@@ -40,25 +40,28 @@ namespace sw
 
 	float4x4 CameraComponent::getViewMatrix() const
 	{
-		const float3 eye = getWorldPosition();
-		const float3 rot = getLocalRotation();
-
-		const float4x4 rotMat  = float4x4::createFromYawPitchRoll( rot._y, rot._x, rot._z );
-		const float3   forward = float3::transformNormal( float3( 0.0f, 0.0f, 1.0f ), rotMat );
-		const float3   target  = eye + forward;
-		return float4x4::createLookAt( eye, target, float3( 0.0f, 1.0f, 0.0f ) );
+		const float4x4 worldMat = getWorldMatrix();
+		const float3   eye		= worldMat.getTranslation();
+		const float3   forward	= float3::transformNormal( float3( 0.0f, 0.0f, 1.0f ), worldMat );
+		const float3   up		= float3::transformNormal( float3( 0.0f, 1.0f, 0.0f ), worldMat );
+		const float3   target	= eye + forward;
+		return float4x4::createLookAt( eye, target, up );
 	}
 
 	float4x4 CameraComponent::getProjectionMatrix( float32 aspectRatio ) const
 	{
 		const float32 aspect = aspectRatio > 1e-4f ? aspectRatio : ( 16.0f / 9.0f );
+		const float32 nearZ	 = _nearZ > 1e-4f ? _nearZ : 0.1f;
+		const float32 farZ	 = _farZ > nearZ + 1e-4f ? _farZ : ( nearZ + 100.0f );
+
 		if ( _bOrthographic )
 		{
 			const float32 height = _orthoHeight > 1e-4f ? _orthoHeight : 10.0f;
 			const float32 width	 = height * aspect;
-			return float4x4::createOrthographic( width, height, _nearZ, _farZ );
+			return float4x4::createOrthographic( width, height, nearZ, farZ );
 		}
-		return float4x4::createPerspectiveFieldOfView( _fovY, aspect, _nearZ, _farZ );
+		const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
+		return float4x4::createPerspectiveFieldOfView( fov, aspect, nearZ, farZ );
 	}
 
 	float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

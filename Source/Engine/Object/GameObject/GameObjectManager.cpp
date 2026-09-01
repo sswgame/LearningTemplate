@@ -1138,11 +1138,15 @@ namespace sw
 		if ( pBase == nullptr || pBase[0] == '\0' )
 			pBase = "GameObject";
 
+		string_view baseView{ pBase };
+		if ( baseView.size() > 96 )
+			baseView = baseView.substr( 0, 96 );
+
 		StringBuilder<constant::kMaxBuffer128> sb;
 		for ( uint32 nameSuffix = 2; nameSuffix < 10000; ++nameSuffix )
 		{
 			sb.clear();
-			sb.append( pBase ).append( '_' ).append( nameSuffix );
+			sb.append( baseView ).append( '_' ).append( nameSuffix );
 			const hashed_string candidate( sb.c_str(), sb.size() );
 			if ( _mapNameToObject.find( candidate ) == _mapNameToObject.end() )
 			{
@@ -1155,7 +1159,7 @@ namespace sw
 		for ( uint32 fallbackIndex = 0; fallbackIndex < 1024; ++fallbackIndex )
 		{
 			sb.clear();
-			sb.append( pBase ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
+			sb.append( baseView ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
 			const hashed_string fallback( sb.c_str(), sb.size() );
 			if ( _mapNameToObject.find( fallback ) == _mapNameToObject.end() )
 			{

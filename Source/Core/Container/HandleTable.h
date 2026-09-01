@@ -114,6 +114,12 @@ namespace sw
 			}
 		}
 
+		/** @brief 현재 활성화된 슬롯 개수를 반환합니다. */
+		uint32 size() const { return static_cast<uint32>( _listSlot.size() - _listFree.size() ); }
+
+		/** @brief 테이블이 비어 있는지 반환합니다. */
+		bool empty() const { return size() == 0; }
+
 		/** @brief 모든 슬롯을 비웁니다. */
 		void clear()
 		{

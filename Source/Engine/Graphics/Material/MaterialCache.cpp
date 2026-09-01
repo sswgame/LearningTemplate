@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/unordered_map.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -23,9 +24,9 @@ namespace sw
 			bool				 _bGpuInit{ false };
 		};
 
-		map<string, Entry, std::less<>> _mapEntry;
-		IRHIDevice*						_pDevice;
-		std::shared_mutex				_mutex;
+		unordered_map<string, Entry> _mapEntry;
+		IRHIDevice*					 _pDevice;
+		std::shared_mutex			 _mutex;
 
 		Impl()
 			: _mapEntry{}

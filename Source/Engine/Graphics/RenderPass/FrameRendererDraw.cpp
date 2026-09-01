@@ -82,15 +82,15 @@ namespace sw
 					if ( bTransparent != bTransparentPass )
 						return;
 
-					shared_ptr<Mesh> mesh = pMeshComp->getMesh();
+					const shared_ptr<Mesh>& mesh = pMeshComp->getMesh();
 					if ( mesh == nullptr || mesh->getVertexCount() == 0 )
 						return;
 					if ( mesh->upload( _pDevice ) == false )
 						return;
 
-					RHIPipelineStateHandle		 drawPso		  = pso;
-					Material*					 pMaterial		  = pMeshComp->getMaterial();
-					shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
+					RHIPipelineStateHandle				drawPso			 = pso;
+					Material*							pMaterial		 = pMeshComp->getMaterial();
+					const shared_ptr<MaterialInstance>& materialInstance = pMeshComp->getMaterialInstance();
 					if ( pMaterial != nullptr || materialInstance != nullptr )
 					{
 						const RHIPipelineStateHandle matPso = getOrCreateMaterialPassPso(

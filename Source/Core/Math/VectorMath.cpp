@@ -359,10 +359,12 @@ namespace sw
 		const float32 dotProduct   = dot( other );
 		const bool	  isUnitLength = MathUtil::nearEqual( lengthSquaredA, 1.f ) && MathUtil::nearEqual( lengthSquaredB, 1.f );
 		if ( isUnitLength )
-			return MathUtil::acos( dotProduct );
+			return MathUtil::acos( MathUtil::clamp( dotProduct, -1.0f, 1.0f ) );
 
 		const float32 length = MathUtil::sqrt( lengthSquaredA ) * MathUtil::sqrt( lengthSquaredB );
-		return MathUtil::acos( dotProduct / length );
+		if ( length <= MathUtil::Epsilon )
+			return 0.0f;
+		return MathUtil::acos( MathUtil::clamp( dotProduct / length, -1.0f, 1.0f ) );
 	}
 
 	bool float3::operator==( const float3& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ); }

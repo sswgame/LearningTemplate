@@ -28,8 +28,9 @@ namespace sw
 
 	void PoolAllocator::allocateChunk()
 	{
-		size_t allocSize = sizeof( Chunk ) + ( _blockSize * _blocksPerChunk );
-		void*  pRaw		 = sw::Memory::alignedAlloc( allocSize, 16 );
+		const size_t chunkHeaderSize = ( sizeof( Chunk ) + 15u ) & ~size_t{ 15 };
+		const size_t allocSize		 = chunkHeaderSize + ( _blockSize * _blocksPerChunk );
+		void*		 pRaw			 = sw::Memory::alignedAlloc( allocSize, 16 );
 		if ( pRaw == nullptr )
 		{
 			// OOM
@@ -40,7 +41,7 @@ namespace sw
 		pNewChunk->_pNext = _pChunkList;
 		_pChunkList		  = pNewChunk;
 
-		uint8* pData = reinterpret_cast<uint8*>( pNewChunk ) + sizeof( Chunk );
+		uint8* pData = reinterpret_cast<uint8*>( pNewChunk ) + chunkHeaderSize;
 		for ( uint32 index = 0; index < _blocksPerChunk; ++index )
 		{
 			FreeNode* pNode = reinterpret_cast<FreeNode*>( pData + ( index * _blockSize ) );

@@ -79,7 +79,14 @@ namespace sw
 			return;
 		}
 
-		_pCmd->beginEventMarker( string( passName ).c_str() );
+		if ( passName.empty() == false )
+		{
+			utf8		 arrPassName[64];
+			const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
+			Memory::copy( arrPassName, passName.data(), copyLen );
+			arrPassName[copyLen] = '\0';
+			_pCmd->beginEventMarker( arrPassName );
+		}
 		clearPassTextureIndices();
 
 		auto colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
@@ -143,7 +150,7 @@ namespace sw
 			if ( bUseMrt )
 			{
 				const float4			  normalClear  = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::kNormalClear );
-				const string			  arrNames[]   = { FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kGBufferNormal };
+				const string_view		  arrNames[]   = { FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kGBufferNormal };
 				const float4			  arrClears[2] = { clearColor, normalClear };
 				const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ) };
 				beginColorPassMRT( arrNames, arrClears, arrLoads, 2, FrameRendererUtil::Attachment::kSceneDepth, colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
@@ -320,13 +327,13 @@ namespace sw
 	void FrameRenderer::beginColorPass( string_view colorName, string_view depthName, const float4& clearColor,
 										RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
 	{
-		const string			  arrName[]	 = { string( colorName ) };
+		const string_view		  arrName[]	 = { colorName };
 		const float4			  arrClear[] = { clearColor };
 		const RHIRenderPassLoadOp arrLoad[]	 = { colorLoad };
 		beginColorPassMRT( arrName, arrClear, arrLoad, 1, depthName, depthLoad );
 	}
 
-	void FrameRenderer::beginColorPassMRT( const string* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
+	void FrameRenderer::beginColorPassMRT( const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
 										   uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
 	{
 		if ( _pDevice == nullptr || _pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )

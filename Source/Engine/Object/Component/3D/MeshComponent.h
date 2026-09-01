@@ -57,7 +57,9 @@ namespace sw
 		/** @brief 메시를 설정합니다. */
 		void setMesh( shared_ptr<Mesh> mesh ) { _mesh = std::move( mesh ); }
 		/** @brief 메시를 반환합니다. */
-		shared_ptr<Mesh> getMesh() const { return _mesh; }
+		const shared_ptr<Mesh>& getMesh() const { return _mesh; }
+		/** @brief 원시 메시 포인터를 반환합니다. */
+		Mesh* getRawMesh() const { return _mesh.get(); }
 
 		/** @brief 머티리얼을 설정합니다. */
 		void setMaterial( Material* pMaterial ) { _pMaterial = pMaterial; }
@@ -67,7 +69,9 @@ namespace sw
 		/** @brief 머티리얼 인스턴스를 설정합니다. */
 		void setMaterialInstance( shared_ptr<MaterialInstance> instance ) { _materialInstance = std::move( instance ); }
 		/** @brief 머티리얼 인스턴스를 반환합니다. */
-		shared_ptr<MaterialInstance> getMaterialInstance() const { return _materialInstance; }
+		const shared_ptr<MaterialInstance>& getMaterialInstance() const { return _materialInstance; }
+		/** @brief 원시 머티리얼 인스턴스 포인터를 반환합니다. */
+		MaterialInstance* getRawMaterialInstance() const { return _materialInstance.get(); }
 
 		/** @brief 블렌드 모드를 설정합니다. */
 		void setBlendMode( RHIBlendMode mode ) { _blendMode = mode; }

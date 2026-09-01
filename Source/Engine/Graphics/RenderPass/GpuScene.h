@@ -217,8 +217,9 @@ namespace sw
 			uint32	_srcIdx{ 0 };
 		};
 
-		vector<SortEntry> _listScratchOpaqueEntry;
-		vector<uint32>	  _listScratchTransparentIdx;
+		vector<SortEntry>			   _listScratchOpaqueEntry;
+		vector<uint32>				   _listScratchTransparentIdx;
+		vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
 
 		GpuMaterialRetireQueue _materialRetire;
 		TaskStageHandle		   _snapshotStage;

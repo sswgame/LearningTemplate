@@ -199,9 +199,11 @@ namespace sw
 		const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / ndx : MathUtil::MaxFloat;
 		const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / ndy : MathUtil::MaxFloat;
 
-		float32 currentT = 0.0f;
+		float32			 currentT	  = 0.0f;
+		constexpr uint32 kMaxRaySteps = 2048;
+		uint32			 stepCount	  = 0;
 
-		while ( currentT <= maxDist )
+		while ( currentT <= maxDist && stepCount++ < kMaxRaySteps )
 		{
 			const uint64 key	  = getCellKey( cellX, cellY );
 			auto		 bucketIt = _mapBucket.find( key );

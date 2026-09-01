@@ -269,20 +269,19 @@ namespace sw
 				MeshComponent* pMeshComp = castTo<MeshComponent>( pComp );
 				if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
 					return;
-				shared_ptr<Mesh> mesh = pMeshComp->getMesh();
-				if ( mesh == nullptr || mesh->getVertexCount() == 0 )
+				Mesh* pMesh = pMeshComp->getRawMesh();
+				if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
 					return;
 
 				const float4x4 world = pMeshComp->getWorldMatrix();
 				DrawCandidate  cand{};
-				cand._world									  = world;
-				cand._boundsCenter							  = world.getTranslation();
-				cand._boundsRadius							  = pMeshComp->getBoundsRadius();
-				cand._blendMode								  = static_cast<uint32>( pMeshComp->getBlendMode() );
-				cand._pMesh									  = mesh.get();
-				cand._pMaterial								  = pMeshComp->getMaterial();
-				shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
-				cand._pInstance								  = materialInstance.get();
+				cand._world		   = world;
+				cand._boundsCenter = world.getTranslation();
+				cand._boundsRadius = pMeshComp->getBoundsRadius();
+				cand._blendMode	   = static_cast<uint32>( pMeshComp->getBlendMode() );
+				cand._pMesh		   = pMesh;
+				cand._pMaterial	   = pMeshComp->getMaterial();
+				cand._pInstance	   = pMeshComp->getRawMaterialInstance();
 				_listScratchCandidate.push_back( cand );
 			} );
 		} );
@@ -400,13 +399,13 @@ namespace sw
 															instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
 		}
 
-		vector<RHIDrawIndirectCommand> listCmds( argsCount );
+		_listScratchIndirectCmd.resize( argsCount );
 		for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
 		{
-			listCmds[argIndex]._vertexCount			  = _listAllBatch[argIndex]._vertexCount;
-			listCmds[argIndex]._instanceCount		  = _listAllBatch[argIndex]._instanceCount;
-			listCmds[argIndex]._startVertexLocation	  = 0;
-			listCmds[argIndex]._startInstanceLocation = _listAllBatch[argIndex]._instanceBase;
+			_listScratchIndirectCmd[argIndex]._vertexCount			 = _listAllBatch[argIndex]._vertexCount;
+			_listScratchIndirectCmd[argIndex]._instanceCount		 = _listAllBatch[argIndex]._instanceCount;
+			_listScratchIndirectCmd[argIndex]._startVertexLocation	 = 0;
+			_listScratchIndirectCmd[argIndex]._startInstanceLocation = _listAllBatch[argIndex]._instanceBase;
 		}
 
 		if ( _indirectArgsBuffer == 0 || _argsCapacity < argsCount )
@@ -424,13 +423,13 @@ namespace sw
 			desc._elementCount	= argsCount;
 			desc._sizeBytes		= desc._elementSize * desc._elementCount;
 			desc._usage			= RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-			desc._pInitialData	= listCmds.data();
+			desc._pInitialData	= _listScratchIndirectCmd.data();
 			_indirectArgsBuffer = pDevice->getResource()->createBuffer( desc );
 			if ( _indirectArgsBuffer == 0 )
 			{
 				_indirectArgsBuffer = pDevice->getResource()->createStructuredBuffer( desc._elementSize, desc._elementCount );
 				if ( _indirectArgsBuffer != 0 )
-					pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, listCmds.data(), desc._sizeBytes );
+					pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, _listScratchIndirectCmd.data(), desc._sizeBytes );
 			}
 			if ( _indirectArgsBuffer != 0 )
 			{
@@ -440,7 +439,7 @@ namespace sw
 		}
 		else
 		{
-			pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, listCmds.data(),
+			pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, _listScratchIndirectCmd.data(),
 															argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
 		}
 

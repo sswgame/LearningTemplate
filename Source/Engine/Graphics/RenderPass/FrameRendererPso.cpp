@@ -179,9 +179,6 @@ namespace sw
 			permHash	= pMaterial->getPermutationHash();
 		}
 
-		if ( pMatDefines == nullptr || pMatDefines->empty() )
-			return createPsoForPassType( passType, defaultShader, bDepthTest, numRenderTargets, pRtvFormats, bDefaultBlend, bDefaultDepthWrite );
-
 		const uint64 passHash = std::hash<string_view>{}( passType );
 		const uint64 cacheKey = passHash ^ ( permHash << 1 );
 
@@ -199,7 +196,7 @@ namespace sw
 		{
 			string			  passTypeStr( passType );
 			string			  defaultShaderStr( defaultShader );
-			vector<string>	  definesCopy = *pMatDefines;
+			vector<string>	  definesCopy = ( pMatDefines != nullptr ) ? *pMatDefines : vector<string>{};
 			vector<RHIFormat> rtvFormatsCopy;
 			if ( pRtvFormats != nullptr && numRenderTargets > 0 )
 				rtvFormatsCopy.assign( pRtvFormats, pRtvFormats + numRenderTargets );

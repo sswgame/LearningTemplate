@@ -104,6 +104,15 @@ namespace sw
 			_mapLoadedAsset[pathStr] = bExists;
 			_uniqueActiveRequest.erase( pathStr );
 
+			for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
+			{
+				if ( it->_assetPath == pathStr )
+				{
+					_listPendingRequest.erase( it );
+					break;
+				}
+			}
+
 			auto itCallbacks = _mapInFlightCallback.find( pathStr );
 			if ( itCallbacks != _mapInFlightCallback.end() )
 			{
@@ -150,6 +159,15 @@ namespace sw
 		std::scoped_lock<mutex> innerLock{ _mutex };
 		_mapLoadedAsset[pathStr] = bExists;
 		_uniqueActiveRequest.erase( pathStr );
+
+		for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
+		{
+			if ( it->_assetPath == pathStr )
+			{
+				_listPendingRequest.erase( it );
+				break;
+			}
+		}
 
 		auto itCallbacks = _mapInFlightCallback.find( pathStr );
 		if ( itCallbacks != _mapInFlightCallback.end() )

@@ -33,17 +33,17 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		string getMeshName() const { return _meshName; }
-		void   setMeshName( const string& mesh ) { _meshName = mesh; }
+		const string& getMeshName() const { return _meshName; }
+		void		  setMeshName( const string& mesh ) { _meshName = mesh; }
 
-		string getMaterialName() const { return _materialName; }
-		void   setMaterialName( const string& mtrl ) { _materialName = mtrl; }
+		const string& getMaterialName() const { return _materialName; }
+		void		  setMaterialName( const string& mtrl ) { _materialName = mtrl; }
 
-		string getTextureName() const { return _textureName; }
-		void   setTextureName( const string& tex ) { _textureName = tex; }
+		const string& getTextureName() const { return _textureName; }
+		void		  setTextureName( const string& tex ) { _textureName = tex; }
 
-		string getSpriteName() const { return _spriteName; }
-		void   setSpriteName( const string& sprite ) { _spriteName = sprite; }
+		const string& getSpriteName() const { return _spriteName; }
+		void		  setSpriteName( const string& sprite ) { _spriteName = sprite; }
 
 	private:
 		PROPERTY( Category = "Rendering", DisplayName = "Mesh", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name", Alias = "Mesh" )

@@ -147,8 +147,21 @@ namespace sw
 
 	quaternion quaternion::lookRotation( const float3& direction, const float3& up ) noexcept
 	{
-		const float3   f = direction.normalize();
-		const float3   r = up.cross( f ).normalize();
+		float3 f = direction.normalize();
+		if ( f.getLengthSquared() < MathUtil::Epsilon )
+			return Identity;
+
+		float3 upVec = up.normalize();
+		if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+			upVec = float3::Up;
+
+		float3 r = upVec.cross( f ).normalize();
+		if ( r.getLengthSquared() < MathUtil::Epsilon )
+		{
+			const float3 altUp = MathUtil::abs( f._y ) > 0.99f ? float3::Forward : float3::Up;
+			r				   = altUp.cross( f ).normalize();
+		}
+
 		const float3   u = f.cross( r );
 		const float4x4 m{ r._x, r._y, r._z, 0.f, u._x, u._y, u._z, 0.f, f._x, f._y, f._z, 0.f, 0.f, 0.f, 0.f, 1.f };
 		return createFromRotationMatrix( m );
@@ -377,35 +390,73 @@ namespace sw
 
 	float4x4 float4x4::createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		const float32 yScale = 1.0f / MathUtil::tan( fov * 0.5f );
-		const float32 xScale = yScale / aspectRatio;
-		return float4x4{ xScale, 0.f, 0.f, 0.f, 0.f, yScale, 0.f, 0.f, 0.f, 0.f, farPlane / ( farPlane - nearPlane ), 1.f, 0.f, 0.f, -nearPlane * farPlane / ( farPlane - nearPlane ), 0.f };
+		const float32 safeFov	 = MathUtil::clamp( fov, 0.001f, MathUtil::Pi - 0.001f );
+		const float32 safeAspect = aspectRatio > MathUtil::Epsilon ? aspectRatio : 1.0f;
+		const float32 span		 = ( farPlane - nearPlane );
+		const float32 safeSpan	 = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+
+		const float32 yScale = 1.0f / MathUtil::tan( safeFov * 0.5f );
+		const float32 xScale = yScale / safeAspect;
+		return float4x4{ xScale, 0.f, 0.f, 0.f, 0.f, yScale, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
 	}
 
 	float4x4 float4x4::createPerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		return float4x4{ 2.f * nearPlane / width, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / height, 0.f, 0.f, 0.f, 0.f, farPlane / ( farPlane - nearPlane ), 1.f, 0.f, 0.f, -nearPlane * farPlane / ( farPlane - nearPlane ), 0.f };
+		const float32 safeW	   = MathUtil::abs( width ) > MathUtil::Epsilon ? width : 1.0f;
+		const float32 safeH	   = MathUtil::abs( height ) > MathUtil::Epsilon ? height : 1.0f;
+		const float32 span	   = ( farPlane - nearPlane );
+		const float32 safeSpan = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+		return float4x4{ 2.f * nearPlane / safeW, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeH, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
 	}
 
 	float4x4 float4x4::createPerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		return float4x4{ 2.f * nearPlane / ( right - left ), 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / ( top - bottom ), 0.f, 0.f, ( left + right ) / ( left - right ), ( top + bottom ) / ( bottom - top ), farPlane / ( farPlane - nearPlane ), 1.f, 0.f, 0.f, -nearPlane * farPlane / ( farPlane - nearPlane ), 0.f };
+		const float32 spanX	   = ( right - left );
+		const float32 spanY	   = ( top - bottom );
+		const float32 safeX	   = MathUtil::abs( spanX ) > MathUtil::Epsilon ? spanX : 1.0f;
+		const float32 safeY	   = MathUtil::abs( spanY ) > MathUtil::Epsilon ? spanY : 1.0f;
+		const float32 spanZ	   = ( farPlane - nearPlane );
+		const float32 safeSpan = MathUtil::abs( spanZ ) > MathUtil::Epsilon ? spanZ : 1.0f;
+		return float4x4{ 2.f * nearPlane / safeX, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeY, 0.f, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
 	}
 
 	float4x4 float4x4::createOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		return float4x4{ 2.f / width, 0.f, 0.f, 0.f, 0.f, 2.f / height, 0.f, 0.f, 0.f, 0.f, 1.f / ( farPlane - nearPlane ), 0.f, 0.f, 0.f, -nearPlane / ( farPlane - nearPlane ), 1.f };
+		const float32 safeW	   = MathUtil::abs( width ) > MathUtil::Epsilon ? width : 1.0f;
+		const float32 safeH	   = MathUtil::abs( height ) > MathUtil::Epsilon ? height : 1.0f;
+		const float32 span	   = ( farPlane - nearPlane );
+		const float32 safeSpan = MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+		return float4x4{ 2.f / safeW, 0.f, 0.f, 0.f, 0.f, 2.f / safeH, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, 0.f, 0.f, -nearPlane / safeSpan, 1.f };
 	}
 
 	float4x4 float4x4::createOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		return float4x4{ 2.f / ( right - left ), 0.f, 0.f, 0.f, 0.f, 2.f / ( top - bottom ), 0.f, 0.f, 0.f, 0.f, 1.f / ( farPlane - nearPlane ), 0.f, ( left + right ) / ( left - right ), ( top + bottom ) / ( bottom - top ), -nearPlane / ( farPlane - nearPlane ), 1.f };
+		const float32 spanX	   = ( right - left );
+		const float32 spanY	   = ( top - bottom );
+		const float32 safeX	   = MathUtil::abs( spanX ) > MathUtil::Epsilon ? spanX : 1.0f;
+		const float32 safeY	   = MathUtil::abs( spanY ) > MathUtil::Epsilon ? spanY : 1.0f;
+		const float32 spanZ	   = ( farPlane - nearPlane );
+		const float32 safeSpan = MathUtil::abs( spanZ ) > MathUtil::Epsilon ? spanZ : 1.0f;
+		return float4x4{ 2.f / safeX, 0.f, 0.f, 0.f, 0.f, 2.f / safeY, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), -nearPlane / safeSpan, 1.f };
 	}
 
 	float4x4 float4x4::createLookAt( const float3& position, const float3& target, const float3& up ) noexcept
 	{
-		const float3 zAxis = ( target - position ).normalize();
-		const float3 xAxis = up.cross( zAxis ).normalize();
+		float3 zAxis = ( target - position ).normalize();
+		if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
+			zAxis = float3::Forward;
+
+		float3 upVec = up.normalize();
+		if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+			upVec = float3::Up;
+
+		float3 xAxis = upVec.cross( zAxis ).normalize();
+		if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
+		{
+			const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
+			xAxis			   = altUp.cross( zAxis ).normalize();
+		}
+
 		const float3 yAxis = zAxis.cross( xAxis );
 
 		return float4x4{ xAxis._x, yAxis._x, zAxis._x, 0.f, xAxis._y, yAxis._y, zAxis._y, 0.f, xAxis._z, yAxis._z, zAxis._z, 0.f, -xAxis.dot( position ), -yAxis.dot( position ), -zAxis.dot( position ), 1.f };
@@ -413,8 +464,21 @@ namespace sw
 
 	float4x4 float4x4::createWorld( const float3& position, const float3& forward, const float3& up ) noexcept
 	{
-		const float3 zAxis = forward.normalize();
-		const float3 xAxis = up.cross( zAxis ).normalize();
+		float3 zAxis = forward.normalize();
+		if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
+			zAxis = float3::Forward;
+
+		float3 upVec = up.normalize();
+		if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+			upVec = float3::Up;
+
+		float3 xAxis = upVec.cross( zAxis ).normalize();
+		if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
+		{
+			const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
+			xAxis			   = altUp.cross( zAxis ).normalize();
+		}
+
 		const float3 yAxis = zAxis.cross( xAxis );
 
 		return float4x4{ xAxis._x, xAxis._y, xAxis._z, 0.f, yAxis._x, yAxis._y, yAxis._z, 0.f, zAxis._x, zAxis._y, zAxis._z, 0.f, position._x, position._y, position._z, 1.f };
@@ -511,16 +575,47 @@ namespace sw
 	void float4x4::setScale( const float3& scale ) noexcept
 	{
 		const float3 curScale = getScale();
-		const float3 ratio{ ( curScale._x > 0.f ) ? scale._x / curScale._x : scale._x, ( curScale._y > 0.f ) ? scale._y / curScale._y : scale._y, ( curScale._z > 0.f ) ? scale._z / curScale._z : scale._z };
-		_11 *= ratio._x;
-		_12 *= ratio._x;
-		_13 *= ratio._x;
-		_21 *= ratio._y;
-		_22 *= ratio._y;
-		_23 *= ratio._y;
-		_31 *= ratio._z;
-		_32 *= ratio._z;
-		_33 *= ratio._z;
+		if ( curScale._x > MathUtil::Epsilon )
+		{
+			const float32 inv = scale._x / curScale._x;
+			_11 *= inv;
+			_12 *= inv;
+			_13 *= inv;
+		}
+		else
+		{
+			_11 = scale._x;
+			_12 = 0.f;
+			_13 = 0.f;
+		}
+
+		if ( curScale._y > MathUtil::Epsilon )
+		{
+			const float32 inv = scale._y / curScale._y;
+			_21 *= inv;
+			_22 *= inv;
+			_23 *= inv;
+		}
+		else
+		{
+			_21 = 0.f;
+			_22 = scale._y;
+			_23 = 0.f;
+		}
+
+		if ( curScale._z > MathUtil::Epsilon )
+		{
+			const float32 inv = scale._z / curScale._z;
+			_31 *= inv;
+			_32 *= inv;
+			_33 *= inv;
+		}
+		else
+		{
+			_31 = 0.f;
+			_32 = 0.f;
+			_33 = scale._z;
+		}
 	}
 
 	void float4x4::setRotation( const quaternion& rotation ) noexcept

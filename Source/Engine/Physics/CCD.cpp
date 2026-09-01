@@ -158,7 +158,7 @@ namespace sw
 			outHit._time	  = 0.0f;
 			outHit._hitPoint  = initialClosest;
 			const float32 len = MathUtil::sqrt( distSqInitial );
-			outHit._hitNormal = len > 0.0001f ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
+			outHit._hitNormal = len > MathUtil::Epsilon ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
 			return true;
 		}
 
@@ -285,7 +285,7 @@ namespace sw
 			outHit._time	  = tNear;
 			outHit._hitPoint  = closestOnBox;
 			const float32 len = MathUtil::sqrt( distSqHit );
-			outHit._hitNormal = len > 0.0001f ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
+			outHit._hitNormal = len > MathUtil::Epsilon ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
 			return true;
 		}
 
@@ -304,7 +304,7 @@ namespace sw
 			outHit._time	  = clampedProj;
 			outHit._hitPoint  = closestOnBox;
 			const float32 len = MathUtil::sqrt( edgeDistSq );
-			outHit._hitNormal = len > 0.0001f ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
+			outHit._hitNormal = len > MathUtil::Epsilon ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
 			return true;
 		}
 

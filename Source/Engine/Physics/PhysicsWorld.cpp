@@ -219,12 +219,30 @@ namespace sw
 		if ( box.isValid() == false )
 			return;
 
-		const int32 minX = PhysicsWorldInternal::toCellCoord( box._min._x, kCellSize );
-		const int32 maxX = PhysicsWorldInternal::toCellCoord( box._max._x, kCellSize );
-		const int32 minY = PhysicsWorldInternal::toCellCoord( box._min._y, kCellSize );
-		const int32 maxY = PhysicsWorldInternal::toCellCoord( box._max._y, kCellSize );
-		const int32 minZ = PhysicsWorldInternal::toCellCoord( box._min._z, kCellSize );
-		const int32 maxZ = PhysicsWorldInternal::toCellCoord( box._max._z, kCellSize );
+		const float3 normMin = float3::min( box._min, box._max );
+		const float3 normMax = float3::max( box._min, box._max );
+
+		const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
+		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
+		const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
+		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
+		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
+		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
+
+		const int64 spanX	   = static_cast<int64>( maxX ) - static_cast<int64>( minX ) + 1;
+		const int64 spanY	   = static_cast<int64>( maxY ) - static_cast<int64>( minY ) + 1;
+		const int64 spanZ	   = static_cast<int64>( maxZ ) - static_cast<int64>( minZ ) + 1;
+		const int64 totalCells = ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
+
+		if ( totalCells <= 0 || totalCells > 1024 || totalCells > static_cast<int64>( _bodies.size() ) )
+		{
+			_bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
+			{
+				if ( queryOverlaps( box, layer, body._aabb, body._layer, _layers ) )
+					outListHandle.push_back( handle );
+			} );
+			return;
+		}
 
 		thread_local vector<BodyHandle> t_listCandidateHandle;
 		t_listCandidateHandle.clear();
@@ -273,12 +291,52 @@ namespace sw
 			float3::min( movingBox._min, movingBox._min + displacement ),
 			float3::max( movingBox._max, movingBox._max + displacement ) };
 
-		const int32 minX = PhysicsWorldInternal::toCellCoord( sweptBounds._min._x, kCellSize );
-		const int32 maxX = PhysicsWorldInternal::toCellCoord( sweptBounds._max._x, kCellSize );
-		const int32 minY = PhysicsWorldInternal::toCellCoord( sweptBounds._min._y, kCellSize );
-		const int32 maxY = PhysicsWorldInternal::toCellCoord( sweptBounds._max._y, kCellSize );
-		const int32 minZ = PhysicsWorldInternal::toCellCoord( sweptBounds._min._z, kCellSize );
-		const int32 maxZ = PhysicsWorldInternal::toCellCoord( sweptBounds._max._z, kCellSize );
+		const float3 normMin = float3::min( sweptBounds._min, sweptBounds._max );
+		const float3 normMax = float3::max( sweptBounds._min, sweptBounds._max );
+
+		const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
+		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
+		const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
+		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
+		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
+		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
+
+		const int64 spanX	   = static_cast<int64>( maxX ) - static_cast<int64>( minX ) + 1;
+		const int64 spanY	   = static_cast<int64>( maxY ) - static_cast<int64>( minY ) + 1;
+		const int64 spanZ	   = static_cast<int64>( maxZ ) - static_cast<int64>( minZ ) + 1;
+		const int64 totalCells = ( spanX > 0 && spanY > 0 && spanZ > 0 ) ? ( spanX * spanY * spanZ ) : 0;
+
+		bool	 bFoundHit = false;
+		SweepHit nearestHit{};
+		nearestHit._time = 1.0f;
+
+		if ( totalCells <= 0 || totalCells > 1024 || totalCells > static_cast<int64>( _bodies.size() ) )
+		{
+			_bodies.forEachHandle( [&]( ObjectHandle handle, const PhysicsBody& body )
+			{
+				if ( _layers.shouldCollide( layer, body._layer ) )
+				{
+					SweepHit hit{};
+					if ( CCD::sweepAABB( movingBox, displacement, body._aabb, hit ) )
+					{
+						if ( hit._time < nearestHit._time || bFoundHit == false )
+						{
+							bFoundHit				= true;
+							nearestHit				= hit;
+							nearestHit._hitBody		= handle;
+							nearestHit._hitObjectId = body._objectId;
+						}
+					}
+				}
+			} );
+
+			if ( bFoundHit )
+			{
+				outHit = nearestHit;
+				return true;
+			}
+			return false;
+		}
 
 		thread_local vector<BodyHandle> t_listCandidateHandle;
 		t_listCandidateHandle.clear();
@@ -299,10 +357,6 @@ namespace sw
 
 		std::sort( t_listCandidateHandle.begin(), t_listCandidateHandle.end() );
 		t_listCandidateHandle.erase( std::unique( t_listCandidateHandle.begin(), t_listCandidateHandle.end() ), t_listCandidateHandle.end() );
-
-		bool	 bFoundHit = false;
-		SweepHit nearestHit{};
-		nearestHit._time = 1.0f;
 
 		for ( BodyHandle handle : t_listCandidateHandle )
 		{

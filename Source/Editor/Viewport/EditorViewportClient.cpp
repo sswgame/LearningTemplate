@@ -644,7 +644,7 @@ namespace sw::editor
 		GameObjectManager* pManager = pScene->getObjectManager();
 		pManager->flushSceneTransforms();
 
-		const float32  aspect	   = canvasSize._x / canvasSize._y;
+		const float32  aspect	   = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
 		const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
 		const float32  ndcX		   = u * 2.0f - 1.0f;
 		const float32  ndcY		   = 1.0f - v * 2.0f;
@@ -666,12 +666,11 @@ namespace sw::editor
 		Component*	pBestComp{ nullptr };
 		float32		bestT{ MathUtil::MaxFloat };
 
-		const vector<GameObject*> listObject = pManager->getAllGameObjects();
-		const bool				  b2DMode	 = _toolbarSettings._bIs2DMode;
-		for ( GameObject* pObj : listObject )
+		const bool b2DMode = _toolbarSettings._bIs2DMode;
+		pManager->forEachGameObject( [&]( GameObject* pObj )
 		{
 			if ( pObj == nullptr || pObj->isActive() == false )
-				continue;
+				return;
 
 			if ( b2DMode )
 			{
@@ -686,7 +685,7 @@ namespace sw::editor
 				EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
 			}
 			EditorViewportClientInternal::considerScenePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-		}
+		} );
 
 		if ( pBestObj != nullptr )
 			EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestComp } );

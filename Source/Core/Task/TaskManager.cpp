@@ -1273,8 +1273,11 @@ namespace sw
 						}
 					}
 
-					std::scoped_lock<mutex> workerLock{ _workerMutex };
-					_cvWorker.notify_one();
+					if ( _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
+					{
+						std::scoped_lock<mutex> workerLock{ _workerMutex };
+						_cvWorker.notify_one();
+					}
 				}
 			}
 		}

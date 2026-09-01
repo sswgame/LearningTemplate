@@ -58,7 +58,9 @@ namespace sw
 		}
 		outSplit = float4{ arrSplit[0], arrSplit[1], arrSplit[2], arrSplit[3] };
 
-		const float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
+			lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
 		const float3 up		= MathUtil::abs( lightDir._y ) > 0.95f ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };
 		const float3 side	= up.cross( lightDir ).normalize();
@@ -94,7 +96,9 @@ namespace sw
 			0.0f, 0.0f, 0.25f, 0.0f,
 			0.0f, 0.0f, 0.5f, 1.0f };
 
-		const float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
+			lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
 		// Simple view: align -Z with light direction.
 		const float3 up		= MathUtil::abs( lightDir._y ) > 0.99f ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };

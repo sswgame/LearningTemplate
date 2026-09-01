@@ -282,9 +282,14 @@ namespace sw
 		static constexpr T frac( T x )
 		{
 			static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
-			T f = x - T( static_cast<int32>( x ) );
-			f	= f < 0 ? ( 1 + f ) : f;
-			return f;
+			if constexpr ( std::is_integral_v<T> )
+			{
+				return T( 0 );
+			}
+			else
+			{
+				return x - MathUtil::floor( x );
+			}
 		}
 	};
 } // namespace sw

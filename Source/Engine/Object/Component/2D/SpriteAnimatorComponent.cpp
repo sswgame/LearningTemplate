@@ -55,6 +55,7 @@ namespace sw
 
 		_frameTimer += deltaTime;
 		const float32 frameDuration = 1.0f / _frameRate;
+		const int32	  prevFrame		= _currentFrame;
 		while ( _frameTimer >= frameDuration )
 		{
 			_frameTimer -= frameDuration;
@@ -65,7 +66,7 @@ namespace sw
 				if ( _bRepeat == SW_TRUE )
 					_currentFrame = 0;
 				else if ( tryAdvanceGraphNode() )
-					break;
+					return;
 				else
 				{
 					_currentFrame = _totalFrames - 1;
@@ -73,8 +74,10 @@ namespace sw
 					break;
 				}
 			}
-			updateSpriteFrame();
 		}
+
+		if ( _currentFrame != prevFrame )
+			updateSpriteFrame();
 	}
 
 	void SpriteAnimatorComponent::play( const string& animName, bool loop )

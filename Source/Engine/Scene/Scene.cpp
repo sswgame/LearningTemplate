@@ -44,17 +44,17 @@ namespace sw
 					return;
 
 				Material* pDefaultMaterial = pScene->getMaterial();
-				for ( GameObject* pObj : pObjectManager->getAllGameObjects() )
+				pObjectManager->forEachGameObject( [&]( GameObject* pObj )
 				{
 					if ( pObj == nullptr )
-						continue;
+						return;
 					MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
 					if ( pMeshComp == nullptr )
-						continue;
+						return;
 					pMeshComp->resolveRuntimeMesh();
 					if ( pMeshComp->getMaterial() == nullptr && pDefaultMaterial != nullptr )
 						pMeshComp->setMaterial( pDefaultMaterial );
-				}
+				} );
 				pObjectManager->flushSceneTransforms();
 			}
 
@@ -192,13 +192,13 @@ namespace sw
 		outDoc._listEntityNode.clear();
 		outDoc._bValid = true;
 
-		for ( GameObject* pGo : _objectManager->getAllGameObjects() )
+		_objectManager->forEachGameObject( [&]( GameObject* pGo )
 		{
 			if ( pGo == nullptr || pGo->getParent() != nullptr )
-				continue;
+				return;
 			CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
 			if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
-				continue;
+				return;
 			SceneDocument::EntityNode node{};
 			node._name = pGo->getName().c_str();
 
@@ -215,7 +215,7 @@ namespace sw
 			node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
 			if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
 				outDoc._listEntityNode.push_back( std::move( node ) );
-		}
+		} );
 		return true;
 	}
 
@@ -308,20 +308,20 @@ namespace sw
 		int32			 bestGamePri = MathUtil::MinInt32;
 		CameraComponent* pBestGame{ nullptr };
 
-		for ( GameObject* pObj : _objectManager->getAllGameObjects() )
+		_objectManager->forEachGameObject( [&]( GameObject* pObj )
 		{
 			if ( pObj == nullptr || pObj->isActive() == false )
-				continue;
+				return;
 			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
 			if ( pCam == nullptr || pCam->isActive() == false )
-				continue;
+				return;
 			if ( pCam->getRole() != CameraRole::Game )
-				continue;
+				return;
 			if ( pCam->getPriority() < bestGamePri )
-				continue;
+				return;
 			bestGamePri = pCam->getPriority();
 			pBestGame	= pCam;
-		}
+		} );
 
 		storeCameraHandle( pBestGame, _activeGameCamera );
 	}

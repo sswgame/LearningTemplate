@@ -223,15 +223,16 @@ namespace sw
 
 	SceneComponent::~SceneComponent()
 	{
-		// 소멸 시 자식 컴포넌트들을 부모로부터 분리
-		vector<SceneComponent*> listChildCopy = _listChild;
-		for ( SceneComponent* pChild : listChildCopy )
+		// 소멸 시 자식 컴포넌트들을 부모로부터 분리 (힙 복사 없이 역순 분리)
+		while ( _listChild.empty() == false )
 		{
+			SceneComponent* pChild = _listChild.back();
 			if ( pChild != nullptr )
 				pChild->detachFromComponent();
+			else
+				_listChild.pop_back();
 		}
 		detachFromComponent();
-		_listChild.clear();
 	}
 
 	void SceneComponent::onBeginPlay()

@@ -24,6 +24,7 @@ namespace sw
 		if ( pValues == nullptr || floatCount < 16 )
 			return;
 		const uint32 instanceCount = floatCount / 16u;
+		_listMatrix.reserve( _listMatrix.size() + instanceCount );
 		for ( uint32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex )
 		{
 			_listMatrix.emplace_back( pValues + ( instanceIndex * 16u ) );
