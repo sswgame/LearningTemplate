@@ -28,46 +28,45 @@ namespace
 {
 	void* getGameService( uint32 id )
 	{
+		using sw::ModuleServiceId;
+
 		if ( id >= sw::kModuleServiceCount )
 			return nullptr;
 
-		switch ( static_cast<sw::ModuleServiceId>( id ) )
-		{
-			case sw::ModuleServiceId::LocalizationManager:
-				return &sw::engine::getLocalizationManager();
-			case sw::ModuleServiceId::EventDispatcher:
-				return &sw::engine::getEventDispatcher();
-			case sw::ModuleServiceId::GlobalVariableManager:
-				return &sw::engine::getGlobalVariableManager();
-			case sw::ModuleServiceId::AudioSystem:
-				return &sw::engine::getAudioSystem();
-			case sw::ModuleServiceId::TypeRegistry:
-				return &sw::engine::getTypeRegistry();
-			case sw::ModuleServiceId::InputManager:
-				return &sw::engine::getInputManager();
-			case sw::ModuleServiceId::SceneManager:
-				return &sw::engine::getSceneManager();
-			case sw::ModuleServiceId::ResourceManager:
-				return &sw::engine::getResourceManager();
-			case sw::ModuleServiceId::DebugDrawQueue:
-				return &sw::engine::getDebugDrawQueue();
-			case sw::ModuleServiceId::DebugOverlayState:
-				return &sw::engine::getDebugOverlayState();
-			case sw::ModuleServiceId::CompressionCodecRegistry:
-				return &sw::engine::getCompressionCodecRegistry();
-			case sw::ModuleServiceId::ShaderCache:
-				return &sw::engine::getShaderCache();
-			case sw::ModuleServiceId::ComponentDefaults:
-				return &sw::engine::getComponentDefaults();
-			case sw::ModuleServiceId::TaskManager:
-			case sw::ModuleServiceId::MemoryProfiler:
-			case sw::ModuleServiceId::CommandStack:
-			case sw::ModuleServiceId::EngineData:
-			case sw::ModuleServiceId::ModuleCompiler:
-			case sw::ModuleServiceId::Count:
-			default:
-				break;
-		}
+		const auto serviceId = static_cast<ModuleServiceId>( id );
+
+#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed ) \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )            \
+	{                                                                    \
+		if constexpr ( ( gameAllowed ) == 0 )                            \
+			return nullptr;                                              \
+		else                                                             \
+			return &sw::engine::getter();                                \
+	}
+
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                  \
+	{                                                                          \
+		if constexpr ( ( gameAllowed ) == 0 )                                  \
+			return nullptr;                                                    \
+		else                                                                   \
+			return const_cast<sw::Type*>( &sw::engine::getter() );             \
+	}
+
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed ) \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )      \
+	{                                                              \
+		if constexpr ( ( gameAllowed ) == 0 )                      \
+			return nullptr;                                        \
+		else                                                       \
+			return sw::engine::getter();                           \
+	}
+
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+
 		return nullptr;
 	}
 
