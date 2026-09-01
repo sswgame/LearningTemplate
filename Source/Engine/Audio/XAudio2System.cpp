@@ -9,6 +9,7 @@
 
 namespace sw
 {
+#if defined( SW_PLATFORM_WINDOWS )
 	namespace
 	{
 		struct XAudio2SystemInternal
@@ -242,6 +243,7 @@ namespace sw
 			}
 		};
 	} // namespace
+#endif
 } // namespace sw
 
 namespace sw

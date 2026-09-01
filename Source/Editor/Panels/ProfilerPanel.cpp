@@ -116,9 +116,9 @@ namespace sw::editor
 			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
 			if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
 			{
-				GameObjectManager*		   pManager	  = pScene->getObjectManager();
-				const vector<GameObject*>& listObject = pManager->getAllGameObjects();
+				GameObjectManager* pManager = pScene->getObjectManager();
 
+				size_t totalObjects{ 0 };
 				size_t rootCount{ 0 };
 				size_t totalComponents{ 0 };
 				size_t sceneCompCount{ 0 };
@@ -127,10 +127,11 @@ namespace sw::editor
 				size_t box2dCompCount{ 0 };
 				size_t cameraCompCount{ 0 };
 
-				for ( const GameObject* pObj : listObject )
+				pManager->forEachGameObject( [&]( GameObject* pObj )
 				{
 					if ( pObj == nullptr )
-						continue;
+						return;
+					++totalObjects;
 					if ( pObj->getParent() == nullptr )
 						++rootCount;
 					totalComponents += pObj->getComponentCount();
@@ -145,9 +146,9 @@ namespace sw::editor
 						++box2dCompCount;
 					if ( pObj->getComponent<CameraComponent>() != nullptr )
 						++cameraCompCount;
-				}
+				} );
 
-				ImGui::BulletText( "Total GameObjects: %zu (Roots: %zu)", listObject.size(), rootCount );
+				ImGui::BulletText( "Total GameObjects: %zu (Roots: %zu)", totalObjects, rootCount );
 				ImGui::BulletText( "Total Attached Components: %zu", totalComponents );
 
 				if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )

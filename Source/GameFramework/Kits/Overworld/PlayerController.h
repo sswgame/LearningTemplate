@@ -71,6 +71,7 @@ namespace sw
 		int32				   _tileY;
 		int32				   _pendingWarpSpawnX;
 		int32				   _pendingWarpSpawnY;
+		uint32				   _encounterStepCounter;
 		float32				   _stepCooldown;
 		float32				   _encounterRate;
 		uint8				   _bMoved			  : 1;

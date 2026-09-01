@@ -60,9 +60,9 @@ namespace sw
 
 	private:
 		HWND					_hWnd;
-		int32					_restoreX;
-		int32					_restoreY;
-		uint8					_bRecreating   : 1;
+		[[maybe_unused]] int32	_restoreX;
+		[[maybe_unused]] int32	_restoreY;
+		[[maybe_unused]] uint8	_bRecreating   : 1;
 		[[maybe_unused]] uint8	_reservedWin32 : 7;
 		[[maybe_unused]] uint16 _padding;
 	};

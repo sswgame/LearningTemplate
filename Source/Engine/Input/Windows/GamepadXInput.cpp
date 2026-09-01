@@ -22,7 +22,8 @@ namespace sw
 				if ( absValue < deadzone )
 					return 0.0f;
 				const float32 sign		 = value < 0.0f ? -1.0f : 1.0f;
-				const float32 normalized = ( absValue - deadzone ) / ( 1.0f - deadzone );
+				const float32 safeSpan	 = ( 1.0f - deadzone ) > 1e-4f ? ( 1.0f - deadzone ) : 1.0f;
+				const float32 normalized = ( absValue - deadzone ) / safeSpan;
 				return sign * ( normalized > 1.0f ? 1.0f : normalized );
 			}
 

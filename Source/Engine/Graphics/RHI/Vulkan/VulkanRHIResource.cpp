@@ -11,39 +11,45 @@
 
 #include <vulkan/vulkan.h>
 
-namespace
+namespace sw
 {
-	sw::ShaderCompileResult compileShader( const sw::ShaderCompileDesc& desc )
+	namespace
 	{
-		if ( sw::engine::areEngineServicesBound() )
-			return sw::engine::getShaderCache().getOrCompile( desc );
-		return sw::ShaderCompiler::compileHLSL( desc );
-	}
-
-	inline VkFormat toVulkanTextureFormat( sw::RHIFormat format )
-	{
-		switch ( format )
+		struct VulkanRHIResourceInternal
 		{
-			case sw::RHIFormat::R8G8B8A8_UNORM:
-				return VK_FORMAT_R8G8B8A8_UNORM;
-			case sw::RHIFormat::B8G8R8A8_UNORM:
-				return VK_FORMAT_B8G8R8A8_UNORM;
-			case sw::RHIFormat::R16G16B16A16_FLOAT:
-				return VK_FORMAT_R16G16B16A16_SFLOAT;
-			case sw::RHIFormat::D24_UNORM_S8_UINT:
-				return VK_FORMAT_D24_UNORM_S8_UINT;
-			case sw::RHIFormat::R32G32B32_FLOAT:
-				return VK_FORMAT_R32G32B32_SFLOAT;
-			case sw::RHIFormat::R32G32_FLOAT:
-				return VK_FORMAT_R32G32_SFLOAT;
-			case sw::RHIFormat::R32_FLOAT:
-				return VK_FORMAT_R32_SFLOAT;
-			default:
-				break;
-		}
-		return VK_FORMAT_UNDEFINED;
-	}
-} // namespace
+			static ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
+			{
+				if ( engine::areEngineServicesBound() )
+					return engine::getShaderCache().getOrCompile( desc );
+				return ShaderCompiler::compileHLSL( desc );
+			}
+
+			static inline VkFormat toVulkanTextureFormat( RHIFormat format )
+			{
+				switch ( format )
+				{
+					case RHIFormat::R8G8B8A8_UNORM:
+						return VK_FORMAT_R8G8B8A8_UNORM;
+					case RHIFormat::B8G8R8A8_UNORM:
+						return VK_FORMAT_B8G8R8A8_UNORM;
+					case RHIFormat::R16G16B16A16_FLOAT:
+						return VK_FORMAT_R16G16B16A16_SFLOAT;
+					case RHIFormat::D24_UNORM_S8_UINT:
+						return VK_FORMAT_D24_UNORM_S8_UINT;
+					case RHIFormat::R32G32B32_FLOAT:
+						return VK_FORMAT_R32G32B32_SFLOAT;
+					case RHIFormat::R32G32_FLOAT:
+						return VK_FORMAT_R32G32_SFLOAT;
+					case RHIFormat::R32_FLOAT:
+						return VK_FORMAT_R32_SFLOAT;
+					default:
+						break;
+				}
+				return VK_FORMAT_UNDEFINED;
+			}
+		};
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -56,7 +62,7 @@ namespace sw
 		vsDesc._entryPoint			 = desc._vertexEntryPoint;
 		vsDesc._stage				 = ShaderStage::Vertex;
 		vsDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult vsResult = compileShader( vsDesc );
+		ShaderCompileResult vsResult = VulkanRHIResourceInternal::compileShader( vsDesc );
 
 		const bool			bDepthOnly		= ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
 		const bool			bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
@@ -68,7 +74,7 @@ namespace sw
 			psDesc._entryPoint	 = desc._pixelEntryPoint;
 			psDesc._stage		 = ShaderStage::Pixel;
 			psDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-			psResult			 = compileShader( psDesc );
+			psResult			 = VulkanRHIResourceInternal::compileShader( psDesc );
 		}
 
 		if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
@@ -243,7 +249,7 @@ namespace sw
 		csDesc._entryPoint			 = entryPoint;
 		csDesc._stage				 = ShaderStage::Compute;
 		csDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult csResult = compileShader( csDesc );
+		ShaderCompileResult csResult = VulkanRHIResourceInternal::compileShader( csDesc );
 
 		if ( csResult._bSuccess == false )
 		{
@@ -347,7 +353,7 @@ namespace sw
 		for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
 		{
 			const RHIRenderPassAttachment& att	   = desc._listColorAttachment[colorIndex];
-			attachments[colorIndex].format		   = toVulkanTextureFormat( att._format );
+			attachments[colorIndex].format		   = VulkanRHIResourceInternal::toVulkanTextureFormat( att._format );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
 			attachments[colorIndex].loadOp		   = toLoadOp( att._loadOp );
 			attachments[colorIndex].storeOp		   = toStoreOp( att._storeOp );
@@ -636,7 +642,7 @@ namespace sw
 		if ( desc._bIsUnorderedAccess )
 			usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
-		const VkFormat requested = toVulkanTextureFormat( desc._format );
+		const VkFormat requested = VulkanRHIResourceInternal::toVulkanTextureFormat( desc._format );
 		VkFormat	   format	 = requested;
 		if ( desc._bIsDepthStencil != 0 || desc._format == sw::RHIFormat::D24_UNORM_S8_UINT )
 		{

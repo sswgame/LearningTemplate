@@ -415,29 +415,69 @@ namespace sw
 		if ( _rootIndex == invalid_index::kInt32 || maxDist <= 0.0f )
 			return;
 
-		const float3 invDir{
-			MathUtil::abs( direction._x ) > MathUtil::Epsilon ? ( 1.0f / direction._x ) : ( 1.0f / MathUtil::Epsilon ),
-			MathUtil::abs( direction._y ) > MathUtil::Epsilon ? ( 1.0f / direction._y ) : ( 1.0f / MathUtil::Epsilon ),
-			MathUtil::abs( direction._z ) > MathUtil::Epsilon ? ( 1.0f / direction._z ) : ( 1.0f / MathUtil::Epsilon ) };
-
 		auto rayIntersects = [&]( const AABB& box ) -> bool
 		{
-			float32 t1	 = ( box._min._x - origin._x ) * invDir._x;
-			float32 t2	 = ( box._max._x - origin._x ) * invDir._x;
-			float32 tMin = MathUtil::min( t1, t2 );
-			float32 tMax = MathUtil::max( t1, t2 );
+			float32 tMin = 0.0f;
+			float32 tMax = maxDist;
 
-			t1	 = ( box._min._y - origin._y ) * invDir._y;
-			t2	 = ( box._max._y - origin._y ) * invDir._y;
-			tMin = MathUtil::max( tMin, MathUtil::min( t1, t2 ) );
-			tMax = MathUtil::min( tMax, MathUtil::max( t1, t2 ) );
+			// X-axis slab
+			if ( MathUtil::abs( direction._x ) < MathUtil::Epsilon )
+			{
+				if ( origin._x < box._min._x || origin._x > box._max._x )
+					return false;
+			}
+			else
+			{
+				const float32 invDx = 1.0f / direction._x;
+				float32		  t1	= ( box._min._x - origin._x ) * invDx;
+				float32		  t2	= ( box._max._x - origin._x ) * invDx;
+				if ( t1 > t2 )
+					std::swap( t1, t2 );
+				tMin = MathUtil::max( tMin, t1 );
+				tMax = MathUtil::min( tMax, t2 );
+				if ( tMin > tMax )
+					return false;
+			}
 
-			t1	 = ( box._min._z - origin._z ) * invDir._z;
-			t2	 = ( box._max._z - origin._z ) * invDir._z;
-			tMin = MathUtil::max( tMin, MathUtil::min( t1, t2 ) );
-			tMax = MathUtil::min( tMax, MathUtil::max( t1, t2 ) );
+			// Y-axis slab
+			if ( MathUtil::abs( direction._y ) < MathUtil::Epsilon )
+			{
+				if ( origin._y < box._min._y || origin._y > box._max._y )
+					return false;
+			}
+			else
+			{
+				const float32 invDy = 1.0f / direction._y;
+				float32		  t1	= ( box._min._y - origin._y ) * invDy;
+				float32		  t2	= ( box._max._y - origin._y ) * invDy;
+				if ( t1 > t2 )
+					std::swap( t1, t2 );
+				tMin = MathUtil::max( tMin, t1 );
+				tMax = MathUtil::min( tMax, t2 );
+				if ( tMin > tMax )
+					return false;
+			}
 
-			return tMax >= MathUtil::max( 0.0f, tMin ) && tMin <= maxDist;
+			// Z-axis slab
+			if ( MathUtil::abs( direction._z ) < MathUtil::Epsilon )
+			{
+				if ( origin._z < box._min._z || origin._z > box._max._z )
+					return false;
+			}
+			else
+			{
+				const float32 invDz = 1.0f / direction._z;
+				float32		  t1	= ( box._min._z - origin._z ) * invDz;
+				float32		  t2	= ( box._max._z - origin._z ) * invDz;
+				if ( t1 > t2 )
+					std::swap( t1, t2 );
+				tMin = MathUtil::max( tMin, t1 );
+				tMax = MathUtil::min( tMax, t2 );
+				if ( tMin > tMax )
+					return false;
+			}
+
+			return true;
 		};
 
 		int32 arrStack[constant::kMaxBuffer256];

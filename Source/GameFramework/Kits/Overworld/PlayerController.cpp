@@ -21,6 +21,7 @@ namespace sw
 		, _tileY{ 1 }
 		, _pendingWarpSpawnX{ 1 }
 		, _pendingWarpSpawnY{ 1 }
+		, _encounterStepCounter{ 0 }
 		, _stepCooldown{ 0.0f }
 		, _encounterRate{ 0.33f }
 		, _bMoved{ SW_FALSE }
@@ -169,9 +170,8 @@ namespace sw
 		}
 		else if ( _pTileMap->isEncounterTile( _tileX, _tileY ) )
 		{
-			static uint32 s_encCounter{ 0 };
-			const uint32  period = _encounterRate > 0.01f ? static_cast<uint32>( 1.0f / _encounterRate ) : 3u;
-			if ( ( ++s_encCounter % ( period < 1 ? 3u : period ) ) == 0 )
+			const uint32 period = _encounterRate > 0.01f ? static_cast<uint32>( 1.0f / _encounterRate ) : 3u;
+			if ( ( ++_encounterStepCounter % ( period < 1 ? 3u : period ) ) == 0 )
 			{
 				_bEncounterPending = 1;
 				SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tileX, _tileY );

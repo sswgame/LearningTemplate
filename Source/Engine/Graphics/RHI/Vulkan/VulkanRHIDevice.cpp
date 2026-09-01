@@ -26,39 +26,36 @@
 	#include <vulkan/vulkan_metal.h>
 #endif
 
-namespace
-{
-	inline VkFormat toVulkanTextureFormat( sw::RHIFormat format )
-	{
-		switch ( format )
-		{
-			case sw::RHIFormat::R8G8B8A8_UNORM:
-				return VK_FORMAT_R8G8B8A8_UNORM;
-			case sw::RHIFormat::B8G8R8A8_UNORM:
-				return VK_FORMAT_B8G8R8A8_UNORM;
-			case sw::RHIFormat::R16G16B16A16_FLOAT:
-				return VK_FORMAT_R16G16B16A16_SFLOAT;
-			case sw::RHIFormat::D24_UNORM_S8_UINT:
-				return VK_FORMAT_D24_UNORM_S8_UINT;
-			case sw::RHIFormat::R32G32B32_FLOAT:
-				return VK_FORMAT_R32G32B32_SFLOAT;
-			case sw::RHIFormat::R32G32_FLOAT:
-				return VK_FORMAT_R32G32_SFLOAT;
-			case sw::RHIFormat::R32_FLOAT:
-				return VK_FORMAT_R32_SFLOAT;
-			default:
-				break;
-		}
-		return VK_FORMAT_UNDEFINED;
-	}
-} // namespace
-
 namespace sw
 {
 	namespace
 	{
 		struct VulkanRHIDeviceInternal
 		{
+			static inline VkFormat toVulkanTextureFormat( RHIFormat format )
+			{
+				switch ( format )
+				{
+					case RHIFormat::R8G8B8A8_UNORM:
+						return VK_FORMAT_R8G8B8A8_UNORM;
+					case RHIFormat::B8G8R8A8_UNORM:
+						return VK_FORMAT_B8G8R8A8_UNORM;
+					case RHIFormat::R16G16B16A16_FLOAT:
+						return VK_FORMAT_R16G16B16A16_SFLOAT;
+					case RHIFormat::D24_UNORM_S8_UINT:
+						return VK_FORMAT_D24_UNORM_S8_UINT;
+					case RHIFormat::R32G32B32_FLOAT:
+						return VK_FORMAT_R32G32B32_SFLOAT;
+					case RHIFormat::R32G32_FLOAT:
+						return VK_FORMAT_R32G32_SFLOAT;
+					case RHIFormat::R32_FLOAT:
+						return VK_FORMAT_R32_SFLOAT;
+					default:
+						break;
+				}
+				return VK_FORMAT_UNDEFINED;
+			}
+
 			static bool hasExtensionVal( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
 			{
 				for ( const VkExtensionProperties& ext : listAvailableExt )
@@ -859,7 +856,10 @@ namespace sw
 			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
 						  availableExtCount );
 			for ( const VkExtensionProperties& ext : listAvailableExt )
+			{
+				(void)ext;
 				SW_LOG_TRACE( "  instance ext: %#", ext.extensionName );
+			}
 			SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
 			return false;
 		}
@@ -2032,7 +2032,7 @@ namespace sw
 			key._colorCount = kMaxColorAttachments;
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			VkFormat colorFmt = toVulkanTextureFormat( desc._arrRtvFormat[colorIndex] );
+			VkFormat colorFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._arrRtvFormat[colorIndex] );
 			if ( colorFmt == VK_FORMAT_UNDEFINED )
 				colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
 			key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );
@@ -2040,7 +2040,7 @@ namespace sw
 		if ( desc._bEnableDepthTest != 0 )
 		{
 			// FrameRenderer는 RHI D24를 요청하지만 GPU가 미지원일 수 있음 → 디바이스 선택 포맷 사용
-			VkFormat depthFmt = toVulkanTextureFormat( desc._depthStencilFormat );
+			VkFormat depthFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._depthStencilFormat );
 			if ( desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
 				 depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED )
 				depthFmt = static_cast<VkFormat>( _depthFormat );
