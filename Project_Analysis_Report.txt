@@ -1,0 +1,198 @@
+================================================================================
+           SW Engine - 프로젝트 잠재적 결함 및 병목 지점 종합 분석 보고서
+================================================================================
+
+작성일시: 2026-09-02
+분석 대상: Core, Engine, RuntimeAPI, App, Editor, GameFramework, RHI, Graphics,
+           Audio, Animation, Spatial, Serialization, Concurrency
+
+--------------------------------------------------------------------------------
+1. 동시성 및 멀티스레딩 잠재 결함 (Critical / Concurrency)
+--------------------------------------------------------------------------------
+
+1.1 TaskManager 큐 포화 시 무한 스핀/일드 데드락 (Thread Starvation & Deadlock)
+- 관련 파일: Source/Core/Task/TaskManager.cpp (L1251~L1278), Source/Core/Concurrency/WorkStealingDeque.h (L53~L58)
+- 문제점:
+  * scheduleReadyTask에서 메인 스레드 큐(_queueMainThread, 고정 크기 1024) 또는 워커 전용 큐(localQ._queue, 고정 크기 4096)에 작업을 인큐할 때 용량이 초과되면 while (enqueue/push == false) std::this_thread::yield(); 루프를 돕니다.
+  * 메인 스레드가 1024개를 초과하는 MainThread 친화도 태스크를 등록하는 경우, 메인 스레드 자신이 while 루프에서 스핀하게 되어 dispatchMainThreadTasks()를 영원히 호출하지 못하는 즉각적인 무한 데드락이 발생합니다.
+  * 워커 스레드 또한 자신의 큐가 가득 찼을 때 yield 루프에 갇혀 스스로 큐에서 작업을 꺼내지 못하고 다른 워커의 스틸링에만 의존하게 되어 스레드 기아 상태가 발생합니다.
+- 개선 권장안:
+  * 고정 용량 초과 시 무한 루프 대신 동적 오버플로우 큐(MPSC 연결 리스트 또는 확장 버퍼)로 폴백하거나, 메인 스레드 등록 중에는 즉시 실행/배치 인큐 방식을 지원해야 합니다.
+
+1.2 부모-자식 태스크 완료 통지 시 동기화 레이스 컨디션 (Dekker's Pattern Race)
+- 관련 파일: Source/Core/Task/TaskManager.cpp (L1290~L1308)
+- 문제점:
+  * onTaskFinished에서 부모 태스크 본문 종료와 자식 태스크 종료 시점 사이에 상태 체크(_activeChildren vs _state)가 원자적으로 묶여있지 않습니다.
+  * 부모 스레드가 _state.store(WaitingForChildren)를 수행하고 _activeChildren.load()를 확인하는 순간, 다른 코어의 자식 스레드가 _activeChildren.fetch_sub(1)을 수행하고 _state.load()를 확인하는 과정에서 Store-Load 재정렬(Store-Buffer Delay)로 인해 양쪽 모두 상대방이 완료 처리를 맡을 것으로 판단하고 조기 리턴할 수 있습니다.
+  * 결과적으로 부모 태스크가 WaitingForChildren 상태로 영구 정지되어 후속 태스크(Successors)가 트리거되지 않고 waitAll()이 멈춥니다.
+- 개선 권장안:
+  * 부모의 실행 완료 플래그와 자식 잔여 카운트를 단일 원자적 상태 변수(상위 비트 플래그 + 하위 카운터)로 병합하거나, seq_cst 펜스 또는 락 기반 완료 핸드셰이크를 적용해야 합니다.
+
+1.3 FrameDoubleBuffer와 RenderThread 간 프레임 리셋 레이스
+- 관련 파일: Source/Core/Memory/FrameArenaAllocator.h (L150~L188), Source/Engine/EngineLoop.cpp (L505~L507)
+- 문제점:
+  * EngineLoop::endFrame()에서 _frameDoubleBuffer->swapAndResetPrevious()를 무조건 호출합니다.
+  * 게임 스레드(GT)가 프레임 N을 마치고 버퍼를 스왑한 뒤 이전 버퍼(N-1)를 reset()할 때, 별도의 전용 렌더 스레드(RenderThread)가 아직 N-1 프레임 패킷을 렌더링 중이라면 RT가 읽고 있는 메모리가 GT에 의해 즉시 덮어씌워지는 데이터 오염(Data Corruption / UAF)이 발생합니다.
+- 개선 권장안:
+  * RenderThread의 Triple-Buffering 링 버퍼 완료 펜스 신호와 연동하여, RT가 해당 프레임 렌더링을 완전히 마쳤음이 보장된 슬롯만 reset()하도록 동기화 토큰을 도입해야 합니다.
+
+1.4 hashed_string 풀 셧다운 시 AB-BA 교착 상태 (Deadlock Hazard)
+- 관련 파일: Source/Core/String/hashed_string.h (L306~L312, L477~L485)
+- 문제점:
+  * hashed_string의 intern 풀(AllocationInfo)에서 문자열 등록과 전체 해제 시 뮤텍스 획득 순서가 반대로(Inverted) 되어 있습니다.
+    - helper_internal() (신규 문자열 생성 시): 1) shard._mutex (Unique Lock) -> 2) _globalAppendMutex 순서로 락 획득
+    - clear() (HashedStringPool::shutdown() 시): 1) _globalAppendMutex -> 2) shard._mutex 순서로 락 획득
+  * 엔진 종료(shutdown) 또는 모듈 언로드 시점에 워커 스레드가 새로운 hashed_string을 생성하고 있다면, 두 스레드가 서로의 락을 대기하며 영구적인 AB-BA 데드락에 빠집니다.
+- 개선 권장안:
+  * clear() 함수에서도 샤드 락들을 먼저 모두 획득한 후 _globalAppendMutex를 잠그거나, clear()가 모든 워커 스레드가 완전히 종료(Join/Drain)된 상태에서만 단일 스레드로 호출되도록 라이프사이클을 보장해야 합니다.
+
+1.5 MulticastDelegate 순회 중 구독 해제 시 Use-After-Free (UAF) 위험
+- 관련 파일: Source/Core/Delegate/Delegate.h (L399~L418)
+- 문제점:
+  * MulticastDelegate::broadcast()는 이벤트 발송 중 델리게이트가 삭제되는 것을 방지하기 위해 _broadcastDepth를 올리고, 삭제 요청을 _listPendingRemove에 지연(Defer)시킵니다.
+  * 그러나 루프 내부에서는 _listDelegate[entryIndex]._delegate를 매 반복마다 꺼내어 그대로 호출합니다.
+  * 만약 앞선 콜백(A)에서 후순위 콜백(B)의 대상 객체를 파괴하고 remove(handleB)를 호출한 경우, B의 핸들이 _listPendingRemove에 들어갔음에도 루프는 계속 돌아 이미 파괴된 인스턴스의 멤버 함수 델리게이트(B)를 호출하는 Use-After-Free(댕글링 포인터 참조) 크래시가 발생합니다.
+- 개선 권장안:
+  * _broadcastDepth > 0일 때 remove(handle)가 호출되면 해당 슬롯의 _delegate를 unbind()로 즉시 무효화하여 남은 순회에서 호출되지 않도록 방어해야 합니다.
+
+
+--------------------------------------------------------------------------------
+2. 성능 병목 지점 및 락 경합 (Performance Bottlenecks)
+--------------------------------------------------------------------------------
+
+2.1 컴포넌트 병렬 틱 시 std::shared_mutex 반복 락 경합
+- 관련 파일: Source/Engine/Object/GameObject/GameObjectManager.cpp (L201~L220, L426~L434)
+- 문제점:
+  * GameObjectManager::tickComponents가 DAG 웨이브 단위로 수십~수백 개의 컴포넌트를 TaskManager::emplaceParallel을 통해 워커 스레드들로 분산 실행합니다.
+  * 그러나 각 워커가 실행하는 resolveAndTickItem() 내부에서 매 인덱스마다 resolveComponent() -> findGameObjectById()를 호출하고, 이는 내부적으로 std::shared_lock<std::shared_mutex> lock{ _mutex }를 매번 획득합니다.
+  * 코어 수가 많을수록 공유 뮤텍스의 원자적 참조 카운트 수정으로 인한 CPU 캐시 라인 바운싱(Cacheline Bouncing)과 락 경합이 발생하여 병렬화 이점이 크게 상쇄됩니다.
+- 개선 권장안:
+  * TickExecutionItem 생성 시점에 유효한 컴포넌트 원시 포인터와 오브젝트 활성 상태를 확정해 두고, 병렬 실행 중에는 ID 재검색 및 락 획득 없이 직접 호출하거나 스레드별 읽기 전용 스냅샷 테이블을 사용해야 합니다.
+
+2.2 UI 스레드와 렌더 스레드 간 직렬화 파이프라인 버블 (Frame Stalling)
+- 관련 파일: Source/Editor/ImGuiEditor.cpp (L280, L511~L515)
+- 문제점:
+  * ImGuiEditor::updateUI() 시작 시 waitForDrawSnapshotIdle()을 호출하여 _inFlightDrawSlot이 해제될 때까지 스핀(yield())합니다.
+  * _inFlightDrawSlot은 RenderThread가 프레임 렌더링 및 postPresent를 끝마쳐야 비워집니다.
+  * 이로 인해 메인/UI 스레드가 렌더 스레드와 동시에 병렬로 다음 프레임 UI를 빌드하지 못하고, 매 프레임 GPU Present 완료 시점까지 블로킹 대기하는 직렬화 버블이 발생합니다.
+- 개선 권장안:
+  * EditorDrawDataSnapshot 링 버퍼 슬롯 수를 3개(Triple-Buffered Snapshot)로 늘려, 직전 프레임이 렌더링 중이어도 UI 스레드가 다음 슬롯에 독립적으로 UI 커맨드를 기록할 수 있도록 디커플링해야 합니다.
+
+2.3 뷰포트/패널 리사이즈 시 GPU 임시 자원 전면 재생성 (Resource Thrashing)
+- 관련 파일: Source/Engine/Graphics/RenderPass/FrameRendererResources.cpp (L180~L223)
+- 문제점:
+  * FrameRenderer::ensureTransientResources()는 에디터 뷰포트나 도킹 창 크기가 1픽셀이라도 달라지면 releaseTransientResources()를 호출하여 모든 Render Target, Depth Buffer, G-Buffer, Bloom 텍스처 및 Bindless SRV를 완전히 파괴하고 새로 생성합니다.
+  * 마우스로 에디터 창을 드래그하여 크기를 조절하는 동안 매 프레임 수십 개의 GPU 텍스처와 디스크립터가 파괴/생성되면서 심각한 프레임 드랍(Stuttering)과 GPU 힙 단편화가 발생합니다.
+- 개선 권장안:
+  * 실제 렌더 타깃 해상도를 256/512 단위로 상향 패딩(Power-of-Two 또는 Block Allotment)하여 할당하고, 뷰포트 영역만 동적으로 잘라 쓰는 동적 뷰포트 스케일링(Dynamic Viewport Allocation) 구조를 도입해야 합니다.
+
+2.4 물리 쿼리 및 스윕 테스트 시 매 프레임 힙 동적 할당 (std::vector + std::sort)
+- 관련 파일: Source/Engine/Physics/PhysicsWorld.cpp (L249~L268)
+- 문제점:
+  * PhysicsWorld::queryAabb 및 sweepTest 호출 시마다 로컬 vector<BodyHandle> listCandidateHandle이 힙에서 동적 할당되며, 중복 셀에 등록된 핸들을 제거하기 위해 std::sort와 std::unique를 매번 수행합니다.
+  * 레이캐스트, 탄환 충돌, AI 시야 체크 등 프레임당 수백 번 호출되는 핫 패스에서 과도한 힙 할당기 부하 및 메모리 대역폭 낭비가 발생합니다.
+- 개선 권장안:
+  * 스택 기반 Small-Vector(InlineVector<BodyHandle, 64>) 또는 프레임 선형 할당기(LinearAllocator)를 사용하고, 비트셋(DynamicBitset)을 통한 방문 체크로 O(N log N) 정렬 없이 O(N)으로 중복을 걸러내야 합니다.
+
+2.5 BVHTree3D 동적 오브젝트 이동 시 매 프레임 트리 전면 재구축 (Dynamic Tree Rebuild)
+- 관련 파일: Source/Engine/Spatial/BVHTree3D.cpp (L68~L79, L82~L85)
+- 문제점:
+  * BVHTree3D::update(handle, bounds)가 호출될 때마다 내부적으로 remove(handle) 후 insert(handle, bounds)를 수행합니다.
+  * insert는 최적의 노드 삽입을 위해 루트부터 SAH(Surface Area Heuristic) 비용을 계산하며 내려가고, remove는 상위 부모 노드들을 재조정합니다.
+  * 매 프레임 조금이라도 움직이는 동적 엔티티가 수백 개 이상일 경우, 매 틱마다 O(N log N)의 무거운 트리 분해/재조정 및 노드 힙 할당이 발생하여 심각한 CPU 병목을 초래합니다.
+- 개선 권장안:
+  * Box2D/PhysX 스타일의 확장 바운딩 박스(Fat AABB with Margin/Velocity)를 도입하여, 객체가 이전 Fat AABB 영역을 벗어났을 때만 트리를 갱신하고 작은 이동은 비용 0으로 스킵하도록 최적화해야 합니다.
+
+2.6 BinarySerializer 역직렬화 시 O(N) 선형 탐색 및 힙 할당 병목
+- 관련 파일: Source/Engine/Serialization/Format/BinarySerializer.cpp (L49~L76)
+- 문제점:
+  * 바이너리 스트림에서 프로퍼티를 읽을 때마다 등록된 전체 프로퍼티 목록(listProp)을 처음부터 끝까지 순회하는 O(N) 선형 탐색을 수행합니다.
+  * 또한 프로퍼티 개수가 64개를 초과하는 복합 객체의 경우 매 역직렬화 호출마다 unordered_set<uint32>을 힙에 새로 할당합니다.
+  * 대용량 세이브 파일이나 씬 로드 시 수만 개의 객체 역직렬화가 O(M x N)으로 지연되며 메모리 할당기 부하를 유발합니다.
+- 개선 권장안:
+  * TypeInfo 내부에 해시 기반 인덱스 룩업 테이블(또는 정렬된 해시 배열의 바이너리 서치)을 구축하여 O(1) 또는 O(log N)으로 프로퍼티를 찾도록 최적화해야 합니다.
+
+
+--------------------------------------------------------------------------------
+3. 메모리 관리 및 서브시스템 잠재 결함 (Memory & Subsystems)
+--------------------------------------------------------------------------------
+
+3.1 XAudio2System 유휴 보이스 풀(Idle Voice Pool)의 오디오 샘플 무기한 잔류 (Memory Leak)
+- 관련 파일: Source/Engine/Audio/XAudio2System.cpp (L468~L481, L666~L680)
+- 문제점:
+  * 원샷 효과음 재생이 끝나면 _listActiveVoice에서 _listIdleVoice로 VoiceBuffer를 이동시켜 최대 32개의 보이스를 재사용합니다.
+  * 하지만 이동된 VoiceBuffer 내부의 shared_ptr<PcmClip> _pClip(수십 MB의 디코딩된 PCM 오디오 원본 데이터)을 초기화(reset())하지 않고 보관합니다.
+  * 결과적으로 재생이 끝난 무거운 사운드 클립들이 동일한 오디오 포맷의 새 사운드가 재생되어 덮어써지기 전까지 유휴 보이스 풀에 영구히 묶여 수십~수백 MB의 오디오 메모리가 누수(Phantom Memory Retain)됩니다.
+- 개선 권장안:
+  * update()에서 보이스를 _listIdleVoice로 이동할 때 v._pClip.reset()으로 사운드 클립 참조를 즉시 해제하고, WAVEFORMATEX 정보만 남겨 재사용 시 새 클립을 바인딩하도록 수정해야 합니다.
+
+3.2 D3D11 / D3D12 그래픽스 PSO의 하드코딩된 정점 입력 레이아웃 (Layout Restriction)
+- 관련 파일: Source/Engine/Graphics/RHI/DX12/D3D12RHIResource.cpp (L71~L77), Source/Engine/Graphics/RHI/DX11/D3D11RHIResource.cpp (L92~L96)
+- 문제점:
+  * Direct3D 11 및 12 백엔드의 createPipelineState 함수에서 Input Layout이 POSITION(float3)과 COLOR(float4) 단 2개 속성으로 고정(Hardcoded)되어 있습니다.
+  * 텍스처 좌표(TEXCOORD), 법선 벡터(NORMAL), 탄젠트(TANGENT), 스켈레탈 가중치(BLENDWEIGHT/BLENDINDICES) 등 표준 3D 메시 속성을 요구하는 셰이더는 Input Assembler를 통해 정점 데이터를 공급받지 못하여 렌더링이 불가능하거나 깨지는 구조적 제약이 존재합니다.
+- 개선 권장안:
+  * RHIPipelineStateDesc에 동적 VertexLayoutDesc를 전달받아 동적으로 D3D12_INPUT_ELEMENT_DESC 배열을 구성하거나, Bindless ByteAddressBuffer를 통한 프로그래머블 버텍스 풀링(Vertex Pulling) 방식으로 파이프라인을 전환해야 합니다.
+
+3.3 AnimPlayer 크로스페이드 시 4x4 행렬 선형 보간으로 인한 외형 붕괴 (Matrix Lerp Distortion)
+- 관련 파일: Source/Engine/Animation/AnimPlayer.cpp (L83)
+- 문제점:
+  * 애니메이션 클립 간 크로스페이드(블렌딩) 시 트랜스폼을 float4x4::lerp(result._transform, b._transform, alpha)로 성분별 단순 선형 보간합니다.
+  * 3x3 회전 행렬을 선형 보간하면 직교성(Orthogonality)이 상실되어 스케일 왜곡, 뼈대 찌그러짐, 볼륨 붕괴(Skin Collapsing / Candy-Wrapper Artifact) 현상이 발생합니다.
+- 개선 권장안:
+  * DualQuaternion::dlb()를 사용하거나, TRS 분해(Translation Lerp + Quaternion Slerp + Scale Lerp)를 적용하여 보간해야 합니다.
+
+3.4 AssetStreamingQueue의 비동기 백그라운드 로딩 미수행
+- 관련 파일: Source/Engine/Resource/AssetStreamingQueue.cpp (L158~L163)
+- 문제점:
+  * 비동기 스트리밍 워커 태스크인 processAssetTask()가 실제 디스크 읽기, 압축 해제, 역직렬화를 수행하지 않고 단순히 ResourceUtil::hasResource(pathStr)(파일 존재 여부 확인)만 수행한 뒤 메인 스레드로 완료를 넘깁니다.
+  * 결과적으로 메인 스레드의 완료 콜백에서 무거운 에셋 파싱과 I/O가 동기적으로 실행되어 프레임 히치(Hitch)를 방지하려는 스트리밍 큐의 본래 목적을 달성하지 못합니다.
+- 개선 권장안:
+  * 워커 태스크 내부에서 원시 파일 바이트 로드 및 에셋 역직렬화(CPU 파싱)를 직접 수행하고, 메인 스레드에는 GPU 리소스 등록 및 씬 바인딩만 위임하도록 파이프라인을 개선해야 합니다.
+
+3.5 SpatialTree (QuadTree / Octree) 월드 경계 밖 객체 유실
+- 관련 파일: Source/Engine/Spatial/SpatialTree.h (L284~L298, L393~L397)
+- 문제점:
+  * SpatialTree::insert()는 대상 객체의 바운딩 박스가 루트 노드의 _worldBounds와 교차하지 않으면 false를 반환하고 등록을 거부합니다.
+  * 게임 플레이 도중 맵 바깥으로 이동하거나 넓은 범위로 스폰된 엔티티는 공간 인덱스에서 완전히 누락되어 시야 컬링(Frustum Culling), 범위 검색, 충돌 검출에서 감지되지 않는 런타임 버그가 발생할 수 있습니다.
+- 개선 권장안:
+  * 월드 경계 밖 객체를 보관하는 전역 오버플로우 목록(Loose Global Bucket)을 두거나, 루트 바운드를 2배씩 동적으로 확장(Dynamic Loose Tree Re-rooting)하는 메커니즘을 추가해야 합니다.
+
+3.6 SceneComponent::detachFromComponent 시 자식 순서 비결정론적 변경
+- 관련 파일: Source/Engine/Object/Component/SceneComponent.cpp (L459~L468)
+- 문제점:
+  * 부모 컴포넌트에서 자식을 제거할 때 listSibling[childIndex] = listSibling.back(); listSibling.pop_back(); (Swap & Pop) 방식을 사용합니다.
+  * 컴포넌트 부착/해제가 반복될 때마다 _listChild의 순서가 무작위로 뒤바뀌어, 계층 순회 순서나 렌더링 우선순위에 영향을 주는 경우 비결정론적인 버그(Non-deterministic behavior)를 유발할 수 있습니다.
+- 개선 권장안:
+  * 순서 유지가 중요한 경우 std::erase를 통한 순서 보존 삭제를 적용하거나, 자식 인덱스를 명시적으로 관리하는 슬롯 방식을 고려해야 합니다.
+
+3.7 PoolAllocator::free 이중 해제(Double Free) 검증 부재
+- 관련 파일: Source/Core/Memory/PoolAllocator.cpp (L79~L93)
+- 문제점:
+  * PoolAllocator::free(pBlock) 호출 시 해당 포인터가 이미 프리리스트에 존재하는지 검증하지 않고 pNode->_pNext = _pFreeList; _pFreeList = pNode;로 즉시 연결합니다.
+  * 실수로 동일 포인터를 두 번 반납할 경우 프리리스트 내부에 영구 순환 루프(Cycle)가 생성되어 이후 allocate() 호출 시 동일 메모리가 다중 발급되거나 무한 루프에 빠집니다.
+- 개선 권장안:
+  * SW_DEBUG 빌드에서 블록 헤더에 매직 넘버/할당 플래그를 두어 중복 해제를 사전에 감지하고 assert를 발생시키도록 안전장치를 추가해야 합니다.
+
+
+--------------------------------------------------------------------------------
+4. 요약 및 종합 권장 조치 로드맵
+--------------------------------------------------------------------------------
+
+[P0] Concurrency - TaskManager 큐 포화 시 무한 스핀 데드락 위험 -> 시스템 멈춤 (Hang)
+[P0] Concurrency - TaskManager 부모-자식 태스크 완료 시 Store-Load 레이스 -> 태스크 누락 및 영구 대기
+[P0] Concurrency - hashed_string 풀 clear()와 등록 간 락 역전(AB-BA) -> 셧다운 시 데드락
+[P0] Concurrency - MulticastDelegate 브로드캐스트 도중 제거된 객체 호출 -> Use-After-Free 크래시
+[P1] Memory      - FrameDoubleBuffer GT/RT 간 리셋 동기화 부재 -> 렌더링 데이터 오염 / UAF
+[P1] Memory      - XAudio2System 유휴 보이스 풀에서 이전 사운드 버퍼 미해제 -> 오디오 메모리 누수
+[P1] Performance - GameObjectManager 병렬 틱 시 _mutex 반복 경합 -> 멀티코어 확장성 저하
+[P1] Performance - ImGuiEditor 매 프레임 postPresent 동기 대기 -> GT/RT 파이프라이닝 차단
+[P1] Graphics    - D3D11/D3D12 정점 입력 레이아웃 하드코딩 -> UV/Normal 등 정점 속성 미지원
+[P2] Animation   - AnimPlayer 4x4 행렬 단순 Lerp -> 크로스페이드 시 외형/볼륨 붕괴
+[P2] Spatial     - BVHTree3D Fat AABB 부재 -> 동적 객체 이동 시 매 틱 트리 전면 재구축
+[P2] Serialization - BinarySerializer 역직렬화 시 O(N) 선형 탐색 및 힙 할당 -> 로드 지연
+[P2] Graphics    - 뷰포트 리사이즈 시 임시 텍스처/SRV 전면 파괴/재생성 -> 창 조절 시 프레임 드랍
+[P2] Physics     - PhysicsWorld 쿼리마다 힙 벡터 할당 및 정렬 -> CPU 메모리 대역폭 낭비
+[P2] Streaming   - AssetStreamingQueue 백그라운드 파싱 누락 -> 메인 스레드 I/O 히치
+
+================================================================================

@@ -18,25 +18,25 @@
 
 namespace sw
 {
-	void FrameRenderer::drawSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+	void FrameRenderer::drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
 	{
-		if ( _pDevice == nullptr || _pCmd == nullptr )
+		if ( _pDevice == nullptr || ctx._pCmd == nullptr )
 			return;
 
 		if ( _bUseGpuDriven != 0 && _gpuScene.isUploaded() )
 		{
-			drawGpuBatches( pso, cbIndex, bTransparentPass );
+			drawGpuBatches( ctx, pso, cbIndex, bTransparentPass );
 			return;
 		}
 
 		if ( _gpuScene.getInstances().empty() == false )
 		{
-			drawGpuSceneMeshes( pso, cbIndex, bTransparentPass );
+			drawGpuSceneMeshes( ctx, pso, cbIndex, bTransparentPass );
 			return;
 		}
 
 		if ( pso != 0 )
-			_pCmd->setPipelineState( pso );
+			ctx._pCmd->setPipelineState( pso );
 
 		GameObjectManager* pObjects = ( _pScene != nullptr ) ? _pScene->getObjectManager() : nullptr;
 		if ( pObjects == nullptr )
@@ -135,14 +135,14 @@ namespace sw
 					if ( item._pso != lastPso )
 					{
 						if ( item._pso != 0 )
-							_pCmd->setPipelineState( item._pso );
+							ctx._pCmd->setPipelineState( item._pso );
 						lastPso = item._pso;
 					}
 
-					if ( bFirstItem || _passConstants._world != item._world )
+					if ( bFirstItem || ctx._passConstants._world != item._world )
 					{
-						_passConstants._world = item._world;
-						commitBindlessTextureBindings();
+						ctx._passConstants._world = item._world;
+						commitBindlessTextureBindings( ctx );
 						bFirstItem = false;
 					}
 
@@ -152,11 +152,11 @@ namespace sw
 					const RHIBufferHandle vb = item._mesh->getVertexBuffer();
 					if ( vb != lastVb )
 					{
-						_pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
+						ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 						lastVb = vb;
 					}
 
-					_pCmd->draw( item._mesh->getVertexCount(), 0, item._cbIndex );
+					ctx._pCmd->draw( item._mesh->getVertexCount(), 0, item._cbIndex );
 					++drawn;
 				}
 			}
@@ -164,14 +164,14 @@ namespace sw
 
 		if ( drawn == 0 )
 		{
-			setIdentityWorld();
-			commitBindlessTextureBindings();
+			setIdentityWorld( ctx );
+			commitBindlessTextureBindings( ctx );
 		}
 	}
 
-	void FrameRenderer::drawGpuSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+	void FrameRenderer::drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
 	{
-		if ( _pDevice == nullptr || _pCmd == nullptr )
+		if ( _pDevice == nullptr || ctx._pCmd == nullptr )
 			return;
 		if ( _gpuScene.getInstances().empty() )
 			return;
@@ -181,7 +181,7 @@ namespace sw
 		const vector<GpuInstance>& listInstances = _gpuScene.getInstances();
 
 		if ( pso != 0 )
-			_pCmd->setPipelineState( pso );
+			ctx._pCmd->setPipelineState( pso );
 
 		uint32 drawn{ 0 };
 		bool   bFirstItem = true;
@@ -196,7 +196,7 @@ namespace sw
 			const RHIBufferHandle vb = pMesh->getVertexBuffer();
 			if ( vb == 0 )
 				continue;
-			_pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
+			ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 
 			const RHIDescriptorIndex drawCb =
 				batch._materialCb != kInvalidDescriptorIndex ? batch._materialCb : cbIndex;
@@ -209,34 +209,34 @@ namespace sw
 				if ( globalIndex >= listInstances.size() )
 					break;
 				const GpuInstance& inst = listInstances[globalIndex];
-				if ( bFirstItem || _passConstants._world != inst._world )
+				if ( bFirstItem || ctx._passConstants._world != inst._world )
 				{
-					_passConstants._world = inst._world;
-					commitBindlessTextureBindings();
+					ctx._passConstants._world = inst._world;
+					commitBindlessTextureBindings( ctx );
 					bFirstItem = false;
 				}
-				_pCmd->draw( pMesh->getVertexCount(), 0, drawCb );
+				ctx._pCmd->draw( pMesh->getVertexCount(), 0, drawCb );
 				++drawn;
 			}
 		}
 
 		if ( drawn == 0 )
 		{
-			setIdentityWorld();
-			commitBindlessTextureBindings();
+			setIdentityWorld( ctx );
+			commitBindlessTextureBindings( ctx );
 		}
 	}
 
-	void FrameRenderer::drawGpuBatches( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+	void FrameRenderer::drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
 	{
-		if ( _pDevice == nullptr || _pCmd == nullptr || _gpuScene.isUploaded() == false )
+		if ( _pDevice == nullptr || ctx._pCmd == nullptr || _gpuScene.isUploaded() == false )
 			return;
 
 		if ( pso != 0 )
-			_pCmd->setPipelineState( pso );
+			ctx._pCmd->setPipelineState( pso );
 
-		setIdentityWorld();
-		commitBindlessTextureBindings();
+		setIdentityWorld( ctx );
+		commitBindlessTextureBindings( ctx );
 
 		const vector<GpuMeshBatch>& batches =
 			bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
@@ -251,23 +251,23 @@ namespace sw
 			const GpuMeshBatch& batch = batches[batchIndex];
 			if ( batch._vertexBuffer == 0 || batch._instanceCount == 0 )
 				continue;
-			_pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
+			ctx._pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
 			const RHIDescriptorIndex drawCb =
 				batch._materialCb != kInvalidDescriptorIndex ? batch._materialCb : cbIndex;
-			_pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
-								 ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), drawCb );
+			ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
+									 ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), drawCb );
 		}
 	}
 
-	void FrameRenderer::drawFullscreen( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
+	void FrameRenderer::drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
 	{
-		if ( _pCmd == nullptr )
+		if ( ctx._pCmd == nullptr )
 			return;
-		setIdentityWorld();
-		commitBindlessTextureBindings();
-		_pCmd->setVertexBuffer( 0, 0, 0, 0 );
+		setIdentityWorld( ctx );
+		commitBindlessTextureBindings( ctx );
+		ctx._pCmd->setVertexBuffer( 0, 0, 0, 0 );
 		if ( pso != 0 )
-			_pCmd->setPipelineState( pso );
-		_pCmd->draw( 3, 0, cbIndex != kInvalidDescriptorIndex ? cbIndex : 0 );
+			ctx._pCmd->setPipelineState( pso );
+		ctx._pCmd->draw( 3, 0, cbIndex != kInvalidDescriptorIndex ? cbIndex : 0 );
 	}
 } // namespace sw

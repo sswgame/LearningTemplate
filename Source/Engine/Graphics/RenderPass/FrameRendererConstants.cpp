@@ -9,38 +9,38 @@
 
 namespace sw
 {
-	void FrameRenderer::updatePassConstants()
+	void FrameRenderer::updatePassConstants( FramePassContext& ctx )
 	{
-		buildLightViewProj( _passConstants._lightViewProj );
-		buildCascadeShadowMatrices( _passConstants._arrCascadeViewProj, _passConstants._cascadeSplits );
+		buildLightViewProj( ctx, ctx._passConstants._lightViewProj );
+		buildCascadeShadowMatrices( ctx, ctx._passConstants._arrCascadeViewProj, ctx._passConstants._cascadeSplits );
 
 		if ( _pScene != nullptr )
 		{
 			CameraComponent* pCam = _pScene->getActiveGameCamera();
 			if ( pCam != nullptr )
-				applyViewFromCamera( pCam );
+				applyViewFromCamera( ctx, pCam );
 			else
-				buildViewProj( _passConstants._viewProj );
+				buildViewProj( ctx._passConstants._viewProj );
 		}
 
-		_passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-		_passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
-		_passConstants._flags			 = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
-		if ( _pDevice != nullptr && _passCb != 0 )
-			_pDevice->getResource()->updateConstantBuffer( _passCb, &_passConstants, sizeof( PassConstants ) );
+		ctx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+		ctx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+		ctx._passConstants._flags			 = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
+		if ( _pDevice != nullptr && ctx._passCb != 0 )
+			_pDevice->getResource()->updateConstantBuffer( ctx._passCb, &ctx._passConstants, sizeof( PassConstants ) );
 	}
 
-	void FrameRenderer::applyViewFromCamera( CameraComponent* pCamera )
+	void FrameRenderer::applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera )
 	{
 		if ( pCamera == nullptr )
 			return;
-		const float32 aspect	 = ( _transientHeight > 0 )
-									 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
-									 : ( 16.0f / 9.0f );
-		_passConstants._viewProj = pCamera->getViewProjectionMatrix( aspect );
+		const float32 aspect		 = ( _transientHeight > 0 )
+										 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+										 : ( 16.0f / 9.0f );
+		ctx._passConstants._viewProj = pCamera->getViewProjectionMatrix( aspect );
 	}
 
-	void FrameRenderer::buildCascadeShadowMatrices( float4x4 outArrCascadeMat[4], float4& outSplit ) const
+	void FrameRenderer::buildCascadeShadowMatrices( const FramePassContext& ctx, float4x4 outArrCascadeMat[4], float4& outSplit ) const
 	{
 		constexpr float32 kLambda	= 0.75f;
 		constexpr float32 kNear		= 0.1f;
@@ -58,7 +58,7 @@ namespace sw
 		}
 		outSplit = float4{ arrSplit[0], arrSplit[1], arrSplit[2], arrSplit[3] };
 
-		float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		float3 lightDir = float3{ ctx._passConstants._keyLightDirIntensity._x, ctx._passConstants._keyLightDirIntensity._y, ctx._passConstants._keyLightDirIntensity._z }.normalize();
 		if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
 			lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
@@ -87,7 +87,7 @@ namespace sw
 		}
 	}
 
-	void FrameRenderer::buildLightViewProj( float4x4& outMat ) const
+	void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
 	{
 		// Orthographic projection looking along key light (column-major).
 		constexpr float4x4 ortho{
@@ -96,7 +96,7 @@ namespace sw
 			0.0f, 0.0f, 0.25f, 0.0f,
 			0.0f, 0.0f, 0.5f, 1.0f };
 
-		float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
+		float3 lightDir = float3{ ctx._passConstants._keyLightDirIntensity._x, ctx._passConstants._keyLightDirIntensity._y, ctx._passConstants._keyLightDirIntensity._z }.normalize();
 		if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
 			lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
@@ -144,8 +144,8 @@ namespace sw
 		outMat = view * proj;
 	}
 
-	void FrameRenderer::setIdentityWorld()
+	void FrameRenderer::setIdentityWorld( FramePassContext& ctx )
 	{
-		_passConstants._world = float4x4::Identity;
+		ctx._passConstants._world = float4x4::Identity;
 	}
 } // namespace sw

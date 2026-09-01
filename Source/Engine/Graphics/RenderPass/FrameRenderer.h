@@ -115,6 +115,23 @@ namespace sw
 			uint32	 _flags{ 0 };
 		};
 
+		/**
+		 * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
+		 * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 예전에는 이 값들이 전부
+		 *          FrameRenderer 멤버였고 onGraphPassExecute 가 _pCmd 를 저장/복원했는데,
+		 *          그건 "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어썼습니다.
+		 *          상수 버퍼도 패스마다 따로 있어야 합니다. 하나를 공유하면 기록은 지연이고
+		 *          버퍼 쓰기는 즉시라, replay 시점엔 마지막 writer 의 값만 남습니다.
+		 */
+		struct FramePassContext
+		{
+			IRHICommandList*   _pCmd{ nullptr };
+			PassConstants	   _passConstants{};
+			RHIBufferHandle	   _passCb{ 0 };
+			RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
+			Material*		   _pBoundMaterial{ nullptr };
+		};
+
 		// ------------------------------------------------------------------------------
 		// 4) 패스 자원 · 콜백 · 드로우
 		// ------------------------------------------------------------------------------
@@ -131,44 +148,44 @@ namespace sw
 		/** @brief RenderGraph 패스 실행 콜백. */
 		void onGraphPassExecute( const RenderGraphPassContext& ctx );
 		/** @brief 패스 타입에 맞는 실행을 수행합니다. */
-		void executePass( string_view passType, string_view passName, Material* pMaterial );
+		void executePass( FramePassContext& ctx, string_view passType, string_view passName, Material* pMaterial );
 		/** @brief 패스 상수 버퍼를 갱신합니다. */
-		void updatePassConstants();
+		void updatePassConstants( FramePassContext& ctx );
 		/** @brief 카메라에서 뷰/투영을 적용합니다. */
-		void applyViewFromCamera( CameraComponent* pCamera );
+		void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
 		/** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
-		void buildLightViewProj( float4x4& outMat ) const;
+		void buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const;
 		/** @brief 캐스케이드 섀도우 맵 뷰-투영 행렬 및 분할 거리를 계산합니다. */
-		void buildCascadeShadowMatrices( float4x4 outArrCascadeMat[4], float4& outSplit ) const;
+		void buildCascadeShadowMatrices( const FramePassContext& ctx, float4x4 outArrCascadeMat[4], float4& outSplit ) const;
 		/** @brief 카메라 뷰-투영 행렬을 만듭니다. */
 		void buildViewProj( float4x4& outMat ) const;
 		/** @brief 월드 행렬을 항등으로 둡니다. */
-		void setIdentityWorld();
+		void setIdentityWorld( FramePassContext& ctx );
 		/** @brief 씬 메시를 직접 그립니다. */
-		void drawSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+		void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
 		/** @brief GpuScene CPU 스냅샷을 월드 행렬 + draw()로 그립니다 (GPU-driven 꺼짐). */
-		void drawGpuSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+		void drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
 		/** @brief GpuScene 배치를 간접 드로우로 그립니다. */
-		void drawGpuBatches( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+		void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
 		/** @brief 풀스크린 삼각형을 그립니다. */
-		void drawFullscreen( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+		void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
 		/** @brief 일시 텍스처를 할당합니다. */
 		void allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
 		/** @brief 컬러(+깊이) 패스를 시작합니다. */
-		void beginColorPass( string_view colorName, string_view depthName, const float4& clearColor,
+		void beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
 							 RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
 		/** @brief MRT 컬러 패스를 시작합니다. */
-		void beginColorPassMRT( const string_view* pColorNames, const float4* pTargetClearColor,
+		void beginColorPassMRT( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
 								const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
 								RHIRenderPassLoadOp depthLoad );
 		/** @brief 깊이 전용 패스를 시작합니다. */
-		void beginDepthOnlyPass( string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
+		void beginDepthOnlyPass( FramePassContext& ctx, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
 		/** @brief 패스 텍스처 인덱스를 설정합니다. */
-		void setPassTexture( uint32& outIndex, string_view name );
+		void setPassTexture( FramePassContext& ctx, uint32& outIndex, string_view name );
 		/** @brief 바인들리스 텍스처 바인딩을 커밋합니다. */
-		void commitBindlessTextureBindings();
+		void commitBindlessTextureBindings( FramePassContext& ctx );
 		/** @brief 패스 텍스처 인덱스를 지웁니다. */
-		void clearPassTextureIndices();
+		void clearPassTextureIndices( FramePassContext& ctx );
 
 		// ------------------------------------------------------------------------------
 		// 5) 커맨드 리스트 · 그래프 제출
@@ -230,22 +247,25 @@ namespace sw
 		void compileMaterialPsoTask( const TaskArgs& args );
 
 	private:
-		IRHIDevice*									  _pDevice;
-		IRHIDevice*									  _pCmdOwnerDevice;
-		unique_ptr<IRHICommandList>					  _frameCmd;
-		IRHICommandList*							  _pCmd;
-		Scene*										  _pScene;
-		TaskManager*								  _pTaskManager;
-		GpuScene									  _gpuScene;
-		RenderPipelineResource						  _pipelineResource;
-		RenderGraph									  _graph;
-		string										  _pipelinePath;
-		float4										  _clearColor;
-		unordered_map<string, RHITextureHandle>		  _mapTransient;
-		unordered_map<string, RHIDescriptorIndex>	  _mapTransientSrv;
-		vector<hashed_string>						  _listClearedThisFrame;
-		Material*									  _pBoundMaterial;
-		PassConstants								  _passConstants;
+		IRHIDevice*								  _pDevice;
+		IRHIDevice*								  _pCmdOwnerDevice;
+		unique_ptr<IRHICommandList>				  _frameCmd;
+		IRHICommandList*						  _pCmd;
+		Scene*									  _pScene;
+		TaskManager*							  _pTaskManager;
+		GpuScene								  _gpuScene;
+		RenderPipelineResource					  _pipelineResource;
+		RenderGraph								  _graph;
+		string									  _pipelinePath;
+		float4									  _clearColor;
+		unordered_map<string, RHITextureHandle>	  _mapTransient;
+		unordered_map<string, RHIDescriptorIndex> _mapTransientSrv;
+		vector<hashed_string>					  _listClearedThisFrame;
+		/**
+		 * @brief 프레임 단위 패스 상태(직렬 경로에서 사용 + 병렬 패스의 시드).
+		 * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
+		 */
+		FramePassContext							  _frameCtx;
 		RHIBufferHandle								  _passCb;
 		RHIDescriptorIndex							  _passCbIndex;
 		RHIBufferHandle								  _gpuCullCb;

@@ -20,6 +20,9 @@ namespace sw
 		_passCb = _pDevice->getResource()->createConstantBuffer( sizeof( PassConstants ) );
 		if ( _passCb != 0 )
 			_passCbIndex = _pDevice->getResource()->registerBindlessResource( _passCb );
+		// 직렬 경로 시드가 이 버퍼를 쓰게 한다. (병렬 경로는 패스별 버퍼로 덮어쓴다)
+		_frameCtx._passCb	   = _passCb;
+		_frameCtx._passCbIndex = _passCbIndex;
 
 		struct GpuCullParams
 		{
@@ -97,12 +100,14 @@ namespace sw
 	{
 		if ( _pDevice == nullptr )
 		{
-			_passCb			= 0;
-			_passCbIndex	= kInvalidDescriptorIndex;
-			_gpuCullCb		= 0;
-			_gpuCullCbIndex = kInvalidDescriptorIndex;
-			_taaHistory		= 0;
-			_taaHistorySrv	= kInvalidDescriptorIndex;
+			_passCb				   = 0;
+			_passCbIndex		   = kInvalidDescriptorIndex;
+			_frameCtx._passCb	   = 0;
+			_frameCtx._passCbIndex = kInvalidDescriptorIndex;
+			_gpuCullCb			   = 0;
+			_gpuCullCbIndex		   = kInvalidDescriptorIndex;
+			_taaHistory			   = 0;
+			_taaHistorySrv		   = kInvalidDescriptorIndex;
 			_mapEnginePso.clear();
 			_mapMaterialPassPso.clear();
 			_bPassResourcesReady = 0;

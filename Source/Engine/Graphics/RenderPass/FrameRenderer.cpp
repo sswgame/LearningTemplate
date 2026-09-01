@@ -32,8 +32,7 @@ namespace sw
 		, _mapTransient{}
 		, _mapTransientSrv{}
 		, _listClearedThisFrame{}
-		, _pBoundMaterial{ nullptr }
-		, _passConstants{}
+		, _frameCtx{}
 		, _passCb{ 0 }
 		, _passCbIndex{ kInvalidDescriptorIndex }
 		, _gpuCullCb{ 0 }
@@ -121,12 +120,13 @@ namespace sw
 		releasePassResources();
 		_graph.clear();
 		_frameCmd.reset();
-		_pCmdOwnerDevice = nullptr;
-		_pCmd			 = nullptr;
-		_pDevice		 = nullptr;
-		_pBoundMaterial	 = nullptr;
-		_pTaskManager	 = nullptr;
-		_status			 = FrameRendererStatus::Uninitialized;
+		_pCmdOwnerDevice		  = nullptr;
+		_pCmd					  = nullptr;
+		_frameCtx._pCmd			  = nullptr;
+		_pDevice				  = nullptr;
+		_frameCtx._pBoundMaterial = nullptr;
+		_pTaskManager			  = nullptr;
+		_status					  = FrameRendererStatus::Uninitialized;
 		_statusMessage.clear();
 		_bCallbacksBound = 0;
 		_pipelinePath.clear();
@@ -197,6 +197,8 @@ namespace sw
 
 		_pCmdOwnerDevice = pDevice;
 		_pCmd			 = _frameCmd.get();
+		// 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이걸 쓴다).
+		_frameCtx._pCmd = _pCmd;
 
 		if ( _pCmd == nullptr )
 		{
@@ -263,14 +265,14 @@ namespace sw
 		if ( isReady() == false || pDevice == nullptr )
 			return false;
 
-		_pDevice			= pDevice;
-		_pScene				= pScene;
-		_pBoundMaterial		= pMaterial;
-		_outputRenderTarget = 0;
+		_pDevice				  = pDevice;
+		_pScene					  = pScene;
+		_frameCtx._pBoundMaterial = pMaterial;
+		_outputRenderTarget		  = 0;
 		ensurePassResources();
 		ensureTransientResources();
-		setIdentityWorld();
-		updatePassConstants();
+		setIdentityWorld( _frameCtx );
+		updatePassConstants( _frameCtx );
 		_listClearedThisFrame.clear();
 		_bSceneTransformsFlushed  = 0;
 		_bHasExecutedDepthPrepass = 0;
@@ -306,24 +308,24 @@ namespace sw
 		if ( isReady() == false || pDevice == nullptr || packet._bValid == 0 )
 			return false;
 
-		_pDevice			= pDevice;
-		_pScene				= nullptr;
-		_pBoundMaterial		= packet._pSceneMaterial;
-		_outputRenderTarget = packet._gameRenderTarget;
-		_gpuScene			= std::move( packet._gpuScene );
+		_pDevice				  = pDevice;
+		_pScene					  = nullptr;
+		_frameCtx._pBoundMaterial = packet._pSceneMaterial;
+		_outputRenderTarget		  = packet._gameRenderTarget;
+		_gpuScene				  = std::move( packet._gpuScene );
 		ensurePassResources();
 		ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
-		setIdentityWorld();
-		buildLightViewProj( _passConstants._lightViewProj );
+		setIdentityWorld( _frameCtx );
+		buildLightViewProj( _frameCtx, _frameCtx._passConstants._lightViewProj );
 		if ( packet._bHasViewProj != 0 )
-			_passConstants._viewProj = packet._viewProj;
+			_frameCtx._passConstants._viewProj = packet._viewProj;
 		else
-			buildViewProj( _passConstants._viewProj );
-		_passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-		_passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
-		_passConstants._flags			 = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
+			buildViewProj( _frameCtx._passConstants._viewProj );
+		_frameCtx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+		_frameCtx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+		_frameCtx._passConstants._flags			   = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
 		if ( _pDevice != nullptr && _passCb != 0 )
-			_pDevice->getResource()->updateConstantBuffer( _passCb, &_passConstants, sizeof( PassConstants ) );
+			_pDevice->getResource()->updateConstantBuffer( _passCb, &_frameCtx._passConstants, sizeof( PassConstants ) );
 		// Skip updatePassConstants() — view already applied from packet.
 		_listClearedThisFrame.clear();
 		_bSceneTransformsFlushed  = 0;
