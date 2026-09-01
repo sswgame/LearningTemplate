@@ -3,12 +3,21 @@
  * @brief Microsoft Windows OS 전용(Win32 GDI 기반) ISplashWindow 구현체 헤더
  */
 #pragma once
+#include "Core/Common/Types.h"
+
 #include "Engine/Window/ISplashWindow.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Engine/Common/EnginePlatformHeaders.h"
 #else
-using HWND = void*;
+using HWND	  = void*;
+using UINT	  = uint32;
+using WPARAM  = uint64;
+using LPARAM  = int64;
+using LRESULT = int64;
+	#if !defined( CALLBACK )
+		#define CALLBACK
+	#endif
 #endif
 
 namespace sw
@@ -31,6 +40,6 @@ namespace sw
 		static LRESULT CALLBACK splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
 	private:
-		HWND _hWnd;
+		[[maybe_unused]] HWND _hWnd;
 	};
 } // namespace sw

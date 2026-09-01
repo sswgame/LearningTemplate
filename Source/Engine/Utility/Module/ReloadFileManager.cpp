@@ -194,6 +194,7 @@ namespace sw
 
 			if ( bAnyMatch )
 			{
+#if !defined( SW_SHIPPING )
 				const utf8* pActionStr = "Unknown";
 				switch ( ev._action )
 				{
@@ -216,6 +217,7 @@ namespace sw
 						break;
 				}
 				SW_LOG_TRACE( "%# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
+#endif
 				_onFileChanged.broadcast( ev );
 			}
 		}

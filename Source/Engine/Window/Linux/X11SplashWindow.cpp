@@ -43,7 +43,7 @@ namespace sw
 		const int32 posY	= ( screenH - static_cast<int32>( _height ) ) / 2;
 
 		XSetWindowAttributes attrs{};
-		attrs.override_redirect = True;
+		attrs.override_redirect = 1;
 		attrs.background_pixel	= 0x181C24;
 
 		Window win = XCreateWindow(

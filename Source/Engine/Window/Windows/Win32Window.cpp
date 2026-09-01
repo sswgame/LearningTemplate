@@ -227,7 +227,7 @@ namespace sw
 
 	Win32Window::~Win32Window() = default;
 
-	bool Win32Window::create( const utf8*, uint32 width, uint32 height )
+	bool Win32Window::initializeWindow( const utf8*, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;
@@ -248,6 +248,15 @@ namespace sw
 	bool Win32Window::processMessages()
 	{
 		return _bShouldClose == SW_FALSE;
+	}
+
+	void Win32Window::showWindow( bool )
+	{
+	}
+
+	bool Win32Window::isVisible() const
+	{
+		return false;
 	}
 
 	LRESULT CALLBACK Win32Window::wndProc( HWND, UINT, WPARAM, LPARAM )
