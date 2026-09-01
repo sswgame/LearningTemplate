@@ -82,13 +82,15 @@ namespace sw
 		push( std::move( cmd ) );
 	}
 
-	void RHIDeferredCommandList::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	void RHIDeferredCommandList::draw( uint32 vertexCount, uint32 startVertex,
+									   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		Cmd cmd{};
 		cmd._op			   = Op::Draw;
 		cmd._vertexCount   = vertexCount;
 		cmd._startVertex   = startVertex;
-		cmd._materialIndex = materialDescriptorIndex;
+		cmd._passCbIndex   = passCbDescriptorIndex;
+		cmd._materialIndex = materialCbDescriptorIndex;
 		push( std::move( cmd ) );
 	}
 
@@ -170,13 +172,14 @@ namespace sw
 	}
 
 	void RHIDeferredCommandList::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-											   RHIDescriptorIndex materialDescriptorIndex )
+											   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		Cmd cmd{};
 		cmd._op				= Op::DrawIndirect;
 		cmd._argumentBuffer = argumentBuffer;
 		cmd._argumentOffset = argumentBufferOffset;
-		cmd._materialIndex	= materialDescriptorIndex;
+		cmd._passCbIndex	= passCbDescriptorIndex;
+		cmd._materialIndex	= materialCbDescriptorIndex;
 		push( std::move( cmd ) );
 	}
 
@@ -261,7 +264,7 @@ namespace sw
 					pContext->setVertexBuffer( cmd._slot, cmd._buffer, cmd._stride, cmd._offset );
 					break;
 				case Op::Draw:
-					pContext->draw( cmd._vertexCount, cmd._startVertex, cmd._materialIndex );
+					pContext->draw( cmd._vertexCount, cmd._startVertex, cmd._passCbIndex, cmd._materialIndex );
 					break;
 				case Op::SetIndexBuffer:
 					pContext->setIndexBuffer( cmd._buffer, cmd._indexStride, cmd._offset );
@@ -291,7 +294,7 @@ namespace sw
 					pContext->blitTexture( cmd._srcTexture, cmd._dstTexture );
 					break;
 				case Op::DrawIndirect:
-					pContext->drawIndirect( cmd._argumentBuffer, cmd._argumentOffset, cmd._materialIndex );
+					pContext->drawIndirect( cmd._argumentBuffer, cmd._argumentOffset, cmd._passCbIndex, cmd._materialIndex );
 					break;
 				case Op::DispatchIndirect:
 					pContext->dispatchIndirect( cmd._argumentBuffer, cmd._argumentOffset );

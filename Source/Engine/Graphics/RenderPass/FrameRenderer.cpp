@@ -33,8 +33,6 @@ namespace sw
 		, _mapTransientSrv{}
 		, _listClearedThisFrame{}
 		, _frameCtx{}
-		, _passCb{ 0 }
-		, _passCbIndex{ kInvalidDescriptorIndex }
 		, _gpuCullCb{ 0 }
 		, _gpuCullCbIndex{ kInvalidDescriptorIndex }
 		, _mapEnginePso{}
@@ -271,6 +269,7 @@ namespace sw
 		_outputRenderTarget		  = 0;
 		ensurePassResources();
 		ensureTransientResources();
+		resetPassCbRing();
 		setIdentityWorld( _frameCtx );
 		updatePassConstants( _frameCtx );
 		_listClearedThisFrame.clear();
@@ -315,6 +314,7 @@ namespace sw
 		_gpuScene				  = std::move( packet._gpuScene );
 		ensurePassResources();
 		ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
+		resetPassCbRing();
 		setIdentityWorld( _frameCtx );
 		buildLightViewProj( _frameCtx, _frameCtx._passConstants._lightViewProj );
 		if ( packet._bHasViewProj != 0 )
@@ -324,8 +324,8 @@ namespace sw
 		_frameCtx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
 		_frameCtx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
 		_frameCtx._passConstants._flags			   = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
-		if ( _pDevice != nullptr && _passCb != 0 )
-			_pDevice->getResource()->updateConstantBuffer( _passCb, &_frameCtx._passConstants, sizeof( PassConstants ) );
+		if ( _pDevice != nullptr && _frameCtx._passCb != 0 )
+			_pDevice->getResource()->updateConstantBuffer( _frameCtx._passCb, &_frameCtx._passConstants, sizeof( PassConstants ) );
 		// Skip updatePassConstants() — view already applied from packet.
 		_listClearedThisFrame.clear();
 		_bSceneTransformsFlushed  = 0;

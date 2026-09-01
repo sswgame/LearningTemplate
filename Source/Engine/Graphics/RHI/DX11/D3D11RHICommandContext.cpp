@@ -243,7 +243,26 @@ namespace sw
 		_pDevice->_boundMeshOffset = offset;
 	}
 
-	void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	void D3D11RHICommandContext::bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex,
+														RHIDescriptorIndex materialCbDescriptorIndex )
+	{
+		auto bindSlot = [this]( RHIDescriptorIndex index, UINT slot )
+		{
+			if ( index == kInvalidDescriptorIndex ||
+				 index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+				return;
+			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[index] );
+			if ( pCb == nullptr )
+				return;
+			_pDevice->_deviceContext->PSSetConstantBuffers( slot, 1, &pCb );
+			_pDevice->_deviceContext->VSSetConstantBuffers( slot, 1, &pCb );
+		};
+		bindSlot( passCbDescriptorIndex, 0 );	  // b0 = PassCB
+		bindSlot( materialCbDescriptorIndex, 1 ); // b1 = MaterialCB
+	}
+
+	void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
+									   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice->_deviceContext == nullptr || vertexCount == 0 )
 			return;
@@ -264,15 +283,7 @@ namespace sw
 		if ( pVs == nullptr || pPs == nullptr )
 			return;
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-		{
-			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex] );
-			if ( pCb != nullptr )
-			{
-				_pDevice->_deviceContext->PSSetConstantBuffers( 0, 1, &pCb );
-				_pDevice->_deviceContext->VSSetConstantBuffers( 0, 1, &pCb );
-			}
-		}
+		bindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex );
 
 		ID3D11Buffer* pVb	 = _pDevice->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pDevice->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
 		UINT		  stride = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
@@ -333,22 +344,13 @@ namespace sw
 	}
 
 	void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-											   RHIDescriptorIndex materialDescriptorIndex )
+											   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice == nullptr || _pDevice->_deviceContext == nullptr || argumentBuffer == 0 )
 			return;
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			 materialDescriptorIndex != _lastBoundMaterialDescriptor &&
-			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-		{
-			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex] );
-			if ( pCb != nullptr )
-			{
-				_pDevice->_deviceContext->PSSetConstantBuffers( 0, 1, &pCb );
-				_lastBoundMaterialDescriptor = materialDescriptorIndex;
-			}
-		}
+		bindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex );
+		_lastBoundMaterialDescriptor = materialCbDescriptorIndex;
 
 		ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
 		if ( pBuf == nullptr )

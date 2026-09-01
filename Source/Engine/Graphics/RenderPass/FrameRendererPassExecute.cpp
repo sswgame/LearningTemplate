@@ -57,6 +57,9 @@ namespace sw
 		FramePassContext passCtx = _frameCtx;
 		if ( graphCtx._pCmdList != nullptr )
 			passCtx._pCmd = graphCtx._pCmdList;
+		// 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연인데 상수 쓰기는 즉시라,
+		// 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다.
+		acquirePassCb( passCtx );
 
 		const vector<RenderGraphPassDesc>& listPass	 = _pipelineResource.getGraphPass();
 		const utf8*						   pPassType = "";
@@ -98,10 +101,9 @@ namespace sw
 			return RHIRenderPassLoadOp::Clear;
 		};
 
-		const RHIDescriptorIndex passCb = ctx._passCbIndex != kInvalidDescriptorIndex
-											? ctx._passCbIndex
-											: ( pMaterial != nullptr ? pMaterial->getDescriptorIndex() : 0 );
-		const RHIDescriptorIndex matCb	= pMaterial != nullptr ? pMaterial->getDescriptorIndex() : passCb;
+		// b0 에 들어갈 패스 상수. 머티리얼 CB 로 폴백하면 안 된다 — 레이아웃이 다르다.
+		// 머티리얼 상수는 드로우마다 메시/배치에서 직접 넘긴다.
+		const RHIDescriptorIndex passCb = ctx._passCbIndex;
 
 		auto executeFullscreenPass = [&]( RHIPipelineStateHandle pso, string_view targetName, const float4& passClearColor )
 		{
@@ -138,7 +140,7 @@ namespace sw
 			const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass != 0 && getEnginePso( "ForwardOpaqueNoDepthWrite" ) != 0 )
 														? getEnginePso( "ForwardOpaqueNoDepthWrite" )
 														: getEnginePso( FrameRendererUtil::PassType::kForwardOpaque );
-			drawSceneMeshes( ctx, psoForward, psoForward != 0 ? passCb : matCb, false );
+			drawSceneMeshes( ctx, psoForward, passCb, false );
 			ctx._pCmd->endRenderPass();
 		}
 		else if ( passType == FrameRendererUtil::PassType::kGBuffer )
@@ -165,7 +167,7 @@ namespace sw
 						: getEnginePso( FrameRendererUtil::PassType::kGBuffer );
 				beginColorPass( ctx, FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kSceneDepth, clearColor,
 								colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
-				drawSceneMeshes( ctx, albedoPso != 0 ? albedoPso : 0, albedoPso != 0 ? passCb : matCb, false );
+				drawSceneMeshes( ctx, albedoPso != 0 ? albedoPso : 0, passCb, false );
 				ctx._pCmd->endRenderPass();
 
 				if ( bHasNormal )
@@ -207,7 +209,7 @@ namespace sw
 				getEnginePso( FrameRendererUtil::PassType::kTransparent ) != 0
 					? getEnginePso( FrameRendererUtil::PassType::kTransparent )
 					: getEnginePso( FrameRendererUtil::PassType::kForwardOpaque );
-			drawSceneMeshes( ctx, transparentPso, matCb, true );
+			drawSceneMeshes( ctx, transparentPso, passCb, true );
 			ctx._pCmd->endRenderPass();
 		}
 		else if ( passType == "SSAO" || passType == "HBAO" )
@@ -314,7 +316,7 @@ namespace sw
 				beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
 				beginInfo._bBindColor = 1;
 				ctx._pCmd->beginRenderPass( beginInfo );
-				drawFullscreen( ctx, 0, matCb );
+				drawFullscreen( ctx, 0, passCb );
 				ctx._pCmd->endRenderPass();
 			}
 		}

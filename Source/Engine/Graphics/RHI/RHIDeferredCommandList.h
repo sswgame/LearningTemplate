@@ -57,7 +57,9 @@ namespace sw
 		/** @brief 버텍스 버퍼 바인드를 기록합니다. */
 		void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
 		/** @brief 삼각형 리스트 드로우를 기록합니다. */
-		void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+		void draw( uint32 vertexCount, uint32 startVertex = 0,
+				   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+				   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		/** @brief 인덱스 버퍼 바인드를 기록합니다. */
 		void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
 
@@ -84,7 +86,8 @@ namespace sw
 		void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
 		/** @brief GPU 인디렉트 드로우를 기록합니다. */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-						   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+						   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+						   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		/** @brief GPU 인디렉트 컴퓨트 디스패치를 기록합니다. */
 		void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
 		/** @brief 버퍼 상태 전이를 기록합니다. */
@@ -155,6 +158,7 @@ namespace sw
 			RHIViewport			   _viewport{};
 			RHIPipelineStateHandle _pso{ 0 };
 			RHIRenderPassBeginInfo _beginInfo{};
+			RHIDescriptorIndex	   _passCbIndex		= kInvalidDescriptorIndex;
 			RHIDescriptorIndex	   _materialIndex	= kInvalidDescriptorIndex;
 			RHIDescriptorIndex	   _descriptorIndex = kInvalidDescriptorIndex;
 			uint32				   _slot{ 0 };

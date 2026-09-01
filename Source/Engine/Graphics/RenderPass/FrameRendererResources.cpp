@@ -17,12 +17,25 @@ namespace sw
 		if ( _pDevice == nullptr || _bPassResourcesReady != 0 )
 			return;
 
-		_passCb = _pDevice->getResource()->createConstantBuffer( sizeof( PassConstants ) );
-		if ( _passCb != 0 )
-			_passCbIndex = _pDevice->getResource()->registerBindlessResource( _passCb );
-		// 직렬 경로 시드가 이 버퍼를 쓰게 한다. (병렬 경로는 패스별 버퍼로 덮어쓴다)
-		_frameCtx._passCb	   = _passCb;
-		_frameCtx._passCbIndex = _passCbIndex;
+		// 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
+		_listPassCbSlot.clear();
+		_listPassCbSlot.reserve( _s_kPassCbSlotCount );
+		for ( uint32 slotIndex = 0; slotIndex < _s_kPassCbSlotCount; ++slotIndex )
+		{
+			PassCbSlot slot{};
+			slot._buffer = _pDevice->getResource()->createConstantBuffer( sizeof( PassConstants ) );
+			if ( slot._buffer == 0 )
+				break;
+			slot._index = _pDevice->getResource()->registerBindlessResource( slot._buffer );
+			_listPassCbSlot.push_back( slot );
+		}
+		_passCbCursor.store( 0, std::memory_order_relaxed );
+		// 직렬 경로 시드는 0번 슬롯을 쓴다. (패스별 경로는 acquirePassCb 로 덮어쓴다)
+		if ( _listPassCbSlot.empty() == false )
+		{
+			_frameCtx._passCb	   = _listPassCbSlot[0]._buffer;
+			_frameCtx._passCbIndex = _listPassCbSlot[0]._index;
+		}
 
 		struct GpuCullParams
 		{
@@ -96,12 +109,45 @@ namespace sw
 					 getEnginePso( FrameRendererUtil::PassType::kPostBloom ), getEnginePso( FrameRendererUtil::PassType::kOutline ), static_cast<uint32>( _bUseGpuDriven ) );
 	}
 
+	void FrameRenderer::resetPassCbRing()
+	{
+		// 0번은 프레임 시드 전용이라 패스에는 1번부터 나눠 준다.
+		_passCbCursor.store( 1, std::memory_order_relaxed );
+		if ( _listPassCbSlot.empty() )
+			return;
+		_frameCtx._passCb	   = _listPassCbSlot[0]._buffer;
+		_frameCtx._passCbIndex = _listPassCbSlot[0]._index;
+	}
+
+	void FrameRenderer::acquirePassCb( FramePassContext& ctx )
+	{
+		if ( _listPassCbSlot.empty() )
+			return;
+
+		uint32 ticket = _passCbCursor.fetch_add( 1, std::memory_order_relaxed );
+		if ( ticket >= static_cast<uint32>( _listPassCbSlot.size() ) )
+		{
+			// 슬롯이 모자라면 0번을 재사용한다. 이 프레임의 일부 패스는 상수를 공유하게 된다.
+			SW_LOG_WARNING( "acquirePassCb: pass constant slots exhausted (%#), reusing slot 0",
+							static_cast<uint32>( _listPassCbSlot.size() ) );
+			ticket = 0;
+		}
+
+		ctx._passCb		 = _listPassCbSlot[ticket]._buffer;
+		ctx._passCbIndex = _listPassCbSlot[ticket]._index;
+
+		// 갓 잡은 슬롯은 내용이 없다. 프레임 시드 상수로 즉시 채워 둬야, 자기 상수를
+		// 다시 쓰지 않는 패스도 뷰/조명 등 프레임 공통값을 그대로 본다.
+		if ( _pDevice != nullptr && ctx._passCb != 0 )
+			_pDevice->getResource()->updateConstantBuffer( ctx._passCb, &ctx._passConstants, sizeof( PassConstants ) );
+	}
+
 	void FrameRenderer::releasePassResources()
 	{
 		if ( _pDevice == nullptr )
 		{
-			_passCb				   = 0;
-			_passCbIndex		   = kInvalidDescriptorIndex;
+			_listPassCbSlot.clear();
+			_passCbCursor.store( 0, std::memory_order_relaxed );
 			_frameCtx._passCb	   = 0;
 			_frameCtx._passCbIndex = kInvalidDescriptorIndex;
 			_gpuCullCb			   = 0;
@@ -152,7 +198,12 @@ namespace sw
 			}
 		};
 
-		releaseResource( _passCb, _passCbIndex );
+		for ( PassCbSlot& slot : _listPassCbSlot )
+			releaseResource( slot._buffer, slot._index );
+		_listPassCbSlot.clear();
+		_passCbCursor.store( 0, std::memory_order_relaxed );
+		_frameCtx._passCb	   = 0;
+		_frameCtx._passCbIndex = kInvalidDescriptorIndex;
 		releaseResource( _gpuCullCb, _gpuCullCbIndex );
 		releaseResource( _taaHistory, _taaHistorySrv, true );
 		_bPassResourcesReady = 0;

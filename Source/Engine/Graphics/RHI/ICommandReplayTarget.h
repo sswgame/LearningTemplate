@@ -51,7 +51,8 @@ namespace sw
 		virtual void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) = 0;
 		/** @brief 리플레이: 삼각형 리스트를 그립니다. */
 		virtual void draw( uint32 vertexCount, uint32 startVertex = 0,
-						   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+						   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+						   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
 		/** @brief 리플레이: 인덱스 버퍼를 바인딩합니다. */
 		virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) = 0;
 
@@ -86,7 +87,8 @@ namespace sw
 
 		/** @brief 리플레이: GPU 인디렉트 드로우. */
 		virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-								   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+								   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+								   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
 		/** @brief 리플레이: GPU 인디렉트 컴퓨트 디스패치. */
 		virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
 		/** @brief 리플레이: 버퍼 상태를 전이합니다. */

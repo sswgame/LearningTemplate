@@ -44,9 +44,16 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 3) 드로우 — 메시 버텍스/인덱스, 머티리얼 CB
 		// ------------------------------------------------------------------------------
-		virtual void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 )								  = 0;
-		virtual void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) = 0;
-		virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 )									  = 0;
+		virtual void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) = 0;
+		/**
+		 * @brief 삼각형 리스트를 그립니다.
+		 * @param passCbDescriptorIndex b0(PassCB) 에 바인딩할 상수 버퍼.
+		 * @param materialCbDescriptorIndex b1(MaterialCB) 에 바인딩할 상수 버퍼.
+		 */
+		virtual void draw( uint32 vertexCount, uint32 startVertex = 0,
+						   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+						   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex )		 = 0;
+		virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) = 0;
 
 		// ------------------------------------------------------------------------------
 		// 4) 컴퓨트 — PSO, 디스패치, 루트 상수, UAV
@@ -67,7 +74,8 @@ namespace sw
 		// 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이, 멀티 드로우
 		// ------------------------------------------------------------------------------
 		virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-								   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex )	= 0;
+								   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+								   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
 		virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )	= 0;
 		virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )					= 0;
 		virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;

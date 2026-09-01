@@ -29,7 +29,7 @@ namespace sw
 			case RHIBufferState::ShaderResource:
 				access = VK_ACCESS_SHADER_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+						 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 				break;
 			case RHIBufferState::IndirectArgument:
 				access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -42,7 +42,7 @@ namespace sw
 			case RHIBufferState::VertexOrConstant:
 				access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				break;
 			case RHIBufferState::Index:
 				access = VK_ACCESS_INDEX_READ_BIT;
@@ -551,21 +551,21 @@ namespace sw
 		_pDevice->_boundIndexOffset = offset;
 	}
 
-	void VulkanRHICommandContext::bindGraphicsMaterialSets( RHIDescriptorIndex materialDescriptorIndex )
+	void VulkanRHICommandContext::bindGraphicsMaterialSets( RHIDescriptorIndex cbDescriptorIndex )
 	{
 		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
 		if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE )
 			return;
 
-		const bool bValidMaterialDescriptor =
-			( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
-			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE );
+		const bool bValidDescriptor =
+			( cbDescriptorIndex != kInvalidDescriptorIndex &&
+			  cbDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
+			  _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex] != VK_NULL_HANDLE );
 
-		// set 0: 유효한 머티리얼 UBO, 없으면 디바이스 기본 셋으로 폴백한다.
+		// set 0 binding 0 = PassCB. 없으면 디바이스 기본 셋으로 폴백한다.
 		// 셰이더가 set 0 을 정적으로 참조하므로 어느 쪽도 없으면 draw 를 건너뛴다(검증 오류 방지).
-		const VkDescriptorSet set0 = bValidMaterialDescriptor
-									   ? _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex]
+		const VkDescriptorSet set0 = bValidDescriptor
+									   ? _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex]
 									   : _pDevice->_descriptorSet;
 		if ( set0 != VK_NULL_HANDLE )
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
@@ -598,7 +598,8 @@ namespace sw
 		return true;
 	}
 
-	void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
+										RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
 		const bool		bCanDraw =
@@ -609,13 +610,13 @@ namespace sw
 		if ( bindActiveGraphicsPipeline() == false )
 			return;
 
-		bindGraphicsMaterialSets( materialDescriptorIndex );
+		bindGraphicsMaterialSets( passCbDescriptorIndex );
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex )
+		if ( materialCbDescriptorIndex != kInvalidDescriptorIndex )
 		{
 			constexpr VkShaderStageFlags kPushStages =
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-			uint32 matIndex = materialDescriptorIndex;
+			uint32 matIndex = materialCbDescriptorIndex;
 			vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
 		}
 
@@ -694,7 +695,7 @@ namespace sw
 	}
 
 	void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-												RHIDescriptorIndex materialDescriptorIndex )
+												RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		VkCommandBuffer							   cmd	   = _pDevice->currentCommandBuffer();
 		const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
@@ -704,11 +705,11 @@ namespace sw
 		if ( bindActiveGraphicsPipeline() == false )
 			return;
 
-		bindGraphicsMaterialSets( materialDescriptorIndex );
+		bindGraphicsMaterialSets( passCbDescriptorIndex );
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
+		if ( materialCbDescriptorIndex != kInvalidDescriptorIndex && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
 		{
-			uint32						 matIndex = materialDescriptorIndex;
+			uint32						 matIndex = materialCbDescriptorIndex;
 			constexpr VkShaderStageFlags kPushStages =
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 			vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );

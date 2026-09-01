@@ -19,10 +19,12 @@ namespace sw
 		void prepareTextureForShaderRead( RHITextureHandle texture ) override;
 		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 		void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
-		void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+		void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
+				   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 		void setViewport( const RHIViewport& viewport ) override;
-		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
+						   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount, RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
 		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
 		void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
@@ -44,7 +46,7 @@ namespace sw
 		 * @details 셰이더가 set 0 을 정적으로 참조하므로 모든 draw 경로(인다이렉트 포함)에서 필요합니다.
 		 *          유효한 머티리얼 디스크립터가 없으면 디바이스의 기본 셋(_descriptorSet)으로 폴백합니다.
 		 */
-		void bindGraphicsMaterialSets( RHIDescriptorIndex materialDescriptorIndex );
+		void bindGraphicsMaterialSets( RHIDescriptorIndex cbDescriptorIndex );
 
 		/**
 		 * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.

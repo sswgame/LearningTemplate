@@ -488,9 +488,10 @@ namespace sw
 
 	bool D3D12RHIDevice::createGlobalResources()
 	{
-		D3D12_DESCRIPTOR_RANGE descriptorRanges[10]{};
+		D3D12_DESCRIPTOR_RANGE descriptorRanges[11]{};
+		// b0 = PassCB, b1 = MaterialCB. 둘은 힙에서 인접하지 않으므로 테이블을 나눈다.
 		descriptorRanges[0].RangeType						  = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		descriptorRanges[0].NumDescriptors					  = 1024;
+		descriptorRanges[0].NumDescriptors					  = 1;
 		descriptorRanges[0].BaseShaderRegister				  = 0;
 		descriptorRanges[0].RegisterSpace					  = 0;
 		descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -517,7 +518,13 @@ namespace sw
 		descriptorRanges[9].RegisterSpace					  = 1;
 		descriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-		D3D12_ROOT_PARAMETER rootParameters[11]{};
+		descriptorRanges[10].RangeType						   = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		descriptorRanges[10].NumDescriptors					   = 1;
+		descriptorRanges[10].BaseShaderRegister				   = 1;
+		descriptorRanges[10].RegisterSpace					   = 0;
+		descriptorRanges[10].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		D3D12_ROOT_PARAMETER rootParameters[12]{};
 		for ( uint32 paramIndex = 0; paramIndex < 10; ++paramIndex )
 		{
 			rootParameters[paramIndex].ParameterType					   = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -530,6 +537,11 @@ namespace sw
 		rootParameters[kComputeRootConstantsParam].Constants.RegisterSpace	= 1; ///< bindless.hlsli: b0, space1 (g_BindlessCbIndex)
 		rootParameters[kComputeRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
 		rootParameters[kComputeRootConstantsParam].ShaderVisibility			= D3D12_SHADER_VISIBILITY_ALL;
+
+		rootParameters[kMaterialCbvParam].ParameterType						  = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameters[kMaterialCbvParam].DescriptorTable.NumDescriptorRanges = 1;
+		rootParameters[kMaterialCbvParam].DescriptorTable.pDescriptorRanges	  = &descriptorRanges[10];
+		rootParameters[kMaterialCbvParam].ShaderVisibility					  = D3D12_SHADER_VISIBILITY_ALL;
 
 		D3D12_STATIC_SAMPLER_DESC staticSamplers[2]{};
 		staticSamplers[0].Filter		   = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -566,7 +578,7 @@ namespace sw
 		rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
 		rootSigDesc.pStaticSamplers	  = staticSamplers;
 		rootSigDesc.Flags			  = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-							D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+										D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

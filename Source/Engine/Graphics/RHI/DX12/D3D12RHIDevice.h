@@ -143,6 +143,7 @@ namespace sw
 		static constexpr uint32 kMaxOffscreenDsvs			  = 16;
 		static constexpr uint32 kGraphicsSrvRootParam0		  = 5;	///< t0..t3 descriptor tables
 		static constexpr uint32 kComputeRootConstantsParam	  = 10; ///< 32-bit root constants (compute)
+		static constexpr uint32 kMaterialCbvParam			  = 11; ///< b1 (MaterialCB) 디스크립터 테이블
 		static constexpr uint32 kMaxComputeRootConstantDwords = 16;
 
 		/// @brief 오프스크린 텍스처 + RTV/SRV 핸들

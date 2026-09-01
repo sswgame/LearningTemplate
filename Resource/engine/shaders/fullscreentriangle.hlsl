@@ -12,7 +12,7 @@ struct PSInput
 	float4 col : COLOR;
 };
 
-SW_DECLARE_CBUFFER( MaterialCB, 0 )
+SW_DECLARE_CBUFFER( MaterialCB, 1 )
 {
 	float4 g_MaterialColor;
 };

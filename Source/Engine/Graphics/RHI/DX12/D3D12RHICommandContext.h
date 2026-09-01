@@ -25,11 +25,13 @@ namespace sw
 		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 		void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
 		void draw( uint32 vertexCount, uint32 startVertex = 0,
-				   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+				   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+				   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 		void setViewport( const RHIViewport& viewport ) override;
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-						   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+						   RHIDescriptorIndex passCbDescriptorIndex		= kInvalidDescriptorIndex,
+						   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
 		void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
 								RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
 		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
@@ -50,7 +52,7 @@ namespace sw
 	private:
 		void ensureRecording();
 		void bindDescriptorHeaps();
-		void bindMaterialCbv( RHIDescriptorIndex materialDescriptorIndex );
+		void bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
 		void bindMeshVertexBuffer();
 		void bindFullscreenVertexBuffer();
 		void bindBoundIndexBuffer();

@@ -139,6 +139,15 @@ namespace sw
 		void ensurePassResources();
 		/** @brief 패스용 상주 GPU 자원을 해제합니다. */
 		void releasePassResources();
+		/**
+		 * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 집어 ctx 에 붙입니다.
+		 * @details 커맨드 기록은 지연이고 상수 버퍼 쓰기는 즉시라, 패스마다 별도 버퍼를
+		 *          써야 재생 시점에 각 패스의 상수가 살아남습니다. 커서는 원자적이라
+		 *          병렬 기록에서도 안전합니다. 슬롯이 모자라면 0번으로 되돌아갑니다.
+		 */
+		void acquirePassCb( FramePassContext& ctx );
+		/** @brief 프레임 시작마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
+		void resetPassCbRing();
 		/** @brief 일시 텍스처를 확보합니다. */
 		void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
 		/** @brief 일시 텍스처를 해제합니다. */
@@ -265,9 +274,17 @@ namespace sw
 		 * @brief 프레임 단위 패스 상태(직렬 경로에서 사용 + 병렬 패스의 시드).
 		 * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
 		 */
-		FramePassContext							  _frameCtx;
-		RHIBufferHandle								  _passCb;
-		RHIDescriptorIndex							  _passCbIndex;
+		FramePassContext _frameCtx;
+		/** @brief 한 프레임이 쓸 수 있는 패스 상수 버퍼 슬롯 수. */
+		static constexpr uint32 _s_kPassCbSlotCount = 64;
+		/** @brief 패스별 상수 버퍼 슬롯. 병렬 기록에서 패스마다 하나씩 집어간다. */
+		struct PassCbSlot
+		{
+			RHIBufferHandle	   _buffer{ 0 };
+			RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+		};
+		vector<PassCbSlot>							  _listPassCbSlot;
+		std::atomic<uint32>							  _passCbCursor{ 0 };
 		RHIBufferHandle								  _gpuCullCb;
 		RHIDescriptorIndex							  _gpuCullCbIndex;
 		unordered_map<string, RHIPipelineStateHandle> _mapEnginePso;

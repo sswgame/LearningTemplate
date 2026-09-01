@@ -367,7 +367,25 @@ namespace sw
 		_pDevice->_boundIndexOffset = offset;
 	}
 
-	void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	void OpenGLRHICommandContext::bindPassAndMaterialUbo( RHIDescriptorIndex passCbDescriptorIndex,
+														  RHIDescriptorIndex materialCbDescriptorIndex )
+	{
+		// HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다.
+		auto bindSlot = [this]( RHIDescriptorIndex index, GLuint binding )
+		{
+			if ( index == kInvalidDescriptorIndex ||
+				 index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+				return;
+			const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+			if ( ubo != 0 )
+				glBindBufferBase( GL_UNIFORM_BUFFER, binding, ubo );
+		};
+		bindSlot( passCbDescriptorIndex, 16 );	   // b0 = PassCB
+		bindSlot( materialCbDescriptorIndex, 17 ); // b1 = MaterialCB
+	}
+
+	void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
+										RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 )
 			return;
@@ -390,12 +408,7 @@ namespace sw
 
 		glUseProgram( program );
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex]._buffer );
-			if ( ubo != 0 )
-				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
-		}
+		bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
 		if ( _pDevice->_boundMeshVb != 0 )
 		{
@@ -477,7 +490,7 @@ namespace sw
 	}
 
 	void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-												RHIDescriptorIndex materialDescriptorIndex )
+												RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
 			return;
@@ -500,13 +513,7 @@ namespace sw
 
 		glUseProgram( program );
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex]._buffer );
-			if ( ubo != 0 )
-				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
-		}
+		bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
 		const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
 		const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );

@@ -30,12 +30,12 @@ namespace
 		void beginRenderPass( const sw::RHIRenderPassBeginInfo& ) override {}
 		void endRenderPass() override {}
 		void setVertexBuffer( uint32, sw::RHIBufferHandle, uint32, uint32 ) override {}
-		void draw( uint32, uint32, sw::RHIDescriptorIndex ) override { ++_drawCount; }
+		void draw( uint32, uint32, sw::RHIDescriptorIndex, sw::RHIDescriptorIndex ) override { ++_drawCount; }
 		void setIndexBuffer( sw::RHIBufferHandle, uint32, uint32 ) override {}
 		void dispatchCompute( uint32, uint32, uint32 ) override {}
 		void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
 		void bindComputeUAV( sw::RHIDescriptorIndex, uint32 ) override {}
-		void drawIndirect( sw::RHIBufferHandle, uint32, sw::RHIDescriptorIndex ) override {}
+		void drawIndirect( sw::RHIBufferHandle, uint32, sw::RHIDescriptorIndex, sw::RHIDescriptorIndex ) override {}
 		void dispatchIndirect( sw::RHIBufferHandle, uint32 ) override {}
 		void drawIndexedIndirect( sw::RHIBufferHandle, uint32 ) override {}
 		void beginEventMarker( const utf8* ) override {}

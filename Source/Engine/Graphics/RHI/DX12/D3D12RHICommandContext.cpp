@@ -66,23 +66,39 @@ namespace sw
 		_pDevice->_commandList->SetDescriptorHeaps( 1, heaps );
 	}
 
-	void D3D12RHICommandContext::bindMaterialCbv( RHIDescriptorIndex materialDescriptorIndex )
+	void D3D12RHICommandContext::bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex,
+														 RHIDescriptorIndex materialCbDescriptorIndex )
 	{
-		if ( materialDescriptorIndex == kInvalidDescriptorIndex )
-			return;
-		if ( materialDescriptorIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-			return;
-		const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[materialDescriptorIndex];
-		if ( rec._resource == nullptr )
-			return;
-		bindDescriptorHeaps();
-		// Native bindless: shaders read ResourceDescriptorHeap[g_BindlessCbIndex] (b0, space1).
-		if ( _pDevice->_bHeapDirectlyIndexed != 0 )
+		auto resolve = [this]( RHIDescriptorIndex index ) -> const D3D12RHIDevice::BindlessResourceRecord*
 		{
-			const uint32 index = static_cast<uint32>( materialDescriptorIndex );
-			_pDevice->_commandList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kComputeRootConstantsParam, 1, &index, 0 );
+			if ( index == kInvalidDescriptorIndex )
+				return nullptr;
+			if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+				return nullptr;
+			const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
+			return rec._resource != nullptr ? &rec : nullptr;
+		};
+
+		const D3D12RHIDevice::BindlessResourceRecord* pPassRec = resolve( passCbDescriptorIndex );
+		const D3D12RHIDevice::BindlessResourceRecord* pMatRec  = resolve( materialCbDescriptorIndex );
+		if ( pPassRec == nullptr && pMatRec == nullptr )
+			return;
+
+		bindDescriptorHeaps();
+
+		// Native bindless: 셰이더가 ResourceDescriptorHeap[g_BindlessCbIndex] 로 PassCB 를 읽는다.
+		if ( pPassRec != nullptr )
+		{
+			if ( _pDevice->_bHeapDirectlyIndexed != 0 )
+			{
+				const uint32 index = static_cast<uint32>( passCbDescriptorIndex );
+				_pDevice->_commandList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kComputeRootConstantsParam, 1, &index, 0 );
+			}
+			_pDevice->_commandList->SetGraphicsRootDescriptorTable( 0, pPassRec->_gpuHandle );
 		}
-		_pDevice->_commandList->SetGraphicsRootDescriptorTable( 0, rec._gpuHandle );
+
+		if ( pMatRec != nullptr )
+			_pDevice->_commandList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kMaterialCbvParam, pMatRec->_gpuHandle );
 	}
 
 	void D3D12RHICommandContext::bindMeshVertexBuffer()
@@ -320,7 +336,8 @@ namespace sw
 		_pDevice->_boundMeshOffset = offset;
 	}
 
-	void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
+									   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice->_commandList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
 			return;
@@ -332,7 +349,7 @@ namespace sw
 		bindDescriptorHeaps();
 		_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
 		_pDevice->_commandList->SetPipelineState( pPsoRec->_pso.Get() );
-		bindMaterialCbv( materialDescriptorIndex );
+		bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
 		_pDevice->_commandList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		if ( _pDevice->_boundMeshVb != 0 )
 			bindMeshVertexBuffer();
@@ -371,7 +388,7 @@ namespace sw
 	}
 
 	void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-											   RHIDescriptorIndex materialDescriptorIndex )
+											   RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
 	{
 		if ( _pDevice->_commandList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 )
 			return;
@@ -384,7 +401,7 @@ namespace sw
 		{
 			bindDescriptorHeaps();
 			_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-			bindMaterialCbv( materialDescriptorIndex );
+			bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
 		}
 		bindFullscreenVertexBuffer();
 		_pDevice->_commandList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );

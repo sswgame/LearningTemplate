@@ -100,7 +100,7 @@ namespace sw
 							drawPso = matPso;
 					}
 
-					RHIDescriptorIndex drawCb = cbIndex;
+					RHIDescriptorIndex drawCb = kInvalidDescriptorIndex;
 					if ( materialInstance != nullptr )
 						drawCb = materialInstance->getDescriptorIndex();
 					else if ( pMaterial != nullptr )
@@ -156,7 +156,7 @@ namespace sw
 						lastVb = vb;
 					}
 
-					ctx._pCmd->draw( item._mesh->getVertexCount(), 0, item._cbIndex );
+					ctx._pCmd->draw( item._mesh->getVertexCount(), 0, cbIndex, item._cbIndex );
 					++drawn;
 				}
 			}
@@ -198,8 +198,7 @@ namespace sw
 				continue;
 			ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 
-			const RHIDescriptorIndex drawCb =
-				batch._materialCb != kInvalidDescriptorIndex ? batch._materialCb : cbIndex;
+			const RHIDescriptorIndex drawCb = batch._materialCb;
 			if ( batch._pMaterialInstance != nullptr )
 				batch._pMaterialInstance->applyToGpu( _pDevice );
 
@@ -215,7 +214,7 @@ namespace sw
 					commitBindlessTextureBindings( ctx );
 					bFirstItem = false;
 				}
-				ctx._pCmd->draw( pMesh->getVertexCount(), 0, drawCb );
+				ctx._pCmd->draw( pMesh->getVertexCount(), 0, cbIndex, drawCb );
 				++drawn;
 			}
 		}
@@ -252,10 +251,11 @@ namespace sw
 			if ( batch._vertexBuffer == 0 || batch._instanceCount == 0 )
 				continue;
 			ctx._pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
-			const RHIDescriptorIndex drawCb =
-				batch._materialCb != kInvalidDescriptorIndex ? batch._materialCb : cbIndex;
+			// b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
+			// 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
 			ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
-									 ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), drawCb );
+									 ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ),
+									 cbIndex, batch._materialCb );
 		}
 	}
 
