@@ -11,14 +11,9 @@
 
 namespace sw
 {
-	struct SaveSlot;
+	class IFlagStore;
 
-	namespace generated
-	{
-		struct sw_DialogueRunnerComponent_Registrar;
-	} // namespace generated
-
-	REFLECT()
+	ENUM()
 	enum class DialogueRunnerState : uint8
 	{
 		Idle,
@@ -47,10 +42,11 @@ namespace sw
 	REFLECT()
 	class SW_GF_API DialogueRunnerComponent : public Component
 	{
-		friend struct ::sw::generated::sw_DialogueRunnerComponent_Registrar;
-
 	public:
 		REFLECT_BODY();
+
+		PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
+		string _graphPath{};
 
 		using OnDialogueLineFunc	 = OnDialogueLineDelegate;
 		using OnDialogueChoicesFunc	 = OnDialogueChoicesDelegate;
@@ -77,7 +73,7 @@ namespace sw
 		FUNCTION( Category = "Preview", DisplayName = "Preview Line" )
 		void previewLine( string speaker, string text );
 
-		void setSaveSlot( SaveSlot* pSaveSlot );
+		void setFlagStore( IFlagStore* pFlagStore );
 
 		DialogueRunnerState	  getState() const;
 		int32				  getCurrentNodeId() const;
@@ -95,10 +91,8 @@ namespace sw
 		void executeNode( int32 nodeId, int32 recursionDepth = 0 );
 		void executeAction( const string& actionCmd );
 
-		PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
-		string				   _graphPath;
 		DialogueGraphAsset	   _graph;
-		SaveSlot*			   _pSaveSlot;
+		IFlagStore*			   _pFlagStore;
 		string				   _currentSpeaker;
 		string				   _currentText;
 		vector<string>		   _listCurrentChoice;

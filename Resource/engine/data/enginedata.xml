@@ -2,7 +2,7 @@
 <!-- Engine-owned bootstrap (Scene / App / FrameRenderer / RHI). Game and Editor have their own XML. -->
 <EngineData>
 	<defaultMaterial>engine/materials/defaultmaterial.material</defaultMaterial>
-	<shellInputMap>engine/input/emergency.input.xml</shellInputMap>
+	<shellInputMap>engine/input/default.input.xml</shellInputMap>
 
 	<defaultForwardPipeline>engine/pipeline/forwardpipeline.xml</defaultForwardPipeline>
 	<defaultDeferredPipeline>engine/pipeline/deferredpipeline.xml</defaultDeferredPipeline>

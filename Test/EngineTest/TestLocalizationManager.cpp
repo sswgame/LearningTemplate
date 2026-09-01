@@ -581,13 +581,13 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	class TestModeHandler : public sw::IGameModeHandler
 	{
 	public:
-		uint32			 _enterCount{ 0 };
-		uint32			 _updateCount{ 0 };
-		uint32			 _exitCount{ 0 };
-		sw::GamePlayMode _lastPreviousMode{ sw::GamePlayMode::None };
-		sw::GamePlayMode _lastNextMode{ sw::GamePlayMode::None };
+		uint32			  _enterCount{ 0 };
+		uint32			  _updateCount{ 0 };
+		uint32			  _exitCount{ 0 };
+		sw::hashed_string _lastPreviousMode{};
+		sw::hashed_string _lastNextMode{};
 
-		void onEnter( sw::GamePlayMode previousMode ) override
+		void onEnter( const sw::hashed_string& previousMode ) override
 		{
 			++_enterCount;
 			_lastPreviousMode = previousMode;
@@ -599,7 +599,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 			++_updateCount;
 		}
 
-		void onExit( sw::GamePlayMode nextMode ) override
+		void onExit( const sw::hashed_string& nextMode ) override
 		{
 			++_exitCount;
 			_lastNextMode = nextMode;
@@ -607,18 +607,18 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	};
 
 	sw::GameModeStateMachine fsm;
-	auto					 titleHandler  = sw::make_shared<TestModeHandler>();
-	auto					 battleHandler = sw::make_shared<TestModeHandler>();
+	auto					 titleHandler	 = sw::make_shared<TestModeHandler>();
+	auto					 gameplayHandler = sw::make_shared<TestModeHandler>();
 
-	fsm.registerHandler( sw::GamePlayMode::Title, titleHandler );
-	fsm.registerHandler( sw::GamePlayMode::TurnBattle, battleHandler );
+	fsm.registerHandler( sw::GameModes::title(), titleHandler );
+	fsm.registerHandler( sw::GameModes::gameplay(), gameplayHandler );
 
-	sw::GamePlayMode notifiedOld{ sw::GamePlayMode::None };
-	sw::GamePlayMode notifiedNew{ sw::GamePlayMode::None };
-	uint32			 notifyCount{ 0 };
+	sw::hashed_string notifiedOld{};
+	sw::hashed_string notifiedNew{};
+	uint32			  notifyCount{ 0 };
 
 	fsm.setOnModeChanged(
-		SW_DELEGATE_LAMBDA( sw::GameModeStateMachine::ModeChangedDelegate, [&]( sw::GamePlayMode oldMode, sw::GamePlayMode newMode )
+		SW_DELEGATE_LAMBDA( sw::GameModeStateMachine::ModeChangedDelegate, [&]( const sw::hashed_string& oldMode, const sw::hashed_string& newMode )
 	{
 		notifiedOld = oldMode;
 		notifiedNew = newMode;
@@ -626,29 +626,29 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	} ) );
 
 	// 1) Title 모드로 전이
-	SW_EXPECT_TRUE( fsm.transitionTo( sw::GamePlayMode::Title ) );
-	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GamePlayMode::Title );
+	SW_EXPECT_TRUE( fsm.transitionTo( sw::GameModes::title() ) );
+	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GameModes::title() );
 	SW_EXPECT_EQUAL( uint32( 1 ), titleHandler->_enterCount );
 	SW_EXPECT_EQUAL( uint32( 1 ), notifyCount );
-	SW_EXPECT_TRUE( notifiedNew == sw::GamePlayMode::Title );
+	SW_EXPECT_TRUE( notifiedNew == sw::GameModes::title() );
 
 	// 2) Update 호출
 	fsm.update( 0.016f );
 	fsm.update( 0.016f );
 	SW_EXPECT_EQUAL( uint32( 2 ), titleHandler->_updateCount );
 
-	// 3) TurnBattle 모드로 전이
-	SW_EXPECT_TRUE( fsm.transitionTo( sw::GamePlayMode::TurnBattle ) );
-	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GamePlayMode::TurnBattle );
-	SW_EXPECT_TRUE( fsm.getPreviousMode() == sw::GamePlayMode::Title );
+	// 3) Gameplay 모드로 전이
+	SW_EXPECT_TRUE( fsm.transitionTo( sw::GameModes::gameplay() ) );
+	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GameModes::gameplay() );
+	SW_EXPECT_TRUE( fsm.getPreviousMode() == sw::GameModes::title() );
 	SW_EXPECT_EQUAL( uint32( 1 ), titleHandler->_exitCount );
-	SW_EXPECT_TRUE( titleHandler->_lastNextMode == sw::GamePlayMode::TurnBattle );
-	SW_EXPECT_EQUAL( uint32( 1 ), battleHandler->_enterCount );
-	SW_EXPECT_TRUE( battleHandler->_lastPreviousMode == sw::GamePlayMode::Title );
+	SW_EXPECT_TRUE( titleHandler->_lastNextMode == sw::GameModes::gameplay() );
+	SW_EXPECT_EQUAL( uint32( 1 ), gameplayHandler->_enterCount );
+	SW_EXPECT_TRUE( gameplayHandler->_lastPreviousMode == sw::GameModes::title() );
 	SW_EXPECT_EQUAL( uint32( 2 ), notifyCount );
 
 	// 4) Reset
 	fsm.reset();
-	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GamePlayMode::None );
-	SW_EXPECT_EQUAL( uint32( 1 ), battleHandler->_exitCount );
+	SW_EXPECT_TRUE( fsm.getCurrentMode().empty() );
+	SW_EXPECT_EQUAL( uint32( 1 ), gameplayHandler->_exitCount );
 }

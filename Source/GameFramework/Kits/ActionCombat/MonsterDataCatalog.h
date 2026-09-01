@@ -1,6 +1,6 @@
 /**
  * @file MonsterDataCatalog.h
- * @brief monsters.xml에서 로드하는 몬스터 스탯 및 AI 데이터 카탈로그
+ * @brief monsters.xml에서 로드하는 몬스터 스탯 및 AI 데이터 카탈로그 (ActionCombat 키트)
  */
 #pragma once
 #include "Core/Common/Macros.h"

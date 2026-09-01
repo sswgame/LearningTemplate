@@ -5,7 +5,6 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 
-#include "GameFramework/Input/GameActions.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
 
 namespace sw
@@ -51,29 +50,27 @@ namespace sw
 		if ( _stepCooldown > 0.0f )
 			return;
 
-		ActionMap* pActionMap = _pActionMap != nullptr ? _pActionMap : &gameActions();
+		ActionMap* pActionMap = _pActionMap != nullptr ? _pActionMap : &input.getActionMap();
 		if ( pActionMap->getInputManager() != &input )
 			pActionMap->setInputManager( &input );
 
-		const GameActionIds& ids = gameActionIds();
-
-		if ( pActionMap->wasActionTriggered( ids._interact ) )
+		if ( pActionMap->wasActionTriggered( "Interact" ) )
 		{
 			_loco.beginInteract();
 			_bInteractPending = 1;
 			return;
 		}
 
-		int32 deltaX{ 0 };
-		int32 deltaY{ 0 };
-		// Move* 바인딩은 InputMap에서 trigger=Down — wasActionTriggered는 홀드와 같습니다.
-		if ( pActionMap->wasActionTriggered( ids._moveUp ) )
+		int32		 deltaX{ 0 };
+		int32		 deltaY{ 0 };
+		const float2 moveVec = pActionMap->getVector2D( "Move" );
+		if ( moveVec._y > 0.5f )
 			deltaY = -1;
-		else if ( pActionMap->wasActionTriggered( ids._moveDown ) )
+		else if ( moveVec._y < -0.5f )
 			deltaY = 1;
-		else if ( pActionMap->wasActionTriggered( ids._moveLeft ) )
+		else if ( moveVec._x < -0.5f )
 			deltaX = -1;
-		else if ( pActionMap->wasActionTriggered( ids._moveRight ) )
+		else if ( moveVec._x > 0.5f )
 			deltaX = 1;
 
 		if ( deltaX == 0 && deltaY == 0 )

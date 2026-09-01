@@ -17,7 +17,8 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
-#include "GameFramework/Save/ISaveGame.h"
+#include "GameFramework/Base/SaveGame.h"
+#include "GameFramework/Kits/TurnBattle/SaveGame.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -301,13 +302,13 @@ SW_TEST_CASE( Engine_Archive, ArchiveObjectTLVSerialization )
 }
 
 /**
- * @brief [Engine_Archive] SaveSlot 바이너리 직렬화/역직렬화(SAV1 포맷 + CRC32) 라운드트립 검증
+ * @brief [Engine_Archive] SaveGame 바이너리 직렬화/역직렬화(SAV1 포맷 + CRC32) 라운드트립 검증
  */
-SW_TEST_CASE( Engine_Archive, SaveSlotBinaryArchiveRoundTrip )
+SW_TEST_CASE( Engine_Archive, SaveGameBinaryArchiveRoundTrip )
 {
 	const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_save_slot.sav" );
 
-	sw::SaveSlot writeSlot;
+	sw::TurnBattleSaveGame writeSlot;
 	writeSlot._mapPath = "Resource/game/empty/scenes/overworld.scene.xml";
 	writeSlot._playerX = 150;
 	writeSlot._playerY = -300;
@@ -315,11 +316,11 @@ SW_TEST_CASE( Engine_Archive, SaveSlotBinaryArchiveRoundTrip )
 	writeSlot.setFlag( "gold_coins", 9999 );
 	writeSlot.setFlag( "current_chapter", 3 );
 
-	SW_EXPECT_TRUE( writeSlot.saveCommonToFile( savePath ) );
+	SW_EXPECT_TRUE( writeSlot.saveToFile( savePath ) );
 	SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
 
-	sw::SaveSlot readSlot;
-	SW_EXPECT_TRUE( readSlot.loadCommonFromFile( savePath ) );
+	sw::TurnBattleSaveGame readSlot;
+	SW_EXPECT_TRUE( readSlot.loadFromFile( savePath ) );
 
 	SW_EXPECT_EQUAL( writeSlot._mapPath, readSlot._mapPath );
 	SW_EXPECT_EQUAL( 150, readSlot._playerX );
@@ -333,18 +334,18 @@ SW_TEST_CASE( Engine_Archive, SaveSlotBinaryArchiveRoundTrip )
 }
 
 /**
- * @brief [Engine_Archive] SaveSlot 변조된 바이너리 세이브 파일 거부(CRC mismatch rejection) 검증
+ * @brief [Engine_Archive] SaveGame 변조된 바이너리 세이브 파일 거부(CRC mismatch rejection) 검증
  */
-SW_TEST_CASE( Engine_Archive, SaveSlotBinaryTamperRejection )
+SW_TEST_CASE( Engine_Archive, SaveGameBinaryTamperRejection )
 {
 	const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "tampered_save_slot.sav" );
 
-	sw::SaveSlot writeSlot;
+	sw::TurnBattleSaveGame writeSlot;
 	writeSlot._mapPath = "world_level_1";
 	writeSlot._playerX = 10;
 	writeSlot._playerY = 20;
 	writeSlot.setFlag( "admin_level", 0 );
-	SW_EXPECT_TRUE( writeSlot.saveCommonToBinaryFile( savePath ) );
+	SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( writeSlot, savePath ) );
 
 	// 파일 읽어서 페이로드 바이트 임의 변조
 	sw::vector<uint8> saveBytes;
@@ -355,8 +356,8 @@ SW_TEST_CASE( Engine_Archive, SaveSlotBinaryTamperRejection )
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( savePath, saveBytes.data(), saveBytes.size() ) );
 
 	// 변조된 파일 로드시 CRC 불일치로 실패해야 함
-	sw::SaveSlot tamperedSlot;
-	SW_EXPECT_FALSE( tamperedSlot.loadCommonFromBinaryFile( savePath ) );
+	sw::TurnBattleSaveGame tamperedSlot;
+	SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( tamperedSlot, savePath ) );
 
 	sw::FileUtil::removeFile( savePath );
 }
@@ -1486,18 +1487,18 @@ SW_TEST_CASE( Engine_Archive, TranscodingFailureCasesAndInvalidInputs )
 	}
 }
 
-SW_TEST_CASE( Engine_Archive, CorruptedSaveSlotAndDocumentBinaryStreams )
+SW_TEST_CASE( Engine_Archive, CorruptedSaveGameAndDocumentBinaryStreams )
 {
-	// 1. SaveSlot SAV1 CRC32 mismatch detection
+	// 1. SaveGame SAV1 CRC32 mismatch detection
 	{
-		sw::SaveSlot validSlot;
+		sw::TurnBattleSaveGame validSlot;
 		validSlot._mapPath = "dungeon_boss";
 		validSlot._playerX = 100;
 		validSlot._playerY = 200;
 		validSlot.setFlag( "boss_defeated", 1 );
 
 		const sw::string savePath = "saved/test_corrupt_slot.sav";
-		SW_EXPECT_TRUE( validSlot.saveCommonToBinaryFile( savePath ) );
+		SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( validSlot, savePath ) );
 
 		// Read and intentionally flip a byte in payload
 		sw::vector<uint8> fileBytes;
@@ -1509,8 +1510,8 @@ SW_TEST_CASE( Engine_Archive, CorruptedSaveSlotAndDocumentBinaryStreams )
 		SW_EXPECT_TRUE( sw::FileUtil::writeFile( savePath, fileBytes.data(), fileBytes.size() ) );
 
 		// Load must detect CRC32 mismatch and reject
-		sw::SaveSlot corruptSlot;
-		SW_EXPECT_FALSE( corruptSlot.loadCommonFromBinaryFile( savePath ) );
+		sw::TurnBattleSaveGame corruptSlot;
+		SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( corruptSlot, savePath ) );
 
 		// Cleanup
 		sw::FileUtil::removeFile( savePath );
@@ -1546,13 +1547,13 @@ SW_TEST_CASE( Engine_Archive, CorruptedSaveSlotAndDocumentBinaryStreams )
 }
 
 /**
- * @brief [Engine_Archive] SaveSlot 플래그 키 사전순 정렬 기반 체크섬 일관성 및 라운드트립 검증
+ * @brief [Engine_Archive] SaveGame 플래그 키 및 필드 리플렉션 라운드트립 검증
  */
-SW_TEST_CASE( Engine_Archive, SaveSlotDeterministicChecksumAndLoad )
+SW_TEST_CASE( Engine_Archive, SaveGameReflectionChecksumAndLoad )
 {
-	const sw::string testSavePath = "saved/test_deterministic_slot.bin";
+	const sw::string testSavePath = "saved/test_deterministic_slot.sav";
 
-	sw::SaveSlot slot1;
+	sw::TurnBattleSaveGame slot1;
 	slot1._mapPath = "Overworld_Main";
 	slot1._playerX = 10;
 	slot1._playerY = 20;
@@ -1563,10 +1564,10 @@ SW_TEST_CASE( Engine_Archive, SaveSlotDeterministicChecksumAndLoad )
 	slot1.setFlag( "dialogue.npc_met", 1 );
 	slot1.setFlag( "area.unlocked_gate", 1 );
 
-	SW_ASSERT_TRUE( slot1.saveCommonToBinaryFile( testSavePath ) );
+	SW_ASSERT_TRUE( sw::SaveGameSerializer::saveGameToSlot( slot1, testSavePath ) );
 
-	sw::SaveSlot slot2;
-	SW_ASSERT_TRUE( slot2.loadCommonFromBinaryFile( testSavePath ) );
+	sw::TurnBattleSaveGame slot2;
+	SW_ASSERT_TRUE( sw::SaveGameSerializer::loadGameFromSlot( slot2, testSavePath ) );
 
 	SW_EXPECT_EQUAL( sw::string( "Overworld_Main" ), slot2._mapPath );
 	SW_EXPECT_EQUAL( 10, slot2._playerX );

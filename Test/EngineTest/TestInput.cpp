@@ -1,13 +1,17 @@
 #include "pch.h"
 
 #include "Engine/Input/ActionMap.h"
+#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/Queue/LockFreeInputQueue.h"
 #include "Engine/Input/Windows/GamepadXInput.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <thread>
 
 // ------------------------------------------------------------------------------
 // InputManagerTest — 입력 상태 및 키/마우스 프레임 엣지 감지 검증
@@ -366,7 +370,7 @@ SW_TEST_CASE( InputManagerTest, GamepadButtonsNameMapping )
 SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
 {
 	sw::GamepadXInput pad;
-	pad.poll( 0 ); // 연결되지 않은 슬롯 폴링
+	pad.poll( 0.016f ); // 연결되지 않은 슬롯 폴링
 
 	for ( size_t btnIndex = 0; btnIndex < static_cast<size_t>( sw::GamepadButton::Count ); ++btnIndex )
 	{
@@ -387,3 +391,149 @@ SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
 	SW_EXPECT_NEAR_EQUAL( 0.0f, ry, 0.001f );
 }
 #endif
+
+/**
+ * @brief [InputManagerTest] LockFreeInputQueue 단일 스레드 Push/Pop/Drain 및 순환 인덱싱 검증
+ */
+SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
+{
+	sw::LockFreeInputQueue<sw::RawInputEvent, 16> queue;
+	SW_EXPECT_TRUE( queue.isEmpty() );
+	SW_EXPECT_EQUAL( 0u, queue.getCount() );
+
+	// 1) 5개 아이템 Push
+	for ( uint16 index = 0; index < 5; ++index )
+	{
+		SW_EXPECT_TRUE( queue.push( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
+	}
+	SW_EXPECT_FALSE( queue.isEmpty() );
+	SW_EXPECT_EQUAL( 5u, queue.getCount() );
+
+	// 2) 2개 아이템 Pop
+	sw::RawInputEvent item0{};
+	SW_EXPECT_TRUE( queue.pop( item0 ) );
+	SW_EXPECT_TRUE( item0._type == sw::RawInputEventType::KeyDown );
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( item0._payload._keyData._nativeVirtualKey ) );
+
+	sw::RawInputEvent item1{};
+	SW_EXPECT_TRUE( queue.pop( item1 ) );
+	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( item1._payload._keyData._nativeVirtualKey ) );
+	SW_EXPECT_EQUAL( 3u, queue.getCount() );
+
+	// 3) 나머지 3개 일괄 Drain
+	sw::RawInputEvent arrDrained[8]{};
+	const uint32	  drainedCount = queue.drain( arrDrained, 8 );
+	SW_EXPECT_EQUAL( 3u, drainedCount );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( arrDrained[0]._payload._keyData._nativeVirtualKey ) );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( arrDrained[1]._payload._keyData._nativeVirtualKey ) );
+	SW_EXPECT_EQUAL( 4u, static_cast<uint32>( arrDrained[2]._payload._keyData._nativeVirtualKey ) );
+	SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+/**
+ * @brief [InputManagerTest] LockFreeInputQueue 생산자-소비자 멀티스레드 동시성 스트레스 테스트
+ */
+SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
+{
+	sw::LockFreeInputQueue<sw::RawInputEvent, 1024> queue;
+	constexpr uint32								kTotalItems = 5000;
+	std::atomic<bool>								bProducerDone{ false };
+
+	// Producer Thread (OS Message Pump 시뮬레이션)
+	std::thread producerThread(
+		[&]()
+	{
+		for ( uint32 index = 0; index < kTotalItems; ++index )
+		{
+			sw::RawInputEvent evt = sw::RawInputEvent::makeKeyDown( sw::Key::Space, static_cast<uint16>( index ) );
+			while ( queue.push( evt ) == false )
+			{
+				std::this_thread::yield();
+			}
+		}
+		bProducerDone.store( true, std::memory_order_release );
+	} );
+
+	// Consumer Thread (메인 엔진 루프 시뮬레이션)
+	uint32 consumedCount	 = 0;
+	uint32 nextExpectedIndex = 0;
+	bool   bOrderingValid	 = true;
+
+	while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.isEmpty() == false )
+	{
+		sw::RawInputEvent arrBatch[64]{};
+		const uint32	  drained = queue.drain( arrBatch, 64 );
+		for ( uint32 batchIndex = 0; batchIndex < drained; ++batchIndex )
+		{
+			const uint32 receivedIndex = arrBatch[batchIndex]._payload._keyData._nativeVirtualKey;
+			if ( receivedIndex != nextExpectedIndex )
+			{
+				bOrderingValid = false;
+			}
+			++nextExpectedIndex;
+			++consumedCount;
+		}
+		if ( drained == 0 )
+		{
+			std::this_thread::yield();
+		}
+	}
+
+	producerThread.join();
+
+	SW_EXPECT_TRUE( bOrderingValid );
+	SW_EXPECT_EQUAL( kTotalItems, consumedCount );
+	SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+/**
+ * @brief [InputManagerTest] InputManager 비동기 postRawEvent 인입 및 beginFrame 드레인 동기화 검증
+ */
+SW_TEST_CASE( InputManagerTest, InputManager_AsyncPostAndBeginFrameDrain )
+{
+	sw::InputManager inputManager;
+	SW_EXPECT_TRUE( inputManager.initialize() );
+
+	// 1) 비동기 스레드에서 원시 이벤트 인입 (WM_KEYDOWN)
+	inputManager.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F ) );
+	SW_EXPECT_EQUAL( 1u, inputManager.getPendingRawEventCount() );
+
+	// beginFrame 호출 전에는 아직 디바이스에 반영되지 않음
+	SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
+
+	// 2) 메인 스레드 beginFrame() 호출 -> 큐 드레인 및 상태 반영
+	inputManager.beginFrame( 0.016f );
+	SW_EXPECT_EQUAL( 0u, inputManager.getPendingRawEventCount() );
+	SW_EXPECT_TRUE( inputManager.isKeyDown( sw::Key::F ) );
+
+	// 3) 비동기 KeyUp 인입
+	inputManager.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F ) );
+	inputManager.beginFrame( 0.016f );
+	SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
+
+	inputManager.shutdown();
+}
+
+/**
+ * @brief [ActionMapTest] default.input.xml 리소스 로드 및 레이어/액션/코드 바인딩 무결성 검증
+ */
+SW_TEST_CASE( ActionMapTest, LoadFromDefaultInputXmlResource )
+{
+	sw::InputManager inputManager;
+	SW_EXPECT_TRUE( inputManager.initialize() );
+
+	sw::ActionMap actionMap;
+	actionMap.setInputManager( &inputManager );
+	SW_EXPECT_TRUE( actionMap.loadFromResource( "engine/input/default.input.xml" ) );
+
+	SW_EXPECT_TRUE( actionMap.hasLayer( "Title" ) );
+	SW_EXPECT_TRUE( actionMap.hasLayer( "Gameplay" ) );
+	SW_EXPECT_TRUE( actionMap.hasLayer( "Debug" ) );
+
+	SW_EXPECT_TRUE( actionMap.hasAction( "Confirm" ) );
+	SW_EXPECT_TRUE( actionMap.hasAction( "Continue" ) );
+	SW_EXPECT_TRUE( actionMap.hasAction( "Cancel" ) );
+	SW_EXPECT_TRUE( actionMap.hasAction( "ReloadEditor" ) );
+
+	inputManager.shutdown();
+}

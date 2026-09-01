@@ -11,6 +11,7 @@
 #include "Editor/Panels/GlobalVariablesPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/HistoryPanel.h"
+#include "Editor/Panels/InputMapEditorPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/MaterialPanel.h"
 #include "Editor/Panels/PrefabEditorPanel.h"
@@ -87,6 +88,7 @@ namespace sw::editor
 		registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<DataTablePanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<InputMapEditorPanel>(), EditorPanelCategory::Tool );
 	}
 
 	void EditorPanelManager::drawOpenPanels()

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Data/MonsterDataCatalog.h"
+#include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 
 #include "Core/String/StringUtil.h"
 

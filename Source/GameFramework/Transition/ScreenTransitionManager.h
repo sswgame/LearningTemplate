@@ -1,6 +1,6 @@
 /**
- * @file TransitionOrchestrator.h
- * @brief 페이드와 대기 중인 워프/전투/복귀 전환 FSM을 소유합니다
+ * @file ScreenTransitionManager.h
+ * @brief 화면 페이드 인/아웃 및 씬 전환 시퀀스(FadeOut -> OnExecute -> FadeIn) FSM 관리자
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,8 +13,7 @@
 namespace sw
 {
 	// ------------------------------------------------------------------------------
-	// 1) FadeService — 화면 검정 핸드셰이크
-	//    오케스트레이터가 타이밍을 소유, HUD는 알파만 그림
+	// 1) FadeService — 화면 페이드 아웃/인 알파 보간 서비스
 	// ------------------------------------------------------------------------------
 	/** @brief 화면 페이드 아웃/인 단계 */
 	enum class FadePhase : uint8
@@ -58,72 +57,60 @@ namespace sw
 	};
 
 	// ------------------------------------------------------------------------------
-	// 2) TransitionCallbacks — 맵 로드 / 전투 / 입력 잠금
-	//    오케스트레이터가 타이밍, SWGame이 월드 데이터
+	// 2) TransitionCallbacks — 전환 시 입력 잠금/복원 및 커스텀 훅 콜백
 	// ------------------------------------------------------------------------------
-	/** @brief SWGame 월드 상태 콜백 (맵 로드 / 전투 / 복귀) */
+	/** @brief 씬/화면 전환 시 호출되는 콜백 모음 */
 	struct TransitionCallbacks
 	{
-		Delegate<bool( string_view mapPath, int32 spawnX, int32 spawnY )> loadMap;				 ///< 맵+스폰 로드
-		Delegate<void()>												  startBattle;			 ///< 전투 룸/턴제 진입
-		Delegate<void()>												  finishBattleReturn;	 ///< 오버월드 복귀
-		Delegate<void( bool bEnable )>									  setPlayerInputEnabled; ///< 전환 중 입력 잠금
+		Delegate<void( bool bEnable )> setPlayerInputEnabled; ///< 전환 중 입력 잠금/복원
+		Delegate<void()>			   onTransitionStarted;	  ///< 전환 시작 훅
+		Delegate<void()>			   onTransitionFinished;  ///< 전환 완료 훅
 	};
 
 	// ------------------------------------------------------------------------------
-	// 3) TransitionOrchestrator — 워프/전투/복귀 페이드 FSM
+	// 3) ScreenTransitionManager — 페이드 효과와 결합된 범용 화면 전환 관리자
 	// ------------------------------------------------------------------------------
-	/** @brief 워프·전투·복귀 전환을 페이드와 맞춰 진행합니다. */
-	class SW_GF_API TransitionOrchestrator
+	/** @brief 화면 페이드와 연동하여 씬 전환 시퀀스(FadeOut -> Execute -> FadeIn)를 일원화 관리합니다. */
+	class SW_GF_API ScreenTransitionManager
 	{
 	public:
-		/** @brief 전환 페이즈 (페이드 아웃 → 로드 → 페이드 인) */
+		/** @brief 전환 단계 (None -> FadeOut -> Loading -> FadeIn -> None) */
 		enum class Phase : uint8
 		{
 			None = 0,
-			WarpFadeOut,
-			WarpLoad,
-			WarpFadeIn,
-			BattleFadeOut,
-			BattleLoad,
-			BattleFadeIn,
-			ReturnFadeOut,
-			ReturnLoad,
-			ReturnFadeIn
+			FadeOut,
+			Loading,
+			FadeIn
 		};
 
-		/** @brief 페이즈 None, 대기 워프 없음으로 시작합니다. */
-		TransitionOrchestrator();
+		/** @brief 초기 상태로 생성합니다. */
+		ScreenTransitionManager();
 
-		/** @brief 워프 전환을 시작합니다. */
-		void beginWarp( string_view mapPath, int32 spawnX, int32 spawnY );
-		/** @brief 전투 전환을 시작합니다. */
-		void beginBattle();
-		/** @brief 오버월드 복귀 전환을 시작합니다. */
-		void beginReturn();
-		/** @brief 전환 FSM과 페이드를 갱신합니다. */
+		/** @brief 범용 전환 시퀀스(FadeOut -> onExecute 콜백 실행 -> FadeIn)를 시작합니다. */
+		void beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration = 0.35f, float32 fadeInDuration = 0.35f );
+
+		/** @brief 전환 FSM 및 페이드 알파를 갱신합니다. */
 		void update( float32 deltaTime );
-		/** @brief 전환 상태와 대기 워프를 비웁니다. */
+		/** @brief 전환 상태를 초기화합니다. */
 		void reset();
 
 		/** @brief 전환 또는 페이드가 진행 중인지 반환합니다. */
 		bool isBusy() const { return _phase != Phase::None || _fade.isBusy(); }
-		/** @brief 현재 전환 페이즈를 반환합니다. */
+		/** @brief 현재 전환 단계를 반환합니다. */
 		Phase getPhase() const { return _phase; }
 		/** @brief 페이드 서비스를 반환합니다. */
 		FadeService& fade() { return _fade; }
 		/** @brief 페이드 서비스를 반환합니다. */
 		const FadeService& fade() const { return _fade; }
 
-		/** @brief 월드 상태 콜백을 설정합니다. */
+		/** @brief 전환 콜백들을 설정합니다. */
 		void setCallbacks( TransitionCallbacks callbacks ) { _callbacks = std::move( callbacks ); }
 
 	private:
 		FadeService			   _fade;
 		TransitionCallbacks	   _callbacks;
-		string				   _pendingWarpMap; ///< beginWarp가 넣어 둔 대상 맵
-		int32				   _pendingWarpX;
-		int32				   _pendingWarpY;
+		Delegate<void()>	   _pendingAction;
+		float32				   _pendingFadeInDuration;
 		Phase				   _phase;
 		[[maybe_unused]] uint8 _arrReserved[7];
 	};

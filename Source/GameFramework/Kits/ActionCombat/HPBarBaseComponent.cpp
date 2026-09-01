@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/Kits/ActionCombat/HPBarBaseComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

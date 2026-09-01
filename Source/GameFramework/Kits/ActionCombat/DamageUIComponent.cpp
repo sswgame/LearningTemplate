@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/UI/DamageUIComponent.h"
+#include "GameFramework/Kits/ActionCombat/DamageUIComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

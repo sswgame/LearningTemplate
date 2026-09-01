@@ -52,13 +52,24 @@ namespace sw
 
 #if defined( _WIN32 )
 			using PFN_XInputGetState = DWORD( WINAPI* )( DWORD, XINPUT_STATE* );
+			using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
 
-			/**
-			 * @brief 첫 폴링 시 이름으로 XInputGetState를 해석합니다.
-			 * @details xinput.lib를 링크하지 마세요. import lib는 서수로 바인딩하고,
-			 *          XINPUT1_4.dll의 서수 1은 DllMain입니다. 이를 Engine IAT에 넣으면
-			 *          LoadLibrary(Engine.dll) 중 BEX64 / STATUS_STACK_BUFFER_OVERRUN (0xC0000409)가 납니다.
-			 */
+			static HMODULE getXInputModule()
+			{
+				static HMODULE s_hModule{ nullptr };
+				static bool	   s_bTried{ false };
+				if ( s_bTried )
+					return s_hModule;
+				s_bTried = true;
+
+				s_hModule = LoadLibraryW( L"XINPUT1_4.dll" );
+				if ( s_hModule == nullptr )
+					s_hModule = LoadLibraryW( L"xinput1_3.dll" );
+				if ( s_hModule == nullptr )
+					s_hModule = LoadLibraryW( L"xinput9_1_0.dll" );
+				return s_hModule;
+			}
+
 			static PFN_XInputGetState resolveXInputGetState()
 			{
 				static PFN_XInputGetState s_pfn{ nullptr };
@@ -67,13 +78,23 @@ namespace sw
 					return s_pfn;
 				s_bTried = true;
 
-				HMODULE hModule = LoadLibraryW( L"XINPUT1_4.dll" );
-				if ( hModule == nullptr )
-					hModule = LoadLibraryW( L"xinput1_3.dll" );
-				if ( hModule == nullptr )
-					hModule = LoadLibraryW( L"xinput9_1_0.dll" );
+				HMODULE hModule = getXInputModule();
 				if ( hModule != nullptr )
 					s_pfn = reinterpret_cast<PFN_XInputGetState>( GetProcAddress( hModule, "XInputGetState" ) );
+				return s_pfn;
+			}
+
+			static PFN_XInputSetState resolveXInputSetState()
+			{
+				static PFN_XInputSetState s_pfn{ nullptr };
+				static bool				  s_bTried{ false };
+				if ( s_bTried )
+					return s_pfn;
+				s_bTried = true;
+
+				HMODULE hModule = getXInputModule();
+				if ( hModule != nullptr )
+					s_pfn = reinterpret_cast<PFN_XInputSetState>( GetProcAddress( hModule, "XInputSetState" ) );
 				return s_pfn;
 			}
 #endif
@@ -105,39 +126,34 @@ namespace sw
 		return nullptr;
 	}
 
-	GamepadXInput::GamepadXInput()
-		: _arrButton{}
-		, _arrPrevButton{}
-		, _leftStickX{ 0.0f }
-		, _leftStickY{ 0.0f }
-		, _rightStickX{ 0.0f }
-		, _rightStickY{ 0.0f }
+	GamepadXInput::GamepadXInput( uint32 userIndex )
+		: GamepadDevice{ userIndex }
 		, _bConnected{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
 
-	void GamepadXInput::setButtonDown( GamepadButton button, bool bDown )
+	void GamepadXInput::poll( [[maybe_unused]] float32 deltaTime )
 	{
-		if ( button >= GamepadButton::Count )
-			return;
-		_arrButton[static_cast<size_t>( button )] = bDown;
+		pollUser( _deviceIndex );
 	}
 
 #if defined( _WIN32 )
-	void GamepadXInput::poll( uint32 userIndex )
+	void GamepadXInput::pollUser( uint32 userIndex )
 	{
-		Memory::copy( _arrPrevButton, _arrButton, sizeof( _arrButton ) );
+		_prevButtonMask = _buttonMask;
 
 		GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
 		if ( pfnGetState == nullptr )
 		{
-			_bConnected	 = SW_FALSE;
-			_leftStickX	 = 0.0f;
-			_leftStickY	 = 0.0f;
-			_rightStickX = 0.0f;
-			_rightStickY = 0.0f;
-			Memory::set( _arrButton, 0, sizeof( _arrButton ) );
+			_bConnected	  = SW_FALSE;
+			_buttonMask	  = 0;
+			_leftStickX	  = 0.0f;
+			_leftStickY	  = 0.0f;
+			_rightStickX  = 0.0f;
+			_rightStickY  = 0.0f;
+			_leftTrigger  = 0.0f;
+			_rightTrigger = 0.0f;
 			return;
 		}
 
@@ -145,31 +161,49 @@ namespace sw
 		const DWORD	 result = pfnGetState( userIndex, &state );
 		if ( result != ERROR_SUCCESS )
 		{
-			_bConnected	 = SW_FALSE;
-			_leftStickX	 = 0.0f;
-			_leftStickY	 = 0.0f;
-			_rightStickX = 0.0f;
-			_rightStickY = 0.0f;
-			Memory::set( _arrButton, 0, sizeof( _arrButton ) );
+			_bConnected	  = SW_FALSE;
+			_buttonMask	  = 0;
+			_leftStickX	  = 0.0f;
+			_leftStickY	  = 0.0f;
+			_rightStickX  = 0.0f;
+			_rightStickY  = 0.0f;
+			_leftTrigger  = 0.0f;
+			_rightTrigger = 0.0f;
 			return;
 		}
 
 		_bConnected		   = SW_TRUE;
 		const WORD buttons = state.Gamepad.wButtons;
-		setButtonDown( GamepadButton::A, ( buttons & XINPUT_GAMEPAD_A ) != 0 );
-		setButtonDown( GamepadButton::B, ( buttons & XINPUT_GAMEPAD_B ) != 0 );
-		setButtonDown( GamepadButton::X, ( buttons & XINPUT_GAMEPAD_X ) != 0 );
-		setButtonDown( GamepadButton::Y, ( buttons & XINPUT_GAMEPAD_Y ) != 0 );
-		setButtonDown( GamepadButton::DPadUp, ( buttons & XINPUT_GAMEPAD_DPAD_UP ) != 0 );
-		setButtonDown( GamepadButton::DPadDown, ( buttons & XINPUT_GAMEPAD_DPAD_DOWN ) != 0 );
-		setButtonDown( GamepadButton::DPadLeft, ( buttons & XINPUT_GAMEPAD_DPAD_LEFT ) != 0 );
-		setButtonDown( GamepadButton::DPadRight, ( buttons & XINPUT_GAMEPAD_DPAD_RIGHT ) != 0 );
-		setButtonDown( GamepadButton::Start, ( buttons & XINPUT_GAMEPAD_START ) != 0 );
-		setButtonDown( GamepadButton::Back, ( buttons & XINPUT_GAMEPAD_BACK ) != 0 );
-		setButtonDown( GamepadButton::LeftShoulder, ( buttons & XINPUT_GAMEPAD_LEFT_SHOULDER ) != 0 );
-		setButtonDown( GamepadButton::RightShoulder, ( buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER ) != 0 );
-		setButtonDown( GamepadButton::LeftThumb, ( buttons & XINPUT_GAMEPAD_LEFT_THUMB ) != 0 );
-		setButtonDown( GamepadButton::RightThumb, ( buttons & XINPUT_GAMEPAD_RIGHT_THUMB ) != 0 );
+		uint32	   mask	   = 0;
+		if ( ( buttons & XINPUT_GAMEPAD_A ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::A ) );
+		if ( ( buttons & XINPUT_GAMEPAD_B ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::B ) );
+		if ( ( buttons & XINPUT_GAMEPAD_X ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::X ) );
+		if ( ( buttons & XINPUT_GAMEPAD_Y ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::Y ) );
+		if ( ( buttons & XINPUT_GAMEPAD_DPAD_UP ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::DPadUp ) );
+		if ( ( buttons & XINPUT_GAMEPAD_DPAD_DOWN ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::DPadDown ) );
+		if ( ( buttons & XINPUT_GAMEPAD_DPAD_LEFT ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::DPadLeft ) );
+		if ( ( buttons & XINPUT_GAMEPAD_DPAD_RIGHT ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::DPadRight ) );
+		if ( ( buttons & XINPUT_GAMEPAD_START ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::Start ) );
+		if ( ( buttons & XINPUT_GAMEPAD_BACK ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::Back ) );
+		if ( ( buttons & XINPUT_GAMEPAD_LEFT_SHOULDER ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::LeftShoulder ) );
+		if ( ( buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::RightShoulder ) );
+		if ( ( buttons & XINPUT_GAMEPAD_LEFT_THUMB ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::LeftThumb ) );
+		if ( ( buttons & XINPUT_GAMEPAD_RIGHT_THUMB ) != 0 )
+			mask |= ( 1u << static_cast<uint32>( GamepadButton::RightThumb ) );
+		_buttonMask = mask;
 
 		const float32 leftX	 = static_cast<float32>( state.Gamepad.sThumbLX ) / 32767.0f;
 		const float32 leftY	 = static_cast<float32>( state.Gamepad.sThumbLY ) / 32767.0f;
@@ -179,52 +213,60 @@ namespace sw
 		_leftStickY			 = GamepadXInputInternal::applyDeadzone( leftY, GamepadXInputInternal::kStickDeadzone );
 		_rightStickX		 = GamepadXInputInternal::applyDeadzone( rightX, GamepadXInputInternal::kStickDeadzone );
 		_rightStickY		 = GamepadXInputInternal::applyDeadzone( rightY, GamepadXInputInternal::kStickDeadzone );
+
+		_leftTrigger  = static_cast<float32>( state.Gamepad.bLeftTrigger ) / 255.0f;
+		_rightTrigger = static_cast<float32>( state.Gamepad.bRightTrigger ) / 255.0f;
+	}
+
+	bool GamepadXInput::setVibration( float32 leftMotor, float32 rightMotor )
+	{
+		setVibration( leftMotor, rightMotor, _deviceIndex );
+		return true;
+	}
+
+	void GamepadXInput::setVibration( float32 leftMotor, float32 rightMotor, uint32 userIndex )
+	{
+		GamepadXInputInternal::PFN_XInputSetState pfnSetState = GamepadXInputInternal::resolveXInputSetState();
+		if ( pfnSetState == nullptr || _bConnected == SW_FALSE )
+			return;
+
+		XINPUT_VIBRATION vibration{};
+		const float32	 clampedLeft  = leftMotor < 0.0f ? 0.0f : ( leftMotor > 1.0f ? 1.0f : leftMotor );
+		const float32	 clampedRight = rightMotor < 0.0f ? 0.0f : ( rightMotor > 1.0f ? 1.0f : rightMotor );
+		vibration.wLeftMotorSpeed	  = static_cast<WORD>( clampedLeft * 65535.0f );
+		vibration.wRightMotorSpeed	  = static_cast<WORD>( clampedRight * 65535.0f );
+		pfnSetState( userIndex, &vibration );
+	}
+
+	void GamepadXInput::stopVibration()
+	{
+		setVibration( 0.0f, 0.0f, _deviceIndex );
 	}
 #else
-	void GamepadXInput::poll( uint32 )
+	void GamepadXInput::pollUser( uint32 )
 	{
-		Memory::copy( _arrPrevButton, _arrButton, sizeof( _arrButton ) );
-		_bConnected	 = SW_FALSE;
-		_leftStickX	 = 0.0f;
-		_leftStickY	 = 0.0f;
-		_rightStickX = 0.0f;
-		_rightStickY = 0.0f;
-		Memory::set( _arrButton, 0, sizeof( _arrButton ) );
+		_prevButtonMask = _buttonMask;
+		_bConnected		= SW_FALSE;
+		_buttonMask		= 0;
+		_leftStickX		= 0.0f;
+		_leftStickY		= 0.0f;
+		_rightStickX	= 0.0f;
+		_rightStickY	= 0.0f;
+		_leftTrigger	= 0.0f;
+		_rightTrigger	= 0.0f;
+	}
+
+	bool GamepadXInput::setVibration( float32, float32 )
+	{
+		return false;
+	}
+
+	void GamepadXInput::setVibration( float32, float32, uint32 )
+	{
+	}
+
+	void GamepadXInput::stopVibration()
+	{
 	}
 #endif
-
-	bool GamepadXInput::isButtonDown( GamepadButton button ) const
-	{
-		if ( button >= GamepadButton::Count )
-			return false;
-		return _arrButton[static_cast<size_t>( button )];
-	}
-
-	bool GamepadXInput::wasButtonPressed( GamepadButton button ) const
-	{
-		if ( button >= GamepadButton::Count )
-			return false;
-		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrButton[buttonIndex] == true ) && ( _arrPrevButton[buttonIndex] == false );
-	}
-
-	bool GamepadXInput::wasButtonReleased( GamepadButton button ) const
-	{
-		if ( button >= GamepadButton::Count )
-			return false;
-		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrButton[buttonIndex] == false ) && ( _arrPrevButton[buttonIndex] == true );
-	}
-
-	void GamepadXInput::getLeftStick( float32& outX, float32& outY ) const
-	{
-		outX = _leftStickX;
-		outY = _leftStickY;
-	}
-
-	void GamepadXInput::getRightStick( float32& outX, float32& outY ) const
-	{
-		outX = _rightStickX;
-		outY = _rightStickY;
-	}
 } // namespace sw

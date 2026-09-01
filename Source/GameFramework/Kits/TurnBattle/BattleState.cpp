@@ -47,11 +47,15 @@ namespace sw
 					  _foe._nickname.c_str() );
 		SW_LOG_TRACE( "%#", _statusText.c_str() );
 		const GameData* pGameData = game::getService<GameData>();
-		if ( pGameData != nullptr && pGameData->_dungeonBgm.empty() == false )
+		if ( pGameData != nullptr )
 		{
-			IAudioSystem* pAudio = game::getService<IAudioSystem>();
-			if ( pAudio != nullptr )
-				pAudio->playMusic( pGameData->_dungeonBgm );
+			const string_view bgm = pGameData->getCustomProperty( "dungeonBgm" );
+			if ( bgm.empty() == false )
+			{
+				IAudioSystem* pAudio = game::getService<IAudioSystem>();
+				if ( pAudio != nullptr )
+					pAudio->playMusic( bgm );
+			}
 		}
 	}
 

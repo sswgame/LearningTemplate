@@ -2,7 +2,10 @@
 
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Utility/Format/KeyValueFile.h"
@@ -33,7 +36,7 @@ namespace sw
 			static size_t partyCap()
 			{
 				const GameData* pData = game::getService<GameData>();
-				const int32		n	  = pData != nullptr ? pData->_maxPartySize : 6;
+				const int32		n	  = pData != nullptr ? pData->getCustomPropertyInt( "maxPartySize", 6 ) : 6;
 				return n > 0 ? static_cast<size_t>( n ) : 6u;
 			}
 		};
@@ -42,45 +45,72 @@ namespace sw
 
 namespace sw
 {
-	SW_LOG_CALLER( "SaveGame" );
+	SW_LOG_CALLER( "TurnBattleSaveGame" );
 
-	void SaveGame::clearParty()
+	void TurnBattleSaveGame::clearParty()
 	{
 		_listParty.clear();
 	}
 
-	void SaveGame::setPartyFrom( const vector<PartyMember>& listParty )
+	void TurnBattleSaveGame::setPartyFrom( const vector<PartyMember>& listParty )
 	{
 		_listParty.clear();
 		const size_t n = listParty.size() < SaveGameInternal::partyCap() ? listParty.size() : SaveGameInternal::partyCap();
 		_listParty.assign( listParty.begin(), listParty.begin() + static_cast<std::ptrdiff_t>( n ) );
 	}
 
-	void SaveGame::ensureStarterParty()
+	void TurnBattleSaveGame::ensureStarterParty()
 	{
-		if ( _listParty.empty() )
-		{
-			const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
-			if ( pCatalog != nullptr )
-				_listParty.push_back( pCatalog->makeStarter() );
-			else
-				_listParty.push_back( PartyMember{} );
-		}
+		if ( _listParty.empty() == false )
+			return;
+
+		const GameData* pData = game::getService<GameData>();
+		if ( pData == nullptr )
+			return;
+
+		const string_view starterSpecies = pData->getCustomProperty( "starterSpecies", "critter_a" );
+		const int32		  starterLevel	 = pData->getCustomPropertyInt( "starterLevel", 5 );
+
+		PartyMember m{};
+		m._speciesId = starterSpecies;
+		m._nickname	 = starterSpecies;
+		m._level	 = starterLevel;
+		m._hp		 = 20 + starterLevel * 2;
+		m._hpMax	 = m._hp;
+		m._pp0		 = 35;
+		m._pp1		 = 30;
+		m._exp		 = 0;
+		m._expNext	 = 40 + starterLevel * 10;
+
+		const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+		const SpeciesDef*	  pDef	   = pCatalog != nullptr ? pCatalog->findSpecies( m._speciesId.c_str() ) : nullptr;
+		if ( pDef != nullptr && pDef->_name.empty() == false )
+			m._nickname = pDef->_name;
+
+		_listParty.push_back( std::move( m ) );
+		SW_LOG_INFO( "Added starter party %# (lv%#)", _listParty[0]._speciesId, _listParty[0]._level );
 	}
 
-	int32 SaveGame::getFlag( string_view key, int32 defaultValue ) const
+	int32 TurnBattleSaveGame::getFlag( string_view key, int32 defaultValue ) const
 	{
 		const auto it = _mapFlag.find( string( key ) );
-		return it != _mapFlag.end() ? it->second : defaultValue;
+		if ( it != _mapFlag.end() )
+			return it->second;
+		return defaultValue;
 	}
 
-	void SaveGame::setFlag( string_view key, int32 value )
+	void TurnBattleSaveGame::setFlag( string_view key, int32 value )
 	{
 		_mapFlag[string( key )] = value;
 	}
 
-	bool SaveGame::saveToFile( string_view path ) const
+	bool TurnBattleSaveGame::saveToFile( string_view path ) const
 	{
+		if ( StringUtil::endsWith( path, ".sav", false ) || StringUtil::endsWith( path, ".bin", false ) )
+		{
+			return SaveGameSerializer::saveGameToSlot( *this, path );
+		}
+
 		StringBuilder<constant::kMaxBuffer2048> sb;
 		sb.append( "map=" ).append( _mapPath.c_str() ).append( "\nx=" ).append( _playerX ).append( "\ny=" ).append( _playerY ).append( "\npartyCount=" ).append( static_cast<int32>( _listParty.size() ) ).append( '\n' );
 
@@ -116,8 +146,17 @@ namespace sw
 		return bCopied;
 	}
 
-	bool SaveGame::loadFromFile( string_view path )
+	bool TurnBattleSaveGame::loadFromFile( string_view path )
 	{
+		vector<uint8> headBytes;
+		if ( FileUtil::readFile( path, headBytes, 0, 4 ) && headBytes.size() >= 4 )
+		{
+			uint32 magic = 0;
+			std::memcpy( &magic, headBytes.data(), sizeof( magic ) );
+			if ( magic == SaveGameSerializer::kSaveBinMagic )
+				return SaveGameSerializer::loadGameFromSlot( *this, path );
+		}
+
 		KeyValueMap map;
 		if ( KeyValueFile::loadFile( path, map ) == false )
 			return false;

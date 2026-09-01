@@ -12,24 +12,6 @@ namespace sw
 	{
 		struct RuntimeHudInternal
 		{
-			static hashed_string keyPlayerHp()
-			{
-				static const hashed_string k{ "hud.player_hp" };
-				return k;
-			}
-
-			static hashed_string keyFoeHp()
-			{
-				static const hashed_string k{ "hud.foe_hp" };
-				return k;
-			}
-
-			static hashed_string keyDash()
-			{
-				static const hashed_string k{ "hud.dash" };
-				return k;
-			}
-
 			static hashed_string keyFade()
 			{
 				static const hashed_string k{ "hud.fade" };
@@ -57,10 +39,7 @@ namespace sw
 
 	RuntimeHud::RuntimeHud()
 		: _screen{}
-		, _playerHp{ 1.0f, 0.05f, 0.82f, 0.30f, 0.04f }
-		, _foeHp{ 1.0f, 0.65f, 0.08f, 0.30f, 0.04f }
-		, _exp{ 0.0f, 0.05f, 0.88f, 0.30f, 0.02f }
-		, _pp{ 1.0f, 0.05f, 0.78f, 0.18f, 0.03f }
+		, _mapGauge{}
 		, _dialogue{}
 		, _fadeAlpha{ 0.0f }
 		, _bVisible{ SW_TRUE }
@@ -88,20 +67,30 @@ namespace sw
 		_dialogue.clear();
 	}
 
-	void RuntimeHud::setBattleGauges( float32 playerHpFill, float32 foeHpFill, float32 expFill, float32 ppFill )
+	void RuntimeHud::setGauge( const hashed_string& key, float32 fill, float32 x, float32 y, float32 w, float32 h )
 	{
-		_playerHp._fill = playerHpFill;
-		_foeHp._fill	= foeHpFill;
-		_exp._fill		= expFill;
-		_pp._fill		= ppFill;
+		_mapGauge[key] = HudGauge{ fill, x, y, w, h };
 	}
 
-	void RuntimeHud::setActionGauges( float32 playerHpFill, float32 bossHpFill, float32 dashFill )
+	const HudGauge* RuntimeHud::getGauge( const hashed_string& key ) const
 	{
-		_playerHp._fill = playerHpFill;
-		_foeHp._fill	= bossHpFill;
-		_exp._fill		= 0.0f;
-		_pp._fill		= dashFill;
+		auto it = _mapGauge.find( key );
+		if ( it != _mapGauge.end() )
+			return &it->second;
+		return nullptr;
+	}
+
+	float32 RuntimeHud::getGaugeFill( const hashed_string& key, float32 fallback ) const
+	{
+		const HudGauge* pGauge = getGauge( key );
+		if ( pGauge != nullptr )
+			return pGauge->_fill;
+		return fallback;
+	}
+
+	void RuntimeHud::clearGauges()
+	{
+		_mapGauge.clear();
 	}
 
 	void RuntimeHud::setFadeOverlay( float32 alpha )
@@ -116,11 +105,14 @@ namespace sw
 			return;
 
 		pOverlay->_bVisible = _bVisible;
-		pOverlay->setFloat( RuntimeHudInternal::keyPlayerHp(), _playerHp._fill );
-		pOverlay->setFloat( RuntimeHudInternal::keyFoeHp(), _foeHp._fill );
-		pOverlay->setFloat( RuntimeHudInternal::keyDash(), _pp._fill );
 		pOverlay->setFloat( RuntimeHudInternal::keyFade(), _fadeAlpha );
 		pOverlay->setFloat( RuntimeHudInternal::keyAction(), actionMode ? 1.0f : 0.0f );
+
+		for ( const auto& [key, gauge] : _mapGauge )
+		{
+			pOverlay->setFloat( key, gauge._fill );
+		}
+
 		if ( _dialogue.empty() )
 			pOverlay->setString( RuntimeHudInternal::keyDialogue(), {} );
 		else
@@ -131,9 +123,9 @@ namespace sw
 	{
 		if ( _dialogue.empty() == false || _fadeAlpha > 0.01f )
 		{
-			SW_LOG_TRACE( "rect=(%#,%# %#x%#) fade=%# hp=%#/%# dlg='%#'",
+			SW_LOG_TRACE( "rect=(%#,%# %#x%#) fade=%# dlg='%#' gauges=%#",
 						  _screen._x, _screen._y, _screen._w, _screen._h,
-						  _fadeAlpha, _playerHp._fill, _foeHp._fill, _dialogue );
+						  _fadeAlpha, _dialogue, static_cast<int32>( _mapGauge.size() ) );
 		}
 	}
 } // namespace sw

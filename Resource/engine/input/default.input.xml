@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Engine emergency InputMap — Title Confirm/Continue/Cancel + Debug reload actions.
-  Used when pack InputMap fails to load (ActionMap::bindEmergencyFallback).
+  Engine default InputMap — Title Confirm/Continue/Cancel + Debug reload actions.
+  Debug reload actions use Ctrl+F6, Ctrl+F7, Ctrl+F8 chords to prevent collision with gameplay F1~F12 skills.
 -->
 <InputMap defaultLayer="Title" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
 	<layers>
-		<layer name="Title" priority="50" enabled="1" blockLower="1"/>
-		<layer name="Gameplay" priority="0" enabled="0" blockLower="0"/>
-		<layer name="Debug" priority="1000" enabled="1" blockLower="0" alwaysOn="1"/>
+		<layer name="Title" enabled="1" blockLower="1"/>
+		<layer name="Gameplay" enabled="0" blockLower="0"/>
+		<layer name="Debug" enabled="1" blockLower="0" alwaysOn="1"/>
 	</layers>
 
 	<action name="Confirm" layer="Title" trigger="Pressed">
@@ -20,15 +20,15 @@
 	<action name="Cancel" layer="Title" trigger="Pressed">
 		<bind source="key" code="Escape"/>
 	</action>
-	<layer name="Debug" priority="1000" enabled="1" blockLower="0" alwaysOn="1">
+	<layer name="Debug" enabled="1" blockLower="0" alwaysOn="1">
 		<action name="ReloadShaders" trigger="Pressed">
-			<bind source="key" code="F8"/>
+			<bind source="key" modifier="Ctrl" code="F8"/>
 		</action>
 		<action name="ReloadEditor" trigger="Pressed">
-			<bind source="key" code="F6"/>
+			<bind source="key" modifier="Ctrl" code="F6"/>
 		</action>
 		<action name="ReloadGame" trigger="Pressed">
-			<bind source="key" code="F7"/>
+			<bind source="key" modifier="Ctrl" code="F7"/>
 		</action>
 	</layer>
 </InputMap>

@@ -2,249 +2,431 @@
 
 #include "Engine/Input/InputManager.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Engine/Input/ActionMap.h"
-#include "Engine/Input/Windows/GamepadXInput.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Input/Devices/GamepadDevice.h"
+#include "Engine/Input/Devices/KeyboardDevice.h"
+#include "Engine/Input/Devices/MouseDevice.h"
+
+#if defined( _WIN32 )
+	#include "Engine/Input/Windows/GamepadXInput.h"
+#endif
 
 namespace sw
 {
 	SW_LOG_CALLER( "InputManager" );
 
 	InputManager::InputManager()
-		: _gamepad{ nullptr }
-		, _actionMap{ make_unique<ActionMap>() }
-		, _mouseX{ 0 }
-		, _mouseY{ 0 }
-		, _prevMouseX{ 0 }
-		, _prevMouseY{ 0 }
-		, _mouseWheelDelta{ 0.0f }
-		, _mouseWheelAccum{ 0.0f }
-		, _arrKey{}
-		, _arrPrevKey{}
-		, _arrMouseButton{}
-		, _arrPrevMouseButton{}
+		: _lockFreeQueue{}
+		, _listDevice{}
+		, _pKeyboard{ nullptr }
+		, _pMouse{ nullptr }
+		, _pGamepad{ nullptr }
+		, _pActionMap{ nullptr }
+		, _listDrainedEvent{}
+		, _activeDeviceType{ InputDeviceType::KeyboardMouse }
+		, _onActiveDeviceChanged{}
+		, _onTextInput{}
 		, _bInitialized{ SW_FALSE }
-		, _bPollGamepad{ SW_FALSE }
-		, _bPointerInside{ SW_FALSE }
-		, _bPrevPointerInside{ SW_FALSE }
-		, _bPointerEntered{ SW_FALSE }
-		, _bPointerLeft{ SW_FALSE }
-		, _reservedFlags{ 0 }
+		, _reserved{ 0 }
 	{
 	}
 
-	InputManager::~InputManager() = default;
-
-	ActionMap& InputManager::getActionMap()
+	InputManager::~InputManager()
 	{
-		return *_actionMap;
+		shutdown();
 	}
 
-	const ActionMap& InputManager::getActionMap() const
-	{
-		return *_actionMap;
-	}
-
-	/**
-	 * @brief 입력 매니저를 초기화하고 모든 키/마우스 버퍼를 0으로 리셋합니다.
-	 */
 	bool InputManager::initialize()
 	{
-		Memory::set( _arrKey, 0, sizeof( _arrKey ) );
-		Memory::set( _arrPrevKey, 0, sizeof( _arrPrevKey ) );
-		Memory::set( _arrMouseButton, 0, sizeof( _arrMouseButton ) );
-		Memory::set( _arrPrevMouseButton, 0, sizeof( _arrPrevMouseButton ) );
-		_mouseX				= 0;
-		_mouseY				= 0;
-		_prevMouseX			= 0;
-		_prevMouseY			= 0;
-		_mouseWheelDelta	= 0.0f;
-		_mouseWheelAccum	= 0.0f;
-		_bPointerInside		= SW_FALSE;
-		_bPrevPointerInside = SW_FALSE;
-		_bPointerEntered	= SW_FALSE;
-		_bPointerLeft		= SW_FALSE;
-		_gamepad			= make_unique<GamepadXInput>();
-		_bPollGamepad		= SW_TRUE;
-		_bInitialized		= SW_TRUE;
-		SW_LOG_INFO( "Initialized." );
+		if ( _bInitialized == SW_TRUE )
+			return true;
+
+		_listDevice.clear();
+		_lockFreeQueue.clear();
+		_listDrainedEvent.clear();
+
+		// 1) 표준 키보드 장치 등록
+		auto pKeyboard = make_unique<KeyboardDevice>();
+		_pKeyboard	   = pKeyboard.get();
+		registerDevice( std::move( pKeyboard ) );
+
+		// 2) 표준 마우스 장치 등록
+		auto pMouse = make_unique<MouseDevice>();
+		_pMouse		= pMouse.get();
+		registerDevice( std::move( pMouse ) );
+
+		// 3) 표준 게임패드 장치 등록 (플랫폼별)
+#if defined( _WIN32 )
+		auto pGamepad = make_unique<GamepadXInput>( 0 );
+		_pGamepad	  = pGamepad.get();
+		registerDevice( std::move( pGamepad ) );
+#endif
+
+		// 4) 통합 ActionMap 인스턴스 생성 및 연결
+		_pActionMap = make_unique<ActionMap>();
+		_pActionMap->setInputManager( this );
+
+		_bInitialized = SW_TRUE;
+		SW_LOG_INFO( "InputManager initialized with %d devices.", static_cast<int32>( _listDevice.size() ) );
 		return true;
 	}
 
-	/**
-	 * @brief 입력 매니저를 종료하고 게임패드 리소스를 해제합니다.
-	 */
 	void InputManager::shutdown()
 	{
-		_gamepad.reset();
-		_bPollGamepad = SW_FALSE;
-		_bInitialized = SW_FALSE;
-		SW_LOG_INFO( "Shut down." );
-	}
-
-	/**
-	 * @brief 매 프레임 시작 시 호출되어 플랫폼 윈도우 이벤트를 폴링하고 휠 및 게임패드 상태를 갱신합니다.
-	 */
-	void InputManager::beginFrame()
-	{
 		if ( _bInitialized == SW_FALSE )
 			return;
 
-		_mouseWheelDelta = _mouseWheelAccum;
-		_mouseWheelAccum = 0.0f;
-		_bPointerEntered = SW_FALSE;
-		_bPointerLeft	 = SW_FALSE;
+		for ( auto& pDevice : _listDevice )
+		{
+			if ( pDevice != nullptr )
+				pDevice->resetState();
+		}
 
-		pollPlatform();
-		updatePointerInside();
-		if ( _bPollGamepad == SW_TRUE && _gamepad != nullptr )
-			_gamepad->poll( 0 );
+		_listDevice.clear();
+		_pKeyboard	= nullptr;
+		_pMouse		= nullptr;
+		_pGamepad	= nullptr;
+		_pActionMap = nullptr;
+		_lockFreeQueue.clear();
+		_listDrainedEvent.clear();
+
+		_bInitialized = SW_FALSE;
+		SW_LOG_INFO( "InputManager shut down." );
 	}
 
-	/**
-	 * @brief 매 프레임 종료 시 호출되어 현재 프레임 입력 상태를 이전 프레임 버퍼로 복사(스냅샷)합니다.
-	 */
+	bool InputManager::postRawEvent( const RawInputEvent& rawEvent )
+	{
+		return _lockFreeQueue.push( rawEvent );
+	}
+
+	uint32 InputManager::drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount )
+	{
+		return _lockFreeQueue.drain( pOutBuffer, maxCount );
+	}
+
+	void InputManager::registerDevice( unique_ptr<IInputDevice> pDevice )
+	{
+		if ( pDevice == nullptr )
+			return;
+
+		if ( pDevice->getDeviceKind() == InputDeviceKind::Keyboard && _pKeyboard == nullptr )
+			_pKeyboard = static_cast<KeyboardDevice*>( pDevice.get() );
+		else if ( pDevice->getDeviceKind() == InputDeviceKind::Mouse && _pMouse == nullptr )
+			_pMouse = static_cast<MouseDevice*>( pDevice.get() );
+		else if ( pDevice->getDeviceKind() == InputDeviceKind::Gamepad && _pGamepad == nullptr )
+			_pGamepad = static_cast<GamepadDevice*>( pDevice.get() );
+
+		_listDevice.push_back( std::move( pDevice ) );
+	}
+
+	void InputManager::unregisterDevice( IInputDevice* pDevice )
+	{
+		if ( pDevice == nullptr )
+			return;
+
+		if ( _pKeyboard == pDevice )
+			_pKeyboard = nullptr;
+		if ( _pMouse == pDevice )
+			_pMouse = nullptr;
+		if ( _pGamepad == pDevice )
+			_pGamepad = nullptr;
+
+		for ( auto it = _listDevice.begin(); it != _listDevice.end(); ++it )
+		{
+			if ( it->get() == pDevice )
+			{
+				_listDevice.erase( it );
+				break;
+			}
+		}
+	}
+
+	IInputDevice* InputManager::getDevice( InputDeviceKind kind, uint32 deviceIndex ) const
+	{
+		for ( const auto& pDev : _listDevice )
+		{
+			if ( pDev != nullptr && pDev->getDeviceKind() == kind && pDev->getDeviceIndex() == deviceIndex )
+				return pDev.get();
+		}
+		return nullptr;
+	}
+
+	GamepadDevice* InputManager::getGamepad( uint32 deviceIndex ) const
+	{
+		IInputDevice* pDev = getDevice( InputDeviceKind::Gamepad, deviceIndex );
+		return static_cast<GamepadDevice*>( pDev );
+	}
+
+	void InputManager::beginFrame( float32 deltaSeconds )
+	{
+		// 1) 락프리 큐에서 비동기 인입된 원시 이벤트들을 일괄 드레인
+		_listDrainedEvent.clear();
+		_lockFreeQueue.drain( _listDrainedEvent );
+
+		// 2) 드레인된 원시 이벤트를 각 디바이스로 디스패치
+		for ( const RawInputEvent& rawEvt : _listDrainedEvent )
+		{
+			dispatchRawEvent( rawEvt );
+		}
+
+		// 3) 등록된 모든 장치에 대해 프레임 시작 및 폴링 호출
+		for ( auto& pDev : _listDevice )
+		{
+			if ( pDev != nullptr )
+			{
+				pDev->onFrameBegin( deltaSeconds );
+				pDev->poll( deltaSeconds );
+			}
+		}
+
+		// 4) 활성 장치 자동 감지
+		if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+		{
+			float32 sx{ 0.0f };
+			float32 sy{ 0.0f };
+			_pGamepad->getLeftStick( sx, sy );
+			const bool bStickActive = ( sx * sx + sy * sy ) > 0.04f;
+			if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f )
+			{
+				setActiveDeviceType( InputDeviceType::GamepadXbox );
+			}
+			else
+			{
+				for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( GamepadButton::Count ); ++btnIdx )
+				{
+					if ( _pGamepad->wasButtonPressed( static_cast<GamepadButton>( btnIdx ) ) )
+					{
+						setActiveDeviceType( InputDeviceType::GamepadXbox );
+						break;
+					}
+				}
+			}
+		}
+
+		if ( _pKeyboard != nullptr )
+		{
+			for ( size_t keyIdx = 1; keyIdx < static_cast<size_t>( Key::Count ); ++keyIdx )
+			{
+				if ( _pKeyboard->wasKeyPressed( static_cast<Key>( keyIdx ) ) )
+				{
+					setActiveDeviceType( InputDeviceType::KeyboardMouse );
+					break;
+				}
+			}
+		}
+
+		if ( _pMouse != nullptr )
+		{
+			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( MouseButton::Count ); ++btnIdx )
+			{
+				if ( _pMouse->wasButtonPressed( static_cast<MouseButton>( btnIdx ) ) )
+				{
+					setActiveDeviceType( InputDeviceType::KeyboardMouse );
+					break;
+				}
+			}
+		}
+	}
+
+	void InputManager::dispatchRawEvent( const RawInputEvent& rawEvt )
+	{
+		switch ( rawEvt._type )
+		{
+			case RawInputEventType::KeyDown:
+				if ( _pKeyboard != nullptr )
+					_pKeyboard->setKeyDown( rawEvt._payload._keyData._key, true );
+				setActiveDeviceType( InputDeviceType::KeyboardMouse );
+				break;
+
+			case RawInputEventType::KeyUp:
+				if ( _pKeyboard != nullptr )
+					_pKeyboard->setKeyDown( rawEvt._payload._keyData._key, false );
+				break;
+
+			case RawInputEventType::MouseMove:
+				if ( _pMouse != nullptr )
+				{
+					_pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
+					_pMouse->addRawDelta( rawEvt._payload._mouseData._rawDeltaX, rawEvt._payload._mouseData._rawDeltaY );
+				}
+				setActiveDeviceType( InputDeviceType::KeyboardMouse );
+				break;
+
+			case RawInputEventType::MouseButtonDown:
+				if ( _pMouse != nullptr )
+				{
+					_pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
+					_pMouse->setButtonDown( rawEvt._payload._mouseData._button, true );
+				}
+				setActiveDeviceType( InputDeviceType::KeyboardMouse );
+				break;
+
+			case RawInputEventType::MouseButtonUp:
+				if ( _pMouse != nullptr )
+				{
+					_pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
+					_pMouse->setButtonDown( rawEvt._payload._mouseData._button, false );
+				}
+				break;
+
+			case RawInputEventType::MouseWheel:
+				if ( _pMouse != nullptr )
+					_pMouse->addWheelDelta( rawEvt._payload._mouseData._wheelDelta );
+				break;
+
+			case RawInputEventType::GamepadButtonDown:
+			{
+				GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+				if ( pPad != nullptr )
+					pPad->setButtonDown( rawEvt._payload._gamepadData._button, true );
+				setActiveDeviceType( InputDeviceType::GamepadXbox );
+				break;
+			}
+
+			case RawInputEventType::GamepadButtonUp:
+			{
+				GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+				if ( pPad != nullptr )
+					pPad->setButtonDown( rawEvt._payload._gamepadData._button, false );
+				break;
+			}
+
+			case RawInputEventType::GamepadAxis:
+			{
+				GamepadDevice* pPad = getGamepad( rawEvt._deviceIndex );
+				if ( pPad != nullptr )
+					pPad->setAxis( rawEvt._payload._gamepadData._axisIndex, rawEvt._payload._gamepadData._axisValue );
+				break;
+			}
+
+			case RawInputEventType::TextInput:
+				onTextInput( rawEvt._payload._textData._arrUtf8 );
+				break;
+
+			case RawInputEventType::FocusGained:
+				break;
+
+			case RawInputEventType::FocusLost:
+				onWindowFocusLost();
+				break;
+
+			case RawInputEventType::None:
+			default:
+				break;
+		}
+	}
+
 	void InputManager::endFrame()
 	{
-		if ( _bInitialized == SW_FALSE )
-			return;
-
-		Memory::copy( _arrPrevKey, _arrKey, sizeof( _arrKey ) );
-		Memory::copy( _arrPrevMouseButton, _arrMouseButton, sizeof( _arrMouseButton ) );
-		_prevMouseX			= _mouseX;
-		_prevMouseY			= _mouseY;
-		_bPrevPointerInside = _bPointerInside;
-		_mouseWheelDelta	= 0.0f;
+		for ( auto& pDev : _listDevice )
+		{
+			if ( pDev != nullptr )
+				pDev->onFrameEnd();
+		}
 	}
 
-	/**
-	 * @brief 게임패드 하드웨어 폴링 활성화 여부를 설정합니다.
-	 */
-	void InputManager::setGamepadPollingEnabled( bool enabled )
+	void InputManager::onWindowFocusLost()
 	{
-		_bPollGamepad = enabled ? SW_TRUE : SW_FALSE;
-		if ( enabled && _gamepad == nullptr )
-			_gamepad = make_unique<GamepadXInput>();
+		for ( auto& pDev : _listDevice )
+		{
+			if ( pDev != nullptr )
+				pDev->resetState();
+		}
 	}
 
-	/**
-	 * @brief 해당 키가 현재 프레임에 눌려있는 상태인지 검사합니다. (Held)
-	 */
-	bool InputManager::isKeyDown( Key key ) const
+	void InputManager::setActiveDeviceType( InputDeviceType type )
 	{
-		if ( key == Key::Unknown || key >= Key::Count )
-			return false;
-		return _arrKey[static_cast<size_t>( key )];
+		if ( _activeDeviceType != type )
+		{
+			_activeDeviceType = type;
+			if ( _onActiveDeviceChanged.isBound() )
+				_onActiveDeviceChanged( type );
+		}
 	}
 
-	/**
-	 * @brief 이전 프레임에는 안 눌렸다가 이번 프레임에 처음 눌렸는지 검사합니다. (Down Edge)
-	 */
-	bool InputManager::wasKeyPressed( Key key ) const
+	bool InputManager::wasAnyInputPressed() const
 	{
-		if ( key == Key::Unknown || key >= Key::Count )
-			return false;
-		const size_t keyIndex = static_cast<size_t>( key );
-		return ( _arrKey[keyIndex] == true ) && ( _arrPrevKey[keyIndex] == false );
+		if ( _pKeyboard != nullptr )
+		{
+			for ( size_t keyIdx = 1; keyIdx < static_cast<size_t>( Key::Count ); ++keyIdx )
+			{
+				if ( _pKeyboard->wasKeyPressed( static_cast<Key>( keyIdx ) ) )
+					return true;
+			}
+		}
+
+		if ( _pMouse != nullptr )
+		{
+			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( MouseButton::Count ); ++btnIdx )
+			{
+				if ( _pMouse->wasButtonPressed( static_cast<MouseButton>( btnIdx ) ) )
+					return true;
+			}
+		}
+
+		if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+		{
+			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( GamepadButton::Count ); ++btnIdx )
+			{
+				if ( _pGamepad->wasButtonPressed( static_cast<GamepadButton>( btnIdx ) ) )
+					return true;
+			}
+		}
+
+		return false;
 	}
 
-	/**
-	 * @brief 이전 프레임에는 눌려있었다가 이번 프레임에 떼어졌는지 검사합니다. (Up Edge)
-	 */
-	bool InputManager::wasKeyReleased( Key key ) const
+	void InputManager::onTextInput( string_view text )
 	{
-		if ( key == Key::Unknown || key >= Key::Count )
-			return false;
-		const size_t keyIndex = static_cast<size_t>( key );
-		return ( _arrKey[keyIndex] == false ) && ( _arrPrevKey[keyIndex] == true );
+		if ( text.empty() == false && _onTextInput.isBound() )
+			_onTextInput( text );
 	}
 
-	/**
-	 * @brief 현재 마우스 커서의 윈도우 클라이언트 기준 좌표(X, Y)를 반환합니다.
-	 */
 	void InputManager::getMousePosition( int32& outX, int32& outY ) const
 	{
-		outX = _mouseX;
-		outY = _mouseY;
+		outX = _pMouse != nullptr ? _pMouse->getPositionX() : 0;
+		outY = _pMouse != nullptr ? _pMouse->getPositionY() : 0;
 	}
 
-	/**
-	 * @brief 이전 프레임 대비 마우스의 이동 델타(Delta X, Delta Y)를 반환합니다.
-	 */
 	void InputManager::getMouseDelta( int32& outDx, int32& outDy ) const
 	{
-		outDx = _mouseX - _prevMouseX;
-		outDy = _mouseY - _prevMouseY;
-	}
-
-	/**
-	 * @brief 마우스 버튼이 현재 눌려있는지 검사합니다.
-	 */
-	bool InputManager::isMouseButtonDown( MouseButton button ) const
-	{
-		if ( button >= MouseButton::Count )
-			return false;
-		return _arrMouseButton[static_cast<size_t>( button )];
-	}
-
-	/**
-	 * @brief 마우스 버튼이 이번 프레임에 처음 클릭되었는지 검사합니다.
-	 */
-	bool InputManager::wasMouseButtonPressed( MouseButton button ) const
-	{
-		if ( button >= MouseButton::Count )
-			return false;
-		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrMouseButton[buttonIndex] == true ) && ( _arrPrevMouseButton[buttonIndex] == false );
-	}
-
-	/**
-	 * @brief 마우스 버튼이 이번 프레임에 떼어졌는지 검사합니다.
-	 */
-	bool InputManager::wasMouseButtonReleased( MouseButton button ) const
-	{
-		if ( button >= MouseButton::Count )
-			return false;
-		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrMouseButton[buttonIndex] == false ) && ( _arrPrevMouseButton[buttonIndex] == true );
-	}
-
-	void InputManager::setKeyDown( Key key, bool bDown )
-	{
-		if ( key == Key::Unknown || key >= Key::Count )
-			return;
-		_arrKey[static_cast<size_t>( key )] = bDown;
-	}
-
-	void InputManager::setMouseButtonDown( MouseButton button, bool bDown )
-	{
-		if ( button >= MouseButton::Count )
-			return;
-		_arrMouseButton[static_cast<size_t>( button )] = bDown;
-	}
-
-#if !defined( SW_PLATFORM_WINDOWS ) && !defined( SW_PLATFORM_LINUX )
-	void InputManager::pollPlatform()
-	{
-	}
-
-	void InputManager::processNativeEvent( const NativeWindowEvent& )
-	{
-	}
-#endif
-
-	void InputManager::updatePointerInside()
-	{
-		bool		   bIsMouseInside{ false };
-		const IWindow* pWindow = IWindow::getActiveWindow();
-		if ( pWindow != nullptr )
+		if ( _pMouse != nullptr )
+			_pMouse->getDelta( outDx, outDy );
+		else
 		{
-			const int32 width  = static_cast<int32>( pWindow->getWidth() );
-			const int32 height = static_cast<int32>( pWindow->getHeight() );
-			bIsMouseInside	   = ( 0 <= _mouseX && _mouseX < width && 0 <= _mouseY && _mouseY < height );
+			outDx = 0;
+			outDy = 0;
 		}
-		_bPointerInside	 = bIsMouseInside ? SW_TRUE : SW_FALSE;
-		_bPointerEntered = ( bIsMouseInside && _bPrevPointerInside == SW_FALSE ) ? SW_TRUE : SW_FALSE;
-		_bPointerLeft	 = ( bIsMouseInside == false && _bPrevPointerInside == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+	}
+
+	void InputManager::getRawMouseDelta( float32& outDx, float32& outDy ) const
+	{
+		if ( _pMouse != nullptr )
+			_pMouse->getRawDelta( outDx, outDy );
+		else
+		{
+			outDx = 0.0f;
+			outDy = 0.0f;
+		}
+	}
+
+	float32 InputManager::getGamepadLeftTrigger( uint32 deviceIndex ) const
+	{
+		GamepadDevice* pPad = getGamepad( deviceIndex );
+		return pPad != nullptr ? pPad->getLeftTrigger() : 0.0f;
+	}
+
+	float32 InputManager::getGamepadRightTrigger( uint32 deviceIndex ) const
+	{
+		GamepadDevice* pPad = getGamepad( deviceIndex );
+		return pPad != nullptr ? pPad->getRightTrigger() : 0.0f;
+	}
+
+	bool InputManager::setGamepadVibration( float32 leftMotor, float32 rightMotor, uint32 deviceIndex )
+	{
+		GamepadDevice* pPad = getGamepad( deviceIndex );
+		return pPad != nullptr ? pPad->setVibration( leftMotor, rightMotor ) : false;
 	}
 } // namespace sw

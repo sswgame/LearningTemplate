@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Save/ISaveGame.h"
+#include "GameFramework/Base/SaveGame.h"
 
 namespace sw
 {
@@ -14,7 +14,7 @@ namespace sw
 	DialogueRunnerComponent::DialogueRunnerComponent()
 		: _graphPath{}
 		, _graph{}
-		, _pSaveSlot{ nullptr }
+		, _pFlagStore{ nullptr }
 		, _currentSpeaker{}
 		, _currentText{}
 		, _listCurrentChoice{}
@@ -29,7 +29,7 @@ namespace sw
 
 	void DialogueRunnerComponent::onBeginPlay()
 	{
-		if ( _graphPath.empty() == false )
+		if ( _graphPath.empty() == false && _graph._listNode.empty() )
 			loadGraphFile( _graphPath );
 	}
 
@@ -44,31 +44,20 @@ namespace sw
 
 	bool DialogueRunnerComponent::loadGraphFile( string_view jsonPath )
 	{
-		if ( _graph.loadFromFile( jsonPath ) == false )
-		{
-			SW_LOG_WARNING( "Failed to read graph file: %#", jsonPath );
-			return false;
-		}
-		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _graph._listNode.size() ) );
-		return true;
+		_graphPath = string( jsonPath );
+		return _graph.loadFromFile( jsonPath );
 	}
 
 	bool DialogueRunnerComponent::loadGraphJson( string_view jsonContent )
 	{
-		if ( _graph.parseJson( jsonContent ) == false )
-		{
-			SW_LOG_WARNING( "Failed to parse graph JSON" );
-			return false;
-		}
-		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _graph._listNode.size() ) );
-		return _graph._listNode.empty() == false;
+		return _graph.parseJson( jsonContent );
 	}
 
 	bool DialogueRunnerComponent::startDialogue( int32 startNodeId )
 	{
 		if ( _graph._listNode.empty() )
 		{
-			SW_LOG_WARNING( "Cannot start dialogue: no nodes loaded." );
+			SW_LOG_WARNING( "DialogueRunner: No valid nodes in graph." );
 			return false;
 		}
 
@@ -78,8 +67,12 @@ namespace sw
 			const DialogueAssetNode* pStart = _graph.findStartNode();
 			targetId						= ( pStart != nullptr ) ? pStart->_id : 0;
 		}
+
 		if ( targetId <= 0 )
+		{
+			SW_LOG_WARNING( "DialogueRunner: No valid root or start node to execute." );
 			return false;
+		}
 
 		executeNode( targetId );
 		return true;
@@ -133,9 +126,9 @@ namespace sw
 			_onLine( _currentSpeaker, _currentText );
 	}
 
-	void DialogueRunnerComponent::setSaveSlot( SaveSlot* pSaveSlot )
+	void DialogueRunnerComponent::setFlagStore( IFlagStore* pFlagStore )
 	{
-		_pSaveSlot = pSaveSlot;
+		_pFlagStore = pFlagStore;
 	}
 
 	DialogueRunnerState DialogueRunnerComponent::getState() const
@@ -217,7 +210,7 @@ namespace sw
 		if ( StringUtil::startsWith( flagKey, kPrefix ) )
 			flagKey = flagKey.substr( kPrefix.size() );
 
-		const int32 currentVal = ( _pSaveSlot != nullptr ) ? _pSaveSlot->getFlag( flagKey ) : 0;
+		const int32 currentVal = ( _pFlagStore != nullptr ) ? _pFlagStore->getFlag( flagKey ) : 0;
 		return ( bEqualsComparison ) ? ( currentVal == expectedVal ) : ( currentVal != expectedVal );
 	}
 
@@ -230,7 +223,7 @@ namespace sw
 		if ( _onEvent.isBound() )
 			_onEvent( actionCmd );
 
-		if ( _pSaveSlot != nullptr )
+		if ( _pFlagStore != nullptr )
 		{
 			constexpr string_view kSetFlag = "set_flag:";
 			if ( StringUtil::startsWith( actionCmd, kSetFlag ) )
@@ -241,7 +234,7 @@ namespace sw
 				int32		 val{ 1 };
 				if ( colon != string::npos )
 					StringUtil::parseInt( rest.substr( colon + 1 ), val );
-				_pSaveSlot->setFlag( key, val );
+				_pFlagStore->setFlag( key, val );
 			}
 		}
 	}

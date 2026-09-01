@@ -610,7 +610,7 @@ namespace sw
 			_mapDebugAction			   = make_unique<ActionMap>();
 			const string& inputMapPath = engine::getEngineData()._shellInputMap;
 			if ( inputMapPath.empty() || _mapDebugAction->loadFromResource( inputMapPath ) == false )
-				_mapDebugAction->bindEmergencyFallback();
+				_mapDebugAction->bindDefaultFallback();
 			_bShellActionsBound = true;
 		}
 

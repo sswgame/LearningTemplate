@@ -10,8 +10,17 @@
 namespace sw
 {
 	// ------------------------------------------------------------------------------
-	// 1) LocomotionState — 한 칸 이동과 상호작용이 입력을 잠금
+	// 1) FacingDir & LocomotionState — 바라보는 방향 및 타일 스텝 이동 FSM
 	// ------------------------------------------------------------------------------
+	/** @brief 2D 캐릭터가 바라보는 4방향 */
+	enum class FacingDir : uint8
+	{
+		Down = 0,
+		Left,
+		Right,
+		Up
+	};
+
 	/** @brief 타일 스텝 이동 상태 */
 	enum class LocomotionState : uint8
 	{

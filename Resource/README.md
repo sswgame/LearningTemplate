@@ -15,4 +15,4 @@
 - 검색 시 경로는 소문자로 정규화됩니다. 파일명은 소문자·숫자·언더바를 권장합니다.
 - 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/level01.xml`, `editor/data/editordata.xml`
 - 팩 상대 키: `pipeline/forwardpipeline.xml` → `game/<pack>/` → `common/` → `engine/` → `editor/` 순으로 검색
-- 셸 InputMap: `engine/input/emergency.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`
+- 셸 InputMap: `engine/input/default.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`

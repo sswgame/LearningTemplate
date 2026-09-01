@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Data/UnitStatsComponent.h"
+#include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

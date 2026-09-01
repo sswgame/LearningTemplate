@@ -17,7 +17,7 @@ namespace sw
 	struct SW_API EngineData
 	{
 		string _defaultMaterial{ "engine/materials/defaultmaterial.material" }; ///< 씬 폴백 머티리얼
-		string _shellInputMap{ "engine/input/emergency.input.xml" };			///< App 셸 InputMap
+		string _shellInputMap{ "engine/input/default.input.xml" };				///< App 셸 InputMap
 
 		string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" };
 		string _defaultDeferredPipeline{ "engine/pipeline/deferredpipeline.xml" };

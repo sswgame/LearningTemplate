@@ -3,12 +3,20 @@
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Input/ActionMap.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputSnapshot.h"
+
 #include "GameFramework/Base/GameInstanceBase.h"
+#include "GameFramework/Base/SaveGame.h"
+#include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
+#include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
+#include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
-#include "GameFramework/Save/ISaveGame.h"
-#include "GameFramework/Transition/TransitionOrchestrator.h"
+#include "GameFramework/Transition/ScreenTransitionManager.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
+#include "GameFramework/UI/RuntimeHud.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -66,33 +74,25 @@ SW_TEST_CASE( GameFrameworkTest, FadeServiceLifecycle )
 }
 
 // ------------------------------------------------------------------------------
-// 2) TransitionOrchestratorTest — 워프/전투/복귀 FSM 및 콜백 연동 검증
+// 2) ScreenTransitionManagerTest — 범용 화면 전환 FSM 및 수명주기 훅 검증
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] TransitionOrchestrator 워프 전환 FSM 및 콜백 호출 순서 검증
+ * @brief [GameFrameworkTest] ScreenTransitionManager 페이드 아웃/인 및 액션 실행 순서 검증
  */
-SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorWarpFlow )
+SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerLifecycle )
 {
-	TransitionOrchestrator orchestrator;
-	SW_EXPECT_FALSE( orchestrator.isBusy() );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::None ), static_cast<uint8>( orchestrator.getPhase() ) );
+	ScreenTransitionManager manager;
+	SW_EXPECT_FALSE( manager.isBusy() );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::None ), static_cast<uint8>( manager.getPhase() ) );
 
-	string loadedMapName;
-	int32  spawnCoordX{ 0 };
-	int32  spawnCoordY{ 0 };
-	int32  inputDisableCount{ 0 };
-	int32  inputEnableCount{ 0 };
+	bool  bActionExecuted	   = false;
+	int32 inputDisableCount	   = 0;
+	int32 inputEnableCount	   = 0;
+	int32 transitionStartCount = 0;
+	int32 transitionEndCount   = 0;
 
 	TransitionCallbacks callbacks{};
-	callbacks.loadMap = Delegate<bool( string_view, int32, int32 )>::create(
-		[&]( string_view mapPath, int32 sx, int32 sy ) -> bool
-	{
-		loadedMapName = string( mapPath );
-		spawnCoordX	  = sx;
-		spawnCoordY	  = sy;
-		return true;
-	} );
 	callbacks.setPlayerInputEnabled = Delegate<void( bool )>::create(
 		[&]( bool bEnable )
 	{
@@ -101,90 +101,72 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorWarpFlow )
 		else
 			++inputDisableCount;
 	} );
+	callbacks.onTransitionStarted = Delegate<void()>::create(
+		[&]()
+	{ ++transitionStartCount; } );
+	callbacks.onTransitionFinished = Delegate<void()>::create(
+		[&]()
+	{ ++transitionEndCount; } );
 
-	orchestrator.setCallbacks( std::move( callbacks ) );
+	manager.setCallbacks( std::move( callbacks ) );
 
-	// 워프 전환 시작
-	orchestrator.beginWarp( "Maps/TownA.map", 10, 20 );
-	SW_EXPECT_TRUE( orchestrator.isBusy() );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::WarpFadeOut ), static_cast<uint8>( orchestrator.getPhase() ) );
+	// 1) 전환 시작 (0.5s fadeOut, 0.5s fadeIn)
+	manager.beginTransition(
+		Delegate<void()>::create( [&]()
+	{ bActionExecuted = true; } ),
+		0.5f,
+		0.5f );
+
+	SW_EXPECT_TRUE( manager.isBusy() );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::FadeOut ), static_cast<uint8>( manager.getPhase() ) );
 	SW_EXPECT_EQUAL( 1, inputDisableCount );
 	SW_EXPECT_EQUAL( 0, inputEnableCount );
+	SW_EXPECT_EQUAL( 1, transitionStartCount );
+	SW_EXPECT_EQUAL( 0, transitionEndCount );
 
-	// 페이드 아웃 완료 (기본 0.35초 이상 update)
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::WarpLoad ), static_cast<uint8>( orchestrator.getPhase() ) );
+	// 2) 페이드 아웃 중 (0.25초 경과) -> 액션 아직 미실행
+	manager.update( 0.25f );
+	SW_EXPECT_FALSE( bActionExecuted );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::FadeOut ), static_cast<uint8>( manager.getPhase() ) );
 
-	// 다음 틱에서 loadMap 콜백 호출 및 WarpFadeIn 진입
-	orchestrator.update( 0.016f );
-	SW_EXPECT_EQUAL( string( "Maps/TownA.map" ), loadedMapName );
-	SW_EXPECT_EQUAL( 10, spawnCoordX );
-	SW_EXPECT_EQUAL( 20, spawnCoordY );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::WarpFadeIn ), static_cast<uint8>( orchestrator.getPhase() ) );
+	// 3) 페이드 아웃 완료 (추가 0.3초 -> 총 0.55초 >= 0.5s) -> 액션 실행 및 FadeIn 진입
+	manager.update( 0.3f );
+	SW_EXPECT_TRUE( bActionExecuted );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::FadeIn ), static_cast<uint8>( manager.getPhase() ) );
+	SW_EXPECT_EQUAL( 0, transitionEndCount );
 
-	// 페이드 인 완료
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::None ), static_cast<uint8>( orchestrator.getPhase() ) );
-	SW_EXPECT_FALSE( orchestrator.isBusy() );
+	// 4) 페이드 인 완료 (0.6초 경과) -> None 복귀, 입력 복원, 완료 알림
+	manager.update( 0.6f );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::None ), static_cast<uint8>( manager.getPhase() ) );
+	SW_EXPECT_FALSE( manager.isBusy() );
 	SW_EXPECT_EQUAL( 1, inputEnableCount );
+	SW_EXPECT_EQUAL( 1, transitionEndCount );
 }
 
 /**
- * @brief [GameFrameworkTest] TransitionOrchestrator 전투 및 복귀 전환 FSM 검증
+ * @brief [GameFrameworkTest] ScreenTransitionManager 리셋 동작 검증
  */
-SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
+SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerReset )
 {
-	TransitionOrchestrator orchestrator;
+	ScreenTransitionManager manager;
+	manager.beginTransition( Delegate<void()>::create( []() {} ), 1.0f, 1.0f );
+	SW_EXPECT_TRUE( manager.isBusy() );
 
-	bool bBattleStarted	 = false;
-	bool bBattleReturned = false;
-
-	TransitionCallbacks callbacks{};
-	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	{ bBattleStarted = true; } );
-	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
-	{ bBattleReturned = true; } );
-	orchestrator.setCallbacks( std::move( callbacks ) );
-
-	// 1) 전투 진입 전환
-	orchestrator.beginBattle();
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::BattleFadeOut ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::BattleLoad ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.016f );
-	SW_EXPECT_TRUE( bBattleStarted );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::BattleFadeIn ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::None ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	// 2) 복귀 전환
-	orchestrator.beginReturn();
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::ReturnFadeOut ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::ReturnLoad ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.016f );
-	SW_EXPECT_TRUE( bBattleReturned );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::ReturnFadeIn ), static_cast<uint8>( orchestrator.getPhase() ) );
-
-	orchestrator.update( 0.4f );
-	SW_EXPECT_EQUAL( static_cast<uint8>( TransitionOrchestrator::Phase::None ), static_cast<uint8>( orchestrator.getPhase() ) );
+	manager.reset();
+	SW_EXPECT_FALSE( manager.isBusy() );
+	SW_EXPECT_EQUAL( static_cast<uint8>( ScreenTransitionManager::Phase::None ), static_cast<uint8>( manager.getPhase() ) );
 }
 
 // ------------------------------------------------------------------------------
-// 3) SaveSlotTest — 플래그 관리 및 파일 직렬화/역직렬화 검증
+// 3) SaveGameTest — 플래그 관리 및 파일 직렬화/역직렬화 검증
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] SaveSlot 플래그 조회/설정 및 파일 저장/로드 라운드트립 검증
+ * @brief [GameFrameworkTest] SaveGame 플래그 조회/설정 및 파일 저장/로드 라운드트립 검증
  */
-SW_TEST_CASE( GameFrameworkTest, SaveSlotFlagsAndFileIO )
+SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
 {
-	SaveSlot srcSlot{};
+	TurnBattleSaveGame srcSlot{};
 	srcSlot._mapPath = "Assets/Maps/Dungeon1.map";
 	srcSlot._playerX = 15;
 	srcSlot._playerY = 25;
@@ -201,12 +183,12 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotFlagsAndFileIO )
 	SW_EXPECT_EQUAL( 42, srcSlot.getFlag( "player_level" ) );
 
 	// 파일 저장 및 로드
-	const string tempSavePath = "test_saveslot_temp.save";
-	const bool	 saveOk		  = srcSlot.saveCommonToFile( tempSavePath );
+	const string tempSavePath = "test_saveslot_temp.sav";
+	const bool	 saveOk		  = SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath );
 	SW_EXPECT_TRUE( saveOk );
 
-	SaveSlot   dstSlot{};
-	const bool loadOk = dstSlot.loadCommonFromFile( tempSavePath );
+	TurnBattleSaveGame dstSlot{};
+	const bool		   loadOk = SaveGameSerializer::loadGameFromSlot( dstSlot, tempSavePath );
 	SW_EXPECT_TRUE( loadOk );
 
 	SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
@@ -221,44 +203,6 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotFlagsAndFileIO )
 }
 
 /**
- * @brief [GameFrameworkTest] SaveSlot 체크섬 무결성 검증 및 위변조/손상 감지 검증
- */
-SW_TEST_CASE( GameFrameworkTest, SaveSlotChecksumValidation )
-{
-	SaveSlot srcSlot{};
-	srcSlot._mapPath = "Assets/Maps/SafeZone.map";
-	srcSlot._playerX = 100;
-	srcSlot._playerY = 200;
-	srcSlot.setFlag( "gold", 9999 );
-
-	const string tempPath = "test_checksum_temp.save";
-	SW_EXPECT_TRUE( srcSlot.saveCommonToFile( tempPath ) );
-
-	// 1) 정상 로드
-	SaveSlot normalSlot{};
-	SW_EXPECT_TRUE( normalSlot.loadCommonFromFile( tempPath ) );
-	SW_EXPECT_EQUAL( 9999, normalSlot.getFlag( "gold" ) );
-
-	// 2) 파일 내용 변조 (골드를 999999로 변경)
-	string fileContent;
-	SW_EXPECT_TRUE( FileUtil::readTextFile( tempPath, fileContent ) );
-
-	const size_t goldPos = fileContent.find( "flag.gold=9999" );
-	SW_ASSERT_TRUE( goldPos != string::npos );
-	fileContent.replace( goldPos, 14, "flag.gold=999999" );
-	SW_EXPECT_TRUE( FileUtil::writeTextFile( tempPath, fileContent ) );
-
-	// 3) 변조된 파일 로드 시 체크섬 불일치로 실패해야 함
-	{
-		SW_TEST_DEFENSIVE_SCOPE( "Testing SaveSlot text checksum tampering detection" );
-		SaveSlot tamperedSlot{};
-		SW_EXPECT_FALSE( tamperedSlot.loadCommonFromFile( tempPath ) );
-	}
-
-	FileUtil::removeFile( tempPath );
-}
-
-/**
  * @brief [GameFrameworkTest] StringUtil::computeCrc32 표준 테스트 벡터 검증
  */
 SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
@@ -269,11 +213,11 @@ SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
 }
 
 /**
- * @brief [GameFrameworkTest] SaveSlot SAV1 바이너리 포맷 저장/로드 및 플래그 보존 검증
+ * @brief [GameFrameworkTest] SaveGame SAV1 바이너리 포맷 저장/로드 및 플래그 보존 검증
  */
-SW_TEST_CASE( GameFrameworkTest, SaveSlotBinarySav1Format )
+SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
 {
-	SaveSlot srcSlot{};
+	TurnBattleSaveGame srcSlot{};
 	srcSlot._mapPath = "Assets/Scenes/Dungeon_B2.scene";
 	srcSlot._playerX = 15;
 	srcSlot._playerY = 48;
@@ -283,11 +227,11 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotBinarySav1Format )
 	srcSlot.setFlag( "difficulty", 2 );
 
 	const string binSavePath = "test_saveslot_sav1.sav";
-	const bool	 saveOk		 = srcSlot.saveCommonToBinaryFile( binSavePath );
+	const bool	 saveOk		 = SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath );
 	SW_EXPECT_TRUE( saveOk );
 
-	SaveSlot   dstSlot{};
-	const bool loadOk = dstSlot.loadCommonFromBinaryFile( binSavePath );
+	TurnBattleSaveGame dstSlot{};
+	const bool		   loadOk = SaveGameSerializer::loadGameFromSlot( dstSlot, binSavePath );
 	SW_EXPECT_TRUE( loadOk );
 
 	SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
@@ -298,31 +242,26 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotBinarySav1Format )
 	SW_EXPECT_EQUAL( 0, dstSlot.getFlag( "boss_defeated" ) );
 	SW_EXPECT_EQUAL( 2, dstSlot.getFlag( "difficulty" ) );
 
-	// loadCommonFromFile로도 매직 감지하여 정상 로드되어야 함
-	SaveSlot autoDetectSlot{};
-	SW_EXPECT_TRUE( autoDetectSlot.loadCommonFromFile( binSavePath ) );
-	SW_EXPECT_EQUAL( srcSlot._mapPath, autoDetectSlot._mapPath );
-
 	FileUtil::removeFile( binSavePath );
 }
 
 /**
- * @brief [GameFrameworkTest] SaveSlot SAV1 바이너리 CRC32 위변조/손상 감지 검증
+ * @brief [GameFrameworkTest] SaveGame SAV1 바이너리 CRC32 위변조/손상 감지 검증
  */
-SW_TEST_CASE( GameFrameworkTest, SaveSlotBinaryCrc32TamperingDetection )
+SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
 {
-	SaveSlot srcSlot{};
+	TurnBattleSaveGame srcSlot{};
 	srcSlot._mapPath = "Assets/Scenes/Castle.scene";
 	srcSlot._playerX = 50;
 	srcSlot._playerY = 70;
 	srcSlot.setFlag( "gold", 5000 );
 
 	const string binPath = "test_sav1_corrupt.sav";
-	SW_EXPECT_TRUE( srcSlot.saveCommonToBinaryFile( binPath ) );
+	SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, binPath ) );
 
 	// 1) 정상 로드 확인
-	SaveSlot okSlot{};
-	SW_EXPECT_TRUE( okSlot.loadCommonFromBinaryFile( binPath ) );
+	TurnBattleSaveGame okSlot{};
+	SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( okSlot, binPath ) );
 	SW_EXPECT_EQUAL( 5000, okSlot.getFlag( "gold" ) );
 
 	// 2) 바이너리 페이로드 바이트 1개 변조
@@ -334,9 +273,9 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotBinaryCrc32TamperingDetection )
 
 	// 3) CRC32 불일치로 로드 실패 검증
 	{
-		SW_TEST_DEFENSIVE_SCOPE( "Testing SaveSlot binary CRC32 tampering detection" );
-		SaveSlot corruptedSlot{};
-		SW_EXPECT_FALSE( corruptedSlot.loadCommonFromBinaryFile( binPath ) );
+		SW_TEST_DEFENSIVE_SCOPE( "Testing SaveGame binary CRC32 tampering detection" );
+		TurnBattleSaveGame corruptedSlot{};
+		SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, binPath ) );
 	}
 
 	FileUtil::removeFile( binPath );
@@ -393,9 +332,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 {
-	SaveSlot				save;
+	TurnBattleSaveGame		save;
 	DialogueRunnerComponent runner;
-	runner.setSaveSlot( &save );
+	runner.setFlagStore( &save );
 
 	const string testJson = R"({
 		"nodes": [
@@ -920,4 +859,527 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 
 	SW_EXPECT_NULL( tileMap.findWarp( -1, -1 ) );
 	SW_EXPECT_NULL( tileMap.findWarp( 100, 100 ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] GameData 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, GameData_CustomPropertyParsingAndQuery )
+{
+	GameData gameData;
+	gameData._mapCustomProperty["dungeonBgm"]	 = "audio/bgm_dungeon.mp3";
+	gameData._mapCustomProperty["maxPartySize"]	 = "8";
+	gameData._mapCustomProperty["encounterRate"] = "0.45";
+	gameData._mapCustomProperty["enableShadows"] = "true";
+
+	// 문자열 조회
+	SW_EXPECT_EQUAL( string_view( "audio/bgm_dungeon.mp3" ), gameData.getCustomProperty( "dungeonBgm" ) );
+	SW_EXPECT_EQUAL( string_view( "fallback_value" ), gameData.getCustomProperty( "non_existent_key", "fallback_value" ) );
+
+	// 정수 조회
+	SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "maxPartySize", 6 ) );
+	SW_EXPECT_EQUAL( 10, gameData.getCustomPropertyInt( "non_existent_int", 10 ) );
+
+	// 실수 조회
+	SW_EXPECT_NEAR_EQUAL( 0.45f, gameData.getCustomPropertyFloat( "encounterRate", 0.1f ), 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, gameData.getCustomPropertyFloat( "non_existent_float", 1.0f ), 1e-4f );
+
+	// 부울 조회
+	SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "enableShadows", false ) );
+	SW_EXPECT_FALSE( gameData.getCustomPropertyBool( "non_existent_bool", false ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] ActionCombat 키트 MonsterDataCatalog 및 UnitStatsComponent 연동 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
+{
+	// 1) MonsterDataCatalog fallback 및 조회 검증
+	MonsterDataCatalog catalog;
+	catalog.loadFromResource( "non_existent_monster.xml" );
+	const MonsterDef* pMonster = catalog.findMonster( hashed_string( "default_monster" ) );
+	SW_ASSERT_NOT_NULL( pMonster );
+	SW_EXPECT_EQUAL( string( "default_monster" ), pMonster->_id );
+	SW_EXPECT_EQUAL( 100, pMonster->_hp );
+	SW_EXPECT_EQUAL( 10, pMonster->_atk );
+
+	// 2) UnitStatsComponent 기본 수명주기 및 대미지/회복 로직 검증
+	UnitStatsComponent stats;
+	stats.setStats( 100, 100, 15, 5, 200.0f, 0.5f );
+	SW_EXPECT_EQUAL( 100, stats.getHp() );
+	SW_EXPECT_EQUAL( 100, stats.getMaxHp() );
+	SW_EXPECT_FALSE( stats.isDead() );
+
+	// 25 대미지 (방어력 5 적용 -> 실 대미지 20, 남은 HP 80)
+	stats.takeDamage( 25 );
+	SW_EXPECT_EQUAL( 80, stats.getHp() );
+
+	// 10 회복 -> HP 90
+	stats.heal( 10 );
+	SW_EXPECT_EQUAL( 90, stats.getHp() );
+
+	// 최대 HP 초과 회복 시 클램프
+	stats.heal( 50 );
+	SW_EXPECT_EQUAL( 100, stats.getHp() );
+
+	// 무적 시간 경과 (0.6초 tick) 후 치명상 (200 대미지 -> HP 0, isDead == true)
+	stats.onTick( 0.6f );
+	stats.takeDamage( 200 );
+	SW_EXPECT_EQUAL( 0, stats.getHp() );
+	SW_EXPECT_TRUE( stats.isDead() );
+}
+
+/**
+ * @brief [GameFrameworkTest] RuntimeHud 범용 게이지 맵 등록/조회/클리어 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, RuntimeHud_GenericGaugeMapSystem )
+{
+	RuntimeHud hud;
+	SW_EXPECT_TRUE( hud.isVisible() );
+	SW_EXPECT_EQUAL( size_t( 0 ), hud.getAllGauges().size() );
+
+	// 1) 게이지 등록 및 조회
+	hud.setGauge( hashed_string( "player_shield" ), 0.75f, 0.1f, 0.1f, 0.2f, 0.05f );
+	hud.setGauge( hashed_string( "turbo_boost" ), 0.5f );
+
+	SW_EXPECT_EQUAL( size_t( 2 ), hud.getAllGauges().size() );
+	SW_EXPECT_NEAR_EQUAL( 0.75f, hud.getGaugeFill( hashed_string( "player_shield" ) ), 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.5f, hud.getGaugeFill( hashed_string( "turbo_boost" ) ), 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, hud.getGaugeFill( hashed_string( "unknown_gauge" ) ), 1e-4f );
+
+	const HudGauge* pShield = hud.getGauge( hashed_string( "player_shield" ) );
+	SW_ASSERT_NOT_NULL( pShield );
+	SW_EXPECT_NEAR_EQUAL( 0.1f, pShield->_x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.2f, pShield->_w, 1e-4f );
+
+	// 2) 게이지 비우기
+	hud.clearGauges();
+	SW_EXPECT_EQUAL( size_t( 0 ), hud.getAllGauges().size() );
+}
+
+/**
+ * @brief [GameFrameworkTest] LIFO 컨텍스트 스택 및 모달/비모달 동시 입력 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
+{
+	InputManager input;
+	input.initialize();
+	ActionMap map;
+	map.setInputManager( &input );
+
+	map.bind( "Move", Key::W, ActionTrigger::Down, "Gameplay" );
+	map.bind( "InventoryClick", Key::I, ActionTrigger::Pressed, "Inventory" );
+	map.bind( "PauseResume", Key::Escape, ActionTrigger::Pressed, "PauseMenu" );
+
+	// 1) Gameplay 레이어만 활성
+	map.pushLayer( "Gameplay", false );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "Gameplay" ) );
+
+	// 2) 비모달 UI (Inventory, blockLower=false) 푸시 -> UI와 Gameplay 동시 활성화 (MMORPG 방식)
+	map.pushLayer( "Inventory", false );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "Inventory" ) );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "Gameplay" ) );
+	SW_EXPECT_EQUAL( string_view( "Inventory" ), map.getCurrentTopLayer() );
+
+	// 3) 모달 UI (PauseMenu, blockLower=true) 푸시 -> 하위 Inventory 및 Gameplay 차단
+	map.pushLayer( "PauseMenu", true );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "PauseMenu" ) );
+	SW_EXPECT_FALSE( map.isLayerEnabled( "Inventory" ) );
+	SW_EXPECT_FALSE( map.isLayerEnabled( "Gameplay" ) );
+
+	// 4) PauseMenu 팝 -> 이전 비모달 동시 활성 상태로 자동 복귀
+	map.popLayer( "PauseMenu" );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "Inventory" ) );
+	SW_EXPECT_TRUE( map.isLayerEnabled( "Gameplay" ) );
+	SW_EXPECT_EQUAL( string_view( "Inventory" ), map.getCurrentTopLayer() );
+
+	map.popLayer();
+	SW_EXPECT_EQUAL( string_view( "Gameplay" ), map.getCurrentTopLayer() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 델리게이트 이벤트 디스패치 및 2D 벡터 합성 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DelegateAnd2DVector )
+{
+	InputManager input;
+	input.initialize();
+	ActionMap map;
+	map.setInputManager( &input );
+
+	map.pushLayer( "Gameplay", false );
+	map.bind( "Jump", Key::Space, ActionTrigger::Pressed, "Gameplay" );
+	map.bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, "Gameplay" );
+
+	int32 jumpCount = 0;
+	map.bindActionCallback( "Jump", ActionTrigger::Pressed, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+	{ ++jumpCount; } ) );
+
+	float2 lastMove{ 0.0f, 0.0f };
+	map.bindVector2DCallback( "Move", SW_DELEGATE_LAMBDA( Delegate<void( float2 )>, [&]( float2 v )
+	{ lastMove = v; } ) );
+
+	input.beginFrame( 0.016f );
+	map.update( 0.016f );
+	SW_EXPECT_EQUAL( 0, jumpCount );
+
+	// W키 이동 벡터 검증
+	const float2 moveVec = map.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, moveVec._x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, moveVec._y, 1e-4f );
+}
+
+/**
+ * @brief [GameFrameworkTest] 1D 축 합성 및 AnyInput 감지 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_Axis1DAndAnyInput )
+{
+	InputManager input;
+	input.initialize();
+	ActionMap map;
+	map.setInputManager( &input );
+
+	map.pushLayer( "Gameplay", false );
+	map.bindAxis1DComposite( "Steer", Key::A, Key::D, "Gameplay" );
+
+	SW_EXPECT_FALSE( input.wasAnyInputPressed() );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, map.getAxis1D( "Steer" ), 1e-4f );
+}
+
+/**
+ * @brief [GameFrameworkTest] 선입력 버퍼링 및 커맨드 시퀀스 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
+{
+	ActionMap map;
+
+	// 1) 선입력 버퍼링 (0.2s)
+	map.bufferAction( "Attack", 0.2f );
+	SW_EXPECT_TRUE( map.consumeBufferedAction( "Attack" ) );
+	SW_EXPECT_FALSE( map.consumeBufferedAction( "Attack" ) ); // 1회 소비 후 소멸
+
+	// 2) 커맨드 시퀀스
+	vector<string> listHadouken;
+	listHadouken.push_back( "Down" );
+	listHadouken.push_back( "DownRight" );
+	listHadouken.push_back( "Right" );
+	listHadouken.push_back( "Attack" );
+
+	SW_EXPECT_FALSE( map.checkCommandSequence( listHadouken, 0.35f ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 넷코드 틱 스냅샷 및 순환 링버퍼 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_NetcodeSnapshotAndHistoryBuffer )
+{
+	InputSnapshot snapshot{};
+	snapshot._tickNumber   = 128;
+	snapshot._buttonMask   = 0x1F;
+	snapshot._moveVector   = float2{ 1.0f, -0.5f };
+	snapshot._lookVector   = float2{ 0.2f, 0.8f };
+	snapshot._leftTrigger  = 0.75f;
+	snapshot._rightTrigger = 1.0f;
+
+	// 1) 바이너리 직렬화/역직렬화 라운드트립
+	uint8		 arrBuffer[sizeof( InputSnapshot )];
+	const uint32 bytesWritten = snapshot.serialize( arrBuffer, sizeof( arrBuffer ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( InputSnapshot ) ), bytesWritten );
+
+	InputSnapshot loaded{};
+	SW_EXPECT_TRUE( loaded.deserialize( arrBuffer, bytesWritten ) );
+	SW_EXPECT_EQUAL( uint32( 128 ), loaded._tickNumber );
+	SW_EXPECT_EQUAL( uint64( 0x1F ), loaded._buttonMask );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._moveVector._x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( -0.5f, loaded._moveVector._y, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.75f, loaded._leftTrigger, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._rightTrigger, 1e-4f );
+
+	// 2) InputHistoryBuffer 링버퍼 검증
+	InputHistoryBuffer history;
+	history.recordSnapshot( snapshot );
+	SW_EXPECT_EQUAL( size_t( 1 ), history.getCount() );
+
+	const InputSnapshot* pFound = history.getSnapshot( 128 );
+	SW_ASSERT_NOT_NULL( pFound );
+	SW_EXPECT_EQUAL( uint32( 128 ), pFound->_tickNumber );
+
+	const InputSnapshot* pLatest = history.getLatestSnapshot();
+	SW_ASSERT_NOT_NULL( pLatest );
+	SW_EXPECT_EQUAL( uint32( 128 ), pLatest->_tickNumber );
+}
+
+/**
+ * @brief [GameFrameworkTest] 디버그 조합 키(Ctrl+F6/F7/F8) 및 스킬 충돌 차단 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DebugChordsAndDefaultFallback )
+{
+	ActionMap map;
+	map.bindDefaultFallback();
+
+	SW_EXPECT_TRUE( map.hasAction( "ReloadEditor" ) );
+	SW_EXPECT_TRUE( map.hasAction( "ReloadGame" ) );
+	SW_EXPECT_TRUE( map.hasAction( "ReloadShaders" ) );
+	SW_EXPECT_TRUE( map.hasAction( "Move" ) );
+	SW_EXPECT_TRUE( map.hasAction( "Jump" ) );
+	SW_EXPECT_TRUE( map.hasAction( "Interact" ) );
+	SW_EXPECT_TRUE( map.hasAction( "Pause" ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] TurnBattleSaveGame 리플렉션 기반 SAV1 바이너리 라운드트립 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_ReflectionSaveRoundtrip )
+{
+	const string binaryPath = "TestTemp/TurnBattleSaveGame_ReflectionTest.sav";
+
+	TurnBattleSaveGame originalSlot;
+	originalSlot._mapPath = "Levels/Dungeon_Floor5.scene";
+	originalSlot._playerX = 42;
+	originalSlot._playerY = 88;
+
+	// 1) 플래그 설정
+	originalSlot.setFlag( "IsBossDead", 1 );
+	originalSlot.setFlag( "ChestOpened_01", 1 );
+	originalSlot.setFlag( "Gold", 99999 );
+
+	// 2) 파티 데이터 설정
+	PartyMember member1{};
+	member1._speciesId = "fire_dragon";
+	member1._nickname  = "Ignis";
+	member1._level	   = 25;
+	member1._hp		   = 250;
+	member1._hpMax	   = 250;
+	originalSlot._listParty.push_back( member1 );
+
+	// --------------------------------------------------------------------------
+	// SAV1 바이너리 (리플렉션 + CRC32) 라운드트립 검증
+	// --------------------------------------------------------------------------
+	SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( originalSlot, binaryPath ) );
+
+	TurnBattleSaveGame loadedBinarySlot;
+	SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loadedBinarySlot, binaryPath ) );
+
+	SW_EXPECT_EQUAL( string( "Levels/Dungeon_Floor5.scene" ), loadedBinarySlot._mapPath );
+	SW_EXPECT_EQUAL( 42, loadedBinarySlot._playerX );
+	SW_EXPECT_EQUAL( 88, loadedBinarySlot._playerY );
+
+	SW_EXPECT_EQUAL( 1, loadedBinarySlot.getFlag( "IsBossDead" ) );
+	SW_EXPECT_EQUAL( 1, loadedBinarySlot.getFlag( "ChestOpened_01" ) );
+	SW_EXPECT_EQUAL( 99999, loadedBinarySlot.getFlag( "Gold" ) );
+
+	SW_ASSERT_EQUAL( size_t( 1 ), loadedBinarySlot._listParty.size() );
+	SW_EXPECT_EQUAL( string( "fire_dragon" ), loadedBinarySlot._listParty[0]._speciesId );
+	SW_EXPECT_EQUAL( string( "Ignis" ), loadedBinarySlot._listParty[0]._nickname );
+	SW_EXPECT_EQUAL( 25, loadedBinarySlot._listParty[0]._level );
+	SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hp );
+	SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hpMax );
+
+	FileUtil::removeFile( binaryPath );
+}
+
+/**
+ * @brief [GameFrameworkTest] 다형적 입력 장치(IInputDevice) 레지스트리 및 범용 InputSlot 무분기 바인딩 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInputSlot )
+{
+	class CustomVirtualStick : public IInputDevice
+	{
+	public:
+		CustomVirtualStick() : _bTriggerDown{ false } {}
+		virtual ~CustomVirtualStick() override = default;
+
+		InputDeviceKind getDeviceKind() const override { return InputDeviceKind::Custom; }
+		string_view		getDeviceName() const override { return "VirtualStick"; }
+		bool			isConnected() const override { return true; }
+
+		void poll( [[maybe_unused]] float32 deltaTime ) override {}
+		void onFrameBegin( [[maybe_unused]] float32 deltaTime ) override {}
+		void onFrameEnd() override {}
+		void resetState() override { _bTriggerDown = false; }
+
+		bool isControlDown( uint16 controlIndex ) const override
+		{
+			return ( controlIndex == 0 ) ? _bTriggerDown : false;
+		}
+		bool wasControlPressed( uint16 controlIndex ) const override
+		{
+			return ( controlIndex == 0 ) ? _bTriggerDown : false;
+		}
+		bool wasControlReleased( [[maybe_unused]] uint16 controlIndex ) const override { return false; }
+
+		void setTrigger( bool bDown ) { _bTriggerDown = bDown; }
+
+	private:
+		bool _bTriggerDown;
+	};
+
+	InputManager inputManager;
+	SW_EXPECT_TRUE( inputManager.initialize() );
+
+	// 1) 기본 디바이스 조회 검증
+	SW_ASSERT_NOT_NULL( inputManager.getKeyboard() );
+	SW_ASSERT_NOT_NULL( inputManager.getMouse() );
+
+	// 2) 커스텀 입력 장치 등록 및 조회 검증
+	auto				pStickDevice = make_unique<CustomVirtualStick>();
+	CustomVirtualStick* pStickRaw	 = pStickDevice.get();
+	inputManager.registerDevice( std::move( pStickDevice ) );
+
+	IInputDevice* pFoundDevice = inputManager.getDevice( InputDeviceKind::Custom );
+	SW_ASSERT_NOT_NULL( pFoundDevice );
+	SW_EXPECT_EQUAL( string_view( "VirtualStick" ), pFoundDevice->getDeviceName() );
+
+	// 3) 범용 InputSlot을 통한 ActionMap 바인딩 검증 (무분기 평가)
+	ActionMap& actionMap = inputManager.getActionMap();
+	actionMap.bind( "FireMissile", InputSlot::fromCustom( InputDeviceKind::Custom, 0 ) );
+
+	// 트리거 비활성 시
+	pStickRaw->setTrigger( false );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
+
+	// 트리거 활성 시
+	pStickRaw->setTrigger( true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
+
+	// 4) 키보드 키로 슬롯 런타임 리매핑 검증
+	actionMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) );
+	pStickRaw->setTrigger( true ); // 커스텀 장치는 무시되어야 함
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
+
+	inputManager.getKeyboard()->setKeyDown( Key::F, true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
+
+	inputManager.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 상용 엔진 표준 ActionPhase 상태 머신 및 홀드/탭/펄스 트리거 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvancedTriggers )
+{
+	InputManager inputManager;
+	SW_EXPECT_TRUE( inputManager.initialize() );
+
+	ActionMap& actionMap = inputManager.getActionMap();
+	actionMap.setHoldThreshold( 0.2f );
+
+	// 1) 일반 버튼 액션의 Started -> Ongoing -> Triggered -> Completed 생명주기 검증
+	actionMap.bind( "HeavySlash", Key::J, ActionTrigger::Pressed );
+
+	int32 startedCount	 = 0;
+	int32 triggeredCount = 0;
+	int32 completedCount = 0;
+	actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Started, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+	{ ++startedCount; } ) );
+	actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Triggered, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+	{ ++triggeredCount; } ) );
+	actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Completed, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+	{ ++completedCount; } ) );
+
+	// Frame 1: Key Down 시작 -> Triggered (Pressed 트리거이므로 발화)
+	inputManager.getKeyboard()->setKeyDown( Key::J, true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Triggered );
+	SW_EXPECT_EQUAL( 1, triggeredCount );
+
+	// Frame 2: Key 유지 -> Ongoing
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Ongoing );
+
+	// Frame 3: Key Release -> Completed
+	inputManager.getKeyboard()->setKeyDown( Key::J, false );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Completed );
+	SW_EXPECT_EQUAL( 1, completedCount );
+
+	// 2) 차지 샷 (HoldAndRelease) 검증: 0.2초 미만 누르고 떼면 발화 취소, 0.2초 이상 누르고 떼면 발화
+	actionMap.bind( "ChargeShot", Key::K, ActionTrigger::HoldAndRelease );
+
+	// 2.1) 미달 취소 테스트: 0.05초 누르고 뗌
+	inputManager.getKeyboard()->setKeyDown( Key::K, true );
+	inputManager.beginFrame( 0.05f );
+	actionMap.update( 0.05f );
+	SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
+
+	inputManager.getKeyboard()->setKeyDown( Key::K, false );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
+	SW_EXPECT_TRUE( actionMap.getActionPhase( "ChargeShot" ) == ActionPhase::Canceled );
+
+	// 2.2) 정상 차지 테스트: 0.25초 누르고 뗌 -> 발화
+	inputManager.getKeyboard()->setKeyDown( Key::K, true );
+	inputManager.beginFrame( 0.15f );
+	actionMap.update( 0.15f );
+	inputManager.beginFrame( 0.15f );
+	actionMap.update( 0.15f ); // 총 0.30초 홀드
+
+	inputManager.getKeyboard()->setKeyDown( Key::K, false );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_TRUE( actionMap.wasActionTriggered( "ChargeShot" ) );
+
+	inputManager.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 통합 액션 파이프라인 (Axis1D, Vector2D, GamepadStick, Invert/Scale Modifiers) 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVector2D )
+{
+	InputManager inputManager;
+	SW_EXPECT_TRUE( inputManager.initialize() );
+
+	ActionMap& actionMap = inputManager.getActionMap();
+
+	// 1) 1D 축 합성 및 쿼리 검증
+	actionMap.bindAxis1DComposite( "Throttle", Key::S, Key::W ); // S: -1.0, W: +1.0
+
+	inputManager.getKeyboard()->setKeyDown( Key::W, true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
+
+	inputManager.getKeyboard()->setKeyDown( Key::W, false );
+	inputManager.getKeyboard()->setKeyDown( Key::S, true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	SW_EXPECT_NEAR_EQUAL( -1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
+
+	// 2) 2D 벡터 합성 및 축 반전(Invert) 모디파이어 검증
+	actionMap.bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+
+	inputManager.getKeyboard()->setKeyDown( Key::S, false );
+	inputManager.getKeyboard()->setKeyDown( Key::D, true ); // 오른쪽 (+X)
+	inputManager.getKeyboard()->setKeyDown( Key::W, true ); // 위쪽 (+Y)
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+
+	float2 moveVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_TRUE( moveVec._x > 0.5f );
+	SW_EXPECT_TRUE( moveVec._y > 0.5f );
+
+	// 축 반전 활성화
+	actionMap.setInvertX( true );
+	actionMap.setInvertY( true );
+	inputManager.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+
+	moveVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_TRUE( moveVec._x < -0.5f );
+	SW_EXPECT_TRUE( moveVec._y < -0.5f );
+
+	inputManager.shutdown();
 }

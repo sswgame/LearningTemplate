@@ -8,7 +8,7 @@
 3. 이후 `EditorModule` DLL과 `SWGame` DLL을 불러와 함수 포인터(`exportGameAPI`)를 연결하고 게임 루프를 시작합니다.
 
 윈도우 메시지는 `NativeWindowEvent`로만 받고, 키/마우스 해석은 `InputManager`가 합니다.
-App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_shellActions`)을 둡니다. Debug 레이어(`alwaysOn`)로 ReloadShaders=F8, ReloadEditor=F6, ReloadGame=F7을 조회합니다. 퀵세이브/로드(F5/F9)는 게임플레이 `gameActions()` 쪽입니다.
+App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_mapDebugAction`)을 둡니다. Debug 레이어(`alwaysOn`)로 ReloadShaders=Ctrl+F8, ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F7 조합 키를 조회하여 게임플레이 단독 스킬 단축키와의 충돌을 차단합니다.
 
 ## 디렉터리 구조
 - **App.cpp / App.h**: 앱 생명주기 및 윈도우/엔진 부트스트랩
