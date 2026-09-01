@@ -4,6 +4,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -38,6 +39,8 @@ namespace sw
 		Scene* createScene( string_view name );
 		/** @brief 빈 씬을 만들어 활성으로 바꾸고 이전 활성 씬을 언로드합니다. */
 		Scene* createEmptyActiveScene( string_view name );
+		/** @brief 씬 디스크립터 XML 비동기 로드를 요청하고 완료 시 활성 씬을 제공하는 TaskFuture를 반환합니다. */
+		TaskFuture<Scene*> requestLoadFuture( string_view path );
 		/** @brief 씬 디스크립터 XML 비동기 로드를 요청합니다 (TaskManager 워커). */
 		bool requestLoadAsync( string_view path );
 		/**
@@ -75,10 +78,11 @@ namespace sw
 	private:
 		struct AsyncLoadSlot
 		{
-			mutex			  _mutex;
-			unique_ptr<Scene> _scene;
-			atomic<bool>	  _bReady{ false };
-			atomic<bool>	  _bAccepting{ true };
+			mutex				_mutex;
+			unique_ptr<Scene>	_scene;
+			atomic<bool>		_bReady{ false };
+			atomic<bool>		_bAccepting{ true };
+			TaskPromise<Scene*> _promise{};
 		};
 
 		vector<unique_ptr<Scene>> _listLoadedScene;

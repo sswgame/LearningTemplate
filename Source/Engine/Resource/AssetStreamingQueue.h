@@ -1,5 +1,7 @@
 #pragma once
+#include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -47,7 +49,9 @@ namespace sw
 		void update( size_t maxCompletionsPerFrame = 32 );
 
 		bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, OnStreamingCompleteDelegate onComplete = {} );
-		void cancelRequest( string_view assetPath );
+		/** @brief 에셋 프리페치를 비동기 요청하고 완료 상태를 TaskFuture<bool>로 반환합니다. */
+		TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );
+		void			 cancelRequest( string_view assetPath );
 
 		void sweepUnusedCache();
 
@@ -74,7 +78,7 @@ namespace sw
 		unordered_map<string, bool>								   _mapLoadedAsset;
 		unordered_set<string>									   _uniqueActiveRequest;
 		unordered_map<string, vector<OnStreamingCompleteDelegate>> _mapInFlightCallback;
-		vector<CompletedItem>									   _listCompletedItem;
+		ConcurrentQueue<CompletedItem, 1024>					   _queueCompleted;
 		bool													   _bInitialized;
 	};
 } // namespace sw

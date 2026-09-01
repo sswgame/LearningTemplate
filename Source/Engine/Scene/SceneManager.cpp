@@ -152,19 +152,19 @@ namespace sw
 	}
 
 	/**
-	 * @brief XML 씬 파일 경로로부터 백그라운드 워커 스레드 비동기 로드를 요청합니다.
+	 * @brief XML 씬 파일 경로로부터 백그라운드 워커 스레드 비동기 로드를 요청하고 TaskFuture<Scene*>를 반환합니다.
 	 */
-	bool SceneManager::requestLoadAsync( string_view path )
+	TaskFuture<Scene*> SceneManager::requestLoadFuture( string_view path )
 	{
 		if ( path.empty() )
 		{
-			SW_LOG_WARNING( "requestLoadAsync: empty path" );
-			return false;
+			SW_LOG_WARNING( "requestLoadFuture: empty path" );
+			return {};
 		}
 		if ( _asyncLoad == nullptr || _asyncLoad->_bAccepting.load( std::memory_order_acquire ) == false )
 		{
-			SW_LOG_WARNING( "requestLoadAsync: manager is shutting down" );
-			return false;
+			SW_LOG_WARNING( "requestLoadFuture: manager is shutting down" );
+			return {};
 		}
 
 		bool expected{ false };
@@ -172,11 +172,12 @@ namespace sw
 		{
 			_queuedPath = path;
 			SW_LOG_TRACE( "Async load in flight — queued '%#'", path );
-			return true;
+			return _asyncLoad->_promise.getFuture();
 		}
 
 		_asyncLoad->_bReady.store( false, std::memory_order_release );
-		SW_LOG_TRACE( "requestLoadAsync: %#", path );
+		_asyncLoad->_promise = TaskPromise<Scene*>{};
+		SW_LOG_TRACE( "requestLoadFuture: %#", path );
 
 		shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
 		_loadHandle					   = engine::getTaskManager().emplaceTask(
@@ -185,7 +186,17 @@ namespace sw
 			   MakeTaskArgs( slot, string( path ) ) );
 
 		_loadHandle.submit();
-		return _loadHandle.isValid();
+		if ( _loadHandle.isValid() == false )
+		{
+			_bLoadInFlight.store( false, std::memory_order_release );
+			return {};
+		}
+		return _asyncLoad->_promise.getFuture();
+	}
+
+	bool SceneManager::requestLoadAsync( string_view path )
+	{
+		return requestLoadFuture( path ).isValid();
 	}
 
 	void SceneManager::loadSceneAsyncJob( const TaskArgs& args )
@@ -245,6 +256,7 @@ namespace sw
 			_asyncLoad->_scene.reset();
 			_asyncLoad->_bReady.store( false, std::memory_order_release );
 			_asyncLoad->_bAccepting.store( true, std::memory_order_release );
+			_asyncLoad->_promise.setValue( nullptr );
 		}
 	}
 
@@ -311,7 +323,7 @@ namespace sw
 					pendingScene->shutdown();
 					pendingScene.reset();
 				}
-				requestLoadAsync( nextPath );
+				requestLoadFuture( nextPath );
 				return;
 			}
 		}
@@ -319,6 +331,8 @@ namespace sw
 		if ( pendingScene == nullptr )
 		{
 			SW_LOG_ERROR( "Async load failed" );
+			if ( _asyncLoad != nullptr )
+				_asyncLoad->_promise.setValue( nullptr );
 			return;
 		}
 
@@ -336,6 +350,9 @@ namespace sw
 		++_sceneGeneration;
 
 		SW_LOG_INFO( "Active scene swapped to '%#'", _pActiveScene->getName() );
+		if ( _asyncLoad != nullptr )
+			_asyncLoad->_promise.setValue( _pActiveScene );
+
 #if !defined( SW_SHIPPING )
 		engine::getCommandStack().clear();
 #endif

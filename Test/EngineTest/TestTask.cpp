@@ -572,3 +572,146 @@ SW_TEST_CASE( Engine_Task, TaskFutureWhenAnyCombinator )
 	promise1.setValue( "FirstLate" );
 	SW_EXPECT_EQUAL( sw::string( "SecondWinner" ), anyFuture.get() );
 }
+
+/**
+ * @brief [Engine_Task] TaskFuture 30단계 Deep Continuation 체이닝 스트레스 테스트
+ */
+SW_TEST_CASE( Engine_Task, TaskFutureDeepContinuationChainStress )
+{
+	sw::TaskPromise<int32> initialPromise;
+	sw::TaskFuture<int32>  currentFuture = initialPromise.getFuture();
+
+	// 30단계 체인 생성: 매 단계마다 index를 더함 (초기 0 -> 0 + 1 + 2 + ... + 30 = 465)
+	constexpr int32 kStages = 30;
+	for ( int32 stageIndex = 1; stageIndex <= kStages; ++stageIndex )
+	{
+		currentFuture = currentFuture.then( [stageIndex]( int32 val )
+		{
+			return val + stageIndex;
+		} );
+	}
+
+	SW_EXPECT_FALSE( currentFuture.isReady() );
+	initialPromise.setValue( 0 );
+
+	SW_EXPECT_TRUE( currentFuture.isReady() );
+	constexpr int32 expectedSum = ( kStages * ( kStages + 1 ) ) / 2; // 465
+	SW_EXPECT_EQUAL( expectedSum, currentFuture.get() );
+}
+
+/**
+ * @brief [Engine_Task] TaskFuture whenAll 대규모 동시성(64개 워커) 스트레스 테스트
+ */
+SW_TEST_CASE( Engine_Task, TaskFutureWhenAllMassiveConcurrencyStress )
+{
+	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+	taskMgr.initialize();
+
+	constexpr int32 kTaskCount = 64;
+
+	struct SharedTaskContext
+	{
+		sw::TaskPromise<int32> _promise{};
+	};
+
+	sw::vector<sw::shared_ptr<SharedTaskContext>> listContext;
+	sw::vector<sw::TaskFuture<int32>>			  listFuture;
+	listContext.reserve( kTaskCount );
+	listFuture.reserve( kTaskCount );
+
+	for ( int32 index = 0; index < kTaskCount; ++index )
+	{
+		auto pCtx = sw::make_shared<SharedTaskContext>();
+		listFuture.push_back( pCtx->_promise.getFuture() );
+		listContext.push_back( pCtx );
+	}
+
+	sw::TaskFuture<sw::vector<int32>> allFuture = sw::whenAllFutures( listFuture );
+	SW_EXPECT_FALSE( allFuture.isReady() );
+
+	int64 expectedSum = 0;
+	for ( size_t index = 0; index < static_cast<size_t>( kTaskCount ); ++index )
+	{
+		const int32 val = static_cast<int32>( ( index + 1 ) * 10 );
+		expectedSum += val;
+
+		auto pCtx = listContext[index];
+		taskMgr.emplaceTask(
+				   "WhenAllWorker",
+				   SW_DELEGATE_LAMBDA(
+					   sw::TaskDelegate,
+					   [pCtx, val]()
+		{
+			pCtx->_promise.setValue( val );
+		} ),
+				   sw::TaskThreadAffinity::Any )
+			.submit();
+	}
+
+	taskMgr.waitAll();
+
+	SW_EXPECT_TRUE( allFuture.isReady() );
+	sw::vector<int32> listResult = allFuture.get();
+	SW_ASSERT_EQUAL( static_cast<size_t>( kTaskCount ), listResult.size() );
+
+	int64 actualSum = 0;
+	for ( size_t index = 0; index < static_cast<size_t>( kTaskCount ); ++index )
+	{
+		actualSum += listResult[index];
+		SW_EXPECT_EQUAL( static_cast<int32>( ( index + 1 ) * 10 ), listResult[index] );
+	}
+	SW_EXPECT_EQUAL( expectedSum, actualSum );
+}
+
+/**
+ * @brief [Engine_Task] TaskFuture whenAny 다중 스레드 레이스 스트레스 테스트
+ */
+SW_TEST_CASE( Engine_Task, TaskFutureWhenAnyRaceStress )
+{
+	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+	taskMgr.initialize();
+
+	constexpr int32 kRacers = 32;
+
+	struct SharedRacerContext
+	{
+		sw::TaskPromise<int32> _promise{};
+	};
+
+	sw::vector<sw::shared_ptr<SharedRacerContext>> listContext;
+	sw::vector<sw::TaskFuture<int32>>			   listFuture;
+	listContext.reserve( kRacers );
+	listFuture.reserve( kRacers );
+
+	for ( int32 index = 0; index < kRacers; ++index )
+	{
+		auto pCtx = sw::make_shared<SharedRacerContext>();
+		listFuture.push_back( pCtx->_promise.getFuture() );
+		listContext.push_back( pCtx );
+	}
+
+	sw::TaskFuture<int32> anyFuture = sw::whenAnyFuture( listFuture );
+	SW_EXPECT_FALSE( anyFuture.isReady() );
+
+	for ( size_t index = 0; index < static_cast<size_t>( kRacers ); ++index )
+	{
+		auto		pCtx	   = listContext[index];
+		const int32 racerIndex = static_cast<int32>( index );
+		taskMgr.emplaceTask(
+				   "RacerTask",
+				   SW_DELEGATE_LAMBDA(
+					   sw::TaskDelegate,
+					   [pCtx, racerIndex]()
+		{
+			pCtx->_promise.setValue( racerIndex );
+		} ),
+				   sw::TaskThreadAffinity::Any )
+			.submit();
+	}
+
+	taskMgr.waitAll();
+
+	SW_EXPECT_TRUE( anyFuture.isReady() );
+	const int32 winnerIndex = anyFuture.get();
+	SW_EXPECT_TRUE( 0 <= winnerIndex && winnerIndex < kRacers );
+}

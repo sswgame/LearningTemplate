@@ -17,7 +17,7 @@ namespace sw
 		, _mapLoadedAsset{}
 		, _uniqueActiveRequest{}
 		, _mapInFlightCallback{}
-		, _listCompletedItem{}
+		, _queueCompleted{}
 		, _bInitialized{ false }
 	{
 	}
@@ -44,7 +44,12 @@ namespace sw
 		_listPendingRequest.clear();
 		_uniqueActiveRequest.clear();
 		_mapInFlightCallback.clear();
-		_listCompletedItem.clear();
+
+		CompletedItem discardItem{};
+		while ( _queueCompleted.dequeue( discardItem ) )
+		{
+		}
+
 		_bInitialized = false;
 	}
 
@@ -108,13 +113,33 @@ namespace sw
 					item._path	   = pathStr;
 					item._callback = cb;
 					item._bSuccess = bExists;
-					_listCompletedItem.push_back( std::move( item ) );
+					_queueCompleted.enqueue( std::move( item ) );
 				}
 				_mapInFlightCallback.erase( itCallbacks );
 			}
 		}
 
 		return true;
+	}
+
+	TaskFuture<bool> AssetStreamingQueue::requestAssetFuture( string_view assetPath, StreamingPriority priority )
+	{
+		auto	   pPromise	  = sw::make_shared<TaskPromise<bool>>();
+		const bool bRequested = requestAsset(
+			assetPath,
+			priority,
+			SW_DELEGATE_LAMBDA(
+				OnStreamingCompleteDelegate,
+				[pPromise]( string_view /*path*/, bool bSuccess )
+		{
+			pPromise->setValue( bSuccess );
+		} ) );
+
+		if ( bRequested == false )
+		{
+			pPromise->setValue( false );
+		}
+		return pPromise->getFuture();
 	}
 
 	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
@@ -140,7 +165,7 @@ namespace sw
 				item._path	   = pathStr;
 				item._callback = cb;
 				item._bSuccess = bExists;
-				_listCompletedItem.push_back( std::move( item ) );
+				_queueCompleted.enqueue( std::move( item ) );
 			}
 			_mapInFlightCallback.erase( itCallbacks );
 		}
@@ -197,21 +222,13 @@ namespace sw
 
 	void AssetStreamingQueue::update( size_t maxCompletionsPerFrame )
 	{
-		vector<CompletedItem> listToNotify;
-		{
-			std::scoped_lock<mutex> lock{ _mutex };
-			if ( _listCompletedItem.empty() )
-				return;
-
-			const size_t count = MathUtil::min( maxCompletionsPerFrame, _listCompletedItem.size() );
-			listToNotify.assign( _listCompletedItem.begin(), _listCompletedItem.begin() + count );
-			_listCompletedItem.erase( _listCompletedItem.begin(), _listCompletedItem.begin() + count );
-		}
-
-		for ( const CompletedItem& item : listToNotify )
+		CompletedItem item{};
+		size_t		  processedCount = 0;
+		while ( processedCount < maxCompletionsPerFrame && _queueCompleted.dequeue( item ) )
 		{
 			if ( item._callback.isBound() )
 				item._callback( item._path, item._bSuccess );
+			++processedCount;
 		}
 	}
 } // namespace sw

@@ -856,3 +856,127 @@ SW_TEST_CASE( Core_DataStructure, PairEmptyBaseOptimization )
 	sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
 	SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
 }
+
+/**
+ * @brief [Core_DataStructure] LockFreeQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
+ */
+SW_TEST_CASE( Core_DataStructure, LockFreeQueueSPSCStress )
+{
+	constexpr int32				   kTotalItems = 100000;
+	sw::LockFreeQueue<int32, 2048> queue;
+
+	sw::atomic<bool>  bProducerDone{ false };
+	sw::atomic<int64> sumConsumed{ 0 };
+	sw::atomic<int32> countConsumed{ 0 };
+	bool			  bOrderPreserved = true;
+
+	// Consumer 스레드
+	std::thread consumer( [&queue, &bProducerDone, &sumConsumed, &countConsumed, &bOrderPreserved]()
+	{
+		int32 expectedNext = 1;
+		int32 item		   = 0;
+		while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.empty() == false )
+		{
+			if ( queue.pop( item ) )
+			{
+				if ( item != expectedNext )
+					bOrderPreserved = false;
+				++expectedNext;
+				sumConsumed.fetch_add( item, std::memory_order_relaxed );
+				countConsumed.fetch_add( 1, std::memory_order_relaxed );
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
+		}
+	} );
+
+	// Producer 스레드
+	int64 expectedSum = 0;
+	for ( int32 index = 1; index <= kTotalItems; ++index )
+	{
+		expectedSum += index;
+		while ( queue.push( index ) == false )
+		{
+			std::this_thread::yield();
+		}
+	}
+	bProducerDone.store( true, std::memory_order_release );
+
+	consumer.join();
+
+	SW_EXPECT_TRUE( bOrderPreserved );
+	SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
+	SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
+
+/**
+ * @brief [Core_DataStructure] ConcurrentQueue 다중 생산자·다중 소비자(MPMC) 동시성 스트레스 테스트 (10만 건)
+ */
+SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMPMCStress )
+{
+	constexpr int32 kProducers		  = 4;
+	constexpr int32 kConsumers		  = 4;
+	constexpr int32 kItemsPerProducer = 25000;
+	constexpr int32 kTotalItems		  = kProducers * kItemsPerProducer;
+
+	sw::ConcurrentQueue<int32, 4096> queue;
+	sw::atomic<int32>				 activeProducers{ kProducers };
+	sw::atomic<int64>				 sumConsumed{ 0 };
+	sw::atomic<int32>				 countConsumed{ 0 };
+
+	sw::vector<std::thread> listConsumer;
+	listConsumer.reserve( kConsumers );
+	for ( int32 consumerIndex = 0; consumerIndex < kConsumers; ++consumerIndex )
+	{
+		listConsumer.emplace_back( [&queue, &activeProducers, &sumConsumed, &countConsumed]()
+		{
+			int32 item = 0;
+			while ( activeProducers.load( std::memory_order_acquire ) > 0 || queue.empty() == false )
+			{
+				if ( queue.dequeue( item ) )
+				{
+					sumConsumed.fetch_add( item, std::memory_order_relaxed );
+					countConsumed.fetch_add( 1, std::memory_order_relaxed );
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+			}
+		} );
+	}
+
+	sw::vector<std::thread> listProducer;
+	listProducer.reserve( kProducers );
+	int64 expectedSum = 0;
+
+	for ( int32 producerIndex = 0; producerIndex < kProducers; ++producerIndex )
+	{
+		const int32 baseVal = producerIndex * kItemsPerProducer;
+		for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+			expectedSum += ( baseVal + index );
+
+		listProducer.emplace_back( [&queue, &activeProducers, baseVal]()
+		{
+			for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+			{
+				while ( queue.enqueue( baseVal + index ) == false )
+				{
+					std::this_thread::yield();
+				}
+			}
+			activeProducers.fetch_sub( 1, std::memory_order_release );
+		} );
+	}
+
+	for ( auto& producer : listProducer )
+		producer.join();
+
+	for ( auto& consumer : listConsumer )
+		consumer.join();
+
+	SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
+	SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
