@@ -3,6 +3,7 @@
  * @brief 에디터 파일 스캔/로컬라이즈 로드를 TaskManager 워커에서 수행하는 잡
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -32,18 +33,11 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex		   _mutex;
-		string				   _folder;
-		string				   _extension;
-		vector<string>		   _listResult;
-		uint32				   _generation;
-		uint8				   _bRecursive : 1;
-		uint8				   _bPending   : 1;
-		uint8				   _bReady	   : 1;
-		[[maybe_unused]] uint8 _reserved   : 5;
+		shared_ptr<State> _pState;
 	};
 
 	/**
@@ -64,15 +58,11 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex		   _mutex;
-		vector<LocRecord>	   _listResult;
-		uint32				   _generation;
-		uint8				   _bPending : 1;
-		uint8				   _bReady	 : 1;
-		[[maybe_unused]] uint8 _reserved : 6;
+		shared_ptr<State> _pState;
 	};
 
 	/**
@@ -93,15 +83,11 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex			  _mutex;
-		vector<GameDataFileEntry> _listResult;
-		uint32					  _generation;
-		uint8					  _bPending : 1;
-		uint8					  _bReady	: 1;
-		[[maybe_unused]] uint8	  _reserved : 6;
+		shared_ptr<State> _pState;
 	};
 
 	/**
@@ -122,15 +108,11 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex					 _mutex;
-		vector<EditorResourceIndexEntry> _listResult;
-		uint32							 _generation;
-		uint8							 _bPending : 1;
-		uint8							 _bReady   : 1;
-		[[maybe_unused]] uint8			 _reserved : 6;
+		shared_ptr<State> _pState;
 	};
 
 	/**
@@ -151,16 +133,11 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex					 _mutex;
-		string							 _folder;
-		vector<EditorFolderListingEntry> _listResult;
-		uint32							 _generation;
-		uint8							 _bPending : 1;
-		uint8							 _bReady   : 1;
-		[[maybe_unused]] uint8			 _reserved : 6;
+		shared_ptr<State> _pState;
 	};
 
 	/**
@@ -181,14 +158,10 @@ namespace sw::editor
 		bool isPending() const;
 
 	private:
+		struct State;
 		static void runJob( const TaskArgs& args );
 
 	private:
-		mutable mutex				_mutex;
-		EditorResourceCatalogCounts _counts;
-		uint32						_generation;
-		uint8						_bPending : 1;
-		uint8						_bReady	  : 1;
-		[[maybe_unused]] uint8		_reserved : 6;
+		shared_ptr<State> _pState;
 	};
 } // namespace sw::editor

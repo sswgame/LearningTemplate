@@ -56,9 +56,9 @@ namespace sw
 
 			for ( ;; )
 			{
-				pCell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
-				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos );
+				pCell			 = &_arrBuffer[pos & kMask];
+				uint32		seq	 = pCell->_sequence.load( std::memory_order_acquire );
+				const int32 diff = static_cast<int32>( seq - pos );
 
 				if ( diff == 0 )
 				{
@@ -84,9 +84,9 @@ namespace sw
 
 			for ( ;; )
 			{
-				pCell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
-				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos );
+				pCell			 = &_arrBuffer[pos & kMask];
+				uint32		seq	 = pCell->_sequence.load( std::memory_order_acquire );
+				const int32 diff = static_cast<int32>( seq - pos );
 
 				if ( diff == 0 )
 				{
@@ -112,9 +112,9 @@ namespace sw
 
 			for ( ;; )
 			{
-				pCell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
-				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos + 1 );
+				pCell			 = &_arrBuffer[pos & kMask];
+				uint32		seq	 = pCell->_sequence.load( std::memory_order_acquire );
+				const int32 diff = static_cast<int32>( seq - ( pos + 1 ) );
 
 				if ( diff == 0 )
 				{

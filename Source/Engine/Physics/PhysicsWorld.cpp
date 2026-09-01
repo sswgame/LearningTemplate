@@ -86,6 +86,8 @@ namespace sw
 						{
 							*handleIt = listHandle.back();
 							listHandle.pop_back();
+							if ( listHandle.empty() )
+								_mapGrid.erase( it );
 						}
 					}
 				}
@@ -244,8 +246,8 @@ namespace sw
 			return;
 		}
 
-		thread_local vector<BodyHandle> t_listCandidateHandle;
-		t_listCandidateHandle.clear();
+		vector<BodyHandle> listCandidateHandle;
+		listCandidateHandle.reserve( 64 );
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
 			for ( int32 gridY = minY; gridY <= maxY; ++gridY )
@@ -255,16 +257,16 @@ namespace sw
 					auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
 					if ( it != _mapGrid.end() )
 					{
-						t_listCandidateHandle.insert( t_listCandidateHandle.end(), it->second.begin(), it->second.end() );
+						listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
 					}
 				}
 			}
 		}
 
-		std::sort( t_listCandidateHandle.begin(), t_listCandidateHandle.end() );
-		t_listCandidateHandle.erase( std::unique( t_listCandidateHandle.begin(), t_listCandidateHandle.end() ), t_listCandidateHandle.end() );
+		std::sort( listCandidateHandle.begin(), listCandidateHandle.end() );
+		listCandidateHandle.erase( std::unique( listCandidateHandle.begin(), listCandidateHandle.end() ), listCandidateHandle.end() );
 
-		for ( BodyHandle handle : t_listCandidateHandle )
+		for ( BodyHandle handle : listCandidateHandle )
 		{
 			const PhysicsBody* pBody = _bodies.get( handle );
 			if ( pBody != nullptr )
@@ -273,9 +275,6 @@ namespace sw
 					outListHandle.push_back( handle );
 			}
 		}
-
-		if ( t_listCandidateHandle.capacity() > 2048 )
-			t_listCandidateHandle.shrink_to_fit();
 	}
 
 	bool PhysicsWorld::sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const
@@ -338,8 +337,8 @@ namespace sw
 			return false;
 		}
 
-		thread_local vector<BodyHandle> t_listCandidateHandle;
-		t_listCandidateHandle.clear();
+		vector<BodyHandle> listCandidateHandle;
+		listCandidateHandle.reserve( 64 );
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
 			for ( int32 gridY = minY; gridY <= maxY; ++gridY )
@@ -349,16 +348,16 @@ namespace sw
 					auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
 					if ( it != _mapGrid.end() )
 					{
-						t_listCandidateHandle.insert( t_listCandidateHandle.end(), it->second.begin(), it->second.end() );
+						listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
 					}
 				}
 			}
 		}
 
-		std::sort( t_listCandidateHandle.begin(), t_listCandidateHandle.end() );
-		t_listCandidateHandle.erase( std::unique( t_listCandidateHandle.begin(), t_listCandidateHandle.end() ), t_listCandidateHandle.end() );
+		std::sort( listCandidateHandle.begin(), listCandidateHandle.end() );
+		listCandidateHandle.erase( std::unique( listCandidateHandle.begin(), listCandidateHandle.end() ), listCandidateHandle.end() );
 
-		for ( BodyHandle handle : t_listCandidateHandle )
+		for ( BodyHandle handle : listCandidateHandle )
 		{
 			const PhysicsBody* pBody = _bodies.get( handle );
 			if ( pBody != nullptr && _layers.shouldCollide( layer, pBody->_layer ) )
@@ -376,9 +375,6 @@ namespace sw
 				}
 			}
 		}
-
-		if ( t_listCandidateHandle.capacity() > 2048 )
-			t_listCandidateHandle.shrink_to_fit();
 
 		if ( bFoundHit )
 		{

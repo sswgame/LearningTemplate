@@ -7,7 +7,6 @@ namespace sw
 	RHIReleaseQueue::RHIReleaseQueue( uint32 frameLatency )
 		: _listFrameEntry{}
 		, _listGpuEntry{}
-		, _listReadyToDestroyBuffer{}
 		, _spinLock{}
 		, _currentFrame{ 0 }
 		, _frameLatency{ frameLatency } {}
@@ -43,7 +42,7 @@ namespace sw
 
 	void RHIReleaseQueue::tickFrame()
 	{
-		_listReadyToDestroyBuffer.clear();
+		vector<RHIResourceReleaseDelegate> listReady;
 		{
 			std::scoped_lock<SpinLock> lock{ _spinLock };
 			_currentFrame++;
@@ -56,12 +55,12 @@ namespace sw
 
 			for ( auto iter = partitionIter; iter != _listFrameEntry.end(); ++iter )
 			{
-				_listReadyToDestroyBuffer.push_back( iter->_releaseDelegate );
+				listReady.push_back( iter->_releaseDelegate );
 			}
 			_listFrameEntry.erase( partitionIter, _listFrameEntry.end() );
 		}
 
-		for ( const RHIResourceReleaseDelegate& callback : _listReadyToDestroyBuffer )
+		for ( const RHIResourceReleaseDelegate& callback : listReady )
 		{
 			if ( callback.isBound() )
 				callback();
@@ -70,7 +69,7 @@ namespace sw
 
 	void RHIReleaseQueue::tickCompleted( uint64 completedFence )
 	{
-		_listReadyToDestroyBuffer.clear();
+		vector<RHIResourceReleaseDelegate> listReady;
 		{
 			std::scoped_lock<SpinLock> lock{ _spinLock };
 
@@ -81,12 +80,12 @@ namespace sw
 
 			for ( auto iter = partitionIter; iter != _listGpuEntry.end(); ++iter )
 			{
-				_listReadyToDestroyBuffer.push_back( iter->_releaseDelegate );
+				listReady.push_back( iter->_releaseDelegate );
 			}
 			_listGpuEntry.erase( partitionIter, _listGpuEntry.end() );
 		}
 
-		for ( const RHIResourceReleaseDelegate& callback : _listReadyToDestroyBuffer )
+		for ( const RHIResourceReleaseDelegate& callback : listReady )
 		{
 			if ( callback.isBound() )
 				callback();

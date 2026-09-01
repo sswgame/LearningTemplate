@@ -200,10 +200,7 @@ namespace sw
 
 			static void resolveAndTickItem( GameObjectManager* pManager, float32 deltaTime, const GameObjectManager::TickExecutionItem& item )
 			{
-				Component* pComp = item._pComponent;
-				if ( pComp == nullptr )
-					pComp = pManager->resolveComponent( item._handle );
-
+				Component* pComp = item._handle.isValid() ? pManager->resolveComponent( item._handle ) : item._pComponent;
 				if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
 					return;
 				GameObject* pOwner = pComp->getOwner();
@@ -678,6 +675,7 @@ namespace sw
 				std::unique_lock<std::shared_mutex> lock{ _mutex };
 				_listPendingDestroyObject.push_back( pObj );
 			}
+			markTickWavesDirty();
 		}
 	}
 
@@ -688,6 +686,7 @@ namespace sw
 			pComp->markPendingKill();
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
 			_listPendingDestroyComponent.push_back( pComp );
+			markTickWavesDirty();
 		}
 	}
 
@@ -778,6 +777,7 @@ namespace sw
 			if ( pObj != nullptr )
 				_poolGameObject.destroy( pObj );
 		}
+		markTickWavesDirty();
 	}
 
 	void GameObjectManager::clear()
@@ -811,6 +811,7 @@ namespace sw
 			_mapNameToObject.clear();
 			_mapIdToObject.clear();
 			_listRootSceneComponent.clear();
+			_listCachedTickWave.clear();
 		}
 
 		for ( GameObject* pObj : listDying )
@@ -830,6 +831,7 @@ namespace sw
 		}
 
 		_listCachedTickWave.clear();
+		markTickWavesDirty();
 	}
 
 	void GameObjectManager::rebindAllCachedTypeInfo()
@@ -883,6 +885,7 @@ namespace sw
 			if ( pObj != nullptr )
 				pObj->refreshActiveInHierarchy();
 		}
+		markTickWavesDirty();
 	}
 
 	void GameObjectManager::registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )

@@ -45,37 +45,41 @@ namespace sw
 		const float32 trace = matrix._11 + matrix._22 + matrix._33;
 		if ( trace > 0.f )
 		{
-			const float32 s = MathUtil::sqrt( trace + 1.0f ) * 2.f;
+			const float32 s	   = MathUtil::sqrt( MathUtil::max( 0.0f, trace + 1.0f ) ) * 2.f;
+			const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
 			return quaternion{
-				( matrix._23 - matrix._32 ) / s,
-				( matrix._31 - matrix._13 ) / s,
-				( matrix._12 - matrix._21 ) / s,
+				( matrix._23 - matrix._32 ) * invS,
+				( matrix._31 - matrix._13 ) * invS,
+				( matrix._12 - matrix._21 ) * invS,
 				0.25f * s };
 		}
 		if ( matrix._11 >= matrix._22 && matrix._11 >= matrix._33 )
 		{
-			const float32 s = MathUtil::sqrt( 1.0f + matrix._11 - matrix._22 - matrix._33 ) * 2.f;
+			const float32 s	   = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._11 - matrix._22 - matrix._33 ) ) * 2.f;
+			const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
 			return quaternion{
 				0.25f * s,
-				( matrix._12 + matrix._21 ) / s,
-				( matrix._13 + matrix._31 ) / s,
-				( matrix._23 - matrix._32 ) / s };
+				( matrix._12 + matrix._21 ) * invS,
+				( matrix._13 + matrix._31 ) * invS,
+				( matrix._23 - matrix._32 ) * invS };
 		}
 		if ( matrix._22 >= matrix._33 )
 		{
-			const float32 s = MathUtil::sqrt( 1.0f + matrix._22 - matrix._11 - matrix._33 ) * 2.f;
+			const float32 s	   = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._22 - matrix._11 - matrix._33 ) ) * 2.f;
+			const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
 			return quaternion{
-				( matrix._12 + matrix._21 ) / s,
+				( matrix._12 + matrix._21 ) * invS,
 				0.25f * s,
-				( matrix._23 + matrix._32 ) / s,
-				( matrix._31 - matrix._13 ) / s };
+				( matrix._23 + matrix._32 ) * invS,
+				( matrix._31 - matrix._13 ) * invS };
 		}
-		const float32 s = MathUtil::sqrt( 1.0f + matrix._33 - matrix._11 - matrix._22 ) * 2.f;
+		const float32 s	   = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._33 - matrix._11 - matrix._22 ) ) * 2.f;
+		const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
 		return quaternion{
-			( matrix._13 + matrix._31 ) / s,
-			( matrix._23 + matrix._32 ) / s,
+			( matrix._13 + matrix._31 ) * invS,
+			( matrix._23 + matrix._32 ) * invS,
 			0.25f * s,
-			( matrix._12 - matrix._21 ) / s };
+			( matrix._12 - matrix._21 ) * invS };
 	}
 
 	quaternion quaternion::rotateTowards( const quaternion& from, const quaternion& to, float32 maxAngle ) noexcept
@@ -111,7 +115,7 @@ namespace sw
 		if ( dotVal > 0.9995f )
 			return lerp( from, q2, t );
 
-		const float32 theta	   = MathUtil::acos( dotVal );
+		const float32 theta	   = MathUtil::acos( MathUtil::clamp( dotVal, -1.0f, 1.0f ) );
 		const float32 sinTheta = MathUtil::sin( theta );
 		const float32 scale1   = MathUtil::sin( ( 1.f - t ) * theta ) / sinTheta;
 		const float32 scale2   = MathUtil::sin( t * theta ) / sinTheta;
@@ -170,7 +174,7 @@ namespace sw
 	float32 quaternion::getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept
 	{
 		const float32 dotVal = MathUtil::abs( lhs.dot( rhs ) );
-		return ( dotVal > 1.f ) ? 0.f : MathUtil::acos( dotVal ) * 2.f;
+		return ( dotVal > 1.f ) ? 0.f : MathUtil::acos( MathUtil::clamp( dotVal, -1.0f, 1.0f ) ) * 2.f;
 	}
 
 	float32 quaternion::norm() const noexcept

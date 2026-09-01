@@ -522,7 +522,9 @@ namespace sw
 
 	TaskNode* TaskManager::allocateNode()
 	{
-		return _nodePool->allocate();
+		TaskNode* pNode = _nodePool->allocate();
+		pNode->_pOwner	= this;
+		return pNode;
 	}
 
 	void TaskManager::deallocateNode( TaskNode* pNode )
@@ -658,6 +660,7 @@ namespace sw
 		{
 			pNode->_pParent = t_pCurrentRunningTask;
 			t_pCurrentRunningTask->_activeChildren.fetch_add( 1, std::memory_order_relaxed );
+			t_pCurrentRunningTask->retain();
 		}
 
 		_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
@@ -688,6 +691,7 @@ namespace sw
 		{
 			pNode->_pParent = t_pCurrentRunningTask;
 			t_pCurrentRunningTask->_activeChildren.fetch_add( 1, std::memory_order_relaxed );
+			t_pCurrentRunningTask->retain();
 		}
 
 		_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
@@ -1299,6 +1303,7 @@ namespace sw
 				int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_acq_rel ) - 1;
 				if ( remaining == 0 && pParent->_state.load( std::memory_order_acquire ) == TaskState::WaitingForChildren )
 					onTaskFinished( pParent );
+				pParent->release();
 			}
 		}
 
