@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Common/MathUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 

@@ -8,6 +8,7 @@ SW_LOG_CALLER( "TestLog" );
 
 namespace
 {
+#if defined( SW_DEBUG )
 	/** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
 	constexpr const utf8* kCapturePrefix = "[TestLog] ";
 
@@ -62,6 +63,7 @@ namespace
 		sw::vector<sw::LogEntry> _listEntry;
 		sw::DelegateHandle		 _handle;
 	};
+
 	/**
 	 * @class ThreadSafeLogCapture
 	 * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 싱크
@@ -113,6 +115,7 @@ namespace
 		sw::vector<sw::LogEntry> _listEntry;
 		sw::DelegateHandle		 _handle;
 	};
+#endif
 } // namespace
 
 // ------------------------------------------------------------------------------
