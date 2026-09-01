@@ -52,5 +52,18 @@ namespace sw
 
 		PROPERTY()
 		map<string, int32> _mapFlag{};
+
+		/** @brief 플래그 값을 반환합니다. 없으면 defaultValue입니다. */
+		int32 getFlag( string_view key, int32 defaultValue = 0 ) const
+		{
+			const auto it = _mapFlag.find( string( key ) );
+			return it != _mapFlag.end() ? it->second : defaultValue;
+		}
+
+		/** @brief 플래그 값을 설정합니다. */
+		void setFlag( string_view key, int32 value )
+		{
+			_mapFlag[string( key )] = value;
+		}
 	};
 } // namespace sw

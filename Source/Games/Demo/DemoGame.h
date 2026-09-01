@@ -131,19 +131,9 @@ namespace sw
 		GameData			   _data;
 		MonsterDataCatalog	   _monsterCatalog;
 		SpeciesCatalog		   _speciesCatalog;
-		SaveGame			   _save;
 		TransitionOrchestrator _transitions;
 		RuntimeHud			   _hud;
 		OverworldCameraBias	   _cameraBias;
-		vector<PartyMember>	   _listParty;
-		string				   _currentMapPath;
-		string				   _returnMapPath; ///< 전투 직전 오버월드 맵
-		string				   _returnScenePath;
-		int32				   _returnPlayerX;
-		int32				   _returnPlayerY;
 		DemoGameState		   _gameState;
-		uint8				   _bTitleHandedOff		 : 1; ///< Title → Playing 핸드오프 완료
-		uint8				   _bBattleReturnPending : 1;
-		[[maybe_unused]] uint8 _reserved			 : 6;
 	};
 } // namespace sw

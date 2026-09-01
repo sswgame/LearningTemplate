@@ -20,7 +20,7 @@ namespace sw
 			SW_LOG_WARNING( "Map load failed: %#", mapPath );
 			return false;
 		}
-		_currentMapPath = mapPath;
+		_gameState._currentMapPath = mapPath;
 		_player.setTileMap( &_tileMap );
 		_player.setEncounterRate( _data._encounterRate );
 		_zones.setFromMap( mapPath, _tileMap.getName(), _tileMap.getWidth(), _tileMap.getHeight(), _tileMap.getRole() );
@@ -59,15 +59,15 @@ namespace sw
 		const string& scenePath = _tileMap.getScenePath();
 		if ( scenePath.empty() == false )
 			game::getService<SceneManager>()->requestLoadAsync( scenePath );
-		else if ( _data._battleScene.empty() == false && _currentMapPath == _data._battleMap )
+		else if ( _data._battleScene.empty() == false && _gameState._currentMapPath == _data._battleMap )
 			game::getService<SceneManager>()->requestLoadAsync( _data._battleScene );
 	}
 
 	void DemoGame::syncActionRoomForZone()
 	{
 		const ZoneRole role			= _zones.getActiveRole();
-		const string   clearedFlag	= "room_cleared:" + _currentMapPath;
-		const bool	   alreadyClear = _save.getFlag( clearedFlag, 0 ) != 0;
+		const string   clearedFlag	= "room_cleared:" + _gameState._currentMapPath;
+		const bool	   alreadyClear = _gameState.getFlag( clearedFlag, 0 ) != 0;
 
 		if ( role == ZoneRole::Boss )
 		{
@@ -92,7 +92,7 @@ namespace sw
 				_zones.setClearGateLocked( false );
 				_hud.setDialogue( GameStrings::get( "ui.room_cleared", "Room cleared! The door opened." ) );
 			}
-			else if ( _currentMapPath.find( "entrance" ) != string::npos )
+			else if ( _gameState._currentMapPath.find( "entrance" ) != string::npos )
 			{
 				_actionRoom.beginEntrance();
 				_hud.setDialogue( GameStrings::get( "ui.dungeon_hint",

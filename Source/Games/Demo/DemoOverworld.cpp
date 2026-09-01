@@ -11,6 +11,7 @@
 #include "GameFramework/Input/GameActions.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
+#include "GameFramework/Kits/TurnBattle/SaveGame.h"
 
 #include "Games/Demo/DemoGame.h"
 #include "Games/Demo/DemoGameHelpers.h"
@@ -55,7 +56,13 @@ namespace sw
 			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
 			if ( pDispatcher != nullptr )
 				pDispatcher->publish( gameEventChannel(), saveEvent );
-			_save.saveToFile( savePath );
+			SaveGame save;
+			save._mapPath	= _gameState._currentMapPath;
+			save._playerX	= _gameState._spawnX;
+			save._playerY	= _gameState._spawnY;
+			save._listParty = _gameState._listParty;
+			save._mapFlag	= _gameState._mapFlag;
+			save.saveToFile( savePath );
 			_hud.setDialogue( GameStrings::get( "ui.game_saved", "Game saved." ) );
 		}
 		else if ( actions.wasActionTriggered( ids._quickLoad ) )
@@ -66,8 +73,14 @@ namespace sw
 			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
 			if ( pDispatcher != nullptr )
 				pDispatcher->publish( gameEventChannel(), loadEvent );
-			if ( _save.loadFromFile( savePath ) )
+			SaveGame save;
+			if ( save.loadFromFile( savePath ) )
 			{
+				_gameState._currentMapPath = std::move( save._mapPath );
+				_gameState._spawnX		   = save._playerX;
+				_gameState._spawnY		   = save._playerY;
+				_gameState._listParty	   = std::move( save._listParty );
+				_gameState._mapFlag		   = std::move( save._mapFlag );
 				applySaveToWorld();
 				_hud.setDialogue( "Game loaded." );
 			}
@@ -98,7 +111,7 @@ namespace sw
 			if ( _zones.getActiveRole() == ZoneRole::Gym && _zones.isClearGateLocked() )
 			{
 				_zones.setClearGateLocked( false );
-				_save.setFlag( "clear_gate_unlocked", 1 );
+				_gameState.setFlag( "clear_gate_unlocked", 1 );
 				_hud.setDialogue( GameStrings::get( "ui.gate_unlocked", "The gate unlocked!" ) );
 				SW_LOG_TRACE( "Interact stub unlocked gym clear gate." );
 			}

@@ -20,16 +20,9 @@ namespace sw
 
 	void DemoGame::syncPartyLeadFromBattle()
 	{
-		if ( _listParty.empty() )
+		if ( _gameState._listParty.empty() )
 			return;
-		const PartyMember& leadMember = _battle.player();
-		_listParty[0]._hp			  = leadMember._hp;
-		_listParty[0]._hpMax		  = leadMember._hpMax;
-		_listParty[0]._pp0			  = leadMember._pp0;
-		_listParty[0]._pp1			  = leadMember._pp1;
-		_listParty[0]._exp			  = leadMember._exp;
-		_listParty[0]._level		  = leadMember._level;
-		_listParty[0]._expNext		  = leadMember._expNext;
+		_gameState._listParty[0] = _battle.player();
 	}
 
 	void DemoGame::updateBattle( float32 deltaTime )
@@ -56,19 +49,19 @@ namespace sw
 				_battle.selectRun();
 		}
 
-		if ( bWasActive && _battle.isActive() == false && _bBattleReturnPending != 0 )
+		if ( bWasActive && _battle.isActive() == false && _gameState._bBattleReturnPending != 0 )
 			beginReturnTransition();
 	}
 
 	void DemoGame::beginBattleTransition()
 	{
-		_returnMapPath		  = _currentMapPath;
-		_returnScenePath	  = _tileMap.getScenePath();
-		_returnPlayerX		  = _player.getTileX();
-		_returnPlayerY		  = _player.getTileY();
-		_bBattleReturnPending = 1;
+		_gameState._returnMapPath		 = _gameState._currentMapPath;
+		_gameState._returnScenePath		 = _tileMap.getScenePath();
+		_gameState._returnPlayerX		 = _player.getTileX();
+		_gameState._returnPlayerY		 = _player.getTileY();
+		_gameState._bBattleReturnPending = 1;
 		BattleRequestedEvent requestedEvent{};
-		requestedEvent._fromMapPath	 = _returnMapPath;
+		requestedEvent._fromMapPath	 = _gameState._returnMapPath;
 		EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
 		if ( pDispatcher != nullptr )
 			pDispatcher->publish( gameEventChannel(), requestedEvent );
@@ -82,12 +75,12 @@ namespace sw
 
 	void DemoGame::startBattleLoad()
 	{
-		if ( _listParty.empty() )
+		if ( _gameState._listParty.empty() )
 			initNewGameParty();
 		string foeId = _tileMap.pickEncounterSpeciesId();
 		if ( foeId.empty() )
 			foeId = _data._defaultEncounterId;
-		_battle.startWithPartyLead( _listParty[0], foeId.c_str() );
+		_battle.startWithPartyLead( _gameState._listParty[0], foeId.c_str() );
 		SceneManager* pSceneManager = game::getService<SceneManager>();
 		if ( pSceneManager != nullptr )
 			pSceneManager->requestLoadAsync( _data._battleScene );
@@ -108,9 +101,9 @@ namespace sw
 		syncPartyLeadFromBattle();
 		_battle.endBattle();
 		if ( bWon )
-			_save.setFlag( "clear_gate_unlocked", 1 );
-		loadMap( _returnMapPath, _returnPlayerX, _returnPlayerY );
-		if ( _save.getFlag( "clear_gate_unlocked", 0 ) != 0 )
+			_gameState.setFlag( "clear_gate_unlocked", 1 );
+		loadMap( _gameState._returnMapPath, _gameState._returnPlayerX, _gameState._returnPlayerY );
+		if ( _gameState.getFlag( "clear_gate_unlocked", 0 ) != 0 )
 		{
 			_zones.setClearGateLocked( false );
 			ClearGateChangedEvent gateEvent{};
@@ -119,11 +112,11 @@ namespace sw
 			if ( bWon )
 				SW_LOG_TRACE( "Clear gate unlocked after win." );
 		}
-		if ( _returnScenePath.empty() == false )
-			game::getService<SceneManager>()->requestLoadAsync( _returnScenePath );
-		_bBattleReturnPending = 0;
+		if ( _gameState._returnScenePath.empty() == false )
+			game::getService<SceneManager>()->requestLoadAsync( _gameState._returnScenePath );
+		_gameState._bBattleReturnPending = 0;
 		_hud.clearDialogue();
 		SW_LOG_TRACE( "Returned to overworld '%#' @ (%#,%#)",
-					  _returnMapPath, _returnPlayerX, _returnPlayerY );
+					  _gameState._returnMapPath, _gameState._returnPlayerX, _gameState._returnPlayerY );
 	}
 } // namespace sw

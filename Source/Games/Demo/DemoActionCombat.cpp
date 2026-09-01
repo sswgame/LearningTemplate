@@ -46,9 +46,9 @@ namespace sw
 		if ( result._bDashStarted != 0 )
 			applyActionDash();
 
-		if ( result._damageToPlayer > 0 && _listParty.empty() == false )
+		if ( result._damageToPlayer > 0 && _gameState._listParty.empty() == false )
 		{
-			PartyMember& leadMember = _listParty[0];
+			PartyMember& leadMember = _gameState._listParty[0];
 			leadMember._hp -= result._damageToPlayer;
 			if ( leadMember._hp < 0 )
 				leadMember._hp = 0;
@@ -71,9 +71,9 @@ namespace sw
 		if ( result._bClearedThisFrame != 0 )
 		{
 			_zones.setClearGateLocked( false );
-			_save.setFlag( "room_cleared:" + _currentMapPath, 1 );
+			_gameState.setFlag( "room_cleared:" + _gameState._currentMapPath, 1 );
 			RoomClearedEvent clearedEvent{};
-			clearedEvent._mapPath		= _currentMapPath;
+			clearedEvent._mapPath		= _gameState._currentMapPath;
 			clearedEvent._bBossDefeated = result._bBossDefeated != 0 ? 1 : 0;
 			ClearGateChangedEvent gateEvent{};
 			gateEvent._bLocked			 = 0;
@@ -92,7 +92,7 @@ namespace sw
 						pAudio->play( _data._bossDefeatSfx );
 				}
 				_hud.setDialogue( GameStrings::get( "ui.boss_defeated", "Belial defeated!" ) );
-				_save.setFlag( "story_belial_cleared", 1 );
+				_gameState.setFlag( "story_belial_cleared", 1 );
 				SW_LOG_TRACE( "Boss cleared ??victory exit to town unlocked (east door)." );
 			}
 			else

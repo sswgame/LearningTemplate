@@ -20,36 +20,31 @@ namespace sw
 
 	void DemoGame::syncSaveFromWorld()
 	{
-		_save._mapPath = _currentMapPath;
-		_save._playerX = _player.getTileX();
-		_save._playerY = _player.getTileY();
-		_save.setPartyFrom( _listParty );
+		_gameState._spawnX = _player.getTileX();
+		_gameState._spawnY = _player.getTileY();
 	}
 
 	bool DemoGame::applySaveToWorld()
 	{
 		applyPartyFromSave();
-		if ( loadMap( _save._mapPath, _save._playerX, _save._playerY ) == false )
+		if ( loadMap( _gameState._currentMapPath, _gameState._spawnX, _gameState._spawnY ) == false )
 			return false;
 		// 체육관형 게이트만 해제를 유지합니다. 던전 룸은 입장 시 다시 잠급니다.
-		if ( _zones.getActiveRole() == ZoneRole::Gym && _save.getFlag( "clear_gate_unlocked", 0 ) != 0 )
+		if ( _zones.getActiveRole() == ZoneRole::Gym && _gameState.getFlag( "clear_gate_unlocked", 0 ) != 0 )
 			_zones.setClearGateLocked( false );
 		return true;
 	}
 
 	void DemoGame::initNewGameParty()
 	{
-		_listParty.clear();
-		_listParty.push_back( _speciesCatalog.makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
-		_save.clearParty();
-		_save.setPartyFrom( _listParty );
-		_save.setFlag( "story_intro", 0 );
+		_gameState._listParty.clear();
+		_gameState._listParty.push_back( _speciesCatalog.makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
+		_gameState.setFlag( "story_intro", 0 );
 	}
 
 	void DemoGame::applyPartyFromSave()
 	{
-		_listParty = _save._listParty;
-		if ( _listParty.empty() )
+		if ( _gameState._listParty.empty() )
 			initNewGameParty();
 	}
 
@@ -67,18 +62,18 @@ namespace sw
 								  safeFill( playerMember._pp0, 35 ) );
 			_hud.setDialogue( _battle.getStatusText() );
 		}
-		else if ( _actionRoom.isActive() && _listParty.empty() == false )
+		else if ( _actionRoom.isActive() && _gameState._listParty.empty() == false )
 		{
-			const PartyMember& leadMember = _listParty[0];
+			const PartyMember& leadMember = _gameState._listParty[0];
 			_hud.setActionGauges( safeFill( leadMember._hp, leadMember._hpMax ),
 								  _actionRoom.getBossHpFill(),
 								  _actionRoom.getDashFill() );
 			_hud.publishSnapshot( true );
 			return;
 		}
-		else if ( _listParty.empty() == false )
+		else if ( _gameState._listParty.empty() == false )
 		{
-			const PartyMember& leadMember = _listParty[0];
+			const PartyMember& leadMember = _gameState._listParty[0];
 			_hud.setBattleGauges( safeFill( leadMember._hp, leadMember._hpMax ), 0.0f,
 								  safeFill( leadMember._exp, leadMember._expNext > 0 ? leadMember._expNext : 1 ),
 								  safeFill( leadMember._pp0, 35 ) );
@@ -147,39 +142,14 @@ namespace sw
 	void DemoGame::onBeforeStateSerialize()
 	{
 		syncSaveFromWorld();
-
-		_gameState._bTitleHandedOff		 = _bTitleHandedOff;
-		_gameState._bBattleReturnPending = _bBattleReturnPending;
-		_gameState._returnPlayerX		 = _returnPlayerX;
-		_gameState._returnPlayerY		 = _returnPlayerY;
-		_gameState._spawnX				 = _save._playerX;
-		_gameState._spawnY				 = _save._playerY;
-		_gameState._currentMapPath		 = _currentMapPath;
-		_gameState._returnMapPath		 = _returnMapPath;
-		_gameState._returnScenePath		 = _returnScenePath;
-		_gameState._listParty			 = _listParty;
-		_gameState._mapFlag				 = _save._mapFlag;
 	}
 
 	void DemoGame::onAfterStateDeserialize()
 	{
-		_bTitleHandedOff	  = _gameState._bTitleHandedOff;
-		_bBattleReturnPending = _gameState._bBattleReturnPending;
-		_returnPlayerX		  = _gameState._returnPlayerX;
-		_returnPlayerY		  = _gameState._returnPlayerY;
-		_currentMapPath		  = _gameState._currentMapPath;
-		_returnMapPath		  = _gameState._returnMapPath;
-		_returnScenePath	  = _gameState._returnScenePath;
-		_listParty			  = std::move( _gameState._listParty );
-		_save._mapFlag		  = std::move( _gameState._mapFlag );
-		_save._mapPath		  = _currentMapPath;
-		_save._playerX		  = _gameState._spawnX;
-		_save._playerY		  = _gameState._spawnY;
-
-		if ( _currentMapPath.empty() == false )
-			loadMap( _currentMapPath, _save._playerX, _save._playerY );
+		if ( _gameState._currentMapPath.empty() == false )
+			loadMap( _gameState._currentMapPath, _gameState._spawnX, _gameState._spawnY );
 		applyPartyFromSave();
-		if ( _zones.getActiveRole() == ZoneRole::Gym && _save.getFlag( "clear_gate_unlocked", 0 ) != 0 )
+		if ( _zones.getActiveRole() == ZoneRole::Gym && _gameState.getFlag( "clear_gate_unlocked", 0 ) != 0 )
 			_zones.setClearGateLocked( false );
 	}
 } // namespace sw

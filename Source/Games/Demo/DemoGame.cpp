@@ -37,19 +37,10 @@ namespace sw
 		, _data{}
 		, _monsterCatalog{}
 		, _speciesCatalog{}
-		, _save{}
 		, _transitions{}
 		, _hud{}
 		, _cameraBias{}
-		, _listParty{}
-		, _currentMapPath{}
-		, _returnMapPath{}
-		, _returnScenePath{}
-		, _returnPlayerX{ 1 }
-		, _returnPlayerY{ 1 }
-		, _bTitleHandedOff{ SW_FALSE }
-		, _bBattleReturnPending{ SW_FALSE }
-		, _reserved{ 0 }
+		, _gameState{}
 	{
 	}
 
@@ -88,10 +79,10 @@ namespace sw
 		_player.setActionMap( &actions );
 		wireTransitionCallbacks();
 
-		_bTitleHandedOff	  = SW_FALSE;
-		_bBattleReturnPending = SW_FALSE;
+		_gameState._bTitleHandedOff		 = 0;
+		_gameState._bBattleReturnPending = 0;
 		_transitions.reset();
-		_currentMapPath = _data._startMap;
+		_gameState._currentMapPath = _data._startMap;
 		_hud.setVisible( true );
 		_hud.setScreenRect( 0.0f, 0.0f, 1.0f, 1.0f );
 		SW_LOG_INFO( "Standby for Title handoff before overworld." );
@@ -111,14 +102,14 @@ namespace sw
 		_battle.endBattle();
 		_tileMap.clear();
 		_zones.clear();
-		_listParty.clear();
+		_gameState._listParty.clear();
 	}
 
 	void DemoGame::onUpdate( float32 deltaTime )
 	{
-		if ( _bTitleHandedOff == SW_FALSE )
+		if ( _gameState._bTitleHandedOff == 0 )
 		{
-			_bTitleHandedOff			= SW_TRUE;
+			_gameState._bTitleHandedOff = 1;
 			SceneManager* pSceneManager = game::getService<SceneManager>();
 			if ( pSceneManager != nullptr )
 				pSceneManager->requestLoadAsync( _data._titleScene );
