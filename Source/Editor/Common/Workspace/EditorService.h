@@ -12,7 +12,7 @@ namespace sw::editor
 	namespace internal
 	{
 		void* getRawService( ModuleServiceId id );
-	}
+	} // namespace internal
 
 	void bindEditorService( const ModuleService& service );
 	void unbindEditorService();
