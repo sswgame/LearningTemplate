@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -16,8 +17,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

@@ -6,10 +6,9 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Transition/GameModeStateMachine.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

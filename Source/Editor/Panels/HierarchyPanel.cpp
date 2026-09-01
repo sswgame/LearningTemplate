@@ -11,6 +11,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorActionMenuManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -19,8 +20,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 
@@ -307,7 +306,7 @@ namespace sw::editor
 
 				EditorWorkspace& ws		   = EditorContext::get()->getWorkspace();
 				const bool		 bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-											   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
+										   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
 				const utf8* pCompName = pSceneComp->getComponentName().empty() == false
 										  ? pSceneComp->getComponentName().c_str()
@@ -486,7 +485,7 @@ namespace sw::editor
 
 						EditorWorkspace& ws			   = EditorContext::get()->getWorkspace();
 						const bool		 bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-														   ws.getSelectedComponentId() == pComp->getComponentId() );
+													   ws.getSelectedComponentId() == pComp->getComponentId() );
 
 						const utf8* pCompName = pComp->getComponentName().empty() == false
 												  ? pComp->getComponentName().c_str()

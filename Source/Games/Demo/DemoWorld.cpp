@@ -2,12 +2,11 @@
 
 #include "Engine/Audio/IAudioSystem.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
 
 #include "Games/Demo/DemoGame.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

@@ -8,6 +8,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -26,8 +27,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

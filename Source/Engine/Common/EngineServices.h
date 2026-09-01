@@ -38,7 +38,6 @@ namespace sw
 	class CompressionCodecRegistry;
 	class ShaderCache;
 	class ComponentDefaults;
-	struct GameData;
 
 	// ------------------------------------------------------------------------------
 	// 1) EngineServices — App이 소유한 매니저 포인터 묶음
@@ -46,9 +45,9 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	struct EngineServices
 	{
-#define SW_ENGINE_SERVICE( member, Type, getter, required )		  Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required ) Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter )			  Type* member{ nullptr };
+#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )	   Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )			   Type* member{ nullptr };
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -72,9 +71,9 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 3) 코어 매니저 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)
 		// ------------------------------------------------------------------------------
-#define SW_ENGINE_SERVICE( member, Type, getter, required )		  SW_API Type& getter();
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required ) SW_API const Type& getter();
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter )			  SW_API Type* getter();
+#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )	   SW_API Type& getter();
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) SW_API const Type& getter();
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )			   SW_API Type* getter();
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST

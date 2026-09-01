@@ -6,12 +6,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

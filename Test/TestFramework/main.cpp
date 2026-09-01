@@ -28,8 +28,9 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 
+#include "GameFramework/Base/GameService.h"
+
 #include "RuntimeAPI/PluginAPI.h"
-#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

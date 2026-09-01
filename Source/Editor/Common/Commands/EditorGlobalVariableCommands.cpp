@@ -5,11 +5,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

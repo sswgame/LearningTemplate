@@ -8,6 +8,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -17,8 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 

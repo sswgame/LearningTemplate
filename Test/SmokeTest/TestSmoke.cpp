@@ -15,12 +15,12 @@
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
 #include "RuntimeAPI/PluginAPI.h"
-#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -57,12 +57,13 @@ namespace
 				return &sw::engine::getCompressionCodecRegistry();
 			case sw::ModuleServiceId::ShaderCache:
 				return &sw::engine::getShaderCache();
-			case sw::ModuleServiceId::GameData:
-				return const_cast<sw::GameData*>( &sw::engine::getGameData() );
 			case sw::ModuleServiceId::ComponentDefaults:
 				return &sw::engine::getComponentDefaults();
-			case sw::ModuleServiceId::MonsterDataCatalog:
-			case sw::ModuleServiceId::SpeciesCatalog:
+			case sw::ModuleServiceId::TaskManager:
+			case sw::ModuleServiceId::MemoryProfiler:
+			case sw::ModuleServiceId::CommandStack:
+			case sw::ModuleServiceId::EngineData:
+			case sw::ModuleServiceId::ModuleCompiler:
 			case sw::ModuleServiceId::Count:
 			default:
 				break;

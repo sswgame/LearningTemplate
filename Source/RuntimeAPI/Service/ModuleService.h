@@ -19,10 +19,12 @@ namespace sw
 	struct DebugOverlayState;
 	class CompressionCodecRegistry;
 	class ShaderCache;
-	struct GameData;
-	class MonsterDataCatalog;
-	class SpeciesCatalog;
 	class ComponentDefaults;
+	class TaskManager;
+	class MemoryProfiler;
+	class CommandStack;
+	struct EngineData;
+	class IModuleCompiler;
 
 	enum class ModuleServiceId : uint32
 	{
@@ -38,10 +40,12 @@ namespace sw
 		DebugOverlayState,
 		CompressionCodecRegistry,
 		ShaderCache,
-		GameData,
-		MonsterDataCatalog, ///< 호스트가 아니라 게임이 bindLocalService로 제공합니다.
-		SpeciesCatalog,		///< 호스트가 아니라 게임이 bindLocalService로 제공합니다.
 		ComponentDefaults,
+		TaskManager,
+		MemoryProfiler,
+		CommandStack,
+		EngineData,
+		ModuleCompiler,
 		Count
 	};
 
@@ -60,7 +64,10 @@ namespace sw
 	};
 
 	template <typename T>
-	struct ModuleServiceTraits;
+	struct ModuleServiceTraits
+	{
+		static constexpr ModuleServiceId id = ModuleServiceId::Count;
+	};
 
 #define SW_DECLARE_MODULE_SERVICE( Type, Id )     \
 	template <>                                   \
@@ -81,8 +88,11 @@ namespace sw
 	SW_DECLARE_MODULE_SERVICE( DebugOverlayState, ModuleServiceId::DebugOverlayState );
 	SW_DECLARE_MODULE_SERVICE( CompressionCodecRegistry, ModuleServiceId::CompressionCodecRegistry );
 	SW_DECLARE_MODULE_SERVICE( ShaderCache, ModuleServiceId::ShaderCache );
-	SW_DECLARE_MODULE_SERVICE( GameData, ModuleServiceId::GameData );
-	SW_DECLARE_MODULE_SERVICE( MonsterDataCatalog, ModuleServiceId::MonsterDataCatalog );
-	SW_DECLARE_MODULE_SERVICE( SpeciesCatalog, ModuleServiceId::SpeciesCatalog );
 	SW_DECLARE_MODULE_SERVICE( ComponentDefaults, ModuleServiceId::ComponentDefaults );
+	SW_DECLARE_MODULE_SERVICE( TaskManager, ModuleServiceId::TaskManager );
+	SW_DECLARE_MODULE_SERVICE( MemoryProfiler, ModuleServiceId::MemoryProfiler );
+	SW_DECLARE_MODULE_SERVICE( CommandStack, ModuleServiceId::CommandStack );
+	SW_DECLARE_MODULE_SERVICE( EngineData, ModuleServiceId::EngineData );
+	SW_DECLARE_MODULE_SERVICE( const EngineData, ModuleServiceId::EngineData );
+	SW_DECLARE_MODULE_SERVICE( IModuleCompiler, ModuleServiceId::ModuleCompiler );
 } // namespace sw

@@ -4,6 +4,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/Base/GameEvents.h"
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
@@ -11,8 +12,6 @@
 
 #include "Games/Demo/DemoGame.h"
 #include "Games/Demo/DemoGameHelpers.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

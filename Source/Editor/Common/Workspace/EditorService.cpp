@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "RuntimeAPI/Service/EditorService.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 SW_LOG_CALLER( "EditorService" );
 namespace sw::editor
@@ -21,10 +21,10 @@ namespace sw::editor
 		s_editorService = {};
 	}
 
-	void* getRawService( uint32 id )
+	void* getRawService( ModuleServiceId id )
 	{
 		SW_LOG_ASSERT( s_editorService.getService != nullptr, "EditorService is not bound" );
-		return s_editorService.getService( id );
+		return s_editorService.getService( toRawServiceId( id ) );
 	}
 
 	EditorData& getEditorData()

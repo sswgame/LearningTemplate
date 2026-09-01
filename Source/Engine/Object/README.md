@@ -199,7 +199,7 @@ bool hit = go->hasTag( "Bullet"_tag );
 Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 씁니다.
 
 ```cpp
-#include "RuntimeAPI/Service/GameService.h"
+#include "GameFramework/Base/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 GameObject* go = game::getResourceManager().getPrefabManager().spawn(

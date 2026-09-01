@@ -4,7 +4,7 @@
 
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 
-#include "RuntimeAPI/Service/GameService.h"
+#include "GameFramework/Base/GameService.h"
 
 namespace sw
 {

@@ -11,11 +11,10 @@
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Resource/ResourceManager.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 

@@ -10,9 +10,9 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceManager.h"
 
-#include "Games/Demo/Actors/MonsterComponent.h"
+#include "GameFramework/Base/GameService.h"
 
-#include "RuntimeAPI/Service/GameService.h"
+#include "Games/Demo/Actors/MonsterComponent.h"
 
 namespace sw
 {

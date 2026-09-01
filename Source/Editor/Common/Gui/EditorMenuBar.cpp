@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/CommandPalettePopup.h"
@@ -27,7 +28,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
-#include "RuntimeAPI/Service/EditorService.h"
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
 #include <imgui.h>

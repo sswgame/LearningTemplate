@@ -10,8 +10,7 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include <imgui.h>
 

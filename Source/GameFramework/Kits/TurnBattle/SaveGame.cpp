@@ -7,10 +7,9 @@
 
 #include "Engine/Utility/Format/KeyValueFile.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

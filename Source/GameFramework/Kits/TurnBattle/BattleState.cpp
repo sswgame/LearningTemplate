@@ -7,10 +7,9 @@
 
 #include "Engine/Audio/IAudioSystem.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

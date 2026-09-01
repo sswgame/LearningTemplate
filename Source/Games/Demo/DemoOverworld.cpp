@@ -7,6 +7,7 @@
 #include "Engine/Input/InputManager.h"
 
 #include "GameFramework/Base/GameEvents.h"
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Input/GameActions.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
@@ -15,8 +16,6 @@
 
 #include "Games/Demo/DemoGame.h"
 #include "Games/Demo/DemoGameHelpers.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

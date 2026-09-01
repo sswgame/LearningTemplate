@@ -5,8 +5,9 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/Base/GameService.h"
+
 #include "RuntimeAPI/ABI/GameAPI.h"
-#include "RuntimeAPI/Service/GameService.h"
 
 /**
  * @brief 게임 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로

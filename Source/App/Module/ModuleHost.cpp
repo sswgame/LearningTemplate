@@ -21,7 +21,6 @@
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/PluginAPI.h"
-#include "RuntimeAPI/Service/EditorService.h"
 #include "RuntimeAPI/Service/ModuleService.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -30,69 +29,62 @@ namespace
 {
 	sw::ModuleHost* s_pCurrentModuleHost{ nullptr };
 
+	enum class ModuleTarget : uint8
+	{
+		Editor,
+		Game
+	};
+
+	template <ModuleTarget Target>
 	void* getModuleService( uint32 id )
 	{
-		using sw::EditorServiceId;
 		using sw::ModuleServiceId;
 
-		if ( id < sw::kModuleServiceCount )
-		{
-			switch ( static_cast<ModuleServiceId>( id ) )
-			{
-				case ModuleServiceId::LocalizationManager:
-					return &sw::engine::getLocalizationManager();
-				case ModuleServiceId::EventDispatcher:
-					return &sw::engine::getEventDispatcher();
-				case ModuleServiceId::GlobalVariableManager:
-					return &sw::engine::getGlobalVariableManager();
-				case ModuleServiceId::AudioSystem:
-					return &sw::engine::getAudioSystem();
-				case ModuleServiceId::TypeRegistry:
-					return &sw::engine::getTypeRegistry();
-				case ModuleServiceId::InputManager:
-					return &sw::engine::getInputManager();
-				case ModuleServiceId::SceneManager:
-					return &sw::engine::getSceneManager();
-				case ModuleServiceId::ResourceManager:
-					return &sw::engine::getResourceManager();
-				case ModuleServiceId::DebugDrawQueue:
-					return &sw::engine::getDebugDrawQueue();
-				case ModuleServiceId::DebugOverlayState:
-					return &sw::engine::getDebugOverlayState();
-				case ModuleServiceId::CompressionCodecRegistry:
-					return &sw::engine::getCompressionCodecRegistry();
-				case ModuleServiceId::ShaderCache:
-					return &sw::engine::getShaderCache();
-				case ModuleServiceId::GameData:
-					return const_cast<sw::GameData*>( &sw::engine::getGameData() );
-				case ModuleServiceId::ComponentDefaults:
-					return &sw::engine::getComponentDefaults();
-				case ModuleServiceId::MonsterDataCatalog:
-				case ModuleServiceId::SpeciesCatalog:
-					// 게임 모듈이 bindLocalService로 제공합니다. 호스트 테이블에는 없습니다.
-					break;
-				case ModuleServiceId::Count:
-				default:
-					break;
-			}
+		if ( id >= sw::kModuleServiceCount )
 			return nullptr;
+
+		const auto serviceId = static_cast<ModuleServiceId>( id );
+
+#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )          \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
+	{                                                                             \
+		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
+			return nullptr;                                                       \
+		else                                                                      \
+			return &sw::engine::getter();                                         \
+	}
+
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed )    \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
+	{                                                                             \
+		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
+			return nullptr;                                                       \
+		else                                                                      \
+			return const_cast<sw::Type*>( &sw::engine::getter() );                \
+	}
+
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )                \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
+	{                                                                             \
+		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
+			return nullptr;                                                       \
+		else                                                                      \
+			return sw::engine::getter();                                          \
+	}
+
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+
+		if ( serviceId == ModuleServiceId::ModuleCompiler )
+		{
+			if constexpr ( Target == ModuleTarget::Game )
+				return nullptr;
+			else
+				return ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getModuleCompiler() : nullptr;
 		}
 
-		switch ( static_cast<EditorServiceId>( id ) )
-		{
-			case EditorServiceId::TaskManager:
-				return &sw::engine::getTaskManager();
-			case EditorServiceId::MemoryProfiler:
-				return sw::engine::getMemoryProfiler();
-			case EditorServiceId::CommandStack:
-				return &sw::engine::getCommandStack();
-			case EditorServiceId::EngineData:
-				return const_cast<sw::EngineData*>( &sw::engine::getEngineData() );
-			case EditorServiceId::ModuleCompiler:
-				return ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getModuleCompiler() : nullptr;
-			default:
-				break;
-		}
 		return nullptr;
 	}
 } // namespace
@@ -521,7 +513,7 @@ namespace sw
 		if ( _editorApi.bindService != nullptr )
 		{
 			ModuleService editorService{};
-			editorService.getService = getModuleService;
+			editorService.getService = getModuleService<ModuleTarget::Editor>;
 			_editorApi.bindService( &editorService );
 		}
 
@@ -553,7 +545,7 @@ namespace sw
 		if ( _gameApi.bindService != nullptr )
 		{
 			ModuleService gameService{};
-			gameService.getService = getModuleService;
+			gameService.getService = getModuleService<ModuleTarget::Game>;
 			_gameApi.bindService( &gameService );
 		}
 
@@ -638,7 +630,7 @@ namespace sw
 		if ( _editorApi.bindService != nullptr )
 		{
 			ModuleService editorService{};
-			editorService.getService = getModuleService;
+			editorService.getService = getModuleService<ModuleTarget::Editor>;
 			_editorApi.bindService( &editorService );
 		}
 
@@ -677,7 +669,7 @@ namespace sw
 		if ( _gameApi.bindService != nullptr )
 		{
 			ModuleService gameService{};
-			gameService.getService = getModuleService;
+			gameService.getService = getModuleService<ModuleTarget::Game>;
 			_gameApi.bindService( &gameService );
 		}
 

@@ -4,7 +4,7 @@
 
 #include "Engine/Input/InputManager.h"
 
-#include "RuntimeAPI/Service/GameService.h"
+#include "GameFramework/Base/GameService.h"
 
 namespace sw
 {

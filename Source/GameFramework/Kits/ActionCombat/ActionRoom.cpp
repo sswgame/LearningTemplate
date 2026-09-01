@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
-#include "RuntimeAPI/Service/GameService.h"
+#include "GameFramework/Base/GameService.h"
 
 namespace sw
 {

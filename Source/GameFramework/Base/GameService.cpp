@@ -1,6 +1,8 @@
 #include "pch.h"
 
-#include "RuntimeAPI/Service/GameService.h"
+#include "GameFramework/Base/GameService.h"
+
+#include "Core/Container/map.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -19,8 +21,9 @@ namespace sw
 
 	namespace
 	{
-		ModuleService s_gameService{};
-		void*		  s_arrLocalServices[kModuleServiceCount]{ nullptr };
+		ModuleService	   s_gameService{};
+		void*			   s_arrLocalHostOverrides[kModuleServiceCount]{ nullptr };
+		map<uint64, void*> s_mapLocalService{};
 	} // namespace
 
 	namespace game
@@ -34,7 +37,8 @@ namespace sw
 		{
 			s_gameService = {};
 			for ( uint32 index = 0; index < kModuleServiceCount; ++index )
-				s_arrLocalServices[index] = nullptr;
+				s_arrLocalHostOverrides[index] = nullptr;
+			s_mapLocalService.clear();
 		}
 
 		SW_GAMESERVICE_API bool areGameServicesBound()
@@ -46,14 +50,28 @@ namespace sw
 		{
 			const uint32 rawId = toRawServiceId( id );
 			if ( rawId < kModuleServiceCount )
-				s_arrLocalServices[rawId] = pService;
+				s_arrLocalHostOverrides[rawId] = pService;
+		}
+
+		SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )
+		{
+			if ( pService != nullptr )
+				s_mapLocalService[typeHash] = pService;
+			else
+				s_mapLocalService.erase( typeHash );
+		}
+
+		SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash )
+		{
+			const auto it = s_mapLocalService.find( typeHash );
+			return it != s_mapLocalService.end() ? it->second : nullptr;
 		}
 
 		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
 		{
 			const uint32 rawId = toRawServiceId( id );
-			if ( rawId < kModuleServiceCount && s_arrLocalServices[rawId] != nullptr )
-				return s_arrLocalServices[rawId];
+			if ( rawId < kModuleServiceCount && s_arrLocalHostOverrides[rawId] != nullptr )
+				return s_arrLocalHostOverrides[rawId];
 
 			if ( s_gameService.getService == nullptr )
 				return nullptr;

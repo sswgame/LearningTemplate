@@ -14,6 +14,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -34,8 +35,6 @@
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

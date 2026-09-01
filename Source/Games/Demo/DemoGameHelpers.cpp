@@ -12,10 +12,9 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/UnitStatsComponent.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

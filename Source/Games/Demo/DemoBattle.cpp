@@ -6,13 +6,12 @@
 #include "Engine/Input/InputManager.h"
 
 #include "GameFramework/Base/GameEvents.h"
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Input/GameActions.h"
 #include "GameFramework/Kits/TurnBattle/BattleState.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 
 #include "Games/Demo/DemoGame.h"
-
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

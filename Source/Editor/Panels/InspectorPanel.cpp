@@ -10,6 +10,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -29,8 +30,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 
@@ -267,7 +266,7 @@ namespace sw::editor
 													  ? pComp->getComponentName().c_str()
 													  : pTInfo->_name.c_str();
 						const bool	 bCanPaste	  = ( ws.hasCopiedComponent() &&
-													  ws.getCopiedComponentTypeName() == compTypeName );
+												  ws.getCopiedComponentTypeName() == compTypeName );
 						if ( bCanPaste )
 						{
 							if ( ImGui::MenuItem( "Paste Component Values" ) )

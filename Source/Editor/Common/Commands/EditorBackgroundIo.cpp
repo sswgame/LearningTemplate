@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "RuntimeAPI/Service/EditorService.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
 {

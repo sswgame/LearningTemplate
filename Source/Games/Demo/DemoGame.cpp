@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Data/MonsterDataCatalog.h"
@@ -22,7 +23,6 @@
 
 #include "RuntimeAPI/ABI/GameAPI.h"
 #include "RuntimeAPI/Export/GameModuleExports.h"
-#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

@@ -5,8 +5,9 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "RuntimeAPI/ABI/EditorAPI.h"
-#include "RuntimeAPI/Service/EditorService.h"
 
 /**
  * @brief 에디터 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로

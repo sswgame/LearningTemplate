@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
 
@@ -33,7 +34,6 @@
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 #include <ImGuiNotify.hpp>
@@ -177,9 +177,9 @@ namespace sw::editor
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
-				"EditorSplash_DefaultRenderPass",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-				MakeTaskArgs( defaultPass ) );
+				  "EditorSplash_DefaultRenderPass",
+				  SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
+				  MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",
