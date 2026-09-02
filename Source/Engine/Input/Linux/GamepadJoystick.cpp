@@ -300,7 +300,7 @@ namespace sw
         _rightMotorSpeed = rightMotor;
 
         if ( _fdForceFeedback < 0 )
-            return false;
+            return true;
 
         // 매번 기존 이펙트를 지우고 새 세기로 다시 업로드합니다 (evdev FF 이펙트는 세기를 직접
         // 갱신하는 API가 없어, 지우고 다시 만드는 편이 가장 단순하고 안전합니다).

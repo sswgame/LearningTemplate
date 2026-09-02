@@ -25,6 +25,7 @@ namespace sw
 {
     InputManager::InputManager()
         : _queueRawEvent{}
+        , _droppedRawEventCount{ 0 }
         , _listDevice{}
         , _pKeyboard{ nullptr }
         , _pMouse{ nullptr }
@@ -55,6 +56,7 @@ namespace sw
 
         _listDevice.clear();
         _queueRawEvent.clear();
+        _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
         _inputHistory.clear();
 
@@ -95,6 +97,7 @@ namespace sw
         _pGamepad   = nullptr;
         _pActionMap = nullptr;
         _queueRawEvent.clear();
+        _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
         _inputHistory.clear();
 
@@ -109,7 +112,7 @@ namespace sw
 
         const bool bPushed = _queueRawEvent.push( rawEvent );
         if ( bPushed == false )
-            SW_LOG_WARNING( "Raw input event queue full (capacity=%d). Event dropped.", static_cast<int32>( _queueRawEvent.capacity() ) );
+            _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;
     }
 
@@ -192,6 +195,12 @@ namespace sw
 
     void InputManager::beginFrame( float32 deltaSeconds )
     {
+        const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
+        if ( droppedCount > 0 )
+        {
+            SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
+        }
+
         // 1) 등록된 모든 장치에 대해 프레임 시작 (이전 프레임 엣지 초기화) 및 폴링 호출
         for ( auto& pDev : _listDevice )
         {

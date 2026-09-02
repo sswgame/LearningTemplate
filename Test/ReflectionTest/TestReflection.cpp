@@ -575,6 +575,7 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
         SW_TEST_SKIP( "ReflectionParser executable not found in binary directory" );
     }
 
+    sw::ResourceUtil::initialize();
     const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
     const sw::string tempHeaderPath = sw::FileUtil::joinPath( binDir, "InvalidBitfieldSample.h" );
     const sw::string outGenDir      = sw::FileUtil::joinPath( binDir, "temp_gen" );

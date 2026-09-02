@@ -17,7 +17,7 @@ namespace sw
             sw::FileUtil::ensureDirectoryExists( dir );
             dir += "/";
             dir += fileName;
-            return sw::FileUtil::normalizePath( dir );
+            return sw::FileUtil::normalizeSeparators( dir );
         }
 
         /** @brief 테스트용 샘플 XML 프리팹 파일을 생성하고 경로를 반환합니다. */
