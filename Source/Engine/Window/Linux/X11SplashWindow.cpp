@@ -92,7 +92,7 @@ namespace sw
                 XImage* pImage = XCreateImage(
                     pDisplay, DefaultVisual( pDisplay, screen ),
                     DefaultDepth( pDisplay, screen ), ZPixmap, 0,
-                    reinterpret_cast<char*>( _splashImage._pPixels ),
+                    reinterpret_cast<utf8*>( _splashImage._pPixels ),
                     _splashImage._width, _splashImage._height, 32, 0 );
                 if ( pImage != nullptr )
                 {

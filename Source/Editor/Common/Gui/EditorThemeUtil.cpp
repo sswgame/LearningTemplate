@@ -447,10 +447,10 @@ namespace sw::editor
             ImGui::TextDisabled( "Color Palette Customization" );
 
             // 2) 액센트 컬러 피커
-            float32 accentRaw[4] = { cfg._accentColor._r, cfg._accentColor._g, cfg._accentColor._b, cfg._accentColor._a };
-            if ( ImGui::ColorEdit4( "Accent Color", accentRaw, ImGuiColorEditFlags_NoAlpha ) )
+            float32 arrAccentRaw[4] = { cfg._accentColor._r, cfg._accentColor._g, cfg._accentColor._b, cfg._accentColor._a };
+            if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
             {
-                cfg._accentColor = Color4{ accentRaw[0], accentRaw[1], accentRaw[2], accentRaw[3] };
+                cfg._accentColor = Color4{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
                 applyTheme( cfg );
                 saveToConfig();
             }
