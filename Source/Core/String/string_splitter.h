@@ -51,7 +51,7 @@ namespace sw
         size_t getOffset() const noexcept { return _tokenOffset; }
 
         basic_string_split_iterator& operator++();
-        basic_string_split_iterator  operator++( int );
+        basic_string_split_iterator  operator++( int32 );
 
         bool operator==( const basic_string_split_iterator& other ) const noexcept
         {
@@ -256,7 +256,7 @@ namespace sw
                     break;
                 }
             }
-            if ( bAllSingleChar == true )
+            if ( bAllSingleChar )
             {
                 _multiChars.reserve( listDelim.size() );
                 for ( const auto& d : listDelim )
@@ -279,7 +279,7 @@ namespace sw
     }
 
     template <typename T>
-    basic_string_split_iterator<T> basic_string_split_iterator<T>::operator++( int )
+    basic_string_split_iterator<T> basic_string_split_iterator<T>::operator++( int32 )
     {
         basic_string_split_iterator tmp = *this;
         ++( *this );
