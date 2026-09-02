@@ -6,20 +6,20 @@
 
 namespace sw
 {
-	bool NativeWindowEvent::isMouseInput() const
-	{
-		return false;
-	}
+    bool NativeWindowEvent::isMouseInput() const
+    {
+        return false;
+    }
 
-	bool NativeWindowEvent::isKeyboardInput() const
-	{
-		return false;
-	}
+    bool NativeWindowEvent::isKeyboardInput() const
+    {
+        return false;
+    }
 
-	bool NativeWindowEvent::isInputRelease() const
-	{
-		return false;
-	}
+    bool NativeWindowEvent::isInputRelease() const
+    {
+        return false;
+    }
 } // namespace sw
 
 #endif

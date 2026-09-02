@@ -7,199 +7,199 @@
 
 namespace sw
 {
-	struct TypeInfo;
+    struct TypeInfo;
 
-	/**
-	 * @class SerializeContext
-	 * @brief 타입별 커스텀 바이너리/텍스트 직렬화 핸들러 등록·검색
-	 */
-	class SW_API SerializeContext
-	{
-	public:
-		using BinaryWriteFn = Delegate<void( const void* pValPtr, vector<uint8>& outListBuffer )>;
-		using BinaryReadFn	= Delegate<bool( void* pValPtr, const uint8* pData, size_t size, size_t& offset )>;
+    /**
+     * @class SerializeContext
+     * @brief 타입별 커스텀 바이너리/텍스트 직렬화 핸들러 등록·검색
+     */
+    class SW_API SerializeContext
+    {
+    public:
+        using BinaryWriteFn = Delegate<void( const void* pValPtr, vector<uint8>& outListBuffer )>;
+        using BinaryReadFn  = Delegate<bool( void* pValPtr, const uint8* pData, size_t size, size_t& offset )>;
 
-		using TextWriteFn = Delegate<string( const void* pValPtr )>;
-		using TextReadFn  = Delegate<bool( void* pValPtr, string_view valStr )>;
+        using TextWriteFn = Delegate<string( const void* pValPtr )>;
+        using TextReadFn  = Delegate<bool( void* pValPtr, string_view valStr )>;
 
-		using OwnedPointerCreateFn = void* (*)( void* pOuter, hashed_string typeName );
-		using RuntimeTypeInfoFn	   = const TypeInfo* (*)( const void* pInstance );
+        using OwnedPointerCreateFn = void* (*)( void* pOuter, hashed_string typeName );
+        using RuntimeTypeInfoFn    = const TypeInfo* (*)( const void* pInstance );
 
-		// ------------------------------------------------------------------------------
-		// 1) 수명 — 기본은 키 대소문자 무시
-		// ------------------------------------------------------------------------------
-		/** @brief 기본 컨텍스트 (키 대소문자 무시). */
-		SerializeContext() noexcept
-			: _mapBinaryWriter{}
-			, _mapBinaryReader{}
-			, _mapTextWriter{}
-			, _mapTextReader{}
-			, _mapObjectToId{}
-			, _mapIdToObject{}
-			, _pOuterInstance{ nullptr }
-			, _pOwnedPointerCreateFn{ nullptr }
-			, _pRuntimeTypeInfoFn{ nullptr }
-			, _bIgnoreCaseKeys{ SW_TRUE }
-			, _bAllowUnknownProperties{ SW_FALSE }
-			, _bEnableObjectDeduplication{ SW_FALSE }
-			, _reservedFlags{ 0 } {}
+        // ------------------------------------------------------------------------------
+        // 1) 수명 — 기본은 키 대소문자 무시
+        // ------------------------------------------------------------------------------
+        /** @brief 기본 컨텍스트 (키 대소문자 무시). */
+        SerializeContext() noexcept
+            : _mapBinaryWriter{}
+            , _mapBinaryReader{}
+            , _mapTextWriter{}
+            , _mapTextReader{}
+            , _mapObjectToId{}
+            , _mapIdToObject{}
+            , _pOuterInstance{ nullptr }
+            , _pOwnedPointerCreateFn{ nullptr }
+            , _pRuntimeTypeInfoFn{ nullptr }
+            , _bIgnoreCaseKeys{ SW_TRUE }
+            , _bAllowUnknownProperties{ SW_FALSE }
+            , _bEnableObjectDeduplication{ SW_FALSE }
+            , _reservedFlags{ 0 } {}
 
-		// ------------------------------------------------------------------------------
-		// 2) 핸들러 등록 · 키 정책
-		// ------------------------------------------------------------------------------
-		/** @brief 바이너리 읽기/쓰기 커스텀 핸들러를 등록합니다. */
-		void registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn );
-		/** @brief 텍스트 읽기/쓰기 커스텀 핸들러를 등록합니다. */
-		void registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn );
+        // ------------------------------------------------------------------------------
+        // 2) 핸들러 등록 · 키 정책
+        // ------------------------------------------------------------------------------
+        /** @brief 바이너리 읽기/쓰기 커스텀 핸들러를 등록합니다. */
+        void registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn );
+        /** @brief 텍스트 읽기/쓰기 커스텀 핸들러를 등록합니다. */
+        void registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn );
 
-		/** @brief 키 대소문자 무시 여부를 설정합니다 (Fluent API). */
-		SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
-		{
-			_bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
-			return *this;
-		}
+        /** @brief 키 대소문자 무시 여부를 설정합니다 (Fluent API). */
+        SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
+        {
+            _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
 
-		/** @brief 바이너리/텍스트 역직렬화 시 스키마에 없는 알 수 없는 프로퍼티를 허용(스킵)할지 여부를 설정합니다. */
-		SerializeContext& setAllowUnknownProperties( bool bAllow )
-		{
-			_bAllowUnknownProperties = bAllow ? SW_TRUE : SW_FALSE;
-			return *this;
-		}
+        /** @brief 바이너리/텍스트 역직렬화 시 스키마에 없는 알 수 없는 프로퍼티를 허용(스킵)할지 여부를 설정합니다. */
+        SerializeContext& setAllowUnknownProperties( bool bAllow )
+        {
+            _bAllowUnknownProperties = bAllow ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
 
-		// ------------------------------------------------------------------------------
-		// 3) 조회 — 타입 이름 → 등록된 writer/reader
-		// ------------------------------------------------------------------------------
-		/** @brief 등록된 바이너리 writer를 찾습니다. */
-		const BinaryWriteFn* findBinaryWriter( hashed_string typeName ) const;
-		/** @brief 등록된 바이너리 reader를 찾습니다. */
-		const BinaryReadFn* findBinaryReader( hashed_string typeName ) const;
-		/** @brief 등록된 텍스트 writer를 찾습니다. */
-		const TextWriteFn* findTextWriter( hashed_string typeName ) const;
-		/** @brief 등록된 텍스트 reader를 찾습니다. */
-		const TextReadFn* findTextReader( hashed_string typeName ) const;
-		/**
-		 * @brief Xml/Json 키·태그·속성 이름 조회 시 대소문자 무시 (기본 true). 값 비교에는 영향 없음.
-		 * @details XmlSerializer::deserialize가 이 값을 IXmlBackend에 전달합니다.
-		 *          끄려면: `SerializeContext ctx = SerializeContext::getDefault(); ctx.setIgnoreCaseKeys(false);`
-		 */
-		bool ignoreCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
-		/** @brief 알 수 없는 프로퍼티 허용(스킵) 여부. */
-		bool allowUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
+        // ------------------------------------------------------------------------------
+        // 3) 조회 — 타입 이름 → 등록된 writer/reader
+        // ------------------------------------------------------------------------------
+        /** @brief 등록된 바이너리 writer를 찾습니다. */
+        const BinaryWriteFn* findBinaryWriter( hashed_string typeName ) const;
+        /** @brief 등록된 바이너리 reader를 찾습니다. */
+        const BinaryReadFn* findBinaryReader( hashed_string typeName ) const;
+        /** @brief 등록된 텍스트 writer를 찾습니다. */
+        const TextWriteFn* findTextWriter( hashed_string typeName ) const;
+        /** @brief 등록된 텍스트 reader를 찾습니다. */
+        const TextReadFn* findTextReader( hashed_string typeName ) const;
+        /**
+         * @brief Xml/Json 키·태그·속성 이름 조회 시 대소문자 무시 (기본 true). 값 비교에는 영향 없음.
+         * @details XmlSerializer::deserialize가 이 값을 IXmlBackend에 전달합니다.
+         *          끄려면: `SerializeContext ctx = SerializeContext::getDefault(); ctx.setIgnoreCaseKeys(false);`
+         */
+        bool ignoreCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
+        /** @brief 알 수 없는 프로퍼티 허용(스킵) 여부. */
+        bool allowUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
 
-		/** @brief 소유 포인터 팩토리의 outer 인스턴스를 설정합니다. */
-		SerializeContext& setOuterInstance( void* pOuter )
-		{
-			_pOuterInstance = pOuter;
-			return *this;
-		}
+        /** @brief 소유 포인터 팩토리의 outer 인스턴스를 설정합니다. */
+        SerializeContext& setOuterInstance( void* pOuter )
+        {
+            _pOuterInstance = pOuter;
+            return *this;
+        }
 
-		/** @brief `vector<T*>` 등 소유 포인터 원소를 만들 팩토리를 설정합니다. */
-		SerializeContext& setOwnedPointerFactory( OwnedPointerCreateFn fn )
-		{
-			_pOwnedPointerCreateFn = fn;
-			return *this;
-		}
+        /** @brief `vector<T*>` 등 소유 포인터 원소를 만들 팩토리를 설정합니다. */
+        SerializeContext& setOwnedPointerFactory( OwnedPointerCreateFn fn )
+        {
+            _pOwnedPointerCreateFn = fn;
+            return *this;
+        }
 
-		/** @brief 소유 포인터 인스턴스의 런타임 TypeInfo를 조회할 함수를 설정합니다. */
-		SerializeContext& setRuntimeTypeInfoFn( RuntimeTypeInfoFn fn )
-		{
-			_pRuntimeTypeInfoFn = fn;
-			return *this;
-		}
+        /** @brief 소유 포인터 인스턴스의 런타임 TypeInfo를 조회할 함수를 설정합니다. */
+        SerializeContext& setRuntimeTypeInfoFn( RuntimeTypeInfoFn fn )
+        {
+            _pRuntimeTypeInfoFn = fn;
+            return *this;
+        }
 
-		/** @brief 소유 포인터 팩토리 outer. */
-		void* getOuterInstance() const { return _pOuterInstance; }
+        /** @brief 소유 포인터 팩토리 outer. */
+        void* getOuterInstance() const { return _pOuterInstance; }
 
-		/** @brief 팩토리로 소유 포인터 인스턴스를 만듭니다. 없으면 nullptr. */
-		void* createOwnedPointer( hashed_string typeName ) const
-		{
-			if ( _pOwnedPointerCreateFn == nullptr )
-				return nullptr;
-			return _pOwnedPointerCreateFn( _pOuterInstance, typeName );
-		}
+        /** @brief 팩토리로 소유 포인터 인스턴스를 만듭니다. 없으면 nullptr. */
+        void* createOwnedPointer( hashed_string typeName ) const
+        {
+            if ( _pOwnedPointerCreateFn == nullptr )
+                return nullptr;
+            return _pOwnedPointerCreateFn( _pOuterInstance, typeName );
+        }
 
-		/** @brief 런타임 TypeInfo. 미설정·스킵이면 nullptr. */
-		const TypeInfo* getRuntimeTypeInfo( const void* pInstance ) const
-		{
-			if ( _pRuntimeTypeInfoFn == nullptr || pInstance == nullptr )
-				return nullptr;
-			return _pRuntimeTypeInfoFn( pInstance );
-		}
+        /** @brief 런타임 TypeInfo. 미설정·스킵이면 nullptr. */
+        const TypeInfo* getRuntimeTypeInfo( const void* pInstance ) const
+        {
+            if ( _pRuntimeTypeInfoFn == nullptr || pInstance == nullptr )
+                return nullptr;
+            return _pRuntimeTypeInfoFn( pInstance );
+        }
 
-		/** @brief 오브젝트 중복 제거(포인터 테이블) 활성화 여부 설정 */
-		SerializeContext& setEnableObjectDeduplication( bool bEnable )
-		{
-			_bEnableObjectDeduplication = bEnable ? SW_TRUE : SW_FALSE;
-			return *this;
-		}
+        /** @brief 오브젝트 중복 제거(포인터 테이블) 활성화 여부 설정 */
+        SerializeContext& setEnableObjectDeduplication( bool bEnable )
+        {
+            _bEnableObjectDeduplication = bEnable ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
 
-		bool isObjectDeduplicationEnabled() const { return _bEnableObjectDeduplication == SW_TRUE; }
+        bool isObjectDeduplicationEnabled() const { return _bEnableObjectDeduplication == SW_TRUE; }
 
-		/** @brief 포인터 객체를 테이블에 등록하거나 이미 등록된 ID를 반환합니다. */
-		uint32 registerOrFindObjectId( const void* pInstance ) const
-		{
-			if ( pInstance == nullptr )
-				return 0;
-			const auto it = _mapObjectToId.find( pInstance );
-			if ( it != _mapObjectToId.end() )
-				return it->second;
-			const uint32 newId = static_cast<uint32>( _mapObjectToId.size() + 1 );
-			_mapObjectToId.emplace( pInstance, newId );
-			return newId;
-		}
+        /** @brief 포인터 객체를 테이블에 등록하거나 이미 등록된 ID를 반환합니다. */
+        uint32 registerOrFindObjectId( const void* pInstance ) const
+        {
+            if ( pInstance == nullptr )
+                return 0;
+            const auto it = _mapObjectToId.find( pInstance );
+            if ( it != _mapObjectToId.end() )
+                return it->second;
+            const uint32 newId = static_cast<uint32>( _mapObjectToId.size() + 1 );
+            _mapObjectToId.emplace( pInstance, newId );
+            return newId;
+        }
 
-		/** @brief 포인터 객체의 기존 등록 ID를 조회합니다. */
-		bool findObjectId( const void* pInstance, uint32& outId ) const
-		{
-			if ( pInstance == nullptr )
-				return false;
-			const auto it = _mapObjectToId.find( pInstance );
-			if ( it == _mapObjectToId.end() )
-				return false;
-			outId = it->second;
-			return true;
-		}
+        /** @brief 포인터 객체의 기존 등록 ID를 조회합니다. */
+        bool findObjectId( const void* pInstance, uint32& outId ) const
+        {
+            if ( pInstance == nullptr )
+                return false;
+            const auto it = _mapObjectToId.find( pInstance );
+            if ( it == _mapObjectToId.end() )
+                return false;
+            outId = it->second;
+            return true;
+        }
 
-		/** @brief ID에 매핑되는 역직렬화 인스턴스 주소를 등록합니다. */
-		void registerObjectWithId( uint32 id, void* pInstance ) const
-		{
-			if ( id != 0 && pInstance != nullptr )
-				_mapIdToObject[id] = pInstance;
-		}
+        /** @brief ID에 매핑되는 역직렬화 인스턴스 주소를 등록합니다. */
+        void registerObjectWithId( uint32 id, void* pInstance ) const
+        {
+            if ( id != 0 && pInstance != nullptr )
+                _mapIdToObject[id] = pInstance;
+        }
 
-		/** @brief ID로부터 역직렬화된 인스턴스 주소를 조회합니다. */
-		void* findObjectById( uint32 id ) const
-		{
-			const auto it = _mapIdToObject.find( id );
-			if ( it != _mapIdToObject.end() )
-				return it->second;
-			return nullptr;
-		}
+        /** @brief ID로부터 역직렬화된 인스턴스 주소를 조회합니다. */
+        void* findObjectById( uint32 id ) const
+        {
+            const auto it = _mapIdToObject.find( id );
+            if ( it != _mapIdToObject.end() )
+                return it->second;
+            return nullptr;
+        }
 
-		/** @brief 객체 포인터 테이블을 초기화합니다. */
-		void clearObjectTable() const
-		{
-			_mapObjectToId.clear();
-			_mapIdToObject.clear();
-		}
+        /** @brief 객체 포인터 테이블을 초기화합니다. */
+        void clearObjectTable() const
+        {
+            _mapObjectToId.clear();
+            _mapIdToObject.clear();
+        }
 
-		/** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
-		static const SerializeContext& getDefault();
+        /** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
+        static const SerializeContext& getDefault();
 
-	private:
-		unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
-		unordered_map<hashed_string, BinaryReadFn>	_mapBinaryReader;
-		unordered_map<hashed_string, TextWriteFn>	_mapTextWriter;
-		unordered_map<hashed_string, TextReadFn>	_mapTextReader;
-		mutable unordered_map<const void*, uint32>	_mapObjectToId;
-		mutable unordered_map<uint32, void*>		_mapIdToObject;
-		void*										_pOuterInstance;
-		OwnedPointerCreateFn						_pOwnedPointerCreateFn;
-		RuntimeTypeInfoFn							_pRuntimeTypeInfoFn;
-		uint8										_bIgnoreCaseKeys			: 1;
-		uint8										_bAllowUnknownProperties	: 1;
-		uint8										_bEnableObjectDeduplication : 1;
-		[[maybe_unused]] uint8						_reservedFlags				: 5;
-	};
+    private:
+        unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
+        unordered_map<hashed_string, BinaryReadFn>  _mapBinaryReader;
+        unordered_map<hashed_string, TextWriteFn>   _mapTextWriter;
+        unordered_map<hashed_string, TextReadFn>    _mapTextReader;
+        mutable unordered_map<const void*, uint32>  _mapObjectToId;
+        mutable unordered_map<uint32, void*>        _mapIdToObject;
+        void*                                       _pOuterInstance;
+        OwnedPointerCreateFn                        _pOwnedPointerCreateFn;
+        RuntimeTypeInfoFn                           _pRuntimeTypeInfoFn;
+        uint8                                       _bIgnoreCaseKeys            : 1;
+        uint8                                       _bAllowUnknownProperties    : 1;
+        uint8                                       _bEnableObjectDeduplication : 1;
+        [[maybe_unused]] uint8                      _reservedFlags              : 5;
+    };
 
 } // namespace sw

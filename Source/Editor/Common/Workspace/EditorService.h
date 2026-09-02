@@ -7,22 +7,22 @@
 
 namespace sw::editor
 {
-	struct EditorData;
+    struct EditorData;
 
-	namespace internal
-	{
-		void* getRawService( sw::internal::ModuleServiceId id );
-	} // namespace internal
+    namespace internal
+    {
+        void* getRawService( sw::internal::ModuleServiceId id );
+    } // namespace internal
 
-	void bindEditorService( const ModuleService& service );
-	void unbindEditorService();
+    void bindEditorService( const ModuleService& service );
+    void unbindEditorService();
 
-	template <typename T>
-	T* getService()
-	{
-		return static_cast<T*>( internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) );
-	}
+    template <typename T>
+    T* getService()
+    {
+        return static_cast<T*>( internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) );
+    }
 
-	EditorData& getEditorData();
-	void		setEditorData( EditorData* pData );
+    EditorData& getEditorData();
+    void        setEditorData( EditorData* pData );
 } // namespace sw::editor

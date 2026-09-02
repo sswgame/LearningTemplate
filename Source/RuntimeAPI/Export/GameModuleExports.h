@@ -15,37 +15,37 @@
  */
 
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                        \
-	extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                              \
-	{                                                                                                                                                \
-		if ( pOutApi == nullptr )                                                                                                                    \
-			return false;                                                                                                                            \
-		pOutApi->create			  = []() -> sw::GameHandle { return sw_new GameClass(); };                                                           \
-		pOutApi->destroy		  = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                         \
-		pOutApi->initialize		  = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool {                  \
+    extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                              \
+    {                                                                                                                                                \
+        if ( pOutApi == nullptr )                                                                                                                    \
+            return false;                                                                                                                            \
+        pOutApi->create           = []() -> sw::GameHandle { return sw_new GameClass(); };                                                           \
+        pOutApi->destroy          = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                         \
+        pOutApi->initialize       = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool {                  \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			return pInstance != nullptr ? pInstance->initialize( static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ) : false; }; \
-		pOutApi->shutdown		  = []( sw::GameHandle gameHandle ) {                                                                                           \
+        pOutApi->shutdown         = []( sw::GameHandle gameHandle ) {                                                                                           \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->shutdown(); };                                                                             \
-		pOutApi->update			  = []( sw::GameHandle gameHandle, float32 deltaTime ) {                                                                        \
+        pOutApi->update           = []( sw::GameHandle gameHandle, float32 deltaTime ) {                                                                        \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->update( deltaTime ); };                                                          \
-		pOutApi->fixedUpdate	  = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) {                                                                   \
+        pOutApi->fixedUpdate      = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) {                                                                   \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->fixedUpdate( fixedDeltaTime ); };                                                     \
-		pOutApi->bindService	  = []( const sw::ModuleService* pService ) {                                                                                     \
+        pOutApi->bindService      = []( const sw::ModuleService* pService ) {                                                                                     \
 			if ( pService != nullptr )                                                                                                                         \
 				sw::game::bindGameService( *pService );                                                                                                        \
 			else                                                                                                                                               \
 				sw::game::unbindGameService(); };                                                                     \
-		pOutApi->serializeState	  = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool {                                             \
+        pOutApi->serializeState   = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool {                                             \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			return pInstance != nullptr ? pInstance->serializeState( pOutBuffer, pInOutSize ) : false; };                               \
-		pOutApi->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool {                                        \
+        pOutApi->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool {                                        \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			return pInstance != nullptr ? pInstance->deserializeState( pInBuffer, bufferSize ) : false; };                           \
-		return true;                                                                                                                                 \
-	}
+        return true;                                                                                                                                 \
+    }

@@ -3,19 +3,19 @@
 #include "Engine/Audio/IAudioSystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include "Engine/Audio/XAudio2System.h"
+    #include "Engine/Audio/XAudio2System.h"
 #else
-	#include "Engine/Audio/NullAudioSystem.h"
+    #include "Engine/Audio/NullAudioSystem.h"
 #endif
 
 namespace sw
 {
-	unique_ptr<IAudioSystem> IAudioSystem::create()
-	{
+    unique_ptr<IAudioSystem> IAudioSystem::create()
+    {
 #if defined( SW_PLATFORM_WINDOWS )
-		return make_unique<XAudio2System>();
+        return make_unique<XAudio2System>();
 #else
-		return make_unique<NullAudioSystem>();
+        return make_unique<NullAudioSystem>();
 #endif
-	}
+    }
 } // namespace sw

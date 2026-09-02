@@ -6,42 +6,42 @@
 
 namespace sw
 {
-	SplashWindow::SplashWindow()
-		: _pImpl{ nullptr }
-	{
-	}
+    SplashWindow::SplashWindow()
+        : _pImpl{ nullptr }
+    {
+    }
 
-	SplashWindow::~SplashWindow()
-	{
-		dismiss();
-	}
+    SplashWindow::~SplashWindow()
+    {
+        dismiss();
+    }
 
-	bool SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
-	{
-		_pImpl = ISplashWindow::createPlatformSplash();
-		if ( _pImpl == nullptr )
-			return false;
+    bool SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
+    {
+        _pImpl = ISplashWindow::createPlatformSplash();
+        if ( _pImpl == nullptr )
+            return false;
 
-		return _pImpl->initialize( pTitle, pInitialStatus, width, height );
-	}
+        return _pImpl->initialize( pTitle, pInitialStatus, width, height );
+    }
 
-	void SplashWindow::updateStatus( const utf8* pStatus )
-	{
-		if ( _pImpl != nullptr )
-			_pImpl->updateStatus( pStatus );
-	}
+    void SplashWindow::updateStatus( const utf8* pStatus )
+    {
+        if ( _pImpl != nullptr )
+            _pImpl->updateStatus( pStatus );
+    }
 
-	void SplashWindow::dismiss()
-	{
-		if ( _pImpl != nullptr )
-		{
-			_pImpl->dismiss();
-			_pImpl.reset();
-		}
-	}
+    void SplashWindow::dismiss()
+    {
+        if ( _pImpl != nullptr )
+        {
+            _pImpl->dismiss();
+            _pImpl.reset();
+        }
+    }
 
-	bool SplashWindow::isOpen() const
-	{
-		return ( _pImpl != nullptr ) && _pImpl->isOpen();
-	}
+    bool SplashWindow::isOpen() const
+    {
+        return ( _pImpl != nullptr ) && _pImpl->isOpen();
+    }
 } // namespace sw

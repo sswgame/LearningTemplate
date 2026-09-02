@@ -7,9 +7,9 @@
 
 namespace sw
 {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Tag Type;
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       Tag Type;
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Tag Type;
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Tag Type;
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             Tag Type;
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -19,13 +19,13 @@ namespace sw
 #include "RuntimeAPI/Service/HostServiceList.xxx"
 #undef SW_HOST_SERVICE
 
-	namespace internal
-	{
-		enum class ModuleServiceId : uint32
-		{
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Type,
+    namespace internal
+    {
+        enum class ModuleServiceId : uint32
+        {
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       Type,
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Type,
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Type,
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             Type,
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -35,33 +35,33 @@ namespace sw
 #include "RuntimeAPI/Service/HostServiceList.xxx"
 #undef SW_HOST_SERVICE
 
-			Count
-		};
+            Count
+        };
 
-		inline constexpr uint32 kModuleServiceCount = static_cast<uint32>( ModuleServiceId::Count );
+        inline constexpr uint32 kModuleServiceCount = static_cast<uint32>( ModuleServiceId::Count );
 
-		inline constexpr uint32 toRawServiceId( ModuleServiceId id )
-		{
-			return static_cast<uint32>( id );
-		}
+        inline constexpr uint32 toRawServiceId( ModuleServiceId id )
+        {
+            return static_cast<uint32>( id );
+        }
 
-		template <typename T>
-		struct ModuleServiceTraits
-		{
-			static constexpr ModuleServiceId id = ModuleServiceId::Count;
-		};
+        template <typename T>
+        struct ModuleServiceTraits
+        {
+            static constexpr ModuleServiceId id = ModuleServiceId::Count;
+        };
 
 #define SW_DECLARE_MODULE_SERVICE( Type, Id )     \
-	template <>                                   \
-	struct ModuleServiceTraits<Type>              \
-	{                                             \
-		static constexpr ModuleServiceId id = Id; \
-	}
+    template <>                                   \
+    struct ModuleServiceTraits<Type>              \
+    {                                             \
+        static constexpr ModuleServiceId id = Id; \
+    }
 
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
-	SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );                       \
-	SW_DECLARE_MODULE_SERVICE( const Type, ModuleServiceId::Type );
+    SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );                       \
+    SW_DECLARE_MODULE_SERVICE( const Type, ModuleServiceId::Type );
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
@@ -71,10 +71,10 @@ namespace sw
 #define SW_HOST_SERVICE( member, Tag, Type, getter, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
 #include "RuntimeAPI/Service/HostServiceList.xxx"
 #undef SW_HOST_SERVICE
-	} // namespace internal
+    } // namespace internal
 
-	struct ModuleService
-	{
-		const void* arrServices[internal::kModuleServiceCount]{ nullptr };
-	};
+    struct ModuleService
+    {
+        const void* arrServices[internal::kModuleServiceCount]{ nullptr };
+    };
 } // namespace sw

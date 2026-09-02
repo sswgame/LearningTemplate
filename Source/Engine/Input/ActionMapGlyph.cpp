@@ -16,170 +16,170 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct ActionMapGlyphInternal
-		{
-			static string slotToGlyph( const InputSlot& slot, InputDeviceType device )
-			{
-				if ( slot._deviceKind == InputDeviceKind::Keyboard )
-				{
-					const Key key = static_cast<Key>( slot._controlIndex );
-					if ( key != Key::Unknown )
-					{
-						const utf8* pName = KeyCodes::toName( key );
-						return pName != nullptr ? pName : "?";
-					}
-				}
-				else if ( slot._deviceKind == InputDeviceKind::Mouse )
-				{
-					const MouseButton btn = static_cast<MouseButton>( slot._controlIndex );
-					if ( btn != MouseButton::Count )
-					{
-						const utf8* pName = MouseButtons::toName( btn );
-						return pName != nullptr ? pName : "?";
-					}
-				}
-				else if ( slot._deviceKind == InputDeviceKind::Gamepad )
-				{
-					const GamepadButton btn = static_cast<GamepadButton>( slot._controlIndex );
-					if ( btn != GamepadButton::Count )
-					{
-						if ( device == InputDeviceType::GamepadPlayStation )
-						{
-							if ( btn == GamepadButton::A )
-								return "X";
-							if ( btn == GamepadButton::B )
-								return "Circle";
-							if ( btn == GamepadButton::X )
-								return "Square";
-							if ( btn == GamepadButton::Y )
-								return "Triangle";
-						}
-						else if ( device == InputDeviceType::GamepadSwitch )
-						{
-							// 닌텐도 배치: Xbox 기준 A/B, X/Y 위치가 서로 뒤바뀝니다.
-							if ( btn == GamepadButton::A )
-								return "B";
-							if ( btn == GamepadButton::B )
-								return "A";
-							if ( btn == GamepadButton::X )
-								return "Y";
-							if ( btn == GamepadButton::Y )
-								return "X";
-						}
-						const utf8* pName = GamepadButtons::toName( btn );
-						return pName != nullptr ? pName : "?";
-					}
-				}
-				return "?";
-			}
-		};
-	} // namespace
+    namespace
+    {
+        struct ActionMapGlyphInternal
+        {
+            static string slotToGlyph( const InputSlot& slot, InputDeviceType device )
+            {
+                if ( slot._deviceKind == InputDeviceKind::Keyboard )
+                {
+                    const Key key = static_cast<Key>( slot._controlIndex );
+                    if ( key != Key::Unknown )
+                    {
+                        const utf8* pName = KeyCodes::toName( key );
+                        return pName != nullptr ? pName : "?";
+                    }
+                }
+                else if ( slot._deviceKind == InputDeviceKind::Mouse )
+                {
+                    const MouseButton btn = static_cast<MouseButton>( slot._controlIndex );
+                    if ( btn != MouseButton::Count )
+                    {
+                        const utf8* pName = MouseButtons::toName( btn );
+                        return pName != nullptr ? pName : "?";
+                    }
+                }
+                else if ( slot._deviceKind == InputDeviceKind::Gamepad )
+                {
+                    const GamepadButton btn = static_cast<GamepadButton>( slot._controlIndex );
+                    if ( btn != GamepadButton::Count )
+                    {
+                        if ( device == InputDeviceType::GamepadPlayStation )
+                        {
+                            if ( btn == GamepadButton::A )
+                                return "X";
+                            if ( btn == GamepadButton::B )
+                                return "Circle";
+                            if ( btn == GamepadButton::X )
+                                return "Square";
+                            if ( btn == GamepadButton::Y )
+                                return "Triangle";
+                        }
+                        else if ( device == InputDeviceType::GamepadSwitch )
+                        {
+                            // 닌텐도 배치: Xbox 기준 A/B, X/Y 위치가 서로 뒤바뀝니다.
+                            if ( btn == GamepadButton::A )
+                                return "B";
+                            if ( btn == GamepadButton::B )
+                                return "A";
+                            if ( btn == GamepadButton::X )
+                                return "Y";
+                            if ( btn == GamepadButton::Y )
+                                return "X";
+                        }
+                        const utf8* pName = GamepadButtons::toName( btn );
+                        return pName != nullptr ? pName : "?";
+                    }
+                }
+                return "?";
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
 {
-	string ActionMap::getGlyphForAction( string_view action ) const
-	{
-		return getGlyphForAction( hashed_string( action ) );
-	}
+    string ActionMap::getGlyphForAction( string_view action ) const
+    {
+        return getGlyphForAction( hashed_string( action ) );
+    }
 
-	string ActionMap::getGlyphForAction( const hashed_string& action ) const
-	{
-		const InputDeviceType device = _pInput != nullptr ? _pInput->getActiveDeviceType() : InputDeviceType::KeyboardMouse;
-		return getGlyphForActionInternal( action, device );
-	}
+    string ActionMap::getGlyphForAction( const hashed_string& action ) const
+    {
+        const InputDeviceType device = _pInput != nullptr ? _pInput->getActiveDeviceType() : InputDeviceType::KeyboardMouse;
+        return getGlyphForActionInternal( action, device );
+    }
 
-	string ActionMap::getGlyphForAction( string_view action, InputDeviceType previewDevice ) const
-	{
-		return getGlyphForAction( hashed_string( action ), previewDevice );
-	}
+    string ActionMap::getGlyphForAction( string_view action, InputDeviceType previewDevice ) const
+    {
+        return getGlyphForAction( hashed_string( action ), previewDevice );
+    }
 
-	string ActionMap::getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const
-	{
-		return getGlyphForActionInternal( action, previewDevice );
-	}
+    string ActionMap::getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const
+    {
+        return getGlyphForActionInternal( action, previewDevice );
+    }
 
-	string ActionMap::getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const
-	{
-		const ActionEntry* pEntry = findAction( action );
-		if ( pEntry == nullptr || pEntry->_listBinding.empty() )
-			return "[ ? ]";
+    string ActionMap::getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || pEntry->_listBinding.empty() )
+            return "[ ? ]";
 
-		for ( const ActionBinding& b : pEntry->_listBinding )
-		{
-			if ( device == InputDeviceType::KeyboardMouse )
-			{
-				if ( b._kind == BindingKind::SingleSlot )
-				{
-					if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard || b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
-					{
-						const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
-						if ( glyph != "?" )
-							return string( "[ " ) + glyph + " ]";
-					}
-				}
-				else if ( b._kind == BindingKind::Axis1DComposite )
-				{
-					return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " / " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::Vector2DComposite )
-				{
-					return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[2], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[3], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::Chord )
-				{
-					return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::MouseDelta2D )
-				{
-					return "[ Mouse Look ]";
-				}
-				else if ( b._kind == BindingKind::VirtualJoystick2D )
-				{
-					return string( "[ Drag " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::Shortcut )
-				{
-					string modStr;
-					if ( ( b._modifierMask & ModifierKey::Ctrl ) != 0 )
-						modStr += "Ctrl + ";
-					if ( ( b._modifierMask & ModifierKey::Shift ) != 0 )
-						modStr += "Shift + ";
-					if ( ( b._modifierMask & ModifierKey::Alt ) != 0 )
-						modStr += "Alt + ";
-					if ( ( b._modifierMask & ModifierKey::Super ) != 0 )
-						modStr += "Win + ";
-					return string( "[ " ) + modStr + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::AnyKey )
-				{
-					return "[ Any Key ]";
-				}
-			}
-			else
-			{
-				if ( b._kind == BindingKind::SingleSlot && b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
-				{
-					const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
-					if ( glyph != "?" )
-						return string( "[ " ) + glyph + " ]";
-				}
-				else if ( b._kind == BindingKind::GamepadStick2D )
-				{
-					return ( b._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
-				}
-				else if ( b._kind == BindingKind::Chord )
-				{
-					return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
-				}
-				else if ( b._kind == BindingKind::AnyKey )
-				{
-					return "[ Any Button ]";
-				}
-			}
-		}
-		return "[ ? ]";
-	}
+        for ( const ActionBinding& b : pEntry->_listBinding )
+        {
+            if ( device == InputDeviceType::KeyboardMouse )
+            {
+                if ( b._kind == BindingKind::SingleSlot )
+                {
+                    if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard || b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
+                    {
+                        const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
+                        if ( glyph != "?" )
+                            return string( "[ " ) + glyph + " ]";
+                    }
+                }
+                else if ( b._kind == BindingKind::Axis1DComposite )
+                {
+                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " / " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::Vector2DComposite )
+                {
+                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[2], device ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[3], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::Chord )
+                {
+                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::MouseDelta2D )
+                {
+                    return "[ Mouse Look ]";
+                }
+                else if ( b._kind == BindingKind::VirtualJoystick2D )
+                {
+                    return string( "[ Drag " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::Shortcut )
+                {
+                    string modStr;
+                    if ( ( b._modifierMask & ModifierKey::Ctrl ) != 0 )
+                        modStr += "Ctrl + ";
+                    if ( ( b._modifierMask & ModifierKey::Shift ) != 0 )
+                        modStr += "Shift + ";
+                    if ( ( b._modifierMask & ModifierKey::Alt ) != 0 )
+                        modStr += "Alt + ";
+                    if ( ( b._modifierMask & ModifierKey::Super ) != 0 )
+                        modStr += "Win + ";
+                    return string( "[ " ) + modStr + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::AnyKey )
+                {
+                    return "[ Any Key ]";
+                }
+            }
+            else
+            {
+                if ( b._kind == BindingKind::SingleSlot && b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
+                {
+                    const string glyph = ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device );
+                    if ( glyph != "?" )
+                        return string( "[ " ) + glyph + " ]";
+                }
+                else if ( b._kind == BindingKind::GamepadStick2D )
+                {
+                    return ( b._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
+                }
+                else if ( b._kind == BindingKind::Chord )
+                {
+                    return string( "[ " ) + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapGlyphInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
+                }
+                else if ( b._kind == BindingKind::AnyKey )
+                {
+                    return "[ Any Button ]";
+                }
+            }
+        }
+        return "[ ? ]";
+    }
 } // namespace sw

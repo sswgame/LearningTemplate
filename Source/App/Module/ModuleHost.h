@@ -18,121 +18,121 @@
 
 namespace sw
 {
-	struct GameKitConfig;
-	class IWindow;
-	class IRHIDevice;
-	class RHI;
-	class LiveReloadManager;
-	class ModuleCompiler;
-	class RenderThread;
-	class CameraComponent;
-	struct NativeWindowEvent;
+    struct GameKitConfig;
+    class IWindow;
+    class IRHIDevice;
+    class RHI;
+    class LiveReloadManager;
+    class ModuleCompiler;
+    class RenderThread;
+    class CameraComponent;
+    struct NativeWindowEvent;
 
-	/**
-	 * @class ModuleHost
-	 * @brief 에디터·게임 모듈의 생명주기·API 바인딩을 캡슐화합니다.
-	 *
-	 * @details
-	 *   App은 ModuleHost를 unique_ptr으로 소유합니다.
-	 *   - initialize()에서 LiveReloadManager에 콜백을 등록합니다.
-	 *   - 핫리로드 시 onBefore/onAfter 콜백이 자동으로 호출됩니다.
-	 */
-	class ModuleHost
-	{
-	public:
-		// 1) ctor/dtor → initialize/shutdown
-		ModuleHost();
-		~ModuleHost();
+    /**
+     * @class ModuleHost
+     * @brief 에디터·게임 모듈의 생명주기·API 바인딩을 캡슐화합니다.
+     *
+     * @details
+     *   App은 ModuleHost를 unique_ptr으로 소유합니다.
+     *   - initialize()에서 LiveReloadManager에 콜백을 등록합니다.
+     *   - 핫리로드 시 onBefore/onAfter 콜백이 자동으로 호출됩니다.
+     */
+    class ModuleHost
+    {
+    public:
+        // 1) ctor/dtor → initialize/shutdown
+        ModuleHost();
+        ~ModuleHost();
 
-		ModuleHost( const ModuleHost& )			   = delete;
-		ModuleHost& operator=( const ModuleHost& ) = delete;
+        ModuleHost( const ModuleHost& )            = delete;
+        ModuleHost& operator=( const ModuleHost& ) = delete;
 
-		/**
-		 * @brief LiveReloadManager에 콜백을 등록하고 에디터/게임 모듈을 로드합니다.
-		 * @param pLiveReloadManager Dev 모드 전용 모듈 매니저 (nullable for Shipping)
-		 * @param pRHI 활성 RHI
-		 * @param pWindow 플랫폼 윈도우
-		 * @param pRenderThread 렌더 스레드 (drainWorkers 용)
-		 * @param bEnableEditor 에디터 모드 여부
-		 */
-		bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
-		void shutdown();
+        /**
+         * @brief LiveReloadManager에 콜백을 등록하고 에디터/게임 모듈을 로드합니다.
+         * @param pLiveReloadManager Dev 모드 전용 모듈 매니저 (nullable for Shipping)
+         * @param pRHI 활성 RHI
+         * @param pWindow 플랫폼 윈도우
+         * @param pRenderThread 렌더 스레드 (drainWorkers 용)
+         * @param bEnableEditor 에디터 모드 여부
+         */
+        bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
+        void shutdown();
 
-		// 3) 프레임 단위 처리
-		/** @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
-		void updateEditorUI( float32 deltaTime );
-		/** @brief 게임 업데이트를 호출합니다. */
-		void updateGame( float32 deltaTime );
-		/** @brief 물리 등 고정 주기 게임 업데이트를 호출합니다. */
-		void fixedUpdateGame( float32 fixedDeltaTime );
-		/** @brief 네이티브 윈도우 이벤트를 에디터에 전달합니다. */
-		bool onWindowMessage( const NativeWindowEvent& event );
+        // 3) 프레임 단위 처리
+        /** @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
+        void updateEditorUI( float32 deltaTime );
+        /** @brief 게임 업데이트를 호출합니다. */
+        void updateGame( float32 deltaTime );
+        /** @brief 물리 등 고정 주기 게임 업데이트를 호출합니다. */
+        void fixedUpdateGame( float32 fixedDeltaTime );
+        /** @brief 네이티브 윈도우 이벤트를 에디터에 전달합니다. */
+        bool onWindowMessage( const NativeWindowEvent& event );
 
-		/** @brief 이번 프레임 Game View RT 핸들과 크기를 에디터에서 조회합니다. */
-		void getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const;
-		/** @brief 이번 프레임 Game View에 쓸 카메라를 에디터에서 조회합니다. */
-		CameraComponent* getViewportCamera() const;
-		/** @brief 에디터가 월드를 틱해야 하면 true입니다. Pause이면서 Step이 아니면 false입니다. */
-		bool shouldTickScene() const;
-		/** @brief 월드 틱 이후 에디터 Step을 소비합니다. */
-		void endEditorFrame();
+        /** @brief 이번 프레임 Game View RT 핸들과 크기를 에디터에서 조회합니다. */
+        void getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const;
+        /** @brief 이번 프레임 Game View에 쓸 카메라를 에디터에서 조회합니다. */
+        CameraComponent* getViewportCamera() const;
+        /** @brief 에디터가 월드를 틱해야 하면 true입니다. Pause이면서 Step이 아니면 false입니다. */
+        bool shouldTickScene() const;
+        /** @brief 월드 틱 이후 에디터 Step을 소비합니다. */
+        void endEditorFrame();
 
-		/** @brief 에디터 인스턴스 핸들을 반환합니다. */
-		EditorHandle getEditor() const { return _editor; }
-		/** @brief 게임 인스턴스 핸들을 반환합니다. */
-		GameHandle getGame() const { return _game; }
-		/** @brief EditorAPI 테이블을 반환합니다. */
-		const EditorAPI& getEditorAPI() const { return _editorApi; }
-		/** @brief GameAPI 테이블을 반환합니다. */
-		const GameAPI& getGameAPI() const { return _gameApi; }
-		/** @brief 에디터 모드인지를 반환합니다. */
-		bool isEditorEnabled() const { return _bEnableEditor == SW_TRUE; }
-		/** @brief ModuleCompiler 인스턴스를 반환합니다. */
-		ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
+        /** @brief 에디터 인스턴스 핸들을 반환합니다. */
+        EditorHandle getEditor() const { return _editor; }
+        /** @brief 게임 인스턴스 핸들을 반환합니다. */
+        GameHandle getGame() const { return _game; }
+        /** @brief EditorAPI 테이블을 반환합니다. */
+        const EditorAPI& getEditorAPI() const { return _editorApi; }
+        /** @brief GameAPI 테이블을 반환합니다. */
+        const GameAPI& getGameAPI() const { return _gameApi; }
+        /** @brief 에디터 모드인지를 반환합니다. */
+        bool isEditorEnabled() const { return _bEnableEditor == SW_TRUE; }
+        /** @brief ModuleCompiler 인스턴스를 반환합니다. */
+        ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
-		// 4) LiveReload 콜백 — LiveReloadManager의 델리게이트가 호출
-		void onBeforeEditorReload();
-		void onAfterEditorReload( void* pLibraryModule );
-		void onBeforeGameReload();
-		void onAfterGameReload( void* pLibraryModule );
-		void onBeforeGameplayDllReload();
-		void onAfterGameplayDllReload( void* pLibraryModule );
-		void onBeforeCommitBatch( const vector<string>& listModuleName );
-		/** @brief RHI 백엔드 핫스왑 전 기존 에디터 및 게임 런타임 인스턴스를 안전하게 정리합니다. */
-		void onBeforeRhiSwap();
-		void drainRenderWorkers();
-		void poisonLiveReload( const utf8* pReason );
+        // 4) LiveReload 콜백 — LiveReloadManager의 델리게이트가 호출
+        void onBeforeEditorReload();
+        void onAfterEditorReload( void* pLibraryModule );
+        void onBeforeGameReload();
+        void onAfterGameReload( void* pLibraryModule );
+        void onBeforeGameplayDllReload();
+        void onAfterGameplayDllReload( void* pLibraryModule );
+        void onBeforeCommitBatch( const vector<string>& listModuleName );
+        /** @brief RHI 백엔드 핫스왑 전 기존 에디터 및 게임 런타임 인스턴스를 안전하게 정리합니다. */
+        void onBeforeRhiSwap();
+        void drainRenderWorkers();
+        void poisonLiveReload( const utf8* pReason );
 
-		// 5) 모듈 바인딩
-		bool bindEditorAPI( void* pLibraryModule );
-		bool bindGameAPI( void* pLibraryModule );
+        // 5) 모듈 바인딩
+        bool bindEditorAPI( void* pLibraryModule );
+        bool bindGameAPI( void* pLibraryModule );
 
-		/** @brief RHI 핫스왑 후 에디터/게임을 재초기화합니다. 실패하면 false. */
-		bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
+        /** @brief RHI 핫스왑 후 에디터/게임을 재초기화합니다. 실패하면 false. */
+        bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
 
-	private:
-		void captureGameState();
-		void restoreGameState();
-		bool recreateEditorInstance( void* pEditorModule );
-		bool recreateGameInstance( void* pGameModule );
+    private:
+        void captureGameState();
+        void restoreGameState();
+        bool recreateEditorInstance( void* pEditorModule );
+        bool recreateGameInstance( void* pGameModule );
 
-	private:
-		unique_ptr<ModuleCompiler> _moduleCompiler;
+    private:
+        unique_ptr<ModuleCompiler> _moduleCompiler;
 
-		EditorAPI	 _editorApi;
-		GameAPI		 _gameApi;
-		EditorHandle _editor;
-		GameHandle	 _game;
+        EditorAPI    _editorApi;
+        GameAPI      _gameApi;
+        EditorHandle _editor;
+        GameHandle   _game;
 
-		LiveReloadManager* _pLiveReloadManager; // non-owning
-		RHI*			   _pRHI;				// non-owning
-		IWindow*		   _pWindow;			// non-owning
-		RenderThread*	   _pRenderThread;		// non-owning
+        LiveReloadManager* _pLiveReloadManager; // non-owning
+        RHI*               _pRHI;               // non-owning
+        IWindow*           _pWindow;            // non-owning
+        RenderThread*      _pRenderThread;      // non-owning
 
-		// 핫리로드 시 게임 상태 보존용 재사용 버퍼
-		vector<uint8> _listGameSavedState;
+        // 핫리로드 시 게임 상태 보존용 재사용 버퍼
+        vector<uint8> _listGameSavedState;
 
-		uint8				   _bEnableEditor : 1;
-		[[maybe_unused]] uint8 _reserved	  : 7;
-	};
+        uint8                  _bEnableEditor : 1;
+        [[maybe_unused]] uint8 _reserved      : 7;
+    };
 } // namespace sw

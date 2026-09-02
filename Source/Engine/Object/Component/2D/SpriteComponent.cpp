@@ -6,32 +6,32 @@
 
 namespace sw
 {
-	SpriteComponent::SpriteComponent()
-		: _meshName{}
-		, _materialName{}
-		, _textureName{}
-		, _spriteName{}
-	{
-	}
+    SpriteComponent::SpriteComponent()
+        : _meshName{}
+        , _materialName{}
+        , _textureName{}
+        , _spriteName{}
+    {
+    }
 
-	void SpriteComponent::onBeginPlay()
-	{
-		MeshComponent::onBeginPlay();
-		setTickGroup( TickGroup::PrePhysics );
+    void SpriteComponent::onBeginPlay()
+    {
+        MeshComponent::onBeginPlay();
+        setTickGroup( TickGroup::PrePhysics );
 
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			pGameObject->addTag( "Sprite"_tag );
-	}
+        GameObject* pGameObject = getOwner();
+        if ( pGameObject != nullptr )
+            pGameObject->addTag( "Sprite"_tag );
+    }
 
-	void SpriteComponent::onEndPlay()
-	{
-		MeshComponent::onEndPlay();
-	}
+    void SpriteComponent::onEndPlay()
+    {
+        MeshComponent::onEndPlay();
+    }
 
-	void SpriteComponent::onTick( float32 deltaTime )
-	{
-		MeshComponent::onTick( deltaTime );
-	}
+    void SpriteComponent::onTick( float32 deltaTime )
+    {
+        MeshComponent::onTick( deltaTime );
+    }
 
 } // namespace sw

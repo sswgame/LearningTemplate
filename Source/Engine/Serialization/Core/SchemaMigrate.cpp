@@ -11,488 +11,488 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct SchemaMigrateInternal
-		{
-			static bool constructWithDefaultCtor( void* pPtr, const TypeInfo& typeInfo )
-			{
-				const FunctionInfo* pCtor = typeInfo.findMethod( hashed_string( "$ctor" ) );
-				if ( pCtor == nullptr || pCtor->_invoker.isBound() == false )
-					return false;
-				pCtor->_invoker( pPtr, TaskArgs{} );
-				return true;
-			}
+    namespace
+    {
+        struct SchemaMigrateInternal
+        {
+            static bool constructWithDefaultCtor( void* pPtr, const TypeInfo& typeInfo )
+            {
+                const FunctionInfo* pCtor = typeInfo.findMethod( hashed_string( "$ctor" ) );
+                if ( pCtor == nullptr || pCtor->_invoker.isBound() == false )
+                    return false;
+                pCtor->_invoker( pPtr, TaskArgs{} );
+                return true;
+            }
 
-			static bool destroyIfDefaultConstructed( void* pPtr, const TypeInfo& typeInfo )
-			{
-				const FunctionInfo* pCtor = typeInfo.findMethod( hashed_string( "$ctor" ) );
-				if ( pCtor == nullptr || pCtor->_invoker.isBound() == false || typeInfo._destroyInstance == nullptr )
-					return false;
-				typeInfo._destroyInstance( pPtr );
-				return true;
-			}
+            static bool destroyIfDefaultConstructed( void* pPtr, const TypeInfo& typeInfo )
+            {
+                const FunctionInfo* pCtor = typeInfo.findMethod( hashed_string( "$ctor" ) );
+                if ( pCtor == nullptr || pCtor->_invoker.isBound() == false || typeInfo._destroyInstance == nullptr )
+                    return false;
+                typeInfo._destroyInstance( pPtr );
+                return true;
+            }
 
-			static string_view stripJsonQuotes( string_view s )
-			{
-				if ( s.size() >= 2 && s.front() == '"' && s.back() == '"' )
-				{
-					s.remove_prefix( 1 );
-					s.remove_suffix( 1 );
-				}
-				return s;
-			}
+            static string_view stripJsonQuotes( string_view s )
+            {
+                if ( s.size() >= 2 && s.front() == '"' && s.back() == '"' )
+                {
+                    s.remove_prefix( 1 );
+                    s.remove_suffix( 1 );
+                }
+                return s;
+            }
 
-			static bool isStringType( hashed_string typeName )
-			{
-				return typeName.isPredefinedType( PredefinedNameType::NameType_string ) ||
-					   typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string );
-			}
+            static bool isStringType( hashed_string typeName )
+            {
+                return typeName.isPredefinedType( PredefinedNameType::NameType_string ) ||
+                       typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string );
+            }
 
-			static hashed_string resolveWireTypeHash( uint32 wireTypeHash )
-			{
-				return engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
-			}
+            static hashed_string resolveWireTypeHash( uint32 wireTypeHash )
+            {
+                return engine::getTypeRegistry().canonicalTypeNameByHash( wireTypeHash );
+            }
 
-			static bool isNumericTypeName( hashed_string typeName )
-			{
-				const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeName );
-				if ( pInfo == nullptr || pInfo->isPrimitive() == false )
-					return false;
-				return typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_float2 ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_float3 ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_float4 ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_float4x4 ) == false &&
-					   typeName.isPredefinedType( PredefinedNameType::NameType_quaternion ) == false;
-			}
+            static bool isNumericTypeName( hashed_string typeName )
+            {
+                const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeName );
+                if ( pInfo == nullptr || pInfo->isPrimitive() == false )
+                    return false;
+                return typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_float2 ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_float3 ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_float4 ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_float4x4 ) == false &&
+                       typeName.isPredefinedType( PredefinedNameType::NameType_quaternion ) == false;
+            }
 
-			template <typename T>
-			static bool readPod( const uint8* pPayload, size_t payloadSize, T& out )
-			{
-				if ( payloadSize != sizeof( T ) )
-					return false;
-				Memory::copy( &out, pPayload, sizeof( T ) );
-				return true;
-			}
+            template <typename T>
+            static bool readPod( const uint8* pPayload, size_t payloadSize, T& out )
+            {
+                if ( payloadSize != sizeof( T ) )
+                    return false;
+                Memory::copy( &out, pPayload, sizeof( T ) );
+                return true;
+            }
 
-			static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
-			{
-				if ( payloadSize == sizeof( int32 ) )
-				{
-					int32 v{ 0 };
-					readPod( pPayload, payloadSize, v );
-					out = sw::to_string( v );
-					return true;
-				}
-				if ( payloadSize == sizeof( int64 ) )
-				{
-					int64 v{ 0 };
-					readPod( pPayload, payloadSize, v );
-					out = sw::to_string( v );
-					return true;
-				}
-				if ( payloadSize == sizeof( float32 ) )
-				{
-					float32 v{ 0 };
-					readPod( pPayload, payloadSize, v );
-					out = sw::to_string( v );
-					return true;
-				}
-				return false;
-			}
+            static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
+            {
+                if ( payloadSize == sizeof( int32 ) )
+                {
+                    int32 v{ 0 };
+                    readPod( pPayload, payloadSize, v );
+                    out = sw::to_string( v );
+                    return true;
+                }
+                if ( payloadSize == sizeof( int64 ) )
+                {
+                    int64 v{ 0 };
+                    readPod( pPayload, payloadSize, v );
+                    out = sw::to_string( v );
+                    return true;
+                }
+                if ( payloadSize == sizeof( float32 ) )
+                {
+                    float32 v{ 0 };
+                    readPod( pPayload, payloadSize, v );
+                    out = sw::to_string( v );
+                    return true;
+                }
+                return false;
+            }
 
-			static vector<string> splitPath( const utf8* pDottedPath )
-			{
-				vector<string> listPart;
-				if ( pDottedPath == nullptr || pDottedPath[0] == '\0' )
-					return listPart;
-				string_splitter splitter( pDottedPath, { "." } );
-				for ( string_view token : splitter.getSplitList() )
-				{
-					string_view t = StringUtil::trim( token );
-					if ( t.empty() == false )
-						listPart.push_back( string{ t } );
-				}
-				return listPart;
-			}
-		};
-	} // namespace
+            static vector<string> splitPath( const utf8* pDottedPath )
+            {
+                vector<string> listPart;
+                if ( pDottedPath == nullptr || pDottedPath[0] == '\0' )
+                    return listPart;
+                string_splitter splitter( pDottedPath, { "." } );
+                for ( string_view token : splitter.getSplitList() )
+                {
+                    string_view t = StringUtil::trim( token );
+                    if ( t.empty() == false )
+                        listPart.push_back( string{ t } );
+                }
+                return listPart;
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
 {
-	void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage )
-	{
-		if ( typeInfo._size == 0 )
-			return nullptr;
-		listStorage.assign( typeInfo._size, 0 );
-		void* pBase = listStorage.data();
+    void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage )
+    {
+        if ( typeInfo._size == 0 )
+            return nullptr;
+        listStorage.assign( typeInfo._size, 0 );
+        void* pBase = listStorage.data();
 
-		if ( SchemaMigrateInternal::constructWithDefaultCtor( pBase, typeInfo ) )
-			return pBase;
+        if ( SchemaMigrateInternal::constructWithDefaultCtor( pBase, typeInfo ) )
+            return pBase;
 
-		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
-		{
-			void* pPropPtr = prop.getRawPtr( pBase );
-			if ( pPropPtr == nullptr )
-				return;
-			NestedContainerInfo shape = prop.getContainerShape();
-			if ( shape._wrapper != nullptr )
-			{
-				shape._wrapper->constructEmpty( pPropPtr );
-			}
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
-				sw_placement_new( pPropPtr ) string();
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
-				sw_placement_new( pPropPtr ) hashed_string();
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-				sw_placement_new( pPropPtr ) atomic<bool>();
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
-				sw_placement_new( pPropPtr ) TagID();
-			else
-			{
-				const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
-				if ( pNested != nullptr )
-					SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
-			}
-		} );
-		return pBase;
-	}
+        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        {
+            void* pPropPtr = prop.getRawPtr( pBase );
+            if ( pPropPtr == nullptr )
+                return;
+            NestedContainerInfo shape = prop.getContainerShape();
+            if ( shape._wrapper != nullptr )
+            {
+                shape._wrapper->constructEmpty( pPropPtr );
+            }
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
+                sw_placement_new( pPropPtr ) string();
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
+                sw_placement_new( pPropPtr ) hashed_string();
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
+                sw_placement_new( pPropPtr ) atomic<bool>();
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
+                sw_placement_new( pPropPtr ) TagID();
+            else
+            {
+                const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
+                if ( pNested != nullptr )
+                    SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
+            }
+        } );
+        return pBase;
+    }
 
-	void destroyScratchInstance( void* pInstance, const TypeInfo& typeInfo )
-	{
-		if ( pInstance == nullptr )
-			return;
-		if ( SchemaMigrateInternal::destroyIfDefaultConstructed( pInstance, typeInfo ) )
-			return;
-		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
-		{
-			void* pPropPtr = prop.getRawPtr( pInstance );
-			if ( pPropPtr == nullptr )
-				return;
-			NestedContainerInfo shape = prop.getContainerShape();
-			if ( shape._wrapper != nullptr )
-			{
-				shape._wrapper->destroyContainer( pPropPtr );
-			}
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
-				std::destroy_at( static_cast<string*>( pPropPtr ) );
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
-				std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
-				std::destroy_at( static_cast<atomic<bool>*>( pPropPtr ) );
-			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
-				std::destroy_at( static_cast<TagID*>( pPropPtr ) );
-			else
-			{
-				const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
-				if ( pNested != nullptr )
-					SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
-			}
-		} );
-	}
+    void destroyScratchInstance( void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+            return;
+        if ( SchemaMigrateInternal::destroyIfDefaultConstructed( pInstance, typeInfo ) )
+            return;
+        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        {
+            void* pPropPtr = prop.getRawPtr( pInstance );
+            if ( pPropPtr == nullptr )
+                return;
+            NestedContainerInfo shape = prop.getContainerShape();
+            if ( shape._wrapper != nullptr )
+            {
+                shape._wrapper->destroyContainer( pPropPtr );
+            }
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
+                std::destroy_at( static_cast<string*>( pPropPtr ) );
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
+                std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) )
+                std::destroy_at( static_cast<atomic<bool>*>( pPropPtr ) );
+            else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
+                std::destroy_at( static_cast<TagID*>( pPropPtr ) );
+            else
+            {
+                const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
+                if ( pNested != nullptr )
+                    SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
+            }
+        } );
+    }
 
-	const SchemaOrphanValue* SchemaMigrateContext::findOrphan( hashed_string name ) const
-	{
-		if ( _pOrphans == nullptr )
-			return nullptr;
-		for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
-		{
-			if ( orphanValue._name == name )
-				return &orphanValue;
-		}
-		return nullptr;
-	}
+    const SchemaOrphanValue* SchemaMigrateContext::findOrphan( hashed_string name ) const
+    {
+        if ( _pOrphans == nullptr )
+            return nullptr;
+        for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
+        {
+            if ( orphanValue._name == name )
+                return &orphanValue;
+        }
+        return nullptr;
+    }
 
-	const SchemaOrphanValue* SchemaMigrateContext::findOrphanHash( uint32 nameHash ) const
-	{
-		if ( _pOrphans == nullptr || nameHash == 0 )
-			return nullptr;
-		for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
-		{
-			if ( orphanValue._nameHash == nameHash )
-				return &orphanValue;
-		}
-		return nullptr;
-	}
+    const SchemaOrphanValue* SchemaMigrateContext::findOrphanHash( uint32 nameHash ) const
+    {
+        if ( _pOrphans == nullptr || nameHash == 0 )
+            return nullptr;
+        for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
+        {
+            if ( orphanValue._nameHash == nameHash )
+                return &orphanValue;
+        }
+        return nullptr;
+    }
 
-	bool SchemaMigrateContext::applyOrphanTo( hashed_string propName, hashed_string wireTypeHint ) const
-	{
-		const SchemaOrphanValue* pOrphan = findOrphan( propName );
-		if ( pOrphan == nullptr )
-			pOrphan = findOrphanHash( propName.getHash() );
-		if ( pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
-			return false;
+    bool SchemaMigrateContext::applyOrphanTo( hashed_string propName, hashed_string wireTypeHint ) const
+    {
+        const SchemaOrphanValue* pOrphan = findOrphan( propName );
+        if ( pOrphan == nullptr )
+            pOrphan = findOrphanHash( propName.getHash() );
+        if ( pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
+            return false;
 
-		void*				pPtr{ nullptr };
-		const PropertyInfo* pProp = nullptr;
-		if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
-			return false;
+        void*               pPtr{ nullptr };
+        const PropertyInfo* pProp = nullptr;
+        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
+            return false;
 
-		const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
+        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
 
-		if ( pOrphan->_text.empty() == false )
-			return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
+        if ( pOrphan->_text.empty() == false )
+            return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
 
-		if ( pOrphan->_listBinary.empty() == false )
-		{
-			hashed_string hint = wireTypeHint;
-			if ( hint.empty() )
-				hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
-			if ( hint.empty() == false )
-			{
-				size_t off{ 0 };
-				if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(),
-															 off, ctx ) )
-				{
-					if ( hint == pProp->_typeName )
-						return true;
-					// wire 타입으로 임시 버퍼에 읽은 뒤 텍스트 coerce — 간단 경로: coerce payload
-				}
-			}
-			return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
-		}
-		return false;
-	}
+        if ( pOrphan->_listBinary.empty() == false )
+        {
+            hashed_string hint = wireTypeHint;
+            if ( hint.empty() )
+                hint = SchemaMigrateInternal::resolveWireTypeHash( pOrphan->_wireTypeHash );
+            if ( hint.empty() == false )
+            {
+                size_t off{ 0 };
+                if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(),
+                                                             off, ctx ) )
+                {
+                    if ( hint == pProp->_typeName )
+                        return true;
+                    // wire 타입으로 임시 버퍼에 읽은 뒤 텍스트 coerce — 간단 경로: coerce payload
+                }
+            }
+            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
+        }
+        return false;
+    }
 
-	bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
-	{
-		if ( pDottedPath == nullptr )
-			return false;
-		const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
-		if ( listPart.empty() )
-			return false;
+    bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
+    {
+        if ( pDottedPath == nullptr )
+            return false;
+        const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
+        if ( listPart.empty() )
+            return false;
 
-		// orphan 이름은 보통 leaf 또는 full old key
-		const hashed_string		 leaf( listPart.back().c_str() );
-		const SchemaOrphanValue* pOrphan = findOrphan( leaf );
-		if ( pOrphan == nullptr )
-			pOrphan = findOrphan( hashed_string( pDottedPath ) );
-		if ( pOrphan == nullptr )
-			return false;
+        // orphan 이름은 보통 leaf 또는 full old key
+        const hashed_string      leaf( listPart.back().c_str() );
+        const SchemaOrphanValue* pOrphan = findOrphan( leaf );
+        if ( pOrphan == nullptr )
+            pOrphan = findOrphan( hashed_string( pDottedPath ) );
+        if ( pOrphan == nullptr )
+            return false;
 
-		void*				pPtr{ nullptr };
-		const PropertyInfo* pProp = nullptr;
-		if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pDottedPath, pPtr, pProp ) == false )
-			return false;
+        void*               pPtr{ nullptr };
+        const PropertyInfo* pProp = nullptr;
+        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pDottedPath, pPtr, pProp ) == false )
+            return false;
 
-		const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-		if ( pOrphan->_text.empty() == false )
-			return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
-		if ( pOrphan->_listBinary.empty() == false )
-		{
-			const hashed_string hint = wireTypeHint.empty() == false ? wireTypeHint : pProp->_typeName;
-			size_t				off{ 0 };
-			if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), off,
-														 ctx ) )
-				return true;
-			return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
-		}
-		return false;
-	}
+        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
+        if ( pOrphan->_text.empty() == false )
+            return parseTextValueCoerced( pPtr, pProp->_typeName, pOrphan->_text, ctx );
+        if ( pOrphan->_listBinary.empty() == false )
+        {
+            const hashed_string hint = wireTypeHint.empty() == false ? wireTypeHint : pProp->_typeName;
+            size_t              off{ 0 };
+            if ( SerializerUtil::deserializeValueBinary( pPtr, hint, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), off,
+                                                         ctx ) )
+                return true;
+            return tryCoerceBinaryPayload( pPtr, pProp->_typeName, pOrphan->_listBinary.data(), pOrphan->_listBinary.size(), ctx );
+        }
+        return false;
+    }
 
-	bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const
-	{
-		return movePropertyPath( fromProp.c_str(), toProp.c_str() );
-	}
+    bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const
+    {
+        return movePropertyPath( fromProp.c_str(), toProp.c_str() );
+    }
 
-	bool SchemaMigrateContext::movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const
-	{
-		if ( _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr )
-			return false;
+    bool SchemaMigrateContext::movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const
+    {
+        if ( _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr )
+            return false;
 
-		const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
+        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
 
-		void*				pSrcPtr{ nullptr };
-		const PropertyInfo* pSrcProp = nullptr;
-		void*				pSrcRoot = _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance;
-		const TypeInfo*		pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
-		if ( resolvePropertyPath( pSrcRoot, *pSrcType, pFromPath, pSrcPtr, pSrcProp ) == false )
-			return false;
+        void*               pSrcPtr{ nullptr };
+        const PropertyInfo* pSrcProp = nullptr;
+        void*               pSrcRoot = _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance;
+        const TypeInfo*     pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
+        if ( resolvePropertyPath( pSrcRoot, *pSrcType, pFromPath, pSrcPtr, pSrcProp ) == false )
+            return false;
 
-		void*				pDstPtr{ nullptr };
-		const PropertyInfo* pDstProp = nullptr;
-		if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pToPath, pDstPtr, pDstProp ) == false )
-			return false;
+        void*               pDstPtr{ nullptr };
+        const PropertyInfo* pDstProp = nullptr;
+        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, pToPath, pDstPtr, pDstProp ) == false )
+            return false;
 
-		StringBuilder<constant::kMaxBuffer8192> ss;
-		SerializerUtil::valueToText( ss, pSrcPtr, pSrcProp->_typeName, ctx );
-		return parseTextValueCoerced( pDstPtr, pDstProp->_typeName, ss.view(), ctx );
-	}
+        StringBuilder<constant::kMaxBuffer8192> ss;
+        SerializerUtil::valueToText( ss, pSrcPtr, pSrcProp->_typeName, ctx );
+        return parseTextValueCoerced( pDstPtr, pDstProp->_typeName, ss.view(), ctx );
+    }
 
-	bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
-	{
-		if ( _pInstance == nullptr || _pTypeInfo == nullptr )
-			return false;
-		void*				pPtr{ nullptr };
-		const PropertyInfo* pProp = nullptr;
-		if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
-			return false;
-		const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-		return parseTextValueCoerced( pPtr, pProp->_typeName, text, ctx );
-	}
+    bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
+    {
+        if ( _pInstance == nullptr || _pTypeInfo == nullptr )
+            return false;
+        void*               pPtr{ nullptr };
+        const PropertyInfo* pProp = nullptr;
+        if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
+            return false;
+        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
+        return parseTextValueCoerced( pPtr, pProp->_typeName, text, ctx );
+    }
 
-	bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-								 const SerializeContext& ctx )
-	{
-		if ( pPropPtr == nullptr || pPayload == nullptr )
-			return false;
+    bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
+                                 const SerializeContext& ctx )
+    {
+        if ( pPropPtr == nullptr || pPayload == nullptr )
+            return false;
 
-		size_t offset{ 0 };
-		if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx ) &&
-			 offset == payloadSize )
-			return true;
+        size_t offset{ 0 };
+        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx ) &&
+             offset == payloadSize )
+            return true;
 
-		// POD → string
-		if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
-		{
-			string asText;
-			if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
-				return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
+        // POD → string
+        if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
+        {
+            string asText;
+            if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
+                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
 
-			// length-prefixed string blob already handled above; if len matches, try raw bytes as text
-			if ( payloadSize >= sizeof( uint32 ) )
-			{
-				uint32 len{ 0 };
-				Memory::copy( &len, pPayload, sizeof( uint32 ) );
-				if ( sizeof( uint32 ) + len == payloadSize )
-				{
-					const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-					return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
-				}
-			}
-		}
+            // length-prefixed string blob already handled above; if len matches, try raw bytes as text
+            if ( payloadSize >= sizeof( uint32 ) )
+            {
+                uint32 len{ 0 };
+                Memory::copy( &len, pPayload, sizeof( uint32 ) );
+                if ( sizeof( uint32 ) + len == payloadSize )
+                {
+                    const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
+                    return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
+                }
+            }
+        }
 
-		// string blob → numeric
-		if ( SchemaMigrateInternal::isNumericTypeName( targetTypeName ) && payloadSize >= sizeof( uint32 ) )
-		{
-			uint32 len{ 0 };
-			Memory::copy( &len, pPayload, sizeof( uint32 ) );
-			if ( sizeof( uint32 ) + len == payloadSize )
-			{
-				const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-				return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
-			}
-		}
+        // string blob → numeric
+        if ( SchemaMigrateInternal::isNumericTypeName( targetTypeName ) && payloadSize >= sizeof( uint32 ) )
+        {
+            uint32 len{ 0 };
+            Memory::copy( &len, pPayload, sizeof( uint32 ) );
+            if ( sizeof( uint32 ) + len == payloadSize )
+            {
+                const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
+                return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
+            }
+        }
 
-		// same-size POD reinterpret (int32↔float32 등) — 마지막 수단
-		offset										  = 0;
-		const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( targetTypeName );
-		if ( pReader != nullptr )
-		{
-			if ( ( *pReader )( pPropPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
-				return true;
-		}
+        // same-size POD reinterpret (int32↔float32 등) — 마지막 수단
+        offset                                        = 0;
+        const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( targetTypeName );
+        if ( pReader != nullptr )
+        {
+            if ( ( *pReader )( pPropPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
+                return true;
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-								const SerializeContext& ctx )
-	{
-		if ( pValPtr == nullptr )
-			return false;
+    bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+                                const SerializeContext& ctx )
+    {
+        if ( pValPtr == nullptr )
+            return false;
 
-		const string_view stripped = SchemaMigrateInternal::stripJsonQuotes( valStr );
-		if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, ctx ) )
-			return true;
-		if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
-		{
-			if ( SerializerUtil::parseTextValue( pValPtr, typeName, stripped, ctx ) )
-				return true;
-		}
+        const string_view stripped = SchemaMigrateInternal::stripJsonQuotes( valStr );
+        if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, ctx ) )
+            return true;
+        if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
+        {
+            if ( SerializerUtil::parseTextValue( pValPtr, typeName, stripped, ctx ) )
+                return true;
+        }
 
-		// numeric wire → string
-		if ( SchemaMigrateInternal::isStringType( typeName ) )
-		{
-			if ( engine::getTypeRegistry().isType( typeName, "hashed_string" ) )
-			{
-				*static_cast<hashed_string*>( pValPtr ) =
-					hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );
-			}
-			else
-				*static_cast<string*>( pValPtr ) = string( stripped );
-			return true;
-		}
+        // numeric wire → string
+        if ( SchemaMigrateInternal::isStringType( typeName ) )
+        {
+            if ( engine::getTypeRegistry().isType( typeName, "hashed_string" ) )
+            {
+                *static_cast<hashed_string*>( pValPtr ) =
+                    hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );
+            }
+            else
+                *static_cast<string*>( pValPtr ) = string( stripped );
+            return true;
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath, void*& pOutPtr,
-							  const PropertyInfo*& pOutProp )
-	{
-		pOutPtr	 = nullptr;
-		pOutProp = nullptr;
-		if ( pRoot == nullptr || pDottedPath == nullptr )
-			return false;
+    bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath, void*& pOutPtr,
+                              const PropertyInfo*& pOutProp )
+    {
+        pOutPtr  = nullptr;
+        pOutProp = nullptr;
+        if ( pRoot == nullptr || pDottedPath == nullptr )
+            return false;
 
-		const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
-		if ( listPart.empty() )
-			return false;
+        const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
+        if ( listPart.empty() )
+            return false;
 
-		void*				pCur	  = pRoot;
-		const TypeInfo*		pCurType  = &typeInfo;
-		const PropertyInfo* pLastProp = nullptr;
+        void*               pCur      = pRoot;
+        const TypeInfo*     pCurType  = &typeInfo;
+        const PropertyInfo* pLastProp = nullptr;
 
-		for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
-		{
-			const hashed_string name( listPart[partIndex].c_str() );
-			const PropertyInfo* pProp = pCurType->findPropertyInHierarchy( name );
-			if ( pProp == nullptr )
-				return false;
+        for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
+        {
+            const hashed_string name( listPart[partIndex].c_str() );
+            const PropertyInfo* pProp = pCurType->findPropertyInHierarchy( name );
+            if ( pProp == nullptr )
+                return false;
 
-			void* pPropPtr = pProp->getRawPtr( pCur );
-			if ( partIndex + 1 == listPart.size() )
-			{
-				pOutPtr	 = pPropPtr;
-				pOutProp = pProp;
-				return true;
-			}
+            void* pPropPtr = pProp->getRawPtr( pCur );
+            if ( partIndex + 1 == listPart.size() )
+            {
+                pOutPtr  = pPropPtr;
+                pOutProp = pProp;
+                return true;
+            }
 
-			const TypeInfo* pNested = engine::getTypeRegistry().findType( pProp->_typeName );
-			if ( pNested == nullptr )
-				return false;
-			pCur	  = pPropPtr;
-			pCurType  = pNested;
-			pLastProp = pProp;
-			(void)pLastProp;
-		}
-		return false;
-	}
+            const TypeInfo* pNested = engine::getTypeRegistry().findType( pProp->_typeName );
+            if ( pNested == nullptr )
+                return false;
+            pCur      = pPropPtr;
+            pCurType  = pNested;
+            pLastProp = pProp;
+            (void)pLastProp;
+        }
+        return false;
+    }
 
-	SW_LOG_CALLER( "SchemaMigrate" );
+    SW_LOG_CALLER( "SchemaMigrate" );
 
-	bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
-							   void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
-							   const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
-							   bool bWarnWhenNoMigrate, const SerializeContext& ctx )
-	{
-		const bool needsMigrate =
-			migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
-		if ( needsMigrate )
-		{
-			SchemaMigrateContext mctx;
-			mctx._fromVersion	  = fromVersion;
-			mctx._toVersion		  = currentVersion;
-			mctx._pInstance		  = pInstance;
-			mctx._pTypeInfo		  = &typeInfo;
-			mctx._pLegacyInstance = pLegacyInstance;
-			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphan;
-			mctx._pSerializeCtx	  = &ctx;
-			return migrate( mctx );
-		}
+    bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
+                               void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
+                               const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
+                               bool bWarnWhenNoMigrate, const SerializeContext& ctx )
+    {
+        const bool needsMigrate =
+            migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
+        if ( needsMigrate )
+        {
+            SchemaMigrateContext mctx;
+            mctx._fromVersion     = fromVersion;
+            mctx._toVersion       = currentVersion;
+            mctx._pInstance       = pInstance;
+            mctx._pTypeInfo       = &typeInfo;
+            mctx._pLegacyInstance = pLegacyInstance;
+            mctx._pLegacyTypeInfo = pLegacyTypeInfo;
+            mctx._pOrphans        = &listOrphan;
+            mctx._pSerializeCtx   = &ctx;
+            return migrate( mctx );
+        }
 
-		if ( migrate == nullptr && bWarnWhenNoMigrate )
-		{
-			SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# orphans: %#)",
-							typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
-							listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
-			return false;
-		}
-		return true;
-	}
+        if ( migrate == nullptr && bWarnWhenNoMigrate )
+        {
+            SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# orphans: %#)",
+                            typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
+                            listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
+            return false;
+        }
+        return true;
+    }
 
 } // namespace sw

@@ -6,10 +6,10 @@
 
 namespace sw
 {
-	void EmptyGame::configureBootstrap( BootstrapConfig& outConfig )
-	{
-		outConfig._packRoot = "game/empty";
-	}
+    void EmptyGame::configureBootstrap( BootstrapConfig& outConfig )
+    {
+        outConfig._packRoot = "game/empty";
+    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::EmptyGame );

@@ -5,19 +5,19 @@
 
 namespace sw
 {
-	class VulkanRHIDevice;
+    class VulkanRHIDevice;
 
-	class VulkanRHISwapChain : public IRHISwapChain
-	{
-	public:
-		explicit VulkanRHISwapChain( VulkanRHIDevice* pDevice )
-			: _pDevice{ pDevice } {}
-		void  resize( uint32 width, uint32 height ) override;
-		void  beginFrame( const float4& clearColor ) override;
-		void  endFrame( bool vsync = true, bool bPresent = true ) override;
-		void* getNativeSwapChain() const override;
+    class VulkanRHISwapChain : public IRHISwapChain
+    {
+    public:
+        explicit VulkanRHISwapChain( VulkanRHIDevice* pDevice )
+            : _pDevice{ pDevice } {}
+        void  resize( uint32 width, uint32 height ) override;
+        void  beginFrame( const float4& clearColor ) override;
+        void  endFrame( bool vsync = true, bool bPresent = true ) override;
+        void* getNativeSwapChain() const override;
 
-	private:
-		VulkanRHIDevice* _pDevice;
-	};
+    private:
+        VulkanRHIDevice* _pDevice;
+    };
 } // namespace sw

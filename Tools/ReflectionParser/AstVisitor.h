@@ -12,40 +12,40 @@
 
 namespace sw
 {
-	// ------------------------------------------------------------------------------
-	// 1) AstVisitor — CXTranslationUnit 순회, REFLECT/ENUM 수집
-	// ------------------------------------------------------------------------------
-	/**
-	 * @brief libclang CXTranslationUnit을 순회하여 REFLECT, ENUM 등을 수집하는 클래스
-	 */
-	class AstVisitor
-	{
-	public:
-		explicit AstVisitor( CXTranslationUnit translationUnit );
+    // ------------------------------------------------------------------------------
+    // 1) AstVisitor — CXTranslationUnit 순회, REFLECT/ENUM 수집
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief libclang CXTranslationUnit을 순회하여 REFLECT, ENUM 등을 수집하는 클래스
+     */
+    class AstVisitor
+    {
+    public:
+        explicit AstVisitor( CXTranslationUnit translationUnit );
 
-		/** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. 에러가 없으면 true를 반환합니다. */
-		bool visit();
+        /** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. 에러가 없으면 true를 반환합니다. */
+        bool visit();
 
-		bool hasError() const noexcept { return _bHasError == SW_TRUE; }
+        bool hasError() const noexcept { return _bHasError == SW_TRUE; }
 
-		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listType; }
-		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnum; }
+        const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listType; }
+        const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnum; }
 
-		/** @brief 커서의 네임스페이스 포함 이름(FQN)을 만듭니다. */
-		static string buildFullyQualifiedName( CXCursor cursor );
+        /** @brief 커서의 네임스페이스 포함 이름(FQN)을 만듭니다. */
+        static string buildFullyQualifiedName( CXCursor cursor );
 
-	private:
-		static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
-		void					  onStructDeclaration( CXCursor cursor );
-		void					  onEnumDeclaration( CXCursor cursor );
-		static bool				  hasAnnotation( CXCursor cursor, string_view prefix );
-		static string			  getCursorSpelling( CXCursor cursor );
+    private:
+        static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
+        void                      onStructDeclaration( CXCursor cursor );
+        void                      onEnumDeclaration( CXCursor cursor );
+        static bool               hasAnnotation( CXCursor cursor, string_view prefix );
+        static string             getCursorSpelling( CXCursor cursor );
 
-	private:
-		CXTranslationUnit	   _translationUnit;
-		vector<ParsedTypeInfo> _listType;
-		vector<ParsedEnumInfo> _listEnum;
-		uint8				   _bHasError : 1;
-		[[maybe_unused]] uint8 _reserved  : 7;
-	};
+    private:
+        CXTranslationUnit      _translationUnit;
+        vector<ParsedTypeInfo> _listType;
+        vector<ParsedEnumInfo> _listEnum;
+        uint8                  _bHasError : 1;
+        [[maybe_unused]] uint8 _reserved  : 7;
+    };
 } // namespace sw

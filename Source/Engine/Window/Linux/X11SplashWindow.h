@@ -7,22 +7,22 @@
 
 namespace sw
 {
-	/**
-	 * @class X11SplashWindow
-	 * @brief Linux X11 기반의 경량 스플래시 창
-	 */
-	class X11SplashWindow : public ISplashWindow
-	{
-	public:
-		X11SplashWindow();
-		virtual ~X11SplashWindow() override;
+    /**
+     * @class X11SplashWindow
+     * @brief Linux X11 기반의 경량 스플래시 창
+     */
+    class X11SplashWindow : public ISplashWindow
+    {
+    public:
+        X11SplashWindow();
+        virtual ~X11SplashWindow() override;
 
-		bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
-		void updateStatus( const utf8* pStatus ) override;
-		void dismiss() override;
+        bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
+        void updateStatus( const utf8* pStatus ) override;
+        void dismiss() override;
 
-	private:
-		[[maybe_unused]] void*	_pX11Display;
-		[[maybe_unused]] uint64 _x11Window;
-	};
+    private:
+        [[maybe_unused]] void*  _pX11Display;
+        [[maybe_unused]] uint64 _x11Window;
+    };
 } // namespace sw

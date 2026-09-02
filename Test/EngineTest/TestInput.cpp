@@ -23,305 +23,305 @@
 
 SW_TEST_CASE( InputManagerTest, LifecycleAndDefaults )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 기본 상태 검증
-	SW_EXPECT_FALSE( input.isKeyDown( sw::Key::A ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::A ) );
-	SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::A ) );
+    // 기본 상태 검증
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::A ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::A ) );
+    SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::A ) );
 
-	SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Left ) );
-	SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
-	SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
+    SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Left ) );
+    SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
+    SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
 
-	int32 mx = -1, my = -1;
-	input.getMousePosition( mx, my );
-	SW_EXPECT_EQUAL( 0, mx );
-	SW_EXPECT_EQUAL( 0, my );
+    int32 mx = -1, my = -1;
+    input.getMousePosition( mx, my );
+    SW_EXPECT_EQUAL( 0, mx );
+    SW_EXPECT_EQUAL( 0, my );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 #if defined( SW_PLATFORM_WINDOWS )
 SW_TEST_CASE( InputManagerTest, NativeEventKeyPressReleaseEdges )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 초기 스냅샷 맞춤
-	input.endFrame();
+    // 초기 스냅샷 맞춤
+    input.endFrame();
 
-	// 프레임 1: Space KeyDown 이벤트 수신
-	sw::NativeWindowEvent downEvt{};
-	downEvt._message = WM_KEYDOWN;
-	downEvt._wParam	 = VK_SPACE;
-	input.processNativeEvent( downEvt );
+    // 프레임 1: Space KeyDown 이벤트 수신
+    sw::NativeWindowEvent downEvt{};
+    downEvt._message = WM_KEYDOWN;
+    downEvt._wParam  = VK_SPACE;
+    input.processNativeEvent( downEvt );
 
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
-	SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
 
-	// 프레임 1 종료: 키 눌림 상태가 prev로 복사됨
-	input.endFrame();
+    // 프레임 1 종료: 키 눌림 상태가 prev로 복사됨
+    input.endFrame();
 
-	// 프레임 2: 키 유지 중
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    // 프레임 2: 키 유지 중
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
 
-	// 프레임 2: Space KeyUp 이벤트 수신
-	sw::NativeWindowEvent upEvt{};
-	upEvt._message = WM_KEYUP;
-	upEvt._wParam  = VK_SPACE;
-	input.processNativeEvent( upEvt );
+    // 프레임 2: Space KeyUp 이벤트 수신
+    sw::NativeWindowEvent upEvt{};
+    upEvt._message = WM_KEYUP;
+    upEvt._wParam  = VK_SPACE;
+    input.processNativeEvent( upEvt );
 
-	SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
-	SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Space ) );
 
-	// 프레임 2 종료
-	input.endFrame();
+    // 프레임 2 종료
+    input.endFrame();
 
-	SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
-	SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 초기 스냅샷
-	input.endFrame();
+    // 초기 스냅샷
+    input.endFrame();
 
-	// 프레임 1: 마우스 이동 및 좌클릭 다운
-	sw::NativeWindowEvent moveEvt1{};
-	moveEvt1._message = WM_MOUSEMOVE;
-	moveEvt1._lParam  = MAKELPARAM( 100, 200 );
-	input.processNativeEvent( moveEvt1 );
+    // 프레임 1: 마우스 이동 및 좌클릭 다운
+    sw::NativeWindowEvent moveEvt1{};
+    moveEvt1._message = WM_MOUSEMOVE;
+    moveEvt1._lParam  = MAKELPARAM( 100, 200 );
+    input.processNativeEvent( moveEvt1 );
 
-	sw::NativeWindowEvent clickEvt{};
-	clickEvt._message = WM_LBUTTONDOWN;
-	input.processNativeEvent( clickEvt );
+    sw::NativeWindowEvent clickEvt{};
+    clickEvt._message = WM_LBUTTONDOWN;
+    input.processNativeEvent( clickEvt );
 
-	int32 mx = 0, my = 0;
-	input.getMousePosition( mx, my );
-	SW_EXPECT_EQUAL( 100, mx );
-	SW_EXPECT_EQUAL( 200, my );
-	SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
+    int32 mx = 0, my = 0;
+    input.getMousePosition( mx, my );
+    SW_EXPECT_EQUAL( 100, mx );
+    SW_EXPECT_EQUAL( 200, my );
+    SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
 
-	// 프레임 1 종료 (현재 마우스 100, 200이 prev로 기록됨)
-	input.endFrame();
+    // 프레임 1 종료 (현재 마우스 100, 200이 prev로 기록됨)
+    input.endFrame();
 
-	// 프레임 2: 마우스 추가 이동 (150, 230) 및 버튼 뗌
-	sw::NativeWindowEvent moveEvt2{};
-	moveEvt2._message = WM_MOUSEMOVE;
-	moveEvt2._lParam  = MAKELPARAM( 150, 230 );
-	input.processNativeEvent( moveEvt2 );
+    // 프레임 2: 마우스 추가 이동 (150, 230) 및 버튼 뗌
+    sw::NativeWindowEvent moveEvt2{};
+    moveEvt2._message = WM_MOUSEMOVE;
+    moveEvt2._lParam  = MAKELPARAM( 150, 230 );
+    input.processNativeEvent( moveEvt2 );
 
-	sw::NativeWindowEvent releaseEvt{};
-	releaseEvt._message = WM_LBUTTONUP;
-	input.processNativeEvent( releaseEvt );
+    sw::NativeWindowEvent releaseEvt{};
+    releaseEvt._message = WM_LBUTTONUP;
+    input.processNativeEvent( releaseEvt );
 
-	int32 dx = 0, dy = 0;
-	input.getMouseDelta( dx, dy );
-	SW_EXPECT_EQUAL( 50, dx );
-	SW_EXPECT_EQUAL( 30, dy );
+    int32 dx = 0, dy = 0;
+    input.getMouseDelta( dx, dy );
+    SW_EXPECT_EQUAL( 50, dx );
+    SW_EXPECT_EQUAL( 30, dy );
 
-	SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Left ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
+    SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Left ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, NativeEventMouseWheelAndEdges )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
-	input.setGamepadPollingEnabled( false );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
+    input.setGamepadPollingEnabled( false );
 
-	// 초기 휠 상태
-	SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    // 초기 휠 상태
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
 
-	// 1) 휠 스크롤 위로 1틱 (+120)
-	sw::NativeWindowEvent wheelUpEvt{};
-	wheelUpEvt._message = WM_MOUSEWHEEL;
-	wheelUpEvt._wParam	= MAKEWPARAM( 0, 120 );
-	input.processNativeEvent( wheelUpEvt );
+    // 1) 휠 스크롤 위로 1틱 (+120)
+    sw::NativeWindowEvent wheelUpEvt{};
+    wheelUpEvt._message = WM_MOUSEWHEEL;
+    wheelUpEvt._wParam  = MAKEWPARAM( 0, 120 );
+    input.processNativeEvent( wheelUpEvt );
 
-	// beginFrame 호출 시 누적 휠이 이번 프레임 델타로 전이됨
-	input.beginFrame();
-	SW_EXPECT_NEAR_EQUAL( 1.0f, input.getMouseWheelDelta(), 1e-4f );
+    // beginFrame 호출 시 누적 휠이 이번 프레임 델타로 전이됨
+    input.beginFrame();
+    SW_EXPECT_NEAR_EQUAL( 1.0f, input.getMouseWheelDelta(), 1e-4f );
 
-	// endFrame 호출 시 델타 0으로 리셋
-	input.endFrame();
-	SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    // endFrame 호출 시 델타 0으로 리셋
+    input.endFrame();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
 
-	// 2) 휠 스크롤 아래로 2틱 (-240)
-	sw::NativeWindowEvent wheelDownEvt{};
-	wheelDownEvt._message = WM_MOUSEWHEEL;
-	wheelDownEvt._wParam  = MAKEWPARAM( 0, -240 );
-	input.processNativeEvent( wheelDownEvt );
+    // 2) 휠 스크롤 아래로 2틱 (-240)
+    sw::NativeWindowEvent wheelDownEvt{};
+    wheelDownEvt._message = WM_MOUSEWHEEL;
+    wheelDownEvt._wParam  = MAKEWPARAM( 0, -240 );
+    input.processNativeEvent( wheelDownEvt );
 
-	input.beginFrame();
-	SW_EXPECT_NEAR_EQUAL( -2.0f, input.getMouseWheelDelta(), 1e-4f );
+    input.beginFrame();
+    SW_EXPECT_NEAR_EQUAL( -2.0f, input.getMouseWheelDelta(), 1e-4f );
 
-	input.endFrame();
-	SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    input.endFrame();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, NativeEventRightAndMiddleMouseButtons )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 1) 우클릭 다운
-	sw::NativeWindowEvent rDown{};
-	rDown._message = WM_RBUTTONDOWN;
-	input.processNativeEvent( rDown );
+    // 1) 우클릭 다운
+    sw::NativeWindowEvent rDown{};
+    rDown._message = WM_RBUTTONDOWN;
+    input.processNativeEvent( rDown );
 
-	SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
-	SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
+    SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
+    SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
 
-	input.endFrame();
+    input.endFrame();
 
-	SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
-	SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
+    SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
+    SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Right ) );
 
-	// 2) 우클릭 업
-	sw::NativeWindowEvent rUp{};
-	rUp._message = WM_RBUTTONUP;
-	input.processNativeEvent( rUp );
+    // 2) 우클릭 업
+    sw::NativeWindowEvent rUp{};
+    rUp._message = WM_RBUTTONUP;
+    input.processNativeEvent( rUp );
 
-	SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Right ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
+    SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Right ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Right ) );
 
-	input.endFrame();
+    input.endFrame();
 
-	// 3) 휠(중간) 클릭 다운 및 업
-	sw::NativeWindowEvent mDown{};
-	mDown._message = WM_MBUTTONDOWN;
-	input.processNativeEvent( mDown );
+    // 3) 휠(중간) 클릭 다운 및 업
+    sw::NativeWindowEvent mDown{};
+    mDown._message = WM_MBUTTONDOWN;
+    input.processNativeEvent( mDown );
 
-	SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Middle ) );
+    SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Middle ) );
 
-	input.endFrame();
+    input.endFrame();
 
-	sw::NativeWindowEvent mUp{};
-	mUp._message = WM_MBUTTONUP;
-	input.processNativeEvent( mUp );
+    sw::NativeWindowEvent mUp{};
+    mUp._message = WM_MBUTTONUP;
+    input.processNativeEvent( mUp );
 
-	SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
-	SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Middle ) );
+    SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Middle ) );
+    SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Middle ) );
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &input );
-	actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &input );
+    actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
 
-	// 1) 아무 키도 안 눌렸을 때 -> (0, 0)
-	sw::float2 v0 = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
+    // 1) 아무 키도 안 눌렸을 때 -> (0, 0)
+    sw::float2 v0 = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
 
-	// 2) W 키(상향) 입력 -> (0, 1)
-	sw::NativeWindowEvent wDown{};
-	wDown._message = WM_KEYDOWN;
-	wDown._wParam  = 'W';
-	input.processNativeEvent( wDown );
+    // 2) W 키(상향) 입력 -> (0, 1)
+    sw::NativeWindowEvent wDown{};
+    wDown._message = WM_KEYDOWN;
+    wDown._wParam  = 'W';
+    input.processNativeEvent( wDown );
 
-	sw::float2 vUp = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, vUp._x, 0.0001f );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, vUp._y, 0.0001f );
+    sw::float2 vUp = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, vUp._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, vUp._y, 0.0001f );
 
-	// 3) W + D(우상향 대각선) 입력 -> 정규화되어 (1/sqrt(2), 1/sqrt(2)) ~= (0.7071f, 0.7071f)
-	sw::NativeWindowEvent dDown{};
-	dDown._message = WM_KEYDOWN;
-	dDown._wParam  = 'D';
-	input.processNativeEvent( dDown );
+    // 3) W + D(우상향 대각선) 입력 -> 정규화되어 (1/sqrt(2), 1/sqrt(2)) ~= (0.7071f, 0.7071f)
+    sw::NativeWindowEvent dDown{};
+    dDown._message = WM_KEYDOWN;
+    dDown._wParam  = 'D';
+    input.processNativeEvent( dDown );
 
-	sw::float2	  vDiag		   = actionMap.getVector2D( "Move" );
-	const float32 expectedDiag = 1.0f / sw::MathUtil::sqrt( 2.0f );
-	SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._y, 0.001f );
+    sw::float2    vDiag        = actionMap.getVector2D( "Move" );
+    const float32 expectedDiag = 1.0f / sw::MathUtil::sqrt( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._y, 0.001f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &input );
-	actionMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &input );
+    actionMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
 
-	input.endFrame();
+    input.endFrame();
 
-	// 1) 초기 상태 -> false
-	SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
-	SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    // 1) 초기 상태 -> false
+    SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
 
-	// 2) LeftControl만 눌림 -> false
-	sw::NativeWindowEvent ctrlDown{};
-	ctrlDown._message = WM_KEYDOWN;
-	ctrlDown._wParam  = VK_LCONTROL;
-	input.processNativeEvent( ctrlDown );
+    // 2) LeftControl만 눌림 -> false
+    sw::NativeWindowEvent ctrlDown{};
+    ctrlDown._message = WM_KEYDOWN;
+    ctrlDown._wParam  = VK_LCONTROL;
+    input.processNativeEvent( ctrlDown );
 
-	SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
-	SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
 
-	// 3) S 키 눌림 -> chord 발화!
-	sw::NativeWindowEvent sDown{};
-	sDown._message = WM_KEYDOWN;
-	sDown._wParam  = 'S';
-	input.processNativeEvent( sDown );
+    // 3) S 키 눌림 -> chord 발화!
+    sw::NativeWindowEvent sDown{};
+    sDown._message = WM_KEYDOWN;
+    sDown._wParam  = 'S';
+    input.processNativeEvent( sDown );
 
-	SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
-	SW_EXPECT_TRUE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_TRUE( actionMap.wasChordTriggered( "QuickSave" ) );
 
-	// 4) 다음 프레임 -> isDown은 true, wasTriggered는 false
-	input.endFrame();
-	SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
-	SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    // 4) 다음 프레임 -> isDown은 true, wasTriggered는 false
+    input.endFrame();
+    SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 SW_TEST_CASE( InputManagerTest, ActionMapGamepadStick2D )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &input );
-	actionMap.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &input );
+    actionMap.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f );
 
-	// 기본 상태 -> (0, 0)
-	sw::float2 v0 = actionMap.getVector2D( "Look" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
+    // 기본 상태 -> (0, 0)
+    sw::float2 v0 = actionMap.getVector2D( "Look" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -329,43 +329,43 @@ SW_TEST_CASE( InputManagerTest, ActionMapGamepadStick2D )
  */
 SW_TEST_CASE( InputManagerTest, GamepadButtonsNameMapping )
 {
-	// 1) 이름 -> 버튼 열거형 (대소문자 무시)
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "a" ) == sw::GamepadButton::A );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "B" ) == sw::GamepadButton::B );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "X" ) == sw::GamepadButton::X );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Y" ) == sw::GamepadButton::Y );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "dpadup" ) == sw::GamepadButton::DPadUp );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadDown" ) == sw::GamepadButton::DPadDown );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadLeft" ) == sw::GamepadButton::DPadLeft );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadRight" ) == sw::GamepadButton::DPadRight );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Start" ) == sw::GamepadButton::Start );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Back" ) == sw::GamepadButton::Back );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftShoulder" ) == sw::GamepadButton::LeftShoulder );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightShoulder" ) == sw::GamepadButton::RightShoulder );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftThumb" ) == sw::GamepadButton::LeftThumb );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightThumb" ) == sw::GamepadButton::RightThumb );
+    // 1) 이름 -> 버튼 열거형 (대소문자 무시)
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "a" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "B" ) == sw::GamepadButton::B );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "X" ) == sw::GamepadButton::X );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Y" ) == sw::GamepadButton::Y );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "dpadup" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadDown" ) == sw::GamepadButton::DPadDown );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadLeft" ) == sw::GamepadButton::DPadLeft );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadRight" ) == sw::GamepadButton::DPadRight );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Start" ) == sw::GamepadButton::Start );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Back" ) == sw::GamepadButton::Back );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftShoulder" ) == sw::GamepadButton::LeftShoulder );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightShoulder" ) == sw::GamepadButton::RightShoulder );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftThumb" ) == sw::GamepadButton::LeftThumb );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightThumb" ) == sw::GamepadButton::RightThumb );
 
-	// 알 수 없는 버튼 이름은 Count 반환
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "InvalidButton" ) == sw::GamepadButton::Count );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "" ) == sw::GamepadButton::Count );
+    // 알 수 없는 버튼 이름은 Count 반환
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "InvalidButton" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "" ) == sw::GamepadButton::Count );
 
-	// 2) 버튼 열거형 -> 안정 문자열
-	SW_EXPECT_STREQ( "A", sw::GamepadButtons::toName( sw::GamepadButton::A ) );
-	SW_EXPECT_STREQ( "B", sw::GamepadButtons::toName( sw::GamepadButton::B ) );
-	SW_EXPECT_STREQ( "X", sw::GamepadButtons::toName( sw::GamepadButton::X ) );
-	SW_EXPECT_STREQ( "Y", sw::GamepadButtons::toName( sw::GamepadButton::Y ) );
-	SW_EXPECT_STREQ( "DPadUp", sw::GamepadButtons::toName( sw::GamepadButton::DPadUp ) );
-	SW_EXPECT_STREQ( "Start", sw::GamepadButtons::toName( sw::GamepadButton::Start ) );
-	SW_EXPECT_STREQ( "Back", sw::GamepadButtons::toName( sw::GamepadButton::Back ) );
-	SW_EXPECT_STREQ( "LeftShoulder", sw::GamepadButtons::toName( sw::GamepadButton::LeftShoulder ) );
-	SW_EXPECT_STREQ( "RightShoulder", sw::GamepadButtons::toName( sw::GamepadButton::RightShoulder ) );
-	SW_EXPECT_STREQ( "LeftThumb", sw::GamepadButtons::toName( sw::GamepadButton::LeftThumb ) );
-	SW_EXPECT_STREQ( "RightThumb", sw::GamepadButtons::toName( sw::GamepadButton::RightThumb ) );
+    // 2) 버튼 열거형 -> 안정 문자열
+    SW_EXPECT_STREQ( "A", sw::GamepadButtons::toName( sw::GamepadButton::A ) );
+    SW_EXPECT_STREQ( "B", sw::GamepadButtons::toName( sw::GamepadButton::B ) );
+    SW_EXPECT_STREQ( "X", sw::GamepadButtons::toName( sw::GamepadButton::X ) );
+    SW_EXPECT_STREQ( "Y", sw::GamepadButtons::toName( sw::GamepadButton::Y ) );
+    SW_EXPECT_STREQ( "DPadUp", sw::GamepadButtons::toName( sw::GamepadButton::DPadUp ) );
+    SW_EXPECT_STREQ( "Start", sw::GamepadButtons::toName( sw::GamepadButton::Start ) );
+    SW_EXPECT_STREQ( "Back", sw::GamepadButtons::toName( sw::GamepadButton::Back ) );
+    SW_EXPECT_STREQ( "LeftShoulder", sw::GamepadButtons::toName( sw::GamepadButton::LeftShoulder ) );
+    SW_EXPECT_STREQ( "RightShoulder", sw::GamepadButtons::toName( sw::GamepadButton::RightShoulder ) );
+    SW_EXPECT_STREQ( "LeftThumb", sw::GamepadButtons::toName( sw::GamepadButton::LeftThumb ) );
+    SW_EXPECT_STREQ( "RightThumb", sw::GamepadButtons::toName( sw::GamepadButton::RightThumb ) );
 
-	// Count / 범위 밖은 nullptr 반환
-	SW_EXPECT_TRUE( sw::GamepadButtons::toName( sw::GamepadButton::Count ) == nullptr );
+    // Count / 범위 밖은 nullptr 반환
+    SW_EXPECT_TRUE( sw::GamepadButtons::toName( sw::GamepadButton::Count ) == nullptr );
 }
 
 /**
@@ -373,26 +373,26 @@ SW_TEST_CASE( InputManagerTest, GamepadButtonsNameMapping )
  */
 SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
 {
-	sw::GamepadXInput pad;
-	pad.poll( 0.016f ); // 연결되지 않은 슬롯 폴링
+    sw::GamepadXInput pad;
+    pad.poll( 0.016f ); // 연결되지 않은 슬롯 폴링
 
-	for ( size_t btnIndex = 0; btnIndex < static_cast<size_t>( sw::GamepadButton::Count ); ++btnIndex )
-	{
-		const sw::GamepadButton btn = static_cast<sw::GamepadButton>( btnIndex );
-		SW_EXPECT_FALSE( pad.isButtonDown( btn ) );
-		SW_EXPECT_FALSE( pad.wasButtonPressed( btn ) );
-		SW_EXPECT_FALSE( pad.wasButtonReleased( btn ) );
-	}
+    for ( size_t btnIndex = 0; btnIndex < static_cast<size_t>( sw::GamepadButton::Count ); ++btnIndex )
+    {
+        const sw::GamepadButton btn = static_cast<sw::GamepadButton>( btnIndex );
+        SW_EXPECT_FALSE( pad.isButtonDown( btn ) );
+        SW_EXPECT_FALSE( pad.wasButtonPressed( btn ) );
+        SW_EXPECT_FALSE( pad.wasButtonReleased( btn ) );
+    }
 
-	float32 lx = 99.0f, ly = 99.0f;
-	pad.getLeftStick( lx, ly );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, lx, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, ly, 0.001f );
+    float32 lx = 99.0f, ly = 99.0f;
+    pad.getLeftStick( lx, ly );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, lx, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, ly, 0.001f );
 
-	float32 rx = 99.0f, ry = 99.0f;
-	pad.getRightStick( rx, ry );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, rx, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, ry, 0.001f );
+    float32 rx = 99.0f, ry = 99.0f;
+    pad.getRightStick( rx, ry );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, rx, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, ry, 0.001f );
 }
 #endif
 
@@ -401,37 +401,37 @@ SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
  */
 SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
 {
-	sw::ConcurrentQueue<sw::RawInputEvent, 16> queue;
-	SW_EXPECT_TRUE( queue.isEmpty() );
-	SW_EXPECT_EQUAL( 0u, queue.getCount() );
+    sw::ConcurrentQueue<sw::RawInputEvent, 16> queue;
+    SW_EXPECT_TRUE( queue.isEmpty() );
+    SW_EXPECT_EQUAL( 0u, queue.getCount() );
 
-	// 1) 5개 아이템 Push
-	for ( uint16 index = 0; index < 5; ++index )
-	{
-		SW_EXPECT_TRUE( queue.push( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
-	}
-	SW_EXPECT_FALSE( queue.isEmpty() );
-	SW_EXPECT_EQUAL( 5u, queue.getCount() );
+    // 1) 5개 아이템 Push
+    for ( uint16 index = 0; index < 5; ++index )
+    {
+        SW_EXPECT_TRUE( queue.push( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
+    }
+    SW_EXPECT_FALSE( queue.isEmpty() );
+    SW_EXPECT_EQUAL( 5u, queue.getCount() );
 
-	// 2) 2개 아이템 Pop
-	sw::RawInputEvent item0{};
-	SW_EXPECT_TRUE( queue.pop( item0 ) );
-	SW_EXPECT_TRUE( item0._type == sw::RawInputEventType::KeyDown );
-	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( item0._payload._keyData._nativeVirtualKey ) );
+    // 2) 2개 아이템 Pop
+    sw::RawInputEvent item0{};
+    SW_EXPECT_TRUE( queue.pop( item0 ) );
+    SW_EXPECT_TRUE( item0._type == sw::RawInputEventType::KeyDown );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( item0._payload._keyData._nativeVirtualKey ) );
 
-	sw::RawInputEvent item1{};
-	SW_EXPECT_TRUE( queue.pop( item1 ) );
-	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( item1._payload._keyData._nativeVirtualKey ) );
-	SW_EXPECT_EQUAL( 3u, queue.getCount() );
+    sw::RawInputEvent item1{};
+    SW_EXPECT_TRUE( queue.pop( item1 ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( item1._payload._keyData._nativeVirtualKey ) );
+    SW_EXPECT_EQUAL( 3u, queue.getCount() );
 
-	// 3) 나머지 3개 일괄 Drain
-	sw::RawInputEvent arrDrained[8]{};
-	const uint32	  drainedCount = queue.drain( arrDrained, 8 );
-	SW_EXPECT_EQUAL( 3u, drainedCount );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( arrDrained[0]._payload._keyData._nativeVirtualKey ) );
-	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( arrDrained[1]._payload._keyData._nativeVirtualKey ) );
-	SW_EXPECT_EQUAL( 4u, static_cast<uint32>( arrDrained[2]._payload._keyData._nativeVirtualKey ) );
-	SW_EXPECT_TRUE( queue.isEmpty() );
+    // 3) 나머지 3개 일괄 Drain
+    sw::RawInputEvent arrDrained[8]{};
+    const uint32      drainedCount = queue.drain( arrDrained, 8 );
+    SW_EXPECT_EQUAL( 3u, drainedCount );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( arrDrained[0]._payload._keyData._nativeVirtualKey ) );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( arrDrained[1]._payload._keyData._nativeVirtualKey ) );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( arrDrained[2]._payload._keyData._nativeVirtualKey ) );
+    SW_EXPECT_TRUE( queue.isEmpty() );
 }
 
 /**
@@ -439,55 +439,55 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
  */
 SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
 {
-	sw::ConcurrentQueue<sw::RawInputEvent, 1024> queue;
-	constexpr uint32							 kTotalItems = 5000;
-	std::atomic<bool>							 bProducerDone{ false };
+    sw::ConcurrentQueue<sw::RawInputEvent, 1024> queue;
+    constexpr uint32                             kTotalItems = 5000;
+    std::atomic<bool>                            bProducerDone{ false };
 
-	// Producer Thread (OS Message Pump 시뮬레이션)
-	std::thread producerThread(
-		[&]()
-	{
-		for ( uint32 index = 0; index < kTotalItems; ++index )
-		{
-			sw::RawInputEvent evt = sw::RawInputEvent::makeKeyDown( sw::Key::Space, static_cast<uint16>( index ) );
-			while ( queue.push( evt ) == false )
-			{
-				std::this_thread::yield();
-			}
-		}
-		bProducerDone.store( true, std::memory_order_release );
-	} );
+    // Producer Thread (OS Message Pump 시뮬레이션)
+    std::thread producerThread(
+        [&]()
+    {
+        for ( uint32 index = 0; index < kTotalItems; ++index )
+        {
+            sw::RawInputEvent evt = sw::RawInputEvent::makeKeyDown( sw::Key::Space, static_cast<uint16>( index ) );
+            while ( queue.push( evt ) == false )
+            {
+                std::this_thread::yield();
+            }
+        }
+        bProducerDone.store( true, std::memory_order_release );
+    } );
 
-	// Consumer Thread (메인 엔진 루프 시뮬레이션)
-	uint32 consumedCount	 = 0;
-	uint32 nextExpectedIndex = 0;
-	bool   bOrderingValid	 = true;
+    // Consumer Thread (메인 엔진 루프 시뮬레이션)
+    uint32 consumedCount     = 0;
+    uint32 nextExpectedIndex = 0;
+    bool   bOrderingValid    = true;
 
-	while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.isEmpty() == false )
-	{
-		sw::RawInputEvent arrBatch[64]{};
-		const uint32	  drained = queue.drain( arrBatch, 64 );
-		for ( uint32 batchIndex = 0; batchIndex < drained; ++batchIndex )
-		{
-			const uint32 receivedIndex = arrBatch[batchIndex]._payload._keyData._nativeVirtualKey;
-			if ( receivedIndex != nextExpectedIndex )
-			{
-				bOrderingValid = false;
-			}
-			++nextExpectedIndex;
-			++consumedCount;
-		}
-		if ( drained == 0 )
-		{
-			std::this_thread::yield();
-		}
-	}
+    while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.isEmpty() == false )
+    {
+        sw::RawInputEvent arrBatch[64]{};
+        const uint32      drained = queue.drain( arrBatch, 64 );
+        for ( uint32 batchIndex = 0; batchIndex < drained; ++batchIndex )
+        {
+            const uint32 receivedIndex = arrBatch[batchIndex]._payload._keyData._nativeVirtualKey;
+            if ( receivedIndex != nextExpectedIndex )
+            {
+                bOrderingValid = false;
+            }
+            ++nextExpectedIndex;
+            ++consumedCount;
+        }
+        if ( drained == 0 )
+        {
+            std::this_thread::yield();
+        }
+    }
 
-	producerThread.join();
+    producerThread.join();
 
-	SW_EXPECT_TRUE( bOrderingValid );
-	SW_EXPECT_EQUAL( kTotalItems, consumedCount );
-	SW_EXPECT_TRUE( queue.isEmpty() );
+    SW_EXPECT_TRUE( bOrderingValid );
+    SW_EXPECT_EQUAL( kTotalItems, consumedCount );
+    SW_EXPECT_TRUE( queue.isEmpty() );
 }
 
 /**
@@ -495,27 +495,27 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
  */
 SW_TEST_CASE( InputManagerTest, InputManager_AsyncPostAndBeginFrameDrain )
 {
-	sw::InputManager inputManager;
-	SW_EXPECT_TRUE( inputManager.initialize() );
+    sw::InputManager inputManager;
+    SW_EXPECT_TRUE( inputManager.initialize() );
 
-	// 1) 비동기 스레드에서 원시 이벤트 인입 (WM_KEYDOWN)
-	inputManager.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F ) );
-	SW_EXPECT_EQUAL( 1u, inputManager.getPendingRawEventCount() );
+    // 1) 비동기 스레드에서 원시 이벤트 인입 (WM_KEYDOWN)
+    inputManager.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F ) );
+    SW_EXPECT_EQUAL( 1u, inputManager.getPendingRawEventCount() );
 
-	// beginFrame 호출 전에는 아직 디바이스에 반영되지 않음
-	SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
+    // beginFrame 호출 전에는 아직 디바이스에 반영되지 않음
+    SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
 
-	// 2) 메인 스레드 beginFrame() 호출 -> 큐 드레인 및 상태 반영
-	inputManager.beginFrame( 0.016f );
-	SW_EXPECT_EQUAL( 0u, inputManager.getPendingRawEventCount() );
-	SW_EXPECT_TRUE( inputManager.isKeyDown( sw::Key::F ) );
+    // 2) 메인 스레드 beginFrame() 호출 -> 큐 드레인 및 상태 반영
+    inputManager.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 0u, inputManager.getPendingRawEventCount() );
+    SW_EXPECT_TRUE( inputManager.isKeyDown( sw::Key::F ) );
 
-	// 3) 비동기 KeyUp 인입
-	inputManager.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F ) );
-	inputManager.beginFrame( 0.016f );
-	SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
+    // 3) 비동기 KeyUp 인입
+    inputManager.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F ) );
+    inputManager.beginFrame( 0.016f );
+    SW_EXPECT_FALSE( inputManager.isKeyDown( sw::Key::F ) );
 
-	inputManager.shutdown();
+    inputManager.shutdown();
 }
 
 /**
@@ -523,23 +523,23 @@ SW_TEST_CASE( InputManagerTest, InputManager_AsyncPostAndBeginFrameDrain )
  */
 SW_TEST_CASE( ActionMapTest, LoadFromDefaultInputXmlResource )
 {
-	sw::InputManager inputManager;
-	SW_EXPECT_TRUE( inputManager.initialize() );
+    sw::InputManager inputManager;
+    SW_EXPECT_TRUE( inputManager.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &inputManager );
-	SW_EXPECT_TRUE( actionMap.loadFromResource( "engine/input/default.input.xml" ) );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &inputManager );
+    SW_EXPECT_TRUE( actionMap.loadFromResource( "engine/input/default.input.xml" ) );
 
-	SW_EXPECT_TRUE( actionMap.hasLayer( "Title" ) );
-	SW_EXPECT_TRUE( actionMap.hasLayer( "Gameplay" ) );
-	SW_EXPECT_TRUE( actionMap.hasLayer( "Debug" ) );
+    SW_EXPECT_TRUE( actionMap.hasLayer( "Title" ) );
+    SW_EXPECT_TRUE( actionMap.hasLayer( "Gameplay" ) );
+    SW_EXPECT_TRUE( actionMap.hasLayer( "Debug" ) );
 
-	SW_EXPECT_TRUE( actionMap.hasAction( "Confirm" ) );
-	SW_EXPECT_TRUE( actionMap.hasAction( "Continue" ) );
-	SW_EXPECT_TRUE( actionMap.hasAction( "Cancel" ) );
-	SW_EXPECT_TRUE( actionMap.hasAction( "ReloadEditor" ) );
+    SW_EXPECT_TRUE( actionMap.hasAction( "Confirm" ) );
+    SW_EXPECT_TRUE( actionMap.hasAction( "Continue" ) );
+    SW_EXPECT_TRUE( actionMap.hasAction( "Cancel" ) );
+    SW_EXPECT_TRUE( actionMap.hasAction( "ReloadEditor" ) );
 
-	inputManager.shutdown();
+    inputManager.shutdown();
 }
 
 /**
@@ -547,16 +547,16 @@ SW_TEST_CASE( ActionMapTest, LoadFromDefaultInputXmlResource )
  */
 SW_TEST_CASE( GamepadDeviceTest, GamepadButtonsFromNameAndToName )
 {
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightTrigger" ) == sw::GamepadButton::Count );
-	SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "NonExistent" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightTrigger" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "NonExistent" ) == sw::GamepadButton::Count );
 
-	const utf8* pNameA = sw::GamepadButtons::toName( sw::GamepadButton::A );
-	SW_EXPECT_TRUE( pNameA != nullptr && sw::StringUtil::equals( pNameA, "A" ) );
+    const utf8* pNameA = sw::GamepadButtons::toName( sw::GamepadButton::A );
+    SW_EXPECT_TRUE( pNameA != nullptr && sw::StringUtil::equals( pNameA, "A" ) );
 
-	const utf8* pNameStart = sw::GamepadButtons::toName( sw::GamepadButton::Start );
-	SW_EXPECT_TRUE( pNameStart != nullptr && sw::StringUtil::equals( pNameStart, "Start" ) );
+    const utf8* pNameStart = sw::GamepadButtons::toName( sw::GamepadButton::Start );
+    SW_EXPECT_TRUE( pNameStart != nullptr && sw::StringUtil::equals( pNameStart, "Start" ) );
 }
 
 /**
@@ -564,36 +564,36 @@ SW_TEST_CASE( GamepadDeviceTest, GamepadButtonsFromNameAndToName )
  */
 SW_TEST_CASE( ActionMapTest, GlyphResolutionWithDeviceTypeAndChords )
 {
-	sw::InputManager inputManager;
-	SW_EXPECT_TRUE( inputManager.initialize() );
+    sw::InputManager inputManager;
+    SW_EXPECT_TRUE( inputManager.initialize() );
 
-	sw::ActionMap& actionMap = inputManager.getActionMap();
+    sw::ActionMap& actionMap = inputManager.getActionMap();
 
-	actionMap.bind( "Interact", sw::Key::E );
-	actionMap.bind( "Fire", sw::MouseButton::Left );
-	actionMap.bind( "Jump", sw::GamepadButton::A );
-	actionMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
+    actionMap.bind( "Interact", sw::Key::E );
+    actionMap.bind( "Fire", sw::MouseButton::Left );
+    actionMap.bind( "Jump", sw::GamepadButton::A );
+    actionMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
 
-	inputManager.setActiveDeviceType( sw::InputDeviceType::KeyboardMouse );
-	const sw::string glyphInteract = actionMap.getGlyphForAction( "Interact" );
-	SW_EXPECT_TRUE( glyphInteract.find( "E" ) != sw::string::npos );
+    inputManager.setActiveDeviceType( sw::InputDeviceType::KeyboardMouse );
+    const sw::string glyphInteract = actionMap.getGlyphForAction( "Interact" );
+    SW_EXPECT_TRUE( glyphInteract.find( "E" ) != sw::string::npos );
 
-	const sw::string glyphFire = actionMap.getGlyphForAction( "Fire" );
-	SW_EXPECT_TRUE( glyphFire.find( "Left" ) != sw::string::npos );
+    const sw::string glyphFire = actionMap.getGlyphForAction( "Fire" );
+    SW_EXPECT_TRUE( glyphFire.find( "Left" ) != sw::string::npos );
 
-	const sw::string glyphSave = actionMap.getGlyphForAction( "QuickSave" );
-	SW_EXPECT_TRUE( glyphSave.find( "LeftControl" ) != sw::string::npos );
-	SW_EXPECT_TRUE( glyphSave.find( "S" ) != sw::string::npos );
+    const sw::string glyphSave = actionMap.getGlyphForAction( "QuickSave" );
+    SW_EXPECT_TRUE( glyphSave.find( "LeftControl" ) != sw::string::npos );
+    SW_EXPECT_TRUE( glyphSave.find( "S" ) != sw::string::npos );
 
-	inputManager.setActiveDeviceType( sw::InputDeviceType::GamepadXbox );
-	const sw::string glyphJumpXbox = actionMap.getGlyphForAction( "Jump" );
-	SW_EXPECT_TRUE( glyphJumpXbox.find( "A" ) != sw::string::npos );
+    inputManager.setActiveDeviceType( sw::InputDeviceType::GamepadXbox );
+    const sw::string glyphJumpXbox = actionMap.getGlyphForAction( "Jump" );
+    SW_EXPECT_TRUE( glyphJumpXbox.find( "A" ) != sw::string::npos );
 
-	inputManager.setActiveDeviceType( sw::InputDeviceType::GamepadPlayStation );
-	const sw::string glyphJumpPS = actionMap.getGlyphForAction( "Jump" );
-	SW_EXPECT_TRUE( glyphJumpPS.find( "X" ) != sw::string::npos );
+    inputManager.setActiveDeviceType( sw::InputDeviceType::GamepadPlayStation );
+    const sw::string glyphJumpPS = actionMap.getGlyphForAction( "Jump" );
+    SW_EXPECT_TRUE( glyphJumpPS.find( "X" ) != sw::string::npos );
 
-	inputManager.shutdown();
+    inputManager.shutdown();
 }
 
 /**
@@ -601,25 +601,25 @@ SW_TEST_CASE( ActionMapTest, GlyphResolutionWithDeviceTypeAndChords )
  */
 SW_TEST_CASE( VirtualJoystickTest, CalculateVectorAndDeadzone )
 {
-	const sw::float2 center{ 100.0f, 100.0f };
-	const float32	 radius	  = 50.0f;
-	const float32	 deadzone = 0.2f;
+    const sw::float2 center{ 100.0f, 100.0f };
+    const float32    radius   = 50.0f;
+    const float32    deadzone = 0.2f;
 
-	const sw::float2 touchInDeadzone{ 105.0f, 100.0f };
-	const sw::float2 vecDead = sw::VirtualJoystick::calculateVector( center, touchInDeadzone, radius, deadzone );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._x, 1e-4f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._y, 1e-4f );
+    const sw::float2 touchInDeadzone{ 105.0f, 100.0f };
+    const sw::float2 vecDead = sw::VirtualJoystick::calculateVector( center, touchInDeadzone, radius, deadzone );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, vecDead._y, 1e-4f );
 
-	const sw::float2 touchFarRight{ 200.0f, 100.0f };
-	const sw::float2 vecFar = sw::VirtualJoystick::calculateVector( center, touchFarRight, radius, deadzone );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, vecFar._x, 1e-4f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, vecFar._y, 1e-4f );
+    const sw::float2 touchFarRight{ 200.0f, 100.0f };
+    const sw::float2 vecFar = sw::VirtualJoystick::calculateVector( center, touchFarRight, radius, deadzone );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, vecFar._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, vecFar._y, 1e-4f );
 
-	const sw::float2 touchDiag{ 150.0f, 150.0f };
-	const sw::float2 vecDiag = sw::VirtualJoystick::calculateVector( center, touchDiag, radius, 0.0f );
-	SW_EXPECT_TRUE( vecDiag._x > 0.0f && vecDiag._y > 0.0f );
-	const float32 len = sw::MathUtil::sqrt( vecDiag._x * vecDiag._x + vecDiag._y * vecDiag._y );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, len, 1e-4f );
+    const sw::float2 touchDiag{ 150.0f, 150.0f };
+    const sw::float2 vecDiag = sw::VirtualJoystick::calculateVector( center, touchDiag, radius, 0.0f );
+    SW_EXPECT_TRUE( vecDiag._x > 0.0f && vecDiag._y > 0.0f );
+    const float32 len = sw::MathUtil::sqrt( vecDiag._x * vecDiag._x + vecDiag._y * vecDiag._y );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, len, 1e-4f );
 }
 
 /**
@@ -627,29 +627,29 @@ SW_TEST_CASE( VirtualJoystickTest, CalculateVectorAndDeadzone )
  */
 SW_TEST_CASE( InputManagerTest, MouseLockModeAndSubRect )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::None );
+    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::None );
 
-	input.setMouseLockMode( sw::MouseLockMode::ConfinedToWindow );
-	SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::ConfinedToWindow );
+    input.setMouseLockMode( sw::MouseLockMode::ConfinedToWindow );
+    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::ConfinedToWindow );
 
-	input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
-	SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::LockedInCenter );
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+    SW_EXPECT_TRUE( input.getMouseLockMode() == sw::MouseLockMode::LockedInCenter );
 
-	input.setMouseClipSubRect( 10, 20, 300, 400 );
-	int32 subX = 0, subY = 0, subW = 0, subH = 0;
-	SW_EXPECT_TRUE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
-	SW_EXPECT_EQUAL( 10, subX );
-	SW_EXPECT_EQUAL( 20, subY );
-	SW_EXPECT_EQUAL( 300, subW );
-	SW_EXPECT_EQUAL( 400, subH );
+    input.setMouseClipSubRect( 10, 20, 300, 400 );
+    int32 subX = 0, subY = 0, subW = 0, subH = 0;
+    SW_EXPECT_TRUE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
+    SW_EXPECT_EQUAL( 10, subX );
+    SW_EXPECT_EQUAL( 20, subY );
+    SW_EXPECT_EQUAL( 300, subW );
+    SW_EXPECT_EQUAL( 400, subH );
 
-	input.clearMouseClipSubRect();
-	SW_EXPECT_FALSE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
+    input.clearMouseClipSubRect();
+    SW_EXPECT_FALSE( input.getMouseClipSubRect( subX, subY, subW, subH ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -657,20 +657,20 @@ SW_TEST_CASE( InputManagerTest, MouseLockModeAndSubRect )
  */
 SW_TEST_CASE( InputManagerTest, MouseWheelHorizontal )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
 
-	input.postRawEvent( sw::RawInputEvent::makeMouseHorizontalWheel( 1.5f ) );
-	input.beginFrame( 0.016f );
+    input.postRawEvent( sw::RawInputEvent::makeMouseHorizontalWheel( 1.5f ) );
+    input.beginFrame( 0.016f );
 
-	SW_EXPECT_NEAR_EQUAL( 1.5f, input.getMouseWheelHorizontal(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, input.getMouseWheelHorizontal(), 1e-4f );
 
-	input.endFrame();
-	SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
+    input.endFrame();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelHorizontal(), 1e-4f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -678,25 +678,25 @@ SW_TEST_CASE( InputManagerTest, MouseWheelHorizontal )
  */
 SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::GamepadDevice* pPad = input.getGamepad( 0 );
-	if ( pPad != nullptr )
-	{
-		pPad->playVibration( 0.8f, 0.6f, 0.1f );
-		SW_EXPECT_NEAR_EQUAL( 0.8f, pPad->getLeftMotorVibration(), 1e-4f );
-		SW_EXPECT_NEAR_EQUAL( 0.6f, pPad->getRightMotorVibration(), 1e-4f );
+    sw::GamepadDevice* pPad = input.getGamepad( 0 );
+    if ( pPad != nullptr )
+    {
+        pPad->playVibration( 0.8f, 0.6f, 0.1f );
+        SW_EXPECT_NEAR_EQUAL( 0.8f, pPad->getLeftMotorVibration(), 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.6f, pPad->getRightMotorVibration(), 1e-4f );
 
-		pPad->onFrameBegin( 0.05f );
-		SW_EXPECT_NEAR_EQUAL( 0.8f, pPad->getLeftMotorVibration(), 1e-4f );
+        pPad->onFrameBegin( 0.05f );
+        SW_EXPECT_NEAR_EQUAL( 0.8f, pPad->getLeftMotorVibration(), 1e-4f );
 
-		pPad->onFrameBegin( 0.06f );
-		SW_EXPECT_NEAR_EQUAL( 0.0f, pPad->getLeftMotorVibration(), 1e-4f );
-		SW_EXPECT_NEAR_EQUAL( 0.0f, pPad->getRightMotorVibration(), 1e-4f );
-	}
+        pPad->onFrameBegin( 0.06f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, pPad->getLeftMotorVibration(), 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, pPad->getRightMotorVibration(), 1e-4f );
+    }
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -704,35 +704,35 @@ SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
  */
 SW_TEST_CASE( InputManagerTest, InputMutingAndInjection )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	SW_EXPECT_FALSE( input.isInputMuted() );
-	input.setInputMuted( true );
-	SW_EXPECT_TRUE( input.isInputMuted() );
+    SW_EXPECT_FALSE( input.isInputMuted() );
+    input.setInputMuted( true );
+    SW_EXPECT_TRUE( input.isInputMuted() );
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::A ) );
-	input.beginFrame( 0.016f );
-	SW_EXPECT_FALSE( input.isKeyDown( sw::Key::A ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::A ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::A ) );
 
-	input.setInputMuted( false );
+    input.setInputMuted( false );
 
-	// Snapshot 직접 주입
-	sw::InputSnapshot snap{};
-	snap._tickNumber = 200;
-	snap._buttonMask = 0x1ULL;
-	snap._moveVector = { 1.0f, 0.0f };
-	input.injectSnapshot( snap );
+    // Snapshot 직접 주입
+    sw::InputSnapshot snap{};
+    snap._tickNumber = 200;
+    snap._buttonMask = 0x1ULL;
+    snap._moveVector = { 1.0f, 0.0f };
+    input.injectSnapshot( snap );
 
-	const sw::InputSnapshot* pInjected = input.getSnapshot( 200 );
-	SW_EXPECT_TRUE( pInjected != nullptr );
-	if ( pInjected != nullptr )
-	{
-		SW_EXPECT_EQUAL( 0x1ULL, pInjected->_buttonMask );
-		SW_EXPECT_NEAR_EQUAL( 1.0f, pInjected->_moveVector._x, 1e-4f );
-	}
+    const sw::InputSnapshot* pInjected = input.getSnapshot( 200 );
+    SW_EXPECT_TRUE( pInjected != nullptr );
+    if ( pInjected != nullptr )
+    {
+        SW_EXPECT_EQUAL( 0x1ULL, pInjected->_buttonMask );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, pInjected->_moveVector._x, 1e-4f );
+    }
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -740,11 +740,11 @@ SW_TEST_CASE( InputManagerTest, InputMutingAndInjection )
  */
 SW_TEST_CASE( InputKeyMapTest, PhysicalScanCodeMapping )
 {
-	SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x11, false ) == sw::Key::W );
-	SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1E, false ) == sw::Key::A );
-	SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1F, false ) == sw::Key::S );
-	SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x20, false ) == sw::Key::D );
-	SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x39, false ) == sw::Key::Space );
+    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x11, false ) == sw::Key::W );
+    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1E, false ) == sw::Key::A );
+    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1F, false ) == sw::Key::S );
+    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x20, false ) == sw::Key::D );
+    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x39, false ) == sw::Key::Space );
 }
 
 /**
@@ -752,23 +752,23 @@ SW_TEST_CASE( InputKeyMapTest, PhysicalScanCodeMapping )
  */
 SW_TEST_CASE( RawInputEventTest, ModifierMaskAndFactories )
 {
-	sw::RawInputEvent keyEvt = sw::RawInputEvent::makeKeyDown( sw::Key::S, 0, false, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
-	SW_EXPECT_TRUE( ( keyEvt._modifierMask & sw::ModifierKey::Ctrl ) != 0 );
-	SW_EXPECT_TRUE( ( keyEvt._modifierMask & sw::ModifierKey::Shift ) != 0 );
-	SW_EXPECT_FALSE( ( keyEvt._modifierMask & sw::ModifierKey::Alt ) != 0 );
+    sw::RawInputEvent keyEvt = sw::RawInputEvent::makeKeyDown( sw::Key::S, 0, false, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
+    SW_EXPECT_TRUE( ( keyEvt._modifierMask & sw::ModifierKey::Ctrl ) != 0 );
+    SW_EXPECT_TRUE( ( keyEvt._modifierMask & sw::ModifierKey::Shift ) != 0 );
+    SW_EXPECT_FALSE( ( keyEvt._modifierMask & sw::ModifierKey::Alt ) != 0 );
 
-	sw::RawInputEvent dblEvt = sw::RawInputEvent::makeMouseDoubleClick( sw::MouseButton::Left, 120, 240 );
-	SW_EXPECT_TRUE( dblEvt._type == sw::RawInputEventType::MouseDoubleClick );
-	SW_EXPECT_EQUAL( 120, dblEvt._payload._mouseData._x );
-	SW_EXPECT_EQUAL( 240, dblEvt._payload._mouseData._y );
+    sw::RawInputEvent dblEvt = sw::RawInputEvent::makeMouseDoubleClick( sw::MouseButton::Left, 120, 240 );
+    SW_EXPECT_TRUE( dblEvt._type == sw::RawInputEventType::MouseDoubleClick );
+    SW_EXPECT_EQUAL( 120, dblEvt._payload._mouseData._x );
+    SW_EXPECT_EQUAL( 240, dblEvt._payload._mouseData._y );
 
-	sw::RawInputEvent compEvt = sw::RawInputEvent::makeTextComposition( "가나다" );
-	SW_EXPECT_TRUE( compEvt._type == sw::RawInputEventType::TextComposition );
-	SW_EXPECT_TRUE( sw::StringUtil::equals( compEvt._payload._textData._arrUtf8, "가나다" ) );
+    sw::RawInputEvent compEvt = sw::RawInputEvent::makeTextComposition( "가나다" );
+    SW_EXPECT_TRUE( compEvt._type == sw::RawInputEventType::TextComposition );
+    SW_EXPECT_TRUE( sw::StringUtil::equals( compEvt._payload._textData._arrUtf8, "가나다" ) );
 
-	sw::RawInputEvent padConnEvt = sw::RawInputEvent::makeGamepadConnection( 0, true );
-	SW_EXPECT_TRUE( padConnEvt._type == sw::RawInputEventType::GamepadConnectionChanged );
-	SW_EXPECT_EQUAL( 0, static_cast<int32>( padConnEvt._deviceIndex ) );
+    sw::RawInputEvent padConnEvt = sw::RawInputEvent::makeGamepadConnection( 0, true );
+    SW_EXPECT_TRUE( padConnEvt._type == sw::RawInputEventType::GamepadConnectionChanged );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( padConnEvt._deviceIndex ) );
 }
 
 /**
@@ -776,20 +776,20 @@ SW_TEST_CASE( RawInputEventTest, ModifierMaskAndFactories )
  */
 SW_TEST_CASE( ActionMapTest, MouseDeltaLookBinding )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bindMouseDelta( "Look", 2.0f );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bindMouseDelta( "Look", 2.0f );
 
-	input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 5 ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 5 ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
 
-	const sw::float2 lookVec = actionMap.getVector2D( "Look" );
-	SW_EXPECT_TRUE( lookVec._x != 0.0f || lookVec._y != 0.0f );
+    const sw::float2 lookVec = actionMap.getVector2D( "Look" );
+    SW_EXPECT_TRUE( lookVec._x != 0.0f || lookVec._y != 0.0f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -797,31 +797,31 @@ SW_TEST_CASE( ActionMapTest, MouseDeltaLookBinding )
  */
 SW_TEST_CASE( ActionMapTest, MultiModifierShortcutBinding )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bindShortcut( "SaveAs", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bindShortcut( "SaveAs", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	SW_EXPECT_FALSE( actionMap.wasActionTriggered( "SaveAs" ) );
-	input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_FALSE( actionMap.wasActionTriggered( "SaveAs" ) );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftControl ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftShift ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S, 0, false, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	SW_EXPECT_TRUE( actionMap.wasActionTriggered( "SaveAs" ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftControl ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::LeftShift ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S, 0, false, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_TRUE( actionMap.wasActionTriggered( "SaveAs" ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -829,23 +829,23 @@ SW_TEST_CASE( ActionMapTest, MultiModifierShortcutBinding )
  */
 SW_TEST_CASE( ActionMapTest, AnyKeyBinding )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bindAnyKey( "PressAnyKeyToStart" );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bindAnyKey( "PressAnyKeyToStart" );
 
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	SW_EXPECT_FALSE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
-	input.endFrame();
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_FALSE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	SW_EXPECT_TRUE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_TRUE( actionMap.wasActionTriggered( "PressAnyKeyToStart" ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -853,57 +853,57 @@ SW_TEST_CASE( ActionMapTest, AnyKeyBinding )
  */
 SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, 100.0f, 0.1f );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, 100.0f, 0.1f );
 
-	// 1) 버튼을 누르지 않은 상태에서는 0벡터
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	sw::float2 idleVec = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._y, 0.001f );
-	input.endFrame();
+    // 1) 버튼을 누르지 않은 상태에서는 0벡터
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    sw::float2 idleVec = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._y, 0.001f );
+    input.endFrame();
 
-	// 2) (200,200)에서 누르면 그 지점이 앵커가 되고, 아직 같은 지점이라 0벡터
-	input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 200, 200 ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	sw::float2 anchoredVec = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._y, 0.001f );
-	input.endFrame();
+    // 2) (200,200)에서 누르면 그 지점이 앵커가 되고, 아직 같은 지점이라 0벡터
+    input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 200, 200 ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    sw::float2 anchoredVec = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._y, 0.001f );
+    input.endFrame();
 
-	// 3) 앵커(200,200)에서 (300,200)으로 드래그 → +X 방향 최대치(반경 100 도달)
-	input.postRawEvent( sw::RawInputEvent::makeMouseMove( 300, 200 ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	sw::float2 dragVec = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, dragVec._x, 0.01f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, dragVec._y, 0.01f );
-	input.endFrame();
+    // 3) 앵커(200,200)에서 (300,200)으로 드래그 → +X 방향 최대치(반경 100 도달)
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 300, 200 ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    sw::float2 dragVec = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, dragVec._x, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, dragVec._y, 0.01f );
+    input.endFrame();
 
-	// 4) 버튼을 떼면 즉시 0벡터로 리셋
-	input.postRawEvent( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left, 300, 200 ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	sw::float2 releasedVec = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._y, 0.001f );
-	input.endFrame();
+    // 4) 버튼을 떼면 즉시 0벡터로 리셋
+    input.postRawEvent( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left, 300, 200 ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    sw::float2 releasedVec = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._y, 0.001f );
+    input.endFrame();
 
-	// 5) 다른 위치(50,50)에서 다시 누르면 앵커가 새 위치로 플로팅되어 다시 0벡터
-	input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 50, 50 ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	sw::float2 reAnchoredVec = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._y, 0.001f );
-	input.endFrame();
+    // 5) 다른 위치(50,50)에서 다시 누르면 앵커가 새 위치로 플로팅되어 다시 0벡터
+    input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 50, 50 ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    sw::float2 reAnchoredVec = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._y, 0.001f );
+    input.endFrame();
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -911,27 +911,27 @@ SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
  */
 SW_TEST_CASE( ActionMapTest, RebindConflictResolution )
 {
-	sw::ActionMap actionMap;
-	actionMap.bind( "ActionA", sw::Key::F );
-	actionMap.bind( "ActionB", sw::Key::G );
+    sw::ActionMap actionMap;
+    actionMap.bind( "ActionA", sw::Key::F );
+    actionMap.bind( "ActionB", sw::Key::G );
 
-	const bool bSwapOk = actionMap.rebindWithResolution( "ActionB", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::Swap );
-	SW_EXPECT_TRUE( bSwapOk );
-	const sw::ActionBinding* pBindB = actionMap.getBinding( "ActionB", 0 );
-	const sw::ActionBinding* pBindA = actionMap.getBinding( "ActionA", 0 );
-	SW_EXPECT_TRUE( pBindB != nullptr && pBindB->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::F ) );
-	SW_EXPECT_TRUE( pBindA != nullptr && pBindA->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::G ) );
+    const bool bSwapOk = actionMap.rebindWithResolution( "ActionB", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::Swap );
+    SW_EXPECT_TRUE( bSwapOk );
+    const sw::ActionBinding* pBindB = actionMap.getBinding( "ActionB", 0 );
+    const sw::ActionBinding* pBindA = actionMap.getBinding( "ActionA", 0 );
+    SW_EXPECT_TRUE( pBindB != nullptr && pBindB->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::F ) );
+    SW_EXPECT_TRUE( pBindA != nullptr && pBindA->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::G ) );
 
-	const bool bOverrideOk = actionMap.rebindWithResolution( "ActionA", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::Override );
-	SW_EXPECT_TRUE( bOverrideOk );
-	pBindA = actionMap.getBinding( "ActionA", 0 );
-	pBindB = actionMap.getBinding( "ActionB", 0 );
-	SW_EXPECT_TRUE( pBindA != nullptr && pBindA->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::F ) );
-	SW_EXPECT_TRUE( pBindB != nullptr && pBindB->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::Unknown ) );
+    const bool bOverrideOk = actionMap.rebindWithResolution( "ActionA", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::Override );
+    SW_EXPECT_TRUE( bOverrideOk );
+    pBindA = actionMap.getBinding( "ActionA", 0 );
+    pBindB = actionMap.getBinding( "ActionB", 0 );
+    SW_EXPECT_TRUE( pBindA != nullptr && pBindA->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::F ) );
+    SW_EXPECT_TRUE( pBindB != nullptr && pBindB->_arrSlot[0]._controlIndex == static_cast<uint16>( sw::Key::Unknown ) );
 
-	const bool bAddOk = actionMap.rebindWithResolution( "ActionB", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::AddSecondary );
-	SW_EXPECT_TRUE( bAddOk );
-	SW_EXPECT_EQUAL( 2u, actionMap.getBindingCount( "ActionB" ) );
+    const bool bAddOk = actionMap.rebindWithResolution( "ActionB", sw::InputSlot::fromKey( sw::Key::F ), sw::ConflictResolution::AddSecondary );
+    SW_EXPECT_TRUE( bAddOk );
+    SW_EXPECT_EQUAL( 2u, actionMap.getBindingCount( "ActionB" ) );
 }
 
 /**
@@ -939,13 +939,13 @@ SW_TEST_CASE( ActionMapTest, RebindConflictResolution )
  */
 SW_TEST_CASE( ActionMapTest, DebugActionStatesDump )
 {
-	sw::ActionMap actionMap;
-	actionMap.bind( "Jump", sw::Key::Space );
-	actionMap.bind( "Fire", sw::MouseButton::Left );
+    sw::ActionMap actionMap;
+    actionMap.bind( "Jump", sw::Key::Space );
+    actionMap.bind( "Fire", sw::MouseButton::Left );
 
-	sw::vector<sw::DebugActionState> listState;
-	actionMap.getDebugActionStates( listState );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listState.size() ) );
+    sw::vector<sw::DebugActionState> listState;
+    actionMap.getDebugActionStates( listState );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listState.size() ) );
 }
 
 /**
@@ -953,35 +953,35 @@ SW_TEST_CASE( ActionMapTest, DebugActionStatesDump )
  */
 SW_TEST_CASE( ActionMapTest, ActionHandleZeroLookup )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bind( "Fire", sw::Key::Space );
-	actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bind( "Fire", sw::Key::Space );
+    actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
 
-	const sw::ActionHandle hFire = actionMap.getActionHandle( "Fire" );
-	const sw::ActionHandle hMove = actionMap.getActionHandle( "Move" );
+    const sw::ActionHandle hFire = actionMap.getActionHandle( "Fire" );
+    const sw::ActionHandle hMove = actionMap.getActionHandle( "Move" );
 
-	SW_EXPECT_TRUE( hFire.isValid() );
-	SW_EXPECT_TRUE( hMove.isValid() );
+    SW_EXPECT_TRUE( hFire.isValid() );
+    SW_EXPECT_TRUE( hMove.isValid() );
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
 
-	SW_EXPECT_TRUE( actionMap.wasActionTriggered( hFire ) );
-	SW_EXPECT_TRUE( actionMap.isActionDown( hFire ) );
-	SW_EXPECT_TRUE( actionMap.wasActionPressed( hFire ) );
-	SW_EXPECT_FALSE( actionMap.wasActionReleased( hFire ) );
+    SW_EXPECT_TRUE( actionMap.wasActionTriggered( hFire ) );
+    SW_EXPECT_TRUE( actionMap.isActionDown( hFire ) );
+    SW_EXPECT_TRUE( actionMap.wasActionPressed( hFire ) );
+    SW_EXPECT_FALSE( actionMap.wasActionReleased( hFire ) );
 
-	const sw::float2 moveVec = actionMap.getVector2D( hMove );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, moveVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, moveVec._y, 0.001f );
-	SW_EXPECT_EQUAL( static_cast<uint32>( sw::ActionPhase::Triggered ), static_cast<uint32>( actionMap.getActionPhase( hFire ) ) );
+    const sw::float2 moveVec = actionMap.getVector2D( hMove );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, moveVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, moveVec._y, 0.001f );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::ActionPhase::Triggered ), static_cast<uint32>( actionMap.getActionPhase( hFire ) ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -989,36 +989,36 @@ SW_TEST_CASE( ActionMapTest, ActionHandleZeroLookup )
  */
 SW_TEST_CASE( ActionMapTest, DigitalNormalizationModes )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
 
-	// 1) IndependentAxes 모드: W + D 대각선 입력 시 X=1.0, Y=1.0 유지
-	actionMap.setDigitalNormalization( sw::DigitalNormalization::IndependentAxes );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
+    // 1) IndependentAxes 모드: W + D 대각선 입력 시 X=1.0, Y=1.0 유지
+    actionMap.setDigitalNormalization( sw::DigitalNormalization::IndependentAxes );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
 
-	sw::float2 vecIndep = actionMap.getVector2D( "Move" );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, vecIndep._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, vecIndep._y, 0.001f );
-	input.endFrame();
+    sw::float2 vecIndep = actionMap.getVector2D( "Move" );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, vecIndep._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, vecIndep._y, 0.001f );
+    input.endFrame();
 
-	// 2) Circular 모드: W + D 대각선 입력 시 단위 원(길이 1.0)으로 정규화
-	actionMap.setDigitalNormalization( sw::DigitalNormalization::Circular );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
+    // 2) Circular 모드: W + D 대각선 입력 시 단위 원(길이 1.0)으로 정규화
+    actionMap.setDigitalNormalization( sw::DigitalNormalization::Circular );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
 
-	sw::float2	  vecCirc = actionMap.getVector2D( "Move" );
-	const float32 len	  = sw::MathUtil::sqrt( vecCirc._x * vecCirc._x + vecCirc._y * vecCirc._y );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, len, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.7071f, vecCirc._x, 0.01f );
-	SW_EXPECT_NEAR_EQUAL( 0.7071f, vecCirc._y, 0.01f );
+    sw::float2    vecCirc = actionMap.getVector2D( "Move" );
+    const float32 len     = sw::MathUtil::sqrt( vecCirc._x * vecCirc._x + vecCirc._y * vecCirc._y );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, len, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.7071f, vecCirc._x, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.7071f, vecCirc._y, 0.01f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1026,19 +1026,19 @@ SW_TEST_CASE( ActionMapTest, DigitalNormalizationModes )
  */
 SW_TEST_CASE( ActionMapTest, RingBufferZeroAllocation )
 {
-	sw::ActionMap actionMap;
+    sw::ActionMap actionMap;
 
-	// 1) 선입력 버퍼링 16개 초과 주입 (오버플로우 링 래핑)
-	for ( uint32 index = 0; index < 20; ++index )
-	{
-		actionMap.bufferAction( "Action_" + std::to_string( index ), 0.5f );
-	}
-	SW_EXPECT_TRUE( actionMap.consumeBufferedAction( "Action_19" ) );
-	SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
+    // 1) 선입력 버퍼링 16개 초과 주입 (오버플로우 링 래핑)
+    for ( uint32 index = 0; index < 20; ++index )
+    {
+        actionMap.bufferAction( "Action_" + std::to_string( index ), 0.5f );
+    }
+    SW_EXPECT_TRUE( actionMap.consumeBufferedAction( "Action_19" ) );
+    SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
 
-	// 2) 시간 경과 후 만료 테스트
-	actionMap.update( 0.6f );
-	SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_19" ) );
+    // 2) 시간 경과 후 만료 테스트
+    actionMap.update( 0.6f );
+    SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_19" ) );
 }
 
 /**
@@ -1046,43 +1046,43 @@ SW_TEST_CASE( ActionMapTest, RingBufferZeroAllocation )
  */
 SW_TEST_CASE( ActionMapTest, CommandPatternFuzzyCombo )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap& actionMap = input.getActionMap();
-	actionMap.bind( "Down", sw::Key::S );
-	actionMap.bind( "DownRight", sw::Key::C );
-	actionMap.bind( "Right", sw::Key::D );
-	actionMap.bind( "Punch", sw::Key::J );
+    sw::ActionMap& actionMap = input.getActionMap();
+    actionMap.bind( "Down", sw::Key::S );
+    actionMap.bind( "DownRight", sw::Key::C );
+    actionMap.bind( "Right", sw::Key::D );
+    actionMap.bind( "Punch", sw::Key::J );
 
-	// 1) 2 (Down) -> 3 (DownRight) -> 6 (Right) -> Punch (236P 파동권) 순차 입력
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
-	input.beginFrame( 0.05f );
-	actionMap.update( 0.05f );
-	input.endFrame();
+    // 1) 2 (Down) -> 3 (DownRight) -> 6 (Right) -> Punch (236P 파동권) 순차 입력
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
+    input.beginFrame( 0.05f );
+    actionMap.update( 0.05f );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::C ) );
-	input.beginFrame( 0.05f );
-	actionMap.update( 0.05f );
-	input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::S ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::C ) );
+    input.beginFrame( 0.05f );
+    actionMap.update( 0.05f );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::C ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
-	input.beginFrame( 0.05f );
-	actionMap.update( 0.05f );
-	input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::C ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
+    input.beginFrame( 0.05f );
+    actionMap.update( 0.05f );
+    input.endFrame();
 
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::D ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::J ) );
-	input.beginFrame( 0.05f );
-	actionMap.update( 0.05f );
-	input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::D ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::J ) );
+    input.beginFrame( 0.05f );
+    actionMap.update( 0.05f );
+    input.endFrame();
 
-	SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236Punch", 0.5f ) );
-	SW_EXPECT_FALSE( actionMap.checkCommandPattern( "623Punch", 0.5f ) );
+    SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236Punch", 0.5f ) );
+    SW_EXPECT_FALSE( actionMap.checkCommandPattern( "623Punch", 0.5f ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1090,72 +1090,72 @@ SW_TEST_CASE( ActionMapTest, CommandPatternFuzzyCombo )
  */
 SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
 {
-	sw::ActionMap mapSave;
-	mapSave.bind( "SingleKey", sw::Key::E );
-	mapSave.bindAxis1DComposite( "MoveX", sw::Key::A, sw::Key::D );
-	mapSave.bindVector2D( "Move2D", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
-	mapSave.bindGamepadStick2D( "LookStick", sw::GamepadStick::Right, 0.2f, {}, 0, 0.95f, 1.5f );
-	mapSave.bindMouseDelta( "LookMouse", 2.5f );
-	mapSave.bindChord( "ChordAction", sw::Key::LeftControl, sw::Key::K );
-	mapSave.bindShortcut( "ShortcutAction", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
-	mapSave.bindAnyKey( "AnyKeyAction" );
-	mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
+    sw::ActionMap mapSave;
+    mapSave.bind( "SingleKey", sw::Key::E );
+    mapSave.bindAxis1DComposite( "MoveX", sw::Key::A, sw::Key::D );
+    mapSave.bindVector2D( "Move2D", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
+    mapSave.bindGamepadStick2D( "LookStick", sw::GamepadStick::Right, 0.2f, {}, 0, 0.95f, 1.5f );
+    mapSave.bindMouseDelta( "LookMouse", 2.5f );
+    mapSave.bindChord( "ChordAction", sw::Key::LeftControl, sw::Key::K );
+    mapSave.bindShortcut( "ShortcutAction", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
+    mapSave.bindAnyKey( "AnyKeyAction" );
+    mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
 
-	const sw::string savePath = "test_all_user_bindings.xml";
-	SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
+    const sw::string savePath = "test_all_user_bindings.xml";
+    SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
 
-	sw::ActionMap mapLoad;
-	SW_EXPECT_TRUE( mapLoad.loadUserBindings( savePath ) );
+    sw::ActionMap mapLoad;
+    SW_EXPECT_TRUE( mapLoad.loadUserBindings( savePath ) );
 
-	SW_EXPECT_TRUE( mapLoad.hasAction( "SingleKey" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "MoveX" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "Move2D" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "LookStick" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "LookMouse" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "ChordAction" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "ShortcutAction" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "AnyKeyAction" ) );
-	SW_EXPECT_TRUE( mapLoad.hasAction( "MoveJoystick" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "SingleKey" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "MoveX" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "Move2D" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "LookStick" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "LookMouse" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "ChordAction" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "ShortcutAction" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "AnyKeyAction" ) );
+    SW_EXPECT_TRUE( mapLoad.hasAction( "MoveJoystick" ) );
 
-	const sw::ActionBinding* pJoystickBind = mapLoad.getBinding( "MoveJoystick", 0 );
-	if ( pJoystickBind != nullptr )
-	{
-		SW_EXPECT_TRUE( pJoystickBind->_kind == sw::BindingKind::VirtualJoystick2D );
-		SW_EXPECT_TRUE( pJoystickBind->_arrSlot[0]._deviceKind == sw::InputDeviceKind::Mouse );
-		SW_EXPECT_EQUAL( static_cast<uint16>( sw::MouseButton::Right ), pJoystickBind->_arrSlot[0]._controlIndex );
-		SW_EXPECT_NEAR_EQUAL( 80.0f, pJoystickBind->_scale, 0.001f );
-		SW_EXPECT_NEAR_EQUAL( 0.2f, pJoystickBind->_deadzone, 0.001f );
-		SW_EXPECT_NEAR_EQUAL( 0.9f, pJoystickBind->_outerDeadzone, 0.001f );
-	}
-	else
-	{
-		SW_EXPECT_NOT_NULL( pJoystickBind );
-	}
+    const sw::ActionBinding* pJoystickBind = mapLoad.getBinding( "MoveJoystick", 0 );
+    if ( pJoystickBind != nullptr )
+    {
+        SW_EXPECT_TRUE( pJoystickBind->_kind == sw::BindingKind::VirtualJoystick2D );
+        SW_EXPECT_TRUE( pJoystickBind->_arrSlot[0]._deviceKind == sw::InputDeviceKind::Mouse );
+        SW_EXPECT_EQUAL( static_cast<uint16>( sw::MouseButton::Right ), pJoystickBind->_arrSlot[0]._controlIndex );
+        SW_EXPECT_NEAR_EQUAL( 80.0f, pJoystickBind->_scale, 0.001f );
+        SW_EXPECT_NEAR_EQUAL( 0.2f, pJoystickBind->_deadzone, 0.001f );
+        SW_EXPECT_NEAR_EQUAL( 0.9f, pJoystickBind->_outerDeadzone, 0.001f );
+    }
+    else
+    {
+        SW_EXPECT_NOT_NULL( pJoystickBind );
+    }
 
-	const sw::ActionBinding* pStickBind = mapLoad.getBinding( "LookStick", 0 );
-	if ( pStickBind != nullptr )
-	{
-		SW_EXPECT_TRUE( pStickBind->_kind == sw::BindingKind::GamepadStick2D );
-		SW_EXPECT_TRUE( pStickBind->_stick == sw::GamepadStick::Right );
-		SW_EXPECT_NEAR_EQUAL( 0.2f, pStickBind->_deadzone, 0.001f );
-		SW_EXPECT_NEAR_EQUAL( 0.95f, pStickBind->_outerDeadzone, 0.001f );
-		SW_EXPECT_NEAR_EQUAL( 1.5f, pStickBind->_responseExponent, 0.001f );
-	}
-	else
-	{
-		SW_EXPECT_NOT_NULL( pStickBind );
-	}
+    const sw::ActionBinding* pStickBind = mapLoad.getBinding( "LookStick", 0 );
+    if ( pStickBind != nullptr )
+    {
+        SW_EXPECT_TRUE( pStickBind->_kind == sw::BindingKind::GamepadStick2D );
+        SW_EXPECT_TRUE( pStickBind->_stick == sw::GamepadStick::Right );
+        SW_EXPECT_NEAR_EQUAL( 0.2f, pStickBind->_deadzone, 0.001f );
+        SW_EXPECT_NEAR_EQUAL( 0.95f, pStickBind->_outerDeadzone, 0.001f );
+        SW_EXPECT_NEAR_EQUAL( 1.5f, pStickBind->_responseExponent, 0.001f );
+    }
+    else
+    {
+        SW_EXPECT_NOT_NULL( pStickBind );
+    }
 
-	const sw::ActionBinding* pMouseBind = mapLoad.getBinding( "LookMouse", 0 );
-	if ( pMouseBind != nullptr )
-	{
-		SW_EXPECT_TRUE( pMouseBind->_kind == sw::BindingKind::MouseDelta2D );
-		SW_EXPECT_NEAR_EQUAL( 2.5f, pMouseBind->_scale, 0.001f );
-	}
-	else
-	{
-		SW_EXPECT_NOT_NULL( pMouseBind );
-	}
+    const sw::ActionBinding* pMouseBind = mapLoad.getBinding( "LookMouse", 0 );
+    if ( pMouseBind != nullptr )
+    {
+        SW_EXPECT_TRUE( pMouseBind->_kind == sw::BindingKind::MouseDelta2D );
+        SW_EXPECT_NEAR_EQUAL( 2.5f, pMouseBind->_scale, 0.001f );
+    }
+    else
+    {
+        SW_EXPECT_NOT_NULL( pMouseBind );
+    }
 }
 
 /**
@@ -1163,23 +1163,23 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
  */
 SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	input.setMouseSmoothing( 0.5f );
-	input.setMouseAcceleration( 2.0f );
-	SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouseSmoothing(), 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouseAcceleration(), 0.001f );
+    input.setMouseSmoothing( 0.5f );
+    input.setMouseAcceleration( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouseSmoothing(), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouseAcceleration(), 0.001f );
 
-	input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
-	input.beginFrame( 0.016f );
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
+    input.beginFrame( 0.016f );
 
-	float32 smoothDx{ 0.0f };
-	float32 smoothDy{ 0.0f };
-	input.getSmoothMouseDelta( smoothDx, smoothDy );
-	SW_EXPECT_TRUE( smoothDx > 0.0f );
+    float32 smoothDx{ 0.0f };
+    float32 smoothDy{ 0.0f };
+    input.getSmoothMouseDelta( smoothDx, smoothDy );
+    SW_EXPECT_TRUE( smoothDx > 0.0f );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1187,14 +1187,14 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
  */
 SW_TEST_CASE( GamepadDeviceTest, BatteryInfoQuery )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	const sw::GamepadBatteryInfo batInfo = input.getGamepadBatteryInfo( 0 );
-	// 비연결/가상 환경에서는 Disconnected 또는 Unknown 반환
-	SW_EXPECT_TRUE( batInfo._type == sw::GamepadBatteryType::Disconnected || batInfo._type == sw::GamepadBatteryType::Unknown || batInfo._type == sw::GamepadBatteryType::Wired || batInfo._type == sw::GamepadBatteryType::Alkaline );
+    const sw::GamepadBatteryInfo batInfo = input.getGamepadBatteryInfo( 0 );
+    // 비연결/가상 환경에서는 Disconnected 또는 Unknown 반환
+    SW_EXPECT_TRUE( batInfo._type == sw::GamepadBatteryType::Disconnected || batInfo._type == sw::GamepadBatteryType::Unknown || batInfo._type == sw::GamepadBatteryType::Wired || batInfo._type == sw::GamepadBatteryType::Alkaline );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1202,41 +1202,41 @@ SW_TEST_CASE( GamepadDeviceTest, BatteryInfoQuery )
  */
 SW_TEST_CASE( KeyboardDeviceTest, NumpadHighIndexKeysFrameBeginReset )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 프레임 1: Numpad8(128), NumpadEnter(135) 누름
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Numpad8 ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::NumpadEnter ) );
-	input.beginFrame( 0.016f );
+    // 프레임 1: Numpad8(128), NumpadEnter(135) 누름
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Numpad8 ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::NumpadEnter ) );
+    input.beginFrame( 0.016f );
 
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Numpad8 ) );
-	SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Numpad8 ) );
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
-	SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::NumpadEnter ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Numpad8 ) );
+    SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Numpad8 ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
+    SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::NumpadEnter ) );
 
-	input.endFrame();
+    input.endFrame();
 
-	// 프레임 2: 키 유지 상태에서 wasKeyPressed가 정상적으로 해제되는지 검증
-	input.beginFrame( 0.016f );
+    // 프레임 2: 키 유지 상태에서 wasKeyPressed가 정상적으로 해제되는지 검증
+    input.beginFrame( 0.016f );
 
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Numpad8 ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Numpad8 ) );
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
-	SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::NumpadEnter ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Numpad8 ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Numpad8 ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::NumpadEnter ) );
 
-	input.endFrame();
+    input.endFrame();
 
-	// 프레임 3: Numpad8 뗌
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Numpad8 ) );
-	input.beginFrame( 0.016f );
+    // 프레임 3: Numpad8 뗌
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Numpad8 ) );
+    input.beginFrame( 0.016f );
 
-	SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Numpad8 ) );
-	SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Numpad8 ) );
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Numpad8 ) );
+    SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Numpad8 ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::NumpadEnter ) );
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 /**
@@ -1244,17 +1244,17 @@ SW_TEST_CASE( KeyboardDeviceTest, NumpadHighIndexKeysFrameBeginReset )
  */
 SW_TEST_CASE( VirtualJoystickTest, SafeDivisionAndClamping )
 {
-	const sw::float2 anchor{ 100.0f, 100.0f };
-	// deadzone == outerDeadzone 영 분모 경계 조건
-	const sw::VirtualJoystick stick( anchor, 50.0f, 0.5f, 0.5f );
+    const sw::float2 anchor{ 100.0f, 100.0f };
+    // deadzone == outerDeadzone 영 분모 경계 조건
+    const sw::VirtualJoystick stick( anchor, 50.0f, 0.5f, 0.5f );
 
-	const sw::float2 zeroVec = stick.calculateVector( anchor );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._y, 0.001f );
+    const sw::float2 zeroVec = stick.calculateVector( anchor );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, zeroVec._y, 0.001f );
 
-	const sw::float2 farVec = stick.calculateVector( sw::float2{ 200.0f, 100.0f } );
-	SW_EXPECT_NEAR_EQUAL( 1.0f, farVec._x, 0.001f );
-	SW_EXPECT_NEAR_EQUAL( 0.0f, farVec._y, 0.001f );
+    const sw::float2 farVec = stick.calculateVector( sw::float2{ 200.0f, 100.0f } );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, farVec._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, farVec._y, 0.001f );
 }
 
 /**
@@ -1262,42 +1262,42 @@ SW_TEST_CASE( VirtualJoystickTest, SafeDivisionAndClamping )
  */
 SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	constexpr uint32 kThreadCount	  = 4;
-	constexpr uint32 kEventsPerThread = 2500;
+    constexpr uint32 kThreadCount     = 4;
+    constexpr uint32 kEventsPerThread = 2500;
 
-	std::vector<std::thread> listThread;
-	listThread.reserve( kThreadCount );
+    std::vector<std::thread> listThread;
+    listThread.reserve( kThreadCount );
 
-	for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
-	{
-		listThread.emplace_back(
-			[&input, threadIndex]()
-		{
-			for ( uint32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
-			{
-				const sw::Key key = static_cast<sw::Key>( ( ( eventIndex + threadIndex ) % 100 ) + 1 );
-				input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
-			}
-		} );
-	}
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listThread.emplace_back(
+            [&input, threadIndex]()
+        {
+            for ( uint32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
+            {
+                const sw::Key key = static_cast<sw::Key>( ( ( eventIndex + threadIndex ) % 100 ) + 1 );
+                input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+            }
+        } );
+    }
 
-	for ( auto& workerThread : listThread )
-	{
-		if ( workerThread.joinable() )
-			workerThread.join();
-	}
+    for ( auto& workerThread : listThread )
+    {
+        if ( workerThread.joinable() )
+            workerThread.join();
+    }
 
-	for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
-	{
-		input.beginFrame( 0.016f );
-		input.endFrame();
-	}
+    for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
+        input.beginFrame( 0.016f );
+        input.endFrame();
+    }
 
-	SW_EXPECT_FALSE( input.isPointerInside() );
-	input.shutdown();
+    SW_EXPECT_FALSE( input.isPointerInside() );
+    input.shutdown();
 }
 
 /**
@@ -1305,58 +1305,58 @@ SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
  */
 SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &input );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &input );
 
-	constexpr uint32			  kActionCount = 1000;
-	std::vector<sw::ActionHandle> listHandle;
-	listHandle.reserve( kActionCount );
+    constexpr uint32              kActionCount = 1000;
+    std::vector<sw::ActionHandle> listHandle;
+    listHandle.reserve( kActionCount );
 
-	for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
-	{
-		utf8 arrName[32]{};
-		snprintf( arrName, sizeof( arrName ), "Action_A_%u", actionIndex );
+    for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
+    {
+        utf8 arrName[32]{};
+        snprintf( arrName, sizeof( arrName ), "Action_A_%u", actionIndex );
 
-		actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
-		const sw::ActionHandle handle = actionMap.getActionHandle( arrName );
-		SW_EXPECT_TRUE( handle.isValid() );
-		listHandle.push_back( handle );
-	}
+        actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
+        const sw::ActionHandle handle = actionMap.getActionHandle( arrName );
+        SW_EXPECT_TRUE( handle.isValid() );
+        listHandle.push_back( handle );
+    }
 
-	// 맵 전체 초기화
-	actionMap.clear();
+    // 맵 전체 초기화
+    actionMap.clear();
 
-	// 구버전 핸들은 모두 무효화되어야 함
-	for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
-	{
-		SW_EXPECT_FALSE( actionMap.wasActionTriggered( listHandle[actionIndex] ) );
-		SW_EXPECT_FALSE( actionMap.isActionDown( listHandle[actionIndex] ) );
-	}
+    // 구버전 핸들은 모두 무효화되어야 함
+    for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
+    {
+        SW_EXPECT_FALSE( actionMap.wasActionTriggered( listHandle[actionIndex] ) );
+        SW_EXPECT_FALSE( actionMap.isActionDown( listHandle[actionIndex] ) );
+    }
 
-	// 새로운 이름의 액션 1,000개 재생성
-	for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
-	{
-		utf8 arrName[32]{};
-		snprintf( arrName, sizeof( arrName ), "Action_B_%u", actionIndex );
-		actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
-	}
+    // 새로운 이름의 액션 1,000개 재생성
+    for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
+    {
+        utf8 arrName[32]{};
+        snprintf( arrName, sizeof( arrName ), "Action_B_%u", actionIndex );
+        actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
+    }
 
-	// 구버전 핸들은 새 액션 슬롯과 인덱스가 겹쳐도 세대 불일치로 절대 트리거되지 않아야 함
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::B ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
+    // 구버전 핸들은 새 액션 슬롯과 인덱스가 겹쳐도 세대 불일치로 절대 트리거되지 않아야 함
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::B ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
 
-	for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
-	{
-		SW_EXPECT_FALSE( actionMap.wasActionTriggered( listHandle[actionIndex] ) );
-		SW_EXPECT_FALSE( actionMap.isActionDown( listHandle[actionIndex] ) );
-	}
+    for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
+    {
+        SW_EXPECT_FALSE( actionMap.wasActionTriggered( listHandle[actionIndex] ) );
+        SW_EXPECT_FALSE( actionMap.isActionDown( listHandle[actionIndex] ) );
+    }
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 /**
@@ -1364,31 +1364,31 @@ SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
  */
 SW_TEST_CASE( GamepadDeviceTest, AllAxesAndTriggerControlIndexRouting )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::GamepadDevice* pGamepad = input.getGamepad( 0 );
-	if ( pGamepad != nullptr )
-	{
-		pGamepad->setAxis( 0, -0.75f ); // LX
-		pGamepad->setAxis( 1, 0.85f );	// LY
-		pGamepad->setAxis( 2, 0.50f );	// RX
-		pGamepad->setAxis( 3, -0.60f ); // RY
-		pGamepad->setAxis( 4, 0.90f );	// LT
-		pGamepad->setAxis( 5, 0.40f );	// RT
+    sw::GamepadDevice* pGamepad = input.getGamepad( 0 );
+    if ( pGamepad != nullptr )
+    {
+        pGamepad->setAxis( 0, -0.75f ); // LX
+        pGamepad->setAxis( 1, 0.85f );  // LY
+        pGamepad->setAxis( 2, 0.50f );  // RX
+        pGamepad->setAxis( 3, -0.60f ); // RY
+        pGamepad->setAxis( 4, 0.90f );  // LT
+        pGamepad->setAxis( 5, 0.40f );  // RT
 
-		SW_EXPECT_NEAR_EQUAL( 0.90f, pGamepad->getControlValue( 100 ), 0.001f );  // LT
-		SW_EXPECT_NEAR_EQUAL( 0.40f, pGamepad->getControlValue( 101 ), 0.001f );  // RT
-		SW_EXPECT_NEAR_EQUAL( -0.75f, pGamepad->getControlValue( 102 ), 0.001f ); // LX
-		SW_EXPECT_NEAR_EQUAL( 0.85f, pGamepad->getControlValue( 103 ), 0.001f );  // LY
-		SW_EXPECT_NEAR_EQUAL( 0.50f, pGamepad->getControlValue( 104 ), 0.001f );  // RX
-		SW_EXPECT_NEAR_EQUAL( -0.60f, pGamepad->getControlValue( 105 ), 0.001f ); // RY
+        SW_EXPECT_NEAR_EQUAL( 0.90f, pGamepad->getControlValue( 100 ), 0.001f );  // LT
+        SW_EXPECT_NEAR_EQUAL( 0.40f, pGamepad->getControlValue( 101 ), 0.001f );  // RT
+        SW_EXPECT_NEAR_EQUAL( -0.75f, pGamepad->getControlValue( 102 ), 0.001f ); // LX
+        SW_EXPECT_NEAR_EQUAL( 0.85f, pGamepad->getControlValue( 103 ), 0.001f );  // LY
+        SW_EXPECT_NEAR_EQUAL( 0.50f, pGamepad->getControlValue( 104 ), 0.001f );  // RX
+        SW_EXPECT_NEAR_EQUAL( -0.60f, pGamepad->getControlValue( 105 ), 0.001f ); // RY
 
-		SW_EXPECT_TRUE( pGamepad->isControlDown( 100 ) );  // LT (0.90 >= default deadzone 0.5)
-		SW_EXPECT_FALSE( pGamepad->isControlDown( 101 ) ); // RT (0.40 < default deadzone 0.5)
-	}
+        SW_EXPECT_TRUE( pGamepad->isControlDown( 100 ) );  // LT (0.90 >= default deadzone 0.5)
+        SW_EXPECT_FALSE( pGamepad->isControlDown( 101 ) ); // RT (0.40 < default deadzone 0.5)
+    }
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1396,22 +1396,22 @@ SW_TEST_CASE( GamepadDeviceTest, AllAxesAndTriggerControlIndexRouting )
  */
 SW_TEST_CASE( KeyboardDeviceTest, RapidUpDownSameFrameEdgeCases )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	// 동일 프레임에 동일 키가 눌렸다 떼어지고 다시 눌림
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Z ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Z ) );
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Z ) );
+    // 동일 프레임에 동일 키가 눌렸다 떼어지고 다시 눌림
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Z ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Z ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Z ) );
 
-	input.beginFrame( 0.016f );
+    input.beginFrame( 0.016f );
 
-	SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Z ) );
-	SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Z ) );
-	SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Z ) );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::Z ) );
+    SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Z ) );
+    SW_EXPECT_TRUE( input.wasKeyReleased( sw::Key::Z ) );
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 /**
@@ -1419,25 +1419,25 @@ SW_TEST_CASE( KeyboardDeviceTest, RapidUpDownSameFrameEdgeCases )
  */
 SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	input.setMouseSmoothing( 0.5f );
-	input.setMouseAcceleration( 2.0f ); // 2차 거듭제곱 가속
+    input.setMouseSmoothing( 0.5f );
+    input.setMouseAcceleration( 2.0f ); // 2차 거듭제곱 가속
 
-	// 극한의 고속 이동 (+10000 픽셀 플릭)
-	input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10000, 5000, 10000, 5000 ) );
-	input.beginFrame( 0.016f );
+    // 극한의 고속 이동 (+10000 픽셀 플릭)
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10000, 5000, 10000, 5000 ) );
+    input.beginFrame( 0.016f );
 
-	float32 smoothDx{ 0.0f };
-	float32 smoothDy{ 0.0f };
-	input.getSmoothMouseDelta( smoothDx, smoothDy );
+    float32 smoothDx{ 0.0f };
+    float32 smoothDy{ 0.0f };
+    input.getSmoothMouseDelta( smoothDx, smoothDy );
 
-	SW_EXPECT_TRUE( smoothDx > 0.0f );
-	SW_EXPECT_TRUE( smoothDy > 0.0f );
+    SW_EXPECT_TRUE( smoothDx > 0.0f );
+    SW_EXPECT_TRUE( smoothDy > 0.0f );
 
-	input.endFrame();
-	input.shutdown();
+    input.endFrame();
+    input.shutdown();
 }
 
 /**
@@ -1445,46 +1445,46 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
  */
 SW_TEST_CASE( ActionMapTest, ComboParserRingBufferOverflowStress )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::ActionMap actionMap;
-	actionMap.setInputManager( &input );
+    sw::ActionMap actionMap;
+    actionMap.setInputManager( &input );
 
-	// 커맨드 구성 바인딩 (Down, DownRight, Right, P)
-	actionMap.bind( "Down", sw::Key::S, sw::ActionTrigger::Pressed );
-	actionMap.bind( "DownRight", sw::Key::C, sw::ActionTrigger::Pressed );
-	actionMap.bind( "Right", sw::Key::D, sw::ActionTrigger::Pressed );
-	actionMap.bind( "P", sw::Key::J, sw::ActionTrigger::Pressed );
+    // 커맨드 구성 바인딩 (Down, DownRight, Right, P)
+    actionMap.bind( "Down", sw::Key::S, sw::ActionTrigger::Pressed );
+    actionMap.bind( "DownRight", sw::Key::C, sw::ActionTrigger::Pressed );
+    actionMap.bind( "Right", sw::Key::D, sw::ActionTrigger::Pressed );
+    actionMap.bind( "P", sw::Key::J, sw::ActionTrigger::Pressed );
 
-	// 1단계: Down 입력
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	input.endFrame();
+    // 1단계: Down 입력
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::S ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    input.endFrame();
 
-	// 2단계: DownRight 입력
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::C ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	input.endFrame();
+    // 2단계: DownRight 입력
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::C ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    input.endFrame();
 
-	// 3단계: Right 입력
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	input.endFrame();
+    // 3단계: Right 입력
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    input.endFrame();
 
-	// 4단계: P 입력
-	input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::J ) );
-	input.beginFrame( 0.016f );
-	actionMap.update( 0.016f );
-	input.endFrame();
+    // 4단계: P 입력
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::J ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    input.endFrame();
 
-	// 콤보 패턴 매칭 검증 (236P)
-	SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236P", 0.5f ) );
+    // 콤보 패턴 매칭 검증 (236P)
+    SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236P", 0.5f ) );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1492,55 +1492,55 @@ SW_TEST_CASE( ActionMapTest, ComboParserRingBufferOverflowStress )
  */
 SW_TEST_CASE( InputReplayTest, RecordingAndPlaybackWorkflow )
 {
-	sw::InputReplay replay;
-	SW_EXPECT_FALSE( replay.isRecording() );
-	SW_EXPECT_FALSE( replay.isPlaying() );
+    sw::InputReplay replay;
+    SW_EXPECT_FALSE( replay.isRecording() );
+    SW_EXPECT_FALSE( replay.isPlaying() );
 
-	replay.startRecording( "TestReplaySession" );
-	SW_EXPECT_TRUE( replay.isRecording() );
-	SW_EXPECT_EQUAL( "TestReplaySession", replay.getReplayName() );
+    replay.startRecording( "TestReplaySession" );
+    SW_EXPECT_TRUE( replay.isRecording() );
+    SW_EXPECT_EQUAL( "TestReplaySession", replay.getReplayName() );
 
-	// 3프레임 녹화
-	for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
-	{
-		sw::InputSnapshot snapshot{};
-		snapshot._tickNumber = frameIndex;
-		snapshot._buttonMask = 1ull << frameIndex;
+    // 3프레임 녹화
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        sw::InputSnapshot snapshot{};
+        snapshot._tickNumber = frameIndex;
+        snapshot._buttonMask = 1ull << frameIndex;
 
-		sw::vector<sw::RawInputEvent> listEvent;
-		listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::A ) );
+        sw::vector<sw::RawInputEvent> listEvent;
+        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::A ) );
 
-		replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-	}
+        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
+    }
 
-	replay.stopRecording();
-	SW_EXPECT_FALSE( replay.isRecording() );
-	SW_EXPECT_EQUAL( 3u, replay.getFrameCount() );
-	SW_EXPECT_NEAR_EQUAL( 0.048f, replay.getTotalDuration(), 0.001f );
+    replay.stopRecording();
+    SW_EXPECT_FALSE( replay.isRecording() );
+    SW_EXPECT_EQUAL( 3u, replay.getFrameCount() );
+    SW_EXPECT_NEAR_EQUAL( 0.048f, replay.getTotalDuration(), 0.001f );
 
-	// 재생 모드 진입
-	replay.play();
-	SW_EXPECT_TRUE( replay.isPlaying() );
-	SW_EXPECT_FALSE( replay.isPaused() );
-	SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
+    // 재생 모드 진입
+    replay.play();
+    SW_EXPECT_TRUE( replay.isPlaying() );
+    SW_EXPECT_FALSE( replay.isPaused() );
+    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
 
-	const sw::InputReplayFrame* pFrame0 = replay.getCurrentFrame();
-	SW_EXPECT_TRUE( pFrame0 != nullptr );
-	if ( pFrame0 != nullptr )
-	{
-		SW_EXPECT_EQUAL( 0u, pFrame0->_tickNumber );
-		SW_EXPECT_EQUAL( 1ull, pFrame0->_snapshot._buttonMask );
-		SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pFrame0->_listRawEvent.size() ) );
-	}
+    const sw::InputReplayFrame* pFrame0 = replay.getCurrentFrame();
+    SW_EXPECT_TRUE( pFrame0 != nullptr );
+    if ( pFrame0 != nullptr )
+    {
+        SW_EXPECT_EQUAL( 0u, pFrame0->_tickNumber );
+        SW_EXPECT_EQUAL( 1ull, pFrame0->_snapshot._buttonMask );
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pFrame0->_listRawEvent.size() ) );
+    }
 
-	// 일시정지 및 재개
-	replay.pause();
-	SW_EXPECT_TRUE( replay.isPaused() );
-	replay.resume();
-	SW_EXPECT_FALSE( replay.isPaused() );
+    // 일시정지 및 재개
+    replay.pause();
+    SW_EXPECT_TRUE( replay.isPaused() );
+    replay.resume();
+    SW_EXPECT_FALSE( replay.isPaused() );
 
-	replay.stop();
-	SW_EXPECT_FALSE( replay.isPlaying() );
+    replay.stop();
+    SW_EXPECT_FALSE( replay.isPlaying() );
 }
 
 /**
@@ -1548,36 +1548,36 @@ SW_TEST_CASE( InputReplayTest, RecordingAndPlaybackWorkflow )
  */
 SW_TEST_CASE( InputReplayTest, StepForwardAndBackward )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	sw::InputReplay replay;
-	replay.startRecording( "StepSession" );
+    sw::InputReplay replay;
+    replay.startRecording( "StepSession" );
 
-	for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-	{
-		sw::InputSnapshot snapshot{};
-		snapshot._tickNumber = frameIndex;
-		sw::vector<sw::RawInputEvent> listEvent;
-		listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
-		replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-	}
-	replay.stopRecording();
+    for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
+        sw::InputSnapshot snapshot{};
+        snapshot._tickNumber = frameIndex;
+        sw::vector<sw::RawInputEvent> listEvent;
+        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
+        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
+    }
+    replay.stopRecording();
 
-	SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
+    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
 
-	// 1프레임씩 전진
-	replay.stepForward( &input );
-	SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
+    // 1프레임씩 전진
+    replay.stepForward( &input );
+    SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
 
-	replay.stepForward( &input );
-	SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
+    replay.stepForward( &input );
+    SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
 
-	// 1프레임 후진
-	replay.stepBackward( &input );
-	SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
+    // 1프레임 후진
+    replay.stepBackward( &input );
+    SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1585,50 +1585,50 @@ SW_TEST_CASE( InputReplayTest, StepForwardAndBackward )
  */
 SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerEdgeDetection )
 {
-	struct TestGamepadDevice : public sw::GamepadDevice
-	{
-		using sw::GamepadDevice::GamepadDevice;
-		void poll( [[maybe_unused]] float32 deltaTime ) override {}
-	};
+    struct TestGamepadDevice : public sw::GamepadDevice
+    {
+        using sw::GamepadDevice::GamepadDevice;
+        void poll( [[maybe_unused]] float32 deltaTime ) override {}
+    };
 
-	TestGamepadDevice pad( 0 );
+    TestGamepadDevice pad( 0 );
 
-	// 초기 상태
-	pad.onFrameBegin( 0.016f );
-	SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
-	pad.onFrameEnd();
+    // 초기 상태
+    pad.onFrameBegin( 0.016f );
+    SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
+    pad.onFrameEnd();
 
-	// 프레임 1: 트리거 0.8f 인입 (상승 엣지)
-	pad.onFrameBegin( 0.016f );
-	pad.setAxis( 4, 0.8f ); // Left Trigger
-	SW_EXPECT_TRUE( pad.isControlDown( 100 ) );
-	SW_EXPECT_TRUE( pad.wasControlPressed( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
-	pad.onFrameEnd();
+    // 프레임 1: 트리거 0.8f 인입 (상승 엣지)
+    pad.onFrameBegin( 0.016f );
+    pad.setAxis( 4, 0.8f ); // Left Trigger
+    SW_EXPECT_TRUE( pad.isControlDown( 100 ) );
+    SW_EXPECT_TRUE( pad.wasControlPressed( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
+    pad.onFrameEnd();
 
-	// 프레임 2: 계속 0.8f 유지 (누르고 있음 -> wasControlPressed는 false여야 함)
-	pad.onFrameBegin( 0.016f );
-	SW_EXPECT_TRUE( pad.isControlDown( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
-	pad.onFrameEnd();
+    // 프레임 2: 계속 0.8f 유지 (누르고 있음 -> wasControlPressed는 false여야 함)
+    pad.onFrameBegin( 0.016f );
+    SW_EXPECT_TRUE( pad.isControlDown( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
+    pad.onFrameEnd();
 
-	// 프레임 3: 트리거 0.0f로 해제 (하강 엣지)
-	pad.onFrameBegin( 0.016f );
-	pad.setAxis( 4, 0.0f );
-	SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
-	SW_EXPECT_TRUE( pad.wasControlReleased( 100 ) );
-	pad.onFrameEnd();
+    // 프레임 3: 트리거 0.0f로 해제 (하강 엣지)
+    pad.onFrameBegin( 0.016f );
+    pad.setAxis( 4, 0.0f );
+    SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
+    SW_EXPECT_TRUE( pad.wasControlReleased( 100 ) );
+    pad.onFrameEnd();
 
-	// 프레임 4: 뗀 상태 유지 (wasControlReleased는 false여야 함)
-	pad.onFrameBegin( 0.016f );
-	SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
-	SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
-	pad.onFrameEnd();
+    // 프레임 4: 뗀 상태 유지 (wasControlReleased는 false여야 함)
+    pad.onFrameBegin( 0.016f );
+    SW_EXPECT_FALSE( pad.isControlDown( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlPressed( 100 ) );
+    SW_EXPECT_FALSE( pad.wasControlReleased( 100 ) );
+    pad.onFrameEnd();
 }
 
 /**
@@ -1636,39 +1636,39 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerEdgeDetection )
  */
 SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndCorruptedData )
 {
-	sw::InputReplay replay;
+    sw::InputReplay replay;
 
-	// 빈 리플레이 상태 안전성 검증
-	replay.play();
-	SW_EXPECT_FALSE( replay.isPlaying() );
-	replay.stepForward( nullptr );
-	replay.stepBackward( nullptr );
-	replay.seek( 100 );
-	SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
-	SW_EXPECT_TRUE( replay.getCurrentFrame() == nullptr );
+    // 빈 리플레이 상태 안전성 검증
+    replay.play();
+    SW_EXPECT_FALSE( replay.isPlaying() );
+    replay.stepForward( nullptr );
+    replay.stepBackward( nullptr );
+    replay.seek( 100 );
+    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
+    SW_EXPECT_TRUE( replay.getCurrentFrame() == nullptr );
 
-	// 프레임 3개 기록
-	replay.startRecording( "BoundaryTest" );
-	for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
-	{
-		sw::InputSnapshot snapshot{};
-		snapshot._tickNumber = frameIndex;
-		sw::vector<sw::RawInputEvent> listEvent;
-		replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-	}
-	replay.stopRecording();
+    // 프레임 3개 기록
+    replay.startRecording( "BoundaryTest" );
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        sw::InputSnapshot snapshot{};
+        snapshot._tickNumber = frameIndex;
+        sw::vector<sw::RawInputEvent> listEvent;
+        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
+    }
+    replay.stopRecording();
 
-	// 범위 초과 시킹 검증 (2로 클램핑)
-	replay.seek( 99999 );
-	SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
+    // 범위 초과 시킹 검증 (2로 클램핑)
+    replay.seek( 99999 );
+    SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
 
-	// 0번 프레임에서 stepBackward 시 언더플로 방어
-	replay.seek( 0 );
-	replay.stepBackward( nullptr );
-	SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
+    // 0번 프레임에서 stepBackward 시 언더플로 방어
+    replay.seek( 0 );
+    replay.stepBackward( nullptr );
+    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
 
-	// 손상된 파일 로드 시도
-	SW_EXPECT_FALSE( replay.loadFromFile( "non_existent_file.swreplay" ) );
+    // 손상된 파일 로드 시도
+    SW_EXPECT_FALSE( replay.loadFromFile( "non_existent_file.swreplay" ) );
 }
 
 /**
@@ -1676,39 +1676,39 @@ SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndCorruptedData )
  */
 SW_TEST_CASE( InputStressTest, MultiThreadedRawEventConcurrentBurst )
 {
-	sw::InputManager input;
-	SW_EXPECT_TRUE( input.initialize() );
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
 
-	constexpr uint32 kThreadCount	  = 4;
-	constexpr uint32 kEventsPerThread = 2500;
+    constexpr uint32 kThreadCount     = 4;
+    constexpr uint32 kEventsPerThread = 2500;
 
-	sw::vector<std::thread> listThread;
-	listThread.reserve( kThreadCount );
+    sw::vector<std::thread> listThread;
+    listThread.reserve( kThreadCount );
 
-	for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
-	{
-		listThread.emplace_back( [&input]()
-		{
-			for ( uint32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
-			{
-				const sw::Key key = static_cast<sw::Key>( ( eventIndex % 26 ) + static_cast<uint32>( sw::Key::A ) );
-				input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
-				input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
-			}
-		} );
-	}
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listThread.emplace_back( [&input]()
+        {
+            for ( uint32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
+            {
+                const sw::Key key = static_cast<sw::Key>( ( eventIndex % 26 ) + static_cast<uint32>( sw::Key::A ) );
+                input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+                input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
+            }
+        } );
+    }
 
-	for ( std::thread& t : listThread )
-	{
-		if ( t.joinable() )
-			t.join();
-	}
+    for ( std::thread& t : listThread )
+    {
+        if ( t.joinable() )
+            t.join();
+    }
 
-	// 모든 인입된 이벤트 드레인 및 상태 정합성 검증
-	input.beginFrame( 0.016f );
-	input.endFrame();
+    // 모든 인입된 이벤트 드레인 및 상태 정합성 검증
+    input.beginFrame( 0.016f );
+    input.endFrame();
 
-	input.shutdown();
+    input.shutdown();
 }
 
 /**
@@ -1716,21 +1716,21 @@ SW_TEST_CASE( InputStressTest, MultiThreadedRawEventConcurrentBurst )
  */
 SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
 {
-	sw::ActionMap actionMap;
+    sw::ActionMap actionMap;
 
-	constexpr uint32 kActionCount = 100;
-	for ( uint32 index = 0; index < kActionCount; ++index )
-	{
-		const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
-		actionMap.bind( actionName, sw::Key::Space );
-	}
+    constexpr uint32 kActionCount = 100;
+    for ( uint32 index = 0; index < kActionCount; ++index )
+    {
+        const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
+        actionMap.bind( actionName, sw::Key::Space );
+    }
 
-	// 100개 액션 간 충돌 해결 (Override 전략)
-	for ( uint32 index = 1; index < kActionCount; ++index )
-	{
-		const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
-		actionMap.rebindWithResolution( actionName, sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
-	}
+    // 100개 액션 간 충돌 해결 (Override 전략)
+    for ( uint32 index = 1; index < kActionCount; ++index )
+    {
+        const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
+        actionMap.rebindWithResolution( actionName, sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
+    }
 
-	SW_EXPECT_TRUE( actionMap.hasAction( "StressAction_0" ) );
+    SW_EXPECT_TRUE( actionMap.hasAction( "StressAction_0" ) );
 }

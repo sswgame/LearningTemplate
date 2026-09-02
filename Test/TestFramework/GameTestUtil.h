@@ -7,23 +7,23 @@
 
 namespace sw::test
 {
-	/** @brief 단위 테스트 격리를 위한 GameService RAII 바인딩 가드 */
-	class ScopedGameServiceBinding
-	{
-	public:
-		explicit ScopedGameServiceBinding( const ModuleService& service )
-		{
-			game::bindGameService( service );
-		}
+    /** @brief 단위 테스트 격리를 위한 GameService RAII 바인딩 가드 */
+    class ScopedGameServiceBinding
+    {
+    public:
+        explicit ScopedGameServiceBinding( const ModuleService& service )
+        {
+            game::bindGameService( service );
+        }
 
-		~ScopedGameServiceBinding()
-		{
-			game::unbindGameService();
-		}
+        ~ScopedGameServiceBinding()
+        {
+            game::unbindGameService();
+        }
 
-		ScopedGameServiceBinding( const ScopedGameServiceBinding& )			   = delete;
-		ScopedGameServiceBinding& operator=( const ScopedGameServiceBinding& ) = delete;
-		ScopedGameServiceBinding( ScopedGameServiceBinding&& )				   = delete;
-		ScopedGameServiceBinding& operator=( ScopedGameServiceBinding&& )	   = delete;
-	};
+        ScopedGameServiceBinding( const ScopedGameServiceBinding& )            = delete;
+        ScopedGameServiceBinding& operator=( const ScopedGameServiceBinding& ) = delete;
+        ScopedGameServiceBinding( ScopedGameServiceBinding&& )                 = delete;
+        ScopedGameServiceBinding& operator=( ScopedGameServiceBinding&& )      = delete;
+    };
 } // namespace sw::test

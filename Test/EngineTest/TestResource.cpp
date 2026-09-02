@@ -18,9 +18,9 @@
 
 SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyForNonexistent )
 {
-	sw::ResourceUtil::initialize();
-	sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat" );
-	SW_EXPECT_TRUE( nonExistent.empty() );
+    sw::ResourceUtil::initialize();
+    sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat" );
+    SW_EXPECT_TRUE( nonExistent.empty() );
 }
 
 /**
@@ -28,9 +28,9 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyForNonexistent )
  */
 SW_TEST_CASE( Engine_Resource, GetResourcePathWithFolderNameEmptyForNonexistent )
 {
-	sw::ResourceUtil::initialize();
-	sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat", "textures" );
-	SW_EXPECT_TRUE( nonExistent.empty() );
+    sw::ResourceUtil::initialize();
+    sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat", "textures" );
+    SW_EXPECT_TRUE( nonExistent.empty() );
 }
 
 /**
@@ -38,44 +38,44 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathWithFolderNameEmptyForNonexistent 
  */
 SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
 {
-	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-	const sw::string& root = sw::ResourceUtil::getRootFolderPath();
-	SW_EXPECT_TRUE_MSG( root.empty() == false, "Resource root should be resolved (display only)" );
-	SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getGameFolderPath().empty() == false, "Games resource folder should exist" );
-	SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEngineFolderPath().empty() == false, "Engine resource folder should exist" );
-	SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEditorFolderPath().empty() == false, "Editor resource folder should exist" );
+    const sw::string& root = sw::ResourceUtil::getRootFolderPath();
+    SW_EXPECT_TRUE_MSG( root.empty() == false, "Resource root should be resolved (display only)" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getGameFolderPath().empty() == false, "Games resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEngineFolderPath().empty() == false, "Engine resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEditorFolderPath().empty() == false, "Editor resource folder should exist" );
 
-	const sw::vector<sw::string> shaderFolders = sw::ResourceUtil::getResourceFolders( "shaders" );
-	SW_EXPECT_TRUE_MSG( shaderFolders.empty() == false, "Expected at least one shaders folder under domain roots" );
+    const sw::vector<sw::string> shaderFolders = sw::ResourceUtil::getResourceFolders( "shaders" );
+    SW_EXPECT_TRUE_MSG( shaderFolders.empty() == false, "Expected at least one shaders folder under domain roots" );
 
-	// 팩 상대 키(engine/common/game/editor 팩 아래 — Resource/ 자체가 아님).
-	const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
-	if ( shaderPath.empty() )
-	{
-		SW_TEST_SKIP( "samplecompute.hlsl not found under domain roots; skip path resolution check" );
-	}
+    // 팩 상대 키(engine/common/game/editor 팩 아래 — Resource/ 자체가 아님).
+    const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
+    if ( shaderPath.empty() )
+    {
+        SW_TEST_SKIP( "samplecompute.hlsl not found under domain roots; skip path resolution check" );
+    }
 
-	const sw::string lowerPath = sw::FileUtil::normalizePath( shaderPath );
-	SW_EXPECT_TRUE_MSG( lowerPath.find( "samplecompute.hlsl" ) != sw::string::npos, shaderPath.c_str() );
-	SW_EXPECT_TRUE_MSG( lowerPath.find( "/resource/" ) == sw::string::npos || lowerPath.find( "/engine/" ) != sw::string::npos ||
-							lowerPath.find( "/common/" ) != sw::string::npos || lowerPath.find( "/game/" ) != sw::string::npos ||
-							lowerPath.find( "/editor/" ) != sw::string::npos,
-						"Resolved path should live under a domain folder" );
+    const sw::string lowerPath = sw::FileUtil::normalizePath( shaderPath );
+    SW_EXPECT_TRUE_MSG( lowerPath.find( "samplecompute.hlsl" ) != sw::string::npos, shaderPath.c_str() );
+    SW_EXPECT_TRUE_MSG( lowerPath.find( "/resource/" ) == sw::string::npos || lowerPath.find( "/engine/" ) != sw::string::npos ||
+                            lowerPath.find( "/common/" ) != sw::string::npos || lowerPath.find( "/game/" ) != sw::string::npos ||
+                            lowerPath.find( "/editor/" ) != sw::string::npos,
+                        "Resolved path should live under a domain folder" );
 
-	sw::vector<uint8> bytes;
-	SW_EXPECT_TRUE_MSG( sw::FileUtil::readFile( shaderPath, bytes ), shaderPath.c_str() );
-	SW_EXPECT_TRUE( bytes.empty() == false );
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::readFile( shaderPath, bytes ), shaderPath.c_str() );
+    SW_EXPECT_TRUE( bytes.empty() == false );
 
-	const sw::string shaderPathAgain = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
-	SW_EXPECT_STREQ( shaderPath.c_str(), shaderPathAgain.c_str() );
+    const sw::string shaderPathAgain = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
+    SW_EXPECT_STREQ( shaderPath.c_str(), shaderPathAgain.c_str() );
 
-	// 전역 ID 는 도메인 루트로 간다(Resource/ + 전체 키가 아님).
-	const sw::string viaGlobal = sw::ResourceUtil::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
-	SW_EXPECT_TRUE_MSG( viaGlobal.empty() == false, "engine/... global ID should resolve under engine root" );
-	const sw::string viaPack = sw::ResourceUtil::getResourcePath( "pipeline/forwardpipeline.xml" );
-	SW_EXPECT_TRUE_MSG( viaPack.empty() == false, "pack-relative pipeline key should resolve" );
-	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( viaGlobal, viaPack ) );
+    // 전역 ID 는 도메인 루트로 간다(Resource/ + 전체 키가 아님).
+    const sw::string viaGlobal = sw::ResourceUtil::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
+    SW_EXPECT_TRUE_MSG( viaGlobal.empty() == false, "engine/... global ID should resolve under engine root" );
+    const sw::string viaPack = sw::ResourceUtil::getResourcePath( "pipeline/forwardpipeline.xml" );
+    SW_EXPECT_TRUE_MSG( viaPack.empty() == false, "pack-relative pipeline key should resolve" );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( viaGlobal, viaPack ) );
 }
 
 /**
@@ -83,9 +83,9 @@ SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
  */
 SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyWhenMissingUnderDomains )
 {
-	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-	// Resource/ 자체가 검색 루트일 때만 "동작"한다.
-	SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( "this_file_does_not_exist_anywhere.bin" ).empty() );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    // Resource/ 자체가 검색 루트일 때만 "동작"한다.
+    SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( "this_file_does_not_exist_anywhere.bin" ).empty() );
 }
 
 /**
@@ -93,24 +93,24 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyWhenMissingUnderDomains )
  */
 SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
 {
-	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-	const sw::string& gameRoot = sw::ResourceUtil::getGameFolderPath();
-	SW_EXPECT_TRUE( gameRoot.empty() == false );
+    const sw::string& gameRoot = sw::ResourceUtil::getGameFolderPath();
+    SW_EXPECT_TRUE( gameRoot.empty() == false );
 
-	const sw::string saveFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/shaders/nested" );
-	const sw::string savePath	= sw::ResourceUtil::makeSavePath( gameRoot + "/shaders/nested", "foobar.hlsl" );
-	const sw::string saveKey	= sw::FileUtil::normalizePath( savePath );
+    const sw::string saveFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/shaders/nested" );
+    const sw::string savePath   = sw::ResourceUtil::makeSavePath( gameRoot + "/shaders/nested", "foobar.hlsl" );
+    const sw::string saveKey    = sw::FileUtil::normalizePath( savePath );
 
-	SW_EXPECT_TRUE_MSG( saveKey.find( "shaders/nested/foobar.hlsl" ) != sw::string::npos, savePath.c_str() );
-	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( sw::ResourceUtil::makeSaveFolderPath( gameRoot ), gameRoot ) );
-	SW_EXPECT_TRUE_MSG( sw::FileUtil::normalizePath( saveFolder ).find( "shaders/nested" ) != sw::string::npos, saveFolder.c_str() );
+    SW_EXPECT_TRUE_MSG( saveKey.find( "shaders/nested/foobar.hlsl" ) != sw::string::npos, savePath.c_str() );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( sw::ResourceUtil::makeSaveFolderPath( gameRoot ), gameRoot ) );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::normalizePath( saveFolder ).find( "shaders/nested" ) != sw::string::npos, saveFolder.c_str() );
 
-	// 대문자 저장 대상 폴더 및 대문자 파일명 전달 시 소문자 변환 검증 (리눅스 에셋 표준)
-	const sw::string saveUpperFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/PREFABS/SUB_DIR" );
-	const sw::string saveUpperPath	 = sw::ResourceUtil::makeSavePath( gameRoot + "/PREFABS/SUB_DIR", "NEW_HERO.PREFAB.JSON" );
-	SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperFolder, "prefabs/sub_dir", true ) );
-	SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperPath, "prefabs/sub_dir/new_hero.prefab.json", true ) );
+    // 대문자 저장 대상 폴더 및 대문자 파일명 전달 시 소문자 변환 검증 (리눅스 에셋 표준)
+    const sw::string saveUpperFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/PREFABS/SUB_DIR" );
+    const sw::string saveUpperPath   = sw::ResourceUtil::makeSavePath( gameRoot + "/PREFABS/SUB_DIR", "NEW_HERO.PREFAB.JSON" );
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperFolder, "prefabs/sub_dir", true ) );
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperPath, "prefabs/sub_dir/new_hero.prefab.json", true ) );
 }
 
 /**
@@ -118,9 +118,9 @@ SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
  */
 SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
 {
-	sw::ResourceUtil::initialize();
+    sw::ResourceUtil::initialize();
 
-	const utf8* kCurrent = R"(<?xml version="1.0" encoding="utf-8"?>
+    const utf8* kCurrent = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDesc formatVersion="0" name="CurrentMat" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
@@ -128,27 +128,27 @@ SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
 </MaterialDesc>
 )";
 
-	sw::XmlDocument doc;
-	doc.parse( kCurrent );
-	sw::XmlNode root = doc.root( "MaterialDesc" );
-	SW_ASSERT_TRUE( root.isValid() );
+    sw::XmlDocument doc;
+    doc.parse( kCurrent );
+    sw::XmlNode root = doc.root( "MaterialDesc" );
+    SW_ASSERT_TRUE( root.isValid() );
 
-	sw::AssetFormatVersion source = 99;
-	SW_EXPECT_TRUE( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
-																						  sw::AssetFormatVersions::kMaterial, &source ) );
-	SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
-	SW_EXPECT_TRUE( root.attr( "formatVersion" ) != nullptr );
-	SW_EXPECT_STREQ( "0", root.attr( "formatVersion" ) );
+    sw::AssetFormatVersion source = 99;
+    SW_EXPECT_TRUE( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+                                                                                          sw::AssetFormatVersions::kMaterial, &source ) );
+    SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
+    SW_EXPECT_TRUE( root.attr( "formatVersion" ) != nullptr );
+    SW_EXPECT_STREQ( "0", root.attr( "formatVersion" ) );
 
-	const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_current_material.material" );
-	SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),
-											 static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
+    const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_current_material.material" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),
+                                             static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
-	sw::Material material;
-	SW_EXPECT_TRUE( material.loadFromFile( tempPath ) );
-	SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material.getName() );
-	SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material.getShaderPath() );
-	sw::FileUtil::removeFile( tempPath );
+    sw::Material material;
+    SW_EXPECT_TRUE( material.loadFromFile( tempPath ) );
+    SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material.getName() );
+    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material.getShaderPath() );
+    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -156,22 +156,22 @@ SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
  */
 SW_TEST_CASE( Engine_Resource, AssetFormatRejectsLegacyMaterialXml )
 {
-	sw::ResourceUtil::initialize();
+    sw::ResourceUtil::initialize();
 
-	const utf8* kLegacy = R"(<?xml version="1.0" encoding="utf-8"?>
+    const utf8* kLegacy = R"(<?xml version="1.0" encoding="utf-8"?>
 <Material>
 	<_name>LegacyMat</_name>
 	<_shader>engine/shaders/forwardlit.hlsl</_shader>
 </Material>
 )";
 
-	const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_legacy_material.material" );
-	SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kLegacy ),
-											 static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
+    const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_legacy_material.material" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kLegacy ),
+                                             static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 
-	sw::Material material;
-	SW_EXPECT_FALSE( material.loadFromFile( tempPath ) );
-	sw::FileUtil::removeFile( tempPath );
+    sw::Material material;
+    SW_EXPECT_FALSE( material.loadFromFile( tempPath ) );
+    sw::FileUtil::removeFile( tempPath );
 }
 
 /**
@@ -179,51 +179,51 @@ SW_TEST_CASE( Engine_Resource, AssetFormatRejectsLegacyMaterialXml )
  */
 SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 {
-	sw::AssetStreamingQueue queue;
-	queue.initialize();
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
 
-	SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
-	SW_EXPECT_EQUAL( size_t( 0 ), queue.getCompletedCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
+    SW_EXPECT_EQUAL( size_t( 0 ), queue.getCompletedCount() );
 
-	bool	   bCompleted1{ false };
-	bool	   bSuccess1{ false };
-	sw::string path1{};
+    bool       bCompleted1{ false };
+    bool       bSuccess1{ false };
+    sw::string path1{};
 
-	queue.requestAsset(
-		"Textures/Character.png",
-		sw::StreamingPriority::Normal,
-		SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
-	{
-		bCompleted1 = true;
-		bSuccess1	= ok;
-		path1		= sw::string( p );
-	} ) );
+    queue.requestAsset(
+        "Textures/Character.png",
+        sw::StreamingPriority::Normal,
+        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
+    {
+        bCompleted1 = true;
+        bSuccess1   = ok;
+        path1       = sw::string( p );
+    } ) );
 
-	SW_EXPECT_TRUE( queue.isStreaming( "Textures/Character.png" ) );
-	SW_EXPECT_EQUAL( size_t( 1 ), queue.getPendingCount() );
+    SW_EXPECT_TRUE( queue.isStreaming( "Textures/Character.png" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), queue.getPendingCount() );
 
-	// 취소 요청 검증
-	queue.cancelRequest( "Textures/Character.png" );
-	SW_EXPECT_FALSE( queue.isStreaming( "Textures/Character.png" ) );
+    // 취소 요청 검증
+    queue.cancelRequest( "Textures/Character.png" );
+    SW_EXPECT_FALSE( queue.isStreaming( "Textures/Character.png" ) );
 
-	// 새 요청 등록 후 메인 프레임 틱 업데이트
-	queue.requestAsset(
-		"Audio/BGM.wav",
-		sw::StreamingPriority::High,
-		SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
-	{
-		bCompleted1 = true;
-		bSuccess1	= ok;
-		path1		= sw::string( p );
-	} ) );
+    // 새 요청 등록 후 메인 프레임 틱 업데이트
+    queue.requestAsset(
+        "Audio/BGM.wav",
+        sw::StreamingPriority::High,
+        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
+    {
+        bCompleted1 = true;
+        bSuccess1   = ok;
+        path1       = sw::string( p );
+    } ) );
 
-	// 워커 스레드 작업 완료 대기
-	std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
+    // 워커 스레드 작업 완료 대기
+    std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
 
-	queue.update( 10 );
-	queue.sweepUnusedCache();
+    queue.update( 10 );
+    queue.sweepUnusedCache();
 
-	queue.shutdown();
+    queue.shutdown();
 }
 
 /**
@@ -231,48 +231,48 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
  */
 SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNormalization )
 {
-	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-	// 1. FileUtil::normalizePath 기본 동작 검증 (역슬래시 -> 슬래시, 소문자화)
-	const sw::string rawPath	= "Resource\\Engine\\Pipeline\\ForwardPipeline.xml";
-	const sw::string normalized = sw::FileUtil::normalizePath( rawPath );
-	SW_EXPECT_STREQ( "resource/engine/pipeline/forwardpipeline.xml", normalized.c_str() );
+    // 1. FileUtil::normalizePath 기본 동작 검증 (역슬래시 -> 슬래시, 소문자화)
+    const sw::string rawPath    = "Resource\\Engine\\Pipeline\\ForwardPipeline.xml";
+    const sw::string normalized = sw::FileUtil::normalizePath( rawPath );
+    SW_EXPECT_STREQ( "resource/engine/pipeline/forwardpipeline.xml", normalized.c_str() );
 
-	// 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
-	const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" );
-	SW_EXPECT_FALSE( pathUpperGlobal.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
-	SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "defaultmaterial.material", true ) );
+    // 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
+    const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" );
+    SW_EXPECT_FALSE( pathUpperGlobal.empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "defaultmaterial.material", true ) );
 
-	// 3. 엔진 파이프라인 대문자 조회 검증
-	const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
-	SW_EXPECT_FALSE( pathEnginePipeline.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathEnginePipeline ) );
+    // 3. 엔진 파이프라인 대문자 조회 검증
+    const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
+    SW_EXPECT_FALSE( pathEnginePipeline.empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathEnginePipeline ) );
 
-	// 4. 팩 상대 키(Mixed case) 조회 검증
-	//    게임 콘텐츠에 의존하지 않도록 팩 루트를 엔진 팩으로 지정해 검사한다.
-	const sw::GameConfig oldActive	= sw::GameConfig::getActive();
-	sw::GameConfig		 packConfig = oldActive;
-	packConfig._packRoot			= "engine";
-	sw::GameConfig::setActive( packConfig );
+    // 4. 팩 상대 키(Mixed case) 조회 검증
+    //    게임 콘텐츠에 의존하지 않도록 팩 루트를 엔진 팩으로 지정해 검사한다.
+    const sw::GameConfig oldActive  = sw::GameConfig::getActive();
+    sw::GameConfig       packConfig = oldActive;
+    packConfig._packRoot            = "engine";
+    sw::GameConfig::setActive( packConfig );
 
-	const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Pipeline/ForwardPipeline.xml" );
-	SW_EXPECT_FALSE( pathMixedPack.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathMixedPack ) );
+    const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Pipeline/ForwardPipeline.xml" );
+    SW_EXPECT_FALSE( pathMixedPack.empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathMixedPack ) );
 
-	sw::GameConfig::setActive( oldActive );
+    sw::GameConfig::setActive( oldActive );
 
-	// 5. 다른 엔진 리소스의 대문자 키 조회 검증
-	const sw::string pathUpperOther = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" );
-	SW_EXPECT_FALSE( pathUpperOther.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperOther ) );
+    // 5. 다른 엔진 리소스의 대문자 키 조회 검증
+    const sw::string pathUpperOther = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" );
+    SW_EXPECT_FALSE( pathUpperOther.empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperOther ) );
 
-	// 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
-	sw::string textContent;
-	const bool bReadOk = sw::ResourceUtil::readTextResource( "ENGINE/PIPELINE/FORWARDPIPELINE.XML", textContent );
-	SW_EXPECT_TRUE( bReadOk );
-	SW_EXPECT_FALSE( textContent.empty() );
-	SW_EXPECT_TRUE( textContent.find( "<RenderPipeline" ) != sw::string::npos );
+    // 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
+    sw::string textContent;
+    const bool bReadOk = sw::ResourceUtil::readTextResource( "ENGINE/PIPELINE/FORWARDPIPELINE.XML", textContent );
+    SW_EXPECT_TRUE( bReadOk );
+    SW_EXPECT_FALSE( textContent.empty() );
+    SW_EXPECT_TRUE( textContent.find( "<RenderPipeline" ) != sw::string::npos );
 }
 
 /**
@@ -280,53 +280,53 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
  */
 SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 {
-	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-	// 1. 기본 검색 우선순위 확인
-	const sw::vector<sw::string>& defaultPriority = sw::ResourceUtil::getSearchPriority();
-	SW_EXPECT_FALSE( defaultPriority.empty() );
-	SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
+    // 1. 기본 검색 우선순위 확인
+    const sw::vector<sw::string>& defaultPriority = sw::ResourceUtil::getSearchPriority();
+    SW_EXPECT_FALSE( defaultPriority.empty() );
+    SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
 
-	// 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
-	const sw::string gameDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/test_asset" );
-	const sw::string gameFile = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
-	sw::FileUtil::ensureDirectoryExists( gameDir );
-	const utf8* kGameContent = "<Asset source=\"game\" />";
-	SW_EXPECT_TRUE( sw::FileUtil::writeFile( gameFile, reinterpret_cast<const uint8*>( kGameContent ),
-											 static_cast<uint64>( sw::StringUtil::strlen( kGameContent ) ) ) );
+    // 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
+    const sw::string gameDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/test_asset" );
+    const sw::string gameFile = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
+    sw::FileUtil::ensureDirectoryExists( gameDir );
+    const utf8* kGameContent = "<Asset source=\"game\" />";
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( gameFile, reinterpret_cast<const uint8*>( kGameContent ),
+                                             static_cast<uint64>( sw::StringUtil::strlen( kGameContent ) ) ) );
 
-	const sw::string dlcDir	 = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/test_asset" );
-	const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "priority_test.xml" );
-	sw::FileUtil::ensureDirectoryExists( dlcDir );
+    const sw::string dlcDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/test_asset" );
+    const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "priority_test.xml" );
+    sw::FileUtil::ensureDirectoryExists( dlcDir );
 
-	const utf8* kDlcContent = "<Asset source=\"dlc\" />";
-	SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcContent ),
-											 static_cast<uint64>( sw::StringUtil::strlen( kDlcContent ) ) ) );
+    const utf8* kDlcContent = "<Asset source=\"dlc\" />";
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcContent ),
+                                             static_cast<uint64>( sw::StringUtil::strlen( kDlcContent ) ) ) );
 
-	// 3. DLC가 1순위인 우선순위 목록 적용
-	const sw::vector<sw::string> listDlcFirstPriority = { "dlc/test_dlc", "game", "common", "engine", "editor" };
-	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listDlcFirstPriority ) );
+    // 3. DLC가 1순위인 우선순위 목록 적용
+    const sw::vector<sw::string> listDlcFirstPriority = { "dlc/test_dlc", "game", "common", "engine", "editor" };
+    SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listDlcFirstPriority ) );
 
-	// 4. 팩 상대 키 "test_asset/priority_test.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
-	const sw::string resolvedDlcPath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
-	SW_EXPECT_FALSE( resolvedDlcPath.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedDlcPath, dlcFile ) );
+    // 4. 팩 상대 키 "test_asset/priority_test.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
+    const sw::string resolvedDlcPath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
+    SW_EXPECT_FALSE( resolvedDlcPath.empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedDlcPath, dlcFile ) );
 
-	// 5. EngineConfig 리플렉션 기본값(getDefaultSearchPriority)으로 우선순위 복구 시 기존 game 팩 파일 매핑 검증
-	const sw::vector<sw::string>& listRestoredPriority = sw::ResourceUtil::getDefaultSearchPriority();
-	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listRestoredPriority ) );
+    // 5. EngineConfig 리플렉션 기본값(getDefaultSearchPriority)으로 우선순위 복구 시 기존 game 팩 파일 매핑 검증
+    const sw::vector<sw::string>& listRestoredPriority = sw::ResourceUtil::getDefaultSearchPriority();
+    SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listRestoredPriority ) );
 
-	const sw::string resolvedGamePath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
-	SW_EXPECT_FALSE( resolvedGamePath.empty() );
-	SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
-	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, gameFile ) );
+    const sw::string resolvedGamePath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
+    SW_EXPECT_FALSE( resolvedGamePath.empty() );
+    SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, gameFile ) );
 
-	// 6. 임시 파일 및 디렉터리 정리
-	sw::FileUtil::removeFile( dlcFile );
-	sw::FileUtil::removeDirectory( dlcDir );
-	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
-	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
+    // 6. 임시 파일 및 디렉터리 정리
+    sw::FileUtil::removeFile( dlcFile );
+    sw::FileUtil::removeDirectory( dlcDir );
+    sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
+    sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
 
-	sw::FileUtil::removeFile( gameFile );
-	sw::FileUtil::removeDirectory( gameDir );
+    sw::FileUtil::removeFile( gameFile );
+    sw::FileUtil::removeDirectory( gameDir );
 }

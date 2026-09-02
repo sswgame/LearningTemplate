@@ -17,69 +17,69 @@
 
 namespace sw
 {
-	/// @brief RenderPipeline XML 서술 (패스 + 어태치먼트)
-	REFLECT()
-	struct RenderPipelineDesc
-	{
-		PROPERTY()
-		string _name = "ForwardPipeline";
+    /// @brief RenderPipeline XML 서술 (패스 + 어태치먼트)
+    REFLECT()
+    struct RenderPipelineDesc
+    {
+        PROPERTY()
+        string _name = "ForwardPipeline";
 
-		/** @brief 선택 힌트: Forward / Deferred / Custom */
-		PROPERTY()
-		string _shadingModel = "Forward";
+        /** @brief 선택 힌트: Forward / Deferred / Custom */
+        PROPERTY()
+        string _shadingModel = "Forward";
 
-		/** @brief 그래프가 쓰는 임시/논리 어태치먼트 */
-		PROPERTY()
-		vector<RenderPassAttachment> _listAttachment;
+        /** @brief 그래프가 쓰는 임시/논리 어태치먼트 */
+        PROPERTY()
+        vector<RenderPassAttachment> _listAttachment;
 
-		/** @brief 그래프 노드 (이름, 타입, 입력, 출력) */
-		PROPERTY()
-		vector<RenderGraphPassDesc> _listPass;
+        /** @brief 그래프 노드 (이름, 타입, 입력, 출력) */
+        PROPERTY()
+        vector<RenderGraphPassDesc> _listPass;
 
-		/**
-		 * @brief RHI 템플릿으로 쓰는 RenderPass XML 경로 (선택)
-		 * (예: renderpass/defaultrenderpass.xml 또는 engine/renderpass/...)
-		 */
-		PROPERTY()
-		vector<string> _listRenderPassRef;
-	};
+        /**
+         * @brief RHI 템플릿으로 쓰는 RenderPass XML 경로 (선택)
+         * (예: renderpass/defaultrenderpass.xml 또는 engine/renderpass/...)
+         */
+        PROPERTY()
+        vector<string> _listRenderPassRef;
+    };
 
-	/**
-	 * @class RenderPipelineResource
-	 * @brief RenderPipelineDesc XML을 읽고 쓰며 FrameRenderer에 그래프 패스를 제공합니다
-	 */
-	class SW_API RenderPipelineResource
-	{
-	public:
-		/** @brief 빈 파이프라인 디스크립터. */
-		RenderPipelineResource() = default;
-		/** @brief 가상 소멸. */
-		virtual ~RenderPipelineResource() = default;
+    /**
+     * @class RenderPipelineResource
+     * @brief RenderPipelineDesc XML을 읽고 쓰며 FrameRenderer에 그래프 패스를 제공합니다
+     */
+    class SW_API RenderPipelineResource
+    {
+    public:
+        /** @brief 빈 파이프라인 디스크립터. */
+        RenderPipelineResource() = default;
+        /** @brief 가상 소멸. */
+        virtual ~RenderPipelineResource() = default;
 
-		/** @brief 복사를 금지합니다. */
-		RenderPipelineResource( const RenderPipelineResource& ) = delete;
-		/** @brief 대입을 금지합니다. */
-		RenderPipelineResource& operator=( const RenderPipelineResource& ) = delete;
+        /** @brief 복사를 금지합니다. */
+        RenderPipelineResource( const RenderPipelineResource& ) = delete;
+        /** @brief 대입을 금지합니다. */
+        RenderPipelineResource& operator=( const RenderPipelineResource& ) = delete;
 
-		/** @brief 리소스 상대 경로에서 파이프라인 XML을 로드합니다. */
-		bool loadFromXmlFile( string_view assetRelativePath );
-		/** @brief 파이프라인 XML을 저장합니다. */
-		bool saveToXmlFile( string_view assetRelativePath ) const;
-		/** @brief 파이프라인 XML을 비동기로 로드합니다. */
-		TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
+        /** @brief 리소스 상대 경로에서 파이프라인 XML을 로드합니다. */
+        bool loadFromXmlFile( string_view assetRelativePath );
+        /** @brief 파이프라인 XML을 저장합니다. */
+        bool saveToXmlFile( string_view assetRelativePath ) const;
+        /** @brief 파이프라인 XML을 비동기로 로드합니다. */
+        TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
 
-		/** @brief 파이프라인 디스크립터를 반환합니다. */
-		const RenderPipelineDesc& getDesc() const { return _desc; }
-		RenderPipelineDesc&		  getDesc() { return _desc; }
+        /** @brief 파이프라인 디스크립터를 반환합니다. */
+        const RenderPipelineDesc& getDesc() const { return _desc; }
+        RenderPipelineDesc&       getDesc() { return _desc; }
 
-		const vector<RenderGraphPassDesc>&	getGraphPass() const { return _desc._listPass; }
-		const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
+        const vector<RenderGraphPassDesc>&  getGraphPass() const { return _desc._listPass; }
+        const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
 
-	private:
-		/** @brief TaskArgs: this, path string. */
-		static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+    private:
+        /** @brief TaskArgs: this, path string. */
+        static void loadFromXmlFileAsyncJob( const TaskArgs& args );
 
-	private:
-		RenderPipelineDesc _desc;
-	};
+    private:
+        RenderPipelineDesc _desc;
+    };
 } // namespace sw

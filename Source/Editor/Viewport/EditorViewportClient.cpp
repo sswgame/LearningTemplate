@@ -38,1208 +38,1208 @@
 
 namespace sw::editor
 {
-	namespace
-	{
-		struct EditorViewportClientInternal
-		{
-			static void storeColumnMajor( float32* pOut, const float4x4& matrix )
-			{
-				const float4x4 columnMajor = matrix.transpose();
-				Memory::copy( pOut, &columnMajor, sizeof( float32 ) * 16 );
-			}
+    namespace
+    {
+        struct EditorViewportClientInternal
+        {
+            static void storeColumnMajor( float32* pOut, const float4x4& matrix )
+            {
+                const float4x4 columnMajor = matrix.transpose();
+                Memory::copy( pOut, &columnMajor, sizeof( float32 ) * 16 );
+            }
 
-			static void loadColumnMajor( float4x4& outMatrix, const float32* pIn )
-			{
-				float4x4 columnMajor{};
-				Memory::copy( &columnMajor, pIn, sizeof( float32 ) * 16 );
-				outMatrix = columnMajor.transpose();
-			}
+            static void loadColumnMajor( float4x4& outMatrix, const float32* pIn )
+            {
+                float4x4 columnMajor{};
+                Memory::copy( &columnMajor, pIn, sizeof( float32 ) * 16 );
+                outMatrix = columnMajor.transpose();
+            }
 
-			static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
-			{
-				const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
-				const float4 world = float4::transform( clip, invViewProj );
-				if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
-					return false;
-				outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
-				return true;
-			}
+            static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
+            {
+                const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
+                const float4 world = float4::transform( clip, invViewProj );
+                if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
+                    return false;
+                outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
+                return true;
+            }
 
-			static bool rayHitsSphere( const float3& origin, const float3& dir, const float3& center, float32 radius, float32& outT )
-			{
-				const float3  m		= origin - center;
-				const float32 b		= m.dot( dir );
-				const float32 c		= m.dot( m ) - radius * radius;
-				const bool	  bAway = ( c > 0.0f && b > 0.0f );
-				if ( bAway )
-					return false;
+            static bool rayHitsSphere( const float3& origin, const float3& dir, const float3& center, float32 radius, float32& outT )
+            {
+                const float3  m     = origin - center;
+                const float32 b     = m.dot( dir );
+                const float32 c     = m.dot( m ) - radius * radius;
+                const bool    bAway = ( c > 0.0f && b > 0.0f );
+                if ( bAway )
+                    return false;
 
-				const float32 discr = b * b - c;
-				if ( discr < 0.0f )
-					return false;
+                const float32 discr = b * b - c;
+                if ( discr < 0.0f )
+                    return false;
 
-				const float32 sqrtDiscr = MathUtil::sqrt( discr );
-				float32		  hitT		= -b - sqrtDiscr;
-				if ( hitT < 0.0f )
-					hitT = -b + sqrtDiscr;
-				if ( hitT < 0.0f )
-					return false;
+                const float32 sqrtDiscr = MathUtil::sqrt( discr );
+                float32       hitT      = -b - sqrtDiscr;
+                if ( hitT < 0.0f )
+                    hitT = -b + sqrtDiscr;
+                if ( hitT < 0.0f )
+                    return false;
 
-				outT = hitT;
-				return true;
-			}
+                outT = hitT;
+                return true;
+            }
 
-			static void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
-			{
-				if ( pSc == nullptr )
-					return;
-				float4x4		localMat = world;
-				SceneComponent* pParent	 = pSc->getParent();
-				if ( pParent != nullptr )
-					localMat = world * pParent->getWorldMatrix().invert();
+            static void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
+            {
+                if ( pSc == nullptr )
+                    return;
+                float4x4        localMat = world;
+                SceneComponent* pParent  = pSc->getParent();
+                if ( pParent != nullptr )
+                    localMat = world * pParent->getWorldMatrix().invert();
 
-				float32 arrMatrix[16];
-				storeColumnMajor( arrMatrix, localMat );
-				float3 translation{};
-				float3 rotationDeg{};
-				float3 scale{};
-				ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
-				pSc->setLocalPosition( translation );
-				pSc->setLocalRotation( float3{ MathUtil::toRadian( rotationDeg._x ), MathUtil::toRadian( rotationDeg._y ),
-											   MathUtil::toRadian( rotationDeg._z ) } );
-				pSc->setLocalScale( scale );
-			}
+                float32 arrMatrix[16];
+                storeColumnMajor( arrMatrix, localMat );
+                float3 translation{};
+                float3 rotationDeg{};
+                float3 scale{};
+                ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
+                pSc->setLocalPosition( translation );
+                pSc->setLocalRotation( float3{ MathUtil::toRadian( rotationDeg._x ), MathUtil::toRadian( rotationDeg._y ),
+                                               MathUtil::toRadian( rotationDeg._z ) } );
+                pSc->setLocalScale( scale );
+            }
 
-			static void considerMeshPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-										  Component*& pBestComp )
-			{
-				MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
-				if ( pMeshComp == nullptr || pMeshComp->isActive() == false || pMeshComp->isVisible() == false )
-					return;
-				const float3  scale	   = pMeshComp->getLocalScale();
-				const float32 absX	   = MathUtil::abs( scale._x );
-				const float32 absY	   = MathUtil::abs( scale._y );
-				const float32 absZ	   = MathUtil::abs( scale._z );
-				const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
-				const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, pMeshComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
-					return;
-				bestT	  = hitT;
-				pBestObj  = pObj;
-				pBestComp = pMeshComp;
-			}
+            static void considerMeshPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+                                          Component*& pBestComp )
+            {
+                MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
+                if ( pMeshComp == nullptr || pMeshComp->isActive() == false || pMeshComp->isVisible() == false )
+                    return;
+                const float3  scale    = pMeshComp->getLocalScale();
+                const float32 absX     = MathUtil::abs( scale._x );
+                const float32 absY     = MathUtil::abs( scale._y );
+                const float32 absZ     = MathUtil::abs( scale._z );
+                const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
+                const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
+                float32       hitT{ 0.0f };
+                if ( rayHitsSphere( nearPt, dir, pMeshComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
+                    return;
+                bestT     = hitT;
+                pBestObj  = pObj;
+                pBestComp = pMeshComp;
+            }
 
-			static void considerSpritePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-											Component*& pBestComp )
-			{
-				SpriteComponent* pSpriteComp = pObj->getComponent<SpriteComponent>();
-				if ( pSpriteComp == nullptr || pSpriteComp->isActive() == false )
-					return;
-				const float3  scale	 = pSpriteComp->getLocalScale();
-				const float32 absX	 = MathUtil::abs( scale._x );
-				const float32 absY	 = MathUtil::abs( scale._y );
-				const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, pSpriteComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
-					return;
-				bestT	  = hitT;
-				pBestObj  = pObj;
-				pBestComp = pSpriteComp;
-			}
+            static void considerSpritePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+                                            Component*& pBestComp )
+            {
+                SpriteComponent* pSpriteComp = pObj->getComponent<SpriteComponent>();
+                if ( pSpriteComp == nullptr || pSpriteComp->isActive() == false )
+                    return;
+                const float3  scale  = pSpriteComp->getLocalScale();
+                const float32 absX   = MathUtil::abs( scale._x );
+                const float32 absY   = MathUtil::abs( scale._y );
+                const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
+                float32       hitT{ 0.0f };
+                if ( rayHitsSphere( nearPt, dir, pSpriteComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
+                    return;
+                bestT     = hitT;
+                pBestObj  = pObj;
+                pBestComp = pSpriteComp;
+            }
 
-			static void considerBoxPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-										 Component*& pBestComp )
-			{
-				BoxCollider2DComponent* pBoxComp = pObj->getComponent<BoxCollider2DComponent>();
-				if ( pBoxComp == nullptr || pBoxComp->isActive() == false )
-					return;
-				const float2  offsetPos = pBoxComp->getOffsetPosition();
-				const float2  offsetScl = pBoxComp->getOffsetScaleVec();
-				const float3  center	= pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-				const float32 radius	= offsetScl.getLength() * 0.5f + 0.1f;
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) == false || hitT >= bestT )
-					return;
-				bestT	  = hitT;
-				pBestObj  = pObj;
-				pBestComp = pBoxComp;
-			}
+            static void considerBoxPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+                                         Component*& pBestComp )
+            {
+                BoxCollider2DComponent* pBoxComp = pObj->getComponent<BoxCollider2DComponent>();
+                if ( pBoxComp == nullptr || pBoxComp->isActive() == false )
+                    return;
+                const float2  offsetPos = pBoxComp->getOffsetPosition();
+                const float2  offsetScl = pBoxComp->getOffsetScaleVec();
+                const float3  center    = pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
+                const float32 radius    = offsetScl.getLength() * 0.5f + 0.1f;
+                float32       hitT{ 0.0f };
+                if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) == false || hitT >= bestT )
+                    return;
+                bestT     = hitT;
+                pBestObj  = pObj;
+                pBestComp = pBoxComp;
+            }
 
-			static void considerScenePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-										   Component*& pBestComp )
-			{
-				SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
-				if ( pSceneComp == nullptr || pSceneComp->isActive() == false )
-					return;
-				float32 hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, pSceneComp->getWorldPosition(), 0.35f, hitT ) == false || hitT >= bestT )
-					return;
-				bestT	  = hitT;
-				pBestObj  = pObj;
-				pBestComp = pSceneComp;
-			}
+            static void considerScenePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+                                           Component*& pBestComp )
+            {
+                SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
+                if ( pSceneComp == nullptr || pSceneComp->isActive() == false )
+                    return;
+                float32 hitT{ 0.0f };
+                if ( rayHitsSphere( nearPt, dir, pSceneComp->getWorldPosition(), 0.35f, hitT ) == false || hitT >= bestT )
+                    return;
+                bestT     = hitT;
+                pBestObj  = pObj;
+                pBestComp = pSceneComp;
+            }
 
-			static CameraComponent* getGameViewCamera()
-			{
-				SceneManager* pSceneManager = editor::getService<SceneManager>();
-				if ( pSceneManager == nullptr )
-					return nullptr;
-				return EditorCamera::ensure( pSceneManager->getActiveScene() );
-			}
+            static CameraComponent* getGameViewCamera()
+            {
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager == nullptr )
+                    return nullptr;
+                return EditorCamera::ensure( pSceneManager->getActiveScene() );
+            }
 
-			static bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
-											  const float2& canvasSize, ImVec2& outScreenPt )
-			{
-				const float4 clip = float4::transform( float4{ worldPt, 1.0f }, viewProj );
-				if ( clip._w <= 0.001f )
-					return false;
-				const float32 invW = 1.0f / clip._w;
-				const float32 x	   = clip._x * invW;
-				const float32 y	   = clip._y * invW;
+            static bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
+                                              const float2& canvasSize, ImVec2& outScreenPt )
+            {
+                const float4 clip = float4::transform( float4{ worldPt, 1.0f }, viewProj );
+                if ( clip._w <= 0.001f )
+                    return false;
+                const float32 invW = 1.0f / clip._w;
+                const float32 x    = clip._x * invW;
+                const float32 y    = clip._y * invW;
 
-				outScreenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
-				outScreenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
-				return true;
-			}
+                outScreenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
+                outScreenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
+                return true;
+            }
 
-			static void drawDebugVisualizers( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos,
-											  const float2& canvasSize, const ViewportToolbarSettings& settings,
-											  CameraComponent* pActiveCamera )
-			{
-				if ( pDrawList == nullptr )
-					return;
+            static void drawDebugVisualizers( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos,
+                                              const float2& canvasSize, const ViewportToolbarSettings& settings,
+                                              CameraComponent* pActiveCamera )
+            {
+                if ( pDrawList == nullptr )
+                    return;
 
-				SceneManager* pSceneManager = editor::getService<SceneManager>();
-				if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
-					return;
-				GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
-				if ( pManager == nullptr )
-					return;
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
+                    return;
+                GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
+                if ( pManager == nullptr )
+                    return;
 
-				const vector<GameObject*>& listObject = pManager->getAllGameObjects();
+                const vector<GameObject*>& listObject = pManager->getAllGameObjects();
 
-				// 1) BoxCollider2D 와이어프레임 렌더링
-				if ( settings._bShowColliders )
-				{
-					constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
-					for ( GameObject* pObj : listObject )
-					{
-						if ( pObj == nullptr || pObj->isActive() == false )
-							continue;
-						BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
-						if ( pBox == nullptr || pBox->isActive() == false )
-							continue;
+                // 1) BoxCollider2D 와이어프레임 렌더링
+                if ( settings._bShowColliders )
+                {
+                    constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
+                    for ( GameObject* pObj : listObject )
+                    {
+                        if ( pObj == nullptr || pObj->isActive() == false )
+                            continue;
+                        BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
+                        if ( pBox == nullptr || pBox->isActive() == false )
+                            continue;
 
-						const float2  offsetPos = pBox->getOffsetPosition();
-						const float2  offsetScl = pBox->getOffsetScaleVec();
-						const float3  center	= pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-						const float32 hx		= MathUtil::max( offsetScl._x * 0.5f, 0.05f );
-						const float32 hy		= MathUtil::max( offsetScl._y * 0.5f, 0.05f );
+                        const float2  offsetPos = pBox->getOffsetPosition();
+                        const float2  offsetScl = pBox->getOffsetScaleVec();
+                        const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
+                        const float32 hx        = MathUtil::max( offsetScl._x * 0.5f, 0.05f );
+                        const float32 hy        = MathUtil::max( offsetScl._y * 0.5f, 0.05f );
 
-						const float3 p0{ center._x - hx, center._y - hy, center._z };
-						const float3 p1{ center._x + hx, center._y - hy, center._z };
-						const float3 p2{ center._x + hx, center._y + hy, center._z };
-						const float3 p3{ center._x - hx, center._y + hy, center._z };
+                        const float3 p0{ center._x - hx, center._y - hy, center._z };
+                        const float3 p1{ center._x + hx, center._y - hy, center._z };
+                        const float3 p2{ center._x + hx, center._y + hy, center._z };
+                        const float3 p3{ center._x - hx, center._y + hy, center._z };
 
-						ImVec2 s0, s1, s2, s3;
-						if ( projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
-							 projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
-							 projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
-							 projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
-						{
-							pDrawList->AddLine( s0, s1, colWire, 1.5f );
-							pDrawList->AddLine( s1, s2, colWire, 1.5f );
-							pDrawList->AddLine( s2, s3, colWire, 1.5f );
-							pDrawList->AddLine( s3, s0, colWire, 1.5f );
-						}
-					}
-				}
+                        ImVec2 s0, s1, s2, s3;
+                        if ( projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
+                             projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
+                             projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
+                             projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
+                        {
+                            pDrawList->AddLine( s0, s1, colWire, 1.5f );
+                            pDrawList->AddLine( s1, s2, colWire, 1.5f );
+                            pDrawList->AddLine( s2, s3, colWire, 1.5f );
+                            pDrawList->AddLine( s3, s0, colWire, 1.5f );
+                        }
+                    }
+                }
 
-				// 2) CameraComponent Frustum 와이어프레임 렌더링
-				if ( settings._bShowCameras )
-				{
-					constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
-					for ( GameObject* pObj : listObject )
-					{
-						if ( pObj == nullptr || pObj->isActive() == false )
-							continue;
-						CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-						if ( pCam == nullptr || pCam == pActiveCamera || pCam->isActive() == false )
-							continue;
+                // 2) CameraComponent Frustum 와이어프레임 렌더링
+                if ( settings._bShowCameras )
+                {
+                    constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
+                    for ( GameObject* pObj : listObject )
+                    {
+                        if ( pObj == nullptr || pObj->isActive() == false )
+                            continue;
+                        CameraComponent* pCam = pObj->getComponent<CameraComponent>();
+                        if ( pCam == nullptr || pCam == pActiveCamera || pCam->isActive() == false )
+                            continue;
 
-						const float4x4 camWorld = pCam->getWorldMatrix();
-						const float3   eye		= float3{ camWorld._41, camWorld._42, camWorld._43 };
-						const float3   rgt		= float3{ camWorld._11, camWorld._12, camWorld._13 };
-						const float3   up		= float3{ camWorld._21, camWorld._22, camWorld._23 };
-						const float3   fwd		= float3{ camWorld._31, camWorld._32, camWorld._33 };
+                        const float4x4 camWorld = pCam->getWorldMatrix();
+                        const float3   eye      = float3{ camWorld._41, camWorld._42, camWorld._43 };
+                        const float3   rgt      = float3{ camWorld._11, camWorld._12, camWorld._13 };
+                        const float3   up       = float3{ camWorld._21, camWorld._22, camWorld._23 };
+                        const float3   fwd      = float3{ camWorld._31, camWorld._32, camWorld._33 };
 
-						const float3 nearCenter = eye + fwd * 1.0f;
-						const float3 p0			= nearCenter - rgt * 0.6f - up * 0.4f;
-						const float3 p1			= nearCenter + rgt * 0.6f - up * 0.4f;
-						const float3 p2			= nearCenter + rgt * 0.6f + up * 0.4f;
-						const float3 p3			= nearCenter - rgt * 0.6f + up * 0.4f;
+                        const float3 nearCenter = eye + fwd * 1.0f;
+                        const float3 p0         = nearCenter - rgt * 0.6f - up * 0.4f;
+                        const float3 p1         = nearCenter + rgt * 0.6f - up * 0.4f;
+                        const float3 p2         = nearCenter + rgt * 0.6f + up * 0.4f;
+                        const float3 p3         = nearCenter - rgt * 0.6f + up * 0.4f;
 
-						ImVec2 sEye, s0, s1, s2, s3;
-						if ( projectPointToScreen( viewProj, eye, canvasPos, canvasSize, sEye ) &&
-							 projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
-							 projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
-							 projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
-							 projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
-						{
-							pDrawList->AddLine( sEye, s0, colCamWire, 1.2f );
-							pDrawList->AddLine( sEye, s1, colCamWire, 1.2f );
-							pDrawList->AddLine( sEye, s2, colCamWire, 1.2f );
-							pDrawList->AddLine( sEye, s3, colCamWire, 1.2f );
-							pDrawList->AddLine( s0, s1, colCamWire, 1.2f );
-							pDrawList->AddLine( s1, s2, colCamWire, 1.2f );
-							pDrawList->AddLine( s2, s3, colCamWire, 1.2f );
-							pDrawList->AddLine( s3, s0, colCamWire, 1.2f );
-						}
-					}
-				}
-			}
-		};
-	} // namespace
+                        ImVec2 sEye, s0, s1, s2, s3;
+                        if ( projectPointToScreen( viewProj, eye, canvasPos, canvasSize, sEye ) &&
+                             projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
+                             projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
+                             projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
+                             projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
+                        {
+                            pDrawList->AddLine( sEye, s0, colCamWire, 1.2f );
+                            pDrawList->AddLine( sEye, s1, colCamWire, 1.2f );
+                            pDrawList->AddLine( sEye, s2, colCamWire, 1.2f );
+                            pDrawList->AddLine( sEye, s3, colCamWire, 1.2f );
+                            pDrawList->AddLine( s0, s1, colCamWire, 1.2f );
+                            pDrawList->AddLine( s1, s2, colCamWire, 1.2f );
+                            pDrawList->AddLine( s2, s3, colCamWire, 1.2f );
+                            pDrawList->AddLine( s3, s0, colCamWire, 1.2f );
+                        }
+                    }
+                }
+            }
+        };
+    } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-	void EditorViewportClient::drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos,
-												 const float2& canvasSize )
-	{
-		if ( pDrawList == nullptr )
-			return;
-
-		const float32 fps		  = ImGui::GetIO().Framerate;
-		const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
-
-		SceneManager*	   pSceneManager = editor::getService<SceneManager>();
-		Scene*			   pScene		 = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-		GameObjectManager* pManager		 = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-		const uint32	   totalObjects	 = ( pManager != nullptr )
-											 ? static_cast<uint32>( pManager->getAllGameObjects().size() )
-											 : 0;
-
-		constexpr float32 overlayW = 160.0f;
-		constexpr float32 overlayH = 72.0f;
-		const float32	  x0	   = canvasPos._x + canvasSize._x - overlayW - 12.0f;
-		const float32	  y0	   = canvasPos._y + 12.0f;
-		const float32	  x1	   = x0 + overlayW;
-		const float32	  y1	   = y0 + overlayH;
-
-		// Background & Border
-		pDrawList->AddRectFilled( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 15, 17, 22, 210 ), 6.0f );
-		pDrawList->AddRect( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 50, 60, 80, 180 ), 6.0f );
-
-		// Text lines
-		fixed_string<constant::kMaxBuffer32> arrFps;
-		formatstring( arrFps.data(), arrFps.capacity(), "FPS: %# (%# ms)", Fmt( static_cast<float64>( fps ), Format().precision( 1 ) ),
-					  Fmt( static_cast<float64>( frameTimeMs ), Format().precision( 2 ) ) );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
-
-		fixed_string<constant::kMaxBuffer32> arrObj;
-		formatstring( arrObj.data(), arrObj.capacity(), "Objects: %u", totalObjects );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
-
-		fixed_string<constant::kMaxBuffer32> arrRes;
-		formatstring( arrRes.data(), arrRes.capacity(), "Res: %#x%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
-					  Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
-	}
-
-	EditorViewportClient::EditorViewportClient()
-		: _cameraPos{ 0.0f, 3.0f, -6.0f }
-		, _cameraRot{ 20.0f, 0.0f, 0.0f }
-		, _orbitTarget{ 0.0f, 0.0f, 0.0f }
-		, _rulerStartWorld{ 0.0f, 0.0f, 0.0f }
-		, _rulerEndWorld{ 0.0f, 0.0f, 0.0f }
-		, _orbitDistance{ 8.0f }
-		, _fovY{ 60.0f }
-		, _nearZ{ 0.1f }
-		, _farZ{ 1000.0f }
-		, _cameraMode{ CameraControlMode::Fly }
-		, _toolbarSettings{}
-		, _gizmoUndoBeforeXml{}
-		, _listGizmoObject{}
-		, _listGizmoUndoXml{}
-		, _listGizmoRelativeWorld{}
-		, _arrGizmoGroupMatrix{}
-		, _bRulerActive{ SW_FALSE }
-		, _bGizmoTracking{ SW_FALSE }
-		, _reservedGizmo{ 0 }
-	{
-	}
-
-	void EditorViewportClient::getViewMatrix( float32* pOutMatrix ) const
-	{
-		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-
-		const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-								MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-		const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
-		EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
-	}
-
-	void EditorViewportClient::getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const
-	{
-		const float32  effectiveAspect = aspect > 0.001f ? aspect : 1.0f;
-		const float4x4 projMat		   = float4x4::createPerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
-		EditorViewportClientInternal::storeColumnMajor( pOutMatrix, projMat );
-	}
-
-	void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
-	{
-		if ( bWindowHovered || bWindowFocused )
-		{
-			ImGuiIO& io = ImGui::GetIO();
-
-			if ( _toolbarSettings._requestedBookmarkSlot >= 0 )
-			{
-				EditorContext* pContext = EditorContext::get();
-				if ( pContext != nullptr )
-				{
-					const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark(
-						static_cast<uint32>( _toolbarSettings._requestedBookmarkSlot ) );
-					if ( pBm != nullptr && pBm->_bValid )
-					{
-						_cameraPos	   = pBm->_position;
-						_cameraRot	   = pBm->_rotation;
-						_orbitTarget   = pBm->_orbitTarget;
-						_orbitDistance = pBm->_orbitDistance;
-					}
-				}
-				_toolbarSettings._requestedBookmarkSlot = -1;
-			}
-
-			if ( io.WantTextInput == false )
-			{
-				for ( int32 keyIndex = 0; keyIndex < 9; ++keyIndex )
-				{
-					const ImGuiKey key = static_cast<ImGuiKey>( ImGuiKey_1 + keyIndex );
-					if ( ImGui::IsKeyPressed( key, false ) )
-					{
-						EditorContext* pContext = EditorContext::get();
-						if ( pContext != nullptr )
-						{
-							if ( io.KeyCtrl )
-							{
-								CameraBookmark bm{};
-								bm._position	  = _cameraPos;
-								bm._rotation	  = _cameraRot;
-								bm._orbitTarget	  = _orbitTarget;
-								bm._orbitDistance = _orbitDistance;
-								fixed_string<constant::kMaxBuffer32> arrName;
-								formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
-								bm._name = arrName.c_str();
-								pContext->getWorkspace().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
-							}
-							else if ( io.KeyAlt == false && io.KeyShift == false )
-							{
-								const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark(
-									static_cast<uint32>( keyIndex ) );
-								if ( pBm != nullptr && pBm->_bValid )
-								{
-									_cameraPos	   = pBm->_position;
-									_cameraRot	   = pBm->_rotation;
-									_orbitTarget   = pBm->_orbitTarget;
-									_orbitDistance = pBm->_orbitDistance;
-								}
-							}
-						}
-					}
-				}
-
-				if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false )
-				{
-					frameSelected();
-				}
-			}
-
-			if ( io.KeyAlt )
-			{
-				_cameraMode = CameraControlMode::Orbit;
-				processOrbitInput();
-			}
-			else if ( io.MouseDown[1] )
-			{
-				_cameraMode = CameraControlMode::Fly;
-				processFlyInput( deltaTime );
-			}
-		}
-
-		CameraComponent* pCam = EditorViewportClientInternal::getGameViewCamera();
-		if ( pCam != nullptr )
-		{
-			pCam->setLocalPosition( _cameraPos );
-			const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-			const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-			const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-								   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-			pCam->lookAt( _cameraPos + forward );
-		}
-	}
-
-	void EditorViewportClient::processFlyInput( float32 deltaTime )
-	{
-		ImGuiIO& io = ImGui::GetIO();
-
-		// 회전 (마우스 델타)
-		_cameraRot._y += io.MouseDelta.x * 0.2f;
-		_cameraRot._x += io.MouseDelta.y * 0.2f;
-		_cameraRot._x = MathUtil::clamp( _cameraRot._x, -89.0f, 89.0f );
-
-		// 이동 (WASD + QE)
-		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-
-		const float3 forward = float3{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-									   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-		const float3 right	 = float3{ MathUtil::cos( yawRad ), 0.0f, -MathUtil::sin( yawRad ) };
-		const float3 up		 = float3{ 0.0f, 1.0f, 0.0f };
-
-		float3 moveDir{ 0.0f, 0.0f, 0.0f };
-		if ( ImGui::IsKeyDown( ImGuiKey_W ) )
-			moveDir += forward;
-		if ( ImGui::IsKeyDown( ImGuiKey_S ) )
-			moveDir -= forward;
-		if ( ImGui::IsKeyDown( ImGuiKey_D ) )
-			moveDir += right;
-		if ( ImGui::IsKeyDown( ImGuiKey_A ) )
-			moveDir -= right;
-		if ( ImGui::IsKeyDown( ImGuiKey_E ) )
-			moveDir += up;
-		if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
-			moveDir -= up;
-
-		const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
-		_cameraPos += moveDir * speed;
-	}
-
-	void EditorViewportClient::processOrbitInput()
-	{
-		ImGuiIO& io = ImGui::GetIO();
-
-		// Alt + LMB: Orbit Rotate
-		if ( io.MouseDown[0] )
-		{
-			_cameraRot._y += io.MouseDelta.x * 0.3f;
-			_cameraRot._x += io.MouseDelta.y * 0.3f;
-			_cameraRot._x = MathUtil::clamp( _cameraRot._x, -89.0f, 89.0f );
-		}
-
-		// Alt + RMB 또는 휠: Orbit Zoom
-		if ( io.MouseDown[1] )
-			_orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, 0.5f );
-
-		if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-			_orbitDistance = MathUtil::max( _orbitDistance - io.MouseWheel * 1.0f, 0.5f );
-
-		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-
-		const float3 forward = float3{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-									   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-
-		_cameraPos = _orbitTarget - forward * _orbitDistance;
-	}
-
-	void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
-	{
-		EditorViewportToolbar::draw( _toolbarSettings, viewportWidth );
-	}
-
-	void EditorViewportClient::drawTransformBar( const float2& anchorPos )
-	{
-		const bool bHasSelection = EditorContext::get()->getSelectionManager().getSelectedObjectCount() > 0;
-		EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
-	}
-
-	void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )
-	{
-		const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-		if ( pTextureId != nullptr )
-			ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
-		else
-			ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
-
-		CameraComponent* pCamera = EditorViewportClientInternal::getGameViewCamera();
-		const float2	 canvasPos{ imagePos.x, imagePos.y };
-
-		if ( pCamera != nullptr )
-		{
-			const float32  aspect	= canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-			const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
-
-			float32 arrView[16];
-			float32 arrProj[16];
-			EditorViewportClientInternal::storeColumnMajor( arrView, pCamera->getViewMatrix() );
-			EditorViewportClientInternal::storeColumnMajor( arrProj, pCamera->getProjectionMatrix( aspect ) );
-
-			if ( _toolbarSettings._bShowGrid )
-				drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
-
-			EditorViewportClientInternal::drawDebugVisualizers( ImGui::GetWindowDrawList(), viewProj, canvasPos, canvasSize, _toolbarSettings,
-																pCamera );
-
-			processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
-
-			processPicking( canvasPos, canvasSize, pCamera );
-
-			{
-				SceneManager* pSceneManager = editor::getService<SceneManager>();
-				if ( pSceneManager != nullptr )
-				{
-					Scene* pScene = pSceneManager->getActiveScene();
-					if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-						pScene->getObjectManager()->flushSceneTransforms();
-				}
-				drawGizmo( arrView, arrProj, canvasPos, canvasSize );
-			}
-
-			if ( _toolbarSettings._bShowStats )
-				drawStatsOverlay( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
-
-			if ( _toolbarSettings._bShowOrientationCube )
-				drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
-
-			if ( ImGui::BeginDragDropTarget() )
-			{
-				string droppedAssetPath;
-				if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
-					handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
-				ImGui::EndDragDropTarget();
-			}
-		}
-	}
-
-	void EditorViewportClient::processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera )
-	{
-		if ( pCamera == nullptr )
-			return;
-		if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) == false )
-			return;
-		if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
-			return;
-		if ( ImGui::GetIO().KeyAlt )
-			return;
-		if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
-			return;
-
-		const ImVec2  mouse = ImGui::GetIO().MousePos;
-		const float32 u		= ( mouse.x - canvasPos._x ) / canvasSize._x;
-		const float32 v		= ( mouse.y - canvasPos._y ) / canvasSize._y;
-		const bool	  bInside =
-			( 0.0f <= u && u <= 1.0f && 0.0f <= v && v <= 1.0f );
-		if ( bInside == false )
-			return;
-
-		SceneManager* pSceneManager = editor::getService<SceneManager>();
-		if ( pSceneManager == nullptr )
-			return;
-		Scene* pScene = pSceneManager->getActiveScene();
-		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-			return;
-		GameObjectManager* pManager = pScene->getObjectManager();
-		pManager->flushSceneTransforms();
-
-		const float32  aspect	   = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-		const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
-		const float32  ndcX		   = u * 2.0f - 1.0f;
-		const float32  ndcY		   = 1.0f - v * 2.0f;
-
-		float3 nearPt{};
-		float3 farPt{};
-		if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
-			return;
-		if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
-			return;
-
-		float3		  dir	 = farPt - nearPt;
-		const float32 dirLen = dir.getLength();
-		if ( dirLen < 1e-8f )
-			return;
-		dir = dir * ( 1.0f / dirLen );
-
-		GameObject* pBestObj{ nullptr };
-		Component*	pBestComp{ nullptr };
-		float32		bestT{ MathUtil::MaxFloat };
-
-		const bool b2DMode = _toolbarSettings._bIs2DMode;
-		pManager->forEachGameObject( [&]( GameObject* pObj )
-		{
-			if ( pObj == nullptr || pObj->isActive() == false )
-				return;
-
-			if ( b2DMode )
-			{
-				EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-				EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-				EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-			}
-			else
-			{
-				EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-				EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-				EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-			}
-			EditorViewportClientInternal::considerScenePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-		} );
-
-		if ( pBestObj != nullptr )
-			EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestComp } );
-		else
-			EditorContext::get()->getWorkspace().clearSelection();
-	}
-
-	void EditorViewportClient::drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos,
-										  const float2& canvasSize )
-	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext == nullptr )
-			return;
-		if ( EditorUtil::areSceneEditsAllowed() == false )
-			return;
-
-		const vector<GameObjectPtr>& listSelected = pContext->getSelectionManager().getSelectedObjects();
-		vector<GameObject*>			 listGizmo;
-		listGizmo.reserve( listSelected.size() );
-		for ( const GameObjectPtr& pGo : listSelected )
-		{
-			GameObject* pRaw = pGo.get();
-			if ( pRaw == nullptr || pRaw->getPrimarySceneComponent() == nullptr )
-				continue;
-			listGizmo.push_back( pRaw );
-		}
-		if ( listGizmo.empty() )
-			return;
-
-		ImGuizmo::SetDrawlist();
-		ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
-
-		EditorWorkspace&	ws	  = pContext->getWorkspace();
-		const int32			opInt = ws.getGizmoOperation();
-		ImGuizmo::OPERATION op	  = ImGuizmo::TRANSLATE;
-		if ( opInt == 1 )
-			op = ImGuizmo::ROTATE;
-		else if ( opInt == 2 )
-			op = ImGuizmo::SCALE;
-
-		const ImGuizmo::MODE mode = ws.isGizmoLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
-
-		float32 arrSnap[3] = { 0.0f, 0.0f, 0.0f };
-		if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bGridSnap )
-			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._gridSnapValue;
-		else if ( op == ImGuizmo::ROTATE && _toolbarSettings._bRotationSnap )
-			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._rotationSnapValue;
-		else if ( op == ImGuizmo::SCALE && _toolbarSettings._bScaleSnap )
-			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._scaleSnapValue;
-		const bool bUseSnap = ( arrSnap[0] > 0.0f );
-
-		const bool bGroup = ( listGizmo.size() > 1 );
-		if ( bGroup )
-		{
-			if ( _bGizmoTracking == SW_FALSE )
-			{
-				float3 centroid{};
-				for ( GameObject* pObj : listGizmo )
-					centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
-				const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
-				centroid			   = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
-				float4x4 groupWorld{};
-				groupWorld._41 = centroid._x;
-				groupWorld._42 = centroid._y;
-				groupWorld._43 = centroid._z;
-				EditorViewportClientInternal::storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
-
-				if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-				{
-					_listGizmoObject.clear();
-					_listGizmoUndoXml.clear();
-					_listGizmoRelativeWorld.clear();
-					const float4x4 invGroup = groupWorld.invert();
-					for ( GameObject* pObj : listGizmo )
-					{
-						_listGizmoObject.push_back( GameObjectPtr{ pObj } );
-						_listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
-						_listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
-					}
-				}
-			}
-
-			if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
-			{
-				float4x4 dummyWorld{};
-				EditorViewportClientInternal::loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
-				const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
-				for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-				{
-					GameObject* pObj = _listGizmoObject[objectIndex].get();
-					if ( pObj == nullptr )
-						continue;
-					SceneComponent* pSc = pObj->getPrimarySceneComponent();
-					if ( pSc == nullptr )
-						continue;
-					EditorViewportClientInternal::applyWorldMatrix( pSc, _listGizmoRelativeWorld[objectIndex] * dummyWorld );
-				}
-			}
-
-			if ( ImGuizmo::IsUsing() )
-			{
-				_bGizmoTracking = SW_TRUE;
-			}
-			else if ( _bGizmoTracking == SW_TRUE )
-			{
-				const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
-				for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-					EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
-													   "Gizmo Transform" );
-				_listGizmoObject.clear();
-				_listGizmoUndoXml.clear();
-				_listGizmoRelativeWorld.clear();
-				_bGizmoTracking = SW_FALSE;
-			}
-			return;
-		}
-
-		GameObject*		pRaw	   = listGizmo[0];
-		SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
-		if ( pSceneComp == nullptr )
-			return;
-
-		float32 arrMatrix[16];
-		EditorViewportClientInternal::storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
-
-		if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-			_gizmoUndoBeforeXml = EditorSceneCommands::captureSnapshot( pRaw );
-
-		if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
-		{
-			float4x4 newWorldMat{};
-			EditorViewportClientInternal::loadColumnMajor( newWorldMat, arrMatrix );
-
-			float4x4		localMat  = newWorldMat;
-			SceneComponent* pParentSc = pSceneComp->getParent();
-			if ( pParentSc != nullptr )
-				localMat = newWorldMat * pParentSc->getWorldMatrix().invert();
-
-			EditorViewportClientInternal::storeColumnMajor( arrMatrix, localMat );
-
-			float3 translation{};
-			float3 rotationDeg{};
-			float3 scale{};
-			ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
-
-			if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
-				EditorSceneCommands::snapTranslationToSurface( pRaw, translation, scale._y );
-
-			EditorSceneCommands::applyLocalTransform( pRaw, translation,
-													  float3{
-														  MathUtil::toRadian( rotationDeg._x ),
-														  MathUtil::toRadian( rotationDeg._y ),
-														  MathUtil::toRadian( rotationDeg._z ) },
-													  scale );
-		}
-
-		if ( ImGuizmo::IsUsing() )
-		{
-			_bGizmoTracking = SW_TRUE;
-		}
-		else if ( _bGizmoTracking == SW_TRUE )
-		{
-			EditorSceneCommands::commitModify( pRaw, _gizmoUndoBeforeXml, "Gizmo Transform" );
-			_gizmoUndoBeforeXml.clear();
-			_bGizmoTracking = SW_FALSE;
-		}
-	}
-
-	void EditorViewportClient::frameSelected()
-	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext == nullptr )
-			return;
-
-		GameObjectPtr pPrimary = pContext->getSelectionManager().getPrimaryObject();
-		if ( pPrimary.isValid() == false )
-			return;
-
-		GameObject* pRaw = pPrimary.get();
-		if ( pRaw == nullptr )
-			return;
-
-		SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
-		if ( pSceneComp == nullptr )
-			return;
-
-		const float3 worldPos = pSceneComp->getWorldPosition();
-		_orbitTarget		  = worldPos;
-
-		float32					objectRadius = 2.0f;
-		BoxCollider2DComponent* pBox		 = pRaw->getComponent<BoxCollider2DComponent>();
-		if ( pBox != nullptr )
-		{
-			const float2 scl = pBox->getOffsetScaleVec();
-			objectRadius	 = MathUtil::max( scl._x, scl._y ) * 0.6f;
-		}
-		MeshComponent* pMesh = pRaw->getComponent<MeshComponent>();
-		if ( pMesh != nullptr )
-		{
-			const float3 scl = pMesh->getLocalScale();
-			objectRadius	 = MathUtil::max( scl._x, MathUtil::max( scl._y, scl._z ) ) * 1.5f;
-		}
-
-		_orbitDistance = MathUtil::clamp( objectRadius * 2.5f, 3.0f, 60.0f );
-
-		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-		const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-							   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-
-		_cameraPos = _orbitTarget - forward * _orbitDistance;
-	}
-
-	void EditorViewportClient::drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos,
-													const float2& canvasSize )
-	{
-		if ( pDrawList == nullptr )
-			return;
-
-		const float32	  cubeCenterX = canvasPos._x + canvasSize._x - 45.0f;
-		const float32	  cubeCenterY = canvasPos._y + ( _toolbarSettings._bShowStats ? 128.0f : 45.0f );
-		constexpr float32 cubeRadius  = 26.0f;
-
-		// Circular background disc
-		pDrawList->AddCircleFilled( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f,
-									IM_COL32( 18, 22, 30, 200 ) );
-		pDrawList->AddCircle( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f, IM_COL32( 55, 65, 85, 180 ), 0,
-							  1.5f );
-
-		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
-		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
-
-		const float3 forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-							  MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-		const float3 right{ MathUtil::cos( yawRad ), 0.0f, -MathUtil::sin( yawRad ) };
-		const float3 up{ right._y * forward._z - right._z * forward._y, right._z * forward._x - right._x * forward._z,
-						 right._x * forward._y - right._y * forward._x };
-
-		struct AxisItem
-		{
-			float3		_dir;
-			ImU32		_col;
-			const utf8* _label;
-			float32		_depth;
-			float2		_screenOffset;
-			float3		_targetRot;
-		};
-
-		AxisItem arrAxis[6] = {
-			{ float3{ 1.0f, 0.0f, 0.0f }, IM_COL32( 235,	 65,	 65, 255 ),	"X", 0.0f, float2{},
-			  float3{ 0.0f, -90.0f, 0.0f }},
-			{float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130,  60,  60, 200 ), "-X", 0.0f, float2{},
-			  float3{ 0.0f, 90.0f, 0.0f } },
-			{ float3{ 0.0f, 1.0f, 0.0f },  IM_COL32( 65, 220,	 95, 255 ),	"Y", 0.0f, float2{},
-			  float3{ 89.0f, 0.0f, 0.0f } },
-			{float3{ 0.0f, -1.0f, 0.0f },  IM_COL32( 50, 130,  70, 200 ), "-Y", 0.0f, float2{},
-			  float3{ -89.0f, 0.0f, 0.0f }},
-			{ float3{ 0.0f, 0.0f, 1.0f },  IM_COL32( 65, 130, 245, 255 ),	 "Z", 0.0f, float2{},
-			  float3{ 0.0f, 180.0f, 0.0f }},
-			{float3{ 0.0f, 0.0f, -1.0f },  IM_COL32( 50,	 70, 140, 200 ), "-Z", 0.0f, float2{},
-			  float3{ 0.0f, 0.0f, 0.0f }	 }
-		   };
-
-		for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
-		{
-			AxisItem&	  ax   = arrAxis[axisIndex];
-			const float32 dotR = ax._dir._x * right._x + ax._dir._y * right._y + ax._dir._z * right._z;
-			const float32 dotU = ax._dir._x * up._x + ax._dir._y * up._y + ax._dir._z * up._z;
-			const float32 dotF = ax._dir._x * forward._x + ax._dir._y * forward._y + ax._dir._z * forward._z;
-
-			ax._depth		 = dotF;
-			ax._screenOffset = float2{ dotR * cubeRadius * 0.78f, -dotU * cubeRadius * 0.78f };
-		}
-
-		// Sort by depth ascending so further items are drawn first
-		std::sort( std::begin( arrAxis ), std::end( arrAxis ),
-				   []( const AxisItem& a, const AxisItem& b )
-		{ return a._depth < b._depth; } );
-
-		const ImVec2 mousePos = ImGui::GetMousePos();
-
-		for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
-		{
-			const AxisItem& ax = arrAxis[axisIndex];
-			const ImVec2	pt( cubeCenterX + ax._screenOffset._x, cubeCenterY + ax._screenOffset._y );
-
-			// Axis line from center
-			pDrawList->AddLine( ImVec2( cubeCenterX, cubeCenterY ), pt, ax._col, 1.8f );
-
-			// Disc handle
-			const float32 handleRadius = ( ax._depth > 0.0f ) ? 6.5f : 4.5f;
-			const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
-			const bool	  bHovered	   = ( distToMouse <= handleRadius + 2.0f );
-
-			pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
-
-			if ( ax._depth > -0.2f && ax._label[0] != '-' )
-			{
-				pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._label );
-			}
-
-			if ( bHovered && ImGui::IsMouseClicked( 0 ) )
-			{
-				_cameraRot				  = ax._targetRot;
-				const float32 newPitchRad = MathUtil::toRadian( _cameraRot._x );
-				const float32 newYawRad	  = MathUtil::toRadian( _cameraRot._y );
-				const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ),
-										  -MathUtil::sin( newPitchRad ),
-										  MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
-				_cameraPos = _orbitTarget - newForward * _orbitDistance;
-			}
-		}
-	}
-
-	void EditorViewportClient::drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos,
-												 const float2& canvasSize, const float32* pView, const float32* pProj )
-	{
-		if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
-			return;
-
-		float4x4 viewMat{};
-		float4x4 projMat{};
-		EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-		EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-		const float4x4 viewProj = viewMat * projMat;
-
-		constexpr int32	  kGridExtent = 20;
-		constexpr float32 kGridStep	  = 1.0f;
-
-		if ( _toolbarSettings._bIs2DMode )
-		{
-			// XY plane vertical grid for 2D mode
-			const float32 centerX = MathUtil::floor( _cameraPos._x );
-			const float32 centerY = MathUtil::floor( _cameraPos._y );
-
-			for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
-			{
-				const float32 current  = static_cast<float32>( index ) * kGridStep;
-				const bool	  bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
-				const bool	  bOriginY = ( MathUtil::abs( centerY + current ) < 0.01f );
-				const bool	  bMajor   = ( index % 5 == 0 );
-
-				const ImU32 colX = bOriginX ? IM_COL32( 65, 220, 95, 180 )
-											: ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-				const ImU32 colY = bOriginY ? IM_COL32( 220, 60, 60, 180 )
-											: ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-
-				// Vertical lines parallel to Y
-				const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
-				const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
-				ImVec2		 sY0, sY1;
-				if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pY0, canvasPos, canvasSize, sY0 ) &&
-					 EditorViewportClientInternal::projectPointToScreen( viewProj, pY1, canvasPos, canvasSize, sY1 ) )
-				{
-					pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
-				}
-
-				// Horizontal lines parallel to X
-				const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
-				const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
-				ImVec2		 sX0, sX1;
-				if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
-					 EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
-				{
-					pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
-				}
-			}
-		}
-		else
-		{
-			// XZ plane ground grid for 3D mode
-			const float32 centerX = MathUtil::floor( _cameraPos._x );
-			const float32 centerZ = MathUtil::floor( _cameraPos._z );
-
-			for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
-			{
-				const float32 current  = static_cast<float32>( index ) * kGridStep;
-				const bool	  bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
-				const bool	  bOriginZ = ( MathUtil::abs( centerZ + current ) < 0.01f );
-				const bool	  bMajor   = ( index % 5 == 0 );
-
-				const ImU32 colX = bOriginX ? IM_COL32( 220, 60, 60, 180 )
-											: ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-				const ImU32 colZ = bOriginZ ? IM_COL32( 60, 110, 240, 180 )
-											: ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-
-				// Line parallel to Z
-				const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
-				const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
-				ImVec2		 sZ0, sZ1;
-				if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pZ0, canvasPos, canvasSize, sZ0 ) &&
-					 EditorViewportClientInternal::projectPointToScreen( viewProj, pZ1, canvasPos, canvasSize, sZ1 ) )
-				{
-					pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
-				}
-
-				// Line parallel to X
-				const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
-				const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
-				ImVec2		 sX0, sX1;
-				if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
-					 EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
-				{
-					pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
-				}
-			}
-		}
-	}
-
-	void EditorViewportClient::processRulerTool( ImDrawList* pDrawList, const float2& canvasPos,
-												 const float2& canvasSize, const float32* pView, const float32* pProj )
-	{
-		if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
-			return;
-
-		if ( ImGui::IsKeyDown( ImGuiKey_M ) == false && _toolbarSettings._bShowRuler == false )
-		{
-			_bRulerActive = SW_FALSE;
-			return;
-		}
-
-		float4x4 viewMat{};
-		float4x4 projMat{};
-		EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-		EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-		const float4x4 viewProj	   = viewMat * projMat;
-		const float4x4 invViewProj = viewProj.invert();
-
-		const ImVec2  mousePos	   = ImGui::GetMousePos();
-		const float32 mouseCanvasX = mousePos.x - canvasPos._x;
-		const float32 mouseCanvasY = mousePos.y - canvasPos._y;
-
-		if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
-			 0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
-		{
-			const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
-			const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
-
-			float3 nearPt{}, farPt{};
-			if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
-				 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
-			{
-				const float3 dir = farPt - nearPt;
-				if ( MathUtil::abs( dir._y ) > 1e-4f )
-				{
-					const float32 t		   = -nearPt._y / dir._y;
-					const float3  groundPt = nearPt + dir * t;
-
-					if ( ImGui::IsMouseClicked( 0 ) )
-					{
-						_rulerStartWorld = groundPt;
-						_rulerEndWorld	 = groundPt;
-						_bRulerActive	 = SW_TRUE;
-					}
-					else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
-					{
-						_rulerEndWorld = groundPt;
-					}
-				}
-			}
-		}
-
-		if ( _bRulerActive == SW_TRUE )
-		{
-			ImVec2 sStart, sEnd;
-			if ( EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&
-				 EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
-			{
-				// Measurement line
-				pDrawList->AddLine( sStart, sEnd, IM_COL32( 255, 215, 40, 240 ), 2.5f );
-				pDrawList->AddCircleFilled( sStart, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
-				pDrawList->AddCircleFilled( sEnd, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
-
-				const float3  delta = _rulerEndWorld - _rulerStartWorld;
-				const float32 dist	= delta.getLength();
-
-				fixed_string<constant::kMaxBuffer64> arrDistText;
-				formatstring( arrDistText.data(), arrDistText.capacity(), "%# m (dX: %#, dZ: %#)",
-							  Fmt( static_cast<float64>( dist ), Format().precision( 2 ) ), Fmt( static_cast<float64>( delta._x ), Format().precision( 2 ) ),
-							  Fmt( static_cast<float64>( delta._z ), Format().precision( 2 ) ) );
-
-				const ImVec2 mid( ( sStart.x + sEnd.x ) * 0.5f, ( sStart.y + sEnd.y ) * 0.5f - 16.0f );
-				pDrawList->AddRectFilled( ImVec2( mid.x - 4.0f, mid.y - 2.0f ),
-										  ImVec2( mid.x + 160.0f, mid.y + 18.0f ), IM_COL32( 20, 24, 32, 220 ), 4.0f );
-				pDrawList->AddText( mid, IM_COL32( 255, 230, 80, 255 ), arrDistText.c_str() );
-			}
-		}
-	}
-
-	void EditorViewportClient::handleViewportAssetDrop( const utf8* pAssetPath, const float2& canvasPos,
-														const float2& canvasSize, const float32* pView,
-														const float32* pProj )
-	{
-		if ( pAssetPath == nullptr || pView == nullptr || pProj == nullptr )
-			return;
-		if ( EditorUtil::areSceneEditsAllowed() == false )
-			return;
-
-		SceneManager* pSceneManager = editor::getService<SceneManager>();
-		if ( pSceneManager == nullptr )
-			return;
-		Scene* pScene = pSceneManager->getActiveScene();
-		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-			return;
-
-		GameObjectManager* pManager = pScene->getObjectManager();
-
-		// Calculate 3D spawn world position from mouse cursor
-		float4x4 viewMat{};
-		float4x4 projMat{};
-		EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
-		EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
-		const float4x4 viewProj	   = viewMat * projMat;
-		const float4x4 invViewProj = viewProj.invert();
-
-		const ImVec2  mousePos	   = ImGui::GetMousePos();
-		const float32 mouseCanvasX = mousePos.x - canvasPos._x;
-		const float32 mouseCanvasY = mousePos.y - canvasPos._y;
-
-		float3 spawnPos{ 0.0f, 0.0f, 0.0f };
-		if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
-			 0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
-		{
-			const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
-			const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
-
-			float3 nearPt{}, farPt{};
-			if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
-				 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
-			{
-				const float3 dir = farPt - nearPt;
-				if ( _toolbarSettings._bIs2DMode )
-				{
-					// Intersect with Z = 0 plane
-					if ( MathUtil::abs( dir._z ) > 1e-4f )
-					{
-						const float32 t = -nearPt._z / dir._z;
-						spawnPos		= nearPt + dir * t;
-						spawnPos._z		= 0.0f;
-					}
-				}
-				else
-				{
-					// Intersect with Y = 0 ground plane
-					if ( MathUtil::abs( dir._y ) > 1e-4f )
-					{
-						const float32 t = -nearPt._y / dir._y;
-						spawnPos		= nearPt + dir * t;
-						spawnPos._y		= 0.0f;
-					}
-				}
-			}
-		}
-
-		EditorAssetCommands::dropAt( pManager, pAssetPath, spawnPos );
-	}
+    void EditorViewportClient::drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos,
+                                                 const float2& canvasSize )
+    {
+        if ( pDrawList == nullptr )
+            return;
+
+        const float32 fps         = ImGui::GetIO().Framerate;
+        const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
+
+        SceneManager*      pSceneManager = editor::getService<SceneManager>();
+        Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pManager      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        const uint32       totalObjects  = ( pManager != nullptr )
+                                             ? static_cast<uint32>( pManager->getAllGameObjects().size() )
+                                             : 0;
+
+        constexpr float32 overlayW = 160.0f;
+        constexpr float32 overlayH = 72.0f;
+        const float32     x0       = canvasPos._x + canvasSize._x - overlayW - 12.0f;
+        const float32     y0       = canvasPos._y + 12.0f;
+        const float32     x1       = x0 + overlayW;
+        const float32     y1       = y0 + overlayH;
+
+        // Background & Border
+        pDrawList->AddRectFilled( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 15, 17, 22, 210 ), 6.0f );
+        pDrawList->AddRect( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 50, 60, 80, 180 ), 6.0f );
+
+        // Text lines
+        fixed_string<constant::kMaxBuffer32> arrFps;
+        formatstring( arrFps.data(), arrFps.capacity(), "FPS: %# (%# ms)", Fmt( static_cast<float64>( fps ), Format().precision( 1 ) ),
+                      Fmt( static_cast<float64>( frameTimeMs ), Format().precision( 2 ) ) );
+        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
+
+        fixed_string<constant::kMaxBuffer32> arrObj;
+        formatstring( arrObj.data(), arrObj.capacity(), "Objects: %u", totalObjects );
+        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
+
+        fixed_string<constant::kMaxBuffer32> arrRes;
+        formatstring( arrRes.data(), arrRes.capacity(), "Res: %#x%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
+                      Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
+        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
+    }
+
+    EditorViewportClient::EditorViewportClient()
+        : _cameraPos{ 0.0f, 3.0f, -6.0f }
+        , _cameraRot{ 20.0f, 0.0f, 0.0f }
+        , _orbitTarget{ 0.0f, 0.0f, 0.0f }
+        , _rulerStartWorld{ 0.0f, 0.0f, 0.0f }
+        , _rulerEndWorld{ 0.0f, 0.0f, 0.0f }
+        , _orbitDistance{ 8.0f }
+        , _fovY{ 60.0f }
+        , _nearZ{ 0.1f }
+        , _farZ{ 1000.0f }
+        , _cameraMode{ CameraControlMode::Fly }
+        , _toolbarSettings{}
+        , _gizmoUndoBeforeXml{}
+        , _listGizmoObject{}
+        , _listGizmoUndoXml{}
+        , _listGizmoRelativeWorld{}
+        , _arrGizmoGroupMatrix{}
+        , _bRulerActive{ SW_FALSE }
+        , _bGizmoTracking{ SW_FALSE }
+        , _reservedGizmo{ 0 }
+    {
+    }
+
+    void EditorViewportClient::getViewMatrix( float32* pOutMatrix ) const
+    {
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+
+        const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                                MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+        const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
+        EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
+    }
+
+    void EditorViewportClient::getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const
+    {
+        const float32  effectiveAspect = aspect > 0.001f ? aspect : 1.0f;
+        const float4x4 projMat         = float4x4::createPerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
+        EditorViewportClientInternal::storeColumnMajor( pOutMatrix, projMat );
+    }
+
+    void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
+    {
+        if ( bWindowHovered || bWindowFocused )
+        {
+            ImGuiIO& io = ImGui::GetIO();
+
+            if ( _toolbarSettings._requestedBookmarkSlot >= 0 )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext != nullptr )
+                {
+                    const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark(
+                        static_cast<uint32>( _toolbarSettings._requestedBookmarkSlot ) );
+                    if ( pBm != nullptr && pBm->_bValid )
+                    {
+                        _cameraPos     = pBm->_position;
+                        _cameraRot     = pBm->_rotation;
+                        _orbitTarget   = pBm->_orbitTarget;
+                        _orbitDistance = pBm->_orbitDistance;
+                    }
+                }
+                _toolbarSettings._requestedBookmarkSlot = -1;
+            }
+
+            if ( io.WantTextInput == false )
+            {
+                for ( int32 keyIndex = 0; keyIndex < 9; ++keyIndex )
+                {
+                    const ImGuiKey key = static_cast<ImGuiKey>( ImGuiKey_1 + keyIndex );
+                    if ( ImGui::IsKeyPressed( key, false ) )
+                    {
+                        EditorContext* pContext = EditorContext::get();
+                        if ( pContext != nullptr )
+                        {
+                            if ( io.KeyCtrl )
+                            {
+                                CameraBookmark bm{};
+                                bm._position      = _cameraPos;
+                                bm._rotation      = _cameraRot;
+                                bm._orbitTarget   = _orbitTarget;
+                                bm._orbitDistance = _orbitDistance;
+                                fixed_string<constant::kMaxBuffer32> arrName;
+                                formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
+                                bm._name = arrName.c_str();
+                                pContext->getWorkspace().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
+                            }
+                            else if ( io.KeyAlt == false && io.KeyShift == false )
+                            {
+                                const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark(
+                                    static_cast<uint32>( keyIndex ) );
+                                if ( pBm != nullptr && pBm->_bValid )
+                                {
+                                    _cameraPos     = pBm->_position;
+                                    _cameraRot     = pBm->_rotation;
+                                    _orbitTarget   = pBm->_orbitTarget;
+                                    _orbitDistance = pBm->_orbitDistance;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false )
+                {
+                    frameSelected();
+                }
+            }
+
+            if ( io.KeyAlt )
+            {
+                _cameraMode = CameraControlMode::Orbit;
+                processOrbitInput();
+            }
+            else if ( io.MouseDown[1] )
+            {
+                _cameraMode = CameraControlMode::Fly;
+                processFlyInput( deltaTime );
+            }
+        }
+
+        CameraComponent* pCam = EditorViewportClientInternal::getGameViewCamera();
+        if ( pCam != nullptr )
+        {
+            pCam->setLocalPosition( _cameraPos );
+            const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+            const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+            const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                                   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+            pCam->lookAt( _cameraPos + forward );
+        }
+    }
+
+    void EditorViewportClient::processFlyInput( float32 deltaTime )
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        // 회전 (마우스 델타)
+        _cameraRot._y += io.MouseDelta.x * 0.2f;
+        _cameraRot._x += io.MouseDelta.y * 0.2f;
+        _cameraRot._x = MathUtil::clamp( _cameraRot._x, -89.0f, 89.0f );
+
+        // 이동 (WASD + QE)
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+
+        const float3 forward = float3{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                                       MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+        const float3 right   = float3{ MathUtil::cos( yawRad ), 0.0f, -MathUtil::sin( yawRad ) };
+        const float3 up      = float3{ 0.0f, 1.0f, 0.0f };
+
+        float3 moveDir{ 0.0f, 0.0f, 0.0f };
+        if ( ImGui::IsKeyDown( ImGuiKey_W ) )
+            moveDir += forward;
+        if ( ImGui::IsKeyDown( ImGuiKey_S ) )
+            moveDir -= forward;
+        if ( ImGui::IsKeyDown( ImGuiKey_D ) )
+            moveDir += right;
+        if ( ImGui::IsKeyDown( ImGuiKey_A ) )
+            moveDir -= right;
+        if ( ImGui::IsKeyDown( ImGuiKey_E ) )
+            moveDir += up;
+        if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
+            moveDir -= up;
+
+        const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
+        _cameraPos += moveDir * speed;
+    }
+
+    void EditorViewportClient::processOrbitInput()
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        // Alt + LMB: Orbit Rotate
+        if ( io.MouseDown[0] )
+        {
+            _cameraRot._y += io.MouseDelta.x * 0.3f;
+            _cameraRot._x += io.MouseDelta.y * 0.3f;
+            _cameraRot._x = MathUtil::clamp( _cameraRot._x, -89.0f, 89.0f );
+        }
+
+        // Alt + RMB 또는 휠: Orbit Zoom
+        if ( io.MouseDown[1] )
+            _orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, 0.5f );
+
+        if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
+            _orbitDistance = MathUtil::max( _orbitDistance - io.MouseWheel * 1.0f, 0.5f );
+
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+
+        const float3 forward = float3{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                                       MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+
+        _cameraPos = _orbitTarget - forward * _orbitDistance;
+    }
+
+    void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
+    {
+        EditorViewportToolbar::draw( _toolbarSettings, viewportWidth );
+    }
+
+    void EditorViewportClient::drawTransformBar( const float2& anchorPos )
+    {
+        const bool bHasSelection = EditorContext::get()->getSelectionManager().getSelectedObjectCount() > 0;
+        EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
+    }
+
+    void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )
+    {
+        const ImVec2 imagePos = ImGui::GetCursorScreenPos();
+        if ( pTextureId != nullptr )
+            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
+        else
+            ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
+
+        CameraComponent* pCamera = EditorViewportClientInternal::getGameViewCamera();
+        const float2     canvasPos{ imagePos.x, imagePos.y };
+
+        if ( pCamera != nullptr )
+        {
+            const float32  aspect   = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+            const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
+
+            float32 arrView[16];
+            float32 arrProj[16];
+            EditorViewportClientInternal::storeColumnMajor( arrView, pCamera->getViewMatrix() );
+            EditorViewportClientInternal::storeColumnMajor( arrProj, pCamera->getProjectionMatrix( aspect ) );
+
+            if ( _toolbarSettings._bShowGrid )
+                drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
+
+            EditorViewportClientInternal::drawDebugVisualizers( ImGui::GetWindowDrawList(), viewProj, canvasPos, canvasSize, _toolbarSettings,
+                                                                pCamera );
+
+            processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
+
+            processPicking( canvasPos, canvasSize, pCamera );
+
+            {
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager != nullptr )
+                {
+                    Scene* pScene = pSceneManager->getActiveScene();
+                    if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+                        pScene->getObjectManager()->flushSceneTransforms();
+                }
+                drawGizmo( arrView, arrProj, canvasPos, canvasSize );
+            }
+
+            if ( _toolbarSettings._bShowStats )
+                drawStatsOverlay( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
+
+            if ( _toolbarSettings._bShowOrientationCube )
+                drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
+
+            if ( ImGui::BeginDragDropTarget() )
+            {
+                string droppedAssetPath;
+                if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
+                    handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
+                ImGui::EndDragDropTarget();
+            }
+        }
+    }
+
+    void EditorViewportClient::processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera )
+    {
+        if ( pCamera == nullptr )
+            return;
+        if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) == false )
+            return;
+        if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
+            return;
+        if ( ImGui::GetIO().KeyAlt )
+            return;
+        if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
+            return;
+
+        const ImVec2  mouse = ImGui::GetIO().MousePos;
+        const float32 u     = ( mouse.x - canvasPos._x ) / canvasSize._x;
+        const float32 v     = ( mouse.y - canvasPos._y ) / canvasSize._y;
+        const bool    bInside =
+            ( 0.0f <= u && u <= 1.0f && 0.0f <= v && v <= 1.0f );
+        if ( bInside == false )
+            return;
+
+        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        GameObjectManager* pManager = pScene->getObjectManager();
+        pManager->flushSceneTransforms();
+
+        const float32  aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+        const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
+        const float32  ndcX        = u * 2.0f - 1.0f;
+        const float32  ndcY        = 1.0f - v * 2.0f;
+
+        float3 nearPt{};
+        float3 farPt{};
+        if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
+            return;
+        if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
+            return;
+
+        float3        dir    = farPt - nearPt;
+        const float32 dirLen = dir.getLength();
+        if ( dirLen < 1e-8f )
+            return;
+        dir = dir * ( 1.0f / dirLen );
+
+        GameObject* pBestObj{ nullptr };
+        Component*  pBestComp{ nullptr };
+        float32     bestT{ MathUtil::MaxFloat };
+
+        const bool b2DMode = _toolbarSettings._bIs2DMode;
+        pManager->forEachGameObject( [&]( GameObject* pObj )
+        {
+            if ( pObj == nullptr || pObj->isActive() == false )
+                return;
+
+            if ( b2DMode )
+            {
+                EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+                EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+                EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+            }
+            else
+            {
+                EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+                EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+                EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+            }
+            EditorViewportClientInternal::considerScenePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+        } );
+
+        if ( pBestObj != nullptr )
+            EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestComp } );
+        else
+            EditorContext::get()->getWorkspace().clearSelection();
+    }
+
+    void EditorViewportClient::drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos,
+                                          const float2& canvasSize )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+        if ( EditorUtil::areSceneEditsAllowed() == false )
+            return;
+
+        const vector<GameObjectPtr>& listSelected = pContext->getSelectionManager().getSelectedObjects();
+        vector<GameObject*>          listGizmo;
+        listGizmo.reserve( listSelected.size() );
+        for ( const GameObjectPtr& pGo : listSelected )
+        {
+            GameObject* pRaw = pGo.get();
+            if ( pRaw == nullptr || pRaw->getPrimarySceneComponent() == nullptr )
+                continue;
+            listGizmo.push_back( pRaw );
+        }
+        if ( listGizmo.empty() )
+            return;
+
+        ImGuizmo::SetDrawlist();
+        ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
+
+        EditorWorkspace&    ws    = pContext->getWorkspace();
+        const int32         opInt = ws.getGizmoOperation();
+        ImGuizmo::OPERATION op    = ImGuizmo::TRANSLATE;
+        if ( opInt == 1 )
+            op = ImGuizmo::ROTATE;
+        else if ( opInt == 2 )
+            op = ImGuizmo::SCALE;
+
+        const ImGuizmo::MODE mode = ws.isGizmoLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+
+        float32 arrSnap[3] = { 0.0f, 0.0f, 0.0f };
+        if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bGridSnap )
+            arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._gridSnapValue;
+        else if ( op == ImGuizmo::ROTATE && _toolbarSettings._bRotationSnap )
+            arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._rotationSnapValue;
+        else if ( op == ImGuizmo::SCALE && _toolbarSettings._bScaleSnap )
+            arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._scaleSnapValue;
+        const bool bUseSnap = ( arrSnap[0] > 0.0f );
+
+        const bool bGroup = ( listGizmo.size() > 1 );
+        if ( bGroup )
+        {
+            if ( _bGizmoTracking == SW_FALSE )
+            {
+                float3 centroid{};
+                for ( GameObject* pObj : listGizmo )
+                    centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
+                const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
+                centroid               = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
+                float4x4 groupWorld{};
+                groupWorld._41 = centroid._x;
+                groupWorld._42 = centroid._y;
+                groupWorld._43 = centroid._z;
+                EditorViewportClientInternal::storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
+
+                if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                {
+                    _listGizmoObject.clear();
+                    _listGizmoUndoXml.clear();
+                    _listGizmoRelativeWorld.clear();
+                    const float4x4 invGroup = groupWorld.invert();
+                    for ( GameObject* pObj : listGizmo )
+                    {
+                        _listGizmoObject.push_back( GameObjectPtr{ pObj } );
+                        _listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
+                        _listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
+                    }
+                }
+            }
+
+            if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
+            {
+                float4x4 dummyWorld{};
+                EditorViewportClientInternal::loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
+                const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+                for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+                {
+                    GameObject* pObj = _listGizmoObject[objectIndex].get();
+                    if ( pObj == nullptr )
+                        continue;
+                    SceneComponent* pSc = pObj->getPrimarySceneComponent();
+                    if ( pSc == nullptr )
+                        continue;
+                    EditorViewportClientInternal::applyWorldMatrix( pSc, _listGizmoRelativeWorld[objectIndex] * dummyWorld );
+                }
+            }
+
+            if ( ImGuizmo::IsUsing() )
+            {
+                _bGizmoTracking = SW_TRUE;
+            }
+            else if ( _bGizmoTracking == SW_TRUE )
+            {
+                const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+                for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+                    EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
+                                                       "Gizmo Transform" );
+                _listGizmoObject.clear();
+                _listGizmoUndoXml.clear();
+                _listGizmoRelativeWorld.clear();
+                _bGizmoTracking = SW_FALSE;
+            }
+            return;
+        }
+
+        GameObject*     pRaw       = listGizmo[0];
+        SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
+        if ( pSceneComp == nullptr )
+            return;
+
+        float32 arrMatrix[16];
+        EditorViewportClientInternal::storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
+
+        if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            _gizmoUndoBeforeXml = EditorSceneCommands::captureSnapshot( pRaw );
+
+        if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
+        {
+            float4x4 newWorldMat{};
+            EditorViewportClientInternal::loadColumnMajor( newWorldMat, arrMatrix );
+
+            float4x4        localMat  = newWorldMat;
+            SceneComponent* pParentSc = pSceneComp->getParent();
+            if ( pParentSc != nullptr )
+                localMat = newWorldMat * pParentSc->getWorldMatrix().invert();
+
+            EditorViewportClientInternal::storeColumnMajor( arrMatrix, localMat );
+
+            float3 translation{};
+            float3 rotationDeg{};
+            float3 scale{};
+            ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
+
+            if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
+                EditorSceneCommands::snapTranslationToSurface( pRaw, translation, scale._y );
+
+            EditorSceneCommands::applyLocalTransform( pRaw, translation,
+                                                      float3{
+                                                          MathUtil::toRadian( rotationDeg._x ),
+                                                          MathUtil::toRadian( rotationDeg._y ),
+                                                          MathUtil::toRadian( rotationDeg._z ) },
+                                                      scale );
+        }
+
+        if ( ImGuizmo::IsUsing() )
+        {
+            _bGizmoTracking = SW_TRUE;
+        }
+        else if ( _bGizmoTracking == SW_TRUE )
+        {
+            EditorSceneCommands::commitModify( pRaw, _gizmoUndoBeforeXml, "Gizmo Transform" );
+            _gizmoUndoBeforeXml.clear();
+            _bGizmoTracking = SW_FALSE;
+        }
+    }
+
+    void EditorViewportClient::frameSelected()
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+
+        GameObjectPtr pPrimary = pContext->getSelectionManager().getPrimaryObject();
+        if ( pPrimary.isValid() == false )
+            return;
+
+        GameObject* pRaw = pPrimary.get();
+        if ( pRaw == nullptr )
+            return;
+
+        SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
+        if ( pSceneComp == nullptr )
+            return;
+
+        const float3 worldPos = pSceneComp->getWorldPosition();
+        _orbitTarget          = worldPos;
+
+        float32                 objectRadius = 2.0f;
+        BoxCollider2DComponent* pBox         = pRaw->getComponent<BoxCollider2DComponent>();
+        if ( pBox != nullptr )
+        {
+            const float2 scl = pBox->getOffsetScaleVec();
+            objectRadius     = MathUtil::max( scl._x, scl._y ) * 0.6f;
+        }
+        MeshComponent* pMesh = pRaw->getComponent<MeshComponent>();
+        if ( pMesh != nullptr )
+        {
+            const float3 scl = pMesh->getLocalScale();
+            objectRadius     = MathUtil::max( scl._x, MathUtil::max( scl._y, scl._z ) ) * 1.5f;
+        }
+
+        _orbitDistance = MathUtil::clamp( objectRadius * 2.5f, 3.0f, 60.0f );
+
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+        const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                               MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+
+        _cameraPos = _orbitTarget - forward * _orbitDistance;
+    }
+
+    void EditorViewportClient::drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos,
+                                                    const float2& canvasSize )
+    {
+        if ( pDrawList == nullptr )
+            return;
+
+        const float32     cubeCenterX = canvasPos._x + canvasSize._x - 45.0f;
+        const float32     cubeCenterY = canvasPos._y + ( _toolbarSettings._bShowStats ? 128.0f : 45.0f );
+        constexpr float32 cubeRadius  = 26.0f;
+
+        // Circular background disc
+        pDrawList->AddCircleFilled( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f,
+                                    IM_COL32( 18, 22, 30, 200 ) );
+        pDrawList->AddCircle( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f, IM_COL32( 55, 65, 85, 180 ), 0,
+                              1.5f );
+
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+
+        const float3 forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+                              MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+        const float3 right{ MathUtil::cos( yawRad ), 0.0f, -MathUtil::sin( yawRad ) };
+        const float3 up{ right._y * forward._z - right._z * forward._y, right._z * forward._x - right._x * forward._z,
+                         right._x * forward._y - right._y * forward._x };
+
+        struct AxisItem
+        {
+            float3      _dir;
+            ImU32       _col;
+            const utf8* _label;
+            float32     _depth;
+            float2      _screenOffset;
+            float3      _targetRot;
+        };
+
+        AxisItem arrAxis[6] = {
+            { float3{ 1.0f, 0.0f, 0.0f }, IM_COL32( 235,  65,  65, 255 ),  "X", 0.0f, float2{},
+             float3{ 0.0f, -90.0f, 0.0f }},
+            {float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130,  60,  60, 200 ), "-X", 0.0f, float2{},
+             float3{ 0.0f, 90.0f, 0.0f } },
+            { float3{ 0.0f, 1.0f, 0.0f },  IM_COL32( 65, 220,  95, 255 ),  "Y", 0.0f, float2{},
+             float3{ 89.0f, 0.0f, 0.0f } },
+            {float3{ 0.0f, -1.0f, 0.0f },  IM_COL32( 50, 130,  70, 200 ), "-Y", 0.0f, float2{},
+             float3{ -89.0f, 0.0f, 0.0f }},
+            { float3{ 0.0f, 0.0f, 1.0f },  IM_COL32( 65, 130, 245, 255 ),  "Z", 0.0f, float2{},
+             float3{ 0.0f, 180.0f, 0.0f }},
+            {float3{ 0.0f, 0.0f, -1.0f },  IM_COL32( 50,  70, 140, 200 ), "-Z", 0.0f, float2{},
+             float3{ 0.0f, 0.0f, 0.0f }  }
+        };
+
+        for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
+        {
+            AxisItem&     ax   = arrAxis[axisIndex];
+            const float32 dotR = ax._dir._x * right._x + ax._dir._y * right._y + ax._dir._z * right._z;
+            const float32 dotU = ax._dir._x * up._x + ax._dir._y * up._y + ax._dir._z * up._z;
+            const float32 dotF = ax._dir._x * forward._x + ax._dir._y * forward._y + ax._dir._z * forward._z;
+
+            ax._depth        = dotF;
+            ax._screenOffset = float2{ dotR * cubeRadius * 0.78f, -dotU * cubeRadius * 0.78f };
+        }
+
+        // Sort by depth ascending so further items are drawn first
+        std::sort( std::begin( arrAxis ), std::end( arrAxis ),
+                   []( const AxisItem& a, const AxisItem& b )
+        { return a._depth < b._depth; } );
+
+        const ImVec2 mousePos = ImGui::GetMousePos();
+
+        for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
+        {
+            const AxisItem& ax = arrAxis[axisIndex];
+            const ImVec2    pt( cubeCenterX + ax._screenOffset._x, cubeCenterY + ax._screenOffset._y );
+
+            // Axis line from center
+            pDrawList->AddLine( ImVec2( cubeCenterX, cubeCenterY ), pt, ax._col, 1.8f );
+
+            // Disc handle
+            const float32 handleRadius = ( ax._depth > 0.0f ) ? 6.5f : 4.5f;
+            const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
+            const bool    bHovered     = ( distToMouse <= handleRadius + 2.0f );
+
+            pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
+
+            if ( ax._depth > -0.2f && ax._label[0] != '-' )
+            {
+                pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._label );
+            }
+
+            if ( bHovered && ImGui::IsMouseClicked( 0 ) )
+            {
+                _cameraRot                = ax._targetRot;
+                const float32 newPitchRad = MathUtil::toRadian( _cameraRot._x );
+                const float32 newYawRad   = MathUtil::toRadian( _cameraRot._y );
+                const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ),
+                                          -MathUtil::sin( newPitchRad ),
+                                          MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
+                _cameraPos = _orbitTarget - newForward * _orbitDistance;
+            }
+        }
+    }
+
+    void EditorViewportClient::drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos,
+                                                 const float2& canvasSize, const float32* pView, const float32* pProj )
+    {
+        if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
+            return;
+
+        float4x4 viewMat{};
+        float4x4 projMat{};
+        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
+        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
+        const float4x4 viewProj = viewMat * projMat;
+
+        constexpr int32   kGridExtent = 20;
+        constexpr float32 kGridStep   = 1.0f;
+
+        if ( _toolbarSettings._bIs2DMode )
+        {
+            // XY plane vertical grid for 2D mode
+            const float32 centerX = MathUtil::floor( _cameraPos._x );
+            const float32 centerY = MathUtil::floor( _cameraPos._y );
+
+            for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
+            {
+                const float32 current  = static_cast<float32>( index ) * kGridStep;
+                const bool    bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
+                const bool    bOriginY = ( MathUtil::abs( centerY + current ) < 0.01f );
+                const bool    bMajor   = ( index % 5 == 0 );
+
+                const ImU32 colX = bOriginX ? IM_COL32( 65, 220, 95, 180 )
+                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colY = bOriginY ? IM_COL32( 220, 60, 60, 180 )
+                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+
+                // Vertical lines parallel to Y
+                const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
+                const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
+                ImVec2       sY0, sY1;
+                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pY0, canvasPos, canvasSize, sY0 ) &&
+                     EditorViewportClientInternal::projectPointToScreen( viewProj, pY1, canvasPos, canvasSize, sY1 ) )
+                {
+                    pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                }
+
+                // Horizontal lines parallel to X
+                const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
+                const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
+                ImVec2       sX0, sX1;
+                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
+                     EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
+                {
+                    pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
+                }
+            }
+        }
+        else
+        {
+            // XZ plane ground grid for 3D mode
+            const float32 centerX = MathUtil::floor( _cameraPos._x );
+            const float32 centerZ = MathUtil::floor( _cameraPos._z );
+
+            for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
+            {
+                const float32 current  = static_cast<float32>( index ) * kGridStep;
+                const bool    bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
+                const bool    bOriginZ = ( MathUtil::abs( centerZ + current ) < 0.01f );
+                const bool    bMajor   = ( index % 5 == 0 );
+
+                const ImU32 colX = bOriginX ? IM_COL32( 220, 60, 60, 180 )
+                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colZ = bOriginZ ? IM_COL32( 60, 110, 240, 180 )
+                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+
+                // Line parallel to Z
+                const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
+                const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
+                ImVec2       sZ0, sZ1;
+                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pZ0, canvasPos, canvasSize, sZ0 ) &&
+                     EditorViewportClientInternal::projectPointToScreen( viewProj, pZ1, canvasPos, canvasSize, sZ1 ) )
+                {
+                    pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                }
+
+                // Line parallel to X
+                const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
+                const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
+                ImVec2       sX0, sX1;
+                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
+                     EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
+                {
+                    pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
+                }
+            }
+        }
+    }
+
+    void EditorViewportClient::processRulerTool( ImDrawList* pDrawList, const float2& canvasPos,
+                                                 const float2& canvasSize, const float32* pView, const float32* pProj )
+    {
+        if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
+            return;
+
+        if ( ImGui::IsKeyDown( ImGuiKey_M ) == false && _toolbarSettings._bShowRuler == false )
+        {
+            _bRulerActive = SW_FALSE;
+            return;
+        }
+
+        float4x4 viewMat{};
+        float4x4 projMat{};
+        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
+        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
+        const float4x4 viewProj    = viewMat * projMat;
+        const float4x4 invViewProj = viewProj.invert();
+
+        const ImVec2  mousePos     = ImGui::GetMousePos();
+        const float32 mouseCanvasX = mousePos.x - canvasPos._x;
+        const float32 mouseCanvasY = mousePos.y - canvasPos._y;
+
+        if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
+             0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
+        {
+            const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
+            const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
+
+            float3 nearPt{}, farPt{};
+            if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
+                 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
+            {
+                const float3 dir = farPt - nearPt;
+                if ( MathUtil::abs( dir._y ) > 1e-4f )
+                {
+                    const float32 t        = -nearPt._y / dir._y;
+                    const float3  groundPt = nearPt + dir * t;
+
+                    if ( ImGui::IsMouseClicked( 0 ) )
+                    {
+                        _rulerStartWorld = groundPt;
+                        _rulerEndWorld   = groundPt;
+                        _bRulerActive    = SW_TRUE;
+                    }
+                    else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
+                    {
+                        _rulerEndWorld = groundPt;
+                    }
+                }
+            }
+        }
+
+        if ( _bRulerActive == SW_TRUE )
+        {
+            ImVec2 sStart, sEnd;
+            if ( EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&
+                 EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
+            {
+                // Measurement line
+                pDrawList->AddLine( sStart, sEnd, IM_COL32( 255, 215, 40, 240 ), 2.5f );
+                pDrawList->AddCircleFilled( sStart, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
+                pDrawList->AddCircleFilled( sEnd, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
+
+                const float3  delta = _rulerEndWorld - _rulerStartWorld;
+                const float32 dist  = delta.getLength();
+
+                fixed_string<constant::kMaxBuffer64> arrDistText;
+                formatstring( arrDistText.data(), arrDistText.capacity(), "%# m (dX: %#, dZ: %#)",
+                              Fmt( static_cast<float64>( dist ), Format().precision( 2 ) ), Fmt( static_cast<float64>( delta._x ), Format().precision( 2 ) ),
+                              Fmt( static_cast<float64>( delta._z ), Format().precision( 2 ) ) );
+
+                const ImVec2 mid( ( sStart.x + sEnd.x ) * 0.5f, ( sStart.y + sEnd.y ) * 0.5f - 16.0f );
+                pDrawList->AddRectFilled( ImVec2( mid.x - 4.0f, mid.y - 2.0f ),
+                                          ImVec2( mid.x + 160.0f, mid.y + 18.0f ), IM_COL32( 20, 24, 32, 220 ), 4.0f );
+                pDrawList->AddText( mid, IM_COL32( 255, 230, 80, 255 ), arrDistText.c_str() );
+            }
+        }
+    }
+
+    void EditorViewportClient::handleViewportAssetDrop( const utf8* pAssetPath, const float2& canvasPos,
+                                                        const float2& canvasSize, const float32* pView,
+                                                        const float32* pProj )
+    {
+        if ( pAssetPath == nullptr || pView == nullptr || pProj == nullptr )
+            return;
+        if ( EditorUtil::areSceneEditsAllowed() == false )
+            return;
+
+        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+
+        GameObjectManager* pManager = pScene->getObjectManager();
+
+        // Calculate 3D spawn world position from mouse cursor
+        float4x4 viewMat{};
+        float4x4 projMat{};
+        EditorViewportClientInternal::loadColumnMajor( viewMat, pView );
+        EditorViewportClientInternal::loadColumnMajor( projMat, pProj );
+        const float4x4 viewProj    = viewMat * projMat;
+        const float4x4 invViewProj = viewProj.invert();
+
+        const ImVec2  mousePos     = ImGui::GetMousePos();
+        const float32 mouseCanvasX = mousePos.x - canvasPos._x;
+        const float32 mouseCanvasY = mousePos.y - canvasPos._y;
+
+        float3 spawnPos{ 0.0f, 0.0f, 0.0f };
+        if ( 0.0f <= mouseCanvasX && mouseCanvasX <= canvasSize._x &&
+             0.0f <= mouseCanvasY && mouseCanvasY <= canvasSize._y )
+        {
+            const float32 ndcX = ( mouseCanvasX / canvasSize._x ) * 2.0f - 1.0f;
+            const float32 ndcY = 1.0f - ( mouseCanvasY / canvasSize._y ) * 2.0f;
+
+            float3 nearPt{}, farPt{};
+            if ( EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) &&
+                 EditorViewportClientInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) )
+            {
+                const float3 dir = farPt - nearPt;
+                if ( _toolbarSettings._bIs2DMode )
+                {
+                    // Intersect with Z = 0 plane
+                    if ( MathUtil::abs( dir._z ) > 1e-4f )
+                    {
+                        const float32 t = -nearPt._z / dir._z;
+                        spawnPos        = nearPt + dir * t;
+                        spawnPos._z     = 0.0f;
+                    }
+                }
+                else
+                {
+                    // Intersect with Y = 0 ground plane
+                    if ( MathUtil::abs( dir._y ) > 1e-4f )
+                    {
+                        const float32 t = -nearPt._y / dir._y;
+                        spawnPos        = nearPt + dir * t;
+                        spawnPos._y     = 0.0f;
+                    }
+                }
+            }
+        }
+
+        EditorAssetCommands::dropAt( pManager, pAssetPath, spawnPos );
+    }
 } // namespace sw::editor

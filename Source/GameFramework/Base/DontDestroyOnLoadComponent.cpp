@@ -6,24 +6,24 @@
 
 namespace sw
 {
-	DontDestroyOnLoadComponent::DontDestroyOnLoadComponent()
-		: _persistentTag{ "Persistent" }
-		, _bPersistent{ true }
-	{
-	}
+    DontDestroyOnLoadComponent::DontDestroyOnLoadComponent()
+        : _persistentTag{ "Persistent" }
+        , _bPersistent{ true }
+    {
+    }
 
-	void DontDestroyOnLoadComponent::onBeginPlay()
-	{
-		Component::onBeginPlay();
-		setTickGroup( TickGroup::PrePhysics );
+    void DontDestroyOnLoadComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        setTickGroup( TickGroup::PrePhysics );
 
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			pOwner->addTag( "DontDestroyOnLoad"_tag );
-	}
+        GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr )
+            pOwner->addTag( "DontDestroyOnLoad"_tag );
+    }
 
-	void DontDestroyOnLoadComponent::onEndPlay()
-	{
-		Component::onEndPlay();
-	}
+    void DontDestroyOnLoadComponent::onEndPlay()
+    {
+        Component::onEndPlay();
+    }
 } // namespace sw

@@ -7,11 +7,11 @@
 
 namespace sw
 {
-	DelegateHandle DelegateHandle::allocate()
-	{
-		static atomic<uint64> s_nextHandleId{ 1 };
-		DelegateHandle		  handle{};
-		handle._id = s_nextHandleId.fetch_add( 1, std::memory_order_relaxed );
-		return handle;
-	}
+    DelegateHandle DelegateHandle::allocate()
+    {
+        static atomic<uint64> s_nextHandleId{ 1 };
+        DelegateHandle        handle{};
+        handle._id = s_nextHandleId.fetch_add( 1, std::memory_order_relaxed );
+        return handle;
+    }
 } // namespace sw

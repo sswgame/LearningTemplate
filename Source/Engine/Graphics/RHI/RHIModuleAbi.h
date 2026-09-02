@@ -11,13 +11,13 @@
 
 namespace sw
 {
-	class IRHIDevice;
+    class IRHIDevice;
 
-	inline constexpr uint32 kRHIModuleAbiVersion = 0;
-	/** @brief 불투명 표면 지문. CL/디바이스 ABI가 바뀌면 문자열을 바꿉니다. */
-	inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v2-2026-08";
+    inline constexpr uint32 kRHIModuleAbiVersion = 0;
+    /** @brief 불투명 표면 지문. CL/디바이스 ABI가 바뀌면 문자열을 바꿉니다. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v2-2026-08";
 
-	using PFN_CreateRHIDevice		 = IRHIDevice* (*)();
-	using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
-	using PFN_GetRHIModuleAbiStamp	 = const utf8* (*)();
+    using PFN_CreateRHIDevice        = IRHIDevice* (*)();
+    using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
+    using PFN_GetRHIModuleAbiStamp   = const utf8* (*)();
 } // namespace sw

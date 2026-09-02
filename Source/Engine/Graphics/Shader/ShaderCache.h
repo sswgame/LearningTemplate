@@ -13,35 +13,35 @@
 
 namespace sw
 {
-	/// @brief 디스크 캐시 한 항목 (바이트코드 + 해시)
-	struct ShaderCacheEntry
-	{
-		uint64				_lastTimestamp{ 0 };
-		ShaderCompileResult _result;
-	};
+    /// @brief 디스크 캐시 한 항목 (바이트코드 + 해시)
+    struct ShaderCacheEntry
+    {
+        uint64              _lastTimestamp{ 0 };
+        ShaderCompileResult _result;
+    };
 
-	/// @brief 컴파일 결과 디스크 캐시 매니저
-	class SW_API ShaderCache
-	{
-	public:
-		ShaderCache();
-		~ShaderCache();
+    /// @brief 컴파일 결과 디스크 캐시 매니저
+    class SW_API ShaderCache
+    {
+    public:
+        ShaderCache();
+        ~ShaderCache();
 
-		ShaderCache( const ShaderCache& )			 = delete;
-		ShaderCache& operator=( const ShaderCache& ) = delete;
+        ShaderCache( const ShaderCache& )            = delete;
+        ShaderCache& operator=( const ShaderCache& ) = delete;
 
-		/** @brief 셰이더 캐시를 초기화합니다. */
-		bool initialize();
-		/** @brief 셰이더 캐시를 정리하고 종료합니다. */
-		void shutdown();
+        /** @brief 셰이더 캐시를 초기화합니다. */
+        bool initialize();
+        /** @brief 셰이더 캐시를 정리하고 종료합니다. */
+        void shutdown();
 
-		/** @brief 캐시에 있으면 반환하고, 없거나 파일이 바뀌었으면 컴파일 후 캐시합니다. */
-		ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );
-		/** @brief 컴파일 캐시를 비웁니다. */
-		void clearCache();
+        /** @brief 캐시에 있으면 반환하고, 없거나 파일이 바뀌었으면 컴파일 후 캐시합니다. */
+        ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );
+        /** @brief 컴파일 캐시를 비웁니다. */
+        void clearCache();
 
-	private:
-		unordered_map<string, ShaderCacheEntry> _mapCache;
-		mutex									_mutexCache;
-	};
+    private:
+        unordered_map<string, ShaderCacheEntry> _mapCache;
+        mutex                                   _mutexCache;
+    };
 } // namespace sw

@@ -6,70 +6,70 @@
 
 namespace sw
 {
-	uint32 InputSnapshot::serialize( uint8* pOutBuffer, uint32 bufferSize ) const
-	{
-		if ( pOutBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
-			return 0;
+    uint32 InputSnapshot::serialize( uint8* pOutBuffer, uint32 bufferSize ) const
+    {
+        if ( pOutBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
+            return 0;
 
-		Memory::copy( pOutBuffer, this, sizeof( InputSnapshot ) );
-		return static_cast<uint32>( sizeof( InputSnapshot ) );
-	}
+        Memory::copy( pOutBuffer, this, sizeof( InputSnapshot ) );
+        return static_cast<uint32>( sizeof( InputSnapshot ) );
+    }
 
-	bool InputSnapshot::deserialize( const uint8* pBuffer, uint32 bufferSize )
-	{
-		if ( pBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
-			return false;
+    bool InputSnapshot::deserialize( const uint8* pBuffer, uint32 bufferSize )
+    {
+        if ( pBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
+            return false;
 
-		Memory::copy( this, pBuffer, sizeof( InputSnapshot ) );
-		return true;
-	}
+        Memory::copy( this, pBuffer, sizeof( InputSnapshot ) );
+        return true;
+    }
 
-	InputHistoryBuffer::InputHistoryBuffer()
-		: _arrHistory{}
-		, _writeIndex{ 0 }
-		, _count{ 0 }
-		, _latestTick{ 0 }
-	{
-	}
+    InputHistoryBuffer::InputHistoryBuffer()
+        : _arrHistory{}
+        , _writeIndex{ 0 }
+        , _count{ 0 }
+        , _latestTick{ 0 }
+    {
+    }
 
-	void InputHistoryBuffer::recordSnapshot( const InputSnapshot& snapshot )
-	{
-		_arrHistory[_writeIndex] = snapshot;
-		_latestTick				 = snapshot._tickNumber;
-		_writeIndex				 = ( _writeIndex + 1 ) & ( kDefaultCapacity - 1 );
-		if ( _count < kDefaultCapacity )
-			++_count;
-	}
+    void InputHistoryBuffer::recordSnapshot( const InputSnapshot& snapshot )
+    {
+        _arrHistory[_writeIndex] = snapshot;
+        _latestTick              = snapshot._tickNumber;
+        _writeIndex              = ( _writeIndex + 1 ) & ( kDefaultCapacity - 1 );
+        if ( _count < kDefaultCapacity )
+            ++_count;
+    }
 
-	const InputSnapshot* InputHistoryBuffer::getSnapshot( uint32 tickNumber ) const
-	{
-		if ( _count == 0 || tickNumber > _latestTick )
-			return nullptr;
+    const InputSnapshot* InputHistoryBuffer::getSnapshot( uint32 tickNumber ) const
+    {
+        if ( _count == 0 || tickNumber > _latestTick )
+            return nullptr;
 
-		const uint32 diff = _latestTick - tickNumber;
-		if ( diff < _count )
-		{
-			const size_t index = ( _writeIndex + kDefaultCapacity - 1 - diff ) & ( kDefaultCapacity - 1 );
-			if ( _arrHistory[index]._tickNumber == tickNumber )
-				return &_arrHistory[index];
-		}
+        const uint32 diff = _latestTick - tickNumber;
+        if ( diff < _count )
+        {
+            const size_t index = ( _writeIndex + kDefaultCapacity - 1 - diff ) & ( kDefaultCapacity - 1 );
+            if ( _arrHistory[index]._tickNumber == tickNumber )
+                return &_arrHistory[index];
+        }
 
-		return nullptr;
-	}
+        return nullptr;
+    }
 
-	const InputSnapshot* InputHistoryBuffer::getLatestSnapshot() const
-	{
-		if ( _count == 0 )
-			return nullptr;
+    const InputSnapshot* InputHistoryBuffer::getLatestSnapshot() const
+    {
+        if ( _count == 0 )
+            return nullptr;
 
-		const size_t lastIndex = ( _writeIndex + kDefaultCapacity - 1 ) & ( kDefaultCapacity - 1 );
-		return &_arrHistory[lastIndex];
-	}
+        const size_t lastIndex = ( _writeIndex + kDefaultCapacity - 1 ) & ( kDefaultCapacity - 1 );
+        return &_arrHistory[lastIndex];
+    }
 
-	void InputHistoryBuffer::clear()
-	{
-		_writeIndex = 0;
-		_count		= 0;
-		_latestTick = 0;
-	}
+    void InputHistoryBuffer::clear()
+    {
+        _writeIndex = 0;
+        _count      = 0;
+        _latestTick = 0;
+    }
 } // namespace sw

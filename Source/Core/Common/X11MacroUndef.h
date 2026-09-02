@@ -4,37 +4,37 @@
  */
 
 #if defined( SW_PLATFORM_LINUX )
-	#include "Core/Common/Types.h"
-	#if defined( None )
-		#undef None
-	#endif
-	#if defined( Bool )
-		#undef Bool
-	#endif
+    #include "Core/Common/Types.h"
+    #if defined( None )
+        #undef None
+    #endif
+    #if defined( Bool )
+        #undef Bool
+    #endif
 typedef int32 Bool;
-	#if defined( Status )
-		#undef Status
-	#endif
+    #if defined( Status )
+        #undef Status
+    #endif
 typedef int32 Status;
-	#if defined( Success )
-		#undef Success
-	#endif
-	#if defined( Always )
-		#undef Always
-	#endif
-	#if defined( Above )
-		#undef Above
-	#endif
-	#if defined( Below )
-		#undef Below
-	#endif
-	#if defined( Complex )
-		#undef Complex
-	#endif
-	#if defined( True )
-		#undef True
-	#endif
-	#if defined( False )
-		#undef False
-	#endif
+    #if defined( Success )
+        #undef Success
+    #endif
+    #if defined( Always )
+        #undef Always
+    #endif
+    #if defined( Above )
+        #undef Above
+    #endif
+    #if defined( Below )
+        #undef Below
+    #endif
+    #if defined( Complex )
+        #undef Complex
+    #endif
+    #if defined( True )
+        #undef True
+    #endif
+    #if defined( False )
+        #undef False
+    #endif
 #endif

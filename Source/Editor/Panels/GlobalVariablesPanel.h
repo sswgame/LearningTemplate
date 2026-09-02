@@ -16,50 +16,50 @@
 
 namespace sw
 {
-	struct GlobalVariableInfo;
+    struct GlobalVariableInfo;
 } // namespace sw
 
 namespace sw::editor
 {
-	/** @brief 등록된 모든 전역 변수를 목록화하고 실시간으로 편집하는 에디터 도구 윈도우 */
-	class GlobalVariablesPanel : public IEditorPanel
-	{
-	public:
-		/** @brief 전역 변수 윈도우를 생성합니다. (도구 창으로 기본 비활성 시작) */
-		GlobalVariablesPanel();
-		/** @brief 추가 해제할 GPU 리소스는 없습니다. */
-		virtual ~GlobalVariablesPanel() override = default;
+    /** @brief 등록된 모든 전역 변수를 목록화하고 실시간으로 편집하는 에디터 도구 윈도우 */
+    class GlobalVariablesPanel : public IEditorPanel
+    {
+    public:
+        /** @brief 전역 변수 윈도우를 생성합니다. (도구 창으로 기본 비활성 시작) */
+        GlobalVariablesPanel();
+        /** @brief 추가 해제할 GPU 리소스는 없습니다. */
+        virtual ~GlobalVariablesPanel() override = default;
 
-		// ------------------------------------------------------------------------------
-		// 1) IEditorPanel — 제목/그리기
-		// ------------------------------------------------------------------------------
-		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getPanelTitle() const override { return "Global Variables"; }
-		/** @brief 전역 변수 UI를 그립니다. */
-		void drawContent() override;
-		/** @brief 기본 창 크기를 반환합니다. */
-		float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
-		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolPanel() const override { return true; }
-		bool trySaveDirtyDocument() override;
-		bool isDocumentDirty() const override;
-		void discardDirtyDocument() override;
+        // ------------------------------------------------------------------------------
+        // 1) IEditorPanel — 제목/그리기
+        // ------------------------------------------------------------------------------
+        /** @brief 윈도우 제목을 반환합니다. */
+        const utf8* getPanelTitle() const override { return "Global Variables"; }
+        /** @brief 전역 변수 UI를 그립니다. */
+        void drawContent() override;
+        /** @brief 기본 창 크기를 반환합니다. */
+        float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
+        /** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
+        bool isToolPanel() const override { return true; }
+        bool trySaveDirtyDocument() override;
+        bool isDocumentDirty() const override;
+        void discardDirtyDocument() override;
 
-	private:
-		/** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */
-		void			 drawVariableRow( GlobalVariableInfo& info, bool bShowPin );
-		void			 markSessionDirty();
-		EditorPanelFlags getPanelFlags() const override;
+    private:
+        /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */
+        void             drawVariableRow( GlobalVariableInfo& info, bool bShowPin );
+        void             markSessionDirty();
+        EditorPanelFlags getPanelFlags() const override;
 
-	private:
-		unordered_set<string>				  _uniquePinnedVar;
-		EditorFileCollectJob				  _presetJob;
-		vector<string>						  _listPresetFile;
-		fixed_string<constant::kMaxBuffer128> _searchFilter;
-		fixed_string<constant::kMaxBuffer64>  _presetNameBuf;
-		uint8								  _bGroupByModule	: 1;
-		uint8								  _bPresetListDirty : 1;
-		uint8								  _bSessionDirty	: 1;
-		[[maybe_unused]] uint8				  _reserved			: 5;
-	};
+    private:
+        unordered_set<string>                 _uniquePinnedVar;
+        EditorFileCollectJob                  _presetJob;
+        vector<string>                        _listPresetFile;
+        fixed_string<constant::kMaxBuffer128> _searchFilter;
+        fixed_string<constant::kMaxBuffer64>  _presetNameBuf;
+        uint8                                 _bGroupByModule   : 1;
+        uint8                                 _bPresetListDirty : 1;
+        uint8                                 _bSessionDirty    : 1;
+        [[maybe_unused]] uint8                _reserved         : 5;
+    };
 } // namespace sw::editor

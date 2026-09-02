@@ -12,39 +12,39 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "Editor" );
+    SW_LOG_CALLER( "Editor" );
 
-	namespace
-	{
-		EditorConfig s_activeEditorConfig{};
-	} // namespace
+    namespace
+    {
+        EditorConfig s_activeEditorConfig{};
+    } // namespace
 
-	void EditorConfig::setActive( const EditorConfig& config )
-	{
-		s_activeEditorConfig = config;
-	}
+    void EditorConfig::setActive( const EditorConfig& config )
+    {
+        s_activeEditorConfig = config;
+    }
 
-	const EditorConfig& EditorConfig::getActive()
-	{
-		return s_activeEditorConfig;
-	}
+    const EditorConfig& EditorConfig::getActive()
+    {
+        return s_activeEditorConfig;
+    }
 
-	void EditorConfig::loadFromHost()
-	{
-		EditorConfig	cfg{};
-		const TypeInfo* pTypeInfo	= EditorConfig::StaticType();
-		const string	projectRoot = EditorUtil::getProjectRootPath();
-		string			configPath	= FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
-		const bool		bAbsolute	= ( configPath.size() >= 2 && configPath[1] == ':' ) ||
-							   ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
-		if ( projectRoot.empty() == false && bAbsolute == false )
-			configPath = FileUtil::joinPath( projectRoot, configPath );
+    void EditorConfig::loadFromHost()
+    {
+        EditorConfig    cfg{};
+        const TypeInfo* pTypeInfo   = EditorConfig::StaticType();
+        const string    projectRoot = EditorUtil::getProjectRootPath();
+        string          configPath  = FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
+        const bool      bAbsolute   = ( configPath.size() >= 2 && configPath[1] == ':' ) ||
+                                      ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
+        if ( projectRoot.empty() == false && bAbsolute == false )
+            configPath = FileUtil::joinPath( projectRoot, configPath );
 
-		if ( pTypeInfo != nullptr && JsonSerializer::loadFile( configPath, &cfg, *pTypeInfo ) )
-			SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
-		else
-			SW_LOG_WARNING( "EditorConfig missing or deserialize failed — cpp defaults" );
+        if ( pTypeInfo != nullptr && JsonSerializer::loadFile( configPath, &cfg, *pTypeInfo ) )
+            SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
+        else
+            SW_LOG_WARNING( "EditorConfig missing or deserialize failed — cpp defaults" );
 
-		setActive( cfg );
-	}
+        setActive( cfg );
+    }
 } // namespace sw::editor

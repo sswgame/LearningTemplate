@@ -12,131 +12,131 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "RHI" );
+    SW_LOG_CALLER( "RHI" );
 
-	IRHIDevice::~IRHIDevice() = default;
+    IRHIDevice::~IRHIDevice() = default;
 
-	IRHIDevice::IRHIDevice()
-		: _pInitWindow{ nullptr }
-		, _renderPassManager{ nullptr }
-		, _defaultCommandListMode{ RHICommandListMode::Deferred }
-		, _bPreferredVSync{ false }
-	{
-	}
+    IRHIDevice::IRHIDevice()
+        : _pInitWindow{ nullptr }
+        , _renderPassManager{ nullptr }
+        , _defaultCommandListMode{ RHICommandListMode::Deferred }
+        , _bPreferredVSync{ false }
+    {
+    }
 
-	unique_ptr<IRHICommandList> IRHIDevice::createCommandList()
-	{
-		return createCommandList( _defaultCommandListMode );
-	}
+    unique_ptr<IRHICommandList> IRHIDevice::createCommandList()
+    {
+        return createCommandList( _defaultCommandListMode );
+    }
 
-	bool IRHIDevice::executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-													uint32 width, uint32 height )
-	{
-		if ( pso == 0 || width == 0 || height == 0 )
-			return false;
-		IRHIResource* pResource = getResource();
-		if ( pResource == nullptr )
-		{
-			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
-			return false;
-		}
-		if ( getCapabilities()._bOffscreenRT == 0 )
-		{
-			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
-			return false;
-		}
+    bool IRHIDevice::executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+                                                    uint32 width, uint32 height )
+    {
+        if ( pso == 0 || width == 0 || height == 0 )
+            return false;
+        IRHIResource* pResource = getResource();
+        if ( pResource == nullptr )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
+            return false;
+        }
+        if ( getCapabilities()._bOffscreenRT == 0 )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
+            return false;
+        }
 
-		RHITextureDesc desc{};
-		desc._width				= width;
-		desc._height			= height;
-		desc._format			= RHIFormat::R8G8B8A8_UNORM;
-		desc._bIsRenderTarget	= 1;
-		desc._bIsShaderResource = 1;
-		desc._clearColor		= float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+        RHITextureDesc desc{};
+        desc._width             = width;
+        desc._height            = height;
+        desc._format            = RHIFormat::R8G8B8A8_UNORM;
+        desc._bIsRenderTarget   = 1;
+        desc._bIsShaderResource = 1;
+        desc._clearColor        = float4{ 0.05f, 0.05f, 0.08f, 1.0f };
 
-		const RHITextureHandle rt = pResource->createTexture2D( desc );
-		if ( rt == 0 )
-		{
-			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
-			return false;
-		}
+        const RHITextureHandle rt = pResource->createTexture2D( desc );
+        if ( rt == 0 )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
+            return false;
+        }
 
-		bool bOk{ true };
+        bool bOk{ true };
 
-		// Present 없이 beginRenderPass → PSO → fullscreen draw (모든 백엔드).
-		unique_ptr<IRHICommandList> cmd = createCommandList( RHICommandListMode::Immediate );
-		if ( cmd == nullptr )
-		{
-			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );
-			bOk = false;
-		}
-		else
-		{
-			RHIRenderPassBeginInfo beginInfo{};
-			beginInfo.setColorTarget( rt, desc._clearColor, RHIRenderPassLoadOp::Clear );
-			beginInfo._bBindColor = 1;
-			beginInfo._width	  = width;
-			beginInfo._height	  = height;
+        // Present 없이 beginRenderPass → PSO → fullscreen draw (모든 백엔드).
+        unique_ptr<IRHICommandList> cmd = createCommandList( RHICommandListMode::Immediate );
+        if ( cmd == nullptr )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );
+            bOk = false;
+        }
+        else
+        {
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( rt, desc._clearColor, RHIRenderPassLoadOp::Clear );
+            beginInfo._bBindColor = 1;
+            beginInfo._width      = width;
+            beginInfo._height     = height;
 
-			RHIViewport viewport{};
-			viewport._width	 = static_cast<float32>( width );
-			viewport._height = static_cast<float32>( height );
+            RHIViewport viewport{};
+            viewport._width  = static_cast<float32>( width );
+            viewport._height = static_cast<float32>( height );
 
-			cmd->beginCommandList();
-			cmd->setViewport( viewport );
-			cmd->beginRenderPass( beginInfo );
-			cmd->setPipelineState( pso );
-			cmd->draw( 3, 0, materialCb );
-			cmd->endRenderPass();
-			cmd->endCommandList();
-			executeCommandList( cmd.get() );
-			waitIdle();
-		}
+            cmd->beginCommandList();
+            cmd->setViewport( viewport );
+            cmd->beginRenderPass( beginInfo );
+            cmd->setPipelineState( pso );
+            cmd->draw( 3, 0, materialCb );
+            cmd->endRenderPass();
+            cmd->endCommandList();
+            executeCommandList( cmd.get() );
+            waitIdle();
+        }
 
-		pResource->destroyTexture( rt );
-		return bOk;
-	}
+        pResource->destroyTexture( rt );
+        return bOk;
+    }
 
-	bool IRHIDevice::initialize()
-	{
-		if ( _pInitWindow == nullptr )
-			return false;
+    bool IRHIDevice::initialize()
+    {
+        if ( _pInitWindow == nullptr )
+            return false;
 
-		_renderPassManager = make_unique<RenderPassManager>();
-		if ( _renderPassManager->initialize() == false )
-			return false;
+        _renderPassManager = make_unique<RenderPassManager>();
+        if ( _renderPassManager->initialize() == false )
+            return false;
 
-		constexpr uint32 kBackBufferCount = 3;
+        constexpr uint32 kBackBufferCount = 3;
 
-		RHISwapChainDesc swapChainDesc{};
-		swapChainDesc._pWindowHandle  = _pInitWindow->getNativeHandle();
-		swapChainDesc._pWindowDisplay = _pInitWindow->getNativeDisplay();
-		swapChainDesc._width		  = _pInitWindow->getWidth();
-		swapChainDesc._height		  = _pInitWindow->getHeight();
-		swapChainDesc._bufferCount	  = kBackBufferCount;
-		swapChainDesc._bVSync		  = _bPreferredVSync;
-		if ( engine::areEngineServicesBound() )
-		{
-			bool bCliVSync{ false };
-			if ( engine::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
-				swapChainDesc._bVSync = bCliVSync;
-		}
+        RHISwapChainDesc swapChainDesc{};
+        swapChainDesc._pWindowHandle  = _pInitWindow->getNativeHandle();
+        swapChainDesc._pWindowDisplay = _pInitWindow->getNativeDisplay();
+        swapChainDesc._width          = _pInitWindow->getWidth();
+        swapChainDesc._height         = _pInitWindow->getHeight();
+        swapChainDesc._bufferCount    = kBackBufferCount;
+        swapChainDesc._bVSync         = _bPreferredVSync;
+        if ( engine::areEngineServicesBound() )
+        {
+            bool bCliVSync{ false };
+            if ( engine::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
+                swapChainDesc._bVSync = bCliVSync;
+        }
 
-		return initializeInternal( swapChainDesc );
-	}
+        return initializeInternal( swapChainDesc );
+    }
 
-	void IRHIDevice::shutdown()
-	{
-		if ( _renderPassManager )
-		{
-			_renderPassManager->shutdown();
-			_renderPassManager.reset();
-		}
-		shutdownInternal();
-	}
+    void IRHIDevice::shutdown()
+    {
+        if ( _renderPassManager )
+        {
+            _renderPassManager->shutdown();
+            _renderPassManager.reset();
+        }
+        shutdownInternal();
+    }
 
-	RenderPassManager& IRHIDevice::getRenderPassManager() const
-	{
-		return *_renderPassManager;
-	}
+    RenderPassManager& IRHIDevice::getRenderPassManager() const
+    {
+        return *_renderPassManager;
+    }
 } // namespace sw

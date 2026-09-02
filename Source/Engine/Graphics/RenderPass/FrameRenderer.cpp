@@ -15,336 +15,336 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FrameRenderer" );
 
-	FrameRenderer::FrameRenderer()
-		: _pDevice{ nullptr }
-		, _pCmdOwnerDevice{ nullptr }
-		, _frameCmd{ nullptr }
-		, _pCmd{ nullptr }
-		, _pScene{ nullptr }
-		, _pTaskManager{ nullptr }
-		, _gpuScene{}
-		, _pipelineResource{}
-		, _graph{}
-		, _pipelinePath{}
-		, _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-		, _mapTransient{}
-		, _mapTransientSrv{}
-		, _listClearedThisFrame{}
-		, _frameCtx{}
-		, _gpuCullCb{ 0 }
-		, _gpuCullCbIndex{ kInvalidDescriptorIndex }
-		, _mapEnginePso{}
-		, _mapMaterialPassPso{}
-		, _transientWidth{ 0 }
-		, _transientHeight{ 0 }
-		, _outputRenderTarget{ 0 }
-		, _taaHistory{ 0 }
-		, _taaHistorySrv{ kInvalidDescriptorIndex }
-		, _status{ FrameRendererStatus::Uninitialized }
-		, _statusMessage{}
-		, _bCallbacksBound{ SW_FALSE }
-		, _bPassResourcesReady{ SW_FALSE }
-		, _bSceneTransformsFlushed{ SW_FALSE }
-		, _bHasExecutedDepthPrepass{ SW_FALSE }
-		, _bUseGpuDriven{ SW_FALSE }
-		, _reservedFlags{ 0 }
-		, _graphContext{}
-	{
-	}
+    FrameRenderer::FrameRenderer()
+        : _pDevice{ nullptr }
+        , _pCmdOwnerDevice{ nullptr }
+        , _frameCmd{ nullptr }
+        , _pCmd{ nullptr }
+        , _pScene{ nullptr }
+        , _pTaskManager{ nullptr }
+        , _gpuScene{}
+        , _pipelineResource{}
+        , _graph{}
+        , _pipelinePath{}
+        , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
+        , _mapTransient{}
+        , _mapTransientSrv{}
+        , _listClearedThisFrame{}
+        , _frameCtx{}
+        , _gpuCullCb{ 0 }
+        , _gpuCullCbIndex{ kInvalidDescriptorIndex }
+        , _mapEnginePso{}
+        , _mapMaterialPassPso{}
+        , _transientWidth{ 0 }
+        , _transientHeight{ 0 }
+        , _outputRenderTarget{ 0 }
+        , _taaHistory{ 0 }
+        , _taaHistorySrv{ kInvalidDescriptorIndex }
+        , _status{ FrameRendererStatus::Uninitialized }
+        , _statusMessage{}
+        , _bCallbacksBound{ SW_FALSE }
+        , _bPassResourcesReady{ SW_FALSE }
+        , _bSceneTransformsFlushed{ SW_FALSE }
+        , _bHasExecutedDepthPrepass{ SW_FALSE }
+        , _bUseGpuDriven{ SW_FALSE }
+        , _reservedFlags{ 0 }
+        , _graphContext{}
+    {
+    }
 
-	FrameRenderer::~FrameRenderer()
-	{
-		shutdown();
-	}
+    FrameRenderer::~FrameRenderer()
+    {
+        shutdown();
+    }
 
-	bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXmlPath )
-	{
-		return initialize( pDevice, nullptr, pipelineXmlPath );
-	}
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXmlPath )
+    {
+        return initialize( pDevice, nullptr, pipelineXmlPath );
+    }
 
-	bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-									string_view pipelineXmlPath )
-	{
-		_pDevice = pDevice;
-		if ( pDevice == nullptr )
-		{
-			_status		   = FrameRendererStatus::Failed;
-			_statusMessage = "null IRHIDevice";
-			SW_LOG_ERROR( "initialize: %#", _statusMessage );
-			return false;
-		}
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
+                                    string_view pipelineXmlPath )
+    {
+        _pDevice = pDevice;
+        if ( pDevice == nullptr )
+        {
+            _status        = FrameRendererStatus::Failed;
+            _statusMessage = "null IRHIDevice";
+            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            return false;
+        }
 
-		if ( pTaskManager != nullptr )
-			bindServices( pTaskManager );
-		else if ( engine::areEngineServicesBound() )
-			bindServices( &engine::getTaskManager() );
+        if ( pTaskManager != nullptr )
+            bindServices( pTaskManager );
+        else if ( engine::areEngineServicesBound() )
+            bindServices( &engine::getTaskManager() );
 
-		const EngineData&  engineData = engine::getEngineData();
-		RenderPassManager& rpm		  = pDevice->getRenderPassManager();
-		if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
-			rpm.loadRenderPass( engineData._defaultRenderPass );
+        const EngineData&  engineData = engine::getEngineData();
+        RenderPassManager& rpm        = pDevice->getRenderPassManager();
+        if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
+            rpm.loadRenderPass( engineData._defaultRenderPass );
 
-		const string_view resolvedPipeline =
-			pipelineXmlPath.empty() ? string_view( engineData._defaultForwardPipeline ) : pipelineXmlPath;
+        const string_view resolvedPipeline =
+            pipelineXmlPath.empty() ? string_view( engineData._defaultForwardPipeline ) : pipelineXmlPath;
 
-		if ( loadPipeline( resolvedPipeline ) == false )
-		{
-			_status = FrameRendererStatus::Failed;
-			if ( _statusMessage.empty() )
-				_statusMessage = string( "pipeline load failed: " ) + string( resolvedPipeline );
-			SW_LOG_ERROR( "Not ready — %#", _statusMessage );
-			return false;
-		}
+        if ( loadPipeline( resolvedPipeline ) == false )
+        {
+            _status = FrameRendererStatus::Failed;
+            if ( _statusMessage.empty() )
+                _statusMessage = string( "pipeline load failed: " ) + string( resolvedPipeline );
+            SW_LOG_ERROR( "Not ready — %#", _statusMessage );
+            return false;
+        }
 
-		_status = FrameRendererStatus::Ready;
-		_statusMessage.clear();
-		SW_LOG_INFO( "Ready with pipeline '%#'", _pipelinePath );
-		return true;
-	}
+        _status = FrameRendererStatus::Ready;
+        _statusMessage.clear();
+        SW_LOG_INFO( "Ready with pipeline '%#'", _pipelinePath );
+        return true;
+    }
 
-	void FrameRenderer::bindServices( TaskManager* pTaskManager )
-	{
-		_pTaskManager = pTaskManager;
-	}
+    void FrameRenderer::bindServices( TaskManager* pTaskManager )
+    {
+        _pTaskManager = pTaskManager;
+    }
 
-	void FrameRenderer::shutdown()
-	{
-		if ( _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty() )
-			return;
+    void FrameRenderer::shutdown()
+    {
+        if ( _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty() )
+            return;
 
-		releaseTransientResources();
-		releasePassResources();
-		_graph.clear();
-		_frameCmd.reset();
-		_pCmdOwnerDevice		  = nullptr;
-		_pCmd					  = nullptr;
-		_frameCtx._pCmd			  = nullptr;
-		_pDevice				  = nullptr;
-		_frameCtx._pBoundMaterial = nullptr;
-		_pTaskManager			  = nullptr;
-		_status					  = FrameRendererStatus::Uninitialized;
-		_statusMessage.clear();
-		_bCallbacksBound = 0;
-		_pipelinePath.clear();
-		SW_LOG_INFO( "Shut down." );
-	}
+        releaseTransientResources();
+        releasePassResources();
+        _graph.clear();
+        _frameCmd.reset();
+        _pCmdOwnerDevice          = nullptr;
+        _pCmd                     = nullptr;
+        _frameCtx._pCmd           = nullptr;
+        _pDevice                  = nullptr;
+        _frameCtx._pBoundMaterial = nullptr;
+        _pTaskManager             = nullptr;
+        _status                   = FrameRendererStatus::Uninitialized;
+        _statusMessage.clear();
+        _bCallbacksBound = 0;
+        _pipelinePath.clear();
+        SW_LOG_INFO( "Shut down." );
+    }
 
-	bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
-	{
-		_pipelinePath	 = pipelineXmlPath;
-		_bCallbacksBound = 0;
-		_graph.clear();
-		releaseTransientResources();
+    bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
+    {
+        _pipelinePath    = pipelineXmlPath;
+        _bCallbacksBound = 0;
+        _graph.clear();
+        releaseTransientResources();
 
-		if ( _pipelineResource.loadFromXmlFile( pipelineXmlPath ) == false )
-		{
-			_statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXmlPath );
-			return false;
-		}
+        if ( _pipelineResource.loadFromXmlFile( pipelineXmlPath ) == false )
+        {
+            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXmlPath );
+            return false;
+        }
 
-		if ( _pDevice != nullptr )
-		{
-			RenderPassManager& rpm = _pDevice->getRenderPassManager();
-			rpm.loadPipeline( pipelineXmlPath );
-			for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
-			{
-				if ( passRef.empty() == false )
-					rpm.loadRenderPass( passRef );
-			}
-		}
+        if ( _pDevice != nullptr )
+        {
+            RenderPassManager& rpm = _pDevice->getRenderPassManager();
+            rpm.loadPipeline( pipelineXmlPath );
+            for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
+            {
+                if ( passRef.empty() == false )
+                    rpm.loadRenderPass( passRef );
+            }
+        }
 
-		const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-		if ( listPass.empty() )
-		{
-			_statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
-			SW_LOG_ERROR( "%#", _statusMessage );
-			return false;
-		}
+        const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+        if ( listPass.empty() )
+        {
+            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
+            SW_LOG_ERROR( "%#", _statusMessage );
+            return false;
+        }
 
-		float4 sceneColorClear;
-		if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
-			_clearColor = sceneColorClear;
+        float4 sceneColorClear;
+        if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
+            _clearColor = sceneColorClear;
 
-		// Rebuild PSOs from pipeline pass recipes (shader / entry / blend / permutations).
-		releasePassResources();
-		ensurePassResources();
-		ensureTransientResources();
-		bindPassCallbacks();
+        // Rebuild PSOs from pipeline pass recipes (shader / entry / blend / permutations).
+        releasePassResources();
+        ensurePassResources();
+        ensureTransientResources();
+        bindPassCallbacks();
 
-		SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
-					 _pipelineResource.getDesc()._name, listPass.size() );
-		return true;
-	}
+        SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
+                     _pipelineResource.getDesc()._name, listPass.size() );
+        return true;
+    }
 
-	// ---------------------------------------------------------------------------
-	// 공통 헬퍼: commandList 준비
-	// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // 공통 헬퍼: commandList 준비
+    // ---------------------------------------------------------------------------
 
-	bool FrameRenderer::prepareCommandList( IRHIDevice* pDevice, [[maybe_unused]] const utf8* pCallerName )
-	{
-		if ( _frameCmd &&
-			 ( _pCmdOwnerDevice != pDevice ||
-			   ( _frameCmd->asDeferred() != nullptr &&
-				 _frameCmd->asDeferred()->getMode() != pDevice->getDefaultCommandListMode() ) ) )
-			_frameCmd.reset();
+    bool FrameRenderer::prepareCommandList( IRHIDevice* pDevice, [[maybe_unused]] const utf8* pCallerName )
+    {
+        if ( _frameCmd &&
+             ( _pCmdOwnerDevice != pDevice ||
+               ( _frameCmd->asDeferred() != nullptr &&
+                 _frameCmd->asDeferred()->getMode() != pDevice->getDefaultCommandListMode() ) ) )
+            _frameCmd.reset();
 
-		if ( _frameCmd == nullptr )
-			_frameCmd = pDevice->createCommandList();
+        if ( _frameCmd == nullptr )
+            _frameCmd = pDevice->createCommandList();
 
-		_pCmdOwnerDevice = pDevice;
-		_pCmd			 = _frameCmd.get();
-		// 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이걸 쓴다).
-		_frameCtx._pCmd = _pCmd;
+        _pCmdOwnerDevice = pDevice;
+        _pCmd            = _frameCmd.get();
+        // 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이걸 쓴다).
+        _frameCtx._pCmd = _pCmd;
 
-		if ( _pCmd == nullptr )
-		{
-			SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
-			return false;
-		}
+        if ( _pCmd == nullptr )
+        {
+            SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
+            return false;
+        }
 
-		RHIDeferredCommandList* pDeferred = _pCmd->asDeferred();
-		if ( pDeferred != nullptr )
-			pDeferred->setContext( pDevice->getCommandContextForMode( pDevice->getDefaultCommandListMode() ) );
+        RHIDeferredCommandList* pDeferred = _pCmd->asDeferred();
+        if ( pDeferred != nullptr )
+            pDeferred->setContext( pDevice->getCommandContextForMode( pDevice->getDefaultCommandListMode() ) );
 
-		return true;
-	}
+        return true;
+    }
 
-	// ---------------------------------------------------------------------------
-	// 공통 헬퍼: graph 실행 및 commandList 제출
-	// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // 공통 헬퍼: graph 실행 및 commandList 제출
+    // ---------------------------------------------------------------------------
 
-	bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
-	{
-		_pCmd->beginCommandList();
+    bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
+    {
+        _pCmd->beginCommandList();
 
-		if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
-		{
-			const RHIPipelineStateHandle cullPso = getEnginePso( "GpuCull" );
-			if ( cullPso != 0 && _gpuCullCb != 0 &&
-				 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex &&
-				 _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex )
-			{
-				struct GpuCullParams
-				{
-					float32 _planes[6][4]{};
-					uint32	_instanceCount{ 0 };
-					uint32	_batchCount{ 0 };
-					uint32	_pad[2]{};
-				} cullParams{};
-				cullParams._instanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
-				cullParams._batchCount	  = _gpuScene.getIndirectCommandCount();
-				_pDevice->getResource()->updateConstantBuffer( _gpuCullCb, &cullParams, sizeof( cullParams ) );
+        if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
+        {
+            const RHIPipelineStateHandle cullPso = getEnginePso( "GpuCull" );
+            if ( cullPso != 0 && _gpuCullCb != 0 &&
+                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex &&
+                 _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex )
+            {
+                struct GpuCullParams
+                {
+                    float32 _planes[6][4]{};
+                    uint32  _instanceCount{ 0 };
+                    uint32  _batchCount{ 0 };
+                    uint32  _pad[2]{};
+                } cullParams{};
+                cullParams._instanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
+                cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
+                _pDevice->getResource()->updateConstantBuffer( _gpuCullCb, &cullParams, sizeof( cullParams ) );
 
-				_pCmd->setComputePipelineState( cullPso );
-				_pCmd->bindComputeUAV( _gpuScene.getInstanceSrv(), 0 );
-				_pCmd->bindComputeUAV( _gpuScene.getIndirectArgsUav(), 1 );
-				_pCmd->setComputeRootConstants( 0, sizeof( cullParams ) / 4, &cullParams );
-				const uint32 groups = ( cullParams._batchCount + 63u ) / 64u;
-				if ( groups > 0 )
-					_pCmd->dispatchCompute( groups, 1, 1 );
-				_pCmd->transitionBuffer( _gpuScene.getIndirectArgsBuffer(), RHIBufferState::IndirectArgument );
-			}
-		}
+                _pCmd->setComputePipelineState( cullPso );
+                _pCmd->bindComputeUAV( _gpuScene.getInstanceSrv(), 0 );
+                _pCmd->bindComputeUAV( _gpuScene.getIndirectArgsUav(), 1 );
+                _pCmd->setComputeRootConstants( 0, sizeof( cullParams ) / 4, &cullParams );
+                const uint32 groups = ( cullParams._batchCount + 63u ) / 64u;
+                if ( groups > 0 )
+                    _pCmd->dispatchCompute( groups, 1, 1 );
+                _pCmd->transitionBuffer( _gpuScene.getIndirectArgsBuffer(), RHIBufferState::IndirectArgument );
+            }
+        }
 
-		const bool bOk = _graph.execute( _graphContext );
-		_pCmd->endCommandList();
-		pDevice->executeCommandList( _pCmd );
-		// _frameCmd 는 다음 프레임 prepareCommandList 에서 재사용. _pCmd 만 비움.
-		_pCmd = nullptr;
-		return bOk;
-	}
+        const bool bOk = _graph.execute( _graphContext );
+        _pCmd->endCommandList();
+        pDevice->executeCommandList( _pCmd );
+        // _frameCmd 는 다음 프레임 prepareCommandList 에서 재사용. _pCmd 만 비움.
+        _pCmd = nullptr;
+        return bOk;
+    }
 
-	// ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
 
-	bool FrameRenderer::execute( IRHIDevice* pDevice, Material* pMaterial, Scene* pScene )
-	{
-		if ( isReady() == false || pDevice == nullptr )
-			return false;
+    bool FrameRenderer::execute( IRHIDevice* pDevice, Material* pMaterial, Scene* pScene )
+    {
+        if ( isReady() == false || pDevice == nullptr )
+            return false;
 
-		_pDevice				  = pDevice;
-		_pScene					  = pScene;
-		_frameCtx._pBoundMaterial = pMaterial;
-		_outputRenderTarget		  = 0;
-		ensurePassResources();
-		ensureTransientResources();
-		resetPassCbRing();
-		setIdentityWorld( _frameCtx );
-		updatePassConstants( _frameCtx );
-		_listClearedThisFrame.clear();
-		_bSceneTransformsFlushed  = 0;
-		_bHasExecutedDepthPrepass = 0;
+        _pDevice                  = pDevice;
+        _pScene                   = pScene;
+        _frameCtx._pBoundMaterial = pMaterial;
+        _outputRenderTarget       = 0;
+        ensurePassResources();
+        ensureTransientResources();
+        resetPassCbRing();
+        setIdentityWorld( _frameCtx );
+        updatePassConstants( _frameCtx );
+        _listClearedThisFrame.clear();
+        _bSceneTransformsFlushed  = 0;
+        _bHasExecutedDepthPrepass = 0;
 
-		float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
-		if ( pScene != nullptr )
-		{
-			pScene->ensureDefaultCameras();
-			CameraComponent* pCam = pScene->getActiveGameCamera();
-			if ( pCam != nullptr )
-				cameraPos = pCam->getCameraPosition();
-		}
-		_gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
-		_gpuScene.upload( pDevice );
+        float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
+        if ( pScene != nullptr )
+        {
+            pScene->ensureDefaultCameras();
+            CameraComponent* pCam = pScene->getActiveGameCamera();
+            if ( pCam != nullptr )
+                cameraPos = pCam->getCameraPosition();
+        }
+        _gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
+        _gpuScene.upload( pDevice );
 
-		if ( _bCallbacksBound == 0 )
-			bindPassCallbacks();
+        if ( _bCallbacksBound == 0 )
+            bindPassCallbacks();
 
-		if ( prepareCommandList( pDevice, "execute" ) == false )
-		{
-			_pScene = nullptr;
-			return false;
-		}
+        if ( prepareCommandList( pDevice, "execute" ) == false )
+        {
+            _pScene = nullptr;
+            return false;
+        }
 
-		const bool bOk = submitGraph( pDevice );
-		_gpuScene.advanceMaterialRetireFrame();
-		_pScene = nullptr;
-		return bOk;
-	}
+        const bool bOk = submitGraph( pDevice );
+        _gpuScene.advanceMaterialRetireFrame();
+        _pScene = nullptr;
+        return bOk;
+    }
 
-	bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
-	{
-		if ( isReady() == false || pDevice == nullptr || packet._bValid == 0 )
-			return false;
+    bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
+    {
+        if ( isReady() == false || pDevice == nullptr || packet._bValid == 0 )
+            return false;
 
-		_pDevice				  = pDevice;
-		_pScene					  = nullptr;
-		_frameCtx._pBoundMaterial = packet._pSceneMaterial;
-		_outputRenderTarget		  = packet._gameRenderTarget;
-		_gpuScene				  = std::move( packet._gpuScene );
-		ensurePassResources();
-		ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
-		resetPassCbRing();
-		setIdentityWorld( _frameCtx );
-		buildLightViewProj( _frameCtx, _frameCtx._passConstants._lightViewProj );
-		if ( packet._bHasViewProj != 0 )
-			_frameCtx._passConstants._viewProj = packet._viewProj;
-		else
-			buildViewProj( _frameCtx._passConstants._viewProj );
-		_frameCtx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-		_frameCtx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
-		_frameCtx._passConstants._flags			   = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
-		if ( _pDevice != nullptr && _frameCtx._passCb != 0 )
-			_pDevice->getResource()->updateConstantBuffer( _frameCtx._passCb, &_frameCtx._passConstants, sizeof( PassConstants ) );
-		// Skip updatePassConstants() — view already applied from packet.
-		_listClearedThisFrame.clear();
-		_bSceneTransformsFlushed  = 0;
-		_bHasExecutedDepthPrepass = 0;
+        _pDevice                  = pDevice;
+        _pScene                   = nullptr;
+        _frameCtx._pBoundMaterial = packet._pSceneMaterial;
+        _outputRenderTarget       = packet._gameRenderTarget;
+        _gpuScene                 = std::move( packet._gpuScene );
+        ensurePassResources();
+        ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
+        resetPassCbRing();
+        setIdentityWorld( _frameCtx );
+        buildLightViewProj( _frameCtx, _frameCtx._passConstants._lightViewProj );
+        if ( packet._bHasViewProj != 0 )
+            _frameCtx._passConstants._viewProj = packet._viewProj;
+        else
+            buildViewProj( _frameCtx._passConstants._viewProj );
+        _frameCtx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+        _frameCtx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+        _frameCtx._passConstants._flags            = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
+        if ( _pDevice != nullptr && _frameCtx._passCb != 0 )
+            _pDevice->getResource()->updateConstantBuffer( _frameCtx._passCb, &_frameCtx._passConstants, sizeof( PassConstants ) );
+        // Skip updatePassConstants() — view already applied from packet.
+        _listClearedThisFrame.clear();
+        _bSceneTransformsFlushed  = 0;
+        _bHasExecutedDepthPrepass = 0;
 
-		_gpuScene.upload( pDevice );
+        _gpuScene.upload( pDevice );
 
-		if ( _bCallbacksBound == 0 )
-			bindPassCallbacks();
+        if ( _bCallbacksBound == 0 )
+            bindPassCallbacks();
 
-		if ( prepareCommandList( pDevice, "executePacket" ) == false )
-		{
-			packet._gpuScene = std::move( _gpuScene );
-			return false;
-		}
+        if ( prepareCommandList( pDevice, "executePacket" ) == false )
+        {
+            packet._gpuScene = std::move( _gpuScene );
+            return false;
+        }
 
-		const bool bOk = submitGraph( pDevice );
-		_gpuScene.advanceMaterialRetireFrame();
-		packet._gpuScene = std::move( _gpuScene );
-		return bOk;
-	}
+        const bool bOk = submitGraph( pDevice );
+        _gpuScene.advanceMaterialRetireFrame();
+        packet._gpuScene = std::move( _gpuScene );
+        return bOk;
+    }
 } // namespace sw

@@ -26,37 +26,37 @@
 
 namespace
 {
-	[[maybe_unused]] void fillGameService( sw::ModuleService& gameService )
-	{
-		sw::engine::fillModuleServices( gameService, true );
-	}
+    [[maybe_unused]] void fillGameService( sw::ModuleService& gameService )
+    {
+        sw::engine::fillModuleServices( gameService, true );
+    }
 } // namespace
 
 #if !defined( SW_SHIPPING )
 
 namespace sw
 {
-	namespace
-	{
-		/** @brief 테스트 모듈 DLL 경로를 만듭니다. */
-		sw::string modulePath( const utf8* pBaseName )
-		{
-	#if defined( SW_TEST_MODULE_DIR )
-			const sw::string dir = SW_TEST_MODULE_DIR;
-	#else
-			const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
-	#endif
-			return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
-		}
+    namespace
+    {
+        /** @brief 테스트 모듈 DLL 경로를 만듭니다. */
+        sw::string modulePath( const utf8* pBaseName )
+        {
+    #if defined( SW_TEST_MODULE_DIR )
+            const sw::string dir = SW_TEST_MODULE_DIR;
+    #else
+            const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    #endif
+            return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
+        }
 
-		/** @brief 테스트 모듈을 동적 로드합니다. */
-		void* loadModule( const utf8* pName )
-		{
-			const sw::string path = modulePath( pName );
-			return sw::FileUtil::loadDynamicLibrary( path );
-		}
+        /** @brief 테스트 모듈을 동적 로드합니다. */
+        void* loadModule( const utf8* pName )
+        {
+            const sw::string path = modulePath( pName );
+            return sw::FileUtil::loadDynamicLibrary( path );
+        }
 
-	} // namespace
+    } // namespace
 } // namespace sw
 
 // ------------------------------------------------------------------------------
@@ -67,37 +67,37 @@ namespace sw
  */
 SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
 {
-	const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
-	for ( const utf8* modName : kRhiModules )
-	{
-		const sw::string path = sw::modulePath( modName );
-		if ( sw::FileUtil::fileExists( path ) == false )
-			continue;
+    for ( const utf8* modName : kRhiModules )
+    {
+        const sw::string path = sw::modulePath( modName );
+        if ( sw::FileUtil::fileExists( path ) == false )
+            continue;
 
-		void* handle = sw::FileUtil::loadDynamicLibrary( path );
-		SW_EXPECT_TRUE( handle != nullptr );
-		if ( handle == nullptr )
-			continue;
+        void* handle = sw::FileUtil::loadDynamicLibrary( path );
+        SW_EXPECT_TRUE( handle != nullptr );
+        if ( handle == nullptr )
+            continue;
 
-		const sw::PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<sw::PFN_GetRHIModuleAbiVersion>(
-			sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
-		const sw::PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<sw::PFN_GetRHIModuleAbiStamp>(
-			sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
-		const void* pfnCreate = reinterpret_cast<void*>(
-			sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+        const sw::PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<sw::PFN_GetRHIModuleAbiVersion>(
+            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+        const sw::PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<sw::PFN_GetRHIModuleAbiStamp>(
+            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+        const void* pfnCreate = reinterpret_cast<void*>(
+            sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
 
-		SW_EXPECT_TRUE( pfnVersion != nullptr );
-		SW_EXPECT_TRUE( pfnStamp != nullptr );
-		SW_EXPECT_TRUE( pfnCreate != nullptr );
+        SW_EXPECT_TRUE( pfnVersion != nullptr );
+        SW_EXPECT_TRUE( pfnStamp != nullptr );
+        SW_EXPECT_TRUE( pfnCreate != nullptr );
 
-		if ( pfnVersion != nullptr )
-			SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, pfnVersion() );
-		if ( pfnStamp != nullptr && pfnStamp() != nullptr )
-			SW_EXPECT_STREQ( sw::kRHIModuleAbiStamp, pfnStamp() );
+        if ( pfnVersion != nullptr )
+            SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, pfnVersion() );
+        if ( pfnStamp != nullptr && pfnStamp() != nullptr )
+            SW_EXPECT_STREQ( sw::kRHIModuleAbiStamp, pfnStamp() );
 
-		sw::FileUtil::unloadDynamicLibrary( handle );
-	}
+        sw::FileUtil::unloadDynamicLibrary( handle );
+    }
 }
 
 /**
@@ -105,20 +105,20 @@ SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
  */
 SW_TEST_CASE( Architecture, LiveReloadKeepOldOnMissingOriginal )
 {
-	SW_TEST_DEFENSIVE_SCOPE( "Testing missing DLL module handling" );
-	sw::LiveReloadManager manager;
-	SW_EXPECT_TRUE( manager.registerModule( "SWGame" ) );
-	void* before = manager.getModuleHandle( "SWGame" );
-	SW_EXPECT_TRUE( before != nullptr );
-	if ( before == nullptr )
-		return;
+    SW_TEST_DEFENSIVE_SCOPE( "Testing missing DLL module handling" );
+    sw::LiveReloadManager manager;
+    SW_EXPECT_TRUE( manager.registerModule( "SWGame" ) );
+    void* before = manager.getModuleHandle( "SWGame" );
+    SW_EXPECT_TRUE( before != nullptr );
+    if ( before == nullptr )
+        return;
 
-	// 가짜 이름으로 다시 등록해 원본을 존재하지 않는 경로로 가리키면 실패한다.
-	// 없는 파일에 registerModule 하면 false 를 반환하고 다른 모듈은 지우지 않는다.
-	SW_EXPECT_FALSE( manager.registerModule( "DefinitelyMissingModule_ZZZ" ) );
-	void* after = manager.getModuleHandle( "SWGame" );
-	SW_EXPECT_EQUAL( before, after );
-	manager.shutdown();
+    // 가짜 이름으로 다시 등록해 원본을 존재하지 않는 경로로 가리키면 실패한다.
+    // 없는 파일에 registerModule 하면 false 를 반환하고 다른 모듈은 지우지 않는다.
+    SW_EXPECT_FALSE( manager.registerModule( "DefinitelyMissingModule_ZZZ" ) );
+    void* after = manager.getModuleHandle( "SWGame" );
+    SW_EXPECT_EQUAL( before, after );
+    manager.shutdown();
 }
 
 /**
@@ -126,13 +126,13 @@ SW_TEST_CASE( Architecture, LiveReloadKeepOldOnMissingOriginal )
  */
 SW_TEST_CASE( Architecture, LiveReloadPoisonIgnoresTrigger )
 {
-	SW_TEST_DEFENSIVE_SCOPE( "Testing broken/poisoned reload graph handling" );
-	sw::LiveReloadManager manager;
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	manager.markGraphBroken( "test" );
-	SW_EXPECT_TRUE( manager.isGraphBroken() );
-	manager.triggerReload( "SWGame" );
-	SW_EXPECT_TRUE( manager.isGraphBroken() );
+    SW_TEST_DEFENSIVE_SCOPE( "Testing broken/poisoned reload graph handling" );
+    sw::LiveReloadManager manager;
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    manager.markGraphBroken( "test" );
+    SW_EXPECT_TRUE( manager.isGraphBroken() );
+    manager.triggerReload( "SWGame" );
+    SW_EXPECT_TRUE( manager.isGraphBroken() );
 }
 
 /**
@@ -140,17 +140,17 @@ SW_TEST_CASE( Architecture, LiveReloadPoisonIgnoresTrigger )
  */
 SW_TEST_CASE( Architecture, LiveReloadOnAfterPoisonFailsRegister )
 {
-	SW_TEST_DEFENSIVE_SCOPE( "Testing onAfter poison registration failure" );
-	sw::LiveReloadManager manager;
-	manager.setOnAfterReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
-	{
-		manager.markGraphBroken( "test onAfter" );
-	} ) );
-	SW_EXPECT_FALSE( manager.registerModule( "SWGame" ) );
-	SW_EXPECT_TRUE( manager.isGraphBroken() );
-	manager.shutdown();
+    SW_TEST_DEFENSIVE_SCOPE( "Testing onAfter poison registration failure" );
+    sw::LiveReloadManager manager;
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
+    {
+        manager.markGraphBroken( "test onAfter" );
+    } ) );
+    SW_EXPECT_FALSE( manager.registerModule( "SWGame" ) );
+    SW_EXPECT_TRUE( manager.isGraphBroken() );
+    manager.shutdown();
 }
 
 /**
@@ -158,40 +158,40 @@ SW_TEST_CASE( Architecture, LiveReloadOnAfterPoisonFailsRegister )
  */
 SW_TEST_CASE( Architecture, LiveReloadCascadeAbortsAfterOnAfterPoison )
 {
-	SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort on poisoned dependent module" );
-	const sw::string gfPath = sw::modulePath( "GameFramework" );
-	if ( sw::FileUtil::fileExists( gfPath ) == false )
-		SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort on poisoned dependent module" );
+    const sw::string gfPath = sw::modulePath( "GameFramework" );
+    if ( sw::FileUtil::fileExists( gfPath ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
-	sw::LiveReloadManager manager;
-	SW_EXPECT_TRUE( manager.registerModule( "GameFramework" ) );
+    sw::LiveReloadManager manager;
+    SW_EXPECT_TRUE( manager.registerModule( "GameFramework" ) );
 
-	sw::vector<sw::string> gameDepends;
-	gameDepends.push_back( "GameFramework" );
-	if ( manager.registerModule( "SWGame", gameDepends ) == false )
-		SW_TEST_SKIP( "SWGame MODULE not available for cascade test" );
+    sw::vector<sw::string> gameDepends;
+    gameDepends.push_back( "GameFramework" );
+    if ( manager.registerModule( "SWGame", gameDepends ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not available for cascade test" );
 
-	void* const gameBefore = manager.getModuleHandle( "SWGame" );
-	SW_EXPECT_TRUE( gameBefore != nullptr );
+    void* const gameBefore = manager.getModuleHandle( "SWGame" );
+    SW_EXPECT_TRUE( gameBefore != nullptr );
 
-	manager.setOnAfterReload(
-		"GameFramework",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
-	{
-		manager.markGraphBroken( "test cascade onAfter" );
-	} ) );
-	manager.triggerReload( "GameFramework" );
+    manager.setOnAfterReload(
+        "GameFramework",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
+    {
+        manager.markGraphBroken( "test cascade onAfter" );
+    } ) );
+    manager.triggerReload( "GameFramework" );
 
-	bool broken{ false };
-	for ( int32 stepIndex = 0; stepIndex < 40 && broken == false; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
-		manager.update();
-		broken = manager.isGraphBroken();
-	}
-	SW_EXPECT_TRUE( broken );
-	SW_EXPECT_EQUAL( gameBefore, manager.getModuleHandle( "SWGame" ) );
-	manager.shutdown();
+    bool broken{ false };
+    for ( int32 stepIndex = 0; stepIndex < 40 && broken == false; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
+        manager.update();
+        broken = manager.isGraphBroken();
+    }
+    SW_EXPECT_TRUE( broken );
+    SW_EXPECT_EQUAL( gameBefore, manager.getModuleHandle( "SWGame" ) );
+    manager.shutdown();
 }
 
 /**
@@ -199,53 +199,53 @@ SW_TEST_CASE( Architecture, LiveReloadCascadeAbortsAfterOnAfterPoison )
  */
 SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
 {
-	sw::LiveReloadManager manager;
-	if ( manager.registerModule( "SWGame" ) == false )
-		SW_TEST_SKIP( "SWGame MODULE not available for LiveReload test" );
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "SWGame" ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not available for LiveReload test" );
 
-	void* const initialHandle = manager.getModuleHandle( "SWGame" );
-	SW_EXPECT_TRUE( initialHandle != nullptr );
+    void* const initialHandle = manager.getModuleHandle( "SWGame" );
+    SW_EXPECT_TRUE( initialHandle != nullptr );
 
-	bool  onBeforeCalled{ false };
-	bool  onAfterCalled{ false };
-	void* newHandleInCb{ nullptr };
+    bool  onBeforeCalled{ false };
+    bool  onAfterCalled{ false };
+    void* newHandleInCb{ nullptr };
 
-	manager.setOnBeforeReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
-	{
-		onBeforeCalled = true;
-	} ) );
+    manager.setOnBeforeReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
+    {
+        onBeforeCalled = true;
+    } ) );
 
-	manager.setOnAfterReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandleInCb]( void* pH )
-	{
-		onAfterCalled = true;
-		newHandleInCb = pH;
-	} ) );
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandleInCb]( void* pH )
+    {
+        onAfterCalled = true;
+        newHandleInCb = pH;
+    } ) );
 
-	// 리로드 트리거
-	manager.triggerReload( "SWGame" );
+    // 리로드 트리거
+    manager.triggerReload( "SWGame" );
 
-	// 업데이트 루프로 리로드 완료 대기 (디바운스 300ms 초과 대기)
-	for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-		if ( onAfterCalled )
-			break;
-	}
+    // 업데이트 루프로 리로드 완료 대기 (디바운스 300ms 초과 대기)
+    for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( onAfterCalled )
+            break;
+    }
 
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_TRUE( onBeforeCalled );
-	SW_EXPECT_TRUE( onAfterCalled );
-	SW_EXPECT_TRUE( newHandleInCb != nullptr );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( onBeforeCalled );
+    SW_EXPECT_TRUE( onAfterCalled );
+    SW_EXPECT_TRUE( newHandleInCb != nullptr );
 
-	void* const finalHandle = manager.getModuleHandle( "SWGame" );
-	SW_EXPECT_EQUAL( newHandleInCb, finalHandle );
+    void* const finalHandle = manager.getModuleHandle( "SWGame" );
+    SW_EXPECT_EQUAL( newHandleInCb, finalHandle );
 
-	manager.shutdown();
+    manager.shutdown();
 }
 
 /**
@@ -256,75 +256,75 @@ SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
  */
 SW_TEST_CASE( Architecture, LiveReloadRegistrarContentLifecycle )
 {
-	const sw::string gfPath = sw::modulePath( "GameFramework" );
-	if ( sw::FileUtil::fileExists( gfPath ) == false )
-		SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    const sw::string gfPath = sw::modulePath( "GameFramework" );
+    if ( sw::FileUtil::fileExists( gfPath ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
-	sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
 
-	const auto collectFqn = [&registry]()
-	{
-		sw::vector<sw::hashed_string> listFqn;
-		registry.forEachType( [&listFqn]( const sw::TypeInfo& info )
-		{
-			listFqn.push_back( info._fullyQualifiedName );
-		} );
-		std::sort( listFqn.begin(), listFqn.end() );
-		return listFqn;
-	};
+    const auto collectFqn = [&registry]()
+    {
+        sw::vector<sw::hashed_string> listFqn;
+        registry.forEachType( [&listFqn]( const sw::TypeInfo& info )
+        {
+            listFqn.push_back( info._fullyQualifiedName );
+        } );
+        std::sort( listFqn.begin(), listFqn.end() );
+        return listFqn;
+    };
 
-	const sw::vector<sw::hashed_string> baseTypes = collectFqn();
-	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
-	SW_EXPECT_EQUAL( static_cast<sw::EnumRegistrar*>( nullptr ), sw::EnumRegistrar::getHead() );
+    const sw::vector<sw::hashed_string> baseTypes = collectFqn();
+    SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+    SW_EXPECT_EQUAL( static_cast<sw::EnumRegistrar*>( nullptr ), sw::EnumRegistrar::getHead() );
 
-	sw::LiveReloadManager manager;
-	if ( manager.registerModule( "GameFramework" ) == false )
-		SW_TEST_SKIP( "GameFramework MODULE register failed in this config" );
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "GameFramework" ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE register failed in this config" );
 
-	const sw::vector<sw::hashed_string> afterRegister = collectFqn();
-	SW_EXPECT_TRUE( afterRegister.size() > baseTypes.size() );
-	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+    const sw::vector<sw::hashed_string> afterRegister = collectFqn();
+    SW_EXPECT_TRUE( afterRegister.size() > baseTypes.size() );
+    SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
 
-	// 모듈이 새로 들여온 타입 하나를 대표로 잡는다.
-	sw::hashed_string sampleFqn{};
-	bool			  bHasSample{ false };
-	for ( const sw::hashed_string& fqn : afterRegister )
-	{
-		if ( std::binary_search( baseTypes.begin(), baseTypes.end(), fqn ) == false )
-		{
-			sampleFqn  = fqn;
-			bHasSample = true;
-			break;
-		}
-	}
-	SW_EXPECT_TRUE( bHasSample );
-	SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
+    // 모듈이 새로 들여온 타입 하나를 대표로 잡는다.
+    sw::hashed_string sampleFqn{};
+    bool              bHasSample{ false };
+    for ( const sw::hashed_string& fqn : afterRegister )
+    {
+        if ( std::binary_search( baseTypes.begin(), baseTypes.end(), fqn ) == false )
+        {
+            sampleFqn  = fqn;
+            bHasSample = true;
+            break;
+        }
+    }
+    SW_EXPECT_TRUE( bHasSample );
+    SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
 
-	// 1) 성공 리로드: 타입 수 불변, 대표 타입 유지, 전역 헤드 drain 유지
-	bool onAfterCalled{ false };
-	manager.setOnAfterReload(
-		"GameFramework",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled]( void* )
-	{
-		onAfterCalled = true;
-	} ) );
-	manager.triggerReload( "GameFramework" );
-	for ( int32 stepIndex = 0; stepIndex < 80 && onAfterCalled == false; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-	}
-	SW_EXPECT_TRUE( onAfterCalled );
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_EQUAL( afterRegister.size(), collectFqn().size() );
-	SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
-	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+    // 1) 성공 리로드: 타입 수 불변, 대표 타입 유지, 전역 헤드 drain 유지
+    bool onAfterCalled{ false };
+    manager.setOnAfterReload(
+        "GameFramework",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled]( void* )
+    {
+        onAfterCalled = true;
+    } ) );
+    manager.triggerReload( "GameFramework" );
+    for ( int32 stepIndex = 0; stepIndex < 80 && onAfterCalled == false; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+    }
+    SW_EXPECT_TRUE( onAfterCalled );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_EQUAL( afterRegister.size(), collectFqn().size() );
+    SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
+    SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
 
-	// 2) 언로드: 타입 수 원복, 대표 타입 제거, 전역 헤드 drain 유지
-	manager.shutdown();
-	SW_EXPECT_EQUAL( baseTypes.size(), collectFqn().size() );
-	SW_EXPECT_TRUE( registry.findType( sampleFqn ) == nullptr );
-	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+    // 2) 언로드: 타입 수 원복, 대표 타입 제거, 전역 헤드 drain 유지
+    manager.shutdown();
+    SW_EXPECT_EQUAL( baseTypes.size(), collectFqn().size() );
+    SW_EXPECT_TRUE( registry.findType( sampleFqn ) == nullptr );
+    SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
 }
 
 /**
@@ -332,64 +332,64 @@ SW_TEST_CASE( Architecture, LiveReloadRegistrarContentLifecycle )
  */
 SW_TEST_CASE( Architecture, LiveReloadCascadeSuccessPath )
 {
-	const sw::string gfPath = sw::modulePath( "GameFramework" );
-	if ( sw::FileUtil::fileExists( gfPath ) == false )
-		SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    const sw::string gfPath = sw::modulePath( "GameFramework" );
+    if ( sw::FileUtil::fileExists( gfPath ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
-	sw::LiveReloadManager manager;
-	if ( manager.registerModule( "GameFramework" ) == false )
-		SW_TEST_SKIP( "GameFramework MODULE registration failed" );
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "GameFramework" ) == false )
+        SW_TEST_SKIP( "GameFramework MODULE registration failed" );
 
-	sw::vector<sw::string> gameDepends;
-	gameDepends.push_back( "GameFramework" );
-	if ( manager.registerModule( "SWGame", gameDepends ) == false )
-		SW_TEST_SKIP( "SWGame MODULE registration failed" );
+    sw::vector<sw::string> gameDepends;
+    gameDepends.push_back( "GameFramework" );
+    if ( manager.registerModule( "SWGame", gameDepends ) == false )
+        SW_TEST_SKIP( "SWGame MODULE registration failed" );
 
-	sw::vector<sw::string> reloadLog;
+    sw::vector<sw::string> reloadLog;
 
-	manager.setOnBeforeReload(
-		"GameFramework",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
-	{
-		reloadLog.push_back( "GF_Before" );
-	} ) );
+    manager.setOnBeforeReload(
+        "GameFramework",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
+    {
+        reloadLog.push_back( "GF_Before" );
+    } ) );
 
-	manager.setOnBeforeReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
-	{
-		reloadLog.push_back( "Game_Before" );
-	} ) );
+    manager.setOnBeforeReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
+    {
+        reloadLog.push_back( "Game_Before" );
+    } ) );
 
-	manager.setOnAfterReload(
-		"GameFramework",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
-	{
-		reloadLog.push_back( "GF_After" );
-	} ) );
+    manager.setOnAfterReload(
+        "GameFramework",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
+    {
+        reloadLog.push_back( "GF_After" );
+    } ) );
 
-	manager.setOnAfterReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
-	{
-		reloadLog.push_back( "Game_After" );
-	} ) );
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
+    {
+        reloadLog.push_back( "Game_After" );
+    } ) );
 
-	// GameFramework 리로드 시 종속된 SWGame까지 캐스케이드 리로드되어야 함
-	manager.triggerReload( "GameFramework" );
+    // GameFramework 리로드 시 종속된 SWGame까지 캐스케이드 리로드되어야 함
+    manager.triggerReload( "GameFramework" );
 
-	for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-		if ( reloadLog.size() >= 4u )
-			break;
-	}
+    for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( reloadLog.size() >= 4u )
+            break;
+    }
 
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_TRUE( reloadLog.size() >= 4u );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( reloadLog.size() >= 4u );
 
-	manager.shutdown();
+    manager.shutdown();
 }
 
 /**
@@ -397,62 +397,62 @@ SW_TEST_CASE( Architecture, LiveReloadCascadeSuccessPath )
  */
 SW_TEST_CASE( Architecture, LiveReloadEditorModule )
 {
-	const sw::string editorPath = sw::modulePath( "EditorModule" );
-	if ( sw::FileUtil::fileExists( editorPath ) == false )
-		SW_TEST_SKIP( "EditorModule not built in this config" );
+    const sw::string editorPath = sw::modulePath( "EditorModule" );
+    if ( sw::FileUtil::fileExists( editorPath ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
 
-	sw::LiveReloadManager manager;
-	if ( manager.registerModule( "EditorModule" ) == false )
-		SW_TEST_SKIP( "EditorModule registration failed" );
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "EditorModule" ) == false )
+        SW_TEST_SKIP( "EditorModule registration failed" );
 
-	void* const initialHandle = manager.getModuleHandle( "EditorModule" );
-	SW_ASSERT_NOT_NULL( initialHandle );
+    void* const initialHandle = manager.getModuleHandle( "EditorModule" );
+    SW_ASSERT_NOT_NULL( initialHandle );
 
-	bool  onBeforeCalled{ false };
-	bool  onAfterCalled{ false };
-	void* newHandle{ nullptr };
+    bool  onBeforeCalled{ false };
+    bool  onAfterCalled{ false };
+    void* newHandle{ nullptr };
 
-	manager.setOnBeforeReload(
-		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
-	{
-		onBeforeCalled = true;
-	} ) );
+    manager.setOnBeforeReload(
+        "EditorModule",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
+    {
+        onBeforeCalled = true;
+    } ) );
 
-	manager.setOnAfterReload(
-		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
-	{
-		onAfterCalled = true;
-		newHandle	  = pH;
-	} ) );
+    manager.setOnAfterReload(
+        "EditorModule",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
+    {
+        onAfterCalled = true;
+        newHandle     = pH;
+    } ) );
 
-	manager.triggerReload( "EditorModule" );
+    manager.triggerReload( "EditorModule" );
 
-	for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-		if ( onAfterCalled )
-			break;
-	}
+    for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( onAfterCalled )
+            break;
+    }
 
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_TRUE( onBeforeCalled );
-	SW_EXPECT_TRUE( onAfterCalled );
-	SW_ASSERT_NOT_NULL( newHandle );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( onBeforeCalled );
+    SW_EXPECT_TRUE( onAfterCalled );
+    SW_ASSERT_NOT_NULL( newHandle );
 
-	// 새로 로드된 모듈에서 C-ABI exportEditorAPI 정상 동작 검증
-	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-		sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
-	SW_ASSERT_NOT_NULL( pfnExport );
+    // 새로 로드된 모듈에서 C-ABI exportEditorAPI 정상 동작 검증
+    const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+    SW_ASSERT_NOT_NULL( pfnExport );
 
-	sw::EditorAPI api{};
-	SW_EXPECT_TRUE( pfnExport( &api ) );
-	SW_EXPECT_TRUE( api.create != nullptr );
-	SW_EXPECT_TRUE( api.render != nullptr );
+    sw::EditorAPI api{};
+    SW_EXPECT_TRUE( pfnExport( &api ) );
+    SW_EXPECT_TRUE( api.create != nullptr );
+    SW_EXPECT_TRUE( api.render != nullptr );
 
-	manager.shutdown();
+    manager.shutdown();
 }
 
 /**
@@ -460,45 +460,45 @@ SW_TEST_CASE( Architecture, LiveReloadEditorModule )
  */
 SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
 {
-	const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
 
-	for ( const utf8* kitName : kKits )
-	{
-		const sw::string kitPath = sw::modulePath( kitName );
-		if ( sw::FileUtil::fileExists( kitPath ) == false )
-			continue;
+    for ( const utf8* kitName : kKits )
+    {
+        const sw::string kitPath = sw::modulePath( kitName );
+        if ( sw::FileUtil::fileExists( kitPath ) == false )
+            continue;
 
-		sw::LiveReloadManager manager;
-		if ( manager.registerModule( kitName ) == false )
-			continue;
+        sw::LiveReloadManager manager;
+        if ( manager.registerModule( kitName ) == false )
+            continue;
 
-		bool  reloaded{ false };
-		void* newH{ nullptr };
+        bool  reloaded{ false };
+        void* newH{ nullptr };
 
-		manager.setOnAfterReload(
-			kitName,
-			SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloaded, &newH]( void* pH )
-		{
-			reloaded = true;
-			newH	 = pH;
-		} ) );
+        manager.setOnAfterReload(
+            kitName,
+            SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloaded, &newH]( void* pH )
+        {
+            reloaded = true;
+            newH     = pH;
+        } ) );
 
-		manager.triggerReload( kitName );
+        manager.triggerReload( kitName );
 
-		for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
-		{
-			std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-			manager.update();
-			if ( reloaded )
-				break;
-		}
+        for ( int32 stepIndex = 0; stepIndex < 80; ++stepIndex )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+            manager.update();
+            if ( reloaded )
+                break;
+        }
 
-		SW_EXPECT_FALSE( manager.isGraphBroken() );
-		SW_EXPECT_TRUE( reloaded );
-		SW_EXPECT_TRUE( newH != nullptr );
+        SW_EXPECT_FALSE( manager.isGraphBroken() );
+        SW_EXPECT_TRUE( reloaded );
+        SW_EXPECT_TRUE( newH != nullptr );
 
-		manager.shutdown();
-	}
+        manager.shutdown();
+    }
 }
 
 /**
@@ -506,74 +506,74 @@ SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
  */
 SW_TEST_CASE( Architecture, MultiModuleFullStackLiveReload )
 {
-	sw::LiveReloadManager manager;
+    sw::LiveReloadManager manager;
 
-	sw::vector<sw::string> gameDepends;
-	gameDepends.push_back( "GF_Overworld" );
-	if ( manager.registerModule( "GF_Overworld" ) == false )
-		SW_TEST_SKIP( "GF_Overworld registration failed" );
+    sw::vector<sw::string> gameDepends;
+    gameDepends.push_back( "GF_Overworld" );
+    if ( manager.registerModule( "GF_Overworld" ) == false )
+        SW_TEST_SKIP( "GF_Overworld registration failed" );
 
-	if ( manager.registerModule( "SWGame", gameDepends ) == false )
-		SW_TEST_SKIP( "SWGame registration failed" );
+    if ( manager.registerModule( "SWGame", gameDepends ) == false )
+        SW_TEST_SKIP( "SWGame registration failed" );
 
-	if ( manager.registerModule( "EditorModule" ) == false )
-		SW_TEST_SKIP( "EditorModule registration failed" );
+    if ( manager.registerModule( "EditorModule" ) == false )
+        SW_TEST_SKIP( "EditorModule registration failed" );
 
-	// 1) GF_Overworld 핫리로드 트리거 -> 종속된 SWGame까지 캐스케이드 리로드
-	bool kitReloaded{ false };
-	bool gameReloaded{ false };
+    // 1) GF_Overworld 핫리로드 트리거 -> 종속된 SWGame까지 캐스케이드 리로드
+    bool kitReloaded{ false };
+    bool gameReloaded{ false };
 
-	manager.setOnAfterReload(
-		"GF_Overworld",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&kitReloaded]( void* )
-	{
-		kitReloaded = true;
-	} ) );
+    manager.setOnAfterReload(
+        "GF_Overworld",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&kitReloaded]( void* )
+    {
+        kitReloaded = true;
+    } ) );
 
-	manager.setOnAfterReload(
-		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&gameReloaded]( void* )
-	{
-		gameReloaded = true;
-	} ) );
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&gameReloaded]( void* )
+    {
+        gameReloaded = true;
+    } ) );
 
-	manager.triggerReload( "GF_Overworld" );
+    manager.triggerReload( "GF_Overworld" );
 
-	for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-		if ( kitReloaded && gameReloaded )
-			break;
-	}
+    for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( kitReloaded && gameReloaded )
+            break;
+    }
 
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_TRUE( kitReloaded );
-	SW_EXPECT_TRUE( gameReloaded );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( kitReloaded );
+    SW_EXPECT_TRUE( gameReloaded );
 
-	// 2) 독립적인 EditorModule 리로드 트리거
-	bool editorReloaded{ false };
-	manager.setOnAfterReload(
-		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&editorReloaded]( void* )
-	{
-		editorReloaded = true;
-	} ) );
+    // 2) 독립적인 EditorModule 리로드 트리거
+    bool editorReloaded{ false };
+    manager.setOnAfterReload(
+        "EditorModule",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&editorReloaded]( void* )
+    {
+        editorReloaded = true;
+    } ) );
 
-	manager.triggerReload( "EditorModule" );
+    manager.triggerReload( "EditorModule" );
 
-	for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
-		manager.update();
-		if ( editorReloaded )
-			break;
-	}
+    for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( editorReloaded )
+            break;
+    }
 
-	SW_EXPECT_FALSE( manager.isGraphBroken() );
-	SW_EXPECT_TRUE( editorReloaded );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( editorReloaded );
 
-	manager.shutdown();
+    manager.shutdown();
 }
 
 /**
@@ -581,91 +581,91 @@ SW_TEST_CASE( Architecture, MultiModuleFullStackLiveReload )
  */
 SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
 {
-	#if defined( SW_SHIPPING )
-	SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
-	#else
-	const sw::string editorPath = sw::modulePath( "EditorModule" );
-	if ( sw::FileUtil::fileExists( editorPath ) == false )
-		SW_TEST_SKIP( "EditorModule not built in this config" );
+    #if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
+    #else
+    const sw::string editorPath = sw::modulePath( "EditorModule" );
+    if ( sw::FileUtil::fileExists( editorPath ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
 
-	sw::LiveReloadManager manager;
-	if ( manager.registerModule( "EditorModule" ) == false )
-		SW_TEST_SKIP( "EditorModule registration failed" );
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "EditorModule" ) == false )
+        SW_TEST_SKIP( "EditorModule registration failed" );
 
-	void* const initialHandle = manager.getModuleHandle( "EditorModule" );
-	SW_ASSERT_NOT_NULL( initialHandle );
+    void* const initialHandle = manager.getModuleHandle( "EditorModule" );
+    SW_ASSERT_NOT_NULL( initialHandle );
 
-	bool  onBeforeCalled{ false };
-	bool  onAfterCalled{ false };
-	void* newHandle{ nullptr };
+    bool  onBeforeCalled{ false };
+    bool  onAfterCalled{ false };
+    void* newHandle{ nullptr };
 
-	manager.setOnBeforeReload(
-		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
-	{
-		onBeforeCalled = true;
-	} ) );
+    manager.setOnBeforeReload(
+        "EditorModule",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
+    {
+        onBeforeCalled = true;
+    } ) );
 
-	manager.setOnAfterReload(
-		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
-	{
-		onAfterCalled = true;
-		newHandle	  = pH;
-	} ) );
+    manager.setOnAfterReload(
+        "EditorModule",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
+    {
+        onAfterCalled = true;
+        newHandle     = pH;
+    } ) );
 
-	sw::ModuleCompiler compiler{ &manager };
+    sw::ModuleCompiler compiler{ &manager };
 
-	// 1) 초기 상태 머신 검증
-	SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Idle ), static_cast<int32>( compiler.getBuildState() ) );
-	SW_EXPECT_FALSE( compiler.isCompiling() );
+    // 1) 초기 상태 머신 검증
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Idle ), static_cast<int32>( compiler.getBuildState() ) );
+    SW_EXPECT_FALSE( compiler.isCompiling() );
 
-	// 2) EditorModule 대상 비동기 컴파일 시작
-	const bool bStarted = compiler.compileModule( "EditorModule" );
-	SW_EXPECT_TRUE( bStarted );
-	SW_EXPECT_TRUE( compiler.isCompiling() );
+    // 2) EditorModule 대상 비동기 컴파일 시작
+    const bool bStarted = compiler.compileModule( "EditorModule" );
+    SW_EXPECT_TRUE( bStarted );
+    SW_EXPECT_TRUE( compiler.isCompiling() );
 
-	// 3) 백그라운드 컴파일 완료 대기 (최대 60초)
-	const auto startTime = std::chrono::steady_clock::now();
-	while ( compiler.isCompiling() )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-		manager.update();
+    // 3) 백그라운드 컴파일 완료 대기 (최대 60초)
+    const auto startTime = std::chrono::steady_clock::now();
+    while ( compiler.isCompiling() )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        manager.update();
 
-		const auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - startTime ).count();
-		if ( elapsedSec > 60 )
-			break;
-	}
+        const auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - startTime ).count();
+        if ( elapsedSec > 60 )
+            break;
+    }
 
-	// 4) 컴파일 성공 후 핫스왑 완료 대기
-	for ( int32 stepIndex = 0; stepIndex < 50 && onAfterCalled == false; ++stepIndex )
-	{
-		std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
-		manager.update();
-	}
+    // 4) 컴파일 성공 후 핫스왑 완료 대기
+    for ( int32 stepIndex = 0; stepIndex < 50 && onAfterCalled == false; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+        manager.update();
+    }
 
-	SW_EXPECT_FALSE( compiler.isCompiling() );
-	SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Success ), static_cast<int32>( compiler.getBuildState() ) );
-	SW_EXPECT_EQUAL( 0, compiler.getLastExitCode() );
+    SW_EXPECT_FALSE( compiler.isCompiling() );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Success ), static_cast<int32>( compiler.getBuildState() ) );
+    SW_EXPECT_EQUAL( 0, compiler.getLastExitCode() );
 
-	// 5) 컴파일 완료 후 LiveReloadManager가 모듈 핫스왑 콜백을 정상 실행했는지 검증
-	SW_EXPECT_TRUE( onBeforeCalled );
-	SW_EXPECT_TRUE( onAfterCalled );
-	SW_ASSERT_NOT_NULL( newHandle );
+    // 5) 컴파일 완료 후 LiveReloadManager가 모듈 핫스왑 콜백을 정상 실행했는지 검증
+    SW_EXPECT_TRUE( onBeforeCalled );
+    SW_EXPECT_TRUE( onAfterCalled );
+    SW_ASSERT_NOT_NULL( newHandle );
 
-	// 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorAPI 심볼 및 함수 테이블 유효성 검증
-	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-		sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
-	SW_ASSERT_NOT_NULL( pfnExport );
+    // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorAPI 심볼 및 함수 테이블 유효성 검증
+    const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+    SW_ASSERT_NOT_NULL( pfnExport );
 
-	sw::EditorAPI api{};
-	SW_EXPECT_TRUE( pfnExport( &api ) );
-	SW_EXPECT_TRUE( api.create != nullptr );
-	SW_EXPECT_TRUE( api.render != nullptr );
+    sw::EditorAPI api{};
+    SW_EXPECT_TRUE( pfnExport( &api ) );
+    SW_EXPECT_TRUE( api.create != nullptr );
+    SW_EXPECT_TRUE( api.render != nullptr );
 
-	compiler.shutdown();
-	manager.shutdown();
-	#endif
+    compiler.shutdown();
+    manager.shutdown();
+    #endif
 }
 
 /**
@@ -673,20 +673,20 @@ SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
  */
 SW_TEST_CASE( Architecture, MaterialCacheAcquireReleaseNoGpu )
 {
-	sw::MaterialCache& cache = sw::engine::getResourceManager().getMaterialManager();
-	cache.clear();
+    sw::MaterialCache& cache = sw::engine::getResourceManager().getMaterialManager();
+    cache.clear();
 
-	sw::Material* mat = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
-	SW_EXPECT_TRUE( mat != nullptr );
-	if ( mat == nullptr )
-		return;
+    sw::Material* mat = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
+    SW_EXPECT_TRUE( mat != nullptr );
+    if ( mat == nullptr )
+        return;
 
-	sw::Material* again = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
-	SW_EXPECT_EQUAL( mat, again );
+    sw::Material* again = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
+    SW_EXPECT_EQUAL( mat, again );
 
-	cache.release( "engine/test/does_not_need_gpu.material" );
-	cache.release( "engine/test/does_not_need_gpu.material" );
-	cache.clear();
+    cache.release( "engine/test/does_not_need_gpu.material" );
+    cache.release( "engine/test/does_not_need_gpu.material" );
+    cache.clear();
 }
 
 /**
@@ -694,37 +694,37 @@ SW_TEST_CASE( Architecture, MaterialCacheAcquireReleaseNoGpu )
  */
 SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
 {
-	const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
-	for ( int32 cycle = 0; cycle < 2; ++cycle )
-	{
-		for ( const utf8* backendName : kRhiBackends )
-		{
-			const sw::string modPath = sw::modulePath( backendName );
-			if ( sw::FileUtil::fileExists( modPath ) == false )
-				continue;
+    for ( int32 cycle = 0; cycle < 2; ++cycle )
+    {
+        for ( const utf8* backendName : kRhiBackends )
+        {
+            const sw::string modPath = sw::modulePath( backendName );
+            if ( sw::FileUtil::fileExists( modPath ) == false )
+                continue;
 
-			void* handle = sw::FileUtil::loadDynamicLibrary( modPath );
-			SW_ASSERT_NOT_NULL( handle );
+            void* handle = sw::FileUtil::loadDynamicLibrary( modPath );
+            SW_ASSERT_NOT_NULL( handle );
 
-			auto* getStamp = reinterpret_cast<const utf8* (*)()>(
-				sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
-			SW_ASSERT_NOT_NULL( getStamp );
-			SW_EXPECT_EQUAL( sw::string( sw::kRHIModuleAbiStamp ), sw::string( getStamp() ) );
+            auto* getStamp = reinterpret_cast<const utf8* (*)()>(
+                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+            SW_ASSERT_NOT_NULL( getStamp );
+            SW_EXPECT_EQUAL( sw::string( sw::kRHIModuleAbiStamp ), sw::string( getStamp() ) );
 
-			auto* getAbiVer = reinterpret_cast<uint32 ( * )()>(
-				sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
-			SW_ASSERT_NOT_NULL( getAbiVer );
-			SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, getAbiVer() );
+            auto* getAbiVer = reinterpret_cast<uint32 ( * )()>(
+                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+            SW_ASSERT_NOT_NULL( getAbiVer );
+            SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, getAbiVer() );
 
-			auto* factory = reinterpret_cast<void* (*)()>(
-				sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
-			SW_ASSERT_NOT_NULL( factory );
+            auto* factory = reinterpret_cast<void* (*)()>(
+                sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+            SW_ASSERT_NOT_NULL( factory );
 
-			// 동적 언로드 및 해제
-			sw::FileUtil::unloadDynamicLibrary( handle );
-		}
-	}
+            // 동적 언로드 및 해제
+            sw::FileUtil::unloadDynamicLibrary( handle );
+        }
+    }
 }
 
 #endif // !SW_SHIPPING
@@ -739,18 +739,18 @@ SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
  */
 SW_TEST_CASE( ModuleAPI, ExportGameAPI_ShippingStatic )
 {
-	sw::GameAPI api{};
-	SW_EXPECT_TRUE( exportGameAPI( &api ) );
-	SW_EXPECT_TRUE( api.create != nullptr );
-	SW_EXPECT_TRUE( api.destroy != nullptr );
-	SW_EXPECT_TRUE( api.initialize != nullptr );
-	SW_EXPECT_TRUE( api.shutdown != nullptr );
-	SW_EXPECT_TRUE( api.update != nullptr );
+    sw::GameAPI api{};
+    SW_EXPECT_TRUE( exportGameAPI( &api ) );
+    SW_EXPECT_TRUE( api.create != nullptr );
+    SW_EXPECT_TRUE( api.destroy != nullptr );
+    SW_EXPECT_TRUE( api.initialize != nullptr );
+    SW_EXPECT_TRUE( api.shutdown != nullptr );
+    SW_EXPECT_TRUE( api.update != nullptr );
 
-	sw::GameHandle game = api.create();
-	SW_EXPECT_TRUE( game != nullptr );
-	if ( game != nullptr )
-		api.destroy( game );
+    sw::GameHandle game = api.create();
+    SW_EXPECT_TRUE( game != nullptr );
+    if ( game != nullptr )
+        api.destroy( game );
 }
 
 #else
@@ -760,33 +760,33 @@ SW_TEST_CASE( ModuleAPI, ExportGameAPI_ShippingStatic )
  */
 SW_TEST_CASE( ModuleAPI, ExportGameAPI )
 {
-	void* handle = sw::loadModule( "SWGame" );
-	SW_EXPECT_TRUE( handle != nullptr );
-	if ( handle == nullptr )
-		return;
+    void* handle = sw::loadModule( "SWGame" );
+    SW_EXPECT_TRUE( handle != nullptr );
+    if ( handle == nullptr )
+        return;
 
-	const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-		sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
-	SW_EXPECT_TRUE( pfnExport != nullptr );
-	if ( pfnExport == nullptr )
-	{
-		sw::FileUtil::unloadDynamicLibrary( handle );
-		return;
-	}
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
+        sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+    SW_EXPECT_TRUE( pfnExport != nullptr );
+    if ( pfnExport == nullptr )
+    {
+        sw::FileUtil::unloadDynamicLibrary( handle );
+        return;
+    }
 
-	sw::GameAPI api{};
-	SW_EXPECT_TRUE( pfnExport( &api ) );
-	SW_EXPECT_TRUE( api.create != nullptr );
-	SW_EXPECT_TRUE( api.destroy != nullptr );
-	SW_EXPECT_TRUE( api.initialize != nullptr );
-	SW_EXPECT_TRUE( api.shutdown != nullptr );
-	SW_EXPECT_TRUE( api.update != nullptr );
-	// create()/destroy()/lifecycle 은 FullGameSceneAndComponentLifecycle 에서 검증
+    sw::GameAPI api{};
+    SW_EXPECT_TRUE( pfnExport( &api ) );
+    SW_EXPECT_TRUE( api.create != nullptr );
+    SW_EXPECT_TRUE( api.destroy != nullptr );
+    SW_EXPECT_TRUE( api.initialize != nullptr );
+    SW_EXPECT_TRUE( api.shutdown != nullptr );
+    SW_EXPECT_TRUE( api.update != nullptr );
+    // create()/destroy()/lifecycle 은 FullGameSceneAndComponentLifecycle 에서 검증
 
-	sw::engine::registerModuleTypes( "SWGame" );
-	sw::engine::unregisterModuleTypes( "SWGame" );
+    sw::engine::registerModuleTypes( "SWGame" );
+    sw::engine::unregisterModuleTypes( "SWGame" );
 
-	sw::FileUtil::unloadDynamicLibrary( handle );
+    sw::FileUtil::unloadDynamicLibrary( handle );
 }
 
 /**
@@ -794,96 +794,96 @@ SW_TEST_CASE( ModuleAPI, ExportGameAPI )
  */
 SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 {
-	void* hOverworld = sw::loadModule( "GF_Overworld" );
-	if ( hOverworld != nullptr )
-		sw::engine::registerModuleTypes( "GF_Overworld" );
+    void* hOverworld = sw::loadModule( "GF_Overworld" );
+    if ( hOverworld != nullptr )
+        sw::engine::registerModuleTypes( "GF_Overworld" );
 
-	void* handle = sw::loadModule( "SWGame" );
-	SW_EXPECT_TRUE( handle != nullptr );
-	if ( handle == nullptr )
-	{
-		if ( hOverworld != nullptr )
-		{
-			sw::engine::unregisterModuleTypes( "GF_Overworld" );
-			sw::FileUtil::unloadDynamicLibrary( hOverworld );
-		}
-		return;
-	}
+    void* handle = sw::loadModule( "SWGame" );
+    SW_EXPECT_TRUE( handle != nullptr );
+    if ( handle == nullptr )
+    {
+        if ( hOverworld != nullptr )
+        {
+            sw::engine::unregisterModuleTypes( "GF_Overworld" );
+            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+        }
+        return;
+    }
 
-	sw::engine::registerModuleTypes( "SWGame" );
+    sw::engine::registerModuleTypes( "SWGame" );
 
-	const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
-	SW_EXPECT_TRUE( pfnExport != nullptr );
-	if ( pfnExport == nullptr )
-	{
-		sw::engine::unregisterModuleTypes( "SWGame" );
-		if ( hOverworld != nullptr )
-		{
-			sw::engine::unregisterModuleTypes( "GF_Overworld" );
-			sw::FileUtil::unloadDynamicLibrary( hOverworld );
-		}
-		sw::FileUtil::unloadDynamicLibrary( handle );
-		return;
-	}
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+    SW_EXPECT_TRUE( pfnExport != nullptr );
+    if ( pfnExport == nullptr )
+    {
+        sw::engine::unregisterModuleTypes( "SWGame" );
+        if ( hOverworld != nullptr )
+        {
+            sw::engine::unregisterModuleTypes( "GF_Overworld" );
+            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+        }
+        sw::FileUtil::unloadDynamicLibrary( handle );
+        return;
+    }
 
-	sw::GameAPI api{};
-	SW_EXPECT_TRUE( pfnExport( &api ) );
+    sw::GameAPI api{};
+    SW_EXPECT_TRUE( pfnExport( &api ) );
 
-	if ( api.bindService )
-	{
-		sw::ModuleService gameService{};
-		fillGameService( gameService );
-		api.bindService( &gameService );
-	}
+    if ( api.bindService )
+    {
+        sw::ModuleService gameService{};
+        fillGameService( gameService );
+        api.bindService( &gameService );
+    }
 
-	sw::GameHandle game = api.create();
-	SW_ASSERT_NOT_NULL( game );
+    sw::GameHandle game = api.create();
+    SW_ASSERT_NOT_NULL( game );
 
-	SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+    SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
 
-	// 1) Test initial game updates
-	for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-	{
-		api.update( game, 0.016f );
-	}
+    // 1) Test initial game updates
+    for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
+        api.update( game, 0.016f );
+    }
 
-	// 2) Create and tick a dynamic test scene
-	sw::Scene* pTestScene = sw::engine::getSceneManager().createScene( "TestMainScene" );
-	SW_ASSERT_NOT_NULL( pTestScene );
-	sw::GameObject* pObj = pTestScene->getObjectManager()->createGameObject( sw::hashed_string( "TestActor" ) );
-	SW_ASSERT_NOT_NULL( pObj );
-	SW_EXPECT_TRUE( pTestScene->getObjectManager()->getAllGameObjects().size() > 0 );
+    // 2) Create and tick a dynamic test scene
+    sw::Scene* pTestScene = sw::engine::getSceneManager().createScene( "TestMainScene" );
+    SW_ASSERT_NOT_NULL( pTestScene );
+    sw::GameObject* pObj = pTestScene->getObjectManager()->createGameObject( sw::hashed_string( "TestActor" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    SW_EXPECT_TRUE( pTestScene->getObjectManager()->getAllGameObjects().size() > 0 );
 
-	for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-	{
-		api.update( game, 0.016f );
-		sw::Scene* pActive = sw::engine::getSceneManager().getActiveScene();
-		if ( pActive != nullptr )
-			pActive->tick( 0.016f );
-	}
+    for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
+        api.update( game, 0.016f );
+        sw::Scene* pActive = sw::engine::getSceneManager().getActiveScene();
+        if ( pActive != nullptr )
+            pActive->tick( 0.016f );
+    }
 
-	SW_LOG_INFO( "[SmokeTest] Step 11: Shutting down..." );
+    SW_LOG_INFO( "[SmokeTest] Step 11: Shutting down..." );
 
-	sw::engine::getTaskManager().waitAll();
-	sw::engine::getSceneManager().tickTransitions();
+    sw::engine::getTaskManager().waitAll();
+    sw::engine::getSceneManager().tickTransitions();
 
-	api.shutdown( game );
-	api.destroy( game );
+    api.shutdown( game );
+    api.destroy( game );
 
-	if ( api.bindService )
-		api.bindService( nullptr );
+    if ( api.bindService )
+        api.bindService( nullptr );
 
-	sw::engine::getSceneManager().shutdown();
-	sw::engine::getSceneManager().initialize();
+    sw::engine::getSceneManager().shutdown();
+    sw::engine::getSceneManager().initialize();
 
-	sw::engine::unregisterModuleTypes( "SWGame" );
-	sw::FileUtil::unloadDynamicLibrary( handle );
+    sw::engine::unregisterModuleTypes( "SWGame" );
+    sw::FileUtil::unloadDynamicLibrary( handle );
 
-	if ( hOverworld != nullptr )
-	{
-		sw::engine::unregisterModuleTypes( "GF_Overworld" );
-		sw::FileUtil::unloadDynamicLibrary( hOverworld );
-	}
+    if ( hOverworld != nullptr )
+    {
+        sw::engine::unregisterModuleTypes( "GF_Overworld" );
+        sw::FileUtil::unloadDynamicLibrary( hOverworld );
+    }
 }
 
 /**
@@ -891,21 +891,21 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
  */
 SW_TEST_CASE( ModuleAPI, ExportEditorAPI )
 {
-	void* handle = sw::loadModule( "EditorModule" );
-	SW_ASSERT_NOT_NULL( handle );
+    void* handle = sw::loadModule( "EditorModule" );
+    SW_ASSERT_NOT_NULL( handle );
 
-	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-		sw::FileUtil::getDynamicSymbol( handle, "exportEditorAPI" ) );
-	SW_ASSERT_NOT_NULL( pfnExport );
+    const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+        sw::FileUtil::getDynamicSymbol( handle, "exportEditorAPI" ) );
+    SW_ASSERT_NOT_NULL( pfnExport );
 
-	sw::EditorAPI api{};
-	SW_EXPECT_TRUE( pfnExport( &api ) );
-	SW_ASSERT_NOT_NULL( api.create );
+    sw::EditorAPI api{};
+    SW_EXPECT_TRUE( pfnExport( &api ) );
+    SW_ASSERT_NOT_NULL( api.create );
 
-	sw::engine::registerModuleTypes( "EditorModule" );
-	sw::engine::unregisterModuleTypes( "EditorModule" );
+    sw::engine::registerModuleTypes( "EditorModule" );
+    sw::engine::unregisterModuleTypes( "EditorModule" );
 
-	sw::FileUtil::unloadDynamicLibrary( handle );
+    sw::FileUtil::unloadDynamicLibrary( handle );
 }
 
 /**
@@ -913,16 +913,16 @@ SW_TEST_CASE( ModuleAPI, ExportEditorAPI )
  */
 SW_TEST_CASE( ModuleAPI, GameFrameworkKitsModuleTypeRegistration )
 {
-	for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
-	{
-		void* handle = sw::loadModule( kitName );
-		if ( handle )
-		{
-			sw::engine::registerModuleTypes( kitName );
-			sw::engine::unregisterModuleTypes( kitName );
-			sw::FileUtil::unloadDynamicLibrary( handle );
-		}
-	}
+    for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
+    {
+        void* handle = sw::loadModule( kitName );
+        if ( handle )
+        {
+            sw::engine::registerModuleTypes( kitName );
+            sw::engine::unregisterModuleTypes( kitName );
+            sw::FileUtil::unloadDynamicLibrary( handle );
+        }
+    }
 }
 
 /**
@@ -930,63 +930,63 @@ SW_TEST_CASE( ModuleAPI, GameFrameworkKitsModuleTypeRegistration )
  */
 SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
 {
-	for ( int32 cycle = 0; cycle < 2; ++cycle )
-	{
-		void* hOverworld = sw::loadModule( "GF_Overworld" );
-		if ( hOverworld != nullptr )
-			sw::engine::registerModuleTypes( "GF_Overworld" );
+    for ( int32 cycle = 0; cycle < 2; ++cycle )
+    {
+        void* hOverworld = sw::loadModule( "GF_Overworld" );
+        if ( hOverworld != nullptr )
+            sw::engine::registerModuleTypes( "GF_Overworld" );
 
-		void* handle = sw::loadModule( "SWGame" );
-		SW_ASSERT_NOT_NULL( handle );
+        void* handle = sw::loadModule( "SWGame" );
+        SW_ASSERT_NOT_NULL( handle );
 
-		sw::engine::registerModuleTypes( "SWGame" );
+        sw::engine::registerModuleTypes( "SWGame" );
 
-		const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-			sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
-		SW_ASSERT_NOT_NULL( pfnExport );
+        const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
+            sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+        SW_ASSERT_NOT_NULL( pfnExport );
 
-		sw::GameAPI api{};
-		SW_EXPECT_TRUE( pfnExport( &api ) );
+        sw::GameAPI api{};
+        SW_EXPECT_TRUE( pfnExport( &api ) );
 
-		if ( api.bindService )
-		{
-			sw::ModuleService gameService{};
-			fillGameService( gameService );
-			api.bindService( &gameService );
-		}
+        if ( api.bindService )
+        {
+            sw::ModuleService gameService{};
+            fillGameService( gameService );
+            api.bindService( &gameService );
+        }
 
-		sw::GameHandle game = api.create();
-		SW_ASSERT_NOT_NULL( game );
-		SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+        sw::GameHandle game = api.create();
+        SW_ASSERT_NOT_NULL( game );
+        SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
 
-		// 가벼운 틱 실행 (비동기 씬 로드 완료 대기)
-		for ( int32 frame = 0; frame < 20; ++frame )
-		{
-			std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-			sw::engine::getSceneManager().tickTransitions();
-			api.update( game, 0.016f );
-		}
-		sw::engine::getTaskManager().waitAll();
-		sw::engine::getSceneManager().tickTransitions();
+        // 가벼운 틱 실행 (비동기 씬 로드 완료 대기)
+        for ( int32 frame = 0; frame < 20; ++frame )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+            sw::engine::getSceneManager().tickTransitions();
+            api.update( game, 0.016f );
+        }
+        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSceneManager().tickTransitions();
 
-		api.shutdown( game );
-		api.destroy( game );
+        api.shutdown( game );
+        api.destroy( game );
 
-		if ( api.bindService )
-			api.bindService( nullptr );
+        if ( api.bindService )
+            api.bindService( nullptr );
 
-		sw::engine::getSceneManager().shutdown();
-		sw::engine::getSceneManager().initialize();
+        sw::engine::getSceneManager().shutdown();
+        sw::engine::getSceneManager().initialize();
 
-		sw::engine::unregisterModuleTypes( "SWGame" );
-		sw::FileUtil::unloadDynamicLibrary( handle );
+        sw::engine::unregisterModuleTypes( "SWGame" );
+        sw::FileUtil::unloadDynamicLibrary( handle );
 
-		if ( hOverworld != nullptr )
-		{
-			sw::engine::unregisterModuleTypes( "GF_Overworld" );
-			sw::FileUtil::unloadDynamicLibrary( hOverworld );
-		}
-	}
+        if ( hOverworld != nullptr )
+        {
+            sw::engine::unregisterModuleTypes( "GF_Overworld" );
+            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+        }
+    }
 }
 
 #endif // SW_SHIPPING

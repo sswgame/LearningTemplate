@@ -12,18 +12,18 @@
 // ------------------------------------------------------------------------------
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#if defined( SW_GF_EXPORTS )
-		#define SW_GF_API __declspec( dllexport )
-	#elif defined( SW_GF_IMPORTS )
-		#define SW_GF_API __declspec( dllimport )
-	#else
-		#define SW_GF_API
-	#endif
+    #if defined( SW_GF_EXPORTS )
+        #define SW_GF_API __declspec( dllexport )
+    #elif defined( SW_GF_IMPORTS )
+        #define SW_GF_API __declspec( dllimport )
+    #else
+        #define SW_GF_API
+    #endif
 #else
-	#define SW_GF_API __attribute__( ( visibility( "default" ) ) )
+    #define SW_GF_API __attribute__( ( visibility( "default" ) ) )
 #endif
 
 namespace sw
 {
-	SW_GF_API void registerGameFrameworkTypes();
+    SW_GF_API void registerGameFrameworkTypes();
 } // namespace sw

@@ -12,183 +12,183 @@
 
 namespace sw::editor
 {
-	EditorDocumentPanel::EditorDocumentPanel( EditorAssetKind kind, bool bLoadOnOpen )
-		: IEditorPanel{ false }
-		, _kind{ kind }
-		, _loadedAssetPath{}
-		, _pendingFocusPath{}
-		, _documentUndoBaseline{}
-		, _lastSavedDocumentText{}
-		, _bLoaded{ SW_FALSE }
-		, _bDocumentDirty{ SW_FALSE }
-		, _bConfirmSwitch{ SW_FALSE }
-		, _reserved{ 0 }
-	{
-		if ( bLoadOnOpen == false )
-			_bLoaded = SW_TRUE;
-	}
+    EditorDocumentPanel::EditorDocumentPanel( EditorAssetKind kind, bool bLoadOnOpen )
+        : IEditorPanel{ false }
+        , _kind{ kind }
+        , _loadedAssetPath{}
+        , _pendingFocusPath{}
+        , _documentUndoBaseline{}
+        , _lastSavedDocumentText{}
+        , _bLoaded{ SW_FALSE }
+        , _bDocumentDirty{ SW_FALSE }
+        , _bConfirmSwitch{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+        if ( bLoadOnOpen == false )
+            _bLoaded = SW_TRUE;
+    }
 
-	bool EditorDocumentPanel::hasNewFocusedDocument() const
-	{
-		const string_view focused = getMatchingFocusedPath();
-		if ( focused.empty() )
-			return false;
-		return focused != _loadedAssetPath;
-	}
+    bool EditorDocumentPanel::hasNewFocusedDocument() const
+    {
+        const string_view focused = getMatchingFocusedPath();
+        if ( focused.empty() )
+            return false;
+        return focused != _loadedAssetPath;
+    }
 
-	string_view EditorDocumentPanel::getMatchingFocusedPath() const
-	{
-		return EditorAssetTypeRegistry::matchingFocusedPath( _kind );
-	}
+    string_view EditorDocumentPanel::getMatchingFocusedPath() const
+    {
+        return EditorAssetTypeRegistry::matchingFocusedPath( _kind );
+    }
 
-	const utf8* EditorDocumentPanel::getPanelTitle() const
-	{
-		return EditorAssetTypeRegistry::getPanelTitle( _kind );
-	}
+    const utf8* EditorDocumentPanel::getPanelTitle() const
+    {
+        return EditorAssetTypeRegistry::getPanelTitle( _kind );
+    }
 
-	void EditorDocumentPanel::acceptFocusedDocument()
-	{
-		const string_view focused = _pendingFocusPath.empty() ? getMatchingFocusedPath() : string_view{ _pendingFocusPath };
-		if ( focused.empty() )
-			return;
-		_loadedAssetPath = string{ focused };
-		_pendingFocusPath.clear();
-		_bLoaded		= SW_FALSE;
-		_bDocumentDirty = SW_FALSE;
-		_bConfirmSwitch = SW_FALSE;
-	}
+    void EditorDocumentPanel::acceptFocusedDocument()
+    {
+        const string_view focused = _pendingFocusPath.empty() ? getMatchingFocusedPath() : string_view{ _pendingFocusPath };
+        if ( focused.empty() )
+            return;
+        _loadedAssetPath = string{ focused };
+        _pendingFocusPath.clear();
+        _bLoaded        = SW_FALSE;
+        _bDocumentDirty = SW_FALSE;
+        _bConfirmSwitch = SW_FALSE;
+    }
 
-	void EditorDocumentPanel::updateFocusedDocument()
-	{
-		if ( _bConfirmSwitch == SW_TRUE )
-		{
-			drawUnsavedDocumentPopup();
-			return;
-		}
+    void EditorDocumentPanel::updateFocusedDocument()
+    {
+        if ( _bConfirmSwitch == SW_TRUE )
+        {
+            drawUnsavedDocumentPopup();
+            return;
+        }
 
-		if ( hasNewFocusedDocument() == false )
-			return;
+        if ( hasNewFocusedDocument() == false )
+            return;
 
-		if ( isDocumentDirty() )
-		{
-			_pendingFocusPath = string{ getMatchingFocusedPath() };
-			_bConfirmSwitch	  = SW_TRUE;
-			drawUnsavedDocumentPopup();
-			return;
-		}
+        if ( isDocumentDirty() )
+        {
+            _pendingFocusPath = string{ getMatchingFocusedPath() };
+            _bConfirmSwitch   = SW_TRUE;
+            drawUnsavedDocumentPopup();
+            return;
+        }
 
-		acceptFocusedDocument();
-	}
+        acceptFocusedDocument();
+    }
 
-	void EditorDocumentPanel::markDocumentLoaded()
-	{
-		_bLoaded		= SW_TRUE;
-		_bDocumentDirty = SW_FALSE;
-		syncDocumentUndoBaseline();
-	}
+    void EditorDocumentPanel::markDocumentLoaded()
+    {
+        _bLoaded        = SW_TRUE;
+        _bDocumentDirty = SW_FALSE;
+        syncDocumentUndoBaseline();
+    }
 
-	bool EditorDocumentPanel::isDocumentLoaded() const
-	{
-		return _bLoaded == SW_TRUE;
-	}
+    bool EditorDocumentPanel::isDocumentLoaded() const
+    {
+        return _bLoaded == SW_TRUE;
+    }
 
-	void EditorDocumentPanel::markDocumentDirty()
-	{
-		_bDocumentDirty = SW_TRUE;
-	}
+    void EditorDocumentPanel::markDocumentDirty()
+    {
+        _bDocumentDirty = SW_TRUE;
+    }
 
-	void EditorDocumentPanel::clearDocumentDirty()
-	{
-		_bDocumentDirty = SW_FALSE;
-	}
+    void EditorDocumentPanel::clearDocumentDirty()
+    {
+        _bDocumentDirty = SW_FALSE;
+    }
 
-	void EditorDocumentPanel::discardDirtyDocument()
-	{
-		clearDocumentDirty();
-	}
+    void EditorDocumentPanel::discardDirtyDocument()
+    {
+        clearDocumentDirty();
+    }
 
-	void EditorDocumentPanel::syncDocumentUndoBaseline()
-	{
-		_documentUndoBaseline  = captureDocumentText();
-		_lastSavedDocumentText = _documentUndoBaseline;
-	}
+    void EditorDocumentPanel::syncDocumentUndoBaseline()
+    {
+        _documentUndoBaseline  = captureDocumentText();
+        _lastSavedDocumentText = _documentUndoBaseline;
+    }
 
-	void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
-	{
-		applyDocumentText( text );
-		_documentUndoBaseline = string{ text };
-		if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
-			clearDocumentDirty();
-		else
-			markDocumentDirty();
-	}
+    void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
+    {
+        applyDocumentText( text );
+        _documentUndoBaseline = string{ text };
+        if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
+            clearDocumentDirty();
+        else
+            markDocumentDirty();
+    }
 
-	void EditorDocumentPanel::notifyDocumentEdited( string_view label, string_view coalesceKey )
-	{
-		const string after = captureDocumentText();
-		if ( after == _documentUndoBaseline )
-			return;
-		EditorTransaction::recordDocumentText(
-			_documentUndoBaseline, after, label,
-			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this]( string_view snapshot )
-		{
-			restoreDocumentFromUndo( snapshot );
-		} ),
-			SW_DELEGATE_LAMBDA( EditorDocumentCaptureDelegate, [this]()
-		{
-			return captureDocumentText();
-		} ),
-			coalesceKey );
-		_documentUndoBaseline = after;
-		markDocumentDirty();
-	}
+    void EditorDocumentPanel::notifyDocumentEdited( string_view label, string_view coalesceKey )
+    {
+        const string after = captureDocumentText();
+        if ( after == _documentUndoBaseline )
+            return;
+        EditorTransaction::recordDocumentText(
+            _documentUndoBaseline, after, label,
+            SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this]( string_view snapshot )
+        {
+            restoreDocumentFromUndo( snapshot );
+        } ),
+            SW_DELEGATE_LAMBDA( EditorDocumentCaptureDelegate, [this]()
+        {
+            return captureDocumentText();
+        } ),
+            coalesceKey );
+        _documentUndoBaseline = after;
+        markDocumentDirty();
+    }
 
-	bool EditorDocumentPanel::trySaveDirtyDocument()
-	{
-		if ( isDocumentDirty() == false )
-			return false;
-		return saveDocument();
-	}
+    bool EditorDocumentPanel::trySaveDirtyDocument()
+    {
+        if ( isDocumentDirty() == false )
+            return false;
+        return saveDocument();
+    }
 
-	EditorPanelFlags EditorDocumentPanel::getPanelFlags() const
-	{
-		if ( isDocumentDirty() )
-			return EditorPanelFlags::UnsavedDocument;
-		return EditorPanelFlags::None;
-	}
+    EditorPanelFlags EditorDocumentPanel::getPanelFlags() const
+    {
+        if ( isDocumentDirty() )
+            return EditorPanelFlags::UnsavedDocument;
+        return EditorPanelFlags::None;
+    }
 
-	void EditorDocumentPanel::drawUnsavedDocumentPopup()
-	{
-		if ( ImGui::IsPopupOpen( "##UnsavedDocumentSwitch" ) == false )
-			ImGui::OpenPopup( "##UnsavedDocumentSwitch" );
-		const EditorUnsavedChoice choice =
-			EditorWidgets::drawUnsavedChangesModal( "##UnsavedDocumentSwitch",
-													"This document has unsaved changes. Switch anyway?" );
-		if ( choice == EditorUnsavedChoice::None )
-			return;
+    void EditorDocumentPanel::drawUnsavedDocumentPopup()
+    {
+        if ( ImGui::IsPopupOpen( "##UnsavedDocumentSwitch" ) == false )
+            ImGui::OpenPopup( "##UnsavedDocumentSwitch" );
+        const EditorUnsavedChoice choice =
+            EditorWidgets::drawUnsavedChangesModal( "##UnsavedDocumentSwitch",
+                                                    "This document has unsaved changes. Switch anyway?" );
+        if ( choice == EditorUnsavedChoice::None )
+            return;
 
-		if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
-		{
-			if ( saveDocument() == false )
-			{
-				_bConfirmSwitch = SW_FALSE;
-				_pendingFocusPath.clear();
-				return;
-			}
-		}
-		if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
-			clearDocumentDirty();
+        if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
+        {
+            if ( saveDocument() == false )
+            {
+                _bConfirmSwitch = SW_FALSE;
+                _pendingFocusPath.clear();
+                return;
+            }
+        }
+        if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+            clearDocumentDirty();
 
-		if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
-		{
-			acceptFocusedDocument();
-			return;
-		}
+        if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
+        {
+            acceptFocusedDocument();
+            return;
+        }
 
-		_bConfirmSwitch = SW_FALSE;
-		_pendingFocusPath.clear();
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext != nullptr && _loadedAssetPath.empty() == false )
-			pContext->getWorkspace().setFocusedAssetPath( _loadedAssetPath.c_str() );
-	}
+        _bConfirmSwitch = SW_FALSE;
+        _pendingFocusPath.clear();
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr && _loadedAssetPath.empty() == false )
+            pContext->getWorkspace().setFocusedAssetPath( _loadedAssetPath.c_str() );
+    }
 } // namespace sw::editor

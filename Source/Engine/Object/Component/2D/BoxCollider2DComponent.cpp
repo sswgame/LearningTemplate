@@ -12,168 +12,168 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct BoxCollider2DComponentInternal
-		{
-			static AABB makeColliderAabb( const float2& minB, const float2& maxB )
-			{
-				AABB box;
-				box._min = float3( minB._x, minB._y, 0.0f );
-				box._max = float3( maxB._x, maxB._y, 0.0f );
-				return box;
-			}
-		};
-	} // namespace
+    namespace
+    {
+        struct BoxCollider2DComponentInternal
+        {
+            static AABB makeColliderAabb( const float2& minB, const float2& maxB )
+            {
+                AABB box;
+                box._min = float3( minB._x, minB._y, 0.0f );
+                box._max = float3( maxB._x, maxB._y, 0.0f );
+                return box;
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
 {
-	BoxCollider2DComponent::BoxCollider2DComponent()
-		: _offsetPos{}
-		, _offsetScale{}
-		, _physicsBody{}
-		, _cachedMin{ 0.0f, 0.0f }
-		, _cachedMax{ 0.0f, 0.0f }
-		, _colliderType{ 0 }
-	{
-		setCanEverTick( true );
-	}
+    BoxCollider2DComponent::BoxCollider2DComponent()
+        : _offsetPos{}
+        , _offsetScale{}
+        , _physicsBody{}
+        , _cachedMin{ 0.0f, 0.0f }
+        , _cachedMax{ 0.0f, 0.0f }
+        , _colliderType{ 0 }
+    {
+        setCanEverTick( true );
+    }
 
-	void BoxCollider2DComponent::onBeginPlay()
-	{
-		SceneComponent::onBeginPlay();
-		setTickGroup( TickGroup::DuringPhysics );
+    void BoxCollider2DComponent::onBeginPlay()
+    {
+        SceneComponent::onBeginPlay();
+        setTickGroup( TickGroup::DuringPhysics );
 
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			pGameObject->addTag( "Collider"_tag );
+        GameObject* pGameObject = getOwner();
+        if ( pGameObject != nullptr )
+            pGameObject->addTag( "Collider"_tag );
 
-		syncPhysicsBody();
-	}
+        syncPhysicsBody();
+    }
 
-	void BoxCollider2DComponent::onEndPlay()
-	{
-		unregisterPhysicsBody();
-		SceneComponent::onEndPlay();
-	}
+    void BoxCollider2DComponent::onEndPlay()
+    {
+        unregisterPhysicsBody();
+        SceneComponent::onEndPlay();
+    }
 
-	void BoxCollider2DComponent::onDestroy()
-	{
-		unregisterPhysicsBody();
-		SceneComponent::onDestroy();
-	}
+    void BoxCollider2DComponent::onDestroy()
+    {
+        unregisterPhysicsBody();
+        SceneComponent::onDestroy();
+    }
 
-	void BoxCollider2DComponent::onTick( float32 deltaTime )
-	{
-		SceneComponent::onTick( deltaTime );
-		syncPhysicsBody();
-	}
+    void BoxCollider2DComponent::onTick( float32 deltaTime )
+    {
+        SceneComponent::onTick( deltaTime );
+        syncPhysicsBody();
+    }
 
-	float2 BoxCollider2DComponent::getOffsetPosition() const
-	{
-		float2 result{ 0.0f, 0.0f };
-		if ( _offsetPos.empty() == false )
-		{
-			string_splitter tokens( _offsetPos, { ",", " " } );
-			const auto&		listToken = tokens.getSplitList();
-			if ( listToken.size() >= 1 && listToken[0].empty() == false )
-				StringUtil::parseFloat( listToken[0], result._x );
-			if ( listToken.size() >= 2 && listToken[1].empty() == false )
-				StringUtil::parseFloat( listToken[1], result._y );
-		}
-		return result;
-	}
+    float2 BoxCollider2DComponent::getOffsetPosition() const
+    {
+        float2 result{ 0.0f, 0.0f };
+        if ( _offsetPos.empty() == false )
+        {
+            string_splitter tokens( _offsetPos, { ",", " " } );
+            const auto&     listToken = tokens.getSplitList();
+            if ( listToken.size() >= 1 && listToken[0].empty() == false )
+                StringUtil::parseFloat( listToken[0], result._x );
+            if ( listToken.size() >= 2 && listToken[1].empty() == false )
+                StringUtil::parseFloat( listToken[1], result._y );
+        }
+        return result;
+    }
 
-	float2 BoxCollider2DComponent::getOffsetScaleVec() const
-	{
-		float2 result{ 0.0f, 0.0f };
-		if ( _offsetScale.empty() == false )
-		{
-			string_splitter tokens( _offsetScale, { ",", " " } );
-			const auto&		listToken = tokens.getSplitList();
-			if ( listToken.size() >= 1 && listToken[0].empty() == false )
-				StringUtil::parseFloat( listToken[0], result._x );
-			if ( listToken.size() >= 2 && listToken[1].empty() == false )
-				StringUtil::parseFloat( listToken[1], result._y );
-		}
-		return result;
-	}
+    float2 BoxCollider2DComponent::getOffsetScaleVec() const
+    {
+        float2 result{ 0.0f, 0.0f };
+        if ( _offsetScale.empty() == false )
+        {
+            string_splitter tokens( _offsetScale, { ",", " " } );
+            const auto&     listToken = tokens.getSplitList();
+            if ( listToken.size() >= 1 && listToken[0].empty() == false )
+                StringUtil::parseFloat( listToken[0], result._x );
+            if ( listToken.size() >= 2 && listToken[1].empty() == false )
+                StringUtil::parseFloat( listToken[1], result._y );
+        }
+        return result;
+    }
 
-	void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
-	{
-		const float3 worldPos = getWorldPosition();
-		const float2 offset	  = getOffsetPosition();
-		const float2 scale	  = getOffsetScaleVec();
-		const float2 center{ worldPos._x + offset._x, worldPos._y + offset._y };
-		const float2 halfSize{ scale._x * 0.5f, scale._y * 0.5f };
+    void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
+    {
+        const float3 worldPos = getWorldPosition();
+        const float2 offset   = getOffsetPosition();
+        const float2 scale    = getOffsetScaleVec();
+        const float2 center{ worldPos._x + offset._x, worldPos._y + offset._y };
+        const float2 halfSize{ scale._x * 0.5f, scale._y * 0.5f };
 
-		outMin = float2{ center._x - halfSize._x, center._y - halfSize._y };
-		outMax = float2{ center._x + halfSize._x, center._y + halfSize._y };
-	}
+        outMin = float2{ center._x - halfSize._x, center._y - halfSize._y };
+        outMax = float2{ center._x + halfSize._x, center._y + halfSize._y };
+    }
 
-	bool BoxCollider2DComponent::intersects( const BoxCollider2DComponent* pOther ) const
-	{
-		if ( pOther == nullptr )
-			return false;
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr && pOwner->getManager() != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
-			return pOwner->getManager()->getPhysicsWorld().overlaps( _physicsBody, pOther->_physicsBody );
+    bool BoxCollider2DComponent::intersects( const BoxCollider2DComponent* pOther ) const
+    {
+        if ( pOther == nullptr )
+            return false;
+        GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && pOwner->getManager() != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
+            return pOwner->getManager()->getPhysicsWorld().overlaps( _physicsBody, pOther->_physicsBody );
 
-		float2 aMin{}, aMax{}, bMin{}, bMax{};
-		getBounds( aMin, aMax );
-		pOther->getBounds( bMin, bMax );
-		return ( aMin._x <= bMax._x && aMax._x >= bMin._x &&
-				 aMin._y <= bMax._y && aMax._y >= bMin._y );
-	}
+        float2 aMin{}, aMax{}, bMin{}, bMax{};
+        getBounds( aMin, aMax );
+        pOther->getBounds( bMin, bMax );
+        return ( aMin._x <= bMax._x && aMax._x >= bMin._x &&
+                 aMin._y <= bMax._y && aMax._y >= bMin._y );
+    }
 
-	bool BoxCollider2DComponent::intersects( const float2& point ) const
-	{
-		float2 aMin{}, aMax{};
-		getBounds( aMin, aMax );
-		return ( point._x >= aMin._x && point._x <= aMax._x &&
-				 point._y >= aMin._y && point._y <= aMax._y );
-	}
+    bool BoxCollider2DComponent::intersects( const float2& point ) const
+    {
+        float2 aMin{}, aMax{};
+        getBounds( aMin, aMax );
+        return ( point._x >= aMin._x && point._x <= aMax._x &&
+                 point._y >= aMin._y && point._y <= aMax._y );
+    }
 
-	bool BoxCollider2DComponent::intersects( const float2& minB, const float2& maxB ) const
-	{
-		float2 aMin{}, aMax{};
-		getBounds( aMin, aMax );
-		return ( aMin._x <= maxB._x && aMax._x >= minB._x &&
-				 aMin._y <= maxB._y && aMax._y >= minB._y );
-	}
+    bool BoxCollider2DComponent::intersects( const float2& minB, const float2& maxB ) const
+    {
+        float2 aMin{}, aMax{};
+        getBounds( aMin, aMax );
+        return ( aMin._x <= maxB._x && aMax._x >= minB._x &&
+                 aMin._y <= maxB._y && aMax._y >= minB._y );
+    }
 
-	void BoxCollider2DComponent::unregisterPhysicsBody()
-	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner == nullptr || pOwner->getManager() == nullptr || _physicsBody.isValid() == false )
-			return;
-		pOwner->getManager()->getPhysicsWorld().removeBody( _physicsBody );
-		_physicsBody = ObjectHandle{};
-	}
+    void BoxCollider2DComponent::unregisterPhysicsBody()
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || pOwner->getManager() == nullptr || _physicsBody.isValid() == false )
+            return;
+        pOwner->getManager()->getPhysicsWorld().removeBody( _physicsBody );
+        _physicsBody = ObjectHandle{};
+    }
 
-	void BoxCollider2DComponent::syncPhysicsBody()
-	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner == nullptr || pOwner->getManager() == nullptr )
-			return;
+    void BoxCollider2DComponent::syncPhysicsBody()
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || pOwner->getManager() == nullptr )
+            return;
 
-		GameObjectManager* pManager = pOwner->getManager();
-		float2			   minB{};
-		float2			   maxB{};
-		getBounds( minB, maxB );
-		_cachedMin = minB;
-		_cachedMax = maxB;
+        GameObjectManager* pManager = pOwner->getManager();
+        float2             minB{};
+        float2             maxB{};
+        getBounds( minB, maxB );
+        _cachedMin = minB;
+        _cachedMax = maxB;
 
-		const AABB	box	  = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
-		const uint8 layer = static_cast<uint8>( _colliderType );
+        const AABB  box   = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
+        const uint8 layer = static_cast<uint8>( _colliderType );
 
-		if ( _physicsBody.isValid() )
-		{
-			pManager->getPhysicsWorld().setAabb( _physicsBody, box );
-			return;
-		}
-		_physicsBody = pManager->getPhysicsWorld().addBody( box, layer, pOwner->getObjectId() );
-	}
+        if ( _physicsBody.isValid() )
+        {
+            pManager->getPhysicsWorld().setAabb( _physicsBody, box );
+            return;
+        }
+        _physicsBody = pManager->getPhysicsWorld().addBody( box, layer, pOwner->getObjectId() );
+    }
 
 } // namespace sw

@@ -6,24 +6,24 @@
 
 namespace sw
 {
-	REFLECT()
-	struct GameKitConfig
-	{
-		REFLECT_BODY();
+    REFLECT()
+    struct GameKitConfig
+    {
+        REFLECT_BODY();
 
-		PROPERTY()
-		string _name;
+        PROPERTY()
+        string _name;
 
-		PROPERTY()
-		vector<string> _listDependencyModule;
-	};
+        PROPERTY()
+        vector<string> _listDependencyModule;
+    };
 
-	REFLECT()
-	struct AppConfig : IConfig
-	{
-		REFLECT_BODY();
+    REFLECT()
+    struct AppConfig : IConfig
+    {
+        REFLECT_BODY();
 
-		PROPERTY()
-		vector<GameKitConfig> _listGameKitModule;
-	};
+        PROPERTY()
+        vector<GameKitConfig> _listGameKitModule;
+    };
 } // namespace sw

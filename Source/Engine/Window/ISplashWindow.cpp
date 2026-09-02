@@ -8,27 +8,27 @@
 
 namespace sw
 {
-	ISplashWindow::ISplashWindow()
-		: _title{}
-		, _status{}
-		, _width{ 480 }
-		, _height{ 280 }
-		, _bOpen{ false }
-	{
-	}
+    ISplashWindow::ISplashWindow()
+        : _title{}
+        , _status{}
+        , _width{ 480 }
+        , _height{ 280 }
+        , _bOpen{ false }
+    {
+    }
 
-	ISplashWindow::~ISplashWindow() = default;
+    ISplashWindow::~ISplashWindow() = default;
 
-	unique_ptr<ISplashWindow> ISplashWindow::createPlatformSplash()
-	{
+    unique_ptr<ISplashWindow> ISplashWindow::createPlatformSplash()
+    {
 #if defined( SW_PLATFORM_WINDOWS )
-		return make_unique<Win32SplashWindow>();
+        return make_unique<Win32SplashWindow>();
 #elif defined( SW_PLATFORM_MACOS )
-		return make_unique<CocoaSplashWindow>();
+        return make_unique<CocoaSplashWindow>();
 #elif defined( SW_PLATFORM_LINUX )
-		return make_unique<X11SplashWindow>();
+        return make_unique<X11SplashWindow>();
 #else
-		return nullptr;
+        return nullptr;
 #endif
-	}
+    }
 } // namespace sw

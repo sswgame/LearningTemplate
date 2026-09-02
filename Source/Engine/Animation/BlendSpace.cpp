@@ -8,116 +8,116 @@
 
 namespace sw
 {
-	void BlendSpace1D::addSample( float32 parameter, string_view clipName, const float4x4& pose )
-	{
-		BlendSample1D sample{};
-		sample._parameter = parameter;
-		sample._clipName  = string{ clipName };
-		sample._pose	  = pose;
+    void BlendSpace1D::addSample( float32 parameter, string_view clipName, const float4x4& pose )
+    {
+        BlendSample1D sample{};
+        sample._parameter = parameter;
+        sample._clipName  = string{ clipName };
+        sample._pose      = pose;
 
-		_listSample.push_back( std::move( sample ) );
+        _listSample.push_back( std::move( sample ) );
 
-		std::sort( _listSample.begin(), _listSample.end(), []( const BlendSample1D& a, const BlendSample1D& b )
-		{
-			return a._parameter < b._parameter;
-		} );
-	}
+        std::sort( _listSample.begin(), _listSample.end(), []( const BlendSample1D& a, const BlendSample1D& b )
+        {
+            return a._parameter < b._parameter;
+        } );
+    }
 
-	float4x4 BlendSpace1D::evaluate( float32 parameter ) const
-	{
-		if ( _listSample.empty() )
-			return float4x4::Identity;
+    float4x4 BlendSpace1D::evaluate( float32 parameter ) const
+    {
+        if ( _listSample.empty() )
+            return float4x4::Identity;
 
-		if ( _listSample.size() == 1 || parameter <= _listSample.front()._parameter )
-			return _listSample.front()._pose;
+        if ( _listSample.size() == 1 || parameter <= _listSample.front()._parameter )
+            return _listSample.front()._pose;
 
-		if ( parameter >= _listSample.back()._parameter )
-			return _listSample.back()._pose;
+        if ( parameter >= _listSample.back()._parameter )
+            return _listSample.back()._pose;
 
-		for ( size_t index = 0; index + 1 < _listSample.size(); ++index )
-		{
-			const BlendSample1D& s0 = _listSample[index];
-			const BlendSample1D& s1 = _listSample[index + 1];
+        for ( size_t index = 0; index + 1 < _listSample.size(); ++index )
+        {
+            const BlendSample1D& s0 = _listSample[index];
+            const BlendSample1D& s1 = _listSample[index + 1];
 
-			if ( s0._parameter <= parameter && parameter <= s1._parameter )
-			{
-				const float32 span = s1._parameter - s0._parameter;
-				const float32 t	   = span > MathUtil::Epsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
+            if ( s0._parameter <= parameter && parameter <= s1._parameter )
+            {
+                const float32 span = s1._parameter - s0._parameter;
+                const float32 t    = span > MathUtil::Epsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
 
-				const DualQuaternion dq0 = DualQuaternion::fromMatrix( s0._pose );
-				const DualQuaternion dq1 = DualQuaternion::fromMatrix( s1._pose );
-				const DualQuaternion dqb = DualQuaternion::dlb( dq0, dq1, t );
-				return dqb.toMatrix4x4();
-			}
-		}
+                const DualQuaternion dq0 = DualQuaternion::fromMatrix( s0._pose );
+                const DualQuaternion dq1 = DualQuaternion::fromMatrix( s1._pose );
+                const DualQuaternion dqb = DualQuaternion::dlb( dq0, dq1, t );
+                return dqb.toMatrix4x4();
+            }
+        }
 
-		return _listSample.back()._pose;
-	}
+        return _listSample.back()._pose;
+    }
 
-	void BlendSpace1D::evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const
-	{
-		const float4x4 rootTransform = evaluate( parameter );
-		if ( inoutSkeleton.getBoneCount() > 0 )
-		{
-			inoutSkeleton.setBoneSpaceTransform( 0, rootTransform );
-			inoutSkeleton.updateCharacterSpaceTransforms();
-		}
-	}
+    void BlendSpace1D::evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const
+    {
+        const float4x4 rootTransform = evaluate( parameter );
+        if ( inoutSkeleton.getBoneCount() > 0 )
+        {
+            inoutSkeleton.setBoneSpaceTransform( 0, rootTransform );
+            inoutSkeleton.updateCharacterSpaceTransforms();
+        }
+    }
 
-	void BlendSpace2D::addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose )
-	{
-		BlendSample2D sample{};
-		sample._parameter = float2{ paramX, paramY };
-		sample._clipName  = string{ clipName };
-		sample._pose	  = pose;
+    void BlendSpace2D::addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose )
+    {
+        BlendSample2D sample{};
+        sample._parameter = float2{ paramX, paramY };
+        sample._clipName  = string{ clipName };
+        sample._pose      = pose;
 
-		_listSample.push_back( std::move( sample ) );
-	}
+        _listSample.push_back( std::move( sample ) );
+    }
 
-	float4x4 BlendSpace2D::evaluate( float32 paramX, float32 paramY ) const
-	{
-		if ( _listSample.empty() )
-			return float4x4::Identity;
+    float4x4 BlendSpace2D::evaluate( float32 paramX, float32 paramY ) const
+    {
+        if ( _listSample.empty() )
+            return float4x4::Identity;
 
-		if ( _listSample.size() == 1 )
-			return _listSample.front()._pose;
+        if ( _listSample.size() == 1 )
+            return _listSample.front()._pose;
 
-		// Inverse Distance Weighting (IDW)
-		float32		 totalWeight = 0.0f;
-		float32		 arrWeight[constant::kMaxBuffer32];
-		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( constant::kMaxBuffer32 ) );
-		const float2 targetParam{ paramX, paramY };
+        // Inverse Distance Weighting (IDW)
+        float32      totalWeight = 0.0f;
+        float32      arrWeight[constant::kMaxBuffer32];
+        const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( constant::kMaxBuffer32 ) );
+        const float2 targetParam{ paramX, paramY };
 
-		for ( size_t index = 0; index < sampleCount; ++index )
-		{
-			const float32 distSq = float2::getDistanceSquared( targetParam, _listSample[index]._parameter );
+        for ( size_t index = 0; index < sampleCount; ++index )
+        {
+            const float32 distSq = float2::getDistanceSquared( targetParam, _listSample[index]._parameter );
 
-			if ( distSq < MathUtil::Epsilon )
-				return _listSample[index]._pose;
+            if ( distSq < MathUtil::Epsilon )
+                return _listSample[index]._pose;
 
-			arrWeight[index] = 1.0f / distSq;
-			totalWeight += arrWeight[index];
-		}
+            arrWeight[index] = 1.0f / distSq;
+            totalWeight += arrWeight[index];
+        }
 
-		if ( totalWeight < MathUtil::Epsilon )
-			return _listSample.front()._pose;
+        if ( totalWeight < MathUtil::Epsilon )
+            return _listSample.front()._pose;
 
-		DualQuaternion accumDQ	   = DualQuaternion::fromMatrix( _listSample[0]._pose );
-		float32		   accumWeight = arrWeight[0] / totalWeight;
+        DualQuaternion accumDQ     = DualQuaternion::fromMatrix( _listSample[0]._pose );
+        float32        accumWeight = arrWeight[0] / totalWeight;
 
-		for ( size_t index = 1; index < sampleCount; ++index )
-		{
-			const float32 normalizedWeight = arrWeight[index] / totalWeight;
-			const float32 weightSum		   = accumWeight + normalizedWeight;
-			if ( weightSum < MathUtil::Epsilon )
-				continue;
-			const float32		 blendFactor = normalizedWeight / weightSum;
-			const DualQuaternion currentDQ	 = DualQuaternion::fromMatrix( _listSample[index]._pose );
+        for ( size_t index = 1; index < sampleCount; ++index )
+        {
+            const float32 normalizedWeight = arrWeight[index] / totalWeight;
+            const float32 weightSum        = accumWeight + normalizedWeight;
+            if ( weightSum < MathUtil::Epsilon )
+                continue;
+            const float32        blendFactor = normalizedWeight / weightSum;
+            const DualQuaternion currentDQ   = DualQuaternion::fromMatrix( _listSample[index]._pose );
 
-			accumDQ = DualQuaternion::dlb( accumDQ, currentDQ, blendFactor );
-			accumWeight += normalizedWeight;
-		}
+            accumDQ = DualQuaternion::dlb( accumDQ, currentDQ, blendFactor );
+            accumWeight += normalizedWeight;
+        }
 
-		return accumDQ.toMatrix4x4();
-	}
+        return accumDQ.toMatrix4x4();
+    }
 } // namespace sw

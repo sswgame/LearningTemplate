@@ -7,14 +7,14 @@
 
 namespace sw
 {
-	/** @brief 부트스트랩만 지정하는 빈 게임 팩 */
-	class EmptyGame : public GameInstanceBase
-	{
-	public:
-		EmptyGame()			  = default;
-		~EmptyGame() override = default;
+    /** @brief 부트스트랩만 지정하는 빈 게임 팩 */
+    class EmptyGame : public GameInstanceBase
+    {
+    public:
+        EmptyGame()           = default;
+        ~EmptyGame() override = default;
 
-	protected:
-		void configureBootstrap( BootstrapConfig& outConfig ) override;
-	};
+    protected:
+        void configureBootstrap( BootstrapConfig& outConfig ) override;
+    };
 } // namespace sw

@@ -25,39 +25,39 @@ SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_testString );
  */
 SW_TEST_CASE( Engine_GlobalVariable, Registration )
 {
-	sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
-	SW_EXPECT_TRUE( pBoolInfo != nullptr );
-	if ( pBoolInfo != nullptr )
-	{
-		SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Boolean );
-		SW_EXPECT_TRUE( pBoolInfo->getValueAsBool() );
-		SW_EXPECT_EQUAL( sw::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
-	}
+    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
+    SW_EXPECT_TRUE( pBoolInfo != nullptr );
+    if ( pBoolInfo != nullptr )
+    {
+        SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Boolean );
+        SW_EXPECT_TRUE( pBoolInfo->getValueAsBool() );
+        SW_EXPECT_EQUAL( sw::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
+    }
 
-	sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
-	SW_EXPECT_TRUE( pIntInfo != nullptr );
-	if ( pIntInfo != nullptr )
-	{
-		SW_EXPECT_TRUE( pIntInfo->_type == sw::GlobalVariableType::Int32 );
-		SW_EXPECT_EQUAL( 60, pIntInfo->getValueAsInt() );
-	}
+    sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
+    SW_EXPECT_TRUE( pIntInfo != nullptr );
+    if ( pIntInfo != nullptr )
+    {
+        SW_EXPECT_TRUE( pIntInfo->_type == sw::GlobalVariableType::Int32 );
+        SW_EXPECT_EQUAL( 60, pIntInfo->getValueAsInt() );
+    }
 
-	sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
-	SW_EXPECT_TRUE( pFloatInfo != nullptr );
-	if ( pFloatInfo != nullptr )
-	{
-		SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
-	}
+    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
+    SW_EXPECT_TRUE( pFloatInfo != nullptr );
+    if ( pFloatInfo != nullptr )
+    {
+        SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
+    }
 
-	sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
-	SW_EXPECT_TRUE( pStrInfo != nullptr );
-	if ( pStrInfo != nullptr )
-	{
-		SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
-	}
+    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    SW_EXPECT_TRUE( pStrInfo != nullptr );
+    if ( pStrInfo != nullptr )
+    {
+        SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
+    }
 
-	const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
-	SW_EXPECT_TRUE( varCount >= 4u );
+    const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
+    SW_EXPECT_TRUE( varCount >= 4u );
 }
 
 /**
@@ -66,17 +66,17 @@ SW_TEST_CASE( Engine_GlobalVariable, Registration )
 SW_TEST_CASE( Engine_GlobalVariable, ModificationAndReset )
 {
 
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", "144" ) );
-	SW_EXPECT_EQUAL( 144, gv_testInt );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", "144" ) );
+    SW_EXPECT_EQUAL( 144, gv_testInt );
 
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testBool", "false" ) );
-	SW_EXPECT_FALSE( gv_testBool );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testBool", "false" ) );
+    SW_EXPECT_FALSE( gv_testBool );
 
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" ) );
-	SW_EXPECT_EQUAL( 60, gv_testInt );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" ) );
+    SW_EXPECT_EQUAL( 60, gv_testInt );
 
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testBool" ) );
-	SW_EXPECT_TRUE( gv_testBool );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testBool" ) );
+    SW_EXPECT_TRUE( gv_testBool );
 }
 
 /**
@@ -84,33 +84,33 @@ SW_TEST_CASE( Engine_GlobalVariable, ModificationAndReset )
  */
 SW_TEST_CASE( Engine_GlobalVariable, DirectValueModificationAndReset )
 {
-	sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
-	SW_ASSERT_NOT_NULL( pBoolInfo );
-	SW_EXPECT_TRUE( pBoolInfo->setValueAsBool( false ) );
-	SW_EXPECT_FALSE( gv_testBool );
-	pBoolInfo->resetToDefault();
-	SW_EXPECT_TRUE( gv_testBool );
+    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
+    SW_ASSERT_NOT_NULL( pBoolInfo );
+    SW_EXPECT_TRUE( pBoolInfo->setValueAsBool( false ) );
+    SW_EXPECT_FALSE( gv_testBool );
+    pBoolInfo->resetToDefault();
+    SW_EXPECT_TRUE( gv_testBool );
 
-	sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
-	SW_ASSERT_NOT_NULL( pIntInfo );
-	SW_EXPECT_TRUE( pIntInfo->setValueAsInt( 999 ) );
-	SW_EXPECT_EQUAL( 999, gv_testInt );
-	pIntInfo->resetToDefault();
-	SW_EXPECT_EQUAL( 60, gv_testInt );
+    sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
+    SW_ASSERT_NOT_NULL( pIntInfo );
+    SW_EXPECT_TRUE( pIntInfo->setValueAsInt( 999 ) );
+    SW_EXPECT_EQUAL( 999, gv_testInt );
+    pIntInfo->resetToDefault();
+    SW_EXPECT_EQUAL( 60, gv_testInt );
 
-	sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
-	SW_ASSERT_NOT_NULL( pFloatInfo );
-	SW_EXPECT_TRUE( pFloatInfo->setValueAsFloat( 123.5f ) );
-	SW_EXPECT_NEAR_EQUAL( 123.5f, gv_testFloat, 1e-4f );
-	pFloatInfo->resetToDefault();
-	SW_EXPECT_NEAR_EQUAL( 45.0f, gv_testFloat, 1e-4f );
+    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
+    SW_ASSERT_NOT_NULL( pFloatInfo );
+    SW_EXPECT_TRUE( pFloatInfo->setValueAsFloat( 123.5f ) );
+    SW_EXPECT_NEAR_EQUAL( 123.5f, gv_testFloat, 1e-4f );
+    pFloatInfo->resetToDefault();
+    SW_EXPECT_NEAR_EQUAL( 45.0f, gv_testFloat, 1e-4f );
 
-	sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
-	SW_ASSERT_NOT_NULL( pStrInfo );
-	SW_EXPECT_TRUE( pStrInfo->setValueAsString( "ModifiedStr" ) );
-	SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), gv_testString );
-	pStrInfo->resetToDefault();
-	SW_EXPECT_EQUAL( sw::string( "InitialValue" ), gv_testString );
+    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    SW_ASSERT_NOT_NULL( pStrInfo );
+    SW_EXPECT_TRUE( pStrInfo->setValueAsString( "ModifiedStr" ) );
+    SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), gv_testString );
+    pStrInfo->resetToDefault();
+    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), gv_testString );
 }
 
 /**
@@ -118,38 +118,38 @@ SW_TEST_CASE( Engine_GlobalVariable, DirectValueModificationAndReset )
  */
 SW_TEST_CASE( Engine_GlobalVariable, CommandLineIntegration )
 {
-	// 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
-	// CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다(과거 flake/abort).
-	// 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
-	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
-	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
+    // 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
+    // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다(과거 flake/abort).
+    // 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
+    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
+    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 
-	sw::CommandLineManager cmd;
-	cmd.initialize();
-	cmd.addArgument<int32>( { "gv_testInt" }, true, int32{ 60 }, false );
-	cmd.addArgument<sw::string>( { "gv_testString" }, true, sw::string( "InitialValue" ), false );
+    sw::CommandLineManager cmd;
+    cmd.initialize();
+    cmd.addArgument<int32>( { "gv_testInt" }, true, int32{ 60 }, false );
+    cmd.addArgument<sw::string>( { "gv_testString" }, true, sw::string( "InitialValue" ), false );
 
-	utf8  arg0[] = "CoreUtilityTest";
-	utf8  arg1[] = "gv_testInt=777";
-	utf8  arg2[] = "gv_testString=FromCLI";
-	utf8* argv[] = { reinterpret_cast<utf8*>( arg0 ), reinterpret_cast<utf8*>( arg1 ), reinterpret_cast<utf8*>( arg2 ) };
-	cmd.parse( 3, argv );
+    utf8  arg0[] = "CoreUtilityTest";
+    utf8  arg1[] = "gv_testInt=777";
+    utf8  arg2[] = "gv_testString=FromCLI";
+    utf8* argv[] = { reinterpret_cast<utf8*>( arg0 ), reinterpret_cast<utf8*>( arg1 ), reinterpret_cast<utf8*>( arg2 ) };
+    cmd.parse( 3, argv );
 
-	int32 parsedInt{ 0 };
-	SW_EXPECT_TRUE( cmd.getArgument( "gv_testInt", parsedInt ) );
-	SW_EXPECT_EQUAL( 777, parsedInt );
+    int32 parsedInt{ 0 };
+    SW_EXPECT_TRUE( cmd.getArgument( "gv_testInt", parsedInt ) );
+    SW_EXPECT_EQUAL( 777, parsedInt );
 
-	sw::string parsedStr;
-	SW_EXPECT_TRUE( cmd.getArgument( "gv_testString", parsedStr ) );
-	SW_EXPECT_EQUAL( sw::string( "FromCLI" ), parsedStr );
+    sw::string parsedStr;
+    SW_EXPECT_TRUE( cmd.getArgument( "gv_testString", parsedStr ) );
+    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), parsedStr );
 
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
-	SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", parsedStr ) );
-	SW_EXPECT_EQUAL( 777, gv_testInt );
-	SW_EXPECT_EQUAL( sw::string( "FromCLI" ), gv_testString );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
+    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", parsedStr ) );
+    SW_EXPECT_EQUAL( 777, gv_testInt );
+    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), gv_testString );
 
-	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
-	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
+    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
+    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 }
 
 /**
@@ -157,11 +157,11 @@ SW_TEST_CASE( Engine_GlobalVariable, CommandLineIntegration )
  */
 SW_TEST_CASE( Engine_GlobalVariable, NonExistentVariableHandling )
 {
-	sw::GlobalVariableInfo* pMissing = sw::engine::getGlobalVariableManager().findVariable( "gv_nonExistentVariable" );
-	SW_EXPECT_NULL( pMissing );
+    sw::GlobalVariableInfo* pMissing = sw::engine::getGlobalVariableManager().findVariable( "gv_nonExistentVariable" );
+    SW_EXPECT_NULL( pMissing );
 
-	SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_nonExistentVariable", "123" ) );
-	SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_nonExistentVariable" ) );
+    SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_nonExistentVariable", "123" ) );
+    SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_nonExistentVariable" ) );
 }
 
 /**
@@ -169,30 +169,30 @@ SW_TEST_CASE( Engine_GlobalVariable, NonExistentVariableHandling )
  */
 SW_TEST_CASE( Engine_GlobalVariable, MultithreadedStringReadWriteThreadSafety )
 {
-	sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
-	SW_ASSERT_NOT_NULL( pStrInfo );
+    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    SW_ASSERT_NOT_NULL( pStrInfo );
 
-	std::atomic<bool> bRunning{ true };
-	std::thread		  writer( [&]()
-	{
-		for ( int32 iter = 0; iter < 1000; ++iter )
-		{
-			sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" + std::to_string( iter ) ) );
-		}
-		bRunning.store( false, std::memory_order_release );
-	} );
+    std::atomic<bool> bRunning{ true };
+    std::thread       writer( [&]()
+    {
+        for ( int32 iter = 0; iter < 1000; ++iter )
+        {
+            sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" + std::to_string( iter ) ) );
+        }
+        bRunning.store( false, std::memory_order_release );
+    } );
 
-	std::thread reader( [&]()
-	{
-		while ( bRunning.load( std::memory_order_acquire ) )
-		{
-			sw::string val = pStrInfo->getValueAsString();
-			SW_EXPECT_TRUE( val.find( "Value_" ) != sw::string::npos || val == "InitialValue" );
-		}
-	} );
+    std::thread reader( [&]()
+    {
+        while ( bRunning.load( std::memory_order_acquire ) )
+        {
+            sw::string val = pStrInfo->getValueAsString();
+            SW_EXPECT_TRUE( val.find( "Value_" ) != sw::string::npos || val == "InitialValue" );
+        }
+    } );
 
-	writer.join();
-	reader.join();
+    writer.join();
+    reader.join();
 
-	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
+    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 }

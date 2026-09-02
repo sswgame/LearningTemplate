@@ -16,15 +16,15 @@ using namespace sw;
  */
 SW_TEST_CASE( DeadlockDetectorTest, BasicTracking )
 {
-	DeadlockDetector detector;
-	detector.initialize();
+    DeadlockDetector detector;
+    detector.initialize();
 
-	void* dummyLock = reinterpret_cast<void*>( 0x1234 );
-	detector.recordLockIntended( dummyLock );
-	detector.recordLockAcquired( dummyLock );
-	detector.recordLockReleased( dummyLock );
+    void* dummyLock = reinterpret_cast<void*>( 0x1234 );
+    detector.recordLockIntended( dummyLock );
+    detector.recordLockAcquired( dummyLock );
+    detector.recordLockReleased( dummyLock );
 
-	detector.shutdown();
+    detector.shutdown();
 }
 
 /**
@@ -32,27 +32,27 @@ SW_TEST_CASE( DeadlockDetectorTest, BasicTracking )
  */
 SW_TEST_CASE( DeadlockDetectorTest, MultiLockHierarchicalAcquisitionAndRelease )
 {
-	DeadlockDetector detector;
-	detector.initialize();
+    DeadlockDetector detector;
+    detector.initialize();
 
-	void* lockA = reinterpret_cast<void*>( 0x1000 );
-	void* lockB = reinterpret_cast<void*>( 0x2000 );
-	void* lockC = reinterpret_cast<void*>( 0x3000 );
+    void* lockA = reinterpret_cast<void*>( 0x1000 );
+    void* lockB = reinterpret_cast<void*>( 0x2000 );
+    void* lockC = reinterpret_cast<void*>( 0x3000 );
 
-	// 스레드에서 A -> B -> C 순차 획득
-	detector.recordLockIntended( lockA );
-	detector.recordLockAcquired( lockA );
+    // 스레드에서 A -> B -> C 순차 획득
+    detector.recordLockIntended( lockA );
+    detector.recordLockAcquired( lockA );
 
-	detector.recordLockIntended( lockB );
-	detector.recordLockAcquired( lockB );
+    detector.recordLockIntended( lockB );
+    detector.recordLockAcquired( lockB );
 
-	detector.recordLockIntended( lockC );
-	detector.recordLockAcquired( lockC );
+    detector.recordLockIntended( lockC );
+    detector.recordLockAcquired( lockC );
 
-	// 역순 해제 C -> B -> A
-	detector.recordLockReleased( lockC );
-	detector.recordLockReleased( lockB );
-	detector.recordLockReleased( lockA );
+    // 역순 해제 C -> B -> A
+    detector.recordLockReleased( lockC );
+    detector.recordLockReleased( lockB );
+    detector.recordLockReleased( lockA );
 
-	detector.shutdown();
+    detector.shutdown();
 }

@@ -11,7 +11,7 @@
 // 1) 부호 있는 정수
 // ------------------------------------------------------------------------------
 
-using int8	= std::int8_t;
+using int8  = std::int8_t;
 using int16 = std::int16_t;
 using int32 = std::int32_t;
 using int64 = std::int64_t;
@@ -19,7 +19,7 @@ using int64 = std::int64_t;
 // ------------------------------------------------------------------------------
 // 2) 부호 없는 정수
 // ------------------------------------------------------------------------------
-using uint8	 = std::uint8_t;
+using uint8  = std::uint8_t;
 using uint16 = std::uint16_t;
 using uint32 = std::uint32_t;
 using uint64 = std::uint64_t;
@@ -33,7 +33,7 @@ using float64 = double;
 // ------------------------------------------------------------------------------
 // 4) 문자 및 문자열 뷰 — utf8 은 ASCII/UTF-8, utf16 은 Windows wchar_t
 // ------------------------------------------------------------------------------
-using utf8		   = char;				///< ASCII 및 UTF-8 호환 문자형
-using utf16		   = wchar_t;			///< Windows API 호환 와이드 문자형
-using string_view  = std::string_view;	///< UTF-8 비소유 문자열 뷰
+using utf8         = char;              ///< ASCII 및 UTF-8 호환 문자형
+using utf16        = wchar_t;           ///< Windows API 호환 와이드 문자형
+using string_view  = std::string_view;  ///< UTF-8 비소유 문자열 뷰
 using wstring_view = std::wstring_view; ///< 와이드 비소유 문자열 뷰

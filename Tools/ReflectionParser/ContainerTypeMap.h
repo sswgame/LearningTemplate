@@ -11,45 +11,45 @@
 
 namespace sw
 {
-	// ------------------------------------------------------------------------------
-	// 1) maps — clang 표기 부분 문자열 → ContainerKind + 래퍼 stem
-	// ------------------------------------------------------------------------------
-	/** @brief clang 표기 부분 문자열과 컨테이너 종류·래퍼 stem 규칙. */
-	struct ContainerTypeRule
-	{
-		string		  _match;
-		string		  _type; ///< Vector | Map | UnorderedMap | …
-		ContainerKind _kind{ ContainerKind::Sequence };
-	};
+    // ------------------------------------------------------------------------------
+    // 1) maps — clang 표기 부분 문자열 → ContainerKind + 래퍼 stem
+    // ------------------------------------------------------------------------------
+    /** @brief clang 표기 부분 문자열과 컨테이너 종류·래퍼 stem 규칙. */
+    struct ContainerTypeRule
+    {
+        string        _match;
+        string        _type; ///< Vector | Map | UnorderedMap | …
+        ContainerKind _kind{ ContainerKind::Sequence };
+    };
 
-	class ContainerTypeMap
-	{
-	public:
-		ContainerTypeMap();
-		~ContainerTypeMap() = default;
+    class ContainerTypeMap
+    {
+    public:
+        ContainerTypeMap();
+        ~ContainerTypeMap() = default;
 
-		/** @brief 프로세스 전역 컨테이너 맵을 반환합니다. */
-		static ContainerTypeMap& instance();
+        /** @brief 프로세스 전역 컨테이너 맵을 반환합니다. */
+        static ContainerTypeMap& instance();
 
-		/** @brief builtins 등록이 완료되었는지 반환합니다. */
-		bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
+        /** @brief builtins 등록이 완료되었는지 반환합니다. */
+        bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
-		/** @brief clang 타입 표기에 맞는 규칙을 찾습니다. */
-		const ContainerTypeRule* match( const string_view clangTypeSpelling ) const;
+        /** @brief clang 타입 표기에 맞는 규칙을 찾습니다. */
+        const ContainerTypeRule* match( const string_view clangTypeSpelling ) const;
 
-		/** @brief 매칭 문자열·종류·래퍼 stem 규칙을 등록합니다. */
-		void registerRule( const string& match, ContainerKind kind, const string& type );
-		/** @brief 종류 철자를 파싱해 규칙을 등록합니다. */
-		void registerRule( const string& match, const string& kindSpelling, const string& type );
+        /** @brief 매칭 문자열·종류·래퍼 stem 규칙을 등록합니다. */
+        void registerRule( const string& match, ContainerKind kind, const string& type );
+        /** @brief 종류 철자를 파싱해 규칙을 등록합니다. */
+        void registerRule( const string& match, const string& kindSpelling, const string& type );
 
-		/** @brief 등록 규칙을 비웁니다. */
-		void clear();
-		/** @brief 로드 완료 플래그를 설정합니다. */
-		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded ? SW_TRUE : SW_FALSE; }
+        /** @brief 등록 규칙을 비웁니다. */
+        void clear();
+        /** @brief 로드 완료 플래그를 설정합니다. */
+        void setLoaded( bool bLoaded ) { _bLoaded = bLoaded ? SW_TRUE : SW_FALSE; }
 
-	private:
-		vector<ContainerTypeRule> _listRule;
-		uint8					  _bLoaded	: 1;
-		[[maybe_unused]] uint8	  _reserved : 7;
-	};
+    private:
+        vector<ContainerTypeRule> _listRule;
+        uint8                     _bLoaded  : 1;
+        [[maybe_unused]] uint8    _reserved : 7;
+    };
 } // namespace sw

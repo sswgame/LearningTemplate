@@ -6,8 +6,8 @@
 
 namespace sw
 {
-	void  VulkanRHISwapChain::resize( uint32 width, uint32 height ) { _pDevice->resize( width, height ); }
-	void  VulkanRHISwapChain::beginFrame( const float4& clearColor ) { _pDevice->beginFrame( clearColor ); }
-	void  VulkanRHISwapChain::endFrame( bool vsync, bool bPresent ) { _pDevice->endFrame( vsync, bPresent ); }
-	void* VulkanRHISwapChain::getNativeSwapChain() const { return _pDevice->getNativeSwapChain(); }
+    void  VulkanRHISwapChain::resize( uint32 width, uint32 height ) { _pDevice->resize( width, height ); }
+    void  VulkanRHISwapChain::beginFrame( const float4& clearColor ) { _pDevice->beginFrame( clearColor ); }
+    void  VulkanRHISwapChain::endFrame( bool vsync, bool bPresent ) { _pDevice->endFrame( vsync, bPresent ); }
+    void* VulkanRHISwapChain::getNativeSwapChain() const { return _pDevice->getNativeSwapChain(); }
 } // namespace sw

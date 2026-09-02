@@ -6,15 +6,15 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "SaveGame" );
+    SW_LOG_CALLER( "SaveGame" );
 
-	bool SaveGame::saveToFile( string_view path ) const
-	{
-		return SaveGameSerializer::saveGameToSlot( *this, path );
-	}
+    bool SaveGame::saveToFile( string_view path ) const
+    {
+        return SaveGameSerializer::saveGameToSlot( *this, path );
+    }
 
-	bool SaveGame::loadFromFile( string_view path )
-	{
-		return SaveGameSerializer::loadGameFromSlot( *this, path );
-	}
+    bool SaveGame::loadFromFile( string_view path )
+    {
+        return SaveGameSerializer::loadGameFromSlot( *this, path );
+    }
 } // namespace sw

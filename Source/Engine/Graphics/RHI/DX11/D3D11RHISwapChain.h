@@ -6,20 +6,20 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-	class D3D11RHIDevice;
+    class D3D11RHIDevice;
 
-	class D3D11RHISwapChain : public IRHISwapChain
-	{
-	public:
-		explicit D3D11RHISwapChain( D3D11RHIDevice* pDevice )
-			: _pDevice{ pDevice } {}
-		void  resize( uint32 width, uint32 height ) override;
-		void  beginFrame( const float4& clearColor ) override;
-		void  endFrame( bool vsync = true, bool bPresent = true ) override;
-		void* getNativeSwapChain() const override;
+    class D3D11RHISwapChain : public IRHISwapChain
+    {
+    public:
+        explicit D3D11RHISwapChain( D3D11RHIDevice* pDevice )
+            : _pDevice{ pDevice } {}
+        void  resize( uint32 width, uint32 height ) override;
+        void  beginFrame( const float4& clearColor ) override;
+        void  endFrame( bool vsync = true, bool bPresent = true ) override;
+        void* getNativeSwapChain() const override;
 
-	private:
-		D3D11RHIDevice* _pDevice;
-	};
+    private:
+        D3D11RHIDevice* _pDevice;
+    };
 } // namespace sw
 #endif

@@ -9,43 +9,43 @@
 
 namespace sw
 {
-	namespace generated
-	{
-		struct sw_TagComponent_Registrar;
-	} // namespace generated
-	/**
-	 * @brief GameObject의 태그를 담는 컴포넌트입니다.
-	 */
-	REFLECT( Category = "Gameplay", DisplayName = "Tag Component", Tooltip = "GameObject Tag Container Component" )
-	class SW_API TagComponent : public Component
-	{
-		friend struct ::sw::generated::sw_TagComponent_Registrar;
+    namespace generated
+    {
+        struct sw_TagComponent_Registrar;
+    } // namespace generated
+    /**
+     * @brief GameObject의 태그를 담는 컴포넌트입니다.
+     */
+    REFLECT( Category = "Gameplay", DisplayName = "Tag Component", Tooltip = "GameObject Tag Container Component" )
+    class SW_API TagComponent : public Component
+    {
+        friend struct ::sw::generated::sw_TagComponent_Registrar;
 
-	public:
-		REFLECT_BODY();
-		TagComponent();
-		virtual ~TagComponent() override = default;
+    public:
+        REFLECT_BODY();
+        TagComponent();
+        virtual ~TagComponent() override = default;
 
-		TagComponent( const TagComponent& )			   = delete;
-		TagComponent& operator=( const TagComponent& ) = delete;
+        TagComponent( const TagComponent& )            = delete;
+        TagComponent& operator=( const TagComponent& ) = delete;
 
-		TagComponent( TagComponent&& other ) noexcept			 = default;
-		TagComponent& operator=( TagComponent&& other ) noexcept = default;
+        TagComponent( TagComponent&& other ) noexcept            = default;
+        TagComponent& operator=( TagComponent&& other ) noexcept = default;
 
-		void onBeginPlay() override;
+        void onBeginPlay() override;
 
-		TagContainer&		getTags();
-		const TagContainer& getTags() const;
+        TagContainer&       getTags();
+        const TagContainer& getTags() const;
 
-		void addTag( TagID tag );
-		void removeTag( TagID tag );
-		void clearTags();
-		bool hasTag( TagID tag, bool bExactMatch = false ) const;
-		bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
-		bool matchesQuery( const TagQuery& query ) const;
+        void addTag( TagID tag );
+        void removeTag( TagID tag );
+        void clearTags();
+        bool hasTag( TagID tag, bool bExactMatch = false ) const;
+        bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
+        bool matchesQuery( const TagQuery& query ) const;
 
-	private:
-		PROPERTY()
-		TagContainer _tags;
-	};
+    private:
+        PROPERTY()
+        TagContainer _tags;
+    };
 } // namespace sw

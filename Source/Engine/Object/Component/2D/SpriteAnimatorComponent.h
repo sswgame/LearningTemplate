@@ -14,77 +14,77 @@
 
 namespace sw
 {
-	namespace generated
-	{
-		struct sw_SpriteAnimatorComponent_Registrar;
-	} // namespace generated
+    namespace generated
+    {
+        struct sw_SpriteAnimatorComponent_Registrar;
+    } // namespace generated
 
-	REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
-	class SW_API SpriteAnimatorComponent : public SceneComponent
-	{
-		friend struct ::sw::generated::sw_SpriteAnimatorComponent_Registrar;
+    REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
+    class SW_API SpriteAnimatorComponent : public SceneComponent
+    {
+        friend struct ::sw::generated::sw_SpriteAnimatorComponent_Registrar;
 
-	public:
-		REFLECT_BODY();
-		SpriteAnimatorComponent();
-		virtual ~SpriteAnimatorComponent() override								 = default;
-		SpriteAnimatorComponent( SpriteAnimatorComponent&& ) noexcept			 = default;
-		SpriteAnimatorComponent& operator=( SpriteAnimatorComponent&& ) noexcept = default;
+    public:
+        REFLECT_BODY();
+        SpriteAnimatorComponent();
+        virtual ~SpriteAnimatorComponent() override                              = default;
+        SpriteAnimatorComponent( SpriteAnimatorComponent&& ) noexcept            = default;
+        SpriteAnimatorComponent& operator=( SpriteAnimatorComponent&& ) noexcept = default;
 
-		void onBeginPlay() override;
-		void onEndPlay() override;
-		void onTick( float32 deltaTime ) override;
+        void onBeginPlay() override;
+        void onEndPlay() override;
+        void onTick( float32 deltaTime ) override;
 
-		void play( const string& animName, bool loop = true );
-		FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
-		void stop();
-		FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
-		void pause();
-		FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
-		void resume();
-		void setFrame( int32 frame );
+        void play( const string& animName, bool loop = true );
+        FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
+        void stop();
+        FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
+        void pause();
+        FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
+        void resume();
+        void setFrame( int32 frame );
 
-		string		  getCurrentAnimation() const;
-		void		  setCurrentAnimation( const string& anim );
-		const string& getAnimationGraphPath() const { return _animationGraphPath; }
+        string        getCurrentAnimation() const;
+        void          setCurrentAnimation( const string& anim );
+        const string& getAnimationGraphPath() const { return _animationGraphPath; }
 
-		bool isRepeating() const;
-		void setRepeat( bool bLoop );
+        bool isRepeating() const;
+        void setRepeat( bool bLoop );
 
-		float32 getFrameRate() const;
-		void	setFrameRate( float32 rate );
+        float32 getFrameRate() const;
+        void    setFrameRate( float32 rate );
 
-		int32 getTotalFrames() const;
-		void  setTotalFrames( int32 total );
+        int32 getTotalFrames() const;
+        void  setTotalFrames( int32 total );
 
-		int32 getCurrentFrame() const;
-		bool  isPlaying() const;
-		bool  isPaused() const;
+        int32 getCurrentFrame() const;
+        bool  isPlaying() const;
+        bool  isPaused() const;
 
-	private:
-		void tryLoadAnimationGraph();
-		bool tryAdvanceGraphNode();
-		void updateSpriteFrame();
+    private:
+        void tryLoadAnimationGraph();
+        bool tryAdvanceGraphNode();
+        void updateSpriteFrame();
 
-		PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
-		string				_animationGraphPath;
-		AnimationGraphAsset _graph;
-		PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
-		string _currentAnimation;
-		PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
-		vector<string> _listAnimation;
-		PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS", Min = 1.0, Max = 120.0, Meta = "Units=fps" )
-		float32 _frameRate;
-		float32 _frameTimer;
-		PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index", Min = 0.0 )
-		int32 _currentFrame;
-		PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Total frame count of active animation", ReadOnly )
-		int32 _totalFrames;
-		PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
-		uint8				   _bRepeat		 : 1;
-		uint8				   _bPlaying	 : 1;
-		uint8				   _bPaused		 : 1;
-		uint8				   _bGraphLoaded : 1;
-		[[maybe_unused]] uint8 _reserved	 : 4;
-	};
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
+        string              _animationGraphPath;
+        AnimationGraphAsset _graph;
+        PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
+        string _currentAnimation;
+        PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
+        vector<string> _listAnimation;
+        PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS", Min = 1.0, Max = 120.0, Meta = "Units=fps" )
+        float32 _frameRate;
+        float32 _frameTimer;
+        PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index", Min = 0.0 )
+        int32 _currentFrame;
+        PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Total frame count of active animation", ReadOnly )
+        int32 _totalFrames;
+        PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
+        uint8                  _bRepeat      : 1;
+        uint8                  _bPlaying     : 1;
+        uint8                  _bPaused      : 1;
+        uint8                  _bGraphLoaded : 1;
+        [[maybe_unused]] uint8 _reserved     : 4;
+    };
 } // namespace sw

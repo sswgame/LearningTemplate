@@ -11,144 +11,144 @@
 
 namespace sw
 {
-	class Logger;
-	class DeadlockDetector;
-	class MemoryProfiler;
-	class ConfigManager;
-	class CommandLineManager;
-	class TaskManager;
-	class GlobalVariableManager;
-	class TypeRegistry;
-	class RHI;
-	class LiveReloadManager;
-	class ReloadFileManager;
-	class SceneManager;
-	class InputManager;
-	class ActionMap;
-	class IAudioSystem;
-	class EventDispatcher;
-	class FrameRenderer;
-	class RenderThread;
-	class ResourceManager;
-	class LocalizationManager;
-	struct EngineData;
-	class AssetStreamingQueue;
-	class CommandStack;
-	struct DebugOverlayState;
-	class DebugDrawQueue;
-	class FrameDoubleBuffer;
-	class RHIBackendRegistry;
-	class CompressionCodecRegistry;
-	class ShaderCache;
-	class ComponentDefaults;
+    class Logger;
+    class DeadlockDetector;
+    class MemoryProfiler;
+    class ConfigManager;
+    class CommandLineManager;
+    class TaskManager;
+    class GlobalVariableManager;
+    class TypeRegistry;
+    class RHI;
+    class LiveReloadManager;
+    class ReloadFileManager;
+    class SceneManager;
+    class InputManager;
+    class ActionMap;
+    class IAudioSystem;
+    class EventDispatcher;
+    class FrameRenderer;
+    class RenderThread;
+    class ResourceManager;
+    class LocalizationManager;
+    struct EngineData;
+    class AssetStreamingQueue;
+    class CommandStack;
+    struct DebugOverlayState;
+    class DebugDrawQueue;
+    class FrameDoubleBuffer;
+    class RHIBackendRegistry;
+    class CompressionCodecRegistry;
+    class ShaderCache;
+    class ComponentDefaults;
 
-	class IRHIDevice;
-	class CameraComponent;
+    class IRHIDevice;
+    class CameraComponent;
 
-	/**
+    /**
 	 * @brief 이번 프레임 뷰 카메라를 돌려줍니다.
 	 * @details tick 내부의 핫리로드/씬 전환이 GameObject 를 파괴할 수 있으므로,
 	 *          카메라는 미리 캡처하지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
 	 */
-	SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
+    SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
 
-	/**
-	 * @class EngineLoop
-	 * @brief App이 보유하던 코어 매니저들을 캡슐화하고 메인 루프(tick)를 담당합니다.
-	 */
-	class SW_API EngineLoop
-	{
-	public:
-		EngineLoop();
-		~EngineLoop();
+    /**
+     * @class EngineLoop
+     * @brief App이 보유하던 코어 매니저들을 캡슐화하고 메인 루프(tick)를 담당합니다.
+     */
+    class SW_API EngineLoop
+    {
+    public:
+        EngineLoop();
+        ~EngineLoop();
 
-		EngineLoop( const EngineLoop& )			   = delete;
-		EngineLoop& operator=( const EngineLoop& ) = delete;
+        EngineLoop( const EngineLoop& )            = delete;
+        EngineLoop& operator=( const EngineLoop& ) = delete;
 
-		/** @brief 서브시스템(윈도우, RHI 포함)을 초기화합니다. */
-		bool initialize( int32 argc, utf8* pArgv[] );
-		/** @brief 매니저들을 종료하고 정리합니다. */
-		void shutdown();
+        /** @brief 서브시스템(윈도우, RHI 포함)을 초기화합니다. */
+        bool initialize( int32 argc, utf8* pArgv[] );
+        /** @brief 매니저들을 종료하고 정리합니다. */
+        void shutdown();
 
-		/** @brief 입력 등을 시작하는 프레임의 첫 단계입니다. */
-		void beginFrame();
-		/**
-		 * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
-		 * @param deltaTime 델타 타임
-		 * @param gameRenderTarget 오프스크린 Game View RT 식별자 (없으면 0 = 백버퍼)
-		 * @param vpWidth 뷰포트 너비
-		 * @param vpHeight 뷰포트 높이
-		 * @param viewCameraProvider 호스트가 지정한 렌더 카메라를 돌려주는 델리게이트.
+        /** @brief 입력 등을 시작하는 프레임의 첫 단계입니다. */
+        void beginFrame();
+        /**
+         * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
+         * @param deltaTime 델타 타임
+         * @param gameRenderTarget 오프스크린 Game View RT 식별자 (없으면 0 = 백버퍼)
+         * @param vpWidth 뷰포트 너비
+         * @param vpHeight 뷰포트 높이
+         * @param viewCameraProvider 호스트가 지정한 렌더 카메라를 돌려주는 델리게이트.
 		 *                           바인딩되지 않았거나 nullptr을 돌려주면 씬의 게임 카메라를 씁니다.
-		 * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
-		 */
-		void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,
-				   const ViewCameraProviderDelegate& viewCameraProvider, bool bTickScene );
-		/** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
-		void endFrame();
+         * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
+         */
+        void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,
+                   const ViewCameraProviderDelegate& viewCameraProvider, bool bTickScene );
+        /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
+        void endFrame();
 
-		/** @brief 대기 중인 RHI 핫스왑을 수행합니다. */
-		bool applyPendingBackendChange();
+        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. */
+        bool applyPendingBackendChange();
 
-		// ----------------------------------------------------------------------
-		// 헬퍼
-		// ----------------------------------------------------------------------
-		void setPresentHook( sw::PresentHookDelegate presentHook );
-		void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
-		void updateShellActions( float32 deltaTime );
-		void pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
-		/** @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다. */
-		bool wasDebugActionTriggered( string_view actionName ) const;
+        // ----------------------------------------------------------------------
+        // 헬퍼
+        // ----------------------------------------------------------------------
+        void setPresentHook( sw::PresentHookDelegate presentHook );
+        void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
+        void updateShellActions( float32 deltaTime );
+        void pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
+        /** @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다. */
+        bool wasDebugActionTriggered( string_view actionName ) const;
 
-		// ----------------------------------------------------------------------
-		// Getter (App이 ModuleHost 등과 연동하기 위해 필요)
-		// ----------------------------------------------------------------------
-		LiveReloadManager*		  getLiveReloadManager() const { return _liveReloadManager.get(); }
-		ConfigManager*			  getConfigManager() const { return _configManager.get(); }
-		CommandLineManager*		  getCommandLineManager() const { return _commandLineManager.get(); }
-		LocalizationManager*	  getLocalizationManager() const { return _localizationManager.get(); }
-		RHI*					  getRHI() const { return _rhi.get(); }
-		RenderThread*			  getRenderThread() const { return _renderThread.get(); }
-		CompressionCodecRegistry* getCompressionCodecRegistry() const { return _compressionCodecRegistry.get(); }
-		ShaderCache*			  getShaderCache() const { return _shaderCache.get(); }
-		ComponentDefaults*		  getComponentDefaults() const { return _componentDefaults.get(); }
+        // ----------------------------------------------------------------------
+        // Getter (App이 ModuleHost 등과 연동하기 위해 필요)
+        // ----------------------------------------------------------------------
+        LiveReloadManager*        getLiveReloadManager() const { return _liveReloadManager.get(); }
+        ConfigManager*            getConfigManager() const { return _configManager.get(); }
+        CommandLineManager*       getCommandLineManager() const { return _commandLineManager.get(); }
+        LocalizationManager*      getLocalizationManager() const { return _localizationManager.get(); }
+        RHI*                      getRHI() const { return _rhi.get(); }
+        RenderThread*             getRenderThread() const { return _renderThread.get(); }
+        CompressionCodecRegistry* getCompressionCodecRegistry() const { return _compressionCodecRegistry.get(); }
+        ShaderCache*              getShaderCache() const { return _shaderCache.get(); }
+        ComponentDefaults*        getComponentDefaults() const { return _componentDefaults.get(); }
 
-	private:
-		/** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
-		void rebindSceneAfterDeviceRecreate();
+    private:
+        /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
+        void rebindSceneAfterDeviceRecreate();
 
-	private:
-		unique_ptr<Logger>					 _logger;
-		unique_ptr<DeadlockDetector>		 _deadlockDetector;
-		unique_ptr<MemoryProfiler>			 _memoryProfiler;
-		unique_ptr<CommandLineManager>		 _commandLineManager;
-		unique_ptr<TaskManager>				 _taskManager;
-		unique_ptr<GlobalVariableManager>	 _globalVariableManager;
-		unique_ptr<TypeRegistry>			 _typeRegistry;
-		unique_ptr<ConfigManager>			 _configManager;
-		unique_ptr<LocalizationManager>		 _localizationManager;
-		unique_ptr<ResourceManager>			 _resourceManager;
-		unique_ptr<RHI>						 _rhi;
-		unique_ptr<LiveReloadManager>		 _liveReloadManager;
-		unique_ptr<ReloadFileManager>		 _reloadFileManager;
-		unique_ptr<SceneManager>			 _sceneManager;
-		unique_ptr<InputManager>			 _inputManager;
-		unique_ptr<ActionMap>				 _mapDebugAction;
-		unique_ptr<IAudioSystem>			 _audioSystem;
-		unique_ptr<EventDispatcher>			 _eventDispatcher;
-		unique_ptr<FrameRenderer>			 _frameRenderer;
-		unique_ptr<RenderThread>			 _renderThread;
-		unique_ptr<EngineData>				 _engineData;
-		unique_ptr<AssetStreamingQueue>		 _assetStreamingQueue;
-		unique_ptr<CommandStack>			 _commandStack;
-		unique_ptr<DebugOverlayState>		 _debugOverlayState;
-		unique_ptr<DebugDrawQueue>			 _debugDrawQueue;
-		unique_ptr<FrameDoubleBuffer>		 _frameDoubleBuffer;
-		unique_ptr<RHIBackendRegistry>		 _rhiBackendRegistry;
-		unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
-		unique_ptr<ShaderCache>				 _shaderCache;
-		unique_ptr<ComponentDefaults>		 _componentDefaults;
+    private:
+        unique_ptr<Logger>                   _logger;
+        unique_ptr<DeadlockDetector>         _deadlockDetector;
+        unique_ptr<MemoryProfiler>           _memoryProfiler;
+        unique_ptr<CommandLineManager>       _commandLineManager;
+        unique_ptr<TaskManager>              _taskManager;
+        unique_ptr<GlobalVariableManager>    _globalVariableManager;
+        unique_ptr<TypeRegistry>             _typeRegistry;
+        unique_ptr<ConfigManager>            _configManager;
+        unique_ptr<LocalizationManager>      _localizationManager;
+        unique_ptr<ResourceManager>          _resourceManager;
+        unique_ptr<RHI>                      _rhi;
+        unique_ptr<LiveReloadManager>        _liveReloadManager;
+        unique_ptr<ReloadFileManager>        _reloadFileManager;
+        unique_ptr<SceneManager>             _sceneManager;
+        unique_ptr<InputManager>             _inputManager;
+        unique_ptr<ActionMap>                _mapDebugAction;
+        unique_ptr<IAudioSystem>             _audioSystem;
+        unique_ptr<EventDispatcher>          _eventDispatcher;
+        unique_ptr<FrameRenderer>            _frameRenderer;
+        unique_ptr<RenderThread>             _renderThread;
+        unique_ptr<EngineData>               _engineData;
+        unique_ptr<AssetStreamingQueue>      _assetStreamingQueue;
+        unique_ptr<CommandStack>             _commandStack;
+        unique_ptr<DebugOverlayState>        _debugOverlayState;
+        unique_ptr<DebugDrawQueue>           _debugDrawQueue;
+        unique_ptr<FrameDoubleBuffer>        _frameDoubleBuffer;
+        unique_ptr<RHIBackendRegistry>       _rhiBackendRegistry;
+        unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
+        unique_ptr<ShaderCache>              _shaderCache;
+        unique_ptr<ComponentDefaults>        _componentDefaults;
 
-		bool _bShellActionsBound;
-	};
+        bool _bShellActionsBound;
+    };
 } // namespace sw

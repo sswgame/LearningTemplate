@@ -15,26 +15,26 @@
 
 SW_TEST_CASE( Core_Memory, FrameArenaAllocatorOperations )
 {
-	sw::FrameArenaAllocator arena( 1024 );
+    sw::FrameArenaAllocator arena( 1024 );
 
-	int32* p1 = static_cast<int32*>( arena.allocate( sizeof( int32 ), alignof( int32 ) ) );
-	SW_EXPECT_TRUE( p1 != nullptr );
-	*p1 = 42;
-	SW_EXPECT_EQUAL( 42, *p1 );
+    int32* p1 = static_cast<int32*>( arena.allocate( sizeof( int32 ), alignof( int32 ) ) );
+    SW_EXPECT_TRUE( p1 != nullptr );
+    *p1 = 42;
+    SW_EXPECT_EQUAL( 42, *p1 );
 
-	struct DummyStruct
-	{
-		float32 x, y, z;
-		uint32	_id;
-	};
+    struct DummyStruct
+    {
+        float32 x, y, z;
+        uint32  _id;
+    };
 
-	DummyStruct* dummy = arena.construct<DummyStruct>( 1.0f, 2.0f, 3.0f, 100u );
-	SW_EXPECT_TRUE( dummy != nullptr );
-	SW_EXPECT_EQUAL( 100u, dummy->_id );
+    DummyStruct* dummy = arena.construct<DummyStruct>( 1.0f, 2.0f, 3.0f, 100u );
+    SW_EXPECT_TRUE( dummy != nullptr );
+    SW_EXPECT_EQUAL( 100u, dummy->_id );
 
-	SW_EXPECT_TRUE( arena.getUsedBytes() > 0 );
-	arena.reset();
-	SW_EXPECT_EQUAL( size_t( 0 ), arena.getUsedBytes() );
+    SW_EXPECT_TRUE( arena.getUsedBytes() > 0 );
+    arena.reset();
+    SW_EXPECT_EQUAL( size_t( 0 ), arena.getUsedBytes() );
 }
 
 /**
@@ -42,20 +42,20 @@ SW_TEST_CASE( Core_Memory, FrameArenaAllocatorOperations )
  */
 SW_TEST_CASE( Core_Memory, AlignmentAndReallocation )
 {
-	sw::FrameArenaAllocator arena( 128 );
+    sw::FrameArenaAllocator arena( 128 );
 
-	void* ptr16 = arena.allocate( 64, 16 );
-	SW_EXPECT_TRUE( ptr16 != nullptr );
-	SW_EXPECT_EQUAL( size_t( 0 ), reinterpret_cast<uintptr_t>( ptr16 ) % 16 );
+    void* ptr16 = arena.allocate( 64, 16 );
+    SW_EXPECT_TRUE( ptr16 != nullptr );
+    SW_EXPECT_EQUAL( size_t( 0 ), reinterpret_cast<uintptr_t>( ptr16 ) % 16 );
 
-	void* ptr32 = arena.allocate( 128, 32 );
-	SW_EXPECT_TRUE( ptr32 != nullptr );
-	SW_EXPECT_EQUAL( size_t( 0 ), reinterpret_cast<uintptr_t>( ptr32 ) % 32 );
+    void* ptr32 = arena.allocate( 128, 32 );
+    SW_EXPECT_TRUE( ptr32 != nullptr );
+    SW_EXPECT_EQUAL( size_t( 0 ), reinterpret_cast<uintptr_t>( ptr32 ) % 32 );
 
-	SW_EXPECT_TRUE( arena.getTotalAllocatedBytes() >= 128 );
+    SW_EXPECT_TRUE( arena.getTotalAllocatedBytes() >= 128 );
 
-	arena.reset();
-	SW_EXPECT_EQUAL( size_t( 0 ), arena.getUsedBytes() );
+    arena.reset();
+    SW_EXPECT_EQUAL( size_t( 0 ), arena.getUsedBytes() );
 }
 
 /**
@@ -63,26 +63,26 @@ SW_TEST_CASE( Core_Memory, AlignmentAndReallocation )
  */
 SW_TEST_CASE( Core_Memory, FrameArenaMarkerAndRollback )
 {
-	sw::FrameArenaAllocator arena( 256 );
+    sw::FrameArenaAllocator arena( 256 );
 
-	int32* p1 = arena.construct<int32>( 100 );
-	SW_EXPECT_TRUE( p1 != nullptr );
-	SW_EXPECT_EQUAL( 100, *p1 );
+    int32* p1 = arena.construct<int32>( 100 );
+    SW_EXPECT_TRUE( p1 != nullptr );
+    SW_EXPECT_EQUAL( 100, *p1 );
 
-	sw::FrameArenaAllocator::Marker marker		 = arena.createMarker();
-	size_t							usedAtMarker = arena.getUsedBytes();
+    sw::FrameArenaAllocator::Marker marker       = arena.createMarker();
+    size_t                          usedAtMarker = arena.getUsedBytes();
 
-	int32* p2 = arena.construct<int32>( 200 );
-	int32* p3 = arena.construct<int32>( 300 );
-	SW_EXPECT_TRUE( p2 != nullptr && p3 != nullptr );
-	SW_EXPECT_TRUE( arena.getUsedBytes() > usedAtMarker );
+    int32* p2 = arena.construct<int32>( 200 );
+    int32* p3 = arena.construct<int32>( 300 );
+    SW_EXPECT_TRUE( p2 != nullptr && p3 != nullptr );
+    SW_EXPECT_TRUE( arena.getUsedBytes() > usedAtMarker );
 
-	arena.rollbackToMarker( marker );
-	SW_EXPECT_EQUAL( usedAtMarker, arena.getUsedBytes() );
+    arena.rollbackToMarker( marker );
+    SW_EXPECT_EQUAL( usedAtMarker, arena.getUsedBytes() );
 
-	int32* p4 = arena.construct<int32>( 400 );
-	SW_EXPECT_EQUAL( p2, p4 );
-	SW_EXPECT_EQUAL( 400, *p4 );
+    int32* p4 = arena.construct<int32>( 400 );
+    SW_EXPECT_EQUAL( p2, p4 );
+    SW_EXPECT_EQUAL( 400, *p4 );
 }
 
 /**
@@ -90,24 +90,24 @@ SW_TEST_CASE( Core_Memory, FrameArenaMarkerAndRollback )
  */
 SW_TEST_CASE( Core_Memory, FrameDoubleBufferSafety )
 {
-	sw::FrameDoubleBuffer doubleBuffer( 1024 );
+    sw::FrameDoubleBuffer doubleBuffer( 1024 );
 
-	SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentIndex() );
-	int32* frame0Ptr = static_cast<int32*>( doubleBuffer.allocate( sizeof( int32 ) ) );
-	SW_EXPECT_TRUE( frame0Ptr != nullptr );
-	*frame0Ptr = 111;
+    SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentIndex() );
+    int32* frame0Ptr = static_cast<int32*>( doubleBuffer.allocate( sizeof( int32 ) ) );
+    SW_EXPECT_TRUE( frame0Ptr != nullptr );
+    *frame0Ptr = 111;
 
-	doubleBuffer.swapAndResetPrevious();
-	SW_EXPECT_EQUAL( 1u, doubleBuffer.getCurrentIndex() );
-	int32* frame1Ptr = static_cast<int32*>( doubleBuffer.allocate( sizeof( int32 ) ) );
-	SW_EXPECT_TRUE( frame1Ptr != nullptr );
-	*frame1Ptr = 222;
+    doubleBuffer.swapAndResetPrevious();
+    SW_EXPECT_EQUAL( 1u, doubleBuffer.getCurrentIndex() );
+    int32* frame1Ptr = static_cast<int32*>( doubleBuffer.allocate( sizeof( int32 ) ) );
+    SW_EXPECT_TRUE( frame1Ptr != nullptr );
+    *frame1Ptr = 222;
 
-	SW_EXPECT_EQUAL( 111, *frame0Ptr );
+    SW_EXPECT_EQUAL( 111, *frame0Ptr );
 
-	doubleBuffer.swapAndResetPrevious();
-	SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentIndex() );
-	SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentUsedBytes() );
+    doubleBuffer.swapAndResetPrevious();
+    SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentIndex() );
+    SW_EXPECT_EQUAL( 0u, doubleBuffer.getCurrentUsedBytes() );
 }
 
 // ------------------------------------------------------------------------------
@@ -118,33 +118,33 @@ SW_TEST_CASE( Core_Memory, FrameDoubleBufferSafety )
  */
 SW_TEST_CASE( Core_Memory, LockFreeObjectPoolOperations )
 {
-	struct PooledItem
-	{
-		int32	_id{ 0 };
-		float32 _value{ 0.0f };
-		PooledItem( int32 id, float32 val )
-			: _id{ id }
-			, _value{ val }
-		{
-		}
-	};
+    struct PooledItem
+    {
+        int32   _id{ 0 };
+        float32 _value{ 0.0f };
+        PooledItem( int32 id, float32 val )
+            : _id{ id }
+            , _value{ val }
+        {
+        }
+    };
 
-	sw::LockFreeObjectPool<PooledItem, 16> pool;
-	SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
-	SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
+    sw::LockFreeObjectPool<PooledItem, 16> pool;
+    SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
+    SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
 
-	PooledItem* item1 = pool.acquire( 10, 3.14f );
-	SW_EXPECT_TRUE( item1 != nullptr );
-	if ( item1 != nullptr )
-	{
-		SW_EXPECT_EQUAL( 10, item1->_id );
-		SW_EXPECT_NEAR_EQUAL( 3.14f, item1->_value, 1e-4f );
-	}
-	SW_EXPECT_EQUAL( 1u, pool.getActiveCount() );
+    PooledItem* item1 = pool.acquire( 10, 3.14f );
+    SW_EXPECT_TRUE( item1 != nullptr );
+    if ( item1 != nullptr )
+    {
+        SW_EXPECT_EQUAL( 10, item1->_id );
+        SW_EXPECT_NEAR_EQUAL( 3.14f, item1->_value, 1e-4f );
+    }
+    SW_EXPECT_EQUAL( 1u, pool.getActiveCount() );
 
-	pool.release( item1 );
-	SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
-	SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
+    pool.release( item1 );
+    SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
+    SW_EXPECT_EQUAL( 16u, pool.getAvailableCount() );
 }
 
 /**
@@ -152,30 +152,30 @@ SW_TEST_CASE( Core_Memory, LockFreeObjectPoolOperations )
  */
 SW_TEST_CASE( Core_Memory, LowLevelMemoryAllocAndAlignment )
 {
-	// 1) 기본 할당 / 해제
-	void* rawPtr = sw::Memory::allocMemory( 512 );
-	SW_ASSERT_NOT_NULL( rawPtr );
+    // 1) 기본 할당 / 해제
+    void* rawPtr = sw::Memory::allocMemory( 512 );
+    SW_ASSERT_NOT_NULL( rawPtr );
 
-	sw::Memory::set( rawPtr, 0, 512 );
-	const uint8* bytePtr = static_cast<const uint8*>( rawPtr );
-	for ( size_t slotIndex = 0; slotIndex < 512; ++slotIndex )
-	{
-		SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bytePtr[slotIndex] ) );
-	}
+    sw::Memory::set( rawPtr, 0, 512 );
+    const uint8* bytePtr = static_cast<const uint8*>( rawPtr );
+    for ( size_t slotIndex = 0; slotIndex < 512; ++slotIndex )
+    {
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bytePtr[slotIndex] ) );
+    }
 
-	sw::Memory::freeMemory( rawPtr );
+    sw::Memory::freeMemory( rawPtr );
 
-	// 2) SIMD 정렬 할당 (64바이트 캐시라인 정렬)
-	void* aligned64 = sw::Memory::alignedAlloc( 256, 64 );
-	SW_ASSERT_NOT_NULL( aligned64 );
-	SW_EXPECT_EQUAL( 0u, reinterpret_cast<uintptr_t>( aligned64 ) % 64 );
+    // 2) SIMD 정렬 할당 (64바이트 캐시라인 정렬)
+    void* aligned64 = sw::Memory::alignedAlloc( 256, 64 );
+    SW_ASSERT_NOT_NULL( aligned64 );
+    SW_EXPECT_EQUAL( 0u, reinterpret_cast<uintptr_t>( aligned64 ) % 64 );
 
-	// 메모리 복사 및 비교 검증
-	const utf8* kSamplePattern = "CoreMemoryAlignmentVerification";
-	sw::Memory::copy( aligned64, kSamplePattern, 32 );
-	SW_EXPECT_EQUAL( 0, sw::Memory::compare( aligned64, kSamplePattern, 32 ) );
+    // 메모리 복사 및 비교 검증
+    const utf8* kSamplePattern = "CoreMemoryAlignmentVerification";
+    sw::Memory::copy( aligned64, kSamplePattern, 32 );
+    SW_EXPECT_EQUAL( 0, sw::Memory::compare( aligned64, kSamplePattern, 32 ) );
 
-	sw::Memory::alignedFree( aligned64 );
+    sw::Memory::alignedFree( aligned64 );
 }
 
 /**
@@ -183,57 +183,57 @@ SW_TEST_CASE( Core_Memory, LowLevelMemoryAllocAndAlignment )
  */
 SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
 {
-	// 1) PoolAllocator 기본 할당 & 해제 & 프리리스트 재활용
-	sw::PoolAllocator pool( 64, 4, true );
+    // 1) PoolAllocator 기본 할당 & 해제 & 프리리스트 재활용
+    sw::PoolAllocator pool( 64, 4, true );
 
-	void* pBlock1 = pool.allocate();
-	void* pBlock2 = pool.allocate();
-	void* pBlock3 = pool.allocate();
-	SW_ASSERT_NOT_NULL( pBlock1 );
-	SW_ASSERT_NOT_NULL( pBlock2 );
-	SW_ASSERT_NOT_NULL( pBlock3 );
+    void* pBlock1 = pool.allocate();
+    void* pBlock2 = pool.allocate();
+    void* pBlock3 = pool.allocate();
+    SW_ASSERT_NOT_NULL( pBlock1 );
+    SW_ASSERT_NOT_NULL( pBlock2 );
+    SW_ASSERT_NOT_NULL( pBlock3 );
 
-	pool.free( pBlock2 );
-	void* pBlock2Reused = pool.allocate();
-	SW_EXPECT_EQUAL( pBlock2, pBlock2Reused );
+    pool.free( pBlock2 );
+    void* pBlock2Reused = pool.allocate();
+    SW_EXPECT_EQUAL( pBlock2, pBlock2Reused );
 
-	pool.free( pBlock1 );
-	pool.free( pBlock2Reused );
-	pool.free( pBlock3 );
+    pool.free( pBlock1 );
+    pool.free( pBlock2Reused );
+    pool.free( pBlock3 );
 
-	pool.clear();
+    pool.clear();
 
-	// 2) TypedPoolAllocator 수명주기 및 생성/소멸 검증
-	struct TestPoolObject
-	{
-		int32 _val{ 0 };
-		bool* _pDestructFlag{ nullptr };
-		TestPoolObject( int32 val, bool* pFlag )
-			: _val{ val }
-			, _pDestructFlag{ pFlag }
-		{
-		}
-		~TestPoolObject()
-		{
-			if ( _pDestructFlag != nullptr )
-			{
-				*_pDestructFlag = true;
-			}
-		}
-	};
+    // 2) TypedPoolAllocator 수명주기 및 생성/소멸 검증
+    struct TestPoolObject
+    {
+        int32 _val{ 0 };
+        bool* _pDestructFlag{ nullptr };
+        TestPoolObject( int32 val, bool* pFlag )
+            : _val{ val }
+            , _pDestructFlag{ pFlag }
+        {
+        }
+        ~TestPoolObject()
+        {
+            if ( _pDestructFlag != nullptr )
+            {
+                *_pDestructFlag = true;
+            }
+        }
+    };
 
-	bool								   bDestroyed = false;
-	sw::TypedPoolAllocator<TestPoolObject> typedPool( 8, false );
+    bool                                   bDestroyed = false;
+    sw::TypedPoolAllocator<TestPoolObject> typedPool( 8, false );
 
-	TestPoolObject* pObj = typedPool.create( 999, &bDestroyed );
-	SW_ASSERT_NOT_NULL( pObj );
-	SW_EXPECT_EQUAL( 999, pObj->_val );
-	SW_EXPECT_FALSE( bDestroyed );
+    TestPoolObject* pObj = typedPool.create( 999, &bDestroyed );
+    SW_ASSERT_NOT_NULL( pObj );
+    SW_EXPECT_EQUAL( 999, pObj->_val );
+    SW_EXPECT_FALSE( bDestroyed );
 
-	typedPool.destroy( pObj );
-	SW_EXPECT_TRUE( bDestroyed );
+    typedPool.destroy( pObj );
+    SW_EXPECT_TRUE( bDestroyed );
 
-	typedPool.clear();
+    typedPool.clear();
 }
 
 /**
@@ -241,50 +241,50 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
  */
 SW_TEST_CASE( Core_Memory, PoolAllocatorMultiChunkStress )
 {
-	constexpr size_t kBlockSize		 = 32;
-	constexpr uint32 kBlocksPerChunk = 8;
-	constexpr size_t kAllocCount	 = 64; // 8개 청크 생성
+    constexpr size_t kBlockSize      = 32;
+    constexpr uint32 kBlocksPerChunk = 8;
+    constexpr size_t kAllocCount     = 64; // 8개 청크 생성
 
-	sw::PoolAllocator pool( kBlockSize, kBlocksPerChunk, true );
-	sw::vector<void*> listBlocks;
-	listBlocks.reserve( kAllocCount );
+    sw::PoolAllocator pool( kBlockSize, kBlocksPerChunk, true );
+    sw::vector<void*> listBlocks;
+    listBlocks.reserve( kAllocCount );
 
-	// 1) 64개 블록 할당
-	for ( size_t index = 0; index < kAllocCount; ++index )
-	{
-		void* pBlock = pool.allocate();
-		SW_ASSERT_NOT_NULL( pBlock );
-		sw::Memory::set( pBlock, static_cast<uint8>( index ), kBlockSize );
-		listBlocks.push_back( pBlock );
-	}
+    // 1) 64개 블록 할당
+    for ( size_t index = 0; index < kAllocCount; ++index )
+    {
+        void* pBlock = pool.allocate();
+        SW_ASSERT_NOT_NULL( pBlock );
+        sw::Memory::set( pBlock, static_cast<uint8>( index ), kBlockSize );
+        listBlocks.push_back( pBlock );
+    }
 
-	// 2) 짝수 인덱스 32개 블록 해제
-	for ( size_t index = 0; index < kAllocCount; index += 2 )
-	{
-		pool.free( listBlocks[index] );
-	}
+    // 2) 짝수 인덱스 32개 블록 해제
+    for ( size_t index = 0; index < kAllocCount; index += 2 )
+    {
+        pool.free( listBlocks[index] );
+    }
 
-	// 3) 32개 재할당
-	sw::vector<void*> listReused;
-	listReused.reserve( kAllocCount / 2 );
-	for ( size_t index = 0; index < kAllocCount / 2; ++index )
-	{
-		void* pReused = pool.allocate();
-		SW_ASSERT_NOT_NULL( pReused );
-		listReused.push_back( pReused );
-	}
+    // 3) 32개 재할당
+    sw::vector<void*> listReused;
+    listReused.reserve( kAllocCount / 2 );
+    for ( size_t index = 0; index < kAllocCount / 2; ++index )
+    {
+        void* pReused = pool.allocate();
+        SW_ASSERT_NOT_NULL( pReused );
+        listReused.push_back( pReused );
+    }
 
-	// 4) 전체 해제 및 클리어
-	for ( size_t index = 1; index < kAllocCount; index += 2 )
-	{
-		pool.free( listBlocks[index] );
-	}
-	for ( void* pBlock : listReused )
-	{
-		pool.free( pBlock );
-	}
+    // 4) 전체 해제 및 클리어
+    for ( size_t index = 1; index < kAllocCount; index += 2 )
+    {
+        pool.free( listBlocks[index] );
+    }
+    for ( void* pBlock : listReused )
+    {
+        pool.free( pBlock );
+    }
 
-	pool.clear();
+    pool.clear();
 }
 
 /**
@@ -292,29 +292,29 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorMultiChunkStress )
  */
 SW_TEST_CASE( Core_Memory, FrameArenaNestedMarkers )
 {
-	sw::FrameArenaAllocator arena( 1024 );
+    sw::FrameArenaAllocator arena( 1024 );
 
-	int32* pLevel0 = arena.construct<int32>( 10 );
-	SW_ASSERT_NOT_NULL( pLevel0 );
+    int32* pLevel0 = arena.construct<int32>( 10 );
+    SW_ASSERT_NOT_NULL( pLevel0 );
 
-	auto   marker1 = arena.createMarker();
-	int32* pLevel1 = arena.construct<int32>( 20 );
-	SW_ASSERT_NOT_NULL( pLevel1 );
+    auto   marker1 = arena.createMarker();
+    int32* pLevel1 = arena.construct<int32>( 20 );
+    SW_ASSERT_NOT_NULL( pLevel1 );
 
-	auto   marker2 = arena.createMarker();
-	int32* pLevel2 = arena.construct<int32>( 30 );
-	SW_ASSERT_NOT_NULL( pLevel2 );
+    auto   marker2 = arena.createMarker();
+    int32* pLevel2 = arena.construct<int32>( 30 );
+    SW_ASSERT_NOT_NULL( pLevel2 );
 
-	// level 2 롤백
-	arena.rollbackToMarker( marker2 );
-	int32* pReallocated2 = arena.construct<int32>( 300 );
-	SW_EXPECT_EQUAL( pLevel2, pReallocated2 );
-	SW_EXPECT_EQUAL( 300, *pReallocated2 );
+    // level 2 롤백
+    arena.rollbackToMarker( marker2 );
+    int32* pReallocated2 = arena.construct<int32>( 300 );
+    SW_EXPECT_EQUAL( pLevel2, pReallocated2 );
+    SW_EXPECT_EQUAL( 300, *pReallocated2 );
 
-	// level 1 롤백
-	arena.rollbackToMarker( marker1 );
-	int32* pReallocated1 = arena.construct<int32>( 200 );
-	SW_EXPECT_EQUAL( pLevel1, pReallocated1 );
-	SW_EXPECT_EQUAL( 200, *pReallocated1 );
-	SW_EXPECT_EQUAL( 10, *pLevel0 );
+    // level 1 롤백
+    arena.rollbackToMarker( marker1 );
+    int32* pReallocated1 = arena.construct<int32>( 200 );
+    SW_EXPECT_EQUAL( pLevel1, pReallocated1 );
+    SW_EXPECT_EQUAL( 200, *pReallocated1 );
+    SW_EXPECT_EQUAL( 10, *pLevel0 );
 }

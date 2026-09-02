@@ -17,182 +17,182 @@
 
 namespace sw::editor
 {
-	namespace
-	{
-		struct PrefabEditorPanelInternal
-		{
-			static GameObject* getPrefabTargetInstance()
-			{
-				EditorContext* pContext = EditorContext::get();
-				if ( pContext == nullptr )
-					return nullptr;
-				return pContext->getSelectionManager().getPrimaryObject().get();
-			}
-		};
-	} // namespace
+    namespace
+    {
+        struct PrefabEditorPanelInternal
+        {
+            static GameObject* getPrefabTargetInstance()
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return nullptr;
+                return pContext->getSelectionManager().getPrimaryObject().get();
+            }
+        };
+    } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "PrefabTool" );
+    SW_LOG_CALLER( "PrefabTool" );
 
-	PrefabEditorPanel::PrefabEditorPanel()
-		: _selectedPrefabPath{}
-		, _selectedInstanceName{}
-		, _lastScanKey{}
-		, _listOverride{}
-		, _listNestedPrefab{}
-		, _bShowOnlyModified{ false }
-	{
-		scanPrefabOverrides( nullptr );
-	}
+    PrefabEditorPanel::PrefabEditorPanel()
+        : _selectedPrefabPath{}
+        , _selectedInstanceName{}
+        , _lastScanKey{}
+        , _listOverride{}
+        , _listNestedPrefab{}
+        , _bShowOnlyModified{ false }
+    {
+        scanPrefabOverrides( nullptr );
+    }
 
-	void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
-	{
-		const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
-		EditorToolAssetCommands::collectPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
-														 _selectedInstanceName, _listOverride, _listNestedPrefab );
-	}
+    void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
+    {
+        const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
+        EditorToolAssetCommands::collectPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
+                                                         _selectedInstanceName, _listOverride, _listNestedPrefab );
+    }
 
-	void PrefabEditorPanel::drawContent()
-	{
-		EditorContext* pContext = EditorContext::get();
-		const utf8*	   pScanPath{ nullptr };
-		uint64		   objectId{ 0 };
-		if ( pContext != nullptr )
-		{
-			GameObject* pPrimary	   = pContext->getSelectionManager().getPrimaryObject().get();
-			objectId				   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
-			const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind::Prefab );
-			if ( matching.empty() == false )
-				pScanPath = matching.data();
-		}
-		if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectId ) )
-			scanPrefabOverrides( pScanPath );
+    void PrefabEditorPanel::drawContent()
+    {
+        EditorContext* pContext = EditorContext::get();
+        const utf8*    pScanPath{ nullptr };
+        uint64         objectId{ 0 };
+        if ( pContext != nullptr )
+        {
+            GameObject* pPrimary       = pContext->getSelectionManager().getPrimaryObject().get();
+            objectId                   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
+            const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind::Prefab );
+            if ( matching.empty() == false )
+                pScanPath = matching.data();
+        }
+        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectId ) )
+            scanPrefabOverrides( pScanPath );
 
-		ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
-		ImGui::SameLine();
-		ImGui::Text( "%s", _selectedPrefabPath.empty() ? "(none)" : _selectedPrefabPath.c_str() );
+        ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
+        ImGui::SameLine();
+        ImGui::Text( "%s", _selectedPrefabPath.empty() ? "(none)" : _selectedPrefabPath.c_str() );
 
-		ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Active Instance:" );
-		ImGui::SameLine();
-		ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
+        ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Active Instance:" );
+        ImGui::SameLine();
+        ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
 
-		if ( pContext != nullptr && pContext->getWorkspace().isPrefabIsolationActive() )
-		{
-			ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.2f, 1.0f ), "Isolation: %s",
-								pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
-			if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
-				EditorAssetCommands::exitPrefabIsolation( true );
-			ImGui::SameLine();
-			if ( ImGui::Button( "Exit Isolation" ) )
-				EditorAssetCommands::exitPrefabIsolation( false );
-		}
-		else if ( _selectedPrefabPath.empty() == false )
-		{
-			if ( ImGui::Button( "Open Prefab Isolation" ) )
-				EditorAssetCommands::enterPrefabIsolation( _selectedPrefabPath );
-		}
+        if ( pContext != nullptr && pContext->getWorkspace().isPrefabIsolationActive() )
+        {
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.2f, 1.0f ), "Isolation: %s",
+                                pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
+            if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
+                EditorAssetCommands::exitPrefabIsolation( true );
+            ImGui::SameLine();
+            if ( ImGui::Button( "Exit Isolation" ) )
+                EditorAssetCommands::exitPrefabIsolation( false );
+        }
+        else if ( _selectedPrefabPath.empty() == false )
+        {
+            if ( ImGui::Button( "Open Prefab Isolation" ) )
+                EditorAssetCommands::enterPrefabIsolation( _selectedPrefabPath );
+        }
 
-		ImGui::Separator();
+        ImGui::Separator();
 
-		if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
-		{
-			for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
-			{
-				ImGui::PushID( static_cast<int32>( prefabIndex ) );
-				ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
-				ImGui::SameLine();
-				if ( ImGui::SmallButton( "Edit" ) )
-					EditorAssetCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
-				ImGui::PopID();
-			}
-		}
+        if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
+            {
+                ImGui::PushID( static_cast<int32>( prefabIndex ) );
+                ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Edit" ) )
+                    EditorAssetCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
+                ImGui::PopID();
+            }
+        }
 
-		ImGui::Separator();
+        ImGui::Separator();
 
-		ImGui::Checkbox( "Show Modified Properties Only", &_bShowOnlyModified );
-		ImGui::SameLine();
-		if ( ImGui::SmallButton( "Refresh Overrides" ) )
-			scanPrefabOverrides( _selectedPrefabPath.c_str() );
+        ImGui::Checkbox( "Show Modified Properties Only", &_bShowOnlyModified );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Refresh Overrides" ) )
+            scanPrefabOverrides( _selectedPrefabPath.c_str() );
 
-		if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
-		{
-			ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f );
-			ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f );
-			ImGui::TableSetupColumn( "Template Default", ImGuiTableColumnFlags_WidthStretch );
-			ImGui::TableSetupColumn( "Instance Value", ImGuiTableColumnFlags_WidthStretch );
-			ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f );
-			ImGui::TableHeadersRow();
+        if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
+        {
+            ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f );
+            ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f );
+            ImGui::TableSetupColumn( "Template Default", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Instance Value", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f );
+            ImGui::TableHeadersRow();
 
-			for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )
-			{
-				PrefabOverrideItem& item = _listOverride[overrideIndex];
-				if ( _bShowOnlyModified && item._bModified == false )
-					continue;
+            for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )
+            {
+                PrefabOverrideItem& item = _listOverride[overrideIndex];
+                if ( _bShowOnlyModified && item._bModified == false )
+                    continue;
 
-				ImGui::TableNextRow();
+                ImGui::TableNextRow();
 
-				ImGui::TableNextColumn();
-				ImGui::Text( "%s", item._componentName.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%s", item._componentName.c_str() );
 
-				ImGui::TableNextColumn();
-				if ( item._bModified )
-					ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.3f, 1.0f ), "* %s", item._propertyName.c_str() );
-				else
-					ImGui::Text( "%s", item._propertyName.c_str() );
+                ImGui::TableNextColumn();
+                if ( item._bModified )
+                    ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.3f, 1.0f ), "* %s", item._propertyName.c_str() );
+                else
+                    ImGui::Text( "%s", item._propertyName.c_str() );
 
-				ImGui::TableNextColumn();
-				ImGui::TextDisabled( "%s", item._defaultValue.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::TextDisabled( "%s", item._defaultValue.c_str() );
 
-				ImGui::TableNextColumn();
-				if ( item._bModified )
-					ImGui::TextColored( ImVec4( 0.4f, 1.0f, 0.4f, 1.0f ), "%s", item._overriddenValue.c_str() );
-				else
-					ImGui::Text( "%s", item._overriddenValue.c_str() );
+                ImGui::TableNextColumn();
+                if ( item._bModified )
+                    ImGui::TextColored( ImVec4( 0.4f, 1.0f, 0.4f, 1.0f ), "%s", item._overriddenValue.c_str() );
+                else
+                    ImGui::Text( "%s", item._overriddenValue.c_str() );
 
-				ImGui::TableNextColumn();
-				if ( item._bModified )
-				{
-					ImGui::PushID( static_cast<int32>( overrideIndex ) );
-					if ( ImGui::SmallButton( "Revert" ) )
-					{
-						EditorToolAssetCommands::revertPrefabOverride( PrefabEditorPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
-						SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
-						scanPrefabOverrides( _selectedPrefabPath.c_str() );
-					}
-					ImGui::PopID();
-				}
-			}
+                ImGui::TableNextColumn();
+                if ( item._bModified )
+                {
+                    ImGui::PushID( static_cast<int32>( overrideIndex ) );
+                    if ( ImGui::SmallButton( "Revert" ) )
+                    {
+                        EditorToolAssetCommands::revertPrefabOverride( PrefabEditorPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
+                        SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
+                        scanPrefabOverrides( _selectedPrefabPath.c_str() );
+                    }
+                    ImGui::PopID();
+                }
+            }
 
-			ImGui::EndTable();
-		}
+            ImGui::EndTable();
+        }
 
-		ImGui::Separator();
+        ImGui::Separator();
 
-		const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
-		if ( bEditsAllowed == false )
-		{
-			ImGui::TextDisabled( "Scene edits locked until Stop." );
-			ImGui::BeginDisabled();
-		}
+        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+        if ( bEditsAllowed == false )
+        {
+            ImGui::TextDisabled( "Scene edits locked until Stop." );
+            ImGui::BeginDisabled();
+        }
 
-		if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
-		{
-			EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
-			scanPrefabOverrides( _selectedPrefabPath.c_str() );
-			SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
-		}
+        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
+        {
+            EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            scanPrefabOverrides( _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+        }
 
-		ImGui::SameLine();
-		if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
-		{
-			EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
-			scanPrefabOverrides( _selectedPrefabPath.c_str() );
-			SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
-		}
+        ImGui::SameLine();
+        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
+        {
+            EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            scanPrefabOverrides( _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
+        }
 
-		if ( bEditsAllowed == false )
-			ImGui::EndDisabled();
-	}
+        if ( bEditsAllowed == false )
+            ImGui::EndDisabled();
+    }
 } // namespace sw::editor

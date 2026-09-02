@@ -10,27 +10,27 @@
 
 namespace sw::editor
 {
-	class IInspectorComponent;
+    class IInspectorComponent;
 
-	/** @brief 컴포넌트 타입별 인스펙터 UI 관리자 (EditorContext 소유) */
-	class InspectorComponentManager
-	{
-	public:
-		InspectorComponentManager()	 = default;
-		~InspectorComponentManager() = default;
+    /** @brief 컴포넌트 타입별 인스펙터 UI 관리자 (EditorContext 소유) */
+    class InspectorComponentManager
+    {
+    public:
+        InspectorComponentManager()  = default;
+        ~InspectorComponentManager() = default;
 
-		void				 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
-		IInspectorComponent* find( string_view typeName ) const;
-		void				 registerDefaults();
+        void                 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
+        IInspectorComponent* find( string_view typeName ) const;
+        void                 registerDefaults();
 
-		template <typename TComponent, typename TInspector, typename... TArgs>
-		void registerComponent( TArgs&&... args )
-		{
-			registerType( TComponent::StaticType()->_name.c_str(),
-						  make_unique<TInspector>( std::forward<TArgs>( args )... ) );
-		}
+        template <typename TComponent, typename TInspector, typename... TArgs>
+        void registerComponent( TArgs&&... args )
+        {
+            registerType( TComponent::StaticType()->_name.c_str(),
+                          make_unique<TInspector>( std::forward<TArgs>( args )... ) );
+        }
 
-	private:
-		map<string, unique_ptr<IInspectorComponent>> _mapInspector;
-	};
+    private:
+        map<string, unique_ptr<IInspectorComponent>> _mapInspector;
+    };
 } // namespace sw::editor

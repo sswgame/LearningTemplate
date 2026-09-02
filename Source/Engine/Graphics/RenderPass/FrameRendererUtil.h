@@ -10,73 +10,73 @@
 
 namespace sw
 {
-	/** @brief FrameRenderer TU 공유 패스/어태치먼트 이름과 헬퍼 */
-	struct FrameRendererUtil
-	{
-		struct PassType
-		{
-			static constexpr auto kShadow		 = "Shadow";
-			static constexpr auto kForwardOpaque = "ForwardOpaque";
-			static constexpr auto kTransparent	 = "Transparent";
-			static constexpr auto kGBuffer		 = "GBuffer";
-			static constexpr auto kGBufferAlbedo = "GBufferAlbedo";
-			static constexpr auto kGBufferNormal = "GBufferNormal";
-			static constexpr auto kLighting		 = "Lighting";
-			static constexpr auto kShading		 = "Shading";
-			static constexpr auto kPostBloom	 = "PostBloom";
-			static constexpr auto kOutline		 = "Outline";
-			static constexpr auto kPostOutline	 = "PostOutline";
-			static constexpr auto kPresent		 = "Present";
-			static constexpr auto kTaa			 = "TAA";
-			static constexpr auto kSsao			 = "SSAO";
-			static constexpr auto kHbao			 = "HBAO";
-			static constexpr auto kTonemap		 = "Tonemap";
-			static constexpr auto kDepthPrepass	 = "DepthPrepass";
-		};
+    /** @brief FrameRenderer TU 공유 패스/어태치먼트 이름과 헬퍼 */
+    struct FrameRendererUtil
+    {
+        struct PassType
+        {
+            static constexpr auto kShadow        = "Shadow";
+            static constexpr auto kForwardOpaque = "ForwardOpaque";
+            static constexpr auto kTransparent   = "Transparent";
+            static constexpr auto kGBuffer       = "GBuffer";
+            static constexpr auto kGBufferAlbedo = "GBufferAlbedo";
+            static constexpr auto kGBufferNormal = "GBufferNormal";
+            static constexpr auto kLighting      = "Lighting";
+            static constexpr auto kShading       = "Shading";
+            static constexpr auto kPostBloom     = "PostBloom";
+            static constexpr auto kOutline       = "Outline";
+            static constexpr auto kPostOutline   = "PostOutline";
+            static constexpr auto kPresent       = "Present";
+            static constexpr auto kTaa           = "TAA";
+            static constexpr auto kSsao          = "SSAO";
+            static constexpr auto kHbao          = "HBAO";
+            static constexpr auto kTonemap       = "Tonemap";
+            static constexpr auto kDepthPrepass  = "DepthPrepass";
+        };
 
-		struct Attachment
-		{
-			static constexpr auto kSwapchain		= "Swapchain";
-			static constexpr auto kSceneColor		= "SceneColor";
-			static constexpr auto kSceneDepth		= "SceneDepth";
-			static constexpr auto kShadowMap		= "ShadowMap";
-			static constexpr auto kGBufferAlbedo	= "GBufferAlbedo";
-			static constexpr auto kGBufferNormal	= "GBufferNormal";
-			static constexpr auto kLitColor			= "LitColor";
-			static constexpr auto kBloomColor		= "BloomColor";
-			static constexpr auto kBloomBright		= "BloomBright";
-			static constexpr auto kOutlineColor		= "OutlineColor";
-			static constexpr auto kTransparentColor = "TransparentColor";
-			static constexpr auto kTaaColor			= "TaaColor";
-		};
+        struct Attachment
+        {
+            static constexpr auto kSwapchain        = "Swapchain";
+            static constexpr auto kSceneColor       = "SceneColor";
+            static constexpr auto kSceneDepth       = "SceneDepth";
+            static constexpr auto kShadowMap        = "ShadowMap";
+            static constexpr auto kGBufferAlbedo    = "GBufferAlbedo";
+            static constexpr auto kGBufferNormal    = "GBufferNormal";
+            static constexpr auto kLitColor         = "LitColor";
+            static constexpr auto kBloomColor       = "BloomColor";
+            static constexpr auto kBloomBright      = "BloomBright";
+            static constexpr auto kOutlineColor     = "OutlineColor";
+            static constexpr auto kTransparentColor = "TransparentColor";
+            static constexpr auto kTaaColor         = "TaaColor";
+        };
 
-		struct Entry
-		{
-			static constexpr auto kVSMain = "VSMain";
-			static constexpr auto kPSMain = "PSMain";
-			static constexpr auto kCSMain = "CSMain";
-		};
+        struct Entry
+        {
+            static constexpr auto kVSMain = "VSMain";
+            static constexpr auto kPSMain = "PSMain";
+            static constexpr auto kCSMain = "CSMain";
+        };
 
-		static constexpr uint32	 kDefaultTransientSize = 1280;
-		static constexpr auto	 kDefaultMainPassName  = "DefaultMainPass";
-		static constexpr float4	 kBlackClear		   = { 0.0f, 0.0f, 0.0f, 1.0f };
-		static constexpr float4	 kSceneClear		   = { 0.12f, 0.15f, 0.18f, 1.0f };
-		static constexpr float4	 kDepthClear		   = { 1.0f, 0.0f, 0.0f, 0.0f };
-		static constexpr float4	 kBloomClear		   = { 0.0f, 0.0f, 0.0f, 1.0f };
-		static constexpr float4	 kNormalClear		   = { 0.5f, 0.5f, 1.0f, 1.0f };
-		static constexpr float32 kDefaultCameraPos[3]  = { 0.0f, 1.2f, 3.2f };
+        static constexpr uint32  kDefaultTransientSize = 1280;
+        static constexpr auto    kDefaultMainPassName  = "DefaultMainPass";
+        static constexpr float4  kBlackClear           = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static constexpr float4  kSceneClear           = { 0.12f, 0.15f, 0.18f, 1.0f };
+        static constexpr float4  kDepthClear           = { 1.0f, 0.0f, 0.0f, 0.0f };
+        static constexpr float4  kBloomClear           = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static constexpr float4  kNormalClear          = { 0.5f, 0.5f, 1.0f, 1.0f };
+        static constexpr float32 kDefaultCameraPos[3]  = { 0.0f, 1.2f, 3.2f };
 
-		static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+        static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
-		static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
-											  std::initializer_list<const utf8*>			 listName )
-		{
-			for ( const utf8* pName : listName )
-			{
-				if ( mapAttachment.find( pName ) != mapAttachment.end() )
-					return pName;
-			}
-			return nullptr;
-		}
-	};
+        static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
+                                              std::initializer_list<const utf8*>             listName )
+        {
+            for ( const utf8* pName : listName )
+            {
+                if ( mapAttachment.find( pName ) != mapAttachment.end() )
+                    return pName;
+            }
+            return nullptr;
+        }
+    };
 } // namespace sw
