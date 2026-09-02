@@ -4,10 +4,10 @@
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Physics/AABB.h"
-
 namespace sw
 {
+    struct AABB;
+
     /**
      * @brief 연속 충돌 감지(CCD) 스윕 테스트 결과
      */

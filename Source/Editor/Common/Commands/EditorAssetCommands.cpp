@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"

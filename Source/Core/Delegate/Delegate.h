@@ -324,8 +324,14 @@ namespace sw
     class SW_API IMulticastDelegateBase
     {
     public:
+        IMulticastDelegateBase() = default;
         /** @brief 파생 리스트를 비웁니다. */
-        virtual ~IMulticastDelegateBase() = default;
+        virtual ~IMulticastDelegateBase()                                      = default;
+        IMulticastDelegateBase( const IMulticastDelegateBase& )                = default;
+        IMulticastDelegateBase& operator=( const IMulticastDelegateBase& )     = default;
+        IMulticastDelegateBase( IMulticastDelegateBase&& ) noexcept            = default;
+        IMulticastDelegateBase& operator=( IMulticastDelegateBase&& ) noexcept = default;
+
         /** @brief 핸들과 일치하는 항목을 제거합니다. */
         virtual void remove( const DelegateHandle& handle ) = 0;
     };

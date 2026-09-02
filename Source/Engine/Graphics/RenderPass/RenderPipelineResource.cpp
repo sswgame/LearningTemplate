@@ -58,6 +58,26 @@ namespace sw
                     if ( pComputeEntryPoint != nullptr )
                         pass._computeEntryPoint = pComputeEntryPoint;
 
+                    const utf8* pGeometryEntryPoint = passNode.childText( "_geometryEntryPoint" );
+                    if ( pGeometryEntryPoint != nullptr )
+                        pass._geometryEntryPoint = pGeometryEntryPoint;
+
+                    const utf8* pHullEntryPoint = passNode.childText( "_hullEntryPoint" );
+                    if ( pHullEntryPoint != nullptr )
+                        pass._hullEntryPoint = pHullEntryPoint;
+
+                    const utf8* pDomainEntryPoint = passNode.childText( "_domainEntryPoint" );
+                    if ( pDomainEntryPoint != nullptr )
+                        pass._domainEntryPoint = pDomainEntryPoint;
+
+                    const utf8* pMeshEntryPoint = passNode.childText( "_meshEntryPoint" );
+                    if ( pMeshEntryPoint != nullptr )
+                        pass._meshEntryPoint = pMeshEntryPoint;
+
+                    const utf8* pAmplificationEntryPoint = passNode.childText( "_amplificationEntryPoint" );
+                    if ( pAmplificationEntryPoint != nullptr )
+                        pass._amplificationEntryPoint = pAmplificationEntryPoint;
+
                     const utf8* pCullMode = passNode.childText( "_cullMode" );
                     if ( pCullMode != nullptr )
                         pass._cullMode = pCullMode;
@@ -188,8 +208,18 @@ namespace sw
                 passNode.appendChild( "_vertexEntryPoint", pass._vertexEntryPoint );
             if ( pass._pixelEntryPoint.empty() == false )
                 passNode.appendChild( "_pixelEntryPoint", pass._pixelEntryPoint );
-            if ( pass._computeEntryPoint.empty() == false && pass._computeEntryPoint != "CSMain" )
+            if ( pass._computeEntryPoint.empty() == false )
                 passNode.appendChild( "_computeEntryPoint", pass._computeEntryPoint );
+            if ( pass._geometryEntryPoint.empty() == false )
+                passNode.appendChild( "_geometryEntryPoint", pass._geometryEntryPoint );
+            if ( pass._hullEntryPoint.empty() == false )
+                passNode.appendChild( "_hullEntryPoint", pass._hullEntryPoint );
+            if ( pass._domainEntryPoint.empty() == false )
+                passNode.appendChild( "_domainEntryPoint", pass._domainEntryPoint );
+            if ( pass._meshEntryPoint.empty() == false )
+                passNode.appendChild( "_meshEntryPoint", pass._meshEntryPoint );
+            if ( pass._amplificationEntryPoint.empty() == false )
+                passNode.appendChild( "_amplificationEntryPoint", pass._amplificationEntryPoint );
             if ( pass._cullMode.empty() == false )
                 passNode.appendChild( "_cullMode", pass._cullMode );
 

@@ -1,6 +1,10 @@
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Math/VectorMath.h"
+
+namespace sw
+{
+    struct float2;
+} // namespace sw
 
 namespace sw::editor
 {

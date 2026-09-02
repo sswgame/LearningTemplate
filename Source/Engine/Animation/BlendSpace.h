@@ -6,11 +6,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Animation/DualQuaternion.h"
-#include "Engine/Animation/Skeleton.h"
-
 namespace sw
 {
+    class Skeleton;
+
     /**
      * @brief 1D 파라미터 모션 샘플 노드
      */

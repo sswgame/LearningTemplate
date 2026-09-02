@@ -19,14 +19,15 @@
 namespace sw
 {
     struct GameKitConfig;
-    class IWindow;
+    struct NativeWindowEvent;
+
+    class CameraComponent;
     class IRHIDevice;
-    class RHI;
+    class IWindow;
     class LiveReloadManager;
     class ModuleCompiler;
     class RenderThread;
-    class CameraComponent;
-    struct NativeWindowEvent;
+    class RHI;
 
     /**
      * @class ModuleHost

@@ -14,8 +14,9 @@
 
 namespace sw
 {
-    struct TaskNode;
     struct StageNode;
+    struct TaskNode;
+
     class TaskNodePool;
 
     /**

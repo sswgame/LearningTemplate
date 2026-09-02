@@ -12,9 +12,9 @@
 
 namespace sw
 {
-    class TileMap;
-    class InputManager;
     class ActionMap;
+    class InputManager;
+    class TileMap;
 
     // ------------------------------------------------------------------------------
     // 1) PlayerController — 입력 → 한 칸 이동 → 워프/조우/상호작용 플래그

@@ -5,12 +5,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileUtil.h"
 
 #if defined( SW_PLATFORM_LINUX )
 
 namespace sw
 {
+    struct FileDialogParams;
     // ------------------------------------------------------------------------------
     // 1) LinuxFileDialog — 데스크톱 도구를 동기 호출. 경로는 대소문자 유지
     // ------------------------------------------------------------------------------

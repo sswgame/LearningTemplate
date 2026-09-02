@@ -9,16 +9,16 @@ namespace sw
 
 namespace sw::editor
 {
-    class SelectionManager;
-    class EditorWorkspace;
-    class EditorNotificationManager;
+    class AssetEditorManager;
     class EditorActionMenuManager;
+    class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
-    class AssetEditorManager;
+    class EditorWorkspace;
+    class IImGuiRendererBackend;
     class InspectorComponentManager;
     class InspectorPropertyManager;
-    class IImGuiRendererBackend;
+    class SelectionManager;
 
     /** @brief 에디터가 소유하는 Game View RT. App은 매 프레임 핸들만 조회합니다. */
     struct EditorGameView

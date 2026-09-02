@@ -15,7 +15,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
 
 namespace sw
 {

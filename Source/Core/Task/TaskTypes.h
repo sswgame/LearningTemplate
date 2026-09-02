@@ -336,9 +336,10 @@ namespace sw
         Completed           ///< 실행 및 후속 트리거 처리가 완전히 완료된 상태
     };
 
-    class TaskManager;
-    struct TaskNode;
     struct StageNode;
+    struct TaskNode;
+
+    class TaskManager;
 
     /**
      * @struct TaskHandle

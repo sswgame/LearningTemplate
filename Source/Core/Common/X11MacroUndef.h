@@ -40,4 +40,13 @@ typedef int32 Status;
     #if defined( AnyKey )
         #undef AnyKey
     #endif
+    #if defined( TileShape )
+        #undef TileShape
+    #endif
+    #if defined( CursorShape )
+        #undef CursorShape
+    #endif
+    #if defined( PixmapShape )
+        #undef PixmapShape
+    #endif
 #endif

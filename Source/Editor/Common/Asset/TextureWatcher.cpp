@@ -8,6 +8,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/TextureBaker.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )

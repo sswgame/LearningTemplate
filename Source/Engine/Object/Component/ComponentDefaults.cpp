@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"

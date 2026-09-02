@@ -11,8 +11,8 @@
 
 namespace sw
 {
-    class IRHIDevice;
     class CameraComponent;
+    class IRHIDevice;
 } // namespace sw
 
 struct ImDrawList;

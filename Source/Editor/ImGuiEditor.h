@@ -14,9 +14,10 @@
 namespace sw::editor
 {
     struct EditorData;
+
+    class EditorContext;
     class IImGuiPlatformBackend;
     class IImGuiRendererBackend;
-    class EditorContext;
 
     /** @brief ImGui 플랫폼/렌더러 호스트. 메뉴·도크·폰트는 Common으로 위임합니다. */
     class ImGuiEditor : public IEditor

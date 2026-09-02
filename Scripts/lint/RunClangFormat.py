@@ -19,6 +19,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import FormatForwardDeclarations
 from common import (
     collectSourceFiles,
     getLintSearchDirs,
@@ -62,6 +63,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not fileList:
         sys.stderr.write("[RunClangFormat] 포맷팅 대상 C++ 파일이 없습니다.\n")
         return 0
+
+    FormatForwardDeclarations.formatForwardDeclarationsBatch(fileList, checkOnly=False)
 
     print(f"[RunClangFormat] {len(fileList)}개 파일에 대해 clang-format 적용 중...", file=sys.stderr)
     return runClangFormatBatch(fileList, checkOnly=False, cwd=root)

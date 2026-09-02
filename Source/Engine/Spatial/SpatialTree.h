@@ -201,7 +201,7 @@ namespace sw
             _worldBounds        = worldBounds;
             _maxElementsPerNode = maxElements;
             _maxDepth           = maxDepth;
-            _pRoot              = sw::make_unique<Node>( worldBounds, 0 );
+            _pRoot              = sw::make_unique<Node>( worldBounds, size_t{ 0 } );
         }
 
         void clear()

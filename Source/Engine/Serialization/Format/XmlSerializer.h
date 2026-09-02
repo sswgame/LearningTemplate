@@ -10,8 +10,9 @@
 
 namespace sw
 {
-    class Archive;
     struct TypeInfo;
+
+    class Archive;
 
     using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
     using XmlMapItemDelegate   = Delegate<void( string_view keyStr, string_view valStr )>;

@@ -1,10 +1,10 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
+    class IRHICommandList;
     /**
      * @struct ComputeDispatchParams
      * @brief 비동기 컴퓨트 스레드 그룹 디스패치 파라미터

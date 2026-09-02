@@ -6,14 +6,14 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 
 namespace sw
 {
-
     struct XAudio2SystemImpl;
+
+    class TaskArgs;
 
     /**
      * @class XAudio2System

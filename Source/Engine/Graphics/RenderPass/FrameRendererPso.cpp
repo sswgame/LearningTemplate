@@ -189,7 +189,7 @@ namespace sw
                 return it->second;
 
             // Mark as pending (0) so we don't dispatch multiple compilation tasks.
-            _mapMaterialPassPso.insert_or_assign( cacheKey, 0 );
+            _mapMaterialPassPso.insert_or_assign( cacheKey, 0ull );
         }
 
         if ( _pTaskManager != nullptr )

@@ -3,8 +3,10 @@
 #include "Engine/Graphics/Shader/LiveShaderManager.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Shader/ShaderBaker.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 
@@ -145,6 +147,18 @@ namespace sw
                     ShaderCompileResult newResult = ShaderCompiler::compileHLSL( watchedInfo._desc );
                     if ( newResult._bSuccess )
                     {
+                        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( watchedInfo._desc._targetFormat );
+                        const string_view stageTag  = ShaderBaker::getStageTag( watchedInfo._desc._stage );
+                        const string_view ext       = ShaderBaker::getExtensionForFormat( watchedInfo._desc._targetFormat );
+                        const string      fileName  = FileUtil::getFileNamePart( watchedInfo._desc._filePath );
+                        const string      stem      = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
+                        const string      localPath = FileUtil::joinPath( FileUtil::joinPath( "Saved/ShaderCache", rhiFolder ), stem + "_" + string( stageTag ) + string( ext ) );
+
+                        const string localDir = FileUtil::getDirectoryPart( localPath );
+                        if ( localDir.empty() == false )
+                            FileUtil::ensureDirectoryExists( localDir );
+                        FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() );
+
                         engine::getShaderCache().clearCache();
                         SW_LOG_INFO( "Live Shader Recompilation Succeeded for %#!",
                                      watchedInfo._desc._filePath.c_str() );

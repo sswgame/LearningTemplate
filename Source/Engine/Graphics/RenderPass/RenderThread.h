@@ -17,8 +17,8 @@ namespace sw
 {
     extern SW_API bool gv_useRenderThread;
 
-    class IRHIDevice;
     class FrameRenderer;
+    class IRHIDevice;
     class Scene;
 
     /**

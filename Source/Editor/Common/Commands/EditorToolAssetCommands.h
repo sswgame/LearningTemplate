@@ -9,11 +9,12 @@
 
 namespace sw
 {
+    struct TileMapXmlData;
+
     class AnimationGraphAsset;
     class DialogueGraphAsset;
     class GameObject;
     class SequenceAsset;
-    struct TileMapXmlData;
 } // namespace sw
 
 namespace sw::editor

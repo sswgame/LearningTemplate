@@ -3,6 +3,7 @@
 #include "Engine/Reflection/PropertyMetaHint.h"
 
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {

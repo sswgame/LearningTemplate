@@ -634,3 +634,98 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecutionAndSerialFallback )
     SW_EXPECT_EQUAL( uint32( 2 ), passAExecuted );
     SW_EXPECT_EQUAL( uint32( 2 ), passBExecuted );
 }
+
+/**
+ * @brief [RenderPassTest] 8대 전체 스테이지 진입점을 명시한 파이프라인 XML 직렬화/역직렬화 라운드트립 검증
+ */
+SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
+{
+    sw::RenderPipelineResource pipeRes;
+    sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
+    desc._name                      = "UnitTestAllStagesPipeline";
+    desc._shadingModel              = "Deferred";
+
+    sw::RenderGraphPassDesc pass{};
+    pass._name                    = "MegaShaderPass";
+    pass._type                    = "CustomGraphics";
+    pass._shaderPath              = "engine/shaders/custom.hlsl";
+    pass._vertexEntryPoint        = "VSMainCustom";
+    pass._pixelEntryPoint         = "PSMainCustom";
+    pass._computeEntryPoint       = "CSMainCustom";
+    pass._geometryEntryPoint      = "GSMainCustom";
+    pass._hullEntryPoint          = "HSMainCustom";
+    pass._domainEntryPoint        = "DSMainCustom";
+    pass._meshEntryPoint          = "MSMainCustom";
+    pass._amplificationEntryPoint = "ASMainCustom";
+    pass._listInput.push_back( "DepthBuffer" );
+    pass._listOutput.push_back( "HDRColor" );
+
+    desc._listPass.push_back( pass );
+
+    const sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_pipeline_all_stages.xml" );
+    SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
+
+    sw::RenderPipelineResource loadedRes;
+    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
+
+    const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
+    SW_EXPECT_EQUAL( sw::string( "MegaShaderPass" ), loadedPass._name );
+    SW_EXPECT_EQUAL( sw::string( "VSMainCustom" ), loadedPass._vertexEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "PSMainCustom" ), loadedPass._pixelEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "CSMainCustom" ), loadedPass._computeEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "GSMainCustom" ), loadedPass._geometryEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "HSMainCustom" ), loadedPass._hullEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "DSMainCustom" ), loadedPass._domainEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "MSMainCustom" ), loadedPass._meshEntryPoint );
+    SW_EXPECT_EQUAL( sw::string( "ASMainCustom" ), loadedPass._amplificationEntryPoint );
+
+    sw::FileUtil::removeFile( testPath );
+}
+
+/**
+ * @brief [RenderPassTest] 미지정 확장 스테이지 진입점의 XML 직렬화 압축성(빈 태그 배제) 검증
+ */
+SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesCompactness )
+{
+    sw::RenderPipelineResource pipeRes;
+    sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
+    desc._name                      = "UnitTestCompactPipeline";
+    desc._shadingModel              = "Forward";
+
+    sw::RenderGraphPassDesc pass{};
+    pass._name             = "CompactPass";
+    pass._type             = "ForwardOpaque";
+    pass._shaderPath       = "engine/shaders/forwardlit.hlsl";
+    pass._vertexEntryPoint = "VSMain";
+    pass._pixelEntryPoint  = "PSMain";
+    // _computeEntryPoint, _geometryEntryPoint 등은 비어 있음
+    desc._listPass.push_back( pass );
+
+    const sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_pipeline_compact.xml" );
+    SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
+
+    sw::string xmlContent;
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( testPath, xmlContent ) );
+
+    // 빈 확장 태그가 XML 텍스트에 포함되지 않았는지 검증
+    SW_EXPECT_TRUE( xmlContent.find( "_geometryEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_hullEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_domainEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_meshEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_amplificationEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_computeEntryPoint" ) == sw::string::npos );
+
+    // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
+    sw::RenderPipelineResource loadedRes;
+    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
+    SW_EXPECT_TRUE( loadedPass._geometryEntryPoint.empty() );
+    SW_EXPECT_TRUE( loadedPass._hullEntryPoint.empty() );
+    SW_EXPECT_TRUE( loadedPass._domainEntryPoint.empty() );
+    SW_EXPECT_TRUE( loadedPass._meshEntryPoint.empty() );
+    SW_EXPECT_TRUE( loadedPass._amplificationEntryPoint.empty() );
+    SW_EXPECT_TRUE( loadedPass._computeEntryPoint.empty() );
+
+    sw::FileUtil::removeFile( testPath );
+}

@@ -4,6 +4,8 @@
 
 #include "Core/Math/Math.h"
 
+#include "Engine/Physics/AABB.h"
+
 namespace sw
 {
     bool CCD::sweepAABB( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )

@@ -15,11 +15,12 @@
 
 namespace sw
 {
-    class IRHIDevice;
-    class GameObject;
-    class Component;
-    struct TypeInfo;
     struct PropertyInfo;
+    struct TypeInfo;
+
+    class Component;
+    class GameObject;
+    class IRHIDevice;
 } // namespace sw
 
 namespace sw::editor

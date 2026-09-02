@@ -31,6 +31,7 @@
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
 #include "Engine/Graphics/Shader/LiveShaderManager.h"
+#include "Engine/Graphics/Shader/ShaderBaker.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
@@ -110,6 +111,7 @@ namespace sw
         , _frameDoubleBuffer{ nullptr }
         , _rhiBackendRegistry{ nullptr }
         , _bShellActionsBound{ false }
+        , _bHeadless{ false }
     {
     }
 
@@ -257,6 +259,15 @@ namespace sw
                 _engineData->loadFromResource( pEngineConfig->_engineData );
             else
                 _engineData->loadFromResource();
+
+            bool bBakeShaders = false;
+            if ( _commandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
+            {
+                _bHeadless = true;
+                SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
+                ShaderBaker::bakeAllShaders();
+                return true;
+            }
 
             if ( EngineLoopInternal::cliRequestsBackend( *_commandLineManager ) == false )
                 gv_rhiBackend = pEngineConfig->_window._defaultRHI;
@@ -431,6 +442,9 @@ namespace sw
                            const ViewCameraProviderDelegate& viewCameraProvider,
                            bool                              bTickScene )
     {
+        if ( _bHeadless )
+            return;
+
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )

@@ -8,8 +8,9 @@
 
 namespace sw
 {
-    class IRHIDevice;
     enum class RHIBackend : uint32;
+
+    class IRHIDevice;
 } // namespace sw
 
 struct ImDrawData;

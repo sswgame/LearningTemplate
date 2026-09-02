@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Math/MathUtil.h"
 
 namespace sw
 {

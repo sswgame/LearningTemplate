@@ -103,12 +103,21 @@ namespace sw
                             return "ps_5_0";
                         case ShaderStage::Compute:
                             return "cs_5_0";
+                        case ShaderStage::Geometry:
+                            return "gs_5_0";
+                        case ShaderStage::Hull:
+                            return "hs_5_0";
+                        case ShaderStage::Domain:
+                            return "ds_5_0";
+                        case ShaderStage::Mesh:
+                        case ShaderStage::Amplification:
+                        case ShaderStage::Count:
                         default:
                             break;
                     }
                     return "vs_5_0";
                 }
-                // DX12, Vulkan, OpenGL은 SM6.6 Native Bindless 및 힙 인덱싱 지원
+                // DX12, Vulkan, OpenGL: 최신 표준 SM6.6 Native Bindless 및 힙 인덱싱 지원
                 switch ( stage )
                 {
                     case ShaderStage::Vertex:
@@ -117,6 +126,17 @@ namespace sw
                         return "ps_6_6";
                     case ShaderStage::Compute:
                         return "cs_6_6";
+                    case ShaderStage::Geometry:
+                        return "gs_6_6";
+                    case ShaderStage::Hull:
+                        return "hs_6_6";
+                    case ShaderStage::Domain:
+                        return "ds_6_6";
+                    case ShaderStage::Mesh:
+                        return "ms_6_6";
+                    case ShaderStage::Amplification:
+                        return "as_6_6";
+                    case ShaderStage::Count:
                     default:
                         break;
                 }
@@ -232,7 +252,12 @@ namespace sw
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
-        string absPathStr = ResourceUtil::getResourcePath( desc._filePath );
+        string absPathStr;
+        if ( FileUtil::fileExists( desc._filePath ) )
+            absPathStr = desc._filePath;
+        else
+            absPathStr = ResourceUtil::getResourcePath( desc._filePath );
+
         if ( absPathStr.empty() || FileUtil::fileExists( absPathStr ) == false )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
@@ -410,7 +435,7 @@ namespace sw
                     if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
                         listArgument.push_back( L"-spirv" );
-                        listArgument.push_back( L"-fspv-target-env=vulkan1.2" );
+                        listArgument.push_back( L"-fspv-target-env=vulkan1.3" );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )

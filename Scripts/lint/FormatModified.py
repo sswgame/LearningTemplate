@@ -18,6 +18,7 @@ sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
 import CheckIncludeOrder
+import FormatForwardDeclarations
 from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch
 
 
@@ -32,7 +33,7 @@ def main() -> int:
     print(f"[FormatModified] {len(modifiedFiles)}개의 수정된 파일 발견.")
 
     # 1. CheckIncludeOrder 실행 (중복 제거 및 순서 자동 수정)
-    print("\n[1/2] Include 순서 및 중복 검사 실행 중...")
+    print("\n[1/3] Include 순서 및 중복 검사 실행 중...")
     sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
     allViolations = []
     for filePath in modifiedFiles:
@@ -46,8 +47,17 @@ def main() -> int:
     else:
         print("  - Include 검사 OK")
 
-    # 2. clang-format 배치 실행 (in-place 포맷팅)
-    print("\n[2/2] clang-format 실행 중...")
+    # 2. Forward Declaration 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)
+    print("\n[2/3] Forward Declaration 순서 및 그룹 정렬 중...")
+    fwdResults = FormatForwardDeclarations.formatForwardDeclarationsBatch(modifiedFiles, checkOnly=False)
+    if fwdResults:
+        for msg in fwdResults:
+            print(f"  - {msg}")
+    else:
+        print("  - Forward Declaration 검사 OK")
+
+    # 3. clang-format 배치 실행 (in-place 포맷팅)
+    print("\n[3/3] clang-format 실행 중...")
     resultCode = runClangFormatBatch(modifiedFiles, checkOnly=False, cwd=projectRoot)
     if resultCode != 0:
         print(f"\n[FormatModified] clang-format 실행 중 오류 발생 (exit {resultCode})")

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Core/Math/VectorMath.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -19,6 +20,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/CCD.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

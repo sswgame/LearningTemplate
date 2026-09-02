@@ -7,7 +7,6 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

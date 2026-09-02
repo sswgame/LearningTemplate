@@ -21,9 +21,9 @@
 
 namespace sw
 {
+    class Component;
     class GameObject;
     class GameObjectManager;
-    class Component;
 } // namespace sw
 
 namespace sw::editor

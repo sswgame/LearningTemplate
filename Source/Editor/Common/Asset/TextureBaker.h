@@ -3,10 +3,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Editor/Common/Asset/TextureImportConfig.h"
-
 namespace sw::editor
 {
+    struct TextureImportRule;
+
+    class TextureImportConfig;
     /**
      * @struct TextureBakeResult
      * @brief 텍스처 베이킹 작업 결과 정보

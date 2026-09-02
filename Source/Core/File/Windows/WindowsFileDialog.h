@@ -5,12 +5,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
 {
+    struct FileDialogParams;
     // ------------------------------------------------------------------------------
     // 1) WindowsFileDialog — 정적 open 만. 인스턴스는 두지 않음
     // ------------------------------------------------------------------------------

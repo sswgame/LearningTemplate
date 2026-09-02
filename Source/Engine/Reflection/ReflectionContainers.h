@@ -3,8 +3,6 @@
  * @brief 리플렉션 컨테이너 래퍼 (시퀀스 / 맵)
  */
 #pragma once
-#include "Core/Task/TaskTypes.h"
-
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -19,8 +17,8 @@ namespace sw
 #undef REGISTER_CONTAINER_KIND
     };
 
-    struct ISequenceContainerWrapper;
     struct IMapContainerWrapper;
+    struct ISequenceContainerWrapper;
 
     /// @brief 시퀀스/맵 공통 컨테이너 래퍼
     struct IContainerWrapper

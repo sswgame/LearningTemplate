@@ -8,9 +8,10 @@
 
 namespace sw
 {
+    struct SequenceTrackItem;
+
     class GameObjectManager;
     class SequenceAsset;
-    struct SequenceTrackItem;
 
     /**
      * @brief 시퀀서 타임라인을 GameObject에 반영하는 공유 헬퍼입니다.

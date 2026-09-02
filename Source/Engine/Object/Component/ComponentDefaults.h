@@ -7,14 +7,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {
-    class Component;
     struct TypeInfo;
+
+    class Component;
 
     /**
      * @class ComponentDefaults

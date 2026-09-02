@@ -7,11 +7,11 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Physics/AABB.h"
-#include "Engine/Physics/CCD.h"
 #include "Engine/Physics/CollisionLayers.h"
 
 namespace sw
 {
+    struct SweepHit;
     /** @brief PhysicsWorld에 등록된 AABB 바디입니다. */
     struct PhysicsBody
     {

@@ -20,6 +20,7 @@ namespace sw
     struct float4;
     struct float4x4;
     struct TypeInfo;
+
     class SerializeContext;
 
     /// @brief 바이너리 아카이브 읽기/쓰기 (선택 리플렉션 직렬화)

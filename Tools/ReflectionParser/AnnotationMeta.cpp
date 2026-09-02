@@ -60,8 +60,8 @@ namespace sw
             return false;
         }
 
-        string currentScope;
-        uint32 bindingCount = 0;
+        string                  currentScope;
+        [[maybe_unused]] uint32 bindingCount = 0;
 
         const string_splitter lines( text, { "\r\n", "\n" } );
         for ( const string_view rawLine : lines.getSplitList() )

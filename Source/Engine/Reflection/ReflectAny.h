@@ -9,6 +9,7 @@
 namespace sw
 {
     struct TypeInfo;
+
     class SerializeContext;
 
     /**

@@ -5,12 +5,13 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 namespace sw
 {
+    struct float3;
+
     class Component;
     class GameObject;
     class GameObjectManager;

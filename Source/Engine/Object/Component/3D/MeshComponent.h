@@ -19,9 +19,9 @@ namespace sw
         struct sw_MeshComponent_Registrar;
     } // namespace generated
 
-    class Mesh;
     class Material;
     class MaterialInstance;
+    class Mesh;
 
     /**
      * @class MeshComponent

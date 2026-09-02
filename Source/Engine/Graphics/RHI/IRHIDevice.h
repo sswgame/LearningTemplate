@@ -11,13 +11,13 @@
 
 namespace sw
 {
-    class IWindow;
     class IRHICommandContext;
     class IRHICommandList;
     class IRHIResource;
     class IRHISwapChain;
-    class RHIDeferredCommandList;
+    class IWindow;
     class RenderPassManager;
+    class RHIDeferredCommandList;
 
     /**
      * @class IRHIDevice

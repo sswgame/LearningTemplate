@@ -8,9 +8,9 @@
 
 namespace sw
 {
-    struct TypeRegistrar;
-    struct EnumRegistrar;
     struct ComponentFactoryRegistrar;
+    struct EnumRegistrar;
+    struct TypeRegistrar;
 
     namespace engine
     {

@@ -219,7 +219,10 @@ namespace sw
         bytes.insert( bytes.end(), pHeaderBytes, pHeaderBytes + sizeof( ReplayHeader ) );
 
         if ( header._nameLength > 0 )
-            bytes.insert( bytes.end(), _replayName.begin(), _replayName.end() );
+        {
+            const auto* pNameBytes = reinterpret_cast<const uint8*>( _replayName.data() );
+            bytes.insert( bytes.end(), pNameBytes, pNameBytes + _replayName.size() );
+        }
 
         for ( const InputReplayFrame& frame : _listFrame )
         {

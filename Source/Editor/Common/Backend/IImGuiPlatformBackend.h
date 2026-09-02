@@ -8,9 +8,11 @@
 
 namespace sw
 {
-    class IWindow;
-    struct NativeWindowEvent;
     enum class RHIBackend : uint32;
+
+    struct NativeWindowEvent;
+
+    class IWindow;
 } // namespace sw
 
 namespace sw::editor

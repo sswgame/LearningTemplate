@@ -1,4 +1,8 @@
 {
+  "target_rhi": "DirectX12",
+  "shader_cook": {
+    "exclude_raw_hlsl": true
+  },
   "global_exclude_directories": [
     "textures_raw",
     "shaders_raw",

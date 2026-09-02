@@ -339,6 +339,8 @@ namespace sw
                     pos = minPos;
                     break;
                 }
+                case Mode::FinishedOnce:
+                case Mode::End:
                 default:
                     _mode = Mode::End;
                     return;
@@ -427,7 +429,7 @@ namespace sw
     }
 
     template <typename TChar>
-    void basic_string_splitter<TChar>::split( std::initializer_list<string_view_type> listDelim )
+    void basic_string_splitter<TChar>::split( [[maybe_unused]] std::initializer_list<string_view_type> listDelim )
     {
         if ( _str.empty() == true )
             return;

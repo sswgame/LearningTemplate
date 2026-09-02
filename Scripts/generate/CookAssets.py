@@ -32,6 +32,7 @@ from common import (
     batchCookAssets,
     getProjectRoot,
     kFilePackConfig,
+    kFileRuntimeEngineConfig,
     kKeyExcludeDirs,
     kKeyExcludePatterns,
     kKeyGlobalExcludeDirs,
@@ -233,7 +234,52 @@ def alignOffsetInternal(offset: int, alignment: int = _kPackSectorAlignment) -> 
     return (offset + mask) & ~mask
 
 
-def shouldIncludeFileInternal(relPath: str, config: dict) -> bool:
+def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path | None = None) -> str:
+    """타깃 RHI를 결정합니다: CLI > PackConfig.json > EngineConfig.json (기본값: dx12)."""
+    r = ""
+    if cliRhi:
+        r = cliRhi.strip().lower()
+    elif config.get("target_rhi"):
+        r = str(config["target_rhi"]).strip().lower()
+    elif projectRoot:
+        engineCfgPath = projectRoot / kFileRuntimeEngineConfig
+        if engineCfgPath.is_file():
+            engineCfg = readJsonDictInternal(engineCfgPath, kFileRuntimeEngineConfig)
+            r = engineCfg.get("_window", {}).get("_defaultRHI", "DirectX12").strip().lower()
+
+    if r in ("directx12", "dx12", "d3d12"):
+        return "dx12"
+    if r in ("vulkan", "vk", "spirv"):
+        return "vulkan"
+    if r in ("opengl", "gl"):
+        return "opengl"
+    if r in ("directx11", "dx11", "d3d11"):
+        return "dx11"
+    return "dx12"
+
+
+def bakeShadersInternal(projectRoot: Path) -> bool:
+    """App.exe --bake-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
+    import subprocess
+    candidates = [
+        projectRoot / "build/Ninja-Debug/Bin/App.exe",
+        projectRoot / "build/Ninja-Release/Bin/App.exe",
+        projectRoot / "Bin/App.exe",
+    ]
+    appExe = None
+    for c in candidates:
+        if c.is_file():
+            appExe = c
+            break
+    if not appExe:
+        print("[CookAssets Warning] App.exe not found to run --bake-shaders", file=sys.stderr)
+        return False
+    print(f"[CookAssets] Running headless shader bake: {appExe} --bake-shaders")
+    res = subprocess.run([str(appExe), "--bake-shaders"])
+    return res.returncode == 0
+
+
+def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
     """PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다."""
     normRel = normalizePath(relPath).lower()
     parts = normRel.split("/")
@@ -265,6 +311,17 @@ def shouldIncludeFileInternal(relPath: str, config: dict) -> bool:
             if fnmatch.fnmatch(fileName, pLower) or fnmatch.fnmatch(normRel, pLower):
                 return False
 
+    # 셰이더 전용 스마트 필터링
+    shaderCookCfg = config.get("shader_cook", {})
+    if shaderCookCfg.get("exclude_raw_hlsl", True):
+        if fileName.endswith(".hlsl") or fileName.endswith(".hlsli"):
+            return False
+
+    if "shaders/bin" in normRel:
+        for rhiFolder in ("dx12", "vulkan", "dx11"):
+            if rhiFolder in dirParts and rhiFolder != targetRhi:
+                return False
+
     return True
 
 
@@ -275,6 +332,7 @@ def cookPack(
     compression: int = _kCompressionZlib,
     stripDebugStrings: bool = True,
     packConfig: dict | None = None,
+    targetRhi: str = "dx12",
 ) -> bool:
     """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다."""
     if not sourceDir.is_dir():
@@ -285,7 +343,7 @@ def cookPack(
     for p in sorted(sourceDir.rglob("*")):
         if p.is_file():
             rel = p.relative_to(sourceDir).as_posix()
-            if packConfig and not shouldIncludeFileInternal(rel, packConfig):
+            if packConfig and not shouldIncludeFileInternal(rel, packConfig, targetRhi=targetRhi):
                 continue
             pathHash = fnv1a64Internal(rel)
             fileEntries.append((rel, p, pathHash))
@@ -399,7 +457,13 @@ def cookPack(
     return True
 
 
-def cookAllPacks(projectRoot: Path, outputDir: Path, isShipping: bool = True, packConfig: dict | None = None) -> bool:
+def cookAllPacks(
+    projectRoot: Path,
+    outputDir: Path,
+    isShipping: bool = True,
+    packConfig: dict | None = None,
+    targetRhi: str = "dx12",
+) -> bool:
     """engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다."""
     resourceDir = projectRoot / "Resource"
     outputDir.mkdir(parents=True, exist_ok=True)
@@ -421,7 +485,7 @@ def cookAllPacks(projectRoot: Path, outputDir: Path, isShipping: bool = True, pa
                 targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
 
     for src, out, dlcId in targets:
-        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig)
+        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi)
         if not success:
             allSuccess = False
 
@@ -441,9 +505,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
+    parser.add_argument("--target-rhi", type=str, default="", help="타깃 RHI 백엔드 (DirectX12, Vulkan, DirectX11)")
+    parser.add_argument("--bake-shaders", action="store_true", help="패킹 전 App.exe --bake-shaders 를 실행하여 셰이더 일괄 사전 빌드")
 
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
+
+    if args.bake_shaders:
+        bakeShadersInternal(projectRoot)
 
     doPrefabs = args.prefabs_only or (not args.scenes_only and not args.packs_only)
     doScenes = args.scenes_only or (not args.prefabs_only and not args.packs_only)
@@ -461,8 +530,10 @@ def main(argv: list[str] | None = None) -> int:
         if not packConfig:
             print(f"[CookAssets Error] missing or invalid config: {configPath}", file=sys.stderr)
             return 1
+        targetRhi = resolveTargetRhiInternal(packConfig, cliRhi=args.target_rhi, projectRoot=projectRoot)
+        print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")
         outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
-        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig)
+        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi)
         if not success:
             exitCode = 1
 

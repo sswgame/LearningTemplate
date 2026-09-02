@@ -6,8 +6,8 @@
 
 namespace sw
 {
-    class Scene;
     class CameraComponent;
+    class Scene;
 } // namespace sw
 
 namespace sw::editor

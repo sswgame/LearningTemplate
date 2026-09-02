@@ -8,13 +8,14 @@
 
 namespace sw
 {
-    class GameObjectManager;
+    struct SceneDocument;
+
+    class CameraComponent;
+    class FrameRenderer;
     class GameObject;
+    class GameObjectManager;
     class IRHIDevice;
     class Material;
-    class FrameRenderer;
-    class CameraComponent;
-    struct SceneDocument;
 
     /**
      * @class Scene

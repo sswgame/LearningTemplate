@@ -11,8 +11,9 @@
 
 namespace sw
 {
-    class Archive;
     struct TypeInfo;
+
+    class Archive;
 
     /**
      * @class JsonSerializer

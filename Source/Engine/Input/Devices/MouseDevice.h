@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/array.h"
 
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodes.h"

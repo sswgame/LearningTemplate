@@ -7,10 +7,11 @@
 
 namespace sw
 {
+    struct NativeWindowEvent;
+
+    class CameraComponent;
     class IRHIDevice;
     class IWindow;
-    class CameraComponent;
-    struct NativeWindowEvent;
 
     /**
      * @class IEditor

@@ -8,8 +8,8 @@
 
 namespace sw
 {
-    struct TypeInfo;
     struct PropertyInfo;
+    struct TypeInfo;
 
     // ------------------------------------------------------------------------------
     // 1) SchemaOrphanValue — 현재 TypeInfo에 매칭·적용 실패한 와이어 필드

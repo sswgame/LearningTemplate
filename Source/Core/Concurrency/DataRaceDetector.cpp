@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/DataRaceDetector.h"
 
-#if SW_DEBUG
+#if defined( SW_DEBUG )
     #include "Core/Container/string.h"
     #include "Core/Log/Logger.h"
     #include "Core/Process/CallStackCapture.h"

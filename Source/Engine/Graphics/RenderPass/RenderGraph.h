@@ -13,8 +13,8 @@
 
 namespace sw
 {
-    class IRHIDevice;
     class IRHICommandList;
+    class IRHIDevice;
     class TaskManager;
 
     /**

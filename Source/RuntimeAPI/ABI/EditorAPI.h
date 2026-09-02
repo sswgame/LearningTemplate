@@ -18,8 +18,8 @@ namespace sw
     /** @brief 텍스처를 가리키는 핸들 */
     using TextureHandle = uint64;
 
-    struct NativeWindowEvent;
     struct ModuleService;
+    struct NativeWindowEvent;
 
     // ------------------------------------------------------------------------------
     // 2) EditorAPI — C ABI 함수 테이블
@@ -51,8 +51,8 @@ namespace sw
     /** @brief EditorModule이 export하는 API 테이블 심볼 이름: exportEditorAPI */
     using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
 
-    class IWindow;
     class IRHIDevice;
+    class IWindow;
 } // namespace sw
 
 extern "C"

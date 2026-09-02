@@ -6,6 +6,9 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Animation/DualQuaternion.h"
+#include "Engine/Animation/Skeleton.h"
+
 namespace sw
 {
     void BlendSpace1D::addSample( float32 parameter, string_view clipName, const float4x4& pose )

@@ -41,7 +41,7 @@ namespace sw
         static LRESULT CALLBACK splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
     private:
-        [[maybe_unused]] HWND _hWnd;
-        uint64                _gdiplusToken;
+        [[maybe_unused]] HWND   _hWnd;
+        [[maybe_unused]] uint64 _gdiplusToken;
     };
 } // namespace sw

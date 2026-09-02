@@ -1,9 +1,9 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
+    struct PropertyMetadata;
     /**
      * @enum PropertyWidgetType
      * @brief 에디터 인스펙터가 프로퍼티를 렌더링할 때 사용하는 UI 위젯 유형

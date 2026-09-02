@@ -11,45 +11,45 @@
 
 namespace sw
 {
-    class Logger;
-    class DeadlockDetector;
-    class MemoryProfiler;
-    class ConfigManager;
-    class CommandLineManager;
-    class TaskManager;
-    class GlobalVariableManager;
-    class TypeRegistry;
-    class RHI;
-    class LiveReloadManager;
-    class ReloadFileManager;
-    class SceneManager;
-    class InputManager;
+    struct DebugOverlayState;
+    struct EngineData;
+
     class ActionMap;
-    class IAudioSystem;
+    class AssetStreamingQueue;
+    class CameraComponent;
+    class CommandLineManager;
+    class CommandStack;
+    class ComponentDefaults;
+    class CompressionCodecRegistry;
+    class ConfigManager;
+    class DeadlockDetector;
+    class DebugDrawQueue;
     class EventDispatcher;
+    class FrameDoubleBuffer;
     class FrameRenderer;
+    class GlobalVariableManager;
+    class IAudioSystem;
+    class InputManager;
+    class IRHIDevice;
+    class LiveReloadManager;
+    class LocalizationManager;
+    class Logger;
+    class MemoryProfiler;
+    class ReloadFileManager;
     class RenderThread;
     class ResourceManager;
-    class LocalizationManager;
-    struct EngineData;
-    class AssetStreamingQueue;
-    class CommandStack;
-    struct DebugOverlayState;
-    class DebugDrawQueue;
-    class FrameDoubleBuffer;
+    class RHI;
     class RHIBackendRegistry;
-    class CompressionCodecRegistry;
+    class SceneManager;
     class ShaderCache;
-    class ComponentDefaults;
-
-    class IRHIDevice;
-    class CameraComponent;
+    class TaskManager;
+    class TypeRegistry;
 
     /**
-	 * @brief 이번 프레임 뷰 카메라를 돌려줍니다.
-	 * @details tick 내부의 핫리로드/씬 전환이 GameObject 를 파괴할 수 있으므로,
-	 *          카메라는 미리 캡처하지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
-	 */
+     * @brief 이번 프레임 뷰 카메라를 돌려줍니다.
+     * @details tick 내부의 핫리로드/씬 전환이 GameObject 를 파괴할 수 있으므로,
+     *          카메라는 미리 캡처하지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
+     */
     SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
 
     /**
@@ -79,7 +79,7 @@ namespace sw
          * @param vpWidth 뷰포트 너비
          * @param vpHeight 뷰포트 높이
          * @param viewCameraProvider 호스트가 지정한 렌더 카메라를 돌려주는 델리게이트.
-		 *                           바인딩되지 않았거나 nullptr을 돌려주면 씬의 게임 카메라를 씁니다.
+         *                           바인딩되지 않았거나 nullptr을 돌려주면 씬의 게임 카메라를 씁니다.
          * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
          */
         void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,
@@ -112,6 +112,7 @@ namespace sw
         CompressionCodecRegistry* getCompressionCodecRegistry() const { return _compressionCodecRegistry.get(); }
         ShaderCache*              getShaderCache() const { return _shaderCache.get(); }
         ComponentDefaults*        getComponentDefaults() const { return _componentDefaults.get(); }
+        bool                      isHeadless() const { return _bHeadless; }
 
     private:
         /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
@@ -150,5 +151,6 @@ namespace sw
         unique_ptr<ComponentDefaults>        _componentDefaults;
 
         bool _bShellActionsBound;
+        bool _bHeadless;
     };
 } // namespace sw

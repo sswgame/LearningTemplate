@@ -439,8 +439,6 @@ namespace sw
         _s_listResourceFolder.clear();
         _s_listResourceFolder.reserve( 16 );
 
-        const string& resourceRoot = _s_resourceRootFolderPath;
-
         for ( const string& tokenRaw : listPriority )
         {
             const string token = FileUtil::normalizePath( tokenRaw );

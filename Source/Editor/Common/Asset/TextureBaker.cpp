@@ -8,6 +8,17 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/ImageUtil.h"
+#include "Editor/Common/Asset/TextureImportConfig.h"
+
+#if defined( TileShape )
+    #undef TileShape
+#endif
+#if defined( CursorShape )
+    #undef CursorShape
+#endif
+#if defined( PixmapShape )
+    #undef PixmapShape
+#endif
 
 #include <DirectXTex.h>
 

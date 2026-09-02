@@ -9,8 +9,8 @@
 
 namespace sw
 {
-    class IRHIDevice;
     class FrameRenderer;
+    class IRHIDevice;
     class Scene;
 
     /**

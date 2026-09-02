@@ -13,10 +13,11 @@
 
 namespace sw
 {
-    class IRHIDevice;
+    struct float4;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
-    struct float4;
+
+    class IRHIDevice;
 
     /// @brief 셰이더 permutation과 패킹 CB를 가진 머티리얼 에셋
     class SW_API Material

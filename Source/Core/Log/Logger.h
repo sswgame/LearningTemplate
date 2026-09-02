@@ -77,8 +77,14 @@ namespace sw
     class SW_API ILogSink
     {
     public:
+        ILogSink() = default;
         /** @brief 파일 핸들과 리스너를 닫습니다. */
-        virtual ~ILogSink() = default;
+        virtual ~ILogSink()                        = default;
+        ILogSink( const ILogSink& )                = default;
+        ILogSink& operator=( const ILogSink& )     = default;
+        ILogSink( ILogSink&& ) noexcept            = default;
+        ILogSink& operator=( ILogSink&& ) noexcept = default;
+
         /** @brief 로그 폴더와 출력 대상을 엽니다. */
         virtual void initialize() = 0;
         /** @brief 파일과 리스너를 닫습니다. */

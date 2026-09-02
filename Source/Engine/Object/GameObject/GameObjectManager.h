@@ -23,9 +23,9 @@
 namespace sw
 {
     class Component;
-    class SceneComponent;
-    class MeshComponent;
     class GameObjectManager;
+    class MeshComponent;
+    class SceneComponent;
 
     /**
      * @struct ComponentFactoryRegistrar

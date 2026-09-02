@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
+
 namespace sw
 {
     ComputePass::ComputePass()

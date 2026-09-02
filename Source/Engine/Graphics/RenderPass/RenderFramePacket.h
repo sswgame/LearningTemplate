@@ -8,9 +8,10 @@
 
 namespace sw
 {
-    class Material;
-    class IRHIDevice;
     struct RenderFramePacket;
+
+    class IRHIDevice;
+    class Material;
 
     SW_DECLARE_DELEGATE( void, PresentHookDelegate, IRHIDevice&, RenderFramePacket& );
 

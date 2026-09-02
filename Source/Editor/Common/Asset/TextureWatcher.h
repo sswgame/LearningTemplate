@@ -2,10 +2,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Asset/TextureBaker.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 
 namespace sw

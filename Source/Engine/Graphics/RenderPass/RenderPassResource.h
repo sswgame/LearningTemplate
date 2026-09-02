@@ -62,7 +62,22 @@ namespace sw
         string _pixelEntryPoint = "PSMain";
 
         PROPERTY()
-        string _computeEntryPoint = "CSMain";
+        string _computeEntryPoint;
+
+        PROPERTY()
+        string _geometryEntryPoint;
+
+        PROPERTY()
+        string _hullEntryPoint;
+
+        PROPERTY()
+        string _domainEntryPoint;
+
+        PROPERTY()
+        string _meshEntryPoint;
+
+        PROPERTY()
+        string _amplificationEntryPoint;
 
         /** @brief Shader macros / permutations as "NAME" or "NAME=VALUE". */
         PROPERTY()

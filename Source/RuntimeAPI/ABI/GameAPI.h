@@ -39,8 +39,8 @@ namespace sw
     /** @brief SWGame export 심볼: exportGameAPI */
     using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutApi );
 
-    class IWindow;
     class IRHIDevice;
+    class IWindow;
 } // namespace sw
 
 extern "C"

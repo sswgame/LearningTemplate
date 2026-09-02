@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Physics/CCD.h"
+
 namespace sw
 {
     namespace

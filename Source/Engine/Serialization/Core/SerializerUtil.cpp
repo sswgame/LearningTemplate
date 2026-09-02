@@ -103,7 +103,8 @@ namespace sw
             const uint32 size   = static_cast<uint32>( str.size() );
             const uint8* pBytes = reinterpret_cast<const uint8*>( &size );
             listBuffer.insert( listBuffer.end(), pBytes, pBytes + sizeof( uint32 ) );
-            listBuffer.insert( listBuffer.end(), str.begin(), str.end() );
+            const auto* pStrBytes = reinterpret_cast<const uint8*>( str.data() );
+            listBuffer.insert( listBuffer.end(), pStrBytes, pStrBytes + str.size() );
             return;
         }
 

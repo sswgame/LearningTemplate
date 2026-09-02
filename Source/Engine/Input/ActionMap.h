@@ -23,8 +23,9 @@
 
 namespace sw
 {
-    class InputManager;
     enum class InputDeviceType : uint8;
+
+    class InputManager;
 
     // ------------------------------------------------------------------------------
     // 1) 스키마 — 액션 값 타입 / 바인딩 종류 / 트리거 / 페이즈 / 데드존 모드

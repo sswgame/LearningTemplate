@@ -76,7 +76,8 @@ namespace sw
                 }
                 else
                 {
-                    compressedPayloadBytes.assign( content.begin(), content.end() );
+                    const auto* pContentBytes = reinterpret_cast<const uint8*>( content.data() );
+                    compressedPayloadBytes.assign( pContentBytes, pContentBytes + content.size() );
                 }
 
                 const uint32 compSize      = static_cast<uint32>( compressedPayloadBytes.size() );

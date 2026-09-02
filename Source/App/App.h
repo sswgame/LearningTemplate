@@ -12,10 +12,11 @@
 
 namespace sw
 {
+    struct GlobalVariableInfo;
+    struct NativeWindowEvent;
+
     class IWindow;
     class ModuleHost;
-    struct NativeWindowEvent;
-    struct GlobalVariableInfo;
 
     /** @brief 윈도우 OS 메시지를 엔진에 전달하고 메인 루프를 구동하는 얇은 래퍼 */
     class App

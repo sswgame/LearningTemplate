@@ -2,12 +2,12 @@
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Task/TaskFuture.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 
 namespace sw
 {
+    class TaskArgs;
     /**
      * @enum StreamingPriority
      * @brief 에셋 비동기 스트리밍 우선순위

@@ -11,9 +11,10 @@
 
 namespace sw
 {
+    enum class ShaderTargetFormat : uint8;
+
     class IRHIDevice;
     class LiveShaderManager;
-    enum class ShaderTargetFormat : uint8;
 } // namespace sw
 
 namespace sw

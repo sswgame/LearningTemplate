@@ -5,12 +5,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileUtil.h"
 
 #if defined( SW_PLATFORM_MACOS )
 
 namespace sw
 {
+    struct FileDialogParams;
     // ------------------------------------------------------------------------------
     // 1) MacFileDialog — osascript 동기 호출. 인스턴스는 두지 않음
     // ------------------------------------------------------------------------------

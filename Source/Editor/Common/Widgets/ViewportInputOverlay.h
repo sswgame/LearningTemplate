@@ -4,12 +4,11 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Container/string.h"
 
 namespace sw
 {
-    class InputManager;
     class ActionMap;
+    class InputManager;
 } // namespace sw
 
 struct ImDrawList;

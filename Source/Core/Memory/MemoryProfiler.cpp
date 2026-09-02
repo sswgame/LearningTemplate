@@ -46,7 +46,7 @@ namespace sw
 #endif
 
             template <typename... Args>
-            static void printLeakMessage( const utf8* pFormat, Args&&... args )
+            [[maybe_unused]] static void printLeakMessage( const utf8* pFormat, Args&&... args )
             {
                 utf8 arrBuf[constant::kMaxBuffer1024]{};
                 formatstring( arrBuf, static_cast<uint32>( sizeof( arrBuf ) ), pFormat, std::forward<Args>( args )... );

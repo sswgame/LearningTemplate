@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 
 #include "GameFramework/GameFrameworkExports.h"

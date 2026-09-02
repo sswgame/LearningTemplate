@@ -54,17 +54,20 @@ namespace sw
     {
         ResourceUtil::initialize();
 
-        SplashWindow splash;
-        splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );
-        splash.setProgress( 0.05f );
-
-        // 1. 코어 매니저들은 모두 EngineLoop가 초기화
+        // 1. 코어 매니저들은 모두 EngineLoop가 초기화 (헤드리스 작업 처리 포함)
         if ( _engineLoop.initialize( argc, pArgv ) == false )
         {
             SW_LOG_ERROR( "EngineLoop initialization failed." );
-            splash.dismiss();
             return false;
         }
+
+        // 헤드리스 모드(예: --bake-shaders)인 경우 스플래시 창 및 윈도우 UI 생성을 건너뛰고 정상 완료
+        if ( _engineLoop.isHeadless() )
+            return true;
+
+        SplashWindow splash;
+        splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );
+        splash.setProgress( 0.05f );
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
@@ -168,6 +171,12 @@ namespace sw
 
     void App::shutdown()
     {
+        if ( _engineLoop.isHeadless() )
+        {
+            _engineLoop.shutdown();
+            return;
+        }
+
         // NOTE: ModuleHost를 EngineLoop보다 먼저 종료해야 합니다.
         //       에디터 shutdown이 Game View RT를 해제할 때 RenderThread와 RHI Device를 사용합니다.
         BLOCK( "Game / Editor 인스턴스 정리" )
@@ -193,6 +202,9 @@ namespace sw
 
     void App::run()
     {
+        if ( _engineLoop.isHeadless() )
+            return;
+
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)..." );
 
         CpuTimer frameTimer;

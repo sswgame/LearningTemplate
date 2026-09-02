@@ -12,7 +12,6 @@ namespace sw
 {
     template <typename T>
     class TaskFuture;
-
     template <typename T>
     class TaskPromise;
 

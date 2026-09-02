@@ -4,19 +4,60 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     /**
      * @enum ShaderStage
-     * @brief 셰이더 파이프라인 스테이지 종류
+     * @brief 단일 셰이더 파이프라인 스테이지 종류 (배열 인덱싱 및 컴파일 단위)
      */
+    ENUM()
     enum class ShaderStage : uint8
     {
-        Vertex, ///< 버텍스 셰이더 (VS)
-        Pixel,  ///< 픽셀/프래그먼트 셰이더 (PS/FS)
-        Compute ///< 컴퓨트 셰이더 (CS)
+        Vertex,        ///< 버텍스 셰이더 (VS)
+        Pixel,         ///< 픽셀/프래그먼트 셰이더 (PS/FS)
+        Compute,       ///< 컴퓨트 셰이더 (CS)
+        Geometry,      ///< 지오메트리 셰이더 (GS)
+        Hull,          ///< 헐/테셀레이션 제어 셰이더 (HS/TCS)
+        Domain,        ///< 도메인/테셀레이션 평가 셰이더 (DS/TES)
+        Mesh,          ///< 메시 셰이더 (MS)
+        Amplification, ///< 앰플리피케이션/태스크 셰이더 (AS/TS)
+        Count
     };
+
+    /**
+     * @enum ShaderStageFlag
+     * @brief 리소스 바인딩 가시성(Visibility) 및 파이프라인 스테이지 조합용 비트플래그
+     */
+    ENUM( Flags )
+    enum class ShaderStageFlag : uint32
+    {
+        None          = 0,
+        Vertex        = SW_BIT( 0 ),
+        Pixel         = SW_BIT( 1 ),
+        Compute       = SW_BIT( 2 ),
+        Geometry      = SW_BIT( 3 ),
+        Hull          = SW_BIT( 4 ),
+        Domain        = SW_BIT( 5 ),
+        Mesh          = SW_BIT( 6 ),
+        Amplification = SW_BIT( 7 ),
+
+        AllGraphics = Vertex | Pixel | Geometry | Hull | Domain | Mesh | Amplification,
+        All         = AllGraphics | Compute
+    };
+
+    constexpr ShaderStageFlag toShaderStageFlag( ShaderStage stage ) noexcept
+    {
+        return ( stage < ShaderStage::Count )
+                 ? static_cast<ShaderStageFlag>( SW_BIT( static_cast<uint8>( stage ) ) )
+                 : ShaderStageFlag::None;
+    }
+
+    constexpr bool hasShaderStage( ShaderStageFlag flags, ShaderStageFlag stage ) noexcept
+    {
+        return ( static_cast<uint32>( flags ) & static_cast<uint32>( stage ) ) != 0;
+    }
 
     /**
      * @enum ShaderTargetFormat
