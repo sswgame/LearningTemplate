@@ -10,7 +10,7 @@ namespace sw
 
     void AssetFormatRegistry::ensureBuiltins()
     {
-        if ( _bBuiltins == true )
+        if ( _bBuiltins )
             return;
         _bBuiltins = true;
         // No built-in migrators: current disk schema is generation 0.
