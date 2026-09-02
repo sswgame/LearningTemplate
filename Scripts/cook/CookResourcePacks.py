@@ -229,6 +229,21 @@ def cookAll(projectRoot: Path, outputDir: Path, isShipping: bool = True) -> bool
     return success
 
 
+def resolveDefaultOutputDirInternal(projectRoot: Path) -> Path:
+    """기본 출력 디렉터리를 찾습니다. (build/<preset>/Bin/Packs 우선 탐색)"""
+    buildDir = projectRoot / "build"
+    if buildDir.is_dir():
+        for preset in ["Ninja-Shipping", "Ninja-Release", "Ninja-Debug", "CI-Shipping", "CI-Debug"]:
+            candidateBin = buildDir / preset / "Bin"
+            if candidateBin.is_dir():
+                return candidateBin / "Packs"
+        for child in sorted(buildDir.iterdir()):
+            candidateBin = child / "Bin"
+            if child.is_dir() and candidateBin.is_dir():
+                return candidateBin / "Packs"
+    return buildDir / "Ninja-Shipping" / "Bin" / "Packs"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="SW Engine Resource Pack Cooker")
     parser.add_argument(
@@ -257,7 +272,7 @@ def main() -> int:
     stripNames = not args.include_debug_names
 
     if args.all:
-        outDir = Path(args.output) if args.output else projectRoot / "Bin" / "Packs"
+        outDir = Path(args.output) if args.output else resolveDefaultOutputDirInternal(projectRoot)
         success = cookAll(projectRoot, outDir, isShipping=stripNames)
         return 0 if success else 1
 
@@ -270,10 +285,11 @@ def main() -> int:
         return 0 if success else 1
 
     # 인자가 없을 시 기본 --all 실행
-    outDir = projectRoot / "Bin" / "Packs"
+    outDir = resolveDefaultOutputDirInternal(projectRoot)
     success = cookAll(projectRoot, outDir, isShipping=stripNames)
     return 0 if success else 1
 
 
 if __name__ == "__main__":
+
     sys.exit(main())
