@@ -29,7 +29,8 @@ namespace sw
 	{
 		KeyboardMouse = 0,
 		GamepadXbox,
-		GamepadPlayStation
+		GamepadPlayStation,
+		GamepadSwitch
 	};
 
 	/**

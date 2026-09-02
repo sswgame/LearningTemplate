@@ -3,7 +3,7 @@
 # 이 파일의 스타일 옵션은 도구 > 옵션에서
 # 현재 IDE 서식 구성을 복제하려는 최선의 시도입니다. 그러나 다음
 # 스타일 옵션을 확인해야 합니다:
-# AfterClass, AfterControlStatement, AfterEnum, AfterFunction, AfterNamespace, 
+# AfterClass, AfterControlStatement, AfterEnum, AfterFunction, AfterNamespace,
 # AfterStruct, AfterUnion
 
 BasedOnStyle: LLVM

@@ -71,6 +71,11 @@ namespace sw::editor
 			_actionMap.setInputManager( pInput );
 		}
 
+		// ActionPhase 상태 머신·커맨드 히스토리·버퍼 만료 타이머 등은 update() 안에서만 갱신되므로
+		// 매 프레임 호출해야 액션 테이블/콤보 테스터/버퍼링 데모가 실제로 동작합니다.
+		if ( pInput != nullptr )
+			_actionMap.update( ImGui::GetIO().DeltaTime );
+
 		// 실시간 시계열 샘플링
 		if ( pInput != nullptr && _bPlotPaused == SW_FALSE )
 		{
@@ -342,7 +347,9 @@ namespace sw::editor
 			ImGui::SameLine();
 			if ( ImGui::Button( "Create Action" ) && _newActionName.empty() == false )
 			{
-				_actionMap.bind( _newActionName.c_str(), Key::Unknown, ActionTrigger::Pressed );
+				static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
+				const InputActionValueType			  valueType		  = kArrValueType[MathUtil::clamp( _newActionValueType, 0, 2 )];
+				_actionMap.createAction( _newActionName.c_str(), valueType );
 				_newActionName = "";
 				_bDirty		   = SW_TRUE;
 			}
@@ -845,8 +852,10 @@ namespace sw::editor
 		ImGui::TextDisabled( "Preview how button prompts appear across Xbox, PlayStation, Nintendo Switch, and PC Keyboards." );
 		ImGui::Separator();
 
-		const utf8* arrPlatforms[] = { "Xbox Controller", "PlayStation DualSense", "Nintendo Switch Pro", "PC Keyboard / Mouse" };
+		const utf8*						 arrPlatforms[]		 = { "Xbox Controller", "PlayStation DualSense", "Nintendo Switch Pro", "PC Keyboard / Mouse" };
+		static constexpr InputDeviceType kArrPreviewDevice[] = { InputDeviceType::GamepadXbox, InputDeviceType::GamepadPlayStation, InputDeviceType::GamepadSwitch, InputDeviceType::KeyboardMouse };
 		ImGui::Combo( "Target Platform", &_selectedGlyphPlatform, arrPlatforms, 4 );
+		const InputDeviceType previewDevice = kArrPreviewDevice[MathUtil::clamp( _selectedGlyphPlatform, 0, 3 )];
 		ImGui::Separator();
 
 		const vector<hashed_string>& listAction = _actionMap.getActionNames();
@@ -869,14 +878,15 @@ namespace sw::editor
 				ImGui::TextUnformatted( glyph.c_str() );
 
 				ImGui::TableNextColumn();
+				const string previewGlyph = _actionMap.getGlyphForAction( actionName.view(), previewDevice );
 				if ( _selectedGlyphPlatform == 0 )
-					ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", glyph.c_str() );
+					ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", previewGlyph.c_str() );
 				else if ( _selectedGlyphPlatform == 1 )
-					ImGui::TextColored( ImVec4( 0.3f, 0.6f, 1.0f, 1.0f ), "[ ▲ DualSense ] %s", glyph.c_str() );
+					ImGui::TextColored( ImVec4( 0.3f, 0.6f, 1.0f, 1.0f ), "[ ▲ DualSense ] %s", previewGlyph.c_str() );
 				else if ( _selectedGlyphPlatform == 2 )
-					ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "[ X Switch ] %s", glyph.c_str() );
+					ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "[ X Switch ] %s", previewGlyph.c_str() );
 				else
-					ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", glyph.c_str() );
+					ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", previewGlyph.c_str() );
 
 				ImGui::TableNextColumn();
 				ImGui::TextDisabled( "%s", arrPlatforms[_selectedGlyphPlatform] );

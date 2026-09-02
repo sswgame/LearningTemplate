@@ -23,6 +23,7 @@
 namespace sw
 {
 	class InputManager;
+	enum class InputDeviceType : uint8;
 
 	// ------------------------------------------------------------------------------
 	// 1) 스키마 — 액션 값 타입 / 바인딩 종류 / 트리거 / 페이즈 / 데드존 모드
@@ -221,6 +222,8 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 3) 통합 바인딩 API — InputSlot / 키 / 패드 / 마우스 / 1D 합성 / 2D 합성 / 스틱 / 조합키
 		// ------------------------------------------------------------------------------
+		/** @brief 바인딩 없이 액션 이름과 값 타입만 등록합니다 (에디터에서 이름만 먼저 만들고 나중에 바인딩을 추가할 때 사용). */
+		void createAction( string_view action, InputActionValueType valueType = InputActionValueType::Boolean );
 		void bind( string_view action, InputSlot slot, ActionTrigger trigger = ActionTrigger::Pressed, string_view layer = {} );
 		void bind( string_view action, Key key, ActionTrigger trigger = ActionTrigger::Pressed, string_view layer = {} );
 		void bind( string_view action, GamepadButton button, ActionTrigger trigger = ActionTrigger::Pressed, string_view layer = {} );
@@ -330,6 +333,9 @@ namespace sw
 		/** @brief 현재 활성 입력 장치에 맞는 UI 안내 글리프 문자열(예: "[ E ]" 또는 "[ Ⓨ ]")을 반환합니다. */
 		string getGlyphForAction( string_view action ) const;
 		string getGlyphForAction( const hashed_string& action ) const;
+		/** @brief 실제 활성 장치 대신 지정한 장치 타입 기준으로 글리프를 미리보기합니다 (에디터 프리뷰어용). */
+		string getGlyphForAction( string_view action, InputDeviceType previewDevice ) const;
+		string getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const;
 
 		/** @brief 런타임에 액션의 키 바인딩을 변경합니다. */
 		bool rebindKey( string_view action, Key newKey, uint32 bindIndex = 0 );
@@ -544,6 +550,7 @@ namespace sw
 
 		const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
+		string	  getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const;
 		bool	  evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
 		bool	  evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
 		bool	  isBindingLayerActive( const ActionBinding& binding ) const;

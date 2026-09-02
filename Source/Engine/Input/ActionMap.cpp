@@ -108,6 +108,18 @@ namespace sw
 							if ( btn == GamepadButton::Y )
 								return "Triangle";
 						}
+						else if ( device == InputDeviceType::GamepadSwitch )
+						{
+							// 닌텐도 배치: Xbox 기준 A/B, X/Y 위치가 서로 뒤바뀝니다.
+							if ( btn == GamepadButton::A )
+								return "B";
+							if ( btn == GamepadButton::B )
+								return "A";
+							if ( btn == GamepadButton::X )
+								return "Y";
+							if ( btn == GamepadButton::Y )
+								return "X";
+						}
 						const utf8* pName = GamepadButtons::toName( btn );
 						return pName != nullptr ? pName : "?";
 					}
@@ -464,6 +476,13 @@ namespace sw
 
 		bind( "Pause", Key::Escape, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
 		bind( "Pause", GamepadButton::Start, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
+	}
+
+	void ActionMap::createAction( string_view action, InputActionValueType valueType )
+	{
+		if ( action.empty() )
+			return;
+		getOrCreateAction( hashed_string( action ), valueType );
 	}
 
 	void ActionMap::bind( string_view action, InputSlot slot, ActionTrigger trigger, string_view layer )
@@ -1062,7 +1081,22 @@ namespace sw
 	string ActionMap::getGlyphForAction( const hashed_string& action ) const
 	{
 		const InputDeviceType device = _pInput != nullptr ? _pInput->getActiveDeviceType() : InputDeviceType::KeyboardMouse;
-		const ActionEntry*	  pEntry = findAction( action );
+		return getGlyphForActionInternal( action, device );
+	}
+
+	string ActionMap::getGlyphForAction( string_view action, InputDeviceType previewDevice ) const
+	{
+		return getGlyphForAction( hashed_string( action ), previewDevice );
+	}
+
+	string ActionMap::getGlyphForAction( const hashed_string& action, InputDeviceType previewDevice ) const
+	{
+		return getGlyphForActionInternal( action, previewDevice );
+	}
+
+	string ActionMap::getGlyphForActionInternal( const hashed_string& action, InputDeviceType device ) const
+	{
+		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr || pEntry->_listBinding.empty() )
 			return "[ ? ]";
 
@@ -1797,7 +1831,9 @@ namespace sw
 			case BindingKind::SingleSlot:
 			{
 				IInputDevice* pDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-				if ( pDevice != nullptr && pDevice->isControlDown( binding._arrSlot[0]._controlIndex ) )
+				// isControlDown()만 보면 같은 프레임 안에서 Down+Up이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력)을
+				// 놓칩니다. wasControlPressed()를 함께 확인해 그 프레임엔 "눌렸었다"로 취급합니다.
+				if ( pDevice != nullptr && ( pDevice->isControlDown( binding._arrSlot[0]._controlIndex ) || pDevice->wasControlPressed( binding._arrSlot[0]._controlIndex ) ) )
 				{
 					if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
 					{
