@@ -141,38 +141,38 @@ namespace sw
 
 		static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-		int32				   _mouseX;
-		int32				   _mouseY;
-		int32				   _prevMouseX;
-		int32				   _prevMouseY;
-		int32				   _deltaX;
-		int32				   _deltaY;
-		float32				   _rawDeltaX;
-		float32				   _rawDeltaY;
-		float32				   _smoothDeltaX;
-		float32				   _smoothDeltaY;
-		float32				   _smoothingFactor;
-		float32				   _accelerationPower;
-		float32				   _accumulatedRawDx;
-		float32				   _accumulatedRawDy;
-		float32				   _mouseWheelDelta;
-		float32				   _mouseWheelAccum;
-		float32				   _mouseWheelHorizontalDelta;
-		float32				   _mouseWheelHorizontalAccum;
-		int32				   _clipSubRectLeft;
+		int32				   _mouseX;					   /**< 현재 프레임의 마우스 화면 좌표 X (윈도우 클라이언트 기준). */
+		int32				   _mouseY;					   /**< 현재 프레임의 마우스 화면 좌표 Y. */
+		int32				   _prevMouseX;				   /**< 직전 프레임의 마우스 좌표 X. getDelta() 계산에 사용. */
+		int32				   _prevMouseY;				   /**< 직전 프레임의 마우스 좌표 Y. */
+		int32				   _deltaX;					   /**< 이번 프레임의 좌표 이동량(_mouseX - _prevMouseX). 화면 경계에 막히면 실제 이동보다 작게 나올 수 있음. */
+		int32				   _deltaY;					   /**< 이번 프레임의 좌표 이동량 Y. */
+		float32				   _rawDeltaX;				   /**< OS 원시(Raw Input) 델타 누적값 X. 화면 경계 클램핑 없이 실제 이동량을 반영 (FPS 카메라 룩에 적합). */
+		float32				   _rawDeltaY;				   /**< OS 원시 델타 누적값 Y. */
+		float32				   _smoothDeltaX;			   /**< 감도/가속/스무딩(EMA)이 적용된 최종 델타 X. getSmoothDelta()가 반환하는 값. */
+		float32				   _smoothDeltaY;			   /**< 스무딩 적용된 최종 델타 Y. */
+		float32				   _smoothingFactor;		   /**< EMA 스무딩 계수 [0.0, 0.99]. 0이면 스무딩 없이 원시 델타를 그대로 사용. */
+		float32				   _accelerationPower;		   /**< 마우스 가속 지수. 1.0이면 가속 없음, 클수록 빠르게 움직일 때 델타가 더 커짐. */
+		float32				   _accumulatedRawDx;		   /**< 현재 미사용(항상 0으로 리셋만 됨) — 프레임 간 원시 델타 누적용으로 남겨둔 예비 필드. */
+		float32				   _accumulatedRawDy;		   /**< 현재 미사용. _accumulatedRawDx와 동일. */
+		float32				   _mouseWheelDelta;		   /**< 이번 프레임 수직 휠 회전량. getMouseWheel()이 반환하는 값. */
+		float32				   _mouseWheelAccum;		   /**< _mouseWheelDelta와 동일한 값을 갖는 중복 필드(현재 별도로 조회되지 않음). */
+		float32				   _mouseWheelHorizontalDelta; /**< 이번 프레임 수평 휠(틸트) 회전량. */
+		float32				   _mouseWheelHorizontalAccum; /**< _mouseWheelHorizontalDelta와 동일한 값을 갖는 중복 필드(현재 별도로 조회되지 않음). */
+		int32				   _clipSubRectLeft;		   /**< 마우스 클리핑 서브 영역(클라이언트 좌표 기준, setClipSubRect로 설정). */
 		int32				   _clipSubRectTop;
 		int32				   _clipSubRectRight;
 		int32				   _clipSubRectBottom;
-		MouseLockMode		   _lockMode;
-		uint8				   _buttonMask;
-		uint8				   _pressedMask;
-		uint8				   _releasedMask;
+		MouseLockMode		   _lockMode;	  /**< 커서 잠금 모드 (None/ConfinedToWindow/LockedInCenter). InputManager::applyMouseLockMode()가 실제 OS ClipCursor를 적용. */
+		uint8				   _buttonMask;	  /**< 이번 프레임의 버튼 눌림 비트마스크 (MouseButton 인덱스로 비트 조회). */
+		uint8				   _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크 (엣지). onFrameBegin/onFrameEnd에서 초기화. */
+		uint8				   _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크 (엣지). */
 		uint8				   _bCursorVisible	  : 1;
-		uint8				   _bPointerInside	  : 1;
-		uint8				   _bPointerEntered	  : 1;
-		uint8				   _bPointerLeft	  : 1;
-		uint8				   _bAnyButtonPressed : 1;
-		uint8				   _bHasSubRect		  : 1;
+		uint8				   _bPointerInside	  : 1; /**< 마우스 포인터가 현재 창 클라이언트 영역 안에 있는지. */
+		uint8				   _bPointerEntered	  : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지(엣지). */
+		uint8				   _bPointerLeft	  : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지(엣지). */
+		uint8				   _bAnyButtonPressed : 1; /**< 이번 프레임에 어떤 버튼이든 새로 눌렸는지. wasAnyButtonPressed()가 참조. */
+		uint8				   _bHasSubRect		  : 1; /**< _clipSubRectXxx로 지정한 서브 영역 클리핑이 활성화되어 있는지. */
 		[[maybe_unused]] uint8 _reserved		  : 2;
 	};
 } // namespace sw

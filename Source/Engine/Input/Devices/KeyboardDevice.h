@@ -61,11 +61,11 @@ namespace sw
 		static constexpr size_t kKeyCount  = static_cast<size_t>( Key::Count );
 		static constexpr size_t kWordCount = ( kKeyCount + 63 ) / 64;
 
-		uint64				   _arrKeyMask[kWordCount];
-		uint64				   _arrPressedMask[kWordCount];
-		uint64				   _arrReleasedMask[kWordCount];
+		uint64				   _arrKeyMask[kWordCount];		 /**< 이번 프레임의 키 눌림 비트마스크 (Key 인덱스 / 64 = word, % 64 = bit). */
+		uint64				   _arrPressedMask[kWordCount];	 /**< 이번 프레임에 새로 눌린 키 비트마스크 (엣지). onFrameBegin/onFrameEnd에서 초기화. */
+		uint64				   _arrReleasedMask[kWordCount]; /**< 이번 프레임에 새로 떼어진 키 비트마스크 (엣지). */
 		TextInputDelegate	   _onTextInput;
-		uint8				   _bAnyKeyPressed : 1;
+		uint8				   _bAnyKeyPressed : 1; /**< 이번 프레임에 어떤 키든 새로 눌렸는지. wasAnyKeyPressed()가 참조. */
 		[[maybe_unused]] uint8 _reserved	   : 7;
 	};
 } // namespace sw

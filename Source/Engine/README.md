@@ -24,6 +24,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Scene/**: Scene · SceneManager · 2D/3D 공간 분할 가속 구조체 ([Scene/README.md](Scene/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
+- **Input/**: InputManager · ActionMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
 - **Resource/**: AssetDatabase · ResourceManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
 - **Serialization/**: 직렬화 (BinarySerializer · JsonSerializer · XmlSerializer · Archive)
 - **Utility/**: Module (LiveReloadManager · ReloadFileManager), Format (KeyValueFile), Json, Xml, CommandStack, Debug

@@ -208,15 +208,15 @@ namespace sw
 		void dispatchRawEvent( const RawInputEvent& rawEvt );
 
 	private:
-		ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;
-		vector<unique_ptr<IInputDevice>>	 _listDevice;
-		KeyboardDevice*						 _pKeyboard;
-		MouseDevice*						 _pMouse;
-		GamepadDevice*						 _pGamepad;
-		unique_ptr<ActionMap>				 _pActionMap;
-		vector<RawInputEvent>				 _listDrainedEvent;
-		InputHistoryBuffer					 _inputHistory;
-		InputDeviceType						 _activeDeviceType;
+		ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;	/**< OS/폴러 스레드가 postRawEvent()로 넣는 락프리 원시 이벤트 큐. beginFrame()이 매 프레임 드레인. */
+		vector<unique_ptr<IInputDevice>>	 _listDevice;		/**< 등록된 모든 장치(키보드/마우스/게임패드 등)의 소유 목록. */
+		KeyboardDevice*						 _pKeyboard;		/**< 편의 API용 캐시 포인터. 실제 소유는 _listDevice가 함. */
+		MouseDevice*						 _pMouse;			/**< 편의 API용 캐시 포인터. */
+		GamepadDevice*						 _pGamepad;			/**< 0번 게임패드 편의 API용 캐시 포인터 (1~3번은 getGamepad(index)로 조회). */
+		unique_ptr<ActionMap>				 _pActionMap;		/**< 이 InputManager에 연결된 기본 ActionMap 인스턴스. */
+		vector<RawInputEvent>				 _listDrainedEvent; /**< beginFrame()에서 큐를 드레인해 담아두는 임시 버퍼 (매 프레임 재사용). */
+		InputHistoryBuffer					 _inputHistory;		/**< 롤백/리플레이용 프레임별 입력 스냅샷 링버퍼. */
+		InputDeviceType						 _activeDeviceType; /**< 마지막으로 조작이 감지된 장치 종류 (UI 글리프 자동 전환용). */
 		ActiveDeviceChangedDelegate			 _onActiveDeviceChanged;
 		GamepadConnectionDelegate			 _onGamepadConnectionChanged;
 		TextInputDelegate					 _onTextInput;

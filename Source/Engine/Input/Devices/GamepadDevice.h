@@ -130,22 +130,22 @@ namespace sw
 
 	protected:
 		GamepadConnectionDelegate _onConnectionChanged;
-		uint32					  _deviceIndex;
-		uint32					  _buttonMask;
-		uint32					  _prevButtonMask;
-		float32					  _leftStickX;
-		float32					  _leftStickY;
-		float32					  _rightStickX;
-		float32					  _rightStickY;
-		float32					  _leftTrigger;
-		float32					  _rightTrigger;
-		float32					  _prevLeftTrigger;
-		float32					  _prevRightTrigger;
-		float32					  _leftMotorSpeed;
-		float32					  _rightMotorSpeed;
-		float32					  _vibrationDurationTimer;
-		float32					  _triggerDeadzone;
-		uint8					  _bTimedVibrationActive : 1;
+		uint32					  _deviceIndex;				  /**< 컨트롤러 슬롯 인덱스 (로컬 멀티플레이어 0~3번 패드). */
+		uint32					  _buttonMask;				  /**< 이번 프레임의 디지털 버튼 눌림 비트마스크 (GamepadButton 인덱스로 비트 조회). */
+		uint32					  _prevButtonMask;			  /**< 직전 프레임의 버튼 비트마스크. wasButtonPressed/Released의 엣지 판정에 사용. */
+		float32					  _leftStickX;				  /**< 왼쪽 스틱 X축 [-1.0, 1.0] (데드존 미적용 원시값). */
+		float32					  _leftStickY;				  /**< 왼쪽 스틱 Y축 [-1.0, 1.0]. */
+		float32					  _rightStickX;				  /**< 오른쪽 스틱 X축 [-1.0, 1.0]. */
+		float32					  _rightStickY;				  /**< 오른쪽 스틱 Y축 [-1.0, 1.0]. */
+		float32					  _leftTrigger;				  /**< 왼쪽 트리거 압력 [0.0, 1.0] (_triggerDeadzone 필터 적용됨). */
+		float32					  _rightTrigger;			  /**< 오른쪽 트리거 압력 [0.0, 1.0]. */
+		float32					  _prevLeftTrigger;			  /**< 직전 프레임의 왼쪽 트리거 값. wasControlPressed/Released 임계값(0.5) 판정에 사용. */
+		float32					  _prevRightTrigger;		  /**< 직전 프레임의 오른쪽 트리거 값. */
+		float32					  _leftMotorSpeed;			  /**< 마지막으로 설정한 왼쪽(저주파) 진동 모터 세기 [0.0, 1.0]. */
+		float32					  _rightMotorSpeed;			  /**< 마지막으로 설정한 오른쪽(고주파) 진동 모터 세기 [0.0, 1.0]. */
+		float32					  _vibrationDurationTimer;	  /**< playVibration()으로 시작한 타이머 진동의 잔여 시간(초). 0 이하가 되면 자동 정지. */
+		float32					  _triggerDeadzone;			  /**< 트리거 축 노이즈 필터용 데드존. 이 값 미만이면 0으로 취급 (디지털 눌림 판정용 0.5 임계값과는 별개). */
+		uint8					  _bTimedVibrationActive : 1; /**< playVibration()으로 시작된 타이머 진동이 진행 중인지. */
 		[[maybe_unused]] uint8	  _reserved				 : 7;
 	};
 } // namespace sw
