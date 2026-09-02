@@ -3,32 +3,55 @@
 #include "Engine/Input/InputManager.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
+#include "Engine/Window/IWindow.h"
 
 #if defined( _WIN32 )
 	#include "Engine/Input/Windows/GamepadXInput.h"
+	#include "Core/Common/PlatformOsHeaders.h"
 #endif
 
 namespace sw
 {
 	SW_LOG_CALLER( "InputManager" );
 
+	namespace
+	{
+#if defined( _WIN32 )
+		struct AccessibilityInternal
+		{
+			static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
+			static inline TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
+			static inline FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
+			static inline bool		 s_bDisabled{ false };
+		};
+#endif
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	InputManager::InputManager()
-		: _lockFreeQueue{}
+		: _queueRawEvent{}
 		, _listDevice{}
 		, _pKeyboard{ nullptr }
 		, _pMouse{ nullptr }
 		, _pGamepad{ nullptr }
 		, _pActionMap{ nullptr }
 		, _listDrainedEvent{}
+		, _inputHistory{}
 		, _activeDeviceType{ InputDeviceType::KeyboardMouse }
 		, _onActiveDeviceChanged{}
+		, _onGamepadConnectionChanged{}
 		, _onTextInput{}
+		, _onTextComposition{}
 		, _bInitialized{ SW_FALSE }
+		, _bInputMuted{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -44,8 +67,9 @@ namespace sw
 			return true;
 
 		_listDevice.clear();
-		_lockFreeQueue.clear();
+		_queueRawEvent.clear();
 		_listDrainedEvent.clear();
+		_inputHistory.clear();
 
 		// 1) 표준 키보드 장치 등록
 		auto pKeyboard = make_unique<KeyboardDevice>();
@@ -57,11 +81,20 @@ namespace sw
 		_pMouse		= pMouse.get();
 		registerDevice( std::move( pMouse ) );
 
-		// 3) 표준 게임패드 장치 등록 (플랫폼별)
+		// 3) 표준 게임패드 장치 등록 (최대 4개 컨트롤러)
 #if defined( _WIN32 )
-		auto pGamepad = make_unique<GamepadXInput>( 0 );
-		_pGamepad	  = pGamepad.get();
-		registerDevice( std::move( pGamepad ) );
+		for ( uint32 padIdx = 0; padIdx < 4; ++padIdx )
+		{
+			auto pGamepad = make_unique<GamepadXInput>( padIdx );
+			if ( padIdx == 0 )
+				_pGamepad = pGamepad.get();
+			pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
+			{
+				if ( _onGamepadConnectionChanged.isBound() )
+					_onGamepadConnectionChanged( index, bConnected );
+			} );
+			registerDevice( std::move( pGamepad ) );
+		}
 #endif
 
 		// 4) 통합 ActionMap 인스턴스 생성 및 연결
@@ -78,6 +111,9 @@ namespace sw
 		if ( _bInitialized == SW_FALSE )
 			return;
 
+		releaseMouseLockMode();
+		restoreWindowsAccessibilityShortcuts();
+
 		for ( auto& pDevice : _listDevice )
 		{
 			if ( pDevice != nullptr )
@@ -89,8 +125,9 @@ namespace sw
 		_pMouse		= nullptr;
 		_pGamepad	= nullptr;
 		_pActionMap = nullptr;
-		_lockFreeQueue.clear();
+		_queueRawEvent.clear();
 		_listDrainedEvent.clear();
+		_inputHistory.clear();
 
 		_bInitialized = SW_FALSE;
 		SW_LOG_INFO( "InputManager shut down." );
@@ -98,12 +135,14 @@ namespace sw
 
 	bool InputManager::postRawEvent( const RawInputEvent& rawEvent )
 	{
-		return _lockFreeQueue.push( rawEvent );
+		if ( _bInputMuted == SW_TRUE )
+			return false;
+		return _queueRawEvent.push( rawEvent );
 	}
 
 	uint32 InputManager::drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount )
 	{
-		return _lockFreeQueue.drain( pOutBuffer, maxCount );
+		return _queueRawEvent.drain( pOutBuffer, maxCount );
 	}
 
 	void InputManager::registerDevice( unique_ptr<IInputDevice> pDevice )
@@ -161,17 +200,7 @@ namespace sw
 
 	void InputManager::beginFrame( float32 deltaSeconds )
 	{
-		// 1) 락프리 큐에서 비동기 인입된 원시 이벤트들을 일괄 드레인
-		_listDrainedEvent.clear();
-		_lockFreeQueue.drain( _listDrainedEvent );
-
-		// 2) 드레인된 원시 이벤트를 각 디바이스로 디스패치
-		for ( const RawInputEvent& rawEvt : _listDrainedEvent )
-		{
-			dispatchRawEvent( rawEvt );
-		}
-
-		// 3) 등록된 모든 장치에 대해 프레임 시작 및 폴링 호출
+		// 1) 등록된 모든 장치에 대해 프레임 시작 (이전 프레임 엣지 초기화) 및 폴링 호출
 		for ( auto& pDev : _listDevice )
 		{
 			if ( pDev != nullptr )
@@ -181,51 +210,42 @@ namespace sw
 			}
 		}
 
-		// 4) 활성 장치 자동 감지
+		// 2) 락프리 큐에서 비동기 인입된 이번 프레임 원시 이벤트들을 일괄 드레인
+		_listDrainedEvent.clear();
+		_queueRawEvent.drain( _listDrainedEvent );
+
+		// 3) 드레인된 원시 이벤트를 각 디바이스로 디스패치 (새 프레임 엣지 플래그 설정)
+		for ( const RawInputEvent& rawEvt : _listDrainedEvent )
+		{
+			dispatchRawEvent( rawEvt );
+		}
+
+		// 4) 활성 장치 자동 감지 (O(1) 플래그 쿼리)
 		if ( _pGamepad != nullptr && _pGamepad->isConnected() )
 		{
 			float32 sx{ 0.0f };
 			float32 sy{ 0.0f };
 			_pGamepad->getLeftStick( sx, sy );
 			const bool bStickActive = ( sx * sx + sy * sy ) > 0.04f;
-			if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f )
+			if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
 			{
 				setActiveDeviceType( InputDeviceType::GamepadXbox );
 			}
-			else
-			{
-				for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( GamepadButton::Count ); ++btnIdx )
-				{
-					if ( _pGamepad->wasButtonPressed( static_cast<GamepadButton>( btnIdx ) ) )
-					{
-						setActiveDeviceType( InputDeviceType::GamepadXbox );
-						break;
-					}
-				}
-			}
 		}
 
-		if ( _pKeyboard != nullptr )
+		if ( _pKeyboard != nullptr && _pKeyboard->wasAnyKeyPressed() )
 		{
-			for ( size_t keyIdx = 1; keyIdx < static_cast<size_t>( Key::Count ); ++keyIdx )
-			{
-				if ( _pKeyboard->wasKeyPressed( static_cast<Key>( keyIdx ) ) )
-				{
-					setActiveDeviceType( InputDeviceType::KeyboardMouse );
-					break;
-				}
-			}
+			setActiveDeviceType( InputDeviceType::KeyboardMouse );
 		}
 
 		if ( _pMouse != nullptr )
 		{
-			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( MouseButton::Count ); ++btnIdx )
+			int32 mdx{ 0 };
+			int32 mdy{ 0 };
+			_pMouse->getDelta( mdx, mdy );
+			if ( _pMouse->wasAnyButtonPressed() || mdx != 0 || mdy != 0 || _pMouse->getMouseWheel() != 0.0f )
 			{
-				if ( _pMouse->wasButtonPressed( static_cast<MouseButton>( btnIdx ) ) )
-				{
-					setActiveDeviceType( InputDeviceType::KeyboardMouse );
-					break;
-				}
+				setActiveDeviceType( InputDeviceType::KeyboardMouse );
 			}
 		}
 	}
@@ -271,9 +291,23 @@ namespace sw
 				}
 				break;
 
+			case RawInputEventType::MouseDoubleClick:
+				if ( _pMouse != nullptr )
+				{
+					_pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
+					_pMouse->setButtonDown( rawEvt._payload._mouseData._button, true );
+				}
+				setActiveDeviceType( InputDeviceType::KeyboardMouse );
+				break;
+
 			case RawInputEventType::MouseWheel:
 				if ( _pMouse != nullptr )
 					_pMouse->addWheelDelta( rawEvt._payload._mouseData._wheelDelta );
+				break;
+
+			case RawInputEventType::MouseWheelHorizontal:
+				if ( _pMouse != nullptr )
+					_pMouse->addHorizontalWheelDelta( rawEvt._payload._mouseData._wheelDelta );
 				break;
 
 			case RawInputEventType::GamepadButtonDown:
@@ -301,11 +335,21 @@ namespace sw
 				break;
 			}
 
+			case RawInputEventType::GamepadConnectionChanged:
+				if ( _onGamepadConnectionChanged.isBound() )
+					_onGamepadConnectionChanged( rawEvt._deviceIndex, rawEvt._payload._gamepadData._bConnected == SW_TRUE );
+				break;
+
 			case RawInputEventType::TextInput:
 				onTextInput( rawEvt._payload._textData._arrUtf8 );
 				break;
 
+			case RawInputEventType::TextComposition:
+				onTextComposition( rawEvt._payload._textData._arrUtf8 );
+				break;
+
 			case RawInputEventType::FocusGained:
+				onWindowFocusGained();
 				break;
 
 			case RawInputEventType::FocusLost:
@@ -327,8 +371,14 @@ namespace sw
 		}
 	}
 
+	void InputManager::onWindowFocusGained()
+	{
+		applyMouseLockMode();
+	}
+
 	void InputManager::onWindowFocusLost()
 	{
+		releaseMouseLockMode();
 		for ( auto& pDev : _listDevice )
 		{
 			if ( pDev != nullptr )
@@ -348,32 +398,14 @@ namespace sw
 
 	bool InputManager::wasAnyInputPressed() const
 	{
-		if ( _pKeyboard != nullptr )
-		{
-			for ( size_t keyIdx = 1; keyIdx < static_cast<size_t>( Key::Count ); ++keyIdx )
-			{
-				if ( _pKeyboard->wasKeyPressed( static_cast<Key>( keyIdx ) ) )
-					return true;
-			}
-		}
+		if ( _pKeyboard != nullptr && _pKeyboard->wasAnyKeyPressed() )
+			return true;
 
-		if ( _pMouse != nullptr )
-		{
-			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( MouseButton::Count ); ++btnIdx )
-			{
-				if ( _pMouse->wasButtonPressed( static_cast<MouseButton>( btnIdx ) ) )
-					return true;
-			}
-		}
+		if ( _pMouse != nullptr && _pMouse->wasAnyButtonPressed() )
+			return true;
 
-		if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-		{
-			for ( size_t btnIdx = 0; btnIdx < static_cast<size_t>( GamepadButton::Count ); ++btnIdx )
-			{
-				if ( _pGamepad->wasButtonPressed( static_cast<GamepadButton>( btnIdx ) ) )
-					return true;
-			}
-		}
+		if ( _pGamepad != nullptr && _pGamepad->isConnected() && _pGamepad->wasAnyButtonPressed() )
+			return true;
 
 		return false;
 	}
@@ -384,10 +416,34 @@ namespace sw
 			_onTextInput( text );
 	}
 
+	void InputManager::onTextComposition( string_view text )
+	{
+		if ( text.empty() == false && _onTextComposition.isBound() )
+			_onTextComposition( text );
+	}
+
 	void InputManager::getMousePosition( int32& outX, int32& outY ) const
 	{
 		outX = _pMouse != nullptr ? _pMouse->getPositionX() : 0;
 		outY = _pMouse != nullptr ? _pMouse->getPositionY() : 0;
+	}
+
+	void InputManager::getMousePositionNormalized( float32& outNormX, float32& outNormY ) const
+	{
+		outNormX = 0.0f;
+		outNormY = 0.0f;
+
+		IWindow* pWindow = IWindow::getActiveWindow();
+		if ( pWindow != nullptr && _pMouse != nullptr )
+		{
+			const uint32 width	= pWindow->getWidth();
+			const uint32 height = pWindow->getHeight();
+			if ( width > 0 && height > 0 )
+			{
+				outNormX = MathUtil::clamp( static_cast<float32>( _pMouse->getPositionX() ) / static_cast<float32>( width ), 0.0f, 1.0f );
+				outNormY = MathUtil::clamp( static_cast<float32>( _pMouse->getPositionY() ) / static_cast<float32>( height ), 0.0f, 1.0f );
+			}
+		}
 	}
 
 	void InputManager::getMouseDelta( int32& outDx, int32& outDy ) const
@@ -412,6 +468,94 @@ namespace sw
 		}
 	}
 
+	void InputManager::setMouseLockMode( MouseLockMode mode )
+	{
+		if ( _pMouse != nullptr )
+			_pMouse->setLockMode( mode );
+		applyMouseLockMode();
+	}
+
+	void InputManager::setCursorVisible( bool bVisible )
+	{
+		if ( _pMouse != nullptr )
+			_pMouse->setCursorVisible( bVisible );
+#if defined( _WIN32 )
+		ShowCursor( bVisible ? TRUE : FALSE );
+#endif
+	}
+
+	void InputManager::setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom )
+	{
+		if ( _pMouse != nullptr )
+			_pMouse->setClipSubRect( left, top, right, bottom );
+		applyMouseLockMode();
+	}
+
+	void InputManager::clearMouseClipSubRect()
+	{
+		if ( _pMouse != nullptr )
+			_pMouse->clearClipSubRect();
+		applyMouseLockMode();
+	}
+
+	void InputManager::applyMouseLockMode()
+	{
+#if defined( _WIN32 )
+		if ( _pMouse == nullptr )
+			return;
+
+		const MouseLockMode lockMode = _pMouse->getLockMode();
+		if ( lockMode == MouseLockMode::None )
+		{
+			ClipCursor( nullptr );
+			return;
+		}
+
+		IWindow* pWindow = IWindow::getActiveWindow();
+		if ( pWindow == nullptr )
+			return;
+
+		HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+		if ( pHwnd == nullptr )
+			return;
+
+		RECT clientRect{};
+		GetClientRect( pHwnd, &clientRect );
+		POINT ptTopLeft{ clientRect.left, clientRect.top };
+		POINT ptBottomRight{ clientRect.right, clientRect.bottom };
+		ClientToScreen( pHwnd, &ptTopLeft );
+		ClientToScreen( pHwnd, &ptBottomRight );
+
+		RECT clipRect{ ptTopLeft.x, ptTopLeft.y, ptBottomRight.x, ptBottomRight.y };
+
+		if ( _pMouse->hasClipSubRect() )
+		{
+			int32 subL{ 0 }, subT{ 0 }, subR{ 0 }, subB{ 0 };
+			_pMouse->getClipSubRect( subL, subT, subR, subB );
+			clipRect.left	= ptTopLeft.x + subL;
+			clipRect.top	= ptTopLeft.y + subT;
+			clipRect.right	= ptTopLeft.x + subR;
+			clipRect.bottom = ptTopLeft.y + subB;
+		}
+
+		ClipCursor( &clipRect );
+
+		if ( lockMode == MouseLockMode::LockedInCenter )
+		{
+			const int32 centerX = ( clipRect.left + clipRect.right ) / 2;
+			const int32 centerY = ( clipRect.top + clipRect.bottom ) / 2;
+			SetCursorPos( centerX, centerY );
+		}
+#endif
+	}
+
+	void InputManager::releaseMouseLockMode()
+	{
+#if defined( _WIN32 )
+		ClipCursor( nullptr );
+#endif
+	}
+
 	float32 InputManager::getGamepadLeftTrigger( uint32 deviceIndex ) const
 	{
 		GamepadDevice* pPad = getGamepad( deviceIndex );
@@ -428,5 +572,124 @@ namespace sw
 	{
 		GamepadDevice* pPad = getGamepad( deviceIndex );
 		return pPad != nullptr ? pPad->setVibration( leftMotor, rightMotor ) : false;
+	}
+
+	bool InputManager::playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex )
+	{
+		GamepadDevice* pPad = getGamepad( deviceIndex );
+		return pPad != nullptr ? pPad->playVibration( leftMotor, rightMotor, durationSeconds ) : false;
+	}
+
+	void InputManager::injectSnapshot( const InputSnapshot& snapshot )
+	{
+		_inputHistory.recordSnapshot( snapshot );
+	}
+
+	void InputManager::disableWindowsAccessibilityShortcuts()
+	{
+#if defined( _WIN32 )
+		if ( AccessibilityInternal::s_bDisabled == false )
+		{
+			SystemParametersInfo( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+			SystemParametersInfo( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+			SystemParametersInfo( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+
+			STICKYKEYS sk = AccessibilityInternal::s_prevStickyKeys;
+			sk.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+			SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &sk, 0 );
+
+			TOGGLEKEYS tk = AccessibilityInternal::s_prevToggleKeys;
+			tk.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+			SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &tk, 0 );
+
+			FILTERKEYS fk = AccessibilityInternal::s_prevFilterKeys;
+			fk.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+			SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &fk, 0 );
+
+			AccessibilityInternal::s_bDisabled = true;
+		}
+#endif
+	}
+
+	void InputManager::restoreWindowsAccessibilityShortcuts()
+	{
+#if defined( _WIN32 )
+		if ( AccessibilityInternal::s_bDisabled == true )
+		{
+			SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+			SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+			SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+			AccessibilityInternal::s_bDisabled = false;
+		}
+#endif
+	}
+
+	void InputManager::recordSnapshot( uint32 tickNumber )
+	{
+		InputSnapshot snapshot{};
+		snapshot._tickNumber = tickNumber;
+
+		// 1) 2D 축 벡터 (Move & Look)
+		if ( _pActionMap != nullptr && _pActionMap->hasAction( "Move" ) )
+		{
+			snapshot._moveVector = _pActionMap->getVector2D( "Move" );
+		}
+		else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+		{
+			_pGamepad->getLeftStick( snapshot._moveVector._x, snapshot._moveVector._y );
+		}
+
+		if ( _pActionMap != nullptr && _pActionMap->hasAction( "Look" ) )
+		{
+			snapshot._lookVector = _pActionMap->getVector2D( "Look" );
+		}
+		else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+		{
+			_pGamepad->getRightStick( snapshot._lookVector._x, snapshot._lookVector._y );
+		}
+
+		// 2) 아날로그 트리거
+		snapshot._leftTrigger  = getGamepadLeftTrigger();
+		snapshot._rightTrigger = getGamepadRightTrigger();
+
+		// 3) 64비트 버튼/액션 비트마스크
+		uint64 mask = 0;
+		if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+		{
+			for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( GamepadButton::Count ); ++btnIndex )
+			{
+				if ( _pGamepad->isButtonDown( static_cast<GamepadButton>( btnIndex ) ) )
+				{
+					mask |= ( 1ULL << btnIndex );
+				}
+			}
+		}
+
+		if ( _pMouse != nullptr )
+		{
+			for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( MouseButton::Count ); ++btnIndex )
+			{
+				if ( _pMouse->isButtonDown( static_cast<MouseButton>( btnIndex ) ) )
+				{
+					mask |= ( 1ULL << ( 16 + btnIndex ) );
+				}
+			}
+		}
+
+		if ( _pActionMap != nullptr )
+		{
+			const vector<hashed_string>& listAction	 = _pActionMap->getActionNames();
+			const uint32				 actionCount = MathUtil::min( static_cast<uint32>( listAction.size() ), 32u );
+			for ( uint32 actionIndex = 0; actionIndex < actionCount; ++actionIndex )
+			{
+				if ( _pActionMap->isActionDown( listAction[actionIndex] ) )
+				{
+					mask |= ( 1ULL << ( 32 + actionIndex ) );
+				}
+			}
+		}
+
+		snapshot._buttonMask = mask;
+		_inputHistory.recordSnapshot( snapshot );
 	}
 } // namespace sw

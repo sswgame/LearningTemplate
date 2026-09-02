@@ -13,12 +13,13 @@
 namespace sw
 {
 	/** @brief 마우스 커서 잠금 및 클리핑 모드 */
-	enum class CursorLockMode : uint8
+	enum class MouseLockMode : uint8
 	{
 		None = 0,
-		Locked,
-		Confined
+		ConfinedToWindow,
+		LockedInCenter
 	};
+	using CursorLockMode = MouseLockMode;
 
 	/**
 	 * @class MouseDevice
@@ -45,9 +46,10 @@ namespace sw
 		void onFrameEnd() override;
 		void resetState() override;
 
-		bool isControlDown( uint16 controlIndex ) const override;
-		bool wasControlPressed( uint16 controlIndex ) const override;
-		bool wasControlReleased( uint16 controlIndex ) const override;
+		bool	isControlDown( uint16 controlIndex ) const override;
+		bool	wasControlPressed( uint16 controlIndex ) const override;
+		bool	wasControlReleased( uint16 controlIndex ) const override;
+		float32 getControlValue( uint16 controlIndex ) const override;
 
 		// ------------------------------------------------------------------------------
 		// 2) 마우스 전용 쿼리
@@ -55,6 +57,7 @@ namespace sw
 		bool isButtonDown( MouseButton button ) const;
 		bool wasButtonPressed( MouseButton button ) const;
 		bool wasButtonReleased( MouseButton button ) const;
+		bool wasAnyButtonPressed() const { return _pressedMask != 0; }
 
 		void getPosition( int32& outX, int32& outY ) const
 		{
@@ -73,16 +76,55 @@ namespace sw
 			outDx = _rawDeltaX;
 			outDy = _rawDeltaY;
 		}
+		void getSmoothDelta( float32& outDx, float32& outDy ) const
+		{
+			outDx = _smoothDeltaX;
+			outDy = _smoothDeltaY;
+		}
+		float32 getSmoothing() const { return _smoothingFactor; }
+		void	setSmoothing( float32 factor ) { _smoothingFactor = factor < 0.0f ? 0.0f : ( factor > 0.99f ? 0.99f : factor ); }
+		float32 getAcceleration() const { return _accelerationPower; }
+		void	setAcceleration( float32 power ) { _accelerationPower = power < 1.0f ? 1.0f : power; }
+
 		float32 getMouseWheel() const { return _mouseWheelDelta; }
+		float32 getMouseWheelHorizontal() const { return _mouseWheelHorizontalDelta; }
 
 		bool isPointerInside() const { return _bPointerInside == SW_TRUE; }
 		bool wasPointerEntered() const { return _bPointerEntered == SW_TRUE; }
 		bool wasPointerLeft() const { return _bPointerLeft == SW_TRUE; }
 
-		CursorLockMode getCursorLockMode() const { return _cursorLockMode; }
-		void		   setCursorLockMode( CursorLockMode mode ) { _cursorLockMode = mode; }
+		MouseLockMode  getLockMode() const { return _lockMode; }
+		void		   setLockMode( MouseLockMode mode ) { _lockMode = mode; }
+		CursorLockMode getCursorLockMode() const { return _lockMode; }
+		void		   setCursorLockMode( CursorLockMode mode ) { _lockMode = mode; }
 		bool		   isCursorVisible() const { return _bCursorVisible == SW_TRUE; }
 		void		   setCursorVisible( bool bVisible ) { _bCursorVisible = bVisible ? SW_TRUE : SW_FALSE; }
+
+		void setClipSubRect( int32 left, int32 top, int32 right, int32 bottom )
+		{
+			_clipSubRectLeft   = left;
+			_clipSubRectTop	   = top;
+			_clipSubRectRight  = right;
+			_clipSubRectBottom = bottom;
+			_bHasSubRect	   = SW_TRUE;
+		}
+		void clearClipSubRect()
+		{
+			_clipSubRectLeft   = 0;
+			_clipSubRectTop	   = 0;
+			_clipSubRectRight  = 0;
+			_clipSubRectBottom = 0;
+			_bHasSubRect	   = SW_FALSE;
+		}
+		bool hasClipSubRect() const { return _bHasSubRect == SW_TRUE; }
+		bool getClipSubRect( int32& outLeft, int32& outTop, int32& outRight, int32& outBottom ) const
+		{
+			outLeft	  = _clipSubRectLeft;
+			outTop	  = _clipSubRectTop;
+			outRight  = _clipSubRectRight;
+			outBottom = _clipSubRectBottom;
+			return _bHasSubRect == SW_TRUE;
+		}
 
 		// ------------------------------------------------------------------------------
 		// 3) OS 이벤트 핸들러
@@ -91,29 +133,46 @@ namespace sw
 		void setPosition( int32 x, int32 y );
 		void addRawDelta( float32 dx, float32 dy );
 		void addWheelDelta( float32 delta );
+		void addHorizontalWheelDelta( float32 delta );
 		void setPointerInsideState( bool bInside );
 
 	private:
+		void updateSmoothDelta( float32 dx, float32 dy );
+
 		static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-		array<bool, kButtonCount> _arrButtonDown;
-		array<bool, kButtonCount> _arrButtonPressed;
-		array<bool, kButtonCount> _arrButtonReleased;
-		int32					  _mouseX;
-		int32					  _mouseY;
-		int32					  _prevMouseX;
-		int32					  _prevMouseY;
-		int32					  _deltaX;
-		int32					  _deltaY;
-		float32					  _rawDeltaX;
-		float32					  _rawDeltaY;
-		float32					  _mouseWheelDelta;
-		float32					  _mouseWheelAccum;
-		CursorLockMode			  _cursorLockMode;
-		uint8					  _bCursorVisible  : 1;
-		uint8					  _bPointerInside  : 1;
-		uint8					  _bPointerEntered : 1;
-		uint8					  _bPointerLeft	   : 1;
-		[[maybe_unused]] uint8	  _reserved		   : 4;
+		int32				   _mouseX;
+		int32				   _mouseY;
+		int32				   _prevMouseX;
+		int32				   _prevMouseY;
+		int32				   _deltaX;
+		int32				   _deltaY;
+		float32				   _rawDeltaX;
+		float32				   _rawDeltaY;
+		float32				   _smoothDeltaX;
+		float32				   _smoothDeltaY;
+		float32				   _smoothingFactor;
+		float32				   _accelerationPower;
+		float32				   _accumulatedRawDx;
+		float32				   _accumulatedRawDy;
+		float32				   _mouseWheelDelta;
+		float32				   _mouseWheelAccum;
+		float32				   _mouseWheelHorizontalDelta;
+		float32				   _mouseWheelHorizontalAccum;
+		int32				   _clipSubRectLeft;
+		int32				   _clipSubRectTop;
+		int32				   _clipSubRectRight;
+		int32				   _clipSubRectBottom;
+		MouseLockMode		   _lockMode;
+		uint8				   _buttonMask;
+		uint8				   _pressedMask;
+		uint8				   _releasedMask;
+		uint8				   _bCursorVisible	  : 1;
+		uint8				   _bPointerInside	  : 1;
+		uint8				   _bPointerEntered	  : 1;
+		uint8				   _bPointerLeft	  : 1;
+		uint8				   _bAnyButtonPressed : 1;
+		uint8				   _bHasSubRect		  : 1;
+		[[maybe_unused]] uint8 _reserved		  : 2;
 	};
 } // namespace sw

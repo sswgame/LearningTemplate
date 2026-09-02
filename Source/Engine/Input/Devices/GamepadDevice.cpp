@@ -2,10 +2,66 @@
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Input/GamepadButtons.h"
+
 namespace sw
 {
+	namespace
+	{
+		struct GamepadDeviceInternal
+		{
+			struct GamepadNameEntry
+			{
+				const utf8*	  _pName;
+				GamepadButton _button;
+			};
+
+			static constexpr GamepadNameEntry kArrGamepadNames[] = {
+				{			  "A",			   GamepadButton::A},
+				{			  "B",			   GamepadButton::B},
+				{			  "X",			   GamepadButton::X},
+				{			  "Y",			   GamepadButton::Y},
+				{		  "DPadUp",		GamepadButton::DPadUp},
+				{	  "DPadDown",	  GamepadButton::DPadDown},
+				{	  "DPadLeft",	  GamepadButton::DPadLeft},
+				{	  "DPadRight",	   GamepadButton::DPadRight},
+				{		  "Start",		   GamepadButton::Start},
+				{		  "Back",		  GamepadButton::Back},
+				{ "LeftShoulder",  GamepadButton::LeftShoulder},
+				{"RightShoulder", GamepadButton::RightShoulder},
+				{	  "LeftThumb",	   GamepadButton::LeftThumb},
+				{	  "RightThumb",	GamepadButton::RightThumb},
+			};
+		};
+	} // namespace
+
+	GamepadButton GamepadButtons::fromName( string_view name )
+	{
+		if ( name.empty() )
+			return GamepadButton::Count;
+		for ( const GamepadDeviceInternal::GamepadNameEntry& entry : GamepadDeviceInternal::kArrGamepadNames )
+		{
+			if ( StringUtil::equals( name, entry._pName, true ) )
+				return entry._button;
+		}
+		return GamepadButton::Count;
+	}
+
+	const utf8* GamepadButtons::toName( GamepadButton button )
+	{
+		for ( const GamepadDeviceInternal::GamepadNameEntry& entry : GamepadDeviceInternal::kArrGamepadNames )
+		{
+			if ( entry._button == button )
+				return entry._pName;
+		}
+		return nullptr;
+	}
+
 	GamepadDevice::GamepadDevice( uint32 deviceIndex )
-		: _deviceIndex{ deviceIndex }
+		: _onConnectionChanged{}
+		, _deviceIndex{ deviceIndex }
 		, _buttonMask{ 0 }
 		, _prevButtonMask{ 0 }
 		, _leftStickX{ 0.0f }
@@ -14,12 +70,27 @@ namespace sw
 		, _rightStickY{ 0.0f }
 		, _leftTrigger{ 0.0f }
 		, _rightTrigger{ 0.0f }
+		, _leftMotorSpeed{ 0.0f }
+		, _rightMotorSpeed{ 0.0f }
+		, _vibrationDurationTimer{ 0.0f }
+		, _triggerDeadzone{ 0.05f }
+		, _bTimedVibrationActive{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
-	void GamepadDevice::onFrameBegin( [[maybe_unused]] float32 deltaTime )
+	void GamepadDevice::onFrameBegin( float32 deltaTime )
 	{
 		_prevButtonMask = _buttonMask;
+
+		if ( _bTimedVibrationActive == SW_TRUE )
+		{
+			_vibrationDurationTimer -= deltaTime;
+			if ( _vibrationDurationTimer <= 0.0f )
+			{
+				stopVibration();
+			}
+		}
 	}
 
 	void GamepadDevice::onFrameEnd()
@@ -41,6 +112,10 @@ namespace sw
 
 	bool GamepadDevice::isControlDown( uint16 controlIndex ) const
 	{
+		if ( controlIndex == 100 ) // Left Trigger
+			return isLeftTriggerDown();
+		if ( controlIndex == 101 ) // Right Trigger
+			return isRightTriggerDown();
 		if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
 			return false;
 		return isButtonDown( static_cast<GamepadButton>( controlIndex ) );
@@ -48,6 +123,10 @@ namespace sw
 
 	bool GamepadDevice::wasControlPressed( uint16 controlIndex ) const
 	{
+		if ( controlIndex == 100 )
+			return isLeftTriggerDown();
+		if ( controlIndex == 101 )
+			return isRightTriggerDown();
 		if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
 			return false;
 		return wasButtonPressed( static_cast<GamepadButton>( controlIndex ) );
@@ -55,6 +134,10 @@ namespace sw
 
 	bool GamepadDevice::wasControlReleased( uint16 controlIndex ) const
 	{
+		if ( controlIndex == 100 )
+			return isLeftTriggerDown() == false;
+		if ( controlIndex == 101 )
+			return isRightTriggerDown() == false;
 		if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
 			return false;
 		return wasButtonReleased( static_cast<GamepadButton>( controlIndex ) );
@@ -66,6 +149,14 @@ namespace sw
 			return _leftTrigger;
 		if ( controlIndex == 101 ) // Right Trigger
 			return _rightTrigger;
+		if ( controlIndex == 102 ) // Left Stick X
+			return _leftStickX;
+		if ( controlIndex == 103 ) // Left Stick Y
+			return _leftStickY;
+		if ( controlIndex == 104 ) // Right Stick X
+			return _rightStickX;
+		if ( controlIndex == 105 ) // Right Stick Y
+			return _rightStickY;
 		return isControlDown( controlIndex ) ? 1.0f : 0.0f;
 	}
 

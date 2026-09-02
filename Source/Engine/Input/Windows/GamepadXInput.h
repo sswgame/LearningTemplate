@@ -24,16 +24,18 @@ namespace sw
 		GamepadXInput& operator=( const GamepadXInput& ) = delete;
 
 		void poll( float32 deltaTime ) override;
-		void pollUser( uint32 userIndex );
+		void pollUser( uint32 userIndex, float32 deltaTime = 0.016f );
 
-		bool isConnected() const override { return _bConnected == SW_TRUE; }
+		bool			   isConnected() const override { return _bConnected == SW_TRUE; }
+		GamepadBatteryInfo getBatteryInfo() const override;
 
 		bool setVibration( float32 leftMotor, float32 rightMotor ) override;
 		void setVibration( float32 leftMotor, float32 rightMotor, uint32 userIndex );
 		void stopVibration() override;
 
 	private:
-		uint8				   _bConnected : 1;
-		[[maybe_unused]] uint8 _reserved   : 7;
+		float32				   _reconnectTimer{ 1.0f };
+		uint8				   _bConnected	: 1;
+		[[maybe_unused]] uint8 _reservedPad : 7;
 	};
 } // namespace sw

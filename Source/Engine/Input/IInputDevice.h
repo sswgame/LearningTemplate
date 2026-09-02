@@ -24,36 +24,37 @@ namespace sw
 
 	/**
 	 * @struct InputSlot
-	 * @brief 장치 종류와 장치 내 컨트롤 인덱스를 통합 식별하는 무분기 입력 경로
+	 * @brief 장치 종류, 장치 인덱스(4인 로컬 게임패드 등) 및 장치 내 컨트롤 인덱스를 통합 식별하는 무분기 입력 경로
 	 */
 	struct InputSlot
 	{
 		InputDeviceKind _deviceKind{ InputDeviceKind::Keyboard };
+		uint8			_deviceIndex{ 0 };
 		uint16			_controlIndex{ 0 };
 
 		static constexpr InputSlot fromKey( Key key ) noexcept
 		{
-			return InputSlot{ InputDeviceKind::Keyboard, static_cast<uint16>( key ) };
+			return InputSlot{ InputDeviceKind::Keyboard, 0, static_cast<uint16>( key ) };
 		}
 
 		static constexpr InputSlot fromMouseButton( MouseButton button ) noexcept
 		{
-			return InputSlot{ InputDeviceKind::Mouse, static_cast<uint16>( button ) };
+			return InputSlot{ InputDeviceKind::Mouse, 0, static_cast<uint16>( button ) };
 		}
 
-		static constexpr InputSlot fromGamepadButton( GamepadButton button ) noexcept
+		static constexpr InputSlot fromGamepadButton( GamepadButton button, uint8 padIndex = 0 ) noexcept
 		{
-			return InputSlot{ InputDeviceKind::Gamepad, static_cast<uint16>( button ) };
+			return InputSlot{ InputDeviceKind::Gamepad, padIndex, static_cast<uint16>( button ) };
 		}
 
-		static constexpr InputSlot fromCustom( InputDeviceKind kind, uint16 index ) noexcept
+		static constexpr InputSlot fromCustom( InputDeviceKind kind, uint16 index, uint8 deviceIndex = 0 ) noexcept
 		{
-			return InputSlot{ kind, index };
+			return InputSlot{ kind, deviceIndex, index };
 		}
 
 		bool operator==( const InputSlot& other ) const noexcept
 		{
-			return _deviceKind == other._deviceKind && _controlIndex == other._controlIndex;
+			return _deviceKind == other._deviceKind && _deviceIndex == other._deviceIndex && _controlIndex == other._controlIndex;
 		}
 
 		bool operator!=( const InputSlot& other ) const noexcept
@@ -65,6 +66,8 @@ namespace sw
 		{
 			if ( _deviceKind != other._deviceKind )
 				return _deviceKind < other._deviceKind;
+			if ( _deviceIndex != other._deviceIndex )
+				return _deviceIndex < other._deviceIndex;
 			return _controlIndex < other._controlIndex;
 		}
 	};

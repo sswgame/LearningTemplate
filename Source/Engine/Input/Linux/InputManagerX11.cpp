@@ -80,6 +80,22 @@ namespace sw
 							postRawEvent( RawInputEvent::makeMouseWheel( -1.0f ) );
 						}
 						break;
+					case 6:
+						if ( bDown )
+						{
+							if ( _pMouse != nullptr )
+								_pMouse->addHorizontalWheelDelta( -1.0f );
+							postRawEvent( RawInputEvent::makeMouseHorizontalWheel( -1.0f ) );
+						}
+						break;
+					case 7:
+						if ( bDown )
+						{
+							if ( _pMouse != nullptr )
+								_pMouse->addHorizontalWheelDelta( 1.0f );
+							postRawEvent( RawInputEvent::makeMouseHorizontalWheel( 1.0f ) );
+						}
+						break;
 					case 8:
 						if ( _pMouse != nullptr )
 							_pMouse->setButtonDown( MouseButton::X1, bDown );
@@ -111,6 +127,9 @@ namespace sw
 			case LeaveNotify:
 				if ( _pMouse != nullptr )
 					_pMouse->setPointerInsideState( false );
+				break;
+			case FocusIn:
+				onWindowFocusGained();
 				break;
 			case FocusOut:
 				onWindowFocusLost();

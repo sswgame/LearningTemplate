@@ -2,7 +2,7 @@
 
 #include "Engine/Input/InputSnapshot.h"
 
-#include <cstring>
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -11,7 +11,7 @@ namespace sw
 		if ( pOutBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
 			return 0;
 
-		std::memcpy( pOutBuffer, this, sizeof( InputSnapshot ) );
+		Memory::copy( pOutBuffer, this, sizeof( InputSnapshot ) );
 		return static_cast<uint32>( sizeof( InputSnapshot ) );
 	}
 
@@ -20,7 +20,7 @@ namespace sw
 		if ( pBuffer == nullptr || bufferSize < sizeof( InputSnapshot ) )
 			return false;
 
-		std::memcpy( this, pBuffer, sizeof( InputSnapshot ) );
+		Memory::copy( this, pBuffer, sizeof( InputSnapshot ) );
 		return true;
 	}
 
@@ -36,21 +36,24 @@ namespace sw
 	{
 		_arrHistory[_writeIndex] = snapshot;
 		_latestTick				 = snapshot._tickNumber;
-		_writeIndex				 = ( _writeIndex + 1 ) % kDefaultCapacity;
+		_writeIndex				 = ( _writeIndex + 1 ) & ( kDefaultCapacity - 1 );
 		if ( _count < kDefaultCapacity )
 			++_count;
 	}
 
 	const InputSnapshot* InputHistoryBuffer::getSnapshot( uint32 tickNumber ) const
 	{
-		if ( _count == 0 )
+		if ( _count == 0 || tickNumber > _latestTick )
 			return nullptr;
 
-		for ( size_t index = 0; index < _count; ++index )
+		const uint32 diff = _latestTick - tickNumber;
+		if ( diff < _count )
 		{
+			const size_t index = ( _writeIndex + kDefaultCapacity - 1 - diff ) & ( kDefaultCapacity - 1 );
 			if ( _arrHistory[index]._tickNumber == tickNumber )
 				return &_arrHistory[index];
 		}
+
 		return nullptr;
 	}
 
@@ -59,7 +62,7 @@ namespace sw
 		if ( _count == 0 )
 			return nullptr;
 
-		const size_t lastIndex = ( _writeIndex + kDefaultCapacity - 1 ) % kDefaultCapacity;
+		const size_t lastIndex = ( _writeIndex + kDefaultCapacity - 1 ) & ( kDefaultCapacity - 1 );
 		return &_arrHistory[lastIndex];
 	}
 

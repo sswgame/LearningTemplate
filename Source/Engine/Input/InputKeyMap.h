@@ -20,8 +20,10 @@ namespace sw
 			Key	  _key;
 		};
 
-		/** @brief Win32 가상 키를 Key로 변환합니다. */
-		static Key mapWin32VirtualKey( uintptr_t vk );
+		/** @brief Win32 가상 키 및 lParam 스캔코드를 Key로 변환합니다. */
+		static Key mapWin32VirtualKey( uintptr_t vk, intptr_t lParam = 0 );
+		/** @brief 물리 스캔코드(ScanCode)를 물리적 위치 기준 Key로 변환합니다 (AZERTY/QWERTZ 다국어 호환). */
+		static Key mapScanCodeToKey( uint32 scanCode, bool bExtended = false );
 		/** @brief X11 KeySym을 Key로 변환합니다. */
 		static Key mapX11KeySym( uint64 keySym );
 		/** @brief Win32 마우스 메시지를 MouseButton으로 변환합니다. */

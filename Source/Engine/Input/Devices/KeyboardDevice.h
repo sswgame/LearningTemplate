@@ -51,17 +51,21 @@ namespace sw
 		bool isKeyDown( Key key ) const;
 		bool wasKeyPressed( Key key ) const;
 		bool wasKeyReleased( Key key ) const;
+		bool wasAnyKeyPressed() const { return _bAnyKeyPressed == SW_TRUE; }
 
 		void setKeyDown( Key key, bool bDown );
 		void notifyTextInput( string_view text );
 		void setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
 
 	private:
-		static constexpr size_t kKeyCount = static_cast<size_t>( Key::Count );
+		static constexpr size_t kKeyCount  = static_cast<size_t>( Key::Count );
+		static constexpr size_t kWordCount = ( kKeyCount + 63 ) / 64;
 
-		array<bool, kKeyCount> _arrKeyDown;
-		array<bool, kKeyCount> _arrKeyPressed;
-		array<bool, kKeyCount> _arrKeyReleased;
+		uint64				   _arrKeyMask[kWordCount];
+		uint64				   _arrPressedMask[kWordCount];
+		uint64				   _arrReleasedMask[kWordCount];
 		TextInputDelegate	   _onTextInput;
+		uint8				   _bAnyKeyPressed : 1;
+		[[maybe_unused]] uint8 _reserved	   : 7;
 	};
 } // namespace sw

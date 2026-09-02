@@ -1,0 +1,6 @@
+<UserBindings>
+	<bind action="Fire" source="mouse" button="Left" layer="Gameplay" />
+	<bind action="Jump" source="key" key="Space" layer="Gameplay" />
+	<bind action="Interact" source="gamepad" code="A" layer="Gameplay" pad="1" />
+	<bind action="pause" source="gamepad" code="Start" layer="Gameplay" pad="2" />
+</UserBindings>

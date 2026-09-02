@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -15,8 +16,8 @@
 #include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/IInputDevice.h"
+#include "Engine/Input/InputSnapshot.h"
 #include "Engine/Input/KeyCodes.h"
-#include "Engine/Input/Queue/LockFreeInputQueue.h"
 
 namespace sw
 {
@@ -39,10 +40,14 @@ namespace sw
 	{
 	public:
 		using ActiveDeviceChangedDelegate = Delegate<void( InputDeviceType )>;
+		using GamepadConnectionDelegate	  = Delegate<void( uint32, bool )>;
 		using TextInputDelegate			  = Delegate<void( string_view )>;
 
 		InputManager();
 		~InputManager();
+
+		InputManager( const InputManager& )			   = delete;
+		InputManager& operator=( const InputManager& ) = delete;
 
 		// ------------------------------------------------------------------------------
 		// 1) 수명주기 및 프레임 제어
@@ -54,7 +59,9 @@ namespace sw
 		void beginFrame( float32 deltaSeconds = 0.016f );
 		/** @brief 프레임 종료 시 엣지 플래그 및 원시 델타 리셋 */
 		void endFrame();
-		/** @brief 윈도우 포커스 아웃 시 모든 장치 입력 상태 초기화 */
+		/** @brief 윈도우 포커스 인 시 마우스 락 모드 재적용 */
+		void onWindowFocusGained();
+		/** @brief 윈도우 포커스 아웃 시 모든 장치 입력 상태 초기화 및 마우스 클리핑 해제 */
 		void onWindowFocusLost();
 
 		// ------------------------------------------------------------------------------
@@ -64,7 +71,7 @@ namespace sw
 		bool postRawEvent( const RawInputEvent& rawEvent );
 		/** @brief 대기 중인 원시 이벤트를 드레인합니다. */
 		uint32 drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount );
-		uint32 getPendingRawEventCount() const { return _lockFreeQueue.getCount(); }
+		uint32 getPendingRawEventCount() const { return _queueRawEvent.getCount(); }
 
 		// ------------------------------------------------------------------------------
 		// 3) 다형적 디바이스 레지스트리 (Device Registry)
@@ -86,10 +93,16 @@ namespace sw
 		InputDeviceType getActiveDeviceType() const { return _activeDeviceType; }
 		void			setActiveDeviceType( InputDeviceType type );
 		void			setActiveDeviceChangedCallback( ActiveDeviceChangedDelegate callback ) { _onActiveDeviceChanged = std::move( callback ); }
+		void			setGamepadConnectionCallback( GamepadConnectionDelegate callback ) { _onGamepadConnectionChanged = std::move( callback ); }
+		void			setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
+		void			setTextCompositionCallback( TextInputDelegate callback ) { _onTextComposition = std::move( callback ); }
 
 		bool wasAnyInputPressed() const;
 		void onTextInput( string_view text );
-		void setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
+		void onTextComposition( string_view text );
+
+		void setInputMuted( bool bMuted ) { _bInputMuted = bMuted ? SW_TRUE : SW_FALSE; }
+		bool isInputMuted() const { return _bInputMuted == SW_TRUE; }
 
 		// ------------------------------------------------------------------------------
 		// 5) 키보드/마우스 편의성 위임 포워딩 API (100% 호환성 보장)
@@ -105,57 +118,108 @@ namespace sw
 		void	getMousePosition( int32& outX, int32& outY ) const;
 		int32	getMousePositionX() const { return _pMouse != nullptr ? _pMouse->getPositionX() : 0; }
 		int32	getMousePositionY() const { return _pMouse != nullptr ? _pMouse->getPositionY() : 0; }
+		void	getMousePositionNormalized( float32& outNormX, float32& outNormY ) const;
 		void	getMouseDelta( int32& outDx, int32& outDy ) const;
 		void	getRawMouseDelta( float32& outDx, float32& outDy ) const;
 		float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
 		float32 getMouseWheelDelta() const { return getMouseWheel(); }
+		float32 getMouseWheelHorizontal() const { return _pMouse != nullptr ? _pMouse->getMouseWheelHorizontal() : 0.0f; }
 
 		bool isPointerInside() const { return _pMouse != nullptr ? _pMouse->isPointerInside() : false; }
 		bool wasPointerEntered() const { return _pMouse != nullptr ? _pMouse->wasPointerEntered() : false; }
 		bool wasPointerLeft() const { return _pMouse != nullptr ? _pMouse->wasPointerLeft() : false; }
 
-		CursorLockMode getCursorLockMode() const { return _pMouse != nullptr ? _pMouse->getCursorLockMode() : CursorLockMode::None; }
-		void		   setCursorLockMode( CursorLockMode mode )
+		MouseLockMode  getMouseLockMode() const { return _pMouse != nullptr ? _pMouse->getLockMode() : MouseLockMode::None; }
+		void		   setMouseLockMode( MouseLockMode mode );
+		CursorLockMode getCursorLockMode() const { return getMouseLockMode(); }
+		void		   setCursorLockMode( CursorLockMode mode ) { setMouseLockMode( mode ); }
+		bool		   isCursorVisible() const { return _pMouse != nullptr ? _pMouse->isCursorVisible() : true; }
+		void		   setCursorVisible( bool bVisible );
+
+		void setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom );
+		bool getMouseClipSubRect( int32& outLeft, int32& outTop, int32& outRight, int32& outBottom ) const
 		{
-			if ( _pMouse != nullptr )
-				_pMouse->setCursorLockMode( mode );
+			return _pMouse != nullptr && _pMouse->getClipSubRect( outLeft, outTop, outRight, outBottom );
 		}
-		bool isCursorVisible() const { return _pMouse != nullptr ? _pMouse->isCursorVisible() : true; }
-		void setCursorVisible( bool bVisible )
+		void clearMouseClipSubRect();
+		void applyMouseLockMode();
+		void releaseMouseLockMode();
+
+		void setMouseSmoothing( float32 factor )
 		{
 			if ( _pMouse != nullptr )
-				_pMouse->setCursorVisible( bVisible );
+				_pMouse->setSmoothing( factor );
+		}
+		float32 getMouseSmoothing() const { return _pMouse != nullptr ? _pMouse->getSmoothing() : 0.0f; }
+		void	setMouseAcceleration( float32 power )
+		{
+			if ( _pMouse != nullptr )
+				_pMouse->setAcceleration( power );
+		}
+		float32 getMouseAcceleration() const { return _pMouse != nullptr ? _pMouse->getAcceleration() : 1.0f; }
+		void	getSmoothMouseDelta( float32& outDx, float32& outDy ) const
+		{
+			if ( _pMouse != nullptr )
+				_pMouse->getSmoothDelta( outDx, outDy );
+			else
+			{
+				outDx = 0.0f;
+				outDy = 0.0f;
+			}
 		}
 
 		// ------------------------------------------------------------------------------
 		// 6) 게임패드 편의성 위임 포워딩 API
 		// ------------------------------------------------------------------------------
-		float32 getGamepadLeftTrigger( uint32 deviceIndex = 0 ) const;
-		float32 getGamepadRightTrigger( uint32 deviceIndex = 0 ) const;
-		bool	setGamepadVibration( float32 leftMotor, float32 rightMotor, uint32 deviceIndex = 0 );
+		float32			   getGamepadLeftTrigger( uint32 deviceIndex = 0 ) const;
+		float32			   getGamepadRightTrigger( uint32 deviceIndex = 0 ) const;
+		GamepadBatteryInfo getGamepadBatteryInfo( uint32 deviceIndex = 0 ) const
+		{
+			GamepadDevice* pPad = getGamepad( deviceIndex );
+			return pPad != nullptr ? pPad->getBatteryInfo() : GamepadBatteryInfo{};
+		}
+		bool setGamepadVibration( float32 leftMotor, float32 rightMotor, uint32 deviceIndex = 0 );
+		bool playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex = 0 );
 
 		// ------------------------------------------------------------------------------
-		// 7) 플랫폼 네이티브 이벤트 처리
+		// 8) 롤백 / 리플레이 입력 스냅샷 버퍼 (Input Snapshot & History) & 가상 입력 주입
+		// ------------------------------------------------------------------------------
+		void					  recordSnapshot( uint32 tickNumber );
+		const InputSnapshot*	  getSnapshot( uint32 tickNumber ) const { return _inputHistory.getSnapshot( tickNumber ); }
+		const InputSnapshot*	  getLatestSnapshot() const { return _inputHistory.getLatestSnapshot(); }
+		const InputHistoryBuffer& getInputHistory() const { return _inputHistory; }
+
+		void injectRawEvent( const RawInputEvent& evt ) { postRawEvent( evt ); }
+		void injectSnapshot( const InputSnapshot& snapshot );
+
+		// ------------------------------------------------------------------------------
+		// 7) 플랫폼 네이티브 이벤트 처리 및 접근성 제어
 		// ------------------------------------------------------------------------------
 		void onNativeWindowEvent( const NativeWindowEvent& event );
 		void processNativeEvent( const NativeWindowEvent& event );
 		void pollPlatform();
+		void disableWindowsAccessibilityShortcuts();
+		void restoreWindowsAccessibilityShortcuts();
 
 	private:
 		void dispatchRawEvent( const RawInputEvent& rawEvt );
 
 	private:
-		LockFreeInputQueue<RawInputEvent, 2048> _lockFreeQueue;
-		vector<unique_ptr<IInputDevice>>		_listDevice;
-		KeyboardDevice*							_pKeyboard;
-		MouseDevice*							_pMouse;
-		GamepadDevice*							_pGamepad;
-		unique_ptr<ActionMap>					_pActionMap;
-		vector<RawInputEvent>					_listDrainedEvent;
-		InputDeviceType							_activeDeviceType;
-		ActiveDeviceChangedDelegate				_onActiveDeviceChanged;
-		TextInputDelegate						_onTextInput;
-		uint8									_bInitialized : 1;
-		[[maybe_unused]] uint8					_reserved	  : 7;
+		ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;
+		vector<unique_ptr<IInputDevice>>	 _listDevice;
+		KeyboardDevice*						 _pKeyboard;
+		MouseDevice*						 _pMouse;
+		GamepadDevice*						 _pGamepad;
+		unique_ptr<ActionMap>				 _pActionMap;
+		vector<RawInputEvent>				 _listDrainedEvent;
+		InputHistoryBuffer					 _inputHistory;
+		InputDeviceType						 _activeDeviceType;
+		ActiveDeviceChangedDelegate			 _onActiveDeviceChanged;
+		GamepadConnectionDelegate			 _onGamepadConnectionChanged;
+		TextInputDelegate					 _onTextInput;
+		TextInputDelegate					 _onTextComposition;
+		uint8								 _bInitialized : 1;
+		uint8								 _bInputMuted  : 1;
+		[[maybe_unused]] uint8				 _reserved	   : 6;
 	};
 } // namespace sw

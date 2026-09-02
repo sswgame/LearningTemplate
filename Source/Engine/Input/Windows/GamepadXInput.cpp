@@ -2,6 +2,8 @@
 
 #include "Engine/Input/Windows/GamepadXInput.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Input/GamepadButtons.h"
 
 #if defined( _WIN32 )
@@ -14,42 +16,6 @@ namespace sw
 	{
 		struct GamepadXInputInternal
 		{
-			static constexpr float32 kStickDeadzone = 0.2f;
-
-			static float32 applyDeadzone( float32 value, float32 deadzone )
-			{
-				const float32 absValue = value < 0.0f ? -value : value;
-				if ( absValue < deadzone )
-					return 0.0f;
-				const float32 sign		 = value < 0.0f ? -1.0f : 1.0f;
-				const float32 safeSpan	 = ( 1.0f - deadzone ) > 1e-4f ? ( 1.0f - deadzone ) : 1.0f;
-				const float32 normalized = ( absValue - deadzone ) / safeSpan;
-				return sign * ( normalized > 1.0f ? 1.0f : normalized );
-			}
-
-			struct GamepadNameEntry
-			{
-				const utf8*	  _pName;
-				GamepadButton _button;
-			};
-
-			static constexpr GamepadNameEntry kArrGamepadNames[] = {
-				{			  "A",			   GamepadButton::A},
-				{			  "B",			   GamepadButton::B},
-				{			  "X",			   GamepadButton::X},
-				{			  "Y",			   GamepadButton::Y},
-				{		  "DPadUp",		GamepadButton::DPadUp},
-				{	  "DPadDown",	  GamepadButton::DPadDown},
-				{	  "DPadLeft",	  GamepadButton::DPadLeft},
-				{	  "DPadRight",	   GamepadButton::DPadRight},
-				{		  "Start",		   GamepadButton::Start},
-				{		  "Back",		  GamepadButton::Back},
-				{ "LeftShoulder",  GamepadButton::LeftShoulder},
-				{"RightShoulder", GamepadButton::RightShoulder},
-				{	  "LeftThumb",	   GamepadButton::LeftThumb},
-				{	  "RightThumb",	GamepadButton::RightThumb},
-			};
-
 #if defined( _WIN32 )
 			using PFN_XInputGetState = DWORD( WINAPI* )( DWORD, XINPUT_STATE* );
 			using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
@@ -97,6 +63,22 @@ namespace sw
 					s_pfn = reinterpret_cast<PFN_XInputSetState>( GetProcAddress( hModule, "XInputSetState" ) );
 				return s_pfn;
 			}
+
+			using PFN_XInputGetBatteryInformation = DWORD( WINAPI* )( DWORD, BYTE, XINPUT_BATTERY_INFORMATION* );
+
+			static PFN_XInputGetBatteryInformation resolveXInputGetBatteryInformation()
+			{
+				static PFN_XInputGetBatteryInformation s_pfn{ nullptr };
+				static bool							   s_bTried{ false };
+				if ( s_bTried )
+					return s_pfn;
+				s_bTried = true;
+
+				HMODULE hModule = getXInputModule();
+				if ( hModule != nullptr )
+					s_pfn = reinterpret_cast<PFN_XInputGetBatteryInformation>( GetProcAddress( hModule, "XInputGetBatteryInformation" ) );
+				return s_pfn;
+			}
 #endif
 		};
 	} // namespace
@@ -104,44 +86,33 @@ namespace sw
 
 namespace sw
 {
-	GamepadButton GamepadButtons::fromName( string_view name )
-	{
-		if ( name.empty() )
-			return GamepadButton::Count;
-		for ( const GamepadXInputInternal::GamepadNameEntry& entry : GamepadXInputInternal::kArrGamepadNames )
-		{
-			if ( StringUtil::equals( name, entry._pName, true ) )
-				return entry._button;
-		}
-		return GamepadButton::Count;
-	}
-
-	const utf8* GamepadButtons::toName( GamepadButton button )
-	{
-		for ( const GamepadXInputInternal::GamepadNameEntry& entry : GamepadXInputInternal::kArrGamepadNames )
-		{
-			if ( entry._button == button )
-				return entry._pName;
-		}
-		return nullptr;
-	}
-
 	GamepadXInput::GamepadXInput( uint32 userIndex )
 		: GamepadDevice{ userIndex }
+		, _reconnectTimer{ 1.0f }
 		, _bConnected{ SW_FALSE }
-		, _reserved{ 0 }
+		, _reservedPad{ 0 }
 	{
 	}
 
-	void GamepadXInput::poll( [[maybe_unused]] float32 deltaTime )
+	void GamepadXInput::poll( float32 deltaTime )
 	{
-		pollUser( _deviceIndex );
+		pollUser( _deviceIndex, deltaTime );
 	}
 
 #if defined( _WIN32 )
-	void GamepadXInput::pollUser( uint32 userIndex )
+	void GamepadXInput::pollUser( uint32 userIndex, float32 deltaTime )
 	{
 		_prevButtonMask = _buttonMask;
+
+		const bool bWasConnected = ( _bConnected == SW_TRUE );
+
+		if ( bWasConnected == false )
+		{
+			_reconnectTimer += deltaTime;
+			if ( _reconnectTimer < 1.0f )
+				return;
+			_reconnectTimer = 0.0f;
+		}
 
 		GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
 		if ( pfnGetState == nullptr )
@@ -154,6 +125,8 @@ namespace sw
 			_rightStickY  = 0.0f;
 			_leftTrigger  = 0.0f;
 			_rightTrigger = 0.0f;
+			if ( bWasConnected && _onConnectionChanged.isBound() )
+				_onConnectionChanged( userIndex, false );
 			return;
 		}
 
@@ -169,10 +142,16 @@ namespace sw
 			_rightStickY  = 0.0f;
 			_leftTrigger  = 0.0f;
 			_rightTrigger = 0.0f;
+			if ( bWasConnected && _onConnectionChanged.isBound() )
+				_onConnectionChanged( userIndex, false );
 			return;
 		}
 
-		_bConnected		   = SW_TRUE;
+		_bConnected		= SW_TRUE;
+		_reconnectTimer = 0.0f;
+		if ( bWasConnected == false && _onConnectionChanged.isBound() )
+			_onConnectionChanged( userIndex, true );
+
 		const WORD buttons = state.Gamepad.wButtons;
 		uint32	   mask	   = 0;
 		if ( ( buttons & XINPUT_GAMEPAD_A ) != 0 )
@@ -205,14 +184,14 @@ namespace sw
 			mask |= ( 1u << static_cast<uint32>( GamepadButton::RightThumb ) );
 		_buttonMask = mask;
 
-		const float32 leftX	 = static_cast<float32>( state.Gamepad.sThumbLX ) / 32767.0f;
-		const float32 leftY	 = static_cast<float32>( state.Gamepad.sThumbLY ) / 32767.0f;
-		const float32 rightX = static_cast<float32>( state.Gamepad.sThumbRX ) / 32767.0f;
-		const float32 rightY = static_cast<float32>( state.Gamepad.sThumbRY ) / 32767.0f;
-		_leftStickX			 = GamepadXInputInternal::applyDeadzone( leftX, GamepadXInputInternal::kStickDeadzone );
-		_leftStickY			 = GamepadXInputInternal::applyDeadzone( leftY, GamepadXInputInternal::kStickDeadzone );
-		_rightStickX		 = GamepadXInputInternal::applyDeadzone( rightX, GamepadXInputInternal::kStickDeadzone );
-		_rightStickY		 = GamepadXInputInternal::applyDeadzone( rightY, GamepadXInputInternal::kStickDeadzone );
+		const float32 leftX	 = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbLX ) / 32767.0f, -1.0f, 1.0f );
+		const float32 leftY	 = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbLY ) / 32767.0f, -1.0f, 1.0f );
+		const float32 rightX = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbRX ) / 32767.0f, -1.0f, 1.0f );
+		const float32 rightY = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbRY ) / 32767.0f, -1.0f, 1.0f );
+		_leftStickX			 = leftX;
+		_leftStickY			 = leftY;
+		_rightStickX		 = rightX;
+		_rightStickY		 = rightY;
 
 		_leftTrigger  = static_cast<float32>( state.Gamepad.bLeftTrigger ) / 255.0f;
 		_rightTrigger = static_cast<float32>( state.Gamepad.bRightTrigger ) / 255.0f;
@@ -220,6 +199,8 @@ namespace sw
 
 	bool GamepadXInput::setVibration( float32 leftMotor, float32 rightMotor )
 	{
+		_leftMotorSpeed	 = leftMotor;
+		_rightMotorSpeed = rightMotor;
 		setVibration( leftMotor, rightMotor, _deviceIndex );
 		return true;
 	}
@@ -231,8 +212,8 @@ namespace sw
 			return;
 
 		XINPUT_VIBRATION vibration{};
-		const float32	 clampedLeft  = leftMotor < 0.0f ? 0.0f : ( leftMotor > 1.0f ? 1.0f : leftMotor );
-		const float32	 clampedRight = rightMotor < 0.0f ? 0.0f : ( rightMotor > 1.0f ? 1.0f : rightMotor );
+		const float32	 clampedLeft  = MathUtil::clamp( leftMotor, 0.0f, 1.0f );
+		const float32	 clampedRight = MathUtil::clamp( rightMotor, 0.0f, 1.0f );
 		vibration.wLeftMotorSpeed	  = static_cast<WORD>( clampedLeft * 65535.0f );
 		vibration.wRightMotorSpeed	  = static_cast<WORD>( clampedRight * 65535.0f );
 		pfnSetState( userIndex, &vibration );
@@ -240,10 +221,62 @@ namespace sw
 
 	void GamepadXInput::stopVibration()
 	{
+		GamepadDevice::stopVibration();
 		setVibration( 0.0f, 0.0f, _deviceIndex );
 	}
+
+	GamepadBatteryInfo GamepadXInput::getBatteryInfo() const
+	{
+		GamepadBatteryInfo									   info{};
+		GamepadXInputInternal::PFN_XInputGetBatteryInformation pfnGetBat = GamepadXInputInternal::resolveXInputGetBatteryInformation();
+		if ( pfnGetBat == nullptr || _bConnected == SW_FALSE )
+			return info;
+
+		XINPUT_BATTERY_INFORMATION bat{};
+		if ( pfnGetBat( _deviceIndex, BATTERY_DEVTYPE_GAMEPAD, &bat ) == ERROR_SUCCESS )
+		{
+			switch ( bat.BatteryType )
+			{
+				case BATTERY_TYPE_WIRED:
+					info._type = GamepadBatteryType::Wired;
+					break;
+				case BATTERY_TYPE_ALKALINE:
+					info._type = GamepadBatteryType::Alkaline;
+					break;
+				case BATTERY_TYPE_NIMH:
+					info._type = GamepadBatteryType::Nimh;
+					break;
+				case BATTERY_TYPE_DISCONNECTED:
+					info._type = GamepadBatteryType::Disconnected;
+					break;
+				default:
+					info._type = GamepadBatteryType::Unknown;
+					break;
+			}
+
+			switch ( bat.BatteryLevel )
+			{
+				case BATTERY_LEVEL_EMPTY:
+					info._level = GamepadBatteryLevel::Empty;
+					break;
+				case BATTERY_LEVEL_LOW:
+					info._level = GamepadBatteryLevel::Low;
+					break;
+				case BATTERY_LEVEL_MEDIUM:
+					info._level = GamepadBatteryLevel::Medium;
+					break;
+				case BATTERY_LEVEL_FULL:
+					info._level = GamepadBatteryLevel::Full;
+					break;
+				default:
+					info._level = GamepadBatteryLevel::Empty;
+					break;
+			}
+		}
+		return info;
+	}
 #else
-	void GamepadXInput::pollUser( uint32 )
+	void GamepadXInput::pollUser( uint32, float32 )
 	{
 		_prevButtonMask = _buttonMask;
 		_bConnected		= SW_FALSE;
@@ -267,6 +300,11 @@ namespace sw
 
 	void GamepadXInput::stopVibration()
 	{
+	}
+
+	GamepadBatteryInfo GamepadXInput::getBatteryInfo() const
+	{
+		return GamepadBatteryInfo{};
 	}
 #endif
 } // namespace sw

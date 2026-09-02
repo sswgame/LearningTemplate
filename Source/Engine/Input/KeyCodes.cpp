@@ -9,21 +9,29 @@ namespace sw
 {
 	Key KeyCodes::fromName( string_view name )
 	{
-		return engine::getTypeRegistry().enumFromString<Key>( name );
+		if ( engine::areEngineServicesBound() )
+			return engine::getTypeRegistry().enumFromString<Key>( name );
+		return Key::Unknown;
 	}
 
 	const utf8* KeyCodes::toName( Key key )
 	{
-		return engine::getTypeRegistry().enumToString( key );
+		if ( engine::areEngineServicesBound() )
+			return engine::getTypeRegistry().enumToString( key );
+		return "Unknown";
 	}
 
 	MouseButton MouseButtons::fromName( string_view name )
 	{
-		return engine::getTypeRegistry().enumFromString<MouseButton>( name );
+		if ( engine::areEngineServicesBound() )
+			return engine::getTypeRegistry().enumFromString<MouseButton>( name );
+		return MouseButton::Count;
 	}
 
 	const utf8* MouseButtons::toName( MouseButton button )
 	{
-		return engine::getTypeRegistry().enumToString( button );
+		if ( engine::areEngineServicesBound() )
+			return engine::getTypeRegistry().enumToString( button );
+		return "Unknown";
 	}
 } // namespace sw

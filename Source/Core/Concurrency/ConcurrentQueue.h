@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/array.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -132,6 +133,50 @@ namespace sw
 			return true;
 		}
 
+		/** @brief push 별칭입니다 (enqueue 호출). */
+		SW_INLINE bool push( const T& item ) { return enqueue( item ); }
+		/** @brief push 별칭입니다 (enqueue 이동 호출). */
+		SW_INLINE bool push( T&& item ) { return enqueue( std::move( item ) ); }
+
+		/** @brief pop 별칭입니다 (dequeue 호출). */
+		SW_INLINE bool pop( T& outItem ) { return dequeue( outItem ); }
+
+		/** @brief 큐에 대기 중인 모든 항목을 vector에 드레인합니다. */
+		uint32 drain( vector<T>& outList )
+		{
+			uint32 drainCount = 0;
+			T	   item{};
+			while ( dequeue( item ) )
+			{
+				outList.push_back( std::move( item ) );
+				++drainCount;
+			}
+			return drainCount;
+		}
+
+		/** @brief 큐에 대기 중인 항목을 버퍼에 일괄 드레인합니다. */
+		uint32 drain( T* pOutBuffer, uint32 maxCount )
+		{
+			if ( pOutBuffer == nullptr || maxCount == 0 )
+				return 0;
+
+			uint32 drainCount = 0;
+			while ( drainCount < maxCount )
+			{
+				if ( dequeue( pOutBuffer[drainCount] ) == false )
+					break;
+				++drainCount;
+			}
+			return drainCount;
+		}
+
+		/** @brief 큐에 남아 있는 모든 요소를 비웁니다. */
+		void clear()
+		{
+			T dummy{};
+			while ( dequeue( dummy ) ) {}
+		}
+
 		/** @brief 대략적인 현재 요소 수를 반환합니다. */
 		SW_INLINE uint32 size() const
 		{
@@ -140,8 +185,13 @@ namespace sw
 			return ( tail - head );
 		}
 
+		/** @brief getCount 별칭입니다 (size 호출). */
+		SW_INLINE uint32 getCount() const { return size(); }
+
 		/** @brief 비어 있는지 반환합니다. */
 		SW_INLINE bool empty() const { return size() == 0; }
+		/** @brief isEmpty 별칭입니다 (empty 호출). */
+		SW_INLINE bool isEmpty() const { return empty(); }
 
 		/** @brief 현재 용량을 반환합니다. */
 		constexpr uint32 capacity() const { return Capacity; }

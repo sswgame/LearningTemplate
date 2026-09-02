@@ -74,7 +74,7 @@ namespace sw::editor
 
 	void InputMapEditorPanel::drawLayerList()
 	{
-		const vector<string>& listLayer = _actionMap.getLayerNames();
+		const vector<hashed_string>& listLayer = _actionMap.getLayerNames();
 
 		if ( ImGui::CollapsingHeader( "Layers", ImGuiTreeNodeFlags_DefaultOpen ) )
 		{
@@ -86,25 +86,27 @@ namespace sw::editor
 				ImGui::TableSetupColumn( "Stack Status", ImGuiTableColumnFlags_WidthFixed, 100.0f );
 				ImGui::TableHeadersRow();
 
-				for ( const string& layerName : listLayer )
+				for ( const hashed_string& layerName : listLayer )
 				{
 					ImGui::TableNextRow();
 					ImGui::TableNextColumn();
 					ImGui::TextUnformatted( layerName.c_str() );
 
 					ImGui::TableNextColumn();
+					ImGui::PushID( layerName.c_str() );
 					bool bEnabled = _actionMap.isLayerEnabled( layerName );
-					if ( ImGui::Checkbox( ( "##Enabled_" + layerName ).c_str(), &bEnabled ) )
+					if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
 					{
-						_actionMap.setLayerEnabled( layerName, bEnabled );
+						_actionMap.setLayerEnabled( layerName.view(), bEnabled );
 						_bDirty = SW_TRUE;
 					}
+					ImGui::PopID();
 
 					ImGui::TableNextColumn();
 					ImGui::Text( "%d", _actionMap.getLayerPriority( layerName ) );
 
 					ImGui::TableNextColumn();
-					if ( _actionMap.getCurrentTopLayer() == layerName )
+					if ( _actionMap.getCurrentTopLayer() == layerName.view() )
 						ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ), "Top (Active)" );
 					else if ( bEnabled )
 						ImGui::Text( "Active" );
@@ -118,7 +120,7 @@ namespace sw::editor
 
 	void InputMapEditorPanel::drawActionTable()
 	{
-		const vector<string>& listAction = _actionMap.getActionNames();
+		const vector<hashed_string>& listAction = _actionMap.getActionNames();
 
 		if ( ImGui::BeginTable( "ActionTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
 		{
@@ -129,7 +131,7 @@ namespace sw::editor
 			ImGui::TableSetupColumn( "Rebind", ImGuiTableColumnFlags_WidthFixed, 80.0f );
 			ImGui::TableHeadersRow();
 
-			for ( const string& actionName : listAction )
+			for ( const hashed_string& actionName : listAction )
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -141,19 +143,21 @@ namespace sw::editor
 				ImGui::TextUnformatted( pTrigName != nullptr ? pTrigName : "Unknown" );
 
 				ImGui::TableNextColumn();
-				const string glyph = _actionMap.getGlyphForAction( actionName );
+				const string glyph = _actionMap.getGlyphForAction( actionName.view() );
 				ImGui::TextColored( ImVec4( 0.3f, 0.8f, 1.0f, 1.0f ), "%s", glyph.c_str() );
 
 				ImGui::TableNextColumn();
 				ImGui::Text( "%.2f s", static_cast<float64>( _actionMap.getActionHoldDuration( actionName ) ) );
 
 				ImGui::TableNextColumn();
-				if ( ImGui::Button( ( "Rebind##" + actionName ).c_str() ) )
+				ImGui::PushID( actionName.c_str() );
+				if ( ImGui::Button( "Rebind" ) )
 				{
 					_selectedAction		= actionName.c_str();
 					_capturingBindIndex = 0;
 					_bCapturingKey		= SW_TRUE;
 				}
+				ImGui::PopID();
 			}
 			ImGui::EndTable();
 		}

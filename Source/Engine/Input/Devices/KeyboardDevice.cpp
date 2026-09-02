@@ -2,15 +2,17 @@
 
 #include "Engine/Input/Devices/KeyboardDevice.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
 	KeyboardDevice::KeyboardDevice()
-		: _arrKeyDown{}
-		, _arrKeyPressed{}
-		, _arrKeyReleased{}
+		: _arrKeyMask{}
+		, _arrPressedMask{}
+		, _arrReleasedMask{}
 		, _onTextInput{}
+		, _bAnyKeyPressed{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 		resetState();
 	}
@@ -21,21 +23,33 @@ namespace sw
 
 	void KeyboardDevice::onFrameBegin( [[maybe_unused]] float32 deltaTime )
 	{
-		_arrKeyPressed.fill( false );
-		_arrKeyReleased.fill( false );
+		for ( size_t wordIndex = 0; wordIndex < kWordCount; ++wordIndex )
+		{
+			_arrPressedMask[wordIndex]	= 0;
+			_arrReleasedMask[wordIndex] = 0;
+		}
+		_bAnyKeyPressed = SW_FALSE;
 	}
 
 	void KeyboardDevice::onFrameEnd()
 	{
-		_arrKeyPressed.fill( false );
-		_arrKeyReleased.fill( false );
+		for ( size_t wordIndex = 0; wordIndex < kWordCount; ++wordIndex )
+		{
+			_arrPressedMask[wordIndex]	= 0;
+			_arrReleasedMask[wordIndex] = 0;
+		}
+		_bAnyKeyPressed = SW_FALSE;
 	}
 
 	void KeyboardDevice::resetState()
 	{
-		_arrKeyDown.fill( false );
-		_arrKeyPressed.fill( false );
-		_arrKeyReleased.fill( false );
+		for ( size_t wordIndex = 0; wordIndex < kWordCount; ++wordIndex )
+		{
+			_arrKeyMask[wordIndex]		= 0;
+			_arrPressedMask[wordIndex]	= 0;
+			_arrReleasedMask[wordIndex] = 0;
+		}
+		_bAnyKeyPressed = SW_FALSE;
 	}
 
 	bool KeyboardDevice::isControlDown( uint16 controlIndex ) const
@@ -62,19 +76,25 @@ namespace sw
 	bool KeyboardDevice::isKeyDown( Key key ) const
 	{
 		const size_t index = static_cast<size_t>( key );
-		return index < kKeyCount ? _arrKeyDown[index] : false;
+		if ( index >= kKeyCount )
+			return false;
+		return ( _arrKeyMask[index / 64] & ( 1ULL << ( index % 64 ) ) ) != 0;
 	}
 
 	bool KeyboardDevice::wasKeyPressed( Key key ) const
 	{
 		const size_t index = static_cast<size_t>( key );
-		return index < kKeyCount ? _arrKeyPressed[index] : false;
+		if ( index >= kKeyCount )
+			return false;
+		return ( _arrPressedMask[index / 64] & ( 1ULL << ( index % 64 ) ) ) != 0;
 	}
 
 	bool KeyboardDevice::wasKeyReleased( Key key ) const
 	{
 		const size_t index = static_cast<size_t>( key );
-		return index < kKeyCount ? _arrKeyReleased[index] : false;
+		if ( index >= kKeyCount )
+			return false;
+		return ( _arrReleasedMask[index / 64] & ( 1ULL << ( index % 64 ) ) ) != 0;
 	}
 
 	void KeyboardDevice::setKeyDown( Key key, bool bDown )
@@ -83,13 +103,27 @@ namespace sw
 		if ( index >= kKeyCount )
 			return;
 
-		const bool bWasDown = _arrKeyDown[index];
-		_arrKeyDown[index]	= bDown;
+		const size_t word	  = index / 64;
+		const uint64 bit	  = 1ULL << ( index % 64 );
+		const bool	 bWasDown = ( _arrKeyMask[word] & bit ) != 0;
 
-		if ( bDown && ( bWasDown == false ) )
-			_arrKeyPressed[index] = true;
-		else if ( ( bDown == false ) && bWasDown )
-			_arrKeyReleased[index] = true;
+		if ( bDown )
+		{
+			_arrKeyMask[word] |= bit;
+			if ( bWasDown == false )
+			{
+				_arrPressedMask[word] |= bit;
+				_bAnyKeyPressed = SW_TRUE;
+			}
+		}
+		else
+		{
+			_arrKeyMask[word] &= ~bit;
+			if ( bWasDown )
+			{
+				_arrReleasedMask[word] |= bit;
+			}
+		}
 	}
 
 	void KeyboardDevice::notifyTextInput( string_view text )

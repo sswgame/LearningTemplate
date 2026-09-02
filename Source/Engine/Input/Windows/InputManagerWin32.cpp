@@ -10,6 +10,29 @@
 	#include "Engine/Window/IWindow.h"
 	#include "Engine/Window/NativeWindowEvent.h"
 
+	#include <imm.h>
+	#pragma comment( lib, "imm32.lib" )
+
+namespace sw
+{
+	namespace
+	{
+		uint8 getWin32ModifierMaskInternal()
+		{
+			uint8 mask = ModifierKey::None;
+			if ( ( GetKeyState( VK_CONTROL ) & 0x8000 ) != 0 )
+				mask |= ModifierKey::Ctrl;
+			if ( ( GetKeyState( VK_SHIFT ) & 0x8000 ) != 0 )
+				mask |= ModifierKey::Shift;
+			if ( ( GetKeyState( VK_MENU ) & 0x8000 ) != 0 )
+				mask |= ModifierKey::Alt;
+			if ( ( ( GetKeyState( VK_LWIN ) & 0x8000 ) != 0 ) || ( ( GetKeyState( VK_RWIN ) & 0x8000 ) != 0 ) )
+				mask |= ModifierKey::Super;
+			return mask;
+		}
+	} // namespace
+} // namespace sw
+
 namespace sw
 {
 	void InputManager::onNativeWindowEvent( const NativeWindowEvent& event )
@@ -24,25 +47,79 @@ namespace sw
 			case WM_KEYDOWN:
 			case WM_SYSKEYDOWN:
 			{
-				const Key key = InputKeyMap::mapWin32VirtualKey( event._wParam );
+				const Key	key		= InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+				const uint8 modMask = getWin32ModifierMaskInternal();
+				const bool	bRepeat = ( event._lParam & 0x40000000 ) != 0;
 				if ( _pKeyboard != nullptr )
 					_pKeyboard->setKeyDown( key, true );
-				postRawEvent( RawInputEvent::makeKeyDown( key, static_cast<uint16>( event._wParam ) ) );
+				postRawEvent( RawInputEvent::makeKeyDown( key, static_cast<uint16>( event._wParam ), bRepeat, modMask ) );
 				break;
 			}
 			case WM_KEYUP:
 			case WM_SYSKEYUP:
 			{
-				const Key key = InputKeyMap::mapWin32VirtualKey( event._wParam );
+				const Key	key		= InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+				const uint8 modMask = getWin32ModifierMaskInternal();
 				if ( _pKeyboard != nullptr )
 					_pKeyboard->setKeyDown( key, false );
-				postRawEvent( RawInputEvent::makeKeyUp( key, static_cast<uint16>( event._wParam ) ) );
+				postRawEvent( RawInputEvent::makeKeyUp( key, static_cast<uint16>( event._wParam ), modMask ) );
+				break;
+			}
+			case WM_INPUT:
+			{
+				HRAWINPUT hRawInput = reinterpret_cast<HRAWINPUT>( event._lParam );
+				RAWINPUT  rawInput{};
+				UINT	  size = sizeof( RAWINPUT );
+				if ( GetRawInputData( hRawInput, RID_INPUT, &rawInput, &size, sizeof( RAWINPUTHEADER ) ) != static_cast<UINT>( -1 ) )
+				{
+					if ( rawInput.header.dwType == RIM_TYPEMOUSE )
+					{
+						const float32 rawDx = static_cast<float32>( rawInput.data.mouse.lLastX );
+						const float32 rawDy = static_cast<float32>( rawInput.data.mouse.lLastY );
+						if ( rawDx != 0.0f || rawDy != 0.0f )
+						{
+							if ( _pMouse != nullptr )
+								_pMouse->addRawDelta( rawDx, rawDy );
+						}
+					}
+				}
 				break;
 			}
 			case WM_LBUTTONDOWN:
 			case WM_RBUTTONDOWN:
 			case WM_MBUTTONDOWN:
 			case WM_XBUTTONDOWN:
+			{
+				const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
+				if ( btn < MouseButton::Count )
+				{
+					int32 mx = 0;
+					int32 my = 0;
+					if ( _pMouse != nullptr )
+						_pMouse->getPosition( mx, my );
+					if ( event._lParam != 0 )
+					{
+						mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+						my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+						if ( _pMouse != nullptr )
+							_pMouse->setPosition( mx, my );
+					}
+					const uint8 modMask = getWin32ModifierMaskInternal();
+					if ( _pMouse != nullptr )
+						_pMouse->setButtonDown( btn, true );
+
+					IWindow* pWindow = IWindow::getActiveWindow();
+					if ( pWindow != nullptr )
+					{
+						HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+						if ( pHwnd != nullptr )
+							SetCapture( pHwnd );
+					}
+
+					postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mx, my, modMask ) );
+				}
+				break;
+			}
 			case WM_LBUTTONDBLCLK:
 			case WM_RBUTTONDBLCLK:
 			case WM_MBUTTONDBLCLK:
@@ -51,9 +128,21 @@ namespace sw
 				const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
 				if ( btn < MouseButton::Count )
 				{
+					int32 mx = 0;
+					int32 my = 0;
+					if ( _pMouse != nullptr )
+						_pMouse->getPosition( mx, my );
+					if ( event._lParam != 0 )
+					{
+						mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+						my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+						if ( _pMouse != nullptr )
+							_pMouse->setPosition( mx, my );
+					}
+					const uint8 modMask = getWin32ModifierMaskInternal();
 					if ( _pMouse != nullptr )
 						_pMouse->setButtonDown( btn, true );
-					postRawEvent( RawInputEvent::makeMouseButtonDown( btn ) );
+					postRawEvent( RawInputEvent::makeMouseDoubleClick( btn, mx, my, modMask ) );
 				}
 				break;
 			}
@@ -65,9 +154,27 @@ namespace sw
 				const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
 				if ( btn < MouseButton::Count )
 				{
+					int32 mx = 0;
+					int32 my = 0;
+					if ( _pMouse != nullptr )
+						_pMouse->getPosition( mx, my );
+					if ( event._lParam != 0 )
+					{
+						mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+						my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+						if ( _pMouse != nullptr )
+							_pMouse->setPosition( mx, my );
+					}
+					const uint8 modMask = getWin32ModifierMaskInternal();
 					if ( _pMouse != nullptr )
 						_pMouse->setButtonDown( btn, false );
-					postRawEvent( RawInputEvent::makeMouseButtonUp( btn ) );
+
+					if ( ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0 )
+					{
+						ReleaseCapture();
+					}
+
+					postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mx, my, modMask ) );
 				}
 				break;
 			}
@@ -83,7 +190,17 @@ namespace sw
 			case WM_MOUSEWHEEL:
 			{
 				const float32 delta = static_cast<float32>( GET_WHEEL_DELTA_WPARAM( event._wParam ) ) / 120.0f;
+				if ( _pMouse != nullptr )
+					_pMouse->addWheelDelta( delta );
 				postRawEvent( RawInputEvent::makeMouseWheel( delta ) );
+				break;
+			}
+			case WM_MOUSEHWHEEL:
+			{
+				const float32 delta = static_cast<float32>( GET_WHEEL_DELTA_WPARAM( event._wParam ) ) / 120.0f;
+				if ( _pMouse != nullptr )
+					_pMouse->addHorizontalWheelDelta( delta );
+				postRawEvent( RawInputEvent::makeMouseHorizontalWheel( delta ) );
 				break;
 			}
 			case WM_CHAR:
@@ -93,20 +210,79 @@ namespace sw
 					const utf16 wch = static_cast<utf16>( event._wParam );
 					if ( wch >= 32 || wch == static_cast<utf16>( '\t' ) || wch == static_cast<utf16>( '\n' ) || wch == static_cast<utf16>( '\r' ) )
 					{
-						const utf8	 utf8Char = static_cast<utf8>( wch < 128 ? wch : '?' );
-						const string strText( 1, utf8Char );
-						onTextInput( strText );
-						postRawEvent( RawInputEvent::makeTextInput( strText ) );
+						utf8   arrUtf8[4] = {};
+						size_t utf8Len	  = 0;
+						if ( wch < 0x80 )
+						{
+							arrUtf8[0] = static_cast<utf8>( wch );
+							utf8Len	   = 1;
+						}
+						else if ( wch < 0x800 )
+						{
+							arrUtf8[0] = static_cast<utf8>( 0xC0 | ( ( wch >> 6 ) & 0x1F ) );
+							arrUtf8[1] = static_cast<utf8>( 0x80 | ( wch & 0x3F ) );
+							utf8Len	   = 2;
+						}
+						else
+						{
+							arrUtf8[0] = static_cast<utf8>( 0xE0 | ( ( wch >> 12 ) & 0x0F ) );
+							arrUtf8[1] = static_cast<utf8>( 0x80 | ( ( wch >> 6 ) & 0x3F ) );
+							arrUtf8[2] = static_cast<utf8>( 0x80 | ( wch & 0x3F ) );
+							utf8Len	   = 3;
+						}
+
+						const string_view svText( reinterpret_cast<const utf8*>( arrUtf8 ), utf8Len );
+						postRawEvent( RawInputEvent::makeTextInput( svText ) );
 					}
 				}
 				break;
 			}
+			case WM_IME_COMPOSITION:
+			{
+				IWindow* pWindow = IWindow::getActiveWindow();
+				if ( pWindow != nullptr )
+				{
+					HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+					if ( pHwnd != nullptr && ( event._lParam & GCS_COMPSTR ) != 0 )
+					{
+						HIMC hImc = ImmGetContext( pHwnd );
+						if ( hImc != nullptr )
+						{
+							const LONG size = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
+							if ( size > 0 && size < 512 )
+							{
+								utf16 arrWStr[256] = {};
+								ImmGetCompositionStringW( hImc, GCS_COMPSTR, arrWStr, static_cast<DWORD>( size ) );
+								arrWStr[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
+								utf8		arrUtf8[512]							   = {};
+								const int32 utf8Len									   = WideCharToMultiByte( CP_UTF8, 0, arrWStr, -1, arrUtf8, sizeof( arrUtf8 ), nullptr, nullptr );
+								if ( utf8Len > 0 )
+								{
+									const string_view svComp( arrUtf8, static_cast<size_t>( utf8Len - 1 ) );
+									postRawEvent( RawInputEvent::makeTextComposition( svComp ) );
+								}
+							}
+							ImmReleaseContext( pHwnd, hImc );
+						}
+					}
+				}
+				break;
+			}
+			case WM_SETFOCUS:
+				onWindowFocusGained();
+				break;
 			case WM_KILLFOCUS:
 				onWindowFocusLost();
+				break;
+			case WM_SIZE:
+			case WM_MOVE:
+				applyMouseLockMode();
 				break;
 			case WM_ACTIVATE:
 				if ( LOWORD( event._wParam ) == WA_INACTIVE )
 					onWindowFocusLost();
+				else
+					onWindowFocusGained();
 				break;
 			default:
 				break;

@@ -11,8 +11,6 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include <cmath>
-
 namespace sw
 {
 	namespace
@@ -70,7 +68,52 @@ namespace sw
 				{			  "Tap",			 ActionTrigger::Tap},
 				{		  "Pulse",		   ActionTrigger::Pulse},
 				{	  "DoubleTap",	   ActionTrigger::DoubleTap},
+				{		  "Repeat",			ActionTrigger::Repeat},
+				{	  "NavRepeat",		   ActionTrigger::Repeat},
 			};
+
+			static string slotToGlyph( const InputSlot& slot, InputDeviceType device )
+			{
+				if ( slot._deviceKind == InputDeviceKind::Keyboard )
+				{
+					const Key key = static_cast<Key>( slot._controlIndex );
+					if ( key != Key::Unknown )
+					{
+						const utf8* pName = KeyCodes::toName( key );
+						return pName != nullptr ? pName : "?";
+					}
+				}
+				else if ( slot._deviceKind == InputDeviceKind::Mouse )
+				{
+					const MouseButton btn = static_cast<MouseButton>( slot._controlIndex );
+					if ( btn != MouseButton::Count )
+					{
+						const utf8* pName = MouseButtons::toName( btn );
+						return pName != nullptr ? pName : "?";
+					}
+				}
+				else if ( slot._deviceKind == InputDeviceKind::Gamepad )
+				{
+					const GamepadButton btn = static_cast<GamepadButton>( slot._controlIndex );
+					if ( btn != GamepadButton::Count )
+					{
+						if ( device == InputDeviceType::GamepadPlayStation )
+						{
+							if ( btn == GamepadButton::A )
+								return "X";
+							if ( btn == GamepadButton::B )
+								return "Circle";
+							if ( btn == GamepadButton::X )
+								return "Square";
+							if ( btn == GamepadButton::Y )
+								return "Triangle";
+						}
+						const utf8* pName = GamepadButtons::toName( btn );
+						return pName != nullptr ? pName : "?";
+					}
+				}
+				return "?";
+			}
 		};
 	} // namespace
 } // namespace sw
@@ -83,28 +126,32 @@ namespace sw
 		: _pInput{ nullptr }
 		, _mapAction{}
 		, _mapLayer{}
-		, _mapActionCallback{}
-		, _mapPhaseCallback{}
-		, _mapVector2DCallback{}
-		, _mapToggleMode{}
-		, _mapToggleState{}
+		, _listActionSlot{}
 		, _listActionName{}
 		, _listLayerName{}
 		, _listLayerStack{}
-		, _listBufferedAction{}
-		, _listCommandHistory{}
+		, _arrBufferedAction{}
+		, _bufferedActionCount{ 0 }
+		, _bufferedActionHead{ 0 }
+		, _arrCommandHistory{}
+		, _commandHistoryCount{ 0 }
+		, _commandHistoryHead{ 0 }
+		, _nextGeneration{ 1 }
 		, _defaultLayerName{ ActionMapDefaults::kDefaultLayerName }
 		, _mouseSensitivity{ 1.0f, 1.0f }
 		, _gamepadSensitivity{ 1.0f, 1.0f }
 		, _doubleClickTime{ ActionMapDefaults::kDoubleClickTime }
 		, _doubleClickMaxDistance{ ActionMapDefaults::kDoubleClickMaxDistance }
+		, _doubleTapTime{ ActionMapDefaults::kDoubleTapTime }
 		, _holdThreshold{ ActionMapDefaults::kHoldThreshold }
 		, _navRepeatDelay{ 0.4f }
 		, _navRepeatRate{ 0.08f }
 		, _totalElapsedTime{ 0.0f }
 		, _deadzoneShape{ DeadzoneShape::Radial }
+		, _digitalNormalization{ DigitalNormalization::Circular }
 		, _bInvertX{ SW_FALSE }
 		, _bInvertY{ SW_FALSE }
+		, _bSuppressBaseActionOnChord{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -113,17 +160,15 @@ namespace sw
 	{
 		_mapAction.clear();
 		_mapLayer.clear();
-		_mapActionCallback.clear();
-		_mapPhaseCallback.clear();
-		_mapVector2DCallback.clear();
-		_mapToggleMode.clear();
-		_mapToggleState.clear();
+		_listActionSlot.clear();
 		_listActionName.clear();
 		_listLayerName.clear();
 		_listLayerStack.clear();
-		_listBufferedAction.clear();
-		_listCommandHistory.clear();
-		_defaultLayerName.assign( ActionMapDefaults::kDefaultLayerName );
+		_bufferedActionCount	= 0;
+		_bufferedActionHead		= 0;
+		_commandHistoryCount	= 0;
+		_commandHistoryHead		= 0;
+		_defaultLayerName		= hashed_string( ActionMapDefaults::kDefaultLayerName );
 		_doubleClickTime		= ActionMapDefaults::kDoubleClickTime;
 		_doubleClickMaxDistance = ActionMapDefaults::kDoubleClickMaxDistance;
 		_holdThreshold			= ActionMapDefaults::kHoldThreshold;
@@ -157,7 +202,7 @@ namespace sw
 		setDoubleClickMaxDistance( dblDist );
 		setHoldThreshold( holdThr );
 		if ( pDefLayer != nullptr && pDefLayer[0] != '\0' )
-			_defaultLayerName = pDefLayer;
+			_defaultLayerName = hashed_string( pDefLayer );
 
 		XmlNode layersNode = root.child( ActionMapInternal::InputMapXml::kLayers );
 		if ( layersNode.isValid() )
@@ -184,12 +229,10 @@ namespace sw
 			if ( pActionName == nullptr || pActionName[0] == '\0' )
 				return;
 
-			string		layer( inheritedLayer );
-			const utf8* pLayerAttr = actionNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
-			if ( pLayerAttr != nullptr )
-				layer.assign( pLayerAttr );
-			if ( layer.empty() )
-				layer = _defaultLayerName;
+			hashed_string layer		 = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
+			const utf8*	  pLayerAttr = actionNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
+			if ( pLayerAttr != nullptr && pLayerAttr[0] != '\0' )
+				layer = hashed_string( pLayerAttr );
 			ensureLayer( layer );
 
 			auto		defaultTrigger = ActionTrigger::Pressed;
@@ -219,11 +262,11 @@ namespace sw
 						trigger = parsed;
 				}
 
-				string		bindLayer	   = layer;
-				const utf8* pBindLayerAttr = bindNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
-				if ( pBindLayerAttr != nullptr )
+				hashed_string bindLayer		 = layer;
+				const utf8*	  pBindLayerAttr = bindNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
+				if ( pBindLayerAttr != nullptr && pBindLayerAttr[0] != '\0' )
 				{
-					bindLayer = pBindLayerAttr;
+					bindLayer = hashed_string( pBindLayerAttr );
 					ensureLayer( bindLayer );
 				}
 
@@ -243,7 +286,7 @@ namespace sw
 					const Key triggerKey = KeyCodes::fromName( pCode );
 					if ( modKey != Key::Unknown && triggerKey != Key::Unknown )
 					{
-						bindChord( pActionName, modKey, triggerKey, trigger, bindLayer );
+						bindChord( pActionName, modKey, triggerKey, trigger, bindLayer.view() );
 						continue;
 					}
 				}
@@ -252,88 +295,91 @@ namespace sw
 				{
 					const Key key = KeyCodes::fromName( pCode );
 					if ( key != Key::Unknown )
-						bind( pActionName, key, trigger, bindLayer );
+						bind( pActionName, key, trigger, bindLayer.view() );
 				}
 				else if ( StringUtil::equals( pSource, ActionMapInternal::InputMapXml::kSourceGamepad, true ) )
 				{
 					if ( StringUtil::equals( pCode, "LeftStick", true ) )
 					{
 						const float32 deadzone = bindNode.attrFloat( ActionMapInternal::InputMapXml::kAttrDeadzone, 0.15f );
-						bindGamepadStick2D( pActionName, GamepadStick::Left, deadzone, bindLayer );
+						bindGamepadStick2D( pActionName, GamepadStick::Left, deadzone, bindLayer.view() );
 					}
 					else if ( StringUtil::equals( pCode, "RightStick", true ) )
 					{
 						const float32 deadzone = bindNode.attrFloat( ActionMapInternal::InputMapXml::kAttrDeadzone, 0.15f );
-						bindGamepadStick2D( pActionName, GamepadStick::Right, deadzone, bindLayer );
+						bindGamepadStick2D( pActionName, GamepadStick::Right, deadzone, bindLayer.view() );
 					}
 					else
 					{
 						const GamepadButton button = GamepadButtons::fromName( pCode );
 						if ( button != GamepadButton::Count )
-							bind( pActionName, button, trigger, bindLayer );
+							bind( pActionName, button, trigger, bindLayer.view() );
 					}
 				}
 				else if ( StringUtil::equals( pSource, ActionMapInternal::InputMapXml::kSourceMouse, true ) )
 				{
 					const MouseButton mouse = MouseButtons::fromName( pCode );
 					if ( mouse != MouseButton::Count )
-						bind( pActionName, mouse, trigger, bindLayer );
+						bind( pActionName, mouse, trigger, bindLayer.view() );
 				}
 			}
 
 			// 2) <vector2d> 태그 파싱
 			for ( XmlNode compNode = actionNode.child( "vector2d" ); compNode.isValid(); compNode = compNode.next( "vector2d" ) )
 			{
-				const Key	  upKey	   = KeyCodes::fromName( compNode.attr( "up" ) );
-				const Key	  downKey  = KeyCodes::fromName( compNode.attr( "down" ) );
-				const Key	  leftKey  = KeyCodes::fromName( compNode.attr( "left" ) );
-				const Key	  rightKey = KeyCodes::fromName( compNode.attr( "right" ) );
-				const float32 deadzone = compNode.attrFloat( "deadzone", 0.0f );
-				string		  compLayer( layer );
+				const Key	  upKey			 = KeyCodes::fromName( compNode.attr( "up" ) );
+				const Key	  downKey		 = KeyCodes::fromName( compNode.attr( "down" ) );
+				const Key	  leftKey		 = KeyCodes::fromName( compNode.attr( "left" ) );
+				const Key	  rightKey		 = KeyCodes::fromName( compNode.attr( "right" ) );
+				const float32 deadzone		 = compNode.attrFloat( "deadzone", 0.0f );
+				hashed_string compLayer		 = layer;
 				const utf8*	  pCompLayerAttr = compNode.attr( "layer" );
 				if ( pCompLayerAttr != nullptr && pCompLayerAttr[0] != '\0' )
 				{
-					compLayer = pCompLayerAttr;
+					compLayer = hashed_string( pCompLayerAttr );
 					ensureLayer( compLayer );
 				}
 				if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
 				{
-					bindVector2D( pActionName, upKey, downKey, leftKey, rightKey, deadzone, compLayer );
+					bindVector2D( pActionName, upKey, downKey, leftKey, rightKey, deadzone, compLayer.view() );
 				}
 			}
 
 			// 3) <axis1d> 태그 파싱
 			for ( XmlNode axisNode = actionNode.child( "axis1d" ); axisNode.isValid(); axisNode = axisNode.next( "axis1d" ) )
 			{
-				const Key	posKey = KeyCodes::fromName( axisNode.attr( "positive" ) );
-				const Key	negKey = KeyCodes::fromName( axisNode.attr( "negative" ) );
-				string		axisLayer( layer );
-				const utf8* pAxisLayerAttr = axisNode.attr( "layer" );
+				const Key	  posKey		 = KeyCodes::fromName( axisNode.attr( "positive" ) );
+				const Key	  negKey		 = KeyCodes::fromName( axisNode.attr( "negative" ) );
+				hashed_string axisLayer		 = layer;
+				const utf8*	  pAxisLayerAttr = axisNode.attr( "layer" );
 				if ( pAxisLayerAttr != nullptr && pAxisLayerAttr[0] != '\0' )
 				{
-					axisLayer = pAxisLayerAttr;
+					axisLayer = hashed_string( pAxisLayerAttr );
 					ensureLayer( axisLayer );
 				}
 				if ( posKey != Key::Unknown && negKey != Key::Unknown )
 				{
-					bindAxis1DComposite( pActionName, negKey, posKey, axisLayer );
+					bindAxis1DComposite( pActionName, negKey, posKey, axisLayer.view() );
 				}
 			}
 
 			// 4) <stick> 태그 파싱
 			for ( XmlNode stickNode = actionNode.child( "stick" ); stickNode.isValid(); stickNode = stickNode.next( "stick" ) )
 			{
-				const utf8*		   pStickName = stickNode.attr( "stick" );
-				const GamepadStick stick	  = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
-				const float32	   deadzone	  = stickNode.attrFloat( "deadzone", 0.15f );
-				string			   stickLayer( layer );
+				const utf8*		   pStickName	   = stickNode.attr( "stick" );
+				const GamepadStick stick		   = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
+				const float32	   deadzone		   = stickNode.attrFloat( "deadzone", 0.15f );
+				hashed_string	   stickLayer	   = layer;
 				const utf8*		   pStickLayerAttr = stickNode.attr( "layer" );
 				if ( pStickLayerAttr != nullptr && pStickLayerAttr[0] != '\0' )
 				{
-					stickLayer = pStickLayerAttr;
+					stickLayer = hashed_string( pStickLayerAttr );
 					ensureLayer( stickLayer );
 				}
-				bindGamepadStick2D( pActionName, stick, deadzone, stickLayer );
+				const uint8	  padIndex		   = static_cast<uint8>( stickNode.attrInt( "pad", 0 ) );
+				const float32 outerDeadzone	   = stickNode.attrFloat( "outerDeadzone", 1.0f );
+				const float32 responseExponent = stickNode.attrFloat( "responseExponent", 1.0f );
+				bindGamepadStick2D( pActionName, stick, deadzone, stickLayer.view(), padIndex, outerDeadzone, responseExponent );
 			}
 
 			// 5) <chord> 태그 파싱
@@ -349,16 +395,16 @@ namespace sw
 					if ( parsed != ActionTrigger::Count )
 						trig = parsed;
 				}
-				string		chordLayer( layer );
-				const utf8* pChordLayerAttr = chordNode.attr( "layer" );
+				hashed_string chordLayer	  = layer;
+				const utf8*	  pChordLayerAttr = chordNode.attr( "layer" );
 				if ( pChordLayerAttr != nullptr && pChordLayerAttr[0] != '\0' )
 				{
-					chordLayer = pChordLayerAttr;
+					chordLayer = hashed_string( pChordLayerAttr );
 					ensureLayer( chordLayer );
 				}
 				if ( modKey != Key::Unknown && trigKey != Key::Unknown )
 				{
-					bindChord( pActionName, modKey, trigKey, trig, chordLayer );
+					bindChord( pActionName, modKey, trigKey, trig, chordLayer.view() );
 				}
 			}
 		};
@@ -386,7 +432,7 @@ namespace sw
 		for ( XmlNode actionNode = root.child( ActionMapInternal::InputMapXml::kAction ); actionNode.isValid();
 			  actionNode		 = actionNode.next( ActionMapInternal::InputMapXml::kAction ) )
 		{
-			loadAction( actionNode, _defaultLayerName );
+			loadAction( actionNode, _defaultLayerName.view() );
 		}
 
 		return true;
@@ -425,13 +471,12 @@ namespace sw
 		if ( action.empty() )
 			return;
 
-		string layerStr( layer );
-		if ( layerStr.empty() )
-			layerStr = _defaultLayerName;
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
 		ensureLayer( layerStr );
-		ensureActionListed( action );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
 
-		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
 		ActionBinding binding{};
 		binding._layer		  = layerStr;
 		binding._kind		  = BindingKind::SingleSlot;
@@ -439,6 +484,7 @@ namespace sw
 		binding._arrSlot[0]	  = slot;
 		binding._pCachedLayer = findLayer( layerStr );
 		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
@@ -468,13 +514,12 @@ namespace sw
 		if ( action.empty() )
 			return;
 
-		string layerStr( layer );
-		if ( layerStr.empty() )
-			layerStr = _defaultLayerName;
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
 		ensureLayer( layerStr );
-		ensureActionListed( action );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
 
-		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis1D );
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis1D );
 		ActionBinding binding{};
 		binding._layer		  = layerStr;
 		binding._kind		  = BindingKind::Axis1DComposite;
@@ -483,10 +528,16 @@ namespace sw
 		binding._arrSlot[1]	  = InputSlot::fromKey( positiveKey );
 		binding._pCachedLayer = findLayer( layerStr );
 		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
 	float32 ActionMap::getAxis1D( string_view action ) const
+	{
+		return getAxis1D( hashed_string( action ) );
+	}
+
+	float32 ActionMap::getAxis1D( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr )
@@ -503,23 +554,17 @@ namespace sw
 		return val < -1.0f ? -1.0f : ( val > 1.0f ? 1.0f : val );
 	}
 
-	float32 ActionMap::getAxis1D( const hashed_string& action ) const
-	{
-		return getAxis1D( action.view() );
-	}
-
 	void ActionMap::bindVector2D( string_view action, Key up, Key down, Key left, Key right, float32 deadzone, string_view layer )
 	{
 		if ( action.empty() )
 			return;
 
-		string layerStr( layer );
-		if ( layerStr.empty() )
-			layerStr = _defaultLayerName;
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
 		ensureLayer( layerStr );
-		ensureActionListed( action );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
 
-		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis2D );
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
 		ActionBinding binding{};
 		binding._layer		  = layerStr;
 		binding._kind		  = BindingKind::Vector2DComposite;
@@ -531,33 +576,42 @@ namespace sw
 		binding._deadzone	  = deadzone;
 		binding._pCachedLayer = findLayer( layerStr );
 		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
-	void ActionMap::bindGamepadStick2D( string_view action, GamepadStick stick, float32 deadzone, string_view layer )
+	void ActionMap::bindGamepadStick2D( string_view action, GamepadStick stick, float32 deadzone, string_view layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent )
 	{
 		if ( action.empty() )
 			return;
 
-		string layerStr( layer );
-		if ( layerStr.empty() )
-			layerStr = _defaultLayerName;
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
 		ensureLayer( layerStr );
-		ensureActionListed( action );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
 
-		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis2D );
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
 		ActionBinding binding{};
-		binding._layer		  = layerStr;
-		binding._kind		  = BindingKind::GamepadStick2D;
-		binding._trigger	  = ActionTrigger::Down;
-		binding._stick		  = stick;
-		binding._deadzone	  = deadzone;
-		binding._pCachedLayer = findLayer( layerStr );
+		binding._layer			  = layerStr;
+		binding._kind			  = BindingKind::GamepadStick2D;
+		binding._trigger		  = ActionTrigger::Down;
+		binding._deviceIndex	  = padIndex;
+		binding._stick			  = stick;
+		binding._deadzone		  = deadzone;
+		binding._outerDeadzone	  = outerDeadzone;
+		binding._responseExponent = responseExponent;
+		binding._pCachedLayer	  = findLayer( layerStr );
 		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
 	float2 ActionMap::getVector2D( string_view action ) const
+	{
+		return getVector2D( hashed_string( action ) );
+	}
+
+	float2 ActionMap::getVector2D( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr )
@@ -582,9 +636,82 @@ namespace sw
 		return val;
 	}
 
-	float2 ActionMap::getVector2D( const hashed_string& action ) const
+	void ActionMap::bindMouseDelta( string_view action, float32 sensitivity, string_view layer )
 	{
-		return getVector2D( action.view() );
+		bindMouseDelta( hashed_string( action ), sensitivity, hashed_string( layer ) );
+	}
+
+	void ActionMap::bindMouseDelta( const hashed_string& action, float32 sensitivity, const hashed_string& layer )
+	{
+		if ( action.empty() )
+			return;
+
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
+		ensureLayer( layerStr );
+		ensureActionListed( action );
+
+		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis2D );
+		ActionBinding binding{};
+		binding._layer		  = layerStr;
+		binding._kind		  = BindingKind::MouseDelta2D;
+		binding._trigger	  = ActionTrigger::Down;
+		binding._scale		  = sensitivity;
+		binding._pCachedLayer = findLayer( layerStr );
+		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
+		entry._listBindingState.push_back( ActionBindingState{} );
+	}
+
+	void ActionMap::bindShortcut( string_view action, Key key, uint8 modifierMask, ActionTrigger trigger, string_view layer )
+	{
+		bindShortcut( hashed_string( action ), key, modifierMask, trigger, hashed_string( layer ) );
+	}
+
+	void ActionMap::bindShortcut( const hashed_string& action, Key key, uint8 modifierMask, ActionTrigger trigger, const hashed_string& layer )
+	{
+		if ( action.empty() || key == Key::Unknown )
+			return;
+
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
+		ensureLayer( layerStr );
+		ensureActionListed( action );
+
+		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
+		ActionBinding binding{};
+		binding._layer		  = layerStr;
+		binding._kind		  = BindingKind::Shortcut;
+		binding._trigger	  = trigger;
+		binding._modifierMask = modifierMask;
+		binding._arrSlot[0]	  = InputSlot::fromKey( key );
+		binding._pCachedLayer = findLayer( layerStr );
+		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
+		entry._listBindingState.push_back( ActionBindingState{} );
+	}
+
+	void ActionMap::bindAnyKey( string_view action, string_view layer )
+	{
+		bindAnyKey( hashed_string( action ), hashed_string( layer ) );
+	}
+
+	void ActionMap::bindAnyKey( const hashed_string& action, const hashed_string& layer )
+	{
+		if ( action.empty() )
+			return;
+
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : layer;
+		ensureLayer( layerStr );
+		ensureActionListed( action );
+
+		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
+		ActionBinding binding{};
+		binding._layer		  = layerStr;
+		binding._kind		  = BindingKind::AnyKey;
+		binding._trigger	  = ActionTrigger::Pressed;
+		binding._pCachedLayer = findLayer( layerStr );
+		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
+		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
 	void ActionMap::bindChord( string_view action, Key modifierKey, Key triggerKey, ActionTrigger trigger, string_view layer )
@@ -592,13 +719,12 @@ namespace sw
 		if ( action.empty() || modifierKey == Key::Unknown || triggerKey == Key::Unknown )
 			return;
 
-		string layerStr( layer );
-		if ( layerStr.empty() )
-			layerStr = _defaultLayerName;
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
 		ensureLayer( layerStr );
-		ensureActionListed( action );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
 
-		ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
 		ActionBinding binding{};
 		binding._layer		  = layerStr;
 		binding._kind		  = BindingKind::Chord;
@@ -607,10 +733,16 @@ namespace sw
 		binding._arrSlot[1]	  = InputSlot::fromKey( triggerKey );
 		binding._pCachedLayer = findLayer( layerStr );
 		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
 	bool ActionMap::isChordDown( string_view action ) const
+	{
+		return isChordDown( hashed_string( action ) );
+	}
+
+	bool ActionMap::isChordDown( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr || _pInput == nullptr )
@@ -629,12 +761,12 @@ namespace sw
 		return false;
 	}
 
-	bool ActionMap::isChordDown( const hashed_string& action ) const
+	bool ActionMap::wasChordTriggered( string_view action ) const
 	{
-		return isChordDown( action.view() );
+		return wasChordTriggered( hashed_string( action ) );
 	}
 
-	bool ActionMap::wasChordTriggered( string_view action ) const
+	bool ActionMap::wasChordTriggered( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr || _pInput == nullptr )
@@ -653,43 +785,44 @@ namespace sw
 		return false;
 	}
 
-	bool ActionMap::wasChordTriggered( const hashed_string& action ) const
-	{
-		return wasChordTriggered( action.view() );
-	}
-
 	void ActionMap::bindActionCallback( string_view action, ActionTrigger trigger, ActionCallbackDelegate callback )
 	{
 		if ( action.empty() || callback.isBound() == false )
 			return;
-		ActionCallbackEntry entry{};
-		entry._trigger	= trigger;
-		entry._callback = callback;
-		_mapActionCallback[string( action )].push_back( entry );
+		ActionEntry&		entry = getOrCreateAction( action );
+		ActionCallbackEntry cbEntry{};
+		cbEntry._trigger  = trigger;
+		cbEntry._callback = std::move( callback );
+		entry._listActionCallback.push_back( std::move( cbEntry ) );
 	}
 
 	void ActionMap::bindPhaseCallback( string_view action, ActionPhase phase, ActionCallbackDelegate callback )
 	{
 		if ( action.empty() || callback.isBound() == false )
 			return;
-		PhaseCallbackEntry entry{};
-		entry._phase	= phase;
-		entry._callback = callback;
-		_mapPhaseCallback[string( action )].push_back( entry );
+		ActionEntry&	   entry = getOrCreateAction( action );
+		PhaseCallbackEntry cbEntry{};
+		cbEntry._phase	  = phase;
+		cbEntry._callback = std::move( callback );
+		entry._listPhaseCallback.push_back( std::move( cbEntry ) );
 	}
 
 	void ActionMap::bindVector2DCallback( string_view action, Vector2DCallbackDelegate callback )
 	{
 		if ( action.empty() || callback.isBound() == false )
 			return;
-		_mapVector2DCallback[string( action )].push_back( callback );
+		ActionEntry& entry = getOrCreateAction( action, InputActionValueType::Axis2D );
+		entry._listVector2DCallback.push_back( std::move( callback ) );
 	}
 
 	void ActionMap::clearCallbacks()
 	{
-		_mapActionCallback.clear();
-		_mapPhaseCallback.clear();
-		_mapVector2DCallback.clear();
+		for ( auto& [name, entry] : _mapAction )
+		{
+			entry._listActionCallback.clear();
+			entry._listPhaseCallback.clear();
+			entry._listVector2DCallback.clear();
+		}
 	}
 
 	void ActionMap::registerLayer( string_view name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
@@ -706,8 +839,9 @@ namespace sw
 
 	void ActionMap::pushLayer( string_view layer, bool blockLower, bool showCursor )
 	{
-		ensureLayer( layer, 0, true, blockLower );
-		LayerDef* pDef = findLayer( layer );
+		const hashed_string hLayer( layer );
+		ensureLayer( hLayer, 0, true, blockLower );
+		LayerDef* pDef = findLayer( hLayer );
 		if ( pDef != nullptr )
 		{
 			pDef->_bEnabled	   = SW_TRUE;
@@ -716,13 +850,13 @@ namespace sw
 
 		for ( auto it = _listLayerStack.begin(); it != _listLayerStack.end(); ++it )
 		{
-			if ( *it == layer )
+			if ( *it == hLayer )
 			{
 				_listLayerStack.erase( it );
 				break;
 			}
 		}
-		_listLayerStack.push_back( string( layer ) );
+		_listLayerStack.push_back( hLayer );
 		if ( _pInput != nullptr && showCursor )
 			_pInput->setCursorVisible( true );
 	}
@@ -735,9 +869,10 @@ namespace sw
 
 	void ActionMap::popLayer( string_view layer )
 	{
+		const hashed_string hLayer( layer );
 		for ( auto it = _listLayerStack.rbegin(); it != _listLayerStack.rend(); ++it )
 		{
-			if ( *it == layer )
+			if ( *it == hLayer )
 			{
 				_listLayerStack.erase( std::next( it ).base() );
 				break;
@@ -748,86 +883,218 @@ namespace sw
 	string_view ActionMap::getCurrentTopLayer() const
 	{
 		if ( _listLayerStack.empty() == false )
-			return _listLayerStack.back();
-		return _defaultLayerName;
+			return _listLayerStack.back().view();
+		return _defaultLayerName.view();
 	}
 
 	void ActionMap::enableOnlyLayer( string_view layer )
 	{
+		const hashed_string hLayer( layer );
 		for ( auto& [name, def] : _mapLayer )
 		{
 			if ( def._bAlwaysOn == SW_TRUE )
 				continue;
-			def._bEnabled = ( name == layer ) ? SW_TRUE : SW_FALSE;
+			def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
 		}
 		_listLayerStack.clear();
-		_listLayerStack.push_back( string( layer ) );
+		_listLayerStack.push_back( hLayer );
 	}
 
 	void ActionMap::setToggleMode( string_view action, bool bToggle )
 	{
-		_mapToggleMode[string( action )] = bToggle;
+		ActionEntry& entry = getOrCreateAction( hashed_string( action ) );
+		entry._bToggleMode = bToggle ? SW_TRUE : SW_FALSE;
 		if ( bToggle == false )
-			_mapToggleState[string( action )] = false;
+			entry._bToggleState = SW_FALSE;
 	}
 
 	bool ActionMap::isActionToggled( string_view action ) const
 	{
-		auto it = _mapToggleState.find( action );
-		return it != _mapToggleState.end() ? it->second : false;
+		return isActionToggled( hashed_string( action ) );
 	}
 
 	bool ActionMap::isActionToggled( const hashed_string& action ) const
 	{
-		return isActionToggled( action.view() );
+		const ActionEntry* pEntry = findAction( action );
+		return pEntry != nullptr && pEntry->_bToggleState == SW_TRUE;
 	}
 
 	void ActionMap::bufferAction( string_view action, float32 expirationSeconds )
 	{
+		bufferAction( hashed_string( action ), expirationSeconds );
+	}
+
+	void ActionMap::bufferAction( const hashed_string& action, float32 expirationSeconds )
+	{
 		if ( action.empty() )
 			return;
-		BufferedActionItem item{};
-		item._action		= string( action );
-		item._remainingTime = expirationSeconds;
-		_listBufferedAction.push_back( item );
+
+		const uint32 insertIdx						 = ( _bufferedActionHead + _bufferedActionCount ) % kMaxBufferedActions;
+		_arrBufferedAction[insertIdx]._action		 = action;
+		_arrBufferedAction[insertIdx]._remainingTime = expirationSeconds;
+		if ( _bufferedActionCount < kMaxBufferedActions )
+			++_bufferedActionCount;
+		else
+			_bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
 	}
 
 	bool ActionMap::consumeBufferedAction( string_view action )
 	{
-		for ( auto it = _listBufferedAction.begin(); it != _listBufferedAction.end(); ++it )
+		return consumeBufferedAction( hashed_string( action ) );
+	}
+
+	bool ActionMap::consumeBufferedAction( const hashed_string& action )
+	{
+		for ( uint32 index = 0; index < _bufferedActionCount; ++index )
 		{
-			if ( it->_action == action && it->_remainingTime > 0.0f )
+			const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
+			if ( _arrBufferedAction[idx]._action == action && _arrBufferedAction[idx]._remainingTime > 0.0f )
 			{
-				_listBufferedAction.erase( it );
+				_arrBufferedAction[idx]._remainingTime = 0.0f;
 				return true;
 			}
 		}
 		return false;
 	}
 
+	bool ActionMap::checkCommandSequence( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
+	{
+		if ( listSequence.empty() || _commandHistoryCount < listSequence.size() )
+			return false;
+
+		const size_t seqCount = listSequence.size();
+		size_t		 matchIdx = seqCount;
+		float32		 lastTime = 0.0f;
+
+		for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
+		{
+			const uint32			   histIdx = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
+			const CommandHistoryEntry& hist	   = _arrCommandHistory[histIdx];
+
+			if ( matchIdx == seqCount )
+			{
+				if ( hist._action == listSequence[seqCount - 1] )
+				{
+					lastTime = hist._timestamp;
+					--matchIdx;
+					if ( matchIdx == 0 )
+						return true;
+				}
+			}
+			else
+			{
+				if ( ( lastTime - hist._timestamp ) > maxWindowSeconds )
+					return false;
+
+				if ( hist._action == listSequence[matchIdx - 1] )
+				{
+					--matchIdx;
+					if ( matchIdx == 0 )
+						return true;
+				}
+			}
+		}
+		return matchIdx == 0;
+	}
+
 	bool ActionMap::checkCommandSequence( const vector<string>& listSequence, float32 maxWindowSeconds ) const
 	{
-		if ( listSequence.empty() || _listCommandHistory.size() < listSequence.size() )
+		if ( listSequence.empty() )
+			return false;
+		vector<hashed_string> listHashed;
+		listHashed.reserve( listSequence.size() );
+		for ( const string& s : listSequence )
+			listHashed.push_back( hashed_string( s ) );
+		return checkCommandSequence( listHashed, maxWindowSeconds );
+	}
+
+	bool ActionMap::checkCommandPattern( string_view pattern, float32 maxWindowSeconds ) const
+	{
+		return checkCommandPattern( hashed_string( pattern ), maxWindowSeconds );
+	}
+
+	bool ActionMap::checkCommandPattern( const hashed_string& pattern, float32 maxWindowSeconds ) const
+	{
+		string_view sv = pattern.view();
+		if ( sv.empty() || _commandHistoryCount == 0 )
 			return false;
 
-		const size_t seqCount	= listSequence.size();
-		const size_t histCount	= _listCommandHistory.size();
-		const size_t startIndex = histCount - seqCount;
+		vector<hashed_string> listExpected;
+		string				  actionToken;
 
-		const float32 firstTime = _listCommandHistory[startIndex]._timestamp;
-		const float32 lastTime	= _listCommandHistory[histCount - 1]._timestamp;
-		if ( ( lastTime - firstTime ) > maxWindowSeconds )
-			return false;
-
-		for ( size_t index = 0; index < seqCount; ++index )
+		for ( size_t index = 0; index < sv.size(); ++index )
 		{
-			if ( _listCommandHistory[startIndex + index]._action != listSequence[index] )
-				return false;
+			const utf8 ch = sv[index];
+			if ( ch == '2' )
+				listExpected.push_back( hashed_string( "Down" ) );
+			else if ( ch == '3' )
+				listExpected.push_back( hashed_string( "DownRight" ) );
+			else if ( ch == '6' )
+				listExpected.push_back( hashed_string( "Right" ) );
+			else if ( ch == '4' )
+				listExpected.push_back( hashed_string( "Left" ) );
+			else if ( ch == '1' )
+				listExpected.push_back( hashed_string( "DownLeft" ) );
+			else if ( ch == '7' )
+				listExpected.push_back( hashed_string( "UpLeft" ) );
+			else if ( ch == '8' )
+				listExpected.push_back( hashed_string( "Up" ) );
+			else if ( ch == '9' )
+				listExpected.push_back( hashed_string( "UpRight" ) );
+			else
+				actionToken.push_back( ch );
 		}
-		return true;
+
+		if ( actionToken.empty() == false )
+			listExpected.push_back( hashed_string( actionToken ) );
+
+		if ( listExpected.empty() )
+			return false;
+
+		if ( checkCommandSequence( listExpected, maxWindowSeconds ) )
+			return true;
+
+		const size_t reqLen	  = listExpected.size();
+		size_t		 matchIdx = reqLen;
+		float32		 lastTs	  = 0.0f;
+
+		for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
+		{
+			const uint32			   histIdx = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
+			const CommandHistoryEntry& hist	   = _arrCommandHistory[histIdx];
+
+			if ( matchIdx == reqLen )
+			{
+				if ( hist._action == listExpected[reqLen - 1] )
+				{
+					lastTs = hist._timestamp;
+					--matchIdx;
+					if ( matchIdx == 0 )
+						return true;
+				}
+			}
+			else
+			{
+				if ( ( lastTs - hist._timestamp ) > maxWindowSeconds )
+					break;
+
+				if ( hist._action == listExpected[matchIdx - 1] )
+				{
+					--matchIdx;
+					if ( matchIdx == 0 )
+						return true;
+				}
+			}
+		}
+		return matchIdx == 0;
 	}
 
 	string ActionMap::getGlyphForAction( string_view action ) const
+	{
+		return getGlyphForAction( hashed_string( action ) );
+	}
+
+	string ActionMap::getGlyphForAction( const hashed_string& action ) const
 	{
 		const InputDeviceType device = _pInput != nullptr ? _pInput->getActiveDeviceType() : InputDeviceType::KeyboardMouse;
 		const ActionEntry*	  pEntry = findAction( action );
@@ -840,54 +1107,66 @@ namespace sw
 			{
 				if ( b._kind == BindingKind::SingleSlot )
 				{
-					if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
+					if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard || b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
 					{
-						const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-						if ( key != Key::Unknown )
-							return string( "[ " ) + KeyCodes::toName( key ) + " ]";
+						const string glyph = ActionMapInternal::slotToGlyph( b._arrSlot[0], device );
+						if ( glyph != "?" )
+							return string( "[ " ) + glyph + " ]";
 					}
-					else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
-					{
-						const MouseButton btn = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
-						if ( btn != MouseButton::Count )
-							return string( "[ " ) + MouseButtons::toName( btn ) + " ]";
-					}
+				}
+				else if ( b._kind == BindingKind::Axis1DComposite )
+				{
+					return string( "[ " ) + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + " / " + ActionMapInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
 				}
 				else if ( b._kind == BindingKind::Vector2DComposite )
 				{
-					return "[ WASD ]";
+					return string( "[ " ) + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + ActionMapInternal::slotToGlyph( b._arrSlot[1], device ) + ActionMapInternal::slotToGlyph( b._arrSlot[2], device ) + ActionMapInternal::slotToGlyph( b._arrSlot[3], device ) + " ]";
 				}
 				else if ( b._kind == BindingKind::Chord )
 				{
-					const Key modKey  = static_cast<Key>( b._arrSlot[0]._controlIndex );
-					const Key trigKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
-					return string( "[ " ) + KeyCodes::toName( modKey ) + " + " + KeyCodes::toName( trigKey ) + " ]";
+					return string( "[ " ) + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
+				}
+				else if ( b._kind == BindingKind::MouseDelta2D )
+				{
+					return "[ Mouse Look ]";
+				}
+				else if ( b._kind == BindingKind::Shortcut )
+				{
+					string modStr;
+					if ( ( b._modifierMask & ModifierKey::Ctrl ) != 0 )
+						modStr += "Ctrl + ";
+					if ( ( b._modifierMask & ModifierKey::Shift ) != 0 )
+						modStr += "Shift + ";
+					if ( ( b._modifierMask & ModifierKey::Alt ) != 0 )
+						modStr += "Alt + ";
+					if ( ( b._modifierMask & ModifierKey::Super ) != 0 )
+						modStr += "Win + ";
+					return string( "[ " ) + modStr + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
+				}
+				else if ( b._kind == BindingKind::AnyKey )
+				{
+					return "[ Any Key ]";
 				}
 			}
 			else
 			{
 				if ( b._kind == BindingKind::SingleSlot && b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
 				{
-					const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
-					if ( btn != GamepadButton::Count )
-					{
-						if ( device == InputDeviceType::GamepadPlayStation )
-						{
-							if ( btn == GamepadButton::A )
-								return "[ X ]";
-							if ( btn == GamepadButton::B )
-								return "[ Circle ]";
-							if ( btn == GamepadButton::X )
-								return "[ Square ]";
-							if ( btn == GamepadButton::Y )
-								return "[ Triangle ]";
-						}
-						return string( "[ " ) + GamepadButtons::toName( btn ) + " ]";
-					}
+					const string glyph = ActionMapInternal::slotToGlyph( b._arrSlot[0], device );
+					if ( glyph != "?" )
+						return string( "[ " ) + glyph + " ]";
 				}
 				else if ( b._kind == BindingKind::GamepadStick2D )
 				{
 					return ( b._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
+				}
+				else if ( b._kind == BindingKind::Chord )
+				{
+					return string( "[ " ) + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + " + " + ActionMapInternal::slotToGlyph( b._arrSlot[1], device ) + " ]";
+				}
+				else if ( b._kind == BindingKind::AnyKey )
+				{
+					return "[ Any Button ]";
 				}
 			}
 		}
@@ -916,6 +1195,139 @@ namespace sw
 		return true;
 	}
 
+	bool ActionMap::rebindWithResolution( string_view action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
+	{
+		return rebindWithResolution( hashed_string( action ), newSlot, strategy, bindIndex );
+	}
+
+	bool ActionMap::rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
+	{
+		ActionEntry* pEntry = findAction( action );
+		if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+			return false;
+
+		const hashed_string targetLayer = pEntry->_listBinding[bindIndex]._layer;
+
+		hashed_string conflictingAction{};
+		uint32		  conflictingBindIndex = 0;
+		for ( auto& [actName, entry] : _mapAction )
+		{
+			if ( actName == action )
+				continue;
+			for ( uint32 bIdx = 0; bIdx < entry._listBinding.size(); ++bIdx )
+			{
+				if ( entry._listBinding[bIdx]._layer == targetLayer && entry._listBinding[bIdx]._arrSlot[0] == newSlot )
+				{
+					conflictingAction	 = actName;
+					conflictingBindIndex = bIdx;
+					break;
+				}
+			}
+			if ( conflictingAction.empty() == false )
+				break;
+		}
+
+		if ( conflictingAction.empty() == false )
+		{
+			ActionEntry* pConflictEntry = findAction( conflictingAction );
+			if ( strategy == ConflictResolution::Swap && pConflictEntry != nullptr )
+			{
+				const InputSlot oldSlot										   = pEntry->_listBinding[bindIndex]._arrSlot[0];
+				pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[0] = oldSlot;
+				pEntry->_listBinding[bindIndex]._arrSlot[0]					   = newSlot;
+				return true;
+			}
+			else if ( strategy == ConflictResolution::Override && pConflictEntry != nullptr )
+			{
+				pConflictEntry->_listBinding[conflictingBindIndex]._arrSlot[0] = InputSlot{};
+				pEntry->_listBinding[bindIndex]._arrSlot[0]					   = newSlot;
+				return true;
+			}
+			else if ( strategy == ConflictResolution::AddSecondary )
+			{
+				ActionBinding newBinding = pEntry->_listBinding[bindIndex];
+				newBinding._arrSlot[0]	 = newSlot;
+				pEntry->_listBinding.push_back( newBinding );
+				pEntry->_listBindingState.push_back( ActionBindingState{} );
+				return true;
+			}
+		}
+
+		pEntry->_listBinding[bindIndex]._arrSlot[0] = newSlot;
+		return true;
+	}
+
+	bool ActionMap::hasBindingConflict( const InputSlot& slot, string_view layer, string& outConflictingAction ) const
+	{
+		const hashed_string targetLayer = layer.empty() ? _defaultLayerName : hashed_string( layer );
+
+		for ( const auto& [actionName, entry] : _mapAction )
+		{
+			for ( const ActionBinding& binding : entry._listBinding )
+			{
+				if ( binding._layer != targetLayer )
+					continue;
+
+				uint32 slotCount = 0;
+				switch ( binding._kind )
+				{
+					case BindingKind::SingleSlot:
+					case BindingKind::Shortcut:
+						slotCount = 1;
+						break;
+					case BindingKind::Axis1DComposite:
+					case BindingKind::Chord:
+						slotCount = 2;
+						break;
+					case BindingKind::Vector2DComposite:
+						slotCount = 4;
+						break;
+					case BindingKind::GamepadStick2D:
+					case BindingKind::MouseDelta2D:
+					case BindingKind::AnyKey:
+					default:
+						slotCount = 0;
+						break;
+				}
+
+				for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
+				{
+					if ( binding._arrSlot[slotIndex] == slot )
+					{
+						outConflictingAction = actionName.c_str();
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	bool ActionMap::resetActionToDefault( string_view action )
+	{
+		ActionEntry* pEntry = findAction( action );
+		if ( pEntry == nullptr || pEntry->_listDefaultBinding.empty() )
+			return false;
+
+		pEntry->_listBinding = pEntry->_listDefaultBinding;
+		pEntry->_listBindingState.clear();
+		pEntry->_listBindingState.resize( pEntry->_listBinding.size() );
+		return true;
+	}
+
+	void ActionMap::resetAllBindingsToDefault()
+	{
+		for ( auto& [name, entry] : _mapAction )
+		{
+			if ( entry._listDefaultBinding.empty() == false )
+			{
+				entry._listBinding = entry._listDefaultBinding;
+				entry._listBindingState.clear();
+				entry._listBindingState.resize( entry._listBinding.size() );
+			}
+		}
+	}
+
 	bool ActionMap::saveUserBindings( string_view filePath ) const
 	{
 		if ( filePath.empty() )
@@ -927,32 +1339,99 @@ namespace sw
 		{
 			for ( const ActionBinding& b : entry._listBinding )
 			{
-				if ( b._kind == BindingKind::SingleSlot )
+				XmlNode bindNode = root.appendChild( "bind" );
+				bindNode.appendAttr( "action", actionName.c_str() );
+				bindNode.appendAttr( "layer", b._layer.c_str() );
+
+				switch ( b._kind )
 				{
-					if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
+					case BindingKind::SingleSlot:
 					{
-						const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-						if ( key != Key::Unknown )
+						bindNode.appendAttr( "kind", "single" );
+						if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
 						{
-							XmlNode bindNode = root.appendChild( "bind" );
-							bindNode.appendAttr( "action", actionName.c_str() );
+							const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
 							bindNode.appendAttr( "source", "key" );
 							bindNode.appendAttr( "key", KeyCodes::toName( key ) );
-							bindNode.appendAttr( "layer", b._layer.c_str() );
 						}
-					}
-					else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
-					{
-						const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
-						if ( btn != GamepadButton::Count )
+						else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
 						{
-							XmlNode bindNode = root.appendChild( "bind" );
-							bindNode.appendAttr( "action", actionName.c_str() );
+							const MouseButton btn = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
+							bindNode.appendAttr( "source", "mouse" );
+							bindNode.appendAttr( "button", MouseButtons::toName( btn ) );
+						}
+						else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
+						{
+							const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
 							bindNode.appendAttr( "source", "gamepad" );
 							bindNode.appendAttr( "code", GamepadButtons::toName( btn ) );
-							bindNode.appendAttr( "layer", b._layer.c_str() );
+							bindNode.appendAttr( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
 						}
+						break;
 					}
+					case BindingKind::Axis1DComposite:
+					{
+						bindNode.appendAttr( "kind", "axis1d" );
+						const Key negKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
+						const Key posKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
+						bindNode.appendAttr( "negKey", KeyCodes::toName( negKey ) );
+						bindNode.appendAttr( "posKey", KeyCodes::toName( posKey ) );
+						break;
+					}
+					case BindingKind::Vector2DComposite:
+					{
+						bindNode.appendAttr( "kind", "vector2d" );
+						const Key upKey	   = static_cast<Key>( b._arrSlot[0]._controlIndex );
+						const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
+						const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
+						const Key rightKey = static_cast<Key>( b._arrSlot[3]._controlIndex );
+						bindNode.appendAttr( "up", KeyCodes::toName( upKey ) );
+						bindNode.appendAttr( "down", KeyCodes::toName( downKey ) );
+						bindNode.appendAttr( "left", KeyCodes::toName( leftKey ) );
+						bindNode.appendAttr( "right", KeyCodes::toName( rightKey ) );
+						bindNode.appendAttr( "deadzone", b._deadzone );
+						break;
+					}
+					case BindingKind::GamepadStick2D:
+					{
+						bindNode.appendAttr( "kind", "stick" );
+						bindNode.appendAttr( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
+						bindNode.appendAttr( "pad", static_cast<int32>( b._deviceIndex ) );
+						bindNode.appendAttr( "deadzone", b._deadzone );
+						bindNode.appendAttr( "outerDeadzone", b._outerDeadzone );
+						bindNode.appendAttr( "exponent", b._responseExponent );
+						break;
+					}
+					case BindingKind::MouseDelta2D:
+					{
+						bindNode.appendAttr( "kind", "mouseDelta" );
+						bindNode.appendAttr( "scale", b._scale );
+						break;
+					}
+					case BindingKind::Chord:
+					{
+						bindNode.appendAttr( "kind", "chord" );
+						const Key modKey  = static_cast<Key>( b._arrSlot[0]._controlIndex );
+						const Key trigKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
+						bindNode.appendAttr( "modKey", KeyCodes::toName( modKey ) );
+						bindNode.appendAttr( "trigKey", KeyCodes::toName( trigKey ) );
+						break;
+					}
+					case BindingKind::Shortcut:
+					{
+						bindNode.appendAttr( "kind", "shortcut" );
+						const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
+						bindNode.appendAttr( "key", KeyCodes::toName( key ) );
+						bindNode.appendAttr( "modifierMask", static_cast<int32>( b._modifierMask ) );
+						break;
+					}
+					case BindingKind::AnyKey:
+					{
+						bindNode.appendAttr( "kind", "anyKey" );
+						break;
+					}
+					default:
+						break;
 				}
 			}
 		}
@@ -974,19 +1453,93 @@ namespace sw
 
 		for ( XmlNode bindNode = root.child( "bind" ); bindNode.isValid(); bindNode = bindNode.next( "bind" ) )
 		{
-			const utf8* pAction	   = bindNode.attr( "action" );
+			const utf8*		  pAction	= bindNode.attr( "action" );
+			const utf8*		  pKindStr	= bindNode.attr( "kind" );
+			const utf8*		  pLayerStr = bindNode.attr( "layer" );
+			const string_view layer		= ( pLayerStr != nullptr && pLayerStr[0] != '\0' ) ? string_view( pLayerStr ) : string_view{};
+
+			if ( pAction == nullptr || pAction[0] == '\0' )
+				continue;
+
+			if ( pKindStr != nullptr )
+			{
+				if ( StringUtil::equals( pKindStr, "axis1d", true ) )
+				{
+					const Key negKey = KeyCodes::fromName( bindNode.attr( "negKey" ) );
+					const Key posKey = KeyCodes::fromName( bindNode.attr( "posKey" ) );
+					if ( negKey != Key::Unknown && posKey != Key::Unknown )
+						bindAxis1DComposite( pAction, negKey, posKey, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "vector2d", true ) )
+				{
+					const Key	  upKey	   = KeyCodes::fromName( bindNode.attr( "up" ) );
+					const Key	  downKey  = KeyCodes::fromName( bindNode.attr( "down" ) );
+					const Key	  leftKey  = KeyCodes::fromName( bindNode.attr( "left" ) );
+					const Key	  rightKey = KeyCodes::fromName( bindNode.attr( "right" ) );
+					const float32 deadzone = bindNode.attrFloat( "deadzone", 0.0f );
+					if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
+						bindVector2D( pAction, upKey, downKey, leftKey, rightKey, deadzone, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "stick", true ) )
+				{
+					const utf8*		   pStickStr	 = bindNode.attr( "stick" );
+					const GamepadStick stick		 = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
+					const uint8		   pad			 = static_cast<uint8>( bindNode.attrInt( "pad", 0 ) );
+					const float32	   deadzone		 = bindNode.attrFloat( "deadzone", 0.15f );
+					const float32	   outerDeadzone = bindNode.attrFloat( "outerDeadzone", 1.0f );
+					const float32	   exp			 = bindNode.attrFloat( "exponent", 1.0f );
+					bindGamepadStick2D( pAction, stick, deadzone, layer, pad, outerDeadzone, exp );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "mouseDelta", true ) )
+				{
+					const float32 scale = bindNode.attrFloat( "scale", 1.0f );
+					bindMouseDelta( pAction, scale, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "chord", true ) )
+				{
+					const Key modKey  = KeyCodes::fromName( bindNode.attr( "modKey" ) );
+					const Key trigKey = KeyCodes::fromName( bindNode.attr( "trigKey" ) );
+					if ( modKey != Key::Unknown && trigKey != Key::Unknown )
+						bindChord( pAction, modKey, trigKey, ActionTrigger::Pressed, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "shortcut", true ) )
+				{
+					const Key	key		= KeyCodes::fromName( bindNode.attr( "key" ) );
+					const uint8 modMask = static_cast<uint8>( bindNode.attrInt( "modifierMask", 0 ) );
+					if ( key != Key::Unknown )
+						bindShortcut( pAction, key, modMask, ActionTrigger::Pressed, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "anyKey", true ) )
+				{
+					bindAnyKey( pAction, layer );
+					continue;
+				}
+			}
+
+			// Single slot fallback / legacy format
 			const utf8* pKeyStr	   = bindNode.attr( "key" );
 			const utf8* pCodeStr   = bindNode.attr( "code" );
+			const utf8* pButtonStr = bindNode.attr( "button" );
 			const utf8* pSourceStr = bindNode.attr( "source" );
-
-			if ( pAction == nullptr )
-				continue;
+			const uint8 padIndex   = static_cast<uint8>( bindNode.attrInt( "pad", 0 ) );
 
 			if ( pKeyStr != nullptr )
 			{
 				const Key key = KeyCodes::fromName( pKeyStr );
 				if ( key != Key::Unknown )
-					rebindKey( pAction, key, 0 );
+					bind( pAction, key, ActionTrigger::Pressed, layer );
+			}
+			else if ( pButtonStr != nullptr )
+			{
+				const MouseButton btn = MouseButtons::fromName( pButtonStr );
+				if ( btn != MouseButton::Count )
+					bind( pAction, btn, ActionTrigger::Pressed, layer );
 			}
 			else if ( pCodeStr != nullptr && pSourceStr != nullptr )
 			{
@@ -994,13 +1547,23 @@ namespace sw
 				{
 					const Key key = KeyCodes::fromName( pCodeStr );
 					if ( key != Key::Unknown )
-						rebindKey( pAction, key, 0 );
+						bind( pAction, key, ActionTrigger::Pressed, layer );
+				}
+				else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
+				{
+					const MouseButton btn = MouseButtons::fromName( pCodeStr );
+					if ( btn != MouseButton::Count )
+						bind( pAction, btn, ActionTrigger::Pressed, layer );
 				}
 				else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
 				{
 					const GamepadButton btn = GamepadButtons::fromName( pCodeStr );
 					if ( btn != GamepadButton::Count )
-						rebindSlot( pAction, InputSlot::fromGamepadButton( btn ), 0 );
+					{
+						InputSlot slot	  = InputSlot::fromGamepadButton( btn );
+						slot._deviceIndex = padIndex;
+						bind( pAction, slot, ActionTrigger::Pressed, layer );
+					}
 				}
 			}
 		}
@@ -1011,20 +1574,23 @@ namespace sw
 	{
 		_totalElapsedTime += deltaSeconds;
 
-		// 1) 선입력 버퍼 갱신
-		for ( auto it = _listBufferedAction.begin(); it != _listBufferedAction.end(); )
+		// 1) 선입력 버퍼 갱신 (Ring Buffer O(1) 정리)
+		for ( uint32 index = 0; index < _bufferedActionCount; ++index )
 		{
-			it->_remainingTime -= deltaSeconds;
-			if ( it->_remainingTime <= 0.0f )
-				it = _listBufferedAction.erase( it );
-			else
-				++it;
+			const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
+			_arrBufferedAction[idx]._remainingTime -= deltaSeconds;
+		}
+		while ( _bufferedActionCount > 0 && _arrBufferedAction[_bufferedActionHead]._remainingTime <= 0.0f )
+		{
+			_bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
+			--_bufferedActionCount;
 		}
 
-		// 2) 커맨드 이력 만료 제거 (2.0초 초과)
-		while ( _listCommandHistory.empty() == false && ( _totalElapsedTime - _listCommandHistory.front()._timestamp ) > 2.0f )
+		// 2) 커맨드 이력 만료 제거 (Ring Buffer O(1) 정리, 2.0초 초과)
+		while ( _commandHistoryCount > 0 && ( _totalElapsedTime - _arrCommandHistory[_commandHistoryHead]._timestamp ) > 2.0f )
 		{
-			_listCommandHistory.erase( _listCommandHistory.begin() );
+			_commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
+			--_commandHistoryCount;
 		}
 
 		if ( _pInput == nullptr )
@@ -1080,9 +1646,25 @@ namespace sw
 
 				if ( state._bPressed == SW_TRUE )
 				{
-					const float32 distSq = static_cast<float32>( ( curMouseX - state._lastPressX ) * ( curMouseX - state._lastPressX ) +
-																 ( curMouseY - state._lastPressY ) * ( curMouseY - state._lastPressY ) );
-					if ( state._timeSinceLastPress <= _doubleClickTime && distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
+					const bool bIsMouseBinding = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
+					bool	   bDoubleDetected = false;
+
+					if ( state._timeSinceLastPress <= _doubleClickTime )
+					{
+						if ( bIsMouseBinding )
+						{
+							const float32 distSq = static_cast<float32>( ( curMouseX - state._lastPressX ) * ( curMouseX - state._lastPressX ) +
+																		 ( curMouseY - state._lastPressY ) * ( curMouseY - state._lastPressY ) );
+							if ( distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
+								bDoubleDetected = true;
+						}
+						else
+						{
+							bDoubleDetected = true;
+						}
+					}
+
+					if ( bDoubleDetected )
 					{
 						state._bDoubleClicked	  = SW_TRUE;
 						state._timeSinceLastPress = ActionMapDefaults::kNeverPressedSentinel;
@@ -1135,13 +1717,27 @@ namespace sw
 			actionEntry._bTriggered		= anyTriggered ? SW_TRUE : SW_FALSE;
 			actionEntry._holdDuration	= maxHold;
 
-			// 모디파이어 적용 (축 반전 및 클램핑)
+			// 모디파이어 적용 (축 반전 및 클램핑/원형 정규화)
 			if ( _bInvertX == SW_TRUE )
 				totalAccumValue._x = -totalAccumValue._x;
 			if ( _bInvertY == SW_TRUE )
 				totalAccumValue._y = -totalAccumValue._y;
-			totalAccumValue._x		  = totalAccumValue._x < -1.0f ? -1.0f : ( totalAccumValue._x > 1.0f ? 1.0f : totalAccumValue._x );
-			totalAccumValue._y		  = totalAccumValue._y < -1.0f ? -1.0f : ( totalAccumValue._y > 1.0f ? 1.0f : totalAccumValue._y );
+
+			if ( _digitalNormalization == DigitalNormalization::Circular )
+			{
+				const float32 lenSq = totalAccumValue._x * totalAccumValue._x + totalAccumValue._y * totalAccumValue._y;
+				if ( lenSq > 1.0f )
+				{
+					const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
+					totalAccumValue._x *= invLen;
+					totalAccumValue._y *= invLen;
+				}
+			}
+			else
+			{
+				totalAccumValue._x = totalAccumValue._x < -1.0f ? -1.0f : ( totalAccumValue._x > 1.0f ? 1.0f : totalAccumValue._x );
+				totalAccumValue._y = totalAccumValue._y < -1.0f ? -1.0f : ( totalAccumValue._y > 1.0f ? 1.0f : totalAccumValue._y );
+			}
 			actionEntry._currentValue = totalAccumValue;
 
 			// --------------------------------------------------------------------------
@@ -1171,59 +1767,52 @@ namespace sw
 			}
 
 			// 접근성 토글 처리
-			if ( actionEntry._bPressed == SW_TRUE )
+			if ( actionEntry._bPressed == SW_TRUE && actionEntry._bToggleMode == SW_TRUE )
 			{
-				auto itToggle = _mapToggleMode.find( actionName );
-				if ( itToggle != _mapToggleMode.end() && itToggle->second == true )
-					_mapToggleState[actionName] = !_mapToggleState[actionName];
+				actionEntry._bToggleState = ( actionEntry._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
 			}
 
-			// 커맨드 이력 기록
+			// 커맨드 이력 기록 (Ring Buffer)
 			if ( actionEntry._bTriggered == SW_TRUE )
 			{
-				CommandHistoryEntry entry{};
-				entry._action	 = actionName;
-				entry._timestamp = _totalElapsedTime;
-				_listCommandHistory.push_back( entry );
+				const uint32 insertIdx					 = ( _commandHistoryHead + _commandHistoryCount ) % kMaxCommandHistory;
+				_arrCommandHistory[insertIdx]._action	 = actionName;
+				_arrCommandHistory[insertIdx]._timestamp = _totalElapsedTime;
+				if ( _commandHistoryCount < kMaxCommandHistory )
+					++_commandHistoryCount;
+				else
+					_commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
 			}
 
 			// 델리게이트 이벤트 디스패치 (Triggered)
 			if ( actionEntry._bTriggered == SW_TRUE )
 			{
-				auto itCb = _mapActionCallback.find( actionName );
-				if ( itCb != _mapActionCallback.end() )
+				for ( const ActionCallbackEntry& cbEntry : actionEntry._listActionCallback )
 				{
-					for ( const ActionCallbackEntry& cbEntry : itCb->second )
-					{
-						if ( cbEntry._callback.isBound() )
-							cbEntry._callback();
-					}
+					if ( cbEntry._callback.isBound() )
+						cbEntry._callback();
 				}
 			}
 
 			// 페이즈 델리게이트 디스패치 (Phase)
 			if ( actionEntry._currentPhase != ActionPhase::None )
 			{
-				auto itPhase = _mapPhaseCallback.find( actionName );
-				if ( itPhase != _mapPhaseCallback.end() )
+				for ( const PhaseCallbackEntry& phaseEntry : actionEntry._listPhaseCallback )
 				{
-					for ( const PhaseCallbackEntry& phaseEntry : itPhase->second )
-					{
-						if ( phaseEntry._phase == actionEntry._currentPhase && phaseEntry._callback.isBound() )
-							phaseEntry._callback();
-					}
+					if ( phaseEntry._phase == actionEntry._currentPhase && phaseEntry._callback.isBound() )
+						phaseEntry._callback();
 				}
 			}
-		}
 
-		// 4) 2D 벡터 델리게이트 디스패치
-		for ( const auto& [actionName, listCb] : _mapVector2DCallback )
-		{
-			const float2 vec = getVector2D( actionName );
-			for ( const auto& cb : listCb )
+			// 2D 벡터 델리게이트 디스패치
+			if ( ( actionEntry._currentValue._x != 0.0f || actionEntry._currentValue._y != 0.0f ) ||
+				 ( bPrevDown && actionEntry._bDown == SW_FALSE ) )
 			{
-				if ( cb.isBound() )
-					cb( vec );
+				for ( const Vector2DCallbackDelegate& vecCb : actionEntry._listVector2DCallback )
+				{
+					if ( vecCb.isBound() )
+						vecCb( actionEntry._currentValue );
+				}
 			}
 		}
 	}
@@ -1237,9 +1826,21 @@ namespace sw
 		{
 			case BindingKind::SingleSlot:
 			{
-				IInputDevice* pDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind );
+				IInputDevice* pDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
 				if ( pDevice != nullptr && pDevice->isControlDown( binding._arrSlot[0]._controlIndex ) )
 				{
+					if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
+					{
+						const Key  key		 = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+						const bool bIsModKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
+						if ( bIsModKey == false )
+						{
+							const bool bCtrlHeld = _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl );
+							const bool bAltHeld	 = _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt );
+							if ( bCtrlHeld || bAltHeld )
+								return false;
+						}
+					}
 					outValue = float2{ 1.0f, 0.0f };
 					return true;
 				}
@@ -1247,8 +1848,8 @@ namespace sw
 			}
 			case BindingKind::Axis1DComposite:
 			{
-				IInputDevice* pNegDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind );
-				IInputDevice* pPosDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind );
+				IInputDevice* pNegDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+				IInputDevice* pPosDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
 				float32		  v		  = 0.0f;
 				if ( pNegDev != nullptr && pNegDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
 					v -= 1.0f;
@@ -1259,10 +1860,10 @@ namespace sw
 			}
 			case BindingKind::Vector2DComposite:
 			{
-				IInputDevice* pUpDev	= _pInput->getDevice( binding._arrSlot[0]._deviceKind );
-				IInputDevice* pDownDev	= _pInput->getDevice( binding._arrSlot[1]._deviceKind );
-				IInputDevice* pLeftDev	= _pInput->getDevice( binding._arrSlot[2]._deviceKind );
-				IInputDevice* pRightDev = _pInput->getDevice( binding._arrSlot[3]._deviceKind );
+				IInputDevice* pUpDev	= _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+				IInputDevice* pDownDev	= _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
+				IInputDevice* pLeftDev	= _pInput->getDevice( binding._arrSlot[2]._deviceKind, binding._arrSlot[2]._deviceIndex );
+				IInputDevice* pRightDev = _pInput->getDevice( binding._arrSlot[3]._deviceKind, binding._arrSlot[3]._deviceIndex );
 
 				float2 kbdVec{ 0.0f, 0.0f };
 				if ( pUpDev != nullptr && pUpDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
@@ -1275,9 +1876,9 @@ namespace sw
 					kbdVec._x += 1.0f;
 
 				const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;
-				if ( lenSq > 1.0f )
+				if ( _digitalNormalization == DigitalNormalization::Circular && lenSq > 1.0f )
 				{
-					const float32 invLen = 1.0f / std::sqrt( lenSq );
+					const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
 					kbdVec._x *= invLen;
 					kbdVec._y *= invLen;
 				}
@@ -1286,7 +1887,7 @@ namespace sw
 			}
 			case BindingKind::GamepadStick2D:
 			{
-				GamepadDevice* pPad = _pInput->getGamepad();
+				GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
 				if ( pPad != nullptr && pPad->isConnected() )
 				{
 					float32 sx{ 0.0f };
@@ -1296,29 +1897,45 @@ namespace sw
 					else
 						pPad->getRightStick( sx, sy );
 
+					const float32 inDeadzone  = binding._deadzone;
+					const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
+					const float32 deadRange	  = outDeadzone - inDeadzone;
+
 					if ( _deadzoneShape == DeadzoneShape::Radial )
 					{
-						const float32 mag = std::sqrt( sx * sx + sy * sy );
-						if ( mag < binding._deadzone )
+						const float32 mag = MathUtil::sqrt( sx * sx + sy * sy );
+						if ( mag <= inDeadzone )
 						{
 							sx = 0.0f;
 							sy = 0.0f;
 						}
 						else
 						{
-							const float32 norm = ( mag - binding._deadzone ) / ( 1.0f - binding._deadzone );
-							sx				   = ( sx / mag ) * norm;
-							sy				   = ( sy / mag ) * norm;
+							float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( mag - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
+							if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
+							{
+								norm = MathUtil::pow( norm, binding._responseExponent );
+							}
+							sx = ( sx / mag ) * norm;
+							sy = ( sy / mag ) * norm;
 						}
 					}
 					else // Axial
 					{
-						const float32 absX = sx < 0.0f ? -sx : sx;
-						const float32 absY = sy < 0.0f ? -sy : sy;
-						if ( absX < binding._deadzone )
-							sx = 0.0f;
-						if ( absY < binding._deadzone )
-							sy = 0.0f;
+						auto applyAxialDeadzone = [&]( float32 val ) -> float32
+						{
+							const float32 absVal = MathUtil::abs( val );
+							if ( absVal <= inDeadzone )
+								return 0.0f;
+							float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( absVal - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
+							if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
+							{
+								norm = MathUtil::pow( norm, binding._responseExponent );
+							}
+							return ( val > 0.0f ? 1.0f : -1.0f ) * norm;
+						};
+						sx = applyAxialDeadzone( sx );
+						sy = applyAxialDeadzone( sy );
 					}
 
 					sx *= _gamepadSensitivity._x;
@@ -1330,14 +1947,12 @@ namespace sw
 			}
 			case BindingKind::Chord:
 			{
-				IInputDevice* pModDev  = _pInput->getDevice( binding._arrSlot[0]._deviceKind );
-				IInputDevice* pTrigDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind );
+				IInputDevice* pModDev  = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+				IInputDevice* pTrigDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
 				if ( pModDev != nullptr && pTrigDev != nullptr )
 				{
 					const bool bModDown	 = pModDev->isControlDown( binding._arrSlot[0]._controlIndex );
-					const bool bTrigDown = ( binding._trigger == ActionTrigger::Pressed )
-											 ? pTrigDev->wasControlPressed( binding._arrSlot[1]._controlIndex )
-											 : pTrigDev->isControlDown( binding._arrSlot[1]._controlIndex );
+					const bool bTrigDown = pTrigDev->isControlDown( binding._arrSlot[1]._controlIndex );
 					if ( bModDown && bTrigDown )
 					{
 						outValue = float2{ 1.0f, 0.0f };
@@ -1346,12 +1961,59 @@ namespace sw
 				}
 				return false;
 			}
+			case BindingKind::MouseDelta2D:
+			{
+				float32 rdx{ 0.0f };
+				float32 rdy{ 0.0f };
+				_pInput->getRawMouseDelta( rdx, rdy );
+				if ( rdx == 0.0f && rdy == 0.0f )
+				{
+					int32 dx{ 0 };
+					int32 dy{ 0 };
+					_pInput->getMouseDelta( dx, dy );
+					rdx = static_cast<float32>( dx );
+					rdy = static_cast<float32>( dy );
+				}
+				outValue._x = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
+				outValue._y = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
+				return ( rdx != 0.0f || rdy != 0.0f );
+			}
+			case BindingKind::Shortcut:
+			{
+				bool bModMatch = true;
+				if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
+					bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl ) );
+				if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
+					bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftShift ) || _pInput->isKeyDown( Key::RightShift ) );
+				if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
+					bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt ) );
+				if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
+					bModMatch = bModMatch && ( _pInput->isKeyDown( Key::LeftSuper ) || _pInput->isKeyDown( Key::RightSuper ) );
+
+				if ( bModMatch == false )
+					return false;
+
+				IInputDevice* pDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+				if ( pDev != nullptr && pDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
+				{
+					outValue = float2{ 1.0f, 0.0f };
+					return true;
+				}
+				return false;
+			}
+			case BindingKind::AnyKey:
+			{
+				const bool bAny = _pInput->wasAnyInputPressed();
+				if ( bAny )
+					outValue = float2{ 1.0f, 0.0f };
+				return bAny;
+			}
 			default:
 				return false;
 		}
 	}
 
-	bool ActionMap::evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 ) const
+	bool ActionMap::evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const
 	{
 		switch ( trigger )
 		{
@@ -1372,6 +2034,22 @@ namespace sw
 				return state._bReleased == SW_TRUE && state._holdDuration < ActionMapDefaults::kTapMaxTime;
 			case ActionTrigger::Pulse:
 				return state._bDown == SW_TRUE && state._pulseTimer >= ActionMapDefaults::kPulseInterval;
+			case ActionTrigger::Repeat:
+			{
+				if ( state._bPressed == SW_TRUE )
+					return true;
+				if ( state._bDown == SW_TRUE && state._holdDuration >= _navRepeatDelay )
+				{
+					const float32 repeatTime	 = state._holdDuration - _navRepeatDelay;
+					const float32 prevRepeatTime = ( state._holdDuration - deltaSeconds ) - _navRepeatDelay;
+					if ( prevRepeatTime < 0.0f )
+						return true;
+					const int32 stepNow	 = static_cast<int32>( repeatTime / _navRepeatRate );
+					const int32 stepPrev = static_cast<int32>( prevRepeatTime / _navRepeatRate );
+					return stepNow > stepPrev;
+				}
+				return false;
+			}
 			case ActionTrigger::Count:
 			default:
 				return false;
@@ -1380,10 +2058,22 @@ namespace sw
 
 	bool ActionMap::isBindingLayerActive( const ActionBinding& binding ) const
 	{
+		if ( binding._pCachedLayer == nullptr )
+		{
+			binding._pCachedLayer = findLayer( binding._layer );
+		}
+
+		if ( binding._pCachedLayer != nullptr && _listLayerStack.empty() )
+		{
+			if ( binding._pCachedLayer->_bEnabled == SW_FALSE )
+				return false;
+			return true;
+		}
+
 		return isLayerActiveInternal( binding._layer );
 	}
 
-	bool ActionMap::isLayerActiveInternal( string_view layer ) const
+	bool ActionMap::isLayerActiveInternal( const hashed_string& layer ) const
 	{
 		const LayerDef* pDef = findLayer( layer );
 		if ( pDef == nullptr || pDef->_bEnabled == SW_FALSE )
@@ -1424,15 +2114,30 @@ namespace sw
 
 	bool ActionMap::hasLayer( string_view layer ) const
 	{
+		return hasLayer( hashed_string( layer ) );
+	}
+
+	bool ActionMap::hasLayer( const hashed_string& layer ) const
+	{
 		return _mapLayer.find( layer ) != _mapLayer.end();
 	}
 
 	bool ActionMap::isLayerEnabled( string_view layer ) const
 	{
+		return isLayerActiveInternal( hashed_string( layer ) );
+	}
+
+	bool ActionMap::isLayerEnabled( const hashed_string& layer ) const
+	{
 		return isLayerActiveInternal( layer );
 	}
 
 	int32 ActionMap::getLayerPriority( string_view layer ) const
+	{
+		return getLayerPriority( hashed_string( layer ) );
+	}
+
+	int32 ActionMap::getLayerPriority( const hashed_string& layer ) const
 	{
 		const LayerDef* pDef = findLayer( layer );
 		return pDef != nullptr ? pDef->_priority : 0;
@@ -1440,10 +2145,20 @@ namespace sw
 
 	bool ActionMap::hasAction( string_view action ) const
 	{
+		return hasAction( hashed_string( action ) );
+	}
+
+	bool ActionMap::hasAction( const hashed_string& action ) const
+	{
 		return _mapAction.find( action ) != _mapAction.end();
 	}
 
 	ActionTrigger ActionMap::getBindingTrigger( string_view action, uint32 bindIndex ) const
+	{
+		return getBindingTrigger( hashed_string( action ), bindIndex );
+	}
+
+	ActionTrigger ActionMap::getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
@@ -1453,11 +2168,21 @@ namespace sw
 
 	uint32 ActionMap::getBindingCount( string_view action ) const
 	{
+		return getBindingCount( hashed_string( action ) );
+	}
+
+	uint32 ActionMap::getBindingCount( const hashed_string& action ) const
+	{
 		const ActionEntry* pEntry = findAction( action );
 		return pEntry != nullptr ? static_cast<uint32>( pEntry->_listBinding.size() ) : 0;
 	}
 
 	const ActionBinding* ActionMap::getBinding( string_view action, uint32 bindIndex ) const
+	{
+		return getBinding( hashed_string( action ), bindIndex );
+	}
+
+	const ActionBinding* ActionMap::getBinding( const hashed_string& action, uint32 bindIndex ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
 		if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
@@ -1467,8 +2192,7 @@ namespace sw
 
 	bool ActionMap::wasActionTriggered( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bTriggered == SW_TRUE;
+		return wasActionTriggered( hashed_string( action ) );
 	}
 
 	bool ActionMap::wasActionTriggered( const hashed_string& action ) const
@@ -1479,8 +2203,7 @@ namespace sw
 
 	bool ActionMap::isActionDown( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
+		return isActionDown( hashed_string( action ) );
 	}
 
 	bool ActionMap::isActionDown( const hashed_string& action ) const
@@ -1489,10 +2212,45 @@ namespace sw
 		return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
 	}
 
-	bool ActionMap::wasActionPressed( string_view action ) const
+	ActionHandle ActionMap::getActionHandle( string_view action ) const
+	{
+		return getActionHandle( hashed_string( action ) );
+	}
+
+	ActionHandle ActionMap::getActionHandle( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
+		if ( pEntry != nullptr && pEntry->_handleIndex != ActionHandle::kInvalidIndex )
+			return ActionHandle{ pEntry->_handleIndex, pEntry->_generation };
+		return ActionHandle{};
+	}
+
+	const ActionMap::ActionEntry* ActionMap::getActionFromHandle( ActionHandle handle ) const
+	{
+		if ( handle._index < _listActionSlot.size() )
+		{
+			const ActionEntry* pEntry = _listActionSlot[handle._index];
+			if ( pEntry != nullptr && pEntry->_generation == handle._generation )
+				return pEntry;
+		}
+		return nullptr;
+	}
+
+	bool ActionMap::wasActionTriggered( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bTriggered == SW_TRUE;
+	}
+
+	bool ActionMap::isActionDown( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bDown == SW_TRUE;
+	}
+
+	bool ActionMap::wasActionPressed( string_view action ) const
+	{
+		return wasActionPressed( hashed_string( action ) );
 	}
 
 	bool ActionMap::wasActionPressed( const hashed_string& action ) const
@@ -1501,10 +2259,15 @@ namespace sw
 		return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
 	}
 
+	bool ActionMap::wasActionPressed( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bPressed == SW_TRUE;
+	}
+
 	bool ActionMap::wasActionReleased( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
+		return wasActionReleased( hashed_string( action ) );
 	}
 
 	bool ActionMap::wasActionReleased( const hashed_string& action ) const
@@ -1513,10 +2276,15 @@ namespace sw
 		return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
 	}
 
+	bool ActionMap::wasActionReleased( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
+	}
+
 	bool ActionMap::wasActionDoubleClicked( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
+		return wasActionDoubleClicked( hashed_string( action ) );
 	}
 
 	bool ActionMap::wasActionDoubleClicked( const hashed_string& action ) const
@@ -1525,10 +2293,15 @@ namespace sw
 		return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
 	}
 
+	bool ActionMap::wasActionDoubleClicked( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
+	}
+
 	bool ActionMap::wasActionHoldThreshold( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
+		return wasActionHoldThreshold( hashed_string( action ) );
 	}
 
 	bool ActionMap::wasActionHoldThreshold( const hashed_string& action ) const
@@ -1537,10 +2310,15 @@ namespace sw
 		return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
 	}
 
+	bool ActionMap::wasActionHoldThreshold( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
+	}
+
 	float32 ActionMap::getActionHoldDuration( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr ? pEntry->_holdDuration : 0.0f;
+		return getActionHoldDuration( hashed_string( action ) );
 	}
 
 	float32 ActionMap::getActionHoldDuration( const hashed_string& action ) const
@@ -1549,15 +2327,32 @@ namespace sw
 		return pEntry != nullptr ? pEntry->_holdDuration : 0.0f;
 	}
 
+	float32 ActionMap::getActionHoldDuration( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr ? pEntry->_holdDuration : 0.0f;
+	}
+
+	float2 ActionMap::getVector2D( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
+		return pEntry != nullptr ? pEntry->_currentValue : float2{ 0.0f, 0.0f };
+	}
+
 	ActionPhase ActionMap::getActionPhase( string_view action ) const
 	{
-		const ActionEntry* pEntry = findAction( action );
-		return pEntry != nullptr ? pEntry->_currentPhase : ActionPhase::None;
+		return getActionPhase( hashed_string( action ) );
 	}
 
 	ActionPhase ActionMap::getActionPhase( const hashed_string& action ) const
 	{
 		const ActionEntry* pEntry = findAction( action );
+		return pEntry != nullptr ? pEntry->_currentPhase : ActionPhase::None;
+	}
+
+	ActionPhase ActionMap::getActionPhase( ActionHandle handle ) const
+	{
+		const ActionEntry* pEntry = getActionFromHandle( handle );
 		return pEntry != nullptr ? pEntry->_currentPhase : ActionPhase::None;
 	}
 
@@ -1608,24 +2403,24 @@ namespace sw
 		return nullptr;
 	}
 
-	void ActionMap::ensureActionListed( string_view action )
+	void ActionMap::ensureActionListed( const hashed_string& action )
 	{
-		for ( const string& name : _listActionName )
+		for ( const hashed_string& name : _listActionName )
 		{
 			if ( name == action )
 				return;
 		}
-		_listActionName.push_back( string( action ) );
+		_listActionName.push_back( action );
 	}
 
-	LayerDef& ActionMap::ensureLayer( string_view name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
+	LayerDef& ActionMap::ensureLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
 	{
 		auto it = _mapLayer.find( name );
 		if ( it != _mapLayer.end() )
 			return it->second;
 
 		LayerDef def{};
-		def._name		 = string( name );
+		def._name		 = name;
 		def._priority	 = priority;
 		def._bEnabled	 = enabled ? SW_TRUE : SW_FALSE;
 		def._bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
@@ -1636,7 +2431,7 @@ namespace sw
 		return insertedIt->second;
 	}
 
-	ActionMap::ActionEntry& ActionMap::getOrCreateAction( string_view action, InputActionValueType valueType )
+	ActionMap::ActionEntry& ActionMap::getOrCreateAction( const hashed_string& action, InputActionValueType valueType )
 	{
 		ensureActionListed( action );
 		auto it = _mapAction.find( action );
@@ -1644,33 +2439,31 @@ namespace sw
 		{
 			ActionEntry entry{};
 			entry._valueType = valueType;
-			auto [newIt, _]	 = _mapAction.emplace( string( action ), std::move( entry ) );
-			return newIt->second;
+			auto [newIt, _]	 = _mapAction.emplace( action, std::move( entry ) );
+			ActionEntry& ref = newIt->second;
+			ref._handleIndex = static_cast<uint32>( _listActionSlot.size() );
+			ref._generation	 = ++_nextGeneration;
+			_listActionSlot.push_back( &ref );
+			return ref;
 		}
 		if ( it->second._valueType == InputActionValueType::Boolean && valueType != InputActionValueType::Boolean )
 			it->second._valueType = valueType;
 		return it->second;
 	}
 
-	LayerDef* ActionMap::findLayer( string_view name )
+	LayerDef* ActionMap::findLayer( const hashed_string& name )
 	{
 		auto it = _mapLayer.find( name );
 		return it != _mapLayer.end() ? &it->second : nullptr;
 	}
 
-	const LayerDef* ActionMap::findLayer( string_view name ) const
+	const LayerDef* ActionMap::findLayer( const hashed_string& name ) const
 	{
 		auto it = _mapLayer.find( name );
 		return it != _mapLayer.end() ? &it->second : nullptr;
 	}
 
-	ActionMap::ActionEntry* ActionMap::findAction( string_view action )
-	{
-		auto it = _mapAction.find( action );
-		return it != _mapAction.end() ? &it->second : nullptr;
-	}
-
-	const ActionMap::ActionEntry* ActionMap::findAction( string_view action ) const
+	ActionMap::ActionEntry* ActionMap::findAction( const hashed_string& action )
 	{
 		auto it = _mapAction.find( action );
 		return it != _mapAction.end() ? &it->second : nullptr;
@@ -1678,6 +2471,26 @@ namespace sw
 
 	const ActionMap::ActionEntry* ActionMap::findAction( const hashed_string& action ) const
 	{
-		return findAction( action.view() );
+		auto it = _mapAction.find( action );
+		return it != _mapAction.end() ? &it->second : nullptr;
+	}
+
+	void ActionMap::getDebugActionStates( vector<DebugActionState>& outListState ) const
+	{
+		outListState.clear();
+		outListState.reserve( _mapAction.size() );
+		for ( const auto& [actName, entry] : _mapAction )
+		{
+			DebugActionState state{};
+			state._action		= actName;
+			state._layer		= entry._listBinding.empty() ? _defaultLayerName : entry._listBinding[0]._layer;
+			state._valueType	= entry._valueType;
+			state._phase		= entry._currentPhase;
+			state._value		= entry._currentValue;
+			state._holdDuration = entry._holdDuration;
+			state._bTriggered	= entry._bTriggered;
+			state._bDown		= entry._bDown;
+			outListState.push_back( state );
+		}
 	}
 } // namespace sw
