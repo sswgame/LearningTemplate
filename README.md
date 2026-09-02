@@ -1,6 +1,7 @@
 # SW Engine (게임 및 에디터 엔진 템플릿)
 
-[![CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+[![CI (main)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI (develop)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![Windows](https://img.shields.io/badge/Windows-clang--cl%20(Debug%20%7C%20Shipping)-0078D6?logo=windows&logoColor=white)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
 [![Linux](https://img.shields.io/badge/Linux-Clang%20(Debug%20%7C%20ASan%20%7C%20Shipping)-FCC624?logo=linux&logoColor=black)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
 [![C++17](https://img.shields.io/badge/Language-C%2B%2B17-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
@@ -11,13 +12,16 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 ### 🛠️ 지원 플랫폼 및 CI 빌드 매트릭스
 
-| OS / 플랫폼 | 컴파일러 / 툴체인 | 빌드 프리셋 & 검증 항목 | CI 검증 |
+> 💡 모든 빌드/테스트 매트릭스의 실시간 실행 상태와 로그는 [GitHub Actions CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)에서 확인하실 수 있습니다.
+
+| OS / 플랫폼 | 컴파일러 / 툴체인 | 빌드 프리셋 & 검증 항목 | CI 상태 링크 |
 | :--- | :--- | :--- | :---: |
-| 🪟 **Windows** | `clang-cl` (LLVM) | `Debug` (LiveReload DLL 모듈) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=windows) |
-| 🪟 **Windows** | `clang-cl` (LLVM) | `Shipping` (최적화 정적 단일 실행파일) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=windows) |
-| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Debug` (LiveReload Shared 모듈) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
-| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Debug + ASan` (메모리 주소 살균자) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
-| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Shipping` (최적화 정적 단일 실행파일) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Debug` (LiveReload DLL 모듈 + 단위 테스트) | [Windows Debug](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Shipping` (최적화 정적 단일 실행파일 + 에셋 쿠킹) | [Windows Shipping](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Debug` (LiveReload Shared 모듈 + 단위 테스트) | [Linux Debug](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Debug-ASAN` (AddressSanitizer 메모리 살균자) | [Linux ASan](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Shipping` (최적화 정적 단일 실행파일 + 에셋 쿠킹) | [Linux Shipping](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+
 
 ---
 
