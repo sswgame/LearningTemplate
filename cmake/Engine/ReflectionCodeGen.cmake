@@ -127,7 +127,7 @@ function(sw_addReflectionStep TARGET_NAME)
         if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
             target_compile_options(${TARGET_NAME} PUBLIC "/FI${_swFlagOpsHeader}")
         else()
-            target_compile_options(${TARGET_NAME} PUBLIC "-include" "${_swFlagOpsHeader}")
+            target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${_swFlagOpsHeader}")
         endif()
     endif()
 
