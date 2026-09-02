@@ -339,14 +339,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 64비트 부호 없는 정수를 LEB128 가변 길이 정수로 기록합니다. */
         void writeVarUInt( uint64 value );
-        /** @brief 32비트 부호 없는 정수를 LEB128 가변 길이 정수로 기록합니다. */
-        void writeVarUInt( uint32 value ) { writeVarUInt( static_cast<uint64>( value ) ); }
         /** @brief 64비트 부호 있는 정수를 ZigZag + LEB128 가변 길이 정수로 기록합니다. */
         void writeVarInt( int64 value );
-        /** @brief 32비트 부호 있는 정수를 ZigZag + LEB128 가변 길이 정수로 기록합니다. */
-        void writeVarInt( int32 value ) { writeVarInt( static_cast<int64>( value ) ); }
 
         /** @brief LEB128 인코딩된 64비트 부호 없는 정수를 읽습니다. */
+
         bool readVarUInt( uint64& outValue );
         /** @brief LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다. */
         bool readVarUInt( uint32& outValue );

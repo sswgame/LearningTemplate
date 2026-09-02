@@ -34,8 +34,9 @@ namespace sw
         void stopVibration() override;
 
     private:
-        float32                _reconnectTimer{ 1.0f };
-        uint8                  _bConnected  : 1;
-        [[maybe_unused]] uint8 _reservedPad : 7;
+        [[maybe_unused]] float32 _reconnectTimer{ 1.0f };
+        uint8                    _bConnected  : 1;
+        [[maybe_unused]] uint8   _reservedPad : 7;
     };
+
 } // namespace sw

@@ -40,8 +40,9 @@ namespace sw
         }
 
         template <typename T>
-        bool loadConfigFromJson( const hashed_string& name, const string& jsonStr, const utf8* pSourceLabel = "json" )
+        bool loadConfigFromJson( const hashed_string& name, const string& jsonStr, [[maybe_unused]] const utf8* pSourceLabel = "json" )
         {
+
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
             unique_ptr<T> newConfig = make_unique<T>();
