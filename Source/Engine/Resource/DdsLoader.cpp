@@ -114,14 +114,17 @@ namespace sw
         const uint32 magic = *reinterpret_cast<const uint32*>( pBuffer );
         if ( magic != kDdsMagic )
         {
-            SW_LOG_ERROR( "Invalid DDS magic: 0x%08X (expected 0x%08X).", magic, kDdsMagic );
+            SW_LOG_ERROR(
+                "Invalid DDS magic: 0x%# (expected 0x%#).",
+                Fmt( magic, Format( 8, Format::Padding::Zero ).hex() ),
+                Fmt( static_cast<uint32>( kDdsMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
             return false;
         }
 
         const DdsFileHeader* pHeader = reinterpret_cast<const DdsFileHeader*>( pBuffer + sizeof( uint32 ) );
         if ( pHeader->_size != kDdsHeaderSize || pHeader->_pixelFormat._size != sizeof( DdsPixelFormatHeader ) )
         {
-            SW_LOG_ERROR( "Corrupted DDS header size (%u, expected %u).", pHeader->_size, kDdsHeaderSize );
+            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, kDdsHeaderSize );
             return false;
         }
 
@@ -168,7 +171,9 @@ namespace sw
                     outImage._dxgiFormat = kDxgiFormatBC5Unorm;
                     break;
                 default:
-                    SW_LOG_WARNING( "Unrecognized DDS FourCC: 0x%08X", pHeader->_pixelFormat._fourCC );
+                    SW_LOG_WARNING(
+                        "Unrecognized DDS FourCC: 0x%#",
+                        Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ) );
                     break;
             }
         }

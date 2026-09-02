@@ -16,7 +16,7 @@ namespace sw
     {
         struct Win32SplashWindowInternal
         {
-            static constexpr const wchar_t* kSplashClassName = L"SWSplashWindowClass";
+            static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             {

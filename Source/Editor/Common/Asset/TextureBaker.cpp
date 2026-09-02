@@ -115,7 +115,10 @@ namespace sw::editor
             const HRESULT hr = DirectX::GenerateMipMaps( baseImage, DirectX::TEX_FILTER_DEFAULT, 0, mipChain );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::GenerateMipMaps failed (hr=0x%08X) for %#", hr, sourcePath.data() );
+                SW_LOG_ERROR(
+                    "DirectX::GenerateMipMaps failed (hr=0x%#) for %#",
+                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                    sourcePath.data() );
                 return false;
             }
         }
@@ -124,7 +127,10 @@ namespace sw::editor
             const HRESULT hr = mipChain.InitializeFromImage( baseImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::InitializeFromImage failed (hr=0x%08X) for %#", hr, sourcePath.data() );
+                SW_LOG_ERROR(
+                    "DirectX::InitializeFromImage failed (hr=0x%#) for %#",
+                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                    sourcePath.data() );
                 return false;
             }
         }
@@ -147,7 +153,10 @@ namespace sw::editor
                 finalImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::Compress failed (hr=0x%08X) for format %d", hr, targetFormat );
+                SW_LOG_ERROR(
+                    "DirectX::Compress failed (hr=0x%#) for format %#",
+                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                    static_cast<uint32>( targetFormat ) );
                 return false;
             }
         }
@@ -163,7 +172,10 @@ namespace sw::editor
                 finalImage );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "DirectX::Convert failed (hr=0x%08X) for format %d", hr, targetFormat );
+                SW_LOG_ERROR(
+                    "DirectX::Convert failed (hr=0x%#) for format %#",
+                    Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                    static_cast<uint32>( targetFormat ) );
                 return false;
             }
         }
@@ -190,7 +202,10 @@ namespace sw::editor
 
         if ( FAILED( hrSave ) )
         {
-            SW_LOG_ERROR( "DirectX::SaveToDDSFile failed (hr=0x%08X) for %#", hrSave, outputPath.data() );
+            SW_LOG_ERROR(
+                "DirectX::SaveToDDSFile failed (hr=0x%#) for %#",
+                Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
+                outputPath.data() );
             return false;
         }
 

@@ -234,7 +234,7 @@ namespace sw::editor
                     break;
                 }
             }
-            if ( bExcludedPath == true )
+            if ( bExcludedPath )
                 continue;
 
             // 2) Exclude patterns check
@@ -247,7 +247,7 @@ namespace sw::editor
                     break;
                 }
             }
-            if ( bExcludedPattern == true )
+            if ( bExcludedPattern )
                 continue;
 
             // 3) Include paths check
