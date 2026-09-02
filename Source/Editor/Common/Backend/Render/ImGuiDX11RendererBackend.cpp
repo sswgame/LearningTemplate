@@ -8,7 +8,6 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <imgui_impl_dx11.h>
-#endif
 
 namespace sw::editor
 {
@@ -89,12 +88,8 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiDX11" );
 
-#if defined( SW_PLATFORM_WINDOWS )
-#endif
-
     bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRhiDevice )
     {
-#if defined( SW_PLATFORM_WINDOWS )
         _pRHIDevice = pRhiDevice;
         if ( _pRHIDevice == nullptr )
             return false;
@@ -108,51 +103,37 @@ namespace sw::editor
                 ImGuiDX11RendererBackendInternal::installViewportGuards();
             return bOk;
         }
-#else
-        (void)pRhiDevice;
-#endif
         return true;
     }
 
     void ImGuiDX11RendererBackend::shutdown()
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_Shutdown();
         _listRegisteredSrv.clear();
         _pRHIDevice = nullptr;
-#endif
     }
 
     void ImGuiDX11RendererBackend::newFrame()
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_NewFrame();
-#endif
     }
 
     void ImGuiDX11RendererBackend::processTextureUpdates()
     {
-#if defined( SW_PLATFORM_WINDOWS )
         updatePendingTextures( &ImGui_ImplDX11_UpdateTexture );
-#endif
     }
 
     void ImGuiDX11RendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
     {
         (void)pRhiDevice;
-#if defined( SW_PLATFORM_WINDOWS )
         if ( pDrawData != nullptr && _pRHIDevice != nullptr )
             ImGui_ImplDX11_RenderDrawData( pDrawData );
-#else
-        (void)pDrawData;
-#endif
     }
 
     void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle texture )
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( texture == 0 || _pRHIDevice == nullptr )
             return nullptr;
 
@@ -184,15 +165,10 @@ namespace sw::editor
         ID3D11ShaderResourceView* pSrvPtr = srv.Get();
         _listRegisteredSrv.push_back( std::move( srv ) );
         return pSrvPtr;
-#else
-        (void)texture;
-        return nullptr;
-#endif
     }
 
     void ImGuiDX11RendererBackend::unregisterTexture( void* pTextureID )
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( pTextureID == nullptr )
             return;
 
@@ -205,8 +181,17 @@ namespace sw::editor
                 return;
             }
         }
-#else
-        (void)pTextureID;
-#endif
     }
 } // namespace sw::editor
+#else
+namespace sw::editor
+{
+    bool  ImGuiDX11RendererBackend::initialize( class IRHIDevice* /*pRhiDevice*/ ) { return false; }
+    void  ImGuiDX11RendererBackend::shutdown() {}
+    void  ImGuiDX11RendererBackend::newFrame() {}
+    void  ImGuiDX11RendererBackend::processTextureUpdates() {}
+    void  ImGuiDX11RendererBackend::render( class IRHIDevice* /*pRhiDevice*/, ImDrawData* /*pDrawData*/ ) {}
+    void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle /*texture*/ ) { return nullptr; }
+    void  ImGuiDX11RendererBackend::unregisterTexture( void* /*pTextureID*/ ) {}
+} // namespace sw::editor
+#endif
