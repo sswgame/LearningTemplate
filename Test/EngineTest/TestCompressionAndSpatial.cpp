@@ -72,32 +72,32 @@ SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_Spatial, SpatialOctreeInsertAndQuery )
 {
-    sw::SpatialOctree octree( sw::AABB3D{
+    sw::SpatialOctree octree( sw::AABB{
         sw::float3{   0.0f,    0.0f,    0.0f},
         sw::float3{1000.0f, 1000.0f, 1000.0f}
     } );
     SW_EXPECT_EQUAL( size_t( 0 ), octree.getTotalElements() );
 
     uint32 octUserData = 999;
-    SW_EXPECT_TRUE( octree.insert( 101, sw::AABB3D{
+    SW_EXPECT_TRUE( octree.insert( 101, sw::AABB{
                                             sw::float3{10.0f, 10.0f, 10.0f},
                                             sw::float3{20.0f, 20.0f, 20.0f}
     },
                                    &octUserData ) );
-    SW_EXPECT_TRUE( octree.insert( 102, sw::AABB3D{
+    SW_EXPECT_TRUE( octree.insert( 102, sw::AABB{
                                             sw::float3{500.0f, 500.0f, 500.0f},
                                             sw::float3{550.0f, 550.0f, 550.0f}
     } ) );
     SW_EXPECT_EQUAL( size_t( 2 ), octree.getTotalElements() );
 
     // 업데이트 후 pUserData 보존 검증
-    SW_EXPECT_TRUE( octree.update( 101, sw::AABB3D{
+    SW_EXPECT_TRUE( octree.update( 101, sw::AABB{
                                             sw::float3{30.0f, 30.0f, 30.0f},
                                             sw::float3{40.0f, 40.0f, 40.0f}
     } ) );
 
     sw::vector<sw::SpatialElement3D> listResults;
-    octree.queryRange( sw::AABB3D{
+    octree.queryRange( sw::AABB{
                            sw::float3{  0.0f,   0.0f,   0.0f},
                            sw::float3{100.0f, 100.0f, 100.0f}
     },
@@ -252,7 +252,7 @@ SW_TEST_CASE( Engine_Renderer, RenderGraphReadModifyWriteAndLifetimes )
 SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
 {
     // 1. Octree 분할 및 축소
-    sw::SpatialOctree octree( sw::AABB3D{
+    sw::SpatialOctree octree( sw::AABB{
                                   sw::float3{   0.0f,    0.0f,    0.0f},
                                   sw::float3{1000.0f, 1000.0f, 1000.0f}
     },
@@ -262,7 +262,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
     for ( uint64 elementId = 1; elementId <= 8; ++elementId )
     {
         const float32 offset = static_cast<float32>( elementId * 20 );
-        octree.insert( elementId, sw::AABB3D{
+        octree.insert( elementId, sw::AABB{
                                       sw::float3{        offset,         offset,         offset},
                                       sw::float3{offset + 10.0f, offset + 10.0f, offset + 10.0f}
         } );
@@ -277,7 +277,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
     SW_EXPECT_EQUAL( size_t( 1 ), octree.getTotalElements() );
 
     sw::vector<sw::SpatialElement3D> listOctreeResults;
-    octree.queryRange( sw::AABB3D{
+    octree.queryRange( sw::AABB{
                            sw::float3{ 0.0f,  0.0f,  0.0f},
                            sw::float3{50.0f, 50.0f, 50.0f}
     },

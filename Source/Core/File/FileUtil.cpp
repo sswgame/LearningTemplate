@@ -22,20 +22,6 @@ namespace sw
 {
     SW_LOG_CALLER( "FileUtil" );
 
-    string FileUtil::getCurrentDateTimeAsString()
-    {
-        time_t t = std::time( nullptr );
-        tm     time_info{};
-#if defined( SW_PLATFORM_WINDOWS )
-        localtime_s( &time_info, &t );
-#else
-        localtime_r( &t, &time_info );
-#endif
-        utf8 arrBuffer[constant::kMaxBuffer128];
-        std::strftime( arrBuffer, sizeof( arrBuffer ), "%d-%m-%Y %H-%M-%S", &time_info );
-        return string{ arrBuffer };
-    }
-
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
     {
         const size_t found = fullPath.find_last_of( "/\\" );
@@ -394,9 +380,9 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
-    void FileUtil::createDirectory( string_view path )
+    void FileUtil::createParentDirectory( string_view filePath )
     {
-        const string directoryPart = getDirectoryPart( path );
+        const string directoryPart = getDirectoryPart( filePath );
         if ( directoryPart.empty() || directoryExists( directoryPart ) )
             return;
 
@@ -803,103 +789,6 @@ namespace sw
         }
 
         return true;
-    }
-
-    string FileUtil::getClipboardText()
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( OpenClipboard( nullptr ) == FALSE )
-            return string{};
-
-        const HANDLE handle = GetClipboardData( CF_UNICODETEXT );
-        if ( handle == nullptr )
-        {
-            CloseClipboard();
-            return string{};
-        }
-
-        wstring      wstr{};
-        const WCHAR* pGlobalStr = static_cast<const WCHAR*>( GlobalLock( handle ) );
-        if ( pGlobalStr != nullptr )
-            wstr = pGlobalStr;
-
-        GlobalUnlock( handle );
-        CloseClipboard();
-
-        return StringUtil::utf16ToUtf8( wstr.c_str() );
-#elif defined( SW_PLATFORM_MACOS )
-        FILE* pipe = popen( "pbpaste", "r" );
-        if ( pipe == nullptr )
-            return string{};
-        utf8   arrBuf[constant::kMaxBuffer512];
-        string result;
-        while ( fgets( arrBuf, sizeof( arrBuf ), pipe ) != nullptr )
-        {
-            result += arrBuf;
-        }
-        pclose( pipe );
-        return result;
-#elif defined( SW_PLATFORM_LINUX )
-        FILE* pipe = popen( "xclip -selection clipboard -o 2>/dev/null", "r" );
-        if ( pipe == nullptr )
-            return string{};
-        utf8   arrBuf[constant::kMaxBuffer512];
-        string result;
-        while ( fgets( arrBuf, sizeof( arrBuf ), pipe ) != nullptr )
-        {
-            result += arrBuf;
-        }
-        pclose( pipe );
-        return result;
-#else
-        return string{};
-#endif
-    }
-
-    bool FileUtil::setClipboardText( string_view str )
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( OpenClipboard( nullptr ) == FALSE )
-            return false;
-
-        const string  strNt( str );
-        const wstring wstr         = StringUtil::utf8ToUtf16( strNt.c_str() );
-        const uint32  stringLength = static_cast<uint32>( wstr.length() ) + 1;
-        const HGLOBAL handle       = GlobalAlloc( GMEM_MOVEABLE, stringLength * sizeof( WCHAR ) );
-        if ( handle == nullptr )
-        {
-            CloseClipboard();
-            return false;
-        }
-
-        WCHAR* pGlobalStr = static_cast<WCHAR*>( GlobalLock( handle ) );
-        Memory::copy( pGlobalStr, wstr.c_str(), stringLength * sizeof( WCHAR ) );
-        GlobalUnlock( handle );
-        EmptyClipboard();
-        if ( SetClipboardData( CF_UNICODETEXT, handle ) == nullptr )
-        {
-            GlobalFree( handle );
-            return false;
-        }
-        CloseClipboard();
-        return true;
-#elif defined( SW_PLATFORM_MACOS )
-        FILE* pPipe = popen( "pbcopy", "w" );
-        if ( pPipe == nullptr )
-            return false;
-        fwrite( str.data(), 1, str.size(), pPipe );
-        pclose( pPipe );
-        return true;
-#elif defined( SW_PLATFORM_LINUX )
-        FILE* pPipe = popen( "xclip -selection clipboard 2>/dev/null", "w" );
-        if ( pPipe == nullptr )
-            return false;
-        fwrite( str.data(), 1, str.size(), pPipe );
-        pclose( pPipe );
-        return true;
-#else
-        return false;
-#endif
     }
 
     string_view FileUtil::getSharedLibraryPrefix()

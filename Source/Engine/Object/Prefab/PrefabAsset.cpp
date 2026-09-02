@@ -213,14 +213,6 @@ namespace sw
                 _name = root.get( "Name" ).asString();
             _stateData = root.get( "GameObject" ).dump( 0 );
         }
-        else if ( root.has( "xmlBody" ) )
-        {
-            // 레거시 xmlBody 임베딩 호환
-            _name = root.get( "name" ).asString();
-            if ( _name.empty() )
-                _name = root.get( "Name" ).asString();
-            _stateData = root.get( "xmlBody" ).asString();
-        }
         else
         {
             // 직접 GameObject JSON인 경우

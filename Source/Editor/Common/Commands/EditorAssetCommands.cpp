@@ -578,7 +578,7 @@ namespace sw::editor
                 continue;
             }
 
-            FileUtil::createDirectory( destPath );
+            FileUtil::createParentDirectory( destPath );
             if ( FileUtil::copyFile( sourcePath, destPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );

@@ -125,19 +125,16 @@ namespace sw
         void    getMouseDelta( int32& outDx, int32& outDy ) const;
         void    getRawMouseDelta( float32& outDx, float32& outDy ) const;
         float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
-        float32 getMouseWheelDelta() const { return getMouseWheel(); }
         float32 getMouseWheelHorizontal() const { return _pMouse != nullptr ? _pMouse->getMouseWheelHorizontal() : 0.0f; }
 
         bool isPointerInside() const { return _pMouse != nullptr ? _pMouse->isPointerInside() : false; }
         bool wasPointerEntered() const { return _pMouse != nullptr ? _pMouse->wasPointerEntered() : false; }
         bool wasPointerLeft() const { return _pMouse != nullptr ? _pMouse->wasPointerLeft() : false; }
 
-        MouseLockMode  getMouseLockMode() const { return _pMouse != nullptr ? _pMouse->getLockMode() : MouseLockMode::None; }
-        void           setMouseLockMode( MouseLockMode mode );
-        CursorLockMode getCursorLockMode() const { return getMouseLockMode(); }
-        void           setCursorLockMode( CursorLockMode mode ) { setMouseLockMode( mode ); }
-        bool           isCursorVisible() const { return _pMouse != nullptr ? _pMouse->isCursorVisible() : true; }
-        void           setCursorVisible( bool bVisible );
+        MouseLockMode getMouseLockMode() const { return _pMouse != nullptr ? _pMouse->getLockMode() : MouseLockMode::None; }
+        void          setMouseLockMode( MouseLockMode mode );
+        bool          isCursorVisible() const { return _pMouse != nullptr ? _pMouse->isCursorVisible() : true; }
+        void          setCursorVisible( bool bVisible );
 
         void setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom );
         bool getMouseClipSubRect( int32& outLeft, int32& outTop, int32& outRight, int32& outBottom ) const

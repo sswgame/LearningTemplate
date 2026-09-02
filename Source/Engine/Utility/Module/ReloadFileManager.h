@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    using FileWatchMatchDelegate = Delegate<void( const FileChangeEvent& )>;
+    using FileWatchMatchDelegate = FileChangeDelegate;
 
     /// @brief registerWatch가 돌려주는 감시 핸들
     struct FileWatchHandle
@@ -57,9 +57,6 @@ namespace sw
         /** @brief 워치 등록을 해제합니다. */
         void unregisterWatch( FileWatchHandle handle );
 
-        /** @brief 레거시: 모든 매칭 구독 전 브로드캐스트용 (등록 watch와 별개로 유지하지 않음 — 매칭된 이벤트만) */
-        FileChangeMulticastDelegate& getOnFileChangedEvent() { return _onFileChanged; }
-
     private:
         /// @brief path prefix + 확장자 필터 + 콜백
         struct WatchEntry
@@ -80,7 +77,6 @@ namespace sw
         bool extensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
         unique_ptr<IFileWatcher>      _fileWatcher;
-        FileChangeMulticastDelegate   _onFileChanged;
         vector<WatchEntry>            _listWatch;
         uint64                        _nextWatchId{ 1 };
         unordered_map<string, uint64> _mapPollMtime;

@@ -185,7 +185,7 @@ namespace sw
 
         BLOCK( "Prepare Output Path" )
         {
-            FileUtil::createDirectory( _outputDir );
+            FileUtil::ensureDirectoryExists( _outputDir );
             _outputFilePath   = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitCppExtension );
             _outputHeaderPath = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitHeaderExtension );
         }

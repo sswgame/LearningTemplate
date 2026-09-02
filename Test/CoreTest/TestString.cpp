@@ -98,15 +98,103 @@ SW_TEST_CASE( Core_String, HashedString )
  */
 SW_TEST_CASE( Core_String, StringSplitter )
 {
-    sw::string_splitter                 splitter( "one|two|three", { "|" } );
-    const sw::vector<std::string_view>& tokens = splitter.getSplitList();
-
-    SW_EXPECT_EQUAL( 3u, splitter.getCount() );
-    if ( tokens.size() == 3 )
+    // 1) 기존 initializer_list 호환성
     {
-        SW_EXPECT_EQUAL( std::string_view( "one" ), tokens[0] );
-        SW_EXPECT_EQUAL( std::string_view( "two" ), tokens[1] );
-        SW_EXPECT_EQUAL( std::string_view( "three" ), tokens[2] );
+        sw::string_splitter                 splitter( "one|two|three", { "|" } );
+        const sw::vector<std::string_view>& tokens = splitter.getSplitList();
+
+        SW_EXPECT_EQUAL( 3u, splitter.getCount() );
+        SW_EXPECT_FALSE( splitter.empty() );
+        if ( tokens.size() == 3 )
+        {
+            SW_EXPECT_EQUAL( std::string_view( "one" ), tokens[0] );
+            SW_EXPECT_EQUAL( std::string_view( "two" ), tokens[1] );
+            SW_EXPECT_EQUAL( std::string_view( "three" ), tokens[2] );
+        }
+    }
+
+    // 2) 단일 문자(char) SIMD 패스트 패스 생성자 및 인덱싱
+    {
+        sw::string_splitter splitter( "apple/banana/cherry", '/' );
+        SW_EXPECT_EQUAL( 3u, splitter.getCount() );
+        SW_EXPECT_EQUAL( std::string_view( "apple" ), splitter[0] );
+        SW_EXPECT_EQUAL( std::string_view( "banana" ), splitter[1] );
+        SW_EXPECT_EQUAL( std::string_view( "cherry" ), splitter[2] );
+    }
+
+    // 3) 단일 문자열 뷰(string_view) 생성자
+    {
+        sw::string_splitter splitter( "root::sub::leaf", "::" );
+        SW_EXPECT_EQUAL( 3u, splitter.getCount() );
+        SW_EXPECT_EQUAL( std::string_view( "root" ), splitter[0] );
+        SW_EXPECT_EQUAL( std::string_view( "sub" ), splitter[1] );
+        SW_EXPECT_EQUAL( std::string_view( "leaf" ), splitter[2] );
+    }
+
+    // 4) 다중 단일 문자 구분자 find_first_of 패스트 패스
+    {
+        sw::string_splitter splitter( "folder/sub\\file.txt", { "/", "\\" } );
+        SW_EXPECT_EQUAL( 3u, splitter.getCount() );
+        SW_EXPECT_EQUAL( std::string_view( "folder" ), splitter[0] );
+        SW_EXPECT_EQUAL( std::string_view( "sub" ), splitter[1] );
+        SW_EXPECT_EQUAL( std::string_view( "file.txt" ), splitter[2] );
+    }
+
+    // 5) Range-based for 루프 순회 지원
+    {
+        sw::string_splitter          splitter( "x,y,z", ',' );
+        sw::vector<std::string_view> listResult;
+        for ( const std::string_view token : splitter )
+            listResult.push_back( token );
+
+        SW_EXPECT_EQUAL( 3u, static_cast<uint32>( listResult.size() ) );
+        if ( listResult.size() == 3 )
+        {
+            SW_EXPECT_EQUAL( std::string_view( "x" ), listResult[0] );
+            SW_EXPECT_EQUAL( std::string_view( "y" ), listResult[1] );
+            SW_EXPECT_EQUAL( std::string_view( "z" ), listResult[2] );
+        }
+    }
+
+    // 6) 이터레이터 자체의 인덱스(it.getIndex()) 및 오프셋(it.getOffset()) 제어
+    {
+        sw::string_splitter    splitter( "10;20;30", ';' );
+        size_t                 expectedIndex     = 0;
+        const std::string_view expectedTokens[]  = { "10", "20", "30" };
+        const size_t           expectedOffsets[] = { 0, 3, 6 };
+
+        for ( auto it = splitter.begin(); it != splitter.end(); ++it )
+        {
+            SW_EXPECT_EQUAL( expectedIndex, it.getIndex() );
+            SW_EXPECT_EQUAL( expectedOffsets[expectedIndex], it.getOffset() );
+            SW_EXPECT_EQUAL( expectedTokens[expectedIndex], *it );
+            ++expectedIndex;
+        }
+        SW_EXPECT_EQUAL( 3u, expectedIndex );
+    }
+
+    // 7) 독립 string_split_iterator 순회 (힙 할당 0회)
+    {
+        sw::string_split_iterator it( "red,green,blue", ',' );
+        sw::string_split_iterator itEnd;
+
+        SW_EXPECT_EQUAL( 0u, it.getIndex() );
+        SW_EXPECT_EQUAL( std::string_view( "red" ), *it );
+        ++it;
+        SW_EXPECT_EQUAL( 1u, it.getIndex() );
+        SW_EXPECT_EQUAL( std::string_view( "green" ), *it );
+        ++it;
+        SW_EXPECT_EQUAL( 2u, it.getIndex() );
+        SW_EXPECT_EQUAL( std::string_view( "blue" ), *it );
+        ++it;
+        SW_EXPECT_TRUE( it == itEnd );
+    }
+
+    // 8) 빈 문자열 처리
+    {
+        sw::string_splitter emptySplitter( "", '/' );
+        SW_EXPECT_EQUAL( 0u, emptySplitter.getCount() );
+        SW_EXPECT_TRUE( emptySplitter.empty() );
     }
 }
 

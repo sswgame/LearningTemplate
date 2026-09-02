@@ -240,7 +240,7 @@ namespace sw
                          relativePath,
                          bImported ? 1 : 0 );
 
-        FileUtil::createDirectory( absMeta );
+        FileUtil::createParentDirectory( absMeta );
         return FileUtil::writeTextFile( absMeta, sb.view() );
     }
 

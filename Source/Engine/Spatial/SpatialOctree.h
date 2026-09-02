@@ -15,13 +15,13 @@ namespace sw
         /** @brief 3D 점 좌표를 포함하는 요소를 검색합니다. */
         void queryPoint( const float3& point, vector<SpatialElement3D>& outListElement ) const
         {
-            queryRange( AABB3D{ point, point }, outListElement );
+            queryRange( AABB{ point, point }, outListElement );
         }
 
         /** @brief 구체 영역에 교차하는 요소를 검색합니다. */
         void querySphere( const float3& center, float32 radius, vector<SpatialElement3D>& outListElement ) const
         {
-            const AABB3D sphereBounds{ center - float3{ radius }, center + float3{ radius } };
+            const AABB sphereBounds{ center - float3{ radius }, center + float3{ radius } };
 
             vector<SpatialElement3D> listCandidate;
             queryRange( sphereBounds, listCandidate );

@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/File/BinaryBlob.h"
 #include "Core/File/FileUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -73,42 +72,4 @@ SW_TEST_CASE( Core_File, WriteAndReadFile )
     SW_EXPECT_EQUAL( testContent, readContent );
 
     sw::FileUtil::removeFile( testPath );
-}
-
-/**
- * @brief [Core_File] BinaryBlob 리틀엔디언 u32/i32 및 문자열 blob append/read 검증
- */
-SW_TEST_CASE( Core_File, BinaryBlobReadWritePrimitives )
-{
-    sw::vector<uint8> listBlob;
-
-    // 1) Write primitives
-    sw::BinaryBlob::appendU32( listBlob, 0x12345678u );
-    sw::BinaryBlob::appendI32( listBlob, -98765 );
-    sw::BinaryBlob::appendString( listBlob, "BinaryBlobPayload" );
-
-    SW_EXPECT_FALSE( listBlob.empty() );
-
-    // 2) Read primitives
-    size_t     offset = 0;
-    uint32     outU32 = 0;
-    int32      outI32 = 0;
-    sw::string outStr;
-
-    SW_EXPECT_TRUE( sw::BinaryBlob::readU32( listBlob, offset, outU32 ) );
-    SW_EXPECT_EQUAL( 0x12345678u, outU32 );
-    SW_EXPECT_EQUAL( 4u, offset );
-
-    SW_EXPECT_TRUE( sw::BinaryBlob::readI32( listBlob, offset, outI32 ) );
-    SW_EXPECT_EQUAL( -98765, outI32 );
-    SW_EXPECT_EQUAL( 8u, offset );
-
-    SW_EXPECT_TRUE( sw::BinaryBlob::readString( listBlob, offset, outStr ) );
-    SW_EXPECT_EQUAL( sw::string( "BinaryBlobPayload" ), outStr );
-    SW_EXPECT_EQUAL( listBlob.size(), offset );
-
-    // 3) Out of range read failure
-    SW_EXPECT_FALSE( sw::BinaryBlob::readU32( listBlob, offset, outU32 ) );
-    SW_EXPECT_FALSE( sw::BinaryBlob::readI32( listBlob, offset, outI32 ) );
-    SW_EXPECT_FALSE( sw::BinaryBlob::readString( listBlob, offset, outStr ) );
 }

@@ -45,9 +45,6 @@ namespace sw
     /** @brief 경로·파일·클립보드·공유 라이브러리 정적 유틸 */
     struct SW_API FileUtil
     {
-        /** @brief 현재 시각을 문자열로 반환합니다. */
-        static string getCurrentDateTimeAsString();
-
         /** @brief 전체 경로를 디렉터리와 파일명으로 나눕니다. */
         static void splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName );
         /** @brief 전체 경로를 디렉터리와 파일명 뷰로 나눕니다 (Zero Allocation). */
@@ -121,10 +118,10 @@ namespace sw
          */
         static string suffixAfterPathComponent( string_view path, string_view component );
         /**
-         * @brief 파일 경로의 상위 디렉터리를 생성합니다.
-         * @note `path`가 파일이면 부모만 만듭니다. 폴더 자체를 만들려면 ensureDirectoryExists.
+         * @brief 대상 파일이 위치할 상위 디렉터리를 생성합니다.
+         * @param filePath 대상 파일 경로 (상위 디렉터리가 없으면 재귀적으로 생성)
          */
-        static void createDirectory( string_view path );
+        static void createParentDirectory( string_view filePath );
         /** @brief 디렉터리 경로 자체를 생성합니다(필요 시 상위 포함). */
         static void ensureDirectoryExists( string_view directoryPath );
         /** @brief 경로에 일반 파일이 존재하는지 여부를 반환합니다. */
@@ -167,11 +164,6 @@ namespace sw
         static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, bool bNormalizePath = true );
         /** @brief 디렉터리 하위의 폴더를 수집합니다. */
         static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive, bool bNormalizePath = true );
-
-        /** @brief 클립보드 텍스트를 반환합니다. */
-        static string getClipboardText();
-        /** @brief 클립보드 텍스트를 설정합니다. */
-        static bool setClipboardText( string_view str );
 
         /** @brief 플랫폼 공유 라이브러리 접두사(예: lib)를 반환합니다. */
         static string_view getSharedLibraryPrefix();

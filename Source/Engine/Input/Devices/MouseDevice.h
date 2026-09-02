@@ -19,7 +19,6 @@ namespace sw
         ConfinedToWindow,
         LockedInCenter
     };
-    using CursorLockMode = MouseLockMode;
 
     /**
      * @class MouseDevice
@@ -93,12 +92,10 @@ namespace sw
         bool wasPointerEntered() const { return _bPointerEntered == SW_TRUE; }
         bool wasPointerLeft() const { return _bPointerLeft == SW_TRUE; }
 
-        MouseLockMode  getLockMode() const { return _lockMode; }
-        void           setLockMode( MouseLockMode mode ) { _lockMode = mode; }
-        CursorLockMode getCursorLockMode() const { return _lockMode; }
-        void           setCursorLockMode( CursorLockMode mode ) { _lockMode = mode; }
-        bool           isCursorVisible() const { return _bCursorVisible == SW_TRUE; }
-        void           setCursorVisible( bool bVisible ) { _bCursorVisible = bVisible ? SW_TRUE : SW_FALSE; }
+        MouseLockMode getLockMode() const { return _lockMode; }
+        void          setLockMode( MouseLockMode mode ) { _lockMode = mode; }
+        bool          isCursorVisible() const { return _bCursorVisible == SW_TRUE; }
+        void          setCursorVisible( bool bVisible ) { _bCursorVisible = bVisible ? SW_TRUE : SW_FALSE; }
 
         void setClipSubRect( int32 left, int32 top, int32 right, int32 bottom )
         {

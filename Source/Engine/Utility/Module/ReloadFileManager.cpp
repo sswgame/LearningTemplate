@@ -218,7 +218,6 @@ namespace sw
                 }
                 SW_LOG_TRACE( "%# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
 #endif
-                _onFileChanged.broadcast( ev );
             }
         }
     }

@@ -432,12 +432,12 @@ sw::vector<sw::SpatialElement> listVisible2D;
 quadTree.queryRange( sw::AABB2D{ 0.0f, 0.0f, 800.0f, 600.0f }, listVisible2D );
 
 // 2. 3D 옥트리 (3D 월드 AABB / 구체(Sphere) 반경 쿼리)
-sw::SpatialOctree octree( sw::AABB3D{ sw::float3( -1000.0f, -1000.0f, -1000.0f ), sw::float3( 1000.0f, 1000.0f, 1000.0f ) } );
-octree.insert( 101, sw::AABB3D{ sw::float3( 10.0f, 0.0f, 10.0f ), sw::float3( 20.0f, 10.0f, 20.0f ) }, pObject );
+sw::SpatialOctree octree( sw::AABB{ sw::float3( -1000.0f, -1000.0f, -1000.0f ), sw::float3( 1000.0f, 1000.0f, 1000.0f ) } );
+octree.insert( 101, sw::AABB{ sw::float3( 10.0f, 0.0f, 10.0f ), sw::float3( 20.0f, 10.0f, 20.0f ) }, pObject );
 
 // 3D 범위 및 구체 반경 쿼리
 sw::vector<sw::SpatialOctreeElement> listVisible3D;
-octree.queryRange( sw::AABB3D{ sw::float3( 0.0f, -50.0f, 0.0f ), sw::float3( 100.0f, 50.0f, 100.0f ) }, listVisible3D );
+octree.queryRange( sw::AABB{ sw::float3( 0.0f, -50.0f, 0.0f ), sw::float3( 100.0f, 50.0f, 100.0f ) }, listVisible3D );
 
 sw::vector<sw::SpatialOctreeElement> listExplosionTargets;
 octree.querySphere( sw::float3( 15.0f, 5.0f, 15.0f ), 25.0f, listExplosionTargets );

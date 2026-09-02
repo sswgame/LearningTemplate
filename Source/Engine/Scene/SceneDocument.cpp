@@ -257,7 +257,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
             return false;
         }
-        FileUtil::createDirectory( absPath );
+        FileUtil::createParentDirectory( absPath );
         if ( xmlDoc.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Failed to write: %#", absPath );
@@ -368,7 +368,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
             return false;
         }
-        FileUtil::createDirectory( absPath );
+        FileUtil::createParentDirectory( absPath );
         const bool bOk = arch.saveFile( absPath );
         if ( bOk )
             SW_LOG_INFO( "Saved binary '%#' (%# entities) -> %#",

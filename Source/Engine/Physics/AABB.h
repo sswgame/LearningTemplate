@@ -60,6 +60,14 @@ namespace sw
                    _min._z <= other._max._z && other._min._z <= _max._z;
         }
 
+        /** @brief 다른 AABB를 완전히 포함하는지 반환합니다. */
+        bool contains( const AABB& other ) const noexcept
+        {
+            return _min._x <= other._min._x && other._max._x <= _max._x &&
+                   _min._y <= other._min._y && other._max._y <= _max._y &&
+                   _min._z <= other._min._z && other._max._z <= _max._z;
+        }
+
         float3 getCenter() const noexcept { return isValid() ? ( _min + _max ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
         float3 getExtents() const noexcept { return isValid() ? ( _max - _min ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
     };

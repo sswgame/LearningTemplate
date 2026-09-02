@@ -83,13 +83,6 @@ namespace sw
             return x * x;
         }
 
-        /** @brief 값의 제곱(x^2)을 계산합니다 (오타 호환성 유지용). */
-        template <typename T>
-        static SW_INLINE constexpr T sqaure( T x ) noexcept
-        {
-            return square( x );
-        }
-
         /** @brief 값의 4제곱(x^4)을 계산합니다. */
         template <typename T>
         static SW_INLINE constexpr T pow4( T x )
@@ -179,15 +172,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 보간 · 정렬 · 난수 · 분수
         // ------------------------------------------------------------------------------
-        /** @brief 이중 선형 보간(Bilinear Interpolation)을 수행합니다. */
-        template <typename float4, typename float2>
-        static SW_INLINE constexpr float32 bilinear( float4 gather, float2 pixel_frac )
-        {
-            const float32 top_row    = lerp( gather.w, gather.z, pixel_frac.x );
-            const float32 bottom_row = lerp( gather.x, gather.y, pixel_frac.x );
-            return MathUtil::lerp( top_row, bottom_row, pixel_frac.y );
-        }
-
         /** @brief 선형 보간(Linear Interpolation)을 수행합니다. */
         template <typename T>
         static SW_INLINE constexpr T lerp( T x, T y, T a )
@@ -198,7 +182,7 @@ namespace sw
 
         /** @brief 두 값 사이의 위치를 통해 t 값(0.0~1.0)을 역으로 구합니다. */
         template <typename T>
-        static SW_INLINE constexpr T inverse_lerp( T value1, T value2, T pos, const float32 epsilon = Epsilon )
+        static SW_INLINE constexpr T inverseLerp( T value1, T value2, T pos, const float32 epsilon = Epsilon )
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
             return ( MathUtil::abs( value2 - value1 ) < epsilon ) ? T( 0 ) : ( ( pos - value1 ) / ( value2 - value1 ) );
@@ -209,7 +193,7 @@ namespace sw
         static SW_INLINE constexpr T smoothstep( T edge0, T edge1, T x )
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
-            const T t = MathUtil::saturate( MathUtil::inverse_lerp( edge0, edge1, x ) );
+            const T t = MathUtil::saturate( MathUtil::inverseLerp( edge0, edge1, x ) );
             return t * t * ( T( 3 ) - T( 2 ) * t );
         }
 

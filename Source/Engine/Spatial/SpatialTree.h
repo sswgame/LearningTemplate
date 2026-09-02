@@ -9,6 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Physics/AABB.h"
 
 namespace sw
 {
@@ -77,83 +78,13 @@ namespace sw
     };
 
     /**
-     * @struct AABB3D
-     * @brief 3차원 축 정렬 경계 상자 (Axis-Aligned Bounding Box)
-     */
-    struct AABB3D
-    {
-        float3 _min{ 0.0f, 0.0f, 0.0f };
-        float3 _max{ 0.0f, 0.0f, 0.0f };
-
-        static constexpr AABB3D empty() noexcept
-        {
-            return AABB3D{
-                float3{MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat},
-                float3{MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat}
-            };
-        }
-
-        static constexpr AABB3D infinite() noexcept
-        {
-            return AABB3D{
-                float3{MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat},
-                float3{MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat}
-            };
-        }
-
-        static constexpr AABB3D zero() noexcept
-        {
-            return AABB3D{
-                float3{0.0f, 0.0f, 0.0f},
-                float3{0.0f, 0.0f, 0.0f}
-            };
-        }
-
-        bool isValid() const noexcept
-        {
-            return _min._x <= _max._x && _min._y <= _max._y && _min._z <= _max._z;
-        }
-
-        bool contains( const float3& point ) const noexcept
-        {
-            return _min._x <= point._x && point._x <= _max._x &&
-                   _min._y <= point._y && point._y <= _max._y &&
-                   _min._z <= point._z && point._z <= _max._z;
-        }
-
-        bool intersects( const AABB3D& other ) const noexcept
-        {
-            return _min._x <= other._max._x && other._min._x <= _max._x &&
-                   _min._y <= other._max._y && other._min._y <= _max._y &&
-                   _min._z <= other._max._z && other._min._z <= _max._z;
-        }
-
-        bool contains( const AABB3D& other ) const noexcept
-        {
-            return _min._x <= other._min._x && other._max._x <= _max._x &&
-                   _min._y <= other._min._y && other._max._y <= _max._y &&
-                   _min._z <= other._min._z && other._max._z <= _max._z;
-        }
-
-        float3 getCenter() const noexcept
-        {
-            return ( _min + _max ) * 0.5f;
-        }
-
-        float3 getExtents() const noexcept
-        {
-            return ( _max - _min ) * 0.5f;
-        }
-    };
-
-    /**
      * @struct SpatialElement3D
      * @brief 3D 공간 트리에 등록되는 단위 객체
      */
     struct SpatialElement3D
     {
         uint64 _id{ 0 };
-        AABB3D _bounds{};
+        AABB   _bounds{};
         void*  _pUserData{ nullptr };
     };
 
@@ -192,14 +123,14 @@ namespace sw
      */
     struct OctreeTraits
     {
-        using BoundsType                     = AABB3D;
+        using BoundsType                     = AABB;
         using ElementType                    = SpatialElement3D;
         using PointType                      = float3;
         static constexpr size_t kChildCount  = 8;
         static constexpr size_t kMaxElements = 16;
         static constexpr size_t kMaxDepth    = 6;
 
-        static void subdivide( const AABB3D& parent, AABB3D outArrChildren[8] )
+        static void subdivide( const AABB& parent, AABB outArrChildren[8] )
         {
             const float3 mid = parent.getCenter();
 
@@ -214,7 +145,7 @@ namespace sw
                 const float32 minZ = ( ( octantIndex & 4 ) != 0 ) ? mid._z : parent._min._z;
                 const float32 maxZ = ( ( octantIndex & 4 ) != 0 ) ? parent._max._z : mid._z;
 
-                outArrChildren[octantIndex] = AABB3D{
+                outArrChildren[octantIndex] = AABB{
                     float3{minX, minY, minZ},
                     float3{maxX, maxY, maxZ}
                 };

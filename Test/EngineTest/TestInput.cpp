@@ -148,7 +148,7 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseWheelAndEdges )
     input.setGamepadPollingEnabled( false );
 
     // 초기 휠 상태
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheel(), 1e-4f );
 
     // 1) 휠 스크롤 위로 1틱 (+120)
     sw::NativeWindowEvent wheelUpEvt{};
@@ -158,11 +158,11 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseWheelAndEdges )
 
     // beginFrame 호출 시 누적 휠이 이번 프레임 델타로 전이됨
     input.beginFrame();
-    SW_EXPECT_NEAR_EQUAL( 1.0f, input.getMouseWheelDelta(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, input.getMouseWheel(), 1e-4f );
 
     // endFrame 호출 시 델타 0으로 리셋
     input.endFrame();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheel(), 1e-4f );
 
     // 2) 휠 스크롤 아래로 2틱 (-240)
     sw::NativeWindowEvent wheelDownEvt{};
@@ -171,10 +171,10 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseWheelAndEdges )
     input.processNativeEvent( wheelDownEvt );
 
     input.beginFrame();
-    SW_EXPECT_NEAR_EQUAL( -2.0f, input.getMouseWheelDelta(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, input.getMouseWheel(), 1e-4f );
 
     input.endFrame();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheelDelta(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouseWheel(), 1e-4f );
 
     input.shutdown();
 }

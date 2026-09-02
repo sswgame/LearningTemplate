@@ -1,7 +1,7 @@
 /**
  * @file PlatformOsHeaders.h
  * @brief OS 시스템 헤더만 포함합니다. DirectX/Vulkan/DXC는 넣지 않습니다.
- * @note 그래픽 API 헤더는 Core/Common/EnginePlatformHeaders.h에 있습니다.
+ * @note 그래픽 API 헤더는 Engine/Common/EnginePlatformHeaders.h에 있습니다.
  */
 #pragma once
 // ------------------------------------------------------------------------------

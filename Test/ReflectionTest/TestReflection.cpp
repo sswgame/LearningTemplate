@@ -578,7 +578,7 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
     const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
     const sw::string tempHeaderPath = sw::FileUtil::joinPath( binDir, "InvalidBitfieldSample.h" );
     const sw::string outGenDir      = sw::FileUtil::joinPath( binDir, "temp_gen" );
-    sw::FileUtil::createDirectory( outGenDir );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
 
     const sw::string headerContent = "#pragma once\n"
                                      "#include \"Engine/Reflection/ReflectionMacros.h\"\n"

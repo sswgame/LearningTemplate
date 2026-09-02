@@ -41,8 +41,6 @@ namespace sw
         const string& getName() const { return _name; }
         /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON)를 반환합니다. */
         const string& getStateData() const { return _stateData; }
-        /** @brief 하위 호환성용 alias */
-        const string& getXmlBody() const { return _stateData; }
         /** @brief 로드에 성공했으면 true. */
         bool isValid() const { return _bValid != 0; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */

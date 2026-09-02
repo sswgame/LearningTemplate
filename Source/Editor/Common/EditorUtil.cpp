@@ -236,7 +236,7 @@ namespace sw::editor
         const string configDir =
             FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorCfg._configFolder ), editorCfg._editorConfigFolder );
         const string markerFile = FileUtil::joinPath( configDir, editorCfg._imguiIniFile );
-        FileUtil::createDirectory( markerFile );
+        FileUtil::createParentDirectory( markerFile );
         return configDir;
     }
 

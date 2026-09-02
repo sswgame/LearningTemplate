@@ -307,13 +307,13 @@ SW_TEST_CASE( Core_Math, MathUtilFunctionsFull )
     float32 lerped = sw::MathUtil::lerp( 0.0f, 100.0f, 0.5f );
     SW_EXPECT_NEAR_EQUAL( 50.0f, lerped, 1e-4f );
 
-    float32 invLerp = sw::MathUtil::inverse_lerp( 10.0f, 20.0f, 15.0f );
+    float32 invLerp = sw::MathUtil::inverseLerp( 10.0f, 20.0f, 15.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, invLerp, 1e-4f );
 
     float32 smoothstepVal = sw::MathUtil::smoothstep( 0.0f, 10.0f, 5.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, smoothstepVal, 1e-4f );
 
-    float32 sq = sw::MathUtil::sqaure( 4.0f );
+    float32 sq = sw::MathUtil::square( 4.0f );
     SW_EXPECT_NEAR_EQUAL( 16.0f, sq, 1e-4f );
 
     float32 p4 = sw::MathUtil::pow4( 2.0f );
