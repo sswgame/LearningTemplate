@@ -214,10 +214,10 @@ namespace sw
 				_rightStickY = value;
 				break;
 			case 4:
-				_leftTrigger = value;
+				_leftTrigger = value < _triggerDeadzone ? 0.0f : value;
 				break;
 			case 5:
-				_rightTrigger = value;
+				_rightTrigger = value < _triggerDeadzone ? 0.0f : value;
 				break;
 			default:
 				break;

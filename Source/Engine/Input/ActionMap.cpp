@@ -126,7 +126,7 @@ namespace sw
 		: _pInput{ nullptr }
 		, _mapAction{}
 		, _mapLayer{}
-		, _listActionSlot{}
+		, _listActionEntry{}
 		, _listActionName{}
 		, _listLayerName{}
 		, _listLayerStack{}
@@ -160,7 +160,7 @@ namespace sw
 	{
 		_mapAction.clear();
 		_mapLayer.clear();
-		_listActionSlot.clear();
+		_listActionEntry.clear();
 		_listActionName.clear();
 		_listLayerName.clear();
 		_listLayerStack.clear();
@@ -817,7 +817,7 @@ namespace sw
 
 	void ActionMap::clearCallbacks()
 	{
-		for ( auto& [name, entry] : _mapAction )
+		for ( ActionEntry& entry : _listActionEntry )
 		{
 			entry._listActionCallback.clear();
 			entry._listPhaseCallback.clear();
@@ -1051,42 +1051,7 @@ namespace sw
 		if ( listExpected.empty() )
 			return false;
 
-		if ( checkCommandSequence( listExpected, maxWindowSeconds ) )
-			return true;
-
-		const size_t reqLen	  = listExpected.size();
-		size_t		 matchIdx = reqLen;
-		float32		 lastTs	  = 0.0f;
-
-		for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
-		{
-			const uint32			   histIdx = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
-			const CommandHistoryEntry& hist	   = _arrCommandHistory[histIdx];
-
-			if ( matchIdx == reqLen )
-			{
-				if ( hist._action == listExpected[reqLen - 1] )
-				{
-					lastTs = hist._timestamp;
-					--matchIdx;
-					if ( matchIdx == 0 )
-						return true;
-				}
-			}
-			else
-			{
-				if ( ( lastTs - hist._timestamp ) > maxWindowSeconds )
-					break;
-
-				if ( hist._action == listExpected[matchIdx - 1] )
-				{
-					--matchIdx;
-					if ( matchIdx == 0 )
-						return true;
-				}
-			}
-		}
-		return matchIdx == 0;
+		return checkCommandSequence( listExpected, maxWindowSeconds );
 	}
 
 	string ActionMap::getGlyphForAction( string_view action ) const
@@ -1210,10 +1175,11 @@ namespace sw
 
 		hashed_string conflictingAction{};
 		uint32		  conflictingBindIndex = 0;
-		for ( auto& [actName, entry] : _mapAction )
+		for ( auto& [actName, actIndex] : _mapAction )
 		{
 			if ( actName == action )
 				continue;
+			const ActionEntry& entry = _listActionEntry[actIndex];
 			for ( uint32 bIdx = 0; bIdx < entry._listBinding.size(); ++bIdx )
 			{
 				if ( entry._listBinding[bIdx]._layer == targetLayer && entry._listBinding[bIdx]._arrSlot[0] == newSlot )
@@ -1261,8 +1227,9 @@ namespace sw
 	{
 		const hashed_string targetLayer = layer.empty() ? _defaultLayerName : hashed_string( layer );
 
-		for ( const auto& [actionName, entry] : _mapAction )
+		for ( const auto& [actionName, actIndex] : _mapAction )
 		{
+			const ActionEntry& entry = _listActionEntry[actIndex];
 			for ( const ActionBinding& binding : entry._listBinding )
 			{
 				if ( binding._layer != targetLayer )
@@ -1317,7 +1284,7 @@ namespace sw
 
 	void ActionMap::resetAllBindingsToDefault()
 	{
-		for ( auto& [name, entry] : _mapAction )
+		for ( ActionEntry& entry : _listActionEntry )
 		{
 			if ( entry._listDefaultBinding.empty() == false )
 			{
@@ -1335,8 +1302,9 @@ namespace sw
 
 		XmlDocument doc;
 		XmlNode		root = doc.appendRoot( "UserBindings" );
-		for ( const auto& [actionName, entry] : _mapAction )
+		for ( const auto& [actionName, actIndex] : _mapAction )
 		{
+			const ActionEntry& entry = _listActionEntry[actIndex];
 			for ( const ActionBinding& b : entry._listBinding )
 			{
 				XmlNode bindNode = root.appendChild( "bind" );
@@ -1601,8 +1569,10 @@ namespace sw
 		_pInput->getMousePosition( curMouseX, curMouseY );
 
 		// 3) 통합 액션 런타임 평가 및 ActionPhase 상태 머신
-		for ( auto& [actionName, actionEntry] : _mapAction )
+		for ( auto& [actionName, actIndex] : _mapAction )
 		{
+			ActionEntry& actionEntry = _listActionEntry[actIndex];
+
 			const size_t bindCount = actionEntry._listBinding.size();
 			if ( actionEntry._listBindingState.size() != bindCount )
 				actionEntry._listBindingState.resize( bindCount );
@@ -2227,11 +2197,11 @@ namespace sw
 
 	const ActionMap::ActionEntry* ActionMap::getActionFromHandle( ActionHandle handle ) const
 	{
-		if ( handle._index < _listActionSlot.size() )
+		if ( handle._index < _listActionEntry.size() )
 		{
-			const ActionEntry* pEntry = _listActionSlot[handle._index];
-			if ( pEntry != nullptr && pEntry->_generation == handle._generation )
-				return pEntry;
+			const ActionEntry& entry = _listActionEntry[handle._index];
+			if ( entry._generation == handle._generation )
+				return &entry;
 		}
 		return nullptr;
 	}
@@ -2437,18 +2407,21 @@ namespace sw
 		auto it = _mapAction.find( action );
 		if ( it == _mapAction.end() )
 		{
+			const uint32 index = static_cast<uint32>( _listActionEntry.size() );
+
 			ActionEntry entry{};
-			entry._valueType = valueType;
-			auto [newIt, _]	 = _mapAction.emplace( action, std::move( entry ) );
-			ActionEntry& ref = newIt->second;
-			ref._handleIndex = static_cast<uint32>( _listActionSlot.size() );
-			ref._generation	 = ++_nextGeneration;
-			_listActionSlot.push_back( &ref );
-			return ref;
+			entry._valueType   = valueType;
+			entry._handleIndex = index;
+			entry._generation  = ++_nextGeneration;
+			_listActionEntry.push_back( std::move( entry ) );
+			_mapAction.emplace( action, index );
+			return _listActionEntry[index];
 		}
-		if ( it->second._valueType == InputActionValueType::Boolean && valueType != InputActionValueType::Boolean )
-			it->second._valueType = valueType;
-		return it->second;
+
+		ActionEntry& entry = _listActionEntry[it->second];
+		if ( entry._valueType == InputActionValueType::Boolean && valueType != InputActionValueType::Boolean )
+			entry._valueType = valueType;
+		return entry;
 	}
 
 	LayerDef* ActionMap::findLayer( const hashed_string& name )
@@ -2466,22 +2439,23 @@ namespace sw
 	ActionMap::ActionEntry* ActionMap::findAction( const hashed_string& action )
 	{
 		auto it = _mapAction.find( action );
-		return it != _mapAction.end() ? &it->second : nullptr;
+		return it != _mapAction.end() ? &_listActionEntry[it->second] : nullptr;
 	}
 
 	const ActionMap::ActionEntry* ActionMap::findAction( const hashed_string& action ) const
 	{
 		auto it = _mapAction.find( action );
-		return it != _mapAction.end() ? &it->second : nullptr;
+		return it != _mapAction.end() ? &_listActionEntry[it->second] : nullptr;
 	}
 
 	void ActionMap::getDebugActionStates( vector<DebugActionState>& outListState ) const
 	{
 		outListState.clear();
 		outListState.reserve( _mapAction.size() );
-		for ( const auto& [actName, entry] : _mapAction )
+		for ( const auto& [actName, actIndex] : _mapAction )
 		{
-			DebugActionState state{};
+			const ActionEntry& entry = _listActionEntry[actIndex];
+			DebugActionState   state{};
 			state._action		= actName;
 			state._layer		= entry._listBinding.empty() ? _defaultLayerName : entry._listBinding[0]._layer;
 			state._valueType	= entry._valueType;

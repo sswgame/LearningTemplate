@@ -113,12 +113,7 @@ namespace sw
 
 		releaseMouseLockMode();
 		restoreWindowsAccessibilityShortcuts();
-
-		for ( auto& pDevice : _listDevice )
-		{
-			if ( pDevice != nullptr )
-				pDevice->resetState();
-		}
+		resetAllDeviceState();
 
 		_listDevice.clear();
 		_pKeyboard	= nullptr;
@@ -137,7 +132,11 @@ namespace sw
 	{
 		if ( _bInputMuted == SW_TRUE )
 			return false;
-		return _queueRawEvent.push( rawEvent );
+
+		const bool bPushed = _queueRawEvent.push( rawEvent );
+		if ( bPushed == false )
+			SW_LOG_WARNING( "Raw input event queue full (capacity=%d). Event dropped.", static_cast<int32>( _queueRawEvent.capacity() ) );
+		return bPushed;
 	}
 
 	uint32 InputManager::drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount )
@@ -165,11 +164,14 @@ namespace sw
 		if ( pDevice == nullptr )
 			return;
 
-		if ( _pKeyboard == pDevice )
+		const bool bWasKeyboard = ( _pKeyboard == pDevice );
+		const bool bWasMouse	= ( _pMouse == pDevice );
+		const bool bWasGamepad	= ( _pGamepad == pDevice );
+		if ( bWasKeyboard )
 			_pKeyboard = nullptr;
-		if ( _pMouse == pDevice )
+		if ( bWasMouse )
 			_pMouse = nullptr;
-		if ( _pGamepad == pDevice )
+		if ( bWasGamepad )
 			_pGamepad = nullptr;
 
 		for ( auto it = _listDevice.begin(); it != _listDevice.end(); ++it )
@@ -179,6 +181,22 @@ namespace sw
 				_listDevice.erase( it );
 				break;
 			}
+		}
+
+		// 대표 편의 포인터(키보드/마우스/게임패드)가 해제되면 남은 장치 중 동일 종류로 재바인딩합니다.
+		if ( bWasKeyboard == false && bWasMouse == false && bWasGamepad == false )
+			return;
+
+		for ( const auto& pRemaining : _listDevice )
+		{
+			if ( pRemaining == nullptr )
+				continue;
+			if ( bWasKeyboard && _pKeyboard == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Keyboard )
+				_pKeyboard = static_cast<KeyboardDevice*>( pRemaining.get() );
+			else if ( bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse )
+				_pMouse = static_cast<MouseDevice*>( pRemaining.get() );
+			else if ( bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad )
+				_pGamepad = static_cast<GamepadDevice*>( pRemaining.get() );
 		}
 	}
 
@@ -379,6 +397,11 @@ namespace sw
 	void InputManager::onWindowFocusLost()
 	{
 		releaseMouseLockMode();
+		resetAllDeviceState();
+	}
+
+	void InputManager::resetAllDeviceState()
+	{
 		for ( auto& pDev : _listDevice )
 		{
 			if ( pDev != nullptr )

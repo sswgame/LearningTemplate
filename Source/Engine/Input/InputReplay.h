@@ -101,6 +101,9 @@ namespace sw
 		const vector<InputReplayFrame>& getFrames() const { return _listFrame; }
 
 	private:
+		/** @brief 모든 장치 상태를 리셋한 뒤, [0, exclusiveEndIndex) 프레임을 순서대로 재생하여 재구성합니다. */
+		void resyncUpTo( InputManager* pInput, uint32 exclusiveEndIndex ) const;
+
 		vector<InputReplayFrame> _listFrame;
 		string					 _replayName;
 		uint32					 _currentPlaybackIndex;

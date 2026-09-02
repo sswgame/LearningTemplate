@@ -132,12 +132,28 @@ namespace sw
 		if ( _currentPlaybackIndex > 0 )
 		{
 			--_currentPlaybackIndex;
-			const InputReplayFrame& frame = _listFrame[_currentPlaybackIndex];
-			if ( pInput != nullptr )
-			{
-				for ( const RawInputEvent& evt : frame._listRawEvent )
-					pInput->postRawEvent( evt );
-			}
+			// 원시 이벤트는 KeyDown/KeyUp처럼 방향성을 가진 상태 전이라, 목표 프레임의 이벤트만
+			// 그대로 재주입하면(정방향 의미) 역방향 탐색 시 눌림 상태가 고착될 수 있습니다.
+			// 0번 프레임부터 목표 프레임까지 장치 상태를 리셋 후 순서대로 재생하여 재구성합니다.
+			resyncUpTo( pInput, _currentPlaybackIndex + 1 );
+		}
+	}
+
+	void InputReplay::resyncUpTo( InputManager* pInput, uint32 exclusiveEndIndex ) const
+	{
+		if ( pInput == nullptr )
+			return;
+
+		pInput->resetAllDeviceState();
+
+		const uint32 endIndex = exclusiveEndIndex < _listFrame.size() ? exclusiveEndIndex : static_cast<uint32>( _listFrame.size() );
+		for ( uint32 index = 0; index < endIndex; ++index )
+		{
+			const InputReplayFrame& frame = _listFrame[index];
+			for ( const RawInputEvent& evt : frame._listRawEvent )
+				pInput->postRawEvent( evt );
+			pInput->beginFrame( frame._deltaTime );
+			pInput->endFrame();
 		}
 	}
 

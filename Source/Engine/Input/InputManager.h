@@ -63,6 +63,8 @@ namespace sw
 		void onWindowFocusGained();
 		/** @brief 윈도우 포커스 아웃 시 모든 장치 입력 상태 초기화 및 마우스 클리핑 해제 */
 		void onWindowFocusLost();
+		/** @brief 등록된 모든 장치의 입력 상태(키/버튼/축)를 초기화합니다 (리플레이 재동기화 등에 사용). */
+		void resetAllDeviceState();
 
 		// ------------------------------------------------------------------------------
 		// 2) 락프리 원시 이벤트 큐 (Lock-Free Event Queue)

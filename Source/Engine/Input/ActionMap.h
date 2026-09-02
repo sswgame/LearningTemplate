@@ -570,35 +570,35 @@ namespace sw
 		const ActionEntry* findAction( string_view action ) const { return findAction( hashed_string( action ) ); }
 
 	private:
-		InputManager*							  _pInput;
-		unordered_map<hashed_string, ActionEntry> _mapAction;
-		unordered_map<hashed_string, LayerDef>	  _mapLayer;
-		vector<ActionEntry*>					  _listActionSlot;
-		vector<hashed_string>					  _listActionName;
-		vector<hashed_string>					  _listLayerName;
-		vector<hashed_string>					  _listLayerStack;
-		BufferedActionItem						  _arrBufferedAction[kMaxBufferedActions];
-		uint32									  _bufferedActionCount{ 0 };
-		uint32									  _bufferedActionHead{ 0 };
-		CommandHistoryEntry						  _arrCommandHistory[kMaxCommandHistory];
-		uint32									  _commandHistoryCount{ 0 };
-		uint32									  _commandHistoryHead{ 0 };
-		uint32									  _nextGeneration{ 1 };
-		hashed_string							  _defaultLayerName;
-		float2									  _mouseSensitivity;
-		float2									  _gamepadSensitivity;
-		float32									  _doubleClickTime;
-		float32									  _doubleClickMaxDistance;
-		float32									  _doubleTapTime;
-		float32									  _holdThreshold;
-		float32									  _navRepeatDelay;
-		float32									  _navRepeatRate;
-		float32									  _totalElapsedTime;
-		DeadzoneShape							  _deadzoneShape;
-		DigitalNormalization					  _digitalNormalization;
-		uint8									  _bInvertX					  : 1;
-		uint8									  _bInvertY					  : 1;
-		uint8									  _bSuppressBaseActionOnChord : 1;
-		[[maybe_unused]] uint8					  _reservedFlags			  : 5;
+		InputManager*						   _pInput;
+		unordered_map<hashed_string, uint32>   _mapAction; /**< 액션 이름 -> _listActionEntry 인덱스. */
+		unordered_map<hashed_string, LayerDef> _mapLayer;
+		vector<ActionEntry>					   _listActionEntry; /**< 안정된 인덱스로만 접근하는 액션 슬롯 소유 저장소 (재할당 시 포인터 무효화 방지). */
+		vector<hashed_string>				   _listActionName;
+		vector<hashed_string>				   _listLayerName;
+		vector<hashed_string>				   _listLayerStack;
+		BufferedActionItem					   _arrBufferedAction[kMaxBufferedActions];
+		uint32								   _bufferedActionCount{ 0 };
+		uint32								   _bufferedActionHead{ 0 };
+		CommandHistoryEntry					   _arrCommandHistory[kMaxCommandHistory];
+		uint32								   _commandHistoryCount{ 0 };
+		uint32								   _commandHistoryHead{ 0 };
+		uint32								   _nextGeneration{ 1 };
+		hashed_string						   _defaultLayerName;
+		float2								   _mouseSensitivity;
+		float2								   _gamepadSensitivity;
+		float32								   _doubleClickTime;
+		float32								   _doubleClickMaxDistance;
+		float32								   _doubleTapTime;
+		float32								   _holdThreshold;
+		float32								   _navRepeatDelay;
+		float32								   _navRepeatRate;
+		float32								   _totalElapsedTime;
+		DeadzoneShape						   _deadzoneShape;
+		DigitalNormalization				   _digitalNormalization;
+		uint8								   _bInvertX				   : 1;
+		uint8								   _bInvertY				   : 1;
+		uint8								   _bSuppressBaseActionOnChord : 1;
+		[[maybe_unused]] uint8				   _reservedFlags			   : 5;
 	};
 } // namespace sw
