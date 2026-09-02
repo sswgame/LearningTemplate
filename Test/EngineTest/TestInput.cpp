@@ -849,6 +849,64 @@ SW_TEST_CASE( ActionMapTest, AnyKeyBinding )
 }
 
 /**
+ * @brief [ActionMapTest] 가상 조이스틱(마우스 드래그) 바인딩의 플로팅 앵커·데드존·리셋 검증
+ */
+SW_TEST_CASE( ActionMapTest, VirtualJoystickDragBinding )
+{
+	sw::InputManager input;
+	SW_EXPECT_TRUE( input.initialize() );
+
+	sw::ActionMap& actionMap = input.getActionMap();
+	actionMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, 100.0f, 0.1f );
+
+	// 1) 버튼을 누르지 않은 상태에서는 0벡터
+	input.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	sw::float2 idleVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._x, 0.001f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, idleVec._y, 0.001f );
+	input.endFrame();
+
+	// 2) (200,200)에서 누르면 그 지점이 앵커가 되고, 아직 같은 지점이라 0벡터
+	input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 200, 200 ) );
+	input.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	sw::float2 anchoredVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._x, 0.001f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, anchoredVec._y, 0.001f );
+	input.endFrame();
+
+	// 3) 앵커(200,200)에서 (300,200)으로 드래그 → +X 방향 최대치(반경 100 도달)
+	input.postRawEvent( sw::RawInputEvent::makeMouseMove( 300, 200 ) );
+	input.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	sw::float2 dragVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, dragVec._x, 0.01f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, dragVec._y, 0.01f );
+	input.endFrame();
+
+	// 4) 버튼을 떼면 즉시 0벡터로 리셋
+	input.postRawEvent( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left, 300, 200 ) );
+	input.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	sw::float2 releasedVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._x, 0.001f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, releasedVec._y, 0.001f );
+	input.endFrame();
+
+	// 5) 다른 위치(50,50)에서 다시 누르면 앵커가 새 위치로 플로팅되어 다시 0벡터
+	input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 50, 50 ) );
+	input.beginFrame( 0.016f );
+	actionMap.update( 0.016f );
+	sw::float2 reAnchoredVec = actionMap.getVector2D( "Move" );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._x, 0.001f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, reAnchoredVec._y, 0.001f );
+	input.endFrame();
+
+	input.shutdown();
+}
+
+/**
  * @brief [ActionMapTest] 리바인딩 충돌 해결(Swap / Override / AddSecondary) 검증
  */
 SW_TEST_CASE( ActionMapTest, RebindConflictResolution )
@@ -1041,6 +1099,7 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
 	mapSave.bindChord( "ChordAction", sw::Key::LeftControl, sw::Key::K );
 	mapSave.bindShortcut( "ShortcutAction", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
 	mapSave.bindAnyKey( "AnyKeyAction" );
+	mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
 
 	const sw::string savePath = "test_all_user_bindings.xml";
 	SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
@@ -1056,6 +1115,22 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
 	SW_EXPECT_TRUE( mapLoad.hasAction( "ChordAction" ) );
 	SW_EXPECT_TRUE( mapLoad.hasAction( "ShortcutAction" ) );
 	SW_EXPECT_TRUE( mapLoad.hasAction( "AnyKeyAction" ) );
+	SW_EXPECT_TRUE( mapLoad.hasAction( "MoveJoystick" ) );
+
+	const sw::ActionBinding* pJoystickBind = mapLoad.getBinding( "MoveJoystick", 0 );
+	if ( pJoystickBind != nullptr )
+	{
+		SW_EXPECT_TRUE( pJoystickBind->_kind == sw::BindingKind::VirtualJoystick2D );
+		SW_EXPECT_TRUE( pJoystickBind->_arrSlot[0]._deviceKind == sw::InputDeviceKind::Mouse );
+		SW_EXPECT_EQUAL( static_cast<uint16>( sw::MouseButton::Right ), pJoystickBind->_arrSlot[0]._controlIndex );
+		SW_EXPECT_NEAR_EQUAL( 80.0f, pJoystickBind->_scale, 0.001f );
+		SW_EXPECT_NEAR_EQUAL( 0.2f, pJoystickBind->_deadzone, 0.001f );
+		SW_EXPECT_NEAR_EQUAL( 0.9f, pJoystickBind->_outerDeadzone, 0.001f );
+	}
+	else
+	{
+		SW_EXPECT_NOT_NULL( pJoystickBind );
+	}
 
 	const sw::ActionBinding* pStickBind = mapLoad.getBinding( "LookStick", 0 );
 	if ( pStickBind != nullptr )

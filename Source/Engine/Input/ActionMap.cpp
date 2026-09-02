@@ -9,6 +9,7 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Utils/VirtualJoystick.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -681,6 +682,31 @@ namespace sw
 		entry._listBindingState.push_back( ActionBindingState{} );
 	}
 
+	void ActionMap::bindVirtualJoystick2D( string_view action, MouseButton activationButton, float32 radius, float32 deadzone, string_view layer, float32 outerDeadzone )
+	{
+		if ( action.empty() || activationButton == MouseButton::Count )
+			return;
+
+		const hashed_string layerStr = layer.empty() ? _defaultLayerName : hashed_string( layer );
+		ensureLayer( layerStr );
+		const hashed_string actionHS( action );
+		ensureActionListed( actionHS );
+
+		ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
+		ActionBinding binding{};
+		binding._layer		   = layerStr;
+		binding._kind		   = BindingKind::VirtualJoystick2D;
+		binding._trigger	   = ActionTrigger::Down;
+		binding._arrSlot[0]	   = InputSlot::fromMouseButton( activationButton );
+		binding._deadzone	   = deadzone;
+		binding._outerDeadzone = outerDeadzone;
+		binding._scale		   = radius;
+		binding._pCachedLayer  = findLayer( layerStr );
+		entry._listBinding.push_back( binding );
+		entry._listDefaultBinding.push_back( binding );
+		entry._listBindingState.push_back( ActionBindingState{} );
+	}
+
 	void ActionMap::bindShortcut( string_view action, Key key, uint8 modifierMask, ActionTrigger trigger, string_view layer )
 	{
 		bindShortcut( hashed_string( action ), key, modifierMask, trigger, hashed_string( layer ) );
@@ -1129,6 +1155,10 @@ namespace sw
 				{
 					return "[ Mouse Look ]";
 				}
+				else if ( b._kind == BindingKind::VirtualJoystick2D )
+				{
+					return string( "[ Drag " ) + ActionMapInternal::slotToGlyph( b._arrSlot[0], device ) + " ]";
+				}
 				else if ( b._kind == BindingKind::Shortcut )
 				{
 					string modStr;
@@ -1274,6 +1304,7 @@ namespace sw
 				{
 					case BindingKind::SingleSlot:
 					case BindingKind::Shortcut:
+					case BindingKind::VirtualJoystick2D:
 						slotCount = 1;
 						break;
 					case BindingKind::Axis1DComposite:
@@ -1410,6 +1441,16 @@ namespace sw
 						bindNode.appendAttr( "scale", b._scale );
 						break;
 					}
+					case BindingKind::VirtualJoystick2D:
+					{
+						bindNode.appendAttr( "kind", "virtualJoystick" );
+						const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
+						bindNode.appendAttr( "button", MouseButtons::toName( activationButton ) );
+						bindNode.appendAttr( "radius", b._scale );
+						bindNode.appendAttr( "deadzone", b._deadzone );
+						bindNode.appendAttr( "outerDeadzone", b._outerDeadzone );
+						break;
+					}
 					case BindingKind::Chord:
 					{
 						bindNode.appendAttr( "kind", "chord" );
@@ -1499,6 +1540,16 @@ namespace sw
 				{
 					const float32 scale = bindNode.attrFloat( "scale", 1.0f );
 					bindMouseDelta( pAction, scale, layer );
+					continue;
+				}
+				else if ( StringUtil::equals( pKindStr, "virtualJoystick", true ) )
+				{
+					const MouseButton activationButton = MouseButtons::fromName( bindNode.attr( "button" ) );
+					const float32	  radius		   = bindNode.attrFloat( "radius", 64.0f );
+					const float32	  deadzone		   = bindNode.attrFloat( "deadzone", 0.1f );
+					const float32	  outerDeadzone	   = bindNode.attrFloat( "outerDeadzone", 1.0f );
+					if ( activationButton != MouseButton::Count )
+						bindVirtualJoystick2D( pAction, activationButton, radius, deadzone, layer, outerDeadzone );
 					continue;
 				}
 				else if ( StringUtil::equals( pKindStr, "chord", true ) )
@@ -1983,6 +2034,32 @@ namespace sw
 				outValue._x = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
 				outValue._y = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
 				return ( rdx != 0.0f || rdy != 0.0f );
+			}
+			case BindingKind::VirtualJoystick2D:
+			{
+				IInputDevice* pActivationDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+				const bool	  bActivationDown	= pActivationDevice != nullptr && pActivationDevice->isControlDown( binding._arrSlot[0]._controlIndex );
+
+				if ( bActivationDown == false )
+				{
+					binding._bJoystickAnchored = false;
+					return false;
+				}
+
+				int32 curX{ 0 };
+				int32 curY{ 0 };
+				_pInput->getMousePosition( curX, curY );
+				const float2 curPos{ static_cast<float32>( curX ), static_cast<float32>( curY ) };
+
+				// 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에서 플로팅됩니다 (모바일 온스크린 스틱 표준 UX).
+				if ( binding._bJoystickAnchored == false )
+				{
+					binding._joystickAnchor	   = curPos;
+					binding._bJoystickAnchored = true;
+				}
+
+				outValue = VirtualJoystick::calculateVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );
+				return ( outValue._x != 0.0f || outValue._y != 0.0f );
 			}
 			case BindingKind::Shortcut:
 			{

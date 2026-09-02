@@ -44,7 +44,8 @@ namespace sw
 		Chord,			   ///< 조합 키 (Modifier Slot + Trigger Slot)
 		MouseDelta2D,	   ///< 마우스 2D 센서 델타 (FPS/TPS 룩 벡터)
 		Shortcut,		   ///< 다중 수정자 마스크 + 키 조합 (Ctrl + Shift + Key)
-		AnyKey			   ///< 임의의 키/버튼 입력 ("Press Any Key")
+		AnyKey,			   ///< 임의의 키/버튼 입력 ("Press Any Key")
+		VirtualJoystick2D  ///< 마우스 드래그 기반 가상 조이스틱(온스크린 스틱 프로토타이핑/테스트용)
 	};
 
 	enum class ConflictResolution : uint8
@@ -170,8 +171,10 @@ namespace sw
 		float32					_deadzone{ 0.0f };
 		float32					_outerDeadzone{ 1.0f };
 		float32					_responseExponent{ 1.0f };
-		float32					_scale{ 1.0f };
+		float32					_scale{ 1.0f }; /**< MouseDelta2D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
 		mutable const LayerDef* _pCachedLayer{ nullptr };
+		mutable float2			_joystickAnchor{ 0.0f, 0.0f }; /**< VirtualJoystick2D 전용. 드래그 시작 시점 마우스 위치(플로팅 앵커). */
+		mutable bool			_bJoystickAnchored{ false };   /**< VirtualJoystick2D 전용. 현재 드래그 중이며 앵커가 잡혀 있는지. */
 
 		ActionBinding() = default;
 	};
@@ -242,6 +245,8 @@ namespace sw
 		/** @brief 마우스 2D 센서 델타 축 바인딩을 등록합니다 (FPS/TPS 3D 시점 룩 벡터). */
 		void bindMouseDelta( string_view action, float32 sensitivity = 1.0f, string_view layer = {} );
 		void bindMouseDelta( const hashed_string& action, float32 sensitivity = 1.0f, const hashed_string& layer = {} );
+		/** @brief 마우스 드래그 기반 가상 조이스틱 2D 축 바인딩을 등록합니다 (앵커는 activationButton을 누른 지점에서 플로팅). */
+		void bindVirtualJoystick2D( string_view action, MouseButton activationButton = MouseButton::Left, float32 radius = 64.0f, float32 deadzone = 0.1f, string_view layer = {}, float32 outerDeadzone = 1.0f );
 		/** @brief 2D 이동/시점 벡터를 반환합니다 (데드존, 감도, 축 반전 적용). */
 		float2 getVector2D( string_view action ) const;
 		float2 getVector2D( const hashed_string& action ) const;
