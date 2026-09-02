@@ -3,10 +3,12 @@
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/Events/RawInputEvent.h"
     #include "Engine/Input/InputKeyMap.h"
+    #include "Engine/Input/Windows/GamepadXInput.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -30,6 +32,15 @@ namespace sw
                 mask |= ModifierKey::Super;
             return mask;
         }
+
+        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키/토글 키/필터 키) 이전 상태 보관 (disable/restoreAccessibilityShortcuts용). */
+        struct AccessibilityInternal
+        {
+            static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
+            static inline TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
+            static inline FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
+            static inline bool       s_bDisabled{ false };
+        };
     } // namespace
 } // namespace sw
 
@@ -321,6 +332,117 @@ namespace sw
                 }
                 _pMouse->setPosition( static_cast<int32>( pt.x ), static_cast<int32>( pt.y ) );
             }
+        }
+    }
+
+    void InputManager::registerPlatformGamepads()
+    {
+        // 최대 4개 컨트롤러 (XInput 슬롯 규격)
+        for ( uint32 padIdx = 0; padIdx < 4; ++padIdx )
+        {
+            auto pGamepad = make_unique<GamepadXInput>( padIdx );
+            if ( padIdx == 0 )
+                _pGamepad = pGamepad.get();
+            pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
+            {
+                if ( _onGamepadConnectionChanged.isBound() )
+                    _onGamepadConnectionChanged( index, bConnected );
+            } );
+            registerDevice( std::move( pGamepad ) );
+        }
+    }
+
+    void InputManager::setCursorVisiblePlatform( bool bVisible )
+    {
+        ShowCursor( bVisible ? TRUE : FALSE );
+    }
+
+    void InputManager::applyMouseLockMode()
+    {
+        if ( _pMouse == nullptr )
+            return;
+
+        const MouseLockMode lockMode = _pMouse->getLockMode();
+        if ( lockMode == MouseLockMode::None )
+        {
+            ClipCursor( nullptr );
+            return;
+        }
+
+        IWindow* pWindow = IWindow::getActiveWindow();
+        if ( pWindow == nullptr )
+            return;
+
+        HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+        if ( pHwnd == nullptr )
+            return;
+
+        RECT clientRect{};
+        GetClientRect( pHwnd, &clientRect );
+        POINT ptTopLeft{ clientRect.left, clientRect.top };
+        POINT ptBottomRight{ clientRect.right, clientRect.bottom };
+        ClientToScreen( pHwnd, &ptTopLeft );
+        ClientToScreen( pHwnd, &ptBottomRight );
+
+        RECT clipRect{ ptTopLeft.x, ptTopLeft.y, ptBottomRight.x, ptBottomRight.y };
+
+        if ( _pMouse->hasClipSubRect() )
+        {
+            int32 subL{ 0 }, subT{ 0 }, subR{ 0 }, subB{ 0 };
+            _pMouse->getClipSubRect( subL, subT, subR, subB );
+            clipRect.left   = ptTopLeft.x + subL;
+            clipRect.top    = ptTopLeft.y + subT;
+            clipRect.right  = ptTopLeft.x + subR;
+            clipRect.bottom = ptTopLeft.y + subB;
+        }
+
+        ClipCursor( &clipRect );
+
+        if ( lockMode == MouseLockMode::LockedInCenter )
+        {
+            const int32 centerX = ( clipRect.left + clipRect.right ) / 2;
+            const int32 centerY = ( clipRect.top + clipRect.bottom ) / 2;
+            SetCursorPos( centerX, centerY );
+        }
+    }
+
+    void InputManager::releaseMouseLockMode()
+    {
+        ClipCursor( nullptr );
+    }
+
+    void InputManager::disableWindowsAccessibilityShortcuts()
+    {
+        if ( AccessibilityInternal::s_bDisabled == false )
+        {
+            SystemParametersInfo( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+            SystemParametersInfo( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+            SystemParametersInfo( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+
+            STICKYKEYS sk = AccessibilityInternal::s_prevStickyKeys;
+            sk.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &sk, 0 );
+
+            TOGGLEKEYS tk = AccessibilityInternal::s_prevToggleKeys;
+            tk.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &tk, 0 );
+
+            FILTERKEYS fk = AccessibilityInternal::s_prevFilterKeys;
+            fk.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &fk, 0 );
+
+            AccessibilityInternal::s_bDisabled = true;
+        }
+    }
+
+    void InputManager::restoreWindowsAccessibilityShortcuts()
+    {
+        if ( AccessibilityInternal::s_bDisabled == true )
+        {
+            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+            AccessibilityInternal::s_bDisabled = false;
         }
     }
 } // namespace sw

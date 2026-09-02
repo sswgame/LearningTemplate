@@ -207,6 +207,15 @@ namespace sw
     private:
         void dispatchRawEvent( const RawInputEvent& rawEvt );
 
+        // ------------------------------------------------------------------------------
+        // 8) 플랫폼별 구현 (Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp)
+        //    이 파일(InputManager.cpp)은 이 함수들을 호출만 합니다 — 여기에 #ifdef를 추가하지 마세요.
+        // ------------------------------------------------------------------------------
+        /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice()로 등록합니다 (Windows: XInput, Linux: 조이스틱 API). */
+        void registerPlatformGamepads();
+        /** @brief 커서 표시/숨김을 OS에 실제로 적용합니다 (setCursorVisible()의 플랫폼 훅). */
+        void setCursorVisiblePlatform( bool bVisible );
+
     private:
         ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;    /**< OS/폴러 스레드가 postRawEvent()로 넣는 락프리 원시 이벤트 큐. beginFrame()이 매 프레임 드레인. */
         vector<unique_ptr<IInputDevice>>     _listDevice;       /**< 등록된 모든 장치(키보드/마우스/게임패드 등)의 소유 목록. */

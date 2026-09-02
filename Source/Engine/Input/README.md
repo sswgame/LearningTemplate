@@ -49,9 +49,34 @@ Input/
 ├─ Devices/                # KeyboardDevice, MouseDevice, GamepadDevice 구현체
 ├─ Events/RawInputEvent.h  # OS 이벤트를 표현하는 값 타입 (postRawEvent로 큐에 들어감)
 ├─ Utils/VirtualJoystick.h # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (ActionMap의 VirtualJoystick2D 바인딩이 사용)
-├─ Windows/, Linux/        # 플랫폼별 폴링/키 매핑 구현
+├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, GamepadXInput.*, InputKeyMapWin32.cpp)
+├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, GamepadJoystick.*, InputKeyMapX11.cpp)
 └─ (Editor 연동은 Source/Editor/Panels/InputMapEditorPanel.cpp)
 ```
+
+### 플랫폼 추상화 규칙
+
+`InputManager.cpp`(공용)는 플랫폼 분기(`#ifdef`)를 갖지 않습니다. 플랫폼별 동작은 `InputManager.h`에
+선언된 아래 훅을 통해서만 연결되고, 실제 구현은 `Windows/InputManagerWin32.cpp` / `Linux/InputManagerX11.cpp`에
+있습니다 — 새 플랫폼을 추가하거나 기존 플랫폼 동작을 바꿀 때 **공용 파일을 건드릴 필요가 없어야 합니다.**
+
+| 훅 | Windows 구현 | Linux 구현 |
+|----|--------------|------------|
+| `registerPlatformGamepads()` | XInput, 4패드 | 커널 조이스틱 API(`/dev/input/jsN`), 4패드 |
+| `applyMouseLockMode()` / `releaseMouseLockMode()` | `ClipCursor` | `XGrabPointer` / `XUngrabPointer` |
+| `setCursorVisiblePlatform()` | `ShowCursor` | 투명 픽스맵 커서 (`XDefineCursor`) |
+| `disable/restoreWindowsAccessibilityShortcuts()` | 고정키/토글키/필터키 SPI | XKB AccessX (StickyKeys 등) |
+| `pollPlatform()` | `GetAsyncKeyState` 폴백 | `XQueryPointer` 마우스 폴백 (키보드는 이벤트로 충분) |
+| `processNativeEvent()` / `onNativeWindowEvent()` | Win32 메시지 처리 | X11 이벤트 처리 |
+
+**Linux 쪽 알려진 한계** (실기 미검증 — 리눅스 환경에서 빌드/실행 검증이 필요합니다):
+- 게임패드 버튼/축 배치는 Xbox 호환(`xpad` 드라이버) 기준 추정치입니다. SDL 같은 기기별 매핑 DB는 없어
+  다른 컨트롤러는 `GamepadJoystick.cpp`의 `kAxisXxx`/버튼 인덱스 조정이 필요할 수 있습니다.
+- 럼블(force feedback)은 대응하는 evdev 노드를 찾아 `EV_FF`로 시도하고, 실패하면 조용히 무시합니다.
+- 텍스트 입력은 XIM의 커밋 문자열만 받고, CJK 입력기의 조합(preedit) 후보 창 렌더링은 구현하지 않았습니다.
+- 마우스 잠금은 창 전체 confine만 지원하고, 서브 사각형(`setMouseClipSubRect`) 클리핑은 아직 구현하지 않았습니다.
+- 고정밀 원시 마우스 델타(Windows의 `WM_INPUT`에 대응하는 XInput2 raw motion)는 구현하지 않아,
+  `MotionNotify`의 절대좌표 차이만 사용합니다.
 
 `ActionMap`은 클래스 하나지만, 책임(등록/평가/직렬화/콤보/글리프)별로 구현 파일을 나눴습니다.
 **"무엇이 궁금한지"에 따라 파일을 고르세요** — 전부 `ActionMap.h` 하나를 같이 include합니다.

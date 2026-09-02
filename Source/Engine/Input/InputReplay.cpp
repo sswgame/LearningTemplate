@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Input/InputManager.h"
 
@@ -264,7 +265,7 @@ namespace sw
         const uint8* pEnd    = bytes.data() + bytes.size();
 
         ReplayHeader header{};
-        std::memcpy( &header, pCursor, sizeof( ReplayHeader ) );
+        Memory::copy( &header, pCursor, sizeof( ReplayHeader ) );
         pCursor += sizeof( ReplayHeader );
 
         if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
@@ -286,13 +287,13 @@ namespace sw
                 break;
 
             InputReplayFrame frame{};
-            std::memcpy( &frame._tickNumber, pCursor, sizeof( uint32 ) );
+            Memory::copy( &frame._tickNumber, pCursor, sizeof( uint32 ) );
             pCursor += sizeof( uint32 );
-            std::memcpy( &frame._deltaTime, pCursor, sizeof( float32 ) );
+            Memory::copy( &frame._deltaTime, pCursor, sizeof( float32 ) );
             pCursor += sizeof( float32 );
 
             uint32 snapSize = 0;
-            std::memcpy( &snapSize, pCursor, sizeof( uint32 ) );
+            Memory::copy( &snapSize, pCursor, sizeof( uint32 ) );
             pCursor += sizeof( uint32 );
 
             if ( snapSize > 0 && pCursor + snapSize <= pEnd )
@@ -305,7 +306,7 @@ namespace sw
                 break;
 
             uint32 eventCount = 0;
-            std::memcpy( &eventCount, pCursor, sizeof( uint32 ) );
+            Memory::copy( &eventCount, pCursor, sizeof( uint32 ) );
             pCursor += sizeof( uint32 );
 
             frame._listRawEvent.reserve( eventCount );
@@ -315,7 +316,7 @@ namespace sw
                     break;
 
                 RawInputEvent evt{};
-                std::memcpy( &evt, pCursor, sizeof( RawInputEvent ) );
+                Memory::copy( &evt, pCursor, sizeof( RawInputEvent ) );
                 pCursor += sizeof( RawInputEvent );
                 frame._listRawEvent.push_back( evt );
             }

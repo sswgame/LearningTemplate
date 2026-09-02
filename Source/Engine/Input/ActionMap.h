@@ -7,6 +7,7 @@
  *        이벤트 델리게이트 디스패치, 선입력 버퍼링, 격투 커맨드 시퀀스 및 XML 직렬화.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -147,7 +148,7 @@ namespace sw
      */
     struct ActionHandle
     {
-        static constexpr uint32 kInvalidIndex = 0xFFFFFFFF;
+        static constexpr uint32 kInvalidIndex = invalid_index::kUint32;
 
         uint32 _index{ kInvalidIndex };
         uint32 _generation{ 0 };
@@ -162,7 +163,7 @@ namespace sw
     struct ActionBinding
     {
         /** @brief _cachedLayerIndex가 아직 해석되지 않았음을 나타내는 무효값. */
-        static constexpr uint32 kInvalidLayerIndex = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidLayerIndex = invalid_index::kUint32;
 
         hashed_string  _layer{};
         BindingKind    _kind{ BindingKind::SingleSlot };

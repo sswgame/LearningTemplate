@@ -11,27 +11,14 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Window/IWindow.h"
 
-#if defined( _WIN32 )
-    #include "Engine/Input/Windows/GamepadXInput.h"
-    #include "Core/Common/PlatformOsHeaders.h"
-#endif
+// 이 파일은 플랫폼 독립적입니다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금/가시성,
+// 접근성 단축키 억제)은 registerPlatformGamepads() 등 8)번 훅을 통해서만 연결되며,
+// 실제 구현은 Windows/InputManagerWin32.cpp · Linux/InputManagerX11.cpp에 있습니다.
+// 새 플랫폼을 추가하거나 플랫폼 동작을 바꿀 때 이 파일을 건드릴 필요가 없어야 합니다.
 
 namespace sw
 {
     SW_LOG_CALLER( "InputManager" );
-
-    namespace
-    {
-#if defined( _WIN32 )
-        struct AccessibilityInternal
-        {
-            static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
-            static inline TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
-            static inline FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
-            static inline bool       s_bDisabled{ false };
-        };
-#endif
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -81,21 +68,8 @@ namespace sw
         _pMouse     = pMouse.get();
         registerDevice( std::move( pMouse ) );
 
-        // 3) 표준 게임패드 장치 등록 (최대 4개 컨트롤러)
-#if defined( _WIN32 )
-        for ( uint32 padIdx = 0; padIdx < 4; ++padIdx )
-        {
-            auto pGamepad = make_unique<GamepadXInput>( padIdx );
-            if ( padIdx == 0 )
-                _pGamepad = pGamepad.get();
-            pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
-            {
-                if ( _onGamepadConnectionChanged.isBound() )
-                    _onGamepadConnectionChanged( index, bConnected );
-            } );
-            registerDevice( std::move( pGamepad ) );
-        }
-#endif
+        // 3) 표준 게임패드 장치 등록 (플랫폼별 구현은 registerPlatformGamepads() 참고)
+        registerPlatformGamepads();
 
         // 4) 통합 ActionMap 인스턴스 생성 및 연결
         _pActionMap = make_unique<ActionMap>();
@@ -502,9 +476,7 @@ namespace sw
     {
         if ( _pMouse != nullptr )
             _pMouse->setCursorVisible( bVisible );
-#if defined( _WIN32 )
-        ShowCursor( bVisible ? TRUE : FALSE );
-#endif
+        setCursorVisiblePlatform( bVisible );
     }
 
     void InputManager::setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom )
@@ -519,64 +491,6 @@ namespace sw
         if ( _pMouse != nullptr )
             _pMouse->clearClipSubRect();
         applyMouseLockMode();
-    }
-
-    void InputManager::applyMouseLockMode()
-    {
-#if defined( _WIN32 )
-        if ( _pMouse == nullptr )
-            return;
-
-        const MouseLockMode lockMode = _pMouse->getLockMode();
-        if ( lockMode == MouseLockMode::None )
-        {
-            ClipCursor( nullptr );
-            return;
-        }
-
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow == nullptr )
-            return;
-
-        HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
-        if ( pHwnd == nullptr )
-            return;
-
-        RECT clientRect{};
-        GetClientRect( pHwnd, &clientRect );
-        POINT ptTopLeft{ clientRect.left, clientRect.top };
-        POINT ptBottomRight{ clientRect.right, clientRect.bottom };
-        ClientToScreen( pHwnd, &ptTopLeft );
-        ClientToScreen( pHwnd, &ptBottomRight );
-
-        RECT clipRect{ ptTopLeft.x, ptTopLeft.y, ptBottomRight.x, ptBottomRight.y };
-
-        if ( _pMouse->hasClipSubRect() )
-        {
-            int32 subL{ 0 }, subT{ 0 }, subR{ 0 }, subB{ 0 };
-            _pMouse->getClipSubRect( subL, subT, subR, subB );
-            clipRect.left   = ptTopLeft.x + subL;
-            clipRect.top    = ptTopLeft.y + subT;
-            clipRect.right  = ptTopLeft.x + subR;
-            clipRect.bottom = ptTopLeft.y + subB;
-        }
-
-        ClipCursor( &clipRect );
-
-        if ( lockMode == MouseLockMode::LockedInCenter )
-        {
-            const int32 centerX = ( clipRect.left + clipRect.right ) / 2;
-            const int32 centerY = ( clipRect.top + clipRect.bottom ) / 2;
-            SetCursorPos( centerX, centerY );
-        }
-#endif
-    }
-
-    void InputManager::releaseMouseLockMode()
-    {
-#if defined( _WIN32 )
-        ClipCursor( nullptr );
-#endif
     }
 
     float32 InputManager::getGamepadLeftTrigger( uint32 deviceIndex ) const
@@ -606,45 +520,6 @@ namespace sw
     void InputManager::injectSnapshot( const InputSnapshot& snapshot )
     {
         _inputHistory.recordSnapshot( snapshot );
-    }
-
-    void InputManager::disableWindowsAccessibilityShortcuts()
-    {
-#if defined( _WIN32 )
-        if ( AccessibilityInternal::s_bDisabled == false )
-        {
-            SystemParametersInfo( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfo( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfo( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
-
-            STICKYKEYS sk = AccessibilityInternal::s_prevStickyKeys;
-            sk.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &sk, 0 );
-
-            TOGGLEKEYS tk = AccessibilityInternal::s_prevToggleKeys;
-            tk.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &tk, 0 );
-
-            FILTERKEYS fk = AccessibilityInternal::s_prevFilterKeys;
-            fk.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &fk, 0 );
-
-            AccessibilityInternal::s_bDisabled = true;
-        }
-#endif
-    }
-
-    void InputManager::restoreWindowsAccessibilityShortcuts()
-    {
-#if defined( _WIN32 )
-        if ( AccessibilityInternal::s_bDisabled == true )
-        {
-            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
-            AccessibilityInternal::s_bDisabled = false;
-        }
-#endif
     }
 
     void InputManager::recordSnapshot( uint32 tickNumber )
