@@ -37,4 +37,7 @@ typedef int32 Status;
     #if defined( False )
         #undef False
     #endif
+    #if defined( AnyKey )
+        #undef AnyKey
+    #endif
 #endif

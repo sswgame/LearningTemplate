@@ -619,14 +619,14 @@ namespace sw
                     const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );
                     if ( bitWidth != 1 )
                     {
-                        CXCursor parent = clang_getCursorSemanticParent( cursor );
                         SW_LOG_ERROR( "ERROR: PROPERTY() bitfield '%#' in '%#' has bit width %#. Only 1-bit bitfield boolean flags (e.g. uint8 _flag : 1;) are supported in reflection!",
-                                      prop._name.c_str(), AstVisitor::buildFullyQualifiedName( parent ).c_str(), bitWidth );
+                                      prop._name.c_str(), AstVisitor::buildFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str(), bitWidth );
                         collector->_bHasError = SW_TRUE;
                         return CXChildVisit_Break;
                     }
 
-                    prop._bIsBitField     = SW_TRUE;
+                    prop._bIsBitField = SW_TRUE;
+
                     const int64 bitOffset = clang_Cursor_getOffsetOfField( cursor );
                     if ( bitOffset >= 0 )
                     {

@@ -495,7 +495,7 @@ int32 main( int32 argc, utf8* argv[] )
         errorCount.fetch_add( 1 );
 
     parseTimer.updateTimer();
-    const float32 elapsedMs = parseTimer.getDeltaTime() * 1000.0f;
+    [[maybe_unused]] const float32 elapsedMs = parseTimer.getDeltaTime() * 1000.0f;
 
     const int32 totalErrors = errorCount.load();
     if ( totalErrors == 0 )

@@ -447,8 +447,6 @@ namespace sw
             return true;
         }
 
-        const hashed_string componentName = pComp->getComponentName();
-
         unregisterComponentIfSceneRoot( pComp );
         pComp->onDestroy();
         pComp->setOwner( nullptr );
@@ -465,7 +463,7 @@ namespace sw
             }
         }
         if ( bRemoved == false )
-            SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", componentName.c_str() );
+            SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", pComp->getComponentName().c_str() );
         else
         {
             if ( _pOwnerManager != nullptr )

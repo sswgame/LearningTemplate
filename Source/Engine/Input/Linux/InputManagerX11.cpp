@@ -28,7 +28,7 @@ namespace sw
             static inline XIM    s_pInputMethod{ nullptr };
             static inline XIC    s_pInputContext{ nullptr };
             static inline void*  s_pImWindow{ nullptr }; ///< XIC를 만들 때 사용한 Display* (창이 바뀌면 재생성).
-            static inline Cursor s_invisibleCursor{ None };
+            static inline Cursor s_invisibleCursor{ 0 }; ///< X11 None(리소스 없음). X11MacroUndef.h가 None 매크로를 지우므로 리터럴 0을 씁니다.
             static inline bool   s_bAccessibilityDisabled{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
 
@@ -41,7 +41,7 @@ namespace sw
 
                 Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
                 Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
-                if ( pDisplay == nullptr || x11Window == None )
+                if ( pDisplay == nullptr || x11Window == 0 )
                     return nullptr;
 
                 if ( s_pInputContext != nullptr && s_pImWindow == pDisplay )
@@ -75,7 +75,7 @@ namespace sw
             /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서"를 만들어 캐싱합니다. */
             static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
             {
-                if ( s_invisibleCursor != None )
+                if ( s_invisibleCursor != 0 )
                     return s_invisibleCursor;
 
                 XColor      dummyColor{};
@@ -102,7 +102,7 @@ namespace sw
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
-        if ( pDisplay == nullptr || x11Window == None )
+        if ( pDisplay == nullptr || x11Window == 0 )
             return;
 
         Window rootReturn{}, childReturn{};
@@ -289,7 +289,7 @@ namespace sw
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
-        if ( pDisplay == nullptr || x11Window == None )
+        if ( pDisplay == nullptr || x11Window == 0 )
             return;
 
         if ( bVisible )
@@ -314,7 +314,7 @@ namespace sw
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
         Window   x11Window = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
-        if ( pDisplay == nullptr || x11Window == None )
+        if ( pDisplay == nullptr || x11Window == 0 )
             return;
 
         const MouseLockMode lockMode = _pMouse->getLockMode();
@@ -328,13 +328,15 @@ namespace sw
         // X11 XGrabPointer는 창 전체에만 가둘 수 있습니다 (임의의 서브 사각형 confine은 네이티브 지원이
         // 없어, 포인터를 매 MotionNotify마다 되돌리는 소프트웨어 클리핑이 필요합니다 — 여기선 미구현).
         const uint32 mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-        XGrabPointer( pDisplay, x11Window, True, mask, GrabModeAsync, GrabModeAsync, x11Window, None, CurrentTime );
+        // owner_events=1(True), confine_to/cursor 뒤 두 인자는 각각 x11Window/None(0). X11MacroUndef.h가
+        // True/None 매크로를 지우므로 리터럴 값을 씁니다.
+        XGrabPointer( pDisplay, x11Window, 1, mask, GrabModeAsync, GrabModeAsync, x11Window, 0, CurrentTime );
 
         if ( lockMode == MouseLockMode::LockedInCenter )
         {
             XWindowAttributes attrs{};
             XGetWindowAttributes( pDisplay, x11Window, &attrs );
-            XWarpPointer( pDisplay, None, x11Window, 0, 0, 0, 0, attrs.width / 2, attrs.height / 2 );
+            XWarpPointer( pDisplay, 0, x11Window, 0, 0, 0, 0, attrs.width / 2, attrs.height / 2 );
         }
         XFlush( pDisplay );
     }
@@ -370,14 +372,15 @@ namespace sw
         if ( pXkb == nullptr )
             return;
 
-        if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == Success && pXkb->ctrls != nullptr )
+        // 반환값 0 == X11 Success. X11MacroUndef.h가 Success 매크로를 지우므로 리터럴 0을 씁니다.
+        if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
             X11InputInternal::s_prevXkbEnabledControls = pXkb->ctrls->enabled_ctrls;
             pXkb->ctrls->enabled_ctrls &= static_cast<uint32>( ~( XkbStickyKeysMask | XkbSlowKeysMask | XkbBounceKeysMask | XkbAccessXKeysMask ) );
             XkbSetControls( pDisplay, XkbControlsEnabledMask, pXkb );
             X11InputInternal::s_bAccessibilityDisabled = true;
         }
-        XkbFreeKeyboard( pXkb, 0, True );
+        XkbFreeKeyboard( pXkb, 0, 1 ); // freeDesc=1(True). X11MacroUndef.h가 True 매크로를 지웁니다.
     }
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
@@ -394,13 +397,13 @@ namespace sw
         if ( pXkb == nullptr )
             return;
 
-        if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == Success && pXkb->ctrls != nullptr )
+        if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
             pXkb->ctrls->enabled_ctrls = X11InputInternal::s_prevXkbEnabledControls;
             XkbSetControls( pDisplay, XkbControlsEnabledMask, pXkb );
             X11InputInternal::s_bAccessibilityDisabled = false;
         }
-        XkbFreeKeyboard( pXkb, 0, True );
+        XkbFreeKeyboard( pXkb, 0, 1 );
     }
 } // namespace sw
 

@@ -341,6 +341,7 @@ namespace sw
             return false;
         }
 
+#if defined( SW_DEBUG )
         if ( engine::areEngineServicesBound() )
         {
             const auto  compression      = static_cast<PackCompressionType>( _header._compressionType );
@@ -354,6 +355,7 @@ namespace sw
                          pCompressionName != nullptr ? pCompressionName : "Raw",
                          pEncryptionName != nullptr ? pEncryptionName : "None" );
         }
+#endif
 
         return true;
     }

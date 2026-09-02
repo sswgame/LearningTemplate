@@ -516,12 +516,14 @@ namespace sw
                             result._bSuccess = true;
                             saveToCacheIfEnabled( result._bytecode );
 
+    #if defined( SW_DEBUG )
                             const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                                                         ? "Vulkan (SPIR-V vulkan1.2)"
                                                     : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                                                         ? "OpenGL (SPIR-V universal1.5)"
                                                         : "D3D12 (DXIL Row-Major)";
                             SW_LOG_TRACE( "Target: %#", pFormatName );
+    #endif
                             return result;
                         }
                     }
