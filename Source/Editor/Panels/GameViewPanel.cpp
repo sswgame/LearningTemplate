@@ -7,10 +7,13 @@
 #include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Input/ActionMap.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -96,6 +99,13 @@ namespace sw::editor
 		{
 			const float2 barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
 			_viewportClient.drawTransformBar( barAnchor );
+
+			InputManager* pInput = getService<InputManager>();
+			if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
+			{
+				ActionMap* pActionMap = &pInput->getActionMap();
+				ViewportInputOverlay::draw( ImGui::GetWindowDrawList(), imagePos, size, pInput, pActionMap );
+			}
 		}
 	}
 

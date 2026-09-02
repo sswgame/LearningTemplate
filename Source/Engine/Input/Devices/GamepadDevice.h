@@ -139,6 +139,8 @@ namespace sw
 		float32					  _rightStickY;
 		float32					  _leftTrigger;
 		float32					  _rightTrigger;
+		float32					  _prevLeftTrigger;
+		float32					  _prevRightTrigger;
 		float32					  _leftMotorSpeed;
 		float32					  _rightMotorSpeed;
 		float32					  _vibrationDurationTimer;

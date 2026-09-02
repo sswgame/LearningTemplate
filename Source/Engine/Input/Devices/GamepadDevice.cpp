@@ -70,6 +70,8 @@ namespace sw
 		, _rightStickY{ 0.0f }
 		, _leftTrigger{ 0.0f }
 		, _rightTrigger{ 0.0f }
+		, _prevLeftTrigger{ 0.0f }
+		, _prevRightTrigger{ 0.0f }
 		, _leftMotorSpeed{ 0.0f }
 		, _rightMotorSpeed{ 0.0f }
 		, _vibrationDurationTimer{ 0.0f }
@@ -81,7 +83,9 @@ namespace sw
 
 	void GamepadDevice::onFrameBegin( float32 deltaTime )
 	{
-		_prevButtonMask = _buttonMask;
+		_prevButtonMask	  = _buttonMask;
+		_prevLeftTrigger  = _leftTrigger;
+		_prevRightTrigger = _rightTrigger;
 
 		if ( _bTimedVibrationActive == SW_TRUE )
 		{
@@ -99,14 +103,16 @@ namespace sw
 
 	void GamepadDevice::resetState()
 	{
-		_buttonMask		= 0;
-		_prevButtonMask = 0;
-		_leftStickX		= 0.0f;
-		_leftStickY		= 0.0f;
-		_rightStickX	= 0.0f;
-		_rightStickY	= 0.0f;
-		_leftTrigger	= 0.0f;
-		_rightTrigger	= 0.0f;
+		_buttonMask		  = 0;
+		_prevButtonMask	  = 0;
+		_leftStickX		  = 0.0f;
+		_leftStickY		  = 0.0f;
+		_rightStickX	  = 0.0f;
+		_rightStickY	  = 0.0f;
+		_leftTrigger	  = 0.0f;
+		_rightTrigger	  = 0.0f;
+		_prevLeftTrigger  = 0.0f;
+		_prevRightTrigger = 0.0f;
 		stopVibration();
 	}
 
@@ -124,9 +130,9 @@ namespace sw
 	bool GamepadDevice::wasControlPressed( uint16 controlIndex ) const
 	{
 		if ( controlIndex == 100 )
-			return isLeftTriggerDown();
+			return ( _leftTrigger >= 0.5f ) && ( _prevLeftTrigger < 0.5f );
 		if ( controlIndex == 101 )
-			return isRightTriggerDown();
+			return ( _rightTrigger >= 0.5f ) && ( _prevRightTrigger < 0.5f );
 		if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
 			return false;
 		return wasButtonPressed( static_cast<GamepadButton>( controlIndex ) );
@@ -135,9 +141,9 @@ namespace sw
 	bool GamepadDevice::wasControlReleased( uint16 controlIndex ) const
 	{
 		if ( controlIndex == 100 )
-			return isLeftTriggerDown() == false;
+			return ( _leftTrigger < 0.5f ) && ( _prevLeftTrigger >= 0.5f );
 		if ( controlIndex == 101 )
-			return isRightTriggerDown() == false;
+			return ( _rightTrigger < 0.5f ) && ( _prevRightTrigger >= 0.5f );
 		if ( controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
 			return false;
 		return wasButtonReleased( static_cast<GamepadButton>( controlIndex ) );
