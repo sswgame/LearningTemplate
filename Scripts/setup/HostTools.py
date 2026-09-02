@@ -15,15 +15,13 @@ from pathlib import Path
 from typing import Callable
 
 from common import (
+    ToolSpec,
     ensureCachedDownload,
     extractTarSafe,
     extractZipSafe,
     findFirstExistingFileInBinDirs,
     findFirstExistingFileRecursive,
-    findFirstValidRoot,
-    kDirToolsNinja,
-    kDirToolsSccache,
-    kDirVcpkgInstalledRelDefault,
+    findToolRoot,
     kKeyNinjaDownloadUrls,
     kKeyNinjaSearchRoots,
     kKeyNinjaToolsSubdir,
@@ -34,9 +32,9 @@ from common import (
     loadSearchPaths,
     normalizePath,
     platformKey,
-    platformSearchRoots,
     recordEnginePath,
     resolveToolsSubdir,
+    sharedLibraryNames,
     toolsCacheDir,
 )
 
@@ -53,7 +51,9 @@ def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:
     """
     result: list[Path] = []
     search = loadSearchPaths()
-    relativeInstalledPath = search.get(kKeyVcpkgInstalledRel, kDirVcpkgInstalledRelDefault)
+    relativeInstalledPath = search.get(kKeyVcpkgInstalledRel)
+    if not relativeInstalledPath:
+        raise KeyError(f"[HostTools] Missing required key '{kKeyVcpkgInstalledRel}' in search_paths config")
     if (preferred := projectRoot / relativeInstalledPath).is_dir():
         result.append(preferred)
     if (buildDir := projectRoot / "build").is_dir():
@@ -94,14 +94,8 @@ def findDxcDlls(sdkDir: str, sdkVer: str, projectRoot: Path) -> tuple[str, str]:
     Returns:
         (dxcompiler 경로, dxil 경로) 튜플
     """
-    match platform.system():
-        case "Windows":
-            dxcNames, dxilNames = ["dxcompiler.dll"], ["dxil.dll"]
-        case "Darwin":
-            dxcNames, dxilNames = ["libdxcompiler.dylib"], ["libdxil.dylib"]
-        case _:
-            dxcNames = ["libdxcompiler.so", "libdxcompiler.so.1"]
-            dxilNames = ["libdxil.so", "libdxil.so.1"]
+    dxcNames = sharedLibraryNames("dxcompiler")
+    dxilNames = sharedLibraryNames("dxil")
 
     vcpkgDirs = findVcpkgInstalledDirsInternal(projectRoot)
     searchRoots: list[Path] = []
@@ -218,7 +212,6 @@ def findSystemIncludeDirs() -> list[str]:
 def setupBuildToolInternal(toolName: str,
                            exeName: str,
                            subdirKey: str,
-                           defaultSubdir: str,
                            searchRootsKey: str,
                            downloadUrlsKey: str,
                            extractFunc: Callable[[Path, Path, Path, str], None]) -> str:
@@ -230,32 +223,18 @@ def setupBuildToolInternal(toolName: str,
     logger.info(f"[{toolName}] Checking {toolName}...")
     
     search = loadSearchPaths()
-    toolsDir = resolveToolsSubdir(subdirKey, defaultSubdir, search)
+    toolsDir = resolveToolsSubdir(subdirKey, search)
     localExePath = toolsDir / exeName
-    extras = {subdirKey: search.get(subdirKey, defaultSubdir)}
-
-    system = shutil.which(exeName.replace(".exe", "") if platform.system() == "Windows" else exeName)
-    if system and Path(system).is_file():
-        logger.info(f"[{toolName}] Using PATH: {system}")
-        return recordEnginePath(f"{toolName.lower()}_path", system)
-
-    def isToolInternal(root: Path) -> bool:
-        return root.is_file() or (root / exeName).is_file()
-
-    found = findFirstValidRoot(
-        platformSearchRoots(search, searchRootsKey),
-        isToolInternal,
-        extras=extras,
-        skip=toolsDir,
+    spec = ToolSpec(
+        name=toolName,
+        tools_subdir_key=subdirKey,
+        search_roots_key=searchRootsKey,
+        bin_names=(exeName, exeName.replace(".exe", "") if platform.system() == "Windows" else exeName),
+        validate_func=lambda root: root.is_file() or (root / exeName).is_file(),
     )
-    if found:
-        resolvedExe = found if found.is_file() else found / exeName
-        logger.info(f"[{toolName}] Using search root: {resolvedExe}")
+    if found := findToolRoot(spec, search, logger=logger):
+        resolvedExe = found if found.is_file() else (found / exeName if (found / exeName).is_file() else found)
         return recordEnginePath(f"{toolName.lower()}_path", resolvedExe)
-
-    if localExePath.is_file():
-        logger.info(f"[{toolName}] Using project kit: {localExePath}")
-        return recordEnginePath(f"{toolName.lower()}_path", localExePath)
 
     url = (search.get(downloadUrlsKey) or {}).get(platformKey())
     if not url:
@@ -289,7 +268,7 @@ def setupNinja() -> str:
         extractZipSafe(archive, destDir)
         
     return setupBuildToolInternal(
-        "SetupNinja", exeName, kKeyNinjaToolsSubdir, kDirToolsNinja,
+        "SetupNinja", exeName, kKeyNinjaToolsSubdir,
         kKeyNinjaSearchRoots, kKeyNinjaDownloadUrls, extractNinjaInternal
     )
 
@@ -309,6 +288,6 @@ def setupSccache() -> str:
         shutil.rmtree(tempExtDir, ignore_errors=True)
         
     return setupBuildToolInternal(
-        "SetupSccache", exeName, kKeySccacheToolsSubdir, kDirToolsSccache,
+        "SetupSccache", exeName, kKeySccacheToolsSubdir,
         kKeySccacheSearchRoots, kKeySccacheDownloadUrls, extractSccacheInternal
     )

@@ -85,21 +85,29 @@ def loadSearchPaths() -> dict[str, Any]:
 
     - search_paths.json 파일이 없으면 defaults 기본 설정 파일을 복사하여 생성합니다.
     - 로컬 파일이 이미 존재하더라도 기본값과 병합하여 새로 추가된 키를 자동으로 보완합니다.
+    - search_paths.defaults.json 이 존재하지 않거나 유효하지 않으면 예외를 발생시킵니다.
     """
     configDir = getProjectRoot() / kDirConfigEnv
     jsonPath = configDir / kFileSearchPaths
     defaultsPath = configDir / kFileSearchPathsDefaults
-    if not jsonPath.is_file() and defaultsPath.is_file():
+
+    if not defaultsPath.is_file():
+        sys.stderr.write(f"[Config Error] Required search paths defaults config not found: {defaultsPath}\n")
+        raise FileNotFoundError(f"Required search paths defaults config not found: {defaultsPath}")
+
+    if not jsonPath.is_file():
         try:
             configDir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(defaultsPath, jsonPath)
         except Exception as exception:
-            sys.stderr.write(f"[Config] Failed to copy {kFileSearchPathsDefaults}: {exception}\n")
+            sys.stderr.write(f"[Config Error] Failed to copy {kFileSearchPathsDefaults}: {exception}\n")
 
     defaults = readJsonDictInternal(defaultsPath, kFileSearchPathsDefaults)
+    if not defaults:
+        sys.stderr.write(f"[Config Error] Failed to load or parse defaults from {defaultsPath}\n")
+        raise RuntimeError(f"Failed to load or parse defaults from {defaultsPath}")
+
     local = readJsonDictInternal(jsonPath, kFileSearchPaths)
-    if not defaults and not local:
-        return {}
     return mergeJsonDictInternal(defaults, local)
 
 
@@ -116,7 +124,6 @@ def autoBootstrapEnabled(force: bool,
                          configKey: str,
                          envKey: str,
                          *,
-                         default: bool = False,
                          search: dict[str, Any] | None = None) -> bool:
     """
     환경 변수나 설정 파일, 강제 옵션 등을 확인하여 자동 부트스트랩(다운로드 등)이 활성화되어 있는지 여부를 반환합니다.
@@ -124,7 +131,7 @@ def autoBootstrapEnabled(force: bool,
     if force:
         return True
     searchConfig = search if search is not None else loadSearchPaths()
-    if bool(searchConfig.get(configKey, default)):
+    if bool(searchConfig.get(configKey, False)):
         return True
     flag = os.environ.get(envKey, "").strip().lower()
     return flag in ("1", "true", "on", "yes")

@@ -6,16 +6,18 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| `CookPrefabs.py` | Prefab XML/JSON 파일을 파싱하여 바이너리(`.prefab.bin`, PFB2)로 쿠킹 | `Resource/game/*/prefabs/*.prefab.bin` |
-| `CookScenes.py` | Scene XML 파일을 파싱하여 바이너리(`.scene.bin`, SCN1)로 쿠킹 | `Resource/game/*/scenes/*.scene.bin` |
+| 스크립트 | 역할 | 출력/대상 |
+|---|---|---|
+| `CookAssets.py` | Prefab, Scene XML 파싱(PFB2, SCN1) 및 Resource 디렉터리 .pack 바이너리 패킹 | `Resource/**/*.bin`, `build/*/Bin/Packs/*.pack` |
 | `BakeShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 베이킹 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 
 ## 실행 방법
 
 ```bash
-py -3 Scripts/generate/CookPrefabs.py
-py -3 Scripts/generate/CookScenes.py
+py -3 -m Scripts cook --all
+# 또는 직접 실행:
+py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only]
 py -3 Scripts/generate/BakeShippingHostDefaults.py <output_header_path>
 py -3 Scripts/generate/GenerateDocs.py [--open]
 ```

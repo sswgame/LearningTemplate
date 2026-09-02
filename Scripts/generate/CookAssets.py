@@ -1,0 +1,473 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Scripts/generate/CookAssets.py
+
+SW Engine 통합 에셋 쿠커:
+  1. Prefabs: Resource/**/prefabs/*.prefab.xml -> *.prefab.bin (PFB2 바이너리)
+  2. Scenes:  Resource/**/scenes/*.scene.xml   -> *.scene.bin  (SCN1 바이너리)
+  3. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
+
+사용법:
+  py -3 Scripts/generate/CookAssets.py [--all] [--output <dir>]
+  py -3 Scripts/generate/CookAssets.py --prefabs-only
+  py -3 Scripts/generate/CookAssets.py --scenes-only
+  py -3 Scripts/generate/CookAssets.py --packs-only
+"""
+
+from __future__ import annotations
+
+import argparse
+import binascii
+import fnmatch
+from pathlib import Path
+import struct
+import sys
+import xml.etree.ElementTree as ET
+import zlib
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from common import (
+    batchCookAssets,
+    getProjectRoot,
+    kFilePackConfig,
+    kKeyExcludeDirs,
+    kKeyExcludePatterns,
+    kKeyGlobalExcludeDirs,
+    kKeyGlobalExcludePatterns,
+    kKeyRecursive,
+    kKeyRules,
+    normalizePath,
+    packLengthPrefixedString,
+    readJsonDictInternal,
+    resolveDefaultOutputDir,
+    writeBinaryIfChanged,
+)
+
+# ==============================================================================
+# 1. 포맷 매직 및 상수 정의
+# ==============================================================================
+
+_kPfb2Magic = 0x50464232  # 'PFB2'
+_kPfb2Version = 0
+
+_kScn1Magic = 0x53434E31  # 'SCN1'
+_kScn1Version = 0
+
+_kPackMagic = 0x4B505753  # 'SWPK'
+_kPackFormatVersion = 1
+_kPackSectorAlignment = 4096
+
+_kFlagNone = 0x0000
+_kFlagHasStringPool = 0x0001
+_kFlagHasCrc32 = 0x0002
+_kFlagEncrypted = 0x0004
+
+_kCompressionNone = 0
+_kCompressionZlib = 2
+
+
+# ==============================================================================
+# 2. Prefab 쿠커
+# ==============================================================================
+
+def readXmlPrefabInternal(path: Path) -> tuple[str, str]:
+    """XML 포맷의 프리팹 파일에서 이름(name)과 내부 요소(xmlBody)를 추출합니다."""
+    tree = ET.parse(path)
+    root = tree.getroot()
+    name = ""
+    if (nameNode := root.find("name")) is not None and nameNode.text:
+        name = nameNode.text.strip()
+    elif root.get("name"):
+        name = root.get("name", "")
+
+    body = ""
+    for tag in ("GameObject", "GameObjectState", "ObjectState"):
+        if (node := root.find(tag)) is not None:
+            body = ET.tostring(node, encoding="unicode")
+            break
+    if not body:
+        body = path.read_text(encoding="utf-8")
+    if not name:
+        name = path.stem.split(".")[0]
+    return name, body
+
+
+def writePfb2Internal(outPath: Path, name: str, body: str) -> bool:
+    """프리팹을 PFB2 바이너리로 변환하여 변경 시에만 기록합니다."""
+    blob = (
+        struct.pack("<II", _kPfb2Magic, _kPfb2Version)
+        + packLengthPrefixedString(name)
+        + packLengthPrefixedString(body)
+    )
+    return writeBinaryIfChanged(outPath, blob)
+
+
+def cookPrefabs(resourceRoot: Path | None = None) -> int:
+    """게임 리소스 폴더 내의 .prefab.xml 파일들을 찾아 .prefab.bin으로 변환합니다."""
+    projectRoot = getProjectRoot()
+    root = resourceRoot or (projectRoot / "Resource" / "game")
+    if not root.is_dir():
+        print(f"[CookPrefabs] Directory not found: {root} (skipping)")
+        return 0
+
+    searchRoots = sorted(path for path in root.glob("*/prefabs") if path.is_dir())
+    if not searchRoots:
+        print("[CookPrefabs] No prefab directory found under Resource/game/*/prefabs (skipping)")
+        return 0
+
+    tasks: list[Path] = []
+    for prefabDir in searchRoots:
+        tasks.extend(sorted(prefabDir.glob("*.prefab.xml")))
+
+    def cookOne(sourceFile: Path) -> bool:
+        name, body = readXmlPrefabInternal(sourceFile)
+        outputBinaryFile = sourceFile.with_suffix(".bin")
+        wrote = writePfb2Internal(outputBinaryFile, name, body)
+        if wrote:
+            print(f"[CookPrefabs] {sourceFile.name} -> {outputBinaryFile.name} ('{name}')")
+        return wrote
+
+    batchCookAssets(tasks, cookOne, label="CookPrefabs")
+    return 0
+
+
+# ==============================================================================
+# 3. Scene 쿠커
+# ==============================================================================
+
+def readXmlSceneInternal(path: Path) -> tuple[str, list[tuple[str, str, str]]]:
+    """XML 씬 파일에서 씬 이름과 엔티티 목록을 추출합니다."""
+    tree = ET.parse(path)
+    root = tree.getroot()
+    sceneName = root.get("name", "")
+    if (nameNode := root.find("name")) is not None and nameNode.text:
+        sceneName = nameNode.text.strip()
+    if not sceneName:
+        sceneName = path.stem.split(".")[0]
+
+    entitiesList: list[tuple[str, str, str]] = []
+    if (entitiesNode := root.find("entities")) is not None:
+        for entityNode in entitiesNode.findall("entity"):
+            entityName = entityNode.get("name", "")
+            if (entNameChild := entityNode.find("name")) is not None and entNameChild.text:
+                entityName = entNameChild.text.strip()
+            if not entityName:
+                entityName = "Entity"
+
+            prefabPath = entityNode.get("prefab", "")
+            if (prefabChild := entityNode.find("prefab")) is not None and prefabChild.text:
+                prefabPath = prefabChild.text.strip()
+
+            embeddedXml = ""
+            if (stateNode := entityNode.find("GameObject")) is not None:
+                embeddedXml = ET.tostring(stateNode, encoding="unicode")
+            elif (stateNode := entityNode.find("GameObjectState")) is not None:
+                embeddedXml = ET.tostring(stateNode, encoding="unicode")
+
+            entitiesList.append((entityName, prefabPath, embeddedXml))
+
+    return sceneName, entitiesList
+
+
+def writeScn1Internal(outputPath: Path, sceneName: str, entitiesList: list[tuple[str, str, str]]) -> bool:
+    """씬 데이터를 SCN1 바이너리로 변환하여 변경 시에만 기록합니다."""
+    chunks = [
+        struct.pack("<II", _kScn1Magic, _kScn1Version),
+        packLengthPrefixedString(sceneName),
+        struct.pack("<I", len(entitiesList)),
+    ]
+    for entityName, prefabPath, embeddedXml in entitiesList:
+        chunks.extend([
+            packLengthPrefixedString(entityName),
+            packLengthPrefixedString(prefabPath),
+            packLengthPrefixedString(embeddedXml),
+        ])
+    return writeBinaryIfChanged(outputPath, b"".join(chunks))
+
+
+def cookScenes(resourceRoot: Path | None = None) -> int:
+    """Resource 하위의 모든 .scene.xml 파일을 .scene.bin으로 변환합니다."""
+    root = resourceRoot or (getProjectRoot() / "Resource")
+    if not root.is_dir():
+        print(f"[CookScenes] Resource dir not found: {root}")
+        return 0
+
+    sceneFiles = sorted(root.rglob("*.scene.xml"))
+    if not sceneFiles:
+        print(f"[CookScenes] No .scene.xml found under {root}")
+        return 0
+
+    def cookOne(xmlPath: Path) -> bool:
+        outputBinaryFile = xmlPath.with_suffix("").with_suffix(".bin")
+        sceneName, entitiesList = readXmlSceneInternal(xmlPath)
+        wrote = writeScn1Internal(outputBinaryFile, sceneName, entitiesList)
+        if wrote:
+            print(f"[CookScenes] Cooked {xmlPath.relative_to(root)} -> {outputBinaryFile.name} ({len(entitiesList)} entities)")
+        return wrote
+
+    batchCookAssets(sceneFiles, cookOne, label="CookScenes")
+    return 0
+
+
+# ==============================================================================
+# 4. Resource Pack (.pack) 쿠커
+# ==============================================================================
+
+def fnv1a64Internal(path: str) -> int:
+    """FNV-1a 64비트 해시를 계산합니다."""
+    fnv_prime = 1099511628211
+    fnv_offset = 14695981039346656037
+    normalized = normalizePath(path).lower()
+    h = fnv_offset
+    for ch in normalized.encode("utf-8"):
+        h ^= ch
+        h = (h * fnv_prime) & 0xFFFFFFFFFFFFFFFF
+    return h
+
+
+def alignOffsetInternal(offset: int, alignment: int = _kPackSectorAlignment) -> int:
+    """오프셋을 섹터 정렬 경계로 올림합니다."""
+    mask = alignment - 1
+    return (offset + mask) & ~mask
+
+
+def shouldIncludeFileInternal(relPath: str, config: dict) -> bool:
+    """PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다."""
+    normRel = normalizePath(relPath).lower()
+    parts = normRel.split("/")
+    fileName = parts[-1]
+    dirParts = parts[:-1]
+
+    for exDir in config.get(kKeyGlobalExcludeDirs, []):
+        if exDir.lower() in dirParts:
+            return False
+
+    for exPattern in config.get(kKeyGlobalExcludePatterns, []):
+        pLower = exPattern.lower()
+        if fnmatch.fnmatch(fileName, pLower) or fnmatch.fnmatch(normRel, pLower):
+            return False
+
+    for rule in config.get(kKeyRules, []):
+        for exDir in rule.get(kKeyExcludeDirs, []):
+            exLower = exDir.lower()
+            isRecursive = rule.get(kKeyRecursive, True)
+            if isRecursive:
+                if exLower in dirParts:
+                    return False
+            else:
+                if dirParts and dirParts[0] == exLower:
+                    return False
+
+        for exPattern in rule.get(kKeyExcludePatterns, []):
+            pLower = exPattern.lower()
+            if fnmatch.fnmatch(fileName, pLower) or fnmatch.fnmatch(normRel, pLower):
+                return False
+
+    return True
+
+
+def cookPack(
+    sourceDir: Path,
+    outPackPath: Path,
+    dlcAppId: int = 0,
+    compression: int = _kCompressionZlib,
+    stripDebugStrings: bool = True,
+    packConfig: dict | None = None,
+) -> bool:
+    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다."""
+    if not sourceDir.is_dir():
+        print(f"[CookAssets Error] Source directory does not exist: {sourceDir}", file=sys.stderr)
+        return False
+
+    fileEntries: list[tuple[str, Path, int]] = []
+    for p in sorted(sourceDir.rglob("*")):
+        if p.is_file():
+            rel = p.relative_to(sourceDir).as_posix()
+            if packConfig and not shouldIncludeFileInternal(rel, packConfig):
+                continue
+            pathHash = fnv1a64Internal(rel)
+            fileEntries.append((rel, p, pathHash))
+
+    fileEntries.sort(key=lambda item: item[2])
+    fileCount = len(fileEntries)
+
+    flags = _kFlagHasCrc32
+    if not stripDebugStrings:
+        flags |= _kFlagHasStringPool
+
+    stringPoolBytes = bytearray()
+    stringPoolOffsets: list[int] = []
+    if not stripDebugStrings:
+        for rel, _, _ in fileEntries:
+            stringPoolOffsets.append(len(stringPoolBytes))
+            stringPoolBytes.extend(rel.encode("utf-8") + b"\x00")
+
+    headerSize = 64
+    tocEntrySize = 48
+    tocTotalSize = fileCount * tocEntrySize
+    tocStartOffset = alignOffsetInternal(headerSize)
+    dataStartOffset = alignOffsetInternal(tocStartOffset + tocTotalSize)
+
+    dataOffset = dataStartOffset
+    tocRecords: list[bytes] = []
+    dataBlobs: list[bytes] = []
+
+    for index, (rel, filePath, pathHash) in enumerate(fileEntries):
+        rawBytes = filePath.read_bytes()
+        rawSize = len(rawBytes)
+        crc = binascii.crc32(rawBytes) & 0xFFFFFFFF
+
+        if compression == _kCompressionZlib:
+            compressed = zlib.compress(rawBytes, level=9)
+            if len(compressed) < rawSize:
+                payload = compressed
+                method = _kCompressionZlib
+            else:
+                payload = rawBytes
+                method = _kCompressionNone
+        else:
+            payload = rawBytes
+            method = _kCompressionNone
+
+        compressedSize = len(payload)
+        dataOffsetAligned = alignOffsetInternal(dataOffset)
+        padding = dataOffsetAligned - dataOffset
+        if padding > 0:
+            dataBlobs.append(b"\x00" * padding)
+        dataOffset = dataOffsetAligned
+
+        strOffset = stringPoolOffsets[index] if not stripDebugStrings else 0
+        tocEntry = struct.pack(
+            "<QQQQIIII",
+            pathHash,
+            dataOffset,
+            compressedSize,
+            rawSize,
+            crc,
+            method,
+            flags,
+            strOffset,
+        )
+        tocRecords.append(tocEntry)
+        dataBlobs.append(payload)
+        dataOffset += compressedSize
+
+    stringPoolOffset = 0
+    stringPoolSize = 0
+    if not stripDebugStrings and stringPoolBytes:
+        stringPoolOffset = alignOffsetInternal(dataOffset)
+        stringPoolSize = len(stringPoolBytes)
+
+    header = struct.pack(
+        "<IIIIQQQQII8s",
+        _kPackMagic,
+        _kPackFormatVersion,
+        flags,
+        dlcAppId,
+        fileCount,
+        tocStartOffset,
+        dataStartOffset,
+        stringPoolOffset,
+        stringPoolSize,
+        _kPackSectorAlignment,
+        b"\x00" * 8,
+    )
+
+    outPackPath.parent.mkdir(parents=True, exist_ok=True)
+    with open(outPackPath, "wb") as f:
+        f.write(header)
+        padding = tocStartOffset - len(header)
+        if padding > 0:
+            f.write(b"\x00" * padding)
+        for entry in tocRecords:
+            f.write(entry)
+        padding = dataStartOffset - (tocStartOffset + tocTotalSize)
+        if padding > 0:
+            f.write(b"\x00" * padding)
+        for blob in dataBlobs:
+            f.write(blob)
+        if not stripDebugStrings and stringPoolBytes:
+            padding = stringPoolOffset - dataOffset
+            if padding > 0:
+                f.write(b"\x00" * padding)
+            f.write(stringPoolBytes)
+
+    packSize = outPackPath.stat().st_size
+    print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {packSize:,} bytes, DLC: {dlcAppId})")
+    return True
+
+
+def cookAllPacks(projectRoot: Path, outputDir: Path, isShipping: bool = True, packConfig: dict | None = None) -> bool:
+    """engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다."""
+    resourceDir = projectRoot / "Resource"
+    outputDir.mkdir(parents=True, exist_ok=True)
+    allSuccess = True
+
+    targets: list[tuple[Path, Path, int]] = []
+    engineDir = resourceDir / "engine"
+    if engineDir.is_dir():
+        targets.append((engineDir, outputDir / "engine.pack", 0))
+
+    commonDir = resourceDir / "common"
+    if commonDir.is_dir():
+        targets.append((commonDir, outputDir / "common.pack", 0))
+
+    gameDir = resourceDir / "game"
+    if gameDir.is_dir():
+        for sub in sorted(gameDir.iterdir()):
+            if sub.is_dir():
+                targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
+
+    for src, out, dlcId in targets:
+        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig)
+        if not success:
+            allSuccess = False
+
+    return allSuccess
+
+
+# ==============================================================================
+# 5. 메인 통합 실행 진입점
+# ==============================================================================
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="SW Engine 통합 에셋 쿠커 (Prefabs, Scenes, Packs)")
+    parser.add_argument("--all", action="store_true", help="프리팹, 씬, 리소스 팩 전체를 순서대로 쿠킹 (기본 동작)")
+    parser.add_argument("--prefabs-only", action="store_true", help="프리팹 바이너리(.prefab.bin)만 쿠킹")
+    parser.add_argument("--scenes-only", action="store_true", help="씬 바이너리(.scene.bin)만 쿠킹")
+    parser.add_argument("--packs-only", action="store_true", help="리소스 팩(.pack)만 쿠킹")
+    parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
+    parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
+    parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
+
+    args = parser.parse_args(argv)
+    projectRoot = getProjectRoot()
+
+    doPrefabs = args.prefabs_only or (not args.scenes_only and not args.packs_only)
+    doScenes = args.scenes_only or (not args.prefabs_only and not args.packs_only)
+    doPacks = args.packs_only or (not args.prefabs_only and not args.scenes_only)
+
+    exitCode = 0
+    if doPrefabs:
+        exitCode = cookPrefabs() or exitCode
+    if doScenes:
+        exitCode = cookScenes() or exitCode
+    if doPacks:
+        stripNames = not args.include_debug_names
+        configPath = Path(args.config) if args.config else (projectRoot / kFilePackConfig)
+        packConfig = readJsonDictInternal(configPath, kFilePackConfig)
+        if not packConfig:
+            print(f"[CookAssets Error] missing or invalid config: {configPath}", file=sys.stderr)
+            return 1
+        outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
+        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig)
+        if not success:
+            exitCode = 1
+
+    return exitCode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

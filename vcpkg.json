@@ -51,6 +51,11 @@
     "imguizmo",
     "imgui-node-editor",
     "imgui-notify",
+    {
+      "name": "directxtex",
+      "default-features": false,
+      "platform": "windows | linux"
+    },
     "stb"
   ]
 }

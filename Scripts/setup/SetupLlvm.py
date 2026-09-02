@@ -27,8 +27,8 @@ from common import (
     ensureCachedDownload,
     findFirstExistingFile,
     findFirstExistingFileRecursive,
-    findFirstValidRoot,
-    kDirToolsLlvm,
+    ToolSpec,
+    findToolRoot,
     kEnvSwLlvmAutoBootstrap,
     kKeyLibclangDllPath,
     kKeyLlvmAutoBootstrap,
@@ -39,9 +39,9 @@ from common import (
     loadSearchPaths,
     normalizePath,
     platformKey,
-    platformSearchRoots,
     recordEnginePath,
     resolveToolsSubdir,
+    sharedLibraryNames,
     toolsCacheDir,
 )
 
@@ -78,12 +78,7 @@ def findLibClangDllPath(llvmPath: str) -> str:
     """
     LLVM 설치 경로를 기반으로 libclang(파서) 동적 라이브러리의 경로를 찾습니다.
     """
-    if platform.system() == "Windows":
-        libNames = ["libclang.dll"]
-    elif platform.system() == "Darwin":
-        libNames = ["libclang.dylib"]
-    else:
-        libNames = ["libclang.so", "libclang.so.1"]
+    libNames = sharedLibraryNames("libclang")
 
     searchDirs: list[Path] = []
     if llvmPath:
@@ -188,32 +183,23 @@ def isMinimalLlvmRoot(path: str) -> bool:
             return False
     return True
 
+kLlvmToolSpec = ToolSpec(
+    name="SetupLlvm",
+    tools_subdir_key=kKeyLlvmToolsSubdir,
+    search_roots_key=kKeyLlvmSearchRoots,
+    bin_names=("clang-cl.exe", "clang-cl", "clang.exe", "clang"),
+    env_vars=("LLVM_DIR", "LLVM_HOME", "LLVM_ROOT", "LLVM_PATH"),
+    validate_func=lambda p: isMinimalLlvmRoot(str(p)),
+)
+
+
 def findLlvmPath() -> str:
     """
     환경변수 → 시스템 PATH → search_paths.json 탐색 루트 → Tools/LLVM 순서로 유효한 LLVM 키트를 찾습니다.
     """
-    for envKey in ("LLVM_DIR", "LLVM_HOME", "LLVM_ROOT", "LLVM_PATH"):
-        if (envLlvm := os.environ.get(envKey)) and isMinimalLlvmRoot(envLlvm):
-            return normalizePath(envLlvm)
-
-    if llvmBin := shutil.which("clang-cl") or shutil.which("clang"):
-        parent = Path(llvmBin).resolve().parent.parent
-        if isMinimalLlvmRoot(str(parent)):
-            return normalizePath(str(parent))
-
     search = loadSearchPaths()
-    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, kDirToolsLlvm, search)
-    extras = {kKeyLlvmToolsSubdir: search.get(kKeyLlvmToolsSubdir, kDirToolsLlvm)}
-    found = findFirstValidRoot(
-        platformSearchRoots(search, kKeyLlvmSearchRoots),
-        lambda p: isMinimalLlvmRoot(str(p)),
-        extras=extras,
-        skip=tools,
-    )
-    if found:
+    if found := findToolRoot(kLlvmToolSpec, search):
         return normalizePath(str(found))
-    if isMinimalLlvmRoot(str(tools)):
-        return normalizePath(str(tools))
     return ""
 
 # --- 2. LLVM 부트스트랩 및 설치 --------------------------------------------
@@ -239,7 +225,7 @@ def findClangFormatPath(llvmPath: str = "") -> str:
     if which := shutil.which("clang-format"):
         return normalizePath(which)
     search = loadSearchPaths()
-    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, kDirToolsLlvm, search)
+    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, search)
     if (candidate := tools / "bin" / name).is_file():
         return normalizePath(candidate)
     return ""
@@ -287,7 +273,7 @@ def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
         return ""
 
     search = loadSearchPaths()
-    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, kDirToolsLlvm, search)
+    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, search)
     destRoot = Path(llvmPath) if llvmPath else tools
     if not destRoot.is_dir():
         destRoot = tools
@@ -461,7 +447,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         return recordInternal(Path(existing))
 
     search = loadSearchPaths()
-    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, kDirToolsLlvm, search)
+    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, search)
 
     # Stale Tools/LLVM (e.g. Clang 19 vs VS18 STL needing 20): explain before replace.
     if tools.is_dir() and (tools / "bin" / "clang-cl.exe").is_file():
@@ -477,7 +463,6 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         allowBootstrap,
         kKeyLlvmAutoBootstrap,
         kEnvSwLlvmAutoBootstrap,
-        default=True,
         search=search,
     ):
         sys.stderr.write(

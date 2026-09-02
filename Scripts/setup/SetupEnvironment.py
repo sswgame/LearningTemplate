@@ -287,7 +287,15 @@ class EnvironmentSetupManager:
     def updateParserConfigInternal(self, targetOs: str) -> None:
         """parser_config.defaults.json 과 로컬 parser_config.json을 병합하여 갱신합니다."""
         defaultsFile = self.project_root / kDirConfigEnv / kFileParserDefaults
+        if not defaultsFile.is_file():
+            self.logger.error(f"[SetupEnvironment] Required defaults config not found: {defaultsFile}")
+            raise FileNotFoundError(f"Required defaults config not found: {defaultsFile}")
+
         seedRaw = readJsonDictInternal(defaultsFile, kFileParserDefaults)
+        if not seedRaw:
+            self.logger.error(f"[SetupEnvironment] Failed to load or parse defaults from {defaultsFile}")
+            raise RuntimeError(f"Failed to load or parse defaults from {defaultsFile}")
+
         localRaw = readJsonDictInternal(self.parser_config_file, kFileParserConfig)
 
         seed = normalizeParserConfigInternal(seedRaw)
@@ -352,7 +360,7 @@ def setupEnvironment(force_refresh: bool = False) -> dict[str, Any]:
     return asdict(manager.run())
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="SW Engine Setup Environment Script")
     parser.add_argument(
         "--force",
@@ -360,14 +368,15 @@ def main():
         help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
     )
     parser.add_argument("--verbose", action="store_true", help="상세 로그를 출력합니다.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=log_level, format="%(message)s")
 
     manager = EnvironmentSetupManager(force_refresh=args.force)
     manager.run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

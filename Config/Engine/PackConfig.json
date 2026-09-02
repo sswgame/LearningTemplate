@@ -1,0 +1,38 @@
+{
+  "global_exclude_directories": [
+    "textures_raw",
+    "shaders_raw",
+    "docs",
+    ".git",
+    ".vs"
+  ],
+  "global_exclude_patterns": [
+    "*.psd",
+    "*.blend",
+    "*.blend1",
+    "*.meta",
+    "*.bak",
+    "*.tmp",
+    "thumbs.db",
+    ".ds_store",
+    "desktop.ini",
+    "*.swp"
+  ],
+  "rules": [
+    {
+      "name": "Exclude_Raw_Source_Assets",
+      "exclude_directories": [
+        "textures_raw",
+        "shaders_raw"
+      ],
+      "recursive": true
+    },
+    {
+      "name": "Exclude_Documentation",
+      "exclude_directories": [
+        "docs"
+      ],
+      "recursive": true
+    }
+  ]
+}

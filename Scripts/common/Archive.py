@@ -29,13 +29,15 @@ def toolsCacheDir() -> Path:
 
 
 def resolveToolsSubdir(subdirKey: str,
-                       default: str,
                        search: dict[str, Any] | None = None) -> Path:
     """
     search_paths.json에서 도구 설치 하위 경로(예: Tools/Ninja)를 읽어 프로젝트 루트 기준 절대 경로로 반환합니다.
+    설정 파일에 해당 키가 없으면 KeyError를 발생시킵니다.
     """
     searchConfig = search if search is not None else loadSearchPaths()
-    subdir = searchConfig.get(subdirKey, default)
+    subdir = searchConfig.get(subdirKey)
+    if not subdir:
+        raise KeyError(f"[Config Error] Missing required key '{subdirKey}' in search_paths config")
     return (getProjectRoot() / str(subdir)).resolve()
 
 

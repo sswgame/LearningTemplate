@@ -7,20 +7,10 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/DdsLoader.h"
+
 namespace sw
 {
-    /**
-     * @struct SplashImageData
-     * @brief stb_image를 통해 디코딩된 스플래시 이미지의 RGBA 픽셀 버퍼 정보
-     */
-    struct SplashImageData
-    {
-        uint8* _pPixels{ nullptr };
-        int32  _width{ 0 };
-        int32  _height{ 0 };
-        int32  _channels{ 0 };
-    };
-
     /**
      * @class ISplashWindow
      * @brief 플랫폼별(Windows, Linux, macOS) 스플래시 창 구현을 위한 추상 기본 클래스
@@ -49,10 +39,7 @@ namespace sw
         virtual void dismiss() = 0;
 
         /** @brief 스플래시 창이 현재 열려 있는지 확인합니다. */
-        virtual bool isOpen() const { return _bOpen; }
-
-        /** @brief 타이틀 문자열을 반환합니다. */
-        const string& getTitle() const { return _title; }
+        virtual bool isOpen() const { return _bOpen == SW_TRUE; }
 
         /** @brief 현재 상태 문자열을 반환합니다. */
         const string& getStatus() const { return _status; }
@@ -60,33 +47,25 @@ namespace sw
         /** @brief 현재 진행률(0.0f ~ 1.0f)을 반환합니다. */
         float32 getProgress() const { return _progress; }
 
-        /** @brief 스플래시 이미지 절대 경로를 반환합니다. (없으면 빈 문자열) */
-        const string& getSplashImagePath() const { return _splashImagePath; }
-
-        /** @brief 디코딩된 스플래시 이미지 버퍼 데이터를 반환합니다. */
-        const SplashImageData& getSplashImage() const { return _splashImage; }
+        /** @brief 로드된 DDS 스플래시 이미지 데이터를 반환합니다. */
+        const DdsImageData& getSplashImage() const { return _splashData; }
 
         /** @brief 현재 플랫폼에 맞는 ISplashWindow 인스턴스를 생성하여 반환합니다. */
         static unique_ptr<ISplashWindow> createPlatformSplash();
 
-        /** @brief 리소스 시스템에서 스플래시 이미지(textures/splash.jpg, .png)의 절대 경로를 검색합니다. */
-        static string findSplashImagePath();
+    protected:
+        /**
+         * @brief 스플래시 이미지(textures/splash.dds)를 로드합니다.
+         */
+        bool loadSplashImage();
 
     protected:
-        /** @brief stb_image를 사용하여 스플래시 이미지 파일을 4채널(RGBA) 버퍼로 디코딩합니다. */
-        bool loadSplashImage( string_view absolutePath );
-
-        /** @brief 로드된 스플래시 이미지 픽셀 메모리를 해제합니다. */
-        void freeSplashImage();
-
-    protected:
-        string          _title;
-        string          _status;
-        string          _splashImagePath;
-        SplashImageData _splashImage;
-        float32         _progress;
-        uint32          _width;
-        uint32          _height;
-        bool            _bOpen;
+        string                 _status;
+        DdsImageData           _splashData;
+        float32                _progress;
+        uint32                 _width;
+        uint32                 _height;
+        uint8                  _bOpen    : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

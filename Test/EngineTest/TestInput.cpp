@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Events/RawInputEvent.h"
@@ -1101,7 +1102,7 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
     mapSave.bindAnyKey( "AnyKeyAction" );
     mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
 
-    const sw::string savePath = "test_all_user_bindings.xml";
+    const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_all_user_bindings.xml" );
     SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
 
     sw::ActionMap mapLoad;
@@ -1156,6 +1157,8 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
     {
         SW_EXPECT_NOT_NULL( pMouseBind );
     }
+
+    sw::FileUtil::removeFile( savePath );
 }
 
 /**

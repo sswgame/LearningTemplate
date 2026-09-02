@@ -25,18 +25,15 @@ namespace sw
 #if defined( SW_PLATFORM_LINUX )
     bool X11SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title           = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
-        _status          = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
-        _width           = width;
-        _height          = height;
-        _splashImagePath = findSplashImagePath();
-        if ( _splashImagePath.empty() == false )
-            loadSplashImage( _splashImagePath );
+        _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
+        _width  = width;
+        _height = height;
+        loadSplashImage();
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
         {
-            _bOpen = false;
+            _bOpen = SW_FALSE;
             return false;
         }
 
@@ -57,14 +54,15 @@ namespace sw
             1, CopyFromParent, InputOutput, CopyFromParent,
             CWOverrideRedirect | CWBackPixel, &attrs );
 
-        XStoreName( pDisplay, win, _title.c_str() );
+        const utf8* pWinTitle = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
+        XStoreName( pDisplay, win, pWinTitle );
         XSelectInput( pDisplay, win, ExposureMask | StructureNotifyMask );
         XMapRaised( pDisplay, win );
         XFlush( pDisplay );
 
         _pX11Display = pDisplay;
         _x11Window   = static_cast<uint64>( win );
-        _bOpen       = true;
+        _bOpen       = SW_TRUE;
 
         updateStatus( _status.c_str() );
         return true;
@@ -72,7 +70,7 @@ namespace sw
 
     void X11SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
-        if ( _bOpen == false )
+        if ( _bOpen == SW_FALSE )
             return;
 
         if ( StringUtil::isNullOrEmpty( pStatus ) == false )
@@ -87,16 +85,16 @@ namespace sw
             const int32 screen = DefaultScreen( pDisplay );
             GC          gc     = DefaultGC( pDisplay, screen );
 
-            if ( _splashImage._pPixels != nullptr && _splashImage._width > 0 && _splashImage._height > 0 )
+            if ( _splashData.isValid() && _splashData.getPixels() != nullptr )
             {
                 XImage* pImage = XCreateImage(
                     pDisplay, DefaultVisual( pDisplay, screen ),
                     DefaultDepth( pDisplay, screen ), ZPixmap, 0,
-                    reinterpret_cast<utf8*>( _splashImage._pPixels ),
-                    _splashImage._width, _splashImage._height, 32, 0 );
+                    reinterpret_cast<utf8*>( _splashData.getPixels() ),
+                    _splashData._width, _splashData._height, 32, 0 );
                 if ( pImage != nullptr )
                 {
-                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _splashImage._width, _splashImage._height );
+                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _splashData._width, _splashData._height );
                     pImage->data = nullptr;
                     XDestroyImage( pImage );
                 }
@@ -128,7 +126,7 @@ namespace sw
 
     void X11SplashWindow::dismiss()
     {
-        if ( _bOpen == false )
+        if ( _bOpen == SW_FALSE )
             return;
 
         Display* pDisplay = static_cast<Display*>( _pX11Display );
@@ -142,7 +140,7 @@ namespace sw
             _x11Window   = 0;
         }
 
-        _bOpen = false;
+        _bOpen = SW_FALSE;
     }
 
 #else

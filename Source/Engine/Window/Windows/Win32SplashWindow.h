@@ -37,14 +37,11 @@ namespace sw
         void setProgress( float32 progress ) override;
         void dismiss() override;
 
-        void* getSplashBitmap() const { return _pSplashBitmap; }
-
     private:
         static LRESULT CALLBACK splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
     private:
         [[maybe_unused]] HWND _hWnd;
         uint64                _gdiplusToken;
-        void*                 _pSplashBitmap;
     };
 } // namespace sw

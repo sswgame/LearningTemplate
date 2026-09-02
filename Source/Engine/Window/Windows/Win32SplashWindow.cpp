@@ -2,11 +2,10 @@
 
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 
-#include "Core/File/FileUtil.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
 
     #include <gdiplus.h>
     #pragma comment( lib, "gdiplus.lib" )
@@ -17,7 +16,7 @@ namespace sw
     {
         struct Win32SplashWindowInternal
         {
-            static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
+            static constexpr const wchar_t* kSplashClassName = L"SWSplashWindowClass";
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             {
@@ -35,14 +34,30 @@ namespace sw
                         RECT               rc;
                         GetClientRect( hWnd, &rc );
 
-                        if ( pSplash != nullptr && pSplash->getSplashBitmap() != nullptr )
+                        if ( pSplash != nullptr && pSplash->getSplashImage().isValid() )
                         {
-                            auto*             pBmp = reinterpret_cast<Gdiplus::Bitmap*>( pSplash->getSplashBitmap() );
-                            Gdiplus::Graphics graphics( hDC );
-                            graphics.SetInterpolationMode( Gdiplus::InterpolationModeHighQualityBicubic );
-                            graphics.DrawImage( pBmp, 0, 0, rc.right - rc.left, rc.bottom - rc.top );
+                            const auto& splashData = pSplash->getSplashImage();
+
+                            BITMAPINFO bmi{};
+                            bmi.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
+                            bmi.bmiHeader.biWidth       = static_cast<LONG>( splashData._width );
+                            bmi.bmiHeader.biHeight      = -static_cast<LONG>( splashData._height ); // Top-down
+                            bmi.bmiHeader.biPlanes      = 1;
+                            bmi.bmiHeader.biBitCount    = 32;
+                            bmi.bmiHeader.biCompression = BI_RGB;
+
+                            SetStretchBltMode( hDC, HALFTONE );
+                            StretchDIBits(
+                                hDC,
+                                0, 0, rc.right - rc.left, rc.bottom - rc.top,
+                                0, 0, static_cast<int32>( splashData._width ), static_cast<int32>( splashData._height ),
+                                splashData.getPixels(),
+                                &bmi,
+                                DIB_RGB_COLORS,
+                                SRCCOPY );
 
                             // 하단 상태 텍스트 영역 그라디언트 오버레이
+                            Gdiplus::Graphics            graphics( hDC );
                             Gdiplus::Rect                gradientRect( 0, rc.bottom - 54, rc.right, 54 );
                             Gdiplus::LinearGradientBrush gradientBrush(
                                 gradientRect,
@@ -109,7 +124,6 @@ namespace sw
         : ISplashWindow{}
         , _hWnd{ nullptr }
         , _gdiplusToken{ 0 }
-        , _pSplashBitmap{ nullptr }
     {
     }
 
@@ -125,7 +139,6 @@ namespace sw
 
     bool Win32SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title  = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
@@ -133,29 +146,17 @@ namespace sw
         Gdiplus::GdiplusStartupInput gdiplusStartupInput{};
         Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
 
-        _splashImagePath = findSplashImagePath();
-        if ( _splashImagePath.empty() == false && loadSplashImage( _splashImagePath ) )
+        if ( loadSplashImage() && _splashData.getPixels() != nullptr )
         {
-            if ( _splashImage._pPixels != nullptr )
+            if ( _splashData._bIsBgra == SW_FALSE )
             {
-                const int32 totalPixels = _splashImage._width * _splashImage._height;
+                const int32 totalPixels = static_cast<int32>( _splashData._width * _splashData._height );
                 for ( int32 index = 0; index < totalPixels; ++index )
                 {
-                    uint8* pPixel = _splashImage._pPixels + ( index * 4 );
+                    uint8* pPixel = _splashData.getPixels() + ( index * 4 );
                     std::swap( pPixel[0], pPixel[2] );
                 }
-
-                auto* pBmp = new Gdiplus::Bitmap(
-                    _splashImage._width,
-                    _splashImage._height,
-                    _splashImage._width * 4,
-                    PixelFormat32bppARGB,
-                    _splashImage._pPixels );
-
-                if ( pBmp != nullptr && pBmp->GetLastStatus() == Gdiplus::Ok )
-                    _pSplashBitmap = pBmp;
-                else
-                    delete pBmp;
+                _splashData._bIsBgra = SW_TRUE;
             }
         }
 
@@ -167,6 +168,7 @@ namespace sw
         wc.lpfnWndProc   = splashWndProc;
         wc.hInstance     = hInstance;
         wc.hCursor       = LoadCursor( nullptr, IDC_ARROW );
+        wc.hbrBackground = nullptr;
         wc.lpszClassName = Win32SplashWindowInternal::kSplashClassName;
 
         RegisterClassExW( &wc );
@@ -176,10 +178,12 @@ namespace sw
         const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
         const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
 
+        const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUtf16( pTitle );
+
         HWND hWnd = CreateWindowExW(
             WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
             Win32SplashWindowInternal::kSplashClassName,
-            L"SW Engine Splash",
+            wsTitle.c_str(),
             WS_POPUP,
             posX,
             posY,
@@ -194,7 +198,7 @@ namespace sw
             return false;
 
         _hWnd  = hWnd;
-        _bOpen = true;
+        _bOpen = SW_TRUE;
 
         SetWindowLongPtrW( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( this ) );
 
@@ -213,7 +217,7 @@ namespace sw
 
     void Win32SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
-        if ( _bOpen == false )
+        if ( _bOpen == SW_FALSE )
             return;
 
         if ( StringUtil::isNullOrEmpty( pStatus ) == false )
@@ -242,7 +246,7 @@ namespace sw
 
     void Win32SplashWindow::dismiss()
     {
-        if ( _bOpen == false && _hWnd == nullptr && _pSplashBitmap == nullptr && _gdiplusToken == 0 )
+        if ( _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0 )
             return;
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
@@ -251,19 +255,13 @@ namespace sw
             _hWnd = nullptr;
         }
 
-        if ( _pSplashBitmap != nullptr )
-        {
-            delete reinterpret_cast<Gdiplus::Bitmap*>( _pSplashBitmap );
-            _pSplashBitmap = nullptr;
-        }
-
         if ( _gdiplusToken != 0 )
         {
             Gdiplus::GdiplusShutdown( static_cast<ULONG_PTR>( _gdiplusToken ) );
             _gdiplusToken = 0;
         }
 
-        _bOpen = false;
+        _bOpen = SW_FALSE;
     }
 } // namespace sw
 
@@ -275,7 +273,6 @@ namespace sw
         : ISplashWindow{}
         , _hWnd{ nullptr }
         , _gdiplusToken{ 0 }
-        , _pSplashBitmap{ nullptr }
     {
     }
 

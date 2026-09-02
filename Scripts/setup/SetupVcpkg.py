@@ -20,11 +20,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
+    ToolSpec,
     autoBootstrapEnabled,
     ensureGitOnPath,
-    findFirstValidRoot,
+    findToolRoot,
     isVcpkgRoot,
-    kDirToolsVcpkg,
     kEnvSwVcpkgAutoBootstrap,
     kKeyVcpkgAutoBootstrap,
     kKeyVcpkgGitCommit,
@@ -33,10 +33,20 @@ from common import (
     kKeyVcpkgSearchRoots,
     kKeyVcpkgToolsSubdir,
     loadSearchPaths,
-    platformSearchRoots,
+    platformKey,
+    platformScriptCommand,
     recordEnginePath,
     resolveToolsSubdir,
     runGit,
+)
+
+kVcpkgToolSpec = ToolSpec(
+    name="SetupVcpkg",
+    tools_subdir_key=kKeyVcpkgToolsSubdir,
+    search_roots_key=kKeyVcpkgSearchRoots,
+    bin_names=("vcpkg.exe", "vcpkg"),
+    env_vars=("VCPKG_ROOT", "VCPKG_INSTALLATION_ROOT"),
+    validate_func=isVcpkgRoot,
 )
 
 
@@ -117,12 +127,9 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
             removeIncompleteVcpkgTreeInternal(toolsDir)
             return False
 
-    bootstrap = (
-        toolsDir / "bootstrap-vcpkg.bat" if sys.platform == "win32" else toolsDir / "bootstrap-vcpkg.sh"
-    )
-    bootstrapCmd = (
-        ["cmd", "/c", str(bootstrap)] if sys.platform == "win32" else ["bash", str(bootstrap)]
-    )
+    bootstrapName = "bootstrap-vcpkg.bat" if platformKey() == "windows" else "bootstrap-vcpkg.sh"
+    bootstrap = toolsDir / bootstrapName
+    bootstrapCmd = platformScriptCommand(bootstrap)
 
     if not bootstrap.is_file():
         sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
@@ -160,44 +167,20 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
         탐색된 vcpkg 경로(Path 객체). 찾지 못한 경우 None을 반환합니다.
     """
     search = loadSearchPaths()
-    toolsDir = resolveToolsSubdir(kKeyVcpkgToolsSubdir, kDirToolsVcpkg, search)
-    extras = {kKeyVcpkgToolsSubdir: search.get(kKeyVcpkgToolsSubdir, kDirToolsVcpkg)}
-
-    for envVar in ("VCPKG_ROOT", "VCPKG_INSTALLATION_ROOT"):
-        if (envValue := os.environ.get(envVar)) and isVcpkgRoot(envValue):
-            print(f"[SetupVcpkg] Using {envVar}: {envValue}", file=sys.stderr)
-            return Path(recordEnginePath(kKeyVcpkgRoot, envValue))
-
-    if vcpkgBin := shutil.which("vcpkg"):
-        binPath = Path(vcpkgBin).resolve()
-        for candidate in (binPath.parent, binPath.parent.parent):
-            if isVcpkgRoot(candidate):
-                print(f"[SetupVcpkg] Using PATH: {candidate}", file=sys.stderr)
-                return Path(recordEnginePath(kKeyVcpkgRoot, candidate))
-
-    found = findFirstValidRoot(
-        platformSearchRoots(search, kKeyVcpkgSearchRoots),
-        isVcpkgRoot,
-        extras=extras,
-        skip=toolsDir,
-    )
-    if found:
-        print(f"[SetupVcpkg] Using search root: {found}", file=sys.stderr)
-        return Path(recordEnginePath(kKeyVcpkgRoot, found))
-
-    if isVcpkgRoot(toolsDir):
-        gitExe = ensureGitOnPath()
-        gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
-        if gitExe is not None and gitCommit:
-            pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
-        print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
-        return Path(recordEnginePath(kKeyVcpkgRoot, toolsDir))
+    toolsDir = resolveToolsSubdir(kKeyVcpkgToolsSubdir, search)
+    if foundRoot := findToolRoot(kVcpkgToolSpec, search):
+        if foundRoot == toolsDir:
+            gitExe = ensureGitOnPath()
+            gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
+            if gitExe is not None and gitCommit:
+                pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
+            print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
+        return Path(recordEnginePath(kKeyVcpkgRoot, foundRoot))
 
     if not autoBootstrapEnabled(
         allowBootstrap,
         kKeyVcpkgAutoBootstrap,
         kEnvSwVcpkgAutoBootstrap,
-        default=False,
         search=search,
     ):
         sys.stderr.write(
@@ -215,7 +198,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
         )
         return None
 
-    gitUrl = str(search.get(kKeyVcpkgGitUrl, "https://github.com/microsoft/vcpkg.git"))
+    gitUrl = str(search[kKeyVcpkgGitUrl])
     gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
     if not bootstrapVcpkgInternal(toolsDir, gitUrl, gitCommit, gitExe):
         return None

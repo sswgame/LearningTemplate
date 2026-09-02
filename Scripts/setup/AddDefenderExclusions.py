@@ -47,7 +47,7 @@ def addDefenderExclusions() -> None:
 
     # 1. 제외 경로 등록
     print("[*] 1/4. 프로젝트 및 빌드 출력 디렉터리 실시간 감시 제외 등록 중...")
-    cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build", "{projectDir}\\build\\Ninja-Debug\\Bin", "{projectDir}\\build\\Ninja-Release\\Bin")'
+    cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build")'
     subprocess.run(["powershell", "-NoProfile", "-Command", cmdPath], check=False)
 
     # 2. 프로세스 제외 등록

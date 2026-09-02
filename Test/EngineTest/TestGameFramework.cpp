@@ -183,7 +183,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
     SW_EXPECT_EQUAL( 42, srcSlot.getFlag( "player_level" ) );
 
     // 파일 저장 및 로드
-    const string tempSavePath = "test_saveslot_temp.sav";
+    const string tempSavePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_saveslot_temp.sav" );
     const bool   saveOk       = SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath );
     SW_EXPECT_TRUE( saveOk );
 
@@ -226,7 +226,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
     srcSlot.setFlag( "boss_defeated", 0 );
     srcSlot.setFlag( "difficulty", 2 );
 
-    const string binSavePath = "test_saveslot_sav1.sav";
+    const string binSavePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_saveslot_sav1.sav" );
     const bool   saveOk      = SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath );
     SW_EXPECT_TRUE( saveOk );
 

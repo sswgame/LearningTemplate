@@ -17,22 +17,19 @@ namespace sw
         dismiss();
     }
 
-    bool CocoaSplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
+    bool CocoaSplashWindow::initialize( const utf8* /*pTitle*/, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title           = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
-        _status          = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
-        _width           = width;
-        _height          = height;
-        _splashImagePath = findSplashImagePath();
-        if ( _splashImagePath.empty() == false )
-            loadSplashImage( _splashImagePath );
-        _bOpen = true;
+        _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
+        _width  = width;
+        _height = height;
+        loadSplashImage();
+        _bOpen = SW_TRUE;
         return true;
     }
 
     void CocoaSplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
-        if ( _bOpen == false )
+        if ( _bOpen == SW_FALSE )
             return;
         if ( StringUtil::isNullOrEmpty( pStatus ) == false )
             _status = pStatus;
@@ -47,6 +44,6 @@ namespace sw
 
     void CocoaSplashWindow::dismiss()
     {
-        _bOpen = false;
+        _bOpen = SW_FALSE;
     }
 } // namespace sw

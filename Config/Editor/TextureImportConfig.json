@@ -1,0 +1,70 @@
+{
+  "presets": {
+    "Base_Default": {
+      "format": "BC7_UNORM",
+      "generate_mips": true,
+      "srgb": true,
+      "invert_green": false,
+      "swizzle": "RGBA"
+    },
+    "Base_NormalMap": {
+      "format": "BC5_UNORM",
+      "generate_mips": true,
+      "srgb": false,
+      "invert_green": true,
+      "swizzle": "RGBA"
+    },
+    "Base_UI": {
+      "format": "B8G8R8A8_UNORM",
+      "generate_mips": false,
+      "srgb": true,
+      "invert_green": false,
+      "swizzle": "BGRA"
+    },
+    "Base_HDR": {
+      "format": "BC6H_UF16",
+      "generate_mips": true,
+      "srgb": false,
+      "invert_green": false,
+      "swizzle": "RGBA"
+    },
+    "Base_Uncompressed": {
+      "format": "R8G8B8A8_UNORM",
+      "generate_mips": true,
+      "srgb": true,
+      "invert_green": false,
+      "swizzle": "RGBA"
+    }
+  },
+  "rules": [
+    {
+      "name": "Editor_Splash",
+      "inherits": "Base_UI",
+      "include_patterns": ["*splash*"],
+      "format": "B8G8R8A8_UNORM",
+      "generate_mips": false,
+      "swizzle": "BGRA"
+    },
+    {
+      "name": "Normal_Maps",
+      "inherits": "Base_NormalMap",
+      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"],
+      "exclude_patterns": ["*preview*"]
+    },
+    {
+      "name": "UI_Textures",
+      "inherits": "Base_UI",
+      "include_paths": ["ui/", "gui/", "icons/"],
+      "recursive": true
+    },
+    {
+      "name": "HDR_Cubemaps",
+      "inherits": "Base_HDR",
+      "include_patterns": ["*.hdr", "*_sky.*", "*_env.*"]
+    },
+    {
+      "name": "Fallback_Default",
+      "inherits": "Base_Default"
+    }
+  ]
+}

@@ -13,6 +13,8 @@ if(NOT SW_SHIPPING_BUILD)
 
 	add_library(EditorModule MODULE ${EDITOR_SOURCES})
 
+	find_package(directxtex CONFIG REQUIRED)
+
 	target_include_directories(EditorModule PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(EditorModule
 		PRIVATE
@@ -23,6 +25,7 @@ if(NOT SW_SHIPPING_BUILD)
 			imgui_notify
 			imguizmo
 			implot
+			Microsoft::DirectXTex
 			sw_graphics_libs
 			sw_global_options
 	)

@@ -108,3 +108,29 @@ def platformKey() -> str:
     if systemName == "darwin":
         return "darwin"
     return "linux"
+
+
+def sharedLibraryNames(baseName: str) -> list[str]:
+    """
+    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .dylib, .so).
+    """
+    match platform.system():
+        case "Windows":
+            return [f"{baseName}.dll"]
+        case "Darwin":
+            name = baseName if baseName.startswith("lib") else f"lib{baseName}"
+            return [f"{name}.dylib"]
+        case _:
+            name = baseName if baseName.startswith("lib") else f"lib{baseName}"
+            return [f"{name}.so", f"{name}.so.1"]
+
+
+def platformScriptCommand(scriptPath: PathLike) -> list[str]:
+    """
+    플랫폼별 쉘 스크립트 실행 명령어 리스트를 반환합니다 (Windows: cmd /c, POSIX: bash).
+    """
+    resolved = str(scriptPath)
+    if platform.system() == "Windows":
+        return ["cmd", "/c", resolved]
+    return ["bash", resolved]
+

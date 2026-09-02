@@ -23,6 +23,7 @@ kFileRuntimeEditorConfig = "Config/Editor/EditorConfig.json"
 kFileRuntimeGameConfig = "Config/Game/GameConfig.json"
 kFileRuntimeEditorData = "Config/Editor/editordata.xml"
 kFileShippingHostDefaultsHeader = "ShippingHostDefaults.h"
+kFilePackConfig = "Config/Engine/PackConfig.json"
 
 # =============================================================================
 # --- 2. Project Source & Reflection Architecture (소스 레이아웃 & 리플렉션 SSOT) -
@@ -55,12 +56,8 @@ kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"
 # =============================================================================
 
 kDirToolsCache = "Tools/_cache"
-kDirToolsNinja = "Tools/Ninja"
-kDirToolsSccache = "Tools/Sccache"
-kDirToolsVcpkg = "Tools/vcpkg"
 kDirToolsLlvm = "Tools/LLVM"
 kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
-kDirVcpkgInstalledRelDefault = "build/vcpkg_installed"
 
 # =============================================================================
 # --- 4. Script Entry Points (스크립트 실행 진입점 경로) ------------------------
@@ -75,9 +72,7 @@ kScriptLintCheckCodeConventions = "Scripts/lint/CheckCodeConventions.py"
 kScriptLintCheckSourceGlob = "Scripts/lint/CheckSourceGlob.py"
 kScriptLintRunClangFormat = "Scripts/lint/RunClangFormat.py"
 kScriptGenerateBakeShippingHostDefaults = "Scripts/generate/BakeShippingHostDefaults.py"
-kScriptGenerateCookPrefabs = "Scripts/generate/CookPrefabs.py"
-kScriptGenerateCookScenes = "Scripts/generate/CookScenes.py"
-kScriptCookResourcePacks = "Scripts/cook/CookResourcePacks.py"
+kScriptCookAssets = "Scripts/generate/CookAssets.py"
 kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 
 # =============================================================================
@@ -132,6 +127,14 @@ kKeyVcpkgGitUrl = "vcpkg_git_url"
 kKeyVcpkgGitCommit = "vcpkg_git_commit"
 kKeyVcpkgAutoBootstrap = "vcpkg_auto_bootstrap"
 kKeyVcpkgInstalledRel = "vcpkg_installed_rel"
+
+# Resource Pack Config (PackConfig.json)
+kKeyGlobalExcludeDirs = "global_exclude_directories"
+kKeyGlobalExcludePatterns = "global_exclude_patterns"
+kKeyRules = "rules"
+kKeyExcludeDirs = "exclude_directories"
+kKeyExcludePatterns = "exclude_patterns"
+kKeyRecursive = "recursive"
 
 # Environment Variables
 kEnvSwLlvmAutoBootstrap = "SW_LLVM_AUTO_BOOTSTRAP"

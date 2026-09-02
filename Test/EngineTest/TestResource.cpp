@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -329,4 +330,25 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 
     sw::FileUtil::removeFile( gameFile );
     sw::FileUtil::removeDirectory( gameDir );
+}
+
+/**
+ * @brief [Engine_Resource] DdsLoader를 통한 DDS 헤더 파싱 및 픽셀 버퍼 로드 검증
+ */
+SW_TEST_CASE( Engine_Resource, DdsLoaderValidHeaderAndPixelLoading )
+{
+    sw::ResourceUtil::initialize();
+    const sw::string splashDdsPath = sw::ResourceUtil::getResourcePath( "textures/splash.dds" );
+    SW_ASSERT_TRUE( splashDdsPath.empty() == false );
+
+    sw::DdsImageData image;
+    SW_ASSERT_TRUE( sw::DdsLoader::loadFromFile( splashDdsPath, image ) );
+
+    SW_EXPECT_TRUE( image.isValid() );
+    SW_EXPECT_EQUAL( 1376u, image._width );
+    SW_EXPECT_EQUAL( 768u, image._height );
+    SW_EXPECT_EQUAL( 87u, image._dxgiFormat ); // DXGI_FORMAT_B8G8R8A8_UNORM
+    SW_EXPECT_EQUAL( SW_TRUE, image._bIsBgra );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1376 * 768 * 4 ), image._bytes.size() );
+    SW_EXPECT_NOT_NULL( image.getPixels() );
 }

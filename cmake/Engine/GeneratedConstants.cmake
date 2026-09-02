@@ -41,9 +41,7 @@ set(SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS "Scripts/lint/CheckCodeConventions.py"
 set(SW_SCRIPT_LINT_CHECK_SOURCE_GLOB "Scripts/lint/CheckSourceGlob.py")
 set(SW_SCRIPT_LINT_RUN_CLANG_FORMAT "Scripts/lint/RunClangFormat.py")
 set(SW_SCRIPT_GENERATE_BAKE_SHIPPING_HOST_DEFAULTS "Scripts/generate/BakeShippingHostDefaults.py")
-set(SW_SCRIPT_GENERATE_COOK_PREFABS "Scripts/generate/CookPrefabs.py")
-set(SW_SCRIPT_GENERATE_COOK_SCENES "Scripts/generate/CookScenes.py")
-set(SW_SCRIPT_COOK_RESOURCE_PACKS "Scripts/cook/CookResourcePacks.py")
+set(SW_SCRIPT_COOK_ASSETS "Scripts/generate/CookAssets.py")
 set(SW_SCRIPT_GENERATE_DOCS "Scripts/generate/GenerateDocs.py")
 
 set(SW_KEY_LLVM_PATH "llvm_path")
