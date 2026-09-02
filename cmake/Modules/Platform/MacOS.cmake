@@ -18,8 +18,21 @@ if(COCOA_FRAMEWORK)
     target_link_libraries(sw_platform_macos INTERFACE ${COCOA_FRAMEWORK})
 endif()
 
+if(NOT TARGET sw_graphics_gl_libs)
+    add_library(sw_graphics_gl_libs INTERFACE)
+endif()
+
+if(NOT TARGET sw_graphics_vulkan_libs)
+    add_library(sw_graphics_vulkan_libs INTERFACE)
+endif()
+
 if(NOT TARGET sw_graphics_libs)
     add_library(sw_graphics_libs INTERFACE)
+    target_link_libraries(sw_graphics_libs INTERFACE
+        sw_graphics_gl_libs
+        sw_graphics_vulkan_libs
+    )
 endif()
 
 list(APPEND sw_flag_libraries sw_platform_macos)
+

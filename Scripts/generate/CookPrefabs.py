@@ -133,8 +133,8 @@ def cookPrefabs(resourceRoot: Path | None = None) -> int:
             searchRoots.extend(sorted(path for path in gameRoot.glob("*/prefabs") if path.is_dir()))
 
     if not searchRoots:
-        print("[CookPrefabs] Prefab directory not found under Resource/game/*/prefabs")
-        return 1
+        print("[CookPrefabs] No prefab directory found under Resource/game/*/prefabs (skipping)")
+        return 0
 
     tasks: list[tuple[Path, bool]] = []
     for prefabDir in searchRoots:
@@ -178,5 +178,11 @@ def cookPrefabs(resourceRoot: Path | None = None) -> int:
     return 0
 
 
+def main() -> int:
+    resourceRoot = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
+    return cookPrefabs(resourceRoot)
+
+
 if __name__ == "__main__":
-    raise SystemExit(cookPrefabs())
+    raise SystemExit(main())
+
