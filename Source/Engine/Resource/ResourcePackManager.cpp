@@ -86,6 +86,56 @@ namespace sw
                 // 3. 일치하는 우선순위 토큰이 없는 일반 팩 기본 우선순위
                 return 0;
             }
+
+            /**
+             * @brief "engine/textures/splash.dds" 또는 "game/empty/maps/title.xml" 에서 도메인과 서브패스를 분리합니다.
+             */
+            static bool trySplitDomainPrefix( string_view relativePath, string_view& outDomain, string_view& outSubPath )
+            {
+                outDomain  = {};
+                outSubPath = {};
+
+                const size_t firstSlash = relativePath.find( '/' );
+                if ( firstSlash == string_view::npos )
+                    return false;
+
+                const string_view firstPart = relativePath.substr( 0, firstSlash );
+                // game/<pack>/... 인 경우
+                if ( StringUtil::equals( firstPart, "game", true ) )
+                {
+                    const size_t secondSlash = relativePath.find( '/', firstSlash + 1 );
+                    if ( secondSlash != string_view::npos )
+                    {
+                        outDomain  = relativePath.substr( 0, secondSlash ); // e.g. "game/empty"
+                        outSubPath = relativePath.substr( secondSlash + 1 );
+                        return outSubPath.empty() == false;
+                    }
+                }
+
+                outDomain  = firstPart; // e.g. "engine", "common", "editor", "dlc"
+                outSubPath = relativePath.substr( firstSlash + 1 );
+                return outSubPath.empty() == false;
+            }
+
+            /**
+             * @brief 마운트된 팩 도메인("engine", "common", "game_empty")과 쿼리 도메인("engine", "game/empty")을 대소문자 무관 매칭합니다.
+             */
+            static bool matchPackDomain( string_view packDomain, string_view queryDomain )
+            {
+                if ( StringUtil::equals( packDomain, queryDomain, true ) )
+                    return true;
+
+                // "game_empty" vs "game/empty" 매칭
+                if ( queryDomain.find( '/' ) != string_view::npos )
+                {
+                    string converted{ queryDomain };
+                    StringUtil::replaceChar( converted, '/', '_' );
+                    if ( StringUtil::equals( packDomain, converted, true ) )
+                        return true;
+                }
+
+                return false;
+            }
         };
     } // namespace
 } // namespace sw
@@ -96,7 +146,11 @@ namespace sw
         : _vfsMutex{}
         , _listMountedPack{}
         , _dlcValidator{}
+#if defined( SW_SHIPPING )
         , _bAllowLooseFiles{ false }
+#else
+        , _bAllowLooseFiles{ true }
+#endif
     {
     }
 
@@ -169,9 +223,15 @@ namespace sw
                 }
             }
 
+            string_view fileNamePart;
+            FileUtil::getFileNamePart( normalizedPath, fileNamePart );
+            string_view stem;
+            FileUtil::removeExtension( fileNamePart, stem );
+
             MountedPack mounted{};
-            mounted._priority = effectivePriority;
-            mounted._pReader  = std::move( pReader );
+            mounted._domainName = string( stem );
+            mounted._priority   = effectivePriority;
+            mounted._pReader    = std::move( pReader );
 
             _listMountedPack.push_back( std::move( mounted ) );
 
@@ -229,10 +289,26 @@ namespace sw
         for ( const auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
-            {
                 return true;
+        }
+
+        // 도메인 한정 경로 확인 (예: "engine/textures/splash.dds" -> packDomain "engine", subPath "textures/splash.dds")
+        string_view queryDomain;
+        string_view subPath;
+        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
+        {
+            const uint64 subHash = StringUtil::computeHash64( subPath );
+            for ( const auto& mounted : _listMountedPack )
+            {
+                if ( mounted._pReader != nullptr &&
+                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
+                {
+                    if ( mounted._pReader->hasFile( subHash ) )
+                        return true;
+                }
             }
         }
+
         return false;
     }
 
@@ -249,11 +325,30 @@ namespace sw
             if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
             {
                 if ( mounted._pReader->readFile( pathHash, outBytes ) )
-                {
                     return true;
+            }
+        }
+
+        // 도메인 한정 팩 직접 읽기 (예: "engine/textures/splash.dds" -> "textures/splash.dds" from "engine.pack")
+        string_view queryDomain;
+        string_view subPath;
+        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
+        {
+            const uint64 subHash = StringUtil::computeHash64( subPath );
+            for ( const auto& mounted : _listMountedPack )
+            {
+                if ( mounted._pReader != nullptr &&
+                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
+                {
+                    if ( mounted._pReader->hasFile( subHash ) )
+                    {
+                        if ( mounted._pReader->readFile( subHash, outBytes ) )
+                            return true;
+                    }
                 }
             }
         }
+
         return false;
     }
 
@@ -272,13 +367,36 @@ namespace sw
                 if ( mounted._pReader->readTextFile( relativePath, outText ) )
                 {
                     if ( pOutMountedPackPath != nullptr )
-                    {
                         *pOutMountedPackPath = mounted._pReader->getPackPath();
-                    }
                     return true;
                 }
             }
         }
+
+        // 도메인 한정 팩 직접 읽기
+        string_view queryDomain;
+        string_view subPath;
+        if ( ResourcePackManagerInternal::trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
+        {
+            const uint64 subHash = StringUtil::computeHash64( subPath );
+            for ( const auto& mounted : _listMountedPack )
+            {
+                if ( mounted._pReader != nullptr &&
+                     ResourcePackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) )
+                {
+                    if ( mounted._pReader->hasFile( subHash ) )
+                    {
+                        if ( mounted._pReader->readTextFile( subPath, outText ) )
+                        {
+                            if ( pOutMountedPackPath != nullptr )
+                                *pOutMountedPackPath = mounted._pReader->getPackPath();
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
         return false;
     }
 

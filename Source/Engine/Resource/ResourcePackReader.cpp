@@ -511,13 +511,7 @@ namespace sw
         if ( readFile( relativePath, bytes ) == false )
             return false;
 
-        string_view sv{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
-        // UTF-8 BOM(0xEF, 0xBB, 0xBF) 제거
-        if ( sv.size() >= 3 && static_cast<uint8>( sv[0] ) == 0xEF && static_cast<uint8>( sv[1] ) == 0xBF && static_cast<uint8>( sv[2] ) == 0xBF )
-        {
-            sv.remove_prefix( 3 );
-        }
-
+        const string_view sv = FileUtil::skipUtf8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
         outText.assign( sv.data(), sv.size() );
         return true;
     }

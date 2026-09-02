@@ -187,7 +187,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     if ( sw::engine::areEngineServicesBound() )
     {
-        sw::engine::getResourceManager().getAssetDatabase()._mapGuidToPath[heroGuid] = "prefabs/new_hero.prefab.xml";
+        sw::engine::getResourceManager().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
     }
 
     sw::SceneDocument loadedDoc{};

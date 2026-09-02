@@ -38,10 +38,6 @@ namespace sw
 
     bool ISplashWindow::loadSplashImage()
     {
-        const string path = ResourceUtil::getResourcePath( "textures/splash.dds" );
-        if ( path.empty() )
-            return false;
-
-        return DdsLoader::loadFromFile( path, _splashData ) && _splashData.isValid();
+        return DdsLoader::loadFromResource( "textures/splash.dds", _splashData ) && _splashData.isValid();
     }
 } // namespace sw

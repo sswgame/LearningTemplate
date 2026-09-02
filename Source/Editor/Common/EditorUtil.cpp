@@ -97,7 +97,7 @@ namespace sw::editor
             return {};
 
         const EditorData& data       = editor::getEditorData();
-        const string&     editorRoot = ResourceUtil::getEditorFolderPath();
+        const string      editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
         if ( editorRoot.empty() == false )
         {
             const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, data._fontsFolder ), pFileName );

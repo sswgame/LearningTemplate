@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -19,6 +20,7 @@ namespace sw
         , _assetFormatRegistry{}
         , _materialCache{ make_unique<MaterialCache>() }
         , _prefabManager{ make_unique<PrefabManager>() }
+        , _pPackManager{ make_unique<ResourcePackManager>() }
         , _resourceWatchHandle{}
         , _pReloadFileManager{ nullptr }
     {
@@ -33,6 +35,12 @@ namespace sw
             SW_LOG_ERROR( "Failed to initialize ResourceManager!" );
             return false;
         }
+
+        if ( _pPackManager != nullptr )
+        {
+            _pPackManager->scanAndMountPacks( "Bin/Packs", ResourceUtil::getSearchPriority() );
+        }
+
         _assetFormatRegistry.ensureBuiltins();
         return true;
     }
@@ -40,6 +48,9 @@ namespace sw
     void ResourceManager::shutdown()
     {
         detachReloadFileManager();
+
+        if ( _pPackManager != nullptr )
+            _pPackManager->unmountAll();
 
         if ( _materialCache != nullptr )
             _materialCache->clear();
@@ -116,5 +127,15 @@ namespace sw
     const PrefabManager& ResourceManager::getPrefabManager() const
     {
         return *_prefabManager;
+    }
+
+    ResourcePackManager& ResourceManager::getPackManager()
+    {
+        return *_pPackManager;
+    }
+
+    const ResourcePackManager& ResourceManager::getPackManager() const
+    {
+        return *_pPackManager;
     }
 } // namespace sw

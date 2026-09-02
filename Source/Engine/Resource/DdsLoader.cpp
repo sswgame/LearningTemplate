@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/ResourceUtil.h"
+
 namespace sw
 {
     namespace
@@ -29,23 +31,16 @@ namespace sw
         constexpr uint32 kFourCC_ATI2 = 0x32495441;
         constexpr uint32 kFourCC_BC5U = 0x55354342;
 
-        // DXGI formats
-        [[maybe_unused]] constexpr uint32 kDxgiFormatR8G8B8A8Unorm     = 28;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatR8G8B8A8UnormSrgb = 29;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC1Unorm          = 71;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC1UnormSrgb      = 72;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC2Unorm          = 74;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC2UnormSrgb      = 75;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC3Unorm          = 77;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC3UnormSrgb      = 78;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC4Unorm          = 80;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC5Unorm          = 83;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatB8G8R8A8Unorm     = 87;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatB8G8R8X8Unorm     = 88;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatB8G8R8A8UnormSrgb = 91;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC6HUF16          = 95;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC7Unorm          = 98;
-        [[maybe_unused]] constexpr uint32 kDxgiFormatBC7UnormSrgb      = 99;
+        // DXGI formats mapped
+        constexpr uint32 kDxgiFormatBC1Unorm          = 71;
+        constexpr uint32 kDxgiFormatBC2Unorm          = 74;
+        constexpr uint32 kDxgiFormatBC3Unorm          = 77;
+        constexpr uint32 kDxgiFormatBC4Unorm          = 80;
+        constexpr uint32 kDxgiFormatBC5Unorm          = 83;
+        constexpr uint32 kDxgiFormatR8G8B8A8Unorm     = 28;
+        constexpr uint32 kDxgiFormatB8G8R8A8Unorm     = 87;
+        constexpr uint32 kDxgiFormatB8G8R8A8UnormSrgb = 91;
+        constexpr uint32 kDxgiFormatB8G8R8X8Unorm     = 88;
 
 #pragma pack( push, 1 )
         struct DdsPixelFormatHeader
@@ -97,6 +92,18 @@ namespace sw
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
         {
             SW_LOG_ERROR( "Failed to read DDS file: %#", filePath.data() );
+            return false;
+        }
+
+        return loadFromMemory( bytes.data(), bytes.size(), outImage );
+    }
+
+    bool DdsLoader::loadFromResource( string_view relativePath, DdsImageData& outImage )
+    {
+        vector<uint8> bytes;
+        if ( ResourceUtil::readBinaryResource( relativePath, bytes ) == false || bytes.empty() )
+        {
+            SW_LOG_ERROR( "Failed to read DDS resource: %#", relativePath.data() );
             return false;
         }
 

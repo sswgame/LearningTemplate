@@ -22,6 +22,7 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -68,13 +69,14 @@ namespace sw::editor
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".scene.xml", ".xml" };
 
-                const string mapsDir = ResourceUtil::joinActivePackPath( path::kMapsFolder );
+                const string activePack = GameConfig::getActive()._packRoot;
+                const string mapsDir    = ResourceUtil::getDomainFolderPath( activePack, path::kMapsFolder );
                 if ( FileUtil::directoryExists( mapsDir ) )
                     params._initialDirectory = mapsDir;
-                else if ( ResourceUtil::getActivePackFolderPath().empty() == false )
-                    params._initialDirectory = ResourceUtil::getActivePackFolderPath();
-                else if ( ResourceUtil::getGameFolderPath().empty() == false )
-                    params._initialDirectory = ResourceUtil::getGameFolderPath();
+                else if ( ResourceUtil::getDomainFolderPath( activePack ).empty() == false )
+                    params._initialDirectory = ResourceUtil::getDomainFolderPath( activePack );
+                else if ( ResourceUtil::getDomainFolderPath( path::kGamePack ).empty() == false )
+                    params._initialDirectory = ResourceUtil::getDomainFolderPath( path::kGamePack );
 
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }

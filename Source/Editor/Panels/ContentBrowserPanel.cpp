@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -332,10 +333,10 @@ namespace sw::editor
             _listRoot.push_back( std::move( root ) );
         };
 
-        addRoot( "game", ResourceUtil::getGameFolderPath() );
-        addRoot( "engine", ResourceUtil::getEngineFolderPath() );
-        addRoot( "common", ResourceUtil::getCommonFolderPath() );
-        addRoot( "editor", ResourceUtil::getEditorFolderPath() );
+        addRoot( "game", ResourceUtil::getDomainFolderPath( "game" ) );
+        addRoot( "engine", ResourceUtil::getDomainFolderPath( "engine" ) );
+        addRoot( "common", ResourceUtil::getDomainFolderPath( "common" ) );
+        addRoot( "editor", ResourceUtil::getDomainFolderPath( "editor" ) );
 
         if ( _selectedFolderAbs.empty() && _listRoot.empty() == false )
             selectFolder( _listRoot.front()._absolutePath, _listRoot.front()._displayName );
@@ -518,10 +519,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? FileUtil::normalizeSeparators(
-                                               FileUtil::joinPath( ResourceUtil::getEngineFolderPath(), kArrFavorites[favIdx]._relPath ) )
-                                         : FileUtil::normalizeSeparators(
-                                               ResourceUtil::joinActivePackPath( kArrFavorites[favIdx]._relPath ) );
+                                         ? ResourceUtil::getDomainFolderPath( "engine", kArrFavorites[favIdx]._relPath )
+                                         : ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._relPath );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._label, bSelected ) )

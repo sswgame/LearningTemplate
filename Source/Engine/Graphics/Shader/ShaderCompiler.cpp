@@ -27,13 +27,13 @@ namespace sw
                 if ( shaderDir.empty() == false )
                     outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
-                const string& engineRoot = ResourceUtil::getEngineFolderPath();
-                if ( engineRoot.empty() == false )
-                    outListDir.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( engineRoot, "shaders" ) ) );
+                const string engineShaders = ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+                if ( engineShaders.empty() == false )
+                    outListDir.push_back( engineShaders );
 
-                const string& commonRoot = ResourceUtil::getCommonFolderPath();
-                if ( commonRoot.empty() == false )
-                    outListDir.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( commonRoot, "shaders" ) ) );
+                const string commonShaders = ResourceUtil::getDomainFolderPath( "common", "shaders" );
+                if ( commonShaders.empty() == false )
+                    outListDir.push_back( commonShaders );
             }
 
 #if defined( SW_PLATFORM_WINDOWS )

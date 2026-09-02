@@ -15,7 +15,7 @@
 SW_TEST_CASE( LiveShaderTest, InitializationAndWatch )
 {
     const sw::string shaderRelPath = "shaders/testlive.hlsl";
-    const sw::string engineFolder  = sw::ResourceUtil::getEngineFolderPath();
+    const sw::string engineFolder  = sw::ResourceUtil::getDomainFolderPath( "engine" );
     const sw::string fullPath      = engineFolder.empty() ? shaderRelPath : sw::FileUtil::joinPath( engineFolder, shaderRelPath );
 
     sw::FileUtil::createDirectory( sw::FileUtil::getDirectoryPart( fullPath ) );

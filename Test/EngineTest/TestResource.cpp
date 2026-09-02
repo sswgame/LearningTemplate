@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -43,12 +45,12 @@ SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
 
     const sw::string& root = sw::ResourceUtil::getRootFolderPath();
     SW_EXPECT_TRUE_MSG( root.empty() == false, "Resource root should be resolved (display only)" );
-    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getGameFolderPath().empty() == false, "Games resource folder should exist" );
-    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEngineFolderPath().empty() == false, "Engine resource folder should exist" );
-    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getEditorFolderPath().empty() == false, "Editor resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getDomainFolderPath( "game" ).empty() == false, "Games resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getDomainFolderPath( "engine" ).empty() == false, "Engine resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourceUtil::getDomainFolderPath( "editor" ).empty() == false, "Editor resource folder should exist" );
 
-    const sw::vector<sw::string> shaderFolders = sw::ResourceUtil::getResourceFolders( "shaders" );
-    SW_EXPECT_TRUE_MSG( shaderFolders.empty() == false, "Expected at least one shaders folder under domain roots" );
+    const sw::string engineShaders = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    SW_EXPECT_TRUE_MSG( engineShaders.empty() == false, "Expected engine shaders folder under domain root" );
 
     // 팩 상대 키(engine/common/game/editor 팩 아래 — Resource/ 자체가 아님).
     const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
@@ -96,7 +98,7 @@ SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    const sw::string& gameRoot = sw::ResourceUtil::getGameFolderPath();
+    const sw::string gameRoot = sw::ResourceUtil::getDomainFolderPath( "game" );
     SW_EXPECT_TRUE( gameRoot.empty() == false );
 
     const sw::string saveFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/shaders/nested" );
@@ -351,4 +353,121 @@ SW_TEST_CASE( Engine_Resource, DdsLoaderValidHeaderAndPixelLoading )
     SW_EXPECT_EQUAL( SW_TRUE, image._bIsBgra );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1376 * 768 * 4 ), image._bytes.size() );
     SW_EXPECT_NOT_NULL( image.getPixels() );
+}
+
+/**
+ * @brief [Engine_Resource] DdsLoader::loadFromResource를 통한 VFS 상대 경로 DDS 로드 검증
+ */
+SW_TEST_CASE( Engine_Resource, DdsLoaderLoadFromResource )
+{
+    sw::ResourceUtil::initialize();
+    sw::DdsImageData image;
+    SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "textures/splash.dds", image ) );
+    SW_EXPECT_TRUE( image.isValid() );
+    SW_EXPECT_EQUAL( 1376u, image._width );
+    SW_EXPECT_EQUAL( 768u, image._height );
+}
+
+/**
+ * @brief [Engine_Resource] AssetDatabase 캡슐화, tryGetGuid/Path, registerMapping 검증
+ */
+SW_TEST_CASE( Engine_Resource, AssetDatabaseThreadSafeLookupAndMapping )
+{
+    sw::AssetDatabase db;
+    SW_EXPECT_EQUAL( 0u, db.getAssetCount() );
+
+    const sw::Uuid testGuid = sw::Uuid::generate();
+    db.registerMapping( "prefabs/player.prefab.xml", testGuid );
+    SW_EXPECT_EQUAL( 1u, db.getAssetCount() );
+
+    sw::Uuid outGuid{};
+    SW_EXPECT_TRUE( db.tryGetGuid( "prefabs/player.prefab.xml", outGuid ) );
+    SW_EXPECT_TRUE( testGuid == outGuid );
+
+    sw::string outPath;
+    SW_EXPECT_TRUE( db.tryGetPath( testGuid, outPath ) );
+    SW_EXPECT_STREQ( "prefabs/player.prefab.xml", outPath.c_str() );
+
+    sw::Uuid missingGuid{};
+    SW_EXPECT_FALSE( db.tryGetGuid( "nonexistent.xml", missingGuid ) );
+
+    db.clear();
+    SW_EXPECT_EQUAL( 0u, db.getAssetCount() );
+}
+
+/**
+ * @brief [Engine_Resource] AssetStreamingQueue::requestAssetData 비동기 버퍼 프리로드 검증
+ */
+SW_TEST_CASE( Engine_Resource, AssetStreamingQueueDataRequest )
+{
+    sw::ResourceUtil::initialize();
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    bool              bCallbackInvoked{ false };
+    bool              bSuccessResult{ false };
+    sw::vector<uint8> loadedBytes;
+
+    const bool bEnqueued = queue.requestAssetData(
+        "textures/splash.dds",
+        sw::StreamingPriority::Normal,
+        SW_DELEGATE_LAMBDA(
+            sw::OnStreamingDataCompleteDelegate,
+            [&]( string_view /*path*/, bool bSuccess, const sw::vector<uint8>& bytes )
+    {
+        bCallbackInvoked = true;
+        bSuccessResult   = bSuccess;
+        loadedBytes      = bytes;
+    } ) );
+
+    SW_ASSERT_TRUE( bEnqueued );
+
+    if ( sw::engine::areEngineServicesBound() )
+        sw::engine::getTaskManager().waitAll();
+
+    queue.update( 32 );
+
+    SW_EXPECT_TRUE( bCallbackInvoked );
+    SW_EXPECT_TRUE( bSuccessResult );
+    SW_EXPECT_TRUE( loadedBytes.empty() == false );
+
+    queue.shutdown();
+}
+
+/**
+ * @brief [Engine_Resource] ResourceManager의 ResourcePackManager 소유권 및 라이프사이클 검증
+ */
+SW_TEST_CASE( Engine_Resource, ResourceManagerPackManagerOwnership )
+{
+    sw::ResourceManager resManager;
+    SW_ASSERT_TRUE( resManager.initialize() );
+
+    sw::ResourcePackManager& packMgr = resManager.getPackManager();
+    SW_EXPECT_NOT_NULL( &packMgr );
+
+    resManager.shutdown();
+}
+
+/**
+ * @brief [Engine_Resource] ResourceUtil::getDomainFolderPath 동적 도메인 및 서브폴더 해석 검증
+ */
+SW_TEST_CASE( Engine_Resource, DynamicDomainFolderPathResolution )
+{
+    sw::ResourceUtil::initialize();
+
+    const sw::string engineRoot = sw::ResourceUtil::getDomainFolderPath( "engine" );
+    SW_EXPECT_TRUE( engineRoot.empty() == false );
+
+    const sw::string engineShaders = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    SW_EXPECT_TRUE( engineShaders.empty() == false );
+    SW_EXPECT_TRUE( engineShaders.find( "shaders" ) != sw::string::npos );
+
+    const sw::string commonRoot = sw::ResourceUtil::getDomainFolderPath( "common" );
+    SW_EXPECT_TRUE( commonRoot.empty() == false );
+
+    const sw::string nonExistent = sw::ResourceUtil::getDomainFolderPath( "invalid_domain_xyz_999" );
+    SW_EXPECT_TRUE( nonExistent.empty() );
+
+    const sw::string nonExistentSub = sw::ResourceUtil::getDomainFolderPath( "engine", "invalid_subfolder_xyz_999" );
+    SW_EXPECT_TRUE( nonExistentSub.empty() );
 }

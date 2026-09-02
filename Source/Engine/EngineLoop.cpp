@@ -40,6 +40,7 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
@@ -241,14 +242,14 @@ namespace sw
             const string exePacksDir = FileUtil::joinPath( exeDir, "Packs" );
             if ( FileUtil::directoryExists( exePacksDir ) )
             {
-                ResourceUtil::getPackManager().scanAndMountPacks( exePacksDir, pEngineConfig->_listResourcePriority );
+                _resourceManager->getPackManager().scanAndMountPacks( exePacksDir, pEngineConfig->_listResourcePriority );
             }
             else
             {
                 const string projectPacksDir = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" );
                 if ( FileUtil::directoryExists( projectPacksDir ) )
                 {
-                    ResourceUtil::getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
+                    _resourceManager->getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
                 }
             }
 

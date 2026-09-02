@@ -108,6 +108,17 @@ namespace sw
         return result;
     }
 
+    void AssetDatabase::registerMapping( string_view relativePath, const Uuid& guid )
+    {
+        string path = FileUtil::normalizePath( relativePath );
+        if ( path.empty() || guid.isNull() )
+            return;
+
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        _mapPathToGuid[path] = guid;
+        _mapGuidToPath[guid] = path;
+    }
+
     bool AssetDatabase::registerExisting( string_view relativePath )
     {
         string path = FileUtil::normalizePath( relativePath );
@@ -121,6 +132,26 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _mapPathToGuid[path] = guid;
         _mapGuidToPath[guid] = path;
+        return true;
+    }
+
+    bool AssetDatabase::tryGetGuid( string_view relativePath, Uuid& outGuid ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        const auto                          it = _mapPathToGuid.find( string( relativePath ) );
+        if ( it == _mapPathToGuid.end() )
+            return false;
+        outGuid = it->second;
+        return true;
+    }
+
+    bool AssetDatabase::tryGetPath( const Uuid& guid, string& outPath ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        const auto                          it = _mapGuidToPath.find( guid );
+        if ( it == _mapGuidToPath.end() )
+            return false;
+        outPath = it->second;
         return true;
     }
 
@@ -140,6 +171,12 @@ namespace sw
         if ( it == _mapGuidToPath.end() )
             return nullptr;
         return &it->second;
+    }
+
+    size_t AssetDatabase::getAssetCount() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        return _mapPathToGuid.size();
     }
 
     uint32 AssetDatabase::refreshFolder( string_view absoluteFolder, bool bCreateMissing )

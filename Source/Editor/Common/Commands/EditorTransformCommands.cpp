@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -135,7 +136,8 @@ namespace sw::editor
         if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || presetName.empty() )
             return false;
 
-        const string presetDir = ResourceUtil::joinActivePackPath( FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
+        const string presetDir = ResourceUtil::getDomainFolderPath(
+            GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
         FileUtil::ensureDirectoryExists( presetDir );
 
         const string compName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str()

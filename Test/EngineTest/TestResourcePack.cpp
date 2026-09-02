@@ -221,32 +221,33 @@ SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
     } );
 
     sw::ResourceUtil::initialize();
-    sw::ResourceUtil::unmountAllPacks();
+    sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+    packManager.unmountAll();
 
     // 2. 엔진 & 게임 팩 마운트
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( enginePack, 3000 ) );
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( gamePack, 5000 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( enginePack, 3000 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( gamePack, 5000 ) );
 
     sw::string content;
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "config/gameplay.xml", content ) );
     SW_EXPECT_EQUAL( content, "VERSION_GAME" ); // game(5000) > engine(3000)
 
     // 3. DLC 팩 마운트 (DLC가 본편 오버라이드)
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( dlcPack, 8000 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( dlcPack, 8000 ) );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "config/gameplay.xml", content ) );
     SW_EXPECT_EQUAL( content, "VERSION_DLC" ); // dlc(8000) > game(5000)
 
     // 4. 긴급 핫픽스 팩 마운트 (patch.pack이 최우선 오버라이드)
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( patchPack, 10000 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( patchPack, 10000 ) );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "config/gameplay.xml", content ) );
     SW_EXPECT_EQUAL( content, "VERSION_PATCH_HOTFIX" ); // patch(10000) > dlc(8000)
 
     // 5. 핫픽스 언마운트 시 DLC로 안전하게 롤백
-    sw::ResourceUtil::unmountPack( patchPack );
+    packManager.unmountPack( patchPack );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "config/gameplay.xml", content ) );
     SW_EXPECT_EQUAL( content, "VERSION_DLC" );
 
-    sw::ResourceUtil::unmountAllPacks();
+    packManager.unmountAll();
     sw::FileUtil::removeFile( enginePack );
     sw::FileUtil::removeFile( gamePack );
     sw::FileUtil::removeFile( dlcPack );
@@ -309,22 +310,23 @@ SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
     sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" );
 
     sw::ResourceUtil::initialize();
-    sw::ResourceUtil::unmountAllPacks();
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( packPath, 5000 ) );
+    sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+    packManager.unmountAll();
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
 
     // 1. 기본 상태: 팩 내용이 우선
-    sw::ResourceUtil::setAllowLooseFiles( false );
+    packManager.setAllowLooseFiles( false );
     sw::string content;
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "test_loose_file.xml", content ) );
     SW_EXPECT_EQUAL( content, "CONTENT_IN_PACK" );
 
     // 2. 모딩/개발용 Loose File 우선 모드 활성화: 디스크의 낱개 파일이 우선
-    sw::ResourceUtil::setAllowLooseFiles( true );
+    packManager.setAllowLooseFiles( true );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( loosePath, content ) );
     SW_EXPECT_EQUAL( content, "CONTENT_ON_DISK" );
 
-    sw::ResourceUtil::setAllowLooseFiles( false );
-    sw::ResourceUtil::unmountAllPacks();
+    packManager.setAllowLooseFiles( true );
+    packManager.unmountAll();
     sw::FileUtil::removeFile( packPath );
     sw::FileUtil::removeFile( loosePath );
 }
@@ -357,48 +359,49 @@ SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
     } );
 
     sw::ResourceUtil::initialize();
-    sw::ResourceUtil::unmountAllPacks();
+    sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+    packManager.unmountAll();
     // 우선순위 토큰 목록 설정: game > common > engine (3개 항목)
     const sw::vector<sw::string> listPriority = { "game", "common", "engine" };
     sw::ResourceUtil::setSearchPriority( listPriority );
 
     // 1. priority = 0 으로 자동 산출 마운트
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( enginePack, 0 ) );
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( commonPack, 0 ) );
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( gamePack, 0 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( enginePack, 0 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( commonPack, 0 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( gamePack, 0 ) );
 
     sw::string versionText;
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "GAME_1.0", versionText ); // game(3000) > common(2000) > engine(1000)
 
     // 2. 게임 전용 패치 팩 마운트
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( patchGame, 0 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( patchGame, 0 ) );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "PATCH_GAME_1.1", versionText ); // patch_game(3500) > game(3000)
 
     // 3. 글로벌 긴급 핫픽스 팩 마운트
-    SW_ASSERT_TRUE( sw::ResourceUtil::mountPack( hotfixPack, 0 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( hotfixPack, 0 ) );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "HOTFIX_GLOBAL_1.2", versionText ); // patch_hotfix(4000) > patch_game(3500)
 
     // 4. 핫픽스 언마운트 시 단계별 롤백 검증
-    sw::ResourceUtil::unmountPack( hotfixPack );
+    packManager.unmountPack( hotfixPack );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "PATCH_GAME_1.1", versionText );
 
-    sw::ResourceUtil::unmountPack( patchGame );
+    packManager.unmountPack( patchGame );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "GAME_1.0", versionText );
 
-    sw::ResourceUtil::unmountPack( gamePack );
+    packManager.unmountPack( gamePack );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "COMMON_1.0", versionText );
 
-    sw::ResourceUtil::unmountPack( commonPack );
+    packManager.unmountPack( commonPack );
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "core/version.txt", versionText ) );
     SW_EXPECT_EQUAL( "ENGINE_1.0", versionText );
 
-    sw::ResourceUtil::unmountAllPacks();
+    packManager.unmountAll();
     sw::FileUtil::removeFile( enginePack );
     sw::FileUtil::removeFile( commonPack );
     sw::FileUtil::removeFile( gamePack );
@@ -532,7 +535,7 @@ SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
     SW_EXPECT_TRUE( nonExistent.empty() );
 
     // 2. 엔진 폴더 내 알려진 경로 룩업 및 캐싱 확인
-    const sw::string engineFolder = sw::ResourceUtil::getEngineFolderPath();
+    const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
     if ( engineFolder.empty() == false )
     {
         const sw::string pathFirst = sw::ResourceUtil::getResourcePath( "shaders" );
@@ -546,4 +549,45 @@ SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
 
     // 3. 캐시 초기화 후 재동작 확인
     sw::ResourceUtil::clearPathCache();
+}
+
+/**
+ * @brief [Engine_ResourcePack] 도메인 한정 경로 VFS 쿼리 검증 ("test_domain_pack/file.dat")
+ */
+SW_TEST_CASE( Engine_ResourcePack, DomainQualifiedQueryInVfs )
+{
+    const sw::string                                    packPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_domain_query_pack.pack" );
+    const sw::vector<std::pair<sw::string, sw::string>> listFile = {
+        { "textures/icon.dat",   "ICON_PAYLOAD_DATA"},
+        {"shaders/custom.dat", "SHADER_PAYLOAD_DATA"},
+    };
+
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
+
+    sw::ResourcePackManager packManager;
+    packManager.setAllowLooseFiles( false ); // 순수 VFS 환경
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
+
+    // 1. 도메인 없이 상대 경로로 쿼리
+    SW_EXPECT_TRUE( packManager.hasFile( "textures/icon.dat" ) );
+    sw::string textContent;
+    SW_EXPECT_TRUE( packManager.readTextFile( "textures/icon.dat", textContent ) );
+    SW_EXPECT_EQUAL( textContent, "ICON_PAYLOAD_DATA" );
+
+    // 2. 도메인 접두사 포함 쿼리 ("sw_domain_query_pack/textures/icon.dat")
+    SW_EXPECT_TRUE( packManager.hasFile( "sw_domain_query_pack/textures/icon.dat" ) );
+    sw::string domainText;
+    SW_EXPECT_TRUE( packManager.readTextFile( "sw_domain_query_pack/textures/icon.dat", domainText ) );
+    SW_EXPECT_EQUAL( domainText, "ICON_PAYLOAD_DATA" );
+
+    // 3. 존재하지 않는 도메인 쿼리 ("wrong_domain/textures/icon.dat")
+    SW_EXPECT_FALSE( packManager.hasFile( "wrong_domain/textures/icon.dat" ) );
+
+    // 4. 바이너리 도메인 쿼리 검증
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( packManager.readFile( "sw_domain_query_pack/shaders/custom.dat", bytes ) );
+    SW_EXPECT_EQUAL( bytes.size(), strlen( "SHADER_PAYLOAD_DATA" ) );
+
+    packManager.unmountAll();
+    sw::FileUtil::removeFile( packPath );
 }

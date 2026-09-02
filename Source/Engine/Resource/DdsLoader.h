@@ -49,9 +49,14 @@ namespace sw
     struct SW_API DdsLoader
     {
         /**
-         * @brief 디스크 파일 경로에서 DDS 텍스처를 로드합니다.
+         * @brief 디스크 물리 파일 경로에서 DDS 텍스처를 로드합니다.
          */
         static bool loadFromFile( string_view filePath, DdsImageData& outImage );
+
+        /**
+         * @brief VFS 리소스 상대 경로(예: "textures/splash.dds")에서 DDS 텍스처를 로드합니다 (.pack 아카이브 및 낱개 파일 투명 지원).
+         */
+        static bool loadFromResource( string_view relativePath, DdsImageData& outImage );
 
         /**
          * @brief 메모리 버퍼에서 DDS 텍스처를 로드합니다.

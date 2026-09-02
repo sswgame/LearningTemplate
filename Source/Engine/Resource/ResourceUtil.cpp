@@ -7,8 +7,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourcePackManager.h"
 
 namespace sw
 {
@@ -31,45 +34,40 @@ namespace sw
                 outRoot.clear();
                 outKeyUnderRoot.clear();
 
-                struct StaticDomainRoute
-                {
-                    string_view _prefix;
-                    const string& ( *_pGetFolderFunc )();
-                };
+                const string& resourceRoot = ResourceUtil::getRootFolderPath();
+                if ( resourceRoot.empty() || lowerRel.empty() )
+                    return false;
 
-                static constexpr StaticDomainRoute kStaticDomainRoutes[] = {
-                    {path::kEnginePack, &ResourceUtil::getEngineFolderPath},
-                    {path::kCommonPack, &ResourceUtil::getCommonFolderPath},
-                    {path::kEditorPack, &ResourceUtil::getEditorFolderPath},
-                };
-
-                for ( const auto& route : kStaticDomainRoutes )
-                {
-                    if ( FileUtil::startsWithPathComponent( lowerRel, route._prefix ) )
-                    {
-                        outRoot         = route._pGetFolderFunc();
-                        outKeyUnderRoot = FileUtil::suffixAfterPathComponent( lowerRel, route._prefix );
-                        return outRoot.empty() == false;
-                    }
-                }
-
+                // 1. game/<pack>/... 형식 분해
                 if ( FileUtil::startsWithPathComponent( lowerRel, path::kGamePack ) )
                 {
-                    const string& gamesRoot = ResourceUtil::getGameFolderPath();
-                    if ( gamesRoot.empty() )
-                        return false;
                     const string rest  = FileUtil::suffixAfterPathComponent( lowerRel, path::kGamePack );
                     const size_t slash = rest.find( '/' );
                     if ( slash == string::npos )
                     {
-                        outRoot         = FileUtil::joinPath( gamesRoot, rest );
+                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest );
                         outKeyUnderRoot = {};
                         return FileUtil::directoryExists( outRoot );
                     }
-                    outRoot         = FileUtil::joinPath( gamesRoot, rest.substr( 0, slash ) );
+                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest.substr( 0, slash ) );
                     outKeyUnderRoot = rest.substr( slash + 1 );
                     return FileUtil::directoryExists( outRoot );
                 }
+
+                // 2. 임의의 도메인 (<domain>/<key>) 동적 해석 (engine, common, editor, dlc, mods 등)
+                const size_t firstSlash = lowerRel.find( '/' );
+                if ( firstSlash != string::npos )
+                {
+                    const string_view domain             = lowerRel.substr( 0, firstSlash );
+                    const string      candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
+                    if ( FileUtil::directoryExists( candidateDomainDir ) )
+                    {
+                        outRoot         = candidateDomainDir;
+                        outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
+                        return true;
+                    }
+                }
+
                 return false;
             }
 
@@ -172,22 +170,11 @@ namespace sw
 
         _s_projectFolderPath = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
 
-        const string resourceRoot   = FileUtil::joinPath( rootPath, path::kResourceFolder );
-        const string resourceEngine = FileUtil::joinPath( resourceRoot, path::kEnginePack );
-        const string resourceCommon = FileUtil::joinPath( resourceRoot, path::kCommonPack );
-        const string resourceGames  = FileUtil::joinPath( resourceRoot, path::kGamePack );
-        const string resourceEditor = FileUtil::joinPath( resourceRoot, path::kEditorPack );
+        const string resourceRoot = FileUtil::joinPath( rootPath, path::kResourceFolder );
 
-        // Display-only top-level (not a search root — no assets live directly under Resource/).
+        // Canonical top-level Resource/ root (all domains are dynamically resolved under this).
         _s_resourceRootFolderPath =
             FileUtil::directoryExists( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
-
-        _s_engineFolderPath = FileUtil::directoryExists( resourceEngine ) ? FileUtil::normalizeSeparators( resourceEngine ) : "";
-        _s_commonFolderPath = FileUtil::directoryExists( resourceCommon ) ? FileUtil::normalizeSeparators( resourceCommon ) : "";
-        _s_editorFolderPath = FileUtil::directoryExists( resourceEditor ) ? FileUtil::normalizeSeparators( resourceEditor ) : "";
-
-        _s_gameFolderPath =
-            FileUtil::directoryExists( resourceGames ) ? FileUtil::normalizeSeparators( resourceGames ) : "";
 
         if ( _s_listSearchPriority.empty() )
             _s_listSearchPriority = getDefaultSearchPriority();
@@ -277,10 +264,25 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const string normalizedKey = FileUtil::normalizePath( relativePath );
+        // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
+        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
+                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
+        if ( bIsAbsolute )
+        {
+            if ( FileUtil::fileExists( relativePath ) )
+            {
+                if ( pOutAbsPath != nullptr )
+                    *pOutAbsPath = string( relativePath );
+                return FileUtil::readTextFile( relativePath, outText );
+            }
+            return false;
+        }
+
+        const string         normalizedKey = FileUtil::normalizePath( relativePath );
+        ResourcePackManager& packManager   = getPackManager();
 
         // 1. 낱개 파일 우선 로드가 켜져 있는 경우, 디스크 파일 먼저 확인
-        if ( _s_packManager.isAllowLooseFiles() )
+        if ( packManager.isAllowLooseFiles() )
         {
             const string absPath = getResourcePath( relativePath );
             if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
@@ -293,22 +295,28 @@ namespace sw
 
         // 2. VFS 마운트된 팩들에서 O(1) 해시 룩업 및 압축 해제 읽기
         string mountedPackPath;
-        if ( _s_packManager.readTextFile( normalizedKey, outText, &mountedPackPath ) )
+        if ( packManager.readTextFile( normalizedKey, outText, &mountedPackPath ) )
         {
             if ( pOutAbsPath != nullptr )
                 *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
             return true;
         }
 
-        // 3. 디스크 fallback 읽기
-        string absPath = getResourcePath( relativePath );
-        if ( absPath.empty() )
-            absPath = string( relativePath );
-        if ( FileUtil::fileExists( absPath ) == false )
-            return false;
-        if ( pOutAbsPath != nullptr )
-            *pOutAbsPath = absPath;
-        return FileUtil::readTextFile( absPath, outText );
+        // 3. 낱개 파일 우선 로드가 켜져 있는 경우에만 디스크 fallback 읽기
+        if ( packManager.isAllowLooseFiles() )
+        {
+            string absPath = getResourcePath( relativePath );
+            if ( absPath.empty() )
+                absPath = string( relativePath );
+            if ( FileUtil::fileExists( absPath ) )
+            {
+                if ( pOutAbsPath != nullptr )
+                    *pOutAbsPath = absPath;
+                return FileUtil::readTextFile( absPath, outText );
+            }
+        }
+
+        return false;
     }
 
     bool ResourceUtil::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
@@ -316,9 +324,20 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const string normalizedKey = FileUtil::normalizePath( relativePath );
+        // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
+        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
+                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
+        if ( bIsAbsolute )
+        {
+            if ( FileUtil::fileExists( relativePath ) )
+                return FileUtil::readFile( relativePath, outBytes );
+            return false;
+        }
 
-        if ( _s_packManager.isAllowLooseFiles() )
+        const string         normalizedKey = FileUtil::normalizePath( relativePath );
+        ResourcePackManager& packManager   = getPackManager();
+
+        if ( packManager.isAllowLooseFiles() )
         {
             const string absPath = getResourcePath( relativePath );
             if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
@@ -327,17 +346,21 @@ namespace sw
             }
         }
 
-        if ( _s_packManager.readFile( normalizedKey, outBytes ) )
+        if ( packManager.readFile( normalizedKey, outBytes ) )
         {
             return true;
         }
 
-        string absPath = getResourcePath( relativePath );
-        if ( absPath.empty() )
-            absPath = string( relativePath );
-        if ( FileUtil::fileExists( absPath ) == false )
-            return false;
-        return FileUtil::readFile( absPath, outBytes );
+        if ( packManager.isAllowLooseFiles() )
+        {
+            string absPath = getResourcePath( relativePath );
+            if ( absPath.empty() )
+                absPath = string( relativePath );
+            if ( FileUtil::fileExists( absPath ) )
+                return FileUtil::readFile( absPath, outBytes );
+        }
+
+        return false;
     }
 
     bool ResourceUtil::hasResource( string_view relativePath )
@@ -345,96 +368,52 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        const string normalizedKey = FileUtil::normalizePath( relativePath );
-        if ( _s_packManager.hasFile( normalizedKey ) )
+        // 0. OS 절대 경로인 경우 디스크에서 직접 확인
+        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
+                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
+        if ( bIsAbsolute )
+            return FileUtil::fileExists( relativePath );
+
+        const string         normalizedKey = FileUtil::normalizePath( relativePath );
+        ResourcePackManager& packManager   = getPackManager();
+
+        if ( packManager.hasFile( normalizedKey ) )
             return true;
 
-        const string absPath = getResourcePath( relativePath );
-        if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
-            return true;
+        if ( packManager.isAllowLooseFiles() )
+        {
+            const string absPath = getResourcePath( relativePath );
+            if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
+                return true;
 
-        return FileUtil::fileExists( relativePath );
-    }
+            return FileUtil::fileExists( relativePath );
+        }
 
-    bool ResourceUtil::mountPack( string_view packFilePath, int32 priority )
-    {
-        clearPathCache();
-        return _s_packManager.mountPack( packFilePath, priority );
-    }
-
-    bool ResourceUtil::unmountPack( string_view packFilePath )
-    {
-        clearPathCache();
-        return _s_packManager.unmountPack( packFilePath );
-    }
-
-    void ResourceUtil::unmountAllPacks()
-    {
-        clearPathCache();
-        _s_packManager.unmountAll();
-    }
-
-    void ResourceUtil::setAllowLooseFiles( bool bAllow )
-    {
-        clearPathCache();
-        _s_packManager.setAllowLooseFiles( bAllow );
-    }
-
-    bool ResourceUtil::isAllowLooseFiles()
-    {
-        return _s_packManager.isAllowLooseFiles();
+        return false;
     }
 
     ResourcePackManager& ResourceUtil::getPackManager()
     {
-        return _s_packManager;
+        return engine::getResourceManager().getPackManager();
     }
 
-    const string& ResourceUtil::getEngineFolderPath()
+    string ResourceUtil::getDomainFolderPath( string_view domainName, string_view subFolder )
     {
-        return _s_engineFolderPath;
-    }
-
-    const string& ResourceUtil::getCommonFolderPath()
-    {
-        return _s_commonFolderPath;
-    }
-
-    const string& ResourceUtil::getGameFolderPath()
-    {
-        return _s_gameFolderPath;
-    }
-
-    string ResourceUtil::getActivePackFolderPath()
-    {
-        const string& packRoot = GameConfig::getActive()._packRoot;
-        if ( packRoot.empty() )
+        if ( _s_resourceRootFolderPath.empty() || domainName.empty() )
             return {};
 
-        const string absPath = makeAbsolutePath( packRoot );
-        if ( absPath.empty() == false )
-            return FileUtil::normalizeSeparators( absPath );
-
-        const string& resourceRoot = getRootFolderPath();
-        if ( resourceRoot.empty() )
+        const string domainDir = FileUtil::joinPath( _s_resourceRootFolderPath, domainName );
+        if ( FileUtil::directoryExists( domainDir ) == false )
             return {};
-        return FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, packRoot ) );
-    }
 
-    string ResourceUtil::joinActivePackPath( string_view relativeUnderPack )
-    {
-        if ( relativeUnderPack.empty() )
-            return getActivePackFolderPath();
+        if ( subFolder.empty() )
+            return FileUtil::normalizeSeparators( domainDir );
 
-        const string packFolder = getActivePackFolderPath();
-        if ( packFolder.empty() )
-            return {};
-        return FileUtil::joinPath( packFolder, relativeUnderPack );
-    }
+        const string targetDir = FileUtil::joinPath( domainDir, subFolder );
+        if ( FileUtil::directoryExists( targetDir ) )
+            return FileUtil::normalizeSeparators( targetDir );
 
-    const string& ResourceUtil::getEditorFolderPath()
-    {
-        return _s_editorFolderPath;
+        return {};
     }
 
     const string& ResourceUtil::getRootFolderPath()
@@ -445,29 +424,6 @@ namespace sw
     const string& ResourceUtil::getProjectFolderPath()
     {
         return _s_projectFolderPath;
-    }
-
-    vector<string> ResourceUtil::getResourceFolders( string_view folderName )
-    {
-        vector<string> listFolder;
-        const string   lowerName = FileUtil::normalizePath( folderName );
-
-        for ( const string& resourceFolder : _s_listResourceFolder )
-        {
-            const string folderPath = FileUtil::joinPath( resourceFolder, lowerName );
-            if ( FileUtil::directoryExists( folderPath ) )
-                listFolder.push_back( FileUtil::normalizeSeparators( folderPath ) );
-
-#if defined( SW_PLATFORM_LINUX )
-            if ( lowerName != folderName )
-            {
-                const string rawPath = FileUtil::joinPath( resourceFolder, folderName );
-                if ( FileUtil::directoryExists( rawPath ) )
-                    listFolder.push_back( FileUtil::normalizeSeparators( rawPath ) );
-            }
-#endif
-        }
-        return listFolder;
     }
 
     bool ResourceUtil::setSearchPriority( const vector<string>& listPriority )
@@ -490,17 +446,18 @@ namespace sw
             const string token = FileUtil::normalizePath( tokenRaw );
             if ( token == "game" )
             {
-                const string activePack = getActivePackFolderPath();
+                const string activePack = getDomainFolderPath( GameConfig::getActive()._packRoot );
                 if ( activePack.empty() == false && FileUtil::directoryExists( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );
                     if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
                         _s_listResourceFolder.push_back( normPack );
                 }
-                if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
+                const string gameDir = getDomainFolderPath( path::kGamePack );
+                if ( gameDir.empty() == false && FileUtil::directoryExists( gameDir ) )
                 {
                     vector<string> listPackFolder;
-                    FileUtil::collectFolders( _s_gameFolderPath, listPackFolder, false, false );
+                    FileUtil::collectFolders( gameDir, listPackFolder, false, false );
                     for ( const string& packFolder : listPackFolder )
                     {
                         const string normPack = FileUtil::normalizeSeparators( packFolder );
@@ -509,47 +466,18 @@ namespace sw
                             _s_listResourceFolder.push_back( normPack );
                         }
                     }
-                    const string norm = FileUtil::normalizeSeparators( _s_gameFolderPath );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
-                        _s_listResourceFolder.push_back( norm );
-                }
-            }
-            else if ( token == "common" )
-            {
-                if ( _s_commonFolderPath.empty() == false && FileUtil::directoryExists( _s_commonFolderPath ) )
-                {
-                    const string norm = FileUtil::normalizeSeparators( _s_commonFolderPath );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
-                        _s_listResourceFolder.push_back( norm );
-                }
-            }
-            else if ( token == "engine" )
-            {
-                if ( _s_engineFolderPath.empty() == false && FileUtil::directoryExists( _s_engineFolderPath ) )
-                {
-                    const string norm = FileUtil::normalizeSeparators( _s_engineFolderPath );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
-                        _s_listResourceFolder.push_back( norm );
-                }
-            }
-            else if ( token == "editor" )
-            {
-                if ( _s_editorFolderPath.empty() == false && FileUtil::directoryExists( _s_editorFolderPath ) )
-                {
-                    const string norm = FileUtil::normalizeSeparators( _s_editorFolderPath );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
-                        _s_listResourceFolder.push_back( norm );
+                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), gameDir ) == _s_listResourceFolder.end() )
+                        _s_listResourceFolder.push_back( gameDir );
                 }
             }
             else
             {
-                // 커스텀 팩 / DLC / 모드 경로 (예: "dlc/expansion1", "mods/pack1")
-                const string customPath = FileUtil::joinPath( resourceRoot, token );
-                if ( FileUtil::directoryExists( customPath ) )
+                // 모든 도메인/커스텀 팩/DLC/모드 동적 해석 ("engine", "common", "editor", "dlc/expansion1", "mods/pack1")
+                const string domainDir = getDomainFolderPath( token );
+                if ( domainDir.empty() == false )
                 {
-                    const string norm = FileUtil::normalizeSeparators( customPath );
-                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
-                        _s_listResourceFolder.push_back( norm );
+                    if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), domainDir ) == _s_listResourceFolder.end() )
+                        _s_listResourceFolder.push_back( domainDir );
                 }
             }
         }
@@ -586,10 +514,10 @@ namespace sw
         {
             ResourceUtilInternal::considerSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
-        ResourceUtilInternal::considerSaveRoot( folderNorm, _s_gameFolderPath, physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, _s_engineFolderPath, physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, _s_commonFolderPath, physicalRoot, rootNorm );
-        ResourceUtilInternal::considerSaveRoot( folderNorm, _s_editorFolderPath, physicalRoot, rootNorm );
+        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
+        ResourceUtilInternal::considerSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
 
         if ( physicalRoot.empty() )
             return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ absoluteFolder } ) );
@@ -628,18 +556,8 @@ namespace sw
 
     string ResourceUtil::_s_resourceRootFolderPath;
 
-    string ResourceUtil::_s_engineFolderPath;
-
-    string ResourceUtil::_s_commonFolderPath;
-
-    string ResourceUtil::_s_gameFolderPath;
-
-    string ResourceUtil::_s_editorFolderPath;
-
     vector<string> ResourceUtil::_s_listSearchPriority;
 
     vector<string> ResourceUtil::_s_listResourceFolder;
-
-    ResourcePackManager ResourceUtil::_s_packManager;
 
 } // namespace sw

@@ -20,6 +20,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -545,7 +546,7 @@ namespace sw::editor
         params._description         = "Scene";
         params._bEnableMultiselect  = false;
         params._listFilterExtension = { ".scene.xml", ".xml" };
-        const string mapsDir        = ResourceUtil::joinActivePackPath( path::kMapsFolder );
+        const string mapsDir        = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::directoryExists( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );

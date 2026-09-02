@@ -24,6 +24,7 @@ namespace sw
      */
     struct MountedPack
     {
+        string                         _domainName{};  ///< 팩 도메인 식별자 (예: "engine", "common", "game_empty")
         int32                          _priority{ 0 }; ///< 높을수록 우선 탐색
         unique_ptr<ResourcePackReader> _pReader;
     };

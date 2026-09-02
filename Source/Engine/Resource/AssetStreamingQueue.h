@@ -20,7 +20,8 @@ namespace sw
         Immediate = 3,
     };
 
-    using OnStreamingCompleteDelegate = Delegate<void( string_view, bool )>;
+    using OnStreamingCompleteDelegate     = Delegate<void( string_view, bool )>;
+    using OnStreamingDataCompleteDelegate = Delegate<void( string_view, bool, const vector<uint8>& )>;
 
     /**
      * @struct StreamingRequest
@@ -49,6 +50,10 @@ namespace sw
         void update( size_t maxCompletionsPerFrame = 32 );
 
         bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, OnStreamingCompleteDelegate onComplete = {} );
+
+        /** @brief 에셋 바이너리 데이터를 백그라운드에서 직접 프리페치하고 완료 콜백으로 전달받습니다. */
+        bool requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, OnStreamingDataCompleteDelegate onComplete = {} );
+
         /** @brief 에셋 프리페치를 비동기 요청하고 완료 상태를 TaskFuture<bool>로 반환합니다. */
         TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );
         void             cancelRequest( string_view assetPath );
@@ -64,20 +69,23 @@ namespace sw
     private:
         struct CompletedItem
         {
-            string                      _path;
-            bool                        _bSuccess;
-            OnStreamingCompleteDelegate _callback;
+            string                          _path;
+            bool                            _bSuccess;
+            vector<uint8>                   _bytes;
+            OnStreamingCompleteDelegate     _callback;
+            OnStreamingDataCompleteDelegate _dataCallback;
         };
 
-        /** @brief TaskArgs: path string. 워커에서 파일 존재 여부를 확인합니다. */
+        /** @brief TaskArgs: path string, generation, bFetchData. 워커에서 파일 존재 확인 및 바이너리 데이터를 읽습니다. */
         void processAssetTask( const TaskArgs& args );
 
     private:
-        mutable mutex                                              _mutex;
-        vector<StreamingRequest>                                   _listPendingRequest;
-        unordered_map<string, bool>                                _mapLoadedAsset;
-        unordered_set<string>                                      _uniqueActiveRequest;
-        unordered_map<string, vector<OnStreamingCompleteDelegate>> _mapInFlightCallback;
+        mutable mutex                                                  _mutex;
+        vector<StreamingRequest>                                       _listPendingRequest;
+        unordered_map<string, bool>                                    _mapLoadedAsset;
+        unordered_set<string>                                          _uniqueActiveRequest;
+        unordered_map<string, vector<OnStreamingCompleteDelegate>>     _mapInFlightCallback;
+        unordered_map<string, vector<OnStreamingDataCompleteDelegate>> _mapInFlightDataCallback;
         /**
          * @brief 경로별 요청 세대. 취소 후 즉시 재요청하면 세대가 올라갑니다.
          * @details 취소해도 이미 큐에 들어간 워커 태스크는 계속 실행됩니다. 세대가 없으면

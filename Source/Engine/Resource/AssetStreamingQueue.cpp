@@ -45,6 +45,7 @@ namespace sw
         _listPendingRequest.clear();
         _uniqueActiveRequest.clear();
         _mapInFlightCallback.clear();
+        _mapInFlightDataCallback.clear();
         _mapRequestGeneration.clear();
 
         CompletedItem discardItem{};
@@ -65,7 +66,6 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _mapLoadedAsset.find( pathStr ) != _mapLoadedAsset.end() )
         {
-            // 이미 로드됨
             if ( onComplete.isBound() )
                 onComplete( pathStr, true );
             return true;
@@ -73,14 +73,12 @@ namespace sw
 
         if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
         {
-            // 이미 처리 중인 경우 대기 콜백 목록에 추가하여 완료 시 함께 통지
             if ( onComplete.isBound() )
                 _mapInFlightCallback[pathStr].push_back( onComplete );
             return true;
         }
 
         _uniqueActiveRequest.insert( pathStr );
-        // 이 요청의 세대를 확정한다. 워커가 끝났을 때 세대가 그대로여야 콜백을 발행한다.
         const uint64 generation = ++_mapRequestGeneration[pathStr];
         if ( onComplete.isBound() )
             _mapInFlightCallback[pathStr].push_back( onComplete );
@@ -97,13 +95,12 @@ namespace sw
             TaskHandle   handle      = taskManager.emplaceTask(
                 "AssetStreamingTask",
                 SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-                MakeTaskArgs( pathStr, generation ),
+                MakeTaskArgs( pathStr, generation, false ),
                 TaskThreadAffinity::Any );
             handle.submit();
         }
         else
         {
-            // 동기 즉시 폴백
             const bool bExists       = ResourceUtil::hasResource( pathStr );
             _mapLoadedAsset[pathStr] = bExists;
             _uniqueActiveRequest.erase( pathStr );
@@ -135,6 +132,76 @@ namespace sw
         return true;
     }
 
+    bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, OnStreamingDataCompleteDelegate onComplete )
+    {
+        if ( assetPath.empty() )
+            return false;
+
+        const string pathStr = string( assetPath );
+
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
+        {
+            if ( onComplete.isBound() )
+                _mapInFlightDataCallback[pathStr].push_back( onComplete );
+            return true;
+        }
+
+        _uniqueActiveRequest.insert( pathStr );
+        const uint64 generation = ++_mapRequestGeneration[pathStr];
+        if ( onComplete.isBound() )
+            _mapInFlightDataCallback[pathStr].push_back( onComplete );
+
+        StreamingRequest req{};
+        req._assetPath = pathStr;
+        req._priority  = priority;
+        _listPendingRequest.push_back( req );
+
+        if ( engine::areEngineServicesBound() )
+        {
+            TaskManager& taskManager = engine::getTaskManager();
+            TaskHandle   handle      = taskManager.emplaceTask(
+                "AssetStreamingTask",
+                SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+                MakeTaskArgs( pathStr, generation, true ),
+                TaskThreadAffinity::Any );
+            handle.submit();
+        }
+        else
+        {
+            vector<uint8> bytes;
+            const bool    bSuccess   = ResourceUtil::readBinaryResource( pathStr, bytes );
+            _mapLoadedAsset[pathStr] = bSuccess;
+            _uniqueActiveRequest.erase( pathStr );
+
+            for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
+            {
+                if ( it->_assetPath == pathStr )
+                {
+                    _listPendingRequest.erase( it );
+                    break;
+                }
+            }
+
+            auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
+            if ( itDataCallbacks != _mapInFlightDataCallback.end() )
+            {
+                for ( const auto& cb : itDataCallbacks->second )
+                {
+                    CompletedItem item{};
+                    item._path         = pathStr;
+                    item._dataCallback = cb;
+                    item._bSuccess     = bSuccess;
+                    item._bytes        = bytes;
+                    _queueCompleted.enqueue( std::move( item ) );
+                }
+                _mapInFlightDataCallback.erase( itDataCallbacks );
+            }
+        }
+
+        return true;
+    }
+
     TaskFuture<bool> AssetStreamingQueue::requestAssetFuture( string_view assetPath, StreamingPriority priority )
     {
         auto       pPromise   = sw::make_shared<TaskPromise<bool>>();
@@ -159,17 +226,26 @@ namespace sw
     {
         const string pathStr    = args.get<string>( 0 );
         const uint64 generation = args.get<uint64>( 1 );
-        const bool   bExists    = ResourceUtil::hasResource( pathStr );
+        const bool   bFetchData = args.getCount() > 2 ? args.get<bool>( 2 ) : false;
+
+        vector<uint8> bytes;
+        bool          bSuccess = false;
+        if ( bFetchData )
+        {
+            bSuccess = ResourceUtil::readBinaryResource( pathStr, bytes );
+        }
+        else
+        {
+            bSuccess = ResourceUtil::hasResource( pathStr );
+        }
 
         std::scoped_lock<mutex> innerLock{ _mutex };
 
-        // 취소된 뒤 같은 경로가 다시 요청되면 세대가 올라간다. 오래된 태스크가 새 요청의
-        // 콜백을 대신 완료시키지 않도록 여기서 걸러낸다.
         const auto itGeneration = _mapRequestGeneration.find( pathStr );
         if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
             return;
 
-        _mapLoadedAsset[pathStr] = bExists;
+        _mapLoadedAsset[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
 
         for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
@@ -189,10 +265,25 @@ namespace sw
                 CompletedItem item{};
                 item._path     = pathStr;
                 item._callback = cb;
-                item._bSuccess = bExists;
+                item._bSuccess = bSuccess;
                 _queueCompleted.enqueue( std::move( item ) );
             }
             _mapInFlightCallback.erase( itCallbacks );
+        }
+
+        auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
+        if ( itDataCallbacks != _mapInFlightDataCallback.end() )
+        {
+            for ( const auto& cb : itDataCallbacks->second )
+            {
+                CompletedItem item{};
+                item._path         = pathStr;
+                item._dataCallback = cb;
+                item._bSuccess     = bSuccess;
+                item._bytes        = bytes;
+                _queueCompleted.enqueue( std::move( item ) );
+            }
+            _mapInFlightDataCallback.erase( itDataCallbacks );
         }
     }
 
@@ -216,7 +307,20 @@ namespace sw
             _mapInFlightCallback.erase( itCallbacks );
         }
 
-        // 이미 실행 중인 워커가 나중에 완료돼도 무시되도록 세대를 올린다.
+        const auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
+        if ( itDataCallbacks != _mapInFlightDataCallback.end() )
+        {
+            for ( const auto& cb : itDataCallbacks->second )
+            {
+                CompletedItem item{};
+                item._path         = pathStr;
+                item._dataCallback = cb;
+                item._bSuccess     = false;
+                _queueCompleted.enqueue( std::move( item ) );
+            }
+            _mapInFlightDataCallback.erase( itDataCallbacks );
+        }
+
         ++_mapRequestGeneration[pathStr];
 
         for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
@@ -269,6 +373,8 @@ namespace sw
         {
             if ( item._callback.isBound() )
                 item._callback( item._path, item._bSuccess );
+            if ( item._dataCallback.isBound() )
+                item._dataCallback( item._path, item._bSuccess, item._bytes );
             ++processedCount;
         }
     }

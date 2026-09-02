@@ -81,10 +81,11 @@ namespace sw
          */
         bool upgradeXml( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion = nullptr );
 
+    private:
         /// @brief (종류, fromVersion) → migrator 키
         struct MigratorKey
         {
-            AssetKind          _kind = AssetKind::Material;
+            AssetKind          _kind{ AssetKind::Material };
             AssetFormatVersion _fromVersion{ 0 };
 
             /** @brief 같으면 true를 반환합니다. */

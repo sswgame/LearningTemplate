@@ -17,10 +17,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/ResourcePackManager.h"
-
 namespace sw
 {
+    class ResourcePackManager;
+
     /**
      * @class ResourceUtil
      * @brief 리소스 도메인 루트·검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 변환하며, VFS .pack 아카이브를 마운트 관리합니다.
@@ -78,36 +78,17 @@ namespace sw
          */
         static bool hasResource( string_view relativePath );
 
-        /** @brief .pack 바이너리 파일을 VFS에 마운트합니다. */
-        static bool mountPack( string_view packFilePath, int32 priority = 0 );
-
-        /** @brief 마운트된 .pack 파일을 언마운트합니다. */
-        static bool unmountPack( string_view packFilePath );
-
-        /** @brief 모든 마운트된 팩을 언마운트합니다. */
-        static void unmountAllPacks();
-
-        /** @brief 낱개 파일(Loose File) 우선 로드 허용 여부 설정 */
-        static void setAllowLooseFiles( bool bAllow );
-
-        /** @brief 낱개 파일 우선 로드 허용 여부 */
-        static bool isAllowLooseFiles();
-
         /** @brief VFS 팩 매니저 인스턴스 참조 반환 */
         static ResourcePackManager& getPackManager();
 
-        /** @brief Engine 리소스 폴더 절대 경로 (`Resource/engine`). 없으면 empty. */
-        static const string& getEngineFolderPath();
-        /** @brief Common 리소스 폴더 절대 경로 (`Resource/common`). 없으면 empty. */
-        static const string& getCommonFolderPath();
-        /** @brief Game 컨테이너 절대 경로 (`Resource/game`) — 표시/브라우즈용. 검색 루트는 하위 팩들. */
-        static const string& getGameFolderPath();
-        /** @brief 활성 게임 팩 폴더 절대 경로 (`Resource/game/<pack>`). GameConfig._packRoot 기준. */
-        static string getActivePackFolderPath();
-        /** @brief 활성 팩 폴더 아래 상대 경로를 이어 붙입니다. relative가 비면 팩 루트. */
-        static string joinActivePackPath( string_view relativeUnderPack );
-        /** @brief Editor 리소스 폴더 절대 경로 (`Resource/editor`). 없으면 empty. */
-        static const string& getEditorFolderPath();
+        /**
+         * @brief 특정 도메인의 특정 서브폴더 절대 경로를 반환합니다 (`Resource/<domainName>/<subFolder>`).
+         * @param domainName 예: "engine", "common", "game/empty", "editor", "dlc/winter"
+         * @param subFolder  예: "shaders", "textures", "prefabs" (기본값 빈 문자열: 도메인 루트)
+         * @return 디렉터리가 존재하면 정규화된 전체 절대 경로, 없으면 빈 문자열
+         */
+        static string getDomainFolderPath( string_view domainName, string_view subFolder = {} );
+
         /** @brief `Resource/` 폴더 절대 경로 (표시·감시용 최상위, 검색 루트 아님). */
         static const string& getRootFolderPath();
         /** @brief 프로젝트 루트 절대 경로 (`Resource/`·`Config/` 의 부모). */
@@ -131,12 +112,6 @@ namespace sw
         static void clearPathCache();
 
         /**
-         * @brief 검색 루트들 아래에서 `folderName` 디렉터리가 존재하는 절대 경로 목록을 반환합니다.
-         * @param folderName 예: `shaders`, `textures` (소문자 우선, 원본 표기 재시도)
-         */
-        static vector<string> getResourceFolders( string_view folderName );
-
-        /**
          * @brief 저장용 폴더 절대 경로를 만듭니다.
          * @param absoluteFolder 기존에 속한 검색/도메인 루트 아래의 절대 폴더
          * @return 루트는 FS 대소문자 유지, 루트 아래 상대 구간만 소문자로 강제한 경로
@@ -153,15 +128,10 @@ namespace sw
         static string makeSavePath( string_view absoluteFolder, string_view fileName );
 
     private:
-        static atomic<bool>        _s_bInitialize;            ///< initialize() 완료 여부
-        static string              _s_projectFolderPath;      ///< 프로젝트 루트
-        static string              _s_resourceRootFolderPath; ///< Resource/ (표시용)
-        static string              _s_engineFolderPath;       ///< Resource/engine
-        static string              _s_commonFolderPath;       ///< Resource/common
-        static string              _s_gameFolderPath;         ///< Resource/game
-        static string              _s_editorFolderPath;       ///< Resource/editor
-        static vector<string>      _s_listSearchPriority;     ///< 검색 우선순위 토큰 목록
-        static vector<string>      _s_listResourceFolder;     ///< getResourcePath 검색 루트들
-        static ResourcePackManager _s_packManager;            ///< VFS 팩 마운트 매니저
+        static atomic<bool>   _s_bInitialize;            ///< initialize() 완료 여부
+        static string         _s_projectFolderPath;      ///< 프로젝트 루트
+        static string         _s_resourceRootFolderPath; ///< Resource/ 최상위 루트 (유일한 기준점)
+        static vector<string> _s_listSearchPriority;     ///< 검색 우선순위 토큰 목록
+        static vector<string> _s_listResourceFolder;     ///< getResourcePath 검색 루트들
     };
 } // namespace sw

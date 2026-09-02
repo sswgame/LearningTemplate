@@ -22,10 +22,11 @@ namespace sw
 {
     class MaterialCache;
     class PrefabManager;
+    class ResourcePackManager;
 
     /**
      * @class ResourceManager
-     * @brief 팩 에셋 식별·스키마·인스턴스 캐시를 한 객체로 소유합니다.
+     * @brief 팩 에셋 식별·스키마·인스턴스 캐시 및 VFS 팩 매니저를 한 객체로 소유합니다.
      */
     class SW_API ResourceManager
     {
@@ -39,11 +40,11 @@ namespace sw
         ResourceManager& operator=( const ResourceManager& ) = delete;
 
         /**
-         * @brief Resource/ 검색 루트를 잡고 내장 XML migrator를 등록합니다.
+         * @brief Resource/ 검색 루트를 잡고 VFS 팩 마운트 및 내장 XML migrator를 등록합니다.
          * @return 프로젝트 루트를 찾으면 true.
          */
         bool initialize();
-        /** @brief Material/GUID 맵을 비웁니다. Prefab 캐시는 소멸자에서 정리됩니다. */
+        /** @brief Material/GUID 맵을 비우고 마운트된 팩을 정리합니다. */
         void shutdown();
 
         /** @brief 핫리로드 감시를 위해 ReloadFileManager를 연결합니다. */
@@ -53,6 +54,10 @@ namespace sw
 
         /** @brief 불필요한 캐시 및 스트리밍 큐 대기 내역을 정리하여 메모리를 반환합니다. */
         void garbageCollectUnusedAssets();
+
+        /** @brief VFS 마운트된 리소스 팩 매니저 반환. */
+        ResourcePackManager&       getPackManager();
+        const ResourcePackManager& getPackManager() const;
 
         /** @brief 경로 ↔ GUID (.meta). */
         AssetDatabase&       getAssetDatabase() { return _assetDatabase; }
@@ -74,11 +79,12 @@ namespace sw
         void onResourceFileChanged( const FileChangeEvent& ev );
 
     private:
-        AssetDatabase             _assetDatabase;
-        AssetFormatRegistry       _assetFormatRegistry;
-        unique_ptr<MaterialCache> _materialCache;
-        unique_ptr<PrefabManager> _prefabManager;
-        FileWatchHandle           _resourceWatchHandle;
-        ReloadFileManager*        _pReloadFileManager;
+        AssetDatabase                   _assetDatabase;
+        AssetFormatRegistry             _assetFormatRegistry;
+        unique_ptr<MaterialCache>       _materialCache;
+        unique_ptr<PrefabManager>       _prefabManager;
+        unique_ptr<ResourcePackManager> _pPackManager;
+        FileWatchHandle                 _resourceWatchHandle;
+        ReloadFileManager*              _pReloadFileManager;
     };
 } // namespace sw
