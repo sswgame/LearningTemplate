@@ -1301,6 +1301,48 @@ SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
 }
 
 /**
+ * @brief [ActionMapTest] 대량 레이어 동적 등록으로 _mapLayer/_listLayerEntry가 여러 번 재할당된 뒤에도
+ *        먼저 바인딩된 액션의 ActionBinding::_cachedLayerIndex(레이어 활성 판정 캐시)가 여전히 정확한지 검증.
+ */
+SW_TEST_CASE( ActionMapTest, LayerCacheStableAcrossMassiveDynamicRegistration )
+{
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
+
+    sw::ActionMap& actionMap = input.getActionMap();
+
+    // 1) 먼저 레이어와 액션을 하나 만들어 _cachedLayerIndex가 여기서 캐싱되게 한다.
+    actionMap.registerLayer( "EarlyLayer", 0, true );
+    actionMap.bind( "EarlyAction", sw::Key::E, sw::ActionTrigger::Down, "EarlyLayer" );
+
+    // 2) 그 뒤로 레이어 1,000개를 등록해 내부 저장소가 여러 번 재할당되도록 강제한다.
+    for ( uint32 layerIndex = 0; layerIndex < 1000; ++layerIndex )
+    {
+        utf8 arrName[32]{};
+        std::snprintf( arrName, sizeof( arrName ), "Layer_%u", layerIndex );
+        actionMap.registerLayer( arrName, 0, true );
+    }
+
+    // 3) 재할당 이후에도 EarlyAction의 레이어 활성 판정이 정확해야 한다.
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_TRUE( actionMap.isActionDown( "EarlyAction" ) );
+    input.endFrame();
+
+    // 4) 재할당이 여러 번 일어난 뒤에 EarlyLayer를 비활성화해도 즉시 반영되어야 한다
+    //    (댕글링 포인터였다면 해제/이동된 메모리를 읽어 결과가 틀리거나 크래시했을 지점).
+    actionMap.setLayerEnabled( "EarlyLayer", false );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
+    input.beginFrame( 0.016f );
+    actionMap.update( 0.016f );
+    SW_EXPECT_FALSE( actionMap.isActionDown( "EarlyAction" ) );
+    input.endFrame();
+
+    input.shutdown();
+}
+
+/**
  * @brief [ActionMapTest] 1,000개 대량 액션 생성 및 맵 재구성 시 세대 토큰 무효화 스트레스 검증
  */
 SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )

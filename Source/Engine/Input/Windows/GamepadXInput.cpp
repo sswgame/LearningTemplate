@@ -102,8 +102,7 @@ namespace sw
 #if defined( _WIN32 )
     void GamepadXInput::pollUser( uint32 userIndex, float32 deltaTime )
     {
-        _prevButtonMask = _buttonMask;
-
+        // _prevButtonMask는 GamepadDevice::onFrameBegin()이 poll() 호출 직전에 이미 갱신합니다.
         const bool bWasConnected = ( _bConnected == SW_TRUE );
 
         if ( bWasConnected == false )

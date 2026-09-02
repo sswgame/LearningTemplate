@@ -29,6 +29,7 @@ namespace sw
         , _mapAction{}
         , _mapLayer{}
         , _listActionEntry{}
+        , _listLayerEntry{}
         , _listActionName{}
         , _listLayerName{}
         , _listLayerStack{}
@@ -63,6 +64,7 @@ namespace sw
         _mapAction.clear();
         _mapLayer.clear();
         _listActionEntry.clear();
+        _listLayerEntry.clear();
         _listActionName.clear();
         _listLayerName.clear();
         _listLayerStack.clear();
@@ -124,11 +126,11 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::SingleSlot;
-        binding._trigger      = trigger;
-        binding._arrSlot[0]   = slot;
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::SingleSlot;
+        binding._trigger          = trigger;
+        binding._arrSlot[0]       = slot;
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -167,12 +169,12 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis1D );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::Axis1DComposite;
-        binding._trigger      = ActionTrigger::Down;
-        binding._arrSlot[0]   = InputSlot::fromKey( negativeKey );
-        binding._arrSlot[1]   = InputSlot::fromKey( positiveKey );
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::Axis1DComposite;
+        binding._trigger          = ActionTrigger::Down;
+        binding._arrSlot[0]       = InputSlot::fromKey( negativeKey );
+        binding._arrSlot[1]       = InputSlot::fromKey( positiveKey );
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -212,15 +214,15 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::Vector2DComposite;
-        binding._trigger      = ActionTrigger::Down;
-        binding._arrSlot[0]   = InputSlot::fromKey( up );
-        binding._arrSlot[1]   = InputSlot::fromKey( down );
-        binding._arrSlot[2]   = InputSlot::fromKey( left );
-        binding._arrSlot[3]   = InputSlot::fromKey( right );
-        binding._deadzone     = deadzone;
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::Vector2DComposite;
+        binding._trigger          = ActionTrigger::Down;
+        binding._arrSlot[0]       = InputSlot::fromKey( up );
+        binding._arrSlot[1]       = InputSlot::fromKey( down );
+        binding._arrSlot[2]       = InputSlot::fromKey( left );
+        binding._arrSlot[3]       = InputSlot::fromKey( right );
+        binding._deadzone         = deadzone;
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -246,7 +248,7 @@ namespace sw
         binding._deadzone         = deadzone;
         binding._outerDeadzone    = outerDeadzone;
         binding._responseExponent = responseExponent;
-        binding._pCachedLayer     = findLayer( layerStr );
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -298,11 +300,11 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Axis2D );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::MouseDelta2D;
-        binding._trigger      = ActionTrigger::Down;
-        binding._scale        = sensitivity;
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::MouseDelta2D;
+        binding._trigger          = ActionTrigger::Down;
+        binding._scale            = sensitivity;
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -320,14 +322,14 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Axis2D );
         ActionBinding binding{};
-        binding._layer         = layerStr;
-        binding._kind          = BindingKind::VirtualJoystick2D;
-        binding._trigger       = ActionTrigger::Down;
-        binding._arrSlot[0]    = InputSlot::fromMouseButton( activationButton );
-        binding._deadzone      = deadzone;
-        binding._outerDeadzone = outerDeadzone;
-        binding._scale         = radius;
-        binding._pCachedLayer  = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::VirtualJoystick2D;
+        binding._trigger          = ActionTrigger::Down;
+        binding._arrSlot[0]       = InputSlot::fromMouseButton( activationButton );
+        binding._deadzone         = deadzone;
+        binding._outerDeadzone    = outerDeadzone;
+        binding._scale            = radius;
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -349,12 +351,12 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::Shortcut;
-        binding._trigger      = trigger;
-        binding._modifierMask = modifierMask;
-        binding._arrSlot[0]   = InputSlot::fromKey( key );
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::Shortcut;
+        binding._trigger          = trigger;
+        binding._modifierMask     = modifierMask;
+        binding._arrSlot[0]       = InputSlot::fromKey( key );
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -376,10 +378,10 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( action, InputActionValueType::Boolean );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::AnyKey;
-        binding._trigger      = ActionTrigger::Pressed;
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::AnyKey;
+        binding._trigger          = ActionTrigger::Pressed;
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -397,12 +399,12 @@ namespace sw
 
         ActionEntry&  entry = getOrCreateAction( actionHS, InputActionValueType::Boolean );
         ActionBinding binding{};
-        binding._layer        = layerStr;
-        binding._kind         = BindingKind::Chord;
-        binding._trigger      = trigger;
-        binding._arrSlot[0]   = InputSlot::fromKey( modifierKey );
-        binding._arrSlot[1]   = InputSlot::fromKey( triggerKey );
-        binding._pCachedLayer = findLayer( layerStr );
+        binding._layer            = layerStr;
+        binding._kind             = BindingKind::Chord;
+        binding._trigger          = trigger;
+        binding._arrSlot[0]       = InputSlot::fromKey( modifierKey );
+        binding._arrSlot[1]       = InputSlot::fromKey( triggerKey );
+        binding._cachedLayerIndex = _mapLayer.find( layerStr )->second;
         entry._listBinding.push_back( binding );
         entry._listDefaultBinding.push_back( binding );
         entry._listBindingState.push_back( ActionBindingState{} );
@@ -561,8 +563,9 @@ namespace sw
     void ActionMap::enableOnlyLayer( string_view layer )
     {
         const hashed_string hLayer( layer );
-        for ( auto& [name, def] : _mapLayer )
+        for ( auto& [name, index] : _mapLayer )
         {
+            LayerDef& def = _listLayerEntry[index];
             if ( def._bAlwaysOn == SW_TRUE )
                 continue;
             def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
@@ -1046,7 +1049,7 @@ namespace sw
     {
         auto it = _mapLayer.find( name );
         if ( it != _mapLayer.end() )
-            return it->second;
+            return _listLayerEntry[it->second];
 
         LayerDef def{};
         def._name        = name;
@@ -1056,8 +1059,10 @@ namespace sw
         def._bAlwaysOn   = alwaysOn ? SW_TRUE : SW_FALSE;
 
         _listLayerName.push_back( def._name );
-        auto [insertedIt, _] = _mapLayer.emplace( def._name, def );
-        return insertedIt->second;
+        const uint32 index = static_cast<uint32>( _listLayerEntry.size() );
+        _listLayerEntry.push_back( std::move( def ) );
+        _mapLayer.emplace( name, index );
+        return _listLayerEntry[index];
     }
 
     ActionMap::ActionEntry& ActionMap::getOrCreateAction( const hashed_string& action, InputActionValueType valueType )
@@ -1086,13 +1091,13 @@ namespace sw
     LayerDef* ActionMap::findLayer( const hashed_string& name )
     {
         auto it = _mapLayer.find( name );
-        return it != _mapLayer.end() ? &it->second : nullptr;
+        return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;
     }
 
     const LayerDef* ActionMap::findLayer( const hashed_string& name ) const
     {
         auto it = _mapLayer.find( name );
-        return it != _mapLayer.end() ? &it->second : nullptr;
+        return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;
     }
 
     ActionMap::ActionEntry* ActionMap::findAction( const hashed_string& action )

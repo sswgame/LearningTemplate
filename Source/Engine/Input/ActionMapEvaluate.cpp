@@ -538,14 +538,16 @@ namespace sw
 
     bool ActionMap::isBindingLayerActive( const ActionBinding& binding ) const
     {
-        if ( binding._pCachedLayer == nullptr )
+        if ( binding._cachedLayerIndex == ActionBinding::kInvalidLayerIndex )
         {
-            binding._pCachedLayer = findLayer( binding._layer );
+            auto it = _mapLayer.find( binding._layer );
+            if ( it != _mapLayer.end() )
+                binding._cachedLayerIndex = it->second;
         }
 
-        if ( binding._pCachedLayer != nullptr && _listLayerStack.empty() )
+        if ( binding._cachedLayerIndex != ActionBinding::kInvalidLayerIndex && _listLayerStack.empty() )
         {
-            if ( binding._pCachedLayer->_bEnabled == SW_FALSE )
+            if ( _listLayerEntry[binding._cachedLayerIndex]._bEnabled == SW_FALSE )
                 return false;
             return true;
         }

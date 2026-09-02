@@ -161,20 +161,23 @@ namespace sw
      */
     struct ActionBinding
     {
-        hashed_string           _layer{};
-        BindingKind             _kind{ BindingKind::SingleSlot };
-        ActionTrigger           _trigger{ ActionTrigger::Pressed };
-        uint8                   _deviceIndex{ 0 };
-        uint8                   _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
-        InputSlot               _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
-        GamepadStick            _stick{ GamepadStick::Left };
-        float32                 _deadzone{ 0.0f };
-        float32                 _outerDeadzone{ 1.0f };
-        float32                 _responseExponent{ 1.0f };
-        float32                 _scale{ 1.0f }; /**< MouseDelta2D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
-        mutable const LayerDef* _pCachedLayer{ nullptr };
-        mutable float2          _joystickAnchor{ 0.0f, 0.0f }; /**< VirtualJoystick2D 전용. 드래그 시작 시점 마우스 위치(플로팅 앵커). */
-        mutable bool            _bJoystickAnchored{ false };   /**< VirtualJoystick2D 전용. 현재 드래그 중이며 앵커가 잡혀 있는지. */
+        /** @brief _cachedLayerIndex가 아직 해석되지 않았음을 나타내는 무효값. */
+        static constexpr uint32 kInvalidLayerIndex = 0xFFFFFFFFu;
+
+        hashed_string  _layer{};
+        BindingKind    _kind{ BindingKind::SingleSlot };
+        ActionTrigger  _trigger{ ActionTrigger::Pressed };
+        uint8          _deviceIndex{ 0 };
+        uint8          _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
+        InputSlot      _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
+        GamepadStick   _stick{ GamepadStick::Left };
+        float32        _deadzone{ 0.0f };
+        float32        _outerDeadzone{ 1.0f };
+        float32        _responseExponent{ 1.0f };
+        float32        _scale{ 1.0f };                          /**< MouseDelta2D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
+        mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< _listLayerEntry 안정 인덱스. 포인터가 아니라 인덱스라 재할당에 안전합니다. */
+        mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용. 드래그 시작 시점 마우스 위치(플로팅 앵커). */
+        mutable bool   _bJoystickAnchored{ false };             /**< VirtualJoystick2D 전용. 현재 드래그 중이며 앵커가 잡혀 있는지. */
 
         ActionBinding() = default;
     };
@@ -582,35 +585,36 @@ namespace sw
         const ActionEntry* findAction( string_view action ) const { return findAction( hashed_string( action ) ); }
 
     private:
-        InputManager*                          _pInput;
-        unordered_map<hashed_string, uint32>   _mapAction; /**< 액션 이름 -> _listActionEntry 인덱스. */
-        unordered_map<hashed_string, LayerDef> _mapLayer;
-        vector<ActionEntry>                    _listActionEntry; /**< 안정된 인덱스로만 접근하는 액션 슬롯 소유 저장소 (재할당 시 포인터 무효화 방지). */
-        vector<hashed_string>                  _listActionName;
-        vector<hashed_string>                  _listLayerName;
-        vector<hashed_string>                  _listLayerStack;
-        BufferedActionItem                     _arrBufferedAction[kMaxBufferedActions];
-        uint32                                 _bufferedActionCount{ 0 };
-        uint32                                 _bufferedActionHead{ 0 };
-        CommandHistoryEntry                    _arrCommandHistory[kMaxCommandHistory];
-        uint32                                 _commandHistoryCount{ 0 };
-        uint32                                 _commandHistoryHead{ 0 };
-        uint32                                 _nextGeneration{ 1 };
-        hashed_string                          _defaultLayerName;
-        float2                                 _mouseSensitivity;
-        float2                                 _gamepadSensitivity;
-        float32                                _doubleClickTime;
-        float32                                _doubleClickMaxDistance;
-        float32                                _doubleTapTime;
-        float32                                _holdThreshold;
-        float32                                _navRepeatDelay;
-        float32                                _navRepeatRate;
-        float32                                _totalElapsedTime;
-        DeadzoneShape                          _deadzoneShape;
-        DigitalNormalization                   _digitalNormalization;
-        uint8                                  _bInvertX                   : 1;
-        uint8                                  _bInvertY                   : 1;
-        uint8                                  _bSuppressBaseActionOnChord : 1;
-        [[maybe_unused]] uint8                 _reservedFlags              : 5;
+        InputManager*                        _pInput;
+        unordered_map<hashed_string, uint32> _mapAction;       /**< 액션 이름 -> _listActionEntry 인덱스. */
+        unordered_map<hashed_string, uint32> _mapLayer;        /**< 레이어 이름 -> _listLayerEntry 인덱스. */
+        vector<ActionEntry>                  _listActionEntry; /**< 안정된 인덱스로만 접근하는 액션 슬롯 소유 저장소 (재할당 시 포인터 무효화 방지). */
+        vector<LayerDef>                     _listLayerEntry;  /**< 안정된 인덱스로만 접근하는 레이어 소유 저장소 (ActionBinding::_cachedLayerIndex가 참조). */
+        vector<hashed_string>                _listActionName;
+        vector<hashed_string>                _listLayerName;
+        vector<hashed_string>                _listLayerStack;
+        BufferedActionItem                   _arrBufferedAction[kMaxBufferedActions];
+        uint32                               _bufferedActionCount{ 0 };
+        uint32                               _bufferedActionHead{ 0 };
+        CommandHistoryEntry                  _arrCommandHistory[kMaxCommandHistory];
+        uint32                               _commandHistoryCount{ 0 };
+        uint32                               _commandHistoryHead{ 0 };
+        uint32                               _nextGeneration{ 1 };
+        hashed_string                        _defaultLayerName;
+        float2                               _mouseSensitivity;
+        float2                               _gamepadSensitivity;
+        float32                              _doubleClickTime;
+        float32                              _doubleClickMaxDistance;
+        float32                              _doubleTapTime;
+        float32                              _holdThreshold;
+        float32                              _navRepeatDelay;
+        float32                              _navRepeatRate;
+        float32                              _totalElapsedTime;
+        DeadzoneShape                        _deadzoneShape;
+        DigitalNormalization                 _digitalNormalization;
+        uint8                                _bInvertX                   : 1;
+        uint8                                _bInvertY                   : 1;
+        uint8                                _bSuppressBaseActionOnChord : 1;
+        [[maybe_unused]] uint8               _reservedFlags              : 5;
     };
 } // namespace sw
