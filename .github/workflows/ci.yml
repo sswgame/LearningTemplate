@@ -8,9 +8,14 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
+      - '.clang-format'
+      - '.clangd'
+      - '.cursorrules'
+      - '.vscode/**'
   pull_request:
     branches: [ main, develop ]
     paths-ignore: *paths-ignore
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -87,11 +92,11 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake lld \
-          clang llvm-dev libclang-dev \
-          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
-          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
-          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+        sudo apt-get install -y --no-install-recommends \
+          libclang-dev libtinfo5 \
+          libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libxext-dev libxfixes-dev libxcb1-dev libx11-xcb-dev \
+          libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev
         for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14 /usr; do
           if [ -f "$candidate/include/clang-c/Index.h" ]; then
             echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
@@ -102,6 +107,7 @@ jobs:
         done
 
     # vcpkg Cache and Setup
+
     - name: Cache vcpkg tools and binary artifacts
       uses: actions/cache@v4
       with:
