@@ -440,12 +440,16 @@ namespace sw::editor
             case InputDeviceType::GamepadPlayStation:
                 pTypeName = "PlayStation Gamepad";
                 break;
+            case InputDeviceType::GamepadSwitch:
+                pTypeName = "Nintendo Switch Gamepad";
+                break;
             default:
                 pTypeName = "Unknown";
                 break;
         }
 
         ImGui::Text( "Active Device:" );
+
         ImGui::SameLine();
         ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.5f, 1.0f ), "%s", pTypeName );
         ImGui::Separator();
