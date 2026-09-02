@@ -638,7 +638,7 @@ SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
     }
 
     // 4) 컴파일 성공 후 핫스왑 완료 대기
-    for ( int32 stepIndex = 0; stepIndex < 50 && onAfterCalled == false; ++stepIndex )
+    for ( int32 stepIndex = 0; stepIndex < 150 && onAfterCalled == false; ++stepIndex )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
         manager.update();

@@ -142,6 +142,7 @@ namespace sw
 
             _globalVariableManager = make_unique<GlobalVariableManager>();
             _globalVariableManager->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
+            GlobalVariableRegistrar::getHead() = nullptr;
             _globalVariableManager->registerToCommandLine( _commandLineManager.get() );
             _commandLineManager->parse( argc, pArgv );
             _globalVariableManager->updateFromCommandLine( _commandLineManager.get() );

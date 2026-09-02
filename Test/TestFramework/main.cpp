@@ -73,7 +73,7 @@ int main( int32 argc, utf8* argv[] )
     shaderCache->initialize();
     commandLineManager->initialize();
     globalVarManager->registerPendingVariables( "Engine", sw::GlobalVariableRegistrar::getHead() );
-    globalVarManager->registerPendingVariables( "TestFramework", sw::GlobalVariableRegistrar::getHead() );
+    sw::GlobalVariableRegistrar::getHead() = nullptr;
     globalVarManager->registerToCommandLine( commandLineManager.get() );
 
     // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.

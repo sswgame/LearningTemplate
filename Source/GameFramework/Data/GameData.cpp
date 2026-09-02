@@ -126,7 +126,7 @@ namespace sw
 
     string BootstrapConfig::resolve( string_view packRelative ) const
     {
-        const string_view pack = FileUtil::trimTrailingSlashes( _packRoot );
+        const string pack = FileUtil::trimTrailingSlashes( _packRoot );
         if ( pack.empty() )
             return FileUtil::normalizePath( packRelative );
 
