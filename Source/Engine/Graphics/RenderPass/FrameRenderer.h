@@ -157,7 +157,7 @@ namespace sw
 		/** @brief RenderGraph 패스 실행 콜백. */
 		void onGraphPassExecute( const RenderGraphPassContext& ctx );
 		/** @brief 패스 타입에 맞는 실행을 수행합니다. */
-		void executePass( FramePassContext& ctx, string_view passType, string_view passName, Material* pMaterial );
+		void executePass( FramePassContext& ctx, string_view passType, string_view passName );
 		/** @brief 패스 상수 버퍼를 갱신합니다. */
 		void updatePassConstants( FramePassContext& ctx );
 		/** @brief 카메라에서 뷰/투영을 적용합니다. */

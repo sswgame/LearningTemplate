@@ -71,10 +71,10 @@ namespace sw
 			pPassType						= pass._type.c_str();
 			pPassName						= pass._name.c_str();
 		}
-		executePass( passCtx, pPassType, pPassName, passCtx._pBoundMaterial );
+		executePass( passCtx, pPassType, pPassName );
 	}
 
-	void FrameRenderer::executePass( FramePassContext& ctx, string_view passType, string_view passName, Material* pMaterial )
+	void FrameRenderer::executePass( FramePassContext& ctx, string_view passType, string_view passName )
 	{
 		if ( ctx._pCmd == nullptr )
 		{
@@ -148,7 +148,7 @@ namespace sw
 			const float4 clearColor = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferAlbedo, float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
 			const bool	 bHasNormal = findTransient( FrameRendererUtil::Attachment::kGBufferNormal ) != 0;
 			const bool	 bUseMrt	= bHasNormal && _pDevice->supportsMultiRenderTarget() &&
-									  getEnginePso( FrameRendererUtil::PassType::kGBuffer ) != 0;
+								 getEnginePso( FrameRendererUtil::PassType::kGBuffer ) != 0;
 			if ( bUseMrt )
 			{
 				const float4			  normalClear  = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::kNormalClear );

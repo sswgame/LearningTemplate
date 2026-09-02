@@ -38,10 +38,23 @@ namespace sw::editor
 		string				   _extension{};
 		vector<string>		   _listResult{};
 		uint32				   _generation{ 0 };
-		uint8				   _bRecursive : 1 { SW_FALSE };
-		uint8				   _bPending   : 1 { SW_FALSE };
-		uint8				   _bReady	   : 1 { SW_FALSE };
-		[[maybe_unused]] uint8 _reserved   : 5 { 0 };
+		uint8				   _bRecursive : 1;
+		uint8				   _bPending   : 1;
+		uint8				   _bReady	   : 1;
+		[[maybe_unused]] uint8 _reserved   : 5;
+
+		State()
+			: _mutex{}
+			, _folder{}
+			, _extension{}
+			, _listResult{}
+			, _generation{ 0 }
+			, _bRecursive{ SW_FALSE }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorFileCollectJob::EditorFileCollectJob()
@@ -130,9 +143,19 @@ namespace sw::editor
 		mutable mutex		   _mutex{};
 		vector<LocRecord>	   _listResult{};
 		uint32				   _generation{ 0 };
-		uint8				   _bPending : 1 { SW_FALSE };
-		uint8				   _bReady	 : 1 { SW_FALSE };
-		[[maybe_unused]] uint8 _reserved : 6 { 0 };
+		uint8				   _bPending : 1;
+		uint8				   _bReady	 : 1;
+		[[maybe_unused]] uint8 _reserved : 6;
+
+		State()
+			: _mutex{}
+			, _listResult{}
+			, _generation{ 0 }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorLocalizationLoadJob::EditorLocalizationLoadJob()
@@ -212,9 +235,19 @@ namespace sw::editor
 		mutable mutex			  _mutex{};
 		vector<GameDataFileEntry> _listResult{};
 		uint32					  _generation{ 0 };
-		uint8					  _bPending : 1 { SW_FALSE };
-		uint8					  _bReady	: 1 { SW_FALSE };
-		[[maybe_unused]] uint8	  _reserved : 6 { 0 };
+		uint8					  _bPending : 1;
+		uint8					  _bReady	: 1;
+		[[maybe_unused]] uint8	  _reserved : 6;
+
+		State()
+			: _mutex{}
+			, _listResult{}
+			, _generation{ 0 }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorGameDataScanJob::EditorGameDataScanJob()
@@ -294,9 +327,19 @@ namespace sw::editor
 		mutable mutex					 _mutex{};
 		vector<EditorResourceIndexEntry> _listResult{};
 		uint32							 _generation{ 0 };
-		uint8							 _bPending : 1 { SW_FALSE };
-		uint8							 _bReady   : 1 { SW_FALSE };
-		[[maybe_unused]] uint8			 _reserved : 6 { 0 };
+		uint8							 _bPending : 1;
+		uint8							 _bReady   : 1;
+		[[maybe_unused]] uint8			 _reserved : 6;
+
+		State()
+			: _mutex{}
+			, _listResult{}
+			, _generation{ 0 }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorResourceIndexJob::EditorResourceIndexJob()
@@ -377,9 +420,20 @@ namespace sw::editor
 		string							 _folder{};
 		vector<EditorFolderListingEntry> _listResult{};
 		uint32							 _generation{ 0 };
-		uint8							 _bPending : 1 { SW_FALSE };
-		uint8							 _bReady   : 1 { SW_FALSE };
-		[[maybe_unused]] uint8			 _reserved : 6 { 0 };
+		uint8							 _bPending : 1;
+		uint8							 _bReady   : 1;
+		[[maybe_unused]] uint8			 _reserved : 6;
+
+		State()
+			: _mutex{}
+			, _folder{}
+			, _listResult{}
+			, _generation{ 0 }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorFolderListingJob::EditorFolderListingJob()
@@ -462,9 +516,19 @@ namespace sw::editor
 		mutable mutex				_mutex{};
 		EditorResourceCatalogCounts _counts{};
 		uint32						_generation{ 0 };
-		uint8						_bPending : 1 { SW_FALSE };
-		uint8						_bReady	  : 1 { SW_FALSE };
-		[[maybe_unused]] uint8		_reserved : 6 { 0 };
+		uint8						_bPending : 1;
+		uint8						_bReady	  : 1;
+		[[maybe_unused]] uint8		_reserved : 6;
+
+		State()
+			: _mutex{}
+			, _counts{}
+			, _generation{ 0 }
+			, _bPending{ SW_FALSE }
+			, _bReady{ SW_FALSE }
+			, _reserved{ 0 }
+		{
+		}
 	};
 
 	EditorResourceCatalogJob::EditorResourceCatalogJob()
