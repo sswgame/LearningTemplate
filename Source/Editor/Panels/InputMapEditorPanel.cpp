@@ -392,9 +392,10 @@ namespace sw::editor
             {
                 const Key   k        = static_cast<Key>( keyIndex );
                 const utf8* pKeyName = KeyCodes::toName( k );
-                if ( pKeyName != nullptr && pKeyName[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pKeyName ) == false )
                 {
                     if ( ImGui::Button( pKeyName, ImVec2( 80, 24 ) ) )
+
                     {
                         _actionMap.rebindKey( _selectedAction.c_str(), k, _capturingBindIndex );
                         _bDirty        = SW_TRUE;
@@ -846,7 +847,14 @@ namespace sw::editor
         const InputReplayFrame* pCurrentFrame = _replay.getCurrentFrame();
         if ( pCurrentFrame != nullptr )
         {
-            ImGui::TextColored( ImVec4( 0.3f, 0.8f, 1.0f, 1.0f ), "Frame #%u | DeltaTime: %.4f s | ButtonMask: 0x%llX | Events: %d", pCurrentFrame->_tickNumber, static_cast<float64>( pCurrentFrame->_deltaTime ), pCurrentFrame->_snapshot._buttonMask, static_cast<int32>( pCurrentFrame->_listRawEvent.size() ) );
+            fixed_string<constant::kMaxBuffer128> frameBuf;
+            formatstring( frameBuf.data(), frameBuf.capacity(),
+                          "Frame #%u | DeltaTime: %#s | ButtonMask: 0x%X | Events: %d",
+                          pCurrentFrame->_tickNumber,
+                          Fmt( static_cast<float64>( pCurrentFrame->_deltaTime ), Format().precision( 4 ) ),
+                          static_cast<uint32>( pCurrentFrame->_snapshot._buttonMask ),
+                          static_cast<int32>( pCurrentFrame->_listRawEvent.size() ) );
+            ImGui::TextColored( ImVec4( 0.3f, 0.8f, 1.0f, 1.0f ), "%s", frameBuf.c_str() );
         }
     }
 

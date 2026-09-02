@@ -7,6 +7,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Gui/EditorThemeUtil.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -53,11 +55,13 @@ namespace sw::editor
                 axisValue = resetValue;
                 bChanged  = true;
             }
+            drawTooltip( "클릭하여 기본값으로 초기화합니다" );
             ImGui::PopStyleColor( 3 );
             ImGui::SameLine();
             ImGui::PushID( pAxisLabel );
             if ( ImGui::DragFloat( "##v", &axisValue, speed, 0.0f, 0.0f, "%.2f" ) )
                 bChanged = true;
+            drawTooltip( "마우스 드래그 또는 더블 클릭으로 값 수정" );
             ImGui::PopID();
             ImGui::PopItemWidth();
             ImGui::SameLine();
@@ -82,15 +86,18 @@ namespace sw::editor
         ImGui::PushID( static_cast<int32>( id ) );
         if ( bAccent )
         {
-            ImGui::PushStyleColor( ImGuiCol_Header, EditorWidgetsInternal::toIm( style::kAccent ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0.85f, 0.28f, 0.22f, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0.70f, 0.18f, 0.14f, 1.0f ) );
+            const Color4 accent = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( accent._r, accent._g, accent._b, 0.85f ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( accent._r * 1.15f, accent._g * 1.15f, accent._b * 1.15f, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( accent._r * 1.30f, accent._g * 1.30f, accent._b * 1.30f, 1.0f ) );
         }
         else
         {
-            ImGui::PushStyleColor( ImGuiCol_Header, EditorWidgetsInternal::toIm( style::kHeader ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0.28f, 0.42f, 0.55f, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0.18f, 0.30f, 0.42f, 1.0f ) );
+            const Color4 hdr    = EditorThemeUtil::getHeaderBgColor();
+            const Color4 accent = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( hdr._r, hdr._g, hdr._b, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( accent._r, accent._g, accent._b, 0.70f ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( accent._r, accent._g, accent._b, 0.90f ) );
         }
 
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2{ 4.0f, 4.0f } );
@@ -104,11 +111,13 @@ namespace sw::editor
         {
             ImGui::SameLine( availX - lineHeight * 2.2f );
             ImGui::Checkbox( "##active", pBActive );
+            drawTooltip( "컴포넌트 활성화/비활성화" );
         }
 
         ImGui::SameLine( availX - lineHeight * 0.5f );
         if ( ImGui::Button( "+", ImVec2{ lineHeight, lineHeight } ) )
             ImGui::OpenPopup( "ComponentSettings" );
+        drawTooltip( "컴포넌트 추가 옵션 및 삭제" );
 
         if ( ImGui::BeginPopup( "ComponentSettings" ) )
         {
@@ -131,7 +140,7 @@ namespace sw::editor
     void EditorWidgets::drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle )
     {
         ImGui::TextUnformatted( pTitle );
-        if ( pSubtitle != nullptr && pSubtitle[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pSubtitle ) == false )
             ImGui::TextDisabled( "%s", pSubtitle );
         ImGui::Separator();
     }
@@ -161,7 +170,7 @@ namespace sw::editor
 
     void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )
     {
-        const bool bHasUnit = ( pUnit != nullptr && pUnit[0] != '\0' );
+        const bool bHasUnit = ( StringUtil::isNullOrEmpty( pUnit ) == false );
         if ( total == 0 )
         {
             if ( bHasUnit )
@@ -179,7 +188,7 @@ namespace sw::editor
 
     void EditorWidgets::drawPanelStatus( const utf8* pText )
     {
-        if ( pText == nullptr || pText[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pText ) )
             return;
         ImGui::Separator();
         ImGui::TextDisabled( "%s", pText );
@@ -255,7 +264,7 @@ namespace sw::editor
         ImGui::PushID( pLabel );
         bool bChanged{ false };
 
-        if ( pLabel != nullptr && pLabel[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pLabel ) == false )
         {
             ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled( "%s", pLabel );
@@ -278,7 +287,7 @@ namespace sw::editor
             if ( tryAcceptAssetPayload( droppedPath ) )
             {
                 bool bAccept{ true };
-                if ( pExpectedExt != nullptr && pExpectedExt[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pExpectedExt ) == false )
                     bAccept = FileUtil::hasExtension( droppedPath, pExpectedExt );
                 if ( bAccept )
                 {
@@ -322,7 +331,7 @@ namespace sw::editor
     bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth )
     {
         ImGui::PushID( pLabel );
-        if ( pLabel != nullptr && pLabel[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pLabel ) == false )
         {
             ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled( "%s", pLabel );
@@ -357,7 +366,7 @@ namespace sw::editor
 
     void EditorWidgets::drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId )
     {
-        if ( pRelativePath == nullptr || pRelativePath[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pRelativePath ) )
             return;
 
         ImGuiDragDropFlags flags = 0;
@@ -427,8 +436,9 @@ namespace sw::editor
 
     EditorUnsavedChoice EditorWidgets::drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage )
     {
-        if ( pPopupId == nullptr || pPopupId[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pPopupId ) )
             return EditorUnsavedChoice::None;
+
         if ( ImGui::BeginPopupModal( pPopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
             return EditorUnsavedChoice::None;
 
@@ -446,5 +456,23 @@ namespace sw::editor
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
         return choice;
+    }
+
+    void EditorWidgets::drawTooltip( const utf8* pText )
+    {
+        if ( StringUtil::isNullOrEmpty( pText ) == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
+        {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * 35.0f );
+            ImGui::TextUnformatted( pText );
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
+
+    void EditorWidgets::drawHelpMarker( const utf8* pDesc )
+    {
+        ImGui::TextDisabled( "(?)" );
+        drawTooltip( pDesc );
     }
 } // namespace sw::editor

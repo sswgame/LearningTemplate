@@ -33,14 +33,20 @@ namespace sw
          */
         bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width = 480, uint32 height = 280 );
 
-        /** @brief 현재 진행 상황 텍스트를 업데이트하고 화면을 즉시 갱신합니다. */
-        void updateStatus( const utf8* pStatus );
+        /** @brief 현재 진행 상황 텍스트 및 진행률(0.0f ~ 1.0f)을 업데이트하고 화면을 즉시 갱신합니다. */
+        void updateStatus( const utf8* pStatus, float32 progress = -1.0f );
+
+        /** @brief 현재 진행률(0.0f ~ 1.0f)을 설정하고 화면을 즉시 갱신합니다. */
+        void setProgress( float32 progress );
 
         /** @brief 스플래시 창을 닫고 리소스를 해제합니다. */
         void dismiss();
 
         /** @brief 스플래시 창이 현재 열려 있는지 확인합니다. */
         bool isOpen() const;
+
+        /** @brief 현재 진행률(0.0f ~ 1.0f)을 반환합니다. */
+        float32 getProgress() const;
 
     private:
         unique_ptr<ISplashWindow> _pImpl;

@@ -2,9 +2,14 @@
 
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/Common/PlatformOsHeaders.h"
+
+    #include <gdiplus.h>
+    #pragma comment( lib, "gdiplus.lib" )
 
 namespace sw
 {
@@ -30,73 +35,56 @@ namespace sw
                         RECT               rc;
                         GetClientRect( hWnd, &rc );
 
-                        // 1) 배경 채우기 (다크 테마 RGB: 24, 28, 36)
-                        HBRUSH hBgBrush = CreateSolidBrush( RGB( 24, 28, 36 ) );
-                        FillRect( hDC, &rc, hBgBrush );
-                        DeleteObject( hBgBrush );
+                        if ( pSplash != nullptr && pSplash->getSplashBitmap() != nullptr )
+                        {
+                            auto*             pBmp = reinterpret_cast<Gdiplus::Bitmap*>( pSplash->getSplashBitmap() );
+                            Gdiplus::Graphics graphics( hDC );
+                            graphics.SetInterpolationMode( Gdiplus::InterpolationModeHighQualityBicubic );
+                            graphics.DrawImage( pBmp, 0, 0, rc.right - rc.left, rc.bottom - rc.top );
 
-                        // 2) 외곽 테두리 (RGB: 55, 65, 82)
-                        HPEN    hBorderPen = CreatePen( PS_SOLID, 1, RGB( 55, 65, 82 ) );
-                        HGDIOBJ hOldPen    = SelectObject( hDC, hBorderPen );
-                        HGDIOBJ hOldBrush  = SelectObject( hDC, GetStockObject( NULL_BRUSH ) );
-                        Rectangle( hDC, rc.left, rc.top, rc.right, rc.bottom );
-                        SelectObject( hDC, hOldPen );
-                        SelectObject( hDC, hOldBrush );
-                        DeleteObject( hBorderPen );
+                            // 하단 상태 텍스트 영역 그라디언트 오버레이
+                            Gdiplus::Rect                gradientRect( 0, rc.bottom - 54, rc.right, 54 );
+                            Gdiplus::LinearGradientBrush gradientBrush(
+                                gradientRect,
+                                Gdiplus::Color( 0, 16, 20, 26 ),
+                                Gdiplus::Color( 230, 16, 20, 26 ),
+                                Gdiplus::LinearGradientModeVertical );
+                            graphics.FillRectangle( &gradientBrush, gradientRect );
 
-                        // 3) 상단 액센트 라인 (RGB: 75, 140, 245)
-                        HBRUSH hAccentBrush = CreateSolidBrush( RGB( 75, 140, 245 ) );
-                        RECT   rcAccent     = { rc.left + 1, rc.top + 1, rc.right - 1, rc.top + 4 };
-                        FillRect( hDC, &rcAccent, hAccentBrush );
-                        DeleteObject( hAccentBrush );
+                            // 상태 진행 텍스트 (Segoe UI, 11pt)
+                            SetBkMode( hDC, TRANSPARENT );
+                            HFONT hSubFont = CreateFontW(
+                                -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI" );
+                            HGDIOBJ hPrevFont = SelectObject( hDC, hSubFont );
+                            SetTextColor( hDC, RGB( 190, 215, 245 ) );
 
-                        SetBkMode( hDC, TRANSPARENT );
+                            wstring wsStatus = StringUtil::utf8ToUtf16( pSplash->getStatus().c_str() );
+                            RECT    rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
+                            DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
 
-                        // 4) 메인 타이틀 (Segoe UI Bold, 20pt)
-                        HFONT hTitleFont = CreateFontW(
-                            -26, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI" );
-                        HGDIOBJ hPrevFont = SelectObject( hDC, hTitleFont );
-                        SetTextColor( hDC, RGB( 240, 245, 255 ) );
+                            // 하단 프로그레스 바 배경 (어두운 반투명/차콜)
+                            RECT   rcProgBg     = { 0, rc.bottom - 4, rc.right, rc.bottom };
+                            HBRUSH hProgBgBrush = CreateSolidBrush( RGB( 20, 24, 30 ) );
+                            FillRect( hDC, &rcProgBg, hProgBgBrush );
+                            DeleteObject( hProgBgBrush );
 
-                        RECT    rcTitle = { 32, 36, rc.right - 32, 75 };
-                        wstring wsTitle = ( pSplash != nullptr ) ? StringUtil::utf8ToUtf16( pSplash->getTitle().c_str() ) : L"SW Engine";
-                        DrawTextW( hDC, wsTitle.c_str(), -1, &rcTitle, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
+                            // 실제 진행률에 따른 프로그레스 라인
+                            const float32 progress        = ( pSplash != nullptr ) ? pSplash->getProgress() : 0.0f;
+                            const float32 clampedProgress = ( progress < 0.0f ) ? 0.0f : ( ( progress > 1.0f ) ? 1.0f : progress );
+                            const int32   fillWidth       = static_cast<int32>( static_cast<float32>( rc.right ) * clampedProgress );
+                            if ( fillWidth > 0 )
+                            {
+                                RECT   rcProgFill     = { 0, rc.bottom - 4, fillWidth, rc.bottom };
+                                HBRUSH hProgFillBrush = CreateSolidBrush( RGB( 70, 145, 255 ) );
+                                FillRect( hDC, &rcProgFill, hProgFillBrush );
+                                DeleteObject( hProgFillBrush );
+                            }
 
-                        // 5) 서브타이틀 (Segoe UI Regular, 10pt)
-                        HFONT hSubFont = CreateFontW(
-                            -13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI" );
-                        SelectObject( hDC, hSubFont );
-                        SetTextColor( hDC, RGB( 130, 150, 180 ) );
-
-                        RECT rcSub = { 32, 75, rc.right - 32, 100 };
-                        DrawTextW( hDC, L"Game & Editor Engine Template (LiveReload Enabled)", -1, &rcSub, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
-
-                        // 6) 상태 진행 텍스트 (Segoe UI, 11pt)
-                        SelectObject( hDC, hSubFont );
-                        SetTextColor( hDC, RGB( 180, 205, 235 ) );
-
-                        wstring wsStatus = ( pSplash != nullptr ) ? StringUtil::utf8ToUtf16( pSplash->getStatus().c_str() ) : L"Initializing Engine...";
-                        RECT    rcStatus = { 32, rc.bottom - 68, rc.right - 32, rc.bottom - 44 };
-                        DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
-
-                        // 7) 하단 프로그레스 바 영역
-                        RECT   rcProgBg     = { 32, rc.bottom - 38, rc.right - 32, rc.bottom - 32 };
-                        HBRUSH hProgBgBrush = CreateSolidBrush( RGB( 38, 44, 58 ) );
-                        FillRect( hDC, &rcProgBg, hProgBgBrush );
-                        DeleteObject( hProgBgBrush );
-
-                        RECT   rcProgFill     = { 32, rc.bottom - 38, rc.right - 80, rc.bottom - 32 };
-                        HBRUSH hProgFillBrush = CreateSolidBrush( RGB( 60, 130, 240 ) );
-                        FillRect( hDC, &rcProgFill, hProgFillBrush );
-                        DeleteObject( hProgFillBrush );
-
-                        SelectObject( hDC, hPrevFont );
-                        DeleteObject( hTitleFont );
-                        DeleteObject( hSubFont );
+                            SelectObject( hDC, hPrevFont );
+                            DeleteObject( hSubFont );
+                        }
 
                         EndPaint( hWnd, &ps );
                         return 0;
@@ -120,6 +108,8 @@ namespace sw
     Win32SplashWindow::Win32SplashWindow()
         : ISplashWindow{}
         , _hWnd{ nullptr }
+        , _gdiplusToken{ 0 }
+        , _pSplashBitmap{ nullptr }
     {
     }
 
@@ -135,10 +125,39 @@ namespace sw
 
     bool Win32SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title  = ( pTitle != nullptr && pTitle[0] != '\0' ) ? string{ pTitle } : "SW Engine";
-        _status = ( pInitialStatus != nullptr && pInitialStatus[0] != '\0' ) ? string{ pInitialStatus } : "Initializing...";
+        _title  = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
+        _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
+
+        Gdiplus::GdiplusStartupInput gdiplusStartupInput{};
+        Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
+
+        _splashImagePath = findSplashImagePath();
+        if ( _splashImagePath.empty() == false && loadSplashImage( _splashImagePath ) )
+        {
+            if ( _splashImage._pPixels != nullptr )
+            {
+                const int32 totalPixels = _splashImage._width * _splashImage._height;
+                for ( int32 index = 0; index < totalPixels; ++index )
+                {
+                    uint8* pPixel = _splashImage._pPixels + ( index * 4 );
+                    std::swap( pPixel[0], pPixel[2] );
+                }
+
+                auto* pBmp = new Gdiplus::Bitmap(
+                    _splashImage._width,
+                    _splashImage._height,
+                    _splashImage._width * 4,
+                    PixelFormat32bppARGB,
+                    _splashImage._pPixels );
+
+                if ( pBmp != nullptr && pBmp->GetLastStatus() == Gdiplus::Ok )
+                    _pSplashBitmap = pBmp;
+                else
+                    delete pBmp;
+            }
+        }
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
@@ -192,12 +211,15 @@ namespace sw
         return true;
     }
 
-    void Win32SplashWindow::updateStatus( const utf8* pStatus )
+    void Win32SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
         if ( _bOpen == false )
             return;
 
-        _status = ( pStatus != nullptr ) ? string{ pStatus } : "";
+        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
+            _status = pStatus;
+        if ( progress >= 0.0f )
+            _progress = ( progress > 1.0f ) ? 1.0f : progress;
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
@@ -213,15 +235,32 @@ namespace sw
         }
     }
 
+    void Win32SplashWindow::setProgress( float32 progress )
+    {
+        updateStatus( nullptr, progress );
+    }
+
     void Win32SplashWindow::dismiss()
     {
-        if ( _bOpen == false )
+        if ( _bOpen == false && _hWnd == nullptr && _pSplashBitmap == nullptr && _gdiplusToken == 0 )
             return;
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
             DestroyWindow( _hWnd );
             _hWnd = nullptr;
+        }
+
+        if ( _pSplashBitmap != nullptr )
+        {
+            delete reinterpret_cast<Gdiplus::Bitmap*>( _pSplashBitmap );
+            _pSplashBitmap = nullptr;
+        }
+
+        if ( _gdiplusToken != 0 )
+        {
+            Gdiplus::GdiplusShutdown( static_cast<ULONG_PTR>( _gdiplusToken ) );
+            _gdiplusToken = 0;
         }
 
         _bOpen = false;
@@ -235,13 +274,16 @@ namespace sw
     Win32SplashWindow::Win32SplashWindow()
         : ISplashWindow{}
         , _hWnd{ nullptr }
+        , _gdiplusToken{ 0 }
+        , _pSplashBitmap{ nullptr }
     {
     }
 
     Win32SplashWindow::~Win32SplashWindow() = default;
 
     bool             Win32SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 ) { return false; }
-    void             Win32SplashWindow::updateStatus( const utf8* ) {}
+    void             Win32SplashWindow::updateStatus( const utf8*, float32 ) {}
+    void             Win32SplashWindow::setProgress( float32 ) {}
     void             Win32SplashWindow::dismiss() {}
     LRESULT CALLBACK Win32SplashWindow::splashWndProc( HWND, UINT, WPARAM, LPARAM ) { return 0; }
 } // namespace sw

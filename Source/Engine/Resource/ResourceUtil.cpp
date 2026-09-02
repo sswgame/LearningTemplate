@@ -304,6 +304,8 @@ namespace sw
         string absPath = getResourcePath( relativePath );
         if ( absPath.empty() )
             absPath = string( relativePath );
+        if ( FileUtil::fileExists( absPath ) == false )
+            return false;
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
         return FileUtil::readTextFile( absPath, outText );
@@ -330,12 +332,12 @@ namespace sw
             return true;
         }
 
-        const string absPath = getResourcePath( relativePath );
-        if ( absPath.empty() == false )
-        {
-            return FileUtil::readFile( absPath, outBytes );
-        }
-        return FileUtil::readFile( relativePath, outBytes );
+        string absPath = getResourcePath( relativePath );
+        if ( absPath.empty() )
+            absPath = string( relativePath );
+        if ( FileUtil::fileExists( absPath ) == false )
+            return false;
+        return FileUtil::readFile( absPath, outBytes );
     }
 
     bool ResourceUtil::hasResource( string_view relativePath )

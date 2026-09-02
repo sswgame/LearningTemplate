@@ -18,6 +18,7 @@
 #include <cctype>
 #include <charconv>
 #include <chrono>
+#include <cinttypes>
 #include <climits>
 #include <condition_variable>
 #include <csignal>

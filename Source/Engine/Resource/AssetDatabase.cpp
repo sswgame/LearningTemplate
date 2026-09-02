@@ -210,9 +210,13 @@ namespace sw
     bool AssetDatabase::loadMetaFile( string_view relativePath, Uuid& outGuid, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        KeyValueMap  mapData;
+        if ( ResourceUtil::hasResource( metaRel ) == false )
+            return false;
+
+        KeyValueMap mapData;
         if ( KeyValueFile::loadResource( metaRel, mapData ) == false )
             return false;
+
         const utf8* pGuidStr = KeyValueFile::get( mapData, "guid", nullptr );
         if ( pGuidStr == nullptr || Uuid::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull() )
             return false;

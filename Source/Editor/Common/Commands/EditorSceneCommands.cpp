@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorUtil.h"
@@ -160,7 +161,7 @@ namespace sw::editor
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return false;
-        if ( pObj == nullptr || pNewName == nullptr || pNewName[0] == '\0' )
+        if ( pObj == nullptr || StringUtil::isNullOrEmpty( pNewName ) )
             return false;
 
         const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );

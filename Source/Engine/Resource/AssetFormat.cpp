@@ -29,7 +29,7 @@ namespace sw
         if ( root.isValid() == false )
             return AssetFormatVersions::kUnversioned;
         const utf8* pAttr = root.attr( kXmlAttrName );
-        if ( pAttr != nullptr && pAttr[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pAttr ) == false )
         {
             uint64 ver{ AssetFormatVersions::kUnversioned };
             StringUtil::parseUInt64( pAttr, ver, 10 );

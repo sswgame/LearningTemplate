@@ -59,8 +59,8 @@ namespace sw::editor
 #endif
 
     private:
-        IRHIDevice* _pRHIDevice{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
+        IRHIDevice*                                  _pRHIDevice{ nullptr };
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> _d3d12SrvHeap;
         vector<uint32>                               _listFreeDescriptor;
         UINT                                         _descriptorSize{ 0 };

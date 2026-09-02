@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
@@ -448,7 +449,7 @@ namespace sw::editor
     {
         if ( EditorUtil::areSceneEditsAllowed() == false )
             return nullptr;
-        if ( pManager == nullptr || pPath == nullptr || pPath[0] == '\0' )
+        if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
 
         string filename = FileUtil::getFileNamePart( pPath );

@@ -24,6 +24,7 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -51,8 +52,11 @@ namespace sw
 
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
+        ResourceUtil::initialize();
+
         SplashWindow splash;
         splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );
+        splash.setProgress( 0.05f );
 
         // 1. 코어 매니저들은 모두 EngineLoop가 초기화
         if ( _engineLoop.initialize( argc, pArgv ) == false )
@@ -62,7 +66,7 @@ namespace sw
             return false;
         }
 
-        splash.updateStatus( "Loading Configuration & Display..." );
+        splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
         const ConfigManager*      pConfigManager      = _engineLoop.getConfigManager();
         const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
@@ -89,6 +93,8 @@ namespace sw
         // 2. 윈도우 소유권 획득 (초기화 중에는 숨김 상태로 시작)
         //    EngineLoop::initialize 가 플랫폼 윈도우를 만들어 IWindow::setActiveWindow 로 넘겨두면
         //    여기서 App 의 unique_ptr 이 그 소유권을 입양합니다. (전역 포인터는 관찰용으로만 유지)
+        splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
+
         _window.reset( IWindow::getActiveWindow() );
         if ( _window == nullptr )
         {
@@ -112,7 +118,7 @@ namespace sw
             _bEnableEditor = false;
         }
 
-        splash.updateStatus( "Loading Modules & Compiling Shaders..." );
+        splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
 
         // 3. ModuleHost (에디터/게임 라이프사이클) 바인딩
         vector<GameKitConfig> listGameKitModule{};
@@ -138,6 +144,8 @@ namespace sw
             return false;
         }
 
+        splash.updateStatus( "Finalizing Setup...", 0.95f );
+
         // 4. 윈도우 콜백 및 이벤트 라우팅 설정
         _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
         _window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
@@ -148,6 +156,8 @@ namespace sw
 
         _engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
+
+        splash.updateStatus( "Ready", 1.0f );
 
         // 준비 완료 -> 스플래시 창을 닫고 메인 윈도우를 화면에 표시
         splash.dismiss();

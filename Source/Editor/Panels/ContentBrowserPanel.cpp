@@ -9,6 +9,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -20,6 +21,7 @@
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
+#include <IconsFontAwesome6.h>
 #include <imgui.h>
 
 namespace sw::editor
@@ -28,17 +30,10 @@ namespace sw::editor
     {
         struct ContentBrowserPanelInternal
         {
-            static ImVec4 colorForAsset( string_view path )
+            static ImVec4 colorForAsset( string_view path, bool bIsDirectory = false )
             {
-                if ( path.empty() )
-                    return ImVec4( 0.35f, 0.40f, 0.55f, 1.0f );
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, path ) )
-                    return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, path ) )
-                    return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path ) )
-                    return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
-                return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
+                const Color4 c = EditorThemeUtil::getAssetColorForPath( path, bIsDirectory );
+                return ImVec4( c._r, c._g, c._b, c._a );
             }
 
             static const utf8* typeLabel( string_view path, bool bIsDirectory )
@@ -85,14 +80,52 @@ namespace sw::editor
         const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
         if ( entry._bIsDirectory )
         {
-            // Golden Folder tab and body
-            pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.15f, minPos._y + h * 0.20f ),
-                                      ImVec2( minPos._x + w * 0.50f, minPos._y + h * 0.36f ),
-                                      IM_COL32( 235, 175, 50, 255 ), 2.0f );
-            pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.15f, minPos._y + h * 0.30f ),
-                                      ImVec2( minPos._x + w * 0.85f, minPos._y + h * 0.80f ),
-                                      IM_COL32( 245, 195, 68, 255 ), 3.0f );
+            const Color4 folderColor = EditorThemeUtil::getFolderColor();
+
+            // Card subtle border
+            pDrawList->AddRect( minVec, maxVec, IM_COL32( 40, 48, 62, 160 ), 4.0f );
+
+            // UE5 Style Layered Folder:
+            // 1) Back Tab & Back Plate (Deep Slate Accent)
+            const uint32 colBack = IM_COL32(
+                static_cast<int32>( folderColor._r * 110 + 15 ),
+                static_cast<int32>( folderColor._g * 125 + 20 ),
+                static_cast<int32>( folderColor._b * 165 + 30 ),
+                255 );
+            // 2) Front Pocket (Vibrant Theme Accent)
+            const uint32 colFront = IM_COL32(
+                static_cast<int32>( folderColor._r * 190 + 20 ),
+                static_cast<int32>( folderColor._g * 205 + 25 ),
+                static_cast<int32>( folderColor._b * 235 + 20 ),
+                255 );
+            // 3) Front Top Highlight Lip
+            const uint32 colLip = IM_COL32(
+                static_cast<int32>( folderColor._r * 255 ),
+                static_cast<int32>( folderColor._g * 255 ),
+                static_cast<int32>( folderColor._b * 255 ),
+                220 );
+
+            const float32 fLeft   = minPos._x + w * 0.18f;
+            const float32 fRight  = minPos._x + w * 0.82f;
+            const float32 fTabR   = minPos._x + w * 0.48f;
+            const float32 fTabTop = minPos._y + h * 0.20f;
+            const float32 fTop    = minPos._y + h * 0.28f;
+            const float32 fPktTop = minPos._y + h * 0.38f;
+            const float32 fBottom = minPos._y + h * 0.78f;
+
+            // Back Tab
+            pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colBack, 3.0f );
+            // Back Body
+            pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colBack, 3.0f );
+
+            // Front Pocket
+            pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
+            // Front Lip Highlight
+            pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colLip, 1.5f );
+            // Crisp Border
+            pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
         }
+
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
         {
             // 3D Isometric Blue Cube for Prefab
@@ -228,12 +261,14 @@ namespace sw::editor
     ContentBrowserPanel::ContentBrowserPanel() noexcept
         : _listRoot{}
         , _listEntry{}
+        , _listHistory{}
         , _selectedFolderAbs{}
         , _breadcrumb{}
         , _selectedAssetAbs{}
         , _searchBuffer{}
         , _tileSize{ 96.0f }
         , _filterIndex{ 0 }
+        , _historyIndex{ -1 }
         , _viewMode{ ViewMode::Tiles }
         , _pendingImportMutex{}
         , _listPendingImportPath{}
@@ -246,6 +281,24 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawContent()
     {
+        // 마우스 X1/X2 버튼(뒤로가기/앞으로가기) 및 단축키(Alt+Left/Right, Backspace) 폴더 이동 처리
+        if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_MouseX1 ) )
+                navigateBack();
+            else if ( ImGui::IsKeyPressed( ImGuiKey_MouseX2 ) )
+                navigateForward();
+        }
+
+        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) && ImGui::IsAnyItemActive() == false )
+        {
+            const ImGuiIO& io = ImGui::GetIO();
+            if ( ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_LeftArrow ) ) || ImGui::IsKeyPressed( ImGuiKey_Backspace ) )
+                navigateBack();
+            else if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_RightArrow ) )
+                navigateForward();
+        }
+
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();
         processPendingImports();
@@ -345,7 +398,28 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
         {
+            const bool bCanBack = canNavigateBack();
+            if ( bCanBack == false )
+                ImGui::BeginDisabled();
+            if ( ImGui::Button( "<##cb_nav_back" ) )
+                navigateBack();
+            if ( bCanBack == false )
+                ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( "이전 폴더로 이동 (마우스 뒤로가기 버튼 / Alt+Left / Backspace)" );
+
+            ImGui::SameLine();
+            const bool bCanForward = canNavigateForward();
+            if ( bCanForward == false )
+                ImGui::BeginDisabled();
+            if ( ImGui::Button( ">##cb_nav_forward" ) )
+                navigateForward();
+            if ( bCanForward == false )
+                ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( "다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)" );
+
+            ImGui::SameLine();
             EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, "Search Content", 160.0f, false );
+            EditorWidgets::drawTooltip( "에셋 이름 또는 확장자로 필터링하여 검색합니다" );
 
             ImGui::SameLine();
             uint32                          filterCount{ 0 };
@@ -366,19 +440,24 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
+            EditorWidgets::drawTooltip( "특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다" );
 
             ImGui::SameLine();
             if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
                 _viewMode = ViewMode::Tiles;
+            EditorWidgets::drawTooltip( "에셋을 사각형 썸네일 카드(타일) 형태로 표시합니다" );
+
             ImGui::SameLine();
             if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
                 _viewMode = ViewMode::List;
+            EditorWidgets::drawTooltip( "에셋을 이름, 종류, 경로 세부 리스트 목록으로 표시합니다" );
 
             if ( _viewMode == ViewMode::Tiles )
             {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( 80.0f );
                 ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
+                EditorWidgets::drawTooltip( "타일 썸네일의 크기를 조절합니다 (64px ~ 160px)" );
             }
 
             ImGui::SameLine();
@@ -386,13 +465,17 @@ namespace sw::editor
             if ( canImport == false )
                 ImGui::BeginDisabled();
             const bool importClicked = ImGui::Button( "Import..." );
-            const bool importHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled );
             if ( canImport == false )
+            {
                 ImGui::EndDisabled();
+                EditorWidgets::drawTooltip( "에셋을 가져올 대상 폴더를 먼저 선택하세요" );
+            }
+            else
+            {
+                EditorWidgets::drawTooltip( "외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다" );
+            }
             if ( importClicked )
                 importFilesFromDialog();
-            if ( importHovered && canImport == false )
-                ImGui::SetTooltip( "Select a destination folder first." );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Refresh" ) )
@@ -402,6 +485,7 @@ namespace sw::editor
                 refreshRoots();
                 refreshCurrentFolder();
             }
+            EditorWidgets::drawTooltip( "디스크 파일 및 리소스 루트 목록을 새로고침합니다" );
         }
         EditorChrome::endToolbar();
     }
@@ -478,8 +562,14 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
         ImGui::PushID( absPath.c_str() );
-        const string labelNt( label );
-        const bool   opened = ImGui::TreeNodeEx( labelNt.c_str(), flags );
+        const bool   bDefaultOpen  = ( ( flags & ImGuiTreeNodeFlags_DefaultOpen ) != 0 );
+        const utf8*  pFolderIcon   = EditorThemeUtil::getFolderIcon( bDefaultOpen );
+        const string labelWithIcon = string( pFolderIcon ) + "  " + string( label );
+        const Color4 folderColor   = EditorThemeUtil::getFolderColor();
+        ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( folderColor._r, folderColor._g, folderColor._b, 1.0f ) );
+        const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
+        ImGui::PopStyleColor();
+
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
             // 루트 이름 + 그 아래 상대 경로로 브레드크럼을 만듭니다.
@@ -634,8 +724,12 @@ namespace sw::editor
             const bool bIsLast = ( partIndex + 1 == listPart.size() );
             if ( bIsLast )
             {
-                ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.35f, 1.0f ), "%.*s", static_cast<int32>( part.size() ), part.data() );
+                const Color4 accentCol = EditorThemeUtil::getAccentColor();
+                ImGui::TextColored( ImVec4( accentCol._r, accentCol._g, accentCol._b, 1.0f ), ICON_FA_FOLDER_OPEN );
+                ImGui::SameLine();
+                ImGui::TextUnformatted( string( part ).c_str() );
             }
+
             else
             {
                 const string partStr{ part };
@@ -678,9 +772,11 @@ namespace sw::editor
                     if ( col > 0 )
                         ImGui::SameLine();
 
-                    const bool selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );
-                    ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( 0.25f, 0.40f, 0.65f, 1.0f ) : ImVec4( 0.14f, 0.14f, 0.16f, 1.0f ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.22f, 0.28f, 0.38f, 1.0f ) );
+                    const bool   selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );
+                    const Color4 accent   = EditorThemeUtil::getAccentColor();
+                    const Color4 frameBg  = EditorThemeUtil::getFrameBgColor();
+                    ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( accent._r, accent._g, accent._b, 0.40f ) : ImVec4( frameBg._r, frameBg._g, frameBg._b, 0.60f ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( accent._r, accent._g, accent._b, 0.60f ) );
 
                     ImGui::BeginGroup();
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
@@ -733,7 +829,13 @@ namespace sw::editor
 
                     const bool selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs );
                     ImGui::TableSetColumnIndex( 0 );
-                    if ( ImGui::Selectable( entry._name.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick ) )
+                    const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
+                    const Color4 assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
+                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name;
+                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( assetColor._r, assetColor._g, assetColor._b, assetColor._a ) );
+                    const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
+                    ImGui::PopStyleColor();
+                    if ( bSelected )
                     {
                         selectAsset( entry );
                         if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
@@ -744,7 +846,7 @@ namespace sw::editor
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
 
                     ImGui::TableSetColumnIndex( 1 );
-                    ImGui::TextColored( ContentBrowserPanelInternal::colorForAsset( entry._bIsDirectory ? string_view{} : string_view{ entry._name } ),
+                    ImGui::TextColored( ContentBrowserPanelInternal::colorForAsset( entry._name, entry._bIsDirectory ),
                                         "%s", ContentBrowserPanelInternal::typeLabel( entry._name, entry._bIsDirectory ) );
 
                     ImGui::TableSetColumnIndex( 2 );
@@ -758,11 +860,51 @@ namespace sw::editor
         }
     }
 
-    void ContentBrowserPanel::selectFolder( string_view absolutePath, string_view breadcrumb )
+    void ContentBrowserPanel::navigateBack()
     {
+        if ( canNavigateBack() )
+        {
+            --_historyIndex;
+            const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
+            selectFolder( entry._folderPathAbs, entry._breadcrumb, false );
+        }
+    }
+
+    void ContentBrowserPanel::navigateForward()
+    {
+        if ( canNavigateForward() )
+        {
+            ++_historyIndex;
+            const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
+            selectFolder( entry._folderPathAbs, entry._breadcrumb, false );
+        }
+    }
+
+    void ContentBrowserPanel::selectFolder( string_view absolutePath, string_view breadcrumb, bool bRecordHistory )
+    {
+        const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
+        if ( bRecordHistory )
+        {
+            const bool bSameAsCurrent = ( _historyIndex >= 0 &&
+                                          _historyIndex < static_cast<int32>( _listHistory.size() ) &&
+                                          FileUtil::pathsEqualNormalized( _listHistory[static_cast<size_t>( _historyIndex )]._folderPathAbs, normalizedPath ) );
+            if ( bSameAsCurrent == false )
+            {
+                if ( _historyIndex >= 0 && _historyIndex + 1 < static_cast<int32>( _listHistory.size() ) )
+                {
+                    _listHistory.erase( _listHistory.begin() + ( _historyIndex + 1 ), _listHistory.end() );
+                }
+                HistoryEntry newEntry;
+                newEntry._folderPathAbs = normalizedPath;
+                newEntry._breadcrumb    = string{ breadcrumb };
+                _listHistory.push_back( std::move( newEntry ) );
+                _historyIndex = static_cast<int32>( _listHistory.size() ) - 1;
+            }
+        }
+
         // 탐색/I/O는 실제 FS 대소문자를 쓰고, 저장 경로는 ResourceUtil::makeSavePath로 상대 세그먼트를 소문자화합니다.
-        _selectedFolderAbs = FileUtil::normalizeSeparators( absolutePath );
-        _breadcrumb        = breadcrumb;
+        _selectedFolderAbs = normalizedPath;
+        _breadcrumb        = string{ breadcrumb };
         _selectedAssetAbs.clear();
         _bFolderDirty = SW_TRUE;
     }

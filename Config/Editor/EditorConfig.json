@@ -6,5 +6,13 @@
     "_windowsIniFile": "windows.ini",
     "_animationGraphSettingsFile": "AnimationGraph.json",
     "_animationGraphDataFile": "AnimationGraphData.json",
-    "_spriteClipFile": "SpriteClip.json"
+    "_dialogueGraphDataFile": "DialogueGraphData.json",
+    "_spriteClipFile": "SpriteClip.json",
+    "_themePreset": "ModernDark",
+    "_themeAccentR": 0.27,
+    "_themeAccentG": 0.57,
+    "_themeAccentB": 1,
+    "_themeWindowRounding": 10,
+    "_themeFrameRounding": 7,
+    "_themeTabRounding": 5
 }

@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/EditorUtil.h"
 
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -33,7 +35,7 @@ namespace sw::editor
             return;
 
         ed::Config config{};
-        if ( pSettingsFileName != nullptr && pSettingsFileName[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pSettingsFileName ) == false )
         {
             const string settingsPath = EditorUtil::resolveEditorConfigFile( pSettingsFileName );
             if ( settingsPath.empty() == false )

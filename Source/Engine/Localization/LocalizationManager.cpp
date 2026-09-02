@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Common/EngineServices.h"
@@ -510,7 +511,7 @@ namespace sw
         if ( currentIter != _mapLanguageTable.end() && currentIter->second != nullptr )
         {
             const utf8* pFound = currentIter->second->getString( key );
-            if ( pFound != nullptr && pFound[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pFound ) == false )
                 return pFound;
         }
 
@@ -521,7 +522,7 @@ namespace sw
             if ( fallbackIter != _mapLanguageTable.end() && fallbackIter->second != nullptr )
             {
                 const utf8* pFound = fallbackIter->second->getString( key );
-                if ( pFound != nullptr && pFound[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pFound ) == false )
                     return pFound;
             }
         }

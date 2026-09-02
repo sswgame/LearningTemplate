@@ -55,12 +55,14 @@ namespace sw
             return false;
 
         const string path = string( assetRelativePath );
+        if ( ResourceUtil::hasResource( path ) == false )
+            return false;
 
         XmlDocument doc;
         string      absPath;
         if ( doc.loadResource( path, &absPath ) == false )
         {
-            SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
+            SW_LOG_WARNING( "Failed to parse gamedata from %# — using built-in defaults.", path );
             return false;
         }
 
@@ -85,7 +87,7 @@ namespace sw
         for ( XmlNode child = root.child(); child.isValid() == true; child = child.next() )
         {
             const utf8* pName = child.name();
-            if ( pName == nullptr || pName[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pName ) )
                 continue;
 
             if ( StringUtil::equals( pName, "startMap" ) ||
@@ -107,7 +109,7 @@ namespace sw
                 {
                     const utf8* pKey = prop.attr( "key" );
                     const utf8* pVal = prop.text();
-                    if ( pKey != nullptr && pKey[0] != '\0' && pVal != nullptr )
+                    if ( StringUtil::isNullOrEmpty( pKey ) == false && pVal != nullptr )
                         _mapCustomProperty[pKey] = pVal;
                 }
                 continue;

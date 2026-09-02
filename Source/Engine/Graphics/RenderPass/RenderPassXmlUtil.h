@@ -68,7 +68,7 @@ namespace sw
                     att._format = pAttFormat;
                 att._bClear                = attNode.childBool( "_bClear", false );
                 const utf8* pAttClearColor = attNode.childText( "_clearColor" );
-                if ( pAttClearColor != nullptr && pAttClearColor[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pAttClearColor ) == false )
                 {
                     string_splitter tokens( pAttClearColor, { ",", " " } );
                     const auto&     listToken = tokens.getSplitList();

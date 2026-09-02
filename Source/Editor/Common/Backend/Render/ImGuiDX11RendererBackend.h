@@ -47,8 +47,8 @@ namespace sw::editor
         void unregisterTexture( void* pTextureID ) override;
 
     private:
-        IRHIDevice* _pRHIDevice{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
+        IRHIDevice*                                              _pRHIDevice{ nullptr };
         vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrv;
 #endif
     };

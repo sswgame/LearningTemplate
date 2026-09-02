@@ -162,7 +162,7 @@ namespace sw
             return false;
 
         const utf8* pMapPath = KeyValueFile::get( map, "map", nullptr );
-        if ( pMapPath != nullptr && pMapPath[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pMapPath ) == false )
             _mapPath = pMapPath;
         _playerX = KeyValueFile::getInt( map, "x", _playerX );
         _playerY = KeyValueFile::getInt( map, "y", _playerY );
@@ -178,10 +178,10 @@ namespace sw
         {
             PartyMember m{};
             const utf8* pSid = KeyValueFile::get( map, SaveGameInternal::partyKey( itemIndex, "speciesId" ).c_str(), nullptr );
-            if ( pSid != nullptr && pSid[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pSid ) == false )
                 m._speciesId = pSid;
             const utf8* pNick = KeyValueFile::get( map, SaveGameInternal::partyKey( itemIndex, "nickname" ).c_str(), nullptr );
-            if ( pNick != nullptr && pNick[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pNick ) == false )
                 m._nickname = pNick;
             m._level = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level );
             m._hp    = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hp" ).c_str(), m._hp );

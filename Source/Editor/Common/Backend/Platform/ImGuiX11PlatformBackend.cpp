@@ -160,14 +160,22 @@ namespace sw::editor
                 case ButtonPress:
                 case ButtonRelease:
                 {
+                    // X11 마우스 확장 버튼 번호 (X11 표준 X.h는 Button1~5만 정의하므로 XButton8/9 상수화)
+                    static constexpr uint32 kX11ButtonBack    = 8;
+                    static constexpr uint32 kX11ButtonForward = 9;
+
+                    // ImGui 마우스 버튼 인덱스
+                    static constexpr int32 kImGuiMouseBack    = 3; // XButton1 (ImGuiKey_MouseX1)
+                    static constexpr int32 kImGuiMouseForward = 4; // XButton2 (ImGuiKey_MouseX2)
+
                     const bool bIsDown = ( pEvent->type == ButtonPress );
-                    int32      button{ 0 };
+                    int32      button  = ImGuiMouseButton_Left;
                     if ( pEvent->xbutton.button == Button1 )
-                        button = 0;
+                        button = ImGuiMouseButton_Left;
                     else if ( pEvent->xbutton.button == Button3 )
-                        button = 1;
+                        button = ImGuiMouseButton_Right;
                     else if ( pEvent->xbutton.button == Button2 )
-                        button = 2;
+                        button = ImGuiMouseButton_Middle;
                     else if ( pEvent->xbutton.button == Button4 )
                     {
                         if ( bIsDown )
@@ -180,9 +188,15 @@ namespace sw::editor
                             io.AddMouseWheelEvent( 0, -1.0f );
                         return io.WantCaptureMouse;
                     }
+                    else if ( pEvent->xbutton.button == kX11ButtonBack )
+                        button = kImGuiMouseBack;
+                    else if ( pEvent->xbutton.button == kX11ButtonForward )
+                        button = kImGuiMouseForward;
                     io.AddMouseButtonEvent( button, bIsDown );
+
                     return io.WantCaptureMouse;
                 }
+
                 default:
                     break;
             }

@@ -31,16 +31,16 @@ namespace sw::editor
     /** @brief 에디터 UI 공통 색 (축 / 강조 / 헤더 / 상태) */
     namespace style
     {
-        inline constexpr Color4 kAxisX{ 0.80f, 0.10f, 0.15f, 1.0f };
-        inline constexpr Color4 kAxisY{ 0.20f, 0.70f, 0.20f, 1.0f };
-        inline constexpr Color4 kAxisZ{ 0.10f, 0.25f, 0.80f, 1.0f };
-        inline constexpr Color4 kAccent{ 0.78f, 0.22f, 0.18f, 1.0f };
-        inline constexpr Color4 kHeader{ 0.22f, 0.35f, 0.48f, 1.0f };
-        inline constexpr Color4 kOk{ 0.20f, 0.65f, 0.30f, 1.0f };
-        inline constexpr Color4 kWarn{ 0.85f, 0.65f, 0.15f, 1.0f };
-        inline constexpr Color4 kError{ 0.70f, 0.20f, 0.20f, 1.0f };
-        inline constexpr Color4 kToggleActive{ 0.22f, 0.45f, 0.75f, 1.0f };
-        inline constexpr Color4 kToggleInactive{ 0.20f, 0.20f, 0.20f, 0.60f };
+        inline constexpr Color4 kAxisX{ 0.85f, 0.25f, 0.25f, 1.0f };
+        inline constexpr Color4 kAxisY{ 0.30f, 0.75f, 0.35f, 1.0f };
+        inline constexpr Color4 kAxisZ{ 0.25f, 0.55f, 0.95f, 1.0f };
+        inline constexpr Color4 kAccent{ 0.27f, 0.57f, 1.0f, 1.0f };
+        inline constexpr Color4 kHeader{ 0.18f, 0.21f, 0.28f, 1.0f };
+        inline constexpr Color4 kOk{ 0.20f, 0.75f, 0.35f, 1.0f };
+        inline constexpr Color4 kWarn{ 0.95f, 0.70f, 0.15f, 1.0f };
+        inline constexpr Color4 kError{ 0.95f, 0.30f, 0.25f, 1.0f };
+        inline constexpr Color4 kToggleActive{ 0.27f, 0.57f, 1.0f, 1.0f };
+        inline constexpr Color4 kToggleInactive{ 0.20f, 0.22f, 0.26f, 0.60f };
     } // namespace style
 
     /** @brief 콘텐츠 브라우저 → 뷰포트/인스펙터 애셋 드래그 페이로드 */
@@ -179,5 +179,15 @@ namespace sw::editor
          * @brief Save / Don't Save / Cancel 모달. 버튼이 눌리기 전에는 None입니다.
          */
         static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage );
+
+        /**
+         * @brief 직전 렌더링된 UI 아이템에 마우스 호버 시 표시할 한글 툴팁을 그립니다.
+         */
+        static void drawTooltip( const utf8* pText );
+
+        /**
+         * @brief 물음표 '(?)' 도움말 마커를 표시하고 호버 시 툴팁을 띄웁니다.
+         */
+        static void drawHelpMarker( const utf8* pDesc );
     };
 } // namespace sw::editor

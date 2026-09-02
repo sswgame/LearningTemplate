@@ -560,7 +560,7 @@ namespace sw
 
         string  sTag = Impl::sanitizeTag( pTagName );
         XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
-        if ( pValueString != nullptr && pValueString[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pValueString ) == false )
             node.setValue( pValueString );
     }
 
@@ -636,7 +636,7 @@ namespace sw
     bool XmlDocumentBackend::initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName )
     {
         _impl->_doc.clear();
-        if ( pXmlStr == nullptr || pXmlStr[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pXmlStr ) )
             return false;
 
         if ( _impl->_doc.parse( pXmlStr ) == false )
@@ -691,7 +691,7 @@ namespace sw
 
         const bool bIgnore = ignoreCaseKeys();
         XmlNode    arrNode = _impl->_currentParent;
-        if ( pTagName != nullptr && pTagName[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
             string sTag = Impl::sanitizeTag( pTagName );
             arrNode     = _impl->_currentParent.child( sTag.c_str(), bIgnore );
@@ -714,7 +714,7 @@ namespace sw
 
         const bool bIgnore = ignoreCaseKeys();
         XmlNode    mapNode = _impl->_currentParent;
-        if ( pTagName != nullptr && pTagName[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
             string sTag = Impl::sanitizeTag( pTagName );
             mapNode     = _impl->_currentParent.child( sTag.c_str(), bIgnore );

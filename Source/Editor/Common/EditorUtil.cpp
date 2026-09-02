@@ -93,7 +93,7 @@ namespace sw::editor
      */
     string EditorUtil::resolveFontFile( const utf8* pFileName )
     {
-        if ( pFileName == nullptr || pFileName[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pFileName ) )
             return {};
 
         const EditorData& data       = editor::getEditorData();
@@ -242,7 +242,7 @@ namespace sw::editor
 
     string EditorUtil::resolveEditorConfigFile( const utf8* pFileName )
     {
-        if ( pFileName == nullptr || pFileName[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pFileName ) )
             return {};
 
         const string configDir = getEditorConfigDirectory();
@@ -289,7 +289,7 @@ namespace sw::editor
 
     GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
     {
-        if ( pManager == nullptr || pPath == nullptr || pPath[0] == '\0' )
+        if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
 
         if ( isPrefabAssetPath( pPath ) == false )

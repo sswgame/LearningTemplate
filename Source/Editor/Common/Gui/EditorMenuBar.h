@@ -12,6 +12,9 @@ namespace sw::editor
     class EditorMenuBar
     {
     public:
+        /** @brief 테마 설정 대화상자를 메뉴바 및 독스페이스보다 먼저 그려 스타일 변경사항을 프레임 지연 없이 즉시 반영합니다. */
+        static void drawThemeDialog();
+
         /** @brief File / Edit / Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
         static void draw( EditorDockLayout& dockLayout );
 

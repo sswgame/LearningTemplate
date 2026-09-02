@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -58,7 +59,7 @@ namespace sw
             for ( XmlNode moveNode = movesNode.child( "move" ); moveNode.isValid(); moveNode = moveNode.next( "move" ) )
             {
                 const utf8* pId = moveNode.attr( "id" );
-                if ( pId == nullptr || pId[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pId ) )
                     continue;
                 const utf8* pName = moveNode.attr( "name" );
                 MoveDef     def{};
@@ -76,7 +77,7 @@ namespace sw
             for ( XmlNode entryNode = speciesNode.child( "entry" ); entryNode.isValid(); entryNode = entryNode.next( "entry" ) )
             {
                 const utf8* pId = entryNode.attr( "id" );
-                if ( pId == nullptr || pId[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pId ) )
                     continue;
                 const utf8* pName = entryNode.attr( "name" );
                 SpeciesDef  def{};

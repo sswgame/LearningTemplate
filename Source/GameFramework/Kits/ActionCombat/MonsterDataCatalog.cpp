@@ -65,7 +65,7 @@ namespace sw
         for ( XmlNode node = root.child( "Monster" ); node; node = node.next( "Monster" ) )
         {
             const utf8* pIdStr = node.attr( "id" );
-            if ( pIdStr == nullptr || pIdStr[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pIdStr ) )
                 continue;
 
             MonsterDef monsterDef;

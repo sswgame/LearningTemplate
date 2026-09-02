@@ -46,9 +46,32 @@ namespace sw::editor
         PROPERTY()
         string _spriteClipFile{ "SpriteClip.json" };
 
+        PROPERTY()
+        string _themePreset{ "ModernDark" };
+
+        PROPERTY()
+        float32 _themeAccentR{ 0.27f };
+
+        PROPERTY()
+        float32 _themeAccentG{ 0.57f };
+
+        PROPERTY()
+        float32 _themeAccentB{ 1.0f };
+
+        PROPERTY()
+        float32 _themeWindowRounding{ 4.0f };
+
+        PROPERTY()
+        float32 _themeFrameRounding{ 3.0f };
+
+        PROPERTY()
+        float32 _themeTabRounding{ 4.0f };
+
         static void                setActive( const EditorConfig& config );
         static const EditorConfig& getActive();
         /** @brief Host JSON을 읽어 active 설정을 채웁니다. 파일이 없으면 cpp 기본값입니다. */
         static void loadFromHost();
+        /** @brief active 설정을 Host JSON 파일에 저장합니다. */
+        static void saveToHost();
     };
 } // namespace sw::editor

@@ -84,7 +84,7 @@ namespace sw
 
             static bool parseNodeBool( const utf8* pText, bool fallback )
             {
-                if ( pText == nullptr || pText[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pText ) )
                     return fallback;
                 return StringUtil::parseBool( pText, fallback );
             }
@@ -226,7 +226,7 @@ namespace sw
     bool XmlNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = childText( pName, bIgnoreCaseKeys );
-        if ( pValue == nullptr || pValue[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pValue ) )
             return false;
         dst = pValue;
         return true;

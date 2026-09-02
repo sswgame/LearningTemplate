@@ -47,4 +47,20 @@ namespace sw::editor
 
         setActive( cfg );
     }
+
+    void EditorConfig::saveToHost()
+    {
+        const TypeInfo* pTypeInfo   = EditorConfig::StaticType();
+        const string    projectRoot = EditorUtil::getProjectRootPath();
+        string          configPath  = FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
+        const bool      bAbsolute   = ( configPath.size() >= 2 && configPath[1] == ':' ) ||
+                                      ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
+        if ( projectRoot.empty() == false && bAbsolute == false )
+            configPath = FileUtil::joinPath( projectRoot, configPath );
+
+        if ( pTypeInfo != nullptr && JsonSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
+            SW_LOG_TRACE( "EditorConfig saved to file (%#)", configPath.c_str() );
+        else
+            SW_LOG_WARNING( "Failed to save EditorConfig to %#", configPath.c_str() );
+    }
 } // namespace sw::editor

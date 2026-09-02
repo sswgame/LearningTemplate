@@ -45,7 +45,7 @@ namespace sw
         const string_view gameDataFile =
             gameCfg._gameDataFile.empty() ? string_view( "data/gamedata.xml" ) : string_view( gameCfg._gameDataFile );
         if ( _bootstrap.load( gameDataFile ) == false )
-            SW_LOG_WARNING( "Bootstrap load failed for pack '%#' — using defaults.", _bootstrap._packRoot );
+            SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
         return onInitialize();
     }
 

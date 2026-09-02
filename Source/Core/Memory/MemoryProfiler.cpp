@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
@@ -129,7 +130,7 @@ namespace sw
 
     int32 MemoryProfiler::reportMemoryLeaks( const utf8* pPhaseTag )
     {
-        const utf8* pPhase = ( pPhaseTag != nullptr && pPhaseTag[0] != '\0' ) ? pPhaseTag : "shutdown";
+        const utf8* pPhase = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
 
 #if defined( SW_HAS_CRT_LEAK_CHECK )
         if ( MemoryProfilerInternal::s_bHasLeakBaseline )

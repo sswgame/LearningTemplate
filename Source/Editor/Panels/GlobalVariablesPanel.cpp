@@ -47,7 +47,7 @@ namespace sw::editor
 
             static bool matchFilter( const GlobalVariableInfo& info, const utf8* pFilter )
             {
-                if ( pFilter == nullptr || pFilter[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pFilter ) )
                     return true;
 
                 return StringUtil::stristr( info._name.c_str(), pFilter ) != nullptr ||
@@ -469,8 +469,7 @@ namespace sw::editor
             if ( bPinned )
                 ImGui::PopStyleColor();
 
-            if ( ImGui::IsItemHovered() )
-                ImGui::SetTooltip( bPinned ? "Unpin from favorites" : "Pin to favorites" );
+            EditorWidgets::drawTooltip( bPinned ? "즐겨찾기 고정 해제" : "즐겨찾기에 고정" );
         }
 
         // Name 컬럼 (툴팁 표시)
@@ -479,8 +478,8 @@ namespace sw::editor
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
-            ImGui::Text( "Description: %s", info._description.empty() ? "(none)" : info._description.c_str() );
-            ImGui::Text( "Module: %s", info._moduleName.empty() ? "Core" : info._moduleName.c_str() );
+            ImGui::Text( "설명: %s", info._description.empty() ? "(설명 없음)" : info._description.c_str() );
+            ImGui::Text( "모듈: %s", info._moduleName.empty() ? "Core" : info._moduleName.c_str() );
             ImGui::EndTooltip();
         }
 

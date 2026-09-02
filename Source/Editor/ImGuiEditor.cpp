@@ -15,6 +15,7 @@
 #include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -125,10 +126,7 @@ namespace sw::editor
             _dockLayout.setupPersistencePaths();
             _dockLayout.applyIniFilename();
 
-            ImGui::StyleColorsDark();
-            ImGuiStyle& style                 = ImGui::GetStyle();
-            style.WindowRounding              = 0.0f;
-            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+            EditorThemeUtil::loadFromConfig();
         }
 
         EditorUtil::setupFonts();
@@ -288,6 +286,7 @@ namespace sw::editor
         BLOCK( "ImGui NewFrame / Dockspace" )
         {
             beginFrame();
+            EditorMenuBar::drawThemeDialog();
             EditorMenuBar::draw( _dockLayout );
             _dockLayout.beginDockspace();
         }

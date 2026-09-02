@@ -10,6 +10,7 @@
 #include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -30,6 +31,7 @@
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
+#include <IconsFontAwesome6.h>
 #include <imgui.h>
 
 namespace sw::editor
@@ -38,7 +40,10 @@ namespace sw::editor
     {
         struct EditorMenuBarInternal
         {
+            inline static bool _s_bShowThemeSettings = false;
+
             static void onOpenSceneDialogResult( const vector<string>& listPath )
+
             {
                 if ( listPath.empty() == false )
                     EditorContext::get()->getWorkspace().requestLoadScene( listPath[0] );
@@ -88,33 +93,54 @@ namespace sw::editor
 
         if ( ImGui::BeginMenu( "File" ) )
         {
-            if ( ImGui::MenuItem( "New Scene" ) )
+            if ( ImGui::MenuItem( ICON_FA_FILE "  New Scene" ) )
                 EditorAssetCommands::tryCreateNewScene();
-            if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
+            EditorWidgets::drawTooltip( "새로운 빈 씬을 생성합니다" );
+
+            if ( ImGui::MenuItem( ICON_FA_FOLDER_OPEN "  Open Scene...", "Ctrl+O" ) )
                 EditorMenuBarInternal::openSceneFileDialog();
-            if ( ImGui::MenuItem( "Save", "Ctrl+S" ) )
+            EditorWidgets::drawTooltip( "디스크에서 기존 씬 파일(.scene.xml)을 엽니다 (Ctrl+O)" );
+
+            if ( ImGui::MenuItem( ICON_FA_FLOPPY_DISK "  Save", "Ctrl+S" ) )
                 EditorMenuBarInternal::saveFocusedOrScene();
-            if ( ImGui::MenuItem( "Save Scene" ) )
+            EditorWidgets::drawTooltip( "현재 포커스된 에셋 또는 활성 씬을 저장합니다 (Ctrl+S)" );
+
+            if ( ImGui::MenuItem( ICON_FA_FLOPPY_DISK "  Save Scene" ) )
                 EditorMenuBarInternal::saveSceneOrPrompt();
+            EditorWidgets::drawTooltip( "현재 활성화된 씬을 디스크에 저장합니다" );
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( "Quick Open...", "Ctrl+P" ) )
+            if ( ImGui::MenuItem( ICON_FA_MAGNIFYING_GLASS "  Quick Open...", "Ctrl+P" ) )
                 QuickLauncherPopup::open();
-            if ( ImGui::MenuItem( "Command Palette...", "Ctrl+Shift+P / Ctrl+Space" ) )
+            EditorWidgets::drawTooltip( "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다 (Ctrl+P)" );
+
+            if ( ImGui::MenuItem( ICON_FA_TERMINAL "  Command Palette...", "Ctrl+Shift+P / Ctrl+Space" ) )
                 CommandPalettePopup::open();
+            EditorWidgets::drawTooltip( "에디터 명령 및 액션을 검색하여 실행합니다 (Ctrl+Shift+P / Ctrl+Space)" );
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( "Exit", "Alt+F4" ) )
+            if ( ImGui::MenuItem( ICON_FA_RIGHT_FROM_BRACKET "  Exit", "Alt+F4" ) )
                 EditorAssetCommands::requestExit();
+            EditorWidgets::drawTooltip( "에디터를 종료합니다 (Alt+F4)" );
+
             ImGui::EndMenu();
         }
 
         if ( ImGui::BeginMenu( "Edit" ) )
         {
-            if ( ImGui::MenuItem( "Undo", "Ctrl+Z", false, EditorPlaySession::isStopped() ) )
+            if ( ImGui::MenuItem( ICON_FA_ROTATE_LEFT "  Undo", "Ctrl+Z", false, EditorPlaySession::isStopped() ) )
                 getService<CommandStack>()->undo();
-            if ( ImGui::MenuItem( "Redo", "Ctrl+Y", false, EditorPlaySession::isStopped() ) )
+            EditorWidgets::drawTooltip( "마지막 편집 작업을 되돌립니다 (Ctrl+Z)" );
+
+            if ( ImGui::MenuItem( ICON_FA_ROTATE_RIGHT "  Redo", "Ctrl+Y", false, EditorPlaySession::isStopped() ) )
                 getService<CommandStack>()->redo();
+            EditorWidgets::drawTooltip( "되돌린 편집 작업을 다시 실행합니다 (Ctrl+Y)" );
+
+            ImGui::Separator();
+            if ( ImGui::MenuItem( ICON_FA_PALETTE "  Theme & Look and Feel..." ) )
+                EditorMenuBarInternal::_s_bShowThemeSettings = true;
+            EditorWidgets::drawTooltip( "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다" );
+
             ImGui::EndMenu();
         }
 
@@ -123,31 +149,35 @@ namespace sw::editor
             IModuleCompiler* pCompiler  = getService<IModuleCompiler>();
             const bool       bCompiling = ( pCompiler != nullptr && pCompiler->isCompiling() );
 
-            if ( ImGui::MenuItem( "Compile Game (SWGame)", "Ctrl+Alt+F11", false, bCompiling == false ) )
+            if ( ImGui::MenuItem( ICON_FA_HAMMER "  Compile Game (SWGame)", "Ctrl+Alt+F11", false, bCompiling == false ) )
             {
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "SWGame" );
             }
+            EditorWidgets::drawTooltip( "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다 (Ctrl+Alt+F11)" );
 
-            if ( ImGui::MenuItem( "Compile Editor (EditorModule)", nullptr, false, bCompiling == false ) )
+            if ( ImGui::MenuItem( ICON_FA_WRENCH "  Compile Editor (EditorModule)", nullptr, false, bCompiling == false ) )
             {
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "EditorModule" );
             }
+            EditorWidgets::drawTooltip( "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다" );
 
-            if ( ImGui::MenuItem( "Compile All Modules", "Ctrl+Shift+B", false, bCompiling == false ) )
+            if ( ImGui::MenuItem( ICON_FA_BOXES_STACKED "  Compile All Modules", "Ctrl+Shift+B", false, bCompiling == false ) )
             {
                 if ( pCompiler != nullptr )
                     pCompiler->compileAll();
             }
+            EditorWidgets::drawTooltip( "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다 (Ctrl+Shift+B)" );
 
             ImGui::Separator();
 
-            if ( ImGui::MenuItem( "Cancel Build", nullptr, false, bCompiling ) )
+            if ( ImGui::MenuItem( ICON_FA_BAN "  Cancel Build", nullptr, false, bCompiling ) )
             {
                 if ( pCompiler != nullptr )
                     pCompiler->cancel();
             }
+            EditorWidgets::drawTooltip( "현재 진행 중인 컴파일 작업을 취소합니다" );
 
             ImGui::EndMenu();
         }
@@ -159,7 +189,7 @@ namespace sw::editor
             for ( uint32 index = 0; index < kindCount; ++index )
             {
                 const utf8* pTitle = EditorAssetTypeRegistry::getPanelTitle( pKind[index] );
-                if ( pTitle == nullptr || pTitle[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pTitle ) )
                     continue;
                 if ( ImGui::MenuItem( pTitle ) )
                     EditorContext::get()->getWorkspace().requestOpenPanel( pTitle );
@@ -190,8 +220,9 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( "Reset Default Layout" ) )
+            if ( ImGui::MenuItem( ICON_FA_TABLE_COLUMNS "  Reset Default Layout" ) )
                 dockLayout.requestResetDefault();
+            EditorWidgets::drawTooltip( "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다" );
 
             ImGui::EndMenu();
         }
@@ -237,40 +268,39 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
                 ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
                 fixed_string<constant::kMaxBuffer64> label;
-                formatstring( label.data(), label.capacity(), "Compiling (%#s) [Cancel]", Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
+                formatstring( label.data(), label.capacity(), ICON_FA_SPINNER " Compiling (%#s)", Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
                     pCompiler->cancel();
                 ImGui::PopStyleColor( 2 );
             }
             else
             {
-                if ( ImGui::SmallButton( "Compile" ) )
+                if ( ImGui::SmallButton( ICON_FA_HAMMER " Compile" ) )
                     pCompiler->compileModule( "SWGame" );
 
-                if ( ImGui::IsItemHovered() )
-                {
-                    ImGui::BeginTooltip();
-                    ImGui::TextUnformatted( "Live Coding: Compile SWGame (Ctrl+Alt+F11 / F7)" );
-                    ImGui::EndTooltip();
-                }
+                EditorWidgets::drawTooltip( "라이브 코딩: SWGame 모듈을 즉시 컴파일하고 핫리로드합니다 (Ctrl+Alt+F11)" );
             }
 
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                ImGui::TextColored( ImVec4( 0.95f, 0.75f, 0.25f, 1.0f ), "Compiling..." );
+                ImGui::TextColored( ImVec4( 0.95f, 0.75f, 0.25f, 1.0f ), ICON_FA_SPINNER " Compiling..." );
+                EditorWidgets::drawTooltip( "현재 백그라운드에서 모듈을 빌드하고 있습니다" );
             }
             else if ( state == BuildState::Success )
             {
-                ImGui::TextColored( ImVec4( 0.35f, 0.85f, 0.35f, 1.0f ), "Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                ImGui::TextColored( ImVec4( 0.35f, 0.85f, 0.35f, 1.0f ), ICON_FA_CIRCLE_CHECK " Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                EditorWidgets::drawTooltip( "마지막 빌드가 성공적으로 완료되었습니다" );
             }
             else if ( state == BuildState::Failed )
             {
-                ImGui::TextColored( ImVec4( 0.95f, 0.35f, 0.35f, 1.0f ), "Build Failed" );
+                ImGui::TextColored( ImVec4( 0.95f, 0.35f, 0.35f, 1.0f ), ICON_FA_CIRCLE_XMARK " Build Failed" );
+                EditorWidgets::drawTooltip( "빌드에 실패했습니다. 콘솔 창에서 상세 오류를 확인하세요." );
             }
             else
             {
-                ImGui::TextDisabled( "Ready" );
+                ImGui::TextDisabled( ICON_FA_CHECK " Ready" );
+                EditorWidgets::drawTooltip( "라이브 코딩 빌드 준비 완료" );
             }
 
             ImGui::SameLine();
@@ -285,18 +315,27 @@ namespace sw::editor
         if ( ImGui::IsItemHovered() )
         {
             ImGui::BeginTooltip();
-            ImGui::TextUnformatted( "Switch RHI: -dx11 / -dx12 / -vk / -gl" );
+            ImGui::Text( "현재 그래픽스 RHI 백엔드: %s (%.0f FPS)", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
+            ImGui::Separator();
+            ImGui::TextUnformatted( "실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl" );
             const bool bVk = RHIAvailability::query( RHIBackend::Vulkan )._bEditorSupported;
             const bool bGl = RHIAvailability::query( RHIBackend::OpenGL )._bEditorSupported;
-            ImGui::Text( "Vulkan editor: %s", bVk ? "yes" : "no" );
-            ImGui::Text( "OpenGL editor: %s", bGl ? "yes" : "no" );
+            ImGui::Text( "Vulkan 에디터 지원: %s", bVk ? "사용 가능" : "미지원" );
+            ImGui::Text( "OpenGL 에디터 지원: %s", bGl ? "사용 가능" : "미지원" );
             ImGui::EndTooltip();
         }
 
         ImGui::EndMainMenuBar();
     }
 
+    void EditorMenuBar::drawThemeDialog()
+    {
+        if ( EditorMenuBarInternal::_s_bShowThemeSettings )
+            EditorThemeUtil::drawThemeSettingsDialog( &EditorMenuBarInternal::_s_bShowThemeSettings );
+    }
+
     void EditorMenuBar::processHotkeys()
+
     {
         ImGuiIO& io = ImGui::GetIO();
         if ( io.WantTextInput == false )

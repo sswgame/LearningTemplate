@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -243,7 +245,7 @@ namespace sw::editor
     void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )
     {
         _focusedAssetPath = ( pPath != nullptr ) ? pPath : "";
-        if ( pPath != nullptr && pPath[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pPath ) == false )
         {
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr )

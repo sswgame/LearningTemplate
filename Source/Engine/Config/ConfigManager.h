@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Config/IConfig.h"
@@ -68,7 +69,7 @@ namespace sw
 
 #if defined( SW_SHIPPING )
             (void)filePath;
-            if ( pBakedJson != nullptr && pBakedJson[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pBakedJson ) == false )
             {
                 if ( loadConfigFromJson<T>( name, string( pBakedJson ), "shipping_host_baked" ) )
                 {
@@ -82,7 +83,7 @@ namespace sw
                 SW_LOG_TRACE( "%# source=file (%#)", name.c_str(), filePath.c_str() );
                 return getConfig<T>( name );
             }
-            if ( pBakedJson != nullptr && pBakedJson[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pBakedJson ) == false )
             {
                 if ( loadConfigFromJson<T>( name, string( pBakedJson ), "shipping_host_baked_fallback" ) )
                 {

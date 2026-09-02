@@ -247,7 +247,7 @@ namespace sw
                 else
                 {
                     const utf8* pVulkanSdkEnv = std::getenv( "VULKAN_SDK" );
-                    if ( pVulkanSdkEnv != nullptr && StringUtil::strlen( pVulkanSdkEnv ) > 0 )
+                    if ( StringUtil::isNullOrEmpty( pVulkanSdkEnv ) == false )
                     {
                         string sdkBinPath = FileUtil::joinPath( pVulkanSdkEnv, "Bin" );
                         SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );

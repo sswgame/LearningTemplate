@@ -238,17 +238,18 @@ namespace sw
         }
 
         /** @brief 지정된 alignment 배수에 맞춰 올림(align) 처리합니다. */
-        template <typename T>
-        static SW_INLINE constexpr T align( T value, T alignment )
+        template <typename T, typename U = T>
+        static SW_INLINE constexpr T align( T value, U alignment )
         {
-            if ( alignment <= T( 0 ) )
+            const T alignT = static_cast<T>( alignment );
+            if ( alignT <= T( 0 ) )
                 return value;
             if constexpr ( std::is_integral_v<T> )
             {
-                if ( ( alignment & ( alignment - 1 ) ) == 0 )
-                    return ( value + alignment - 1 ) & ~( alignment - 1 );
+                if ( ( alignT & ( alignT - 1 ) ) == 0 )
+                    return ( value + alignT - 1 ) & ~( alignT - 1 );
             }
-            return ( ( value + alignment - T( 1 ) ) / alignment ) * alignment;
+            return ( ( value + alignT - T( 1 ) ) / alignT ) * alignT;
         }
 
         /** @brief 임의의 난수를 반환합니다. */

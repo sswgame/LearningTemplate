@@ -106,7 +106,7 @@ namespace sw
             static vector<string> splitPath( const utf8* pDottedPath )
             {
                 vector<string> listPart;
-                if ( pDottedPath == nullptr || pDottedPath[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pDottedPath ) )
                     return listPart;
                 string_splitter splitter( pDottedPath, { "." } );
                 for ( string_view token : splitter.getSplitList() )

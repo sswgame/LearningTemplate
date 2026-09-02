@@ -161,7 +161,7 @@ namespace sw
 
     const utf8* Logger::getCaller( const utf8* pFile )
     {
-        if ( pFile == nullptr || pFile[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pFile ) )
             return nullptr;
         string_view fileName;
         FileUtil::getFileNamePart( string_view{ pFile }, fileName );

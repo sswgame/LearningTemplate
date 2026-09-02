@@ -53,7 +53,7 @@ namespace sw::editor
 
             static bool nameMatchesFilter( GameObject* pObj, const utf8* pFilter )
             {
-                if ( pFilter == nullptr || pFilter[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pFilter ) )
                     return true;
                 if ( pObj == nullptr )
                     return false;
@@ -355,7 +355,7 @@ namespace sw::editor
                 if ( pObj == nullptr || pManager == nullptr )
                     return;
 
-                if ( pFilter != nullptr && pFilter[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pFilter ) == false )
                 {
                     if ( subtreeMatchesFilter( pObj, pFilter ) == false )
                         return;
@@ -538,18 +538,21 @@ namespace sw::editor
             if ( bEditsAllowed == false )
             {
                 EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
+                EditorWidgets::drawTooltip( "플레이 모드 실행 중 (씬 편집 제한)" );
                 ImGui::SameLine();
             }
             if ( bEditsAllowed == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "+ Create" ) )
                 EditorSceneCommands::create( pManager, nullptr );
+            EditorWidgets::drawTooltip( "현재 씬의 루트에 새 게임오브젝트를 생성합니다" );
             if ( bEditsAllowed == false )
                 ImGui::EndDisabled();
 
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
                                             "Search (t:Mesh, tag:Player)...", 0.0f, false );
+            EditorWidgets::drawTooltip( "오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다" );
         }
         EditorChrome::endToolbar();
 

@@ -32,7 +32,8 @@ namespace sw::editor
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
                 if ( bytes < 1024 )
-                    formatstring( out.data(), out.capacity(), "%llu B", bytes );
+                    formatstring( out.data(), out.capacity(), "%# B", bytes );
+
                 else if ( bytes < 1024 * 1024 )
                     formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / 1024.0, Format().precision( 2 ) ) );
                 else if ( bytes < 1024 * 1024 * 1024 )
@@ -284,8 +285,9 @@ namespace sw::editor
                     ImGui::TableNextColumn();
                     ImGui::Text( "%s", arrBytesBuf.c_str() );
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%llu", stats._currentAllocationCount.load() );
+                    ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount.load() ) );
                     ImGui::TableNextColumn();
+
                     ImGui::Text( "%s", arrTotalBuf.c_str() );
                 }
                 ImGui::EndTable();
@@ -316,7 +318,9 @@ namespace sw::editor
 
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
-                        ImGui::Text( "%llu B (%llu allocs)", info._currentBytes, info._currentCount );
+                        fixed_string<constant::kMaxBuffer64> allocBuf;
+                        formatstring( allocBuf.data(), allocBuf.capacity(), "%# B (%# allocs)", info._currentBytes, info._currentCount );
+                        ImGui::TextUnformatted( allocBuf.c_str() );
 
                         ImGui::TableNextColumn();
 

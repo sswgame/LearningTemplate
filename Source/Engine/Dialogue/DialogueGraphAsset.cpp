@@ -3,6 +3,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -277,7 +278,7 @@ namespace sw
 
         const string keyStr{ textOrKey };
         const utf8*  pResolved = engine::getLocalizationManager().getString( hashed_string( keyStr.c_str() ), nullptr );
-        if ( pResolved == nullptr || pResolved[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };
         return string{ pResolved };
     }

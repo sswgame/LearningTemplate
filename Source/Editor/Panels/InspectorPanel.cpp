@@ -199,21 +199,29 @@ namespace sw::editor
         if ( pfbPath.empty() == false )
         {
             EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
+            EditorWidgets::drawTooltip( "프리팹 인스턴스입니다" );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", pfbPath.c_str() );
 
             if ( ImGui::Button( "Apply to Prefab" ) )
                 EditorInspectorCommands::applyToPrefab( pObj, pfbPath );
+            EditorWidgets::drawTooltip( "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다" );
+
             ImGui::SameLine();
             if ( ImGui::Button( "Revert to Prefab" ) )
                 EditorInspectorCommands::revertToPrefab( pObj, pfbPath );
+            EditorWidgets::drawTooltip( "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" );
+
             ImGui::SameLine();
             if ( ImGui::Button( "Unlink" ) )
                 EditorInspectorCommands::unlinkPrefab( pObj );
+            EditorWidgets::drawTooltip( "프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환합니다" );
+
             ImGui::Separator();
         }
 
         EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, "Search properties..." );
+        EditorWidgets::drawTooltip( "프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다" );
         ImGui::Spacing();
 
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
@@ -371,15 +379,17 @@ namespace sw::editor
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )
     {
-        ImGui::Text( "GameObject  ID: %llu", static_cast<uint64>( pObj->getObjectId() ) );
+        ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectId() ) );
 
         fixed_string<constant::kMaxBuffer256> nameBuf{ pObj->getName().c_str() };
         if ( ImGui::InputText( "Name", nameBuf.data(), nameBuf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
             pObj->setName( hashed_string( nameBuf.c_str() ) );
+        EditorWidgets::drawTooltip( "게임오브젝트의 고유 이름 (Enter 키로 적용)" );
 
         bool bActive = pObj->isActive();
         if ( ImGui::Checkbox( "Active", &bActive ) )
             pObj->setActive( bActive );
+        EditorWidgets::drawTooltip( "게임오브젝트의 활성화 상태를 토글합니다" );
 
         GameObject* pParent = pObj->getParent();
         if ( pParent != nullptr )
@@ -388,6 +398,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Unparent" ) )
                 pObj->detachFromParent();
+            EditorWidgets::drawTooltip( "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다" );
         }
         else
             ImGui::TextDisabled( "Parent: (root)" );
@@ -398,7 +409,7 @@ namespace sw::editor
             ImGui::TextUnformatted( "Tags:" );
             for ( const TagID& tag : listTag )
             {
-                if ( tag._pString != nullptr && tag._pString[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                 {
                     ImGui::SameLine();
                     EditorWidgets::drawChip( tag._pString, editor::style::kOk );
@@ -409,7 +420,7 @@ namespace sw::editor
 
     void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice )
     {
-        ImGui::TextDisabled( "ID: %llu", static_cast<uint64>( pComp->getComponentId() ) );
+        ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentId() ) );
 
         const TypeInfo*      pTypeInfo  = pComp->getTypeInfo();
         IInspectorComponent* pInspector = ( pTypeInfo != nullptr )

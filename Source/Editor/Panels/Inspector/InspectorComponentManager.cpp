@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -122,7 +124,7 @@ namespace sw::editor
                     const vector<TagID>& listTag = pTagComp->getTags().getTags();
                     for ( const TagID& tag : listTag )
                     {
-                        if ( tag._pString != nullptr && tag._pString[0] != '\0' )
+                        if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                         {
                             ImGui::SameLine();
                             EditorWidgets::drawChip( tag._pString, editor::style::kOk );

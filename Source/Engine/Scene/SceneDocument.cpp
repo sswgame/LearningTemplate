@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -47,7 +48,7 @@ namespace sw
                     return;
 
                 const utf8* pNodeName = node.name();
-                if ( pNodeName == nullptr || pNodeName[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pNodeName ) )
                     return;
 
                 out.append( '<' ).append( pNodeName );
@@ -60,14 +61,14 @@ namespace sw
                 for ( XmlNode child = node.child(); child; child = child.next() )
                 {
                     const utf8* pChildName = child.name();
-                    if ( pChildName != nullptr && pChildName[0] != '\0' )
+                    if ( StringUtil::isNullOrEmpty( pChildName ) == false )
                     {
                         bHasElementChild = true;
                         break;
                     }
                 }
 
-                const bool bHasValue = node.text() != nullptr && node.text()[0] != '\0';
+                const bool bHasValue = StringUtil::isNullOrEmpty( node.text() ) == false;
                 if ( bHasElementChild == false && bHasValue == false )
                 {
                     out.append( "/>" );
@@ -81,7 +82,7 @@ namespace sw
                 for ( XmlNode child = node.child(); child; child = child.next() )
                 {
                     const utf8* pChildName = child.name();
-                    if ( pChildName != nullptr && pChildName[0] != '\0' )
+                    if ( StringUtil::isNullOrEmpty( pChildName ) == false )
                         appendNodeXml( out, child );
                 }
 

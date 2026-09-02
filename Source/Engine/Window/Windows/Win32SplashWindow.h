@@ -33,13 +33,18 @@ namespace sw
         virtual ~Win32SplashWindow() override;
 
         bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
-        void updateStatus( const utf8* pStatus ) override;
+        void updateStatus( const utf8* pStatus, float32 progress = -1.0f ) override;
+        void setProgress( float32 progress ) override;
         void dismiss() override;
+
+        void* getSplashBitmap() const { return _pSplashBitmap; }
 
     private:
         static LRESULT CALLBACK splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
     private:
         [[maybe_unused]] HWND _hWnd;
+        uint64                _gdiplusToken;
+        void*                 _pSplashBitmap;
     };
 } // namespace sw

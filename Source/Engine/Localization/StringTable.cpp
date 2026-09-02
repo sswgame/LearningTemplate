@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Format/KeyValueFile.h"
@@ -231,13 +232,13 @@ namespace sw
         for ( XmlNode strNode = root.child(); strNode; strNode = strNode.next() )
         {
             const utf8* pKey = strNode.attr( "key" );
-            if ( pKey == nullptr || pKey[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pKey ) )
                 pKey = strNode.attr( "id" );
-            if ( pKey == nullptr || pKey[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pKey ) )
                 continue;
 
             const utf8* pValue = strNode.attr( "value" );
-            if ( pValue != nullptr && pValue[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pValue ) == false )
                 _mapTable[hashed_string( pKey ).getHash()] = pValue;
             else
                 _mapTable[hashed_string( pKey ).getHash()] = strNode.text();

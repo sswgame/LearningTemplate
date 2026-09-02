@@ -88,12 +88,27 @@ namespace sw::editor
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
 
+        /** @brief 폴더 이동 히스토리 항목 */
+        struct HistoryEntry
+        {
+            string _folderPathAbs;
+            string _breadcrumb;
+        };
+
         // ------------------------------------------------------------------------------
-        // 5) 선택 · 임포트
+        // 5) 선택 · 히스토리 · 임포트
         //    파일 대화상자는 백그라운드, processPendingImports는 메인 스레드
         // ------------------------------------------------------------------------------
+        /** @brief 이전 히스토리 폴더로 이동 가능한지 여부 */
+        bool canNavigateBack() const { return _historyIndex > 0; }
+        /** @brief 다음 히스토리 폴더로 이동 가능한지 여부 */
+        bool canNavigateForward() const { return _historyIndex >= 0 && _historyIndex + 1 < static_cast<int32>( _listHistory.size() ); }
+        /** @brief 이전 히스토리 폴더로 이동합니다. */
+        void navigateBack();
+        /** @brief 다음 히스토리 폴더로 이동합니다. */
+        void navigateForward();
         /** @brief 폴더를 선택하고 내용을 새로고침합니다. */
-        void selectFolder( string_view absolutePath, string_view breadcrumb );
+        void selectFolder( string_view absolutePath, string_view breadcrumb, bool bRecordHistory = true );
         /** @brief 애셋을 선택된 상태로 표시합니다. */
         void selectAsset( const AssetEntry& entry );
         /** @brief 폴더를 열거나 파일 애셋에 포커스/오픈합니다. */
@@ -108,12 +123,14 @@ namespace sw::editor
     private:
         vector<ContentRoot>                   _listRoot;
         vector<AssetEntry>                    _listEntry;
+        vector<HistoryEntry>                  _listHistory;
         string                                _selectedFolderAbs;
         string                                _breadcrumb; /**< 예: "Game / Shaders" */
         string                                _selectedAssetAbs;
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         float32                               _tileSize;
         uint32                                _filterIndex;
+        int32                                 _historyIndex;
         ViewMode                              _viewMode;
         mutex                                 _pendingImportMutex;
         vector<string>                        _listPendingImportPath;

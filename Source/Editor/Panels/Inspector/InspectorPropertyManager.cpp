@@ -151,9 +151,10 @@ namespace sw::editor
                 const float32 maxF      = prop._metadata._maxRange;
                 const int32   minI      = static_cast<int32>( minF );
                 const int32   maxI      = static_cast<int32>( maxF );
-                const string  fmt       = getFormatWithUnits( prop, "%lld" );
+                const string  fmt       = getFormatWithUnits( prop, "%d" );
 
                 int64* pPtr = prop.getValuePtr<int64>( pInstance );
+
                 if ( pPtr == nullptr )
                     return true;
                 if ( bReadOnly )

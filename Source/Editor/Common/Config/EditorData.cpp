@@ -29,7 +29,7 @@ namespace sw::editor
                 for ( XmlNode fontNode = list.child( "font" ); fontNode; fontNode = fontNode.next( "font" ) )
                 {
                     const utf8* pText = fontNode.text();
-                    if ( pText != nullptr && pText[0] != '\0' )
+                    if ( StringUtil::isNullOrEmpty( pText ) == false )
                         listLoaded.push_back( pText );
                 }
                 if ( listLoaded.empty() == false )
@@ -39,8 +39,9 @@ namespace sw::editor
             static void takeClearColor( XmlNode root, float4& outColor )
             {
                 const utf8* pText = root.childText( "clearColor" );
-                if ( pText == nullptr || pText[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pText ) )
                     return;
+
                 string_splitter tokens( pText, { ",", " " } );
                 const auto&     listToken = tokens.getSplitList();
                 if ( listToken.size() < 4 )

@@ -25,10 +25,16 @@ namespace sw
         return _pImpl->initialize( pTitle, pInitialStatus, width, height );
     }
 
-    void SplashWindow::updateStatus( const utf8* pStatus )
+    void SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
         if ( _pImpl != nullptr )
-            _pImpl->updateStatus( pStatus );
+            _pImpl->updateStatus( pStatus, progress );
+    }
+
+    void SplashWindow::setProgress( float32 progress )
+    {
+        if ( _pImpl != nullptr )
+            _pImpl->setProgress( progress );
     }
 
     void SplashWindow::dismiss()
@@ -43,5 +49,10 @@ namespace sw
     bool SplashWindow::isOpen() const
     {
         return ( _pImpl != nullptr ) && _pImpl->isOpen();
+    }
+
+    float32 SplashWindow::getProgress() const
+    {
+        return ( _pImpl != nullptr ) ? _pImpl->getProgress() : 0.0f;
     }
 } // namespace sw

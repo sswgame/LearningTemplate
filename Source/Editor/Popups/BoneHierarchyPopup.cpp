@@ -2,6 +2,8 @@
 
 #include "Editor/Popups/BoneHierarchyPopup.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -29,9 +31,10 @@ namespace sw::editor
                 if ( pOwner != nullptr )
                 {
                     const utf8* pNameStr = pOwner->getName().c_str();
-                    if ( pNameStr != nullptr && pNameStr[0] != '\0' )
+                    if ( StringUtil::isNullOrEmpty( pNameStr ) == false )
                         pCompName = pNameStr;
                 }
+
                 const ImGuiID            nodeId = static_cast<ImGuiID>( pComp->getComponentId() );
                 const ImGuiTreeNodeFlags flags  = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
 
@@ -51,7 +54,7 @@ namespace sw::editor
                     return;
 
                 const utf8* pObjName = pObj->getName().c_str();
-                if ( pObjName == nullptr || pObjName[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pObjName ) )
                     pObjName = "GameObject";
 
                 const vector<GameObject*>& listChildren = pObj->getChildren();

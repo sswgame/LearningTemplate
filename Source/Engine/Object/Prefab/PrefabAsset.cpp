@@ -44,7 +44,7 @@ namespace sw
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {
-                if ( pText == nullptr || pText[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pText ) )
                     return;
                 if ( StringUtil::stristr( pText, ".prefab" ) == nullptr )
                     return;
@@ -517,7 +517,7 @@ namespace sw
             return nullptr;
 
         const utf8* pInstanceNameUtf8 = pInstanceName != nullptr ? pInstanceName : pAsset->getName().c_str();
-        if ( pInstanceNameUtf8 == nullptr || pInstanceNameUtf8[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pInstanceNameUtf8 ) )
             pInstanceNameUtf8 = PrefabAssetInternal::kDefaultInstance;
 
         GameObject* pGameObject = pGameObjectManager->createGameObject( hashed_string( pInstanceNameUtf8 ) );

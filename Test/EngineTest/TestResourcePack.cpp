@@ -109,9 +109,10 @@ namespace sw
                 listDiskEntry.push_back( diskEntry );
             }
 
-            header._totalDataSize    = dataStreamBytes.size();
-            header._indexOffset      = MathUtil::align( static_cast<uint64>( kPackSectorAlignment ) + header._totalDataSize, 64ULL );
-            header._indexSize        = listDiskEntry.size() * sizeof( PackFileEntryOnDisk );
+            header._totalDataSize = dataStreamBytes.size();
+            header._indexOffset   = MathUtil::align( static_cast<uint64>( kPackSectorAlignment ) + header._totalDataSize, uint64{ 64 } );
+            header._indexSize     = listDiskEntry.size() * sizeof( PackFileEntryOnDisk );
+
             header._stringPoolOffset = header._indexOffset + header._indexSize;
             header._stringPoolSize   = stringPoolBytes.size();
 

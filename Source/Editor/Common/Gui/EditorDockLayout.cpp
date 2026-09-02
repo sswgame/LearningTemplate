@@ -3,6 +3,7 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
@@ -160,8 +161,9 @@ namespace sw::editor
         for ( uint32 index = 0; index < kindCount; ++index )
         {
             const utf8* pTitle = EditorAssetTypeRegistry::getPanelTitle( pKind[index] );
-            if ( pTitle == nullptr || pTitle[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pTitle ) )
                 continue;
+
             ImGui::DockBuilderDockWindow( pTitle, dockMain );
         }
 

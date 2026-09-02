@@ -2,6 +2,8 @@
 
 #include "Engine/Window/Mac/CocoaSplashWindow.h"
 
+#include "Core/String/StringUtil.h"
+
 namespace sw
 {
     CocoaSplashWindow::CocoaSplashWindow()
@@ -17,19 +19,30 @@ namespace sw
 
     bool CocoaSplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title  = ( pTitle != nullptr && pTitle[0] != '\0' ) ? string{ pTitle } : "SW Engine";
-        _status = ( pInitialStatus != nullptr && pInitialStatus[0] != '\0' ) ? string{ pInitialStatus } : "Initializing...";
-        _width  = width;
-        _height = height;
-        _bOpen  = true;
+        _title           = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
+        _status          = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
+        _width           = width;
+        _height          = height;
+        _splashImagePath = findSplashImagePath();
+        if ( _splashImagePath.empty() == false )
+            loadSplashImage( _splashImagePath );
+        _bOpen = true;
         return true;
     }
 
-    void CocoaSplashWindow::updateStatus( const utf8* pStatus )
+    void CocoaSplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
         if ( _bOpen == false )
             return;
-        _status = ( pStatus != nullptr ) ? string{ pStatus } : "";
+        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
+            _status = pStatus;
+        if ( progress >= 0.0f )
+            _progress = ( progress > 1.0f ) ? 1.0f : progress;
+    }
+
+    void CocoaSplashWindow::setProgress( float32 progress )
+    {
+        updateStatus( nullptr, progress );
     }
 
     void CocoaSplashWindow::dismiss()

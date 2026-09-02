@@ -109,7 +109,7 @@ namespace sw
         setDoubleClickTime( dblClick );
         setDoubleClickMaxDistance( dblDist );
         setHoldThreshold( holdThr );
-        if ( pDefLayer != nullptr && pDefLayer[0] != '\0' )
+        if ( StringUtil::isNullOrEmpty( pDefLayer ) == false )
             _defaultLayerName = hashed_string( pDefLayer );
 
         XmlNode layersNode = root.child( ActionMapSerializationInternal::InputMapXml::kLayers );
@@ -119,7 +119,7 @@ namespace sw
                   layerNode         = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
             {
                 const utf8* pLayerName = layerNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
-                if ( pLayerName == nullptr || pLayerName[0] == '\0' )
+                if ( StringUtil::isNullOrEmpty( pLayerName ) )
                     continue;
                 const int32 priority   = layerNode.attrInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
                 const bool  enabled    = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
@@ -134,12 +134,12 @@ namespace sw
         auto loadAction = [this]( XmlNode actionNode, string_view inheritedLayer )
         {
             const utf8* pActionName = actionNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
-            if ( pActionName == nullptr || pActionName[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pActionName ) )
                 return;
 
             hashed_string layer      = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
             const utf8*   pLayerAttr = actionNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
-            if ( pLayerAttr != nullptr && pLayerAttr[0] != '\0' )
+            if ( StringUtil::isNullOrEmpty( pLayerAttr ) == false )
                 layer = hashed_string( pLayerAttr );
             ensureLayer( layer );
 
@@ -158,7 +158,7 @@ namespace sw
             {
                 const utf8* pSource = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrSource );
                 const utf8* pCode   = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrCode );
-                if ( pSource == nullptr || pCode == nullptr || pCode[0] == '\0' )
+                if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
                     continue;
 
                 ActionTrigger trigger          = defaultTrigger;
@@ -172,14 +172,14 @@ namespace sw
 
                 hashed_string bindLayer      = layer;
                 const utf8*   pBindLayerAttr = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
-                if ( pBindLayerAttr != nullptr && pBindLayerAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pBindLayerAttr ) == false )
                 {
                     bindLayer = hashed_string( pBindLayerAttr );
                     ensureLayer( bindLayer );
                 }
 
                 const utf8* pModifierAttr = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
-                if ( pModifierAttr != nullptr && pModifierAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
                 {
                     Key modKey = KeyCodes::fromName( pModifierAttr );
                     if ( modKey == Key::Unknown )
@@ -242,7 +242,7 @@ namespace sw
                 const float32 deadzone       = compNode.attrFloat( "deadzone", 0.0f );
                 hashed_string compLayer      = layer;
                 const utf8*   pCompLayerAttr = compNode.attr( "layer" );
-                if ( pCompLayerAttr != nullptr && pCompLayerAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pCompLayerAttr ) == false )
                 {
                     compLayer = hashed_string( pCompLayerAttr );
                     ensureLayer( compLayer );
@@ -260,7 +260,7 @@ namespace sw
                 const Key     negKey         = KeyCodes::fromName( axisNode.attr( "negative" ) );
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.attr( "layer" );
-                if ( pAxisLayerAttr != nullptr && pAxisLayerAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
                 {
                     axisLayer = hashed_string( pAxisLayerAttr );
                     ensureLayer( axisLayer );
@@ -279,7 +279,7 @@ namespace sw
                 const float32      deadzone        = stickNode.attrFloat( "deadzone", 0.15f );
                 hashed_string      stickLayer      = layer;
                 const utf8*        pStickLayerAttr = stickNode.attr( "layer" );
-                if ( pStickLayerAttr != nullptr && pStickLayerAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pStickLayerAttr ) == false )
                 {
                     stickLayer = hashed_string( pStickLayerAttr );
                     ensureLayer( stickLayer );
@@ -297,7 +297,7 @@ namespace sw
                 const Key     trigKey   = KeyCodes::fromName( chordNode.attr( "trigger" ) );
                 ActionTrigger trig      = defaultTrigger;
                 const utf8*   pTrigAttr = chordNode.attr( "triggerMode" );
-                if ( pTrigAttr != nullptr && pTrigAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pTrigAttr ) == false )
                 {
                     const ActionTrigger parsed = actionTriggerFromName( pTrigAttr );
                     if ( parsed != ActionTrigger::Count )
@@ -305,7 +305,7 @@ namespace sw
                 }
                 hashed_string chordLayer      = layer;
                 const utf8*   pChordLayerAttr = chordNode.attr( "layer" );
-                if ( pChordLayerAttr != nullptr && pChordLayerAttr[0] != '\0' )
+                if ( StringUtil::isNullOrEmpty( pChordLayerAttr ) == false )
                 {
                     chordLayer = hashed_string( pChordLayerAttr );
                     ensureLayer( chordLayer );
@@ -320,7 +320,7 @@ namespace sw
         for ( XmlNode layerNode = root.child( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
         {
             const utf8* pLayerName = layerNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
-            if ( pLayerName == nullptr || pLayerName[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pLayerName ) )
                 continue;
             if ( hasLayer( pLayerName ) == false )
             {
@@ -485,9 +485,9 @@ namespace sw
             const utf8*       pAction   = bindNode.attr( "action" );
             const utf8*       pKindStr  = bindNode.attr( "kind" );
             const utf8*       pLayerStr = bindNode.attr( "layer" );
-            const string_view layer     = ( pLayerStr != nullptr && pLayerStr[0] != '\0' ) ? string_view( pLayerStr ) : string_view{};
+            const string_view layer     = ( StringUtil::isNullOrEmpty( pLayerStr ) == false ) ? string_view( pLayerStr ) : string_view{};
 
-            if ( pAction == nullptr || pAction[0] == '\0' )
+            if ( StringUtil::isNullOrEmpty( pAction ) )
                 continue;
 
             if ( pKindStr != nullptr )

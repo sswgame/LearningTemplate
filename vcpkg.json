@@ -50,6 +50,7 @@
     "implot",
     "imguizmo",
     "imgui-node-editor",
-    "imgui-notify"
+    "imgui-notify",
+    "stb"
   ]
 }

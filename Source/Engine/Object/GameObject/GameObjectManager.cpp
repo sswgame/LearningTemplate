@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/array.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -1138,7 +1139,7 @@ namespace sw
             return requested;
 
         const utf8* pBase = requested.c_str();
-        if ( pBase == nullptr || pBase[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pBase ) )
             pBase = "GameObject";
 
         string_view baseView{ pBase };

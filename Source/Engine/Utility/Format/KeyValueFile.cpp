@@ -83,7 +83,7 @@ namespace sw
     int32 KeyValueFile::getInt( const KeyValueMap& mapData, string_view key, int32 fallback )
     {
         const utf8* pV = get( mapData, key, nullptr );
-        if ( pV == nullptr || pV[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pV ) )
             return fallback;
         int32 val{ fallback };
         StringUtil::parseInt( pV, val );
@@ -93,7 +93,7 @@ namespace sw
     float32 KeyValueFile::getFloat( const KeyValueMap& mapData, string_view key, float32 fallback )
     {
         const utf8* pV = get( mapData, key, nullptr );
-        if ( pV == nullptr || pV[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pV ) )
             return fallback;
         float32 val{ fallback };
         StringUtil::parseFloat( pV, val );
@@ -103,7 +103,7 @@ namespace sw
     bool KeyValueFile::getBool( const KeyValueMap& mapData, string_view key, bool fallback )
     {
         const utf8* pV = get( mapData, key, nullptr );
-        if ( pV == nullptr || pV[0] == '\0' )
+        if ( StringUtil::isNullOrEmpty( pV ) )
             return fallback;
         return StringUtil::parseBool( pV, fallback );
     }

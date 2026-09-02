@@ -118,6 +118,7 @@ namespace sw::editor
         if ( currentState == PlaySessionState::Playing )
         {
             EditorWidgets::drawChip( "Playing", editor::style::kOk );
+            EditorWidgets::drawTooltip( "현재 게임 실행 중" );
             ImGui::SameLine();
         }
         else if ( ImGui::Button( "Play" ) )
@@ -127,6 +128,8 @@ namespace sw::editor
             else
                 EditorPlaySession::play();
         }
+        if ( currentState != PlaySessionState::Playing )
+            EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Simulate" ) )
@@ -136,19 +139,24 @@ namespace sw::editor
             else
                 EditorPlaySession::play();
         }
+        EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (에디터 카메라를 유지하며 물리/게임 로직 실행)" );
 
         ImGui::SameLine();
         if ( currentState == PlaySessionState::Paused )
         {
             EditorWidgets::drawChip( "Paused", editor::style::kWarn );
+            EditorWidgets::drawTooltip( "게임 일시 정지됨" );
             ImGui::SameLine();
         }
         else if ( ImGui::Button( "Pause" ) )
             EditorPlaySession::pause();
+        if ( currentState != PlaySessionState::Paused )
+            EditorWidgets::drawTooltip( "게임 실행을 일시 정지합니다" );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Step" ) )
             EditorPlaySession::stepOnce();
+        EditorWidgets::drawTooltip( "게임을 정확히 1프레임 전진시킵니다" );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Stop" ) )
@@ -162,5 +170,6 @@ namespace sw::editor
                     EditorContext::get()->getWorkspace().remapSelectionByObjectName( pScene->getObjectManager() );
             }
         }
+        EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
     }
 } // namespace sw::editor

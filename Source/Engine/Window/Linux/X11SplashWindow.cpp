@@ -2,6 +2,8 @@
 
 #include "Engine/Window/Linux/X11SplashWindow.h"
 
+#include "Core/String/StringUtil.h"
+
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 #endif
@@ -23,10 +25,13 @@ namespace sw
 #if defined( SW_PLATFORM_LINUX )
     bool X11SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        _title  = ( pTitle != nullptr && pTitle[0] != '\0' ) ? string{ pTitle } : "SW Engine";
-        _status = ( pInitialStatus != nullptr && pInitialStatus[0] != '\0' ) ? string{ pInitialStatus } : "Initializing...";
-        _width  = width;
-        _height = height;
+        _title           = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
+        _status          = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
+        _width           = width;
+        _height          = height;
+        _splashImagePath = findSplashImagePath();
+        if ( _splashImagePath.empty() == false )
+            loadSplashImage( _splashImagePath );
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
@@ -65,12 +70,15 @@ namespace sw
         return true;
     }
 
-    void X11SplashWindow::updateStatus( const utf8* pStatus )
+    void X11SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
     {
         if ( _bOpen == false )
             return;
 
-        _status = ( pStatus != nullptr ) ? string{ pStatus } : "";
+        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
+            _status = pStatus;
+        if ( progress >= 0.0f )
+            _progress = ( progress > 1.0f ) ? 1.0f : progress;
 
         Display* pDisplay = static_cast<Display*>( _pX11Display );
         Window   win      = static_cast<Window>( _x11Window );
@@ -79,29 +87,43 @@ namespace sw
             const int32 screen = DefaultScreen( pDisplay );
             GC          gc     = DefaultGC( pDisplay, screen );
 
-            XSetForeground( pDisplay, gc, 0x181C24 );
-            XFillRectangle( pDisplay, win, gc, 0, 0, _width, _height );
-            XSetForeground( pDisplay, gc, 0x374152 );
-            XDrawRectangle( pDisplay, win, gc, 0, 0, _width - 1, _height - 1 );
+            if ( _splashImage._pPixels != nullptr && _splashImage._width > 0 && _splashImage._height > 0 )
+            {
+                XImage* pImage = XCreateImage(
+                    pDisplay, DefaultVisual( pDisplay, screen ),
+                    DefaultDepth( pDisplay, screen ), ZPixmap, 0,
+                    reinterpret_cast<char*>( _splashImage._pPixels ),
+                    _splashImage._width, _splashImage._height, 32, 0 );
+                if ( pImage != nullptr )
+                {
+                    XPutImage( pDisplay, win, gc, pImage, 0, 0, 0, 0, _splashImage._width, _splashImage._height );
+                    pImage->data = nullptr;
+                    XDestroyImage( pImage );
+                }
+            }
 
-            XSetForeground( pDisplay, gc, 0x4B8CF5 );
-            XFillRectangle( pDisplay, win, gc, 1, 1, _width - 2, 3 );
-
-            XSetForeground( pDisplay, gc, 0xF0F5FF );
-            XDrawString( pDisplay, win, gc, 32, 50, _title.c_str(), static_cast<int32>( _title.length() ) );
-            XSetForeground( pDisplay, gc, 0x8296B4 );
-            XDrawString( pDisplay, win, gc, 32, 85, "Game & Editor Engine Template (LiveReload Enabled)", 50 );
-
-            XSetForeground( pDisplay, gc, 0xB4CDEB );
+            XSetForeground( pDisplay, gc, 0xAEC3E6 );
             XDrawString( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 50, _status.c_str(), static_cast<int32>( _status.length() ) );
 
-            XSetForeground( pDisplay, gc, 0x262C3A );
-            XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 38, _width - 64, 6 );
-            XSetForeground( pDisplay, gc, 0x3C82F0 );
-            XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 38, _width - 110, 6 );
+            const int32   totalBarWidth   = static_cast<int32>( _width ) - 64;
+            const float32 clampedProgress = ( _progress < 0.0f ) ? 0.0f : ( ( _progress > 1.0f ) ? 1.0f : _progress );
+            const int32   fillWidth       = static_cast<int32>( static_cast<float32>( totalBarWidth ) * clampedProgress );
+
+            XSetForeground( pDisplay, gc, 0x202632 );
+            XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 30, totalBarWidth, 4 );
+            if ( fillWidth > 0 )
+            {
+                XSetForeground( pDisplay, gc, 0x4691FF );
+                XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 30, fillWidth, 4 );
+            }
 
             XFlush( pDisplay );
         }
+    }
+
+    void X11SplashWindow::setProgress( float32 progress )
+    {
+        updateStatus( nullptr, progress );
     }
 
     void X11SplashWindow::dismiss()
@@ -126,7 +148,8 @@ namespace sw
 #else
 
     bool X11SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 ) { return false; }
-    void X11SplashWindow::updateStatus( const utf8* ) {}
+    void X11SplashWindow::updateStatus( const utf8*, float32 ) {}
+    void X11SplashWindow::setProgress( float32 ) {}
     void X11SplashWindow::dismiss() {}
 
 #endif
