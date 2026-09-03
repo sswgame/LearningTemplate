@@ -35,7 +35,7 @@ namespace sw
                 outKeyUnderRoot.clear();
 
                 const string& resourceRoot = ResourceUtil::getRootFolderPath();
-                if ( resourceRoot.empty() || lowerRel.empty() )
+                if ( resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel ) )
                     return false;
 
                 // 1. game/<pack>/... 형식 분해
@@ -56,15 +56,18 @@ namespace sw
 
                 // 2. 임의의 도메인 (<domain>/<key>) 동적 해석 (engine, common, editor, dlc, mods 등)
                 const size_t firstSlash = lowerRel.find( '/' );
-                if ( firstSlash != string::npos )
+                if ( firstSlash != string::npos && firstSlash > 0 )
                 {
-                    const string_view domain             = lowerRel.substr( 0, firstSlash );
-                    const string      candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                    if ( FileUtil::directoryExists( candidateDomainDir ) )
+                    const string_view domain = lowerRel.substr( 0, firstSlash );
+                    if ( domain.find( ':' ) == string_view::npos )
                     {
-                        outRoot         = candidateDomainDir;
-                        outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
-                        return true;
+                        const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
+                        if ( FileUtil::directoryExists( candidateDomainDir ) )
+                        {
+                            outRoot         = candidateDomainDir;
+                            outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
+                            return true;
+                        }
                     }
                 }
 
@@ -188,6 +191,13 @@ namespace sw
         if ( filePath.empty() )
             return {};
 
+        if ( FileUtil::isAbsolutePath( filePath ) )
+        {
+            if ( FileUtil::fileExists( filePath ) )
+                return FileUtil::normalizeSeparators( filePath );
+            return {};
+        }
+
         uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
         if ( folderName.empty() == false )
         {
@@ -246,6 +256,9 @@ namespace sw
         if ( relativePath.empty() )
             return {};
 
+        if ( FileUtil::isAbsolutePath( relativePath ) )
+            return FileUtil::normalizeSeparators( relativePath );
+
         string result = getResourcePath( relativePath );
         if ( result.empty() )
         {
@@ -265,9 +278,7 @@ namespace sw
             return false;
 
         // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
-        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
-                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
-        if ( bIsAbsolute )
+        if ( FileUtil::isAbsolutePath( relativePath ) )
         {
             if ( FileUtil::fileExists( relativePath ) )
             {
@@ -325,9 +336,7 @@ namespace sw
             return false;
 
         // 0. OS 절대 경로(임시 파일, 외부 세이브 등)인 경우 디스크에서 직접 읽기
-        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
-                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
-        if ( bIsAbsolute )
+        if ( FileUtil::isAbsolutePath( relativePath ) )
         {
             if ( FileUtil::fileExists( relativePath ) )
                 return FileUtil::readFile( relativePath, outBytes );

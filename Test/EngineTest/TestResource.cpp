@@ -471,3 +471,19 @@ SW_TEST_CASE( Engine_Resource, DynamicDomainFolderPathResolution )
     const sw::string nonExistentSub = sw::ResourceUtil::getDomainFolderPath( "engine", "invalid_subfolder_xyz_999" );
     SW_EXPECT_TRUE( nonExistentSub.empty() );
 }
+
+/**
+ * @brief [Engine_Resource] ResourceUtil::makeAbsolutePath 절대 경로 전달 시 그대로 반환 및 도메인 오인 방지 검증
+ */
+SW_TEST_CASE( Engine_Resource, AbsolutePathPreservation )
+{
+    sw::ResourceUtil::initialize();
+
+    const sw::string posixAbs = "/home/runner/work/scene.xml";
+    SW_EXPECT_STREQ( posixAbs.c_str(), sw::ResourceUtil::makeAbsolutePath( posixAbs ).c_str() );
+
+    const sw::string winAbs = "C:/Projects/Game/scene.xml";
+    SW_EXPECT_STREQ( winAbs.c_str(), sw::ResourceUtil::makeAbsolutePath( winAbs ).c_str() );
+
+    SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( posixAbs ).empty() );
+}

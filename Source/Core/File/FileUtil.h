@@ -86,6 +86,8 @@ namespace sw
         static bool makePathRelative( string_view rootDir, string_view path, string& outResult );
         /** @brief 절대 경로로 만듭니다. */
         static bool makePathAbsolute( string_view path, string& outResult );
+        /** @brief 경로가 절대 경로인지 확인합니다. */
+        static bool isAbsolutePath( string_view path );
         /**
          * @brief 비교/맵 키용 경로 정규화 (`\`→`/` + 소문자).
          * @note Linux/macOS I/O에는 사용하지 말 것. open에는 normalizeSeparators 또는 실제 FS 경로를 쓴다.

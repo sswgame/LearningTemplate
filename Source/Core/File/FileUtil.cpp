@@ -279,6 +279,17 @@ namespace sw
         return false;
     }
 
+    bool FileUtil::isAbsolutePath( string_view path )
+    {
+        if ( path.empty() )
+            return false;
+
+        if ( path.size() >= 2 && ( ( 'a' <= path[0] && path[0] <= 'z' ) || ( 'A' <= path[0] && path[0] <= 'Z' ) ) && path[1] == ':' )
+            return true;
+
+        return path[0] == '/' || path[0] == '\\';
+    }
+
     string FileUtil::normalizePath( string_view path )
     {
         string outResult{ path };

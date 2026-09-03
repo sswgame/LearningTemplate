@@ -32,6 +32,9 @@ namespace sw
 
             static string absoluteWritePath( string_view path )
             {
+                if ( FileUtil::isAbsolutePath( path ) )
+                    return FileUtil::normalizeSeparators( path );
+
                 string result = ResourceUtil::getResourcePath( path );
                 if ( result.empty() )
                 {
@@ -103,15 +106,10 @@ namespace sw
 
         XmlDocument doc;
         string      absPath;
-        if ( doc.loadResource( path, &absPath ) == false )
+        if ( doc.loadPath( path, &absPath ) == false )
         {
-            // Absolute fallback
-            if ( doc.loadFile( path ) == false )
-            {
-                SW_LOG_ERROR( "File not found: %#", path );
-                return false;
-            }
-            absPath = path;
+            SW_LOG_ERROR( "File not found: %#", path );
+            return false;
         }
 
         XmlNode root = doc.root( SceneDocumentInternal::kRoot );
@@ -273,11 +271,27 @@ namespace sw
         *this       = {};
         _sourcePath = path;
 
-        string absPath = ResourceUtil::getResourcePath( path );
-        if ( absPath.empty() )
-            absPath = path;
+        vector<uint8> bytes;
+        string        absPath;
+        Archive       arch;
 
-        Archive arch( absPath, true );
+        if ( ResourceUtil::readBinaryResource( path, bytes ) )
+        {
+            arch    = Archive( bytes.data(), bytes.size() );
+            absPath = path;
+        }
+        else
+        {
+            if ( FileUtil::isAbsolutePath( path ) )
+                absPath = FileUtil::normalizeSeparators( path );
+            else
+            {
+                absPath = ResourceUtil::getResourcePath( path );
+                if ( absPath.empty() )
+                    absPath = path;
+            }
+            arch = Archive( absPath, true );
+        }
         if ( arch.getSize() < 12 )
         {
             SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
