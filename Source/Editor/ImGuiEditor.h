@@ -66,6 +66,7 @@ namespace sw::editor
         void onHostFrameEnd() override;
 
     private:
+        void cleanupPartialInitialization();
         bool onWindowCloseQuery();
         // ------------------------------------------------------------------------------
         // 3) ImGui 프레임 · 백엔드 렌더

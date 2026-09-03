@@ -371,13 +371,14 @@ namespace sw::editor
         // 1) 등록된 모든 에디터 패널 토글 커맨드
         for ( const EditorPanelEntry& win : EditorContext::get()->getPanelManager().getPanels() )
         {
+            const string        panelId  = win._id;
             const string        winTitle = win._title;
             CommandPaletteEntry entry;
             entry._category = "Panel";
             entry._label    = "Open Panel: " + winTitle;
             entry._detail   = "Editor Panel";
-            entry._action   = [winTitle]()
-            { EditorContext::get()->getPanelManager().setPanelOpen( winTitle.c_str(), true ); };
+            entry._action   = [panelId]()
+            { EditorContext::get()->getPanelManager().setPanelOpen( panelId.c_str(), true ); };
             _listAllCommand.push_back( std::move( entry ) );
         }
 

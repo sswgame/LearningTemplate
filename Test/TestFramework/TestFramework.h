@@ -270,8 +270,8 @@ namespace test
 #define SW_EXPECT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \
     {                                                                                                                        \
-        const auto& _swExpected = ( expected );                                                                              \
-        const auto& _swActual   = ( actual );                                                                                \
+        const auto _swExpected = ( expected );                                                                               \
+        const auto _swActual   = ( actual );                                                                                 \
         if ( !( _swExpected == _swActual ) )                                                                                 \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
@@ -284,8 +284,8 @@ namespace test
 #define SW_EXPECT_NOT_EQUAL( expected, actual )                                                                              \
     do                                                                                                                       \
     {                                                                                                                        \
-        const auto& _swExpected = ( expected );                                                                              \
-        const auto& _swActual   = ( actual );                                                                                \
+        const auto _swExpected = ( expected );                                                                               \
+        const auto _swActual   = ( actual );                                                                                 \
         if ( _swExpected == _swActual )                                                                                      \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
@@ -298,10 +298,10 @@ namespace test
 #define SW_EXPECT_NEAR_EQUAL( expected, actual, tolerance )                                                                                        \
     do                                                                                                                                             \
     {                                                                                                                                              \
-        const auto& _swExpected   = ( expected );                                                                                                  \
-        const auto& _swActual     = ( actual );                                                                                                    \
-        const auto& _swTolerance  = ( tolerance );                                                                                                 \
-        const auto  _swDifference = sw::MathUtil::abs( _swExpected - _swActual );                                                                  \
+        const auto _swExpected   = ( expected );                                                                                                   \
+        const auto _swActual     = ( actual );                                                                                                     \
+        const auto _swTolerance  = ( tolerance );                                                                                                  \
+        const auto _swDifference = sw::MathUtil::abs( _swExpected - _swActual );                                                                   \
         if ( _swDifference > _swTolerance )                                                                                                        \
         {                                                                                                                                          \
             std::ostringstream oss;                                                                                                                \
@@ -369,8 +369,8 @@ namespace test
 #define SW_ASSERT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \
     {                                                                                                                        \
-        const auto& _swExpected = ( expected );                                                                              \
-        const auto& _swActual   = ( actual );                                                                                \
+        const auto _swExpected = ( expected );                                                                               \
+        const auto _swActual   = ( actual );                                                                                 \
         if ( !( _swExpected == _swActual ) )                                                                                 \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \

@@ -23,6 +23,7 @@
 namespace sw::editor
 {
     void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
+                                            string_view              panelId,
                                             EditorPanelCategory category, string_view menuPath )
     {
         if ( pPanel == nullptr )
@@ -30,6 +31,7 @@ namespace sw::editor
 
         const utf8*      pTitle = pPanel->getPanelTitle();
         EditorPanelEntry entry{};
+        entry._id        = panelId.empty() == false ? string{ panelId } : ( pTitle != nullptr ? pTitle : "" );
         entry._title     = pTitle != nullptr ? pTitle : "";
         entry._menuPath  = menuPath.empty() == false ? string{ menuPath } : entry._title;
         entry._category  = category;
@@ -38,21 +40,21 @@ namespace sw::editor
         _listPanel.push_back( std::move( entry ) );
     }
 
-    IEditorPanel* EditorPanelManager::findPanel( string_view title ) const
+    IEditorPanel* EditorPanelManager::findPanel( string_view panelId ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance == nullptr )
                 continue;
-            if ( entry._title == title || entry._menuPath == title )
+            if ( entry._id == panelId || entry._title == panelId )
                 return entry._pInstance.get();
         }
         return nullptr;
     }
 
-    bool EditorPanelManager::setPanelOpen( string_view title, bool bOpen )
+    bool EditorPanelManager::setPanelOpen( string_view panelId, bool bOpen )
     {
-        IEditorPanel* pPanel = findPanel( title );
+        IEditorPanel* pPanel = findPanel( panelId );
         if ( pPanel != nullptr )
         {
             pPanel->setOpen( bOpen );
@@ -71,24 +73,24 @@ namespace sw::editor
         clear();
 
         // 핵심 패널 (Core)
-        registerPanel( make_unique<HierarchyPanel>(), EditorPanelCategory::Core );
-        registerPanel( make_unique<InspectorPanel>(), EditorPanelCategory::Core );
-        registerPanel( make_unique<GameViewPanel>(), EditorPanelCategory::Core );
-        registerPanel( make_unique<ConsolePanel>(), EditorPanelCategory::Core );
-        registerPanel( make_unique<ProfilerPanel>(), EditorPanelCategory::Core );
-        registerPanel( make_unique<ContentBrowserPanel>(), EditorPanelCategory::Core );
+        registerPanel( make_unique<HierarchyPanel>(), "hierarchy", EditorPanelCategory::Core );
+        registerPanel( make_unique<InspectorPanel>(), "inspector", EditorPanelCategory::Core );
+        registerPanel( make_unique<GameViewPanel>(), "game_view", EditorPanelCategory::Core );
+        registerPanel( make_unique<ConsolePanel>(), "console", EditorPanelCategory::Core );
+        registerPanel( make_unique<ProfilerPanel>(), "profiler", EditorPanelCategory::Core );
+        registerPanel( make_unique<ContentBrowserPanel>(), "content_browser", EditorPanelCategory::Core );
 
-        registerPanel( make_unique<HistoryPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<GlobalVariablesPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<SequencerPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<DialogueGraphPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<MaterialPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<DataTablePanel>(), EditorPanelCategory::Tool );
-        registerPanel( make_unique<InputMapEditorPanel>(), EditorPanelCategory::Tool );
+        registerPanel( make_unique<HistoryPanel>(), "history", EditorPanelCategory::Tool );
+        registerPanel( make_unique<GlobalVariablesPanel>(), "global_variables", EditorPanelCategory::Tool );
+        registerPanel( make_unique<SequencerPanel>(), "sequencer", EditorPanelCategory::Tool );
+        registerPanel( make_unique<AnimationGraphPanel>(), "animation_graph", EditorPanelCategory::Tool );
+        registerPanel( make_unique<DialogueGraphPanel>(), "dialogue_graph", EditorPanelCategory::Tool );
+        registerPanel( make_unique<MaterialPanel>(), "material", EditorPanelCategory::Tool );
+        registerPanel( make_unique<PrefabEditorPanel>(), "prefab_editor", EditorPanelCategory::Tool );
+        registerPanel( make_unique<TileMapPanel>(), "tile_map", EditorPanelCategory::Tool );
+        registerPanel( make_unique<SpriteClipPanel>(), "sprite_clip", EditorPanelCategory::Tool );
+        registerPanel( make_unique<DataTablePanel>(), "data_table", EditorPanelCategory::Tool );
+        registerPanel( make_unique<InputMapEditorPanel>(), "input_map", EditorPanelCategory::Tool );
     }
 
     void EditorPanelManager::drawOpenPanels()

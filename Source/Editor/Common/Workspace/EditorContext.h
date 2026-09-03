@@ -45,7 +45,7 @@ namespace sw::editor
         void shutdown();
 
         /** @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다. */
-        static EditorContext* get() { return s_pActiveContext; }
+        static EditorContext* get();
         /** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
         static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }
 

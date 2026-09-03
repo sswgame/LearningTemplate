@@ -28,6 +28,7 @@ namespace sw::editor
     /** @brief 등록된 에디터 패널 항목 메타데이터 */
     struct EditorPanelEntry
     {
+        string                   _id;
         string                   _title;
         string                   _menuPath;
         EditorPanelCategory      _category{ EditorPanelCategory::Core };
@@ -45,23 +46,25 @@ namespace sw::editor
         ~EditorPanelManager() = default;
 
         void registerPanel( unique_ptr<IEditorPanel> pPanel,
+                            string_view              panelId,
                             EditorPanelCategory      category = EditorPanelCategory::Core,
                             string_view              menuPath = {} );
 
         template <typename TPanel, typename... TArgs>
         TPanel* registerPanel( EditorPanelCategory category = EditorPanelCategory::Core,
+                               string_view         panelId  = {},
                                string_view         menuPath = {}, TArgs&&... args )
         {
             unique_ptr<TPanel> pPanel = make_unique<TPanel>( std::forward<TArgs>( args )... );
             TPanel*            pRaw   = pPanel.get();
-            registerPanel( std::move( pPanel ), category, menuPath );
+            registerPanel( std::move( pPanel ), panelId, category, menuPath );
             return pRaw;
         }
 
         const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
         vector<EditorPanelEntry>&       getPanelsMutable() { return _listPanel; }
-        IEditorPanel*                   findPanel( string_view title ) const;
-        bool                            setPanelOpen( string_view title, bool bOpen );
+        IEditorPanel*                   findPanel( string_view panelId ) const;
+        bool                            setPanelOpen( string_view panelId, bool bOpen );
         void                            clear();
         void                            registerDefaultPanels();
         void                            drawOpenPanels();

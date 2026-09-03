@@ -5,7 +5,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -107,8 +106,9 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------------------
-    EditorWorkspace::EditorWorkspace()
-        : _selectedComponentId{ 0 }
+    EditorWorkspace::EditorWorkspace( SelectionManager* pSelectionManager )
+        : _pSelectionManager{ pSelectionManager }
+        , _selectedComponentId{ 0 }
         , _observedSceneGeneration{ 0 }
         , _scrollToComponentId{ 0 }
         , _scrollToObjectId{ 0 }
@@ -142,17 +142,15 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     uint64 EditorWorkspace::getSelectedObjectId() const
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            return pContext->getSelectionManager().getPrimaryObjectId();
+        if ( _pSelectionManager != nullptr )
+            return _pSelectionManager->getPrimaryObjectId();
         return 0;
     }
 
     GameObjectPtr EditorWorkspace::getSelectedObject() const
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            return pContext->getSelectionManager().getPrimaryObject();
+        if ( _pSelectionManager != nullptr )
+            return _pSelectionManager->getPrimaryObject();
         return GameObjectPtr{};
     }
 
@@ -166,18 +164,16 @@ namespace sw::editor
 
     void EditorWorkspace::clearSelection()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSelectionManager().clearAll();
+        if ( _pSelectionManager != nullptr )
+            _pSelectionManager->clearAll();
         _selectedComponentId = 0;
         _selectedComponentKey.clear();
     }
 
     void EditorWorkspace::selectGameObject( GameObjectPtr pObj, SelectionMode mode )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSelectionManager().selectObject( pObj, mode );
+        if ( _pSelectionManager != nullptr )
+            _pSelectionManager->selectObject( pObj, mode );
         _selectedComponentId = 0;
         _selectedComponentKey.clear();
         _inspectMode = InspectMode::GameObject;
@@ -185,9 +181,8 @@ namespace sw::editor
 
     void EditorWorkspace::selectComponent( GameObjectPtr pObj, ComponentPtr pComp )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSelectionManager().selectObject( pObj, SelectionMode::Replace );
+        if ( _pSelectionManager != nullptr )
+            _pSelectionManager->selectObject( pObj, SelectionMode::Replace );
 
         Component* pRawComp = pComp.get();
         if ( pRawComp != nullptr )
@@ -225,9 +220,8 @@ namespace sw::editor
             return;
         }
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSelectionManager().selectObject( GameObjectPtr{ pObj }, SelectionMode::Replace );
+        if ( _pSelectionManager != nullptr )
+            _pSelectionManager->selectObject( GameObjectPtr{ pObj }, SelectionMode::Replace );
 
         if ( _selectedComponentKey.empty() )
         {
@@ -247,9 +241,8 @@ namespace sw::editor
         _focusedAssetPath = ( pPath != nullptr ) ? pPath : "";
         if ( StringUtil::isNullOrEmpty( pPath ) == false )
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr )
-                pContext->getSelectionManager().selectAsset( pPath, SelectionMode::Replace );
+            if ( _pSelectionManager != nullptr )
+                _pSelectionManager->selectAsset( pPath, SelectionMode::Replace );
         }
     }
 

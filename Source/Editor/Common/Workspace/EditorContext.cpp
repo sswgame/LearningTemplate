@@ -6,6 +6,7 @@
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorActionMenuManager.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -21,6 +22,12 @@
 namespace sw::editor
 {
     EditorContext* EditorContext::s_pActiveContext = nullptr;
+
+    EditorContext* EditorContext::get()
+    {
+        EditorContext* pLocalContext = getService<EditorContext>();
+        return pLocalContext != nullptr ? pLocalContext : s_pActiveContext;
+    }
 
     EditorContext::EditorContext()
         : _pRhiDevice{ nullptr }
@@ -40,7 +47,7 @@ namespace sw::editor
     void EditorContext::initialize()
     {
         _pSelectionManager          = make_unique<SelectionManager>();
-        _pWorkspace                 = make_unique<EditorWorkspace>();
+        _pWorkspace                 = make_unique<EditorWorkspace>( _pSelectionManager.get() );
         _pNotificationManager       = make_unique<EditorNotificationManager>();
         _pActionMenuManager         = make_unique<EditorActionMenuManager>();
         _pPanelManager              = make_unique<EditorPanelManager>();
@@ -50,6 +57,7 @@ namespace sw::editor
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
 
         setActive( this );
+        bindLocalService( this );
 
         _pAssetEditorManager->registerDefaultMappings();
         _pInspectorComponentManager->registerDefaults();
@@ -75,6 +83,7 @@ namespace sw::editor
         _pSelectionManager.reset();
         _pRendererBackend = nullptr;
         _pRhiDevice       = nullptr;
+        unbindLocalService<EditorContext>();
     }
 
     void EditorContext::destroyGameView()

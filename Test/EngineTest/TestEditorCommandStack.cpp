@@ -20,11 +20,11 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
     CommandStack::Command inc;
     inc._label = "inc";
     inc._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-    {
+     {
         ++value;
     } );
     inc._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-    {
+     {
         --value;
     } );
     inc._redo();
@@ -45,11 +45,11 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
     CommandStack::Command dec;
     dec._label = "dec";
     dec._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-    {
+     {
         --value;
     } );
     dec._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-    {
+     {
         ++value;
     } );
     stack.undo();
@@ -82,9 +82,9 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
         sw::CommandStack::Command cmd;
         cmd._label = "step_" + sw::to_string( cmdIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-        { ++count; } );
+         { ++count; } );
         cmd._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-        { --count; } );
+         { --count; } );
         cmd._redo();
         globalStack.push( std::move( cmd ) );
     }
@@ -128,11 +128,11 @@ SW_TEST_CASE( CommandStack, NestedTransactionCommitsOnceAtOutermost )
         CommandStack::Command cmd;
         cmd._label = "add";
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, amount]()
-        {
+         {
             value += amount;
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, amount]()
-        {
+         {
             value -= amount;
         } );
         cmd._redo();
@@ -177,11 +177,11 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
     CommandStack::Command cmd1;
     cmd1._label = "op1";
     cmd1._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-    {
+     {
         valA += 5;
     } );
     cmd1._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-    {
+     {
         valA -= 5;
     } );
     cmd1._redo();
@@ -190,11 +190,11 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
     CommandStack::Command cmd2;
     cmd2._label = "op2";
     cmd2._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-    {
+     {
         valB *= 2;
     } );
     cmd2._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-    {
+     {
         valB /= 2;
     } );
     cmd2._redo();
@@ -226,11 +226,11 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
     CommandStack::Command cmd3;
     cmd3._label = "op3";
     cmd3._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-    {
+     {
         valA += 100;
     } );
     cmd3._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-    {
+     {
         valA -= 100;
     } );
     cmd3._redo();
@@ -259,11 +259,11 @@ SW_TEST_CASE( CommandStack, PushCoalesce )
         CommandStack::Command cmd;
         cmd._label = "SliderDrag";
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, targetVal]()
-        {
+         {
             sliderValue = targetVal;
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, initialVal]()
-        {
+         {
             sliderValue = initialVal;
         } );
         cmd._redo();
@@ -271,18 +271,18 @@ SW_TEST_CASE( CommandStack, PushCoalesce )
     }
 
     // 3번 pushCoalesce 되었지만 스택에는 1개의 명령만 존재해야 함
-    SW_EXPECT_EQUAL( 5.0f, sliderValue );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, sliderValue, 0.0001f );
     SW_EXPECT_TRUE( stack.canUndo() );
 
     // 1번의 Undo로 초기값 0.0f 로 복원
     stack.undo();
-    SW_EXPECT_EQUAL( 0.0f, sliderValue );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sliderValue, 0.0001f );
     SW_EXPECT_FALSE( stack.canUndo() );
     SW_EXPECT_TRUE( stack.canRedo() );
 
     // 1번의 Redo로 최종값 5.0f 로 복원
     stack.redo();
-    SW_EXPECT_EQUAL( 5.0f, sliderValue );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, sliderValue, 0.0001f );
 }
 
 /**
@@ -298,9 +298,9 @@ SW_TEST_CASE( CommandStack, JumpToAndHistoryInspection )
         CommandStack::Command cmd;
         cmd._label = "step_" + sw::to_string( cmdIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, cmdIndex]()
-        { value = cmdIndex; } );
+         { value = cmdIndex; } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, cmdIndex]()
-        { value = cmdIndex - 1; } );
+         { value = cmdIndex - 1; } );
         cmd._redo();
         stack.push( std::move( cmd ) );
     }
@@ -362,12 +362,12 @@ SW_TEST_CASE( CommandStack, GameObjectBinarySnapshotUndoRedoTransactions )
         CommandStack::Command cmd;
         cmd._label = "MoveStep_" + to_string( stepIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, afterBytes]()
-        {
+         {
             string parentName;
             ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size(), parentName );
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, beforeBytes]()
-        {
+         {
             string parentName;
             ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size(), parentName );
         } );

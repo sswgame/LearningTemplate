@@ -73,6 +73,14 @@ namespace sw::editor
                 if ( it != _listSelectedObject.end() )
                     _listSelectedObject.erase( it );
             }
+            else if ( mode == SelectionMode::Toggle )
+            {
+                auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+                if ( it != _listSelectedObject.end() )
+                    _listSelectedObject.erase( it );
+                else
+                    _listSelectedObject.push_back( pObj );
+            }
             else if ( hasObject( pObj ) == false )
             {
                 _listSelectedObject.push_back( pObj );
@@ -160,6 +168,14 @@ namespace sw::editor
                 auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), path );
                 if ( it != _listSelectedAsset.end() )
                     _listSelectedAsset.erase( it );
+            }
+            else if ( mode == SelectionMode::Toggle )
+            {
+                auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), path );
+                if ( it != _listSelectedAsset.end() )
+                    _listSelectedAsset.erase( it );
+                else
+                    _listSelectedAsset.push_back( path );
             }
             else if ( hasAsset( path ) == false )
             {

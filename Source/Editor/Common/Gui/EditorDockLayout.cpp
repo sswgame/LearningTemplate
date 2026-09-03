@@ -72,7 +72,7 @@ namespace sw::editor
         {
             if ( entry._pInstance == nullptr )
                 continue;
-            const bool bOpen = KeyValueFile::getBool( visibilityKv, entry._title.c_str(), entry._pInstance->isOpen() );
+            const bool bOpen = KeyValueFile::getBool( visibilityKv, entry._id.c_str(), entry._pInstance->isOpen() );
             entry._pInstance->setOpen( bOpen );
         }
 
@@ -88,7 +88,7 @@ namespace sw::editor
             {
                 if ( entry._pInstance == nullptr )
                     continue;
-                visibilityKv[entry._title] = entry._pInstance->isOpen() ? "1" : "0";
+                visibilityKv[entry._id] = entry._pInstance->isOpen() ? "1" : "0";
             }
 
             if ( KeyValueFile::saveFile( _windowsIniPath, visibilityKv, "Editor panel visibility (1=open, 0=closed)",

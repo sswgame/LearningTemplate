@@ -96,6 +96,11 @@ namespace sw::editor
         SW_LOG_TRACE( "Initialize start." );
         if ( _bInitialized != SW_FALSE )
             return true;
+        if ( pWindow == nullptr || pRhiDevice == nullptr )
+        {
+            SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
+            return false;
+        }
 
 #if !defined( SW_SHIPPING )
         BLOCK( "EditorConfig host load" )
@@ -138,6 +143,7 @@ namespace sw::editor
             if ( _platformBackend == nullptr )
             {
                 SW_LOG_ERROR( "Failed to create platform backend" );
+                cleanupPartialInitialization();
                 return false;
             }
 
@@ -145,6 +151,7 @@ namespace sw::editor
             if ( _platformBackend->initialize( pWindow, pRhiDevice->getBackendType() ) == false )
             {
                 SW_LOG_ERROR( "Platform backend initialization failed" );
+                cleanupPartialInitialization();
                 return false;
             }
         }
@@ -156,12 +163,7 @@ namespace sw::editor
             if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRhiDevice ) == false )
             {
                 SW_LOG_ERROR( "Renderer backend initialization failed" );
-                _platformBackend->shutdown();
-                _platformBackend.reset();
-
-                editor::setEditorData( nullptr );
-                _editorData.reset();
-                ImGui::DestroyContext();
+                cleanupPartialInitialization();
                 return false;
             }
         }
@@ -211,9 +213,41 @@ namespace sw::editor
         return true;
     }
 
+    void ImGuiEditor::cleanupPartialInitialization()
+    {
+        if ( _editorContext != nullptr )
+        {
+            _editorContext->destroyGameView();
+            _editorContext->getPanelManager().shutdownAllPanels( nullptr );
+            _editorContext->getPanelManager().clear();
+            _editorContext->shutdown();
+            _editorContext.reset();
+        }
+
+        if ( _rendererBackend != nullptr )
+        {
+            _rendererBackend->shutdown();
+            _rendererBackend.reset();
+        }
+
+        if ( _platformBackend != nullptr )
+        {
+            _platformBackend->shutdown();
+            _platformBackend.reset();
+        }
+
+        editor::setEditorData( nullptr );
+        _editorData.reset();
+
+        if ( ImPlot::GetCurrentContext() != nullptr )
+            ImPlot::DestroyContext();
+        if ( ImGui::GetCurrentContext() != nullptr )
+            ImGui::DestroyContext();
+    }
+
     void ImGuiEditor::shutdown()
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
             return;
 
         IWindow* pActiveWindow = IWindow::getActiveWindow();
@@ -233,31 +267,7 @@ namespace sw::editor
             _editorContext->getPanelManager().clear();
         }
 
-        if ( _rendererBackend != nullptr )
-        {
-            _rendererBackend->shutdown();
-            _rendererBackend.reset();
-        }
-
-        if ( _platformBackend != nullptr )
-        {
-            _platformBackend->shutdown();
-            _platformBackend.reset();
-            editor::setEditorData( nullptr );
-            _editorData.reset();
-        }
-
-        if ( _editorContext != nullptr )
-        {
-            _editorContext->shutdown();
-            _editorContext.reset();
-        }
-
-        if ( ImPlot::GetCurrentContext() != nullptr )
-            ImPlot::DestroyContext();
-
-        if ( ImGui::GetCurrentContext() != nullptr )
-            ImGui::DestroyContext();
+        cleanupPartialInitialization();
 
         _bInitialized = SW_FALSE;
     }

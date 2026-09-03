@@ -74,7 +74,14 @@ SW_TEST_CASE( SelectionManagerTest, GameObjectSelectionModes )
     SW_EXPECT_TRUE( selection.hasObject( ptrB ) );
     SW_EXPECT_TRUE( selection.hasObject( ptrC ) );
 
-    // 6) clearObjectSelection
+    // 6) 배치 Toggle은 기존 선택을 제거하고 신규 선택을 추가
+    selection.selectObjects( { ptrB, ptrC }, SelectionMode::Toggle );
+    SW_EXPECT_EQUAL( size_t( 1 ), selection.getSelectedObjectCount() );
+    SW_EXPECT_TRUE( selection.hasObject( ptrA ) );
+    SW_EXPECT_FALSE( selection.hasObject( ptrB ) );
+    SW_EXPECT_FALSE( selection.hasObject( ptrC ) );
+
+    // 7) clearObjectSelection
     selection.clearObjectSelection();
     SW_EXPECT_EQUAL( size_t( 0 ), selection.getSelectedObjectCount() );
     SW_EXPECT_FALSE( selection.getPrimaryObject().isValid() );
@@ -114,7 +121,14 @@ SW_TEST_CASE( SelectionManagerTest, AssetPathSelectionModes )
     selection.selectAssets( listBatch, SelectionMode::Replace );
     SW_EXPECT_EQUAL( size_t( 3 ), selection.getSelectedAssets().size() );
 
-    // 5) clearAssetSelection
+    // 5) 배치 Toggle은 기존 선택을 제거하고 신규 선택을 추가
+    selection.selectAssets( { pathB, pathC }, SelectionMode::Toggle );
+    SW_EXPECT_EQUAL( size_t( 1 ), selection.getSelectedAssets().size() );
+    SW_EXPECT_TRUE( selection.hasAsset( pathA ) );
+    SW_EXPECT_FALSE( selection.hasAsset( pathB ) );
+    SW_EXPECT_FALSE( selection.hasAsset( pathC ) );
+
+    // 6) clearAssetSelection
     selection.clearAssetSelection();
     SW_EXPECT_TRUE( selection.getSelectedAssets().empty() );
 }

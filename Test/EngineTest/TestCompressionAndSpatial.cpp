@@ -180,8 +180,8 @@ SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
     float32 minVal = 0.0f;
     float32 maxVal = 0.0f;
     SW_EXPECT_TRUE( sw::PropertyMetaHint::getSliderRange( rangeMeta, minVal, maxVal ) );
-    SW_EXPECT_EQUAL( 0.0f, minVal );
-    SW_EXPECT_EQUAL( 100.0f, maxVal );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, minVal, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, maxVal, 0.0001f );
 
     sw::PropertyMetadata assetMeta{};
     assetMeta._bAssetPath = 1;
@@ -201,7 +201,7 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
     bool       bCallbackCalled = false;
     const auto handle          = manager.registerWatch( "Resource/shaders", { ".hlsl" },
                                                         SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-    {
+             {
         bCallbackCalled = true;
     } ) );
 
@@ -530,8 +530,8 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
     sw::vector<sw::ObjectHandle> listAabb;
     const sw::AABB               testBox{
-        {-1.0f, -1.0f,  0.0f},
-        { 6.0f,  5.0f, 15.0f}
+                      {-1.0f, -1.0f,  0.0f},
+                      { 6.0f,  5.0f, 15.0f}
     };
     bvh.queryAABB( testBox, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );

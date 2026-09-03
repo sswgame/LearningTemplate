@@ -69,7 +69,7 @@ namespace sw::editor
     class EditorWorkspace
     {
     public:
-        EditorWorkspace();
+        explicit EditorWorkspace( SelectionManager* pSelectionManager );
         ~EditorWorkspace() = default;
 
         // ------------------------------------------------------------------------------
@@ -206,6 +206,7 @@ namespace sw::editor
         void        clearGuidMap();
 
     private:
+        SelectionManager*             _pSelectionManager;
         uint64                        _selectedComponentId;
         uint64                        _observedSceneGeneration;
         uint64                        _scrollToComponentId;
