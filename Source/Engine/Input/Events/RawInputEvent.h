@@ -3,6 +3,7 @@
  * @brief OS 윈도우 스레드 / 백그라운드 입력 폴러에서 발생하는 정밀 원시 입력 이벤트 패킷
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -86,7 +87,7 @@ namespace sw
 
             struct
             {
-                utf8 _arrUtf8[32];
+                utf8 _arrUtf8[constant::kMaxBuffer32];
             } _textData;
         } _payload{};
 

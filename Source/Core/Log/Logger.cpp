@@ -7,6 +7,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -20,7 +22,7 @@ namespace sw
         struct CallerEntry
         {
             uint64 _fileHash{ 0 };
-            utf8   _arrCallerName[64]{ 0 };
+            utf8   _arrCallerName[constant::kMaxBuffer64]{ 0 };
         };
 
         static constexpr size_t kMaxCallerEntries = 512;
@@ -142,8 +144,8 @@ namespace sw
         {
             if ( s_arrCallerEntry[index]._fileHash == fileHash )
             {
-                const size_t copyLen = std::min( callerName.size(), sizeof( s_arrCallerEntry[index]._arrCallerName ) - 1 );
-                std::memcpy( s_arrCallerEntry[index]._arrCallerName, callerName.data(), copyLen );
+                const size_t copyLen = MathUtil::min( callerName.size(), sizeof( s_arrCallerEntry[index]._arrCallerName ) - 1 );
+                Memory::copy( s_arrCallerEntry[index]._arrCallerName, callerName.data(), copyLen );
                 s_arrCallerEntry[index]._arrCallerName[copyLen] = '\0';
                 return;
             }
@@ -152,8 +154,8 @@ namespace sw
         if ( s_callerEntryCount < kMaxCallerEntries )
         {
             s_arrCallerEntry[s_callerEntryCount]._fileHash = fileHash;
-            const size_t copyLen                           = std::min( callerName.size(), sizeof( s_arrCallerEntry[s_callerEntryCount]._arrCallerName ) - 1 );
-            std::memcpy( s_arrCallerEntry[s_callerEntryCount]._arrCallerName, callerName.data(), copyLen );
+            const size_t copyLen                           = MathUtil::min( callerName.size(), sizeof( s_arrCallerEntry[s_callerEntryCount]._arrCallerName ) - 1 );
+            Memory::copy( s_arrCallerEntry[s_callerEntryCount]._arrCallerName, callerName.data(), copyLen );
             s_arrCallerEntry[s_callerEntryCount]._arrCallerName[copyLen] = '\0';
             ++s_callerEntryCount;
         }

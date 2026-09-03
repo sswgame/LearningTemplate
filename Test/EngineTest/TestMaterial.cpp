@@ -594,10 +594,10 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
     reflection._listConstantBuffer.push_back( cb );
     SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
 
-    constexpr uint32         kThreadCount        = 8;
-    constexpr uint32         kInstancesPerThread = 64;
-    std::vector<std::thread> listThread;
-    std::atomic<uint32>      successCount{ 0 };
+    constexpr uint32        kThreadCount        = 8;
+    constexpr uint32        kInstancesPerThread = 64;
+    sw::vector<std::thread> listThread;
+    std::atomic<uint32>     successCount{ 0 };
 
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {

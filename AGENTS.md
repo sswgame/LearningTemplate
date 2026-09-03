@@ -96,6 +96,10 @@ cmake --build --preset Ninja-Debug
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.
+- Do not spell out buffer/path-size magic numbers (e.g. `char buf[64]`,
+  `fixed_string<256>`, `StringBuilder<32>`). Use the sentinels in the
+  `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`
+  through `kMaxBuffer8192`, and `kMaxPathSize` for filesystem paths.
 
 ## Helpers: Util vs Internal
 

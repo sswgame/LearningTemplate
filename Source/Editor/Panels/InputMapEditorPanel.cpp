@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -172,11 +173,10 @@ namespace sw::editor
         ImGui::Text( "InputMap Resource:" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 260.0f );
-        utf8 arrPathBuf[128]{};
-        std::snprintf( arrPathBuf, sizeof( arrPathBuf ), "%s", _inputMapPath.c_str() );
-        if ( ImGui::InputText( "##InputMapPath", arrPathBuf, sizeof( arrPathBuf ) ) )
+        fixed_string<constant::kMaxBuffer128> pathBuf{ _inputMapPath.c_str() };
+        if ( ImGui::InputText( "##InputMapPath", pathBuf.data(), pathBuf.capacity() ) )
         {
-            _inputMapPath = arrPathBuf;
+            _inputMapPath = pathBuf.c_str();
         }
 
         ImGui::SameLine();
@@ -333,11 +333,10 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( "Add New Action / Layer" ) )
         {
-            utf8 arrNameBuf[64]{};
-            std::snprintf( arrNameBuf, sizeof( arrNameBuf ), "%s", _newActionName.c_str() );
+            fixed_string<constant::kMaxBuffer64> nameBuf{ _newActionName.c_str() };
             ImGui::SetNextItemWidth( 200.0f );
-            if ( ImGui::InputText( "New Action Name", arrNameBuf, sizeof( arrNameBuf ) ) )
-                _newActionName = arrNameBuf;
+            if ( ImGui::InputText( "New Action Name", nameBuf.data(), nameBuf.capacity() ) )
+                _newActionName = nameBuf.c_str();
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
@@ -772,11 +771,10 @@ namespace sw::editor
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
         ImGui::Separator();
 
-        utf8 arrPathBuf[128]{};
-        std::snprintf( arrPathBuf, sizeof( arrPathBuf ), "%s", _replayFilePath.c_str() );
+        fixed_string<constant::kMaxBuffer128> pathBuf{ _replayFilePath.c_str() };
         ImGui::SetNextItemWidth( 260.0f );
-        if ( ImGui::InputText( "Replay File", arrPathBuf, sizeof( arrPathBuf ) ) )
-            _replayFilePath = arrPathBuf;
+        if ( ImGui::InputText( "Replay File", pathBuf.data(), pathBuf.capacity() ) )
+            _replayFilePath = pathBuf.c_str();
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
@@ -949,11 +947,10 @@ namespace sw::editor
         ImGui::Text( "Fighting Game Combo Tester & Input Buffer Inspector" );
         ImGui::Separator();
 
-        utf8 arrBuf[64]{};
-        std::snprintf( arrBuf, sizeof( arrBuf ), "%s", _testComboPattern.c_str() );
+        fixed_string<constant::kMaxBuffer64> patternBuf{ _testComboPattern.c_str() };
         ImGui::SetNextItemWidth( 150.0f );
-        if ( ImGui::InputText( "Combo Pattern (Numpad Notation)", arrBuf, sizeof( arrBuf ) ) )
-            _testComboPattern = arrBuf;
+        if ( ImGui::InputText( "Combo Pattern (Numpad Notation)", patternBuf.data(), patternBuf.capacity() ) )
+            _testComboPattern = patternBuf.c_str();
 
         ImGui::SameLine();
         const bool bPatternMatched = _actionMap.checkCommandPattern( _testComboPattern.c_str(), 0.8f );

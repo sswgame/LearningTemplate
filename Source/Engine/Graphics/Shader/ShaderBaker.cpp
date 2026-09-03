@@ -303,9 +303,9 @@ namespace sw
 
         if ( permHash != 0 )
         {
-            fixed_string<16> hexBuf;
-            std::snprintf( hexBuf.data(), hexBuf.capacity(), "_%08x", static_cast<uint32>( permHash & 0xFFFFFFFFu ) );
-            basePart += hexBuf.c_str();
+            StringBuilder<constant::kMaxBuffer16> sb;
+            sb.appendFormat( "_%#", Fmt( static_cast<uint32>( permHash & 0xFFFFFFFFu ), Format( 8, Format::Padding::Zero ).hex() ) );
+            basePart += sb.view();
         }
 
         basePart += string( ext );

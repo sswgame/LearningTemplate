@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Events/RawInputEvent.h"
@@ -1032,7 +1033,9 @@ SW_TEST_CASE( ActionMapTest, RingBufferZeroAllocation )
     // 1) 선입력 버퍼링 16개 초과 주입 (오버플로우 링 래핑)
     for ( uint32 index = 0; index < 20; ++index )
     {
-        actionMap.bufferAction( "Action_" + std::to_string( index ), 0.5f );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
+        sb.append( "Action_" ).append( index );
+        actionMap.bufferAction( sb.view(), 0.5f );
     }
     SW_EXPECT_TRUE( actionMap.consumeBufferedAction( "Action_19" ) );
     SW_EXPECT_FALSE( actionMap.consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
@@ -1271,7 +1274,7 @@ SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
     constexpr uint32 kThreadCount     = 4;
     constexpr uint32 kEventsPerThread = 2500;
 
-    std::vector<std::thread> listThread;
+    sw::vector<std::thread> listThread;
     listThread.reserve( kThreadCount );
 
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
@@ -1321,9 +1324,9 @@ SW_TEST_CASE( ActionMapTest, LayerCacheStableAcrossMassiveDynamicRegistration )
     // 2) 그 뒤로 레이어 1,000개를 등록해 내부 저장소가 여러 번 재할당되도록 강제한다.
     for ( uint32 layerIndex = 0; layerIndex < 1000; ++layerIndex )
     {
-        utf8 arrName[32]{};
-        std::snprintf( arrName, sizeof( arrName ), "Layer_%u", layerIndex );
-        actionMap.registerLayer( arrName, 0, true );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
+        sb.append( "Layer_" ).append( layerIndex );
+        actionMap.registerLayer( sb.view(), 0, true );
     }
 
     // 3) 재할당 이후에도 EarlyAction의 레이어 활성 판정이 정확해야 한다.
@@ -1356,17 +1359,17 @@ SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
     sw::ActionMap actionMap;
     actionMap.setInputManager( &input );
 
-    constexpr uint32              kActionCount = 1000;
-    std::vector<sw::ActionHandle> listHandle;
+    constexpr uint32             kActionCount = 1000;
+    sw::vector<sw::ActionHandle> listHandle;
     listHandle.reserve( kActionCount );
 
     for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
     {
-        utf8 arrName[32]{};
-        snprintf( arrName, sizeof( arrName ), "Action_A_%u", actionIndex );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
+        sb.append( "Action_A_" ).append( actionIndex );
 
-        actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
-        const sw::ActionHandle handle = actionMap.getActionHandle( arrName );
+        actionMap.bind( sb.view(), sw::InputSlot::fromKey( sw::Key::A ), sw::ActionTrigger::Pressed );
+        const sw::ActionHandle handle = actionMap.getActionHandle( sb.view() );
         SW_EXPECT_TRUE( handle.isValid() );
         listHandle.push_back( handle );
     }
@@ -1384,9 +1387,9 @@ SW_TEST_CASE( ActionMapTest, GenerationalHandleStressAndMassiveActions )
     // 새로운 이름의 액션 1,000개 재생성
     for ( uint32 actionIndex = 0; actionIndex < kActionCount; ++actionIndex )
     {
-        utf8 arrName[32]{};
-        snprintf( arrName, sizeof( arrName ), "Action_B_%u", actionIndex );
-        actionMap.bind( arrName, sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
+        sb.append( "Action_B_" ).append( actionIndex );
+        actionMap.bind( sb.view(), sw::InputSlot::fromKey( sw::Key::B ), sw::ActionTrigger::Pressed );
     }
 
     // 구버전 핸들은 새 액션 슬롯과 인덱스가 겹쳐도 세대 불일치로 절대 트리거되지 않아야 함
@@ -1766,14 +1769,18 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
     constexpr uint32 kActionCount = 100;
     for ( uint32 index = 0; index < kActionCount; ++index )
     {
-        const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
+        sbName.append( "StressAction_" ).append( index );
+        const sw::string actionName( sbName.view() );
         actionMap.bind( actionName, sw::Key::Space );
     }
 
     // 100개 액션 간 충돌 해결 (Override 전략)
     for ( uint32 index = 1; index < kActionCount; ++index )
     {
-        const sw::string actionName = "StressAction_" + sw::string( std::to_string( index ).c_str() );
+        sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
+        sbName.append( "StressAction_" ).append( index );
+        const sw::string actionName( sbName.view() );
         actionMap.rebindWithResolution( actionName, sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
     }
 

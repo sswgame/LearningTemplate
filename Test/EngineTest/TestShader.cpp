@@ -588,7 +588,7 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
     sw::unordered_map<uint64, uint32> mapHashToId;
     mapHashToId.reserve( kPermutationCount );
 
-    sw::fixed_string<64> defBuf;
+    sw::fixed_string<sw::constant::kMaxBuffer64> defBuf;
     for ( uint32 index = 0; index < kPermutationCount; ++index )
     {
         sw::formatstring( defBuf.data(), defBuf.capacity(), "PERM_MACRO_%u=%u", index, ( index * 31u + 7u ) );

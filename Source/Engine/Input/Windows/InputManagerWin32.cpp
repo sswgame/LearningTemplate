@@ -3,6 +3,9 @@
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/Common/Defines.h"
+    #include "Core/String/fixed_string.h"
+
     #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
@@ -260,16 +263,16 @@ namespace sw
                         if ( hImc != nullptr )
                         {
                             const LONG size = ImmGetCompositionStringW( hImc, GCS_COMPSTR, nullptr, 0 );
-                            if ( size > 0 && size < 512 )
+                            if ( size > 0 && size < static_cast<LONG>( constant::kMaxBuffer512 ) )
                             {
-                                utf16 arrWStr[256] = {};
-                                ImmGetCompositionStringW( hImc, GCS_COMPSTR, arrWStr, static_cast<DWORD>( size ) );
-                                arrWStr[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
-                                utf8        arrUtf8[512]                               = {};
-                                const int32 utf8Len                                    = WideCharToMultiByte( CP_UTF8, 0, arrWStr, -1, arrUtf8, sizeof( arrUtf8 ), nullptr, nullptr );
+                                fixed_wstring<constant::kMaxBuffer256> wstrBuf;
+                                ImmGetCompositionStringW( hImc, GCS_COMPSTR, wstrBuf.data(), static_cast<DWORD>( size ) );
+                                wstrBuf.data()[static_cast<size_t>( size ) / sizeof( utf16 )] = L'\0';
+                                fixed_string<constant::kMaxBuffer512> utf8Buf;
+                                const int32                           utf8Len = WideCharToMultiByte( CP_UTF8, 0, wstrBuf.data(), -1, utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), nullptr, nullptr );
                                 if ( utf8Len > 0 )
                                 {
-                                    const string_view svComp( arrUtf8, static_cast<size_t>( utf8Len - 1 ) );
+                                    const string_view svComp( utf8Buf.data(), static_cast<size_t>( utf8Len - 1 ) );
                                     postRawEvent( RawInputEvent::makeTextComposition( svComp ) );
                                 }
                             }

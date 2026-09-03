@@ -3,6 +3,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
@@ -96,17 +97,16 @@ namespace sw
         uint32                        _count{ 0 };
         TaskNode*                     _arrInlineNode[kInlineCapacity]{};
         unique_ptr<vector<TaskNode*>> _pOverflow;
-        mutable std::atomic_flag      _lock = ATOMIC_FLAG_INIT;
+        mutable SpinLock              _lock;
 
         void lock() const noexcept
         {
-            while ( _lock.test_and_set( std::memory_order_acquire ) )
-                sw::cpuPause();
+            _lock.lock();
         }
 
         void unlock() const noexcept
         {
-            _lock.clear( std::memory_order_release );
+            _lock.unlock();
         }
 
         void push_back( TaskNode* pNode )

@@ -533,11 +533,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
                     { hashed_string( "_totalExp" ), hashed_string( "int64" ),
                      SW_OFFSET_OF( MassiveStressState, _totalExp ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
                     { hashed_string( "_listMonsterId" ), hashed_string( "int32" ),
-                     SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), std::make_shared<VectorWrapper<vector<int32>>>() },
+                     SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), sw::make_shared<VectorWrapper<vector<int32>>>() },
                     { hashed_string( "_listSkillName" ), hashed_string( "string" ),
-                     SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), std::make_shared<VectorWrapper<vector<string>>>() },
+                     SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), sw::make_shared<VectorWrapper<vector<string>>>() },
                     { hashed_string( "_mapFlag" ), hashed_string( "int32" ),
-                     SW_OFFSET_OF( MassiveStressState, _mapFlag ), true, ContainerKind::Map, hashed_string( "int32" ), hashed_string( "string" ), std::make_shared<MapWrapper<map<string, int32>>>() }
+                     SW_OFFSET_OF( MassiveStressState, _mapFlag ), true, ContainerKind::Map, hashed_string( "int32" ), hashed_string( "string" ), sw::make_shared<MapWrapper<map<string, int32>>>() }
                 };
             }
             return &s_typeInfo;

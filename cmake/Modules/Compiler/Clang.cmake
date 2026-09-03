@@ -57,6 +57,7 @@ target_compile_options(sw_compiler_clang INTERFACE
 	-Wno-cast-function-type-strict # C-ABI 동적 심볼(GetProcAddress/vkGetInstanceProcAddr 등) 함수 포인터 캐스팅 허용
 	-Wno-covered-switch-default# 모든 enum 케이스를 다루더라도 방어적 default: 레이블을 항상 작성할 수 있도록 허용 (-Wswitch-default 충돌 방지)
 	-Wno-exit-time-destructors # 정적 전역 레지스트라(SW_TEST_CASE, 리플렉션 등록 등)의 종료 소멸자 허용
+	-Wno-float-equal           # SW_EXPECT_EQUAL 등 테스트 매크로의 정확한 값 비교(반올림 없는 왕복 검증)를 위해 부동소수점 == 허용
 	-Wno-global-constructors   # 정적 전역 생성자(SW_GLOBAL_VARIABLE, 테스트 등록 등) 허용
 	-Wno-invalid-offsetof      # 다형성/비-표준 레이아웃 클래스 대상 리플렉션 프로퍼티 오프셋 연산 허용
 	-Wno-padded                # 64비트 정렬(alignas)에 따른 자연스러운 구조체 패딩 허용

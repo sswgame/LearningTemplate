@@ -3,6 +3,8 @@
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_LINUX )
+    #include "Core/String/fixed_string.h"
+
     #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
@@ -150,15 +152,15 @@ namespace sw
                     XIC pInputContext = X11InputInternal::getOrCreateInputContext();
                     if ( pInputContext != nullptr )
                     {
-                        utf8        arrUtf8[32]{};
-                        KeySym      lookupKeySym{};
-                        Status      lookupStatus{};
-                        const int32 byteCount = Xutf8LookupString( pInputContext, const_cast<XKeyPressedEvent*>( &pXev->xkey ),
-                                                                   arrUtf8, static_cast<int32>( sizeof( arrUtf8 ) - 1 ), &lookupKeySym, &lookupStatus );
+                        fixed_string<constant::kMaxBuffer32> utf8Buf;
+                        KeySym                               lookupKeySym{};
+                        Status                               lookupStatus{};
+                        const int32                          byteCount = Xutf8LookupString( pInputContext, const_cast<XKeyPressedEvent*>( &pXev->xkey ),
+                                                                                            utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), &lookupKeySym, &lookupStatus );
                         if ( ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0 )
                         {
-                            arrUtf8[byteCount] = '\0';
-                            const string_view svText( arrUtf8, static_cast<size_t>( byteCount ) );
+                            utf8Buf.data()[byteCount] = '\0';
+                            const string_view svText( utf8Buf.data(), static_cast<size_t>( byteCount ) );
                             postRawEvent( RawInputEvent::makeTextInput( svText ) );
                         }
                     }

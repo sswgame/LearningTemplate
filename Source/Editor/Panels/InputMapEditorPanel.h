@@ -3,6 +3,7 @@
  * @brief ImGui 기반 InputMap XML 시각적 편집기 에디터 패널
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -50,33 +51,33 @@ namespace sw::editor
     private:
         static constexpr size_t kPlotSampleCount = 120;
 
-        ActionMap              _actionMap;
-        InputReplay            _replay;
-        fixed_string<128>      _inputMapPath;
-        fixed_string<128>      _replayFilePath;
-        fixed_string<64>       _newActionName;
-        fixed_string<64>       _newLayerName;
-        fixed_string<64>       _selectedAction;
-        fixed_string<64>       _testComboPattern;
-        float32                _arrPlotLeftStickX[kPlotSampleCount];
-        float32                _arrPlotLeftStickY[kPlotSampleCount];
-        float32                _arrPlotMouseDeltaX[kPlotSampleCount];
-        float32                _arrPlotMouseDeltaY[kPlotSampleCount];
-        float32                _arrPlotTriggerL[kPlotSampleCount];
-        float32                _arrPlotTriggerR[kPlotSampleCount];
-        float32                _testVibLeft;
-        float32                _testVibRight;
-        float32                _simStickX;
-        float32                _simStickY;
-        uint32                 _plotOffset;
-        uint32                 _capturingBindIndex;
-        int32                  _newActionValueType;
-        int32                  _simKeyToInject;
-        int32                  _selectedGlyphPlatform;
-        uint8                  _bLoaded       : 1;
-        uint8                  _bCapturingKey : 1;
-        uint8                  _bDirty        : 1;
-        uint8                  _bPlotPaused   : 1;
-        [[maybe_unused]] uint8 _reserved      : 4;
+        ActionMap                             _actionMap;
+        InputReplay                           _replay;
+        fixed_string<constant::kMaxBuffer128> _inputMapPath;
+        fixed_string<constant::kMaxBuffer128> _replayFilePath;
+        fixed_string<constant::kMaxBuffer64>  _newActionName;
+        fixed_string<constant::kMaxBuffer64>  _newLayerName;
+        fixed_string<constant::kMaxBuffer64>  _selectedAction;
+        fixed_string<constant::kMaxBuffer64>  _testComboPattern;
+        float32                               _arrPlotLeftStickX[kPlotSampleCount];
+        float32                               _arrPlotLeftStickY[kPlotSampleCount];
+        float32                               _arrPlotMouseDeltaX[kPlotSampleCount];
+        float32                               _arrPlotMouseDeltaY[kPlotSampleCount];
+        float32                               _arrPlotTriggerL[kPlotSampleCount];
+        float32                               _arrPlotTriggerR[kPlotSampleCount];
+        float32                               _testVibLeft;
+        float32                               _testVibRight;
+        float32                               _simStickX;
+        float32                               _simStickY;
+        uint32                                _plotOffset;
+        uint32                                _capturingBindIndex;
+        int32                                 _newActionValueType;
+        int32                                 _simKeyToInject;
+        int32                                 _selectedGlyphPlatform;
+        uint8                                 _bLoaded       : 1;
+        uint8                                 _bCapturingKey : 1;
+        uint8                                 _bDirty        : 1;
+        uint8                                 _bPlotPaused   : 1;
+        [[maybe_unused]] uint8                _reserved      : 4;
     };
 } // namespace sw::editor

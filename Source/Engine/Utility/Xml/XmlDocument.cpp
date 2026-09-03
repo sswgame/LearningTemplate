@@ -312,21 +312,21 @@ namespace sw
 
     void XmlNode::appendAttr( const utf8* pName, int32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         appendAttr( pName, sb.c_str() );
     }
 
     void XmlNode::appendAttr( const utf8* pName, uint32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         appendAttr( pName, sb.c_str() );
     }
 
     void XmlNode::appendAttr( const utf8* pName, float32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         appendAttr( pName, sb.c_str() );
     }
@@ -367,21 +367,21 @@ namespace sw
 
     void XmlNode::setAttr( const utf8* pName, int32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setAttr( pName, sb.c_str() );
     }
 
     void XmlNode::setAttr( const utf8* pName, uint32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setAttr( pName, sb.c_str() );
     }
 
     void XmlNode::setAttr( const utf8* pName, float32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setAttr( pName, sb.c_str() );
     }
@@ -418,21 +418,21 @@ namespace sw
 
     void XmlNode::setValue( int32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setValue( sb.c_str() );
     }
 
     void XmlNode::setValue( uint32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setValue( sb.c_str() );
     }
 
     void XmlNode::setValue( float32 value ) const
     {
-        StringBuilder<32> sb;
+        StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
         setValue( sb.c_str() );
     }

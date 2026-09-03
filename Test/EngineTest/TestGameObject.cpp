@@ -622,7 +622,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 
         for ( int32 objectIndex = 0; objectIndex < 100; ++objectIndex )
         {
-            sw::fixed_string<32> nameBuf{};
+            sw::fixed_string<sw::constant::kMaxBuffer32> nameBuf{};
             sw::formatstring( nameBuf.data(), nameBuf.capacity(), "TickActor_%#", objectIndex );
             sw::GameObject* actorPtr = manager.createGameObject( sw::hashed_string( nameBuf.c_str() ) );
             actorPtr->addComponent<sw::MockMeshComponent>();
@@ -1742,7 +1742,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 
     for ( size_t actorIdx = 0; actorIdx < kActorCount; ++actorIdx )
     {
-        sw::fixed_string<64> nameBuf{};
+        sw::fixed_string<sw::constant::kMaxBuffer64> nameBuf{};
         sw::formatstring( nameBuf.data(), nameBuf.capacity(), "StressActor_%#", actorIdx );
         sw::GameObject* pActor = manager.createGameObject( sw::hashed_string( nameBuf.c_str() ) );
         listActor.push_back( pActor );

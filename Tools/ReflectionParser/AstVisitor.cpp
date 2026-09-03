@@ -753,12 +753,33 @@ namespace sw
 
             struct BaseClassCollector
             {
-                string _ownerFQN;
-                string _firstBaseFQN;
-                int32  _baseCount = 0;
+                string                 _ownerFQN;
+                string                 _firstBaseFQN; ///< 선언 순서상 첫 번째 베이스 FQN. 리플렉션 부모는 항상 이 베이스로 고정합니다.
+                int32                  _baseCount = 0;
+                uint8                  _bHasError : 1;
+                [[maybe_unused]] uint8 _reserved  : 7;
+
+                BaseClassCollector()
+                    : _ownerFQN{}
+                    , _firstBaseFQN{}
+                    , _baseCount{ 0 }
+                    , _bHasError{ SW_FALSE }
+                    , _reserved{ 0 }
+                {
+                }
             };
 
-            /** @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다. */
+            /**
+             * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다 (단일 상속 체인).
+             * @details PropertyInfo 의 오프셋 접근/캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0에
+             *          있다"는 전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI가 offset 0을 보장하지만, 두
+             *          번째 이후 베이스는 그렇지 않습니다). 그래서 부모는 선언 순서와 무관하게 채택하지 않고
+             *          항상 첫 번째 베이스로 고정합니다.
+             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스/믹스인(예: IFlagStore)이면 잃을
+             *          프로퍼티가 없으므로 조용히 무시합니다. REFLECT() 가 붙은 베이스가 두 번째 이후에
+             *          있으면 — 실제로 프로퍼티가 유실되거나(경고가 아니라) 조용히 오프셋이 잘못될 수 있는
+             *          상황이므로 — 빌드를 실패시키는 에러로 처리합니다. 첫 번째 베이스로 옮기면 해결됩니다.
+             */
             static CXChildVisitResult baseClassVisitor( CXCursor cursor, CXCursor, CXClientData data )
             {
                 if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
@@ -772,14 +793,36 @@ namespace sw
                     ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
                 ++collector->_baseCount;
-                if ( collector->_baseCount > 1 )
+                if ( collector->_baseCount == 1 )
                 {
-                    SW_LOG_WARNING( "%# has multiple base classes; only '%#' is reflected, '%#' is ignored.",
-                                    collector->_ownerFQN, collector->_firstBaseFQN, baseFQN );
+                    collector->_firstBaseFQN = baseFQN;
                     return CXChildVisit_Continue;
                 }
 
-                collector->_firstBaseFQN = baseFQN;
+                // 두 번째 이후 베이스 — REFLECT() 가 없으면 잃을 프로퍼티가 없으므로 조용히 넘어갑니다.
+                // clang_getTypeDeclaration 이 돌려주는 커서는 AnnotateAttr 자식 순회가 누락되는 경우가 있어
+                // (다른 어노테이션 검사와 동일하게) 소스 텍스트 폴백까지 함께 검사합니다.
+                bool bBaseHasReflect = false;
+                if ( clang_Cursor_isNull( baseDecl ) == 0 )
+                {
+                    const CXCursor   baseDef      = clang_getCursorDefinition( baseDecl );
+                    const CXCursor   searchCursor = clang_Cursor_isNull( baseDef ) == 0 ? baseDef : baseDecl;
+                    AnnotationSearch reflectSearch{ annotationConstants::kReflectPrefix };
+                    clang_visitChildren( searchCursor, annotationSearchVisitor, &reflectSearch );
+                    bBaseHasReflect = ( reflectSearch._bFound == SW_TRUE ) ||
+                                      sourceHasPrimaryAnnotation( searchCursor, annotationConstants::kReflectPrefix );
+                }
+
+                if ( bBaseHasReflect )
+                {
+                    SW_LOG_ERROR( "ERROR: %# has multiple base classes; '%#' has REFLECT() but is not the first base. "
+                                  "Its properties would not be inherited and its member offsets would be unsafe to access. "
+                                  "Declare '%#' as the first base instead (only the first base may be REFLECT()).",
+                                  collector->_ownerFQN, baseFQN, baseFQN );
+                    collector->_bHasError = SW_TRUE;
+                    return CXChildVisit_Break;
+                }
+
                 return CXChildVisit_Continue;
             }
 
@@ -810,7 +853,12 @@ namespace sw
                 const CXCursorKind          kind = clang_getCursorKind( cursor );
 
                 if ( kind == CXCursor_CXXBaseSpecifier )
-                    return baseClassVisitor( cursor, parent, &ctx->_bases );
+                {
+                    const CXChildVisitResult res = baseClassVisitor( cursor, parent, &ctx->_bases );
+                    if ( ctx->_bases._bHasError == SW_TRUE )
+                        return CXChildVisit_Break;
+                    return res;
+                }
 
                 if ( kind == CXCursor_FieldDecl )
                 {
@@ -1099,7 +1147,7 @@ namespace sw
             collect._fields._pProperties        = &typeInfo._listProperty;
             collect._methods._pMethods          = &typeInfo._listMethod;
             clang_visitChildren( cursor, AstVisitorInternal::structMemberCollectVisitor, &collect );
-            if ( collect._fields._bHasError == SW_TRUE )
+            if ( collect._fields._bHasError == SW_TRUE || collect._bases._bHasError == SW_TRUE )
             {
                 _bHasError = SW_TRUE;
                 return;
