@@ -211,7 +211,7 @@ namespace sw
                 const HRESULT                                  hr = D3DReflect( bytecode.data(), bytecode.size(), IID_PPV_ARGS( reflection.GetAddressOf() ) );
                 if ( FAILED( hr ) || reflection == nullptr )
                 {
-                    SW_LOG_ERROR( "D3DReflect failed for DXBC (hr=0x%#).", static_cast<uint32>( hr ) );
+                    SW_LOG_ERROR( "D3DReflect failed for DXBC (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
                     return ShaderReflectionData{};
                 }
 
@@ -288,7 +288,7 @@ namespace sw
                                       data._listConstantBuffer.size(), data._listResource.size() );
                     }
                     else
-                        SW_LOG_ERROR( "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", static_cast<uint32>( hr ) );
+                        SW_LOG_ERROR( "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
                 }
 
                 return data;

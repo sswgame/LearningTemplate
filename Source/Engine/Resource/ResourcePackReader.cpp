@@ -321,7 +321,8 @@ namespace sw
 
         if ( _header._magic != kPackMagic )
         {
-            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#", _header._magic, kPackMagic, packFilePath );
+            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#",
+                          Fmt( _header._magic, Format( 8, Format::Padding::Zero ).hex() ), Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
             close();
             return false;
         }
@@ -491,7 +492,8 @@ namespace sw
             const uint32 computedCrc = StringUtil::computeCrc32( outBytes.data(), outBytes.size() );
             if ( computedCrc != entry._crc32 )
             {
-                SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", _packFilePath, computedCrc, entry._crc32 );
+                SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", _packFilePath,
+                              Fmt( computedCrc, Format( 8, Format::Padding::Zero ).hex() ), Fmt( entry._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }

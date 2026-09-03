@@ -343,19 +343,19 @@ namespace sw
         else if ( hr == RPC_E_CHANGED_MODE )
             _impl->_bComInitialized = 0;
         else
-            SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", static_cast<uint32>( hr ) );
+            SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
         const HRESULT mfHr = MFStartup( MF_VERSION );
         if ( SUCCEEDED( mfHr ) )
             _impl->_bMfInitialized = 1;
         else
-            SW_LOG_WARNING( "MFStartup failed (0x%#).", static_cast<uint32>( mfHr ) );
+            SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
         IXAudio2* pXAudio{ nullptr };
         hr = XAudio2Create( &pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
         if ( FAILED( hr ) || pXAudio == nullptr )
         {
-            SW_LOG_WARNING( "XAudio2Create failed (0x%#). Running null audio.", static_cast<uint32>( hr ) );
+            SW_LOG_WARNING( "XAudio2Create failed (0x%#). Running null audio.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_bInitialized = 1;
             return true;
         }
@@ -364,7 +364,7 @@ namespace sw
         hr = pXAudio->CreateMasteringVoice( &pMasterVoice );
         if ( FAILED( hr ) || pMasterVoice == nullptr )
         {
-            SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#).", static_cast<uint32>( hr ) );
+            SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             pXAudio->Release();
             _impl->_bInitialized = 1;
             return true;
@@ -685,7 +685,7 @@ namespace sw
             hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format );
             if ( FAILED( hr ) || pVoice == nullptr )
             {
-                SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
+                SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
                 return;
             }
         }
@@ -713,7 +713,7 @@ namespace sw
         hr = pVoice->SubmitSourceBuffer( &audioBuffer );
         if ( FAILED( hr ) )
         {
-            SW_LOG_WARNING( "SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
+            SW_LOG_WARNING( "SubmitSourceBuffer failed (0x%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             if ( loop )
             {
                 _impl->_pMusicVoice->DestroyVoice();
