@@ -41,6 +41,10 @@ CompileFlags:
     - -Wno-unknown-warning-option
     # 사용되지 않는 커맨드라인 인자 경고 무시
     - -Wno-unused-command-line-argument
+    # clangd가 __COUNTER__를 C2y 확장으로 진단하지 않도록 설정
+    - -Wno-c2y-extensions
+    # 헤더에서 선언만 제공하는 매크로의 미사용 진단 억제
+    - -Wno-unused-macros
 
 Diagnostics:
   # ----------------------------------------------------------------------------
