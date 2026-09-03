@@ -5,20 +5,16 @@
  */
 #include "Engine/EngineMinimal.h"
 
+#include "TestFramework/TestContext.h"
+#include "TestFramework/TestEnvironment.h"
+#include "TestFramework/TestFilter.h"
+#include "TestFramework/TestFixture.h"
+
 namespace test
 {
     // ------------------------------------------------------------------------------
     // 1) 결과 — 실패 기록·케이스 메타
     // ------------------------------------------------------------------------------
-    /** @brief 실패한 어서션의 조건·위치·메시지. */
-    struct TestFailure
-    {
-        sw::string _condition;
-        sw::string _file;
-        int32      _line;
-        sw::string _message;
-    };
-
     /** @brief 등록된 테스트 케이스 메타데이터. */
     struct TestCaseInfo
     {
@@ -42,8 +38,8 @@ namespace test
         /** @brief 스위트·이름·함수로 테스트를 등록합니다. */
         void registerTest( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func );
 
-        /** @brief argv 에서 --test_filter / --gtest_filter / --test_list 를 파싱합니다. */
-        void configureFromArgs( int32 argc, utf8* argv[] );
+        /** @brief 테스트 전용 인자를 파싱하고 나머지 인자를 반환합니다. */
+        sw::vector<utf8*> configureFromArgs( int32 argc, utf8* argv[] );
 
         /** @brief glob 필터를 설정합니다. "Suite.*", 쉼표 include, "-RHI*" exclude. */
         void setFilter( const sw::string& filter );
@@ -59,22 +55,19 @@ namespace test
         void skipCurrentTest( const sw::string& reason, const sw::string& file, int32 line );
 
         /** @brief 현재 테스트가 실패했는지 반환합니다. */
-        bool isCurrentTestHasFailed() const { return _currentTestFailed; }
+        bool isCurrentTestHasFailed() const { return _currentContext.hasFailed(); }
         /** @brief 현재 테스트가 스킵되었는지 반환합니다. */
-        bool isCurrentTestSkipped() const { return _currentTestSkipped; }
+        bool isCurrentTestSkipped() const { return _currentContext.isSkipped(); }
+        /** @brief 현재 테스트의 상세 실행 컨텍스트를 반환합니다. */
+        TestContext*       getCurrentContext() { return &_currentContext; }
+        const TestContext* getCurrentContext() const { return &_currentContext; }
 
     private:
-        /** @brief include/exclude glob 에 이름이 맞는지 검사합니다. */
-        bool matchesFilter( const sw::string& fullName ) const;
-        /** @brief `*` glob 패턴과 텍스트를 비교합니다. */
-        static bool matchGlob( const sw::string& pattern, const sw::string& text );
-
         sw::vector<TestCaseInfo> _listTest;
-        sw::vector<sw::string>   _listIncludePattern;
-        sw::vector<sw::string>   _listExcludePattern;
+        TestFilter               _filter;
+        TestContext              _currentContext;
+        TestEnvironment          _environment;
         bool                     _listOnly{ false };
-        bool                     _currentTestFailed{ false };
-        bool                     _currentTestSkipped{ false };
     };
 
     /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
@@ -236,6 +229,13 @@ namespace test
         return;                                                                              \
     } while ( 0 )
 
+/** @brief 현재 테스트 종료 후 역순으로 실행할 정리 함수를 등록합니다. */
+#define SW_TEST_DEFER_CLEANUP( cleanup ) test::TestRegistry::getInstance().getCurrentContext()->deferCleanup( cleanup )
+
+/** @brief 현재 테스트 컨텍스트에 연결된 엔진 fixture를 생성합니다. */
+#define SW_TEST_FIXTURE( name ) \
+    test::TestFixture name { *test::TestRegistry::getInstance().getCurrentContext() }
+
 /** @brief 약한 기대 — 실패를 기록하고 계속합니다. */
 #define SW_EXPECT_TRUE( cond )                                                         \
     do                                                                                 \
@@ -270,10 +270,12 @@ namespace test
 #define SW_EXPECT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \
     {                                                                                                                        \
-        if ( !( ( expected ) == ( actual ) ) )                                                                               \
+        const auto& _swExpected = ( expected );                                                                              \
+        const auto& _swActual   = ( actual );                                                                                \
+        if ( !( _swExpected == _swActual ) )                                                                                 \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
-            oss << "Expected [" << ( expected ) << "], Actual [" << ( actual ) << "]";                                       \
+            oss << "Expected [" << _swExpected << "], Actual [" << _swActual << "]";                                         \
             test::TestRegistry::getInstance().addFailure( #actual " == " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
         }                                                                                                                    \
     } while ( 0 )
@@ -282,10 +284,12 @@ namespace test
 #define SW_EXPECT_NOT_EQUAL( expected, actual )                                                                              \
     do                                                                                                                       \
     {                                                                                                                        \
-        if ( ( expected ) == ( actual ) )                                                                                    \
+        const auto& _swExpected = ( expected );                                                                              \
+        const auto& _swActual   = ( actual );                                                                                \
+        if ( _swExpected == _swActual )                                                                                      \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
-            oss << "Expected not equal to [" << ( expected ) << "]";                                                         \
+            oss << "Expected not equal to [" << _swExpected << "]";                                                          \
             test::TestRegistry::getInstance().addFailure( #actual " != " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
         }                                                                                                                    \
     } while ( 0 )
@@ -294,10 +298,14 @@ namespace test
 #define SW_EXPECT_NEAR_EQUAL( expected, actual, tolerance )                                                                                        \
     do                                                                                                                                             \
     {                                                                                                                                              \
-        if ( sw::MathUtil::abs( ( expected ) - ( actual ) ) > ( tolerance ) )                                                                      \
+        const auto& _swExpected   = ( expected );                                                                                                  \
+        const auto& _swActual     = ( actual );                                                                                                    \
+        const auto& _swTolerance  = ( tolerance );                                                                                                 \
+        const auto  _swDifference = sw::MathUtil::abs( _swExpected - _swActual );                                                                  \
+        if ( _swDifference > _swTolerance )                                                                                                        \
         {                                                                                                                                          \
             std::ostringstream oss;                                                                                                                \
-            oss << "Diff [" << sw::MathUtil::abs( ( expected ) - ( actual ) ) << "] exceeds tolerance [" << ( tolerance ) << "]";                  \
+            oss << "Diff [" << _swDifference << "] exceeds tolerance [" << _swTolerance << "]";                                                    \
             test::TestRegistry::getInstance().addFailure( "|" #actual " - " #expected "| <= " #tolerance, __FILE__, __LINE__, oss.str().c_str() ); \
         }                                                                                                                                          \
     } while ( 0 )
@@ -361,10 +369,12 @@ namespace test
 #define SW_ASSERT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \
     {                                                                                                                        \
-        if ( !( ( expected ) == ( actual ) ) )                                                                               \
+        const auto& _swExpected = ( expected );                                                                              \
+        const auto& _swActual   = ( actual );                                                                                \
+        if ( !( _swExpected == _swActual ) )                                                                                 \
         {                                                                                                                    \
             std::ostringstream oss;                                                                                          \
-            oss << "Expected [" << ( expected ) << "], Actual [" << ( actual ) << "]";                                       \
+            oss << "Expected [" << _swExpected << "], Actual [" << _swActual << "]";                                         \
             test::TestRegistry::getInstance().addFailure( #actual " == " #expected, __FILE__, __LINE__, oss.str().c_str() ); \
             return;                                                                                                          \
         }                                                                                                                    \

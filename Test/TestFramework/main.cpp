@@ -77,27 +77,8 @@ int main( int32 argc, utf8* argv[] )
     globalVarManager->registerToCommandLine( commandLineManager.get() );
 
     // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
-    test::TestRegistry::getInstance().configureFromArgs( argc, argv );
-
-    sw::vector<utf8*> listCoreArg;
-    listCoreArg.reserve( static_cast<size_t>( argc ) );
-    listCoreArg.push_back( argv[0] );
-    for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
-    {
-        const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
-        if ( arg == "--test_list" || arg == "--gtest_list_tests" )
-            continue;
-        if ( arg == "--test_filter" || arg == "--gtest_filter" )
-        {
-            if ( argIndex + 1 < argc )
-                ++argIndex;
-            continue;
-        }
-        if ( sw::StringUtil::startsWith( arg, "--test_filter=" ) || sw::StringUtil::startsWith( arg, "--gtest_filter=" ) )
-            continue;
-        listCoreArg.push_back( argv[argIndex] );
-    }
-    commandLineManager->parse( static_cast<int32>( listCoreArg.size() ), listCoreArg.data() );
+    sw::vector<utf8*> listApplicationArg = test::TestRegistry::getInstance().configureFromArgs( argc, argv );
+    commandLineManager->parse( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
     globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
     sw::EngineServices services{};

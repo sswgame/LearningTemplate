@@ -39,6 +39,7 @@ if(SW_ENABLE_DEADLOCK_DETECTION)
 	target_compile_definitions(sw_global_options INTERFACE SW_ENABLE_DEADLOCK_DETECTION)
 	message(STATUS "[BuildConfig] sw::Mutex deadlock detection enabled (slow)")
 endif()
+
 if(SW_ENABLE_STL_CONTAINER)
 	target_compile_definitions(sw_global_options INTERFACE SW_ENABLE_STL_CONTAINER)
 	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Using std::allocator for containers")
@@ -48,9 +49,11 @@ endif()
 # 3) IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Release)
 # ------------------------------------------------------------------------------
 set(sw_ipo_supported FALSE)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
 	include(CheckIPOSupported)
 	check_ipo_supported(RESULT sw_ipo_supported OUTPUT sw_ipo_error)
+
 	if(sw_ipo_supported)
 		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 		message(STATUS "[BuildConfig] IPO enabled globally (opt-out for Tools/Tests/Editor)")
@@ -115,12 +118,14 @@ function(sw_configureAppDependencies TARGET_NAME)
 		if(TARGET SWGame)
 			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
 		endif()
+
 		if(TARGET CookAssets)
 			add_dependencies(${TARGET_NAME} CookAssets)
 		endif()
 	else()
 		if(TARGET SWGame)
 			get_property(dynMods GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+
 			foreach(mod IN LISTS dynMods)
 				if(TARGET ${mod})
 					add_dependencies(${TARGET_NAME} ${mod})
@@ -138,20 +143,21 @@ function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 	target_include_directories(${BACKEND_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${BACKEND_NAME}
 		PRIVATE
-			Engine
-			${GRAPHICS_LIB}
-			sw_third_party_includes
-			sw_global_options
+		Engine
+		${GRAPHICS_LIB}
+		sw_third_party_includes
+		sw_global_options
 	)
+
 	if(sw_flag_libraries)
 		target_link_libraries(${BACKEND_NAME} PRIVATE ${sw_flag_libraries})
 	endif()
 
 	target_compile_definitions(${BACKEND_NAME}
 		PRIVATE
-			"SW_LOG_TAG=\"RHI\""
-			SW_MODULE_EXPORTS
-			SW_ENGINE_INTERNAL
+		"SW_LOG_TAG=\"RHI\""
+		SW_MODULE_EXPORTS
+		SW_ENGINE_INTERNAL
 	)
 	sw_configurePch(${BACKEND_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setModuleBinOutput(${BACKEND_NAME})
@@ -172,12 +178,13 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	target_include_directories(${KIT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${KIT_NAME}
 		PUBLIC
-			GameFramework
-			Engine
-			sw_public_source_includes
+		GameFramework
+		Engine
+		sw_public_source_includes
 		PRIVATE
-			sw_global_options
+		sw_global_options
 	)
+
 	if(sw_flag_libraries)
 		target_link_libraries(${KIT_NAME} PRIVATE ${sw_flag_libraries})
 	endif()
@@ -186,12 +193,15 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	sw_configurePch(${KIT_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	sw_configureGfExports(${KIT_NAME} ${kitType})
+
 	if(kitType STREQUAL "SHARED")
 		sw_setModuleBinOutput(${KIT_NAME})
+
 		if(WIN32)
 			sw_addDelayloadHook(${KIT_NAME} DLLS GameFramework.dll)
 		endif()
 	endif()
+
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${KIT_NAME})
 	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
 
@@ -205,6 +215,7 @@ endfunction()
 # 게임 팩 모듈(SWGame) 타겟을 정의하고 링크 및 리플렉션/딜레이로드를 구성합니다.
 function(sw_addGameModule TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "KITS;HEADERS;EXCLUDE" ${ARGN})
+
 	if(SW_SHIPPING_BUILD)
 		set(gameLibType STATIC)
 	else()
@@ -212,6 +223,7 @@ function(sw_addGameModule TARGET_NAME)
 	endif()
 
 	file(GLOB_RECURSE gameSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+
 	foreach(exPattern IN LISTS ARG_EXCLUDE)
 		list(FILTER gameSources EXCLUDE REGEX "${exPattern}")
 	endforeach()
@@ -222,21 +234,23 @@ function(sw_addGameModule TARGET_NAME)
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${TARGET_NAME}
 		PRIVATE
-			Engine
-			RuntimeAPI
-			GameFramework
-			${ARG_KITS}
-			sw_global_options
+		Engine
+		RuntimeAPI
+		GameFramework
+		${ARG_KITS}
+		sw_global_options
 	)
+
 	if(sw_flag_libraries)
 		target_link_libraries(${TARGET_NAME} PRIVATE ${sw_flag_libraries})
 	endif()
 
 	target_compile_definitions(${TARGET_NAME}
 		PRIVATE
-			"SW_LOG_TAG=\"Game\""
-			SW_GAME_INTERNAL
+		"SW_LOG_TAG=\"Game\""
+		SW_GAME_INTERNAL
 	)
+
 	if(gameLibType STREQUAL "MODULE")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
 		sw_setModuleBinOutput(${TARGET_NAME})
@@ -250,9 +264,11 @@ function(sw_addGameModule TARGET_NAME)
 
 	if(NOT SW_SHIPPING_BUILD AND WIN32)
 		set(delayDlls GameFramework.dll)
+
 		foreach(kit IN LISTS ARG_KITS)
 			list(APPEND delayDlls "${kit}.dll")
 		endforeach()
+
 		sw_addDelayloadHook(${TARGET_NAME} DLLS ${delayDlls})
 	endif()
 
@@ -271,46 +287,54 @@ endfunction()
 # 테스트 실행 파일 타겟을 정의하고 공통 PCH, 로그 태그, CTest 등록을 수행합니다.
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS" ${ARGN})
+
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	endif()
 
 	add_executable(${TARGET_NAME} ${ARG_SOURCES})
+	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp")
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
 
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${TARGET_NAME}
 		PRIVATE
-			TestFramework
-			${ARG_LIBS}
-			sw_global_options
+		TestFramework
+		${ARG_LIBS}
+		sw_global_options
 	)
+
 	if(sw_flag_libraries)
 		target_link_libraries(${TARGET_NAME} PRIVATE ${sw_flag_libraries})
 	endif()
 
 	target_compile_definitions(${TARGET_NAME}
 		PRIVATE
-			"SW_LOG_TAG=\"Test\""
-			${ARG_DEFINITIONS}
+		"SW_LOG_TAG=\"Test\""
+		${ARG_DEFINITIONS}
 	)
 	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	if(BUILD_TESTING)
 		add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
 		set(timeout 30)
+
 		if(ARG_TIMEOUT)
 			set(timeout ${ARG_TIMEOUT})
 		endif()
+
 		set(labels "unit")
+
 		if(ARG_LABELS)
 			set(labels "${ARG_LABELS}")
 		endif()
+
 		set_tests_properties(${TARGET_NAME} PROPERTIES
 			WORKING_DIRECTORY "${sw_output_directory}/Bin"
 			LABELS "${labels}"
 			TIMEOUT ${timeout}
 		)
+
 		if(ARG_RUN_SERIAL)
 			set_tests_properties(${TARGET_NAME} PROPERTIES RUN_SERIAL TRUE)
 		endif()
@@ -322,24 +346,32 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_addDelayloadHook TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "DLLS" ${ARGN})
+
 	if(NOT WIN32)
 		return()
 	endif()
+
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "sw_addDelayloadHook: target '${TARGET_NAME}' does not exist")
 	endif()
+
 	set(swHookSrc "")
+
 	if(TARGET Engine)
 		get_property(swHookSrc TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE)
 	endif()
+
 	if(NOT swHookSrc OR NOT EXISTS "${swHookSrc}")
 		set(swHookSrc "${CMAKE_SOURCE_DIR}/Source/Engine/Utility/Module/DelayLoadNotifyHook.cpp")
+
 		if(NOT EXISTS "${swHookSrc}")
 			message(WARNING "[sw_addDelayloadHook] DelayLoadNotifyHook.cpp not found: ${swHookSrc}")
 		endif()
 	endif()
+
 	target_sources(${TARGET_NAME} PRIVATE "${swHookSrc}")
 	target_link_libraries(${TARGET_NAME} PRIVATE delayimp)
+
 	foreach(dll IN LISTS ARG_DLLS)
 		target_link_options(${TARGET_NAME} PRIVATE "LINKER:/DELAYLOAD:${dll}")
 	endforeach()
@@ -352,9 +384,11 @@ function(sw_queueRuntimeCopy TARGET_NAME SRC_FILE)
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "sw_queueRuntimeCopy: target '${TARGET_NAME}' does not exist")
 	endif()
+
 	if(NOT SRC_FILE OR NOT EXISTS "${SRC_FILE}")
 		return()
 	endif()
+
 	set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
@@ -362,26 +396,33 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "sw_emitRuntimeCopies: target '${TARGET_NAME}' does not exist")
 	endif()
+
 	get_property(already TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED)
+
 	if(already)
 		return()
 	endif()
+
 	get_property(files TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPY_FILES)
+
 	if(NOT files)
 		return()
 	endif()
+
 	list(REMOVE_DUPLICATES files)
 	set(names "")
 	set(commands "")
+
 	foreach(src IN LISTS files)
 		get_filename_component(name "${src}" NAME)
 		list(APPEND names "${name}")
 		list(APPEND commands
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				"${src}"
-				"$<TARGET_FILE_DIR:${TARGET_NAME}>/${name}"
+			"${src}"
+			"$<TARGET_FILE_DIR:${TARGET_NAME}>/${name}"
 		)
 	endforeach()
+
 	list(JOIN names ", " summary)
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
 		${commands}
@@ -396,15 +437,19 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_thirdPartySystemIncludes TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "INTERFACE;PUBLIC;PRIVATE" ${ARGN})
+
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "[ThirdParty] Target not found: ${TARGET_NAME}")
 	endif()
+
 	if(ARG_INTERFACE)
 		target_include_directories(${TARGET_NAME} SYSTEM INTERFACE ${ARG_INTERFACE})
 	endif()
+
 	if(ARG_PUBLIC)
 		target_include_directories(${TARGET_NAME} SYSTEM PUBLIC ${ARG_PUBLIC})
 	endif()
+
 	if(ARG_PRIVATE)
 		target_include_directories(${TARGET_NAME} SYSTEM PRIVATE ${ARG_PRIVATE})
 	endif()
@@ -412,30 +457,38 @@ endfunction()
 
 function(sw_addVcpkgConfigLib)
 	cmake_parse_arguments(ARG "HEADER_ONLY;ATTACH_GLOBAL" "NAME;PACKAGE;CONFIG_TARGET" "" ${ARGN})
+
 	if(NOT ARG_NAME)
 		message(FATAL_ERROR "sw_addVcpkgConfigLib: NAME required")
 	endif()
+
 	if(NOT ARG_PACKAGE)
 		set(ARG_PACKAGE ${ARG_NAME})
 	endif()
+
 	if(NOT ARG_CONFIG_TARGET)
 		set(ARG_CONFIG_TARGET "${ARG_NAME}::${ARG_NAME}")
 	endif()
+
 	find_package(${ARG_PACKAGE} CONFIG QUIET)
+
 	if(TARGET ${ARG_NAME})
-		# Target already exists as imported library from find_package
+	# Target already exists as imported library from find_package
 	elseif(TARGET ${ARG_CONFIG_TARGET})
 		add_library(${ARG_NAME} INTERFACE)
 		target_link_libraries(${ARG_NAME} INTERFACE ${ARG_CONFIG_TARGET})
 	else()
 		add_library(${ARG_NAME} INTERFACE)
+
 		if(NOT TARGET ${ARG_CONFIG_TARGET})
 			add_library(${ARG_CONFIG_TARGET} ALIAS ${ARG_NAME})
 		endif()
+
 		if(ARG_HEADER_ONLY AND COMMAND sw_linkVcpkgHeaderOnlyTarget)
 			sw_linkVcpkgHeaderOnlyTarget(${ARG_NAME})
 		endif()
 	endif()
+
 	if(ARG_ATTACH_GLOBAL AND TARGET sw_third_party_includes)
 		target_link_libraries(sw_third_party_includes INTERFACE ${ARG_NAME})
 	endif()
@@ -443,50 +496,64 @@ endfunction()
 
 function(sw_addVcpkgStaticLib)
 	cmake_parse_arguments(ARG "" "NAME;PACKAGE;CONFIG_TARGET;HEADER;LIB_BASENAME;WARN" "" ${ARGN})
+
 	if(NOT ARG_NAME OR NOT ARG_HEADER OR NOT ARG_LIB_BASENAME)
 		message(FATAL_ERROR "sw_addVcpkgStaticLib: NAME, HEADER, LIB_BASENAME required")
 	endif()
+
 	if(NOT ARG_PACKAGE)
 		set(ARG_PACKAGE ${ARG_NAME})
 	endif()
+
 	if(NOT ARG_CONFIG_TARGET)
 		set(ARG_CONFIG_TARGET "${ARG_NAME}::${ARG_NAME}")
 	endif()
+
 	find_package(${ARG_PACKAGE} CONFIG QUIET)
+
 	if(TARGET ${ARG_CONFIG_TARGET})
 		add_library(${ARG_NAME} INTERFACE)
 		target_link_libraries(${ARG_NAME} INTERFACE ${ARG_CONFIG_TARGET})
 		return()
 	endif()
+
 	if(TARGET ${ARG_NAME})
 		return()
 	endif()
 
 	set(root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+
 	if(NOT EXISTS "${root}/include/${ARG_HEADER}")
 		if(ARG_WARN)
 			message(WARNING "${ARG_WARN}")
 		else()
 			message(WARNING "[${ARG_NAME}] vcpkg 설치 트리에서 헤더 '${ARG_HEADER}'를 찾을 수 없습니다 (${root}/include).")
 		endif()
+
 		add_library(${ARG_NAME} INTERFACE)
 		return()
 	endif()
 
 	add_library(${ARG_CONFIG_TARGET} STATIC IMPORTED GLOBAL)
+
 	if(WIN32)
 		set(dbg "${root}/debug/lib/${ARG_LIB_BASENAME}d.lib")
+
 		if(NOT EXISTS "${dbg}")
 			set(dbg "${root}/debug/lib/${ARG_LIB_BASENAME}.lib")
 		endif()
+
 		set(rel "${root}/lib/${ARG_LIB_BASENAME}.lib")
 	else()
 		set(dbg "${root}/debug/lib/lib${ARG_LIB_BASENAME}d.a")
+
 		if(NOT EXISTS "${dbg}")
 			set(dbg "${root}/debug/lib/lib${ARG_LIB_BASENAME}.a")
 		endif()
+
 		set(rel "${root}/lib/lib${ARG_LIB_BASENAME}.a")
 	endif()
+
 	set_target_properties(${ARG_CONFIG_TARGET} PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${root}/include"
 		IMPORTED_LOCATION_DEBUG "${dbg}"

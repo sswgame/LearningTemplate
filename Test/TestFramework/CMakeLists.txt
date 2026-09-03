@@ -3,17 +3,29 @@
 # @brief 모든 단위 테스트에서 공통으로 사용하는 기본 테스트 프레임워크 래퍼
 # ==============================================================================
 
-file(GLOB_RECURSE TF_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+set(TF_SOURCES
+    TestContext.cpp
+    TestEnvironment.cpp
+    TestFilter.cpp
+    TestFixture.cpp
+    TestFramework.cpp
+    TestContext.h
+    TestEnvironment.h
+    TestFilter.h
+    TestFixture.h
+    TestFramework.h
+)
 
 add_library(TestFramework STATIC ${TF_SOURCES})
 
 target_include_directories(TestFramework PUBLIC "${CMAKE_SOURCE_DIR}/Test" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(TestFramework
     PUBLIC
-        Engine
+    Engine
     PRIVATE
-        sw_global_options
+    sw_global_options
 )
+
 if(sw_flag_libraries)
     target_link_libraries(TestFramework PRIVATE ${sw_flag_libraries})
 endif()

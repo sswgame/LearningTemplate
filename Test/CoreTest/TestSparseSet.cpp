@@ -27,11 +27,11 @@ SW_TEST_CASE( SparseSet, BasicOperations )
     SW_EXPECT_EQUAL( 100, val );
 
     set.emplace( 5, 500 );
-    SW_EXPECT_EQUAL( 2, set.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), set.size() );
 
     set.erase( 0 );
     SW_EXPECT_FALSE( set.contains( 0 ) );
-    SW_EXPECT_EQUAL( 1, set.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), set.size() );
 
     if ( set.contains( 5 ) )
         val = set[5];
@@ -55,7 +55,7 @@ SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
 
     set.erase( 1 );
     SW_EXPECT_FALSE( set.contains( 1 ) );
-    SW_EXPECT_EQUAL( 2, set.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), set.size() );
     SW_EXPECT_EQUAL( 10, set[0]._value );
     SW_EXPECT_EQUAL( 30, set[2]._value );
 
@@ -73,7 +73,7 @@ SW_TEST_CASE( SparseSet, OverwriteAndReuseKey )
     sparse_set<int32> set;
     set.emplace( 7, 1 );
     set.emplace( 7, 2 );
-    SW_EXPECT_EQUAL( 1, set.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), set.size() );
     SW_EXPECT_EQUAL( 2, set[7] );
 
     set.erase( 7 );
@@ -104,18 +104,18 @@ SW_TEST_CASE( SparseSet, ShrinkToFitReclaimsCapacity )
     {
         set.emplace( index, static_cast<int32>( index * 10 ) );
     }
-    SW_EXPECT_EQUAL( 1000, set.size() );
+    SW_EXPECT_EQUAL( size_t( 1000 ), set.size() );
 
     // 950개 삭제
     for ( uint32 index = 50; index < 1000; ++index )
     {
         set.erase( index );
     }
-    SW_EXPECT_EQUAL( 50, set.size() );
+    SW_EXPECT_EQUAL( size_t( 50 ), set.size() );
 
     set.shrink_to_fit();
 
-    SW_EXPECT_EQUAL( 50, set.size() );
+    SW_EXPECT_EQUAL( size_t( 50 ), set.size() );
     for ( uint32 index = 0; index < 50; ++index )
     {
         SW_EXPECT_TRUE( set.contains( index ) );
@@ -174,7 +174,7 @@ SW_TEST_CASE( SparseSet, DenseKeysAndClear )
     SW_EXPECT_EQUAL( 3u, keys.size() );
 
     set.clear();
-    SW_EXPECT_EQUAL( 0, set.size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), set.size() );
     SW_EXPECT_FALSE( set.contains( 100 ) );
     SW_EXPECT_FALSE( set.contains( 200 ) );
     SW_EXPECT_FALSE( set.contains( 300 ) );

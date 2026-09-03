@@ -2,23 +2,18 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include "Core/Task/TaskManager.h"
-
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Scene/SceneManager.h"
-
 namespace test
 {
     namespace
     {
         /** @brief CLI 인자 값의 따옴표를 제거합니다. */
-        std::string_view trimArgValue( std::string_view value )
+        sw::string trimArgValue( std::string_view value )
         {
             while ( value.empty() == false && ( value.front() == '"' || value.front() == '\'' ) )
                 value.remove_prefix( 1 );
             while ( value.empty() == false && ( value.back() == '"' || value.back() == '\'' ) )
                 value.remove_suffix( 1 );
-            return value;
+            return sw::string( value );
         }
 
     } // namespace
@@ -36,42 +31,16 @@ namespace test
 
     void TestRegistry::setFilter( const sw::string& filter )
     {
-        _listIncludePattern.clear();
-        _listExcludePattern.clear();
-
-        if ( filter.empty() )
-            return;
-
-        size_t start{ 0 };
-        while ( start <= filter.size() )
-        {
-            const size_t comma = filter.find( ',', start );
-            sw::string   token = filter.substr( start, comma == sw::string::npos ? sw::string::npos : comma - start );
-            while ( token.empty() == false && token.front() == ' ' )
-                token.erase( token.begin() );
-            while ( token.empty() == false && token.back() == ' ' )
-                token.pop_back();
-
-            if ( token.empty() == false )
-            {
-                if ( token.front() == '-' )
-                {
-                    _listExcludePattern.push_back( token.substr( 1 ) );
-                }
-                else
-                {
-                    _listIncludePattern.push_back( token );
-                }
-            }
-
-            if ( comma == sw::string::npos )
-                break;
-            start = comma + 1;
-        }
+        _filter.setPattern( filter );
     }
 
-    void TestRegistry::configureFromArgs( int32 argc, utf8* argv[] )
+    sw::vector<utf8*> TestRegistry::configureFromArgs( int32 argc, utf8* argv[] )
     {
+        sw::vector<utf8*> listApplicationArg;
+        listApplicationArg.reserve( static_cast<size_t>( argc ) );
+        if ( argc > 0 )
+            listApplicationArg.push_back( argv[0] );
+
         for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
         {
             const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
@@ -100,82 +69,18 @@ namespace test
                 {
                     setFilter( sw::string( trimArgValue( argv[++argIndex] ) ) );
                 }
-            }
-        }
-    }
-
-    bool TestRegistry::matchGlob( const sw::string& pattern, const sw::string& text )
-    {
-        if ( pattern.empty() || pattern == "*" )
-            return true;
-
-        size_t       textPos{ 0 };
-        size_t       patternPos{ 0 };
-        const size_t textSize    = text.size();
-        const size_t patternSize = pattern.size();
-
-        size_t starPattern = sw::string::npos;
-        size_t starText    = sw::string::npos;
-
-        while ( textPos < textSize )
-        {
-            if ( patternPos < patternSize && pattern[patternPos] == '*' )
-            {
-                starPattern = patternPos++;
-                starText    = textPos;
                 continue;
             }
 
-            if ( patternPos < patternSize && pattern[patternPos] == text[textPos] )
-            {
-                ++patternPos;
-                ++textPos;
-                continue;
-            }
-
-            if ( starPattern != sw::string::npos )
-            {
-                patternPos = starPattern + 1;
-                textPos    = ++starText;
-                continue;
-            }
-
-            return false;
+            listApplicationArg.push_back( argv[argIndex] );
         }
 
-        while ( patternPos < patternSize && pattern[patternPos] == '*' )
-            ++patternPos;
-
-        return patternPos == patternSize;
-    }
-
-    bool TestRegistry::matchesFilter( const sw::string& fullName ) const
-    {
-        bool included = _listIncludePattern.empty();
-        for ( const sw::string& pattern : _listIncludePattern )
-        {
-            if ( matchGlob( pattern, fullName ) )
-            {
-                included = true;
-                break;
-            }
-        }
-
-        if ( included == false )
-            return false;
-
-        for ( const sw::string& pattern : _listExcludePattern )
-        {
-            if ( matchGlob( pattern, fullName ) )
-                return false;
-        }
-
-        return true;
+        return listApplicationArg;
     }
 
     void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
     {
-        _currentTestFailed = true;
+        _currentContext.addFailure( condition, file, line, message );
         std::fprintf( stdout, "\n  [FAILED] %s:%d\n    Condition: %s\n", file.c_str(), line, condition.c_str() );
         if ( message.empty() == false )
         {
@@ -192,7 +97,7 @@ namespace test
 
     void TestRegistry::skipCurrentTest( [[maybe_unused]] const sw::string& reason, [[maybe_unused]] const sw::string& file, [[maybe_unused]] int32 line )
     {
-        _currentTestSkipped = true;
+        _currentContext.skip( reason, file, line );
         SW_LOG_INFO( "\n  [SKIPPED] %#:%# — %#", file.c_str(), line, reason.c_str() );
     }
 
@@ -224,7 +129,7 @@ namespace test
         uint32 runnableCount{ 0 };
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( matchesFilter( testInfo.fullName() ) )
+            if ( _filter.matches( testInfo.fullName() ) )
                 ++runnableCount;
         }
 
@@ -242,43 +147,63 @@ namespace test
 
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            if ( matchesFilter( testInfo.fullName() ) == false )
+            if ( _filter.matches( testInfo.fullName() ) == false )
                 continue;
 
-            _currentTestFailed  = false;
-            _currentTestSkipped = false;
+            _currentContext.begin( testInfo.fullName() );
             std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
             std::fflush( stdout );
             SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 
             const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-            testInfo._func();
-
-            if ( sw::engine::areEngineServicesBound() )
+            try
             {
-                sw::engine::getSceneManager().cancelPendingAsyncLoads();
-                sw::engine::getTaskManager().clear();
+                testInfo._func();
             }
+            catch ( const std::exception& exception )
+            {
+                addFailure( "test exception", "TestFramework", 0, exception.what() );
+            }
+            catch ( ... )
+            {
+                addFailure( "test exception", "TestFramework", 0, "Unknown test exception" );
+            }
+
+            try
+            {
+                _environment.tearDown();
+            }
+            catch ( const std::exception& exception )
+            {
+                addFailure( "environment teardown", "TestFramework", 0, exception.what() );
+            }
+            catch ( ... )
+            {
+                addFailure( "environment teardown", "TestFramework", 0, "Unknown teardown exception" );
+            }
+
+            _currentContext.runCleanup();
 
             const std::chrono::high_resolution_clock::time_point end     = std::chrono::high_resolution_clock::now();
             const float64                                        elapsed = std::chrono::duration<float64, std::milli>( end - start ).count();
             totalMs += elapsed;
 
-            if ( _currentTestSkipped && _currentTestFailed == false )
+            if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
             {
                 ++skippedCount;
                 std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
                 std::fflush( stdout );
                 SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
             }
-            else if ( _currentTestFailed )
+            else if ( _currentContext.hasFailed() )
             {
                 ++failedCount;
                 listFailedTestName.push_back( testInfo.fullName() );
                 std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
                 std::fflush( stdout );
-                SW_LOG_ERROR( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
+                const sw::string testName = testInfo.fullName();
+                SW_LOG_ERROR( "%# (%# ms)", testName.c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
             }
             else
             {
@@ -298,7 +223,7 @@ namespace test
         SW_LOG_INFO( "====================================================" );
 
         std::fprintf( stdout, "====================================================\n" );
-        std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount, skippedCount, totalMs );
+        std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount + skippedCount, skippedCount, totalMs );
         if ( failedCount > 0 )
         {
             std::fprintf( stdout, " Tests failed (%d):\n", failedCount );
