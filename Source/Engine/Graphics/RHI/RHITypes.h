@@ -224,25 +224,19 @@ namespace sw
      * @enum RHIBufferUsage
      * @brief 범용 GPU 버퍼 usage 플래그 (createBuffer)
      */
-    enum class RHIBufferUsage : uint32
+    ENUM( Flags )
+    enum class RHIBufferUsage : uint8
     {
         None            = 0,
-        Vertex          = 1u << 0,
-        Index           = 1u << 1,
-        Constant        = 1u << 2,
-        Structured      = 1u << 3,
-        UnorderedAccess = 1u << 4,
-        ShaderResource  = 1u << 5,
-        IndirectArgs    = 1u << 6,
-        Raw             = 1u << 7, ///< 바이트 주소 / RAW UAV (DX11 DRAWINDIRECT_ARGS 호환)
+        Vertex          = SW_BIT( 0 ),
+        Index           = SW_BIT( 1 ),
+        Constant        = SW_BIT( 2 ),
+        Structured      = SW_BIT( 3 ),
+        UnorderedAccess = SW_BIT( 4 ),
+        ShaderResource  = SW_BIT( 5 ),
+        IndirectArgs    = SW_BIT( 6 ),
+        Raw             = SW_BIT( 7 ), ///< 바이트 주소 / RAW UAV (DX11 DRAWINDIRECT_ARGS 호환)
     };
-
-    /** @brief usage 플래그 OR. */
-    constexpr RHIBufferUsage operator|( RHIBufferUsage a, RHIBufferUsage b ) noexcept { return static_cast<RHIBufferUsage>( static_cast<uint32>( a ) | static_cast<uint32>( b ) ); }
-    /** @brief usage 플래그 AND. */
-    constexpr RHIBufferUsage operator&( RHIBufferUsage a, RHIBufferUsage b ) noexcept { return static_cast<RHIBufferUsage>( static_cast<uint32>( a ) & static_cast<uint32>( b ) ); }
-    /** @brief mask에 flag가 켜져 있는지. */
-    constexpr bool hasFlag( RHIBufferUsage mask, RHIBufferUsage flag ) noexcept { return ( static_cast<uint32>( mask ) & static_cast<uint32>( flag ) ) != 0; }
 
     /**
      * @enum RHIBufferState

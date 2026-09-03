@@ -3,6 +3,7 @@
  * @brief TypeRegistry와 정적 Type/Enum registrar 연결
  */
 #pragma once
+#include "Core/Common/EnumUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -254,15 +255,20 @@ namespace sw
         }
 
         template <typename E>
-        /** @brief 템플릿 비트플래그 enum에 대해 포함 여부를 검사합니다. */
+        /**
+         * @brief 템플릿 비트플래그 enum에 대해 포함 여부를 검사합니다.
+         * @details ENUM(Flags)로 등록된 타입인지 런타임에 검증합니다. 타입을 컴파일 타임에 알고
+         *          있고 레지스트리 검증이 필요 없는 핫패스라면, 조회 없이 바로 계산하는
+         *          sw::EnumUtil::hasFlag(Core/Common/EnumUtil.h)를 대신 사용하세요.
+         *          실제 비트 연산 로직은 EnumUtil에만 있고, 여기서는 위임만 합니다.
+         */
         bool hasFlag( E flags, E contains ) const
         {
             static_assert( std::is_enum_v<E>, "hasFlag requires an enum type" );
             const EnumInfo* pInfo = findEnumOf<E>();
             if ( pInfo == nullptr || pInfo->_bIsBitFlag == 0 )
                 return false;
-            using U = std::underlying_type_t<E>;
-            return ( static_cast<U>( flags ) & static_cast<U>( contains ) ) == static_cast<U>( contains );
+            return EnumUtil::hasFlag( flags, contains );
         }
 
         // ------------------------------------------------------------------------------

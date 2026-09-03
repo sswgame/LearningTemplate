@@ -55,7 +55,7 @@
         "generated_ns_open": "namespace sw::generated\n{\n",
         "generated_ns_close": "} // namespace sw::generated\n\n",
         "flag_ops_header": "FlagOps.gen.h",
-        "flag_ops_marker": "operator|",
+        "flag_ops_marker": "IsBitFlagEnum",
         "register_type_marker": "RegisterType",
         "register_enum_marker": "RegisterEnum",
         "value_forbidden_base_types": [

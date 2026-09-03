@@ -441,12 +441,12 @@ namespace sw
 // 5) ENUM Flags — 전역 비트플래그 샘플
 // ------------------------------------------------------------------------------
 ENUM( Flags )
-enum class TestFlag : uint32
+enum class TestFlag : uint8
 {
     None    = 0,
-    Read    = 1 << 0,
-    Write   = 1 << 1,
-    Execute = 1 << 2
+    Read    = SW_BIT( 0 ),
+    Write   = SW_BIT( 1 ),
+    Execute = SW_BIT( 2 )
 };
 
 ENUM( Meta = "Doc=EnumForTesting, Version=2" )

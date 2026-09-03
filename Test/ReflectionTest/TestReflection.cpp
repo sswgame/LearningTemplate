@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/EnumUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
@@ -2602,6 +2603,28 @@ SW_TEST_CASE( Reflection_EnumFlag, EnumFlagOperators )
 
     flag |= TestFlag::Execute;
     SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Execute ) );
+}
+
+/**
+ * @brief [Reflection_EnumFlag] ENUM(Flags) 코드젠 연산자(|, &, ^, ~, |=, &=, ^=)가 sw::EnumUtil의
+ *        제네릭 hasFlag/hasAnyFlag/setFlag/clearFlag(Core/Common/EnumUtil.h)와 함께 정상 동작하는지
+ *        검증합니다. EnumUtil 자체의 단위 테스트는 Test/CoreTest/TestEnumUtil.cpp에 있습니다
+ *        (리플렉션과 무관하게 동작함을 증명하기 위해 일부러 CoreTest에 둡니다).
+ */
+SW_TEST_CASE( Reflection_EnumFlag, GeneratedOperatorsWithEnumUtil )
+{
+    TestFlag flag = TestFlag::Read | TestFlag::Write;
+
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Read ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Write ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flag, TestFlag::Execute ) );
+
+    flag |= TestFlag::Execute;
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Execute ) );
+
+    flag = sw::EnumUtil::clearFlag( flag, TestFlag::Read );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flag, TestFlag::Read ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasAnyFlag( flag, TestFlag::Write | TestFlag::Execute ) );
 }
 
 // ------------------------------------------------------------------------------

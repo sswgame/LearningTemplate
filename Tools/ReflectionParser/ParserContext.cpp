@@ -323,7 +323,7 @@ namespace sw
         , _emitGeneratedNsOpen{ "namespace sw::generated\n{\n" }
         , _emitGeneratedNsClose{ "} // namespace sw::generated\n\n" }
         , _emitFlagOpsHeader{ "FlagOps.gen.h" }
-        , _emitFlagOpsMarker{ "operator|" }
+        , _emitFlagOpsMarker{ "IsBitFlagEnum" }
         , _emitRegisterTypeMarker{ "RegisterType" }
         , _emitRegisterEnumMarker{ "RegisterEnum" }
         , _listModuleRule{ { "GameFramework", "GameFramework" }, { "Games", "SWGame" }, { "SWGame", "SWGame" }, { "Editor", "EditorModule" }, { "App", "App" } },

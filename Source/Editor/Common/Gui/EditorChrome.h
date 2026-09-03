@@ -15,7 +15,7 @@ namespace sw::editor
     // 1) Panel Flags & Descs
     // ------------------------------------------------------------------------------
     ENUM( Flags )
-    enum class EditorPanelFlags : uint32
+    enum class EditorPanelFlags : uint8
     {
         None            = 0,
         NoCollapse      = SW_BIT( 0 ),
@@ -35,7 +35,7 @@ namespace sw::editor
     };
 
     ENUM( Flags )
-    enum class EditorSectionFlags : uint32
+    enum class EditorSectionFlags : uint8
     {
         None                = 0,
         Border              = SW_BIT( 0 ),
@@ -59,7 +59,7 @@ namespace sw::editor
     // 3) FloatingBar Flags & Descs
     // ------------------------------------------------------------------------------
     ENUM( Flags )
-    enum class EditorFloatingBarFlags : uint32
+    enum class EditorFloatingBarFlags : uint8
     {
         None                    = 0,
         AutoResize              = SW_BIT( 0 ),
@@ -84,7 +84,7 @@ namespace sw::editor
     // 4) Overlay Flags & Descs
     // ------------------------------------------------------------------------------
     ENUM( Flags )
-    enum class EditorOverlayFlags : uint32
+    enum class EditorOverlayFlags : uint16
     {
         None               = 0,
         NoTitleBar         = SW_BIT( 0 ),

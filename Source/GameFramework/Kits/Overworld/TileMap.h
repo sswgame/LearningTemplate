@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -17,25 +19,16 @@ namespace sw
     //    Solid는 Walkable의 역(작성 편의). PassThrough는 낭떠러지 힌트
     // ------------------------------------------------------------------------------
     /** @brief 타일 한 칸의 충돌·이벤트 비트 */
+    ENUM( Flags )
     enum class TileFlags : uint8
     {
         None        = 0,
-        Walkable    = 1 << 0,
-        Encounter   = 1 << 1,
-        Warp        = 1 << 2,
-        Solid       = 1 << 3, ///< 차단 (Walkable의 역)
-        PassThrough = 1 << 4  ///< 낭떠러지 / 일방 힌트 (보행은 가능)
+        Walkable    = SW_BIT( 0 ),
+        Encounter   = SW_BIT( 1 ),
+        Warp        = SW_BIT( 2 ),
+        Solid       = SW_BIT( 3 ), ///< 차단 (Walkable의 역)
+        PassThrough = SW_BIT( 4 )  ///< 낭떠러지 / 일방 힌트 (보행은 가능)
     };
-
-    // ------------------------------------------------------------------------------
-    // 2) 플래그 결합 — enum class라 연산자를 직접 둠
-    // ------------------------------------------------------------------------------
-    /** @brief 타일 플래그를 OR 결합합니다. */
-    inline TileFlags operator|( TileFlags a, TileFlags b ) { return static_cast<TileFlags>( static_cast<uint8>( a ) | static_cast<uint8>( b ) ); }
-    /** @brief 타일 플래그를 AND 결합합니다. */
-    inline TileFlags operator&( TileFlags a, TileFlags b ) { return static_cast<TileFlags>( static_cast<uint8>( a ) & static_cast<uint8>( b ) ); }
-    /** @brief 지정 비트가 켜져 있는지 반환합니다. */
-    inline bool hasTileFlag( TileFlags flags, TileFlags bit ) { return ( static_cast<uint8>( flags ) & static_cast<uint8>( bit ) ) != 0; }
 
     // ------------------------------------------------------------------------------
     // 3) 워프 · 조우 테이블 · HD-2D 비주얼
