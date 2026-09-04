@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -24,10 +24,9 @@ PSInput VSMain(VSInput input, uint vid : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	PassCBData passCb = GetPassCB();
 	float depth = SampleDepth(input.uv).r;
 	float3 n = normalize(SampleNormal(input.uv).xyz * 2.0f - 1.0f);
-	float2 texel = passCb.g_OutlineParams.yz;
+	float2 texel = g_OutlineParams.yz;
 	float ao = 0.0f;
 	const int kSamples = 4;
 	float2 offsets[4] = {

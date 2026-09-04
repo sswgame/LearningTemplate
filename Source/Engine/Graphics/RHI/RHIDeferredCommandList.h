@@ -60,6 +60,8 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0,
                    RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
                    RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
+        /** @brief 인스턴스드 삼각형 리스트 드로우를 기록합니다. */
+        void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         /** @brief 인덱스 버퍼 바인드를 기록합니다. */
         void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
 
@@ -76,6 +78,10 @@ namespace sw
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         /** @brief 셰이더 텍스처 슬롯 바인드를 기록합니다. */
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
+        /** @brief 상수 버퍼를 레지스터 슬롯(bN)에 바인드하는 기록입니다 (리플렉션 구동). */
+        void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) override;
+        /** @brief 구조적 SRV 버퍼를 레지스터 슬롯(tN)에 바인드하는 기록입니다. */
+        void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
 
         // ------------------------------------------------------------------------------
         // 5) 기록 — 배리어 · blit · 인디렉트 · 마커
@@ -135,12 +141,15 @@ namespace sw
             EndRenderPass,
             SetVertexBuffer,
             Draw,
+            DrawInstanced,
             SetIndexBuffer,
             SetComputePipelineState,
             DispatchCompute,
             SetComputeRootConstants,
             BindComputeUAV,
             BindShaderResource,
+            BindConstantBuffer,
+            BindStructuredBuffer,
             PrepareTextureForShaderRead,
             BlitTexture,
             DrawIndirect,
@@ -166,6 +175,8 @@ namespace sw
             uint32                 _offset{ 0 };
             uint32                 _vertexCount{ 0 };
             uint32                 _startVertex{ 0 };
+            uint32                 _instanceCount{ 1 };
+            uint32                 _startInstance{ 0 };
             uint32                 _indexStride = 4;
             uint32                 _dispatchX{ 0 };
             uint32                 _dispatchY{ 0 };

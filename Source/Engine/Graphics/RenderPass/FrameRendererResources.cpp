@@ -23,7 +23,7 @@ namespace sw
         for ( uint32 slotIndex = 0; slotIndex < _s_kPassCbSlotCount; ++slotIndex )
         {
             PassCbSlot slot{};
-            slot._buffer = _pDevice->getResource()->createConstantBuffer( sizeof( PassConstants ) );
+            slot._buffer = _pDevice->getResource()->createConstantBuffer( _s_kEnginePassCbSize );
             if ( slot._buffer == 0 )
                 break;
             slot._index = _pDevice->getResource()->registerBindlessResource( slot._buffer );
@@ -135,11 +135,8 @@ namespace sw
 
         ctx._passCb      = _listPassCbSlot[ticket]._buffer;
         ctx._passCbIndex = _listPassCbSlot[ticket]._index;
-
-        // 갓 잡은 슬롯은 내용이 없다. 프레임 시드 상수로 즉시 채워 둬야, 자기 상수를
-        // 다시 쓰지 않는 패스도 뷰/조명 등 프레임 공통값을 그대로 본다.
-        if ( _pDevice != nullptr && ctx._passCb != 0 )
-            _pDevice->getResource()->updateConstantBuffer( ctx._passCb, &ctx._passConstants, sizeof( PassConstants ) );
+        // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
+        // (ctx._passValues 에 이미 프레임 시드가 들어있으므로 별도 선-업로드가 필요 없다).
     }
 
     void FrameRenderer::releasePassResources()

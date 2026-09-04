@@ -143,6 +143,60 @@ Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapCha
 
 ---
 
+## 리플렉션 구동 셰이더 바인딩
+
+**셰이더(.hlsl)만 고치면 된다.** C++ 에 미러 struct 없음 — 엔진이 `ShaderReflection` 으로 셰이더가
+선언한 CB 멤버/텍스처 이름·레지스터를 읽어 바인딩한다.
+
+```text
+PSO desc → ShaderBindingLayoutCache.getOrBuild(desc, backend)   (컴파일 → 리플렉션 → 레이아웃, 캐시)
+                    ↓
+FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/... 등록,
+               PassConstantValues 에 g_ViewProj/g_World/... 값 채움
+                    ↓
+드로우 직전 ShaderBindingBinder::bindGraphics(layout, registry, values, ...)
+   - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer
+   - MaterialCB(b1): Material 의 bindless 인덱스 → bindConstantBuffer
+   - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (네이티브 bindless)
+                    비네이티브(DX11/GL)는 bindShaderResource(srv, 리플렉션 t#)
+```
+
+| 파일 | 역할 |
+|------|------|
+| `Shader/ShaderBindingSlots.h` | 슬롯 용량 상수 (C++ 측). HLSL 미러 `Resource/engine/shaders/bindingslots.hlsli` |
+| `Shader/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
+| `Shader/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
+| `RenderPass/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
+| `RenderPass/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
+| `Resource/engine/shaders/binding.hlsli` | `bindless.hlsli` 대체. PassCB 선언 + `SampleShadow/Source/...` 헬퍼 + GPUScene 인스턴스 (4백엔드) |
+
+**셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로
+쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
+`FrameResourceRegistry` 에 `"<Name>"` 등록. `#if VULKAN/OPENGL` 분기 금지 — `binding.hlsli` 가 처리한다.
+
+**`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
+사용 금지) — 한 프로세스에 여러 `IRHIDevice` 가 공존하면(멀티 백엔드 파리티 테스트 등) 전역값이 실제
+디바이스와 어긋나 엉뚱한 셰이더 변형을 리플렉션한다.
+
+### GPUScene 인스턴스드 드로우 (언리얼 방식)
+
+메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData`, C++ `GpuInstance` 와 레이아웃 일치)
+에서 읽고, 배치당 `drawInstanced` 한 번으로 그린다. VS 는 `SwLoadInstanceWorld( SV_InstanceID )` 로 월드 행렬을
+얻는다. PassCB `g_InstanceBase` = 배치 시작 오프셋, `g_SwInstancesIndex` = 버퍼 bindless SRV 인덱스
+(`SW_INVALID_INDEX` 면 `g_World` 폴백). **4백엔드 전부 지원**:
+
+| 백엔드 | 인스턴스 버퍼 접근 |
+|--------|--------------------|
+| DX12   | `ResourceDescriptorHeap[g_SwInstancesIndex]` (힙 인덱싱, StructuredBuffer SRV — `registerBindlessResource` 가 구조버퍼면 CBV 대신 SRV 생성) |
+| DX11   | `StructuredBuffer` SRV (t4) — `createStructuredBuffer` 가 SRV 생성, `VS/PSSetShaderResources` |
+| OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4)` |
+| Vulkan | storage buffer descriptor set (space6/binding0) — 파이프라인 레이아웃 set 6+slot 에 바인딩. **set 4 는 정적 샘플러(`g_SwSamplerLinearWrap`, immutable) 전용** 레이아웃으로 매 드로우 set 0/1 과 함께 바인딩 (`bindGraphicsMaterialSets`) |
+
+- GPU 컬(gpucull)은 `instanceCount` 만 줄이고 인스턴스 리스트를 compact 하지 않는다 (배치 앞 N개만 그림).
+- **RHI ABI**: `bindConstantBuffer`/`bindStructuredBuffer`/`drawInstanced` 추가 (`RHIModuleAbi` stamp `rhi-cl-v4-2026-09`).
+
+---
+
 ## 의존 · 레이어
 
 - Graphics → Reflection / Object 참조 **허용**

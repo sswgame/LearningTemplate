@@ -11,13 +11,17 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RenderPass/FrameResourceRegistry.h"
 #include "Engine/Graphics/RenderPass/GpuScene.h"
 #include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Graphics/RenderPass/ShaderBindingBinder.h"
+#include "Engine/Graphics/Shader/ShaderBindingLayoutCache.h"
 
 namespace sw
 {
     struct RenderFramePacket;
+    struct ShaderCompileResult;
 
     class CameraComponent;
     class IRHICommandList;
@@ -25,6 +29,7 @@ namespace sw
     class Material;
     class MaterialInstance;
     class Scene;
+    class ShaderBindingLayout;
     class TaskArgs;
     class TaskManager;
 
@@ -90,32 +95,10 @@ namespace sw
         /** @brief GpuScene을 반환합니다. */
         const GpuScene& getGpuScene() const { return _gpuScene; }
         GpuScene&       getGpuScene() { return _gpuScene; }
+        /** @brief 셰이더 핫리로드 알림 — 영향받는 PSO 바인딩 레이아웃을 다시 만든다. */
+        void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
 
     private:
-        /** @brief GPU 상수 버퍼 레이아웃. 필드 순서가 와이어 포맷이므로 함부로 바꾸지 마세요. */
-        struct PassConstants
-        {
-            float4x4 _lightViewProj{};
-            float4x4 _viewProj{};
-            float4x4 _world{};
-            float4x4 _arrCascadeViewProj[4]{};
-            float4   _cascadeSplits{ 10.0f, 25.0f, 60.0f, 150.0f };
-            float4   _keyLightDirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
-            float4   _keyLightColor{ 1.0f, 0.82f, 0.62f, 0.28f };
-            float4   _shadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
-            float4   _bloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
-            float4   _outlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
-            float4   _outlineParams{ 0.02f, 0.001f, 0.001f, 0.0f };
-            uint32   _cascadeCount{ 4 };
-            uint32   _texShadow      = kInvalidDescriptorIndex;
-            uint32   _texAlbedo      = kInvalidDescriptorIndex;
-            uint32   _texNormal      = kInvalidDescriptorIndex;
-            uint32   _texDepth       = kInvalidDescriptorIndex;
-            uint32   _texSource      = kInvalidDescriptorIndex;
-            uint32   _texSourceDepth = kInvalidDescriptorIndex;
-            uint32   _flags{ 0 };
-        };
-
         /**
          * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
          * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 예전에는 이 값들이 전부
@@ -126,8 +109,11 @@ namespace sw
          */
         struct FramePassContext
         {
-            IRHICommandList*   _pCmd{ nullptr };
-            PassConstants      _passConstants{};
+            IRHICommandList* _pCmd{ nullptr };
+            /** @brief 엔진 PassCB 값 (이름 기반). ShaderBindingBinder 가 리플렉션 오프셋에 기록. */
+            PassConstantValues _passValues{};
+            /** @brief 이번 드로우의 월드 행렬 (드로우마다 `g_World` 로 push, 인스턴스 경로에선 폴백용). */
+            float4x4           _world{};
             RHIBufferHandle    _passCb{ 0 };
             RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
             Material*          _pBoundMaterial{ nullptr };
@@ -159,21 +145,27 @@ namespace sw
         void onGraphPassExecute( const RenderGraphPassContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
         void executePass( FramePassContext& ctx, string_view passType, string_view passName );
-        /** @brief 패스 상수 버퍼를 갱신합니다. */
+        /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
         /** @brief 카메라에서 뷰/투영을 적용합니다. */
         void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
         /** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
         void buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const;
-        /** @brief 캐스케이드 섀도우 맵 뷰-투영 행렬 및 분할 거리를 계산합니다. */
-        void buildCascadeShadowMatrices( const FramePassContext& ctx, float4x4 outArrCascadeMat[4], float4& outSplit ) const;
         /** @brief 카메라 뷰-투영 행렬을 만듭니다. */
         void buildViewProj( float4x4& outMat ) const;
         /** @brief 월드 행렬을 항등으로 둡니다. */
         void setIdentityWorld( FramePassContext& ctx );
+        /** @brief 드로우 직전 리플렉션 구동 바인딩을 수행합니다 (PassCB/MaterialCB/텍스처/인스턴스 버퍼). */
+        void bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb );
+        /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr. */
+        const ShaderBindingLayout* layoutForPso( RHIPipelineStateHandle pso ) const;
+        /** @brief PSO 생성 desc 로 레이아웃을 만들고 핸들에 매핑합니다. */
+        void registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
+        /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
+        void registerInstanceBuffer();
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-        /** @brief GpuScene CPU 스냅샷을 월드 행렬 + draw()로 그립니다 (GPU-driven 꺼짐). */
+        /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
         void drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene 배치를 간접 드로우로 그립니다. */
         void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
@@ -190,12 +182,10 @@ namespace sw
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
         void beginDepthOnlyPass( FramePassContext& ctx, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
-        /** @brief 패스 텍스처 인덱스를 설정합니다. */
-        void setPassTexture( FramePassContext& ctx, uint32& outIndex, string_view name );
-        /** @brief 바인들리스 텍스처 바인딩을 커밋합니다. */
+        /** @brief 일시 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다 (bindless SRV 자동 매칭). */
+        void registerPassTexture( FramePassContext& ctx, string_view canonicalName, string_view attachmentName );
+        /** @brief 바인들리스 텍스처 바인딩을 커밋합니다 (PassConstantValues 갱신 + 에뮬 백엔드 폴백 바인딩). */
         void commitBindlessTextureBindings( FramePassContext& ctx );
-        /** @brief 패스 텍스처 인덱스를 지웁니다. */
-        void clearPassTextureIndices( FramePassContext& ctx );
 
         // ------------------------------------------------------------------------------
         // 5) 커맨드 리스트 · 그래프 제출
@@ -284,10 +274,19 @@ namespace sw
             RHIBufferHandle    _buffer{ 0 };
             RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
         };
-        vector<PassCbSlot>                            _listPassCbSlot;
-        std::atomic<uint32>                           _passCbCursor{ 0 };
-        RHIBufferHandle                               _gpuCullCb;
-        RHIDescriptorIndex                            _gpuCullCbIndex;
+        vector<PassCbSlot>  _listPassCbSlot;
+        std::atomic<uint32> _passCbCursor{ 0 };
+        RHIBufferHandle     _gpuCullCb;
+        RHIDescriptorIndex  _gpuCullCbIndex;
+        /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
+        ShaderBindingLayoutCache _bindingLayoutCache;
+        /** @brief 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스}. 패스 시작마다 reset(). */
+        FrameResourceRegistry                                             _resourceRegistry;
+        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;
+        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPsoDesc;
+        mutable mutex                                                     _psoLayoutMutex;
+        /** @brief 엔진(PassCB) 상수 버퍼 슬롯 크기. 리플렉션이 실제 쓰는 만큼만 채우므로 여유있게 잡는다. */
+        static constexpr uint32                       _s_kEnginePassCbSize = 512;
         unordered_map<string, RHIPipelineStateHandle> _mapEnginePso;
         unordered_map<uint64, RHIPipelineStateHandle> _mapMaterialPassPso;
         unordered_map<hashed_string, uint32>          _mapPassNameToIndex;

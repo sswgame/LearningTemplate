@@ -358,6 +358,44 @@ namespace sw
         _pDevice->_commandList->DrawInstanced( vertexCount, 1, startVertex, 0 );
     }
 
+    void D3D12RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        if ( _pDevice->_commandList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0 )
+            return;
+
+        const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRec = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
+            return;
+
+        bindDescriptorHeaps();
+        _pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
+        _pDevice->_commandList->SetPipelineState( pPsoRec->_pso.Get() );
+        _pDevice->_commandList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        if ( _pDevice->_boundMeshVb != 0 )
+            bindMeshVertexBuffer();
+        else
+            bindFullscreenVertexBuffer();
+        _pDevice->_commandList->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
+    }
+
+    void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        if ( slot == 0 )
+            bindPassAndMaterialCbv( cb, kInvalidDescriptorIndex );
+        else if ( slot == 1 )
+            bindPassAndMaterialCbv( kInvalidDescriptorIndex, cb );
+        else
+            SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 현재 루트시그니처에서 지원하지 않습니다.", slot );
+    }
+
+    void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 네이티브 bindless(힙 직접 인덱싱) 는 인덱스가 CB 에 있으므로 no-op. 에뮬은 SRV 테이블(t#)로.
+        if ( _pDevice->_bHeapDirectlyIndexed != 0 )
+            return;
+        bindShaderResource( index, slot );
+    }
+
     void D3D12RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pDevice->_commandList == nullptr )

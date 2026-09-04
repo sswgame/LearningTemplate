@@ -437,6 +437,74 @@ namespace sw
         }
     }
 
+    void OpenGLRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        // startInstance 는 셰이더 오프셋(g_InstanceBase)으로 넘기므로 여기선 무시한다 (GL 3.1 호환 glDrawArraysInstanced).
+        (void)startInstance;
+        if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0 )
+            return;
+
+        GLuint program = _pDevice->_shaderProgram;
+        GLenum mode    = GL_TRIANGLES;
+
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
+        if ( pPso != nullptr && pPso->_program != 0 )
+        {
+            program = pPso->_program;
+            mode    = toGlPrimitive( pPso->_topology );
+        }
+
+        if ( program == 0 )
+            return;
+
+        glUseProgram( program );
+
+        if ( _pDevice->_boundMeshVb != 0 )
+        {
+            const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
+            if ( vbo != 0 && _pDevice->_meshVao != 0 )
+            {
+                const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
+                glBindVertexArray( _pDevice->_meshVao );
+                glBindBuffer( GL_ARRAY_BUFFER, vbo );
+                glEnableVertexAttribArray( 0 );
+                glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
+                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
+                glEnableVertexAttribArray( 1 );
+                glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
+                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+                glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ),
+                                       static_cast<GLsizei>( instanceCount ) );
+                glBindVertexArray( 0 );
+                glBindBuffer( GL_ARRAY_BUFFER, 0 );
+            }
+        }
+        else if ( _pDevice->_vao != 0 )
+        {
+            glBindVertexArray( _pDevice->_vao );
+            glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ),
+                                   static_cast<GLsizei>( instanceCount ) );
+            glBindVertexArray( 0 );
+        }
+    }
+
+    void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        // HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다.
+        if ( _pDevice->_bInitialized == SW_FALSE || cb == kInvalidDescriptorIndex ||
+             cb >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[cb]._buffer );
+        if ( ubo != 0 )
+            glBindBufferBase( GL_UNIFORM_BUFFER, 16u + slot, ubo );
+    }
+
+    void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // GL 은 t# SRV 버퍼도 bindShaderResource 와 동일 경로(SSBO/텍스처)로 처리한다.
+        bindShaderResource( index, slot );
+    }
+
     void OpenGLRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )

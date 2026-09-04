@@ -52,8 +52,15 @@ namespace sw
          */
         virtual void draw( uint32 vertexCount, uint32 startVertex = 0,
                            RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
-                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex )      = 0;
-        virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) = 0;
+                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+        /**
+         * @brief 삼각형 리스트를 인스턴스드로 그립니다 (GPUScene 인스턴스 버퍼 경로).
+         * @param instanceCount 인스턴스 개수. VS 는 `SV_InstanceID` 로 `g_SwInstances[g_InstanceBase + id]` 를 읽습니다.
+         * @param startInstance 시작 인스턴스 위치. 크로스 백엔드 일관성을 위해 셰이더 오프셋은 `g_InstanceBase` 로 넘기고
+         *                      이 값은 0 을 권장합니다 (SV_InstanceID 는 백엔드마다 base 포함 여부가 다름).
+         */
+        virtual void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) = 0;
+        virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 )                         = 0;
 
         // ------------------------------------------------------------------------------
         // 4) 컴퓨트 — PSO, 디스패치, 루트 상수, UAV
@@ -63,6 +70,24 @@ namespace sw
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                            = 0;
         virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                        = 0;
+
+        // ------------------------------------------------------------------------------
+        // 4-1) 리플렉션 구동 바인딩 — 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩
+        //      (ShaderBindingBinder 가 ShaderBindingLayout 의 _registerIndex 를 slot 으로 전달)
+        // ------------------------------------------------------------------------------
+        /**
+         * @brief 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
+         * @param cb   bindless 디스크립터 인덱스 (엔진/머티리얼 CB).
+         * @param slot HLSL `register(bN)` 의 N. 네이티브 bindless 백엔드는 루트상수/CB에 인덱스만 기록해도 됩니다.
+         */
+        virtual void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) = 0;
+
+        /**
+         * @brief 구조적/바이트주소 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
+         * @param index bindless 디스크립터 인덱스.
+         * @param slot  HLSL `register(tN)` 의 N.
+         */
+        virtual void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 5) 배리어 · blit — 샘플링 가능 전환, 컬러 복사 (dst==0은 스왑체인)

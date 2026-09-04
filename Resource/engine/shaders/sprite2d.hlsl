@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -20,13 +20,12 @@ SW_DECLARE_CBUFFER( MaterialCB, 1 )
 	uint albedoMap;
 };
 
-PSInput VSMain(VSInput input)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
-	PassCBData passCb = GetPassCB();
 
-	float4 worldPos = mul(float4(input.pos, 1.0f), passCb.g_World);
-	output.pos = mul(worldPos, passCb.g_ViewProj);
+	float4 worldPos = mul(float4(input.pos, 1.0f), SwLoadInstanceWorld(iid));
+	output.pos = mul(worldPos, g_ViewProj);
 	
 	// Default UV from position [-0.5, 0.5] mapped to [0, 1]
 	float2 baseUv = input.pos.xy * float2(1.0f, -1.0f) + 0.5f;

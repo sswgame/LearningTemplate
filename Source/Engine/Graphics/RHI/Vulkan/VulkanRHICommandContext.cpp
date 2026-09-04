@@ -573,6 +573,11 @@ namespace sw
         // set 1: bindless 텍스처 배열.
         if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+
+        // set 4: 정적 샘플러(g_SwSamplerLinearWrap, immutable) — binding.hlsli 가 모든 셰이더에서 정적으로
+        // 참조하므로 매 드로우 함께 바인딩해야 한다 (없으면 vkCmdDraw 검증 오류).
+        if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
     }
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
@@ -638,6 +643,77 @@ namespace sw
         }
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
+    }
+
+    void VulkanRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        const bool      bCanDraw =
+            ( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && vertexCount > 0 && instanceCount > 0 );
+        if ( bCanDraw == false )
+            return;
+
+        if ( bindActiveGraphicsPipeline() == false )
+            return;
+
+        if ( _pDevice->_boundMeshVb != 0 )
+        {
+            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
+            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
+            {
+                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
+                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+            }
+        }
+        else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
+        {
+            VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
+            VkDeviceSize arrOffset[]       = { 0 };
+            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+        }
+
+        vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
+    }
+
+    void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        // 현재 파이프라인 레이아웃: b0(PassCB) = set 0, b1(MaterialCB) = push constant. b2+ 미지원.
+        if ( slot == 0 )
+        {
+            bindGraphicsMaterialSets( cb );
+            return;
+        }
+        if ( slot == 1 )
+        {
+            VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+            if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || cb == kInvalidDescriptorIndex )
+                return;
+            constexpr VkShaderStageFlags kPushStages =
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+            uint32 matIndex = cb;
+            vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
+            return;
+        }
+        SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 현재 파이프라인 레이아웃에서 지원하지 않습니다.", slot );
+    }
+
+    void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). registerBindlessResource 가 만든
+        // STORAGE_BUFFER 디스크립터셋을 파이프라인 레이아웃 set 6+slot 에 바인딩한다
+        // (set 6..9 = _uavDescriptorSetLayout). HLSL: register(t#, space6).
+        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
+            return;
+        if ( index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) )
+            return;
+        const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        if ( descSet == VK_NULL_HANDLE )
+            return;
+        vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,
+                                 6 + slot, 1, &descSet, 0, nullptr );
     }
 
     void VulkanRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )

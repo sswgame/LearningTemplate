@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -24,8 +24,7 @@ PSInput VSMain(VSInput input, uint vid : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	PassCBData passCb = GetPassCB();
-	float2 texel = passCb.g_OutlineParams.yz;
+	float2 texel = g_OutlineParams.yz;
 	float3 c = SampleSource(input.uv).rgb;
 	float3 blur = 0;
 	blur += SampleSource(input.uv + float2(-texel.x, 0)).rgb;
@@ -35,7 +34,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 	blur *= 0.25f;
 
 	float lum = max(max(blur.r, blur.g), blur.b);
-	float soft = saturate((lum - passCb.g_BloomParams.x + passCb.g_BloomParams.z) / max(passCb.g_BloomParams.z, 1e-4));
-	float3 bright = blur * soft * soft * passCb.g_BloomParams.y;
+	float soft = saturate((lum - g_BloomParams.x + g_BloomParams.z) / max(g_BloomParams.z, 1e-4));
+	float3 bright = blur * soft * soft * g_BloomParams.y;
 	return float4(c + bright, 1.0f);
 }

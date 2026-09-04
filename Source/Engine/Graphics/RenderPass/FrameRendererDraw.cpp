@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
+#include "Engine/Graphics/Shader/ShaderBindingLayout.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -18,6 +19,66 @@
 
 namespace sw
 {
+    void FrameRenderer::registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
+    {
+        if ( pso == 0 || _pDevice == nullptr )
+            return;
+        // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다 —
+        // 한 프로세스에 여러 IRHIDevice 가 동시에 존재하면 전역값이 어긋날 수 있다.
+        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, _pDevice->getBackendType() );
+        std::scoped_lock<mutex>    lock{ _psoLayoutMutex };
+        _mapPsoLayout[pso] = &layout;
+        _mapPsoDesc[pso]   = desc;
+    }
+
+    void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
+    {
+        if ( result._bSuccess == false || _pDevice == nullptr )
+            return;
+
+        _bindingLayoutCache.invalidateByShaderPath( shaderPath );
+
+        // 영향받는 PSO 를 특정하지 않고 전부 다시 만든다 (PSO 수는 소수). getOrBuild 가 재컴파일·리플렉션한다.
+        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+        for ( const auto& entry : _mapPsoDesc )
+        {
+            const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( entry.second, _pDevice->getBackendType() );
+            _mapPsoLayout[entry.first]        = &layout;
+        }
+    }
+
+    const ShaderBindingLayout* FrameRenderer::layoutForPso( RHIPipelineStateHandle pso ) const
+    {
+        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+        auto                    it = _mapPsoLayout.find( pso );
+        return it != _mapPsoLayout.end() ? it->second : nullptr;
+    }
+
+    void FrameRenderer::registerInstanceBuffer()
+    {
+        if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
+            return;
+        // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
+        _resourceRegistry.registerBuffer( hashed_string( "SwInstances" ),
+                                          _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
+    }
+
+    void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb )
+    {
+        if ( _pDevice == nullptr || ctx._pCmd == nullptr )
+            return;
+
+        ctx._passValues.setMatrix( hashed_string( "g_World" ), ctx._world );
+
+        const ShaderBindingLayout* pLayout = layoutForPso( pso );
+        if ( pLayout == nullptr || pLayout->isEmpty() )
+            return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
+
+        const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
+        ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, _resourceRegistry, ctx._passValues,
+                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling() );
+    }
+
     void FrameRenderer::drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
@@ -139,9 +200,9 @@ namespace sw
                         lastPso = item._pso;
                     }
 
-                    if ( bFirstItem || ctx._passConstants._world != item._world )
+                    if ( bFirstItem || ctx._world != item._world )
                     {
-                        ctx._passConstants._world = item._world;
+                        ctx._world = item._world;
                         commitBindlessTextureBindings( ctx );
                         bFirstItem = false;
                     }
@@ -156,7 +217,8 @@ namespace sw
                         lastVb = vb;
                     }
 
-                    ctx._pCmd->draw( item._mesh->getVertexCount(), 0, cbIndex, item._cbIndex );
+                    bindForDraw( ctx, item._pso, item._cbIndex );
+                    ctx._pCmd->draw( item._mesh->getVertexCount(), 0 );
                     ++drawn;
                 }
             }
@@ -171,6 +233,7 @@ namespace sw
 
     void FrameRenderer::drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
+        (void)cbIndex;
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
         if ( _gpuScene.getInstances().empty() )
@@ -182,6 +245,13 @@ namespace sw
 
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
+
+        // 언리얼 GPUScene 방식: VS 가 per-instance world 를 구조버퍼에서 읽을 수 있으면 배치당 drawInstanced 한 번.
+        // 아니면(DX11/Vulkan) 드로우당 g_World 를 갱신하는 폴백.
+        const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
+                                _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
+        if ( bInstanced )
+            registerInstanceBuffer();
 
         uint32 drawn{ 0 };
         bool   bFirstItem = true;
@@ -202,19 +272,34 @@ namespace sw
             if ( batch._pMaterialInstance != nullptr )
                 batch._pMaterialInstance->applyToGpu( _pDevice );
 
+            if ( bInstanced )
+            {
+                if ( bFirstItem )
+                {
+                    commitBindlessTextureBindings( ctx );
+                    bFirstItem = false;
+                }
+                ctx._passValues.setUint( hashed_string( "g_InstanceBase" ), batch._instanceBase );
+                bindForDraw( ctx, pso, drawCb );
+                ctx._pCmd->drawInstanced( pMesh->getVertexCount(), batch._instanceCount, 0, 0 );
+                drawn += batch._instanceCount;
+                continue;
+            }
+
             for ( uint32 instanceIndex = 0; instanceIndex < batch._instanceCount; ++instanceIndex )
             {
                 const uint32 globalIndex = batch._instanceBase + instanceIndex;
                 if ( globalIndex >= listInstances.size() )
                     break;
                 const GpuInstance& inst = listInstances[globalIndex];
-                if ( bFirstItem || ctx._passConstants._world != inst._world )
+                if ( bFirstItem || ctx._world != inst._world )
                 {
-                    ctx._passConstants._world = inst._world;
+                    ctx._world = inst._world;
                     commitBindlessTextureBindings( ctx );
                     bFirstItem = false;
                 }
-                ctx._pCmd->draw( pMesh->getVertexCount(), 0, cbIndex, drawCb );
+                bindForDraw( ctx, pso, drawCb );
+                ctx._pCmd->draw( pMesh->getVertexCount(), 0 );
                 ++drawn;
             }
         }
@@ -228,6 +313,7 @@ namespace sw
 
     void FrameRenderer::drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
+        (void)cbIndex;
         if ( _pDevice == nullptr || ctx._pCmd == nullptr || _gpuScene.isUploaded() == false )
             return;
 
@@ -236,6 +322,11 @@ namespace sw
 
         setIdentityWorld( ctx );
         commitBindlessTextureBindings( ctx );
+
+        const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
+                                _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
+        if ( bInstanced )
+            registerInstanceBuffer();
 
         const vector<GpuMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
@@ -253,14 +344,17 @@ namespace sw
             ctx._pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
             // b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
+            if ( bInstanced )
+                ctx._passValues.setUint( hashed_string( "g_InstanceBase" ), batch._instanceBase );
+            bindForDraw( ctx, pso, batch._materialCb );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
-                                     ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ),
-                                     cbIndex, batch._materialCb );
+                                     ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
     }
 
     void FrameRenderer::drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
     {
+        (void)cbIndex;
         if ( ctx._pCmd == nullptr )
             return;
         setIdentityWorld( ctx );
@@ -268,6 +362,7 @@ namespace sw
         ctx._pCmd->setVertexBuffer( 0, 0, 0, 0 );
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
-        ctx._pCmd->draw( 3, 0, cbIndex != kInvalidDescriptorIndex ? cbIndex : 0 );
+        bindForDraw( ctx, pso, kInvalidDescriptorIndex );
+        ctx._pCmd->draw( 3, 0 );
     }
 } // namespace sw

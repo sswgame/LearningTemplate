@@ -298,6 +298,71 @@ namespace sw
         _pDevice->_deviceContext->Draw( vertexCount, startVertex );
     }
 
+    void D3D11RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        if ( _pDevice->_deviceContext == nullptr || vertexCount == 0 || instanceCount == 0 )
+            return;
+
+        ID3D11VertexShader*                             pVs  = nullptr;
+        ID3D11PixelShader*                              pPs  = nullptr;
+        ID3D11InputLayout*                              pIl  = nullptr;
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        if ( pPso != nullptr )
+        {
+            if ( pPso->_vs )
+                pVs = pPso->_vs.Get();
+            if ( pPso->_ps )
+                pPs = pPso->_ps.Get();
+            if ( pPso->_inputLayout )
+                pIl = pPso->_inputLayout.Get();
+        }
+        if ( pVs == nullptr || pPs == nullptr )
+            return;
+
+        ID3D11Buffer* pVb    = _pDevice->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pDevice->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
+        UINT          stride = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
+        UINT          offset = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshOffset : 0;
+        if ( pVb != nullptr )
+            _pDevice->_deviceContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+
+        _pDevice->_deviceContext->IASetInputLayout( pIl );
+        _pDevice->_deviceContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        _pDevice->_deviceContext->VSSetShader( pVs, nullptr, 0 );
+        _pDevice->_deviceContext->PSSetShader( pPs, nullptr, 0 );
+        _pDevice->_deviceContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
+    }
+
+    void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        if ( _pDevice->_deviceContext == nullptr || cb == kInvalidDescriptorIndex ||
+             cb >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[cb] );
+        if ( pCb == nullptr )
+            return;
+        _pDevice->_deviceContext->VSSetConstantBuffers( slot, 1, &pCb );
+        _pDevice->_deviceContext->PSSetConstantBuffers( slot, 1, &pCb );
+        _pDevice->_deviceContext->CSSetConstantBuffers( slot, 1, &pCb );
+    }
+
+    void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). createStructuredBuffer 에서 만든 SRV 를
+        // 리플렉션 t 슬롯에 바인딩한다.
+        if ( _pDevice->_deviceContext == nullptr || index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const RHIBufferHandle buffer = _pDevice->_listRegisteredBindless[index];
+        if ( buffer == 0 )
+            return;
+        const auto it = _pDevice->_mapBufferSrv.find( buffer );
+        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
+            return;
+        ID3D11ShaderResourceView* pSrv = it->second.Get();
+        _pDevice->_deviceContext->VSSetShaderResources( slot, 1, &pSrv );
+        _pDevice->_deviceContext->PSSetShaderResources( slot, 1, &pSrv );
+    }
+
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pDevice->_deviceContext != nullptr )

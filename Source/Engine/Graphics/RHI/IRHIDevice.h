@@ -123,6 +123,13 @@ namespace sw
         virtual bool supportsComputeRootConstants() const { return getCapabilities()._bComputeRootConstants != 0; }
 
         /**
+         * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조버퍼(SwInstanceData)를 읽을 수 있으면 true.
+         * @details true 면 FrameRenderer 가 배치당 draw 대신 drawInstanced 로 그리고 per-instance world 를
+         *          구조버퍼에서 읽습니다. false 면 드로우당 g_World 를 갱신하는 폴백 경로를 씁니다.
+         */
+        virtual bool supportsInstancedSceneDraw() const { return false; }
+
+        /**
          * @brief 드로우/Present 컨텍스트를 소유 스레드 하나에서만 써야 하면 true.
          * @details DX11 immediate context + OpenGL (wgl/egl MakeCurrent). DX12/Vulkan: false.
          */

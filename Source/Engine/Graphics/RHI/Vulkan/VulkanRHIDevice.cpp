@@ -173,6 +173,9 @@ namespace sw
         , _uavDescriptorSetLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _descriptorSet{ nullptr }
+        , _staticSamplerLinearWrap{ nullptr }
+        , _samplerSetLayout{ nullptr }
+        , _staticSamplerSet{ nullptr }
         , _dummyUBO{ nullptr }
         , _dummyUBOMemory{ nullptr }
         , _pipeline{ nullptr }
@@ -526,6 +529,17 @@ namespace sw
                 vkDestroyDescriptorSetLayout( _device, _uavDescriptorSetLayout, nullptr );
                 _uavDescriptorSetLayout = nullptr;
             }
+            if ( _samplerSetLayout )
+            {
+                vkDestroyDescriptorSetLayout( _device, _samplerSetLayout, nullptr );
+                _samplerSetLayout = nullptr;
+            }
+            if ( _staticSamplerLinearWrap )
+            {
+                vkDestroySampler( _device, _staticSamplerLinearWrap, nullptr );
+                _staticSamplerLinearWrap = nullptr;
+            }
+            _staticSamplerSet = nullptr; // 풀 파괴로 함께 해제됨
 
             cleanupSwapChain();
             destroySyncObjects();
@@ -1568,6 +1582,39 @@ namespace sw
         if ( createSimpleSetLayout( VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, allStages, _uavDescriptorSetLayout ) == false )
             return false;
 
+        // set 4 = 정적 샘플러(g_SwSamplerLinearWrap). binding.hlsli 는 standalone SamplerState 로 선언하므로
+        // (COMBINED_IMAGE_SAMPLER 가 아니라) VK_DESCRIPTOR_TYPE_SAMPLER 전용 레이아웃이 필요하다.
+        // immutable sampler 로 굽기 때문에 vkUpdateDescriptorSets 없이 매 드로우 바인딩만 하면 된다.
+        {
+            VkSamplerCreateInfo samplerInfo{};
+            samplerInfo.sType         = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            samplerInfo.magFilter     = VK_FILTER_LINEAR;
+            samplerInfo.minFilter     = VK_FILTER_LINEAR;
+            samplerInfo.mipmapMode    = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            samplerInfo.addressModeU  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeV  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeW  = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.maxAnisotropy = 1.0f;
+            samplerInfo.borderColor   = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            samplerInfo.maxLod        = 1000.0f;
+            if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_staticSamplerLinearWrap ) != VK_SUCCESS )
+                return false;
+
+            VkDescriptorSetLayoutBinding binding{};
+            binding.binding            = 0;
+            binding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
+            binding.descriptorCount    = 1;
+            binding.stageFlags         = allStages;
+            binding.pImmutableSamplers = &_staticSamplerLinearWrap;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = 1;
+            layoutInfo.pBindings    = &binding;
+            if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_samplerSetLayout ) != VK_SUCCESS )
+                return false;
+        }
+
         // Bindless texture array layout (set 1) — ensureBindlessTextureArray가 세트를 할당.
         {
             VkDescriptorSetLayoutBinding binding{};
@@ -1596,14 +1643,16 @@ namespace sw
         // Descriptor set layout (matches VulkanRHICommandContext binds):
         //   0: Pass/Material UBO
         //   1: Bindless texture array (native sampling)
-        //   2..5: Explicit single-texture SRV slots 0..3 (DX11-style emulation)
-        //   6..9: Compute UAV / SSBO slots 0..3
+        //   2,3,5: Explicit single-texture SRV slots (DX11-style emulation, 텍스처 슬롯 0/1/3)
+        //   4: 정적 샘플러(g_SwSamplerLinearWrap, immutable) — 텍스처 슬롯 2 는 이 set 을 쓰지 않는다
+        //      (bindShaderResource 는 native bindless 에서 아예 호출 안 됨 — Vulkan 은 항상 native).
+        //   6..9: Compute UAV / SSBO / GPUScene 인스턴스 구조버퍼 슬롯 0..3
         VkDescriptorSetLayout arrSetLayout[10] = {
             _descriptorSetLayout,
             _bindlessTextureArrayLayout,
             _textureDescriptorSetLayout,
             _textureDescriptorSetLayout,
-            _textureDescriptorSetLayout,
+            _samplerSetLayout,
             _textureDescriptorSetLayout,
             _uavDescriptorSetLayout,
             _uavDescriptorSetLayout,
@@ -1629,6 +1678,7 @@ namespace sw
             {        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16384},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32768},
             {        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16384},
+            {               VK_DESCRIPTOR_TYPE_SAMPLER,     4},
         };
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1638,6 +1688,17 @@ namespace sw
         poolInfo.pPoolSizes    = arrPoolSize;
         if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
             return false;
+
+        // 정적 샘플러 set 4 를 한 번 할당해 둔다 (immutable sampler라 vkUpdateDescriptorSets 불필요).
+        {
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool     = _descriptorPool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts        = &_samplerSetLayout;
+            if ( vkAllocateDescriptorSets( _device, &allocInfo, &_staticSamplerSet ) != VK_SUCCESS )
+                return false;
+        }
 
         return true;
     }

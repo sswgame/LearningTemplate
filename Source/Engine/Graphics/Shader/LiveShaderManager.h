@@ -51,6 +51,9 @@ namespace sw
         /** @brief 셰이더와 선택 재컴파일 콜백을 등록합니다. */
         void watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled = {} );
 
+        /** @brief 어떤 감시 셰이더든 재컴파일되면 호출되는 전역 콜백을 설정합니다 (PSO 바인딩 레이아웃 무효화용). */
+        void setOnAnyShaderRecompiled( const ShaderRecompiledDelegate& onAnyRecompiled ) { _onAnyRecompiled = onAnyRecompiled; }
+
         /** @brief 대기 중인 리로드 경로를 비우고 다시 컴파일합니다. */
         void update();
 
@@ -80,6 +83,7 @@ namespace sw
         unordered_map<string, vector<WatchedShaderInfo>> _mapWatchedShader;
         unordered_map<string, vector<string>>            _mapIncludeDependency;
         vector<string>                                   _listPendingReloadPath;
+        ShaderRecompiledDelegate                         _onAnyRecompiled;
         string                                           _watchDirectory;
         ReloadFileManager*                               _pReloadFiles{ nullptr };
         FileWatchHandle                                  _fileWatchHandle{};

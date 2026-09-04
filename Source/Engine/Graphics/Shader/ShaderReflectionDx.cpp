@@ -24,6 +24,9 @@ namespace sw
                         return "Sampler";
                     case static_cast<uint32>( D3D_SIT_CBUFFER ):
                         return "ConstantBuffer";
+                    case static_cast<uint32>( D3D_SIT_STRUCTURED ):
+                    case static_cast<uint32>( D3D_SIT_BYTEADDRESS ):
+                        return "StructuredBuffer";
                     case static_cast<uint32>( D3D_SIT_UAV_RWTYPED ):
                     case static_cast<uint32>( D3D_SIT_UAV_RWSTRUCTURED ):
                     case static_cast<uint32>( D3D_SIT_UAV_RWBYTEADDRESS ):
@@ -85,10 +88,22 @@ namespace sw
                     D3D11_SHADER_BUFFER_DESC cbDesc{};
                     pCb->GetDesc( &cbDesc );
 
+                    // GetConstantBufferByIndex 는 실제 cbuffer 블록뿐 아니라 StructuredBuffer<T>/ByteAddressBuffer
+                    // 의 원소 타입 레이아웃도 "가상 CB" 로 함께 열거한다 (Type == D3D_CT_RESOURCE_BIND_INFO).
+                    // 실제 cbuffer 만 받는다 — 아니면 loop index 를 bindPoint 로 오인해 register(bN) 이 어긋난다.
+                    if ( cbDesc.Type != D3D_CT_CBUFFER )
+                        continue;
+
+                    // cbIndex(열거 순서) 는 register(bN) 과 다를 수 있다 — 이름으로 실제 바인드 포인트를 찾는다.
+                    UINT                         realBindPoint = cbIndex;
+                    D3D11_SHADER_INPUT_BIND_DESC nameBindDesc{};
+                    if ( cbDesc.Name != nullptr && SUCCEEDED( pReflection->GetResourceBindingDescByName( cbDesc.Name, &nameBindDesc ) ) )
+                        realBindPoint = nameBindDesc.BindPoint;
+
                     ShaderBufferInfo bufInfo{};
                     bufInfo._name          = cbDesc.Name != nullptr ? cbDesc.Name : "";
                     bufInfo._registerSpace = 0;
-                    bufInfo._bindPoint     = cbIndex;
+                    bufInfo._bindPoint     = realBindPoint;
                     bufInfo._totalSize     = cbDesc.Size;
 
                     for ( UINT varIndex = 0; varIndex < cbDesc.Variables; ++varIndex )
@@ -145,6 +160,12 @@ namespace sw
                     ID3D12ShaderReflectionConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
                     D3D12_SHADER_BUFFER_DESC              cbDesc{};
                     pCb->GetDesc( &cbDesc );
+
+                    // GetConstantBufferByIndex 는 실제 cbuffer 블록뿐 아니라 StructuredBuffer<T>/ByteAddressBuffer
+                    // 의 원소 타입 레이아웃도 "가상 CB" 로 함께 열거한다 (Type == D3D_CT_RESOURCE_BIND_INFO).
+                    // 그대로 두면 아래 bindPoint=0 초기값이 실제 CB(주로 PassCB, b0)와 충돌해 dedup 된다.
+                    if ( cbDesc.Type != D3D_CT_CBUFFER )
+                        continue;
 
                     ShaderBufferInfo bufInfo{};
                     bufInfo._name          = cbDesc.Name != nullptr ? cbDesc.Name : "";

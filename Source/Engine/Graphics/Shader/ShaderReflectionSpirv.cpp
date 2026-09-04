@@ -153,9 +153,10 @@ namespace sw
         size_t offset = 5;
         while ( offset < wordCount )
         {
-            const uint32 first      = pWords[offset];
-            const uint32 instrWords = first & 0xFFFFu;
-            const uint32 opcode     = first >> 16;
+            const uint32 first = pWords[offset];
+            // SPIR-V 명령어 헤더: 상위 16비트 = WordCount, 하위 16비트 = Opcode (스펙 2.3 "Physical Layout").
+            const uint32 instrWords = first >> 16;
+            const uint32 opcode     = first & 0xFFFFu;
             if ( instrWords == 0 || offset + instrWords > wordCount )
                 break;
 
@@ -277,7 +278,13 @@ namespace sw
             const uint32 space     = ( setIt != mapDescriptorSet.end() ) ? setIt->second : 0;
             const uint32 bindPoint = bindingIt->second;
 
-            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform || var._storageClass == ShaderReflectionSpirvInternal::kStorageClassStorageBuffer )
+            // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
+            // StructuredBuffer/RWStructuredBuffer(StorageBuffer storage class) 는 구조체 원소 타입을 똑같은
+            // 방식으로 반영하지만 실제 cbuffer 가 아니다 — 여기 포함시키면 ShaderBindingLayout 이
+            // ConstantBuffer 종류의 "가짜 CB" 슬롯(멤버 이름이 원소 구조체 필드와 겹침)을 만들어
+            // 엔진 CB 버퍼에 엉뚱한 오프셋으로 값을 덮어쓸 수 있다. 아래 리소스 루프가 StructuredBuffer 로
+            // 올바르게 분류해 별도 처리한다.
+            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
             {
                 ShaderBufferInfo buf{};
                 buf._name          = name;

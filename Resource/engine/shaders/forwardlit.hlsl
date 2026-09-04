@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -14,33 +14,32 @@ struct PSInput
 	float3 nrm : TEXCOORD1;
 };
 
-PSInput VSMain(VSInput input)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
-	PassCBData passCb = GetPassCB();
-	float4 worldPos = mul(float4(input.pos, 1.0f), passCb.g_World);
-	output.pos = mul(worldPos, passCb.g_ViewProj);
+	float4x4 world = SwLoadInstanceWorld(iid);
+	float4 worldPos = mul(float4(input.pos, 1.0f), world);
+	output.pos = mul(worldPos, g_ViewProj);
 	output.col = input.col;
 	output.uv  = input.pos.xy * float2(0.5f, -0.5f) + 0.5f;
 	float3 n = DemoCubeNormal(input.pos);
-	output.nrm = normalize(mul(float4(n, 0.0f), passCb.g_World).xyz);
+	output.nrm = normalize(mul(float4(n, 0.0f), world).xyz);
 	return output;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	PassCBData passCb = GetPassCB();
 	float3 N = normalize(input.nrm);
-	float3 L = normalize(-passCb.g_KeyLightDirIntensity.xyz);
+	float3 L = normalize(-g_KeyLightDirIntensity.xyz);
 	float  ndotl = saturate(dot(N, L));
 
-	float2 shadowUV = saturate(input.uv + passCb.g_ShadowParams.zw);
+	float2 shadowUV = saturate(input.uv + g_ShadowParams.zw);
 	float  shadowSample = SampleShadow(shadowUV).r;
-	float  shadow = lerp(1.0f - passCb.g_ShadowParams.y, 1.0f, saturate(shadowSample + passCb.g_ShadowParams.x));
+	float  shadow = lerp(1.0f - g_ShadowParams.y, 1.0f, saturate(shadowSample + g_ShadowParams.x));
 
-	float3 ambient = passCb.g_KeyLightColor.rgb * passCb.g_KeyLightColor.a;
-	float3 lit = input.col.rgb * (ambient + ndotl * passCb.g_KeyLightDirIntensity.w * passCb.g_KeyLightColor.rgb) * shadow;
+	float3 ambient = g_KeyLightColor.rgb * g_KeyLightColor.a;
+	float3 lit = input.col.rgb * (ambient + ndotl * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb) * shadow;
 	float rim = pow(1.0f - saturate(dot(N, float3(0, 0, 1))), 2.0f) * 0.15f;
-	lit += rim * passCb.g_KeyLightColor.rgb;
+	lit += rim * g_KeyLightColor.rgb;
 	return float4(lit, input.col.a);
 }

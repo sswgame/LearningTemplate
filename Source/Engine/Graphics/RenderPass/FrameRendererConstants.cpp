@@ -9,82 +9,60 @@
 
 namespace sw
 {
+    namespace
+    {
+        constexpr float4 kDefaultKeyLightDirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
+        constexpr float4 kDefaultKeyLightColor{ 1.0f, 0.82f, 0.62f, 0.28f };
+        constexpr float4 kDefaultShadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
+        constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
+        constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
+    } // namespace
+
     void FrameRenderer::updatePassConstants( FramePassContext& ctx )
     {
-        buildLightViewProj( ctx, ctx._passConstants._lightViewProj );
-        buildCascadeShadowMatrices( ctx, ctx._passConstants._arrCascadeViewProj, ctx._passConstants._cascadeSplits );
-
+        // 뷰/라이트 행렬은 씬이 있을 때만 재계산한다. 렌더 스레드 패킷 경로(_pScene == null)는
+        // executePacket 에서 이미 시드했다.
         if ( _pScene != nullptr )
         {
+            float4x4 lightViewProj{};
+            buildLightViewProj( ctx, lightViewProj );
+            ctx._passValues.setMatrix( hashed_string( "g_LightViewProj" ), lightViewProj );
+
             CameraComponent* pCam = _pScene->getActiveGameCamera();
             if ( pCam != nullptr )
+            {
                 applyViewFromCamera( ctx, pCam );
+            }
             else
-                buildViewProj( ctx._passConstants._viewProj );
+            {
+                float4x4 viewProj = float4x4::Identity;
+                buildViewProj( viewProj );
+                ctx._passValues.setMatrix( hashed_string( "g_ViewProj" ), viewProj );
+            }
         }
+        ctx._passValues.setMatrix( hashed_string( "g_World" ), ctx._world );
 
-        ctx._passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-        ctx._passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
-        ctx._passConstants._flags            = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
-        if ( _pDevice != nullptr && ctx._passCb != 0 )
-            _pDevice->getResource()->updateConstantBuffer( ctx._passCb, &ctx._passConstants, sizeof( PassConstants ) );
+        const float32 outlineY = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+        const float32 outlineZ = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+
+        ctx._passValues.setFloat4( hashed_string( "g_KeyLightDirIntensity" ), kDefaultKeyLightDirIntensity );
+        ctx._passValues.setFloat4( hashed_string( "g_KeyLightColor" ), kDefaultKeyLightColor );
+        ctx._passValues.setFloat4( hashed_string( "g_ShadowParams" ), kDefaultShadowParams );
+        ctx._passValues.setFloat4( hashed_string( "g_BloomParams" ), kDefaultBloomParams );
+        ctx._passValues.setFloat4( hashed_string( "g_OutlineColor" ), kDefaultOutlineColor );
+        ctx._passValues.setFloat4( hashed_string( "g_OutlineParams" ), float4{ 0.02f, outlineY, outlineZ, 0.0f } );
+        ctx._passValues.setUint( hashed_string( "g_Flags" ),
+                                 ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u );
     }
 
     void FrameRenderer::applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera )
     {
         if ( pCamera == nullptr )
             return;
-        const float32 aspect         = ( _transientHeight > 0 )
-                                         ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
-                                         : ( 16.0f / 9.0f );
-        ctx._passConstants._viewProj = pCamera->getViewProjectionMatrix( aspect );
-    }
-
-    void FrameRenderer::buildCascadeShadowMatrices( const FramePassContext& ctx, float4x4 outArrCascadeMat[4], float4& outSplit ) const
-    {
-        constexpr float32 kLambda   = 0.75f;
-        constexpr float32 kNear     = 0.1f;
-        constexpr float32 kFar      = 150.0f;
-        constexpr int32   kCascades = 4;
-
-        // Practical split scheme: Ci = lambda * (n * (f/n)^(i/m)) + (1-lambda) * (n + (i/m)*(f-n))
-        float32 arrSplit[4]{};
-        for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
-        {
-            const float32 p        = static_cast<float32>( cascadeIndex + 1 ) / static_cast<float32>( kCascades );
-            const float32 logSplit = kNear * MathUtil::pow( kFar / kNear, p );
-            const float32 uniSplit = kNear + ( kFar - kNear ) * p;
-            arrSplit[cascadeIndex] = kLambda * logSplit + ( 1.0f - kLambda ) * uniSplit;
-        }
-        outSplit = float4{ arrSplit[0], arrSplit[1], arrSplit[2], arrSplit[3] };
-
-        float3 lightDir = float3{ ctx._passConstants._keyLightDirIntensity._x, ctx._passConstants._keyLightDirIntensity._y, ctx._passConstants._keyLightDirIntensity._z }.normalize();
-        if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
-            lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
-
-        const float3 up     = MathUtil::abs( lightDir._y ) > 0.95f ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };
-        const float3 side   = up.cross( lightDir ).normalize();
-        const float3 realUp = lightDir.cross( side );
-
-        const float4x4 lightView{
-            side._x, realUp._x, -lightDir._x, 0.0f,
-            side._y, realUp._y, -lightDir._y, 0.0f,
-            side._z, realUp._z, -lightDir._z, 0.0f,
-            0.0f, 0.0f, 2.0f, 1.0f };
-
-        for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
-        {
-            const float32 extent = arrSplit[cascadeIndex] * 0.6f + 2.0f;
-            const float32 invExt = 1.0f / extent;
-
-            const float4x4 orthoCascade{
-                invExt, 0.0f, 0.0f, 0.0f,
-                0.0f, invExt, 0.0f, 0.0f,
-                0.0f, 0.0f, 0.1f * invExt, 0.0f,
-                0.0f, 0.0f, 0.5f, 1.0f };
-
-            outArrCascadeMat[cascadeIndex] = lightView * orthoCascade;
-        }
+        const float32 aspect = ( _transientHeight > 0 )
+                                 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+                                 : ( 16.0f / 9.0f );
+        ctx._passValues.setMatrix( hashed_string( "g_ViewProj" ), pCamera->getViewProjectionMatrix( aspect ) );
     }
 
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
@@ -96,7 +74,8 @@ namespace sw
             0.0f, 0.0f, 0.25f, 0.0f,
             0.0f, 0.0f, 0.5f, 1.0f };
 
-        float3 lightDir = float3{ ctx._passConstants._keyLightDirIntensity._x, ctx._passConstants._keyLightDirIntensity._y, ctx._passConstants._keyLightDirIntensity._z }.normalize();
+        (void)ctx;
+        float3 lightDir = float3{ kDefaultKeyLightDirIntensity._x, kDefaultKeyLightDirIntensity._y, kDefaultKeyLightDirIntensity._z }.normalize();
         if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
             lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
@@ -146,6 +125,6 @@ namespace sw
 
     void FrameRenderer::setIdentityWorld( FramePassContext& ctx )
     {
-        ctx._passConstants._world = float4x4::Identity;
+        ctx._world = float4x4::Identity;
     }
 } // namespace sw

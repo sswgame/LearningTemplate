@@ -90,7 +90,7 @@ namespace sw
             arrPassName[copyLen] = '\0';
             ctx._pCmd->beginEventMarker( arrPassName );
         }
-        clearPassTextureIndices( ctx );
+        _resourceRegistry.reset();
 
         auto colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
         {
@@ -132,7 +132,7 @@ namespace sw
         }
         else if ( passType == FrameRendererUtil::PassType::kForwardOpaque )
         {
-            setPassTexture( ctx, ctx._passConstants._texShadow, FrameRendererUtil::Attachment::kShadowMap );
+            registerPassTexture( ctx, "ShadowMap", FrameRendererUtil::Attachment::kShadowMap );
             const float4 sceneClear = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kSceneColor, _clearColor );
             beginColorPass( ctx, FrameRendererUtil::Attachment::kSceneColor, FrameRendererUtil::Attachment::kSceneDepth, sceneClear,
                             colorLoadFor( FrameRendererUtil::Attachment::kSceneColor, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
@@ -182,10 +182,10 @@ namespace sw
         }
         else if ( passType == FrameRendererUtil::PassType::kLighting || passType == FrameRendererUtil::PassType::kShading )
         {
-            setPassTexture( ctx, ctx._passConstants._texAlbedo, FrameRendererUtil::Attachment::kGBufferAlbedo );
-            setPassTexture( ctx, ctx._passConstants._texNormal, FrameRendererUtil::Attachment::kGBufferNormal );
-            setPassTexture( ctx, ctx._passConstants._texDepth, FrameRendererUtil::Attachment::kSceneDepth );
-            setPassTexture( ctx, ctx._passConstants._texShadow, FrameRendererUtil::Attachment::kShadowMap );
+            registerPassTexture( ctx, "GBufferAlbedo", FrameRendererUtil::Attachment::kGBufferAlbedo );
+            registerPassTexture( ctx, "GBufferNormal", FrameRendererUtil::Attachment::kGBufferNormal );
+            registerPassTexture( ctx, "SceneDepth", FrameRendererUtil::Attachment::kSceneDepth );
+            registerPassTexture( ctx, "ShadowMap", FrameRendererUtil::Attachment::kShadowMap );
             const string_view litTarget = findTransient( FrameRendererUtil::Attachment::kLitColor ) != 0 ? "LitColor" : "SceneColor";
             executeFullscreenPass( getEnginePso( FrameRendererUtil::PassType::kLighting ), litTarget, getAttachmentClearColorOrDefault( litTarget, _clearColor ) );
         }
@@ -215,8 +215,8 @@ namespace sw
         else if ( passType == "SSAO" || passType == "HBAO" )
         {
             const string_view aoTarget = findTransient( "AOColor" ) != 0 ? "AOColor" : FrameRendererUtil::Attachment::kSceneColor;
-            setPassTexture( ctx, ctx._passConstants._texDepth, FrameRendererUtil::Attachment::kSceneDepth );
-            setPassTexture( ctx, ctx._passConstants._texNormal, FrameRendererUtil::Attachment::kGBufferNormal );
+            registerPassTexture( ctx, "SceneDepth", FrameRendererUtil::Attachment::kSceneDepth );
+            registerPassTexture( ctx, "GBufferNormal", FrameRendererUtil::Attachment::kGBufferNormal );
             const RHIPipelineStateHandle aoPso =
                 getEnginePso( FrameRendererUtil::PassType::kSsao ) != 0 ? getEnginePso( FrameRendererUtil::PassType::kSsao ) : getEnginePso( FrameRendererUtil::PassType::kHbao );
             executeFullscreenPass( aoPso, aoTarget, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
@@ -226,7 +226,7 @@ namespace sw
             const string_view bloomTarget = findTransient( FrameRendererUtil::Attachment::kBloomColor ) != 0 ? "BloomColor" : "SceneColor";
             const utf8*       pSrcName    = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
             if ( pSrcName != nullptr )
-                setPassTexture( ctx, ctx._passConstants._texSource, pSrcName );
+                registerPassTexture( ctx, "SourceColor", pSrcName );
             executeFullscreenPass( getEnginePso( FrameRendererUtil::PassType::kPostBloom ), bloomTarget, getAttachmentClearColorOrDefault( bloomTarget, _clearColor ) );
         }
         else if ( passType == FrameRendererUtil::PassType::kOutline || passType == FrameRendererUtil::PassType::kPostOutline )
@@ -234,8 +234,8 @@ namespace sw
             const string_view outlineTarget = findTransient( FrameRendererUtil::Attachment::kOutlineColor ) != 0 ? "OutlineColor" : "SceneColor";
             const utf8*       pSrcName      = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
             if ( pSrcName != nullptr )
-                setPassTexture( ctx, ctx._passConstants._texSource, pSrcName );
-            setPassTexture( ctx, ctx._passConstants._texSourceDepth, FrameRendererUtil::Attachment::kSceneDepth );
+                registerPassTexture( ctx, "SourceColor", pSrcName );
+            registerPassTexture( ctx, "SourceDepth", FrameRendererUtil::Attachment::kSceneDepth );
             executeFullscreenPass( getEnginePso( FrameRendererUtil::PassType::kOutline ), outlineTarget, _clearColor );
         }
         else if ( passType == FrameRendererUtil::PassType::kTaa )
@@ -243,12 +243,12 @@ namespace sw
             const string_view taaTarget = findTransient( FrameRendererUtil::Attachment::kTaaColor ) != 0 ? "TaaColor" : "SceneColor";
             const utf8*       pSrcName  = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "OutlineColor", "TransparentColor", "LitColor", "SceneColor" } );
             if ( pSrcName != nullptr )
-                setPassTexture( ctx, ctx._passConstants._texSource, pSrcName );
+                registerPassTexture( ctx, "SourceColor", pSrcName );
             if ( _taaHistory != 0 )
             {
                 if ( _taaHistorySrv == kInvalidDescriptorIndex )
                     _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
-                ctx._passConstants._texAlbedo = _taaHistorySrv;
+                _resourceRegistry.registerTexture( hashed_string( framres::kGBufferAlbedo ), _taaHistory, _taaHistorySrv );
             }
             beginColorPass( ctx, taaTarget, "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
             const RHIPipelineStateHandle taaPso = getEnginePso( FrameRendererUtil::PassType::kTaa );
@@ -283,7 +283,7 @@ namespace sw
                 findTransient( "TonemapColor" ) != 0 ? "TonemapColor" : FrameRendererUtil::Attachment::kSceneColor;
             const utf8* pSrcName = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TaaColor", "OutlineColor", "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
             if ( pSrcName != nullptr )
-                setPassTexture( ctx, ctx._passConstants._texSource, pSrcName );
+                registerPassTexture( ctx, "SourceColor", pSrcName );
             const RHIPipelineStateHandle tonemapPso =
                 getEnginePso( FrameRendererUtil::PassType::kTonemap ) != 0 ? getEnginePso( FrameRendererUtil::PassType::kTonemap ) : getEnginePso( FrameRendererUtil::PassType::kPresent );
             executeFullscreenPass( tonemapPso, tonemapTarget, _clearColor );
@@ -296,7 +296,7 @@ namespace sw
             const RHIPipelineStateHandle psoBlit   = getEnginePso( FrameRendererUtil::PassType::kPresent );
             if ( src != 0 && psoBlit != 0 )
             {
-                setPassTexture( ctx, ctx._passConstants._texSource, srcName );
+                registerPassTexture( ctx, "SourceColor", srcName );
                 RHIRenderPassBeginInfo beginInfo{};
                 beginInfo._bBindColor        = 1;
                 beginInfo._arrColorTarget[0] = dstTarget;
@@ -374,13 +374,13 @@ namespace sw
         ctx._pCmd->beginRenderPass( beginInfo );
     }
 
-    void FrameRenderer::setPassTexture( FramePassContext& ctx, uint32& outIndex, string_view name )
+    void FrameRenderer::registerPassTexture( FramePassContext& ctx, string_view canonicalName, string_view attachmentName )
     {
-        const RHITextureHandle tex = findTransient( name );
+        const RHITextureHandle tex = findTransient( attachmentName );
         if ( tex != 0 && ctx._pCmd != nullptr )
             ctx._pCmd->prepareTextureForShaderRead( tex );
-        const RHIDescriptorIndex srv = findTransientSrv( name );
-        outIndex                     = ( srv != kInvalidDescriptorIndex ) ? static_cast<uint32>( srv ) : kInvalidDescriptorIndex;
+        const RHIDescriptorIndex srv = findTransientSrv( attachmentName );
+        _resourceRegistry.registerTexture( hashed_string( string( canonicalName ).c_str() ), tex, srv );
     }
 
     void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )
@@ -391,39 +391,36 @@ namespace sw
         updatePassConstants( ctx );
 
         // DX11/GL: bind PassCB indices into t0..t3 (emulated bindless).
-        // DX12/VK: shaders index the heap/array directly — skip slot binds.
+        // DX12/VK: shaders index the heap/array directly — 리플렉션 바인더가 g_<Name>Index 를 채운다.
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        const RHIDescriptorIndex slot0 = ( ctx._passConstants._texShadow != kInvalidDescriptorIndex )
-                                           ? ctx._passConstants._texShadow
-                                           : ctx._passConstants._texSource;
-        const RHIDescriptorIndex slot1 = ( ctx._passConstants._texAlbedo != kInvalidDescriptorIndex )
-                                           ? ctx._passConstants._texAlbedo
-                                           : ctx._passConstants._texSourceDepth;
-        const RHIDescriptorIndex slot2 = ctx._passConstants._texNormal;
-        const RHIDescriptorIndex slot3 = ( ctx._passConstants._texDepth != kInvalidDescriptorIndex )
-                                           ? ctx._passConstants._texDepth
-                                           : ctx._passConstants._texShadow;
+        auto srvOf = [this]( const utf8* pName ) -> RHIDescriptorIndex
+        {
+            const RegisteredTexture* pTex = _resourceRegistry.findTexture( hashed_string( pName ) );
+            return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
+        };
 
-        if ( ctx._passConstants._texShadow != kInvalidDescriptorIndex || ctx._passConstants._texSource != kInvalidDescriptorIndex )
+        const RHIDescriptorIndex shadow      = srvOf( "ShadowMap" );
+        const RHIDescriptorIndex albedo      = srvOf( "GBufferAlbedo" );
+        const RHIDescriptorIndex normal      = srvOf( "GBufferNormal" );
+        const RHIDescriptorIndex depth       = srvOf( "SceneDepth" );
+        const RHIDescriptorIndex source      = srvOf( "SourceColor" );
+        const RHIDescriptorIndex sourceDepth = srvOf( "SourceDepth" );
+
+        const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
+        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : sourceDepth;
+        const RHIDescriptorIndex slot2 = normal;
+        const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
+
+        if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot0, 0 );
-        if ( ctx._passConstants._texAlbedo != kInvalidDescriptorIndex || ctx._passConstants._texSourceDepth != kInvalidDescriptorIndex )
+        if ( albedo != kInvalidDescriptorIndex || sourceDepth != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot1, 1 );
-        if ( ctx._passConstants._texNormal != kInvalidDescriptorIndex )
+        if ( normal != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot2, 2 );
-        if ( ctx._passConstants._texDepth != kInvalidDescriptorIndex || ( ctx._passConstants._texShadow != kInvalidDescriptorIndex && ctx._passConstants._texDepth == kInvalidDescriptorIndex ) )
+        if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot3, 3 );
-    }
-
-    void FrameRenderer::clearPassTextureIndices( FramePassContext& ctx )
-    {
-        ctx._passConstants._texShadow      = kInvalidDescriptorIndex;
-        ctx._passConstants._texAlbedo      = kInvalidDescriptorIndex;
-        ctx._passConstants._texNormal      = kInvalidDescriptorIndex;
-        ctx._passConstants._texDepth       = kInvalidDescriptorIndex;
-        ctx._passConstants._texSource      = kInvalidDescriptorIndex;
-        ctx._passConstants._texSourceDepth = kInvalidDescriptorIndex;
     }
 
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( string_view passType ) const

@@ -94,6 +94,17 @@ namespace sw
         push( std::move( cmd ) );
     }
 
+    void RHIDeferredCommandList::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
+    {
+        Cmd cmd{};
+        cmd._op            = Op::DrawInstanced;
+        cmd._vertexCount   = vertexCount;
+        cmd._instanceCount = instanceCount;
+        cmd._startVertex   = startVertex;
+        cmd._startInstance = startInstance;
+        push( std::move( cmd ) );
+    }
+
     void RHIDeferredCommandList::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
         Cmd cmd{};
@@ -149,6 +160,24 @@ namespace sw
     {
         Cmd cmd{};
         cmd._op              = Op::BindShaderResource;
+        cmd._descriptorIndex = index;
+        cmd._slot            = slot;
+        push( std::move( cmd ) );
+    }
+
+    void RHIDeferredCommandList::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        Cmd cmd{};
+        cmd._op              = Op::BindConstantBuffer;
+        cmd._descriptorIndex = cb;
+        cmd._slot            = slot;
+        push( std::move( cmd ) );
+    }
+
+    void RHIDeferredCommandList::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        Cmd cmd{};
+        cmd._op              = Op::BindStructuredBuffer;
         cmd._descriptorIndex = index;
         cmd._slot            = slot;
         push( std::move( cmd ) );
@@ -266,6 +295,9 @@ namespace sw
                 case Op::Draw:
                     pContext->draw( cmd._vertexCount, cmd._startVertex, cmd._passCbIndex, cmd._materialIndex );
                     break;
+                case Op::DrawInstanced:
+                    pContext->drawInstanced( cmd._vertexCount, cmd._instanceCount, cmd._startVertex, cmd._startInstance );
+                    break;
                 case Op::SetIndexBuffer:
                     pContext->setIndexBuffer( cmd._buffer, cmd._indexStride, cmd._offset );
                     break;
@@ -286,6 +318,12 @@ namespace sw
                     break;
                 case Op::BindShaderResource:
                     pContext->bindShaderResource( cmd._descriptorIndex, cmd._slot );
+                    break;
+                case Op::BindConstantBuffer:
+                    pContext->bindConstantBuffer( cmd._descriptorIndex, cmd._slot );
+                    break;
+                case Op::BindStructuredBuffer:
+                    pContext->bindStructuredBuffer( cmd._descriptorIndex, cmd._slot );
                     break;
                 case Op::PrepareTextureForShaderRead:
                     pContext->prepareTextureForShaderRead( cmd._srcTexture );

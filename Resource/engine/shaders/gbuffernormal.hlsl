@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -12,14 +12,14 @@ struct PSInput
 	float3 nrm : TEXCOORD0;
 };
 
-PSInput VSMain(VSInput input)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
-	PassCBData passCb = GetPassCB();
-	float4 worldPos = mul(float4(input.pos, 1.0f), passCb.g_World);
-	output.pos = mul(worldPos, passCb.g_ViewProj);
+	float4x4 world = SwLoadInstanceWorld(iid);
+	float4 worldPos = mul(float4(input.pos, 1.0f), world);
+	output.pos = mul(worldPos, g_ViewProj);
 	float3 n = DemoCubeNormal(input.pos);
-	output.nrm = normalize(mul(float4(n, 0.0f), passCb.g_World).xyz);
+	output.nrm = normalize(mul(float4(n, 0.0f), world).xyz);
 	return output;
 }
 

@@ -29,7 +29,9 @@ namespace sw
         {
             desc._arrRtvFormat[rtIndex] = ( pRtvFormats != nullptr ) ? pRtvFormats[rtIndex] : RHIFormat::R8G8B8A8_UNORM;
         }
-        return _pDevice->getResource()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
+        registerPsoLayout( handle, desc );
+        return handle;
     }
 
     RHIPipelineStateHandle FrameRenderer::createPsoForPassType( string_view passType, string_view defaultShader,
@@ -134,7 +136,9 @@ namespace sw
                 desc._arrRtvFormat[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
             }
         }
-        return _pDevice->getResource()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
+        registerPsoLayout( handle, desc );
+        return handle;
     }
 
     void FrameRenderer::compileMaterialPsoTask( const TaskArgs& args )

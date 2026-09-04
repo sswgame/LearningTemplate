@@ -107,6 +107,9 @@ namespace sw
         /** @brief Descriptor-indexing texture array (g_BindlessTextures[]) */
         bool supportsNativeBindlessSampling() const override { return _bindlessTextureSet != nullptr; }
 
+        /** @brief VS 가 storage buffer(g_SwInstances, set 6)로 GPUScene 인스턴스 버퍼를 읽는다. */
+        bool supportsInstancedSceneDraw() const override { return true; }
+
         /** @brief Offscreen MRT (color×N + optional depth) via composite framebuffers. */
         bool supportsMultiRenderTarget() const override { return true; }
 
@@ -469,6 +472,11 @@ namespace sw
         VkDescriptorSetLayout _uavDescriptorSetLayout;
         VkDescriptorPool      _descriptorPool;
         VkDescriptorSet       _descriptorSet;
+        /// @brief set 4 = 정적 샘플러(VK_DESCRIPTOR_TYPE_SAMPLER, immutable). binding.hlsli 의
+        ///        `g_SwSamplerLinearWrap` 이 매 드로우 set 0/1 과 함께 바인딩된다 (bindGraphicsMaterialSets).
+        VkSampler             _staticSamplerLinearWrap;
+        VkDescriptorSetLayout _samplerSetLayout;
+        VkDescriptorSet       _staticSamplerSet;
         VkBuffer              _dummyUBO;
         VkDeviceMemory        _dummyUBOMemory;
         VkPipeline            _pipeline;

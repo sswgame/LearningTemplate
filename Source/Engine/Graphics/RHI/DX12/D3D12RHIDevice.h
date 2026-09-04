@@ -67,6 +67,9 @@ namespace sw
         /** @brief 루트 시그니처가 힙 인덱싱이면 ResourceDescriptorHeap[index] 네이티브 샘플링. */
         bool supportsNativeBindlessSampling() const override { return _bHeapDirectlyIndexed != 0; }
 
+        /** @brief 힙 인덱싱이면 VS 가 ResourceDescriptorHeap[g_SwInstancesIndex] 로 인스턴스 버퍼를 읽는다. */
+        bool supportsInstancedSceneDraw() const override { return _bHeapDirectlyIndexed != 0; }
+
         /** @brief 런타임 native bindless 반영. */
         RHICapabilities getCapabilities() const override
         {
@@ -214,6 +217,8 @@ namespace sw
         uint32                                                 _boundIndexStride;
         uint32                                                 _boundIndexOffset;
         unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>  _mapStructuredBufferState;
+        /// @brief 구조 버퍼 핸들 → 요소 stride (bindless StructuredBuffer SRV 생성용).
+        unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
         unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;
         uint32                                                  _nextOffscreenRtvIndex;

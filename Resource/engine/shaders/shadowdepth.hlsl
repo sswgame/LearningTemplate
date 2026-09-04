@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -11,12 +11,11 @@ struct PSInput
 	float4 pos : SV_POSITION;
 };
 
-PSInput VSMain(VSInput input)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
-	PassCBData passCb = GetPassCB();
-	float4 worldPos = mul(float4(input.pos, 1.0f), passCb.g_World);
-	output.pos = mul(worldPos, passCb.g_LightViewProj);
+	float4 worldPos = mul(float4(input.pos, 1.0f), SwLoadInstanceWorld(iid));
+	output.pos = mul(worldPos, g_LightViewProj);
 	return output;
 }
 

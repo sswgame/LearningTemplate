@@ -255,7 +255,21 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateBuffer( &bd, nullptr, buffer.GetAddressOf() ) ) )
             return 0;
 
-        return _pDevice->storeBuffer( std::move( buffer ) );
+        ID3D11Buffer* pBuffer = buffer.Get();
+
+        // 그래픽스 VS/PS 가 StructuredBuffer 로 읽을 수 있도록 SRV 를 만들어 둔다 (GPUScene 인스턴스 버퍼 등).
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.Format              = DXGI_FORMAT_UNKNOWN;
+        srvDesc.ViewDimension       = D3D11_SRV_DIMENSION_BUFFER;
+        srvDesc.Buffer.FirstElement = 0;
+        srvDesc.Buffer.NumElements  = elementCount;
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+        _pDevice->_device->CreateShaderResourceView( pBuffer, &srvDesc, srv.GetAddressOf() );
+
+        const RHIBufferHandle handle = _pDevice->storeBuffer( std::move( buffer ) );
+        if ( handle != 0 && srv )
+            _pDevice->_mapBufferSrv[handle] = std::move( srv );
+        return handle;
     }
 
     void D3D11RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -299,6 +313,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
+
+        _pDevice->_mapBufferSrv.erase( buffer );
 
         for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
         {

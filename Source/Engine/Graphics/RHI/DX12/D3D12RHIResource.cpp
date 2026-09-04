@@ -272,6 +272,7 @@ namespace sw
 
         const RHIBufferHandle handle                = _pDevice->storeBuffer( buffer );
         _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
+        _pDevice->_mapStructuredStride[handle]      = elementSize > 0 ? elementSize : 4u;
         return handle;
     }
 
@@ -663,6 +664,35 @@ namespace sw
             index = _pDevice->_allocatedDescriptorsCount++;
         }
 
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
+        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
+        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+
+        // 구조 버퍼면 StructuredBuffer SRV (ResourceDescriptorHeap[idx] 가 StructuredBuffer<T> 로 읽힘).
+        // 그 외(상수 버퍼 ring)면 CBV.
+        const auto strideIt = _pDevice->_mapStructuredStride.find( buffer );
+        if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
+        {
+            const UINT                      stride = strideIt->second;
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+            srvDesc.ViewDimension              = D3D12_SRV_DIMENSION_BUFFER;
+            srvDesc.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Format                     = DXGI_FORMAT_UNKNOWN;
+            srvDesc.Buffer.FirstElement        = 0;
+            srvDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width ) / stride;
+            srvDesc.Buffer.StructureByteStride = stride;
+            srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
+            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
+
+            if ( index >= _pDevice->_listRegisteredBindless.size() )
+                _pDevice->_listRegisteredBindless.resize( index + 1 );
+            _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle };
+            _pDevice->_listRegisteredBindless[index]._buffer = buffer;
+            return index;
+        }
+
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
         cbvDesc.BufferLocation = pRes->GetGPUVirtualAddress();
 
@@ -681,12 +711,6 @@ namespace sw
             if ( cbvDesc.SizeInBytes == 0 )
                 return kInvalidDescriptorIndex;
         }
-
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
-
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
 
         _pDevice->_device->CreateConstantBufferView( &cbvDesc, cpuHandle );
 

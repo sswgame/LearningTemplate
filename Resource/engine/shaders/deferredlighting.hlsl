@@ -1,4 +1,4 @@
-#include "bindless.hlsli"
+#include "binding.hlsli"
 
 struct VSInput
 {
@@ -24,7 +24,6 @@ PSInput VSMain(VSInput input, uint vid : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	PassCBData passCb = GetPassCB();
 	float3 albedo = SampleAlbedo(input.uv).rgb;
 	float3 normal = normalize(SampleNormal(input.uv).xyz * 2.0f - 1.0f);
 	if (length(normal) < 0.1f)
@@ -32,14 +31,14 @@ float4 PSMain(PSInput input) : SV_TARGET
 
 	float depth = SampleDepth(input.uv).r;
 	float shadowSample = SampleShadow(input.uv).r;
-	float shadow = lerp(1.0f - passCb.g_ShadowParams.y, 1.0f, saturate(shadowSample + passCb.g_ShadowParams.x));
+	float shadow = lerp(1.0f - g_ShadowParams.y, 1.0f, saturate(shadowSample + g_ShadowParams.x));
 
-	float3 L = normalize(-passCb.g_KeyLightDirIntensity.xyz);
+	float3 L = normalize(-g_KeyLightDirIntensity.xyz);
 	float  ndotl = saturate(dot(normal, L));
-	float3 ambient = passCb.g_KeyLightColor.rgb * passCb.g_KeyLightColor.a;
-	float3 lit = albedo * (ambient + ndotl * passCb.g_KeyLightDirIntensity.w * passCb.g_KeyLightColor.rgb) * shadow;
+	float3 ambient = g_KeyLightColor.rgb * g_KeyLightColor.a;
+	float3 lit = albedo * (ambient + ndotl * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb) * shadow;
 	lit *= saturate(1.0f - depth * 0.12f);
 	float rim = pow(1.0f - saturate(ndotl), 3.0f) * 0.12f;
-	lit += rim * passCb.g_KeyLightColor.rgb;
+	lit += rim * g_KeyLightColor.rgb;
 	return float4(lit, 1.0f);
 }

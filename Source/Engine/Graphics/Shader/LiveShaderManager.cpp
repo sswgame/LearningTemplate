@@ -165,6 +165,8 @@ namespace sw
 
                         if ( watchedInfo._onRecompiled.isBound() )
                             watchedInfo._onRecompiled( changedPath, newResult );
+                        if ( _onAnyRecompiled.isBound() )
+                            _onAnyRecompiled( watchedInfo._desc._filePath, newResult );
                     }
                     else
                     {

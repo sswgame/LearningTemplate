@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
@@ -70,6 +71,9 @@ namespace sw
 
         /** @brief 디스크립터 인덱스 테이블 (CB/UAV/텍스처) — 드로우 시 바인드 에뮬레이션. */
         bool supportsBindless() const override { return true; }
+
+        /** @brief VS 가 StructuredBuffer SRV(g_SwInstances, t4)로 GPUScene 인스턴스 버퍼를 읽는다. */
+        bool supportsInstancedSceneDraw() const override { return true; }
 
         /** @brief 백엔드 문자열 반환 */
         const utf8* getBackendName() const override { return "Direct3D 11"; }
@@ -182,10 +186,12 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 포스트 (정점 3개)
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D11Buffer>> _gpuBuffers;
-        RHIHandleTable<TextureRecord>                        _gpuTextures;
-        RHIBufferHandle                                      _boundMeshVb;
-        uint32                                               _boundMeshStride; ///< 바인딩된 VB stride
-        uint32                                               _boundMeshOffset;
+        /// @brief 구조 버퍼 핸들 → SRV (그래픽스 VS 가 StructuredBuffer 로 읽음. GPUScene 인스턴스 버퍼 등).
+        unordered_map<RHIBufferHandle, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _mapBufferSrv;
+        RHIHandleTable<TextureRecord>                                                    _gpuTextures;
+        RHIBufferHandle                                                                  _boundMeshVb;
+        uint32                                                                           _boundMeshStride; ///< 바인딩된 VB stride
+        uint32                                                                           _boundMeshOffset;
 
         vector<RHIBufferHandle> _listRegisteredBindless;
         vector<uint32>          _listBindlessFree;

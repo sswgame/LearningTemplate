@@ -69,6 +69,9 @@ namespace sw
         /** @brief Descriptor-index tables for UBO/SSBO/texture (bind-at-draw / image units). */
         bool supportsBindless() const override { return true; }
 
+        /** @brief VS 가 SSBO(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽는다 (glBindBufferBase). */
+        bool supportsInstancedSceneDraw() const override { return true; }
+
         /** @brief RHI 텍스처 핸들에 대응하는 GL texture name (없으면 0) */
         uint32 getGLTextureName( RHITextureHandle texture ) const;
 

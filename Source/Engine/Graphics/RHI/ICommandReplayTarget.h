@@ -53,6 +53,13 @@ namespace sw
         virtual void draw( uint32 vertexCount, uint32 startVertex = 0,
                            RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
                            RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+        /** @brief 리플레이: 삼각형 리스트를 인스턴스드로 그립니다. 기본은 draw 로 폴백. */
+        virtual void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 )
+        {
+            (void)instanceCount;
+            (void)startInstance;
+            draw( vertexCount, startVertex );
+        }
         /** @brief 리플레이: 인덱스 버퍼를 바인딩합니다. */
         virtual void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) = 0;
 
@@ -68,6 +75,18 @@ namespace sw
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) = 0;
         /** @brief 리플레이: 셰이더 텍스처 슬롯을 바인딩합니다. */
         virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )
+        {
+            (void)index;
+            (void)slot;
+        }
+        /** @brief 리플레이: 상수 버퍼를 레지스터 슬롯(bN)에 바인딩합니다. (ShaderBindingBinder 리플렉션 구동) */
+        virtual void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+        {
+            (void)cb;
+            (void)slot;
+        }
+        /** @brief 리플레이: 구조적 SRV 버퍼를 레지스터 슬롯(tN)에 바인딩합니다. */
+        virtual void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
         {
             (void)index;
             (void)slot;

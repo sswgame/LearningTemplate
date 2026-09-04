@@ -299,6 +299,8 @@ namespace sw
                 SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
                 return false;
             }
+            _rhi->getLiveShaderManager().setOnAnyShaderRecompiled(
+                SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &FrameRenderer::onShaderRecompiled, _frameRenderer.get() ) );
 
             _renderThread = make_unique<RenderThread>();
             if ( gv_useRenderThread )
