@@ -455,26 +455,21 @@ namespace sw
                     if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
                     {
                         listArgument.push_back( L"DX12=1" );
-                        // Graphics: fully-bindless heap sampling + optional bindless UAV array.
-                        // Compute RS (SampleIndirect) uses explicit u0/u1 — skip BINDLESS_UAV on CS.
-                        if ( desc._stage != ShaderStage::Compute )
-                        {
-                            listArgument.push_back( L"-D" );
-                            listArgument.push_back( L"SW_BINDLESS=1" );
-                            listArgument.push_back( L"-D" );
-                            listArgument.push_back( L"BINDLESS_UAV=1" );
-                        }
+                        // 그래픽스/컴퓨트 모두 힙 직접 인덱싱(SM6.6, Tier3) + bindless UAV 배열 사용 가능.
+                        // 컴퓨트 루트시그니처도 그래픽스와 동일한 블롭(heap-directly-indexed)이라 그대로 지원된다.
+                        listArgument.push_back( L"-D" );
+                        listArgument.push_back( L"SW_BINDLESS=1" );
+                        listArgument.push_back( L"-D" );
+                        listArgument.push_back( L"BINDLESS_UAV=1" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
                         listArgument.push_back( L"VULKAN=1" );
-                        if ( desc._stage != ShaderStage::Compute )
-                        {
-                            listArgument.push_back( L"-D" );
-                            listArgument.push_back( L"SW_BINDLESS=1" );
-                            listArgument.push_back( L"-D" );
-                            listArgument.push_back( L"BINDLESS_UAV=1" );
-                        }
+                        // 그래픽스/컴퓨트 모두 동일한 파이프라인 레이아웃(set1=bindless 텍스처)을 공유한다.
+                        listArgument.push_back( L"-D" );
+                        listArgument.push_back( L"SW_BINDLESS=1" );
+                        listArgument.push_back( L"-D" );
+                        listArgument.push_back( L"BINDLESS_UAV=1" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                         listArgument.push_back( L"OPENGL=1" );

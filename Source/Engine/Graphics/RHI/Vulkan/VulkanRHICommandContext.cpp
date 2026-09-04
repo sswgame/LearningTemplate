@@ -303,6 +303,16 @@ namespace sw
                 set0 = _pDevice->_listRegisteredDescriptorSet[0];
             if ( set0 != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+
+            // set 1: bindless 텍스처 배열 / set 4: 정적 샘플러 — binding.hlsli 를 포함하는 컴퓨트 셰이더가
+            // (SW_BINDLESS 활성화로) 정적으로 참조할 수 있으므로 그래픽스와 동일하게 매 디스패치 바인딩한다.
+            if ( _pDevice->_pipelineLayout != VK_NULL_HANDLE )
+            {
+                if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
+                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+                if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
+                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
+            }
         }
     }
 
@@ -611,13 +621,16 @@ namespace sw
               cbDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
               _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex] != VK_NULL_HANDLE );
 
-        // set 0 binding 0 = PassCB. 없으면 디바이스 기본 셋으로 폴백한다.
-        // 셰이더가 set 0 을 정적으로 참조하므로 어느 쪽도 없으면 draw 를 건너뛴다(검증 오류 방지).
-        const VkDescriptorSet set0 = bValidDescriptor
-                                       ? _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex]
-                                       : _pDevice->_descriptorSet;
-        if ( set0 != VK_NULL_HANDLE )
+        // set 0 binding 0 = PassCB. 유효한 인덱스가 있을 때만 (재)바인딩한다.
+        // ShaderBindingBinder::bindGraphics 가 draw/drawIndirect 호출 전에 이미 bindConstantBuffer(slot0)
+        // 로 실제 PassCB 를 set 0 에 바인딩해 두므로, 여기서 유효하지 않은 인덱스로 더미 UBO 폴백을
+        // 강제로 덮어쓰면 방금 바인딩한 값이 지워진다(과거 draw()가 CB 바인딩을 직접 겸하던 구조의 잔재).
+        // 인덱스가 없을 땐 현재 바인딩을 그대로 두어 이 문제를 피한다.
+        if ( bValidDescriptor )
+        {
+            const VkDescriptorSet set0 = _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex];
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+        }
 
         // set 1: bindless 텍스처 배열.
         if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
