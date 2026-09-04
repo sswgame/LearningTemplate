@@ -84,7 +84,7 @@ namespace sw
 
         if ( passName.empty() == false )
         {
-            utf8         arrPassName[64];
+            utf8         arrPassName[constant::kMaxBuffer64];
             const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
             Memory::copy( arrPassName, passName.data(), copyLen );
             arrPassName[copyLen] = '\0';

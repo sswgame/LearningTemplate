@@ -149,6 +149,15 @@
 
 ### 프로젝트 기능 사용 규칙
 1. STL이나 System 기능보단 Core와 Engine에 있는 기능을 우선적으로 사용하며, 불가능할 시 STL/System 기능을 사용하는 것을 고려한다.
+2. 버퍼/경로 크기 등에 매직 넘버를 직접 쓰지 않는다 (`char buf[64]`, `fixed_string<256>`, `StringBuilder<32>` 등). `Core/Common/Defines.h`의 `constant` 네임스페이스 상수(`kMaxBuffer16`~`kMaxBuffer8192`, 경로용 `kMaxPathSize`)를 사용한다.
+    ```cpp
+    //BAD
+    utf8 arrName[64]{};
+    sw::fixed_string<128> path;
+    //GOOD
+    utf8 arrName[constant::kMaxBuffer64]{};
+    sw::fixed_string<constant::kMaxBuffer128> path;
+    ```
 
 ### 변수 초기화 규칙
 1. 생성자에서 초기화 시 선언 순서로 정렬되어야 한다

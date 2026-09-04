@@ -216,7 +216,7 @@ namespace sw::editor
                     {
                         if ( node._text.size() > 40 )
                         {
-                            StringBuilder<64> previewBuilder;
+                            StringBuilder<constant::kMaxBuffer64> previewBuilder;
                             previewBuilder.append( string_view{ node._text.data(), 37 } );
                             previewBuilder.append( "..." );
                             ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );

@@ -33,11 +33,6 @@ namespace sw
                 return ParserUtil::scopeLeaf( spec );
             }
 
-            static string enclosingNamespaceOf( const string& fqn )
-            {
-                return string{ ParserUtil::enclosingNamespaceOf( fqn ) };
-            }
-
             /**
              * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
              */
@@ -756,71 +751,18 @@ namespace sw
 
         if ( bNeedFlags )
         {
-            e.line( "#include \"Engine/EngineMinimal.h\"" );
+            // 비트 연산자(|, &, ^, ~, |=, &=, ^=)와 hasFlag/hasAnyFlag/setFlag/clearFlag는 enum마다
+            // 코드젠하지 않고 Core/Common/EnumUtil.h의 제네릭 sw::IsBitFlagEnum<E> 트레이트 + 전역
+            // 스코프 SFINAE 연산자로 통일합니다 — 로직이 모든 enum에서 동일해 타입별 코드젠이 필요
+            // 없습니다. 여기서는 그 트레이트를 opt-in 하는 한 줄짜리 명시적 특수화만 생성합니다.
+            e.line( "#include \"Core/Common/EnumUtil.h\"" );
             e.blank();
-        }
-
-        for ( const ParsedEnumInfo& enumInfo : _listEnum )
-        {
-            if ( enumInfo._bEmitFlagOps == 0 )
-                continue;
-
-            const string& fqn = enumInfo._fullyQualifiedName;
-            const string  ns  = CodeGeneratorInternal::enclosingNamespaceOf( fqn );
-            if ( ns.empty() == false )
+            for ( const ParsedEnumInfo& enumInfo : _listEnum )
             {
-                e.linef( "namespace %#", ns );
-                e.line( "{" );
+                if ( enumInfo._bEmitFlagOps == 0 )
+                    continue;
+                e.linef( "template <> struct sw::IsBitFlagEnum<%#> : std::true_type {};", enumInfo._fullyQualifiedName );
             }
-            e.linef( "SW_INLINE constexpr %# operator|( %# lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.linef( "using Underlying = std::underlying_type_t<%#>;", fqn );
-            e.linef( "return static_cast<%#>( static_cast<Underlying>( lhs ) | static_cast<Underlying>( rhs ) );", fqn );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %# operator&( %# lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.linef( "using Underlying = std::underlying_type_t<%#>;", fqn );
-            e.linef( "return static_cast<%#>( static_cast<Underlying>( lhs ) & static_cast<Underlying>( rhs ) );", fqn );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %# operator^( %# lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.linef( "using Underlying = std::underlying_type_t<%#>;", fqn );
-            e.linef( "return static_cast<%#>( static_cast<Underlying>( lhs ) ^ static_cast<Underlying>( rhs ) );", fqn );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %# operator~( %# val )", fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.linef( "using Underlying = std::underlying_type_t<%#>;", fqn );
-            e.linef( "return static_cast<%#>( ~static_cast<Underlying>( val ) );", fqn );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %#& operator|=( %#& lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.line( "return lhs = lhs | rhs;" );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %#& operator&=( %#& lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.line( "return lhs = lhs & rhs;" );
-            e.pop();
-            e.line( "}" );
-            e.linef( "SW_INLINE constexpr %#& operator^=( %#& lhs, %# rhs )", fqn, fqn, fqn );
-            e.line( "{" );
-            e.push();
-            e.line( "return lhs = lhs ^ rhs;" );
-            e.pop();
-            e.line( "}" );
-            e.blank();
-            if ( ns.empty() == false )
-                e.line( "}" );
             e.blank();
         }
 

@@ -2,6 +2,8 @@
 
 #include "Engine/Reflection/ReflectAny.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -66,7 +68,7 @@ namespace sw
                     hex.push_back( kDigits[( byte >> 4 ) & 0xF] );
                     hex.push_back( kDigits[byte & 0xF] );
                 }
-                StringBuilder<128> sb;
+                StringBuilder<constant::kMaxBuffer128> sb;
                 sb.append( any._typeFqn.view() ).append( '|' ).append( hex );
                 return string{ sb.c_str(), sb.size() };
             }

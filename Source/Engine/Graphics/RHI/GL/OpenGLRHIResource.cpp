@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 
+#include "Core/Common/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -396,11 +397,11 @@ namespace sw
 
         ScopedOpenGLContext ctxScope( _pDevice );
 
-        if ( hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
             return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-        if ( hasFlag( desc._usage, RHIBufferUsage::Constant ) )
+        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
             return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-        if ( hasFlag( desc._usage, RHIBufferUsage::Index ) )
+        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) )
         {
             const uint32 stride = ( desc._elementSize == 2 ) ? 2u : 4u;
             return _pDevice->createIndexBuffer( desc._pInitialData, desc._sizeBytes, stride );
@@ -425,7 +426,7 @@ namespace sw
         glBufferData( GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>( alignedSize ), desc._pInitialData, GL_DYNAMIC_DRAW );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
 
-        if ( hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) )
+        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) )
         {
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, ssbo );
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );

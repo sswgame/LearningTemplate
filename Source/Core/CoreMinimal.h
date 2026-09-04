@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Common/EnumUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"

@@ -31,7 +31,7 @@ namespace sw
      * @brief 리소스 바인딩 가시성(Visibility) 및 파이프라인 스테이지 조합용 비트플래그
      */
     ENUM( Flags )
-    enum class ShaderStageFlag : uint32
+    enum class ShaderStageFlag : uint8
     {
         None          = 0,
         Vertex        = SW_BIT( 0 ),
@@ -52,11 +52,6 @@ namespace sw
         return ( stage < ShaderStage::Count )
                  ? static_cast<ShaderStageFlag>( SW_BIT( static_cast<uint8>( stage ) ) )
                  : ShaderStageFlag::None;
-    }
-
-    constexpr bool hasShaderStage( ShaderStageFlag flags, ShaderStageFlag stage ) noexcept
-    {
-        return ( static_cast<uint32>( flags ) & static_cast<uint32>( stage ) ) != 0;
     }
 
     /**

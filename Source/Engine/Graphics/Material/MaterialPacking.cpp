@@ -243,64 +243,6 @@ namespace sw
                 }
             }
 
-            static MaterialUsageFlags parseUsageFlags( string_view s )
-            {
-                uint32          mask{ 0 };
-                string_splitter splitter( s, { "|", ",", " " } );
-                for ( string_view part : splitter.getSplitList() )
-                {
-                    const string partNt( part );
-                    const string token = StringUtil::trim( partNt.c_str() );
-                    if ( token.empty() )
-                        continue;
-                    if ( iequals( token, "StaticMesh" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::StaticMesh );
-                    else if ( iequals( token, "SkeletalMesh" ) || iequals( token, "Skinned" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::SkeletalMesh );
-                    else if ( iequals( token, "Instanced" ) || iequals( token, "Instancing" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::Instanced );
-                    else if ( iequals( token, "Particles" ) || iequals( token, "Particle" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::Particles );
-                    else if ( iequals( token, "Decal" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::Decal );
-                    else if ( iequals( token, "UI" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::UI );
-                    else if ( iequals( token, "PostProcess" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::PostProcess );
-                    else if ( iequals( token, "LightFunction" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::LightFunction );
-                    else if ( iequals( token, "MorphTargets" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::MorphTargets );
-                    else if ( iequals( token, "SplineMesh" ) )
-                        mask |= static_cast<uint32>( MaterialUsageFlags::SplineMesh );
-                }
-                return static_cast<MaterialUsageFlags>( mask );
-            }
-
-            static string usageFlagsToString( MaterialUsageFlags flags )
-            {
-                string outStr;
-                auto   append = [&]( MaterialUsageFlags flag, const utf8* pName )
-                {
-                    if ( hasFlag( flags, flag ) == false )
-                        return;
-                    if ( outStr.empty() == false )
-                        outStr += "|";
-                    outStr += pName;
-                };
-                append( MaterialUsageFlags::StaticMesh, "StaticMesh" );
-                append( MaterialUsageFlags::SkeletalMesh, "SkeletalMesh" );
-                append( MaterialUsageFlags::Instanced, "Instanced" );
-                append( MaterialUsageFlags::Particles, "Particles" );
-                append( MaterialUsageFlags::Decal, "Decal" );
-                append( MaterialUsageFlags::UI, "UI" );
-                append( MaterialUsageFlags::PostProcess, "PostProcess" );
-                append( MaterialUsageFlags::LightFunction, "LightFunction" );
-                append( MaterialUsageFlags::MorphTargets, "MorphTargets" );
-                append( MaterialUsageFlags::SplineMesh, "SplineMesh" );
-                return outStr.empty() ? "None" : outStr;
-            }
-
             static void parseStringListItems( XmlNode list, vector<string>& outListItem )
             {
                 outListItem.clear();
@@ -686,32 +628,19 @@ namespace sw
 
     MaterialQualityLevel MaterialUtil::parseQuality( string_view s )
     {
-        if ( MaterialPackingInternal::iequals( s, "Low" ) )
-            return MaterialQualityLevel::Low;
-        if ( MaterialPackingInternal::iequals( s, "Medium" ) || MaterialPackingInternal::iequals( s, "Med" ) )
-            return MaterialQualityLevel::Medium;
-        if ( MaterialPackingInternal::iequals( s, "Epic" ) )
-            return MaterialQualityLevel::Epic;
+        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
+        int64           value{ 0 };
+        if ( pInfo != nullptr && pInfo->tryParse( s, value ) )
+            return static_cast<MaterialQualityLevel>( value );
         return MaterialQualityLevel::High;
     }
 
     const utf8* MaterialUtil::qualityToString( MaterialQualityLevel q )
     {
-        switch ( q )
-        {
-            case MaterialQualityLevel::Low:
-                return "Low";
-            case MaterialQualityLevel::Medium:
-                return "Medium";
-            case MaterialQualityLevel::High:
-                return "High";
-            case MaterialQualityLevel::Epic:
-                return "Epic";
-            case MaterialQualityLevel::Count:
-                return "High";
-            default:
-                break;
-        }
+        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
+        const utf8*     pStr  = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( q ) ) : nullptr;
+        if ( pStr != nullptr )
+            return pStr;
         return "High";
     }
 
@@ -736,7 +665,11 @@ namespace sw
         }
         const string usage = MaterialUtil::fieldText( perm, "usage" );
         if ( usage.empty() == false )
-            out._usage = MaterialPackingInternal::parseUsageFlags( usage );
+        {
+            const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
+            if ( pUsageEnum != nullptr )
+                out._usage = static_cast<MaterialUsageFlags>( pUsageEnum->stringFlagsToValue( usage ) );
+        }
 
         XmlNode always = perm.child( "_alwaysDefines" );
         MaterialPackingInternal::parseStringListItems( always, out._listAlwaysDefine );
@@ -780,7 +713,11 @@ namespace sw
         XmlNode node = root.appendChild( "_permutations" );
         MaterialUtil::appendAttr( node, "quality", MaterialUtil::qualityToString( perm._quality ) );
         node.appendAttr( "shaderLOD", perm._shaderLOD );
-        MaterialUtil::appendAttr( node, "usage", MaterialPackingInternal::usageFlagsToString( perm._usage ) );
+        {
+            const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
+            const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( perm._usage ) ) : nullptr;
+            MaterialUtil::appendAttr( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
+        }
         MaterialPackingInternal::appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
 
         if ( perm._listStaticSwitch.empty() == false )
@@ -825,65 +762,41 @@ namespace sw
 
     void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
     {
-        if ( hasFlag( usage, MaterialUsageFlags::StaticMesh ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::StaticMesh ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_STATIC_MESH" );
-        if ( hasFlag( usage, MaterialUsageFlags::SkeletalMesh ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::SkeletalMesh ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SKELETAL_MESH" );
-        if ( hasFlag( usage, MaterialUsageFlags::Instanced ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Instanced ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_INSTANCED" );
-        if ( hasFlag( usage, MaterialUsageFlags::Particles ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Particles ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_PARTICLES" );
-        if ( hasFlag( usage, MaterialUsageFlags::Decal ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Decal ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_DECAL" );
-        if ( hasFlag( usage, MaterialUsageFlags::UI ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::UI ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_UI" );
-        if ( hasFlag( usage, MaterialUsageFlags::PostProcess ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::PostProcess ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_POSTPROCESS" );
-        if ( hasFlag( usage, MaterialUsageFlags::LightFunction ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::LightFunction ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_LIGHTFUNCTION" );
-        if ( hasFlag( usage, MaterialUsageFlags::MorphTargets ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::MorphTargets ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_MORPHTARGETS" );
-        if ( hasFlag( usage, MaterialUsageFlags::SplineMesh ) )
+        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::SplineMesh ) )
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SPLINEMESH" );
     }
 
     void MaterialUtil::appendQualityDefines( MaterialQualityLevel q, vector<string>& outListDefine )
     {
         MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
-        switch ( q )
-        {
-            case MaterialQualityLevel::Low:
-                MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_LOW" );
-                break;
-            case MaterialQualityLevel::Medium:
-                MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_MEDIUM" );
-                break;
-            case MaterialQualityLevel::High:
-                MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_HIGH" );
-                break;
-            case MaterialQualityLevel::Epic:
-                MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_EPIC" );
-                break;
-            case MaterialQualityLevel::Count:
-                MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_HIGH" );
-                break;
-            default:
-                break;
-        }
+        MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( MaterialUtil::qualityToString( q ) ) );
     }
 
     uint64 MaterialUtil::hashDefines( const vector<string>& listDefine )
     {
-        uint64 h = 14695981039346656037ull;
+        uint64 h = StringUtil::kOffset64;
         for ( const string& defineStr : listDefine )
         {
-            for ( const utf8 ch : defineStr )
-            {
-                h ^= static_cast<uint64>( static_cast<uint8>( ch ) );
-                h *= 1099511628211ull;
-            }
-            h ^= 0xFFull;
-            h *= 1099511628211ull;
+            h = StringUtil::computeHash64( defineStr, false, h );
+            h = ( h ^ 0xFFull ) * StringUtil::kPrime64;
         }
         return h;
     }

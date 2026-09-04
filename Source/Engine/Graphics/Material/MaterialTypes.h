@@ -39,6 +39,7 @@ namespace sw
     };
 
     /// @brief 머티리얼 Quality Level 종류를 정의하는 열거형입니다.
+    ENUM( Count = Count, ValueAlias = "Med:Medium" )
     enum class MaterialQualityLevel : uint8
     {
         Low    = 0,
@@ -49,36 +50,21 @@ namespace sw
     };
 
     /// @brief 머티리얼 Usage Flags 종류를 정의하는 열거형입니다.
-    enum class MaterialUsageFlags : uint32
+    ENUM( Flags )
+    enum class MaterialUsageFlags : uint16
     {
         None          = 0,
-        StaticMesh    = 1u << 0,
-        SkeletalMesh  = 1u << 1,
-        Instanced     = 1u << 2,
-        Particles     = 1u << 3,
-        Decal         = 1u << 4,
-        UI            = 1u << 5,
-        PostProcess   = 1u << 6,
-        LightFunction = 1u << 7,
-        MorphTargets  = 1u << 8,
-        SplineMesh    = 1u << 9,
+        StaticMesh    = SW_BIT( 0 ),
+        SkeletalMesh  = SW_BIT( 1 ),
+        Instanced     = SW_BIT( 2 ),
+        Particles     = SW_BIT( 3 ),
+        Decal         = SW_BIT( 4 ),
+        UI            = SW_BIT( 5 ),
+        PostProcess   = SW_BIT( 6 ),
+        LightFunction = SW_BIT( 7 ),
+        MorphTargets  = SW_BIT( 8 ),
+        SplineMesh    = SW_BIT( 9 ),
     };
-
-    /** @brief 연산자입니다. */
-    inline MaterialUsageFlags operator|( MaterialUsageFlags a, MaterialUsageFlags b )
-    {
-        return static_cast<MaterialUsageFlags>( static_cast<uint32>( a ) | static_cast<uint32>( b ) );
-    }
-    /** @brief 연산자입니다. */
-    inline MaterialUsageFlags operator&( MaterialUsageFlags a, MaterialUsageFlags b )
-    {
-        return static_cast<MaterialUsageFlags>( static_cast<uint32>( a ) & static_cast<uint32>( b ) );
-    }
-    /** @brief 플래그 비트가 켜져 있으면 true. */
-    inline bool hasFlag( MaterialUsageFlags mask, MaterialUsageFlags flag )
-    {
-        return ( static_cast<uint32>( mask ) & static_cast<uint32>( flag ) ) != 0;
-    }
 
     /// @brief 머티리얼 enum 항목 (이름 + 값)
     struct MaterialEnumEntry

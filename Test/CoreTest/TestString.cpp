@@ -260,7 +260,7 @@ SW_TEST_CASE( Core_String, FixedStringFullCoverage )
  */
 SW_TEST_CASE( Core_String, FormatStringUtility )
 {
-    utf8 buffer[256] = {};
+    utf8 buffer[sw::constant::kMaxBuffer256] = {};
 
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "Value: %#", 42 );
     SW_EXPECT_EQUAL( sw::string( "Value: 42" ), sw::string( buffer ) );
@@ -798,7 +798,7 @@ SW_TEST_CASE( Core_String, FixedStringUnorderedContainers )
  */
 SW_TEST_CASE( Core_String, FormatStringFloatFallbackNullTerminator )
 {
-    utf8 buf[64]{ 0 };
+    utf8 buf[sw::constant::kMaxBuffer64]{ 0 };
     sw::formatstring( buf, sizeof( buf ), "Value: %#", 123.456f );
     sw::string formattedFloat( buf );
     SW_EXPECT_FALSE( formattedFloat.empty() );

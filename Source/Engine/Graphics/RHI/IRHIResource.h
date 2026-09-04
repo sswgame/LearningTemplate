@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Common/EnumUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
@@ -54,9 +55,9 @@ namespace sw
         /** @brief 범용 버퍼 (structured / UAV / 인디렉트 인자 / 인덱스). */
         virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
         {
-            if ( hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
                 return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-            if ( hasFlag( desc._usage, RHIBufferUsage::Constant ) )
+            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
                 return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
             const uint32    elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
             const uint32    elemCount = desc._elementCount > 0

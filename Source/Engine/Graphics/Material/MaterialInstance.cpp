@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -259,7 +260,7 @@ namespace sw
     {
         const array<float32, 4> val = { value._x, value._y, value._z, value._w };
         MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
-        StringBuilder<64> sb;
+        StringBuilder<constant::kMaxBuffer64> sb;
         sb.appendFormat( "%# %# %# %#", value._x, value._y, value._z, value._w );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
         _bGpuDirty = 1;

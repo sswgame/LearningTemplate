@@ -3,6 +3,8 @@
  * @brief OS 윈도우 스레드 / 백그라운드 입력 폴러에서 발생하는 정밀 원시 입력 이벤트 패킷
  */
 #pragma once
+#include "Core/Common/Defines.h"
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -15,10 +17,10 @@ namespace sw
     namespace ModifierKey
     {
         inline constexpr uint8 None  = 0;
-        inline constexpr uint8 Ctrl  = 1 << 0;
-        inline constexpr uint8 Shift = 1 << 1;
-        inline constexpr uint8 Alt   = 1 << 2;
-        inline constexpr uint8 Super = 1 << 3;
+        inline constexpr uint8 Ctrl  = SW_BIT( 0 );
+        inline constexpr uint8 Shift = SW_BIT( 1 );
+        inline constexpr uint8 Alt   = SW_BIT( 2 );
+        inline constexpr uint8 Super = SW_BIT( 3 );
     } // namespace ModifierKey
 
     /** @brief 원시 입력 이벤트 종류 */
@@ -86,7 +88,7 @@ namespace sw
 
             struct
             {
-                utf8 _arrUtf8[32];
+                utf8 _arrUtf8[constant::kMaxBuffer32];
             } _textData;
         } _payload{};
 

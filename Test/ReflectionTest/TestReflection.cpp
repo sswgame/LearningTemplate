@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/EnumUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
@@ -2604,6 +2605,28 @@ SW_TEST_CASE( Reflection_EnumFlag, EnumFlagOperators )
     SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Execute ) );
 }
 
+/**
+ * @brief [Reflection_EnumFlag] ENUM(Flags) 코드젠 연산자(|, &, ^, ~, |=, &=, ^=)가 sw::EnumUtil의
+ *        제네릭 hasFlag/hasAnyFlag/setFlag/clearFlag(Core/Common/EnumUtil.h)와 함께 정상 동작하는지
+ *        검증합니다. EnumUtil 자체의 단위 테스트는 Test/CoreTest/TestEnumUtil.cpp에 있습니다
+ *        (리플렉션과 무관하게 동작함을 증명하기 위해 일부러 CoreTest에 둡니다).
+ */
+SW_TEST_CASE( Reflection_EnumFlag, GeneratedOperatorsWithEnumUtil )
+{
+    TestFlag flag = TestFlag::Read | TestFlag::Write;
+
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Read ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Write ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flag, TestFlag::Execute ) );
+
+    flag |= TestFlag::Execute;
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flag, TestFlag::Execute ) );
+
+    flag = sw::EnumUtil::clearFlag( flag, TestFlag::Read );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flag, TestFlag::Read ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasAnyFlag( flag, TestFlag::Write | TestFlag::Execute ) );
+}
+
 // ------------------------------------------------------------------------------
 // 20) Reflection_Cloning — 딥카피
 // ------------------------------------------------------------------------------
@@ -3306,6 +3329,37 @@ SW_TEST_CASE( Reflection_GenericQuery, FindTypeAndIsA )
     SW_EXPECT_TRUE( sw::isA<sw::TestScriptComponent>( &comp ) );
     SW_EXPECT_TRUE( sw::isA<sw::Component>( &comp ) );
     SW_EXPECT_TRUE( sw::isA<sw::DummyActor>( &comp ) == false );
+}
+
+/**
+ * @brief [Reflection_GenericQuery] REFLECT() 베이스가 첫 번째로 선언된 다중 상속 액터의 부모 채택을
+ *        검증합니다. IPlainMixinTestActor(REFLECT() 없는 순수 인터페이스)는 두 번째 베이스로 조용히
+ *        무시되고, EmptyReflectedBaseTestActor(REFLECT() 있음, 첫 번째 베이스)가 부모로 채택되어야
+ *        합니다. GameFramework::TurnBattleSaveGame : public SaveGame, public IFlagStore 실사례의
+ *        축소판이며, ReflectionParser/AstVisitor.cpp 의 baseClassVisitor 회귀 테스트입니다.
+ * @note 프로퍼티 오프셋은 파생 클래스 자신에게 직접 선언된 것만 안전합니다(offsetof가 그 파생
+ *       클래스 자체의 실제 레이아웃으로 계산되므로). 그래서 리플렉션 부모(EmptyReflectedBaseTestActor)
+ *       는 실제 SaveGame처럼 프로퍼티가 없고, _ownValue 는 파생 클래스 자신에 선언되어 있습니다 —
+ *       서로 다른 다형성을 가진 베이스를 섞으면 상속받은(파생 클래스에 없는) 프로퍼티의 오프셋이
+ *       ABI상 안전하지 않을 수 있으므로, 리플렉션 프로퍼티 병합은 여전히 단일 상속에서만 신뢰할 수
+ *       있습니다(getPropertiesWithBase() 문서 참고).
+ */
+SW_TEST_CASE( Reflection_GenericQuery, MultiInheritanceSafeOrderParentAndProperties )
+{
+    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MultiBaseOrderTestActor>();
+    SW_ASSERT_NOT_NULL( pType );
+
+    // 부모는 IPlainMixinTestActor(REFLECT() 없음)가 아니라 첫 번째로 선언된 REFLECT() 베이스여야 합니다.
+    SW_EXPECT_TRUE( pType->_parentFQN == sw::hashed_string( "sw::EmptyReflectedBaseTestActor" ) );
+    SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::EmptyReflectedBaseTestActor" ) ) );
+
+    // 다중 상속과 무관하게, 파생 클래스 자신에게 직접 선언된 프로퍼티는 정상적으로 round-trip 되어야
+    // 합니다 (TurnBattleSaveGame 의 5개 필드가 실제로 의존하는 보장입니다).
+    sw::MultiBaseOrderTestActor actor;
+    const sw::PropertyInfo*     pOwnProp = pType->findProperty( sw::hashed_string( "_ownValue" ) );
+    SW_ASSERT_NOT_NULL( pOwnProp );
+    pOwnProp->setValue<int32>( &actor, 555 );
+    SW_EXPECT_TRUE( actor._ownValue == 555 );
 }
 
 /**

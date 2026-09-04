@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -152,7 +153,7 @@ namespace sw
         if ( FileUtil::readFile( path, headBytes, 0, 4 ) && headBytes.size() >= 4 )
         {
             uint32 magic = 0;
-            std::memcpy( &magic, headBytes.data(), sizeof( magic ) );
+            Memory::copy( &magic, headBytes.data(), sizeof( magic ) );
             if ( magic == SaveGameSerializer::kSaveBinMagic )
                 return SaveGameSerializer::loadGameFromSlot( *this, path );
         }

@@ -377,30 +377,30 @@ SW_TEST_CASE( ShaderStageTest, HasShaderStageAndMasking )
     const sw::ShaderStageFlag flags = sw::ShaderStageFlag::Vertex | sw::ShaderStageFlag::Pixel | sw::ShaderStageFlag::Compute;
 
     // 포함된 스테이지 검사
-    SW_EXPECT_TRUE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Vertex ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Pixel ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Compute ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Vertex ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Pixel ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Compute ) );
 
     // 미포함 스테이지 검사
-    SW_EXPECT_FALSE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Geometry ) );
-    SW_EXPECT_FALSE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Hull ) );
-    SW_EXPECT_FALSE( sw::hasShaderStage( flags, sw::ShaderStageFlag::Mesh ) );
-    SW_EXPECT_FALSE( sw::hasShaderStage( sw::ShaderStageFlag::None, sw::ShaderStageFlag::Vertex ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Geometry ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Hull ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( flags, sw::ShaderStageFlag::Mesh ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::None, sw::ShaderStageFlag::Vertex ) );
 
     // AllGraphics (7대 그래픽스 스테이지 포함, Compute 미포함)
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Vertex ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Pixel ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Geometry ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Hull ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Domain ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Mesh ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Amplification ) );
-    SW_EXPECT_FALSE( sw::hasShaderStage( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Compute ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Vertex ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Pixel ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Geometry ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Hull ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Domain ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Mesh ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Amplification ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::AllGraphics, sw::ShaderStageFlag::Compute ) );
 
     // All (Compute 포함 8대 전 스테이지 포함)
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Compute ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Vertex ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Amplification ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Compute ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Vertex ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( sw::ShaderStageFlag::All, sw::ShaderStageFlag::Amplification ) );
 }
 
 /**
@@ -433,12 +433,12 @@ SW_TEST_CASE( ShaderStageTest, BitwiseOperatorAlgebraicLaws )
     // 복합 대입 (Compound assignment)
     sw::ShaderStageFlag testFlag = flagVs;
     testFlag |= flagPs;
-    SW_EXPECT_TRUE( sw::hasShaderStage( testFlag, flagVs ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( testFlag, flagPs ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( testFlag, flagVs ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( testFlag, flagPs ) );
 
     testFlag &= ~flagVs;
-    SW_EXPECT_FALSE( sw::hasShaderStage( testFlag, flagVs ) );
-    SW_EXPECT_TRUE( sw::hasShaderStage( testFlag, flagPs ) );
+    SW_EXPECT_FALSE( sw::EnumUtil::hasFlag( testFlag, flagVs ) );
+    SW_EXPECT_TRUE( sw::EnumUtil::hasFlag( testFlag, flagPs ) );
 
     testFlag ^= flagPs;
     SW_EXPECT_TRUE( testFlag == sw::ShaderStageFlag::None );
@@ -458,7 +458,7 @@ SW_TEST_CASE( ShaderStageTest, BitwiseStressEvaluation )
         const sw::ShaderStageFlag stageFlag  = sw::toShaderStageFlag( stage );
 
         flags ^= stageFlag;
-        const bool bHas = sw::hasShaderStage( flags, stageFlag );
+        const bool bHas = sw::EnumUtil::hasFlag( flags, stageFlag );
         SW_EXPECT_TRUE( bHas == ( ( flags & stageFlag ) != sw::ShaderStageFlag::None ) );
     }
 }
@@ -588,7 +588,7 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
     sw::unordered_map<uint64, uint32> mapHashToId;
     mapHashToId.reserve( kPermutationCount );
 
-    sw::fixed_string<64> defBuf;
+    sw::fixed_string<sw::constant::kMaxBuffer64> defBuf;
     for ( uint32 index = 0; index < kPermutationCount; ++index )
     {
         sw::formatstring( defBuf.data(), defBuf.capacity(), "PERM_MACRO_%u=%u", index, ( index * 31u + 7u ) );

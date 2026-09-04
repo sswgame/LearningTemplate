@@ -666,7 +666,7 @@ SW_TEST_CASE( Core_DataStructure, SpinLockMutualExclusion )
     constexpr int32 kIterations   = 1000;
     int32           sharedCounter = 0;
 
-    std::vector<std::thread> listWorkers;
+    sw::vector<std::thread> listWorkers;
     listWorkers.reserve( kThreadCount );
 
     for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
@@ -740,7 +740,7 @@ SW_TEST_CASE( Core_DataStructure, WorkStealingDequeMultiThreadStress )
     std::atomic<int32> totalCountStolen{ 0 };
 
     // 1) 3개 Stealer 스레드
-    std::vector<std::thread> listStealers;
+    sw::vector<std::thread> listStealers;
     listStealers.reserve( kStealCount );
     for ( int32 stealerIndex = 0; stealerIndex < kStealCount; ++stealerIndex )
     {

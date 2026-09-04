@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Container/pair.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -26,7 +27,7 @@ namespace sw
         /**
          * @brief 테스트용 팩 파일을 생성하는 헬퍼 함수
          */
-        bool createTestPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<std::pair<string, string>>& listFileContent, bool bIncludeDebugStringPool = false )
+        bool createTestPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<sw::pair<string, string>>& listFileContent, bool bIncludeDebugStringPool = false )
         {
             FileUtil::createParentDirectory( packPath );
 
@@ -164,7 +165,7 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 {
     const sw::string testPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_01.pack" );
 
-    const sw::vector<std::pair<sw::string, sw::string>> listFile = {
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         {"maps/title.scene.xml",         "<Scene name=\"Title\" version=\"1.0\"/>"},
         {    "shaders/pbr.hlsl",             "// PBR Forward Lighting Shader Code"},
         {     "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}"}
@@ -473,7 +474,7 @@ SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
 {
     const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_concurrent_vfs.pack" );
 
-    sw::vector<std::pair<sw::string, sw::string>> listFile;
+    sw::vector<sw::pair<sw::string, sw::string>> listFile;
     for ( uint32 fileIndex = 0; fileIndex < 16; ++fileIndex )
     {
         listFile.push_back( { "data/file_" + sw::to_string( fileIndex ) + ".txt",
@@ -557,8 +558,8 @@ SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
  */
 SW_TEST_CASE( Engine_ResourcePack, DomainQualifiedQueryInVfs )
 {
-    const sw::string                                    packPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_domain_query_pack.pack" );
-    const sw::vector<std::pair<sw::string, sw::string>> listFile = {
+    const sw::string                                   packPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_domain_query_pack.pack" );
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "textures/icon.dat",   "ICON_PAYLOAD_DATA"},
         {"shaders/custom.dat", "SHADER_PAYLOAD_DATA"},
     };
