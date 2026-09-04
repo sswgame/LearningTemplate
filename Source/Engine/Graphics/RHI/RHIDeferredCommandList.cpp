@@ -183,6 +183,24 @@ namespace sw
         push( std::move( cmd ) );
     }
 
+    void RHIDeferredCommandList::bindComputeConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    {
+        Cmd cmd{};
+        cmd._op              = Op::BindComputeConstantBuffer;
+        cmd._descriptorIndex = cb;
+        cmd._slot            = slot;
+        push( std::move( cmd ) );
+    }
+
+    void RHIDeferredCommandList::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    {
+        Cmd cmd{};
+        cmd._op              = Op::BindComputeShaderResource;
+        cmd._descriptorIndex = index;
+        cmd._slot            = slot;
+        push( std::move( cmd ) );
+    }
+
     void RHIDeferredCommandList::prepareTextureForShaderRead( RHITextureHandle texture )
     {
         Cmd cmd{};
@@ -324,6 +342,12 @@ namespace sw
                     break;
                 case Op::BindStructuredBuffer:
                     pContext->bindStructuredBuffer( cmd._descriptorIndex, cmd._slot );
+                    break;
+                case Op::BindComputeConstantBuffer:
+                    pContext->bindComputeConstantBuffer( cmd._descriptorIndex, cmd._slot );
+                    break;
+                case Op::BindComputeShaderResource:
+                    pContext->bindComputeShaderResource( cmd._descriptorIndex, cmd._slot );
                     break;
                 case Op::PrepareTextureForShaderRead:
                     pContext->prepareTextureForShaderRead( cmd._srcTexture );

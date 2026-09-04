@@ -363,6 +363,33 @@ namespace sw
         _pDevice->_deviceContext->PSSetShaderResources( slot, 1, &pSrv );
     }
 
+    void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        if ( _pDevice->_deviceContext == nullptr || index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[index] );
+        if ( pCb == nullptr )
+            return;
+        _pDevice->_deviceContext->CSSetConstantBuffers( slot, 1, &pCb );
+    }
+
+    void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    {
+        // gpucull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
+        if ( _pDevice->_deviceContext == nullptr || index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const RHIBufferHandle buffer = _pDevice->_listRegisteredBindless[index];
+        if ( buffer == 0 )
+            return;
+        const auto it = _pDevice->_mapBufferSrv.find( buffer );
+        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
+            return;
+        ID3D11ShaderResourceView* pSrv = it->second.Get();
+        _pDevice->_deviceContext->CSSetShaderResources( slot, 1, &pSrv );
+    }
+
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
         if ( _pDevice->_deviceContext != nullptr )

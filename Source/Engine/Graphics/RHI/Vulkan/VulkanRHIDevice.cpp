@@ -1646,7 +1646,9 @@ namespace sw
         //   2,3,5: Explicit single-texture SRV slots (DX11-style emulation, 텍스처 슬롯 0/1/3)
         //   4: 정적 샘플러(g_SwSamplerLinearWrap, immutable) — 텍스처 슬롯 2 는 이 set 을 쓰지 않는다
         //      (bindShaderResource 는 native bindless 에서 아예 호출 안 됨 — Vulkan 은 항상 native).
-        //   6..9: Compute UAV / SSBO / GPUScene 인스턴스 구조버퍼 슬롯 0..3
+        //   6..9: 컴퓨트 읽기전용 구조버퍼(t0..t3, bindComputeShaderResource) / GPUScene 인스턴스 구조버퍼
+        //   7..9: 위 4개 set 중 뒤쪽 3개는 컴퓨트 UAV(u0..u2, bindComputeUAV) 와도 공유한다 —
+        //         한 디스패치에서 t 슬롯과 u 슬롯을 동시에 쓸 때는 서로 다른 인덱스를 사용해야 한다.
         VkDescriptorSetLayout arrSetLayout[10] = {
             _descriptorSetLayout,
             _bindlessTextureArrayLayout,

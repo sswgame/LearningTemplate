@@ -514,6 +514,32 @@ namespace sw
 
     void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
+        // u<slot> (RW 구조버퍼) 전용 — set 7..9. t<slot> (읽기전용) 은 bindComputeShaderResource(set 6..9) 를 쓴다.
+        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 3 )
+            return;
+
+        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pDevice->_bRenderPassActive = SW_FALSE;
+        }
+
+        VkDescriptorSet descSet = VK_NULL_HANDLE;
+        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) && _pDevice->_listRegisteredUAV[index] != VK_NULL_HANDLE )
+            descSet = _pDevice->_listRegisteredUAV[index];
+        else if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) && _pDevice->_listRegisteredDescriptorSet[index] != VK_NULL_HANDLE )
+            descSet = _pDevice->_listRegisteredDescriptorSet[index];
+
+        if ( descSet != VK_NULL_HANDLE )
+        {
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 7 + slot, 1, &descSet, 0, nullptr );
+        }
+    }
+
+    void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    {
+        // t<slot> (읽기전용 구조버퍼) 전용 — set 6..9.
         VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
             return;
@@ -534,6 +560,29 @@ namespace sw
         {
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 6 + slot, 1, &descSet, 0, nullptr );
         }
+    }
+
+    void VulkanRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // set 0 binding 0 = b<slot>. gpucull 등 컴퓨트 셰이더의 cbuffer(register(b0)) 전용.
+        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot != 0 )
+            return;
+        if ( index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) )
+            return;
+
+        const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        if ( descSet == VK_NULL_HANDLE )
+            return;
+
+        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pDevice->_bRenderPassActive = SW_FALSE;
+        }
+
+        vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
     }
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )

@@ -43,7 +43,7 @@ SW_DECLARE_CBUFFER( CullParams, 0 )
 	uint2  g_Pad;
 };
 SW_DECLARE_STRUCTURED_BUFFER( GpuInstance, g_Instances, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 1 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 );
 #else
 SW_DECLARE_CBUFFER( CullParams, 0 )
 {

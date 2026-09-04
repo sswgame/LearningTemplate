@@ -89,6 +89,21 @@ namespace sw
          */
         virtual void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) = 0;
 
+        /**
+         * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
+         * @details gpucull 등 컴퓨트 패스 전용 — bindConstantBuffer 는 그래픽스 스테이지만 대상으로 합니다.
+         * @param cb   bindless 디스크립터 인덱스.
+         * @param slot HLSL `register(bN)` 의 N.
+         */
+        virtual void bindComputeConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) = 0;
+
+        /**
+         * @brief 컴퓨트 스테이지에 읽기전용 구조적 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
+         * @param index bindless 디스크립터 인덱스.
+         * @param slot  HLSL `register(tN)` 의 N.
+         */
+        virtual void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
+
         // ------------------------------------------------------------------------------
         // 5) 배리어 · blit — 샘플링 가능 전환, 컬러 복사 (dst==0은 스왑체인)
         // ------------------------------------------------------------------------------

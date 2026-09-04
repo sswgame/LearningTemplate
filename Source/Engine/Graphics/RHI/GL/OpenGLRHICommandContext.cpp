@@ -352,6 +352,28 @@ namespace sw
         }
     }
 
+    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다 (gpucull 의 CullParams 등).
+        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        if ( ubo != 0 )
+            glBindBufferBase( GL_UNIFORM_BUFFER, 16 + slot, ubo );
+    }
+
+    void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    {
+        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 #에 매핑된다 (gpucull 의 g_Instances 등).
+        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        if ( ssbo != 0 )
+            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
+    }
+
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
         (void)slot;

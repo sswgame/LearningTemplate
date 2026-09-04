@@ -82,6 +82,10 @@ namespace sw
         void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) override;
         /** @brief 구조적 SRV 버퍼를 레지스터 슬롯(tN)에 바인드하는 기록입니다. */
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
+        /** @brief 컴퓨트 스테이지 상수 버퍼를 레지스터 슬롯(bN)에 바인드하는 기록입니다. */
+        void bindComputeConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) override;
+        /** @brief 컴퓨트 스테이지 구조적 SRV 버퍼를 레지스터 슬롯(tN)에 바인드하는 기록입니다. */
+        void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
 
         // ------------------------------------------------------------------------------
         // 5) 기록 — 배리어 · blit · 인디렉트 · 마커
@@ -150,6 +154,8 @@ namespace sw
             BindShaderResource,
             BindConstantBuffer,
             BindStructuredBuffer,
+            BindComputeConstantBuffer,
+            BindComputeShaderResource,
             PrepareTextureForShaderRead,
             BlitTexture,
             DrawIndirect,

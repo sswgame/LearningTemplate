@@ -328,6 +328,45 @@ namespace sw
         _pDevice->_commandList->SetComputeRootDescriptorTable( 1 + slot, rec._gpuHandle );
     }
 
+    void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 루트파라미터 0 은 b0/space0 CBV 테이블 하나만 담당한다 (gpucull 의 CullParams).
+        if ( _pDevice->_commandList == nullptr || slot != 0 )
+            return;
+        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
+        if ( rec._resource == nullptr )
+            return;
+
+        bindDescriptorHeaps();
+        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
+        if ( pRootSig == nullptr )
+            pRootSig = _pDevice->_rootSignature.Get();
+        if ( pRootSig != nullptr )
+            _pDevice->_commandList->SetComputeRootSignature( pRootSig );
+        _pDevice->_commandList->SetComputeRootDescriptorTable( 0, rec._gpuHandle );
+    }
+
+    void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+    {
+        if ( _pDevice->_commandList == nullptr || slot >= 4 )
+            return;
+        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+            return;
+        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
+        if ( rec._resource == nullptr )
+            return;
+
+        bindDescriptorHeaps();
+        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
+        if ( pRootSig == nullptr )
+            pRootSig = _pDevice->_rootSignature.Get();
+        if ( pRootSig != nullptr )
+            _pDevice->_commandList->SetComputeRootSignature( pRootSig );
+        _pDevice->_commandList->SetComputeRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, rec._gpuHandle );
+    }
+
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
         (void)slot;

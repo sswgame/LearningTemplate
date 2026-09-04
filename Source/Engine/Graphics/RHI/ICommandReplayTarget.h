@@ -91,6 +91,18 @@ namespace sw
             (void)index;
             (void)slot;
         }
+        /** @brief 리플레이: 컴퓨트 스테이지에 상수 버퍼를 레지스터 슬롯(bN)에 바인딩합니다. */
+        virtual void bindComputeConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+        {
+            (void)cb;
+            (void)slot;
+        }
+        /** @brief 리플레이: 컴퓨트 스테이지에 구조적 SRV 버퍼를 레지스터 슬롯(tN)에 바인딩합니다. */
+        virtual void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
+        {
+            (void)index;
+            (void)slot;
+        }
 
         // ------------------------------------------------------------------------------
         // 4) Replay — 배리어 · blit · 인디렉트

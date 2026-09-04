@@ -13,11 +13,12 @@ namespace sw
 {
     class IRHIDevice;
 
-    inline constexpr uint32 kRHIModuleAbiVersion = 1;
+    inline constexpr uint32 kRHIModuleAbiVersion = 2;
     /** @brief 불투명 표면 지문. CL/디바이스 ABI가 바뀌면 문자열을 바꿉니다.
      *         v3: IRHICommandList/ICommandReplayTarget 에 bindConstantBuffer/bindStructuredBuffer 추가.
-     *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v4-2026-09";
+     *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가.
+     *         v5: bindComputeConstantBuffer/bindComputeShaderResource 추가 (gpucull 컴퓨트 바인딩 수정). */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v5-2026-09";
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();

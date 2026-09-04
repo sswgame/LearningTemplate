@@ -222,7 +222,7 @@ namespace sw
         if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
         {
             const RHIPipelineStateHandle cullPso = getEnginePso( "GpuCull" );
-            if ( cullPso != 0 && _gpuCullCb != 0 &&
+            if ( cullPso != 0 && _gpuCullCb != 0 && _gpuCullCbIndex != kInvalidDescriptorIndex &&
                  _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex &&
                  _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex )
             {
@@ -238,9 +238,10 @@ namespace sw
                 _pDevice->getResource()->updateConstantBuffer( _gpuCullCb, &cullParams, sizeof( cullParams ) );
 
                 _pCmd->setComputePipelineState( cullPso );
-                _pCmd->bindComputeUAV( _gpuScene.getInstanceSrv(), 0 );
-                _pCmd->bindComputeUAV( _gpuScene.getIndirectArgsUav(), 1 );
-                _pCmd->setComputeRootConstants( 0, sizeof( cullParams ) / 4, &cullParams );
+                // CullParams(b0) / g_Instances(t0, 읽기전용) / g_IndirectArgs(u0, RW) — gpucull.hlsl 레지스터와 1:1 대응.
+                _pCmd->bindComputeConstantBuffer( _gpuCullCbIndex, 0 );
+                _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
+                _pCmd->bindComputeUAV( _gpuScene.getIndirectArgsUav(), 0 );
                 const uint32 groups = ( cullParams._batchCount + 63u ) / 64u;
                 if ( groups > 0 )
                     _pCmd->dispatchCompute( groups, 1, 1 );
