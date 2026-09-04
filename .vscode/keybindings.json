@@ -1,0 +1,164 @@
+[
+    // =============================================================
+    // 1. VISUAL ASSIST (VAX) 특화 단축키 (최우선 오버라이드)
+    // =============================================================
+    // Alt + O : 헤더(.h) <-> 소스(.cpp) 즉시 전환 (clangd 전용 명령)
+    {
+        "key": "alt+o",
+        "command": "clangd.switchheadersource",
+        "when": "editorTextFocus && editorLangId == 'cpp'"
+    },
+    // Shift + Alt + O : 프로젝트 내 파일 빠른 검색 (Open File in Solution)
+    {
+        "key": "shift+alt+o",
+        "command": "workbench.action.quickOpen"
+    },
+    // Shift + Alt + S : 프로젝트 내 모든 심볼 검색 (Find Symbol in Solution)
+    {
+        "key": "shift+alt+s",
+        "command": "workbench.action.showAllSymbols"
+    },
+    // Alt + M : 현재 파일 내 멤버/함수 목록 (Find Member in Document)
+    {
+        "key": "alt+m",
+        "command": "workbench.action.gotoSymbol"
+    },
+    // Shift + Alt + L : 탐색기에서 현재 열린 파일 위치로 이동
+    {
+        "key": "shift+alt+l",
+        "command": "workbench.files.action.showActiveFileInExplorer"
+    },
+    // Alt + G : 정의(Definition)로 바로 이동
+    {
+        "key": "alt+g",
+        "command": "editor.action.revealDefinition",
+        "when": "editorHasDefinitionProvider && editorTextFocus"
+    },
+    // Shift + Alt + G : 구현부(Implementation) 이동
+    {
+        "key": "shift+alt+g",
+        "command": "editor.action.goToImplementation",
+        "when": "editorHasImplementationProvider && editorTextFocus"
+    },
+    // Shift + Alt + F : 참조/사용처 검색 (Find References)
+    {
+        "key": "shift+alt+f",
+        "command": "editor.action.referenceSearch.trigger",
+        "when": "editorHasReferenceProvider && editorTextFocus"
+    },
+    // Shift + Alt + R : 심볼 이름 한 번에 변경 (Rename - clangd 기반)
+    {
+        "key": "shift+alt+r",
+        "command": "editor.action.rename",
+        "when": "editorHasRenameProvider && editorTextFocus && !editorReadonly"
+    },
+    // Shift + Alt + Q : Quick Action / 스마트 리팩터링 메뉴 (VAX Quick Menu)
+    {
+        "key": "shift+alt+q",
+        "command": "editor.action.quickFix",
+        "when": "editorTextFocus"
+    },
+    // Alt + Left / Alt + Right : 이전/다음 커서 위치 히스토리 이동
+    {
+        "key": "alt+left",
+        "command": "workbench.action.navigateBack"
+    },
+    {
+        "key": "alt+right",
+        "command": "workbench.action.navigateForward"
+    },
+    // =============================================================
+    // 2. VISUAL STUDIO 2022 표준 탐색 & 코드 편집
+    // =============================================================
+    // Ctrl + K, Ctrl + O : VS 2022 표준 헤더/소스 전환 (보조 단축키)
+    {
+        "key": "ctrl+k ctrl+o",
+        "command": "clangd.switchheadersource",
+        "when": "editorTextFocus && editorLangId == 'cpp'"
+    },
+    // F12 : 정의로 이동 / Ctrl + F12 : 구현으로 이동 / Shift + F12 : 모든 참조 찾기
+    {
+        "key": "f12",
+        "command": "editor.action.revealDefinition",
+        "when": "editorHasDefinitionProvider && editorTextFocus"
+    },
+    {
+        "key": "ctrl+f12",
+        "command": "editor.action.goToImplementation",
+        "when": "editorHasImplementationProvider && editorTextFocus"
+    },
+    {
+        "key": "shift+f12",
+        "command": "editor.action.goToReferences",
+        "when": "editorHasReferenceProvider && editorTextFocus"
+    },
+    // Ctrl + K, Ctrl + I : Quick Info / 툴팁(Hover) 표시
+    {
+        "key": "ctrl+k ctrl+i",
+        "command": "editor.action.showHover",
+        "when": "editorTextFocus"
+    },
+    // Ctrl + K, Ctrl + C / Ctrl + K, Ctrl + U : 주석 처리 / 주석 해제
+    {
+        "key": "ctrl+k ctrl+c",
+        "command": "editor.action.commentLine",
+        "when": "editorTextFocus && !editorReadonly"
+    },
+    {
+        "key": "ctrl+k ctrl+u",
+        "command": "editor.action.uncommentLine",
+        "when": "editorTextFocus && !editorReadonly"
+    },
+    // =============================================================
+    // 3. 코드 아웃라인 & 접기 (Outlining: Ctrl + M 시리즈)
+    // =============================================================
+    // Ctrl + M, Ctrl + M : 현재 영역 접기/펼치기 토글
+    {
+        "key": "ctrl+m ctrl+m",
+        "command": "editor.toggleFold",
+        "when": "editorTextFocus"
+    },
+    // Ctrl + M, Ctrl + O : 전체 영역 접기
+    {
+        "key": "ctrl+m ctrl+o",
+        "command": "editor.foldAll",
+        "when": "editorTextFocus"
+    },
+    // Ctrl + M, Ctrl + L : 전체 영역 펼치기
+    {
+        "key": "ctrl+m ctrl+l",
+        "command": "editor.unfoldAll",
+        "when": "editorTextFocus"
+    },
+    // =============================================================
+    // 4. 빌드, 디버깅 & 클립보드 링
+    // =============================================================
+    // Ctrl + Shift + B : 빌드 실행
+    {
+        "key": "ctrl+shift+b",
+        "command": "workbench.action.tasks.build",
+        "when": "taskCommandsRegistered"
+    },
+    // F5 : 디버그 시작 / Ctrl + F5 : 디버그 없이 시작 / F9 : 브레이크포인트 토글
+    {
+        "key": "f5",
+        "command": "workbench.action.debug.start",
+        "when": "debuggersAvailable && debugState == 'inactive'"
+    },
+    {
+        "key": "ctrl+f5",
+        "command": "workbench.action.debug.run",
+        "when": "debuggersAvailable && debugState == 'inactive'"
+    },
+    {
+        "key": "f9",
+        "command": "editor.debug.action.toggleBreakpoint",
+        "when": "editorTextFocus"
+    },
+    // Ctrl + Shift + V : VS 스타일 클립보드 이력(Clipboard Ring) 열기
+    {
+        "key": "ctrl+shift+v",
+        "command": "editor.action.clipboardHistoryAction",
+        "when": "editorTextFocus && !editorReadonly"
+    }
+]

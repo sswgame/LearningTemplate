@@ -21,6 +21,7 @@ generated/
 !.vscode/tasks.json
 !.vscode/settings.json
 !.vscode/extensions.json
+!.vscode/keybindings.json
 launch.json
 .cache
 __pycache__/
