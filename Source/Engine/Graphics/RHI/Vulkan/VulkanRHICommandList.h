@@ -15,34 +15,28 @@ namespace sw
     /**
      * @class VulkanRHICommandList
      * @brief `RHIDeferredCommandList`(CPU `Cmd` 벡터에 기록 후 나중에 replay)를 대체하는 IRHICommandList.
-     * @details 이 리스트는 **자기 primary `VkCommandBuffer` 와 전용 커맨드 풀**을 디바이스 풀에서
-     *          빌려 소유하고, 자기 `VulkanRecordingState` 를 갖는다. 그래서 여러 리스트가 서로 다른
-     *          스레드에서 동시에 기록해도 버퍼도 바인딩 캐시도 겹치지 않는다.
-     *          `vkCmdBeginRenderPass` 는 primary 에서만 가능하므로(VUID-vkCmdBeginRenderPass-bufferlevel)
-     *          secondary + `vkCmdExecuteCommands` 로는 패스마다 자기 렌더패스를 열 수 없다. 그래서
-     *          `VulkanRHIDevice::executeCommandList` 는 프레임 커맨드 버퍼를 세그먼트로 끊고 이 리스트의
-     *          버퍼를 그 사이에 끼워, 프레임당 단일 `vkQueueSubmit` 에 순서대로 함께 제출한다.
+     * @details `VulkanRHICommandContext`는 상태 없이 매 호출마다 `_pDevice->currentCommandBuffer()`로
+     *          "지금 활성인 버퍼"(스왑체인 프레임 버퍼 또는 오프스크린 버퍼)를 동적으로 찾아간다 —
+     *          DX11/DX12와 달리 이 리스트는 자신만의 네이티브 `VkCommandBuffer`를 새로 소유하지 않고,
+     *          그 컨텍스트를 그대로 감싸 호출을 즉시 전달한다. 버퍼의 open/close(`vkBeginCommandBuffer`/
+     *          `vkEndCommandBuffer`)와 제출(`vkQueueSubmit`)은 지금처럼 `VulkanRHIDevice::beginFrame`/
+     *          `endFrame`과 `beginOffscreenPass`/`endOffscreenPass`가 그대로 소유한다 — 이 클래스가
+     *          없애는 건 순수하게 "CPU 쪽 Cmd 구조체 벡터에 쌓았다가 나중에 switch문으로 재생하는"
+     *          중간 계층뿐이다.
      */
     class VulkanRHICommandList : public IRHICommandList
     {
     public:
-        /** @brief 디바이스 풀에서 secondary 버퍼 + 전용 커맨드 풀을 빌립니다. */
-        explicit VulkanRHICommandList( VulkanRHIDevice* pDevice );
-        /** @brief 빌린 엔트리를 GPU 펜스 통과 후 풀로 돌려보냅니다. */
-        ~VulkanRHICommandList() override;
+        explicit VulkanRHICommandList( VulkanRHIDevice* pDevice )
+            : _context{ pDevice } {}
+        ~VulkanRHICommandList() override = default;
 
         VulkanRHICommandList( const VulkanRHICommandList& )            = delete;
         VulkanRHICommandList& operator=( const VulkanRHICommandList& ) = delete;
 
-        /** @brief 자기 커맨드 풀을 리셋하고 secondary 버퍼 기록을 시작합니다. */
-        void beginCommandList() override;
-        /** @brief secondary 버퍼 기록을 끝냅니다. */
-        void endCommandList() override;
-
-        /** @brief 이 리스트가 유효한 버퍼를 확보했으면 true. */
-        bool isValid() const { return _entry._buffer != nullptr; }
-        /** @brief `VulkanRHIDevice::executeCommandList` 가 vkCmdExecuteCommands 에 쓰는 네이티브 버퍼. */
-        VkCommandBuffer getNativeCommandBuffer() const { return _entry._buffer; }
+        /** @brief 버퍼 open/close는 beginFrame/endFrame/beginOffscreenPass가 소유하므로 아무 것도 하지 않습니다. */
+        void beginCommandList() override {}
+        void endCommandList() override {}
 
         void setViewport( const RHIViewport& viewport ) override { _context.setViewport( viewport ); }
         void setPipelineState( RHIPipelineStateHandle pso ) override { _context.setPipelineState( pso ); }
@@ -108,9 +102,6 @@ namespace sw
         void endEventMarker() override { _context.endEventMarker(); }
 
     private:
-        VulkanRHIDevice*        _pDevice;
-        VulkanCommandListEntry  _entry; ///< 이 리스트 전용 primary 버퍼 + 커맨드 풀
-        VulkanRecordingState    _state; ///< 이 리스트 전용 기록 상태
         VulkanRHICommandContext _context;
     };
 } // namespace sw

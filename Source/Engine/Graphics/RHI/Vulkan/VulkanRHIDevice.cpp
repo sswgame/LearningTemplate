@@ -135,7 +135,6 @@ namespace sw
         , _listSwapChainImageView{}
         , _listSwapChainFramebuffer{}
         , _renderPass{ nullptr }
-        , _renderPassLoad{ VK_NULL_HANDLE }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _listCommandBuffer{}
@@ -387,14 +386,6 @@ namespace sw
 
         if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPass ) != VK_SUCCESS )
             return false;
-
-        // 같은 스왑체인 이미지를 한 프레임에 여러 번 열어야 하므로(패스마다 렌더패스를 닫았다 여는
-        // 구조 + 병렬 기록을 위해 프레임 내내 열어두지 않는 구조) LOAD 변형을 하나 더 만든다.
-        // 프레임의 첫 오픈만 CLEAR 를 쓰고, 이후 재오픈은 이미 그린 내용을 보존해야 한다.
-        colorAttachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPassLoad ) != VK_SUCCESS )
-            return false;
         return true;
     }
 
@@ -407,26 +398,10 @@ namespace sw
             _immContext.reset();
             _deferredContext.reset();
 
-            {
-                std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
-                for ( VulkanCommandListEntry& entry : _listFreeCmdListEntry )
-                {
-                    if ( entry._pool != VK_NULL_HANDLE )
-                        vkDestroyCommandPool( _device, entry._pool, nullptr );
-                }
-                _listFreeCmdListEntry.clear();
-            }
-
             if ( _commandPool )
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );
                 _commandPool = VK_NULL_HANDLE;
-            }
-
-            if ( _renderPassLoad != VK_NULL_HANDLE )
-            {
-                vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
-                _renderPassLoad = VK_NULL_HANDLE;
             }
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -664,9 +639,6 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
-        _currentFrameSegment = _listCommandBuffer[_currentFrame];
-        _listFrameSubmit.clear();
-        _listFrameSubmit.push_back( _currentFrameSegment );
 
         // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
         _recordingState._lastBoundGraphicsSet0    = nullptr;
@@ -694,41 +666,25 @@ namespace sw
         scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
         vkCmdSetScissor( _listCommandBuffer[_currentFrame], 0, 1, &scissor );
 
-        // 스왑체인 렌더패스를 여기서 바로 열지 않는다. 프레임 내내 열어두면 커맨드 버퍼가 계속
-        // 렌더패스 안에 있게 되어 패스별 secondary 버퍼를 vkCmdExecuteCommands 로 끼울 수 없다
-        // (렌더패스 안에서는 inheritance 가 강제됨). 실제로 스왑체인에 그리는 시점에
-        // ensureSwapchainRenderPass() 가 연다 — 첫 오픈은 CLEAR, 이후 재오픈은 LOAD 변형.
-        _swapchainClearColor               = clearColor;
-        _recordingState._bSwapchainCleared = SW_FALSE;
-    }
+        if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffer.empty() == false && _imageIndex < _listSwapChainFramebuffer.size() )
+        {
+            VkRenderPassBeginInfo rpBeginInfo{};
+            rpBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            rpBeginInfo.renderPass        = _renderPass;
+            rpBeginInfo.framebuffer       = _listSwapChainFramebuffer[_imageIndex];
+            rpBeginInfo.renderArea.offset = { 0, 0 };
+            rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
 
-    void VulkanRHIDevice::ensureSwapchainRenderPass( VkCommandBuffer cmd, VulkanRecordingState& state )
-    {
-        if ( cmd == VK_NULL_HANDLE || state._bRenderPassActive == SW_TRUE )
-            return;
-        if ( _renderPass == VK_NULL_HANDLE || _listSwapChainFramebuffer.empty() || _imageIndex >= _listSwapChainFramebuffer.size() )
-            return;
+            VkClearValue clearVal{};
+            clearVal.color = {
+                { clearColor._x, clearColor._y, clearColor._z, clearColor._w }
+            };
+            rpBeginInfo.clearValueCount = 1;
+            rpBeginInfo.pClearValues    = &clearVal;
 
-        const bool bFirstOpen = state._bSwapchainCleared == SW_FALSE;
-
-        VkRenderPassBeginInfo rpBeginInfo{};
-        rpBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        rpBeginInfo.renderPass        = bFirstOpen ? _renderPass : _renderPassLoad;
-        rpBeginInfo.framebuffer       = _listSwapChainFramebuffer[_imageIndex];
-        rpBeginInfo.renderArea.offset = { 0, 0 };
-        rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
-
-        VkClearValue clearVal{};
-        clearVal.color = {
-            { _swapchainClearColor._x, _swapchainClearColor._y, _swapchainClearColor._z, _swapchainClearColor._w }
-        };
-        // LOAD 변형은 clear 값을 쓰지 않는다.
-        rpBeginInfo.clearValueCount = bFirstOpen ? 1u : 0u;
-        rpBeginInfo.pClearValues    = bFirstOpen ? &clearVal : nullptr;
-
-        vkCmdBeginRenderPass( cmd, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-        state._bRenderPassActive = SW_TRUE;
-        state._bSwapchainCleared = SW_TRUE;
+            vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+            _recordingState._bRenderPassActive = SW_TRUE;
+        }
     }
 
     void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
@@ -737,17 +693,12 @@ namespace sw
         if ( _bFrameStarted == SW_FALSE )
             return;
 
-        // 이번 프레임에 스왑체인에 아무도 안 그렸으면 렌더패스가 한 번도 안 열려 clear 도 안 된다 —
-        // 예전(beginFrame 이 무조건 열던 구조)과 화면 결과를 같게 유지하려고 여기서 열었다 닫는다.
-        if ( _recordingState._bSwapchainCleared == SW_FALSE )
-            ensureSwapchainRenderPass( _currentFrameSegment, _recordingState );
-
         if ( _recordingState._bRenderPassActive == SW_TRUE )
         {
-            vkCmdEndRenderPass( _currentFrameSegment );
+            vkCmdEndRenderPass( _listCommandBuffer[_currentFrame] );
             _recordingState._bRenderPassActive = SW_FALSE;
         }
-        vkEndCommandBuffer( _currentFrameSegment );
+        vkEndCommandBuffer( _listCommandBuffer[_currentFrame] );
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -758,14 +709,8 @@ namespace sw
         submitInfo.pWaitSemaphores              = arrWaitSemaphore;
         submitInfo.pWaitDstStageMask            = arrWaitStage;
 
-        submitInfo.commandBufferCount = static_cast<uint32>( _listFrameSubmit.size() );
-        submitInfo.pCommandBuffers    = _listFrameSubmit.data();
-        // 프레임 도중 빌린 세그먼트들은 GPU 가 끝낸 뒤에 풀로 돌려보낸다.
-        for ( const VulkanCommandListEntry& segment : _listFrameSegmentEntry )
-        {
-            recycleCommandListEntryDeferred( segment );
-        }
-        _listFrameSegmentEntry.clear();
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &_listCommandBuffer[_currentFrame];
 
         VkSemaphore arrSignalSemaphore[] = { _listRenderFinishedSemaphore[_imageIndex] };
         submitInfo.signalSemaphoreCount  = 1;
@@ -838,60 +783,8 @@ namespace sw
         if ( _recordingState._bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
             return _offscreenCommandBuffer;
         if ( _bFrameStarted == SW_TRUE && _listCommandBuffer.empty() == false )
-            return _currentFrameSegment;
+            return _listCommandBuffer[_currentFrame];
         return VK_NULL_HANDLE;
-    }
-
-    VulkanCommandListEntry VulkanRHIDevice::acquireCommandListEntry()
-    {
-        {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
-            if ( _listFreeCmdListEntry.empty() == false )
-            {
-                VulkanCommandListEntry entry = _listFreeCmdListEntry.back();
-                _listFreeCmdListEntry.pop_back();
-                return entry;
-            }
-        }
-
-        VulkanCommandListEntry entry;
-        if ( _device == VK_NULL_HANDLE )
-            return entry;
-
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-        poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
-        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &entry._pool ) != VK_SUCCESS )
-            return VulkanCommandListEntry{};
-
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = entry._pool;
-        // primary 다 — vkCmdBeginRenderPass 는 primary 에서만 호출할 수 있어서(VUID-...-bufferlevel)
-        // 패스마다 자기 렌더패스를 여는 이 구조에서는 secondary 를 쓸 수 없다.
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
-        if ( vkAllocateCommandBuffers( _device, &allocInfo, &entry._buffer ) != VK_SUCCESS )
-        {
-            vkDestroyCommandPool( _device, entry._pool, nullptr );
-            return VulkanCommandListEntry{};
-        }
-        return entry;
-    }
-
-    void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )
-    {
-        if ( entry._pool == VK_NULL_HANDLE || entry._buffer == VK_NULL_HANDLE )
-            return;
-
-        // 제출 직후 리스트가 사라져도 GPU 는 아직 이 버퍼를 읽고 있다 — 펜스 통과 후에야 풀로 돌린다.
-        auto recycleCb = [this, entry]()
-        {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
-            _listFreeCmdListEntry.push_back( entry );
-        };
-        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter );
     }
 
     static VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )
@@ -910,59 +803,15 @@ namespace sw
 
     unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList( RHICommandListMode mode )
     {
-        (void)mode; // Vulkan은 소프트웨어 Cmd-vector 없이 자기 secondary 버퍼에 직접 기록한다.
-        unique_ptr<VulkanRHICommandList> list = make_unique<VulkanRHICommandList>( this );
-        if ( list->isValid() == false )
-            return nullptr;
-        return list;
+        (void)mode; // Vulkan은 소프트웨어 Cmd-vector 없이 즉시 VulkanRHICommandContext를 호출한다.
+        return make_unique<VulkanRHICommandList>( this );
     }
 
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        // 리스트가 자기 secondary 버퍼에 기록해뒀으므로, 지금 이 지점에서 프레임 primary 버퍼에
-        // 끼워 넣는다 — 호출 순서가 곧 실행 순서가 되어 정렬이 그대로 보존되고, 프레임당 단일
-        // vkQueueSubmit 과 세마포어 체인도 손대지 않는다.
-        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
-        if ( pList == nullptr || pList->isValid() == false )
-            return;
-
-        if ( _currentFrameSegment == VK_NULL_HANDLE )
-            return;
-
-        // 렌더패스는 커맨드 버퍼를 넘어갈 수 없으므로 세그먼트를 끊기 전에 닫는다.
-        if ( _recordingState._bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( _currentFrameSegment );
-            _recordingState._bRenderPassActive = SW_FALSE;
-        }
-        vkEndCommandBuffer( _currentFrameSegment );
-
-        // 이 패스의 버퍼를 제출 순서상 지금 위치에 끼운다.
-        _listFrameSubmit.push_back( pList->getNativeCommandBuffer() );
-
-        // 이후 기록을 받을 새 세그먼트를 연다.
-        VulkanCommandListEntry segment = acquireCommandListEntry();
-        if ( segment._buffer == VK_NULL_HANDLE )
-        {
-            _currentFrameSegment = VK_NULL_HANDLE;
-            return;
-        }
-        vkResetCommandPool( _device, segment._pool, 0 );
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer( segment._buffer, &beginInfo );
-
-        _listFrameSegmentEntry.push_back( segment );
-        _currentFrameSegment = segment._buffer;
-        _listFrameSubmit.push_back( _currentFrameSegment );
-
-        // 새 버퍼에는 아무 바인딩도 안 걸려 있다 — 캐시를 무효화한다.
-        // 단, 스왑체인 clear 여부는 프레임 단위 사실이라 유지한다.
-        const uint8 bCleared               = _recordingState._bSwapchainCleared;
-        _recordingState                    = VulkanRecordingState{};
-        _recordingState._bSwapchainCleared = bCleared;
+        // 이 리스트는 자신만의 네이티브 버퍼를 갖지 않고 currentCommandBuffer()에 바로 기록했으므로
+        // 여기서 제출할 것이 없다 — 실제 제출은 지금처럼 endFrame()/endOffscreenPass()가 담당한다.
+        (void)pCmdList;
     }
 
     bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const
