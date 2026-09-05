@@ -40,15 +40,12 @@ function(sw_configurePch targetName headerPath)
 endfunction()
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
 
-# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 테스트 타겟은 자기
-# 런타임 DLL(DXC, Vulkan 검증 레이어)까지 같은 Bin 으로 복사하므로, 켜져 있으면 아래
-# 구성별 배포 가드를 우회해 버린다. Shipping 에서는 기본값을 끈다(명시 지정은 존중).
-if(SW_SHIPPING_BUILD)
-	set(swEnableTestingDefault OFF)
-else()
-	set(swEnableTestingDefault ON)
-endif()
-option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ${swEnableTestingDefault})
+# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 한때 Shipping 에서 테스트를
+# 통째로 껐는데, 그러면 CI 가 Shipping 을 CoreTest 로 스모크하는 경로(`--target App CoreTest`)가
+# 사라져 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다. 테스트는 어디서든 빌드하고,
+# 대신 Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
+# 테스트가 끌고 오는 개발용 DLL 은 각 호출부의 SW_SHIPPING_BUILD 가드가 이미 막고 있다.
+option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)
 option(SW_GLOB_CONFIGURE_DEPENDS "소스 파일 추가/삭제를 빌드 시스템이 자동 감지하도록 CONFIGURE_DEPENDS 활성화 (Ninja 권장)" ON)
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)

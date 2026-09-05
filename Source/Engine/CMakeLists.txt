@@ -44,6 +44,9 @@ foreach(exPattern IN LISTS coreExclude)
     list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
 
+# ResourcePackReader 가 uncompress 를 직접 부른다.
+find_package(ZLIB REQUIRED)
+
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -54,7 +57,12 @@ target_link_libraries(Engine
         sw_global_options
         # 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
         # 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
-        zlib
+        #
+        # raw 이름 `zlib` 을 넘기면 안 된다. 그건 링커에 그대로 `-lzlib` 로 전달되는데,
+        # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
+        # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
+        # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
+        ZLIB::ZLIB
 )
 if(sw_flag_libraries)
     target_link_libraries(Engine PRIVATE ${sw_flag_libraries})
