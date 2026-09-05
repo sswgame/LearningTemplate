@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <glad/glad.h>
@@ -608,8 +609,8 @@ namespace sw
         {
             if ( _pDevice->_listRegisteredTexture[textureIndex]._texture != texture )
                 continue;
-            _pDevice->_listRegisteredTexture[textureIndex]._texture = 0;
-            _pDevice->_listTextureFree.push_back( static_cast<uint32>( textureIndex ) );
+            releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                  static_cast<uint32>( textureIndex ), OpenGLRHIDevice::BindlessTextureRecord{} );
         }
 
         auto releaseCb = [fboName, texName]()
@@ -637,20 +638,8 @@ namespace sw
         if ( glName == 0 )
             return kInvalidDescriptorIndex;
 
-        RHIDescriptorIndex index;
-        if ( _pDevice->_listTextureFree.empty() == false )
-        {
-            index = _pDevice->_listTextureFree.back();
-            _pDevice->_listTextureFree.pop_back();
-        }
-        else
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
-
-        if ( index >= _pDevice->_listRegisteredTexture.size() )
-            _pDevice->_listRegisteredTexture.resize( index + 1 );
-
-        _pDevice->_listRegisteredTexture[index]._texture = texture;
-        return index;
+        return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                      OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
     RHIDescriptorIndex OpenGLRHIResource::registerBindlessResource( RHIBufferHandle buffer )
@@ -661,28 +650,14 @@ namespace sw
         GLuint ubo = _pDevice->resolveGlBuffer( buffer );
         if ( ubo == 0 )
             return kInvalidDescriptorIndex;
-        RHIDescriptorIndex index;
-        if ( _pDevice->_listBindlessFree.empty() == false )
-        {
-            index = _pDevice->_listBindlessFree.back();
-            _pDevice->_listBindlessFree.pop_back();
-        }
-        else
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
-
-        if ( index >= _pDevice->_listRegisteredBindless.size() )
-            _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]._buffer = buffer;
-        return index;
+        return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree,
+                                      OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
     void OpenGLRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredBindless.size() )
-        {
-            _pDevice->_listRegisteredBindless[index]._buffer = 0;
-            _pDevice->_listBindlessFree.push_back( index );
-        }
+        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index,
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 
     RHIDescriptorIndex OpenGLRHIResource::registerBindlessUAV( RHIBufferHandle buffer )
@@ -693,27 +668,13 @@ namespace sw
         GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo == 0 )
             return kInvalidDescriptorIndex;
-        RHIDescriptorIndex index;
-        if ( _pDevice->_listUavFree.empty() == false )
-        {
-            index = _pDevice->_listUavFree.back();
-            _pDevice->_listUavFree.pop_back();
-        }
-        else
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-
-        if ( index >= _pDevice->_listRegisteredUAV.size() )
-            _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]._buffer = buffer;
-        return index;
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree,
+                                      OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
     void OpenGLRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredUAV.size() )
-        {
-            _pDevice->_listRegisteredUAV[index]._buffer = 0;
-            _pDevice->_listUavFree.push_back( index );
-        }
+        releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 } // namespace sw

@@ -60,8 +60,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 컴퓨트 — PSO, 디스패치, 루트 상수, UAV
         // ------------------------------------------------------------------------------
-        virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                                                              = 0;
-        virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )                                    = 0;
+        virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                           = 0;
+        virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
+        /**
+         * @brief 컴퓨트 루트/푸시 상수를 씁니다.
+         * @details 백엔드마다 실제 용량(dword)이 다르다 — DX11=64, OpenGL=64, Vulkan=32, DX12=16
+         *          (각 백엔드 헤더의 kMaxComputeRootConstantDwords 참고). 4개 백엔드 모두에서 안전한
+         *          상한은 constant::kMinComputeRootConstantDwords(=DX12 기준) — 그 이상을 쓰면 DX12에서
+         *          조용히 잘리거나 덮어써질 수 있다.
+         */
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                            = 0;
         virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                        = 0;

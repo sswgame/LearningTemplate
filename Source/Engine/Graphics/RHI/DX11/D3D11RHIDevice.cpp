@@ -55,7 +55,7 @@ namespace sw
         , _pHWnd{ nullptr }
         , _width{ 0 }
         , _height{ 0 }
-        , _releaseQueue{ 3 }
+        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _immContext{ nullptr }
         , _deferredContext{ nullptr }
         , _swapChainImpl{ nullptr }

@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
@@ -597,8 +598,8 @@ namespace sw
                                                            _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredDescriptorSet[bufferIndex] = VK_NULL_HANDLE;
             }
-            _pDevice->_listBindlessSourceBuffer[bufferIndex] = 0;
-            _pDevice->_listBindlessFree.push_back( static_cast<uint32>( bufferIndex ) );
+            releaseFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree,
+                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
         {
@@ -616,8 +617,8 @@ namespace sw
                                                            _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredUAV[bufferIndex] = VK_NULL_HANDLE;
             }
-            _pDevice->_listUavSourceBuffer[bufferIndex] = 0;
-            _pDevice->_listUavFree.push_back( static_cast<uint32>( bufferIndex ) );
+            releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree,
+                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
         VkBuffer       buf = owned._buffer;
@@ -760,21 +761,19 @@ namespace sw
                  _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
             {
                 _pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
-                _pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
-                _pDevice->_listTextureFree.push_back( index );
+                releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, VkDescriptorSet{ VK_NULL_HANDLE } );
             }
             else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )
             {
-                VkDevice         dev  = _pDevice->_device;
-                VkDescriptorPool pool = _pDevice->_descriptorPool;
-                VkDescriptorSet  set  = _pDevice->_listRegisteredTexture[index];
+                VkDevice              dev  = _pDevice->_device;
+                VkDescriptorPool      pool = _pDevice->_descriptorPool;
+                const VkDescriptorSet set  = releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                                                   index, VkDescriptorSet{ VK_NULL_HANDLE } );
                 _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
                 } ),
                                                            _pDevice->_frameFenceCounter + 1 );
-                _pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
-                _pDevice->_listTextureFree.push_back( index );
             }
             pSlot->_bindlessIndex = kInvalidDescriptorIndex;
         }
@@ -816,14 +815,7 @@ namespace sw
         if ( record._bindlessIndex != kInvalidDescriptorIndex )
             return record._bindlessIndex;
 
-        RHIDescriptorIndex descriptorIndex;
-        if ( _pDevice->_listTextureFree.empty() == false )
-        {
-            descriptorIndex = _pDevice->_listTextureFree.back();
-            _pDevice->_listTextureFree.pop_back();
-        }
-        else
-            descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
+        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree );
 
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
@@ -914,14 +906,7 @@ namespace sw
 
         vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
-        RHIDescriptorIndex descriptorIndex;
-        if ( _pDevice->_listBindlessFree.empty() == false )
-        {
-            descriptorIndex = _pDevice->_listBindlessFree.back();
-            _pDevice->_listBindlessFree.pop_back();
-        }
-        else
-            descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() );
+        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree );
 
         if ( descriptorIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
         {
@@ -935,24 +920,22 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredDescriptorSet.size() )
+        if ( index >= _pDevice->_listRegisteredDescriptorSet.size() )
+            return;
+        const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree,
+                                                          index, VkDescriptorSet{ VK_NULL_HANDLE } );
+        if ( set != VK_NULL_HANDLE )
         {
-            VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSet[index];
-            if ( set != VK_NULL_HANDLE )
+            VkDevice         dev  = _pDevice->_device;
+            VkDescriptorPool pool = _pDevice->_descriptorPool;
+            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
             {
-                VkDevice         dev  = _pDevice->_device;
-                VkDescriptorPool pool = _pDevice->_descriptorPool;
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
-                {
-                    vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
-                _pDevice->_listRegisteredDescriptorSet[index] = VK_NULL_HANDLE;
-            }
-            if ( index < _pDevice->_listBindlessSourceBuffer.size() )
-                _pDevice->_listBindlessSourceBuffer[index] = 0;
-            _pDevice->_listBindlessFree.push_back( index );
+                vkFreeDescriptorSets( dev, pool, 1, &set );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
         }
+        if ( index < _pDevice->_listBindlessSourceBuffer.size() )
+            _pDevice->_listBindlessSourceBuffer[index] = 0;
     }
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessUAV( RHIBufferHandle buffer )
@@ -990,14 +973,7 @@ namespace sw
 
         vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
-        RHIDescriptorIndex descriptorIndex;
-        if ( _pDevice->_listUavFree.empty() == false )
-        {
-            descriptorIndex = _pDevice->_listUavFree.back();
-            _pDevice->_listUavFree.pop_back();
-        }
-        else
-            descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree );
 
         if ( descriptorIndex >= _pDevice->_listRegisteredUAV.size() )
         {
@@ -1011,23 +987,21 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredUAV.size() )
+        if ( index >= _pDevice->_listRegisteredUAV.size() )
+            return;
+        const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree,
+                                                          index, VkDescriptorSet{ VK_NULL_HANDLE } );
+        if ( set != VK_NULL_HANDLE )
         {
-            VkDescriptorSet set = _pDevice->_listRegisteredUAV[index];
-            if ( set != VK_NULL_HANDLE )
+            VkDevice         dev  = _pDevice->_device;
+            VkDescriptorPool pool = _pDevice->_descriptorPool;
+            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
             {
-                VkDevice         dev  = _pDevice->_device;
-                VkDescriptorPool pool = _pDevice->_descriptorPool;
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
-                {
-                    vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
-                _pDevice->_listRegisteredUAV[index] = VK_NULL_HANDLE;
-            }
-            if ( index < _pDevice->_listUavSourceBuffer.size() )
-                _pDevice->_listUavSourceBuffer[index] = 0;
-            _pDevice->_listUavFree.push_back( index );
+                vkFreeDescriptorSets( dev, pool, 1, &set );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
         }
+        if ( index < _pDevice->_listUavSourceBuffer.size() )
+            _pDevice->_listUavSourceBuffer[index] = 0;
     }
 } // namespace sw

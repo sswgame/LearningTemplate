@@ -262,7 +262,13 @@ namespace sw
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
+        /** @brief 실제 bindless 텍스처 용량 — DX12(D3D12RHIDevice.h의 kBindlessTextureCount)와 값이
+         *         다르다. 콘텐츠는 더 작은 쪽(DX12)을 기준으로 삼을 것 — RHITypes.h의
+         *         constant::kMinComputeRootConstantDwords 옆 주석 참고. */
         static constexpr uint32 kBindlessTextureCount = 4096;
+        /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
+         *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
+        static constexpr uint32 kMaxComputeRootConstantDwords = 32;
 
         /// @brief VkBuffer + 메모리 + 사용 플래그
         struct VulkanBufferRecord

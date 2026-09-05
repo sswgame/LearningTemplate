@@ -19,7 +19,6 @@
 
 namespace sw
 {
-    DXGI_FORMAT toDxgiFormatD3D12( RHIFormat format );
     class D3D12RHICommandContext;
     class D3D12RHICommandList;
     class D3D12RHIResource;
@@ -187,12 +186,18 @@ namespace sw
          */
         void flushDebugMessages( const utf8* pStage );
 
-        static constexpr uint32 kMaxOffscreenRtvs             = 32;
-        static constexpr uint32 kMaxOffscreenDsvs             = 16;
-        static constexpr uint32 kGraphicsSrvRootParam0        = 5;  ///< t0..t3 descriptor tables
-        static constexpr uint32 kComputeRootConstantsParam    = 10; ///< 32-bit root constants (compute)
-        static constexpr uint32 kMaterialCbvParam             = 11; ///< b1 (MaterialCB) 디스크립터 테이블
+        static constexpr uint32 kMaxOffscreenRtvs          = 32;
+        static constexpr uint32 kMaxOffscreenDsvs          = 16;
+        static constexpr uint32 kGraphicsSrvRootParam0     = 5;  ///< t0..t3 descriptor tables
+        static constexpr uint32 kComputeRootConstantsParam = 10; ///< 32-bit root constants (compute)
+        static constexpr uint32 kMaterialCbvParam          = 11; ///< b1 (MaterialCB) 디스크립터 테이블
+        /** @brief setComputeRootConstants 실제 용량(dword) — 4개 백엔드 중 가장 작아서 RHITypes.h의
+         *         constant::kMinComputeRootConstantDwords가 이 값을 기준으로 한다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 16;
+        /** @brief 실제 bindless 텍스처 SRV 테이블 용량 — Vulkan(VulkanRHIDevice.h의
+         *         kBindlessTextureCount=4096)과 값이 다르다. 콘텐츠는 더 작은 이 값(DX12) 기준으로
+         *         bindless 인덱스를 할당할 것. */
+        static constexpr uint32 kBindlessTextureCount = 1024;
 
         /// @brief 오프스크린 텍스처 + RTV/SRV 핸들
         struct OffscreenTextureRecord

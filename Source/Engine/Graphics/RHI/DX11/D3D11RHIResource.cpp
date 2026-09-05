@@ -6,6 +6,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/RHIDxgiFormat.h"
+#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -19,34 +21,6 @@ namespace sw
                 return engine::getShaderCache().getOrCompile( desc );
             return ShaderCompiler::compileHLSL( desc );
         }
-
-        struct D3D11RHIResourceInternal
-        {
-            static DXGI_FORMAT toDxgiFormatD3D11( RHIFormat format )
-            {
-                switch ( format )
-                {
-                    case RHIFormat::R8G8B8A8_UNORM:
-                        return DXGI_FORMAT_R8G8B8A8_UNORM;
-                    case RHIFormat::B8G8R8A8_UNORM:
-                        return DXGI_FORMAT_B8G8R8A8_UNORM;
-                    case RHIFormat::R16G16B16A16_FLOAT:
-                        return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                    case RHIFormat::D24_UNORM_S8_UINT:
-                        return DXGI_FORMAT_D24_UNORM_S8_UINT;
-                    case RHIFormat::R32G32B32_FLOAT:
-                        return DXGI_FORMAT_R32G32B32_FLOAT;
-                    case RHIFormat::R32G32_FLOAT:
-                        return DXGI_FORMAT_R32G32_FLOAT;
-                    case RHIFormat::R32_FLOAT:
-                        return DXGI_FORMAT_R32_FLOAT;
-                    default:
-                        break;
-                }
-                SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
-                return DXGI_FORMAT_UNKNOWN;
-            }
-        };
     } // namespace
 } // namespace sw
 
@@ -320,16 +294,16 @@ namespace sw
         {
             if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
                 continue;
-            _pDevice->_listRegisteredBindless[bindlessIndex] = 0;
-            _pDevice->_listBindlessFree.push_back( static_cast<uint32>( bindlessIndex ) );
+            releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree,
+                                  static_cast<uint32>( bindlessIndex ), RHIBufferHandle{ 0 } );
         }
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
                 continue;
             _pDevice->_listRegisteredUAV[bufferIndex].Reset();
-            _pDevice->_listUavSourceBuffer[bufferIndex] = 0;
-            _pDevice->_listUavFree.push_back( static_cast<uint32>( bufferIndex ) );
+            releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree,
+                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
         auto releaseCb = [owned]()
@@ -350,7 +324,7 @@ namespace sw
         texDesc.MipLevels = desc._mipLevels;
         texDesc.ArraySize = 1;
         // Typeless so we can create both DSV and depth SRV for shadow sampling.
-        texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : D3D11RHIResourceInternal::toDxgiFormatD3D11( desc._format );
+        texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
         texDesc.SampleDesc.Count   = 1;
         texDesc.SampleDesc.Quality = 0;
         texDesc.Usage              = D3D11_USAGE_DEFAULT;
@@ -412,7 +386,7 @@ namespace sw
             if ( bDepth )
                 srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
             else
-                srvDesc.Format = D3D11RHIResourceInternal::toDxgiFormatD3D11( desc._format );
+                srvDesc.Format = toDxgiFormat( desc._format );
 
             if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), bDepth ? &srvDesc : nullptr, record._srv.GetAddressOf() ) ) )
             {
@@ -437,8 +411,8 @@ namespace sw
         {
             if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
                 continue;
-            _pDevice->_listRegisteredTexture[textureIndex] = 0;
-            _pDevice->_listTextureFree.push_back( static_cast<uint32>( textureIndex ) );
+            releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                  static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
         }
 
         D3D11RHIDevice::TextureRecord owned;
@@ -459,19 +433,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
 
-        RHIDescriptorIndex index;
-        if ( _pDevice->_listTextureFree.empty() == false )
-        {
-            index = _pDevice->_listTextureFree.back();
-            _pDevice->_listTextureFree.pop_back();
-            _pDevice->_listRegisteredTexture[index] = texture;
-        }
-        else
-        {
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
-            _pDevice->_listRegisteredTexture.push_back( texture );
-        }
-        return index;
+        return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
     }
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessResource( RHIBufferHandle buffer )
@@ -482,28 +444,12 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return kInvalidDescriptorIndex;
-        RHIDescriptorIndex index;
-        if ( _pDevice->_listBindlessFree.empty() == false )
-        {
-            index = _pDevice->_listBindlessFree.back();
-            _pDevice->_listBindlessFree.pop_back();
-            _pDevice->_listRegisteredBindless[index] = buffer;
-        }
-        else
-        {
-            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
-            _pDevice->_listRegisteredBindless.push_back( buffer );
-        }
-        return index;
+        return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, buffer );
     }
 
     void D3D11RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        if ( index < _pDevice->_listRegisteredBindless.size() )
-        {
-            _pDevice->_listRegisteredBindless[index] = 0;
-            _pDevice->_listBindlessFree.push_back( index );
-        }
+        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
     }
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessUAV( RHIBufferHandle buffer )

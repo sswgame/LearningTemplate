@@ -393,17 +393,14 @@ namespace sw
                                                           RHIDescriptorIndex materialCbDescriptorIndex )
     {
         // HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다.
-        auto bindSlot = [this]( RHIDescriptorIndex index, GLuint binding )
+        defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
+                                      _pDevice->_listRegisteredBindless.size(), 16 /*b0=PassCB*/, 17 /*b1=MaterialCB*/,
+                                      [this]( RHIDescriptorIndex index, uint32 binding )
         {
-            if ( index == kInvalidDescriptorIndex ||
-                 index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-                return;
             const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
             if ( ubo != 0 )
                 glBindBufferBase( GL_UNIFORM_BUFFER, binding, ubo );
-        };
-        bindSlot( passCbDescriptorIndex, 16 );     // b0 = PassCB
-        bindSlot( materialCbDescriptorIndex, 17 ); // b1 = MaterialCB
+        } );
     }
 
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,

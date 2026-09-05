@@ -7,6 +7,7 @@
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/RHI/RHIDxgiFormat.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -91,7 +92,7 @@ namespace sw
             {
                 auto& rtBlend                 = psoDesc.BlendState.RenderTarget[rtvIndex];
                 rtBlend.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormatD3D12( desc._arrRtvFormat[rtvIndex] );
+                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormat( desc._arrRtvFormat[rtvIndex] );
                 if ( desc._bEnableBlend != 0 )
                 {
                     rtBlend.BlendEnable    = TRUE;
@@ -110,7 +111,7 @@ namespace sw
                                                              ? D3D12_DEPTH_WRITE_MASK_ALL
                                                              : D3D12_DEPTH_WRITE_MASK_ZERO;
                 psoDesc.DepthStencilState.DepthFunc      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-                psoDesc.DSVFormat                        = toDxgiFormatD3D12( desc._depthStencilFormat );
+                psoDesc.DSVFormat                        = toDxgiFormat( desc._depthStencilFormat );
             }
             else
             {
@@ -449,9 +450,9 @@ namespace sw
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
         const bool            bDepth      = desc._bIsDepthStencil != 0;
-        const DXGI_FORMAT     typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormatD3D12( desc._format );
+        const DXGI_FORMAT     typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
         constexpr DXGI_FORMAT dsvFmt      = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        const DXGI_FORMAT     colorFmt    = toDxgiFormatD3D12( desc._format );
+        const DXGI_FORMAT     colorFmt    = toDxgiFormat( desc._format );
 
         D3D12_RESOURCE_DESC resDesc{};
         resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;

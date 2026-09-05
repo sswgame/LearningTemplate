@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 #include "Engine/Graphics/RenderPass/GpuScene.h"
 
 namespace sw
@@ -35,7 +36,7 @@ namespace sw
         RenderFramePacket()
             : _gpuScene{}
             , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-            , _cameraPos{ 0.0f, 1.2f, 3.2f }
+            , _cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] }
             , _viewProj{}
             , _lightViewProj{}
             , _pSceneMaterial{ nullptr }

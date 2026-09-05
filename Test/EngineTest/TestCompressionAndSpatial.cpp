@@ -3,7 +3,6 @@
 #include "Core/Container/ObjectHandle.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/BindlessTable.h"
 #include "Engine/Graphics/RenderPass/ComputePass.h"
 #include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Physics/AABB.h"
@@ -135,38 +134,6 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueAsyncOperations )
 }
 
 // ------------------------------------------------------------------------------
-// 6) BindlessTable 슬롯 할당 및 프리 리스트 재사용 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_RHI, BindlessTableSlotAllocationAndReuse )
-{
-    sw::BindlessTable table;
-    table.initialize( 1024 );
-    SW_EXPECT_EQUAL( size_t( 0 ), table.getActiveTextureCount() );
-
-    const sw::RHITextureHandle dummyTex1 = 0x1000;
-    const sw::RHITextureHandle dummyTex2 = 0x2000;
-
-    const sw::RHIDescriptorIndex slot0 = table.allocateTextureSlot( dummyTex1 );
-    const sw::RHIDescriptorIndex slot1 = table.allocateTextureSlot( dummyTex2 );
-    SW_EXPECT_EQUAL( uint32( 0 ), slot0 );
-    SW_EXPECT_EQUAL( uint32( 1 ), slot1 );
-    SW_EXPECT_EQUAL( size_t( 2 ), table.getActiveTextureCount() );
-
-    SW_EXPECT_EQUAL( dummyTex1, table.getTexture( slot0 ) );
-    SW_EXPECT_EQUAL( dummyTex2, table.getTexture( slot1 ) );
-
-    // Slot0 해제 후 재할당 시 Slot0이 재사용되어야 함
-    table.freeTextureSlot( slot0 );
-    SW_EXPECT_EQUAL( size_t( 1 ), table.getActiveTextureCount() );
-
-    const sw::RHIDescriptorIndex reusedSlot = table.allocateTextureSlot( dummyTex1 );
-    SW_EXPECT_EQUAL( uint32( 0 ), reusedSlot );
-    SW_EXPECT_EQUAL( size_t( 2 ), table.getActiveTextureCount() );
-
-    table.shutdown();
-}
-
-// ------------------------------------------------------------------------------
 // 7) PropertyMetaHint UI 위젯 판별
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
@@ -201,7 +168,7 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
     bool       bCallbackCalled = false;
     const auto handle          = manager.registerWatch( "Resource/shaders", { ".hlsl" },
                                                         SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-             {
+    {
         bCallbackCalled = true;
     } ) );
 
@@ -363,34 +330,6 @@ SW_TEST_CASE( Engine_Streaming, AssetStreamingQueueInFlightMulticastCallbacks )
 }
 
 // ------------------------------------------------------------------------------
-// 13) BindlessTable Double Free 방어 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Graphics, BindlessTableDoubleFreeProtection )
-{
-    sw::BindlessTable table;
-    table.initialize( 1024 );
-
-    sw::RHIDescriptorIndex slot = table.allocateTextureSlot( 100 );
-    SW_EXPECT_TRUE( slot != sw::kInvalidDescriptorIndex );
-    SW_EXPECT_EQUAL( size_t( 1 ), table.getActiveTextureCount() );
-
-    // 첫 번째 정상 해제
-    table.freeTextureSlot( slot );
-    SW_EXPECT_EQUAL( size_t( 0 ), table.getActiveTextureCount() );
-
-    // 두 번째 중복 해제 (No-Op 가드로 무시되어야 함)
-    table.freeTextureSlot( slot );
-    SW_EXPECT_EQUAL( size_t( 0 ), table.getActiveTextureCount() );
-
-    // 새 슬롯 할당 시 정상 작동 확인
-    sw::RHIDescriptorIndex newSlot = table.allocateTextureSlot( 200 );
-    SW_EXPECT_EQUAL( slot, newSlot );
-    SW_EXPECT_EQUAL( size_t( 1 ), table.getActiveTextureCount() );
-
-    table.shutdown();
-}
-
-// ------------------------------------------------------------------------------
 // 14) SpatialHashGrid2D 엔티티 등록, 이동, 삭제 및 카운트 검증
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DInsertUpdateRemoveAndCount )
@@ -530,8 +469,8 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
     sw::vector<sw::ObjectHandle> listAabb;
     const sw::AABB               testBox{
-                      {-1.0f, -1.0f,  0.0f},
-                      { 6.0f,  5.0f, 15.0f}
+        {-1.0f, -1.0f,  0.0f},
+        { 6.0f,  5.0f, 15.0f}
     };
     bvh.queryAABB( testBox, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );

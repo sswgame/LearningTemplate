@@ -94,7 +94,7 @@ namespace sw
         atomic<bool>        _bStop;
         atomic<bool>        _bContextBound; ///< bindGraphicsContext succeeded on current executor
 
-        static constexpr uint32 _s_kRingCapacity{ 3 }; // Triple buffering
+        static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
         // sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)
         std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
         LinearAllocator                                 _arrFrameAllocators[_s_kRingCapacity];

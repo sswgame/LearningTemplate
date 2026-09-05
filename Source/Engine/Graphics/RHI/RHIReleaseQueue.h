@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "Engine/Common/EngineDefines.h"
+
 namespace sw
 {
 
@@ -25,7 +27,7 @@ namespace sw
         // 1) 수명 — frameLatency 뒤 해제, 소멸 시 flushAll
         // ------------------------------------------------------------------------------
         /** @brief frameLatency 프레임 뒤 해제를 수행하는 큐를 만듭니다. */
-        explicit RHIReleaseQueue( uint32 frameLatency = 3 );
+        explicit RHIReleaseQueue( uint32 frameLatency = constant::kGpuReleaseFrameLatency );
         /** @brief 대기 중인 해제를 모두 실행합니다. */
         ~RHIReleaseQueue();
 

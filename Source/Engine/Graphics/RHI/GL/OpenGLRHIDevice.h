@@ -135,6 +135,8 @@ namespace sw
         OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
         const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
+        /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
+         *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 64;
 
         /// @brief 드로우 시 바인드할 버퍼/텍스처 슬롯

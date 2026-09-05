@@ -145,7 +145,7 @@ namespace sw
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _listRenderPass{}
-        , _releaseQueue{ 3 }
+        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _immContext{ nullptr }
         , _deferredContext{ nullptr }
         , _swapChainImpl{ nullptr }

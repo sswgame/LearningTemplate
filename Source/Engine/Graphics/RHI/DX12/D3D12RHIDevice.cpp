@@ -10,36 +10,12 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
+    #include "Engine/Graphics/RHI/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "D3D12" );
-
-    DXGI_FORMAT toDxgiFormatD3D12( RHIFormat format )
-    {
-        switch ( format )
-        {
-            case RHIFormat::R8G8B8A8_UNORM:
-                return DXGI_FORMAT_R8G8B8A8_UNORM;
-            case RHIFormat::B8G8R8A8_UNORM:
-                return DXGI_FORMAT_B8G8R8A8_UNORM;
-            case RHIFormat::R16G16B16A16_FLOAT:
-                return DXGI_FORMAT_R16G16B16A16_FLOAT;
-            case RHIFormat::D24_UNORM_S8_UINT:
-                return DXGI_FORMAT_D24_UNORM_S8_UINT;
-            case RHIFormat::R32G32B32_FLOAT:
-                return DXGI_FORMAT_R32G32B32_FLOAT;
-            case RHIFormat::R32G32_FLOAT:
-                return DXGI_FORMAT_R32G32_FLOAT;
-            case RHIFormat::R32_FLOAT:
-                return DXGI_FORMAT_R32_FLOAT;
-            default:
-                break;
-        }
-        SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
-        return DXGI_FORMAT_UNKNOWN;
-    }
 
     D3D12RHIDevice::D3D12RHIDevice()
         : _device{ nullptr }
@@ -91,7 +67,7 @@ namespace sw
         , _width{ 0 }
         , _height{ 0 }
         , _bufferCount{ 2 }
-        , _releaseQueue{ 3 }
+        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _immContext{ nullptr }
         , _deferredContext{ nullptr }
         , _swapChainImpl{ nullptr }
@@ -521,7 +497,7 @@ namespace sw
             descriptorRanges[5 + subpassIndex].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
         }
         descriptorRanges[9].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        descriptorRanges[9].NumDescriptors                    = 1024;
+        descriptorRanges[9].NumDescriptors                    = kBindlessTextureCount;
         descriptorRanges[9].BaseShaderRegister                = 0;
         descriptorRanges[9].RegisterSpace                     = 1;
         descriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -586,7 +562,7 @@ namespace sw
         rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
         rootSigDesc.pStaticSamplers   = staticSamplers;
         rootSigDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-                            D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+                                        D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
         Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
         Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

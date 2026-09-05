@@ -198,7 +198,7 @@ namespace sw
         , _listUavSourceBuffer{}
         , _listUavFree{}
         , _gpuTextures{}
-        , _releaseQueue{ 3 }
+        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _mapCompositeFramebuffer{}
         , _mapPipelineRenderPass{}
         , _textureDescriptorSetLayout{ nullptr }
@@ -749,7 +749,7 @@ namespace sw
                 SW_LOG_ERROR( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( presentResult ) );
         }
 
-        _currentFrame  = ( _currentFrame + 1 ) % 2;
+        _currentFrame  = ( _currentFrame + 1 ) % constant::kMaxFrameCountInFlight;
         _bFrameStarted = SW_FALSE;
         _releaseQueue.tickFrame();
     }
@@ -1310,7 +1310,7 @@ namespace sw
 
     bool VulkanRHIDevice::createCommandBuffers()
     {
-        _listCommandBuffer.resize( 2 );
+        _listCommandBuffer.resize( constant::kMaxFrameCountInFlight );
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool        = _commandPool;
@@ -1354,9 +1354,9 @@ namespace sw
     {
         _listImageAvailableSemaphore.resize( _listSwapChainImage.size() );
         _listRenderFinishedSemaphore.resize( _listSwapChainImage.size() );
-        _listInFlightFence.resize( 2 );
+        _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
         _listImagesInFlight.resize( _listSwapChainImage.size(), VK_NULL_HANDLE );
-        _listRingFrameNumber.resize( 2, 0 );
+        _listRingFrameNumber.resize( constant::kMaxFrameCountInFlight, 0 );
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1370,7 +1370,7 @@ namespace sw
                 return false;
         }
 
-        for ( size_t syncIndex = 0; syncIndex < 2; syncIndex++ )
+        for ( size_t syncIndex = 0; syncIndex < constant::kMaxFrameCountInFlight; syncIndex++ )
         {
             if ( vkCreateFence( _device, &fenceInfo, nullptr, &_listInFlightFence[syncIndex] ) != VK_SUCCESS )
                 return false;
@@ -1677,7 +1677,7 @@ namespace sw
         VkPushConstantRange pushRange{};
         pushRange.stageFlags = allStages;
         pushRange.offset     = 0;
-        pushRange.size       = 128;
+        pushRange.size       = kMaxComputeRootConstantDwords * sizeof( uint32 );
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

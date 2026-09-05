@@ -1,6 +1,7 @@
 /**
  * @file FrameResourceRing.h
- * @brief DX12용 N-버퍼 프레임 리소스 / 업로드 오프셋 헬퍼
+ * @brief N-버퍼 프레임 리소스 / 업로드 오프셋 헬퍼 (DX12는 프레임 리소스로, Vulkan은 상수 버퍼
+ *        슬롯 크기 계산에도 kFrameCount를 씁니다)
  */
 #pragma once
 #include "Core/Common/Macros.h"

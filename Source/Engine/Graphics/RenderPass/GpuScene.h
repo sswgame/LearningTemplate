@@ -55,7 +55,9 @@ namespace sw
     class SW_API GpuMaterialRetireQueue
     {
     public:
-        static constexpr uint32 kRetireFrameDelay = 2;
+        /** @brief RenderThread 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같아야 안전합니다 —
+         *         그보다 짧으면 아직 큐잉된(미소비) 패킷이 참조 중인 MaterialInstance를 조기 파괴할 수 있습니다. */
+        static constexpr uint32 kRetireFrameDelay = constant::kRenderFrameQueueDepth;
 
         /** @brief 현재 배치에 실린 인스턴스를 pin하고, 빠진 것은 retire 큐로 옮깁니다. */
         void syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent );

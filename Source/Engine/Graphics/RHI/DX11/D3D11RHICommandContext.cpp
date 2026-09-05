@@ -246,19 +246,16 @@ namespace sw
     void D3D11RHICommandContext::bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex,
                                                         RHIDescriptorIndex materialCbDescriptorIndex )
     {
-        auto bindSlot = [this]( RHIDescriptorIndex index, UINT slot )
+        defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
+                                      _pDevice->_listRegisteredBindless.size(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
+                                      [this]( RHIDescriptorIndex index, uint32 slot )
         {
-            if ( index == kInvalidDescriptorIndex ||
-                 index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-                return;
             ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[index] );
             if ( pCb == nullptr )
                 return;
             _pContext->PSSetConstantBuffers( slot, 1, &pCb );
             _pContext->VSSetConstantBuffers( slot, 1, &pCb );
-        };
-        bindSlot( passCbDescriptorIndex, 0 );     // b0 = PassCB
-        bindSlot( materialCbDescriptorIndex, 1 ); // b1 = MaterialCB
+        } );
     }
 
     void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
@@ -474,19 +471,6 @@ namespace sw
     {
         // DX11은 리소스 상태를 명시적으로 전환하지 않음. 심볼 링크용 스텁.
         (void)texture;
-    }
-
-    void D3D11RHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                                    uint32 maxCommandCount, RHIBufferHandle countBuffer, uint32 countBufferOffset )
-    {
-        (void)countBuffer;
-        (void)countBufferOffset;
-        for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
-        {
-            const uint32 offset =
-                argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) );
-            drawIndirect( argumentBuffer, offset );
-        }
     }
 
     void D3D11RHICommandContext::beginEventMarker( const utf8* pName )

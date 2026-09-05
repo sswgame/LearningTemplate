@@ -156,6 +156,8 @@ namespace sw
         /** @brief TextureRecord를 테이블에 넣고 핸들을 반환합니다. */
         RHITextureHandle storeTexture( TextureRecord record );
 
+        /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
+         *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 64;
 
         /// @brief VS/PS + 래스터/블렌드/깊이 상태 묶음
