@@ -297,9 +297,12 @@ namespace sw
         vector<D3D12RenderPassRecord>            _listRenderPass;
 
         /// @brief 스왑체인 백버퍼의 실제 리소스 상태 — 리스트가 아니라 리소스 자체에 속한 전역 상태.
-        D3D12_RESOURCE_STATES  _swapchainState;
-        uint8                  _bHeapDirectlyIndexed : 1;
-        [[maybe_unused]] uint8 _reservedPassFlags    : 7;
+        D3D12_RESOURCE_STATES _swapchainState;
+        uint8                 _bHeapDirectlyIndexed : 1;
+        /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true — 매
+        /// 프레임 flushDebugMessages()가 똑같은 검증 메시지 수십 줄을 무한 반복 출력하는 걸 막는다.
+        uint8                  _bDeviceRemovedLogged : 1;
+        [[maybe_unused]] uint8 _reservedPassFlags    : 6;
 
         /// @brief Immediate/Deferred Context(레거시 단일 공유 리스트)용 기록 상태.
         D3D12RecordingState _legacyState;

@@ -135,9 +135,14 @@ namespace sw
             if ( FAILED( presentHr ) )
             {
                 [[maybe_unused]] const HRESULT removed = _pDevice->_device->GetDeviceRemovedReason();
-                // %# 는 10진 출력 — DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
-                SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
-                              static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
+                // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다 —
+                // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 스킵해 로그 폭주를 막는다.
+                if ( _pDevice->_bDeviceRemovedLogged == 0 )
+                {
+                    // %# 는 10진 출력 — DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
+                    SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
+                                  static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
+                }
                 _pDevice->flushDebugMessages( "after Present" );
             }
         }

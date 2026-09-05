@@ -50,6 +50,7 @@ namespace sw
         , _listRenderPass{}
         , _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }
         , _bHeapDirectlyIndexed{ SW_FALSE }
+        , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _legacyState{}
         , _listRegisteredBindless{}
@@ -684,6 +685,11 @@ namespace sw
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
     {
     #if defined( SW_DEBUG )
+        // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
+        // 수십 줄 + DRED 덤프를 무한 반복하지 않는다 — 자동 복구가 없어서 그 이후 매 프레임
+        // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
+        const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged != 0;
+
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
         if ( SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
         {
@@ -694,14 +700,18 @@ namespace sw
                 infoQueue->GetMessage( messageIndex, nullptr, &messageLength );
                 vector<uint8>  bytes( messageLength );
                 D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
-                if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) )
+                if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) && bAlreadyDeviceRemoved == false )
                     SW_LOG_ERROR( "[%#] %#", pStage, pMessage->pDescription );
             }
             infoQueue->ClearStoredMessages();
         }
 
+        if ( bAlreadyDeviceRemoved )
+            return;
+
         if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
         {
+            _bDeviceRemovedLogged = SW_TRUE;
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
             if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
             {
