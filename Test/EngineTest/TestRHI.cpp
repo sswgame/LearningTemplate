@@ -671,20 +671,27 @@ SW_TEST_CASE( RHITest, DualContextAndModeParityAllAvailableBackends )
         SW_EXPECT_TRUE( device->getDefaultCommandContext() == device->getDeferredCommandContext() );
         SW_EXPECT_TRUE( device->getCommandContextForMode( sw::RHICommandListMode::Deferred ) == device->getDeferredCommandContext() );
 
+        // DX12/Vulkan/DX11 은 진짜 네이티브 커맨드 리스트(asDeferred() == nullptr)를 반환할 수 있다 —
+        // "Deferred Context가 진짜"가 되면서 소프트웨어 RHIDeferredCommandList 는 더 이상 유일한
+        // IRHICommandList 구현체가 아니다(OpenGL만 계속 소프트웨어 재생을 쓴다). 소프트웨어 전용
+        // 내부 상태(getMode/isApplied)는 asDeferred() 가 실제로 그 타입일 때만 검사한다 — 그 외엔
+        // 추상 IRHICommandList 인터페이스로 begin/draw/end/execute 시퀀스가 크래시 없이 도는지만 본다.
         sw::unique_ptr<sw::IRHICommandList> deferredList =
             device->createCommandList( sw::RHICommandListMode::Deferred );
         SW_EXPECT_NOT_NULL( deferredList.get() );
         if ( deferredList != nullptr )
         {
             sw::RHIDeferredCommandList* asDef = deferredList->asDeferred();
-            SW_ASSERT_NOT_NULL( asDef );
-            SW_EXPECT_TRUE( asDef->getMode() == sw::RHICommandListMode::Deferred );
-            asDef->beginCommandList();
-            asDef->draw( 3, 0, 0 );
-            asDef->endCommandList();
-            SW_EXPECT_TRUE( asDef->isApplied() == false );
+            if ( asDef != nullptr )
+                SW_EXPECT_TRUE( asDef->getMode() == sw::RHICommandListMode::Deferred );
+            deferredList->beginCommandList();
+            deferredList->draw( 3, 0, 0 );
+            deferredList->endCommandList();
+            if ( asDef != nullptr )
+                SW_EXPECT_TRUE( asDef->isApplied() == false );
             device->executeCommandList( deferredList.get() );
-            SW_EXPECT_TRUE( asDef->isApplied() );
+            if ( asDef != nullptr )
+                SW_EXPECT_TRUE( asDef->isApplied() );
         }
 
         sw::unique_ptr<sw::IRHICommandList> immediateList =
@@ -693,11 +700,13 @@ SW_TEST_CASE( RHITest, DualContextAndModeParityAllAvailableBackends )
         if ( immediateList != nullptr )
         {
             sw::RHIDeferredCommandList* asImm = immediateList->asDeferred();
-            SW_ASSERT_NOT_NULL( asImm );
-            asImm->beginCommandList();
-            asImm->draw( 3, 0, 0 );
-            asImm->endCommandList();
-            SW_EXPECT_TRUE( asImm->isApplied() );
+            immediateList->beginCommandList();
+            immediateList->draw( 3, 0, 0 );
+            immediateList->endCommandList();
+            if ( asImm != nullptr )
+                SW_EXPECT_TRUE( asImm->isApplied() );
+            else
+                device->executeCommandList( immediateList.get() );
         }
 
         shutdownDeviceWithWindow( device, window );

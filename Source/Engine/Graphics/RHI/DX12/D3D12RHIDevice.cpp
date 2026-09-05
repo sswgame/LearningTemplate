@@ -3,13 +3,13 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
-    #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
@@ -56,16 +56,12 @@ namespace sw
         , _dispatchCommandSignature{ nullptr }
         , _arrCommandAllocator{}
         , _commandList{ nullptr }
+        , _arrFrameCmdAllocator{}
         , _frameRing{}
         , _listRenderTarget{}
         , _gpuBuffers{}
         , _gpuTextures{}
-        , _boundMeshVb{ 0 }
-        , _boundMeshStride{ sizeof( RHIVertex ) }
-        , _boundMeshOffset{ 0 }
-        , _boundIndexBuffer{ 0 }
-        , _boundIndexStride{ 4 }
-        , _boundIndexOffset{ 0 }
+        , _resourceStateMutex{}
         , _mapStructuredBufferState{}
         , _mapOffscreenTexture{}
         , _nextOffscreenRtvIndex{ 0 }
@@ -76,15 +72,10 @@ namespace sw
         , _mapCbMapped{}
         , _pipelineStates{}
         , _listRenderPass{}
-        , _activeGraphicsPso{ 0 }
-        , _arrActiveColorTarget{}
-        , _activeDepthTarget{ 0 }
-        , _activeColorTargetCount{ 0 }
         , _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }
-        , _bActiveSwapchainRT{ SW_FALSE }
         , _bHeapDirectlyIndexed{ SW_FALSE }
-        , _bRecording{ SW_FALSE }
         , _reservedPassFlags{ 0 }
+        , _legacyState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
         , _listRegisteredUAV{}
@@ -197,11 +188,9 @@ namespace sw
             _frameIndex = _swapChain->GetCurrentBackBufferIndex();
         }
 
-        _bActiveSwapchainRT     = 0;
-        _bHeapDirectlyIndexed   = 0;
-        _activeColorTargetCount = 0;
-        _activeDepthTarget      = 0;
-        _swapchainState         = D3D12_RESOURCE_STATE_PRESENT;
+        _bHeapDirectlyIndexed = 0;
+        _swapchainState       = D3D12_RESOURCE_STATE_PRESENT;
+        _legacyState          = D3D12RecordingState{};
 
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
         rtvHeapDesc.NumDescriptors = _bufferCount + kMaxOffscreenRtvs;
@@ -232,13 +221,15 @@ namespace sw
         {
             if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
                 return false;
+            if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrFrameCmdAllocator[frameIndex].GetAddressOf() ) ) ) )
+                return false;
         }
 
         if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
             return false;
 
         _commandList->Close();
-        _bRecording = 0;
+        _legacyState._bRecording = 0;
         _frameRing.reset( 0 );
 
         createRenderTargets();
@@ -251,8 +242,8 @@ namespace sw
         if ( createGlobalResources() == false )
             return false;
 
-        _immContext      = sw::make_unique<D3D12RHICommandContext>( this );
-        _deferredContext = sw::make_unique<D3D12RHICommandContext>( this );
+        _immContext      = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_legacyState );
+        _deferredContext = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_legacyState );
 
         return true;
     }
@@ -272,12 +263,7 @@ namespace sw
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
         _gpuTextures.clear();
-        _boundMeshVb               = 0;
-        _boundMeshStride           = sizeof( RHIVertex );
-        _boundMeshOffset           = 0;
-        _boundIndexBuffer          = 0;
-        _boundIndexStride          = 4;
-        _boundIndexOffset          = 0;
+        _legacyState               = D3D12RecordingState{};
         _nextOffscreenRtvIndex     = 0;
         _allocatedDescriptorsCount = 0;
 
@@ -297,7 +283,11 @@ namespace sw
         {
             allocator.Reset();
         }
-        _bRecording = 0;
+        for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrFrameCmdAllocator )
+        {
+            allocator.Reset();
+        }
+        _legacyState._bRecording = 0;
         _immContext.reset();
         _deferredContext.reset();
         _bHeapDirectlyIndexed = 0;
@@ -339,13 +329,26 @@ namespace sw
 
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList( RHICommandListMode mode )
     {
-        unique_ptr<RHIDeferredCommandList> list = make_unique<RHIDeferredCommandList>( mode, getCommandContextForMode( mode ) );
+        (void)mode; // DX12 는 진짜 네이티브 리스트를 쓴다 — Deferred/Immediate 소프트웨어 모드 구분이 없다.
+        unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
+        if ( list->isValid() == false )
+        {
+            SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: 네이티브 커맨드 리스트 생성 실패." );
+            return nullptr;
+        }
         return list;
     }
 
     void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        RHIDeferredCommandList::execute( this, pCmdList );
+        if ( pCmdList == nullptr || _commandQueue == nullptr )
+            return;
+        auto*                      pNative = static_cast<D3D12RHICommandList*>( pCmdList );
+        ID3D12GraphicsCommandList* pList   = pNative->getNativeCommandList();
+        if ( pList == nullptr )
+            return;
+        ID3D12CommandList* arr[] = { pList };
+        _commandQueue->ExecuteCommandLists( 1, arr );
     }
 
     void D3D12RHIDevice::createRenderTargets()
@@ -458,6 +461,11 @@ namespace sw
     ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()
     {
         return _arrCommandAllocator[_frameRing.currentIndex()].Get();
+    }
+
+    ID3D12CommandAllocator* D3D12RHIDevice::currentFrameCmdAllocator()
+    {
+        return _arrFrameCmdAllocator[_frameRing.currentIndex()].Get();
     }
 
     ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
@@ -578,7 +586,7 @@ namespace sw
         rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
         rootSigDesc.pStaticSamplers   = staticSamplers;
         rootSigDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-                                        D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+                            D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
         Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
         Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

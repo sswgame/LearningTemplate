@@ -164,8 +164,8 @@ namespace sw
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return;
-        if ( _pDevice->_activeGraphicsPso == pso )
-            _pDevice->_activeGraphicsPso = 0;
+        if ( _pDevice->_legacyState._activeGraphicsPso == pso )
+            _pDevice->_legacyState._activeGraphicsPso = 0;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> owned     = record._pso;
         auto                                        releaseCb = [owned]()
         { (void)owned.Get(); };
@@ -270,9 +270,12 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
             return 0;
 
-        const RHIBufferHandle handle                = _pDevice->storeBuffer( buffer );
-        _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
-        _pDevice->_mapStructuredStride[handle]      = elementSize > 0 ? elementSize : 4u;
+        const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
+        }
+        _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
         return handle;
     }
 
@@ -324,10 +327,13 @@ namespace sw
             return;
         }
 
-        D3D12_RESOURCE_STATES                                                       stateBefore = D3D12_RESOURCE_STATE_COMMON;
-        const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt     = _pDevice->_mapStructuredBufferState.find( buffer );
-        if ( stateIt != _pDevice->_mapStructuredBufferState.end() )
-            stateBefore = stateIt->second;
+        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
+        {
+            std::scoped_lock<mutex>                                                     lock{ _pDevice->_resourceStateMutex };
+            const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
+            if ( stateIt != _pDevice->_mapStructuredBufferState.end() )
+                stateBefore = stateIt->second;
+        }
 
         if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
         {
@@ -355,7 +361,10 @@ namespace sw
         _pDevice->_commandQueue->ExecuteCommandLists( 1, lists );
         _pDevice->waitForPreviousFrame();
 
-        _pDevice->_mapStructuredBufferState[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            _pDevice->_mapStructuredBufferState[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        }
     }
 
     RHIBufferHandle D3D12RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -393,11 +402,14 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_boundMeshVb )
-            _pDevice->_boundMeshVb = 0;
-        if ( buffer == _pDevice->_boundIndexBuffer )
-            _pDevice->_boundIndexBuffer = 0;
-        _pDevice->_mapStructuredBufferState.erase( buffer );
+        if ( buffer == _pDevice->_legacyState._boundMeshVb )
+            _pDevice->_legacyState._boundMeshVb = 0;
+        if ( buffer == _pDevice->_legacyState._boundIndexBuffer )
+            _pDevice->_legacyState._boundIndexBuffer = 0;
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            _pDevice->_mapStructuredBufferState.erase( buffer );
+        }
         const auto mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
         {

@@ -16,6 +16,7 @@ set(SW_RHI_DX11_DEVICE_SOURCES
 )
 set(SW_RHI_DX12_DEVICE_SOURCES
     "${swRhiRoot}/DX12/D3D12RHICommandContext.cpp"
+    "${swRhiRoot}/DX12/D3D12RHICommandList.cpp"
     "${swRhiRoot}/DX12/D3D12RHIDevice.cpp"
     "${swRhiRoot}/DX12/D3D12RHIResource.cpp"
     "${swRhiRoot}/DX12/D3D12RHISwapChain.cpp"

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -20,8 +21,42 @@ namespace sw
 {
     DXGI_FORMAT toDxgiFormatD3D12( RHIFormat format );
     class D3D12RHICommandContext;
+    class D3D12RHICommandList;
     class D3D12RHIResource;
     class D3D12RHISwapChain;
+
+    /**
+     * @struct D3D12RecordingState
+     * @brief "지금 이 커맨드 리스트가 기록 중" 상태 — 디바이스 전역이 아니라 리스트(컨텍스트)마다 있어야 한다.
+     * @details 예전엔 이 필드들이 D3D12RHIDevice 에 있어서 Immediate/Deferred Context 가 사실상 같은
+     *          커맨드 리스트를 가리키는 별칭이었다. `D3D12RHICommandList` 가 자기 것을 소유하게 해서
+     *          진짜 독립된 Deferred Context/병렬 기록의 전제조건을 만든다 (스왑체인 리소스 상태처럼
+     *          "실제 GPU 리소스의 상태"를 나타내는 것은 여기 포함하지 않는다 — 그건 디바이스/리소스 전역).
+     */
+    struct D3D12RecordingState
+    {
+        RHIBufferHandle        _boundMeshVb{ 0 };
+        uint32                 _boundMeshStride{ 0 };
+        uint32                 _boundMeshOffset{ 0 };
+        RHIBufferHandle        _boundIndexBuffer{ 0 };
+        uint32                 _boundIndexStride{ 4 };
+        uint32                 _boundIndexOffset{ 0 };
+        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments]{};
+        RHITextureHandle       _activeDepthTarget{ 0 };
+        uint32                 _activeColorTargetCount{ 0 };
+        uint8                  _bActiveSwapchainRT : 1;
+        uint8                  _bRecording         : 1;
+        [[maybe_unused]] uint8 _reserved           : 6;
+
+        /** @brief 기록 안 한 상태로 초기화. */
+        D3D12RecordingState()
+            : _bActiveSwapchainRT{ 0 }
+            , _bRecording{ 0 }
+            , _reserved{ 0 }
+        {
+        }
+    };
 
     /**
      * @class D3D12RHIDevice
@@ -33,6 +68,7 @@ namespace sw
         friend class D3D12RHISwapChain;
         friend class D3D12RHIResource;
         friend class D3D12RHICommandContext;
+        friend class D3D12RHICommandList;
         // ------------------------------------------------------------------------------
         // 1) 수명 — 디바이스/큐/스왑체인, 프레임, 오프스크린
         // ------------------------------------------------------------------------------
@@ -123,8 +159,17 @@ namespace sw
          * @brief 현재 링 슬롯에 펜스를 기록하고 해제 큐를 진행합니다. GPU를 기다리지 않습니다.
          */
         void signalCurrentFrame();
-        /** @brief 현재 링 슬롯의 커맨드 얼로케이터입니다. */
+        /** @brief 현재 링 슬롯의 커맨드 얼로케이터입니다 (레거시 Immediate/Deferred Context 전용). */
         ID3D12CommandAllocator* currentAllocator();
+        /**
+         * @brief 현재 링 슬롯의 `D3D12RHICommandList` 전용 얼로케이터입니다.
+         * @details 레거시 `_arrCommandAllocator` 와 별개 — 같은 프레임 안에서 스왑체인 begin/end(레거시
+         *          리스트)와 `FrameRenderer` 의 진짜 네이티브 리스트가 동시에 "열려" 있을 수 있으므로,
+         *          같은 얼로케이터를 공유하면 안 된다(D3D12 는 열린 리스트가 있는 얼로케이터를 Reset 하면
+         *          안 됨). 링 인덱스는 `waitForRingSlot()` 이 이미 이번 프레임에 정한 것을 그대로 쓴다
+         *          (다시 대기하지 않음 — 한 프레임에 한 번만 전진).
+         */
+        ID3D12CommandAllocator* currentFrameCmdAllocator();
         /** @brief 불투명 버퍼 핸들을 GPU 리소스로 풉니다. */
         ID3D12Resource* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief 불투명 텍스처 핸들을 GPU 리소스로 풉니다. */
@@ -205,18 +250,16 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[FrameResourceRing::kFrameCount];
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
-        FrameResourceRing                                 _frameRing;
+        /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 레거시와 별개.
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[FrameResourceRing::kFrameCount];
+        FrameResourceRing                              _frameRing;
 
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
-        RHIBufferHandle                                        _boundMeshVb;
-        uint32                                                 _boundMeshStride; ///< 바인딩된 VB stride
-        uint32                                                 _boundMeshOffset;
-        RHIBufferHandle                                        _boundIndexBuffer;
-        uint32                                                 _boundIndexStride;
-        uint32                                                 _boundIndexOffset;
-        unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>  _mapStructuredBufferState;
+        /// @brief 리소스 상태 전이 맵 보호용 — 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있으므로.
+        mutex                                                 _resourceStateMutex;
+        unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES> _mapStructuredBufferState;
         /// @brief 구조 버퍼 핸들 → 요소 stride (bindless StructuredBuffer SRV 생성용).
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
@@ -230,16 +273,14 @@ namespace sw
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         vector<D3D12RenderPassRecord>            _listRenderPass;
-        RHIPipelineStateHandle                   _activeGraphicsPso;
 
-        RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
-        RHITextureHandle       _activeDepthTarget;
-        uint32                 _activeColorTargetCount;
+        /// @brief 스왑체인 백버퍼의 실제 리소스 상태 — 리스트가 아니라 리소스 자체에 속한 전역 상태.
         D3D12_RESOURCE_STATES  _swapchainState;
-        uint8                  _bActiveSwapchainRT   : 1;
         uint8                  _bHeapDirectlyIndexed : 1;
-        uint8                  _bRecording           : 1;
-        [[maybe_unused]] uint8 _reservedPassFlags    : 5;
+        [[maybe_unused]] uint8 _reservedPassFlags    : 7;
+
+        /// @brief Immediate/Deferred Context(레거시 단일 공유 리스트)용 기록 상태.
+        D3D12RecordingState _legacyState;
 
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
