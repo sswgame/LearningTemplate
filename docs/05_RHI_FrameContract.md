@@ -116,7 +116,7 @@ swapChain->endFrame()
 | 단계 | 내용 | 위험도 |
 |---|---|---|
 | ~~**S1**~~ | ✅ **완료** — `beginFrame` 을 두 경로 공통으로 맨 앞으로 옮기고, 백버퍼 확립을 대신할 **명시적 `beginRenderPass(백버퍼, Load)`** 를 `presentHook` 직전에 추가. 부수로 R5·R6 위반 2건을 Vulkan 에서 수정해야 했다 | 높음(완료) |
-| **S2** | `beginFrame` 에서 백버퍼 바인딩/클리어 제거(수명주기만 남김). 클리어는 첫 백버퍼 `beginRenderPass` 의 `loadOp=Clear` 로 이동 | 높음 |
+| ~~**S2**~~ | ✅ **완료**(`d0677ae1`) — `beginFrame` 에서 백버퍼 바인딩/클리어 제거(수명주기만 남김). 클리어는 백버퍼 `beginRenderPass` 의 `loadOp` 이 담당. Vulkan 은 `loadOp=LOAD` 렌더패스 변종을 추가해야 했다 | 높음(완료) |
 | **S3** | `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. **Vulkan 블로킹 제출도 여기서 사라진다** | 중간 |
 | **S4** | Vulkan 리스트가 자기 `VkCommandBuffer`/커맨드 풀 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간 |
 
@@ -131,16 +131,26 @@ S1·S2 가 가장 위험하다. 백엔드마다 `beginFrame` 이 하는 일이 �
 각 단계마다 4개 백엔드를 실제로 띄워 확인할 것:
 
 ```powershell
-# 백엔드별로 7초 띄우고 로그의 오류를 센다
-.\App.exe -EnableEditor            # DX12(기본)
+# 백엔드 4개 × 에디터 유무 2가지 = 8조합을 각각 8초 띄우고 로그의 오류를 센다
+.\App.exe -EnableEditor            # 에디터 O: 그래프가 게임 RT(오프스크린)에 그린다
 .\App.exe -EnableEditor -vulkan
 .\App.exe -EnableEditor -dx11
 .\App.exe -EnableEditor -gl
+.\App.exe                          # 에디터 X: 그래프가 **백버퍼에 직접** 그린다 — 경로가 다르다
+.\App.exe -vulkan
+.\App.exe -dx11
+.\App.exe -gl
 ```
 
 - **정상 기준선 = `[Error]` 3건** (전부 `Config/*.json` 없음 안내). 그 이상이면 회귀다.
 - Vulkan 은 `VUID` / `spec states` 문자열이 0건이어야 한다.
 - stderr 에 `CRASH` 가 없어야 한다.
+- 비결정적이므로 새로 고친 조합은 **3회 이상** 반복해 재현율을 본다.
+
+**에디터 유무를 반드시 둘 다 볼 것.** `-EnableEditor` 만 보던 동안 비에디터 경로는 DX12 가 시작
+직후 DEVICE_HUNG 으로 무너지고(오류 99~102건) Vulkan 은 백버퍼에 아무것도 안 그리는 상태였는데
+아무도 몰랐다(아래 3·4·5번 기록). 두 경로는 "그래프가 어디에 그리는가"가 다르므로 사실상 다른
+코드 경로다.
 
 ## 7. 실패 기록 (같은 실수 반복 방지)
 
@@ -153,3 +163,21 @@ S1·S2 가 가장 위험하다. 백엔드마다 `beginFrame` 이 하는 일이 �
 합류시키려 `executeFrameBody` 순서를 바꿨더니 **R2 위반으로 DX12 가 깨졌다**(오류 881건).
 
 두 번 다 원인은 "코드를 잘못 옮긴 것"이 아니라 **계약을 모르고 옮긴 것**이었다. 그래서 이 문서가 있다.
+
+**3차(S2 중 발견, 실패 아님)** — 검증 범위를 비에디터 경로까지 넓혔더니 DX12 가 시작 직후 오류
+99~102건 + DEVICE_HUNG. S1/S2 회귀가 아니라 그 이전 리비전(`6d96f231`)에서도 재현되는 기존
+버그였다. 원인은 `FrameRenderer::_frameCmd` 처럼 **프레임을 넘어 재사용되는 커맨드 리스트가 매
+프레임 같은 얼로케이터를 GPU 대기 없이 `Reset`** 한 것. 에디터 모드는 프레임이 느려 GPU 가 늘
+따라잡는 바람에 가려져 있었다. → `9d50c662` 에서 `beginCommandList` 마다 리스트+얼로케이터 쌍을
+교체하도록 수정(대기 없음).
+
+**4차(S2 중 발견)** — Vulkan 의 핸들 0 라우팅이 끈적했다. `_activeOffscreenTarget != 0` 이기만 하면
+백버퍼 요청을 게임뷰 RT 로 돌렸는데, 이 값은 "마지막에 바인딩한 컬러 타깃"이라 그래프가 트랜지언트에
+그린 뒤에도 남는다. `beginFrame` 이 렌더패스를 열어주던 동안에는 스왑체인 이미지가 어쨌든 전이돼
+가려져 있었다. → 오프스크린 패스가 **실제로 열려 있을 때만** 라우팅.
+
+**5차(S2 중 발견)** — Vulkan 스왑체인이 `B8G8R8A8_UNORM`, DX12 가 `R8G8B8A8_UNORM` 이었다. 파이프라인
+리소스는 후자로 렌더패스를 만들므로, 백버퍼에 직접 그리는 패스가 전부 렌더패스 비호환이 된다.
+→ Vulkan 도 `R8G8B8A8_UNORM` 우선으로 통일.
+
+세 건 모두 **에디터 모드만 검증하던 사각지대**에 있었다. 검증 프로토콜을 8조합으로 늘린 이유다.
