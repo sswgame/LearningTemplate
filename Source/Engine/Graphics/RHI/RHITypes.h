@@ -69,22 +69,6 @@ namespace sw
     };
 
     /**
-     * @struct RHIVulkanImGuiNative
-     * @brief Vulkan ImGui init용 opaque 핸들 묶음 (Editor가 concrete VulkanRHIDevice에 의존하지 않도록)
-     */
-    struct RHIVulkanImGuiNative
-    {
-        void*  _pInstance{ nullptr };
-        void*  _pPhysicalDevice{ nullptr };
-        void*  _pDevice{ nullptr };
-        void*  _pGraphicsQueue{ nullptr };
-        void*  _pRenderPass{ nullptr };
-        uint32 _queueFamily{ 0 };
-        uint32 _minImageCount = 2;
-        uint32 _imageCount    = 2;
-    };
-
-    /**
      * @enum RHIFormat
      * @brief 텍스처·렌더 타깃·픽셀 데이터 포맷
      */
@@ -98,6 +82,95 @@ namespace sw
         R32G32B32_FLOAT    = 4, ///< 32비트 부동소수점 RGB (위치/노멀)
         R32G32_FLOAT       = 5, ///< 32비트 부동소수점 RG (UV)
         R32_FLOAT          = 6, ///< 32비트 단일 부동소수점
+    };
+
+    namespace constant
+    {
+        // ------------------------------------------------------------------------------
+        // 백엔드 간 "값이 같아야 하는" 계약 상수.
+        // 지금 값이 우연히 같더라도 바뀔 수 있는 값이면 반드시 여기로 뺀다 — 한쪽 백엔드만
+        // 바뀌면 컴파일은 통과하고 런타임에 조용히 깨진다(아래 kBackBufferFormat 사례).
+        // 이 블록이 RHIFormat 바로 뒤에 있는 이유는 RHISwapChainDesc 의 기본값으로 쓰이기 때문이다.
+        // ------------------------------------------------------------------------------
+
+        /**
+         * @brief 백버퍼 컬러 포맷 — 4개 백엔드 스왑체인과 파이프라인 RTV 기본값이 같아야 한다.
+         * @details 파이프라인은 `RHIPipelineStateDesc::_arrRtvFormat` 으로 렌더패스/PSO 를 만든다.
+         *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 전부 비호환이 된다 —
+         *          실제로 Vulkan 만 `B8G8R8A8_UNORM` 을 고르고 있어서, 에디터 없이 실행하는 경로가
+         *          렌더패스 비호환으로 깨져 있었다(docs/05_RHI_FrameContract.md 실패기록 5차).
+         *          백엔드가 이 포맷을 낼 수 없으면 조용히 다른 걸 고르지 말고
+         *          `IRHIDevice::getBackBufferFormat()` 으로 실제 채택한 값을 보고해야 한다.
+         */
+        inline constexpr RHIFormat kBackBufferFormat = RHIFormat::R8G8B8A8_UNORM;
+
+        /**
+         * @brief 오프스크린 컬러 타깃(에디터 게임뷰 등) 기본 포맷.
+         * @details Vulkan 은 이 포맷일 때만 공용 오프스크린 렌더패스를 재사용하고 나머지는 전용
+         *          렌더패스를 만든다 — 값이 갈라지면 조용히 렌더패스가 늘어나거나 비호환이 된다.
+         */
+        inline constexpr RHIFormat kOffscreenColorFormat = RHIFormat::R8G8B8A8_UNORM;
+
+        /**
+         * @brief 깊이/스텐실 기본 포맷.
+         * @details DX11/DX12/GL 은 이 값을 그대로 쓴다. Vulkan 은 물리 디바이스가 미지원이면
+         *          대체 포맷을 고르고(`depthFormat()`), 파이프라인 렌더패스도 그 값으로 맞춘다.
+         */
+        inline constexpr RHIFormat kDepthStencilFormat = RHIFormat::D24_UNORM_S8_UINT;
+
+        /**
+         * @brief 상수버퍼 슬롯 정렬(바이트).
+         * @details 4개 백엔드가 같은 값으로 슬롯 크기를 계산해야 프레임 링 오프셋이 어긋나지 않는다.
+         *          D3D12 의 요구치(256)가 가장 크므로 그걸 공통값으로 쓴다. 텍스처 행 정렬
+         *          (`D3D12_TEXTURE_DATA_PITCH_ALIGNMENT`)은 이름만 같은 별개 개념이니 섞지 말 것.
+         */
+        inline constexpr uint32 kConstantBufferAlignment = 256;
+
+        /**
+         * @brief CPU 가 GPU 를 앞서갈 수 있는 최대 프레임 수 (= 프레임별 리소스 링 슬롯 수).
+         * @details **이 개념의 유일한 출처다.** 프레임마다 따로 있어야 하는 자원 — DX12 커맨드
+         *          얼로케이터·업로드 슬롯, Vulkan 커맨드버퍼·펜스·상수버퍼 슬롯·디스크립터 셋,
+         *          에디터 draw 스냅샷 — 이 전부 이 값으로 크기를 잡는다.
+         *          예전엔 이 값과 `FrameResourceRing::kFrameCount` 두 상수가 각각 2/3 으로 따로
+         *          있었고 Vulkan 이 둘을 섞어 썼다(상수버퍼는 3슬롯, 커맨드버퍼는 2개) — 값이 작아서
+         *          우연히 맞았을 뿐이고, 한쪽만 올리면 디스크립터가 버퍼 밖을 가리켰다. 그래서 별칭도
+         *          두지 않는다 — 같은 개념에 이름이 둘이면 같은 사고가 다시 난다.
+         */
+        inline constexpr uint32 kMaxFrameCountInFlight = 3;
+
+        /**
+         * @brief GPU 리소스 지연 해제 프레임 수 (RHIReleaseQueue 기본 frameLatency).
+         * @details 4개 RHI 백엔드(DX11/DX12/Vulkan/OpenGL)가 전부 같은 값을 써야 하는 계약 —
+         *          한쪽만 바꾸면 아직 GPU가 참조 중인 리소스를 조기 해제할 위험이 있다.
+         */
+        inline constexpr uint32 kGpuReleaseFrameLatency = 3;
+
+        /**
+         * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
+         *        프레임 수 (RenderThread 패킷 링 깊이).
+         * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
+         *          해제를 미뤄야 한다 (예: GpuMaterialRetireQueue::kRetireFrameDelay). GPU 인플라이트
+         *          값인 kMaxFrameCountInFlight 와는 별개 개념 — 혼동하지 말 것.
+         */
+        inline constexpr uint32 kRenderFrameQueueDepth = 3;
+    } // namespace constant
+
+    /**
+     * @struct RHIVulkanImGuiNative
+     * @brief Vulkan ImGui init용 opaque 핸들 묶음 (Editor가 concrete VulkanRHIDevice에 의존하지 않도록)
+     * @details 이미지 개수 기본값은 디바이스가 실제 스왑체인 값으로 덮어쓴다 — 여기 기본값은 그때까지의
+     *          자리표시자라서, 매직 넘버 대신 계약 상수를 쓴다.
+     */
+    struct RHIVulkanImGuiNative
+    {
+        void*  _pInstance{ nullptr };
+        void*  _pPhysicalDevice{ nullptr };
+        void*  _pDevice{ nullptr };
+        void*  _pGraphicsQueue{ nullptr };
+        void*  _pRenderPass{ nullptr };
+        uint32 _queueFamily{ 0 };
+        uint32 _minImageCount{ constant::kMaxFrameCountInFlight };
+        uint32 _imageCount{ constant::kMaxFrameCountInFlight };
     };
 
     /**
@@ -137,6 +210,9 @@ namespace sw
 
         PROPERTY()
         uint32 _bufferCount{ 2 }; ///< 프레임버퍼 개수 (Double/Triple Buffering)
+
+        /// @brief 백버퍼 컬러 포맷. 백엔드는 이 값을 존중해야 하고, 못 내면 실제 값을 보고해야 한다.
+        RHIFormat _format{ constant::kBackBufferFormat };
 
         PROPERTY()
         bool _bVSync{ true }; ///< 수직 동기화

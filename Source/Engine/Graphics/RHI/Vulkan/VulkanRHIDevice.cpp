@@ -228,6 +228,10 @@ namespace sw
         _width          = desc._width;
         _height         = desc._height;
 
+        // 백버퍼 포맷/개수는 백엔드 간 계약값이다 — 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
+        _requestedBackBufferFormat = desc._format;
+        _requestedBufferCount      = desc._bufferCount;
+
         BLOCK( "Validation Layer Setup" )
         {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -1328,13 +1332,14 @@ namespace sw
         vector<VkSurfaceFormatKHR> formats( formatCount );
         vkGetPhysicalDeviceSurfaceFormatsKHR( _physicalDevice, _surface, &formatCount, formats.data() );
 
-        // 백버퍼 포맷은 백엔드 간에 같아야 한다. 파이프라인은 desc._arrRtvFormat 으로 렌더패스를 만들고
-        // Vulkan 은 그 렌더패스와 실제 렌더패스의 첨부 포맷이 다르면 드로우를 거부하는데, 파이프라인
-        // 리소스는 DX12 스왑체인에 맞춰 R8G8B8A8_UNORM 을 쓴다. 여기서 B8G8R8A8 을 고르면 백버퍼에
-        // 직접 그리는 패스(에디터 없이 실행하는 경로)가 통째로 렌더패스 비호환이 된다.
-        // R8G8B8A8_UNORM → B8G8R8A8_UNORM → 첫 번째 순으로 고른다.
+        // 백버퍼 포맷은 백엔드 간 계약이다(constant::kBackBufferFormat). 파이프라인이 그 포맷으로
+        // 렌더패스를 만들기 때문에, 여기서 다른 걸 고르면 백버퍼에 직접 그리는 패스가 통째로
+        // 렌더패스 비호환이 된다. 요청 포맷 → 대체 → 첫 번째 순으로 고르고, 요청을 못 맞추면
+        // getBackBufferFormat() 으로 실제 값을 보고한다(조용히 어긋나게 두지 않는다).
+        const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedBackBufferFormat );
+        const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
+
         VkSurfaceFormatKHR surfaceFormat   = formats[0];
-        constexpr VkFormat arrPreferred[]  = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM };
         bool               bFoundPreferred = false;
         for ( const VkFormat preferred : arrPreferred )
         {
@@ -1349,6 +1354,12 @@ namespace sw
             }
             if ( bFoundPreferred )
                 break;
+        }
+        if ( surfaceFormat.format != requestedFormat )
+        {
+            SW_LOG_ERROR( "스왑체인이 요청 포맷(%#)을 지원하지 않아 %# 로 대체됐습니다 — 백버퍼를 직접 "
+                          "타깃으로 하는 파이프라인이 렌더패스 비호환이 될 수 있습니다.",
+                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -1368,7 +1379,11 @@ namespace sw
                 extent.height = capabilities.maxImageExtent.height;
         }
 
-        uint32 imageCount = capabilities.minImageCount + 1;
+        // 백버퍼 개수도 백엔드 간 계약이다 — 예전엔 이 값을 무시하고 minImageCount + 1 을 썼다.
+        // 요청값을 존중하되 서피스 능력으로 클램프한다.
+        uint32 imageCount = ( _requestedBufferCount > 0 ) ? _requestedBufferCount : ( capabilities.minImageCount + 1 );
+        if ( imageCount < capabilities.minImageCount )
+            imageCount = capabilities.minImageCount;
         if ( capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount )
             imageCount = capabilities.maxImageCount;
 
@@ -1409,9 +1424,13 @@ namespace sw
         _listSwapChainImage.resize( imageCount );
         vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, _listSwapChainImage.data() );
 
-        _swapChainImageFormat  = static_cast<uint32>( surfaceFormat.format );
-        _swapChainExtentWidth  = extent.width;
-        _swapChainExtentHeight = extent.height;
+        _swapChainImageFormat   = static_cast<uint32>( surfaceFormat.format );
+        _actualBackBufferFormat = ( surfaceFormat.format == requestedFormat )
+                                    ? _requestedBackBufferFormat
+                                    : ( ( surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM ) ? RHIFormat::B8G8R8A8_UNORM
+                                                                                             : RHIFormat::R8G8B8A8_UNORM );
+        _swapChainExtentWidth   = extent.width;
+        _swapChainExtentHeight  = extent.height;
         return true;
     }
 
@@ -1518,7 +1537,10 @@ namespace sw
 
     bool VulkanRHIDevice::createSyncObjects()
     {
-        _listImageAvailableSemaphore.resize( _listSwapChainImage.size() );
+        // acquire 세마포어는 _currentFrame 으로, present 세마포어는 _imageIndex 로 인덱싱한다 —
+        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 예전엔 둘 다 이미지 수로 잡아서,
+        // 드라이버가 인플라이트 프레임 수보다 적은 이미지를 주면 범위 밖 접근이 될 수 있었다.
+        _listImageAvailableSemaphore.resize( constant::kMaxFrameCountInFlight );
         _listRenderFinishedSemaphore.resize( _listSwapChainImage.size() );
         _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
         _listImagesInFlight.resize( _listSwapChainImage.size(), VK_NULL_HANDLE );
@@ -2149,8 +2171,8 @@ namespace sw
         if ( _device == nullptr )
             return false;
 
-        // Shared pass is always R8G8B8A8_UNORM (Game View). Other RT formats use a private RP.
-        constexpr uint32 sharedFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        // 공용 오프스크린 렌더패스는 계약 포맷일 때만 재사용한다. 다른 포맷은 전용 RP 를 만든다.
+        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( constant::kOffscreenColorFormat ) );
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 
@@ -2550,7 +2572,7 @@ namespace sw
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
 
-        const uint32 alignedSize = MathUtil::align( sizeBytes, 256u );
+        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

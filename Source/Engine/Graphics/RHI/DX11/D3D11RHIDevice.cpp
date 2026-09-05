@@ -11,6 +11,7 @@
 
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
+    #include "Engine/Graphics/RHI/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
@@ -84,7 +85,7 @@ namespace sw
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
         swapChainDesc.BufferDesc.Width                   = _width;
         swapChainDesc.BufferDesc.Height                  = _height;
-        swapChainDesc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swapChainDesc.BufferDesc.Format                  = toDxgiFormat( desc._format );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
         swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenomiator;
         swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;

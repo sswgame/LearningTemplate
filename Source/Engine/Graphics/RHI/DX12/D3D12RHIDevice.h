@@ -278,7 +278,7 @@ namespace sw
 
         /// @brief updateStructuredBuffer 전용 프레임 링 슬롯 — 매 호출마다 업로드 힙/커맨드리스트를
         /// 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
-        /// 편승한다(같은 인덱스를 다시 쓸 때는 kFrameCount 프레임 전 제출이 이미 GPU에서 끝났다).
+        /// 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU에서 끝났다).
         struct StructuredUploadSlot
         {
             Microsoft::WRL::ComPtr<ID3D12Resource>            _uploadHeap;
@@ -300,15 +300,15 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[FrameResourceRing::kFrameCount];
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[constant::kMaxFrameCountInFlight];
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 레거시와 별개.
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[FrameResourceRing::kFrameCount];
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[constant::kMaxFrameCountInFlight];
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
         mutex                         _cmdListPoolMutex;
         vector<D3D12CommandListEntry> _listFreeCmdListEntry;
         FrameResourceRing             _frameRing;
-        StructuredUploadSlot          _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
+        StructuredUploadSlot          _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;

@@ -343,7 +343,7 @@ namespace sw
 
     RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
     {
-        const uint32 alignedSize = MathUtil::align( size, 256u );
+        const uint32 alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         GLuint       ubo;
         glGenBuffers( 1, &ubo );
         glBindBuffer( GL_UNIFORM_BUFFER, ubo );
@@ -418,7 +418,7 @@ namespace sw
         if ( sizeBytes == 0 )
             return 0;
 
-        const uint32 alignedSize = MathUtil::align( sizeBytes, 256u );
+        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
 
         // SSBO allocation; same name can bind as GL_DRAW_INDIRECT_BUFFER / DISPATCH_INDIRECT_BUFFER.
         GLuint ssbo{ 0 };

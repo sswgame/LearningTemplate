@@ -9,22 +9,10 @@ namespace sw
 {
     namespace constant
     {
-        /** @brief CPU-GPU 동기화를 위한 렌더링 프레임 최대 큐 크기 (이중 버퍼링 기준) */
-        inline constexpr uint32 kMaxFrameCountInFlight = 2;
-        /**
-         * @brief GPU 리소스 지연 해제 프레임 수 (RHIReleaseQueue 기본 frameLatency).
-         * @details 4개 RHI 백엔드(DX11/DX12/Vulkan/OpenGL)가 전부 같은 값을 써야 하는 계약 —
-         *          한쪽만 바꾸면 아직 GPU가 참조 중인 리소스를 조기 해제할 위험이 있다.
-         */
-        inline constexpr uint32 kGpuReleaseFrameLatency = 3;
-        /**
-         * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
-         *        프레임 수 (RenderThread 패킷 링 깊이).
-         * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
-         *          해제를 미뤄야 한다 (예: GpuMaterialRetireQueue::kRetireFrameDelay). GPU
-         *          더블버퍼링 값인 kMaxFrameCountInFlight와는 별개 개념 — 혼동하지 말 것.
-         */
-        inline constexpr uint32 kRenderFrameQueueDepth = 3;
+        // 렌더링 프레임 상수(kMaxFrameCountInFlight / kGpuReleaseFrameLatency /
+        // kRenderFrameQueueDepth)는 RHITypes.h 의 constant 블록에 있다 — 백엔드 간 계약 상수들과
+        // 같은 자리에 모아 두는 편이 "한쪽만 바꾸면 깨진다"를 알아보기 쉽다.
+
         /** @brief 기본 뷰포트 너비입니다. */
         inline constexpr float32 kDefaultViewportWidth = 1280.0f;
         /** @brief 기본 뷰포트 높이입니다. */

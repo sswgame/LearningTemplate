@@ -1,24 +1,24 @@
 /**
  * @file FrameResourceRing.h
  * @brief N-버퍼 프레임 리소스 / 업로드 오프셋 헬퍼 (DX12는 프레임 리소스로, Vulkan은 상수 버퍼
- *        슬롯 크기 계산에도 kFrameCount를 씁니다)
+ *        슬롯 크기 계산에도 constant::kMaxFrameCountInFlight를 씁니다)
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
+
 namespace sw
 {
     /**
      * @class FrameResourceRing
-     * @brief 프레임별 펜스 값과 선형 업로드 bump allocator (N=3)
+     * @brief 프레임별 펜스 값과 선형 업로드 bump allocator (N = constant::kMaxFrameCountInFlight)
      * @details GPU 버퍼는 소유하지 않습니다 — 업로드 힙과 짝을 이루고 매 프레임 오프셋을 진행합니다.
      */
     class SW_API FrameResourceRing
     {
     public:
-        static constexpr uint32 kFrameCount = 3;
-
         // ------------------------------------------------------------------------------
         // 1) 수명 — 업로드 용량, reset
         // ------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ namespace sw
             uint64 _uploadOffset{ 0 };
         };
 
-        Slot   _arrSlot[kFrameCount]{};
+        Slot   _arrSlot[constant::kMaxFrameCountInFlight]{};
         uint64 _uploadCapacity{ 0 };
         uint32 _frameIndex{ 0 };
     };

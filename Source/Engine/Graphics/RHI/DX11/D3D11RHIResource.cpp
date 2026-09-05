@@ -369,7 +369,7 @@ namespace sw
         if ( bDepth )
         {
             D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-            dsvDesc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
+            dsvDesc.Format             = toDxgiFormat( constant::kDepthStencilFormat );
             dsvDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
             dsvDesc.Texture2D.MipSlice = 0;
             if ( FAILED( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, record._dsv.GetAddressOf() ) ) )

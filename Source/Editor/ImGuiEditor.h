@@ -9,7 +9,7 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw::editor
 {
@@ -81,18 +81,18 @@ namespace sw::editor
         void waitForDrawSnapshotIdle();
 
     private:
-        /** @brief UI 스레드와 렌더 스레드가 번갈아 쓰는 draw 스냅샷 슬롯 수. */
-        static constexpr uint32 _s_kDrawSnapshotCount = constant::kMaxFrameCountInFlight;
         /** @brief 렌더 중인 슬롯이 없음을 뜻하는 센티널. */
         static constexpr uint32 _s_kInvalidDrawSlot = invalid_index::kUint32;
-        static_assert( _s_kDrawSnapshotCount >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
+        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이라 constant::kMaxFrameCountInFlight
+        // 를 직접 쓴다 — 별칭을 두면 같은 개념에 이름이 둘이 되고, 한쪽만 바뀌어도 컴파일은 통과한다.
+        static_assert( constant::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
 
         unique_ptr<IImGuiPlatformBackend> _platformBackend;
         unique_ptr<IImGuiRendererBackend> _rendererBackend;
         unique_ptr<EditorData>            _editorData;
         unique_ptr<EditorContext>         _editorContext;
         EditorDockLayout                  _dockLayout;
-        EditorDrawDataSnapshot            _arrDrawSnapshot[_s_kDrawSnapshotCount];
+        EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];
         atomic<uint32>                    _publishedDrawSlot;
         atomic<uint32>                    _inFlightDrawSlot;
 

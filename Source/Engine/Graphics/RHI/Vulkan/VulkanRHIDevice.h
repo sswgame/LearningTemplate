@@ -211,6 +211,9 @@ namespace sw
         VkDevice         getDevice() const { return _device; }
         VkRenderPass     getRenderPass() const { return _renderPass; }
 
+        /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
+        RHIFormat getBackBufferFormat() const override { return _actualBackBufferFormat; }
+
         bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const override
         {
             out._pInstance       = _instance;
@@ -219,8 +222,11 @@ namespace sw
             out._pGraphicsQueue  = _graphicsQueue;
             out._pRenderPass     = _renderPass;
             out._queueFamily     = _graphicsQueueFamilyIndex;
-            out._minImageCount   = 2;
-            out._imageCount      = static_cast<uint32>( _listSwapChainImage.empty() ? 2 : _listSwapChainImage.size() );
+            // 실제 스왑체인 이미지 수를 그대로 알린다 — 매직 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
+            // ImGui 쪽만 옛 값으로 남는다.
+            out._imageCount    = static_cast<uint32>( _listSwapChainImage.empty() ? constant::kMaxFrameCountInFlight
+                                                                                  : _listSwapChainImage.size() );
+            out._minImageCount = out._imageCount;
             return _device != nullptr;
         }
 
@@ -514,6 +520,13 @@ namespace sw
         uint32                _swapChainExtentHeight;
         vector<VkImageView>   _listSwapChainImageView;
         vector<VkFramebuffer> _listSwapChainFramebuffer;
+
+        /// @brief 스왑체인에 요청한 백버퍼 포맷(계약값). 서피스가 못 내면 대체되고 로그로 알린다.
+        RHIFormat _requestedBackBufferFormat{ constant::kBackBufferFormat };
+        /// @brief 스왑체인에 요청한 백버퍼 개수. 서피스 능력으로 클램프된다.
+        uint32 _requestedBufferCount{ 0 };
+        /// @brief 실제로 채택된 백버퍼 포맷. 요청과 다르면 getBackBufferFormat() 으로 드러난다.
+        RHIFormat _actualBackBufferFormat{ constant::kBackBufferFormat };
 
         VkRenderPass _renderPass;           ///< 스왑체인 렌더패스 (loadOp=CLEAR)
         VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더패스의 loadOp=LOAD 변종. 한 프레임에 백버퍼를

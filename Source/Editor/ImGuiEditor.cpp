@@ -342,7 +342,7 @@ namespace sw::editor
             }
 
             const uint32 writeSlot =
-                ( _publishedDrawSlot.load( std::memory_order_acquire ) + 1u ) % _s_kDrawSnapshotCount;
+                ( _publishedDrawSlot.load( std::memory_order_acquire ) + 1u ) % constant::kMaxFrameCountInFlight;
             while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
                 std::this_thread::yield();
 
@@ -373,7 +373,7 @@ namespace sw::editor
 
         const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
         _inFlightDrawSlot.store( slot, std::memory_order_release );
-        if ( slot < _s_kDrawSnapshotCount )
+        if ( slot < constant::kMaxFrameCountInFlight )
         {
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
             if ( pDrawData != nullptr )

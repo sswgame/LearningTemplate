@@ -191,13 +191,13 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
     {
-        const UINT            alignedSize = MathUtil::align( size, 256u );
+        const UINT            alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 
         D3D12_RESOURCE_DESC resDesc{};
         resDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resDesc.Width            = static_cast<UINT64>( alignedSize ) * FrameResourceRing::kFrameCount;
+        resDesc.Width            = static_cast<UINT64>( alignedSize ) * constant::kMaxFrameCountInFlight;
         resDesc.Height           = 1;
         resDesc.DepthOrArraySize = 1;
         resDesc.MipLevels        = 1;
@@ -225,7 +225,7 @@ namespace sw
             return;
 
         // CBV SizeInBytes must be a multiple of 256 (D3D12 requirement).
-        uint32     alignedSize = MathUtil::align( size, 256u );
+        uint32     alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         const auto sizeIt      = _pDevice->_mapCbAlignedSize.find( buffer );
         if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
             alignedSize = sizeIt->second;
@@ -291,7 +291,7 @@ namespace sw
             return;
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙/얼로케이터/리스트를 새로 만들지 않음).
-        // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 kFrameCount 프레임 전 제출의
+        // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다.
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[_pDevice->_frameRing.currentIndex()];
 
@@ -487,10 +487,10 @@ namespace sw
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-        const bool            bDepth      = desc._bIsDepthStencil != 0;
-        const DXGI_FORMAT     typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
-        constexpr DXGI_FORMAT dsvFmt      = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        const DXGI_FORMAT     colorFmt    = toDxgiFormat( desc._format );
+        const bool        bDepth      = desc._bIsDepthStencil != 0;
+        const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
+        const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::kDepthStencilFormat );
+        const DXGI_FORMAT colorFmt    = toDxgiFormat( desc._format );
 
         D3D12_RESOURCE_DESC resDesc{};
         resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -763,7 +763,8 @@ namespace sw
         else
         {
             // Non-ring buffers: CBV size must be 256-byte aligned and <= resource width.
-            const UINT width    = static_cast<UINT>( pRes->GetDesc().Width );
+            const UINT width = static_cast<UINT>( pRes->GetDesc().Width );
+            // 텍스처 행 정렬(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) — 상수버퍼 정렬과 이름만 같은 별개 값이다.
             const UINT aligned  = MathUtil::align( width, 256u );
             cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
             if ( cbvDesc.SizeInBytes == 0 )

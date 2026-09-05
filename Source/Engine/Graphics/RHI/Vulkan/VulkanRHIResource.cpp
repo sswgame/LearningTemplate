@@ -443,8 +443,8 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResource::createConstantBuffer( uint32 size )
     {
-        const uint32          aligned = MathUtil::align( size, 256u );
-        const uint32          total   = aligned * FrameResourceRing::kFrameCount;
+        const uint32          aligned = MathUtil::align( size, constant::kConstantBufferAlignment );
+        const uint32          total   = aligned * constant::kMaxFrameCountInFlight;
         const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
         if ( handle != 0 )
             _pDevice->_mapCbSlotSize[handle] = aligned;
@@ -464,7 +464,7 @@ namespace sw
         const auto slotIt   = _pDevice->_mapCbSlotSize.find( buffer );
         if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             slotSize = slotIt->second;
-        const uint32 offset = ( _pDevice->_currentFrame % FrameResourceRing::kFrameCount ) * slotSize;
+        const uint32 offset = ( _pDevice->_currentFrame % constant::kMaxFrameCountInFlight ) * slotSize;
 
         void* pMapped{ nullptr };
         if ( vkMapMemory( _pDevice->_device, pRecord->_memory, offset, size, 0, &pMapped ) == VK_SUCCESS )

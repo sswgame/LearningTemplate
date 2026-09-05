@@ -152,7 +152,7 @@ namespace sw
         scDesc.BufferCount      = _bufferCount;
         scDesc.Width            = _width;
         scDesc.Height           = _height;
-        scDesc.Format           = DXGI_FORMAT_R8G8B8A8_UNORM;
+        scDesc.Format           = toDxgiFormat( desc._format );
         scDesc.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         scDesc.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         scDesc.SampleDesc.Count = 1;
@@ -196,7 +196,7 @@ namespace sw
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 
-        for ( uint32 frameIndex = 0; frameIndex < FrameResourceRing::kFrameCount; ++frameIndex )
+        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
         {
             if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
                 return false;
@@ -417,7 +417,7 @@ namespace sw
         if ( _frameRing.beginFrame( completed ) )
             return;
 
-        const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % FrameResourceRing::kFrameCount;
+        const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
         const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
         if ( _fence->GetCompletedValue() < waitValue && _fenceEvent != nullptr )
         {

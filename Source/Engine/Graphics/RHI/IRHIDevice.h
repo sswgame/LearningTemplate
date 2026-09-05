@@ -75,6 +75,14 @@ namespace sw
          * @note 정적 표는 RHIAvailability::query. DX12/VK native bindless는
          *       supportsNativeBindlessSampling() / override getCapabilities()가 런타임 확정.
          */
+        /**
+         * @brief 이 디바이스가 실제로 채택한 백버퍼 컬러 포맷.
+         * @details 기본은 계약값 `constant::kBackBufferFormat` 이다. 하드웨어/서피스 제약으로 그 값을
+         *          낼 수 없는 백엔드(Vulkan)만 override 해서 실제 값을 보고한다 — 조용히 다른 포맷을
+         *          쓰면 백버퍼를 타깃으로 하는 PSO 가 전부 렌더패스 비호환이 된다.
+         */
+        virtual RHIFormat getBackBufferFormat() const { return constant::kBackBufferFormat; }
+
         virtual RHICapabilities getCapabilities() const { return RHIAvailability::query( getBackendType() ); }
         virtual IRHISwapChain*  getSwapChain() { return nullptr; }
         virtual IRHIResource*   getResource() { return nullptr; }
