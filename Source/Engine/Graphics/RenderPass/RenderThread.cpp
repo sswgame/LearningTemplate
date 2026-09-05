@@ -263,33 +263,42 @@ namespace sw
 
         const bool          bOffscreen = packet._gameRenderTarget != 0;
         IRHICommandContext* pImm       = _pDevice->getImmediateContext();
+        if ( _pDevice->getSwapChain() == nullptr )
+        {
+            SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
+            return false;
+        }
+        if ( bOffscreen && pImm == nullptr )
+        {
+            SW_LOG_ERROR( "getImmediateContext() is null; skipping offscreen packet" );
+            return false;
+        }
+
+        // 프레임 수명주기는 경로와 무관하게 항상 여기서 한 번 연다. 예전엔 오프스크린 경로에서만
+        // beginFrame 을 그래프 뒤로 미뤄뒀는데, 그건 "백버퍼를 바인딩할 다른 수단이 없어서" 위치로
+        // 대신하던 것이었다(docs/05_RHI_FrameContract.md 의 R2). 그 역할은 아래 명시적 백버퍼
+        // 렌더패스가 대신한다 — 이 둘은 반드시 같이 있어야 한다.
+        _pDevice->getSwapChain()->beginFrame( packet._clearColor );
+
         if ( bOffscreen )
-        {
-            if ( pImm == nullptr )
-            {
-                SW_LOG_ERROR( "getImmediateContext() is null; skipping offscreen packet" );
-                return false;
-            }
             pImm->beginOffscreenPass( packet._gameRenderTarget, packet._clearColor );
-        }
-        else
-        {
-            if ( _pDevice->getSwapChain() == nullptr )
-            {
-                SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
-                return false;
-            }
-            _pDevice->getSwapChain()->beginFrame( packet._clearColor );
-        }
 
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
             _pFrameRenderer->executePacket( _pDevice, packet );
 
         if ( bOffscreen )
-        {
             pImm->endOffscreenPass( packet._gameRenderTarget );
-            if ( _pDevice->getSwapChain() != nullptr )
-                _pDevice->getSwapChain()->beginFrame( packet._clearColor );
+
+        // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린/백버퍼 어디에 그렸든, 여기서 타깃을
+        // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
+        if ( pImm != nullptr )
+        {
+            RHIRenderPassBeginInfo backbufferPass{};
+            backbufferPass._bBindColor        = 1;
+            backbufferPass._colorTargetCount  = 1;
+            backbufferPass._arrColorTarget[0] = 0; // 0 = 백버퍼
+            backbufferPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+            pImm->beginRenderPass( backbufferPass );
         }
 
         if ( _presentHook.isBound() )

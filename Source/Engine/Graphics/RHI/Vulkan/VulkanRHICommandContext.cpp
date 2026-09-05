@@ -96,6 +96,17 @@ namespace sw
             return;
         }
 
+        // beginFrame 이 이미 스왑체인 렌더패스를 열어둔 상태다(S1 이후). 오프스크린 전용 버퍼로
+        // 갈아타기 전에 프레임 버퍼의 렌더패스를 실제로 닫아야 한다 — 예전엔 플래그만 내렸는데,
+        // 그때는 beginFrame 이 아직 안 불려 열린 렌더패스가 없어서 무해했을 뿐이다.
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            VkCommandBuffer frameCmd = commandBuffer();
+            if ( frameCmd != VK_NULL_HANDLE )
+                vkCmdEndRenderPass( frameCmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+
         vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
         vkResetFences( _pDevice->_device, 1, &_pDevice->_offscreenFence );
         vkResetCommandBuffer( _pDevice->_offscreenCommandBuffer, 0 );
@@ -114,8 +125,10 @@ namespace sw
                                          VK_IMAGE_ASPECT_COLOR_BIT );
         record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
-        _pState->_bOffscreenPassActive  = 1;
-        _pDevice->_bFrameStarted        = SW_TRUE; // allow Immediate Context draws during offscreen
+        _pState->_bOffscreenPassActive = 1;
+        // _bFrameStarted 는 프레임 수명주기 상태라 beginFrame/endFrame 만 소유한다. 예전엔 여기서
+        // 강제로 세웠는데, beginFrame 이 항상 먼저 오는 지금은 불필요하고 오히려 위험하다
+        // (docs/05_RHI_FrameContract.md R5 참고).
         _pState->_bRenderPassActive     = SW_FALSE;
         _pState->_activeOffscreenTarget = colorTarget;
 
@@ -281,8 +294,10 @@ namespace sw
         vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, _pDevice->_offscreenFence );
         vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
 
-        _pState->_bOffscreenPassActive  = 0;
-        _pDevice->_bFrameStarted        = SW_FALSE;
+        _pState->_bOffscreenPassActive = 0;
+        // _bFrameStarted 를 여기서 내리면 뒤따르는 endFrame 이 조기 반환해 프레임 제출이 통째로
+        // 사라진다(=acquire 세마포어가 신호된 채 남아 다음 프레임 acquire 가 실패). 프레임 수명주기는
+        // beginFrame/endFrame 소유다.
         _pState->_activeOffscreenTarget = 0;
     }
 

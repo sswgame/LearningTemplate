@@ -13,13 +13,16 @@
 
 ```
 [오프스크린 경로 — 에디터 게임뷰]              [백버퍼 경로 — 에디터 없이 실행]
-beginOffscreenPass(gameRT, clear)              beginFrame(clear)
+beginOffscreenPass(gameRT, clear)              beginFrame(clear)   ← 맨 앞
 FrameRenderer::executePacket()                 FrameRenderer::executePacket()
 endOffscreenPass(gameRT)
-beginFrame(clear)   ← 두 번째 호출
+beginFrame(clear)   ← 여기(그래프 뒤)
 presentHook()  (에디터 UI)                     presentHook()
 endFrame()                                     endFrame()
 ```
+
+**`beginFrame` 은 프레임당 정확히 한 번 호출된다. 두 경로의 차이는 호출 "위치"다.**
+오프스크린 경로에서는 게임뷰 렌더가 끝난 뒤로 미뤄져 있는데, 이게 우연이 아니라 계약이다(아래 R2).
 
 ## 2. 각 백엔드가 실제로 하는 일
 
@@ -47,18 +50,30 @@ endFrame()                                     endFrame()
 
 문서에 없지만 코드가 의존하는 규칙들:
 
-- **R1. `beginFrame` 의 수명주기 부분은 멱등이어야 한다.** 오프스크린 경로에서 두 번째로 불릴 때,
-  DX12 는 `_bRecording != 0` 이라 `Reset` 을 건너뛴다. 이 멱등성이 깨지면 오프스크린 기록이 날아간다.
-- **R2. 백버퍼를 (재)바인딩하는 유일한 수단이 `beginFrame` 이다.** 오프스크린 경로의 두 번째
-  `beginFrame` 호출은 사실 "프레임 시작"이 아니라 **"UI 를 그리기 위해 백버퍼를 다시 바인딩+클리어"**
-  가 목적이다. RHI 에 그 뜻을 표현하는 다른 수단이 없어서 `beginFrame` 을 재사용하고 있다.
+- **R1. `beginFrame` 의 수명주기 부분은 "이미 기록이 시작됐으면 건너뛴다"여야 한다.** 오프스크린
+  경로에서는 `beginOffscreenPass` 가 먼저 기록을 시작하므로(R3), 뒤늦게 불리는 `beginFrame` 이
+  얼로케이터/리스트를 `Reset` 하면 그때까지의 게임뷰 기록이 통째로 날아간다. DX12 는
+  `_bRecording != 0` 검사로 이를 지킨다.
+- **R2. 백버퍼를 바인딩하는 유일한 수단이 `beginFrame` 이고, 따라서 그 "호출 위치"가 계약이다.**
+  `beginFrame` 뒤에 기록되는 것은 모두 백버퍼를 향한다. 오프스크린 경로에서 호출이 그래프 뒤로
+  미뤄져 있는 이유가 이것이다 — 게임뷰를 다 그린 다음에야 백버퍼를 바인딩해서 UI 를 받는다.
+  RHI 에 "백버퍼를 바인딩하라"를 따로 표현할 수단이 없어 `beginFrame` 의 위치로 대신하고 있다.
 - **R3. `beginOffscreenPass` 는 기록이 시작 안 됐으면 시작해도 된다.** (DX12 `ensureRecording`,
   Vulkan 은 자기 버퍼를 연다.)
 - **R4. 오프스크린 작업과 UI 작업이 같은 제출에 들어가는지는 백엔드마다 다르다.** Vulkan 만 분리
   제출이고 나머지는 같은 스트림이다.
+- **R5. 프레임 수명주기 상태를 오프스크린이 건드리고 있었다.** Vulkan `beginOffscreenPass` 가
+  `_bFrameStarted = TRUE`, `endOffscreenPass` 가 `= FALSE` 로 되돌렸다. `beginFrame` 이 뒤에 오던
+  시절엔 무해했지만, 순서를 바꾸면 `endFrame` 이 조기 반환해 **프레임 제출이 통째로 사라지고**
+  acquire 세마포어가 신호된 채 남아 다음 프레임이 깨진다. → S1 에서 제거함.
+- **R6. 렌더패스 "닫힘"을 플래그로만 표시하는 곳이 있었다.** Vulkan `beginOffscreenPass` 는
+  `_bRenderPassActive = FALSE` 만 세팅하고 실제 `vkCmdEndRenderPass` 를 하지 않았다. `beginFrame` 이
+  뒤에 와서 열린 렌더패스가 없던 시절엔 맞는 코드였다. → S1 에서 실제로 닫도록 수정.
 
-R2 가 이번 실패의 핵심이었다. `beginFrame` 을 앞으로 옮기자 **오프스크린 이후 백버퍼를 재바인딩하는
-주체가 사라져** DX12 에서 리소스 상태 오류 758건과 DEVICE_HUNG 이 터졌다.
+R2 가 이번 실패의 핵심이었다. `beginFrame` 을 (두 경로 공통으로) 맨 앞으로 옮기자, 오프스크린 경로에서
+**게임뷰 렌더 이후 백버퍼를 확립하는 주체가 사라져** UI 가 잘못된 타깃/상태로 그려졌고 DX12 에서
+리소스 상태 오류 758건과 DEVICE_HUNG 이 터졌다. 옮기려면 **그 자리를 대신할 명시적 백버퍼 바인딩을
+같이 넣어야 한다** — 그게 아래 S1 이다.
 
 ## 4. 재설계 — 두 책임을 분리한다
 
@@ -67,8 +82,8 @@ RHIRenderPassBeginInfo )` 는 컬러 타깃 배열·로드 op·클리어 값을 
 해석된다(D3D12RHICommandContext 의 렌더패스 처리 참고). 실제로 `FrameRenderer` 의 Present 패스는
 **이미** 이 API 로 게임 RT(`_outputRenderTarget`)를 타깃으로 렌더패스를 연다.
 
-즉 `beginOffscreenPass`/`endOffscreenPass` 와 "두 번째 `beginFrame`" 은 모두 이 API 로 표현 가능한
-레거시 스캐폴드다. 셰이더 읽기 전환도 `IRHICommandList::prepareTextureForShaderRead` 가 이미 있다.
+즉 `beginOffscreenPass`/`endOffscreenPass` 와 "`beginFrame` 의 위치로 백버퍼 바인딩을 대신하는 관행"은
+모두 이 API 로 표현 가능한 레거시 스캐폴드다. 셰이더 읽기 전환도 `IRHICommandList::prepareTextureForShaderRead` 가 이미 있다.
 
 ### 목표 계약
 
@@ -100,7 +115,7 @@ swapChain->endFrame()
 
 | 단계 | 내용 | 위험도 |
 |---|---|---|
-| **S1** | 백버퍼 바인딩을 명시화. 에디터 UI 경로(`presentHook`)가 두 번째 `beginFrame` 에 의존하지 않고 `beginRenderPass(백버퍼, Load)` 를 직접 열도록 변경. 나머지는 그대로 둔다 | **높음** — R2 를 바꾸는 지점 |
+| ~~**S1**~~ | ✅ **완료** — `beginFrame` 을 두 경로 공통으로 맨 앞으로 옮기고, 백버퍼 확립을 대신할 **명시적 `beginRenderPass(백버퍼, Load)`** 를 `presentHook` 직전에 추가. 부수로 R5·R6 위반 2건을 Vulkan 에서 수정해야 했다 | 높음(완료) |
 | **S2** | `beginFrame` 에서 백버퍼 바인딩/클리어 제거(수명주기만 남김). 클리어는 첫 백버퍼 `beginRenderPass` 의 `loadOp=Clear` 로 이동 | 높음 |
 | **S3** | `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. **Vulkan 블로킹 제출도 여기서 사라진다** | 중간 |
 | **S4** | Vulkan 리스트가 자기 `VkCommandBuffer`/커맨드 풀 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간 |
