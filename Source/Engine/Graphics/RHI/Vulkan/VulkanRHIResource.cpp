@@ -302,8 +302,8 @@ namespace sw
             } ),
                                                        _pDevice->_frameFenceCounter + 1 );
         }
-        if ( _pDevice->_activeGraphicsPso == pso )
-            _pDevice->_activeGraphicsPso = 0;
+        if ( _pDevice->_recordingState._activeGraphicsPso == pso )
+            _pDevice->_recordingState._activeGraphicsPso = 0;
     }
 
     RHIRenderPassHandle VulkanRHIResource::createRenderPass( const RHIRenderPassDesc& desc )
@@ -573,10 +573,10 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_boundMeshVb )
-            _pDevice->_boundMeshVb = 0;
-        if ( buffer == _pDevice->_boundIndexBuffer )
-            _pDevice->_boundIndexBuffer = 0;
+        if ( buffer == _pDevice->_recordingState._boundMeshVb )
+            _pDevice->_recordingState._boundMeshVb = 0;
+        if ( buffer == _pDevice->_recordingState._boundIndexBuffer )
+            _pDevice->_recordingState._boundIndexBuffer = 0;
         _pDevice->_mapCbSlotSize.erase( buffer );
 
         VulkanRHIDevice::VulkanBufferRecord owned;

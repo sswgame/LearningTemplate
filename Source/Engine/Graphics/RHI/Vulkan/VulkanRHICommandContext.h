@@ -2,16 +2,25 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 namespace sw
 {
-    class VulkanRHIDevice;
 
     class VulkanRHICommandContext : public IRHICommandContext
     {
     public:
-        explicit VulkanRHICommandContext( VulkanRHIDevice* pDevice )
-            : _pDevice{ pDevice } {}
+        /**
+         * @brief 디바이스의 기록 상태/버퍼를 쓰는 즉시 컨텍스트를 만듭니다.
+         * @details 스왑체인 begin/end 처럼 "디바이스가 직접 여는 버퍼"에 기록하는 경로용입니다.
+         */
+        explicit VulkanRHICommandContext( VulkanRHIDevice* pDevice );
+        /**
+         * @brief 지정한 커맨드 버퍼와 기록 상태에 기록하는 컨텍스트를 만듭니다.
+         * @details `VulkanRHICommandList` 처럼 자기 버퍼/상태를 소유하는 쪽이 씁니다 — 여러 리스트가
+         *          동시에 기록해도 서로의 바인딩 캐시를 건드리지 않습니다.
+         */
+        VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer, VulkanRecordingState* pState );
         ~VulkanRHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -64,5 +73,12 @@ namespace sw
         void bindMeshVertexBufferOrFallback();
 
         VulkanRHIDevice* _pDevice;
+        /// @brief 이 컨텍스트가 기록할 버퍼. nullptr 이면 디바이스가 지금 연 버퍼를 따라간다.
+        VkCommandBuffer _targetBuffer{ nullptr };
+        /// @brief 이 컨텍스트가 갱신할 기록 상태. 리스트가 자기 것을 넘기면 서로 간섭하지 않는다.
+        VulkanRecordingState* _pState{ nullptr };
+
+        /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 게 있으면 그것, 없으면 디바이스의 현재 버퍼). */
+        VkCommandBuffer commandBuffer() const;
     };
 } // namespace sw

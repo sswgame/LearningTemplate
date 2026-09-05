@@ -152,8 +152,6 @@ namespace sw
         , _height{ 0 }
         , _depthFormat{ 0 }
         , _bFrameStarted{ SW_FALSE }
-        , _bOffscreenPassActive{ SW_FALSE }
-        , _bRenderPassActive{ SW_FALSE }
 #if defined( SW_DEBUG )
         , _bEnableValidationLayers{ SW_TRUE }
 #else
@@ -167,8 +165,6 @@ namespace sw
         , _reservedVulkan{ 0 }
         , _offscreenCommandBuffer{ nullptr }
         , _offscreenFence{ nullptr }
-        , _activeOffscreenTarget{ 0 }
-        , _activeGraphicsPso{ 0 }
         , _defaultSampler{ nullptr }
         , _pipelineLayout{ nullptr }
         , _descriptorSetLayout{ nullptr }
@@ -186,14 +182,6 @@ namespace sw
         , _listBindlessFree{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
-        , _boundMeshVb{ 0 }
-        , _boundMeshStride{ sizeof( RHIVertex ) }
-        , _boundMeshOffset{ 0 }
-        , _lastBoundGraphicsSet0{ nullptr }
-        , _bStaticGraphicsSetsBound{ false }
-        , _boundIndexBuffer{ 0 }
-        , _boundIndexStride{ 4 }
-        , _boundIndexOffset{ 0 }
         , _listRegisteredDescriptorSet{}
         , _listBindlessSourceBuffer{}
         , _listRegisteredUAV{}
@@ -424,12 +412,12 @@ namespace sw
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
             _gpuBuffers.clear();
-            _boundMeshVb      = 0;
-            _boundMeshStride  = sizeof( RHIVertex );
-            _boundMeshOffset  = 0;
-            _boundIndexBuffer = 0;
-            _boundIndexStride = 4;
-            _boundIndexOffset = 0;
+            _recordingState._boundMeshVb      = 0;
+            _recordingState._boundMeshStride  = sizeof( RHIVertex );
+            _recordingState._boundMeshOffset  = 0;
+            _recordingState._boundIndexBuffer = 0;
+            _recordingState._boundIndexStride = 4;
+            _recordingState._boundIndexOffset = 0;
             _listRegisteredDescriptorSet.clear();
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
@@ -653,11 +641,11 @@ namespace sw
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
         // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
-        _lastBoundGraphicsSet0    = nullptr;
-        _bStaticGraphicsSetsBound = false;
+        _recordingState._lastBoundGraphicsSet0    = nullptr;
+        _recordingState._bStaticGraphicsSetsBound = false;
 
-        _bFrameStarted     = SW_TRUE;
-        _bRenderPassActive = SW_FALSE;
+        _bFrameStarted                     = SW_TRUE;
+        _recordingState._bRenderPassActive = SW_FALSE;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -695,7 +683,7 @@ namespace sw
             rpBeginInfo.pClearValues    = &clearVal;
 
             vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-            _bRenderPassActive = SW_TRUE;
+            _recordingState._bRenderPassActive = SW_TRUE;
         }
     }
 
@@ -705,10 +693,10 @@ namespace sw
         if ( _bFrameStarted == SW_FALSE )
             return;
 
-        if ( _bRenderPassActive == SW_TRUE )
+        if ( _recordingState._bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( _listCommandBuffer[_currentFrame] );
-            _bRenderPassActive = SW_FALSE;
+            _recordingState._bRenderPassActive = SW_FALSE;
         }
         vkEndCommandBuffer( _listCommandBuffer[_currentFrame] );
 
@@ -792,7 +780,7 @@ namespace sw
 
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
-        if ( _bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
+        if ( _recordingState._bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
             return _offscreenCommandBuffer;
         if ( _bFrameStarted == SW_TRUE && _listCommandBuffer.empty() == false )
             return _listCommandBuffer[_currentFrame];

@@ -48,6 +48,47 @@ namespace sw
      * @class VulkanRHIDevice
      * @brief Vulkan 1.3 그래픽스 및 컴퓨트 디바이스 구현체 (Descriptor Indexing / Bindless 지원)
      */
+    /**
+     * @struct VulkanRecordingState
+     * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" — 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태.
+     * @details 예전엔 이 필드들이 `VulkanRHIDevice` 에 있었다. 커맨드 버퍼가 프레임당 하나뿐이라는
+     *          전제에서는 문제가 없었지만, 그 전제 때문에 여러 리스트가 동시에 기록할 수 없었다
+     *          (서로의 바인딩 캐시를 덮어쓴다). DX12 의 `D3D12RecordingState` 와 같은 역할이며,
+     *          "기록 상태는 리스트가 소유하고 디바이스는 진짜 전역 자원만 갖는다"는 구조로 맞춘 것이다.
+     */
+    struct VulkanRecordingState
+    {
+        /// @brief 이 스트림에 렌더패스가 열려 있는가.
+        uint8 _bRenderPassActive : 1;
+        /// @brief 이 스트림에 오프스크린 패스가 열려 있는가.
+        uint8 _bOffscreenPassActive : 1;
+        /// @brief set 1(bindless 텍스처)·set 4(정적 샘플러)를 이 버퍼에 이미 바인딩했는가.
+        uint8                  _bStaticGraphicsSetsBound : 1;
+        [[maybe_unused]] uint8 _reserved                 : 5;
+
+        RHITextureHandle       _activeOffscreenTarget{ 0 };
+        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+
+        RHIBufferHandle _boundMeshVb{ 0 };
+        uint32          _boundMeshStride{ sizeof( RHIVertex ) };
+        uint32          _boundMeshOffset{ 0 };
+        RHIBufferHandle _boundIndexBuffer{ 0 };
+        uint32          _boundIndexStride{ 4 };
+        uint32          _boundIndexOffset{ 0 };
+
+        /// @brief 마지막으로 바인딩한 set 0(PassCB) — 인덱스가 실제로 바뀔 때만 재바인딩하기 위한 캐시.
+        VkDescriptorSet _lastBoundGraphicsSet0{ nullptr };
+
+        /** @brief 아무것도 안 걸린 상태로 시작합니다. */
+        VulkanRecordingState()
+            : _bRenderPassActive{ 0 }
+            , _bOffscreenPassActive{ 0 }
+            , _bStaticGraphicsSetsBound{ 0 }
+            , _reserved{ 0 }
+        {
+        }
+    };
+
     class VulkanRHIDevice : public IRHIDevice
     {
         friend class VulkanRHICommandContext;
@@ -477,8 +518,6 @@ namespace sw
         uint32                  _height;
         uint32                  _depthFormat; ///< VkFormat — createTexture2D/RP 공통 depth
         uint16                  _bFrameStarted           : 1;
-        uint16                  _bOffscreenPassActive    : 1;
-        uint16                  _bRenderPassActive       : 1;
         uint16                  _bEnableValidationLayers : 1;
         uint16                  _bMultiDrawIndirect      : 1;
         uint16                  _bDrawIndirectCount      : 1;
@@ -487,11 +526,9 @@ namespace sw
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
         [[maybe_unused]] uint16 _reservedVulkan          : 6;
 
-        VkCommandBuffer        _offscreenCommandBuffer;
-        VkFence                _offscreenFence;
-        RHITextureHandle       _activeOffscreenTarget;
-        RHIPipelineStateHandle _activeGraphicsPso;
-        VkSampler              _defaultSampler;
+        VkCommandBuffer _offscreenCommandBuffer;
+        VkFence         _offscreenFence;
+        VkSampler       _defaultSampler;
 
         VkPipelineLayout      _pipelineLayout;
         VkDescriptorSetLayout _descriptorSetLayout;
@@ -512,19 +549,9 @@ namespace sw
 
         RHIHandleTable<VulkanBufferRecord>     _gpuBuffers;
         unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
-        RHIBufferHandle                        _boundMeshVb;
-        uint32                                 _boundMeshStride; ///< 바인딩된 VB stride
-        uint32                                 _boundMeshOffset;
-        /// @brief bindGraphicsMaterialSets가 매 draw 무조건 재바인딩하지 않도록 하는 캐시. set 1(bindless
-        /// 텍스처)·set 4(정적 샘플러)는 커맨드버퍼 하나 내내 안 바뀌므로 그 버퍼에 한 번만 바인딩하면
-        /// 되고, set 0(PassCB)은 인덱스가 실제로 바뀔 때만 재바인딩한다. Vulkan은 병렬 기록을 안 타므로
-        /// (RHICapabilities._bParallelCommandRecording=0) 디바이스 전역이어도 스레드 안전 문제 없음.
-        /// beginFrame()/beginOffscreenPass()에서 새 커맨드버퍼를 열 때마다 초기화해야 한다.
-        VkDescriptorSet _lastBoundGraphicsSet0;
-        bool            _bStaticGraphicsSetsBound;
-        RHIBufferHandle _boundIndexBuffer;
-        uint32          _boundIndexStride;
-        uint32          _boundIndexOffset;
+        /// @brief 즉시 컨텍스트(스왑체인 begin/end·오프스크린)가 쓰는 기록 상태. 리스트 기반 기록은
+        /// 각자 자기 것을 갖는다 — 여기 있는 건 "디바이스가 직접 여는 버퍼" 전용이다.
+        VulkanRecordingState _recordingState;
         /// @brief 디스크립터 레지스트리 보호용. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
         /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽는다
         /// (gv_useRenderThread 기본 true 라 렌더/게임 스레드 사이에서 이미 성립하는 레이스).

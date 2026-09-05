@@ -8,6 +8,28 @@
 
 namespace sw
 {
+    VulkanRHICommandContext::VulkanRHICommandContext( VulkanRHIDevice* pDevice )
+        : _pDevice{ pDevice }
+        , _targetBuffer{ nullptr }
+        , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
+    {
+    }
+
+    VulkanRHICommandContext::VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer,
+                                                      VulkanRecordingState* pState )
+        : _pDevice{ pDevice }
+        , _targetBuffer{ targetBuffer }
+        , _pState{ pState }
+    {
+    }
+
+    VkCommandBuffer VulkanRHICommandContext::commandBuffer() const
+    {
+        if ( _targetBuffer != nullptr )
+            return _targetBuffer;
+        return _pDevice != nullptr ? _pDevice->currentCommandBuffer() : nullptr;
+    }
+
     SW_LOG_CALLER( "Vulkan" );
 
     static void setVkClearColor( VkClearValue& dst, const float32* pClear )
@@ -84,18 +106,18 @@ namespace sw
         vkBeginCommandBuffer( _pDevice->_offscreenCommandBuffer, &beginInfo );
 
         // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
-        _pDevice->_lastBoundGraphicsSet0    = nullptr;
-        _pDevice->_bStaticGraphicsSetsBound = false;
+        _pState->_lastBoundGraphicsSet0    = nullptr;
+        _pState->_bStaticGraphicsSetsBound = false;
 
         _pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image, record._layout,
                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                          VK_IMAGE_ASPECT_COLOR_BIT );
         record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
-        _pDevice->_bOffscreenPassActive  = 1;
-        _pDevice->_bFrameStarted         = SW_TRUE; // allow Immediate Context draws during offscreen
-        _pDevice->_bRenderPassActive     = SW_FALSE;
-        _pDevice->_activeOffscreenTarget = colorTarget;
+        _pState->_bOffscreenPassActive  = 1;
+        _pDevice->_bFrameStarted        = SW_TRUE; // allow Immediate Context draws during offscreen
+        _pState->_bRenderPassActive     = SW_FALSE;
+        _pState->_activeOffscreenTarget = colorTarget;
 
         // Default clear pass (FrameRenderer may restart passes on this same buffer).
         RHIRenderPassBeginInfo rpBegin{};
@@ -107,14 +129,14 @@ namespace sw
 
     void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || src == 0 )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );
@@ -184,7 +206,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
@@ -202,17 +224,17 @@ namespace sw
 
     void VulkanRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
             return;
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
         if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         VulkanRHIDevice::VulkanTextureRecord& record       = *pResolved;
@@ -231,7 +253,7 @@ namespace sw
 
     void VulkanRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
     {
-        if ( colorTarget == 0 || _pDevice->_bOffscreenPassActive == 0 || _pDevice->_offscreenCommandBuffer == VK_NULL_HANDLE )
+        if ( colorTarget == 0 || _pState->_bOffscreenPassActive == 0 || _pDevice->_offscreenCommandBuffer == VK_NULL_HANDLE )
             return;
 
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( colorTarget );
@@ -239,10 +261,10 @@ namespace sw
             return;
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( _pDevice->_offscreenCommandBuffer );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
         _pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image,
                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -259,18 +281,18 @@ namespace sw
         vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, _pDevice->_offscreenFence );
         vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
 
-        _pDevice->_bOffscreenPassActive  = 0;
-        _pDevice->_bFrameStarted         = SW_FALSE;
-        _pDevice->_activeOffscreenTarget = 0;
+        _pState->_bOffscreenPassActive  = 0;
+        _pDevice->_bFrameStarted        = SW_FALSE;
+        _pState->_activeOffscreenTarget = 0;
     }
 
     void VulkanRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        _pDevice->_activeGraphicsPso                              = pso;
+        _pState->_activeGraphicsPso                               = pso;
         VkPipeline                                        pipe    = _pDevice->_pipeline;
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord != nullptr )
@@ -285,14 +307,14 @@ namespace sw
 
     void VulkanRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
@@ -321,7 +343,7 @@ namespace sw
 
     void VulkanRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
@@ -339,8 +361,8 @@ namespace sw
             colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
         }
 
-        if ( colorCount == 1 && colorHandles[0] == 0 && _pDevice->_activeOffscreenTarget != 0 )
-            colorHandles[0] = _pDevice->_activeOffscreenTarget;
+        if ( colorCount == 1 && colorHandles[0] == 0 && _pState->_activeOffscreenTarget != 0 )
+            colorHandles[0] = _pState->_activeOffscreenTarget;
 
         // Composite FB for MRT, color+depth, or depth-only. Keep plain single-RT / swapchain path otherwise.
         const bool bUseComposite = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
@@ -364,10 +386,10 @@ namespace sw
             key._depth       = beginInfo._depthTarget;
             key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
 
-            if ( _pDevice->_bRenderPassActive == SW_TRUE )
+            if ( _pState->_bRenderPassActive == SW_TRUE )
             {
                 vkCmdEndRenderPass( cmd );
-                _pDevice->_bRenderPassActive = SW_FALSE;
+                _pState->_bRenderPassActive = SW_FALSE;
             }
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
@@ -400,7 +422,7 @@ namespace sw
             extent      = { composite._width, composite._height };
             // Track RT only — do NOT set _bOffscreenPassActive (that routes to a separate CB).
             if ( key._colorCount > 0 )
-                _pDevice->_activeOffscreenTarget = key._arrColor[0];
+                _pState->_activeOffscreenTarget = key._arrColor[0];
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
@@ -427,11 +449,11 @@ namespace sw
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
                                                  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-                pTex->_layout                    = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-                renderPass                       = pTex->_renderPass;
-                framebuffer                      = pTex->_framebuffer;
-                extent                           = { pTex->_width, pTex->_height };
-                _pDevice->_activeOffscreenTarget = colorTarget;
+                pTex->_layout                   = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                renderPass                      = pTex->_renderPass;
+                framebuffer                     = pTex->_framebuffer;
+                extent                          = { pTex->_width, pTex->_height };
+                _pState->_activeOffscreenTarget = colorTarget;
             }
             else
             {
@@ -441,10 +463,10 @@ namespace sw
                 extent      = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
             }
 
-            if ( _pDevice->_bRenderPassActive == SW_TRUE )
+            if ( _pState->_bRenderPassActive == SW_TRUE )
             {
                 vkCmdEndRenderPass( cmd );
-                _pDevice->_bRenderPassActive = SW_FALSE;
+                _pState->_bRenderPassActive = SW_FALSE;
             }
 
             const float32* pClear = &beginInfo._arrClearColor[0]._x;
@@ -468,7 +490,7 @@ namespace sw
         renderPassInfo.pClearValues      = clearValues;
 
         vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-        _pDevice->_bRenderPassActive = SW_TRUE;
+        _pState->_bRenderPassActive = SW_TRUE;
 
         // Match DX12 beginRenderPass: viewport = pass extent, DX Y orientation.
         RHIViewport vp{};
@@ -481,16 +503,16 @@ namespace sw
 
     void VulkanRHICommandContext::endRenderPass()
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
-        if ( cmd == VK_NULL_HANDLE || _pDevice->_bRenderPassActive == SW_FALSE )
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE || _pState->_bRenderPassActive == SW_FALSE )
             return;
         vkCmdEndRenderPass( cmd );
-        _pDevice->_bRenderPassActive = SW_FALSE;
+        _pState->_bRenderPassActive = SW_FALSE;
     }
 
     void VulkanRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        VkCommandBuffer                      cmd     = _pDevice->currentCommandBuffer();
+        VkCommandBuffer                      cmd     = commandBuffer();
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
             return;
@@ -498,10 +520,10 @@ namespace sw
         if ( pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         VkAccessFlags        srcAccess{ 0 };
@@ -528,14 +550,14 @@ namespace sw
     void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // u<slot> (RW 구조버퍼) 전용 — set 7..9. t<slot> (읽기전용) 은 bindComputeShaderResource(set 6..9) 를 쓴다.
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 3 )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         VkDescriptorSet       descSet = VK_NULL_HANDLE;
@@ -554,14 +576,14 @@ namespace sw
     void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // t<slot> (읽기전용 구조버퍼) 전용 — set 6..9.
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         VkDescriptorSet       descSet = VK_NULL_HANDLE;
@@ -580,7 +602,7 @@ namespace sw
     void VulkanRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
     {
         // set 0 binding 0 = b<slot>. gpucull 등 컴퓨트 셰이더의 cbuffer(register(b0)) 전용.
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot != 0 )
             return;
         if ( index == kInvalidDescriptorIndex ||
@@ -591,10 +613,10 @@ namespace sw
         if ( descSet == VK_NULL_HANDLE )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
@@ -603,21 +625,21 @@ namespace sw
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
         (void)slot;
-        _pDevice->_boundMeshVb     = buffer;
-        _pDevice->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pDevice->_boundMeshOffset = offset;
+        _pState->_boundMeshVb     = buffer;
+        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
+        _pState->_boundMeshOffset = offset;
     }
 
     void VulkanRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pDevice->_boundIndexBuffer = buffer;
-        _pDevice->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
-        _pDevice->_boundIndexOffset = offset;
+        _pState->_boundIndexBuffer = buffer;
+        _pState->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
+        _pState->_boundIndexOffset = offset;
     }
 
     void VulkanRHICommandContext::bindGraphicsMaterialSets( RHIDescriptorIndex cbDescriptorIndex )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE )
             return;
 
@@ -635,15 +657,15 @@ namespace sw
         if ( bValidDescriptor )
         {
             const VkDescriptorSet set0 = _pDevice->registeredDescriptorSetAt( cbDescriptorIndex );
-            if ( set0 != _pDevice->_lastBoundGraphicsSet0 )
+            if ( set0 != _pState->_lastBoundGraphicsSet0 )
             {
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
-                _pDevice->_lastBoundGraphicsSet0 = set0;
+                _pState->_lastBoundGraphicsSet0 = set0;
             }
         }
 
         // set 1(bindless 텍스처)·set 4(정적 샘플러)는 이 커맨드버퍼가 살아있는 동안 안 바뀌므로 한 번만.
-        if ( _pDevice->_bStaticGraphicsSetsBound == false )
+        if ( _pState->_bStaticGraphicsSetsBound == false )
         {
             if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
@@ -652,23 +674,23 @@ namespace sw
             if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
 
-            _pDevice->_bStaticGraphicsSetsBound = true;
+            _pState->_bStaticGraphicsSetsBound = true;
         }
     }
 
     void VulkanRHICommandContext::bindMeshVertexBufferOrFallback()
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        if ( _pDevice->_boundMeshVb != 0 )
+        if ( _pState->_boundMeshVb != 0 )
         {
-            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
+            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
             if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
             {
                 VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pState->_boundMeshOffset ) };
                 vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
             }
         }
@@ -682,18 +704,18 @@ namespace sw
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return false;
 
         VkPipeline                                        pipeline = _pDevice->_pipeline;
-        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pRecord != nullptr )
         {
             if ( pRecord->_pipeline != VK_NULL_HANDLE )
                 pipeline = pRecord->_pipeline;
         }
-        else if ( _pDevice->_activeOffscreenTarget != 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
+        else if ( _pState->_activeOffscreenTarget != 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
             pipeline = _pDevice->_offscreenPipeline;
 
         if ( pipeline == VK_NULL_HANDLE )
@@ -706,7 +728,7 @@ namespace sw
     void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
                                         RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         const bool      bCanDraw =
             ( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && vertexCount > 0 );
         if ( bCanDraw == false )
@@ -732,7 +754,7 @@ namespace sw
 
     void VulkanRHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         const bool      bCanDraw =
             ( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && vertexCount > 0 && instanceCount > 0 );
         if ( bCanDraw == false )
@@ -756,7 +778,7 @@ namespace sw
         }
         if ( slot == 1 )
         {
-            VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+            VkCommandBuffer cmd = commandBuffer();
             if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || cb == kInvalidDescriptorIndex )
                 return;
             constexpr VkShaderStageFlags kPushStages =
@@ -773,7 +795,7 @@ namespace sw
         // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). registerBindlessResource 가 만든
         // STORAGE_BUFFER 디스크립터셋을 파이프라인 레이아웃 set 6+slot 에 바인딩한다
         // (set 6..9 = _uavDescriptorSetLayout). HLSL: register(t#, space6).
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
             return;
         if ( index == kInvalidDescriptorIndex ||
@@ -788,14 +810,14 @@ namespace sw
 
     void VulkanRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        if ( _pDevice->_bRenderPassActive == SW_TRUE )
+        if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
-            _pDevice->_bRenderPassActive = SW_FALSE;
+            _pState->_bRenderPassActive = SW_FALSE;
         }
 
         vkCmdDispatch( cmd, threadGroupCountX, threadGroupCountY, threadGroupCountZ );
@@ -803,7 +825,7 @@ namespace sw
 
     void VulkanRHICommandContext::setViewport( const RHIViewport& viewport )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
             return;
 
@@ -829,7 +851,7 @@ namespace sw
     void VulkanRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
         (void)rootParameterIndex;
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         const bool      bCanPush =
             ( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && pData != nullptr && num32BitValues > 0 );
         if ( bCanPush == false )
@@ -843,7 +865,7 @@ namespace sw
     void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
                                                 RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
     {
-        VkCommandBuffer                            cmd     = _pDevice->currentCommandBuffer();
+        VkCommandBuffer                            cmd     = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
         if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
             return;
@@ -870,9 +892,9 @@ namespace sw
 
     void VulkanRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        VkCommandBuffer                            cmd   = _pDevice->currentCommandBuffer();
+        VkCommandBuffer                            cmd   = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
-        const VulkanRHIDevice::VulkanBufferRecord* pIb   = _pDevice->resolveAllocatedBuffer( _pDevice->_boundIndexBuffer );
+        const VulkanRHIDevice::VulkanBufferRecord* pIb   = _pDevice->resolveAllocatedBuffer( _pState->_boundIndexBuffer );
         const bool                                 bValidArgs =
             ( cmd != VK_NULL_HANDLE && pArgs != nullptr && pIb != nullptr && pArgs->_buffer != VK_NULL_HANDLE && pIb->_buffer != VK_NULL_HANDLE );
         if ( bValidArgs == false )
@@ -884,22 +906,22 @@ namespace sw
         // 셰이더가 set 0 을 정적으로 참조하므로 인다이렉트 드로우에서도 바인딩해야 한다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
         bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
-        const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
+        const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
         if ( pVb != nullptr )
         {
             VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-            VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+            VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pState->_boundMeshOffset ) };
             vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
         }
 
-        const VkIndexType indexType = ( _pDevice->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-        vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pDevice->_boundIndexOffset, indexType );
+        const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+        vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
         vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndexedIndirectCommand ) );
     }
 
     void VulkanRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        VkCommandBuffer                            cmd     = _pDevice->currentCommandBuffer();
+        VkCommandBuffer                            cmd     = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
         if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
             return;
@@ -911,7 +933,7 @@ namespace sw
     void VulkanRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
                                                      RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        VkCommandBuffer                            cmd   = _pDevice->currentCommandBuffer();
+        VkCommandBuffer                            cmd   = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
         const bool                                 bValidMultiArgs =
             ( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->_buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
@@ -954,7 +976,7 @@ namespace sw
 
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE )
             return;
 
@@ -971,7 +993,7 @@ namespace sw
 
     void VulkanRHICommandContext::endEventMarker()
     {
-        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || _pDevice->_instance == VK_NULL_HANDLE )
             return;
 
