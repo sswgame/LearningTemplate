@@ -59,8 +59,11 @@ namespace sw
         /// @brief 이 스트림에 오프스크린 패스가 열려 있는가.
         uint8 _bOffscreenPassActive : 1;
         /// @brief set 1(bindless 텍스처)·set 4(정적 샘플러)를 이 버퍼에 이미 바인딩했는가.
-        uint8                  _bStaticGraphicsSetsBound : 1;
-        [[maybe_unused]] uint8 _reserved                 : 5;
+        uint8 _bStaticGraphicsSetsBound : 1;
+        /// @brief 지금 열려 있는 렌더패스가 스왑체인(백버퍼) 렌더패스인가. PSO 가 등록돼 있지 않을 때
+        ///        폴백 파이프라인을 고르는 기준 — 렌더패스 호환성 때문에 백버퍼용/오프스크린용이 다르다.
+        uint8                  _bActiveSwapchainRT : 1;
+        [[maybe_unused]] uint8 _reserved           : 4;
 
         RHITextureHandle       _activeOffscreenTarget{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
@@ -80,6 +83,7 @@ namespace sw
             : _bRenderPassActive{ 0 }
             , _bOffscreenPassActive{ 0 }
             , _bStaticGraphicsSetsBound{ 0 }
+            , _bActiveSwapchainRT{ 0 }
             , _reserved{ 0 }
         {
         }
@@ -494,7 +498,9 @@ namespace sw
         vector<VkImageView>   _listSwapChainImageView;
         vector<VkFramebuffer> _listSwapChainFramebuffer;
 
-        VkRenderPass  _renderPass;
+        VkRenderPass _renderPass;           ///< 스왑체인 렌더패스 (loadOp=CLEAR)
+        VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더패스의 loadOp=LOAD 변종. 한 프레임에 백버퍼를
+                                            ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 얹을 때) 앞의 내용을 보존한다.
         VkRenderPass  _offscreenRenderPass; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
         VkCommandPool _commandPool;
 

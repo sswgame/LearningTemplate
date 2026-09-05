@@ -228,8 +228,10 @@ namespace sw
         if ( _renderTargetView == nullptr )
             return;
 
-        _deviceContext->ClearRenderTargetView( _renderTargetView.Get(), &clearColor._x );
-        _deviceContext->OMSetRenderTargets( 1, _renderTargetView.GetAddressOf(), nullptr );
+        // 백버퍼 바인딩/클리어는 더 이상 여기서 하지 않는다 — beginFrame 은 프레임 수명주기 전용이고,
+        // 백버퍼를 타깃으로 삼는 건 beginRenderPass(핸들 0) 가 명시적으로 한다
+        // (docs/05_RHI_FrameContract.md S2). RTV 재취득은 FLIP_DISCARD 때문에 수명주기에 속한다.
+        (void)clearColor;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportY        = 0.0f;

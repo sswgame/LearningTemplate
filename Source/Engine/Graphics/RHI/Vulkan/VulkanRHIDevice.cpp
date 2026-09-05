@@ -135,6 +135,7 @@ namespace sw
         , _listSwapChainImageView{}
         , _listSwapChainFramebuffer{}
         , _renderPass{ nullptr }
+        , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _listCommandBuffer{}
@@ -386,6 +387,15 @@ namespace sw
 
         if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPass ) != VK_SUCCESS )
             return false;
+
+        // LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가 백버퍼에 그린
+        // 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷/개수/
+        // 샘플수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
+        // 이 시점의 스왑체인 이미지는 앞선 패스의 finalLayout 인 PRESENT_SRC 상태다.
+        colorAttachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPassLoad ) != VK_SUCCESS )
+            return false;
         return true;
     }
 
@@ -544,6 +554,8 @@ namespace sw
             }
             _listRenderPass.clear();
 
+            if ( _renderPassLoad )
+                vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
             if ( _renderPass )
                 vkDestroyRenderPass( _device, _renderPass, nullptr );
             if ( _offscreenRenderPass )
@@ -666,25 +678,10 @@ namespace sw
         scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
         vkCmdSetScissor( _listCommandBuffer[_currentFrame], 0, 1, &scissor );
 
-        if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffer.empty() == false && _imageIndex < _listSwapChainFramebuffer.size() )
-        {
-            VkRenderPassBeginInfo rpBeginInfo{};
-            rpBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            rpBeginInfo.renderPass        = _renderPass;
-            rpBeginInfo.framebuffer       = _listSwapChainFramebuffer[_imageIndex];
-            rpBeginInfo.renderArea.offset = { 0, 0 };
-            rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
-
-            VkClearValue clearVal{};
-            clearVal.color = {
-                { clearColor._x, clearColor._y, clearColor._z, clearColor._w }
-            };
-            rpBeginInfo.clearValueCount = 1;
-            rpBeginInfo.pClearValues    = &clearVal;
-
-            vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-            _recordingState._bRenderPassActive = SW_TRUE;
-        }
+        // 백버퍼 렌더패스는 여기서 열지 않는다 — beginFrame 은 프레임 수명주기 전용이고, 백버퍼
+        // 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다(docs/05_RHI_FrameContract.md S2).
+        // 클리어도 그 렌더패스의 loadOp 이 담당한다.
+        (void)clearColor;
     }
 
     void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
@@ -1185,14 +1182,27 @@ namespace sw
         vector<VkSurfaceFormatKHR> formats( formatCount );
         vkGetPhysicalDeviceSurfaceFormatsKHR( _physicalDevice, _surface, &formatCount, formats.data() );
 
-        VkSurfaceFormatKHR surfaceFormat = formats[0];
-        for ( const VkSurfaceFormatKHR& availableFormat : formats )
+        // 백버퍼 포맷은 백엔드 간에 같아야 한다. 파이프라인은 desc._arrRtvFormat 으로 렌더패스를 만들고
+        // Vulkan 은 그 렌더패스와 실제 렌더패스의 첨부 포맷이 다르면 드로우를 거부하는데, 파이프라인
+        // 리소스는 DX12 스왑체인에 맞춰 R8G8B8A8_UNORM 을 쓴다. 여기서 B8G8R8A8 을 고르면 백버퍼에
+        // 직접 그리는 패스(에디터 없이 실행하는 경로)가 통째로 렌더패스 비호환이 된다.
+        // R8G8B8A8_UNORM → B8G8R8A8_UNORM → 첫 번째 순으로 고른다.
+        VkSurfaceFormatKHR surfaceFormat   = formats[0];
+        constexpr VkFormat arrPreferred[]  = { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM };
+        bool               bFoundPreferred = false;
+        for ( const VkFormat preferred : arrPreferred )
         {
-            if ( availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
+            for ( const VkSurfaceFormatKHR& availableFormat : formats )
             {
-                surfaceFormat = availableFormat;
-                break;
+                if ( availableFormat.format == preferred && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
+                {
+                    surfaceFormat   = availableFormat;
+                    bFoundPreferred = true;
+                    break;
+                }
             }
+            if ( bFoundPreferred )
+                break;
         }
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;

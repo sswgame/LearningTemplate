@@ -71,23 +71,10 @@ namespace sw
         if ( _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() )
             return;
 
-        if ( _pDevice->_swapchainState != D3D12_RESOURCE_STATE_RENDER_TARGET )
-        {
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
-            barrier.Transition.StateBefore = _pDevice->_swapchainState;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            _pDevice->_commandList->ResourceBarrier( 1, &barrier );
-            _pDevice->_swapchainState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        }
-
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle( _pDevice->_rtvHeap->GetCPUDescriptorHandleForHeapStart() );
-        rtvHandle.ptr += ( _pDevice->_frameIndex * _pDevice->_rtvDescriptorSize );
-
-        _pDevice->_commandList->OMSetRenderTargets( 1, &rtvHandle, FALSE, nullptr );
-        _pDevice->_commandList->ClearRenderTargetView( rtvHandle, &clearColor._x, 0, nullptr );
+        // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다 —
+        // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 배리어까지
+        // 포함해 명시적으로 한다 (docs/05_RHI_FrameContract.md S2). 뷰포트/시저는 기본값으로 남긴다.
+        (void)clearColor;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportY        = 0.0f;

@@ -672,10 +672,11 @@ namespace sw
             wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) );
 #endif
 
-        glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+        // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다 — beginFrame 은 프레임 수명주기(GL 은
+        // 컨텍스트 확보)만 담당하고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다
+        // (docs/05_RHI_FrameContract.md S2). 뷰포트는 기본 상태로 남겨둔다.
+        (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
-        glClearColor( clearColor._x, clearColor._y, clearColor._z, clearColor._w );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     }
 
     void OpenGLRHIDevice::endFrame( bool vsync, bool bPresent )

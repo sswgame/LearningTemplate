@@ -376,7 +376,11 @@ namespace sw
             colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
         }
 
-        if ( colorCount == 1 && colorHandles[0] == 0 && _pState->_activeOffscreenTarget != 0 )
+        // 핸들 0 은 "백버퍼"다. 오프스크린 패스가 **실제로 열려 있는 동안에만** 게임뷰 RT 로 라우팅한다.
+        // 예전엔 _activeOffscreenTarget 이 0 이 아니기만 하면 돌렸는데, 이 값은 마지막으로 바인딩한
+        // 컬러 타깃이라 그래프가 트랜지언트에 그리고 나면 계속 남아 있었다 — 그래서 에디터 없이 띄우면
+        // 진짜 백버퍼 렌더패스가 영영 안 열려 스왑체인 이미지가 UNDEFINED 인 채로 present 됐다.
+        if ( colorCount == 1 && colorHandles[0] == 0 && _pState->_bOffscreenPassActive != 0 && _pState->_activeOffscreenTarget != 0 )
             colorHandles[0] = _pState->_activeOffscreenTarget;
 
         // Composite FB for MRT, color+depth, or depth-only. Keep plain single-RT / swapchain path otherwise.
@@ -432,9 +436,10 @@ namespace sw
             if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
                 return;
 
-            renderPass  = composite._renderPass;
-            framebuffer = composite._framebuffer;
-            extent      = { composite._width, composite._height };
+            renderPass                   = composite._renderPass;
+            framebuffer                  = composite._framebuffer;
+            extent                       = { composite._width, composite._height };
+            _pState->_bActiveSwapchainRT = 0;
             // Track RT only — do NOT set _bOffscreenPassActive (that routes to a separate CB).
             if ( key._colorCount > 0 )
                 _pState->_activeOffscreenTarget = key._arrColor[0];
@@ -469,6 +474,7 @@ namespace sw
                 framebuffer                     = pTex->_framebuffer;
                 extent                          = { pTex->_width, pTex->_height };
                 _pState->_activeOffscreenTarget = colorTarget;
+                _pState->_bActiveSwapchainRT    = 0;
             }
             else
             {
@@ -476,6 +482,14 @@ namespace sw
                     return;
                 framebuffer = _pDevice->_listSwapChainFramebuffer[_pDevice->_imageIndex];
                 extent      = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
+                // 지금 바인딩된 컬러 타깃은 백버퍼다 — 앞선 오프스크린 패스가 남긴 추적값을 지운다.
+                _pState->_activeOffscreenTarget = 0;
+                _pState->_bActiveSwapchainRT    = 1;
+                // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다 —
+                // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
+                // 그린 내용이 지워진다.
+                if ( beginInfo._arrLoadOp[0] == RHIRenderPassLoadOp::Load && _pDevice->_renderPassLoad != VK_NULL_HANDLE )
+                    renderPass = _pDevice->_renderPassLoad;
             }
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -730,8 +744,13 @@ namespace sw
             if ( pRecord->_pipeline != VK_NULL_HANDLE )
                 pipeline = pRecord->_pipeline;
         }
-        else if ( _pState->_activeOffscreenTarget != 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
+        else if ( _pState->_bActiveSwapchainRT == 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
+        {
+            // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가"여야 한다 —
+            // 예전엔 _activeOffscreenTarget 으로 판단했는데, 깊이 전용 패스처럼 컬러 타깃을 갱신하지
+            // 않는 패스에서는 그 값이 직전 패스의 것이라 엉뚱한 파이프라인을 골랐다.
             pipeline = _pDevice->_offscreenPipeline;
+        }
 
         if ( pipeline == VK_NULL_HANDLE )
             return false;

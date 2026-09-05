@@ -297,7 +297,10 @@ namespace sw
             backbufferPass._bBindColor        = 1;
             backbufferPass._colorTargetCount  = 1;
             backbufferPass._arrColorTarget[0] = 0; // 0 = 백버퍼
-            backbufferPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+            // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 안 건드렸다
+            // → 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
+            backbufferPass._arrLoadOp[0]     = bOffscreen ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+            backbufferPass._arrClearColor[0] = packet._clearColor;
             pImm->beginRenderPass( backbufferPass );
         }
 
