@@ -120,13 +120,11 @@ namespace sw
                     caps._bIndexedDraw          = 1;
                     caps._bGpuCulling           = 1;
                     caps._bMultiDrawIndirect    = 1;
-                    // VulkanRHICommandList는 자기 VkCommandBuffer를 안 갖고 디바이스가 공유하는 단일
-                    // VulkanRHICommandContext(currentCommandBuffer()로 동적 획득)를 감싸기만 한다
-                    // (네이티브 커맨드리스트 전환, native-rhi-command-lists 참고). 여러 스레드가 동시에
-                    // 기록하면 같은 VkCommandBuffer를 레이스 조건으로 덮어쓰므로, 리스트별 독립 버퍼를
-                    // 실제로 소유하게 재작업하기 전까지는 false로 유지 — DX12만 리스트당 독립
-                    // 얼로케이터/커맨드리스트를 진짜로 소유한다.
-                    caps._bParallelCommandRecording = 0;
+                    // VulkanRHICommandList가 자기 secondary VkCommandBuffer와 전용 커맨드 풀,
+                    // 전용 VulkanRecordingState를 소유하므로 스레드마다 독립적으로 기록할 수 있다.
+                    // 제출은 executeCommandList가 프레임 primary에 vkCmdExecuteCommands로 끼워 넣어
+                    // 순서를 보존하고, 프레임당 단일 vkQueueSubmit 구조도 그대로다.
+                    caps._bParallelCommandRecording = 1;
                     break;
                 default:
                     break;

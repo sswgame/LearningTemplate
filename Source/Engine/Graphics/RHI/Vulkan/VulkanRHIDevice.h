@@ -3,6 +3,8 @@
  * @brief Vulkan 1.3 API 기반 RHI 백엔드 클래스 정의 및 C 타입 전방 선언
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
@@ -87,6 +89,20 @@ namespace sw
             , _reserved{ 0 }
         {
         }
+    };
+
+    /**
+     * @struct VulkanCommandListEntry
+     * @brief secondary 커맨드 버퍼와 **그 버퍼 전용** 커맨드 풀 한 쌍.
+     * @details Vulkan 스펙상 `VkCommandPool` 은 외부 동기화 대상이라, 여러 스레드가 한 풀에서
+     *          동시에 할당/기록하면 안 된다. 엔트리마다 자기 풀을 갖게 하면 "이 엔트리는 한 번에
+     *          한 리스트만 소유한다"는 것만으로 스레드 안전이 성립해서, 스레드 친화성을 따로
+     *          관리할 필요가 없다.
+     */
+    struct VulkanCommandListEntry
+    {
+        VkCommandPool   _pool{ nullptr };
+        VkCommandBuffer _buffer{ nullptr };
     };
 
     /**
@@ -460,6 +476,17 @@ namespace sw
          */
         void ensureSwapchainRenderPass( VkCommandBuffer cmd, VulkanRecordingState& state );
 
+    public:
+        /**
+         * @brief 병렬 기록용 secondary 버퍼 + 전용 커맨드 풀 한 쌍을 풀에서 빌립니다.
+         * @details 풀에 없으면 새로 만든다. 돌아온 엔트리는 GPU 펜스를 통과한 것이라 곧바로
+         *          `vkResetCommandPool` 해도 안전하다. 태스크 스레드에서 동시에 호출되므로 잠근다.
+         */
+        VulkanCommandListEntry acquireCommandListEntry();
+        /** @brief 다 쓴 엔트리를 GPU 가 끝낸 뒤 재사용 풀로 돌려보냅니다. */
+        void recycleCommandListEntryDeferred( VulkanCommandListEntry entry );
+
+    private:
         // ------------------------------------------------------------------------------
         // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다(원시 vector 직접 인덱싱 금지).
         // ------------------------------------------------------------------------------
@@ -566,6 +593,18 @@ namespace sw
         /// @brief 즉시 컨텍스트(스왑체인 begin/end·오프스크린)가 쓰는 기록 상태. 리스트 기반 기록은
         /// 각자 자기 것을 갖는다 — 여기 있는 건 "디바이스가 직접 여는 버퍼" 전용이다.
         VulkanRecordingState _recordingState;
+
+        /// @brief 이번 프레임에 제출할 커맨드 버퍼들 — 기록/끼워넣기 순서가 곧 실행 순서다.
+        vector<VkCommandBuffer> _listFrameSubmit;
+        /// @brief 지금 열려 있는 프레임 세그먼트. executeCommandList 가 패스 버퍼를 끼울 때마다
+        /// 이 세그먼트를 닫고 새 세그먼트를 연다(렌더패스는 세그먼트를 넘어갈 수 없으므로).
+        VkCommandBuffer _currentFrameSegment{ nullptr };
+        /// @brief 프레임 도중 추가로 빌린 세그먼트들 — endFrame 에서 한꺼번에 반납한다.
+        vector<VulkanCommandListEntry> _listFrameSegmentEntry;
+
+        /// @brief 병렬 기록용 엔트리 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
+        mutex                          _cmdListPoolMutex;
+        vector<VulkanCommandListEntry> _listFreeCmdListEntry;
         /// @brief 디스크립터 레지스트리 보호용. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
         /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽는다
         /// (gv_useRenderThread 기본 true 라 렌더/게임 스레드 사이에서 이미 성립하는 레이스).
