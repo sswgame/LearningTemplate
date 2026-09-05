@@ -60,6 +60,9 @@ namespace sw
          */
         bool bindActiveGraphicsPipeline();
 
+        /** @brief 현재 바인딩된 메시 VB(없으면 풀스크린 정점버퍼)를 슬롯 0에 건다. draw류 3곳 복붙 통합. */
+        void bindMeshVertexBufferOrFallback();
+
         VulkanRHIDevice* _pDevice;
     };
 } // namespace sw

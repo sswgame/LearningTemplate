@@ -501,14 +501,21 @@ namespace sw
         RHIBufferHandle                        _boundMeshVb;
         uint32                                 _boundMeshStride; ///< 바인딩된 VB stride
         uint32                                 _boundMeshOffset;
-        RHIBufferHandle                        _boundIndexBuffer;
-        uint32                                 _boundIndexStride;
-        uint32                                 _boundIndexOffset;
-        vector<VkDescriptorSet>                _listRegisteredDescriptorSet;
-        vector<RHIBufferHandle>                _listBindlessSourceBuffer;
-        vector<VkDescriptorSet>                _listRegisteredUAV;
-        vector<RHIBufferHandle>                _listUavSourceBuffer;
-        vector<uint32>                         _listUavFree;
+        /// @brief bindGraphicsMaterialSets가 매 draw 무조건 재바인딩하지 않도록 하는 캐시. set 1(bindless
+        /// 텍스처)·set 4(정적 샘플러)는 커맨드버퍼 하나 내내 안 바뀌므로 그 버퍼에 한 번만 바인딩하면
+        /// 되고, set 0(PassCB)은 인덱스가 실제로 바뀔 때만 재바인딩한다. Vulkan은 병렬 기록을 안 타므로
+        /// (RHICapabilities._bParallelCommandRecording=0) 디바이스 전역이어도 스레드 안전 문제 없음.
+        /// beginFrame()/beginOffscreenPass()에서 새 커맨드버퍼를 열 때마다 초기화해야 한다.
+        VkDescriptorSet         _lastBoundGraphicsSet0;
+        bool                    _bStaticGraphicsSetsBound;
+        RHIBufferHandle         _boundIndexBuffer;
+        uint32                  _boundIndexStride;
+        uint32                  _boundIndexOffset;
+        vector<VkDescriptorSet> _listRegisteredDescriptorSet;
+        vector<RHIBufferHandle> _listBindlessSourceBuffer;
+        vector<VkDescriptorSet> _listRegisteredUAV;
+        vector<RHIBufferHandle> _listUavSourceBuffer;
+        vector<uint32>          _listUavFree;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;

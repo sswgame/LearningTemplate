@@ -83,6 +83,10 @@ namespace sw
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer( _pDevice->_offscreenCommandBuffer, &beginInfo );
 
+        // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
+        _pDevice->_lastBoundGraphicsSet0    = nullptr;
+        _pDevice->_bStaticGraphicsSetsBound = false;
+
         _pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image, record._layout,
                                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                          VK_IMAGE_ASPECT_COLOR_BIT );
@@ -626,20 +630,54 @@ namespace sw
         // 로 실제 PassCB 를 set 0 에 바인딩해 두므로, 여기서 유효하지 않은 인덱스로 더미 UBO 폴백을
         // 강제로 덮어쓰면 방금 바인딩한 값이 지워진다(과거 draw()가 CB 바인딩을 직접 겸하던 구조의 잔재).
         // 인덱스가 없을 땐 현재 바인딩을 그대로 두어 이 문제를 피한다.
+        // 같은 세트를 이미 바인딩해 뒀으면(연속 드로우가 흔히 그렇다) 재호출을 스킵한다 — 캐시는
+        // beginFrame()/beginOffscreenPass()가 새 커맨드버퍼를 열 때 초기화한다.
         if ( bValidDescriptor )
         {
             const VkDescriptorSet set0 = _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex];
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+            if ( set0 != _pDevice->_lastBoundGraphicsSet0 )
+            {
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+                _pDevice->_lastBoundGraphicsSet0 = set0;
+            }
         }
 
-        // set 1: bindless 텍스처 배열.
-        if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+        // set 1(bindless 텍스처)·set 4(정적 샘플러)는 이 커맨드버퍼가 살아있는 동안 안 바뀌므로 한 번만.
+        if ( _pDevice->_bStaticGraphicsSetsBound == false )
+        {
+            if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
 
-        // set 4: 정적 샘플러(g_SwSamplerLinearWrap, immutable) — binding.hlsli 가 모든 셰이더에서 정적으로
-        // 참조하므로 매 드로우 함께 바인딩해야 한다 (없으면 vkCmdDraw 검증 오류).
-        if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
+            // binding.hlsli 가 모든 셰이더에서 정적으로 참조하므로(없으면 vkCmdDraw 검증 오류) 필요.
+            if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
+
+            _pDevice->_bStaticGraphicsSetsBound = true;
+        }
+    }
+
+    void VulkanRHICommandContext::bindMeshVertexBufferOrFallback()
+    {
+        VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
+            return;
+
+        if ( _pDevice->_boundMeshVb != 0 )
+        {
+            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
+            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
+            {
+                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
+                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+            }
+        }
+        else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
+        {
+            VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
+            VkDeviceSize arrOffset[]       = { 0 };
+            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+        }
     }
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
@@ -687,22 +725,7 @@ namespace sw
             vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
         }
 
-        if ( _pDevice->_boundMeshVb != 0 )
-        {
-            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
-            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
-            {
-                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-            }
-        }
-        else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
-        {
-            VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
-            VkDeviceSize arrOffset[]       = { 0 };
-            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-        }
+        bindMeshVertexBufferOrFallback();
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
     }
@@ -718,22 +741,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        if ( _pDevice->_boundMeshVb != 0 )
-        {
-            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
-            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
-            {
-                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-            }
-        }
-        else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
-        {
-            VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
-            VkDeviceSize arrOffset[]       = { 0 };
-            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-        }
+        bindMeshVertexBufferOrFallback();
 
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
@@ -855,19 +863,7 @@ namespace sw
 
         if ( pRecord->_buffer != VK_NULL_HANDLE )
         {
-            const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
-            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
-            {
-                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-            }
-            else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
-            {
-                VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
-                VkDeviceSize arrOffset[]       = { 0 };
-                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
-            }
+            bindMeshVertexBufferOrFallback();
             vkCmdDrawIndirect( cmd, pRecord->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
         }
     }

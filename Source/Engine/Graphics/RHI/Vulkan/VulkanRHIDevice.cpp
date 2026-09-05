@@ -189,6 +189,8 @@ namespace sw
         , _boundMeshVb{ 0 }
         , _boundMeshStride{ sizeof( RHIVertex ) }
         , _boundMeshOffset{ 0 }
+        , _lastBoundGraphicsSet0{ nullptr }
+        , _bStaticGraphicsSetsBound{ false }
         , _boundIndexBuffer{ 0 }
         , _boundIndexStride{ 4 }
         , _boundIndexOffset{ 0 }
@@ -649,6 +651,10 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
+
+        // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
+        _lastBoundGraphicsSet0    = nullptr;
+        _bStaticGraphicsSetsBound = false;
 
         _bFrameStarted     = SW_TRUE;
         _bRenderPassActive = SW_FALSE;
