@@ -90,7 +90,7 @@ namespace sw
             arrPassName[copyLen] = '\0';
             ctx._pCmd->beginEventMarker( arrPassName );
         }
-        _resourceRegistry.reset();
+        ctx._resourceRegistry.reset();
 
         auto colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
         {
@@ -248,7 +248,7 @@ namespace sw
             {
                 if ( _taaHistorySrv == kInvalidDescriptorIndex )
                     _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
-                _resourceRegistry.registerTexture( hashed_string( framres::kGBufferAlbedo ), _taaHistory, _taaHistorySrv );
+                ctx._resourceRegistry.registerTexture( hashed_string( framres::kGBufferAlbedo ), _taaHistory, _taaHistorySrv );
             }
             beginColorPass( ctx, taaTarget, "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
             const RHIPipelineStateHandle taaPso = getEnginePso( FrameRendererUtil::PassType::kTaa );
@@ -380,7 +380,7 @@ namespace sw
         if ( tex != 0 && ctx._pCmd != nullptr )
             ctx._pCmd->prepareTextureForShaderRead( tex );
         const RHIDescriptorIndex srv = findTransientSrv( attachmentName );
-        _resourceRegistry.registerTexture( hashed_string( string( canonicalName ).c_str() ), tex, srv );
+        ctx._resourceRegistry.registerTexture( hashed_string( string( canonicalName ).c_str() ), tex, srv );
     }
 
     void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )
@@ -395,9 +395,9 @@ namespace sw
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        auto srvOf = [this]( const utf8* pName ) -> RHIDescriptorIndex
+        auto srvOf = [&ctx]( const utf8* pName ) -> RHIDescriptorIndex
         {
-            const RegisteredTexture* pTex = _resourceRegistry.findTexture( hashed_string( pName ) );
+            const RegisteredTexture* pTex = ctx._resourceRegistry.findTexture( hashed_string( pName ) );
             return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
         };
 

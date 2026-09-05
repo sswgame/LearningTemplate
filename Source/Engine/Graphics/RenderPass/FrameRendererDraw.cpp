@@ -54,13 +54,13 @@ namespace sw
         return it != _mapPsoLayout.end() ? it->second : nullptr;
     }
 
-    void FrameRenderer::registerInstanceBuffer()
+    void FrameRenderer::registerInstanceBuffer( FramePassContext& ctx )
     {
         if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
             return;
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
-        _resourceRegistry.registerBuffer( hashed_string( "SwInstances" ),
-                                          _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
+        ctx._resourceRegistry.registerBuffer( hashed_string( "SwInstances" ),
+                                              _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
     }
 
     void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb )
@@ -75,7 +75,7 @@ namespace sw
             return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
 
         const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
-        ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, _resourceRegistry, ctx._passValues,
+        ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                            engineCb, materialCb, _pDevice->supportsNativeBindlessSampling() );
     }
 
@@ -251,7 +251,7 @@ namespace sw
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )
-            registerInstanceBuffer();
+            registerInstanceBuffer( ctx );
 
         uint32 drawn{ 0 };
         bool   bFirstItem = true;
@@ -326,7 +326,7 @@ namespace sw
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )
-            registerInstanceBuffer();
+            registerInstanceBuffer( ctx );
 
         const vector<GpuMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();

@@ -178,6 +178,15 @@ namespace sw
         /** @brief 컴파일 완료된 위상 정렬 패스 실행 순서 반환 */
         const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }
 
+        /**
+         * @brief 컴파일된 실행 순서를 의존성 웨이브(레벨) 단위로 묶어 반환합니다.
+         * @details 같은 웨이브 안의 패스들은 서로 입출력 의존이 없어(Kahn 위상 정렬의 같은 BFS 레벨)
+         *          안전하게 동시에(병렬로) 기록할 수 있습니다. 웨이브 사이에는 순서를 지켜야 합니다.
+         *          executeParallel()이 이 구조를 써서 웨이브 안에서만 병렬 기록하고 웨이브 경계에서
+         *          동기화합니다.
+         */
+        const vector<vector<hashed_string>>& getExecutionWaves() const { return _listCompiledWave; }
+
         /** @brief 그래프 내 총 패스 노드 개수 반환 */
         uint32 getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
 
@@ -199,6 +208,8 @@ namespace sw
     private:
         vector<RenderGraphNode> _listNode;
         vector<hashed_string>   _listCompiledExecutionOrder;
+        /** @brief _listCompiledExecutionOrder와 같은 순서·내용을 웨이브(의존성 레벨) 단위로 묶은 것. */
+        vector<vector<hashed_string>> _listCompiledWave;
 
         // 핫패스 무할당용 캐시
         unordered_map<hashed_string, size_t> _mapNameToIndex;

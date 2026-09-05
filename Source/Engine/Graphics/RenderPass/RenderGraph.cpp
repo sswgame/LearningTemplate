@@ -58,6 +58,7 @@ namespace sw
     bool RenderGraph::compile()
     {
         _listCompiledExecutionOrder.clear();
+        _listCompiledWave.clear();
 
         if ( _listNode.empty() )
             return false;
@@ -148,23 +149,33 @@ namespace sw
         }
 
         _listCompiledExecutionOrder.reserve( listActiveIndex.size() );
+        // Kahn 위상 정렬을 BFS 레벨(웨이브) 단위로 배치 처리한다 — 같은 웨이브에 들어온 노드들은
+        // 서로 입출력 의존이 없어(동시에 in-degree 0이 됨) 안전하게 병렬 기록할 수 있다.
         while ( queueReady.empty() == false )
         {
-            const size_t nodeIndex = queueReady.front();
-            queueReady.pop();
-            _listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
+            const size_t           waveSize = queueReady.size();
+            vector<hashed_string>& wave     = _listCompiledWave.emplace_back();
+            wave.reserve( waveSize );
 
-            unordered_map<size_t, vector<size_t>>::iterator adjIt = adjacency.find( nodeIndex );
-            if ( adjIt == adjacency.end() )
-                continue;
-
-            for ( size_t consumerIndex : adjIt->second )
+            for ( size_t waveSlot = 0; waveSlot < waveSize; ++waveSlot )
             {
-                uint32& degree = mapInDegree[consumerIndex];
-                if ( degree > 0 )
-                    --degree;
-                if ( degree == 0 )
-                    queueReady.push( consumerIndex );
+                const size_t nodeIndex = queueReady.front();
+                queueReady.pop();
+                _listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
+                wave.push_back( _listNode[nodeIndex]._name );
+
+                unordered_map<size_t, vector<size_t>>::iterator adjIt = adjacency.find( nodeIndex );
+                if ( adjIt == adjacency.end() )
+                    continue;
+
+                for ( size_t consumerIndex : adjIt->second )
+                {
+                    uint32& degree = mapInDegree[consumerIndex];
+                    if ( degree > 0 )
+                        --degree;
+                    if ( degree == 0 )
+                        queueReady.push( consumerIndex );
+                }
             }
         }
 
@@ -174,6 +185,7 @@ namespace sw
                             static_cast<uint32>( _listCompiledExecutionOrder.size() ),
                             static_cast<uint32>( listActiveIndex.size() ) );
             _listCompiledExecutionOrder.clear();
+            _listCompiledWave.clear();
             return false;
         }
 
@@ -254,33 +266,44 @@ namespace sw
             unique_ptr<IRHICommandList> _pPassCmdList{ nullptr };
         };
 
-        vector<ParallelPassEntry> listPassEntry;
-        listPassEntry.reserve( _listCompiledExecutionOrder.size() );
-
-        for ( const hashed_string& passName : _listCompiledExecutionOrder )
+        // 웨이브(의존성 레벨) 단위로 처리한다 — 같은 웨이브의 패스들만 동시에 병렬 기록하고,
+        // 웨이브 경계마다 태스크를 기다린 뒤 그 웨이브의 커맨드리스트를 먼저 GPU 큐에 제출한다.
+        // 그래야 웨이브 N+1이 참조할 수도 있는 웨이브 N의 출력(예: DepthPrepass → ForwardOpaque)이
+        // 커맨드 기록 순서와 무관하게 GPU 타임라인에서도 먼저 끝난다(같은 큐에 대한
+        // ExecuteCommandLists 호출 순서 = 실행 순서). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
+        // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다 —
+        // 같은 자원을 놓고 경합하는 두 패스는 compile()의 Write-after-Write/Read-after-Write 엣지로
+        // 이미 서로 다른 웨이브에 배치되어 있다.
+        for ( const vector<hashed_string>& wave : _listCompiledWave )
         {
-            const auto indexIt = _mapNameToIndex.find( passName );
-            if ( indexIt == _mapNameToIndex.end() )
-            {
-                SW_LOG_ERROR( "executeParallel: unknown pass in order: %#", passName.c_str() );
-                return false;
-            }
+            vector<ParallelPassEntry> listPassEntry;
+            listPassEntry.reserve( wave.size() );
 
-            RenderGraphNode& node = _listNode[indexIt->second];
-            if ( node._bCulled )
-                continue;
+            for ( const hashed_string& passName : wave )
+            {
+                const auto indexIt = _mapNameToIndex.find( passName );
+                if ( indexIt == _mapNameToIndex.end() )
+                {
+                    SW_LOG_ERROR( "executeParallel: unknown pass in wave: %#", passName.c_str() );
+                    return false;
+                }
 
-            for ( const hashed_string& input : node._listInput )
-            {
-                context.transitionTo( input, RenderGraphResourceState::Read );
-            }
-            for ( const hashed_string& output : node._listOutput )
-            {
-                context.transitionTo( output, RenderGraphResourceState::Write );
-            }
+                RenderGraphNode& node = _listNode[indexIt->second];
+                if ( node._bCulled )
+                    continue;
 
-            if ( node._execute.isBound() )
-            {
+                for ( const hashed_string& input : node._listInput )
+                {
+                    context.transitionTo( input, RenderGraphResourceState::Read );
+                }
+                for ( const hashed_string& output : node._listOutput )
+                {
+                    context.transitionTo( output, RenderGraphResourceState::Write );
+                }
+
+                if ( node._execute.isBound() == false )
+                    continue;
+
                 unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList( RHICommandListMode::Deferred );
                 if ( passCmd == nullptr )
                 {
@@ -289,37 +312,37 @@ namespace sw
                 }
                 listPassEntry.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
             }
-        }
 
-        if ( listPassEntry.empty() )
-            return true;
+            if ( listPassEntry.empty() )
+                continue;
 
-        TaskStageHandle stage = pTaskManager->createAnonymousStage( "RenderPassStage" );
+            TaskStageHandle stage = pTaskManager->createAnonymousStage( "RenderPassStage" );
 
-        for ( ParallelPassEntry& entry : listPassEntry )
-        {
-            RenderGraphNode* pNode    = entry._pNode;
-            IRHICommandList* pCmdList = entry._pPassCmdList.get();
-
-            TaskHandle handle = pTaskManager->emplaceTask(
-                "RenderPassRecord",
-                SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderGraphInternal::recordRenderPassTask ),
-                MakeTaskArgs( pNode, pCmdList ) );
-
-            if ( handle.isValid() )
+            for ( ParallelPassEntry& entry : listPassEntry )
             {
-                stage.addTask( handle );
-                handle.submit();
+                RenderGraphNode* pNode    = entry._pNode;
+                IRHICommandList* pCmdList = entry._pPassCmdList.get();
+
+                TaskHandle handle = pTaskManager->emplaceTask(
+                    "RenderPassRecord",
+                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderGraphInternal::recordRenderPassTask ),
+                    MakeTaskArgs( pNode, pCmdList ) );
+
+                if ( handle.isValid() )
+                {
+                    stage.addTask( handle );
+                    handle.submit();
+                }
             }
-        }
 
-        pTaskManager->waitStage( stage );
+            pTaskManager->waitStage( stage );
 
-        for ( ParallelPassEntry& entry : listPassEntry )
-        {
-            if ( entry._pPassCmdList != nullptr )
+            for ( ParallelPassEntry& entry : listPassEntry )
             {
-                pDevice->executeCommandList( entry._pPassCmdList.get() );
+                if ( entry._pPassCmdList != nullptr )
+                {
+                    pDevice->executeCommandList( entry._pPassCmdList.get() );
+                }
             }
         }
 
@@ -509,6 +532,7 @@ namespace sw
     {
         _listNode.clear();
         _listCompiledExecutionOrder.clear();
+        _listCompiledWave.clear();
         _mapNameToIndex.clear();
     }
 } // namespace sw

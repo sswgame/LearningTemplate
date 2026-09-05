@@ -117,6 +117,9 @@ namespace sw
             RHIBufferHandle    _passCb{ 0 };
             RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
             Material*          _pBoundMaterial{ nullptr };
+            /** @brief 패스 스코프 이름→리소스 레지스트리. 패스 시작마다 새로 시작(reset) — 병렬 기록 시
+             *         패스마다 독립이어야 하므로 FrameRenderer 공유 멤버가 아니라 여기 둔다. */
+            FrameResourceRegistry _resourceRegistry{};
         };
 
         // ------------------------------------------------------------------------------
@@ -162,7 +165,7 @@ namespace sw
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 핸들에 매핑합니다. */
         void registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
-        void registerInstanceBuffer();
+        void registerInstanceBuffer( FramePassContext& ctx );
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
@@ -279,9 +282,7 @@ namespace sw
         RHIBufferHandle     _gpuCullCb;
         RHIDescriptorIndex  _gpuCullCbIndex;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
-        ShaderBindingLayoutCache _bindingLayoutCache;
-        /** @brief 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스}. 패스 시작마다 reset(). */
-        FrameResourceRegistry                                             _resourceRegistry;
+        ShaderBindingLayoutCache                                          _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPsoDesc;
         mutable mutex                                                     _psoLayoutMutex;

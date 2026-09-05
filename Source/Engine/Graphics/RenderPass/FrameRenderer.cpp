@@ -242,6 +242,23 @@ namespace sw
             }
         }
 
+        // 병렬 기록 가능(백엔드 capability + TaskManager + 웨이브가 나올 만큼 컴파일된 그래프)이면
+        // 컬링 디스패치(위에서 _pCmd에 이미 기록됨)를 먼저 닫아 GPU 큐에 제출해서, 각 패스의 독립
+        // 커맨드리스트보다 인다이렉트 인자 준비가 GPU 타임라인상 먼저 끝나도록 순서를 보장한다
+        // (같은 큐에 대한 ExecuteCommandLists 호출 순서 = 실행 순서). 첫 프레임처럼 그래프가 아직
+        // 컴파일 안 됐으면(getExecutionOrder()가 비어 있으면) 안전하게 기존 직렬 경로로 폴백한다 —
+        // executeParallel 안에서 compile()이 그때 한 번 일어난다.
+        const bool bCanRunParallel = _pTaskManager != nullptr &&
+                                     pDevice->getCapabilities()._bParallelCommandRecording != 0 &&
+                                     _graph.getExecutionOrder().size() > 1;
+        if ( bCanRunParallel )
+        {
+            _pCmd->endCommandList();
+            pDevice->executeCommandList( _pCmd );
+            _pCmd = nullptr;
+            return _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
+        }
+
         const bool bOk = _graph.execute( _graphContext );
         _pCmd->endCommandList();
         pDevice->executeCommandList( _pCmd );

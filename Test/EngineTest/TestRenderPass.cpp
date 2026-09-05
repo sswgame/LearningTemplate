@@ -307,7 +307,33 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
     SW_EXPECT_EQUAL( 3u, executeCount.load() );
     SW_EXPECT_EQUAL( 3u, graph.getNodeCount() );
 
+    // DepthPass/ShadowPass는 서로 입출력이 없어 같은 웨이브(레벨 0)에 묶이고, 둘 다에 의존하는
+    // ForwardPass는 다음 웨이브(레벨 1)로 분리돼야 한다 — executeParallel이 이 구조로 안전하게
+    // 병렬 기록할 수 있는지의 근거.
+    const sw::vector<sw::vector<sw::hashed_string>>& waves = graph.getExecutionWaves();
+    SW_ASSERT_EQUAL( size_t( 2 ), waves.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), waves[0].size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), waves[1].size() );
+    SW_EXPECT_TRUE( waves[1][0] == sw::hashed_string( "ForwardPass" ) );
+
     taskManager.shutdown();
+}
+
+/**
+ * @brief [RenderPassTest] 완전 직렬 체인은 패스마다 자기 웨이브를 받는다(현재 기본 파이프라인 형태).
+ */
+SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassWaves )
+{
+    sw::RenderGraph graph;
+    graph.addPass( sw::hashed_string( "Shadow" ), {}, { sw::hashed_string( "ShadowMap" ) } );
+    graph.addPass( sw::hashed_string( "Forward" ), { sw::hashed_string( "ShadowMap" ) }, { sw::hashed_string( "SceneColor" ) } );
+    graph.addPass( sw::hashed_string( "Present" ), { sw::hashed_string( "SceneColor" ) }, {} );
+
+    SW_ASSERT_TRUE( graph.compile() );
+    const sw::vector<sw::vector<sw::hashed_string>>& waves = graph.getExecutionWaves();
+    SW_ASSERT_EQUAL( size_t( 3 ), waves.size() );
+    for ( const sw::vector<sw::hashed_string>& wave : waves )
+        SW_EXPECT_EQUAL( size_t( 1 ), wave.size() );
 }
 
 /**
@@ -561,6 +587,53 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
         cube->releaseGpu();
 
     renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
+ * @brief 실제 RHI 디바이스로 RenderGraph::executeParallel을 웨이브 단위로 끝까지 실행해 본다.
+ * @details DX12만 _bParallelCommandRecording=1이라 실제로 병렬 경로(패스별 독립 Deferred
+ *          커맨드리스트 + TaskManager 스테이지)를 타고, 다른 백엔드는 이 테스트 대상이 아니다.
+ *          독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 웨이브 경계를 넘나드는
+ *          제출 순서(웨이브마다 먼저 제출 후 다음 웨이브)까지 실제로 동작하는지 확인한다.
+ */
+SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallelRunsOnRealDevice )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    if ( tryInitDeviceForFrameRenderer( sw::RHIBackend::DirectX12, window, device ) == false )
+        SW_TEST_SKIP( "No DX12 backend for RenderGraph::executeParallel test" );
+
+    sw::TaskManager taskManager;
+    SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
+
+    sw::RenderGraph    graph;
+    sw::atomic<uint32> executeCount{ 0 };
+
+    auto makeCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
+    {
+        return sw::RenderGraphPassExecuteFn(
+            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
+        {
+            SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
+            SW_EXPECT_TRUE( ctx._pCmdList != nullptr );
+            executeCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+    };
+
+    graph.addPass( sw::hashed_string( "DepthPass" ), {}, { sw::hashed_string( "DepthBuffer" ) }, makeCb( "DepthPass" ) );
+    graph.addPass( sw::hashed_string( "ShadowPass" ), {}, { sw::hashed_string( "ShadowMap" ) }, makeCb( "ShadowPass" ) );
+    graph.addPass( sw::hashed_string( "ForwardPass" ), { sw::hashed_string( "DepthBuffer" ), sw::hashed_string( "ShadowMap" ) }, { sw::hashed_string( "SceneColor" ) }, makeCb( "ForwardPass" ) );
+
+    sw::RenderGraphExecutionContext context;
+    SW_ASSERT_TRUE( graph.executeParallel( context, &taskManager, device.get() ) );
+    SW_EXPECT_EQUAL( 3u, executeCount.load() );
+
+    device->waitIdle();
+    taskManager.shutdown();
     device->shutdown();
     device.reset();
     window->destroy();
