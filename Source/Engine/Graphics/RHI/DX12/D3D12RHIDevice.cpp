@@ -33,6 +33,8 @@ namespace sw
         , _arrCommandAllocator{}
         , _commandList{ nullptr }
         , _arrFrameCmdAllocator{}
+        , _cmdListPoolMutex{}
+        , _listFreeCmdListEntry{}
         , _frameRing{}
         , _listRenderTarget{}
         , _gpuBuffers{}
@@ -260,6 +262,10 @@ namespace sw
         {
             allocator.Reset();
         }
+        {
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.clear();
+        }
         for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrFrameCmdAllocator )
         {
             allocator.Reset();
@@ -444,6 +450,48 @@ namespace sw
     ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()
     {
         return _arrCommandAllocator[_frameRing.currentIndex()].Get();
+    }
+
+    D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
+    {
+        {
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            if ( _listFreeCmdListEntry.empty() == false )
+            {
+                D3D12CommandListEntry entry = std::move( _listFreeCmdListEntry.back() );
+                _listFreeCmdListEntry.pop_back();
+                return entry;
+            }
+        }
+
+        // 풀이 비었으면 새로 만든다. 생성 직후의 리스트는 열린 상태라 바로 Close 해 둔다
+        // (beginCommandList 가 Reset 으로 다시 연다).
+        D3D12CommandListEntry entry;
+        if ( _device == nullptr )
+            return entry;
+        if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) ) ) )
+            return D3D12CommandListEntry{};
+        if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
+                                                 IID_PPV_ARGS( entry._list.GetAddressOf() ) ) ) )
+            return D3D12CommandListEntry{};
+        entry._list->Close();
+        return entry;
+    }
+
+    void D3D12RHIDevice::recycleCommandListEntryDeferred( D3D12CommandListEntry entry )
+    {
+        if ( entry._list == nullptr || entry._allocator == nullptr )
+            return;
+
+        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 얼로케이터의 커맨드 메모리를 읽고 있다.
+        // 해제 큐에 실어 현재 펜스가 통과한 뒤에야 재사용 풀로 돌려보낸다 — 그래야 다음 사용자가
+        // Reset 해도 안전하다.
+        auto recycleCb = [this, entry]()
+        {
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.push_back( entry );
+        };
+        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
 
     ID3D12CommandAllocator* D3D12RHIDevice::currentFrameCmdAllocator()

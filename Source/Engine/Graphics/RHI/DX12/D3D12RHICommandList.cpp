@@ -8,66 +8,45 @@
 
 namespace sw
 {
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> D3D12RHICommandList::createNativeList( D3D12RHIDevice* pDevice )
-    {
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> list;
-        if ( pDevice == nullptr || pDevice->_device == nullptr || pDevice->_arrFrameCmdAllocator[0] == nullptr )
-        {
-            SW_LOG_ERROR( "D3D12RHICommandList::createNativeList: precondition failed (device=%# alloc0=%#)",
-                          pDevice != nullptr && pDevice->_device != nullptr,
-                          pDevice != nullptr && pDevice->_arrFrameCmdAllocator[0] != nullptr );
-            return list;
-        }
-
-        // 생성 시점의 얼로케이터는 더미다 — beginCommandList() 가 실제 프레임 링 얼로케이터로 Reset 한다.
-        const HRESULT hr = pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                                                pDevice->_arrFrameCmdAllocator[0].Get(), nullptr,
-                                                                IID_PPV_ARGS( list.GetAddressOf() ) );
-        if ( SUCCEEDED( hr ) )
-            list->Close();
-        else
-        {
-            // 디바이스가 이미 제거된 뒤엔 매 프레임 같은 실패가 반복되므로 최초 1회만 남긴다.
-            if ( pDevice->_bDeviceRemovedLogged == 0 )
-                SW_LOG_ERROR( "D3D12RHICommandList::createNativeList: CreateCommandList failed hr=0x%#", static_cast<uint32>( hr ) );
-            list.Reset();
-        }
-        return list;
-    }
-
     D3D12RHICommandList::D3D12RHICommandList( D3D12RHIDevice* pDevice )
         : _pDevice{ pDevice }
-        , _cmdList{ createNativeList( pDevice ) }
+        , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : D3D12CommandListEntry{} }
         , _state{}
-        , _context{ pDevice, _cmdList.Get(), &_state }
+        , _context{ pDevice, _entry._list.Get(), &_state }
     {
+    }
+
+    D3D12RHICommandList::~D3D12RHICommandList()
+    {
+        if ( _pDevice != nullptr )
+            _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
     }
 
     void D3D12RHICommandList::beginCommandList()
     {
         _state = D3D12RecordingState{};
-        if ( _pDevice == nullptr || _cmdList == nullptr )
+        if ( _pDevice == nullptr || _entry._list == nullptr || _entry._allocator == nullptr )
             return;
 
-        // 스왑체인 begin/end(레거시 리스트)와 별개인 전용 얼로케이터를 쓴다 — 링 인덱스 자체는
-        // 이번 프레임에 이미 waitForRingSlot() 이 정한 것을 그대로 따른다(다시 대기/전진하지 않음).
-        ID3D12CommandAllocator* pAllocator = _pDevice->currentFrameCmdAllocator();
-        if ( pAllocator == nullptr )
+        // 이 리스트 전용 얼로케이터라 다른 스레드가 동시에 기록/Reset 하지 않는다. 풀에서 빌려온
+        // 시점에 이미 GPU 펜스를 통과했으므로 곧바로 Reset 해도 안전하다.
+        if ( FAILED( _entry._allocator->Reset() ) )
             return;
-        pAllocator->Reset();
-        _cmdList->Reset( pAllocator, nullptr );
+        if ( FAILED( _entry._list->Reset( _entry._allocator.Get(), nullptr ) ) )
+            return;
+
         _state._bRecording = 1;
         if ( _pDevice->_cbvHeap != nullptr )
         {
             ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
-            _cmdList->SetDescriptorHeaps( 1, heaps );
+            _entry._list->SetDescriptorHeaps( 1, heaps );
         }
     }
 
     void D3D12RHICommandList::endCommandList()
     {
-        if ( _cmdList != nullptr )
-            _cmdList->Close();
+        if ( _entry._list != nullptr )
+            _entry._list->Close();
     }
 } // namespace sw
 

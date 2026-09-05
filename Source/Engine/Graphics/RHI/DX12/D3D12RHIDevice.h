@@ -64,6 +64,19 @@ namespace sw
     };
 
     /**
+     * @struct D3D12CommandListEntry
+     * @brief 커맨드 리스트와 **그 리스트 전용** 얼로케이터 한 쌍.
+     * @details D3D12는 하나의 얼로케이터에 동시에 두 리스트를 기록할 수 없고, 기록 중인 리스트가
+     *          있으면 Reset 도 할 수 없다. `RenderGraph::executeParallel` 이 패스마다 리스트를 만들어
+     *          여러 스레드에서 동시에 기록하므로, 리스트는 반드시 자기 얼로케이터를 가져야 한다.
+     */
+    struct D3D12CommandListEntry
+    {
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _allocator;
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _list;
+    };
+
+    /**
      * @class D3D12RHIDevice
      * @brief Direct3D 12 그래픽스 디바이스 구현체 (Bindless 지원)
      */
@@ -175,6 +188,22 @@ namespace sw
          *          (다시 대기하지 않음 — 한 프레임에 한 번만 전진).
          */
         ID3D12CommandAllocator* currentFrameCmdAllocator();
+
+    public:
+        /**
+         * @brief 병렬 기록용 커맨드 리스트 + 전용 얼로케이터 한 쌍을 풀에서 빌립니다.
+         * @details 풀에 남은 게 없으면 새로 만든다. 풀로 돌아온 항목은 이미 GPU 펜스를 통과한 것이라
+         *          곧바로 Reset 해도 안전하다. 여러 태스크 스레드가 동시에 호출하므로 내부에서 잠근다.
+         */
+        D3D12CommandListEntry acquireCommandListEntry();
+        /**
+         * @brief 다 쓴 리스트/얼로케이터 쌍을 GPU가 끝낸 뒤 풀로 돌려보냅니다.
+         * @details 제출 직후 파괴되더라도 GPU는 아직 그 얼로케이터의 커맨드 메모리를 읽고 있으므로,
+         *          해제 큐에 실어 현재 펜스가 통과한 다음에 재사용 풀로 되돌린다.
+         */
+        void recycleCommandListEntryDeferred( D3D12CommandListEntry entry );
+
+    private:
         /** @brief 불투명 버퍼 핸들을 GPU 리소스로 풉니다. */
         ID3D12Resource* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief 불투명 텍스처 핸들을 GPU 리소스로 풉니다. */
@@ -275,8 +304,11 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 레거시와 별개.
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[FrameResourceRing::kFrameCount];
-        FrameResourceRing                              _frameRing;
-        StructuredUploadSlot                           _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
+        /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
+        mutex                         _cmdListPoolMutex;
+        vector<D3D12CommandListEntry> _listFreeCmdListEntry;
+        FrameResourceRing             _frameRing;
+        StructuredUploadSlot          _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
 
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
