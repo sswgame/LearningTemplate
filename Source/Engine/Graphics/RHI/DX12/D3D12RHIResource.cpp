@@ -289,44 +289,79 @@ namespace sw
         if ( pDest == nullptr )
             return;
 
-        D3D12_HEAP_PROPERTIES uploadHeap{};
-        uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
+        // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙/얼로케이터/리스트를 새로 만들지 않음).
+        // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 kFrameCount 프레임 전 제출의
+        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다.
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[_pDevice->_frameRing.currentIndex()];
 
-        D3D12_RESOURCE_DESC uploadDesc{};
-        uploadDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-        uploadDesc.Width            = size;
-        uploadDesc.Height           = 1;
-        uploadDesc.DepthOrArraySize = 1;
-        uploadDesc.MipLevels        = 1;
-        uploadDesc.Format           = DXGI_FORMAT_UNKNOWN;
-        uploadDesc.SampleDesc.Count = 1;
-        uploadDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-        Microsoft::WRL::ComPtr<ID3D12Resource> upload;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
-                                                                 D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( upload.GetAddressOf() ) ) ) )
+        if ( slot._uploadHeap == nullptr || slot._capacity < size )
         {
-            SW_LOG_ERROR( "updateStructuredBuffer: failed to create staging upload buffer (%# bytes)", size );
+            const uint64 newCapacity = MathUtil::align( static_cast<uint64>( size ) * 2, 65536ull );
+
+            D3D12_HEAP_PROPERTIES uploadHeap{};
+            uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+            D3D12_RESOURCE_DESC uploadDesc{};
+            uploadDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+            uploadDesc.Width            = newCapacity;
+            uploadDesc.Height           = 1;
+            uploadDesc.DepthOrArraySize = 1;
+            uploadDesc.MipLevels        = 1;
+            uploadDesc.Format           = DXGI_FORMAT_UNKNOWN;
+            uploadDesc.SampleDesc.Count = 1;
+            uploadDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+            Microsoft::WRL::ComPtr<ID3D12Resource> newHeap;
+            if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
+                                                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( newHeap.GetAddressOf() ) ) ) )
+            {
+                SW_LOG_ERROR( "updateStructuredBuffer: failed to (re)create staging upload buffer (%# bytes)", newCapacity );
+                return;
+            }
+
+            void* pMapped{ nullptr };
+            if ( FAILED( newHeap->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+            {
+                SW_LOG_ERROR( "updateStructuredBuffer: Map failed on staging buffer" );
+                return;
+            }
+
+            slot._uploadHeap = newHeap;
+            slot._pMapped    = pMapped;
+            slot._capacity   = newCapacity;
+        }
+
+        Memory::copy( slot._pMapped, pData, size );
+
+        if ( slot._copyAllocator == nullptr )
+        {
+            if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
+            {
+                SW_LOG_ERROR( "updateStructuredBuffer: failed to create copy command allocator" );
+                return;
+            }
+        }
+        else if ( FAILED( slot._copyAllocator->Reset() ) )
+        {
+            SW_LOG_ERROR( "updateStructuredBuffer: copy allocator Reset failed" );
             return;
         }
 
-        void* pMapped{ nullptr };
-        if ( FAILED( upload->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+        if ( slot._copyCommandList == nullptr )
         {
-            SW_LOG_ERROR( "updateStructuredBuffer: Map failed on staging buffer" );
+            if ( FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ) ) )
+            {
+                SW_LOG_ERROR( "updateStructuredBuffer: failed to create copy command list" );
+                return;
+            }
+        }
+        else if ( FAILED( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ) ) )
+        {
+            SW_LOG_ERROR( "updateStructuredBuffer: copy command list Reset failed" );
             return;
         }
-        Memory::copy( pMapped, pData, size );
-        upload->Unmap( 0, nullptr );
 
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    stagingAllocator;
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> stagingList;
-        if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( stagingAllocator.GetAddressOf() ) ) ) ||
-             FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, stagingAllocator.Get(), nullptr, IID_PPV_ARGS( stagingList.GetAddressOf() ) ) ) )
-        {
-            SW_LOG_ERROR( "updateStructuredBuffer: failed to create staging command list" );
-            return;
-        }
+        ID3D12GraphicsCommandList* pList = slot._copyCommandList.Get();
 
         D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
         {
@@ -344,10 +379,10 @@ namespace sw
             toCopyDest.Transition.StateBefore = stateBefore;
             toCopyDest.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
             toCopyDest.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            stagingList->ResourceBarrier( 1, &toCopyDest );
+            pList->ResourceBarrier( 1, &toCopyDest );
         }
 
-        stagingList->CopyBufferRegion( pDest, 0, upload.Get(), 0, size );
+        pList->CopyBufferRegion( pDest, 0, slot._uploadHeap.Get(), 0, size );
 
         D3D12_RESOURCE_BARRIER toUav{};
         toUav.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -355,12 +390,11 @@ namespace sw
         toUav.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         toUav.Transition.StateAfter  = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        stagingList->ResourceBarrier( 1, &toUav );
+        pList->ResourceBarrier( 1, &toUav );
 
-        stagingList->Close();
-        ID3D12CommandList* lists[] = { stagingList.Get() };
+        pList->Close();
+        ID3D12CommandList* lists[] = { pList };
         _pDevice->_commandQueue->ExecuteCommandLists( 1, lists );
-        _pDevice->waitForPreviousFrame();
 
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };

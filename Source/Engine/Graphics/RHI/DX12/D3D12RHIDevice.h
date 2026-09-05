@@ -241,6 +241,18 @@ namespace sw
             RHITextureHandle                       _texture{ 0 };
         };
 
+        /// @brief updateStructuredBuffer 전용 프레임 링 슬롯 — 매 호출마다 업로드 힙/커맨드리스트를
+        /// 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
+        /// 편승한다(같은 인덱스를 다시 쓸 때는 kFrameCount 프레임 전 제출이 이미 GPU에서 끝났다).
+        struct StructuredUploadSlot
+        {
+            Microsoft::WRL::ComPtr<ID3D12Resource>            _uploadHeap;
+            Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _copyAllocator;
+            Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _copyCommandList;
+            void*                                             _pMapped{ nullptr };
+            uint64                                            _capacity{ 0 };
+        };
+
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
         Microsoft::WRL::ComPtr<IDXGISwapChain3>           _swapChain;
@@ -258,6 +270,7 @@ namespace sw
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 레거시와 별개.
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[FrameResourceRing::kFrameCount];
         FrameResourceRing                              _frameRing;
+        StructuredUploadSlot                           _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
 
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;

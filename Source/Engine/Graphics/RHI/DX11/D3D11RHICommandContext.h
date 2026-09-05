@@ -55,10 +55,15 @@ namespace sw
         void endOffscreenPass( RHITextureHandle colorTarget ) override;
 
     private:
-        void                 bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
-        D3D11RHIDevice*      _pDevice;
-        ID3D11DeviceContext* _pContext;
-        RHIDescriptorIndex   _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
+        void bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
+        /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */
+        ID3DUserDefinedAnnotation* getAnnotation();
+        D3D11RHIDevice*            _pDevice;
+        ID3D11DeviceContext*       _pContext;
+        RHIDescriptorIndex         _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
+        /** @brief _pContext 수명 동안 불변이라 최초 QueryInterface 결과를 재사용한다(마커마다 QI 방지). */
+        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
+        bool                                              _bAnnotationQueried{ false };
     };
 } // namespace sw
 #endif

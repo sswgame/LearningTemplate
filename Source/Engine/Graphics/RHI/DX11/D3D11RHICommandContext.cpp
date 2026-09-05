@@ -473,26 +473,35 @@ namespace sw
         (void)texture;
     }
 
+    ID3DUserDefinedAnnotation* D3D11RHICommandContext::getAnnotation()
+    {
+        if ( _bAnnotationQueried == false )
+        {
+            _bAnnotationQueried = true;
+            if ( _pContext != nullptr )
+                _pContext->QueryInterface( IID_PPV_ARGS( _annotation.GetAddressOf() ) );
+        }
+        return _annotation.Get();
+    }
+
     void D3D11RHICommandContext::beginEventMarker( const utf8* pName )
     {
-        if ( _pContext == nullptr || pName == nullptr )
+        if ( pName == nullptr )
             return;
-        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> annotation;
-        if ( SUCCEEDED( _pContext->QueryInterface( IID_PPV_ARGS( annotation.GetAddressOf() ) ) ) && annotation != nullptr )
+        ID3DUserDefinedAnnotation* pAnnotation = getAnnotation();
+        if ( pAnnotation != nullptr )
         {
             utf16 wide[constant::kMaxBuffer256]{};
             MultiByteToWideChar( CP_UTF8, 0, pName, -1, wide, constant::kMaxBuffer256 );
-            annotation->BeginEvent( wide );
+            pAnnotation->BeginEvent( wide );
         }
     }
 
     void D3D11RHICommandContext::endEventMarker()
     {
-        if ( _pContext == nullptr )
-            return;
-        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> annotation;
-        if ( SUCCEEDED( _pContext->QueryInterface( IID_PPV_ARGS( annotation.GetAddressOf() ) ) ) && annotation != nullptr )
-            annotation->EndEvent();
+        ID3DUserDefinedAnnotation* pAnnotation = getAnnotation();
+        if ( pAnnotation != nullptr )
+            pAnnotation->EndEvent();
     }
 
 } // namespace sw
