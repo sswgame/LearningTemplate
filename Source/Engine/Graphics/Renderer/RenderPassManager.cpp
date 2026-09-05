@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/RenderPassManager.h"
+#include "Engine/Graphics/Renderer/RenderPassManager.h"
 
-#include "Engine/Graphics/RenderPass/RenderPassResource.h"
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/RenderPipelineResource.h"
 
 namespace sw
 {

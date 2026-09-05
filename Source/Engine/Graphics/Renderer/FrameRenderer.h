@@ -11,11 +11,11 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/RenderPass/FrameResourceRegistry.h"
-#include "Engine/Graphics/RenderPass/GpuScene.h"
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
-#include "Engine/Graphics/RenderPass/ShaderBindingBinder.h"
+#include "Engine/Graphics/Renderer/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/GpuScene.h"
+#include "Engine/Graphics/Renderer/RenderGraph.h"
+#include "Engine/Graphics/Renderer/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/ShaderBindingBinder.h"
 #include "Engine/Graphics/Shader/ShaderBindingLayoutCache.h"
 
 namespace sw

@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RenderPass/RenderThread.h"
+#include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

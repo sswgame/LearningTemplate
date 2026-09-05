@@ -11,7 +11,7 @@
 #include "Core/Memory/LinearAllocator.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RenderPass/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/RenderFramePacket.h"
 
 namespace sw
 {

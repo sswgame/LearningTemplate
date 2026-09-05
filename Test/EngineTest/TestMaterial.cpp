@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 
 #include "TestFramework/TestFramework.h"

@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/RenderPipelineResource.h"
 
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RenderPass/RenderPassXmlUtil.h"
+#include "Engine/Graphics/Renderer/RenderPassXmlUtil.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"

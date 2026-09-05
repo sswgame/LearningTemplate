@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/FrameRenderer.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw

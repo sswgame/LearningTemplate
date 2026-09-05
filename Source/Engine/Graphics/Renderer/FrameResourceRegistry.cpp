@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/FrameResourceRegistry.h"
 
 namespace sw
 {

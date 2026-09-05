@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Graphics/Material/MaterialInstance.h"
+
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 

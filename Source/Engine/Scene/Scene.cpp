@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/FrameRenderer.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

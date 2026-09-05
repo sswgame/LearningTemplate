@@ -337,8 +337,8 @@ pObjectManager->findGameObjectsByTag( "Player.Hero"_tag, listPlayers );
 
 ```cpp
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
+#include "Engine/Graphics/Renderer/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/RenderGraph.h"
 
 // 1. 프레임 렌더러 초기화 (원하는 RHI 백엔드 선택)
 // gv_rhiBackend = "DirectX12" 또는 "Vulkan", "DirectX11", "OpenGL"
@@ -547,8 +547,8 @@ sw::AssetStreamingQueue::get().tick();
 CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인과 **비동기 컴퓨트 셰이더 디스패치**를 지원합니다.
 
 ```cpp
-#include "Engine/Graphics/RenderPass/IndirectDrawBuffer.h"
-#include "Engine/Graphics/RenderPass/ComputePass.h"
+#include "Engine/Graphics/Renderer/IndirectDrawBuffer.h"
+#include "Engine/Graphics/Renderer/ComputePass.h"
 
 // 1. Indirect Draw Argument 버퍼 구성
 sw::IndirectDrawBuffer indirectBuffer;
@@ -594,7 +594,7 @@ uint32 textureDescriptorIndex = bindlessTable.allocateTextureSlot( textureHandle
 RenderGraph는 패스 간 자원 의존성을 DAG 위상 정렬할 때 **Read-Modify-Write (동일 리소스 읽기 및 덮어쓰기)** 및 **순차 쓰기(Sequential Multi-Write)** 체인을 자동으로 추적하며, VRAM 앨리어싱(Transient Aliasing)을 위한 리소스 수명 주기(First ~ Last Pass)를 산출합니다.
 
 ```cpp
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
+#include "Engine/Graphics/Renderer/RenderGraph.h"
 
 sw::RenderGraph graph;
 // Pass A(쓰기) -> Pass B(읽기 & 덮어쓰기) -> Pass C(읽기)

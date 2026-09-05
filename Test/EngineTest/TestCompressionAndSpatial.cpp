@@ -3,8 +3,8 @@
 #include "Core/Container/ObjectHandle.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RenderPass/ComputePass.h"
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
+#include "Engine/Graphics/Renderer/ComputePass.h"
+#include "Engine/Graphics/Renderer/RenderGraph.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"

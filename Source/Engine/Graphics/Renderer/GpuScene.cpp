@@ -1,10 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/GpuScene.h"
+#include "Engine/Graphics/Renderer/GpuScene.h"
 
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"

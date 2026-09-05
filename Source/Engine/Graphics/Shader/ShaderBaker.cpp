@@ -11,7 +11,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineData.h"
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 #include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"

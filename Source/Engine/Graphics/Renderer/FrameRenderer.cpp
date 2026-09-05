@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/FrameRenderer.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
@@ -8,9 +8,9 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
-#include "Engine/Graphics/RenderPass/RenderFramePacket.h"
-#include "Engine/Graphics/RenderPass/RenderPassManager.h"
+#include "Engine/Graphics/Renderer/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/RenderPassManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw
