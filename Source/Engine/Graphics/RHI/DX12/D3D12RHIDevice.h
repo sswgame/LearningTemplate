@@ -276,7 +276,12 @@ namespace sw
         FrameResourceRing                              _frameRing;
         StructuredUploadSlot                           _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
 
-        vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
+        vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listRenderTarget;
+        /// @brief 핸들 테이블 보호용. HandleTable::insert()는 내부 vector에 push_back 하므로 재할당이
+        /// 일어나는데, get()은 그 vector 내부를 가리키는 포인터를 돌려준다 — 병렬 패스 기록 중 한
+        /// 스레드가 리소스를 만들면(createTexture2D) 다른 스레드가 resolve로 받아둔 ID3D12Resource*가
+        /// dangling 이 되어 GPU에 쓰레기 주소가 넘어간다(PageFault VA=0). const resolve에서도 잠그므로 mutable.
+        mutable mutex                                          _handleTableMutex;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
         /// @brief 리소스 상태 전이 맵 보호용 — 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있으므로.
@@ -307,6 +312,12 @@ namespace sw
         /// @brief Immediate/Deferred Context(레거시 단일 공유 리스트)용 기록 상태.
         D3D12RecordingState _legacyState;
 
+        /// @brief bindless 레지스트리/프리리스트/디스크립터 카운터 보호용. RenderGraph::executeParallel이
+        /// 같은 웨이브의 패스 콜백을 여러 태스크 스레드에서 동시에 돌리는데, 그 콜백들이 드로우마다
+        /// updateConstantBuffer(레지스트리 순회)와 registerBindless*(레지스트리 resize)를 함께 호출한다.
+        /// 락이 없으면 순회 중 vector 재할당이 일어나 이미 잡아둔 참조가 dangling 되고, 결국 GPU가
+        /// 쓰레기/NULL 디스크립터를 읽어 PageFault(VA=0) → DEVICE_HUNG 으로 이어진다.
+        mutex                          _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
 

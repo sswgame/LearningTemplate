@@ -452,12 +452,14 @@ namespace sw
 
     ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
     {
+        std::scoped_lock<mutex>                       lock{ _handleTableMutex };
         const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuBuffers.get( handle );
         return slot != nullptr ? slot->Get() : nullptr;
     }
 
     ID3D12Resource* D3D12RHIDevice::resolveTexture( RHITextureHandle handle ) const
     {
+        std::scoped_lock<mutex>                       lock{ _handleTableMutex };
         const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuTextures.get( handle );
         return slot != nullptr ? slot->Get() : nullptr;
     }
@@ -466,6 +468,7 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
+        std::scoped_lock<mutex> lock{ _handleTableMutex };
         return _gpuBuffers.insert( std::move( buffer ) );
     }
 
@@ -473,6 +476,7 @@ namespace sw
     {
         if ( texture == nullptr )
             return 0;
+        std::scoped_lock<mutex> lock{ _handleTableMutex };
         return _gpuTextures.insert( std::move( texture ) );
     }
 
