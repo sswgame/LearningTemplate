@@ -27,7 +27,9 @@ namespace sw
             list->Close();
         else
         {
-            SW_LOG_ERROR( "D3D12RHICommandList::createNativeList: CreateCommandList failed hr=0x%#", static_cast<uint32>( hr ) );
+            // 디바이스가 이미 제거된 뒤엔 매 프레임 같은 실패가 반복되므로 최초 1회만 남긴다.
+            if ( pDevice->_bDeviceRemovedLogged == 0 )
+                SW_LOG_ERROR( "D3D12RHICommandList::createNativeList: CreateCommandList failed hr=0x%#", static_cast<uint32>( hr ) );
             list.Reset();
         }
         return list;

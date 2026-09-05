@@ -310,7 +310,8 @@ namespace sw
         unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
         if ( list->isValid() == false )
         {
-            SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: 네이티브 커맨드 리스트 생성 실패." );
+            if ( _bDeviceRemovedLogged == 0 )
+                SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: 네이티브 커맨드 리스트 생성 실패." );
             return nullptr;
         }
         return list;

@@ -307,7 +307,13 @@ namespace sw
                 unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList( RHICommandListMode::Deferred );
                 if ( passCmd == nullptr )
                 {
-                    SW_LOG_WARNING( "Deferred command list unsupported by RHI — falling back to serial execute" );
+                    // 디바이스가 죽으면 매 프레임 여기로 떨어지므로, 같은 경고를 무한 반복하지 않는다.
+                    static bool s_bFallbackLogged = false;
+                    if ( s_bFallbackLogged == false )
+                    {
+                        s_bFallbackLogged = true;
+                        SW_LOG_WARNING( "Deferred command list unsupported by RHI — falling back to serial execute" );
+                    }
                     return execute( context );
                 }
                 listPassEntry.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
