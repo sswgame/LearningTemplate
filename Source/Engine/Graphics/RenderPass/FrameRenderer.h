@@ -120,6 +120,10 @@ namespace sw
             /** @brief 패스 스코프 이름→리소스 레지스트리. 패스 시작마다 새로 시작(reset) — 병렬 기록 시
              *         패스마다 독립이어야 하므로 FrameRenderer 공유 멤버가 아니라 여기 둔다. */
             FrameResourceRegistry _resourceRegistry{};
+            /** @brief bindForDraw가 마지막으로 조회한 PSO→레이아웃. 같은 PSO로 연속 드로우할 때
+             *         layoutForPso()의 뮤텍스+해시맵 조회를 스킵하는 패스-로컬 1-entry 캐시. */
+            RHIPipelineStateHandle     _lastLayoutPso{ 0 };
+            const ShaderBindingLayout* _pLastLayout{ nullptr };
         };
 
         // ------------------------------------------------------------------------------

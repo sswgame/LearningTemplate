@@ -70,7 +70,14 @@ namespace sw
 
         ctx._passValues.setMatrix( hashed_string( "g_World" ), ctx._world );
 
-        const ShaderBindingLayout* pLayout = layoutForPso( pso );
+        // 같은 PSO로 연속 드로우하는 게 흔한 패턴이라, 패스-로컬 1-entry 캐시로
+        // layoutForPso()의 뮤텍스+해시맵 조회를 매 드로우 반복하지 않게 한다.
+        if ( ctx._lastLayoutPso != pso )
+        {
+            ctx._pLastLayout   = layoutForPso( pso );
+            ctx._lastLayoutPso = pso;
+        }
+        const ShaderBindingLayout* pLayout = ctx._pLastLayout;
         if ( pLayout == nullptr || pLayout->isEmpty() )
             return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
 

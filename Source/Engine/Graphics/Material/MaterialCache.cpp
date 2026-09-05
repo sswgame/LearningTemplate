@@ -108,7 +108,14 @@ namespace sw
         if ( it != _impl->_mapEntry.end() )
         {
             if ( it->second._bGpuInit && _impl->_pDevice != nullptr )
+            {
+                // 아직 이전 프레임(들)이 GPU에서 이 Material의 bindless 상수버퍼 인덱스를 참조하고
+                // 있을 수 있다 — shutdown()의 unregisterBindlessResource는 인덱스를 즉시 프리리스트로
+                // 반환해서, waitIdle 없이 바로 initialize()가 같은 인덱스를 재할당하면 아직 그 인덱스를
+                // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
+                _impl->_pDevice->waitIdle();
                 it->second._material->shutdown( _impl->_pDevice );
+            }
             it->second._bGpuInit = false;
 
             if ( _impl->_pDevice != nullptr )

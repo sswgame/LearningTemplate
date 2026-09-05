@@ -45,5 +45,9 @@ namespace sw
     private:
         unordered_map<hashed_string, unique_ptr<RenderPassResource>>     _mapRenderPass;
         unordered_map<hashed_string, unique_ptr<RenderPipelineResource>> _mapPipeline;
+        /// @brief 파일 경로 → 이미 로드된 리소스. 같은 파이프라인이 같은 RenderPass XML을 여러 번
+        /// 참조할 때 이름 기준 캐시 조회 전에 매번 XML을 다시 파싱하지 않도록 경로로 먼저 확인한다.
+        unordered_map<string, RenderPassResource*>     _mapPathToRenderPass;
+        unordered_map<string, RenderPipelineResource*> _mapPathToPipeline;
     };
 } // namespace sw
