@@ -117,7 +117,7 @@ swapChain->endFrame()
 |---|---|---|
 | ~~**S1**~~ | ✅ **완료** — `beginFrame` 을 두 경로 공통으로 맨 앞으로 옮기고, 백버퍼 확립을 대신할 **명시적 `beginRenderPass(백버퍼, Load)`** 를 `presentHook` 직전에 추가. 부수로 R5·R6 위반 2건을 Vulkan 에서 수정해야 했다 | 높음(완료) |
 | ~~**S2**~~ | ✅ **완료**(`d0677ae1`) — `beginFrame` 에서 백버퍼 바인딩/클리어 제거(수명주기만 남김). 클리어는 백버퍼 `beginRenderPass` 의 `loadOp` 이 담당. Vulkan 은 `loadOp=LOAD` 렌더패스 변종을 추가해야 했다 | 높음(완료) |
-| **S3** | `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. **Vulkan 블로킹 제출도 여기서 사라진다** | 중간 |
+| ~~**S3**~~ | ✅ **완료**(`bfa00729`, `40a09b80`) — `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. Vulkan 블로킹 제출과 오프스크린 전용 스트림이 사라졌다 | 중간(완료) |
 | **S4** | Vulkan 리스트가 자기 `VkCommandBuffer`/커맨드 풀 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간 |
 
 S1·S2 가 가장 위험하다. 백엔드마다 `beginFrame` 이 하는 일이 다르므로(위 표) **한 단계에 한 백엔드씩**
@@ -175,6 +175,14 @@ S1·S2 가 가장 위험하다. 백엔드마다 `beginFrame` 이 하는 일이 �
 백버퍼 요청을 게임뷰 RT 로 돌렸는데, 이 값은 "마지막에 바인딩한 컬러 타깃"이라 그래프가 트랜지언트에
 그린 뒤에도 남는다. `beginFrame` 이 렌더패스를 열어주던 동안에는 스왑체인 이미지가 어쨌든 전이돼
 가려져 있었다. → 오프스크린 패스가 **실제로 열려 있을 때만** 라우팅.
+
+**6차(S3 중 발견)** — 오프스크린 블로킹 제출(`vkQueueSubmit` + `vkWaitForFences`)을 걷어내자 그
+스톨이 가려주던 Vulkan 수명주기 버그 2건이 즉시 드러났다. (a) 링 상수버퍼의 디스크립터 셋을 매
+프레임 새 슬롯으로 다시 기록하고 있었다 — 그 셋은 아직 실행 중인 직전 프레임 커맨드버퍼가 참조한다.
+프레임 슬롯마다 전용 셋을 만들어 등록 시점에 굳혀 두는 것으로 해결(드로우 경로에서
+`vkUpdateDescriptorSets` 가 아예 사라져 성능에도 이득). (b) 프레임버퍼/렌더패스를 즉시 `vkDestroy`
+했다 — 해제 큐로 옮겼다.
+**교훈: 블로킹 대기를 제거할 때는 그 대기가 무엇을 가려주고 있었는지 먼저 찾아야 한다.**
 
 **5차(S2 중 발견)** — Vulkan 스왑체인이 `B8G8R8A8_UNORM`, DX12 가 `R8G8B8A8_UNORM` 이었다. 파이프라인
 리소스는 후자로 렌더패스를 만들므로, 백버퍼에 직접 그리는 패스가 전부 렌더패스 비호환이 된다.
