@@ -505,7 +505,8 @@ namespace sw
                     packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
                     packet._bHasViewProj = 1;
                 }
-                packet._gpuScene.buildFromScene( pActiveScene, packet._cameraPos, _taskManager.get() );
+                _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos, _taskManager.get() );
+                _gtGpuScene.exportCpuSnapshot( packet._gpuScene );
             }
 
             if ( _renderThread != nullptr )

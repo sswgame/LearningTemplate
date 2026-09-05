@@ -305,7 +305,10 @@ namespace sw
         _pScene                   = nullptr;
         _frameCtx._pBoundMaterial = packet._pSceneMaterial;
         _outputRenderTarget       = packet._gameRenderTarget;
-        _gpuScene                 = std::move( packet._gpuScene );
+        // _gpuScene는 FrameRenderer가 프레임 간 영속 소유(GPU 버퍼/핸들/MaterialRetireQueue 보존) —
+        // 패킷에서는 CPU 스냅샷(인스턴스/배치 목록)만 옮겨온다. 통째로 move하면 직전 프레임에 업로드한
+        // GPU 버퍼/디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 생성하는 리크가 됐었다.
+        _gpuScene.adoptCpuSnapshot( std::move( packet._gpuScene ) );
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
@@ -337,14 +340,10 @@ namespace sw
             bindPassCallbacks();
 
         if ( prepareCommandList( pDevice, "executePacket" ) == false )
-        {
-            packet._gpuScene = std::move( _gpuScene );
             return false;
-        }
 
         const bool bOk = submitGraph( pDevice );
         _gpuScene.advanceMaterialRetireFrame();
-        packet._gpuScene = std::move( _gpuScene );
         return bOk;
     }
 } // namespace sw

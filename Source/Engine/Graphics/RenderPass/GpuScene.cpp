@@ -472,6 +472,27 @@ namespace sw
         _materialRetire.flushAfterGpu( pDevice );
     }
 
+    void GpuScene::exportCpuSnapshot( GpuScene& outSnapshot )
+    {
+        outSnapshot._listInstance         = _listInstance;
+        outSnapshot._listOpaqueBatch      = _listOpaqueBatch;
+        outSnapshot._listTransparentBatch = _listTransparentBatch;
+        outSnapshot._listAllBatch         = _listAllBatch;
+        outSnapshot._indirectCommandCount = _indirectCommandCount;
+        outSnapshot._bCpuDirty            = _bCpuDirty;
+        _bCpuDirty                        = 0;
+    }
+
+    void GpuScene::adoptCpuSnapshot( GpuScene&& snapshot )
+    {
+        _listInstance         = std::move( snapshot._listInstance );
+        _listOpaqueBatch      = std::move( snapshot._listOpaqueBatch );
+        _listTransparentBatch = std::move( snapshot._listTransparentBatch );
+        _listAllBatch         = std::move( snapshot._listAllBatch );
+        _indirectCommandCount = snapshot._indirectCommandCount;
+        _bCpuDirty            = snapshot._bCpuDirty;
+    }
+
     void GpuScene::sortTransparent( const float32* pCameraPos )
     {
         if ( pCameraPos == nullptr || _listScratchTransparentIdx.size() <= 1 )

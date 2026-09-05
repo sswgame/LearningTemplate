@@ -119,26 +119,29 @@ namespace sw
         void rebindSceneAfterDeviceRecreate();
 
     private:
-        unique_ptr<Logger>                   _logger;
-        unique_ptr<DeadlockDetector>         _deadlockDetector;
-        unique_ptr<MemoryProfiler>           _memoryProfiler;
-        unique_ptr<CommandLineManager>       _commandLineManager;
-        unique_ptr<TaskManager>              _taskManager;
-        unique_ptr<GlobalVariableManager>    _globalVariableManager;
-        unique_ptr<TypeRegistry>             _typeRegistry;
-        unique_ptr<ConfigManager>            _configManager;
-        unique_ptr<LocalizationManager>      _localizationManager;
-        unique_ptr<ResourceManager>          _resourceManager;
-        unique_ptr<RHI>                      _rhi;
-        unique_ptr<LiveReloadManager>        _liveReloadManager;
-        unique_ptr<ReloadFileManager>        _reloadFileManager;
-        unique_ptr<SceneManager>             _sceneManager;
-        unique_ptr<InputManager>             _inputManager;
-        unique_ptr<ActionMap>                _mapDebugAction;
-        unique_ptr<IAudioSystem>             _audioSystem;
-        unique_ptr<EventDispatcher>          _eventDispatcher;
-        unique_ptr<FrameRenderer>            _frameRenderer;
-        unique_ptr<RenderThread>             _renderThread;
+        unique_ptr<Logger>                _logger;
+        unique_ptr<DeadlockDetector>      _deadlockDetector;
+        unique_ptr<MemoryProfiler>        _memoryProfiler;
+        unique_ptr<CommandLineManager>    _commandLineManager;
+        unique_ptr<TaskManager>           _taskManager;
+        unique_ptr<GlobalVariableManager> _globalVariableManager;
+        unique_ptr<TypeRegistry>          _typeRegistry;
+        unique_ptr<ConfigManager>         _configManager;
+        unique_ptr<LocalizationManager>   _localizationManager;
+        unique_ptr<ResourceManager>       _resourceManager;
+        unique_ptr<RHI>                   _rhi;
+        unique_ptr<LiveReloadManager>     _liveReloadManager;
+        unique_ptr<ReloadFileManager>     _reloadFileManager;
+        unique_ptr<SceneManager>          _sceneManager;
+        unique_ptr<InputManager>          _inputManager;
+        unique_ptr<ActionMap>             _mapDebugAction;
+        unique_ptr<IAudioSystem>          _audioSystem;
+        unique_ptr<EventDispatcher>       _eventDispatcher;
+        unique_ptr<FrameRenderer>         _frameRenderer;
+        unique_ptr<RenderThread>          _renderThread;
+        /** @brief GT 쪽 영속 GpuScene — buildFromScene의 콘텐츠 해시 캐싱이 프레임 간 유지되도록 여기 소유.
+         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot으로 뽑아 RenderFramePacket에 담아 RT로 넘긴다. */
+        GpuScene                             _gtGpuScene;
         unique_ptr<EngineData>               _engineData;
         unique_ptr<AssetStreamingQueue>      _assetStreamingQueue;
         unique_ptr<CommandStack>             _commandStack;

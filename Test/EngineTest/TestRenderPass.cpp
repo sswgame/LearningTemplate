@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Graphics/RenderPass/GpuScene.h"
+#include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Graphics/RenderPass/RenderPassManager.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
@@ -486,6 +487,76 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
     device->waitIdle();
 
     // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 해제.
+    if ( cube != nullptr )
+        cube->releaseGpu();
+
+    renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
+ * @brief executePacket()이 프레임마다 GpuScene GPU 버퍼를 재생성하지 않고 재사용하는지 검증.
+ * @details GT/RT 소유권 분리(exportCpuSnapshot/adoptCpuSnapshot) 회귀 테스트 — 고치기 전에는
+ *          FrameRenderer::_gpuScene이 매 프레임 통째로 덮어써져서 인스턴스 버퍼 핸들이 매번 바뀌었다
+ *          (직전 프레임 버퍼/디스크립터는 releaseGpu() 없이 버려지는 누수였음).
+ */
+SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+    bool bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for GpuScene buffer reuse test" );
+
+    sw::FrameRenderer renderer;
+    SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
+
+    sw::Scene scene( "GpuSceneReuseScene" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+    SW_ASSERT_NOT_NULL( go );
+    sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( mesh );
+    mesh->setMesh( cube );
+
+    sw::GpuScene        gtGpuScene; // EngineLoop::_gtGpuScene 역할 — 여기서는 테스트 로컬로 흉내
+    sw::float4          clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+    sw::RHIBufferHandle instanceBufferAfterFrame1{ 0 };
+
+    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    {
+        sw::RenderFramePacket packet{};
+        packet._bValid = 1;
+        gtGpuScene.buildFromScene( &scene, packet._cameraPos, nullptr );
+        gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+
+        device->getSwapChain()->beginFrame( clear );
+        SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
+        device->getSwapChain()->endFrame( false, false );
+
+        const sw::RHIBufferHandle instanceBuffer = renderer.getGpuScene().getInstanceBuffer();
+        SW_EXPECT_TRUE( instanceBuffer != 0 );
+        if ( frameIndex == 0 )
+            instanceBufferAfterFrame1 = instanceBuffer;
+        else
+            SW_EXPECT_EQUAL( instanceBufferAfterFrame1, instanceBuffer );
+    }
+
+    device->waitIdle();
     if ( cube != nullptr )
         cube->releaseGpu();
 

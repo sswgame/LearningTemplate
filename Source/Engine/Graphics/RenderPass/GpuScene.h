@@ -138,6 +138,19 @@ namespace sw
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGpu( IRHIDevice* pDevice );
 
+        /**
+         * @brief CPU 스냅샷(인스턴스/배치 목록)만 outSnapshot으로 복사합니다. GPU 핸들은 건드리지 않습니다.
+         * @details GT가 프레임마다 영속 GpuScene에서 RenderFramePacket으로 넘길 스냅샷을 뽑을 때 씁니다.
+         *          호출 후 *this의 dirty 플래그는 소비된 것으로 보고 0으로 리셋합니다(다음 buildFromScene이
+         *          다시 바뀌었다고 판단할 때까지 유지 — upload()의 재업로드 스킵과 대칭되는 GT 쪽 소비 시점).
+         */
+        void exportCpuSnapshot( GpuScene& outSnapshot );
+        /**
+         * @brief snapshot의 CPU 스냅샷만 *this로 옮깁니다. *this의 GPU 핸들/용량/MaterialRetireQueue는 보존합니다.
+         * @details RT(FrameRenderer)가 영속 소유한 GpuScene에 매 프레임 패킷의 스냅샷을 반영할 때 씁니다.
+         */
+        void adoptCpuSnapshot( GpuScene&& snapshot );
+
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GpuInstance>& getInstances() const { return _listInstance; }
         /** @brief 불투명 배치를 반환합니다. */
