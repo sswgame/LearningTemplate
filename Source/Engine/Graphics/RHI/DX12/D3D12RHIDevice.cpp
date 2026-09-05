@@ -341,7 +341,12 @@ namespace sw
             if ( FAILED( getHr ) )
             {
                 SW_LOG_ERROR( "GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
-                continue;
+                // 일부 슬롯만 null인 채로 남겨두면 크기는 정상(_bufferCount)이라 empty()/범위 체크를
+                // 통과해버려서, beginFrame()이 null 리소스를 그대로 ResourceBarrier에 넘겨 GPU가
+                // NULL VA를 참조하는 PageFault로 이어진다(디바이스 행 상황에서 실제로 발생 확인).
+                // 부분 성공을 허용하지 말고 전체를 비워 "준비 안 됨" 상태로 통일한다.
+                cleanupRenderTargets();
+                return;
             }
             _device->CreateRenderTargetView( _listRenderTarget[bufferIndex].Get(), nullptr, rtvHandle );
             rtvHandle.ptr += _rtvDescriptorSize;
