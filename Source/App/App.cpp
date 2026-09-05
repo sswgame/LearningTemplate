@@ -275,6 +275,14 @@ namespace sw
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
+        // gv_useRenderThread(기본 true)일 때는 전용 RenderThread가 별도 스레드에서 beginFrame/
+        // endFrame으로 스왑체인·렌더타겟을 계속 건드리고 있을 수 있다. 이 상태에서 메인(윈도우
+        // 메시지) 스레드가 바로 resize()를 호출하면 같은 리소스에 대한 진짜 크로스스레드 레이스가
+        // 된다 — waitIdle()로 큐를 비우고 GPU까지 완전히 쉬게 한 뒤 리사이즈한다.
+        RenderThread* pRenderThread = _engineLoop.getRenderThread();
+        if ( pRenderThread != nullptr )
+            pRenderThread->waitIdle();
+
         IRHISwapChain* pSwapChain = pRHI->getDevice().getSwapChain();
         if ( pSwapChain != nullptr )
             pSwapChain->resize( width, height );
