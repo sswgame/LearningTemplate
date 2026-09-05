@@ -25,19 +25,40 @@ namespace sw
         ConfigManager( const ConfigManager& )            = delete;
         ConfigManager& operator=( const ConfigManager& ) = delete;
 
+        /**
+         * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
+         * @details `Config/...` 경로는 상대 경로라 예전엔 **현재 작업 디렉터리 기준**으로만 찾았다.
+         *          실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어서,
+         *          EngineConfig/GameConfig/AppConfig 가 매 실행마다 전부 "없음"으로 떨어지고 베이크된
+         *          기본값으로 조용히 대체되고 있었다(창 크기·VSync·리소스 우선순위·게임킷 모듈 목록이
+         *          전부 무시됨). `Resource/` 는 상위 디렉터리를 거슬러 올라가 루트를 찾는데
+         *          (`ResourceUtil`) Config 만 그 혜택을 못 받고 있었다 — 그 루트를 여기에 넣어준다.
+         */
+        void setRootDirectory( string_view rootDirectory ) { _rootDirectory = string( rootDirectory ); }
+
         template <typename T>
         bool loadConfig( const hashed_string& name, const string& filePath )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            string jsonStr;
-            if ( FileUtil::readTextFile( filePath, jsonStr ) == false )
+            string resolvedPath;
+            if ( resolveConfigPath( filePath, resolvedPath ) == false )
             {
+                // 존재하지 않는 설정 파일은 오류가 아니다 — 호출부(ensureConfig)가 베이크된 기본값으로
+                // 정상 폴백한다. 여기서 곧바로 readTextFile 을 부르면 FileUtil 이 [Error] 를 남겨서
+                // "정상 기동인데 매번 오류 3건"이 되어 진짜 오류를 가린다.
                 SW_LOG_WARNING( "Failed to load config from: %#", filePath.c_str() );
                 return false;
             }
 
-            return loadConfigFromJson<T>( name, jsonStr, filePath.c_str() );
+            string jsonStr;
+            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
+            {
+                SW_LOG_WARNING( "Failed to load config from: %#", resolvedPath.c_str() );
+                return false;
+            }
+
+            return loadConfigFromJson<T>( name, jsonStr, resolvedPath.c_str() );
         }
 
         template <typename T>
@@ -110,7 +131,56 @@ namespace sw
         }
 
     private:
+        /**
+         * @brief 설정 파일의 실제 위치를 찾습니다.
+         * @details 절대경로 → 현재 작업 디렉터리 → 루트 디렉터리(프로젝트 루트) → 실행 파일 디렉터리
+         *          순으로 **존재 여부만** 확인한다. 읽기 전에 존재를 확인하므로, 없을 때 FileUtil 이
+         *          [Error] 를 남기지 않는다.
+         * @return 찾으면 true 이고 @p outResolvedPath 에 실제 경로가 담긴다.
+         */
+        bool resolveConfigPath( const string& filePath, string& outResolvedPath ) const
+        {
+            if ( filePath.empty() )
+                return false;
+
+            if ( FileUtil::isAbsolutePath( filePath ) )
+            {
+                outResolvedPath = filePath;
+                return FileUtil::fileExists( outResolvedPath );
+            }
+
+            if ( FileUtil::fileExists( filePath ) )
+            {
+                outResolvedPath = filePath;
+                return true;
+            }
+
+            if ( _rootDirectory.empty() == false )
+            {
+                string candidate = FileUtil::joinPath( _rootDirectory, filePath );
+                if ( FileUtil::fileExists( candidate ) )
+                {
+                    outResolvedPath = std::move( candidate );
+                    return true;
+                }
+            }
+
+            const string exeDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+            if ( exeDir.empty() == false )
+            {
+                string candidate = FileUtil::joinPath( exeDir, filePath );
+                if ( FileUtil::fileExists( candidate ) )
+                {
+                    outResolvedPath = std::move( candidate );
+                    return true;
+                }
+            }
+            return false;
+        }
+
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
+        /// @brief 상대 Config 경로의 기준 디렉터리. 비어 있으면 작업 디렉터리/실행 파일 위치만 본다.
+        string _rootDirectory;
     };
 
 } // namespace sw

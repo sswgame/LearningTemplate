@@ -226,6 +226,11 @@ namespace sw
 
         BLOCK( "엔진 기본 설정 로드 및 RHI 백엔드 선정 & 초기화" )
         {
+            // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다 — 작업 디렉터리
+            // 기준으로만 찾으면 전부 "없음"이 되어 조용히 기본값으로 떨어진다. Resource/ 를 찾을 때
+            // 이미 알아낸 프로젝트 루트를 기준으로 넘겨준다.
+            _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+
             const hashed_string kEngineConfigHash = hashed_string{ "EngineConfig" };
             const EngineConfig* pEngineConfig     = _configManager->ensureConfig<EngineConfig>(
                 kEngineConfigHash, config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
