@@ -280,14 +280,26 @@ namespace sw
         // 렌더패스가 대신한다 — 이 둘은 반드시 같이 있어야 한다.
         _pDevice->getSwapChain()->beginFrame( packet._clearColor );
 
+        // 게임뷰 RT 확립. 예전엔 beginOffscreenPass 였는데, 그건 "렌더타깃 바인딩"과 "백엔드마다
+        // 다른 스트림 분리"가 섞인 API 였다(Vulkan 만 별도 커맨드버퍼 + 블로킹 제출).
+        // 렌더타깃 바인딩은 beginRenderPass 로 충분하다 — docs/05_RHI_FrameContract.md S3.
         if ( bOffscreen )
-            pImm->beginOffscreenPass( packet._gameRenderTarget, packet._clearColor );
+        {
+            RHIRenderPassBeginInfo gameViewPass{};
+            gameViewPass._bBindColor        = 1;
+            gameViewPass._colorTargetCount  = 1;
+            gameViewPass._arrColorTarget[0] = packet._gameRenderTarget;
+            gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
+            gameViewPass._arrClearColor[0]  = packet._clearColor;
+            pImm->beginRenderPass( gameViewPass );
+        }
 
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
             _pFrameRenderer->executePacket( _pDevice, packet );
 
+        // 에디터가 게임뷰 텍스처를 샘플링한다 — 읽기 상태로 전환(열려 있는 렌더패스도 여기서 닫힌다).
         if ( bOffscreen )
-            pImm->endOffscreenPass( packet._gameRenderTarget );
+            pImm->prepareTextureForShaderRead( packet._gameRenderTarget );
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린/백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.

@@ -473,28 +473,12 @@ namespace sw
             vkUnmapMemory( _pDevice->_device, pRecord->_memory );
         }
 
-        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
-        {
-            if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer || bufferIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
-                continue;
-            VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSet[bufferIndex];
-            if ( set == VK_NULL_HANDLE )
-                continue;
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = pRecord->_buffer;
-            bufferInfo.offset = offset;
-            bufferInfo.range  = slotSize;
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet          = set;
-            descriptorWrite.dstBinding      = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo     = &bufferInfo;
-            vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
-        }
+        // 디스크립터는 여기서 손대지 않는다. 프레임 슬롯마다 전용 셋이 등록 시점에 자기 오프셋을
+        // 가리키도록 한 번만 기록돼 있고(registerBindlessResource), 바인딩 때 현재 프레임 셋이
+        // 선택된다(registeredDescriptorSetAt). 예전엔 셋 하나를 매 프레임 새 슬롯으로 다시 기록했는데,
+        // 그 셋은 아직 실행 중인 직전 프레임 커맨드버퍼가 참조하고 있어 in-use 위반이었다.
+        (void)slotSize;
+        (void)offset;
     }
 
     RHIBufferHandle VulkanRHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -889,26 +873,35 @@ namespace sw
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts        = &setLayout;
 
-        VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-        if ( vkAllocateDescriptorSets( _pDevice->_device, &allocInfo, &descriptorSet ) != VK_SUCCESS )
-            return kInvalidDescriptorIndex;
+        const auto   slotIt   = _pDevice->_mapCbSlotSize.find( buffer );
+        const bool   bRingCb  = ( bIsStorage == false ) && ( slotIt != _pDevice->_mapCbSlotSize.end() );
+        const uint32 slotSize = bRingCb ? slotIt->second : pRecord->_size;
 
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = pRecord->_buffer;
-        bufferInfo.offset = 0;
-        const auto slotIt = _pDevice->_mapCbSlotSize.find( buffer );
-        bufferInfo.range  = ( slotIt != _pDevice->_mapCbSlotSize.end() ) ? slotIt->second : pRecord->_size;
+        // 링 상수버퍼(createConstantBuffer 가 프레임 슬롯 수만큼 잡아둔 버퍼)는 슬롯마다 전용 셋을
+        // 만들어 각자 자기 오프셋을 가리키게 굳혀 둔다 - 그래야 매 프레임 디스크립터를 다시 쓸 일이
+        // 없고(in-use 위반 제거), 드로우 경로에서 vkUpdateDescriptorSets 가 아예 사라진다.
+        const uint32    ringCount = bRingCb ? constant::kMaxFrameCountInFlight : 1u;
+        VkDescriptorSet arrSet[constant::kMaxFrameCountInFlight]{};
+        for ( uint32 ringIndex = 0; ringIndex < ringCount; ++ringIndex )
+        {
+            if ( vkAllocateDescriptorSets( _pDevice->_device, &allocInfo, &arrSet[ringIndex] ) != VK_SUCCESS )
+                return kInvalidDescriptorIndex;
 
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet          = descriptorSet;
-        descriptorWrite.dstBinding      = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType  = bIsStorage ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo     = &bufferInfo;
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = pRecord->_buffer;
+            bufferInfo.offset = bRingCb ? static_cast<VkDeviceSize>( ringIndex ) * slotSize : 0;
+            bufferInfo.range  = slotSize;
 
-        vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
+            VkWriteDescriptorSet descriptorWrite{};
+            descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet          = arrSet[ringIndex];
+            descriptorWrite.dstBinding      = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType  = bIsStorage ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo     = &bufferInfo;
+            vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
+        }
 
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree );
@@ -918,7 +911,13 @@ namespace sw
             _pDevice->_listRegisteredDescriptorSet.resize( descriptorIndex + 1 );
             _pDevice->_listBindlessSourceBuffer.resize( descriptorIndex + 1 );
         }
-        _pDevice->_listRegisteredDescriptorSet[descriptorIndex] = descriptorSet;
+        const size_t ringBase = static_cast<size_t>( descriptorIndex ) * constant::kMaxFrameCountInFlight;
+        if ( ringBase + constant::kMaxFrameCountInFlight > _pDevice->_listRegisteredCbSetRing.size() )
+            _pDevice->_listRegisteredCbSetRing.resize( ringBase + constant::kMaxFrameCountInFlight, VK_NULL_HANDLE );
+        for ( uint32 ringIndex = 0; ringIndex < constant::kMaxFrameCountInFlight; ++ringIndex )
+            _pDevice->_listRegisteredCbSetRing[ringBase + ringIndex] = bRingCb ? arrSet[ringIndex] : VK_NULL_HANDLE;
+
+        _pDevice->_listRegisteredDescriptorSet[descriptorIndex] = arrSet[0];
         _pDevice->_listBindlessSourceBuffer[descriptorIndex]    = buffer;
         return descriptorIndex;
     }
@@ -930,16 +929,36 @@ namespace sw
             return;
         const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree,
                                                           index, VkDescriptorSet{ VK_NULL_HANDLE } );
-        if ( set != VK_NULL_HANDLE )
+
+        VkDevice         dev         = _pDevice->_device;
+        VkDescriptorPool pool        = _pDevice->_descriptorPool;
+        auto             enqueueFree = [this, dev, pool]( VkDescriptorSet target )
         {
-            VkDevice         dev  = _pDevice->_device;
-            VkDescriptorPool pool = _pDevice->_descriptorPool;
-            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, target]()
             {
-                vkFreeDescriptorSets( dev, pool, 1, &set );
+                vkFreeDescriptorSets( dev, pool, 1, &target );
             } ),
                                                        _pDevice->_frameFenceCounter + 1 );
+        };
+
+        // 프레임 슬롯별 셋도 같이 반납한다. arrSet[0] 은 _listRegisteredDescriptorSet 과 같은 객체라
+        // 링이 있는 인덱스에서는 set 을 따로 해제하지 않는다(이중 해제 방지).
+        const size_t ringBase = static_cast<size_t>( index ) * constant::kMaxFrameCountInFlight;
+        bool         bHadRing = false;
+        if ( ringBase + constant::kMaxFrameCountInFlight <= _pDevice->_listRegisteredCbSetRing.size() )
+        {
+            for ( uint32 ringIndex = 0; ringIndex < constant::kMaxFrameCountInFlight; ++ringIndex )
+            {
+                VkDescriptorSet& ringSet = _pDevice->_listRegisteredCbSetRing[ringBase + ringIndex];
+                if ( ringSet == VK_NULL_HANDLE )
+                    continue;
+                bHadRing = true;
+                enqueueFree( ringSet );
+                ringSet = VK_NULL_HANDLE;
+            }
         }
+        if ( set != VK_NULL_HANDLE && bHadRing == false )
+            enqueueFree( set );
         if ( index < _pDevice->_listBindlessSourceBuffer.size() )
             _pDevice->_listBindlessSourceBuffer[index] = 0;
     }

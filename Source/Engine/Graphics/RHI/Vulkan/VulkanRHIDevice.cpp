@@ -184,6 +184,7 @@ namespace sw
         , _gpuBuffers{}
         , _mapCbSlotSize{}
         , _listRegisteredDescriptorSet{}
+        , _listRegisteredCbSetRing{}
         , _listBindlessSourceBuffer{}
         , _listRegisteredUAV{}
         , _listUavSourceBuffer{}
@@ -756,6 +757,17 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredDescriptorSet.size() )
             return VK_NULL_HANDLE;
+
+        // 링 상수버퍼는 프레임 슬롯마다 전용 셋을 갖는다. 예전엔 셋 하나를 매 프레임 새 슬롯으로
+        // 다시 기록했는데, 그 셋은 직전 프레임 커맨드버퍼가 아직 쓰고 있어서 in-use 위반이었다
+        // (오프스크린 블로킹 제출이 사라지기 전까지는 그 스톨이 가려주고 있었다).
+        const size_t ringBase = static_cast<size_t>( index ) * constant::kMaxFrameCountInFlight;
+        if ( ringBase + _currentFrame < _listRegisteredCbSetRing.size() )
+        {
+            const VkDescriptorSet ringSet = _listRegisteredCbSetRing[ringBase + _currentFrame];
+            if ( ringSet != VK_NULL_HANDLE )
+                return ringSet;
+        }
         return _listRegisteredDescriptorSet[index];
     }
 
@@ -2137,15 +2149,29 @@ namespace sw
 
     void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
     {
-        if ( record._framebuffer != VK_NULL_HANDLE )
+        // 즉시 파괴하면 안 된다 - 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
+        // 있다(게임뷰 리사이즈가 대표적인 경로다). 예전엔 오프스크린 경로가 매 프레임 블로킹
+        // 제출을 해서 우연히 안전했을 뿐이고, 그 스톨을 걷어내자 곧바로 in-use 위반이 드러났다.
+        enqueueFramebufferRelease( record._framebuffer,
+                                   ( record._renderPass != _offscreenRenderPass ) ? record._renderPass : VK_NULL_HANDLE );
+        record._framebuffer = VK_NULL_HANDLE;
+        record._renderPass  = VK_NULL_HANDLE;
+    }
+
+    void VulkanRHIDevice::enqueueFramebufferRelease( VkFramebuffer framebuffer, VkRenderPass ownedRenderPass )
+    {
+        if ( _device == nullptr || ( framebuffer == VK_NULL_HANDLE && ownedRenderPass == VK_NULL_HANDLE ) )
+            return;
+
+        VkDevice dev = _device;
+        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
         {
-            vkDestroyFramebuffer( _device, record._framebuffer, nullptr );
-            record._framebuffer = VK_NULL_HANDLE;
-        }
-        // Shared offscreen RP is owned by the device; only destroy private per-texture passes.
-        if ( record._renderPass != VK_NULL_HANDLE && record._renderPass != _offscreenRenderPass )
-            vkDestroyRenderPass( _device, record._renderPass, nullptr );
-        record._renderPass = VK_NULL_HANDLE;
+            if ( framebuffer != VK_NULL_HANDLE )
+                vkDestroyFramebuffer( dev, framebuffer, nullptr );
+            if ( ownedRenderPass != VK_NULL_HANDLE )
+                vkDestroyRenderPass( dev, ownedRenderPass, nullptr );
+        } ),
+                                         _frameFenceCounter + 1 );
     }
 
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
@@ -2388,10 +2414,8 @@ namespace sw
             }
             if ( bUses )
             {
-                if ( it->second._framebuffer != VK_NULL_HANDLE )
-                    vkDestroyFramebuffer( _device, it->second._framebuffer, nullptr );
-                if ( it->second._renderPass != VK_NULL_HANDLE )
-                    vkDestroyRenderPass( _device, it->second._renderPass, nullptr );
+                // 실행 중인 커맨드버퍼가 아직 참조할 수 있으므로 펜스 통과 후에 파괴한다.
+                enqueueFramebufferRelease( it->second._framebuffer, it->second._renderPass );
                 it = _mapCompositeFramebuffer.erase( it );
             }
             else

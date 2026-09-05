@@ -486,8 +486,16 @@ namespace sw
 
     void D3D11RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
-        // DX11은 리소스 상태를 명시적으로 전환하지 않음. 심볼 링크용 스텁.
+        // DX11 은 리소스 상태를 명시적으로 전환하지 않는다. 다만 같은 텍스처가 렌더타깃으로 걸린 채
+        // SRV 로도 걸려 있으면 런타임이 조용히 한쪽을 풀어버리므로, 읽기로 넘기기 전에 픽셀 셰이더
+        // SRV 슬롯을 비운다(예전 endOffscreenPass 가 하던 일). 이 호출은 항상 바인딩 **이전**에
+        // 오므로(FrameRenderer::registerPassTexture) 유효한 바인딩을 지우지 않는다.
         (void)texture;
+        if ( _pContext == nullptr )
+            return;
+
+        ID3D11ShaderResourceView* arrNullSrv[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+        _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSrv );
     }
 
     ID3DUserDefinedAnnotation* D3D11RHICommandContext::getAnnotation()

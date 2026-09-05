@@ -700,7 +700,13 @@ namespace sw
 
     void OpenGLRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
+        // FBO 로 그린 결과를 텍스처로 샘플링하기 전에 필요한 배리어(예전 endOffscreenPass 가 하던 일).
+        // FBO 0 재바인딩은 여기서 하지 않는다 — 다음 beginRenderPass 가 타깃을 명시적으로 정한다.
         (void)texture;
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+
+        glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
     }
 
     void OpenGLRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,

@@ -473,6 +473,8 @@ namespace sw
         bool createOffscreenFramebuffer( VulkanTextureRecord& record );
         /** @brief 오프스크린 프레임버퍼를 파괴합니다. */
         void destroyOffscreenFramebuffer( VulkanTextureRecord& record );
+        /** @brief 프레임버퍼(및 이 프레임버퍼가 소유한 렌더패스)를 GPU 펜스 통과 후 파괴하도록 큐에 넣습니다. */
+        void enqueueFramebufferRelease( VkFramebuffer framebuffer, VkRenderPass ownedRenderPass );
         /** @brief 파이프라인용 VkRenderPass를 확보합니다. */
         VkRenderPass ensurePipelineRenderPass( const RHIPipelineStateDesc& desc );
         /** @brief 합성 프레임버퍼를 확보합니다. */
@@ -565,6 +567,11 @@ namespace sw
         mutable std::shared_mutex _bindlessMutex;
 
         vector<VkDescriptorSet> _listRegisteredDescriptorSet;
+        /// @brief 링 상수버퍼용 프레임별 디스크립터 셋. 인덱스 i 의 셋들은
+        ///        [i * kMaxFrameCountInFlight, (i+1) * kMaxFrameCountInFlight) 구간에 놓이고,
+        ///        각각 자기 프레임 슬롯 오프셋을 가리키도록 등록 시점에 한 번만 기록된다.
+        ///        링이 아닌(= 구조버퍼 등) 인덱스 구간은 VK_NULL_HANDLE 로 남는다.
+        vector<VkDescriptorSet> _listRegisteredCbSetRing;
         vector<RHIBufferHandle> _listBindlessSourceBuffer;
         vector<VkDescriptorSet> _listRegisteredUAV;
         vector<RHIBufferHandle> _listUavSourceBuffer;
