@@ -290,6 +290,7 @@ namespace sw
 
         _pDevice->_mapBufferSrv.erase( buffer );
 
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
         {
             if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
@@ -407,12 +408,15 @@ namespace sw
         if ( pSlot == nullptr )
             return;
 
-        for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
         {
-            if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
-                continue;
-            releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
-                                  static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
+            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
+            {
+                if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
+                    continue;
+                releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                      static_cast<uint32>( textureIndex ), RHITextureHandle{ 0 } );
+            }
         }
 
         D3D11RHIDevice::TextureRecord owned;
@@ -433,6 +437,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
 
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
     }
 
@@ -444,11 +449,13 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return kInvalidDescriptorIndex;
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, buffer );
     }
 
     void D3D11RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
     }
 
@@ -484,7 +491,8 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRes, &uavDesc, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;
 
-        RHIDescriptorIndex index;
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  index;
         if ( _pDevice->_listUavFree.empty() == false )
         {
             index = _pDevice->_listUavFree.back();

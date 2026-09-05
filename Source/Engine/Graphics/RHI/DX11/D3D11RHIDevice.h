@@ -14,6 +14,8 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
+#include <shared_mutex>
+
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
@@ -76,6 +78,20 @@ namespace sw
 
         /** @brief VS 가 StructuredBuffer SRV(g_SwInstances, t4)로 GPUScene 인스턴스 버퍼를 읽는다. */
         bool supportsInstancedSceneDraw() const override { return true; }
+
+        /**
+         * @brief 병렬 커맨드 기록 지원 여부를 런타임에 반영합니다.
+         * @details 리스트마다 자기 Deferred Context를 소유하므로 구조적으로는 병렬 기록이 가능하지만,
+         *          드라이버가 커맨드 리스트를 네이티브로 지원하지 않으면 D3D11 런타임이 소프트웨어로
+         *          에뮬레이션해서 병렬화 이득보다 오버헤드가 커진다. 그래서 정적 표를 그대로 쓰지 않고
+         *          `D3D11_FEATURE_THREADING` 조회 결과로 이 항목만 덮어쓴다.
+         */
+        RHICapabilities getCapabilities() const override
+        {
+            RHICapabilities caps            = RHIAvailability::query( RHIBackend::DirectX11 );
+            caps._bParallelCommandRecording = _bDriverCommandLists != SW_FALSE ? 1u : 0u;
+            return caps;
+        }
 
         /** @brief 백엔드 문자열 반환 */
         const utf8* getBackendName() const override { return "Direct3D 11"; }
@@ -144,6 +160,21 @@ namespace sw
                 , _reserved{ 0 } {}
         };
 
+        // ------------------------------------------------------------------------------
+        // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다.
+        // 커맨드 기록(병렬 가능)이 인덱스로 읽고, register/unregister가 push_back으로 재할당하므로
+        // 원시 vector를 직접 인덱싱하면 기록 스레드가 쓰레기를 읽는다. 읽기는 공유 락이라 병렬
+        // 기록끼리는 서로를 막지 않는다.
+        // ------------------------------------------------------------------------------
+        /** @brief 등록된 상수버퍼 슬롯 수입니다. */
+        size_t bindlessBufferCount() const;
+        /** @brief 인덱스의 상수버퍼 핸들입니다. 범위 밖이면 0입니다. */
+        RHIBufferHandle bindlessBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0입니다. */
+        RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 UAV입니다(참조를 하나 올려 돌려줍니다). 범위 밖이면 nullptr입니다. */
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUavAt( RHIDescriptorIndex index ) const;
+
         /** @brief 컴퓨트 루트 상수 CB를 확보합니다. */
         bool ensureComputeRootConstantCB();
         /** @brief 불투명 버퍼 핸들을 ID3D11Buffer로 풉니다. */
@@ -196,6 +227,14 @@ namespace sw
         RHIBufferHandle                                                                  _boundMeshVb;
         uint32                                                                           _boundMeshStride; ///< 바인딩된 VB stride
         uint32                                                                           _boundMeshOffset;
+
+        /// @brief 드라이버가 커맨드 리스트를 네이티브 지원하면 SW_TRUE — 병렬 기록 capability의 근거.
+        uint8 _bDriverCommandLists{ SW_FALSE };
+
+        /// @brief 디스크립터 레지스트리 보호용. 커맨드 기록(D3D11RHICommandContext의 바인드 경로)이
+        /// 인덱스로 이 목록들을 읽는 동안, register/unregister가 push_back으로 재할당을 일으키면
+        /// 기록 스레드가 쓰레기를 읽는다. 읽기는 공유 락이라 병렬 기록을 직렬화하지 않는다.
+        mutable std::shared_mutex _bindlessMutex;
 
         vector<RHIBufferHandle> _listRegisteredBindless;
         vector<uint32>          _listBindlessFree;

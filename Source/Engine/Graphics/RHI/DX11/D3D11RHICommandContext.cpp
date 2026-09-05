@@ -215,19 +215,21 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pContext != nullptr && index < _pDevice->_listRegisteredUAV.size() && _pDevice->_listRegisteredUAV[index] != nullptr )
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUavAt( index );
+        if ( _pContext != nullptr && uav != nullptr )
         {
-            ID3D11UnorderedAccessView* pUav = _pDevice->_listRegisteredUAV[index].Get();
+            ID3D11UnorderedAccessView* pUav = uav.Get();
             _pContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
         }
     }
 
     void D3D11RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pContext == nullptr || index >= _pDevice->_listRegisteredTexture.size() )
+        const RHITextureHandle texture = _pDevice->bindlessTextureAt( index );
+        if ( _pContext == nullptr || texture == 0 )
             return;
         ID3D11ShaderResourceView*      pSrv{ nullptr };
-        D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index] );
+        D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( texture );
         if ( pTex != nullptr )
             pSrv = pTex->_srv.Get();
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
@@ -247,10 +249,10 @@ namespace sw
                                                         RHIDescriptorIndex materialCbDescriptorIndex )
     {
         defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
-                                      _pDevice->_listRegisteredBindless.size(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
+                                      _pDevice->bindlessBufferCount(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
                                       [this]( RHIDescriptorIndex index, uint32 slot )
         {
-            ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[index] );
+            ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( index ) );
             if ( pCb == nullptr )
                 return;
             _pContext->PSSetConstantBuffers( slot, 1, &pCb );
@@ -332,9 +334,9 @@ namespace sw
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
     {
         if ( _pContext == nullptr || cb == kInvalidDescriptorIndex ||
-             cb >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+             cb >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[cb] );
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( cb ) );
         if ( pCb == nullptr )
             return;
         _pContext->VSSetConstantBuffers( slot, 1, &pCb );
@@ -347,9 +349,9 @@ namespace sw
         // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). createStructuredBuffer 에서 만든 SRV 를
         // 리플렉션 t 슬롯에 바인딩한다.
         if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        const RHIBufferHandle buffer = _pDevice->_listRegisteredBindless[index];
+        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
         if ( buffer == 0 )
             return;
         const auto it = _pDevice->_mapBufferSrv.find( buffer );
@@ -363,9 +365,9 @@ namespace sw
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
     {
         if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[index] );
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( index ) );
         if ( pCb == nullptr )
             return;
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );
@@ -375,9 +377,9 @@ namespace sw
     {
         // gpucull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
         if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        const RHIBufferHandle buffer = _pDevice->_listRegisteredBindless[index];
+        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
         if ( buffer == 0 )
             return;
         const auto it = _pDevice->_mapBufferSrv.find( buffer );

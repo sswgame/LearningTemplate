@@ -128,6 +128,20 @@ namespace sw
             return false;
         }
 
+        // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
+        // 지원하는지에 달렸다 — 미지원이면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
+        // 이득보다 오버헤드가 커진다. 그래서 이 값으로 병렬 기록 capability를 런타임에 결정한다.
+        {
+            D3D11_FEATURE_DATA_THREADING threadingCaps{};
+            if ( SUCCEEDED( _device->CheckFeatureSupport( D3D11_FEATURE_THREADING, &threadingCaps, sizeof( threadingCaps ) ) ) )
+            {
+                _bDriverCommandLists = threadingCaps.DriverCommandLists != FALSE ? SW_TRUE : SW_FALSE;
+                SW_LOG_INFO( "Threading caps: DriverConcurrentCreates=%#, DriverCommandLists=%#",
+                             static_cast<uint32>( threadingCaps.DriverConcurrentCreates ),
+                             static_cast<uint32>( threadingCaps.DriverCommandLists ) );
+            }
+        }
+
         createRenderTargetView();
 
         {
@@ -353,6 +367,36 @@ namespace sw
     {
         const Microsoft::WRL::ComPtr<ID3D11Buffer>* pSlot = _gpuBuffers.get( handle );
         return pSlot != nullptr ? pSlot->Get() : nullptr;
+    }
+
+    size_t D3D11RHIDevice::bindlessBufferCount() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        return _listRegisteredBindless.size();
+    }
+
+    RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredBindless.size() )
+            return 0;
+        return _listRegisteredBindless[index];
+    }
+
+    RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredTexture.size() )
+            return 0;
+        return _listRegisteredTexture[index];
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUavAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredUAV.size() )
+            return nullptr;
+        return _listRegisteredUAV[index];
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer )
