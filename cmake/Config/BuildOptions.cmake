@@ -27,6 +27,9 @@ set(sw_output_directory "${CMAKE_BINARY_DIR}")
 # 2-1) 빌드 모드 및 엔진 기능 옵션
 option(SW_BUILD_DOCS "Doxygen 코드 문서화 생성 타겟 추가" OFF)
 option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드" ON)
+# 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
+option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
+
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
 
@@ -36,12 +39,20 @@ function(sw_configurePch targetName headerPath)
 	endif()
 endfunction()
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
-option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
+
+# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 테스트 타겟은 자기
+# 런타임 DLL(DXC, Vulkan 검증 레이어)까지 같은 Bin 으로 복사하므로, 켜져 있으면 아래
+# 구성별 배포 가드를 우회해 버린다. Shipping 에서는 기본값을 끈다(명시 지정은 존중).
+if(SW_SHIPPING_BUILD)
+	set(swEnableTestingDefault OFF)
+else()
+	set(swEnableTestingDefault ON)
+endif()
+option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ${swEnableTestingDefault})
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)
 option(SW_GLOB_CONFIGURE_DEPENDS "소스 파일 추가/삭제를 빌드 시스템이 자동 감지하도록 CONFIGURE_DEPENDS 활성화 (Ninja 권장)" ON)
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
 option(SW_RHI_AS_MODULES "RHI 그래픽스 백엔드(DX11/DX12/GL/Vulkan)를 MODULE DLL 플러그인으로 분리 빌드" ON)
-option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 option(SW_USE_SCCACHE "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속" ON)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션

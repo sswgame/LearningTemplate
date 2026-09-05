@@ -116,12 +116,24 @@ endif()
 
 set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
 
+# 빌드 타임 전용 도구다 — 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
+# libclang.dll(수십 MB)이 그대로 따라 들어간다. 별도 디렉터리로 내보낸다.
+# 호출부는 전부 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
+set(swReflectionParserOutDir "${CMAKE_BINARY_DIR}/BuildTools")
+set_target_properties(ReflectionParser PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${swReflectionParserOutDir}"
+	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${swReflectionParserOutDir}"
+	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${swReflectionParserOutDir}"
+	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${swReflectionParserOutDir}"
+	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${swReflectionParserOutDir}"
+)
+
 if(WIN32)
     target_compile_definitions(ReflectionParser PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
 # ------------------------------------------------------------------------------
-# 3) 런타임 libclang.dll — Bin으로 복사
+# 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사
 # ------------------------------------------------------------------------------
 if(NOT DETECTED_LIBCLANG_DLL AND LIBCLANG_INCLUDE_DIR)
     find_file(

@@ -20,9 +20,14 @@ sw_addTestExecutable(EngineTest
 		180
 )
 
-# RHI Vulkan Debug validation 경로와 동일 Bin 을 쓰므로 layer + mimalloc 배포
-sw_copyDxcDlls(EngineTest)
-sw_copyVulkanValidationRuntime(EngineTest)
+# RHI Vulkan Debug validation 경로와 동일 Bin 을 쓰므로 layer + mimalloc 배포.
+# 구성별 가드는 App 과 같다 — 배포 빌드에 셰이더 컴파일러/검증 레이어를 흘리지 않는다.
+if(NOT SW_SHIPPING_BUILD)
+	sw_copyDxcDlls(EngineTest)
+endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	sw_copyVulkanValidationRuntime(EngineTest)
+endif()
 sw_emitRuntimeCopies(EngineTest)
 
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드
