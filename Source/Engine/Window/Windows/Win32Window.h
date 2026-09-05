@@ -63,7 +63,8 @@ namespace sw
         [[maybe_unused]] int32  _restoreX;
         [[maybe_unused]] int32  _restoreY;
         [[maybe_unused]] uint8  _bRecreating   : 1;
-        [[maybe_unused]] uint8  _reservedWin32 : 7;
+        [[maybe_unused]] uint8  _bResizing     : 1;
+        [[maybe_unused]] uint8  _reservedWin32 : 6;
         [[maybe_unused]] uint16 _padding;
     };
 } // namespace sw

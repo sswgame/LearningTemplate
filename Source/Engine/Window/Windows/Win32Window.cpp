@@ -14,6 +14,7 @@ namespace sw
         , _restoreX{ CW_USEDEFAULT }
         , _restoreY{ CW_USEDEFAULT }
         , _bRecreating{ SW_FALSE }
+        , _bResizing{ SW_FALSE }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
@@ -187,8 +188,17 @@ namespace sw
                 case WM_SIZE:
                     pThis->_width  = LOWORD( lParam );
                     pThis->_height = HIWORD( lParam );
-                    if ( wParam != SIZE_MINIMIZED && pThis->_width > 0 && pThis->_height > 0 && pThis->_bRecreating == SW_FALSE && pThis->_onResize.isBound() )
+                    // DPI 변경 등으로 ShowWindow/SetForegroundWindow 처리 중 OS가 GetSystemMetricsForDpi
+                    // 등을 통해 SendMessageW로 같은 스레드에 재진입 WM_SIZE를 보낼 수 있다 — 재진입 가드
+                    // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 재생성 중인 렌더타겟을
+                    // 다시 정리/재생성하게 되어 DataRaceDetector가 레이스로 감지해 크래시한다.
+                    if ( wParam != SIZE_MINIMIZED && pThis->_width > 0 && pThis->_height > 0 &&
+                         pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
+                    {
+                        pThis->_bResizing = SW_TRUE;
                         pThis->_onResize( pThis->_width, pThis->_height );
+                        pThis->_bResizing = SW_FALSE;
+                    }
                     return 0;
 
                 case WM_CLOSE:
@@ -220,6 +230,7 @@ namespace sw
         , _restoreX{ 0 }
         , _restoreY{ 0 }
         , _bRecreating{ SW_FALSE }
+        , _bResizing{ SW_FALSE }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
