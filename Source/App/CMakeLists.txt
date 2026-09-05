@@ -48,3 +48,31 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 sw_emitRuntimeCopies(App)
+
+# ------------------------------------------------------------------------------
+# 3) Shipping 정적 링크 시 리플렉션 등록기 보존
+# ------------------------------------------------------------------------------
+# 생성된 *.gen.cpp 의 등록기는 파일 스코프 static 객체이고(생성자가 전역 링크드 리스트에
+# 자신을 매단다) 외부에서 참조되는 심볼이 없다. Dev 는 Engine 이 DLL 이라 전부 로드되지만,
+# Shipping 은 정적 라이브러리라 링커가 "아무도 참조 안 하는 오브젝트 파일"을 통째로 버린다.
+# 실제로 RHITypes.gen.cpp 가 빠져 RHIBackend 열거형이 등록되지 않았고, EngineConfig 의
+# _window._defaultRHI 역직렬화가 실패해 엔진 설정이 통째로 기본값으로 떨어졌다
+# (→ 리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
+# 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다.
+if(SW_SHIPPING_BUILD AND WIN32)
+	set(swReflectionStaticLibs Engine GameFramework SWGame)
+	get_property(swKitModules GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+	if(swKitModules)
+		list(APPEND swReflectionStaticLibs ${swKitModules})
+	endif()
+	list(REMOVE_DUPLICATES swReflectionStaticLibs)
+
+	foreach(reflLib IN LISTS swReflectionStaticLibs)
+		if(TARGET ${reflLib})
+			get_target_property(reflLibType ${reflLib} TYPE)
+			if(reflLibType STREQUAL "STATIC_LIBRARY")
+				target_link_options(App PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
+			endif()
+		endif()
+	endforeach()
+endif()
