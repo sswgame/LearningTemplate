@@ -14,230 +14,13 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include <zlib.h>
+
 namespace sw
 {
     namespace
     {
         SW_LOG_CALLER( "ResourcePackReader" );
-
-        /**
-         * @struct TinyInflate
-         * @brief RFC 1950 / RFC 1951 (Zlib / Raw Deflate) 표준 압축 해제기
-         */
-        struct TinyInflate
-        {
-            struct BitStream
-            {
-                const uint8* _pData{ nullptr };
-                size_t       _size{ 0 };
-                size_t       _bytePos{ 0 };
-                uint32       _bitBuffer{ 0 };
-                uint32       _bitsLeft{ 0 };
-
-                uint32 getBits( uint32 count )
-                {
-                    while ( _bitsLeft < count )
-                    {
-                        if ( _bytePos >= _size )
-                            return 0;
-                        _bitBuffer |= static_cast<uint32>( _pData[_bytePos++] ) << _bitsLeft;
-                        _bitsLeft += 8;
-                    }
-                    const uint32 result = _bitBuffer & ( ( 1u << count ) - 1u );
-                    _bitBuffer >>= count;
-                    _bitsLeft -= count;
-                    return result;
-                }
-            };
-
-            struct HuffmanTree
-            {
-                array<int16, constant::kMaxBuffer1024> _arrTree{};
-
-                void build( const uint8* pLengths, uint32 count )
-                {
-                    Memory::set( _arrTree.data(), 0xFF, _arrTree.size() * sizeof( int16 ) );
-                    array<uint16, constant::kMaxBuffer16> arrCount{};
-                    for ( uint32 index = 0; index < count; ++index )
-                    {
-                        if ( pLengths[index] > 0 && pLengths[index] < constant::kMaxBuffer16 )
-                            arrCount[pLengths[index]]++;
-                    }
-
-                    array<uint16, constant::kMaxBuffer16> arrNextCode{};
-                    uint16                                code = 0;
-                    for ( uint32 bitCount = 1; bitCount <= 15; ++bitCount )
-                    {
-                        code                  = static_cast<uint16>( ( code + arrCount[bitCount - 1] ) << 1 );
-                        arrNextCode[bitCount] = code;
-                    }
-
-                    int16 nextAlloc = 0;
-                    for ( uint32 symbol = 0; symbol < count; ++symbol )
-                    {
-                        const uint32 len = pLengths[symbol];
-                        if ( len == 0 )
-                            continue;
-
-                        uint16 curCode = arrNextCode[len]++;
-                        int16  node    = 0;
-                        for ( int32 bitIndex = static_cast<int32>( len ) - 1; bitIndex >= 0; --bitIndex )
-                        {
-                            const uint32 b         = ( curCode >> bitIndex ) & 1;
-                            const size_t slotIndex = static_cast<size_t>( static_cast<uint32>( node ) * 2u + b );
-                            if ( slotIndex >= constant::kMaxBuffer1024 )
-                                return;
-
-                            if ( bitIndex == 0 )
-                            {
-                                _arrTree[slotIndex] = static_cast<int16>( symbol );
-                            }
-                            else
-                            {
-                                if ( _arrTree[slotIndex] < 0 )
-                                {
-                                    _arrTree[slotIndex] = ++nextAlloc;
-                                }
-                                node = _arrTree[slotIndex];
-                            }
-                        }
-                    }
-                }
-
-                int32 decode( BitStream& bs ) const
-                {
-                    int16 node = 0;
-                    while ( node >= 0 )
-                    {
-                        const uint32 b         = bs.getBits( 1 );
-                        const size_t slotIndex = static_cast<size_t>( static_cast<uint32>( node ) * 2u + b );
-                        if ( slotIndex >= constant::kMaxBuffer1024 )
-                            return -1;
-                        const int16 val = _arrTree[slotIndex];
-                        if ( val < 0 )
-                            return -1;
-                        if ( val < static_cast<int16>( constant::kMaxBuffer512 ) &&
-                             _arrTree[static_cast<size_t>( val * 2 )] < 0 &&
-                             _arrTree[static_cast<size_t>( val * 2 + 1 )] < 0 )
-                        {
-                            // Symbol leaf
-                            return val;
-                        }
-                        node = val;
-                    }
-                    return -1;
-                }
-            };
-
-            static bool inflateZlib( const uint8* pSrc, size_t srcSize, uint8* pDst, size_t dstSize )
-            {
-                if ( pSrc == nullptr || pDst == nullptr || dstSize == 0 )
-                    return false;
-
-                size_t offset = 0;
-                // Zlib header check (CMF / FLG)
-                if ( srcSize >= 2 && ( ( pSrc[0] * 256 + pSrc[1] ) % 31 == 0 ) && ( ( pSrc[0] & 0x0F ) == 8 ) )
-                {
-                    offset = 2; // Skip 2-byte zlib header
-                }
-
-                BitStream bs{ pSrc + offset, srcSize - offset, 0, 0, 0 };
-                size_t    outPos = 0;
-
-                while ( outPos < dstSize )
-                {
-                    const uint32 bFinal = bs.getBits( 1 );
-                    const uint32 bType  = bs.getBits( 2 );
-
-                    if ( bType == 0 )
-                    {
-                        // Uncompressed block
-                        bs._bitsLeft  = 0; // Align to byte boundary
-                        bs._bitBuffer = 0;
-                        if ( bs._bytePos + 4 > bs._size )
-                            return false;
-
-                        const uint16 len = static_cast<uint16>( bs._pData[bs._bytePos] | ( bs._pData[bs._bytePos + 1] << 8 ) );
-                        bs._bytePos += 4; // Skip LEN and NLEN
-                        if ( bs._bytePos + len > bs._size || outPos + len > dstSize )
-                            return false;
-
-                        Memory::copy( pDst + outPos, bs._pData + bs._bytePos, len );
-                        outPos += len;
-                        bs._bytePos += len;
-                    }
-                    else if ( bType == 1 )
-                    {
-                        // Fixed Huffman block
-                        array<uint8, 288> arrLitLength{};
-                        for ( size_t index = 0; index <= 143; ++index )
-                            arrLitLength[index] = 8;
-                        for ( size_t index = 144; index <= 255; ++index )
-                            arrLitLength[index] = 9;
-                        for ( size_t index = 256; index <= 279; ++index )
-                            arrLitLength[index] = 7;
-                        for ( size_t index = 280; index <= 287; ++index )
-                            arrLitLength[index] = 8;
-
-                        HuffmanTree litTree;
-                        litTree.build( arrLitLength.data(), 288 );
-
-                        while ( outPos < dstSize )
-                        {
-                            const int32 symbol = litTree.decode( bs );
-                            if ( symbol < 0 || symbol == 256 )
-                                break;
-
-                            if ( symbol < 256 )
-                            {
-                                pDst[outPos++] = static_cast<uint8>( symbol );
-                            }
-                            else
-                            {
-                                // Match length & distance
-                                static constexpr uint16 kArrLenBase[29] = {
-                                    3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258 };
-                                static constexpr uint8 kArrLenExtra[29] = {
-                                    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0 };
-                                const uint32 lenIndex = static_cast<uint32>( symbol - 257 );
-                                if ( lenIndex >= 29 )
-                                    return false;
-                                const uint32 matchLen = kArrLenBase[lenIndex] + bs.getBits( kArrLenExtra[lenIndex] );
-
-                                // Distance (fixed 5-bit)
-                                static constexpr uint16 kArrDistBase[30] = {
-                                    1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577 };
-                                static constexpr uint8 kArrDistExtra[30] = {
-                                    0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
-                                const uint32 distCode = bs.getBits( 5 );
-                                if ( distCode >= 30 )
-                                    return false;
-                                const uint32 matchDist = kArrDistBase[distCode] + bs.getBits( kArrDistExtra[distCode] );
-
-                                if ( matchDist > outPos )
-                                    return false;
-
-                                for ( uint32 copyIndex = 0; copyIndex < matchLen && outPos < dstSize; ++copyIndex )
-                                {
-                                    pDst[outPos] = pDst[outPos - matchDist];
-                                    outPos++;
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Dynamic block or unsupported format
-                        return false;
-                    }
-
-                    if ( bFinal != 0 )
-                        break;
-                }
-
-                return outPos == dstSize;
-            }
-        };
     } // namespace
 } // namespace sw
 
@@ -638,7 +421,19 @@ namespace sw
 
         if ( type == PackCompressionType::Zlib )
         {
-            return TinyInflate::inflateZlib( pSrc, srcSize, static_cast<uint8*>( pDst ), dstSize );
+            // 예전엔 이 파일 안에 자체 인플레이터를 들고 있었는데, 동적 허프만(BTYPE=2)을 아예
+            // 거부하고 fixed 경로도 거리 코드를 LSB-first 로 읽는 등 온전하지 않았다. 팩을 한 번도
+            // 못 읽던 동안 검증될 기회가 없던 코드다 — 표준 zlib 으로 대체했다.
+            uLongf      destLen = static_cast<uLongf>( dstSize );
+            const int32 result  = uncompress( static_cast<Bytef*>( pDst ), &destLen,
+                                              reinterpret_cast<const Bytef*>( pSrc ), static_cast<uLong>( srcSize ) );
+            if ( result != Z_OK )
+            {
+                SW_LOG_ERROR( "zlib uncompress 실패 (code %#, src %# → dst %# bytes)",
+                              result, static_cast<uint32>( srcSize ), static_cast<uint32>( dstSize ) );
+                return false;
+            }
+            return static_cast<size_t>( destLen ) == dstSize;
         }
 
         SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );

@@ -52,6 +52,9 @@ target_link_libraries(Engine
         sw_public_source_includes
     PRIVATE
         sw_global_options
+        # 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
+        # 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
+        zlib
 )
 if(sw_flag_libraries)
     target_link_libraries(Engine PRIVATE ${sw_flag_libraries})

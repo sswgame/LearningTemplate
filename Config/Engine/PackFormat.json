@@ -36,12 +36,11 @@
             "항목별 코덱이 필요해지면 이 파일의 entry 에 필드를 추가하고 리더를 함께 고칠 것."
         ],
         "codecs": { "None": 0, "RLE": 1, "Zlib": 2, "LZ4": 3, "Custom": 255 },
-        "deflateStrategy": "fixed",
+        "deflateStrategy": "default",
         "deflateNote": [
-            "리더의 인플레이터(ResourcePackReader.cpp TinyInflate)는 stored/fixed-Huffman 블록만",
-            "해석하고 동적 허프만(BTYPE=2)은 거부한다. 그래서 쿠커는 반드시 Z_FIXED 로 압축해야 한다 —",
-            "기본 zlib.compress 는 실데이터에서 거의 항상 동적 허프만을 내보내므로 전부 해제 실패한다.",
-            "인플레이터가 동적 허프만을 지원하게 되면 이 값을 'default' 로 바꿔 압축률을 되찾을 것."
+            "리더가 표준 zlib(uncompress)을 쓰므로 전략 제약이 없다. 예전에는 자체 인플레이터가",
+            "동적 허프만을 거부해서 쿠커가 Z_FIXED 로 압축해야 했다 — 지금은 기본 전략(동적 허프만)을",
+            "써서 압축률을 온전히 쓴다. 리더를 다시 자체 구현으로 바꾸면 이 값도 같이 조정할 것."
         ]
     },
 
