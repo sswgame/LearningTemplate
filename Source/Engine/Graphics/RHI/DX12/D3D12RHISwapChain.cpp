@@ -50,8 +50,11 @@ namespace sw
             ID3D12CommandAllocator* pAllocator = _pDevice->currentAllocator();
             if ( pAllocator == nullptr || _pDevice->_commandList == nullptr )
                 return;
-            pAllocator->Reset();
-            _pDevice->_commandList->Reset( pAllocator, nullptr );
+            // 디바이스가 제거된 상태에서는 Reset()이 실패해 커맨드 리스트가 여전히 closed로 남는다.
+            // 그걸 무시하고 _bRecording=1로 넘어가면 이후의 모든 커맨드리스트 호출이 "closed command
+            // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다 — 실패 시 이번 프레임을 스킵한다.
+            if ( FAILED( pAllocator->Reset() ) || FAILED( _pDevice->_commandList->Reset( pAllocator, nullptr ) ) )
+                return;
             _pDevice->_legacyState._bRecording = 1;
             if ( _pDevice->_cbvHeap != nullptr )
             {
