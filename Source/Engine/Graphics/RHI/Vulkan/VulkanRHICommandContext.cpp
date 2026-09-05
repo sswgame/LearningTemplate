@@ -188,11 +188,10 @@ namespace sw
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        VkDescriptorSet descSet = VK_NULL_HANDLE;
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
-             _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE &&
-             _pDevice->_listRegisteredTexture[index] != _pDevice->_bindlessTextureSet )
-            descSet = _pDevice->_listRegisteredTexture[index];
+        VkDescriptorSet       descSet    = VK_NULL_HANDLE;
+        const VkDescriptorSet textureSet = _pDevice->registeredTextureSetAt( index );
+        if ( textureSet != VK_NULL_HANDLE && textureSet != _pDevice->_bindlessTextureSet )
+            descSet = textureSet;
 
         if ( descSet != VK_NULL_HANDLE )
         {
@@ -303,8 +302,8 @@ namespace sw
                 vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pRecord->_pipeline );
 
             VkDescriptorSet set0 = _pDevice->_descriptorSet;
-            if ( set0 == VK_NULL_HANDLE && _pDevice->_listRegisteredDescriptorSet.empty() == false )
-                set0 = _pDevice->_listRegisteredDescriptorSet[0];
+            if ( set0 == VK_NULL_HANDLE )
+                set0 = _pDevice->registeredDescriptorSetAt( 0 );
             if ( set0 != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
 
@@ -539,11 +538,12 @@ namespace sw
             _pDevice->_bRenderPassActive = SW_FALSE;
         }
 
-        VkDescriptorSet descSet = VK_NULL_HANDLE;
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) && _pDevice->_listRegisteredUAV[index] != VK_NULL_HANDLE )
-            descSet = _pDevice->_listRegisteredUAV[index];
-        else if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) && _pDevice->_listRegisteredDescriptorSet[index] != VK_NULL_HANDLE )
-            descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        VkDescriptorSet       descSet = VK_NULL_HANDLE;
+        const VkDescriptorSet uavSet  = _pDevice->registeredUavSetAt( index );
+        if ( uavSet != VK_NULL_HANDLE )
+            descSet = uavSet;
+        else
+            descSet = _pDevice->registeredDescriptorSetAt( index );
 
         if ( descSet != VK_NULL_HANDLE )
         {
@@ -564,11 +564,12 @@ namespace sw
             _pDevice->_bRenderPassActive = SW_FALSE;
         }
 
-        VkDescriptorSet descSet = VK_NULL_HANDLE;
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) && _pDevice->_listRegisteredUAV[index] != VK_NULL_HANDLE )
-            descSet = _pDevice->_listRegisteredUAV[index];
-        else if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) && _pDevice->_listRegisteredDescriptorSet[index] != VK_NULL_HANDLE )
-            descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        VkDescriptorSet       descSet = VK_NULL_HANDLE;
+        const VkDescriptorSet uavSet  = _pDevice->registeredUavSetAt( index );
+        if ( uavSet != VK_NULL_HANDLE )
+            descSet = uavSet;
+        else
+            descSet = _pDevice->registeredDescriptorSetAt( index );
 
         if ( descSet != VK_NULL_HANDLE )
         {
@@ -583,10 +584,10 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot != 0 )
             return;
         if ( index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) )
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->registeredDescriptorSetCount() ) )
             return;
 
-        const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        const VkDescriptorSet descSet = _pDevice->registeredDescriptorSetAt( index );
         if ( descSet == VK_NULL_HANDLE )
             return;
 
@@ -622,8 +623,7 @@ namespace sw
 
         const bool bValidDescriptor =
             ( cbDescriptorIndex != kInvalidDescriptorIndex &&
-              cbDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
-              _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex] != VK_NULL_HANDLE );
+              _pDevice->registeredDescriptorSetAt( cbDescriptorIndex ) != VK_NULL_HANDLE );
 
         // set 0 binding 0 = PassCB. 유효한 인덱스가 있을 때만 (재)바인딩한다.
         // ShaderBindingBinder::bindGraphics 가 draw/drawIndirect 호출 전에 이미 bindConstantBuffer(slot0)
@@ -634,7 +634,7 @@ namespace sw
         // beginFrame()/beginOffscreenPass()가 새 커맨드버퍼를 열 때 초기화한다.
         if ( bValidDescriptor )
         {
-            const VkDescriptorSet set0 = _pDevice->_listRegisteredDescriptorSet[cbDescriptorIndex];
+            const VkDescriptorSet set0 = _pDevice->registeredDescriptorSetAt( cbDescriptorIndex );
             if ( set0 != _pDevice->_lastBoundGraphicsSet0 )
             {
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
@@ -777,9 +777,9 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
             return;
         if ( index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) )
+             index >= static_cast<RHIDescriptorIndex>( _pDevice->registeredDescriptorSetCount() ) )
             return;
-        const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[index];
+        const VkDescriptorSet descSet = _pDevice->registeredDescriptorSetAt( index );
         if ( descSet == VK_NULL_HANDLE )
             return;
         vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,

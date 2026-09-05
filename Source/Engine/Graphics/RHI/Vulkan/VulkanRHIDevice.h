@@ -8,6 +8,8 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
+#include <shared_mutex>
+
 /** @brief SW_VK_DEFINE_HANDLE 매크로 정의입니다. */
 
 #define SW_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;
@@ -406,6 +408,18 @@ namespace sw
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view );
         /** @brief 현재 프레임 커맨드 버퍼. */
         VkCommandBuffer currentCommandBuffer() const;
+
+        // ------------------------------------------------------------------------------
+        // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다(원시 vector 직접 인덱싱 금지).
+        // ------------------------------------------------------------------------------
+        /** @brief 등록된 상수버퍼 디스크립터셋 수입니다. */
+        size_t registeredDescriptorSetCount() const;
+        /** @brief 인덱스의 상수버퍼 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
+        VkDescriptorSet registeredDescriptorSetAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 UAV 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
+        VkDescriptorSet registeredUavSetAt( RHIDescriptorIndex index ) const;
+        /** @brief 인덱스의 텍스처 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
+        VkDescriptorSet registeredTextureSetAt( RHIDescriptorIndex index ) const;
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
         /** @brief 오프스크린 VkRenderPass를 확보합니다. */
@@ -506,11 +520,17 @@ namespace sw
         /// 되고, set 0(PassCB)은 인덱스가 실제로 바뀔 때만 재바인딩한다. Vulkan은 병렬 기록을 안 타므로
         /// (RHICapabilities._bParallelCommandRecording=0) 디바이스 전역이어도 스레드 안전 문제 없음.
         /// beginFrame()/beginOffscreenPass()에서 새 커맨드버퍼를 열 때마다 초기화해야 한다.
-        VkDescriptorSet         _lastBoundGraphicsSet0;
-        bool                    _bStaticGraphicsSetsBound;
-        RHIBufferHandle         _boundIndexBuffer;
-        uint32                  _boundIndexStride;
-        uint32                  _boundIndexOffset;
+        VkDescriptorSet _lastBoundGraphicsSet0;
+        bool            _bStaticGraphicsSetsBound;
+        RHIBufferHandle _boundIndexBuffer;
+        uint32          _boundIndexStride;
+        uint32          _boundIndexOffset;
+        /// @brief 디스크립터 레지스트리 보호용. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
+        /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽는다
+        /// (gv_useRenderThread 기본 true 라 렌더/게임 스레드 사이에서 이미 성립하는 레이스).
+        /// 읽기는 공유 락이라 서로를 막지 않는다.
+        mutable std::shared_mutex _bindlessMutex;
+
         vector<VkDescriptorSet> _listRegisteredDescriptorSet;
         vector<RHIBufferHandle> _listBindlessSourceBuffer;
         vector<VkDescriptorSet> _listRegisteredUAV;

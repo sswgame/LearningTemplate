@@ -760,6 +760,36 @@ namespace sw
         _releaseQueue.tickFrame();
     }
 
+    size_t VulkanRHIDevice::registeredDescriptorSetCount() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        return _listRegisteredDescriptorSet.size();
+    }
+
+    VkDescriptorSet VulkanRHIDevice::registeredDescriptorSetAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredDescriptorSet.size() )
+            return VK_NULL_HANDLE;
+        return _listRegisteredDescriptorSet[index];
+    }
+
+    VkDescriptorSet VulkanRHIDevice::registeredUavSetAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredUAV.size() )
+            return VK_NULL_HANDLE;
+        return _listRegisteredUAV[index];
+    }
+
+    VkDescriptorSet VulkanRHIDevice::registeredTextureSetAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredTexture.size() )
+            return VK_NULL_HANDLE;
+        return _listRegisteredTexture[index];
+    }
+
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
         if ( _bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )

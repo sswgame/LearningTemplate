@@ -473,6 +473,7 @@ namespace sw
             vkUnmapMemory( _pDevice->_device, pRecord->_memory );
         }
 
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer || bufferIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
@@ -582,6 +583,7 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer )
@@ -756,7 +758,8 @@ namespace sw
 
         if ( pSlot->_bindlessIndex != kInvalidDescriptorIndex )
         {
-            const RHIDescriptorIndex index = pSlot->_bindlessIndex;
+            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            const RHIDescriptorIndex            index = pSlot->_bindlessIndex;
             if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTexture.size() &&
                  _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
             {
@@ -815,7 +818,8 @@ namespace sw
         if ( record._bindlessIndex != kInvalidDescriptorIndex )
             return record._bindlessIndex;
 
-        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree );
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex            descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree );
 
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
@@ -906,7 +910,8 @@ namespace sw
 
         vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
-        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree );
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex            descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree );
 
         if ( descriptorIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
         {
@@ -920,6 +925,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredDescriptorSet.size() )
             return;
         const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree,
@@ -973,7 +979,8 @@ namespace sw
 
         vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
-        const RHIDescriptorIndex descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree );
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex            descriptorIndex = resolveFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree );
 
         if ( descriptorIndex >= _pDevice->_listRegisteredUAV.size() )
         {
@@ -987,6 +994,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             return;
         const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree,
