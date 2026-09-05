@@ -61,6 +61,13 @@ namespace sw
         }
         _pDevice->_frameIndex = _pDevice->_swapChain->GetCurrentBackBufferIndex();
 
+        // resize()가 ResizeBuffers 실패로 조기 반환하면 cleanupRenderTargets()만 실행되고
+        // createRenderTargets()는 못 돌아 _listRenderTarget이 비어있는 채로 남는다 — 그 상태에서
+        // 아래 인덱싱을 그대로 하면 범위 밖 접근(SW_ASSERT 트리거, 디버거 없으면 크래시)이 된다.
+        // 디바이스가 이미 맛이 간 프레임이므로 이번 프레임은 조용히 건너뛴다.
+        if ( _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() )
+            return;
+
         if ( _pDevice->_swapchainState != D3D12_RESOURCE_STATE_RENDER_TARGET )
         {
             D3D12_RESOURCE_BARRIER barrier{};
