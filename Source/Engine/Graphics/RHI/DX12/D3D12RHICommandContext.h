@@ -34,6 +34,8 @@ namespace sw
         void ensureRecording();
         /** @brief 이 컨텍스트가 기록 중인 네이티브 커맨드 리스트. */
         ID3D12GraphicsCommandList* getNativeCommandList() const { return _pCmdList; }
+        /** @brief 기록 대상 네이티브 리스트를 교체합니다(소유자가 얼로케이터 쌍을 바꿔 낄 때). */
+        void rebindCommandList( ID3D12GraphicsCommandList* pCmdList ) { _pCmdList = pCmdList; }
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;

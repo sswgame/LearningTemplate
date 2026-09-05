@@ -29,7 +29,9 @@ namespace sw
      *          만들어 동시에 기록하게 되면서 그 전제가 깨졌다 — 여러 리스트가 한 얼로케이터를 공유하면
      *          D3D12 계약 위반(기록 중 Reset, 동시 기록)이라 커맨드 메모리가 서로 덮어써지고 GPU 가
      *          쓰레기를 실행해 PageFault/DEVICE_HUNG 으로 이어졌다. 이제 디바이스 풀에서 리스트+얼로케이터
-     *          쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후 풀로 돌려준다.
+     *          쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후 풀로 돌려준다. 리스트 객체가 프레임을 넘어
+     *          재사용되는 경우(`FrameRenderer::_frameCmd`)에도 같은 쌍을 다시 Reset 하지 않고 매
+     *          `beginCommandList` 마다 쌍을 교체한다 — 같은 계약 위반이기 때문이다.
      */
     class D3D12RHICommandList : public IRHICommandList
     {
@@ -115,7 +117,8 @@ namespace sw
 
     private:
         D3D12RHIDevice*        _pDevice;
-        D3D12CommandListEntry  _entry; ///< 이 리스트 전용 커맨드 리스트 + 얼로케이터
+        D3D12CommandListEntry  _entry;            ///< 이 리스트 전용 커맨드 리스트 + 얼로케이터
+        uint8                  _bEntryDirty{ 0 }; ///< 현재 쌍에 이미 기록한 적이 있는가(있으면 다음 begin 때 교체)
         D3D12RecordingState    _state;
         D3D12RHICommandContext _context;
     };
