@@ -118,9 +118,18 @@ swapChain->endFrame()
 | ~~**S1**~~ | ✅ **완료** — `beginFrame` 을 두 경로 공통으로 맨 앞으로 옮기고, 백버퍼 확립을 대신할 **명시적 `beginRenderPass(백버퍼, Load)`** 를 `presentHook` 직전에 추가. 부수로 R5·R6 위반 2건을 Vulkan 에서 수정해야 했다 | 높음(완료) |
 | ~~**S2**~~ | ✅ **완료**(`d0677ae1`) — `beginFrame` 에서 백버퍼 바인딩/클리어 제거(수명주기만 남김). 클리어는 백버퍼 `beginRenderPass` 의 `loadOp` 이 담당. Vulkan 은 `loadOp=LOAD` 렌더패스 변종을 추가해야 했다 | 높음(완료) |
 | ~~**S3**~~ | ✅ **완료**(`bfa00729`, `40a09b80`) — `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. Vulkan 블로킹 제출과 오프스크린 전용 스트림이 사라졌다 | 중간(완료) |
-| **S4** | Vulkan 리스트가 자기 `VkCommandBuffer`/커맨드 풀 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간 |
+| ~~**S4**~~ | ✅ **완료**(`2f24e069`) — Vulkan 리스트가 자기 `VkCommandPool`/`VkCommandBuffer`/기록 상태 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간(완료) |
 
-S1·S2 가 가장 위험하다. 백엔드마다 `beginFrame` 이 하는 일이 다르므로(위 표) **한 단계에 한 백엔드씩**
+**네 단계 모두 완료됐다.** 최종 상태 요약:
+
+- `beginFrame`/`endFrame` = 프레임 수명주기 전용. 렌더타깃 바인딩은 `beginRenderPass` 하나로 통일.
+- `beginOffscreenPass`/`endOffscreenPass` 삭제. Vulkan 의 오프스크린 전용 스트림과 매 프레임
+  블로킹 제출도 함께 사라졌다.
+- 병렬 커맨드 기록: DX12·Vulkan 활성(각각 리스트마다 전용 얼로케이터/커맨드 풀 소유),
+  DX11 은 드라이버가 `DriverCommandLists=0` 을 보고해 런타임 판정으로 꺼짐, GL 은 구조상 제외.
+- 드로우 경로에서 Vulkan `vkUpdateDescriptorSets` 가 완전히 사라졌다(프레임 슬롯별 디스크립터 셋).
+
+S1·S2 가 가장 위험했다. 백엔드마다 `beginFrame` 이 하는 일이 다르므로(위 표) **한 단계에 한 백엔드씩**
 바꾸고 매번 검증하는 편이 안전하다.
 
 ## 6. 검증 프로토콜 — **테스트만으로는 절대 부족하다**
