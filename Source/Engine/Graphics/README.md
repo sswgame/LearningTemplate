@@ -64,7 +64,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RHI` | RHI/ | 백엔드 선택·디바이스 수명·`gv_rhiCommandListMode` |
 | `IRHIDevice` (+ 백엔드 `*RHIDevice`) | RHI/ | 리소스·PSO·CL 생성, Context 소유, execute |
 | `IRHICommandContext` (+ `*RHICommandContext`) | RHI/ | draw/dispatch/barrier/blit 실행면 |
-| `IRHICommandList` / `RHIDeferredCommandList` | RHI/ | 명령 기록·Mode별 flush/replay |
+| `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 명령 기록 — 모든 백엔드가 소프트웨어 replay 없이 즉시 `*RHICommandContext`를 호출 |
 | `IRHIResource` / `IRHISwapChain` | RHI/ | 리소스·스왑체인 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
@@ -78,29 +78,28 @@ DX11 · DX12 · OpenGL · Vulkan
 
 ---
 
-## CommandList Mode vs Context (헷갈리기 쉬운 용어)
+## CommandList vs Context (헷갈리기 쉬운 용어)
 
-**Mode는 “언제 GPU에 내느냐”, Context는 “어느 제출/기록 슬롯이냐”.**  
-`gv_rhiCommandListMode`가 Mode를 고르고, Context 쌍은 디바이스가 항상 들고 있다.
+**Context는 “어느 제출/기록 슬롯이냐”, CommandList는 “FrameRenderer가 기록에 쓰는 핸들”.**
+모든 백엔드가 네이티브(또는 즉시 호출) `IRHICommandList`를 반환하므로 `RHICommandListMode`는
+`createCommandList()`에서 사실상 무시된다 — Context 쌍은 지금도 디바이스가 항상 들고 있다.
 
 | 용어 | 무엇인가 | 역할 |
 |------|----------|------|
-| Immediate **Context** (`getImmediateContext`) | GPU에 바로/최종 제출하는 컨텍스트 | present, offscreen, Deferred CL **replay 대상** |
-| Deferred **Context** (`getDeferredCommandContext`) | 기록용 컨텍스트(soft 또는 네이티브) | Mode=Deferred일 때 CL에 바인딩; **present 대상 아님** |
-| Immediate **CommandList** (`RHICommandListMode::Immediate`) | 소프트웨어 CL 모드 | `endCommandList`에서 Immediate Context로 flush |
-| Deferred **CommandList** (`RHICommandListMode::Deferred`) | 소프트웨어 CL 모드 | 기록만; `executeCommandList` → Immediate Context에 replay |
+| Immediate **Context** (`getImmediateContext`) | GPU에 바로/최종 제출하는 컨텍스트 | present, offscreen 경로, ImGui 오버레이가 직접 사용 |
+| Deferred **Context** (`getDeferredCommandContext`) | Immediate와 같은 기록 대상을 감싸는 별개 인스턴스 | 레거시 슬롯 구분 유지(현재는 present 대상 아님 정도의 의미만 남음) |
+| `IRHICommandList` (`createCommandList()`) | FrameRenderer가 그래프를 기록하는 핸들 | `beginCommandList`/각 draw·bind 호출/`endCommandList`가 그 자리에서 바로 백엔드 API로 나간다 |
 
-### CL `replay`가 하는 일
+### 기록이 실제로 나가는 방식 (모든 백엔드 공통, replay 없음)
 
-이 엔진의 CL은 네이티브 DX12/VK command buffer 제출이 아니라, CPU `vector<Cmd>`에 op를 쌓은 **소프트웨어 커맨드 리스트**다.
+과거엔 CPU `vector<Cmd>`에 op를 쌓았다가(`RHIDeferredCommandList`) 나중에 `IRHICommandContext`
+가상 호출로 재생(replay)했지만, 지금은 모든 백엔드가 그 중간 계층 없이 즉시 호출한다.
 
-1. 인자 Context에 대해 `_cmds`를 **기록 순서대로** 순회한다.
-2. 각 `Cmd.op`를 같은 이름의 `IRHICommandContext` 가상 호출로 넘긴다.
-3. Context 구현체가 백엔드 API로 GPU 작업을 낸다. **replay ≠ queue submit / ExecuteCommandLists.**
-4. context null이면 no-op; `_cmds`는 호출 측이 clear/markApplied.
-
-- Immediate Mode: `endCommandList` → `replay(_context)` → clear + markApplied  
-- Deferred Mode: `RHIDeferredCommandList::execute` → `replay(getImmediateContext())` → markApplied  
+- DX11/DX12: `*RHICommandList`가 자신만의 네이티브 Deferred Context/CommandList를 소유하고
+  그 자리에서 바로 API를 호출, `executeCommandList()`가 실제 제출(`ExecuteCommandLists`)을 한다.
+- Vulkan/OpenGL: `*RHICommandList`는 새 네이티브 자원을 만들지 않고 `*RHICommandContext`를 그대로
+  감싸 즉시 호출만 전달한다 — 버퍼 open/close·제출은 지금도 `beginFrame`/`endFrame`(Vulkan) 또는
+  GL 컨텍스트(스레드 종속, begin/end 없음)가 그대로 소유하므로 `executeCommandList()`는 no-op이다.
 
 ---
 
@@ -229,7 +228,9 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **P1** — DebugDrawQueue 스피어 → `GameViewPanel` ImGui 원으로 소비
 - **P2** — DX12 `HEAP_DIRECTLY_INDEXED` 실패 시 bind-at-draw (런타임 Caps, WARNING 제거)
 - **P2** — Vulkan `createRenderPass(desc)` 소유 VkRenderPass 생성 + `destroy`/`shutdown`에서 해제 (빈 desc는 swapchain RP alias)
-- **P2** — DX11 native `FinishCommandList`는 **채택하지 않음** — 전 백엔드 soft `Cmd` replay가 Mode/Context 모델 (의도적)
+- **P2** — 전 백엔드(DX12/DX11/Vulkan/OpenGL) soft `Cmd` replay(`RHIDeferredCommandList`) 제거,
+  즉시 호출하는 네이티브 `IRHICommandList`로 전환 완료 — DX11은 `FinishCommandList`, DX12는 자신만의
+  `ID3D12GraphicsCommandList`, Vulkan/OpenGL은 기존 `*RHICommandContext`를 그대로 감싸 즉시 호출
 - **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, `IRHIDevice::executeOffscreenPipelineSmoke`, FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
 - **Perf** — Transparent 연속 mesh/mat 머지, GpuScene 내용·카메라 핑거프린트 캐시, Deferred CL 기본·`_frameCmd` 재사용·Cmd reserve 256
 

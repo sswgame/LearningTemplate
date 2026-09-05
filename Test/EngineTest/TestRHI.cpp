@@ -6,7 +6,6 @@
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 #include "Engine/Window/IWindow.h"
@@ -15,35 +14,6 @@
 
 namespace
 {
-    /** @brief replay/Mode 검증용 — 호출 횟수만 센다. */
-    class CountingCommandContext final : public sw::IRHICommandContext
-    {
-    public:
-        uint32 _setViewportCount{ 0 };
-        uint32 _drawCount{ 0 };
-        uint32 _beginOffscreenCount{ 0 };
-        uint32 _endOffscreenCount{ 0 };
-
-        void setViewport( const sw::RHIViewport& ) override { ++_setViewportCount; }
-        void setPipelineState( sw::RHIPipelineStateHandle ) override {}
-        void setComputePipelineState( sw::RHIPipelineStateHandle ) override {}
-        void beginRenderPass( const sw::RHIRenderPassBeginInfo& ) override {}
-        void endRenderPass() override {}
-        void setVertexBuffer( uint32, sw::RHIBufferHandle, uint32, uint32 ) override {}
-        void draw( uint32, uint32, sw::RHIDescriptorIndex, sw::RHIDescriptorIndex ) override { ++_drawCount; }
-        void setIndexBuffer( sw::RHIBufferHandle, uint32, uint32 ) override {}
-        void dispatchCompute( uint32, uint32, uint32 ) override {}
-        void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
-        void bindComputeUAV( sw::RHIDescriptorIndex, uint32 ) override {}
-        void drawIndirect( sw::RHIBufferHandle, uint32, sw::RHIDescriptorIndex, sw::RHIDescriptorIndex ) override {}
-        void dispatchIndirect( sw::RHIBufferHandle, uint32 ) override {}
-        void drawIndexedIndirect( sw::RHIBufferHandle, uint32 ) override {}
-        void beginEventMarker( const utf8* ) override {}
-        void endEventMarker() override {}
-        void beginOffscreenPass( sw::RHITextureHandle, const sw::float4& ) override { ++_beginOffscreenCount; }
-        void endOffscreenPass( sw::RHITextureHandle ) override { ++_endOffscreenCount; }
-    };
-
     bool tryInitDeviceWithWindow( sw::RHIBackend backend, sw::unique_ptr<sw::IWindow>& outWindow,
                                   sw::shared_ptr<sw::IRHIDevice>& outDevice )
     {
@@ -478,32 +448,6 @@ SW_TEST_CASE( RHITypesTest, VertexLayoutBuilderAutoOffset )
     }
 }
 
-// ------------------------------------------------------------------------------
-// 4) RHITest — Deferred CL (디바이스 없이)
-// ------------------------------------------------------------------------------
-/**
- * @brief 디바이스 없이 Deferred CL 기록 (GPU 없는 환경 안전)
- */
-SW_TEST_CASE( RHITest, DeferredCommandListRecordsWithoutDevice )
-{
-    sw::RHIDeferredCommandList list( sw::RHICommandListMode::Deferred, nullptr );
-    list.beginCommandList();
-    SW_EXPECT_TRUE( list.isRecording() );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( list.commandCount() ) );
-
-    sw::RHIViewport vp{ 0.0f, 0.0f, 128.0f, 72.0f, 0.0f, 1.0f };
-    list.setViewport( vp );
-    list.setVertexBuffer( 0, 1, 16, 0 );
-    list.draw( 3, 0 );
-    list.setIndexBuffer( 2, 4, 0 );
-    list.drawIndexedIndirect( 3, 0 );
-    list.endCommandList();
-
-    SW_EXPECT_TRUE( list.isRecording() == false );
-    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( list.commandCount() ) );
-    SW_EXPECT_TRUE( list.isApplied() == false );
-}
-
 /**
  * @brief [RHIHandleTable] generation이 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
  */
@@ -554,89 +498,8 @@ SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
 }
 
 // ------------------------------------------------------------------------------
-// 5) RHITest — Mode / soft replay / dual context parity
+// 5) RHITest — dual context parity
 // ------------------------------------------------------------------------------
-/**
- * @brief Immediate Mode: endCommandList가 Context로 flush(replay)하고 applied + cmds clear
- */
-SW_TEST_CASE( RHITest, ImmediateCommandListFlushesOnEnd )
-{
-    CountingCommandContext     ctx;
-    sw::RHIDeferredCommandList list( sw::RHICommandListMode::Immediate, &ctx );
-    list.beginCommandList();
-    sw::RHIViewport vp{ 0.0f, 0.0f, 64.0f, 64.0f, 0.0f, 1.0f };
-    list.setViewport( vp );
-    list.draw( 3, 0 );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( list.commandCount() ) );
-    SW_EXPECT_EQUAL( 0u, ctx._setViewportCount );
-
-    list.endCommandList();
-    SW_EXPECT_TRUE( list.isApplied() );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( list.commandCount() ) );
-    SW_EXPECT_EQUAL( 1u, ctx._setViewportCount );
-    SW_EXPECT_EQUAL( 1u, ctx._drawCount );
-}
-
-/**
- * @brief Deferred Mode: endCommandList는 replay하지 않음; replay()가 Context에 재생
- */
-SW_TEST_CASE( RHITest, DeferredCommandListReplayOntoContext )
-{
-    CountingCommandContext     ctx;
-    sw::RHIDeferredCommandList list( sw::RHICommandListMode::Deferred, &ctx );
-    list.beginCommandList();
-    list.draw( 3, 0, 7 );
-    list.setViewport( sw::RHIViewport{ 1.0f, 2.0f, 3.0f, 4.0f, 0.0f, 1.0f } );
-    list.endCommandList();
-
-    SW_EXPECT_TRUE( list.isApplied() == false );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( list.commandCount() ) );
-    SW_EXPECT_EQUAL( 0u, ctx._drawCount );
-    SW_EXPECT_EQUAL( 0u, ctx._setViewportCount );
-
-    list.replay( &ctx );
-    SW_EXPECT_EQUAL( 1u, ctx._drawCount );
-    SW_EXPECT_EQUAL( 1u, ctx._setViewportCount );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( list.commandCount() ) );
-
-    list.replay( nullptr ); // no-op
-    SW_EXPECT_EQUAL( 1u, ctx._drawCount );
-}
-
-/**
- * @brief RHIDeferredCommandList::execute: Immediate Context null이면 markApplied 금지
- */
-SW_TEST_CASE( RHITest, ExecuteDeferredDoesNotMarkAppliedWithoutImmediateContext )
-{
-    SW_TEST_DEFENSIVE_SCOPE( "Testing deferred list execution without immediate context" );
-    sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( sw::RHIBackend::DirectX12 );
-    if ( device == nullptr )
-        device = sw::RHI::createDevice( sw::RHIBackend::Vulkan );
-    if ( device == nullptr )
-        SW_TEST_SKIP( "No RHI device factory available" );
-
-    // initialize 전: getImmediateContext는 구현체마다 null 또는 미배선일 수 있음.
-    // 생성만 된 디바이스에서 Deferred CL을 execute해도 crash/markApplied 되면 안 됨.
-    sw::RHIDeferredCommandList list( sw::RHICommandListMode::Deferred, nullptr );
-    list.beginCommandList();
-    list.draw( 3, 0 );
-    list.endCommandList();
-    SW_EXPECT_TRUE( list.isApplied() == false );
-
-    if ( device->getImmediateContext() == nullptr )
-    {
-        sw::RHIDeferredCommandList::execute( device.get(), &list );
-        SW_EXPECT_TRUE( list.isApplied() == false );
-    }
-    else
-    {
-        // 드물게 생성자에서 context를 만들면 execute가 성공할 수 있음 — 그 경우 applied OK.
-        sw::RHIDeferredCommandList::execute( device.get(), &list );
-    }
-
-    device.reset();
-}
-
 /**
  * @brief 가용 백엔드마다 Immediate/Deferred Context·SwapChain·Resource·Mode 선택 패리티
  */
@@ -671,27 +534,18 @@ SW_TEST_CASE( RHITest, DualContextAndModeParityAllAvailableBackends )
         SW_EXPECT_TRUE( device->getDefaultCommandContext() == device->getDeferredCommandContext() );
         SW_EXPECT_TRUE( device->getCommandContextForMode( sw::RHICommandListMode::Deferred ) == device->getDeferredCommandContext() );
 
-        // DX12/Vulkan/DX11 은 진짜 네이티브 커맨드 리스트(asDeferred() == nullptr)를 반환할 수 있다 —
-        // "Deferred Context가 진짜"가 되면서 소프트웨어 RHIDeferredCommandList 는 더 이상 유일한
-        // IRHICommandList 구현체가 아니다(OpenGL만 계속 소프트웨어 재생을 쓴다). 소프트웨어 전용
-        // 내부 상태(getMode/isApplied)는 asDeferred() 가 실제로 그 타입일 때만 검사한다 — 그 외엔
-        // 추상 IRHICommandList 인터페이스로 begin/draw/end/execute 시퀀스가 크래시 없이 도는지만 본다.
+        // 모든 백엔드가 이제 네이티브(또는 즉시 호출) IRHICommandList를 반환한다 — 소프트웨어
+        // Cmd-vector/replay 내부 상태는 더 이상 없으므로, begin/draw/end/execute 시퀀스가
+        // 크래시 없이 도는지만 본다.
         sw::unique_ptr<sw::IRHICommandList> deferredList =
             device->createCommandList( sw::RHICommandListMode::Deferred );
         SW_EXPECT_NOT_NULL( deferredList.get() );
         if ( deferredList != nullptr )
         {
-            sw::RHIDeferredCommandList* asDef = deferredList->asDeferred();
-            if ( asDef != nullptr )
-                SW_EXPECT_TRUE( asDef->getMode() == sw::RHICommandListMode::Deferred );
             deferredList->beginCommandList();
             deferredList->draw( 3, 0, 0 );
             deferredList->endCommandList();
-            if ( asDef != nullptr )
-                SW_EXPECT_TRUE( asDef->isApplied() == false );
             device->executeCommandList( deferredList.get() );
-            if ( asDef != nullptr )
-                SW_EXPECT_TRUE( asDef->isApplied() );
         }
 
         sw::unique_ptr<sw::IRHICommandList> immediateList =
@@ -699,14 +553,10 @@ SW_TEST_CASE( RHITest, DualContextAndModeParityAllAvailableBackends )
         SW_EXPECT_NOT_NULL( immediateList.get() );
         if ( immediateList != nullptr )
         {
-            sw::RHIDeferredCommandList* asImm = immediateList->asDeferred();
             immediateList->beginCommandList();
             immediateList->draw( 3, 0, 0 );
             immediateList->endCommandList();
-            if ( asImm != nullptr )
-                SW_EXPECT_TRUE( asImm->isApplied() );
-            else
-                device->executeCommandList( immediateList.get() );
+            device->executeCommandList( immediateList.get() );
         }
 
         shutdownDeviceWithWindow( device, window );

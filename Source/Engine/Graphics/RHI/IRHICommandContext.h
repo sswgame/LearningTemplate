@@ -6,13 +6,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/ICommandReplayTarget.h"
 #include "Engine/Graphics/RHI/RHICommandListDefaults.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
-    class RHIDeferredCommandList;
-
     /**
      * @class IRHICommandList
      * @brief GPU 그래픽스/컴퓨트 명령을 기록하는 커맨드 리스트
@@ -21,15 +19,12 @@ namespace sw
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 수명 — 복사 금지, asDeferred는 지연 리플레이용 다운캐스트
+        // 1) 수명 — 복사 금지
         // ------------------------------------------------------------------------------
         virtual ~IRHICommandList()                           = default;
         IRHICommandList()                                    = default;
         IRHICommandList( const IRHICommandList& )            = delete;
         IRHICommandList& operator=( const IRHICommandList& ) = delete;
-
-        virtual RHIDeferredCommandList*       asDeferred() { return nullptr; }
-        virtual const RHIDeferredCommandList* asDeferred() const { return nullptr; }
 
         // ------------------------------------------------------------------------------
         // 2) 기록 범위 · 뷰포트 · PSO · 렌더 패스
@@ -137,17 +132,22 @@ namespace sw
     /**
      * @class IRHICommandContext
      * @brief 즉시 실행 가능한 커맨드 컨텍스트 인터페이스.
-     *        ICommandReplayTarget을 상속하여 지연된 커맨드 리스트의 재현 타겟 역할을 수행합니다.
+     * @details `IRHICommandList`와 같은 기록 API 표면을 공유합니다 — `beginCommandList`/`endCommandList`는
+     *          컨텍스트에는 "기록 범위" 개념이 없어 no-op으로 막아 둡니다(리스트 쪽 구현체만 의미 있게 씀).
      */
-    class SW_API IRHICommandContext : public ICommandReplayTarget
+    class SW_API IRHICommandContext : public IRHICommandList
     {
     public:
-        IRHICommandContext()                                                                             = default;
-        virtual ~IRHICommandContext() override                                                           = default;
-        IRHICommandContext( const IRHICommandContext& )                                                  = delete;
-        IRHICommandContext& operator=( const IRHICommandContext& )                                       = delete;
-        virtual void        beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor ) = 0;
-        virtual void        endOffscreenPass( RHITextureHandle colorTarget )                             = 0;
+        IRHICommandContext()                                       = default;
+        ~IRHICommandContext() override                             = default;
+        IRHICommandContext( const IRHICommandContext& )            = delete;
+        IRHICommandContext& operator=( const IRHICommandContext& ) = delete;
+
+        void beginCommandList() override {}
+        void endCommandList() override {}
+
+        virtual void beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor ) = 0;
+        virtual void endOffscreenPass( RHITextureHandle colorTarget )                             = 0;
     };
 
 } // namespace sw

@@ -7,8 +7,8 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
@@ -771,13 +771,15 @@ namespace sw
 
     unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList( RHICommandListMode mode )
     {
-        unique_ptr<RHIDeferredCommandList> list = make_unique<RHIDeferredCommandList>( mode, getCommandContextForMode( mode ) );
-        return list;
+        (void)mode; // Vulkan은 소프트웨어 Cmd-vector 없이 즉시 VulkanRHICommandContext를 호출한다.
+        return make_unique<VulkanRHICommandList>( this );
     }
 
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        RHIDeferredCommandList::execute( this, pCmdList );
+        // 이 리스트는 자신만의 네이티브 버퍼를 갖지 않고 currentCommandBuffer()에 바로 기록했으므로
+        // 여기서 제출할 것이 없다 — 실제 제출은 지금처럼 endFrame()/endOffscreenPass()가 담당한다.
+        (void)pCmdList;
     }
 
     bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const

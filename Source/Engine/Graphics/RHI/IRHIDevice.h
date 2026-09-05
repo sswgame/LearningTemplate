@@ -17,7 +17,6 @@ namespace sw
     class IRHISwapChain;
     class IWindow;
     class RenderPassManager;
-    class RHIDeferredCommandList;
 
     /**
      * @class IRHIDevice

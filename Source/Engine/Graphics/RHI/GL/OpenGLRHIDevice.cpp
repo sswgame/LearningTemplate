@@ -4,9 +4,9 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
-#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <glad/glad.h>
@@ -852,17 +852,15 @@ namespace sw
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList( RHICommandListMode mode )
     {
-        unique_ptr<RHIDeferredCommandList> list = make_unique<RHIDeferredCommandList>( mode, getCommandContextForMode( mode ) );
-        return list;
+        (void)mode; // OpenGL은 소프트웨어 Cmd-vector 없이 즉시 OpenGLRHICommandContext를 호출한다.
+        return make_unique<OpenGLRHICommandList>( this );
     }
 
     void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( _pHDC != nullptr && _pHRC != nullptr )
-            wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) );
-#endif
-        RHIDeferredCommandList::execute( this, pCmdList );
+        // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList에서 컨텍스트 재바인딩까지 마침)
+        // 여기서 더 할 일이 없다.
+        (void)pCmdList;
     }
 
     bool OpenGLRHIDevice::ensureComputeRootConstantUbo()

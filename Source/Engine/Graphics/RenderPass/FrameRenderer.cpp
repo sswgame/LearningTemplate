@@ -5,9 +5,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderPassManager.h"
@@ -184,10 +184,7 @@ namespace sw
 
     bool FrameRenderer::prepareCommandList( IRHIDevice* pDevice, [[maybe_unused]] const utf8* pCallerName )
     {
-        if ( _frameCmd &&
-             ( _pCmdOwnerDevice != pDevice ||
-               ( _frameCmd->asDeferred() != nullptr &&
-                 _frameCmd->asDeferred()->getMode() != pDevice->getDefaultCommandListMode() ) ) )
+        if ( _frameCmd && _pCmdOwnerDevice != pDevice )
             _frameCmd.reset();
 
         if ( _frameCmd == nullptr )
@@ -203,10 +200,6 @@ namespace sw
             SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
             return false;
         }
-
-        RHIDeferredCommandList* pDeferred = _pCmd->asDeferred();
-        if ( pDeferred != nullptr )
-            pDeferred->setContext( pDevice->getCommandContextForMode( pDevice->getDefaultCommandListMode() ) );
 
         return true;
     }
