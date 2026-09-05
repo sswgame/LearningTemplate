@@ -2,8 +2,10 @@
 
 #include "Engine/Graphics/Shader/ShaderBindingLayoutCache.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 
@@ -50,7 +52,12 @@ namespace sw
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;
 
-                const ShaderCompileResult result = ShaderCompiler::compileHLSL( compileDesc );
+                // 리플렉션에 필요한 건 바이트코드뿐이라 사전 컴파일 바이너리로 충분하다. 컴파일러를
+                // 직접 부르면 캐시(사전 컴파일 팩 바이너리)를 통째로 건너뛰게 되는데, Shipping 은
+                // 런타임 셰이더 컴파일러(DXC)를 배포하지 않으므로 그대로 실패한다.
+                const ShaderCompileResult result = engine::areEngineServicesBound()
+                                                     ? engine::getShaderCache().getOrCompile( compileDesc )
+                                                     : ShaderCompiler::compileHLSL( compileDesc );
                 if ( result._bSuccess == false || result._bytecode.empty() )
                 {
                     SW_LOG_TRACE( "Layout: stage %# compile failed for '%#' (%#).",

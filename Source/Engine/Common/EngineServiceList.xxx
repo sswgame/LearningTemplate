@@ -28,7 +28,12 @@ SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, 1, 1 )
 SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, 1, 1 )
 SW_ENGINE_SERVICE( _pResourceManager, class, ResourceManager, getResourceManager, 1, 1 )
 SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, 1, 0 )
-SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, 1, 0 )
+// CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 생성되지 않는다
+// (EngineLoop 의 #if !defined(SW_SHIPPING) 참고). 그런데 required=1 이면
+// areEngineServicesBound() 가 Shipping 에서 영영 false 가 되고, 그 함수로 게이팅되는 경로가
+// 전부 무력화된다 — 실제로 셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다가
+// (Shipping 에는 DXC 가 없어서) 죽었다. 소비자는 이미 전부 Shipping 에서 제외돼 있다.
+SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, 0, 0 )
 SW_ENGINE_SERVICE( _pDebugOverlayState, struct, DebugOverlayState, getDebugOverlayState, 1, 1 )
 SW_ENGINE_SERVICE( _pDebugDrawQueue, class, DebugDrawQueue, getDebugDrawQueue, 1, 1 )
 SW_ENGINE_SERVICE( _pRHIBackendRegistry, class, RHIBackendRegistry, getRHIBackendRegistry, 1, 0 )

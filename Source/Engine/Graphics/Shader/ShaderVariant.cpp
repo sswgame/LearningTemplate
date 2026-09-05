@@ -4,7 +4,9 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
 {
@@ -48,7 +50,10 @@ namespace sw
         compileDesc._targetFormat = ( variantKey._targetFormat == ShaderTargetFormat::Count ) ? RHI::getShaderTargetFormat( gv_rhiBackend ) : variantKey._targetFormat;
         compileDesc._listDefine   = variantKey._listDefine;
 
-        ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( compileDesc );
+        // 사전 컴파일 바이너리를 먼저 쓰도록 캐시를 경유한다 — Shipping 에는 런타임 컴파일러가 없다.
+        ShaderCompileResult compileResult = engine::areEngineServicesBound()
+                                              ? engine::getShaderCache().getOrCompile( compileDesc )
+                                              : ShaderCompiler::compileHLSL( compileDesc );
         auto [insertedIter, success]      = _mapVariantCache.try_emplace( key, std::move( compileResult ) );
         return &insertedIter->second;
     }
