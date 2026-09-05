@@ -56,16 +56,13 @@ namespace sw
     {
         /// @brief 이 스트림에 렌더패스가 열려 있는가.
         uint8 _bRenderPassActive : 1;
-        /// @brief 이 스트림에 오프스크린 패스가 열려 있는가.
-        uint8 _bOffscreenPassActive : 1;
         /// @brief set 1(bindless 텍스처)·set 4(정적 샘플러)를 이 버퍼에 이미 바인딩했는가.
         uint8 _bStaticGraphicsSetsBound : 1;
         /// @brief 지금 열려 있는 렌더패스가 스왑체인(백버퍼) 렌더패스인가. PSO 가 등록돼 있지 않을 때
         ///        폴백 파이프라인을 고르는 기준 — 렌더패스 호환성 때문에 백버퍼용/오프스크린용이 다르다.
         uint8                  _bActiveSwapchainRT : 1;
-        [[maybe_unused]] uint8 _reserved           : 4;
+        [[maybe_unused]] uint8 _reserved           : 5;
 
-        RHITextureHandle       _activeOffscreenTarget{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
 
         RHIBufferHandle _boundMeshVb{ 0 };
@@ -81,7 +78,6 @@ namespace sw
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
             : _bRenderPassActive{ 0 }
-            , _bOffscreenPassActive{ 0 }
             , _bStaticGraphicsSetsBound{ 0 }
             , _bActiveSwapchainRT{ 0 }
             , _reserved{ 0 }
@@ -534,9 +530,7 @@ namespace sw
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
         [[maybe_unused]] uint16 _reservedVulkan          : 6;
 
-        VkCommandBuffer _offscreenCommandBuffer;
-        VkFence         _offscreenFence;
-        VkSampler       _defaultSampler;
+        VkSampler _defaultSampler;
 
         VkPipelineLayout      _pipelineLayout;
         VkDescriptorSetLayout _descriptorSetLayout;

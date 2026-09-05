@@ -164,8 +164,6 @@ namespace sw
         , _bDepthHasStencil{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _reservedVulkan{ 0 }
-        , _offscreenCommandBuffer{ nullptr }
-        , _offscreenFence{ nullptr }
         , _defaultSampler{ nullptr }
         , _pipelineLayout{ nullptr }
         , _descriptorSetLayout{ nullptr }
@@ -488,13 +486,6 @@ namespace sw
                 vkDestroySampler( _device, _defaultSampler, nullptr );
                 _defaultSampler = nullptr;
             }
-            if ( _offscreenFence )
-            {
-                vkDestroyFence( _device, _offscreenFence, nullptr );
-                _offscreenFence = nullptr;
-            }
-            _offscreenCommandBuffer = nullptr; // freed with command pool
-
             if ( _textureDescriptorSetLayout )
             {
                 vkDestroyDescriptorSetLayout( _device, _textureDescriptorSetLayout, nullptr );
@@ -789,8 +780,8 @@ namespace sw
 
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
-        if ( _recordingState._bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
-            return _offscreenCommandBuffer;
+        // 스트림은 프레임 커맨드버퍼 하나뿐이다. 예전엔 오프스크린 전용 버퍼로 갈라졌고 그쪽은
+        // 매 프레임 자체 제출 + 펜스 블로킹을 했다 — S3 에서 사라졌다.
         if ( _bFrameStarted == SW_TRUE && _listCommandBuffer.empty() == false )
             return _listCommandBuffer[_currentFrame];
         return VK_NULL_HANDLE;
@@ -819,7 +810,7 @@ namespace sw
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
         // 이 리스트는 자신만의 네이티브 버퍼를 갖지 않고 currentCommandBuffer()에 바로 기록했으므로
-        // 여기서 제출할 것이 없다 — 실제 제출은 지금처럼 endFrame()/endOffscreenPass()가 담당한다.
+        // 여기서 제출할 것이 없다 — 실제 제출은 endFrame() 이 담당한다.
         (void)pCmdList;
     }
 
@@ -1364,20 +1355,6 @@ namespace sw
         allocInfo.commandBufferCount = static_cast<uint32>( _listCommandBuffer.size() );
 
         if ( vkAllocateCommandBuffers( _device, &allocInfo, _listCommandBuffer.data() ) != VK_SUCCESS )
-            return false;
-
-        VkCommandBufferAllocateInfo offscreenAlloc{};
-        offscreenAlloc.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        offscreenAlloc.commandPool        = _commandPool;
-        offscreenAlloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        offscreenAlloc.commandBufferCount = 1;
-        if ( vkAllocateCommandBuffers( _device, &offscreenAlloc, &_offscreenCommandBuffer ) != VK_SUCCESS )
-            return false;
-
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        if ( vkCreateFence( _device, &fenceInfo, nullptr, &_offscreenFence ) != VK_SUCCESS )
             return false;
 
         VkSamplerCreateInfo samplerInfo{};

@@ -78,68 +78,6 @@ namespace sw
         }
     }
 
-    void VulkanRHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
-    {
-        if ( colorTarget == 0 )
-        {
-            _pDevice->beginFrame( clearColor );
-            return;
-        }
-
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( colorTarget );
-        if ( pResolved == nullptr || _pDevice->_offscreenCommandBuffer == VK_NULL_HANDLE )
-            return;
-        VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-        if ( record._framebuffer == VK_NULL_HANDLE || record._renderPass == VK_NULL_HANDLE )
-        {
-            SW_LOG_ERROR( "beginOffscreenPass: texture has no framebuffer." );
-            return;
-        }
-
-        // beginFrame 이 이미 스왑체인 렌더패스를 열어둔 상태다(S1 이후). 오프스크린 전용 버퍼로
-        // 갈아타기 전에 프레임 버퍼의 렌더패스를 실제로 닫아야 한다 — 예전엔 플래그만 내렸는데,
-        // 그때는 beginFrame 이 아직 안 불려 열린 렌더패스가 없어서 무해했을 뿐이다.
-        if ( _pState->_bRenderPassActive == SW_TRUE )
-        {
-            VkCommandBuffer frameCmd = commandBuffer();
-            if ( frameCmd != VK_NULL_HANDLE )
-                vkCmdEndRenderPass( frameCmd );
-            _pState->_bRenderPassActive = SW_FALSE;
-        }
-
-        vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
-        vkResetFences( _pDevice->_device, 1, &_pDevice->_offscreenFence );
-        vkResetCommandBuffer( _pDevice->_offscreenCommandBuffer, 0 );
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer( _pDevice->_offscreenCommandBuffer, &beginInfo );
-
-        // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
-        _pState->_lastBoundGraphicsSet0    = nullptr;
-        _pState->_bStaticGraphicsSetsBound = false;
-
-        _pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image, record._layout,
-                                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                         VK_IMAGE_ASPECT_COLOR_BIT );
-        record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-
-        _pState->_bOffscreenPassActive = 1;
-        // _bFrameStarted 는 프레임 수명주기 상태라 beginFrame/endFrame 만 소유한다. 예전엔 여기서
-        // 강제로 세웠는데, beginFrame 이 항상 먼저 오는 지금은 불필요하고 오히려 위험하다
-        // (docs/05_RHI_FrameContract.md R5 참고).
-        _pState->_bRenderPassActive     = SW_FALSE;
-        _pState->_activeOffscreenTarget = colorTarget;
-
-        // Default clear pass (FrameRenderer may restart passes on this same buffer).
-        RHIRenderPassBeginInfo rpBegin{};
-        rpBegin.setColorTarget( colorTarget, clearColor, RHIRenderPassLoadOp::Clear );
-        rpBegin._width  = record._width;
-        rpBegin._height = record._height;
-        beginRenderPass( rpBegin );
-    }
-
     void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         VkCommandBuffer cmd = commandBuffer();
@@ -264,43 +202,6 @@ namespace sw
         record._layout = targetLayout;
     }
 
-    void VulkanRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
-    {
-        if ( colorTarget == 0 || _pState->_bOffscreenPassActive == 0 || _pDevice->_offscreenCommandBuffer == VK_NULL_HANDLE )
-            return;
-
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( colorTarget );
-        if ( pResolved == nullptr )
-            return;
-
-        VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-        if ( _pState->_bRenderPassActive == SW_TRUE )
-        {
-            vkCmdEndRenderPass( _pDevice->_offscreenCommandBuffer );
-            _pState->_bRenderPassActive = SW_FALSE;
-        }
-        _pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image,
-                                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                         VK_IMAGE_ASPECT_COLOR_BIT );
-        record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-
-        vkEndCommandBuffer( _pDevice->_offscreenCommandBuffer );
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers    = &_pDevice->_offscreenCommandBuffer;
-        vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, _pDevice->_offscreenFence );
-        vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
-
-        _pState->_bOffscreenPassActive = 0;
-        // _bFrameStarted 를 여기서 내리면 뒤따르는 endFrame 이 조기 반환해 프레임 제출이 통째로
-        // 사라진다(=acquire 세마포어가 신호된 채 남아 다음 프레임 acquire 가 실패). 프레임 수명주기는
-        // beginFrame/endFrame 소유다.
-        _pState->_activeOffscreenTarget = 0;
-    }
-
     void VulkanRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
         VkCommandBuffer cmd = commandBuffer();
@@ -376,13 +277,6 @@ namespace sw
             colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
         }
 
-        // 핸들 0 은 "백버퍼"다. 오프스크린 패스가 **실제로 열려 있는 동안에만** 게임뷰 RT 로 라우팅한다.
-        // 예전엔 _activeOffscreenTarget 이 0 이 아니기만 하면 돌렸는데, 이 값은 마지막으로 바인딩한
-        // 컬러 타깃이라 그래프가 트랜지언트에 그리고 나면 계속 남아 있었다 — 그래서 에디터 없이 띄우면
-        // 진짜 백버퍼 렌더패스가 영영 안 열려 스왑체인 이미지가 UNDEFINED 인 채로 present 됐다.
-        if ( colorCount == 1 && colorHandles[0] == 0 && _pState->_bOffscreenPassActive != 0 && _pState->_activeOffscreenTarget != 0 )
-            colorHandles[0] = _pState->_activeOffscreenTarget;
-
         // Composite FB for MRT, color+depth, or depth-only. Keep plain single-RT / swapchain path otherwise.
         const bool bUseComposite = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
                                    ( colorCount == 0 && bHasDepth );
@@ -440,9 +334,6 @@ namespace sw
             framebuffer                  = composite._framebuffer;
             extent                       = { composite._width, composite._height };
             _pState->_bActiveSwapchainRT = 0;
-            // Track RT only — do NOT set _bOffscreenPassActive (that routes to a separate CB).
-            if ( key._colorCount > 0 )
-                _pState->_activeOffscreenTarget = key._arrColor[0];
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
@@ -469,22 +360,19 @@ namespace sw
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
                                                  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-                pTex->_layout                   = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-                renderPass                      = pTex->_renderPass;
-                framebuffer                     = pTex->_framebuffer;
-                extent                          = { pTex->_width, pTex->_height };
-                _pState->_activeOffscreenTarget = colorTarget;
-                _pState->_bActiveSwapchainRT    = 0;
+                pTex->_layout                = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                renderPass                   = pTex->_renderPass;
+                framebuffer                  = pTex->_framebuffer;
+                extent                       = { pTex->_width, pTex->_height };
+                _pState->_bActiveSwapchainRT = 0;
             }
             else
             {
                 if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_listSwapChainFramebuffer.empty() || _pDevice->_imageIndex >= _pDevice->_listSwapChainFramebuffer.size() )
                     return;
-                framebuffer = _pDevice->_listSwapChainFramebuffer[_pDevice->_imageIndex];
-                extent      = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
-                // 지금 바인딩된 컬러 타깃은 백버퍼다 — 앞선 오프스크린 패스가 남긴 추적값을 지운다.
-                _pState->_activeOffscreenTarget = 0;
-                _pState->_bActiveSwapchainRT    = 1;
+                framebuffer                  = _pDevice->_listSwapChainFramebuffer[_pDevice->_imageIndex];
+                extent                       = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
+                _pState->_bActiveSwapchainRT = 1;
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다 —
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.
@@ -682,7 +570,7 @@ namespace sw
         // 강제로 덮어쓰면 방금 바인딩한 값이 지워진다(과거 draw()가 CB 바인딩을 직접 겸하던 구조의 잔재).
         // 인덱스가 없을 땐 현재 바인딩을 그대로 두어 이 문제를 피한다.
         // 같은 세트를 이미 바인딩해 뒀으면(연속 드로우가 흔히 그렇다) 재호출을 스킵한다 — 캐시는
-        // beginFrame()/beginOffscreenPass()가 새 커맨드버퍼를 열 때 초기화한다.
+        // beginFrame()이 새 커맨드버퍼를 열 때 초기화한다.
         if ( bValidDescriptor )
         {
             const VkDescriptorSet set0 = _pDevice->registeredDescriptorSetAt( cbDescriptorIndex );

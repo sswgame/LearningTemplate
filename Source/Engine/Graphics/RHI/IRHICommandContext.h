@@ -152,9 +152,6 @@ namespace sw
 
         void beginCommandList() override {}
         void endCommandList() override {}
-
-        virtual void beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor ) = 0;
-        virtual void endOffscreenPass( RHITextureHandle colorTarget )                             = 0;
     };
 
 } // namespace sw

@@ -35,37 +35,6 @@ namespace sw
         }
     }
 
-    void OpenGLRHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
-    {
-        if ( colorTarget == 0 )
-        {
-            _pDevice->beginFrame( clearColor );
-            return;
-        }
-
-        if ( _pDevice->_bInitialized == SW_FALSE )
-            return;
-
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorTarget );
-        if ( pRecord == nullptr || pRecord->_fbo == 0 )
-            return;
-
-        glBindFramebuffer( GL_FRAMEBUFFER, pRecord->_fbo );
-        glViewport( 0, 0, static_cast<GLsizei>( pRecord->_width ), static_cast<GLsizei>( pRecord->_height ) );
-        glClearColor( clearColor._x, clearColor._y, clearColor._z, clearColor._w );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    }
-
-    void OpenGLRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
-    {
-        if ( colorTarget == 0 || _pDevice->_bInitialized == SW_FALSE )
-            return;
-
-        glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        // Make color attachment readable as a texture for subsequent sampling (ImGui Game View etc.).
-        glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
-    }
-
     void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || src == 0 )

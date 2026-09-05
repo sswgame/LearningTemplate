@@ -161,46 +161,6 @@ namespace sw
         record._state = newState;
     }
 
-    void D3D12RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
-    {
-        if ( colorTarget == 0 )
-        {
-            IRHISwapChain* pSwapChain = _pDevice->getSwapChain();
-            if ( pSwapChain != nullptr )
-                pSwapChain->beginFrame( clearColor );
-            return;
-        }
-
-        ensureRecording();
-        if ( _pCmdList == nullptr )
-            return;
-
-        auto it = _pDevice->_mapOffscreenTexture.find( colorTarget );
-        if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == 0 )
-            return;
-
-        D3D12RHIDevice::OffscreenTextureRecord& record = it->second;
-        transitionTexture( colorTarget, D3D12_RESOURCE_STATE_RENDER_TARGET );
-
-        _pCmdList->OMSetRenderTargets( 1, &record._rtvHandle, FALSE, nullptr );
-        _pCmdList->ClearRenderTargetView( record._rtvHandle, &clearColor._x, 0, nullptr );
-
-        _pState->_arrActiveColorTarget[0] = colorTarget;
-        _pState->_activeColorTargetCount  = 1;
-        _pState->_activeDepthTarget       = 0;
-        _pState->_bActiveSwapchainRT      = 0;
-
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( record._width );
-        vp.Height   = static_cast<float32>( record._height );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        _pCmdList->RSSetViewports( 1, &vp );
-
-        D3D12_RECT scissor{ 0, 0, static_cast<LONG>( record._width ), static_cast<LONG>( record._height ) };
-        _pCmdList->RSSetScissorRects( 1, &scissor );
-    }
-
     void D3D12RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pCmdList == nullptr || src == 0 )
@@ -785,12 +745,5 @@ namespace sw
         _pCmdList->ResourceBarrier( 1, &barrier );
     }
 
-    void D3D12RHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
-    {
-        if ( colorTarget == 0 || _pCmdList == nullptr )
-            return;
-
-        transitionTexture( colorTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-    }
 } // namespace sw
 #endif

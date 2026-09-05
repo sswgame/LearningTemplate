@@ -26,47 +26,6 @@ namespace sw
     {
     }
 
-    void D3D11RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
-    {
-        if ( colorTarget == 0 )
-        {
-            _pDevice->beginFrame( clearColor );
-            return;
-        }
-
-        if ( _pContext == nullptr )
-            return;
-
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( colorTarget );
-        if ( pRecord == nullptr || pRecord->_rtv == nullptr )
-            return;
-
-        _pContext->ClearRenderTargetView( pRecord->_rtv.Get(), &clearColor._x );
-        _pContext->OMSetRenderTargets( 1, pRecord->_rtv.GetAddressOf(), nullptr );
-
-        D3D11_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( pRecord->_width );
-        vp.Height   = static_cast<float32>( pRecord->_height );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        vp.TopLeftX = 0.0f;
-        vp.TopLeftY = 0.0f;
-        _pContext->RSSetViewports( 1, &vp );
-    }
-
-    void D3D11RHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
-    {
-        if ( colorTarget == 0 || _pContext == nullptr )
-            return;
-
-        ID3D11RenderTargetView* pNullRtv{ nullptr };
-        _pContext->OMSetRenderTargets( 1, &pNullRtv, nullptr );
-
-        // Unbind possible SRV uses of the offscreen color target before ImGui samples it.
-        ID3D11ShaderResourceView* nullSrvs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
-        _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullSrvs );
-    }
-
     void D3D11RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         if ( _pContext == nullptr || src == 0 )

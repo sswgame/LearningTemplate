@@ -16,11 +16,10 @@ namespace sw
      * @class VulkanRHICommandList
      * @brief `RHIDeferredCommandList`(CPU `Cmd` 벡터에 기록 후 나중에 replay)를 대체하는 IRHICommandList.
      * @details `VulkanRHICommandContext`는 상태 없이 매 호출마다 `_pDevice->currentCommandBuffer()`로
-     *          "지금 활성인 버퍼"(스왑체인 프레임 버퍼 또는 오프스크린 버퍼)를 동적으로 찾아간다 —
-     *          DX11/DX12와 달리 이 리스트는 자신만의 네이티브 `VkCommandBuffer`를 새로 소유하지 않고,
-     *          그 컨텍스트를 그대로 감싸 호출을 즉시 전달한다. 버퍼의 open/close(`vkBeginCommandBuffer`/
-     *          `vkEndCommandBuffer`)와 제출(`vkQueueSubmit`)은 지금처럼 `VulkanRHIDevice::beginFrame`/
-     *          `endFrame`과 `beginOffscreenPass`/`endOffscreenPass`가 그대로 소유한다 — 이 클래스가
+     *          지금 활성인 프레임 커맨드버퍼를 찾아간다 — DX11/DX12와 달리 이 리스트는 자신만의
+     *          네이티브 `VkCommandBuffer`를 새로 소유하지 않고, 그 컨텍스트를 그대로 감싸 호출을 즉시
+     *          전달한다. 버퍼의 open/close(`vkBeginCommandBuffer`/`vkEndCommandBuffer`)와
+     *          제출(`vkQueueSubmit`)은 `VulkanRHIDevice::beginFrame`/`endFrame`이 소유한다 — 이 클래스가
      *          없애는 건 순수하게 "CPU 쪽 Cmd 구조체 벡터에 쌓았다가 나중에 switch문으로 재생하는"
      *          중간 계층뿐이다.
      */
@@ -34,7 +33,7 @@ namespace sw
         VulkanRHICommandList( const VulkanRHICommandList& )            = delete;
         VulkanRHICommandList& operator=( const VulkanRHICommandList& ) = delete;
 
-        /** @brief 버퍼 open/close는 beginFrame/endFrame/beginOffscreenPass가 소유하므로 아무 것도 하지 않습니다. */
+        /** @brief 버퍼 open/close는 beginFrame/endFrame이 소유하므로 아무 것도 하지 않습니다. */
         void beginCommandList() override {}
         void endCommandList() override {}
 
