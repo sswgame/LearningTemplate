@@ -54,7 +54,8 @@ namespace sw
             return;
         pAllocator->Reset();
         _pCmdList->Reset( pAllocator, nullptr );
-        _pState->_bRecording = 1;
+        _pState->_bRecording             = 1;
+        _pState->_boundNativeGraphicsPso = 0; // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
         bindDescriptorHeaps();
     }
 
@@ -84,7 +85,8 @@ namespace sw
         if ( pPassRec == nullptr && pMatRec == nullptr )
             return;
 
-        bindDescriptorHeaps();
+        // 디스크립터 힙은 ensureRecording()이 Reset() 직후 한 번만 SetDescriptorHeaps 하면 그 커맨드
+        // 리스트가 Close될 때까지 유지된다 — 여기서 다시 부를 필요 없음(예전엔 매 바인딩마다 재호출).
 
         // Native bindless: 셰이더가 ResourceDescriptorHeap[g_BindlessCbIndex] 로 PassCB 를 읽는다.
         if ( pPassRec != nullptr )
@@ -290,7 +292,6 @@ namespace sw
         if ( rec._resource == nullptr )
             return;
 
-        bindDescriptorHeaps();
         _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
         _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, rec._gpuHandle );
     }
@@ -319,7 +320,6 @@ namespace sw
         if ( rec._resource == nullptr )
             return;
 
-        bindDescriptorHeaps();
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
         if ( pRootSig == nullptr )
             pRootSig = _pDevice->_rootSignature.Get();
@@ -339,7 +339,6 @@ namespace sw
         if ( rec._resource == nullptr )
             return;
 
-        bindDescriptorHeaps();
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
         if ( pRootSig == nullptr )
             pRootSig = _pDevice->_rootSignature.Get();
@@ -358,7 +357,6 @@ namespace sw
         if ( rec._resource == nullptr )
             return;
 
-        bindDescriptorHeaps();
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
         if ( pRootSig == nullptr )
             pRootSig = _pDevice->_rootSignature.Get();
@@ -385,9 +383,12 @@ namespace sw
         if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
             return;
 
-        bindDescriptorHeaps();
-        _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-        _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+        if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
+        {
+            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
+            _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+            _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
+        }
         bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         if ( _pState->_boundMeshVb != 0 )
@@ -406,9 +407,12 @@ namespace sw
         if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
             return;
 
-        bindDescriptorHeaps();
-        _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-        _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+        if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
+        {
+            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
+            _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
+            _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
+        }
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         if ( _pState->_boundMeshVb != 0 )
             bindMeshVertexBuffer();
@@ -476,7 +480,6 @@ namespace sw
 
         if ( _pDevice->_rootSignature != nullptr )
         {
-            bindDescriptorHeaps();
             _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
             bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
         }
@@ -534,7 +537,6 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
         {
-            bindDescriptorHeaps();
             _pCmdList->SetComputeRootSignature( pRootSig );
         }
 
@@ -602,10 +604,11 @@ namespace sw
 
         if ( _pDevice->_rootSignature != nullptr )
         {
-            bindDescriptorHeaps();
             _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
         }
         _pCmdList->SetPipelineState( pRecord->_pso.Get() );
+        // draw()/drawInstanced()가 같은 PSO로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시.
+        _pState->_boundNativeGraphicsPso = pso;
     }
 
     void D3D12RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
@@ -622,7 +625,6 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
         {
-            bindDescriptorHeaps();
             _pCmdList->SetComputeRootSignature( pRootSig );
         }
         _pCmdList->SetPipelineState( pRecord->_pso.Get() );

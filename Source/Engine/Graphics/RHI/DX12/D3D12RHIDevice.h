@@ -41,6 +41,10 @@ namespace sw
         uint32                 _boundIndexStride{ 4 };
         uint32                 _boundIndexOffset{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        /** @brief _pCmdList에 실제로 SetPipelineState/SetGraphicsRootSignature가 이미 나간 PSO 핸들.
+         *  draw()/drawInstanced()가 _activeGraphicsPso와 같으면 재바인딩을 스킵한다. Reset() 직후에는
+         *  0으로 되돌려야 한다(그 리스트엔 아직 아무 PSO도 안 걸렸으므로 캐시가 무효). */
+        RHIPipelineStateHandle _boundNativeGraphicsPso{ 0 };
         RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments]{};
         RHITextureHandle       _activeDepthTarget{ 0 };
         uint32                 _activeColorTargetCount{ 0 };
