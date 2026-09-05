@@ -135,6 +135,7 @@ namespace sw
         , _listSwapChainImageView{}
         , _listSwapChainFramebuffer{}
         , _renderPass{ nullptr }
+        , _renderPassLoad{ VK_NULL_HANDLE }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _listCommandBuffer{}
@@ -386,6 +387,14 @@ namespace sw
 
         if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPass ) != VK_SUCCESS )
             return false;
+
+        // 같은 스왑체인 이미지를 한 프레임에 여러 번 열어야 하므로(패스마다 렌더패스를 닫았다 여는
+        // 구조 + 병렬 기록을 위해 프레임 내내 열어두지 않는 구조) LOAD 변형을 하나 더 만든다.
+        // 프레임의 첫 오픈만 CLEAR 를 쓰고, 이후 재오픈은 이미 그린 내용을 보존해야 한다.
+        colorAttachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPassLoad ) != VK_SUCCESS )
+            return false;
         return true;
     }
 
@@ -402,6 +411,12 @@ namespace sw
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );
                 _commandPool = VK_NULL_HANDLE;
+            }
+
+            if ( _renderPassLoad != VK_NULL_HANDLE )
+            {
+                vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
+                _renderPassLoad = VK_NULL_HANDLE;
             }
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -666,25 +681,41 @@ namespace sw
         scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
         vkCmdSetScissor( _listCommandBuffer[_currentFrame], 0, 1, &scissor );
 
-        if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffer.empty() == false && _imageIndex < _listSwapChainFramebuffer.size() )
-        {
-            VkRenderPassBeginInfo rpBeginInfo{};
-            rpBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            rpBeginInfo.renderPass        = _renderPass;
-            rpBeginInfo.framebuffer       = _listSwapChainFramebuffer[_imageIndex];
-            rpBeginInfo.renderArea.offset = { 0, 0 };
-            rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
+        // 스왑체인 렌더패스를 여기서 바로 열지 않는다. 프레임 내내 열어두면 커맨드 버퍼가 계속
+        // 렌더패스 안에 있게 되어 패스별 secondary 버퍼를 vkCmdExecuteCommands 로 끼울 수 없다
+        // (렌더패스 안에서는 inheritance 가 강제됨). 실제로 스왑체인에 그리는 시점에
+        // ensureSwapchainRenderPass() 가 연다 — 첫 오픈은 CLEAR, 이후 재오픈은 LOAD 변형.
+        _swapchainClearColor               = clearColor;
+        _recordingState._bSwapchainCleared = SW_FALSE;
+    }
 
-            VkClearValue clearVal{};
-            clearVal.color = {
-                { clearColor._x, clearColor._y, clearColor._z, clearColor._w }
-            };
-            rpBeginInfo.clearValueCount = 1;
-            rpBeginInfo.pClearValues    = &clearVal;
+    void VulkanRHIDevice::ensureSwapchainRenderPass( VkCommandBuffer cmd, VulkanRecordingState& state )
+    {
+        if ( cmd == VK_NULL_HANDLE || state._bRenderPassActive == SW_TRUE )
+            return;
+        if ( _renderPass == VK_NULL_HANDLE || _listSwapChainFramebuffer.empty() || _imageIndex >= _listSwapChainFramebuffer.size() )
+            return;
 
-            vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-            _recordingState._bRenderPassActive = SW_TRUE;
-        }
+        const bool bFirstOpen = state._bSwapchainCleared == SW_FALSE;
+
+        VkRenderPassBeginInfo rpBeginInfo{};
+        rpBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpBeginInfo.renderPass        = bFirstOpen ? _renderPass : _renderPassLoad;
+        rpBeginInfo.framebuffer       = _listSwapChainFramebuffer[_imageIndex];
+        rpBeginInfo.renderArea.offset = { 0, 0 };
+        rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
+
+        VkClearValue clearVal{};
+        clearVal.color = {
+            { _swapchainClearColor._x, _swapchainClearColor._y, _swapchainClearColor._z, _swapchainClearColor._w }
+        };
+        // LOAD 변형은 clear 값을 쓰지 않는다.
+        rpBeginInfo.clearValueCount = bFirstOpen ? 1u : 0u;
+        rpBeginInfo.pClearValues    = bFirstOpen ? &clearVal : nullptr;
+
+        vkCmdBeginRenderPass( cmd, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+        state._bRenderPassActive = SW_TRUE;
+        state._bSwapchainCleared = SW_TRUE;
     }
 
     void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
@@ -692,6 +723,11 @@ namespace sw
         (void)vsync;
         if ( _bFrameStarted == SW_FALSE )
             return;
+
+        // 이번 프레임에 스왑체인에 아무도 안 그렸으면 렌더패스가 한 번도 안 열려 clear 도 안 된다 —
+        // 예전(beginFrame 이 무조건 열던 구조)과 화면 결과를 같게 유지하려고 여기서 열었다 닫는다.
+        if ( _recordingState._bSwapchainCleared == SW_FALSE )
+            ensureSwapchainRenderPass( _listCommandBuffer[_currentFrame], _recordingState );
 
         if ( _recordingState._bRenderPassActive == SW_TRUE )
         {

@@ -45,10 +45,6 @@ namespace sw
     class VulkanRHISwapChain;
 
     /**
-     * @class VulkanRHIDevice
-     * @brief Vulkan 1.3 그래픽스 및 컴퓨트 디바이스 구현체 (Descriptor Indexing / Bindless 지원)
-     */
-    /**
      * @struct VulkanRecordingState
      * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" — 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태.
      * @details 예전엔 이 필드들이 `VulkanRHIDevice` 에 있었다. 커맨드 버퍼가 프레임당 하나뿐이라는
@@ -60,11 +56,14 @@ namespace sw
     {
         /// @brief 이 스트림에 렌더패스가 열려 있는가.
         uint8 _bRenderPassActive : 1;
+        /// @brief 이번 프레임에 스왑체인 렌더패스를 이미 한 번 열었는가(=clear 를 이미 했는가).
+        /// 첫 오픈만 CLEAR 변형을 쓰고 이후 재오픈은 LOAD 변형을 써야 이미 그린 내용이 안 지워진다.
+        uint8 _bSwapchainCleared : 1;
         /// @brief 이 스트림에 오프스크린 패스가 열려 있는가.
         uint8 _bOffscreenPassActive : 1;
         /// @brief set 1(bindless 텍스처)·set 4(정적 샘플러)를 이 버퍼에 이미 바인딩했는가.
         uint8                  _bStaticGraphicsSetsBound : 1;
-        [[maybe_unused]] uint8 _reserved                 : 5;
+        [[maybe_unused]] uint8 _reserved                 : 4;
 
         RHITextureHandle       _activeOffscreenTarget{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
@@ -82,6 +81,7 @@ namespace sw
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
             : _bRenderPassActive{ 0 }
+            , _bSwapchainCleared{ 0 }
             , _bOffscreenPassActive{ 0 }
             , _bStaticGraphicsSetsBound{ 0 }
             , _reserved{ 0 }
@@ -89,6 +89,10 @@ namespace sw
         }
     };
 
+    /**
+     * @class VulkanRHIDevice
+     * @brief Vulkan 1.3 그래픽스 및 컴퓨트 디바이스 구현체 (Descriptor Indexing / Bindless 지원)
+     */
     class VulkanRHIDevice : public IRHIDevice
     {
         friend class VulkanRHICommandContext;
@@ -449,6 +453,12 @@ namespace sw
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view );
         /** @brief 현재 프레임 커맨드 버퍼. */
         VkCommandBuffer currentCommandBuffer() const;
+        /**
+         * @brief 스왑체인 렌더패스가 안 열려 있으면 엽니다(프레임 첫 오픈만 CLEAR, 이후는 LOAD).
+         * @details `beginFrame` 이 프레임 내내 렌더패스를 물고 있으면 패스별 secondary 커맨드 버퍼를
+         *          `vkCmdExecuteCommands` 로 끼울 수 없어서, 실제로 스왑체인에 그릴 때 여기서 연다.
+         */
+        void ensureSwapchainRenderPass( VkCommandBuffer cmd, VulkanRecordingState& state );
 
         // ------------------------------------------------------------------------------
         // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다(원시 vector 직접 인덱싱 금지).
@@ -494,7 +504,11 @@ namespace sw
         vector<VkImageView>   _listSwapChainImageView;
         vector<VkFramebuffer> _listSwapChainFramebuffer;
 
-        VkRenderPass  _renderPass;
+        VkRenderPass _renderPass;
+        /// @brief beginFrame 이 받아둔 스왑체인 clear 색 — 실제 오픈 시점에 쓴다.
+        float4 _swapchainClearColor{};
+        /// @brief 스왑체인 렌더패스의 LOAD 변형 — 한 프레임에 두 번째 이후로 열 때 쓴다(내용 보존).
+        VkRenderPass  _renderPassLoad;
         VkRenderPass  _offscreenRenderPass; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
         VkCommandPool _commandPool;
 

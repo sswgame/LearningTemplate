@@ -748,6 +748,10 @@ namespace sw
         }
 
         bindMeshVertexBufferOrFallback();
+        // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+        // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+        if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+            _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
     }
@@ -764,6 +768,10 @@ namespace sw
             return;
 
         bindMeshVertexBufferOrFallback();
+        // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+        // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+        if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+            _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
 
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
@@ -886,6 +894,10 @@ namespace sw
         if ( pRecord->_buffer != VK_NULL_HANDLE )
         {
             bindMeshVertexBufferOrFallback();
+            // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+            // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+            if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+                _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
             vkCmdDrawIndirect( cmd, pRecord->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
         }
     }
@@ -916,6 +928,10 @@ namespace sw
 
         const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
         vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
+        // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+        // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+        if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+            _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
         vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndexedIndirectCommand ) );
     }
 
@@ -955,6 +971,10 @@ namespace sw
             {
                 if ( pCountRec->_buffer != VK_NULL_HANDLE )
                 {
+                    // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+                    // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+                    if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+                        _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
                     vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRec->_buffer, countBufferOffset,
                                             maxCommandCount, stride );
                     return;
@@ -964,12 +984,20 @@ namespace sw
 
         if ( _pDevice->_bMultiDrawIndirect != 0 && maxCommandCount > 1 )
         {
+            // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+            // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+            if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+                _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
             vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset, maxCommandCount, stride );
             return;
         }
 
         for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
         {
+            // 스왑체인 렌더패스는 더 이상 beginFrame 이 물고 있지 않으므로, 아무 렌더패스도 안 열려
+            // 있으면 여기서 연다(오프스크린 패스가 열려 있으면 그대로 둔다).
+            if ( _pState != nullptr && _pState->_bRenderPassActive == SW_FALSE && _pDevice != nullptr )
+                _pDevice->ensureSwapchainRenderPass( cmd, *_pState );
             vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
         }
     }
