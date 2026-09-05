@@ -189,8 +189,12 @@ namespace sw
         }
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-        for ( uint32 unit = 0; unit < 16; ++unit )
+        // bindShaderResource가 실제로 바인딩한 유닛만 언바인드한다(예전엔 0..15 전부 방어적으로 언바인드).
+        const uint32 unbindMask = _pDevice->_boundTextureUnitMask;
+        for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
         {
+            if ( ( unbindMask & ( 1u << unit ) ) == 0 )
+                continue;
             if ( glad_glBindTextureUnit != nullptr )
                 glBindTextureUnit( unit, 0 );
             else
@@ -199,6 +203,7 @@ namespace sw
                 glBindTexture( GL_TEXTURE_2D, 0 );
             }
         }
+        _pDevice->_boundTextureUnitMask = 0;
         glViewport( 0, 0, static_cast<GLsizei>( w ), static_cast<GLsizei>( h ) );
 
         if ( bHasDepth || bDepthOnly )
@@ -336,6 +341,8 @@ namespace sw
             if ( tex != 0 )
             {
                 glBindTextureUnit( slot, tex );
+                if ( slot < 32 )
+                    _pDevice->_boundTextureUnitMask |= ( 1u << slot );
                 return;
             }
         }
@@ -403,6 +410,19 @@ namespace sw
         } );
     }
 
+    void OpenGLRHICommandContext::bindMeshVaoAttribs( uint32 vbo )
+    {
+        const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
+        glBindVertexArray( _pDevice->_meshVao );
+        glBindBuffer( GL_ARRAY_BUFFER, vbo );
+        glEnableVertexAttribArray( 0 );
+        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
+                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
+        glEnableVertexAttribArray( 1 );
+        glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
+                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+    }
+
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
                                         RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
     {
@@ -434,15 +454,7 @@ namespace sw
             const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
             if ( vbo != 0 && _pDevice->_meshVao != 0 )
             {
-                const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
-                glBindVertexArray( _pDevice->_meshVao );
-                glBindBuffer( GL_ARRAY_BUFFER, vbo );
-                glEnableVertexAttribArray( 0 );
-                glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-                glEnableVertexAttribArray( 1 );
-                glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+                bindMeshVaoAttribs( vbo );
                 glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
                 glBindVertexArray( 0 );
                 glBindBuffer( GL_ARRAY_BUFFER, 0 );
@@ -483,15 +495,7 @@ namespace sw
             const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
             if ( vbo != 0 && _pDevice->_meshVao != 0 )
             {
-                const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
-                glBindVertexArray( _pDevice->_meshVao );
-                glBindBuffer( GL_ARRAY_BUFFER, vbo );
-                glEnableVertexAttribArray( 0 );
-                glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-                glEnableVertexAttribArray( 1 );
-                glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                                       reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+                bindMeshVaoAttribs( vbo );
                 glDrawArraysInstanced( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ),
                                        static_cast<GLsizei>( instanceCount ) );
                 glBindVertexArray( 0 );
@@ -607,15 +611,7 @@ namespace sw
         if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 || glad_glDrawArraysIndirect == nullptr )
             return;
 
-        const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
-        glBindVertexArray( _pDevice->_meshVao );
-        glBindBuffer( GL_ARRAY_BUFFER, vbo );
-        glEnableVertexAttribArray( 0 );
-        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-        glEnableVertexAttribArray( 1 );
-        glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+        bindMeshVaoAttribs( vbo );
 
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
         glDrawArraysIndirect( mode, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
@@ -653,15 +649,7 @@ namespace sw
 
         if ( vbo != 0 && _pDevice->_meshVao != 0 )
         {
-            const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
-            glBindVertexArray( _pDevice->_meshVao );
-            glBindBuffer( GL_ARRAY_BUFFER, vbo );
-            glEnableVertexAttribArray( 0 );
-            glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-            glEnableVertexAttribArray( 1 );
-            glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+            bindMeshVaoAttribs( vbo );
             if ( ibo != 0 )
                 glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
         }
@@ -713,15 +701,7 @@ namespace sw
         const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
         if ( vbo != 0 && _pDevice->_meshVao != 0 )
         {
-            const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
-            glBindVertexArray( _pDevice->_meshVao );
-            glBindBuffer( GL_ARRAY_BUFFER, vbo );
-            glEnableVertexAttribArray( 0 );
-            glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-            glEnableVertexAttribArray( 1 );
-            glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+            bindMeshVaoAttribs( vbo );
         }
 
         GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );

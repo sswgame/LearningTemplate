@@ -271,6 +271,10 @@ namespace sw
         int8                   _lastVsync; ///< -1 unset, 0/1 last applied
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;
+        /// @brief bindShaderResource가 실제로 바인딩한 텍스처 유닛 비트마스크(비트 i = 유닛 i).
+        /// beginRenderPass가 패스 시작마다 방어적으로 0..15 유닛을 전부 언바인드하던 것을, 실제로
+        /// 바인딩된 유닛만 언바인드하도록 줄이는 데 쓴다.
+        uint32 _boundTextureUnitMask{ 0 };
     };
 
     /**
