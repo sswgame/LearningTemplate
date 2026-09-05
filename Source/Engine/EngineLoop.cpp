@@ -304,8 +304,12 @@ namespace sw
                 SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
                 return false;
             }
-            _rhi->getLiveShaderManager().setOnAnyShaderRecompiled(
-                SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &FrameRenderer::onShaderRecompiled, _frameRenderer.get() ) );
+            // LiveShaderManager 는 SW_DEBUG 에서만 만들어진다 — 없으면 건너뛴다.
+            if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+            {
+                pLiveShaderManager->setOnAnyShaderRecompiled(
+                    SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &FrameRenderer::onShaderRecompiled, _frameRenderer.get() ) );
+            }
 
             _renderThread = make_unique<RenderThread>();
             if ( gv_useRenderThread )
@@ -460,7 +464,10 @@ namespace sw
                 _liveReloadManager->update();
     #if defined( SW_DEBUG )
             if ( _rhi != nullptr )
-                _rhi->getLiveShaderManager().update();
+            {
+                if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+                    pLiveShaderManager->update();
+            }
     #endif
 #endif
             if ( _reloadFileManager != nullptr )
@@ -655,8 +662,11 @@ namespace sw
         if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadShadersAction ) && _rhi != nullptr )
         {
     #if defined( SW_DEBUG )
-            _rhi->getLiveShaderManager().triggerReloadAll();
-            SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
+            if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+            {
+                pLiveShaderManager->triggerReloadAll();
+                SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
+            }
     #endif
         }
         if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadGameAction ) && forceReloadCallback.isBound() )

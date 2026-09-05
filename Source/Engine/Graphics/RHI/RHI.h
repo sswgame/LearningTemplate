@@ -93,8 +93,13 @@ namespace sw
         bool hasDevice() const { return _device != nullptr; }
         /** @brief 활성 IRHIDevice를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
-        /** @brief 활성 LiveShaderManager를 반환합니다. */
-        LiveShaderManager& getLiveShaderManager() const { return *_liveShaderManager; }
+        /**
+         * @brief 활성 LiveShaderManager 를 반환합니다. **널일 수 있습니다.**
+         * @details 셰이더 라이브 리로드는 개발 편의 기능이라 SW_DEBUG 에서만 생성된다(RHI.cpp).
+         *          예전엔 이 함수가 참조를 돌려줘서, Release/Shipping 에서 널 unique_ptr 을
+         *          역참조하는 UB 였다 — EngineLoop 이 무조건 호출해 기동 직후 죽었다.
+         */
+        LiveShaderManager* getLiveShaderManager() const { return _liveShaderManager.get(); }
 
     private:
         unique_ptr<LiveShaderManager> _liveShaderManager;

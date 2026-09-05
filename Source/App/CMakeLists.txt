@@ -34,12 +34,11 @@ sw_addReflectionStep(App
 #    셰이더 컴파일러와 검증 레이어가 그대로 따라 들어갔다.
 # ------------------------------------------------------------------------------
 
-# DXC(dxcompiler/dxil)는 캐시 미스 시의 런타임 HLSL 컴파일 폴백에만 쓰인다. 그 폴백은
-# ShaderCache 에서 #if !defined(SW_SHIPPING) 으로 막혀 있어(Shipping 은 미리 구운 셰이더가
-# 없으면 오류) Shipping 산출물에는 필요 없다.
-if(NOT SW_SHIPPING_BUILD)
-	sw_copyDxcDlls(App)
-endif()
+# DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일 폴백뿐 아니라 **DXIL 리플렉션**에도 쓰인다
+# (ShaderReflection). 사전 컴파일 바이너리만 쓰는 Shipping 에서도 셰이더 바인딩 레이아웃을
+# 얻으려면 필요하다 — 빼면 리플렉션이 조용히 실패해 바인딩이 어긋나고 DEVICE_HUNG 으로 간다.
+# 리플렉션 데이터를 쿠킹 시점에 구워 두게 되면 그때 다시 뺄 수 있다.
+sw_copyDxcDlls(App)
 
 # Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — Debug 구성에만 배포한다.
 # (딸려오는 mimalloc 도 검증 레이어 의존성일 뿐이다.)
