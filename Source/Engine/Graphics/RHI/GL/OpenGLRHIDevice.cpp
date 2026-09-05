@@ -849,8 +849,11 @@ namespace sw
     void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
         // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList에서 컨텍스트 재바인딩까지 마침)
-        // 여기서 더 할 일이 없다.
+        // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아뒀다가 보내므로, 즉시 모드에서는
+        // 리스트 경계마다 밀어내 오류가 어느 리스트에서 났는지 드러나게 한다.
         (void)pCmdList;
+        if ( _bImmediateSubmit )
+            glFlush();
     }
 
     bool OpenGLRHIDevice::ensureComputeRootConstantUbo()

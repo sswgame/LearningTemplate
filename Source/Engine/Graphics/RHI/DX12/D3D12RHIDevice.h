@@ -137,8 +137,13 @@ namespace sw
         /** @brief ID3D12Device 포인터 반환 */
         void* getNativeDevice() const override { return _device.Get(); }
 
-        /** @brief ID3D12GraphicsCommandList 포인터 반환 */
-        void* getNativeContext() const override { return _commandList.Get(); }
+        /**
+         * @brief 지금 기록 중인 ID3D12GraphicsCommandList 포인터 (프레임 스트림의 활성 세그먼트).
+         * @details 에디터 ImGui 백엔드가 이 리스트에 직접 드로우를 기록한다. 세그먼트 제출 도입 후
+         *          _commandList 는 '첫 세그먼트'일 뿐이고 커맨드 리스트가 제출될 때마다 닫힌다 —
+         *          그걸 그대로 돌려주면 닫힌 리스트에 기록하게 되어 UI 가 통째로 사라진다.
+         */
+        void* getNativeContext() const override { return _activeFrameList != nullptr ? _activeFrameList : _commandList.Get(); }
 
         /** @brief IDXGISwapChain3 포인터 반환 */
         void* getNativeSwapChain() const override { return _swapChain.Get(); }
@@ -154,6 +159,7 @@ namespace sw
 
         /** @brief 독립 커맨드 리스트 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
     private:
         /**
@@ -189,6 +195,12 @@ namespace sw
         ID3D12CommandAllocator* currentFrameCmdAllocator();
 
     public:
+        /**
+         * @brief 프레임 스트림의 다음 세그먼트를 열고 기록 대상으로 만듭니다.
+         * @details 커맨드 리스트가 제출될 때마다 스트림을 여기서 자른다(executeCommandList 참고).
+         */
+        ID3D12GraphicsCommandList* beginNextFrameSegment();
+
         /**
          * @brief 병렬 기록용 커맨드 리스트 + 전용 얼로케이터 한 쌍을 풀에서 빌립니다.
          * @details 풀에 남은 게 없으면 새로 만든다. 풀로 돌아온 항목은 이미 GPU 펜스를 통과한 것이라
@@ -301,6 +313,13 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[constant::kMaxFrameCountInFlight];
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
+
+        /// @brief 이번 프레임에 큐로 넘길 커맨드 리스트들 — 기록 순서 = 실행 순서.
+        vector<ID3D12CommandList*> _listPendingSubmit;
+        /// @brief 프레임 스트림을 자를 때마다 풀에서 빌린 추가 세그먼트들(프레임 끝에 반납).
+        vector<D3D12CommandListEntry> _listFrameSegment;
+        /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 _commandList 로 시작한다.
+        ID3D12GraphicsCommandList* _activeFrameList{ nullptr };
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 프레임 스트림과 별개.
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[constant::kMaxFrameCountInFlight];
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.

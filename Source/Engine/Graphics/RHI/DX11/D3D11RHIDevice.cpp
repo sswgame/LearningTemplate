@@ -306,7 +306,16 @@ namespace sw
         ID3D11CommandList* pList   = pNative->getNativeCommandList();
         if ( pList == nullptr )
             return;
+        // DX11 은 스트림을 자를 필요가 없다. 기록 대상(Deferred Context)과 제출 대상(Immediate
+        // Context)이 처음부터 분리돼 있어서, 이 호출은 Immediate Context 스트림의 '지금 이 지점'에
+        // 그대로 끼워진다 — DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         _deviceContext->ExecuteCommandList( pList, FALSE );
+
+        // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
+        // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.
+        // 즉시 모드에서는 리스트마다 밀어내 그 경계에서 오류가 드러나게 한다.
+        if ( _bImmediateSubmit )
+            _deviceContext->Flush();
     }
 
     void D3D11RHIDevice::createRenderTargetView()

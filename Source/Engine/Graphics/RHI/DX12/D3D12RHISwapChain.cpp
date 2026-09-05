@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
+#include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -47,6 +48,9 @@ namespace sw
         if ( _pDevice->_frameStreamState._bRecording == 0 )
         {
             _pDevice->waitForRingSlot();
+            // 프레임 스트림은 세그먼트로 나뉜다 — 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
+            // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
+            _pDevice->_listPendingSubmit.clear();
             ID3D12CommandAllocator* pAllocator = _pDevice->currentAllocator();
             if ( pAllocator == nullptr || _pDevice->_commandList == nullptr )
                 return;
@@ -56,10 +60,12 @@ namespace sw
             if ( FAILED( pAllocator->Reset() ) || FAILED( _pDevice->_commandList->Reset( pAllocator, nullptr ) ) )
                 return;
             _pDevice->_frameStreamState._bRecording = 1;
+            _pDevice->_activeFrameList              = _pDevice->_commandList.Get();
+            _pDevice->_frameStreamContext->rebindCommandList( _pDevice->_activeFrameList );
             if ( _pDevice->_cbvHeap != nullptr )
             {
                 ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
-                _pDevice->_commandList->SetDescriptorHeaps( 1, heaps );
+                _pDevice->_activeFrameList->SetDescriptorHeaps( 1, heaps );
             }
         }
         _pDevice->_frameIndex = _pDevice->_swapChain->GetCurrentBackBufferIndex();
@@ -88,10 +94,10 @@ namespace sw
         vp.MaxDepth = kDefaultViewportMaxDepth;
         vp.TopLeftX = kDefaultViewportX;
         vp.TopLeftY = kDefaultViewportY;
-        _pDevice->_commandList->RSSetViewports( 1, &vp );
+        _pDevice->_activeFrameList->RSSetViewports( 1, &vp );
 
         D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _pDevice->_width ), static_cast<LONG>( _pDevice->_height ) };
-        _pDevice->_commandList->RSSetScissorRects( 1, &scissorRect );
+        _pDevice->_activeFrameList->RSSetScissorRects( 1, &scissorRect );
     }
 
     void D3D12RHISwapChain::endFrame( bool vsync, bool bPresent )
@@ -104,17 +110,32 @@ namespace sw
             barrier.Transition.StateBefore = _pDevice->_swapchainState;
             barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            _pDevice->_commandList->ResourceBarrier( 1, &barrier );
+            _pDevice->_activeFrameList->ResourceBarrier( 1, &barrier );
             _pDevice->_swapchainState = D3D12_RESOURCE_STATE_PRESENT;
         }
 
-        if ( _pDevice->_frameStreamState._bRecording != 0 && _pDevice->_commandList != nullptr )
+        if ( _pDevice->_frameStreamState._bRecording != 0 && _pDevice->_activeFrameList != nullptr )
         {
-            _pDevice->_commandList->Close();
-            ID3D12CommandList* ppCommandLists[] = { _pDevice->_commandList.Get() };
-            _pDevice->_commandQueue->ExecuteCommandLists( 1, ppCommandLists );
+            _pDevice->_activeFrameList->Close();
+            _pDevice->_listPendingSubmit.push_back( _pDevice->_activeFrameList );
             _pDevice->_frameStreamState._bRecording = 0;
         }
+
+        // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
+        if ( _pDevice->_listPendingSubmit.empty() == false && _pDevice->_commandQueue != nullptr )
+        {
+            _pDevice->_commandQueue->ExecuteCommandLists( static_cast<UINT>( _pDevice->_listPendingSubmit.size() ),
+                                                          _pDevice->_listPendingSubmit.data() );
+        }
+        _pDevice->_listPendingSubmit.clear();
+        _pDevice->_activeFrameList = nullptr;
+
+        // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
+        for ( D3D12CommandListEntry& segment : _pDevice->_listFrameSegment )
+        {
+            _pDevice->recycleCommandListEntryDeferred( std::move( segment ) );
+        }
+        _pDevice->_listFrameSegment.clear();
 
         if ( bPresent && _pDevice->_swapChain != nullptr )
         {

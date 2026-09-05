@@ -71,10 +71,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 10) 능력 · 스레드 — 백엔드 종류, bindless, 컨텍스트 소유
         // ------------------------------------------------------------------------------
-        /** @brief 백엔드 capability를 조회합니다.
-         * @note 정적 표는 RHIAvailability::query. DX12/VK native bindless는
-         *       supportsNativeBindlessSampling() / override getCapabilities()가 런타임 확정.
-         */
         /**
          * @brief 이 디바이스가 실제로 채택한 백버퍼 컬러 포맷.
          * @details 기본은 계약값 `constant::kBackBufferFormat` 이다. 하드웨어/서피스 제약으로 그 값을
@@ -83,6 +79,10 @@ namespace sw
          */
         virtual RHIFormat getBackBufferFormat() const { return constant::kBackBufferFormat; }
 
+        /** @brief 백엔드 capability를 조회합니다.
+         * @note 정적 표는 RHIAvailability::query. DX12/VK native bindless는
+         *       supportsNativeBindlessSampling() / override getCapabilities()가 런타임 확정.
+         */
         virtual RHICapabilities getCapabilities() const { return RHIAvailability::query( getBackendType() ); }
         virtual IRHISwapChain*  getSwapChain() { return nullptr; }
         virtual IRHIResource*   getResource() { return nullptr; }
@@ -206,12 +206,44 @@ namespace sw
         /** @brief 독립 커맨드 리스트를 만듭니다 (기록 전용; GPU 적용은 executeCommandList). */
         virtual unique_ptr<IRHICommandList> createCommandList() = 0;
 
-        /** @brief 독립 커맨드 리스트를 제출하고 커맨드 큐에서 실행합니다 (그래픽스 실행 스레드에서만). */
+        /**
+         * @brief 커맨드 리스트를 **프레임 스트림 순서에 맞춰** 제출 대기열에 넣습니다.
+         * @details beginFrame~endFrame 사이에서 쓴다. 디바이스는 이 지점에서 프레임 스트림을 잘라
+         *          [지금까지의 세그먼트][이 리스트][새 세그먼트] 순서로 잇고 endFrame 에서 한 번에
+         *          큐로 넘긴다 — 같은 큐의 제출 순서가 곧 실행 순서다. 그래픽스 실행 스레드 전용.
+         */
         virtual void executeCommandList( IRHICommandList* pCmdList ) = 0;
+
+        /**
+         * @brief 프레임 스트림과 무관하게 **곧바로** 큐에 제출합니다.
+         * @details 프레임 밖 일회성 작업(오프스크린 스모크, 리소스 업로드, 썸네일 렌더 등)용이다.
+         *          프레임 순서 보장이 필요 없고 beginFrame 이 열려 있지 않은 경우에만 쓸 것 —
+         *          프레임 중 호출하면 스트림 순서를 건너뛰므로 렌더 결과가 어긋난다.
+         *          기본 구현은 executeCommandList 로 위임한다(DX11/GL 처럼 기록이 곧 실행인 백엔드).
+         */
+        virtual void executeCommandListImmediate( IRHICommandList* pCmdList ) { executeCommandList( pCmdList ); }
+
+        /**
+         * @brief 커맨드 리스트가 제출될 때마다 프레임 스트림을 **곧바로** 큐로 내보낼지 지정합니다.
+         * @details 기본(false)은 프레임 끝에 한 번에 제출한다. 켜면 executeCommandList 마다 큐 제출이
+         *          한 번씩 일어나 오버헤드가 크지만, 두 모드 모두 [세그먼트][리스트] 순서를 지키므로
+         *          실행 순서는 같다 — 달라지는 건 제출 '시점'뿐이다. GPU 오류(DEVICE_HUNG, 검증 레이어)가
+         *          어느 제출에서 났는지 좁힐 때 쓴다.
+         * @note 백엔드별로 "즉시"가 가리키는 것이 다르다. DX12/Vulkan 은 모아둔 커맨드 리스트를 그
+         *       자리에서 큐로 제출하고, DX11/GL 은 애초에 기록 스트림이 곧 제출 스트림이라 순서는
+         *       이미 맞으므로 `Flush`/`glFlush` 로 GPU 에 밀어내기만 한다. 어느 쪽이든 효과는 같다 —
+         *       리스트 경계에서 GPU 작업이 끊긴다.
+         * @note 값의 출처는 Engine 의 `gv_rhiImmediateSubmit` 이고, RenderThread 가 프레임마다 밀어넣는다.
+         *       백엔드는 MODULE DLL 로 따로 빌드되므로 전역 변수를 그쪽까지 export 하지 않는다 —
+         *       정책은 Engine 이 정하고 디바이스는 메커니즘만 갖는다.
+         */
+        void setImmediateSubmit( bool bEnable ) { _bImmediateSubmit = bEnable; }
 
     protected:
         IWindow*                      _pInitWindow;
         unique_ptr<RenderPassManager> _renderPassManager;
         bool                          _bPreferredVSync;
+        /// @brief setImmediateSubmit 참고 — 프레임 스트림을 자를 때마다 즉시 제출할지.
+        bool _bImmediateSubmit{ false };
     };
 } // namespace sw

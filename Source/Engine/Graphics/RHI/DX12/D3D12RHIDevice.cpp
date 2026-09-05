@@ -319,16 +319,89 @@ namespace sw
         return list;
     }
 
-    void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()
     {
-        if ( pCmdList == nullptr || _commandQueue == nullptr )
+        D3D12CommandListEntry entry = acquireCommandListEntry();
+        if ( entry._list == nullptr || entry._allocator == nullptr )
+            return nullptr;
+
+        // 풀에서 나온 쌍은 이미 펜스를 통과했으므로 곧바로 Reset 해도 된다.
+        if ( FAILED( entry._allocator->Reset() ) || FAILED( entry._list->Reset( entry._allocator.Get(), nullptr ) ) )
+            return nullptr;
+
+        if ( _cbvHeap != nullptr )
+        {
+            ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
+            entry._list->SetDescriptorHeaps( 1, heaps );
+        }
+
+        ID3D12GraphicsCommandList* pList = entry._list.Get();
+        _listFrameSegment.push_back( std::move( entry ) );
+        return pList;
+    }
+
+    void D3D12RHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    {
+        auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
+        if ( pNative == nullptr || _commandQueue == nullptr )
             return;
-        auto*                      pNative = static_cast<D3D12RHICommandList*>( pCmdList );
-        ID3D12GraphicsCommandList* pList   = pNative->getNativeCommandList();
+
+        ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
         if ( pList == nullptr )
             return;
+
         ID3D12CommandList* arr[] = { pList };
         _commandQueue->ExecuteCommandLists( 1, arr );
+    }
+
+    void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    {
+        auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
+        if ( pNative == nullptr || _commandQueue == nullptr || _activeFrameList == nullptr )
+            return;
+
+        ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
+        if ( pList == nullptr )
+            return;
+
+        // 예전엔 여기서 곧바로 ExecuteCommandLists 를 불렀다. 그러면 프레임 스트림(디바이스가
+        // 소유한 리스트)은 endFrame 에서 한 번에 제출되므로, 그래프보다 **먼저** 기록한 것까지
+        // 그래프 뒤에 실행됐다 — 오프스크린 경로의 게임 RT 클리어가 대표적이다.
+        // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
+        // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
+        _activeFrameList->Close();
+        _listPendingSubmit.push_back( _activeFrameList );
+        _listPendingSubmit.push_back( pList );
+
+        // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다 — 제출 시점만 앞당긴다.
+        if ( _bImmediateSubmit && _listPendingSubmit.empty() == false )
+        {
+            _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+            _listPendingSubmit.clear();
+        }
+
+        ID3D12GraphicsCommandList* pNextSegment = beginNextFrameSegment();
+        _activeFrameList                        = pNextSegment;
+        if ( pNextSegment == nullptr )
+        {
+            _frameStreamState._bRecording = 0;
+            return;
+        }
+
+        // 새 리스트라 바인딩 캐시가 무효다. 뷰포트/시저도 다시 깔아준다.
+        _frameStreamState             = D3D12RecordingState{};
+        _frameStreamState._bRecording = 1;
+        _frameStreamContext->rebindCommandList( pNextSegment );
+
+        D3D12_VIEWPORT vp{};
+        vp.Width    = static_cast<float32>( _width );
+        vp.Height   = static_cast<float32>( _height );
+        vp.MinDepth = 0.0f;
+        vp.MaxDepth = 1.0f;
+        pNextSegment->RSSetViewports( 1, &vp );
+
+        D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _width ), static_cast<LONG>( _height ) };
+        pNextSegment->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D12RHIDevice::createRenderTargets()

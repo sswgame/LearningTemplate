@@ -45,14 +45,6 @@ namespace sw
     class VulkanRHISwapChain;
 
     /**
-     * @struct VulkanRecordingState
-     * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" — 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태.
-     * @details 예전엔 이 필드들이 `VulkanRHIDevice` 에 있었다. 커맨드 버퍼가 프레임당 하나뿐이라는
-     *          전제에서는 문제가 없었지만, 그 전제 때문에 여러 리스트가 동시에 기록할 수 없었다
-     *          (서로의 바인딩 캐시를 덮어쓴다). DX12 의 `D3D12RecordingState` 와 같은 역할이며,
-     *          "기록 상태는 리스트가 소유하고 디바이스는 진짜 전역 자원만 갖는다"는 구조로 맞춘 것이다.
-     */
-    /**
      * @struct VulkanCommandListEntry
      * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀 + 커맨드 버퍼 쌍.
      * @details `VkCommandPool` 은 외부 동기화 대상이라 여러 스레드가 동시에 기록하려면 **리스트마다
@@ -64,6 +56,14 @@ namespace sw
         VkCommandBuffer _buffer{ nullptr };
     };
 
+    /**
+     * @struct VulkanRecordingState
+     * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" — 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태.
+     * @details 예전엔 이 필드들이 `VulkanRHIDevice` 에 있었다. 커맨드 버퍼가 프레임당 하나뿐이라는
+     *          전제에서는 문제가 없었지만, 그 전제 때문에 여러 리스트가 동시에 기록할 수 없었다
+     *          (서로의 바인딩 캐시를 덮어쓴다). DX12 의 `D3D12RecordingState` 와 같은 역할이며,
+     *          "기록 상태는 리스트가 소유하고 디바이스는 진짜 전역 자원만 갖는다"는 구조로 맞춘 것이다.
+     */
     struct VulkanRecordingState
     {
         /// @brief 이 스트림에 렌더패스가 열려 있는가.
@@ -203,6 +203,7 @@ namespace sw
 
         /** @brief 커맨드 리스트 실행 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
         /** @brief ImGui용 네이티브 Vulkan 핸들을 조회합니다. */
         VkInstance       getInstance() const { return _instance; }
@@ -544,6 +545,8 @@ namespace sw
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼(프레임 슬롯별 재사용).
         vector<VkCommandBuffer> _arrFrameSegment[constant::kMaxFrameCountInFlight];
         uint32                  _frameSegmentCursor{ 0 };
+        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는가 (첫 제출만 건다).
+        uint8 _bFrameAcquireWaitPending{ 0 };
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
         VkCommandBuffer _activeFrameBuffer{ nullptr };
 

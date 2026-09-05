@@ -14,6 +14,10 @@ namespace sw
 {
     SW_LOG_CALLER( "RenderThread" );
 
+    // 커맨드 리스트를 프레임 끝에 모아 제출할지(기본), 잘릴 때마다 바로 제출할지.
+    // 정의는 RHI.cpp — 여기서는 프레임마다 디바이스로 밀어넣기만 한다.
+    SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit );
+
     SW_GLOBAL_VARIABLE_BOOL( gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
     RenderThread::RenderThread()
@@ -278,6 +282,15 @@ namespace sw
         // beginFrame 을 그래프 뒤로 미뤄뒀는데, 그건 "백버퍼를 바인딩할 다른 수단이 없어서" 위치로
         // 대신하던 것이었다(docs/05_RHI_FrameContract.md 의 R2). 그 역할은 아래 명시적 백버퍼
         // 렌더패스가 대신한다 — 이 둘은 반드시 같이 있어야 한다.
+        // 제출 정책은 매 프레임 갱신한다 — 런타임에 gv 를 토글해도 다음 프레임부터 바로 먹힌다.
+        // 즉시 모드는 제출 횟수가 늘어 성능이 크게 떨어지므로, 모르고 그 상태로 재는 일이 없도록
+        // 바뀐 순간에 한 번 남긴다.
+        if ( gv_rhiImmediateSubmit != _bLastImmediateSubmit )
+        {
+            _bLastImmediateSubmit = gv_rhiImmediateSubmit;
+            SW_LOG_INFO( "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
+        }
+        _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
         _pDevice->getSwapChain()->beginFrame( packet._clearColor );
 
         // 게임뷰 RT 확립. 예전엔 beginOffscreenPass 였는데, 그건 "렌더타깃 바인딩"과 "백엔드마다

@@ -22,6 +22,13 @@ namespace sw
     // 이 플랫폼에서 쓸 수 없으면 RHI::initialize 가 getDefaultPlatformBackend() 로 폴백합니다.
     SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
 
+    // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지.
+    // 두 모드 모두 기록 순서 = 실행 순서다 — 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
+    // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
+    // 검증 레이어)가 어느 제출에서 났는지 좁히기 쉬워 디버깅에 쓴다.
+    SW_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit, false,
+                             "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
+
     RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
         : _vertexShaderPath{}
         , _vertexEntryPoint{}

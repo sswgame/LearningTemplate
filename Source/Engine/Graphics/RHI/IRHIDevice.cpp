@@ -83,7 +83,8 @@ namespace sw
             cmd->draw( 3, 0, materialCb );
             cmd->endRenderPass();
             cmd->endCommandList();
-            executeCommandList( cmd.get() );
+            // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.
+            executeCommandListImmediate( cmd.get() );
             waitIdle();
         }
 

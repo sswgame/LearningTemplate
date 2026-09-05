@@ -655,8 +655,9 @@ namespace sw
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
-        _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
-        _frameSegmentCursor = 0;
+        _activeFrameBuffer        = _listCommandBuffer[_currentFrame];
+        _frameSegmentCursor       = 0;
+        _bFrameAcquireWaitPending = 1;
         _listPendingSubmit.clear();
 
         // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
@@ -708,11 +709,16 @@ namespace sw
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
+        // acquire 대기는 프레임당 한 번만 — 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
         VkSemaphore          arrWaitSemaphore[] = { _listImageAvailableSemaphore[_currentFrame] };
         VkPipelineStageFlags arrWaitStage[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount           = 1;
-        submitInfo.pWaitSemaphores              = arrWaitSemaphore;
-        submitInfo.pWaitDstStageMask            = arrWaitStage;
+        if ( _bFrameAcquireWaitPending != 0 )
+        {
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores    = arrWaitSemaphore;
+            submitInfo.pWaitDstStageMask  = arrWaitStage;
+            _bFrameAcquireWaitPending     = 0;
+        }
 
         // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다 — 같은 큐에 대한
         // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
@@ -910,6 +916,26 @@ namespace sw
         return make_unique<VulkanRHICommandList>( this );
     }
 
+    void VulkanRHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    {
+        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
+        if ( pList == nullptr || _graphicsQueue == VK_NULL_HANDLE )
+            return;
+
+        const VkCommandBuffer listBuffer = pList->nativeCommandBuffer();
+        if ( listBuffer == VK_NULL_HANDLE )
+            return;
+
+        // 프레임 밖 일회성 제출이라 프레임 펜스에 얹을 수 없다 — 자체 제출 후 큐가 비기를 기다려
+        // 호출자가 결과를 바로 쓸 수 있게 한다(업로드/스모크 용도라 빈도가 낮다).
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &listBuffer;
+        if ( vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
+            vkQueueWaitIdle( _graphicsQueue );
+    }
+
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
         VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
@@ -929,6 +955,26 @@ namespace sw
         vkEndCommandBuffer( _activeFrameBuffer );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );
+
+        // 즉시 모드: 여기서 바로 내보낸다. acquire 세마포어 대기는 '이 프레임의 첫 제출'에만 걸고,
+        // renderFinished 신호와 인플라이트 펜스는 endFrame 의 마지막 제출이 담당한다.
+        if ( _bImmediateSubmit )
+        {
+            VkSubmitInfo         flushInfo{};
+            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            flushInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            flushInfo.commandBufferCount   = static_cast<uint32>( _listPendingSubmit.size() );
+            flushInfo.pCommandBuffers      = _listPendingSubmit.data();
+            if ( _bFrameAcquireWaitPending != 0 && _listImageAvailableSemaphore.empty() == false )
+            {
+                flushInfo.waitSemaphoreCount = 1;
+                flushInfo.pWaitSemaphores    = &_listImageAvailableSemaphore[_currentFrame];
+                flushInfo.pWaitDstStageMask  = &waitStage;
+                _bFrameAcquireWaitPending    = 0;
+            }
+            vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            _listPendingSubmit.clear();
+        }
 
         // 이어서 기록할 새 세그먼트를 연다. 새 버퍼이므로 바인딩 캐시는 무효다.
         VkCommandBuffer nextSegment = beginNextFrameSegment();
