@@ -486,6 +486,16 @@ namespace sw
                 vkDestroySampler( _device, _defaultSampler, nullptr );
                 _defaultSampler = nullptr;
             }
+            {
+                std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+                for ( const VulkanCommandListEntry& entry : _listFreeCmdListEntry )
+                {
+                    if ( entry._pool != VK_NULL_HANDLE )
+                        vkDestroyCommandPool( _device, entry._pool, nullptr );
+                }
+                _listFreeCmdListEntry.clear();
+            }
+
             if ( _textureDescriptorSetLayout )
             {
                 vkDestroyDescriptorSetLayout( _device, _textureDescriptorSetLayout, nullptr );
@@ -644,6 +654,11 @@ namespace sw
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
+        // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
+        _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
+        _frameSegmentCursor = 0;
+        _listPendingSubmit.clear();
+
         // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
         _recordingState._lastBoundGraphicsSet0    = nullptr;
         _recordingState._bStaticGraphicsSetsBound = false;
@@ -663,12 +678,12 @@ namespace sw
         viewport.height   = -static_cast<float32>( _swapChainExtentHeight );
         viewport.minDepth = kDefaultViewportMinDepth;
         viewport.maxDepth = kDefaultViewportMaxDepth;
-        vkCmdSetViewport( _listCommandBuffer[_currentFrame], 0, 1, &viewport );
+        vkCmdSetViewport( _activeFrameBuffer, 0, 1, &viewport );
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
         scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
-        vkCmdSetScissor( _listCommandBuffer[_currentFrame], 0, 1, &scissor );
+        vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
 
         // 백버퍼 렌더패스는 여기서 열지 않는다 — beginFrame 은 프레임 수명주기 전용이고, 백버퍼
         // 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다(docs/05_RHI_FrameContract.md S2).
@@ -684,10 +699,11 @@ namespace sw
 
         if ( _recordingState._bRenderPassActive == SW_TRUE )
         {
-            vkCmdEndRenderPass( _listCommandBuffer[_currentFrame] );
+            vkCmdEndRenderPass( _activeFrameBuffer );
             _recordingState._bRenderPassActive = SW_FALSE;
         }
-        vkEndCommandBuffer( _listCommandBuffer[_currentFrame] );
+        vkEndCommandBuffer( _activeFrameBuffer );
+        _listPendingSubmit.push_back( _activeFrameBuffer );
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -698,8 +714,10 @@ namespace sw
         submitInfo.pWaitSemaphores              = arrWaitSemaphore;
         submitInfo.pWaitDstStageMask            = arrWaitStage;
 
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers    = &_listCommandBuffer[_currentFrame];
+        // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다 — 같은 큐에 대한
+        // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
+        submitInfo.commandBufferCount = static_cast<uint32>( _listPendingSubmit.size() );
+        submitInfo.pCommandBuffers    = _listPendingSubmit.data();
 
         VkSemaphore arrSignalSemaphore[] = { _listRenderFinishedSemaphore[_imageIndex] };
         submitInfo.signalSemaphoreCount  = 1;
@@ -732,8 +750,10 @@ namespace sw
                 SW_LOG_ERROR( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( presentResult ) );
         }
 
-        _currentFrame  = ( _currentFrame + 1 ) % constant::kMaxFrameCountInFlight;
-        _bFrameStarted = SW_FALSE;
+        _listPendingSubmit.clear();
+        _activeFrameBuffer = VK_NULL_HANDLE;
+        _currentFrame      = ( _currentFrame + 1 ) % constant::kMaxFrameCountInFlight;
+        _bFrameStarted     = SW_FALSE;
         _releaseQueue.tickFrame();
     }
 
@@ -780,11 +800,95 @@ namespace sw
 
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
-        // 스트림은 프레임 커맨드버퍼 하나뿐이다. 예전엔 오프스크린 전용 버퍼로 갈라졌고 그쪽은
-        // 매 프레임 자체 제출 + 펜스 블로킹을 했다 — S3 에서 사라졌다.
-        if ( _bFrameStarted == SW_TRUE && _listCommandBuffer.empty() == false )
-            return _listCommandBuffer[_currentFrame];
+        // 스트림은 하나지만 리스트가 제출될 때마다 세그먼트로 잘린다 — 지금 열려 있는 세그먼트를
+        // 돌려준다. 예전엔 오프스크린 전용 버퍼로 갈라졌고 그쪽은 매 프레임 자체 제출 + 펜스
+        // 블로킹을 했다(S3 에서 사라졌다).
+        if ( _bFrameStarted == SW_TRUE )
+            return _activeFrameBuffer;
         return VK_NULL_HANDLE;
+    }
+
+    VulkanCommandListEntry VulkanRHIDevice::acquireCommandListEntry()
+    {
+        {
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            if ( _listFreeCmdListEntry.empty() == false )
+            {
+                VulkanCommandListEntry entry = _listFreeCmdListEntry.back();
+                _listFreeCmdListEntry.pop_back();
+                return entry;
+            }
+        }
+
+        VulkanCommandListEntry entry{};
+        if ( _device == nullptr )
+            return entry;
+
+        // 풀은 리스트마다 전용이어야 한다 — VkCommandPool 은 외부 동기화 대상이라 두 스레드가 같은
+        // 풀에서 동시에 기록하면 정의되지 않은 동작이다.
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &entry._pool ) != VK_SUCCESS )
+            return VulkanCommandListEntry{};
+
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = entry._pool;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        if ( vkAllocateCommandBuffers( _device, &allocInfo, &entry._buffer ) != VK_SUCCESS )
+        {
+            vkDestroyCommandPool( _device, entry._pool, nullptr );
+            return VulkanCommandListEntry{};
+        }
+        return entry;
+    }
+
+    void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )
+    {
+        if ( entry._pool == VK_NULL_HANDLE || entry._buffer == VK_NULL_HANDLE )
+            return;
+
+        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 버퍼를 읽고 있다 — 이번 프레임 세대가
+        // 끝났다고 확인된 뒤에야 재사용 풀로 돌려보낸다(대기 없음).
+        auto recycleCb = [this, entry]()
+        {
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.push_back( entry );
+        };
+        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
+    }
+
+    VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
+    {
+        if ( _device == nullptr || _currentFrame >= constant::kMaxFrameCountInFlight )
+            return VK_NULL_HANDLE;
+
+        vector<VkCommandBuffer>& listSegment = _arrFrameSegment[_currentFrame];
+        if ( _frameSegmentCursor >= listSegment.size() )
+        {
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool        = _commandPool;
+            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandBufferCount = 1;
+            VkCommandBuffer created{ VK_NULL_HANDLE };
+            if ( vkAllocateCommandBuffers( _device, &allocInfo, &created ) != VK_SUCCESS )
+                return VK_NULL_HANDLE;
+            listSegment.push_back( created );
+        }
+
+        VkCommandBuffer segment = listSegment[_frameSegmentCursor];
+        ++_frameSegmentCursor;
+
+        // 이 프레임 슬롯의 펜스를 beginFrame 에서 이미 기다렸으므로 곧바로 Reset 해도 안전하다.
+        vkResetCommandBuffer( segment, 0 );
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer( segment, &beginInfo );
+        return segment;
     }
 
     static VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )
@@ -809,9 +913,48 @@ namespace sw
 
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        // 이 리스트는 자신만의 네이티브 버퍼를 갖지 않고 currentCommandBuffer()에 바로 기록했으므로
-        // 여기서 제출할 것이 없다 — 실제 제출은 endFrame() 이 담당한다.
-        (void)pCmdList;
+        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
+        if ( pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
+            return;
+
+        const VkCommandBuffer listBuffer = pList->nativeCommandBuffer();
+        if ( listBuffer == VK_NULL_HANDLE )
+            return;
+
+        // 지금까지의 프레임 세그먼트를 닫아 제출 순서에 넣고, 그 뒤에 이 리스트의 버퍼를 잇는다.
+        if ( _recordingState._bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( _activeFrameBuffer );
+            _recordingState._bRenderPassActive = SW_FALSE;
+        }
+        vkEndCommandBuffer( _activeFrameBuffer );
+        _listPendingSubmit.push_back( _activeFrameBuffer );
+        _listPendingSubmit.push_back( listBuffer );
+
+        // 이어서 기록할 새 세그먼트를 연다. 새 버퍼이므로 바인딩 캐시는 무효다.
+        VkCommandBuffer nextSegment = beginNextFrameSegment();
+        if ( nextSegment == VK_NULL_HANDLE )
+        {
+            _activeFrameBuffer = VK_NULL_HANDLE;
+            _bFrameStarted     = SW_FALSE;
+            return;
+        }
+        _activeFrameBuffer = nextSegment;
+        _recordingState    = VulkanRecordingState{};
+
+        VkViewport viewport{};
+        viewport.x        = 0.0f;
+        viewport.y        = static_cast<float32>( _swapChainExtentHeight );
+        viewport.width    = static_cast<float32>( _swapChainExtentWidth );
+        viewport.height   = -static_cast<float32>( _swapChainExtentHeight );
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport( _activeFrameBuffer, 0, 1, &viewport );
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
+        vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
     }
 
     bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const
@@ -2252,7 +2395,8 @@ namespace sw
 
     bool VulkanRHIDevice::ensureCompositeFramebuffer( const CompositeFbKey& key, CompositeFbRecord& outRecord )
     {
-        auto existing = _mapCompositeFramebuffer.find( key );
+        std::scoped_lock<mutex> lock{ _compositeFbMutex };
+        auto                    existing = _mapCompositeFramebuffer.find( key );
         if ( existing != _mapCompositeFramebuffer.end() )
         {
             outRecord = existing->second;
@@ -2382,6 +2526,7 @@ namespace sw
     {
         if ( texture == 0 || _device == nullptr )
             return;
+        std::scoped_lock<mutex> lock{ _compositeFbMutex };
         for ( auto it = _mapCompositeFramebuffer.begin(); it != _mapCompositeFramebuffer.end(); )
         {
             bool bUses = ( it->first._depth == texture );

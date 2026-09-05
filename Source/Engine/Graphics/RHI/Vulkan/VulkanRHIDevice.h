@@ -52,6 +52,18 @@ namespace sw
      *          (서로의 바인딩 캐시를 덮어쓴다). DX12 의 `D3D12RecordingState` 와 같은 역할이며,
      *          "기록 상태는 리스트가 소유하고 디바이스는 진짜 전역 자원만 갖는다"는 구조로 맞춘 것이다.
      */
+    /**
+     * @struct VulkanCommandListEntry
+     * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀 + 커맨드 버퍼 쌍.
+     * @details `VkCommandPool` 은 외부 동기화 대상이라 여러 스레드가 동시에 기록하려면 **리스트마다
+     *          전용 풀**이어야 한다. 다 쓴 쌍은 GPU 펜스를 통과한 뒤에 풀로 돌아간다.
+     */
+    struct VulkanCommandListEntry
+    {
+        VkCommandPool   _pool{ nullptr };
+        VkCommandBuffer _buffer{ nullptr };
+    };
+
     struct VulkanRecordingState
     {
         /// @brief 이 스트림에 렌더패스가 열려 있는가.
@@ -92,6 +104,7 @@ namespace sw
     class VulkanRHIDevice : public IRHIDevice
     {
         friend class VulkanRHICommandContext;
+        friend class VulkanRHICommandList;
 
     public:
         friend class VulkanRHISwapChain;
@@ -449,6 +462,12 @@ namespace sw
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view );
         /** @brief 현재 프레임 커맨드 버퍼. */
         VkCommandBuffer currentCommandBuffer() const;
+        /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비면 새로 만듭니다. */
+        VulkanCommandListEntry acquireCommandListEntry();
+        /** @brief 빌린 쌍을 GPU 펜스 통과 후 재사용 풀로 돌려보냅니다. */
+        void recycleCommandListEntryDeferred( VulkanCommandListEntry entry );
+        /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
+        VkCommandBuffer beginNextFrameSegment();
 
         // ------------------------------------------------------------------------------
         // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다(원시 vector 직접 인덱싱 금지).
@@ -501,6 +520,20 @@ namespace sw
                                             ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 얹을 때) 앞의 내용을 보존한다.
         VkRenderPass  _offscreenRenderPass; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
         VkCommandPool _commandPool;
+
+        /// @brief 컴포지트 프레임버퍼 캐시 보호용. RenderGraph::executeParallel 이 여러 스레드에서
+        ///        동시에 beginRenderPass 를 부르면 이 맵에 동시 삽입이 일어난다.
+        mutable mutex _compositeFbMutex;
+        /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀. 펜스를 통과한 것만 들어 있다.
+        mutable mutex                  _cmdListPoolMutex;
+        vector<VulkanCommandListEntry> _listFreeCmdListEntry;
+        /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들 — 기록 순서 = 실행 순서.
+        vector<VkCommandBuffer> _listPendingSubmit;
+        /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼(프레임 슬롯별 재사용).
+        vector<VkCommandBuffer> _arrFrameSegment[constant::kMaxFrameCountInFlight];
+        uint32                  _frameSegmentCursor{ 0 };
+        /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
+        VkCommandBuffer _activeFrameBuffer{ nullptr };
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkSemaphore>     _listImageAvailableSemaphore;

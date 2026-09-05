@@ -30,6 +30,7 @@ set(SW_RHI_GL_DEVICE_SOURCES
 )
 set(SW_RHI_VULKAN_DEVICE_SOURCES
     "${swRhiRoot}/Vulkan/VulkanRHICommandContext.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHICommandList.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIDevice.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIResource.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHISwapChain.cpp"

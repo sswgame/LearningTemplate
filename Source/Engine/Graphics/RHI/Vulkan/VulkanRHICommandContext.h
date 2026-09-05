@@ -78,5 +78,9 @@ namespace sw
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 게 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;
+
+    public:
+        /** @brief 기록 대상 버퍼를 교체합니다(소유자가 버퍼+풀 쌍을 바꿔 낄 때). */
+        void rebindCommandBuffer( VkCommandBuffer targetBuffer ) { _targetBuffer = targetBuffer; }
     };
 } // namespace sw
