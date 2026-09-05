@@ -34,9 +34,6 @@ namespace sw
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
         , _gpuTextures{}
-        , _boundMeshVb{ 0 }
-        , _boundMeshStride{ sizeof( RHIVertex ) }
-        , _boundMeshOffset{ 0 }
         , _listRegisteredBindless{}
         , _listBindlessFree{}
         , _listRegisteredTexture{}
@@ -51,7 +48,6 @@ namespace sw
         , _depthEnabledState{ nullptr }
         , _depthDisabledState{ nullptr }
         , _linearSampler{ nullptr }
-        , _activeGraphicsPso{ 0 }
         , _pHWnd{ nullptr }
         , _width{ 0 }
         , _height{ 0 }
@@ -183,7 +179,7 @@ namespace sw
         _depthEnabledState.Reset();
         _depthDisabledState.Reset();
         _linearSampler.Reset();
-        _activeGraphicsPso = 0;
+        _recordingState._activeGraphicsPso = 0;
         _listRegisteredBindless.clear();
         _listBindlessFree.clear();
         _listRegisteredTexture.clear();

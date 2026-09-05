@@ -21,6 +21,23 @@ namespace sw
     class OpenGLRHISwapChain;
 
     /**
+     * @struct OpenGLRecordingState
+     * @brief "지금 이 기록 스트림에 무엇이 걸려 있나" — 리스트마다 있어야 하는 상태.
+     * @details OpenGL 은 스레드 종속 상태 머신이라 병렬 기록 자체가 불가능하지만(capability 0),
+     *          "기록 상태는 리스트가 소유한다"는 불변식을 4개 백엔드에서 동일하게 유지하려고
+     *          다른 백엔드와 같은 형태로 분리해 둔다.
+     */
+    struct OpenGLRecordingState
+    {
+        RHIBufferHandle _boundMeshVb{ 0 };
+        uint32          _boundMeshStride{ 0 };
+        uint32          _boundMeshOffset{ 0 };
+        RHIBufferHandle _boundIndexBuffer{ 0 };
+        uint32          _boundIndexStride{ 4 };
+        uint32          _boundIndexOffset{ 0 };
+    };
+
+    /**
      * @class OpenGLRHIDevice
      * @brief OpenGL 4.6 그래픽스 및 컴퓨트 디바이스 구현체 (SSBO/UBO 바인딩 지원)
      */
@@ -236,12 +253,8 @@ namespace sw
         uint32 _defaultTexture;
 
         RHIHandleTable<uint32> _gpuBuffers;
-        RHIBufferHandle        _boundMeshVb;
-        uint32                 _boundMeshStride; ///< 바인딩된 VB stride
-        uint32                 _boundMeshOffset;
-        RHIBufferHandle        _boundIndexBuffer;
-        uint32                 _boundIndexStride;
-        uint32                 _boundIndexOffset;
+        /// @brief 즉시 컨텍스트가 쓰는 기록 상태. 리스트는 각자 자기 것을 갖는다.
+        OpenGLRecordingState _recordingState;
 
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listBindlessFree;

@@ -8,6 +8,18 @@
 
 namespace sw
 {
+    OpenGLRHICommandContext::OpenGLRHICommandContext( OpenGLRHIDevice* pDevice )
+        : _pDevice{ pDevice }
+        , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
+    {
+    }
+
+    OpenGLRHICommandContext::OpenGLRHICommandContext( OpenGLRHIDevice* pDevice, OpenGLRecordingState* pState )
+        : _pDevice{ pDevice }
+        , _pState{ pState }
+    {
+    }
+
     static GLenum toGlPrimitive( RHIPrimitiveTopology topology )
     {
         switch ( topology )
@@ -384,16 +396,16 @@ namespace sw
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
         (void)slot;
-        _pDevice->_boundMeshVb     = buffer;
-        _pDevice->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pDevice->_boundMeshOffset = offset;
+        _pState->_boundMeshVb     = buffer;
+        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
+        _pState->_boundMeshOffset = offset;
     }
 
     void OpenGLRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
     {
-        _pDevice->_boundIndexBuffer = buffer;
-        _pDevice->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
-        _pDevice->_boundIndexOffset = offset;
+        _pState->_boundIndexBuffer = buffer;
+        _pState->_boundIndexStride = ( indexStride == 2 ) ? 2u : 4u;
+        _pState->_boundIndexOffset = offset;
     }
 
     void OpenGLRHICommandContext::bindPassAndMaterialUbo( RHIDescriptorIndex passCbDescriptorIndex,
@@ -412,15 +424,15 @@ namespace sw
 
     void OpenGLRHICommandContext::bindMeshVaoAttribs( uint32 vbo )
     {
-        const GLsizei stride = static_cast<GLsizei>( _pDevice->_boundMeshStride );
+        const GLsizei stride = static_cast<GLsizei>( _pState->_boundMeshStride );
         glBindVertexArray( _pDevice->_meshVao );
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
         glEnableVertexAttribArray( 0 );
         glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
+                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
         glEnableVertexAttribArray( 1 );
         glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
     }
 
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
@@ -449,9 +461,9 @@ namespace sw
 
         bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
-        if ( _pDevice->_boundMeshVb != 0 )
+        if ( _pState->_boundMeshVb != 0 )
         {
-            const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
+            const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
             if ( vbo != 0 && _pDevice->_meshVao != 0 )
             {
                 bindMeshVaoAttribs( vbo );
@@ -490,9 +502,9 @@ namespace sw
 
         glUseProgram( program );
 
-        if ( _pDevice->_boundMeshVb != 0 )
+        if ( _pState->_boundMeshVb != 0 )
         {
-            const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
+            const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
             if ( vbo != 0 && _pDevice->_meshVao != 0 )
             {
                 bindMeshVaoAttribs( vbo );
@@ -606,7 +618,7 @@ namespace sw
 
         bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
+        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
         if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 || glad_glDrawArraysIndirect == nullptr )
             return;
@@ -644,8 +656,8 @@ namespace sw
 
         glUseProgram( program );
 
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
-        const GLuint ibo = _pDevice->resolveGlBuffer( _pDevice->_boundIndexBuffer );
+        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
+        const GLuint ibo = _pDevice->resolveGlBuffer( _pState->_boundIndexBuffer );
 
         if ( vbo != 0 && _pDevice->_meshVao != 0 )
         {
@@ -657,7 +669,7 @@ namespace sw
         GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
         if ( buf != 0 && glad_glDrawElementsIndirect != nullptr )
         {
-            const GLenum indexType = ( _pDevice->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+            const GLenum indexType = ( _pState->_boundIndexStride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
             glDrawElementsIndirect( mode, indexType, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
@@ -698,7 +710,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || maxCommandCount == 0 )
             return;
 
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
+        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         if ( vbo != 0 && _pDevice->_meshVao != 0 )
         {
             bindMeshVaoAttribs( vbo );

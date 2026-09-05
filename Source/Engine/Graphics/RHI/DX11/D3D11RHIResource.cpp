@@ -150,8 +150,8 @@ namespace sw
         if ( pso == 0 )
             return;
         _pDevice->_pipelineStates.erase( pso );
-        if ( _pDevice->_activeGraphicsPso == pso )
-            _pDevice->_activeGraphicsPso = 0;
+        if ( _pDevice->_recordingState._activeGraphicsPso == pso )
+            _pDevice->_recordingState._activeGraphicsPso = 0;
     }
 
     RHIRenderPassHandle D3D11RHIResource::createRenderPass( const RHIRenderPassDesc& desc )
@@ -281,8 +281,8 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_boundMeshVb )
-            _pDevice->_boundMeshVb = 0;
+        if ( buffer == _pDevice->_recordingState._boundMeshVb )
+            _pDevice->_recordingState._boundMeshVb = 0;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )

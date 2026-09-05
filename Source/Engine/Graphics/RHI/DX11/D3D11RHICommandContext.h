@@ -2,12 +2,12 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    class D3D11RHIDevice;
 
     /**
      * @class D3D11RHICommandContext
@@ -19,9 +19,10 @@ namespace sw
     class D3D11RHICommandContext : public IRHICommandContext
     {
     public:
-        D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext )
-            : _pDevice{ pDevice }
-            , _pContext{ pContext } {}
+        /** @brief 디바이스의 기록 상태를 쓰는 즉시 컨텍스트. */
+        D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext );
+        /** @brief 리스트가 자기 기록 상태를 넘겨 만드는 컨텍스트 — 병렬 기록 시 서로 간섭하지 않는다. */
+        D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext, D3D11RecordingState* pState );
         ~D3D11RHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -60,7 +61,9 @@ namespace sw
         ID3DUserDefinedAnnotation* getAnnotation();
         D3D11RHIDevice*            _pDevice;
         ID3D11DeviceContext*       _pContext;
-        RHIDescriptorIndex         _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
+        /// @brief 이 컨텍스트가 갱신할 기록 상태.
+        D3D11RecordingState* _pState{ nullptr };
+        RHIDescriptorIndex   _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
         /** @brief _pContext 수명 동안 불변이라 최초 QueryInterface 결과를 재사용한다(마커마다 QI 방지). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
         bool                                              _bAnnotationQueried{ false };

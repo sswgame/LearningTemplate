@@ -11,6 +11,21 @@
 namespace sw
 {
 
+    D3D11RHICommandContext::D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext )
+        : _pDevice{ pDevice }
+        , _pContext{ pContext }
+        , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
+    {
+    }
+
+    D3D11RHICommandContext::D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext,
+                                                    D3D11RecordingState* pState )
+        : _pDevice{ pDevice }
+        , _pContext{ pContext }
+        , _pState{ pState }
+    {
+    }
+
     void D3D11RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
     {
         if ( colorTarget == 0 )
@@ -86,7 +101,7 @@ namespace sw
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
 
-        _pDevice->_activeGraphicsPso = pso;
+        _pState->_activeGraphicsPso = pso;
         if ( pRecord->_vs )
             _pContext->VSSetShader( pRecord->_vs.Get(), nullptr, 0 );
         if ( pRecord->_ps )
@@ -163,7 +178,7 @@ namespace sw
             _pContext->OMSetRenderTargets( 0, nullptr, pDsv );
 
         // Prefer active PSO depth/blend (depth-write / alpha); fall back to global depth states.
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pRecord != nullptr )
         {
             if ( pRecord->_depthStencilState )
@@ -240,9 +255,9 @@ namespace sw
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
         (void)slot;
-        _pDevice->_boundMeshVb     = buffer;
-        _pDevice->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
-        _pDevice->_boundMeshOffset = offset;
+        _pState->_boundMeshVb     = buffer;
+        _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
+        _pState->_boundMeshOffset = offset;
     }
 
     void D3D11RHICommandContext::bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex,
@@ -269,7 +284,7 @@ namespace sw
         ID3D11VertexShader*                             pVs  = nullptr;
         ID3D11PixelShader*                              pPs  = nullptr;
         ID3D11InputLayout*                              pIl  = nullptr;
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pPso != nullptr )
         {
             if ( pPso->_vs )
@@ -284,9 +299,9 @@ namespace sw
 
         bindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex );
 
-        ID3D11Buffer* pVb    = _pDevice->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pDevice->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
-        UINT          stride = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshOffset : 0;
+        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
+        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
+        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
 
@@ -305,7 +320,7 @@ namespace sw
         ID3D11VertexShader*                             pVs  = nullptr;
         ID3D11PixelShader*                              pPs  = nullptr;
         ID3D11InputLayout*                              pIl  = nullptr;
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
         if ( pPso != nullptr )
         {
             if ( pPso->_vs )
@@ -318,9 +333,9 @@ namespace sw
         if ( pVs == nullptr || pPs == nullptr )
             return;
 
-        ID3D11Buffer* pVb    = _pDevice->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pDevice->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
-        UINT          stride = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = _pDevice->_boundMeshVb != 0 ? _pDevice->_boundMeshOffset : 0;
+        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
+        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
+        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
 

@@ -127,12 +127,6 @@ namespace sw
         , _defaultSampler{ 0 }
         , _defaultTexture{ 0 }
         , _gpuBuffers{}
-        , _boundMeshVb{ 0 }
-        , _boundMeshStride{ sizeof( RHIVertex ) }
-        , _boundMeshOffset{ 0 }
-        , _boundIndexBuffer{ 0 }
-        , _boundIndexStride{ 4 }
-        , _boundIndexOffset{ 0 }
         , _listRegisteredBindless{}
         , _listBindlessFree{}
         , _listRegisteredUAV{}
@@ -542,12 +536,12 @@ namespace sw
                 name = 0;
             }
         } );
-        _boundMeshVb      = 0;
-        _boundMeshStride  = sizeof( RHIVertex );
-        _boundMeshOffset  = 0;
-        _boundIndexBuffer = 0;
-        _boundIndexStride = 4;
-        _boundIndexOffset = 0;
+        _recordingState._boundMeshVb      = 0;
+        _recordingState._boundMeshStride  = sizeof( RHIVertex );
+        _recordingState._boundMeshOffset  = 0;
+        _recordingState._boundIndexBuffer = 0;
+        _recordingState._boundIndexStride = 4;
+        _recordingState._boundIndexOffset = 0;
         _listRegisteredBindless.clear();
         _listRegisteredUAV.clear();
         _listRegisteredTexture.clear();

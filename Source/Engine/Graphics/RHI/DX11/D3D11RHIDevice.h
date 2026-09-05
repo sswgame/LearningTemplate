@@ -26,6 +26,20 @@ namespace sw
     class D3D11RHISwapChain;
 
     /**
+     * @struct D3D11RecordingState
+     * @brief "지금 이 Deferred Context 에 무엇이 걸려 있나" — 기록 스트림마다 있어야 하는 상태.
+     * @details D3D12 의 `D3D12RecordingState` 와 같은 역할. 리스트마다 자기 Deferred Context 를
+     *          소유하는데 이 캐시는 디바이스 전역이면 서로의 바인딩 캐시를 덮어쓴다.
+     */
+    struct D3D11RecordingState
+    {
+        RHIBufferHandle        _boundMeshVb{ 0 };
+        uint32                 _boundMeshStride{ 0 };
+        uint32                 _boundMeshOffset{ 0 };
+        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+    };
+
+    /**
      * @class D3D11RHIDevice
      * @brief Direct3D 11 그래픽스 디바이스 구현체
      */
@@ -224,9 +238,9 @@ namespace sw
         /// @brief 구조 버퍼 핸들 → SRV (그래픽스 VS 가 StructuredBuffer 로 읽음. GPUScene 인스턴스 버퍼 등).
         unordered_map<RHIBufferHandle, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _mapBufferSrv;
         RHIHandleTable<TextureRecord>                                                    _gpuTextures;
-        RHIBufferHandle                                                                  _boundMeshVb;
-        uint32                                                                           _boundMeshStride; ///< 바인딩된 VB stride
-        uint32                                                                           _boundMeshOffset;
+
+        /// @brief 즉시 컨텍스트가 쓰는 기록 상태. 리스트는 각자 자기 것을 갖는다.
+        D3D11RecordingState _recordingState;
 
         /// @brief 드라이버가 커맨드 리스트를 네이티브 지원하면 SW_TRUE — 병렬 기록 capability의 근거.
         uint8 _bDriverCommandLists{ SW_FALSE };
@@ -255,11 +269,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;
         Microsoft::WRL::ComPtr<ID3D11SamplerState>      _linearSampler;
-        RHIPipelineStateHandle                          _activeGraphicsPso;
-
-        HWND   _pHWnd;
-        uint32 _width;
-        uint32 _height;
+        HWND                                            _pHWnd;
+        uint32                                          _width;
+        uint32                                          _height;
 
         RHIReleaseQueue _releaseQueue;
 
