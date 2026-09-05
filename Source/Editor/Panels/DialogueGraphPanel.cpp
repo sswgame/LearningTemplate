@@ -341,8 +341,8 @@ namespace sw::editor
                     }
                 }
             }
-            ed::EndCreate();
         }
+        ed::EndCreate();
 
         // 삭제 처리
         if ( ed::BeginDelete() )

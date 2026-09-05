@@ -209,8 +209,8 @@ namespace sw::editor
                     notifyDocumentEdited( "Link Animation Graph Nodes" );
                 }
             }
-            ed::EndCreate();
         }
+        ed::EndCreate();
 
         if ( ed::BeginDelete() )
         {
