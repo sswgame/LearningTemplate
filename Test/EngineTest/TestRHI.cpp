@@ -99,25 +99,21 @@ SW_TEST_CASE( RHITest, CapabilityMatrixNativeVsEmulated )
     const sw::RHICapabilities dx12 = RHIAvailability::query( RHIBackend::DirectX12 );
     SW_EXPECT_TRUE( dx12._bBindless != 0 );
     SW_EXPECT_TRUE( dx12._bNativeBindless != 0 );
-    SW_EXPECT_TRUE( dx12._bIndexedDraw != 0 );
     SW_EXPECT_TRUE( dx12._bOffscreenRT != 0 );
 
     const sw::RHICapabilities dx11 = RHIAvailability::query( RHIBackend::DirectX11 );
     SW_EXPECT_TRUE( dx11._bBindless != 0 );
     SW_EXPECT_TRUE( dx11._bNativeBindless == 0 );
-    SW_EXPECT_TRUE( dx11._bIndexedDraw != 0 );
     SW_EXPECT_TRUE( dx11._bOffscreenRT != 0 );
 
     const sw::RHICapabilities gl = RHIAvailability::query( RHIBackend::OpenGL );
     SW_EXPECT_TRUE( gl._bBindless != 0 );
     SW_EXPECT_TRUE( gl._bNativeBindless == 0 );
-    SW_EXPECT_TRUE( gl._bIndexedDraw != 0 );
     SW_EXPECT_TRUE( gl._bOffscreenRT != 0 );
 
     const sw::RHICapabilities vk = RHIAvailability::query( RHIBackend::Vulkan );
     SW_EXPECT_TRUE( vk._bBindless != 0 );
     SW_EXPECT_TRUE( vk._bNativeBindless != 0 );
-    SW_EXPECT_TRUE( vk._bIndexedDraw != 0 );
     SW_EXPECT_TRUE( vk._bOffscreenRT != 0 );
 }
 
@@ -500,182 +496,3 @@ SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
 // ------------------------------------------------------------------------------
 // 5) RHITest — dual context parity
 // ------------------------------------------------------------------------------
-/**
- * @brief 가용 백엔드마다 Immediate/Deferred Context·SwapChain·Resource·Mode 선택 패리티
- */
-SW_TEST_CASE( RHITest, DualContextAndModeParityAllAvailableBackends )
-{
-    const sw::RHIBackend backends[] = {
-        sw::RHIBackend::DirectX11,
-        sw::RHIBackend::DirectX12,
-        sw::RHIBackend::Vulkan,
-        sw::RHIBackend::OpenGL,
-    };
-
-    uint32 initializedCount{ 0 };
-    for ( sw::RHIBackend backend : backends )
-    {
-        sw::unique_ptr<sw::IWindow>    window;
-        sw::shared_ptr<sw::IRHIDevice> device;
-        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
-            continue;
-
-        ++initializedCount;
-        SW_EXPECT_NOT_NULL( device->getImmediateContext() );
-        SW_EXPECT_NOT_NULL( device->getDeferredCommandContext() );
-        SW_EXPECT_NOT_NULL( device->getSwapChain() );
-        SW_EXPECT_NOT_NULL( device->getResource() );
-
-        device->setDefaultCommandListMode( sw::RHICommandListMode::Immediate );
-        SW_EXPECT_TRUE( device->getDefaultCommandContext() == device->getImmediateContext() );
-        SW_EXPECT_TRUE( device->getCommandContextForMode( sw::RHICommandListMode::Immediate ) == device->getImmediateContext() );
-
-        device->setDefaultCommandListMode( sw::RHICommandListMode::Deferred );
-        SW_EXPECT_TRUE( device->getDefaultCommandContext() == device->getDeferredCommandContext() );
-        SW_EXPECT_TRUE( device->getCommandContextForMode( sw::RHICommandListMode::Deferred ) == device->getDeferredCommandContext() );
-
-        // 모든 백엔드가 이제 네이티브(또는 즉시 호출) IRHICommandList를 반환한다 — 소프트웨어
-        // Cmd-vector/replay 내부 상태는 더 이상 없으므로, begin/draw/end/execute 시퀀스가
-        // 크래시 없이 도는지만 본다.
-        sw::unique_ptr<sw::IRHICommandList> deferredList =
-            device->createCommandList( sw::RHICommandListMode::Deferred );
-        SW_EXPECT_NOT_NULL( deferredList.get() );
-        if ( deferredList != nullptr )
-        {
-            deferredList->beginCommandList();
-            deferredList->draw( 3, 0, 0 );
-            deferredList->endCommandList();
-            device->executeCommandList( deferredList.get() );
-        }
-
-        sw::unique_ptr<sw::IRHICommandList> immediateList =
-            device->createCommandList( sw::RHICommandListMode::Immediate );
-        SW_EXPECT_NOT_NULL( immediateList.get() );
-        if ( immediateList != nullptr )
-        {
-            immediateList->beginCommandList();
-            immediateList->draw( 3, 0, 0 );
-            immediateList->endCommandList();
-            device->executeCommandList( immediateList.get() );
-        }
-
-        shutdownDeviceWithWindow( device, window );
-    }
-
-    if ( initializedCount == 0 )
-        SW_TEST_SKIP( "No RHI backend could initialize with a window in this environment" );
-}
-
-/**
- * @brief setDefaultCommandListMode가 getDefaultCommandContext 선택을 바꾼다
- */
-SW_TEST_CASE( RHITest, DefaultCommandContextFollowsMode )
-{
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    sw::RHIBackend                 backends[] = {
-        sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL };
-    bool bOk{ false };
-    for ( sw::RHIBackend backend : backends )
-    {
-        if ( tryInitDeviceWithWindow( backend, window, device ) )
-        {
-            bOk = true;
-            break;
-        }
-    }
-    if ( bOk == false )
-        SW_TEST_SKIP( "No RHI backend could initialize for Mode selection test" );
-
-    sw::IRHICommandContext* imm = device->getImmediateContext();
-    sw::IRHICommandContext* def = device->getDeferredCommandContext();
-    SW_ASSERT_NOT_NULL( imm );
-    SW_ASSERT_NOT_NULL( def );
-
-    device->setDefaultCommandListMode( sw::RHICommandListMode::Immediate );
-    SW_EXPECT_TRUE( device->getDefaultCommandContext() == imm );
-
-    device->setDefaultCommandListMode( sw::RHICommandListMode::Deferred );
-    SW_EXPECT_TRUE( device->getDefaultCommandContext() == def );
-
-    shutdownDeviceWithWindow( device, window );
-}
-
-/**
- * @brief RHI::recreateDevice 핫스왑 후 Imm/Def Context·Mode가 다시 살아 있다
- */
-SW_TEST_CASE( RHITest, RecreateDeviceHotSwapRestoresContexts )
-{
-    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
-    SW_ASSERT_NOT_NULL( window.get() );
-    SW_EXPECT_TRUE( window->initializeWindow( "RHIRecreateHotSwap", 320, 240 ) );
-    sw::IWindow::setActiveWindow( window.get() );
-
-    const sw::RHIBackend startCandidates[] = {
-        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan };
-    const sw::RHIBackend swapCandidates[] = {
-        sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan };
-
-    sw::RHI        rhi;
-    sw::RHIBackend startBackend = sw::RHIBackend::DirectX11;
-    bool           bStarted{ false };
-    for ( sw::RHIBackend backend : startCandidates )
-    {
-        if ( sw::RHIAvailability::isAvailable( backend ) == false )
-            continue;
-        sw::gv_rhiBackend         = backend;
-        sw::gv_rhiCommandListMode = sw::RHICommandListMode::Deferred;
-        if ( rhi.initialize() )
-        {
-            startBackend = backend;
-            bStarted     = true;
-            break;
-        }
-    }
-    if ( bStarted == false )
-    {
-        sw::IWindow::setActiveWindow( nullptr );
-        window->destroy();
-        SW_TEST_SKIP( "Could not initialize starting RHI for recreateDevice test" );
-    }
-
-    SW_EXPECT_NOT_NULL( rhi.getDevice().getImmediateContext() );
-    SW_EXPECT_NOT_NULL( rhi.getDevice().getDeferredCommandContext() );
-    SW_EXPECT_TRUE( rhi.getDevice().getDefaultCommandContext() == rhi.getDevice().getDeferredCommandContext() );
-
-    bool bSwapped{ false };
-    for ( sw::RHIBackend target : swapCandidates )
-    {
-        if ( target == startBackend )
-            continue;
-        if ( sw::RHIAvailability::isAvailable( target ) == false )
-            continue;
-        if ( rhi.recreateDevice( target ) )
-        {
-            bSwapped = true;
-            SW_EXPECT_EQUAL( static_cast<int32>( target ), static_cast<int32>( rhi.getDevice().getBackendType() ) );
-            SW_EXPECT_EQUAL( static_cast<int32>( target ), static_cast<int32>( rhi.getCommittedBackend() ) );
-            SW_EXPECT_NOT_NULL( rhi.getDevice().getImmediateContext() );
-            SW_EXPECT_NOT_NULL( rhi.getDevice().getDeferredCommandContext() );
-            rhi.getDevice().setDefaultCommandListMode( sw::RHICommandListMode::Immediate );
-            SW_EXPECT_TRUE( rhi.getDevice().getDefaultCommandContext() == rhi.getDevice().getImmediateContext() );
-            break;
-        }
-    }
-
-    // schedulePendingBackendChange API (실제 consume은 EngineLoop 경로)
-    rhi.schedulePendingBackendChange( startBackend );
-    if ( rhi.hasPendingBackendChange() )
-    {
-        const sw::RHIBackend pending = rhi.consumePendingBackendChange();
-        SW_EXPECT_EQUAL( static_cast<int32>( startBackend ), static_cast<int32>( pending ) );
-        SW_EXPECT_FALSE( rhi.hasPendingBackendChange() );
-    }
-
-    rhi.shutdown();
-    sw::IWindow::setActiveWindow( nullptr );
-    window->destroy();
-
-    if ( bSwapped == false )
-        SW_TEST_SKIP( "recreateDevice could not switch to another backend (single-backend env)" );
-}

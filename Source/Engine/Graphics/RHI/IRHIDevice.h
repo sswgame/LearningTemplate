@@ -22,7 +22,7 @@ namespace sw
      * @class IRHIDevice
      * @brief DX11/DX12/Vulkan/OpenGL 하드웨어 디바이스 추상화
      * @details Context(제출/기록 슬롯)와 CommandList Mode(언제 replay/flush할지)는 별개다.
-     *          Immediate Context = present/offscreen/Deferred CL replay 대상.
+     *          프레임 스트림 컨텍스트 = present/offscreen/Deferred CL replay 대상.
      *          Deferred Context = Mode=Deferred일 때 CL 바인딩용(soft 또는 네이티브).
      */
     class SW_API IRHIDevice
@@ -88,28 +88,13 @@ namespace sw
         virtual IRHIResource*   getResource() { return nullptr; }
 
         /**
-         * @brief Present / offscreen / Deferred CommandList replay 대상 Immediate Context.
-         * @note CommandList Mode와 혼동하지 말 것 — 이것은 Context 슬롯이다.
+         * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트.
+         * @details beginFrame/endFrame 이 여는 디바이스 커맨드 리스트(버퍼)에 그대로 기록한다 —
+         *          RenderThread 가 백버퍼 렌더패스를 여는 경로가 이것이다. 패스별 기록은 자기
+         *          네이티브 버퍼를 소유하는 IRHICommandList 가 따로 한다.
+         *          예전엔 Immediate/Deferred 두 슬롯이 있었지만 모드 구분이 사라져 스트림은 하나다.
          */
-        virtual IRHICommandContext* getImmediateContext() = 0;
-
-        /**
-         * @brief Mode=Deferred일 때 CL에 바인딩하는 Deferred Context (기록용; present 대상 아님).
-         * @note 기본 구현은 Immediate로 폴백. 백엔드는 soft 두 번째 래퍼 또는 네이티브 deferred를 제공한다.
-         */
-        virtual IRHICommandContext* getDeferredCommandContext() { return getImmediateContext(); }
-
-        /**
-         * @brief 현재 기본 CommandList Mode에 맞는 Context (Immediate Mode→imm, Deferred Mode→deferred).
-         * @note “기본 컨텍스트”이지 Deferred Context 전용이 아니다.
-         */
-        IRHICommandContext* getDefaultCommandContext() { return getCommandContextForMode( _defaultCommandListMode ); }
-
-        /** @brief Mode에 대응하는 Context (createCommandList / FrameRenderer 공유). */
-        IRHICommandContext* getCommandContextForMode( RHICommandListMode mode )
-        {
-            return mode == RHICommandListMode::Immediate ? getImmediateContext() : getDeferredCommandContext();
-        }
+        virtual IRHICommandContext* getFrameStreamContext() = 0;
 
         /** @brief 현재 RHI 백엔드 종류를 반환합니다. */
         virtual RHIBackend getBackendType() const = 0;
@@ -125,9 +110,6 @@ namespace sw
 
         /** @brief beginRenderPass에서 다중 컬러 RT를 동시에 바인딩할 수 있는지 (MRT GBuffer 등). */
         virtual bool supportsMultiRenderTarget() const { return true; }
-
-        /** @brief 컴퓨트 루트/푸시 상수(setComputeRootConstants) 네이티브 지원 여부. */
-        virtual bool supportsComputeRootConstants() const { return getCapabilities()._bComputeRootConstants != 0; }
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조버퍼(SwInstanceData)를 읽을 수 있으면 true.
@@ -218,17 +200,11 @@ namespace sw
         RenderPassManager& getRenderPassManager() const;
 
         // ------------------------------------------------------------------------------
-        // 14) 커맨드 리스트 — 기본 모드, 생성, 그래픽스 스레드에서만 execute
+        // 14) 커맨드 리스트 — 생성, 그래픽스 스레드에서만 execute
         // ------------------------------------------------------------------------------
-        /** @brief createCommandList()가 쓸 기본 모드를 설정합니다. */
-        void setDefaultCommandListMode( RHICommandListMode mode ) { _defaultCommandListMode = mode; }
-        /** @brief createCommandList()가 쓸 기본 모드를 반환합니다. */
-        RHICommandListMode getDefaultCommandListMode() const { return _defaultCommandListMode; }
 
         /** @brief 독립 커맨드 리스트를 만듭니다 (기록 전용; GPU 적용은 executeCommandList). */
-        virtual unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) = 0;
-        /** @brief 기본 모드로 커맨드 리스트를 만듭니다. */
-        unique_ptr<IRHICommandList> createCommandList();
+        virtual unique_ptr<IRHICommandList> createCommandList() = 0;
 
         /** @brief 독립 커맨드 리스트를 제출하고 커맨드 큐에서 실행합니다 (그래픽스 실행 스레드에서만). */
         virtual void executeCommandList( IRHICommandList* pCmdList ) = 0;
@@ -236,7 +212,6 @@ namespace sw
     protected:
         IWindow*                      _pInitWindow;
         unique_ptr<RenderPassManager> _renderPassManager;
-        RHICommandListMode            _defaultCommandListMode;
         bool                          _bPreferredVSync;
     };
 } // namespace sw

@@ -136,9 +136,8 @@ namespace sw
         IRHISwapChain* getSwapChain() override;
         IRHIResource*  getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
-        IRHICommandContext* getImmediateContext() override;
+        IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
-        IRHICommandContext* getDeferredCommandContext() override;
 
         /** @brief 백엔드 타입 반환 (Vulkan) */
         RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
@@ -200,7 +199,7 @@ namespace sw
 
         /** @brief GPU 이벤트 디버그 마커 시작 */
 
-        unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
+        unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트 실행 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
@@ -637,8 +636,7 @@ namespace sw
         vector<VulkanRenderPassRecord>            _listRenderPass;
         VkPipelineCache                           _pipelineCache;
 
-        sw::unique_ptr<VulkanRHICommandContext> _immContext;
-        sw::unique_ptr<VulkanRHICommandContext> _deferredContext;
+        sw::unique_ptr<VulkanRHICommandContext> _frameStreamContext;
         sw::unique_ptr<VulkanRHISwapChain>      _swapChainImpl;
         sw::unique_ptr<VulkanRHIResource>       _resourceImpl;
     };

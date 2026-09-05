@@ -19,8 +19,7 @@ namespace sw
 
 namespace sw
 {
-    extern SW_API RHIBackend         gv_rhiBackend;
-    extern SW_API RHICommandListMode gv_rhiCommandListMode;
+    extern SW_API RHIBackend gv_rhiBackend;
 
     /**
      * @class RHI

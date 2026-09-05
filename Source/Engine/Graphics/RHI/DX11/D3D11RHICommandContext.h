@@ -12,7 +12,7 @@ namespace sw
     /**
      * @class D3D11RHICommandContext
      * @brief 실제 D3D11 API 호출을 issue 하는 구현체. `_pContext` 로 "어떤 `ID3D11DeviceContext` 에
-     *        기록할지" 를 주입받는다 — 디바이스의 단일 Immediate Context(레거시 Immediate/Deferred Context
+     *        기록할지" 를 주입받는다 — 디바이스의 단일 Immediate Context(프레임 스트림
      *        슬롯)와, `D3D11RHICommandList`(리스트별 진짜 네이티브 Deferred Context)가 각자 자신의
      *        `ID3D11DeviceContext*` 로 이 클래스를 구성해서 재사용한다.
      */

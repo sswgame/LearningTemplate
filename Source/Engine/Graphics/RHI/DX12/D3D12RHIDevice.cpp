@@ -54,7 +54,7 @@ namespace sw
         , _bHeapDirectlyIndexed{ SW_FALSE }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
-        , _legacyState{}
+        , _frameStreamState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
         , _listRegisteredUAV{}
@@ -71,8 +71,7 @@ namespace sw
         , _height{ 0 }
         , _bufferCount{ 2 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
-        , _immContext{ nullptr }
-        , _deferredContext{ nullptr }
+        , _frameStreamContext{ nullptr }
         , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -169,7 +168,7 @@ namespace sw
 
         _bHeapDirectlyIndexed = 0;
         _swapchainState       = D3D12_RESOURCE_STATE_PRESENT;
-        _legacyState          = D3D12RecordingState{};
+        _frameStreamState     = D3D12RecordingState{};
 
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
         rtvHeapDesc.NumDescriptors = _bufferCount + kMaxOffscreenRtvs;
@@ -208,7 +207,7 @@ namespace sw
             return false;
 
         _commandList->Close();
-        _legacyState._bRecording = 0;
+        _frameStreamState._bRecording = 0;
         _frameRing.reset( 0 );
 
         createRenderTargets();
@@ -221,8 +220,7 @@ namespace sw
         if ( createGlobalResources() == false )
             return false;
 
-        _immContext      = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_legacyState );
-        _deferredContext = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_legacyState );
+        _frameStreamContext = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_frameStreamState );
 
         return true;
     }
@@ -242,7 +240,7 @@ namespace sw
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
         _gpuTextures.clear();
-        _legacyState               = D3D12RecordingState{};
+        _frameStreamState          = D3D12RecordingState{};
         _nextOffscreenRtvIndex     = 0;
         _allocatedDescriptorsCount = 0;
 
@@ -270,9 +268,8 @@ namespace sw
         {
             allocator.Reset();
         }
-        _legacyState._bRecording = 0;
-        _immContext.reset();
-        _deferredContext.reset();
+        _frameStreamState._bRecording = 0;
+        _frameStreamContext.reset();
         _bHeapDirectlyIndexed = 0;
         _fence.Reset();
         _swapChain.Reset();
@@ -310,9 +307,8 @@ namespace sw
     // D3D12RHIResource Implementation
     // ------------------------------------------------------------------------------
 
-    unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList( RHICommandListMode mode )
+    unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
     {
-        (void)mode; // DX12 는 진짜 네이티브 리스트를 쓴다 — Deferred/Immediate 소프트웨어 모드 구분이 없다.
         unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
         if ( list->isValid() == false )
         {
@@ -804,8 +800,7 @@ namespace sw
 
     IRHISwapChain*      D3D12RHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       D3D12RHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* D3D12RHIDevice::getImmediateContext() { return _immContext.get(); }
-    IRHICommandContext* D3D12RHIDevice::getDeferredCommandContext() { return _deferredContext.get(); }
+    IRHICommandContext* D3D12RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
 } // namespace sw
 #endif

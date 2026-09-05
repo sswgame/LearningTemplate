@@ -53,8 +53,7 @@ namespace sw
         , _width{ 0 }
         , _height{ 0 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
-        , _immContext{ nullptr }
-        , _deferredContext{ nullptr }
+        , _frameStreamContext{ nullptr }
         , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -69,8 +68,7 @@ namespace sw
 
     IRHISwapChain*      D3D11RHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* D3D11RHIDevice::getImmediateContext() { return _immContext.get(); }
-    IRHICommandContext* D3D11RHIDevice::getDeferredCommandContext() { return _deferredContext.get(); }
+    IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
@@ -164,16 +162,14 @@ namespace sw
         }
 
         SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
-        _immContext      = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
-        _deferredContext = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
+        _frameStreamContext = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
         return true;
     }
 
     void D3D11RHIDevice::shutdownInternal()
     {
         _releaseQueue.flushAll();
-        _immContext.reset();
-        _deferredContext.reset();
+        _frameStreamContext.reset();
         cleanupRenderTargetView();
         _gpuTextures.clear();
         _gpuBuffers.clear();
@@ -291,9 +287,8 @@ namespace sw
         return pRec != nullptr ? pRec->_texture.Get() : nullptr;
     }
 
-    unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList( RHICommandListMode mode )
+    unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()
     {
-        (void)mode; // D3D11 은 진짜 네이티브 Deferred Context 를 쓴다 — 소프트웨어 모드 구분이 없다.
         unique_ptr<D3D11RHICommandList> list = make_unique<D3D11RHICommandList>( this );
         if ( list->isValid() == false )
         {

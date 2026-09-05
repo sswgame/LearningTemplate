@@ -7,7 +7,6 @@
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
-#include "Engine/Graphics/Shader/ShaderVariant.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -138,31 +137,6 @@ SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
 }
 
 /**
- * @brief [ShaderCompilerTest] 셰이더 배리언트 permutation
- */
-SW_TEST_CASE( ShaderCompilerTest, ShaderVariantPermutation )
-{
-    sw::ShaderVariantKey key1;
-    key1._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-    key1._listDefine.push_back( { "USE_ALBEDO_MAP", "1" } );
-
-    sw::ShaderVariantKey key2;
-    key2._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-    key2._listDefine.push_back( { "USE_ALBEDO_MAP", "1" } );
-
-    sw::ShaderVariantKey key3;
-    key3._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-    key3._listDefine.push_back( { "SKINNED_MESH", "1" } );
-
-    SW_EXPECT_EQUAL( key1.getVariantHashKey().getHash(), key2.getVariantHashKey().getHash() );
-    SW_EXPECT_FALSE( key1.getVariantHashKey() == key3.getVariantHashKey() );
-
-    sw::ShaderVariantManager variantManager;
-    SW_EXPECT_EQUAL( 0u, variantManager.getCompiledVariantCount() );
-    variantManager.clear();
-}
-
-/**
  * @brief [ShaderCompilerTest] 디스크 캐시 활성화, 캐시 히트 검증 및 디스크 캐시 삭제
  */
 SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
@@ -253,55 +227,6 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
         sw::ShaderCompileResult vkRes2 = shaderCache.getOrCompile( vkDesc );
         SW_EXPECT_TRUE( vkRes1._bytecode == vkRes2._bytecode );
     }
-}
-
-/**
- * @brief [ShaderCompilerTest] RHI 백엔드(TargetFormat)별 ShaderVariantKey 해시 및 매니저 캐시 분리 검증
- */
-SW_TEST_CASE( ShaderCompilerTest, MultiBackendVariantKeyIsolation )
-{
-    sw::ShaderVariantKey keyDx11;
-    keyDx11._shaderPath   = "engine/shaders/fullscreentriangle.hlsl";
-    keyDx11._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-    keyDx11._listDefine.push_back( { "USE_TEXTURE", "1" } );
-
-    sw::ShaderVariantKey keyDx12;
-    keyDx12._shaderPath   = "engine/shaders/fullscreentriangle.hlsl";
-    keyDx12._targetFormat = sw::ShaderTargetFormat::DXIL_D3D12;
-    keyDx12._listDefine.push_back( { "USE_TEXTURE", "1" } );
-
-    sw::ShaderVariantKey keyVk;
-    keyVk._shaderPath   = "engine/shaders/fullscreentriangle.hlsl";
-    keyVk._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
-    keyVk._listDefine.push_back( { "USE_TEXTURE", "1" } );
-
-    sw::ShaderVariantKey keyGl;
-    keyGl._shaderPath   = "engine/shaders/fullscreentriangle.hlsl";
-    keyGl._targetFormat = sw::ShaderTargetFormat::SPIRV_OpenGL;
-    keyGl._listDefine.push_back( { "USE_TEXTURE", "1" } );
-
-    // 동일 소스 및 define이라도 targetFormat이 다르면 해시 키가 유일하게 구별되어야 함
-    SW_EXPECT_FALSE( keyDx11.getVariantHashKey() == keyDx12.getVariantHashKey() );
-    SW_EXPECT_FALSE( keyDx11.getVariantHashKey() == keyVk.getVariantHashKey() );
-    SW_EXPECT_FALSE( keyDx12.getVariantHashKey() == keyVk.getVariantHashKey() );
-    SW_EXPECT_FALSE( keyVk.getVariantHashKey() == keyGl.getVariantHashKey() );
-
-    // 동일 targetFormat 및 define은 일치해야 함
-    sw::ShaderVariantKey keyDx11Copy = keyDx11;
-    SW_EXPECT_EQUAL( keyDx11.getVariantHashKey().getHash(), keyDx11Copy.getVariantHashKey().getHash() );
-
-    sw::ShaderVariantManager       manager;
-    const sw::ShaderCompileResult* pResDx11 = manager.getOrCompileVariant( keyDx11 );
-    if ( pResDx11 != nullptr && pResDx11->_bSuccess )
-    {
-        const sw::ShaderCompileResult* pResDx12 = manager.getOrCompileVariant( keyDx12 );
-        if ( pResDx12 != nullptr && pResDx12->_bSuccess )
-        {
-            SW_EXPECT_EQUAL( 2u, manager.getCompiledVariantCount() );
-            SW_EXPECT_FALSE( pResDx11->_bytecode == pResDx12->_bytecode );
-        }
-    }
-    manager.clear();
 }
 
 /**

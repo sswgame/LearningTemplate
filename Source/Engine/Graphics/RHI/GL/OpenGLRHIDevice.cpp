@@ -140,8 +140,7 @@ namespace sw
         , _pipelineStates{}
         , _listRenderPass{}
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
-        , _immContext{ nullptr }
-        , _deferredContext{ nullptr }
+        , _frameStreamContext{ nullptr }
         , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
         , _boundGraphicsPso{ 0 }
@@ -160,8 +159,7 @@ namespace sw
 
     IRHISwapChain*      OpenGLRHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       OpenGLRHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* OpenGLRHIDevice::getImmediateContext() { return _immContext.get(); }
-    IRHICommandContext* OpenGLRHIDevice::getDeferredCommandContext() { return _deferredContext.get(); }
+    IRHICommandContext* OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
@@ -471,8 +469,7 @@ namespace sw
             _defaultSampler = defaultSampler;
         }
 
-        _immContext      = sw::make_unique<OpenGLRHICommandContext>( this );
-        _deferredContext = sw::make_unique<OpenGLRHICommandContext>( this );
+        _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
 
         SW_LOG_INFO( "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
         return true;
@@ -489,8 +486,7 @@ namespace sw
 #endif
 
         _releaseQueue.flushAll();
-        _immContext.reset();
-        _deferredContext.reset();
+        _frameStreamContext.reset();
 
         if ( _defaultSampler )
         {
@@ -845,9 +841,8 @@ namespace sw
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
     }
 
-    unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList( RHICommandListMode mode )
+    unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
     {
-        (void)mode; // OpenGL은 소프트웨어 Cmd-vector 없이 즉시 OpenGLRHICommandContext를 호출한다.
         return make_unique<OpenGLRHICommandList>( this );
     }
 

@@ -55,20 +55,6 @@ namespace sw
     };
 
     /**
-     * @enum RHICommandListMode
-     * @brief 소프트웨어 CommandList의 제출 시기 (Immediate/Deferred Context와 다름).
-     * @details Immediate: endCommandList에서 Immediate Context로 flush(replay).
-     *          Deferred: 기록만; executeCommandList → Immediate Context에 replay.
-     *          Context 슬롯 선택은 IRHIDevice::getImmediateContext / getDeferredCommandContext.
-     */
-    ENUM()
-    enum class RHICommandListMode : uint8
-    {
-        Deferred  = 0, ///< 기록 후 execute에서 Immediate Context로 replay
-        Immediate = 1, ///< endCommandList에서 Immediate Context로 즉시 flush
-    };
-
-    /**
      * @enum RHIFormat
      * @brief 텍스처·렌더 타깃·픽셀 데이터 포맷
      */

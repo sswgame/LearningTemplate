@@ -77,9 +77,8 @@ namespace sw
         IRHISwapChain* getSwapChain() override;
         IRHIResource*  getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
-        IRHICommandContext* getImmediateContext() override;
+        IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
-        IRHICommandContext* getDeferredCommandContext() override;
 
         /** @brief GPU idle 대기 후 해제 큐를 flush합니다. */
         void waitIdle() override;
@@ -137,7 +136,7 @@ namespace sw
                            RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
 
         /** @brief 커맨드 리스트 생성 */
-        unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
+        unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
@@ -275,8 +274,7 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
 
-        sw::unique_ptr<D3D11RHICommandContext> _immContext;
-        sw::unique_ptr<D3D11RHICommandContext> _deferredContext;
+        sw::unique_ptr<D3D11RHICommandContext> _frameStreamContext;
         sw::unique_ptr<D3D11RHISwapChain>      _swapChainImpl;
         sw::unique_ptr<D3D11RHIResource>       _resourceImpl;
     };
@@ -313,10 +311,9 @@ namespace sw
 
         IRHISwapChain*      getSwapChain() override { return nullptr; }
         IRHIResource*       getResource() override { return nullptr; }
-        IRHICommandContext* getImmediateContext() override { return nullptr; }
-        IRHICommandContext* getDeferredCommandContext() override { return nullptr; }
+        IRHICommandContext* getFrameStreamContext() override { return nullptr; }
 
-        sw::unique_ptr<IRHICommandList> createCommandList( RHICommandListMode ) { return nullptr; }
+        sw::unique_ptr<IRHICommandList> createCommandList() { return nullptr; }
         void                            executeCommandList( IRHICommandList* ) {}
     };
 } // namespace sw

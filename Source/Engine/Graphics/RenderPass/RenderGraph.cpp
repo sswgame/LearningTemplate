@@ -304,7 +304,7 @@ namespace sw
                 if ( node._execute.isBound() == false )
                     continue;
 
-                unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList( RHICommandListMode::Deferred );
+                unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList();
                 if ( passCmd == nullptr )
                 {
                     // 디바이스가 죽으면 매 프레임 여기로 떨어지므로, 같은 경고를 무한 반복하지 않는다.

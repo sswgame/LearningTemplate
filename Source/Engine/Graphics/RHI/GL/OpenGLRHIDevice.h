@@ -73,9 +73,8 @@ namespace sw
         IRHISwapChain* getSwapChain() override;
         IRHIResource*  getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
-        IRHICommandContext* getImmediateContext() override;
+        IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
-        IRHICommandContext* getDeferredCommandContext() override;
 
         /** @brief glFinish — GPU 대기 */
         void waitIdle() override;
@@ -127,7 +126,7 @@ namespace sw
                                 RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 );
 
         /** @brief 커맨드 리스트 객체 생성 */
-        unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
+        unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트 실행 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
@@ -275,8 +274,7 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
 
-        sw::unique_ptr<OpenGLRHICommandContext> _immContext;
-        sw::unique_ptr<OpenGLRHICommandContext> _deferredContext;
+        sw::unique_ptr<OpenGLRHICommandContext> _frameStreamContext;
         sw::unique_ptr<OpenGLRHISwapChain>      _swapChainImpl;
         sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
 

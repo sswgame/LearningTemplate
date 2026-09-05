@@ -21,7 +21,6 @@ namespace sw
         uint8 _bEditorSupported{ 0 };          ///< 이 백엔드에서 EditorModule 실행 가능
         uint8 _bComputeRootConstants{ 0 };     ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
         uint8 _bIndirectDraw{ 0 };             ///< drawIndirect / dispatchIndirect
-        uint8 _bIndexedDraw{ 0 };              ///< setIndexBuffer + drawIndexedIndirect
         uint8 _bGpuCulling{ 0 };               ///< 컴퓨트 컬 + 인디렉트 인자 경로
         uint8 _bMultiDrawIndirect{ 0 };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
         uint8 _bParallelCommandRecording{ 0 }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
@@ -72,7 +71,6 @@ namespace sw
                     caps._bEditorSupported          = 1;
                     caps._bComputeRootConstants     = 1;
                     caps._bIndirectDraw             = 1;
-                    caps._bIndexedDraw              = 1;
                     caps._bGpuCulling               = 1;
                     caps._bMultiDrawIndirect        = 1;
                     caps._bParallelCommandRecording = 1;
@@ -86,7 +84,6 @@ namespace sw
                     caps._bEditorSupported          = 1;
                     caps._bComputeRootConstants     = 1;
                     caps._bIndirectDraw             = 1;
-                    caps._bIndexedDraw              = 1;
                     caps._bGpuCulling               = 1;
                     caps._bMultiDrawIndirect        = 1;
                     caps._bParallelCommandRecording = 0;
@@ -100,7 +97,6 @@ namespace sw
                     caps._bEditorSupported          = 1;
                     caps._bComputeRootConstants     = 1;
                     caps._bIndirectDraw             = 1;
-                    caps._bIndexedDraw              = 1;
                     caps._bGpuCulling               = 1;
                     caps._bMultiDrawIndirect        = 1;
                     caps._bParallelCommandRecording = 0;
@@ -117,7 +113,6 @@ namespace sw
                     caps._bEditorSupported      = 1;
                     caps._bComputeRootConstants = 1;
                     caps._bIndirectDraw         = 1;
-                    caps._bIndexedDraw          = 1;
                     caps._bGpuCulling           = 1;
                     caps._bMultiDrawIndirect    = 1;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).

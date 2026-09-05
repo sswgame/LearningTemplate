@@ -21,13 +21,13 @@ namespace sw
         _pDevice->_width  = width;
         _pDevice->_height = height;
 
-        if ( _pDevice->_legacyState._bRecording != 0 && _pDevice->_commandList != nullptr )
+        if ( _pDevice->_frameStreamState._bRecording != 0 && _pDevice->_commandList != nullptr )
         {
             _pDevice->_commandList->Close();
             ID3D12CommandList* arrCommandList[] = { _pDevice->_commandList.Get() };
             if ( _pDevice->_commandQueue != nullptr )
                 _pDevice->_commandQueue->ExecuteCommandLists( 1, arrCommandList );
-            _pDevice->_legacyState._bRecording = 0;
+            _pDevice->_frameStreamState._bRecording = 0;
         }
 
         _pDevice->waitForPreviousFrame();
@@ -44,7 +44,7 @@ namespace sw
 
     void D3D12RHISwapChain::beginFrame( const float4& clearColor )
     {
-        if ( _pDevice->_legacyState._bRecording == 0 )
+        if ( _pDevice->_frameStreamState._bRecording == 0 )
         {
             _pDevice->waitForRingSlot();
             ID3D12CommandAllocator* pAllocator = _pDevice->currentAllocator();
@@ -55,7 +55,7 @@ namespace sw
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다 — 실패 시 이번 프레임을 스킵한다.
             if ( FAILED( pAllocator->Reset() ) || FAILED( _pDevice->_commandList->Reset( pAllocator, nullptr ) ) )
                 return;
-            _pDevice->_legacyState._bRecording = 1;
+            _pDevice->_frameStreamState._bRecording = 1;
             if ( _pDevice->_cbvHeap != nullptr )
             {
                 ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
@@ -108,12 +108,12 @@ namespace sw
             _pDevice->_swapchainState = D3D12_RESOURCE_STATE_PRESENT;
         }
 
-        if ( _pDevice->_legacyState._bRecording != 0 && _pDevice->_commandList != nullptr )
+        if ( _pDevice->_frameStreamState._bRecording != 0 && _pDevice->_commandList != nullptr )
         {
             _pDevice->_commandList->Close();
             ID3D12CommandList* ppCommandLists[] = { _pDevice->_commandList.Get() };
             _pDevice->_commandQueue->ExecuteCommandLists( 1, ppCommandLists );
-            _pDevice->_legacyState._bRecording = 0;
+            _pDevice->_frameStreamState._bRecording = 0;
         }
 
         if ( bPresent && _pDevice->_swapChain != nullptr )

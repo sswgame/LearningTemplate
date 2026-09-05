@@ -108,9 +108,8 @@ namespace sw
         IRHISwapChain* getSwapChain() override;
         IRHIResource*  getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
-        IRHICommandContext* getImmediateContext() override;
+        IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
-        IRHICommandContext* getDeferredCommandContext() override;
 
         /** @brief 백엔드 타입 반환 (DirectX12) */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX12; }
@@ -151,7 +150,7 @@ namespace sw
         void* getNativeTexturePointer( RHITextureHandle texture ) const override;
 
         /** @brief 독립 커맨드 리스트 생성 */
-        unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
+        unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 독립 커맨드 리스트 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
@@ -177,11 +176,11 @@ namespace sw
          * @brief 현재 링 슬롯에 펜스를 기록하고 해제 큐를 진행합니다. GPU를 기다리지 않습니다.
          */
         void signalCurrentFrame();
-        /** @brief 현재 링 슬롯의 커맨드 얼로케이터입니다 (레거시 Immediate/Deferred Context 전용). */
+        /** @brief 현재 링 슬롯의 커맨드 얼로케이터입니다 (디바이스 프레임 스트림 전용). */
         ID3D12CommandAllocator* currentAllocator();
         /**
          * @brief 현재 링 슬롯의 `D3D12RHICommandList` 전용 얼로케이터입니다.
-         * @details 레거시 `_arrCommandAllocator` 와 별개 — 같은 프레임 안에서 스왑체인 begin/end(레거시
+         * @details 프레임 스트림용 `_arrCommandAllocator` 와 별개 — 같은 프레임 안에서 스왑체인 begin/end(프레임 스트림
          *          리스트)와 `FrameRenderer` 의 진짜 네이티브 리스트가 동시에 "열려" 있을 수 있으므로,
          *          같은 얼로케이터를 공유하면 안 된다(D3D12 는 열린 리스트가 있는 얼로케이터를 Reset 하면
          *          안 됨). 링 인덱스는 `waitForRingSlot()` 이 이미 이번 프레임에 정한 것을 그대로 쓴다
@@ -302,7 +301,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _arrCommandAllocator[constant::kMaxFrameCountInFlight];
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
-        /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 레거시와 별개.
+        /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 프레임 스트림과 별개.
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[constant::kMaxFrameCountInFlight];
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
         mutex                         _cmdListPoolMutex;
@@ -338,8 +337,10 @@ namespace sw
         uint8                  _bDeviceRemovedLogged : 1;
         [[maybe_unused]] uint8 _reservedPassFlags    : 6;
 
-        /// @brief Immediate/Deferred Context(레거시 단일 공유 리스트)용 기록 상태.
-        D3D12RecordingState _legacyState;
+        /// @brief 디바이스 프레임 스트림(Immediate Context + 스왑체인 begin/endFrame)의 기록 상태.
+        /// @details 예전엔 '레거시'라고 불렀지만, S2/S3 이후 RenderThread 가 백버퍼 렌더패스를 여는
+        ///          정식 경로다 — 패스별 D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐이다.
+        D3D12RecordingState _frameStreamState;
 
         /// @brief bindless 레지스트리/프리리스트/디스크립터 카운터 보호용. RenderGraph::executeParallel이
         /// 같은 웨이브의 패스 콜백을 여러 태스크 스레드에서 동시에 돌리는데, 그 콜백들이 드로우마다
@@ -372,11 +373,10 @@ namespace sw
         RHIReleaseQueue _releaseQueue;
 
         /** @brief Present / offscreen / Deferred CL replay 대상 Immediate Context. */
-        sw::unique_ptr<D3D12RHICommandContext> _immContext;
+        sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;
         /** @brief Mode=Deferred일 때 CL 바인딩용 soft Deferred Context (present 대상 아님). */
-        sw::unique_ptr<D3D12RHICommandContext> _deferredContext;
-        sw::unique_ptr<D3D12RHISwapChain>      _swapChainImpl;
-        sw::unique_ptr<D3D12RHIResource>       _resourceImpl;
+        sw::unique_ptr<D3D12RHISwapChain> _swapChainImpl;
+        sw::unique_ptr<D3D12RHIResource>  _resourceImpl;
     };
 } // namespace sw
 
@@ -409,10 +409,9 @@ namespace sw
 
         IRHISwapChain*      getSwapChain() override { return nullptr; }
         IRHIResource*       getResource() override { return nullptr; }
-        IRHICommandContext* getImmediateContext() override { return nullptr; }
-        IRHICommandContext* getDeferredCommandContext() override { return nullptr; }
+        IRHICommandContext* getFrameStreamContext() override { return nullptr; }
 
-        sw::unique_ptr<IRHICommandList> createCommandList( RHICommandListMode ) override { return nullptr; }
+        sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
         void                            executeCommandList( IRHICommandList* ) override {}
     };
 } // namespace sw

@@ -202,8 +202,7 @@ namespace sw
         , _pipelineStates{}
         , _listRenderPass{}
         , _pipelineCache{ nullptr }
-        , _immContext{ nullptr }
-        , _deferredContext{ nullptr }
+        , _frameStreamContext{ nullptr }
         , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -218,8 +217,7 @@ namespace sw
 
     IRHISwapChain*      VulkanRHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       VulkanRHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* VulkanRHIDevice::getImmediateContext() { return _immContext.get(); }
-    IRHICommandContext* VulkanRHIDevice::getDeferredCommandContext() { return _deferredContext.get(); }
+    IRHICommandContext* VulkanRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
@@ -343,8 +341,7 @@ namespace sw
         }
 
         initPipelineCache();
-        _immContext      = sw::make_unique<VulkanRHICommandContext>( this );
-        _deferredContext = sw::make_unique<VulkanRHICommandContext>( this );
+        _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
         SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
         return true;
@@ -408,8 +405,7 @@ namespace sw
         {
             vkDeviceWaitIdle( _device );
             _releaseQueue.flushAll();
-            _immContext.reset();
-            _deferredContext.reset();
+            _frameStreamContext.reset();
 
             if ( _commandPool )
             {
@@ -909,9 +905,8 @@ namespace sw
         }
     }
 
-    unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList( RHICommandListMode mode )
+    unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList()
     {
-        (void)mode; // Vulkan은 소프트웨어 Cmd-vector 없이 즉시 VulkanRHICommandContext를 호출한다.
         return make_unique<VulkanRHICommandList>( this );
     }
 

@@ -165,8 +165,8 @@ namespace sw
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return;
-        if ( _pDevice->_legacyState._activeGraphicsPso == pso )
-            _pDevice->_legacyState._activeGraphicsPso = 0;
+        if ( _pDevice->_frameStreamState._activeGraphicsPso == pso )
+            _pDevice->_frameStreamState._activeGraphicsPso = 0;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> owned     = record._pso;
         auto                                        releaseCb = [owned]()
         { (void)owned.Get(); };
@@ -438,10 +438,10 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_legacyState._boundMeshVb )
-            _pDevice->_legacyState._boundMeshVb = 0;
-        if ( buffer == _pDevice->_legacyState._boundIndexBuffer )
-            _pDevice->_legacyState._boundIndexBuffer = 0;
+        if ( buffer == _pDevice->_frameStreamState._boundMeshVb )
+            _pDevice->_frameStreamState._boundMeshVb = 0;
+        if ( buffer == _pDevice->_frameStreamState._boundIndexBuffer )
+            _pDevice->_frameStreamState._boundIndexBuffer = 0;
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState.erase( buffer );

@@ -19,14 +19,8 @@ namespace sw
     IRHIDevice::IRHIDevice()
         : _pInitWindow{ nullptr }
         , _renderPassManager{ nullptr }
-        , _defaultCommandListMode{ RHICommandListMode::Deferred }
         , _bPreferredVSync{ false }
     {
-    }
-
-    unique_ptr<IRHICommandList> IRHIDevice::createCommandList()
-    {
-        return createCommandList( _defaultCommandListMode );
     }
 
     bool IRHIDevice::executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
@@ -64,7 +58,7 @@ namespace sw
         bool bOk{ true };
 
         // Present 없이 beginRenderPass → PSO → fullscreen draw (모든 백엔드).
-        unique_ptr<IRHICommandList> cmd = createCommandList( RHICommandListMode::Immediate );
+        unique_ptr<IRHICommandList> cmd = createCommandList();
         if ( cmd == nullptr )
         {
             SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );

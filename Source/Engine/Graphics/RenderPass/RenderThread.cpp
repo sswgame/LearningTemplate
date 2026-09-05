@@ -261,16 +261,16 @@ namespace sw
 
         ensureContextOnCurrentThread();
 
-        const bool          bOffscreen = packet._gameRenderTarget != 0;
-        IRHICommandContext* pImm       = _pDevice->getImmediateContext();
+        const bool          bOffscreen   = packet._gameRenderTarget != 0;
+        IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
         if ( _pDevice->getSwapChain() == nullptr )
         {
             SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
             return false;
         }
-        if ( bOffscreen && pImm == nullptr )
+        if ( bOffscreen && pFrameStream == nullptr )
         {
-            SW_LOG_ERROR( "getImmediateContext() is null; skipping offscreen packet" );
+            SW_LOG_ERROR( "getFrameStreamContext() is null; skipping offscreen packet" );
             return false;
         }
 
@@ -291,7 +291,7 @@ namespace sw
             gameViewPass._arrColorTarget[0] = packet._gameRenderTarget;
             gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             gameViewPass._arrClearColor[0]  = packet._clearColor;
-            pImm->beginRenderPass( gameViewPass );
+            pFrameStream->beginRenderPass( gameViewPass );
         }
 
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
@@ -299,11 +299,11 @@ namespace sw
 
         // 에디터가 게임뷰 텍스처를 샘플링한다 — 읽기 상태로 전환(열려 있는 렌더패스도 여기서 닫힌다).
         if ( bOffscreen )
-            pImm->prepareTextureForShaderRead( packet._gameRenderTarget );
+            pFrameStream->prepareTextureForShaderRead( packet._gameRenderTarget );
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린/백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
-        if ( pImm != nullptr )
+        if ( pFrameStream != nullptr )
         {
             RHIRenderPassBeginInfo backbufferPass{};
             backbufferPass._bBindColor        = 1;
@@ -313,7 +313,7 @@ namespace sw
             // → 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
             backbufferPass._arrLoadOp[0]     = bOffscreen ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
             backbufferPass._arrClearColor[0] = packet._clearColor;
-            pImm->beginRenderPass( backbufferPass );
+            pFrameStream->beginRenderPass( backbufferPass );
         }
 
         if ( _presentHook.isBound() )

@@ -15,7 +15,7 @@ namespace sw
     /**
      * @class D3D12RHICommandContext
      * @brief 실제 D3D12 API 호출을 issue 하는 구현체. `_pCmdList`/`_pState` 로 "어떤 커맨드 리스트에,
-     *        어떤 기록 상태로" 기록할지를 주입받는다 — 디바이스의 레거시 단일 공유 리스트(Immediate/
+     *        어떤 기록 상태로" 기록할지를 주입받는다 — 디바이스의 프레임 스트림 공유 리스트(Immediate/
      *        Deferred Context)와, `D3D12RHICommandList`(리스트별 진짜 네이티브 커맨드 리스트)가 각자
      *        자신의 (cmdList, state) 쌍으로 이 클래스를 구성해서 재사용한다.
      */
