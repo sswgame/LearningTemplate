@@ -19,6 +19,7 @@
 namespace sw
 {
     class D3D11RHICommandContext;
+    class D3D11RHICommandList;
     class D3D11RHIResource;
     class D3D11RHISwapChain;
 
@@ -29,6 +30,7 @@ namespace sw
     class D3D11RHIDevice : public IRHIDevice
     {
         friend class D3D11RHICommandContext;
+        friend class D3D11RHICommandList;
 
     public:
         friend class D3D11RHISwapChain;

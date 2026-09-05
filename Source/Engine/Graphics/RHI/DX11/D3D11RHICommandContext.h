@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -8,11 +9,19 @@ namespace sw
 {
     class D3D11RHIDevice;
 
+    /**
+     * @class D3D11RHICommandContext
+     * @brief 실제 D3D11 API 호출을 issue 하는 구현체. `_pContext` 로 "어떤 `ID3D11DeviceContext` 에
+     *        기록할지" 를 주입받는다 — 디바이스의 단일 Immediate Context(레거시 Immediate/Deferred Context
+     *        슬롯)와, `D3D11RHICommandList`(리스트별 진짜 네이티브 Deferred Context)가 각자 자신의
+     *        `ID3D11DeviceContext*` 로 이 클래스를 구성해서 재사용한다.
+     */
     class D3D11RHICommandContext : public IRHICommandContext
     {
     public:
-        explicit D3D11RHICommandContext( D3D11RHIDevice* pDevice )
-            : _pDevice{ pDevice } {}
+        D3D11RHICommandContext( D3D11RHIDevice* pDevice, ID3D11DeviceContext* pContext )
+            : _pDevice{ pDevice }
+            , _pContext{ pContext } {}
         ~D3D11RHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -47,9 +56,10 @@ namespace sw
         void endOffscreenPass( RHITextureHandle colorTarget ) override;
 
     private:
-        void               bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
-        D3D11RHIDevice*    _pDevice;
-        RHIDescriptorIndex _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
+        void                 bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
+        D3D11RHIDevice*      _pDevice;
+        ID3D11DeviceContext* _pContext;
+        RHIDescriptorIndex   _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
     };
 } // namespace sw
 #endif

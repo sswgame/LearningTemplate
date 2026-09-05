@@ -10,6 +10,7 @@ set(swRhiRoot "${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI")
 
 set(SW_RHI_DX11_DEVICE_SOURCES
     "${swRhiRoot}/DX11/D3D11RHICommandContext.cpp"
+    "${swRhiRoot}/DX11/D3D11RHICommandList.cpp"
     "${swRhiRoot}/DX11/D3D11RHIDevice.cpp"
     "${swRhiRoot}/DX11/D3D11RHIResource.cpp"
     "${swRhiRoot}/DX11/D3D11RHISwapChain.cpp"

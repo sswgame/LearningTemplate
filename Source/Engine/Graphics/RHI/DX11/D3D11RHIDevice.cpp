@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
+#include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 
@@ -10,7 +11,6 @@
 
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
-    #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
@@ -153,8 +153,8 @@ namespace sw
         }
 
         SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
-        _immContext      = sw::make_unique<D3D11RHICommandContext>( this );
-        _deferredContext = sw::make_unique<D3D11RHICommandContext>( this );
+        _immContext      = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
+        _deferredContext = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
         return true;
     }
 
@@ -280,13 +280,25 @@ namespace sw
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList( RHICommandListMode mode )
     {
-        unique_ptr<RHIDeferredCommandList> list = make_unique<RHIDeferredCommandList>( mode, getCommandContextForMode( mode ) );
+        (void)mode; // D3D11 은 진짜 네이티브 Deferred Context 를 쓴다 — 소프트웨어 모드 구분이 없다.
+        unique_ptr<D3D11RHICommandList> list = make_unique<D3D11RHICommandList>( this );
+        if ( list->isValid() == false )
+        {
+            SW_LOG_ERROR( "D3D11RHIDevice::createCommandList: 네이티브 Deferred Context 생성 실패." );
+            return nullptr;
+        }
         return list;
     }
 
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        RHIDeferredCommandList::execute( this, pCmdList );
+        if ( pCmdList == nullptr || _deviceContext == nullptr )
+            return;
+        auto*              pNative = static_cast<D3D11RHICommandList*>( pCmdList );
+        ID3D11CommandList* pList   = pNative->getNativeCommandList();
+        if ( pList == nullptr )
+            return;
+        _deviceContext->ExecuteCommandList( pList, FALSE );
     }
 
     void D3D11RHIDevice::createRenderTargetView()
