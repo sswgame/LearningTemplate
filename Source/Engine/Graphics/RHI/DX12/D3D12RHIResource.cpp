@@ -237,7 +237,7 @@ namespace sw
             return;
         Memory::copy( static_cast<uint8*>( mapIt->second ) + offset, pData, size );
 
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
+        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
         {
             if ( rec._buffer != buffer || rec._resource == nullptr )
@@ -456,14 +456,11 @@ namespace sw
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
-        {
-            std::scoped_lock<mutex> lock{ _pDevice->_handleTableMutex };
-            if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
-                return;
-        }
+        if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
+            return;
 
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
+            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
             for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
             {
                 if ( rec._buffer != buffer )
@@ -624,14 +621,11 @@ namespace sw
             _pDevice->_mapOffscreenTexture.erase( it );
         }
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
-        {
-            std::scoped_lock<mutex> lock{ _pDevice->_handleTableMutex };
-            if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
-                return;
-        }
+        if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
+            return;
 
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
+            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
             for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
             {
                 if ( rec._texture != texture )
@@ -655,8 +649,8 @@ namespace sw
         if ( pRes == nullptr )
             return kInvalidDescriptorIndex;
 
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex      index;
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  index;
         if ( _pDevice->_listFreeBindless.empty() == false )
         {
             index = _pDevice->_listFreeBindless.back();
@@ -711,8 +705,8 @@ namespace sw
         if ( pRes == nullptr )
             return kInvalidDescriptorIndex;
 
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex      index;
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  index;
         if ( _pDevice->_listFreeBindless.empty() == false )
         {
             index = _pDevice->_listFreeBindless.back();
@@ -788,7 +782,7 @@ namespace sw
 
     void D3D12RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index < _pDevice->_listRegisteredBindless.size() )
         {
             _pDevice->_listRegisteredBindless[index]._resource = nullptr;
@@ -807,9 +801,9 @@ namespace sw
         if ( pRes == nullptr )
             return kInvalidDescriptorIndex;
 
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex      descriptorIndex{ 0 };
-        bool                    bReuseHeapSlot = false;
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  descriptorIndex{ 0 };
+        bool                                bReuseHeapSlot = false;
         if ( _pDevice->_listFreeUav.empty() == false )
         {
             descriptorIndex = _pDevice->_listFreeUav.back();
@@ -868,7 +862,7 @@ namespace sw
 
     void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        std::scoped_lock<mutex> lock{ _pDevice->_bindlessMutex };
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index < _pDevice->_listRegisteredUAV.size() )
         {
             _pDevice->_listRegisteredUAV[index]._resource = nullptr;

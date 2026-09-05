@@ -15,6 +15,8 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
+#include <shared_mutex>
+
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
@@ -276,12 +278,7 @@ namespace sw
         FrameResourceRing                              _frameRing;
         StructuredUploadSlot                           _arrStructuredUploadSlot[FrameResourceRing::kFrameCount];
 
-        vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listRenderTarget;
-        /// @brief 핸들 테이블 보호용. HandleTable::insert()는 내부 vector에 push_back 하므로 재할당이
-        /// 일어나는데, get()은 그 vector 내부를 가리키는 포인터를 돌려준다 — 병렬 패스 기록 중 한
-        /// 스레드가 리소스를 만들면(createTexture2D) 다른 스레드가 resolve로 받아둔 ID3D12Resource*가
-        /// dangling 이 되어 GPU에 쓰레기 주소가 넘어간다(PageFault VA=0). const resolve에서도 잠그므로 mutable.
-        mutable mutex                                          _handleTableMutex;
+        vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
         /// @brief 리소스 상태 전이 맵 보호용 — 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있으므로.
@@ -317,7 +314,9 @@ namespace sw
         /// updateConstantBuffer(레지스트리 순회)와 registerBindless*(레지스트리 resize)를 함께 호출한다.
         /// 락이 없으면 순회 중 vector 재할당이 일어나 이미 잡아둔 참조가 dangling 되고, 결국 GPU가
         /// 쓰레기/NULL 디스크립터를 읽어 PageFault(VA=0) → DEVICE_HUNG 으로 이어진다.
-        mutex                          _bindlessMutex;
+        /// 읽기(드로우마다 도는 updateConstantBuffer의 레지스트리 순회)는 공유 락이라 병렬 패스
+        /// 기록을 직렬화하지 않고, 구조를 바꾸는 register/unregister만 배타 락으로 막는다.
+        std::shared_mutex              _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
 
