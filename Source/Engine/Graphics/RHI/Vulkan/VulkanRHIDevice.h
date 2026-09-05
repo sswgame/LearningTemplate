@@ -442,11 +442,17 @@ namespace sw
         vector<VkSemaphore>     _listRenderFinishedSemaphore;
         vector<VkFence>         _listInFlightFence;
         vector<VkFence>         _listImagesInFlight;
+        /// @brief 링 슬롯별로 마지막 제출에 매긴 _frameFenceCounter 값 — beginFrame이 그 슬롯의 펜스를
+        ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제한다.
+        vector<uint64> _listRingFrameNumber;
 
-        void*                   _pHWnd;
-        void*                   _pDisplayHandle;
-        uint32                  _currentFrame;
-        uint32                  _imageIndex;
+        void*  _pHWnd;
+        void*  _pDisplayHandle;
+        uint32 _currentFrame;
+        uint32 _imageIndex;
+        /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호. 해제 큐가 실제 GPU 펜스 완료 기준으로
+        ///        해제하도록(enqueueGpuRelease) 프레임 카운트 대신 이 값을 쓴다.
+        uint64                  _frameFenceCounter;
         uint32                  _width;
         uint32                  _height;
         uint32                  _depthFormat; ///< VkFormat — createTexture2D/RP 공통 depth

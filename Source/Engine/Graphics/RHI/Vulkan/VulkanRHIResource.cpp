@@ -295,10 +295,11 @@ namespace sw
         {
             VkDevice   dev  = _pDevice->_device;
             VkPipeline pipe = record._pipeline;
-            _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
+            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
             {
                 vkDestroyPipeline( dev, pipe, nullptr );
-            } ) );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
         }
         if ( _pDevice->_activeGraphicsPso == pso )
             _pDevice->_activeGraphicsPso = 0;
@@ -589,10 +590,11 @@ namespace sw
                 VkDevice         dev  = _pDevice->_device;
                 VkDescriptorPool pool = _pDevice->_descriptorPool;
                 VkDescriptorSet  set  = _pDevice->_listRegisteredDescriptorSet[bufferIndex];
-                _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ) );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredDescriptorSet[bufferIndex] = VK_NULL_HANDLE;
             }
             _pDevice->_listBindlessSourceBuffer[bufferIndex] = 0;
@@ -607,10 +609,11 @@ namespace sw
                 VkDevice         dev  = _pDevice->_device;
                 VkDescriptorPool pool = _pDevice->_descriptorPool;
                 VkDescriptorSet  set  = _pDevice->_listRegisteredUAV[bufferIndex];
-                _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ) );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredUAV[bufferIndex] = VK_NULL_HANDLE;
             }
             _pDevice->_listUavSourceBuffer[bufferIndex] = 0;
@@ -620,13 +623,14 @@ namespace sw
         VkBuffer       buf = owned._buffer;
         VkDeviceMemory mem = owned._memory;
         VkDevice       dev = _pDevice->_device;
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
-        } ) );
+        } ),
+                                                   _pDevice->_frameFenceCounter + 1 );
     }
 
     RHITextureHandle VulkanRHIResource::createTexture2D( const RHITextureDesc& desc )
@@ -764,10 +768,11 @@ namespace sw
                 VkDevice         dev  = _pDevice->_device;
                 VkDescriptorPool pool = _pDevice->_descriptorPool;
                 VkDescriptorSet  set  = _pDevice->_listRegisteredTexture[index];
-                _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ) );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
                 _pDevice->_listTextureFree.push_back( index );
             }
@@ -782,7 +787,7 @@ namespace sw
         VkImageView    view  = owned._imageView;
         VkImage        image = owned._image;
         VkDeviceMemory mem   = owned._memory;
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, image, mem]()
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, image, mem]()
         {
             if ( view != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, view, nullptr );
@@ -790,7 +795,8 @@ namespace sw
                 vkDestroyImage( dev, image, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
-        } ) );
+        } ),
+                                                   _pDevice->_frameFenceCounter + 1 );
     }
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessTexture( RHITextureHandle texture )
@@ -936,10 +942,11 @@ namespace sw
             {
                 VkDevice         dev  = _pDevice->_device;
                 VkDescriptorPool pool = _pDevice->_descriptorPool;
-                _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ) );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredDescriptorSet[index] = VK_NULL_HANDLE;
             }
             if ( index < _pDevice->_listBindlessSourceBuffer.size() )
@@ -1011,10 +1018,11 @@ namespace sw
             {
                 VkDevice         dev  = _pDevice->_device;
                 VkDescriptorPool pool = _pDevice->_descriptorPool;
-                _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
                 {
                     vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ) );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
                 _pDevice->_listRegisteredUAV[index] = VK_NULL_HANDLE;
             }
             if ( index < _pDevice->_listUavSourceBuffer.size() )

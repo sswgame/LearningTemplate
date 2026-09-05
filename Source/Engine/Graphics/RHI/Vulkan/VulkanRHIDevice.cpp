@@ -142,10 +142,12 @@ namespace sw
         , _listRenderFinishedSemaphore{}
         , _listInFlightFence{}
         , _listImagesInFlight{}
+        , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
         , _currentFrame{ 0 }
         , _imageIndex{ 0 }
+        , _frameFenceCounter{ 0 }
         , _width{ 0 }
         , _height{ 0 }
         , _depthFormat{ 0 }
@@ -618,6 +620,9 @@ namespace sw
             return;
 
         vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
+        // 이 링 슬롯의 펜스가 신호됐다는 건 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
+        // GPU 작업이 실제로 끝났다는 뜻이다 — 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
+        _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
 
         VkResult result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _listImageAvailableSemaphore[_currentFrame], VK_NULL_HANDLE, &_imageIndex );
         if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR )
@@ -717,6 +722,9 @@ namespace sw
         submitInfo.signalSemaphoreCount  = 1;
         submitInfo.pSignalSemaphores     = arrSignalSemaphore;
 
+        // 이 제출에 새 세대 번호를 매긴다 — 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
+        // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame의 tickCompleted) 보류된다.
+        _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
 
         if ( bPresent )
@@ -1348,6 +1356,7 @@ namespace sw
         _listRenderFinishedSemaphore.resize( _listSwapChainImage.size() );
         _listInFlightFence.resize( 2 );
         _listImagesInFlight.resize( _listSwapChainImage.size(), VK_NULL_HANDLE );
+        _listRingFrameNumber.resize( 2, 0 );
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1400,6 +1409,7 @@ namespace sw
                 vkDestroyFence( _device, fence, nullptr );
         }
         _listInFlightFence.clear();
+        _listRingFrameNumber.clear();
 
         // 스왑체인 이미지가 소유하지 않는 참조 사본이므로 비우기만 합니다.
         _listImagesInFlight.clear();
