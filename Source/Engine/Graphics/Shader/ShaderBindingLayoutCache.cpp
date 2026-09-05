@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
 
 namespace sw
 {
@@ -52,9 +53,18 @@ namespace sw
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;
 
-                // 리플렉션에 필요한 건 바이트코드뿐이라 사전 컴파일 바이너리로 충분하다. 컴파일러를
-                // 직접 부르면 캐시(사전 컴파일 팩 바이너리)를 통째로 건너뛰게 되는데, Shipping 은
-                // 런타임 셰이더 컴파일러(DXC)를 배포하지 않으므로 그대로 실패한다.
+                // 1순위: 쿠킹 시점에 구운 리플렉션 매니페스트. 배포 빌드는 이 경로만 쓴다 —
+                // DXIL 리플렉션은 dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
+                if ( ShaderReflectionLibrary::tryGet( compileDesc, outReflection ) )
+                    return true;
+
+#if defined( SW_SHIPPING )
+                SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
+                              string( shaderPath ).c_str() );
+                return false;
+#else
+                // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션. 셰이더를 막 고쳐
+                // 아직 베이킹하지 않은 상태를 위한 폴백이다.
                 const ShaderCompileResult result = engine::areEngineServicesBound()
                                                      ? engine::getShaderCache().getOrCompile( compileDesc )
                                                      : ShaderCompiler::compileHLSL( compileDesc );
@@ -67,6 +77,7 @@ namespace sw
 
                 outReflection = ShaderReflection::reflect( result._bytecode, targetFormat );
                 return true;
+#endif
             }
         };
     } // namespace

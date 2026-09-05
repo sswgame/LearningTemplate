@@ -13,6 +13,8 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -532,6 +534,10 @@ namespace sw
 
         uint32 totalBaked = 0;
 
+        // 리플렉션은 RHI 폴더마다 파일 하나로 모은다 — 셰이더마다 사이드카를 두면 팩 엔트리와
+        // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
+        unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
+
         // 3) 각 레시피 및 타깃 포맷별로 베이킹
         for ( const ShaderBakerInternal::BakeRecipe& recipe : listRecipe )
         {
@@ -561,20 +567,39 @@ namespace sw
                 const string      fileName  = computeBinaryFileName( stemLower, recipe._stage, recipe._entryPoint, recipe._permHash, ext );
                 const string      outPath   = FileUtil::joinPath( outDir, fileName );
 
+                bool bUpToDate = false;
                 if ( bForceAll == false && FileUtil::fileExists( outPath ) )
                 {
                     const uint64 outMtime = FileUtil::getFileTimestamp( outPath );
-                    if ( outMtime >= sourceMtime )
-                        continue;
+                    bUpToDate             = ( outMtime >= sourceMtime );
                 }
 
-                ShaderBakeResult result{};
-                if ( bakeShader( absPath, outPath, recipe._entryPoint, recipe._stage, fmt, &recipe._listPermutation, &result ) )
+                if ( bUpToDate == false )
                 {
-                    ++totalBaked;
+                    ShaderBakeResult result{};
+                    if ( bakeShader( absPath, outPath, recipe._entryPoint, recipe._stage, fmt, &recipe._listPermutation, &result ) )
+                    {
+                        ++totalBaked;
+                    }
+                }
+
+                // 새로 구웠든 이미 최신이든 매니페스트에는 항상 넣는다 — 바이너리만 최신이고
+                // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
+                if ( mapManifest[outDir].find( fileName ) == mapManifest[outDir].end() )
+                {
+                    vector<uint8> bytecode;
+                    if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
+                        mapManifest[outDir].emplace( fileName, ShaderReflection::reflect( bytecode, fmt ) );
                 }
             }
         }
+
+        // 4) RHI 폴더별 리플렉션 매니페스트 기록
+        for ( const auto& manifestPair : mapManifest )
+        {
+            ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first );
+        }
+        ShaderReflectionLibrary::clearCache();
 
         SW_LOG_INFO( "Shader baking completed: %# binaries generated/updated.", totalBaked );
         return totalBaked;
