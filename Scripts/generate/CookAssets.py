@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import binascii
 import fnmatch
+import json
 from pathlib import Path
 import struct
 import sys
@@ -56,17 +57,64 @@ _kPfb2Version = 0
 _kScn1Magic = 0x53434E31  # 'SCN1'
 _kScn1Version = 0
 
-_kPackMagic = 0x4B505753  # 'SWPK'
-_kPackFormatVersion = 1
-_kPackSectorAlignment = 4096
+# ------------------------------------------------------------------------------
+# .pack 바이너리 포맷 계약 — Config/Engine/PackFormat.json 이 단일 출처다.
+# 같은 파일에서 C++ 헤더(sw/config/PackFormat.gen.h)도 생성되므로, 여기서 레이아웃을
+# 손으로 들고 있지 않는다. 예전에는 양쪽이 각자 레이아웃을 갖고 있다가 헤더가 offset 8
+# 부터 어긋나, 리더가 fileCount 를 0 으로 읽는 "빈 팩"이 만들어지고 있었다.
+# ------------------------------------------------------------------------------
+_kPackFormatConfigRelative = "Config/Engine/PackFormat.json"
 
-_kFlagNone = 0x0000
-_kFlagHasStringPool = 0x0001
-_kFlagHasCrc32 = 0x0002
-_kFlagEncrypted = 0x0004
+_kStructTypeCodes = {"uint8": "B", "uint16": "H", "uint32": "I", "uint64": "Q"}
+_kStructTypeSizes = {"uint8": 1, "uint16": 2, "uint32": 4, "uint64": 8}
 
-_kCompressionNone = 0
-_kCompressionZlib = 2
+
+def _loadPackFormatSpecInternal() -> dict:
+    """팩 포맷 계약 파일을 읽어 struct 포맷 문자열까지 계산해 돌려줍니다."""
+    specPath = getProjectRoot() / _kPackFormatConfigRelative
+    if not specPath.is_file():
+        raise FileNotFoundError(f"Pack format contract not found: {specPath}")
+    spec = json.loads(specPath.read_text(encoding="utf-8"))
+
+    def buildLayout(part: dict) -> tuple[str, int, list[str]]:
+        formatText = "<"
+        totalSize = 0
+        fieldNames: list[str] = []
+        for field in part["fields"]:
+            typeName = field["type"]
+            if typeName.endswith("]"):
+                baseName, countText = typeName[:-1].split("[")
+                count = int(countText)
+                formatText += f"{count * _kStructTypeSizes[baseName]}s"
+                totalSize += count * _kStructTypeSizes[baseName]
+            else:
+                formatText += _kStructTypeCodes[typeName]
+                totalSize += _kStructTypeSizes[typeName]
+            fieldNames.append(field["name"])
+        if totalSize != int(part["size"]):
+            raise ValueError(f"{part['name']}: 필드 합계 {totalSize}B != 선언 크기 {part['size']}B")
+        return formatText, totalSize, fieldNames
+
+    spec["_headerLayout"] = buildLayout(spec["header"])
+    spec["_entryLayout"] = buildLayout(spec["entry"])
+    return spec
+
+
+_gPackFormatSpec = _loadPackFormatSpecInternal()
+
+_kPackMagic = int.from_bytes(_gPackFormatSpec["magic"].encode("ascii"), "little")
+_kPackFormatVersion = int(_gPackFormatSpec["formatVersion"])
+_kPackSectorAlignment = int(_gPackFormatSpec["sectorAlignment"])
+
+_kFlagNone = _gPackFormatSpec["flags"]["None"]
+_kFlagHasStringPool = _gPackFormatSpec["flags"]["HasStringPool"]
+_kFlagHasCrc32 = _gPackFormatSpec["flags"]["HasCrc32"]
+_kFlagEncrypted = _gPackFormatSpec["flags"]["Encrypted"]
+
+_kCompressionNone = _gPackFormatSpec["compression"]["codecs"]["None"]
+_kCompressionZlib = _gPackFormatSpec["compression"]["codecs"]["Zlib"]
+_kEncryptionNone = _gPackFormatSpec["encryption"]["None"]
+_kDeflateStrategy = _gPackFormatSpec["compression"].get("deflateStrategy", "default")
 
 
 # ==============================================================================
@@ -216,10 +264,19 @@ def cookScenes(resourceRoot: Path | None = None) -> int:
 # 4. Resource Pack (.pack) 쿠커
 # ==============================================================================
 
+def _deflateForReaderInternal(rawBytes: bytes) -> bytes:
+    """리더가 해석할 수 있는 전략으로 zlib 압축합니다(계약 파일 compression.deflateStrategy)."""
+    if _kDeflateStrategy == "fixed":
+        # 리더의 인플레이터가 동적 허프만을 거부하므로 Z_FIXED 로 고정한다.
+        compressor = zlib.compressobj(9, zlib.DEFLATED, 15, 9, zlib.Z_FIXED)
+        return compressor.compress(rawBytes) + compressor.flush()
+    return zlib.compress(rawBytes, level=9)
+
+
 def fnv1a64Internal(path: str) -> int:
     """FNV-1a 64비트 해시를 계산합니다."""
-    fnv_prime = 1099511628211
-    fnv_offset = 14695981039346656037
+    fnv_prime = int(_gPackFormatSpec["pathHash"]["prime"])
+    fnv_offset = int(_gPackFormatSpec["pathHash"]["offsetBasis"])
     normalized = normalizePath(path).lower()
     h = fnv_offset
     for ch in normalized.encode("utf-8"):
@@ -362,8 +419,8 @@ def cookPack(
             stringPoolOffsets.append(len(stringPoolBytes))
             stringPoolBytes.extend(rel.encode("utf-8") + b"\x00")
 
-    headerSize = 64
-    tocEntrySize = 48
+    headerSize = int(_gPackFormatSpec["header"]["size"])
+    tocEntrySize = int(_gPackFormatSpec["entry"]["size"])
     tocTotalSize = fileCount * tocEntrySize
     tocStartOffset = alignOffsetInternal(headerSize)
     dataStartOffset = alignOffsetInternal(tocStartOffset + tocTotalSize)
@@ -372,22 +429,19 @@ def cookPack(
     tocRecords: list[bytes] = []
     dataBlobs: list[bytes] = []
 
+    entryFormat, entrySize, _ = _gPackFormatSpec["_entryLayout"]
+
     for index, (rel, filePath, pathHash) in enumerate(fileEntries):
         rawBytes = filePath.read_bytes()
         rawSize = len(rawBytes)
         crc = binascii.crc32(rawBytes) & 0xFFFFFFFF
 
+        # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
+        # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
         if compression == _kCompressionZlib:
-            compressed = zlib.compress(rawBytes, level=9)
-            if len(compressed) < rawSize:
-                payload = compressed
-                method = _kCompressionZlib
-            else:
-                payload = rawBytes
-                method = _kCompressionNone
+            payload = _deflateForReaderInternal(rawBytes)
         else:
             payload = rawBytes
-            method = _kCompressionNone
 
         compressedSize = len(payload)
         dataOffsetAligned = alignOffsetInternal(dataOffset)
@@ -398,16 +452,15 @@ def cookPack(
 
         strOffset = stringPoolOffsets[index] if not stripDebugStrings else 0
         tocEntry = struct.pack(
-            "<QQQQIIII",
+            entryFormat,
             pathHash,
             dataOffset,
             compressedSize,
             rawSize,
             crc,
-            method,
-            flags,
             strOffset,
         )
+        assert len(tocEntry) == entrySize
         tocRecords.append(tocEntry)
         dataBlobs.append(payload)
         dataOffset += compressedSize
@@ -418,20 +471,25 @@ def cookPack(
         stringPoolOffset = alignOffsetInternal(dataOffset)
         stringPoolSize = len(stringPoolBytes)
 
+    headerFormat, headerSizeFromSpec, _ = _gPackFormatSpec["_headerLayout"]
     header = struct.pack(
-        "<IIIIQQQQII8s",
+        headerFormat,
         _kPackMagic,
         _kPackFormatVersion,
-        flags,
         dlcAppId,
+        compression,
+        _kEncryptionNone,
+        _kPackSectorAlignment,
+        flags,
         fileCount,
         tocStartOffset,
-        dataStartOffset,
+        tocTotalSize,
         stringPoolOffset,
         stringPoolSize,
-        _kPackSectorAlignment,
-        b"\x00" * 8,
+        dataOffset - dataStartOffset,
+        b"\x00" * 2,
     )
+    assert len(header) == headerSizeFromSpec
 
     outPackPath.parent.mkdir(parents=True, exist_ok=True)
     with open(outPackPath, "wb") as f:

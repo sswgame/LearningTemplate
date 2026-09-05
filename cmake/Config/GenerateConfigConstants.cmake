@@ -23,7 +23,16 @@ configure_file(
     "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigConstants.h"
 )
 
-# 5. Shipping/Dev 폴백용 호스트 기본값 베이크 (커밋된 Engine/Game Config JSON)
+# 5. .pack 바이너리 포맷 계약 → C++ 헤더 생성
+#    Config/Engine/PackFormat.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가
+#    읽는다. 생성물의 offsetof/sizeof static_assert 덕분에 계약과 C++ 이 어긋나면 컴파일이 깨진다.
+set(SW_GENERATED_PACK_FORMAT_H "${CMAKE_BINARY_DIR}/generated/sw/config/PackFormat.gen.h")
+sw_executePythonScript("Scripts/generate/GeneratePackFormat.py"
+	ARGS "${SW_GENERATED_PACK_FORMAT_H}"
+	REQUIRED
+)
+
+# 6. Shipping/Dev 폴백용 호스트 기본값 베이크 (커밋된 Engine/Game Config JSON)
 set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")
 sw_executePythonScript("Scripts/generate/BakeShippingHostDefaults.py"
 	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}"

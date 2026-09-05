@@ -56,6 +56,12 @@ function(sw_addReflectionStep TARGET_NAME)
     # 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
     list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
     file(GLOB _swEmitTpls "${_swEmitTemplatesDir}/*.tpl")
+    # 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.
+    # 없으면 libclang 파싱이 "file not found" 로 실패한다.
+    if(EXISTS "${CMAKE_BINARY_DIR}/generated")
+        list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
+    endif()
+
     foreach(inc IN LISTS ARG_INCLUDES)
         list(APPEND parserArgs "--include" "${inc}")
     endforeach()
