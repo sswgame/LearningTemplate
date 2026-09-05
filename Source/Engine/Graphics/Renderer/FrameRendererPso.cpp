@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -184,7 +185,9 @@ namespace sw
             permHash    = pMaterial->getPermutationHash();
         }
 
-        const uint64 passHash = std::hash<string_view>{}( passType );
+        // std::hash 는 구현마다 알고리즘이 다르고 표준이 보장하는 것도 "같은 실행 안에서 일관"뿐이다.
+        // 엔진이 이미 쓰는 FNV 해시로 맞춘다 — hashed_string 과 달리 문자열을 intern 하지 않는다.
+        const uint64 passHash = StringUtil::computeHash64( passType );
         const uint64 cacheKey = passHash ^ ( permHash << 1 );
 
         {
