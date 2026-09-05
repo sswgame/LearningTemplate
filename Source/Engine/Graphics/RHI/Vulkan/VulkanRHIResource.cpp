@@ -262,8 +262,15 @@ namespace sw
         csInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         csInfo.codeSize = csResult._bytecode.size();
         csInfo.pCode    = reinterpret_cast<const uint32*>( csResult._bytecode.data() );
-        VkShaderModule compShaderModule;
-        vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule );
+        // 예전엔 초기화도 하지 않은 핸들에 결과를 받아 검사 없이 썼다 — 생성이 실패하면 쓰레기
+        // 값을 파이프라인 생성에 넘기고 vkDestroyShaderModule 까지 불렀다.
+        VkShaderModule compShaderModule{ VK_NULL_HANDLE };
+        if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
+             compShaderModule == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createComputePipelineState: vkCreateShaderModule failed" );
+            return 0;
+        }
 
         VkPipelineShaderStageCreateInfo compShaderStageInfo{};
         compShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

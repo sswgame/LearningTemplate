@@ -642,6 +642,75 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallelRunsOnRealDevice )
 }
 
 /**
+ * @brief Deferred 파이프라인을 실제 디바이스에서 돌린다 — 같은 웨이브의 패스가 병렬로 기록되는 유일한 구성.
+ * @details forwardpipeline 은 Shadow→ForwardOpaque→…→Present 완전 체인이라 웨이브가 전부 1개다.
+ *          즉 병렬 기록 경로가 있어도 실제로 동시에 도는 패스가 없었고, 그래서 패스 콜백이 만지는
+ *          FrameRenderer 공유 상태(_listClearedThisFrame, 프레임 래치 플래그)의 레이스가 드러나지
+ *          않았다. deferredpipeline 은 웨이브0 = {Shadow, GBuffer}, 이후 {Transparent, SSAO} 가
+ *          동시에 기록된다. 메시가 있어야 드로우 경로까지 들어가므로 큐브를 하나 넣고 돌린다.
+ */
+SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan };
+    bool                           bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No parallel-recording backend for deferred pipeline test" );
+
+    sw::TaskManager taskManager;
+    SW_ASSERT_TRUE( taskManager.initialize( 4 ) );
+
+    sw::FrameRenderer renderer;
+    SW_ASSERT_TRUE( renderer.initialize( device.get(), &taskManager, "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_TRUE( renderer.isReady() );
+
+    sw::Scene scene( "DeferredParallelScene" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    for ( uint32 objectIndex = 0; objectIndex < 4; ++objectIndex )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "DeferredCube" ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pMesh );
+        pMesh->setMesh( cube );
+        // 인스턴스를 서로 다른 월드 행렬로 흩어 놓아야 드로우 루프의 월드 갱신 분기까지 탄다.
+        pMesh->setLocalPosition( sw::float3{ static_cast<float32>( objectIndex ) * 1.5f, 0.0f, 0.0f } );
+    }
+
+    // 여러 프레임 돌린다 — 레이스는 한 프레임만으로는 잘 드러나지 않는다.
+    const sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
+    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    {
+        device->getSwapChain()->beginFrame( clear );
+        SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
+        device->getSwapChain()->endFrame( false, false );
+    }
+    device->waitIdle();
+
+    // 드로우 경로까지 실제로 들어갔는지 — GpuScene 이 비어 있으면 이 테스트는 클리어만 검증한 셈이다.
+    SW_EXPECT_TRUE( renderer.getGpuScene().getInstances().empty() == false );
+
+    if ( cube != nullptr )
+        cube->releaseGpu();
+    renderer.shutdown();
+    taskManager.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
  * @brief FrameRenderer 패리티 스모크 — DX11 / DX12 / Vulkan / OpenGL 각각 begin→execute→end(no present)
  * @details Present 없이 waitIdle까지. 가용 백엔드는 전부 성공해야 한다.
  */

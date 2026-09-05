@@ -5,6 +5,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/FrameRendererUtil.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw
@@ -30,38 +31,39 @@ namespace sw
 
     void FrameRenderer::updatePassConstants( FramePassContext& ctx )
     {
-        // 뷰/라이트 행렬은 씬이 있을 때만 재계산한다. 렌더 스레드 패킷 경로(_pScene == null)는
-        // executePacket 에서 이미 시드했다.
-        if ( _pScene != nullptr )
-        {
-            float4x4 lightViewProj{};
-            buildLightViewProj( ctx, lightViewProj );
-            ctx._passValues.setMatrix( hashed_string( "g_LightViewProj" ), lightViewProj );
+        // **프레임당 한 번** 프레임 시드(_frameCtx)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
+        // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
+        // 예전엔 commitBindlessTextureBindings 가 드로우마다 이걸 불렀다.
+        //
+        // 뷰/라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다 — 패킷이 자기
+        // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
+        float4x4 lightViewProj{};
+        buildLightViewProj( ctx, lightViewProj );
+        ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
 
-            CameraComponent* pCam = _pScene->getActiveGameCamera();
-            if ( pCam != nullptr )
-            {
-                applyViewFromCamera( ctx, pCam );
-            }
-            else
-            {
-                float4x4 viewProj = float4x4::Identity;
-                buildViewProj( viewProj );
-                ctx._passValues.setMatrix( hashed_string( "g_ViewProj" ), viewProj );
-            }
+        CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
+        if ( pCam != nullptr )
+        {
+            applyViewFromCamera( ctx, pCam );
         }
-        ctx._passValues.setMatrix( hashed_string( "g_World" ), ctx._world );
+        else
+        {
+            float4x4 viewProj = float4x4::Identity;
+            buildViewProj( viewProj );
+            ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+        }
+        ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
         const float32 outlineY = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
         const float32 outlineZ = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
 
-        ctx._passValues.setFloat4( hashed_string( "g_KeyLightDirIntensity" ), kDefaultKeyLightDirIntensity );
-        ctx._passValues.setFloat4( hashed_string( "g_KeyLightColor" ), kDefaultKeyLightColor );
-        ctx._passValues.setFloat4( hashed_string( "g_ShadowParams" ), kDefaultShadowParams );
-        ctx._passValues.setFloat4( hashed_string( "g_BloomParams" ), kDefaultBloomParams );
-        ctx._passValues.setFloat4( hashed_string( "g_OutlineColor" ), kDefaultOutlineColor );
-        ctx._passValues.setFloat4( hashed_string( "g_OutlineParams" ), float4{ 0.02f, outlineY, outlineZ, 0.0f } );
-        ctx._passValues.setUint( hashed_string( "g_Flags" ),
+        ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, kDefaultKeyLightDirIntensity );
+        ctx._passValues.setFloat4( passConstantNames()._keyLightColor, kDefaultKeyLightColor );
+        ctx._passValues.setFloat4( passConstantNames()._shadowParams, kDefaultShadowParams );
+        ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
+        ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
+        ctx._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
+        ctx._passValues.setUint( passConstantNames()._flags,
                                  ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u );
     }
 
@@ -72,7 +74,7 @@ namespace sw
         const float32 aspect = ( _transientHeight > 0 )
                                  ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
                                  : ( 16.0f / 9.0f );
-        ctx._passValues.setMatrix( hashed_string( "g_ViewProj" ), pCamera->getViewProjectionMatrix( aspect ) );
+        ctx._passValues.setMatrix( passConstantNames()._viewProj, pCamera->getViewProjectionMatrix( aspect ) );
     }
 
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const

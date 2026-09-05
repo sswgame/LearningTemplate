@@ -60,7 +60,7 @@ namespace sw
         if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
             return;
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
-        ctx._resourceRegistry.registerBuffer( hashed_string( "SwInstances" ),
+        ctx._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
     }
 
@@ -69,7 +69,7 @@ namespace sw
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
 
-        ctx._passValues.setMatrix( hashed_string( "g_World" ), ctx._world );
+        ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
         // 같은 PSO로 연속 드로우하는 게 흔한 패턴이라, 패스-로컬 1-entry 캐시로
         // layoutForPso()의 뮤텍스+해시맵 조회를 매 드로우 반복하지 않게 한다.
@@ -111,11 +111,10 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        if ( _bSceneTransformsFlushed == 0 )
-        {
+        // 병렬 패스가 동시에 여기 도달할 수 있다 — 검사와 표시를 한 번의 원자 교환으로 묶지 않으면
+        // 둘 다 0 을 보고 flushSceneTransforms 를 중복 호출한다.
+        if ( _bSceneTransformsFlushed.exchange( 1 ) == 0 )
             pObjects->flushSceneTransforms();
-            _bSceneTransformsFlushed = 1;
-        }
 
         const utf8* pPassTypeForMat = bTransparentPass
                                         ? FrameRendererUtil::PassType::kTransparent
@@ -175,8 +174,11 @@ namespace sw
                     else if ( pMaterial != nullptr )
                         drawCb = pMaterial->getDescriptorIndex();
 
-                    const uint64 vbId    = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFF;
-                    const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( static_cast<uint64>( drawCb ) << 16 ) | vbId;
+                    // 세 필드를 16비트씩 겹치지 않게 넣는다. 예전엔 drawCb 만 마스킹이 없어서
+                    // 0x10000 이상이면 pso 필드를 침범해 정렬 순서가 뒤엉켰다(배칭 품질 저하).
+                    const uint64 vbId    = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFFull;
+                    const uint64 cbId    = static_cast<uint64>( drawCb ) & 0xFFFFull;
+                    const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( cbId << 16 ) | vbId;
 
                     SceneMeshDrawItem item{};
                     item._sortKey           = sortKey;
@@ -287,7 +289,7 @@ namespace sw
                     commitBindlessTextureBindings( ctx );
                     bFirstItem = false;
                 }
-                ctx._passValues.setUint( hashed_string( "g_InstanceBase" ), batch._instanceBase );
+                ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
                 bindForDraw( ctx, pso, drawCb );
                 ctx._pCmd->drawInstanced( pMesh->getVertexCount(), batch._instanceCount, 0, 0 );
                 drawn += batch._instanceCount;
@@ -353,7 +355,7 @@ namespace sw
             // b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
-                ctx._passValues.setUint( hashed_string( "g_InstanceBase" ), batch._instanceBase );
+                ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
             bindForDraw( ctx, pso, batch._materialCb );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );

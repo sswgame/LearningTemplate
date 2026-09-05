@@ -109,10 +109,26 @@ namespace sw
                      getEnginePso( FrameRendererUtil::PassType::kPostBloom ), getEnginePso( FrameRendererUtil::PassType::kOutline ), static_cast<uint32>( _bUseGpuDriven ) );
     }
 
+    bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
+    {
+        std::scoped_lock<mutex> lock{ _clearedMutex };
+        if ( std::find( _listClearedThisFrame.begin(), _listClearedThisFrame.end(), key ) != _listClearedThisFrame.end() )
+            return false;
+        _listClearedThisFrame.push_back( key );
+        return true;
+    }
+
+    void FrameRenderer::resetClearedAttachments()
+    {
+        std::scoped_lock<mutex> lock{ _clearedMutex };
+        _listClearedThisFrame.clear();
+    }
+
     void FrameRenderer::resetPassCbRing()
     {
         // 0번은 프레임 시드 전용이라 패스에는 1번부터 나눠 준다.
         _passCbCursor.store( 1, std::memory_order_relaxed );
+        _bPassCbExhaustedLogged.store( 0 );
         if ( _listPassCbSlot.empty() )
             return;
         _frameCtx._passCb      = _listPassCbSlot[0]._buffer;
@@ -127,10 +143,15 @@ namespace sw
         uint32 ticket = _passCbCursor.fetch_add( 1, std::memory_order_relaxed );
         if ( ticket >= static_cast<uint32>( _listPassCbSlot.size() ) )
         {
-            // 슬롯이 모자라면 0번을 재사용한다. 이 프레임의 일부 패스는 상수를 공유하게 된다.
-            SW_LOG_WARNING( "acquirePassCb: pass constant slots exhausted (%#), reusing slot 0",
-                            static_cast<uint32>( _listPassCbSlot.size() ) );
-            ticket = 0;
+            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 예전엔 0번으로 되돌렸는데 0번은 프레임 시드
+            // 전용이라(resetPassCbRing 참고) 그 패스가 시드 값을 덮어써 다른 패스까지 망가뜨렸다.
+            // 경고는 프레임당 한 번만 — 패스마다 찍으면 로그가 잠긴다.
+            if ( _bPassCbExhaustedLogged.exchange( 1 ) == 0 )
+            {
+                SW_LOG_WARNING( "acquirePassCb: pass constant slots exhausted (%#), passes will share the last slot",
+                                static_cast<uint32>( _listPassCbSlot.size() ) );
+            }
+            ticket = static_cast<uint32>( _listPassCbSlot.size() ) - 1;
         }
 
         ctx._passCb      = _listPassCbSlot[ticket]._buffer;

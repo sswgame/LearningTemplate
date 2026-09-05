@@ -139,6 +139,15 @@ namespace sw
          *          써야 재생 시점에 각 패스의 상수가 살아남습니다. 커서는 원자적이라
          *          병렬 기록에서도 안전합니다. 슬롯이 모자라면 0번으로 되돌아갑니다.
          */
+        /**
+         * @brief 이 첨부를 이번 프레임에 처음 건드리는 것이면 표시하고 true 를 돌려줍니다.
+         * @details 반환값이 곧 "Clear 로 열어도 되는가" 다. 같은 웨이브의 패스들이 동시에 부르므로
+         *          조회와 표시가 한 임계구역이어야 한다 — 나눠 놓으면 두 패스가 같은 첨부를 둘 다
+         *          Clear 로 열어 앞 패스의 결과를 지운다.
+         */
+        bool markAttachmentCleared( const hashed_string& key );
+        /** @brief 이번 프레임의 클리어 기록을 비웁니다 (프레임 시작). */
+        void resetClearedAttachments();
         void acquirePassCb( FramePassContext& ctx );
         /** @brief 프레임 시작마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
@@ -267,7 +276,9 @@ namespace sw
         float4                                    _clearColor;
         unordered_map<string, RHITextureHandle>   _mapTransient;
         unordered_map<string, RHIDescriptorIndex> _mapTransientSrv;
-        vector<hashed_string>                     _listClearedThisFrame;
+        /// @brief 이번 프레임에 이미 클리어한 첨부들. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호한다.
+        vector<hashed_string> _listClearedThisFrame;
+        mutable mutex         _clearedMutex;
         /**
          * @brief 프레임 단위 패스 상태(직렬 경로에서 사용 + 병렬 패스의 시드).
          * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
@@ -283,8 +294,10 @@ namespace sw
         };
         vector<PassCbSlot>  _listPassCbSlot;
         std::atomic<uint32> _passCbCursor{ 0 };
-        RHIBufferHandle     _gpuCullCb;
-        RHIDescriptorIndex  _gpuCullCbIndex;
+        /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
+        std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
+        RHIBufferHandle    _gpuCullCb;
+        RHIDescriptorIndex _gpuCullCbIndex;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
         ShaderBindingLayoutCache                                          _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;
@@ -303,12 +316,18 @@ namespace sw
         RHIDescriptorIndex                            _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
         FrameRendererStatus                           _status;
         string                                        _statusMessage;
-        uint8                                         _bCallbacksBound          : 1;
-        uint8                                         _bPassResourcesReady      : 1;
-        uint8                                         _bSceneTransformsFlushed  : 1; ///< CPU 드로우 경로: execute당 한 번 flush
-        uint8                                         _bHasExecutedDepthPrepass : 1;
-        uint8                                         _bUseGpuDriven            : 1;
-        [[maybe_unused]] uint8                        _reservedFlags            : 3;
-        RenderGraphExecutionContext                   _graphContext;
+        uint8                                         _bCallbacksBound     : 1;
+        uint8                                         _bPassResourcesReady : 1;
+        uint8                                         _bUseGpuDriven       : 1;
+        [[maybe_unused]] uint8                        _reservedFlags       : 5;
+
+        // 아래 둘은 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
+        // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
+        // 같은 바이트를 read-modify-write 해서 서로의 값을 날린다 — 독립 원자 변수로 뺀다.
+        /// @brief CPU 드로우 경로: execute 당 한 번만 flushSceneTransforms 를 부르기 위한 래치.
+        std::atomic<uint8> _bSceneTransformsFlushed{ 0 };
+        /// @brief 이번 프레임에 DepthPrepass 가 실행됐는가 (ForwardOpaque 의 PSO 선택에 쓴다).
+        std::atomic<uint8>          _bHasExecutedDepthPrepass{ 0 };
+        RenderGraphExecutionContext _graphContext;
     };
 } // namespace sw

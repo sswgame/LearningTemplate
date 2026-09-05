@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -79,4 +80,38 @@ namespace sw
             return nullptr;
         }
     };
+
+    /**
+     * @struct PassConstantNames
+     * @brief PassCB/리소스 이름의 hashed_string 캐시.
+     * @details hashed_string 생성은 전역 문자열 레지스트리에 intern 하는 작업이다(FNV 해시 →
+     *          샤드 공유락 → 조회). 리터럴은 값이 고정이므로 매번 만들 이유가 없는데, 예전엔
+     *          `g_World` 를 드로우 호출마다 새로 만들고 있었다. 한 번만 만들어 재사용한다.
+     */
+    struct PassConstantNames
+    {
+        hashed_string _lightViewProj{ "g_LightViewProj" };
+        hashed_string _viewProj{ "g_ViewProj" };
+        hashed_string _world{ "g_World" };
+        hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
+        hashed_string _keyLightColor{ "g_KeyLightColor" };
+        hashed_string _shadowParams{ "g_ShadowParams" };
+        hashed_string _bloomParams{ "g_BloomParams" };
+        hashed_string _outlineColor{ "g_OutlineColor" };
+        hashed_string _outlineParams{ "g_OutlineParams" };
+        hashed_string _flags{ "g_Flags" };
+        hashed_string _instanceBase{ "g_InstanceBase" };
+        hashed_string _swInstances{ "SwInstances" };
+    };
+
+    /**
+     * @brief 프로세스 전역 PassConstantNames 를 돌려줍니다.
+     * @details 함수 지역 static 이라 첫 호출 때 한 번만, 스레드 안전하게 만들어진다 — 전역 정적
+     *          객체로 두면 문자열 레지스트리보다 먼저 초기화될 수 있다.
+     */
+    inline const PassConstantNames& passConstantNames()
+    {
+        static const PassConstantNames s_names{};
+        return s_names;
+    }
 } // namespace sw

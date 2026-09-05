@@ -12,6 +12,19 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct FrameRendererPsoInternal
+        {
+            /** @brief 64비트 해시 누산 (boost::hash_combine 의 64비트 변형). */
+            static uint64 mixHash( uint64 seed, uint64 value )
+            {
+                seed ^= value + 0x9e3779b97f4a7c15ull + ( seed << 6 ) + ( seed >> 2 );
+                return seed;
+            }
+        };
+    } // namespace
+
     RHIPipelineStateHandle FrameRenderer::createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets,
                                                            const RHIFormat* pRtvFormats, bool bBlend, bool bDepthWrite )
     {
@@ -185,10 +198,19 @@ namespace sw
             permHash    = pMaterial->getPermutationHash();
         }
 
-        // std::hash 는 구현마다 알고리즘이 다르고 표준이 보장하는 것도 "같은 실행 안에서 일관"뿐이다.
-        // 엔진이 이미 쓰는 FNV 해시로 맞춘다 — hashed_string 과 달리 문자열을 intern 하지 않는다.
-        const uint64 passHash = StringUtil::computeHash64( passType );
-        const uint64 cacheKey = passHash ^ ( permHash << 1 );
+        // 캐시 키는 PSO 를 결정하는 값을 **전부** 담아야 한다. 예전엔 passType 과 머티리얼 퍼뮤테이션
+        // 둘뿐이라, RT 포맷·뎁스·블렌드가 다른 호출부가 하나만 생겨도 조용히 다른 PSO 를 돌려줬다.
+        // (`permHash << 1` 은 최상위 비트도 버렸다.)
+        // std::hash 는 구현마다 알고리즘이 달라 쓰지 않는다 — 엔진이 이미 쓰는 FNV 해시로 맞춘다.
+        uint64 cacheKey = StringUtil::computeHash64( passType );
+        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, StringUtil::computeHash64( defaultShader ) );
+        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, permHash );
+        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, static_cast<uint64>( numRenderTargets ) );
+        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, ( bDepthTest ? 1ull : 0ull ) |
+                                                                           ( bDefaultBlend ? 2ull : 0ull ) |
+                                                                           ( bDefaultDepthWrite ? 4ull : 0ull ) );
+        for ( uint32 rtIndex = 0; pRtvFormats != nullptr && rtIndex < numRenderTargets; ++rtIndex )
+            cacheKey = FrameRendererPsoInternal::mixHash( cacheKey, static_cast<uint64>( pRtvFormats[rtIndex] ) );
 
         {
             std::scoped_lock<mutex> lock{ _psoMutex };

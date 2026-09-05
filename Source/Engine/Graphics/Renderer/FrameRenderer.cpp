@@ -46,8 +46,6 @@ namespace sw
         , _statusMessage{}
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
-        , _bSceneTransformsFlushed{ SW_FALSE }
-        , _bHasExecutedDepthPrepass{ SW_FALSE }
         , _bUseGpuDriven{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _graphContext{}
@@ -283,9 +281,9 @@ namespace sw
         resetPassCbRing();
         setIdentityWorld( _frameCtx );
         updatePassConstants( _frameCtx );
-        _listClearedThisFrame.clear();
-        _bSceneTransformsFlushed  = 0;
-        _bHasExecutedDepthPrepass = 0;
+        resetClearedAttachments();
+        _bSceneTransformsFlushed.store( 0 );
+        _bHasExecutedDepthPrepass.store( 0 );
 
         float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
         if ( pScene != nullptr )
@@ -330,26 +328,17 @@ namespace sw
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
         setIdentityWorld( _frameCtx );
-        {
-            float4x4 lightViewProj{};
-            buildLightViewProj( _frameCtx, lightViewProj );
-            _frameCtx._passValues.setMatrix( hashed_string( "g_LightViewProj" ), lightViewProj );
-
-            float4x4 viewProj = packet._bHasViewProj != 0 ? packet._viewProj : float4x4::Identity;
-            if ( packet._bHasViewProj == 0 )
-                buildViewProj( viewProj );
-            _frameCtx._passValues.setMatrix( hashed_string( "g_ViewProj" ), viewProj );
-        }
-        const float32 outlineY = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-        const float32 outlineZ = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
-        _frameCtx._passValues.setFloat4( hashed_string( "g_OutlineParams" ), float4{ 0.02f, outlineY, outlineZ, 0.0f } );
-        _frameCtx._passValues.setUint( hashed_string( "g_Flags" ),
-                                       ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u );
+        // 예전엔 여기서 시드를 따로 채웠고, updatePassConstants 와 겹치면서도 라이트/블룸/아웃라인
+        // 색 상수는 빠져 있었다(그건 드로우 경로가 updatePassConstants 를 다시 부르며 가려주고
+        // 있었다). 같은 함수를 쓰고, 패킷이 자기 뷰 행렬을 갖고 있을 때만 그 위에 덮어쓴다.
+        // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 세운다.
+        updatePassConstants( _frameCtx );
+        if ( packet._bHasViewProj != 0 )
+            _frameCtx._passValues.setMatrix( passConstantNames()._viewProj, packet._viewProj );
         // 값 업로드/바인딩은 드로우 직전 ShaderBindingBinder 가 한다 — 여기서는 시드만 채운다.
-        // Skip updatePassConstants() — view already applied from packet.
-        _listClearedThisFrame.clear();
-        _bSceneTransformsFlushed  = 0;
-        _bHasExecutedDepthPrepass = 0;
+        resetClearedAttachments();
+        _bSceneTransformsFlushed.store( 0 );
+        _bHasExecutedDepthPrepass.store( 0 );
 
         _gpuScene.upload( pDevice );
 

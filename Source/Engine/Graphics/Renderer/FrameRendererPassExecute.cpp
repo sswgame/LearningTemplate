@@ -94,11 +94,10 @@ namespace sw
 
         auto colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
         {
-            const hashed_string key( name.data(), static_cast<uint32>( name.length() ) );
-            if ( bForceLoad || std::find( _listClearedThisFrame.begin(), _listClearedThisFrame.end(), key ) != _listClearedThisFrame.end() )
+            if ( bForceLoad )
                 return RHIRenderPassLoadOp::Load;
-            _listClearedThisFrame.push_back( key );
-            return RHIRenderPassLoadOp::Clear;
+            const hashed_string key( name.data(), static_cast<uint32>( name.length() ) );
+            return markAttachmentCleared( key ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
         };
 
         // b0 에 들어갈 패스 상수. 머티리얼 CB 로 폴백하면 안 된다 — 레이아웃이 다르다.
@@ -128,7 +127,7 @@ namespace sw
                                                       : getEnginePso( FrameRendererUtil::PassType::kShadow );
             drawSceneMeshes( ctx, depthPso, passCb, false );
             ctx._pCmd->endRenderPass();
-            _bHasExecutedDepthPrepass = 1;
+            _bHasExecutedDepthPrepass.store( 1 );
         }
         else if ( passType == FrameRendererUtil::PassType::kForwardOpaque )
         {
@@ -137,7 +136,7 @@ namespace sw
             beginColorPass( ctx, FrameRendererUtil::Attachment::kSceneColor, FrameRendererUtil::Attachment::kSceneDepth, sceneClear,
                             colorLoadFor( FrameRendererUtil::Attachment::kSceneColor, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 
-            const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass != 0 && getEnginePso( "ForwardOpaqueNoDepthWrite" ) != 0 )
+            const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePso( "ForwardOpaqueNoDepthWrite" ) != 0 )
                                                         ? getEnginePso( "ForwardOpaqueNoDepthWrite" )
                                                         : getEnginePso( FrameRendererUtil::PassType::kForwardOpaque );
             drawSceneMeshes( ctx, psoForward, passCb, false );
@@ -201,7 +200,7 @@ namespace sw
                 const RHITextureHandle src = findTransient( FrameRendererUtil::Attachment::kLitColor ) != 0 ? findTransient( FrameRendererUtil::Attachment::kLitColor ) : findTransient( FrameRendererUtil::Attachment::kSceneColor );
                 if ( src != 0 )
                     ctx._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
-                _listClearedThisFrame.push_back( hashed_string( colorTarget ) );
+                markAttachmentCleared( hashed_string( colorTarget ) );
             }
 
             beginColorPass( ctx, colorTarget, depthTarget, _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load );
@@ -380,7 +379,8 @@ namespace sw
         if ( tex != 0 && ctx._pCmd != nullptr )
             ctx._pCmd->prepareTextureForShaderRead( tex );
         const RHIDescriptorIndex srv = findTransientSrv( attachmentName );
-        ctx._resourceRegistry.registerTexture( hashed_string( string( canonicalName ).c_str() ), tex, srv );
+        // hashed_string 은 string_view 생성자가 있다 — c_str() 하나 얻자고 힙 string 을 만들 필요가 없다.
+        ctx._resourceRegistry.registerTexture( hashed_string( canonicalName ), tex, srv );
     }
 
     void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )
@@ -388,7 +388,11 @@ namespace sw
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
 
-        updatePassConstants( ctx );
+        // 예전엔 여기서 updatePassConstants 를 불렀다. 이 함수는 드로우 루프 안에서 호출되므로
+        // 드로우마다 라이트/뷰 행렬을 다시 만들고(정규화·외적·4x4 곱 두 번) 카메라를 다시 찾고
+        // hashed_string 을 여덟 개씩 intern 했다. 그 값들은 전부 프레임 상수라 execute/executePacket
+        // 이 프레임 시드(_frameCtx)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
+        // 드로우마다 바뀌는 건 g_World 하나뿐이고 그건 bindForDraw 가 넣는다.
 
         // DX11/GL: bind PassCB indices into t0..t3 (emulated bindless).
         // DX12/VK: shaders index the heap/array directly — 리플렉션 바인더가 g_<Name>Index 를 채운다.
