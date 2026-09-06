@@ -239,7 +239,10 @@ namespace sw
         }
 
         // 여기서 움직인 프리미티브가 onWorldTransformUpdated 를 통해 스스로 더티를 찍는다.
-        pObjects->flushSceneTransforms();
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.flushTransforms" );
+            pObjects->flushSceneTransforms();
+        }
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
         const uint64             setGeneration = primitives.getSetGeneration();
@@ -261,27 +264,30 @@ namespace sw
         _listScratchCandidate.reserve( listPrimitive.size() );
 
         // 등록부에는 그릴 수 있는 것만 들어 있다 — 타입 검사가 없다.
-        for ( MeshComponent* pMeshComp : listPrimitive )
         {
-            if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-                continue;
-            GameObject* pObj = pMeshComp->getOwner();
-            if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
-                continue;
-            Mesh* pMesh = pMeshComp->getRawMesh();
-            if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
-                continue;
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
+            for ( MeshComponent* pMeshComp : listPrimitive )
+            {
+                if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
+                    continue;
+                GameObject* pObj = pMeshComp->getOwner();
+                if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
+                    continue;
+                Mesh* pMesh = pMeshComp->getRawMesh();
+                if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+                    continue;
 
-            const float4x4 world = pMeshComp->getWorldMatrix();
-            DrawCandidate  cand{};
-            cand._world        = world;
-            cand._boundsCenter = world.getTranslation();
-            cand._boundsRadius = pMeshComp->getBoundsRadius();
-            cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
-            cand._pMesh        = pMesh;
-            cand._pMaterial    = pMeshComp->getMaterial();
-            cand._pInstance    = pMeshComp->getRawMaterialInstance();
-            _listScratchCandidate.push_back( cand );
+                const float4x4 world = pMeshComp->getWorldMatrix();
+                DrawCandidate  cand{};
+                cand._world        = world;
+                cand._boundsCenter = world.getTranslation();
+                cand._boundsRadius = pMeshComp->getBoundsRadius();
+                cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
+                cand._pMesh        = pMesh;
+                cand._pMaterial    = pMeshComp->getMaterial();
+                cand._pInstance    = pMeshComp->getRawMaterialInstance();
+                _listScratchCandidate.push_back( cand );
+            }
         }
 
         if ( _listScratchCandidate.empty() )
@@ -292,7 +298,11 @@ namespace sw
 
         // 더티 신호가 왔다고 내용이 실제로 달라졌다는 뜻은 아니다(집합 세대는 활성 토글 같은 것에도
         // 올라간다). 여기서 한 번 더 확인해 헛된 재구축을 막는다.
-        const bool bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _listInstance.empty() == false;
+        bool bContentSame = false;
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.compare" );
+            bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _listInstance.empty() == false;
+        }
 
         if ( bContentSame && bCamSame )
         {
@@ -309,6 +319,7 @@ namespace sw
 
         if ( bContentSame == false )
         {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.fill" );
             // 병렬로 나눠 쓰기 전에 버퍼 주소를 한 번만 확정한다. 워커가 컨테이너를 직접 만지면
             // 서로 다른 원소를 써도 레이스 감지기가 "writer N 개"로 본다.
             _pScratchCandidateBase = _listScratchCandidate.data();
@@ -329,16 +340,22 @@ namespace sw
                 GpuSceneInternal::fillRangePtr( _pScratchCandidateBase, _pScratchRawBase, 0, count );
 
             if ( bBatchKeysSame == false )
+            {
+                SW_PROFILE_SCOPE( "GT.GpuScene.build.partition" );
                 rebuildPartitionTables();
+            }
         }
 
-        sortTransparent( &cameraPos._x );
+        {
+            SW_PROFILE_SCOPE( "GT.GpuScene.build.batches" );
+            sortTransparent( &cameraPos._x );
 
-        _listInstance.clear();
-        _listOpaqueBatch.clear();
-        _listTransparentBatch.clear();
-        _listAllBatch.clear();
-        buildBatches();
+            _listInstance.clear();
+            _listOpaqueBatch.clear();
+            _listTransparentBatch.clear();
+            _listAllBatch.clear();
+            buildBatches();
+        }
 
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다 — 복사 없이 두 버퍼를
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
