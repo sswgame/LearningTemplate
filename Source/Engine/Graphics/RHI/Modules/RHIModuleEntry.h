@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIModuleAbi.h"
+#include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 
 /**
  * @brief RHI 백엔드 모듈의 C-ABI 진입점 3종을 구현하고 export 합니다.

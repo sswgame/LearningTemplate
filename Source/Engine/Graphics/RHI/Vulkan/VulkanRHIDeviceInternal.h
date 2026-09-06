@@ -13,7 +13,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineData.h"
-#include "Engine/Graphics/RHI/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"

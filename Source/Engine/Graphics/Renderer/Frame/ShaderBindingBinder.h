@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 
 namespace sw
 {
@@ -19,43 +20,6 @@ namespace sw
     class IRHICommandList;
     class IRHIDevice;
     class ShaderBindingLayout;
-
-    /**
-     * @class PassConstantValues
-     * @brief 이름 기반 값 저장소 (float4x4/float4/float/uint). 대형 미러 struct 대체.
-     */
-    class SW_API PassConstantValues
-    {
-    public:
-        static constexpr uint32 kMaxValueBytes = 64; ///< float4x4 하나 크기
-
-        /** @brief 모든 값을 비운다. */
-        void clear() { _listEntry.clear(); }
-
-        /** @brief float4x4 값을 이름으로 설정(upsert)한다. */
-        void setMatrix( hashed_string name, const float4x4& value );
-        /** @brief float4 값을 이름으로 설정한다. */
-        void setFloat4( hashed_string name, const float4& value );
-        /** @brief float32 값을 이름으로 설정한다. */
-        void setFloat( hashed_string name, float32 value );
-        /** @brief uint 값을 이름으로 설정한다. */
-        void setUint( hashed_string name, uint32 value );
-        /** @brief 원시 바이트 값을 이름으로 설정한다. */
-        void setBytes( hashed_string name, const void* pData, uint32 byteSize );
-
-        /** @brief 이름으로 값을 찾는다 (없으면 nullptr). */
-        const uint8* find( hashed_string name, uint32& outSize ) const;
-
-    private:
-        struct Entry
-        {
-            hashed_string                _name;
-            uint32                       _size{ 0 };
-            array<uint8, kMaxValueBytes> _data{};
-        };
-
-        vector<Entry> _listEntry;
-    };
 
     /// @brief 엔진(PassCB 등) 상수 버퍼 슬롯 — 버퍼 핸들 + bindless 인덱스.
     struct EngineConstantBufferSlot

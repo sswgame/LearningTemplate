@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICommandListForward.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 

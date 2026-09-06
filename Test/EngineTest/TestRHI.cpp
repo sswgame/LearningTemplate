@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"

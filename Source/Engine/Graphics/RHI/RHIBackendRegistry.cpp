@@ -6,8 +6,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHIModuleAbi.h"
 
 #if !defined( SW_RHI_AS_MODULES )
     #if defined( SW_SHIPPING )

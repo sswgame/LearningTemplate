@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"

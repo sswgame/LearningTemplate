@@ -10,10 +10,10 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
 #include <shared_mutex>
 

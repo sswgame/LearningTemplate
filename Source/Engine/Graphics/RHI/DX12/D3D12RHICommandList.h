@@ -8,7 +8,7 @@
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICommandListForward.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

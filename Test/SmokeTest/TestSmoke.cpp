@@ -8,7 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/RHIModuleAbi.h"
+#include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"

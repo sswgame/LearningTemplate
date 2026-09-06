@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 
 #include "Core/Math/MathUtil.h"
 

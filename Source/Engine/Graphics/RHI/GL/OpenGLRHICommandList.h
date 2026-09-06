@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICommandListForward.h"
 
 namespace sw

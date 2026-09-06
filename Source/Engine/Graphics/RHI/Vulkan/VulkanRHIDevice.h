@@ -5,8 +5,8 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
 #include <shared_mutex>
 

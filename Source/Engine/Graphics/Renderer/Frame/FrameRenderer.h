@@ -12,7 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
-#include "Engine/Graphics/Renderer/Frame/ShaderBindingBinder.h"
+#include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"

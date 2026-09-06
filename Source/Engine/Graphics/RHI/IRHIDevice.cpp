@@ -5,7 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Window/IWindow.h"

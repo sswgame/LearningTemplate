@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
-#include "Engine/Graphics/RHI/RHIDxgiFormat.h"
-#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

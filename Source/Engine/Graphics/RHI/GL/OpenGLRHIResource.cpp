@@ -7,7 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
-#include "Engine/Graphics/RHI/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <glad/glad.h>
