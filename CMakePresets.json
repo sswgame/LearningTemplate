@@ -1,6 +1,5 @@
 {
   "version": 8,
-
   "configurePresets": [
     {
       "name": "base-vcpkg",
@@ -20,7 +19,6 @@
     },
     {
       "name": "base-windows",
-
       "hidden": true,
       "inherits": "base-vcpkg",
       "architecture": {
@@ -32,7 +30,6 @@
         "CXX": "clang-cl"
       }
     },
-
     {
       "name": "base-wsl",
       "hidden": true,
@@ -55,7 +52,6 @@
         }
       }
     },
-
     {
       "name": "Ninja-Debug",
       "displayName": "Windows Ninja Debug (Clang-cl)",
@@ -65,7 +61,6 @@
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
-
     {
       "name": "Ninja-Debug-ASAN",
       "displayName": "Windows Ninja Debug + ASan (Clang-cl)",
@@ -77,7 +72,6 @@
         "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
       }
     },
-
     {
       "name": "Ninja-Release",
       "displayName": "Windows Ninja Release (Clang-cl)",
@@ -87,7 +81,6 @@
         "CMAKE_BUILD_TYPE": "Release"
       }
     },
-
     {
       "name": "Ninja-Shipping",
       "displayName": "Windows Ninja Shipping (Clang-cl)",
@@ -98,7 +91,6 @@
         "SW_SHIPPING_BUILD": "ON"
       }
     },
-
     {
       "name": "WSL-Debug",
       "displayName": "WSL Ninja Debug (Clang)",
@@ -108,7 +100,6 @@
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
-
     {
       "name": "WSL-Release",
       "displayName": "WSL Ninja Release (Clang)",
@@ -118,7 +109,6 @@
         "CMAKE_BUILD_TYPE": "Release"
       }
     },
-
     {
       "name": "WSL-Shipping",
       "displayName": "WSL Ninja Shipping (Clang)",
@@ -129,7 +119,6 @@
         "SW_SHIPPING_BUILD": "ON"
       }
     },
-
     {
       "name": "CI-Debug",
       "displayName": "CI Debug (Ninja)",
@@ -141,7 +130,6 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
-
     {
       "name": "CI-Shipping",
       "displayName": "CI Shipping (Ninja, clang-cl on Windows)",
@@ -153,7 +141,6 @@
         "SW_ENABLE_UNITY_BUILD": "ON"
       }
     },
-
     {
       "name": "CI-Debug-ASAN",
       "displayName": "CI Debug + ASan (Ninja)",
@@ -167,7 +154,6 @@
       }
     }
   ],
-
   "buildPresets": [
     {
       "name": "Ninja-Debug",
@@ -210,54 +196,77 @@
       "configurePreset": "CI-Shipping"
     }
   ],
-
   "testPresets": [
     {
       "name": "Ninja-Debug-lint",
       "configurePreset": "Ninja-Debug",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "lint" }
+        "include": {
+          "label": "lint"
+        }
       }
     },
     {
       "name": "Ninja-Debug-nogpu",
       "configurePreset": "Ninja-Debug",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "nogpu" }
+        "include": {
+          "label": "nogpu"
+        }
       }
     },
     {
       "name": "Ninja-Debug-ASAN-nogpu",
       "configurePreset": "Ninja-Debug-ASAN",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "nogpu" }
+        "include": {
+          "label": "nogpu"
+        }
       }
     },
     {
       "name": "WSL-Debug-nogpu",
       "configurePreset": "WSL-Debug",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "nogpu" }
+        "include": {
+          "label": "nogpu"
+        }
       }
     },
     {
       "name": "CI-Debug-nogpu",
       "configurePreset": "CI-Debug",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "nogpu" }
+        "include": {
+          "label": "nogpu"
+        }
       }
     },
     {
       "name": "CI-Debug-ASAN-nogpu",
       "configurePreset": "CI-Debug-ASAN",
-      "output": { "outputOnFailure": true },
+      "output": {
+        "outputOnFailure": true
+      },
       "filter": {
-        "include": { "label": "nogpu" }
+        "include": {
+          "label": "nogpu"
+        }
       }
     }
   ]

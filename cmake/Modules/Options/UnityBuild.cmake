@@ -11,15 +11,20 @@ function(sw_setUnityBuild TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
+
 	cmake_parse_arguments(ARG "OFF" "BATCH_SIZE" "" ${ARGN})
+
 	if(ARG_OFF OR NOT SW_ENABLE_UNITY_BUILD)
 		set_target_properties(${TARGET_NAME} PROPERTIES UNITY_BUILD OFF)
 		return()
 	endif()
+
 	set(batch 12)
+
 	if(ARG_BATCH_SIZE)
 		set(batch ${ARG_BATCH_SIZE})
 	endif()
+
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		UNITY_BUILD ON
 		UNITY_BUILD_BATCH_SIZE ${batch}
@@ -33,6 +38,7 @@ function(sw_skipUnitySources TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
+
 	foreach(src IN LISTS ARGN)
 		if(EXISTS "${src}")
 			set_source_files_properties("${src}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

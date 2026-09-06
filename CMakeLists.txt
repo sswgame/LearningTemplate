@@ -4,10 +4,10 @@
 # ==============================================================================
 #
 # cmake/
-#   Config/      — BuildOptions, GenerateConfigConstants
-#   Environment/ — DetectToolchain, VcpkgIntegration, FindWindowsTools, PythonUtils
-#   Modules/     — LoadCompileFlags (Compiler, Platform, Architecture, BuildType, Options, Toolchain)
-#   Engine/      — ModuleBuildRules, RuntimeDependencies, ReflectionCodeGen, AssetAndToolTargets, RhiBackendSources
+# Config/      — BuildOptions, GenerateConfigConstants
+# Environment/ — DetectToolchain, VcpkgIntegration, FindWindowsTools, PythonUtils
+# Modules/     — LoadCompileFlags (Compiler, Platform, Architecture, BuildType, Options, Toolchain)
+# Engine/      — ModuleBuildRules, RuntimeDependencies, ReflectionCodeGen, AssetAndToolTargets, RhiBackendSources
 #
 # ==============================================================================
 
@@ -16,7 +16,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # ------------------------------------------------------------------------------
 # 1) project() 이전 — 옵션·상수·개발환경·vcpkg 연동
-#    (Ninja 링크 잡풀은 BuildOptions.cmake 5)에서 컴파일 풀과 함께 설정)
+# (Ninja 링크 잡풀은 BuildOptions.cmake 5)에서 컴파일 풀과 함께 설정)
 # ------------------------------------------------------------------------------
 include(cmake/Config/BuildOptions.cmake)
 include(cmake/Config/GenerateConfigConstants.cmake)
@@ -52,6 +52,7 @@ target_include_directories(sw_public_source_includes INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/Resource"
 	"${CMAKE_BINARY_DIR}/generated"
 )
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
 	add_subdirectory(ThirdParty)
 endif()
@@ -71,6 +72,7 @@ add_subdirectory(Source/App)
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
 	add_subdirectory(Source/GameFramework)
 endif()
+
 if(SW_BUILD_GAME)
 	add_subdirectory(Source/Games)
 endif()

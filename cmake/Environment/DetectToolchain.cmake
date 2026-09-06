@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file cmake/Environment/DetectToolchain.cmake
 # @brief Scripts/setup/SetupEnvironment.py를 실행하여 개발 환경을 탐색하고,
-#        생성된 Config/Environment/toolchain_config.json으로부터 LLVM/vcpkg/SDK 경로를 CMake에 주입
+# 생성된 Config/Environment/toolchain_config.json으로부터 LLVM/vcpkg/SDK 경로를 CMake에 주입
 #
 # [동작 파이프라인]:
 # 1. Python 서브프로세스를 통해 `SetupEnvironment.py`를 실행하여 툴체인 및 패키지 매니저 경로를 자동 탐지/다운로드.
@@ -15,10 +15,11 @@
 include("${CMAKE_CURRENT_LIST_DIR}/PythonUtils.cmake")
 
 if(SW_VCPKG_AUTO_BOOTSTRAP)
-	set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
+    set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
 endif()
+
 if(SW_LLVM_AUTO_BOOTSTRAP)
-	set(ENV{SW_LLVM_AUTO_BOOTSTRAP} "1")
+    set(ENV{SW_LLVM_AUTO_BOOTSTRAP} "1")
 endif()
 
 # SetupEnvironment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영)
@@ -32,35 +33,49 @@ sw_executePythonScript(
 # 2) toolchain_config.json 파싱 및 project() 호출 전 빌드 환경 주입
 # ------------------------------------------------------------------------------
 set(swEngineCfg "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
+
 if(EXISTS "${swEngineCfg}")
     file(READ "${swEngineCfg}" swEngineCfgJson)
 
     # JSON 키별 경로 추출
     string(JSON swLlvmPath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_LLVM_PATH}")
+
     if(swJsonErr)
         set(swLlvmPath "")
     endif()
+
     string(JSON swNinjaPath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_NINJA_PATH}")
+
     if(swJsonErr)
         set(swNinjaPath "")
     endif()
+
     string(JSON swVcpkgRoot ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_VCPKG_ROOT}")
+
     if(swJsonErr)
         set(swVcpkgRoot "")
     endif()
+
     string(JSON swSdkDir ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_WINDOWS_SDK_DIR}")
+
     if(swJsonErr)
         set(swSdkDir "")
     endif()
+
     string(JSON swSdkVer ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_WINDOWS_SDK_VERSION}")
+
     if(swJsonErr)
         set(swSdkVer "")
     endif()
+
     string(JSON swMsvcTools ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_MSVC_TOOLS_DIR}")
+
     if(swJsonErr)
         set(swMsvcTools "")
     endif()
+
     string(JSON swSccachePath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_SCCACHE_PATH}")
+
     if(swJsonErr)
         set(swSccachePath "")
     endif()
@@ -78,6 +93,7 @@ if(EXISTS "${swEngineCfg}")
         set(ENV{LLVM_DIR} "${swLlvmPath}")
         set(ENV{LLVM_ROOT} "${swLlvmPath}")
         set(ENV{LLVM_HOME} "${swLlvmPath}")
+
         if(WIN32)
             set(ENV{PATH} "${swLlvmPath}/bin;$ENV{PATH}")
         else()
@@ -87,9 +103,11 @@ if(EXISTS "${swEngineCfg}")
         if(WIN32 AND EXISTS "${swLlvmPath}/bin/clang-cl.exe")
             set(CMAKE_C_COMPILER "${swLlvmPath}/bin/clang-cl.exe" CACHE FILEPATH "C 컴파일러" FORCE)
             set(CMAKE_CXX_COMPILER "${swLlvmPath}/bin/clang-cl.exe" CACHE FILEPATH "CXX 컴파일러" FORCE)
+
             if(EXISTS "${swLlvmPath}/bin/lld-link.exe")
                 set(CMAKE_LINKER "${swLlvmPath}/bin/lld-link.exe" CACHE FILEPATH "링커" FORCE)
             endif()
+
             if(EXISTS "${swLlvmPath}/bin/llvm-rc.exe")
                 set(CMAKE_RC_COMPILER "${swLlvmPath}/bin/llvm-rc.exe" CACHE FILEPATH "RC 컴파일러" FORCE)
             endif()
@@ -125,11 +143,13 @@ if(EXISTS "${swEngineCfg}")
     if(swNinjaPath AND EXISTS "${swNinjaPath}")
         set(CMAKE_MAKE_PROGRAM "${swNinjaPath}" CACHE FILEPATH "Ninja" FORCE)
         get_filename_component(swNinjaDir "${swNinjaPath}" DIRECTORY)
+
         if(WIN32)
             set(ENV{PATH} "${swNinjaDir};$ENV{PATH}")
         else()
             set(ENV{PATH} "${swNinjaDir}:$ENV{PATH}")
         endif()
+
         message(STATUS "[DetectToolchain] Using Ninja: ${swNinjaPath}")
     endif()
 endif()

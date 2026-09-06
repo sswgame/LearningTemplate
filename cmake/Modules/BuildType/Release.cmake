@@ -14,6 +14,7 @@ list(APPEND sw_flag_libraries sw_build_release)
 if(SW_SHIPPING_BUILD AND SW_ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipoSupported OUTPUT ipoError)
+
     if(ipoSupported)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
         message(STATUS "[Release] Shipping ThinLTO (INTERPROCEDURAL_OPTIMIZATION) ENABLED")

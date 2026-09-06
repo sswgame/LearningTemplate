@@ -11,9 +11,10 @@ add_library(sw_sanitizer INTERFACE)
 
 # ------------------------------------------------------------------------------
 # 1) 프론트엔드별 sanitizer 플래그
-#    clang-cl: Clang ID + MSVC 프론트엔드 → /fsanitize=address (GNU -fsanitize 아님)
+# clang-cl: Clang ID + MSVC 프론트엔드 → /fsanitize=address (GNU -fsanitize 아님)
 # ------------------------------------------------------------------------------
 set(sw_is_clang_cl FALSE)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 	set(sw_is_clang_cl TRUE)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
@@ -24,6 +25,7 @@ if(MSVC OR sw_is_clang_cl)
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "MSVC runtime library" FORCE)
 	target_compile_options(sw_sanitizer INTERFACE /fsanitize=address)
 	target_link_options(sw_sanitizer INTERFACE /INCREMENTAL:NO)
+
 	if(sw_is_clang_cl)
 		execute_process(
 			COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
@@ -31,6 +33,7 @@ if(MSVC OR sw_is_clang_cl)
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
 		set(sw_clang_asan_dir "${sw_clang_resource_dir}/lib/windows")
+
 		if(EXISTS "${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.lib")
 			target_link_libraries(sw_sanitizer INTERFACE
 				"${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.lib"
@@ -41,6 +44,7 @@ if(MSVC OR sw_is_clang_cl)
 				DESTINATION "${CMAKE_BINARY_DIR}/Bin")
 		endif()
 	endif()
+
 	message(STATUS "[Sanitizer] AddressSanitizer (MSVC/clang-cl frontend, CRT: /MD)")
 else()
 	target_compile_options(sw_sanitizer INTERFACE

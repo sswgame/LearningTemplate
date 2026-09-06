@@ -26,8 +26,10 @@ if(SW_BUILD_DOCS)
 	if(NOT Python3_Interpreter_FOUND)
 		find_package(Python3 COMPONENTS Interpreter REQUIRED)
 	endif()
+
 	find_program(DOXYGEN_EXECUTABLE doxygen)
 	set(doxyfile "${CMAKE_SOURCE_DIR}/Doxyfile")
+
 	if(DOXYGEN_EXECUTABLE AND EXISTS "${doxyfile}")
 		sw_addRepoPythonTarget(GenerateDocs "${SW_SCRIPT_GENERATE_DOCS}"
 			COMMENT "Generating Doxygen Documentation..."
@@ -40,20 +42,23 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) 스크립트 타겟 — CookPrefabs, Engine 레이어/GLOB 린트
-#    CheckEngineLayers: Engine → Editor/GameFramework/Games 금지 include
-#    CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
+# CheckEngineLayers: Engine → Editor/GameFramework/Games 금지 include
+# CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
 # ------------------------------------------------------------------------------
 if(NOT Python3_Interpreter_FOUND)
 	find_package(Python3 COMPONENTS Interpreter QUIET)
 endif()
+
 if(Python3_Interpreter_FOUND)
 	# 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
 	# 정의되지 않은 변수를 쓰면 "/Packs"(파일시스템 루트)가 되어 조용히 엉뚱한 곳에 쿠킹되거나
 	# Linux 에서 권한 오류로 죽으므로, 비어 있으면 구성 단계에서 잡는다.
 	set(swPackOutputDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Packs")
+
 	if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 		message(FATAL_ERROR "[CookAssets] CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty — pack output path would resolve to the filesystem root.")
 	endif()
+
 	sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
 		COMMENT "Cooking scene XML, prefab XML and Resource packs to binary..."
 		ARGS --all --output "${swPackOutputDir}"
@@ -94,7 +99,7 @@ function(sw_registerLintTests)
 		add_test(
 			NAME CheckEngineLayers
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
-				--root "${CMAKE_SOURCE_DIR}"
+			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
@@ -103,7 +108,7 @@ function(sw_registerLintTests)
 		add_test(
 			NAME CheckIncludeOrder
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_INCLUDE_ORDER}"
-				--root "${CMAKE_SOURCE_DIR}"
+			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
@@ -112,7 +117,7 @@ function(sw_registerLintTests)
 		add_test(
 			NAME CheckResourceCasing
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_RESOURCE_CASING}"
-				--root "${CMAKE_SOURCE_DIR}"
+			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckResourceCasing PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
@@ -121,7 +126,7 @@ function(sw_registerLintTests)
 		add_test(
 			NAME CheckCodeConventions
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS}"
-				--root "${CMAKE_SOURCE_DIR}"
+			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckCodeConventions PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
@@ -130,7 +135,7 @@ function(sw_registerLintTests)
 		add_test(
 			NAME CheckSourceGlob
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
-				--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
+			--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
 		)
 		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()

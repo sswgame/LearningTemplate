@@ -9,9 +9,9 @@
 
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 타입 · RHI 소스 목록
-#    Dev: SHARED / Shipping: STATIC
-#    RHI MODULE 엔트리(Modules/)는 항상 Engine GLOB에서 제외
-#    SW_RHI_AS_MODULES=ON 이면 device .cpp도 Engine에서 빼고 RHI_*가 동일 리스트를 씀
+# Dev: SHARED / Shipping: STATIC
+# RHI MODULE 엔트리(Modules/)는 항상 Engine GLOB에서 제외
+# SW_RHI_AS_MODULES=ON 이면 device .cpp도 Engine에서 빼고 RHI_*가 동일 리스트를 씀
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
     set(coreLibType STATIC)
@@ -25,6 +25,7 @@ set(coreExclude
     "Graphics/RHI/Modules/"
     "Module/DelayLoadNotifyHook.cpp"
 )
+
 if(SW_RHI_AS_MODULES OR SW_SHIPPING_BUILD)
     foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
         file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
@@ -35,11 +36,12 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) Engine 타겟 — include 전파, Core_objects 재사용
-#    Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
-#    Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
-#    ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
+# Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
+# Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
+# ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+
 foreach(exPattern IN LISTS coreExclude)
     list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
@@ -52,18 +54,20 @@ add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(Engine
     PUBLIC
-        sw_public_source_includes
+    sw_public_source_includes
     PRIVATE
-        sw_global_options
-        # 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
-        # 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
-        #
-        # raw 이름 `zlib` 을 넘기면 안 된다. 그건 링커에 그대로 `-lzlib` 로 전달되는데,
-        # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
-        # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
-        # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
-        ZLIB::ZLIB
+    sw_global_options
+
+    # 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
+    # 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
+    #
+    # raw 이름 `zlib` 을 넘기면 안 된다. 그건 링커에 그대로 `-lzlib` 로 전달되는데,
+    # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
+    # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
+    # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
+    ZLIB::ZLIB
 )
+
 if(sw_flag_libraries)
     target_link_libraries(Engine PRIVATE ${sw_flag_libraries})
 endif()
@@ -72,7 +76,7 @@ target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTE
 sw_configurePch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
-	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
@@ -95,6 +99,7 @@ if(NOT SW_RHI_AS_MODULES)
                 set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping용 대상 RHI 백엔드")
             endif()
         endif()
+
         message(STATUS "[Engine] Shipping monolithic RHI backend: ${SW_SHIPPING_RHI_BACKEND}")
 
         if(SW_SHIPPING_RHI_BACKEND STREQUAL "DX12" AND TARGET sw_graphics_dx12_libs)
@@ -123,7 +128,7 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 4) export / IPO / delay-load 훅 경로 / 로그 태그 / Windows 시스템 라이브러리
-#    SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(Targets.cmake)이 참조
+# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(Targets.cmake)이 참조
 # ------------------------------------------------------------------------------
 sw_configureEngineDllExports(Engine ${coreLibType})
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
@@ -159,40 +164,42 @@ if(SW_RHI_AS_MODULES)
 else()
     message(STATUS "[Engine] SW_RHI_AS_MODULES=OFF -> RHI device sources linked into Engine")
 endif()
+
 # ------------------------------------------------------------------------------
 # 5) Unity — FrameRenderer/Material 분할 TU는 공유 내부 헤더 병합을 피함
 # ------------------------------------------------------------------------------
 if(COMMAND sw_setUnityBuild)
-	sw_setUnityBuild(Engine BATCH_SIZE 12)
-	if(COMMAND sw_skipUnitySources)
-		# DelayLoadNotifyHook은 이미 EXCLUDE에 포함됨.
-		# FrameRenderer/Material 분할 TU: 공유 내부 헤더의 Unity 병합을 피함.
-		sw_skipUnitySources(Engine
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRenderer.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererResources.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPassExecute.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererDraw.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererConstants.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPso.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/Material.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialPacking.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialIO.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialInstance.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialCache.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/IRHIDevice.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflection.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionSpirv.cpp"
-			"${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionDx.cpp"
-		)
-	endif()
+    sw_setUnityBuild(Engine BATCH_SIZE 12)
+
+    if(COMMAND sw_skipUnitySources)
+        # DelayLoadNotifyHook은 이미 EXCLUDE에 포함됨.
+        # FrameRenderer/Material 분할 TU: 공유 내부 헤더의 Unity 병합을 피함.
+        sw_skipUnitySources(Engine
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRenderer.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererResources.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPassExecute.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererDraw.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererConstants.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPso.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/Material.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialPacking.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialIO.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialInstance.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialCache.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/IRHIDevice.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflection.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionSpirv.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionDx.cpp"
+        )
+    endif()
 endif()
 
 # ------------------------------------------------------------------------------
 # 6) ENUM() 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
-#    RHI_* MODULE은 런타임 로드이므로 빌드 순서만 묶음 (링크하지 않음)
+# RHI_* MODULE은 런타임 로드이므로 빌드 순서만 묶음 (링크하지 않음)
 # ------------------------------------------------------------------------------
 sw_addReflectionStep(Engine
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+    INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )
 sw_addReflectBuiltinsGen(Engine)
 

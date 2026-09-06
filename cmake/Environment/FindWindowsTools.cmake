@@ -5,8 +5,8 @@
 
 # ------------------------------------------------------------------------------
 # 1) sw_findWindowsArchiveAndMt — lib.exe(아카이버) / mt.exe 경로
-#    우선순위: llvm-lib·llvm-mt → toolchain_config MSVC/SDK → Windows Kits
-#    결과를 SW_CACHED_WIN_AR / SW_CACHED_WIN_MT에 캐싱하여 불필요한 디스크 I/O 방지
+# 우선순위: llvm-lib·llvm-mt → toolchain_config MSVC/SDK → Windows Kits
+# 결과를 SW_CACHED_WIN_AR / SW_CACHED_WIN_MT에 캐싱하여 불필요한 디스크 I/O 방지
 # ------------------------------------------------------------------------------
 function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND DEFINED CACHE{SW_CACHED_WIN_MT})
@@ -22,9 +22,11 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	set(swSdkDir "")
 	set(swSdkVer "")
 	set(swMsvcTools "")
+
 	foreach(candidateRoot IN ITEMS "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 		get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
 		set(cfgCandidate "${absRoot}/Config/Environment/toolchain_config.json")
+
 		if(EXISTS "${cfgCandidate}")
 			set(swCfgJson "${cfgCandidate}")
 			file(READ "${swCfgJson}" cfgContent)
@@ -43,11 +45,13 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 		foreach(hostArch IN ITEMS Hostx64 Hostx86)
 			foreach(targetArch IN ITEMS x64 x86)
 				set(arCandidate "${swMsvcTools}/bin/${hostArch}/${targetArch}/lib.exe")
+
 				if(EXISTS "${arCandidate}")
 					set(swAr "${arCandidate}")
 					break()
 				endif()
 			endforeach()
+
 			if(swAr)
 				break()
 			endif()
@@ -61,6 +65,7 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	elseif(swSdkDir AND swSdkVer AND NOT swSdkDir STREQUAL "" AND NOT swSdkVer STREQUAL "")
 		foreach(arch IN ITEMS x64 x86)
 			set(mtCandidate "${swSdkDir}/bin/${swSdkVer}/${arch}/mt.exe")
+
 			if(EXISTS "${mtCandidate}")
 				set(swMt "${mtCandidate}")
 				break()
@@ -76,20 +81,25 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 			if(NOT IS_DIRECTORY "${kitsRoot}/bin")
 				continue()
 			endif()
+
 			file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
 			list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
+
 			foreach(verDir IN LISTS sdkVerDirs)
 				foreach(arch IN ITEMS x64 x86)
 					set(mtCandidate "${verDir}/${arch}/mt.exe")
+
 					if(EXISTS "${mtCandidate}")
 						set(swMt "${mtCandidate}")
 						break()
 					endif()
 				endforeach()
+
 				if(swMt)
 					break()
 				endif()
 			endforeach()
+
 			if(swMt)
 				break()
 			endif()
@@ -108,16 +118,19 @@ endfunction()
 macro(sw_bindClangClWindowsTools)
 	if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		set(swArTool "")
+
 		if(CMAKE_AR AND NOT CMAKE_AR MATCHES "NOTFOUND" AND EXISTS "${CMAKE_AR}")
 			set(swArTool "${CMAKE_AR}")
 		endif()
 
 		if(NOT swArTool)
 			sw_findWindowsArchiveAndMt(swFoundAr swFoundMt)
+
 			if(swFoundAr)
 				set(swArTool "${swFoundAr}")
 			endif()
-			if(swFoundMt AND (NOT CMAKE_MT OR CMAKE_MT MATCHES "NOTFOUND"))
+
+			if(swFoundMt AND(NOT CMAKE_MT OR CMAKE_MT MATCHES "NOTFOUND"))
 				set(CMAKE_MT "${swFoundMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
 			endif()
 		endif()

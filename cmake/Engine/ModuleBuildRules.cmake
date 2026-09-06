@@ -299,6 +299,7 @@ function(sw_addTestExecutable TARGET_NAME)
 	# 배포 빌드의 Bin 은 App.exe 와 Packs/ 만 담아야 한다. 테스트는 계속 빌드하되 옆 디렉터리로
 	# 뺀다 — CI 가 Shipping 을 CoreTest 로 스모크할 수 있으면서 배포 산출물은 깨끗하다.
 	set(swTestOutputDir "${sw_output_directory}/Bin")
+
 	if(SW_SHIPPING_BUILD)
 		set(swTestOutputDir "${sw_output_directory}/TestBin")
 		set_target_properties(${TARGET_NAME} PROPERTIES

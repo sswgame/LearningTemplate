@@ -10,10 +10,11 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 1) sw_getVcpkgPaths — installed include / bin / lib 경로
-#    OUT_INC_DIRS, OUT_BIN_DIRS. triplet 미정이면 OS 기본값
+# OUT_INC_DIRS, OUT_BIN_DIRS. triplet 미정이면 OS 기본값
 # ------------------------------------------------------------------------------
 macro(sw_getVcpkgPaths OUT_INC_DIRS OUT_BIN_DIRS)
     set(vcpkgPath "${sw_vcpkg_root}")
+
     if(NOT vcpkgPath)
         set(vcpkgPath "${VCPKG_ROOT}")
     endif()
@@ -51,18 +52,20 @@ endmacro()
 # ------------------------------------------------------------------------------
 function(sw_linkVcpkgHeaderOnlyTarget TARGET_NAME)
     sw_getVcpkgPaths(incDirs binDirs)
+
     foreach(dir IN LISTS incDirs)
         if(EXISTS "${dir}")
             target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${dir}")
         endif()
     endforeach()
+
     target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction()
 
 # ------------------------------------------------------------------------------
 # 3) 런타임 복사 큐 — 실제 POST_BUILD는 sw_emitRuntimeCopies
-#    sw_copyVcpkgFile: bin 디렉터리의 지정 파일
-#    sw_copyVcpkgSharedLib: 플랫폼별 .dll / .dylib / .so
+# sw_copyVcpkgFile: bin 디렉터리의 지정 파일
+# sw_copyVcpkgSharedLib: 플랫폼별 .dll / .dylib / .so
 # ------------------------------------------------------------------------------
 # vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다.
 function(sw_copyVcpkgFile TARGET_NAME FILE_NAME)
@@ -96,13 +99,14 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 4) sw_copyVulkanValidationRuntime — Khronos validation + vcpkg mimalloc 의존성
-#    VkLayer_khronos_validation.dll 은 mimalloc.dll 에 링크되어 있음.
-#    layer만 복사하면 LoadLibrary(126) → vkCreateInstance LAYER_NOT_PRESENT(-6).
+# VkLayer_khronos_validation.dll 은 mimalloc.dll 에 링크되어 있음.
+# layer만 복사하면 LoadLibrary(126) → vkCreateInstance LAYER_NOT_PRESENT(-6).
 # ------------------------------------------------------------------------------
 function(sw_copyVulkanValidationRuntime TARGET_NAME)
-	sw_copyVcpkgSharedLib(${TARGET_NAME} "VkLayer_khronos_validation")
-	sw_copyVcpkgFile(${TARGET_NAME} "VkLayer_khronos_validation.json")
-	# vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 (없으면 no-op)
-	sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc")
-	sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc-redirect")
+    sw_copyVcpkgSharedLib(${TARGET_NAME} "VkLayer_khronos_validation")
+    sw_copyVcpkgFile(${TARGET_NAME} "VkLayer_khronos_validation.json")
+
+    # vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 (없으면 no-op)
+    sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc")
+    sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc-redirect")
 endfunction()

@@ -58,9 +58,9 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) Core_objects — 한 번만 컴파일
-#    ReflectionParser: Core STATIC 링크
-#    Engine: 동일 OBJECT를 넣어 Dev에서 Engine.dll로 export
-#    SW_EXPORTS: App/Editor(SW_IMPORTS)가 dllimport 할 수 있게
+# ReflectionParser: Core STATIC 링크
+# Engine: 동일 OBJECT를 넣어 Dev에서 Engine.dll로 export
+# SW_EXPORTS: App/Editor(SW_IMPORTS)가 dllimport 할 수 있게
 # ------------------------------------------------------------------------------
 add_library(Core_objects OBJECT ${cfSources})
 set_target_properties(Core_objects PROPERTIES
@@ -70,10 +70,11 @@ set_target_properties(Core_objects PROPERTIES
 
 target_include_directories(Core_objects
 	PRIVATE
-		"${CMAKE_CURRENT_SOURCE_DIR}"
+	"${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(Core_objects PUBLIC sw_public_source_includes)
 target_link_libraries(Core_objects PUBLIC sw_third_party_includes)
+
 if(sw_flag_libraries)
 	target_link_libraries(Core_objects PRIVATE ${sw_flag_libraries})
 endif()
@@ -101,15 +102,17 @@ set_target_properties(Core PROPERTIES
 )
 target_include_directories(Core
 	PRIVATE
-		"${CMAKE_CURRENT_SOURCE_DIR}"
+	"${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)
+
 if(WIN32)
 	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp)
 elseif(APPLE)
 	target_link_libraries(Core PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
+
 # Engine이 $<TARGET_OBJECTS:Core_objects>를 가져갈 수 있게 의존성 노출
 add_dependencies(Core Core_objects)
 set_property(TARGET Core PROPERTY SW_CORE_OBJECTS Core_objects)

@@ -6,6 +6,7 @@
 if(NOT DEFINED sw_cpp_standard)
 	set(sw_cpp_standard 17)
 endif()
+
 if(sw_cpp_standard LESS 17)
 	message(FATAL_ERROR "sw_cpp_standard must be >= 17 (got ${sw_cpp_standard})")
 endif()

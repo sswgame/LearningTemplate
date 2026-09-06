@@ -2,9 +2,9 @@
 # @file cmake/Modules/Toolchain/Vcpkg/VcpkgPortsCompileRules.cmake
 # @brief vcpkg 포트 COMPILE_OBJECT 규칙 오버라이드 (CMAKE_USER_MAKE_RULES_OVERRIDE)
 # @note clang-cl은 CMAKE_<LANG>_FLAGS를 타겟 COMPILE_OPTIONS보다 앞에 두므로
-#       포트의 -Werror가 CMAKE_C_FLAGS의 -Wno-error보다 앞선다.
-#       <FLAGS> 뒤에 -Wno-error를 붙여 커맨드 라인 마지막에 오게 한다.
-#       clang-cl에서 /EHsc가 없으면 예외가 꺼지며, spirv-cross는 throw를 쓴다.
+# 포트의 -Werror가 CMAKE_C_FLAGS의 -Wno-error보다 앞선다.
+# <FLAGS> 뒤에 -Wno-error를 붙여 커맨드 라인 마지막에 오게 한다.
+# clang-cl에서 /EHsc가 없으면 예외가 꺼지며, spirv-cross는 throw를 쓴다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------

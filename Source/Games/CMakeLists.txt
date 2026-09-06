@@ -5,7 +5,7 @@
 
 # ------------------------------------------------------------------------------
 # 1) 활성 게임 팩 — 타겟명은 항상 SWGame
-#    App LiveReload / Shipping 정적 링크가 이 이름을 본다
+# App LiveReload / Shipping 정적 링크가 이 이름을 본다
 # ------------------------------------------------------------------------------
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SW_ACTIVE_GAME}/CMakeLists.txt")
 	message(FATAL_ERROR "SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no CMakeLists.txt under Source/Games/")

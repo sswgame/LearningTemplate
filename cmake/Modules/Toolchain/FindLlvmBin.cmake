@@ -4,11 +4,11 @@
 # ==============================================================================
 
 if(NOT COMMAND sw_findLlvmBin)
-# ------------------------------------------------------------------------------
-# 1) sw_findLlvmBin — clang-cl / clang 이 있는 bin 경로
-#    우선순위: env → PATH → toolchain_config(Environment/) → search_paths → Program Files
-#    시스템/기존 설치를 프로젝트 Tools보다 먼저 (최초 clone 시 Tools 없어도 OK)
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
+    # 1) sw_findLlvmBin — clang-cl / clang 이 있는 bin 경로
+    # 우선순위: env → PATH → toolchain_config(Environment/) → search_paths → Program Files
+    # 시스템/기존 설치를 프로젝트 Tools보다 먼저 (최초 clone 시 Tools 없어도 OK)
+    # ------------------------------------------------------------------------------
     function(sw_findLlvmBin OUT_VAR)
         include("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../Config/GenerateConfigConstants.cmake" OPTIONAL)
         set(llvmBin "")
@@ -25,6 +25,7 @@ if(NOT COMMAND sw_findLlvmBin)
 
         if(NOT llvmBin)
             find_program(clangClExe NAMES clang-cl clang-cl.exe clang)
+
             if(clangClExe)
                 get_filename_component(llvmBin "${clangClExe}" DIRECTORY)
             endif()
@@ -42,9 +43,11 @@ if(NOT COMMAND sw_findLlvmBin)
             foreach(candidateRoot IN LISTS candidateRoots)
                 get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
                 set(cfgJson "${absRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
+
                 if(EXISTS "${cfgJson}")
                     file(READ "${cfgJson}" cfgContent)
                     string(JSON jsonLlvm ERROR_VARIABLE jsonErr GET "${cfgContent}" "${SW_KEY_LLVM_PATH}")
+
                     if(NOT jsonErr AND jsonLlvm)
                         if(EXISTS "${jsonLlvm}/bin/clang-cl.exe" OR EXISTS "${jsonLlvm}/bin/clang")
                             set(llvmBin "${jsonLlvm}/bin")
@@ -61,26 +64,31 @@ if(NOT COMMAND sw_findLlvmBin)
                 set(llvmSubdir "")
                 set(localJson "${absRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_SEARCH_PATHS}")
                 set(defaultsJson "${absRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_SEARCH_PATHS_DEFAULTS}")
+
                 if(EXISTS "${localJson}")
                     file(READ "${localJson}" localContent)
                     string(JSON llvmSubdir ERROR_VARIABLE jsonErr GET "${localContent}" "${SW_KEY_LLVM_TOOLS_SUBDIR}")
+
                     if(jsonErr)
                         set(llvmSubdir "")
                     endif()
                 endif()
-                if(llvmSubdir STREQUAL "" AND EXISTS "${defaultsJson}")
 
+                if(llvmSubdir STREQUAL "" AND EXISTS "${defaultsJson}")
                     file(READ "${defaultsJson}" defaultsContent)
                     string(JSON llvmSubdir ERROR_VARIABLE jsonErr GET "${defaultsContent}" "${SW_KEY_LLVM_TOOLS_SUBDIR}")
+
                     if(jsonErr)
                         set(llvmSubdir "")
                     endif()
                 endif()
+
                 if(llvmSubdir STREQUAL "")
                     set(llvmSubdir "${SW_DIR_TOOLS_LLVM}")
                 endif()
 
                 set(kit "${absRoot}/${llvmSubdir}")
+
                 if(EXISTS "${kit}/bin/clang-cl.exe" OR EXISTS "${kit}/bin/clang")
                     set(llvmBin "${kit}/bin")
                     break()

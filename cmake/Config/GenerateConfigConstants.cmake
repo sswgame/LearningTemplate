@@ -9,9 +9,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 # 2. Constants.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
 # (Python이 Single Source of Truth가 됨)
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
-sw_executePythonScript("Scripts/setup/GenerateCMakeConstants.py" 
-    ARGS "${SW_GENERATED_CMAKE_VARS}"
-    REQUIRED
+sw_executePythonScript("Scripts/setup/GenerateCMakeConstants.py"
+	ARGS "${SW_GENERATED_CMAKE_VARS}"
+	REQUIRED
 )
 
 # 3. 방금 파이썬이 생성한 CMake 변수들을 현재 스코프에 인클루드
@@ -19,13 +19,13 @@ include("${SW_GENERATED_CMAKE_VARS}")
 
 # 4. 가져온 CMake 변수들을 바탕으로 C++ 헤더(ConfigConstants.h) 생성
 configure_file(
-    "${CMAKE_CURRENT_LIST_DIR}/ConfigConstants.h.in"
-    "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigConstants.h"
+	"${CMAKE_CURRENT_LIST_DIR}/ConfigConstants.h.in"
+	"${CMAKE_BINARY_DIR}/generated/sw/config/ConfigConstants.h"
 )
 
 # 5. .pack 바이너리 포맷 계약 → C++ 헤더 생성
-#    Config/Engine/PackFormat.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가
-#    읽는다. 생성물의 offsetof/sizeof static_assert 덕분에 계약과 C++ 이 어긋나면 컴파일이 깨진다.
+# Config/Engine/PackFormat.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가
+# 읽는다. 생성물의 offsetof/sizeof static_assert 덕분에 계약과 C++ 이 어긋나면 컴파일이 깨진다.
 set(SW_GENERATED_PACK_FORMAT_H "${CMAKE_BINARY_DIR}/generated/sw/config/PackFormat.gen.h")
 sw_executePythonScript("Scripts/generate/GeneratePackFormat.py"
 	ARGS "${SW_GENERATED_PACK_FORMAT_H}"

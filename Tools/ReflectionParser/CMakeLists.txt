@@ -7,6 +7,7 @@
 # 1) LLVM/libclang 경로 — env → toolchain_config.json
 # ------------------------------------------------------------------------------
 set(DETECTED_LLVM_DIR "$ENV{LLVM_DIR}")
+
 if(NOT DETECTED_LLVM_DIR)
     set(DETECTED_LLVM_DIR "$ENV{LLVM_HOME}")
 endif()
@@ -16,10 +17,13 @@ set(swEngineCfg "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CO
 if(NOT DETECTED_LLVM_DIR AND EXISTS "${swEngineCfg}")
     file(READ "${swEngineCfg}" configJsonContent)
     string(JSON DETECTED_LLVM_DIR ERROR_VARIABLE jsonErr GET "${configJsonContent}" "${SW_KEY_LLVM_PATH}")
+
     if(jsonErr)
         set(DETECTED_LLVM_DIR "")
     endif()
+
     string(JSON DETECTED_LIBCLANG_DLL ERROR_VARIABLE jsonErr2 GET "${configJsonContent}" "libclang_dll_path")
+
     if(jsonErr2)
         set(DETECTED_LIBCLANG_DLL "")
     endif()
@@ -29,13 +33,16 @@ endif()
 if(NOT DETECTED_LLVM_DIR)
     foreach(_swLlvmMajor 20 19 18 17 16 15 14)
         set(_swLlvmCandidate "/usr/lib/llvm-${_swLlvmMajor}")
+
         if(EXISTS "${_swLlvmCandidate}/include/clang-c/Index.h")
             set(DETECTED_LLVM_DIR "${_swLlvmCandidate}")
             message(STATUS "[ReflectionParser] Using distro LLVM: ${DETECTED_LLVM_DIR}")
             break()
         endif()
+
         unset(_swLlvmCandidate)
     endforeach()
+
     unset(_swLlvmMajor)
 endif()
 
@@ -61,8 +68,8 @@ find_library(LIBCLANG_LIB
 find_path(LIBCLANG_INCLUDE_DIR
     NAMES clang-c/Index.h
     PATHS
-        "${LLVM_INSTALL_PREFIX}/include"
-        /usr/include
+    "${LLVM_INSTALL_PREFIX}/include"
+    /usr/include
     NO_DEFAULT_PATH
 )
 
@@ -73,8 +80,8 @@ if(NOT LIBCLANG_LIB OR NOT LIBCLANG_INCLUDE_DIR)
             "  LLVM을 설치하거나 Config/Environment/toolchain_config.json 의 llvm_path 를 설정하세요.\n"
             "  도구만 빌드하려면 -DSW_REQUIRE_REFLECTION=OFF 를 사용하세요."
         )
-
     endif()
+
     message(WARNING
         "[ReflectionParser] '${LLVM_INSTALL_PREFIX}' 경로에서 libclang을 찾을 수 없습니다.\n"
         "  ReflectionParser 빌드가 건너뛰어집니다."
@@ -98,10 +105,11 @@ target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generat
 
 target_link_libraries(ReflectionParser
     PRIVATE
-        Core
-        "${LIBCLANG_LIB}"
-        sw_global_options
+    Core
+    "${LIBCLANG_LIB}"
+    sw_global_options
 )
+
 if(sw_flag_libraries)
     target_link_libraries(ReflectionParser PRIVATE ${sw_flag_libraries})
 endif()
@@ -110,8 +118,9 @@ target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"")
 sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 
 set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+
 if(COMMAND sw_setUnityBuild)
-	sw_setUnityBuild(ReflectionParser OFF)
+    sw_setUnityBuild(ReflectionParser OFF)
 endif()
 
 set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
@@ -121,11 +130,11 @@ set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
 # 호출부는 전부 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
 set(swReflectionParserOutDir "${CMAKE_BINARY_DIR}/BuildTools")
 set_target_properties(ReflectionParser PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${swReflectionParserOutDir}"
+    RUNTIME_OUTPUT_DIRECTORY "${swReflectionParserOutDir}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${swReflectionParserOutDir}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${swReflectionParserOutDir}"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${swReflectionParserOutDir}"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${swReflectionParserOutDir}"
 )
 
 if(WIN32)
@@ -147,8 +156,8 @@ if(DETECTED_LIBCLANG_DLL AND EXISTS "${DETECTED_LIBCLANG_DLL}")
     add_custom_command(
         TARGET ReflectionParser POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${DETECTED_LIBCLANG_DLL}"
-            "$<TARGET_FILE_DIR:ReflectionParser>"
+        "${DETECTED_LIBCLANG_DLL}"
+        "$<TARGET_FILE_DIR:ReflectionParser>"
         COMMENT "[ReflectionParser] Copying libclang.dll..."
         VERBATIM
     )

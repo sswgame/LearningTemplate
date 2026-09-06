@@ -19,6 +19,7 @@ set(sw_project_version "1.0.0")
 if(NOT DEFINED sw_cpp_standard)
 	set(sw_cpp_standard 17)
 endif()
+
 set(sw_output_directory "${CMAKE_BINARY_DIR}")
 
 # ------------------------------------------------------------------------------
@@ -27,6 +28,7 @@ set(sw_output_directory "${CMAKE_BINARY_DIR}")
 # 2-1) 빌드 모드 및 엔진 기능 옵션
 option(SW_BUILD_DOCS "Doxygen 코드 문서화 생성 타겟 추가" OFF)
 option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드" ON)
+
 # 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
 option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 
@@ -38,6 +40,7 @@ function(sw_configurePch targetName headerPath)
 		target_precompile_headers(${targetName} PRIVATE "${headerPath}")
 	endif()
 endfunction()
+
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
 
 # 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 한때 Shipping 에서 테스트를
@@ -84,12 +87,14 @@ set(sw_flag_libraries "")
 # ------------------------------------------------------------------------------
 if(CMAKE_GENERATOR MATCHES "Ninja")
 	cmake_host_system_information(RESULT cpuCount QUERY NUMBER_OF_LOGICAL_CORES)
+
 	if(NOT cpuCount OR cpuCount LESS 2)
 		set(cpuCount 4)
 	endif()
 
 	# 링크 동시 실행 개수는 코어 수의 1/4 (최소 2, 최대 4)로 제한하여 RAM 부족/페이징 스래싱 방지
 	math(EXPR linkJobs "${cpuCount} / 4")
+
 	if(linkJobs LESS 2)
 		set(linkJobs 2)
 	elseif(linkJobs GREATER 4)
