@@ -33,9 +33,12 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_TRUE( color != nullptr );
     if ( color )
     {
+        // 흰색이어야 한다. forwardlit 이 MaterialCB 를 선언하기 전까지 이 값은 화면에 닿은 적이 없어
+        // 장식용 주황(1, 0.5, 0.2)이 들어 있었는데, 이제 셰이더가 정점 색에 실제로 곱한다 —
+        // 폴백 머티리얼이 색을 입히면 안 되므로 중립값으로 바꿨다.
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[0], 1e-4f );
-        SW_EXPECT_NEAR_EQUAL( 0.5f, color[1], 1e-4f );
-        SW_EXPECT_NEAR_EQUAL( 0.2f, color[2], 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, color[1], 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, color[2], 1e-4f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[3], 1e-4f );
     }
 

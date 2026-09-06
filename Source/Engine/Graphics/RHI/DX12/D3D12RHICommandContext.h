@@ -85,6 +85,8 @@ namespace sw
         void bindDescriptorHeaps();
         void bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
         void bindMeshVertexBuffer();
+        /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
+        void bindMeshVertexBufferOrFallback();
         void bindFullscreenVertexBuffer();
         void bindBoundIndexBuffer();
         void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );

@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    extern string gv_defaultMaterial;
+
     namespace
     {
         struct SceneInternal
@@ -32,6 +34,9 @@ namespace sw
              */
             static string resolveDefaultMaterialPath()
             {
+                // -gv_defaultMaterial 이 있으면 그것이 먼저다(EngineLoop.cpp 선언, 같은 모듈).
+                if ( gv_defaultMaterial.empty() == false )
+                    return gv_defaultMaterial;
                 return engine::getEngineData()._defaultMaterial;
             }
 

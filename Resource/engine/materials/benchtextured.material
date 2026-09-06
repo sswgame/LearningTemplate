@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Scalars as XML attributes; nested lists remain child elements. -->
-<MaterialDesc formatVersion="0" name="DefaultMaterial" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+<!-- 벤치·시각 검증용: 기본 머티리얼과 같지만 albedoMap 이 DXT1(BC1) 텍스처를 가리킨다. -gv_defaultMaterial 로 고른다. -->
+<MaterialDesc formatVersion="0" name="BenchTextured" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="albedoMap" type="Texture2D" assetPath="engine/textures/test/checker.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
 		<item name="useNormalMap" type="Keyword" defaultValue="0" shaderKeyword="MATERIAL_NORMALMAP" displayName="Normal Map" group="Features"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">

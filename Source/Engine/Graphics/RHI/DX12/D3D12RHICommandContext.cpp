@@ -135,6 +135,14 @@ namespace sw
         _pCmdList->IASetVertexBuffers( 0, 1, &vbv );
     }
 
+    void D3D12RHICommandContext::bindMeshVertexBufferOrFallback()
+    {
+        if ( _pState->_boundMeshVb != 0 )
+            bindMeshVertexBuffer();
+        else
+            bindFullscreenVertexBuffer();
+    }
+
     void D3D12RHICommandContext::bindFullscreenVertexBuffer()
     {
         if ( _pDevice->_vertexBuffer == nullptr )
@@ -410,10 +418,7 @@ namespace sw
         }
         bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        if ( _pState->_boundMeshVb != 0 )
-            bindMeshVertexBuffer();
-        else
-            bindFullscreenVertexBuffer();
+        bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, 1, startVertex, 0 );
     }
 
@@ -433,10 +438,7 @@ namespace sw
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        if ( _pState->_boundMeshVb != 0 )
-            bindMeshVertexBuffer();
-        else
-            bindFullscreenVertexBuffer();
+        bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
@@ -502,7 +504,11 @@ namespace sw
             _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
             bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
         }
-        bindFullscreenVertexBuffer();
+        // 여기서 풀스크린 정점버퍼를 무조건 걸던 것이 GPU 드리븐 메시 드로우를 통째로 깨뜨렸다.
+        // setVertexBuffer 가 걸어 둔 배치 메시 VB 를 덮어써서, ExecuteIndirect 가 36 정점을 3 정점짜리
+        // 버퍼에서 읽어 화면에 찢어진 삼각형이 나왔다(범위 밖은 0 이라 죽지는 않아 더 늦게 드러났다).
+        // 다른 세 백엔드는 원래 메시 VB 를 우선한다.
+        bindMeshVertexBufferOrFallback();
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }

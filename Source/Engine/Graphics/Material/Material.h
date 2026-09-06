@@ -84,6 +84,13 @@ namespace sw
         bool setPropertyValue( IRHIDevice* pRhi, hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 넣습니다. */
         bool setTextureProperty( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx );
+        /**
+         * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
+         * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). shutdown 이 releaseTextureAssets 로 되돌린다.
+         */
+        void resolveTextureAssets( IRHIDevice* pRhi );
+        /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 돌려줍니다. */
+        void releaseTextureAssets( IRHIDevice* pRhi );
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
         /** @brief 사용 플래그를 설정합니다. */
@@ -154,6 +161,7 @@ namespace sw
         RHIBufferHandle            _constantBuffer;
         RHIDescriptorIndex         _descriptorIndex;
         IRHIDevice*                _pRHIDevice;
+        vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로 — shutdown 때 그대로 돌려준다
         RHIBlendMode               _blendMode;
         shared_ptr<AsyncLoadState> _asyncLoadState;
 

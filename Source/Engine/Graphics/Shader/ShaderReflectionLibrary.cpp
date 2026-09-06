@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Shader/ShaderBaker.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -186,6 +187,29 @@ namespace sw
         const uint64 permHash = ShaderBaker::computePermutationHash( desc._listDefine );
         const string key      = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
                                                                     desc._entryPoint, permHash, ext );
+
+#if !defined( SW_SHIPPING )
+        // **소스보다 오래된 매니페스트는 쓰지 않는다** — ShaderCache 의 베이크 바이너리와 같은 규칙이다
+        // (71cd9755 가 바이너리에만 넣었고 여기엔 빠져 있었다). 둘이 어긋나면 증상이 아주 멀리서 난다:
+        // 바이너리는 새로 컴파일돼 b1(MaterialCB)을 참조하는데 레이아웃은 낡은 매니페스트라 그 슬롯이
+        // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 빈 루트 디스크립터 테이블을 읽고 GPU 페이지
+        // 폴트(DEVICE_HUNG)로 죽는다. 셰이더 한 줄 고쳤을 뿐인데 죽는 곳은 드로우라 추적이 오래 걸린다.
+        {
+            const string sourceAbs   = ResourceUtil::getResourcePath( desc._filePath );
+            const string manifestAbs = ResourceUtil::getResourcePath( binDirRel + getManifestFileName() );
+            if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
+            {
+                const uint64 sourceMtime   = FileUtil::getFileTimestamp( sourceAbs );
+                const uint64 manifestMtime = FileUtil::getFileTimestamp( manifestAbs );
+                if ( sourceMtime != 0 && manifestMtime != 0 && manifestMtime < sourceMtime )
+                {
+                    SW_LOG_TRACE( "리플렉션 매니페스트가 소스보다 오래됨 — 런타임 리플렉션으로 폴백: %#",
+                                  string( desc._filePath ).c_str() );
+                    return false;
+                }
+            }
+        }
+#endif
 
         std::scoped_lock<mutex> lock{ manifestMutexInternal() };
         auto&                   mapManifest = manifestCacheInternal();

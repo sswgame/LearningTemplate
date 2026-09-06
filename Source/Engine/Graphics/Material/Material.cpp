@@ -4,11 +4,15 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Resource/ResourceManager.h"
 
 namespace sw
 {
@@ -39,6 +43,7 @@ namespace sw
         , _constantBuffer{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _pRHIDevice{ nullptr }
+        , _listAcquiredTexturePath{}
         , _blendMode{ RHIBlendMode::Opaque }
         , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
         , _listCachedDefine{}
@@ -93,12 +98,59 @@ namespace sw
         pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), bufferSize );
         _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
 
+        // 텍스처는 CB 가 생긴 뒤에 — setTextureProperty 가 인덱스를 CB 에 바로 올린다.
+        resolveTextureAssets( pRhi );
+
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
+    void Material::resolveTextureAssets( IRHIDevice* pRhi )
+    {
+        if ( pRhi == nullptr || engine::areEngineServicesBound() == false )
+            return;
+        TextureCache& textures = engine::getResourceManager().getTextureManager();
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
+                continue;
+            Texture2D* pTexture = textures.acquire( prop._assetPath, pRhi );
+            if ( pTexture == nullptr )
+            {
+                SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded — sampling falls back to white.",
+                                _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
+                continue;
+            }
+            _listAcquiredTexturePath.push_back( prop._assetPath );
+            setTextureProperty( pRhi, hashed_string( prop._name.c_str() ), pTexture->getSrv() );
+        }
+    }
+
+    void Material::releaseTextureAssets( IRHIDevice* pRhi )
+    {
+        if ( _listAcquiredTexturePath.empty() )
+            return;
+        if ( engine::areEngineServicesBound() )
+        {
+            TextureCache& textures = engine::getResourceManager().getTextureManager();
+            for ( const string& path : _listAcquiredTexturePath )
+                textures.release( path, pRhi );
+        }
+        _listAcquiredTexturePath.clear();
+        for ( MaterialProperty& prop : _data._listProperty )
+        {
+            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
+                continue;
+            // _value 도 비운다 — setTextureProperty 가 인덱스를 문자열로도 남기므로, 그대로 두면
+            // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 되살린다.
+            prop._textureIndex = kInvalidDescriptorIndex;
+            prop._value.clear();
+        }
+    }
+
     void Material::shutdown( IRHIDevice* pRhi )
     {
+        releaseTextureAssets( pRhi );
         if ( pRhi != nullptr )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )

@@ -154,6 +154,30 @@ float4 SW_SampleIndex( uint index, float2 uv )
 
 #endif
 
+/**
+ * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (MaterialCB 의 uint 슬롯).
+ * @details SW_SampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
+ *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
+ *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그런데 그 경로의 마지막 폴백은
+ *          t0(그림자맵)을 샘플링하므로, 그대로 두면 큐브에 그림자맵이 입혀진다. 조용히 엉뚱한
+ *          텍스처를 입히느니 흰색(=텍스처 없음)을 돌려준다. DX12/Vulkan 은 네이티브 bindless 라
+ *          정상 동작한다. DX11/GL 을 제대로 지원하려면 머티리얼 텍스처를 실제 슬롯에 바인딩하는
+ *          경로가 필요하다(아직 없음).
+ */
+#if defined( SW_BINDLESS ) && ( defined( DX12 ) || defined( VULKAN ) )
+float4 SW_SampleMaterialTexture( uint index, float2 uv )
+{
+	if ( index == SW_INVALID_INDEX )
+		return float4( 1, 1, 1, 1 );
+	return SW_SampleIndex( index, uv );
+}
+#else
+float4 SW_SampleMaterialTexture( uint index, float2 uv )
+{
+	return float4( 1, 1, 1, 1 );
+}
+#endif
+
 /** @brief 하위호환: 예전 SampleBindlessIndex 이름. */
 float4 SampleBindlessIndex( uint index, float2 uv ) { return SW_SampleIndex( index, uv ); }
 

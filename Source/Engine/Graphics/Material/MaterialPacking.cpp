@@ -491,18 +491,17 @@ namespace sw
             case MaterialPropertyType::Texture2DArray:
             {
                 uint32 textureIndex = prop._textureIndex;
-                if ( textureIndex == kInvalidDescriptorIndex )
+                if ( textureIndex == kInvalidDescriptorIndex && prop._value.empty() == false )
                 {
                     // Allow numeric override in _value
-                    if ( prop._value.empty() == false )
-                    {
-                        uint64 numericVal{ 0 };
-                        if ( StringUtil::parseUInt64( prop._value, numericVal, 0 ) )
-                            textureIndex = static_cast<uint32>( numericVal );
-                    }
-                    else
-                        textureIndex = 0;
+                    uint64 numericVal{ 0 };
+                    if ( StringUtil::parseUInt64( prop._value, numericVal, 0 ) )
+                        textureIndex = static_cast<uint32>( numericVal );
                 }
+                // 붙은 텍스처가 없으면 0 이 아니라 SW_INVALID_INDEX 를 넣는다. 0 은 "첫 번째 슬롯"
+                // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있던 상수버퍼를
+                // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 났다. 셰이더의
+                // SW_SampleIndex 는 SW_INVALID_INDEX 를 "텍스처 없음" 으로 이미 처리한다.
                 Memory::copy( pDst, &textureIndex, sizeof( textureIndex ) );
                 return true;
             }

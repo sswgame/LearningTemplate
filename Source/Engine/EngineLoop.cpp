@@ -34,6 +34,7 @@
 #include "Engine/Graphics/Shader/LiveShaderManager.h"
 #include "Engine/Graphics/Shader/ShaderBaker.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -67,6 +68,13 @@ namespace sw
 
     /** @brief `-gv_profileFrames=N` — 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다. */
     SW_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
+
+    /**
+     * @brief `-gv_defaultMaterial=<path>` — 씬 기본 머티리얼을 EngineData 대신 이 경로로.
+     * @details 벤치·시각 검증용(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 본다).
+     *          비어 있으면 EngineData._defaultMaterial.
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -409,7 +417,10 @@ namespace sw
             if ( _rhi != nullptr )
             {
                 if ( _resourceManager != nullptr && _rhi->getDevice().getNativeDevice() != nullptr )
+                {
                     _resourceManager->getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
+                    _resourceManager->getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
+                }
                 _rhi->getDevice().waitIdle();
                 _rhi->shutdown();
             }
@@ -655,6 +666,7 @@ namespace sw
                 _frameRenderer->shutdown();
 
             engine::getResourceManager().getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
+            engine::getResourceManager().getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
 
             _rhi->getDevice().waitIdle();
             if ( _shaderCache != nullptr )
