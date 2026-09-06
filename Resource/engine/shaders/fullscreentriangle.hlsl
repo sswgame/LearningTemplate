@@ -12,11 +12,6 @@ struct PSInput
 	float4 col : COLOR;
 };
 
-SW_DECLARE_CBUFFER( MaterialCB, 1 )
-{
-	float4 g_MaterialColor;
-};
-
 PSInput VSMain(VSInput input)
 {
 	PSInput output;
@@ -27,5 +22,5 @@ PSInput VSMain(VSInput input)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	return input.col * g_MaterialColor;
+	return input.col;
 }

@@ -52,43 +52,43 @@ namespace sw
         const EngineData&   engineData         = engine::getEngineData();
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
 
-        auto registerPso = [this]( string_view passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
+        auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
                                    const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true ) -> RHIPipelineStateHandle
         {
             const RHIPipelineStateHandle pso =
                 createPsoForPassType( passType, shaderPath, bDepthTest, numRt, pRtFormats, bBlend, bDepthWrite );
             if ( pso != 0 )
-                _mapEnginePso.insert_or_assign( string( passType ), pso );
+                _mapEnginePso.insert_or_assign( passType, pso );
             return pso;
         };
 
-        registerPso( FrameRendererUtil::PassType::kShadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        registerPso( FrameRendererUtil::PassType::kDepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        registerPso( FrameRendererUtil::PassType::kForwardOpaque, engineData._shaderForwardLit.c_str(), true );
-        registerPso( "ForwardOpaqueNoDepthWrite", engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
-        registerPso( FrameRendererUtil::PassType::kTransparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
-        registerPso( FrameRendererUtil::PassType::kGBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
-        registerPso( FrameRendererUtil::PassType::kGBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
-        registerPso( FrameRendererUtil::PassType::kGBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
-        registerPso( FrameRendererUtil::PassType::kLighting, engineData._shaderDeferredLighting.c_str(), false );
-        registerPso( FrameRendererUtil::PassType::kPostBloom, engineData._shaderPostBloom.c_str(), false );
+        registerPso( RenderPassType::Shadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
+        registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
+        registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
+        registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
+        registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
+        registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
+        registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
+        registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
+        registerPso( RenderPassType::Lighting, engineData._shaderDeferredLighting.c_str(), false );
+        registerPso( RenderPassType::Bloom, engineData._shaderPostBloom.c_str(), false );
 
         {
-            RHIPipelineStateHandle psoOutline = createPsoForPassType( FrameRendererUtil::PassType::kOutline, engineData._shaderPostOutlineCommon.c_str(), false );
+            RHIPipelineStateHandle psoOutline = createPsoForPassType( RenderPassType::Outline, engineData._shaderPostOutlineCommon.c_str(), false );
             if ( psoOutline == 0 )
                 psoOutline = createEnginePso( engineData._shaderPostOutlineEngine.c_str(), false );
             if ( psoOutline != 0 )
-                _mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kOutline, psoOutline );
+                _mapEnginePso.insert_or_assign( RenderPassType::Outline, psoOutline );
         }
 
-        registerPso( FrameRendererUtil::PassType::kPresent, engineData._shaderFullscreenBlit.c_str(), false );
+        registerPso( RenderPassType::Present, engineData._shaderFullscreenBlit.c_str(), false );
 
-        const RHIPipelineStateHandle psoSsao = registerPso( FrameRendererUtil::PassType::kSsao, engineData._shaderSsao.c_str(), false );
+        const RHIPipelineStateHandle psoSsao = registerPso( RenderPassType::SSAO, engineData._shaderSsao.c_str(), false );
         if ( psoSsao != 0 )
-            _mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kHbao, psoSsao );
+            _mapEnginePso.insert_or_assign( RenderPassType::SSAO, psoSsao );
 
-        registerPso( FrameRendererUtil::PassType::kTaa, engineData._shaderTaa.c_str(), false );
-        registerPso( FrameRendererUtil::PassType::kTonemap, engineData._shaderTonemap.c_str(), false );
+        registerPso( RenderPassType::TAA, engineData._shaderTaa.c_str(), false );
+        registerPso( RenderPassType::Tonemap, engineData._shaderTonemap.c_str(), false );
 
         // Compute PSO: GpuCull — capabilities + 실제 PSO 생성 성공 시에만 GPU-driven.
         const RHICapabilities caps = _pDevice->getCapabilities();
@@ -97,16 +97,16 @@ namespace sw
             const RHIPipelineStateHandle psoGpuCull =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoGpuCull != 0 )
-                _mapEnginePso.insert_or_assign( "GpuCull", psoGpuCull );
+                _mapEnginePso.insert_or_assign( RenderPassType::GpuCull, psoGpuCull );
         }
 
-        _bUseGpuDriven = ( caps._bIndirectDraw != 0 && caps._bGpuCulling != 0 && getEnginePso( "GpuCull" ) != 0 ) ? 1 : 0;
+        _bUseGpuDriven = ( caps._bIndirectDraw != 0 && caps._bGpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0 ) ? 1 : 0;
 
         _bPassResourcesReady = 1;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
-                     getEnginePso( FrameRendererUtil::PassType::kShadow ), getEnginePso( FrameRendererUtil::PassType::kForwardOpaque ),
-                     getEnginePso( FrameRendererUtil::PassType::kTransparent ), getEnginePso( FrameRendererUtil::PassType::kLighting ),
-                     getEnginePso( FrameRendererUtil::PassType::kPostBloom ), getEnginePso( FrameRendererUtil::PassType::kOutline ), static_cast<uint32>( _bUseGpuDriven ) );
+                     getEnginePso( RenderPassType::Shadow ), getEnginePso( RenderPassType::ForwardOpaque ),
+                     getEnginePso( RenderPassType::Transparent ), getEnginePso( RenderPassType::Lighting ),
+                     getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( _bUseGpuDriven ) );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
@@ -402,10 +402,9 @@ namespace sw
         return pName != nullptr ? string( pName ) : string{};
     }
 
-    RHIPipelineStateHandle FrameRenderer::getEnginePso( string_view passType ) const
+    RHIPipelineStateHandle FrameRenderer::getEnginePso( RenderPassType passType ) const
     {
-        unordered_map<string, RHIPipelineStateHandle>::const_iterator it =
-            _mapEnginePso.find( string( passType ) );
+        const auto it = _mapEnginePso.find( passType );
         return ( it != _mapEnginePso.end() ) ? it->second : 0;
     }
 } // namespace sw

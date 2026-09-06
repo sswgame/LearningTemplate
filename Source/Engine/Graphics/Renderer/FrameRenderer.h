@@ -166,7 +166,7 @@ namespace sw
         /** @brief RenderGraph 패스 실행 콜백. */
         void onGraphPassExecute( const RenderGraphPassContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
-        void executePass( FramePassContext& ctx, string_view passType, string_view passName );
+        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName );
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
         /** @brief 카메라에서 뷰/투영을 적용합니다. */
@@ -241,14 +241,14 @@ namespace sw
         /** @brief Present 소스 어태치먼트 이름을 결정합니다. */
         string resolvePresentSource() const;
         /** @brief 패스 타입으로 파이프라인 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( string_view passType ) const;
+        const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
         /** @brief 엔진 기본 PSO를 만듭니다. */
         RHIPipelineStateHandle createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets = 1,
                                                 const RHIFormat* pRtvFormats = nullptr, bool bBlend = false,
                                                 bool bDepthWrite = true );
         /** @brief 파이프라인 XML 패스 레시피로 PSO를 만들고, 없으면 타입 기본값을 씁니다. */
-        RHIPipelineStateHandle createPsoForPassType( string_view passType, string_view defaultShader,
+        RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, string_view defaultShader,
                                                      bool bDepthTest, uint32 numRenderTargets = 1,
                                                      const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
                                                      bool                  bDefaultDepthWrite = true,
@@ -256,13 +256,13 @@ namespace sw
         /**
          * @brief 패스 레시피 PSO에 Material/MaterialInstance permutation define을 합칩니다 (캐시).
          */
-        RHIPipelineStateHandle getOrCreateMaterialPassPso( string_view passType, string_view defaultShader,
+        RHIPipelineStateHandle getOrCreateMaterialPassPso( RenderPassType passType, string_view defaultShader,
                                                            bool bDepthTest, Material* pMaterial,
                                                            MaterialInstance* pMaterialInstance = nullptr,
                                                            uint32 numRenderTargets = 1, const RHIFormat* pRtvFormats = nullptr,
                                                            bool bDefaultBlend = false, bool bDefaultDepthWrite = true );
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
-        RHIPipelineStateHandle getEnginePso( string_view passType ) const;
+        RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
 
     private:
         /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
@@ -310,22 +310,23 @@ namespace sw
         unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPsoDesc;
         mutable mutex                                                     _psoLayoutMutex;
         /** @brief 엔진(PassCB) 상수 버퍼 슬롯 크기. 리플렉션이 실제 쓰는 만큼만 채우므로 여유있게 잡는다. */
-        static constexpr uint32                       _s_kEnginePassCbSize = 512;
-        unordered_map<string, RHIPipelineStateHandle> _mapEnginePso;
-        unordered_map<uint64, RHIPipelineStateHandle> _mapMaterialPassPso;
-        unordered_map<hashed_string, uint32>          _mapPassNameToIndex;
-        mutex                                         _psoMutex;
-        uint32                                        _transientWidth;
-        uint32                                        _transientHeight;
-        RHITextureHandle                              _outputRenderTarget;
-        RHITextureHandle                              _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
-        RHIDescriptorIndex                            _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
-        FrameRendererStatus                           _status;
-        string                                        _statusMessage;
-        uint8                                         _bCallbacksBound     : 1;
-        uint8                                         _bPassResourcesReady : 1;
-        uint8                                         _bUseGpuDriven       : 1;
-        [[maybe_unused]] uint8                        _reservedFlags       : 5;
+        static constexpr uint32 _s_kEnginePassCbSize = 512;
+        /// @brief 엔진이 만들어 둔 패스별 PSO. 예전엔 string 키라 조회마다 string 을 만들었다.
+        unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
+        unordered_map<uint64, RHIPipelineStateHandle>         _mapMaterialPassPso;
+        unordered_map<hashed_string, uint32>                  _mapPassNameToIndex;
+        mutex                                                 _psoMutex;
+        uint32                                                _transientWidth;
+        uint32                                                _transientHeight;
+        RHITextureHandle                                      _outputRenderTarget;
+        RHITextureHandle                                      _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
+        RHIDescriptorIndex                                    _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
+        FrameRendererStatus                                   _status;
+        string                                                _statusMessage;
+        uint8                                                 _bCallbacksBound     : 1;
+        uint8                                                 _bPassResourcesReady : 1;
+        uint8                                                 _bUseGpuDriven       : 1;
+        [[maybe_unused]] uint8                                _reservedFlags       : 5;
 
         // 아래 둘은 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와

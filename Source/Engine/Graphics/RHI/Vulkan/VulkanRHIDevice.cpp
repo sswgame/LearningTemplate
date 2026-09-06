@@ -1421,6 +1421,17 @@ namespace sw
                 extent.height = capabilities.maxImageExtent.height;
         }
 
+        // 창이 최소화되거나 파괴되는 중이면 서피스가 0 크기를 보고한다. 그대로 넘기면
+        // vkCreateSwapchainKHR / vkCreateFramebuffer / vkCmdBeginRenderPass 가 줄줄이 0 크기로
+        // 불려 검증 오류가 쏟아진다(종료 경로에서 실제로 그랬다). 크기가 생기면 _bSwapChainDirty
+        // 경로가 다시 부르므로 여기서는 조용히 물러난다.
+        if ( extent.width == 0 || extent.height == 0 )
+        {
+            SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#x%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
+                          extent.width, extent.height );
+            return false;
+        }
+
         // 백버퍼 개수도 백엔드 간 계약이다 — 예전엔 이 값을 무시하고 minImageCount + 1 을 썼다.
         // 요청값을 존중하되 서피스 능력으로 클램프한다.
         uint32 imageCount = ( _requestedBufferCount > 0 ) ? _requestedBufferCount : ( capabilities.minImageCount + 1 );

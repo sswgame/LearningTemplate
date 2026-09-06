@@ -642,6 +642,112 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallelRunsOnRealDevice )
 }
 
 /**
+ * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
+ * @details forward/deferred 둘 다 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나
+ *          조용히 잘못 그리거나 GPU 가 죽는다(`ae7fb078` 이 그 사례였다).
+ */
+SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
+{
+    const std::string_view arrPipeline[] = {
+        "engine/pipeline/forwardpipeline.xml",
+        "engine/pipeline/deferredpipeline.xml",
+    };
+    for ( std::string_view path : arrPipeline )
+    {
+        sw::RenderPipelineResource res;
+        SW_ASSERT_TRUE( res.loadFromXmlFile( path ) );
+        SW_EXPECT_EQUAL( 0u, res.validate( path ) );
+        // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
+        for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
+            SW_EXPECT_TRUE( sw::isPipelinePassType( pass._resolvedType ) );
+    }
+}
+
+/**
+ * @brief 파이프라인 검증이 실제로 문제를 잡는지 — 잡지 못하는 검증은 없느니만 못하다.
+ */
+SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
+{
+    // 1) 알 수 없는 패스 타입
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderGraphPassDesc    pass{};
+        pass._name = "Bad";
+        pass._type = "NoSuchPassType";
+        desc._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid );
+    }
+
+    // 2) 선언되지 않은 첨부를 입출력으로 참조
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderGraphPassDesc    pass{};
+        pass._name = "Dangling";
+        pass._type = "ForwardOpaque";
+        pass._listOutput.push_back( "NotDeclared" );
+        desc._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+
+    // 3) Swapchain 은 첨부로 선언하지 않는 예약어라 통과해야 한다
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderGraphPassDesc    pass{};
+        pass._name = "Blit";
+        pass._type = "Present";
+        pass._listOutput.push_back( "Swapchain" );
+        desc._listPass.push_back( pass );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+
+    // 4) 알 수 없는 첨부 포맷
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderPassAttachment   att{};
+        att._name   = "Weird";
+        att._format = "R99G99_NOPE";
+        desc._listAttachment.push_back( att );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+
+    // 5) 이름은 정본 하나로 통일돼 있다 — 예전 표기(`Shading`, `PostBloom`)는 이제 오류로 잡힌다.
+    //    다시 이름을 바꿔야 하면 ENUM( ValueAlias = "Old:New" ) 로 호환을 열어 주면 된다.
+    {
+        auto retiredIsRejected = []( const utf8* pRetired ) -> bool
+        {
+            sw::RenderPipelineResource res;
+            sw::RenderPipelineDesc&    desc = res.getDesc();
+            sw::RenderGraphPassDesc    pass{};
+            pass._name = "Retired";
+            pass._type = pRetired;
+            desc._listPass.push_back( pass );
+            return res.validate( "unit-test" ) > 0u;
+        };
+        SW_EXPECT_TRUE( retiredIsRejected( "Shading" ) );
+        SW_EXPECT_TRUE( retiredIsRejected( "PostBloom" ) );
+        SW_EXPECT_TRUE( retiredIsRejected( "HBAO" ) );
+        // 철자 대소문자는 리플렉션이 무시하므로 "ToneMap" 은 "Tonemap" 으로 읽힌다 — 의도된 관용이다.
+        SW_EXPECT_TRUE( retiredIsRejected( "ToneMap" ) == false );
+    }
+
+    // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다.
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPipelineDesc&    desc = res.getDesc();
+        sw::RenderGraphPassDesc    pass{};
+        pass._name = "Internal";
+        pass._type = "GpuCull";
+        desc._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+}
+
+/**
  * @brief Deferred 파이프라인을 실제 디바이스에서 돌린다 — 같은 웨이브의 패스가 병렬로 기록되는 유일한 구성.
  * @details forwardpipeline 은 Shadow→ForwardOpaque→…→Present 완전 체인이라 웨이브가 전부 1개다.
  *          즉 병렬 기록 경로가 있어도 실제로 동시에 도는 패스가 없었고, 그래서 패스 콜백이 만지는

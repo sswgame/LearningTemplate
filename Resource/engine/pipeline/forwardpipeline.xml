@@ -102,7 +102,7 @@
 		</item>
 		<item>
 			<_name>PostBloom</_name>
-			<_type>PostBloom</_type>
+			<_type>Bloom</_type>
 			<_inputs>
 				<item>SceneColor</item>
 			</_inputs>

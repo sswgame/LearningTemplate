@@ -49,7 +49,7 @@ namespace sw
         return handle;
     }
 
-    RHIPipelineStateHandle FrameRenderer::createPsoForPassType( string_view passType, string_view defaultShader,
+    RHIPipelineStateHandle FrameRenderer::createPsoForPassType( RenderPassType passType, string_view defaultShader,
                                                                 bool bDepthTest, uint32 numRenderTargets, const RHIFormat* pRtvFormats,
                                                                 bool bDefaultBlend, bool bDefaultDepthWrite,
                                                                 const vector<string>* pExtraDefines )
@@ -173,7 +173,7 @@ namespace sw
 
     void FrameRenderer::compileMaterialPsoTask( const TaskArgs& args )
     {
-        const string            passTypeStr        = args.get<string>( 0 );
+        const RenderPassType    passType           = static_cast<RenderPassType>( args.get<uint32>( 0 ) );
         const string            defaultShaderStr   = args.get<string>( 1 );
         const bool              bDepthTest         = args.get<bool>( 2 );
         const uint32            numRenderTargets   = args.get<uint32>( 3 );
@@ -184,7 +184,7 @@ namespace sw
         const uint64            cacheKey           = args.get<uint64>( 8 );
 
         const RHIPipelineStateHandle pso = createPsoForPassType(
-            passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets,
+            passType, defaultShaderStr, bDepthTest, numRenderTargets,
             rtvFormatsCopy.empty() ? nullptr : rtvFormatsCopy.data(),
             bDefaultBlend, bDefaultDepthWrite, &definesCopy );
 
@@ -195,7 +195,7 @@ namespace sw
         }
     }
 
-    RHIPipelineStateHandle FrameRenderer::getOrCreateMaterialPassPso( string_view passType, string_view defaultShader,
+    RHIPipelineStateHandle FrameRenderer::getOrCreateMaterialPassPso( RenderPassType passType, string_view defaultShader,
                                                                       bool bDepthTest, Material* pMaterial, MaterialInstance* pMaterialInstance,
                                                                       uint32 numRenderTargets, const RHIFormat* pRtvFormats,
                                                                       bool bDefaultBlend, bool bDefaultDepthWrite )
@@ -217,7 +217,7 @@ namespace sw
         // 둘뿐이라, RT 포맷·뎁스·블렌드가 다른 호출부가 하나만 생겨도 조용히 다른 PSO 를 돌려줬다.
         // (`permHash << 1` 은 최상위 비트도 버렸다.)
         // std::hash 는 구현마다 알고리즘이 달라 쓰지 않는다 — 엔진이 이미 쓰는 FNV 해시로 맞춘다.
-        uint64 cacheKey = StringUtil::computeHash64( passType );
+        uint64 cacheKey = FrameRendererPsoInternal::mixHash( 0ull, static_cast<uint64>( passType ) );
         cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, StringUtil::computeHash64( defaultShader ) );
         cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, permHash );
         cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, static_cast<uint64>( numRenderTargets ) );
@@ -239,7 +239,6 @@ namespace sw
 
         if ( _pTaskManager != nullptr )
         {
-            string            passTypeStr( passType );
             string            defaultShaderStr( defaultShader );
             vector<string>    definesCopy = ( pMatDefines != nullptr ) ? *pMatDefines : vector<string>{};
             vector<RHIFormat> rtvFormatsCopy;
@@ -249,7 +248,7 @@ namespace sw
             TaskHandle handle = _pTaskManager->emplaceTask(
                 "CompileMaterialPso",
                 SW_DELEGATE_METHOD( TaskArgsDelegate, &FrameRenderer::compileMaterialPsoTask, this ),
-                MakeTaskArgs( passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets, rtvFormatsCopy, bDefaultBlend,
+                MakeTaskArgs( static_cast<uint32>( passType ), defaultShaderStr, bDepthTest, numRenderTargets, rtvFormatsCopy, bDefaultBlend,
                               bDefaultDepthWrite, definesCopy, cacheKey ) );
             _pTaskManager->submit( handle );
 

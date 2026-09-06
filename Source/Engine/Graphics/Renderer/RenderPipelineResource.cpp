@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/RenderPassXmlUtil.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -173,9 +174,107 @@ namespace sw
         if ( _desc._shadingModel.empty() || _desc._shadingModel == "Forward" )
             _desc._shadingModel = RenderPipelineResourceInternal::guessShadingModel( _desc._name, _desc._listPass );
 
+        // 여기서 걸러내지 못한 불일치는 전부 런타임에 드러난다 — 그것도 조용히. 파이프라인이
+        // 선언한 포맷과 PSO 가 어긋나 GPU 가 통째로 죽은 적이 있다(`ae7fb078`).
+        validate( absPath );
+
         SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
                      _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
         return true;
+    }
+
+    uint32 RenderPipelineResource::validate( string_view sourcePath )
+    {
+        uint32 issueCount{ 0 };
+
+        auto findAttachment = [this]( string_view name ) -> const RenderPassAttachment*
+        {
+            for ( const RenderPassAttachment& att : _desc._listAttachment )
+            {
+                if ( att._name == name )
+                    return &att;
+            }
+            return nullptr;
+        };
+
+        // 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 이름이 겹치지 않는가.
+        for ( uint32 attIndex = 0; attIndex < _desc._listAttachment.size(); ++attIndex )
+        {
+            const RenderPassAttachment& att = _desc._listAttachment[attIndex];
+            RHIFormat                   parsed{};
+            if ( engine::getTypeRegistry().enumFromString( att._format, parsed ) == false )
+            {
+                SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, att._name, att._format );
+                ++issueCount;
+            }
+            for ( uint32 otherIndex = 0; otherIndex < attIndex; ++otherIndex )
+            {
+                if ( _desc._listAttachment[otherIndex]._name == att._name )
+                {
+                    SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, att._name );
+                    ++issueCount;
+                    break;
+                }
+            }
+        }
+
+        // 2) 패스: 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
+        for ( RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            pass._resolvedType = engine::getTypeRegistry().enumFromString<RenderPassType>( pass._type );
+            if ( isPipelinePassType( pass._resolvedType ) == false )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
+                              sourcePath, pass._name, pass._type );
+                ++issueCount;
+            }
+
+            for ( const string& inputName : pass._listInput )
+            {
+                if ( findAttachment( inputName ) == nullptr )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 입력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, inputName );
+                    ++issueCount;
+                }
+            }
+            for ( const string& outputName : pass._listOutput )
+            {
+                // 스왑체인은 파이프라인이 선언하는 첨부가 아니라 디바이스가 주는 백버퍼다.
+                if ( outputName == kSwapchainOutputName )
+                    continue;
+                if ( findAttachment( outputName ) == nullptr )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, outputName );
+                    ++issueCount;
+                }
+            }
+        }
+
+        // 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다 — 포맷이 서로 달라도 되지만 개수 한계는 있다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            uint32 colorCount{ 0 };
+            for ( const string& outputName : pass._listOutput )
+            {
+                const RenderPassAttachment* pAtt = findAttachment( outputName );
+                if ( pAtt == nullptr )
+                    continue;
+                RHIFormat fmt{};
+                if ( engine::getTypeRegistry().enumFromString( pAtt->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
+                    ++colorCount;
+            }
+            if ( colorCount > kMaxColorAttachments )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#': 컬러 출력이 %#개로 한계(%#)를 넘습니다",
+                              sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
+                ++issueCount;
+            }
+        }
+
+        if ( issueCount > 0 )
+            SW_LOG_ERROR( "[%#] 파이프라인 검증에서 %#건의 문제를 찾았습니다 — 렌더 결과가 어긋나거나 GPU 가 죽을 수 있습니다",
+                          sourcePath, issueCount );
+        return issueCount;
     }
 
     bool RenderPipelineResource::saveToXmlFile( string_view assetRelativePath ) const

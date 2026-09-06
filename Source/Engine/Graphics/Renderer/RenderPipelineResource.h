@@ -72,6 +72,16 @@ namespace sw
         const RenderPipelineDesc& getDesc() const { return _desc; }
         RenderPipelineDesc&       getDesc() { return _desc; }
 
+        /**
+         * @brief 로드한 파이프라인이 스스로 모순이 없는지 검사하고 문제 수를 돌려줍니다.
+         * @details 패스 타입 표기 해석(`_resolvedType` 도 여기서 채운다), 입출력이 선언된 첨부를
+         *          가리키는지, 첨부 포맷 표기가 RHIFormat 으로 읽히는지, 컬러 출력 개수가 한계
+         *          안인지를 본다. 여기서 못 잡은 불일치는 런타임에 조용히 어긋나거나 GPU 를
+         *          죽인다 — 실제로 그런 적이 있다(`ae7fb078`).
+         * @return 발견한 문제 수 (0 이면 정상). 로드는 막지 않고 로그만 남긴다.
+         */
+        uint32 validate( string_view sourcePath );
+
         const vector<RenderGraphPassDesc>&  getGraphPass() const { return _desc._listPass; }
         const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
 

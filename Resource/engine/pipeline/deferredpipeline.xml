@@ -94,7 +94,7 @@
 		</item>
 		<item>
 			<_name>Shading</_name>
-			<_type>Shading</_type>
+			<_type>Lighting</_type>
 			<_inputs>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
@@ -129,7 +129,7 @@
 		</item>
 		<item>
 			<_name>PostBloom</_name>
-			<_type>PostBloom</_type>
+			<_type>Bloom</_type>
 			<_inputs>
 				<item>TransparentColor</item>
 				<item>AOColor</item>

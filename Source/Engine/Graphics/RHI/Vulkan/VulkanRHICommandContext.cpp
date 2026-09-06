@@ -700,6 +700,18 @@ namespace sw
         }
         if ( slot == 1 )
         {
+            // b1 은 Vulkan 에서 **실제 상수 버퍼가 아니다** — set 0 에는 바인딩 0 하나뿐이고,
+            // 여기서는 머티리얼 인덱스만 푸시 상수로 넘긴다(bindingslots.hlsli 의 b1 설명 참고).
+            // 셰이더가 `SW_DECLARE_CBUFFER( X, 1 )` 로 실제 필드를 선언하면 파이프라인 레이아웃에
+            // 없는 디스크립터를 참조하게 되어 vkCmdDraw 에서 깨진다 — 검증 레이어가 없으면 원인을
+            // 알 수 없는 크래시로만 보인다. 그래서 이 경로를 한 번은 소리내어 알린다.
+            if ( _pDevice->_bMaterialCbSlotWarned == 0 )
+            {
+                _pDevice->_bMaterialCbSlotWarned = 1;
+                SW_LOG_INFO( "b1(MaterialCB) 는 Vulkan 에서 푸시 상수(머티리얼 인덱스)로 전달됩니다 — "
+                             "셰이더가 b1 을 실제 cbuffer 로 선언했다면 레이아웃과 어긋납니다." );
+            }
+
             VkCommandBuffer cmd = commandBuffer();
             if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || cb == kInvalidDescriptorIndex )
                 return;

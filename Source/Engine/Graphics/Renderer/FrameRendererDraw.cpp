@@ -116,10 +116,8 @@ namespace sw
         if ( _bSceneTransformsFlushed.exchange( 1 ) == 0 )
             pObjects->flushSceneTransforms();
 
-        const utf8* pPassTypeForMat = bTransparentPass
-                                        ? FrameRendererUtil::PassType::kTransparent
-                                        : FrameRendererUtil::PassType::kForwardOpaque;
-        const utf8* pDefaultShader  = engine::getEngineData()._shaderForwardLit.c_str();
+        const RenderPassType passTypeForMat = bTransparentPass ? RenderPassType::Transparent : RenderPassType::ForwardOpaque;
+        const utf8*          pDefaultShader = engine::getEngineData()._shaderForwardLit.c_str();
 
         uint32 drawn{ 0 };
         if ( pObjects != nullptr )
@@ -162,7 +160,7 @@ namespace sw
                     if ( pMaterial != nullptr || materialInstance != nullptr )
                     {
                         const RHIPipelineStateHandle matPso = getOrCreateMaterialPassPso(
-                            pPassTypeForMat, pDefaultShader, true, pMaterial, materialInstance.get(),
+                            passTypeForMat, pDefaultShader, true, pMaterial, materialInstance.get(),
                             1, nullptr, bTransparentPass, bTransparentPass == false );
                         if ( matPso != 0 )
                             drawPso = matPso;

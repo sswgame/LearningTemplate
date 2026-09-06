@@ -547,6 +547,8 @@ namespace sw
         uint32                  _frameSegmentCursor{ 0 };
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는가 (첫 제출만 건다).
         uint8 _bFrameAcquireWaitPending{ 0 };
+        /// @brief b1(MaterialCB) 푸시 상수 경로 안내를 한 번만 남기기 위한 래치.
+        uint8 _bMaterialCbSlotWarned{ 0 };
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
         VkCommandBuffer _activeFrameBuffer{ nullptr };
 

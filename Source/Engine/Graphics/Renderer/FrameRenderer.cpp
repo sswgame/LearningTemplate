@@ -212,7 +212,7 @@ namespace sw
 
         if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
         {
-            const RHIPipelineStateHandle cullPso = getEnginePso( "GpuCull" );
+            const RHIPipelineStateHandle cullPso = getEnginePso( RenderPassType::GpuCull );
             if ( cullPso != 0 && _gpuCullCb != 0 && _gpuCullCbIndex != kInvalidDescriptorIndex &&
                  _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex &&
                  _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex )
