@@ -65,6 +65,13 @@ namespace sw
         virtual float32 getLastDurationSec() const override { return _lastDurationSec.load( std::memory_order_relaxed ); }
         /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다. (0 = 성공) */
         virtual int32 getLastExitCode() const override { return _lastExitCode.load( std::memory_order_relaxed ); }
+
+        /**
+         * @brief 마지막 빌드가 "실행 중인 바이너리를 교체할 수 없어" 실패했는가.
+         * @details 엔진 자체가 다시 링크돼야 하는 변경이면 핫리로드로는 해결되지 않는다. 이 경우
+         *          빌드 실패는 코드 오류가 아니라 환경 제약이므로, 호출부가 구분해서 다룰 수 있게 한다.
+         */
+        bool wasBlockedByLoadedBinary() const { return _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0; }
         /** @brief 현재 또는 마지막으로 컴파일된 타겟 이름을 반환합니다. */
         virtual string getTargetName() const override;
 
@@ -80,9 +87,11 @@ namespace sw
         string              _targetName;
         mutable mutex       _mutex;
         atomic<BuildState>  _buildState;
-        atomic<int32>       _lastExitCode;
-        atomic<float32>     _lastDurationSec;
-        atomic<bool>        _bIsCompiling;
-        atomic<bool>        _bCancelRequested;
+        /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는가 (핫리로드로는 해결 불가).
+        atomic<uint8>   _bBlockedByLoadedBinary{ 0 };
+        atomic<int32>   _lastExitCode;
+        atomic<float32> _lastDurationSec;
+        atomic<bool>    _bIsCompiling;
+        atomic<bool>    _bCancelRequested;
     };
 } // namespace sw

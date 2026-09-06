@@ -62,6 +62,7 @@ namespace sw
         }
 
         _bCancelRequested.store( false, std::memory_order_relaxed );
+        _bBlockedByLoadedBinary.store( 0, std::memory_order_relaxed );
         _bIsCompiling.store( true, std::memory_order_relaxed );
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
         _buildTimer.resetTimer();
@@ -164,6 +165,12 @@ namespace sw
             if ( singleLine.empty() )
                 continue;
 
+            // 이미 로드된 DLL 을 다시 링크하려다 막힌 경우다. 링커 메시지만 보면 원인이 안 보이므로
+            // 따로 표시해 두고 아래에서 사람이 읽을 수 있는 설명을 남긴다 — 핫리로드로 고칠 수 없는
+            // 상황(엔진 자체가 바뀜)이라 재시작이 필요하다는 것이 요점이다.
+            if ( singleLine.find( "failed to write output" ) != string::npos && singleLine.find( "permission denied" ) != string::npos )
+                _bBlockedByLoadedBinary.store( 1, std::memory_order_relaxed );
+
             if ( singleLine.find( "FAILED:" ) != string::npos || singleLine.find( "error:" ) != string::npos || singleLine.find( "Error" ) != string::npos )
                 SW_LOG_ERROR( "%#", singleLine.c_str() );
             else if ( singleLine.find( "warning:" ) != string::npos || singleLine.find( "Warning" ) != string::npos )
@@ -206,7 +213,16 @@ namespace sw
         else
         {
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-            SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+            if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
+            {
+                SW_LOG_ERROR( "Compilation failed (target: %#): 이미 실행 중이라 교체할 수 없는 바이너리가 있습니다. "
+                              "핫리로드는 플러그인 모듈만 바꿀 수 있고, 엔진 자체가 다시 링크돼야 하는 변경이면 재시작해야 합니다.",
+                              targetDisplayName.c_str() );
+            }
+            else
+            {
+                SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+            }
         }
 
         _bIsCompiling.store( false, std::memory_order_relaxed );
