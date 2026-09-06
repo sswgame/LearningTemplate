@@ -15,6 +15,116 @@ namespace sw
 {
     namespace
     {
+        /// @brief 자산 XML 저장 포맷. 줄 접기는 pugixml 이 아니라 wrapLongElementLines 가 한다.
+        inline constexpr uint32 kXmlSaveFormat = pugi::format_default | pugi::format_no_declaration;
+
+        /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접는다.
+        inline constexpr size_t kXmlWrapColumn = 120;
+
+        /**
+         * @brief 한 줄에 담긴 속성들을 잘라, 다음 속성이 시작되는 위치들을 모읍니다.
+         * @details 속성 값 안에도 공백이 있으므로 따옴표 밖의 공백만 경계로 센다. 값 안의 따옴표는
+         *          XML 이 `&quot;` 로 이스케이프하므로 따옴표 쌍만 세면 안전하다.
+         * @param outListEnd 각 속성의 끝 위치(반열림). 첫 원소가 첫 속성의 끝이다.
+         */
+        void collectAttributeEnds( string_view line, size_t from, vector<size_t>& outListEnd )
+        {
+            bool bInQuotes = false;
+            for ( size_t charIndex = from; charIndex < line.size(); ++charIndex )
+            {
+                if ( line[charIndex] != '"' )
+                    continue;
+                bInQuotes = !bInQuotes;
+                if ( bInQuotes == false )
+                    outListEnd.push_back( charIndex + 1 );
+            }
+        }
+
+        /**
+         * @brief 너무 긴 요소 줄을 속성 단위로 접습니다.
+         * @details 리플렉션 직렬화는 스칼라를 속성으로 쓴다. 필드가 20개면 속성 20개짜리 요소가
+         *          한 줄이 되어 1,000자를 넘고, 읽기도 어렵고 한 글자만 고쳐도 diff 가 줄 전체를
+         *          바뀐 것으로 표시한다.
+         *
+         *          pugixml 의 `format_indent_attributes` 는 태그 이름만 남기고 속성을 전부 아래로
+         *          내려서, 짧은 요소까지 여러 줄로 흩어지고 무슨 요소인지 눈에 덜 들어온다.
+         *          그래서 직접 접는다 — **짧은 줄은 그대로 두고**, 긴 줄만 첫 속성을 태그 옆에
+         *          남긴 채 나머지를 한 줄에 하나씩 내린다.
+         *
+         *              <RenderGraphPassDesc _name="Shadow"
+         *                  _type="Shadow"
+         *                  _depthAttachment="ShadowMap" />
+         */
+        string wrapLongElementLines( string_view xml )
+        {
+            string result;
+            result.reserve( xml.size() + xml.size() / 4 );
+
+            vector<size_t> listAttrEnd;
+            size_t         lineStart = 0;
+            while ( lineStart <= xml.size() )
+            {
+                size_t lineEnd = xml.find( '\n', lineStart );
+                if ( lineEnd == string_view::npos )
+                    lineEnd = xml.size();
+
+                const string_view line      = xml.substr( lineStart, lineEnd - lineStart );
+                const bool        bLastLine = ( lineEnd >= xml.size() );
+
+                size_t indentLen = 0;
+                while ( indentLen < line.size() && ( line[indentLen] == '\t' || line[indentLen] == ' ' ) )
+                    ++indentLen;
+
+                // 접을 대상: 충분히 길고, 여는 태그이며, 속성이 둘 이상인 줄.
+                const bool   bOpenTag   = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
+                                          line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
+                const size_t firstSpace = line.find( ' ', indentLen );
+
+                listAttrEnd.clear();
+                if ( line.size() > kXmlWrapColumn && bOpenTag && firstSpace != string_view::npos )
+                    collectAttributeEnds( line, firstSpace, listAttrEnd );
+
+                if ( listAttrEnd.size() < 2 )
+                {
+                    result.append( line.data(), line.size() );
+                    if ( bLastLine == false )
+                        result.push_back( '\n' );
+                    lineStart = lineEnd + 1;
+                    continue;
+                }
+
+                // 태그 + 첫 속성은 같은 줄에 둔다 — 무슨 요소인지가 먼저 보여야 한다.
+                result.append( line.data(), listAttrEnd[0] );
+
+                // 이어지는 속성은 **첫 속성과 같은 열**에 세운다. `<TagName ` 만큼의 폭을 들여쓰기
+                // 뒤부터 재서 공백으로 메우므로, 탭 폭이 몇이든 세로줄이 맞는다.
+                const size_t alignColumn = firstSpace + 1 - indentLen;
+
+                for ( size_t attrIndex = 1; attrIndex < listAttrEnd.size(); ++attrIndex )
+                {
+                    size_t tokenStart = listAttrEnd[attrIndex - 1];
+                    while ( tokenStart < line.size() && line[tokenStart] == ' ' )
+                        ++tokenStart;
+
+                    result.push_back( '\n' );
+                    result.append( line.data(), indentLen );
+                    result.append( alignColumn, ' ' );
+                    result.append( line.data() + tokenStart, listAttrEnd[attrIndex] - tokenStart );
+                }
+
+                // 마지막 속성 뒤의 꼬리( "/>" 또는 ">" )는 그대로 붙인다.
+                const size_t tailStart = listAttrEnd.back();
+                if ( tailStart < line.size() )
+                    result.append( line.data() + tailStart, line.size() - tailStart );
+
+                if ( bLastLine == false )
+                    result.push_back( '\n' );
+                lineStart = lineEnd + 1;
+            }
+
+            return result;
+        }
+
         struct XmlStringWriter : pugi::xml_writer
         {
             string _result;
@@ -448,8 +558,8 @@ namespace sw
         if ( pNode.empty() )
             return {};
         XmlStringWriter writer;
-        pNode.print( writer, "\t", pugi::format_default | pugi::format_no_declaration );
-        return std::move( writer._result );
+        pNode.print( writer, "\t", kXmlSaveFormat );
+        return wrapLongElementLines( writer._result );
     }
 
     XmlNode XmlNode::appendClone( XmlNode src ) const
@@ -561,8 +671,8 @@ namespace sw
         if ( _impl == nullptr )
             return "";
         XmlStringWriter writer;
-        _impl->doc.save( writer, "\t", pugi::format_default | pugi::format_no_declaration );
-        return std::move( writer._result );
+        _impl->doc.save( writer, "\t", kXmlSaveFormat );
+        return wrapLongElementLines( writer._result );
     }
 
     bool XmlDocument::saveFile( string_view absPath ) const
