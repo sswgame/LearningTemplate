@@ -2,6 +2,7 @@
 #include "Core/Common/EnumUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -99,6 +100,14 @@ namespace sw
          * @return 포맷이 업로드 불가이거나 데이터가 모자라면 false.
          */
         virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
+
+        /**
+         * @brief 2D 텍스처의 밉 하나를 CPU 로 읽어 옵니다 — 행은 빈틈없이(업로드와 같은 배치, BC 는 블록 행).
+         * @details GPU 를 기다리는 **동기** 경로다. 테스트·도구·스크린샷 용도이지 프레임 경로가 아니다.
+         *          outLayout 에 밉 크기와 행 바이트가 채워진다(_pData 는 outBytes.data() 를 가리키지 않는다).
+         * @return 포맷이 대상이 아니거나(깊이) 밉이 범위 밖이면 false.
+         */
+        virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
 
         // ------------------------------------------------------------------------------
         // Bindless — 텍스처/버퍼/UAV 등록과 해제

@@ -20,10 +20,28 @@ namespace sw
 
     SW_LOG_CALLER( "OpenGLRHIResource" );
 
+    // S3TC 는 확장이라 glad 헤더에 없다 — 값은 EXT_texture_compression_s3tc 그대로다.
+    static constexpr GLenum kGlCompressedRgbaS3tcDxt1 = 0x83F1;
+    static constexpr GLenum kGlCompressedRgbaS3tcDxt3 = 0x83F2;
+    static constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
+    static constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
+
     static GLenum toGlInternalFormat( RHIFormat format )
     {
         switch ( format )
         {
+            case RHIFormat::BC1_UNORM:
+                return kGlCompressedRgbaS3tcDxt1;
+            case RHIFormat::BC2_UNORM:
+                return kGlCompressedRgbaS3tcDxt3;
+            case RHIFormat::BC3_UNORM:
+                return kGlCompressedRgbaS3tcDxt5;
+            case RHIFormat::BC4_UNORM:
+                return GL_COMPRESSED_RED_RGTC1;
+            case RHIFormat::BC5_UNORM:
+                return kGlCompressedRgRgtc2;
+            case RHIFormat::BC7_UNORM:
+                return GL_COMPRESSED_RGBA_BPTC_UNORM;
             case RHIFormat::R8G8B8A8_UNORM:
             case RHIFormat::B8G8R8A8_UNORM:
                 return GL_RGBA8;
@@ -259,8 +277,10 @@ namespace sw
         }
 
         ScopedOpenGLContext ctxScope( _pDevice );
-        const GLenum        glFormat = toGlFormat( pRecord->_format );
-        const GLenum        glType   = toGlType( pRecord->_format );
+        const bool          bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
+        const GLenum        glInternal  = toGlInternalFormat( pRecord->_format );
+        const GLenum        glFormat    = toGlFormat( pRecord->_format );
+        const GLenum        glType      = toGlType( pRecord->_format );
 
         glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
         // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R32G32B32 12바이트 행 같은 경우).
@@ -268,10 +288,42 @@ namespace sw
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& span = arrMip[mip];
-            glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
-                             static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+            if ( bCompressed )
+            {
+                glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
+                                           static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glInternal,
+                                           static_cast<GLsizei>( span._sizeBytes ), span._pData );
+            }
+            else
+            {
+                glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
+                                 static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+            }
         }
         glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+        glBindTexture( GL_TEXTURE_2D, 0 );
+        return true;
+    }
+
+    bool OpenGLRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    {
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
+            return false;
+        if ( pRecord->_bDepthStencil != 0 || mip >= pRecord->_mipLevels )
+            return false;
+        if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+            return false;
+
+        ScopedOpenGLContext ctxScope( _pDevice );
+        outBytes.assign( outLayout._sizeBytes, 0 );
+        glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+        glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+        if ( isRHIFormatBlockCompressed( pRecord->_format ) )
+            glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
+        else
+            glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );
+        glPixelStorei( GL_PACK_ALIGNMENT, 4 );
         glBindTexture( GL_TEXTURE_2D, 0 );
         return true;
     }

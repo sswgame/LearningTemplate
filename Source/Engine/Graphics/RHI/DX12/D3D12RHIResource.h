@@ -27,6 +27,7 @@ namespace sw
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
         bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        bool                   readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
@@ -45,8 +46,12 @@ namespace sw
          *          submitUploadSlot 으로 닫는다. updateStructuredBuffer / uploadTexture2D 공용.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
-        /** @brief acquireUploadStaging 으로 연 복사 리스트를 닫고 그래픽스 큐에 제출합니다. */
+        /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다(스테이징 없이 — readback 처럼 소스가 다른 곳일 때). */
+        bool openUploadSlot( uint32& outSlotIndex );
+        /** @brief acquireUploadStaging / openUploadSlot 으로 연 복사 리스트를 닫고 그래픽스 큐에 제출합니다. */
         void submitUploadSlot( uint32 slotIndex );
+        /** @brief 지금까지 큐에 넣은 작업이 끝날 때까지 CPU 를 세웁니다(readback 전용 — 프레임 경로에서 부르지 말 것). */
+        bool waitForQueueDrain();
 
     public:
     private:

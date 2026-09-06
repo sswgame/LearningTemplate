@@ -55,6 +55,18 @@ namespace sw
                     return VK_FORMAT_R32G32_SFLOAT;
                 case RHIFormat::R32_FLOAT:
                     return VK_FORMAT_R32_SFLOAT;
+                case RHIFormat::BC1_UNORM:
+                    return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+                case RHIFormat::BC2_UNORM:
+                    return VK_FORMAT_BC2_UNORM_BLOCK;
+                case RHIFormat::BC3_UNORM:
+                    return VK_FORMAT_BC3_UNORM_BLOCK;
+                case RHIFormat::BC4_UNORM:
+                    return VK_FORMAT_BC4_UNORM_BLOCK;
+                case RHIFormat::BC5_UNORM:
+                    return VK_FORMAT_BC5_UNORM_BLOCK;
+                case RHIFormat::BC7_UNORM:
+                    return VK_FORMAT_BC7_UNORM_BLOCK;
                 case RHIFormat::Unknown: ///< 첨부 없음 — Vulkan 에는 대응 값이 없다.
                 default:
                     break;

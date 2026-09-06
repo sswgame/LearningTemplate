@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourcePackManager.h"
@@ -19,6 +20,7 @@ namespace sw
         : _assetDatabase{}
         , _assetFormatRegistry{}
         , _materialCache{ make_unique<MaterialCache>() }
+        , _textureCache{ make_unique<TextureCache>() }
         , _prefabManager{ make_unique<PrefabManager>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _resourceWatchHandle{}
@@ -54,6 +56,8 @@ namespace sw
 
         if ( _materialCache != nullptr )
             _materialCache->clear();
+        if ( _textureCache != nullptr )
+            _textureCache->clear();
         _assetDatabase.clear();
     }
 
@@ -117,6 +121,16 @@ namespace sw
     const MaterialCache& ResourceManager::getMaterialManager() const
     {
         return *_materialCache;
+    }
+
+    TextureCache& ResourceManager::getTextureManager()
+    {
+        return *_textureCache;
+    }
+
+    const TextureCache& ResourceManager::getTextureManager() const
+    {
+        return *_textureCache;
     }
 
     PrefabManager& ResourceManager::getPrefabManager()

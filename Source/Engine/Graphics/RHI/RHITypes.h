@@ -71,8 +71,15 @@ namespace sw
         R32_FLOAT          = 6, ///< 32비트 단일 부동소수점
         /// @brief 첨부 없음. 뎁스를 쓰지 않는 패스의 PSO 가 "DSV 없음" 을 선언하는 데 쓴다 —
         ///        DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용한다.
-        ///        기존 값의 번호를 바꾸지 않도록 반드시 끝에 둔다.
+        ///        기존 값의 번호는 바꾸지 않는다 — 새 포맷은 아래처럼 뒤에 이어 붙인다.
         Unknown = 7,
+        // 블록 압축(4x4 블록). 렌더 타깃 불가, 샘플링·업로드·읽기 전용. DDS 의 DXT1/3/5·BC4/5/7 과 1:1.
+        BC1_UNORM = 8,  ///< 8 B/블록, RGB + 1비트 알파
+        BC2_UNORM = 9,  ///< 16 B/블록, 명시 알파
+        BC3_UNORM = 10, ///< 16 B/블록, 보간 알파
+        BC4_UNORM = 11, ///< 8 B/블록, 단일 채널
+        BC5_UNORM = 12, ///< 16 B/블록, 2채널(노멀맵)
+        BC7_UNORM = 13, ///< 16 B/블록, 고품질 RGBA
     };
 
     namespace constant
@@ -552,25 +559,81 @@ namespace sw
         uint32       _mip{ 0 };
     };
 
-    /** @brief 비압축 컬러 포맷의 픽셀당 바이트. 깊이/Unknown 은 0 — 업로드 대상이 아니다. */
-    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
+    /**
+     * @struct RHIFormatBlockInfo
+     * @brief 포맷의 저장 단위 — 비압축은 1x1 블록에 픽셀 바이트, BC 는 4x4 블록에 8/16 바이트
+     */
+    struct RHIFormatBlockInfo
+    {
+        uint32 _blockWidth{ 1 };
+        uint32 _blockHeight{ 1 };
+        uint32 _blockBytes{ 0 }; ///< 0 = 업로드·읽기 대상이 아님(깊이/Unknown)
+    };
+
+    /** @brief 포맷의 블록 정보. 4개 백엔드가 밉 크기·행 바이트를 같은 규칙으로 계산하는 유일한 출처다. */
+    inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
     {
         switch ( format )
         {
             case RHIFormat::R8G8B8A8_UNORM:
             case RHIFormat::B8G8R8A8_UNORM:
             case RHIFormat::R32_FLOAT:
-                return 4;
+                return RHIFormatBlockInfo{ 1, 1, 4 };
             case RHIFormat::R16G16B16A16_FLOAT:
             case RHIFormat::R32G32_FLOAT:
-                return 8;
+                return RHIFormatBlockInfo{ 1, 1, 8 };
             case RHIFormat::R32G32B32_FLOAT:
-                return 12;
+                return RHIFormatBlockInfo{ 1, 1, 12 };
+            case RHIFormat::BC1_UNORM:
+            case RHIFormat::BC4_UNORM:
+                return RHIFormatBlockInfo{ 4, 4, 8 };
+            case RHIFormat::BC2_UNORM:
+            case RHIFormat::BC3_UNORM:
+            case RHIFormat::BC5_UNORM:
+            case RHIFormat::BC7_UNORM:
+                return RHIFormatBlockInfo{ 4, 4, 16 };
             case RHIFormat::D24_UNORM_S8_UINT:
             case RHIFormat::Unknown:
             default:
-                return 0;
+                return RHIFormatBlockInfo{ 1, 1, 0 };
         }
+    }
+
+    /** @brief 블록 압축 포맷인가. */
+    inline constexpr bool isRHIFormatBlockCompressed( RHIFormat format )
+    {
+        return getRHIFormatBlockInfo( format )._blockWidth > 1;
+    }
+
+    /** @brief 비압축 컬러 포맷의 픽셀당 바이트. 압축/깊이/Unknown 은 0. */
+    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
+    {
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
+        return info._blockWidth == 1 ? info._blockBytes : 0;
+    }
+
+    /**
+     * @brief 텍스처 밉 하나의 크기와 행 바이트를 계산합니다 — 업로드(빈틈없는 행)와 읽기(readback)가 같은 배치를 쓴다.
+     * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지한다.
+     * @return 포맷이 대상이 아니거나 크기가 0 이면 false.
+     */
+    inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
+    {
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
+        if ( info._blockBytes == 0 || width == 0 || height == 0 )
+            return false;
+        const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
+        const uint32 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1u;
+        const uint32 blocksX   = ( mipWidth + info._blockWidth - 1 ) / info._blockWidth;
+        const uint32 blocksY   = ( mipHeight + info._blockHeight - 1 ) / info._blockHeight;
+        outSpan._pData         = nullptr;
+        outSpan._offsetBytes   = 0;
+        outSpan._rowBytes      = blocksX * info._blockBytes;
+        outSpan._sizeBytes     = outSpan._rowBytes * blocksY;
+        outSpan._width         = mipWidth;
+        outSpan._height        = mipHeight;
+        outSpan._mip           = mip;
+        return true;
     }
 
     /**
@@ -580,8 +643,7 @@ namespace sw
     inline uint32 resolveTextureUploadMips( const RHITextureUploadDesc& desc, RHIFormat format, uint32 width, uint32 height,
                                             uint32 textureMipCount, RHITextureMipSpan* pOutSpan, uint32 outCapacity )
     {
-        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
-        if ( bytesPerPixel == 0 || desc._pData == nullptr || desc._sizeBytes == 0 || width == 0 || height == 0 || pOutSpan == nullptr )
+        if ( desc._pData == nullptr || desc._sizeBytes == 0 || pOutSpan == nullptr )
             return 0;
 
         const uint32 mipCount = ( desc._mipLevels == 0 ) ? textureMipCount : desc._mipLevels;
@@ -592,22 +654,14 @@ namespace sw
         uint32       offset = 0;
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
-            const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
-            const uint32 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1u;
-            const uint32 rowBytes  = mipWidth * bytesPerPixel;
-            const uint32 sizeBytes = rowBytes * mipHeight;
-            if ( offset + sizeBytes > desc._sizeBytes )
-                return 0;
-
             RHITextureMipSpan& span = pOutSpan[mip];
-            span._pData             = pBase + offset;
-            span._offsetBytes       = offset;
-            span._sizeBytes         = sizeBytes;
-            span._rowBytes          = rowBytes;
-            span._width             = mipWidth;
-            span._height            = mipHeight;
-            span._mip               = mip;
-            offset += sizeBytes;
+            if ( computeRHITextureMipLayout( format, width, height, mip, span ) == false )
+                return 0;
+            if ( offset + span._sizeBytes > desc._sizeBytes )
+                return 0;
+            span._pData       = pBase + offset;
+            span._offsetBytes = offset;
+            offset += span._sizeBytes;
         }
         return mipCount;
     }

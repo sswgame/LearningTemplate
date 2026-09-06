@@ -194,6 +194,49 @@ namespace sw
         return true;
     }
 
+    bool D3D11RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    {
+        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr )
+            return false;
+        if ( pRecord->_bDepth != 0 )
+            return false;
+
+        D3D11_TEXTURE2D_DESC texDesc{};
+        pRecord->_texture->GetDesc( &texDesc );
+        if ( mip >= texDesc.MipLevels )
+            return false;
+        if ( computeRHITextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
+            return false;
+
+        // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map — Map 이 GPU 를 기다린다.
+        D3D11_TEXTURE2D_DESC stagingDesc = texDesc;
+        stagingDesc.Width                = outLayout._width;
+        stagingDesc.Height               = outLayout._height;
+        stagingDesc.MipLevels            = 1;
+        stagingDesc.ArraySize            = 1;
+        stagingDesc.Usage                = D3D11_USAGE_STAGING;
+        stagingDesc.BindFlags            = 0;
+        stagingDesc.CPUAccessFlags       = D3D11_CPU_ACCESS_READ;
+        stagingDesc.MiscFlags            = 0;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
+        if ( FAILED( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, staging.GetAddressOf() ) ) )
+            return false;
+
+        _pDevice->_deviceContext->CopySubresourceRegion( staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), mip, nullptr );
+
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        if ( FAILED( _pDevice->_deviceContext->Map( staging.Get(), 0, D3D11_MAP_READ, 0, &mapped ) ) )
+            return false;
+        outBytes.assign( outLayout._sizeBytes, 0 );
+        const uint32 rowCount = outLayout._sizeBytes / outLayout._rowBytes;
+        for ( uint32 row = 0; row < rowCount; ++row )
+            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
+                          static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, outLayout._rowBytes );
+        _pDevice->_deviceContext->Unmap( staging.Get(), 0 );
+        return true;
+    }
+
     RHITextureHandle D3D11RHIResource::createTexture2D( const RHITextureDesc& desc )
     {
         if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )

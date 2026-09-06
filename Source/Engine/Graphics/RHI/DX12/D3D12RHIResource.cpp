@@ -117,6 +117,75 @@ namespace sw
         return handle;
     }
 
+    bool D3D12RHIResource::openUploadSlot( uint32& outSlotIndex )
+    {
+        if ( _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return false;
+        const uint32                          slotIndex       = _pDevice->_frameRing.currentIndex();
+        D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        const bool                            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+
+        if ( slot._copyAllocator == nullptr )
+        {
+            if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
+            {
+                SW_LOG_ERROR( "openUploadSlot: failed to create copy command allocator" );
+                return false;
+            }
+            utf16 arrName[64]{};
+            swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
+            slot._copyAllocator->SetName( arrName );
+        }
+        else if ( bNewFencePeriod && FAILED( slot._copyAllocator->Reset() ) )
+        {
+            SW_LOG_ERROR( "openUploadSlot: copy allocator Reset failed" );
+            return false;
+        }
+        if ( bNewFencePeriod )
+            slot._uploadOffset = 0;
+        slot._resetFence = _pDevice->_fenceValue;
+
+        if ( slot._copyCommandList == nullptr )
+        {
+            if ( FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ) ) )
+            {
+                SW_LOG_ERROR( "openUploadSlot: failed to create copy command list" );
+                return false;
+            }
+        }
+        else if ( FAILED( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ) ) )
+        {
+            SW_LOG_ERROR( "openUploadSlot: copy command list Reset failed" );
+            return false;
+        }
+        outSlotIndex = slotIndex;
+        return true;
+    }
+
+    bool D3D12RHIResource::waitForQueueDrain()
+    {
+        if ( _pDevice->_commandQueue == nullptr || _pDevice->_fence == nullptr || _pDevice->_fenceEvent == nullptr )
+            return false;
+        if ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) )
+            return false;
+
+        // waitForPreviousFrame 은 스왑체인 acquire 까지 하므로 프레임 중간에 부를 수 없다 — 펜스만 올리고 기다린다.
+        // _fenceValue 가 올라가므로 다음 openUploadSlot 은 새 구간으로 보고 얼로케이터를 Reset 한다 — 방금
+        // 기다린 작업이 그 얼로케이터의 마지막 사용이니 안전하다.
+        const UINT64 fenceToWait = _pDevice->_fenceValue;
+        if ( FAILED( _pDevice->_commandQueue->Signal( _pDevice->_fence.Get(), fenceToWait ) ) )
+            return false;
+        _pDevice->_fenceValue++;
+        if ( _pDevice->_fence->GetCompletedValue() < fenceToWait )
+        {
+            _pDevice->_fence->SetEventOnCompletion( fenceToWait, _pDevice->_fenceEvent );
+            if ( WaitForSingleObject( _pDevice->_fenceEvent, 2000 ) != WAIT_OBJECT_0 )
+                return false;
+        }
+        _pDevice->_releaseQueue.tickCompleted( _pDevice->_fence->GetCompletedValue() );
+        return true;
+    }
+
     bool D3D12RHIResource::acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped )
     {
         if ( sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
@@ -127,12 +196,11 @@ namespace sw
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다 — **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
-        const uint32                          slotIndex = _pDevice->_frameRing.currentIndex();
-        D3D12RHIDevice::StructuredUploadSlot& slot      = _pDevice->_arrStructuredUploadSlot[slotIndex];
-
-        const bool bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
-        if ( bNewFencePeriod )
-            slot._uploadOffset = 0;
+        // 얼로케이터/리스트를 먼저 연다 — 펜스 구간이 바뀌었으면 여기서 오프셋도 0 으로 되감긴다.
+        uint32 slotIndex{ 0 };
+        if ( openUploadSlot( slotIndex ) == false )
+            return false;
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
         uint64 stagingOffset = MathUtil::align( slot._uploadOffset, alignment );
         if ( slot._uploadHeap == nullptr || slot._capacity < stagingOffset + sizeBytes )
@@ -183,38 +251,6 @@ namespace sw
             slot._uploadHeap = newHeap;
             slot._pMapped    = pMapped;
             slot._capacity   = newCapacity;
-        }
-
-        if ( slot._copyAllocator == nullptr )
-        {
-            if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
-            {
-                SW_LOG_ERROR( "acquireUploadStaging: failed to create copy command allocator" );
-                return false;
-            }
-            utf16 arrName[64]{};
-            swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
-            slot._copyAllocator->SetName( arrName );
-        }
-        else if ( bNewFencePeriod && FAILED( slot._copyAllocator->Reset() ) )
-        {
-            SW_LOG_ERROR( "acquireUploadStaging: copy allocator Reset failed" );
-            return false;
-        }
-        slot._resetFence = _pDevice->_fenceValue;
-
-        if ( slot._copyCommandList == nullptr )
-        {
-            if ( FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ) ) )
-            {
-                SW_LOG_ERROR( "acquireUploadStaging: failed to create copy command list" );
-                return false;
-            }
-        }
-        else if ( FAILED( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ) ) )
-        {
-            SW_LOG_ERROR( "acquireUploadStaging: copy command list Reset failed" );
-            return false;
         }
 
         slot._uploadOffset = stagingOffset + sizeBytes;
@@ -378,6 +414,97 @@ namespace sw
         }
 
         submitUploadSlot( slotIndex );
+        return true;
+    }
+
+    bool D3D12RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    {
+        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
+        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return false;
+
+        const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
+        if ( mip >= resDesc.MipLevels )
+            return false;
+        if ( computeRHITextureMipLayout( fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ), resDesc.Height, mip, outLayout ) == false )
+            return false;
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
+        UINT                               rowCount{ 0 };
+        UINT64                             rowSize{ 0 };
+        UINT64                             totalBytes{ 0 };
+        _pDevice->_device->GetCopyableFootprints( &resDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
+
+        D3D12_HEAP_PROPERTIES readbackHeap{};
+        readbackHeap.Type = D3D12_HEAP_TYPE_READBACK;
+        D3D12_RESOURCE_DESC bufferDesc{};
+        bufferDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+        bufferDesc.Width            = totalBytes;
+        bufferDesc.Height           = 1;
+        bufferDesc.DepthOrArraySize = 1;
+        bufferDesc.MipLevels        = 1;
+        bufferDesc.Format           = DXGI_FORMAT_UNKNOWN;
+        bufferDesc.SampleDesc.Count = 1;
+        bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        Microsoft::WRL::ComPtr<ID3D12Resource> readback;
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                                 D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
+            return false;
+
+        uint32 slotIndex{ 0 };
+        if ( openUploadSlot( slotIndex ) == false )
+            return false;
+        ID3D12GraphicsCommandList* pList = _pDevice->_arrStructuredUploadSlot[slotIndex]._copyCommandList.Get();
+
+        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            const auto              offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
+                stateBefore = offscreenIt->second._state;
+        }
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource   = pTexture;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+        {
+            barrier.Transition.StateBefore = stateBefore;
+            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+
+        D3D12_TEXTURE_COPY_LOCATION src{};
+        src.pResource        = pTexture;
+        src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        src.SubresourceIndex = mip;
+        D3D12_TEXTURE_COPY_LOCATION dst{};
+        dst.pResource       = readback.Get();
+        dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        dst.PlacedFootprint = footprint;
+        pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
+
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
+        {
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            barrier.Transition.StateAfter  = stateBefore;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+        submitUploadSlot( slotIndex );
+        if ( waitForQueueDrain() == false )
+            return false;
+
+        void* pMapped{ nullptr };
+        if ( FAILED( readback->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+            return false;
+        outBytes.assign( outLayout._sizeBytes, 0 );
+        const uint32 copyRowBytes = MathUtil::min( outLayout._rowBytes, static_cast<uint32>( rowSize ) );
+        for ( uint32 row = 0; row < rowCount; ++row )
+            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
+                          static_cast<const uint8*>( pMapped ) + footprint.Offset + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, copyRowBytes );
+        D3D12_RANGE noWrite{ 0, 0 };
+        readback->Unmap( 0, &noWrite );
         return true;
     }
 

@@ -433,6 +433,107 @@ SW_TEST_CASE( RHITest, UploadTexture2DAllBackends )
 }
 
 /**
+ * @brief [RHITest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단, 4백엔드
+ * @details 비압축은 픽셀, BC1 은 블록을 GPU 가 해석하지 않고 그대로 저장하므로 바이트 단위 일치를 요구할 수 있다.
+ */
+SW_TEST_CASE( RHITest, TextureReadbackMatchesUpload )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    // R8G8B8A8 4x4 → 2x2 → 1x1 = 21 픽셀. 픽셀마다 다른 값을 넣어 행/밉 어긋남을 잡는다.
+    uint8 arrRgba[21 * 4]{};
+    for ( uint32 byteIndex = 0; byteIndex < sizeof( arrRgba ); ++byteIndex )
+        arrRgba[byteIndex] = static_cast<uint8>( byteIndex * 7 + 3 );
+
+    // BC1 8x8(4 블록) → 4x4(1 블록) = 5 블록 x 8 바이트.
+    uint8 arrBc1[5 * 8]{};
+    for ( uint32 byteIndex = 0; byteIndex < sizeof( arrBc1 ); ++byteIndex )
+        arrBc1[byteIndex] = static_cast<uint8>( 200 - byteIndex * 3 );
+
+    struct Case
+    {
+        sw::RHIFormat _format;
+        uint32        _width;
+        uint32        _height;
+        uint32        _mips;
+        const uint8*  _pData;
+        uint32        _sizeBytes;
+        const utf8*   _pName;
+    };
+    const Case arrCase[] = {
+        {sw::RHIFormat::R8G8B8A8_UNORM, 4, 4, 3, arrRgba, sizeof( arrRgba ), "R8G8B8A8"},
+        {     sw::RHIFormat::BC1_UNORM, 8, 8, 2,  arrBc1,  sizeof( arrBc1 ),      "BC1"},
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        for ( const Case& testCase : arrCase )
+        {
+            sw::RHITextureDesc texDesc{};
+            texDesc._width                     = testCase._width;
+            texDesc._height                    = testCase._height;
+            texDesc._mipLevels                 = testCase._mips;
+            texDesc._format                    = testCase._format;
+            texDesc._bIsShaderResource         = 1;
+            const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+            SW_EXPECT_TRUE_MSG( texture != 0, testCase._pName );
+            if ( texture == 0 )
+                continue;
+
+            sw::RHITextureUploadDesc upload{};
+            upload._pData     = testCase._pData;
+            upload._sizeBytes = testCase._sizeBytes;
+            upload._mipLevels = 0;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, upload ), testCase._pName );
+
+            uint32 offset = 0;
+            for ( uint32 mip = 0; mip < testCase._mips; ++mip )
+            {
+                sw::vector<uint8>     bytes;
+                sw::RHITextureMipSpan layout{};
+                const bool            bRead = pResource->readbackTexture2D( texture, mip, bytes, layout );
+                SW_EXPECT_TRUE_MSG( bRead, testCase._pName );
+                if ( bRead == false )
+                    break;
+                SW_EXPECT_TRUE( bytes.size() == layout._sizeBytes );
+                SW_EXPECT_TRUE( offset + layout._sizeBytes <= testCase._sizeBytes );
+                const bool bSame = ( bytes.size() == layout._sizeBytes ) && ( offset + layout._sizeBytes <= testCase._sizeBytes ) &&
+                                   sw::Memory::compare( bytes.data(), testCase._pData + offset, layout._sizeBytes ) == 0;
+                SW_EXPECT_TRUE_MSG( bSame, "readback bytes differ from upload" );
+                offset += layout._sizeBytes;
+            }
+            sw::vector<uint8>     outOfRangeBytes;
+            sw::RHITextureMipSpan outOfRangeLayout{};
+            SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, outOfRangeBytes, outOfRangeLayout ) == false );
+            pResource->destroyTexture( texture );
+        }
+
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for texture readback test" );
+}
+
+/**
  * @brief [RHITest] 커맨드 리스트 생성과 실행
  */
 SW_TEST_CASE( RHITest, CommandListCreationAndExecution )

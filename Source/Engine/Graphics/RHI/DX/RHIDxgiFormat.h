@@ -33,6 +33,18 @@ namespace sw
                 return DXGI_FORMAT_R32_FLOAT;
             case RHIFormat::Unknown:
                 return DXGI_FORMAT_UNKNOWN;
+            case RHIFormat::BC1_UNORM:
+                return DXGI_FORMAT_BC1_UNORM;
+            case RHIFormat::BC2_UNORM:
+                return DXGI_FORMAT_BC2_UNORM;
+            case RHIFormat::BC3_UNORM:
+                return DXGI_FORMAT_BC3_UNORM;
+            case RHIFormat::BC4_UNORM:
+                return DXGI_FORMAT_BC4_UNORM;
+            case RHIFormat::BC5_UNORM:
+                return DXGI_FORMAT_BC5_UNORM;
+            case RHIFormat::BC7_UNORM:
+                return DXGI_FORMAT_BC7_UNORM;
             default:
                 break;
         }
@@ -59,6 +71,18 @@ namespace sw
                 return RHIFormat::R32G32_FLOAT;
             case DXGI_FORMAT_R32_FLOAT:
                 return RHIFormat::R32_FLOAT;
+            case DXGI_FORMAT_BC1_UNORM:
+                return RHIFormat::BC1_UNORM;
+            case DXGI_FORMAT_BC2_UNORM:
+                return RHIFormat::BC2_UNORM;
+            case DXGI_FORMAT_BC3_UNORM:
+                return RHIFormat::BC3_UNORM;
+            case DXGI_FORMAT_BC4_UNORM:
+                return RHIFormat::BC4_UNORM;
+            case DXGI_FORMAT_BC5_UNORM:
+                return RHIFormat::BC5_UNORM;
+            case DXGI_FORMAT_BC7_UNORM:
+                return RHIFormat::BC7_UNORM;
             default:
                 return RHIFormat::Unknown;
         }

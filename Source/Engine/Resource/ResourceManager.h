@@ -23,6 +23,7 @@ namespace sw
     class MaterialCache;
     class PrefabManager;
     class ResourcePackManager;
+    class TextureCache;
 
     /**
      * @class ResourceManager
@@ -70,6 +71,9 @@ namespace sw
         /** @brief 경로 키 Material 인스턴스 + GPU 수명. */
         MaterialCache&       getMaterialManager();
         const MaterialCache& getMaterialManager() const;
+        /** @brief 경로 키 Texture2D 인스턴스 + GPU 수명. 머티리얼의 Texture2D 프로퍼티(assetPath)가 여기서 빌린다. */
+        TextureCache&       getTextureManager();
+        const TextureCache& getTextureManager() const;
 
         /** @brief Prefab 로드/스폰 캐시. */
         PrefabManager&       getPrefabManager();
@@ -82,6 +86,7 @@ namespace sw
         AssetDatabase                   _assetDatabase;
         AssetFormatRegistry             _assetFormatRegistry;
         unique_ptr<MaterialCache>       _materialCache;
+        unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabManager>       _prefabManager;
         unique_ptr<ResourcePackManager> _pPackManager;
         FileWatchHandle                 _resourceWatchHandle;
