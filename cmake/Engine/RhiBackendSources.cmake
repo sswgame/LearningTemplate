@@ -21,6 +21,9 @@ set(SW_RHI_DX12_DEVICE_SOURCES
     "${swRhiRoot}/DX12/D3D12RHICommandContext.cpp"
     "${swRhiRoot}/DX12/D3D12RHICommandList.cpp"
     "${swRhiRoot}/DX12/D3D12RHIDevice.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIDeviceDescriptor.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIDeviceInit.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIDeviceSubmission.cpp"
     "${swRhiRoot}/DX12/D3D12RHIResource.cpp"
     "${swRhiRoot}/DX12/D3D12RHIResourceBindless.cpp"
     "${swRhiRoot}/DX12/D3D12RHIResourcePipeline.cpp"
@@ -29,6 +32,8 @@ set(SW_RHI_DX12_DEVICE_SOURCES
 set(SW_RHI_GL_DEVICE_SOURCES
     "${swRhiRoot}/GL/OpenGLRHICommandContext.cpp"
     "${swRhiRoot}/GL/OpenGLRHIDevice.cpp"
+    "${swRhiRoot}/GL/OpenGLRHIDeviceInit.cpp"
+    "${swRhiRoot}/GL/OpenGLRHIDeviceSubmission.cpp"
     "${swRhiRoot}/GL/OpenGLRHIResource.cpp"
     "${swRhiRoot}/GL/OpenGLRHIResourceBindless.cpp"
     "${swRhiRoot}/GL/OpenGLRHIResourcePipeline.cpp"
