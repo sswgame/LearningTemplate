@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
@@ -71,7 +72,7 @@ namespace sw
         void transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter );
 
         /** @brief 표시 직후의 상태(PRESENT)로 되돌려 기록합니다 — Present 후 동기화용. */
-        void markPresented() { _state = D3D12_RESOURCE_STATE_PRESENT; }
+        void markPresented();
 
         /** @brief 네이티브 스왑체인이 있는지 (오프스크린 전용 디바이스면 false). */
         bool isValid() const { return _swapChain != nullptr; }
@@ -90,7 +91,7 @@ namespace sw
         /** @brief 현재 백버퍼의 RTV. 준비 안 됐으면 `{ 0 }`. */
         D3D12_CPU_DESCRIPTOR_HANDLE getCurrentRtv() const;
 
-        D3D12_RESOURCE_STATES getState() const { return _state; }
+        D3D12_RESOURCE_STATES getState() const;
         IDXGISwapChain3*      getNative() const { return _swapChain.Get(); }
 
     private:
@@ -105,6 +106,12 @@ namespace sw
         uint32 _backBufferIndex{ 0 };
 
         /// @brief 현재 백버퍼의 실제 리소스 상태. `transitionTo` 만 이 값을 바꿉니다.
+        /// @details `_stateMutex` 로 보호한다 — RenderGraph::executeParallel 이 같은 웨이브의 패스
+        ///          콜백을 여러 태스크 스레드에서 동시에 돌리는데, 백버퍼를 타깃으로 하는 패스가
+        ///          둘 이상이면 그 콜백들이 동시에 이 상태를 읽고 바꾼다. 락이 없으면 둘 다
+        ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 쏴서, 두 번째 것이
+        ///          before==after 가 된다(D3D12 검증 오류 → 디바이스 제거).
+        mutable mutex         _stateMutex;
         D3D12_RESOURCE_STATES _state{ D3D12_RESOURCE_STATE_PRESENT };
     };
 } // namespace sw

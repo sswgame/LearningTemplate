@@ -581,6 +581,16 @@ namespace sw
                 _pState->_lastBoundGraphicsSet0 = set0;
             }
         }
+        else if ( _pState->_lastBoundGraphicsSet0 == VK_NULL_HANDLE && _pDevice->_descriptorSet != VK_NULL_HANDLE )
+        {
+            // 이 커맨드버퍼에 set 0 이 아직 한 번도 안 걸렸다. 셰이더가 set 0 을 **정적으로** 참조하므로
+            // 비워 두면 vkCmdDraw 가 거부된다. 프레임 스트림 하나로 기록할 때는 앞선 드로우가 이미
+            // 걸어 둬서 드러나지 않았지만, 병렬 기록은 패스마다 새 버퍼라 매번 비어 있는 채로 시작한다.
+            // 기본 셋을 깔아 두고, 유효한 PassCB 가 오면 위 분기가 덮어쓴다.
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1,
+                                     &_pDevice->_descriptorSet, 0, nullptr );
+            _pState->_lastBoundGraphicsSet0 = _pDevice->_descriptorSet;
+        }
 
         // set 1(bindless 텍스처)·set 4(정적 샘플러)는 이 커맨드버퍼가 살아있는 동안 안 바뀌므로 한 번만.
         if ( _pState->_bStaticGraphicsSetsBound == false )

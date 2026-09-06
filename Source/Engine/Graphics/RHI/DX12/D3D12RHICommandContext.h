@@ -71,6 +71,16 @@ namespace sw
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
 
     private:
+        /**
+         * @brief 등록된 bindless 슬롯의 GPU 디스크립터 핸들을 **값으로** 꺼내 옵니다.
+         * @details 레지스트리(`_listRegisteredBindless` / `_listRegisteredUAV`)는 다른 스레드가
+         *          register/unregister 로 **resize** 할 수 있다. 참조를 들고 락 밖으로 나오면 그 사이
+         *          재할당에 dangling 이 되고, GPU 가 쓰레기 디스크립터를 읽어 PageFault(VA=0) →
+         *          DEVICE_HUNG 으로 이어진다. 그래서 공유 락 안에서 핸들만 복사해 나온다.
+         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리.
+         * @return 인덱스가 범위를 벗어나거나 슬롯이 비어 있으면 false.
+         */
+        bool tryGetBindlessGpuHandle( RHIDescriptorIndex index, bool bUav, D3D12_GPU_DESCRIPTOR_HANDLE& outHandle ) const;
         void bindDescriptorHeaps();
         void bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
         void bindMeshVertexBuffer();

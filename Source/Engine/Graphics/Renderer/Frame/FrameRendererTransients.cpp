@@ -154,8 +154,12 @@ namespace sw
             ticket = static_cast<uint32>( _listPassCbSlot.size() ) - 1;
         }
 
-        ctx._passCb      = _listPassCbSlot[ticket]._buffer;
-        ctx._passCbIndex = _listPassCbSlot[ticket]._index;
+        // 슬롯 배열은 프레임 시작에 잡아 두고 병렬 구간에서 크기가 변하지 않는다. 분배도 위의
+        // atomic 커서가 하므로 락이 필요 없다 — 다만 **const 로 읽어야** 한다. 비-const 접근은
+        // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 패스 둘도 레이스로 잡힌다.
+        const vector<FrameRenderer::PassCbSlot>& listSlot = _listPassCbSlot;
+        ctx._passCb                                       = listSlot[ticket]._buffer;
+        ctx._passCbIndex                                  = listSlot[ticket]._index;
         // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
         // (ctx._passValues 에 이미 프레임 시드가 들어있으므로 별도 선-업로드가 필요 없다).
     }

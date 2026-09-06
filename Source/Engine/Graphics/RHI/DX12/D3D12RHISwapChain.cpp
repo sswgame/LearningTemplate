@@ -120,7 +120,13 @@ namespace sw
 
     void D3D12RHISwapChain::transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter )
     {
-        if ( pCmdList == nullptr || _state == stateAfter || isBackBufferReady() == false )
+        if ( pCmdList == nullptr || isBackBufferReady() == false )
+            return;
+
+        // 상태 확인과 배리어 기록이 한 덩어리여야 한다. 병렬 패스 기록에서 이 둘이 갈라지면 두
+        // 스레드가 같은 "이전 상태" 를 보고 각자 배리어를 쏘고, 두 번째가 before==after 가 된다.
+        std::scoped_lock<mutex> lock{ _stateMutex };
+        if ( _state == stateAfter )
             return;
 
         D3D12_RESOURCE_BARRIER barrier{};
@@ -131,6 +137,18 @@ namespace sw
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pCmdList->ResourceBarrier( 1, &barrier );
         _state = stateAfter;
+    }
+
+    void D3D12RHISwapChain::markPresented()
+    {
+        std::scoped_lock<mutex> lock{ _stateMutex };
+        _state = D3D12_RESOURCE_STATE_PRESENT;
+    }
+
+    D3D12_RESOURCE_STATES D3D12RHISwapChain::getState() const
+    {
+        std::scoped_lock<mutex> lock{ _stateMutex };
+        return _state;
     }
 
     ID3D12Resource* D3D12RHISwapChain::getCurrentBackBuffer() const

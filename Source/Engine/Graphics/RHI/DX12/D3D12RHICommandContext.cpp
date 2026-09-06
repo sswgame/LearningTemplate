@@ -66,40 +66,56 @@ namespace sw
         _pCmdList->SetDescriptorHeaps( 1, heaps );
     }
 
+    bool D3D12RHICommandContext::tryGetBindlessGpuHandle( RHIDescriptorIndex index, bool bUav,
+                                                          D3D12_GPU_DESCRIPTOR_HANDLE& outHandle ) const
+    {
+        if ( index == kInvalidDescriptorIndex )
+            return false;
+
+        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+
+        // const 참조로 받는 것이 중요하다 — 비-const 접근은 "쓰기" 로 취급되어, 같은 웨이브의 패스
+        // 콜백 둘이 동시에 읽기만 해도 레이스로 잡힌다(실제로 deferred 파이프라인에서 그랬다).
+        const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
+            bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+
+        if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
+            return false;
+
+        const D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
+        if ( rec._resource == nullptr )
+            return false;
+
+        outHandle = rec._gpuHandle;
+        return true;
+    }
+
     void D3D12RHICommandContext::bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex,
                                                          RHIDescriptorIndex materialCbDescriptorIndex )
     {
-        auto resolve = [this]( RHIDescriptorIndex index ) -> const D3D12RHIDevice::BindlessResourceRecord*
-        {
-            if ( index == kInvalidDescriptorIndex )
-                return nullptr;
-            if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-                return nullptr;
-            const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
-            return rec._resource != nullptr ? &rec : nullptr;
-        };
-
-        const D3D12RHIDevice::BindlessResourceRecord* pPassRec = resolve( passCbDescriptorIndex );
-        const D3D12RHIDevice::BindlessResourceRecord* pMatRec  = resolve( materialCbDescriptorIndex );
-        if ( pPassRec == nullptr && pMatRec == nullptr )
+        D3D12_GPU_DESCRIPTOR_HANDLE passHandle{};
+        D3D12_GPU_DESCRIPTOR_HANDLE matHandle{};
+        const bool                  bHasPass = tryGetBindlessGpuHandle( passCbDescriptorIndex, false, passHandle );
+        const bool                  bHasMat  = tryGetBindlessGpuHandle( materialCbDescriptorIndex, false, matHandle );
+        if ( bHasPass == false && bHasMat == false )
             return;
 
         // 디스크립터 힙은 ensureRecording()이 Reset() 직후 한 번만 SetDescriptorHeaps 하면 그 커맨드
         // 리스트가 Close될 때까지 유지된다 — 여기서 다시 부를 필요 없음(예전엔 매 바인딩마다 재호출).
 
         // Native bindless: 셰이더가 ResourceDescriptorHeap[g_BindlessCbIndex] 로 PassCB 를 읽는다.
-        if ( pPassRec != nullptr )
+        if ( bHasPass )
         {
             if ( _pDevice->_bHeapDirectlyIndexed != 0 )
             {
                 const uint32 index = static_cast<uint32>( passCbDescriptorIndex );
                 _pCmdList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kComputeRootConstantsParam, 1, &index, 0 );
             }
-            _pCmdList->SetGraphicsRootDescriptorTable( 0, pPassRec->_gpuHandle );
+            _pCmdList->SetGraphicsRootDescriptorTable( 0, passHandle );
         }
 
-        if ( pMatRec != nullptr )
-            _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kMaterialCbvParam, pMatRec->_gpuHandle );
+        if ( bHasMat )
+            _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kMaterialCbvParam, matHandle );
     }
 
     void D3D12RHICommandContext::bindMeshVertexBuffer()
@@ -143,13 +159,22 @@ namespace sw
 
     void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
     {
+        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
+            return;
+
+        // 상태 확인과 배리어 기록이 한 덩어리여야 한다 — RenderGraph::executeParallel 이 같은 웨이브의
+        // 패스 콜백을 여러 스레드에서 돌리는데, 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를
+        // 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
+        std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+
         auto it = _pDevice->_mapOffscreenTexture.find( texture );
         if ( it == _pDevice->_mapOffscreenTexture.end() )
             return;
-        D3D12RHIDevice::OffscreenTextureRecord& record    = it->second;
-        ID3D12Resource*                         pResource = _pDevice->resolveTexture( texture );
-        if ( pResource == nullptr || record._state == newState )
+        D3D12RHIDevice::OffscreenTextureRecord& record = it->second;
+        if ( record._state == newState )
             return;
+
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource   = pResource;
@@ -233,6 +258,8 @@ namespace sw
                 return;
             }
 
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+
             D3D12_RESOURCE_BARRIER barrier{};
             barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Transition.pResource   = pDstRes;
@@ -258,14 +285,12 @@ namespace sw
     {
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= 4 )
             return;
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-            return;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
-        if ( rec._resource == nullptr )
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
             return;
 
         _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-        _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, rec._gpuHandle );
+        _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, gpuHandle );
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -286,10 +311,8 @@ namespace sw
     {
         if ( _pCmdList == nullptr || slot >= 4 )
             return;
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
-            return;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredUAV[index];
-        if ( rec._resource == nullptr )
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+        if ( tryGetBindlessGpuHandle( index, true, gpuHandle ) == false )
             return;
 
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
@@ -297,7 +320,7 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
             _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( 1 + slot, rec._gpuHandle );
+        _pCmdList->SetComputeRootDescriptorTable( 1 + slot, gpuHandle );
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -305,10 +328,8 @@ namespace sw
         // 루트파라미터 0 은 b0/space0 CBV 테이블 하나만 담당한다 (gpucull 의 CullParams).
         if ( _pCmdList == nullptr || slot != 0 )
             return;
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-            return;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
-        if ( rec._resource == nullptr )
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
             return;
 
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
@@ -316,17 +337,15 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
             _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( 0, rec._gpuHandle );
+        _pCmdList->SetComputeRootDescriptorTable( 0, gpuHandle );
     }
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         if ( _pCmdList == nullptr || slot >= 4 )
             return;
-        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
-            return;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
-        if ( rec._resource == nullptr )
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
             return;
 
         ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
@@ -334,7 +353,7 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
             _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, rec._gpuHandle );
+        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, gpuHandle );
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
