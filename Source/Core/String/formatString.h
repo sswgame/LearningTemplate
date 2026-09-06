@@ -482,6 +482,16 @@ namespace sw
         template <typename T>
         static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value ) noexcept
         {
+            // 문자열류 인자는 임시 버퍼를 거치지 않는다. 아래 arrTemp 는 kTempBufferSize(256) 라,
+            // `SW_LOG_ERROR("%#", pMessage)` 처럼 긴 C 문자열을 넘기면 **256자에서 잘렸다** —
+            // Vulkan 검증 메시지의 꼬리("... is type UNIFORM_BUFFER but <실제 타입>")가 그렇게
+            // 사라져서 디스크립터 불일치를 진단할 수 없었다. write() 는 목적지 용량만큼 복사하므로
+            // 문자열은 곧장 넘기면 된다. 서식(폭/정밀도)이 붙은 값은 기존 경로를 그대로 탄다.
+            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> )
+            {
+                return write( pBuffer, pos, capacity, string_view{ value } );
+            }
+
             utf8 arrTemp[kTempBufferSize];
 
             if constexpr ( is_formatted_value_v<T> )
