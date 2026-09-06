@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/unordered_set.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -192,8 +193,6 @@ namespace sw
         void sortTransparent( const float32* pCameraPos );
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
-        /** @brief 후보 내용 핑거프린트. */
-        uint64 hashCandidates() const;
         /** @brief 캐시 무효화. */
         void invalidateBuildCache();
 
@@ -212,9 +211,35 @@ namespace sw
             Material*         _pMaterial{ nullptr };
             MaterialInstance* _pInstance{ nullptr };
             uint32            _blendMode{ 0 };
+
+            /**
+             * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
+             * @details 예전엔 후보마다 100여 바이트를 FNV 로 섞어 64비트 지문을 만들어 비교했다.
+             *          그건 (1) 바이트마다 곱셈이 들어가 이 비교 자체가 수집 비용에 맞먹었고,
+             *          (2) 해시가 충돌하면 바뀐 씬을 "그대로"로 보고 화면이 멈추는, 재현이 사실상
+             *          불가능한 버그를 남겼다. 어차피 같은 바이트를 다 읽어야 한다면 지문을 만들지 말고
+             *          **그냥 비교**하는 게 더 싸고 정확하다 — 다르면 즉시 빠져나올 수도 있다.
+             * @note 부동소수는 float3/float4x4 의 `operator==` (nearEqual, 엡실론 비교)가 아니라
+             *       **비트 그대로** 비교한다. 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를
+             *       영원히 "안 바뀜"으로 보고 화면에 오차를 누적시킨다. 반대로 비트 비교가 틀리는
+             *       방향(-0.0 과 0.0 을 다르게 봄)은 불필요한 재구축일 뿐이라 안전하다.
+             *       비교 대상 블록은 모두 float 연속이라 패딩이 끼지 않는다.
+             */
+            bool operator==( const DrawCandidate& o ) const
+            {
+                return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance &&
+                       _blendMode == o._blendMode &&
+                       Memory::compare( &_world, &o._world, sizeof( _world ) ) == 0 &&
+                       Memory::compare( &_boundsCenter, &o._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
+                       Memory::compare( &_boundsRadius, &o._boundsRadius, sizeof( _boundsRadius ) ) == 0;
+            }
+            /** @brief operator== 의 부정입니다. */
+            bool operator!=( const DrawCandidate& o ) const { return ( *this == o ) == false; }
         };
 
         vector<DrawCandidate> _listScratchCandidate;
+        /** @brief 마지막으로 반영된 후보 집합. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
+        vector<DrawCandidate> _listBuiltCandidate;
         vector<GpuInstance>   _listScratchRaw;
 
         struct SortKey
@@ -240,14 +265,12 @@ namespace sw
         TaskStageHandle        _snapshotStage;
         RHIBufferHandle        _instanceBuffer{ 0 };
         RHIBufferHandle        _indirectArgsBuffer{ 0 };
-        uint64                 _lastContentHash{ 0 };
         float3                 _lastCameraPos{};
         RHIDescriptorIndex     _instanceSrv     = kInvalidDescriptorIndex;
         RHIDescriptorIndex     _indirectArgsUav = kInvalidDescriptorIndex;
         uint32                 _indirectCommandCount{ 0 };
         uint32                 _instanceCapacity{ 0 };
         uint32                 _argsCapacity{ 0 };
-        uint8                  _bHasBuildCache{ 0 };
         uint8                  _bCpuDirty{ 1 };
     };
 } // namespace sw

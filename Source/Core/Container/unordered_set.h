@@ -14,11 +14,11 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>, typename Allocator = std::allocator<Key>>
+    template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<Key>>
     using unordered_set = std::unordered_set<Key, Hash, KeyEqual, Allocator>;
 #else
     /** @brief 밀집 해시셋. erase 시 이터레이터가 무효화될 수 있습니다. */
-    template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>, typename Allocator = Allocator<Key>>
+    template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<Key>>
     class unordered_set
     {
         SW_RACE_CTX_MEMBER

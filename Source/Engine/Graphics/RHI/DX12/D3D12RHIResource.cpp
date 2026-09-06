@@ -385,6 +385,13 @@ namespace sw
         record._bHasDsv  = 0;
         record._reserved = 0;
 
+        _pDevice->checkRegistryMutableNow( "createTexture2D" );
+
+        // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
+        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다 — 예전엔 읽는 쪽만 잠가서
+        // 생성/파괴가 맵을 리해시하면 읽는 쪽이 무효한 참조를 잡을 수 있었다.
+        std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
+
         if ( pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr )
         {
             uint32 rtvSlot{ 0 };
@@ -396,7 +403,13 @@ namespace sw
             else if ( _pDevice->_nextOffscreenRtvIndex < D3D12RHIDevice::kMaxOffscreenRtvs )
                 rtvSlot = _pDevice->_nextOffscreenRtvIndex++;
             else
+            {
+                // 고갈되면 예전엔 조용히 넘어갔다 — 유효한 핸들이 돌아오는데 RTV 가 없어서,
+                // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보였다.
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
+                SW_LOG_ERROR( "오프스크린 RTV 디스크립터 고갈(최대 %#) — 이 텍스처는 렌더타깃으로 쓸 수 없습니다.",
+                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRtvs ) );
+            }
             if ( rtvSlot < D3D12RHIDevice::kMaxOffscreenRtvs )
             {
                 record._rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
@@ -423,7 +436,11 @@ namespace sw
             else if ( _pDevice->_nextOffscreenDsvIndex < D3D12RHIDevice::kMaxOffscreenDsvs )
                 dsvSlot = _pDevice->_nextOffscreenDsvIndex++;
             else
+            {
                 dsvSlot = D3D12RHIDevice::kMaxOffscreenDsvs;
+                SW_LOG_ERROR( "오프스크린 DSV 디스크립터 고갈(최대 %#) — 이 텍스처는 뎁스로 쓸 수 없습니다.",
+                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDsvs ) );
+            }
             if ( dsvSlot < D3D12RHIDevice::kMaxOffscreenDsvs )
             {
                 record._dsvIndex  = dsvSlot;
@@ -447,15 +464,20 @@ namespace sw
     {
         if ( texture == 0 )
             return;
-        auto it = _pDevice->_mapOffscreenTexture.find( texture );
-        if ( it != _pDevice->_mapOffscreenTexture.end() )
+        _pDevice->checkRegistryMutableNow( "destroyTexture" );
         {
-            const uint32 offscreenRtvBase = _pDevice->_swapChain.getBufferCount();
-            if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= offscreenRtvBase )
-                _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
-            if ( it->second._bHasDsv != 0 )
-                _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
-            _pDevice->_mapOffscreenTexture.erase( it );
+            std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
+
+            auto it = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( it != _pDevice->_mapOffscreenTexture.end() )
+            {
+                const uint32 offscreenRtvBase = _pDevice->_swapChain.getBufferCount();
+                if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= offscreenRtvBase )
+                    _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
+                if ( it->second._bHasDsv != 0 )
+                    _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
+                _pDevice->_mapOffscreenTexture.erase( it );
+            }
         }
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )

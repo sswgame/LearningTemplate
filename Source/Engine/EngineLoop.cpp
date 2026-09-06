@@ -307,8 +307,20 @@ namespace sw
             // LiveShaderManager 는 SW_DEBUG 에서만 만들어진다 — 없으면 건너뛴다.
             if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
             {
-                pLiveShaderManager->setOnAnyShaderRecompiled(
-                    SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &FrameRenderer::onShaderRecompiled, _frameRenderer.get() ) );
+                // 렌더 스레드를 먼저 세운 뒤에 재컴파일을 반영한다.
+                //
+                // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데,
+                // FrameRenderer::_mapPsoLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
+                // 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
+                // 렌더 스레드는 직전 패킷을 그리는 중이라, 그냥 부르면 그리는 쪽이 해제된 레이아웃을
+                // 참조한다. 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
+                auto onRecompiled = [this]( string_view shaderPath, const ShaderCompileResult& result )
+                {
+                    if ( _renderThread != nullptr )
+                        _renderThread->waitIdle();
+                    _frameRenderer->onShaderRecompiled( shaderPath, result );
+                };
+                pLiveShaderManager->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
             }
 
             _renderThread = make_unique<RenderThread>();

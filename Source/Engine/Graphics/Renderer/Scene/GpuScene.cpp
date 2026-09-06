@@ -20,32 +20,6 @@ namespace sw
     {
         struct GpuSceneInternal
         {
-            static void mixHash( uint64& h, uint64 v )
-            {
-                h ^= v + 0x9e3779b97f4a7c15ull + ( h << 6 ) + ( h >> 2 );
-            }
-
-            static void mixBytes( uint64& h, const void* pData, size_t bytes )
-            {
-                const uint8* pBytes    = static_cast<const uint8*>( pData );
-                const size_t wordCount = bytes / sizeof( uint64 );
-                const size_t remainder = bytes % sizeof( uint64 );
-
-                for ( size_t wordIndex = 0; wordIndex < wordCount; ++wordIndex )
-                {
-                    uint64 word = 0;
-                    Memory::copy( &word, pBytes + wordIndex * sizeof( uint64 ), sizeof( uint64 ) );
-                    mixHash( h, word );
-                }
-
-                if ( remainder > 0 )
-                {
-                    uint64 tailWord = 0;
-                    Memory::copy( &tailWord, pBytes + wordCount * sizeof( uint64 ), remainder );
-                    mixHash( h, tailWord );
-                }
-            }
-
             template <typename TCandidate, typename TInstance>
             static void fillRangeVal( const vector<TCandidate>& listScratchCandidate, vector<TInstance>& listScratchRaw, uint32 begin, uint32 end )
             {
@@ -87,10 +61,9 @@ namespace sw
 {
     void GpuScene::invalidateBuildCache()
     {
-        _lastContentHash = 0;
-        _lastCameraPos   = float3{};
-        _bHasBuildCache  = 0;
-        _bCpuDirty       = 1;
+        _listBuiltCandidate.clear();
+        _lastCameraPos = float3{};
+        _bCpuDirty     = 1;
     }
 
     void GpuScene::clear()
@@ -182,23 +155,6 @@ namespace sw
         if ( pDevice != nullptr )
             pDevice->waitIdle();
         clear();
-    }
-
-    uint64 GpuScene::hashCandidates() const
-    {
-        uint64 h = 14695981039346656037ull;
-        GpuSceneInternal::mixHash( h, static_cast<uint64>( _listScratchCandidate.size() ) );
-        for ( const DrawCandidate& cand : _listScratchCandidate )
-        {
-            GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pMesh ) );
-            GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pMaterial ) );
-            GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pInstance ) );
-            GpuSceneInternal::mixHash( h, cand._blendMode );
-            GpuSceneInternal::mixBytes( h, &cand._world, sizeof( cand._world ) );
-            GpuSceneInternal::mixBytes( h, &cand._boundsCenter, sizeof( cand._boundsCenter ) );
-            GpuSceneInternal::mixBytes( h, &cand._boundsRadius, sizeof( cand._boundsRadius ) );
-        }
-        return h;
     }
 
     void GpuScene::rebuildPartitionTables()
@@ -293,10 +249,11 @@ namespace sw
             return;
         }
 
-        const uint64 contentHash = hashCandidates();
-        const bool   bContentSame =
-            _bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstance.empty() == false;
-        const bool bCamSame = _bHasBuildCache != 0 && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
+        // 캐시 유효성은 별도 플래그가 아니라 "직전 후보 집합이 비어 있지 않다"로 판단한다 —
+        // 플래그와 데이터가 어긋날 여지를 없앤다.
+        const bool bHasCache    = _listBuiltCandidate.empty() == false;
+        const bool bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _listInstance.empty() == false;
+        const bool bCamSame     = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
 
         if ( bContentSame && bCamSame )
             return;
@@ -331,10 +288,11 @@ namespace sw
         _listAllBatch.clear();
         buildBatches();
 
-        _lastContentHash = contentHash;
-        _lastCameraPos   = cameraPos;
-        _bHasBuildCache  = 1;
-        _bCpuDirty       = 1;
+        // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다 — 복사 없이 두 버퍼를
+        // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
+        _listBuiltCandidate.swap( _listScratchCandidate );
+        _lastCameraPos = cameraPos;
+        _bCpuDirty     = 1;
     }
 
     bool GpuScene::upload( IRHIDevice* pDevice )

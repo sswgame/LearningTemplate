@@ -36,7 +36,6 @@ namespace sw
         , _gpuCullCb{ 0 }
         , _gpuCullCbIndex{ kInvalidDescriptorIndex }
         , _mapEnginePso{}
-        , _mapMaterialPassPso{}
         , _transientWidth{ 0 }
         , _transientHeight{ 0 }
         , _outputRenderTarget{ 0 }

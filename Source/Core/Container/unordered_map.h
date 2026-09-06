@@ -6,7 +6,11 @@
  * 1. Dense Storage (밀집 저장소): 모든 키-값 쌍(Node)이 연속된 `vector<Node>`에 저장되어 순회(Iteration) 시 L1/L2 캐시 적중률이 극대화됩니다.
  * 2. Bucket Index Table: 해시 충돌 체이닝을 노드 포인터 대신 8바이트 정수 인덱스(`size_t`)로 관리하여 포인터 간접 참조 오버헤드와 메모리 단편화를 제거합니다.
  * 3. Race Condition Detector: 디버그 모드에서 ScopedRaceRead / ScopedRaceWrite를 통해 동시 다중 쓰기 및 읽기/쓰기 충돌을 실시간 감지합니다.
- * 4. Heterogeneous Lookup: `std::string_view` 등 이종 키로 검색 시 임시 힙 메모리 할당(Zero-Allocation)을 지원합니다.
+ * 4. Heterogeneous Lookup: `string_view` 등 이종 키로 검색할 때 키를 만들지 않습니다(Zero-Allocation).
+ *    성립 조건은 **해시가 transparent** 인 것 하나다 — `std::hash<sw::string>` 이 `string_view` 오버로드를 갖고 있어
+ *    같은 바이트에서 같은 해시가 나온다. 비교자 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있다.
+ *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너에 붙었을 때만 이종 검색이 컴파일되지 않아,
+ *    같은 코드가 빌드 옵션에 따라 갈렸을 것이다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -20,7 +24,7 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>, typename Allocator = std::allocator<pair<const Key, T>>>
+    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<pair<const Key, T>>>
     using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
 #else
     /**
@@ -29,7 +33,7 @@ namespace sw
      *
      * 주의: 요소를 삭제(`erase`)할 때 순서 보존 또는 Swap-and-Pop 방식에 따라 기존 반복자가 무효화될 수 있습니다.
      */
-    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>, typename Allocator = Allocator<pair<const Key, T>>>
+    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
     {
         SW_RACE_CTX_MEMBER

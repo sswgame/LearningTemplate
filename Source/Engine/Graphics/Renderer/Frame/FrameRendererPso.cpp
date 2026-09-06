@@ -157,28 +157,4 @@ namespace sw
         registerPsoLayout( handle, desc );
         return handle;
     }
-
-    void FrameRenderer::compileMaterialPsoTask( const TaskArgs& args )
-    {
-        const RenderPassType    passType           = static_cast<RenderPassType>( args.get<uint32>( 0 ) );
-        const string            defaultShaderStr   = args.get<string>( 1 );
-        const bool              bDepthTest         = args.get<bool>( 2 );
-        const uint32            numRenderTargets   = args.get<uint32>( 3 );
-        const vector<RHIFormat> rtvFormatsCopy     = args.get<vector<RHIFormat>>( 4 );
-        const bool              bDefaultBlend      = args.get<bool>( 5 );
-        const bool              bDefaultDepthWrite = args.get<bool>( 6 );
-        const vector<string>    definesCopy        = args.get<vector<string>>( 7 );
-        const uint64            cacheKey           = args.get<uint64>( 8 );
-
-        const RHIPipelineStateHandle pso = createPsoForPassType(
-            passType, defaultShaderStr, bDepthTest, numRenderTargets,
-            rtvFormatsCopy.empty() ? nullptr : rtvFormatsCopy.data(),
-            bDefaultBlend, bDefaultDepthWrite, &definesCopy );
-
-        if ( pso != 0 )
-        {
-            std::scoped_lock<mutex> lock{ _psoMutex };
-            _mapMaterialPassPso[cacheKey] = pso;
-        }
-    }
 } // namespace sw

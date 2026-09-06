@@ -278,7 +278,6 @@ namespace sw
 
     private:
         /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
-        void compileMaterialPsoTask( const TaskArgs& args );
 
     private:
         IRHIDevice*                               _pDevice;
@@ -325,9 +324,7 @@ namespace sw
         static constexpr uint32 _s_kEnginePassCbSize = 512;
         /// @brief 엔진이 만들어 둔 패스별 PSO. 예전엔 string 키라 조회마다 string 을 만들었다.
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
-        unordered_map<uint64, RHIPipelineStateHandle>         _mapMaterialPassPso;
         unordered_map<hashed_string, uint32>                  _mapPassNameToIndex;
-        mutex                                                 _psoMutex;
         uint32                                                _transientWidth;
         uint32                                                _transientHeight;
         RHITextureHandle                                      _outputRenderTarget;

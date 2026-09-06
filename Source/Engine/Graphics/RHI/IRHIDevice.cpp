@@ -37,7 +37,7 @@ namespace sw
         // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를
         // 읽는다" 는 뜻이라 개발자가 그 자리에서 알아채야 하므로 디버거를 세운다.
         SW_LOG_ASSERT( _bParallelRecording == false,
-                       "%# 이(가) 병렬 패스 기록 중에 bindless 레지스트리를 바꾸려 합니다. 등록/해제는 "
+                       "%# 이(가) 병렬 패스 기록 중에 리소스 테이블을 바꾸려 합니다. 생성/등록/해제는 "
                        "그래프 셋업 단계에서 끝내야 합니다 — 기록 중 resize 가 일어나면 드로우가 잡아 둔 "
                        "디스크립터 참조가 dangling 이 되고 GPU 가 PageFault 로 죽습니다 "
                        "(IRHIDevice::setParallelRecording 참고).",

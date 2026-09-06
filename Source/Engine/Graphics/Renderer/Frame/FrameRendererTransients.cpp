@@ -177,7 +177,6 @@ namespace sw
             _taaHistory            = 0;
             _taaHistorySrv         = kInvalidDescriptorIndex;
             _mapEnginePso.clear();
-            _mapMaterialPassPso.clear();
             _bPassResourcesReady = 0;
             return;
         }
@@ -192,15 +191,6 @@ namespace sw
         }
         _mapEnginePso.clear();
 
-        for ( auto& [pass, pso] : _mapMaterialPassPso )
-        {
-            if ( pso != 0 )
-            {
-                _pDevice->getResource()->destroyPipelineState( pso );
-                pso = 0;
-            }
-        }
-        _mapMaterialPassPso.clear();
         _gpuScene.releaseGpu( _pDevice );
 
         auto releaseResource = [this]( RHIBufferHandle& handle, RHIDescriptorIndex& srvIndex, bool bIsTexture = false )
@@ -270,8 +260,7 @@ namespace sw
 
         auto ensureNamed = [&]( string_view name )
         {
-            const string key( name );
-            if ( _mapTransient.find( key ) != _mapTransient.end() || name == FrameRendererUtil::Attachment::kSwapchain )
+            if ( _mapTransient.find( name ) != _mapTransient.end() || name == FrameRendererUtil::Attachment::kSwapchain )
                 return;
 
             float4     clearColor{};
@@ -322,7 +311,7 @@ namespace sw
 
         // 히스토리는 TAA 출력의 복사본이다 — CopyResource 는 포맷이 정확히 같아야 하므로 대상
         // 첨부의 포맷을 그대로 따라간다.
-        const bool        bHasTaaColor = _mapTransient.find( string( "TaaColor" ) ) != _mapTransient.end();
+        const bool        bHasTaaColor = _mapTransient.find( string_view{ "TaaColor" } ) != _mapTransient.end();
         const string_view taaTarget    = bHasTaaColor ? string_view{ "TaaColor" }
                                                       : string_view{ FrameRendererUtil::Attachment::kSceneColor };
 
@@ -382,7 +371,7 @@ namespace sw
 
     void FrameRenderer::allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
     {
-        if ( _mapTransient.find( string( name ) ) != _mapTransient.end() || _pDevice == nullptr )
+        if ( _mapTransient.find( name ) != _mapTransient.end() || _pDevice == nullptr )
             return;
 
         RHITextureDesc desc{};
@@ -428,13 +417,13 @@ namespace sw
 
     RHITextureHandle FrameRenderer::findTransient( string_view name ) const
     {
-        const auto it = _mapTransient.find( string( name ) );
+        const auto it = _mapTransient.find( name );
         return it != _mapTransient.end() ? it->second : 0;
     }
 
     RHIDescriptorIndex FrameRenderer::findTransientSrv( string_view name ) const
     {
-        const auto it = _mapTransientSrv.find( string( name ) );
+        const auto it = _mapTransientSrv.find( name );
         return it != _mapTransientSrv.end() ? it->second : kInvalidDescriptorIndex;
     }
 
