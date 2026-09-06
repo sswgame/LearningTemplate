@@ -69,6 +69,7 @@ namespace sw
             _pContext->bindComputeShaderResource( index, slot );
         }
         void prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }
+        void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
                            RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,

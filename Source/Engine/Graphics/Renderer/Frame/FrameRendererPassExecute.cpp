@@ -40,10 +40,46 @@ namespace sw
             _graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
         }
 
+        _graph.setWavePrologue( SW_DELEGATE_METHOD( RenderGraphWavePrologueFn, &FrameRenderer::onGraphWavePrologue, this ) );
+
         if ( _graph.compile() == false )
             SW_LOG_ERROR( "Callback bind compile failed" );
         else
             _bCallbacksBound = 1;
+    }
+
+    void FrameRenderer::onGraphWavePrologue( const RenderGraphWaveContext& waveCtx )
+    {
+        if ( _pDevice == nullptr || waveCtx._pCmdList == nullptr )
+            return;
+
+        // 이 웨이브가 읽을 것들 — 샘플링 가능 상태로.
+        if ( waveCtx._pListReadResource != nullptr )
+        {
+            for ( const hashed_string& name : *waveCtx._pListReadResource )
+            {
+                const RHITextureHandle texture = findTransient( name.c_str() );
+                if ( texture != 0 )
+                    waveCtx._pCmdList->prepareTextureForShaderRead( texture );
+            }
+        }
+
+        // 이 웨이브가 쓸 것들 — 렌더타깃(또는 뎁스) 상태로. 컬러/뎁스 구분은 백엔드가 한다.
+        if ( waveCtx._pListWriteResource != nullptr )
+        {
+            for ( const hashed_string& name : *waveCtx._pListWriteResource )
+            {
+                // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에 없다.
+                if ( name == hashed_string( kSwapchainOutputName ) )
+                {
+                    waveCtx._pCmdList->prepareTextureForRenderTarget( 0 );
+                    continue;
+                }
+                const RHITextureHandle texture = findTransient( name.c_str() );
+                if ( texture != 0 )
+                    waveCtx._pCmdList->prepareTextureForRenderTarget( texture );
+            }
+        }
     }
 
     void FrameRenderer::onGraphPassExecute( const RenderGraphPassContext& graphCtx )

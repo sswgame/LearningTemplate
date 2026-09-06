@@ -28,6 +28,8 @@ namespace sw
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
+        /** @brief D3D11 은 리소스 상태를 추적하지 않는다 — 의도적 no-op. */
+        void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,

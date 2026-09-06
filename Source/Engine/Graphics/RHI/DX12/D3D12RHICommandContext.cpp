@@ -201,6 +201,7 @@ namespace sw
         if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != 0 )
             return;
 
+        _pDevice->noteBarrierDuringRecording( "blitTexture(src)" );
         transitionTexture( src, D3D12_RESOURCE_STATE_COPY_SOURCE );
 
         ID3D12Resource*       pDstRes        = nullptr;
@@ -307,7 +308,31 @@ namespace sw
         if ( it->second._bHasRtv == 0 && it->second._bHasDsv == 0 )
             return;
 
+        _pDevice->noteBarrierDuringRecording( "prepareTextureForShaderRead" );
         transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+    }
+
+    void D3D12RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+
+        if ( texture == 0 )
+        {
+            // 백버퍼. 뎁스로 쓰이는 일은 없다.
+            _pDevice->_swapChain.transitionTo( _pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET );
+            return;
+        }
+
+        bool bDepth = false;
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            const auto              it = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( it == _pDevice->_mapOffscreenTexture.end() )
+                return;
+            bDepth = it->second._bHasDsv != 0;
+        }
+        transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
     }
 
     void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
@@ -666,6 +691,7 @@ namespace sw
                         break;
                     return;
                 }
+                _pDevice->noteBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = it->second._rtvHandle;
                 bValid                                  = true;
@@ -691,6 +717,7 @@ namespace sw
             auto depthIt = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
             if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != 0 )
             {
+                _pDevice->noteBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
                 dsvHandle                   = depthIt->second._dsvHandle;
                 pDsv                        = &dsvHandle;

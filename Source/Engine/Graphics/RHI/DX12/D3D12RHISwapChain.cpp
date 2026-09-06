@@ -129,6 +129,9 @@ namespace sw
         if ( _state == stateAfter )
             return;
 
+        if ( _pBarrierWatcher != nullptr )
+            _pBarrierWatcher->noteBarrierDuringRecording( "swapChain.transitionTo" );
+
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource   = _listBackBuffer[_backBufferIndex].Get();

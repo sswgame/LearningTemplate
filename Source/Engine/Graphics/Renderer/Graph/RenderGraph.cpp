@@ -4,6 +4,7 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -278,6 +279,8 @@ namespace sw
         {
             vector<ParallelPassEntry> listPassEntry;
             listPassEntry.reserve( wave.size() );
+            _listWaveRead.clear();
+            _listWaveWrite.clear();
 
             for ( const hashed_string& passName : wave )
             {
@@ -295,10 +298,12 @@ namespace sw
                 for ( const hashed_string& input : node._listInput )
                 {
                     context.transitionTo( input, RenderGraphResourceState::Read );
+                    _listWaveRead.push_back( input );
                 }
                 for ( const hashed_string& output : node._listOutput )
                 {
                     context.transitionTo( output, RenderGraphResourceState::Write );
+                    _listWaveWrite.push_back( output );
                 }
 
                 if ( node._execute.isBound() == false )
@@ -321,6 +326,19 @@ namespace sw
 
             if ( listPassEntry.empty() )
                 continue;
+
+            // 이 웨이브가 만질 자원의 배리어를 **여기서 미리** 발행한다 — 프레임 스트림은 이 웨이브의
+            // 패스 리스트보다 먼저 제출되므로(executeCommandList 가 스트림을 잘라 앞에 붙인다) GPU
+            // 타임라인에서도 앞선다. 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를
+            // 바꾸지 않는다 — 배리어를 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다.
+            if ( _wavePrologue.isBound() )
+            {
+                RenderGraphWaveContext waveCtx;
+                waveCtx._pListReadResource  = &_listWaveRead;
+                waveCtx._pListWriteResource = &_listWaveWrite;
+                waveCtx._pCmdList           = pDevice->getFrameStreamContext();
+                _wavePrologue( waveCtx );
+            }
 
             // 이 구간 동안 bindless 레지스트리는 불변이어야 한다 — 기록 중 등록/해제가 일어나면
             // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.

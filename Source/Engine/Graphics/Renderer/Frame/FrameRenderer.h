@@ -173,6 +173,18 @@ namespace sw
         void bindPassCallbacks();
         /** @brief RenderGraph 패스 실행 콜백. */
         void onGraphPassExecute( const RenderGraphPassContext& ctx );
+
+        /**
+         * @brief 웨이브를 병렬 기록하기 **직전에** 그 웨이브가 만질 자원의 배리어를 미리 발행합니다.
+         * @details 자원 이름을 실제 텍스처로 풀어 `prepareTextureForShaderRead` /
+         *          `prepareTextureForRenderTarget` 을 프레임 스트림에 기록한다. 프레임 스트림은 이
+         *          웨이브의 패스 리스트보다 먼저 제출되므로 GPU 타임라인에서도 앞선다.
+         *
+         *          이렇게 하면 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를 바꾸지
+         *          않는다 — 배리어를 병렬 기록 스레드가 정하던 구조는 이 프로젝트에서 실제로 여러 번
+         *          깨졌다(중복 배리어, 레이아웃 불일치).
+         */
+        void onGraphWavePrologue( const RenderGraphWaveContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
         void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName );
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */

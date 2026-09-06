@@ -72,6 +72,7 @@ namespace sw
         if ( FAILED( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ) ) )
             return false;
 
+        _swapChain.setBarrierWatcher( this );
         if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
             return false;
 

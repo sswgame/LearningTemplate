@@ -111,7 +111,20 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 배리어 · blit — 샘플링 가능 전환, 컬러 복사 (dst==0은 스왑체인)
         // ------------------------------------------------------------------------------
-        virtual void prepareTextureForShaderRead( RHITextureHandle texture )   = 0;
+        virtual void prepareTextureForShaderRead( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 렌더타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
+         * @details `prepareTextureForShaderRead` 의 짝이다. 그래프가 웨이브를 **병렬로 기록하기 전에**
+         *          단일 스레드에서 미리 불러 두는 용도다 — 그러면 패스 콜백은 이미 맞는 상태를 보게
+         *          되어, 기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
+         *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
+         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다** — 호출부가
+         *       그걸 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
+         * @note DX11/GL 은 상태리스라 no-op 이다.
+         */
+        virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
+
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
         // ------------------------------------------------------------------------------

@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -74,6 +75,13 @@ namespace sw
         /** @brief 표시 직후의 상태(PRESENT)로 되돌려 기록합니다 — Present 후 동기화용. */
         void markPresented();
 
+        /**
+         * @brief 병렬 기록 중 배리어 감시자를 붙입니다 (디바이스 자신).
+         * @details 스왑체인은 디바이스를 모르는 편이 낫지만, "기록 중에 상태가 바뀌면 알린다" 는
+         *          감시는 디바이스가 들고 있다 — 그 한 가지만 포인터로 받는다.
+         */
+        void setBarrierWatcher( const IRHIDevice* pWatcher ) { _pBarrierWatcher = pWatcher; }
+
         /** @brief 네이티브 스왑체인이 있는지 (오프스크린 전용 디바이스면 false). */
         bool isValid() const { return _swapChain != nullptr; }
 
@@ -98,6 +106,9 @@ namespace sw
         Microsoft::WRL::ComPtr<IDXGISwapChain3>        _swapChain;
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer;
         vector<D3D12_CPU_DESCRIPTOR_HANDLE>            _listBackBufferRtv;
+
+        /// @brief setBarrierWatcher 참고 — 소유하지 않는다.
+        const IRHIDevice* _pBarrierWatcher{ nullptr };
 
         HWND   _pHWnd{ nullptr };
         uint32 _width{ 0 };

@@ -193,6 +193,31 @@ namespace sw
         _pDevice->transitionTextureLayout( cmd, record, targetLayout, aspect );
     }
 
+    void VulkanRHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE || texture == 0 )
+            return; // 스왑체인(0)은 렌더패스의 initialLayout 이 담당한다.
+
+        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
+        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
+            return;
+
+        // 렌더패스를 열어 둔 채로 레이아웃을 바꿀 수 없다.
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+
+        const bool   bDepth       = pResolved->_bDepthStencil != 0;
+        const uint32 targetLayout = bDepth ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
+                                           : static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        const uint32 aspect       = bDepth ? _pDevice->depthAspectMask()
+                                           : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+        _pDevice->transitionTextureLayout( cmd, *pResolved, targetLayout, aspect );
+    }
+
     void VulkanRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
         VkCommandBuffer cmd = commandBuffer();

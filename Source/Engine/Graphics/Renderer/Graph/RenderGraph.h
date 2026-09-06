@@ -43,6 +43,23 @@ namespace sw
     using RenderGraphPassExecuteFn = Delegate<void( const RenderGraphPassContext& )>;
 
     /**
+     * @struct RenderGraphWaveContext
+     * @brief 한 웨이브를 **병렬로 기록하기 직전에**, 단일 스레드에서 한 번 전달되는 컨텍스트
+     * @details 이 웨이브의 패스들이 읽고 쓸 자원 이름이 들어 있다. 받는 쪽은 이 이름들을 실제
+     *          텍스처로 풀어 `prepareTextureForShaderRead` / `prepareTextureForRenderTarget` 을
+     *          미리 불러 둔다 — 그러면 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스
+     *          상태를 바꾸지 않는다.
+     */
+    struct RenderGraphWaveContext
+    {
+        const vector<hashed_string>* _pListReadResource{ nullptr };  ///< 이 웨이브가 입력으로 읽는 자원
+        const vector<hashed_string>* _pListWriteResource{ nullptr }; ///< 이 웨이브가 출력으로 쓰는 자원
+        IRHICommandList*             _pCmdList{ nullptr };           ///< 프레임 스트림 — 웨이브보다 먼저 실행된다
+    };
+
+    using RenderGraphWavePrologueFn = Delegate<void( const RenderGraphWaveContext& )>;
+
+    /**
      * @struct RenderGraphExecutionContext
      * @brief execute() 호출 시 임시 상태 및 메모리를 관리하는 컨텍스트
      */
@@ -139,6 +156,12 @@ namespace sw
                       RenderGraphPassExecuteFn execute = {} );
 
         /**
+         * @brief 웨이브를 병렬 기록하기 직전에 부를 콜백을 등록합니다 (배리어 선행 발행용).
+         * @details 등록하지 않으면 아무 일도 하지 않는다 — 직렬 실행 경로에는 필요 없다.
+         */
+        void setWavePrologue( const RenderGraphWavePrologueFn& prologue ) { _wavePrologue = prologue; }
+
+        /**
          * @brief 렌더 패스 간 의존성 검사 및 위상 정렬 수행
          * @return 성공 시 true
          */
@@ -213,5 +236,11 @@ namespace sw
 
         // 핫패스 무할당용 캐시
         unordered_map<hashed_string, size_t> _mapNameToIndex;
+
+        /// @brief 웨이브를 병렬 기록하기 직전에 부르는 콜백 — setWavePrologue 참고.
+        RenderGraphWavePrologueFn _wavePrologue;
+        /// @brief 웨이브마다 모으는 읽기/쓰기 자원 이름 (프레임마다 재사용 — 할당을 반복하지 않는다).
+        vector<hashed_string> _listWaveRead;
+        vector<hashed_string> _listWaveWrite;
     };
 } // namespace sw
