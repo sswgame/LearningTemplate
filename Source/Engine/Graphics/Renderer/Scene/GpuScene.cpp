@@ -43,6 +43,18 @@ namespace sw
                 }
             }
 
+            /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사한다(렌더 스레드는 Material* 를 따라갈 수 없다). */
+            static void fillMaterialTextureSrvs( GpuMeshBatch& batch, const Material* pMaterial )
+            {
+                if ( pMaterial == nullptr )
+                    return;
+                const vector<RHIDescriptorIndex>& listSrv = pMaterial->getMaterialTextureSrvs();
+                const uint32                      count   = MathUtil::min( static_cast<uint32>( listSrv.size() ),
+                                                                           shaderslot::kMaterialTextureCount );
+                for ( uint32 texIndex = 0; texIndex < count; ++texIndex )
+                    batch._arrMaterialTexSrv[texIndex] = listSrv[texIndex];
+            }
+
             static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& listBatch )
             {
                 for ( GpuMeshBatch& batch : listBatch )
@@ -556,6 +568,8 @@ namespace sw
                         batch._materialCb = key._pInstance->getDescriptorIndex();
                     else
                         batch._materialCb = key._pMaterial ? key._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
+                    // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
+                    GpuSceneInternal::fillMaterialTextureSrvs( batch, key._pMaterial );
 
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
                     for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
@@ -601,6 +615,7 @@ namespace sw
                         batch._materialCb = cand._pInstance->getDescriptorIndex();
                     else
                         batch._materialCb = cand._pMaterial ? cand._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
+                    GpuSceneInternal::fillMaterialTextureSrvs( batch, cand._pMaterial );
 
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
                     for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )

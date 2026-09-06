@@ -9,6 +9,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -43,6 +44,13 @@ namespace sw
         uint32             _materialIndex{ 0 };
         RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
+        /**
+         * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순). 비네이티브 bindless 백엔드에서만 쓴다.
+         * @details DX11/GL 은 셰이더가 전역 인덱스를 못 풀어서 엔진이 t5..t8 에 직접 바인딩해야 한다.
+         *          렌더 스레드는 씬을 못 보므로(Material* 를 따라갈 수 없다) 값으로 실어 나른다.
+         */
+        RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
+            kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /** @brief RT가 draw 직전에 applyToGpu. 수명은 GpuScene pin/retire 큐로 관리. */
         MaterialInstance* _pMaterialInstance{ nullptr };
     };

@@ -199,7 +199,7 @@ namespace sw
             const string manifestAbs = ResourceUtil::getResourcePath( binDirRel + getManifestFileName() );
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
-                const uint64 sourceMtime   = FileUtil::getFileTimestamp( sourceAbs );
+                const uint64 sourceMtime   = ShaderBaker::computeEffectiveSourceTimestamp( sourceAbs );
                 const uint64 manifestMtime = FileUtil::getFileTimestamp( manifestAbs );
                 if ( sourceMtime != 0 && manifestMtime != 0 && manifestMtime < sourceMtime )
                 {

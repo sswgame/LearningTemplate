@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -44,6 +45,7 @@ namespace sw
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _pRHIDevice{ nullptr }
         , _listAcquiredTexturePath{}
+        , _listMaterialTextureSrv{}
         , _blendMode{ RHIBlendMode::Opaque }
         , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
         , _listCachedDefine{}
@@ -109,7 +111,12 @@ namespace sw
     {
         if ( pRhi == nullptr || engine::areEngineServicesBound() == false )
             return;
-        TextureCache& textures = engine::getResourceManager().getTextureManager();
+
+        // DX12/Vulkan 은 셰이더가 전역 bindless 인덱스로 직접 힙/배열을 찌른다. DX11/GL 은 그게 안 되므로
+        // (SM5.0 은 리소스 배열 동적 인덱싱 없음, GL 은 SPIR-V 라 ARB_bindless_texture 불가) 엔진이
+        // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
+        const bool    bNativeBindless = pRhi->supportsNativeBindlessSampling();
+        TextureCache& textures        = engine::getResourceManager().getTextureManager();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
@@ -121,8 +128,19 @@ namespace sw
                                 _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
                 continue;
             }
+
+            const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );
+            if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
+            {
+                SW_LOG_WARNING( "Material '%#': 이 백엔드는 머티리얼 텍스처를 %#개까지만 바인딩합니다 — '%#' 는 흰색으로 남습니다.",
+                                _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
+                textures.release( prop._assetPath, pRhi );
+                continue;
+            }
+
             _listAcquiredTexturePath.push_back( prop._assetPath );
-            setTextureProperty( pRhi, hashed_string( prop._name.c_str() ), pTexture->getSrv() );
+            _listMaterialTextureSrv.push_back( pTexture->getSrv() );
+            setTextureProperty( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
         }
     }
 
@@ -137,6 +155,7 @@ namespace sw
                 textures.release( path, pRhi );
         }
         _listAcquiredTexturePath.clear();
+        _listMaterialTextureSrv.clear();
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )

@@ -87,6 +87,18 @@ namespace sw
         static string_view getDefaultEntryPointForStage( ShaderStage stage );
 
         /** @brief 타깃 포맷에 해당하는 서브폴더 이름("dx11", "dx12", "vulkan", "opengl")을 반환합니다. */
+        /**
+         * @brief 소스와 **공유 헤더(.hlsli)** 중 가장 새로운 타임스탬프.
+         * @details 베이크 산출물이 최신인지 판단하는 유일한 기준이다. `.hlsl` 하나만 보면
+         *          `binding.hlsli` 같은 공유 헤더를 고쳐도 아무것도 다시 굽지 않아, 바이너리와
+         *          리플렉션 매니페스트가 소스와 조용히 어긋난다(그 어긋남은 DX12 GPU 페이지 폴트로
+         *          나타난 적이 있다). 어느 셰이더가 어떤 헤더를 include 하는지는 파싱하지 않고
+         *          **모든 .hlsli 중 최신값**으로 넉넉하게 잡는다 — 과하게 굽는 쪽이 안전하다.
+         */
+        static uint64 computeEffectiveSourceTimestamp( string_view absShaderPath );
+        /** @brief Resource 아래 모든 .hlsli 중 가장 새로운 타임스탬프 (프로세스당 한 번만 훑는다). */
+        static uint64 getSharedHeaderTimestamp();
+
         static string_view getSubfolderForFormat( ShaderTargetFormat format );
 
         /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. */

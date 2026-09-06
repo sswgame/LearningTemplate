@@ -331,6 +331,75 @@ namespace sw
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
 
+    bool FrameRenderer::dumpTransientToPpm( string_view attachmentName, string_view outFilePath )
+    {
+        if ( _pDevice == nullptr || outFilePath.empty() )
+            return false;
+        const RHITextureHandle texture = findTransient( attachmentName );
+        if ( texture == 0 )
+        {
+            SW_LOG_ERROR( "dumpTransientToPpm: 트랜지언트 '%#' 를 찾지 못했습니다.", string( attachmentName ).c_str() );
+            return false;
+        }
+
+        RHIFormat format = RHIFormat::R8G8B8A8_UNORM;
+        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        {
+            if ( att._name == attachmentName )
+            {
+                format = parseAttachmentFormat( att._format );
+                break;
+            }
+        }
+        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        if ( bytesPerPixel < 3 )
+        {
+            SW_LOG_ERROR( "dumpTransientToPpm: PPM 으로 덤프할 수 없는 포맷입니다 ('%#').", string( attachmentName ).c_str() );
+            return false;
+        }
+
+        vector<uint8>     bytes;
+        RHITextureMipSpan layout{};
+        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, bytes, layout ) == false )
+        {
+            SW_LOG_ERROR( "dumpTransientToPpm: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
+            return false;
+        }
+        if ( layout._width == 0 || layout._height == 0 )
+            return false;
+
+        // PPM(P6): 아스키 헤더 + RGB 8bit. 트랜지언트는 R8G8B8A8 / B8G8R8A8 이라 채널 순서만 맞춘다.
+        const bool                            bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
+        StringBuilder<constant::kMaxBuffer64> header;
+        // PPM 헤더의 구분자는 임의의 공백이면 된다 — 공백만 써서 이스케이프 없이 적는다.
+        header.appendFormat( "P6 %# %# 255 ", layout._width, layout._height );
+
+        vector<uint8> outBytes;
+        outBytes.reserve( header.size() + static_cast<size_t>( layout._width ) * layout._height * 3 );
+        outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( header.c_str() ),
+                         reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
+        for ( uint32 row = 0; row < layout._height; ++row )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            for ( uint32 col = 0; col < layout._width; ++col )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                outBytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
+                outBytes.push_back( pPixel[1] );
+                outBytes.push_back( bBgra ? pPixel[0] : pPixel[2] );
+            }
+        }
+
+        if ( FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() ) == false )
+        {
+            SW_LOG_ERROR( "dumpTransientToPpm: 파일 쓰기 실패 (%#).", string( outFilePath ).c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Screenshot: '%#' %#x%# -> %#", string( attachmentName ).c_str(), layout._width, layout._height,
+                     string( outFilePath ).c_str() );
+        return true;
+    }
+
     void FrameRenderer::releaseTransientResources()
     {
         if ( _pDevice == nullptr )

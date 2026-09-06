@@ -8,9 +8,12 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 
 namespace sw
 {
+    extern string gv_screenshot;
+
     SW_LOG_CALLER( "RenderThread" );
 
     // 커맨드 리스트를 프레임 끝에 모아 제출할지(기본), 잘릴 때마다 바로 제출할지.
@@ -327,6 +330,21 @@ namespace sw
             _presentHook( *_pDevice, packet );
 
         _pDevice->endFrame( true );
+
+        // -gv_screenshot=<path> : 한 장만 찍는다.
+        //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 됐고 아직 큐에 나가지 않아,
+        //    읽어 보면 클리어 색만 나온다.
+        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다
+        //    (그래서 처음엔 네 백엔드 중 하나만 지오메트리가 보였다).
+        if ( gv_screenshot.empty() == false && _bScreenshotTaken == 0 && _pFrameRenderer != nullptr )
+        {
+            constexpr uint32 kScreenshotWarmupFrames = 10;
+            if ( ++_screenshotFrameCounter >= kScreenshotWarmupFrames )
+            {
+                _bScreenshotTaken = 1;
+                _pFrameRenderer->dumpTransientToPpm( FrameRendererUtil::Attachment::kSceneColor, gv_screenshot );
+            }
+        }
 
         return true;
     }

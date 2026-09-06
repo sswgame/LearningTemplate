@@ -342,6 +342,33 @@ namespace sw
         return "Main";
     }
 
+    uint64 ShaderBaker::getSharedHeaderTimestamp()
+    {
+        // getOrCompile 이 PSO 마다 부르므로 프로세스당 한 번만 훑는다. 실행 중 헤더를 고치는
+        // 라이브 리로드는 어차피 명시적으로 재컴파일하는 경로를 따로 탄다.
+        static const uint64 s_timestamp = []() -> uint64
+        {
+            const string rootDir = ResourceUtil::getRootFolderPath();
+            if ( rootDir.empty() )
+                return 0;
+            vector<string> listHeader;
+            FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true, true );
+            uint64 newest = 0;
+            for ( const string& headerPath : listHeader )
+                newest = MathUtil::max( newest, FileUtil::getFileTimestamp( headerPath ) );
+            return newest;
+        }();
+        return s_timestamp;
+    }
+
+    uint64 ShaderBaker::computeEffectiveSourceTimestamp( string_view absShaderPath )
+    {
+        const uint64 sourceMtime = FileUtil::getFileTimestamp( absShaderPath );
+        if ( sourceMtime == 0 )
+            return 0;
+        return MathUtil::max( sourceMtime, getSharedHeaderTimestamp() );
+    }
+
     string_view ShaderBaker::getSubfolderForFormat( ShaderTargetFormat format )
     {
         switch ( format )
@@ -558,7 +585,7 @@ namespace sw
 
             const string shaderDir   = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
             const string stemLower   = ShaderBakerInternal::getStemLower( normPath );
-            const uint64 sourceMtime = FileUtil::getFileTimestamp( normPath );
+            const uint64 sourceMtime = computeEffectiveSourceTimestamp( normPath );
 
             for ( ShaderTargetFormat fmt : listTargetFormat )
             {

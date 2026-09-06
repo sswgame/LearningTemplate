@@ -97,6 +97,12 @@ namespace sw
         GpuScene&       getGpuScene() { return _gpuScene; }
         /** @brief 셰이더 핫리로드 알림 — 영향받는 PSO 바인딩 레이아웃을 다시 만든다. */
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
+        /**
+         * @brief 트랜지언트 첨부를 CPU 로 읽어 PPM(P6) 으로 저장합니다 — 백엔드별 시각 검증용.
+         * @details 프레임 경로가 아니다(GPU 를 기다린다). 창 캡처가 백엔드마다 되고 안 되고가 갈려서,
+         *          네 백엔드를 같은 기준으로 비교하려면 이쪽을 쓴다.
+         */
+        bool dumpTransientToPpm( string_view attachmentName, string_view outFilePath );
 
     private:
         /**
@@ -212,7 +218,8 @@ namespace sw
         /** @brief 월드 행렬을 항등으로 둡니다. */
         void setIdentityWorld( FramePassContext& ctx );
         /** @brief 드로우 직전 리플렉션 구동 바인딩을 수행합니다 (PassCB/MaterialCB/텍스처/인스턴스 버퍼). */
-        void bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb );
+        void bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+                          const RHIDescriptorIndex* pMaterialTexSrv = nullptr );
         /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr. */
         const ShaderBindingLayout* layoutForPso( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 핸들에 매핑합니다. */

@@ -66,7 +66,8 @@ namespace sw
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
     }
 
-    void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb )
+    void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+                                     const RHIDescriptorIndex* pMaterialTexSrv )
     {
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
@@ -86,7 +87,7 @@ namespace sw
 
         const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
         ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
-                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling() );
+                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv );
     }
 
     void FrameRenderer::drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
@@ -265,7 +266,7 @@ namespace sw
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
                 ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
-            bindForDraw( ctx, pso, batch._materialCb );
+            bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }

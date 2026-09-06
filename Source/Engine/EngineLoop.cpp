@@ -77,6 +77,14 @@ namespace sw
     SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
 
     /**
+     * @brief `-gv_screenshot=<파일경로>` — SceneColor 를 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
+     * @details Win32 PrintWindow 캡처는 DX11/GL/Vulkan 에서 빈 화면이 자주 나온다 — 스왑체인이 GDI 로
+     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2D).
+     *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "SceneColor 를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+
+    /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.

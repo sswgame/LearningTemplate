@@ -83,7 +83,8 @@ namespace sw
                                             const PassConstantValues&       values,
                                             const EngineConstantBufferSlot& engineCb,
                                             RHIDescriptorIndex              materialCb,
-                                            bool                            bNativeBindless )
+                                            bool                            bNativeBindless,
+                                            const RHIDescriptorIndex*       pMaterialTexSrv )
     {
         if ( layout.isEmpty() )
             return;
@@ -170,6 +171,17 @@ namespace sw
                 case ShaderBindingKind::Unknown:
                 default:
                     break;
+            }
+        }
+
+        // 머티리얼 텍스처 — 에뮬 백엔드(DX11/GL)만. 셰이더가 서수로 t5..t8 을 고르므로 그 순서대로 건다.
+        // 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 아무것도 걸 필요가 없다.
+        if ( bNativeBindless == false && pMaterialTexSrv != nullptr )
+        {
+            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
+            {
+                if ( pMaterialTexSrv[texIndex] != kInvalidDescriptorIndex )
+                    cmd.bindShaderResource( pMaterialTexSrv[texIndex], shaderslot::kMaterialTexture0 + texIndex );
             }
         }
 

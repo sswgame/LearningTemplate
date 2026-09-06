@@ -136,6 +136,13 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, 1, 0 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, 2, 0 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, 3, 0 );
 
+// 머티리얼 텍스처 고정 슬롯 t5..t8 — 레지스터 번호는 SW_SLOT_MATERIAL_TEX0(=5) 부터다.
+// 토큰 붙이기라 매크로 산술을 쓸 수 없어 리터럴로 적는다(둘이 어긋나면 엉뚱한 슬롯을 읽는다).
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, 5, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, 6, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, 7, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, 8, 0 );
+
 float4 SW_SampleIndex( uint index, float2 uv )
 {
 	if ( index == SW_INVALID_INDEX )
@@ -167,6 +174,7 @@ float4 SW_SampleIndex( uint index, float2 uv )
 #if defined( SW_BINDLESS ) && ( defined( DX12 ) || defined( VULKAN ) )
 float4 SW_SampleMaterialTexture( uint index, float2 uv )
 {
+	// 네이티브 bindless: index 는 힙/배열 전역 인덱스다.
 	if ( index == SW_INVALID_INDEX )
 		return float4( 1, 1, 1, 1 );
 	return SW_SampleIndex( index, uv );
@@ -174,6 +182,13 @@ float4 SW_SampleMaterialTexture( uint index, float2 uv )
 #else
 float4 SW_SampleMaterialTexture( uint index, float2 uv )
 {
+	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..N-1)다.
+	// 엔진이 그 서수 순서대로 t5..t8 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
+	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 슬롯 수가 4 라 분기도 4 개다.
+	if ( index == 0 ) return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
+	if ( index == 1 ) return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
+	if ( index == 2 ) return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
+	if ( index == 3 ) return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
 	return float4( 1, 1, 1, 1 );
 }
 #endif

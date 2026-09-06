@@ -96,7 +96,7 @@ namespace sw
         cacheKey.assign( sb.c_str(), sb.size() );
 
         if ( absPath.empty() == false )
-            currentTimestamp = FileUtil::getFileTimestamp( absPath );
+            currentTimestamp = ShaderBaker::computeEffectiveSourceTimestamp( absPath );
 
         // 0) 인메모리 캐시 조회
         {

@@ -94,7 +94,9 @@ namespace sw
         atomic<bool>        _bStop;
         atomic<bool>        _bContextBound; ///< bindGraphicsContext succeeded on current executor
         /// @brief 직전 프레임에 디바이스로 밀어넣은 제출 정책 — 바뀔 때만 로그를 남기기 위한 것.
-        bool _bLastImmediateSubmit{ false };
+        bool   _bLastImmediateSubmit{ false };
+        uint8  _bScreenshotTaken{ 0 };       ///< -gv_screenshot 은 한 장만 찍는다
+        uint32 _screenshotFrameCounter{ 0 }; ///< 씬이 채워질 때까지 몇 프레임 기다린다
 
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
         // sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)

@@ -91,6 +91,12 @@ namespace sw
         void resolveTextureAssets( IRHIDevice* pRhi );
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 돌려줍니다. */
         void releaseTextureAssets( IRHIDevice* pRhi );
+        /**
+         * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다.
+         * @details 비네이티브 bindless 백엔드(DX11/GL)에서 엔진이 이 순서대로 t5..t8 에 바인딩한다.
+         *          MaterialCB 에 실리는 값은 그 백엔드에선 SRV 인덱스가 아니라 이 배열의 **서수**다.
+         */
+        const vector<RHIDescriptorIndex>& getMaterialTextureSrvs() const { return _listMaterialTextureSrv; }
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
         /** @brief 사용 플래그를 설정합니다. */
@@ -162,6 +168,7 @@ namespace sw
         RHIDescriptorIndex         _descriptorIndex;
         IRHIDevice*                _pRHIDevice;
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로 — shutdown 때 그대로 돌려준다
+        vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬 백엔드 슬롯 바인딩용)
         RHIBlendMode               _blendMode;
         shared_ptr<AsyncLoadState> _asyncLoadState;
 

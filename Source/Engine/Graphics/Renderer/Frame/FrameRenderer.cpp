@@ -15,6 +15,7 @@
 
 namespace sw
 {
+
     SW_LOG_CALLER( "FrameRenderer" );
 
     FrameRenderer::FrameRenderer()
