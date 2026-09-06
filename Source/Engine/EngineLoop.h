@@ -7,7 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/Common.h"
-#include "Engine/Graphics/Renderer/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 
 namespace sw
 {

@@ -8,7 +8,7 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
-#include "Engine/Graphics/Renderer/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 
 namespace sw
 {

@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/ShaderBindingBinder.h"
+#include "Engine/Graphics/Renderer/Frame/ShaderBindingBinder.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/Renderer/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Graphics/Shader/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 

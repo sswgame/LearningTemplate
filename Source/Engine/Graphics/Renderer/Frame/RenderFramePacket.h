@@ -4,8 +4,8 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Renderer/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/GpuScene.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
 namespace sw
 {

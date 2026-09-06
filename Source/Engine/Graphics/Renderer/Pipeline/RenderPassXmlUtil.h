@@ -11,7 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Engine/Graphics/Renderer/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

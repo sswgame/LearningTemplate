@@ -19,7 +19,7 @@
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/Renderer/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"

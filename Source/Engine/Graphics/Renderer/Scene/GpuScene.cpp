@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/GpuScene.h"
+#include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
 #include "Core/Task/TaskManager.h"
 

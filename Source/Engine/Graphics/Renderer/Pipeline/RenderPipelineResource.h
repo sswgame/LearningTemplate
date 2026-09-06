@@ -12,7 +12,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Common/Common.h"
-#include "Engine/Graphics/Renderer/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw

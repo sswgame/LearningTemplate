@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/ComputePass.h"
+#include "Engine/Graphics/Renderer/Frame/ComputePass.h"
 
 #include "Core/Log/Logger.h"
 

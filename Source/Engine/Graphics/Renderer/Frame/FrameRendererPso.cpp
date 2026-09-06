@@ -7,8 +7,8 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/Renderer/FrameRenderer.h"
-#include "Engine/Graphics/Renderer/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 
 namespace sw
 {
