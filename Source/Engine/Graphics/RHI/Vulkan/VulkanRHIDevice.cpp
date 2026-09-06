@@ -266,6 +266,16 @@ namespace sw
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
             _gpuBuffers.clear();
+            for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+            {
+                if ( slot._pMapped != nullptr && slot._memory != VK_NULL_HANDLE )
+                    vkUnmapMemory( _device, slot._memory );
+                if ( slot._buffer != VK_NULL_HANDLE )
+                    vkDestroyBuffer( _device, slot._buffer, nullptr );
+                if ( slot._memory != VK_NULL_HANDLE )
+                    vkFreeMemory( _device, slot._memory, nullptr );
+                slot = StructuredUploadSlot{};
+            }
             _recordingState._boundMeshVb      = 0;
             _recordingState._boundMeshStride  = sizeof( RHIVertex );
             _recordingState._boundMeshOffset  = 0;

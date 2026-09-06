@@ -76,29 +76,176 @@ namespace sw
         return _pDevice->createVulkanBuffer( elementSize * elementCount, usage, nullptr );
     }
 
+    bool VulkanRHIResource::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
+    {
+        const uint32                           slotIndex = _pDevice->_currentFrame;
+        VulkanRHIDevice::StructuredUploadSlot& slot      = _pDevice->_arrStructuredUploadSlot[slotIndex];
+
+        // 슬롯이 다시 내 차례가 됐다는 건 beginFrame 이 그 슬롯의 펜스를 기다렸다는 뜻 — 오프셋을 되감는다.
+        // 같은 펜스 구간(같은 프레임) 안의 두 번째 호출은 앞선 복사가 아직 스테이징을 읽을 수 있으므로 이어 쓴다.
+        if ( slot._resetFence != _pDevice->_frameFenceCounter )
+        {
+            slot._uploadOffset = 0;
+            slot._resetFence   = _pDevice->_frameFenceCounter;
+        }
+
+        uint64 offset = MathUtil::align( slot._uploadOffset, static_cast<uint64>( constant::kConstantBufferAlignment ) );
+        if ( slot._buffer == VK_NULL_HANDLE || slot._capacity < offset + sizeBytes )
+        {
+            const uint64 newCapacity = MathUtil::align( ( offset + sizeBytes ) * 2, 65536ull );
+
+            // 옛 스테이징은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다 — 펜스 뒤에 놓아준다.
+            if ( slot._buffer != VK_NULL_HANDLE )
+            {
+                VkDevice       dev = _pDevice->_device;
+                VkBuffer       buf = slot._buffer;
+                VkDeviceMemory mem = slot._memory;
+                if ( slot._pMapped != nullptr )
+                    vkUnmapMemory( dev, mem );
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
+                {
+                    vkDestroyBuffer( dev, buf, nullptr );
+                    vkFreeMemory( dev, mem, nullptr );
+                } ),
+                                                           _pDevice->_frameFenceCounter + 1 );
+                slot._buffer   = VK_NULL_HANDLE;
+                slot._memory   = VK_NULL_HANDLE;
+                slot._pMapped  = nullptr;
+                slot._capacity = 0;
+                offset         = 0;
+            }
+
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size        = newCapacity;
+            bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            if ( vkCreateBuffer( _pDevice->_device, &bufferInfo, nullptr, &slot._buffer ) != VK_SUCCESS )
+            {
+                SW_LOG_ERROR( "acquireStructuredUploadStaging: failed to create the staging buffer (%# bytes)", newCapacity );
+                slot._buffer = VK_NULL_HANDLE;
+                return false;
+            }
+
+            VkMemoryRequirements memReq{};
+            vkGetBufferMemoryRequirements( _pDevice->_device, slot._buffer, &memReq );
+            uint32 memoryTypeIndex{ 0 };
+            if ( _pDevice->findMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
+            {
+                vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
+                slot._buffer = VK_NULL_HANDLE;
+                SW_LOG_ERROR( "acquireStructuredUploadStaging: no host visible memory type" );
+                return false;
+            }
+
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize  = memReq.size;
+            allocInfo.memoryTypeIndex = memoryTypeIndex;
+            if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &slot._memory ) != VK_SUCCESS ||
+                 vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||
+                 vkMapMemory( _pDevice->_device, slot._memory, 0, VK_WHOLE_SIZE, 0, &slot._pMapped ) != VK_SUCCESS )
+            {
+                if ( slot._memory != VK_NULL_HANDLE )
+                    vkFreeMemory( _pDevice->_device, slot._memory, nullptr );
+                vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
+                slot             = VulkanRHIDevice::StructuredUploadSlot{};
+                slot._resetFence = _pDevice->_frameFenceCounter;
+                SW_LOG_ERROR( "acquireStructuredUploadStaging: failed to allocate/map the staging memory" );
+                return false;
+            }
+            slot._capacity = newCapacity;
+        }
+
+        slot._uploadOffset = offset + sizeBytes;
+        outOffset          = offset;
+        outBuffer          = slot._buffer;
+        return true;
+    }
+
     void VulkanRHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        // updateConstantBuffer 로 넘기면 안 된다. 그쪽은 `(frame % kMaxFrameCountInFlight) * slotSize`
-        // 링 오프셋에 쓰는데, 그 링은 createConstantBuffer 가 `size * kMaxFrameCountInFlight` 로
-        // 잡아 준 버퍼에만 존재한다. createStructuredBuffer 는 정확히 한 프레임 크기만 잡으므로
-        // 프레임 1부터 버퍼 밖을 매핑한다 — 인스턴스 버퍼 400 x 96 B = 0x9600 에서
-        // "offset 0x9600 plus size 0x9600 oversteps total array size 0x9600" 이 그것이고,
-        // 그 덮어쓰기가 메모리를 깨뜨려 vkAcquireNextImageKHR 가 매 프레임 DEVICE_LOST(-4) 를 냈다.
-        // 매 프레임 구조버퍼를 갱신하는 씬이 없어서 한 번도 드러나지 않았을 뿐이다.
-        //
-        // 구조버퍼는 링이 아니므로 항상 오프셋 0 이다. (GPU 가 직전 프레임을 아직 읽고 있을 수 있는
-        // CPU/GPU 해저드는 남는다 — 그건 프레임 간 찢어짐이지 메모리 손상이 아니다. 진짜 해결은
-        // 구조버퍼도 링으로 잡고 바인딩 쪽이 프레임 슬롯을 가리키게 하는 것인데, bindless SRV 가
-        // 버퍼 전체를 한 번 등록하는 구조라 별도 설계가 필요하다.)
+        // 예전엔 목적 버퍼를 직접 vkMapMemory 해서 썼다. 링 오프셋 버그(71cd9755)를 걷어낸 뒤에도
+        // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 남아 있었다.
+        // 지금은 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다 — 큐 순서가 곧 해저드 해결이고,
+        // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( pRecord == nullptr || pData == nullptr || size == 0 || pRecord->_memory == VK_NULL_HANDLE )
+        if ( pRecord == nullptr || pData == nullptr || size == 0 || pRecord->_buffer == VK_NULL_HANDLE ||
+             _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE )
             return;
+        if ( size > pRecord->_size )
+            size = pRecord->_size;
 
-        void* pMapped{ nullptr };
-        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS )
+        uint64   stagingOffset{ 0 };
+        VkBuffer stagingBuffer{ VK_NULL_HANDLE };
+        if ( acquireStructuredUploadStaging( size, stagingOffset, stagingBuffer ) == false )
+            return;
+        Memory::copy( static_cast<uint8*>( _pDevice->_arrStructuredUploadSlot[_pDevice->_currentFrame]._pMapped ) + stagingOffset, pData, size );
+
+        // 프레임 안이면 프레임 스트림에 기록한다(제출 순서상 이번 프레임의 패스 리스트보다 앞). 프레임 밖
+        // (초기 업로드·테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
+        VkCommandBuffer cmd      = ( _pDevice->_bFrameStarted == SW_TRUE ) ? _pDevice->_activeFrameBuffer : VK_NULL_HANDLE;
+        const bool      bOneShot = ( cmd == VK_NULL_HANDLE );
+        if ( bOneShot )
         {
-            Memory::copy( pMapped, pData, size );
-            vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+            if ( _pDevice->_commandPool == VK_NULL_HANDLE )
+                return;
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool        = _pDevice->_commandPool;
+            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandBufferCount = 1;
+            if ( vkAllocateCommandBuffers( _pDevice->_device, &allocInfo, &cmd ) != VK_SUCCESS )
+                return;
+            VkCommandBufferBeginInfo beginInfo{};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer( cmd, &beginInfo );
+        }
+        else if ( _pDevice->_recordingState._bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pDevice->_recordingState._bRenderPassActive = SW_FALSE;
+        }
+
+        // 앞 프레임의 읽기(셰이더·간접 인자·컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
+        // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다 — 보수적인 마스크로 양쪽을 다 덮는다.
+        constexpr VkAccessFlags        kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+        constexpr VkPipelineStageFlags kConsumerStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer              = pRecord->_buffer;
+        barrier.offset              = 0;
+        barrier.size                = VK_WHOLE_SIZE;
+
+        barrier.srcAccessMask = kConsumerAccess;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier( cmd, kConsumerStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr );
+
+        VkBufferCopy region{};
+        region.srcOffset = stagingOffset;
+        region.dstOffset = 0;
+        region.size      = size;
+        vkCmdCopyBuffer( cmd, stagingBuffer, pRecord->_buffer, 1, &region );
+
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = kConsumerAccess;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, kConsumerStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
+
+        if ( bOneShot )
+        {
+            vkEndCommandBuffer( cmd );
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers    = &cmd;
+            if ( vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
+                vkQueueWaitIdle( _pDevice->_graphicsQueue );
+            vkFreeCommandBuffers( _pDevice->_device, _pDevice->_commandPool, 1, &cmd );
         }
     }
 

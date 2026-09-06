@@ -513,7 +513,27 @@ namespace sw
         vector<VkCommandBuffer> _listPendingSubmit;
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼(프레임 슬롯별 재사용).
         vector<VkCommandBuffer> _arrFrameSegment[constant::kMaxFrameCountInFlight];
-        uint32                  _frameSegmentCursor{ 0 };
+
+        /**
+         * @struct StructuredUploadSlot
+         * @brief updateStructuredBuffer 가 쓰는 프레임 슬롯별 호스트 가시 스테이징(bump 할당).
+         * @details 예전엔 목적 버퍼에 vkMapMemory 로 직접 썼다 — GPU 가 직전 프레임을 아직 읽는 중인
+         *          메모리를 CPU 가 덮어써 프레임 간 찢어짐이 남아 있었다. 이제 스테이징에 쓰고
+         *          vkCmdCopyBuffer 를 프레임 커맨드버퍼에 기록하므로, 복사는 GPU 큐 순서로 앞 프레임의
+         *          읽기 뒤·이번 프레임의 드로우 앞에 놓인다(DX12 와 같은 모델). 슬롯은 beginFrame 이
+         *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어 쓴다.
+         */
+        struct StructuredUploadSlot
+        {
+            VkBuffer       _buffer{ nullptr };
+            VkDeviceMemory _memory{ nullptr };
+            void*          _pMapped{ nullptr };
+            uint64         _capacity{ 0 };
+            uint64         _uploadOffset{ 0 };
+            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
+        };
+        StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
+        uint32               _frameSegmentCursor{ 0 };
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는가 (첫 제출만 건다).
         uint8 _bFrameAcquireWaitPending{ 0 };
         /// @brief b1(MaterialCB) 푸시 상수 경로 안내를 한 번만 남기기 위한 래치.
