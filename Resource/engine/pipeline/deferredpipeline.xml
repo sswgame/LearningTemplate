@@ -81,6 +81,7 @@
 			<_outputs>
 				<item>ShadowMap</item>
 			</_outputs>
+			<_depthAttachment>ShadowMap</_depthAttachment>
 		</item>
 		<item>
 			<_name>GBuffer</_name>
@@ -91,6 +92,7 @@
 				<item>GBufferNormal</item>
 				<item>SceneDepth</item>
 			</_outputs>
+			<_depthAttachment>SceneDepth</_depthAttachment>
 		</item>
 		<item>
 			<_name>Shading</_name>
@@ -115,6 +117,7 @@
 			<_outputs>
 				<item>TransparentColor</item>
 			</_outputs>
+			<_depthAttachment>SceneDepth</_depthAttachment>
 		</item>
 		<item>
 			<_name>SSAO</_name>

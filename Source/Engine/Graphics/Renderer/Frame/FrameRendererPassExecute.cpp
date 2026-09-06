@@ -102,17 +102,19 @@ namespace sw
         // PSO 생성이 서로 다른 표기를 받아줄 여지가 생긴다(그게 `ae7fb078` 의 원인이었다).
         RenderPassType passType  = RenderPassType::Invalid;
         const utf8*    pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
-        const auto     iter      = _mapPassNameToIndex.find( graphCtx._passName );
+        string_view    depthAttachment;
+        const auto     iter = _mapPassNameToIndex.find( graphCtx._passName );
         if ( iter != _mapPassNameToIndex.end() && iter->second < listPass.size() )
         {
             const RenderGraphPassDesc& pass = listPass[iter->second];
             passType                        = pass._resolvedType;
             pPassName                       = pass._name.c_str();
+            depthAttachment                 = pass._depthAttachment;
         }
-        executePass( passCtx, passType, pPassName );
+        executePass( passCtx, passType, pPassName, depthAttachment );
     }
 
-    void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName )
+    void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, string_view depthAttachment )
     {
         if ( ctx._pCmd == nullptr )
         {
@@ -149,17 +151,24 @@ namespace sw
             ctx._pCmd->endRenderPass();
         };
 
+        // 이 패스가 바인딩할 뎁스. 파이프라인 XML 의 `_depthAttachment` 가 정본이고, 비어 있으면
+        // 뎁스 없이 연다 — "이 패스는 일부러 뎁스를 안 쓴다" 를 선언으로 표현할 수 있어야 한다.
+        // 선언한 이름이 이번 프레임에 실제로 없으면(트랜지언트 미할당) 뎁스 없이 진행한다.
+        const string_view passDepth = ( depthAttachment.empty() == false && findTransient( depthAttachment ) != 0 )
+                                        ? depthAttachment
+                                        : string_view{};
+
         if ( passType == RenderPassType::Shadow )
         {
             const float4 clearVal = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kShadowMap, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-            beginDepthOnlyPass( ctx, FrameRendererUtil::Attachment::kShadowMap, clearVal._x, colorLoadFor( FrameRendererUtil::Attachment::kShadowMap, false ) );
+            beginDepthOnlyPass( ctx, passDepth, clearVal._x, colorLoadFor( passDepth, false ) );
             drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, false );
             ctx._pCmd->endRenderPass();
         }
-        else if ( passType == RenderPassType::DepthPrepass || false )
+        else if ( passType == RenderPassType::DepthPrepass )
         {
             const float4 clearVal = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kSceneDepth, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-            beginDepthOnlyPass( ctx, FrameRendererUtil::Attachment::kSceneDepth, clearVal._x, colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
+            beginDepthOnlyPass( ctx, passDepth, clearVal._x, colorLoadFor( passDepth, false ) );
             const RHIPipelineStateHandle depthPso = getEnginePso( RenderPassType::DepthPrepass ) != 0
                                                       ? getEnginePso( RenderPassType::DepthPrepass )
                                                       : getEnginePso( RenderPassType::Shadow );
@@ -171,7 +180,7 @@ namespace sw
         {
             registerPassTexture( ctx, "ShadowMap", FrameRendererUtil::Attachment::kShadowMap );
             const float4 sceneClear = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kSceneColor, _clearColor );
-            beginColorPass( ctx, FrameRendererUtil::Attachment::kSceneColor, FrameRendererUtil::Attachment::kSceneDepth, sceneClear,
+            beginColorPass( ctx, FrameRendererUtil::Attachment::kSceneColor, passDepth, sceneClear,
                             colorLoadFor( FrameRendererUtil::Attachment::kSceneColor, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 
             const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePso( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
@@ -192,7 +201,7 @@ namespace sw
                 const string_view         arrNames[]   = { FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kGBufferNormal };
                 const float4              arrClears[2] = { clearColor, normalClear };
                 const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ) };
-                beginColorPassMRT( ctx, arrNames, arrClears, arrLoads, 2, FrameRendererUtil::Attachment::kSceneDepth, colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
+                beginColorPassMRT( ctx, arrNames, arrClears, arrLoads, 2, passDepth, colorLoadFor( passDepth, false ) );
                 drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBuffer ), passCb, false );
                 ctx._pCmd->endRenderPass();
             }
@@ -202,7 +211,7 @@ namespace sw
                     getEnginePso( RenderPassType::GBufferAlbedo ) != 0
                         ? getEnginePso( RenderPassType::GBufferAlbedo )
                         : getEnginePso( RenderPassType::GBuffer );
-                beginColorPass( ctx, FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kSceneDepth, clearColor,
+                beginColorPass( ctx, FrameRendererUtil::Attachment::kGBufferAlbedo, passDepth, clearColor,
                                 colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
                 drawSceneMeshes( ctx, albedoPso != 0 ? albedoPso : 0, passCb, false );
                 ctx._pCmd->endRenderPass();
@@ -210,14 +219,14 @@ namespace sw
                 if ( bHasNormal )
                 {
                     const float4 normalClear = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::kNormalClear );
-                    beginColorPass( ctx, FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::Attachment::kSceneDepth, normalClear,
+                    beginColorPass( ctx, FrameRendererUtil::Attachment::kGBufferNormal, passDepth, normalClear,
                                     colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ), RHIRenderPassLoadOp::Load );
                     drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBufferNormal ), passCb, false );
                     ctx._pCmd->endRenderPass();
                 }
             }
         }
-        else if ( passType == RenderPassType::Lighting || passType == RenderPassType::Lighting )
+        else if ( passType == RenderPassType::Lighting )
         {
             registerPassTexture( ctx, "GBufferAlbedo", FrameRendererUtil::Attachment::kGBufferAlbedo );
             registerPassTexture( ctx, "GBufferNormal", FrameRendererUtil::Attachment::kGBufferNormal );
@@ -231,7 +240,6 @@ namespace sw
             const string_view colorTarget = findTransient( FrameRendererUtil::Attachment::kTransparentColor ) != 0
                                               ? "TransparentColor"
                                               : ( findTransient( FrameRendererUtil::Attachment::kLitColor ) != 0 ? "LitColor" : "SceneColor" );
-            const string_view depthTarget = findTransient( FrameRendererUtil::Attachment::kSceneDepth ) != 0 ? "SceneDepth" : "";
 
             if ( colorTarget == "TransparentColor" )
             {
@@ -241,7 +249,7 @@ namespace sw
                 markAttachmentCleared( hashed_string( colorTarget ) );
             }
 
-            beginColorPass( ctx, colorTarget, depthTarget, _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load );
+            beginColorPass( ctx, colorTarget, passDepth, _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load );
             const RHIPipelineStateHandle transparentPso =
                 getEnginePso( RenderPassType::Transparent ) != 0
                     ? getEnginePso( RenderPassType::Transparent )
@@ -266,7 +274,7 @@ namespace sw
                 registerPassTexture( ctx, "SourceColor", pSrcName );
             executeFullscreenPass( getEnginePso( RenderPassType::Bloom ), bloomTarget, getAttachmentClearColorOrDefault( bloomTarget, _clearColor ) );
         }
-        else if ( passType == RenderPassType::Outline || passType == RenderPassType::Outline )
+        else if ( passType == RenderPassType::Outline )
         {
             const string_view outlineTarget = findTransient( FrameRendererUtil::Attachment::kOutlineColor ) != 0 ? "OutlineColor" : "SceneColor";
             const utf8*       pSrcName      = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );

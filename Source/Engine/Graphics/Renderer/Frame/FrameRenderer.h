@@ -186,7 +186,7 @@ namespace sw
          */
         void onGraphWavePrologue( const RenderGraphWaveContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
-        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName );
+        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, string_view depthAttachment );
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
         /** @brief 카메라에서 뷰/투영을 적용합니다. */

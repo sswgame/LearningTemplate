@@ -43,6 +43,11 @@ namespace sw
                     RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
                     RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
 
+                    // 비어 있으면 "뎁스 없이 그린다" 는 뜻이다 — 기본값을 넣지 않는다.
+                    const utf8* pDepthAttachment = passNode.childText( "_depthAttachment" );
+                    if ( pDepthAttachment != nullptr )
+                        pass._depthAttachment = pDepthAttachment;
+
                     const utf8* pShaderPath = passNode.childText( "_shaderPath" );
                     if ( pShaderPath != nullptr )
                         pass._shaderPath = pShaderPath;
@@ -106,6 +111,13 @@ namespace sw
                     if ( pass._listOutput.empty() )
                         RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
                     RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
+
+                    const utf8* pDepthAttachment = passNode.childText( "_depthAttachment" );
+                    if ( pDepthAttachment == nullptr )
+                        pDepthAttachment = passNode.childText( "depthAttachment" );
+                    if ( pDepthAttachment != nullptr )
+                        pass._depthAttachment = pDepthAttachment;
+
                     outListPass.push_back( std::move( pass ) );
                 }
             }
@@ -248,6 +260,40 @@ namespace sw
                     ++issueCount;
                 }
             }
+
+            // 뎁스 첨부: 비어 있는 것은 "일부러 뎁스를 안 쓴다" 는 뜻이라 정상이다. 다만 이름을
+            // 적었으면 그 첨부가 실재하고 뎁스 포맷이어야 한다 — 컬러 첨부를 뎁스로 바인딩하면
+            // 렌더패스가 통째로 비호환이 된다.
+            if ( pass._depthAttachment.empty() == false )
+            {
+                const RenderPassAttachment* pDepthAtt = findAttachment( pass._depthAttachment );
+                if ( pDepthAtt == nullptr )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 이 _attachments 에 없습니다",
+                                  sourcePath, pass._name, pass._depthAttachment );
+                    ++issueCount;
+                }
+                else if ( engine::getTypeRegistry().enumFromString<RHIFormat>( pDepthAtt->_format ) != constant::kDepthStencilFormat )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
+                                  sourcePath, pass._name, pass._depthAttachment, pDepthAtt->_format );
+                    ++issueCount;
+                }
+            }
+            else
+            {
+                // 뎁스를 쓰겠다고 출력에 적어 놓고 바인딩은 안 하는 것은 앞뒤가 안 맞는다.
+                for ( const string& outputName : pass._listOutput )
+                {
+                    const RenderPassAttachment* pAtt = findAttachment( outputName );
+                    if ( pAtt == nullptr || engine::getTypeRegistry().enumFromString<RHIFormat>( pAtt->_format ) != constant::kDepthStencilFormat )
+                        continue;
+                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 을 출력으로 선언했는데 _depthAttachment 가 비어 "
+                                  "있습니다 — 이대로면 뎁스 없이 그립니다",
+                                  sourcePath, pass._name, outputName );
+                    ++issueCount;
+                }
+            }
         }
 
         // 3) 컬러 첨부가 여러 개인 패스는 MRT 로 묶인다 — 포맷이 서로 달라도 되지만 개수 한계는 있다.
@@ -301,6 +347,8 @@ namespace sw
 
             RenderPassXmlUtil::appendStringList( passNode, "_inputs", pass._listInput );
             RenderPassXmlUtil::appendStringList( passNode, "_outputs", pass._listOutput );
+            if ( pass._depthAttachment.empty() == false )
+                passNode.appendChild( "_depthAttachment", pass._depthAttachment );
             if ( pass._shaderPath.empty() == false )
                 passNode.appendChild( "_shaderPath", pass._shaderPath );
             if ( pass._vertexEntryPoint.empty() == false )

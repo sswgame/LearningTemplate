@@ -111,6 +111,18 @@ namespace sw
         PROPERTY()
         vector<string> _listOutput;
 
+        /**
+         * @brief 이 패스가 바인딩할 뎁스 첨부 이름. **비어 있으면 뎁스 없이 연다.**
+         * @details 예전엔 패스 타입마다 코드에 박혀 있었다("GBuffer 면 SceneDepth"). 그러면 "이 패스는
+         *          일부러 뎁스를 쓰지 않는다" 를 표현할 방법이 없어서, DepthPrepass 를 넣거나 빼는
+         *          구성을 바꾸려면 엔진 코드를 고쳐야 했다. 선언으로 빼면 파이프라인 XML 만으로 바뀐다.
+         * @note 읽기/쓰기 여부는 `_listInput` / `_listOutput` 이 따로 말한다 — Transparent 는 SceneDepth 를
+         *       **입력으로 읽으면서** 뎁스로 바인딩한다(테스트만 하고 쓰지 않는다). 그래서 출력에서
+         *       유추하지 않고 별도 필드로 둔다.
+         */
+        PROPERTY()
+        string _depthAttachment;
+
         /** @brief HLSL path (engine/... or common/...). Empty → FrameRenderer type default. */
         PROPERTY()
         string _shaderPath;

@@ -50,6 +50,7 @@
 			<_outputs>
 				<item>ShadowMap</item>
 			</_outputs>
+			<_depthAttachment>ShadowMap</_depthAttachment>
 			<_shaderPath>engine/shaders/shadowdepth.hlsl</_shaderPath>
 			<_vertexEntryPoint>VSMain</_vertexEntryPoint>
 			<_pixelEntryPoint>PSMain</_pixelEntryPoint>
@@ -68,6 +69,7 @@
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
 			</_outputs>
+			<_depthAttachment>SceneDepth</_depthAttachment>
 			<_shaderPath>engine/shaders/forwardlit.hlsl</_shaderPath>
 			<_vertexEntryPoint>VSMain</_vertexEntryPoint>
 			<_pixelEntryPoint>PSMain</_pixelEntryPoint>
@@ -89,6 +91,7 @@
 			<_outputs>
 				<item>SceneColor</item>
 			</_outputs>
+			<_depthAttachment>SceneDepth</_depthAttachment>
 			<_shaderPath>engine/shaders/forwardlit.hlsl</_shaderPath>
 			<_vertexEntryPoint>VSMain</_vertexEntryPoint>
 			<_pixelEntryPoint>PSMain</_pixelEntryPoint>
