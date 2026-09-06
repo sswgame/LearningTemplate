@@ -6,137 +6,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassXmlUtil.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct RenderPipelineResourceInternal
-        {
-            static void parsePipelineGraphPasses( XmlNode passesNode, vector<RenderGraphPassDesc>& outListPass )
-            {
-                outListPass.clear();
-                if ( passesNode.isValid() == false )
-                    return;
-
-                for ( XmlNode passNode = passesNode.child( "item" ); passNode.isValid(); passNode = passNode.next( "item" ) )
-                {
-                    RenderGraphPassDesc pass{};
-                    const utf8*         pName = passNode.childText( "_name" );
-                    if ( pName == nullptr )
-                        pName = passNode.attr( "name" );
-                    if ( pName != nullptr )
-                        pass._name = pName;
-
-                    const utf8* pType = passNode.childText( "_type" );
-                    if ( pType == nullptr )
-                        pType = passNode.attr( "type" );
-                    if ( pType != nullptr )
-                        pass._type = pType;
-
-                    RenderPassXmlUtil::parseStringList( passNode, "_inputs", pass._listInput );
-                    RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
-                    RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
-
-                    // 비어 있으면 "뎁스 없이 그린다" 는 뜻이다 — 기본값을 넣지 않는다.
-                    const utf8* pDepthAttachment = passNode.childText( "_depthAttachment" );
-                    if ( pDepthAttachment != nullptr )
-                        pass._depthAttachment = pDepthAttachment;
-
-                    const utf8* pShaderPath = passNode.childText( "_shaderPath" );
-                    if ( pShaderPath != nullptr )
-                        pass._shaderPath = pShaderPath;
-
-                    const utf8* pVertexEntryPoint = passNode.childText( "_vertexEntryPoint" );
-                    if ( pVertexEntryPoint != nullptr )
-                        pass._vertexEntryPoint = pVertexEntryPoint;
-
-                    const utf8* pPixelEntryPoint = passNode.childText( "_pixelEntryPoint" );
-                    if ( pPixelEntryPoint != nullptr )
-                        pass._pixelEntryPoint = pPixelEntryPoint;
-
-                    const utf8* pComputeEntryPoint = passNode.childText( "_computeEntryPoint" );
-                    if ( pComputeEntryPoint != nullptr )
-                        pass._computeEntryPoint = pComputeEntryPoint;
-
-                    const utf8* pGeometryEntryPoint = passNode.childText( "_geometryEntryPoint" );
-                    if ( pGeometryEntryPoint != nullptr )
-                        pass._geometryEntryPoint = pGeometryEntryPoint;
-
-                    const utf8* pHullEntryPoint = passNode.childText( "_hullEntryPoint" );
-                    if ( pHullEntryPoint != nullptr )
-                        pass._hullEntryPoint = pHullEntryPoint;
-
-                    const utf8* pDomainEntryPoint = passNode.childText( "_domainEntryPoint" );
-                    if ( pDomainEntryPoint != nullptr )
-                        pass._domainEntryPoint = pDomainEntryPoint;
-
-                    const utf8* pMeshEntryPoint = passNode.childText( "_meshEntryPoint" );
-                    if ( pMeshEntryPoint != nullptr )
-                        pass._meshEntryPoint = pMeshEntryPoint;
-
-                    const utf8* pAmplificationEntryPoint = passNode.childText( "_amplificationEntryPoint" );
-                    if ( pAmplificationEntryPoint != nullptr )
-                        pass._amplificationEntryPoint = pAmplificationEntryPoint;
-
-                    const utf8* pCullMode = passNode.childText( "_cullMode" );
-                    if ( pCullMode != nullptr )
-                        pass._cullMode = pCullMode;
-
-                    pass._bEnableDepthTest  = passNode.childBool( "_bEnableDepthTest", pass._bEnableDepthTest );
-                    pass._bEnableDepthWrite = passNode.childBool( "_bEnableDepthWrite", pass._bEnableDepthWrite );
-                    pass._bEnableBlend      = passNode.childBool( "_bEnableBlend", pass._bEnableBlend );
-
-                    outListPass.push_back( std::move( pass ) );
-                }
-
-                for ( XmlNode passNode = passesNode.child( "Pass" ); passNode.isValid(); passNode = passNode.next( "Pass" ) )
-                {
-                    RenderGraphPassDesc pass{};
-                    const utf8*         pName = passNode.attr( "name" );
-                    if ( pName != nullptr )
-                        pass._name = pName;
-                    const utf8* pType = passNode.attr( "type" );
-                    if ( pType != nullptr )
-                        pass._type = pType;
-                    RenderPassXmlUtil::parseStringList( passNode, "inputs", pass._listInput );
-                    RenderPassXmlUtil::parseStringList( passNode, "outputs", pass._listOutput );
-                    if ( pass._listInput.empty() )
-                        RenderPassXmlUtil::parseStringList( passNode, "_inputs", pass._listInput );
-                    if ( pass._listOutput.empty() )
-                        RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
-                    RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
-
-                    const utf8* pDepthAttachment = passNode.childText( "_depthAttachment" );
-                    if ( pDepthAttachment == nullptr )
-                        pDepthAttachment = passNode.childText( "depthAttachment" );
-                    if ( pDepthAttachment != nullptr )
-                        pass._depthAttachment = pDepthAttachment;
-
-                    outListPass.push_back( std::move( pass ) );
-                }
-            }
-
-            static string guessShadingModel( string_view name, const vector<RenderGraphPassDesc>& listPass )
-            {
-                const string nameNt( name );
-                if ( StringUtil::stristr( nameNt.c_str(), "deferred" ) != nullptr )
-                    return "Deferred";
-                for ( const RenderGraphPassDesc& passDesc : listPass )
-                {
-                    if ( passDesc._type == "GBuffer" || passDesc._type == "Shading" || passDesc._type == "Lighting" )
-                        return "Deferred";
-                }
-                return "Forward";
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw
 {
@@ -144,51 +17,25 @@ namespace sw
 
     bool RenderPipelineResource::loadFromXmlFile( string_view assetRelativePath )
     {
-        string      absPath;
-        XmlDocument doc;
-        if ( doc.loadPath( assetRelativePath, &absPath ) == false )
+        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType<RenderPipelineDesc>();
+        if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "XML file not found: %#", assetRelativePath );
-            return false;
-        }
-
-        XmlNode root = doc.root( "RenderPipelineDesc" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_ERROR( "XML missing root <RenderPipelineDesc>: %#", absPath );
-            return false;
-        }
-
-        if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::RenderPipeline, doc, root, AssetFormatVersions::kRenderPipeline ) == false )
-        {
-            SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
+            SW_LOG_ERROR( "RenderPipelineDesc TypeInfo 를 찾을 수 없습니다 — 리플렉션 생성이 빠졌습니다" );
             return false;
         }
 
         _desc = {};
 
-        const utf8* pName = root.childText( "_name" );
-        if ( pName != nullptr )
-            _desc._name = pName;
+        // PROPERTY 그래프를 그대로 읽는다. 예전엔 파서가 두 벌(정식/구형 짧은 이름)에 라이터가 따로
+        // 있어서, 필드를 하나 추가하려면 세 곳을 고쳐야 했고 하나만 빠뜨리면 값이 조용히 비었다 —
+        // `_depthAttachment` 를 넣을 때 실제로 그 함정에 걸렸다.
+        if ( XmlSerializer::loadFile( assetRelativePath, &_desc, *pTypeInfo ) == false )
+        {
+            SW_LOG_ERROR( "RenderPipeline XML 로드 실패: %#", assetRelativePath );
+            return false;
+        }
 
-        const utf8* pShadingModel = root.childText( "_shadingModel" );
-        if ( pShadingModel != nullptr )
-            _desc._shadingModel = pShadingModel;
-
-        RenderPassXmlUtil::parseAttachmentList( root.child( "_attachments" ), _desc._listAttachment );
-
-        XmlNode passesNode = root.child( "_passes" );
-        if ( passesNode.isValid() )
-            RenderPipelineResourceInternal::parsePipelineGraphPasses( passesNode, _desc._listPass );
-
-        RenderPassXmlUtil::parseStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
-
-        if ( _desc._shadingModel.empty() || _desc._shadingModel == "Forward" )
-            _desc._shadingModel = RenderPipelineResourceInternal::guessShadingModel( _desc._name, _desc._listPass );
-
-        // 여기서 걸러내지 못한 불일치는 전부 런타임에 드러난다 — 그것도 조용히. 파이프라인이
-        // 선언한 포맷과 PSO 가 어긋나 GPU 가 통째로 죽은 적이 있다(`ae7fb078`).
-        validate( absPath );
+        validate( assetRelativePath );
 
         SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
                      _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
@@ -325,65 +172,17 @@ namespace sw
 
     bool RenderPipelineResource::saveToXmlFile( string_view assetRelativePath ) const
     {
+        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType<RenderPipelineDesc>();
+        if ( pTypeInfo == nullptr )
+            return false;
+
         string absPath = ResourceUtil::getResourcePath( assetRelativePath );
         if ( absPath.empty() )
             absPath = assetRelativePath;
 
-        XmlDocument doc;
-        XmlNode     root = doc.appendRoot( "RenderPipelineDesc" );
-        engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kRenderPipeline );
-
-        root.appendChild( "_name", _desc._name );
-        root.appendChild( "_shadingModel", _desc._shadingModel );
-
-        RenderPassXmlUtil::appendAttachmentList( root, _desc._listAttachment );
-
-        XmlNode passesNode = root.appendChild( "_passes" );
-        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        if ( XmlSerializer::saveFile( absPath, &_desc, *pTypeInfo ) == false )
         {
-            XmlNode passNode = passesNode.appendChild( "item" );
-            passNode.appendChild( "_name", pass._name );
-            passNode.appendChild( "_type", pass._type );
-
-            RenderPassXmlUtil::appendStringList( passNode, "_inputs", pass._listInput );
-            RenderPassXmlUtil::appendStringList( passNode, "_outputs", pass._listOutput );
-            if ( pass._depthAttachment.empty() == false )
-                passNode.appendChild( "_depthAttachment", pass._depthAttachment );
-            if ( pass._shaderPath.empty() == false )
-                passNode.appendChild( "_shaderPath", pass._shaderPath );
-            if ( pass._vertexEntryPoint.empty() == false )
-                passNode.appendChild( "_vertexEntryPoint", pass._vertexEntryPoint );
-            if ( pass._pixelEntryPoint.empty() == false )
-                passNode.appendChild( "_pixelEntryPoint", pass._pixelEntryPoint );
-            if ( pass._computeEntryPoint.empty() == false )
-                passNode.appendChild( "_computeEntryPoint", pass._computeEntryPoint );
-            if ( pass._geometryEntryPoint.empty() == false )
-                passNode.appendChild( "_geometryEntryPoint", pass._geometryEntryPoint );
-            if ( pass._hullEntryPoint.empty() == false )
-                passNode.appendChild( "_hullEntryPoint", pass._hullEntryPoint );
-            if ( pass._domainEntryPoint.empty() == false )
-                passNode.appendChild( "_domainEntryPoint", pass._domainEntryPoint );
-            if ( pass._meshEntryPoint.empty() == false )
-                passNode.appendChild( "_meshEntryPoint", pass._meshEntryPoint );
-            if ( pass._amplificationEntryPoint.empty() == false )
-                passNode.appendChild( "_amplificationEntryPoint", pass._amplificationEntryPoint );
-            if ( pass._cullMode.empty() == false )
-                passNode.appendChild( "_cullMode", pass._cullMode );
-
-            passNode.appendChild( "_bEnableDepthTest", pass._bEnableDepthTest );
-            passNode.appendChild( "_bEnableDepthWrite", pass._bEnableDepthWrite );
-            passNode.appendChild( "_bEnableBlend", pass._bEnableBlend );
-
-            if ( pass._listPermutation.empty() == false )
-                RenderPassXmlUtil::appendStringList( passNode, "_permutations", pass._listPermutation );
-        }
-
-        if ( _desc._listRenderPassRef.empty() == false )
-            RenderPassXmlUtil::appendStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
-
-        if ( doc.saveFile( absPath ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write: %#", absPath );
+            SW_LOG_ERROR( "Failed to write XML file: %#", absPath );
             return false;
         }
 

@@ -1,186 +1,115 @@
-<?xml version="1.0" encoding="utf-8"?>
-<RenderPipelineDesc formatVersion="0">
-	<_name>DeferredPipeline</_name>
-	<_shadingModel>Deferred</_shadingModel>
-	<_renderPassRefs>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-	</_renderPassRefs>
-	<_attachments>
-		<item>
-			<_name>GBufferAlbedo</_name>
-			<_format>R8G8B8A8_UNORM</_format>
-			<_clearColor>0.000000,0.000000,0.000000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>GBufferNormal</_name>
-			<_format>R16G16B16A16_FLOAT</_format>
-			<_clearColor>0.500000,0.500000,1.000000,0.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>SceneDepth</_name>
-			<_format>D24_UNORM_S8_UINT</_format>
-			<_clearColor>1.000000,0.000000,0.000000,0.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>ShadowMap</_name>
-			<_format>D24_UNORM_S8_UINT</_format>
-			<_clearColor>1.000000,0.000000,0.000000,0.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>LitColor</_name>
-			<_format>R16G16B16A16_FLOAT</_format>
-			<_clearColor>0.120000,0.150000,0.180000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>TransparentColor</_name>
-			<_format>R16G16B16A16_FLOAT</_format>
-			<_clearColor>0.120000,0.150000,0.180000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>AOColor</_name>
-			<_format>R8G8B8A8_UNORM</_format>
-			<_clearColor>1.000000,1.000000,1.000000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>BloomColor</_name>
-			<_format>R16G16B16A16_FLOAT</_format>
-			<_clearColor>0.000000,0.000000,0.000000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>TaaColor</_name>
-			<_format>R16G16B16A16_FLOAT</_format>
-			<_clearColor>0.000000,0.000000,0.000000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>OutlineColor</_name>
-			<_format>R8G8B8A8_UNORM</_format>
-			<_clearColor>0.120000,0.150000,0.180000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-		<item>
-			<_name>TonemapColor</_name>
-			<_format>R8G8B8A8_UNORM</_format>
-			<_clearColor>0.120000,0.150000,0.180000,1.000000</_clearColor>
-			<_bClear>1</_bClear>
-		</item>
-	</_attachments>
-	<_passes>
-		<item>
-			<_name>Shadow</_name>
-			<_type>Shadow</_type>
-			<_inputs/>
-			<_outputs>
+<RenderPipelineDesc _name="DeferredPipeline" _shadingModel="Deferred">
+	<_listAttachment>
+		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="GBufferNormal" _format="R16G16B16A16_FLOAT" _clearColor="0.5,0.5,1,0" _bClear="true" />
+		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="LitColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="TransparentColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _bClear="true" />
+		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="TaaColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="OutlineColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+	</_listAttachment>
+	<_listPass>
+		<RenderGraphPassDesc _name="Shadow" _type="Shadow" _depthAttachment="ShadowMap" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput />
+			<_listOutput>
 				<item>ShadowMap</item>
-			</_outputs>
-			<_depthAttachment>ShadowMap</_depthAttachment>
-		</item>
-		<item>
-			<_name>GBuffer</_name>
-			<_type>GBuffer</_type>
-			<_inputs/>
-			<_outputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="GBuffer" _type="GBuffer" _depthAttachment="SceneDepth" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput />
+			<_listOutput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>SceneDepth</item>
-			</_outputs>
-			<_depthAttachment>SceneDepth</_depthAttachment>
-		</item>
-		<item>
-			<_name>Shading</_name>
-			<_type>Lighting</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Shading" _type="Lighting" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>SceneDepth</item>
 				<item>ShadowMap</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>LitColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>Transparent</_name>
-			<_type>Transparent</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Transparent" _type="Transparent" _depthAttachment="SceneDepth" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>TransparentColor</item>
-			</_outputs>
-			<_depthAttachment>SceneDepth</_depthAttachment>
-		</item>
-		<item>
-			<_name>SSAO</_name>
-			<_type>SSAO</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="SSAO" _type="SSAO" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>GBufferNormal</item>
 				<item>SceneDepth</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>AOColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>PostBloom</_name>
-			<_type>Bloom</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="PostBloom" _type="Bloom" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>TransparentColor</item>
 				<item>AOColor</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>BloomColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>Outline</_name>
-			<_type>Outline</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Outline" _type="Outline" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>BloomColor</item>
 				<item>SceneDepth</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>OutlineColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>TAA</_name>
-			<_type>TAA</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="TAA" _type="TAA" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>OutlineColor</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>TaaColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>Tonemap</_name>
-			<_type>Tonemap</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Tonemap" _type="Tonemap" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>TaaColor</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>TonemapColor</item>
-			</_outputs>
-		</item>
-		<item>
-			<_name>Present</_name>
-			<_type>Present</_type>
-			<_inputs>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Present" _type="Present" _depthAttachment="" _shaderPath="" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _meshEntryPoint="" _amplificationEntryPoint="" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
+			<_listInput>
 				<item>TonemapColor</item>
-			</_inputs>
-			<_outputs>
+			</_listInput>
+			<_listOutput>
 				<item>Swapchain</item>
-			</_outputs>
-		</item>
-	</_passes>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+	</_listPass>
+	<_listRenderPassRef>
+		<item>engine/renderpass/defaultrenderpass.xml</item>
+	</_listRenderPassRef>
 </RenderPipelineDesc>
