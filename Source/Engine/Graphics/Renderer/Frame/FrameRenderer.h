@@ -159,6 +159,14 @@ namespace sw
         void resetPassCbRing();
         /** @brief 일시 텍스처를 확보합니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
+        /**
+         * @brief TAA 히스토리 텍스처를 **셋업 단계에서** 만들어 둡니다.
+         * @details 예전엔 TAA 패스 콜백 안에서 처음 만들고 bindless 에 등록했다. 그 콜백은 병렬
+         *          기록에서 태스크 스레드가 돌리므로, 기록 중에 bindless 레지스트리가 resize 되는
+         *          셈이었다 — 다른 스레드가 같은 레지스트리를 읽고 있는 와중에. 파이프라인이 TAA 를
+         *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 다 알 수 있다.
+         */
+        void ensureTaaHistory();
         /** @brief 일시 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번 바인딩합니다. */

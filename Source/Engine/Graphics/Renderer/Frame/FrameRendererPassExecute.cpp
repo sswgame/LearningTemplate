@@ -245,12 +245,10 @@ namespace sw
             const utf8*       pSrcName  = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "OutlineColor", "TransparentColor", "LitColor", "SceneColor" } );
             if ( pSrcName != nullptr )
                 registerPassTexture( ctx, "SourceColor", pSrcName );
+            // 히스토리 생성·bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다 — 이 콜백은
+            // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다.
             if ( _taaHistory != 0 )
-            {
-                if ( _taaHistorySrv == kInvalidDescriptorIndex )
-                    _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
                 ctx._resourceRegistry.registerTexture( hashed_string( framres::kGBufferAlbedo ), _taaHistory, _taaHistorySrv );
-            }
             beginColorPass( ctx, taaTarget, "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
             const RHIPipelineStateHandle taaPso = getEnginePso( RenderPassType::TAA );
             if ( taaPso != 0 )
@@ -260,26 +258,8 @@ namespace sw
             ctx._pCmd->endRenderPass();
 
             const RHITextureHandle taaOut = findTransient( taaTarget );
-            if ( taaOut != 0 )
-            {
-                if ( _taaHistory == 0 )
-                {
-                    RHITextureDesc histDesc{};
-                    histDesc._width  = _transientWidth != 0 ? _transientWidth : FrameRendererUtil::kDefaultTransientSize;
-                    histDesc._height = _transientHeight != 0 ? _transientHeight : FrameRendererUtil::kDefaultTransientSize;
-                    // TAA 히스토리는 TAA 출력의 복사본이다 — CopyResource 는 포맷이 정확히 같아야
-                    // 하는데 예전엔 R8G8B8A8 로 박아 놨다. deferredpipeline 의 TaaColor 는
-                    // R16G16B16A16_FLOAT 라 R16F→R8 복사가 되어 정의되지 않은 동작이었다.
-                    histDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
-                    histDesc._bIsRenderTarget   = 1;
-                    histDesc._bIsShaderResource = 1;
-                    _taaHistory                 = _pDevice->getResource()->createTexture2D( histDesc );
-                    if ( _taaHistory != 0 )
-                        _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
-                }
-                if ( _taaHistory != 0 )
-                    ctx._pCmd->blitTexture( taaOut, _taaHistory );
-            }
+            if ( taaOut != 0 && _taaHistory != 0 )
+                ctx._pCmd->blitTexture( taaOut, _taaHistory );
         }
         else if ( passType == RenderPassType::Tonemap )
         {

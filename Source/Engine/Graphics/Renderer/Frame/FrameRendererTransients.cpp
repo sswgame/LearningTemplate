@@ -298,6 +298,44 @@ namespace sw
                 ensureNamed( out );
             }
         }
+
+        ensureTaaHistory();
+    }
+
+    void FrameRenderer::ensureTaaHistory()
+    {
+        if ( _pDevice == nullptr || _taaHistory != 0 )
+            return;
+
+        // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
+        bool bHasTaaPass = false;
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( pass._resolvedType == RenderPassType::TAA )
+            {
+                bHasTaaPass = true;
+                break;
+            }
+        }
+        if ( bHasTaaPass == false )
+            return;
+
+        // 히스토리는 TAA 출력의 복사본이다 — CopyResource 는 포맷이 정확히 같아야 하므로 대상
+        // 첨부의 포맷을 그대로 따라간다.
+        const bool        bHasTaaColor = _mapTransient.find( string( "TaaColor" ) ) != _mapTransient.end();
+        const string_view taaTarget    = bHasTaaColor ? string_view{ "TaaColor" }
+                                                      : string_view{ FrameRendererUtil::Attachment::kSceneColor };
+
+        RHITextureDesc histDesc{};
+        histDesc._width             = _transientWidth != 0 ? _transientWidth : FrameRendererUtil::kDefaultTransientSize;
+        histDesc._height            = _transientHeight != 0 ? _transientHeight : FrameRendererUtil::kDefaultTransientSize;
+        histDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
+        histDesc._bIsRenderTarget   = 1;
+        histDesc._bIsShaderResource = 1;
+
+        _taaHistory = _pDevice->getResource()->createTexture2D( histDesc );
+        if ( _taaHistory != 0 )
+            _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -306,10 +344,26 @@ namespace sw
         {
             _mapTransient.clear();
             _mapTransientSrv.clear();
+            _taaHistory      = 0;
+            _taaHistorySrv   = kInvalidDescriptorIndex;
             _transientWidth  = 0;
             _transientHeight = 0;
             return;
         }
+
+        // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약) — 트랜지언트가
+        // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.
+        if ( _taaHistorySrv != kInvalidDescriptorIndex )
+        {
+            _pDevice->getResource()->unregisterBindlessResource( _taaHistorySrv );
+            _taaHistorySrv = kInvalidDescriptorIndex;
+        }
+        if ( _taaHistory != 0 )
+        {
+            _pDevice->getResource()->destroyTexture( _taaHistory );
+            _taaHistory = 0;
+        }
+
         for ( auto& [name, srv] : _mapTransientSrv )
         {
             if ( srv != kInvalidDescriptorIndex )

@@ -29,6 +29,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -85,6 +86,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessResource( RHIBufferHandle buffer )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessResource" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -170,6 +172,7 @@ namespace sw
 
     void D3D12RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index < _pDevice->_listRegisteredBindless.size() )
         {
@@ -182,6 +185,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessUAV( RHIBufferHandle buffer )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessUAV" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -250,6 +254,7 @@ namespace sw
 
     void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessUAV" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index < _pDevice->_listRegisteredUAV.size() )
         {

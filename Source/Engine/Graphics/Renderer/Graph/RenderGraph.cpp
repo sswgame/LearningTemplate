@@ -322,6 +322,10 @@ namespace sw
             if ( listPassEntry.empty() )
                 continue;
 
+            // 이 구간 동안 bindless 레지스트리는 불변이어야 한다 — 기록 중 등록/해제가 일어나면
+            // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
+            pDevice->setParallelRecording( true );
+
             TaskStageHandle stage = pTaskManager->createAnonymousStage( "RenderPassStage" );
 
             for ( ParallelPassEntry& entry : listPassEntry )
@@ -342,6 +346,7 @@ namespace sw
             }
 
             pTaskManager->waitStage( stage );
+            pDevice->setParallelRecording( false );
 
             for ( ParallelPassEntry& entry : listPassEntry )
             {

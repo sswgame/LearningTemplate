@@ -34,6 +34,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_descriptorPool == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
 
@@ -108,6 +109,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessResource( RHIBufferHandle buffer )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessResource" );
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || _pDevice->_descriptorPool == VK_NULL_HANDLE || _pDevice->_descriptorSetLayout == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
@@ -171,6 +173,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredDescriptorSet.size() )
             return;
@@ -212,6 +215,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessUAV( RHIBufferHandle buffer )
     {
+        _pDevice->checkRegistryMutableNow( "registerBindlessUAV" );
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || _pDevice->_descriptorPool == VK_NULL_HANDLE || _pDevice->_uavDescriptorSetLayout == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
@@ -260,6 +264,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessUAV" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             return;

@@ -251,11 +251,41 @@ namespace sw
          */
         void setImmediateSubmit( bool bEnable ) { _bImmediateSubmit = bEnable; }
 
+        /**
+         * @brief 지금 여러 스레드가 동시에 패스를 기록하는 구간인지 알립니다.
+         * @details **이 구간에서는 bindless 레지스트리를 바꿀 수 없다.** 레지스트리는 기록 중에
+         *          드로우마다 읽히는데, 그 사이에 register/unregister 가 resize 를 일으키면 읽는
+         *          쪽이 잡아 둔 참조가 dangling 이 되고 GPU 가 쓰레기 디스크립터를 읽는다.
+         *
+         *          그래서 등록은 전부 기록 **밖**(그래프 셋업 · 리소스 로드)에서 끝낸다. 그러면
+         *          기록 중 레지스트리는 불변이라 읽기에 락이 필요 없다 — 락을 잘 거는 대신 애초에
+         *          공유하지 않는 쪽을 택한 것이고, 상용 엔진(UE RDG)도 같은 방식이다.
+         * @note 이 플래그는 그 규칙을 **감시**하기 위한 것이다. 디버그 빌드에서 규칙이 깨지면
+         *       백엔드가 로그로 알린다 — 규칙이 조용히 썩는 것을 막는 것이 목적이다.
+         * @note 값의 출처는 `RenderGraph::executeParallel` 이다. 백엔드는 MODULE DLL 로 따로
+         *       빌드되므로 전역 변수를 export 하지 않는다 — 정책은 Engine, 메커니즘은 디바이스.
+         */
+        void setParallelRecording( bool bEnable ) { _bParallelRecording = bEnable; }
+
+        /** @brief setParallelRecording 참고. 백엔드가 규칙 위반을 감지하는 데 쓴다. */
+        bool isParallelRecording() const { return _bParallelRecording; }
+
+        /**
+         * @brief 지금 bindless 레지스트리를 바꿔도 되는 시점인지 확인하고, 아니면 디버거를 세웁니다.
+         * @details 백엔드의 register/unregister 진입부에서 부른다. 규칙이 깨지면 로그를 남기고
+         *          **디버거를 세운다**(`SW_LOG_ASSERT`) — 로그만으로는 다른 줄에 묻혀 지나친다.
+         *          Release 에서는 제거된다.
+         * @param pWhat 로그에 남길 호출 지점 이름.
+         */
+        void checkRegistryMutableNow( const utf8* pWhat ) const;
+
     protected:
         IWindow*                      _pInitWindow;
         unique_ptr<RenderPassManager> _renderPassManager;
         bool                          _bPreferredVSync;
         /// @brief setImmediateSubmit 참고 — 프레임 스트림을 자를 때마다 즉시 제출할지.
         bool _bImmediateSubmit{ false };
+        /// @brief setParallelRecording 참고 — 지금이 병렬 패스 기록 구간인가.
+        bool _bParallelRecording{ false };
     };
 } // namespace sw

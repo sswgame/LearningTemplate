@@ -72,9 +72,12 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return false;
 
-        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-
-        // const 참조로 받는 것이 중요하다 — 비-const 접근은 "쓰기" 로 취급되어, 같은 웨이브의 패스
+        // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다** — 등록/해제는 전부 그래프 셋업에서
+        // 끝내고, 그 규칙은 checkRegistryMutableNow 가 디버그에서 감시한다
+        // (IRHIDevice::setParallelRecording 참고). 드로우마다 도는 경로라 락을 거는 대신 애초에
+        // 공유하지 않는 쪽을 택했다.
+        //
+        // const 참조로 받는 것도 중요하다 — 비-const 접근은 "쓰기" 로 취급되어, 같은 웨이브의 패스
         // 콜백 둘이 동시에 읽기만 해도 레이스로 잡힌다(실제로 deferred 파이프라인에서 그랬다).
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;

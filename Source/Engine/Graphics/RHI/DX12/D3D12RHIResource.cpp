@@ -70,10 +70,9 @@ namespace sw
             return;
         Memory::copy( static_cast<uint8*>( mapIt->second ) + offset, pData, size );
 
-        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-
-        // 공유 락이라 여러 스레드가 동시에 여기 들어온다 — 비-const 순회는 "쓰기" 로 취급되어
-        // 읽기만 하는데도 레이스로 잡힌다. 실제로 읽기만 하므로 const 로 받는다.
+        // 드로우마다 도는 경로다. 레지스트리는 기록 중 불변이므로 락을 걸지 않는다
+        // (IRHIDevice::setParallelRecording 참고). 여러 스레드가 동시에 순회하므로 const 로 받아야
+        // 한다 — 비-const 순회는 읽기여도 "쓰기" 로 취급되어 레이스로 잡힌다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listBindless = _pDevice->_listRegisteredBindless;
         for ( const D3D12RHIDevice::BindlessResourceRecord& rec : listBindless )
         {

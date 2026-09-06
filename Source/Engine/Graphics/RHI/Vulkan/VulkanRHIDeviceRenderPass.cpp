@@ -11,6 +11,20 @@
 
 namespace sw
 {
+    void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
+                                                   uint32 targetLayout, uint32 aspect )
+    {
+        if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
+            return;
+
+        std::scoped_lock<mutex> lock{ _imageLayoutMutex };
+        if ( record._layout == targetLayout )
+            return;
+
+        transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
+        record._layout = targetLayout;
+    }
+
     SW_LOG_CALLER( "Vulkan" );
 
     static VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )

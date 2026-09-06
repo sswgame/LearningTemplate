@@ -96,10 +96,8 @@ namespace sw
             return;
 
         VulkanRHIDevice::VulkanTextureRecord& srcRec = *pSrcResolved;
-        _pDevice->transitionImageLayout( cmd, srcRec._image, srcRec._layout,
-                                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                         VK_IMAGE_ASPECT_COLOR_BIT );
-        srcRec._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+        _pDevice->transitionTextureLayout( cmd, srcRec, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                           VK_IMAGE_ASPECT_COLOR_BIT );
 
         VkImage dstImage = VK_NULL_HANDLE;
         uint32  dstW     = _pDevice->_swapChain.getExtentWidth();
@@ -122,10 +120,8 @@ namespace sw
             dstImage = pDstResolved->_image;
             dstW     = pDstResolved->_width;
             dstH     = pDstResolved->_height;
-            _pDevice->transitionImageLayout( cmd, dstImage, pDstResolved->_layout,
-                                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                             VK_IMAGE_ASPECT_COLOR_BIT );
-            pDstResolved->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+            _pDevice->transitionTextureLayout( cmd, *pDstResolved, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                               VK_IMAGE_ASPECT_COLOR_BIT );
         }
 
         VkImageBlit blit{};
@@ -147,12 +143,10 @@ namespace sw
         }
         else
         {
-            _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                             VK_IMAGE_ASPECT_COLOR_BIT );
             VulkanRHIDevice::VulkanTextureRecord* pDstResolved = _pDevice->resolveTexture( dst );
             if ( pDstResolved != nullptr )
-                pDstResolved->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                _pDevice->transitionTextureLayout( cmd, *pDstResolved, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                                   VK_IMAGE_ASPECT_COLOR_BIT );
         }
     }
 
@@ -193,14 +187,10 @@ namespace sw
         const uint32                          targetLayout = ( record._bDepthStencil != 0 )
                                                                ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
                                                                : static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        if ( record._layout == targetLayout )
-            return;
-
-        const uint32 aspect = ( record._bDepthStencil != 0 )
-                                ? _pDevice->depthAspectMask()
-                                : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
-        _pDevice->transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
-        record._layout = targetLayout;
+        const uint32                          aspect       = ( record._bDepthStencil != 0 )
+                                                               ? _pDevice->depthAspectMask()
+                                                               : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+        _pDevice->transitionTextureLayout( cmd, record, targetLayout, aspect );
     }
 
     void VulkanRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
@@ -312,9 +302,7 @@ namespace sw
                 if ( pTex == nullptr )
                     return;
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
-                                                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-                pTex->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
             }
             if ( key._depth != 0 )
             {
@@ -322,9 +310,7 @@ namespace sw
                 if ( pTex == nullptr )
                     return;
                 const uint32 aspect = _pDevice->depthAspectMask();
-                _pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
-                                                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
-                pTex->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
             }
 
             VulkanRHIDevice::CompositeFbRecord composite{};
@@ -359,9 +345,7 @@ namespace sw
                     return;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
-                                                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-                pTex->_layout                = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
                 renderPass                   = pTex->_renderPass;
                 framebuffer                  = pTex->_framebuffer;
                 extent                       = { pTex->_width, pTex->_height };

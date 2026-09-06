@@ -455,6 +455,17 @@ namespace sw
         VkDescriptorSet registeredTextureSetAt( RHIDescriptorIndex index ) const;
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
+
+        /**
+         * @brief 텍스처를 `targetLayout` 으로 전이합니다 — **확인·배리어·기록이 한 덩어리입니다.**
+         * @details 예전엔 호출 지점마다 "현재 레이아웃을 읽고 → 배리어를 쏘고 → 레코드를 갱신" 을
+         *          손으로 복사해 뒀다(7곳). 병렬 패스 기록에서는 그 셋이 갈라지면 두 스레드가 같은
+         *          "이전 레이아웃" 을 보고 각자 배리어를 쏘거나, 한쪽이 이미 바꿔 놓은 뒤라 실제
+         *          레이아웃과 기록이 어긋난다 — `vkQueueSubmit` 이 "이 이미지가 X 레이아웃일 것으로
+         *          기대했는데 아니다" 로 거부한다.
+         * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
+         */
+        void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
         /** @brief 오프스크린 VkRenderPass를 확보합니다. */
         bool ensureOffscreenRenderPass( uint32 vkFormat );
         /** @brief 오프스크린 텍스처용 프레임버퍼를 만듭니다. */
@@ -491,6 +502,8 @@ namespace sw
         /// @brief 컴포지트 프레임버퍼 캐시 보호용. RenderGraph::executeParallel 이 여러 스레드에서
         ///        동시에 beginRenderPass 를 부르면 이 맵에 동시 삽입이 일어난다.
         mutable mutex _compositeFbMutex;
+        /// @brief 텍스처 레이아웃 확인+전이 보호용 — transitionTextureLayout 참고.
+        mutable mutex _imageLayoutMutex;
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀. 펜스를 통과한 것만 들어 있다.
         mutable mutex                  _cmdListPoolMutex;
         vector<VulkanCommandListEntry> _listFreeCmdListEntry;
