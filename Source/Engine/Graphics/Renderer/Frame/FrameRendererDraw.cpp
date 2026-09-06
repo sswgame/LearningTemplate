@@ -143,8 +143,13 @@ namespace sw
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
 
-        // 언리얼 GPUScene 방식: VS 가 per-instance world 를 구조버퍼에서 읽을 수 있으면 배치당 drawInstanced 한 번.
-        // 아니면(DX11/Vulkan) 드로우당 g_World 를 갱신하는 폴백.
+        // 언리얼 GPUScene 방식: VS 가 per-instance world 를 구조버퍼에서 읽을 수 있으면 배치당
+        // drawInstanced 한 번이면 된다.
+        //
+        // 폴백(인스턴스마다 g_World 를 갱신하며 draw)은 인스턴스 수만큼 상수버퍼 갱신과 바인딩이
+        // 붙으므로 훨씬 비싸다. 지금은 DX11/GL/Vulkan 이 모두 지원을 보고하고, DX12 만 힙 직접
+        // 인덱싱이 없을 때 폴백으로 떨어진다 — 예전 주석은 DX11/Vulkan 이 폴백이라고 적어 두었는데
+        // 그 사이 둘 다 지원으로 바뀌었다.
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )

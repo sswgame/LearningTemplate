@@ -88,8 +88,10 @@ namespace sw
         if ( layout.isEmpty() )
             return;
 
-        IRHIResource*       pResource = device.getResource();
-        const hashed_string materialCbName{ shaderslot::cbname::kMaterial };
+        IRHIResource* pResource = device.getResource();
+        // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
+        // 전역 레지스트리 intern(FNV + 샤드 뮤텍스)이 붙는다 — 함수 지역 static 으로 한 번만 만든다.
+        static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
 
         // 1) 엔진 CB 채우기.
         //    크기·멤버 키·자동 인덱스 키는 전부 레이아웃 빌드 때 구워 뒀다(ShaderBindingLayout::
@@ -148,7 +150,7 @@ namespace sw
             {
                 case ShaderBindingKind::ConstantBuffer:
                 {
-                    if ( slot._name == materialCbName )
+                    if ( slot._name == s_materialCbName )
                     {
                         if ( materialCb != kInvalidDescriptorIndex )
                             cmd.bindConstantBuffer( materialCb, slot._registerIndex );
