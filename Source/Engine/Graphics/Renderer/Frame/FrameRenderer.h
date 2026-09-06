@@ -273,14 +273,6 @@ namespace sw
                                                      const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
                                                      bool                  bDefaultDepthWrite = true,
                                                      const vector<string>* pExtraDefines      = nullptr );
-        /**
-         * @brief 패스 레시피 PSO에 Material/MaterialInstance permutation define을 합칩니다 (캐시).
-         */
-        RHIPipelineStateHandle getOrCreateMaterialPassPso( RenderPassType passType, string_view defaultShader,
-                                                           bool bDepthTest, Material* pMaterial,
-                                                           MaterialInstance* pMaterialInstance = nullptr,
-                                                           uint32 numRenderTargets = 1, const RHIFormat* pRtvFormats = nullptr,
-                                                           bool bDefaultBlend = false, bool bDefaultDepthWrite = true );
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
 
@@ -348,11 +340,9 @@ namespace sw
         uint8                                                 _bUseGpuDriven       : 1;
         [[maybe_unused]] uint8                                _reservedFlags       : 5;
 
-        // 아래 둘은 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
+        // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
         // 같은 바이트를 read-modify-write 해서 서로의 값을 날린다 — 독립 원자 변수로 뺀다.
-        /// @brief CPU 드로우 경로: execute 당 한 번만 flushSceneTransforms 를 부르기 위한 래치.
-        std::atomic<uint8> _bSceneTransformsFlushed{ 0 };
         /// @brief 이번 프레임에 DepthPrepass 가 실행됐는가 (ForwardOpaque 의 PSO 선택에 쓴다).
         std::atomic<uint8>          _bHasExecutedDepthPrepass{ 0 };
         RenderGraphExecutionContext _graphContext;

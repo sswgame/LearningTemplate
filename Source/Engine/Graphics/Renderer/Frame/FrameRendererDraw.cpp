@@ -99,6 +99,22 @@ namespace sw
             return;
         }
 
+        // 여기 오면 그릴 메시가 하나도 없다.
+        //
+        // 예전엔 이 자리에 씬 전체를 다시 순회해 드로우 목록을 만들고 정렬하는 폴백 경로가 있었다.
+        // 그런데 `GpuScene::buildFromScene` 의 수집 조건이 그 순회와 같다 — 활성 오브젝트의 보이는
+        // MeshComponent 중 정점이 있는 것. 그래서 인스턴스가 비었다는 건 "그릴 메시가 없다" 는
+        // 뜻이고, 폴백이 다시 순회해도 똑같이 빈손이었다. 패스마다(deferred 는 프레임당 최대 7회)
+        // 씬 전체를 훑고 shared_ptr 을 복사하고 정렬까지 하던 코드가 통째로 도달 불가였다.
+        //
+        // 무엇보다 런타임 경로에서는 애초에 불가능했다: `executePacket` 은 `_pScene = nullptr` 로
+        // 명시한다(렌더 스레드가 씬 그래프를 만지면 안 되고, 그러라고 GpuScene 스냅샷이 있다).
+        // 폴백은 `_pScene` 이 없으면 첫 가드에서 바로 나가므로, GameObject 를 아무리 추가해도
+        // 그릴 수 없었다. 동기 경로(`execute`)에서만 기회가 있었는데 거기서는 바로 앞줄에서
+        // 같은 조건으로 buildFromScene 이 돈다.
+        //
+        // 정적으로만 판단하지 않고 계측해서도 확인했다 — 큐브를 그리는 RenderPassTest, 앱(에디터 ON),
+        // SceneTest 어디서도 "인스턴스는 비었는데 씬에는 그릴 메시가 있는" 순간이 없었다.
         if ( _gpuScene.getInstances().empty() == false )
         {
             drawGpuSceneMeshes( ctx, pso, cbIndex, bTransparentPass );
@@ -108,136 +124,8 @@ namespace sw
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
 
-        GameObjectManager* pObjects = ( _pScene != nullptr ) ? _pScene->getObjectManager() : nullptr;
-        if ( pObjects == nullptr )
-            return;
-
-        // 병렬 패스가 동시에 여기 도달할 수 있다 — 검사와 표시를 한 번의 원자 교환으로 묶지 않으면
-        // 둘 다 0 을 보고 flushSceneTransforms 를 중복 호출한다.
-        if ( _bSceneTransformsFlushed.exchange( 1 ) == 0 )
-            pObjects->flushSceneTransforms();
-
-        const RenderPassType passTypeForMat = bTransparentPass ? RenderPassType::Transparent : RenderPassType::ForwardOpaque;
-        const utf8*          pDefaultShader = engine::getEngineData()._shaderForwardLit.c_str();
-
-        uint32 drawn{ 0 };
-        if ( pObjects != nullptr )
-        {
-            struct SceneMeshDrawItem
-            {
-                uint64                 _sortKey{ 0 };
-                shared_ptr<Mesh>       _mesh;
-                MaterialInstance*      _pMaterialInstance{ nullptr };
-                RHIPipelineStateHandle _pso{ 0 };
-                RHIDescriptorIndex     _cbIndex{ 0 };
-                float4x4               _world;
-            };
-
-            vector<SceneMeshDrawItem> listDrawItem;
-            pObjects->forEachGameObject( [&]( GameObject* pObj )
-            {
-                if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
-                    return;
-
-                pObj->forEachComponent( [&]( Component* pComp )
-                {
-                    MeshComponent* pMeshComp = castTo<MeshComponent>( pComp );
-                    if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-                        return;
-
-                    const bool bTransparent = pMeshComp->getBlendMode() == RHIBlendMode::Transparent;
-                    if ( bTransparent != bTransparentPass )
-                        return;
-
-                    const shared_ptr<Mesh>& mesh = pMeshComp->getMesh();
-                    if ( mesh == nullptr || mesh->getVertexCount() == 0 )
-                        return;
-                    if ( mesh->upload( _pDevice ) == false )
-                        return;
-
-                    RHIPipelineStateHandle              drawPso          = pso;
-                    Material*                           pMaterial        = pMeshComp->getMaterial();
-                    const shared_ptr<MaterialInstance>& materialInstance = pMeshComp->getMaterialInstance();
-                    if ( pMaterial != nullptr || materialInstance != nullptr )
-                    {
-                        const RHIPipelineStateHandle matPso = getOrCreateMaterialPassPso(
-                            passTypeForMat, pDefaultShader, true, pMaterial, materialInstance.get(),
-                            1, nullptr, bTransparentPass, bTransparentPass == false );
-                        if ( matPso != 0 )
-                            drawPso = matPso;
-                    }
-
-                    RHIDescriptorIndex drawCb = kInvalidDescriptorIndex;
-                    if ( materialInstance != nullptr )
-                        drawCb = materialInstance->getDescriptorIndex();
-                    else if ( pMaterial != nullptr )
-                        drawCb = pMaterial->getDescriptorIndex();
-
-                    // 세 필드를 16비트씩 겹치지 않게 넣는다. 예전엔 drawCb 만 마스킹이 없어서
-                    // 0x10000 이상이면 pso 필드를 침범해 정렬 순서가 뒤엉켰다(배칭 품질 저하).
-                    const uint64 vbId    = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFFull;
-                    const uint64 cbId    = static_cast<uint64>( drawCb ) & 0xFFFFull;
-                    const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( cbId << 16 ) | vbId;
-
-                    SceneMeshDrawItem item{};
-                    item._sortKey           = sortKey;
-                    item._mesh              = mesh;
-                    item._pMaterialInstance = materialInstance.get();
-                    item._pso               = drawPso;
-                    item._cbIndex           = drawCb;
-                    item._world             = pMeshComp->getWorldMatrix();
-                    listDrawItem.push_back( std::move( item ) );
-                } );
-            } );
-
-            if ( listDrawItem.empty() == false )
-            {
-                std::sort( listDrawItem.begin(), listDrawItem.end(),
-                           []( const SceneMeshDrawItem& lhs, const SceneMeshDrawItem& rhs )
-                { return lhs._sortKey < rhs._sortKey; } );
-
-                RHIPipelineStateHandle lastPso    = 0;
-                RHIBufferHandle        lastVb     = 0;
-                bool                   bFirstItem = true;
-
-                for ( const auto& item : listDrawItem )
-                {
-                    if ( item._pso != lastPso )
-                    {
-                        if ( item._pso != 0 )
-                            ctx._pCmd->setPipelineState( item._pso );
-                        lastPso = item._pso;
-                    }
-
-                    if ( bFirstItem || ctx._world != item._world )
-                    {
-                        ctx._world = item._world;
-                        commitBindlessTextureBindings( ctx );
-                        bFirstItem = false;
-                    }
-
-                    if ( item._pMaterialInstance != nullptr )
-                        item._pMaterialInstance->applyToGpu( _pDevice );
-
-                    const RHIBufferHandle vb = item._mesh->getVertexBuffer();
-                    if ( vb != lastVb )
-                    {
-                        ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
-                        lastVb = vb;
-                    }
-
-                    bindForDraw( ctx, item._pso, item._cbIndex );
-                    ctx._pCmd->draw( item._mesh->getVertexCount(), 0 );
-                    ++drawn;
-                }
-            }
-        }
-
-        if ( drawn == 0 )
-        {
-            setIdentityWorld( ctx );
-            commitBindlessTextureBindings( ctx );
-        }
+        setIdentityWorld( ctx );
+        commitBindlessTextureBindings( ctx );
     }
 
     void FrameRenderer::drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )

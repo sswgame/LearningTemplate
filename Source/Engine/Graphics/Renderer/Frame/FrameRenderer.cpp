@@ -282,7 +282,6 @@ namespace sw
         setIdentityWorld( _frameCtx );
         updatePassConstants( _frameCtx );
         resetClearedAttachments();
-        _bSceneTransformsFlushed.store( 0 );
         _bHasExecutedDepthPrepass.store( 0 );
 
         float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
@@ -337,7 +336,6 @@ namespace sw
             _frameCtx._passValues.setMatrix( passConstantNames()._viewProj, packet._viewProj );
         // 값 업로드/바인딩은 드로우 직전 ShaderBindingBinder 가 한다 — 여기서는 시드만 채운다.
         resetClearedAttachments();
-        _bSceneTransformsFlushed.store( 0 );
         _bHasExecutedDepthPrepass.store( 0 );
 
         _gpuScene.upload( pDevice );

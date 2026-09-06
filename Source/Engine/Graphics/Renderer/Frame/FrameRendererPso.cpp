@@ -12,19 +12,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct FrameRendererPsoInternal
-        {
-            /** @brief 64비트 해시 누산 (boost::hash_combine 의 64비트 변형). */
-            static uint64 mixHash( uint64 seed, uint64 value )
-            {
-                seed ^= value + 0x9e3779b97f4a7c15ull + ( seed << 6 ) + ( seed >> 2 );
-                return seed;
-            }
-        };
-    } // namespace
-
     RHIPipelineStateHandle FrameRenderer::createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets,
                                                            const RHIFormat* pRtvFormats, bool bBlend, bool bDepthWrite )
     {
@@ -192,78 +179,6 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _psoMutex };
             _mapMaterialPassPso[cacheKey] = pso;
-        }
-    }
-
-    RHIPipelineStateHandle FrameRenderer::getOrCreateMaterialPassPso( RenderPassType passType, string_view defaultShader,
-                                                                      bool bDepthTest, Material* pMaterial, MaterialInstance* pMaterialInstance,
-                                                                      uint32 numRenderTargets, const RHIFormat* pRtvFormats,
-                                                                      bool bDefaultBlend, bool bDefaultDepthWrite )
-    {
-        const vector<string>* pMatDefines = nullptr;
-        uint64                permHash{ 0 };
-        if ( pMaterialInstance != nullptr )
-        {
-            pMatDefines = &pMaterialInstance->getCachedShaderDefines();
-            permHash    = pMaterialInstance->getPermutationHash();
-        }
-        else if ( pMaterial != nullptr )
-        {
-            pMatDefines = &pMaterial->getCachedShaderDefines();
-            permHash    = pMaterial->getPermutationHash();
-        }
-
-        // 캐시 키는 PSO 를 결정하는 값을 **전부** 담아야 한다. 예전엔 passType 과 머티리얼 퍼뮤테이션
-        // 둘뿐이라, RT 포맷·뎁스·블렌드가 다른 호출부가 하나만 생겨도 조용히 다른 PSO 를 돌려줬다.
-        // (`permHash << 1` 은 최상위 비트도 버렸다.)
-        // std::hash 는 구현마다 알고리즘이 달라 쓰지 않는다 — 엔진이 이미 쓰는 FNV 해시로 맞춘다.
-        uint64 cacheKey = FrameRendererPsoInternal::mixHash( 0ull, static_cast<uint64>( passType ) );
-        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, StringUtil::computeHash64( defaultShader ) );
-        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, permHash );
-        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, static_cast<uint64>( numRenderTargets ) );
-        cacheKey        = FrameRendererPsoInternal::mixHash( cacheKey, ( bDepthTest ? 1ull : 0ull ) |
-                                                                           ( bDefaultBlend ? 2ull : 0ull ) |
-                                                                           ( bDefaultDepthWrite ? 4ull : 0ull ) );
-        for ( uint32 rtIndex = 0; pRtvFormats != nullptr && rtIndex < numRenderTargets; ++rtIndex )
-            cacheKey = FrameRendererPsoInternal::mixHash( cacheKey, static_cast<uint64>( pRtvFormats[rtIndex] ) );
-
-        {
-            std::scoped_lock<mutex> lock{ _psoMutex };
-            auto                    it = _mapMaterialPassPso.find( cacheKey );
-            if ( it != _mapMaterialPassPso.end() )
-                return it->second;
-
-            // Mark as pending (0) so we don't dispatch multiple compilation tasks.
-            _mapMaterialPassPso.insert_or_assign( cacheKey, 0ull );
-        }
-
-        if ( _pTaskManager != nullptr )
-        {
-            string            defaultShaderStr( defaultShader );
-            vector<string>    definesCopy = ( pMatDefines != nullptr ) ? *pMatDefines : vector<string>{};
-            vector<RHIFormat> rtvFormatsCopy;
-            if ( pRtvFormats != nullptr && numRenderTargets > 0 )
-                rtvFormatsCopy.assign( pRtvFormats, pRtvFormats + numRenderTargets );
-
-            TaskHandle handle = _pTaskManager->emplaceTask(
-                "CompileMaterialPso",
-                SW_DELEGATE_METHOD( TaskArgsDelegate, &FrameRenderer::compileMaterialPsoTask, this ),
-                MakeTaskArgs( static_cast<uint32>( passType ), defaultShaderStr, bDepthTest, numRenderTargets, rtvFormatsCopy, bDefaultBlend,
-                              bDefaultDepthWrite, definesCopy, cacheKey ) );
-            _pTaskManager->submit( handle );
-
-            return 0; // Return pending
-        }
-        else
-        {
-            const RHIPipelineStateHandle pso =
-                createPsoForPassType( passType, defaultShader, bDepthTest, numRenderTargets, pRtvFormats, bDefaultBlend, bDefaultDepthWrite, pMatDefines );
-            if ( pso != 0 )
-            {
-                std::scoped_lock<mutex> lock{ _psoMutex };
-                _mapMaterialPassPso.insert_or_assign( cacheKey, pso );
-            }
-            return pso;
         }
     }
 } // namespace sw
