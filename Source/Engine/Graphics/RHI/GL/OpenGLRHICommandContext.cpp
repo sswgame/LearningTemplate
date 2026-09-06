@@ -380,9 +380,9 @@ namespace sw
     void OpenGLRHICommandContext::bindPassAndMaterialUbo( RHIDescriptorIndex passCbDescriptorIndex,
                                                           RHIDescriptorIndex materialCbDescriptorIndex )
     {
-        // HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다.
+        // 바인딩 번호는 구운 SPIR-V 의 OpDecorate 와 같아야 한다 — b0=binding 0, b1=binding 1.
         defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
-                                      _pDevice->_listRegisteredBindless.size(), 16 /*b0=PassCB*/, 17 /*b1=MaterialCB*/,
+                                      _pDevice->_listRegisteredBindless.size(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
                                       [this]( RHIDescriptorIndex index, uint32 binding )
         {
             const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
@@ -494,14 +494,18 @@ namespace sw
 
     void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
     {
-        // HLSL b# 는 -fvk-b-shift 16 으로 GL 유니폼 바인딩 16+# 에 매핑된다.
+        // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
+        // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는데(common.hlsli 가 항상 명시한다),
+        // 엔진만 16+# 에 걸고 있었다. 그래서 셰이더가 PassCB 를 영영 못 읽어 g_ViewProj 가 0 이었고
+        // OpenGL 은 메시를 하나도 그리지 못했다(드로우는 정상적으로 나가고 GL 에러도 없어 오래 걸렸다).
+        // 확인 방법: 구운 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
         if ( _pDevice->_bInitialized == SW_FALSE || cb == kInvalidDescriptorIndex ||
              cb >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
             return;
         const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[cb]._buffer );
         if ( ubo != 0 )
         {
-            glBindBufferBase( GL_UNIFORM_BUFFER, 16u + slot, ubo );
+            glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
         }
     }
 
