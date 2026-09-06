@@ -185,6 +185,7 @@ namespace sw
         , _cachedWorldPosition{ other._cachedWorldPosition }
         , _cachedWorldMatrix{ other._cachedWorldMatrix }
         , _cachedWorldPositionLWC{ other._cachedWorldPositionLWC }
+        , _pManager{ other._pManager }
         , _pParent{ other._pParent }
         , _listChild{ std::move( other._listChild ) }
         , _bIsTransformDirty{ other._bIsTransformDirty }
@@ -208,6 +209,7 @@ namespace sw
             _cachedWorldPosition    = other._cachedWorldPosition;
             _cachedWorldMatrix      = other._cachedWorldMatrix;
             _cachedWorldPositionLWC = other._cachedWorldPositionLWC;
+            _pManager               = other._pManager;
             _pParent                = other._pParent;
             _listChild              = std::move( other._listChild );
             _bIsTransformDirty      = other._bIsTransformDirty;
@@ -246,6 +248,21 @@ namespace sw
         Component::onTick( deltaTime );
     }
 
+    void SceneComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _pManager = &manager;
+        if ( getParent() == nullptr )
+            manager.registerRootSceneComponent( this );
+    }
+
+    void SceneComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.unregisterRootSceneComponent( this );
+        _pManager = nullptr;
+        Component::onUnregister( manager );
+    }
+
     void SceneComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
@@ -257,10 +274,9 @@ namespace sw
 
     void SceneComponent::setLocalPosition( const float3& pos )
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = pOwner->getManager();
+            GameObjectManager*        pMgr   = _pManager;
             const sw::ComponentHandle handle = getHandle();
             pMgr->deferTransformUpdate( [pMgr, handle, pos]()
             {
@@ -283,10 +299,9 @@ namespace sw
 
     void SceneComponent::setLocalRotation( const float3& rot )
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = pOwner->getManager();
+            GameObjectManager*        pMgr   = _pManager;
             const sw::ComponentHandle handle = getHandle();
             pMgr->deferTransformUpdate( [pMgr, handle, rot]()
             {
@@ -309,10 +324,9 @@ namespace sw
 
     void SceneComponent::setLocalScale( const float3& scale )
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = pOwner->getManager();
+            GameObjectManager*        pMgr   = _pManager;
             const sw::ComponentHandle handle = getHandle();
             pMgr->deferTransformUpdate( [pMgr, handle, scale]()
             {
@@ -335,22 +349,21 @@ namespace sw
 
     float3 SceneComponent::getWorldPosition() const
     {
-        if ( getOwner() == nullptr || getOwner()->getManager() == nullptr || getOwner()->getManager()->isParallelTransformReadOnly() == false )
+        if ( _pManager == nullptr || _pManager->isParallelTransformReadOnly() == false )
             getWorldMatrix();
         return _cachedWorldPosition;
     }
 
     double3 SceneComponent::getWorldPositionLWC() const
     {
-        if ( getOwner() == nullptr || getOwner()->getManager() == nullptr || getOwner()->getManager()->isParallelTransformReadOnly() == false )
+        if ( _pManager == nullptr || _pManager->isParallelTransformReadOnly() == false )
             getWorldMatrix();
         return _cachedWorldPositionLWC;
     }
 
     float4x4 SceneComponent::getWorldMatrix() const
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
             return _cachedWorldMatrix;
 
         if ( _bIsTransformDirty == SW_TRUE )
@@ -388,14 +401,14 @@ namespace sw
         SceneComponentInternal::composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
                                                         _cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
         _bIsTransformDirty = SW_FALSE;
+        onWorldTransformUpdated();
     }
 
     bool SceneComponent::attachToComponent( SceneComponent* pParent )
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr         = pOwner->getManager();
+            GameObjectManager*        pMgr         = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
             const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
             pMgr->deferTransformUpdate( [pMgr, selfHandle, parentHandle]()
@@ -430,8 +443,8 @@ namespace sw
         _pParent = pParent;
         pParent->_listChild.push_back( this );
 
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->unregisterRootSceneComponent( this );
+        if ( _pManager != nullptr )
+            _pManager->unregisterRootSceneComponent( this );
 
         markTransformDirty();
         return true;
@@ -439,10 +452,9 @@ namespace sw
 
     void SceneComponent::detachFromComponent()
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = pOwner->getManager();
+            GameObjectManager*        pMgr   = _pManager;
             const sw::ComponentHandle handle = getHandle();
             pMgr->deferTransformUpdate( [pMgr, handle]()
             {
@@ -468,18 +480,17 @@ namespace sw
         }
         _pParent = nullptr;
 
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->registerRootSceneComponent( this );
+        if ( _pManager != nullptr )
+            _pManager->registerRootSceneComponent( this );
 
         markTransformDirty();
     }
 
     void SceneComponent::markTransformDirty()
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+        if ( _pManager != nullptr && _pManager->isParallelTransformReadOnly() )
         {
-            GameObjectManager*        pMgr   = pOwner->getManager();
+            GameObjectManager*        pMgr   = _pManager;
             const sw::ComponentHandle handle = getHandle();
             pMgr->deferTransformUpdate( [pMgr, handle]()
             {
@@ -492,8 +503,8 @@ namespace sw
 
         _bIsTransformDirty = SW_TRUE;
 
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-            pOwner->getManager()->notifyTransformDirtied();
+        if ( _pManager != nullptr )
+            _pManager->notifyTransformDirtied();
 
         SceneComponent* pParentComp = _pParent;
         while ( pParentComp != nullptr )
@@ -541,10 +552,9 @@ namespace sw
         GameObject* pParentOwner = pSelfOwner;
         if ( _attachOwner.empty() == false && _attachOwner != pSelfOwner->getName() )
         {
-            GameObjectManager* pManager = pSelfOwner->getManager();
-            if ( pManager == nullptr )
+            if ( _pManager == nullptr )
                 return;
-            pParentOwner = pManager->findGameObjectByName( _attachOwner );
+            pParentOwner = _pManager->findGameObjectByName( _attachOwner );
             if ( pParentOwner == nullptr )
                 return;
         }

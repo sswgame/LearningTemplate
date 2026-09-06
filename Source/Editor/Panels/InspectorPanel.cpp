@@ -32,6 +32,7 @@
 #include "Engine/Utility/CommandStack.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -118,6 +119,9 @@ namespace sw::editor
         , _lastInvokeResult{}
         , _componentPresetJob{}
         , _listComponentPresetFile{}
+        , _pEditTargetComponent{ nullptr }
+        , _pEditTargetObject{ nullptr }
+        , _propertyDrawDepth{ 0 }
         , _bComponentPresetDirty{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -227,10 +231,12 @@ namespace sw::editor
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {
+            _pEditTargetObject = pObj;
             ImGui::SeparatorText( "Reflected Properties" );
             drawTypeProperties( pObj, pTypeInfo );
             ImGui::SeparatorText( "Methods" );
             drawTypeMethods( pObj, pTypeInfo );
+            _pEditTargetObject = nullptr;
         }
 
         ImGui::SeparatorText( "Components" );
@@ -438,10 +444,12 @@ namespace sw::editor
         {
             if ( pTypeInfo != nullptr )
             {
+                _pEditTargetComponent = pComp;
                 ImGui::SeparatorText( "Properties" );
                 drawTypeProperties( pComp, pTypeInfo );
                 ImGui::SeparatorText( "Methods" );
                 drawTypeMethods( pComp, pTypeInfo );
+                _pEditTargetComponent = nullptr;
             }
             else
                 ImGui::TextDisabled( "No TypeInfo registered for this component." );
@@ -538,6 +546,32 @@ namespace sw::editor
     }
 
     void InspectorPanel::drawPropertyWidget( void* pInstance, const PropertyInfo& prop )
+    {
+        // ImGui 는 이번 프레임에 활성 아이템이 편집됐는지를 컨텍스트에 전역으로 기록한다. 위젯을
+        // 그리기 전후로 그 플래그의 **전이**를 보면 "사이에 그린 이 프로퍼티가 편집됐다"를 정확히
+        // 가려낼 수 있다 — 위젯이 아이템 하나든 여럿이든, 값이 float 이든 string 이든 상관없다.
+        // 위젯마다 판정을 심으면 새 위젯을 추가할 때 빠뜨리는데, 여기 한 곳이면 빠뜨릴 수 없다.
+        ImGuiContext& g             = *ImGui::GetCurrentContext();
+        const bool    bEditedBefore = g.ActiveIdHasBeenEditedThisFrame;
+
+        ++_propertyDrawDepth;
+        drawPropertyWidgetBody( pInstance, prop );
+        --_propertyDrawDepth;
+
+        // 컨테이너·중첩 구조체는 이 함수가 재귀한다. 통지는 가장 바깥에서 한 번만 한다.
+        if ( _propertyDrawDepth == 0 && bEditedBefore == false && g.ActiveIdHasBeenEditedThisFrame )
+            notifyPropertyEdited( prop );
+    }
+
+    void InspectorPanel::notifyPropertyEdited( const PropertyInfo& prop )
+    {
+        if ( _pEditTargetComponent != nullptr )
+            _pEditTargetComponent->onPropertyChanged( prop._name );
+        else if ( _pEditTargetObject != nullptr )
+            _pEditTargetObject->onPropertyChanged( prop._name );
+    }
+
+    void InspectorPanel::drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop )
     {
         IInspectorProperty* pProperty = EditorContext::get()->getInspectorPropertyManager().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )

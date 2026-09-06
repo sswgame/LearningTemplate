@@ -62,8 +62,9 @@ namespace sw
     void GpuScene::invalidateBuildCache()
     {
         _listBuiltCandidate.clear();
-        _lastCameraPos = float3{};
-        _bCpuDirty     = 1;
+        _lastCameraPos              = float3{};
+        _lastPrimitiveSetGeneration = 0;
+        _bCpuDirty                  = 1;
     }
 
     void GpuScene::clear()
@@ -157,6 +158,20 @@ namespace sw
         clear();
     }
 
+    bool GpuScene::hasSameBatchKeysAsBuilt() const
+    {
+        if ( _listBuiltCandidate.size() != _listScratchCandidate.size() )
+            return false;
+        // 후보 순서는 등록부 순서를 그대로 따른다. 등록/해제가 있었으면 집합 세대가 올라가 여기까지
+        // 오지 않고, 가시성 변화는 개수를 바꾸므로 위 크기 비교에서 걸린다.
+        for ( size_t index = 0; index < _listBuiltCandidate.size(); ++index )
+        {
+            if ( _listBuiltCandidate[index].hasSameBatchKey( _listScratchCandidate[index] ) == false )
+                return false;
+        }
+        return true;
+    }
+
     void GpuScene::rebuildPartitionTables()
     {
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
@@ -211,37 +226,51 @@ namespace sw
             return;
         }
 
+        // 여기서 움직인 프리미티브가 onWorldTransformUpdated 를 통해 스스로 더티를 찍는다.
         pObjects->flushSceneTransforms();
 
+        const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
+        const uint64             setGeneration = primitives.getSetGeneration();
+        const bool               bHasCache     = _listBuiltCandidate.empty() == false;
+        const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
+        const bool               bCamSame      = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
+
+        // 아무도 "바뀌었다"고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
+        // 예전엔 이 판단을 하려고 매 프레임 모든 GameObject 의 모든 Component 를 castTo 로 훑어
+        // 후보를 다 만든 다음에야 "그대로였네" 하고 버렸다. 씬이 커질수록, 화면이 정지해 있어도
+        // 비용이 늘었다. 이제는 바꾼 쪽이 알려주므로 정지한 씬의 비용이 0 에 수렴한다.
+        if ( bSetSame && bCamSame && primitives.hasDirty() == false )
+            return;
+
+        pObjects->getPrimitiveRegistry().clearDirty();
+
+        const vector<MeshComponent*>& listPrimitive = primitives.getAll();
         _listScratchCandidate.clear();
-        _listScratchCandidate.reserve( 1024 );
+        _listScratchCandidate.reserve( listPrimitive.size() );
 
-        pObjects->forEachGameObject( [this]( GameObject* pObj )
+        // 등록부에는 그릴 수 있는 것만 들어 있다 — 타입 검사가 없다.
+        for ( MeshComponent* pMeshComp : listPrimitive )
         {
+            if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
+                continue;
+            GameObject* pObj = pMeshComp->getOwner();
             if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
-                return;
+                continue;
+            Mesh* pMesh = pMeshComp->getRawMesh();
+            if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+                continue;
 
-            pObj->forEachComponent( [this]( Component* pComp )
-            {
-                MeshComponent* pMeshComp = castTo<MeshComponent>( pComp );
-                if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-                    return;
-                Mesh* pMesh = pMeshComp->getRawMesh();
-                if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
-                    return;
-
-                const float4x4 world = pMeshComp->getWorldMatrix();
-                DrawCandidate  cand{};
-                cand._world        = world;
-                cand._boundsCenter = world.getTranslation();
-                cand._boundsRadius = pMeshComp->getBoundsRadius();
-                cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
-                cand._pMesh        = pMesh;
-                cand._pMaterial    = pMeshComp->getMaterial();
-                cand._pInstance    = pMeshComp->getRawMaterialInstance();
-                _listScratchCandidate.push_back( cand );
-            } );
-        } );
+            const float4x4 world = pMeshComp->getWorldMatrix();
+            DrawCandidate  cand{};
+            cand._world        = world;
+            cand._boundsCenter = world.getTranslation();
+            cand._boundsRadius = pMeshComp->getBoundsRadius();
+            cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
+            cand._pMesh        = pMesh;
+            cand._pMaterial    = pMeshComp->getMaterial();
+            cand._pInstance    = pMeshComp->getRawMaterialInstance();
+            _listScratchCandidate.push_back( cand );
+        }
 
         if ( _listScratchCandidate.empty() )
         {
@@ -249,17 +278,22 @@ namespace sw
             return;
         }
 
-        // 캐시 유효성은 별도 플래그가 아니라 "직전 후보 집합이 비어 있지 않다"로 판단한다 —
-        // 플래그와 데이터가 어긋날 여지를 없앤다.
-        const bool bHasCache    = _listBuiltCandidate.empty() == false;
+        // 더티 신호가 왔다고 내용이 실제로 달라졌다는 뜻은 아니다(집합 세대는 활성 토글 같은 것에도
+        // 올라간다). 여기서 한 번 더 확인해 헛된 재구축을 막는다.
         const bool bContentSame = bHasCache && _listBuiltCandidate == _listScratchCandidate && _listInstance.empty() == false;
-        const bool bCamSame     = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
 
         if ( bContentSame && bCamSame )
+        {
+            _lastPrimitiveSetGeneration = setGeneration;
             return;
+        }
 
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
         _listScratchRaw.resize( count );
+
+        // 물체가 움직이기만 했으면 배치 구성은 그대로다 — 인스턴스 값만 새로 채우고, 나누기와
+        // 정렬은 건너뛴다. 움직이는 씬에서 남아 있던 유일한 O(N log N) 이 이 정렬이었다.
+        const bool bBatchKeysSame = bHasCache && bContentSame == false && hasSameBatchKeysAsBuilt();
 
         if ( bContentSame == false )
         {
@@ -277,7 +311,8 @@ namespace sw
             else
                 GpuSceneInternal::fillRangeVal( _listScratchCandidate, _listScratchRaw, 0, count );
 
-            rebuildPartitionTables();
+            if ( bBatchKeysSame == false )
+                rebuildPartitionTables();
         }
 
         sortTransparent( &cameraPos._x );
@@ -291,8 +326,9 @@ namespace sw
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다 — 복사 없이 두 버퍼를
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
         _listBuiltCandidate.swap( _listScratchCandidate );
-        _lastCameraPos = cameraPos;
-        _bCpuDirty     = 1;
+        _lastCameraPos              = cameraPos;
+        _lastPrimitiveSetGeneration = setGeneration;
+        _bCpuDirty                  = 1;
     }
 
     bool GpuScene::upload( IRHIDevice* pDevice )

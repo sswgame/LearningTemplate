@@ -32,6 +32,7 @@ namespace sw
     BoxCollider2DComponent::BoxCollider2DComponent()
         : _offsetPos{}
         , _offsetScale{}
+        , _pPhysics{ nullptr }
         , _physicsBody{}
         , _cachedMin{ 0.0f, 0.0f }
         , _cachedMax{ 0.0f, 0.0f }
@@ -112,13 +113,25 @@ namespace sw
         outMax = float2{ center._x + halfSize._x, center._y + halfSize._y };
     }
 
+    void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        _pPhysics = &manager.getPhysicsWorld();
+    }
+
+    void BoxCollider2DComponent::onUnregister( GameObjectManager& manager )
+    {
+        unregisterPhysicsBody();
+        _pPhysics = nullptr;
+        SceneComponent::onUnregister( manager );
+    }
+
     bool BoxCollider2DComponent::intersects( const BoxCollider2DComponent* pOther ) const
     {
         if ( pOther == nullptr )
             return false;
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
-            return pOwner->getManager()->getPhysicsWorld().overlaps( _physicsBody, pOther->_physicsBody );
+        if ( _pPhysics != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
+            return _pPhysics->overlaps( _physicsBody, pOther->_physicsBody );
 
         float2 aMin{}, aMax{}, bMin{}, bMax{};
         getBounds( aMin, aMax );
@@ -145,22 +158,20 @@ namespace sw
 
     void BoxCollider2DComponent::unregisterPhysicsBody()
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || pOwner->getManager() == nullptr || _physicsBody.isValid() == false )
+        if ( _pPhysics == nullptr || _physicsBody.isValid() == false )
             return;
-        pOwner->getManager()->getPhysicsWorld().removeBody( _physicsBody );
+        _pPhysics->removeBody( _physicsBody );
         _physicsBody = ObjectHandle{};
     }
 
     void BoxCollider2DComponent::syncPhysicsBody()
     {
         GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || pOwner->getManager() == nullptr )
+        if ( pOwner == nullptr || _pPhysics == nullptr )
             return;
 
-        GameObjectManager* pManager = pOwner->getManager();
-        float2             minB{};
-        float2             maxB{};
+        float2 minB{};
+        float2 maxB{};
         getBounds( minB, maxB );
         _cachedMin = minB;
         _cachedMax = maxB;
@@ -170,10 +181,10 @@ namespace sw
 
         if ( _physicsBody.isValid() )
         {
-            pManager->getPhysicsWorld().setAabb( _physicsBody, box );
+            _pPhysics->setAabb( _physicsBody, box );
             return;
         }
-        _physicsBody = pManager->getPhysicsWorld().addBody( box, layer, pOwner->getObjectId() );
+        _physicsBody = _pPhysics->addBody( box, layer, pOwner->getObjectId() );
     }
 
 } // namespace sw

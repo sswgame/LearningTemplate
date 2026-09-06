@@ -19,6 +19,8 @@ namespace sw
         struct sw_SceneComponent_Registrar;
     } // namespace generated
 
+    class GameObjectManager;
+
     /**
      * @class SceneComponent
      * @brief 로컬 트랜스폼·부모-자식 계층, float32→float64 누적 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트
@@ -47,6 +49,19 @@ namespace sw
         void onTick( float32 deltaTime ) override;
         /** @brief 로컬 TRS PROPERTY 변경 시 월드 캐시를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
+
+        /** @brief 부모가 없으면 루트 SceneComponent 캐시에 자기를 넣습니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 루트 SceneComponent 캐시에서 자기를 뺍니다. */
+        void onUnregister( GameObjectManager& manager ) override;
+
+        /**
+         * @brief 월드 행렬이 실제로 다시 계산된 직후 호출됩니다.
+         * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 짚어주는 유일한 지점이다.
+         *          렌더 프리미티브는 여기서 자기를 더티로 표시한다 — 프레임마다 전부 훑어
+         *          "행렬이 바뀌었나" 되묻지 않아도 되게.
+         */
+        virtual void onWorldTransformUpdated() {}
 
         /** @brief 로컬 위치 설정 */
         void setLocalPosition( const float3& pos );
@@ -128,10 +143,17 @@ namespace sw
         PROPERTY( HideInInspector )
         mutable hashed_string _attachOwner;
         PROPERTY( HideInInspector )
-        mutable hashed_string   _attachComponent;
-        float3                  _cachedWorldPosition;
-        float4x4                _cachedWorldMatrix;
-        double3                 _cachedWorldPositionLWC;
+        mutable hashed_string _attachComponent;
+        float3                _cachedWorldPosition;
+        float4x4              _cachedWorldMatrix;
+        double3               _cachedWorldPositionLWC;
+        /**
+         * @brief 이 컴포넌트가 속한 매니저. 등록 시점에 받아 둡니다.
+         * @details 쓸 때마다 `getOwner()->getManager()` 로 두 홉 거슬러 찾던 것을 대체한다.
+         *          언리얼 컴포넌트가 등록 시점에 `GetWorld()` 를 잡아 두는 것과 같은 자리다.
+         *          씬에 붙지 않았으면 nullptr 이고, 그때는 지연 없이 즉시 반영하는 경로를 탄다.
+         */
+        GameObjectManager*      _pManager;
         SceneComponent*         _pParent;
         vector<SceneComponent*> _listChild;
         uint8                   _bIsTransformDirty   : 1;

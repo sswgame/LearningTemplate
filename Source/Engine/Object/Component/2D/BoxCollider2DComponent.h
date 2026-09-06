@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    class PhysicsWorld;
+
     namespace generated
     {
         struct sw_BoxCollider2DComponent_Registrar;
@@ -34,6 +36,10 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onDestroy() override;
+        /** @brief 물리 월드를 등록 시점에 받아 둡니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 물리 월드 참조를 놓습니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onTick( float32 deltaTime ) override;
 
         int32 getColliderType() const { return _colliderType; }
@@ -60,10 +66,12 @@ namespace sw
         PROPERTY( Category = "Collider", DisplayName = "Offset Position", Tooltip = "2D Offset position as string format" )
         string _offsetPos;
         PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "2D Offset scale as string format" )
-        string       _offsetScale;
-        ObjectHandle _physicsBody;
-        float2       _cachedMin;
-        float2       _cachedMax;
+        string _offsetScale;
+        /** @brief 등록 시점에 받은 물리 월드. 소유자를 거슬러 매니저를 찾지 않는다. */
+        PhysicsWorld* _pPhysics;
+        ObjectHandle  _physicsBody;
+        float2        _cachedMin;
+        float2        _cachedMax;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
         int32 _colliderType;
     };

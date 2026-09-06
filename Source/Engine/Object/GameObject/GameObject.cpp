@@ -3,6 +3,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
@@ -99,6 +100,17 @@ namespace sw
     void GameObject::onPropertyChanged( hashed_string propertyName )
     {
         (void)propertyName;
+        // 인스펙터는 `_bActive` 를 세터가 아니라 멤버에 직접 쓴다. setActive 가 해주던 계층 전파를
+        // 여기서 해줘야 자식들의 isActiveInHierarchy 가 따라온다 — 프리미티브 집합 무효화도
+        // 그 안에서 함께 일어난다.
+        refreshActiveInHierarchy();
+    }
+
+    void GameObject::markPrimitiveSetDirtyOnManager()
+    {
+        GameObjectManager* pManager = getManager();
+        if ( pManager != nullptr )
+            pManager->getPrimitiveRegistry().markSetDirty();
     }
 
     /**
@@ -226,7 +238,11 @@ namespace sw
             bParentActive = pParent->isActiveInHierarchy();
 
         const bool bActiveInHierarchy = bParentActive && isActive();
-        _bIsActiveInHierarchy.store( bActiveInHierarchy, std::memory_order_relaxed );
+        const bool bWasActive         = _bIsActiveInHierarchy.exchange( bActiveInHierarchy, std::memory_order_relaxed );
+
+        // 이 값이 곧 렌더 스냅샷의 포함 여부다. 바뀌면 프리미티브 집합이 통째로 달라진다.
+        if ( bWasActive != bActiveInHierarchy )
+            markPrimitiveSetDirtyOnManager();
 
         for ( GameObject* pChild : getChildren() )
         {
@@ -412,7 +428,8 @@ namespace sw
         {
             if ( pComp == nullptr )
                 continue;
-            unregisterComponentIfSceneRoot( pComp );
+            if ( _pOwnerManager != nullptr )
+                pComp->onUnregister( *_pOwnerManager );
             pComp->onDestroy();
             pComp->setOwner( nullptr );
             if ( _pOwnerManager != nullptr )
@@ -447,7 +464,8 @@ namespace sw
             return true;
         }
 
-        unregisterComponentIfSceneRoot( pComp );
+        if ( _pOwnerManager != nullptr )
+            pComp->onUnregister( *_pOwnerManager );
         pComp->onDestroy();
         pComp->setOwner( nullptr );
 
@@ -473,56 +491,6 @@ namespace sw
         }
         markTickOrderDirty();
         return bRemoved;
-    }
-
-    void GameObject::registerComponentIfSceneRoot( Component* pComp )
-    {
-        if ( pComp == nullptr )
-            return;
-        SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-        if ( pSceneComp != nullptr )
-        {
-            if ( pSceneComp->getParent() == nullptr )
-            {
-                if ( _pOwnerManager != nullptr )
-                    _pOwnerManager->registerRootSceneComponent( pSceneComp );
-                else
-                {
-                    Scene* pScene = engine::getSceneManager().getActiveScene();
-                    if ( pScene != nullptr )
-                    {
-                        GameObjectManager* pManager = pScene->getObjectManager();
-                        if ( pManager != nullptr )
-                            pManager->registerRootSceneComponent( pSceneComp );
-                    }
-                }
-            }
-        }
-    }
-
-    void GameObject::unregisterComponentIfSceneRoot( Component* pComp )
-    {
-        if ( pComp == nullptr )
-            return;
-        SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-        if ( pSceneComp != nullptr )
-        {
-            if ( pSceneComp->getParent() == nullptr )
-            {
-                if ( _pOwnerManager != nullptr )
-                    _pOwnerManager->unregisterRootSceneComponent( pSceneComp );
-                else
-                {
-                    Scene* pScene = engine::getSceneManager().getActiveScene();
-                    if ( pScene != nullptr )
-                    {
-                        GameObjectManager* pManager = pScene->getObjectManager();
-                        if ( pManager != nullptr )
-                            pManager->unregisterRootSceneComponent( pSceneComp );
-                    }
-                }
-            }
-        }
     }
 
     void GameObject::markTickOrderDirty()

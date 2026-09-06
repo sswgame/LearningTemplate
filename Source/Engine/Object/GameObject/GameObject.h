@@ -236,10 +236,8 @@ namespace sw
     private:
         /** @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy`를 재계산하고 자식에 전파 */
         void refreshActiveInHierarchy();
-        /** @brief 컴포넌트가 SceneComponent 루트일 경우 매니저에 등록합니다. */
-        void registerComponentIfSceneRoot( Component* pComp );
-        /** @brief 컴포넌트가 SceneComponent 루트일 경우 매니저에서 해제합니다. */
-        void unregisterComponentIfSceneRoot( Component* pComp );
+        /** @brief 프리미티브 집합이 통째로 바뀌었음을 매니저에 알립니다. */
+        void markPrimitiveSetDirtyOnManager();
 
         static atomic<uint64> _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 
@@ -309,7 +307,8 @@ namespace sw
         pComp->applyTypeDefaults( pTypeInfo );
 
         _listComponent.push_back( pComp );
-        registerComponentIfSceneRoot( pComp );
+        // 어느 등록부에 들어갈지는 컴포넌트가 안다 — GameObject 는 타입을 몰라도 된다.
+        pComp->onRegister( *_pOwnerManager );
         markTickOrderDirty();
         return pComp;
     }

@@ -9,6 +9,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -328,6 +329,7 @@ namespace sw
         , _activeModuleName{}
         , _dirtyTransformGeneration{ 1 }
         , _lastFlushedTransformGeneration{ 0 }
+        , _primitiveRegistry{}
     {
         _listDeferredTransformUpdate.reserve( 128 );
         _listProcessingTransform.reserve( 128 );
@@ -695,6 +697,14 @@ namespace sw
     {
         if ( pComp == nullptr )
             return;
+
+        // 등록부는 raw 포인터를 들고 있다. ComponentPtr/ComponentHandle 은 접근할 때마다 이름·타입으로
+        // 다시 찾기 때문에, 프레임마다 전부 훑는 렌더 경로에 쓰면 지금 걷어내려는 순회보다 비싸진다.
+        // 대신 **메모리를 실제로 반납하는 이 한 지점**에서 등록을 해제해, 등록된 채로 해제되는 경우가
+        // 구조적으로 없게 만든다. 목록에서 빼는 쪽(removeComponent, clearComponents)에만 걸어두면
+        // 지연 파괴 경로가 그걸 우회한다. onUnregister 는 멱등이라 두 번 불려도 된다.
+        // 소멸자 호출 전이어야 가상 디스패치가 유효하다.
+        pComp->onUnregister( *this );
 
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo != nullptr )

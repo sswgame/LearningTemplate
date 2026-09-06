@@ -56,8 +56,18 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 타입의 프로퍼티 목록을 그립니다. */
         void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief 단일 프로퍼티 위젯을 그립니다. */
+        /** @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다. */
         void drawPropertyWidget( void* pInstance, const PropertyInfo& prop );
+        /** @brief 위젯 본문. 통지 판정은 감싸는 drawPropertyWidget 이 합니다. */
+        void drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop );
+        /**
+         * @brief 인스펙터가 값을 바꿨음을 편집 대상에 알립니다.
+         * @details 이게 없으면 인스펙터 편집은 아무에게도 보이지 않는 변경이 된다. 위젯 대부분이
+         *          `getValuePtr<T>()` 로 멤버 생 포인터를 뽑아 ImGui 에 넘기기 때문에, 리플렉션
+         *          `setValue<T>()` 안의 통지 분기를 타지 않는다. 렌더 상태처럼 "바뀌면 누가 반응해야
+         *          하는" 값들이 조용히 어긋나던 구멍이다.
+         */
+        void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
 
@@ -72,7 +82,13 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer256> _lastInvokeResult;
         EditorFileCollectJob                  _componentPresetJob;
         vector<string>                        _listComponentPresetFile;
-        uint8                                 _bComponentPresetDirty : 1;
-        [[maybe_unused]] uint8                _reserved              : 7;
+        /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트. 편집 통지를 받는다. */
+        Component* _pEditTargetComponent;
+        /** @brief 지금 프로퍼티를 그리는 중인 GameObject. 컴포넌트가 없을 때만 쓴다. */
+        GameObject* _pEditTargetObject;
+        /** @brief 중첩/컨테이너 재귀 깊이. 통지는 가장 바깥에서 한 번만 한다. */
+        uint32                 _propertyDrawDepth;
+        uint8                  _bComponentPresetDirty : 1;
+        [[maybe_unused]] uint8 _reserved              : 7;
     };
 } // namespace sw::editor

@@ -399,6 +399,167 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 }
 
 /**
+ * @brief 프리미티브 등록부: 변경을 알린 것만 다시 만들고, 알린 게 없으면 수집조차 하지 않는다.
+ * @details 이 구조의 최악 실패 모드는 "움직였는데 화면이 안 따라오는 것"이다. 등록·해제·더티
+ *          신호 중 하나라도 빠지면 여기서 걸린다.
+ */
+SW_TEST_CASE( RenderPassTest, GpuScenePrimitiveRegistryTracksChanges )
+{
+    sw::Scene scene( "GpuScenePrimitiveRegistry" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    auto addMeshAt = [&]( const utf8* pName, float32 x ) -> sw::MeshComponent*
+    {
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
+        if ( go == nullptr )
+            return nullptr;
+        sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+        if ( mesh == nullptr )
+            return nullptr;
+        mesh->setMesh( cube );
+        mesh->setLocalPosition( sw::float3( x, 0.0f, -1.0f ) );
+        mesh->setVisible( true );
+        return mesh;
+    };
+
+    sw::MeshComponent* pMeshA = addMeshAt( "RegA", 0.0f );
+    sw::MeshComponent* pMeshB = addMeshAt( "RegB", 2.0f );
+    SW_ASSERT_NOT_NULL( pMeshA );
+    SW_ASSERT_NOT_NULL( pMeshB );
+
+    // 붙는 것만으로 등록부에 들어간다 — 렌더러가 씬을 뒤져 찾지 않는다.
+    SW_EXPECT_EQUAL( size_t( 2 ), objects->getPrimitiveRegistry().getAll().size() );
+
+    sw::GpuScene     gpuScene;
+    const sw::float3 camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 1) 움직이면 반영된다.
+    pMeshA->setLocalPosition( sw::float3( 7.0f, 0.0f, -1.0f ) );
+    SW_EXPECT_TRUE( objects->getPrimitiveRegistry().hasDirty() || objects->getPrimitiveRegistry().getSetGeneration() != 0 );
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    bool bFoundMoved = false;
+    for ( const sw::GpuInstance& inst : gpuScene.getInstances() )
+    {
+        if ( sw::MathUtil::nearEqual( inst._boundsCenter._x, 7.0f ) )
+            bFoundMoved = true;
+    }
+    SW_EXPECT_TRUE( bFoundMoved );
+
+    // 2) 아무도 안 바뀌면 더티가 없다 — 이게 수집을 건너뛰는 근거다.
+    SW_EXPECT_TRUE( objects->getPrimitiveRegistry().hasDirty() == false );
+
+    // 3) 가시성을 끄면 빠진다.
+    pMeshB->setVisible( false );
+    SW_EXPECT_TRUE( objects->getPrimitiveRegistry().hasDirty() );
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 4) 컴포넌트를 떼면 등록부에서도 빠진다.
+    sw::GameObject* pOwnerB = pMeshB->getOwner();
+    SW_ASSERT_NOT_NULL( pOwnerB );
+    SW_EXPECT_TRUE( pOwnerB->removeComponent( pMeshB ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), objects->getPrimitiveRegistry().getAll().size() );
+
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 5) 오브젝트를 비활성화하면 집합이 바뀐다.
+    sw::GameObject* pOwnerA = pMeshA->getOwner();
+    SW_ASSERT_NOT_NULL( pOwnerA );
+    pOwnerA->setActive( false );
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+}
+
+/**
+ * @brief 트랜스폼만 바뀌면 배치를 다시 나누지 않지만, 결과는 다시 나눈 것과 같아야 한다.
+ * @details 정렬을 건너뛰는 경로라 조용히 틀리기 쉽다. 키가 바뀐 경우와 나란히 확인한다.
+ */
+SW_TEST_CASE( RenderPassTest, GpuSceneTransformOnlyChangeKeepsBatches )
+{
+    sw::Scene scene( "GpuSceneTransformOnly" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+
+    auto addMeshAt = [&]( const utf8* pName, float32 x, float32 z, sw::RHIBlendMode blend ) -> sw::MeshComponent*
+    {
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
+        if ( go == nullptr )
+            return nullptr;
+        sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+        if ( mesh == nullptr )
+            return nullptr;
+        mesh->setMesh( cube );
+        mesh->setLocalPosition( sw::float3( x, 0.0f, z ) );
+        mesh->setBlendMode( blend );
+        mesh->setVisible( true );
+        return mesh;
+    };
+
+    sw::MeshComponent* pOpaqueA = addMeshAt( "TfOpaqueA", 0.0f, -1.0f, sw::RHIBlendMode::Opaque );
+    addMeshAt( "TfOpaqueB", 1.0f, -1.0f, sw::RHIBlendMode::Opaque );
+    addMeshAt( "TfTransFar", 0.0f, -10.0f, sw::RHIBlendMode::Transparent );
+    sw::MeshComponent* pTransNear = addMeshAt( "TfTransNear", 0.0f, -2.0f, sw::RHIBlendMode::Transparent );
+    SW_ASSERT_NOT_NULL( pOpaqueA );
+    SW_ASSERT_NOT_NULL( pTransNear );
+
+    sw::GpuScene     gpuScene;
+    const sw::float3 camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+
+    const uint32 opaqueBatchCount      = static_cast<uint32>( gpuScene.getOpaqueBatches().size() );
+    const uint32 transparentBatchCount = static_cast<uint32>( gpuScene.getTransparentBatches().size() );
+    SW_ASSERT_EQUAL( 1u, transparentBatchCount );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    // 1) 트랜스폼만 변경 — 배치 구성은 그대로여야 하고, 위치는 반영돼야 한다.
+    pOpaqueA->setLocalPosition( sw::float3( 5.0f, 0.0f, -1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+
+    SW_EXPECT_EQUAL( opaqueBatchCount, static_cast<uint32>( gpuScene.getOpaqueBatches().size() ) );
+    SW_EXPECT_EQUAL( transparentBatchCount, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    bool bMovedApplied = false;
+    for ( const sw::GpuInstance& inst : gpuScene.getInstances() )
+    {
+        if ( sw::MathUtil::nearEqual( inst._boundsCenter._x, 5.0f ) )
+            bMovedApplied = true;
+    }
+    SW_EXPECT_TRUE( bMovedApplied );
+
+    // transparent 는 트랜스폼이 바뀌면 다시 정렬돼야 한다 (먼 것 → 가까운 것).
+    {
+        const sw::vector<sw::GpuInstance>& instances = gpuScene.getInstances();
+        const sw::GpuMeshBatch&            trBatch   = gpuScene.getTransparentBatches()[0];
+        SW_ASSERT_EQUAL( 2u, trBatch._instanceCount );
+        const float32 z0 = instances[trBatch._instanceBase]._boundsCenter._z;
+        const float32 z1 = instances[trBatch._instanceBase + 1]._boundsCenter._z;
+        SW_EXPECT_TRUE( ( z0 * z0 ) >= ( z1 * z1 ) );
+    }
+
+    // 2) 배치 키가 바뀌면(블렌드 모드) 다시 나눠야 한다 — 빠른 경로로 새면 안 된다.
+    pTransNear->setBlendMode( sw::RHIBlendMode::Opaque );
+    gpuScene.buildFromScene( &scene, camPos, nullptr );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
+    SW_EXPECT_EQUAL( 1u, gpuScene.getTransparentBatches()[0]._instanceCount );
+}
+
+/**
  * @brief 서로 다른 MaterialInstance 키는 transparent 머지되지 않는다
  */
 SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )

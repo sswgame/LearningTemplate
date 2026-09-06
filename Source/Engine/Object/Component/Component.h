@@ -14,6 +14,7 @@ namespace sw
 {
 
     class GameObject;
+    class GameObjectManager;
     /**
      * @enum TickGroup
      * @brief 프레임 내 컴포넌트 tick 실행 순서 슬롯
@@ -124,6 +125,21 @@ namespace sw
         virtual void onTick( float32 deltaTime );
         /** @brief 프레임 단위 보조 서브틱 업데이트 콜백 */
         virtual void onSubTick( uint32 subTickId, float32 deltaTime );
+        /**
+         * @brief 소유 GameObject 에 붙은 직후 호출됩니다.
+         * @details 자기가 어떤 등록부에 들어가야 하는지는 자기가 안다. GameObject 가 `castTo` 로
+         *          타입을 골라 대신 등록해 주면, 등록부가 하나 늘 때마다 GameObject 를 고쳐야 하고
+         *          GameObject 가 MeshComponent 같은 하위 타입을 알게 된다.
+         * @param manager 자기가 속한 매니저. 필요한 것(등록부·물리 월드 등)을 여기서 꺼내 **들고
+         *        있는다**. 쓸 때마다 소유자를 거슬러 올라가 찾지 않는다 — 그 조회는 소유자가 이미
+         *        끊긴 파괴 시점에 엉뚱한 씬을 가리킨다.
+         */
+        virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
+        /**
+         * @brief 소유 GameObject 에서 떨어지기 직전 호출됩니다.
+         * @note 파괴 경로가 여러 갈래라 **두 번 이상 불릴 수 있다**. 구현은 멱등이어야 합니다.
+         */
+        virtual void onUnregister( GameObjectManager& manager ) { (void)manager; }
         /** @brief 컴포넌트 소멸 및 해제 시 콜백 */
         virtual void onDestroy();
         /** @brief 프로퍼티 변경 시 이벤트 콜백 */

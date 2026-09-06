@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
@@ -170,13 +171,22 @@ namespace sw
         void executeOrDeferPostTick( PostTickDelegate func );
 
         /** @brief 루트 계층이 된 SceneComponent를 캐시에 등록합니다. */
-        void registerRootSceneComponent( class SceneComponent* pComp );
+        void registerRootSceneComponent( SceneComponent* pComp );
 
         /** @brief 부모가 생기거나 파괴된 SceneComponent를 루트 캐시에서 제거합니다. */
-        void unregisterRootSceneComponent( class SceneComponent* pComp );
+        void unregisterRootSceneComponent( SceneComponent* pComp );
+
+        /**
+         * @brief 그릴 수 있는 컴포넌트의 등록부입니다.
+         * @details PhysicsWorld 와 같은 자리다 — 능력은 별도 타입으로 두고 매니저는 그걸 소유만
+         *          한다. 컴포넌트는 등록 시점에 이걸 받아 들고 있으므로, 매니저 전체를 알 필요가 없다.
+         */
+        PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
+        /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
+        const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. pending-kill이면 nullptr. */
-        Component* resolveComponent( sw::ComponentHandle handle );
+        Component* resolveComponent( ComponentHandle handle );
 
         /** @brief 이 씬의 AABB 질의 월드입니다. */
         PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
@@ -365,5 +375,8 @@ namespace sw
 
         atomic<uint64> _dirtyTransformGeneration;
         uint64         _lastFlushedTransformGeneration;
+
+        /** @brief 그릴 수 있는 컴포넌트의 등록부. PhysicsWorld 처럼 매니저가 소유만 합니다. */
+        PrimitiveRegistry _primitiveRegistry;
     };
 } // namespace sw

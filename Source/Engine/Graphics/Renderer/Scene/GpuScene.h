@@ -193,6 +193,8 @@ namespace sw
         void sortTransparent( const float32* pCameraPos );
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
+        /** @brief 직전 후보와 배치 키가 모두 같은지(= 트랜스폼만 달라졌는지) 확인합니다. */
+        bool hasSameBatchKeysAsBuilt() const;
         /** @brief 캐시 무효화. */
         void invalidateBuildCache();
 
@@ -235,6 +237,18 @@ namespace sw
             }
             /** @brief operator== 의 부정입니다. */
             bool operator!=( const DrawCandidate& o ) const { return ( *this == o ) == false; }
+
+            /**
+             * @brief 배치가 묶이는 기준(메시·머티리얼·인스턴스·블렌드)이 같은지. 트랜스폼은 보지 않습니다.
+             * @details 불투명 배치는 이 네 가지로만 나뉘고 정렬된다. 물체가 **움직이기만** 했다면
+             *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없다.
+             *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬이다.
+             */
+            bool hasSameBatchKey( const DrawCandidate& o ) const
+            {
+                return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance &&
+                       _blendMode == o._blendMode;
+            }
         };
 
         vector<DrawCandidate> _listScratchCandidate;
@@ -266,11 +280,13 @@ namespace sw
         RHIBufferHandle        _instanceBuffer{ 0 };
         RHIBufferHandle        _indirectArgsBuffer{ 0 };
         float3                 _lastCameraPos{};
-        RHIDescriptorIndex     _instanceSrv     = kInvalidDescriptorIndex;
-        RHIDescriptorIndex     _indirectArgsUav = kInvalidDescriptorIndex;
-        uint32                 _indirectCommandCount{ 0 };
-        uint32                 _instanceCapacity{ 0 };
-        uint32                 _argsCapacity{ 0 };
-        uint8                  _bCpuDirty{ 1 };
+        /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */
+        uint64             _lastPrimitiveSetGeneration{ 0 };
+        RHIDescriptorIndex _instanceSrv     = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
+        uint32             _indirectCommandCount{ 0 };
+        uint32             _instanceCapacity{ 0 };
+        uint32             _argsCapacity{ 0 };
+        uint8              _bCpuDirty{ 1 };
     };
 } // namespace sw
