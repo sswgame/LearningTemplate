@@ -263,9 +263,12 @@ namespace sw
                 if ( _taaHistory == 0 )
                 {
                     RHITextureDesc histDesc{};
-                    histDesc._width             = _transientWidth != 0 ? _transientWidth : FrameRendererUtil::kDefaultTransientSize;
-                    histDesc._height            = _transientHeight != 0 ? _transientHeight : FrameRendererUtil::kDefaultTransientSize;
-                    histDesc._format            = RHIFormat::R8G8B8A8_UNORM;
+                    histDesc._width  = _transientWidth != 0 ? _transientWidth : FrameRendererUtil::kDefaultTransientSize;
+                    histDesc._height = _transientHeight != 0 ? _transientHeight : FrameRendererUtil::kDefaultTransientSize;
+                    // TAA 히스토리는 TAA 출력의 복사본이다 — CopyResource 는 포맷이 정확히 같아야
+                    // 하는데 예전엔 R8G8B8A8 로 박아 놨다. deferredpipeline 의 TaaColor 는
+                    // R16G16B16A16_FLOAT 라 R16F→R8 복사가 되어 정의되지 않은 동작이었다.
+                    histDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
                     histDesc._bIsRenderTarget   = 1;
                     histDesc._bIsShaderResource = 1;
                     _taaHistory                 = _pDevice->getResource()->createTexture2D( histDesc );
@@ -427,11 +430,29 @@ namespace sw
             ctx._pCmd->bindShaderResource( slot3, 3 );
     }
 
+    RHIFormat FrameRenderer::attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const
+    {
+        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
+        {
+            if ( att._name == attachmentName )
+                return parseAttachmentFormat( att._format );
+        }
+        return fallback;
+    }
+
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( string_view passType ) const
     {
+        // 별칭을 정규화해서 비교한다 — 정확히 일치하는 것을 먼저 보고, 없으면 정규화된 이름으로 찾는다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             if ( pass._type == passType )
+                return &pass;
+        }
+
+        const string_view wanted = FrameRendererUtil::canonicalPassType( passType );
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( FrameRendererUtil::canonicalPassType( pass._type ) == wanted )
                 return &pass;
         }
         return nullptr;

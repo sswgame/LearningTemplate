@@ -134,11 +134,11 @@ namespace sw
         /** @brief 패스용 상주 GPU 자원을 해제합니다. */
         void releasePassResources();
         /**
-         * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 집어 ctx 에 붙입니다.
-         * @details 커맨드 기록은 지연이고 상수 버퍼 쓰기는 즉시라, 패스마다 별도 버퍼를
-         *          써야 재생 시점에 각 패스의 상수가 살아남습니다. 커서는 원자적이라
-         *          병렬 기록에서도 안전합니다. 슬롯이 모자라면 0번으로 되돌아갑니다.
+         * @brief 파이프라인 XML 에 선언된 첨부의 포맷을 돌려줍니다 (없으면 fallback).
+         * @details 첨부와 같은 크기·포맷이어야 하는 보조 텍스처(TAA 히스토리 등)를 만들 때 쓴다 —
+         *          포맷을 상수로 박아 두면 파이프라인이 HDR 첨부를 쓰는 순간 어긋난다.
          */
+        RHIFormat attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const;
         /**
          * @brief 이 첨부를 이번 프레임에 처음 건드리는 것이면 표시하고 true 를 돌려줍니다.
          * @details 반환값이 곧 "Clear 로 열어도 되는가" 다. 같은 웨이브의 패스들이 동시에 부르므로
@@ -148,6 +148,12 @@ namespace sw
         bool markAttachmentCleared( const hashed_string& key );
         /** @brief 이번 프레임의 클리어 기록을 비웁니다 (프레임 시작). */
         void resetClearedAttachments();
+        /**
+         * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 집어 ctx 에 붙입니다.
+         * @details 커맨드 기록은 지연이고 상수 버퍼 쓰기는 즉시라, 패스마다 별도 버퍼를
+         *          써야 재생 시점에 각 패스의 상수가 살아남습니다. 커서는 원자적이라
+         *          병렬 기록에서도 안전합니다. 슬롯이 모자라면 마지막 슬롯을 공유합니다.
+         */
         void acquirePassCb( FramePassContext& ctx );
         /** @brief 프레임 시작마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();

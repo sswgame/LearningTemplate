@@ -538,11 +538,32 @@ namespace sw
         D3D12CommandListEntry entry;
         if ( _device == nullptr )
             return entry;
-        if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) ) ) )
+
+        // 예전엔 HRESULT 를 버리고 빈 엔트리만 돌려줬다. 호출부는 "생성 실패" 한 줄만 남기므로
+        // 원인(메모리 부족인지 디바이스 제거인지)을 알 방법이 없었다.
+        const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
+        if ( FAILED( allocHr ) )
+        {
+            if ( _bDeviceRemovedLogged == 0 )
+                SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
+                              static_cast<uint32>( allocHr ),
+                              static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                              static_cast<uint32>( _cmdListEntryCreated ) );
+            flushDebugMessages( "acquireCommandListEntry" );
             return D3D12CommandListEntry{};
-        if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
-                                                 IID_PPV_ARGS( entry._list.GetAddressOf() ) ) ) )
+        }
+        const HRESULT listHr = _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
+                                                           IID_PPV_ARGS( entry._list.GetAddressOf() ) );
+        if ( FAILED( listHr ) )
+        {
+            if ( _bDeviceRemovedLogged == 0 )
+                SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
+                              static_cast<uint32>( listHr ),
+                              static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                              static_cast<uint32>( _cmdListEntryCreated ) );
             return D3D12CommandListEntry{};
+        }
+        ++_cmdListEntryCreated;
         entry._list->Close();
         return entry;
     }

@@ -69,6 +69,31 @@ namespace sw
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
+        /**
+         * @brief 파이프라인 XML 의 패스 타입 표기를 엔진 PSO 등록 이름으로 정규화합니다.
+         * @details executePass 는 예전부터 별칭을 받아줬다(Shading=Lighting, ToneMap=Tonemap, ...).
+         *          그런데 PSO 를 만들 때 쓰는 findPassDescByType 은 문자열을 그대로 비교해서, 별칭으로
+         *          적힌 패스는 desc 를 못 찾고 출력 첨부 포맷 대신 R8G8B8A8 기본값으로 떨어졌다.
+         *          deferredpipeline 의 `Shading` 이 그 경우였고, 실제 타깃 LitColor 는
+         *          R16G16B16A16_FLOAT 라 드로우마다 렌더타깃 포맷 불일치가 났다.
+         */
+        static string_view canonicalPassType( string_view passType )
+        {
+            if ( passType == "Shading" )
+                return PassType::kLighting;
+            if ( passType == "ToneMap" )
+                return PassType::kTonemap;
+            if ( passType == "HBAO" )
+                return PassType::kSsao;
+            if ( passType == "PostOutline" )
+                return PassType::kOutline;
+            if ( passType == "Bloom" || passType == "Post" )
+                return PassType::kPostBloom;
+            if ( passType == "Depth" || passType == "PrePass" )
+                return PassType::kDepthPrepass;
+            return passType;
+        }
+
         static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
                                               std::initializer_list<const utf8*>             listName )
         {

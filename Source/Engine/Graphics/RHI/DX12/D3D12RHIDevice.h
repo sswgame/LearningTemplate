@@ -318,6 +318,10 @@ namespace sw
         vector<ID3D12CommandList*> _listPendingSubmit;
         /// @brief 프레임 스트림을 자를 때마다 풀에서 빌린 추가 세그먼트들(프레임 끝에 반납).
         vector<D3D12CommandListEntry> _listFrameSegment;
+        /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수 — 풀이 무한히 늘어나는지 보기 위한 계측.
+        std::atomic<uint32> _cmdListEntryCreated{ 0 };
+        /// @brief blitTexture 포맷/크기 불일치 경고를 한 번만 남기기 위한 래치.
+        uint8 _bBlitMismatchLogged{ 0 };
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 _commandList 로 시작한다.
         ID3D12GraphicsCommandList* _activeFrameList{ nullptr };
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 프레임 스트림과 별개.

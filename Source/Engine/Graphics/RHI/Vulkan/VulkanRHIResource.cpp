@@ -43,6 +43,7 @@ namespace sw
                         return VK_FORMAT_R32G32_SFLOAT;
                     case RHIFormat::R32_FLOAT:
                         return VK_FORMAT_R32_SFLOAT;
+                    case RHIFormat::Unknown: ///< 첨부 없음 — Vulkan 에는 대응 값이 없다.
                     default:
                         break;
                 }

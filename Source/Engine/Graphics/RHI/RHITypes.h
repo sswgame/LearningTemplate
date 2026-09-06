@@ -68,6 +68,10 @@ namespace sw
         R32G32B32_FLOAT    = 4, ///< 32비트 부동소수점 RGB (위치/노멀)
         R32G32_FLOAT       = 5, ///< 32비트 부동소수점 RG (UV)
         R32_FLOAT          = 6, ///< 32비트 단일 부동소수점
+        /// @brief 첨부 없음. 뎁스를 쓰지 않는 패스의 PSO 가 "DSV 없음" 을 선언하는 데 쓴다 —
+        ///        DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용한다.
+        ///        기존 값의 번호를 바꾸지 않도록 반드시 끝에 둔다.
+        Unknown = 7,
     };
 
     namespace constant

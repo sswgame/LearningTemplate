@@ -43,6 +43,7 @@ namespace sw
                 return GL_RG32F;
             case RHIFormat::R32_FLOAT:
                 return GL_R32F;
+            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
             default:
                 return 0;
         }
@@ -65,6 +66,7 @@ namespace sw
                 return GL_RG;
             case RHIFormat::R32_FLOAT:
                 return GL_RED;
+            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
             default:
                 return 0;
         }
@@ -84,6 +86,7 @@ namespace sw
                 return GL_FLOAT;
             case RHIFormat::D24_UNORM_S8_UINT:
                 return GL_UNSIGNED_INT_24_8;
+            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
             default:
                 return 0;
         }

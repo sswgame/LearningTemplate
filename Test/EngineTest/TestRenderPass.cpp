@@ -564,7 +564,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
     sw::float4          clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     sw::RHIBufferHandle instanceBufferAfterFrame1{ 0 };
 
-    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
     {
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
@@ -647,7 +647,12 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallelRunsOnRealDevice )
  *          즉 병렬 기록 경로가 있어도 실제로 동시에 도는 패스가 없었고, 그래서 패스 콜백이 만지는
  *          FrameRenderer 공유 상태(_listClearedThisFrame, 프레임 래치 플래그)의 레이스가 드러나지
  *          않았다. deferredpipeline 은 웨이브0 = {Shadow, GBuffer}, 이후 {Transparent, SSAO} 가
- *          동시에 기록된다. 메시가 있어야 드로우 경로까지 들어가므로 큐브를 하나 넣고 돌린다.
+ *          동시에 기록된다. 메시가 있어야 드로우 경로까지 들어가므로 큐브를 넣고 여러 프레임 돌린다.
+ *
+ *          이 테스트를 처음 넣었을 때 곧바로 DX12 GPU 행(3번째 프레임에서 fence wait timeout →
+ *          DEVICE_HUNG → 크래시)을 잡아냈다. 원인은 파이프라인 XML 이 선언한 포맷과 PSO/보조
+ *          텍스처가 어긋난 것이었다(Shading 별칭 미해석, 풀스크린 PSO 의 뎁스 포맷, TAA 히스토리
+ *          포맷 하드코딩). 검증 레이어 오류가 0 인지도 같이 봐야 의미가 있다.
  */
 SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
 {
@@ -689,7 +694,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
 
     // 여러 프레임 돌린다 — 레이스는 한 프레임만으로는 잘 드러나지 않는다.
     const sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
-    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
     {
         device->getSwapChain()->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );

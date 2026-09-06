@@ -202,6 +202,28 @@ namespace sw
             dstStateBefore = dstIt->second._state;
         }
 
+        // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 예전엔 검증 없이 발행해서, 포맷이나
+        // 해상도가 다른 조합(예: R16G16B16A16_FLOAT 트랜지언트 → R8G8B8A8 백버퍼, 1280 → 320)에서
+        // 그대로 정의되지 않은 동작이 됐다 — 검증 레이어는 오류를 내고 드라이버는
+        // DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
+        {
+            const D3D12_RESOURCE_DESC srcDesc = pSrcRes->GetDesc();
+            const D3D12_RESOURCE_DESC dstDesc = pDstRes->GetDesc();
+            if ( srcDesc.Format != dstDesc.Format || srcDesc.Width != dstDesc.Width ||
+                 srcDesc.Height != dstDesc.Height || srcDesc.DepthOrArraySize != dstDesc.DepthOrArraySize ||
+                 srcDesc.MipLevels != dstDesc.MipLevels )
+            {
+                if ( _pDevice->_bBlitMismatchLogged == 0 )
+                {
+                    _pDevice->_bBlitMismatchLogged = 1;
+                    SW_LOG_ERROR( "blitTexture: CopyResource 불가 — src(fmt=%# %#x%#) dst(fmt=%# %#x%#). 복사를 건너뜁니다.",
+                                  static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
+                                  static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
+                }
+                return;
+            }
+        }
+
         if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
         {
             D3D12_RESOURCE_BARRIER barrier{};

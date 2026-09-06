@@ -31,6 +31,8 @@ namespace sw
                 return DXGI_FORMAT_R32G32_FLOAT;
             case RHIFormat::R32_FLOAT:
                 return DXGI_FORMAT_R32_FLOAT;
+            case RHIFormat::Unknown:
+                return DXGI_FORMAT_UNKNOWN;
             default:
                 break;
         }
