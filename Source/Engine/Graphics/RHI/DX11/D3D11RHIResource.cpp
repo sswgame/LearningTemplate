@@ -164,6 +164,36 @@ namespace sw
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 
+    bool D3D11RHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    {
+        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr )
+            return false;
+        if ( pRecord->_bDepth != 0 )
+            return false;
+
+        D3D11_TEXTURE2D_DESC texDesc{};
+        pRecord->_texture->GetDesc( &texDesc );
+
+        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height,
+                                                               texDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+        if ( mipCount == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+                          desc._sizeBytes, texDesc.Width, texDesc.Height, texDesc.MipLevels );
+            return false;
+        }
+
+        // UpdateSubresource 는 즉시 컨텍스트 큐에 순서대로 들어가므로 뒤이은 드로우보다 먼저 실행된다.
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const RHITextureMipSpan& span = arrMip[mip];
+            _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), span._mip, nullptr, span._pData, span._rowBytes, span._sizeBytes );
+        }
+        return true;
+    }
+
     RHITextureHandle D3D11RHIResource::createTexture2D( const RHITextureDesc& desc )
     {
         if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )

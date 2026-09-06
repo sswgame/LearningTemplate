@@ -317,10 +317,12 @@ namespace sw
             VkDeviceMemory     _memory{ nullptr };
             VkFramebuffer      _framebuffer{ nullptr };
             VkRenderPass       _renderPass{ nullptr };
-            uint32             _format{ 0 }; ///< VkFormat
-            uint32             _layout{ 0 }; ///< VkImageLayout (UNDEFINED=0)
+            uint32             _format{ 0 };    ///< VkFormat
+            uint32             _rhiFormat{ 0 }; ///< RHIFormat — 업로드 시 픽셀 크기 계산용 (VkFormat 은 깊이 선택으로 달라질 수 있다)
+            uint32             _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
             uint32             _width{ 0 };
             uint32             _height{ 0 };
+            uint32             _mipLevels{ 1 };
             uint8              _bRenderTarget : 1;
             uint8              _bDepthStencil : 1;
             uint8              _reserved      : 6;

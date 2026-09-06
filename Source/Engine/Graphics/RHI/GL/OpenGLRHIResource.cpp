@@ -240,6 +240,42 @@ namespace sw
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 
+    bool OpenGLRHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    {
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
+            return false;
+        if ( pRecord->_bDepthStencil != 0 )
+            return false;
+
+        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        const uint32      mipCount = resolveTextureUploadMips( desc, pRecord->_format, pRecord->_width, pRecord->_height,
+                                                               pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
+        if ( mipCount == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+                          desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
+            return false;
+        }
+
+        ScopedOpenGLContext ctxScope( _pDevice );
+        const GLenum        glFormat = toGlFormat( pRecord->_format );
+        const GLenum        glType   = toGlType( pRecord->_format );
+
+        glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+        // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R32G32B32 12바이트 행 같은 경우).
+        glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const RHITextureMipSpan& span = arrMip[mip];
+            glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
+                             static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+        }
+        glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+        glBindTexture( GL_TEXTURE_2D, 0 );
+        return true;
+    }
+
     RHITextureHandle OpenGLRHIResource::createTexture2D( const RHITextureDesc& desc )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0 )

@@ -89,6 +89,17 @@ namespace sw
         /** @brief GPU 텍스처 리소스를 삭제합니다. */
         virtual void destroyTexture( RHITextureHandle texture ) = 0;
 
+        /**
+         * @brief 2D 텍스처에 픽셀을 올립니다 — 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치).
+         * @details 로드 시점용 동기 경로다. 반환했을 때 DX12/Vulkan 은 복사가 GPU 큐에서 뒤이은 드로우보다
+         *          앞서도록 제출돼 있고(Vulkan 은 대기까지 함), DX11/GL 은 즉시 컨텍스트에 들어가 있다.
+         *          매 프레임 갱신 용도가 아니다. createTexture2D 가 _bIsShaderResource 로 만든 비압축 컬러
+         *          포맷만 받는다 — 압축(BC) 포맷은 RHIFormat 에 아직 없다(getRHIFormatBytesPerPixel 참고).
+         *          밉 크기·오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
+         * @return 포맷이 업로드 불가이거나 데이터가 모자라면 false.
+         */
+        virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
+
         // ------------------------------------------------------------------------------
         // Bindless — 텍스처/버퍼/UAV 등록과 해제
         // ------------------------------------------------------------------------------

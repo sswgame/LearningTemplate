@@ -117,29 +117,27 @@ namespace sw
         return handle;
     }
 
-    void D3D12RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    bool D3D12RHIResource::acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped )
     {
-        if ( buffer == 0 || pData == nullptr || size == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
-            return;
-
-        ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
-        if ( pDest == nullptr )
-            return;
+        if ( sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return false;
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙/얼로케이터/리스트를 새로 만들지 않음).
         // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다 — **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
-        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[_pDevice->_frameRing.currentIndex()];
+        const uint32                          slotIndex = _pDevice->_frameRing.currentIndex();
+        D3D12RHIDevice::StructuredUploadSlot& slot      = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
         const bool bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
         if ( bNewFencePeriod )
             slot._uploadOffset = 0;
 
-        if ( slot._uploadHeap == nullptr || slot._capacity < slot._uploadOffset + size )
+        uint64 stagingOffset = MathUtil::align( slot._uploadOffset, alignment );
+        if ( slot._uploadHeap == nullptr || slot._capacity < stagingOffset + sizeBytes )
         {
-            const uint64 newCapacity = MathUtil::align( ( slot._uploadOffset + static_cast<uint64>( size ) ) * 2, 65536ull );
+            const uint64 newCapacity = MathUtil::align( ( stagingOffset + sizeBytes ) * 2, 65536ull );
 
             // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다 — 펜스 뒤에 놓아준다.
             if ( slot._uploadHeap != nullptr )
@@ -151,6 +149,7 @@ namespace sw
                 slot._uploadHeap   = nullptr;
                 slot._pMapped      = nullptr;
                 slot._uploadOffset = 0;
+                stagingOffset      = 0;
             }
 
             D3D12_HEAP_PROPERTIES uploadHeap{};
@@ -170,15 +169,15 @@ namespace sw
             if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
                                                                      D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( newHeap.GetAddressOf() ) ) ) )
             {
-                SW_LOG_ERROR( "updateStructuredBuffer: failed to (re)create staging upload buffer (%# bytes)", newCapacity );
-                return;
+                SW_LOG_ERROR( "acquireUploadStaging: failed to (re)create staging upload buffer (%# bytes)", newCapacity );
+                return false;
             }
 
             void* pMapped{ nullptr };
             if ( FAILED( newHeap->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
             {
-                SW_LOG_ERROR( "updateStructuredBuffer: Map failed on staging buffer" );
-                return;
+                SW_LOG_ERROR( "acquireUploadStaging: Map failed on staging buffer" );
+                return false;
             }
 
             slot._uploadHeap = newHeap;
@@ -186,25 +185,21 @@ namespace sw
             slot._capacity   = newCapacity;
         }
 
-        const uint64 stagingOffset = slot._uploadOffset;
-        Memory::copy( static_cast<uint8*>( slot._pMapped ) + stagingOffset, pData, size );
-        slot._uploadOffset = MathUtil::align( stagingOffset + static_cast<uint64>( size ), 256ull );
-
         if ( slot._copyAllocator == nullptr )
         {
             if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
             {
-                SW_LOG_ERROR( "updateStructuredBuffer: failed to create copy command allocator" );
-                return;
+                SW_LOG_ERROR( "acquireUploadStaging: failed to create copy command allocator" );
+                return false;
             }
             utf16 arrName[64]{};
-            swprintf_s( arrName, L"StructuredUploadAllocator%u", _pDevice->_frameRing.currentIndex() );
+            swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
         else if ( bNewFencePeriod && FAILED( slot._copyAllocator->Reset() ) )
         {
-            SW_LOG_ERROR( "updateStructuredBuffer: copy allocator Reset failed" );
-            return;
+            SW_LOG_ERROR( "acquireUploadStaging: copy allocator Reset failed" );
+            return false;
         }
         slot._resetFence = _pDevice->_fenceValue;
 
@@ -212,17 +207,51 @@ namespace sw
         {
             if ( FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ) ) )
             {
-                SW_LOG_ERROR( "updateStructuredBuffer: failed to create copy command list" );
-                return;
+                SW_LOG_ERROR( "acquireUploadStaging: failed to create copy command list" );
+                return false;
             }
         }
         else if ( FAILED( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ) ) )
         {
-            SW_LOG_ERROR( "updateStructuredBuffer: copy command list Reset failed" );
-            return;
+            SW_LOG_ERROR( "acquireUploadStaging: copy command list Reset failed" );
+            return false;
         }
 
-        ID3D12GraphicsCommandList* pList = slot._copyCommandList.Get();
+        slot._uploadOffset = stagingOffset + sizeBytes;
+        outSlotIndex       = slotIndex;
+        outOffset          = stagingOffset;
+        pOutMapped         = slot._pMapped;
+        return true;
+    }
+
+    void D3D12RHIResource::submitUploadSlot( uint32 slotIndex )
+    {
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        if ( slot._copyCommandList == nullptr )
+            return;
+        slot._copyCommandList->Close();
+        ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
+        _pDevice->_commandQueue->ExecuteCommandLists( 1, arrList );
+    }
+
+    void D3D12RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    {
+        if ( buffer == 0 || pData == nullptr || size == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return;
+
+        ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
+        if ( pDest == nullptr )
+            return;
+
+        uint32 slotIndex{ 0 };
+        uint64 stagingOffset{ 0 };
+        void*  pMapped{ nullptr };
+        if ( acquireUploadStaging( size, constant::kConstantBufferAlignment, slotIndex, stagingOffset, pMapped ) == false )
+            return;
+        Memory::copy( static_cast<uint8*>( pMapped ) + stagingOffset, pData, size );
+
+        D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
 
         D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
         {
@@ -253,14 +282,103 @@ namespace sw
         toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toUav );
 
-        pList->Close();
-        ID3D12CommandList* lists[] = { pList };
-        _pDevice->_commandQueue->ExecuteCommandLists( 1, lists );
+        submitUploadSlot( slotIndex );
 
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         }
+    }
+
+    bool D3D12RHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    {
+        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
+        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return false;
+
+        const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
+        RHITextureMipSpan         arrMip[constant::kMaxTextureMipCount]{};
+        const uint32              mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ),
+                                                                       resDesc.Height, resDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+        if ( mipCount == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+                          desc._sizeBytes, static_cast<uint32>( resDesc.Width ), resDesc.Height, static_cast<uint32>( resDesc.MipLevels ) );
+            return false;
+        }
+
+        // 텍스처 복사는 행 피치 256·서브리소스 512 정렬 풋프린트를 요구한다 — 빈틈없는 입력을 풋프린트대로 다시 깐다.
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT arrFootprint[constant::kMaxTextureMipCount]{};
+        UINT                               arrRowCount[constant::kMaxTextureMipCount]{};
+        UINT64                             arrRowSize[constant::kMaxTextureMipCount]{};
+        UINT64                             totalBytes{ 0 };
+        _pDevice->_device->GetCopyableFootprints( &resDesc, 0, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+
+        uint32 slotIndex{ 0 };
+        uint64 stagingOffset{ 0 };
+        void*  pMapped{ nullptr };
+        if ( acquireUploadStaging( totalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
+            return false;
+        // 스테이징 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
+        _pDevice->_device->GetCopyableFootprints( &resDesc, 0, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const RHITextureMipSpan&                  span      = arrMip[mip];
+            const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint = arrFootprint[mip];
+            uint8*                                    pDstBase  = static_cast<uint8*>( pMapped ) + footprint.Offset;
+            const uint32                              rowBytes  = MathUtil::min( span._rowBytes, static_cast<uint32>( arrRowSize[mip] ) );
+            for ( uint32 row = 0; row < arrRowCount[mip]; ++row )
+                Memory::copy( pDstBase + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, span._pData + static_cast<uint64>( row ) * span._rowBytes, rowBytes );
+        }
+
+        D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+
+        // 렌더 타깃이면 추적 중인 상태에서, 아니면 COMMON 에서 출발해 같은 상태로 돌아간다 — 그래야 기존 SRV
+        // 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
+        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            const auto              offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
+                stateBefore = offscreenIt->second._state;
+        }
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource   = pTexture;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+        {
+            barrier.Transition.StateBefore = stateBefore;
+            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            D3D12_TEXTURE_COPY_LOCATION dst{};
+            dst.pResource        = pTexture;
+            dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dst.SubresourceIndex = arrMip[mip]._mip;
+
+            D3D12_TEXTURE_COPY_LOCATION src{};
+            src.pResource       = slot._uploadHeap.Get();
+            src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            src.PlacedFootprint = arrFootprint[mip];
+            pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
+        }
+
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+        {
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.StateAfter  = stateBefore;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+
+        submitUploadSlot( slotIndex );
+        return true;
     }
 
     RHIBufferHandle D3D12RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )

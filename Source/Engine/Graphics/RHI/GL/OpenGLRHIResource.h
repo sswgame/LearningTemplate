@@ -26,6 +26,7 @@ namespace sw
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
+        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;

@@ -271,6 +271,8 @@ namespace sw
         record._width         = desc._width;
         record._height        = desc._height;
         record._format        = static_cast<uint32>( format );
+        record._rhiFormat     = static_cast<uint32>( desc._format );
+        record._mipLevels     = imageInfo.mipLevels;
         record._layout        = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
@@ -334,6 +336,115 @@ namespace sw
             SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
         return _pDevice->_gpuTextures.insert( std::move( record ) );
+    }
+
+    bool VulkanRHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    {
+        VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
+             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
+            return false;
+        if ( pRecord->_bDepthStencil != 0 )
+            return false;
+
+        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        const uint32      mipCount = resolveTextureUploadMips( desc, static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height,
+                                                               pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
+        if ( mipCount == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+                          desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
+            return false;
+        }
+        const uint32 usedBytes = arrMip[mipCount - 1]._offsetBytes + arrMip[mipCount - 1]._sizeBytes;
+
+        // 호스트 가시 스테이징 버퍼에 통째로 올린 뒤 일회성 커맨드버퍼로 밉마다 복사한다. 로드 시점 경로라
+        // 큐가 비기를 기다리는 값싼 동기 방식을 택했다(executeCommandListImmediate 와 같은 이유).
+        const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
+        VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
+        if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: failed to create the staging buffer (%# bytes)", usedBytes );
+            return false;
+        }
+
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = _pDevice->_commandPool;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        VkCommandBuffer cmd{ VK_NULL_HANDLE };
+        if ( vkAllocateCommandBuffers( _pDevice->_device, &allocInfo, &cmd ) != VK_SUCCESS )
+        {
+            destroyBuffer( staging );
+            SW_LOG_ERROR( "uploadTexture2D: failed to allocate the one-shot command buffer" );
+            return false;
+        }
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer( cmd, &beginInfo );
+
+        // transitionImageLayout 은 밉 하나만 다루므로 여기서는 전체 밉 체인 배리어를 직접 쓴다.
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = pRecord->_image;
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = pRecord->_mipLevels;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = 1;
+
+        barrier.oldLayout     = static_cast<VkImageLayout>( pRecord->_layout );
+        barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const RHITextureMipSpan& span = arrMip[mip];
+            VkBufferImageCopy        region{};
+            region.bufferOffset                    = span._offsetBytes;
+            region.bufferRowLength                 = 0; // 0 = 빈틈없는 행
+            region.bufferImageHeight               = 0;
+            region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel       = span._mip;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount     = 1;
+            region.imageExtent                     = { span._width, span._height, 1 };
+            vkCmdCopyBufferToImage( cmd, pStaging->_buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+        }
+
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                              0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkEndCommandBuffer( cmd );
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &cmd;
+        const bool bSubmitted         = ( vkQueueSubmit( _pDevice->_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS );
+        if ( bSubmitted )
+            vkQueueWaitIdle( _pDevice->_graphicsQueue );
+        vkFreeCommandBuffers( _pDevice->_device, _pDevice->_commandPool, 1, &cmd );
+        destroyBuffer( staging );
+
+        if ( bSubmitted == false )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: vkQueueSubmit failed" );
+            return false;
+        }
+        pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        return true;
     }
 
     void VulkanRHIResource::destroyTexture( RHITextureHandle texture )

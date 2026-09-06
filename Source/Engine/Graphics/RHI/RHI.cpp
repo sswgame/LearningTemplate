@@ -84,6 +84,13 @@ namespace sw
     {
     }
 
+    RHITextureUploadDesc::RHITextureUploadDesc() noexcept
+        : _pData{ nullptr }
+        , _sizeBytes{ 0 }
+        , _mipLevels{ 0 }
+    {
+    }
+
     RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
         : _renderPass{ 0 }
         , _arrColorTarget{}

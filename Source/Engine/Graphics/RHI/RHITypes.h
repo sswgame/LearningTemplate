@@ -117,6 +117,9 @@ namespace sw
          */
         inline constexpr uint32 kConstantBufferAlignment = 256;
 
+        /** @brief uploadTexture2D 가 한 번에 받는 밉 수 상한 — 2^16 텍스처의 전체 체인(17단) 을 덮는다. */
+        inline constexpr uint32 kMaxTextureMipCount = 17;
+
         /**
          * @brief CPU 가 GPU 를 앞서갈 수 있는 최대 프레임 수 (= 프레임별 리소스 링 슬롯 수).
          * @details **이 개념의 유일한 출처다.** 프레임마다 따로 있어야 하는 자원 — DX12 커맨드
@@ -517,6 +520,97 @@ namespace sw
         /** @brief 기본 크기/포맷/클리어. */
         RHITextureDesc() noexcept;
     };
+
+    /**
+     * @struct RHITextureUploadDesc
+     * @brief IRHIResource::uploadTexture2D 입력 — 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록
+     * @details DDS 파일의 픽셀 배치 그대로다(DdsImageData::_bytes 를 그대로 넘길 수 있다). 행 패딩은
+     *          백엔드가 필요하면 스스로 맞춘다(DX12 는 256 정렬 풋프린트로 다시 배치, GL 은 UNPACK_ALIGNMENT 1).
+     */
+    struct SW_API RHITextureUploadDesc
+    {
+        const void* _pData;     ///< 밉 0 첫 행부터 (8 bytes)
+        uint32      _sizeBytes; ///< _pData 전체 길이 (4 bytes)
+        uint32      _mipLevels; ///< 올릴 밉 수. 0 이면 텍스처가 가진 밉 전부 (4 bytes)
+
+        /** @brief 빈 업로드(데이터 없음, 밉 전부). */
+        RHITextureUploadDesc() noexcept;
+    };
+
+    /**
+     * @struct RHITextureMipSpan
+     * @brief resolveTextureUploadMips 가 풀어낸 밉 하나의 위치와 크기
+     */
+    struct RHITextureMipSpan
+    {
+        const uint8* _pData{ nullptr }; ///< 이 밉의 첫 바이트
+        uint32       _offsetBytes{ 0 }; ///< RHITextureUploadDesc::_pData 기준 오프셋
+        uint32       _sizeBytes{ 0 };   ///< _rowBytes * _height
+        uint32       _rowBytes{ 0 };    ///< 빈틈없는 한 행의 바이트
+        uint32       _width{ 0 };
+        uint32       _height{ 0 };
+        uint32       _mip{ 0 };
+    };
+
+    /** @brief 비압축 컬러 포맷의 픽셀당 바이트. 깊이/Unknown 은 0 — 업로드 대상이 아니다. */
+    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
+    {
+        switch ( format )
+        {
+            case RHIFormat::R8G8B8A8_UNORM:
+            case RHIFormat::B8G8R8A8_UNORM:
+            case RHIFormat::R32_FLOAT:
+                return 4;
+            case RHIFormat::R16G16B16A16_FLOAT:
+            case RHIFormat::R32G32_FLOAT:
+                return 8;
+            case RHIFormat::R32G32B32_FLOAT:
+                return 12;
+            case RHIFormat::D24_UNORM_S8_UINT:
+            case RHIFormat::Unknown:
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * @brief 업로드 서술체를 밉 배열로 풉니다. 4개 백엔드가 같은 규칙으로 밉 크기·오프셋을 계산해야 하므로 여기 한 곳에 둔다.
+     * @return 채운 밉 수. 포맷이 업로드 불가이거나, 요청 밉이 텍스처 밉보다 많거나, 데이터가 모자라면 0.
+     */
+    inline uint32 resolveTextureUploadMips( const RHITextureUploadDesc& desc, RHIFormat format, uint32 width, uint32 height,
+                                            uint32 textureMipCount, RHITextureMipSpan* pOutSpan, uint32 outCapacity )
+    {
+        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        if ( bytesPerPixel == 0 || desc._pData == nullptr || desc._sizeBytes == 0 || width == 0 || height == 0 || pOutSpan == nullptr )
+            return 0;
+
+        const uint32 mipCount = ( desc._mipLevels == 0 ) ? textureMipCount : desc._mipLevels;
+        if ( mipCount == 0 || mipCount > textureMipCount || mipCount > outCapacity )
+            return 0;
+
+        const uint8* pBase  = static_cast<const uint8*>( desc._pData );
+        uint32       offset = 0;
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
+            const uint32 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1u;
+            const uint32 rowBytes  = mipWidth * bytesPerPixel;
+            const uint32 sizeBytes = rowBytes * mipHeight;
+            if ( offset + sizeBytes > desc._sizeBytes )
+                return 0;
+
+            RHITextureMipSpan& span = pOutSpan[mip];
+            span._pData             = pBase + offset;
+            span._offsetBytes       = offset;
+            span._sizeBytes         = sizeBytes;
+            span._rowBytes          = rowBytes;
+            span._width             = mipWidth;
+            span._height            = mipHeight;
+            span._mip               = mip;
+            offset += sizeBytes;
+        }
+        return mipCount;
+    }
 
     /**
      * @struct RHIRenderPassBeginInfo

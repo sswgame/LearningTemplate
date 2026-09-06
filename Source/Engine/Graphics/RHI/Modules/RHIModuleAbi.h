@@ -27,8 +27,9 @@ namespace sw
      *             ICommandReplayTarget 대신 IRHICommandList를 직접 상속(같은 기록 API 표면을
      *             공유)하도록 표면 자체가 바뀌었으므로 버전을 bump.
      *         v8: IRHIResource 에 unregisterBindlessTexture 추가 — 텍스처/버퍼 인덱스 공간이 다른
-     *             백엔드(DX11/GL/Vulkan)에서 텍스처 SRV 를 버퍼 해제로 넘기던 오염을 끊는다. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v8-2026-09";
+     *             백엔드(DX11/GL/Vulkan)에서 텍스처 SRV 를 버퍼 해제로 넘기던 오염을 끊는다.
+     *         v9: IRHIResource::uploadTexture2D + RHITextureUploadDesc — 처음으로 텍스처에 픽셀을 올리는 길. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v9-2026-09";
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();

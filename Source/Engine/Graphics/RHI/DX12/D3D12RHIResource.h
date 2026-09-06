@@ -26,6 +26,7 @@ namespace sw
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
+        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
@@ -36,6 +37,16 @@ namespace sw
     private:
         /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */
         void releaseBindlessSlot( RHIDescriptorIndex index );
+
+        /**
+         * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당하고 복사 리스트를 열어 둡니다.
+         * @details 얼로케이터는 펜스 구간이 바뀔 때만 Reset 한다 — 같은 구간의 앞선 복사가 GPU 에서 도는 중일 수
+         *          있다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록하고
+         *          submitUploadSlot 으로 닫는다. updateStructuredBuffer / uploadTexture2D 공용.
+         */
+        bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
+        /** @brief acquireUploadStaging 으로 연 복사 리스트를 닫고 그래픽스 큐에 제출합니다. */
+        void submitUploadSlot( uint32 slotIndex );
 
     public:
     private:

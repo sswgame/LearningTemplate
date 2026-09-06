@@ -354,6 +354,85 @@ SW_TEST_CASE( RHITest, BindlessTextureReleaseKeepsBufferIndices )
 }
 
 /**
+ * @brief [RHITest] 텍스처 픽셀 업로드 — 밉 체인 전체, 밉 0 만, 데이터 부족 거부 (4백엔드)
+ * @details 읽어 오는 API 가 아직 없어 내용은 검증하지 못한다 — 성공/거부 계약과 디버그 레이어 무오류만 본다.
+ */
+SW_TEST_CASE( RHITest, UploadTexture2DAllBackends )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    // 4x4 + 2x2 + 1x1 = 21 픽셀 x RGBA 4바이트. 밉마다 다른 색으로 채운다.
+    constexpr uint32 kPixelCount = 16 + 4 + 1;
+    uint8            arrPixel[kPixelCount * 4]{};
+    for ( uint32 pixelIndex = 0; pixelIndex < kPixelCount; ++pixelIndex )
+    {
+        const uint32 mip               = pixelIndex < 16 ? 0u : ( pixelIndex < 20 ? 1u : 2u );
+        arrPixel[pixelIndex * 4 + mip] = 255;
+        arrPixel[pixelIndex * 4 + 3]   = 255;
+    }
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._mipLevels                 = 3;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = 1;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = arrPixel;
+        upload._sizeBytes = sizeof( arrPixel );
+        upload._mipLevels = 0; // 전부
+        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, upload ), "full mip chain upload failed" );
+
+        sw::RHITextureUploadDesc firstMipOnly = upload;
+        firstMipOnly._mipLevels               = 1;
+        firstMipOnly._sizeBytes               = 16 * 4;
+        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, firstMipOnly ), "mip 0 only upload failed" );
+
+        sw::RHITextureUploadDesc tooShort = upload;
+        tooShort._sizeBytes               = 16 * 4; // 밉 3개를 요구하면서 밉 0 분량만 줌
+        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooShort ) == false, "short upload must be rejected" );
+
+        sw::RHITextureUploadDesc tooManyMips = upload;
+        tooManyMips._mipLevels               = 4;
+        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooManyMips ) == false, "mip count beyond the texture must be rejected" );
+
+        const sw::RHIDescriptorIndex srv = pResource->registerBindlessTexture( texture );
+        SW_EXPECT_TRUE( srv != sw::kInvalidDescriptorIndex );
+        if ( srv != sw::kInvalidDescriptorIndex )
+            pResource->unregisterBindlessTexture( srv );
+        pResource->destroyTexture( texture );
+
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for texture upload test" );
+}
+
+/**
  * @brief [RHITest] 커맨드 리스트 생성과 실행
  */
 SW_TEST_CASE( RHITest, CommandListCreationAndExecution )
