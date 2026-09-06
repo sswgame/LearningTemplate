@@ -38,6 +38,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -543,6 +544,19 @@ namespace sw
 
             if ( pActiveScene != nullptr )
             {
+                // 주광은 씬이 갖고, 렌더 스레드는 패킷으로만 받는다 — executePacket 은 _pScene 을
+                // null 로 두므로 렌더 스레드에서 씬을 조회할 수 없다.
+                DirectionalLightComponent* pLight = pActiveScene->findActiveDirectionalLight();
+                if ( pLight != nullptr )
+                {
+                    const float3 dir          = pLight->getLightDirection();
+                    const float3 color        = pLight->getColor();
+                    packet._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
+                    packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
+                    packet._lightViewProj     = pLight->castsShadow() ? pLight->buildShadowViewProj() : float4x4{};
+                    packet._bHasLight         = 1;
+                }
+
                 pActiveScene->ensureDefaultCameras();
                 // 위의 핫리로드/씬 전환/씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다.
                 CameraComponent* pCam = viewCameraProvider.isBound() ? viewCameraProvider() : nullptr;

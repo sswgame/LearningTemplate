@@ -76,6 +76,13 @@ namespace sw
         Material* getMaterial() const { return _pMaterial; }
         /** @brief 활성 게임 카메라를 반환합니다. */
         CameraComponent* getActiveGameCamera() const;
+
+        /**
+         * @brief 씬의 주광입니다. 없으면 nullptr — 렌더러가 기본값으로 폴백합니다.
+         * @details 카메라와 달리 캐시하지 않고 그때그때 찾는다. 프레임당 한 번만 불리고
+         *          (RenderFramePacket 채울 때) 라이트는 보통 한두 개다.
+         */
+        class DirectionalLightComponent* findActiveDirectionalLight() const;
         /** @brief 엔티티가 스폰된 프리팹 애셋 경로를 반환합니다 (없으면 빈 문자열). */
         const string& getEntityPrefabPath( uint64 objectId ) const;
 

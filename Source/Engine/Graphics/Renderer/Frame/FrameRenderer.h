@@ -189,6 +189,20 @@ namespace sw
         void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment );
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
+
+        /**
+         * @brief 이번 프레임의 주광 값입니다. 패킷이 실어 주면 그 값, 아니면 기본값입니다.
+         * @details 예전엔 방향·색·세기·그림자 볼륨이 전부 .cpp 안의 constexpr 이라 씬이 커져도
+         *          그림자 볼륨이 2 유닛 그대로였다.
+         */
+        struct FrameLightState
+        {
+            float4   _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
+            float4   _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
+            float4x4 _shadowViewProj{};
+            uint8    _bHasShadowViewProj{ 0 };
+        };
+        FrameLightState _frameLight;
         /** @brief 카메라에서 뷰/투영을 적용합니다. */
         void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
         /** @brief 키라이트 뷰-투영 행렬을 만듭니다. */

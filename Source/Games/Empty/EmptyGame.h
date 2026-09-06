@@ -42,6 +42,12 @@ namespace sw
          */
         void updateBenchScene( float32 deltaTime );
 
+        /** @brief 격자 한 변의 절반 크기입니다. */
+        static float32 halfExtentOf( uint32 side, float32 spacing );
+
+        /** @brief 씬에 주광을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
+        void spawnBenchLight( Scene* pScene, float32 halfExtent );
+
         /** @brief 격자 전체가 화면에 들어오도록 카메라를 물립니다. */
         void frameBenchCamera( Scene* pScene, uint32 side, float32 spacing );
 

@@ -279,6 +279,7 @@ namespace sw
         ensureTransientResources();
         resetPassCbRing();
         setIdentityWorld( _frameCtx );
+
         updatePassConstants( _frameCtx );
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
@@ -322,6 +323,20 @@ namespace sw
         // 패킷에서는 CPU 스냅샷(인스턴스/배치 목록)만 옮겨온다. 통째로 move하면 직전 프레임에 업로드한
         // GPU 버퍼/디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 생성하는 리크가 됐었다.
         _gpuScene.adoptCpuSnapshot( std::move( packet._gpuScene ) );
+
+        // 주광은 씬이 아니라 패킷으로 온다 — 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
+        if ( packet._bHasLight != 0 )
+        {
+            _frameLight._dirIntensity       = packet._lightDirIntensity;
+            _frameLight._colorAmbient       = packet._lightColorAmbient;
+            _frameLight._shadowViewProj     = packet._lightViewProj;
+            _frameLight._bHasShadowViewProj = 1;
+        }
+        else
+        {
+            _frameLight = FrameLightState{};
+        }
+
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();

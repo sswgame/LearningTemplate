@@ -8,6 +8,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -126,10 +127,41 @@ namespace sw
             _listBenchMesh.push_back( pMesh );
         }
 
+        spawnBenchLight( pScene, halfExtentOf( side, kBenchSpacing ) );
         frameBenchCamera( pScene, side, kBenchSpacing );
 
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#x%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
+    }
+
+    float32 EmptyGame::halfExtentOf( uint32 side, float32 spacing )
+    {
+        return 0.5f * static_cast<float32>( side ) * spacing;
+    }
+
+    void EmptyGame::spawnBenchLight( Scene* pScene, float32 halfExtent )
+    {
+        if ( pScene == nullptr )
+            return;
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+
+        GameObject* pLightObject = pObjects->createGameObject( hashed_string( "BenchKeyLight" ) );
+        if ( pLightObject == nullptr )
+            return;
+        DirectionalLightComponent* pLight = pLightObject->addComponent<DirectionalLightComponent>();
+        if ( pLight == nullptr )
+            return;
+
+        // 그림자 볼륨은 씬을 덮어야 한다. 엔진 기본값은 2 유닛이라 142 유닛 격자에서는
+        // 그림자가 원점 근처 몇 개에만 걸린다.
+        pLight->setShadowExtent( halfExtent * 1.15f );
+        pLight->setShadowDistance( halfExtent * 1.5f );
+        pLight->setCastShadow( true );
+        pLight->setIntensity( 1.6f );
+
+        SW_LOG_INFO( "[Bench] 주광을 만들었습니다 (그림자 볼륨 반경 %#).", static_cast<int32>( halfExtent * 1.15f ) );
     }
 
     void EmptyGame::frameBenchCamera( Scene* pScene, uint32 side, float32 spacing )
@@ -143,7 +175,7 @@ namespace sw
         // 격자 한 변의 절반이 시야각 안에 들어오는 거리로 뺀다. 기본 카메라는 (0, 1.2, 3.2) 라
         // 큐브 5000 개(71x71 = 140 유닛)면 화면에 몇 개밖에 안 걸린다 — 그러면 드로우는 도는데
         // 눈으로 확인할 수가 없다.
-        const float32 halfExtent = 0.5f * static_cast<float32>( side ) * spacing;
+        const float32 halfExtent = halfExtentOf( side, spacing );
         const float32 fovY       = pCamera->getFieldOfViewY();
         const float32 tanHalf    = MathUtil::tan( fovY * 0.5f );
         const float32 distance   = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );
@@ -177,6 +209,11 @@ namespace sw
             position._y     = wave * 0.75f;
             pMesh->setLocalPosition( position );
             pMesh->setLocalRotation( float3{ 0.0f, ( _benchElapsed + phase ) * 45.0f, 0.0f } );
+
+            // 스케일도 흔든다 — 위치·회전만 바꾸면 월드 행렬의 회전/이동 성분만 갱신되므로
+            // 스케일 경로(및 바운드 반지름을 쓰는 컬링)가 검증되지 않는다.
+            const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
+            pMesh->setLocalScale( float3{ scale, scale, scale } );
         }
     }
 } // namespace sw

@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -297,6 +298,23 @@ namespace sw
 
         _bCamerasEnsured = true;
         return true;
+    }
+
+    DirectionalLightComponent* Scene::findActiveDirectionalLight() const
+    {
+        if ( _objectManager == nullptr )
+            return nullptr;
+
+        DirectionalLightComponent* pBest{ nullptr };
+        _objectManager->forEachGameObject( [&]( GameObject* pObj )
+        {
+            if ( pObj == nullptr || pObj->isActiveInHierarchy() == false || pBest != nullptr )
+                return;
+            DirectionalLightComponent* pLight = pObj->getComponent<DirectionalLightComponent>();
+            if ( pLight != nullptr && pLight->isActive() )
+                pBest = pLight;
+        } );
+        return pBest;
     }
 
     void Scene::refreshCameraCache()

@@ -38,7 +38,10 @@ namespace sw
         // 뷰/라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다 — 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
         float4x4 lightViewProj{};
-        buildLightViewProj( ctx, lightViewProj );
+        if ( _frameLight._bHasShadowViewProj != 0 )
+            lightViewProj = _frameLight._shadowViewProj;
+        else
+            buildLightViewProj( ctx, lightViewProj );
         ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
 
         CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
@@ -57,8 +60,8 @@ namespace sw
         const float32 outlineY = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
         const float32 outlineZ = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
 
-        ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, kDefaultKeyLightDirIntensity );
-        ctx._passValues.setFloat4( passConstantNames()._keyLightColor, kDefaultKeyLightColor );
+        ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
+        ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
         ctx._passValues.setFloat4( passConstantNames()._shadowParams, kDefaultShadowParams );
         ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
