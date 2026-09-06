@@ -156,6 +156,27 @@ namespace sw
             _device->CreateSamplerState( &sampDesc, _linearSampler.GetAddressOf() );
         }
 
+        // 풀스크린 삼각형 정점버퍼. **DX11 만 이게 없었다** — 멤버는 선언돼 있고 draw() 가 읽는데
+        // 아무도 만들지 않아 항상 nullptr 이었다. 그래서 메시 VB 없이 그리는 패스(Present/Bloom/
+        // Outline/Tonemap 등 전부)가 정점 없이 그려 아무것도 나오지 않았다. 오래 살아남은 이유는
+        // 오프스크린 스모크가 "크래시 안 났다" 만 봤기 때문이다(RHITest.OffscreenDrawIsReadable 이 그 공백).
+        // 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다 — fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
+        {
+            const RHIVertex arrFullscreenVert[3] = {
+                {{ -1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+                { { 3.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+                { { -1.0f, 3.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+            };
+            D3D11_BUFFER_DESC vbDesc{};
+            vbDesc.Usage     = D3D11_USAGE_IMMUTABLE;
+            vbDesc.ByteWidth = static_cast<UINT>( sizeof( arrFullscreenVert ) );
+            vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+            D3D11_SUBRESOURCE_DATA vbData{};
+            vbData.pSysMem = arrFullscreenVert;
+            if ( FAILED( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ) ) )
+                SW_LOG_WARNING( "Failed to create the fullscreen triangle vertex buffer." );
+        }
+
         SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
         _frameStreamContext = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
         return true;

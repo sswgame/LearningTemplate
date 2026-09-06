@@ -82,7 +82,10 @@ namespace sw
      *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2D).
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "SceneColor 를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "트랜지언트를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+
+    /** @brief `-gv_screenshotAttachment=<이름>` — 덤프할 트랜지언트 첨부 이름. 비면 SceneColor. */
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "덤프할 트랜지언트 이름 (비면 SceneColor)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.

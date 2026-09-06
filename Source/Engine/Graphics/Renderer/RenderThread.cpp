@@ -13,6 +13,7 @@
 namespace sw
 {
     extern string gv_screenshot;
+    extern string gv_screenshotAttachment;
 
     SW_LOG_CALLER( "RenderThread" );
 
@@ -341,8 +342,11 @@ namespace sw
             constexpr uint32 kScreenshotWarmupFrames = 10;
             if ( ++_screenshotFrameCounter >= kScreenshotWarmupFrames )
             {
-                _bScreenshotTaken = 1;
-                _pFrameRenderer->dumpTransientToPpm( FrameRendererUtil::Attachment::kSceneColor, gv_screenshot );
+                _bScreenshotTaken            = 1;
+                const string_view attachment = gv_screenshotAttachment.empty()
+                                                 ? string_view{ FrameRendererUtil::Attachment::kSceneColor }
+                                                 : string_view{ gv_screenshotAttachment };
+                _pFrameRenderer->dumpTransientToPpm( attachment, gv_screenshot );
             }
         }
 

@@ -56,7 +56,8 @@ namespace sw
     }
 
     bool IRHIDevice::executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                                    uint32 width, uint32 height )
+                                                    uint32 width, uint32 height,
+                                                    vector<uint8>* pOutPixels, RHITextureMipSpan* pOutLayout )
     {
         if ( pso == 0 || width == 0 || height == 0 )
             return false;
@@ -118,6 +119,16 @@ namespace sw
             // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.
             executeCommandListImmediate( cmd.get() );
             waitIdle();
+        }
+
+        // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
+        if ( bOk && pOutPixels != nullptr && pOutLayout != nullptr )
+        {
+            if ( pResource->readbackTexture2D( rt, 0, *pOutPixels, *pOutLayout ) == false )
+            {
+                SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2D failed" );
+                bOk = false;
+            }
         }
 
         pResource->destroyTexture( rt );
