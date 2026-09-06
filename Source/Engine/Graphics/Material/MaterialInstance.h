@@ -112,6 +112,8 @@ namespace sw
         RHIBufferHandle    _constantBuffer;
         RHIDescriptorIndex _descriptorIndex;
         IRHIDevice*        _pRHIDevice;
+        /** @brief GPU 자원을 만든 시점의 RHI 디바이스 세대. 달라졌으면 그 디바이스는 이미 없습니다. */
+        uint64 _gpuDeviceGeneration{ 0 };
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

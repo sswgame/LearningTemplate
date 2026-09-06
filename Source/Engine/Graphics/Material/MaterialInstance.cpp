@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -95,8 +96,13 @@ namespace sw
 
     MaterialInstance::~MaterialInstance()
     {
-        if ( _pRHIDevice != nullptr )
+        // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). `_pRHIDevice` 는 생 포인터라
+        // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다 — Mesh::releaseGpu 와 같은 함정이다.
+        if ( _pRHIDevice != nullptr && _gpuDeviceGeneration == RHI::getDeviceGeneration() )
             shutdown( _pRHIDevice );
+        _pRHIDevice      = nullptr;
+        _constantBuffer  = 0;
+        _descriptorIndex = kInvalidDescriptorIndex;
     }
 
     void MaterialInstance::shutdown( IRHIDevice* pRhi )
@@ -204,7 +210,8 @@ namespace sw
             _constantBuffer = pRhi->getResource()->createConstantBuffer( size );
             if ( _constantBuffer == 0 )
                 return false;
-            _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
+            _descriptorIndex     = pRhi->getResource()->registerBindlessResource( _constantBuffer );
+            _gpuDeviceGeneration = RHI::getDeviceGeneration();
         }
         pRhi->getResource()->updateConstantBuffer( _constantBuffer, _listBuffer.data(), size );
         _bGpuDirty = 0;

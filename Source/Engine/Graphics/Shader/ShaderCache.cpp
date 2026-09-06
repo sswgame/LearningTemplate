@@ -139,9 +139,28 @@ namespace sw
         }
 
         // 2순위 (Git 사전 컴파일 정식 바이너리 패스트 패스: Resource/<domain>/shaders/bin/<rhi>/ 또는 .pack)
-        const string  prebakedRelPath = ShaderCacheInternal::makePrebakedRelativePath( desc._filePath, rhiFolder, stageTag, ext );
+        //
+        // **소스보다 오래된 바이너리는 쓰지 않는다.** 예전엔 .dxil 이 있기만 하면 무조건 이겼다.
+        // 그래서 HLSL 을 고쳐도 화면은 그대로였고(리베이크 전까지), 엔진 셰이더에 대해서는
+        // 라이브 컴파일 경로가 사실상 도달 불가였다 — 그 경로를 검증할 방법도 없었던 셈이다.
+        const string prebakedRelPath = ShaderCacheInternal::makePrebakedRelativePath( desc._filePath, rhiFolder, stageTag, ext );
+        bool         bPrebakedUsable = true;
+        if ( currentTimestamp != 0 )
+        {
+            const string prebakedAbsPath = ResourceUtil::getResourcePath( prebakedRelPath );
+            if ( prebakedAbsPath.empty() == false && FileUtil::fileExists( prebakedAbsPath ) )
+            {
+                const uint64 prebakedMtime = FileUtil::getFileTimestamp( prebakedAbsPath );
+                if ( prebakedMtime != 0 && prebakedMtime < currentTimestamp )
+                {
+                    SW_LOG_TRACE( "Pre-baked shader is older than source — recompiling: %#", prebakedRelPath.c_str() );
+                    bPrebakedUsable = false;
+                }
+            }
+        }
+
         vector<uint8> prebakedBytes;
-        if ( ResourceUtil::readBinaryResource( prebakedRelPath, prebakedBytes ) && prebakedBytes.empty() == false )
+        if ( bPrebakedUsable && ResourceUtil::readBinaryResource( prebakedRelPath, prebakedBytes ) && prebakedBytes.empty() == false )
         {
             SW_LOG_TRACE( "Loaded pre-baked shader binary: %# (%zu bytes)", prebakedRelPath.c_str(), prebakedBytes.size() );
             ShaderCompileResult result{};

@@ -42,18 +42,27 @@ namespace sw
          */
         void updateBenchScene( float32 deltaTime );
 
+        /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
+        static float4 makeBenchColor( uint32 index );
+
         /** @brief 격자 한 변의 절반 크기입니다. */
         static float32 halfExtentOf( uint32 side, float32 spacing );
 
         /** @brief 씬에 주광을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
         void spawnBenchLight( Scene* pScene, float32 halfExtent );
 
-        /** @brief 격자 전체가 화면에 들어오도록 카메라를 물립니다. */
+        /** @brief 씬의 모든 카메라를 격자에 맞춥니다(에디터 뷰포트 카메라 포함). */
         void frameBenchCamera( Scene* pScene, uint32 side, float32 spacing );
+        /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */
+        void frameOneCamera( class CameraComponent* pCamera, uint32 side, float32 spacing );
 
         /** @brief 벤치 큐브. 씬이 이들을 소유하며, 벤치 실행 중에는 파괴되지 않습니다. */
         vector<MeshComponent*> _listBenchMesh;
         /** @brief 애니메이션 누적 시간. */
         float32 _benchElapsed{ 0.0f };
+        /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
+        uint32 _benchGridSide{ 0 };
+        /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
+        uint8 _bRefreshedCameras{ 0 };
     };
 } // namespace sw

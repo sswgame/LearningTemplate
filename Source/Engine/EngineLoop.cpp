@@ -69,6 +69,16 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
 
     /**
+     * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
+     * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
+     *          경로에 실제 부하를 거는 유일한 방법이다.
+     * @warning **DX12 에서 100% 크래시한다.** 렌더 중 상수버퍼를 만들면서 커맨드 얼로케이터가
+     *          사용 중에 Reset 되는 기존 버그(간헐 3/8)를 확실히 터뜨린다. 그래서 기본은 꺼 두되,
+     *          그 버그를 재현·수정할 때 쓰라고 남겨 둔다. DX11/Vulkan/GL 은 정상이다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
+
+    /**
      * @brief 프로파일 통계에서 버리는 초반 프레임 수.
      * @details 셰이더 컴파일·PSO 생성·트랜지언트 할당이 첫 프레임들을 크게 부풀린다. 섞으면
      *          평균이 그 한 번에 끌려가 아무것도 못 읽는다.

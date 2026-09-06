@@ -78,7 +78,28 @@ namespace sw
 
     void VulkanRHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        updateConstantBuffer( buffer, pData, size );
+        // updateConstantBuffer 로 넘기면 안 된다. 그쪽은 `(frame % kMaxFrameCountInFlight) * slotSize`
+        // 링 오프셋에 쓰는데, 그 링은 createConstantBuffer 가 `size * kMaxFrameCountInFlight` 로
+        // 잡아 준 버퍼에만 존재한다. createStructuredBuffer 는 정확히 한 프레임 크기만 잡으므로
+        // 프레임 1부터 버퍼 밖을 매핑한다 — 인스턴스 버퍼 400 x 96 B = 0x9600 에서
+        // "offset 0x9600 plus size 0x9600 oversteps total array size 0x9600" 이 그것이고,
+        // 그 덮어쓰기가 메모리를 깨뜨려 vkAcquireNextImageKHR 가 매 프레임 DEVICE_LOST(-4) 를 냈다.
+        // 매 프레임 구조버퍼를 갱신하는 씬이 없어서 한 번도 드러나지 않았을 뿐이다.
+        //
+        // 구조버퍼는 링이 아니므로 항상 오프셋 0 이다. (GPU 가 직전 프레임을 아직 읽고 있을 수 있는
+        // CPU/GPU 해저드는 남는다 — 그건 프레임 간 찢어짐이지 메모리 손상이 아니다. 진짜 해결은
+        // 구조버퍼도 링으로 잡고 바인딩 쪽이 프레임 슬롯을 가리키게 하는 것인데, bindless SRV 가
+        // 버퍼 전체를 한 번 등록하는 구조라 별도 설계가 필요하다.)
+        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        if ( pRecord == nullptr || pData == nullptr || size == 0 || pRecord->_memory == VK_NULL_HANDLE )
+            return;
+
+        void* pMapped{ nullptr };
+        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS )
+        {
+            Memory::copy( pMapped, pData, size );
+            vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+        }
     }
 
     RHIBufferHandle VulkanRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
