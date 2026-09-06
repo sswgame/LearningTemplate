@@ -15,24 +15,6 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderBindingBinder" );
 
-    namespace
-    {
-        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` → `"ShadowMap"` (레지스트리 조회 키). */
-        string canonicalResourceName( string_view identifier, bool bStripIndexSuffix )
-        {
-            string_view name = identifier;
-            if ( name.size() > 2 && name[0] == 'g' && name[1] == '_' )
-                name = name.substr( 2 );
-            if ( bStripIndexSuffix && name.size() > 5 )
-            {
-                const string_view suffix = name.substr( name.size() - 5 );
-                if ( suffix == "Index" )
-                    name = name.substr( 0, name.size() - 5 );
-            }
-            return string( name );
-        }
-    } // namespace
-
     // ------------------------------------------------------------------------------
     // PassConstantValues
     // ------------------------------------------------------------------------------
@@ -106,71 +88,57 @@ namespace sw
         if ( layout.isEmpty() )
             return;
 
-        IRHIResource* pResource = device.getResource();
-
-        // 1) 엔진 CB 크기 산정 (모든 non-Material CB 의 최대 크기)
+        IRHIResource*       pResource = device.getResource();
         const hashed_string materialCbName{ shaderslot::cbname::kMaterial };
-        uint32              engineCbSize = 0;
-        for ( const ShaderBindingSlot& slot : layout.getSlots() )
-        {
-            if ( slot._kind != ShaderBindingKind::ConstantBuffer || slot._name == materialCbName )
-                continue;
-            uint32 slotEnd = slot._cbTotalSize;
-            for ( const ShaderVariableInfo& member : slot._listCbMember )
-                slotEnd = MathUtil::max( slotEnd, member._offset + member._size );
-            engineCbSize = MathUtil::max( engineCbSize, slotEnd );
-        }
 
-        // 2) 엔진 CB 바이트 버퍼 구성 (리플렉션 멤버 이름 ← PassConstantValues)
+        // 1) 엔진 CB 채우기.
+        //    크기·멤버 키·자동 인덱스 키는 전부 레이아웃 빌드 때 구워 뒀다(ShaderBindingLayout::
+        //    buildBindPlan). 예전엔 드로우마다 슬롯/멤버를 훑어 크기를 다시 구하고, 멤버 이름으로
+        //    hashed_string 을 만들고(전역 intern 테이블 조회), canonical 이름을 string 으로 새로
+        //    할당했다 — 전부 PSO 마다 한 번이면 되는 일이라 드로우 경로에서 걷어냈다.
+        const uint32 engineCbSize = layout.getEngineCbSize();
         if ( engineCbSize > 0 && engineCb._buffer != 0 && pResource != nullptr )
         {
-            vector<uint8> cbBytes;
-            cbBytes.assign( MathUtil::align( engineCbSize, 16u ), 0 );
+            // 드로우마다 힙에서 새로 잡지 않는다. 병렬 패스 기록이 여러 스레드에서 이 함수를
+            // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.
+            thread_local vector<uint8> s_cbBytes;
+            const uint32               alignedSize = MathUtil::align( engineCbSize, 16u );
+            s_cbBytes.assign( alignedSize, 0 );
 
-            for ( const ShaderBindingSlot& slot : layout.getSlots() )
+            for ( const ShaderEngineCbMember& member : layout.getEngineCbMembers() )
             {
-                if ( slot._kind != ShaderBindingKind::ConstantBuffer || slot._name == materialCbName )
-                    continue;
+                uint32       valueSize = 0;
+                const uint8* pValue    = values.find( member._valueKey, valueSize );
 
-                for ( const ShaderVariableInfo& member : slot._listCbMember )
+                // 명시 값이 없고 `g_<Name>Index` 패턴이면 레지스트리에서 텍스처/버퍼 bindless 인덱스를 채운다.
+                // 해결 실패해도 이 멤버는 반드시 INVALID(0xFFFFFFFF) 로 채운다 — 0 으로 두면 셰이더가 힙 0번을
+                // 오독한다 (SwLoadInstanceWorld / SW_SampleIndex 는 SW_INVALID_INDEX 비교로 폴백).
+                uint32 autoIndex = kInvalidDescriptorIndex;
+                if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                 {
-                    const hashed_string memberKey( static_cast<std::string_view>( member._name ) );
-
-                    uint32       valueSize = 0;
-                    const uint8* pValue    = values.find( memberKey, valueSize );
-
-                    // 명시 값이 없고 `g_<Name>Index` 패턴이면 레지스트리에서 텍스처/버퍼 bindless 인덱스를 채운다.
-                    // 해결 실패해도 이 멤버는 반드시 INVALID(0xFFFFFFFF) 로 채운다 — 0 으로 두면 셰이더가 힙 0번을
-                    // 오독한다 (SwLoadInstanceWorld / SW_SampleIndex 는 SW_INVALID_INDEX 비교로 폴백).
-                    uint32 autoIndex = kInvalidDescriptorIndex;
-                    if ( ( pValue == nullptr || valueSize == 0 ) && member._size == sizeof( uint32 ) &&
-                         member._name.find( "Index" ) != string::npos )
+                    const RegisteredTexture* pTex = registry.findTexture( member._autoIndexKey );
+                    if ( pTex != nullptr )
                     {
-                        const string             baseName = canonicalResourceName( static_cast<std::string_view>( member._name ), true );
-                        const RegisteredTexture* pTex     = registry.findTexture( hashed_string( baseName.c_str() ) );
-                        if ( pTex != nullptr )
-                        {
-                            autoIndex = pTex->_srv;
-                        }
-                        else
-                        {
-                            const RegisteredBuffer* pBuffer = registry.findBuffer( hashed_string( baseName.c_str() ) );
-                            if ( pBuffer != nullptr )
-                                autoIndex = pBuffer->_index;
-                        }
-                        pValue    = reinterpret_cast<const uint8*>( &autoIndex );
-                        valueSize = sizeof( uint32 );
+                        autoIndex = pTex->_srv;
                     }
-
-                    if ( pValue == nullptr || valueSize == 0 )
-                        continue;
-                    const uint32 writeSize = MathUtil::min( valueSize, member._size );
-                    if ( member._offset + writeSize <= cbBytes.size() )
-                        Memory::copy( cbBytes.data() + member._offset, pValue, writeSize );
+                    else
+                    {
+                        const RegisteredBuffer* pBuffer = registry.findBuffer( member._autoIndexKey );
+                        if ( pBuffer != nullptr )
+                            autoIndex = pBuffer->_index;
+                    }
+                    pValue    = reinterpret_cast<const uint8*>( &autoIndex );
+                    valueSize = sizeof( uint32 );
                 }
+
+                if ( pValue == nullptr || valueSize == 0 )
+                    continue;
+                const uint32 writeSize = MathUtil::min( valueSize, member._size );
+                if ( member._offset + writeSize <= s_cbBytes.size() )
+                    Memory::copy( s_cbBytes.data() + member._offset, pValue, writeSize );
             }
 
-            pResource->updateConstantBuffer( engineCb._buffer, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
+            pResource->updateConstantBuffer( engineCb._buffer, s_cbBytes.data(), static_cast<uint32>( s_cbBytes.size() ) );
         }
 
         // 3) 슬롯별 바인딩
@@ -192,27 +160,8 @@ namespace sw
                     break;
                 }
                 case ShaderBindingKind::Texture:
-                {
-                    if ( bNativeBindless )
-                        break; // 인덱스는 이미 CB 에 기록됨
-                    const string             key  = canonicalResourceName( slot._name.c_str(), false );
-                    const RegisteredTexture* pTex = registry.findTexture( hashed_string( key.c_str() ) );
-                    if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
-                        cmd.bindShaderResource( pTex->_srv, slot._registerIndex );
-                    break;
-                }
                 case ShaderBindingKind::StructuredBuffer:
-                {
-                    // 텍스처와 달리 구조버퍼는 "네이티브 bindless(텍스처 샘플링)" 백엔드라도 항상 명시 바인딩이
-                    // 필요할 수 있다 (Vulkan: 텍스처는 네이티브지만 그래픽스 storage buffer 는 디스크립터셋
-                    // 바인딩 필요). 스킵 여부는 각 백엔드 bindStructuredBuffer 가 자체 판단한다
-                    // (DX12 는 _bHeapDirectlyIndexed 면 내부에서 no-op).
-                    const string            key     = canonicalResourceName( slot._name.c_str(), false );
-                    const RegisteredBuffer* pBuffer = registry.findBuffer( hashed_string( key.c_str() ) );
-                    if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
-                        cmd.bindStructuredBuffer( pBuffer->_index, slot._registerIndex );
-                    break;
-                }
+                    break; // 아래 getResourceBinds() 표에서 한 번에 처리한다
                 case ShaderBindingKind::Sampler:
                 case ShaderBindingKind::RwStructuredBuffer:
                 case ShaderBindingKind::RwTexture:
@@ -220,6 +169,28 @@ namespace sw
                 default:
                     break;
             }
+        }
+
+        // 3) 텍스처·구조버퍼 — 조회 키는 레이아웃이 이미 canonical 로 구워 뒀다.
+        for ( const ShaderResourceBind& bind : layout.getResourceBinds() )
+        {
+            if ( bind._kind == ShaderBindingKind::Texture )
+            {
+                if ( bNativeBindless )
+                    continue; // 인덱스는 이미 CB 에 기록됨
+                const RegisteredTexture* pTex = registry.findTexture( bind._lookupKey );
+                if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
+                    cmd.bindShaderResource( pTex->_srv, bind._registerIndex );
+                continue;
+            }
+
+            // 텍스처와 달리 구조버퍼는 "네이티브 bindless(텍스처 샘플링)" 백엔드라도 항상 명시 바인딩이
+            // 필요할 수 있다 (Vulkan: 텍스처는 네이티브지만 그래픽스 storage buffer 는 디스크립터셋
+            // 바인딩 필요). 스킵 여부는 각 백엔드 bindStructuredBuffer 가 자체 판단한다
+            // (DX12 는 _bHeapDirectlyIndexed 면 내부에서 no-op).
+            const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
+            if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
+                cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
         }
     }
 } // namespace sw
