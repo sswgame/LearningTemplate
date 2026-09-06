@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <vulkan/vulkan.h>
@@ -23,31 +24,6 @@ namespace sw
                 if ( engine::areEngineServicesBound() )
                     return engine::getShaderCache().getOrCompile( desc );
                 return ShaderCompiler::compileHLSL( desc );
-            }
-
-            static inline VkFormat toVulkanTextureFormat( RHIFormat format )
-            {
-                switch ( format )
-                {
-                    case RHIFormat::R8G8B8A8_UNORM:
-                        return VK_FORMAT_R8G8B8A8_UNORM;
-                    case RHIFormat::B8G8R8A8_UNORM:
-                        return VK_FORMAT_B8G8R8A8_UNORM;
-                    case RHIFormat::R16G16B16A16_FLOAT:
-                        return VK_FORMAT_R16G16B16A16_SFLOAT;
-                    case RHIFormat::D24_UNORM_S8_UINT:
-                        return VK_FORMAT_D24_UNORM_S8_UINT;
-                    case RHIFormat::R32G32B32_FLOAT:
-                        return VK_FORMAT_R32G32B32_SFLOAT;
-                    case RHIFormat::R32G32_FLOAT:
-                        return VK_FORMAT_R32G32_SFLOAT;
-                    case RHIFormat::R32_FLOAT:
-                        return VK_FORMAT_R32_SFLOAT;
-                    case RHIFormat::Unknown: ///< 첨부 없음 — Vulkan 에는 대응 값이 없다.
-                    default:
-                        break;
-                }
-                return VK_FORMAT_UNDEFINED;
             }
         };
     } // namespace
@@ -363,7 +339,7 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
             const RHIRenderPassAttachment& att     = desc._listColorAttachment[colorIndex];
-            attachments[colorIndex].format         = VulkanRHIResourceInternal::toVulkanTextureFormat( att._format );
+            attachments[colorIndex].format         = VulkanRHIDeviceInternal::toVulkanTextureFormat( att._format );
             attachments[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
             attachments[colorIndex].loadOp         = toLoadOp( att._loadOp );
             attachments[colorIndex].storeOp        = toStoreOp( att._storeOp );
@@ -641,7 +617,7 @@ namespace sw
         if ( desc._bIsUnorderedAccess )
             usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
-        const VkFormat requested = VulkanRHIResourceInternal::toVulkanTextureFormat( desc._format );
+        const VkFormat requested = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._format );
         VkFormat       format    = requested;
         if ( desc._bIsDepthStencil != 0 || desc._format == sw::RHIFormat::D24_UNORM_S8_UINT )
         {

@@ -32,6 +32,9 @@ set(SW_RHI_VULKAN_DEVICE_SOURCES
     "${swRhiRoot}/Vulkan/VulkanRHICommandContext.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHICommandList.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIDevice.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIDeviceDescriptor.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIDeviceInit.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIDeviceRenderPass.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIResource.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHISwapChain.cpp"
 )
