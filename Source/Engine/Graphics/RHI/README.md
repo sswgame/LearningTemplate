@@ -42,7 +42,6 @@ RHI/
 | `<B>RHIResourceBindless` | 리소스를 인덱스로 접근 가능하게 등록 | O | O | O | O |
 | `<B>RHICommandContext` | 드로우·디스패치·바인딩 기록 | O | O | O | O |
 | `<B>RHICommandList` | 독립 기록 단위 | O | O | O | O |
-| `<B>RHISwapChain` | 화면 출력 | O | O | O | O |
 
 **빈 칸은 빠뜨린 것이 아니라 그 API 에 개념이 없다는 뜻입니다.**
 
@@ -53,6 +52,10 @@ RHI/
   "바인딩할 자리를 미리 선언해 두는" 모델이고, 이게 두 세대의 가장 큰 차이입니다.
 - `RenderPass` 가 Vulkan 에만 있는 이유: Vulkan 만 렌더패스/프레임버퍼를 **미리 만들어 캐시**해야
   합니다. 다른 API 는 렌더타깃을 그때그때 바인딩합니다.
+- **SwapChain 파일이 없는 이유**: 프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice`
+  에 있고, 스왑체인 핸들·백버퍼는 디바이스가 소유합니다. 예전에 `IRHISwapChain` 이 있었지만 상태를
+  하나도 갖지 않고 이름만 책임지는 껍데기였습니다(`55848521` 에서 제거). 진짜 스왑체인 객체로
+  만드는 것은 아래 "남은 과제" 참고.
 
 ## 읽는 순서 (처음이라면)
 
@@ -69,3 +72,28 @@ RHI/
 - `SW_RHI_AS_MODULES` (기본 ON) 이면 백엔드는 별도 DLL 입니다. 그래서 Engine 의 전역 변수를
   백엔드에서 그냥 `extern` 으로 참조할 수 없습니다 — 정책은 Engine 이 정하고 디바이스는
   메커니즘만 갖는 형태로 넘깁니다(`IRHIDevice::setImmediateSubmit` 참고).
+
+## 남은 과제 — 스왑체인을 진짜 객체로
+
+지금은 스왑체인 상태가 디바이스에 있습니다.
+
+```
+Vulkan  _surface, _swapChain, _listSwapChainImage, _swapChainImageFormat,
+        _swapChainExtentWidth/Height, _listSwapChainImageView,
+        _listImageAvailableSemaphore, _listRenderFinishedSemaphore
+DX12    _swapChain, _rtvHeap, _listRenderTarget, _frameIndex, _bufferCount
+```
+
+상용 엔진은 이걸 창(뷰포트)당 객체가 소유합니다(언리얼 `FRHIViewport` / `VulkanSwapChain`).
+다중 창·다중 뷰포트를 지원하려면 그 구조가 필요합니다.
+
+**착수 전에 알아 둘 것** (2026-09-06 측정)
+
+- 상태를 만지는 지점: DX12 56곳, Vulkan 98곳. `_frameIndex`(DX12) / `_currentFrame`(Vulkan) 은
+  CommandContext 와 Resource 까지 씁니다
+- `_currentFrame` 은 **스왑체인 이미지 인덱스이자 인플라이트 프레임 슬롯**이라 소유자가 하나로
+  정해지지 않습니다. 디스크립터 링·커맨드 버퍼·펜스가 모두 이 값을 씁니다 — 선행 정리가 필요합니다
+- 인터페이스도 `beginFrame`/`endFrame` 이 아니라 `acquireNextImage`/`present` 로 바뀌어야
+  이름이 거짓말을 하지 않습니다
+- 이 코드는 이 프로젝트에서 GPU 행을 여러 번 냈습니다(`4d99eedb`, `ae7fb078`). 백엔드 하나씩,
+  매 단계 4백엔드 매트릭스로 검증하며 진행할 것
