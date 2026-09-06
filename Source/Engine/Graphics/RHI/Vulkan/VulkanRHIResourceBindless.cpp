@@ -24,12 +24,6 @@ namespace sw
     {
         struct VulkanRHIResourceInternal
         {
-            static ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
-            {
-                if ( engine::areEngineServicesBound() )
-                    return engine::getShaderCache().getOrCompile( desc );
-                return ShaderCompiler::compileHLSL( desc );
-            }
         };
     } // namespace
 } // namespace sw

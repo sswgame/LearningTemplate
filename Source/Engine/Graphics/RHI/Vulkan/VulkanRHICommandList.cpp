@@ -15,6 +15,7 @@ namespace sw
         , _state{}
         , _context{ pDevice, _entry._buffer, &_state }
     {
+        _pContext = &_context;
     }
 
     VulkanRHICommandList::~VulkanRHICommandList()

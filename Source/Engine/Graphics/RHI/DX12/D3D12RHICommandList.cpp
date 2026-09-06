@@ -14,6 +14,7 @@ namespace sw
         , _state{}
         , _context{ pDevice, _entry._list.Get(), &_state }
     {
+        _pContext = &_context;
     }
 
     D3D12RHICommandList::~D3D12RHICommandList()

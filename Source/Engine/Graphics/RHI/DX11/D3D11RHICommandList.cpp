@@ -34,6 +34,7 @@ namespace sw
         , _pFinishedList{ nullptr }
         , _context{ pDevice, _pNativeContext.Get() }
     {
+        _pContext = &_context;
     }
 
     void D3D11RHICommandList::beginCommandList()

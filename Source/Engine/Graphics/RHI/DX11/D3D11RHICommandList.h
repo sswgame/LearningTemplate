@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/RHICommandListForward.h"
+#include "Engine/Graphics/RHI/RHICommandListForwarder.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -30,7 +30,7 @@ namespace sw
      *          스레드에서 발행한 Immediate Context 호출 순서가 곧 실행 순서이므로(Vulkan의 세마포어
      *          재정렬 문제 없음) 프레임 스트림의 스왑체인 begin/end 호출과 섞여도 순서가 보장된다.
      */
-    class D3D11RHICommandList : public IRHICommandList
+    class D3D11RHICommandList : public RHICommandListForwarder<D3D11RHICommandContext>
     {
     public:
         /** @brief 자신의 네이티브 Deferred Context를 만듭니다. */
@@ -47,8 +47,6 @@ namespace sw
 
         void beginCommandList() override;
         void endCommandList() override;
-
-        SW_FORWARD_RHI_COMMAND_LIST( _context )
 
     private:
         /** @brief 디바이스에 Deferred Context 생성을 요청합니다. */

@@ -8,7 +8,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/RHICommandListForward.h"
+#include "Engine/Graphics/RHI/RHICommandListForwarder.h"
 
 namespace sw
 {
@@ -19,12 +19,15 @@ namespace sw
      *          상태 없이 매 호출을 즉시 GL API로 발행한다. 이 리스트는 그 컨텍스트를 그대로 감싸 호출을
      *          즉시 전달할 뿐, begin/end에서 별도로 열고 닫을 자원이 없다.
      */
-    class OpenGLRHICommandList : public IRHICommandList
+    class OpenGLRHICommandList : public RHICommandListForwarder<OpenGLRHICommandContext>
     {
     public:
         explicit OpenGLRHICommandList( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice }
-            , _context{ pDevice } {}
+            , _context{ pDevice }
+        {
+            _pContext = &_context;
+        }
         ~OpenGLRHICommandList() override = default;
 
         OpenGLRHICommandList( const OpenGLRHICommandList& )            = delete;
@@ -38,8 +41,6 @@ namespace sw
                 _pDevice->bindGraphicsContext();
         }
         void endCommandList() override {}
-
-        SW_FORWARD_RHI_COMMAND_LIST( _context )
 
     private:
         OpenGLRHIDevice*        _pDevice;

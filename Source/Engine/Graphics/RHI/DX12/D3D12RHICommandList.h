@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/RHICommandListForward.h"
+#include "Engine/Graphics/RHI/RHICommandListForwarder.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -34,7 +34,7 @@ namespace sw
      *          재사용되는 경우(`FrameRenderer::_frameCmd`)에도 같은 쌍을 다시 Reset 하지 않고 매
      *          `beginCommandList` 마다 쌍을 교체한다 — 같은 계약 위반이기 때문이다.
      */
-    class D3D12RHICommandList : public IRHICommandList
+    class D3D12RHICommandList : public RHICommandListForwarder<D3D12RHICommandContext>
     {
     public:
         /** @brief 디바이스 풀에서 리스트+전용 얼로케이터 쌍을 빌립니다(Close 상태). */
@@ -52,8 +52,6 @@ namespace sw
 
         void beginCommandList() override;
         void endCommandList() override;
-
-        SW_FORWARD_RHI_COMMAND_LIST( _context )
 
     private:
         D3D12RHIDevice*        _pDevice;

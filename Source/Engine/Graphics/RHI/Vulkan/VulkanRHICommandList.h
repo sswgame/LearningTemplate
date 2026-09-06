@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/RHICommandListForward.h"
+#include "Engine/Graphics/RHI/RHICommandListForwarder.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
 namespace sw
@@ -24,7 +24,7 @@ namespace sw
      *          프레임 스트림을 그 지점에서 잘라 [지금까지의 세그먼트][이 리스트][새 세그먼트] 순서로
      *          잇고 `endFrame` 에서 한 번에 제출한다 — 같은 큐의 제출 순서가 곧 실행 순서다.
      */
-    class VulkanRHICommandList : public IRHICommandList
+    class VulkanRHICommandList : public RHICommandListForwarder<VulkanRHICommandContext>
     {
     public:
         /** @brief 디바이스 풀에서 커맨드 풀 + 버퍼 쌍을 빌립니다. */
@@ -40,8 +40,6 @@ namespace sw
 
         void beginCommandList() override;
         void endCommandList() override;
-
-        SW_FORWARD_RHI_COMMAND_LIST( _context )
 
     private:
         VulkanRHIDevice*        _pDevice{ nullptr };
