@@ -24,18 +24,9 @@ struct DrawIndirectCommand
 	uint startInstance;
 };
 
-#if defined(VULKAN)
-SW_DECLARE_CBUFFER( CullParams, 0 )
-{
-	float4 g_FrustumPlanes[6];
-	uint   g_InstanceCount;
-	uint   g_BatchCount;
-	uint2  g_Pad;
-};
-SW_DECLARE_STRUCTURED_BUFFER_SPACE( GpuInstance, g_Instances, 0, 6 );
-SW_DECLARE_RW_STRUCTURED_BUFFER_SPACE( DrawIndirectCommand, g_IndirectArgs, 0, 7 );
-#elif defined(OPENGL)
-SW_DECLARE_CBUFFER( CullParams, 0 )
+// 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 인스턴스 읽기 버퍼는 t0, 인자 쓰기 버퍼는 u0.
+// 백엔드별 위치(Vulkan 세트 / GL SSBO 번호)는 common.hlsli 의 선언 매크로가 계약대로 정한다 — 여기서 분기하지 않는다.
+SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
 	float4 g_FrustumPlanes[6];
 	uint   g_InstanceCount;
@@ -44,17 +35,6 @@ SW_DECLARE_CBUFFER( CullParams, 0 )
 };
 SW_DECLARE_STRUCTURED_BUFFER( GpuInstance, g_Instances, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 );
-#else
-SW_DECLARE_CBUFFER( CullParams, 0 )
-{
-	float4 g_FrustumPlanes[6];
-	uint   g_InstanceCount;
-	uint   g_BatchCount;
-	uint2  g_Pad;
-};
-SW_DECLARE_STRUCTURED_BUFFER( GpuInstance, g_Instances, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( DrawIndirectCommand, g_IndirectArgs, 0 );
-#endif
 
 bool IsVisible(float3 center, float radius)
 {

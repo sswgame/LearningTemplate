@@ -57,6 +57,11 @@ namespace sw
         }
     } // namespace
 
+    ShaderBindingKind ShaderBindingLayout::kindFromTypeLabel( string_view typeLabel )
+    {
+        return shaderBindingKindFromTypeLabel( typeLabel );
+    }
+
     ShaderBindingLayout ShaderBindingLayout::build( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
     {
         ShaderBindingLayout layout;

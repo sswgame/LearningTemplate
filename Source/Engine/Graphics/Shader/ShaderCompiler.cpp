@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Graphics/Shader/ShaderBaker.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
@@ -452,8 +453,11 @@ namespace sw
                         listArgument.push_back( L"-fvk-b-shift" );
                         listArgument.push_back( L"16" );
                         listArgument.push_back( L"0" );
+                        // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0) 이 정한다 — common.hlsli 의 OPENGL 용
+                        // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트 무관.
+                        static const wstring s_uavShift = StringUtil::utf8ToUtf16( to_string( shaderslot::gl::kUavBinding0 ).c_str() );
                         listArgument.push_back( L"-fvk-u-shift" );
-                        listArgument.push_back( L"48" );
+                        listArgument.push_back( s_uavShift.c_str() );
                         listArgument.push_back( L"0" );
                     }
 

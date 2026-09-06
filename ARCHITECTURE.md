@@ -55,6 +55,7 @@ App은 게임이나 에디터 클래스를 직접 알지 못하며 오직 C-ABI(
 DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입니다.
 - **동작 원리**: `IRHIDevice` 인터페이스를 통해 RHI 백엔드를 DLL 형태로 동적으로 불러옵니다(`SW_RHI_AS_MODULES=ON`).
 - **Caps**: 현재 모든 백엔드는 Bindless(바인드리스) 텍스처 접근과 Compute Root Constants(작은 UBO/CB)를 에뮬레이션 또는 네이티브로 지원합니다.
+- **바인딩 계약**: 레지스터 ↔ 백엔드 바인딩 위치의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다. HLSL 과 C++(`ShaderBindingSlots.h`)가 같은 파일을 include 하고, 4 백엔드는 그 상수로만 바인딩합니다. `ShaderBindingContract::validate` 가 PSO 레이아웃 빌드·베이킹·테스트(`ShaderBindingContractTest.AllBakedShadersMatchContract`, nogpu)에서 구운 바이너리의 리플렉션을 계약과 대조하므로, 셰이더 선언·헤더·백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패합니다. 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 겁니다.
 - **명령 기록 (Command List)**: 렌더 스레드 또는 메인 스레드에서 GPU 명령을 모은 뒤, 한 번에 큐에 제출(Submit)하는 지연(Deferred) 방식을 씁니다.
 
 ### 4. RenderPass vs Render Pipeline

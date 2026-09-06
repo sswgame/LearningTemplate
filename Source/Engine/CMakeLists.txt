@@ -52,6 +52,8 @@ find_package(ZLIB REQUIRED)
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+# 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다 — ShaderBindingSlots.h 가 include 한다.
+target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
 target_link_libraries(Engine
     PUBLIC
     sw_public_source_includes

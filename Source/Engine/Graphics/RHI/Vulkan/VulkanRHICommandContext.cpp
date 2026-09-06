@@ -152,19 +152,18 @@ namespace sw
 
     void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        VkCommandBuffer cmd = commandBuffer();
-        if ( _pDevice->supportsNativeBindlessSampling() )
-            return;
-
-        VkDescriptorSet       descSet    = VK_NULL_HANDLE;
-        const VkDescriptorSet textureSet = _pDevice->registeredTextureSetAt( index );
-        if ( textureSet != VK_NULL_HANDLE && textureSet != _pDevice->_bindlessTextureSet )
-            descSet = textureSet;
-
-        if ( descSet != VK_NULL_HANDLE )
+        // Vulkan 은 항상 네이티브 bindless(set 1 배열)로 샘플링한다 — 계약(bindingslots.hlsli)에 Vulkan 용 텍스처
+        // 슬롯 세트는 없다. 예전 에뮬 경로는 set 2+slot 에 걸어 slot 2 가 정적 샘플러 세트(4)를 덮을 수 있었다.
+        (void)index;
+        (void)slot;
+        if ( _pDevice->supportsNativeBindlessSampling() == false )
         {
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 2 + slot, 1, &descSet, 0, nullptr );
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 2 + slot, 1, &descSet, 0, nullptr );
+            static bool s_bWarned{ false };
+            if ( s_bWarned == false )
+            {
+                s_bWarned = true;
+                SW_LOG_ERROR( "bindShaderResource: Vulkan 은 descriptor indexing 없이는 텍스처를 바인딩할 수 없습니다 (계약에 슬롯 세트 없음)." );
+            }
         }
     }
 
@@ -259,16 +258,16 @@ namespace sw
             if ( set0 == VK_NULL_HANDLE )
                 set0 = _pDevice->registeredDescriptorSetAt( 0 );
             if ( set0 != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
-                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetPassCb, 1, &set0, 0, nullptr );
 
             // set 1: bindless 텍스처 배열 / set 4: 정적 샘플러 — binding.hlsli 를 포함하는 컴퓨트 셰이더가
             // (SW_BINDLESS 활성화로) 정적으로 참조할 수 있으므로 그래픽스와 동일하게 매 디스패치 바인딩한다.
             if ( _pDevice->_pipelineLayout != VK_NULL_HANDLE )
             {
                 if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
-                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetBindlessTexture, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
                 if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
-                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
+                    vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetStaticSampler, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
             }
         }
     }
@@ -478,7 +477,7 @@ namespace sw
     {
         // u<slot> (RW 구조버퍼) 전용 — set 7..9. t<slot> (읽기전용) 은 bindComputeShaderResource(set 6..9) 를 쓴다.
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 3 )
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= shaderslot::vk::kUavSetCount )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -496,7 +495,7 @@ namespace sw
 
         if ( descSet != VK_NULL_HANDLE )
         {
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 7 + slot, 1, &descSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetUav0 + slot, 1, &descSet, 0, nullptr );
         }
     }
 
@@ -504,7 +503,7 @@ namespace sw
     {
         // t<slot> (읽기전용 구조버퍼) 전용 — set 6..9.
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= shaderslot::vk::kStorageSetCount )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -522,7 +521,7 @@ namespace sw
 
         if ( descSet != VK_NULL_HANDLE )
         {
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 6 + slot, 1, &descSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetStorage0 + slot, 1, &descSet, 0, nullptr );
         }
     }
 
@@ -530,7 +529,7 @@ namespace sw
     {
         // set 0 binding 0 = b<slot>. gpucull 등 컴퓨트 셰이더의 cbuffer(register(b0)) 전용.
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot != 0 )
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot != shaderslot::kComputeConstantBuffer )
             return;
         if ( index == kInvalidDescriptorIndex ||
              index >= static_cast<RHIDescriptorIndex>( _pDevice->registeredDescriptorSetCount() ) )
@@ -546,7 +545,7 @@ namespace sw
             _pState->_bRenderPassActive = SW_FALSE;
         }
 
-        vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
+        vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, shaderslot::vk::kSetPassCb, 1, &descSet, 0, nullptr );
     }
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -586,7 +585,7 @@ namespace sw
             const VkDescriptorSet set0 = _pDevice->registeredDescriptorSetAt( cbDescriptorIndex );
             if ( set0 != _pState->_lastBoundGraphicsSet0 )
             {
-                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, shaderslot::vk::kSetPassCb, 1, &set0, 0, nullptr );
                 _pState->_lastBoundGraphicsSet0 = set0;
             }
         }
@@ -596,7 +595,7 @@ namespace sw
             // 비워 두면 vkCmdDraw 가 거부된다. 프레임 스트림 하나로 기록할 때는 앞선 드로우가 이미
             // 걸어 둬서 드러나지 않았지만, 병렬 기록은 패스마다 새 버퍼라 매번 비어 있는 채로 시작한다.
             // 기본 셋을 깔아 두고, 유효한 PassCB 가 오면 위 분기가 덮어쓴다.
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1,
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, shaderslot::vk::kSetPassCb, 1,
                                      &_pDevice->_descriptorSet, 0, nullptr );
             _pState->_lastBoundGraphicsSet0 = _pDevice->_descriptorSet;
         }
@@ -605,18 +604,22 @@ namespace sw
         if ( _pState->_bStaticGraphicsSetsBound == false )
         {
             if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
-                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, shaderslot::vk::kSetBindlessTexture, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
 
             // binding.hlsli 가 모든 셰이더에서 정적으로 참조하므로(없으면 vkCmdDraw 검증 오류) 필요.
             if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
-                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, shaderslot::vk::kSetStaticSampler, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
 
             // MaterialCB(b1) 를 선언한 셰이더는 그 세트를 정적으로 참조한다 — Vulkan 은 정적으로
             // 참조된 세트가 바인딩돼 있지 않으면 vkCmdDraw 를 거부하므로, 실제 머티리얼이 없을 때를
             // 위해 기본 UBO 세트를 깔아 둔다. 실제 값은 bindConstantBuffer( cb, 1 ) 가 덮어쓴다.
-            if ( _pDevice->_descriptorSet != VK_NULL_HANDLE )
+            // bindConstantBuffer( cb, b1 ) 이 draw 보다 먼저 왔을 수 있다 — 이미 걸린 세트를 기본값으로 덮지 않는다.
+            if ( _pDevice->_descriptorSet != VK_NULL_HANDLE && _pState->_lastBoundMaterialSet == VK_NULL_HANDLE )
+            {
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,
                                          VulkanRHIDevice::kMaterialCbSetIndex, 1, &_pDevice->_descriptorSet, 0, nullptr );
+                _pState->_lastBoundMaterialSet = _pDevice->_descriptorSet;
+            }
 
             _pState->_bStaticGraphicsSetsBound = true;
         }
@@ -674,8 +677,7 @@ namespace sw
         return true;
     }
 
-    void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
-                                        RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
         VkCommandBuffer cmd = commandBuffer();
         const bool      bCanDraw =
@@ -686,14 +688,9 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        bindGraphicsMaterialSets( passCbDescriptorIndex );
-
-        // b1 은 다른 세 백엔드처럼 draw() 가 직접 건다(set 10). 예전엔 여기서 머티리얼 **인덱스**를 푸시
-        // 상수로만 밀어 넣었는데, 그 푸시 상수를 읽는 셰이더는 이제 없고 실제 b1 은 걸리지 않았다 —
-        // 엔진 경로는 ShaderBindingBinder 가 bindConstantBuffer(b1) 을 먼저 불러 가려졌지만,
-        // draw(…, materialCb) 만 쓰는 오프스크린 스모크는 Vulkan 에서만 g_MaterialColor=0 으로 검게 나왔다.
-        if ( materialCbDescriptorIndex != kInvalidDescriptorIndex )
-            bindConstantBuffer( materialCbDescriptorIndex, shaderslot::kMaterialConstantBuffer );
+        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다. 여기서는
+        // 셰이더가 정적으로 참조하는 세트(set 0·1·4·10)의 기본값만 보장한다.
+        bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
         bindMeshVertexBufferOrFallback();
 
@@ -759,7 +756,7 @@ namespace sw
         // STORAGE_BUFFER 디스크립터셋을 파이프라인 레이아웃 set 6+slot 에 바인딩한다
         // (set 6..9 = _uavDescriptorSetLayout). HLSL: register(t#, space6).
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
+        if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= shaderslot::vk::kStorageSetCount )
             return;
         if ( index == kInvalidDescriptorIndex ||
              index >= static_cast<RHIDescriptorIndex>( _pDevice->registeredDescriptorSetCount() ) )
@@ -768,7 +765,7 @@ namespace sw
         if ( descSet == VK_NULL_HANDLE )
             return;
         vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,
-                                 6 + slot, 1, &descSet, 0, nullptr );
+                                 shaderslot::vk::kSetStorage0 + slot, 1, &descSet, 0, nullptr );
     }
 
     void VulkanRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
@@ -825,8 +822,7 @@ namespace sw
         vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, destOffsetIn32BitValues * 4, num32BitValues * 4, pData );
     }
 
-    void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                                RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         VkCommandBuffer                            cmd     = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
@@ -836,15 +832,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        bindGraphicsMaterialSets( passCbDescriptorIndex );
-
-        if ( materialCbDescriptorIndex != kInvalidDescriptorIndex && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
-        {
-            uint32                       matIndex = materialCbDescriptorIndex;
-            constexpr VkShaderStageFlags kPushStages =
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-            vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
-        }
+        bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
         if ( pRecord->_buffer != VK_NULL_HANDLE )
         {

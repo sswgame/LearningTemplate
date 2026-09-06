@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -113,7 +114,8 @@ namespace sw
             cmd->setViewport( viewport );
             cmd->beginRenderPass( beginInfo );
             cmd->setPipelineState( pso );
-            cmd->draw( 3, 0, kInvalidDescriptorIndex, materialCb );
+            cmd->bindConstantBuffer( materialCb, shaderslot::kMaterialConstantBuffer );
+            cmd->draw( 3, 0 );
             cmd->endRenderPass();
             cmd->endCommandList();
             // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.

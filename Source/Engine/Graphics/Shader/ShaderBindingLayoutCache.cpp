@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
@@ -56,7 +57,11 @@ namespace sw
                 // 1순위: 쿠킹 시점에 구운 리플렉션 매니페스트. 배포 빌드는 이 경로만 쓴다 —
                 // DXIL 리플렉션은 dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
                 if ( ShaderReflectionLibrary::tryGet( compileDesc, outReflection ) )
+                {
+                    // 바이너리를 읽는 순간 계약과 대조한다 — 어긋나면 로그에 이름·숫자로 남는다 (검증 에러는 안 난다).
+                    ShaderBindingContract::validate( outReflection, targetFormat, shaderPath );
                     return true;
+                }
 
 #if defined( SW_SHIPPING )
                 SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
@@ -76,6 +81,7 @@ namespace sw
                 }
 
                 outReflection = ShaderReflection::reflect( result._bytecode, targetFormat );
+                ShaderBindingContract::validate( outReflection, targetFormat, shaderPath );
                 return true;
 #endif
             }

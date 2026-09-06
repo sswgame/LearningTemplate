@@ -32,8 +32,7 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
-        void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
-                   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
+        void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
@@ -41,8 +40,7 @@ namespace sw
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
-                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
+        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
@@ -56,14 +54,12 @@ namespace sw
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
 
     private:
-        void bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
         /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
         D3D11RHIDevice*            _pDevice;
         ID3D11DeviceContext*       _pContext;
         /// @brief 이 컨텍스트가 갱신할 기록 상태.
         D3D11RecordingState* _pState{ nullptr };
-        RHIDescriptorIndex   _lastBoundMaterialDescriptor{ kInvalidDescriptorIndex };
         /** @brief _pContext 수명 동안 불변이라 최초 QueryInterface 결과를 재사용한다(마커마다 QI 방지). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
         bool                                              _bAnnotationQueried{ false };

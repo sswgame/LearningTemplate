@@ -207,8 +207,10 @@ namespace sw
                     resBinding._bindPoint     = bindDesc.BindPoint;
                     resBinding._bindCount     = bindDesc.BindCount;
                     resBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-                    data._listResource.push_back( std::move( resBinding ) );
 
+                    // 이 짝맞추기는 **move 하기 전에** 해야 한다 — 예전엔 push_back( std::move ) 뒤에 비어 버린 이름과
+                    // 비교해 한 번도 맞지 않았고, DXIL 의 모든 cbuffer 가 bindPoint 0 으로 보고됐다(MaterialCB 도 b0).
+                    // 엔진 바인더는 정본 슬롯으로 걸어 가려졌지만 계약 검증이 "PassCB 와 MaterialCB 가 같은 자리" 로 잡아냈다.
                     if ( bindDesc.Type == D3D_SIT_CBUFFER )
                     {
                         for ( ShaderBufferInfo& cb : data._listConstantBuffer )
@@ -221,6 +223,7 @@ namespace sw
                             }
                         }
                     }
+                    data._listResource.push_back( std::move( resBinding ) );
                 }
 
                 return data;

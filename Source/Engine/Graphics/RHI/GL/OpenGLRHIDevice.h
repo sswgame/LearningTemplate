@@ -116,10 +116,6 @@ namespace sw
         /** @brief OpenGL은 커맨드 큐가 없음 (nullptr) */
         void* getNativeCommandQueue() const override { return nullptr; }
 
-        /** @brief glDrawArraysIndirect 실행 */
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-                           RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
-
         /** @brief glMultiDrawArraysIndirect when available. */
         void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
                                 RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 );

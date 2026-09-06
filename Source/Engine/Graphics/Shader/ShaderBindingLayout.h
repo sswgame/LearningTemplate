@@ -76,6 +76,9 @@ namespace sw
         /** @brief 스테이지별 리플렉션 데이터를 병합해 레이아웃을 만든다. */
         static ShaderBindingLayout build( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection );
 
+        /// @brief 리플렉션 문자열 타입 라벨("Texture", "StorageBuffer", …) → ShaderBindingKind. 계약 검증기도 같은 분류를 쓴다.
+        static ShaderBindingKind kindFromTypeLabel( string_view typeLabel );
+
         /** @brief 이름으로 슬롯을 찾는다 (없으면 nullptr). */
         const ShaderBindingSlot* find( hashed_string name ) const;
         /** @brief (종류, space, register) 로 슬롯을 찾는다. */

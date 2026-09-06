@@ -130,10 +130,6 @@ namespace sw
         /** @brief 네이티브 텍스처 포인터 반환 (ID3D11Texture2D*) */
         void* getNativeTexturePointer( RHITextureHandle texture ) const override;
 
-        /** @brief D3D11 DrawInstancedIndirect 호출 */
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-                           RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
-
         /** @brief 커맨드 리스트 생성 */
         unique_ptr<IRHICommandList> createCommandList() override;
 

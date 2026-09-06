@@ -17,60 +17,41 @@ namespace sw
 
     bool D3D12RHIDevice::createGlobalResources()
     {
-        D3D12_DESCRIPTOR_RANGE descriptorRanges[11]{};
-        // b0 = PassCB, b1 = MaterialCB. 둘은 힙에서 인접하지 않으므로 테이블을 나눈다.
-        descriptorRanges[0].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-        descriptorRanges[0].NumDescriptors                    = 1;
-        descriptorRanges[0].BaseShaderRegister                = 0;
-        descriptorRanges[0].RegisterSpace                     = 0;
-        descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-        for ( uint32 subpassIndex = 0; subpassIndex < 4; ++subpassIndex )
+        // 레지스터 범위는 전부 계약(bindingslots.hlsli → shaderslot)에서 온다. 테이블 하나 = 루트 파라미터 하나.
+        // 예전엔 SRV 테이블이 t0..t3 뿐이라 인스턴스 버퍼(t4)·머티리얼 텍스처(t5..t8)는 힙 직접 인덱싱이 없는
+        // 기기에서 조용히 안 걸렸다 — 이제 SW_SRV_SLOT_COUNT 만큼 만든다.
+        D3D12_DESCRIPTOR_RANGE descriptorRanges[kRootParameterCount]{};
+        auto                   setRange = [&]( uint32 paramIndex, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32 baseRegister, uint32 space, uint32 count )
         {
-            descriptorRanges[1 + subpassIndex].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-            descriptorRanges[1 + subpassIndex].NumDescriptors                    = 1;
-            descriptorRanges[1 + subpassIndex].BaseShaderRegister                = subpassIndex;
-            descriptorRanges[1 + subpassIndex].RegisterSpace                     = 0;
-            descriptorRanges[1 + subpassIndex].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-        }
-        for ( uint32 subpassIndex = 0; subpassIndex < 4; ++subpassIndex )
-        {
-            descriptorRanges[5 + subpassIndex].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-            descriptorRanges[5 + subpassIndex].NumDescriptors                    = 1;
-            descriptorRanges[5 + subpassIndex].BaseShaderRegister                = subpassIndex;
-            descriptorRanges[5 + subpassIndex].RegisterSpace                     = 0;
-            descriptorRanges[5 + subpassIndex].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-        }
-        descriptorRanges[9].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        descriptorRanges[9].NumDescriptors                    = kBindlessTextureCount;
-        descriptorRanges[9].BaseShaderRegister                = 0;
-        descriptorRanges[9].RegisterSpace                     = 1;
-        descriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+            descriptorRanges[paramIndex].RangeType                         = type;
+            descriptorRanges[paramIndex].NumDescriptors                    = count;
+            descriptorRanges[paramIndex].BaseShaderRegister                = baseRegister;
+            descriptorRanges[paramIndex].RegisterSpace                     = space;
+            descriptorRanges[paramIndex].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+        };
+        setRange( kPassCbvParam, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, shaderslot::kPassConstantBuffer, 0, 1 );
+        for ( uint32 uavIndex = 0; uavIndex < shaderslot::kComputeUavSlotCount; ++uavIndex )
+            setRange( kComputeUavRootParam0 + uavIndex, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, uavIndex, 0, 1 );
+        for ( uint32 srvIndex = 0; srvIndex < shaderslot::kSrvSlotCount; ++srvIndex )
+            setRange( kGraphicsSrvRootParam0 + srvIndex, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, srvIndex, 0, 1 );
+        setRange( kBindlessTextureTableParam, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, shaderslot::kBindlessTextureSpace, kBindlessTextureCount );
+        setRange( kMaterialCbvParam, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, shaderslot::kMaterialConstantBuffer, 0, 1 );
 
-        descriptorRanges[10].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-        descriptorRanges[10].NumDescriptors                    = 1;
-        descriptorRanges[10].BaseShaderRegister                = 1;
-        descriptorRanges[10].RegisterSpace                     = 0;
-        descriptorRanges[10].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-        D3D12_ROOT_PARAMETER rootParameters[12]{};
-        for ( uint32 paramIndex = 0; paramIndex < 10; ++paramIndex )
+        D3D12_ROOT_PARAMETER rootParameters[kRootParameterCount]{};
+        for ( uint32 paramIndex = 0; paramIndex < kRootParameterCount; ++paramIndex )
         {
+            if ( paramIndex == kComputeRootConstantsParam )
+                continue;
             rootParameters[paramIndex].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             rootParameters[paramIndex].DescriptorTable.NumDescriptorRanges = 1;
             rootParameters[paramIndex].DescriptorTable.pDescriptorRanges   = &descriptorRanges[paramIndex];
             rootParameters[paramIndex].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
         }
         rootParameters[kComputeRootConstantsParam].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        rootParameters[kComputeRootConstantsParam].Constants.ShaderRegister = 0;
-        rootParameters[kComputeRootConstantsParam].Constants.RegisterSpace  = 1; ///< bindless.hlsli: b0, space1 (g_BindlessCbIndex)
+        rootParameters[kComputeRootConstantsParam].Constants.ShaderRegister = shaderslot::kBindlessConstantRegister;
+        rootParameters[kComputeRootConstantsParam].Constants.RegisterSpace  = shaderslot::kBindlessConstantSpace; ///< b0, space1 (g_BindlessCbIndex)
         rootParameters[kComputeRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
         rootParameters[kComputeRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
-
-        rootParameters[kMaterialCbvParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        rootParameters[kMaterialCbvParam].DescriptorTable.NumDescriptorRanges = 1;
-        rootParameters[kMaterialCbvParam].DescriptorTable.pDescriptorRanges   = &descriptorRanges[10];
-        rootParameters[kMaterialCbvParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
 
         D3D12_STATIC_SAMPLER_DESC staticSamplers[2]{};
         staticSamplers[0].Filter           = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #include <shared_mutex>
 
@@ -162,9 +163,6 @@ namespace sw
 
         /** @brief Vulkan 그래픽스 파이프라인(VkPipeline) 생성 */
 
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-                           RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
-
         /** @brief vkCmdDrawIndexedIndirect 실행 */
 
         void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
@@ -288,16 +286,14 @@ namespace sw
 
         /**
          * @brief b0(PassCB)·b1(MaterialCB) 이 들어가는 디스크립터 세트 인덱스.
-         * @details Vulkan 은 세트 단위로 바인딩하므로 상수 버퍼 슬롯마다 세트가 하나씩 필요하다.
-         *          `Resource/engine/shaders/common.hlsli` 의 SW_VK_CB_SET_* 와 **같은 값이어야
-         *          한다** — 어긋나면 셰이더가 파이프라인 레이아웃에 없는 세트를 참조한다.
-         *          b1 은 원래 푸시 상수로 우회하고 있었는데, 그러면 리플렉션이 b1 을 실제 상수
-         *          버퍼로 보고해도 Vulkan 만 값을 못 받는 예외가 생긴다.
+         * @details Vulkan 은 세트 단위로 바인딩하므로 상수 버퍼 슬롯마다 세트가 하나씩 필요하다. 번호는
+         *          `bindingslots.hlsli`(shaderslot::vk) 가 정본이고 HLSL 도 같은 파일을 읽는다 — 예전엔 여기와
+         *          common.hlsli 에 따로 적혀 있었고, 어긋나면 셰이더가 파이프라인 레이아웃에 없는 세트를 참조했다.
          */
-        static constexpr uint32 kPassCbSetIndex     = 0;
-        static constexpr uint32 kMaterialCbSetIndex = 10;
+        static constexpr uint32 kPassCbSetIndex     = shaderslot::vk::kSetPassCb;
+        static constexpr uint32 kMaterialCbSetIndex = shaderslot::vk::kSetMaterialCb;
         /// @brief 파이프라인 레이아웃이 요구하는 디스크립터 세트 수 (기기 한계와 비교한다).
-        static constexpr uint32 kBoundDescriptorSetCount = kMaterialCbSetIndex + 1;
+        static constexpr uint32 kBoundDescriptorSetCount = shaderslot::vk::kBoundSetCount;
 
         /// @brief VkBuffer + 메모리 + 사용 플래그
         struct VulkanBufferRecord

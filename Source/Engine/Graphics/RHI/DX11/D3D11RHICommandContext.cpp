@@ -89,8 +89,6 @@ namespace sw
         if ( _pContext == nullptr )
             return;
 
-        _lastBoundMaterialDescriptor = kInvalidDescriptorIndex;
-
         ID3D11RenderTargetView* arrRtv[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
         if ( beginInfo._bBindColor != 0 )
@@ -225,23 +223,7 @@ namespace sw
         _pState->_boundMeshOffset = offset;
     }
 
-    void D3D11RHICommandContext::bindPassAndMaterialCb( RHIDescriptorIndex passCbDescriptorIndex,
-                                                        RHIDescriptorIndex materialCbDescriptorIndex )
-    {
-        defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
-                                      _pDevice->bindlessBufferCount(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
-                                      [this]( RHIDescriptorIndex index, uint32 slot )
-        {
-            ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( index ) );
-            if ( pCb == nullptr )
-                return;
-            _pContext->PSSetConstantBuffers( slot, 1, &pCb );
-            _pContext->VSSetConstantBuffers( slot, 1, &pCb );
-        } );
-    }
-
-    void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
-                                       RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pContext == nullptr || vertexCount == 0 )
             return;
@@ -261,8 +243,6 @@ namespace sw
         }
         if ( pVs == nullptr || pPs == nullptr )
             return;
-
-        bindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex );
 
         ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
         UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
@@ -414,14 +394,10 @@ namespace sw
         _pContext->CSSetConstantBuffers( rootParameterIndex, 1, &pCb );
     }
 
-    void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                               RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pDevice == nullptr || _pContext == nullptr || argumentBuffer == 0 )
             return;
-
-        bindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex );
-        _lastBoundMaterialDescriptor = materialCbDescriptorIndex;
 
         ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
         if ( pBuf == nullptr )

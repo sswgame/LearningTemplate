@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #include <glad/glad.h>
 
@@ -293,7 +294,7 @@ namespace sw
             GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index]._buffer );
             if ( ssbo != 0 )
             {
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
+                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUavBinding0 + slot, ssbo ); // u# → 계약 SSBO 번호
                 return;
             }
         }
@@ -379,20 +380,6 @@ namespace sw
         _pState->_boundIndexOffset = offset;
     }
 
-    void OpenGLRHICommandContext::bindPassAndMaterialUbo( RHIDescriptorIndex passCbDescriptorIndex,
-                                                          RHIDescriptorIndex materialCbDescriptorIndex )
-    {
-        // 바인딩 번호는 구운 SPIR-V 의 OpDecorate 와 같아야 한다 — b0=binding 0, b1=binding 1.
-        defaultBindPassAndMaterialCb( passCbDescriptorIndex, materialCbDescriptorIndex,
-                                      _pDevice->_listRegisteredBindless.size(), 0 /*b0=PassCB*/, 1 /*b1=MaterialCB*/,
-                                      [this]( RHIDescriptorIndex index, uint32 binding )
-        {
-            const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
-            if ( ubo != 0 )
-                glBindBufferBase( GL_UNIFORM_BUFFER, binding, ubo );
-        } );
-    }
-
     void OpenGLRHICommandContext::bindMeshVaoAttribs( uint32 vbo )
     {
         const GLsizei stride = static_cast<GLsizei>( _pState->_boundMeshStride );
@@ -406,8 +393,7 @@ namespace sw
                                reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
     }
 
-    void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
-                                        RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 )
             return;
@@ -429,8 +415,6 @@ namespace sw
             return;
 
         glUseProgram( program );
-
-        bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
         if ( _pState->_boundMeshVb != 0 )
         {
@@ -569,8 +553,7 @@ namespace sw
         glBindBufferBase( GL_UNIFORM_BUFFER, rootParameterIndex, _pDevice->_computeRootConstantUbo );
     }
 
-    void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                                RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
             return;
@@ -592,8 +575,6 @@ namespace sw
             return;
 
         glUseProgram( program );
-
-        bindPassAndMaterialUbo( passCbDescriptorIndex, materialCbDescriptorIndex );
 
         const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );

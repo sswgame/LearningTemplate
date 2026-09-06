@@ -114,7 +114,7 @@ namespace sw
                 const uint32 index = static_cast<uint32>( passCbDescriptorIndex );
                 _pCmdList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kComputeRootConstantsParam, 1, &index, 0 );
             }
-            _pCmdList->SetGraphicsRootDescriptorTable( 0, passHandle );
+            _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kPassCbvParam, passHandle );
         }
 
         if ( bHasMat )
@@ -295,7 +295,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= 4 )
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
         if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
@@ -345,7 +345,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || slot >= 4 )
+        if ( _pCmdList == nullptr || slot >= shaderslot::kComputeUavSlotCount )
             return;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
         if ( tryGetBindlessGpuHandle( index, true, gpuHandle ) == false )
@@ -356,13 +356,13 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
             _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( 1 + slot, gpuHandle );
+        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kComputeUavRootParam0 + slot, gpuHandle );
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
     {
         // 루트파라미터 0 은 b0/space0 CBV 테이블 하나만 담당한다 (gpucull 의 CullParams).
-        if ( _pCmdList == nullptr || slot != 0 )
+        if ( _pCmdList == nullptr || slot != shaderslot::kComputeConstantBuffer )
             return;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
         if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
@@ -373,12 +373,12 @@ namespace sw
             pRootSig = _pDevice->_rootSignature.Get();
         if ( pRootSig != nullptr )
             _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( 0, gpuHandle );
+        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kPassCbvParam, gpuHandle );
     }
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || slot >= 4 )
+        if ( _pCmdList == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
         if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
@@ -400,8 +400,7 @@ namespace sw
         _pState->_boundMeshOffset = offset;
     }
 
-    void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex,
-                                       RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
             return;
@@ -416,7 +415,7 @@ namespace sw
             _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
-        bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
+        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다.
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, 1, startVertex, 0 );
@@ -444,9 +443,9 @@ namespace sw
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
     {
-        if ( slot == 0 )
+        if ( slot == shaderslot::kPassConstantBuffer )
             bindPassAndMaterialCbv( cb, kInvalidDescriptorIndex );
-        else if ( slot == 1 )
+        else if ( slot == shaderslot::kMaterialConstantBuffer )
             bindPassAndMaterialCbv( kInvalidDescriptorIndex, cb );
         else
             SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 현재 루트시그니처에서 지원하지 않습니다.", slot );
@@ -489,8 +488,7 @@ namespace sw
         _pCmdList->RSSetScissorRects( 1, &scissor );
     }
 
-    void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                               RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex )
+    void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 )
             return;
@@ -500,10 +498,7 @@ namespace sw
             return;
 
         if ( _pDevice->_rootSignature != nullptr )
-        {
-            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-            bindPassAndMaterialCbv( passCbDescriptorIndex, materialCbDescriptorIndex );
-        }
+            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() ); // 같은 루트시그니처 재설정은 루트 인자를 지우지 않는다
         // 여기서 풀스크린 정점버퍼를 무조건 걸던 것이 GPU 드리븐 메시 드로우를 통째로 깨뜨렸다.
         // setVertexBuffer 가 걸어 둔 배치 메시 VB 를 덮어써서, ExecuteIndirect 가 36 정점을 3 정점짜리
         // 버퍼에서 읽어 화면에 찢어진 삼각형이 나왔다(범위 밖은 0 이라 죽지는 않아 더 늦게 드러났다).

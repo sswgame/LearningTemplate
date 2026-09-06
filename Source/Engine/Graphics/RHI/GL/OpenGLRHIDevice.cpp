@@ -77,30 +77,6 @@ namespace sw
         return storeGlBuffer( ibo );
     }
 
-    void OpenGLRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                        RHIDescriptorIndex materialDescriptorIndex )
-    {
-        if ( _bInitialized == SW_FALSE || argumentBuffer == 0 )
-            return;
-
-        if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
-             materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _listRegisteredBindless.size() ) )
-        {
-            GLuint ubo = resolveGlBuffer( _listRegisteredBindless[materialDescriptorIndex]._buffer );
-            if ( ubo != 0 )
-                glBindBufferBase( GL_UNIFORM_BUFFER, 0, ubo );
-        }
-
-        GLuint buf = resolveGlBuffer( argumentBuffer );
-        if ( buf == 0 )
-            return;
-        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
-
-        if ( glad_glDrawArraysIndirect != nullptr )
-            glDrawArraysIndirect( GL_TRIANGLES, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
-        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
-    }
-
     void OpenGLRHIDevice::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
                                              RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {

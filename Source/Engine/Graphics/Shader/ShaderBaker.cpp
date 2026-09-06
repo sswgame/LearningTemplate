@@ -12,6 +12,7 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Shader/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
@@ -565,6 +566,7 @@ namespace sw
         // 리플렉션은 RHI 폴더마다 파일 하나로 모은다 — 셰이더마다 사이드카를 두면 팩 엔트리와
         // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
         unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
+        uint32                                                   contractViolationCount{ 0 };
 
         // 3) 각 레시피 및 타깃 포맷별로 베이킹
         for ( const ShaderBakerInternal::BakeRecipe& recipe : listRecipe )
@@ -618,7 +620,10 @@ namespace sw
                     vector<uint8> bytecode;
                     if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
                     {
-                        mapManifest[outDir].emplace( fileName, ShaderReflection::reflect( bytecode, fmt ) );
+                        ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
+                        // 구운 바이너리를 계약과 대조한다 — 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름·숫자로 드러난다.
+                        contractViolationCount += ShaderBindingContract::validate( reflection, fmt, outPath );
+                        mapManifest[outDir].emplace( fileName, std::move( reflection ) );
                     }
                 }
             }
@@ -631,6 +636,8 @@ namespace sw
         }
         ShaderReflectionLibrary::clearCache();
 
+        if ( contractViolationCount > 0 )
+            SW_LOG_ERROR( "바인딩 계약 위반 %#건 — 위 [바인딩 계약] 로그를 보고 셰이더 선언이나 bindingslots.hlsli 를 고치십시오.", contractViolationCount );
         SW_LOG_INFO( "Shader baking completed: %# binaries generated/updated.", totalBaked );
         return totalBaked;
     }

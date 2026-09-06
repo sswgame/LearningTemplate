@@ -38,12 +38,7 @@ namespace sw
         {
             _pContext->setVertexBuffer( slot, buffer, stride, offset );
         }
-        void draw( uint32 vertexCount, uint32 startVertex = 0,
-                   RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
-                   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override
-        {
-            _pContext->draw( vertexCount, startVertex, passCbDescriptorIndex, materialCbDescriptorIndex );
-        }
+        void draw( uint32 vertexCount, uint32 startVertex = 0 ) override { _pContext->draw( vertexCount, startVertex ); }
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override
         {
             _pContext->drawInstanced( vertexCount, instanceCount, startVertex, startInstance );
@@ -71,11 +66,9 @@ namespace sw
         void prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-                           RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
-                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override
+        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
         {
-            _pContext->drawIndirect( argumentBuffer, argumentBufferOffset, passCbDescriptorIndex, materialCbDescriptorIndex );
+            _pContext->drawIndirect( argumentBuffer, argumentBufferOffset );
         }
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
         {

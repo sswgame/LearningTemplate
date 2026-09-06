@@ -358,7 +358,17 @@ namespace sw
             else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
                 res._type = "ConstantBuffer";
             else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniformConstant )
-                res._type = "TextureOrSampler";
+            {
+                // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가지 않으므로 결합 이미지 샘플러로 본다.
+                res._type        = "TextureOrSampler";
+                const auto ptrIt = mapType.find( var._typeId );
+                if ( ptrIt != mapType.end() && ptrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer )
+                {
+                    const auto pointeeIt = mapType.find( ptrIt->second._subTypeId );
+                    if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler )
+                        res._type = "Sampler";
+                }
+            }
             else
                 res._type = "OtherResource";
             data._listResource.push_back( std::move( res ) );

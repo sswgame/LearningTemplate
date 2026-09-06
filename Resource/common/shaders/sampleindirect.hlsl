@@ -24,32 +24,14 @@ struct RHIDispatchIndirectCommand
 
 #include "common.hlsli"
 
-#ifdef BINDLESS_UAV
-// Bindless 모드: Descriptor Table 내 인덱스 및 UAV 배열 사용
-SW_DECLARE_CBUFFER( ComputeConstants, 1 )
-{
-	uint g_DrawBufferIndex;     ///< Draw Indirect 버퍼의 Bindless 인덱스
-	uint g_DispatchBufferIndex; ///< Dispatch Indirect 버퍼의 Bindless 인덱스
-};
-SW_DECLARE_RW_BYTE_ADDRESS_BUFFER_ARRAY_UNBOUNDED( g_UAVs, 0, 1 );
-
-	#define GET_DRAW_BUFFER g_UAVs[g_DrawBufferIndex]
-	#define GET_DISPATCH_BUFFER g_UAVs[g_DispatchBufferIndex]
-#else
-// Explicit Binding 모드
-// DX12: spaces match compute root signature UAV tables (u0 space1, u1 space2)
-// DX11: CSSetUnorderedAccessViews uses flat u0/u1; SM5.0 rejects `space` (needs 5.1+)
-#if defined( DX11 )
+// 바인딩 계약(bindingslots.hlsli): 컴퓨트 UAV 는 u0/u1. 백엔드별 위치(Vulkan set SW_VK_SET_UAV#, GL SSBO
+// SW_GL_UAV_BINDING0+#)는 common.hlsli 의 선언 매크로가 정한다. 엔진은 bindComputeUAV( index, 0/1 ) 로 건다.
+// 예전의 "bindless UAV 배열(u0 space1)" 분기는 DX12 루트시그니처에도 Vulkan 레이아웃에도 없는 자리였다.
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDrawBuffer, 0 );
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDispatchBuffer, 1 );
-#else
-SW_DECLARE_RW_BYTE_ADDRESS_BUFFER_SPACE( g_IndirectDrawBuffer, 0, 1 );
-SW_DECLARE_RW_BYTE_ADDRESS_BUFFER_SPACE( g_IndirectDispatchBuffer, 1, 2 );
-#endif
 
-	#define GET_DRAW_BUFFER g_IndirectDrawBuffer
-	#define GET_DISPATCH_BUFFER g_IndirectDispatchBuffer
-#endif
+#define GET_DRAW_BUFFER g_IndirectDrawBuffer
+#define GET_DISPATCH_BUFFER g_IndirectDispatchBuffer
 
 /**
  * @brief CSMain 컴퓨트 셰이더 진입점 (1,1,1 스레드 그룹)

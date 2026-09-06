@@ -648,7 +648,7 @@ SW_TEST_CASE( RHITest, CommandListCreationAndExecution )
         cmdList->beginCommandList();
         sw::RHIViewport vp{ 0.0f, 0.0f, 800.0f, 600.0f, 0.0f, 1.0f };
         cmdList->setViewport( vp );
-        cmdList->draw( 3, 0, 0 );
+        cmdList->draw( 3, 0 );
         cmdList->endCommandList();
 
         rhiDevice->executeCommandList( cmdList.get() );

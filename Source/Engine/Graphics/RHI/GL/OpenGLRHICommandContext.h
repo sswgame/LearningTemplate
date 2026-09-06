@@ -22,8 +22,7 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
-        void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
-                   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
+        void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
@@ -31,8 +30,7 @@ namespace sw
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, RHIDescriptorIndex passCbDescriptorIndex = kInvalidDescriptorIndex,
-                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) override;
+        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount, RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
@@ -47,7 +45,6 @@ namespace sw
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
 
     private:
-        void bindPassAndMaterialUbo( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
         /** @brief _meshVao를 바인딩하고 position(0)/color(1) 정점 attrib를 vbo 기준으로 세팅한다.
          *         draw류 5곳에 복붙돼 있던 블록 통합 — 호출자가 draw 후 언바인드는 각자 책임진다. */
         void             bindMeshVaoAttribs( uint32 vbo );

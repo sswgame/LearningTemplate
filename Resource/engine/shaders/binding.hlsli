@@ -74,7 +74,7 @@ float4x4 SwLoadInstanceWorld( uint instanceId )
 #elif defined( __spirv__ ) && defined( VULKAN )
 
 // Vulkan 그래픽스 storage buffer 바인딩은 파이프라인 레이아웃 set 6 (STORAGE_BUFFER) 를 통해 이뤄진다.
-SW_DECLARE_STRUCTURED_BUFFER_SPACE( SwInstanceData, g_SwInstances, 0, 6 );
+SW_DECLARE_STRUCTURED_BUFFER_SPACE( SwInstanceData, g_SwInstances, 0, SW_VK_SET_STORAGE0 );
 float4x4 SwLoadInstanceWorld( uint instanceId )
 {
 	if ( g_SwInstancesIndex == SW_INVALID_INDEX )
@@ -84,9 +84,8 @@ float4x4 SwLoadInstanceWorld( uint instanceId )
 
 #else
 
-// DX11 / OpenGL : 엔진이 리플렉션 t 슬롯에 인스턴스 SRV/SSBO 를 바인딩.
-// 슬롯 번호는 리터럴이어야 한다 (register( t##slot ) 토큰 페이스트가 매크로 확장보다 먼저). = SW_SLOT_INSTANCE_SRV.
-SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, 4 );
+// DX11 / OpenGL : 엔진이 계약 슬롯 t4(SW_SLOT_INSTANCE_SRV) 에 인스턴스 SRV/SSBO 를 바인딩.
+SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 float4x4 SwLoadInstanceWorld( uint instanceId )
 {
 	if ( g_SwInstancesIndex == SW_INVALID_INDEX )
@@ -99,10 +98,12 @@ float4x4 SwLoadInstanceWorld( uint instanceId )
 // ------------------------------------------------------------------------------
 // 2) 샘플러
 // ------------------------------------------------------------------------------
+// 네이티브 bindless 백엔드(DX12/Vulkan)만 쓴다. DX11 은 슬롯 결합 샘플러(g_SwSlot#Sampler, s0..)만 있어서
+// 여기 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다).
 #if defined( __spirv__ )
-[[vk::binding( SW_SAMPLER_LINEAR_WRAP, 4 )]] SamplerState g_SwSamplerLinearWrap : register( s0, space4 );
-#else
-SamplerState g_SwSamplerLinearWrap : register( s0 );
+SW_DECLARE_SAMPLER_SPACE( g_SwSamplerLinearWrap, SW_SAMPLER_LINEAR_WRAP, SW_SPACE_STATIC_SAMPLER );
+#elif defined( SW_BINDLESS )
+SamplerState g_SwSamplerLinearWrap : register( SW_CAT( s, SW_SAMPLER_LINEAR_WRAP ) );
 #endif
 
 // ------------------------------------------------------------------------------
@@ -120,7 +121,7 @@ float4 SW_SampleIndex( uint index, float2 uv )
 
 #elif defined( SW_BINDLESS ) && defined( VULKAN )
 
-SW_DECLARE_TEXTURE2D_ARRAY_UNBOUNDED( g_SwBindlessTex2D, 0, 1 );
+SW_DECLARE_TEXTURE2D_ARRAY_UNBOUNDED( g_SwBindlessTex2D, 0, SW_SPACE_BINDLESS_TEX );
 float4 SW_SampleIndex( uint index, float2 uv )
 {
 	if ( index == SW_INVALID_INDEX )
@@ -131,17 +132,16 @@ float4 SW_SampleIndex( uint index, float2 uv )
 #else
 
 // DX11 / OpenGL : 엔진이 t0..t3 에 SRV 바인딩. 값 비교로 어느 논리 텍스처인지 판별.
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, 0, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, 1, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, 2, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, 3, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3, 0 );
 
-// 머티리얼 텍스처 고정 슬롯 t5..t8 — 레지스터 번호는 SW_SLOT_MATERIAL_TEX0(=5) 부터다.
-// 토큰 붙이기라 매크로 산술을 쓸 수 없어 리터럴로 적는다(둘이 어긋나면 엉뚱한 슬롯을 읽는다).
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, 5, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, 6, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, 7, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, 8, 0 );
+// 머티리얼 텍스처 고정 슬롯 t5..t8 — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, SW_SLOT_MATERIAL_TEX0, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT_MATERIAL_TEX1, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, SW_SLOT_MATERIAL_TEX3, 0 );
 
 float4 SW_SampleIndex( uint index, float2 uv )
 {

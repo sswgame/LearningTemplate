@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #include <shared_mutex>
 
@@ -226,11 +227,16 @@ namespace sw
          */
         void flushDebugMessages( const utf8* pStage );
 
-        static constexpr uint32 kMaxOffscreenRtvs          = 32;
-        static constexpr uint32 kMaxOffscreenDsvs          = 16;
-        static constexpr uint32 kGraphicsSrvRootParam0     = 5;  ///< t0..t3 descriptor tables
-        static constexpr uint32 kComputeRootConstantsParam = 10; ///< 32-bit root constants (compute)
-        static constexpr uint32 kMaterialCbvParam          = 11; ///< b1 (MaterialCB) 디스크립터 테이블
+        static constexpr uint32 kMaxOffscreenRtvs = 32;
+        static constexpr uint32 kMaxOffscreenDsvs = 16;
+        // 루트 파라미터 배치 — 레지스터 범위는 bindingslots.hlsli(shaderslot) 가 정한다. 인덱스는 순서대로 쌓인다.
+        static constexpr uint32 kPassCbvParam              = 0;                                                        ///< b0 (PassCB / 컴퓨트 CB) CBV 테이블
+        static constexpr uint32 kComputeUavRootParam0      = kPassCbvParam + 1;                                        ///< u0..u(N-1) UAV 테이블
+        static constexpr uint32 kGraphicsSrvRootParam0     = kComputeUavRootParam0 + shaderslot::kComputeUavSlotCount; ///< t0..t(N-1) SRV 테이블 (엔진 텍스처·인스턴스·머티리얼 텍스처)
+        static constexpr uint32 kBindlessTextureTableParam = kGraphicsSrvRootParam0 + shaderslot::kSrvSlotCount;       ///< t0 space1 bindless 배열 테이블
+        static constexpr uint32 kComputeRootConstantsParam = kBindlessTextureTableParam + 1;                           ///< 32비트 루트 상수 (b0 space1)
+        static constexpr uint32 kMaterialCbvParam          = kComputeRootConstantsParam + 1;                           ///< b1 (MaterialCB) CBV 테이블
+        static constexpr uint32 kRootParameterCount        = kMaterialCbvParam + 1;
         /** @brief setComputeRootConstants 실제 용량(dword) — 4개 백엔드 중 가장 작아서 RHITypes.h의
          *         constant::kMinComputeRootConstantDwords가 이 값을 기준으로 한다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 16;

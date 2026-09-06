@@ -44,12 +44,11 @@ namespace sw
         virtual void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) = 0;
         /**
          * @brief 삼각형 리스트를 그립니다.
-         * @param passCbDescriptorIndex b0(PassCB) 에 바인딩할 상수 버퍼.
-         * @param materialCbDescriptorIndex b1(MaterialCB) 에 바인딩할 상수 버퍼.
+         * @details 상수버퍼(b0/b1)는 여기 인자가 아니라 **bindConstantBuffer( index, shaderslot::k*ConstantBuffer )** 로
+         *          미리 건다. 예전엔 draw( …, passCb, materialCb ) 위치 인자였는데, 자리를 하나 바꿔 넘긴 호출 한 줄이
+         *          네 백엔드에서 동시에 검은 화면을 냈다 — 슬롯은 항상 이름(계약 상수)으로 지정한다.
          */
-        virtual void draw( uint32 vertexCount, uint32 startVertex = 0,
-                           RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
-                           RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+        virtual void draw( uint32 vertexCount, uint32 startVertex = 0 ) = 0;
         /**
          * @brief 삼각형 리스트를 인스턴스드로 그립니다 (GPUScene 인스턴스 버퍼 경로).
          * @param instanceCount 인스턴스 개수. VS 는 `SV_InstanceID` 로 `g_SwInstances[g_InstanceBase + id]` 를 읽습니다.
@@ -130,9 +129,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이, 멀티 드로우
         // ------------------------------------------------------------------------------
-        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
-                                   RHIDescriptorIndex passCbDescriptorIndex     = kInvalidDescriptorIndex,
-                                   RHIDescriptorIndex materialCbDescriptorIndex = kInvalidDescriptorIndex ) = 0;
+        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )        = 0;
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )    = 0;
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                    = 0;
         virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;

@@ -153,19 +153,18 @@ namespace sw
         //         한 디스패치에서 t 슬롯과 u 슬롯을 동시에 쓸 때는 서로 다른 인덱스를 사용해야 한다.
         //   10: MaterialCB(b1). 세트 단위 바인딩이라 상수 버퍼 슬롯마다 세트가 하나씩 필요하다 —
         //       common.hlsli 의 SW_VK_CB_SET_1 과 같은 값이어야 한다.
-        VkDescriptorSetLayout arrSetLayout[kBoundDescriptorSetCount] = {
-            _descriptorSetLayout,
-            _bindlessTextureArrayLayout,
-            _textureDescriptorSetLayout,
-            _textureDescriptorSetLayout,
-            _samplerSetLayout,
-            _textureDescriptorSetLayout,
-            _uavDescriptorSetLayout,
-            _uavDescriptorSetLayout,
-            _uavDescriptorSetLayout,
-            _uavDescriptorSetLayout,
-            _descriptorSetLayout, // 10: MaterialCB (b1)
-        };
+        // 세트 번호는 bindingslots.hlsli(shaderslot::vk) 가 정본이다 — HLSL 의 [[vk::binding(slot, set)]] 과 같은 파일.
+        // 예약·미사용 세트(2,3,5)는 텍스처 레이아웃으로 채워 두기만 한다(어떤 셰이더도 참조하지 않는다 — 계약 검증이 막는다).
+        namespace vkslot = shaderslot::vk;
+        VkDescriptorSetLayout arrSetLayout[kBoundDescriptorSetCount]{};
+        for ( uint32 setIndex = 0; setIndex < kBoundDescriptorSetCount; ++setIndex )
+            arrSetLayout[setIndex] = _textureDescriptorSetLayout;
+        arrSetLayout[vkslot::kSetPassCb]          = _descriptorSetLayout;
+        arrSetLayout[vkslot::kSetBindlessTexture] = _bindlessTextureArrayLayout;
+        arrSetLayout[vkslot::kSetStaticSampler]   = _samplerSetLayout;
+        for ( uint32 storageIndex = 0; storageIndex < vkslot::kStorageSetCount; ++storageIndex )
+            arrSetLayout[vkslot::kSetStorage0 + storageIndex] = _uavDescriptorSetLayout;
+        arrSetLayout[vkslot::kSetMaterialCb] = _descriptorSetLayout;
 
         // 세트를 11개 요구한다. Vulkan 이 보장하는 최소값은 4 라서 기기에 따라 부족할 수 있는데,
         // 예전엔 확인 없이 만들고 vkCreatePipelineLayout 실패만 남겨 원인을 알 수 없었다.
