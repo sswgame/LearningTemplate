@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    uint64 RHI::_s_deviceGeneration = 1;
+
     SW_LOG_CALLER( "RHI" );
 
     // EngineConfig 로드 실패 시에도 WindowConfig::_defaultRHI(cpp 기본값)와 같은 백엔드로 기동하도록 맞춥니다.
@@ -215,6 +217,8 @@ namespace sw
         {
             _device->shutdown();
             _device.reset();
+            // 이 디바이스를 기억하고 있던 GPU 리소스들이 더 이상 만지지 않게 한다.
+            ++_s_deviceGeneration;
         }
         // After devices are gone, drop MODULE DLLs (DX11/DX12) so FreeLibrary is safe.
         engine::getRHIBackendRegistry().unloadModules();

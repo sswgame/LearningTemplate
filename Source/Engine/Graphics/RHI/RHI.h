@@ -90,6 +90,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 디바이스가 활성화되어 있는지 여부를 반환합니다. */
         bool hasDevice() const { return _device != nullptr; }
+
+        /**
+         * @brief 디바이스가 파괴될 때마다 올라가는 세대 번호입니다.
+         * @details GPU 버퍼를 들고 있는 엔진 객체(Mesh 등)는 디바이스를 **생 포인터**로 기억한다.
+         *          디바이스가 먼저 죽고 나서 그 포인터로 destroy 를 부르면 UAF 다. 업로드 시점의
+         *          세대를 함께 기억해 두고, 세대가 달라졌으면 손대지 않는다 — 어차피 디바이스
+         *          shutdown 이 자기 버퍼를 전부 해제한다.
+         */
+        static uint64 getDeviceGeneration() { return _s_deviceGeneration; }
         /** @brief 활성 IRHIDevice를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
         /**
@@ -103,10 +112,13 @@ namespace sw
     private:
         unique_ptr<LiveShaderManager> _liveShaderManager;
         unique_ptr<IRHIDevice>        _device;
-        RHIBackend                    _pendingRHIBackend;
-        RHIBackend                    _committedRHIBackend;
-        uint8                         _bPreferredVSync       : 1;
-        uint8                         _bPendingBackendChange : 1;
-        [[maybe_unused]] uint8        _reserved              : 6;
+
+        /** @brief 디바이스 파괴마다 증가. 0 은 "업로드된 적 없음" 을 뜻합니다. */
+        static uint64          _s_deviceGeneration;
+        RHIBackend             _pendingRHIBackend;
+        RHIBackend             _committedRHIBackend;
+        uint8                  _bPreferredVSync       : 1;
+        uint8                  _bPendingBackendChange : 1;
+        [[maybe_unused]] uint8 _reserved              : 6;
     };
 } // namespace sw

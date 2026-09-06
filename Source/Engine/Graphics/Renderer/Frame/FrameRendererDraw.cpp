@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MatrixMath.h"
+#include "Core/Profile/FrameProfiler.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
@@ -155,6 +156,8 @@ namespace sw
         if ( bInstanced )
             registerInstanceBuffer( ctx );
 
+        SW_PROFILE_SCOPE( "RT.Draw.sceneMeshes" );
+
         uint32 drawn{ 0 };
         bool   bFirstItem = true;
         for ( const GpuMeshBatch& batch : batches )
@@ -211,6 +214,11 @@ namespace sw
             }
         }
 
+        // 드로우 수는 시간 해석의 전제다 — 배치가 몇 개로 묶였는지 모르면 ms 만 봐서는
+        // 무엇이 비싼지 알 수 없다.
+        SW_PROFILE_COUNT( "RT.Draw.count", drawn );
+        SW_PROFILE_COUNT( "RT.Draw.batches", batches.size() );
+
         if ( drawn == 0 )
         {
             setIdentityWorld( ctx );
@@ -220,6 +228,8 @@ namespace sw
 
     void FrameRenderer::drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
+        SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
+
         (void)cbIndex;
         if ( _pDevice == nullptr || ctx._pCmd == nullptr || _gpuScene.isUploaded() == false )
             return;
@@ -237,6 +247,8 @@ namespace sw
 
         const vector<GpuMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
+        // 시간만 보면 무엇이 비싼지 알 수 없다 — 배치가 몇 개로 묶였는지가 해석의 전제다.
+        SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
 
         // Indirect slots are laid out opaque then transparent in upload order.
         uint32 batchOffset{ 0 };

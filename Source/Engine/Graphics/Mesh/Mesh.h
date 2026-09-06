@@ -68,5 +68,7 @@ namespace sw
         vector<RHIVertex> _listVertex;
         RHIBufferHandle   _vertexBuffer{ 0 };
         IRHIDevice*       _pUploadDevice{ nullptr };
+        /** @brief 업로드 당시의 RHI 디바이스 세대. 달라졌으면 그 디바이스는 이미 없습니다. */
+        uint64 _uploadDeviceGeneration{ 0 };
     };
 } // namespace sw

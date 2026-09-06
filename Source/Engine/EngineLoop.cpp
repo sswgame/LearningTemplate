@@ -11,6 +11,7 @@
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Profile/FrameProfiler.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -55,6 +56,24 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_benchMeshes=N` — 게임이 시작 시 만들 벤치 큐브 수. 0 이면 만들지 않습니다.
+     * @details 커맨드라인 인자를 게임 모듈이 직접 읽을 수는 없다(CommandLineManager 는
+     *          gameAllowed=0). 전역 변수는 엔진이 선언·바인딩하고 게임은 허용된
+     *          GlobalVariableManager 서비스로 읽으므로, 경계를 넘지 않고 값을 전달할 수 있다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
+
+    /** @brief `-gv_profileFrames=N` — 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다. */
+    SW_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
+
+    /**
+     * @brief 프로파일 통계에서 버리는 초반 프레임 수.
+     * @details 셰이더 컴파일·PSO 생성·트랜지언트 할당이 첫 프레임들을 크게 부풀린다. 섞으면
+     *          평균이 그 한 번에 끌려가 아무것도 못 읽는다.
+     */
+    static constexpr uint64 kProfileWarmupFrames = 60;
+
     namespace
     {
         struct EngineLoopInternal
@@ -348,6 +367,13 @@ namespace sw
             }
         }
 
+        if ( gv_profileFrames > 0 )
+        {
+            _profileFrameTarget = static_cast<uint64>( gv_profileFrames );
+            FrameProfiler::get().setEnabled( true );
+            SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임", kProfileWarmupFrames, gv_profileFrames );
+        }
+
         MemoryProfiler::captureMemoryLeakBaseline();
 
         return true;
@@ -469,6 +495,9 @@ namespace sw
         if ( _bHeadless )
             return;
 
+        FrameProfiler& profiler = FrameProfiler::get();
+        profiler.beginFrame();
+
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )
@@ -542,6 +571,32 @@ namespace sw
 
     void EngineLoop::endFrame()
     {
+        FrameProfiler& profiler = FrameProfiler::get();
+        profiler.endFrame();
+
+        // 워밍업(셰이더 컴파일·PSO 생성·트랜지언트 할당)이 첫 프레임들을 크게 부풀린다.
+        // 그 구간을 통계에 섞으면 평균이 의미를 잃으므로 버리고 다시 센다.
+        if ( _profileFrameTarget > 0 && _bProfileReported == 0 )
+        {
+            const uint64 frames = profiler.getFrameCount();
+            if ( _bProfileWarmedUp == 0 && frames >= kProfileWarmupFrames )
+            {
+                // reset() 은 프레임 카운터도 0 으로 되돌린다 — 플래그가 없으면 이 조건이 매 60
+                // 프레임마다 다시 참이 되어 영원히 워밍업만 한다.
+                _bProfileWarmedUp = 1;
+                profiler.reset();
+                SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.",
+                             kProfileWarmupFrames, _profileFrameTarget );
+            }
+            else if ( _bProfileWarmedUp != 0 && frames >= _profileFrameTarget )
+            {
+                _bProfileReported = 1;
+                profiler.report( "frame breakdown" );
+                profiler.setEnabled( false );
+                _bWantsQuit = 1;
+            }
+        }
+
         if ( _inputManager != nullptr )
             _inputManager->endFrame();
         engine::getDebugDrawQueue().clear();

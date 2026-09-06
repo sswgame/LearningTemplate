@@ -255,6 +255,9 @@ namespace sw
         /** @brief 마지막으로 반영된 후보 집합. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
         vector<DrawCandidate> _listBuiltCandidate;
         vector<GpuInstance>   _listScratchRaw;
+        /** @brief 병렬 채우기 구간에서 쓰는 버퍼 주소. 디스패치 직전에 한 번만 확정합니다. */
+        const DrawCandidate* _pScratchCandidateBase{ nullptr };
+        GpuInstance*         _pScratchRawBase{ nullptr };
 
         struct SortKey
         {

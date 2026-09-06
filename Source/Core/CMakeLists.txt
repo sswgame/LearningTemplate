@@ -28,6 +28,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/MemoryProfiler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/PoolAllocator.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Process.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Profile/FrameProfiler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/StringUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/hashed_string.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskManager.cpp"

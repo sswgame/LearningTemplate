@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Profile/FrameProfiler.h"
+
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -116,6 +118,8 @@ namespace sw
 
     void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment )
     {
+        SW_PROFILE_SCOPE( "RT.Pass.execute" );
+
         if ( ctx._pCmd == nullptr )
         {
             SW_LOG_ERROR( "executePass: no active IRHICommandList" );

@@ -215,6 +215,13 @@ namespace sw
 
         while ( _window->processMessages() )
         {
+            // 프로파일 실행(-ProfileFrames N)은 목표 프레임을 채우면 스스로 끝난다.
+            if ( _engineLoop.wantsQuit() )
+            {
+                _window->requestClose();
+                break;
+            }
+
             frameTimer.updateTimer();
             const float32 deltaTime = MathUtil::min( frameTimer.getDeltaTime(), _maxFrameDeltaTime );
             accumulator += deltaTime;

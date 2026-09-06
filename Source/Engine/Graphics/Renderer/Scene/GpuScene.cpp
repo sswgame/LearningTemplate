@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
+#include "Core/Profile/FrameProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -20,17 +21,25 @@ namespace sw
     {
         struct GpuSceneInternal
         {
+            /**
+             * @brief 후보 [begin,end) 를 인스턴스 배열에 채웁니다. 범위는 서로 겹치지 않습니다.
+             * @details 컨테이너가 아니라 **미리 뽑아 둔 생 포인터**를 받는다. sw::vector 의 비상수
+             *          접근은 전부 "쓰기"로 집계되므로, 워커 N 개가 서로 다른 원소를 만져도
+             *          DataRaceDetector 에는 "같은 컨테이너에 writer N 개"로 보인다.
+             *          실제로 앱에 메시가 생기자마자 writer 17 개로 잡혀 SW_DEBUG_BREAK 이 돌았다 —
+             *          씬에 메시가 없어서 이 병렬 경로가 한 번도 실행되지 않았을 뿐이었다.
+             */
             template <typename TCandidate, typename TInstance>
-            static void fillRangeVal( const vector<TCandidate>& listScratchCandidate, vector<TInstance>& listScratchRaw, uint32 begin, uint32 end )
+            static void fillRangePtr( const TCandidate* pCandidate, TInstance* pInstance, uint32 begin, uint32 end )
             {
                 for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
                 {
-                    const auto& cand   = listScratchCandidate[entryIndex];
-                    auto&       inst   = listScratchRaw[entryIndex];
-                    inst._world        = cand._world;
-                    inst._boundsCenter = cand._boundsCenter;
-                    inst._boundsRadius = cand._boundsRadius;
-                    inst._blendMode    = cand._blendMode;
+                    const TCandidate& cand = pCandidate[entryIndex];
+                    TInstance&        inst = pInstance[entryIndex];
+                    inst._world            = cand._world;
+                    inst._boundsCenter     = cand._boundsCenter;
+                    inst._boundsRadius     = cand._boundsRadius;
+                    inst._blendMode        = cand._blendMode;
                 }
             }
 
@@ -207,12 +216,15 @@ namespace sw
 
     void GpuScene::fillScratchRange( uint32 start, uint32 end )
     {
-        GpuSceneInternal::fillRangeVal( _listScratchCandidate, _listScratchRaw, start, end );
+        // 포인터는 병렬 구간에 들어가기 전에 뽑아 둔다(prepareScratchPointers).
+        GpuSceneInternal::fillRangePtr( _pScratchCandidateBase, _pScratchRawBase, start, end );
     }
 
     void GpuScene::buildFromScene( Scene* pScene, const float3& cameraPos,
                                    TaskManager* pTaskManager )
     {
+        SW_PROFILE_SCOPE( "GT.GpuScene.build" );
+
         if ( pScene == nullptr )
         {
             clear();
@@ -297,6 +309,11 @@ namespace sw
 
         if ( bContentSame == false )
         {
+            // 병렬로 나눠 쓰기 전에 버퍼 주소를 한 번만 확정한다. 워커가 컨테이너를 직접 만지면
+            // 서로 다른 원소를 써도 레이스 감지기가 "writer N 개"로 본다.
+            _pScratchCandidateBase = _listScratchCandidate.data();
+            _pScratchRawBase       = _listScratchRaw.data();
+
             if ( pTaskManager != nullptr && count >= 8 && pTaskManager->getWorkerCount() > 0 )
             {
                 if ( _snapshotStage.isValid() == false )
@@ -309,7 +326,7 @@ namespace sw
                 pTaskManager->waitStage( _snapshotStage );
             }
             else
-                GpuSceneInternal::fillRangeVal( _listScratchCandidate, _listScratchRaw, 0, count );
+                GpuSceneInternal::fillRangePtr( _pScratchCandidateBase, _pScratchRawBase, 0, count );
 
             if ( bBatchKeysSame == false )
                 rebuildPartitionTables();
@@ -333,6 +350,8 @@ namespace sw
 
     bool GpuScene::upload( IRHIDevice* pDevice )
     {
+        SW_PROFILE_SCOPE( "RT.GpuScene.upload" );
+
         if ( pDevice == nullptr || _listInstance.empty() || _listAllBatch.empty() )
             return false;
 

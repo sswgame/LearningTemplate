@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
+#include "Core/Profile/FrameProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -250,6 +251,8 @@ namespace sw
 
     bool RenderGraph::executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice )
     {
+        SW_PROFILE_SCOPE( "RT.Graph.executeParallel" );
+
         if ( _listCompiledExecutionOrder.empty() && compile() == false )
             return false;
 

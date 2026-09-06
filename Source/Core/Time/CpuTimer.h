@@ -81,12 +81,17 @@ namespace sw
         /** @brief 경과를 갱신하고 밀리초를 Info 로그로 남깁니다. */
         ~ScopeCpuTimer() noexcept
         {
-            _timer.updateTimer();
             (void)_pTag;
             SW_LOG_INFO( "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * 1000.0f );
         }
 
-        /** @brief 생성 이후 경과 초입니다. 호출 시 타이머를 한 번 갱신합니다. */
+        /**
+         * @brief 생성 이후 경과 초입니다. 호출 시 타이머를 한 번 갱신합니다.
+         * @details `updateTimer()` 는 **직전 갱신 이후**의 델타를 재고 기준점을 지금으로 옮긴다.
+         *          그래서 두 번 연달아 부르면 두 번째는 그 사이 시간(≈0)만 돌려준다.
+         *          예전 소멸자는 `updateTimer()` 를 부른 뒤 이 함수를 불러서 또 갱신했고,
+         *          결과적으로 **스코프 길이와 무관하게 0 ms 를 찍었다.** 갱신은 한 번만 한다.
+         */
         float32 getElapsedTimeInSeconds() const noexcept
         {
             const_cast<CpuTimer&>( _timer ).updateTimer();
