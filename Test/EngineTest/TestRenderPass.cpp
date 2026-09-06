@@ -508,9 +508,9 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
     mesh->setMesh( cube );
 
     sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
-    device->getSwapChain()->beginFrame( clear );
+    device->beginFrame( clear );
     SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
-    device->getSwapChain()->endFrame( false, false );
+    device->endFrame( false, false );
     device->waitIdle();
 
     // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 해제.
@@ -571,9 +571,9 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
         gtGpuScene.buildFromScene( &scene, packet._cameraPos, nullptr );
         gtGpuScene.exportCpuSnapshot( packet._gpuScene );
 
-        device->getSwapChain()->beginFrame( clear );
+        device->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
-        device->getSwapChain()->endFrame( false, false );
+        device->endFrame( false, false );
 
         const sw::RHIBufferHandle instanceBuffer = renderer.getGpuScene().getInstanceBuffer();
         SW_EXPECT_TRUE( instanceBuffer != 0 );
@@ -802,9 +802,9 @@ SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
     const sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
     for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
     {
-        device->getSwapChain()->beginFrame( clear );
+        device->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
-        device->getSwapChain()->endFrame( false, false );
+        device->endFrame( false, false );
     }
     device->waitIdle();
 
@@ -867,9 +867,9 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
         if ( bOk )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            device->getSwapChain()->beginFrame( clear );
+            device->beginFrame( clear );
             bOk = renderer.execute( device.get(), nullptr, &scene );
-            device->getSwapChain()->endFrame( false, false );
+            device->endFrame( false, false );
             device->waitIdle();
         }
 

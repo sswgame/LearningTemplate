@@ -5,7 +5,6 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -72,11 +71,9 @@ namespace sw
         , _bufferCount{ 2 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
-        , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _swapChainImpl = sw::make_unique<D3D12RHISwapChain>( this );
-        _resourceImpl  = sw::make_unique<D3D12RHIResource>( this );
+        _resourceImpl = sw::make_unique<D3D12RHIResource>( this );
     }
 
     D3D12RHIDevice::~D3D12RHIDevice()
@@ -194,7 +191,6 @@ namespace sw
     #endif
     }
 
-    IRHISwapChain*      D3D12RHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       D3D12RHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* D3D12RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 

@@ -4,7 +4,6 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -253,6 +252,34 @@ namespace sw
             rt.Reset();
         }
         _listRenderTarget.clear();
+    }
+
+    void D3D12RHIDevice::resize( uint32 width, uint32 height )
+    {
+        if ( _swapChain == nullptr || ( width == 0 && height == 0 ) )
+            return;
+        _width  = width;
+        _height = height;
+
+        if ( _frameStreamState._bRecording != 0 && _commandList != nullptr )
+        {
+            _commandList->Close();
+            ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
+            if ( _commandQueue != nullptr )
+                _commandQueue->ExecuteCommandLists( 1, arrCommandList );
+            _frameStreamState._bRecording = 0;
+        }
+
+        waitForPreviousFrame();
+        cleanupRenderTargets();
+        const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, 0 );
+        if ( FAILED( resizeHr ) )
+        {
+            SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+            return;
+        }
+        createRenderTargets();
+        _frameIndex = _swapChain->GetCurrentBackBufferIndex();
     }
 
 } // namespace sw

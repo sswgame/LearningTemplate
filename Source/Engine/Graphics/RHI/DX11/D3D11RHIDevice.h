@@ -23,7 +23,6 @@ namespace sw
     class D3D11RHICommandContext;
     class D3D11RHICommandList;
     class D3D11RHIResource;
-    class D3D11RHISwapChain;
 
     /**
      * @struct D3D11RecordingState
@@ -49,7 +48,6 @@ namespace sw
         friend class D3D11RHICommandList;
 
     public:
-        friend class D3D11RHISwapChain;
         friend class D3D11RHIResource;
         // ------------------------------------------------------------------------------
         // 1) 수명 — 디바이스/스왑체인, 프레임, 오프스크린
@@ -66,16 +64,15 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief 스왑체인 뷰포트 크기 변경 */
-        void resize( uint32 width, uint32 height );
+        void resize( uint32 width, uint32 height ) override;
 
         /** @brief 프레임 시작 (백버퍼 렌더 타깃 클리어) */
-        void beginFrame( const float4& clearColor );
+        void beginFrame( const float4& clearColor ) override;
 
         /** @brief 스왑체인 Present 실행 */
-        void endFrame( bool vsync = true, bool bPresent = true );
+        void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        IRHISwapChain* getSwapChain() override;
-        IRHIResource*  getResource() override;
+        IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
         IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
@@ -275,7 +272,6 @@ namespace sw
         RHIReleaseQueue _releaseQueue;
 
         sw::unique_ptr<D3D11RHICommandContext> _frameStreamContext;
-        sw::unique_ptr<D3D11RHISwapChain>      _swapChainImpl;
         sw::unique_ptr<D3D11RHIResource>       _resourceImpl;
     };
 } // namespace sw
@@ -309,7 +305,6 @@ namespace sw
         void* getNativeSwapChain() const override { return nullptr; }
         void* getNativeCommandQueue() const { return nullptr; }
 
-        IRHISwapChain*      getSwapChain() override { return nullptr; }
         IRHIResource*       getResource() override { return nullptr; }
         IRHICommandContext* getFrameStreamContext() override { return nullptr; }
 

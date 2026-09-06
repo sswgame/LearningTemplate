@@ -16,7 +16,6 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
@@ -283,9 +282,7 @@ namespace sw
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle();
 
-        IRHISwapChain* pSwapChain = pRHI->getDevice().getSwapChain();
-        if ( pSwapChain != nullptr )
-            pSwapChain->resize( width, height );
+        pRHI->getDevice().resize( width, height );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )

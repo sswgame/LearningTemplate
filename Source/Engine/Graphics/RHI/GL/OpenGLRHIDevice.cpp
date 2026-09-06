@@ -7,7 +7,6 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
@@ -45,15 +44,13 @@ namespace sw
         , _listRenderPass{}
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
-        , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
         , _boundGraphicsPso{ 0 }
         , _lastVsync{ -1 }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
-        _swapChainImpl = sw::make_unique<OpenGLRHISwapChain>( this );
-        _resourceImpl  = sw::make_unique<OpenGLRHIResource>( this );
+        _resourceImpl = sw::make_unique<OpenGLRHIResource>( this );
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()
@@ -61,7 +58,6 @@ namespace sw
         shutdown();
     }
 
-    IRHISwapChain*      OpenGLRHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       OpenGLRHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 

@@ -65,7 +65,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHIDevice` (+ 백엔드 `*RHIDevice`) | RHI/ | 리소스·PSO·CL 생성, Context 소유, execute |
 | `IRHICommandContext` (+ `*RHICommandContext`) | RHI/ | draw/dispatch/barrier/blit 실행면 |
 | `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 명령 기록 — 모든 백엔드가 소프트웨어 replay 없이 즉시 `*RHICommandContext`를 호출 |
-| `IRHIResource` / `IRHISwapChain` | RHI/ | 리소스·스왑체인 추상 |
+| `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
 | `ShaderCompiler` · `ShaderReflection` · `ShaderVariant` · `ShaderCache` · `LiveShaderManager` | Shader/ | 컴파일·리플렉션·배리언트·캐시·핫리로드 |
@@ -138,7 +138,11 @@ Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapCha
 - Native bindless sampling — DX12/VK; DX11/GL은 bind-at-draw로 기능 동등
 - Vulkan `createRenderPass(desc)` — 비어 있으면 swapchain RP alias; 어태치먼트가 있으면 **소유** VkRenderPass 생성
 
-얇은 `*RHISwapChain.cpp`(VK/GL/DX11) 는 미완 스텁이 아니라 **Device로 위임하는 facade** 입니다.
+프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice` 에 있습니다. 예전에는 `IRHISwapChain`
+이라는 인터페이스가 있었지만 구현 넷 중 셋이 Device 로 그대로 넘기기만 했고, DX12 만 내용이 있었는데
+그마저 Device 의 private 멤버를 만지느라 `friend` 가 필요했습니다 — 상태를 하나도 갖지 않는 분리라
+없앴습니다. 스왑체인을 진짜 객체로 만드는 것(이미지·포맷·present 소유, acquire/present 인터페이스)은
+별개 과제입니다.
 
 ---
 

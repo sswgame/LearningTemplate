@@ -7,7 +7,6 @@
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 
 namespace sw
@@ -267,11 +266,6 @@ namespace sw
 
         const bool          bOffscreen   = packet._gameRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
-        if ( _pDevice->getSwapChain() == nullptr )
-        {
-            SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
-            return false;
-        }
         if ( bOffscreen && pFrameStream == nullptr )
         {
             SW_LOG_ERROR( "getFrameStreamContext() is null; skipping offscreen packet" );
@@ -291,7 +285,7 @@ namespace sw
             SW_LOG_INFO( "RHI submit mode: %#", _bLastImmediateSubmit ? "immediate (debug)" : "batched at endFrame" );
         }
         _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
-        _pDevice->getSwapChain()->beginFrame( packet._clearColor );
+        _pDevice->beginFrame( packet._clearColor );
 
         // 게임뷰 RT 확립. 예전엔 beginOffscreenPass 였는데, 그건 "렌더타깃 바인딩"과 "백엔드마다
         // 다른 스트림 분리"가 섞인 API 였다(Vulkan 만 별도 커맨드버퍼 + 블로킹 제출).
@@ -332,8 +326,7 @@ namespace sw
         if ( _presentHook.isBound() )
             _presentHook( *_pDevice, packet );
 
-        if ( _pDevice->getSwapChain() != nullptr )
-            _pDevice->getSwapChain()->endFrame( true );
+        _pDevice->endFrame( true );
 
         return true;
     }

@@ -18,7 +18,6 @@ namespace sw
 {
     class OpenGLRHICommandContext;
     class OpenGLRHIResource;
-    class OpenGLRHISwapChain;
 
     /**
      * @struct OpenGLRecordingState
@@ -48,7 +47,6 @@ namespace sw
     public:
         RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
         RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride );
-        friend class OpenGLRHISwapChain;
         friend class OpenGLRHIResource;
         /** @brief 빈 OpenGL 디바이스. */
         OpenGLRHIDevice();
@@ -62,16 +60,15 @@ namespace sw
         void shutdownInternal() override;
 
         /** @brief glViewport 크기 변경 */
-        void resize( uint32 width, uint32 height );
+        void resize( uint32 width, uint32 height ) override;
 
         /** @brief 프레임 시작 (glClearColor 및 glClear) */
-        void beginFrame( const float4& clearColor );
+        void beginFrame( const float4& clearColor ) override;
 
         /** @brief 프레임 종료 (SwapBuffers / wglSwapBuffers) */
-        void endFrame( bool vsync, bool bPresent = true );
+        void endFrame( bool vsync, bool bPresent = true ) override;
 
-        IRHISwapChain* getSwapChain() override;
-        IRHIResource*  getResource() override;
+        IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
         IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
@@ -275,7 +272,6 @@ namespace sw
         RHIReleaseQueue _releaseQueue;
 
         sw::unique_ptr<OpenGLRHICommandContext> _frameStreamContext;
-        sw::unique_ptr<OpenGLRHISwapChain>      _swapChainImpl;
         sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
 
         RHIPipelineStateHandle _boundGraphicsPso;

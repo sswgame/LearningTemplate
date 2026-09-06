@@ -5,7 +5,6 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
-#include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -54,11 +53,9 @@ namespace sw
         , _height{ 0 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
-        , _swapChainImpl{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _swapChainImpl = sw::make_unique<D3D11RHISwapChain>( this );
-        _resourceImpl  = sw::make_unique<D3D11RHIResource>( this );
+        _resourceImpl = sw::make_unique<D3D11RHIResource>( this );
     }
 
     D3D11RHIDevice::~D3D11RHIDevice()
@@ -66,7 +63,6 @@ namespace sw
         shutdown();
     }
 
-    IRHISwapChain*      D3D11RHIDevice::getSwapChain() { return _swapChainImpl.get(); }
     IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 

@@ -6,7 +6,6 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw

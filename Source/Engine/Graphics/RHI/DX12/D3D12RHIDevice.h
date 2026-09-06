@@ -24,7 +24,6 @@ namespace sw
     class D3D12RHICommandContext;
     class D3D12RHICommandList;
     class D3D12RHIResource;
-    class D3D12RHISwapChain;
 
     /**
      * @struct D3D12RecordingState
@@ -83,7 +82,6 @@ namespace sw
     class D3D12RHIDevice : public IRHIDevice
     {
     public:
-        friend class D3D12RHISwapChain;
         friend class D3D12RHIResource;
         friend class D3D12RHICommandContext;
         friend class D3D12RHICommandList;
@@ -105,8 +103,7 @@ namespace sw
         void waitIdle() override;
 
         /** @brief 오프스크린 패스를 종료합니다. */
-        IRHISwapChain* getSwapChain() override;
-        IRHIResource*  getResource() override;
+        IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
         IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
@@ -158,6 +155,10 @@ namespace sw
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 독립 커맨드 리스트 제출 */
+        void beginFrame( const float4& clearColor ) override;
+        void endFrame( bool vsync = true, bool bPresent = true ) override;
+        void resize( uint32 width, uint32 height ) override;
+
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
@@ -398,8 +399,7 @@ namespace sw
         /** @brief Present / offscreen / Deferred CL replay 대상 Immediate Context. */
         sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;
         /** @brief Mode=Deferred일 때 CL 바인딩용 soft Deferred Context (present 대상 아님). */
-        sw::unique_ptr<D3D12RHISwapChain> _swapChainImpl;
-        sw::unique_ptr<D3D12RHIResource>  _resourceImpl;
+        sw::unique_ptr<D3D12RHIResource> _resourceImpl;
     };
 } // namespace sw
 
@@ -418,7 +418,7 @@ namespace sw
         bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
         void shutdownInternal() override {}
         void resize( uint32, uint32 ) override {}
-        void beginFrame( const float4& ) {}
+        void beginFrame( const float4& ) override {}
         void endFrame( bool, bool = true ) override {}
 
         RHIBackend  getBackendType() const override { return RHIBackend::DirectX12; }
@@ -430,7 +430,6 @@ namespace sw
         void* getNativeSwapChain() const { return nullptr; }
         void* getNativeCommandQueue() const override { return nullptr; }
 
-        IRHISwapChain*      getSwapChain() override { return nullptr; }
         IRHIResource*       getResource() override { return nullptr; }
         IRHICommandContext* getFrameStreamContext() override { return nullptr; }
 

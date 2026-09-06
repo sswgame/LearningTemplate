@@ -14,7 +14,6 @@ namespace sw
     class IRHICommandContext;
     class IRHICommandList;
     class IRHIResource;
-    class IRHISwapChain;
     class IWindow;
     class RenderPassManager;
 
@@ -84,8 +83,21 @@ namespace sw
          *       supportsNativeBindlessSampling() / override getCapabilities()가 런타임 확정.
          */
         virtual RHICapabilities getCapabilities() const { return RHIAvailability::query( getBackendType() ); }
-        virtual IRHISwapChain*  getSwapChain() { return nullptr; }
-        virtual IRHIResource*   getResource() { return nullptr; }
+        /**
+         * @brief 프레임 기록을 열고 백버퍼를 준비합니다.
+         * @details 예전에는 이 셋이 `IRHISwapChain` 에 있었다. 그런데 스왑체인 구현 넷 중 셋은
+         *          디바이스로 그대로 넘기기만 했고, DX12 만 내용이 있었는데 그 내용이 전부
+         *          디바이스의 private 멤버를 만지는 것이라 `friend` 가 필요했다 — 분리가 아니라
+         *          분리의 반대였다. 프레임 수명주기는 디바이스의 일이므로 여기로 올린다.
+         * @note 스왑체인 자체(이미지·포맷·present)를 별도 객체로 소유하게 만드는 것은 별개 과제다.
+         *       그건 인터페이스를 acquire/present 로 바꾸는 설계 변경이라 같이 하면 안 된다.
+         */
+        virtual void beginFrame( const float4& clearColor ) = 0;
+        /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 생략합니다. */
+        virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
+        /** @brief 백버퍼 크기를 바꿉니다. */
+        virtual void          resize( uint32 width, uint32 height ) = 0;
+        virtual IRHIResource* getResource() { return nullptr; }
 
         /**
          * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트.

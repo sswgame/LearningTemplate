@@ -42,7 +42,6 @@ namespace sw
 {
     class VulkanRHICommandContext;
     class VulkanRHIResource;
-    class VulkanRHISwapChain;
 
     /**
      * @struct VulkanCommandListEntry
@@ -109,7 +108,6 @@ namespace sw
         friend class VulkanRHICommandList;
 
     public:
-        friend class VulkanRHISwapChain;
         friend class VulkanRHIResource;
         /** @brief 빈 Vulkan 디바이스. */
         VulkanRHIDevice();
@@ -126,17 +124,16 @@ namespace sw
         void waitIdle() override;
 
         /** @brief 스왑체인 재창조 */
-        void resize( uint32 width, uint32 height );
+        void resize( uint32 width, uint32 height ) override;
         bool createRenderPass();
         /** @brief 프레임 시작 (vkAcquireNextImageKHR 및 커맨드버퍼 기록 시작) */
-        void beginFrame( const float4& clearColor );
+        void beginFrame( const float4& clearColor ) override;
 
         /** @brief 프레임 종료 (vkQueueSubmit 및 vkQueuePresentKHR 제출) */
-        void endFrame( bool vsync, bool bPresent = true );
+        void endFrame( bool vsync, bool bPresent = true ) override;
 
         /** @brief 오프스크린 패스를 시작합니다. */
-        IRHISwapChain* getSwapChain() override;
-        IRHIResource*  getResource() override;
+        IRHIResource* getResource() override;
         /** @brief Present/offscreen/replay Immediate Context. */
         IRHICommandContext* getFrameStreamContext() override;
         /** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
@@ -657,7 +654,6 @@ namespace sw
         VkPipelineCache                           _pipelineCache;
 
         sw::unique_ptr<VulkanRHICommandContext> _frameStreamContext;
-        sw::unique_ptr<VulkanRHISwapChain>      _swapChainImpl;
         sw::unique_ptr<VulkanRHIResource>       _resourceImpl;
     };
 } // namespace sw
