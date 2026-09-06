@@ -20,6 +20,7 @@ namespace sw
     REFLECT()
     struct SampleTestActor
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _hp = 100;
 
@@ -59,6 +60,7 @@ namespace sw
     REFLECT()
     struct EmptyReflectedBaseTestActor
     {
+        REFLECT_BODY();
         virtual ~EmptyReflectedBaseTestActor() = default;
     };
 
@@ -72,6 +74,7 @@ namespace sw
     REFLECT()
     struct MultiBaseOrderTestActor : public EmptyReflectedBaseTestActor, public IPlainMixinTestActor
     {
+        REFLECT_BODY();
         void mixinHook() override {}
 
         PROPERTY()
@@ -81,6 +84,7 @@ namespace sw
     REFLECT()
     struct AliasAndReorderTestActor
     {
+        REFLECT_BODY();
         PROPERTY( Alias = "hp, HitPoints" )
         int32 _currentHp = 100;
 
@@ -94,6 +98,7 @@ namespace sw
     REFLECT( Alias = LegacyRenameActor )
     struct RenameCompatActor
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _hp = 100;
     };
@@ -101,6 +106,7 @@ namespace sw
     REFLECT()
     struct DefaultValueTestActor
     {
+        REFLECT_BODY();
         /** @brief 에셋에 _mana 가 없으면 Default 를 적용합니다(클래스 초기값 0이 아님). */
         PROPERTY( Default = "75" )
         int32 _mana{ 0 };
@@ -112,6 +118,7 @@ namespace sw
     REFLECT()
     struct NestedInner
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _x{ 0 };
     };
@@ -119,6 +126,7 @@ namespace sw
     REFLECT()
     struct NestedContainerActor
     {
+        REFLECT_BODY();
         PROPERTY()
         vector<vector<int32>> _grid;
 
@@ -147,6 +155,7 @@ namespace sw
     REFLECT()
     struct RpcDemoActor
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _hp = 100;
 
@@ -163,6 +172,7 @@ namespace sw
     REFLECT( Abstract )
     struct AbstractDemoBase
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _baseValue{ 1 };
 
@@ -176,6 +186,7 @@ namespace sw
     REFLECT( Static )
     struct StaticDemoLibrary
     {
+        REFLECT_BODY();
         FUNCTION( Category = "Math", DisplayName = "Double Int", Tooltip = "Returns value * 2" )
         /** @brief value * 2 를 반환합니다. */
         static int32 doubleInt( int32 value )
@@ -187,6 +198,7 @@ namespace sw
     REFLECT()
     struct PolyPayloadA
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _a{ 1 };
     };
@@ -194,6 +206,7 @@ namespace sw
     REFLECT()
     struct AssetPathActor
     {
+        REFLECT_BODY();
         PROPERTY( AssetPath, AssetType = "Texture" )
         string _albedo;
 
@@ -205,6 +218,7 @@ namespace sw
     REFLECT()
     struct CtorDemoActor
     {
+        REFLECT_BODY();
         PROPERTY()
         int32 _value = -1;
 
@@ -225,6 +239,7 @@ namespace sw
     REFLECT()
     struct MetadataDemoActor
     {
+        REFLECT_BODY();
         PROPERTY( Category = "Stats", DisplayName = "Hit Points", Tooltip = "Current HP", ReadOnly )
         int32 _hp = 10;
     };
@@ -233,6 +248,7 @@ namespace sw
     REFLECT()
     struct BitfieldTestActor
     {
+        REFLECT_BODY();
         PROPERTY( Category = "Flags" )
         uint8 _bActive : 1;
 
@@ -260,6 +276,7 @@ namespace sw
     REFLECT()
     struct WideBitfieldTestActor
     {
+        REFLECT_BODY();
         PROPERTY( Category = "Flags16" )
         uint16 _bFlag16_A : 1;
 
@@ -315,12 +332,14 @@ namespace sw
         REFLECT()
         struct OuterStruct
         {
+            REFLECT_BODY();
             PROPERTY()
             int32 _outerValue = 42;
 
             REFLECT()
             struct InnerStruct
             {
+                REFLECT_BODY();
                 PROPERTY()
                 string _innerData = "NestedData";
 
@@ -332,6 +351,7 @@ namespace sw
             class InnerClass
             {
             public:
+                REFLECT_BODY();
                 PROPERTY()
                 int64 _id = 999;
             };

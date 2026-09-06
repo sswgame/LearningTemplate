@@ -1008,13 +1008,13 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
 }
 
 /**
- * @brief [RenderPassTest] 미지정 확장 스테이지 진입점이 라운드트립에서 빈 값으로 유지되는지 검증
- * @details 예전에는 "빈 태그가 파일에 없어야 한다" 를 검사했다. 손으로 쓰던 라이터가 빈 필드를
- *          건너뛰었기 때문인데, 지금은 리플렉션 직렬화라 **모든 PROPERTY 를 기록한다.** 기본값을
- *          생략하면 "없음" 과 "명시적 기본값" 을 구분할 수 없어 라운드트립이 모호해지므로 그 편이
- *          맞다 — 파일이 장황해지는 대가는 받아들인다. 정작 중요한 계약은 값이 보존되는 것이다.
+ * @brief [RenderPassTest] `PROPERTY( SkipIfEmpty )` 가 빈 확장 스테이지를 파일에서 빼는지 검증
+ * @details 리플렉션 직렬화는 기본적으로 **모든** PROPERTY 를 쓴다 — 그래야 "파일에 없음" 과
+ *          "명시적으로 비어 있음" 이 구분된다. 그 기본값을 유지한 채 선택적 필드만 간결하게
+ *          만드는 방법이 `SkipIfEmpty` 다: 생략해도 좋다고 **스키마가 선언한** 필드만 빠지므로
+ *          모호해지지 않는다. 아래는 그 선언이 실제로 파일에 반영되는지를 본다.
  */
-SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesRoundtrip )
+SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 {
     sw::RenderPipelineResource pipeRes;
     sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
@@ -1036,9 +1036,15 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesRoundtrip )
     sw::string xmlContent;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( testPath, xmlContent ) );
 
-    // 지정한 값은 파일에 남아 있어야 한다.
+    // 지정한 값은 남고, SkipIfEmpty 를 선언한 빈 필드는 빠져야 한다.
     SW_EXPECT_TRUE( xmlContent.find( "VSMain" ) != sw::string::npos );
     SW_EXPECT_TRUE( xmlContent.find( "PSMain" ) != sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_geometryEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_hullEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_domainEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_meshEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_amplificationEntryPoint" ) == sw::string::npos );
+    SW_EXPECT_TRUE( xmlContent.find( "_computeEntryPoint" ) == sw::string::npos );
 
     // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
     sw::RenderPipelineResource loadedRes;

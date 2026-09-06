@@ -44,6 +44,8 @@ flag.XmlAttribute = XmlAttribute, xmlAttribute
 flag.AssetPath = AssetPath, assetPath
 flag.Polymorphic = Polymorphic, polymorphic
 flag.Transient = Transient, transient, NonSerialized, nonSerialized
+# 값이 비었으면 쓸 때 생략 (읽기에는 영향 없음)
+flag.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 flag.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 # 복수: Alias="hp, HitPoints" (따옴표 필수 — 콤마가 토큰 분리에 안 먹히게)
 string.Alias = Alias, PreviousName, PreviousNames
@@ -58,6 +60,7 @@ float.MaxRange = Max
 bool.ReadOnly = ReadOnly
 bool.XmlAttribute = XmlAttribute
 bool.Transient = Transient, transient, NonSerialized, nonSerialized
+bool.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 bool.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 
 [FUNCTION]

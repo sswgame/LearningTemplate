@@ -1,36 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Editor tool seeds (Dev). Host paths/layout filenames live in Config/Editor/EditorConfig.json. -->
-<EditorData>
-	<defaultMap></defaultMap>
-	<warpMap></warpMap>
-	<spriteAtlas></spriteAtlas>
-	<defaultMaterial>engine/materials/defaultmaterial.material</defaultMaterial>
-
-	<fontSize>16</fontSize>
-	<playerSpeed>5.0</playerSpeed>
-	<clearColor>0.12 0.15 0.18 1.0</clearColor>
-
-	<editorFolder>editor</editorFolder>
-	<fontsFolder>fonts</fontsFolder>
-
-	<baseFonts>
-		<font>consola.ttf</font>
-		<font>Consolas.ttf</font>
-		<font>DejaVuSansMono.ttf</font>
-		<font>DejaVuSansMono-Bold.ttf</font>
-		<font>LiberationMono-Regular.ttf</font>
-		<font>NotoSansMono-Regular.ttf</font>
-		<font>UbuntuMono-R.ttf</font>
-		<font>FreeMono.ttf</font>
-	</baseFonts>
-	<koreanFonts>
-		<font>malgun.ttf</font>
-		<font>malgunsl.ttf</font>
-		<font>NanumGothic.ttf</font>
-		<font>NanumBarunGothic.ttf</font>
-		<font>NotoSansCJK-Regular.ttc</font>
-		<font>NotoSansCJKkr-Regular.otf</font>
-		<font>NotoSansKR-Regular.otf</font>
-		<font>DroidSansFallbackFull.ttf</font>
-	</koreanFonts>
+<EditorData _defaultMap=""
+			_warpMap=""
+			_spriteAtlas=""
+			_defaultMaterial="engine/materials/defaultmaterial.material"
+			_fontSize="16"
+			_playerSpeed="5"
+			_clearColor="0.12,0.15,0.18,1"
+			_editorFolder="editor"
+			_fontsFolder="fonts">
+	<_listBaseFont>
+		<item>consola.ttf</item>
+		<item>Consolas.ttf</item>
+		<item>DejaVuSansMono.ttf</item>
+		<item>DejaVuSansMono-Bold.ttf</item>
+		<item>LiberationMono-Regular.ttf</item>
+		<item>NotoSansMono-Regular.ttf</item>
+		<item>UbuntuMono-R.ttf</item>
+		<item>FreeMono.ttf</item>
+	</_listBaseFont>
+	<_listKoreanFont>
+		<item>malgun.ttf</item>
+		<item>malgunsl.ttf</item>
+		<item>NanumGothic.ttf</item>
+		<item>NanumBarunGothic.ttf</item>
+		<item>NotoSansCJK-Regular.ttc</item>
+		<item>NotoSansCJKkr-Regular.otf</item>
+		<item>NotoSansKR-Regular.otf</item>
+		<item>DroidSansFallbackFull.ttf</item>
+	</_listKoreanFont>
 </EditorData>

@@ -14,6 +14,7 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -21,6 +22,7 @@ namespace sw
     REFLECT()
     struct RenderPipelineDesc
     {
+        REFLECT_BODY();
         PROPERTY()
         string _name = "ForwardPipeline";
 

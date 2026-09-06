@@ -9,51 +9,10 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        struct EditorDataInternal
-        {
-            static void takeFontList( XmlNode root, const utf8* pListName, vector<string>& outList )
-            {
-                XmlNode list = root.child( pListName );
-                if ( list.isValid() == false )
-                    return;
-
-                vector<string> listLoaded;
-                for ( XmlNode fontNode = list.child( "font" ); fontNode; fontNode = fontNode.next( "font" ) )
-                {
-                    const utf8* pText = fontNode.text();
-                    if ( StringUtil::isNullOrEmpty( pText ) == false )
-                        listLoaded.push_back( pText );
-                }
-                if ( listLoaded.empty() == false )
-                    outList = std::move( listLoaded );
-            }
-
-            static void takeClearColor( XmlNode root, float4& outColor )
-            {
-                const utf8* pText = root.childText( "clearColor" );
-                if ( StringUtil::isNullOrEmpty( pText ) )
-                    return;
-
-                string_splitter tokens( pText, { ",", " " } );
-                const auto&     listToken = tokens.getSplitList();
-                if ( listToken.size() < 4 )
-                    return;
-                float32 arrVal[4] = { outColor._x, outColor._y, outColor._z, outColor._w };
-                for ( size_t index = 0; index < 4; ++index )
-                    StringUtil::parseFloat( listToken[index], arrVal[index] );
-                outColor = float4( arrVal[0], arrVal[1], arrVal[2], arrVal[3] );
-            }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -72,32 +31,21 @@ namespace sw::editor
         if ( projectRoot.empty() == false && bAbsolute == false )
             absPath = FileUtil::joinPath( projectRoot, absPath );
 
-        XmlDocument doc;
-        if ( doc.loadFile( absPath ) == false )
+        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다 — 레지스트리를 이름으로 뒤질
+        // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
+        const TypeInfo* pTypeInfo = EditorData::StaticType();
+        if ( pTypeInfo == nullptr )
+        {
+            SW_LOG_WARNING( "EditorData TypeInfo 없음 — 내장 기본값을 씁니다." );
+            return false;
+        }
+
+        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다 — 실패해도 내장 기본값으로 동작한다.
+        if ( XmlSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
         {
             SW_LOG_WARNING( "Using built-in defaults; failed to read %#", absPath );
             return false;
         }
-
-        XmlNode root = doc.root( "EditorData" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <EditorData> in %# — using defaults.", absPath );
-            return false;
-        }
-
-        root.takeChildText( "defaultMap", _defaultMap );
-        root.takeChildText( "warpMap", _warpMap );
-        root.takeChildText( "spriteAtlas", _spriteAtlas );
-        root.takeChildText( "defaultMaterial", _defaultMaterial );
-        root.takeChildText( "editorFolder", _editorFolder );
-        root.takeChildText( "fontsFolder", _fontsFolder );
-
-        _fontSize    = root.childFloat( "fontSize", _fontSize );
-        _playerSpeed = root.childFloat( "playerSpeed", _playerSpeed );
-        EditorDataInternal::takeClearColor( root, _clearColor );
-        EditorDataInternal::takeFontList( root, "baseFonts", _listBaseFont );
-        EditorDataInternal::takeFontList( root, "koreanFonts", _listKoreanFont );
 
         SW_LOG_INFO( "Loaded from %#", absPath );
         return true;

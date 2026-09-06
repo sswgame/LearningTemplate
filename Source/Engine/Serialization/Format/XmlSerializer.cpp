@@ -309,6 +309,12 @@ namespace sw
                         {
                             StringBuilder<constant::kMaxBuffer8192> ss;
                             SerializerUtil::valueToText( ss, pPropPtr, prop._typeName, ctx );
+
+                            // 기본은 "전부 쓴다" 다 — 그래야 파일에 없음과 명시적으로 비어 있음이
+                            // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
+                            if ( prop._metadata._bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
+                                return;
+
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
                         }
                     }

@@ -3,7 +3,8 @@
 #include "Engine/Config/EngineData.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw
 {
@@ -13,43 +14,23 @@ namespace sw
     {
         const string path = assetRelativePath.empty() ? string( path::kEngineData ) : string( assetRelativePath );
 
-        XmlDocument doc;
-        string      absPath;
-        if ( doc.loadResource( path, &absPath ) == false )
+        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다 — 레지스트리를 이름으로 뒤질
+        // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
+        const TypeInfo* pTypeInfo = EngineData::StaticType();
+        if ( pTypeInfo == nullptr )
+        {
+            SW_LOG_WARNING( "EngineData TypeInfo 없음 — 내장 기본값을 씁니다." );
+            return false;
+        }
+
+        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다 — 그래서 실패해도 내장 기본값으로 동작한다.
+        if ( XmlSerializer::loadFile( path, this, *pTypeInfo ) == false )
         {
             SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
             return false;
         }
 
-        XmlNode root = doc.root( "EngineData" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <EngineData> in %# — using defaults.", absPath );
-            return false;
-        }
-
-        root.takeChildText( "defaultMaterial", _defaultMaterial );
-        root.takeChildText( "shellInputMap", _shellInputMap );
-        root.takeChildText( "defaultForwardPipeline", _defaultForwardPipeline );
-        root.takeChildText( "defaultDeferredPipeline", _defaultDeferredPipeline );
-        root.takeChildText( "defaultRenderPass", _defaultRenderPass );
-        root.takeChildText( "shaderShadowDepth", _shaderShadowDepth );
-        root.takeChildText( "shaderForwardLit", _shaderForwardLit );
-        root.takeChildText( "shaderGBuffer", _shaderGBuffer );
-        root.takeChildText( "shaderGBufferAlbedo", _shaderGBufferAlbedo );
-        root.takeChildText( "shaderGBufferNormal", _shaderGBufferNormal );
-        root.takeChildText( "shaderDeferredLighting", _shaderDeferredLighting );
-        root.takeChildText( "shaderPostBloom", _shaderPostBloom );
-        root.takeChildText( "shaderPostOutlineCommon", _shaderPostOutlineCommon );
-        root.takeChildText( "shaderPostOutlineEngine", _shaderPostOutlineEngine );
-        root.takeChildText( "shaderFullscreenBlit", _shaderFullscreenBlit );
-        root.takeChildText( "shaderGpuCull", _shaderGpuCull );
-        root.takeChildText( "shaderFullscreenTriangle", _shaderFullscreenTriangle );
-        root.takeChildText( "shaderSsao", _shaderSsao );
-        root.takeChildText( "shaderTaa", _shaderTaa );
-        root.takeChildText( "shaderTonemap", _shaderTonemap );
-
-        SW_LOG_INFO( "Loaded from %#", absPath );
+        SW_LOG_INFO( "Loaded from %#", path );
         return true;
     }
 } // namespace sw

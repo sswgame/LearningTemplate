@@ -10,6 +10,7 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -186,6 +187,7 @@ namespace sw
     REFLECT()
     struct RHISwapChainDesc
     {
+        REFLECT_BODY();
         PROPERTY()
         void* _pWindowHandle{ nullptr }; ///< OS 윈도우 핸들 (HWND, Window XID 등)
 
@@ -221,6 +223,7 @@ namespace sw
     REFLECT()
     struct RHIViewport
     {
+        REFLECT_BODY();
         PROPERTY()
         float32 _x{ 0.0f }; ///< 뷰포트 좌상단 X
 
@@ -247,6 +250,7 @@ namespace sw
     REFLECT()
     struct RHIDrawIndirectCommand
     {
+        REFLECT_BODY();
         PROPERTY()
         uint32 _vertexCount = 3; ///< 정점 개수
 
@@ -267,6 +271,7 @@ namespace sw
     REFLECT()
     struct RHIDispatchIndirectCommand
     {
+        REFLECT_BODY();
         PROPERTY()
         uint32 _threadGroupCountX{ 1 }; ///< X축 스레드 그룹 개수
 

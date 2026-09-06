@@ -77,9 +77,9 @@ namespace sw
         , _bAssetPath{ SW_FALSE }
         , _bPolymorphic{ SW_FALSE }
         , _bTransient{ SW_FALSE }
+        , _bSkipIfEmpty{ SW_FALSE }
 #if !defined( SW_SHIPPING )
         , _bHideInInspector{ SW_FALSE }
-        , _reservedFlags{ 0 }
 #else
         , _reservedFlags{ 0 }
 #endif

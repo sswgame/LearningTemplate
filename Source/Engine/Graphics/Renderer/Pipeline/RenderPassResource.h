@@ -10,6 +10,7 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -70,6 +71,7 @@ namespace sw
     REFLECT()
     struct RenderPassAttachment
     {
+        REFLECT_BODY();
         PROPERTY()
         string _name = "ColorAttachment0";
 
@@ -91,6 +93,7 @@ namespace sw
     REFLECT()
     struct RenderGraphPassDesc
     {
+        REFLECT_BODY();
         PROPERTY()
         string _name = "Pass";
 
@@ -120,11 +123,11 @@ namespace sw
          *       **입력으로 읽으면서** 뎁스로 바인딩한다(테스트만 하고 쓰지 않는다). 그래서 출력에서
          *       유추하지 않고 별도 필드로 둔다.
          */
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _depthAttachment;
 
         /** @brief HLSL path (engine/... or common/...). Empty → FrameRenderer type default. */
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _shaderPath;
 
         PROPERTY()
@@ -133,22 +136,22 @@ namespace sw
         PROPERTY()
         string _pixelEntryPoint = "PSMain";
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _computeEntryPoint;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _geometryEntryPoint;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _hullEntryPoint;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _meshEntryPoint;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         string _amplificationEntryPoint;
 
         /** @brief Shader macros / permutations as "NAME" or "NAME=VALUE". */
@@ -175,6 +178,7 @@ namespace sw
     REFLECT()
     struct RenderPassDesc
     {
+        REFLECT_BODY();
         PROPERTY()
         string _name = "DefaultMainPass";
 

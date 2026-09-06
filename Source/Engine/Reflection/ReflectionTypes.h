@@ -78,12 +78,21 @@ namespace sw
         uint8 _bPolymorphic : 1;
         /** @brief 직렬화(Json/Xml/Binary/Diff) 저장/로드 대상에서 제외 (Transient / NonSerialized). */
         uint8 _bTransient : 1;
+        /**
+         * @brief 값이 비어 있으면 **쓸 때 생략**한다 (PROPERTY(SkipIfEmpty)).
+         * @details 리플렉션 직렬화는 기본적으로 모든 PROPERTY 를 쓴다. 그래야 "파일에 없음" 과
+         *          "명시적으로 비어 있음" 이 구분되기 때문이다. 다만 선택적 필드(안 쓰는 셰이더
+         *          스테이지 진입점 같은 것)까지 전부 쓰면 파일이 읽기 어려워진다. 이 플래그는
+         *          그 판단을 **스키마가 명시**하게 한다 — 생략해도 좋다고 선언한 필드만 생략되므로
+         *          모호함이 생기지 않는다.
+         * @note 읽기에는 영향이 없다. 없으면 멤버 초기값이 그대로 남는다.
+         */
+        uint8 _bSkipIfEmpty : 1;
 #if !defined( SW_SHIPPING )
         /** @brief 에디터 인스펙터 패널 UI에서 숨김 (HideInInspector). */
-        uint8                  _bHideInInspector : 1;
-        [[maybe_unused]] uint8 _reservedFlags    : 1;
+        uint8 _bHideInInspector : 1;
 #else
-        [[maybe_unused]] uint8 _reservedFlags : 2;
+        [[maybe_unused]] uint8 _reservedFlags : 1;
 #endif
 
         /** @brief 범위/플래그 끈 기본값. */

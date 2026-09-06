@@ -64,17 +64,19 @@ namespace sw
         uint32                          _byteOffset;
         ContainerKind                   _containerKind;
         uint8                           _bitMask;
-        uint8                           _bIsBitField      : 1;
-        uint8                           _bReadOnly        : 1;
-        uint8                           _bXmlAttribute    : 1;
-        uint8                           _bAssetPath       : 1;
-        uint8                           _bPolymorphic     : 1;
-        uint8                           _bHasRange        : 1;
-        uint8                           _bIsContainer     : 1;
-        uint8                           _bTransient       : 1;
-        uint8                           _bHideInInspector : 1;
-        [[maybe_unused]] uint8          _reserved         : 7;
-        [[maybe_unused]] uint16         _padding;
+        uint8                           _bIsBitField   : 1;
+        uint8                           _bReadOnly     : 1;
+        uint8                           _bXmlAttribute : 1;
+        uint8                           _bAssetPath    : 1;
+        uint8                           _bPolymorphic  : 1;
+        uint8                           _bHasRange     : 1;
+        uint8                           _bIsContainer  : 1;
+        uint8                           _bTransient    : 1;
+        /** @brief 값이 비어 있으면 직렬화에서 생략 (PROPERTY(SkipIfEmpty)). */
+        uint8                   _bSkipIfEmpty     : 1;
+        uint8                   _bHideInInspector : 1;
+        [[maybe_unused]] uint8  _reserved         : 7;
+        [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
             : _name{}
@@ -104,6 +106,7 @@ namespace sw
             , _bHasRange{ SW_FALSE }
             , _bIsContainer{ SW_FALSE }
             , _bTransient{ SW_FALSE }
+            , _bSkipIfEmpty{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }

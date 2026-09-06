@@ -60,6 +60,7 @@ if(NOT SW_SHIPPING_BUILD)
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 		HEADERS
 			"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
+			"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorData.h"
 			"${CMAKE_CURRENT_SOURCE_DIR}/Common/Gui/EditorChrome.h"
 	)
 endif()

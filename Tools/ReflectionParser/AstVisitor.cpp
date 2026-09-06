@@ -1157,6 +1157,20 @@ namespace sw
             typeInfo._bComponentFactory = ( collect._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor ) ) ? SW_TRUE : SW_FALSE;
         }
 
+        // REFLECT() 를 붙였으면 REFLECT_BODY() 도 있어야 한다. 없으면 그 타입만 StaticType() 이
+        // 없어서, 다른 타입은 `T::StaticType()` 으로 되는 일이 그 타입만 레지스트리 이름 조회로
+        // 우회해야 한다 — 쓰는 쪽이 타입마다 접근 방법을 외워야 하는 상태가 된다. 경고로 두면
+        // 지나치므로 생성 자체를 실패시킨다.
+        if ( typeInfo._bReflectBody == SW_FALSE )
+        {
+            SW_LOG_ERROR( "ERROR: REFLECT() is used in class/struct '%#', but it lacks REFLECT_BODY()! "
+                          "Add REFLECT_BODY(); as the first line of the type body "
+                          "(and include \"Engine/Reflection/ReflectionMacros.h\").",
+                          typeInfo._fullyQualifiedName.c_str() );
+            _bHasError = SW_TRUE;
+            return;
+        }
+
         SW_LOG_TRACE( "REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
                       typeInfo._fullyQualifiedName, typeInfo._listProperty.size(), typeInfo._listMethod.size(),
                       typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,

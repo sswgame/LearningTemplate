@@ -339,6 +339,7 @@ namespace sw
         e.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
         e.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
         e.flagIf( prop._bTransient != 0, "p._metadata._bTransient", "SW_TRUE" );
+        e.flagIf( prop._bSkipIfEmpty != 0, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
         if ( prop._bHasRange != 0 )
         {
             e.linef( "p._metadata._minRange     = %#f;", prop._minRange );
