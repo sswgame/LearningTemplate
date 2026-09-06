@@ -284,6 +284,15 @@ namespace sw
         /// @brief updateStructuredBuffer 전용 프레임 링 슬롯 — 매 호출마다 업로드 힙/커맨드리스트를
         /// 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
         /// 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU에서 끝났다).
+        /**
+         * @struct StructuredUploadSlot
+         * @brief updateStructuredBuffer 가 쓰는 프레임 링 슬롯 하나 — 스테이징 힙 + 복사 얼로케이터/리스트.
+         * @details 한 프레임 안에서 여러 번 불린다(GpuScene 은 인스턴스·간접 인자 두 번). 그래서
+         *          얼로케이터는 **펜스 구간마다 한 번만** Reset 하고(_resetFence), 스테이징은 bump
+         *          오프셋으로 이어 쓴다(_uploadOffset). 예전엔 호출마다 둘 다 처음부터 다시 써서, 두 번째
+         *          호출이 첫 번째 복사가 아직 실행 중인 얼로케이터를 Reset 했다("allocator is being reset
+         *          [in use]" → 디바이스 제거 → 세그폴트, 에디터 없이 400 큐브에서 8/8 재현).
+         */
         struct StructuredUploadSlot
         {
             Microsoft::WRL::ComPtr<ID3D12Resource>            _uploadHeap;
@@ -291,6 +300,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _copyCommandList;
             void*                                             _pMapped{ nullptr };
             uint64                                            _capacity{ 0 };
+            uint64                                            _uploadOffset{ 0 };        ///< 이번 펜스 구간에서 쓴 스테이징 바이트
+            uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간
         };
 
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;

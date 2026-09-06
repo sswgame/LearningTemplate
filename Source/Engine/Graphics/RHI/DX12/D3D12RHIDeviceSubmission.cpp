@@ -242,7 +242,12 @@ namespace sw
                               static_cast<uint32>( _cmdListEntryCreated ) );
             return D3D12CommandListEntry{};
         }
-        ++_cmdListEntryCreated;
+        const uint32 entryIndex = _cmdListEntryCreated++;
+        utf16        arrName[64]{};
+        swprintf_s( arrName, L"PoolAllocator%u", entryIndex );
+        entry._allocator->SetName( arrName );
+        swprintf_s( arrName, L"PoolList%u", entryIndex );
+        entry._list->SetName( arrName );
         entry._list->Close();
         return entry;
     }

@@ -128,12 +128,30 @@ namespace sw
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙/얼로케이터/리스트를 새로 만들지 않음).
         // 이 슬롯을 다시 쓸 차례가 됐다는 건 waitForRingSlot()이 이미 constant::kMaxFrameCountInFlight 프레임 전 제출의
-        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다.
+        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다 — **프레임 사이에는**.
+        // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
+        // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[_pDevice->_frameRing.currentIndex()];
 
-        if ( slot._uploadHeap == nullptr || slot._capacity < size )
+        const bool bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+        if ( bNewFencePeriod )
+            slot._uploadOffset = 0;
+
+        if ( slot._uploadHeap == nullptr || slot._capacity < slot._uploadOffset + size )
         {
-            const uint64 newCapacity = MathUtil::align( static_cast<uint64>( size ) * 2, 65536ull );
+            const uint64 newCapacity = MathUtil::align( ( slot._uploadOffset + static_cast<uint64>( size ) ) * 2, 65536ull );
+
+            // 옛 힙은 이번 구간의 앞선 복사가 아직 읽고 있을 수 있다 — 펜스 뒤에 놓아준다.
+            if ( slot._uploadHeap != nullptr )
+            {
+                Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap = slot._uploadHeap;
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap]()
+                { (void)oldHeap.Get(); } ),
+                                                           _pDevice->_fenceValue );
+                slot._uploadHeap   = nullptr;
+                slot._pMapped      = nullptr;
+                slot._uploadOffset = 0;
+            }
 
             D3D12_HEAP_PROPERTIES uploadHeap{};
             uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -168,7 +186,9 @@ namespace sw
             slot._capacity   = newCapacity;
         }
 
-        Memory::copy( slot._pMapped, pData, size );
+        const uint64 stagingOffset = slot._uploadOffset;
+        Memory::copy( static_cast<uint8*>( slot._pMapped ) + stagingOffset, pData, size );
+        slot._uploadOffset = MathUtil::align( stagingOffset + static_cast<uint64>( size ), 256ull );
 
         if ( slot._copyAllocator == nullptr )
         {
@@ -177,12 +197,16 @@ namespace sw
                 SW_LOG_ERROR( "updateStructuredBuffer: failed to create copy command allocator" );
                 return;
             }
+            utf16 arrName[64]{};
+            swprintf_s( arrName, L"StructuredUploadAllocator%u", _pDevice->_frameRing.currentIndex() );
+            slot._copyAllocator->SetName( arrName );
         }
-        else if ( FAILED( slot._copyAllocator->Reset() ) )
+        else if ( bNewFencePeriod && FAILED( slot._copyAllocator->Reset() ) )
         {
             SW_LOG_ERROR( "updateStructuredBuffer: copy allocator Reset failed" );
             return;
         }
+        slot._resetFence = _pDevice->_fenceValue;
 
         if ( slot._copyCommandList == nullptr )
         {
@@ -219,7 +243,7 @@ namespace sw
             pList->ResourceBarrier( 1, &toCopyDest );
         }
 
-        pList->CopyBufferRegion( pDest, 0, slot._uploadHeap.Get(), 0, size );
+        pList->CopyBufferRegion( pDest, 0, slot._uploadHeap.Get(), stagingOffset, size );
 
         D3D12_RESOURCE_BARRIER toUav{};
         toUav.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
