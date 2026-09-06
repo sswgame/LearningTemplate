@@ -1902,7 +1902,9 @@ namespace sw
         //   6..9: 컴퓨트 읽기전용 구조버퍼(t0..t3, bindComputeShaderResource) / GPUScene 인스턴스 구조버퍼
         //   7..9: 위 4개 set 중 뒤쪽 3개는 컴퓨트 UAV(u0..u2, bindComputeUAV) 와도 공유한다 —
         //         한 디스패치에서 t 슬롯과 u 슬롯을 동시에 쓸 때는 서로 다른 인덱스를 사용해야 한다.
-        VkDescriptorSetLayout arrSetLayout[10] = {
+        //   10: MaterialCB(b1). 세트 단위 바인딩이라 상수 버퍼 슬롯마다 세트가 하나씩 필요하다 —
+        //       common.hlsli 의 SW_VK_CB_SET_1 과 같은 값이어야 한다.
+        VkDescriptorSetLayout arrSetLayout[kBoundDescriptorSetCount] = {
             _descriptorSetLayout,
             _bindlessTextureArrayLayout,
             _textureDescriptorSetLayout,
@@ -1913,7 +1915,21 @@ namespace sw
             _uavDescriptorSetLayout,
             _uavDescriptorSetLayout,
             _uavDescriptorSetLayout,
+            _descriptorSetLayout, // 10: MaterialCB (b1)
         };
+
+        // 세트를 11개 요구한다. Vulkan 이 보장하는 최소값은 4 라서 기기에 따라 부족할 수 있는데,
+        // 예전엔 확인 없이 만들고 vkCreatePipelineLayout 실패만 남겨 원인을 알 수 없었다.
+        {
+            VkPhysicalDeviceProperties props{};
+            vkGetPhysicalDeviceProperties( _physicalDevice, &props );
+            if ( props.limits.maxBoundDescriptorSets < kBoundDescriptorSetCount )
+            {
+                SW_LOG_ERROR( "이 기기는 디스크립터 세트를 %#개까지만 바인딩할 수 있는데 엔진은 %#개를 요구합니다.",
+                              props.limits.maxBoundDescriptorSets, kBoundDescriptorSetCount );
+                return false;
+            }
+        }
 
         VkPushConstantRange pushRange{};
         pushRange.stageFlags = allStages;
@@ -1922,7 +1938,7 @@ namespace sw
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount         = 10;
+        pipelineLayoutInfo.setLayoutCount         = kBoundDescriptorSetCount;
         pipelineLayoutInfo.pSetLayouts            = arrSetLayout;
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges    = &pushRange;

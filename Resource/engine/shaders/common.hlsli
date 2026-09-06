@@ -60,8 +60,12 @@
 #define SW_DECLARE_RW_BYTE_ADDRESS_BUFFER_ARRAY_UNBOUNDED( bufName, slot, spaceSet ) \
 	[[vk::binding( slot, spaceSet )]] RWByteAddressBuffer bufName[] : register( u##slot, space##spaceSet )
 
+// Vulkan 은 디스크립터 **세트** 단위로 바인딩하므로 상수 버퍼 슬롯마다 세트가 하나씩 필요하다.
+// 아래 번호는 C++ VulkanRHIDevice::kPassCbSetIndex / kMaterialCbSetIndex 와 같은 값이어야 한다.
+#define SW_VK_CB_SET_0 0
+#define SW_VK_CB_SET_1 10
 #define SW_DECLARE_CBUFFER( name, slot ) \
-	[[vk::binding( slot, 0 )]] cbuffer name : register( b##slot )
+	[[vk::binding( 0, SW_VK_CB_SET_##slot )]] cbuffer name : register( b##slot )
 #define SW_DECLARE_CBUFFER_SPACE( name, slot, spaceSet ) \
 	[[vk::binding( slot, spaceSet )]] cbuffer name : register( b##slot, space##spaceSet )
 #else

@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #include <vulkan/vulkan.h>
 
@@ -591,6 +592,13 @@ namespace sw
             if ( _pDevice->_staticSamplerSet != VK_NULL_HANDLE )
                 vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 4, 1, &_pDevice->_staticSamplerSet, 0, nullptr );
 
+            // MaterialCB(b1) 를 선언한 셰이더는 그 세트를 정적으로 참조한다 — Vulkan 은 정적으로
+            // 참조된 세트가 바인딩돼 있지 않으면 vkCmdDraw 를 거부하므로, 실제 머티리얼이 없을 때를
+            // 위해 기본 UBO 세트를 깔아 둔다. 실제 값은 bindConstantBuffer( cb, 1 ) 가 덮어쓴다.
+            if ( _pDevice->_descriptorSet != VK_NULL_HANDLE )
+                vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,
+                                         VulkanRHIDevice::kMaterialCbSetIndex, 1, &_pDevice->_descriptorSet, 0, nullptr );
+
             _pState->_bStaticGraphicsSetsBound = true;
         }
     }
@@ -692,35 +700,38 @@ namespace sw
 
     void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
     {
-        // 현재 파이프라인 레이아웃: b0(PassCB) = set 0, b1(MaterialCB) = push constant. b2+ 미지원.
-        if ( slot == 0 )
+        // 리플렉션이 알려준 레지스터 슬롯 그대로 바인딩한다. Vulkan 은 세트 단위라 상수 버퍼
+        // 슬롯마다 세트가 하나씩 있고(VulkanRHIDevice::kPassCbSetIndex / kMaterialCbSetIndex),
+        // 셰이더 쪽 매핑은 common.hlsli 의 SW_VK_CB_SET_* 이 맞춘다.
+        //
+        // 예전엔 b1 을 푸시 상수(머티리얼 인덱스)로 우회했다. 그러면 리플렉션이 b1 을 실제 상수
+        // 버퍼로 보고해도 Vulkan 만 값을 못 받았고, 셰이더가 b1 필드를 읽는 순간 파이프라인
+        // 레이아웃에 없는 디스크립터를 참조해 vkCmdDraw 가 깨졌다 — 바인딩 모델이 리플렉션
+        // 구동인데 한 백엔드만 예외를 두면 그 예외가 곧 함정이 된다.
+        if ( slot == shaderslot::kPassConstantBuffer )
         {
             bindGraphicsMaterialSets( cb );
             return;
         }
-        if ( slot == 1 )
-        {
-            // b1 은 Vulkan 에서 **실제 상수 버퍼가 아니다** — set 0 에는 바인딩 0 하나뿐이고,
-            // 여기서는 머티리얼 인덱스만 푸시 상수로 넘긴다(bindingslots.hlsli 의 b1 설명 참고).
-            // 셰이더가 `SW_DECLARE_CBUFFER( X, 1 )` 로 실제 필드를 선언하면 파이프라인 레이아웃에
-            // 없는 디스크립터를 참조하게 되어 vkCmdDraw 에서 깨진다 — 검증 레이어가 없으면 원인을
-            // 알 수 없는 크래시로만 보인다. 그래서 이 경로를 한 번은 소리내어 알린다.
-            if ( _pDevice->_bMaterialCbSlotWarned == 0 )
-            {
-                _pDevice->_bMaterialCbSlotWarned = 1;
-                SW_LOG_INFO( "b1(MaterialCB) 는 Vulkan 에서 푸시 상수(머티리얼 인덱스)로 전달됩니다 — "
-                             "셰이더가 b1 을 실제 cbuffer 로 선언했다면 레이아웃과 어긋납니다." );
-            }
 
+        if ( slot == shaderslot::kMaterialConstantBuffer )
+        {
             VkCommandBuffer cmd = commandBuffer();
-            if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || cb == kInvalidDescriptorIndex )
+            if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE ||
+                 cb == kInvalidDescriptorIndex ||
+                 cb >= static_cast<RHIDescriptorIndex>( _pDevice->registeredDescriptorSetCount() ) )
                 return;
-            constexpr VkShaderStageFlags kPushStages =
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-            uint32 matIndex = cb;
-            vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
+
+            const VkDescriptorSet materialSet = _pDevice->registeredDescriptorSetAt( cb );
+            if ( materialSet == VK_NULL_HANDLE || materialSet == _pState->_lastBoundMaterialSet )
+                return;
+
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout,
+                                     VulkanRHIDevice::kMaterialCbSetIndex, 1, &materialSet, 0, nullptr );
+            _pState->_lastBoundMaterialSet = materialSet;
             return;
         }
+
         SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 현재 파이프라인 레이아웃에서 지원하지 않습니다.", slot );
     }
 

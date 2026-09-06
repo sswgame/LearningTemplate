@@ -12,6 +12,7 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Renderer/RenderPipelineResource.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 #include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
@@ -589,7 +590,9 @@ namespace sw
                 {
                     vector<uint8> bytecode;
                     if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
+                    {
                         mapManifest[outDir].emplace( fileName, ShaderReflection::reflect( bytecode, fmt ) );
+                    }
                 }
             }
         }

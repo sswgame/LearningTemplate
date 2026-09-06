@@ -2,13 +2,9 @@
  * bindingslots.hlsli — 범용 바인딩 슬롯 번호 (C++ ShaderBindingSlots.h 와 수동 동기).
  *
  *  b0  space0 : PassCB   (엔진이 리플렉션으로 채움 — 셰이더가 필요한 필드만 선언)
- *  b1  space0 : MaterialCB — **Vulkan 에서는 실제 상수 버퍼가 아니다.**
- *              DX11/DX12/GL 은 진짜 cbuffer 로 바인딩하지만, Vulkan 백엔드는 set 0 에 바인딩 0
- *              하나만 두고 b1 은 머티리얼 **인덱스**를 푸시 상수로 넘긴다
- *              (VulkanRHICommandContext::bindConstantBuffer 참고). 그래서 Vulkan 에서
- *              `SW_DECLARE_CBUFFER( X, 1 )` 로 실제 필드를 선언하면 파이프라인 레이아웃에 없는
- *              디스크립터를 참조하게 되어 vkCmdDraw 가 깨진다. 머티리얼 값이 필요하면 bindless
- *              구조버퍼(SwInstanceData.materialIndex)를 쓸 것.
+ *  b1  space0 : MaterialCB (리플렉션 구동) — 네 백엔드 모두 실제 상수 버퍼다.
+ *              Vulkan 은 세트 단위 바인딩이라 b0/b1 이 각각 별도 디스크립터 세트를 쓴다
+ *              (common.hlsli 의 SW_VK_CB_SET_*, C++ VulkanRHIDevice::k*CbSetIndex 와 같은 값).
  *  b2..b15    : 자유 (범용 루트 시그니처 용량; 현재 엔진 바인더는 b0/b1 만 자동 채움)
  *  b0  space1 : g_BindlessCbIndex (루트 상수 — DX12 SM6.6 ResourceDescriptorHeap 경로)
  *  t0..t3     : 비네이티브 백엔드(DX11/GL) 엔진 텍스처 슬롯 (리플렉션 순서)

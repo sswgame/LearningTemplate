@@ -86,6 +86,8 @@ namespace sw
 
         /// @brief 마지막으로 바인딩한 set 0(PassCB) — 인덱스가 실제로 바뀔 때만 재바인딩하기 위한 캐시.
         VkDescriptorSet _lastBoundGraphicsSet0{ nullptr };
+        /// @brief 마지막으로 바인딩한 MaterialCB(b1) 세트 — 연속 드로우에서 재바인딩을 건너뛴다.
+        VkDescriptorSet _lastBoundMaterialSet{ nullptr };
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
@@ -331,6 +333,19 @@ namespace sw
         /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
          *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 32;
+
+        /**
+         * @brief b0(PassCB)·b1(MaterialCB) 이 들어가는 디스크립터 세트 인덱스.
+         * @details Vulkan 은 세트 단위로 바인딩하므로 상수 버퍼 슬롯마다 세트가 하나씩 필요하다.
+         *          `Resource/engine/shaders/common.hlsli` 의 SW_VK_CB_SET_* 와 **같은 값이어야
+         *          한다** — 어긋나면 셰이더가 파이프라인 레이아웃에 없는 세트를 참조한다.
+         *          b1 은 원래 푸시 상수로 우회하고 있었는데, 그러면 리플렉션이 b1 을 실제 상수
+         *          버퍼로 보고해도 Vulkan 만 값을 못 받는 예외가 생긴다.
+         */
+        static constexpr uint32 kPassCbSetIndex     = 0;
+        static constexpr uint32 kMaterialCbSetIndex = 10;
+        /// @brief 파이프라인 레이아웃이 요구하는 디스크립터 세트 수 (기기 한계와 비교한다).
+        static constexpr uint32 kBoundDescriptorSetCount = kMaterialCbSetIndex + 1;
 
         /// @brief VkBuffer + 메모리 + 사용 플래그
         struct VulkanBufferRecord
