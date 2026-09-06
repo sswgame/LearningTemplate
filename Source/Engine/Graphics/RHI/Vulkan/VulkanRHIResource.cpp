@@ -479,6 +479,18 @@ namespace sw
             return 0;
         }
 
+        if ( desc._bIsDepthStencil != 0 )
+        {
+            // 샘플용 뷰는 aspect 가 하나여야 한다 (DEPTH|STENCIL 뷰는 디스크립터에 못 쓴다). 그림자맵처럼
+            // 깊이를 읽는 패스가 이 뷰로 bindless 등록된다 — registerBindlessTexture 참고.
+            viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._sampleView ) != VK_SUCCESS )
+            {
+                record._sampleView = VK_NULL_HANDLE;
+                SW_LOG_WARNING( "createTexture2D: depth sample view creation failed — texture cannot be sampled." );
+            }
+        }
+
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
@@ -704,14 +716,17 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
-        VkDevice       dev   = _pDevice->_device;
-        VkImageView    view  = owned._imageView;
-        VkImage        image = owned._image;
-        VkDeviceMemory mem   = owned._memory;
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, image, mem]()
+        VkDevice       dev        = _pDevice->_device;
+        VkImageView    view       = owned._imageView;
+        VkImageView    sampleView = owned._sampleView;
+        VkImage        image      = owned._image;
+        VkDeviceMemory mem        = owned._memory;
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem]()
         {
             if ( view != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, view, nullptr );
+            if ( sampleView != VK_NULL_HANDLE )
+                vkDestroyImageView( dev, sampleView, nullptr );
             if ( image != VK_NULL_HANDLE )
                 vkDestroyImage( dev, image, nullptr );
             if ( mem != VK_NULL_HANDLE )

@@ -113,7 +113,7 @@ namespace sw
             cmd->setViewport( viewport );
             cmd->beginRenderPass( beginInfo );
             cmd->setPipelineState( pso );
-            cmd->draw( 3, 0, materialCb );
+            cmd->draw( 3, 0, kInvalidDescriptorIndex, materialCb );
             cmd->endRenderPass();
             cmd->endCommandList();
             // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.

@@ -688,13 +688,12 @@ namespace sw
 
         bindGraphicsMaterialSets( passCbDescriptorIndex );
 
+        // b1 은 다른 세 백엔드처럼 draw() 가 직접 건다(set 10). 예전엔 여기서 머티리얼 **인덱스**를 푸시
+        // 상수로만 밀어 넣었는데, 그 푸시 상수를 읽는 셰이더는 이제 없고 실제 b1 은 걸리지 않았다 —
+        // 엔진 경로는 ShaderBindingBinder 가 bindConstantBuffer(b1) 을 먼저 불러 가려졌지만,
+        // draw(…, materialCb) 만 쓰는 오프스크린 스모크는 Vulkan 에서만 g_MaterialColor=0 으로 검게 나왔다.
         if ( materialCbDescriptorIndex != kInvalidDescriptorIndex )
-        {
-            constexpr VkShaderStageFlags kPushStages =
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-            uint32 matIndex = materialCbDescriptorIndex;
-            vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
-        }
+            bindConstantBuffer( materialCbDescriptorIndex, shaderslot::kMaterialConstantBuffer );
 
         bindMeshVertexBufferOrFallback();
 

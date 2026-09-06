@@ -163,20 +163,20 @@ namespace sw
         bool   bFirstItem = true;
         for ( const GpuMeshBatch& batch : batches )
         {
-            Mesh* pMesh = batch._pMesh;
+            // 정점버퍼와 머티리얼 CB 는 **GpuScene::upload 가 이미 만들어 배치에 적어 뒀다**(게임 스레드).
+            // 여기는 패스 기록 중이라 TaskManager 워커에서 돌 수 있고, 그 스레드에서 Mesh::upload /
+            // applyToGpu 를 부르면 RHI 자원 생성이 워커에서 일어난다 — `-gv_gpuDriven=0` 이 DX12/Vulkan 에서
+            // 즉시 크래시하던 원인(Mesh::upload 의 워커 스레드 단언). 배치에 적힌 핸들만 쓴다.
+            const Mesh* pMesh = batch._pMesh;
             if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
                 continue;
-            if ( pMesh->upload( _pDevice ) == false )
-                continue;
 
-            const RHIBufferHandle vb = pMesh->getVertexBuffer();
+            const RHIBufferHandle vb = batch._vertexBuffer;
             if ( vb == 0 )
                 continue;
             ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 
             const RHIDescriptorIndex drawCb = batch._materialCb;
-            if ( batch._pMaterialInstance != nullptr )
-                batch._pMaterialInstance->applyToGpu( _pDevice );
 
             if ( bInstanced )
             {

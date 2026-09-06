@@ -120,6 +120,7 @@ namespace sw
         if ( pRecord == nullptr )
             return;
 
+        _pDevice->_boundComputePso = pso;
         if ( pRecord->_program != 0 )
             glUseProgram( pRecord->_program );
     }
@@ -521,14 +522,14 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        GLuint                                            program = _pDevice->_shaderProgram;
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso    = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
-        if ( pPso != nullptr && pPso->_program != 0 )
-            program = pPso->_program;
+        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 예전엔 그래픽스 PSO(또는 디바이스
+        // 기본 프로그램)를 다시 걸고 디스패치해서 gpucull 이 매 프레임 GL_INVALID_OPERATION
+        // ("no active compute program") 을 냈다 — 컬링 결과는 CPU 가 채운 인자 그대로라 화면은 멀쩡했다.
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundComputePso );
+        if ( pPso == nullptr || pPso->_program == 0 )
+            return;
 
-        if ( program != 0 )
-            glUseProgram( program );
-
+        glUseProgram( pPso->_program );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 

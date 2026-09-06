@@ -93,6 +93,21 @@ namespace sw
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
+        {
+            // 그림자맵: 깊이 쓰기(late fragment tests) 가 끝난 뒤 프래그먼트 셰이더가 샘플한다.
+            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
+        {
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        }
         else
         {
             barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;

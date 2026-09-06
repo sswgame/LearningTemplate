@@ -314,6 +314,7 @@ namespace sw
         {
             VkImage            _image{ nullptr };
             VkImageView        _imageView{ nullptr };
+            VkImageView        _sampleView{ nullptr }; ///< 깊이 텍스처 샘플용 DEPTH 단일 aspect 뷰. 컬러는 nullptr(_imageView 를 그대로 쓴다)
             VkDeviceMemory     _memory{ nullptr };
             VkFramebuffer      _framebuffer{ nullptr };
             VkRenderPass       _renderPass{ nullptr };
@@ -434,7 +435,7 @@ namespace sw
         /** @brief 디스크립터 풀·셋 레이아웃·파이프라인 레이아웃을 생성합니다. */
         bool createDescriptorResources();
         /** @brief bindless 텍스처 슬롯을 갱신합니다. */
-        void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view );
+        void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
         /** @brief 현재 프레임 커맨드 버퍼. */
         VkCommandBuffer currentCommandBuffer() const;
         /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비면 새로 만듭니다. */

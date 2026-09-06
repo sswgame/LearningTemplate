@@ -277,7 +277,8 @@ namespace sw
         sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
 
         RHIPipelineStateHandle _boundGraphicsPso;
-        int8                   _lastVsync; ///< -1 unset, 0/1 last applied
+        RHIPipelineStateHandle _boundComputePso; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO — dispatchCompute 는 이 프로그램을 쓴다
+        int8                   _lastVsync;       ///< -1 unset, 0/1 last applied
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;
         /// @brief bindShaderResource가 실제로 바인딩한 텍스처 유닛 비트마스크(비트 i = 유닛 i).

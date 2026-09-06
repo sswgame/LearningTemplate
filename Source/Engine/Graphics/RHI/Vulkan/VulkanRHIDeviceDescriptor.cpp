@@ -399,15 +399,17 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view )
+    void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
     {
         if ( _bindlessTextureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount )
             return;
 
+        // 레이아웃은 샘플 시점에 이미지가 실제로 있을 레이아웃과 같아야 한다 — 컬러는 SHADER_READ_ONLY,
+        // 깊이는 prepareTextureForShaderRead 가 옮기는 DEPTH_STENCIL_READ_ONLY (호출자가 고른다).
         VkDescriptorImageInfo imageInfo{};
         imageInfo.sampler     = _defaultSampler;
         imageInfo.imageView   = view;
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageLayout = static_cast<VkImageLayout>( imageLayout );
 
         VkWriteDescriptorSet write{};
         write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

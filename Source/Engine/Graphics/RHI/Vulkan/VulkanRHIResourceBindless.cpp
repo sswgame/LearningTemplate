@@ -42,8 +42,16 @@ namespace sw
         if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
 
-        // DEPTH|STENCIL image views cannot be written as sampled descriptors.
-        if ( pResolved->_bDepthStencil != 0 )
+        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다 — DEPTH 단일 aspect 뷰
+        // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는
+        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 예전엔 여기서 그냥 거부했다 —
+        // 그러면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 돌려줘, Vulkan 만
+        // 모든 픽셀이 "완전 그림자"(x0.56) 로 어두웠다(검증 에러 없음, 큐브는 다 보인다).
+        const bool        bDepth       = pResolved->_bDepthStencil != 0;
+        const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
+        const uint32      sampleLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+                                                                     : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        if ( sampleView == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
 
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
@@ -61,7 +69,7 @@ namespace sw
 
         if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
         {
-            _pDevice->writeBindlessTextureSlot( descriptorIndex, record._imageView );
+            _pDevice->writeBindlessTextureSlot( descriptorIndex, sampleView, sampleLayout );
             if ( descriptorIndex >= _pDevice->_listRegisteredTexture.size() )
                 _pDevice->_listRegisteredTexture.resize( descriptorIndex + 1 );
             _pDevice->_listRegisteredTexture[descriptorIndex] = _pDevice->_bindlessTextureSet; // shared array set
@@ -88,8 +96,8 @@ namespace sw
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.sampler     = _pDevice->_defaultSampler;
-        imageInfo.imageView   = record._imageView;
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView   = sampleView;
+        imageInfo.imageLayout = static_cast<VkImageLayout>( sampleLayout );
 
         VkWriteDescriptorSet write{};
         write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -251,7 +259,7 @@ namespace sw
              _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
         {
             // 공유 배열 세트의 슬롯 하나 — 더미 뷰로 되돌려 두면 GPU 가 아직 읽고 있어도 안전하다.
-            _pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
+            _pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, VkDescriptorSet{ VK_NULL_HANDLE } );
         }
         else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )

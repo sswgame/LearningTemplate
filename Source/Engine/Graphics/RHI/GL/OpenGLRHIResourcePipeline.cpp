@@ -237,6 +237,8 @@ namespace sw
 
         if ( _pDevice->_boundGraphicsPso == pso )
             _pDevice->_boundGraphicsPso = 0;
+        if ( _pDevice->_boundComputePso == pso )
+            _pDevice->_boundComputePso = 0;
 
         if ( program == 0 && vao == 0 )
             return;

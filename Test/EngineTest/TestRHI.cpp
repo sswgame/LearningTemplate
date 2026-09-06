@@ -587,8 +587,7 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
             const bool            bSmoke = device->executeOffscreenPipelineSmoke( pso, cbIndex, 64, 64, &pixels, &layout );
-            if ( bSmoke == false )
-                SW_LOG_WARNING( "%#: executeOffscreenPipelineSmoke(readback) 실패 — 위 TODO 참고.", device->getBackendName() );
+            SW_EXPECT_TRUE_MSG( bSmoke, "executeOffscreenPipelineSmoke(readback) 실패" );
             if ( bSmoke )
             {
                 // 클리어는 (0.05,0.05,0.08), 드로우는 빨강 — 빨간 픽셀이 하나도 없으면 그리기가
@@ -604,14 +603,14 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
                             ++redCount;
                     }
                 }
-                // TODO(미해결): 지금은 네 백엔드 모두 여기서 빨간 픽셀을 못 찾는다. 조사한 데까지는
-                // 백엔드마다 실패 지점이 다르다 — DX11 은 풀스크린 정점버퍼가 아예 없었고(이 커밋에서
-                // 고쳤다), Vulkan/GL 은 클리어조차 안 보이며, DX12 는 이 경로의 readback 자체가 실패한다.
-                // 원인을 다 가르기 전까지 하드 실패 대신 건너뛴다 — **고치는 즉시 이 스킵을 없애고
-                // SW_EXPECT_TRUE_MSG 로 되돌릴 것.** (오프스크린 렌더타깃을 읽어 검증하는 유일한 그물이다)
+                // 네 백엔드가 한때 전부 여기서 0 을 냈다. 공통 원인은 스모크가 draw( 3, 0, materialCb ) 로
+                // 머티리얼 CB 를 **PassCB 자리**에 넘긴 것 — b1 이 안 걸려 삼각형이 검게 나와 클리어까지
+                // 덮었다(그래서 "클리어조차 안 보임" 으로 보였다). Vulkan 은 거기에 더해 draw() 가 b1 을
+                // 푸시 상수로만 넘기고 set 10 을 안 걸었다. 둘 다 고쳤으므로 다시 하드 단언이다.
+                SW_EXPECT_TRUE_MSG( redCount > 0, "오프스크린 드로우가 readback 에 보이지 않습니다" );
                 if ( redCount == 0 )
                 {
-                    SW_LOG_WARNING( "%#: 오프스크린 드로우가 readback 에 보이지 않습니다 (첫 픽셀 %# %# %#, 클리어는 13 13 20).",
+                    SW_LOG_WARNING( "%#: 첫 픽셀 %# %# %# (클리어는 13 13 20, 드로우는 빨강).",
                                     device->getBackendName(), pixels.size() > 2 ? pixels[0] : 0,
                                     pixels.size() > 2 ? pixels[1] : 0, pixels.size() > 2 ? pixels[2] : 0 );
                 }
@@ -627,7 +626,6 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
 
     if ( okCount == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for offscreen readback test" );
-    SW_TEST_SKIP( "오프스크린 렌더타깃 readback 이 아직 백엔드별로 어긋난다 — 위 TODO 참고" );
 }
 
 /**
