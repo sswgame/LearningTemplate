@@ -25,8 +25,10 @@ namespace sw
      *             IRHICommandList로 전환 완료. 이제 어떤 백엔드도 RHIDeferredCommandList를 쓰지
      *             않아 그 클래스와 ICommandReplayTarget을 완전히 삭제 — IRHICommandContext가
      *             ICommandReplayTarget 대신 IRHICommandList를 직접 상속(같은 기록 API 표면을
-     *             공유)하도록 표면 자체가 바뀌었으므로 버전을 bump. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v7-2026-09";
+     *             공유)하도록 표면 자체가 바뀌었으므로 버전을 bump.
+     *         v8: IRHIResource 에 unregisterBindlessTexture 추가 — 텍스처/버퍼 인덱스 공간이 다른
+     *             백엔드(DX11/GL/Vulkan)에서 텍스처 SRV 를 버퍼 해제로 넘기던 오염을 끊는다. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v8-2026-09";
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();

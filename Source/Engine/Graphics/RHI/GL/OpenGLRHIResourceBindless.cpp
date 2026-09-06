@@ -52,8 +52,25 @@ namespace sw
 
     void OpenGLRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        // 빈 슬롯(텍스처 인덱스가 잘못 넘어왔거나 이중 해제)을 다시 넣으면 같은 인덱스가 두 버퍼에 발급된다.
+        if ( index < _pDevice->_listRegisteredBindless.size() && _pDevice->_listRegisteredBindless[index]._buffer == 0 )
+        {
+            SW_LOG_ERROR( "Bindless buffer index %# is already free; ignoring the duplicate release.", index );
+            return;
+        }
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index,
                               OpenGLRHIDevice::BindlessResourceRecord{} );
+    }
+
+    void OpenGLRHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index]._texture == 0 )
+        {
+            SW_LOG_ERROR( "Bindless texture index %# is already free; ignoring the duplicate release.", index );
+            return;
+        }
+        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index,
+                              OpenGLRHIDevice::BindlessTextureRecord{} );
     }
 
     RHIDescriptorIndex OpenGLRHIResource::registerBindlessUAV( RHIBufferHandle buffer )

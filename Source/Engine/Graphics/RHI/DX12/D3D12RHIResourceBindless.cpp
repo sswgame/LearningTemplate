@@ -173,14 +173,32 @@ namespace sw
     void D3D12RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->checkRegistryMutableNow( "unregisterBindlessResource" );
+        releaseBindlessSlot( index );
+    }
+
+    void D3D12RHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessTexture" );
+        releaseBindlessSlot( index );
+    }
+
+    void D3D12RHIResource::releaseBindlessSlot( RHIDescriptorIndex index )
+    {
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index < _pDevice->_listRegisteredBindless.size() )
+        if ( index >= _pDevice->_listRegisteredBindless.size() )
+            return;
+        D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredBindless[index];
+        // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다.
+        if ( rec._resource == nullptr && rec._buffer == 0 && rec._texture == 0 )
         {
-            _pDevice->_listRegisteredBindless[index]._resource = nullptr;
-            _pDevice->_listRegisteredBindless[index]._buffer   = 0;
-            _pDevice->_listRegisteredBindless[index]._texture  = 0;
-            _pDevice->_listFreeBindless.push_back( index );
+            SW_LOG_ERROR( "Bindless index %# is already free; ignoring the duplicate release.", index );
+            return;
         }
+        rec._resource = nullptr;
+        rec._buffer   = 0;
+        rec._texture  = 0;
+        _pDevice->_listFreeBindless.push_back( index );
     }
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessUAV( RHIBufferHandle buffer )

@@ -27,11 +27,17 @@ namespace sw
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
+        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
+    private:
+        /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */
+        void releaseBindlessSlot( RHIDescriptorIndex index );
+
+    public:
     private:
         D3D12RHIDevice* _pDevice;
     };

@@ -27,6 +27,7 @@ namespace sw
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
+        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;

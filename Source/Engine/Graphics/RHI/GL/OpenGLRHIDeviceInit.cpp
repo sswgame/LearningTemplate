@@ -541,6 +541,19 @@ namespace sw
         return true;
     }
 
+    bool OpenGLRHIDevice::isGraphicsContextCurrent() const
+    {
+        if ( _bInitialized == SW_FALSE || _pHRC == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        return wglGetCurrentContext() == static_cast<HGLRC>( _pHRC );
+#elif defined( SW_PLATFORM_LINUX )
+        return glXGetCurrentContext() == (GLXContext)_pHRC;
+#else
+        return false; // 조회 수단이 없으면 예전처럼 바인딩/해제한다.
+#endif
+    }
+
     void OpenGLRHIDevice::unbindGraphicsContext()
     {
         if ( _bInitialized == SW_FALSE )

@@ -177,6 +177,15 @@ namespace sw
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredDescriptorSet.size() )
             return;
+        // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
+        // 넣으면 다음 registerBindlessResource 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다 — 실제로
+        // 트랜지언트 텍스처 인덱스 0·1·2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 STORAGE 세트가
+        // 들어갔고, 그래픽스 set 0 이 UNIFORM 레이아웃과 어긋난다는 검증 에러가 매 프레임 났다.
+        if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
+        {
+            SW_LOG_ERROR( "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
+            return;
+        }
         const VkDescriptorSet set = releaseFreeListIndex( _pDevice->_listRegisteredDescriptorSet, _pDevice->_listBindlessFree,
                                                           index, VkDescriptorSet{ VK_NULL_HANDLE } );
 
@@ -211,6 +220,54 @@ namespace sw
             enqueueFree( set );
         if ( index < _pDevice->_listBindlessSourceBuffer.size() )
             _pDevice->_listBindlessSourceBuffer[index] = 0;
+    }
+
+    void VulkanRHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        _pDevice->checkRegistryMutableNow( "unregisterBindlessTexture" );
+        if ( index == kInvalidDescriptorIndex )
+            return;
+        // 텍스처 레코드가 자기 인덱스를 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽도
+        // 같이 지워야 나중의 destroyTexture 가 같은 슬롯을 두 번 반납하지 않는다.
+        bool bFound = false;
+        _pDevice->_gpuTextures.forEach( [this, index, &bFound]( VulkanRHIDevice::VulkanTextureRecord& record )
+        {
+            if ( record._bindlessIndex != index )
+                return;
+            releaseTextureBindlessSlot( record );
+            bFound = true;
+        } );
+        if ( bFound == false )
+            SW_LOG_ERROR( "Bindless texture index %# is not owned by any texture; ignoring the release.", index );
+    }
+
+    void VulkanRHIResource::releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record )
+    {
+        if ( record._bindlessIndex == kInvalidDescriptorIndex )
+            return;
+        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex            index = record._bindlessIndex;
+        if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTexture.size() &&
+             _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
+        {
+            // 공유 배열 세트의 슬롯 하나 — 더미 뷰로 되돌려 두면 GPU 가 아직 읽고 있어도 안전하다.
+            _pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
+            releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, VkDescriptorSet{ VK_NULL_HANDLE } );
+        }
+        else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )
+        {
+            // 텍스처별 전용 세트(슬롯 바인드 폴백) — 프레임 펜스 뒤에 반납한다.
+            VkDevice              dev  = _pDevice->_device;
+            VkDescriptorPool      pool = _pDevice->_descriptorPool;
+            const VkDescriptorSet set  = releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                                               index, VkDescriptorSet{ VK_NULL_HANDLE } );
+            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
+            {
+                vkFreeDescriptorSets( dev, pool, 1, &set );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
+        }
+        record._bindlessIndex = kInvalidDescriptorIndex;
     }
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessUAV( RHIBufferHandle buffer )

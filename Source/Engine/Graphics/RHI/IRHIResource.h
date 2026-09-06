@@ -92,13 +92,32 @@ namespace sw
         // ------------------------------------------------------------------------------
         // Bindless — 텍스처/버퍼/UAV 등록과 해제
         // ------------------------------------------------------------------------------
-        /** @brief Bindless 테이블에 텍스처를 등록하고 SRV 인덱스를 발급합니다. */
+        /**
+         * @brief Bindless 테이블에 텍스처를 등록하고 SRV 인덱스를 발급합니다.
+         * @details 텍스처 인덱스와 버퍼 인덱스는 **서로 다른 공간**입니다. DX12 만 하나의 셰이더 가시
+         *          힙을 공유하고, DX11/OpenGL/Vulkan 은 텍스처 표와 버퍼 표를 따로 둡니다 — 같은 정수가
+         *          양쪽에서 각각 다른 리소스를 가리킬 수 있습니다. 그래서 해제도 종류별로 나뉩니다.
+         */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief registerBindlessTexture 가 발급한 텍스처 SRV 인덱스를 해제합니다.
+         * @details 버퍼 인덱스를 여기에 넘기거나 텍스처 인덱스를 unregisterBindlessResource 에 넘기면
+         *          안 됩니다. 후자는 실제로 있었던 사고입니다 — 트랜지언트 텍스처 SRV 0·1·2 가 버퍼
+         *          프리리스트로 들어가 살아 있는 패스 상수버퍼 슬롯 0·1·2 를 비운 것으로 만들었고, 다음에
+         *          등록된 인스턴스 구조버퍼가 슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸렸습니다.
+         *          destroyTexture 는 등록을 스스로 정리하므로 파괴 직전이라면 이 호출은 생략해도 됩니다.
+         */
+        virtual void unregisterBindlessTexture( RHIDescriptorIndex index ) = 0;
 
         /** @brief Bindless 테이블에 버퍼를 등록하고 인덱스를 발급합니다. */
         virtual RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) = 0;
 
-        /** @brief Bindless 리소스 등록을 해제합니다. */
+        /**
+         * @brief registerBindlessResource 가 발급한 **버퍼** 인덱스를 해제합니다.
+         * @details 이미 비어 있는 슬롯(다른 종류의 인덱스, 이중 해제)은 프리리스트에 다시 넣지 않습니다 —
+         *          한 번이라도 넣으면 같은 인덱스가 두 리소스에 발급돼 조용히 엉뚱한 버퍼가 바인딩됩니다.
+         */
         virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
 
         /** @brief Bindless UAV를 등록하고 인덱스를 발급합니다. */

@@ -347,30 +347,7 @@ namespace sw
 
         _pDevice->destroyCompositeFramebuffersUsing( texture );
 
-        if ( pSlot->_bindlessIndex != kInvalidDescriptorIndex )
-        {
-            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            const RHIDescriptorIndex            index = pSlot->_bindlessIndex;
-            if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTexture.size() &&
-                 _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
-            {
-                _pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
-                releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, VkDescriptorSet{ VK_NULL_HANDLE } );
-            }
-            else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )
-            {
-                VkDevice              dev  = _pDevice->_device;
-                VkDescriptorPool      pool = _pDevice->_descriptorPool;
-                const VkDescriptorSet set  = releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
-                                                                   index, VkDescriptorSet{ VK_NULL_HANDLE } );
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
-                {
-                    vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
-            }
-            pSlot->_bindlessIndex = kInvalidDescriptorIndex;
-        }
+        releaseTextureBindlessSlot( *pSlot );
 
         _pDevice->destroyOffscreenFramebuffer( *pSlot );
         VulkanRHIDevice::VulkanTextureRecord owned;

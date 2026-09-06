@@ -2,6 +2,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 namespace sw
 {
@@ -26,12 +27,16 @@ namespace sw
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
+        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
+        /** @brief 텍스처 레코드가 쥔 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture/unregisterBindlessTexture 공용). */
+        void releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record );
+
         VulkanRHIDevice* _pDevice;
     };
 } // namespace sw

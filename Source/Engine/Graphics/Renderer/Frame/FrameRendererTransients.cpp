@@ -197,7 +197,11 @@ namespace sw
         {
             if ( srvIndex != kInvalidDescriptorIndex )
             {
-                _pDevice->getResource()->unregisterBindlessResource( srvIndex );
+                // 텍스처와 버퍼는 인덱스 공간이 다르다 — 종류에 맞는 해제를 불러야 한다.
+                if ( bIsTexture )
+                    _pDevice->getResource()->unregisterBindlessTexture( srvIndex );
+                else
+                    _pDevice->getResource()->unregisterBindlessResource( srvIndex );
                 srvIndex = kInvalidDescriptorIndex;
             }
             if ( handle != 0 )
@@ -344,7 +348,7 @@ namespace sw
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.
         if ( _taaHistorySrv != kInvalidDescriptorIndex )
         {
-            _pDevice->getResource()->unregisterBindlessResource( _taaHistorySrv );
+            _pDevice->getResource()->unregisterBindlessTexture( _taaHistorySrv );
             _taaHistorySrv = kInvalidDescriptorIndex;
         }
         if ( _taaHistory != 0 )
@@ -355,8 +359,10 @@ namespace sw
 
         for ( auto& [name, srv] : _mapTransientSrv )
         {
+            // 텍스처 SRV 인덱스다. 예전엔 버퍼용 해제로 넘겨서 버퍼 프리리스트가 오염됐고, 그 자리를
+            // 인스턴스 구조버퍼가 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀌었다(Vulkan 검증 에러).
             if ( srv != kInvalidDescriptorIndex )
-                _pDevice->getResource()->unregisterBindlessResource( srv );
+                _pDevice->getResource()->unregisterBindlessTexture( srv );
         }
         for ( auto& [name, tex] : _mapTransient )
         {

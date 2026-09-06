@@ -272,6 +272,88 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 }
 
 /**
+ * @brief [RHITest] 텍스처 SRV 인덱스와 버퍼 인덱스는 다른 공간 — 텍스처 해제가 버퍼 프리리스트를 오염시키면 안 된다
+ * @details 실제 사고: 트랜지언트 텍스처 SRV 0·1·2 가 unregisterBindlessResource 로 넘어가 살아 있는
+ *          패스 CB 슬롯을 비운 것으로 만들었고, 다음 registerBindlessResource(인스턴스 구조버퍼)가
+ *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸렸다. DX11/OpenGL 도 같은 구조(텍스처 표
+ *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 원래 무해하다.
+ */
+SW_TEST_CASE( RHITest, BindlessTextureReleaseKeepsBufferIndices )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        // 버퍼 셋을 먼저 등록해 두고(살아 있는 패스 CB 슬롯 역할), 텍스처 하나를 등록/해제한 뒤
+        // 새 버퍼를 등록하면 기존 버퍼 인덱스와 겹치면 안 된다.
+        sw::RHIBufferHandle    arrBuffer[3]{};
+        sw::RHIDescriptorIndex arrIndex[3]{};
+        for ( uint32 slot = 0; slot < 3; ++slot )
+        {
+            arrBuffer[slot] = pResource->createConstantBuffer( 64 );
+            SW_ASSERT_TRUE( arrBuffer[slot] != 0 );
+            arrIndex[slot] = pResource->registerBindlessResource( arrBuffer[slot] );
+            SW_ASSERT_TRUE( arrIndex[slot] != sw::kInvalidDescriptorIndex );
+        }
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsRenderTarget           = 1;
+        texDesc._bIsShaderResource         = 1;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        const sw::RHIDescriptorIndex textureSrv = pResource->registerBindlessTexture( texture );
+        SW_ASSERT_TRUE( textureSrv != sw::kInvalidDescriptorIndex );
+
+        pResource->unregisterBindlessTexture( textureSrv );
+
+        const sw::RHIBufferHandle newBuffer = pResource->createConstantBuffer( 64 );
+        SW_ASSERT_TRUE( newBuffer != 0 );
+        const sw::RHIDescriptorIndex newIndex = pResource->registerBindlessResource( newBuffer );
+        SW_EXPECT_TRUE( newIndex != sw::kInvalidDescriptorIndex );
+        for ( uint32 slot = 0; slot < 3; ++slot )
+            SW_EXPECT_TRUE_MSG( newIndex != arrIndex[slot], "texture release handed a live buffer index to a new buffer" );
+
+        // 반대 방향 오용(텍스처 인덱스를 unregisterBindlessResource 에)은 검사할 수 없다 — 공간이 다르므로
+        // 그 정수는 살아 있는 버퍼 슬롯을 정당하게 가리키고, 백엔드는 둘을 구분할 방법이 없다. 그래서
+        // 해제 API 를 종류별로 나눈 것이고, 백엔드 쪽 "빈 슬롯 재반납 거부"는 이중 해제만 막는 보조 장치다.
+
+        pResource->destroyTexture( texture );
+        pResource->unregisterBindlessResource( newIndex );
+        pResource->destroyBuffer( newBuffer );
+        for ( uint32 slot = 0; slot < 3; ++slot )
+        {
+            pResource->unregisterBindlessResource( arrIndex[slot] );
+            pResource->destroyBuffer( arrBuffer[slot] );
+        }
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for bindless index-space test" );
+}
+
+/**
  * @brief [RHITest] 커맨드 리스트 생성과 실행
  */
 SW_TEST_CASE( RHITest, CommandListCreationAndExecution )

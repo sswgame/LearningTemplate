@@ -105,6 +105,8 @@ namespace sw
 
         bool requiresExclusiveContextThread() const override { return true; }
         bool bindGraphicsContext() override;
+        /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지. ScopedOpenGLContext 가 남의 바인딩을 풀지 않게 하는 근거. */
+        bool isGraphicsContextCurrent() const;
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
         void unbindGraphicsContext() override;
 
@@ -287,17 +289,21 @@ namespace sw
     /**
      * @struct ScopedOpenGLContext
      * @brief OpenGL 배타적 그래픽스 컨텍스트 바인딩이 필요한 작업 시 컨텍스트를 획득하고 해제하는 RAII 가드
+     * @details 컨텍스트가 **이미 이 스레드에 current 면 아무것도 하지 않는다.** 예전엔 무조건 바인딩하고
+     *          무조건 풀어서, 렌더 스레드(또는 디바이스를 초기화한 스레드)가 걸어 둔 바인딩을 첫
+     *          createTexture2D 가 지워 버렸다 — 그 뒤의 createConstantBuffer 는 가드 없이 glGenBuffers 를
+     *          불러 0 을 받았다. 앱에서는 beginFrame 이 매 프레임 다시 바인딩해 가려졌고 RHITest 에서 드러났다.
      */
     struct ScopedOpenGLContext
     {
-        IRHIDevice* _pDevice{ nullptr };
-        bool        _bNeedsUnbind{ false };
+        OpenGLRHIDevice* _pDevice{ nullptr };
+        bool             _bNeedsUnbind{ false };
 
-        explicit ScopedOpenGLContext( IRHIDevice* pDevice )
+        explicit ScopedOpenGLContext( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice }
             , _bNeedsUnbind{ false }
         {
-            if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() )
+            if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false )
             {
                 _bNeedsUnbind = _pDevice->bindGraphicsContext();
             }
