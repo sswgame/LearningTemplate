@@ -189,7 +189,12 @@ namespace sw
                 if ( globalIndex >= listInstances.size() )
                     break;
                 const GpuInstance& inst = listInstances[globalIndex];
-                if ( bFirstItem || ctx._world != inst._world )
+                // float4x4::operator!= 는 nearEqual 16회를 .cpp 안에서 돈다 — 드로우마다 비인라인
+                // 호출이 하나 붙는다. 그리고 엡실론 비교라, 매 프레임 엡실론 미만으로 움직이는 물체는
+                // 영원히 "안 바뀜"으로 판정돼 월드 행렬이 갱신되지 않는다. 비트 비교면 둘 다 없다.
+                const bool bWorldChanged =
+                    Memory::compare( &ctx._world, &inst._world, sizeof( ctx._world ) ) != 0;
+                if ( bFirstItem || bWorldChanged )
                 {
                     ctx._world = inst._world;
                     commitBindlessTextureBindings( ctx );

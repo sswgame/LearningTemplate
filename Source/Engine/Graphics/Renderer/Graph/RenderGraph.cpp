@@ -267,6 +267,13 @@ namespace sw
             unique_ptr<IRHICommandList> _pPassCmdList{ nullptr };
         };
 
+        // 웨이브 루프 **밖**에서 한 번 만들고 웨이브마다 비워 쓴다. 안에 두면 웨이브 수만큼
+        // 힙 할당이 프레임마다 생긴다. 멤버로 올리면 그 하나마저 없앨 수 있지만,
+        // unique_ptr<IRHICommandList> 를 헤더 멤버로 두려면 삭제자 인스턴스화에 완전한 타입이
+        // 필요해 RenderGraph.h 가 RHI 커맨드리스트 헤더를 끌어와야 한다 — 프레임당 할당 하나와
+        // 바꾸기엔 비싼 의존이다.
+        vector<ParallelPassEntry> listPassEntry;
+
         // 웨이브(의존성 레벨) 단위로 처리한다 — 같은 웨이브의 패스들만 동시에 병렬 기록하고,
         // 웨이브 경계마다 태스크를 기다린 뒤 그 웨이브의 커맨드리스트를 먼저 GPU 큐에 제출한다.
         // 그래야 웨이브 N+1이 참조할 수도 있는 웨이브 N의 출력(예: DepthPrepass → ForwardOpaque)이
@@ -277,7 +284,7 @@ namespace sw
         // 이미 서로 다른 웨이브에 배치되어 있다.
         for ( const vector<hashed_string>& wave : _listCompiledWave )
         {
-            vector<ParallelPassEntry> listPassEntry;
+            listPassEntry.clear();
             listPassEntry.reserve( wave.size() );
             _listWaveRead.clear();
             _listWaveWrite.clear();

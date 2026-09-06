@@ -81,6 +81,8 @@ namespace sw
         for ( RenderGraphPassDesc& pass : _desc._listPass )
         {
             pass._resolvedType = engine::getTypeRegistry().enumFromString<RenderPassType>( pass._type );
+            pass._resolvedDepthAttachment =
+                pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
             if ( isPipelinePassType( pass._resolvedType ) == false )
             {
                 SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",

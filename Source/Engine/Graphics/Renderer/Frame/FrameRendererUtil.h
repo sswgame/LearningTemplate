@@ -61,6 +61,47 @@ namespace sw
     };
 
     /**
+     * @struct AttachmentNames
+     * @brief 어태치먼트·패스 리소스 이름의 hashed_string 캐시.
+     * @details PassConstantNames 와 같은 이유다 — hashed_string 생성은 전역 레지스트리 intern
+     *          (FNV 해시 → 32-way 샤드 뮤텍스 → 조회)이다. 이 이름들은 전부 코드 리터럴이라
+     *          값이 고정인데, 예전엔 패스마다·드로우마다 새로 intern 했다.
+     *          특히 `commitBindlessTextureBindings` 는 DX11/GL 경로에서 **드로우 호출마다**
+     *          네 개를 만들고 있었다.
+     * @note 문자열이 필요한 자리에는 `view()` 를 쓴다 — 락 없는 O(1) 포인터 역참조다.
+     */
+    struct AttachmentNames
+    {
+        hashed_string _swapchain{ FrameRendererUtil::Attachment::kSwapchain };
+        hashed_string _sceneColor{ FrameRendererUtil::Attachment::kSceneColor };
+        hashed_string _sceneDepth{ FrameRendererUtil::Attachment::kSceneDepth };
+        hashed_string _shadowMap{ FrameRendererUtil::Attachment::kShadowMap };
+        hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
+        hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
+        hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
+        hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
+        hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
+        hashed_string _transparentColor{ FrameRendererUtil::Attachment::kTransparentColor };
+        hashed_string _taaColor{ FrameRendererUtil::Attachment::kTaaColor };
+        hashed_string _aoColor{ "AOColor" };
+        hashed_string _tonemapColor{ "TonemapColor" };
+
+        /// 셰이더가 보는 이름(어태치먼트 이름과 다를 수 있다 — registerPassTexture 의 canonical 인자).
+        hashed_string _sourceColor{ "SourceColor" };
+        hashed_string _sourceDepth{ "SourceDepth" };
+    };
+
+    /**
+     * @brief 프로세스 전역 AttachmentNames 를 돌려줍니다.
+     * @details 함수 지역 static — 문자열 레지스트리보다 먼저 초기화될 위험이 없다.
+     */
+    inline const AttachmentNames& attachmentNames()
+    {
+        static const AttachmentNames s_names{};
+        return s_names;
+    }
+
+    /**
      * @struct PassConstantNames
      * @brief PassCB/리소스 이름의 hashed_string 캐시.
      * @details hashed_string 생성은 전역 문자열 레지스트리에 intern 하는 작업이다(FNV 해시 →

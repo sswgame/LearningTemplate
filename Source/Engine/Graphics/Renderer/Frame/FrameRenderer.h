@@ -186,7 +186,7 @@ namespace sw
          */
         void onGraphWavePrologue( const RenderGraphWaveContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
-        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, string_view depthAttachment );
+        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment );
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
         /** @brief 카메라에서 뷰/투영을 적용합니다. */
@@ -224,8 +224,12 @@ namespace sw
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
         void beginDepthOnlyPass( FramePassContext& ctx, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
-        /** @brief 일시 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다 (bindless SRV 자동 매칭). */
-        void registerPassTexture( FramePassContext& ctx, string_view canonicalName, string_view attachmentName );
+        /**
+         * @brief 일시 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다 (bindless SRV 자동 매칭).
+         * @param canonicalName **미리 intern 된** 이름. 문자열을 받으면 패스마다 다시 intern 하게 된다 —
+         *        attachmentNames() 의 캐시를 넘기세요.
+         */
+        void registerPassTexture( FramePassContext& ctx, const hashed_string& canonicalName, string_view attachmentName );
         /** @brief 바인들리스 텍스처 바인딩을 커밋합니다 (PassConstantValues 갱신 + 에뮬 백엔드 폴백 바인딩). */
         void commitBindlessTextureBindings( FramePassContext& ctx );
 

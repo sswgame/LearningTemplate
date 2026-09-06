@@ -126,6 +126,15 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _depthAttachment;
 
+        /**
+         * @brief `_depthAttachment` 를 intern 해 둔 값. XML 로드 시 RenderPipelineResource 가 채운다.
+         * @details 직렬화 대상이 아니다(원본 철자는 `_depthAttachment` 가 갖고 있다). `_resolvedType` 과
+         *          같은 이유로 한 번만 해석해 둔다 — 이 이름은 패스마다 어태치먼트 클리어 여부를
+         *          판정하는 데 쓰이는데, 매 프레임 다시 intern 하면 그때마다 전역 문자열 레지스트리의
+         *          샤드 뮤텍스를 잡게 된다.
+         */
+        hashed_string _resolvedDepthAttachment;
+
         /** @brief HLSL path (engine/... or common/...). Empty → FrameRenderer type default. */
         PROPERTY( SkipIfEmpty )
         string _shaderPath;
