@@ -29,8 +29,7 @@ namespace sw
         : _device{ nullptr }
         , _deviceContext{ nullptr }
         , _contextOwnerThread{}
-        , _swapChain{ nullptr }
-        , _renderTargetView{ nullptr }
+        , _swapChain{}
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
         , _gpuTextures{}
@@ -49,8 +48,6 @@ namespace sw
         , _depthDisabledState{ nullptr }
         , _linearSampler{ nullptr }
         , _pHWnd{ nullptr }
-        , _width{ 0 }
-        , _height{ 0 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -68,17 +65,15 @@ namespace sw
 
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        _pHWnd  = static_cast<HWND>( desc._pWindowHandle );
-        _width  = desc._width;
-        _height = desc._height;
+        _pHWnd = static_cast<HWND>( desc._pWindowHandle );
 
         // Use FLIP_DISCARD to match DX12 (and DXGI HWND rules): after a flip-model
         // swapchain has been created for an HWND, subsequent DISCARD/blt chains on the
         // same window can Present without updating what the user sees (frozen frame).
         DXGI_SWAP_CHAIN_DESC swapChainDesc{};
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
-        swapChainDesc.BufferDesc.Width                   = _width;
-        swapChainDesc.BufferDesc.Height                  = _height;
+        swapChainDesc.BufferDesc.Width                   = desc._width;
+        swapChainDesc.BufferDesc.Height                  = desc._height;
         swapChainDesc.BufferDesc.Format                  = toDxgiFormat( desc._format );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
         swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenomiator;
@@ -100,24 +95,28 @@ namespace sw
             D3D_FEATURE_LEVEL_10_0,
         };
 
-        HRESULT hr = D3D11CreateDeviceAndSwapChain( nullptr,
-                                                    D3D_DRIVER_TYPE_HARDWARE,
-                                                    nullptr,
-                                                    createDeviceFlags,
-                                                    arrFeatureLevel,
-                                                    SW_COUNT_OF( arrFeatureLevel ),
-                                                    D3D11_SDK_VERSION,
-                                                    &swapChainDesc,
-                                                    _swapChain.GetAddressOf(),
-                                                    _device.GetAddressOf(),
-                                                    &featureLevel,
-                                                    _deviceContext.GetAddressOf() );
+        Microsoft::WRL::ComPtr<IDXGISwapChain> createdSwapChain;
+        HRESULT                                hr = D3D11CreateDeviceAndSwapChain( nullptr,
+                                                                                   D3D_DRIVER_TYPE_HARDWARE,
+                                                                                   nullptr,
+                                                                                   createDeviceFlags,
+                                                                                   arrFeatureLevel,
+                                                                                   SW_COUNT_OF( arrFeatureLevel ),
+                                                                                   D3D11_SDK_VERSION,
+                                                                                   &swapChainDesc,
+                                                                                   createdSwapChain.GetAddressOf(),
+                                                                                   _device.GetAddressOf(),
+                                                                                   &featureLevel,
+                                                                                   _deviceContext.GetAddressOf() );
 
         if ( FAILED( hr ) )
         {
             SW_LOG_ERROR( "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
             return false;
         }
+
+        // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다 — 만들어진 것을 넘겨 소유시킨다.
+        _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height );
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
         // 지원하는지에 달렸다 — 미지원이면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
@@ -133,7 +132,7 @@ namespace sw
             }
         }
 
-        createRenderTargetView();
+        _swapChain.acquireNextImage( _device.Get() );
 
         {
             D3D11_DEPTH_STENCIL_DESC dsDesc{};
@@ -166,7 +165,19 @@ namespace sw
     {
         _releaseQueue.flushAll();
         _frameStreamContext.reset();
-        cleanupRenderTargetView();
+
+        // 커맨드 리스트는 디바이스보다 오래 살 수 있다. 여기서 연결을 끊지 않으면 그쪽 소멸자가
+        // 이미 파괴된 이 디바이스의 등록 목록을 잠그려 든다.
+        {
+            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+            for ( D3D11RHICommandList* pLiveList : _listLiveCmdList )
+            {
+                pLiveList->detachFromDevice();
+            }
+            _listLiveCmdList.clear();
+        }
+
+        _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
         _depthEnabledState.Reset();
@@ -182,43 +193,45 @@ namespace sw
         _listUavFree.clear();
         _computeRootConstantCB.Reset();
         Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
-        _swapChain.Reset();
         _deviceContext.Reset();
         _device.Reset();
     }
 
     void D3D11RHIDevice::resize( uint32 width, uint32 height )
     {
-        if ( _swapChain == nullptr || ( width == 0 && height == 0 ) )
+        if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;
 
-        _width  = width;
-        _height = height;
-
-        cleanupRenderTargetView();
+        // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
+        // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다 — 백버퍼 RTV, Immediate Context 의
+        // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨려서 이 백엔드는
+        // 창 크기 변경이 매번 조용히 실패하고 있었다.
+        _swapChain.releaseBackBufferRtv();
+        {
+            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+            for ( D3D11RHICommandList* pLiveList : _listLiveCmdList )
+            {
+                pLiveList->releaseRecordedState();
+            }
+        }
         if ( _deviceContext != nullptr )
         {
             _deviceContext->ClearState();
             _deviceContext->Flush();
         }
-        const HRESULT resizeHr = _swapChain->ResizeBuffers( 0, width, height, DXGI_FORMAT_UNKNOWN, 0 );
-        if ( FAILED( resizeHr ) )
-        {
-            SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+        if ( _swapChain.resize( width, height ) == false )
             return;
-        }
-        createRenderTargetView();
+        _swapChain.acquireNextImage( _device.Get() );
     }
 
     void D3D11RHIDevice::beginFrame( const float4& clearColor )
     {
-        if ( _deviceContext == nullptr || _swapChain == nullptr )
+        if ( _deviceContext == nullptr || _swapChain.isValid() == false )
             return;
 
-        // FLIP_DISCARD rotates the back buffer; reacquire RTV each frame so we clear/draw the one Present will show.
-        cleanupRenderTargetView();
-        createRenderTargetView();
-        if ( _renderTargetView == nullptr )
+        // FLIP_DISCARD 는 백버퍼를 돌려 쓴다 — Present 가 보여줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
+        _swapChain.acquireNextImage( _device.Get() );
+        if ( _swapChain.getBackBufferRtv() == nullptr )
             return;
 
         // 백버퍼 바인딩/클리어는 더 이상 여기서 하지 않는다 — beginFrame 은 프레임 수명주기 전용이고,
@@ -232,8 +245,8 @@ namespace sw
         constexpr float32 kDefaultViewportMaxDepth = 1.0f;
 
         D3D11_VIEWPORT vp;
-        vp.Width    = static_cast<float32>( _width );
-        vp.Height   = static_cast<float32>( _height );
+        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
+        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
         vp.MinDepth = kDefaultViewportMinDepth;
         vp.MaxDepth = kDefaultViewportMaxDepth;
         vp.TopLeftX = kDefaultViewportX;
@@ -243,14 +256,14 @@ namespace sw
 
     void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )
     {
-        if ( _swapChain == nullptr )
+        if ( _swapChain.isValid() == false )
             return;
 
-        cleanupRenderTargetView();
+        _swapChain.releaseBackBufferRtv();
 
         if ( bPresent )
         {
-            const HRESULT hr = _swapChain->Present( vsync ? 1 : 0, 0 );
+            const HRESULT hr = _swapChain.present( vsync );
             if ( FAILED( hr ) )
                 SW_LOG_ERROR( "Present failed hr=%#", static_cast<uint32>( hr ) );
         }
@@ -294,6 +307,25 @@ namespace sw
         return list;
     }
 
+    void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        _listLiveCmdList.push_back( pCmdList );
+    }
+
+    void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        for ( size_t index = 0; index < _listLiveCmdList.size(); ++index )
+        {
+            if ( _listLiveCmdList[index] != pCmdList )
+                continue;
+            _listLiveCmdList[index] = _listLiveCmdList.back();
+            _listLiveCmdList.pop_back();
+            return;
+        }
+    }
+
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
         if ( pCmdList == nullptr || _deviceContext == nullptr )
@@ -312,26 +344,6 @@ namespace sw
         // 즉시 모드에서는 리스트마다 밀어내 그 경계에서 오류가 드러나게 한다.
         if ( _bImmediateSubmit )
             _deviceContext->Flush();
-    }
-
-    void D3D11RHIDevice::createRenderTargetView()
-    {
-        if ( _swapChain == nullptr || _device == nullptr )
-            return;
-
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-        HRESULT                                 hr = _swapChain->GetBuffer( 0, IID_PPV_ARGS( backBuffer.GetAddressOf() ) );
-        if ( FAILED( hr ) )
-        {
-            SW_LOG_ERROR( "GetBuffer failed hr=0x%#", static_cast<uint32>( hr ) );
-            return;
-        }
-        _device->CreateRenderTargetView( backBuffer.Get(), nullptr, _renderTargetView.GetAddressOf() );
-    }
-
-    void D3D11RHIDevice::cleanupRenderTargetView()
-    {
-        _renderTargetView.Reset();
     }
 
     bool D3D11RHIDevice::ensureComputeRootConstantCB()

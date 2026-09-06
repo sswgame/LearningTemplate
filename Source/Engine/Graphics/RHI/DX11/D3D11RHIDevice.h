@@ -6,10 +6,12 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -120,7 +122,7 @@ namespace sw
         void unbindGraphicsContext() override;
 
         /** @brief IDXGISwapChain 인터페이스 포인터 반환 */
-        void* getNativeSwapChain() const override { return _swapChain.Get(); }
+        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
 
         /** @brief D3D11은 단일 큐 모델로 커맨드 큐 포인터가 없음 (nullptr) */
         void* getNativeCommandQueue() const override { return nullptr; }
@@ -138,15 +140,12 @@ namespace sw
         /** @brief 커맨드 리스트 제출 */
         void executeCommandList( IRHICommandList* pCmdList ) override;
 
+        /** @brief 살아 있는 커맨드 리스트를 등록합니다 (소유하지 않는 참조). */
+        void registerCommandList( D3D11RHICommandList* pCmdList );
+        /** @brief 등록을 해제합니다. */
+        void unregisterCommandList( D3D11RHICommandList* pCmdList );
+
     private:
-        /**
-         * @brief 스왑체인 백버퍼 RTV를 만듭니다.
-         */
-        void createRenderTargetView();
-        /**
-         * @brief 렌더 타깃 뷰를 정리합니다
-         */
-        void cleanupRenderTargetView();
         /**
          * @brief 풀스크린 삼각형 버텍스 버퍼를 만듭니다.
          */
@@ -224,9 +223,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Device>        _device;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _deviceContext;
         /** @brief Thread that may call immediate-context APIs (0 = unbound / GT init). */
-        std::thread::id                                _contextOwnerThread;
-        Microsoft::WRL::ComPtr<IDXGISwapChain>         _swapChain;
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> _renderTargetView;
+        std::thread::id _contextOwnerThread;
+        /// @brief 창 하나의 백버퍼. 백버퍼 RTV·크기·Present 가 전부 여기 모여 있다.
+        D3D11RHISwapChain _swapChain;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 포스트 (정점 3개)
 
@@ -266,8 +265,11 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;
         Microsoft::WRL::ComPtr<ID3D11SamplerState>      _linearSampler;
         HWND                                            _pHWnd;
-        uint32                                          _width;
-        uint32                                          _height;
+
+        /// @brief 살아 있는 `D3D11RHICommandList` 들 — **소유하지 않는다.** 리사이즈 직전에
+        ///        기록물을 버리게 하려고 들고 있다 (백버퍼 참조를 붙들고 있기 때문).
+        mutex                        _liveCmdListMutex;
+        vector<D3D11RHICommandList*> _listLiveCmdList;
 
         RHIReleaseQueue _releaseQueue;
 

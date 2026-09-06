@@ -3,7 +3,6 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/IRHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #if __has_include( <pix3.h> )
@@ -184,10 +183,10 @@ namespace sw
 
         if ( dst == 0 )
         {
-            if ( _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() || _pDevice->_listRenderTarget[_pDevice->_frameIndex] == nullptr )
+            pDstRes = _pDevice->_swapChain.getCurrentBackBuffer();
+            if ( pDstRes == nullptr )
                 return;
-            pDstRes        = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
-            dstStateBefore = _pDevice->_swapchainState;
+            dstStateBefore = _pDevice->_swapChain.getState();
             dstStateAfter  = D3D12_RESOURCE_STATE_PRESENT;
             bSwapchainDst  = true;
         }
@@ -224,44 +223,35 @@ namespace sw
             }
         }
 
-        if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+        // 스왑체인 백버퍼의 상태는 스왑체인 객체만 바꾼다 — 여기서 배리어를 따로 쏘고 상태를 직접
+        // 대입하면 그 두 벌이 어긋날 수 있다. 오프스크린만 자기 레코드를 갱신한다.
+        auto transitionDst = [&]( D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter )
         {
+            if ( bSwapchainDst )
+            {
+                _pDevice->_swapChain.transitionTo( _pCmdList, stateAfter );
+                return;
+            }
+
             D3D12_RESOURCE_BARRIER barrier{};
             barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Transition.pResource   = pDstRes;
-            barrier.Transition.StateBefore = dstStateBefore;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.StateBefore = stateBefore;
+            barrier.Transition.StateAfter  = stateAfter;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             _pCmdList->ResourceBarrier( 1, &barrier );
-            if ( bSwapchainDst )
-                _pDevice->_swapchainState = D3D12_RESOURCE_STATE_COPY_DEST;
-            else
-            {
-                auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
-                if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
-                    dstIt->second._state = D3D12_RESOURCE_STATE_COPY_DEST;
-            }
-        }
+
+            auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
+            if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
+                dstIt->second._state = stateAfter;
+        };
+
+        if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+            transitionDst( dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
 
         _pCmdList->CopyResource( pDstRes, pSrcRes );
 
-        {
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pDstRes;
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrier.Transition.StateAfter  = dstStateAfter;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            _pCmdList->ResourceBarrier( 1, &barrier );
-            if ( bSwapchainDst )
-                _pDevice->_swapchainState = dstStateAfter;
-            else
-            {
-                auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
-                if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
-                    dstIt->second._state = dstStateAfter;
-            }
-        }
+        transitionDst( D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
     }
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -637,21 +627,10 @@ namespace sw
 
             if ( colorHandle == 0 )
             {
-                if ( attachmentIndex > 0 || _pDevice->_rtvHeap == nullptr || _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() )
+                if ( attachmentIndex > 0 || _pDevice->_swapChain.isBackBufferReady() == false )
                     break;
-                if ( _pDevice->_swapchainState != D3D12_RESOURCE_STATE_RENDER_TARGET )
-                {
-                    D3D12_RESOURCE_BARRIER barrier{};
-                    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                    barrier.Transition.pResource   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
-                    barrier.Transition.StateBefore = _pDevice->_swapchainState;
-                    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                    _pCmdList->ResourceBarrier( 1, &barrier );
-                    _pDevice->_swapchainState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                }
-                rtv = _pDevice->_rtvHeap->GetCPUDescriptorHandleForHeapStart();
-                rtv.ptr += _pDevice->_frameIndex * _pDevice->_rtvDescriptorSize;
+                _pDevice->_swapChain.transitionTo( _pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET );
+                rtv                                     = _pDevice->_swapChain.getCurrentRtv();
                 bValid                                  = true;
                 _pState->_bActiveSwapchainRT            = 1;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
@@ -706,8 +685,8 @@ namespace sw
         else if ( pDsv != nullptr )
             _pCmdList->OMSetRenderTargets( 0, nullptr, FALSE, pDsv );
 
-        const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
-        const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_height;
+        const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth();
+        const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight();
         D3D12_VIEWPORT vp{};
         vp.Width    = static_cast<float32>( vpW );
         vp.Height   = static_cast<float32>( vpH );

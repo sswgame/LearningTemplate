@@ -102,14 +102,14 @@ namespace sw
         srcRec._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 
         VkImage dstImage = VK_NULL_HANDLE;
-        uint32  dstW     = _pDevice->_swapChainExtentWidth;
-        uint32  dstH     = _pDevice->_swapChainExtentHeight;
+        uint32  dstW     = _pDevice->_swapChain.getExtentWidth();
+        uint32  dstH     = _pDevice->_swapChain.getExtentHeight();
 
         if ( dst == 0 )
         {
-            if ( _pDevice->_imageIndex >= _pDevice->_listSwapChainImage.size() )
+            if ( _pDevice->_swapChain.getCurrentImage() == VK_NULL_HANDLE )
                 return;
-            dstImage = _pDevice->_listSwapChainImage[_pDevice->_imageIndex];
+            dstImage = _pDevice->_swapChain.getCurrentImage();
             _pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                              VK_IMAGE_ASPECT_COLOR_BIT );
@@ -284,7 +284,7 @@ namespace sw
 
         VkRenderPass  renderPass  = _pDevice->_renderPass;
         VkFramebuffer framebuffer = VK_NULL_HANDLE;
-        VkExtent2D    extent{ _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
+        VkExtent2D    extent{ _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
         VkClearValue  clearValues[kMaxColorAttachments + 1]{};
         uint32        clearCount{ 0 };
 
@@ -369,10 +369,10 @@ namespace sw
             }
             else
             {
-                if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_listSwapChainFramebuffer.empty() || _pDevice->_imageIndex >= _pDevice->_listSwapChainFramebuffer.size() )
+                if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_swapChain.getCurrentFramebuffer() == VK_NULL_HANDLE )
                     return;
-                framebuffer                  = _pDevice->_listSwapChainFramebuffer[_pDevice->_imageIndex];
-                extent                       = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
+                framebuffer                  = _pDevice->_swapChain.getCurrentFramebuffer();
+                extent                       = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
                 _pState->_bActiveSwapchainRT = 1;
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다 —
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에

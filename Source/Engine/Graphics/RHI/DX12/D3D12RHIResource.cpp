@@ -396,7 +396,7 @@ namespace sw
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
             if ( rtvSlot < D3D12RHIDevice::kMaxOffscreenRtvs )
             {
-                record._rtvIndex  = _pDevice->_bufferCount + rtvSlot;
+                record._rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
                 record._rtvHandle = _pDevice->_rtvHeap->GetCPUDescriptorHandleForHeapStart();
                 record._rtvHandle.ptr += static_cast<SIZE_T>( record._rtvIndex ) * _pDevice->_rtvDescriptorSize;
                 D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
@@ -447,8 +447,9 @@ namespace sw
         auto it = _pDevice->_mapOffscreenTexture.find( texture );
         if ( it != _pDevice->_mapOffscreenTexture.end() )
         {
-            if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= _pDevice->_bufferCount )
-                _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - _pDevice->_bufferCount );
+            const uint32 offscreenRtvBase = _pDevice->_swapChain.getBufferCount();
+            if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= offscreenRtvBase )
+                _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
             if ( it->second._bHasDsv != 0 )
                 _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
             _pDevice->_mapOffscreenTexture.erase( it );

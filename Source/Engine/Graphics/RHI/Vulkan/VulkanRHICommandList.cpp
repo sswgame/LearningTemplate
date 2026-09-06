@@ -58,16 +58,16 @@ namespace sw
         // 새 버퍼라 동적 상태가 비어 있다 — 파이프라인이 뷰포트/시저를 동적으로 쓰므로 기본값을 깐다.
         VkViewport viewport{};
         viewport.x        = 0.0f;
-        viewport.y        = static_cast<float32>( _pDevice->_swapChainExtentHeight );
-        viewport.width    = static_cast<float32>( _pDevice->_swapChainExtentWidth );
-        viewport.height   = -static_cast<float32>( _pDevice->_swapChainExtentHeight );
+        viewport.y        = static_cast<float32>( _pDevice->_swapChain.getExtentHeight() );
+        viewport.width    = static_cast<float32>( _pDevice->_swapChain.getExtentWidth() );
+        viewport.height   = -static_cast<float32>( _pDevice->_swapChain.getExtentHeight() );
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport( _entry._buffer, 0, 1, &viewport );
 
         VkRect2D scissor{};
         scissor.offset = { 0, 0 };
-        scissor.extent = { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
+        scissor.extent = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
         vkCmdSetScissor( _entry._buffer, 0, 1, &scissor );
     }
 

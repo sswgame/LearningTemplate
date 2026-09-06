@@ -19,7 +19,6 @@ namespace sw
     D3D12RHIDevice::D3D12RHIDevice()
         : _device{ nullptr }
         , _commandQueue{ nullptr }
-        , _swapChain{ nullptr }
         , _rtvHeap{ nullptr }
         , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
@@ -35,7 +34,6 @@ namespace sw
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
         , _frameRing{}
-        , _listRenderTarget{}
         , _gpuBuffers{}
         , _gpuTextures{}
         , _resourceStateMutex{}
@@ -49,7 +47,7 @@ namespace sw
         , _mapCbMapped{}
         , _pipelineStates{}
         , _listRenderPass{}
-        , _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }
+        , _swapChain{}
         , _bHeapDirectlyIndexed{ SW_FALSE }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
@@ -61,14 +59,9 @@ namespace sw
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
         , _allocatedDescriptorsCount{ 0 }
-        , _frameIndex{ 0 }
         , _fenceEvent{ nullptr }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
-        , _pHWnd{ nullptr }
-        , _width{ 0 }
-        , _height{ 0 }
-        , _bufferCount{ 2 }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }

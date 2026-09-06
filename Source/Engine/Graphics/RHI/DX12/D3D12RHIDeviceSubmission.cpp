@@ -108,13 +108,13 @@ namespace sw
         _frameStreamContext->rebindCommandList( pNextSegment );
 
         D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _width );
-        vp.Height   = static_cast<float32>( _height );
+        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
+        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
         vp.MinDepth = 0.0f;
         vp.MaxDepth = 1.0f;
         pNextSegment->RSSetViewports( 1, &vp );
 
-        D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _width ), static_cast<LONG>( _height ) };
+        D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         pNextSegment->RSSetScissorRects( 1, &scissor );
     }
 
@@ -149,8 +149,8 @@ namespace sw
                 SW_LOG_ERROR( "Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
         }
 
-        if ( _swapChain != nullptr && ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) ) )
-            _frameIndex = _swapChain->GetCurrentBackBufferIndex();
+        if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
+            _swapChain.acquireNextImage();
     }
 
     void D3D12RHIDevice::waitForRingSlot()
@@ -293,13 +293,12 @@ namespace sw
                 _activeFrameList->SetDescriptorHeaps( 1, heaps );
             }
         }
-        _frameIndex = _swapChain->GetCurrentBackBufferIndex();
+        _swapChain.acquireNextImage();
 
-        // resize()가 ResizeBuffers 실패로 조기 반환하면 cleanupRenderTargets()만 실행되고
-        // createRenderTargets()는 못 돌아 _listRenderTarget이 비어있는 채로 남는다 — 그 상태에서
-        // 아래 인덱싱을 그대로 하면 범위 밖 접근(SW_ASSERT 트리거, 디버거 없으면 크래시)이 된다.
-        // 디바이스가 이미 맛이 간 프레임이므로 이번 프레임은 조용히 건너뛴다.
-        if ( _frameIndex >= _listRenderTarget.size() )
+        // resize()가 ResizeBuffers 실패로 조기 반환하면 백버퍼가 비워진 채로 남는다 — 그 상태로
+        // 계속 진행하면 null 리소스가 배리어에 들어간다. 디바이스가 이미 맛이 간 프레임이므로
+        // 이번 프레임은 조용히 건너뛴다.
+        if ( _swapChain.isBackBufferReady() == false )
             return;
 
         // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다 —
@@ -313,31 +312,22 @@ namespace sw
         constexpr float32 kDefaultViewportMaxDepth = 1.0f;
 
         D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _width );
-        vp.Height   = static_cast<float32>( _height );
+        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
+        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
         vp.MinDepth = kDefaultViewportMinDepth;
         vp.MaxDepth = kDefaultViewportMaxDepth;
         vp.TopLeftX = kDefaultViewportX;
         vp.TopLeftY = kDefaultViewportY;
         _activeFrameList->RSSetViewports( 1, &vp );
 
-        D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _width ), static_cast<LONG>( _height ) };
+        D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         _activeFrameList->RSSetScissorRects( 1, &scissorRect );
     }
 
     void D3D12RHIDevice::endFrame( bool vsync, bool bPresent )
     {
-        if ( bPresent && _swapchainState != D3D12_RESOURCE_STATE_PRESENT && _listRenderTarget.empty() == false )
-        {
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = _listRenderTarget[_frameIndex].Get();
-            barrier.Transition.StateBefore = _swapchainState;
-            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            _activeFrameList->ResourceBarrier( 1, &barrier );
-            _swapchainState = D3D12_RESOURCE_STATE_PRESENT;
-        }
+        if ( bPresent )
+            _swapChain.transitionTo( _activeFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
         if ( _frameStreamState._bRecording != 0 && _activeFrameList != nullptr )
         {
@@ -362,9 +352,9 @@ namespace sw
         }
         _listFrameSegment.clear();
 
-        if ( bPresent && _swapChain != nullptr )
+        if ( bPresent )
         {
-            const HRESULT presentHr = _swapChain->Present( vsync ? 1 : 0, 0 );
+            const HRESULT presentHr = _swapChain.present( vsync );
             if ( FAILED( presentHr ) )
             {
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
@@ -380,10 +370,9 @@ namespace sw
             }
         }
         signalCurrentFrame();
-        if ( _swapChain != nullptr )
-            _frameIndex = _swapChain->GetCurrentBackBufferIndex();
+        _swapChain.acquireNextImage();
         if ( bPresent )
-            _swapchainState = D3D12_RESOURCE_STATE_PRESENT;
+            _swapChain.markPresented();
     }
 
 } // namespace sw

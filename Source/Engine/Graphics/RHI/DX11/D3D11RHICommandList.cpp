@@ -30,11 +30,33 @@ namespace sw
     }
 
     D3D11RHICommandList::D3D11RHICommandList( D3D11RHIDevice* pDevice )
-        : _pNativeContext{ createNativeContext( pDevice ) }
+        : _pDevice{ pDevice }
+        , _pNativeContext{ createNativeContext( pDevice ) }
         , _pFinishedList{ nullptr }
         , _context{ pDevice, _pNativeContext.Get() }
     {
         _pContext = &_context;
+        if ( _pDevice != nullptr )
+            _pDevice->registerCommandList( this );
+    }
+
+    D3D11RHICommandList::~D3D11RHICommandList()
+    {
+        if ( _pDevice != nullptr )
+            _pDevice->unregisterCommandList( this );
+    }
+
+    void D3D11RHICommandList::detachFromDevice()
+    {
+        releaseRecordedState();
+        _pDevice = nullptr;
+    }
+
+    void D3D11RHICommandList::releaseRecordedState()
+    {
+        _pFinishedList.Reset();
+        if ( _pNativeContext != nullptr )
+            _pNativeContext->ClearState();
     }
 
     void D3D11RHICommandList::beginCommandList()

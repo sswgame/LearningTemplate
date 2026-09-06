@@ -138,11 +138,14 @@ Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapCha
 - Native bindless sampling — DX12/VK; DX11/GL은 bind-at-draw로 기능 동등
 - Vulkan `createRenderPass(desc)` — 비어 있으면 swapchain RP alias; 어태치먼트가 있으면 **소유** VkRenderPass 생성
 
-프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice` 에 있습니다. 예전에는 `IRHISwapChain`
-이라는 인터페이스가 있었지만 구현 넷 중 셋이 Device 로 그대로 넘기기만 했고, DX12 만 내용이 있었는데
-그마저 Device 의 private 멤버를 만지느라 `friend` 가 필요했습니다 — 상태를 하나도 갖지 않는 분리라
-없앴습니다. 스왑체인을 진짜 객체로 만드는 것(이미지·포맷·present 소유, acquire/present 인터페이스)은
-별개 과제입니다.
+프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice` 에 있고, 창의 백버퍼는
+`<백엔드>RHISwapChain` 이 소유합니다 — 백버퍼·이미지 인덱스·리소스 상태·동기화 객체·present 가
+한 객체에 모여 있습니다. 예전에는 `IRHISwapChain` 이라는 **가상 인터페이스**가 있었지만 상태를 하나도
+갖지 않아 구현 넷 중 셋이 Device 로 그대로 넘기기만 했고, DX12 만 내용이 있었는데 그마저 Device 의
+private 멤버를 만지느라 `friend` 가 필요했습니다. 지금 것은 가상 인터페이스가 아니라 **백엔드 내부의
+구체 클래스**입니다 — 백엔드 밖에서 스왑체인을 다형적으로 다룰 이유가 없어서, 그렇게 만들면 없앴던
+껍데기가 그대로 돌아옵니다. GL 에는 없습니다(`SwapBuffers(HDC)` 가 present 의 전부이고 그 HDC 는
+스레드 바인딩에도 쓰이므로 스왑체인이 아니라 컨텍스트입니다).
 
 ---
 

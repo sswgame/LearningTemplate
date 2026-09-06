@@ -38,9 +38,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Texture2D> dstTex;
         if ( dst == 0 )
         {
-            if ( _pDevice->_swapChain == nullptr )
-                return;
-            if ( FAILED( _pDevice->_swapChain->GetBuffer( 0, IID_PPV_ARGS( dstTex.GetAddressOf() ) ) ) )
+            dstTex = _pDevice->_swapChain.getBackBufferTexture();
+            if ( dstTex == nullptr )
                 return;
         }
         else
@@ -102,7 +101,7 @@ namespace sw
                 const RHITextureHandle  colorHandle = beginInfo._arrColorTarget[attachmentIndex];
                 ID3D11RenderTargetView* pRtv{ nullptr };
                 if ( colorHandle == 0 )
-                    pRtv = ( attachmentIndex == 0 ) ? _pDevice->_renderTargetView.Get() : nullptr;
+                    pRtv = ( attachmentIndex == 0 ) ? _pDevice->_swapChain.getBackBufferRtv() : nullptr;
                 else
                 {
                     D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( colorHandle );
@@ -158,8 +157,8 @@ namespace sw
             _pContext->OMSetDepthStencilState( _pDevice->_depthDisabledState.Get(), 0 );
 
         D3D11_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_width );
-        vp.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : _pDevice->_height );
+        vp.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth() );
+        vp.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight() );
         vp.MinDepth = 0.0f;
         vp.MaxDepth = 1.0f;
         _pContext->RSSetViewports( 1, &vp );

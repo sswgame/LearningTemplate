@@ -1,42 +1,16 @@
 /**
  * @file VulkanRHIDevice.h
- * @brief Vulkan 1.3 API 기반 RHI 백엔드 클래스 정의 및 C 타입 전방 선언
+ * @brief Vulkan 1.3 API 기반 RHI 백엔드 클래스 정의
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
 
 #include <shared_mutex>
-
-/** @brief SW_VK_DEFINE_HANDLE 매크로 정의입니다. */
-
-#define SW_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;
-SW_VK_DEFINE_HANDLE( VkInstance )
-SW_VK_DEFINE_HANDLE( VkPhysicalDevice )
-SW_VK_DEFINE_HANDLE( VkDevice )
-SW_VK_DEFINE_HANDLE( VkQueue )
-SW_VK_DEFINE_HANDLE( VkRenderPass )
-SW_VK_DEFINE_HANDLE( VkSurfaceKHR )
-SW_VK_DEFINE_HANDLE( VkSwapchainKHR )
-SW_VK_DEFINE_HANDLE( VkImage )
-SW_VK_DEFINE_HANDLE( VkImageView )
-SW_VK_DEFINE_HANDLE( VkFramebuffer )
-SW_VK_DEFINE_HANDLE( VkCommandPool )
-SW_VK_DEFINE_HANDLE( VkCommandBuffer )
-SW_VK_DEFINE_HANDLE( VkSemaphore )
-SW_VK_DEFINE_HANDLE( VkFence )
-SW_VK_DEFINE_HANDLE( VkPipelineLayout )
-SW_VK_DEFINE_HANDLE( VkDescriptorSetLayout )
-SW_VK_DEFINE_HANDLE( VkDescriptorPool )
-SW_VK_DEFINE_HANDLE( VkDescriptorSet )
-SW_VK_DEFINE_HANDLE( VkBuffer )
-SW_VK_DEFINE_HANDLE( VkDeviceMemory )
-SW_VK_DEFINE_HANDLE( VkPipeline )
-SW_VK_DEFINE_HANDLE( VkPipelineCache )
-SW_VK_DEFINE_HANDLE( VkDebugUtilsMessengerEXT )
-SW_VK_DEFINE_HANDLE( VkSampler )
 
 namespace sw
 {
@@ -181,7 +155,7 @@ namespace sw
         }
 
         /** @brief Native VkSwapchainKHR 핸들 반환 */
-        void* getNativeSwapChain() const override { return _swapChain; }
+        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
 
         /** @brief Native VkQueue 핸들 반환 */
         void* getNativeCommandQueue() const override { return _graphicsQueue; }
@@ -211,7 +185,7 @@ namespace sw
         VkRenderPass     getRenderPass() const { return _renderPass; }
 
         /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
-        RHIFormat getBackBufferFormat() const override { return _actualBackBufferFormat; }
+        RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
         bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const override
         {
@@ -223,8 +197,8 @@ namespace sw
             out._queueFamily     = _graphicsQueueFamilyIndex;
             // 실제 스왑체인 이미지 수를 그대로 알린다 — 매직 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
             // ImGui 쪽만 옛 값으로 남는다.
-            out._imageCount    = static_cast<uint32>( _listSwapChainImage.empty() ? constant::kMaxFrameCountInFlight
-                                                                                  : _listSwapChainImage.size() );
+            out._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::kMaxFrameCountInFlight
+                                                                     : _swapChain.getImageCount();
             out._minImageCount = out._imageCount;
             return _device != nullptr;
         }
@@ -249,10 +223,6 @@ namespace sw
          */
         void setupDebugMessenger();
         /**
-         * @brief 윈도우 서피스를 만듭니다.
-         */
-        bool createSurface();
-        /**
          * @brief 물리 디바이스를 선택합니다
          */
         bool pickPhysicalDevice();
@@ -260,18 +230,6 @@ namespace sw
          * @brief 논리 디바이스와 큐를 만듭니다.
          */
         bool createLogicalDevice();
-        /**
-         * @brief 스왑체인을 생성합니다
-         */
-        bool createSwapChain();
-        /**
-         * @brief 스왑체인 이미지 뷰를 만듭니다.
-         */
-        bool createImageViews();
-        /**
-         * @brief 스왑체인 프레임버퍼를 만듭니다.
-         */
-        bool createFramebuffers();
         /**
          * @brief 그래픽스 커맨드 풀을 만듭니다.
          */
@@ -281,13 +239,13 @@ namespace sw
          */
         bool createCommandBuffers();
         /**
-         * @brief 세마포어/펜스를 만듭니다.
+         * @brief 인플라이트 슬롯의 펜스를 만듭니다. 스왑체인 세마포어는 스왑체인이 만듭니다.
          */
-        bool createSyncObjects();
+        bool createFrameFences();
         /**
-         * @brief 세마포어/펜스를 파괴하고 컨테이너를 비웁니다.
+         * @brief 인플라이트 펜스를 파괴하고 컨테이너를 비웁니다.
          */
-        void destroySyncObjects();
+        void destroyFrameFences();
         /**
          * @brief GPU가 지원하는 depth/stencil 포맷을 선택합니다.
          */
@@ -297,13 +255,10 @@ namespace sw
          */
 
         /**
-         * @brief 스왑체인을 재생성합니다
+         * @brief 스왑체인을 통째로 다시 만듭니다 (창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때).
+         * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 표까지 함께 갱신합니다.
          */
         void recreateSwapChain();
-        /**
-         * @brief 스왑체인을 정리합니다
-         */
-        void cleanupSwapChain();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         bool initPipelineCache();
@@ -519,26 +474,13 @@ namespace sw
 
         VkInstance               _instance;
         VkDebugUtilsMessengerEXT _debugMessenger;
-        VkSurfaceKHR             _surface;
         VkPhysicalDevice         _physicalDevice;
         VkDevice                 _device;
         VkQueue                  _graphicsQueue;
         uint32                   _graphicsQueueFamilyIndex;
 
-        VkSwapchainKHR        _swapChain;
-        vector<VkImage>       _listSwapChainImage;
-        uint32                _swapChainImageFormat;
-        uint32                _swapChainExtentWidth;
-        uint32                _swapChainExtentHeight;
-        vector<VkImageView>   _listSwapChainImageView;
-        vector<VkFramebuffer> _listSwapChainFramebuffer;
-
-        /// @brief 스왑체인에 요청한 백버퍼 포맷(계약값). 서피스가 못 내면 대체되고 로그로 알린다.
-        RHIFormat _requestedBackBufferFormat{ constant::kBackBufferFormat };
-        /// @brief 스왑체인에 요청한 백버퍼 개수. 서피스 능력으로 클램프된다.
-        uint32 _requestedBufferCount{ 0 };
-        /// @brief 실제로 채택된 백버퍼 포맷. 요청과 다르면 getBackBufferFormat() 으로 드러난다.
-        RHIFormat _actualBackBufferFormat{ constant::kBackBufferFormat };
+        /// @brief 창 하나의 서피스·스왑체인·백버퍼. 이미지/뷰/프레임버퍼/세마포어가 전부 여기 있다.
+        VulkanRHISwapChain _swapChain;
 
         VkRenderPass _renderPass;           ///< 스왑체인 렌더패스 (loadOp=CLEAR)
         VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더패스의 loadOp=LOAD 변종. 한 프레임에 백버퍼를
@@ -565,18 +507,18 @@ namespace sw
         VkCommandBuffer _activeFrameBuffer{ nullptr };
 
         vector<VkCommandBuffer> _listCommandBuffer;
-        vector<VkSemaphore>     _listImageAvailableSemaphore;
-        vector<VkSemaphore>     _listRenderFinishedSemaphore;
         vector<VkFence>         _listInFlightFence;
-        vector<VkFence>         _listImagesInFlight;
+        /// @brief 스왑체인 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 인플라이트 펜스(소유하지 않는 사본).
+        vector<VkFence> _listImagesInFlight;
         /// @brief 링 슬롯별로 마지막 제출에 매긴 _frameFenceCounter 값 — beginFrame이 그 슬롯의 펜스를
         ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제한다.
         vector<uint64> _listRingFrameNumber;
 
-        void*  _pHWnd;
-        void*  _pDisplayHandle;
+        void* _pHWnd;
+        void* _pDisplayHandle;
+        /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1). 스왑체인 이미지 인덱스와 **다른 값**이다 —
+        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 들고 있다(`_swapChain.getImageIndex()`).
         uint32 _currentFrame;
-        uint32 _imageIndex;
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호. 해제 큐가 실제 GPU 펜스 완료 기준으로
         ///        해제하도록(enqueueGpuRelease) 프레임 카운트 대신 이 값을 쓴다.
         uint64                  _frameFenceCounter;

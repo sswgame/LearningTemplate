@@ -35,7 +35,7 @@ namespace sw
     public:
         /** @brief 자신의 네이티브 Deferred Context를 만듭니다. */
         explicit D3D11RHICommandList( D3D11RHIDevice* pDevice );
-        ~D3D11RHICommandList() override = default;
+        ~D3D11RHICommandList() override;
 
         D3D11RHICommandList( const D3D11RHICommandList& )            = delete;
         D3D11RHICommandList& operator=( const D3D11RHICommandList& ) = delete;
@@ -48,10 +48,27 @@ namespace sw
         void beginCommandList() override;
         void endCommandList() override;
 
+        /**
+         * @brief 기록해 둔 커맨드 리스트를 버리고 Deferred Context 바인딩을 비웁니다.
+         * @details `ID3D11CommandList` 는 **자기가 바인딩한 리소스의 참조를 붙들고 있다.** 백버퍼
+         *          RTV 도 마찬가지라, 지난 프레임에 기록된 리스트가 살아 있으면 `ResizeBuffers` 가
+         *          DXGI_ERROR_INVALID_CALL 로 거부된다 — 창 크기 변경이 조용히 실패하는 원인이었다.
+         */
+        void releaseRecordedState();
+
+        /**
+         * @brief 디바이스가 먼저 내려갈 때, 디바이스를 다시 만지지 않도록 연결을 끊습니다.
+         * @details 커맨드 리스트가 디바이스보다 오래 살 수 있습니다 — 그때 소멸자가 이미 파괴된
+         *          디바이스의 등록 목록을 건드리면 죽은 뮤텍스를 잠그게 됩니다. 끊긴 리스트는
+         *          더 이상 쓸 수 없고, 놓아 주는 것만 안전합니다.
+         */
+        void detachFromDevice();
+
     private:
         /** @brief 디바이스에 Deferred Context 생성을 요청합니다. */
         static Microsoft::WRL::ComPtr<ID3D11DeviceContext> createNativeContext( D3D11RHIDevice* pDevice );
 
+        D3D11RHIDevice*                             _pDevice{ nullptr };
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _pNativeContext;
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
         D3D11RHICommandContext                      _context;

@@ -8,7 +8,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
@@ -17,11 +16,6 @@ namespace sw
 
     bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        _pHWnd       = static_cast<HWND>( desc._pWindowHandle );
-        _width       = desc._width;
-        _height      = desc._height;
-        _bufferCount = desc._bufferCount;
-
     #if defined( SW_DEBUG )
         {
             Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
@@ -78,31 +72,16 @@ namespace sw
         if ( FAILED( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ) ) )
             return false;
 
-        DXGI_SWAP_CHAIN_DESC1 scDesc{};
-        scDesc.BufferCount      = _bufferCount;
-        scDesc.Width            = _width;
-        scDesc.Height           = _height;
-        scDesc.Format           = toDxgiFormat( desc._format );
-        scDesc.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        scDesc.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        scDesc.SampleDesc.Count = 1;
-
-        if ( _pHWnd != nullptr && _width > 0 && _height > 0 )
-        {
-            Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain1;
-            if ( FAILED( factory->CreateSwapChainForHwnd( _commandQueue.Get(), _pHWnd, &scDesc, nullptr, nullptr, swapChain1.GetAddressOf() ) ) )
-                return false;
-
-            swapChain1.As( &_swapChain );
-            _frameIndex = _swapChain->GetCurrentBackBufferIndex();
-        }
+        if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
+            return false;
 
         _bHeapDirectlyIndexed = 0;
-        _swapchainState       = D3D12_RESOURCE_STATE_PRESENT;
         _frameStreamState     = D3D12RecordingState{};
 
+        // 백버퍼와 오프스크린 렌더타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
+        // 그 뒤가 오프스크린이다 — 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-        rtvHeapDesc.NumDescriptors = _bufferCount + kMaxOffscreenRtvs;
+        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRtvs;
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         if ( FAILED( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ) ) )
@@ -141,7 +120,7 @@ namespace sw
         _frameStreamState._bRecording = 0;
         _frameRing.reset( 0 );
 
-        createRenderTargets();
+        _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
 
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
             return false;
@@ -175,7 +154,7 @@ namespace sw
         _nextOffscreenRtvIndex     = 0;
         _allocatedDescriptorsCount = 0;
 
-        cleanupRenderTargets();
+        _swapChain.shutdown();
         _vertexBuffer.Reset();
         _rootSignature.Reset();
         _computeRootSignature.Reset();
@@ -203,7 +182,6 @@ namespace sw
         _frameStreamContext.reset();
         _bHeapDirectlyIndexed = 0;
         _fence.Reset();
-        _swapChain.Reset();
         _commandQueue.Reset();
         _device.Reset();
 
@@ -214,52 +192,14 @@ namespace sw
         }
 
         _fenceValue        = 0;
-        _frameIndex        = 0;
         _rtvDescriptorSize = 0;
         _cbvDescriptorSize = 0;
     }
 
-    void D3D12RHIDevice::createRenderTargets()
-    {
-        if ( _swapChain == nullptr || _device == nullptr || _rtvHeap == nullptr )
-            return;
-
-        _listRenderTarget.resize( _bufferCount );
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle( _rtvHeap->GetCPUDescriptorHandleForHeapStart() );
-
-        for ( UINT bufferIndex = 0; bufferIndex < _bufferCount; ++bufferIndex )
-        {
-            const HRESULT getHr = _swapChain->GetBuffer( bufferIndex, IID_PPV_ARGS( _listRenderTarget[bufferIndex].GetAddressOf() ) );
-            if ( FAILED( getHr ) )
-            {
-                SW_LOG_ERROR( "GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
-                // 일부 슬롯만 null인 채로 남겨두면 크기는 정상(_bufferCount)이라 empty()/범위 체크를
-                // 통과해버려서, beginFrame()이 null 리소스를 그대로 ResourceBarrier에 넘겨 GPU가
-                // NULL VA를 참조하는 PageFault로 이어진다(디바이스 행 상황에서 실제로 발생 확인).
-                // 부분 성공을 허용하지 말고 전체를 비워 "준비 안 됨" 상태로 통일한다.
-                cleanupRenderTargets();
-                return;
-            }
-            _device->CreateRenderTargetView( _listRenderTarget[bufferIndex].Get(), nullptr, rtvHandle );
-            rtvHandle.ptr += _rtvDescriptorSize;
-        }
-    }
-
-    void D3D12RHIDevice::cleanupRenderTargets()
-    {
-        for ( Microsoft::WRL::ComPtr<ID3D12Resource>& rt : _listRenderTarget )
-        {
-            rt.Reset();
-        }
-        _listRenderTarget.clear();
-    }
-
     void D3D12RHIDevice::resize( uint32 width, uint32 height )
     {
-        if ( _swapChain == nullptr || ( width == 0 && height == 0 ) )
+        if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;
-        _width  = width;
-        _height = height;
 
         if ( _frameStreamState._bRecording != 0 && _commandList != nullptr )
         {
@@ -271,15 +211,11 @@ namespace sw
         }
 
         waitForPreviousFrame();
-        cleanupRenderTargets();
-        const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, 0 );
-        if ( FAILED( resizeHr ) )
-        {
-            SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+        _swapChain.releaseBackBuffers();
+        if ( _swapChain.resize( width, height ) == false )
             return;
-        }
-        createRenderTargets();
-        _frameIndex = _swapChain->GetCurrentBackBufferIndex();
+        _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
+        _swapChain.acquireNextImage();
     }
 
 } // namespace sw

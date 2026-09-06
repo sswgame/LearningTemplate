@@ -44,7 +44,7 @@ namespace sw
     bool VulkanRHIDevice::createRenderPass()
     {
         VkAttachmentDescription colorAttachment{};
-        colorAttachment.format         = static_cast<VkFormat>( _swapChainImageFormat );
+        colorAttachment.format         = static_cast<VkFormat>( _swapChain.getImageFormat() );
         colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
@@ -220,98 +220,6 @@ namespace sw
         CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger );
     }
 
-    bool VulkanRHIDevice::createSurface()
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        VkWin32SurfaceCreateInfoKHR createInfo{};
-        createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-        createInfo.hwnd      = static_cast<HWND>( _pHWnd );
-        createInfo.hinstance = GetModuleHandle( nullptr );
-
-        if ( vkCreateWin32SurfaceKHR( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR( "Failed to create window surface!" );
-            return false;
-        }
-        return true;
-#elif defined( SW_PLATFORM_LINUX )
-        Display* pDisplay = static_cast<Display*>( _pDisplayHandle );
-        Window   window   = static_cast<Window>( reinterpret_cast<uintptr_t>( _pHWnd ) );
-        if ( pDisplay == nullptr || window == 0 )
-        {
-            SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
-            return false;
-        }
-
-        if ( _linuxWsi == 1 )
-        {
-            PFN_vkCreateXlibSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-                vkGetInstanceProcAddr( _instance, "vkCreateXlibSurfaceKHR" ) );
-            if ( pCreateFn == nullptr )
-            {
-                SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
-                return false;
-            }
-
-            VkXlibSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-            createInfo.dpy    = pDisplay;
-            createInfo.window = window;
-            if ( pCreateFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-            {
-                SW_LOG_ERROR( "Failed to create Xlib Vulkan surface!" );
-                return false;
-            }
-            return true;
-        }
-
-        if ( _linuxWsi == 2 )
-        {
-            PFN_vkCreateXcbSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
-                vkGetInstanceProcAddr( _instance, "vkCreateXcbSurfaceKHR" ) );
-            if ( pCreateFn == nullptr )
-            {
-                SW_LOG_ERROR( "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
-                return false;
-            }
-
-            xcb_connection_t* pConnection = XGetXCBConnection( pDisplay );
-            if ( pConnection == nullptr )
-            {
-                SW_LOG_ERROR( "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
-                return false;
-            }
-
-            VkXcbSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-            createInfo.connection = pConnection;
-            createInfo.window     = static_cast<xcb_window_t>( window );
-            if ( pCreateFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-            {
-                SW_LOG_ERROR( "Failed to create XCB Vulkan surface!" );
-                return false;
-            }
-            return true;
-        }
-
-        SW_LOG_ERROR( "No Linux Vulkan WSI selected during instance creation." );
-        return false;
-#elif defined( SW_PLATFORM_MACOS )
-        VkMetalSurfaceCreateInfoEXT createInfo{};
-        createInfo.sType  = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
-        createInfo.pLayer = _pHWnd;
-
-        if ( vkCreateMetalSurfaceEXT( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR( "Failed to create Metal window surface!" );
-            return false;
-        }
-        return true;
-#else
-        return false;
-#endif
-    }
-
     bool VulkanRHIDevice::pickPhysicalDevice()
     {
         uint32 deviceCount{ 0 };
@@ -335,7 +243,7 @@ namespace sw
                 if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
                 {
                     VkBool32 presentSupport{ false };
-                    vkGetPhysicalDeviceSurfaceSupportKHR( device, i, _surface, &presentSupport );
+                    vkGetPhysicalDeviceSurfaceSupportKHR( device, i, _swapChain.getSurface(), &presentSupport );
                     if ( presentSupport )
                     {
                         _graphicsQueueFamilyIndex = i;
@@ -438,191 +346,6 @@ namespace sw
         return true;
     }
 
-    bool VulkanRHIDevice::createSwapChain()
-    {
-        VkSurfaceCapabilitiesKHR capabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR( _physicalDevice, _surface, &capabilities );
-
-        uint32 formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR( _physicalDevice, _surface, &formatCount, nullptr );
-        vector<VkSurfaceFormatKHR> formats( formatCount );
-        vkGetPhysicalDeviceSurfaceFormatsKHR( _physicalDevice, _surface, &formatCount, formats.data() );
-
-        // 백버퍼 포맷은 백엔드 간 계약이다(constant::kBackBufferFormat). 파이프라인이 그 포맷으로
-        // 렌더패스를 만들기 때문에, 여기서 다른 걸 고르면 백버퍼에 직접 그리는 패스가 통째로
-        // 렌더패스 비호환이 된다. 요청 포맷 → 대체 → 첫 번째 순으로 고르고, 요청을 못 맞추면
-        // getBackBufferFormat() 으로 실제 값을 보고한다(조용히 어긋나게 두지 않는다).
-        const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedBackBufferFormat );
-        const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
-
-        VkSurfaceFormatKHR surfaceFormat   = formats[0];
-        bool               bFoundPreferred = false;
-        for ( const VkFormat preferred : arrPreferred )
-        {
-            for ( const VkSurfaceFormatKHR& availableFormat : formats )
-            {
-                if ( availableFormat.format == preferred && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
-                {
-                    surfaceFormat   = availableFormat;
-                    bFoundPreferred = true;
-                    break;
-                }
-            }
-            if ( bFoundPreferred )
-                break;
-        }
-        if ( surfaceFormat.format != requestedFormat )
-        {
-            SW_LOG_ERROR( "스왑체인이 요청 포맷(%#)을 지원하지 않아 %# 로 대체됐습니다 — 백버퍼를 직접 "
-                          "타깃으로 하는 파이프라인이 렌더패스 비호환이 될 수 있습니다.",
-                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
-        }
-
-        VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-
-        // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 합니다.
-        VkExtent2D extent = capabilities.currentExtent;
-        if ( capabilities.currentExtent.width == UINT32_MAX || capabilities.currentExtent.height == UINT32_MAX )
-        {
-            extent = { _width, _height };
-            if ( extent.width < capabilities.minImageExtent.width )
-                extent.width = capabilities.minImageExtent.width;
-            if ( extent.width > capabilities.maxImageExtent.width )
-                extent.width = capabilities.maxImageExtent.width;
-            if ( extent.height < capabilities.minImageExtent.height )
-                extent.height = capabilities.minImageExtent.height;
-            if ( extent.height > capabilities.maxImageExtent.height )
-                extent.height = capabilities.maxImageExtent.height;
-        }
-
-        // 창이 최소화되거나 파괴되는 중이면 서피스가 0 크기를 보고한다. 그대로 넘기면
-        // vkCreateSwapchainKHR / vkCreateFramebuffer / vkCmdBeginRenderPass 가 줄줄이 0 크기로
-        // 불려 검증 오류가 쏟아진다(종료 경로에서 실제로 그랬다). 크기가 생기면 _bSwapChainDirty
-        // 경로가 다시 부르므로 여기서는 조용히 물러난다.
-        if ( extent.width == 0 || extent.height == 0 )
-        {
-            SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#x%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
-                          extent.width, extent.height );
-            return false;
-        }
-
-        // 백버퍼 개수도 백엔드 간 계약이다 — 예전엔 이 값을 무시하고 minImageCount + 1 을 썼다.
-        // 요청값을 존중하되 서피스 능력으로 클램프한다.
-        uint32 imageCount = ( _requestedBufferCount > 0 ) ? _requestedBufferCount : ( capabilities.minImageCount + 1 );
-        if ( imageCount < capabilities.minImageCount )
-            imageCount = capabilities.minImageCount;
-        if ( capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount )
-            imageCount = capabilities.maxImageCount;
-
-        VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        if ( ( capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR ) == 0 )
-        {
-            if ( ( capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR ) != 0 )
-                compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
-            else if ( ( capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR ) != 0 )
-                compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
-            else if ( ( capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR ) != 0 )
-                compositeAlpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
-        }
-
-        VkSurfaceTransformFlagBitsKHR preTransform = capabilities.currentTransform;
-        if ( ( capabilities.supportedTransforms & preTransform ) == 0 )
-            preTransform = ( ( capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) != 0 ) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : capabilities.currentTransform;
-
-        VkSwapchainCreateInfoKHR createInfo{};
-        createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface          = _surface;
-        createInfo.minImageCount    = imageCount;
-        createInfo.imageFormat      = surfaceFormat.format;
-        createInfo.imageColorSpace  = surfaceFormat.colorSpace;
-        createInfo.imageExtent      = extent;
-        createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        createInfo.preTransform     = preTransform;
-        createInfo.compositeAlpha   = compositeAlpha;
-        createInfo.presentMode      = presentMode;
-        createInfo.clipped          = VK_TRUE;
-
-        if ( vkCreateSwapchainKHR( _device, &createInfo, nullptr, &_swapChain ) != VK_SUCCESS )
-            return false;
-
-        vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, nullptr );
-        _listSwapChainImage.resize( imageCount );
-        vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, _listSwapChainImage.data() );
-
-        _swapChainImageFormat   = static_cast<uint32>( surfaceFormat.format );
-        _actualBackBufferFormat = ( surfaceFormat.format == requestedFormat )
-                                    ? _requestedBackBufferFormat
-                                    : ( ( surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM ) ? RHIFormat::B8G8R8A8_UNORM
-                                                                                             : RHIFormat::R8G8B8A8_UNORM );
-        _swapChainExtentWidth   = extent.width;
-        _swapChainExtentHeight  = extent.height;
-        return true;
-    }
-
-    bool VulkanRHIDevice::createImageViews()
-    {
-        _listSwapChainImageView.resize( _listSwapChainImage.size() );
-        for ( size_t imageIndex = 0; imageIndex < _listSwapChainImage.size(); imageIndex++ )
-        {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image                           = _listSwapChainImage[imageIndex];
-            createInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format                          = static_cast<VkFormat>( _swapChainImageFormat );
-            createInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel   = 0;
-            createInfo.subresourceRange.levelCount     = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount     = 1;
-
-            if ( vkCreateImageView( _device, &createInfo, nullptr, &_listSwapChainImageView[imageIndex] ) != VK_SUCCESS )
-            {
-                for ( size_t cleanupIndex = 0; cleanupIndex < imageIndex; ++cleanupIndex )
-                {
-                    if ( _listSwapChainImageView[cleanupIndex] != VK_NULL_HANDLE )
-                        vkDestroyImageView( _device, _listSwapChainImageView[cleanupIndex], nullptr );
-                }
-                _listSwapChainImageView.clear();
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool VulkanRHIDevice::createFramebuffers()
-    {
-        _listSwapChainFramebuffer.resize( _listSwapChainImageView.size(), VK_NULL_HANDLE );
-        for ( size_t imageIndex = 0; imageIndex < _listSwapChainImageView.size(); imageIndex++ )
-        {
-            VkImageView             arrAttachment[] = { _listSwapChainImageView[imageIndex] };
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass      = _renderPass;
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments    = arrAttachment;
-            framebufferInfo.width           = _swapChainExtentWidth;
-            framebufferInfo.height          = _swapChainExtentHeight;
-            framebufferInfo.layers          = 1;
-            if ( vkCreateFramebuffer( _device, &framebufferInfo, nullptr, &_listSwapChainFramebuffer[imageIndex] ) != VK_SUCCESS )
-            {
-                for ( size_t cleanupIndex = 0; cleanupIndex < imageIndex; ++cleanupIndex )
-                {
-                    if ( _listSwapChainFramebuffer[cleanupIndex] != VK_NULL_HANDLE )
-                        vkDestroyFramebuffer( _device, _listSwapChainFramebuffer[cleanupIndex], nullptr );
-                }
-                _listSwapChainFramebuffer.clear();
-                return false;
-            }
-        }
-        return true;
-    }
-
     bool VulkanRHIDevice::createCommandPool()
     {
         VkCommandPoolCreateInfo poolInfo{};
@@ -662,61 +385,31 @@ namespace sw
         return true;
     }
 
-    bool VulkanRHIDevice::createSyncObjects()
+    bool VulkanRHIDevice::createFrameFences()
     {
-        // acquire 세마포어는 _currentFrame 으로, present 세마포어는 _imageIndex 로 인덱싱한다 —
-        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 예전엔 둘 다 이미지 수로 잡아서,
-        // 드라이버가 인플라이트 프레임 수보다 적은 이미지를 주면 범위 밖 접근이 될 수 있었다.
-        _listImageAvailableSemaphore.resize( constant::kMaxFrameCountInFlight );
-        _listRenderFinishedSemaphore.resize( _listSwapChainImage.size() );
+        // 펜스는 인플라이트 슬롯당 하나 — 스왑체인 이미지 개수와 무관하다.
+        // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
         _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
-        _listImagesInFlight.resize( _listSwapChainImage.size(), VK_NULL_HANDLE );
         _listRingFrameNumber.resize( constant::kMaxFrameCountInFlight, 0 );
+        // "이 이미지를 마지막으로 쓴 펜스" 표는 이미지 개수만큼 필요하다.
+        _listImagesInFlight.resize( _swapChain.getImageCount(), VK_NULL_HANDLE );
 
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        for ( size_t syncIndex = 0; syncIndex < _listImageAvailableSemaphore.size(); syncIndex++ )
+        for ( VkFence& fence : _listInFlightFence )
         {
-            if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listImageAvailableSemaphore[syncIndex] ) != VK_SUCCESS )
-                return false;
-        }
-
-        for ( size_t syncIndex = 0; syncIndex < constant::kMaxFrameCountInFlight; syncIndex++ )
-        {
-            if ( vkCreateFence( _device, &fenceInfo, nullptr, &_listInFlightFence[syncIndex] ) != VK_SUCCESS )
-                return false;
-        }
-
-        for ( size_t syncIndex = 0; syncIndex < _listRenderFinishedSemaphore.size(); syncIndex++ )
-        {
-            if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listRenderFinishedSemaphore[syncIndex] ) != VK_SUCCESS )
+            if ( vkCreateFence( _device, &fenceInfo, nullptr, &fence ) != VK_SUCCESS )
                 return false;
         }
         return true;
     }
 
-    void VulkanRHIDevice::destroySyncObjects()
+    void VulkanRHIDevice::destroyFrameFences()
     {
         if ( _device == nullptr )
             return;
-
-        for ( VkSemaphore semaphore : _listRenderFinishedSemaphore )
-        {
-            if ( semaphore != VK_NULL_HANDLE )
-                vkDestroySemaphore( _device, semaphore, nullptr );
-        }
-        _listRenderFinishedSemaphore.clear();
-
-        for ( VkSemaphore semaphore : _listImageAvailableSemaphore )
-        {
-            if ( semaphore != VK_NULL_HANDLE )
-                vkDestroySemaphore( _device, semaphore, nullptr );
-        }
-        _listImageAvailableSemaphore.clear();
 
         for ( VkFence fence : _listInFlightFence )
         {
@@ -726,8 +419,21 @@ namespace sw
         _listInFlightFence.clear();
         _listRingFrameNumber.clear();
 
-        // 스왑체인 이미지가 소유하지 않는 참조 사본이므로 비우기만 합니다.
+        // 위 펜스를 가리키는 사본이므로 비우기만 합니다.
         _listImagesInFlight.clear();
+    }
+
+    void VulkanRHIDevice::resize( uint32 width, uint32 height )
+    {
+        if ( _width == width && _height == height )
+            return;
+
+        _width  = width;
+        _height = height;
+
+        // 임의의 호출 스레드에서 재생성하지 않고 beginFrame까지 미룹니다.
+        if ( width != 0 && height != 0 )
+            _bSwapChainDirty = 1;
     }
 
     void VulkanRHIDevice::recreateSwapChain()
@@ -736,58 +442,33 @@ namespace sw
             return;
         vkDeviceWaitIdle( _device );
 
-        // 세마포어/펜스는 스왑체인 이미지 개수로 크기가 정해지므로 함께 재생성해야 합니다.
-        destroySyncObjects();
-        cleanupSwapChain();
+        // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 재생성합니다.
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
 
-        if ( createSwapChain() == false )
+        if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
         {
             SW_LOG_ERROR( "Failed to recreate the swapchain!" );
             return;
         }
-        if ( createImageViews() == false )
-        {
-            SW_LOG_ERROR( "Failed to recreate the swapchain image views!" );
-            return;
-        }
-        if ( createFramebuffers() == false )
+        if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
         {
             SW_LOG_ERROR( "Failed to recreate the swapchain framebuffers!" );
             return;
         }
-        if ( createSyncObjects() == false )
+        if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
         {
-            SW_LOG_ERROR( "Failed to recreate the swapchain sync objects!" );
+            SW_LOG_ERROR( "Failed to recreate the swapchain semaphores!" );
+            return;
+        }
+        if ( createFrameFences() == false )
+        {
+            SW_LOG_ERROR( "Failed to recreate the frame fences!" );
             return;
         }
 
         _currentFrame = 0;
-    }
-
-    void VulkanRHIDevice::cleanupSwapChain()
-    {
-        if ( _device == nullptr )
-            return;
-
-        for ( VkFramebuffer framebuffer : _listSwapChainFramebuffer )
-        {
-            vkDestroyFramebuffer( _device, framebuffer, nullptr );
-        }
-        _listSwapChainFramebuffer.clear();
-
-        for ( VkImageView imageView : _listSwapChainImageView )
-        {
-            vkDestroyImageView( _device, imageView, nullptr );
-        }
-        _listSwapChainImageView.clear();
-
-        if ( _swapChain )
-        {
-            vkDestroySwapchainKHR( _device, _swapChain, nullptr );
-            _swapChain = nullptr;
-        }
-        // 스왑체인 소유 이미지이므로 핸들만 버립니다.
-        _listSwapChainImage.clear();
     }
 
     bool VulkanRHIDevice::initPipelineCache()

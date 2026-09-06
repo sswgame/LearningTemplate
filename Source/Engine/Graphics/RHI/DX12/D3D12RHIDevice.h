@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
@@ -143,7 +144,7 @@ namespace sw
         void* getNativeContext() const override { return _activeFrameList != nullptr ? _activeFrameList : _commandList.Get(); }
 
         /** @brief IDXGISwapChain3 포인터 반환 */
-        void* getNativeSwapChain() const override { return _swapChain.Get(); }
+        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
 
         /** @brief ID3D12CommandQueue 포인터 반환 */
         void* getNativeCommandQueue() const override { return _commandQueue.Get(); }
@@ -163,14 +164,6 @@ namespace sw
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
     private:
-        /**
-         * @brief 스왑체인 RTV/DSV를 만듭니다.
-         */
-        void createRenderTargets();
-        /**
-         * @brief 렌더 타깃을 정리합니다
-         */
-        void cleanupRenderTargets();
         /**
          * @brief 이전 프레임 완료를 기다립니다
          */
@@ -302,7 +295,6 @@ namespace sw
 
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
-        Microsoft::WRL::ComPtr<IDXGISwapChain3>           _swapChain;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
@@ -333,7 +325,6 @@ namespace sw
         FrameResourceRing             _frameRing;
         StructuredUploadSlot          _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
-        vector<Microsoft::WRL::ComPtr<ID3D12Resource>>         _listRenderTarget;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
         /// @brief 리소스 상태 전이 맵 보호용 — 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있으므로.
@@ -353,9 +344,10 @@ namespace sw
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         vector<D3D12RenderPassRecord>            _listRenderPass;
 
-        /// @brief 스왑체인 백버퍼의 실제 리소스 상태 — 리스트가 아니라 리소스 자체에 속한 전역 상태.
-        D3D12_RESOURCE_STATES _swapchainState;
-        uint8                 _bHeapDirectlyIndexed : 1;
+        /// @brief 창 하나의 백버퍼 묶음. 백버퍼·인덱스·리소스 상태·Present 가 전부 여기 모여 있다.
+        D3D12RHISwapChain _swapChain;
+
+        uint8 _bHeapDirectlyIndexed : 1;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true — 매
         /// 프레임 flushDebugMessages()가 똑같은 검증 메시지 수십 줄을 무한 반복 출력하는 걸 막는다.
         uint8                  _bDeviceRemovedLogged : 1;
@@ -383,16 +375,10 @@ namespace sw
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;
         UINT _allocatedDescriptorsCount;
-        UINT _frameIndex;
 
         HANDLE                              _fenceEvent;
         Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
         UINT64                              _fenceValue;
-
-        HWND   _pHWnd;
-        uint32 _width;
-        uint32 _height;
-        uint32 _bufferCount;
 
         RHIReleaseQueue _releaseQueue;
 
