@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Graphics/Shader/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
@@ -209,6 +210,11 @@ namespace sw
                     const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
                     hash = StringUtil::computeHash64( sourceStr, false, hash );
                 }
+                // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
+                // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그걸 "새로 컴파일한 것" 으로 알고 라이브 캐시에
+                // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
+                // ShaderBaker 의 유효 소스 타임스탬프(모든 .hlsli 포함) 를 키에 섞는다.
+                hash = StringUtil::computeHash64( to_string( ShaderBaker::computeEffectiveSourceTimestamp( absPathStr ) ), false, hash );
 
                 fixed_string<constant::kMaxBuffer64> buf;
                 formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );

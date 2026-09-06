@@ -114,9 +114,16 @@ namespace sw
 
     RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
     {
-        const uint32 alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
-        GLuint       ubo;
+        // 머티리얼 상수버퍼는 **게임 스레드**(Material::initialize) 에서 만들어진다. GL 컨텍스트는 렌더 스레드가
+        // 프레임 동안만 쥐고 executePacket 끝에 놓으므로(RenderThread), 여기서도 createBuffer 처럼 잠깐 빌려야 한다.
+        // 가드 없이는 glGenBuffers 가 조용히 아무것도 안 해 초기화 안 된 이름이 그대로 저장됐고(0xFFFFFFFF),
+        // 이후 update 도 무시돼 PS 가 color=0 을 읽어 큐브가 전부 검게 나왔다 — GL 에러도, 로그도 없이.
+        ScopedOpenGLContext ctxScope( _pDevice );
+        const uint32        alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
+        GLuint              ubo{ 0 };
         glGenBuffers( 1, &ubo );
+        if ( ubo == 0 )
+            return 0;
         glBindBuffer( GL_UNIFORM_BUFFER, ubo );
         glBufferData( GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>( alignedSize ), nullptr, GL_DYNAMIC_DRAW );
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
@@ -131,6 +138,7 @@ namespace sw
         GLuint ubo = _pDevice->resolveGlBuffer( buffer );
         if ( ubo == 0 )
             return;
+        ScopedOpenGLContext ctxScope( _pDevice );
         glBindBuffer( GL_UNIFORM_BUFFER, ubo );
         glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( size ), pData );
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
@@ -157,6 +165,7 @@ namespace sw
         GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo == 0 )
             return;
+        ScopedOpenGLContext ctxScope( _pDevice );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );
         glBufferSubData( GL_SHADER_STORAGE_BUFFER, 0, static_cast<GLsizeiptr>( size ), pData );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );

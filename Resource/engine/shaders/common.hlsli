@@ -64,8 +64,18 @@
 // 아래 번호는 C++ VulkanRHIDevice::kPassCbSetIndex / kMaterialCbSetIndex 와 같은 값이어야 한다.
 #define SW_VK_CB_SET_0 0
 #define SW_VK_CB_SET_1 10
+#if defined( OPENGL )
+// **GL 은 디스크립터 세트가 없다** (GL_ARB_gl_spirv 는 set 을 무시한다). Vulkan 처럼 b0/b1 을 세트로
+// 가르면 GL 에서는 둘 다 UBO binding 0 이 되어 **겹친다** — MaterialCB 의 color 가 PassCB 의
+// g_LightViewProj 첫 행을 읽어 큐브가 검게 나왔다(검증 에러 없음). GL 은 슬롯을 binding 번호로
+// 가른다: b0=binding 0, b1=binding 1. 엔진도 같은 번호에 건다(OpenGLRHICommandContext::bindConstantBuffer).
+// 구운 .spv 의 OpDecorate(Binding) 이 정본이다.
+#define SW_DECLARE_CBUFFER( name, slot ) \
+	[[vk::binding( slot, 0 )]] cbuffer name : register( b##slot )
+#else
 #define SW_DECLARE_CBUFFER( name, slot ) \
 	[[vk::binding( 0, SW_VK_CB_SET_##slot )]] cbuffer name : register( b##slot )
+#endif
 #define SW_DECLARE_CBUFFER_SPACE( name, slot, spaceSet ) \
 	[[vk::binding( slot, spaceSet )]] cbuffer name : register( b##slot, space##spaceSet )
 #else

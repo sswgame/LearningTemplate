@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/unordered_set.h"
+
 #include "Engine/Graphics/Shader/ShaderReflectionUtil.h"
 
 namespace sw
@@ -25,6 +27,7 @@ namespace sw
             static constexpr uint32 kOpTypePointer      = 32u;
             static constexpr uint32 kOpVariable         = 59u;
 
+            static constexpr uint32 kDecorationBufferBlock   = 3u; ///< SPIR-V 1.3 이하: Uniform 클래스 + BufferBlock = SSBO
             static constexpr uint32 kDecorationBinding       = 33u;
             static constexpr uint32 kDecorationDescriptorSet = 34u;
             static constexpr uint32 kDecorationOffset        = 35u;
@@ -140,6 +143,7 @@ namespace sw
         unordered_map<uint32, unordered_map<uint32, string>>            mapMemberName;
         unordered_map<uint32, uint32>                                   mapBinding;
         unordered_map<uint32, uint32>                                   mapDescriptorSet;
+        unordered_set<uint32>                                           uniqueBufferBlockType; ///< BufferBlock 데코레이션이 붙은 구조체 타입 id
         unordered_map<uint32, unordered_map<uint32, uint32>>            mapMemberOffset;
         unordered_map<uint32, ShaderReflectionSpirvInternal::SpirvType> mapType;
 
@@ -183,6 +187,8 @@ namespace sw
                     mapBinding[target] = pWords[offset + 3];
                 else if ( decoration == ShaderReflectionSpirvInternal::kDecorationDescriptorSet && instrWords >= 4 )
                     mapDescriptorSet[target] = pWords[offset + 3];
+                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationBufferBlock )
+                    uniqueBufferBlockType.insert( target );
             }
             else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instrWords >= 5 )
             {
@@ -278,13 +284,27 @@ namespace sw
             const uint32 space     = ( setIt != mapDescriptorSet.end() ) ? setIt->second : 0;
             const uint32 bindPoint = bindingIt->second;
 
+            // SSBO 는 SPIR-V 버전에 따라 **두 가지**로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
+            // 타깃) 이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
+            // 예전엔 앞쪽만 봐서 GL 용 SPIR-V(vulkan1.1 타깃이 1.3 을 냄)의 StructuredBuffer 가 상수버퍼로
+            // 분류됐다 — 바인더는 그걸 CB 슬롯으로 걸고 bindStructuredBuffer 는 영영 부르지 않아, GL 에서
+            // 인스턴스 행렬이 전부 0 으로 읽혀 메시가 하나도 그려지지 않았다.
+            bool bIsStorageBuffer = ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassStorageBuffer );
+            if ( bIsStorageBuffer == false && var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
+            {
+                const auto ptrIt = mapType.find( var._typeId );
+                if ( ptrIt != mapType.end() && ptrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer &&
+                     uniqueBufferBlockType.find( ptrIt->second._subTypeId ) != uniqueBufferBlockType.end() )
+                    bIsStorageBuffer = true;
+            }
+
             // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
             // StructuredBuffer/RWStructuredBuffer(StorageBuffer storage class) 는 구조체 원소 타입을 똑같은
             // 방식으로 반영하지만 실제 cbuffer 가 아니다 — 여기 포함시키면 ShaderBindingLayout 이
             // ConstantBuffer 종류의 "가짜 CB" 슬롯(멤버 이름이 원소 구조체 필드와 겹침)을 만들어
             // 엔진 CB 버퍼에 엉뚱한 오프셋으로 값을 덮어쓸 수 있다. 아래 리소스 루프가 StructuredBuffer 로
             // 올바르게 분류해 별도 처리한다.
-            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
+            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform && bIsStorageBuffer == false )
             {
                 ShaderBufferInfo buf{};
                 buf._name          = name;
@@ -333,10 +353,10 @@ namespace sw
             res._registerSpace = space;
             res._bindPoint     = bindPoint;
             res._bindCount     = 1;
-            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
-                res._type = "ConstantBuffer";
-            else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassStorageBuffer )
+            if ( bIsStorageBuffer )
                 res._type = "StorageBuffer";
+            else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
+                res._type = "ConstantBuffer";
             else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniformConstant )
                 res._type = "TextureOrSampler";
             else
