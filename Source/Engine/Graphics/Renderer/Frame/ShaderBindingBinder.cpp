@@ -151,14 +151,21 @@ namespace sw
             {
                 case ShaderBindingKind::ConstantBuffer:
                 {
+                    // **예약 CB 는 리플렉션 번호가 아니라 정본 슬롯 번호로 건다.** 리플렉션이 주는
+                    // `_registerIndex` 는 백엔드마다 뜻이 다르다 — Vulkan 은 b0/b1 을 각각 다른
+                    // 디스크립터 세트의 binding 0 으로 만들므로 PassCB 와 MaterialCB 가 **둘 다 0** 이고,
+                    // GL 은 -fvk-b-shift 때문에 16/17 이 된다. 그대로 넘기면 Vulkan 은 머티리얼 CB 가
+                    // 패스 CB 자리(set 0)를 덮어써 뷰/투영 행렬이 통째로 깨지고(화면이 비었다),
+                    // GL 은 어느 슬롯에도 안 걸린다. 둘 다 검증 에러가 안 난다 — 같은 UNIFORM_BUFFER 라서.
+                    // bindingslots.hlsli 가 정하는 b0=PassCB / b1=MaterialCB 를 그대로 쓴다.
                     if ( slot._name == s_materialCbName )
                     {
                         if ( materialCb != kInvalidDescriptorIndex )
-                            cmd.bindConstantBuffer( materialCb, slot._registerIndex );
+                            cmd.bindConstantBuffer( materialCb, shaderslot::kMaterialConstantBuffer );
                     }
                     else if ( engineCb._index != kInvalidDescriptorIndex )
                     {
-                        cmd.bindConstantBuffer( engineCb._index, slot._registerIndex );
+                        cmd.bindConstantBuffer( engineCb._index, shaderslot::kPassConstantBuffer );
                     }
                     break;
                 }

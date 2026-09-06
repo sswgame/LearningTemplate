@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    extern int32 gv_gpuDriven;
+
     SW_LOG_CALLER( "FrameRenderer" );
 
     void FrameRenderer::ensurePassResources()
@@ -100,7 +102,10 @@ namespace sw
                 _mapEnginePso.insert_or_assign( RenderPassType::GpuCull, psoGpuCull );
         }
 
-        _bUseGpuDriven = ( caps._bIndirectDraw != 0 && caps._bGpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0 ) ? 1 : 0;
+        // GPU 드리븐은 **인다이렉트 드로우만 있으면 성립한다** — 간접 인자는 GpuScene 이 CPU 에서 채운다.
+        // 컴퓨트 컬링은 그 위의 선택 사항이라 여기 조건에 넣지 않는다(넣으면 컬링을 못 하는 백엔드가
+        // 인다이렉트 경로를 통째로 잃고, 렌더 스레드에서 Mesh* 를 만지는 레거시 경로로 떨어진다).
+        _bUseGpuDriven = ( gv_gpuDriven != 0 && caps._bIndirectDraw != 0 ) ? 1 : 0;
 
         _bPassResourcesReady = 1;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",

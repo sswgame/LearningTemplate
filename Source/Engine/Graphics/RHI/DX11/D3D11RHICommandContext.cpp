@@ -426,6 +426,37 @@ namespace sw
         ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
         if ( pBuf == nullptr )
             return;
+
+        // **파이프라인 상태를 여기서도 걸어야 한다.** DX11 은 setPipelineState 가 핸들만 기록하고
+        // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 그런데 이
+        // 경로에만 그 블록이 없어서, GPU 드리븐 경로(엔진 기본값 gpuDriven=1)의 모든 드로우가
+        // 셰이더도 정점버퍼도 없이 나갔다 — 화면과 트랜지언트가 클리어 색만 남던 원인이다.
+        ID3D11VertexShader*                             pVs  = nullptr;
+        ID3D11PixelShader*                              pPs  = nullptr;
+        ID3D11InputLayout*                              pIl  = nullptr;
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
+        if ( pPso != nullptr )
+        {
+            if ( pPso->_vs )
+                pVs = pPso->_vs.Get();
+            if ( pPso->_ps )
+                pPs = pPso->_ps.Get();
+            if ( pPso->_inputLayout )
+                pIl = pPso->_inputLayout.Get();
+        }
+        if ( pVs == nullptr || pPs == nullptr )
+            return;
+
+        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
+        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
+        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
+        if ( pVb != nullptr )
+            _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+
+        _pContext->IASetInputLayout( pIl );
+        _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        _pContext->VSSetShader( pVs, nullptr, 0 );
+        _pContext->PSSetShader( pPs, nullptr, 0 );
         _pContext->DrawInstancedIndirect( pBuf, argumentBufferOffset );
     }
 

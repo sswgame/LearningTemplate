@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    extern int32 gv_gpuCulling;
 
     SW_LOG_CALLER( "FrameRenderer" );
 
@@ -210,7 +211,7 @@ namespace sw
     {
         _pCmd->beginCommandList();
 
-        if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
+        if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() && gv_gpuCulling != 0 )
         {
             const RHIPipelineStateHandle cullPso = getEnginePso( RenderPassType::GpuCull );
             if ( cullPso != 0 && _gpuCullCb != 0 && _gpuCullCbIndex != kInvalidDescriptorIndex &&

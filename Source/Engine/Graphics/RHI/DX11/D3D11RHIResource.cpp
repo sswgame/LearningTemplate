@@ -98,6 +98,65 @@ namespace sw
         return handle;
     }
 
+    RHIBufferHandle D3D11RHIResource::createBuffer( const RHIBufferDesc& desc )
+    {
+        // 인다이렉트 인자 버퍼만 따로 만든다. D3D11 은 `DRAWINDIRECT_ARGS` 를 `BUFFER_STRUCTURED` 와
+        // **함께 쓸 수 없다** — 기본 경로(createStructuredBuffer)가 항상 STRUCTURED 로 만들기 때문에
+        // GPUScene 의 간접 인자 버퍼가 DrawInstancedIndirect 에 쓸 수 없는 버퍼였고, 드로우가 조용히
+        // 아무것도 하지 않았다(디버그 레이어를 켜지 않으면 흔적도 없다).
+        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
+            return IRHIResource::createBuffer( desc );
+
+        uint32 sizeBytes = desc._sizeBytes;
+        if ( sizeBytes == 0 )
+        {
+            const uint32 elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
+            const uint32 elemCount = desc._elementCount > 0 ? desc._elementCount : 1u;
+            sizeBytes              = elemSize * elemCount;
+        }
+        if ( sizeBytes == 0 || _pDevice->_device == nullptr )
+            return 0;
+
+        D3D11_BUFFER_DESC bd{};
+        bd.Usage     = D3D11_USAGE_DEFAULT;
+        bd.ByteWidth = sizeBytes;
+        bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+        // RAW 뷰는 허용된다(구조화와 달리). 컴퓨트 컬링은 D3D11 에서 끄지만(RHICapabilities 참고)
+        // UAV 등록 경로가 이 플래그를 보고 raw UAV 를 만든다.
+        bd.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS | D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+        D3D11_SUBRESOURCE_DATA  initData{};
+        D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
+        if ( desc._pInitialData != nullptr )
+        {
+            initData.pSysMem = desc._pInitialData;
+            pInitData        = &initData;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+        if ( FAILED( _pDevice->_device->CreateBuffer( &bd, pInitData, buffer.GetAddressOf() ) ) )
+        {
+            SW_LOG_ERROR( "createBuffer: 인다이렉트 인자 버퍼 생성 실패 (%# bytes)", sizeBytes );
+            return 0;
+        }
+
+        ID3D11Buffer* pBuffer = buffer.Get();
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.Format                = DXGI_FORMAT_R32_TYPELESS;
+        srvDesc.ViewDimension         = D3D11_SRV_DIMENSION_BUFFEREX;
+        srvDesc.BufferEx.FirstElement = 0;
+        srvDesc.BufferEx.NumElements  = sizeBytes / 4;
+        srvDesc.BufferEx.Flags        = D3D11_BUFFEREX_SRV_FLAG_RAW;
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+        _pDevice->_device->CreateShaderResourceView( pBuffer, &srvDesc, srv.GetAddressOf() );
+
+        const RHIBufferHandle handle = _pDevice->storeBuffer( std::move( buffer ) );
+        if ( handle != 0 && srv )
+            _pDevice->_mapBufferSrv[handle] = std::move( srv );
+        return handle;
+    }
+
     void D3D11RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr )
