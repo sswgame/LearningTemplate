@@ -203,6 +203,51 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 월드 선분을 화면 선분으로 — **근평면에서 잘라서** 낸다.
+             * @details 점 단위로 투영하면 끝점 하나가 카메라 뒤에 있는 선분을 통째로 버리게 된다. 그리드는
+             *          카메라를 중심으로 ±kGridExtent 로 깔리므로 카메라를 가로지르는 선이 대부분이다 —
+             *          그래서 격자가 한두 줄만 남았다. 동차 좌표에서 w 가 근평면을 넘는 지점을 찾아 그 점으로 자른다.
+             * @return 선분 전체가 카메라 뒤면 false.
+             */
+            static bool projectSegmentToScreen( const float4x4& viewProj, const float3& worldA, const float3& worldB,
+                                                const float2& canvasPos, const float2& canvasSize,
+                                                ImVec2& outScreenA, ImVec2& outScreenB )
+            {
+                constexpr float32 kNearW = 0.001f;
+
+                float4 clipA = float4::transform( float4{ worldA, 1.0f }, viewProj );
+                float4 clipB = float4::transform( float4{ worldB, 1.0f }, viewProj );
+                if ( clipA._w <= kNearW && clipB._w <= kNearW )
+                    return false;
+
+                // 한쪽만 뒤에 있으면 w == kNearW 가 되는 지점까지 당긴다. 동차 좌표는 선형이라 clip 공간에서 바로 보간된다.
+                if ( clipA._w <= kNearW )
+                {
+                    const float32 t = ( kNearW - clipA._w ) / ( clipB._w - clipA._w );
+                    clipA           = clipA + ( clipB - clipA ) * t;
+                }
+                else if ( clipB._w <= kNearW )
+                {
+                    const float32 t = ( kNearW - clipB._w ) / ( clipA._w - clipB._w );
+                    clipB           = clipB + ( clipA - clipB ) * t;
+                }
+
+                auto toScreen = []( const float4& clip, const float2& pos, const float2& size ) -> ImVec2
+                {
+                    const float32 invW = 1.0f / clip._w;
+                    const float32 x    = clip._x * invW;
+                    const float32 y    = clip._y * invW;
+                    ImVec2        screenPt;
+                    screenPt.x = pos._x + ( x * 0.5f + 0.5f ) * size._x;
+                    screenPt.y = pos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * size._y;
+                    return screenPt;
+                };
+                outScreenA = toScreen( clipA, canvasPos, canvasSize );
+                outScreenB = toScreen( clipB, canvasPos, canvasSize );
+                return true;
+            }
+
             static void drawDebugVisualizers( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos,
                                               const float2& canvasSize, const ViewportToolbarSettings& settings,
                                               CameraComponent* pActiveCamera )
@@ -1037,8 +1082,7 @@ namespace sw::editor
                 const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
-                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pY0, canvasPos, canvasSize, sY0 ) &&
-                     EditorViewportClientInternal::projectPointToScreen( viewProj, pY1, canvasPos, canvasSize, sY1 ) )
+                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
                 {
                     pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1047,8 +1091,7 @@ namespace sw::editor
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
-                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
-                     EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
+                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
                 {
                     pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1076,8 +1119,7 @@ namespace sw::editor
                 const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
-                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pZ0, canvasPos, canvasSize, sZ0 ) &&
-                     EditorViewportClientInternal::projectPointToScreen( viewProj, pZ1, canvasPos, canvasSize, sZ1 ) )
+                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
                 {
                     pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1086,8 +1128,7 @@ namespace sw::editor
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
-                if ( EditorViewportClientInternal::projectPointToScreen( viewProj, pX0, canvasPos, canvasSize, sX0 ) &&
-                     EditorViewportClientInternal::projectPointToScreen( viewProj, pX1, canvasPos, canvasSize, sX1 ) )
+                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
                 {
                     pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
                 }
