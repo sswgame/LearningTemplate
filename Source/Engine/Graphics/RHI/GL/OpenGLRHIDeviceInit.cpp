@@ -257,14 +257,36 @@ namespace sw
         {
             SW_LOG_INFO( "OpenGL glad Loaded Successfully." );
 
-#ifdef GL_CLIP_CONTROL
-            if ( GLAD_GL_VERSION_4_5 )
+            // UPPER_LEFT + ZERO_TO_ONE = Direct3D 의 clip/NDC (프레임버퍼 원점 좌상단, 깊이 [0,1]).
+            // **이 호출은 선택이 아니다.** 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
+            // 백엔드와 반대로 쌓인다 — 풀스크린 블릿은 DX 규약(NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 화면과
+            // 스크린샷이 통째로 상하 반전된다. 깊이도 [-1,1] 로 남아 [0,1] 을 내보내는 투영이 버퍼의 절반만 쓴다.
+            // 예전엔 이 블록이 `#ifdef GL_CLIP_CONTROL` 로 감싸여 있었다 — 그런 GL 토큰은 없다(실제 토큰은
+            // GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE 이고 GL_CLIP_CONTROL 은 함수 이름일 뿐이다). 그래서 4.6 컨텍스트에서도
+            // 블록이 통째로 컴파일에서 빠져 한 번도 불리지 않았고, 로그도 남지 않아 오래 드러나지 않았다.
+            // 이제 함수 포인터로 판단하고, 실제로 걸렸는지 GL 에 되물어 확인한다.
+            if ( glad_glClipControl != nullptr )
             {
-                // UPPER_LEFT + ZERO_TO_ONE = Direct3D clip/NDC (Y-up, top-left origin, Z in [0,1]).
                 glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE );
-                SW_LOG_TRACE( "OpenGL glClipControl: GL_UPPER_LEFT, GL_ZERO_TO_ONE (match DirectX NDC / top-left UV)" );
+
+                GLint clipOrigin{ 0 };
+                GLint clipDepth{ 0 };
+                glGetIntegerv( GL_CLIP_ORIGIN, &clipOrigin );
+                glGetIntegerv( GL_CLIP_DEPTH_MODE, &clipDepth );
+                if ( clipOrigin != GL_UPPER_LEFT || clipDepth != GL_ZERO_TO_ONE )
+                {
+                    SW_LOG_ERROR( "glClipControl 이 적용되지 않았습니다 (origin %#, depth %#) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다.",
+                                  static_cast<uint32>( clipOrigin ), static_cast<uint32>( clipDepth ) );
+                }
+                else
+                {
+                    SW_LOG_INFO( "OpenGL glClipControl: GL_UPPER_LEFT, GL_ZERO_TO_ONE (DirectX NDC / 좌상단 UV 와 일치)" );
+                }
             }
-#endif
+            else
+            {
+                SW_LOG_ERROR( "glClipControl 을 쓸 수 없습니다 (GL 4.5 / ARB_clip_control 필요) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다." );
+            }
         }
         else
         {

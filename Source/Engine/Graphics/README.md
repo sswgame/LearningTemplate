@@ -283,6 +283,20 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   없었다. `ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의 stride·필드 오프셋을
   `GpuInstance` 와 대조한다 — 오프셋을 일부러 4 틀리게 넣어 실패 메시지(파일 이름 + 숫자)까지 확인했다.
 
+OpenGL 이 상하 반전으로 그리고 있었다 (2026-09-08):
+- `glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE )` 이 **한 번도 불리지 않았다.** 호출부가 `#ifdef GL_CLIP_CONTROL` 로 감싸여
+  있었는데 그런 GL 토큰은 없다(실제 토큰은 `GL_CLIP_ORIGIN` / `GL_CLIP_DEPTH_MODE`, `GL_CLIP_CONTROL` 은 함수 이름일 뿐이다).
+  4.6 컨텍스트에서도 블록이 통째로 컴파일에서 빠졌고, 안에 있던 로그까지 같이 빠져 아무 흔적이 없었다.
+- 결과 둘: (1) 프레임버퍼 원점이 좌하단으로 남아 GL 만 SceneColor 행 순서가 반대로 쌓였다 — 풀스크린 블릿은 DX 규약
+  (NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 **화면과 스크린샷이 통째로 상하 반전**. (2) 깊이 NDC 가 [-1,1] 로 남아
+  [0,1] 을 내보내는 투영이 깊이 버퍼의 절반만 썼다(대소는 유지돼 그림자·깊이 테스트는 정상, 정밀도만 절반).
+- 이제 함수 포인터로 판단하고 `glGetIntegerv( GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE )` 로 **실제로 걸렸는지 GL 에 되묻는다.**
+  못 걸면 에러 로그를 남긴다 — 조용히 지나가는 것이 이 버그의 본체였다.
+- **왜 안 잡혔나**: `RenderPassTest.FrameRendererParityAllBackends` 가 채널 평균과 그려진 픽셀 수만 비교했다 — 둘 다 상하
+  반전에 무관하다. 게다가 큐브를 원점(= 카메라가 보는 지점)에 두어 그림이 세로로 대칭이라 어떤 지표로도 잡을 수 없었다.
+  이제 큐브를 원점 위로 올려 비대칭하게 만들고 **그려진 픽셀의 무게중심이 이미지 위쪽인지** 단언한다. 수정을 되돌려
+  OpenGL 만 실패하는 것(`무게중심 y=1055 가 중앙 640 보다 아래`)을 확인한 뒤 되살렸다.
+
 ## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
 
 ```powershell

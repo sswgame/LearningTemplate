@@ -990,6 +990,9 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
 
+    /// @brief 큐브를 원점(카메라가 보는 지점)보다 이만큼 위에 둔다 — 그림을 세로로 비대칭하게 만들어 방향을 검사할 수 있게.
+    constexpr float32 kParityCubeHeight = 1.0f;
+
     uint32  attemptedCount{ 0 };
     uint32  okCount{ 0 };
     bool    bHasReferenceMean{ false };
@@ -1022,7 +1025,13 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                 sw::MeshComponent* meshComp = go->addComponent<sw::MeshComponent>();
                 bOk                         = meshComp != nullptr;
                 if ( bOk )
+                {
                     meshComp->setMesh( cube );
+                    // 큐브를 카메라가 보는 원점보다 **위로** 올린다. 원점에 두면 화면 정중앙이라 그림이 세로로 대칭이고,
+                    // 그러면 상하 반전을 평균으로도 무게중심으로도 잡을 수 없다 — OpenGL 이 실제로 뒤집혀 있었는데
+                    // 이 테스트가 통과하던 이유다(평균·픽셀 수만 봤다).
+                    meshComp->setLocalPosition( sw::float3{ 0.0f, kParityCubeHeight, 0.0f } );
+                }
             }
         }
 
@@ -1049,6 +1058,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                 const uint32 pixelCount = layout._width * layout._height;
                 uint64       arrSum[3]{};
                 uint32       drawnCount{ 0 };
+                uint64       drawnSumY{ 0 };
                 for ( uint32 y = 0; y < layout._height; ++y )
                 {
                     const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
@@ -1062,12 +1072,28 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                         arrSum[2] += b;
                         // 파이프라인 클리어 색(0.12, 0.15, 0.18 → 31, 38, 46) 이 아니면 무언가 그려진 픽셀이다.
                         if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                        {
                             ++drawnCount;
+                            drawnSumY += y;
+                        }
                     }
                 }
                 const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
                 SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
                                     ( label + ": SceneColor 에 큐브가 없다 (drawn " + sw::to_string( drawnCount ) + "/" + sw::to_string( pixelCount ) + ")" ).c_str() );
+                // **방향 검사** — 평균과 픽셀 수는 상하 반전에 무관하다. 큐브를 원점 위에 두었으므로 올바른 방향이면
+                // 그려진 픽셀의 무게중심이 이미지 위쪽(행 번호가 작은 쪽)에 있어야 한다. 뒤집히면 아래쪽으로 간다.
+                // OpenGL 이 glClipControl 없이 좌하단 원점으로 그리던 시절 이 단언이 잡는다.
+                if ( drawnCount > 0 )
+                {
+                    const float32 centroidY = static_cast<float32>( drawnSumY ) / static_cast<float32>( drawnCount );
+                    const float32 centerY   = static_cast<float32>( layout._height ) * 0.5f;
+                    SW_EXPECT_TRUE_MSG( centroidY < centerY,
+                                        ( label + ": 그림이 상하로 뒤집혔다 — 큐브 무게중심 y=" + sw::to_string( static_cast<int32>( centroidY ) ) +
+                                          " 가 중앙 " + sw::to_string( static_cast<int32>( centerY ) ) + " 보다 아래다" )
+                                            .c_str() );
+                }
+
                 float32 arrMean[3]{};
                 for ( uint32 channel = 0; channel < 3; ++channel )
                     arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
