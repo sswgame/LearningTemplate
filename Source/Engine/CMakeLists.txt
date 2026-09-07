@@ -85,14 +85,13 @@ target_link_libraries(Engine
     # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
     # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
     # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
-    $<$<BOOL:${WIN32}>:ZLIB::ZLIB>
-    # Linux/macOS 는 overlay triplet 이 정적 링크(x64-linux.cmake: VCPKG_LIBRARY_LINKAGE static)라 zlib 이
-    # 아카이브(libz.a)다. 아카이브는 "그 시점에 미해결인 심볼" 만 당겨오므로, 링크 순서나 유니티 묶음이
-    # 바뀌면 uncompress 가 libEngine.so 에 안 들어가고 미해결로 남는다 — 공유 라이브러리는 그걸 허용해서
-    # 링크가 통과하고, App 링크에서 `undefined reference to uncompress` 로 터진다(같은 증상으로 CI 가 두 번 깨졌다).
-    # 통째로 넣어 순서와 무관하게 심볼이 libEngine 안에 있게 한다. Windows 는 triplet 이 dynamic 이라
-    # zd.lib 가 임포트 라이브러리이므로 whole-archive 대상이 아니다.
-    $<$<NOT:$<BOOL:${WIN32}>>:$<LINK_LIBRARY:WHOLE_ARCHIVE,ZLIB::ZLIB>>
+    ZLIB::ZLIB
+    # 임포트 타겟 **하나에만** 기대지 않는다. Linux CI 에서 `libEngine.so: undefined reference to uncompress`
+    # 가 세 번 났는데, 매번 링크 줄에 zlib 이 아예 안 붙은 결과였다(임포트 타겟이 왜 비었는지는 여기서
+    # 재현할 수 없었다 — 이 머신에 Linux 환경이 없다). find_package 가 채우는 ZLIB_LIBRARIES 는
+    # `optimized;<경로>;debug;<경로>` 형태의 **확정된 경로 목록**이라 타겟 속성 해석에 좌우되지 않는다.
+    # 둘 다 걸어 어느 한쪽이 비어도 심볼이 남지 않게 한다(중복 지정은 링커가 무시한다).
+    ${ZLIB_LIBRARIES}
 )
 
 if(sw_flag_libraries)

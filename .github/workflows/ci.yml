@@ -93,7 +93,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          libclang-dev libtinfo5 \
+          libclang-dev libtinfo5 zlib1g-dev \
           libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxext-dev libxfixes-dev libxcb1-dev libx11-xcb-dev \
           libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev
