@@ -1076,6 +1076,259 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
 }
 
 /**
+ * @brief [GpuSceneTest] 배치마다 **자기 머티리얼 원소**를 고르고, 값이 다르면 바이트도 다른지 (GPU 불필요).
+ * @details 지금까지의 렌더 검증은 전부 씬 기본 머티리얼 하나였다 — 머티리얼 원소가 하나뿐이라 `materialIndex`
+ *          가 늘 0 이었고, "배치마다 올바른 원소를 고르는가" 가 한 번도 검사되지 않았다. 영속 원소 ID 로 바꾼 뒤라
+ *          특히 중요하다(인덱스가 프레임을 넘어 유지되고 회수 후 재사용된다).
+ *
+ *          픽셀로 보려 했지만 조명·톤매핑이 섞여 값이 흔들렸다. 여기서는 **CPU 스냅샷**을 본다 —
+ *          두 머티리얼이 서로 다른 원소를 받는가, 그리고 프로퍼티 값이 다르면 패킹된 바이트도 다른가.
+ *          백엔드 간 패킹 일치는 ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 본다.
+ */
+SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
+{
+    // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다. XML 을 손으로 지어내면 퍼뮤테이션 선언(_permutations)이
+    // 빠져 구워둔 셰이더 변형과 맞지 않는 머티리얼이 만들어진다 — 그러면 검증하려던 것과 다른 걸 재게 된다.
+    auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
+    {
+        sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
+            return nullptr;
+        if ( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+            return nullptr;
+        return material;
+    };
+
+    sw::unique_ptr<sw::Material> materialRed  = makeMaterial( "1.0 0.05 0.05 1.0" );
+    sw::unique_ptr<sw::Material> materialBlue = makeMaterial( "0.05 0.05 1.0 1.0" );
+    SW_ASSERT_TRUE( materialRed != nullptr && materialBlue != nullptr );
+
+    // 프로퍼티 값이 다르면 패킹된 바이트도 달라야 한다 — 같은 셰이더라 레이아웃은 같고 값만 다르다.
+    const sw::vector<uint8>& bytesRed  = materialRed->getBuffer();
+    const sw::vector<uint8>& bytesBlue = materialBlue->getBuffer();
+    SW_EXPECT_TRUE_MSG( bytesRed.empty() == false && bytesBlue.empty() == false, "머티리얼 바이트가 비어 있다" );
+    SW_EXPECT_TRUE_MSG( bytesRed.size() == bytesBlue.size(), "같은 셰이더인데 패킹 크기가 다르다" );
+    if ( bytesRed.size() == bytesBlue.size() && bytesRed.empty() == false )
+    {
+        SW_EXPECT_TRUE_MSG( sw::Memory::compare( bytesRed.data(), bytesBlue.data(), bytesRed.size() ) != 0,
+                            "color 가 다른데 패킹된 바이트가 같다 — 프로퍼티가 원소에 반영되지 않는다" );
+    }
+
+    sw::Scene scene( "PerBatchMaterialScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    // 메시도 따로 만든다 — 배치 키에 메시가 들어가므로 배치가 갈린다.
+    sw::shared_ptr<sw::Mesh> meshA = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> meshB = sw::Mesh::createUnitCube();
+    SW_ASSERT_TRUE( meshA != nullptr && meshB != nullptr );
+
+    auto addObject = [&]( const utf8* pName, const sw::shared_ptr<sw::Mesh>& mesh, sw::Material* pMaterial, float32 offsetX )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+        SW_ASSERT_TRUE( pObj != nullptr );
+        sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_TRUE( pMeshComp != nullptr );
+        pMeshComp->setMesh( mesh );
+        pMeshComp->setMaterial( pMaterial );
+        pMeshComp->setLocalPosition( sw::float3{ offsetX, 0.0f, 0.0f } );
+    };
+    addObject( "CubeRed", meshA, materialRed.get(), -1.1f );
+    addObject( "CubeBlue", meshB, materialBlue.get(), 1.1f );
+
+    sw::GpuScene gpuScene;
+    gpuScene.buildFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f }, nullptr );
+
+    // 배치가 둘 생기고, 각 배치가 자기 머티리얼의 원소를 가리켜야 한다.
+    const sw::vector<sw::GpuMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    SW_EXPECT_TRUE_MSG( batches.size() == 2, "메시가 둘이면 배치도 둘이어야 한다" );
+    SW_ASSERT_TRUE( batches.size() == 2 );
+    SW_EXPECT_TRUE_MSG( batches[0]._materialIndex != batches[1]._materialIndex,
+                        "서로 다른 머티리얼인데 같은 원소를 가리킨다 — materialIndex 가 어긋난다" );
+
+    // 그 인덱스가 실제로 그 배치의 머티리얼을 가리키는지 그룹에서 확인한다.
+    for ( const sw::GpuMeshBatch& batch : batches )
+    {
+        SW_ASSERT_TRUE( batch._materialGroup < gpuScene.getMaterialGroups().size() );
+        const sw::GpuMaterialGroup& group = gpuScene.getMaterialGroups()[batch._materialGroup];
+        SW_ASSERT_TRUE( batch._materialIndex < group._listEntry.size() );
+        SW_EXPECT_TRUE_MSG( group._listEntry[batch._materialIndex].first == batch._pMaterial,
+                            "배치의 materialIndex 가 다른 머티리얼의 원소를 가리킨다" );
+    }
+
+    meshA->releaseGpu();
+    meshB->releaseGpu();
+}
+
+/**
+ * @brief [RenderPassTest] 배치마다 자기 머티리얼 **색**으로 그려지는지 (4 백엔드).
+ * @details GpuSceneTest.PerBatchMaterialElementsAreDistinct 는 CPU 쪽 원소 선택까지만 본다. 여기서는 그
+ *          원소가 실제로 셰이더까지 도달하는지를 픽셀로 본다 — 붉은 머티리얼과 푸른 머티리얼을 좌우에 두고
+ *          그린다.
+ *
+ *          판정은 "붉은 픽셀 수" 가 아니라 **그려진 픽셀의 평균 (R - B)** 로 한다. 절대 색은 조명·톤매핑·
+ *          백엔드 색공간에 따라 흔들리지만, 같은 조명을 받는 두 큐브 사이의 R-B 대소는 흔들리지 않는다.
+ *          픽셀 수로 세었을 때는 백엔드마다 값이 널뛰어 판정이 되지 않았다.
+ */
+SW_TEST_CASE( RenderPassTest, PerBatchMaterialColorsReachShader )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    // 기본 카메라는 -Z 를 본다 — 월드 +X 가 화면 **왼쪽**으로 간다. 그래서 붉은 큐브를 -X 에 두면
+    // 화면 오른쪽이 붉어진다.
+    constexpr float32 kSideOffset = 1.2f;
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "PerBatchMaterialColorScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다 — 손으로 지은 XML 은 퍼뮤테이션 선언이 빠져 구워둔
+        // 셰이더 변형과 맞지 않는다(그러면 드로우가 통째로 사라져 검증이 무의미해진다).
+        // initialize 가 아니라 loadFromFile 을 쓴다 — initialize 는 텍스처 에셋 해석까지 하므로 에셋
+        // 시스템이 없는 테스트 프로세스에서는 못 쓴다. GPUScene 은 머티리얼 상수버퍼가 아니라
+        // getBuffer() 를 구조버퍼 원소로 패킹하므로 여기까지면 충분하다.
+        auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
+        {
+            sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
+                return nullptr;
+            if ( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                return nullptr;
+            return material;
+        };
+
+        sw::unique_ptr<sw::Material> materialRed;
+        sw::unique_ptr<sw::Material> materialBlue;
+        if ( bOk )
+        {
+            materialRed  = makeMaterial( "1.0 0.02 0.02 1.0" );
+            materialBlue = makeMaterial( "0.02 0.02 1.0 1.0" );
+            bOk          = materialRed != nullptr && materialBlue != nullptr;
+            SW_EXPECT_TRUE_MSG( bOk, "테스트 머티리얼 준비" );
+        }
+
+        // 메시도 따로 만든다 — 배치 키에 메시가 들어가므로 배치가 갈려 드로우가 둘이 된다.
+        sw::shared_ptr<sw::Mesh> meshRed;
+        sw::shared_ptr<sw::Mesh> meshBlue;
+        if ( bOk )
+        {
+            meshRed  = sw::Mesh::createUnitCube();
+            meshBlue = sw::Mesh::createUnitCube();
+            bOk      = meshRed != nullptr && meshBlue != nullptr;
+        }
+        if ( bOk )
+        {
+            const sw::shared_ptr<sw::Mesh> arrMesh[2]     = { meshRed, meshBlue };
+            sw::Material*                  arrMaterial[2] = { materialRed.get(), materialBlue.get() };
+            const float32                  arrOffsetX[2]  = { -kSideOffset, kSideOffset };
+            const utf8*                    arrName[2]     = { "CubeRed", "CubeBlue" };
+            for ( uint32 sideIndex = 0; sideIndex < 2 && bOk; ++sideIndex )
+            {
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( arrName[sideIndex] ) );
+                bOk                  = pObj != nullptr;
+                if ( bOk )
+                {
+                    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                    bOk                          = pMeshComp != nullptr;
+                    if ( bOk )
+                    {
+                        pMeshComp->setMesh( arrMesh[sideIndex] );
+                        pMeshComp->setMaterial( arrMaterial[sideIndex] );
+                        pMeshComp->setLocalPosition( sw::float3{ arrOffsetX[sideIndex], 0.0f, 0.0f } );
+                    }
+                }
+            }
+        }
+
+        if ( bOk )
+        {
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        {
+            // 그려진 픽셀(검은 배경이 아닌 곳)만 모아 좌/우 절반의 평균 (R - B) 를 낸다.
+            int64  arrSumDiff[2]{};
+            uint32 arrDrawn[2]{};
+
+            // 배경은 검지 않다 — 패스 리소스가 정한 클리어 색과 톤매핑이 섞여 회색빛이 깔린다. 그래서
+            // "검지 않은 픽셀" 이 아니라 **모서리 픽셀과 확연히 다른 픽셀** 을 큐브로 본다.
+            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
+            const uint8* pCorner = bytes.data();
+            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
+            const int32  bgG     = pCorner[1];
+            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+            for ( uint32 y = 0; y < layout._height; ++y )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                for ( uint32 x = 0; x < layout._width; ++x )
+                {
+                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
+                    const int32  g      = pPixel[1];
+                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
+                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                        continue; // 배경
+                    const uint32 side = ( x < layout._width / 2 ) ? 0u : 1u;
+                    arrSumDiff[side] += ( r - b );
+                    ++arrDrawn[side];
+                }
+            }
+
+            const sw::string label    = sw::string( device->getBackendName() );
+            const uint32     minDrawn = ( layout._width * layout._height ) / 400;
+            const bool       bEnough  = arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn;
+            SW_EXPECT_TRUE_MSG( bEnough, ( label + ": 큐브가 화면 양쪽에 그려지지 않았다 (좌 " + sw::to_string( arrDrawn[0] ) +
+                                           ", 우 " + sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) + ")" )
+                                             .c_str() );
+            if ( bEnough )
+            {
+                const int64 leftDiff  = arrSumDiff[0] / static_cast<int64>( arrDrawn[0] );
+                const int64 rightDiff = arrSumDiff[1] / static_cast<int64>( arrDrawn[1] );
+                SW_EXPECT_TRUE_MSG( rightDiff > leftDiff + 16,
+                                    ( label + ": 좌우가 같은 색으로 그려졌다 (좌 R-B " + sw::to_string( leftDiff ) +
+                                      ", 우 R-B " + sw::to_string( rightDiff ) +
+                                      ") — 배치가 자기 머티리얼 원소를 못 읽는다" )
+                                        .c_str() );
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
+
+        if ( meshRed != nullptr )
+            meshRed->releaseGpu();
+        if ( meshBlue != nullptr )
+            meshBlue->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for per-batch material color test" );
+}
+
+/**
  * @brief [RenderPassTest] 한 패스에 드로우가 둘일 때 배치마다 다른 상수가 유지되는지 (4 백엔드).
  * @details 배치 키에 메시 포인터가 들어가므로 **메시가 다르면 배치가 갈린다**. 그러면 한 패스가 드로우를
  *          두 번 하는데, 패스 상수버퍼는 `acquirePassCb` 가 패스당 하나만 잡고 `bindGraphics` 는 드로우마다
