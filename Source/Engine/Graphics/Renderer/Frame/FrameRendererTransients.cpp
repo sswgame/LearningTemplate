@@ -107,6 +107,9 @@ namespace sw
         // 인다이렉트 경로를 통째로 잃고, 렌더 스레드에서 Mesh* 를 만지는 레거시 경로로 떨어진다).
         _bUseGpuDriven = ( gv_gpuDriven != 0 && caps._bIndirectDraw != 0 ) ? 1 : 0;
 
+        // Present 변종도 PSO 등록 단계에서 만든다 — 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
+        buildPresentPsoVariants();
+
         // 폴백 원소는 PSO 를 다 등록한 뒤에 만든다 — 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
 
@@ -648,19 +651,43 @@ namespace sw
         }
     }
 
+    void FrameRenderer::buildPresentPsoVariants()
+    {
+        if ( _pDevice == nullptr )
+            return;
+
+        // Present 가 그릴 수 있는 대상은 둘뿐이다 — 백버퍼(디바이스가 실제 채택한 포맷)와 오프스크린
+        // 렌더타깃(에디터 GameView 등, 계약값 kOffscreenColorFormat). 둘 다 **셋업에서** 만들어 둔다.
+        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
+        for ( const RHIFormat format : arrTargetFormat )
+        {
+            if ( format == RHIFormat::Unknown || _mapPresentPso.find( format ) != _mapPresentPso.end() )
+                continue;
+            const RHIFormat              arrRtvFormat[] = { format };
+            const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
+                                                                                false, 1, arrRtvFormat );
+            // 실패해도 기록한다 — 0 이면 호출부가 blit 폴백으로 간다.
+            _mapPresentPso.insert_or_assign( format, pso );
+        }
+    }
+
     RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
     {
+        // **조회만 한다.** 예전엔 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
+        // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더패스 캐시(락 없음)를 건드리므로, 같은
+        // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. checkRegistryMutableNow 는 bindless
+        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
             return getEnginePso( RenderPassType::Present );
         const auto it = _mapPresentPso.find( targetFormat );
         if ( it != _mapPresentPso.end() )
             return it->second;
 
-        const RHIFormat              arrRtvFormat[] = { targetFormat };
-        const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
-                                                                            false, 1, arrRtvFormat );
-        // 실패해도 기록한다 — 매 프레임 다시 컴파일을 시도하지 않도록. 0 이면 호출부가 blit 폴백으로 간다.
-        _mapPresentPso.insert_or_assign( targetFormat, pso );
-        return pso;
+        if ( _bPresentPsoMissingLogged.exchange( 1 ) == 0 )
+        {
+            SW_LOG_ERROR( "Present 대상 포맷 %# 의 PSO 가 셋업에 없습니다 — buildPresentPsoVariants 에 그 포맷을 추가해야 합니다.",
+                          static_cast<uint32>( targetFormat ) );
+        }
+        return getEnginePso( RenderPassType::Present );
     }
 } // namespace sw

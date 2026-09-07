@@ -338,6 +338,8 @@ namespace sw
          *          여기서는 Present 하나만 그 키가 포맷이라 맵 하나로 충분하다.
          */
         RHIPipelineStateHandle ensurePresentPso( RHIFormat targetFormat );
+        /** @brief Present 가 그릴 수 있는 대상 포맷(백버퍼·오프스크린)의 PSO 를 셋업에서 미리 만듭니다. */
+        void buildPresentPsoVariants();
 
     private:
         /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
@@ -416,18 +418,20 @@ namespace sw
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
-        unordered_map<hashed_string, uint32>             _mapPassNameToIndex;
-        uint32                                           _transientWidth;
-        uint32                                           _transientHeight;
-        RHITextureHandle                                 _outputRenderTarget;
-        RHITextureHandle                                 _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
-        RHIDescriptorIndex                               _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
-        FrameRendererStatus                              _status;
-        string                                           _statusMessage;
-        uint8                                            _bCallbacksBound     : 1;
-        uint8                                            _bPassResourcesReady : 1;
-        uint8                                            _bUseGpuDriven       : 1;
-        [[maybe_unused]] uint8                           _reservedFlags       : 5;
+        /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.
+        std::atomic<uint8>                   _bPresentPsoMissingLogged{ 0 };
+        unordered_map<hashed_string, uint32> _mapPassNameToIndex;
+        uint32                               _transientWidth;
+        uint32                               _transientHeight;
+        RHITextureHandle                     _outputRenderTarget;
+        RHITextureHandle                     _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
+        RHIDescriptorIndex                   _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
+        FrameRendererStatus                  _status;
+        string                               _statusMessage;
+        uint8                                _bCallbacksBound     : 1;
+        uint8                                _bPassResourcesReady : 1;
+        uint8                                _bUseGpuDriven       : 1;
+        [[maybe_unused]] uint8               _reservedFlags       : 5;
 
         // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
