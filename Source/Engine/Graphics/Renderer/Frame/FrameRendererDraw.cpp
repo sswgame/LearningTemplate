@@ -84,12 +84,12 @@ namespace sw
             if ( it != _mapMaterialFallback.end() && it->second._buffer != 0 && it->second._srv != kInvalidDescriptorIndex )
             {
                 ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
-                ctx._passValues.setUint( passConstantNames()._swMaterialCount, 1u );
+                ctx._drawMaterialCount = 1u;
             }
             return;
         }
         ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSrv );
-        ctx._passValues.setUint( passConstantNames()._swMaterialCount, batch._materialCount );
+        ctx._drawMaterialCount = batch._materialCount;
     }
 
     void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
@@ -111,12 +111,27 @@ namespace sw
         if ( pLayout == nullptr || pLayout->isEmpty() )
             return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
 
-        // **드로우마다** 슬롯을 새로 잡는다. 한 버퍼를 여러 드로우가 나눠 쓰면 updateConstantBuffer 가
-        // 같은 프레임 슬롯을 덮어써 전부 마지막 값(마지막 배치의 g_InstanceBase 등)을 읽는다 — acquireCbSlot 주석 참고.
-        EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
-        acquireCbSlot( engineCb._buffer, engineCb._index );
+        // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다 — 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
+        // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전엔 이 둘을 PassCB 에 넣어 드로우마다
+        // 버퍼를 새로 잡아야 했다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
+        const uint32 arrDrawRootConstant[] = { ctx._drawInstanceBase, ctx._drawMaterialCount };
+        ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
+                                             arrDrawRootConstant );
+
+        const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
+
+        // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나 — 값·레지스트리 버전과 버퍼가 모두 그대로면 없다.
+        const uint32 valuesVersion   = ctx._passValues.getVersion();
+        const uint32 registryVersion = ctx._resourceRegistry.getVersion();
+        const bool   bUpToDate       = ( ctx._lastCbBuffer == engineCb._buffer ) && ( ctx._lastCbValuesVersion == valuesVersion ) &&
+                                       ( ctx._lastCbRegistryVersion == registryVersion );
+
         ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
-                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv );
+                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
+
+        ctx._lastCbBuffer          = engineCb._buffer;
+        ctx._lastCbValuesVersion   = valuesVersion;
+        ctx._lastCbRegistryVersion = registryVersion;
     }
 
     void FrameRenderer::drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
@@ -213,7 +228,7 @@ namespace sw
                 commitBindlessTextureBindings( ctx );
                 bFirstItem = false;
             }
-            ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
+            ctx._drawInstanceBase = batch._instanceBase;
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             ctx._pCmd->drawInstanced( pMesh->getVertexCount(), batch._instanceCount, 0, 0 );
             drawn += batch._instanceCount;
@@ -269,7 +284,7 @@ namespace sw
             // b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
-                ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
+                ctx._drawInstanceBase = batch._instanceBase;
             registerMaterialBuffer( ctx, batch, pso );
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),

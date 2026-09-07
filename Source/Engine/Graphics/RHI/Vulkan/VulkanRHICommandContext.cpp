@@ -768,6 +768,12 @@ namespace sw
         vkCmdSetScissor( cmd, 0, 1, &scissor );
     }
 
+    void VulkanRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        // 푸시 상수 범위는 전 스테이지(VS/PS/CS)에 걸려 있으므로 컴퓨트 경로와 같은 호출이면 된다.
+        setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
+    }
+
     void VulkanRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
         (void)rootParameterIndex;

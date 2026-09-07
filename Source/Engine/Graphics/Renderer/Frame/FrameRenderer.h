@@ -133,6 +133,15 @@ namespace sw
             FrameResourceRegistry _resourceRegistry{};
             /** @brief bindForDraw가 마지막으로 조회한 PSO→레이아웃. 같은 PSO로 연속 드로우할 때
              *         layoutForPso()의 뮤텍스+해시맵 조회를 스킵하는 패스-로컬 1-entry 캐시. */
+            /// @brief 이 드로우의 루트 상수 값 — 배치마다 바뀐다(인스턴스 시작 오프셋, 머티리얼 원소 수).
+            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
+            /// @brief 마지막으로 엔진 상수버퍼를 올린 시점의 (버퍼, 값 버전, 레지스트리 버전).
+            ///        셋이 그대로면 그 드로우는 버퍼를 다시 만들 필요가 없다.
+            RHIBufferHandle            _lastCbBuffer{ 0 };
+            uint32                     _lastCbValuesVersion{ 0 };
+            uint32                     _lastCbRegistryVersion{ 0 };
+            uint32                     _drawInstanceBase{ 0 };
+            uint32                     _drawMaterialCount{ 0 };
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
             const ShaderBindingLayout* _pLastLayout{ nullptr };
         };

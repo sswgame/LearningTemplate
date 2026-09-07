@@ -49,6 +49,11 @@ namespace sw
         }
         void setComputePipelineState( RHIPipelineStateHandle pso ) override { _pContext->setComputePipelineState( pso ); }
         void dispatchCompute( uint32 x, uint32 y, uint32 z ) override { _pContext->dispatchCompute( x, y, z ); }
+        void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
+                                       uint32 destOffsetIn32BitValues = 0 ) override
+        {
+            _pContext->setGraphicsRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
+        }
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
                                       uint32 destOffsetIn32BitValues = 0 ) override
         {

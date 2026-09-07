@@ -53,6 +53,13 @@ namespace sw
         /** @brief 버퍼를 이름으로 등록한다. */
         void registerBuffer( hashed_string name, RHIBufferHandle handle, RHIDescriptorIndex index );
 
+        /**
+         * @brief 등록 내용이 바뀔 때마다 오르는 번호 (PassConstantValues::getVersion 과 같은 용도).
+         * @details 엔진 상수버퍼의 `g_<Name>Index` 멤버가 이 레지스트리에서 채워지므로, 등록이 그대로면
+         *          상수버퍼도 그대로다.
+         */
+        uint32 getVersion() const { return _version; }
+
         /** @brief 이름으로 텍스처를 찾는다 (없으면 nullptr). */
         const RegisteredTexture* findTexture( hashed_string name ) const;
         /** @brief 이름으로 버퍼를 찾는다 (없으면 nullptr). */
@@ -61,5 +68,6 @@ namespace sw
     private:
         unordered_map<hashed_string, RegisteredTexture> _mapTexture;
         unordered_map<hashed_string, RegisteredBuffer>  _mapBuffer;
+        uint32                                          _version{ 0 };
     };
 } // namespace sw

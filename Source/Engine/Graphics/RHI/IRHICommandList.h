@@ -70,8 +70,17 @@ namespace sw
          *          상한은 constant::kMinComputeRootConstantDwords — 그 이상은 조용히 잘린다.
          */
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                            = 0;
-        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                        = 0;
+        /**
+         * @brief 그래픽스 스테이지에 루트/푸시 상수를 씁니다 — **드로우마다 바뀌는 소수의 값** 전용.
+         * @details 언리얼이 `FMeshDrawCommand` 의 느슨한 파라미터를 드로우별로 싣는 자리와 같다. 상수버퍼로
+         *          나르면 드로우마다 버퍼를 새로 잡거나(할당·디스크립터) 덮어써야 하는데(덮어쓰면 GPU 는 마지막
+         *          값만 본다), 루트/푸시 상수는 커맨드 리스트에 값이 그대로 실려 그 문제가 없다.
+         *          용량은 `constant::kMinComputeRootConstantDwords` 까지가 4 백엔드 공통 안전선이다.
+         *          DX12 는 루트 상수, Vulkan 은 푸시 상수, DX11/GL 은 계약 슬롯 b2 의 상수버퍼로 흉내 낸다.
+         */
+        virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
+        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
+        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                         = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 구동 바인딩 — 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩

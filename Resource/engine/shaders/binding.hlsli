@@ -44,11 +44,30 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SourceColorIndex;
 	uint     g_SourceDepthIndex;
 	uint     g_Flags;
-	uint     g_InstanceBase;     // GPUScene 인스턴스 버퍼에서 이 배치의 시작 오프셋
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, SW_INVALID_INDEX 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
-	uint     g_SwMaterialCount;  // 이 배치의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다
 };
+
+// ------------------------------------------------------------------------------
+// 1-0) 드로우별 루트/푸시 상수 — **배치마다 달라지는 값만** 여기 둔다.
+//      PassCB 는 패스당 한 번 올리는 버퍼라, 배치마다 바뀌는 값을 거기 넣으면 한 패스의 드로우들이 서로를
+//      덮어써 전부 마지막 값을 읽는다(GPU 는 제출 뒤에 읽는다). 언리얼이 FMeshDrawCommand 의 느슨한
+//      파라미터를 드로우별로 싣는 자리와 같다. DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬.
+// ------------------------------------------------------------------------------
+//      컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: computetexturewrite.hlsl) 여기서는 빼 둔다 —
+//      한 셰이더에 블록이 둘이면 재정의다.
+#if !defined( SW_STAGE_COMPUTE )
+SW_ROOT_CONSTANTS_BEGIN
+	uint g_InstanceBase;    // GPUScene 인스턴스 버퍼에서 이 배치의 시작 오프셋
+	uint g_SwMaterialCount; // 이 배치의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다
+SW_ROOT_CONSTANTS_END
+#define SW_DRAW_INSTANCE_BASE  SW_ROOT( g_InstanceBase )
+#define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
+#else
+// 컴퓨트에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SwLoadInstance / SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
+#define SW_DRAW_INSTANCE_BASE  0u
+#define SW_DRAW_MATERIAL_COUNT 0u
+#endif
 
 // ------------------------------------------------------------------------------
 // 1-1) GPUScene 인스턴스 (per-instance world/material). C++ GpuInstance 와 레이아웃 일치.
@@ -75,7 +94,7 @@ SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SR
  */
 SwInstanceData SwLoadInstance( uint instanceId )
 {
-	const uint element = g_InstanceBase + instanceId;
+	const uint element = SW_DRAW_INSTANCE_BASE + instanceId;
 	if ( g_SwInstancesIndex != SW_INVALID_INDEX && element < g_SwInstanceCount )
 		return g_SwInstances[element];
 	SwInstanceData inst;
@@ -105,7 +124,8 @@ float4x4 SwLoadInstanceWorld( uint instanceId )
 // ------------------------------------------------------------------------------
 uint SwClampMaterialIndex( uint index )
 {
-	return ( g_SwMaterialCount == 0 ) ? 0 : min( index, g_SwMaterialCount - 1 );
+	const uint materialCount = SW_DRAW_MATERIAL_COUNT;
+	return ( materialCount == 0 ) ? 0 : min( index, materialCount - 1 );
 }
 #define SW_MATERIAL_BEGIN struct SwMaterialData_t
 #define SW_MATERIAL_END   ; SW_DECLARE_STRUCTURED_BUFFER( SwMaterialData_t, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );

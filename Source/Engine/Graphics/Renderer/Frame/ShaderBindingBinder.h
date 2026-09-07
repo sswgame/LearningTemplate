@@ -49,6 +49,7 @@ namespace sw
                                   const EngineConstantBufferSlot& engineCb,
                                   RHIDescriptorIndex              materialCb,
                                   bool                            bNativeBindless,
-                                  const RHIDescriptorIndex*       pMaterialTexSrv = nullptr );
+                                  const RHIDescriptorIndex*       pMaterialTexSrv   = nullptr,
+                                  bool                            bEngineCbUpToDate = false );
     };
 } // namespace sw

@@ -557,6 +557,12 @@ namespace sw
                     static_cast<GLsizei>( viewport._height ) );
     }
 
+    void OpenGLRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        // UBO 바인딩 포인트는 스테이지 무관이라 컴퓨트 경로와 같은 호출이면 된다.
+        setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
+    }
+
     void OpenGLRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr )

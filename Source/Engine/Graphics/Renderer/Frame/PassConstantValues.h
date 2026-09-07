@@ -25,7 +25,19 @@ namespace sw
         static constexpr uint32 kMaxValueBytes = 64; ///< float4x4 하나 크기
 
         /** @brief 모든 값을 비운다. */
-        void clear() { _listEntry.clear(); }
+        void clear()
+        {
+            _listEntry.clear();
+            ++_version;
+        }
+
+        /**
+         * @brief 내용이 바뀔 때마다 오르는 번호.
+         * @details 드로우마다 엔진 상수버퍼를 새로 만들어 올릴 필요가 있는지 판단하는 데 쓴다 — 값이 그대로면
+         *          같은 버퍼를 그대로 두면 된다. 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli 1-0)
+         *          한 패스 안에서는 보통 이 번호가 움직이지 않는다.
+         */
+        uint32 getVersion() const { return _version; }
 
         /** @brief float4x4 값을 이름으로 설정(upsert)한다. */
         void setMatrix( hashed_string name, const float4x4& value );
@@ -50,5 +62,6 @@ namespace sw
         };
 
         vector<Entry> _listEntry;
+        uint32        _version{ 0 };
     };
 } // namespace sw

@@ -613,6 +613,20 @@ namespace sw
         _pCmdList->SetComputeRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
+    void D3D12RHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
+                                                           uint32 destOffsetIn32BitValues )
+    {
+        (void)rootParameterIndex; // 루트 인자 번호는 루트 시그니처가 정한다 (kRootConstantsParam).
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
+            return;
+        if ( destOffsetIn32BitValues >= D3D12RHIDevice::kMaxComputeRootConstantDwords )
+            return;
+
+        const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
+        _pCmdList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
+    }
+
     void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         if ( _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0 )

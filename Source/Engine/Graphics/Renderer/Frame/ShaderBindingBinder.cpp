@@ -23,16 +23,22 @@ namespace sw
         if ( pData == nullptr || byteSize == 0 || byteSize > kMaxValueBytes )
             return;
 
+        // **값이 실제로 달라질 때만** 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
+        // 같은 항등 행렬로 다시 넣는다), 그때마다 버전을 올리면 상수버퍼를 드로우마다 새로 만들게 된다.
         for ( Entry& entry : _listEntry )
         {
             if ( entry._name == name )
             {
+                if ( entry._size == byteSize && Memory::compare( entry._data.data(), pData, byteSize ) == 0 )
+                    return;
                 entry._size = byteSize;
                 Memory::copy( entry._data.data(), pData, byteSize );
+                ++_version;
                 return;
             }
         }
 
+        ++_version;
         Entry entry{};
         entry._name = name;
         entry._size = byteSize;
@@ -84,7 +90,8 @@ namespace sw
                                             const EngineConstantBufferSlot& engineCb,
                                             RHIDescriptorIndex              materialCb,
                                             bool                            bNativeBindless,
-                                            const RHIDescriptorIndex*       pMaterialTexSrv )
+                                            const RHIDescriptorIndex*       pMaterialTexSrv,
+                                            bool                            bEngineCbUpToDate )
     {
         if ( layout.isEmpty() )
             return;
@@ -99,8 +106,11 @@ namespace sw
         //    buildBindPlan). 예전엔 드로우마다 슬롯/멤버를 훑어 크기를 다시 구하고, 멤버 이름으로
         //    hashed_string 을 만들고(전역 intern 테이블 조회), canonical 이름을 string 으로 새로
         //    할당했다 — 전부 PSO 마다 한 번이면 되는 일이라 드로우 경로에서 걷어냈다.
+        // 값·레지스트리가 그대로면 버퍼 내용도 그대로다 — 다시 만들지도, 올리지도 않는다.
+        // 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli 1-0) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
+        // 예전엔 드로우마다 멤버 표를 훑어 바이트를 채우고 512 바이트를 올렸다.
         const uint32 engineCbSize = layout.getEngineCbSize();
-        if ( engineCbSize > 0 && engineCb._buffer != 0 && pResource != nullptr )
+        if ( engineCbSize > 0 && engineCb._buffer != 0 && pResource != nullptr && bEngineCbUpToDate == false )
         {
             // 드로우마다 힙에서 새로 잡지 않는다. 병렬 패스 기록이 여러 스레드에서 이 함수를
             // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.

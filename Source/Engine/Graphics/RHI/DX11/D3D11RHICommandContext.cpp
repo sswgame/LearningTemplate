@@ -371,6 +371,34 @@ namespace sw
         _pContext->RSSetViewports( 1, &d3dvp );
     }
 
+    void D3D11RHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        (void)rootParameterIndex;
+        if ( _pContext == nullptr || num32BitValues == 0 || pData == nullptr )
+            return;
+        if ( destOffsetIn32BitValues >= D3D11RHIDevice::kMaxComputeRootConstantDwords )
+            return;
+
+        const uint32 maxCount = D3D11RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
+        if ( _pDevice->ensureComputeRootConstantCB() == false )
+            return;
+
+        Memory::copy( _pDevice->_arrComputeRootConstantShadow + destOffsetIn32BitValues, pData, static_cast<size_t>( count ) * sizeof( uint32 ) );
+
+        // DX11 에는 루트 상수가 없다 — 계약 슬롯 b2 의 작은 상수버퍼로 흉내 낸다. WRITE_DISCARD 라 드로우마다
+        // 버퍼가 새로 이름 지어져(rename) 앞 드로우가 읽던 내용과 섞이지 않는다.
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        if ( FAILED( _pContext->Map( _pDevice->_computeRootConstantCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+            return;
+        Memory::copy( mapped.pData, _pDevice->_arrComputeRootConstantShadow, sizeof( _pDevice->_arrComputeRootConstantShadow ) );
+        _pContext->Unmap( _pDevice->_computeRootConstantCB.Get(), 0 );
+
+        ID3D11Buffer* pCb = _pDevice->_computeRootConstantCB.Get();
+        _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
+        _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
+    }
+
     void D3D11RHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
         if ( _pContext == nullptr || num32BitValues == 0 || pData == nullptr )
