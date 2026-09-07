@@ -33,11 +33,14 @@ namespace sw
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
         void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */
         void releaseBindlessSlot( RHIDescriptorIndex index );
+        /** @brief 인덱스를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다 — 실행 중인 리스트가 새 리소스를 읽지 않도록. */
+        void deferFreeBindlessIndex( RHIDescriptorIndex index );
 
         /**
          * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당하고 복사 리스트를 열어 둡니다.

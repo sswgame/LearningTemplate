@@ -9,130 +9,148 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+    #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
     #include "Engine/Graphics/Shader/ShaderCache.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "D3D12" );
 
+    void D3D12RHIDevice::bindBindlessRootState( ID3D12GraphicsCommandList* pList )
+    {
+        if ( pList == nullptr || _cbvHeap == nullptr )
+            return;
+        ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
+        pList->SetDescriptorHeaps( 1, heaps );
+        if ( _rootSignature == nullptr )
+            return;
+        // 유일한 테이블(텍스처 배열)이 힙 시작을 가리킨다 — 리스트가 사는 동안 바뀌지 않는다. 같은 루트 시그니처를
+        // 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 버퍼는 이후 루트 디스크립터로 건다.
+        const D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        pList->SetGraphicsRootSignature( _rootSignature.Get() );
+        pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        pList->SetComputeRootSignature( _rootSignature.Get() );
+        pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+    }
+
     bool D3D12RHIDevice::createGlobalResources()
     {
-        // 레지스터 범위는 전부 계약(bindingslots.hlsli → shaderslot)에서 온다. 테이블 하나 = 루트 파라미터 하나.
-        // 예전엔 SRV 테이블이 t0..t3 뿐이라 인스턴스 버퍼(t4)·머티리얼 텍스처(t5..t8)는 힙 직접 인덱싱이 없는
-        // 기기에서 조용히 안 걸렸다 — 이제 SW_SRV_SLOT_COUNT 만큼 만든다.
-        D3D12_DESCRIPTOR_RANGE descriptorRanges[kRootParameterCount]{};
-        auto                   setRange = [&]( uint32 paramIndex, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32 baseRegister, uint32 space, uint32 count )
+        // 루트 시그니처 (bindingslots.hlsli) — 언리얼식: 버퍼는 루트 디스크립터, 텍스처만 배열.
+        //  [0..1]   루트 CBV  b0..b1 (PassCB / MaterialCB·컴퓨트 CB)
+        //  [2..11]  루트 SRV  t0..t9 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9 — raw/구조 버퍼)
+        //  [12..15] 루트 UAV  u0..u3
+        //  [16]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
+        //  [17]     32비트 루트 상수 b0 space2 (setComputeRootConstants)
+        //  정적 샘플러 s0..s7 (bindingslots.hlsli 4 의 세트), space0.
+        // 비용: 2*2 + 10*2 + 4*2 + 1 + 16 = 49 dword (한계 64).
         {
-            descriptorRanges[paramIndex].RangeType                         = type;
-            descriptorRanges[paramIndex].NumDescriptors                    = count;
-            descriptorRanges[paramIndex].BaseShaderRegister                = baseRegister;
-            descriptorRanges[paramIndex].RegisterSpace                     = space;
-            descriptorRanges[paramIndex].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-        };
-        setRange( kPassCbvParam, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, shaderslot::kPassConstantBuffer, 0, 1 );
-        for ( uint32 uavIndex = 0; uavIndex < shaderslot::kComputeUavSlotCount; ++uavIndex )
-            setRange( kComputeUavRootParam0 + uavIndex, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, uavIndex, 0, 1 );
-        for ( uint32 srvIndex = 0; srvIndex < shaderslot::kSrvSlotCount; ++srvIndex )
-            setRange( kGraphicsSrvRootParam0 + srvIndex, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, srvIndex, 0, 1 );
-        setRange( kBindlessTextureTableParam, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, shaderslot::kBindlessTextureSpace, kBindlessTextureCount );
-        setRange( kMaterialCbvParam, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, shaderslot::kMaterialConstantBuffer, 0, 1 );
-
-        D3D12_ROOT_PARAMETER rootParameters[kRootParameterCount]{};
-        for ( uint32 paramIndex = 0; paramIndex < kRootParameterCount; ++paramIndex )
-        {
-            if ( paramIndex == kComputeRootConstantsParam )
-                continue;
-            rootParameters[paramIndex].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-            rootParameters[paramIndex].DescriptorTable.NumDescriptorRanges = 1;
-            rootParameters[paramIndex].DescriptorTable.pDescriptorRanges   = &descriptorRanges[paramIndex];
-            rootParameters[paramIndex].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+            D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
+            if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
+                 options.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_2 )
+            {
+                SW_LOG_ERROR( "Resource Binding Tier %# — 무제한 텍스처 배열에는 Tier 2 이상이 필요합니다.",
+                              static_cast<uint32>( options.ResourceBindingTier ) );
+            }
         }
-        rootParameters[kComputeRootConstantsParam].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        rootParameters[kComputeRootConstantsParam].Constants.ShaderRegister = shaderslot::kBindlessConstantRegister;
-        rootParameters[kComputeRootConstantsParam].Constants.RegisterSpace  = shaderslot::kBindlessConstantSpace; ///< b0, space1 (g_BindlessCbIndex)
-        rootParameters[kComputeRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
-        rootParameters[kComputeRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
 
-        D3D12_STATIC_SAMPLER_DESC staticSamplers[2]{};
-        staticSamplers[0].Filter           = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        staticSamplers[0].AddressU         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        staticSamplers[0].AddressV         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        staticSamplers[0].AddressW         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        staticSamplers[0].MipLODBias       = 0.0f;
-        staticSamplers[0].MaxAnisotropy    = 1;
-        staticSamplers[0].ComparisonFunc   = D3D12_COMPARISON_FUNC_ALWAYS;
-        staticSamplers[0].BorderColor      = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        staticSamplers[0].MinLOD           = 0.0f;
-        staticSamplers[0].MaxLOD           = D3D12_FLOAT32_MAX;
-        staticSamplers[0].ShaderRegister   = 0;
-        staticSamplers[0].RegisterSpace    = 0;
-        staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        D3D12_ROOT_PARAMETER arrParam[kRootParameterCount]{};
+        auto                 setRootDescriptor = [&]( uint32 paramIndex, D3D12_ROOT_PARAMETER_TYPE type, uint32 shaderRegister )
+        {
+            arrParam[paramIndex].ParameterType             = type;
+            arrParam[paramIndex].Descriptor.ShaderRegister = shaderRegister;
+            arrParam[paramIndex].Descriptor.RegisterSpace  = 0;
+            arrParam[paramIndex].ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+        };
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+            setRootDescriptor( kCbvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
+        for ( uint32 slot = 0; slot < shaderslot::kSrvSlotCount; ++slot )
+            setRootDescriptor( kSrvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_SRV, slot );
+        for ( uint32 slot = 0; slot < shaderslot::kComputeUavSlotCount; ++slot )
+            setRootDescriptor( kUavRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_UAV, slot );
 
-        staticSamplers[1].Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
-        staticSamplers[1].AddressU         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSamplers[1].AddressV         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSamplers[1].AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        staticSamplers[1].MipLODBias       = 0.0f;
-        staticSamplers[1].MaxAnisotropy    = 1;
-        staticSamplers[1].ComparisonFunc   = D3D12_COMPARISON_FUNC_ALWAYS;
-        staticSamplers[1].BorderColor      = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-        staticSamplers[1].MinLOD           = 0.0f;
-        staticSamplers[1].MaxLOD           = D3D12_FLOAT32_MAX;
-        staticSamplers[1].ShaderRegister   = 1;
-        staticSamplers[1].RegisterSpace    = 0;
-        staticSamplers[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        // 텍스처 테이블 — 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
+        // g_SwBindlessRWTex2D[] (컴퓨트). 인덱스는 등록이 준 힙 슬롯이라 둘 다 offset 0 이다.
+        D3D12_DESCRIPTOR_RANGE arrTextureRange[2]{};
+        arrTextureRange[0].RangeType                                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        arrTextureRange[0].NumDescriptors                                        = UINT_MAX; // 무제한
+        arrTextureRange[0].BaseShaderRegister                                    = 0;
+        arrTextureRange[0].RegisterSpace                                         = shaderslot::bindless::kTextureSpace;
+        arrTextureRange[0].OffsetInDescriptorsFromTableStart                     = 0;
+        arrTextureRange[1].RangeType                                             = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        arrTextureRange[1].NumDescriptors                                        = UINT_MAX;
+        arrTextureRange[1].BaseShaderRegister                                    = 0;
+        arrTextureRange[1].RegisterSpace                                         = shaderslot::bindless::kTextureSpace;
+        arrTextureRange[1].OffsetInDescriptorsFromTableStart                     = 0;
+        arrParam[kBindlessTextureTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kBindlessTextureTableParam].DescriptorTable.NumDescriptorRanges = 2;
+        arrParam[kBindlessTextureTableParam].DescriptorTable.pDescriptorRanges   = arrTextureRange;
+        arrParam[kBindlessTextureTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        arrParam[kRootConstantsParam].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        arrParam[kRootConstantsParam].Constants.ShaderRegister = shaderslot::kRootConstantRegister;
+        arrParam[kRootConstantsParam].Constants.RegisterSpace  = shaderslot::kRootConstantSpace;
+        arrParam[kRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
+        arrParam[kRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
+
+        // 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4, 언리얼의 정적 샘플러와 같은 자리) — 셰이더는 g_SwSamplers[SW_SAMPLER_*].
+        D3D12_STATIC_SAMPLER_DESC staticSamplers[shaderslot::kStaticSamplerCount]{};
+        struct StaticSamplerSpec
+        {
+            D3D12_FILTER               _filter;
+            D3D12_TEXTURE_ADDRESS_MODE _address;
+            D3D12_COMPARISON_FUNC      _comparison;
+            uint32                     _anisotropy;
+        };
+        const StaticSamplerSpec arrSpec[shaderslot::kStaticSamplerCount] = {
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_WRAP
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_CLAMP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_WRAP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_CLAMP
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_MIRROR,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_MIRROR
+            {                        D3D12_FILTER_ANISOTROPIC,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 8}, // ANISO_WRAP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_BORDER,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_BORDER
+            {D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_COMPARISON_FUNC_LESS_EQUAL, 1}, // SHADOW_CMP
+        };
+        for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerCount; ++samplerIndex )
+        {
+            D3D12_STATIC_SAMPLER_DESC& sampler = staticSamplers[samplerIndex];
+            sampler.Filter                     = arrSpec[samplerIndex]._filter;
+            sampler.AddressU                   = arrSpec[samplerIndex]._address;
+            sampler.AddressV                   = arrSpec[samplerIndex]._address;
+            sampler.AddressW                   = arrSpec[samplerIndex]._address;
+            sampler.MipLODBias                 = 0.0f;
+            sampler.MaxAnisotropy              = arrSpec[samplerIndex]._anisotropy;
+            sampler.ComparisonFunc             = arrSpec[samplerIndex]._comparison;
+            sampler.BorderColor                = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+            sampler.MinLOD                     = 0.0f;
+            sampler.MaxLOD                     = D3D12_FLOAT32_MAX;
+            sampler.ShaderRegister             = samplerIndex;
+            sampler.RegisterSpace              = 0;
+            sampler.ShaderVisibility           = D3D12_SHADER_VISIBILITY_ALL;
+        }
 
         D3D12_ROOT_SIGNATURE_DESC rootSigDesc{};
-        rootSigDesc.NumParameters     = _countof( rootParameters );
-        rootSigDesc.pParameters       = rootParameters;
+        rootSigDesc.NumParameters     = kRootParameterCount;
+        rootSigDesc.pParameters       = arrParam;
         rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
         rootSigDesc.pStaticSamplers   = staticSamplers;
-        rootSigDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-                                        D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+        rootSigDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
         Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
         Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-        _bHeapDirectlyIndexed = 0;
-
-        auto tryCreateRootSigs = [&]( D3D12_ROOT_SIGNATURE_FLAGS flags ) -> bool
+        _bBindlessRootSignature = 0;
+        if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
         {
-            rootSigDesc.Flags = flags;
-            signatureBlob.Reset();
-            errorBlob.Reset();
-            if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
-            {
-                if ( errorBlob )
-                    SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
-                return false;
-            }
-            _rootSignature.Reset();
-            _computeRootSignature.Reset();
-            if ( FAILED( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ) ) )
-                return false;
-            if ( FAILED( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _computeRootSignature.GetAddressOf() ) ) ) )
-            {
-                _rootSignature.Reset();
-                return false;
-            }
-            return true;
-        };
-
-        const D3D12_ROOT_SIGNATURE_FLAGS kIndexedFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-            D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
-        const D3D12_ROOT_SIGNATURE_FLAGS kFallbackFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-        if ( tryCreateRootSigs( kIndexedFlags ) )
-            _bHeapDirectlyIndexed = 1;
-        else if ( tryCreateRootSigs( kFallbackFlags ) )
-        {
-            // 정적 Caps의 native bindless는 후보; 런타임은 supportsNativeBindlessSampling()/getCapabilities().
-            _bHeapDirectlyIndexed = 0;
-            SW_LOG_TRACE( "Native heap indexing unavailable — bind-at-draw root signature (caps._bNativeBindless=0)" );
-        }
-        else
+            if ( errorBlob )
+                SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
             return false;
+        }
+        if ( FAILED( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ) ) )
+        {
+            SW_LOG_ERROR( "CreateRootSignature failed." );
+            return false;
+        }
+        _bBindlessRootSignature = 1;
 
         D3D12_INDIRECT_ARGUMENT_DESC drawArg{};
         drawArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;

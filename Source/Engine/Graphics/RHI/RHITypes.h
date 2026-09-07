@@ -433,10 +433,8 @@ namespace sw
     {
         /**
          * @brief setComputeRootConstants가 4개 백엔드 모두에서 안전하게 쓸 수 있는 최대 dword 수.
-         * @details 실제 백엔드별 용량은 DX11=64(D3D11RHIDevice.h)/OpenGL=64(OpenGLRHIDevice.h)/
-         *          Vulkan=32(VulkanRHIDevice.h)/DX12=16(D3D12RHIDevice.h)로 서로 다르다 — 가장 작은
-         *          DX12 기준을 공통 안전값으로 둔다. 백엔드별 실제 값은 각자의 헤더에 그대로 둔다
-         *          (호환을 위해 값 자체를 맞추지는 않음).
+         * @details DX11=64(D3D11RHIDevice.h)/OpenGL=64(OpenGLRHIDevice.h)는 UBO 로 에뮬한다. DX12/Vulkan 은
+         *          루트/푸시 상수 16 dword 다(bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 가장 작은 값을 공통 안전값으로 둔다.
          */
         inline constexpr uint32 kMinComputeRootConstantDwords = 16;
     } // namespace constant

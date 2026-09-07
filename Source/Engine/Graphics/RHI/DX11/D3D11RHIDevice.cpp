@@ -275,8 +275,37 @@ namespace sw
         _deviceContext->RSSetViewports( 1, &vp );
     }
 
+    void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
+    {
+    #if defined( SW_DEBUG )
+        // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 올린다 — WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
+        // 나오므로 버린다. DX12 의 flushDebugMessages 와 같은 자리(프레임 끝)에서 부른다.
+        Microsoft::WRL::ComPtr<ID3D11InfoQueue> queue;
+        if ( _device == nullptr || FAILED( _device.As( &queue ) ) || queue == nullptr )
+            return;
+        const UINT64 count = queue->GetNumStoredMessages();
+        for ( UINT64 messageIndex = 0; messageIndex < count; ++messageIndex )
+        {
+            SIZE_T length = 0;
+            queue->GetMessage( messageIndex, nullptr, &length );
+            vector<uint8>  bytes( length );
+            D3D11_MESSAGE* pMessage = reinterpret_cast<D3D11_MESSAGE*>( bytes.data() );
+            if ( FAILED( queue->GetMessage( messageIndex, pMessage, &length ) ) )
+                continue;
+            if ( pMessage->Severity == D3D11_MESSAGE_SEVERITY_CORRUPTION || pMessage->Severity == D3D11_MESSAGE_SEVERITY_ERROR )
+                SW_LOG_ERROR( "[%#] %#", pStage, pMessage->pDescription );
+        }
+        queue->ClearStoredMessages();
+    #else
+        (void)pStage;
+    #endif
+    }
+
     void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )
     {
+    #if defined( SW_DEBUG )
+        flushDebugMessages( "endFrame" );
+    #endif
         if ( _swapChain.isValid() == false )
             return;
 

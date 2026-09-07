@@ -43,11 +43,7 @@ namespace sw
         if ( FAILED( entry._allocator->Reset() ) || FAILED( entry._list->Reset( entry._allocator.Get(), nullptr ) ) )
             return nullptr;
 
-        if ( _cbvHeap != nullptr )
-        {
-            ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
-            entry._list->SetDescriptorHeaps( 1, heaps );
-        }
+        bindBindlessRootState( entry._list.Get() );
 
         ID3D12GraphicsCommandList* pList = entry._list.Get();
         _listFrameSegment.push_back( std::move( entry ) );
@@ -292,11 +288,7 @@ namespace sw
             _frameStreamState._bRecording = 1;
             _activeFrameList              = _commandList.Get();
             _frameStreamContext->rebindCommandList( _activeFrameList );
-            if ( _cbvHeap != nullptr )
-            {
-                ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
-                _activeFrameList->SetDescriptorHeaps( 1, heaps );
-            }
+            bindBindlessRootState( _activeFrameList );
         }
         _swapChain.acquireNextImage();
 

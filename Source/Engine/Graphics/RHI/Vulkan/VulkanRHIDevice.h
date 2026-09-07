@@ -30,6 +30,30 @@ namespace sw
         VkCommandBuffer _buffer{ nullptr };
     };
 
+    /// @brief 슬롯 세트의 원소 하나 — 어떤 버퍼의 어느 구간이 걸려 있나.
+    struct VulkanSlotBinding
+    {
+        VkBuffer _buffer{ nullptr };
+        uint64   _offset{ 0 };
+        uint64   _range{ 0 };
+    };
+
+    /**
+     * @struct VulkanSlotState
+     * @brief 바인드 포인트(그래픽스/컴퓨트) 하나의 슬롯 세트 상태 — 언리얼 Vulkan RHI 의 파이프라인별 디스크립터 상태와 같은 자리.
+     * @details PSO 를 걸 때 비워지고(이전 패스의 t/u 슬롯이 다음 세트로 새지 않도록) 드로우/디스패치 직전 flushSlotSet 이
+     *          바뀐 것을 세트로 굳힌다.
+     */
+    struct VulkanSlotState
+    {
+        /// @brief binding(종류별 시프트 + 레지스터)별로 걸린 버퍼.
+        VulkanSlotBinding _arrSlot[shaderslot::vk::kSlotBindingCount]{};
+        /// @brief _arrSlot 중 걸린 것의 비트 (binding 번호 = 비트).
+        uint64 _slotSetMask{ 0 };
+        /// @brief 마지막으로 굳힌 세트 이후 바뀌었는가.
+        uint8 _bDirty{ 1 };
+    };
+
     /**
      * @struct VulkanRecordingState
      * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" — 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태.
@@ -42,8 +66,8 @@ namespace sw
     {
         /// @brief 이 스트림에 렌더패스가 열려 있는가.
         uint8 _bRenderPassActive : 1;
-        /// @brief set 1(bindless 텍스처)·set 4(정적 샘플러)를 이 버퍼에 이미 바인딩했는가.
-        uint8 _bStaticGraphicsSetsBound : 1;
+        /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 걸었는가.
+        uint8 _bTextureSetBound : 1;
         /// @brief 지금 열려 있는 렌더패스가 스왑체인(백버퍼) 렌더패스인가. PSO 가 등록돼 있지 않을 때
         ///        폴백 파이프라인을 고르는 기준 — 렌더패스 호환성 때문에 백버퍼용/오프스크린용이 다르다.
         uint8                  _bActiveSwapchainRT : 1;
@@ -58,15 +82,13 @@ namespace sw
         uint32          _boundIndexStride{ 4 };
         uint32          _boundIndexOffset{ 0 };
 
-        /// @brief 마지막으로 바인딩한 set 0(PassCB) — 인덱스가 실제로 바뀔 때만 재바인딩하기 위한 캐시.
-        VkDescriptorSet _lastBoundGraphicsSet0{ nullptr };
-        /// @brief 마지막으로 바인딩한 MaterialCB(b1) 세트 — 연속 드로우에서 재바인딩을 건너뛴다.
-        VkDescriptorSet _lastBoundMaterialSet{ nullptr };
+        /// @brief 바인드 포인트별 슬롯 세트 상태 — [0] 그래픽스, [1] 컴퓨트. 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않는다.
+        VulkanSlotState _arrSlotState[2]{};
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
             : _bRenderPassActive{ 0 }
-            , _bStaticGraphicsSetsBound{ 0 }
+            , _bTextureSetBound{ 0 }
             , _bActiveSwapchainRT{ 0 }
             , _reserved{ 0 }
         {
@@ -122,7 +144,7 @@ namespace sw
         {
             RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );
             caps._bMultiDrawIndirect = _bMultiDrawIndirect;
-            caps._bNativeBindless    = _bindlessTextureSet != nullptr ? 1u : 0u;
+            caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
             return caps;
         }
 
@@ -133,10 +155,10 @@ namespace sw
         /** @brief depth 이미지 aspect 마스크 (VkImageAspectFlags) */
         uint32 depthAspectMask() const;
 
-        /** @brief Descriptor-indexing texture array (g_BindlessTextures[]) */
-        bool supportsNativeBindlessSampling() const override { return _bindlessTextureSet != nullptr; }
+        /** @brief 텍스처 배열 세트(set 1, g_SwBindlessTex2D[])가 준비됐는가. */
+        bool supportsNativeBindlessSampling() const override { return _textureSet != nullptr; }
 
-        /** @brief VS 가 storage buffer(g_SwInstances, set 6)로 GPUScene 인스턴스 버퍼를 읽는다. */
+        /** @brief VS 가 슬롯 세트의 t4(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽는다. */
         bool supportsInstancedSceneDraw() const override { return true; }
 
         /** @brief Offscreen MRT (color×N + optional depth) via composite framebuffers. */
@@ -276,24 +298,16 @@ namespace sw
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
-        /** @brief 실제 bindless 텍스처 용량 — DX12(D3D12RHIDevice.h의 kBindlessTextureCount)와 값이
-         *         다르다. 콘텐츠는 더 작은 쪽(DX12)을 기준으로 삼을 것 — RHITypes.h의
-         *         constant::kMinComputeRootConstantDwords 옆 주석 참고. */
+        /** @brief 텍스처 배열 세트(set 1)의 원소 수. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)라 값이 다르다. */
         static constexpr uint32 kBindlessTextureCount = 4096;
-        /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
-         *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = 32;
-
-        /**
-         * @brief b0(PassCB)·b1(MaterialCB) 이 들어가는 디스크립터 세트 인덱스.
-         * @details Vulkan 은 세트 단위로 바인딩하므로 상수 버퍼 슬롯마다 세트가 하나씩 필요하다. 번호는
-         *          `bindingslots.hlsli`(shaderslot::vk) 가 정본이고 HLSL 도 같은 파일을 읽는다 — 예전엔 여기와
-         *          common.hlsli 에 따로 적혀 있었고, 어긋나면 셰이더가 파이프라인 레이아웃에 없는 세트를 참조했다.
-         */
-        static constexpr uint32 kPassCbSetIndex     = shaderslot::vk::kSetPassCb;
-        static constexpr uint32 kMaterialCbSetIndex = shaderslot::vk::kSetMaterialCb;
-        /// @brief 파이프라인 레이아웃이 요구하는 디스크립터 세트 수 (기기 한계와 비교한다).
-        static constexpr uint32 kBoundDescriptorSetCount = shaderslot::vk::kBoundSetCount;
+        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수 — UAV 인덱스가 이 미만이어야 등록된다. */
+        static constexpr uint32 kBindlessStorageImageCount = 1024;
+        /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수 — 바인딩 상태가 바뀔 때마다 하나씩 쓴다(배치·패스 단위). 차면 풀을 하나 더 만든다. */
+        static constexpr uint32 kSlotSetsPerPool = 4096;
+        /** @brief 프레임 링 슬롯 하나가 가질 수 있는 최대 풀 수 — 넘으면 에러 로그 후 직전 세트로 그린다. */
+        static constexpr uint32 kMaxSlotPoolsPerFrame = 16;
+        /** @brief setComputeRootConstants 용량(dword) = 푸시 상수 크기. RHITypes.h 의 constant::kMinComputeRootConstantDwords 와 같다. */
+        static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief VkBuffer + 메모리 + 사용 플래그
         struct VulkanBufferRecord
@@ -424,14 +438,24 @@ namespace sw
             uint8        _bOwned{ 0 }; ///< 1 = createRenderPass(desc)가 소유, 0 = swapchain RP alias
         };
 
-        /** @brief bindless 텍스처 배열을 확보합니다. */
-        bool ensureBindlessTextureArray();
-        /** @brief set 0(Pass/Material UBO) 폴백용 기본 디스크립터 셋(_descriptorSet)을 확보합니다. */
-        bool ensureDefaultDescriptorSet();
-        /** @brief 디스크립터 풀·셋 레이아웃·파이프라인 레이아웃을 생성합니다. */
+        /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열 + immutable sampler)를 확보합니다. */
+        bool ensureTextureSet();
+        /** @brief 정적 샘플러·세트 레이아웃 둘·파이프라인 레이아웃·풀(텍스처용 1 + 프레임별 슬롯용)·더미 UBO 를 생성합니다. */
         bool createDescriptorResources();
-        /** @brief bindless 텍스처 슬롯을 갱신합니다. */
+        /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
+        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다 (GENERAL 레이아웃). */
+        void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
+        /** @brief 이번 프레임 풀 체인에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만든다 (kMaxSlotPoolsPerFrame 까지). */
+        VkDescriptorSet allocateSlotSet();
+        /** @brief 슬롯 세트 풀 하나를 만듭니다 (kSlotSetsPerPool 세트, 세트당 b/t/u 슬롯 전부 수용). */
+        VkDescriptorPool createSlotPool();
+        /** @brief 프레임 링 슬롯의 슬롯 세트 풀을 통째로 비웁니다 (그 슬롯의 펜스가 신호된 뒤). */
+        void resetSlotPoolForFrame( uint32 frameIndex );
+        /** @brief SRV/CB 레지스트리 인덱스 → 버퍼 핸들 (없으면 0). */
+        RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
+        /** @brief UAV 레지스트리 인덱스 → 버퍼 핸들 (없으면 0). */
+        RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 현재 프레임 커맨드 버퍼. */
         VkCommandBuffer currentCommandBuffer() const;
         /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비면 새로 만듭니다. */
@@ -441,17 +465,6 @@ namespace sw
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
 
-        // ------------------------------------------------------------------------------
-        // bindless 레지스트리 접근자 — 락을 여기 한 곳에 모아둔다(원시 vector 직접 인덱싱 금지).
-        // ------------------------------------------------------------------------------
-        /** @brief 등록된 상수버퍼 디스크립터셋 수입니다. */
-        size_t registeredDescriptorSetCount() const;
-        /** @brief 인덱스의 상수버퍼 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
-        VkDescriptorSet registeredDescriptorSetAt( RHIDescriptorIndex index ) const;
-        /** @brief 인덱스의 UAV 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
-        VkDescriptorSet registeredUavSetAt( RHIDescriptorIndex index ) const;
-        /** @brief 인덱스의 텍스처 디스크립터셋입니다. 범위 밖이면 VK_NULL_HANDLE 입니다. */
-        VkDescriptorSet registeredTextureSetAt( RHIDescriptorIndex index ) const;
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
 
@@ -561,29 +574,21 @@ namespace sw
         uint16                  _bEnableValidationLayers : 1;
         uint16                  _bMultiDrawIndirect      : 1;
         uint16                  _bDrawIndirectCount      : 1;
+        uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
         uint16                  _bSwapChainDirty         : 1; ///< resize/present 결과로 예약된 스왑체인 재생성 요청
         uint16                  _bDepthHasStencil        : 1; ///< _depthFormat에 stencil plane 포함
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
-        [[maybe_unused]] uint16 _reservedVulkan          : 6;
+        [[maybe_unused]] uint16 _reservedVulkan          : 5;
 
         VkSampler _defaultSampler;
 
-        VkPipelineLayout      _pipelineLayout;
-        VkDescriptorSetLayout _descriptorSetLayout;
-        VkDescriptorSetLayout _uavDescriptorSetLayout;
-        VkDescriptorPool      _descriptorPool;
-        VkDescriptorSet       _descriptorSet;
-        /// @brief set 4 = 정적 샘플러(VK_DESCRIPTOR_TYPE_SAMPLER, immutable). binding.hlsli 의
-        ///        `g_SwSamplerLinearWrap` 이 매 드로우 set 0/1 과 함께 바인딩된다 (bindGraphicsMaterialSets).
-        VkSampler             _staticSamplerLinearWrap;
-        VkDescriptorSetLayout _samplerSetLayout;
-        VkDescriptorSet       _staticSamplerSet;
-        VkBuffer              _dummyUBO;
-        VkDeviceMemory        _dummyUBOMemory;
-        VkPipeline            _pipeline;
-        VkPipeline            _offscreenPipeline; ///< Same shaders as `_pipeline`, bound to `_offscreenRenderPass`
-        VkBuffer              _vertexBuffer;      ///< 풀스크린 포스트 (정점 3개)
-        vector<uint32>        _listBindlessFree;
+        VkPipelineLayout _pipelineLayout;
+        VkDescriptorPool _descriptorPool;
+        VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트 (set 1 immutable)
+        VkPipeline       _pipeline;
+        VkPipeline       _offscreenPipeline; ///< Same shaders as `_pipeline`, bound to `_offscreenRenderPass`
+        VkBuffer         _vertexBuffer;      ///< 풀스크린 포스트 (정점 3개)
+        vector<uint32>   _listBindlessFree;
 
         RHIHandleTable<VulkanBufferRecord>     _gpuBuffers;
         unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
@@ -596,16 +601,12 @@ namespace sw
         /// 읽기는 공유 락이라 서로를 막지 않는다.
         mutable std::shared_mutex _bindlessMutex;
 
-        vector<VkDescriptorSet> _listRegisteredDescriptorSet;
-        /// @brief 링 상수버퍼용 프레임별 디스크립터 셋. 인덱스 i 의 셋들은
-        ///        [i * kMaxFrameCountInFlight, (i+1) * kMaxFrameCountInFlight) 구간에 놓이고,
-        ///        각각 자기 프레임 슬롯 오프셋을 가리키도록 등록 시점에 한 번만 기록된다.
-        ///        링이 아닌(= 구조버퍼 등) 인덱스 구간은 VK_NULL_HANDLE 로 남는다.
-        vector<VkDescriptorSet> _listRegisteredCbSetRing;
+        /// @brief SRV/CB 버퍼 인덱스 → 원본 버퍼 (0 = 빈 슬롯). 인덱스 공간의 정본이자 프리리스트의 짝이다.
         vector<RHIBufferHandle> _listBindlessSourceBuffer;
-        vector<VkDescriptorSet> _listRegisteredUAV;
         vector<RHIBufferHandle> _listUavSourceBuffer;
-        vector<uint32>          _listUavFree;
+        /// @brief UAV 인덱스 → 원본 텍스처 (RW 텍스처 배열 원소, 0 = 버퍼 또는 빈 슬롯). 버퍼 UAV 와 같은 인덱스 공간.
+        vector<RHITextureHandle> _listUavSourceTexture;
+        vector<uint32>           _listUavFree;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;
@@ -613,15 +614,22 @@ namespace sw
         unordered_map<CompositeFbKey, CompositeFbRecord, CompositeFbKeyHash> _mapCompositeFramebuffer;
         unordered_map<PipelineRpKey, VkRenderPass, PipelineRpKeyHash>        _mapPipelineRenderPass;
 
-        VkDescriptorSetLayout   _textureDescriptorSetLayout;
-        vector<VkDescriptorSet> _listRegisteredTexture; ///< 레거시 텍스처별 set (슬롯 바인드 폴백)
-        vector<uint32>          _listTextureFree;
+        vector<uint8>  _listTextureUsed; ///< 텍스처 인덱스 공간 (1 = 사용 중) — 프리리스트의 짝
+        vector<uint32> _listTextureFree;
 
-        VkDescriptorSetLayout _bindlessTextureArrayLayout;
-        VkDescriptorSet       _bindlessTextureSet;
-        VkImage               _bindlessDummyImage;
-        VkImageView           _bindlessDummyView;
-        VkDeviceMemory        _bindlessDummyMemory;
+        VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트 (b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
+        VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열 + immutable sampler
+        VkDescriptorSet       _textureSet;       ///< set 1 — 커맨드버퍼마다 한 번 바인딩
+        /// @brief 프레임 링별 슬롯 세트 풀 체인 — 하나가 차면 다음 풀을 만든다(언리얼처럼 자라고, beginFrame 이 통째로 리셋).
+        vector<VkDescriptorPool> _arrSlotPoolChain[constant::kMaxFrameCountInFlight];
+        uint32                   _arrSlotPoolCursor[constant::kMaxFrameCountInFlight]; ///< 체인에서 지금 할당 중인 풀
+        mutex                    _slotPoolMutex;                                       ///< 병렬 기록이 같은 프레임 풀에서 할당한다
+        uint8                    _bSlotPoolExhaustedLogged;
+        VkImage                  _bindlessDummyImage;
+        VkImageView              _bindlessDummyView;
+        VkDeviceMemory           _bindlessDummyMemory;
+        VkBuffer                 _dummyUBO; ///< 셰이더가 정적으로 참조하지만 안 걸린 b# 슬롯이 가리키는 0 채운 256 바이트
+        VkDeviceMemory           _dummyUBOMemory;
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         vector<VulkanRenderPassRecord>            _listRenderPass;

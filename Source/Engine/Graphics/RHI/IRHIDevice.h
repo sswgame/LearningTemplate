@@ -129,8 +129,8 @@ namespace sw
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조버퍼(SwInstanceData)를 읽을 수 있으면 true.
-         * @details true 면 FrameRenderer 가 배치당 draw 대신 drawInstanced 로 그리고 per-instance world 를
-         *          구조버퍼에서 읽습니다. false 면 드로우당 g_World 를 갱신하는 폴백 경로를 씁니다.
+         * @details true 면 FrameRenderer 가 배치당 drawInstanced 로 그리고 per-instance world/materialIndex 를
+         *          구조버퍼에서 읽습니다. false 면 씬 메시를 그릴 수 없습니다 — 드로우당 g_World 폴백 경로는 없습니다.
          */
         virtual bool supportsInstancedSceneDraw() const { return false; }
 

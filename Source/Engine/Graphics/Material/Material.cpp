@@ -8,9 +8,11 @@
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -43,6 +45,7 @@ namespace sw
         , _data{}
         , _constantBuffer{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }
+        , _elementStride{ 0 }
         , _pRHIDevice{ nullptr }
         , _listAcquiredTexturePath{}
         , _listMaterialTextureSrv{}
@@ -189,13 +192,24 @@ namespace sw
 
         if ( result._bytecode.empty() == false )
         {
+            // 바이트코드 포맷은 디바이스가 정한다 — DXBC(DX11) 와 DXIL(DX12) 은 둘 다 "DXBC" 매직이라 매직으로는 못 가른다.
+            // 예전엔 DX11 바이트코드를 DXIL 로 리플렉션해 g_SwMaterials 원소 stride 가 0 이 됐고, 머티리얼 버퍼가
+            // CB 크기(256) stride 로 만들어져 DX11 디버그 레이어가 "stride 256 vs 24" 를 냈다.
             ShaderTargetFormat fmt = ShaderTargetFormat::DXIL_D3D12;
-            if ( result._bytecode.size() >= sizeof( uint32 ) )
+            switch ( pRhi->getBackendType() )
             {
-                uint32 magic{ 0 };
-                Memory::copy( &magic, result._bytecode.data(), sizeof( uint32 ) );
-                if ( magic == 0x07230203u )
+                case RHIBackend::DirectX11:
+                    fmt = ShaderTargetFormat::DXBC_D3D11;
+                    break;
+                case RHIBackend::Vulkan:
                     fmt = ShaderTargetFormat::SPIRV_Vulkan;
+                    break;
+                case RHIBackend::OpenGL:
+                    fmt = ShaderTargetFormat::SPIRV_OpenGL;
+                    break;
+                case RHIBackend::DirectX12:
+                default:
+                    break;
             }
             const ShaderReflectionData reflection = ShaderReflection::reflect( result._bytecode, fmt );
             syncPropertiesFromReflection( reflection );
@@ -209,18 +223,70 @@ namespace sw
         }
     }
 
+    bool Material::ensureShaderLayout( IRHIDevice* pDevice )
+    {
+        // 머티리얼 바이트의 정본은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData_t 원소 레이아웃**이다(언리얼도
+        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전엔 핫리로드(reloadShader) 때만 맞췄고 로드 경로에서는 XML
+        // 순서로 패킹해 stride 가 0 이었다 — 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
+        if ( pDevice == nullptr || _desc._shaderPath.empty() )
+            return false;
+        const uint32 backendBit = 1u << static_cast<uint32>( pDevice->getBackendType() );
+        if ( ( _shaderLayoutBackendMask & backendBit ) != 0 )
+            return _elementStride != 0;
+        _shaderLayoutBackendMask |= backendBit;
+
+        ShaderCompileDesc desc{};
+        desc._filePath     = _desc._shaderPath;
+        desc._entryPoint   = "PSMain";
+        desc._stage        = ShaderStage::Pixel;
+        desc._targetFormat = RHI::getShaderTargetFormat( pDevice->getBackendType() );
+        ShaderReflectionData reflection{};
+        if ( ShaderReflectionLibrary::tryGet( desc, reflection ) == false )
+        {
+            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — XML 순서 패킹으로 남습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
+            return false;
+        }
+        syncPropertiesFromReflection( reflection );
+        return _elementStride != 0;
+    }
+
     bool Material::syncPropertiesFromReflection( const ShaderReflectionData& reflectionData )
     {
-        if ( reflectionData._listConstantBuffer.empty() )
+        if ( reflectionData._listConstantBuffer.empty() && reflectionData._listStructuredElement.empty() )
             return true;
 
+        // 스키마 우선순위: GPUScene 머티리얼 데이터(g_SwMaterials 구조버퍼 원소) → MaterialCB → 멤버가 있는 첫 CB(레거시).
         const ShaderBufferInfo* pSchemaCb = nullptr;
-        for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
+        for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
         {
-            if ( cb._listVariable.empty() == false )
+            if ( element._name == shaderslot::resname::kMaterials && element._listVariable.empty() == false )
             {
-                pSchemaCb = &cb;
+                pSchemaCb      = &element;
+                _elementStride = element._totalSize;
                 break;
+            }
+        }
+        if ( pSchemaCb == nullptr )
+        {
+            _elementStride = 0;
+            for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
+            {
+                if ( cb._name == shaderslot::cbname::kMaterial && cb._listVariable.empty() == false )
+                {
+                    pSchemaCb = &cb;
+                    break;
+                }
+            }
+        }
+        if ( pSchemaCb == nullptr )
+        {
+            for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
+            {
+                if ( cb._listVariable.empty() == false )
+                {
+                    pSchemaCb = &cb;
+                    break;
+                }
             }
         }
         if ( pSchemaCb == nullptr )

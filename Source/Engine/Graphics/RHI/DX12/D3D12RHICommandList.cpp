@@ -55,11 +55,8 @@ namespace sw
 
         _bEntryDirty       = 1;
         _state._bRecording = 1;
-        if ( _pDevice->_cbvHeap != nullptr )
-        {
-            ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
-            _entry._list->SetDescriptorHeaps( 1, heaps );
-        }
+        // 힙·루트 시그니처·bindless 테이블 — 리스트마다 한 번. 이후는 루트 상수만 쓴다.
+        _pDevice->bindBindlessRootState( _entry._list.Get() );
     }
 
     void D3D12RHICommandList::endCommandList()

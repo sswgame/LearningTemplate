@@ -203,7 +203,8 @@ namespace sw
                 const vector<string> listEngineComputeShader = {
                     engineData._shaderGpuCull,
                     "common/shaders/samplecompute.hlsl",
-                    "common/shaders/sampleindirect.hlsl" };
+                    "common/shaders/sampleindirect.hlsl",
+                    "common/shaders/computetexturewrite.hlsl" };
 
                 for ( const string& path : listEngineComputeShader )
                 {

@@ -27,6 +27,7 @@ namespace sw
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
+        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
@@ -53,11 +54,18 @@ namespace sw
 
     private:
         /**
-         * @brief 그래픽스 draw 직전 set 0(머티리얼/Pass UBO)·set 1(bindless 텍스처)을 바인딩합니다.
-         * @details 셰이더가 set 0 을 정적으로 참조하므로 모든 draw 경로(인다이렉트 포함)에서 필요합니다.
-         *          유효한 머티리얼 디스크립터가 없으면 디바이스의 기본 셋(_descriptorSet)으로 폴백합니다.
+         * @brief 바뀐 슬롯 상태를 슬롯 세트(set 0)로 굳혀 두 바인드 포인트에 걸고, 텍스처 세트(set 1)는 커맨드버퍼마다 한 번 겁니다.
+         * @details 언리얼 Vulkan RHI 처럼 드로우/디스패치 직전에 부른다. 상태가 그대로면 아무것도 안 한다.
          */
-        void bindGraphicsMaterialSets( RHIDescriptorIndex cbDescriptorIndex );
+        void flushSlotSet( bool bCompute );
+        /**
+         * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 겁니다 (세트는 flushSlotSet 이 굳힌다).
+         * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스 — 둘은 독립이다.
+         * @param bindingIndex 세트 0 의 binding (종류별 시프트 + 레지스터 번호).
+         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리.
+         * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋/크기를 쓴다.
+         */
+        void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUav, bool bConstantBuffer );
 
         /**
          * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.

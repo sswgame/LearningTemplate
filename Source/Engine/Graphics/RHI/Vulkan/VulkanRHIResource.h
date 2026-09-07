@@ -33,11 +33,14 @@ namespace sw
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
         void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처 레코드가 쥔 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture/unregisterBindlessTexture 공용). */
         void releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record );
+        /** @brief 버퍼 인덱스(SRV/CB 또는 UAV)를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 호출 전에 원본 표는 비워 둔다. */
+        void deferFreeBufferIndex( RHIDescriptorIndex index, bool bUav );
         /** @brief 현재 프레임 슬롯의 스테이징에서 sizeBytes 를 bump 할당합니다(부족하면 키우고 옛 버퍼는 펜스 뒤 해제). */
         bool acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer );
 

@@ -23,7 +23,6 @@ namespace sw
         , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
         , _rootSignature{ nullptr }
-        , _computeRootSignature{ nullptr }
         , _vertexBuffer{ nullptr }
         , _drawCommandSignature{ nullptr }
         , _drawIndexedCommandSignature{ nullptr }
@@ -48,14 +47,13 @@ namespace sw
         , _pipelineStates{}
         , _listRenderPass{}
         , _swapChain{}
-        , _bHeapDirectlyIndexed{ SW_FALSE }
+        , _bBindlessRootSignature{ SW_FALSE }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _frameStreamState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
         , _listRegisteredUAV{}
-        , _listFreeUav{}
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
         , _allocatedDescriptorsCount{ 0 }

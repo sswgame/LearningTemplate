@@ -44,6 +44,12 @@ namespace sw
     {
         vector<ShaderBufferInfo>      _listConstantBuffer;
         vector<ShaderResourceBinding> _listResource;
+        /**
+         * @brief StructuredBuffer<T> 의 **원소 레이아웃** — 이름은 버퍼 변수 이름, 멤버는 T 의 필드, _totalSize 는 원소 stride.
+         * @details GPUScene 머티리얼 데이터(g_SwMaterials)는 cbuffer 가 아니라 구조버퍼 원소라, 머티리얼 패커가 여기서
+         *          오프셋과 stride 를 읽는다. stride 는 백엔드마다 다르다(DX 자연 패킹 / SPIR-V std430).
+         */
+        vector<ShaderBufferInfo> _listStructuredElement;
     };
 
     /// @brief DXC/SPIR-V 리플렉션을 ShaderReflectionData로 채움

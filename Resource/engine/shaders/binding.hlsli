@@ -6,25 +6,27 @@
  * - 엔진(C++ ShaderBindingBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - 텍스처는 이름 규약: `uint g_<Name>Index` (PassCB) ↔ 엔진 리소스 `"<Name>"`.
- *   네이티브 bindless(DX12 SM6.6 / Vulkan): 인덱스로 힙 직접 샘플.
+ *   네이티브 bindless(DX12 / Vulkan): 인덱스로 무제한 텍스처 배열을 직접 샘플 (SM6.6 힙 인덱싱 아님).
  *   에뮬(DX11 / OpenGL): 엔진이 리플렉션 t# 슬롯에 SRV 를 바인딩, 값 비교로 멀티플렉싱.
- * - GPUScene 인스턴스드 드로우: VS 는 `SwLoadInstanceWorld( SV_InstanceID )` 로 월드 행렬을 얻는다
- *   (언리얼 GPUScene 방식 — per-instance world/material 을 영속 구조버퍼에서 읽음).
+ * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
+ *     VS: `SwInstanceData inst = SwLoadInstance( SV_InstanceID )` → inst.world / inst.materialIndex
+ *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
+ *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
+ *   StructuredBuffer(g_SwMaterials, t9)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
  */
 
 #ifndef SW_ENGINE_BINDING_HLSLI
 #define SW_ENGINE_BINDING_HLSLI
 
 #include "common.hlsli"
-#include "bindingslots.hlsli"
 
 static const uint SW_INVALID_INDEX = 0xFFFFFFFFu;
 static const uint kInvalidBindlessIndex = 0xFFFFFFFFu; // 하위호환 별칭
 
 // ------------------------------------------------------------------------------
-// 1) PassCB — b0. 셰이더가 실제 쓰는 필드만. 엔진이 이름으로 채운다.
+// 1) PassCB — b0. 셰이더가 실제 쓰는 필드만. 엔진이 이름으로 채운다. 패스(배치)마다 한 번 걸리는 진짜 상수버퍼.
 // ------------------------------------------------------------------------------
-SW_DECLARE_CBUFFER( PassCB, 0 )
+SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 {
 	float4x4 g_LightViewProj;
 	float4x4 g_ViewProj;
@@ -43,12 +45,14 @@ SW_DECLARE_CBUFFER( PassCB, 0 )
 	uint     g_SourceDepthIndex;
 	uint     g_Flags;
 	uint     g_InstanceBase;     // GPUScene 인스턴스 버퍼에서 이 배치의 시작 오프셋
-	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼 bindless SRV 인덱스 (DX12). SW_INVALID_INDEX 면 g_World 폴백
+	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, SW_INVALID_INDEX 면 g_World 폴백 (풀스크린·픽스처)
+	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
+	uint     g_SwMaterialCount;  // 이 배치의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다
 };
 
 // ------------------------------------------------------------------------------
 // 1-1) GPUScene 인스턴스 (per-instance world/material). C++ GpuInstance 와 레이아웃 일치.
-//      VS 는 SwLoadInstanceWorld( SV_InstanceID ) 로 월드 행렬을 얻는다.
+//      네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 건다 (레지스트리 이름 "SwInstances").
 // ------------------------------------------------------------------------------
 struct SwInstanceData
 {
@@ -61,87 +65,162 @@ struct SwInstanceData
 	uint     pad;
 };
 
-#if defined( SW_BINDLESS ) && defined( DX12 )
-
-float4x4 SwLoadInstanceWorld( uint instanceId )
-{
-	if ( g_SwInstancesIndex == SW_INVALID_INDEX )
-		return g_World;
-	StructuredBuffer<SwInstanceData> instances = ResourceDescriptorHeap[NonUniformResourceIndex( g_SwInstancesIndex )];
-	return instances[g_InstanceBase + instanceId].world;
-}
-
-#elif defined( __spirv__ ) && defined( VULKAN )
-
-// Vulkan 그래픽스 storage buffer 바인딩은 파이프라인 레이아웃 set 6 (STORAGE_BUFFER) 를 통해 이뤄진다.
-SW_DECLARE_STRUCTURED_BUFFER_SPACE( SwInstanceData, g_SwInstances, 0, SW_VK_SET_STORAGE0 );
-float4x4 SwLoadInstanceWorld( uint instanceId )
-{
-	if ( g_SwInstancesIndex == SW_INVALID_INDEX )
-		return g_World;
-	return g_SwInstances[g_InstanceBase + instanceId].world;
-}
-
-#else
-
-// DX11 / OpenGL : 엔진이 계약 슬롯 t4(SW_SLOT_INSTANCE_SRV) 에 인스턴스 SRV/SSBO 를 바인딩.
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
+
+/**
+ * @brief 이 드로우의 인스턴스 데이터 — 씬 메시는 전부 인스턴스 버퍼에서 읽는다(경로 하나).
+ * @details 인스턴스 버퍼가 안 걸린 드로우(풀스크린·픽스처)나 범위 밖 인덱스는 PassCB 의 g_World 와 머티리얼 원소 0 으로 만든다.
+ *          범위 검사는 백엔드마다 다른 OOB 결과(DX11/GL 0, Vulkan robustBufferAccess 0, DX12 루트 SRV 는 정의되지 않음)를
+ *          하나로 맞추기 위한 것이다.
+ */
+SwInstanceData SwLoadInstance( uint instanceId )
+{
+	const uint element = g_InstanceBase + instanceId;
+	if ( g_SwInstancesIndex != SW_INVALID_INDEX && element < g_SwInstanceCount )
+		return g_SwInstances[element];
+	SwInstanceData inst;
+	inst.world          = g_World;
+	inst.boundsCenter   = float3( 0, 0, 0 );
+	inst.boundsRadius   = 0;
+	inst.meshBatchIndex = 0;
+	inst.materialIndex  = 0;
+	inst.blendMode      = 0;
+	inst.pad            = 0;
+	return inst;
+}
+
 float4x4 SwLoadInstanceWorld( uint instanceId )
 {
-	if ( g_SwInstancesIndex == SW_INVALID_INDEX )
-		return g_World;
-	return g_SwInstances[g_InstanceBase + instanceId].world;
+	return SwLoadInstance( instanceId ).world;
 }
 
-#endif
+// ------------------------------------------------------------------------------
+// 1-2) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
+//      SW_MATERIAL_BEGIN { float4 color; uint albedoMap; } SW_MATERIAL_END
+//      ... SW_MATERIAL( inst.materialIndex ).color
+//      리플렉션 이름 g_SwMaterials(t9) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
+//      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 굽고
+//      ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 구운 바이너리로 확인한다.
+//      인덱스는 g_SwMaterialCount 로 클램프한다 — 잘못된 인덱스가 백엔드마다 다른 OOB 결과를 내지 않도록.
+// ------------------------------------------------------------------------------
+uint SwClampMaterialIndex( uint index )
+{
+	return ( g_SwMaterialCount == 0 ) ? 0 : min( index, g_SwMaterialCount - 1 );
+}
+#define SW_MATERIAL_BEGIN struct SwMaterialData_t
+#define SW_MATERIAL_END   ; SW_DECLARE_STRUCTURED_BUFFER( SwMaterialData_t, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
+#define SW_MATERIAL( index ) g_SwMaterials[SwClampMaterialIndex( index )]
 
 // ------------------------------------------------------------------------------
-// 2) 샘플러
+// 2) 샘플러 세트 — 네이티브 bindless 백엔드(DX12/Vulkan)만 쓴다. DX11/GL 은 슬롯 결합 샘플러(g_SwSlot#Sampler, s#)뿐이라
+//    여기서 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다).
+//    DX12 는 루트 시그니처 정적 샘플러 s0..s7, Vulkan 은 set SW_VK_TEXTURE_SET 의 immutable sampler 배열(binding 1) + 비교 샘플러(binding 2).
+//    번호는 bindingslots.hlsli 4 의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트와 같은 자리.
 // ------------------------------------------------------------------------------
-// 네이티브 bindless 백엔드(DX12/Vulkan)만 쓴다. DX11 은 슬롯 결합 샘플러(g_SwSlot#Sampler, s0..)만 있어서
-// 여기 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다).
+#if defined( SW_NATIVE_BINDLESS )
 #if defined( __spirv__ )
-SW_DECLARE_SAMPLER_SPACE( g_SwSamplerLinearWrap, SW_SAMPLER_LINEAR_WRAP, SW_SPACE_STATIC_SAMPLER );
-#elif defined( SW_BINDLESS )
-SamplerState g_SwSamplerLinearWrap : register( SW_CAT( s, SW_SAMPLER_LINEAR_WRAP ) );
+// Vulkan: set 1 binding 1 의 immutable sampler 배열 — 배열 그대로 인덱싱한다.
+[[vk::binding( SW_VK_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerState g_SwSamplers[SW_STATIC_SAMPLER_ARRAY_COUNT] : register( s0 );
+[[vk::binding( SW_VK_SHADOW_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SHADOW_CMP ) );
+#define SW_SAMPLER_STATE( samplerId ) g_SwSamplers[samplerId]
+#define g_SwSamplerLinearWrap g_SwSamplers[SW_SAMPLER_LINEAR_WRAP]
+#else
+// DX12: 정적 샘플러는 배열 선언(s0..s6 범위)을 못 채운다 — 루트 시그니처가 범위를 디스크립터 테이블로 요구해 PSO 생성이
+// "sampler descriptor range not fully bound" 로 실패한다. 하나씩 선언하고 리터럴 분기로 고른다(언리얼도 정적 샘플러를 개별 선언).
+SamplerState g_SwSampler0 : register( s0 );
+SamplerState g_SwSampler1 : register( s1 );
+SamplerState g_SwSampler2 : register( s2 );
+SamplerState g_SwSampler3 : register( s3 );
+SamplerState g_SwSampler4 : register( s4 );
+SamplerState g_SwSampler5 : register( s5 );
+SamplerState g_SwSampler6 : register( s6 );
+SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SHADOW_CMP ) );
+#define g_SwSamplerLinearWrap g_SwSampler0
+#endif
 #endif
 
 // ------------------------------------------------------------------------------
-// 3) 텍스처 샘플 — 이름 기반
+// 3) 텍스처 샘플 — 이름 기반. 컴퓨트 RW 텍스처는 SW_StoreTex2D / SW_LoadRWTex2D (컴퓨트 스테이지에서만 선언된다).
 // ------------------------------------------------------------------------------
-#if defined( SW_BINDLESS ) && defined( DX12 )
+#if defined( SW_NATIVE_BINDLESS )
 
-float4 SW_SampleIndex( uint index, float2 uv )
+// 무제한 텍스처 배열 — DX12 t0 space1 (루트 시그니처 테이블), Vulkan set 1 binding 0. SM5.1 무제한 배열이지 6.6 힙 인덱싱이 아니다.
+#if defined( __spirv__ )
+[[vk::binding( SW_VK_TEXTURE_BINDING, SW_VK_TEXTURE_SET )]] Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
+#else
+Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
+#endif
+/** @brief 인덱스의 텍스처를 샘플러 세트의 samplerId(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. */
+float4 SW_SampleIndexWith( uint index, uint samplerId, float2 uv )
 {
 	if ( index == SW_INVALID_INDEX )
 		return float4( 0, 0, 0, 1 );
-	Texture2D tex = ResourceDescriptorHeap[NonUniformResourceIndex( index )];
-	return tex.Sample( g_SwSamplerLinearWrap, uv );
+#if defined( __spirv__ )
+	return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
+#else
+	switch ( samplerId )
+	{
+		case 1: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler1, uv );
+		case 2: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler2, uv );
+		case 3: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler3, uv );
+		case 4: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler4, uv );
+		case 5: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler5, uv );
+		case 6: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler6, uv );
+		default: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler0, uv );
+	}
+#endif
 }
-
-#elif defined( SW_BINDLESS ) && defined( VULKAN )
-
-SW_DECLARE_TEXTURE2D_ARRAY_UNBOUNDED( g_SwBindlessTex2D, 0, SW_SPACE_BINDLESS_TEX );
 float4 SW_SampleIndex( uint index, float2 uv )
 {
-	if ( index == SW_INVALID_INDEX )
-		return float4( 0, 0, 0, 1 );
-	return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSamplerLinearWrap, uv );
+	return SW_SampleIndexWith( index, SW_SAMPLER_LINEAR_WRAP, uv );
 }
+/** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
+float SW_SampleShadowCmp( uint index, float2 uv, float depth )
+{
+	if ( index == SW_INVALID_INDEX )
+		return 1.0f;
+	return g_SwBindlessTex2D[NonUniformResourceIndex( index )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
+}
+
+#if defined( SW_STAGE_COMPUTE )
+// 컴퓨트 RW 텍스처 배열 — DX12 u0 space1 (텍스처 테이블의 두 번째 범위), Vulkan set 1 binding 3 (STORAGE_IMAGE[]).
+// 인덱스는 registerBindlessTextureUAV 가 준다. 컴퓨트에서만 선언한다 — 그래픽스 스테이지에 UAV 배열을 두면
+// DX12 가 PS UAV 슬롯을, Vulkan 이 vertexPipelineStores 기능을 요구한다.
+#if defined( __spirv__ )
+[[vk::binding( SW_VK_RWTEXTURE_BINDING, SW_VK_TEXTURE_SET )]] RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
+#else
+RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
+#endif
+void SW_StoreTex2D( uint index, uint2 coord, float4 value )
+{
+	if ( index == SW_INVALID_INDEX )
+		return;
+	g_SwBindlessRWTex2D[NonUniformResourceIndex( index )][coord] = value;
+}
+float4 SW_LoadRWTex2D( uint index, uint2 coord )
+{
+	if ( index == SW_INVALID_INDEX )
+		return float4( 0, 0, 0, 0 );
+	return g_SwBindlessRWTex2D[NonUniformResourceIndex( index )][coord];
+}
+#endif // SW_STAGE_COMPUTE
 
 #else
 
+#if !defined( SW_STAGE_COMPUTE )
+// 에뮬 백엔드의 샘플 슬롯은 그래픽스 스테이지 전용이다 — GL 은 텍스처 유닛과 이미지 유닛이 SPIR-V 에서 같은 binding 번호를
+// 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 t0..t3 을 걸지 않는다).
 // DX11 / OpenGL : 엔진이 t0..t3 에 SRV 바인딩. 값 비교로 어느 논리 텍스처인지 판별.
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
 
 // 머티리얼 텍스처 고정 슬롯 t5..t8 — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, SW_SLOT_MATERIAL_TEX0, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT_MATERIAL_TEX1, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2, 0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, SW_SLOT_MATERIAL_TEX3, 0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, SW_SLOT_MATERIAL_TEX0 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT_MATERIAL_TEX1 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, SW_SLOT_MATERIAL_TEX3 );
 
 float4 SW_SampleIndex( uint index, float2 uv )
 {
@@ -158,23 +237,58 @@ float4 SW_SampleIndex( uint index, float2 uv )
 		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
 	return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 }
+/** @brief 에뮬 백엔드는 슬롯 결합 샘플러뿐이라 samplerId 를 무시한다 — 슬롯의 샘플러 상태는 엔진이 정한다. */
+float4 SW_SampleIndexWith( uint index, uint samplerId, float2 uv )
+{
+	return SW_SampleIndex( index, uv ); // samplerId 는 쓰지 않는다
+}
+/** @brief 에뮬 백엔드: 비교 샘플러가 없어 저장된 깊이를 읽어 직접 비교한다 (필터링 없는 하드 섀도). */
+float SW_SampleShadowCmp( uint index, float2 uv, float depth )
+{
+	if ( index == SW_INVALID_INDEX )
+		return 1.0f;
+	return ( depth <= SW_SampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+}
+
+#endif // !SW_STAGE_COMPUTE
+
+#if defined( SW_STAGE_COMPUTE )
+// 컴퓨트 RW 텍스처 고정 슬롯 u4..u7 — 엔진이 bindComputeUAV( index, SW_SLOT_COMPUTE_TEXUAV0 + 서수 ) 로 건다. index = 서수.
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot0, SW_SLOT_COMPUTE_TEXUAV0, SW_GL_IMAGE_UNIT0 );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot1, SW_SLOT_COMPUTE_TEXUAV1, SW_GL_IMAGE_UNIT1 );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot2, SW_SLOT_COMPUTE_TEXUAV2, SW_GL_IMAGE_UNIT2 );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot3, SW_SLOT_COMPUTE_TEXUAV3, SW_GL_IMAGE_UNIT3 );
+void SW_StoreTex2D( uint index, uint2 coord, float4 value )
+{
+	if ( index == 0 ) g_SwRWSlot0[coord] = value;
+	else if ( index == 1 ) g_SwRWSlot1[coord] = value;
+	else if ( index == 2 ) g_SwRWSlot2[coord] = value;
+	else if ( index == 3 ) g_SwRWSlot3[coord] = value;
+}
+float4 SW_LoadRWTex2D( uint index, uint2 coord )
+{
+	if ( index == 0 ) return g_SwRWSlot0[coord];
+	if ( index == 1 ) return g_SwRWSlot1[coord];
+	if ( index == 2 ) return g_SwRWSlot2[coord];
+	if ( index == 3 ) return g_SwRWSlot3[coord];
+	return float4( 0, 0, 0, 0 );
+}
+#endif // SW_STAGE_COMPUTE
 
 #endif
 
+#if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
 /**
- * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (MaterialCB 의 uint 슬롯).
+ * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
  * @details SW_SampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
  *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
- *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그런데 그 경로의 마지막 폴백은
- *          t0(그림자맵)을 샘플링하므로, 그대로 두면 큐브에 그림자맵이 입혀진다. 조용히 엉뚱한
- *          텍스처를 입히느니 흰색(=텍스처 없음)을 돌려준다. DX12/Vulkan 은 네이티브 bindless 라
- *          정상 동작한다. DX11/GL 을 제대로 지원하려면 머티리얼 텍스처를 실제 슬롯에 바인딩하는
- *          경로가 필요하다(아직 없음).
+ *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
+ *          t5..t8 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
  */
-#if defined( SW_BINDLESS ) && ( defined( DX12 ) || defined( VULKAN ) )
+#if defined( SW_NATIVE_BINDLESS )
 float4 SW_SampleMaterialTexture( uint index, float2 uv )
 {
-	// 네이티브 bindless: index 는 힙/배열 전역 인덱스다.
+	// 네이티브 bindless: index 는 배열 전역 인덱스다.
 	if ( index == SW_INVALID_INDEX )
 		return float4( 1, 1, 1, 1 );
 	return SW_SampleIndex( index, uv );
@@ -202,6 +316,8 @@ float4 SampleNormal( float2 uv )      { return SW_SampleIndex( g_GBufferNormalIn
 float4 SampleDepth( float2 uv )       { return SW_SampleIndex( g_SceneDepthIndex, uv ); }
 float4 SampleSource( float2 uv )      { return SW_SampleIndex( g_SourceColorIndex, uv ); }
 float4 SampleSourceDepth( float2 uv ) { return SW_SampleIndex( g_SourceDepthIndex, uv ); }
+
+#endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
 
 // 축 정렬 데모 큐브 노멀 (bindless.hlsli 하위호환).
 float3 DemoCubeNormal( float3 pos )

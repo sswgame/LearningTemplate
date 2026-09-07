@@ -289,6 +289,19 @@ namespace sw
             return;
 
         if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
+             _pDevice->_listRegisteredUAV[index]._texture != 0 )
+        {
+            // RW 텍스처 — u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수) 이다 (common.hlsli SW_DECLARE_RW_TEXTURE2D 의 명시 binding).
+            if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
+                return;
+            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredUAV[index]._texture );
+            if ( pRec == nullptr || pRec->_texture == 0 )
+                return;
+            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRec->_texture, 0, GL_FALSE, 0, GL_READ_WRITE, pRec->_internalFormat );
+            return;
+        }
+
+        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
              _pDevice->_listRegisteredUAV[index]._buffer != 0 )
         {
             GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index]._buffer );
@@ -305,7 +318,7 @@ namespace sw
             GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
             if ( ssbo != 0 )
             {
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
+                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo ); // t# → 계약 SSBO binding # (common.hlsli SW_GL_BINDING). 예전 48+slot 은 세트 3 시절의 잔재
                 return;
             }
         }
@@ -515,6 +528,8 @@ namespace sw
 
         glUseProgram( pPso->_program );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
+        // 이미지 스토어 결과를 이후 샘플링/읽기/업로드가 보도록 — SSBO 는 transitionBuffer 가 따로 막는다.
+        glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
     }
 
     void OpenGLRHICommandContext::setViewport( const RHIViewport& viewport )
@@ -550,7 +565,9 @@ namespace sw
             glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( sizeof( _pDevice->_arrComputeRootConstantShadow ) ), _pDevice->_arrComputeRootConstantShadow );
             glBindBuffer( GL_UNIFORM_BUFFER, 0 );
         }
-        glBindBufferBase( GL_UNIFORM_BUFFER, rootParameterIndex, _pDevice->_computeRootConstantUbo );
+        // 루트 상수는 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL → UBO binding, SW_ROOT_CONSTANTS_BEGIN)에 건다.
+        (void)rootParameterIndex;
+        glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulSlot, _pDevice->_computeRootConstantUbo );
     }
 
     void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -665,6 +682,15 @@ namespace sw
             return;
 
         glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
+    }
+
+    void OpenGLRHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
+    {
+        // 상태 추적이 없다 — 이전 렌더/샘플 결과가 이미지 스토어 전에 끝나도록 배리어만 친다.
+        (void)texture;
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+        glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
     }
 
     void OpenGLRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,

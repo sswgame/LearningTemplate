@@ -308,7 +308,20 @@ namespace sw
 
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.multiDrawIndirect = availableFeatures.multiDrawIndirect;
-        _bMultiDrawIndirect              = availableFeatures.multiDrawIndirect ? 1 : 0;
+        // 범위 밖 버퍼 읽기가 0 이 되도록 — DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스/머티리얼 인덱스가 GPU 폴트 대신
+        // 검은 픽셀로 드러난다(DX12 루트 SRV 는 이 보호가 없어 셰이더 쪽 클램프가 따로 있다: binding.hlsli SwLoadInstance).
+        deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;
+        deviceFeatures.samplerAnisotropy  = availableFeatures.samplerAnisotropy; // 정적 샘플러 세트의 ANISO_WRAP (없으면 createDescriptorResources 가 1.0 으로 만든다)
+        // RW 텍스처 배열(RWTexture2D<float4>[] — 포맷 미지정 스토리지 이미지)의 읽기/쓰기.
+        deviceFeatures.shaderStorageImageWriteWithoutFormat   = availableFeatures.shaderStorageImageWriteWithoutFormat;
+        deviceFeatures.shaderStorageImageReadWithoutFormat    = availableFeatures.shaderStorageImageReadWithoutFormat;
+        deviceFeatures.shaderStorageImageArrayDynamicIndexing = availableFeatures.shaderStorageImageArrayDynamicIndexing;
+        // 네이티브 bindless — 배열을 푸시 상수/CB 값으로 인덱싱한다 (동적 인덱싱 코어 기능).
+        deviceFeatures.shaderUniformBufferArrayDynamicIndexing = availableFeatures.shaderUniformBufferArrayDynamicIndexing;
+        deviceFeatures.shaderStorageBufferArrayDynamicIndexing = availableFeatures.shaderStorageBufferArrayDynamicIndexing;
+        deviceFeatures.shaderSampledImageArrayDynamicIndexing  = availableFeatures.shaderSampledImageArrayDynamicIndexing;
+        _bMultiDrawIndirect                                    = availableFeatures.multiDrawIndirect ? 1 : 0;
+        _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
 
         VkPhysicalDeviceVulkan12Features available12{};
         available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -320,13 +333,21 @@ namespace sw
         VkPhysicalDeviceVulkan12Features vulkan12Features{};
         vulkan12Features.sType                                         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
         vulkan12Features.descriptorBindingPartiallyBound               = available12.descriptorBindingPartiallyBound;
+        vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = available12.descriptorBindingUniformBufferUpdateAfterBind;
         vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = available12.descriptorBindingStorageBufferUpdateAfterBind;
+        vulkan12Features.descriptorBindingUpdateUnusedWhilePending     = available12.descriptorBindingUpdateUnusedWhilePending;
+        vulkan12Features.shaderUniformBufferArrayNonUniformIndexing    = available12.shaderUniformBufferArrayNonUniformIndexing;
         vulkan12Features.descriptorBindingSampledImageUpdateAfterBind  = available12.descriptorBindingSampledImageUpdateAfterBind;
+        vulkan12Features.descriptorBindingStorageImageUpdateAfterBind  = available12.descriptorBindingStorageImageUpdateAfterBind;
+        vulkan12Features.shaderStorageImageArrayNonUniformIndexing     = available12.shaderStorageImageArrayNonUniformIndexing;
         vulkan12Features.shaderStorageBufferArrayNonUniformIndexing    = available12.shaderStorageBufferArrayNonUniformIndexing;
         vulkan12Features.shaderSampledImageArrayNonUniformIndexing     = available12.shaderSampledImageArrayNonUniformIndexing;
         vulkan12Features.runtimeDescriptorArray                        = available12.runtimeDescriptorArray;
         vulkan12Features.drawIndirectCount                             = available12.drawIndirectCount;
-        _bDrawIndirectCount                                            = available12.drawIndirectCount ? 1 : 0;
+        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 굽는다 — relaxed block layout(1.1 코어)으로 대부분 충분하지만
+        // 스칼라 정렬까지 허용해 두면 어떤 구조체든 DX 와 같은 오프셋을 쓸 수 있다.
+        vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
+        _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

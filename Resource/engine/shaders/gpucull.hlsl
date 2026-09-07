@@ -25,7 +25,7 @@ struct DrawIndirectCommand
 };
 
 // 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 인스턴스 읽기 버퍼는 t0, 인자 쓰기 버퍼는 u0.
-// 백엔드별 위치(Vulkan 세트 / GL SSBO 번호)는 common.hlsli 의 선언 매크로가 계약대로 정한다 — 여기서 분기하지 않는다.
+// C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( srv, 0 ) / bindComputeUAV( uav, 0 ).
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
 	float4 g_FrustumPlanes[6];

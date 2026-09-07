@@ -50,6 +50,26 @@ namespace sw
         if ( _gpuCullCb != 0 )
             _gpuCullCbIndex = _pDevice->getResource()->registerBindlessResource( _gpuCullCb );
 
+        // 머티리얼 없는 배치용 폴백 원소(0 채움, 256 바이트 — 어떤 SwMaterialData_t 도 stride 가 이보다 작다).
+        {
+            constexpr uint32 kFallbackBytes = 256;
+            RHIBufferDesc    desc{};
+            desc._elementSize       = kFallbackBytes;
+            desc._elementCount      = 1;
+            desc._sizeBytes         = kFallbackBytes;
+            desc._usage             = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+            desc._pInitialData      = nullptr;
+            _materialFallbackBuffer = _pDevice->getResource()->createBuffer( desc );
+            if ( _materialFallbackBuffer == 0 )
+                _materialFallbackBuffer = _pDevice->getResource()->createStructuredBuffer( kFallbackBytes, 1 );
+            if ( _materialFallbackBuffer != 0 )
+            {
+                static const uint8 s_arrZero[kFallbackBytes]{};
+                _pDevice->getResource()->updateStructuredBuffer( _materialFallbackBuffer, s_arrZero, kFallbackBytes );
+                _materialFallbackSrv = _pDevice->getResource()->registerBindlessResource( _materialFallbackBuffer );
+            }
+        }
+
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
@@ -175,12 +195,14 @@ namespace sw
         {
             _listPassCbSlot.clear();
             _passCbCursor.store( 0, std::memory_order_relaxed );
-            _frameCtx._passCb      = 0;
-            _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-            _gpuCullCb             = 0;
-            _gpuCullCbIndex        = kInvalidDescriptorIndex;
-            _taaHistory            = 0;
-            _taaHistorySrv         = kInvalidDescriptorIndex;
+            _frameCtx._passCb       = 0;
+            _frameCtx._passCbIndex  = kInvalidDescriptorIndex;
+            _gpuCullCb              = 0;
+            _gpuCullCbIndex         = kInvalidDescriptorIndex;
+            _materialFallbackBuffer = 0;
+            _materialFallbackSrv    = kInvalidDescriptorIndex;
+            _taaHistory             = 0;
+            _taaHistorySrv          = kInvalidDescriptorIndex;
             _mapEnginePso.clear();
             _bPassResourcesReady = 0;
             return;
@@ -226,6 +248,7 @@ namespace sw
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
         releaseResource( _gpuCullCb, _gpuCullCbIndex );
+        releaseResource( _materialFallbackBuffer, _materialFallbackSrv );
         releaseResource( _taaHistory, _taaHistorySrv, true );
         _bPassResourcesReady = 0;
     }
@@ -336,42 +359,49 @@ namespace sw
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
 
-    bool FrameRenderer::dumpTransientToPpm( string_view attachmentName, string_view outFilePath )
+    bool FrameRenderer::readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat )
     {
-        if ( _pDevice == nullptr || outFilePath.empty() )
+        if ( _pDevice == nullptr )
             return false;
         const RHITextureHandle texture = findTransient( attachmentName );
         if ( texture == 0 )
         {
-            SW_LOG_ERROR( "dumpTransientToPpm: 트랜지언트 '%#' 를 찾지 못했습니다.", string( attachmentName ).c_str() );
+            SW_LOG_ERROR( "readbackTransient: 트랜지언트 '%#' 를 찾지 못했습니다.", string( attachmentName ).c_str() );
             return false;
         }
-
-        RHIFormat format = RHIFormat::R8G8B8A8_UNORM;
+        outFormat = RHIFormat::R8G8B8A8_UNORM;
         for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
         {
             if ( att._name == attachmentName )
             {
-                format = parseAttachmentFormat( att._format );
+                outFormat = parseAttachmentFormat( att._format );
                 break;
             }
         }
+        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, outBytes, outLayout ) == false )
+        {
+            SW_LOG_ERROR( "readbackTransient: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
+            return false;
+        }
+        return outLayout._width != 0 && outLayout._height != 0;
+    }
+
+    bool FrameRenderer::dumpTransientToPpm( string_view attachmentName, string_view outFilePath )
+    {
+        if ( _pDevice == nullptr || outFilePath.empty() )
+            return false;
+
+        vector<uint8>     bytes;
+        RHITextureMipSpan layout{};
+        RHIFormat         format = RHIFormat::R8G8B8A8_UNORM;
+        if ( readbackTransient( attachmentName, bytes, layout, format ) == false )
+            return false;
         const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
         if ( bytesPerPixel < 3 )
         {
             SW_LOG_ERROR( "dumpTransientToPpm: PPM 으로 덤프할 수 없는 포맷입니다 ('%#').", string( attachmentName ).c_str() );
             return false;
         }
-
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, bytes, layout ) == false )
-        {
-            SW_LOG_ERROR( "dumpTransientToPpm: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
-            return false;
-        }
-        if ( layout._width == 0 || layout._height == 0 )
-            return false;
 
         // PPM(P6): 아스키 헤더 + RGB 8bit. 트랜지언트는 R8G8B8A8 / B8G8R8A8 이라 채널 순서만 맞춘다.
         const bool                            bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );

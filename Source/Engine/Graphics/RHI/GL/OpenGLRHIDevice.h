@@ -153,7 +153,8 @@ namespace sw
         /// @brief 드로우 시 바인드할 버퍼/텍스처 슬롯
         struct BindlessResourceRecord
         {
-            RHIBufferHandle _buffer{ 0 };
+            RHIBufferHandle  _buffer{ 0 };
+            RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0 이 아니다
         };
 
         /// @brief GLuint 텍스처 + 타깃/포맷
@@ -165,6 +166,7 @@ namespace sw
             uint32    _height{ 0 };
             uint32    _mipLevels{ 1 };
             RHIFormat _format = RHIFormat::R8G8B8A8_UNORM;
+            uint32    _internalFormat{ 0 }; ///< GL 내부 포맷 — glBindImageTexture 가 쓴다
             uint8     _bDepthStencil : 1;
             uint8     _bUAV          : 1;
             uint8     _reserved      : 6;

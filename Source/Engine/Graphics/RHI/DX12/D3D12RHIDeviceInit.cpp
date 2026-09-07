@@ -76,8 +76,8 @@ namespace sw
         if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
             return false;
 
-        _bHeapDirectlyIndexed = 0;
-        _frameStreamState     = D3D12RecordingState{};
+        _bBindlessRootSignature = 0;
+        _frameStreamState       = D3D12RecordingState{};
 
         // 백버퍼와 오프스크린 렌더타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
         // 그 뒤가 오프스크린이다 — 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
@@ -154,7 +154,6 @@ namespace sw
         _listRegisteredBindless.clear();
         _listFreeBindless.clear();
         _listRegisteredUAV.clear();
-        _listFreeUav.clear();
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
         _gpuTextures.clear();
@@ -165,7 +164,6 @@ namespace sw
         _swapChain.shutdown();
         _vertexBuffer.Reset();
         _rootSignature.Reset();
-        _computeRootSignature.Reset();
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
@@ -188,7 +186,7 @@ namespace sw
         }
         _frameStreamState._bRecording = 0;
         _frameStreamContext.reset();
-        _bHeapDirectlyIndexed = 0;
+        _bBindlessRootSignature = 0;
         _fence.Reset();
         _commandQueue.Reset();
         _device.Reset();

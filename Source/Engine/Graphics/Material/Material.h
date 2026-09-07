@@ -56,6 +56,12 @@ namespace sw
         void reloadShader( IRHIDevice* pRhi, const ShaderCompileResult& result );
         /** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
+        /**
+         * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
+         * @details 백엔드마다 한 번만 한다. GpuScene 이 머티리얼 버퍼를 올리기 전에 부른다 — 레이아웃 정본은 셰이더다.
+         * @return 원소 stride 를 얻었으면 true.
+         */
+        bool ensureShaderLayout( IRHIDevice* pDevice );
         /** @brief 프로퍼티를 패킹 CB에 다시 씁니다. */
         bool rebuildPackedBuffer();
         /** @brief 한 프로퍼티를 `_defaultValue`로 되돌리고 CB를 다시 올립니다. */
@@ -142,6 +148,11 @@ namespace sw
         RHIDescriptorIndex getDescriptorIndex() const { return _descriptorIndex; }
         /** @brief 상수 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getConstantBuffer() const { return _constantBuffer; }
+        /**
+         * @brief GPUScene 머티리얼 데이터 버퍼(g_SwMaterials)의 원소 stride — 셰이더 리플렉션의 구조버퍼 원소 크기.
+         * @details 0 이면 셰이더가 SW_MATERIAL_BEGIN/END 를 쓰지 않는다(레거시 MaterialCB). 백엔드마다 다를 수 있다.
+         */
+        uint32 getElementStride() const { return _elementStride; }
         /** @brief 블렌드 모드를 반환합니다. */
         RHIBlendMode getBlendMode() const { return _blendMode; }
         /** @brief float32 파라미터를 읽습니다. */
@@ -166,6 +177,8 @@ namespace sw
         MaterialData               _data;
         RHIBufferHandle            _constantBuffer;
         RHIDescriptorIndex         _descriptorIndex;
+        uint32                     _elementStride;                /**< g_SwMaterials 원소 stride (리플렉션). 0 = 구조버퍼 머티리얼 아님 */
+        uint32                     _shaderLayoutBackendMask{ 0 }; /**< ensureShaderLayout 을 끝낸 백엔드 비트 */
         IRHIDevice*                _pRHIDevice;
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로 — shutdown 때 그대로 돌려준다
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬 백엔드 슬롯 바인딩용)

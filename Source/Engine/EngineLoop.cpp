@@ -357,6 +357,8 @@ namespace sw
             _rhi->setPreferredVSync( pEngineConfig->_window._bVSync );
             if ( _rhi->initialize() == false )
                 return false;
+            // GT 쪽 GpuScene 이 배치를 만든다 — 텍스처를 인덱스로 고를 수 있는 백엔드면 셰이더 타입 단위로 합친다(언리얼 GPUScene).
+            _gtGpuScene.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
 
             if ( _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() ) == false )
             {

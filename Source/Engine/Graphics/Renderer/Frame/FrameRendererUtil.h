@@ -121,7 +121,13 @@ namespace sw
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _flags{ "g_Flags" };
         hashed_string _instanceBase{ "g_InstanceBase" };
+        /// @brief 인스턴스 버퍼 원소 수 — 셰이더 SwLoadInstance 가 범위를 막는다.
+        hashed_string _swInstanceCount{ "g_SwInstanceCount" };
+        /// @brief 배치의 머티리얼 데이터 버퍼 원소 수 — 셰이더 SW_MATERIAL 이 클램프한다.
+        hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };
+        /// @brief 배치의 머티리얼 데이터 구조버퍼 (binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록한다.
+        hashed_string _swMaterials{ "SwMaterials" };
     };
 
     /**

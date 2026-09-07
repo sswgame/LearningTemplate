@@ -59,10 +59,8 @@ namespace sw
             vkUnmapMemory( _pDevice->_device, pRecord->_memory );
         }
 
-        // 디스크립터는 여기서 손대지 않는다. 프레임 슬롯마다 전용 셋이 등록 시점에 자기 오프셋을
-        // 가리키도록 한 번만 기록돼 있고(registerBindlessResource), 바인딩 때 현재 프레임 셋이
-        // 선택된다(registeredDescriptorSetAt). 예전엔 셋 하나를 매 프레임 새 슬롯으로 다시 기록했는데,
-        // 그 셋은 아직 실행 중인 직전 프레임 커맨드버퍼가 참조하고 있어 in-use 위반이었다.
+        // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 슬롯의 오프셋을
+        // 넣는다 — 세트는 프레임마다 새로 할당되므로 아직 실행 중인 직전 프레임의 세트를 덮어쓸 일이 없다.
         (void)slotSize;
         (void)offset;
     }
@@ -212,7 +210,7 @@ namespace sw
         // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다 — 보수적인 마스크로 양쪽을 다 덮는다.
         constexpr VkAccessFlags        kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
         constexpr VkPipelineStageFlags kConsumerStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+                                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
 
         VkBufferMemoryBarrier barrier{};
         barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -321,44 +319,22 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
+        // 아직 등록돼 있으면 인덱스를 반납한다 (unregister 를 안 부른 소유자 정리). 디스크립터는 드로우 시점 슬롯 세트에만
+        // 있으므로 되돌릴 것이 없다.
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer )
                 continue;
-            if ( bufferIndex < _pDevice->_listRegisteredDescriptorSet.size() && _pDevice->_listRegisteredDescriptorSet[bufferIndex] != VK_NULL_HANDLE )
-            {
-                VkDevice         dev  = _pDevice->_device;
-                VkDescriptorPool pool = _pDevice->_descriptorPool;
-                VkDescriptorSet  set  = _pDevice->_listRegisteredDescriptorSet[bufferIndex];
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
-                {
-                    vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
-                _pDevice->_listRegisteredDescriptorSet[bufferIndex] = VK_NULL_HANDLE;
-            }
-            releaseFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree,
-                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
+            _pDevice->_listBindlessSourceBuffer[bufferIndex] = RHIBufferHandle{ 0 };
+            deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), false );
         }
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
                 continue;
-            if ( bufferIndex < _pDevice->_listRegisteredUAV.size() && _pDevice->_listRegisteredUAV[bufferIndex] != VK_NULL_HANDLE )
-            {
-                VkDevice         dev  = _pDevice->_device;
-                VkDescriptorPool pool = _pDevice->_descriptorPool;
-                VkDescriptorSet  set  = _pDevice->_listRegisteredUAV[bufferIndex];
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
-                {
-                    vkFreeDescriptorSets( dev, pool, 1, &set );
-                } ),
-                                                           _pDevice->_frameFenceCounter + 1 );
-                _pDevice->_listRegisteredUAV[bufferIndex] = VK_NULL_HANDLE;
-            }
-            releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree,
-                                  static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
+            _pDevice->_listUavSourceBuffer[bufferIndex] = RHIBufferHandle{ 0 };
+            deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), true );
         }
 
         VkBuffer       buf = owned._buffer;

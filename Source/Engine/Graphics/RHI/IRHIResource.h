@@ -143,6 +143,14 @@ namespace sw
         /** @brief Bindless UAV를 등록하고 인덱스를 발급합니다. */
         virtual RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) = 0;
 
+        /**
+         * @brief 텍스처(생성 시 _bIsUnorderedAccess)를 컴퓨트 RW 텍스처로 등록하고 인덱스를 발급합니다.
+         * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D)의 원소 인덱스라 셰이더가 그 값으로 고른다(루트 상수 등으로 넘긴다).
+         *          DX11/GL 은 bindComputeUAV( index, shaderslot::kComputeTextureUav0 + 서수 ) 로 슬롯에 걸고 셰이더는 서수를 쓴다.
+         *          해제는 unregisterBindlessUAV — 버퍼 UAV 와 같은 인덱스 공간이다.
+         */
+        virtual RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle texture ) = 0;
+
         /** @brief Bindless UAV 등록을 해제합니다. */
         virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
     };

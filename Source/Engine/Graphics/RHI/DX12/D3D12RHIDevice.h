@@ -116,17 +116,17 @@ namespace sw
         /** @brief D3D12는 네이티브 Bindless(Unbounded Descriptor Table)를 지원함 (true 반환) */
         bool supportsBindless() const override { return true; }
 
-        /** @brief 루트 시그니처가 힙 인덱싱이면 ResourceDescriptorHeap[index] 네이티브 샘플링. */
-        bool supportsNativeBindlessSampling() const override { return _bHeapDirectlyIndexed != 0; }
+        /** @brief 루트 시그니처의 무제한 텍스처 배열 테이블(t0 space1)로 g_SwBindlessTex2D[] 를 샘플링한다 (SM6.6 힙 인덱싱 아님). */
+        bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != 0; }
 
-        /** @brief 힙 인덱싱이면 VS 가 ResourceDescriptorHeap[g_SwInstancesIndex] 로 인스턴스 버퍼를 읽는다. */
-        bool supportsInstancedSceneDraw() const override { return _bHeapDirectlyIndexed != 0; }
+        /** @brief VS 가 루트 SRV(t4)로 걸린 g_SwInstances 에서 인스턴스를 읽는다. */
+        bool supportsInstancedSceneDraw() const override { return _bBindlessRootSignature != 0; }
 
         /** @brief 런타임 native bindless 반영. */
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
-            caps._bNativeBindless = _bHeapDirectlyIndexed != 0 ? 1u : 0u;
+            caps._bNativeBindless = _bBindlessRootSignature != 0 ? 1u : 0u;
             return caps;
         }
 
@@ -219,9 +219,15 @@ namespace sw
         /** @brief ComPtr을 테이블에 넣고 핸들을 반환합니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
         /**
-         * @brief 풀스크린 삼각형 버텍스 버퍼를 만듭니다.
+         * @brief 루트 시그니처(루트 CBV/SRV/UAV + 텍스처 배열 테이블 + 루트 상수 + 정적 샘플러), 커맨드 시그니처, 풀스크린 정점버퍼를 만듭니다.
          */
         bool createGlobalResources();
+        /**
+         * @brief 새로 연 커맨드 리스트에 셰이더 가시 힙·루트 시그니처(그래픽스/컴퓨트)·텍스처 배열 테이블을 겁니다.
+         * @details 리스트가 열릴 때 한 번이면 된다 — 이후 드로우는 루트 디스크립터(버퍼 GPU 주소)만 바꾼다. 힙을 거는 4곳
+         *          (프레임 스트림 begin, 세그먼트, 리스트 begin, 즉시 컨텍스트 ensureRecording)이 전부 이걸 부른다.
+         */
+        void bindBindlessRootState( ID3D12GraphicsCommandList* pList );
         /**
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
          */
@@ -229,21 +235,17 @@ namespace sw
 
         static constexpr uint32 kMaxOffscreenRtvs = 32;
         static constexpr uint32 kMaxOffscreenDsvs = 16;
-        // 루트 파라미터 배치 — 레지스터 범위는 bindingslots.hlsli(shaderslot) 가 정한다. 인덱스는 순서대로 쌓인다.
-        static constexpr uint32 kPassCbvParam              = 0;                                                        ///< b0 (PassCB / 컴퓨트 CB) CBV 테이블
-        static constexpr uint32 kComputeUavRootParam0      = kPassCbvParam + 1;                                        ///< u0..u(N-1) UAV 테이블
-        static constexpr uint32 kGraphicsSrvRootParam0     = kComputeUavRootParam0 + shaderslot::kComputeUavSlotCount; ///< t0..t(N-1) SRV 테이블 (엔진 텍스처·인스턴스·머티리얼 텍스처)
-        static constexpr uint32 kBindlessTextureTableParam = kGraphicsSrvRootParam0 + shaderslot::kSrvSlotCount;       ///< t0 space1 bindless 배열 테이블
-        static constexpr uint32 kComputeRootConstantsParam = kBindlessTextureTableParam + 1;                           ///< 32비트 루트 상수 (b0 space1)
-        static constexpr uint32 kMaterialCbvParam          = kComputeRootConstantsParam + 1;                           ///< b1 (MaterialCB) CBV 테이블
-        static constexpr uint32 kRootParameterCount        = kMaterialCbvParam + 1;
-        /** @brief setComputeRootConstants 실제 용량(dword) — 4개 백엔드 중 가장 작아서 RHITypes.h의
-         *         constant::kMinComputeRootConstantDwords가 이 값을 기준으로 한다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = 16;
-        /** @brief 실제 bindless 텍스처 SRV 테이블 용량 — Vulkan(VulkanRHIDevice.h의
-         *         kBindlessTextureCount=4096)과 값이 다르다. 콘텐츠는 더 작은 이 값(DX12) 기준으로
-         *         bindless 인덱스를 할당할 것. */
-        static constexpr uint32 kBindlessTextureCount = 1024;
+        // 루트 시그니처 — 슬롯 리소스는 전부 루트 디스크립터(GPU 주소)다: b# 루트 CBV, t# 루트 SRV, u# 루트 UAV
+        // (raw/구조 버퍼만 오므로 가능하다). 디스크립터 테이블은 텍스처 배열(t0 space1, 무제한) 하나뿐이고 힙 시작을 가리킨다.
+        // 슬롯 번호는 bindingslots.hlsli(shaderslot) 가 정한다 — 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
+        static constexpr uint32 kCbvRootParam0             = 0;                                                     ///< b0..b(N-1) 루트 CBV
+        static constexpr uint32 kSrvRootParam0             = kCbvRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) 루트 SRV
+        static constexpr uint32 kUavRootParam0             = kSrvRootParam0 + shaderslot::kSrvSlotCount;            ///< u0..u(N-1) 루트 UAV
+        static constexpr uint32 kBindlessTextureTableParam = kUavRootParam0 + shaderslot::kComputeUavSlotCount;     ///< t0 space1 무제한 텍스처 배열 테이블
+        static constexpr uint32 kRootConstantsParam        = kBindlessTextureTableParam + 1;                        ///< b0 space2 32비트 루트 상수 (setComputeRootConstants)
+        static constexpr uint32 kRootParameterCount        = kRootConstantsParam + 1;
+        /** @brief setComputeRootConstants 용량(dword). RHITypes.h 의 constant::kMinComputeRootConstantDwords 가 이 값을 기준으로 한다. */
+        static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief 오프스크린 텍스처 + RTV/SRV 핸들
         struct OffscreenTextureRecord
@@ -315,9 +317,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
-        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;
-        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _computeRootSignature;
-        Microsoft::WRL::ComPtr<ID3D12Resource>            _vertexBuffer; ///< 풀스크린 포스트 (정점 3개)
+        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature; ///< 그래픽스·컴퓨트 공용 (같은 블롭)
+        Microsoft::WRL::ComPtr<ID3D12Resource>            _vertexBuffer;  ///< 풀스크린 포스트 (정점 3개)
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
@@ -364,7 +365,7 @@ namespace sw
         /// @brief 창 하나의 백버퍼 묶음. 백버퍼·인덱스·리소스 상태·Present 가 전부 여기 모여 있다.
         D3D12RHISwapChain _swapChain;
 
-        uint8 _bHeapDirectlyIndexed : 1;
+        uint8 _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함) 생성 성공 — 네이티브 bindless 텍스처 샘플링 가능
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true — 매
         /// 프레임 flushDebugMessages()가 똑같은 검증 메시지 수십 줄을 무한 반복 출력하는 걸 막는다.
         uint8                  _bDeviceRemovedLogged : 1;
@@ -386,8 +387,9 @@ namespace sw
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
 
+        /// @brief UAV 레지스트리 — 인덱스는 SRV/CBV 와 **같은 힙 인덱스 공간**(_listFreeBindless 공유)이다. 셰이더가
+        ///        RWStructuredBuffer<T> name[] 을 그 인덱스로 고르므로 힙 슬롯 번호 그대로여야 한다.
         vector<BindlessResourceRecord> _listRegisteredUAV;
-        vector<uint32>                 _listFreeUav;
 
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;

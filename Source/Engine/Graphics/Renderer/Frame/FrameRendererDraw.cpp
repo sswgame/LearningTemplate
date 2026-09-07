@@ -64,6 +64,25 @@ namespace sw
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
         ctx._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
+        ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
+    }
+
+    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch )
+    {
+        // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼 — 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
+        // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다 (드로우별 CB 바인딩 없음).
+        if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
+        {
+            // 머티리얼 없는 배치 — 빈 슬롯으로 그리지 않는다(DX12 루트 SRV 는 경계 검사가 없어 GPU 폴트). 0 채운 폴백 원소를 건다.
+            if ( _materialFallbackBuffer != 0 && _materialFallbackSrv != kInvalidDescriptorIndex )
+            {
+                ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, _materialFallbackBuffer, _materialFallbackSrv );
+                ctx._passValues.setUint( passConstantNames()._swMaterialCount, 1u );
+            }
+            return;
+        }
+        ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSrv );
+        ctx._passValues.setUint( passConstantNames()._swMaterialCount, batch._materialCount );
     }
 
     void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
@@ -140,22 +159,25 @@ namespace sw
 
         const vector<GpuMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
-        const vector<GpuInstance>& listInstances = _gpuScene.getInstances();
-
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
 
-        // 언리얼 GPUScene 방식: VS 가 per-instance world 를 구조버퍼에서 읽을 수 있으면 배치당
-        // drawInstanced 한 번이면 된다.
-        //
-        // 폴백(인스턴스마다 g_World 를 갱신하며 draw)은 인스턴스 수만큼 상수버퍼 갱신과 바인딩이
-        // 붙으므로 훨씬 비싸다. 지금은 DX11/GL/Vulkan 이 모두 지원을 보고하고, DX12 만 힙 직접
-        // 인덱싱이 없을 때 폴백으로 떨어진다 — 예전 주석은 DX11/Vulkan 이 폴백이라고 적어 두었는데
-        // 그 사이 둘 다 지원으로 바뀌었다.
-        const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
-                                _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
-        if ( bInstanced )
-            registerInstanceBuffer( ctx );
+        // 언리얼 GPUScene 방식 하나뿐이다: VS 가 per-instance world/materialIndex 를 인스턴스 구조버퍼에서 읽고 배치당
+        // drawInstanced 한 번. 예전의 "드로우마다 g_World 를 갱신하는" 폴백 경로는 지웠다 — 네 백엔드가 모두 인스턴스
+        // 버퍼를 지원하고, 경로가 둘이면 새 기능이 한쪽에만 들어가는 일이 반복된다.
+        if ( _pDevice->supportsInstancedSceneDraw() == false || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
+        {
+            static bool s_bWarned = false;
+            if ( s_bWarned == false )
+            {
+                s_bWarned = true;
+                SW_LOG_ERROR( "씬 메시를 그릴 수 없습니다 — 인스턴스 버퍼가 없거나 백엔드가 인스턴스드 드로우를 지원하지 않습니다." );
+            }
+            setIdentityWorld( ctx );
+            commitBindlessTextureBindings( ctx );
+            return;
+        }
+        registerInstanceBuffer( ctx );
 
         SW_PROFILE_SCOPE( "RT.Draw.sceneMeshes" );
 
@@ -163,10 +185,9 @@ namespace sw
         bool   bFirstItem = true;
         for ( const GpuMeshBatch& batch : batches )
         {
-            // 정점버퍼와 머티리얼 CB 는 **GpuScene::upload 가 이미 만들어 배치에 적어 뒀다**(게임 스레드).
+            // 정점버퍼와 머티리얼 버퍼는 **GpuScene::upload 가 이미 만들어 배치에 적어 뒀다**(게임 스레드).
             // 여기는 패스 기록 중이라 TaskManager 워커에서 돌 수 있고, 그 스레드에서 Mesh::upload /
-            // applyToGpu 를 부르면 RHI 자원 생성이 워커에서 일어난다 — `-gv_gpuDriven=0` 이 DX12/Vulkan 에서
-            // 즉시 크래시하던 원인(Mesh::upload 의 워커 스레드 단언). 배치에 적힌 핸들만 쓴다.
+            // applyToGpu 를 부르면 RHI 자원 생성이 워커에서 일어난다 — 배치에 적힌 핸들만 쓴다.
             const Mesh* pMesh = batch._pMesh;
             if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
                 continue;
@@ -176,43 +197,16 @@ namespace sw
                 continue;
             ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 
-            const RHIDescriptorIndex drawCb = batch._materialCb;
-
-            if ( bInstanced )
+            registerMaterialBuffer( ctx, batch );
+            if ( bFirstItem )
             {
-                if ( bFirstItem )
-                {
-                    commitBindlessTextureBindings( ctx );
-                    bFirstItem = false;
-                }
-                ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
-                bindForDraw( ctx, pso, drawCb );
-                ctx._pCmd->drawInstanced( pMesh->getVertexCount(), batch._instanceCount, 0, 0 );
-                drawn += batch._instanceCount;
-                continue;
+                commitBindlessTextureBindings( ctx );
+                bFirstItem = false;
             }
-
-            for ( uint32 instanceIndex = 0; instanceIndex < batch._instanceCount; ++instanceIndex )
-            {
-                const uint32 globalIndex = batch._instanceBase + instanceIndex;
-                if ( globalIndex >= listInstances.size() )
-                    break;
-                const GpuInstance& inst = listInstances[globalIndex];
-                // float4x4::operator!= 는 nearEqual 16회를 .cpp 안에서 돈다 — 드로우마다 비인라인
-                // 호출이 하나 붙는다. 그리고 엡실론 비교라, 매 프레임 엡실론 미만으로 움직이는 물체는
-                // 영원히 "안 바뀜"으로 판정돼 월드 행렬이 갱신되지 않는다. 비트 비교면 둘 다 없다.
-                const bool bWorldChanged =
-                    Memory::compare( &ctx._world, &inst._world, sizeof( ctx._world ) ) != 0;
-                if ( bFirstItem || bWorldChanged )
-                {
-                    ctx._world = inst._world;
-                    commitBindlessTextureBindings( ctx );
-                    bFirstItem = false;
-                }
-                bindForDraw( ctx, pso, drawCb );
-                ctx._pCmd->draw( pMesh->getVertexCount(), 0 );
-                ++drawn;
-            }
+            ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
+            bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
+            ctx._pCmd->drawInstanced( pMesh->getVertexCount(), batch._instanceCount, 0, 0 );
+            drawn += batch._instanceCount;
         }
 
         // 드로우 수는 시간 해석의 전제다 — 배치가 몇 개로 묶였는지 모르면 ms 만 봐서는
@@ -266,6 +260,7 @@ namespace sw
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
                 ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
+            registerMaterialBuffer( ctx, batch );
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );

@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #if __has_include( <pix3.h> )
@@ -55,70 +56,37 @@ namespace sw
         _pCmdList->Reset( pAllocator, nullptr );
         _pState->_bRecording             = 1;
         _pState->_boundNativeGraphicsPso = 0; // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
-        bindDescriptorHeaps();
+        // 힙·루트 시그니처·텍스처 배열 테이블은 리스트가 열릴 때 한 번 — 이후 bind*() 는 루트 디스크립터(GPU 주소)만 쓴다.
+        _pDevice->bindBindlessRootState( _pCmdList );
     }
 
-    void D3D12RHICommandContext::bindDescriptorHeaps()
-    {
-        if ( _pCmdList == nullptr || _pDevice->_cbvHeap == nullptr )
-            return;
-        ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
-        _pCmdList->SetDescriptorHeaps( 1, heaps );
-    }
-
-    bool D3D12RHICommandContext::tryGetBindlessGpuHandle( RHIDescriptorIndex index, bool bUav,
-                                                          D3D12_GPU_DESCRIPTOR_HANDLE& outHandle ) const
+    D3D12_GPU_VIRTUAL_ADDRESS D3D12RHICommandContext::resolveBufferAddress( RHIDescriptorIndex index, bool bUav, bool bConstantBuffer ) const
     {
         if ( index == kInvalidDescriptorIndex )
-            return false;
+            return 0;
 
         // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다** — 등록/해제는 전부 그래프 셋업에서
         // 끝내고, 그 규칙은 checkRegistryMutableNow 가 디버그에서 감시한다
         // (IRHIDevice::setParallelRecording 참고). 드로우마다 도는 경로라 락을 거는 대신 애초에
-        // 공유하지 않는 쪽을 택했다.
-        //
-        // const 참조로 받는 것도 중요하다 — 비-const 접근은 "쓰기" 로 취급되어, 같은 웨이브의 패스
-        // 콜백 둘이 동시에 읽기만 해도 레이스로 잡힌다(실제로 deferred 파이프라인에서 그랬다).
+        // 공유하지 않는 쪽을 택했다. const 참조로 받는 것도 중요하다 — 비-const 접근은 "쓰기" 로 취급된다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
-
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
-            return false;
-
+            return 0;
         const D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
         if ( rec._resource == nullptr )
-            return false;
+            return 0;
 
-        outHandle = rec._gpuHandle;
-        return true;
-    }
-
-    void D3D12RHICommandContext::bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex,
-                                                         RHIDescriptorIndex materialCbDescriptorIndex )
-    {
-        D3D12_GPU_DESCRIPTOR_HANDLE passHandle{};
-        D3D12_GPU_DESCRIPTOR_HANDLE matHandle{};
-        const bool                  bHasPass = tryGetBindlessGpuHandle( passCbDescriptorIndex, false, passHandle );
-        const bool                  bHasMat  = tryGetBindlessGpuHandle( materialCbDescriptorIndex, false, matHandle );
-        if ( bHasPass == false && bHasMat == false )
-            return;
-
-        // 디스크립터 힙은 ensureRecording()이 Reset() 직후 한 번만 SetDescriptorHeaps 하면 그 커맨드
-        // 리스트가 Close될 때까지 유지된다 — 여기서 다시 부를 필요 없음(예전엔 매 바인딩마다 재호출).
-
-        // Native bindless: 셰이더가 ResourceDescriptorHeap[g_BindlessCbIndex] 로 PassCB 를 읽는다.
-        if ( bHasPass )
+        D3D12_GPU_VIRTUAL_ADDRESS address = rec._resource->GetGPUVirtualAddress();
+        if ( bConstantBuffer )
         {
-            if ( _pDevice->_bHeapDirectlyIndexed != 0 )
-            {
-                const uint32 index = static_cast<uint32>( passCbDescriptorIndex );
-                _pCmdList->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kComputeRootConstantsParam, 1, &index, 0 );
-            }
-            _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kPassCbvParam, passHandle );
+            // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다 —
+            // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
+            const auto sizeIt = _pDevice->_mapCbAlignedSize.find( rec._buffer );
+            if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
+                address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
         }
-
-        if ( bHasMat )
-            _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kMaterialCbvParam, matHandle );
+        return address;
     }
 
     void D3D12RHICommandContext::bindMeshVertexBuffer()
@@ -295,14 +263,14 @@ namespace sw
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
+        // 그래픽스 t# → 루트 SRV(GPU 주소). 텍스처 슬롯(t0..t3, 에뮬 전용)은 여기로 오지 않는다 —
+        // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다. 루트 SRV 는 raw/구조 버퍼만 받는다.
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, false );
+        if ( address == 0 )
             return;
-
-        _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-        _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, gpuHandle );
+        _pCmdList->SetGraphicsRootShaderResourceView( D3D12RHIDevice::kSrvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -318,6 +286,15 @@ namespace sw
 
         _pDevice->noteBarrierDuringRecording( "prepareTextureForShaderRead" );
         transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+    }
+
+    void D3D12RHICommandContext::prepareTextureForUnorderedAccess( RHITextureHandle texture )
+    {
+        if ( _pCmdList == nullptr || texture == 0 )
+            return;
+        // COMMON 은 SRV 로만 암묵 승격된다 — UAV 는 명시 전이가 필요하다 (readback 이 레코드 상태로 되돌린다).
+        _pDevice->noteBarrierDuringRecording( "prepareTextureForUnorderedAccess" );
+        transitionTexture( texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
     }
 
     void D3D12RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
@@ -345,51 +322,33 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || slot >= shaderslot::kComputeUavSlotCount )
+        // 컴퓨트 u# → 루트 UAV(GPU 주소). 인덱스는 UAV 레지스트리(registerBindlessUAV)의 것.
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount )
             return;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( tryGetBindlessGpuHandle( index, true, gpuHandle ) == false )
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, true, false );
+        if ( address == 0 )
             return;
-
-        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
-        if ( pRootSig == nullptr )
-            pRootSig = _pDevice->_rootSignature.Get();
-        if ( pRootSig != nullptr )
-            _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kComputeUavRootParam0 + slot, gpuHandle );
+        _pCmdList->SetComputeRootUnorderedAccessView( D3D12RHIDevice::kUavRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 루트파라미터 0 은 b0/space0 CBV 테이블 하나만 담당한다 (gpucull 의 CullParams).
-        if ( _pCmdList == nullptr || slot != shaderslot::kComputeConstantBuffer )
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kConstantBufferSlotCount )
             return;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, true );
+        if ( address == 0 )
             return;
-
-        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
-        if ( pRootSig == nullptr )
-            pRootSig = _pDevice->_rootSignature.Get();
-        if ( pRootSig != nullptr )
-            _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kPassCbvParam, gpuHandle );
+        _pCmdList->SetComputeRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || slot >= shaderslot::kSrvSlotCount )
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( tryGetBindlessGpuHandle( index, false, gpuHandle ) == false )
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, false );
+        if ( address == 0 )
             return;
-
-        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
-        if ( pRootSig == nullptr )
-            pRootSig = _pDevice->_rootSignature.Get();
-        if ( pRootSig != nullptr )
-            _pCmdList->SetComputeRootSignature( pRootSig );
-        _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kGraphicsSrvRootParam0 + slot, gpuHandle );
+        _pCmdList->SetComputeRootShaderResourceView( D3D12RHIDevice::kSrvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -411,11 +370,10 @@ namespace sw
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
-            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
             _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
-        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다.
+        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV).
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, 1, startVertex, 0 );
@@ -432,7 +390,6 @@ namespace sw
 
         if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
         {
-            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
             _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
@@ -443,19 +400,23 @@ namespace sw
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
     {
-        if ( slot == shaderslot::kPassConstantBuffer )
-            bindPassAndMaterialCbv( cb, kInvalidDescriptorIndex );
-        else if ( slot == shaderslot::kMaterialConstantBuffer )
-            bindPassAndMaterialCbv( kInvalidDescriptorIndex, cb );
-        else
-            SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 현재 루트시그니처에서 지원하지 않습니다.", slot );
+        // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다 — 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
+        if ( slot >= shaderslot::kConstantBufferSlotCount )
+        {
+            SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 루트 시그니처의 CBV 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
+            return;
+        }
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )
+            return;
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( cb, false, true );
+        if ( address == 0 )
+            return;
+        _pCmdList->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 네이티브 bindless(힙 직접 인덱싱) 는 인덱스가 CB 에 있으므로 no-op. 에뮬은 SRV 테이블(t#)로.
-        if ( _pDevice->_bHeapDirectlyIndexed != 0 )
-            return;
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …) — 리플렉션이 준 슬롯의 루트 SRV 에 GPU 주소를 건다.
         bindShaderResource( index, slot );
     }
 
@@ -497,8 +458,6 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
-        if ( _pDevice->_rootSignature != nullptr )
-            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() ); // 같은 루트시그니처 재설정은 루트 인자를 지우지 않는다
         // 여기서 풀스크린 정점버퍼를 무조건 걸던 것이 GPU 드리븐 메시 드로우를 통째로 깨뜨렸다.
         // setVertexBuffer 가 걸어 둔 배치 메시 VB 를 덮어써서, ExecuteIndirect 가 36 정점을 3 정점짜리
         // 버퍼에서 읽어 화면에 찢어진 삼각형이 나왔다(범위 밖은 0 이라 죽지는 않아 더 늦게 드러났다).
@@ -517,6 +476,9 @@ namespace sw
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
         if ( pArgs == nullptr )
             return;
+
+        bindMeshVertexBufferOrFallback();
+        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
         ID3D12Resource* pCountRes = nullptr;
         if ( countBuffer != 0 )
@@ -541,26 +503,15 @@ namespace sw
     void D3D12RHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,
                                                           uint32 destOffsetIn32BitValues )
     {
-        if ( _pCmdList == nullptr || pData == nullptr || num32BitValues == 0 )
+        (void)rootParameterIndex;
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
             return;
         if ( destOffsetIn32BitValues >= D3D12RHIDevice::kMaxComputeRootConstantDwords )
             return;
 
-        const uint32 maxCount   = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
-        const uint32 count      = num32BitValues < maxCount ? num32BitValues : maxCount;
-        uint32       paramIndex = rootParameterIndex;
-        if ( rootParameterIndex == 0 || rootParameterIndex == D3D12RHIDevice::kComputeRootConstantsParam )
-            paramIndex = D3D12RHIDevice::kComputeRootConstantsParam;
-
-        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
-        if ( pRootSig == nullptr )
-            pRootSig = _pDevice->_rootSignature.Get();
-        if ( pRootSig != nullptr )
-        {
-            _pCmdList->SetComputeRootSignature( pRootSig );
-        }
-
-        _pCmdList->SetComputeRoot32BitConstants( paramIndex, count, pData, destOffsetIn32BitValues );
+        const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
+        _pCmdList->SetComputeRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
 
     void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -622,10 +573,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
 
-        if ( _pDevice->_rootSignature != nullptr )
-        {
-            _pCmdList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-        }
+        // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState) — PSO 만 바꾼다. 루트 인자는 유지된다.
         _pCmdList->SetPipelineState( pRecord->_pso.Get() );
         // draw()/drawInstanced()가 같은 PSO로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시.
         _pState->_boundNativeGraphicsPso = pso;
@@ -640,13 +588,6 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
 
-        ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
-        if ( pRootSig == nullptr )
-            pRootSig = _pDevice->_rootSignature.Get();
-        if ( pRootSig != nullptr )
-        {
-            _pCmdList->SetComputeRootSignature( pRootSig );
-        }
         _pCmdList->SetPipelineState( pRecord->_pso.Get() );
     }
 

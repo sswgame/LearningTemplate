@@ -21,22 +21,27 @@ namespace sw
         string _message;  ///< 사람이 읽는 설명 (기대값/실제값 포함)
     };
 
+    /// @brief 예약 리소스가 한 백엔드에서 있어야 할 자리. `_bDeclared == false` 면 그 백엔드에는 선언 자체가 없어야 한다.
+    struct ShaderReservedLocation
+    {
+        uint32 _space{ 0 }; ///< DX: register space / Vulkan: descriptor set / GL: 항상 0
+        uint32 _bind{ 0 };  ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO·텍스처 유닛·SSBO)
+        bool   _bDeclared{ false };
+    };
+
     /**
      * @brief 예약 리소스 하나의 계약 위치 — 백엔드별로 "어디에 있어야 하는가".
-     * @details 값은 전부 ShaderBindingSlots.h(= bindingslots.hlsli)에서 온다. 백엔드가 그 리소스를 선언하지
-     *          않는 경우(예: Vulkan 은 네이티브 bindless 라 g_SwSlot# 이 없다) kNotDeclared 다.
+     * @details 값은 전부 ShaderBindingSlots.h(= bindingslots.hlsli)에서 온다. 네이티브 bindless(DX12/Vulkan)는
+     *          종류별 무제한 배열 번호(= DX12 space = Vulkan binding)이고, 에뮬(DX11/GL)은 register 슬롯이다.
      */
     struct ShaderReservedBinding
     {
-        static constexpr uint32 kNotDeclared = 0xFFFFFFFFu;
-
-        const utf8*       _name{ nullptr };
-        ShaderBindingKind _kind{ ShaderBindingKind::Unknown };
-        uint32            _dxRegister{ 0 };           ///< DX11/DX12 register 번호 (b/t/u/s 는 _kind 가 정한다)
-        uint32            _dxSpace{ 0 };              ///< DX12 register space (DX11 은 항상 0)
-        uint32            _vkSet{ kNotDeclared };     ///< Vulkan descriptor set
-        uint32            _vkBinding{ kNotDeclared }; ///< Vulkan binding
-        uint32            _glBinding{ kNotDeclared }; ///< OpenGL binding (UBO / 텍스처 유닛 / SSBO — set 은 무시된다)
+        const utf8*            _name{ nullptr };
+        ShaderBindingKind      _kind{ ShaderBindingKind::Unknown };
+        ShaderReservedLocation _dx11;
+        ShaderReservedLocation _dx12;
+        ShaderReservedLocation _vulkan;
+        ShaderReservedLocation _opengl;
     };
 
     /**
@@ -47,12 +52,13 @@ namespace sw
      *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드·베이킹·테스트) 에 이름과 숫자로 보고한다.
      *
      *          검사 항목 (백엔드별 이름공간 기준):
-     *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwSlot#, g_SwMaterialTex#, …)의 종류와
-     *              (space/set, register/binding) 이 계약 표와 같은가. 그 백엔드에 없어야 할 선언이 있는가.
+     *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwMaterials, g_SwBindlessTex2D, g_SwSlot#, …)의 종류와
+     *              위치가 계약 표와 같은가. 그 백엔드에 없어야 할 선언이 있는가.
      *           2. 같은 이름공간에서 두 리소스가 한 자리를 차지하는가 — DX: (레지스터 종류, space, 번호),
      *              Vulkan: (set, binding), GL: (UBO/텍스처 유닛/SSBO, binding). GL 은 set 을 버리므로 여기서
      *              MaterialCB(set 10, binding 0) 가 PassCB(binding 0) 와 겹치던 사고가 잡힌다.
-     *           3. Vulkan: 참조한 set 이 파이프라인 레이아웃 범위 안이고 그 set 의 디스크립터 타입과 맞는가.
+     *           3. DX12: space0 레지스터가 루트 디스크립터 범위 안인가, space1 은 텍스처 배열뿐인가, space2 는 루트 상수뿐인가.
+     *              Vulkan: set 0 binding 이 종류별 밴드(b 0..15 / t 16..31 / u 32..47) 안인가, set 1 은 텍스처 배열·샘플러뿐인가.
      *           4. OpenGL: 모든 리소스가 set 0 인가 (0 이 아니면 작성자가 세트 의미를 가정한 것이다).
      */
     class SW_API ShaderBindingContract

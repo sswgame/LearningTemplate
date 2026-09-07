@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
@@ -390,8 +391,10 @@ namespace sw
         Memory::copy( mapped.pData, _pDevice->_arrComputeRootConstantShadow, sizeof( _pDevice->_arrComputeRootConstantShadow ) );
         _pContext->Unmap( _pDevice->_computeRootConstantCB.Get(), 0 );
 
+        // 루트 상수는 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL, SW_ROOT_CONSTANTS_BEGIN)에 건다 — rootParameterIndex 는 DX12 루트 인자 번호라 여기선 뜻이 없다.
+        (void)rootParameterIndex;
         ID3D11Buffer* pCb = _pDevice->_computeRootConstantCB.Get();
-        _pContext->CSSetConstantBuffers( rootParameterIndex, 1, &pCb );
+        _pContext->CSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
     }
 
     void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )

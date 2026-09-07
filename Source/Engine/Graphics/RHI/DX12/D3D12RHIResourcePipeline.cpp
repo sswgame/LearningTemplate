@@ -126,7 +126,14 @@ namespace sw
             }
             psoDesc.SampleDesc.Count = 1;
 
-            _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            // 실패를 조용히 삼키지 않는다 — PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다(루트 시그니처와 셰이더 불일치가
+            // 그렇게 숨어 있었다). 디버그 레이어 메시지를 바로 비워 원인이 같은 줄에 나오게 한다.
+            const HRESULT hrPso = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            if ( FAILED( hrPso ) )
+            {
+                SW_LOG_ERROR( "CreateGraphicsPipelineState 실패 (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPso ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
+                _pDevice->flushDebugMessages( "CreateGraphicsPipelineState" );
+            }
         }
 
         return _pDevice->_pipelineStates.insert( { pso } );
@@ -146,7 +153,7 @@ namespace sw
             if ( res._bSuccess )
             {
                 D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
-                psoDesc.pRootSignature = _pDevice->_computeRootSignature ? _pDevice->_computeRootSignature.Get() : _pDevice->_rootSignature.Get();
+                psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
                 psoDesc.CS             = { res._bytecode.data(), res._bytecode.size() };
 
                 const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );

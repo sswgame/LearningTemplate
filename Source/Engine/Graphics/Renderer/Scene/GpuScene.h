@@ -3,6 +3,8 @@
  * @brief GPU 컬·간접 드로우용 MeshComponent CPU 스냅샷.
  */
 #pragma once
+#include "Core/Container/pair.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
@@ -44,6 +46,19 @@ namespace sw
         uint32             _materialIndex{ 0 };
         RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
+        /** @brief 배치가 쓰는 부모 머티리얼 — 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자. */
+        Material* _pMaterial{ nullptr };
+        /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스 — _listMaterialGroup. 없으면 kInvalidMaterialGroup. */
+        uint32 _materialGroup{ 0xFFFFFFFFu };
+        /**
+         * @brief 그룹의 GPU 구조버퍼(g_SwMaterials, t9)와 SRV 인덱스 — upload 가 채운다.
+         * @details 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다 (언리얼 GPUScene 방식). 드로우마다 CB 를 갈아
+         *          끼우지 않고, 배치마다 이 버퍼를 리플렉션 슬롯에 한 번 건다.
+         */
+        RHIBufferHandle    _materialBuffer{ 0 };
+        RHIDescriptorIndex _materialSrv = kInvalidDescriptorIndex;
+        /** @brief 그룹 버퍼의 원소 수 — PassCB g_SwMaterialCount 로 넘겨 셰이더가 인덱스를 클램프한다. */
+        uint32 _materialCount{ 0 };
         /**
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순). 비네이티브 bindless 백엔드에서만 쓴다.
          * @details DX11/GL 은 셰이더가 전역 인덱스를 못 풀어서 엔진이 t5..t8 에 직접 바인딩해야 한다.
@@ -53,6 +68,28 @@ namespace sw
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /** @brief RT가 draw 직전에 applyToGpu. 수명은 GpuScene pin/retire 큐로 관리. */
         MaterialInstance* _pMaterialInstance{ nullptr };
+    };
+
+    /**
+     * @struct GpuMaterialGroup
+     * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록 — CPU 스냅샷의 일부.
+     * @details 원소 순서가 곧 materialIndex 다. 같은 셰이더를 쓰는 머티리얼/인스턴스는 구조체 레이아웃이 같아 한 버퍼에 쌓인다.
+     */
+    struct GpuMaterialGroup
+    {
+        string                                     _shaderPath;
+        vector<pair<Material*, MaterialInstance*>> _listEntry;
+    };
+
+    /// @brief 그룹의 GPU 버퍼 — RT 소유, 셰이더 경로로 스냅샷을 넘어 재사용한다.
+    struct GpuMaterialGpu
+    {
+        RHIBufferHandle    _buffer{ 0 };
+        RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+        uint32             _capacityBytes{ 0 };
+        uint32             _stride{ 0 };
+        /** @brief 마지막으로 올린 바이트 — 같으면 업로드를 건너뛴다 (언리얼처럼 더티만 올린다). */
+        vector<uint8> _lastBytes;
     };
 
     /**
@@ -68,8 +105,11 @@ namespace sw
          *         그보다 짧으면 아직 큐잉된(미소비) 패킷이 참조 중인 MaterialInstance를 조기 파괴할 수 있습니다. */
         static constexpr uint32 kRetireFrameDelay = constant::kRenderFrameQueueDepth;
 
-        /** @brief 현재 배치에 실린 인스턴스를 pin하고, 빠진 것은 retire 큐로 옮깁니다. */
-        void syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent );
+        /**
+         * @brief 현재 배치와 머티리얼 그룹에 실린 인스턴스를 pin하고, 빠진 것은 retire 큐로 옮깁니다.
+         * @details 배치를 셰이더 타입으로 합치면 배치의 _pMaterialInstance 는 대표 하나뿐이라, 그룹 원소(머티리얼·인스턴스 쌍)도 본다.
+         */
+        void syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup );
         /** @brief RT 프레임 종료 시 호출 — retire 카운트를 줄입니다 (waitIdle 없음). */
         void advanceFrame();
         /** @brief device.waitIdle() 후 pin/retire를 모두 비웁니다. */
@@ -180,6 +220,20 @@ namespace sw
         bool isUploaded() const { return _instanceBuffer != 0; }
         /** @brief 마지막 buildFromScene이 CPU 스냅샷을 바꿨으면 true. */
         bool isCpuSnapshotDirty() const { return _bCpuDirty != 0; }
+        /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
+        const vector<GpuMaterialGroup>& getMaterialGroups() const { return _listMaterialGroup; }
+        /**
+         * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 타입**(머티리얼 셰이더 경로)으로 묶을지 정합니다 (언리얼 GPUScene).
+         * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽으므로, 텍스처를 인덱스로 고를 수 있는 백엔드
+         *          (DX12/Vulkan 텍스처 배열)에서는 같은 메시·같은 셰이더면 머티리얼이 달라도 한 드로우다. DX11/GL 은 머티리얼
+         *          텍스처를 t5..t8 슬롯에 걸어야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer/EngineLoop 가 디바이스
+         *          caps(supportsNativeBindlessSampling)로 정한다. 바꾸면 다음 buildFromScene 이 다시 묶는다.
+         */
+        void setMergeBatchesAcrossMaterials( bool bMerge );
+        /** @brief setMergeBatchesAcrossMaterials 로 정한 값. */
+        bool isMergingBatchesAcrossMaterials() const { return _bMergeAcrossMaterials != 0; }
+
+        static constexpr uint32 kInvalidMaterialGroup = 0xFFFFFFFFu;
 
         /** @brief 배치 MaterialInstance pin/retire 정책. */
         GpuMaterialRetireQueue& getMaterialRetireQueue() { return _materialRetire; }
@@ -197,6 +251,23 @@ namespace sw
         void fillScratchRange( uint32 start, uint32 end );
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
         void buildBatches();
+        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup. */
+        uint32 materialGroupFor( const Material* pMaterial );
+        /**
+         * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 돌려줍니다 (GT, buildBatches 안).
+         * @details 같은 쌍은 같은 원소를 공유한다. 인스턴스마다 부른다 — 배치를 셰이더 타입으로 합치면 한 배치 안에 여러 원소가 산다.
+         */
+        uint32 assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex );
+        /**
+         * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 셰이더 경로의 대표 머티리얼, 아니면 그 머티리얼 자신.
+         * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
+         */
+        Material* batchKeyMaterial( Material* pMaterial );
+        /**
+         * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조버퍼에 올리고 배치에 버퍼/SRV 를 적습니다 (RT).
+         * @details 바이트가 지난 업로드와 같으면 건너뛴다 — 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
+         */
+        void uploadMaterialGroups( IRHIDevice* pDevice );
         /** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */
         void sortTransparent( const float32* pCameraPos );
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
@@ -206,10 +277,16 @@ namespace sw
         /** @brief 캐시 무효화. */
         void invalidateBuildCache();
 
-        vector<GpuInstance>  _listInstance;
-        vector<GpuMeshBatch> _listOpaqueBatch;
-        vector<GpuMeshBatch> _listTransparentBatch;
-        vector<GpuMeshBatch> _listAllBatch; ///< 불투명 다음 투명. 간접 슬롯과 일치
+        vector<GpuInstance>      _listInstance;
+        vector<GpuMeshBatch>     _listOpaqueBatch;
+        vector<GpuMeshBatch>     _listTransparentBatch;
+        vector<GpuMeshBatch>     _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
+        vector<GpuMaterialGroup> _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소 (CPU 스냅샷)
+        /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
+        unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
+        /// @brief 재구축 중 셰이더 경로 → 대표 머티리얼 (배치 키 합치기용, GT).
+        unordered_map<string, Material*> _mapShaderRepresentative;
+        vector<uint8>                    _listMaterialScratch;
 
         /// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate
@@ -299,5 +376,6 @@ namespace sw
         uint32             _instanceCapacity{ 0 };
         uint32             _argsCapacity{ 0 };
         uint8              _bCpuDirty{ 1 };
+        uint8              _bMergeAcrossMaterials{ 0 };
     };
 } // namespace sw

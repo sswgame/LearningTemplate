@@ -37,6 +37,8 @@ namespace sw
         , _frameCtx{}
         , _gpuCullCb{ 0 }
         , _gpuCullCbIndex{ kInvalidDescriptorIndex }
+        , _materialFallbackBuffer{ 0 }
+        , _materialFallbackSrv{ kInvalidDescriptorIndex }
         , _mapEnginePso{}
         , _transientWidth{ 0 }
         , _transientHeight{ 0 }
@@ -79,6 +81,9 @@ namespace sw
             bindServices( pTaskManager );
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getTaskManager() );
+
+        // 동기 경로(execute)는 이 GpuScene 이 직접 배치를 만든다 — 패킷 경로의 GT GpuScene 은 EngineLoop 가 같은 값을 준다.
+        _gpuScene.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
         const EngineData&  engineData = engine::getEngineData();
         RenderPassManager& rpm        = pDevice->getRenderPassManager();

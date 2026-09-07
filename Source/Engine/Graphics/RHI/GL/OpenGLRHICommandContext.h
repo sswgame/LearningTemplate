@@ -20,6 +20,7 @@ namespace sw
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         /** @brief OpenGL 은 리소스 상태를 추적하지 않는다 — 의도적 no-op. */
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
+        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;

@@ -34,6 +34,8 @@ namespace sw
         // 이 링 슬롯의 펜스가 신호됐다는 건 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
         // GPU 작업이 실제로 끝났다는 뜻이다 — 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
+        // 이 링 슬롯에서 쓴 슬롯 세트들도 GPU 가 다 읽었다 — 풀을 통째로 비워 이번 프레임에 다시 쓴다.
+        resetSlotPoolForFrame( _currentFrame );
 
         VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
         if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
@@ -71,9 +73,10 @@ namespace sw
         _bFrameAcquireWaitPending = 1;
         _listPendingSubmit.clear();
 
-        // 새 커맨드버퍼엔 아직 아무 디스크립터셋도 안 걸림 — bindGraphicsMaterialSets 캐시 무효화.
-        _recordingState._lastBoundGraphicsSet0    = nullptr;
-        _recordingState._bStaticGraphicsSetsBound = false;
+        // 새 커맨드버퍼엔 아직 아무 세트도 안 걸림 — flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
+        _recordingState._bTextureSetBound = 0;
+        _recordingState._arrSlotState[0]  = VulkanSlotState{};
+        _recordingState._arrSlotState[1]  = VulkanSlotState{};
 
         _bFrameStarted                     = SW_TRUE;
         _recordingState._bRenderPassActive = SW_FALSE;

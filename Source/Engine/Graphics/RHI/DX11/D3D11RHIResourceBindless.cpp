@@ -125,6 +125,45 @@ namespace sw
         return index;
     }
 
-    void D3D11RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index ) { (void)index; }
+    RHIDescriptorIndex D3D11RHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return kInvalidDescriptorIndex;
+        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr )
+            return kInvalidDescriptorIndex;
+
+        // 텍스처 UAV — bindComputeUAV( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
+        if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
+            return kInvalidDescriptorIndex;
+
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  index;
+        if ( _pDevice->_listUavFree.empty() == false )
+        {
+            index = _pDevice->_listUavFree.back();
+            _pDevice->_listUavFree.pop_back();
+            _pDevice->_listRegisteredUAV[index]   = uav;
+            _pDevice->_listUavSourceBuffer[index] = RHIBufferHandle{ 0 };
+        }
+        else
+        {
+            index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+            _pDevice->_listRegisteredUAV.push_back( uav );
+            _pDevice->_listUavSourceBuffer.push_back( RHIBufferHandle{ 0 } );
+        }
+        return index;
+    }
+
+    void D3D11RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
+    {
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )
+            return;
+        _pDevice->_listRegisteredUAV[index].Reset();
+        _pDevice->_listUavSourceBuffer[index] = RHIBufferHandle{ 0 };
+        _pDevice->_listUavFree.push_back( index );
+    }
 } // namespace sw
 #endif

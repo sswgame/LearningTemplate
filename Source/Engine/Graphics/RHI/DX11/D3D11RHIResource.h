@@ -34,6 +34,7 @@ namespace sw
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
         void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:

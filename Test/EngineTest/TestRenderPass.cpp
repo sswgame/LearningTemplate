@@ -990,8 +990,10 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
 
-    uint32 attemptedCount{ 0 };
-    uint32 okCount{ 0 };
+    uint32  attemptedCount{ 0 };
+    uint32  okCount{ 0 };
+    bool    bHasReferenceMean{ false };
+    float32 referenceMean[3]{};
 
     for ( sw::RHIBackend backend : backends )
     {
@@ -1031,6 +1033,59 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
             bOk = renderer.execute( device.get(), nullptr, &scene );
             device->endFrame( false, false );
             device->waitIdle();
+        }
+
+        // 실행 성공만으로는 부족하다 — 실제로 큐브가 찍혔는지, 백엔드끼리 같은 그림인지 SceneColor 픽셀로 본다.
+        // (예전엔 여기가 비어 있어서 Vulkan 이 아무것도 안 그리고 GL 이 큐브를 한 자리에 겹쳐 그려도 통과했다.)
+        if ( bOk )
+        {
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+            const bool            bRead  = renderer.readbackTransient( "SceneColor", bytes, layout, format );
+            SW_EXPECT_TRUE_MSG( bRead, "SceneColor readback" );
+            if ( bRead )
+            {
+                const uint32 pixelCount = layout._width * layout._height;
+                uint64       arrSum[3]{};
+                uint32       drawnCount{ 0 };
+                for ( uint32 y = 0; y < layout._height; ++y )
+                {
+                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                    for ( uint32 x = 0; x < layout._width; ++x )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                        arrSum[0] += r;
+                        arrSum[1] += pPixel[1];
+                        arrSum[2] += b;
+                        // 파이프라인 클리어 색(0.12, 0.15, 0.18 → 31, 38, 46) 이 아니면 무언가 그려진 픽셀이다.
+                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                            ++drawnCount;
+                    }
+                }
+                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+                SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
+                                    ( label + ": SceneColor 에 큐브가 없다 (drawn " + sw::to_string( drawnCount ) + "/" + sw::to_string( pixelCount ) + ")" ).c_str() );
+                float32 arrMean[3]{};
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                    arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+                if ( bHasReferenceMean == false )
+                {
+                    bHasReferenceMean = true;
+                    for ( uint32 channel = 0; channel < 3; ++channel )
+                        referenceMean[channel] = arrMean[channel];
+                }
+                else
+                {
+                    for ( uint32 channel = 0; channel < 3; ++channel )
+                    {
+                        const float32 diff = arrMean[channel] > referenceMean[channel] ? arrMean[channel] - referenceMean[channel] : referenceMean[channel] - arrMean[channel];
+                        SW_EXPECT_TRUE_MSG( diff <= 3.0f, ( label + ": SceneColor 평균이 첫 백엔드와 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
+                    }
+                }
+            }
         }
 
         if ( cube != nullptr )

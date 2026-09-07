@@ -65,10 +65,9 @@ namespace sw
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
          * @brief 컴퓨트 루트/푸시 상수를 씁니다.
-         * @details 백엔드마다 실제 용량(dword)이 다르다 — DX11=64, OpenGL=64, Vulkan=32, DX12=16
-         *          (각 백엔드 헤더의 kMaxComputeRootConstantDwords 참고). 4개 백엔드 모두에서 안전한
-         *          상한은 constant::kMinComputeRootConstantDwords(=DX12 기준) — 그 이상을 쓰면 DX12에서
-         *          조용히 잘리거나 덮어써질 수 있다.
+         * @details 백엔드마다 실제 용량(dword)이 다르다 — DX11=64, OpenGL=64, DX12/Vulkan=16 (루트/푸시 상수,
+         *          bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 4개 백엔드 모두에서 안전한
+         *          상한은 constant::kMinComputeRootConstantDwords — 그 이상은 조용히 잘린다.
          */
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                            = 0;
@@ -123,6 +122,13 @@ namespace sw
          * @note DX11/GL 은 상태리스라 no-op 이다.
          */
         virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
+
+        /**
+         * @brief 텍스처를 컴퓨트가 쓰는 RW 텍스처(UAV) 상태로 만듭니다 — 디스패치 전에 부른다.
+         * @details DX12 는 UNORDERED_ACCESS 전이, Vulkan 은 GENERAL 레이아웃 전이. DX11 은 no-op, GL 은 이미지 접근 배리어.
+         *          다시 샘플링하려면 prepareTextureForShaderRead 를 부른다.
+         */
+        virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
 
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 

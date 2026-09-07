@@ -383,14 +383,15 @@ namespace sw
         glBindTexture( GL_TEXTURE_2D, 0 );
 
         OpenGLRHIDevice::OpenGLTextureRecord record{};
-        record._texture       = tex;
-        record._width         = desc._width;
-        record._height        = desc._height;
-        record._mipLevels     = mipLevels;
-        record._format        = desc._format;
-        record._bDepthStencil = bDepth ? 1 : 0;
-        record._bUAV          = desc._bIsUnorderedAccess ? 1 : 0;
-        record._reserved      = 0;
+        record._texture        = tex;
+        record._width          = desc._width;
+        record._height         = desc._height;
+        record._mipLevels      = mipLevels;
+        record._format         = desc._format;
+        record._internalFormat = static_cast<uint32>( internalFmt );
+        record._bDepthStencil  = bDepth ? 1 : 0;
+        record._bUAV           = desc._bIsUnorderedAccess ? 1 : 0;
+        record._reserved       = 0;
 
         if ( desc._bIsRenderTarget || bDepth )
         {

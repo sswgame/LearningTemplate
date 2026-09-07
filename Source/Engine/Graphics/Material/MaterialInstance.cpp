@@ -484,6 +484,14 @@ namespace sw
                         return true;
                 }
             }
+            for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
+            {
+                for ( const ShaderVariableInfo& var : element._listVariable )
+                {
+                    if ( hashed_string( var._name.c_str() ) == paramName )
+                        return true;
+                }
+            }
             for ( const ShaderResourceBinding& res : reflectionData._listResource )
             {
                 if ( hashed_string( res._name.c_str() ) == paramName )

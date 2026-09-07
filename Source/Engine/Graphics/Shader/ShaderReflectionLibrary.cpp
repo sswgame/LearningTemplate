@@ -20,7 +20,7 @@ namespace sw
         /// @brief 'SRFM' 매니페스트 매직.
         constexpr uint32 kManifestMagic = 0x4D465253;
         /// @brief 매니페스트 포맷 버전. 굽는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 된다.
-        constexpr uint32 kManifestVersion = 1;
+        constexpr uint32 kManifestVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
         {
@@ -49,6 +49,23 @@ namespace sw
                 archive << resource._registerSpace;
                 archive << resource._bindPoint;
                 archive << resource._bindCount;
+            }
+
+            archive << static_cast<uint32>( reflection._listStructuredElement.size() );
+            for ( const ShaderBufferInfo& element : reflection._listStructuredElement )
+            {
+                archive << string_view( element._name );
+                archive << element._registerSpace;
+                archive << element._bindPoint;
+                archive << element._totalSize;
+                archive << static_cast<uint32>( element._listVariable.size() );
+                for ( const ShaderVariableInfo& variable : element._listVariable )
+                {
+                    archive << string_view( variable._name );
+                    archive << string_view( variable._type );
+                    archive << variable._offset;
+                    archive << variable._size;
+                }
             }
         }
 
@@ -95,6 +112,31 @@ namespace sw
                 archive >> resource._registerSpace;
                 archive >> resource._bindPoint;
                 archive >> resource._bindCount;
+            }
+
+            uint32 elementCount{ 0 };
+            archive >> elementCount;
+            if ( archive.isError() )
+                return false;
+            outReflection._listStructuredElement.resize( elementCount );
+            for ( ShaderBufferInfo& element : outReflection._listStructuredElement )
+            {
+                archive >> element._name;
+                archive >> element._registerSpace;
+                archive >> element._bindPoint;
+                archive >> element._totalSize;
+                uint32 variableCount{ 0 };
+                archive >> variableCount;
+                if ( archive.isError() )
+                    return false;
+                element._listVariable.resize( variableCount );
+                for ( ShaderVariableInfo& variable : element._listVariable )
+                {
+                    archive >> variable._name;
+                    archive >> variable._type;
+                    archive >> variable._offset;
+                    archive >> variable._size;
+                }
             }
 
             return archive.isError() == false;

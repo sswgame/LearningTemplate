@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"
@@ -847,6 +848,96 @@ SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
     queue.tickCompleted( 4 );
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
+ * @brief [RHITest] 컴퓨트가 RW 텍스처(UAV)에 쓴 픽셀을 네 백엔드에서 읽어 확인한다.
+ * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D) 의 등록 인덱스를, DX11/GL 은 u4 슬롯 서수 0 을 루트 상수로 넘긴다
+ *          (computetexturewrite.hlsl 의 SW_StoreTex2D). prepareTextureForUnorderedAccess → dispatch → readback.
+ */
+SW_TEST_CASE( RHITest, ComputeTextureUavWriteIsReadable )
+{
+    const sw::RHIBackend backends[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+    constexpr uint32     kSize      = 8;
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+        const utf8*       pName     = backend == sw::RHIBackend::DirectX11 ? "DirectX11" : backend == sw::RHIBackend::DirectX12 ? "DirectX12"
+                                                                                     : backend == sw::RHIBackend::Vulkan        ? "Vulkan"
+                                                                                                                                : "OpenGL";
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = kSize;
+        texDesc._height                    = kSize;
+        texDesc._mipLevels                 = 1;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = 1;
+        texDesc._bIsUnorderedAccess        = 1;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_EXPECT_TRUE_MSG( texture != 0, pName );
+        const sw::RHIDescriptorIndex uav = texture != 0 ? pResource->registerBindlessTextureUAV( texture ) : sw::kInvalidDescriptorIndex;
+        SW_EXPECT_TRUE_MSG( uav != sw::kInvalidDescriptorIndex, pName );
+        const sw::RHIPipelineStateHandle pso = pResource->createComputePipelineState( "common/shaders/computetexturewrite.hlsl" );
+        SW_EXPECT_TRUE_MSG( pso != 0, pName );
+
+        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        {
+            sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
+            SW_EXPECT_TRUE_MSG( cmdList != nullptr, pName );
+            if ( cmdList != nullptr )
+            {
+                // 네이티브(DX12/Vulkan)는 배열 인덱스, 에뮬(DX11/GL)은 u4 슬롯의 서수 0.
+                const uint32 arrRoot[4] = { device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u, kSize, kSize, 0u };
+                cmdList->beginCommandList();
+                cmdList->prepareTextureForUnorderedAccess( texture );
+                cmdList->setComputePipelineState( pso );
+                cmdList->bindComputeUAV( uav, sw::shaderslot::kComputeTextureUav0 );
+                cmdList->setComputeRootConstants( 0, 4, arrRoot, 0 );
+                cmdList->dispatchCompute( 1, 1, 1 );
+                cmdList->endCommandList();
+                device->executeCommandListImmediate( cmdList.get() ); // 프레임 밖 — DX12/Vulkan 은 executeCommandList 가 프레임 스트림을 요구한다
+            }
+            device->waitIdle();
+
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bRead = pResource->readbackTexture2D( texture, 0, bytes, layout );
+            SW_EXPECT_TRUE_MSG( bRead, pName );
+            if ( bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize )
+            {
+                uint32 mismatchCount{ 0 };
+                for ( uint32 y = 0; y < kSize; ++y )
+                {
+                    for ( uint32 x = 0; x < kSize; ++x )
+                    {
+                        const uint8* pPixel = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes + static_cast<size_t>( x ) * 4;
+                        // 포맷은 RGBA 로 요청했지만 백엔드가 BGRA 로 돌려줄 수 있어 r/g 위치만 본다: r == x, g == y, a == 255.
+                        const bool bOk = ( pPixel[0] == x && pPixel[1] == y && pPixel[3] == 255 ) || ( pPixel[2] == x && pPixel[1] == y && pPixel[3] == 255 );
+                        if ( bOk == false )
+                            ++mismatchCount;
+                    }
+                }
+                SW_EXPECT_TRUE_MSG( mismatchCount == 0, ( sw::string( pName ) + ": compute wrote wrong pixels (" + sw::to_string( mismatchCount ) + ")" ).c_str() );
+            }
+            else if ( bRead )
+                SW_EXPECT_TRUE_MSG( false, ( sw::string( pName ) + ": readback layout unexpected" ).c_str() );
+            ++okCount;
+        }
+
+        if ( uav != sw::kInvalidDescriptorIndex )
+            pResource->unregisterBindlessUAV( uav );
+        if ( texture != 0 )
+            pResource->destroyTexture( texture );
+        shutdownDeviceWithWindow( device, window );
+    }
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the compute RW texture test" );
 }
 
 // ------------------------------------------------------------------------------

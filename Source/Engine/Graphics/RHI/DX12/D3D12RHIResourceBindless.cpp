@@ -117,7 +117,7 @@ namespace sw
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
         gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
 
-        // 구조 버퍼면 StructuredBuffer SRV (ResourceDescriptorHeap[idx] 가 StructuredBuffer<T> 로 읽힘).
+        // 구조 버퍼면 StructuredBuffer SRV (셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
         // 그 외(상수 버퍼 ring)면 CBV.
         const auto strideIt = _pDevice->_mapStructuredStride.find( buffer );
         if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
@@ -198,7 +198,20 @@ namespace sw
         rec._resource = nullptr;
         rec._buffer   = 0;
         rec._texture  = 0;
-        _pDevice->_listFreeBindless.push_back( index );
+        deferFreeBindlessIndex( index );
+    }
+
+    void D3D12RHIResource::deferFreeBindlessIndex( RHIDescriptorIndex index )
+    {
+        // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다 (언리얼의 지연 디스크립터 해제와 같다).
+        // 즉시 프리리스트에 넣으면 같은 프레임에 등록된 새 리소스가 그 자리를 받아, 아직 실행 중인 리스트가 새 리소스를 읽는다.
+        D3D12RHIDevice* pDevice = _pDevice;
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+        {
+            std::unique_lock<std::shared_mutex> lock{ pDevice->_bindlessMutex };
+            pDevice->_listFreeBindless.push_back( index );
+        } ),
+                                                   _pDevice->_fenceValue );
     }
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessUAV( RHIBufferHandle buffer )
@@ -208,31 +221,18 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         ID3D12Resource* pRes = _pDevice->resolveBuffer( buffer );
-        if ( pRes == nullptr )
+        if ( pRes == nullptr || pRes->GetDesc().Width < 4 )
             return kInvalidDescriptorIndex;
 
+        // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간** 을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
+        // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다.
+        // 예전엔 UAV 목록의 순번을 돌려줘서 힙 슬롯과 달랐다(테이블을 슬롯마다 따로 걸던 시절엔 상관없었다).
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        RHIDescriptorIndex                  descriptorIndex{ 0 };
-        bool                                bReuseHeapSlot = false;
-        if ( _pDevice->_listFreeUav.empty() == false )
+        RHIDescriptorIndex                  index;
+        if ( _pDevice->_listFreeBindless.empty() == false )
         {
-            descriptorIndex = _pDevice->_listFreeUav.back();
-            _pDevice->_listFreeUav.pop_back();
-            bReuseHeapSlot = true;
-        }
-        else
-        {
-            descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-            _pDevice->_listRegisteredUAV.push_back( D3D12RHIDevice::BindlessResourceRecord{} );
-        }
-
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( bReuseHeapSlot && descriptorIndex < _pDevice->_listRegisteredUAV.size() &&
-             _pDevice->_listRegisteredUAV[descriptorIndex]._cpuHandle.ptr != 0 )
-        {
-            cpuHandle = _pDevice->_listRegisteredUAV[descriptorIndex]._cpuHandle;
-            gpuHandle = _pDevice->_listRegisteredUAV[descriptorIndex]._gpuHandle;
+            index = _pDevice->_listFreeBindless.back();
+            _pDevice->_listFreeBindless.pop_back();
         }
         else
         {
@@ -241,46 +241,105 @@ namespace sw
                 SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
                 return kInvalidDescriptorIndex;
             }
-            const RHIDescriptorIndex heapSlot = _pDevice->_allocatedDescriptorsCount++;
-            cpuHandle                         = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
-            cpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
-            gpuHandle = _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart();
-            gpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
+            index = _pDevice->_allocatedDescriptorsCount++;
         }
 
-        if ( pRes->GetDesc().Width < 4 )
-            return kInvalidDescriptorIndex;
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
+        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
+        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
 
-        // RWByteAddressBuffer / RAW UAV: R32_TYPELESS + RAW, StructureByteStride must be 0.
+        // 구조 버퍼면 StructuredBuffer UAV, 아니면 RAW UAV (RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0).
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
-        uavDesc.ViewDimension              = D3D12_UAV_DIMENSION_BUFFER;
-        uavDesc.Format                     = DXGI_FORMAT_R32_TYPELESS;
-        uavDesc.Buffer.FirstElement        = 0;
-        uavDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width / 4 );
-        uavDesc.Buffer.StructureByteStride = 0;
-        uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_RAW;
-
+        uavDesc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+        uavDesc.Buffer.FirstElement = 0;
+        const auto strideIt         = _pDevice->_mapStructuredStride.find( buffer );
+        if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
+        {
+            uavDesc.Format                     = DXGI_FORMAT_UNKNOWN;
+            uavDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width ) / strideIt->second;
+            uavDesc.Buffer.StructureByteStride = strideIt->second;
+            uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_NONE;
+        }
+        else
+        {
+            uavDesc.Format                     = DXGI_FORMAT_R32_TYPELESS;
+            uavDesc.Buffer.NumElements         = static_cast<UINT>( pRes->GetDesc().Width / 4 );
+            uavDesc.Buffer.StructureByteStride = 0;
+            uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_RAW;
+        }
         _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
 
-        if ( descriptorIndex >= _pDevice->_listRegisteredUAV.size() )
-            _pDevice->_listRegisteredUAV.resize( descriptorIndex + 1 );
-        _pDevice->_listRegisteredUAV[descriptorIndex]         = { pRes, cpuHandle, gpuHandle };
-        _pDevice->_listRegisteredUAV[descriptorIndex]._buffer = buffer;
+        if ( index >= _pDevice->_listRegisteredUAV.size() )
+            _pDevice->_listRegisteredUAV.resize( index + 1 );
+        _pDevice->_listRegisteredUAV[index]         = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredUAV[index]._buffer = buffer;
 
-        return descriptorIndex;
+        return index;
+    }
+
+    RHIDescriptorIndex D3D12RHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        _pDevice->checkRegistryMutableNow( "registerBindlessTextureUAV" );
+        if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+        ID3D12Resource* pRes = _pDevice->resolveTexture( texture );
+        if ( pRes == nullptr || ( pRes->GetDesc().Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
+            return kInvalidDescriptorIndex;
+
+        // 텍스처 UAV 도 같은 힙 인덱스 공간 — 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
+        std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        RHIDescriptorIndex                  index;
+        if ( _pDevice->_listFreeBindless.empty() == false )
+        {
+            index = _pDevice->_listFreeBindless.back();
+            _pDevice->_listFreeBindless.pop_back();
+        }
+        else
+        {
+            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+            {
+                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+                return kInvalidDescriptorIndex;
+            }
+            index = _pDevice->_allocatedDescriptorsCount++;
+        }
+
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
+        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
+        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+        uavDesc.Format               = pRes->GetDesc().Format;
+        uavDesc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
+        uavDesc.Texture2D.MipSlice   = 0;
+        uavDesc.Texture2D.PlaneSlice = 0;
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
+
+        if ( index >= _pDevice->_listRegisteredUAV.size() )
+            _pDevice->_listRegisteredUAV.resize( index + 1 );
+        _pDevice->_listRegisteredUAV[index]          = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredUAV[index]._texture = texture;
+        return index;
     }
 
     void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
         _pDevice->checkRegistryMutableNow( "unregisterBindlessUAV" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( index < _pDevice->_listRegisteredUAV.size() )
+        if ( index >= _pDevice->_listRegisteredUAV.size() )
+            return;
+        D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredUAV[index];
+        if ( rec._resource == nullptr && rec._buffer == 0 && rec._texture == 0 )
         {
-            _pDevice->_listRegisteredUAV[index]._resource = nullptr;
-            _pDevice->_listRegisteredUAV[index]._buffer   = 0;
-            _pDevice->_listRegisteredUAV[index]._texture  = 0;
-            _pDevice->_listFreeUav.push_back( index );
+            SW_LOG_ERROR( "Bindless UAV index %# is already free; ignoring the duplicate release.", index );
+            return;
         }
+        rec._resource = nullptr;
+        rec._buffer   = 0;
+        rec._texture  = 0;
+        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
     }
 
 } // namespace sw

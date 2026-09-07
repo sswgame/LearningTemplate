@@ -41,6 +41,7 @@ namespace sw
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
+        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
@@ -69,18 +70,14 @@ namespace sw
 
     private:
         /**
-         * @brief 등록된 bindless 슬롯의 GPU 디스크립터 핸들을 **값으로** 꺼내 옵니다.
-         * @details 레지스트리(`_listRegisteredBindless` / `_listRegisteredUAV`)는 다른 스레드가
-         *          register/unregister 로 **resize** 할 수 있다. 참조를 들고 락 밖으로 나오면 그 사이
-         *          재할당에 dangling 이 되고, GPU 가 쓰레기 디스크립터를 읽어 PageFault(VA=0) →
-         *          DEVICE_HUNG 으로 이어진다. 그래서 공유 락 안에서 핸들만 복사해 나온다.
+         * @brief 등록된 bindless 인덱스의 버퍼 GPU 주소 — 루트 디스크립터(CBV/SRV/UAV)에 그대로 건다.
+         * @details 레지스트리는 기록 중 불변이라 락 없이 읽는다 (IRHIDevice::setParallelRecording 참고).
          * @param bUav true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리.
-         * @return 인덱스가 범위를 벗어나거나 슬롯이 비어 있으면 false.
+         * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋을 더한다.
+         * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0.
          */
-        bool tryGetBindlessGpuHandle( RHIDescriptorIndex index, bool bUav, D3D12_GPU_DESCRIPTOR_HANDLE& outHandle ) const;
-        void bindDescriptorHeaps();
-        void bindPassAndMaterialCbv( RHIDescriptorIndex passCbDescriptorIndex, RHIDescriptorIndex materialCbDescriptorIndex );
-        void bindMeshVertexBuffer();
+        D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUav, bool bConstantBuffer ) const;
+        void                      bindMeshVertexBuffer();
         /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
         void bindMeshVertexBufferOrFallback();
         void bindFullscreenVertexBuffer();

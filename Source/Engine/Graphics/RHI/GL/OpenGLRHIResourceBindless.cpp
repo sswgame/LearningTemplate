@@ -85,6 +85,15 @@ namespace sw
                                       OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
+    RHIDescriptorIndex OpenGLRHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        if ( texture == 0 || _pDevice->getGLTextureName( texture ) == 0 )
+            return kInvalidDescriptorIndex;
+        OpenGLRHIDevice::BindlessResourceRecord record{};
+        record._texture = texture;
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, record );
+    }
+
     void OpenGLRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
         releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,

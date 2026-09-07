@@ -4,35 +4,36 @@
  * 이 파일은 순수 전처리기 정의만 담는다(#define 정수 + 주석). 그래서 HLSL 과 C++ 가 **같은 파일을
  * include** 한다 — C++ 쪽은 Source/Engine/Graphics/Shader/ShaderBindingSlots.h 가 이 파일을 include 해
  * 같은 값을 constexpr 로 노출하고, 4개 백엔드(DX11/DX12/Vulkan/GL)는 그 상수로만 바인딩한다.
- * 예전엔 이 번호들이 HLSL 매크로·C++ 헤더·백엔드 4곳에 손으로 복사돼 있었고, 그 어긋남이
- * "검증 에러 없이 검게 나오는" 형태로 여섯 번 이상 반복됐다. 여기 한 줄을 바꾸면 양쪽이 함께 바뀐다.
+ * ShaderBindingContract::validate 가 구운 바이너리의 리플렉션을 이 표와 대조한다.
  *
  * 규칙: 이 파일에는 #define 과 주석만 둔다 (C++ 컴파일러가 그대로 읽는다). 산술식·함수형 매크로 금지.
  *
- * 레지스터 → 백엔드 바인딩 위치 (같은 줄의 값이 곧 계약이다)
- *  ┌────────────────────┬──────────────┬────────────────┬──────────────────┬─────────────────┐
- *  │ 논리 리소스        │ HLSL         │ Vulkan set/bind│ OpenGL binding   │ DX12 루트 파라미터│
- *  ├────────────────────┼──────────────┼────────────────┼──────────────────┼─────────────────┤
- *  │ PassCB             │ b0 space0    │ set 0 / 0      │ UBO 0            │ CBV 테이블 (b0)  │
- *  │ MaterialCB         │ b1 space0    │ set 10 / 0     │ UBO 1            │ CBV 테이블 (b1)  │
- *  │ 컴퓨트 CB          │ b0 space0    │ set 0 / 0      │ UBO 0            │ CBV 테이블 (b0)  │
- *  │ 엔진 텍스처 슬롯   │ t0..t3       │ (네이티브 — 없음)│ 텍스처 유닛 0..3 │ SRV 테이블 t0..3 │
- *  │ 인스턴스 구조버퍼  │ t4 (VK: t0 space6)│ set 6 / 0 │ SSBO 4           │ SRV 테이블 t4    │
- *  │ 머티리얼 텍스처    │ t5..t8       │ (네이티브 — 없음)│ 텍스처 유닛 5..8 │ SRV 테이블 t5..8 │
- *  │ bindless 텍스처 배열│ t0 space1   │ set 1 / 0      │ (없음)           │ SRV 테이블 space1│
- *  │ 정적 샘플러        │ s0..s7 (VK: space4)│ set 4 / 0..7│ (결합 샘플러)   │ 정적 샘플러      │
- *  │ 컴퓨트 SRV         │ t0..t3 (VK: space6..9)│ set 6+#/0│ SSBO #          │ SRV 테이블 t#    │
- *  │ 컴퓨트 UAV         │ u0..u3 (VK: space7..9)│ set 7+#/0│ SSBO #          │ UAV 테이블 u#    │
- *  │ DX12 루트 상수     │ b0 space1    │ (푸시 상수)    │ (없음)           │ 32비트 루트 상수 │
- *  └────────────────────┴──────────────┴────────────────┴──────────────────┴─────────────────┘
+ * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
+ * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
+ * (인스턴스 g_SwInstances[t4], 머티리얼 g_SwMaterials[t9]) — 그래서 드로우 사이에 바뀌는 바인딩이 없고 슬롯 번호는
+ * 리플렉션이 준다. 텍스처만 백엔드가 갈린다: DX12/Vulkan 은 무제한 배열(g_SwBindlessTex2D[]), DX11/GL 은 고정 슬롯.
  *
- * 백엔드별 함정 (계약이 이렇게 생긴 이유):
- *  - Vulkan 은 세트 단위 바인딩이라 상수버퍼 슬롯마다 세트가 하나씩 필요하다(b0=set0, b1=set10).
- *  - OpenGL(GL_ARB_gl_spirv)은 DescriptorSet 을 **무시**하고 binding 번호만 본다 — 그래서 GL 용 SPIR-V 는
- *    모든 리소스가 set 0 이어야 하고, b# 가 곧 UBO binding #, t# 가 곧 텍스처 유닛/SSBO # 다.
- *  - DX11(SM5.0)은 space 를 모르고 리소스 배열 동적 인덱싱이 없다 — 그래서 텍스처는 고정 슬롯이다.
- *  - DX12 는 SM6.6 ResourceDescriptorHeap 으로 힙을 직접 인덱싱한다 — 텍스처 슬롯은 쓰지 않는다.
- * 런타임/테스트 검증: ShaderBindingContract::validate 가 구운 바이너리의 리플렉션을 이 표와 대조한다.
+ *   레지스터 → 백엔드 바인딩 자리
+ *   ┌────────────────────┬──────────────┬─────────────────────┬─────────────────────┬──────────────────┐
+ *   │ 논리 리소스        │ HLSL         │ DX12                │ Vulkan (set 0)      │ OpenGL           │
+ *   ├────────────────────┼──────────────┼─────────────────────┼─────────────────────┼──────────────────┤
+ *   │ PassCB / 컴퓨트 CB │ b0           │ 루트 CBV            │ UBO  binding 0      │ UBO 0            │
+ *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
+ *   │ 엔진 텍스처 슬롯   │ t0..t3 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 0..3 │
+ *   │ 인스턴스 구조버퍼  │ t4           │ 루트 SRV            │ SSBO binding 16+4   │ SSBO 4           │
+ *   │ 머티리얼 텍스처    │ t5..t8 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 5..8 │
+ *   │ 머티리얼 데이터    │ t9           │ 루트 SRV            │ SSBO binding 16+9   │ SSBO 9           │
+ *   │ 컴퓨트 읽기 버퍼   │ t0..t3       │ 루트 SRV            │ SSBO binding 16+#   │ SSBO #           │
+ *   │ 컴퓨트 쓰기 버퍼   │ u0..u3       │ 루트 UAV            │ SSBO binding 32+#   │ SSBO 16+#        │
+ *   │ bindless 텍스처    │ t0 space1    │ 테이블 (힙 전체)    │ set 1 binding 0     │ (없음)           │
+ *   │ 정적 샘플러        │ s0           │ 정적 샘플러         │ set 1 binding 1     │ (결합 샘플러)    │
+ *   │ 루트 상수          │ b0 space2    │ 32비트 루트 상수    │ 푸시 상수           │ (UBO 에뮬)       │
+ *   └────────────────────┴──────────────┴─────────────────────┴─────────────────────┴──────────────────┘
+ *   - DX12: 버퍼는 전부 루트 디스크립터(GPU 주소) — 디스크립터 힙에 쓸 일이 없고 테이블은 텍스처 배열 하나뿐이다.
+ *   - Vulkan: set 0 은 "슬롯 세트" — 레지스터 종류별 시프트(DXC -fvk-b/t/u-shift)로 binding 이 정해진다. 드로우/디스패치
+ *     직전에 바인딩 상태가 바뀌었으면 세트를 새로 할당해 쓴다(언리얼 Vulkan RHI 와 같은 방식). set 1 은 텍스처 배열.
+ *   - OpenGL: DescriptorSet 을 무시하고 binding 만 본다 — b# 가 곧 UBO #, t# 가 곧 텍스처 유닛/SSBO #, u# 는 SSBO 16+#.
+ *   - DX11(SM5.0): space 를 모르고 리소스 배열 동적 인덱싱이 없다 — 텍스처는 고정 슬롯이다.
  */
 
 #ifndef SW_ENGINE_BINDINGSLOTS_HLSLI
@@ -44,14 +45,16 @@
 #define SW_SLOT_PASS_CB          0
 #define SW_SLOT_MATERIAL_CB      1
 #define SW_SLOT_COMPUTE_CB       0
+#define SW_CB_SLOT_COUNT         3   // b0..b2 — b2 는 DX11/GL 루트 상수 에뮬 자리(SW_SLOT_ROOT_CB_EMUL)
 #define SW_MAX_CONSTANT_BUFFER   16
 
-// DX12 루트 상수 — b0 space1 (g_BindlessCbIndex). Vulkan 은 같은 자리를 푸시 상수로 받는다.
-#define SW_SLOT_BINDLESS_CB      0
-#define SW_SPACE_BINDLESS_CB     1
-
+// 루트/푸시 상수 — DX12 b0 space2 (32비트 루트 상수), Vulkan 푸시 상수, DX11/GL 은 UBO 에뮬. setComputeRootConstants 전용.
+#define SW_SLOT_ROOT_CB          0
+#define SW_SPACE_ROOT_CB         2
+#define SW_ROOT_DWORD_COUNT      16
+#define SW_SLOT_ROOT_CB_EMUL     2   // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0) — 에뮬 백엔드(DX11/GL)의 고정 슬롯. t0..t8 총 9개.
+// 2) SRV (t#, space0). t0..t9 총 10개 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 텍스처(에뮬)·머티리얼 데이터.
 // ------------------------------------------------------------------------------
 #define SW_SLOT_ENGINE_TEX0            0
 #define SW_SLOT_ENGINE_TEX1            1
@@ -60,21 +63,22 @@
 #define SW_ENGINE_TEXTURE_SLOT_COUNT   4
 #define SW_FALLBACK_SRV_COUNT          4   // = SW_ENGINE_TEXTURE_SLOT_COUNT (옛 이름)
 
-// GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음.
+// GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음. 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV           4
 
 // 머티리얼 텍스처 고정 슬롯. DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
-// 엔진이 텍스처를 이 슬롯에 걸고 MaterialCB 에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스.
+// 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스.
 #define SW_SLOT_MATERIAL_TEX0          5
 #define SW_SLOT_MATERIAL_TEX1          6
 #define SW_SLOT_MATERIAL_TEX2          7
 #define SW_SLOT_MATERIAL_TEX3          8
 #define SW_MATERIAL_TEXTURE_SLOT_COUNT 4
 
-#define SW_SRV_SLOT_COUNT              9   // t0..t8 — DX12 SRV 루트 테이블 수
+// GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<SwMaterialData_t> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
+// 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
+#define SW_SLOT_MATERIAL_BUFFER        9
 
-// 네이티브 bindless 텍스처 배열 — t0 space1 (DX12) / set 1 (Vulkan)
-#define SW_SPACE_BINDLESS_TEX          1
+#define SW_SRV_SLOT_COUNT              10  // t0..t9 — DX12 루트 SRV 수, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)
@@ -82,11 +86,22 @@
 #define SW_COMPUTE_SRV_SLOT_COUNT      4
 #define SW_COMPUTE_UAV_SLOT_COUNT      4
 
+// 컴퓨트 RW 텍스처 — DX11/GL 은 고정 슬롯 u4..u7(g_SwRWSlot#), DX12/Vulkan 은 무제한 배열(g_SwBindlessRWTex2D, 아래 5)을
+// 인덱스로 고른다. 셰이더는 SW_StoreTex2D( index, coord, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..3).
+#define SW_SLOT_COMPUTE_TEXUAV0        4
+#define SW_SLOT_COMPUTE_TEXUAV1        5
+#define SW_SLOT_COMPUTE_TEXUAV2        6
+#define SW_SLOT_COMPUTE_TEXUAV3        7
+#define SW_COMPUTE_TEXUAV_SLOT_COUNT   4
+
 // ------------------------------------------------------------------------------
-// 4) 정적 샘플러 (s#; SPIR-V 는 space/set SW_SPACE_STATIC_SAMPLER)
+// 4) 정적 샘플러 (s#, space0)
 // ------------------------------------------------------------------------------
-#define SW_SPACE_STATIC_SAMPLER        4
+//    DX12: 루트 시그니처 정적 샘플러 s0..s7. Vulkan: set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6) +
+//    binding SW_VK_SHADOW_SAMPLER_BINDING 의 비교 샘플러. 셰이더는 g_SwSamplers[SW_SAMPLER_*] / g_SwSamplerShadowCmp 로 쓴다.
+//    비교 샘플러는 HLSL 타입이 달라(SamplerComparisonState) 배열에 못 들어가므로 마지막 번호다.
 #define SW_STATIC_SAMPLER_COUNT        8
+#define SW_STATIC_SAMPLER_ARRAY_COUNT  7   // g_SwSamplers[0..6] — 비교 샘플러 제외
 
 #define SW_SAMPLER_LINEAR_WRAP      0
 #define SW_SAMPLER_LINEAR_CLAMP     1
@@ -94,35 +109,43 @@
 #define SW_SAMPLER_POINT_CLAMP      3
 #define SW_SAMPLER_LINEAR_MIRROR    4
 #define SW_SAMPLER_ANISO_WRAP       5
-#define SW_SAMPLER_SHADOW_CMP       6
-#define SW_SAMPLER_POINT_BORDER     7
+#define SW_SAMPLER_POINT_BORDER     6
+#define SW_SAMPLER_SHADOW_CMP       7
 
 // ------------------------------------------------------------------------------
-// 5) Vulkan 디스크립터 세트 번호 — 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)과 HLSL 의
-//    [[vk::binding(slot, set)]] 이 **이 값 하나**로 맞는다.
+// 5) 네이티브 bindless 텍스처 배열 (DX12/Vulkan) — 슬롯 리소스와 다른 자리에 둔다.
+//    DX12: Texture2D g_SwBindlessTex2D[] : register(t0, space1) 와 RWTexture2D g_SwBindlessRWTex2D[] : register(u0, space1)
+//          — 루트 시그니처의 유일한 테이블(범위 둘, 둘 다 힙 시작에서 무제한).
+//    Vulkan: set 1 binding 0 (COMBINED_IMAGE_SAMPLER[]), binding 1 = immutable sampler 배열, binding 2 = 비교 샘플러,
+//            binding 3 = STORAGE_IMAGE[] (RW 텍스처).
 // ------------------------------------------------------------------------------
-#define SW_VK_SET_PASS_CB              0   // b0 (UNIFORM_BUFFER)
-#define SW_VK_SET_BINDLESS_TEX         1   // g_SwBindlessTex2D[] (COMBINED_IMAGE_SAMPLER 배열) = SW_SPACE_BINDLESS_TEX
-#define SW_VK_SET_STATIC_SAMPLER       4   // 정적 샘플러 = SW_SPACE_STATIC_SAMPLER
-#define SW_VK_SET_STORAGE0             6   // 읽기 구조버퍼 t# → set 6+# (STORAGE_BUFFER), 인스턴스 버퍼 포함
-#define SW_VK_SET_STORAGE1             7
-#define SW_VK_SET_STORAGE2             8
-#define SW_VK_SET_STORAGE3             9
-#define SW_VK_STORAGE_SET_COUNT        4   // set 6..9
-#define SW_VK_SET_UAV0                 7   // 쓰기 구조버퍼 u# → set 7+# (STORAGE_BUFFER, 읽기 세트와 공유)
-#define SW_VK_SET_UAV1                 8
-#define SW_VK_SET_UAV2                 9
-#define SW_VK_UAV_SET_COUNT            3   // set 7..9 — 한 디스패치에서 t# 와 u# 가 같은 세트를 가리키면 안 된다
-#define SW_VK_SET_MATERIAL_CB          10  // b1 (UNIFORM_BUFFER)
-#define SW_VK_BOUND_SET_COUNT          11  // 파이프라인 레이아웃이 요구하는 세트 수 (set 2,3,5 는 예약·미사용)
-
-// 인스턴스 구조버퍼의 Vulkan space (= 세트). 옛 이름 호환.
-#define SW_SPACE_INSTANCE_SRV          6
+#define SW_SPACE_BINDLESS_TEX          1
+#define SW_VK_TEXTURE_SET              1
+#define SW_VK_TEXTURE_BINDING          0
+#define SW_VK_SAMPLER_BINDING          1
+#define SW_VK_SHADOW_SAMPLER_BINDING   2
+#define SW_VK_RWTEXTURE_BINDING        3
 
 // ------------------------------------------------------------------------------
-// 6) OpenGL SSBO 번호 — t# 는 binding #, u# 는 binding SW_GL_UAV_BINDING0 + # (DXC -fvk-u-shift 가 이 값이다).
+// 6) Vulkan 슬롯 세트(set 0) — binding = 레지스터 종류별 시프트 + 번호. DXC 에 -fvk-b-shift/-fvk-t-shift/-fvk-u-shift 로
+//    넘기고(ShaderCompiler.cpp), 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 번호에 바인딩을 만든다.
+//    b0..b15 → 0..15 (UBO), t0..t15 → 16..31 (SSBO), u0..u15 → 32..47 (SSBO).
+// ------------------------------------------------------------------------------
+#define SW_VK_B_SHIFT                  0
+#define SW_VK_T_SHIFT                  16
+#define SW_VK_U_SHIFT                  32
+#define SW_VK_SLOT_BAND_WIDTH          16
+#define SW_VK_SLOT_BINDING_COUNT       48
+
+// ------------------------------------------------------------------------------
+// 7) OpenGL SSBO 번호 — t# 는 binding #, u# 는 binding SW_GL_UAV_BINDING0 + # (DXC -fvk-u-shift 가 이 값이다).
 //    둘을 나누지 않으면 gpucull 의 g_Instances(t0) 와 g_IndirectArgs(u0) 가 같은 SSBO 자리를 다툰다.
 // ------------------------------------------------------------------------------
 #define SW_GL_UAV_BINDING0             16
+// OpenGL 이미지 유닛 — 컴퓨트 RW 텍스처 u4..u7 → 이미지 유닛 0..3 (SSBO 와 다른 이름공간, common.hlsli 가 명시 binding 으로 적는다).
+#define SW_GL_IMAGE_UNIT0              0
+#define SW_GL_IMAGE_UNIT1              1
+#define SW_GL_IMAGE_UNIT2              2
+#define SW_GL_IMAGE_UNIT3              3
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

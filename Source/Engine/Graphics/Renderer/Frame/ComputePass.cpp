@@ -54,7 +54,8 @@ namespace sw
 
         for ( const auto& [slot, descriptorIndex] : _mapSrvBinding )
         {
-            pCmdList->bindShaderResource( descriptorIndex, slot );
+            // 컴퓨트 스테이지용 — 그래픽스 bindShaderResource 는 DX11 에서 PS 슬롯에 걸리고 DX12 에서는 그래픽스 루트에 쓴다.
+            pCmdList->bindComputeShaderResource( descriptorIndex, slot );
         }
 
         pCmdList->dispatchCompute( params._threadGroupCountX, params._threadGroupCountY, params._threadGroupCountZ );

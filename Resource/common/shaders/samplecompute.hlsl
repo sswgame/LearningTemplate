@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 #include "common.hlsli"
 
 struct ComputeData
@@ -13,6 +6,7 @@ struct ComputeData
 	float  factor;
 };
 
+// 바인딩 계약(bindingslots.hlsli): 컴퓨트 UAV u0. C++: bindComputeUAV( index, 0 ).
 SW_DECLARE_RW_STRUCTURED_BUFFER( ComputeData, g_OutputBuffer, 0 );
 
 [numthreads( 64, 1, 1 )]

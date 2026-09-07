@@ -4,6 +4,11 @@
  * @details 번호는 이 파일에 없다. HLSL 과 C++ 가 같은 파일을 읽으므로 "수동 동기" 가 사라진다.
  *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingContract 가 구운 바이너리의
  *          리플렉션을 이 값과 대조한다 (런타임 로드 시 + 테스트).
+ *
+ *          모델(언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 같고(register b#/t#/u#), 드로우별 데이터는
+ *          바인딩이 아니라 버퍼(인스턴스 t4, 머티리얼 t9)에서 인덱스로 읽는다. 백엔드는 리플렉션이 준 슬롯을
+ *          각자의 방식으로 건다 — DX12 루트 디스크립터, Vulkan 세트 0 의 시프트된 binding, DX11/GL 슬롯.
+ *          텍스처만 DX12/Vulkan 이 무제한 배열(`bindless::`)이고 DX11/GL 은 고정 슬롯이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,16 +22,20 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 상수버퍼 (b#, space0)
         // ------------------------------------------------------------------------------
-        inline constexpr uint32 kPassConstantBuffer     = SW_SLOT_PASS_CB;
-        inline constexpr uint32 kMaterialConstantBuffer = SW_SLOT_MATERIAL_CB;
-        inline constexpr uint32 kComputeConstantBuffer  = SW_SLOT_COMPUTE_CB;
-        inline constexpr uint32 kMaxConstantBuffer      = SW_MAX_CONSTANT_BUFFER;
-        /// @brief DX12 루트 상수 / Vulkan 푸시 상수 — b0 space1.
-        inline constexpr uint32 kBindlessConstantRegister = SW_SLOT_BINDLESS_CB;
-        inline constexpr uint32 kBindlessConstantSpace    = SW_SPACE_BINDLESS_CB;
+        inline constexpr uint32 kPassConstantBuffer      = SW_SLOT_PASS_CB;
+        inline constexpr uint32 kMaterialConstantBuffer  = SW_SLOT_MATERIAL_CB;
+        inline constexpr uint32 kComputeConstantBuffer   = SW_SLOT_COMPUTE_CB;
+        inline constexpr uint32 kConstantBufferSlotCount = SW_CB_SLOT_COUNT;
+        inline constexpr uint32 kMaxConstantBuffer       = SW_MAX_CONSTANT_BUFFER;
+        /// @brief setComputeRootConstants 전용 루트/푸시 상수 — DX12 b0 space2, Vulkan 푸시 상수, DX11/GL UBO 에뮬.
+        inline constexpr uint32 kRootConstantRegister = SW_SLOT_ROOT_CB;
+        inline constexpr uint32 kRootConstantSpace    = SW_SPACE_ROOT_CB;
+        inline constexpr uint32 kRootConstantDwords   = SW_ROOT_DWORD_COUNT;
+        /// @brief DX11/GL 이 루트 상수를 담는 상수버퍼 슬롯 (b#, space0) — setComputeRootConstants 가 여기에 건다.
+        inline constexpr uint32 kRootConstantEmulSlot = SW_SLOT_ROOT_CB_EMUL;
 
         // ------------------------------------------------------------------------------
-        // 2) SRV (t#, space0) — 에뮬 백엔드(DX11/GL)의 고정 슬롯
+        // 2) SRV (t#, space0) — 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
         inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_SLOT_COUNT;
@@ -36,39 +45,52 @@ namespace sw
          * @details 그 두 백엔드는 머티리얼이 준 전역 인덱스를 셰이더에서 풀 수 없다 — DX11 은 SM5.0 이라
          *          리소스 배열 동적 인덱싱이 없고(그건 SM5.1=D3D12), GL 은 SPIR-V 로 먹이므로
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
-         *          바인딩하고 MaterialCB 에는 서수를 넣는다.
+         *          바인딩하고 머티리얼 데이터에는 서수를 넣는다.
          */
         inline constexpr uint32 kMaterialTexture0     = SW_SLOT_MATERIAL_TEX0;
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
-        inline constexpr uint32 kSrvSlotCount         = SW_SRV_SLOT_COUNT;
-        inline constexpr uint32 kBindlessTextureSpace = SW_SPACE_BINDLESS_TEX;
+        /// @brief GPUScene 머티리얼 데이터 구조버퍼(g_SwMaterials) — 인스턴스 materialIndex 로 읽는다.
+        inline constexpr uint32 kMaterialBuffer = SW_SLOT_MATERIAL_BUFFER;
+        inline constexpr uint32 kSrvSlotCount   = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트 / 샘플러
         // ------------------------------------------------------------------------------
         inline constexpr uint32 kComputeSrvSlotCount = SW_COMPUTE_SRV_SLOT_COUNT;
         inline constexpr uint32 kComputeUavSlotCount = SW_COMPUTE_UAV_SLOT_COUNT;
-        inline constexpr uint32 kStaticSamplerSpace  = SW_SPACE_STATIC_SAMPLER;
-        inline constexpr uint32 kStaticSamplerCount  = SW_STATIC_SAMPLER_COUNT;
+        /// @brief 컴퓨트 RW 텍스처 슬롯 u4..u7 — DX11/GL 만 실제 슬롯이고 DX12/Vulkan 은 배열 인덱스라 bindComputeUAV 가 무시한다.
+        inline constexpr uint32 kComputeTextureUav0         = SW_SLOT_COMPUTE_TEXUAV0;
+        inline constexpr uint32 kComputeTextureUavSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
+        inline constexpr uint32 kStaticSamplerCount         = SW_STATIC_SAMPLER_COUNT;
+        inline constexpr uint32 kStaticSamplerArrayCount    = SW_STATIC_SAMPLER_ARRAY_COUNT;
+        inline constexpr uint32 kSamplerShadowCmp           = SW_SAMPLER_SHADOW_CMP;
 
-        /// @brief Vulkan 디스크립터 세트 번호 — 파이프라인 레이아웃과 HLSL `[[vk::binding(slot, set)]]` 의 정본.
+        /// @brief 네이티브 bindless 텍스처 배열(DX12/Vulkan) 의 자리 — 슬롯 리소스와 분리돼 있다.
+        namespace bindless
+        {
+            inline constexpr uint32 kTextureSpace           = SW_SPACE_BINDLESS_TEX;        ///< DX12: t0 space1
+            inline constexpr uint32 kVkTextureSet           = SW_VK_TEXTURE_SET;            ///< Vulkan set 1
+            inline constexpr uint32 kVkTextureBinding       = SW_VK_TEXTURE_BINDING;        ///< set 1 binding 0 = 배열
+            inline constexpr uint32 kVkSamplerBinding       = SW_VK_SAMPLER_BINDING;        ///< set 1 binding 1 = immutable sampler 배열
+            inline constexpr uint32 kVkShadowSamplerBinding = SW_VK_SHADOW_SAMPLER_BINDING; ///< set 1 binding 2 = 비교 샘플러
+            inline constexpr uint32 kVkRwTextureBinding     = SW_VK_RWTEXTURE_BINDING;      ///< set 1 binding 3 = STORAGE_IMAGE 배열
+        } // namespace bindless
+
+        /// @brief Vulkan 슬롯 세트(set 0) — binding = 종류별 시프트 + 레지스터 번호 (DXC -fvk-*-shift 와 같은 값).
         namespace vk
         {
-            inline constexpr uint32 kSetPassCb          = SW_VK_SET_PASS_CB;
-            inline constexpr uint32 kSetBindlessTexture = SW_VK_SET_BINDLESS_TEX;
-            inline constexpr uint32 kSetStaticSampler   = SW_VK_SET_STATIC_SAMPLER;
-            inline constexpr uint32 kSetStorage0        = SW_VK_SET_STORAGE0;
-            inline constexpr uint32 kStorageSetCount    = SW_VK_STORAGE_SET_COUNT;
-            inline constexpr uint32 kSetUav0            = SW_VK_SET_UAV0;
-            inline constexpr uint32 kUavSetCount        = SW_VK_UAV_SET_COUNT;
-            inline constexpr uint32 kSetMaterialCb      = SW_VK_SET_MATERIAL_CB;
-            inline constexpr uint32 kBoundSetCount      = SW_VK_BOUND_SET_COUNT;
+            inline constexpr uint32 kBShift           = SW_VK_B_SHIFT;
+            inline constexpr uint32 kTShift           = SW_VK_T_SHIFT;
+            inline constexpr uint32 kUShift           = SW_VK_U_SHIFT;
+            inline constexpr uint32 kBandWidth        = SW_VK_SLOT_BAND_WIDTH;
+            inline constexpr uint32 kSlotBindingCount = SW_VK_SLOT_BINDING_COUNT;
         } // namespace vk
 
         /// @brief OpenGL SSBO 번호 — u# 는 t# 와 겹치지 않게 SW_GL_UAV_BINDING0 부터 (DXC -fvk-u-shift 값이기도 하다).
         namespace gl
         {
             inline constexpr uint32 kUavBinding0 = SW_GL_UAV_BINDING0;
+            inline constexpr uint32 kImageUnit0  = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u4..u7 → 이미지 유닛 0..3
         } // namespace gl
 
         /// @brief 엔진 예약 CB 이름 (리플렉션 매칭 키).
@@ -77,18 +99,25 @@ namespace sw
             inline constexpr const utf8* kPass     = "PassCB";
             inline constexpr const utf8* kMaterial = "MaterialCB";
             inline constexpr const utf8* kCull     = "CullParams";
+            /// @brief SW_ROOT_CONSTANTS_BEGIN/END 가 선언하는 루트/푸시 상수 블록 (DX12 b0 space2, Vulkan 푸시 상수, DX11/GL b2).
+            inline constexpr const utf8* kRootConstants = "SwRootConstants";
         } // namespace cbname
 
         /// @brief 엔진 예약 리소스 이름 (binding.hlsli / gpucull.hlsl 선언과 같아야 한다 — 계약 검증 키).
         namespace resname
         {
-            inline constexpr const utf8* kInstances         = "g_SwInstances";
-            inline constexpr const utf8* kEngineTexture     = "g_SwSlot";        ///< + 0..3
-            inline constexpr const utf8* kMaterialTexture   = "g_SwMaterialTex"; ///< + 0..3
-            inline constexpr const utf8* kBindlessTextures  = "g_SwBindlessTex2D";
-            inline constexpr const utf8* kLinearWrapSampler = "g_SwSamplerLinearWrap";
-            inline constexpr const utf8* kCullInstances     = "g_Instances";
-            inline constexpr const utf8* kCullIndirectArgs  = "g_IndirectArgs";
+            inline constexpr const utf8* kInstances          = "g_SwInstances";
+            inline constexpr const utf8* kMaterials          = "g_SwMaterials";
+            inline constexpr const utf8* kEngineTexture      = "g_SwSlot";        ///< + 0..3
+            inline constexpr const utf8* kMaterialTexture    = "g_SwMaterialTex"; ///< + 0..3
+            inline constexpr const utf8* kBindlessTextures   = "g_SwBindlessTex2D";
+            inline constexpr const utf8* kBindlessRwTextures = "g_SwBindlessRWTex2D";
+            inline constexpr const utf8* kSamplers           = "g_SwSamplers";         ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
+            inline constexpr const utf8* kSamplerSlot        = "g_SwSampler";          ///< + 0..6 — DX12 정적 샘플러 s# (배열은 정적 샘플러로 못 채운다)
+            inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp"; ///< s7 비교 샘플러
+            inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";           ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
+            inline constexpr const utf8* kCullInstances      = "g_Instances";
+            inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
         } // namespace resname
 
         // 계약 내부 일관성 — 값을 바꾸면 여기서 먼저 걸린다.
@@ -97,17 +126,28 @@ namespace sw
         static_assert( SW_SLOT_MATERIAL_TEX1 == SW_SLOT_MATERIAL_TEX0 + 1 && SW_SLOT_MATERIAL_TEX2 == SW_SLOT_MATERIAL_TEX0 + 2 &&
                            SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3,
                        "머티리얼 텍스처 슬롯은 연속이어야 한다 (셰이더가 서수로 고른다)" );
-        static_assert( kMaterialTexture0 + kMaterialTextureCount == kSrvSlotCount, "SRV 슬롯 총수는 머티리얼 텍스처 마지막 슬롯 + 1 이다" );
+        static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount && kMaterialBuffer + 1 == kSrvSlotCount,
+                       "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
-        static_assert( vk::kSetUav0 == vk::kSetStorage0 + 1 && SW_VK_SET_UAV2 == vk::kSetUav0 + vk::kUavSetCount - 1,
-                       "Vulkan UAV 세트는 읽기 세트의 뒤쪽을 공유한다" );
-        static_assert( vk::kSetStorage0 + vk::kStorageSetCount <= vk::kSetMaterialCb, "Vulkan 스토리지 세트가 MaterialCB 세트와 겹친다" );
-        static_assert( vk::kSetMaterialCb + 1 == vk::kBoundSetCount, "MaterialCB 세트는 마지막 세트다" );
-        static_assert( SW_SPACE_INSTANCE_SRV == vk::kSetStorage0 && kBindlessTextureSpace == vk::kSetBindlessTexture &&
-                           kStaticSamplerSpace == vk::kSetStaticSampler,
-                       "HLSL space 와 Vulkan set 은 같은 값이어야 한다" );
-        static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kMaxConstantBuffer, "예약 CB 슬롯 충돌" );
-        static_assert( SW_VK_SET_STORAGE3 == vk::kSetStorage0 + vk::kStorageSetCount - 1, "Vulkan 스토리지 세트는 연속이어야 한다" );
+        static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
+                           kComputeConstantBuffer < kConstantBufferSlotCount,
+                       "예약 CB 슬롯은 백엔드가 마련한 b# 자리 안이어야 한다" );
+        static_assert( kSrvSlotCount <= vk::kBandWidth && kComputeUavSlotCount <= vk::kBandWidth && kConstantBufferSlotCount <= vk::kBandWidth,
+                       "슬롯 수가 Vulkan 세트 0 의 종류별 밴드 폭을 넘는다" );
+        static_assert( vk::kTShift == vk::kBShift + vk::kBandWidth && vk::kUShift == vk::kTShift + vk::kBandWidth &&
+                           vk::kSlotBindingCount == vk::kUShift + vk::kBandWidth,
+                       "Vulkan 세트 0 밴드(b/t/u)는 연속이어야 한다" );
+        static_assert( kRootConstantSpace != 0 && kRootConstantSpace != bindless::kTextureSpace, "루트 상수 space 가 슬롯/텍스처 배열과 겹친다" );
+        static_assert( kRootConstantEmulSlot < kConstantBufferSlotCount && kRootConstantEmulSlot != kPassConstantBuffer && kRootConstantEmulSlot != kMaterialConstantBuffer,
+                       "루트 상수 에뮬 슬롯은 예약 CB 와 겹치지 않는 b# 자리여야 한다" );
+        static_assert( kComputeTextureUav0 == kComputeUavSlotCount && kComputeTextureUav0 + kComputeTextureUavSlotCount <= vk::kBandWidth,
+                       "컴퓨트 RW 텍스처 슬롯은 버퍼 UAV 슬롯 바로 다음이어야 한다" );
+        static_assert( SW_SLOT_COMPUTE_TEXUAV1 == SW_SLOT_COMPUTE_TEXUAV0 + 1 && SW_SLOT_COMPUTE_TEXUAV2 == SW_SLOT_COMPUTE_TEXUAV0 + 2 &&
+                           SW_SLOT_COMPUTE_TEXUAV3 == SW_SLOT_COMPUTE_TEXUAV0 + 3 && SW_GL_IMAGE_UNIT1 == SW_GL_IMAGE_UNIT0 + 1 &&
+                           SW_GL_IMAGE_UNIT2 == SW_GL_IMAGE_UNIT0 + 2 && SW_GL_IMAGE_UNIT3 == SW_GL_IMAGE_UNIT0 + 3,
+                       "RW 텍스처 슬롯/이미지 유닛은 연속이어야 한다 (셰이더가 서수로 고른다)" );
+        static_assert( kStaticSamplerArrayCount + 1 == kStaticSamplerCount && kSamplerShadowCmp == kStaticSamplerArrayCount,
+                       "비교 샘플러는 샘플러 배열 바로 다음 번호(마지막)여야 한다" );
         static_assert( gl::kUavBinding0 >= kSrvSlotCount && gl::kUavBinding0 >= kComputeSrvSlotCount, "GL UAV SSBO 번호가 SRV 번호와 겹친다" );
     } // namespace shaderslot
 } // namespace sw

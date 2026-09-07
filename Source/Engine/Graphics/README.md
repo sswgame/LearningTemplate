@@ -128,14 +128,14 @@ Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapCha
 | Immediate + Deferred Context | ● | ● | ● | ● |
 | CommandContext (draw/barrier/…) | ● | ● | ● | ● |
 | SwapChain | Device 로직 + thin facade | 동상 | 동상 | SwapChain TU에 로직 |
-| Native bindless | 런타임 세트 기준 | 에뮬 | 에뮬 | `_bHeapDirectlyIndexed` |
+| Bindless 텍스처 배열 | set 1 텍스처 배열 | 에뮬(t 슬롯) | 에뮬(t 슬롯) | `_bBindlessRootSignature`(t0 space1 테이블) |
 
 **의도적 차이(패리티 예외):**
 
 - DX11/GL `prepareTextureForShaderRead` — 상태리스라 no-op (DX12/VK는 barrier/layout)
 - DX11 `transitionBuffer` no-op; GL은 `glMemoryBarrier` soft
 - Exclusive graphics context thread — DX11/GL만
-- Native bindless sampling — DX12/VK; DX11/GL은 bind-at-draw로 기능 동등
+- Native bindless sampling — DX12/VK 는 무제한 텍스처 배열 + 인덱스; DX11/GL 은 bind-at-draw 로 기능 동등. 버퍼(인스턴스·머티리얼 데이터)는 4 백엔드가 같은 StructuredBuffer 슬롯을 쓴다
 - Vulkan `createRenderPass(desc)` — 비어 있으면 swapchain RP alias; 어태치먼트가 있으면 **소유** VkRenderPass 생성
 
 프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice` 에 있고, 창의 백버퍼는
@@ -161,20 +161,25 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
                PassConstantValues 에 g_ViewProj/g_World/... 값 채움
                     ↓
 드로우 직전 ShaderBindingBinder::bindGraphics(layout, registry, values, ...)
-   - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer
-   - MaterialCB(b1): Material 의 bindless 인덱스 → bindConstantBuffer
-   - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (네이티브 bindless)
+   - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer (패스마다 한 번)
+   - g_SwMaterials(t9): 셰이더 타입별 StructuredBuffer<SwMaterialData_t> — GpuScene 이 Material/MaterialInstance 버퍼를
+                    리플렉션 stride 로 채워 배치 전에 bindStructuredBuffer. PS 는 인스턴스의 _materialIndex 로 원소를 읽는다
+   - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (DX12/VK 텍스처 배열)
                     비네이티브(DX11/GL)는 bindShaderResource(srv, 리플렉션 t#)
+   - MaterialCB(b1): 인스턴스 버퍼가 없는 픽스처(fullscreentriangle) 만 — Material 버퍼를 상수버퍼로 건다
+   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `SW_SampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11·GL 슬롯 결합 샘플러
+   - RW 텍스처    : 컴퓨트 전용 `SW_StoreTex2D( index, coord, v )` — DX12/VK 배열(registerBindlessTextureUAV 인덱스), DX11/GL u4..u7 서수
+   - 루트 상수    : `SW_ROOT_CONSTANTS_BEGIN … SW_ROOT_CONSTANTS_END` + `SW_ROOT( field )` ← setComputeRootConstants (16 dword)
 ```
 
 | 파일 | 역할 |
 |------|------|
-| `Shader/ShaderBindingSlots.h` | 슬롯 용량 상수 (C++ 측). HLSL 미러 `Resource/engine/shaders/bindingslots.hlsli` |
+| `Shader/ShaderBindingSlots.h` | 슬롯·공간·Vulkan 시프트 상수 (C++ 측). `Resource/engine/shaders/bindingslots.hlsli` 를 include 해 정본을 공유 |
 | `Shader/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
 | `Shader/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
 | `RenderPass/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
 | `RenderPass/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
-| `Resource/engine/shaders/binding.hlsli` | `bindless.hlsli` 대체. PassCB 선언 + `SampleShadow/Source/...` 헬퍼 + GPUScene 인스턴스 (4백엔드) |
+| `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `SampleShadow/Source/...` 헬퍼 (4백엔드) |
 
 **셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로
 쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
@@ -187,16 +192,18 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 ### GPUScene 인스턴스드 드로우 (언리얼 방식)
 
 메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData`, C++ `GpuInstance` 와 레이아웃 일치)
-에서 읽고, 배치당 `drawInstanced` 한 번으로 그린다. VS 는 `SwLoadInstanceWorld( SV_InstanceID )` 로 월드 행렬을
-얻는다. PassCB `g_InstanceBase` = 배치 시작 오프셋, `g_SwInstancesIndex` = 버퍼 bindless SRV 인덱스
-(`SW_INVALID_INDEX` 면 `g_World` 폴백). **4백엔드 전부 지원**:
+에서 읽고, 배치당 `drawInstanced` 한 번으로 그린다. VS 는 `SwLoadInstance( SV_InstanceID )` 로 월드 행렬과
+`materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼 버퍼
+`g_SwMaterials`(t9) 의 원소를 읽는다. PassCB `g_InstanceBase` = 배치 시작 오프셋, `g_SwInstancesIndex` 가
+`SW_INVALID_INDEX` 면 `g_World`/`g_MaterialIndex` 폴백(레거시 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
+같은 슬롯(t4/t9)** 을 쓰고 백엔드는 그 슬롯을 어떻게 거는지만 다르다:
 
-| 백엔드 | 인스턴스 버퍼 접근 |
+| 백엔드 | t4/t9 구조버퍼를 거는 방법 |
 |--------|--------------------|
-| DX12   | `ResourceDescriptorHeap[g_SwInstancesIndex]` (힙 인덱싱, StructuredBuffer SRV — `registerBindlessResource` 가 구조버퍼면 CBV 대신 SRV 생성) |
-| DX11   | `StructuredBuffer` SRV (t4) — `createStructuredBuffer` 가 SRV 생성, `VS/PSSetShaderResources` |
-| OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4)` |
-| Vulkan | storage buffer descriptor set (space6/binding0) — 파이프라인 레이아웃 set 6+slot 에 바인딩. **set 4 는 정적 샘플러(`g_SwSamplerLinearWrap`, immutable) 전용** 레이아웃으로 매 드로우 set 0/1 과 함께 바인딩 (`bindGraphicsMaterialSets`) |
+| DX12   | 루트 SRV(`SetGraphicsRootShaderResourceView`, 버퍼 GPU 주소). 텍스처 배열만 테이블(t0 space1). SM6.6 힙 인덱싱은 쓰지 않는다 |
+| DX11   | `StructuredBuffer` SRV — `createStructuredBuffer` 가 SRV 생성, `VS/PSSetShaderResources` |
+| OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 슬롯)` |
+| Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 프레임 풀에서 세트를 할당해 쓴다(`flushSlotSet`); 텍스처 배열·immutable sampler 는 set 1 |
 
 - GPU 컬(gpucull)은 `instanceCount` 만 줄이고 인스턴스 리스트를 compact 하지 않는다 (배치 앞 N개만 그림).
 - **RHI ABI**: `bindConstantBuffer`/`bindStructuredBuffer`/`drawInstanced` 추가 (`RHIModuleAbi` stamp `rhi-cl-v4-2026-09`).
@@ -215,11 +222,13 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 | 실수 | 결과 |
 |------|------|
-| Caps의 bindless = 실제 native | DX12는 `supportsNativeBindlessSampling()` → `_bHeapDirectlyIndexed` 확인 |
+| Caps의 bindless = 실제 native | DX12는 `supportsNativeBindlessSampling()` → `_bBindlessRootSignature` 확인 |
 | DebugDrawQueue = GPU 즉시 드로우 | 큐 API; 화면 표시는 Editor GameView 등 소비 측 |
 | Immediate Context = Immediate CommandList | Mode vs Context 혼동 — 위 표 참고 |
 | gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
 | DX11/GL prepareTexture가 “미구현 stub” | **의도적** 상태리스 no-op |
+| `-gv_rhiBackend=Vulkan` 으로 백엔드 선택 | 무시된다 — EngineConfig `_defaultRHI` 가 덮어쓴다. `-dx11` / `-dx12` / `-vk` / `-gl` 플래그를 쓴다 (스모크가 이 실수로 네 번 다 DX12 를 돌렸다) |
+| 백엔드 패리티를 "실행 성공" 으로 판정 | `RenderPassTest.FrameRendererParityAllBackends` 는 SceneColor 를 읽어 큐브 픽셀과 평균을 비교한다 — 픽셀을 보지 않는 스모크는 아무것도 증명하지 않는다 |
 
 ---
 
@@ -231,7 +240,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **P0** — 전 백엔드 dual Immediate/Deferred Context + Mode 배선
 - **P0** — SSAO/TAA/Tonemap/GpuCull 패스 실행 경로
 - **P0** — DX11/GL `prepareTextureForShaderRead` 정의 (의도적 no-op)
-- **P1** — DX12 `_bHeapDirectlyIndexed` ↔ `supportsNativeBindlessSampling()` / `getCapabilities()._bNativeBindless`
+- **P1** — DX12 `_bBindlessRootSignature` ↔ `supportsNativeBindlessSampling()` / `getCapabilities()._bNativeBindless`
 - **P1** — DebugDrawQueue 스피어 → `GameViewPanel` ImGui 원으로 소비
 - **P2** — DX12 `HEAP_DIRECTLY_INDEXED` 실패 시 bind-at-draw (런타임 Caps, WARNING 제거)
 - **P2** — Vulkan `createRenderPass(desc)` 소유 VkRenderPass 생성 + `destroy`/`shutdown`에서 해제 (빈 desc는 swapchain RP alias)

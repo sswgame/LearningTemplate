@@ -103,6 +103,11 @@ namespace sw
          *          네 백엔드를 같은 기준으로 비교하려면 이쪽을 쓴다.
          */
         bool dumpTransientToPpm( string_view attachmentName, string_view outFilePath );
+        /**
+         * @brief 트랜지언트 첨부를 CPU 로 읽어 옵니다 (밉 0). 테스트가 백엔드 간 픽셀을 비교하는 데 쓴다 — GPU 를 기다린다.
+         * @param outFormat 첨부의 RHIFormat (채널 순서 해석용).
+         */
+        bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
 
     private:
         /**
@@ -118,7 +123,7 @@ namespace sw
             IRHICommandList* _pCmd{ nullptr };
             /** @brief 엔진 PassCB 값 (이름 기반). ShaderBindingBinder 가 리플렉션 오프셋에 기록. */
             PassConstantValues _passValues{};
-            /** @brief 이번 드로우의 월드 행렬 (드로우마다 `g_World` 로 push, 인스턴스 경로에선 폴백용). */
+            /** @brief `g_World` — 인스턴스 버퍼가 없는 드로우(풀스크린·픽스처)의 월드 행렬. 씬 메시는 인스턴스 버퍼에서 읽는다. */
             float4x4           _world{};
             RHIBufferHandle    _passCb{ 0 };
             RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
@@ -226,6 +231,8 @@ namespace sw
         void registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& ctx );
+        /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 로 등록합니다. */
+        void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch );
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
@@ -340,6 +347,13 @@ namespace sw
         std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
         RHIBufferHandle    _gpuCullCb;
         RHIDescriptorIndex _gpuCullCbIndex;
+        /**
+         * @brief 머티리얼 데이터 버퍼가 없는 배치(머티리얼 없는 메시)에 거는 0 채운 원소 하나짜리 구조버퍼.
+         * @details DX12 루트 SRV 는 경계 검사가 없어 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)다 — 어떤 드로우도 빈 슬롯으로 나가지 않게
+         *          항상 유효한 버퍼를 건다 (언리얼의 기본 머티리얼과 같은 자리).
+         */
+        RHIBufferHandle    _materialFallbackBuffer;
+        RHIDescriptorIndex _materialFallbackSrv;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
         ShaderBindingLayoutCache                                          _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;

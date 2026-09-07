@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Profile/FrameProfiler.h"
 #include "Core/Task/TaskManager.h"
 
@@ -94,6 +95,7 @@ namespace sw
         _listOpaqueBatch.clear();
         _listTransparentBatch.clear();
         _listAllBatch.clear();
+        _listMaterialGroup.clear();
         _indirectCommandCount = 0;
         _listScratchCandidate.clear();
         _listScratchRaw.clear();
@@ -105,7 +107,27 @@ namespace sw
 
     void GpuScene::syncMaterialPins()
     {
-        _materialRetire.syncFromBatches( _listOpaqueBatch, _listTransparentBatch );
+        _materialRetire.syncFromBatches( _listOpaqueBatch, _listTransparentBatch, _listMaterialGroup );
+    }
+
+    void GpuScene::setMergeBatchesAcrossMaterials( bool bMerge )
+    {
+        const uint8 value = bMerge ? 1 : 0;
+        if ( _bMergeAcrossMaterials == value )
+            return;
+        _bMergeAcrossMaterials = value;
+        invalidateBuildCache();
+    }
+
+    Material* GpuScene::batchKeyMaterial( Material* pMaterial )
+    {
+        if ( _bMergeAcrossMaterials == 0 || pMaterial == nullptr )
+            return pMaterial;
+        auto it = _mapShaderRepresentative.find( pMaterial->getShaderPath() );
+        if ( it != _mapShaderRepresentative.end() )
+            return it->second;
+        _mapShaderRepresentative.emplace( pMaterial->getShaderPath(), pMaterial );
+        return pMaterial;
     }
 
     void GpuMaterialRetireQueue::clear()
@@ -128,7 +150,7 @@ namespace sw
         return false;
     }
 
-    void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent )
+    void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup )
     {
         unordered_set<MaterialInstance*> uniqueLive;
         auto                             collect = [&]( const vector<GpuMeshBatch>& listBatch )
@@ -141,6 +163,14 @@ namespace sw
         };
         collect( listOpaque );
         collect( listTransparent );
+        for ( const GpuMaterialGroup& group : listGroup )
+        {
+            for ( const auto& entry : group._listEntry )
+            {
+                if ( entry.second != nullptr )
+                    uniqueLive.insert( entry.second );
+            }
+        }
 
         for ( MaterialInstance* pInst : _uniquePinned )
         {
@@ -200,6 +230,7 @@ namespace sw
         _listScratchOpaqueEntry.reserve( count );
         _listScratchTransparentIdx.clear();
         _listScratchTransparentIdx.reserve( count );
+        _mapShaderRepresentative.clear();
 
         for ( uint32 instanceIndex = 0; instanceIndex < count; ++instanceIndex )
         {
@@ -209,7 +240,8 @@ namespace sw
                 _listScratchTransparentIdx.push_back( instanceIndex );
                 continue;
             }
-            SortKey key{ cand._pMesh, cand._pMaterial, cand._pInstance };
+            // 합치기가 켜져 있으면 같은 셰이더 타입은 머티리얼·인스턴스가 달라도 한 키다 — 파라미터는 원소 인덱스로 읽는다.
+            SortKey key{ cand._pMesh, batchKeyMaterial( cand._pMaterial ), _bMergeAcrossMaterials != 0 ? nullptr : cand._pInstance };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -297,7 +329,9 @@ namespace sw
                 cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
                 cand._pMesh        = pMesh;
                 cand._pMaterial    = pMeshComp->getMaterial();
-                cand._pInstance    = pMeshComp->getRawMaterialInstance();
+                if ( cand._pMaterial == nullptr )
+                    cand._pMaterial = pScene->getMaterial(); // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼)
+                cand._pInstance = pMeshComp->getRawMaterialInstance();
                 _listScratchCandidate.push_back( cand );
             }
         }
@@ -387,6 +421,8 @@ namespace sw
         // RT-owned context: pack MaterialInstance overrides and upload meshes in a single pass.
         GpuSceneInternal::applyInstanceCbsVal( pDevice, _listAllBatch );
         GpuSceneInternal::uploadMeshesVal( pDevice, _listAllBatch );
+        // 머티리얼 데이터 구조버퍼(셰이더 타입별) — 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 올린다.
+        uploadMaterialGroups( pDevice );
 
         const size_t opaqueCount = _listOpaqueBatch.size();
         for ( size_t batchIndex = 0; batchIndex < opaqueCount; ++batchIndex )
@@ -496,6 +532,19 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
+        for ( auto& pair : _mapMaterialGpu )
+        {
+            if ( pair.second._srv != kInvalidDescriptorIndex )
+                pDevice->getResource()->unregisterBindlessResource( pair.second._srv );
+            if ( pair.second._buffer != 0 )
+                pDevice->getResource()->destroyBuffer( pair.second._buffer );
+        }
+        _mapMaterialGpu.clear();
+        for ( GpuMeshBatch& batch : _listAllBatch )
+        {
+            batch._materialBuffer = 0;
+            batch._materialSrv    = kInvalidDescriptorIndex;
+        }
         if ( _instanceSrv != kInvalidDescriptorIndex )
             pDevice->getResource()->unregisterBindlessResource( _instanceSrv );
         if ( _indirectArgsUav != kInvalidDescriptorIndex )
@@ -521,6 +570,7 @@ namespace sw
         outSnapshot._listOpaqueBatch      = _listOpaqueBatch;
         outSnapshot._listTransparentBatch = _listTransparentBatch;
         outSnapshot._listAllBatch         = _listAllBatch;
+        outSnapshot._listMaterialGroup    = _listMaterialGroup;
         outSnapshot._indirectCommandCount = _indirectCommandCount;
         outSnapshot._bCpuDirty            = _bCpuDirty;
         _bCpuDirty                        = 0;
@@ -532,6 +582,7 @@ namespace sw
         _listOpaqueBatch      = std::move( snapshot._listOpaqueBatch );
         _listTransparentBatch = std::move( snapshot._listTransparentBatch );
         _listAllBatch         = std::move( snapshot._listAllBatch );
+        _listMaterialGroup    = std::move( snapshot._listMaterialGroup );
         _indirectCommandCount = snapshot._indirectCommandCount;
         _bCpuDirty            = snapshot._bCpuDirty;
     }
@@ -548,6 +599,7 @@ namespace sw
     void GpuScene::buildBatches()
     {
         _listInstance.reserve( _listScratchCandidate.size() );
+        _listMaterialGroup.clear();
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {
@@ -564,19 +616,27 @@ namespace sw
                     batch._instanceCount     = entryIndex - batchStart;
                     batch._blendMode         = RHIBlendMode::Opaque;
                     batch._pMaterialInstance = key._pInstance;
+                    batch._pMaterial         = key._pMaterial;
                     if ( key._pInstance != nullptr )
                         batch._materialCb = key._pInstance->getDescriptorIndex();
                     else
                         batch._materialCb = key._pMaterial ? key._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
                     // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
                     GpuSceneInternal::fillMaterialTextureSrvs( batch, key._pMaterial );
+                    batch._materialGroup = materialGroupFor( key._pMaterial );
+                    batch._materialIndex = 0;
 
+                    // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다 — 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 산다.
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
                     for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
                     {
-                        uint32      srcIdx   = _listScratchOpaqueEntry[batchEntryIndex]._srcIdx;
-                        GpuInstance inst     = _listScratchRaw[srcIdx];
-                        inst._meshBatchIndex = batchIndex;
+                        const uint32         srcIdx = _listScratchOpaqueEntry[batchEntryIndex]._srcIdx;
+                        const DrawCandidate& cand   = _listScratchCandidate[srcIdx];
+                        GpuInstance          inst   = _listScratchRaw[srcIdx];
+                        inst._meshBatchIndex        = batchIndex;
+                        inst._materialIndex         = assignMaterialElement( cand._pMaterial, cand._pInstance, batch._materialGroup );
+                        if ( batchEntryIndex == batchStart )
+                            batch._materialIndex = inst._materialIndex;
                         _listInstance.push_back( inst );
                     }
                     _listOpaqueBatch.push_back( batch );
@@ -599,7 +659,8 @@ namespace sw
                 {
                     const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
                     const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( a._pMaterial != b._pMaterial ) || ( a._pInstance != b._pInstance );
+                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial ) != batchKeyMaterial( b._pMaterial ) ) ||
+                                 ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -611,18 +672,25 @@ namespace sw
                     batch._instanceCount     = entryIndex - batchStart;
                     batch._blendMode         = RHIBlendMode::Transparent;
                     batch._pMaterialInstance = cand._pInstance;
+                    batch._pMaterial         = cand._pMaterial;
                     if ( cand._pInstance != nullptr )
                         batch._materialCb = cand._pInstance->getDescriptorIndex();
                     else
                         batch._materialCb = cand._pMaterial ? cand._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
                     GpuSceneInternal::fillMaterialTextureSrvs( batch, cand._pMaterial );
+                    batch._materialGroup = materialGroupFor( cand._pMaterial );
+                    batch._materialIndex = 0;
 
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
                     for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
                     {
-                        const uint32 srcIdx  = _listScratchTransparentIdx[batchEntryIndex];
-                        GpuInstance  inst    = _listScratchRaw[srcIdx];
-                        inst._meshBatchIndex = batchIndex;
+                        const uint32         srcIdx    = _listScratchTransparentIdx[batchEntryIndex];
+                        const DrawCandidate& entryCand = _listScratchCandidate[srcIdx];
+                        GpuInstance          inst      = _listScratchRaw[srcIdx];
+                        inst._meshBatchIndex           = batchIndex;
+                        inst._materialIndex            = assignMaterialElement( entryCand._pMaterial, entryCand._pInstance, batch._materialGroup );
+                        if ( batchEntryIndex == batchStart )
+                            batch._materialIndex = inst._materialIndex;
                         _listInstance.push_back( inst );
                     }
                     _listTransparentBatch.push_back( batch );
@@ -633,5 +701,144 @@ namespace sw
         }
 
         syncMaterialPins();
+    }
+
+    uint32 GpuScene::materialGroupFor( const Material* pMaterial )
+    {
+        if ( pMaterial == nullptr )
+            return kInvalidMaterialGroup;
+        const string& shaderPath = pMaterial->getShaderPath();
+        for ( uint32 index = 0; index < _listMaterialGroup.size(); ++index )
+        {
+            if ( _listMaterialGroup[index]._shaderPath == shaderPath )
+                return index;
+        }
+        GpuMaterialGroup group{};
+        group._shaderPath = shaderPath;
+        _listMaterialGroup.push_back( std::move( group ) );
+        return static_cast<uint32>( _listMaterialGroup.size() - 1 );
+    }
+
+    uint32 GpuScene::assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex )
+    {
+        if ( pMaterial == nullptr || groupIndex >= _listMaterialGroup.size() )
+            return 0;
+        GpuMaterialGroup& group = _listMaterialGroup[groupIndex];
+        for ( uint32 index = 0; index < group._listEntry.size(); ++index )
+        {
+            if ( group._listEntry[index].first == pMaterial && group._listEntry[index].second == pInstance )
+                return index;
+        }
+        group._listEntry.push_back( pair<Material*, MaterialInstance*>{ pMaterial, pInstance } );
+        return static_cast<uint32>( group._listEntry.size() - 1 );
+    }
+
+    void GpuScene::uploadMaterialGroups( IRHIDevice* pDevice )
+    {
+        SW_PROFILE_SCOPE( "RT.GpuScene.uploadMaterials" );
+        if ( pDevice == nullptr )
+            return;
+
+        for ( const GpuMaterialGroup& group : _listMaterialGroup )
+        {
+            if ( group._listEntry.empty() )
+                continue;
+
+            // 원소 stride = 셰이더 리플렉션이 준 구조버퍼 원소 크기(Material::getElementStride, 백엔드마다 다르다).
+            // 같은 셰이더의 머티리얼은 같은 stride 를 가진다 — 다르면 가장 큰 것을 쓴다.
+            uint32 stride{ 0 };
+            for ( const auto& entry : group._listEntry )
+            {
+                Material* pMaterial = entry.first;
+                if ( pMaterial == nullptr )
+                    continue;
+                // 레이아웃 정본은 셰이더 — 이 백엔드의 리플렉션으로 오프셋·stride 를 맞춘 뒤 바이트를 읽는다(백엔드마다 한 번).
+                pMaterial->ensureShaderLayout( pDevice );
+                uint32 entryStride = pMaterial->getElementStride();
+                if ( entryStride == 0 )
+                    entryStride = static_cast<uint32>( pMaterial->getBuffer().size() );
+                stride = MathUtil::max( stride, entryStride );
+            }
+            // stride 는 셰이더가 선언한 원소 크기 그대로다 — DX11 은 SRV 의 구조 stride 가 셰이더 선언(24 등)과 다르면 디버그 레이어가
+            // 오류로 잡고, 네 백엔드가 DX 패킹(-fvk-use-dx-layout)으로 같은 stride 를 쓴다. 16 정렬로 키우면 DX11 이 "32 vs 24" 를 낸다.
+            if ( stride == 0 )
+                continue;
+
+            const uint32 elementCount = static_cast<uint32>( group._listEntry.size() );
+            const uint32 needBytes    = stride * elementCount;
+            _listMaterialScratch.assign( needBytes, 0 );
+            for ( uint32 element = 0; element < elementCount; ++element )
+            {
+                const Material*         pMaterial = group._listEntry[element].first;
+                const MaterialInstance* pInstance = group._listEntry[element].second;
+                if ( pMaterial == nullptr )
+                    continue;
+                const vector<uint8>& bytes = ( pInstance != nullptr && pInstance->getBuffer().empty() == false ) ? pInstance->getBuffer() : pMaterial->getBuffer();
+                const uint32         copy  = MathUtil::min( stride, static_cast<uint32>( bytes.size() ) );
+                if ( copy > 0 )
+                    Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );
+            }
+
+            GpuMaterialGpu& gpu       = _mapMaterialGpu[group._shaderPath];
+            const bool      bRecreate = ( gpu._buffer == 0 || gpu._capacityBytes < needBytes || gpu._stride != stride );
+            if ( bRecreate )
+            {
+                if ( gpu._buffer != 0 )
+                {
+                    if ( gpu._srv != kInvalidDescriptorIndex )
+                        pDevice->getResource()->unregisterBindlessResource( gpu._srv );
+                    pDevice->getResource()->destroyBuffer( gpu._buffer );
+                    gpu = GpuMaterialGpu{};
+                }
+                // 여유를 두어 머티리얼이 하나 늘 때마다 다시 만들지 않는다.
+                const uint32  capacityElements = MathUtil::max( elementCount * 2u, 16u );
+                RHIBufferDesc desc{};
+                desc._elementSize  = stride;
+                desc._elementCount = capacityElements;
+                desc._sizeBytes    = stride * capacityElements;
+                desc._usage        = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+                desc._pInitialData = nullptr;
+                gpu._buffer        = pDevice->getResource()->createBuffer( desc );
+                if ( gpu._buffer == 0 )
+                    gpu._buffer = pDevice->getResource()->createStructuredBuffer( stride, capacityElements );
+                if ( gpu._buffer == 0 )
+                {
+                    SW_LOG_ERROR( "머티리얼 데이터 버퍼 생성 실패 (%#, stride %#, %# 원소).", group._shaderPath.c_str(), stride, elementCount );
+                    continue;
+                }
+                gpu._srv           = pDevice->getResource()->registerBindlessResource( gpu._buffer );
+                gpu._capacityBytes = desc._sizeBytes;
+                gpu._stride        = stride;
+            }
+            // 값이 지난 업로드와 같으면 올리지 않는다 — 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만으로 준다.
+            const bool bChanged = bRecreate || gpu._lastBytes.size() != needBytes ||
+                                  Memory::compare( gpu._lastBytes.data(), _listMaterialScratch.data(), needBytes ) != 0;
+            if ( bChanged )
+            {
+                pDevice->getResource()->updateStructuredBuffer( gpu._buffer, _listMaterialScratch.data(), needBytes );
+                gpu._lastBytes.assign( _listMaterialScratch.begin(), _listMaterialScratch.begin() + needBytes );
+            }
+        }
+
+        auto applyToBatches = [this]( vector<GpuMeshBatch>& listBatch )
+        {
+            for ( GpuMeshBatch& batch : listBatch )
+            {
+                batch._materialBuffer = 0;
+                batch._materialSrv    = kInvalidDescriptorIndex;
+                batch._materialCount  = 0;
+                if ( batch._materialGroup == kInvalidMaterialGroup || batch._materialGroup >= _listMaterialGroup.size() )
+                    continue;
+                auto it = _mapMaterialGpu.find( _listMaterialGroup[batch._materialGroup]._shaderPath );
+                if ( it == _mapMaterialGpu.end() )
+                    continue;
+                batch._materialBuffer = it->second._buffer;
+                batch._materialSrv    = it->second._srv;
+                batch._materialCount  = static_cast<uint32>( _listMaterialGroup[batch._materialGroup]._listEntry.size() );
+            }
+        };
+        applyToBatches( _listAllBatch );
+        applyToBatches( _listOpaqueBatch );
+        applyToBatches( _listTransparentBatch );
     }
 } // namespace sw

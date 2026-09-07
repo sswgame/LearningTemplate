@@ -61,45 +61,43 @@ namespace sw
 #endif
         , _bMultiDrawIndirect{ SW_FALSE }
         , _bDrawIndirectCount{ SW_FALSE }
+        , _bSamplerAnisotropy{ SW_FALSE }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _reservedVulkan{ 0 }
         , _defaultSampler{ nullptr }
         , _pipelineLayout{ nullptr }
-        , _descriptorSetLayout{ nullptr }
-        , _uavDescriptorSetLayout{ nullptr }
         , _descriptorPool{ nullptr }
-        , _descriptorSet{ nullptr }
-        , _staticSamplerLinearWrap{ nullptr }
-        , _samplerSetLayout{ nullptr }
-        , _staticSamplerSet{ nullptr }
-        , _dummyUBO{ nullptr }
-        , _dummyUBOMemory{ nullptr }
+        , _arrStaticSampler{}
         , _pipeline{ nullptr }
         , _offscreenPipeline{ nullptr }
         , _vertexBuffer{ nullptr }
         , _listBindlessFree{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
-        , _listRegisteredDescriptorSet{}
-        , _listRegisteredCbSetRing{}
         , _listBindlessSourceBuffer{}
-        , _listRegisteredUAV{}
         , _listUavSourceBuffer{}
+        , _listUavSourceTexture{}
         , _listUavFree{}
         , _gpuTextures{}
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _mapCompositeFramebuffer{}
         , _mapPipelineRenderPass{}
-        , _textureDescriptorSetLayout{ nullptr }
-        , _listRegisteredTexture{}
+        , _listTextureUsed{}
         , _listTextureFree{}
-        , _bindlessTextureArrayLayout{ nullptr }
-        , _bindlessTextureSet{ nullptr }
+        , _slotSetLayout{ nullptr }
+        , _textureSetLayout{ nullptr }
+        , _textureSet{ nullptr }
+        , _arrSlotPoolChain{}
+        , _arrSlotPoolCursor{}
+        , _slotPoolMutex{}
+        , _bSlotPoolExhaustedLogged{ 0 }
         , _bindlessDummyImage{ nullptr }
         , _bindlessDummyView{ nullptr }
         , _bindlessDummyMemory{ nullptr }
+        , _dummyUBO{ nullptr }
+        , _dummyUBOMemory{ nullptr }
         , _pipelineStates{}
         , _listRenderPass{}
         , _pipelineCache{ nullptr }
@@ -214,8 +212,7 @@ namespace sw
                 SW_LOG_ERROR( "Failed to create descriptor / pipeline layout resources." );
                 return false;
             }
-            (void)ensureBindlessTextureArray();
-            (void)ensureDefaultDescriptorSet();
+            (void)ensureTextureSet();
         }
 
         BLOCK( "Fullscreen Triangle" )
@@ -282,7 +279,6 @@ namespace sw
             _recordingState._boundIndexBuffer = 0;
             _recordingState._boundIndexStride = 4;
             _recordingState._boundIndexOffset = 0;
-            _listRegisteredDescriptorSet.clear();
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {
@@ -311,14 +307,38 @@ namespace sw
                     vkDestroyRenderPass( _device, pair.second, nullptr );
             }
             _mapPipelineRenderPass.clear();
-            _listRegisteredTexture.clear();
+            _listTextureUsed.clear();
             _listTextureFree.clear();
 
-            _bindlessTextureSet = VK_NULL_HANDLE; // owned by descriptor pool
-            if ( _bindlessTextureArrayLayout )
+            _textureSet = VK_NULL_HANDLE; // owned by descriptor pool
+            if ( _textureSetLayout )
             {
-                vkDestroyDescriptorSetLayout( _device, _bindlessTextureArrayLayout, nullptr );
-                _bindlessTextureArrayLayout = nullptr;
+                vkDestroyDescriptorSetLayout( _device, _textureSetLayout, nullptr );
+                _textureSetLayout = nullptr;
+            }
+            if ( _slotSetLayout )
+            {
+                vkDestroyDescriptorSetLayout( _device, _slotSetLayout, nullptr );
+                _slotSetLayout = nullptr;
+            }
+            for ( vector<VkDescriptorPool>& chain : _arrSlotPoolChain )
+            {
+                for ( VkDescriptorPool pool : chain )
+                {
+                    if ( pool != VK_NULL_HANDLE )
+                        vkDestroyDescriptorPool( _device, pool, nullptr );
+                }
+                chain.clear();
+            }
+            if ( _dummyUBO )
+            {
+                vkDestroyBuffer( _device, _dummyUBO, nullptr );
+                _dummyUBO = nullptr;
+            }
+            if ( _dummyUBOMemory )
+            {
+                vkFreeMemory( _device, _dummyUBOMemory, nullptr );
+                _dummyUBOMemory = nullptr;
             }
             if ( _bindlessDummyView )
             {
@@ -351,12 +371,6 @@ namespace sw
                 _listFreeCmdListEntry.clear();
             }
 
-            if ( _textureDescriptorSetLayout )
-            {
-                vkDestroyDescriptorSetLayout( _device, _textureDescriptorSetLayout, nullptr );
-                _textureDescriptorSetLayout = nullptr;
-            }
-
             _pipelineStates.forEach( [this]( VulkanPipelineStateRecord& pso )
             {
                 if ( pso._pipeline != VK_NULL_HANDLE )
@@ -375,30 +389,14 @@ namespace sw
             }
             if ( _pipelineLayout )
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
-            if ( _dummyUBO )
-                vkDestroyBuffer( _device, _dummyUBO, nullptr );
-            if ( _dummyUBOMemory )
-                vkFreeMemory( _device, _dummyUBOMemory, nullptr );
             if ( _descriptorPool )
                 vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
-            if ( _descriptorSetLayout )
-                vkDestroyDescriptorSetLayout( _device, _descriptorSetLayout, nullptr );
-            if ( _uavDescriptorSetLayout )
+            for ( VkSampler& sampler : _arrStaticSampler )
             {
-                vkDestroyDescriptorSetLayout( _device, _uavDescriptorSetLayout, nullptr );
-                _uavDescriptorSetLayout = nullptr;
+                if ( sampler != VK_NULL_HANDLE )
+                    vkDestroySampler( _device, sampler, nullptr );
+                sampler = VK_NULL_HANDLE;
             }
-            if ( _samplerSetLayout )
-            {
-                vkDestroyDescriptorSetLayout( _device, _samplerSetLayout, nullptr );
-                _samplerSetLayout = nullptr;
-            }
-            if ( _staticSamplerLinearWrap )
-            {
-                vkDestroySampler( _device, _staticSamplerLinearWrap, nullptr );
-                _staticSamplerLinearWrap = nullptr;
-            }
-            _staticSamplerSet = nullptr; // 풀 파괴로 함께 해제됨
 
             _swapChain.destroy( _device );
             _swapChain.destroySemaphores( _device );

@@ -93,6 +93,51 @@ namespace sw
              * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
              * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
              */
+            /**
+             * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다 (InstanceIndex→InstanceId, VertexIndex→VertexId).
+             * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 낸다. ARB_gl_spirv 는 그 둘을
+             *          지원하지 않아 드라이버가 조용히 0 을 돌려줬다 — 인스턴스드 드로우가 전부 원소 0 을 읽어 큐브 16개가 한
+             *          자리에 겹쳤다. 엔진은 시작 인스턴스를 g_InstanceBase 로 넘기고 startInstance 0 으로 그리므로
+             *          gl_InstanceID(베이스 제외) 로도 뜻이 같다. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댄다.
+             */
+            static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
+            {
+                constexpr uint32 kOpDecorate           = 71;
+                constexpr uint32 kOpMemberDecorate     = 72;
+                constexpr uint32 kDecorationBuiltIn    = 11;
+                constexpr uint32 kBuiltInVertexId      = 5;
+                constexpr uint32 kBuiltInInstanceId    = 6;
+                constexpr uint32 kBuiltInVertexIndex   = 42;
+                constexpr uint32 kBuiltInInstanceIndex = 43;
+                if ( ioBytecode.size() < 20 || ( ioBytecode.size() % 4 ) != 0 )
+                    return;
+                uint32*      pWord     = reinterpret_cast<uint32*>( ioBytecode.data() );
+                const size_t wordCount = ioBytecode.size() / 4;
+                if ( pWord[0] != 0x07230203u )
+                    return;
+                size_t offset = 5;
+                while ( offset < wordCount )
+                {
+                    const uint32 opcode = pWord[offset] & 0xFFFFu;
+                    const uint32 length = pWord[offset] >> 16;
+                    if ( length == 0 || offset + length > wordCount )
+                        break;
+                    uint32* pValue = nullptr;
+                    if ( opcode == kOpDecorate && length >= 4 && pWord[offset + 2] == kDecorationBuiltIn )
+                        pValue = &pWord[offset + 3];
+                    else if ( opcode == kOpMemberDecorate && length >= 5 && pWord[offset + 3] == kDecorationBuiltIn )
+                        pValue = &pWord[offset + 4];
+                    if ( pValue != nullptr )
+                    {
+                        if ( *pValue == kBuiltInInstanceIndex )
+                            *pValue = kBuiltInInstanceId;
+                        else if ( *pValue == kBuiltInVertexIndex )
+                            *pValue = kBuiltInVertexId;
+                    }
+                    offset += length;
+                }
+            }
+
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
                 if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
@@ -314,8 +359,10 @@ namespace sw
                 wstring                          wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
 
                 vector<D3D_SHADER_MACRO> listMacro;
-                listMacro.reserve( desc._listDefine.size() + 2 );
+                listMacro.reserve( desc._listDefine.size() + 3 );
                 listMacro.push_back( { "DX11", "1" } );
+                if ( desc._stage == ShaderStage::Compute )
+                    listMacro.push_back( { "SW_STAGE_COMPUTE", "1" } );
                 for ( const ShaderMacroDefine& def : desc._listDefine )
                 {
                     if ( def._name.empty() )
@@ -444,12 +491,30 @@ namespace sw
                         listArgument.push_back( L"-spirv" );
                         listArgument.push_back( L"-fspv-target-env=vulkan1.3" );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
+                        // cbuffer·StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다 — 머티리얼 데이터 원소(g_SwMaterials)를
+                        // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride/오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
+                        listArgument.push_back( L"-fvk-use-dx-layout" );
+                        // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호 (bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
+                        // 쓰고 [[vk::binding]] 을 적지 않는다 — 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
+                        static const wstring s_bShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kBShift ).c_str() );
+                        static const wstring s_tShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kTShift ).c_str() );
+                        static const wstring s_uShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kUShift ).c_str() );
+                        listArgument.push_back( L"-fvk-b-shift" );
+                        listArgument.push_back( s_bShift.c_str() );
+                        listArgument.push_back( L"0" );
+                        listArgument.push_back( L"-fvk-t-shift" );
+                        listArgument.push_back( s_tShift.c_str() );
+                        listArgument.push_back( L"0" );
+                        listArgument.push_back( L"-fvk-u-shift" );
+                        listArgument.push_back( s_uShift.c_str() );
+                        listArgument.push_back( L"0" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                     {
                         listArgument.push_back( L"-spirv" );
                         listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
+                        listArgument.push_back( L"-fvk-use-dx-layout" ); // Vulkan 과 같은 이유 — 네 백엔드 원소 레이아웃 일치
                         listArgument.push_back( L"-fvk-b-shift" );
                         listArgument.push_back( L"16" );
                         listArgument.push_back( L"0" );
@@ -465,26 +530,28 @@ namespace sw
                     if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
                     {
                         listArgument.push_back( L"DX12=1" );
-                        // 그래픽스/컴퓨트 모두 힙 직접 인덱싱(SM6.6, Tier3) + bindless UAV 배열 사용 가능.
-                        // 컴퓨트 루트시그니처도 그래픽스와 동일한 블롭(heap-directly-indexed)이라 그대로 지원된다.
+                        // 네이티브 bindless 텍스처(common.hlsli SW_NATIVE_BINDLESS): 텍스처만 무제한 배열(t0 space1), 버퍼는
+                        // 루트 디스크립터 슬롯. SM6.6 힙 직접 인덱싱(ResourceDescriptorHeap)은 쓰지 않는다.
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_BINDLESS=1" );
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( L"BINDLESS_UAV=1" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
                         listArgument.push_back( L"VULKAN=1" );
-                        // 그래픽스/컴퓨트 모두 동일한 파이프라인 레이아웃(set1=bindless 텍스처)을 공유한다.
+                        // 네이티브 bindless 텍스처 — 세트 1 배열. 버퍼는 세트 0 의 슬롯(시프트된 binding).
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_BINDLESS=1" );
-                        listArgument.push_back( L"-D" );
-                        listArgument.push_back( L"BINDLESS_UAV=1" );
                     }
                     else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                         listArgument.push_back( L"OPENGL=1" );
                     else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
                         listArgument.push_back( L"DX11=1" );
+                    if ( desc._stage == ShaderStage::Compute )
+                    {
+                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열/슬롯, binding.hlsli 3)의 스위치.
+                        listArgument.push_back( L"-D" );
+                        listArgument.push_back( L"SW_STAGE_COMPUTE=1" );
+                    }
 
                     for ( const ShaderMacroDefine& def : desc._listDefine )
                     {
@@ -543,6 +610,8 @@ namespace sw
                         {
                             const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                             result._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
+                            if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
+                                ShaderCompilerInternal::patchSpirvBuiltinsForOpenGL( result._bytecode );
                             result._bSuccess = true;
                             saveToCacheIfEnabled( result._bytecode );
 

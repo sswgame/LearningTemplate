@@ -205,10 +205,9 @@ namespace sw
                 continue;
             }
 
-            // 텍스처와 달리 구조버퍼는 "네이티브 bindless(텍스처 샘플링)" 백엔드라도 항상 명시 바인딩이
-            // 필요할 수 있다 (Vulkan: 텍스처는 네이티브지만 그래픽스 storage buffer 는 디스크립터셋
-            // 바인딩 필요). 스킵 여부는 각 백엔드 bindStructuredBuffer 가 자체 판단한다
-            // (DX12 는 _bHeapDirectlyIndexed 면 내부에서 no-op).
+            // 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …): 리플렉션이 준 슬롯에 네 백엔드가 각자의 방식으로 건다 —
+            // DX12 루트 SRV, Vulkan 슬롯 세트, DX11 SRV 슬롯, GL SSBO. 드로우별로 바뀌는 데이터는 이 버퍼 안의 원소라
+            // 바인딩 자체는 패스/배치마다 한 번이다.
             const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
             if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
                 cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
