@@ -404,7 +404,9 @@ namespace sw
             return _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
         }
 
-        const bool bOk = _graph.execute( _graphContext );
+        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다 —
+        // 병렬 경로처럼 프레임 스트림으로 앞당길 수 없다(직렬은 순서가 곧 리스트 안의 위치다).
+        const bool bOk = _graph.execute( _graphContext, _pCmd );
         _pCmd->endCommandList();
         pDevice->executeCommandList( _pCmd );
         // _frameCmd 는 다음 프레임 prepareCommandList 에서 재사용. _pCmd 만 비움.

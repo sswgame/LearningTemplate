@@ -55,31 +55,31 @@ namespace sw
         if ( _pDevice == nullptr || waveCtx._pCmdList == nullptr )
             return;
 
-        // 이 웨이브가 읽을 것들 — 샘플링 가능 상태로.
-        if ( waveCtx._pListReadResource != nullptr )
-        {
-            for ( const hashed_string& name : *waveCtx._pListReadResource )
-            {
-                const RHITextureHandle texture = findTransient( name.c_str() );
-                if ( texture != 0 )
-                    waveCtx._pCmdList->prepareTextureForShaderRead( texture );
-            }
-        }
+        if ( waveCtx._pListBarrier == nullptr )
+            return;
 
-        // 이 웨이브가 쓸 것들 — 렌더타깃(또는 뎁스) 상태로. 컬러/뎁스 구분은 백엔드가 한다.
-        if ( waveCtx._pListWriteResource != nullptr )
+        // 그래프가 **실제로 바뀌는 전이만** 추려서 준다 — 여기서는 이름을 텍스처로 풀어 그대로 건다.
+        // 예전엔 이 웨이브가 읽고 쓰는 이름을 전부 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
+        // 반복해서 걸고 이미 맞는 상태도 다시 걸었다.
+        for ( const RenderGraphBarrier& barrier : *waveCtx._pListBarrier )
         {
-            for ( const hashed_string& name : *waveCtx._pListWriteResource )
+            if ( barrier._after == RenderGraphResourceState::Write )
             {
                 // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에 없다.
-                if ( name == attachmentNames()._swapchain )
+                if ( barrier._resource == attachmentNames()._swapchain )
                 {
                     waveCtx._pCmdList->prepareTextureForRenderTarget( 0 );
                     continue;
                 }
-                const RHITextureHandle texture = findTransient( name.c_str() );
+                const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
                 if ( texture != 0 )
                     waveCtx._pCmdList->prepareTextureForRenderTarget( texture );
+            }
+            else if ( barrier._after == RenderGraphResourceState::Read )
+            {
+                const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
+                if ( texture != 0 )
+                    waveCtx._pCmdList->prepareTextureForShaderRead( texture );
             }
         }
     }

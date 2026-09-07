@@ -198,13 +198,16 @@ namespace sw
             _mapNameToIndex[_listNode[nodeIndex]._name] = nodeIndex;
         }
 
+        // 수명은 실행 순서가 정해진 **뒤에야** 뜻이 있다 — "몇 번째 패스에서 처음/마지막으로 쓰이나" 이므로.
+        buildResourceLifetimes();
+
         return true;
     }
 
     /**
      * @brief 그래프 컴파일: 리소스 의존성 기준 Kahn 위상 정렬로 실행 시퀀스 구축
      */
-    bool RenderGraph::execute( RenderGraphExecutionContext& context )
+    bool RenderGraph::execute( RenderGraphExecutionContext& context, IRHICommandList* pCmdList )
     {
         context.reset();
 
@@ -227,14 +230,13 @@ namespace sw
             if ( node._bCulled )
                 continue;
 
-            for ( const hashed_string& input : node._listInput )
-            {
-                context.transitionTo( input, RenderGraphResourceState::Read );
-            }
-            for ( const hashed_string& output : node._listOutput )
-            {
-                context.transitionTo( output, RenderGraphResourceState::Write );
-            }
+            // 직렬 경로도 **같은 추론**을 쓴다. 예전엔 여기서 상태만 적어 두고 배리어는 내지 않았고,
+            // 그래서 전이가 패스 콜백 안 여기저기에서 즉흥적으로 일어났다 — 경로가 둘이면 한쪽에만 고쳐진다.
+            // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(웨이브처럼 앞으로 몰 수 없다).
+            _listWaveBarrier.clear();
+            _mapWaveBarrierIndex.clear();
+            appendPassBarriers( context, node );
+            issueBarriers( pCmdList );
 
             if ( node._execute.isBound() )
             {
@@ -289,8 +291,8 @@ namespace sw
         {
             listPassEntry.clear();
             listPassEntry.reserve( wave.size() );
-            _listWaveRead.clear();
-            _listWaveWrite.clear();
+            _listWaveBarrier.clear();
+            _mapWaveBarrierIndex.clear();
 
             for ( const hashed_string& passName : wave )
             {
@@ -305,16 +307,7 @@ namespace sw
                 if ( node._bCulled )
                     continue;
 
-                for ( const hashed_string& input : node._listInput )
-                {
-                    context.transitionTo( input, RenderGraphResourceState::Read );
-                    _listWaveRead.push_back( input );
-                }
-                for ( const hashed_string& output : node._listOutput )
-                {
-                    context.transitionTo( output, RenderGraphResourceState::Write );
-                    _listWaveWrite.push_back( output );
-                }
+                appendPassBarriers( context, node );
 
                 if ( node._execute.isBound() == false )
                     continue;
@@ -341,14 +334,7 @@ namespace sw
             // 패스 리스트보다 먼저 제출되므로(executeCommandList 가 스트림을 잘라 앞에 붙인다) GPU
             // 타임라인에서도 앞선다. 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를
             // 바꾸지 않는다 — 배리어를 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다.
-            if ( _wavePrologue.isBound() )
-            {
-                RenderGraphWaveContext waveCtx;
-                waveCtx._pListReadResource  = &_listWaveRead;
-                waveCtx._pListWriteResource = &_listWaveWrite;
-                waveCtx._pCmdList           = pDevice->getFrameStreamContext();
-                _wavePrologue( waveCtx );
-            }
+            issueBarriers( pDevice->getFrameStreamContext() );
 
             // 이 구간 동안 bindless 레지스트리는 불변이어야 한다 — 기록 중 등록/해제가 일어나면
             // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
@@ -501,67 +487,118 @@ namespace sw
         return result;
     }
 
-    /**
-     * @brief Transient Resource Aliasing을 위한 각 리소스별 수명 주기(First ~ Last Pass Index) 계산
-     */
-    vector<RenderGraphResourceLifetime> RenderGraph::computeResourceLifetimes() const
+    void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
-        unordered_map<hashed_string, RenderGraphResourceLifetime> mapLifetime;
+        // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다. 예전엔 이름을 그대로 밀어 넣어서 SceneDepth
+        // 처럼 여러 패스가 읽는 자원이 웨이브마다 읽기 전이를 다섯 번씩 받았다.
+        auto request = [this, &context]( hashed_string resource, RenderGraphResourceState desired )
+        {
+            const RenderGraphResourceState before = context.transitionTo( resource, desired );
+            if ( before == desired )
+                return; // 이미 그 상태다 — 낼 배리어가 없다.
+
+            const auto it = _mapWaveBarrierIndex.find( resource );
+            if ( it != _mapWaveBarrierIndex.end() )
+            {
+                // 같은 웨이브에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
+                // 그래도 들어오면 더 강한 쪽(쓰기)을 남긴다.
+                if ( desired == RenderGraphResourceState::Write )
+                    _listWaveBarrier[it->second]._after = desired;
+                return;
+            }
+
+            RenderGraphBarrier barrier{};
+            barrier._resource = resource;
+            barrier._before   = before;
+            barrier._after    = desired;
+            _mapWaveBarrierIndex.emplace( resource, _listWaveBarrier.size() );
+            _listWaveBarrier.push_back( barrier );
+        };
+
+        for ( const hashed_string& input : node._listInput )
+        {
+            request( input, RenderGraphResourceState::Read );
+        }
+        for ( const hashed_string& output : node._listOutput )
+        {
+            request( output, RenderGraphResourceState::Write );
+        }
+    }
+
+    void RenderGraph::issueBarriers( IRHICommandList* pCmdList )
+    {
+        // 커맨드 리스트가 없어도 콜백은 부른다 — 기록할 수 있는지는 받는 쪽의 사정이고, 그래프의 일은
+        // "무엇을 바꿔야 하는가" 를 내는 데까지다. GPU 없는 테스트가 추론만 따로 볼 수 있는 자리이기도 하다.
+        if ( _listWaveBarrier.empty() || _wavePrologue.isBound() == false )
+            return;
+
+        RenderGraphWaveContext waveCtx;
+        waveCtx._pListBarrier = &_listWaveBarrier;
+        waveCtx._pCmdList     = pCmdList;
+        _wavePrologue( waveCtx );
+    }
+
+    void RenderGraph::buildResourceLifetimes()
+    {
+        _listResourceLifetime.clear();
+        _mapResourceLifetimeIndex.clear();
+
+        auto touch = [this]( hashed_string resource, size_t passIndex, bool bWritten )
+        {
+            const auto it = _mapResourceLifetimeIndex.find( resource );
+            if ( it != _mapResourceLifetimeIndex.end() )
+            {
+                RenderGraphResourceLifetime& life = _listResourceLifetime[it->second];
+                life._lastPassIndex               = passIndex;
+                if ( bWritten )
+                    life._bWritten = true;
+                else
+                    life._bRead = true;
+                return;
+            }
+
+            RenderGraphResourceLifetime life{};
+            life._name           = resource;
+            life._firstPassIndex = passIndex;
+            life._lastPassIndex  = passIndex;
+            life._bWritten       = bWritten;
+            life._bRead          = bWritten == false;
+            _mapResourceLifetimeIndex.emplace( resource, _listResourceLifetime.size() );
+            _listResourceLifetime.push_back( life );
+        };
 
         for ( size_t passIndex = 0; passIndex < _listCompiledExecutionOrder.size(); ++passIndex )
         {
-            const hashed_string passName = _listCompiledExecutionOrder[passIndex];
-            auto                it       = _mapNameToIndex.find( passName );
+            const auto it = _mapNameToIndex.find( _listCompiledExecutionOrder[passIndex] );
             if ( it == _mapNameToIndex.end() )
                 continue;
-
             const RenderGraphNode& node = _listNode[it->second];
             for ( const hashed_string& input : node._listInput )
             {
-                auto lifeIt = mapLifetime.find( input );
-                if ( lifeIt == mapLifetime.end() )
-                {
-                    RenderGraphResourceLifetime life{};
-                    life._name           = input;
-                    life._firstPassIndex = passIndex;
-                    life._lastPassIndex  = passIndex;
-                    life._bRead          = true;
-                    mapLifetime[input]   = life;
-                }
-                else
-                {
-                    lifeIt->second._lastPassIndex = passIndex;
-                    lifeIt->second._bRead         = true;
-                }
+                touch( input, passIndex, false );
             }
-
             for ( const hashed_string& output : node._listOutput )
             {
-                auto lifeIt = mapLifetime.find( output );
-                if ( lifeIt == mapLifetime.end() )
-                {
-                    RenderGraphResourceLifetime life{};
-                    life._name           = output;
-                    life._firstPassIndex = passIndex;
-                    life._lastPassIndex  = passIndex;
-                    life._bWritten       = true;
-                    mapLifetime[output]  = life;
-                }
-                else
-                {
-                    lifeIt->second._lastPassIndex = passIndex;
-                    lifeIt->second._bWritten      = true;
-                }
+                touch( output, passIndex, true );
             }
         }
 
-        vector<RenderGraphResourceLifetime> listResult;
-        listResult.reserve( mapLifetime.size() );
-        for ( auto& [name, life] : mapLifetime )
+        // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 그림은 그럴듯하게 나오고
+        // 로그는 조용하다 — 파이프라인 XML 과 코드가 어긋났을 때 실제로 이렇게 조용히 틀렸다.
+        for ( const RenderGraphResourceLifetime& life : _listResourceLifetime )
         {
-            listResult.push_back( std::move( life ) );
+            if ( life._bRead && life._bWritten == false )
+            {
+                SW_LOG_WARNING( "Resource '%#' is read but never written by any pass — reads stale or zeroed content.",
+                                life._name.c_str() );
+            }
         }
-        return listResult;
+    }
+
+    const RenderGraphResourceLifetime* RenderGraph::findResourceLifetime( hashed_string name ) const
+    {
+        const auto it = _mapResourceLifetimeIndex.find( name );
+        return ( it != _mapResourceLifetimeIndex.end() ) ? &_listResourceLifetime[it->second] : nullptr;
     }
 
     /**
@@ -573,5 +610,7 @@ namespace sw
         _listCompiledExecutionOrder.clear();
         _listCompiledWave.clear();
         _mapNameToIndex.clear();
+        _listResourceLifetime.clear();
+        _mapResourceLifetimeIndex.clear();
     }
 } // namespace sw
