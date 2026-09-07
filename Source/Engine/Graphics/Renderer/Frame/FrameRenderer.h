@@ -399,8 +399,15 @@ namespace sw
         std::atomic<uint32> _passCbCursor{ 0 };
         /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
         std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
-        RHIBufferHandle    _gpuCullCb;
-        RHIDescriptorIndex _gpuCullCbIndex;
+        /**
+         * @brief 컬링 상수버퍼 — **뷰마다 하나**. 절두체 평면이 뷰마다 다르기 때문이다.
+         * @details 하나를 나눠 쓰면 두 번째 디스패치의 업로드가 첫 번째가 읽을 내용을 덮어쓴다(CPU 는
+         *          디스패치 사이에 쓰지만 GPU 는 제출 뒤에 읽는다). 실제로 그러다가 메인 뷰가 **그림자
+         *          라이트의 좁은 직교 절두체**로 컬링돼 화면 절반이 사라졌다. 패스 상수버퍼에서 겪은 것과
+         *          같은 함정이다.
+         */
+        RHIBufferHandle    _arrGpuCullCb[static_cast<uint32>( GpuCullView::Count )]{};
+        RHIDescriptorIndex _arrGpuCullCbIndex[static_cast<uint32>( GpuCullView::Count )]{};
         RHIBufferHandle    _instanceAnimCb;
         RHIDescriptorIndex _instanceAnimCbIndex;
         RHIBufferHandle    _instanceSortCb;
@@ -425,6 +432,17 @@ namespace sw
         /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 (업로드 전에 GpuScene 에 알린다). */
         bool wantsGpuGeneratedCommands() const;
         /**
+         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다 (instanceanim.hlsl).
+         * @details **컬링보다 먼저** 돌아야 한다 — 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의
+         *          바운드로 판정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
+         */
+        void dispatchInstanceAnimation( uint32 instanceCount );
+        /**
+         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 깊이순으로 되돌립니다 (gpucull/instancesort.hlsl).
+         * @details 컬링 결과는 절두체에 종속이라 뷰(메인/그림자)마다 자기 인자·목록을 따로 만든다.
+         */
+        void dispatchCullAndSort( uint32 instanceCount );
+        /**
          * @brief 인스턴스 애니메이션에 넣는 절대 시간(초).
          * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 만든다**. 누적하면 프레임
          *          간격의 흔들림이 그대로 쌓여 백엔드·실행마다 다른 각도가 나오고, 스크린샷 비교가 불가능해진다.
@@ -438,20 +456,13 @@ namespace sw
          *          항상 유효한 버퍼를 건다 (언리얼의 기본 머티리얼과 같은 자리).
          */
         /**
-         * @struct MaterialFallbackBuffer
          * @brief 머티리얼 없는 배치에 거는 0 채운 원소 하나짜리 구조버퍼 — **stride 마다 하나**.
          * @details 언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같다.
          *          예전엔 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData_t` 는
          *          24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다.
          */
-        struct MaterialFallbackBuffer
-        {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-        };
-
         /// @brief stride → 폴백 버퍼. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
-        unordered_map<uint32, MaterialFallbackBuffer> _mapMaterialFallback;
+        unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
         ShaderBindingLayoutCache                                          _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;

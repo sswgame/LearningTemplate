@@ -1218,6 +1218,127 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 }
 
 /**
+ * @brief [RenderPassTest] 메인 패스가 **카메라 절두체**로 컬링되는지 — 라이트 절두체가 아니라 (4 백엔드).
+ * @details 컬링은 뷰마다 돈다(메인 카메라 / 그림자 라이트). 그런데 상수버퍼를 **하나만** 두고 두 뷰가
+ *          나눠 쓰면, 두 번째 업로드가 첫 번째 디스패치가 읽을 내용을 덮어쓴다 — CPU 는 디스패치 사이에
+ *          쓰지만 GPU 는 제출 뒤에 읽기 때문이다. 실제로 그렇게 돼서 메인 뷰가 **그림자 라이트의 좁은
+ *          직교 절두체**로 걸러졌고, 화면에서 격자의 절반이 사라졌다.
+ *
+ *          그래서 큐브를 **라이트 상자 밖, 카메라 시야 안**에 둔다. 라이트는 원점 근처 2.2 폭 상자만
+ *          비추므로 x = ±2.5 는 확실히 밖이고, 카메라는 z 를 뒤로 물리면 그만큼 넓게 본다.
+ *          뷰를 잘못 쓰면 이 큐브들이 통째로 사라진다.
+ */
+SW_TEST_CASE( RenderPassTest, MainPassCullsWithCameraFrustumNotLight )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    // 라이트 직교 상자는 원점 중심 폭 2.22 — 반폭 1.11 에 바운드 반지름 0.87 을 더해도 2.5 는 밖이다.
+    constexpr float32 kSideX = 2.5f;
+    // 카메라(0, 1.2, 3.2)에서 뒤로 물려 시야 폭을 넓힌다 — 그래야 ±2.5 가 화면 안에 들어온다.
+    constexpr float32 kDepthZ = -6.0f;
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "CameraFrustumCullScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        sw::shared_ptr<sw::Mesh> sharedMesh;
+        if ( bOk )
+        {
+            sharedMesh = sw::Mesh::createUnitCube();
+            bOk        = sharedMesh != nullptr;
+        }
+        if ( bOk )
+        {
+            const float32 arrX[] = { -kSideX, kSideX };
+            for ( uint32 sideIndex = 0; sideIndex < 2 && bOk; ++sideIndex )
+            {
+                sw::string      name = sw::string( "FarCube" ) + sw::to_string( sideIndex );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                bOk                  = pObj != nullptr;
+                if ( bOk == false )
+                    break;
+                sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                bOk                          = pMeshComp != nullptr;
+                if ( bOk == false )
+                    break;
+                pMeshComp->setMesh( sharedMesh );
+                pMeshComp->setLocalPosition( sw::float3{ arrX[sideIndex], 0.0f, kDepthZ } );
+            }
+        }
+
+        if ( bOk )
+        {
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        {
+            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
+            const uint8* pCorner = bytes.data();
+            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
+            const int32  bgG     = pCorner[1];
+            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+
+            uint32 arrDrawn[2]{};
+            for ( uint32 y = 0; y < layout._height; ++y )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                for ( uint32 x = 0; x < layout._width; ++x )
+                {
+                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
+                    const int32  g      = pPixel[1];
+                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
+                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                        continue;
+                    ++arrDrawn[( x < layout._width / 2 ) ? 0u : 1u];
+                }
+            }
+
+            const sw::string label    = sw::string( device->getBackendName() );
+            const uint32     minDrawn = ( layout._width * layout._height ) / 3000;
+            SW_EXPECT_TRUE_MSG( arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn,
+                                ( label + ": 라이트 상자 밖의 큐브가 사라졌다 (좌 " + sw::to_string( arrDrawn[0] ) + ", 우 " +
+                                  sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) +
+                                  ") — 메인 패스가 카메라가 아니라 라이트 절두체로 걸러지고 있다" )
+                                    .c_str() );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
+
+        if ( sharedMesh != nullptr )
+            sharedMesh->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for camera frustum cull test" );
+}
+
+/**
  * @brief [RenderPassTest] 한 배치 안의 투명 인스턴스가 백엔드마다 같은 순서로 섞이는지 (4 백엔드).
  * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 **완료 순서**로 정해진다. 투명은 그 순서가 곧
  *          블렌딩 순서라 그대로 두면 그림이 틀린다. 그래서 컬링 뒤에 instancesort 가 깊이순으로 되돌린다.

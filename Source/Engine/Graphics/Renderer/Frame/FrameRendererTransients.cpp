@@ -45,9 +45,13 @@ namespace sw
             uint32  _batchCount{ 0 };
             uint32  _pad[2]{};
         };
-        _gpuCullCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuCullParams ) );
-        if ( _gpuCullCb != 0 )
-            _gpuCullCbIndex = _pDevice->getResource()->registerBindlessResource( _gpuCullCb );
+        // 뷰마다 하나씩 — 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+        {
+            _arrGpuCullCb[viewIndex] = _pDevice->getResource()->createConstantBuffer( sizeof( GpuCullParams ) );
+            if ( _arrGpuCullCb[viewIndex] != 0 )
+                _arrGpuCullCbIndex[viewIndex] = _pDevice->getResource()->registerBindlessResource( _arrGpuCullCb[viewIndex] );
+        }
 
         struct GpuAnimParams
         {
@@ -269,12 +273,15 @@ namespace sw
             _passCbCursor.store( 0, std::memory_order_relaxed );
             _frameCtx._passCb      = 0;
             _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-            _gpuCullCb             = 0;
-            _gpuCullCbIndex        = kInvalidDescriptorIndex;
-            _instanceAnimCb        = 0;
-            _instanceAnimCbIndex   = kInvalidDescriptorIndex;
-            _instanceSortCb        = 0;
-            _instanceSortCbIndex   = kInvalidDescriptorIndex;
+            for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+            {
+                _arrGpuCullCb[viewIndex]      = 0;
+                _arrGpuCullCbIndex[viewIndex] = kInvalidDescriptorIndex;
+            }
+            _instanceAnimCb      = 0;
+            _instanceAnimCbIndex = kInvalidDescriptorIndex;
+            _instanceSortCb      = 0;
+            _instanceSortCbIndex = kInvalidDescriptorIndex;
             _mapMaterialFallback.clear();
             _taaHistory    = 0;
             _taaHistorySrv = kInvalidDescriptorIndex;
@@ -329,11 +336,12 @@ namespace sw
         _passCbCursor.store( 0, std::memory_order_relaxed );
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-        releaseResource( _gpuCullCb, _gpuCullCbIndex );
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+            releaseResource( _arrGpuCullCb[viewIndex], _arrGpuCullCbIndex[viewIndex] );
         releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
         releaseResource( _instanceSortCb, _instanceSortCbIndex );
-        for ( auto& [stride, fallback] : _mapMaterialFallback )
-            releaseResource( fallback._buffer, fallback._srv );
+        for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
+            fallbackSlot.release( _pDevice );
         _mapMaterialFallback.clear();
         releaseResource( _taaHistory, _taaHistorySrv, true );
         _bPassResourcesReady = 0;
@@ -685,25 +693,15 @@ namespace sw
             if ( _mapMaterialFallback.find( stride ) != _mapMaterialFallback.end() )
                 continue;
 
-            RHIBufferDesc desc{};
-            desc._elementSize  = stride;
-            desc._elementCount = 1;
-            desc._sizeBytes    = stride;
-            desc._usage        = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-            desc._pInitialData = nullptr;
-
-            MaterialFallbackBuffer fallback{};
-            fallback._buffer = _pDevice->getResource()->createBuffer( desc );
-            if ( fallback._buffer == 0 )
-                fallback._buffer = _pDevice->getResource()->createStructuredBuffer( stride, 1 );
-            if ( fallback._buffer == 0 )
+            const vector<uint8>     zeroBytes( stride, 0 );
+            RHIStructuredBufferSlot fallback{};
+            if ( fallback.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false,
+                                          zeroBytes.data() ) == false )
             {
                 SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
                 continue;
             }
-            const vector<uint8> zeroBytes( stride, 0 );
-            _pDevice->getResource()->updateStructuredBuffer( fallback._buffer, zeroBytes.data(), stride );
-            fallback._srv = _pDevice->getResource()->registerBindlessResource( fallback._buffer );
+            fallback.upload( _pDevice, zeroBytes.data(), stride );
             _mapMaterialFallback.insert_or_assign( stride, fallback );
         }
     }

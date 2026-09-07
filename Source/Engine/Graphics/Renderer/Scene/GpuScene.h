@@ -10,6 +10,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
@@ -57,13 +58,8 @@ namespace sw
     /** @brief 뷰 하나가 갖는 컬링 산출물 (간접 인자 + 가시 인스턴스 목록). */
     struct GpuCullViewResources
     {
-        RHIBufferHandle    _indirectArgsBuffer{ 0 };
-        RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
-        RHIBufferHandle    _visibleInstanceBuffer{ 0 };
-        RHIDescriptorIndex _visibleInstanceSrv = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _visibleInstanceUav = kInvalidDescriptorIndex;
-        uint32             _argsCapacity{ 0 };
-        uint32             _visibleCapacity{ 0 };
+        RHIStructuredBufferSlot _indirectArgs;
+        RHIStructuredBufferSlot _visibleInstances;
     };
 
     /**
@@ -196,10 +192,7 @@ namespace sw
     /// @brief 그룹의 GPU 버퍼 — RT 소유, 셰이더 경로로 스냅샷을 넘어 재사용한다.
     struct GpuMaterialGpu
     {
-        RHIBufferHandle    _buffer{ 0 };
-        RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-        uint32             _capacityBytes{ 0 };
-        uint32             _stride{ 0 };
+        RHIStructuredBufferSlot _slot;
         /** @brief 마지막으로 올린 바이트 — 같으면 업로드를 건너뛴다 (언리얼처럼 더티만 올린다). */
         vector<uint8> _lastBytes;
     };
@@ -325,19 +318,19 @@ namespace sw
         /** @brief 투명 배치를 반환합니다. */
         const vector<GpuMeshBatch>& getTransparentBatches() const { return _listTransparentBatch; }
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
-        RHIBufferHandle getInstanceBuffer() const { return _instanceBuffer; }
+        RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
-        RHIDescriptorIndex getInstanceSrv() const { return _instanceSrv; }
+        RHIDescriptorIndex getInstanceSrv() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스 — 컴퓨트가 월드 행렬을 **고쳐 쓰는** 통로.
          * @details instanceanim.hlsl 이 인스턴스마다 다른 각속도로 회전을 얹는다. 백엔드가 구조버퍼 UAV 를
          *          못 만들면 kInvalidDescriptorIndex 라 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
-        RHIDescriptorIndex getInstanceUav() const { return _instanceUav; }
+        RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물 (간접 인자 + 가시 목록). */
         const GpuCullViewResources& getCullView( GpuCullView view ) const { return _arrCullView[static_cast<uint32>( view )]; }
         /** @brief 배치 구간 버퍼의 SRV (컬링 컴퓨트 t1). */
-        RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfoSrv; }
+        RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
         /**
          * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
          * @details true 면 업로드 시점에 개수를 **0 으로** 올린다 — 컬링 컴퓨트가 InterlockedAdd 로 채우기
@@ -371,11 +364,11 @@ namespace sw
          */
         bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != 0; }
         /** @brief 메인 뷰의 간접 인자 버퍼 (isUploaded 등 뷰를 가리지 않는 검사용). */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( GpuCullView::Main )]._indirectArgsBuffer; }
+        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( GpuCullView::Main )]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief GPU에 올라갔는지 반환합니다. */
-        bool isUploaded() const { return _instanceBuffer != 0; }
+        bool isUploaded() const { return _instances._buffer != 0; }
         /** @brief 마지막 buildFromScene이 CPU 스냅샷을 바꿨으면 true. */
         bool isCpuSnapshotDirty() const { return _bCpuDirty != 0; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
@@ -539,14 +532,12 @@ namespace sw
         /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
         vector<uint32> _listBuiltTransparentIdx;
 
-        GpuMaterialRetireQueue _materialRetire;
-        TaskStageHandle        _snapshotStage;
-        RHIBufferHandle        _instanceBuffer{ 0 };
-        float3                 _lastCameraPos{};
+        GpuMaterialRetireQueue  _materialRetire;
+        TaskStageHandle         _snapshotStage;
+        RHIStructuredBufferSlot _instances;
+        float3                  _lastCameraPos{};
         /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */
-        uint64             _lastPrimitiveSetGeneration{ 0 };
-        RHIDescriptorIndex _instanceSrv = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _instanceUav = kInvalidDescriptorIndex;
+        uint64 _lastPrimitiveSetGeneration{ 0 };
         /**
          * @brief 뷰별 컬링 산출물 — 언리얼 FInstanceCullingContext 가 뷰마다 있는 것과 같은 자리.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
@@ -554,10 +545,8 @@ namespace sw
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수가 없다).
          *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트가 **각자** 갖는다.
          */
-        GpuCullViewResources _arrCullView[static_cast<uint32>( GpuCullView::Count )];
-        RHIBufferHandle      _batchInfoBuffer{ 0 };
-        RHIDescriptorIndex   _batchInfoSrv = kInvalidDescriptorIndex;
-        uint32               _batchInfoCapacity{ 0 };
+        GpuCullViewResources    _arrCullView[static_cast<uint32>( GpuCullView::Count )];
+        RHIStructuredBufferSlot _batchInfo;
         /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
         uint8 _bWantGpuIndirectCounts{ 0 };
         /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).
@@ -565,7 +554,6 @@ namespace sw
         /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
         uint32 _spinInstanceCount{ 0 };
         uint32 _indirectCommandCount{ 0 };
-        uint32 _instanceCapacity{ 0 };
         uint8  _bCpuDirty{ 1 };
         uint8  _bMergeAcrossMaterials{ 0 };
     };

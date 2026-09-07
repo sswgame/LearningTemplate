@@ -70,11 +70,11 @@ namespace sw
         // 예전처럼 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 전부 0 번 인스턴스를 그린다 — 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullView );
-        if ( _bGpuCullingActive != 0 && cullView._visibleInstanceBuffer != 0 &&
-             cullView._visibleInstanceSrv != kInvalidDescriptorIndex )
+        if ( _bGpuCullingActive != 0 && cullView._visibleInstances._buffer != 0 &&
+             cullView._visibleInstances._srv != kInvalidDescriptorIndex )
         {
             ctx._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIds,
-                                                  cullView._visibleInstanceBuffer, cullView._visibleInstanceSrv );
+                                                  cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
         }
     }
 
@@ -92,7 +92,7 @@ namespace sw
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다 — 걸 것도 없다.
             const auto it = _mapMaterialFallback.find( pSlot->_elementStride );
-            if ( it != _mapMaterialFallback.end() && it->second._buffer != 0 && it->second._srv != kInvalidDescriptorIndex )
+            if ( it != _mapMaterialFallback.end() && it->second.isValid() && it->second._srv != kInvalidDescriptorIndex )
             {
                 ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
                 ctx._drawMaterialCount = 1u;
@@ -215,7 +215,7 @@ namespace sw
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            ctx._pCmd->drawIndirect( _gpuScene.getCullView( ctx._cullView )._indirectArgsBuffer,
+            ctx._pCmd->drawIndirect( _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer,
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
     }
