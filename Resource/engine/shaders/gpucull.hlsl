@@ -47,7 +47,7 @@ struct GpuBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
-	uint bPreserveOrder; // 투명 배치 — CPU 가 정렬해 둔 순서가 곧 블렌딩 순서다
+	uint sortMode; // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 GPU 깊이 정렬
 	uint pad;
 };
 
@@ -93,11 +93,10 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	if (IsVisible(inst.boundsCenter, inst.boundsRadius) == false)
 		return;
 
-	// 순서를 지켜야 하는 배치(투명)는 압축하지 않는다. CPU 가 뒤에서 앞으로 정렬해 둔 순서가 곧
-	// 블렌딩 순서인데, 원자 연산이 주는 자리 번호는 **완료 순서**라 그 정렬을 부순다. 인스턴스는 배치마다
-	// 연속으로 놓이므로 instId 가 곧 자기 자리다 — 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다.
-	// (그래서 투명은 컬링 이득을 못 받는다. 정렬을 지키는 압축은 접두합이 필요하고, 투명은 보통 수가 적다.)
-	if (g_BatchInfo[batchIndex].bPreserveOrder != 0)
+	// sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instId 가 곧 자기 자리다 —
+	// 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
+	// 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 깊이순으로 되돌린다.
+	if (g_BatchInfo[batchIndex].sortMode == 1u)
 	{
 		g_VisibleInstanceIds[instId] = instId;
 		return;
@@ -106,7 +105,34 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	// 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
 	// 오프셋을 더해야 전역 자리가 된다.
 	uint slot = 0;
+#if defined( DX11 )
+	// SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
+	// (DX11 은 간접 인자 제약으로 컬링 자체를 돌리지 않으므로 이 경로는 실제로 쓰이지 않는다.)
 	InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, 1u, slot);
+#else
+	// 웨이브 안에서 먼저 모으고 **웨이브당 한 번만** 원자 연산을 한다. 같은 배치에 인스턴스가 많을수록
+	// (인스턴스드 렌더링에서는 그게 정상이다) 같은 주소에 대한 경합이 스레드 수만큼 쌓이기 때문이다.
+	// 언리얼의 인스턴스 컬링도 같은 이유로 웨이브 단위로 접는다.
+	//
+	// 한 웨이브 안에 **여러 배치**가 섞일 수 있으므로 batchIndex 가 같은 레인끼리만 묶는다.
+	// WaveMatch 는 SM6.5+ 라 쓰지 않고, 같은 값끼리 모으는 표준 관용구를 쓴다.
+	const uint firstBatch = WaveReadLaneFirst(batchIndex);
+	if (firstBatch == batchIndex)
+	{
+		// 이 웨이브에서 batchIndex 가 첫 레인과 같은 레인들만 여기 들어온다.
+		const uint laneCount = WaveActiveCountBits(true);
+		const uint laneRank  = WavePrefixCountBits(true);
+		uint       waveBase  = 0;
+		if (WaveIsFirstLane())
+			InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, laneCount, waveBase);
+		slot = WaveReadLaneFirst(waveBase) + laneRank;
+	}
+	else
+	{
+		// 첫 레인과 배치가 다른 레인들 — 드문 경우라 그냥 각자 원자 연산을 한다.
+		InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, 1u, slot);
+	}
+#endif
 
 	const uint writeAt = g_BatchInfo[batchIndex].instanceBase + slot;
 	if (writeAt < g_InstanceCount)

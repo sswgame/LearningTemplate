@@ -61,6 +61,17 @@ namespace sw
         if ( _instanceAnimCb != 0 )
             _instanceAnimCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceAnimCb );
 
+        struct GpuSortParams
+        {
+            float32 _cameraPos[4]{};
+            uint32  _instanceCount{ 0 };
+            uint32  _batchCount{ 0 };
+            uint32  _pad[2]{};
+        };
+        _instanceSortCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuSortParams ) );
+        if ( _instanceSortCb != 0 )
+            _instanceSortCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceSortCb );
+
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
@@ -79,7 +90,17 @@ namespace sw
         registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
         registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
         registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
-        registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
+        {
+            // 반투명 패스는 **반투명 퍼뮤테이션**으로 굽는다. 이 define 이 없으면 forwardlit 의 불투명
+            // 변형이 걸려 알파가 1 로 고정되고(퍼뮤테이션 분기 참고) 블렌딩이 눈에 보이지 않는다.
+            // 머티리얼 에셋(glassmaterial)도 같은 define 을 always-define 으로 들고 있어 둘이 짝을 이룬다.
+            const vector<string>         listTranslucentDefine{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+            const RHIPipelineStateHandle psoTransparent =
+                createPsoForPassType( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false,
+                                      &listTranslucentDefine );
+            if ( psoTransparent != 0 )
+                _mapEnginePso.insert_or_assign( RenderPassType::Transparent, psoTransparent );
+        }
         registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
         registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
         registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
@@ -111,6 +132,12 @@ namespace sw
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoGpuCull != 0 )
                 _mapEnginePso.insert_or_assign( RenderPassType::GpuCull, psoGpuCull );
+
+            // 압축한 가시 목록을 깊이순으로 되돌리는 패스 — 컬링과 같은 바인딩 자리를 쓴다.
+            const RHIPipelineStateHandle psoSort =
+                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceSort.c_str(), FrameRendererUtil::Entry::kCSMain );
+            if ( psoSort != 0 )
+                _mapEnginePso.insert_or_assign( RenderPassType::InstanceSort, psoSort );
         }
 
         // 인스턴스 애니메이션은 **컬링 능력과 무관하다** — 구조버퍼 UAV 하나만 있으면 된다.
@@ -245,6 +272,8 @@ namespace sw
             _gpuCullCbIndex        = kInvalidDescriptorIndex;
             _instanceAnimCb        = 0;
             _instanceAnimCbIndex   = kInvalidDescriptorIndex;
+            _instanceSortCb        = 0;
+            _instanceSortCbIndex   = kInvalidDescriptorIndex;
             _mapMaterialFallback.clear();
             _taaHistory    = 0;
             _taaHistorySrv = kInvalidDescriptorIndex;
@@ -301,6 +330,7 @@ namespace sw
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
         releaseResource( _gpuCullCb, _gpuCullCbIndex );
         releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
+        releaseResource( _instanceSortCb, _instanceSortCbIndex );
         for ( auto& [stride, fallback] : _mapMaterialFallback )
             releaseResource( fallback._buffer, fallback._srv );
         _mapMaterialFallback.clear();

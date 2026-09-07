@@ -329,12 +329,18 @@ namespace sw
                 cand._world        = world;
                 cand._boundsCenter = world.getTranslation();
                 cand._boundsRadius = pMeshComp->getBoundsRadius();
-                cand._blendMode    = static_cast<uint32>( pMeshComp->getBlendMode() );
                 cand._spinSeed     = pMeshComp->getGpuSpinSeed();
                 cand._pMesh        = pMesh;
                 cand._pMaterial    = pMeshComp->getMaterial();
                 if ( cand._pMaterial == nullptr )
                     cand._pMaterial = pScene->getMaterial(); // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼)
+
+                // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
+                // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
+                // 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다.
+                // 머티리얼이 없을 때만 컴포넌트 값을 쓴다(픽스처·디버그 메시).
+                cand._blendMode = ( cand._pMaterial != nullptr ) ? static_cast<uint32>( cand._pMaterial->getBlendMode() )
+                                                                 : static_cast<uint32>( pMeshComp->getBlendMode() );
                 cand._pInstance = pMeshComp->getRawMaterialInstance();
                 _listScratchCandidate.push_back( cand );
             }
@@ -400,11 +406,20 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.GpuScene.build.batches" );
             sortTransparent( &cameraPos._x );
 
-            _listInstance.clear();
-            _listOpaqueBatch.clear();
-            _listTransparentBatch.clear();
-            _listAllBatch.clear();
-            buildBatches();
+            // 배치 구성이 그대로면 **다시 나누지 않는다** — 인스턴스 값만 제자리에서 갱신한다.
+            // 예전엔 물체가 하나만 움직여도 인스턴스·배치 목록을 통째로 비우고 다시 만들었다(측정에서
+            // 이 블록이 GpuScene 빌드의 절반이 넘었다). 언리얼 GPUScene 도 프리미티브가 움직였다고
+            // 자료구조를 다시 만들지는 않는다.
+            const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace();
+            if ( bRefreshed == false )
+            {
+                _listInstance.clear();
+                _listOpaqueBatch.clear();
+                _listTransparentBatch.clear();
+                _listAllBatch.clear();
+                buildBatches();
+                _listBuiltTransparentIdx = _listScratchTransparentIdx;
+            }
             retireUnusedMaterialElements();
         }
 
@@ -543,9 +558,15 @@ namespace sw
         _listScratchBatchInfo.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            _listScratchBatchInfo[argIndex]._instanceBase   = _listAllBatch[argIndex]._instanceBase;
-            _listScratchBatchInfo[argIndex]._instanceCount  = _listAllBatch[argIndex]._instanceCount;
-            _listScratchBatchInfo[argIndex]._bPreserveOrder = ( _listAllBatch[argIndex]._blendMode == RHIBlendMode::Transparent ) ? 1u : 0u;
+            const GpuMeshBatch& infoBatch                  = _listAllBatch[argIndex];
+            _listScratchBatchInfo[argIndex]._instanceBase  = infoBatch._instanceBase;
+            _listScratchBatchInfo[argIndex]._instanceCount = infoBatch._instanceCount;
+            // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
+            // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
+            GpuBatchSortMode sortMode = GpuBatchSortMode::None;
+            if ( infoBatch._blendMode == RHIBlendMode::Transparent )
+                sortMode = ( infoBatch._instanceCount <= kGpuSortMaxElements ) ? GpuBatchSortMode::DepthGpu : GpuBatchSortMode::Preserve;
+            _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
         }
         if ( _batchInfoBuffer == 0 || _batchInfoCapacity < argsCount )
         {
@@ -583,16 +604,16 @@ namespace sw
         // 0 으로 올리면 안 된다 — 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
         // 그래서 "원한다"(_bWantGpuIndirectCounts)와 "실제로 된다"(_bGpuFillsIndirectCounts)를 나눠 둔다.
         _bGpuFillsIndirectCounts =
-            ( _bWantGpuIndirectCounts != 0 && _batchInfoBuffer != 0 && hasAllCullViewBuffers() ) ? 1u : 0u;
+            ( _bWantGpuIndirectCounts != 0 && _batchInfoBuffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
 
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             _listScratchIndirectCmd[argIndex]._vertexCount = _listAllBatch[argIndex]._vertexCount;
             // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다 — InterlockedAdd 로 보이는 것만 센다.
-            // 순서를 지켜야 하는 배치(투명)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
-            const bool bGpuCounts                                  = ( _bGpuFillsIndirectCounts != 0 ) &&
-                                                                     ( _listAllBatch[argIndex]._blendMode != RHIBlendMode::Transparent );
+            // 압축을 포기한 배치(Preserve)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
+            const bool bPreserve                                   = static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve;
+            const bool bGpuCounts                                  = ( _bGpuFillsIndirectCounts != 0 ) && ( bPreserve == false );
             _listScratchIndirectCmd[argIndex]._instanceCount       = bGpuCounts ? 0u : _listAllBatch[argIndex]._instanceCount;
             _listScratchIndirectCmd[argIndex]._startVertexLocation = 0;
             // **0 이어야 한다.** 배치의 인스턴스 시작 오프셋은 셰이더가 루트 상수(g_InstanceBase)로 더한다.
@@ -646,10 +667,28 @@ namespace sw
             }
         }
 
+        // 인자 버퍼를 하나라도 못 만들었으면 컴퓨트가 개수를 만들 수 없다 — 개수 0 짜리 인자로 그리면
+        // 그 뷰는 빈 화면이 된다. 플래그를 내리고 CPU 개수로 되돌려 올린다.
+        if ( _bGpuFillsIndirectCounts != 0 && hasAllCullViewBuffers() == false )
+        {
+            _bGpuFillsIndirectCounts = 0;
+            refreshIndirectCounts( pDevice );
+        }
+
         _indirectCommandCount = argsCount;
         _bCpuDirty            = 0;
 
         return _instanceBuffer != 0 && getIndirectArgsBuffer() != 0;
+    }
+
+    bool GpuScene::hasAllVisibleBuffers() const
+    {
+        for ( const GpuCullViewResources& view : _arrCullView )
+        {
+            if ( view._visibleInstanceBuffer == 0 )
+                return false;
+        }
+        return true;
     }
 
     bool GpuScene::hasAllCullViewBuffers() const
@@ -670,8 +709,10 @@ namespace sw
 
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            const bool bGpuCounts                            = ( _listAllBatch[argIndex]._blendMode != RHIBlendMode::Transparent );
-            _listScratchIndirectCmd[argIndex]._instanceCount = bGpuCounts ? 0u : _listAllBatch[argIndex]._instanceCount;
+            // 압축을 포기한 배치(Preserve)만 CPU 개수를 그대로 두고, 나머지는 컴퓨트가 0 부터 센다.
+            const bool bPreserve                             = ( argIndex < _listScratchBatchInfo.size() ) &&
+                                                               ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
+            _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _listAllBatch[argIndex]._instanceCount : 0u;
         }
         for ( GpuCullViewResources& view : _arrCullView )
         {
@@ -780,9 +821,60 @@ namespace sw
         { return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, camPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, camPos ); } );
     }
 
+    bool GpuScene::refreshInstancesInPlace()
+    {
+        // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
+        if ( _listInstance.empty() || _listInstanceSrcIndex.size() != _listInstance.size() )
+            return false;
+        // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 어느 인스턴스가 어느 자리에
+        // 앉는지가 달라지므로 매핑을 그대로 쓸 수 없다.
+        if ( _listScratchTransparentIdx != _listBuiltTransparentIdx )
+            return false;
+
+        const uint32 rawCount = static_cast<uint32>( _listScratchRaw.size() );
+        _spinInstanceCount    = 0;
+        for ( size_t slot = 0; slot < _listInstance.size(); ++slot )
+        {
+            const uint32 srcIndex = _listInstanceSrcIndex[slot];
+            if ( srcIndex >= rawCount )
+                return false;
+
+            // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다 — 바뀐 것은
+            // 트랜스폼과 바운드, 그리고 회전 시드뿐이다.
+            GpuInstance&       inst = _listInstance[slot];
+            const GpuInstance& raw  = _listScratchRaw[srcIndex];
+            inst._world             = raw._world;
+            inst._boundsCenter      = raw._boundsCenter;
+            inst._boundsRadius      = raw._boundsRadius;
+            inst._blendMode         = raw._blendMode;
+            inst._spinSeed          = raw._spinSeed;
+            if ( inst._spinSeed != 0 )
+                ++_spinInstanceCount;
+        }
+
+        // 배치 구성은 그대로지만 **회수 시계는 돌아야 한다**. 안 그러면 물체가 움직이기만 하는 씬에서
+        // 시계가 멈춰, 안 쓰이게 된 머티리얼 원소가 영원히 회수되지 않는다(자리가 조금씩 샌다).
+        // 지금 인스턴스가 가리키는 원소는 전부 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
+        ++_buildCounter;
+        for ( const GpuInstance& inst : _listInstance )
+        {
+            if ( inst._meshBatchIndex >= _listAllBatch.size() )
+                continue;
+            const uint32 groupIndex = _listAllBatch[inst._meshBatchIndex]._materialGroup;
+            if ( groupIndex >= _listMaterialGroup.size() )
+                continue;
+            GpuMaterialGroup& group = _listMaterialGroup[groupIndex];
+            if ( inst._materialIndex < group._listEntryLastSeenBuild.size() )
+                group._listEntryLastSeenBuild[inst._materialIndex] = _buildCounter;
+        }
+        return true;
+    }
+
     void GpuScene::buildBatches()
     {
         _listInstance.reserve( _listScratchCandidate.size() );
+        _listInstanceSrcIndex.clear();
+        _listInstanceSrcIndex.reserve( _listScratchCandidate.size() );
         _spinInstanceCount = 0;
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
@@ -832,6 +924,7 @@ namespace sw
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
                             ++_spinInstanceCount;
+                        _listInstanceSrcIndex.push_back( srcIdx );
                         _listInstance.push_back( inst );
                     }
                     _listOpaqueBatch.push_back( batch );
@@ -888,6 +981,7 @@ namespace sw
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
                             ++_spinInstanceCount;
+                        _listInstanceSrcIndex.push_back( srcIdx );
                         _listInstance.push_back( inst );
                     }
                     _listTransparentBatch.push_back( batch );

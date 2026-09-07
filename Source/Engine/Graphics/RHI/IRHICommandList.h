@@ -144,9 +144,19 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이, 멀티 드로우
         // ------------------------------------------------------------------------------
-        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )        = 0;
-        virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )    = 0;
-        virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                    = 0;
+        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )     = 0;
+        virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
+        virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                 = 0;
+        /**
+         * @brief 앞선 디스패치의 UAV 쓰기가 끝난 뒤에 다음 디스패치가 읽도록 막습니다.
+         * @details 상태가 바뀌지 않는 전이(UAV → UAV)는 `transitionBuffer` 가 아무것도 하지 않는다 —
+         *          그런데 컴퓨트 두 개가 **같은 버퍼를 이어서** 쓰고 읽으면 그 사이에 장벽이 필요하다.
+         *          컬링이 채운 가시 목록을 정렬이 바로 읽는 자리가 그렇다. 없으면 정렬이 아직 안 채워진
+         *          목록을 읽는다(드라이버·백엔드마다 결과가 달라져 재현이 어렵다).
+         *          DX12 는 UAV 배리어, Vulkan 은 버퍼 메모리 배리어, GL 은 glMemoryBarrier,
+         *          DX11 은 디스패치가 컨텍스트에서 직렬화되므로 할 일이 없다.
+         */
+        virtual void uavBarrier( RHIBufferHandle buffer )                                                   = 0;
         virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
         virtual void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
                                         RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 )

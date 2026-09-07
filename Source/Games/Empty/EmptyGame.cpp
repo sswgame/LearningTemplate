@@ -125,6 +125,45 @@ namespace sw
             bPerCubeMaterial               = ( pVar != nullptr && pVar->getValueAsInt() != 0 );
         }
 
+        uint32 transparentPercent = 0;
+        if ( GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>() )
+        {
+            const GlobalVariableInfo* pVar  = pGlobals->findVariable( "gv_benchTransparent" );
+            const int32               value = ( pVar != nullptr ) ? pVar->getValueAsInt() : 0;
+            transparentPercent              = ( value > 0 ) ? static_cast<uint32>( MathUtil::min( value, 100 ) ) : 0u;
+        }
+
+        // 투명은 **별도 머티리얼 에셋**이다 — 블렌드 모드가 머티리얼의 성질이고 알파 사용 여부가
+        // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문이다. 메시에 플래그를 세우는
+        // 방식이었을 때는 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 됐다.
+        //
+        // 인스턴스는 **소수만 만들어 돌려 쓴다** — 큐브마다 하나씩 주면 배치가 인스턴스마다 갈려 한
+        // 배치에 투명 인스턴스가 하나뿐이 되고, 그러면 배치 안의 정렬(instancesort 가 되돌리는 그 순서)이
+        // 한 번도 검사되지 않는다.
+        constexpr uint32             kTransparentMaterialCount = 3;
+        shared_ptr<MaterialInstance> arrTransparentMaterial[kTransparentMaterialCount];
+        if ( transparentPercent > 0 )
+        {
+            if ( _glassMaterial == nullptr )
+            {
+                _glassMaterial = make_unique<Material>();
+                if ( _glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" ) == false )
+                {
+                    SW_LOG_WARNING( "[Bench] 투명 머티리얼을 읽지 못했습니다 — 투명 큐브를 건너뜁니다." );
+                    _glassMaterial.reset();
+                }
+            }
+            for ( uint32 slot = 0; slot < kTransparentMaterialCount && _glassMaterial != nullptr; ++slot )
+            {
+                shared_ptr<MaterialInstance> instance = make_shared<MaterialInstance>( _glassMaterial.get() );
+                const float4                 tint     = makeBenchColor( slot * 977u + 13u );
+                // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
+                const float32 alpha = 0.30f + 0.15f * static_cast<float32>( slot );
+                instance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+                arrTransparentMaterial[slot] = std::move( instance );
+            }
+        }
+
         StringBuilder<constant::kMaxBuffer64> nameBuilder;
         for ( uint32 index = 0; index < meshCount; ++index )
         {
@@ -165,6 +204,15 @@ namespace sw
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( col ) * kBenchSpacing,
                                              0.0f,
                                              origin + static_cast<float32>( row ) * kBenchSpacing } );
+            // 일부를 투명으로 — 블렌드 모드가 배치를 가르고, 컬링이 압축한 순서를 instancesort 가
+            // 깊이순으로 되돌린다. 투명 큐브끼리는 머티리얼 인스턴스를 나눠 쓰므로 한 배치에 여럿 들어간다.
+            if ( isBenchTransparent( index, transparentPercent ) && arrTransparentMaterial[0] != nullptr )
+            {
+                // 블렌드 모드는 머티리얼이 정한다 — 메시에 따로 세우지 않는다.
+                pMesh->setMaterial( _glassMaterial.get() );
+                pMesh->setMaterialInstance( arrTransparentMaterial[index % kTransparentMaterialCount] );
+            }
+
             // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
             // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
             pMesh->setGpuSpinSeed( index + 1u );
@@ -191,6 +239,18 @@ namespace sw
         const float32 b = static_cast<float32>( ( hash >> 16 ) & 0xFFu ) / 255.0f;
         // 너무 어두우면 조명 확인이 어려우므로 아래를 들어 올린다.
         return float4{ 0.35f + r * 0.65f, 0.35f + g * 0.65f, 0.35f + b * 0.65f, 1.0f };
+    }
+
+    bool EmptyGame::isBenchTransparent( uint32 index, uint32 percent )
+    {
+        if ( percent == 0 )
+            return false;
+        // 격자 위치와 무관하게 흩어져야 한다 — 인덱스를 그대로 나누면 줄 단위로 뭉친다.
+        uint32 hash = index * 2246822519u;
+        hash ^= hash >> 13;
+        hash *= 3266489917u;
+        hash ^= hash >> 16;
+        return ( hash % 100u ) < percent;
     }
 
     float32 EmptyGame::halfExtentOf( uint32 side, float32 spacing )

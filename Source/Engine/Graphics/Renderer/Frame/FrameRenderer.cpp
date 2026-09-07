@@ -39,6 +39,8 @@ namespace sw
         , _gpuCullCbIndex{ kInvalidDescriptorIndex }
         , _instanceAnimCb{ 0 }
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
+        , _instanceSortCb{ 0 }
+        , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ 0 }
         , _mapMaterialFallback{}
         , _mapEnginePso{}
@@ -285,11 +287,6 @@ namespace sw
             if ( cullPso != 0 && _gpuCullCb != 0 && _gpuCullCbIndex != kInvalidDescriptorIndex &&
                  _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex && _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
             {
-                _pCmd->setComputePipelineState( cullPso );
-                // 인스턴스·배치 구간은 뷰가 공유한다 — 절두체만 다르다.
-                _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
-                _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
-
                 bool bAllViewsCulled = true;
                 for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
                 {
@@ -321,15 +318,58 @@ namespace sw
                     // 가시 목록은 ShaderResource 로 두고 끝냈다.
                     _pCmd->transitionBuffer( view._indirectArgsBuffer, RHIBufferState::UnorderedAccess );
                     _pCmd->transitionBuffer( view._visibleInstanceBuffer, RHIBufferState::UnorderedAccess );
+                    // PSO 와 바인딩은 **루프 안에서** 다시 건다. 아래 정렬 패스가 둘 다 갈아 끼우므로
+                    // 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
+                    _pCmd->setComputePipelineState( cullPso );
                     // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1)
-                    // — gpucull.hlsl 레지스터와 1:1 대응.
+                    // — gpucull.hlsl 레지스터와 1:1 대응. 인스턴스·배치 구간은 뷰가 공유한다(절두체만 다르다).
                     _pCmd->bindComputeConstantBuffer( _gpuCullCbIndex, 0 );
+                    _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
+                    _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
                     _pCmd->bindComputeUAV( view._indirectArgsUav, 0 );
                     _pCmd->bindComputeUAV( view._visibleInstanceUav, 1 );
                     // **인스턴스마다** 스레드 하나다(예전엔 배치마다 하나였다) — 그래야 보이는 것을 골라 압축할 수 있다.
                     const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
                     if ( groups > 0 )
                         _pCmd->dispatchCompute( groups, 1, 1 );
+                    // 압축이 끝났으면 투명 배치의 순서를 깊이순으로 되돌린다. 원자 연산이 준 자리 번호는
+                    // 완료 순서라 그대로 두면 블렌딩이 틀린다 — 예전엔 그래서 투명이 압축을 통째로
+                    // 포기했다. 정렬을 GPU 로 옮기면 투명도 컬링 이득을 받는다.
+                    // 컬링이 채운 목록을 정렬이 바로 읽는다 — 상태가 그대로라 transitionBuffer 는
+                    // 아무것도 하지 않으므로 **UAV 배리어**를 따로 걸어야 한다. 없으면 정렬이 아직
+                    // 안 채워진 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
+                    _pCmd->uavBarrier( view._indirectArgsBuffer );
+                    _pCmd->uavBarrier( view._visibleInstanceBuffer );
+
+                    const RHIPipelineStateHandle sortPso = getEnginePso( RenderPassType::InstanceSort );
+                    if ( sortPso != 0 && _instanceSortCb != 0 && _instanceSortCbIndex != kInvalidDescriptorIndex &&
+                         cullParams._batchCount > 0 )
+                    {
+                        struct GpuSortParams
+                        {
+                            float32 _cameraPos[4]{};
+                            uint32  _instanceCount{ 0 };
+                            uint32  _batchCount{ 0 };
+                            uint32  _pad[2]{};
+                        } sortParams{};
+                        sortParams._cameraPos[0]  = _cullCameraPos._x;
+                        sortParams._cameraPos[1]  = _cullCameraPos._y;
+                        sortParams._cameraPos[2]  = _cullCameraPos._z;
+                        sortParams._instanceCount = animInstanceCount;
+                        sortParams._batchCount    = cullParams._batchCount;
+                        _pDevice->getResource()->updateConstantBuffer( _instanceSortCb, &sortParams, sizeof( sortParams ) );
+
+                        _pCmd->setComputePipelineState( sortPso );
+                        // 바인딩 자리는 컬링과 같다 — 인자·가시 목록을 그대로 읽고 쓴다.
+                        _pCmd->bindComputeConstantBuffer( _instanceSortCbIndex, 0 );
+                        _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
+                        _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
+                        _pCmd->bindComputeUAV( view._indirectArgsUav, 0 );
+                        _pCmd->bindComputeUAV( view._visibleInstanceUav, 1 );
+                        // 배치마다 워크그룹 하나 — 그 배치의 목록을 그룹공유 안에서 정렬한다.
+                        _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
+                    }
+
                     _pCmd->transitionBuffer( view._indirectArgsBuffer, RHIBufferState::IndirectArgument );
                     _pCmd->transitionBuffer( view._visibleInstanceBuffer, RHIBufferState::ShaderResource );
                 }
@@ -390,6 +430,7 @@ namespace sw
             if ( pCam != nullptr )
                 cameraPos = pCam->getCameraPosition();
         }
+        _cullCameraPos = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
         _gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.

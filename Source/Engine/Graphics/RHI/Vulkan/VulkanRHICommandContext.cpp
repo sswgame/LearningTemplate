@@ -448,6 +448,33 @@ namespace sw
         _pState->_bRenderPassActive = SW_FALSE;
     }
 
+    void VulkanRHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    {
+        VkCommandBuffer                      cmd     = commandBuffer();
+        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        if ( cmd == VK_NULL_HANDLE || pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
+            return;
+
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+
+        // 컴퓨트 쓰기 → 컴퓨트 읽기·쓰기. 상태는 그대로라 레이아웃 전이가 아니라 **가시성**만 맞춘다.
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer              = pRecord->_buffer;
+        barrier.offset              = 0;
+        barrier.size                = VK_WHOLE_SIZE;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1,
+                              &barrier, 0, nullptr );
+    }
+
     void VulkanRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         VkCommandBuffer                      cmd     = commandBuffer();

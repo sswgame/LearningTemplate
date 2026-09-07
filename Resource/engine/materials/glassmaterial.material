@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 반투명 머티리얼. 불투명과 **다른 에셋**이다 — 블렌드 모드는 메시가 아니라 머티리얼의 성질이고,
+     알파를 쓰는지에 따라 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)도 갈린다. -->
+<MaterialDesc formatVersion="0" name="GlassMaterial" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Transparent">
+	<_properties>
+		<item name="color" type="Color" shaderType="Float4" defaultValue="0.9 0.6 0.3 0.45" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="useNormalMap" type="Keyword" defaultValue="0" shaderKeyword="MATERIAL_NORMALMAP" displayName="Normal Map" group="Features"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+		</_alwaysDefines>
+		<_staticSwitches>
+			<item name="UseNormalMap" keyword="MATERIAL_NORMALMAP" keywordOff="MATERIAL_NORMALMAP_OFF" bEnabled="0" bShaderFeature="1"/>
+		</_staticSwitches>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>

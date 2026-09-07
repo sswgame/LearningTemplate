@@ -53,6 +53,7 @@ namespace sw
         void endRenderPass() override;
         void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
         /**

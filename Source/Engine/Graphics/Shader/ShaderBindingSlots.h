@@ -139,6 +139,7 @@ namespace sw
             inline constexpr const utf8* kMaterial = "MaterialCB";
             inline constexpr const utf8* kCull     = "CullParams";
             inline constexpr const utf8* kAnim     = "AnimParams"; ///< instanceanim.hlsl 의 컴퓨트 CB (b0)
+            inline constexpr const utf8* kSort     = "SortParams"; ///< instancesort.hlsl 의 컴퓨트 CB (b0)
             /// @brief SW_ROOT_CONSTANTS_BEGIN/END 가 선언하는 루트/푸시 상수 블록 (DX12 b0 space2, Vulkan 푸시 상수, DX11/GL b2).
             inline constexpr const utf8* kRootConstants = "SwRootConstants";
         } // namespace cbname

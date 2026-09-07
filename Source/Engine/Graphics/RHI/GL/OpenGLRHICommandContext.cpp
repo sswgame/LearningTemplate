@@ -270,6 +270,13 @@ namespace sw
             glClipControl( GL_LOWER_LEFT, GL_ZERO_TO_ONE );
     }
 
+    void OpenGLRHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    {
+        // GL 은 버퍼 단위 배리어가 없다 — 비트로 어떤 접근을 기다릴지 고른다.
+        (void)buffer;
+        glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT );
+    }
+
     void OpenGLRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         (void)buffer;

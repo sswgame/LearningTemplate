@@ -55,6 +55,7 @@ namespace sw
         void endRenderPass() override;
         void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
         /** @brief beginEventMarker/endEventMarker용 어노테이션 인터페이스를 최초 1회만 QI해 캐시합니다. */

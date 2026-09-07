@@ -1218,6 +1218,177 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 }
 
 /**
+ * @brief [RenderPassTest] 한 배치 안의 투명 인스턴스가 백엔드마다 같은 순서로 섞이는지 (4 백엔드).
+ * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 **완료 순서**로 정해진다. 투명은 그 순서가 곧
+ *          블렌딩 순서라 그대로 두면 그림이 틀린다. 그래서 컬링 뒤에 instancesort 가 깊이순으로 되돌린다.
+ *
+ *          DX11 은 간접 인자 제약으로 컬링을 아예 돌리지 않아 **CPU 가 정렬한 순서 그대로** 그린다.
+ *          그래서 이 테스트에서 DX11 은 정답지 노릇을 한다 — 나머지 셋(압축 + GPU 정렬)이 DX11 과 같은
+ *          그림을 내면 정렬이 순서를 제대로 되돌린 것이다.
+ *
+ *          씬은 **완전히 정적**이어야 한다(회전 시드 없음, 시간에 의존하는 것 없음). 안 그러면 백엔드마다
+ *          측정 시각이 달라 비교 자체가 성립하지 않는다.
+ */
+SW_TEST_CASE( RenderPassTest, TransparentOrderMatchesAcrossBackends )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    bool    bHasReference{ false };
+    float32 referenceMean[3]{};
+    uint32  referenceDrawn{ 0 };
+    uint32  attemptedCount{ 0 };
+
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "TransparentOrderScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // 메시와 머티리얼 인스턴스를 **공유**한다 — 그래야 한 배치에 투명 인스턴스가 여럿 들어가고,
+        // 배치 안의 정렬이 실제로 검사된다. 따로 주면 배치가 하나씩 갈려 검사할 순서가 없다.
+        // 로드하지 않은 씬은 기본 머티리얼이 없다(getMaterial 이 null) — 에셋을 직접 읽고 알파만 낮춘다.
+        sw::shared_ptr<sw::Mesh>     sharedMesh;
+        sw::unique_ptr<sw::Material> glassMaterial;
+        if ( bOk )
+        {
+            sharedMesh    = sw::Mesh::createUnitCube();
+            glassMaterial = sw::make_unique<sw::Material>();
+            // 반투명 전용 에셋 — blendMode 와 퍼뮤테이션이 불투명과 다르다. 예전처럼 불투명 에셋에
+            // 알파만 낮춰 쓰면 "머티리얼은 불투명인데 블렌딩으로 그린다"는 어긋난 상태를 검증하게 된다.
+            bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" );
+        }
+
+        if ( bOk )
+        {
+            // 카메라(0, 1.2, 3.2)에서 원점을 본다. 깊이를 어긋나게 겹쳐 놓아 순서가 그림을 바꾸게 한다.
+            constexpr uint32 kCubeCount = 6;
+            for ( uint32 cubeIndex = 0; cubeIndex < kCubeCount && bOk; ++cubeIndex )
+            {
+                sw::string      name = sw::string( "Glass" ) + sw::to_string( cubeIndex );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                bOk                  = pObj != nullptr;
+                if ( bOk == false )
+                    break;
+                sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                bOk                          = pMeshComp != nullptr;
+                if ( bOk == false )
+                    break;
+                pMeshComp->setMesh( sharedMesh );
+                pMeshComp->setMaterial( glassMaterial.get() ); // 블렌드 모드는 이 머티리얼이 정한다
+                const float32 offset = static_cast<float32>( cubeIndex ) * 0.30f;
+                pMeshComp->setLocalPosition( sw::float3{ offset - 0.75f, 0.0f, offset - 0.75f } );
+                // **큐브마다 다른 고정 회전**을 준다. 같은 색·같은 알파 레이어를 겹치면 블렌딩이 순서에
+                // 무관해져(모든 src 가 같으면 결과가 교환법칙을 따른다) 정렬이 뒤집혀도 그림이 안 변한다.
+                // 회전을 달리하면 보이는 면의 정점 색이 달라져 순서가 그림에 남는다. 시간이 아니라
+                // 인덱스로 정하므로 백엔드·실행이 달라도 같다.
+                const float32 yaw = static_cast<float32>( cubeIndex ) * 37.0f;
+                pMeshComp->setLocalRotation( sw::float3{ 17.0f * static_cast<float32>( cubeIndex % 3 ), yaw, 0.0f } );
+            }
+        }
+
+        if ( bOk )
+        {
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        {
+            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
+            const uint8* pCorner = bytes.data();
+            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
+            const int32  bgG     = pCorner[1];
+            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+
+            uint64 arrSum[3]{};
+            uint32 drawn{ 0 };
+            for ( uint32 y = 0; y < layout._height; ++y )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                for ( uint32 x = 0; x < layout._width; ++x )
+                {
+                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
+                    const int32  g      = pPixel[1];
+                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
+                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                        continue;
+                    arrSum[0] += static_cast<uint64>( r );
+                    arrSum[1] += static_cast<uint64>( g );
+                    arrSum[2] += static_cast<uint64>( b );
+                    ++drawn;
+                }
+            }
+
+            const sw::string label = sw::string( device->getBackendName() );
+            SW_EXPECT_TRUE_MSG( drawn > ( layout._width * layout._height ) / 400,
+                                ( label + ": 투명 큐브가 그려지지 않았다 (" + sw::to_string( drawn ) + " px)" ).c_str() );
+            if ( drawn > 0 )
+            {
+                const float32 mean[3] = { static_cast<float32>( arrSum[0] ) / static_cast<float32>( drawn ),
+                                          static_cast<float32>( arrSum[1] ) / static_cast<float32>( drawn ),
+                                          static_cast<float32>( arrSum[2] ) / static_cast<float32>( drawn ) };
+                if ( bHasReference == false )
+                {
+                    bHasReference    = true;
+                    referenceMean[0] = mean[0];
+                    referenceMean[1] = mean[1];
+                    referenceMean[2] = mean[2];
+                    referenceDrawn   = drawn;
+                }
+                else
+                {
+                    // 정적 씬이라 백엔드끼리 그림이 같아야 한다. 블렌딩 순서가 어긋나면 겹친 자리의
+                    // 색이 달라져 평균이 움직인다.
+                    for ( uint32 channel = 0; channel < 3; ++channel )
+                    {
+                        const float32 diff = sw::MathUtil::abs( mean[channel] - referenceMean[channel] );
+                        SW_EXPECT_TRUE_MSG( diff < 6.0f,
+                                            ( label + ": 투명 블렌딩 결과가 기준 백엔드와 다르다 (채널 " +
+                                              sw::to_string( channel ) + ", " + sw::to_string( mean[channel] ) + " vs " +
+                                              sw::to_string( referenceMean[channel] ) + ") — 배치 안 정렬 순서가 어긋난다" )
+                                                .c_str() );
+                    }
+                    const int32 drawnDiff = static_cast<int32>( drawn ) - static_cast<int32>( referenceDrawn );
+                    SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( drawnDiff ) < static_cast<int32>( referenceDrawn / 8 + 64 ),
+                                        ( label + ": 그려진 픽셀 수가 기준과 크게 다르다 (" + sw::to_string( drawn ) + " vs " +
+                                          sw::to_string( referenceDrawn ) + ")" )
+                                            .c_str() );
+                }
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
+
+        if ( sharedMesh != nullptr )
+            sharedMesh->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for transparent order test" );
+}
+
+/**
  * @brief [RenderPassTest] 컴퓨트가 만든 드로우 커맨드가 **보이는 인스턴스만** 고르는지 (4 백엔드).
  * @details 컬링 컴퓨트는 배치의 개수를 줄이는 데서 끝나지 않고, 살아남은 인스턴스 번호를 압축 목록
  *          (g_SwVisibleInstanceIds)에 적는다. 정점 셰이더는 그 목록으로 자기 인스턴스를 찾는다 —

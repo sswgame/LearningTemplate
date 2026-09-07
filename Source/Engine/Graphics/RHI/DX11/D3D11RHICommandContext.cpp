@@ -178,6 +178,13 @@ namespace sw
         _pContext->IASetIndexBuffer( pIb, format, offset );
     }
 
+    void D3D11RHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    {
+        // D3D11 은 같은 컨텍스트의 디스패치를 순서대로 실행하고 UAV 위험도 드라이버가 처리한다.
+        // 명시적 배리어 개념 자체가 없다 — 의도적으로 아무것도 하지 않는다.
+        (void)buffer;
+    }
+
     void D3D11RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         // D3D11 has no explicit buffer state transitions; GPU sync is via Flush / FinishCommandList.

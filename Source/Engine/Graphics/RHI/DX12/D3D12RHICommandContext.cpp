@@ -834,6 +834,20 @@ namespace sw
         bindBoundIndexBuffer();
     }
 
+    void D3D12RHICommandContext::uavBarrier( RHIBufferHandle buffer )
+    {
+        if ( _pCmdList == nullptr || buffer == 0 )
+            return;
+        ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
+            return;
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = pResource;
+        _pCmdList->ResourceBarrier( 1, &barrier );
+    }
+
     void D3D12RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         if ( _pCmdList == nullptr || buffer == 0 )

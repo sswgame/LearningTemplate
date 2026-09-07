@@ -59,5 +59,13 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float3 lit = albedo.rgb * (ambient + ndotl * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb) * shadow;
 	float rim = pow(1.0f - saturate(dot(N, float3(0, 0, 1))), 2.0f) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;
+
+	// 알파를 쓰는지가 **퍼뮤테이션으로 갈린다**. 반투명 머티리얼만 MATERIAL_BLEND_TRANSLUCENT 를 always-define
+	// 으로 들고 있고(glassmaterial.material), 불투명 변형은 알파 경로가 아예 컴파일되지 않는다 — 불투명
+	// 패스에서 머티리얼 알파가 새어 나오는 일이 없다. 언리얼도 블렌드 모드가 머티리얼의 퍼뮤테이션이다.
+#if defined( MATERIAL_BLEND_TRANSLUCENT )
 	return float4(lit, albedo.a);
+#else
+	return float4(lit, 1.0f);
+#endif
 }

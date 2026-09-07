@@ -15,6 +15,7 @@
             _shaderFullscreenBlit="engine/shaders/fullscreenblit.hlsl"
             _shaderGpuCull="engine/shaders/gpucull.hlsl"
             _shaderInstanceAnim="engine/shaders/instanceanim.hlsl"
+            _shaderInstanceSort="engine/shaders/instancesort.hlsl"
             _shaderFullscreenTriangle="engine/shaders/fullscreentriangle.hlsl"
             _shaderSsao="engine/shaders/ssao.hlsl"
             _shaderTaa="engine/shaders/taa.hlsl"

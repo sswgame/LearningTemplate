@@ -72,18 +72,31 @@ namespace sw
      *          포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 시작점으로 쓸 수 없다. gpucull.hlsl 의
      *          GpuBatchInfo 와 레이아웃이 같아야 한다.
      */
+    /**
+     * @brief 배치의 가시 목록 정렬 방식.
+     * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 완료 순서로 정해진다. 불투명은 상관없지만
+     *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 **GPU 에서 깊이순으로 다시
+     *          정렬**한다(instancesort.hlsl). 한 워크그룹에 안 담기는 큰 배치만 압축을 포기하고 CPU 가
+     *          정렬해 둔 제자리 매핑을 쓴다.
+     */
+    enum class GpuBatchSortMode : uint32
+    {
+        None     = 0, ///< 불투명 — 압축만 하고 순서는 상관없다
+        Preserve = 1, ///< 압축하지 않고 CPU 정렬 순서를 그대로 (GPU 정렬 한계를 넘는 투명 배치)
+        DepthGpu = 2, ///< 압축한 뒤 GPU 가 깊이순으로 정렬 (투명 기본)
+    };
+
+    /// @brief 한 배치에서 GPU 정렬로 다룰 수 있는 최대 인스턴스 수 (instancesort.hlsl 의 SW_SORT_MAX_ELEMENTS).
+    inline constexpr uint32 kGpuSortMaxElements = 512;
+
     struct GpuBatchInfo
     {
         uint32 _instanceBase{ 0 };
         uint32 _instanceCount{ 0 };
         /**
-         * @brief 이 배치는 인스턴스 **순서를 지켜야 하는가** (투명 배치는 1).
-         * @details 불투명은 살아남은 것을 앞에서부터 채워도 되지만(InterlockedAdd 로 자리를 받는다),
-         *          투명은 CPU 가 뒤에서 앞으로 정렬해 둔 순서가 곧 블렌딩 순서다. 원자 연산이 주는 자리
-         *          번호는 완료 순서라 그 정렬을 부순다. 그래서 순서를 지켜야 하는 배치는 압축하지 않고
-         *          제자리 매핑(g_VisibleInstanceIds[instId] = instId)을 쓰고 개수는 CPU 가 채운다.
+         * @brief 이 배치의 가시 목록을 어떻게 다룰지 (GpuBatchSortMode). instancesort.hlsl 과 값이 같아야 한다.
          */
-        uint32 _bPreserveOrder{ 0 };
+        uint32 _sortMode{ 0 };
         uint32 _pad{ 0 };
     };
 
@@ -340,6 +353,16 @@ namespace sw
         void refreshIndirectCounts( IRHIDevice* pDevice );
         /** @brief 모든 컬링 뷰가 간접 인자와 가시 목록을 다 갖췄는가 (하나라도 없으면 GPU 개수를 쓰면 안 된다). */
         bool hasAllCullViewBuffers() const;
+        /** @brief 모든 컬링 뷰가 가시 목록 버퍼를 갖췄는가 (간접 인자는 이 검사 뒤에 만들어진다). */
+        bool hasAllVisibleBuffers() const;
+        /**
+         * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
+         * @details 배치 키가 그대로고 투명 정렬 순서도 그대로일 때만 쓸 수 있다. 그 두 조건이 맞으면
+         *          `_listInstance` 의 자리 배치와 각 원소의 `_meshBatchIndex`/`_materialIndex` 가 그대로라,
+         *          바뀐 것은 트랜스폼과 바운드뿐이다.
+         * @return 갱신했으면 true, 조건이 안 맞아 전체 재구축이 필요하면 false.
+         */
+        bool refreshInstancesInPlace();
         /**
          * @brief 마지막 upload 가 실제로 개수를 컴퓨트에 맡겼는가.
          * @details "원한다"와 "실제로 된다"는 다르다 — 가시 목록이나 배치 구간 버퍼를 못 만들었으면
@@ -508,6 +531,15 @@ namespace sw
         vector<uint32>                 _listScratchTransparentIdx;
         vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
         vector<GpuBatchInfo>           _listScratchBatchInfo;
+        /**
+         * @brief `_listInstance[i]` 가 어느 후보에서 왔는지 (buildBatches 가 채운다).
+         * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
+         *          값만 **제자리에서** 갱신하면 된다 — 언리얼 GPUScene 이 프리미티브가 움직였을 때
+         *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 자리다.
+         */
+        vector<uint32> _listInstanceSrcIndex;
+        /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
+        vector<uint32> _listBuiltTransparentIdx;
 
         GpuMaterialRetireQueue _materialRetire;
         TaskStageHandle        _snapshotStage;

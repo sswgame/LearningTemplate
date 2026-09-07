@@ -404,6 +404,10 @@ namespace sw
         RHIDescriptorIndex _gpuCullCbIndex;
         RHIBufferHandle    _instanceAnimCb;
         RHIDescriptorIndex _instanceAnimCbIndex;
+        RHIBufferHandle    _instanceSortCb;
+        RHIDescriptorIndex _instanceSortCbIndex;
+        /// @brief 이번 프레임 컬링·정렬에 쓸 카메라 위치 (정렬 키가 여기까지의 거리다).
+        float3 _cullCameraPos{};
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는가 (가시 목록이 유효한가).
          * @details 드로우가 가시 목록을 걸지 말지 정하는 값이다. 목록을 걸었는데 컬링이 안 돌면 셰이더가

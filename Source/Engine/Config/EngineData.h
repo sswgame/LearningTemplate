@@ -62,6 +62,8 @@ namespace sw
         PROPERTY()
         string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" };
         PROPERTY()
+        string _shaderInstanceSort{ "engine/shaders/instancesort.hlsl" };
+        PROPERTY()
         string _shaderFullscreenTriangle{ "engine/shaders/fullscreentriangle.hlsl" };
         PROPERTY()
         string _shaderSsao{ "engine/shaders/ssao.hlsl" };

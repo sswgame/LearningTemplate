@@ -54,6 +54,8 @@ namespace sw
         GpuCull,
         /// @brief GPUScene 인스턴스 애니메이션 컴퓨트 (instanceanim.hlsl) — 인스턴스마다 다른 각속도로 회전.
         InstanceAnim,
+        /// @brief 배치 안의 가시 인스턴스를 깊이순으로 정렬하는 컴퓨트 (instancesort.hlsl) — 투명 블렌딩 순서.
+        InstanceSort,
     };
 
     /**

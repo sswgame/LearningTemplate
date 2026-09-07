@@ -45,6 +45,7 @@ namespace sw
         void endRenderPass() override;
         void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
         /** @brief _meshVao를 바인딩하고 position(0)/color(1) 정점 attrib를 vbo 기준으로 세팅한다.

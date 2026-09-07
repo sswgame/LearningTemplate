@@ -44,6 +44,8 @@ namespace sw
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );
+        /** @brief 인덱스가 투명 큐브인지 (결정적 해시 — 실행마다 같은 그림이 나와야 비교가 된다). */
+        static bool isBenchTransparent( uint32 index, uint32 percent );
 
         /** @brief 격자 한 변의 절반 크기입니다. */
         static float32 halfExtentOf( uint32 side, float32 spacing );
@@ -58,6 +60,8 @@ namespace sw
 
         /** @brief 벤치 큐브. 씬이 이들을 소유하며, 벤치 실행 중에는 파괴되지 않습니다. */
         vector<MeshComponent*> _listBenchMesh;
+        /// @brief 벤치의 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다).
+        unique_ptr<Material> _glassMaterial;
         /** @brief 애니메이션 누적 시간. */
         float32 _benchElapsed{ 0.0f };
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */

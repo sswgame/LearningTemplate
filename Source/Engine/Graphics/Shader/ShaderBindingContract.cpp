@@ -306,6 +306,8 @@ namespace sw
                      slotB( shaderslot::kMaterialConstantBuffer ), slotB( shaderslot::kMaterialConstantBuffer ), vkB( shaderslot::kMaterialConstantBuffer ), slotB( shaderslot::kMaterialConstantBuffer ) );
                 add( shaderslot::cbname::kCull, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
+                add( shaderslot::cbname::kSort, ShaderBindingKind::ConstantBuffer,
+                     slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 add( shaderslot::cbname::kAnim, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 // 루트/푸시 상수 블록 — DX12 b0 space2, DX11/GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
