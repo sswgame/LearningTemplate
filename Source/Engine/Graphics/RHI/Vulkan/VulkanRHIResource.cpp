@@ -15,16 +15,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct VulkanRHIResourceInternal
-        {
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "VulkanRHIResource" );
 
     RHIBufferHandle VulkanRHIResource::createConstantBuffer( uint32 size )

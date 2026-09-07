@@ -97,6 +97,16 @@ _kPchIncludeRe = re.compile(r'^\s*#\s*include\s*["<]pch\.h[">]')
 # 용도: 실제 파일 시스템 상의 대소문자(Exact Path Case)와 일치하는지 대조 검증
 _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 
+# [익명 네임스페이스 헬퍼 이름 중복 검사]
+# 정규식 패턴: r'^\s*struct\s+(\w+Internal)\s*$'
+#   - ^\s*struct\s+   : 줄 시작의 struct 선언
+#   - (\w+Internal)    : 컨벤션상 TU 전용 헬퍼 이름(AGENTS.md "Helpers: Util vs Internal") 캡처
+#   - \s*$             : 같은 줄에 다른 토큰이 없는 순수 선언만 (전방 선언/한 줄 정의 제외)
+# 용도: 유니티 빌드(SW_ENABLE_UNITY_BUILD, CI-Debug/CI-Shipping)는 .cpp 여러 개를 한 TU 로 묶는다.
+#       익명 네임스페이스라도 같은 TU 안에서는 같은 이름이 재정의로 충돌한다 — 같은 클래스를 여러 .cpp 로
+#       나눠 구현할 때 헬퍼를 클래스 이름으로 지으면 실제로 부딪힌다(VulkanRHIResourceInternal 사례).
+_kAnonHelperStructRe = re.compile(r'^\s*struct\s+(\w+Internal)\s*$', re.MULTILINE)
+
 _s_exactPathMap: dict[str, str] = {}
 
 
@@ -1532,6 +1542,48 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
 # --- 5. 공개 API 및 진입점 ---------------------------------------------------
 
+def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+    """
+    여러 .cpp 가 같은 `XxxInternal` 헬퍼 이름을 쓰는지 검사합니다 (유니티 빌드 재정의 충돌 예방).
+
+    익명 네임스페이스는 **번역 단위** 단위로만 이름을 가립니다. 유니티 빌드는 .cpp 를 묶어 하나의 TU 로 만들므로,
+    묶인 파일들이 같은 이름을 쓰면 재정의 오류가 납니다. 파일 단위 검사로는 잡히지 않아 전체 스캔에서만 봅니다.
+    """
+    mapNameToFile: dict[str, list[tuple[str, int]]] = {}
+    for filePath in filesToScan:
+        if filePath.suffix.lower() != ".cpp":
+            continue
+        try:
+            content = filePath.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        try:
+            relPath = normalizePath(filePath.relative_to(projectRoot))
+        except ValueError:
+            relPath = normalizePath(filePath)
+        for match in _kAnonHelperStructRe.finditer(content):
+            lineNum = content.count("\n", 0, match.start()) + 1
+            mapNameToFile.setdefault(match.group(1), []).append((relPath, lineNum))
+
+    violations: list[ConventionViolation] = []
+    for helperName, listSite in mapNameToFile.items():
+        uniqueFiles = sorted({relPath for relPath, _ in listSite})
+        if len(uniqueFiles) < 2:
+            continue
+        for relPath, lineNum in listSite:
+            others = [other for other in uniqueFiles if other != relPath]
+            violations.append(ConventionViolation(
+                file_path=relPath,
+                line_number=lineNum,
+                rule_category="Naming/DuplicateInternalHelper",
+                message=(f"'{helperName}' 이 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
+                         "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 익명 네임스페이스라도 재정의로 충돌합니다."),
+                snippet=f"struct {helperName}",
+                suggested_fix="헬퍼 이름을 클래스가 아니라 **이 TU(파일)** 기준으로 지으세요 (예: VulkanRHIResourcePipelineInternal).",
+            ))
+    return violations
+
+
 def runConventionsCheck(rootDir: Path | None = None,
                         specificFiles: list[str] | None = None) -> list[ConventionViolation]:
     """
@@ -1571,6 +1623,9 @@ def runConventionsCheck(rootDir: Path | None = None,
         futures = [executor.submit(checkFileConventionsInternal, filePath, projectRoot) for filePath in filesToScan]
         for future in concurrent.futures.as_completed(futures):
             allViolations.extend(future.result())
+
+    # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
+    allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
 
     return allViolations
 

@@ -130,6 +130,14 @@ namespace sw
 - Locator-only `s_*` state used by bind/get APIs stays in the implementation
   block's anonymous namespace. This applies to `Source/` and
   `Tools/ReflectionParser/`.
+- Name the `Internal` helper after **the translation unit, not the class**. When one
+  class is split across several `.cpp` files, naming each helper after the class makes
+  them collide: unity builds (`SW_ENABLE_UNITY_BUILD`, used by the `CI-*` presets) merge
+  several `.cpp` files into one translation unit, and an anonymous namespace only hides a
+  name *per translation unit* — so the second definition is a redefinition error. So
+  `VulkanRHIResourcePipeline.cpp` uses `VulkanRHIResourcePipelineInternal`, not
+  `VulkanRHIResourceInternal`. Enforced by `CheckCodeConventions.py`
+  (`Naming/DuplicateInternalHelper`, full-scan only).
 
 ## C++ style
 

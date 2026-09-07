@@ -22,7 +22,9 @@ namespace sw
 {
     namespace
     {
-        struct VulkanRHIResourceInternal
+        // 이름은 클래스(VulkanRHIResource)가 아니라 **이 TU**(…ResourcePipeline)를 따른다. 같은 클래스를 여러 .cpp 로
+        // 나눠 구현하므로 클래스 이름으로 지으면 유니티 빌드에서 다른 조각의 같은 이름과 재정의로 부딪힌다(실제로 부딪혔다).
+        struct VulkanRHIResourcePipelineInternal
         {
             static ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
             {
@@ -45,7 +47,7 @@ namespace sw
         vsDesc._entryPoint           = desc._vertexEntryPoint;
         vsDesc._stage                = ShaderStage::Vertex;
         vsDesc._targetFormat         = ShaderTargetFormat::SPIRV_Vulkan;
-        ShaderCompileResult vsResult = VulkanRHIResourceInternal::compileShader( vsDesc );
+        ShaderCompileResult vsResult = VulkanRHIResourcePipelineInternal::compileShader( vsDesc );
 
         const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
         const bool          bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
@@ -57,7 +59,7 @@ namespace sw
             psDesc._entryPoint   = desc._pixelEntryPoint;
             psDesc._stage        = ShaderStage::Pixel;
             psDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-            psResult             = VulkanRHIResourceInternal::compileShader( psDesc );
+            psResult             = VulkanRHIResourcePipelineInternal::compileShader( psDesc );
         }
 
         if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
@@ -232,7 +234,7 @@ namespace sw
         csDesc._entryPoint           = entryPoint;
         csDesc._stage                = ShaderStage::Compute;
         csDesc._targetFormat         = ShaderTargetFormat::SPIRV_Vulkan;
-        ShaderCompileResult csResult = VulkanRHIResourceInternal::compileShader( csDesc );
+        ShaderCompileResult csResult = VulkanRHIResourcePipelineInternal::compileShader( csDesc );
 
         if ( csResult._bSuccess == false )
         {
