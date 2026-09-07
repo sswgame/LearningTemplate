@@ -103,6 +103,13 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
+     * @brief `-gv_crashTest=1` — RHI 초기화 직후 일부러 크래시를 냅니다 (리포트 경로 검증용).
+     * @details 크래시 리포트는 크래시가 나야만 만들어진다. 그래서 "덤프가 제대로 써지는가" 는 일부러
+     *          죽여 보는 것 말고는 확인할 방법이 없다 — 배포하고 나서 안 된다는 걸 알면 늦다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
+
+    /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.
@@ -208,6 +215,23 @@ namespace sw
 
             // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다.
             CrashHandler::initialize();
+
+            // 크래시 리포트에 함께 나갈 값들 — 덤프만으로는 알 수 없는 것들이다.
+            // 백엔드는 RHI 초기화 뒤에 다시 덮어쓴다(여기서는 아직 정해지지 않았을 수 있다).
+#if defined( SW_SHIPPING )
+            CrashHandler::setContextValue( "Build", "Shipping" );
+#elif defined( SW_DEBUG )
+            CrashHandler::setContextValue( "Build", "Debug" );
+#else
+            CrashHandler::setContextValue( "Build", "Release" );
+#endif
+#if defined( SW_PLATFORM_WINDOWS )
+            CrashHandler::setContextValue( "Platform", "Windows" );
+#elif defined( SW_PLATFORM_LINUX )
+            CrashHandler::setContextValue( "Platform", "Linux" );
+#elif defined( SW_PLATFORM_MACOS )
+            CrashHandler::setContextValue( "Platform", "macOS" );
+#endif
 
 #if defined( SW_DEBUG )
             _deadlockDetector = make_unique<DeadlockDetector>();
@@ -379,6 +403,19 @@ namespace sw
             if ( _rhi->initialize() == false )
                 return false;
             // GT 쪽 GpuScene 이 배치를 만든다 — 텍스처를 인덱스로 고를 수 있는 백엔드면 셰이더 타입 단위로 합친다(언리얼 GPUScene).
+            // 백엔드가 정해졌으니 크래시 리포트에 남긴다 — 이 저장소는 백엔드가 넷이라 "어느
+            // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
+            CrashHandler::setContextValue( "RHI", _rhi->getDevice().getBackendName() );
+
+            // `-gv_crashTest=1` — 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다. 리포트는
+            // 크래시가 나야만 만들어지므로, 일부러 한 번 죽여 보지 않으면 배포 뒤에야 안 되는 걸 안다.
+            if ( gv_crashTest != 0 )
+            {
+                SW_LOG_ERROR( "[CrashTest] 의도적으로 널 포인터를 씁니다 — 크래시 리포트 경로 검증용입니다." );
+                volatile int32* pNull = nullptr;
+                *pNull                = 1;
+            }
+
             _gtGpuScene.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
 
             if ( _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() ) == false )

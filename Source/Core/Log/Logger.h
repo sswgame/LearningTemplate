@@ -146,6 +146,18 @@ namespace sw
         /** @brief 현재 전역 싱크입니다. 없으면 nullptr. */
         static ILogSink* getGlobalSink();
 
+        /**
+         * @brief 런타임 상세도를 정합니다 — 이 레벨보다 덜 심각한 줄은 버려집니다.
+         * @details 컴파일 타임 상한(SW_LOG_COMPILED_VERBOSITY)이 "무엇을 남길 수 있나" 를 정하고,
+         *          이 값이 "지금 무엇을 남길까" 를 정한다. 언리얼의 카테고리 기본 상세도와 같은 자리다.
+         *          배포본에서 고객에게 `-logVerbosity=trace` 를 시켜 재현을 받는 것이 이 값의 용도다.
+         */
+        static void setRuntimeVerbosity( LogLevel level );
+        /** @brief setRuntimeVerbosity 로 정한 값 (기본 Info). */
+        static LogLevel getRuntimeVerbosity();
+        /** @brief 이 레벨이 지금 기록되는가 — 포맷 비용을 치르기 전에 물어봅니다. */
+        static bool shouldLog( LogLevel level ) { return static_cast<int32>( level ) <= static_cast<int32>( getRuntimeVerbosity() ); }
+
     private:
         /** @brief 폴더·파일명을 준비하고 첫 파일을 엽니다. */
         void initializeInternal();
@@ -186,8 +198,30 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) SW_LOG_* — Debug 에서만 포맷·기록. Release 는 no-op
+// 4) SW_LOG_* — **상세도 상한**으로 자릅니다 (빌드 구성으로 통째로 끄지 않습니다)
+//
+//    예전에는 SW_DEBUG 가 아니면 매크로 전체가 빈 껍데기였다. 그러면 배포본에서 문제가 났을 때
+//    남는 것이 하나도 없어 덤프만으로 원인을 찾아야 한다 — 실제 서비스에서는 성립하지 않는다.
+//    언리얼처럼 **카테고리 상세도**로 자른다: 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는
+//    Shipping 에도 남는다. 관례대로 Warning 이상은 어떤 빌드에서도 살린다.
+//
+//    SW_LOG_COMPILED_VERBOSITY 는 LogLevel 의 순서(Error 0 → Trace 3)와 같은 숫자다.
 // ------------------------------------------------------------------------------
+
+#if !defined( SW_LOG_COMPILED_VERBOSITY )
+    #if defined( SW_SHIPPING )
+  /// @brief 배포본은 Warning 까지만 컴파일한다 — Info/Trace 는 호출 자체가 사라진다.
+        #define SW_LOG_COMPILED_VERBOSITY 1
+    #elif defined( SW_DEBUG )
+        #define SW_LOG_COMPILED_VERBOSITY 3
+    #else
+  /// @brief 개발(Release) 빌드는 Info 까지. Trace 는 비용이 커서 뺀다.
+        #define SW_LOG_COMPILED_VERBOSITY 2
+    #endif
+#endif
+
+/// @brief 이 레벨이 이 빌드에 컴파일되어 있는가 (숫자는 LogLevel 순서와 같다).
+#define SW_LOG_LEVEL_COMPILED( levelIndex ) ( ( levelIndex ) <= SW_LOG_COMPILED_VERBOSITY )
 
 /**
  * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
@@ -200,31 +234,56 @@ namespace sw
 			return true; }(); \
     }
 
-#if defined( SW_DEBUG )
-    /**
-     * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
-     * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
-     */
-    #define SW_LOG_INTERNAL( level, ... )                                                              \
-        do                                                                                             \
+/**
+ * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
+ * @details **런타임 상세도를 먼저 물어본다** — 버려질 줄은 8KB 버퍼 포맷 비용도 치르지 않는다.
+ * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
+ */
+#define SW_LOG_INTERNAL( level, ... )                                                                  \
+    do                                                                                                 \
+    {                                                                                                  \
+        if ( ::sw::Logger::shouldLog( level ) )                                                        \
         {                                                                                              \
             ::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                          \
             ::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );              \
             ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__ ); \
-        } while ( false )
+        }                                                                                              \
+    } while ( false )
 
-    /** @brief Error 레벨로 포맷해 남깁니다. */
+#if SW_LOG_LEVEL_COMPILED( 0 )
+    /** @brief Error 레벨로 포맷해 남깁니다. 어떤 빌드에도 남습니다. */
     #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
-    /** @brief Warning 레벨로 포맷해 남깁니다. */
+#else
+    #define SW_LOG_ERROR( ... )
+#endif
+
+#if SW_LOG_LEVEL_COMPILED( 1 )
+    /** @brief Warning 레벨로 포맷해 남깁니다. 배포본에도 남습니다. */
     #define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
-    /** @brief Info 레벨로 포맷해 남깁니다. */
+#else
+    #define SW_LOG_WARNING( ... )
+#endif
+
+#if SW_LOG_LEVEL_COMPILED( 2 )
+    /** @brief Info 레벨로 포맷해 남깁니다. 배포본에서는 호출이 사라집니다. */
     #define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
-    /** @brief Trace 레벨로 포맷해 남깁니다. */
+#else
+    #define SW_LOG_INFO( ... )
+#endif
+
+#if SW_LOG_LEVEL_COMPILED( 3 )
+    /** @brief Trace 레벨로 포맷해 남깁니다. Debug 에만 컴파일됩니다. */
     #define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
+#else
+    #define SW_LOG_TRACE( ... )
+#endif
+
+#if defined( SW_DEBUG )
 
     /**
      * @brief 조건 실패 시 메시지·식·파일·함수·라인을 Error로 남기고 디버그 브레이크
-     * @note Release에서는 no-op. 무조건 실패는 SW_LOG_ASSERT( false, ... )로 호출.
+     * @note Debug 에서만 브레이크한다. 그 밖의 빌드는 아래에서 **로그만** 남긴다 —
+     *       배포본에서 단언이 통째로 사라지면 무엇이 어긋났는지 알 길이 없다.
      */
     #define SW_LOG_ASSERT( expr, ... )                                                           \
         do                                                                                       \
@@ -245,9 +304,23 @@ namespace sw
             }                                                                                    \
         } while ( false )
 #else
-    #define SW_LOG_ERROR( ... )
-    #define SW_LOG_WARNING( ... )
-    #define SW_LOG_INFO( ... )
-    #define SW_LOG_TRACE( ... )
-    #define SW_LOG_ASSERT( expr, ... )
+    /**
+     * @brief Debug 가 아니면 **브레이크 없이 Error 로만** 남깁니다.
+     * @details 예전에는 통째로 no-op 이었다. 배포본에서 계약이 깨진 순간을 놓치는 가장 큰 구멍이었다.
+     */
+    #define SW_LOG_ASSERT( expr, ... )                                                     \
+        do                                                                                 \
+        {                                                                                  \
+            if ( !( expr ) )                                                               \
+            {                                                                              \
+                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                             \
+                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ ); \
+                SW_LOG_ERROR( "ASSERT failed\n"                                            \
+                              "Expression : %#\n"                                          \
+                              "Message    : %#\n"                                          \
+                              "FileName   : %#\n"                                          \
+                              "Line       : %#",                                           \
+                              #expr, _assertMsg, __FILE__, __LINE__ );                     \
+            }                                                                              \
+        } while ( false )
 #endif

@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/CrashContext.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -182,6 +183,22 @@ namespace sw
         return _logFolderPath;
     }
 
+    namespace
+    {
+        /// @brief 런타임 상세도. 기본 Info — 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘린다.
+        atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
+    } // namespace
+
+    void Logger::setRuntimeVerbosity( LogLevel level )
+    {
+        s_runtimeVerbosity.store( static_cast<int32>( level ), std::memory_order_relaxed );
+    }
+
+    LogLevel Logger::getRuntimeVerbosity()
+    {
+        return static_cast<LogLevel>( s_runtimeVerbosity.load( std::memory_order_relaxed ) );
+    }
+
     void Logger::setGlobalSink( ILogSink* pSink )
     {
         s_globalSink.store( pSink, std::memory_order_release );
@@ -226,6 +243,8 @@ namespace sw
 
         _logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
         FileUtil::ensureDirectoryExists( _logFolderPath );
+        // 크래시 덤프·리포트도 같은 폴더에 둔다 — 고객이 한 폴더만 보내면 되도록.
+        setCrashReportFolder( _logFolderPath );
 
 #if defined( SW_PLATFORM_WINDOWS )
         SetConsoleOutputCP( CP_UTF8 );
@@ -492,8 +511,12 @@ namespace sw
             }
 
             _lastLogHour = hour;
+            // **세션 ID 를 파일 이름에 넣는다.** 예전엔 시간별로만 갈려서 같은 시간에 여러 번 실행하면
+            // 로그가 한 파일에 섞였다 — 배포본은 크래시 뒤 바로 재실행하는 일이 잦아 그게 기본 상황이다.
+            // 크래시 덤프도 같은 세션 ID 를 쓰므로 둘을 짝지을 수 있다.
             fixed_string<constant::kMaxBuffer128> expectedFileName{};
-            formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#.txt", year, month, day, hour );
+            formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt", year, month, day, hour,
+                          getCrashSessionId() );
             _currentLogFileName = expectedFileName.c_str();
 
             const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );

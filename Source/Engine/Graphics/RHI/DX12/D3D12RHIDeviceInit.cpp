@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Process/CrashHandler.h"
+
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
@@ -38,6 +40,24 @@ namespace sw
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
+
+        // 크래시 리포트용 어댑터 정보 — 실패해도 디바이스 생성에는 영향이 없다.
+        {
+            Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+            if ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr )
+            {
+                DXGI_ADAPTER_DESC1 adapterDesc{};
+                if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
+                {
+                    utf8         arrName[constant::kMaxBuffer256]{};
+                    const string name = StringUtil::utf16ToUtf8( adapterDesc.Description );
+                    formatstring( arrName, constant::kMaxBuffer256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
+                                  adapterDesc.VendorId, adapterDesc.DeviceId,
+                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / ( 1024ull * 1024ull ) ) );
+                    CrashHandler::setContextValue( "GPU", arrName );
+                }
+            }
+        }
 
         if ( FAILED( D3D12CreateDevice( nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;

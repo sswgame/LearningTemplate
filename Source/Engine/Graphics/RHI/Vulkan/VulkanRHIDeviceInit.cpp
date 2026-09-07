@@ -6,6 +6,8 @@
  */
 #include "pch.h"
 
+#include "Core/Process/CrashHandler.h"
+
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
@@ -256,6 +258,19 @@ namespace sw
             }
             if ( found )
                 break;
+        }
+
+        // 크래시 리포트에 어댑터·드라이버를 남긴다. "어느 GPU·어느 드라이버에서만 난다" 는 판단이
+        // 이것 없이는 불가능하고, 그게 범위를 좁히는 첫 질문이다.
+        if ( _physicalDevice != nullptr )
+        {
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+            utf8 arrGpu[constant::kMaxBuffer256]{};
+            formatstring( arrGpu, constant::kMaxBuffer256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
+                          properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
+                          VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
+            CrashHandler::setContextValue( "GPU", arrGpu );
         }
         return _physicalDevice != nullptr;
     }

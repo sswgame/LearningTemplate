@@ -8,7 +8,7 @@ SW_LOG_CALLER( "TestLog" );
 
 namespace
 {
-#if defined( SW_DEBUG )
+    // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 Debug 전용이 아니게 됐으므로 검증도 그래야 한다.
     /** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
     constexpr const utf8* kCapturePrefix = "[TestLog] ";
 
@@ -115,7 +115,6 @@ namespace
         sw::vector<sw::LogEntry> _listEntry;
         sw::DelegateHandle       _handle;
     };
-#endif
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -150,6 +149,16 @@ SW_TEST_CASE( Core_Log, WriteLogDeliversEveryLevel )
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
+
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
 
     SW_LOG_INFO( "[TestLog] Info level log" );
     SW_LOG_WARNING( "[TestLog] Warning level log" );
@@ -187,6 +196,51 @@ SW_TEST_CASE( Core_Log, WriteLogDeliversEveryLevel )
 }
 
 /**
+ * @brief [Core_Log] 런타임 상세도가 그보다 덜 심각한 줄을 버리는지
+ * @details 배포본에서 고객에게 상세도를 올려 재현을 받는 것이 이 값의 용도다. 컴파일 상한과는 다른
+ *          축이다 — 상한은 "무엇을 남길 수 있나", 이 값은 "지금 무엇을 남길까" 를 정한다.
+ */
+SW_TEST_CASE( Core_Log, RuntimeVerbosityDropsLessSevere )
+{
+    LogCapture capture;
+    SW_ASSERT_TRUE( capture.isAttached() );
+
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
+
+    // Error 만 남기게 하면 Warning 아래는 버려져야 한다.
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Error );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Error ) );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Warning ) == false );
+
+    SW_LOG_ERROR( "[TestLog] kept" );
+    SW_LOG_WARNING( "[TestLog] dropped" );
+    SW_LOG_INFO( "[TestLog] dropped" );
+    SW_EXPECT_EQUAL( 1u, capture.getCount() );
+
+    // Warning 까지 올리면 배포본 기본(컴파일 상한 Warning)과 같은 상태가 된다.
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Warning );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Warning ) );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Info ) == false );
+}
+
+/**
+ * @brief [Core_Log] Error/Warning 은 **모든 빌드**에 컴파일되는지
+ * @details 예전에는 SW_DEBUG 가 아니면 매크로가 통째로 사라져 배포본에 로그가 하나도 없었다.
+ *          이 단언이 그 회귀를 막는다 — 상한이 Warning 밑으로 내려가면 여기서 걸린다.
+ */
+SW_TEST_CASE( Core_Log, ErrorAndWarningSurviveEveryBuild )
+{
+    static_assert( SW_LOG_COMPILED_VERBOSITY >= 1, "Error/Warning 은 어떤 빌드에서도 컴파일되어야 한다" );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( 0 ) );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( 1 ) );
+}
+
+/**
  * @brief [Core_Log] 로그 레벨 개수
  */
 SW_TEST_CASE( Core_Log, LogLevelCount )
@@ -203,6 +257,16 @@ SW_TEST_CASE( Core_Log, LogMacrosFormatArguments )
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
+
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
 
     SW_LOG_INFO( "[TestLog] SW_LOG_INFO %#", 123 );
     SW_LOG_WARNING( "[TestLog] SW_LOG_WARNING %#", "warning" );
