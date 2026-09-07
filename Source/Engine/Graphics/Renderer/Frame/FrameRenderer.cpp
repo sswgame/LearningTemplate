@@ -458,6 +458,9 @@ namespace sw
             ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
         }
 
+        // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
+        ensureMaterialPsos();
+
         if ( prepareCommandList( pDevice, "execute" ) == false )
         {
             _pScene = nullptr;
@@ -530,6 +533,9 @@ namespace sw
             const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + _s_kPassCbSlotCount;
             ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
         }
+
+        // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
+        ensureMaterialPsos();
 
         if ( prepareCommandList( pDevice, "executePacket" ) == false )
             return false;

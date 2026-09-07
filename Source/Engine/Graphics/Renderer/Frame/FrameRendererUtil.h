@@ -8,6 +8,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 
 namespace sw
 {
@@ -56,6 +57,30 @@ namespace sw
         static constexpr float32 kGpuSpinSpeedRange = 1.75f;
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+
+        /**
+         * @brief 이 패스가 씬 메시(GpuScene 배치)를 그리는가.
+         * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들이다. 풀스크린 패스는 배치를 안 쓴다.
+         */
+        static bool drawsSceneMeshes( RenderPassType passType )
+        {
+            return passType == RenderPassType::Shadow || passType == RenderPassType::DepthPrepass ||
+                   passType == RenderPassType::ForwardOpaque || passType == RenderPassType::ForwardOpaqueNoDepthWrite ||
+                   passType == RenderPassType::GBuffer || passType == RenderPassType::GBufferAlbedo ||
+                   passType == RenderPassType::GBufferNormal || passType == RenderPassType::Transparent;
+        }
+
+        /**
+         * @brief 이 패스가 **머티리얼의 셰이더**로 그리는가 (아니면 패스 자신의 셰이더인가).
+         * @details 언리얼로 치면 패스가 셰이더 **타입**(TShadowDepthVS 같은)을 정하고 머티리얼이 그 타입의
+         *          퍼뮤테이션을 준다. 그림자·뎁스 패스는 지오메트리만 그리므로 자기 셰이더가 정본이고, 머티리얼은
+         *          define 만 얹는다(알파 마스크 같은 것이 나중에 여기로 들어온다). 여기서 true 인 패스만
+         *          머티리얼이 선언한 .hlsl 로 갈아탄다.
+         */
+        static bool usesMaterialShader( RenderPassType passType )
+        {
+            return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
+        }
 
         static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
                                               std::initializer_list<const utf8*>             listName )

@@ -110,6 +110,20 @@ namespace sw
          */
         bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
 
+        /** @brief 패스 타입에 대응하는 엔진 PSO. 없으면 0. */
+        RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
+        /**
+         * @brief 이 배치를 그릴 PSO — 머티리얼 퍼뮤테이션 변형이 있으면 그것, 없으면 패스 PSO 그대로.
+         * @details 드로우 경로가 배치마다 부르는 조회다(읽기 전용). 캐시는 `ensureMaterialPsos` 가 기록 전에 채운다.
+         */
+        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const;
+        /**
+         * @brief PSO 를 만들 때 쓴 디스크립터를 돌려줍니다 (셰이더 경로·define·렌더 상태). 모르는 PSO 면 nullptr.
+         * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 창이다 — 픽셀로는 안 보이는
+         *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인한다.
+         */
+        bool findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+
     private:
         /**
          * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
@@ -321,7 +335,31 @@ namespace sw
                                                      bool                  bDefaultDepthWrite = true,
                                                      const vector<string>* pExtraDefines      = nullptr );
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
-        RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
+        /**
+         * @struct MaterialPsoEntry
+         * @brief (패스, 머티리얼 퍼뮤테이션) 하나에 대응하는 PSO.
+         * @details `_bOwned` 가 0 이면 값은 패스 PSO 그대로다 — 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
+         *          새로 만들지 않는다. 그래서 파괴할 때 **이 PSO 는 건드리면 안 된다**(패스가 소유한다).
+         */
+        struct MaterialPsoEntry
+        {
+            RHIPipelineStateHandle _pso{ 0 };
+            uint8                  _bOwned{ 0 };
+        };
+
+        /**
+         * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 다 만들어 둡니다.
+         * @details 기록 중에는 PSO 를 만들 수 없고(상수버퍼 용량을 미리 늘리는 것과 같은 이유다), 패스는
+         *          병렬로 기록되므로 그때 만들면 백엔드마다 다른 방식으로 깨진다.
+         */
+        void ensureMaterialPsos();
+        /**
+         * @brief 패스 PSO 에 머티리얼 퍼뮤테이션을 얹은 변형을 만듭니다. 얹을 게 없으면 패스 PSO 를 그대로 돌려줍니다.
+         * @details 렌더 상태(블렌드·뎁스·RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 갈아 끼운다 —
+         *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 게 아니다.
+         */
+        MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
+                                                   const GpuShaderPermutation& permutation );
         /**
          * @brief 상수버퍼 슬롯을 하나 빌립니다 — **드로우마다** 하나씩. 없으면 false.
          * @details 슬롯을 드로우 단위로 나누는 이유: `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰는데
@@ -467,6 +505,14 @@ namespace sw
         static constexpr uint32 _s_kEnginePassCbSize = 512;
         /// @brief 엔진이 만들어 둔 패스별 PSO. 예전엔 string 키라 조회마다 string 을 만들었다.
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
+
+        /**
+         * @brief (패스 PSO, 퍼뮤테이션 해시) → PSO. 언리얼의 머티리얼별 PSO 캐시가 있는 자리.
+         * @details **기록 전에** 채운다(`ensureMaterialPsos`). PSO 생성은 기록 중에 할 수 없고, 패스들은
+         *          병렬로 기록되므로 드로우 시점에는 읽기만 한다.
+         */
+        unordered_map<uint64, MaterialPsoEntry> _mapMaterialPso;
+        mutable mutex                           _materialPsoMutex;
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.

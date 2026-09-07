@@ -94,17 +94,11 @@ namespace sw
         registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
         registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
         registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
-        {
-            // 반투명 패스는 **반투명 퍼뮤테이션**으로 굽는다. 이 define 이 없으면 forwardlit 의 불투명
-            // 변형이 걸려 알파가 1 로 고정되고(퍼뮤테이션 분기 참고) 블렌딩이 눈에 보이지 않는다.
-            // 머티리얼 에셋(glassmaterial)도 같은 define 을 always-define 으로 들고 있어 둘이 짝을 이룬다.
-            const vector<string>         listTranslucentDefine{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
-            const RHIPipelineStateHandle psoTransparent =
-                createPsoForPassType( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false,
-                                      &listTranslucentDefine );
-            if ( psoTransparent != 0 )
-                _mapEnginePso.insert_or_assign( RenderPassType::Transparent, psoTransparent );
-        }
+        // 반투명 패스는 블렌드를 켜고 뎁스 쓰기를 끄는 것까지가 **패스의 몫**이다. 어떤 셰이더 퍼뮤테이션으로
+        // 그릴지는 머티리얼이 정한다 — glassmaterial 이 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로 들고
+        // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전엔 이 define 을 여기에 박아 두어
+        // "반투명 패스에 들어온 것은 무조건 반투명" 이었다 — 머티리얼이 뭘 선언했든 상관이 없었다.
+        registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
         registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
         registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
         registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
@@ -288,8 +282,24 @@ namespace sw
             _taaHistorySrv = kInvalidDescriptorIndex;
             _mapEnginePso.clear();
             _mapPresentPso.clear();
+            {
+                std::scoped_lock<mutex> lock{ _materialPsoMutex };
+                _mapMaterialPso.clear();
+            }
             _bPassResourcesReady = 0;
             return;
+        }
+
+        // 퍼뮤테이션 변형을 **패스 PSO 보다 먼저** 파괴한다. `_bOwned` 가 0 인 항목은 패스 PSO 를 그대로
+        // 담고 있을 뿐이라 여기서 파괴하면 두 번 파괴하는 셈이 된다.
+        {
+            std::scoped_lock<mutex> lock{ _materialPsoMutex };
+            for ( auto& [key, entry] : _mapMaterialPso )
+            {
+                if ( entry._bOwned != 0 && entry._pso != 0 )
+                    _pDevice->getResource()->destroyPipelineState( entry._pso );
+            }
+            _mapMaterialPso.clear();
         }
 
         for ( auto& [name, pso] : _mapEnginePso )

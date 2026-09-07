@@ -122,14 +122,48 @@ namespace sw
         invalidateBuildCache();
     }
 
-    Material* GpuScene::batchKeyMaterial( Material* pMaterial )
+    uint64 GpuScene::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance )
+    {
+        if ( pMaterial == nullptr )
+            return 0;
+        // 인스턴스가 있으면 그 해시를 쓴다 — 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모 것을 이미 포함한다.
+        const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
+        uint64       hash       = StringUtil::computeHash64( pMaterial->getShaderPath(), false, StringUtil::kOffset64 );
+        hash ^= defineHash + 0x9e3779b97f4a7c15ull + ( hash << 6 ) + ( hash >> 2 );
+        return hash;
+    }
+
+    uint32 GpuScene::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance )
+    {
+        if ( pMaterial == nullptr )
+            return kInvalidShaderPermutation;
+        const uint64 hash = permutationHashFor( pMaterial, pInstance );
+        const auto   it   = _mapPermutationToIndex.find( hash );
+        if ( it != _mapPermutationToIndex.end() )
+            return it->second;
+
+        GpuShaderPermutation permutation{};
+        permutation._shaderPath = pMaterial->getShaderPath();
+        permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
+        permutation._hash       = hash;
+        _listShaderPermutation.push_back( std::move( permutation ) );
+
+        const uint32 index = static_cast<uint32>( _listShaderPermutation.size() - 1 );
+        _mapPermutationToIndex.emplace( hash, index );
+        return index;
+    }
+
+    Material* GpuScene::batchKeyMaterial( Material* pMaterial, const MaterialInstance* pInstance )
     {
         if ( _bMergeAcrossMaterials == 0 || pMaterial == nullptr )
             return pMaterial;
-        auto it = _mapShaderRepresentative.find( pMaterial->getShaderPath() );
+        // 대표는 **퍼뮤테이션 단위**다. 예전엔 셰이더 경로만 봐서, 같은 .hlsl 을 쓰지만 정적 스위치가 다른
+        // 머티리얼이 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 버려졌다.
+        const uint64 hash = permutationHashFor( pMaterial, pInstance );
+        auto         it   = _mapShaderRepresentative.find( hash );
         if ( it != _mapShaderRepresentative.end() )
             return it->second;
-        _mapShaderRepresentative.emplace( pMaterial->getShaderPath(), pMaterial );
+        _mapShaderRepresentative.emplace( hash, pMaterial );
         return pMaterial;
     }
 
@@ -244,7 +278,7 @@ namespace sw
                 continue;
             }
             // 합치기가 켜져 있으면 같은 셰이더 타입은 머티리얼·인스턴스가 달라도 한 키다 — 파라미터는 원소 인덱스로 읽는다.
-            SortKey key{ cand._pMesh, batchKeyMaterial( cand._pMaterial ), _bMergeAcrossMaterials != 0 ? nullptr : cand._pInstance };
+            SortKey key{ cand._pMesh, batchKeyMaterial( cand._pMaterial, cand._pInstance ), _bMergeAcrossMaterials != 0 ? nullptr : cand._pInstance };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -770,8 +804,9 @@ namespace sw
                         batch._materialCb = key._pMaterial ? key._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
                     // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
                     GpuSceneInternal::fillMaterialTextureSrvs( batch, key._pMaterial );
-                    batch._materialGroup = materialGroupFor( key._pMaterial );
-                    batch._materialIndex = 0;
+                    batch._materialGroup     = materialGroupFor( key._pMaterial );
+                    batch._shaderPermutation = shaderPermutationFor( key._pMaterial, key._pInstance );
+                    batch._materialIndex     = 0;
 
                     // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다 — 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 산다.
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
@@ -809,7 +844,7 @@ namespace sw
                 {
                     const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
                     const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial ) != batchKeyMaterial( b._pMaterial ) ) ||
+                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial, a._pInstance ) != batchKeyMaterial( b._pMaterial, b._pInstance ) ) ||
                                              ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
                 }
                 if ( bEnd || bKeyChange )
@@ -828,8 +863,9 @@ namespace sw
                     else
                         batch._materialCb = cand._pMaterial ? cand._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
                     GpuSceneInternal::fillMaterialTextureSrvs( batch, cand._pMaterial );
-                    batch._materialGroup = materialGroupFor( cand._pMaterial );
-                    batch._materialIndex = 0;
+                    batch._materialGroup     = materialGroupFor( cand._pMaterial );
+                    batch._shaderPermutation = shaderPermutationFor( cand._pMaterial, cand._pInstance );
+                    batch._materialIndex     = 0;
 
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
                     for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
@@ -888,6 +924,8 @@ namespace sw
     {
         _listMaterialGroup.clear();
         _mapShaderPathToGroup.clear();
+        _listShaderPermutation.clear();
+        _mapPermutationToIndex.clear();
     }
 
     uint32 GpuScene::materialGroupFor( const Material* pMaterial )

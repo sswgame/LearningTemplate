@@ -1160,6 +1160,99 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 }
 
 /**
+ * @brief [GpuSceneTest] 정적 스위치가 다르면 배치가 갈리고, 그 퍼뮤테이션이 배치에 실려 나가는지 (GPU 불필요).
+ * @details 배치는 **PSO 하나로** 그린다. 그래서 배치를 묶는 키에 셰이더 퍼뮤테이션이 들어 있지 않으면,
+ *          같은 .hlsl 을 쓰지만 정적 스위치가 다른 두 머티리얼이 한 배치로 접히고 한쪽 퍼뮤테이션이
+ *          통째로 사라진다. 예전 키는 셰이더 **경로**뿐이라 정확히 그랬다 — 머티리얼이 선언한
+ *          MATERIAL_BLEND_TRANSLUCENT 같은 것이 구워지기만 하고 한 번도 걸리지 않았다.
+ *
+ *          화면으로는 잡기 어렵다(퍼뮤테이션이 빠져도 그림은 그럴듯하게 나온다). 그래서 배치가 갈리는지와
+ *          배치가 가리키는 퍼뮤테이션의 define 을 CPU 에서 직접 본다.
+ */
+SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
+{
+    // 실제 에셋을 읽어 스위치만 바꾼다 — XML 을 손으로 지으면 _permutations 가 빠져 다른 걸 재게 된다.
+    auto makeMaterial = []() -> sw::unique_ptr<sw::Material>
+    {
+        sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
+            return nullptr;
+        return material;
+    };
+
+    sw::unique_ptr<sw::Material> materialPlain    = makeMaterial();
+    sw::unique_ptr<sw::Material> materialSwitched = makeMaterial();
+    SW_ASSERT_TRUE( materialPlain != nullptr && materialSwitched != nullptr );
+
+    // 같은 셰이더, 같은 블렌드 모드. 다른 것은 정적 스위치 하나뿐이다.
+    materialSwitched->setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
+    SW_EXPECT_TRUE_MSG( materialPlain->getShaderPath() == materialSwitched->getShaderPath(),
+                        "이 테스트는 같은 셰이더를 쓰는 두 머티리얼을 전제로 한다" );
+    SW_ASSERT_TRUE( materialPlain->getPermutationHash() != materialSwitched->getPermutationHash() );
+
+    sw::Scene scene( "PermutationSplitScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    // 메시는 **하나를 공유한다**. 메시가 다르면 어차피 배치가 갈려서 퍼뮤테이션 때문에 갈린 것인지 알 수 없다.
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::createUnitCube();
+    SW_ASSERT_TRUE( mesh != nullptr );
+
+    auto addObject = [&]( const utf8* pName, sw::Material* pMaterial, float32 offsetX )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+        SW_ASSERT_TRUE( pObj != nullptr );
+        sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_TRUE( pMeshComp != nullptr );
+        pMeshComp->setMesh( mesh );
+        pMeshComp->setMaterial( pMaterial );
+        pMeshComp->setLocalPosition( sw::float3{ offsetX, 0.0f, 0.0f } );
+    };
+    addObject( "CubePlain", materialPlain.get(), -1.1f );
+    addObject( "CubeSwitched", materialSwitched.get(), 1.1f );
+
+    sw::GpuScene gpuScene;
+    // 머티리얼을 가로질러 합치는 모드 — 이 모드가 바로 퍼뮤테이션을 뭉개던 자리다.
+    gpuScene.setMergeBatchesAcrossMaterials( true );
+    gpuScene.buildFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f }, nullptr );
+
+    const sw::vector<sw::GpuMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    SW_EXPECT_TRUE_MSG( batches.size() == 2,
+                        "퍼뮤테이션이 다른 두 머티리얼이 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 한쪽이 버려진다" );
+    SW_ASSERT_TRUE( batches.size() == 2 );
+
+    SW_EXPECT_TRUE_MSG( batches[0]._shaderPermutation != batches[1]._shaderPermutation,
+                        "배치는 갈렸는데 같은 퍼뮤테이션을 가리킨다" );
+
+    // 배치가 가리키는 퍼뮤테이션이 실제로 그 머티리얼의 define 을 들고 있어야 한다.
+    bool bFoundSwitched{ false };
+    for ( const sw::GpuMeshBatch& batch : batches )
+    {
+        const sw::GpuShaderPermutation* pPermutation = gpuScene.findShaderPermutation( batch._shaderPermutation );
+        SW_ASSERT_TRUE( pPermutation != nullptr );
+        SW_EXPECT_TRUE_MSG( pPermutation->_shaderPath.empty() == false, "퍼뮤테이션에 셰이더 경로가 없다" );
+
+        bool bHasNormalMap{ false };
+        for ( const sw::string& defineStr : pPermutation->_listDefine )
+        {
+            if ( defineStr == "MATERIAL_NORMALMAP" )
+                bHasNormalMap = true;
+        }
+        if ( batch._pMaterial == materialSwitched.get() )
+        {
+            bFoundSwitched = true;
+            SW_EXPECT_TRUE_MSG( bHasNormalMap, "스위치를 켠 머티리얼의 배치인데 그 키워드가 퍼뮤테이션에 없다" );
+        }
+        else
+        {
+            SW_EXPECT_TRUE_MSG( bHasNormalMap == false, "스위치를 안 켠 머티리얼의 배치에 남의 키워드가 들어 있다" );
+        }
+    }
+    SW_EXPECT_TRUE_MSG( bFoundSwitched, "스위치를 켠 머티리얼의 배치를 찾지 못했다" );
+
+    mesh->releaseGpu();
+}
+
+/**
  * @brief [GpuSceneTest] 절두체 평면을 viewProj 에서 제대로 뽑는지 (GPU 불필요).
  * @details 이 계산이 **없어서** GPU 컬링이 켜 놓고도 한 번도 아무것도 거르지 않았다. 상수버퍼의 평면
  *          배열이 0 인 채로 나갔고, 그러면 셰이더의 `dot( 0, center ) + 0 < -radius` 가 항상 거짓이라
@@ -1217,6 +1310,153 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 
     // 반지름이 크면 경계 밖이어도 걸리면 안 된다 (셰이더가 반지름을 그대로 쓰는지).
     SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 200.0f, 0.0f, 0.0f }, 400.0f ), "반지름이 큰 물체를 잘못 걸렀다" );
+}
+
+/**
+ * @brief [RenderPassTest] 머티리얼의 퍼뮤테이션이 실제로 그 배치의 PSO 가 되는지 (4 백엔드).
+ * @details 머티리얼은 자기 셰이더 변형을 선언한다(유리는 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로
+ *          들고 있다). 그런데 드로우가 **패스 PSO 하나로** 전부 그리면 그 선언은 구워지기만 하고 한 번도
+ *          걸리지 않는다. 예전엔 반투명 패스 PSO 에 그 define 을 직접 박아 두어 가려져 있었다 —
+ *          "반투명 패스에 들어온 것은 무조건 반투명" 이었고, 머티리얼이 뭘 선언했는지는 상관이 없었다.
+ *
+ *          픽셀로는 잡기 어렵다. 알파 경로가 컴파일됐는지 여부는 겹치는 곳의 색만 바꾸는데, 그 색은
+ *          조명·톤매핑을 타고 흔들린다. 그래서 **드로우가 실제로 고른 PSO 의 디스크립터**를 본다.
+ */
+SW_TEST_CASE( RenderPassTest, MaterialPermutationDrivesBatchPso )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
+    {
+        for ( const sw::string& defineStr : desc._listShaderDefine )
+        {
+            if ( defineStr == pDefine )
+                return true;
+        }
+        return false;
+    };
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        // 실제 에셋을 쓴다 — 손으로 지은 XML 은 _permutations 가 빠져 검증하려던 것과 다른 걸 재게 된다.
+        sw::unique_ptr<sw::Material> materialGlass = sw::make_unique<sw::Material>();
+        if ( bOk )
+            bOk = materialGlass->loadFromFile( "engine/materials/glassmaterial.material" );
+
+        sw::Scene scene( "MaterialPermutationPsoScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        sw::shared_ptr<sw::Mesh> mesh;
+        if ( bOk )
+        {
+            mesh = sw::Mesh::createUnitCube();
+            bOk  = mesh != nullptr;
+        }
+        if ( bOk )
+        {
+            sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "GlassCube" ) );
+            bOk                  = pObj != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                bOk                          = pMeshComp != nullptr;
+                if ( bOk )
+                {
+                    pMeshComp->setMesh( mesh );
+                    pMeshComp->setMaterial( materialGlass.get() );
+                }
+            }
+        }
+
+        if ( bOk )
+        {
+            // 한 프레임을 돌려야 배치가 서고 ensureMaterialPsos 가 퍼뮤테이션 PSO 를 만든다.
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        const sw::string label = sw::string( device->getBackendName() );
+        if ( bOk )
+        {
+            const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getTransparentBatches();
+            SW_EXPECT_TRUE_MSG( batches.empty() == false,
+                                ( label + ": 반투명 머티리얼인데 반투명 배치가 없다" ).c_str() );
+
+            const sw::RHIPipelineStateHandle passPso = renderer.getEnginePso( sw::RenderPassType::Transparent );
+            if ( batches.empty() == false && passPso != 0 )
+            {
+                // 패스 PSO 자체에는 이제 그 define 이 없다 — 반투명 패스가 정하는 것은 블렌드·뎁스지 셰이더가 아니다.
+                sw::RHIPipelineStateDesc passDesc{};
+                if ( renderer.findPsoDesc( passPso, passDesc ) )
+                {
+                    SW_EXPECT_TRUE_MSG( hasDefine( passDesc, "MATERIAL_BLEND_TRANSLUCENT" ) == false,
+                                        ( label + ": 반투명 패스 PSO 에 퍼뮤테이션이 박혀 있다 — 머티리얼이 뭘 선언하든 상관없어진다" )
+                                            .c_str() );
+                    SW_EXPECT_TRUE_MSG( passDesc._bEnableBlend != 0,
+                                        ( label + ": 반투명 패스인데 블렌드가 꺼져 있다" ).c_str() );
+                }
+
+                // 배치가 고르는 PSO 는 패스 PSO 와 **달라야** 하고, 그 안에 머티리얼의 define 이 있어야 한다.
+                const sw::RHIPipelineStateHandle batchPso = renderer.psoForBatch( passPso, batches[0] );
+                SW_EXPECT_TRUE_MSG( batchPso != passPso,
+                                    ( label + ": 유리 배치가 패스 PSO 를 그대로 쓴다 — 머티리얼 퍼뮤테이션이 안 걸렸다" ).c_str() );
+
+                sw::RHIPipelineStateDesc batchDesc{};
+                if ( renderer.findPsoDesc( batchPso, batchDesc ) )
+                {
+                    SW_EXPECT_TRUE_MSG( hasDefine( batchDesc, "MATERIAL_BLEND_TRANSLUCENT" ),
+                                        ( label + ": 배치 PSO 에 MATERIAL_BLEND_TRANSLUCENT 가 없다 — 알파 경로가 컴파일되지 않는다" )
+                                            .c_str() );
+                    // 렌더 상태는 **패스가 정한다** — 머티리얼이 블렌드를 끄거나 켤 수는 없다.
+                    SW_EXPECT_TRUE_MSG( batchDesc._bEnableBlend == passDesc._bEnableBlend,
+                                        ( label + ": 퍼뮤테이션 변형이 패스의 블렌드 상태를 바꿨다" ).c_str() );
+                }
+                else
+                {
+                    SW_EXPECT_TRUE_MSG( false, ( label + ": 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
+                }
+
+                // 그림자 패스는 자기 지오메트리 셰이더가 정본이다 — 머티리얼 셰이더로 갈아타면 안 된다.
+                const sw::RHIPipelineStateHandle shadowPso = renderer.getEnginePso( sw::RenderPassType::Shadow );
+                sw::RHIPipelineStateDesc         shadowDesc{};
+                if ( shadowPso != 0 && renderer.findPsoDesc( shadowPso, shadowDesc ) )
+                {
+                    const sw::RHIPipelineStateHandle shadowBatchPso = renderer.psoForBatch( shadowPso, batches[0] );
+                    sw::RHIPipelineStateDesc         shadowBatchDesc{};
+                    if ( renderer.findPsoDesc( shadowBatchPso, shadowBatchDesc ) )
+                    {
+                        SW_EXPECT_TRUE_MSG( shadowBatchDesc._vertexShaderPath == shadowDesc._vertexShaderPath,
+                                            ( label + ": 그림자 패스가 머티리얼 셰이더로 갈아탔다" ).c_str() );
+                    }
+                }
+            }
+        }
+        else
+        {
+            SW_EXPECT_TRUE_MSG( false, ( label + ": 프레임 실행 실패" ).c_str() );
+        }
+
+        renderer.shutdown();
+        if ( mesh != nullptr )
+            mesh->releaseGpu();
+    }
+
+    SW_EXPECT_TRUE_MSG( attemptedCount > 0, "백엔드를 하나도 초기화하지 못했다 — 이 테스트는 아무것도 검증하지 않았다" );
 }
 
 /**

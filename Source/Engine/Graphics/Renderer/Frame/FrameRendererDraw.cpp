@@ -186,6 +186,9 @@ namespace sw
         setIdentityWorld( ctx );
         commitBindlessTextureBindings( ctx );
 
+        // 지금 커맨드 리스트에 걸려 있는 PSO. 배치마다 퍼뮤테이션이 다를 수 있으므로 **바뀔 때만** 다시 건다.
+        RHIPipelineStateHandle boundPso = pso;
+
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )
@@ -207,12 +210,23 @@ namespace sw
             if ( batch._vertexBuffer == 0 || batch._instanceCount == 0 )
                 continue;
             ctx._pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
+
+            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 예전엔 패스 PSO 하나로 전부 그려서, 머티리얼이 선언한
+            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않았다.
+            // 캐시는 ensureMaterialPsos 가 기록 전에 채운다 — 여기서는 조회만 한다.
+            const RHIPipelineStateHandle batchPso = psoForBatch( pso, batch );
+            if ( batchPso != boundPso && batchPso != 0 )
+            {
+                ctx._pCmd->setPipelineState( batchPso );
+                boundPso = batchPso;
+            }
+
             // b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
                 ctx._drawInstanceBase = batch._instanceBase;
-            registerMaterialBuffer( ctx, batch, pso );
-            bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
+            registerMaterialBuffer( ctx, batch, batchPso );
+            bindForDraw( ctx, batchPso, batch._materialCb, batch._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
             ctx._pCmd->drawIndirect( _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer,

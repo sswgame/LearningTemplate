@@ -105,6 +105,12 @@ namespace sw
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스 — _listMaterialGroup. 없으면 kInvalidMaterialGroup. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
+         * @brief 이 배치를 그릴 셰이더 퍼뮤테이션 — `GpuScene::getShaderPermutations()` 인덱스.
+         * @details 없으면 kInvalidShaderPermutation 이고, 그때는 패스가 자기 PSO 로 그린다. 배치 키에 이 퍼뮤테이션
+         *          해시가 들어가므로, 한 배치의 인스턴스는 반드시 모두 같은 셰이더다.
+         */
+        uint32 _shaderPermutation{ 0xFFFFFFFFu };
+        /**
          * @brief 그룹의 GPU 구조버퍼(g_SwMaterials, t9)와 SRV 인덱스 — upload 가 채운다.
          * @details 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다 (언리얼 GPUScene 방식). 드로우마다 CB 를 갈아
          *          끼우지 않고, 배치마다 이 버퍼를 리플렉션 슬롯에 한 번 건다.
@@ -155,6 +161,25 @@ namespace sw
             h ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
             return h;
         }
+    };
+
+    /**
+     * @struct GpuShaderPermutation
+     * @brief 머티리얼이 요구하는 셰이더 변형 하나 — 경로 + 정적 define.
+     * @details 언리얼의 `FMaterialShaderMap` 이 있는 자리다. 같은 .hlsl 이라도 정적 스위치가 다르면 **다른 셰이더**라서
+     *          다른 PSO 로 그려야 한다. 예전엔 셰이더 **경로**만 봐서, 유리 머티리얼처럼 always-define 을 가진 것이
+     *          불투명 머티리얼과 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 그 정보가 그냥 버려졌다.
+     *
+     *          렌더 스레드는 씬을 못 보므로(Material* 을 따라갈 수 없다) 값으로 실어 나른다.
+     */
+    struct GpuShaderPermutation
+    {
+        /// @brief 머티리얼이 선언한 셰이더. 패스가 자기 셰이더를 쓰는 경우(그림자·뎁스)엔 무시된다.
+        string _shaderPath;
+        /// @brief always-define + 정적 스위치 + 멀티컴파일 선택. 그대로 PSO 의 셰이더 define 이 된다.
+        vector<string> _listDefine;
+        /// @brief (경로, define) 해시 — PSO 캐시 키이자 **배치 병합 키**다.
+        uint64 _hash{ 0 };
     };
 
     struct GpuMaterialGroup
@@ -366,6 +391,13 @@ namespace sw
         bool isCpuSnapshotDirty() const { return _bCpuDirty != 0; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
         const vector<GpuMaterialGroup>& getMaterialGroups() const { return _listMaterialGroup; }
+        /** @brief 배치가 가리키는 셰이더 퍼뮤테이션 목록 (CPU 스냅샷). 인덱스는 빌드가 바뀌어도 유지된다. */
+        const vector<GpuShaderPermutation>& getShaderPermutations() const { return _listShaderPermutation; }
+        /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
+        const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
+        {
+            return ( index < _listShaderPermutation.size() ) ? &_listShaderPermutation[index] : nullptr;
+        }
         /**
          * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 타입**(머티리얼 셰이더 경로)으로 묶을지 정합니다 (언리얼 GPUScene).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽으므로, 텍스처를 인덱스로 고를 수 있는 백엔드
@@ -375,7 +407,8 @@ namespace sw
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
 
-        static constexpr uint32 kInvalidMaterialGroup = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidMaterialGroup     = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
         /** @brief 배치 MaterialInstance pin/retire 정책. */
         GpuMaterialRetireQueue& getMaterialRetireQueue() { return _materialRetire; }
@@ -400,15 +433,23 @@ namespace sw
         void   resetMaterialRegistry();
         uint32 materialGroupFor( const Material* pMaterial );
         /**
+         * @brief (머티리얼, 인스턴스) 의 퍼뮤테이션 해시 — 셰이더 경로와 정적 define 을 함께 봅니다.
+         * @details 인스턴스는 키워드를 덮어쓸 수 있으므로 인스턴스가 있으면 그 해시를 쓴다(부모 것을 이미 포함한다).
+         */
+        static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance );
+        /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidShaderPermutation. */
+        uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance );
+        /**
          * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 돌려줍니다 (GT, buildBatches 안).
          * @details 같은 쌍은 같은 원소를 공유한다. 인스턴스마다 부른다 — 배치를 셰이더 타입으로 합치면 한 배치 안에 여러 원소가 산다.
          */
         uint32 assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex );
         /**
-         * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 셰이더 경로의 대표 머티리얼, 아니면 그 머티리얼 자신.
+         * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼, 아니면 그 머티리얼 자신.
          * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
+         *          대표는 **퍼뮤테이션 단위**다 — 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
          */
-        Material* batchKeyMaterial( Material* pMaterial );
+        Material* batchKeyMaterial( Material* pMaterial, const MaterialInstance* pInstance );
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조버퍼에 올리고 배치에 버퍼/SRV 를 적습니다 (RT).
          * @details 바이트가 지난 업로드와 같으면 건너뛴다 — 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
@@ -434,9 +475,17 @@ namespace sw
         uint64 _buildCounter{ 0 };
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
         unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
-        /// @brief 재구축 중 셰이더 경로 → 대표 머티리얼 (배치 키 합치기용, GT).
-        unordered_map<string, Material*> _mapShaderRepresentative;
-        vector<uint8>                    _listMaterialScratch;
+        /**
+         * @brief 재구축 중 **퍼뮤테이션 해시** → 대표 머티리얼 (배치 키 합치기용, GT).
+         * @details 예전엔 셰이더 **경로**가 키였다. 그러면 forwardlit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이
+         *          한 대표로 접혀 같은 배치가 되고, 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 사라졌다.
+         */
+        unordered_map<uint64, Material*> _mapShaderRepresentative;
+        /// @brief 퍼뮤테이션 목록 — 배치의 `_shaderPermutation` 이 가리킨다. 빌드마다 비우지 않는다(RT 가 지난 스냅샷을 읽는다).
+        vector<GpuShaderPermutation> _listShaderPermutation;
+        /// @brief 퍼뮤테이션 해시 → `_listShaderPermutation` 인덱스.
+        unordered_map<uint64, uint32> _mapPermutationToIndex;
+        vector<uint8>                 _listMaterialScratch;
 
         /// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate

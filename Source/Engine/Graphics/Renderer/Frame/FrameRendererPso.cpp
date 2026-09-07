@@ -157,4 +157,157 @@ namespace sw
         registerPsoLayout( handle, desc );
         return handle;
     }
+
+    namespace
+    {
+        /** @brief (패스 PSO, 퍼뮤테이션) 캐시 키. */
+        uint64 materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash )
+        {
+            uint64 key = static_cast<uint64>( passPso ) * 0x9e3779b97f4a7c15ull;
+            key ^= permutationHash + 0x9e3779b97f4a7c15ull + ( key << 6 ) + ( key >> 2 );
+            return key;
+        }
+    } // namespace
+
+    FrameRenderer::MaterialPsoEntry FrameRenderer::createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
+                                                                             const GpuShaderPermutation& permutation )
+    {
+        MaterialPsoEntry entry{ passPso, 0 };
+        if ( passPso == 0 || _pDevice == nullptr )
+            return entry;
+
+        RHIPipelineStateDesc desc{};
+        {
+            // 패스가 정한 렌더 상태를 통째로 물려받는다 — 블렌드·뎁스·RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
+            std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+            const auto              it = _mapPsoDesc.find( passPso );
+            if ( it == _mapPsoDesc.end() )
+                return entry; // desc 를 모르는 PSO — 변형을 만들 근거가 없다.
+            desc = it->second;
+        }
+
+        bool bChanged{ false };
+        // 머티리얼 셰이더를 쓰는 패스만 경로를 갈아탄다(그림자·뎁스는 자기 지오메트리 셰이더가 정본이다).
+        if ( FrameRendererUtil::usesMaterialShader( passType ) && permutation._shaderPath.empty() == false &&
+             permutation._shaderPath != desc._vertexShaderPath )
+        {
+            desc._vertexShaderPath = permutation._shaderPath;
+            desc._pixelShaderPath  = permutation._shaderPath;
+            bChanged               = true;
+        }
+        for ( const string& defineStr : permutation._listDefine )
+        {
+            bool bFound{ false };
+            for ( const string& existing : desc._listShaderDefine )
+            {
+                if ( existing == defineStr )
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+            if ( bFound == false )
+            {
+                desc._listShaderDefine.push_back( defineStr );
+                bChanged = true;
+            }
+        }
+
+        // 얹을 게 없다 = 패스 PSO 가 이미 이 머티리얼의 셰이더다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
+        if ( bChanged == false )
+            return entry;
+
+        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
+        if ( handle == 0 )
+            return entry; // 컴파일 실패 — 패스 PSO 로 그린다(화면이 비는 것보다 낫다).
+        registerPsoLayout( handle, desc );
+        entry._pso    = handle;
+        entry._bOwned = 1;
+        return entry;
+    }
+
+    void FrameRenderer::ensureMaterialPsos()
+    {
+        if ( _pDevice == nullptr )
+            return;
+
+        // 이번 프레임 배치가 실제로 쓰는 퍼뮤테이션만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
+        // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
+        auto collect = []( const vector<GpuMeshBatch>& listBatch, vector<uint32>& outList )
+        {
+            for ( const GpuMeshBatch& batch : listBatch )
+            {
+                if ( batch._shaderPermutation == GpuScene::kInvalidShaderPermutation )
+                    continue;
+                bool bFound{ false };
+                for ( const uint32 existing : outList )
+                {
+                    if ( existing == batch._shaderPermutation )
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                if ( bFound == false )
+                    outList.push_back( batch._shaderPermutation );
+            }
+        };
+
+        vector<uint32> listOpaquePermutation;
+        vector<uint32> listTransparentPermutation;
+        collect( _gpuScene.getOpaqueBatches(), listOpaquePermutation );
+        collect( _gpuScene.getTransparentBatches(), listTransparentPermutation );
+        if ( listOpaquePermutation.empty() && listTransparentPermutation.empty() )
+            return;
+
+        for ( const auto& [passType, passPso] : _mapEnginePso )
+        {
+            if ( passPso == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
+                continue;
+            const vector<uint32>& listPermutation =
+                ( passType == RenderPassType::Transparent ) ? listTransparentPermutation : listOpaquePermutation;
+
+            for ( const uint32 permutationIndex : listPermutation )
+            {
+                const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( permutationIndex );
+                if ( pPermutation == nullptr )
+                    continue;
+
+                const uint64 key = materialPsoKey( passPso, pPermutation->_hash );
+                {
+                    std::scoped_lock<mutex> lock{ _materialPsoMutex };
+                    if ( _mapMaterialPso.find( key ) != _mapMaterialPso.end() )
+                        continue;
+                }
+                // 생성은 락 밖에서 한다 — 셰이더 컴파일이 낄 수 있어 드로우 경로의 조회를 붙잡으면 안 된다.
+                const MaterialPsoEntry  entry = createMaterialPsoVariant( passPso, passType, *pPermutation );
+                std::scoped_lock<mutex> lock{ _materialPsoMutex };
+                _mapMaterialPso.insert_or_assign( key, entry );
+            }
+        }
+    }
+
+    bool FrameRenderer::findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
+    {
+        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+        const auto              it = _mapPsoDesc.find( pso );
+        if ( it == _mapPsoDesc.end() )
+            return false;
+        outDesc = it->second;
+        return true;
+    }
+
+    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const
+    {
+        if ( passPso == 0 || batch._shaderPermutation == GpuScene::kInvalidShaderPermutation )
+            return passPso;
+        const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
+        if ( pPermutation == nullptr )
+            return passPso;
+
+        std::scoped_lock<mutex> lock{ _materialPsoMutex };
+        const auto              it = _mapMaterialPso.find( materialPsoKey( passPso, pPermutation->_hash ) );
+        // 못 찾으면 패스 PSO 로 그린다 — ensureMaterialPsos 가 기록 전에 채우므로 정상 경로에선 늘 있다.
+        return ( it != _mapMaterialPso.end() && it->second._pso != 0 ) ? it->second._pso : passPso;
+    }
 } // namespace sw
