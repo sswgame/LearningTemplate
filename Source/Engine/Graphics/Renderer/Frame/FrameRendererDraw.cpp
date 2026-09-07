@@ -111,7 +111,10 @@ namespace sw
         if ( pLayout == nullptr || pLayout->isEmpty() )
             return; // 레이아웃 미확보(컴파일 실패 등) — 조용히 스킵
 
-        const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
+        // **드로우마다** 슬롯을 새로 잡는다. 한 버퍼를 여러 드로우가 나눠 쓰면 updateConstantBuffer 가
+        // 같은 프레임 슬롯을 덮어써 전부 마지막 값(마지막 배치의 g_InstanceBase 등)을 읽는다 — acquireCbSlot 주석 참고.
+        EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
+        acquireCbSlot( engineCb._buffer, engineCb._index );
         ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                            engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv );
     }

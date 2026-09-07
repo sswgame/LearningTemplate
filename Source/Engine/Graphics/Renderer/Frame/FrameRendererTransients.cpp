@@ -143,33 +143,68 @@ namespace sw
         _frameCtx._passCbIndex = _listPassCbSlot[0]._index;
     }
 
-    void FrameRenderer::acquirePassCb( FramePassContext& ctx )
+    bool FrameRenderer::acquireCbSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex )
     {
         if ( _listPassCbSlot.empty() )
-            return;
+            return false;
 
         uint32 ticket = _passCbCursor.fetch_add( 1, std::memory_order_relaxed );
+
+        // 다음 프레임 용량 산정용 최댓값. 단조 증가라 한 번 커진 용량은 줄지 않는다.
+        uint32 previousHigh = _passCbHighWater.load( std::memory_order_relaxed );
+        while ( previousHigh < ticket + 1 &&
+                _passCbHighWater.compare_exchange_weak( previousHigh, ticket + 1, std::memory_order_relaxed ) == false )
+        {
+        }
+
         if ( ticket >= static_cast<uint32>( _listPassCbSlot.size() ) )
         {
-            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 예전엔 0번으로 되돌렸는데 0번은 프레임 시드
-            // 전용이라(resetPassCbRing 참고) 그 패스가 시드 값을 덮어써 다른 패스까지 망가뜨렸다.
-            // 경고는 프레임당 한 번만 — 패스마다 찍으면 로그가 잠긴다.
+            // 슬롯이 모자라면 마지막 슬롯을 공유한다 — 그 프레임은 배치 상수가 섞인다. 예전엔 0번으로
+            // 되돌렸는데 0번은 프레임 시드 전용이라(resetPassCbRing 참고) 시드까지 덮어써 더 크게 망가졌다.
+            // 경고는 프레임당 한 번만 — 드로우마다 찍으면 로그가 잠긴다.
             if ( _bPassCbExhaustedLogged.exchange( 1 ) == 0 )
             {
-                SW_LOG_WARNING( "acquirePassCb: pass constant slots exhausted (%#), passes will share the last slot",
+                SW_LOG_WARNING( "상수버퍼 슬롯이 부족합니다 (%#개) — 이 프레임의 남은 드로우는 마지막 슬롯을 공유해 배치 상수가 섞입니다.",
                                 static_cast<uint32>( _listPassCbSlot.size() ) );
             }
             ticket = static_cast<uint32>( _listPassCbSlot.size() ) - 1;
         }
 
-        // 슬롯 배열은 프레임 시작에 잡아 두고 병렬 구간에서 크기가 변하지 않는다. 분배도 위의
+        // 슬롯 배열은 기록 시작 전에 잡아 두고 병렬 구간에서 크기가 변하지 않는다. 분배도 위의
         // atomic 커서가 하므로 락이 필요 없다 — 다만 **const 로 읽어야** 한다. 비-const 접근은
-        // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 패스 둘도 레이스로 잡힌다.
+        // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 드로우 둘도 레이스로 잡힌다.
         const vector<FrameRenderer::PassCbSlot>& listSlot = _listPassCbSlot;
-        ctx._passCb                                       = listSlot[ticket]._buffer;
-        ctx._passCbIndex                                  = listSlot[ticket]._index;
+        outBuffer                                         = listSlot[ticket]._buffer;
+        outIndex                                          = listSlot[ticket]._index;
+        return true;
+    }
+
+    void FrameRenderer::acquirePassCb( FramePassContext& ctx )
+    {
+        // 패스 진입 시의 기본 슬롯. 실제 드로우는 bindForDraw 가 드로우마다 새 슬롯을 잡는다.
+        acquireCbSlot( ctx._passCb, ctx._passCbIndex );
         // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
         // (ctx._passValues 에 이미 프레임 시드가 들어있으므로 별도 선-업로드가 필요 없다).
+    }
+
+    void FrameRenderer::ensurePassCbCapacity( uint32 needed )
+    {
+        if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
+            return;
+        const uint32 target = MathUtil::min( needed, _s_kMaxPassCbSlotCount );
+        if ( static_cast<uint32>( _listPassCbSlot.size() ) >= target )
+            return;
+
+        _listPassCbSlot.reserve( target );
+        while ( static_cast<uint32>( _listPassCbSlot.size() ) < target )
+        {
+            PassCbSlot slot{};
+            slot._buffer = _pDevice->getResource()->createConstantBuffer( _s_kEnginePassCbSize );
+            if ( slot._buffer == 0 )
+                break;
+            slot._index = _pDevice->getResource()->registerBindlessResource( slot._buffer );
+            _listPassCbSlot.push_back( slot );
+        }
     }
 
     void FrameRenderer::releasePassResources()

@@ -982,6 +982,132 @@ SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
 }
 
 /**
+ * @brief [RenderPassTest] 한 패스에 드로우가 둘일 때 배치마다 다른 상수가 유지되는지 (4 백엔드).
+ * @details 배치 키에 메시 포인터가 들어가므로 **메시가 다르면 배치가 갈린다**. 그러면 한 패스가 드로우를
+ *          두 번 하는데, 패스 상수버퍼는 `acquirePassCb` 가 패스당 하나만 잡고 `bindGraphics` 는 드로우마다
+ *          거기에 덮어쓴다. GPU 는 제출 뒤에 읽으므로 두 드로우가 **마지막 배치의 `g_InstanceBase`** 를 보게 되고,
+ *          앞 배치의 메시가 뒤 배치의 인스턴스 자리에 그려진다(= 한쪽이 비어 보인다).
+ *
+ *          지금까지 이 경로가 한 번도 검증되지 않았다 — 벤치 씬도 패리티 테스트도 메시를 하나만 쓴다.
+ *          그래서 같은 큐브를 **두 번 따로 만들어** 포인터를 다르게 하고(기하는 동일해 가시성 변수를 없앤다)
+ *          좌우로 떨어뜨린 뒤, 화면 좌우 양쪽에 모두 그려졌는지 본다.
+ */
+SW_TEST_CASE( RenderPassTest, MultiBatchPassKeepsPerBatchConstants )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    /// @brief 두 큐브를 카메라가 보는 원점에서 좌우로 이만큼 떼어 놓는다.
+    constexpr float32 kSideOffset = 1.1f;
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "MultiBatchScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // 같은 기하지만 **다른 Mesh 객체** 두 개 — 배치 키가 갈려 한 패스에서 드로우가 둘이 된다.
+        sw::shared_ptr<sw::Mesh> meshLeft;
+        sw::shared_ptr<sw::Mesh> meshRight;
+        if ( bOk )
+        {
+            meshLeft  = sw::Mesh::createUnitCube();
+            meshRight = sw::Mesh::createUnitCube();
+            bOk       = meshLeft != nullptr && meshRight != nullptr && meshLeft != meshRight;
+        }
+        if ( bOk )
+        {
+            const sw::shared_ptr<sw::Mesh> arrMesh[2]   = { meshLeft, meshRight };
+            const float32                  arrOffset[2] = { -kSideOffset, kSideOffset };
+            for ( uint32 sideIndex = 0; sideIndex < 2 && bOk; ++sideIndex )
+            {
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( sideIndex == 0 ? "CubeLeft" : "CubeRight" ) );
+                bOk                  = pObj != nullptr;
+                if ( bOk )
+                {
+                    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                    bOk                          = pMeshComp != nullptr;
+                    if ( bOk )
+                    {
+                        pMeshComp->setMesh( arrMesh[sideIndex] );
+                        pMeshComp->setLocalPosition( sw::float3{ arrOffset[sideIndex], 0.0f, 0.0f } );
+                    }
+                }
+            }
+        }
+
+        if ( bOk )
+        {
+            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
+
+        if ( bOk )
+        {
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+            if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+            {
+                // 화면을 좌/우로 나눠 각각 그려진 픽셀을 센다. 한 배치가 다른 배치의 인스턴스를 읽으면
+                // 두 큐브가 같은 자리에 겹쳐 그려져 한쪽이 비어 버린다.
+                uint32 arrSideCount[2]{};
+                for ( uint32 y = 0; y < layout._height; ++y )
+                {
+                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                    for ( uint32 x = 0; x < layout._width; ++x )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                            ++arrSideCount[x < layout._width / 2 ? 0 : 1];
+                    }
+                }
+
+                const sw::string label      = sw::string( device->getBackendName() );
+                const uint32     minPerSide = ( layout._width * layout._height ) / 400;
+                SW_EXPECT_TRUE_MSG( arrSideCount[0] > minPerSide,
+                                    ( label + ": 왼쪽 큐브가 없다 (left " + sw::to_string( arrSideCount[0] ) + ", right " +
+                                      sw::to_string( arrSideCount[1] ) + ") — 배치마다 다른 상수가 유지되지 않는다" )
+                                        .c_str() );
+                SW_EXPECT_TRUE_MSG( arrSideCount[1] > minPerSide,
+                                    ( label + ": 오른쪽 큐브가 없다 (left " + sw::to_string( arrSideCount[0] ) + ", right " +
+                                      sw::to_string( arrSideCount[1] ) + ") — 배치마다 다른 상수가 유지되지 않는다" )
+                                        .c_str() );
+            }
+        }
+
+        if ( meshLeft != nullptr )
+            meshLeft->releaseGpu();
+        if ( meshRight != nullptr )
+            meshRight->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for multi-batch pass test" );
+}
+
+/**
  * @brief FrameRenderer 패리티 스모크 — DX11 / DX12 / Vulkan / OpenGL 각각 begin→execute→end(no present)
  * @details Present 없이 waitIdle까지. 가용 백엔드는 전부 성공해야 한다.
  */

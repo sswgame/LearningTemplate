@@ -308,6 +308,21 @@ namespace sw
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
         /**
+         * @brief 상수버퍼 슬롯을 하나 빌립니다 — **드로우마다** 하나씩. 없으면 false.
+         * @details 슬롯을 드로우 단위로 나누는 이유: `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰는데
+         *          GPU 는 제출 뒤에 읽는다. 그래서 여러 드로우가 같은 버퍼를 쓰면 전부 마지막에 쓴 값을 본다.
+         *          배치마다 `g_InstanceBase`·`g_SwMaterialCount` 가 다르므로, 한 패스에 드로우가 둘 이상이면
+         *          앞 배치가 뒤 배치의 인스턴스를 읽어 엉뚱한 자리에 그려진다(RenderPassTest.MultiBatchPassKeepsPerBatchConstants).
+         *          언리얼도 드로우별 느슨한 파라미터는 드로우마다 유니폼 버퍼를 따로 잡는다.
+         */
+        bool acquireCbSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );
+        /**
+         * @brief 상수버퍼 슬롯 수를 `needed` 이상으로 늘립니다 — **기록 시작 전에만** 부릅니다.
+         * @details 버퍼 생성과 bindless 등록은 레지스트리를 바꾸므로 병렬 기록 중에는 할 수 없다
+         *          (IRHIDevice::setParallelRecording). 그래서 배치 수를 아는 프레임 시작 지점에서 미리 키운다.
+         */
+        void ensurePassCbCapacity( uint32 needed );
+        /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다 (셋업 전용).
          * @details 기록 중에는 만들 수 없다 — 버퍼 생성과 `registerBindlessResource` 는 bindless 레지스트리를 바꾸고,
          *          패스 콜백은 태스크 워커에서 병렬로 돈다(`checkRegistryMutableNow` 가 감시하는 규칙).
@@ -350,14 +365,21 @@ namespace sw
          */
         FramePassContext _frameCtx;
         /** @brief 한 프레임이 쓸 수 있는 패스 상수 버퍼 슬롯 수. */
+        /// @brief 상수버퍼 슬롯 최소 개수. 드로우마다 하나씩 나눠 주므로 배치 수에 따라 아래에서 더 키운다.
         static constexpr uint32 _s_kPassCbSlotCount = 64;
+        /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지 어림값 (그림자·프리패스·불투명·반투명).
+        static constexpr uint32 _s_kDrawCbPassEstimate = 4;
+        /// @brief 슬롯 상한. 넘으면 에러를 남기고 마지막 슬롯을 공유한다(그 프레임은 배치 상수가 섞인다).
+        static constexpr uint32 _s_kMaxPassCbSlotCount = 4096;
         /** @brief 패스별 상수 버퍼 슬롯. 병렬 기록에서 패스마다 하나씩 집어간다. */
         struct PassCbSlot
         {
             RHIBufferHandle    _buffer{ 0 };
             RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
         };
-        vector<PassCbSlot>  _listPassCbSlot;
+        vector<PassCbSlot> _listPassCbSlot;
+        /// @brief 지금까지 한 프레임에서 쓴 슬롯 수의 최댓값 — 다음 프레임 용량 산정의 바닥값(단조 증가).
+        std::atomic<uint32> _passCbHighWater{ 0 };
         std::atomic<uint32> _passCbCursor{ 0 };
         /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
         std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };

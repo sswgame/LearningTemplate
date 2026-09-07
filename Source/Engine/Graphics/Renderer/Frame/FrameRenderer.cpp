@@ -305,6 +305,14 @@ namespace sw
         if ( _bCallbacksBound == 0 )
             bindPassCallbacks();
 
+        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다
+        // (기록 중에는 버퍼 생성·bindless 등록을 할 수 없다).
+        {
+            const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
+            const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + _s_kPassCbSlotCount;
+            ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
+        }
+
         if ( prepareCommandList( pDevice, "execute" ) == false )
         {
             _pScene = nullptr;
@@ -363,6 +371,14 @@ namespace sw
 
         if ( _bCallbacksBound == 0 )
             bindPassCallbacks();
+
+        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다
+        // (기록 중에는 버퍼 생성·bindless 등록을 할 수 없다).
+        {
+            const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
+            const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + _s_kPassCbSlotCount;
+            ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
+        }
 
         if ( prepareCommandList( pDevice, "executePacket" ) == false )
             return false;
