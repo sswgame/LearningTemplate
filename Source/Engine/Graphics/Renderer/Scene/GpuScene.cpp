@@ -116,6 +116,8 @@ namespace sw
         if ( _bMergeAcrossMaterials == value )
             return;
         _bMergeAcrossMaterials = value;
+        // 합치기 여부가 배치 키를 바꾼다 = 원소 구성이 달라진다. 영속 인덱스를 그대로 두면 예전 기준의 자리가 남는다.
+        resetMaterialRegistry();
         invalidateBuildCache();
     }
 
@@ -401,6 +403,7 @@ namespace sw
             _listTransparentBatch.clear();
             _listAllBatch.clear();
             buildBatches();
+            retireUnusedMaterialElements();
         }
 
         // scratch 를 기준 집합으로 넘기고 낡은 기준을 scratch 로 돌려받는다 — 복사 없이 두 버퍼를
@@ -599,7 +602,15 @@ namespace sw
     void GpuScene::buildBatches()
     {
         _listInstance.reserve( _listScratchCandidate.size() );
-        _listMaterialGroup.clear();
+
+        // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
+        // 예전엔 여기서 그룹을 통째로 지우고 인스턴스마다 다시 부여했다 — 인스턴스 N 개와 머티리얼 M 종에
+        // O(N·M) 이었고, 무엇보다 같은 머티리얼의 인덱스가 프레임마다 달라져 "바뀐 것만 올린다" 를 할 수 없었다.
+        // 이제 처음 본 (머티리얼, 인스턴스) 쌍에만 자리를 주고, 안 쓰이면 아래 retireUnusedMaterialElements 가
+        // 지연 회수한다. 자리를 옮기지 않으므로 인덱스는 안정적이다.
+        ++_buildCounter;
+        for ( GpuMaterialGroup& group : _listMaterialGroup )
+            group._bHasLast = 0;
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {
@@ -660,7 +671,7 @@ namespace sw
                     const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
                     const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial ) != batchKeyMaterial( b._pMaterial ) ) ||
-                                 ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
+                                             ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -703,34 +714,93 @@ namespace sw
         syncMaterialPins();
     }
 
+    void GpuScene::retireUnusedMaterialElements()
+    {
+        // 이번 빌드에서 안 쓰인 원소는 바로 지우지 않는다 — 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
+        // GpuMaterialRetireQueue 와 같은 지연 기준을 쓴다.
+        if ( _buildCounter <= GpuMaterialRetireQueue::kRetireFrameDelay )
+            return;
+        const uint64 staleBefore = _buildCounter - GpuMaterialRetireQueue::kRetireFrameDelay;
+
+        for ( GpuMaterialGroup& group : _listMaterialGroup )
+        {
+            for ( uint32 index = 0; index < group._listEntry.size(); ++index )
+            {
+                if ( group._listEntry[index].first == nullptr )
+                    continue;
+                if ( group._listEntryLastSeenBuild[index] >= staleBefore )
+                    continue;
+
+                const GpuMaterialElementKey key{ group._listEntry[index].first, group._listEntry[index].second };
+                group._mapEntryToIndex.erase( key );
+                // 자리는 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
+                // 이미 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
+                group._listEntry[index] = pair<Material*, MaterialInstance*>{ nullptr, nullptr };
+                group._listFreeEntry.push_back( index );
+                group._bHasLast = 0;
+            }
+        }
+    }
+
+    void GpuScene::resetMaterialRegistry()
+    {
+        _listMaterialGroup.clear();
+        _mapShaderPathToGroup.clear();
+    }
+
     uint32 GpuScene::materialGroupFor( const Material* pMaterial )
     {
         if ( pMaterial == nullptr )
             return kInvalidMaterialGroup;
         const string& shaderPath = pMaterial->getShaderPath();
-        for ( uint32 index = 0; index < _listMaterialGroup.size(); ++index )
-        {
-            if ( _listMaterialGroup[index]._shaderPath == shaderPath )
-                return index;
-        }
+        const auto    it         = _mapShaderPathToGroup.find( shaderPath );
+        if ( it != _mapShaderPathToGroup.end() )
+            return it->second;
+
         GpuMaterialGroup group{};
         group._shaderPath = shaderPath;
         _listMaterialGroup.push_back( std::move( group ) );
-        return static_cast<uint32>( _listMaterialGroup.size() - 1 );
+        const uint32 groupIndex = static_cast<uint32>( _listMaterialGroup.size() - 1 );
+        _mapShaderPathToGroup.emplace( shaderPath, groupIndex );
+        return groupIndex;
     }
 
     uint32 GpuScene::assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex )
     {
         if ( pMaterial == nullptr || groupIndex >= _listMaterialGroup.size() )
             return 0;
-        GpuMaterialGroup& group = _listMaterialGroup[groupIndex];
-        for ( uint32 index = 0; index < group._listEntry.size(); ++index )
+        GpuMaterialGroup&           group = _listMaterialGroup[groupIndex];
+        const GpuMaterialElementKey key{ pMaterial, pInstance };
+        // 배치 안의 인스턴스는 같은 원소를 연속으로 묻는다 — 포인터 비교 한 번으로 끝낸다.
+        if ( group._bHasLast != 0 && group._lastKey == key )
+            return group._lastIndex;
+
+        const auto it = group._mapEntryToIndex.find( key );
+        uint32     elementIndex{ 0 };
+        if ( it != group._mapEntryToIndex.end() )
         {
-            if ( group._listEntry[index].first == pMaterial && group._listEntry[index].second == pInstance )
-                return index;
+            elementIndex = it->second;
         }
-        group._listEntry.push_back( pair<Material*, MaterialInstance*>{ pMaterial, pInstance } );
-        return static_cast<uint32>( group._listEntry.size() - 1 );
+        else if ( group._listFreeEntry.empty() == false )
+        {
+            // 회수된 자리를 재사용한다 — 새 자리를 늘리면 버퍼가 단조 증가한다.
+            elementIndex = group._listFreeEntry.back();
+            group._listFreeEntry.pop_back();
+            group._listEntry[elementIndex] = pair<Material*, MaterialInstance*>{ pMaterial, pInstance };
+            group._mapEntryToIndex.emplace( key, elementIndex );
+        }
+        else
+        {
+            group._listEntry.push_back( pair<Material*, MaterialInstance*>{ pMaterial, pInstance } );
+            group._listEntryLastSeenBuild.push_back( 0 );
+            elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
+            group._mapEntryToIndex.emplace( key, elementIndex );
+        }
+        group._listEntryLastSeenBuild[elementIndex] = _buildCounter;
+        group._lastKey                              = key;
+        group._lastIndex                            = elementIndex;
+        group._bHasLast                             = 1;
+        return elementIndex;
     }
 
     void GpuScene::uploadMaterialGroups( IRHIDevice* pDevice )

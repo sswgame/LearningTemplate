@@ -982,6 +982,100 @@ SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
 }
 
 /**
+ * @brief [GpuSceneTest] 머티리얼 원소 인덱스가 프레임을 넘어 유지되고, 안 쓰이면 회수되는지 (GPU 불필요).
+ * @details 언리얼 GPUScene 은 프리미티브·머티리얼에 등록 시점에 **영속 ID** 를 주고 더티한 것만 갱신한다.
+ *          예전엔 매 빌드마다 그룹을 지우고 인스턴스마다 인덱스를 다시 부여했다 — O(인스턴스 x 머티리얼) 이고,
+ *          같은 머티리얼의 인덱스가 프레임마다 달라져 "바뀐 것만 올린다" 를 할 수 없었다.
+ *
+ *          여기서 보는 것 둘: (1) 같은 머티리얼은 빌드를 반복해도 같은 인덱스를 갖는다,
+ *          (2) 쓰이지 않게 된 원소는 지연 회수돼 자리가 재사용된다(자리를 **옮기지 않고**).
+ *          기본 생성한 Material 은 셰이더 경로가 비어 있어 한 그룹에 모인다 — 리소스 없이 원소 로직만 본다.
+ */
+SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
+{
+    sw::Scene scene( "MaterialElementIdScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::shared_ptr<sw::Mesh>     mesh      = sw::Mesh::createUnitCube();
+    sw::unique_ptr<sw::Material> materialA = sw::make_unique<sw::Material>();
+    sw::unique_ptr<sw::Material> materialB = sw::make_unique<sw::Material>();
+    SW_ASSERT_TRUE( mesh != nullptr && materialA != nullptr && materialB != nullptr );
+
+    auto addObject = [&]( const utf8* pName, sw::Material* pMaterial, float32 offsetX ) -> sw::GameObject*
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+        if ( pObj == nullptr )
+            return nullptr;
+        sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+        if ( pMeshComp == nullptr )
+            return nullptr;
+        pMeshComp->setMesh( mesh );
+        pMeshComp->setMaterial( pMaterial );
+        pMeshComp->setLocalPosition( sw::float3{ offsetX, 0.0f, 0.0f } );
+        return pObj;
+    };
+
+    sw::GameObject* pObjA = addObject( "MatA", materialA.get(), -1.0f );
+    sw::GameObject* pObjB = addObject( "MatB", materialB.get(), 1.0f );
+    SW_ASSERT_TRUE( pObjA != nullptr && pObjB != nullptr );
+
+    // 머티리얼 → 원소 인덱스를 읽는 helper. 그룹은 하나뿐이다(둘 다 셰이더 경로가 비어 있다).
+    auto findElementIndex = [&]( const sw::GpuScene& gpuScene, const sw::Material* pMaterial ) -> int32
+    {
+        for ( const sw::GpuMaterialGroup& group : gpuScene.getMaterialGroups() )
+        {
+            for ( uint32 index = 0; index < group._listEntry.size(); ++index )
+            {
+                if ( group._listEntry[index].first == pMaterial )
+                    return static_cast<int32>( index );
+            }
+        }
+        return -1;
+    };
+
+    sw::GpuScene     gpuScene;
+    const sw::float3 cameraPos{ 0.0f, 1.2f, 3.2f };
+    gpuScene.buildFromScene( &scene, cameraPos, nullptr );
+    const int32 firstA = findElementIndex( gpuScene, materialA.get() );
+    const int32 firstB = findElementIndex( gpuScene, materialB.get() );
+    SW_EXPECT_TRUE_MSG( firstA >= 0 && firstB >= 0, "첫 빌드에서 두 머티리얼이 모두 원소를 받아야 한다" );
+    SW_EXPECT_TRUE_MSG( firstA != firstB, "서로 다른 머티리얼은 서로 다른 원소여야 한다" );
+
+    // (1) 여러 번 다시 빌드해도 인덱스가 그대로여야 한다.
+    for ( uint32 buildIndex = 0; buildIndex < 4; ++buildIndex )
+    {
+        gpuScene.buildFromScene( &scene, cameraPos, nullptr );
+        SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialA.get() ) == firstA, "머티리얼 A 의 원소 인덱스가 빌드마다 바뀐다" );
+        SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialB.get() ) == firstB, "머티리얼 B 의 원소 인덱스가 빌드마다 바뀐다" );
+    }
+
+    // (2) B 를 씬에서 빼고 회수 기준을 넘겨 빌드하면 B 의 자리가 비워져야 한다.
+    //     회수 시계는 **실제로 원소를 다시 부여한 빌드**에서만 돈다 — 내용이 그대로면 buildFromScene 이
+    //     조기 종료하므로(살아 있는 원소를 다시 표시하지 않는다) 그때 시계를 돌리면 멀쩡한 것이 회수된다.
+    //     그래서 매번 A 를 조금씩 움직여 실제 리빌드를 일으킨다.
+    sw::MeshComponent* pMeshB = pObjB->getComponent<sw::MeshComponent>();
+    SW_ASSERT_TRUE( pMeshB != nullptr );
+    pMeshB->setVisible( false );
+    sw::MeshComponent* pMeshA = pObjA->getComponent<sw::MeshComponent>();
+    SW_ASSERT_TRUE( pMeshA != nullptr );
+    for ( uint32 buildIndex = 0; buildIndex < sw::GpuMaterialRetireQueue::kRetireFrameDelay + 3; ++buildIndex )
+    {
+        pMeshA->setLocalPosition( sw::float3{ -1.0f + static_cast<float32>( buildIndex ) * 0.01f, 0.0f, 0.0f } );
+        gpuScene.buildFromScene( &scene, cameraPos, nullptr );
+    }
+
+    SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialB.get() ) < 0, "안 쓰이게 된 머티리얼 원소가 회수되지 않았다" );
+    SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialA.get() ) == firstA, "남아 있는 머티리얼의 인덱스는 회수 뒤에도 그대로여야 한다" );
+
+    // 회수된 자리는 새 머티리얼이 재사용한다 — 자리를 옮기지 않으므로 A 의 인덱스는 여전히 그대로다.
+    sw::unique_ptr<sw::Material> materialC = sw::make_unique<sw::Material>();
+    SW_ASSERT_TRUE( addObject( "MatC", materialC.get(), 2.0f ) != nullptr );
+    gpuScene.buildFromScene( &scene, cameraPos, nullptr );
+    SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialC.get() ) == firstB, "회수된 자리를 새 머티리얼이 재사용해야 한다" );
+    SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialA.get() ) == firstA, "새 머티리얼이 들어와도 기존 인덱스는 그대로여야 한다" );
+}
+
+/**
  * @brief [RenderPassTest] 한 패스에 드로우가 둘일 때 배치마다 다른 상수가 유지되는지 (4 백엔드).
  * @details 배치 키에 메시 포인터가 들어가므로 **메시가 다르면 배치가 갈린다**. 그러면 한 패스가 드로우를
  *          두 번 하는데, 패스 상수버퍼는 `acquirePassCb` 가 패스당 하나만 잡고 `bindGraphics` 는 드로우마다

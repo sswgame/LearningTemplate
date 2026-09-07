@@ -75,10 +75,57 @@ namespace sw
      * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록 — CPU 스냅샷의 일부.
      * @details 원소 순서가 곧 materialIndex 다. 같은 셰이더를 쓰는 머티리얼/인스턴스는 구조체 레이아웃이 같아 한 버퍼에 쌓인다.
      */
+    /**
+     * @struct GpuMaterialElementKey
+     * @brief 머티리얼 데이터 원소 하나를 가리키는 키 — (머티리얼, 인스턴스) 쌍.
+     * @details 인스턴스가 없으면 머티리얼 자신이 원소다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 한다.
+     */
+    struct GpuMaterialElementKey
+    {
+        Material*         _pMaterial{ nullptr };
+        MaterialInstance* _pInstance{ nullptr };
+        /** @brief 같으면 true를 반환합니다. */
+        bool operator==( const GpuMaterialElementKey& other ) const
+        {
+            return _pMaterial == other._pMaterial && _pInstance == other._pInstance;
+        }
+    };
+
+    /// @brief GpuMaterialElementKey 해시 — 포인터 둘을 섞는다.
+    struct GpuMaterialElementKeyHash
+    {
+        /** @brief 호출 연산자입니다. */
+        size_t operator()( const GpuMaterialElementKey& key ) const
+        {
+            size_t h = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
+            h ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+            return h;
+        }
+    };
+
     struct GpuMaterialGroup
     {
         string                                     _shaderPath;
         vector<pair<Material*, MaterialInstance*>> _listEntry;
+        /**
+         * @brief 원소 키 → `_listEntry` 인덱스.
+         * @details 예전엔 인스턴스마다 `_listEntry` 를 처음부터 훑어 같은 쌍을 찾았다 — 인스턴스 N 개와 머티리얼 M 종에
+         *          O(N·M) 이라 머티리얼이 늘수록 빌드가 제곱으로 느려졌다(벤치는 머티리얼이 하나라 안 보였다).
+         *          언리얼은 등록 시점에 영속 ID 를 주고 더티만 갱신한다 — 여기서는 최소한 조회를 상수 시간으로 만든다.
+         */
+        unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
+        /// @brief 원소별 마지막으로 쓰인 빌드 번호 — 오래 안 쓰인 원소를 회수하는 기준.
+        vector<uint64> _listEntryLastSeenBuild;
+        /// @brief 회수된 원소 자리. **인덱스를 옮기지 않고** 재사용한다 — 옮기면 영속 ID 가 아니게 된다.
+        vector<uint32> _listFreeEntry;
+        /**
+         * @brief 직전 조회 결과 — 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻는다.
+         * @details 맵만 두면 머티리얼이 하나뿐인 흔한 경우가 오히려 느려진다(포인터 비교 한 번 → 해시+탐색).
+         *          실측으로 확인했다: 큐브 2000 개·머티리얼 1 종에서 배치 구성이 665us → 901us 로 늘었다.
+         */
+        GpuMaterialElementKey _lastKey{};
+        uint32                _lastIndex{ 0 };
+        uint8                 _bHasLast{ 0 };
     };
 
     /// @brief 그룹의 GPU 버퍼 — RT 소유, 셰이더 경로로 스냅샷을 넘어 재사용한다.
@@ -252,6 +299,10 @@ namespace sw
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
         void buildBatches();
         /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup. */
+        /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
+        void retireUnusedMaterialElements();
+        /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다 (그룹 기준이 바뀌었을 때). */
+        void   resetMaterialRegistry();
         uint32 materialGroupFor( const Material* pMaterial );
         /**
          * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 돌려줍니다 (GT, buildBatches 안).
@@ -282,6 +333,10 @@ namespace sw
         vector<GpuMeshBatch>     _listTransparentBatch;
         vector<GpuMeshBatch>     _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
         vector<GpuMaterialGroup> _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소 (CPU 스냅샷)
+        /// @brief 셰이더 경로 → `_listMaterialGroup` 인덱스. 예전엔 배치마다 그룹 목록을 string 비교로 훑었다.
+        unordered_map<string, uint32> _mapShaderPathToGroup;
+        /// @brief 빌드 번호. 원소가 마지막으로 쓰인 시점을 재는 데만 쓴다(회수 판정).
+        uint64 _buildCounter{ 0 };
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
         unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
         /// @brief 재구축 중 셰이더 경로 → 대표 머티리얼 (배치 키 합치기용, GT).
