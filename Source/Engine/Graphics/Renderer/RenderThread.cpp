@@ -14,6 +14,7 @@ namespace sw
 {
     extern string gv_screenshot;
     extern string gv_screenshotAttachment;
+    extern int32  gv_screenshotFrame;
 
     SW_LOG_CALLER( "RenderThread" );
 
@@ -339,8 +340,13 @@ namespace sw
         //    (그래서 처음엔 네 백엔드 중 하나만 지오메트리가 보였다).
         if ( gv_screenshot.empty() == false && _bScreenshotTaken == 0 && _pFrameRenderer != nullptr )
         {
-            constexpr uint32 kScreenshotWarmupFrames = 10;
-            if ( ++_screenshotFrameCounter >= kScreenshotWarmupFrames )
+            // 최소 몇 프레임은 기다려야 한다 — 첫 프레임엔 GpuScene 업로드가 아직이라 그릴 게 없다.
+            // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다).
+            constexpr uint32 kScreenshotMinWarmupFrames = 10;
+            const uint32     targetFrame                = ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) )
+                                                            ? static_cast<uint32>( gv_screenshotFrame )
+                                                            : kScreenshotMinWarmupFrames;
+            if ( ++_screenshotFrameCounter >= targetFrame )
             {
                 _bScreenshotTaken            = 1;
                 const string_view attachment = gv_screenshotAttachment.empty()

@@ -202,6 +202,7 @@ namespace sw
                 // Bootstrap Compute Shaders
                 const vector<string> listEngineComputeShader = {
                     engineData._shaderGpuCull,
+                    engineData._shaderInstanceAnim,
                     "common/shaders/samplecompute.hlsl",
                     "common/shaders/sampleindirect.hlsl",
                     "common/shaders/computetexturewrite.hlsl" };

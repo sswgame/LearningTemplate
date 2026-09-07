@@ -82,6 +82,16 @@ namespace sw
         /** @brief 블렌드 모드를 반환합니다. */
         RHIBlendMode getBlendMode() const { return _blendMode; }
 
+        /**
+         * @brief GPU 회전 애니메이션 시드를 설정합니다 (0 = 애니메이션 없음).
+         * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instanceanim.hlsl` 이 이 값을 해시해
+         *          **인스턴스마다 다른 각속도**로 회전을 얹는다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
+         *          되고, 회전은 전적으로 컴퓨트가 만든다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 준다.
+         */
+        void setGpuSpinSeed( uint32 seed );
+        /** @brief setGpuSpinSeed 로 정한 값 (0 이면 GPU 회전 없음). */
+        uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
+
         /** @brief 바운드 반지름을 설정합니다. */
         void setBoundsRadius( float32 radius );
         /** @brief 바운드 반지름을 반환합니다. */
@@ -129,6 +139,8 @@ namespace sw
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )
         RHIBlendMode _blendMode;
+        PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
+        uint32 _gpuSpinSeed;
         /** @brief 등록 시점에 받은 등록부. 더티 표시는 여기로 바로 간다 — 소유자를 거치지 않는다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯. 미등록이면 kInvalidPrimitiveIndex. */

@@ -1160,6 +1160,143 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 }
 
 /**
+ * @brief [RenderPassTest] 컴퓨트가 만든 드로우 커맨드가 **보이는 인스턴스만** 고르는지 (4 백엔드).
+ * @details 컬링 컴퓨트는 배치의 개수를 줄이는 데서 끝나지 않고, 살아남은 인스턴스 번호를 압축 목록
+ *          (g_SwVisibleInstanceIds)에 적는다. 정점 셰이더는 그 목록으로 자기 인스턴스를 찾는다 —
+ *          언리얼 FInstanceCullingContext 와 같은 구조다.
+ *
+ *          개수만 줄이던 예전 방식은 "배치 앞쪽 N 개"를 그렸다. 한 배치 안에서 앞이 안 보이고 뒤가
+ *          보이면 **보이는 쪽이 사라지고 안 보이는 쪽이 그려졌다**. 개수만으로는 무엇을 그릴지 고를 수가
+ *          없기 때문이다.
+ *
+ *          그래서 **메시 하나를 여럿이 공유해 한 배치에 인스턴스를 여러 개** 만들고, 그중 절반을 카메라
+ *          뒤로 보낸다. 화면에 남아야 할 둘이 좌우에 제대로 찍히는지 본다.
+ */
+SW_TEST_CASE( RenderPassTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    // 기본 카메라는 (0, 1.2, 3.2) 에서 원점을 본다 — -Z 를 보므로 월드 +X 는 화면 왼쪽이다.
+    constexpr float32 kSideOffset = 1.2f;
+    // 카메라 뒤(+Z 쪽 멀리)로 보내 절두체 밖에 둔다.
+    constexpr float32 kBehindCameraZ = 40.0f;
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "GpuCullVisibleScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // **메시 하나를 모두가 공유한다** — 배치 키에 메시가 들어가므로 배치가 하나로 묶이고, 그래야
+        // 한 배치 안에서 일부만 컬링되는 상황이 만들어진다(배치마다 인스턴스가 하나면 검사할 게 없다).
+        sw::shared_ptr<sw::Mesh> sharedMesh;
+        if ( bOk )
+        {
+            sharedMesh = sw::Mesh::createUnitCube();
+            bOk        = sharedMesh != nullptr;
+        }
+
+        if ( bOk )
+        {
+            // 앞의 넷은 카메라 뒤(안 보임), 뒤의 둘은 화면 좌우(보임).
+            const sw::float3 arrPosition[] = {
+                sw::float3{       -3.0f, 0.0f, kBehindCameraZ},
+                sw::float3{       -1.0f, 0.0f, kBehindCameraZ},
+                sw::float3{        1.0f, 0.0f, kBehindCameraZ},
+                sw::float3{        3.0f, 0.0f, kBehindCameraZ},
+                sw::float3{-kSideOffset, 0.0f,           0.0f},
+                sw::float3{ kSideOffset, 0.0f,           0.0f},
+            };
+            constexpr uint32 kObjectCount = static_cast<uint32>( sizeof( arrPosition ) / sizeof( arrPosition[0] ) );
+            for ( uint32 objectIndex = 0; objectIndex < kObjectCount && bOk; ++objectIndex )
+            {
+                sw::string      name = sw::string( "CullCube" ) + sw::to_string( objectIndex );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                bOk                  = pObj != nullptr;
+                if ( bOk )
+                {
+                    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                    bOk                          = pMeshComp != nullptr;
+                    if ( bOk )
+                    {
+                        pMeshComp->setMesh( sharedMesh );
+                        pMeshComp->setLocalPosition( arrPosition[objectIndex] );
+                    }
+                }
+            }
+        }
+
+        if ( bOk )
+        {
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( bOk && renderer.readbackTransient( "SceneColor", bytes, layout, format ) )
+        {
+            const bool   bBgra   = format == sw::RHIFormat::B8G8R8A8_UNORM;
+            const uint8* pCorner = bytes.data();
+            const int32  bgR     = bBgra ? pCorner[2] : pCorner[0];
+            const int32  bgG     = pCorner[1];
+            const int32  bgB     = bBgra ? pCorner[0] : pCorner[2];
+
+            uint32 arrDrawn[2]{};
+            for ( uint32 y = 0; y < layout._height; ++y )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                for ( uint32 x = 0; x < layout._width; ++x )
+                {
+                    const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                    const int32  r      = bBgra ? pPixel[2] : pPixel[0];
+                    const int32  g      = pPixel[1];
+                    const int32  b      = bBgra ? pPixel[0] : pPixel[2];
+                    if ( sw::MathUtil::abs( r - bgR ) + sw::MathUtil::abs( g - bgG ) + sw::MathUtil::abs( b - bgB ) < 24 )
+                        continue;
+                    ++arrDrawn[( x < layout._width / 2 ) ? 0u : 1u];
+                }
+            }
+
+            const sw::string label    = sw::string( device->getBackendName() );
+            const uint32     minDrawn = ( layout._width * layout._height ) / 400;
+            SW_EXPECT_TRUE_MSG( arrDrawn[0] > minDrawn && arrDrawn[1] > minDrawn,
+                                ( label + ": 보이는 큐브 둘이 화면 좌우에 남지 않았다 (좌 " + sw::to_string( arrDrawn[0] ) +
+                                  ", 우 " + sw::to_string( arrDrawn[1] ) + ", 최소 " + sw::to_string( minDrawn ) +
+                                  ") — 컬링이 보이는 인스턴스를 고르지 못한다" )
+                                    .c_str() );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
+
+        if ( sharedMesh != nullptr )
+            sharedMesh->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for GPU-generated command test" );
+}
+
+/**
  * @brief [RenderPassTest] 배치마다 자기 머티리얼 **색**으로 그려지는지 (4 백엔드).
  * @details GpuSceneTest.PerBatchMaterialElementsAreDistinct 는 CPU 쪽 원소 선택까지만 본다. 여기서는 그
  *          원소가 실제로 셰이더까지 도달하는지를 픽셀로 본다 — 붉은 머티리얼과 푸른 머티리얼을 좌우에 두고

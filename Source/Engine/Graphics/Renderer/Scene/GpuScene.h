@@ -32,7 +32,26 @@ namespace sw
         uint32   _meshBatchIndex{ 0 };
         uint32   _materialIndex{ 0 };
         uint32   _blendMode{ 0 }; ///< RHIBlendMode
-        uint32   _pad{ 0 };
+        /**
+         * @brief GPU 인스턴스 애니메이션 시드 — 0 이면 애니메이션 없음.
+         * @details instanceanim.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 예전엔 여기가
+         *          정렬용 `_pad` 였다 — 자리를 새로 만들지 않고 그 빈칸을 쓴다(셰이더 구조체 레이아웃 불변).
+         *          CPU 가 매 프레임 회전을 계산해 올리던 것을 GPU 로 옮기는 통로다.
+         */
+        uint32 _spinSeed{ 0 };
+    };
+
+    /**
+     * @brief 배치의 인스턴스 구간 — 컬링 컴퓨트에게 "이 배치는 어디서 시작하나"를 알려준다.
+     * @details 간접 인자의 `startInstance` 는 0 이어야 해서(Vulkan 의 InstanceIndex 가 firstInstance 를
+     *          포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 시작점으로 쓸 수 없다. gpucull.hlsl 의
+     *          GpuBatchInfo 와 레이아웃이 같아야 한다.
+     */
+    struct GpuBatchInfo
+    {
+        uint32 _instanceBase{ 0 };
+        uint32 _instanceCount{ 0 };
+        uint32 _pad[2]{};
     };
 
     /// @brief 같은 메시/머티리얼의 인스턴스 배치
@@ -257,6 +276,34 @@ namespace sw
         RHIBufferHandle getInstanceBuffer() const { return _instanceBuffer; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
         RHIDescriptorIndex getInstanceSrv() const { return _instanceSrv; }
+        /**
+         * @brief 인스턴스 버퍼의 UAV 인덱스 — 컴퓨트가 월드 행렬을 **고쳐 쓰는** 통로.
+         * @details instanceanim.hlsl 이 인스턴스마다 다른 각속도로 회전을 얹는다. 백엔드가 구조버퍼 UAV 를
+         *          못 만들면 kInvalidDescriptorIndex 라 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
+         */
+        RHIDescriptorIndex getInstanceUav() const { return _instanceUav; }
+        /** @brief 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 압축해 채우고, 정점 셰이더가 이 순서로 읽는다. */
+        RHIBufferHandle getVisibleInstanceBuffer() const { return _visibleInstanceBuffer; }
+        /** @brief 가시 인스턴스 ID 버퍼의 SRV (그래픽스 t 슬롯). */
+        RHIDescriptorIndex getVisibleInstanceSrv() const { return _visibleInstanceSrv; }
+        /** @brief 가시 인스턴스 ID 버퍼의 UAV (컬링 컴퓨트 u 슬롯). */
+        RHIDescriptorIndex getVisibleInstanceUav() const { return _visibleInstanceUav; }
+        /** @brief 배치 구간 버퍼의 SRV (컬링 컴퓨트 t1). */
+        RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfoSrv; }
+        /**
+         * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
+         * @details true 면 업로드 시점에 개수를 **0 으로** 올린다 — 컬링 컴퓨트가 InterlockedAdd 로 채우기
+         *          때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
+         *          FrameRenderer 가 매 프레임 실제 컬링 가능 여부를 보고 정한다.
+         */
+        void setIndirectCountsFilledByGpu( bool bByGpu );
+        /**
+         * @brief 마지막 upload 가 실제로 개수를 컴퓨트에 맡겼는가.
+         * @details "원한다"와 "실제로 된다"는 다르다 — 가시 목록이나 배치 구간 버퍼를 못 만들었으면
+         *          개수를 0 으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 **이 값**을 따라야
+         *          한다. 둘이 어긋나면 개수 0 짜리 인자로 그리거나(빈 화면), 갱신 안 된 목록을 읽는다.
+         */
+        bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != 0; }
         /** @brief 간접 인자 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getIndirectArgsBuffer() const { return _indirectArgsBuffer; }
         /** @brief 간접 인자 UAV 인덱스를 반환합니다. */
@@ -353,6 +400,8 @@ namespace sw
             Material*         _pMaterial{ nullptr };
             MaterialInstance* _pInstance{ nullptr };
             uint32            _blendMode{ 0 };
+            /// @brief GPU 회전 애니메이션 시드 (0 = 없음). MeshComponent 가 준다 → GpuInstance::_spinSeed.
+            uint32 _spinSeed{ 0 };
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -370,7 +419,7 @@ namespace sw
             bool operator==( const DrawCandidate& o ) const
             {
                 return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance &&
-                       _blendMode == o._blendMode &&
+                       _blendMode == o._blendMode && _spinSeed == o._spinSeed &&
                        Memory::compare( &_world, &o._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &o._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &o._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -417,6 +466,7 @@ namespace sw
         vector<SortEntry>              _listScratchOpaqueEntry;
         vector<uint32>                 _listScratchTransparentIdx;
         vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
+        vector<GpuBatchInfo>           _listScratchBatchInfo;
 
         GpuMaterialRetireQueue _materialRetire;
         TaskStageHandle        _snapshotStage;
@@ -426,11 +476,29 @@ namespace sw
         /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */
         uint64             _lastPrimitiveSetGeneration{ 0 };
         RHIDescriptorIndex _instanceSrv     = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _instanceUav     = kInvalidDescriptorIndex;
         RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
-        uint32             _indirectCommandCount{ 0 };
-        uint32             _instanceCapacity{ 0 };
-        uint32             _argsCapacity{ 0 };
-        uint8              _bCpuDirty{ 1 };
-        uint8              _bMergeAcrossMaterials{ 0 };
+        /**
+         * @brief 가시 인스턴스 ID 버퍼 — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리.
+         * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
+         *          `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다. 이게 없으면 컬링이
+         *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수가 없다).
+         */
+        RHIBufferHandle    _visibleInstanceBuffer{ 0 };
+        RHIDescriptorIndex _visibleInstanceSrv = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _visibleInstanceUav = kInvalidDescriptorIndex;
+        uint32             _visibleCapacity{ 0 };
+        RHIBufferHandle    _batchInfoBuffer{ 0 };
+        RHIDescriptorIndex _batchInfoSrv = kInvalidDescriptorIndex;
+        uint32             _batchInfoCapacity{ 0 };
+        /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
+        uint8 _bWantGpuIndirectCounts{ 0 };
+        /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).
+        uint8  _bGpuFillsIndirectCounts{ 0 };
+        uint32 _indirectCommandCount{ 0 };
+        uint32 _instanceCapacity{ 0 };
+        uint32 _argsCapacity{ 0 };
+        uint8  _bCpuDirty{ 1 };
+        uint8  _bMergeAcrossMaterials{ 0 };
     };
 } // namespace sw

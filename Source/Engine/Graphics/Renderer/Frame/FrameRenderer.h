@@ -396,6 +396,25 @@ namespace sw
         std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
         RHIBufferHandle    _gpuCullCb;
         RHIDescriptorIndex _gpuCullCbIndex;
+        RHIBufferHandle    _instanceAnimCb;
+        RHIDescriptorIndex _instanceAnimCbIndex;
+        /**
+         * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는가 (가시 목록이 유효한가).
+         * @details 드로우가 가시 목록을 걸지 말지 정하는 값이다. 목록을 걸었는데 컬링이 안 돌면 셰이더가
+         *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 전부 같은 인스턴스를 그린다.
+         */
+        uint8 _bGpuCullingActive;
+
+        /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 (업로드 전에 GpuScene 에 알린다). */
+        bool wantsGpuGeneratedCommands() const;
+        /**
+         * @brief 인스턴스 애니메이션에 넣는 절대 시간(초).
+         * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 만든다**. 누적하면 프레임
+         *          간격의 흔들림이 그대로 쌓여 백엔드·실행마다 다른 각도가 나오고, 스크린샷 비교가 불가능해진다.
+         *          렌더러가 자기 시계를 갖는다 — 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
+         *          게임 시간을 만지지 않는다.
+         */
+        CpuTimer _animTimer;
         /**
          * @brief 머티리얼 데이터 버퍼가 없는 배치(머티리얼 없는 메시)에 거는 0 채운 원소 하나짜리 구조버퍼.
          * @details DX12 루트 SRV 는 경계 검사가 없어 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)다 — 어떤 드로우도 빈 슬롯으로 나가지 않게

@@ -37,6 +37,9 @@ namespace sw
         , _frameCtx{}
         , _gpuCullCb{ 0 }
         , _gpuCullCbIndex{ kInvalidDescriptorIndex }
+        , _instanceAnimCb{ 0 }
+        , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
+        , _bGpuCullingActive{ 0 }
         , _mapMaterialFallback{}
         , _mapEnginePso{}
         , _mapPresentPso{}
@@ -69,6 +72,9 @@ namespace sw
                                     string_view pipelineXmlPath )
     {
         _pDevice = pDevice;
+        // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다 (CpuTimer 는 만들면 중지 상태다).
+        _animTimer.resetTimer();
+        _animTimer.startTimer();
         if ( pDevice == nullptr )
         {
             _status        = FrameRendererStatus::Failed;
@@ -212,16 +218,69 @@ namespace sw
     // 공통 헬퍼: graph 실행 및 commandList 제출
     // ---------------------------------------------------------------------------
 
+    bool FrameRenderer::wantsGpuGeneratedCommands() const
+    {
+        // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
+        // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
+        return _bUseGpuDriven == SW_TRUE && gv_gpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0;
+    }
+
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
         _pCmd->beginCommandList();
+        _bGpuCullingActive = 0;
+        _animTimer.updateTimer();
 
-        if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() && gv_gpuCulling != 0 )
+        // 컴퓨트 프리패스 둘 — 인스턴스 애니메이션이 먼저고 컬링이 나중이다. 순서가 뒤집히면 컬링이
+        // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
+        // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
+        const uint32 animInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
+        if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() && animInstanceCount > 0 )
+        {
+            const RHIPipelineStateHandle animPso = getEnginePso( RenderPassType::InstanceAnim );
+            if ( animPso != 0 && _instanceAnimCb != 0 && _instanceAnimCbIndex != kInvalidDescriptorIndex &&
+                 _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
+            {
+                struct GpuAnimParams
+                {
+                    float32 _time{ 0.0f };
+                    float32 _baseSpeed{ 0.0f };
+                    float32 _speedRange{ 0.0f };
+                    uint32  _instanceCount{ 0 };
+                } animParams{};
+                animParams._time = _animTimer.getTotalTime();
+                // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도"로 보이지 않는다.
+                animParams._baseSpeed     = FrameRendererUtil::kGpuSpinBaseSpeed;
+                animParams._speedRange    = FrameRendererUtil::kGpuSpinSpeedRange;
+                animParams._instanceCount = animInstanceCount;
+                _pDevice->getResource()->updateConstantBuffer( _instanceAnimCb, &animParams, sizeof( animParams ) );
+
+                // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
+                // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12/Vulkan 에서 쓰기가
+                // 유효하지 않다 — 화면은 조용히 예전 값 그대로다.
+                _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
+                _pCmd->setComputePipelineState( animPso );
+                // AnimParams(b0) / g_InstancesRW(u0) — instanceanim.hlsl 레지스터와 1:1 대응.
+                _pCmd->bindComputeConstantBuffer( _instanceAnimCbIndex, 0 );
+                _pCmd->bindComputeUAV( _gpuScene.getInstanceUav(), 0 );
+                const uint32 animGroups = ( animInstanceCount + 63u ) / 64u;
+                if ( animGroups > 0 )
+                    _pCmd->dispatchCompute( animGroups, 1, 1 );
+                // 다음 디스패치(컬링)와 정점 셰이더가 이 결과를 읽는다 — 쓰기가 끝났음을 알린다.
+                _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::ShaderResource );
+            }
+        }
+
+        // 컬링은 GpuScene 이 "개수를 컴퓨트에 맡겼다"고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
+        // 디스패치 여부가 절대 어긋나지 않는다 — 어긋나면 한쪽은 빈 화면, 다른 쪽은 낡은 목록이다.
+        if ( _gpuScene.isUploaded() && _gpuScene.areIndirectCountsGpuFilled() )
         {
             const RHIPipelineStateHandle cullPso = getEnginePso( RenderPassType::GpuCull );
             if ( cullPso != 0 && _gpuCullCb != 0 && _gpuCullCbIndex != kInvalidDescriptorIndex &&
                  _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex &&
-                 _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex )
+                 _gpuScene.getIndirectArgsUav() != kInvalidDescriptorIndex &&
+                 _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex &&
+                 _gpuScene.getVisibleInstanceUav() != kInvalidDescriptorIndex )
             {
                 struct GpuCullParams
                 {
@@ -230,19 +289,29 @@ namespace sw
                     uint32  _batchCount{ 0 };
                     uint32  _pad[2]{};
                 } cullParams{};
-                cullParams._instanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
+                cullParams._instanceCount = animInstanceCount;
                 cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
                 _pDevice->getResource()->updateConstantBuffer( _gpuCullCb, &cullParams, sizeof( cullParams ) );
 
+                // 컬링이 쓰는 두 버퍼도 UAV 상태여야 한다. 간접 인자는 직전 프레임에 IndirectArgument 로,
+                // 가시 목록은 ShaderResource 로 두고 끝냈다.
+                _pCmd->transitionBuffer( _gpuScene.getIndirectArgsBuffer(), RHIBufferState::UnorderedAccess );
+                _pCmd->transitionBuffer( _gpuScene.getVisibleInstanceBuffer(), RHIBufferState::UnorderedAccess );
                 _pCmd->setComputePipelineState( cullPso );
-                // CullParams(b0) / g_Instances(t0, 읽기전용) / g_IndirectArgs(u0, RW) — gpucull.hlsl 레지스터와 1:1 대응.
+                // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1)
+                // — gpucull.hlsl 레지스터와 1:1 대응.
                 _pCmd->bindComputeConstantBuffer( _gpuCullCbIndex, 0 );
                 _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
+                _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
                 _pCmd->bindComputeUAV( _gpuScene.getIndirectArgsUav(), 0 );
-                const uint32 groups = ( cullParams._batchCount + 63u ) / 64u;
+                _pCmd->bindComputeUAV( _gpuScene.getVisibleInstanceUav(), 1 );
+                // **인스턴스마다** 스레드 하나다(예전엔 배치마다 하나였다) — 그래야 보이는 것을 골라 압축할 수 있다.
+                const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
                 if ( groups > 0 )
                     _pCmd->dispatchCompute( groups, 1, 1 );
                 _pCmd->transitionBuffer( _gpuScene.getIndirectArgsBuffer(), RHIBufferState::IndirectArgument );
+                _pCmd->transitionBuffer( _gpuScene.getVisibleInstanceBuffer(), RHIBufferState::ShaderResource );
+                _bGpuCullingActive = 1;
             }
         }
 
@@ -300,6 +369,9 @@ namespace sw
                 cameraPos = pCam->getCameraPosition();
         }
         _gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
+        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
+        // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
+        _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
         _gpuScene.upload( pDevice );
 
         if ( _bCallbacksBound == 0 )
@@ -367,6 +439,9 @@ namespace sw
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
+        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
+        // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
+        _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
         _gpuScene.upload( pDevice );
 
         if ( _bCallbacksBound == 0 )

@@ -60,6 +60,8 @@ namespace sw
         PROPERTY()
         string _shaderGpuCull{ "engine/shaders/gpucull.hlsl" };
         PROPERTY()
+        string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" };
+        PROPERTY()
         string _shaderFullscreenTriangle{ "engine/shaders/fullscreentriangle.hlsl" };
         PROPERTY()
         string _shaderSsao{ "engine/shaders/ssao.hlsl" };

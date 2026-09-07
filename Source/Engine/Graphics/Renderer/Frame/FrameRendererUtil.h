@@ -46,6 +46,15 @@ namespace sw
         static constexpr float4  kNormalClear          = { 0.5f, 0.5f, 1.0f, 1.0f };
         static constexpr float32 kDefaultCameraPos[3]  = { 0.0f, 1.2f, 3.2f };
 
+        /**
+         * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭 (라디안/초).
+         * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
+         *          속도 차이가 눈에 안 띄어 결국 "다 같은 속도"로 보인다 — 그게 이 패스를 만든 이유다.
+         *          instanceanim.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 가른다.
+         */
+        static constexpr float32 kGpuSpinBaseSpeed  = 0.35f;
+        static constexpr float32 kGpuSpinSpeedRange = 1.75f;
+
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
         static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
@@ -126,6 +135,8 @@ namespace sw
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수 — 셰이더 SW_MATERIAL 이 클램프한다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };
+        /// @brief 컬링이 만든 가시 인스턴스 ID 목록 (binding.hlsli g_SwVisibleInstanceIds ↔ "SwVisibleInstanceIds").
+        hashed_string _swVisibleInstanceIds{ "SwVisibleInstanceIds" };
         /// @brief 배치의 머티리얼 데이터 구조버퍼 (binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록한다.
         hashed_string _swMaterials{ "SwMaterials" };
     };

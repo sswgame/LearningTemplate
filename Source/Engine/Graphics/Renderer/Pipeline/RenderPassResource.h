@@ -52,6 +52,8 @@ namespace sw
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
         GpuCull,
+        /// @brief GPUScene 인스턴스 애니메이션 컴퓨트 (instanceanim.hlsl) — 인스턴스마다 다른 각속도로 회전.
+        InstanceAnim,
     };
 
     /**

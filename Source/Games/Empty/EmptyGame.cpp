@@ -165,6 +165,9 @@ namespace sw
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( col ) * kBenchSpacing,
                                              0.0f,
                                              origin + static_cast<float32>( row ) * kBenchSpacing } );
+            // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
+            // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
+            pMesh->setGpuSpinSeed( index + 1u );
             pMesh->setVisible( true );
             _listBenchMesh.push_back( pMesh );
         }
@@ -296,7 +299,10 @@ namespace sw
             float3 position = pMesh->getLocalPosition();
             position._y     = wave * 0.75f;
             pMesh->setLocalPosition( position );
-            pMesh->setLocalRotation( float3{ 0.0f, ( _benchElapsed + phase ) * 45.0f, 0.0f } );
+            // 회전은 **컴퓨트가 만든다**(instanceanim.hlsl). 예전엔 여기서 전부 45도/초로 돌렸는데,
+            // 속도가 하나뿐이라 큐브가 몇 천 개여도 한 덩어리처럼 보였다. 지금은 시드 해시가
+            // 인스턴스마다 속도와 방향을 갈라 준다. CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
+            // 다음 업로드가 덮어써 도로 균일해진다 — 그래서 회전은 CPU 가 손대지 않는다.
 
             // 스케일도 흔든다 — 위치·회전만 바꾸면 월드 행렬의 회전/이동 성분만 갱신되므로
             // 스케일 경로(및 바운드 반지름을 쓰는 컬링)가 검증되지 않는다.

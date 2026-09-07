@@ -51,7 +51,13 @@ namespace sw
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
         /// @brief GPUScene 머티리얼 데이터 구조버퍼(g_SwMaterials) — 인스턴스 materialIndex 로 읽는다.
         inline constexpr uint32 kMaterialBuffer = SW_SLOT_MATERIAL_BUFFER;
-        inline constexpr uint32 kSrvSlotCount   = SW_SRV_SLOT_COUNT;
+        /**
+         * @brief GPU 컬링이 만든 가시 인스턴스 ID 목록(g_SwVisibleInstanceIds).
+         * @details 컬링 컴퓨트가 살아남은 인스턴스 번호를 배치 구간에 압축해 넣고, 정점 셰이더가 이 순서로
+         *          읽는다 — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리.
+         */
+        inline constexpr uint32 kVisibleInstanceBuffer = SW_SLOT_VISIBLE_INSTANCE_SRV;
+        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트 / 샘플러
@@ -132,6 +138,7 @@ namespace sw
             inline constexpr const utf8* kPass     = "PassCB";
             inline constexpr const utf8* kMaterial = "MaterialCB";
             inline constexpr const utf8* kCull     = "CullParams";
+            inline constexpr const utf8* kAnim     = "AnimParams"; ///< instanceanim.hlsl 의 컴퓨트 CB (b0)
             /// @brief SW_ROOT_CONSTANTS_BEGIN/END 가 선언하는 루트/푸시 상수 블록 (DX12 b0 space2, Vulkan 푸시 상수, DX11/GL b2).
             inline constexpr const utf8* kRootConstants = "SwRootConstants";
         } // namespace cbname
@@ -145,12 +152,16 @@ namespace sw
             inline constexpr const utf8* kMaterialTexture    = "g_SwMaterialTex"; ///< + 0..3
             inline constexpr const utf8* kBindlessTextures   = "g_SwBindlessTex2D";
             inline constexpr const utf8* kBindlessRwTextures = "g_SwBindlessRWTex2D";
-            inline constexpr const utf8* kSamplers           = "g_SwSamplers";         ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
-            inline constexpr const utf8* kSamplerSlot        = "g_SwSampler";          ///< + 0..6 — DX12 정적 샘플러 s# (배열은 정적 샘플러로 못 채운다)
-            inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp"; ///< s7 비교 샘플러
-            inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";           ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
+            inline constexpr const utf8* kSamplers           = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
+            inline constexpr const utf8* kSamplerSlot        = "g_SwSampler";            ///< + 0..6 — DX12 정적 샘플러 s# (배열은 정적 샘플러로 못 채운다)
+            inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
+            inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
+            inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIds"; ///< t10 (그래픽스) — 컬링이 만든 가시 목록
             inline constexpr const utf8* kCullInstances      = "g_Instances";
+            inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1 — 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
+            inline constexpr const utf8* kCullVisibleIds     = "g_VisibleInstanceIds"; ///< 컬링 u1 — 압축해 쓰는 쪽
+            inline constexpr const utf8* kAnimInstancesRw    = "g_InstancesRW";        ///< instanceanim u0 — 월드 행렬을 고쳐 쓴다
         } // namespace resname
 
         // 계약 내부 일관성 — 값을 바꾸면 여기서 먼저 걸린다.
@@ -159,8 +170,9 @@ namespace sw
         static_assert( SW_SLOT_MATERIAL_TEX1 == SW_SLOT_MATERIAL_TEX0 + 1 && SW_SLOT_MATERIAL_TEX2 == SW_SLOT_MATERIAL_TEX0 + 2 &&
                            SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3,
                        "머티리얼 텍스처 슬롯은 연속이어야 한다 (셰이더가 서수로 고른다)" );
-        static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount && kMaterialBuffer + 1 == kSrvSlotCount,
-                       "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount, "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이어야 한다" );
+        static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1 && kVisibleInstanceBuffer + 1 == kSrvSlotCount,
+                       "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,

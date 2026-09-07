@@ -88,6 +88,14 @@ namespace sw
     SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "덤프할 트랜지언트 이름 (비면 SceneColor)" );
 
     /**
+     * @brief `-gv_screenshotFrame=<N>` — 몇 번째 프레임에서 찍을지 정합니다 (기본 10).
+     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이
+     *          필요하다. 예전엔 워밍업 10프레임이 고정이라 `-gv_profileFrames` 를 아무리 늘려도 늘 같은
+     *          시각이 찍혔고, 그걸 모르고 비교하면 "움직이지 않는다"는 잘못된 결론이 나온다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
+
+    /**
      * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.

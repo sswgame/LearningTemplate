@@ -50,6 +50,17 @@ namespace sw
         if ( _gpuCullCb != 0 )
             _gpuCullCbIndex = _pDevice->getResource()->registerBindlessResource( _gpuCullCb );
 
+        struct GpuAnimParams
+        {
+            float32 _time{ 0.0f };
+            float32 _baseSpeed{ 0.0f };
+            float32 _speedRange{ 0.0f };
+            uint32  _instanceCount{ 0 };
+        };
+        _instanceAnimCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuAnimParams ) );
+        if ( _instanceAnimCb != 0 )
+            _instanceAnimCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceAnimCb );
+
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
@@ -100,6 +111,13 @@ namespace sw
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoGpuCull != 0 )
                 _mapEnginePso.insert_or_assign( RenderPassType::GpuCull, psoGpuCull );
+
+            // 인스턴스 애니메이션도 같은 컴퓨트 능력 위에 선다. 만들지 못하면 그 패스만 생략되고
+            // 회전은 CPU 가 올린 트랜스폼 그대로다(그리기는 영향 없음).
+            const RHIPipelineStateHandle psoAnim =
+                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
+            if ( psoAnim != 0 )
+                _mapEnginePso.insert_or_assign( RenderPassType::InstanceAnim, psoAnim );
         }
 
         // GPU 드리븐은 **인다이렉트 드로우만 있으면 성립한다** — 간접 인자는 GpuScene 이 CPU 에서 채운다.
@@ -220,6 +238,8 @@ namespace sw
             _frameCtx._passCbIndex = kInvalidDescriptorIndex;
             _gpuCullCb             = 0;
             _gpuCullCbIndex        = kInvalidDescriptorIndex;
+            _instanceAnimCb        = 0;
+            _instanceAnimCbIndex   = kInvalidDescriptorIndex;
             _mapMaterialFallback.clear();
             _taaHistory    = 0;
             _taaHistorySrv = kInvalidDescriptorIndex;
@@ -275,6 +295,7 @@ namespace sw
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
         releaseResource( _gpuCullCb, _gpuCullCbIndex );
+        releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
         for ( auto& [stride, fallback] : _mapMaterialFallback )
             releaseResource( fallback._buffer, fallback._srv );
         _mapMaterialFallback.clear();

@@ -16,6 +16,7 @@ namespace sw
         , _meshId{}
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
+        , _gpuSpinSeed{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
@@ -99,6 +100,12 @@ namespace sw
     void MeshComponent::setBoundsRadius( float32 radius )
     {
         _boundsRadius = radius;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setGpuSpinSeed( uint32 seed )
+    {
+        _gpuSpinSeed = seed;
         markRenderStateDirty();
     }
 

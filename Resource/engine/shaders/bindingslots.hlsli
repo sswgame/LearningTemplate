@@ -79,7 +79,13 @@
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
 #define SW_SLOT_MATERIAL_BUFFER        9
 
-#define SW_SRV_SLOT_COUNT              10  // t0..t9 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIds).
+// 정점 셰이더가 g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID] 로 자기 인스턴스 번호를 찾는다 —
+// 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(SW_INVALID_INDEX)
+// 예전처럼 g_InstanceBase + SV_InstanceID 를 그대로 쓴다(컬링 없음 경로).
+#define SW_SLOT_VISIBLE_INSTANCE_SRV   10
+
+#define SW_SRV_SLOT_COUNT              11  // t0..t10 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)

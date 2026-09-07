@@ -46,6 +46,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_Flags;
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, SW_INVALID_INDEX 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
+	uint     g_SwVisibleInstanceIdsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
 };
 
 // ------------------------------------------------------------------------------
@@ -86,6 +87,23 @@ struct SwInstanceData
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
+// GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );
+
+/**
+ * @brief 드로우의 인스턴스 서수를 **실제 인스턴스 번호**로 바꾼다.
+ * @details GPU 컬링이 켜져 있으면 드로우가 그리는 것은 "배치의 n 번째 인스턴스"가 아니라 "배치에서
+ *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIds 에 들어 있다.
+ *          목록이 없으면(컬링 없음) 예전과 같이 배치 시작 + 서수를 쓴다.
+ */
+uint SwResolveInstanceId( uint drawInstanceId )
+{
+	const uint slot = SW_DRAW_INSTANCE_BASE + drawInstanceId;
+	if ( g_SwVisibleInstanceIdsIndex != SW_INVALID_INDEX && slot < g_SwInstanceCount )
+		return g_SwVisibleInstanceIds[slot];
+	return slot;
+}
+
 /**
  * @brief 이 드로우의 인스턴스 데이터 — 씬 메시는 전부 인스턴스 버퍼에서 읽는다(경로 하나).
  * @details 인스턴스 버퍼가 안 걸린 드로우(풀스크린·픽스처)나 범위 밖 인덱스는 PassCB 의 g_World 와 머티리얼 원소 0 으로 만든다.
@@ -94,7 +112,7 @@ SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SR
  */
 SwInstanceData SwLoadInstance( uint instanceId )
 {
-	const uint element = SW_DRAW_INSTANCE_BASE + instanceId;
+	const uint element = SwResolveInstanceId( instanceId );
 	if ( g_SwInstancesIndex != SW_INVALID_INDEX && element < g_SwInstanceCount )
 		return g_SwInstances[element];
 	SwInstanceData inst;
