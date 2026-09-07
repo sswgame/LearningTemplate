@@ -46,7 +46,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
 	SwMaterialData_t material = SW_MATERIAL(input.materialIndex);
 	float4 texColor = float4(1,1,1,1);
-	if (material.albedoMap != kInvalidBindlessIndex)
+	if (material.albedoMap != SW_INVALID_INDEX)
 	{
 		texColor = SW_SampleMaterialTexture(material.albedoMap, input.uv);
 	}

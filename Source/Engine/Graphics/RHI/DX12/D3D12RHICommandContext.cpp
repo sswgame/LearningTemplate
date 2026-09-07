@@ -556,9 +556,10 @@ namespace sw
         _pCmdList->RSSetScissorRects( 1, &scissor );
     }
 
-    void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                               RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        if ( _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 )
+        if ( _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0 )
             return;
 
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
@@ -572,41 +573,11 @@ namespace sw
         flushSlotTables( false );
         bindMeshVertexBufferOrFallback();
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
-    }
 
-    void D3D12RHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                                    RHIBufferHandle countBuffer, uint32 countBufferOffset )
-    {
-        if ( _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 || maxCommandCount == 0 )
-            return;
-
-        ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
-        if ( pArgs == nullptr )
-            return;
-
-        flushSlotTables( false );
-        bindMeshVertexBufferOrFallback();
-        _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-
-        ID3D12Resource* pCountRes = nullptr;
-        if ( countBuffer != 0 )
-        {
-            pCountRes = _pDevice->resolveBuffer( countBuffer );
-            if ( pCountRes == nullptr )
-            {
-                for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
-                {
-                    const uint32 offset =
-                        argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) );
-                    drawIndirect( argumentBuffer, offset );
-                }
-                return;
-            }
-        }
-
-        _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), maxCommandCount, pArgs, argumentBufferOffset,
-                                    pCountRes, countBufferOffset );
+        // countBuffer 가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한). ExecuteIndirect 는 둘을 같이 받는다.
+        ID3D12Resource* pCountRes = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
+        _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountRes,
+                                    ( pCountRes != nullptr ) ? countBufferOffset : 0 );
     }
 
     void D3D12RHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData,

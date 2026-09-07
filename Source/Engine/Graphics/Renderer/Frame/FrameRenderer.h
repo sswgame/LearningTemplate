@@ -251,7 +251,6 @@ namespace sw
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
-        void drawGpuSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene 배치를 간접 드로우로 그립니다. */
         void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
@@ -476,7 +475,6 @@ namespace sw
         string                               _statusMessage;
         uint8                                _bCallbacksBound     : 1;
         uint8                                _bPassResourcesReady : 1;
-        uint8                                _bUseGpuDriven       : 1;
         [[maybe_unused]] uint8               _reservedFlags       : 5;
 
         // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다

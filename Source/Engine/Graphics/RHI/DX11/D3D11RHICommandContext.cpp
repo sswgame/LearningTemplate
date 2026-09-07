@@ -432,9 +432,14 @@ namespace sw
         _pContext->CSSetConstantBuffers( shaderslot::kRootConstantEmulSlot, 1, &pCb );
     }
 
-    void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                               RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        if ( _pDevice == nullptr || _pContext == nullptr || argumentBuffer == 0 )
+        // D3D11 에는 멀티 드로우도 countBuffer 도 없다 — 커맨드마다 한 번씩 부른다.
+        // (countBuffer 는 GPU 가 정한 개수라 CPU 가 읽을 수 없으므로 drawCount 를 상한으로 그대로 쓴다.)
+        (void)countBuffer;
+        (void)countBufferOffset;
+        if ( _pDevice == nullptr || _pContext == nullptr || argumentBuffer == 0 || drawCount == 0 )
             return;
 
         ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
@@ -471,7 +476,10 @@ namespace sw
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         _pContext->VSSetShader( pVs, nullptr, 0 );
         _pContext->PSSetShader( pPs, nullptr, 0 );
-        _pContext->DrawInstancedIndirect( pBuf, argumentBufferOffset );
+        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+        {
+            _pContext->DrawInstancedIndirect( pBuf, argumentBufferOffset + commandIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+        }
     }
 
     void D3D11RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )

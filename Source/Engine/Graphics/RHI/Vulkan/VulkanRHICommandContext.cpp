@@ -827,25 +827,6 @@ namespace sw
         vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, destOffsetIn32BitValues * 4, count * 4, pData );
     }
 
-    void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
-    {
-        VkCommandBuffer                            cmd     = commandBuffer();
-        const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( argumentBuffer );
-        if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
-            return;
-
-        if ( bindActiveGraphicsPipeline() == false )
-            return;
-
-        flushSlotSet( false );
-
-        if ( pRecord->_buffer != VK_NULL_HANDLE )
-        {
-            bindMeshVertexBufferOrFallback();
-            vkCmdDrawIndirect( cmd, pRecord->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
-        }
-    }
-
     void VulkanRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
         VkCommandBuffer                            cmd   = commandBuffer();
@@ -889,14 +870,12 @@ namespace sw
         }
     }
 
-    void VulkanRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                                     RHIBufferHandle countBuffer, uint32 countBufferOffset )
+    void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
         VkCommandBuffer                            cmd   = commandBuffer();
         const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
-        const bool                                 bValidMultiArgs =
-            ( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->_buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
-        if ( bValidMultiArgs == false )
+        if ( cmd == VK_NULL_HANDLE || pArgs == nullptr || pArgs->_buffer == VK_NULL_HANDLE || drawCount == 0 )
             return;
 
         if ( bindActiveGraphicsPipeline() == false )
@@ -904,6 +883,8 @@ namespace sw
 
         // 세트 0 은 커맨드버퍼마다 한 번(머티리얼은 GPU 인스턴스 데이터에서 인덱싱).
         flushSlotSet( false );
+        // 정점버퍼를 거는 건 단일 경로에만 있었다 — 합치면서 두 경우 모두 걸린다.
+        bindMeshVertexBufferOrFallback();
 
         constexpr uint32 stride = sizeof( RHIDrawIndirectCommand );
 
@@ -915,19 +896,20 @@ namespace sw
                 if ( pCountRec->_buffer != VK_NULL_HANDLE )
                 {
                     vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRec->_buffer, countBufferOffset,
-                                            maxCommandCount, stride );
+                                            drawCount, stride );
                     return;
                 }
             }
         }
 
-        if ( _pDevice->_bMultiDrawIndirect != 0 && maxCommandCount > 1 )
+        // 한 번만 그리거나 멀티를 지원하면 호출 하나로 끝난다. 아니면 하나씩 나눠 부른다.
+        if ( drawCount == 1 || _pDevice->_bMultiDrawIndirect != 0 )
         {
-            vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset, maxCommandCount, stride );
+            vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset, drawCount, stride );
             return;
         }
 
-        for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
+        for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
         {
             vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
         }

@@ -214,9 +214,6 @@ namespace sw
 
         /** @brief vkCmdDrawIndexedIndirect 실행 */
 
-        void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 );
-
         /** @brief GPU 이벤트 디버그 마커 시작 */
 
         unique_ptr<IRHICommandList> createCommandList() override;

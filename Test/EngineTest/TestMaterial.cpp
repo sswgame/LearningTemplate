@@ -358,7 +358,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
     // 1) 셰이더 리플렉션으로 CBuffer 변수 순서 및 오프셋 정의: roughness(0B), tint(16B), specular(32B), albedoIndex(48B)
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
-    cb._name      = "CustomMaterialCB";
+    cb._name      = "MaterialCB";
     cb._totalSize = 64;
 
     sw::ShaderVariableInfo varRoughness{};
@@ -493,7 +493,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionRapidHotReloadStressTest )
     {
         sw::ShaderReflectionData reflection{};
         sw::ShaderBufferInfo     cb{};
-        cb._name = "StressDynamicCB";
+        cb._name = "MaterialCB";
 
         uint32 currentOffset = 0;
 
@@ -583,7 +583,7 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
     // CBuffer에 다중 텍스처 인덱스 필드 구성
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
-    cb._name      = "MultiBindlessCB";
+    cb._name      = "MaterialCB";
     cb._totalSize = 64;
 
     for ( uint32 slotIndex = 0; slotIndex < 8; ++slotIndex )
@@ -648,7 +648,7 @@ SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
-    cb._name      = "ComplexMatrixCB";
+    cb._name      = "MaterialCB";
     cb._totalSize = 160;
 
     // 1) float3 + float (16B)

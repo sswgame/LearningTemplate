@@ -4,7 +4,7 @@
 @brief 네 백엔드(DX12/Vulkan/DX11/GL)로 벤치 큐브 씬을 그려 SceneColor 를 PPM 으로 받아 비교하는 스모크.
 
 사용법 (빌드 후):
-    py -3 Scripts/dev/BackendSmoke.py                # 프레임 경로 + -gv_gpuDriven=0 경로, 네 백엔드
+    py -3 Scripts/dev/BackendSmoke.py                # 불투명 + 반투명 회차, 네 백엔드
     py -3 Scripts/dev/BackendSmoke.py --preset Ninja-Release --out C:/tmp/smoke
 
 판정: 각 실행이 exit 0 이고, 로그의 [Error] 수와 PPM 의 평균 RGB·"배경이 아닌 픽셀 수" 를 표로 낸다.
@@ -59,7 +59,7 @@ def main():
 
     failed = False
     results = []
-    for kind, extra, frames in (("frame", [], 30), ("legacy", ["-gv_gpuDriven=0"], 20)):
+    for kind, extra, frames in (("opaque", ["-gv_benchTransparent=0"], 30), ("transparent", ["-gv_benchTransparent=25"], 30)):
         for name, flag in BACKENDS:
             ppm = os.path.join(out_dir, "%s_%s.ppm" % (kind, name))
             log = os.path.join(out_dir, "%s_%s.log" % (kind, name))

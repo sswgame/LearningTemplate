@@ -388,8 +388,6 @@ namespace sw
          *          caps(supportsNativeBindlessSampling)로 정한다. 바꾸면 다음 buildFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
-        /** @brief setMergeBatchesAcrossMaterials 로 정한 값. */
-        bool isMergingBatchesAcrossMaterials() const { return _bMergeAcrossMaterials != 0; }
 
         static constexpr uint32 kInvalidMaterialGroup = 0xFFFFFFFFu;
 

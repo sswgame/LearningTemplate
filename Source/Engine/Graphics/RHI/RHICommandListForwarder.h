@@ -73,9 +73,10 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { _pContext->prepareTextureForUnorderedAccess( texture ); }
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
+        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override
         {
-            _pContext->drawIndirect( argumentBuffer, argumentBufferOffset );
+            _pContext->drawIndirect( argumentBuffer, argumentBufferOffset, drawCount, countBuffer, countBufferOffset );
         }
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
         {
@@ -85,11 +86,6 @@ namespace sw
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
         {
             _pContext->drawIndexedIndirect( argumentBuffer, argumentBufferOffset );
-        }
-        void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override
-        {
-            _pContext->multiDrawIndirect( argumentBuffer, argumentBufferOffset, maxCommandCount, countBuffer, countBufferOffset );
         }
         void beginEventMarker( const utf8* pName ) override { _pContext->beginEventMarker( pName ); }
         void endEventMarker() override { _pContext->endEventMarker(); }

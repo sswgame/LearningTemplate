@@ -21,7 +21,6 @@
 #include "common.hlsli"
 
 static const uint SW_INVALID_INDEX = 0xFFFFFFFFu;
-static const uint kInvalidBindlessIndex = 0xFFFFFFFFu; // 하위호환 별칭
 
 // ------------------------------------------------------------------------------
 // 1) PassCB — b0. 셰이더가 실제 쓰는 필드만. 엔진이 이름으로 채운다. 패스(배치)마다 한 번 걸리는 진짜 상수버퍼.
@@ -389,9 +388,6 @@ float4 SW_SampleMaterialTexture( uint index, float2 uv )
 }
 #endif
 
-/** @brief 하위호환: 예전 SampleBindlessIndex 이름. */
-float4 SampleBindlessIndex( uint index, float2 uv ) { return SW_SampleIndex( index, uv ); }
-
 float4 SampleShadow( float2 uv )      { return SW_SampleIndex( g_ShadowMapIndex, uv ); }
 float4 SampleAlbedo( float2 uv )      { return SW_SampleIndex( g_GBufferAlbedoIndex, uv ); }
 float4 SampleNormal( float2 uv )      { return SW_SampleIndex( g_GBufferNormalIndex, uv ); }
@@ -401,7 +397,7 @@ float4 SampleSourceDepth( float2 uv ) { return SW_SampleIndex( g_SourceDepthInde
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
 
-// 축 정렬 데모 큐브 노멀 (bindless.hlsli 하위호환).
+// 축 정렬 데모 큐브 노멀 — createUnitCube 가 만드는 큐브에만 맞는다(정점에 노멀이 없어서 위치로 만든다).
 float3 DemoCubeNormal( float3 pos )
 {
 	float3 a = abs( pos );

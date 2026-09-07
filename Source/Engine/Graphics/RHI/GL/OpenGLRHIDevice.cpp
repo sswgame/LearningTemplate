@@ -77,43 +77,6 @@ namespace sw
         return storeGlBuffer( ibo );
     }
 
-    void OpenGLRHIDevice::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                             RHIBufferHandle countBuffer, uint32 countBufferOffset )
-    {
-        if ( _bInitialized == SW_FALSE || argumentBuffer == 0 || maxCommandCount == 0 )
-            return;
-
-        GLuint buf = resolveGlBuffer( argumentBuffer );
-        if ( buf == 0 )
-            return;
-        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
-
-        constexpr GLsizei stride  = sizeof( RHIDrawIndirectCommand );
-        const void*       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) );
-
-        if ( countBuffer != 0 && glad_glMultiDrawArraysIndirectCount != nullptr )
-        {
-            GLuint count = resolveGlBuffer( countBuffer );
-            if ( count != 0 )
-                glBindBuffer( GL_PARAMETER_BUFFER, count );
-            glMultiDrawArraysIndirectCount( GL_TRIANGLES, pOffset, static_cast<GLintptr>( countBufferOffset ),
-                                            static_cast<GLsizei>( maxCommandCount ), stride );
-            glBindBuffer( GL_PARAMETER_BUFFER, 0 );
-        }
-        else if ( glad_glMultiDrawArraysIndirect != nullptr )
-            glMultiDrawArraysIndirect( GL_TRIANGLES, pOffset, static_cast<GLsizei>( maxCommandCount ), stride );
-        else if ( glad_glDrawArraysIndirect != nullptr )
-        {
-            for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
-            {
-                const void* pCmdOffset = reinterpret_cast<const void*>( argumentBufferOffset + commandIndex * sizeof( RHIDrawIndirectCommand ) );
-                glDrawArraysIndirect( GL_TRIANGLES, pCmdOffset );
-            }
-        }
-
-        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
-    }
-
     bool OpenGLRHIDevice::ensureComputeRootConstantUbo()
     {
         if ( _computeRootConstantUbo != 0 )

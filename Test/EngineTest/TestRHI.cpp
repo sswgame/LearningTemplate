@@ -758,7 +758,7 @@ SW_TEST_CASE( RHITest, ComputeShaderDispatchAndIndirectCommands )
             cmdList->dispatchCompute( 4, 1, 1 );
             cmdList->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
             cmdList->drawIndirect( argBuf, 0 );
-            cmdList->multiDrawIndirect( argBuf, 0, 1 );
+            cmdList->drawIndirect( argBuf, 0, 1 ); // 멀티는 drawCount 만 다른 같은 호출이다
             cmdList->dispatchCompute( 2, 1, 1 );
             cmdList->drawIndirect( argBuf, 0 );
             cmdList->dispatchIndirect( argBuf, 0 );

@@ -54,7 +54,6 @@ namespace sw
         , _statusMessage{}
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
-        , _bUseGpuDriven{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _graphContext{}
     {
@@ -224,7 +223,7 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return _bUseGpuDriven == SW_TRUE && gv_gpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0;
+        return gv_gpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0;
     }
 
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )

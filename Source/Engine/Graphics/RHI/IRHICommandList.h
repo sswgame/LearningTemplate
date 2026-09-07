@@ -8,7 +8,6 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/RHICommandListDefaults.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -142,9 +141,23 @@ namespace sw
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
         // ------------------------------------------------------------------------------
-        // 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이, 멀티 드로우
+        // 6) 인디렉트 — 드로우/디스패치, 버퍼 상태 전이
         // ------------------------------------------------------------------------------
-        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 )     = 0;
+        /**
+         * @brief 간접 인자로 그립니다. **한 번 그리는 것은 drawCount == 1 인 멀티 드로우다.**
+         * @details 예전엔 drawIndirect 와 multiDrawIndirect 가 따로 있었다. 둘은 같은 일을 하는데 개수만
+         *          다르고, 나뉘어 있는 동안 **멀티 쪽만 조용히 틀려 있었다** — GL 은 PSO 프로그램·토폴로지를
+         *          안 걸고 GL_TRIANGLES 로 굳혔고, Vulkan 은 정점버퍼 바인딩을 빠뜨렸다. 아무도 안 부르는
+         *          경로라 드러나지 않았다. 하나로 합치면 그럴 자리가 없다.
+         * @param argumentBuffer       `RHIDrawIndirectCommand` 배열.
+         * @param argumentBufferOffset 첫 커맨드의 바이트 오프셋.
+         * @param drawCount            그릴 커맨드 수. 커맨드는 연속으로 놓여 있다고 본다.
+         * @param countBuffer          실제 개수를 GPU 가 적어 두는 버퍼(0 이면 drawCount 를 그대로 쓴다).
+         *                             지원하지 않는 백엔드는 drawCount 로 폴백한다.
+         * @param countBufferOffset    그 버퍼 안의 바이트 오프셋.
+         */
+        virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                                   RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 )       = 0;
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                 = 0;
         /**
@@ -158,14 +171,6 @@ namespace sw
          */
         virtual void uavBarrier( RHIBufferHandle buffer )                                                   = 0;
         virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
-        virtual void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                        RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 )
-        {
-            defaultMultiDrawIndirect( argumentBuffer, argumentBufferOffset, maxCommandCount, countBuffer, countBufferOffset,
-                                      [this]( RHIBufferHandle buf, uint32 off )
-            { drawIndirect( buf, off ); } );
-        }
-
         // ------------------------------------------------------------------------------
         // 7) GPU 디버그 마커
         // ------------------------------------------------------------------------------

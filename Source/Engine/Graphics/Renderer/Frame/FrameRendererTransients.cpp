@@ -10,7 +10,6 @@
 
 namespace sw
 {
-    extern int32 gv_gpuDriven;
 
     SW_LOG_CALLER( "FrameRenderer" );
 
@@ -152,10 +151,12 @@ namespace sw
                 _mapEnginePso.insert_or_assign( RenderPassType::InstanceAnim, psoAnim );
         }
 
-        // GPU 드리븐은 **인다이렉트 드로우만 있으면 성립한다** — 간접 인자는 GpuScene 이 CPU 에서 채운다.
-        // 컴퓨트 컬링은 그 위의 선택 사항이라 여기 조건에 넣지 않는다(넣으면 컬링을 못 하는 백엔드가
-        // 인다이렉트 경로를 통째로 잃고, 렌더 스레드에서 Mesh* 를 만지는 레거시 경로로 떨어진다).
-        _bUseGpuDriven = ( gv_gpuDriven != 0 && caps._bIndirectDraw != 0 ) ? 1 : 0;
+        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다 — 예전엔 진단용 전역변수로 끌 수 있는 두 번째
+        // 드로우 루프가 있었지만, 컬링·정렬·인스턴스 애니메이션이 전부 인다이렉트 경로에만 붙어 있어
+        // 그걸 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
+        // 여기서 크게 알린다.
+        if ( caps._bIndirectDraw == 0 )
+            SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
         // Present 변종도 PSO 등록 단계에서 만든다 — 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
         buildPresentPsoVariants();
@@ -167,7 +168,7 @@ namespace sw
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
                      getEnginePso( RenderPassType::Shadow ), getEnginePso( RenderPassType::ForwardOpaque ),
                      getEnginePso( RenderPassType::Transparent ), getEnginePso( RenderPassType::Lighting ),
-                     getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( _bUseGpuDriven ) );
+                     getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )

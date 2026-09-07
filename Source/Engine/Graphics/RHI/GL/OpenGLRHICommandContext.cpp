@@ -598,16 +598,17 @@ namespace sw
         glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulSlot, _pDevice->_computeRootConstantUbo );
     }
 
-    void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
+    void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
+                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
+        if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || drawCount == 0 )
             return;
 
+        // 프로그램과 토폴로지는 PSO 가 정한다. 예전 멀티 경로는 이걸 빠뜨리고 GL_TRIANGLES 로 굳혀 놨었다 —
+        // 아무도 안 부르는 경로라 드러나지 않았다.
         GLuint program = _pDevice->_shaderProgram;
         GLenum mode    = GL_TRIANGLES;
-
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
-        if ( pPso != nullptr )
+        if ( const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso ) )
         {
             if ( pPso->_program != 0 )
             {
@@ -615,7 +616,6 @@ namespace sw
                 mode    = toGlPrimitive( pPso->_topology );
             }
         }
-
         if ( program == 0 )
             return;
 
@@ -623,15 +623,37 @@ namespace sw
 
         const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
-        if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 || glad_glDrawArraysIndirect == nullptr )
+        if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 )
             return;
 
         bindMeshVaoAttribs( vbo );
-
         glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
-        glDrawArraysIndirect( mode, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
-        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
 
+        constexpr GLsizei stride  = sizeof( RHIDrawIndirectCommand );
+        const void*       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) );
+
+        if ( countBuffer != 0 && glad_glMultiDrawArraysIndirectCount != nullptr )
+        {
+            const GLuint count = _pDevice->resolveGlBuffer( countBuffer );
+            if ( count != 0 )
+                glBindBuffer( GL_PARAMETER_BUFFER, count );
+            glMultiDrawArraysIndirectCount( mode, pOffset, static_cast<GLintptr>( countBufferOffset ),
+                                            static_cast<GLsizei>( drawCount ), stride );
+            glBindBuffer( GL_PARAMETER_BUFFER, 0 );
+        }
+        else if ( drawCount > 1 && glad_glMultiDrawArraysIndirect != nullptr )
+            glMultiDrawArraysIndirect( mode, pOffset, static_cast<GLsizei>( drawCount ), stride );
+        else if ( glad_glDrawArraysIndirect != nullptr )
+        {
+            for ( uint32 commandIndex = 0; commandIndex < drawCount; ++commandIndex )
+            {
+                const void* pCmdOffset =
+                    reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset + commandIndex * stride ) );
+                glDrawArraysIndirect( mode, pCmdOffset );
+            }
+        }
+
+        glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
         glBindVertexArray( 0 );
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
@@ -719,57 +741,6 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
         glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-    }
-
-    void OpenGLRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
-                                                     uint32 maxCommandCount, RHIBufferHandle countBuffer,
-                                                     uint32 countBufferOffset )
-    {
-        if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || maxCommandCount == 0 )
-            return;
-
-        const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-        if ( vbo != 0 && _pDevice->_meshVao != 0 )
-        {
-            bindMeshVaoAttribs( vbo );
-        }
-
-        GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
-        if ( buf != 0 )
-        {
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
-
-            constexpr GLsizei stride  = sizeof( RHIDrawIndirectCommand );
-            const void*       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) );
-
-            if ( countBuffer != 0 && glad_glMultiDrawArraysIndirectCount != nullptr )
-            {
-                GLuint count = _pDevice->resolveGlBuffer( countBuffer );
-                if ( count != 0 )
-                    glBindBuffer( GL_PARAMETER_BUFFER, count );
-                glMultiDrawArraysIndirectCount( GL_TRIANGLES, pOffset, static_cast<GLintptr>( countBufferOffset ),
-                                                static_cast<GLsizei>( maxCommandCount ), stride );
-                glBindBuffer( GL_PARAMETER_BUFFER, 0 );
-            }
-            else if ( glad_glMultiDrawArraysIndirect != nullptr )
-                glMultiDrawArraysIndirect( GL_TRIANGLES, pOffset, static_cast<GLsizei>( maxCommandCount ), stride );
-            else if ( glad_glDrawArraysIndirect != nullptr )
-            {
-                for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
-                {
-                    const void* pCmdOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset + commandIndex * sizeof( RHIDrawIndirectCommand ) ) );
-                    glDrawArraysIndirect( GL_TRIANGLES, pCmdOffset );
-                }
-            }
-
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
-        }
-
-        if ( _pDevice->_meshVao != 0 )
-        {
-            glBindVertexArray( 0 );
-            glBindBuffer( GL_ARRAY_BUFFER, 0 );
-        }
     }
 
     void OpenGLRHICommandContext::beginEventMarker( const utf8* pName )

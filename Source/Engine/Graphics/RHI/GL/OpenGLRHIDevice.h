@@ -117,8 +117,6 @@ namespace sw
         void* getNativeCommandQueue() const override { return nullptr; }
 
         /** @brief glMultiDrawArraysIndirect when available. */
-        void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
-                                RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 );
 
         /** @brief 커맨드 리스트 객체 생성 */
         unique_ptr<IRHICommandList> createCommandList() override;

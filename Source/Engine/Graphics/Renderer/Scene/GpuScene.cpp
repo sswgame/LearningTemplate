@@ -338,9 +338,15 @@ namespace sw
                 // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
                 // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
                 // 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 만들어진다.
-                // 머티리얼이 없을 때만 컴포넌트 값을 쓴다(픽스처·디버그 메시).
-                cand._blendMode = ( cand._pMaterial != nullptr ) ? static_cast<uint32>( cand._pMaterial->getBlendMode() )
-                                                                 : static_cast<uint32>( pMeshComp->getBlendMode() );
+                //
+                // 인스턴스만 붙은 메시는 **인스턴스의 부모 머티리얼**이 정본이다(인스턴스는 값만 덮어쓰고
+                // 블렌드 모드는 갖지 않는다). 둘 다 없을 때만 컴포넌트 값을 쓴다 — 머티리얼이 없는
+                // 디버그·픽스처 메시가 그 경우다.
+                const Material* pBlendSource = cand._pMaterial;
+                if ( pBlendSource == nullptr && cand._pInstance != nullptr )
+                    pBlendSource = cand._pInstance->getParent();
+                cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
+                                                              : static_cast<uint32>( pMeshComp->getBlendMode() );
                 cand._pInstance = pMeshComp->getRawMaterialInstance();
                 _listScratchCandidate.push_back( cand );
             }

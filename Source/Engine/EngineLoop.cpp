@@ -102,9 +102,6 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
-    /** @brief `-gv_gpuDriven=0` — 인다이렉트 드로우 대신 인스턴스드 드로우 경로를 씁니다(진단·폴백용). */
-    SW_GLOBAL_VARIABLE_INT( gv_gpuDriven, 1, "GPU 드리븐 인다이렉트 드로우 (0=인스턴스드 경로)" );
-
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우

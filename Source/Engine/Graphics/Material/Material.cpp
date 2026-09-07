@@ -278,19 +278,16 @@ namespace sw
                 }
             }
         }
+        // 예전엔 여기에 "멤버가 있는 **첫** 상수버퍼를 머티리얼 스키마로 삼는" 폴백이 있었다. 지금은
+        // 모든 셰이더가 SW_MATERIAL_BEGIN/END(g_SwMaterials) 아니면 MaterialCB 를 선언하므로 도달하지
+        // 않는다 — 그리고 도달했다면 **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한 오프셋에
+        // 값을 써 넣었을 것이다. 조용히 틀리느니 못 찾았다고 알린다.
         if ( pSchemaCb == nullptr )
         {
-            for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
-            {
-                if ( cb._listVariable.empty() == false )
-                {
-                    pSchemaCb = &cb;
-                    break;
-                }
-            }
-        }
-        if ( pSchemaCb == nullptr )
+            SW_LOG_WARNING( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
+                            _desc._name.c_str() );
             return true;
+        }
 
         if ( _data._listProperty.empty() )
         {

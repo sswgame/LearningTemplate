@@ -31,7 +31,7 @@ namespace sw
      *         v9: IRHIResource::uploadTexture2D + RHITextureUploadDesc — 처음으로 텍스처에 픽셀을 올리는 길.
      *         v10: readbackTexture2D(동기 읽기) + RHIFormat BC1~BC7 — 업로드 내용을 바이트로 검증할 수 있게.
      *         v11: IRHIResource::registerBindlessTextureUAV + IRHICommandList::prepareTextureForUnorderedAccess — 컴퓨트 RW 텍스처. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v13-2026-09";
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v14-2026-09";
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
