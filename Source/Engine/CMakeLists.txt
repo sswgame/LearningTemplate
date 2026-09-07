@@ -49,6 +49,24 @@ endforeach()
 # ResourcePackReader 가 uncompress 를 직접 부른다.
 find_package(ZLIB REQUIRED)
 
+# 무엇으로 풀렸는지 configure 로그에 남긴다. 이 줄이 없던 동안 Linux CI 가
+# `libEngine.so: undefined reference to uncompress` 로 두 번 깨졌고, 그때마다 링크 구문만 보고는
+# ZLIB::ZLIB 이 실제로 무엇을 가리키는지(정적/공유, debug/release, vcpkg/시스템) 알 수 없었다.
+get_target_property(swZlibType ZLIB::ZLIB TYPE)
+get_target_property(swZlibImportedConfig ZLIB::ZLIB IMPORTED_CONFIGURATIONS)
+get_target_property(swZlibLocationDebug ZLIB::ZLIB IMPORTED_LOCATION_DEBUG)
+get_target_property(swZlibLocationRelease ZLIB::ZLIB IMPORTED_LOCATION_RELEASE)
+get_target_property(swZlibLocationNoConfig ZLIB::ZLIB IMPORTED_LOCATION)
+message(STATUS "[Engine] ZLIB::ZLIB type=${swZlibType} configs=${swZlibImportedConfig}")
+message(STATUS "[Engine] ZLIB::ZLIB loc(debug)=${swZlibLocationDebug} loc(release)=${swZlibLocationRelease} loc=${swZlibLocationNoConfig}")
+message(STATUS "[Engine] ZLIB_LIBRARIES=${ZLIB_LIBRARIES} ZLIB_INCLUDE_DIRS=${ZLIB_INCLUDE_DIRS}")
+
+# 임포트 타겟이 아무 라이브러리도 가리키지 않으면 링크는 조용히 통과하고(공유 라이브러리는 미해결 심볼을
+# 허용한다) 그걸 링크하는 실행 파일에서야 터진다. 여기서 먼저 멈춘다.
+if(NOT swZlibLocationDebug AND NOT swZlibLocationRelease AND NOT swZlibLocationNoConfig AND NOT ZLIB_LIBRARIES)
+    message(FATAL_ERROR "ZLIB::ZLIB 이 어떤 라이브러리도 가리키지 않습니다 — 이대로 링크하면 libEngine 이 uncompress 를 미해결로 남깁니다.")
+endif()
+
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -67,7 +85,14 @@ target_link_libraries(Engine
     # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
     # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
     # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
-    ZLIB::ZLIB
+    $<$<BOOL:${WIN32}>:ZLIB::ZLIB>
+    # Linux/macOS 는 overlay triplet 이 정적 링크(x64-linux.cmake: VCPKG_LIBRARY_LINKAGE static)라 zlib 이
+    # 아카이브(libz.a)다. 아카이브는 "그 시점에 미해결인 심볼" 만 당겨오므로, 링크 순서나 유니티 묶음이
+    # 바뀌면 uncompress 가 libEngine.so 에 안 들어가고 미해결로 남는다 — 공유 라이브러리는 그걸 허용해서
+    # 링크가 통과하고, App 링크에서 `undefined reference to uncompress` 로 터진다(같은 증상으로 CI 가 두 번 깨졌다).
+    # 통째로 넣어 순서와 무관하게 심볼이 libEngine 안에 있게 한다. Windows 는 triplet 이 dynamic 이라
+    # zd.lib 가 임포트 라이브러리이므로 whole-archive 대상이 아니다.
+    $<$<NOT:$<BOOL:${WIN32}>>:$<LINK_LIBRARY:WHOLE_ARCHIVE,ZLIB::ZLIB>>
 )
 
 if(sw_flag_libraries)
