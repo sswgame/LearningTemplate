@@ -167,7 +167,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
    - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (DX12/VK 텍스처 배열)
                     비네이티브(DX11/GL)는 bindShaderResource(srv, 리플렉션 t#)
    - MaterialCB(b1): 인스턴스 버퍼가 없는 픽스처(fullscreentriangle) 만 — Material 버퍼를 상수버퍼로 건다
-   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `SW_SampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11·GL 슬롯 결합 샘플러
+   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `SW_SampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11 s9..s15 샘플러 상태 / GL 은 결합 샘플러라 samplerId 무시
    - RW 텍스처    : 컴퓨트 전용 `SW_StoreTex2D( index, coord, v )` — DX12/VK 배열(registerBindlessTextureUAV 인덱스), DX11/GL u4..u7 서수
    - 루트 상수    : `SW_ROOT_CONSTANTS_BEGIN … SW_ROOT_CONSTANTS_END` + `SW_ROOT( field )` ← setComputeRootConstants (16 dword)
 ```
@@ -200,10 +200,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 | 백엔드 | t4/t9 구조버퍼를 거는 방법 |
 |--------|--------------------|
-| DX12   | 루트 SRV(`SetGraphicsRootShaderResourceView`, 버퍼 GPU 주소). 텍스처 배열만 테이블(t0 space1). SM6.6 힙 인덱싱은 쓰지 않는다 |
+| DX12   | t/u 슬롯 **디스크립터 테이블** — 등록 때 오프라인(CPU) 힙에 만든 뷰를 드로우/디스패치 직전 `flushSlotTables` 가 온라인 힙 블록에 `CopyDescriptors` 해 루트 테이블로 건다(언리얼 `FD3D12DescriptorCache`). CB 만 루트 CBV. 텍스처 배열은 힙 시작 테이블(t0 space1). 루트 예산 25/64 dword (`shaderslot::dx12`). SM6.6 힙 인덱싱은 쓰지 않는다 |
 | DX11   | `StructuredBuffer` SRV — `createStructuredBuffer` 가 SRV 생성, `VS/PSSetShaderResources` |
 | OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 슬롯)` |
-| Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 프레임 풀에서 세트를 할당해 쓴다(`flushSlotSet`); 텍스처 배열·immutable sampler 는 set 1 |
+| Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`)에서 세트를 할당해 쓴다(`flushSlotSet`) — 락 없음, 버퍼가 펜스를 지나 재사용될 때 통째로 리셋. 텍스처 배열·immutable sampler 는 set 1 |
 
 - GPU 컬(gpucull)은 `instanceCount` 만 줄이고 인스턴스 리스트를 compact 하지 않는다 (배치 앞 N개만 그림).
 - **RHI ABI**: `bindConstantBuffer`/`bindStructuredBuffer`/`drawInstanced` 추가 (`RHIModuleAbi` stamp `rhi-cl-v4-2026-09`).
@@ -250,13 +250,28 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, `IRHIDevice::executeOffscreenPipelineSmoke`, FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
 - **Perf** — Transparent 연속 mesh/mat 머지, GpuScene 내용·카메라 핑거프린트 캐시, Deferred CL 기본·`_frameCmd` 재사용·Cmd reserve 256
 
-남은 것 (2026-09-07 바인딩 리워크 이후, 우선순위순):
-- **P1** — Vulkan Present 패스 렌더패스 포맷 불일치 (스왑체인 B8G8R8A8 vs 파이프라인 R8G8B8A8, 검증 레이어가 매 프레임 로그). 바인딩과 무관한 스왑체인 포맷 폴백 문제.
-- **P2** — Vulkan 슬롯 세트 풀이 디바이스 전역 뮤텍스 하나(`_slotPoolMutex`) — 웨이브 병렬 기록이 본격화되면 컨텍스트별 풀로.
-- **P2** — DX12 루트 시그니처 예산: 루트 CBV 3 + SRV 10 + UAV 4 = 51/64 dword. 슬롯을 더 늘리려면 t/u 를 테이블로 옮겨야 한다.
-- **P3** — 텍스처 배열 용량 고정(Vulkan 4096 / DX12 힙), 스트리밍·축출 없음. 큐브맵·3D 텍스처 배열 없음(계약 space1/set1 규칙도 같이 바꿔야 한다).
-- **P3** — DX11/GL 은 배치를 머티리얼 단위로 유지(텍스처를 t5..t8 슬롯에 걸어야 해서). 머티리얼을 넘어 합치려면 Texture2DArray/아틀라스가 필요.
-- **P3** — 에뮬 백엔드(DX11/GL)의 `SW_SampleIndexWith` 는 samplerId 를 무시한다(슬롯 결합 샘플러뿐).
+2026-09-07 바인딩 리워크 이후 남았던 것 — 상용 엔진(언리얼)이 같은 문제를 어떻게 푸는지에 맞춰 닫았다:
+- **P1 해결** — Vulkan Present 렌더패스 포맷 불일치. 원인은 Present PSO 가 `R8G8B8A8` 상수로 만들어지고 스왑체인은 서피스와
+  협상한 포맷(B8G8R8A8 일 수 있음)을 쓴 것. 언리얼은 PSO 초기화자의 `RenderTargetFormats` 를 **바인딩된 타깃의 실제 포맷**
+  (`FRHITexture::GetFormat`, 스왑체인은 `FVulkanSwapChain` 이 되돌려 준 포맷)에서 뽑고 그것이 PSO 캐시 키다. 같은 구조로:
+  `IRHIResource::getTextureFormat( handle )` + `IRHIDevice::getBackBufferFormat()` 을 정본으로 두고 `FrameRenderer::ensurePresentPso( format )`
+  가 대상 포맷별 PSO 를 캐시한다(백버퍼 vs GameView RT). `-gv_rhiBackBufferFormat=1`(언리얼 `r.DefaultBackBufferPixelFormat` 자리)로
+  B8G8R8A8 백버퍼를 실제로 돌려 검증 에러 0 을 확인했다.
+- **P2 해결** — Vulkan 슬롯 세트 풀의 전역 뮤텍스 제거. 언리얼 `FVulkanDescriptorPoolSetContainer` 처럼 **커맨드 버퍼 쌍이 자기 풀 묶음**
+  (`VulkanDescriptorPoolSet`)을 들고 다니고, 쌍이 GPU 펜스를 지나 재사용 풀로 돌아온 뒤 `beginCommandList` 가 통째로 리셋한다.
+  디바이스 프레임 스트림은 링 슬롯별 묶음. 할당 경로에 락이 없다.
+- **P2 해결** — DX12 루트 예산 51 → 25 dword. 언리얼 `FD3D12RootSignature` 배치대로 CB 는 루트 CBV, t/u 슬롯은 **디스크립터 테이블**.
+  등록이 뷰를 오프라인 힙에도 만들고(`_offlineCpuHandle`), 드로우/디스패치 직전 `flushSlotTables` 가 바뀐 테이블만 온라인 힙 블록에
+  `CopyDescriptors` 해 건다(`FD3D12DescriptorCache` + 서브할당 온라인 힙). 블록은 리스트가 닫힐 때 펜스 뒤 반납. 안 걸린 슬롯은 null 뷰.
+  `ShaderBindingContractTest.Dx12RootSignatureFitsBudget` 이 계약에서 예산을 계산한다 — 테이블 안의 슬롯 수는 예산에 들지 않는다.
+- **P3 해결(DX11)** — `SW_SampleIndexWith` 의 samplerId 를 DX11 도 존중한다: 정적 샘플러 세트를 s9..s15 샘플러 상태로 걸고(`bindStaticSamplers`,
+  즉시/지연 컨텍스트 모두) 셰이더가 리터럴 분기로 고른다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러 불가)이라 슬롯의 샘플러를
+  엔진이 정한다 — 언리얼 OpenGL RHI 도 같은 제약(`glBindSampler` 유닛 단위).
+- **P3 설계 결정(구현 안 함)** — 텍스처 배열 용량은 언리얼도 고정(cvar 로 정한 힙 크기) + 펜스 뒤 인덱스 재사용이며, 스트리밍·축출은
+  디스크립터가 아니라 텍스처 스트리밍 시스템의 일이다(이미 지연 해제는 4 백엔드 구현됨). 큐브맵/3D 는 같은 배열 바인딩에 타입만 다른
+  선언을 겹쳐 두는 방식(Vulkan: set 1 binding 0 에 `TextureCube[]` 별칭, DX12: 같은 힙 시작을 가리키는 space3 범위)이 언리얼식이지만,
+  엔진에 큐브/3D 텍스처 리소스 자체가 없어 바인딩만 먼저 열 이유가 없다. DX11/GL 의 머티리얼 단위 배치도 언리얼과 같다 —
+  `FMeshDrawCommand` 병합은 셰이더 바인딩이 같을 때만 일어나고, 텍스처를 슬롯에 거는 플랫폼에서는 머티리얼 경계가 곧 바인딩 경계다.
 
 ## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
 
@@ -270,6 +285,8 @@ py -3 Scripts/dev/BackendSmoke.py                                               
 ```
 
 - 백엔드는 `-dx11 / -dx12 / -vk / -gl` 플래그로 고른다. `-gv_rhiBackend=X` 는 무시된다.
+- `-gv_rhiBackBufferFormat=1` 은 B8G8R8A8 백버퍼를 요청한다 — 백버퍼 PSO 가 `getBackBufferFormat()` 을 따르는지(Vulkan 렌더패스 호환) 이걸로 본다.
+  로그의 `백버퍼 포맷: 요청 → 채택` 줄이 실제 채택값이다.
 - DX11/DX12 디버그 레이어 메시지는 프레임 끝에 `[Error]` 로 로그에 나온다(`flushDebugMessages`). 스모크 로그의 `[Error]` 수가 0 이 아니면 읽어라.
 - 셰이더 .hlsli 를 고쳤으면 반드시 `--bake-shaders` 를 다시 돌린다 — 런타임은 매니페스트가 소스보다 오래되면 런타임 리플렉션으로 폴백하지만 테스트는 구운 바이너리를 본다.
 

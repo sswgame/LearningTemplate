@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -137,6 +138,12 @@ namespace sw
         return bOk;
     }
 
+    // 요청 백버퍼 포맷 — 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리. 0 = R8G8B8A8(계약 기본), 1 = B8G8R8A8.
+    // 백엔드가 실제로 채택한 값은 getBackBufferFormat() 이 답한다(DX 는 요청대로, Vulkan 은 서피스와 협상, GL 은 창 픽셀
+    // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다 — 이 변수는 그 경로를 다른 포맷으로
+    // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=1`).
+    SW_GLOBAL_VARIABLE_INT( gv_rhiBackBufferFormat, 0, "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
+
     bool IRHIDevice::initialize()
     {
         if ( _pInitWindow == nullptr )
@@ -154,6 +161,7 @@ namespace sw
         swapChainDesc._width          = _pInitWindow->getWidth();
         swapChainDesc._height         = _pInitWindow->getHeight();
         swapChainDesc._bufferCount    = kBackBufferCount;
+        swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         if ( engine::areEngineServicesBound() )
         {
@@ -162,7 +170,12 @@ namespace sw
                 swapChainDesc._bVSync = bCliVSync;
         }
 
-        return initializeInternal( swapChainDesc );
+        if ( initializeInternal( swapChainDesc ) == false )
+            return false;
+        // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다 — 어느 쪽인지 로그로 남긴다.
+        SW_LOG_INFO( "백버퍼 포맷: 요청 %# → 채택 %# (getBackBufferFormat)",
+                     static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
+        return true;
     }
 
     void IRHIDevice::shutdown()

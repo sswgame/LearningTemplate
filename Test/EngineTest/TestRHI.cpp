@@ -630,6 +630,66 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
 }
 
 /**
+ * @brief [RHITest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
+ * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
+ *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.
+ */
+SW_TEST_CASE( RHITest, TextureFormatQueryAndBackBufferFormat )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        const sw::RHIFormat backBuffer = device->getBackBufferFormat();
+        SW_EXPECT_TRUE_MSG( backBuffer == sw::RHIFormat::R8G8B8A8_UNORM || backBuffer == sw::RHIFormat::B8G8R8A8_UNORM, device->getBackendName() );
+
+        const sw::RHIFormat arrFormat[] = { sw::RHIFormat::R8G8B8A8_UNORM, sw::RHIFormat::R16G16B16A16_FLOAT, sw::RHIFormat::D24_UNORM_S8_UINT };
+        for ( const sw::RHIFormat format : arrFormat )
+        {
+            sw::RHITextureDesc desc{};
+            desc._width                        = 16;
+            desc._height                       = 16;
+            desc._format                       = format;
+            desc._mipLevels                    = 1;
+            const bool bDepth                  = ( format == sw::RHIFormat::D24_UNORM_S8_UINT );
+            desc._bIsRenderTarget              = bDepth ? SW_FALSE : SW_TRUE;
+            desc._bIsDepthStencil              = bDepth ? SW_TRUE : SW_FALSE;
+            desc._bIsShaderResource            = SW_TRUE;
+            const sw::RHITextureHandle texture = pResource->createTexture2D( desc );
+            SW_EXPECT_TRUE_MSG( texture != 0, device->getBackendName() );
+            if ( texture == 0 )
+                continue;
+            SW_EXPECT_EQUAL( static_cast<uint32>( format ), static_cast<uint32>( pResource->getTextureFormat( texture ) ) );
+            pResource->destroyTexture( texture );
+        }
+        SW_EXPECT_EQUAL( static_cast<uint32>( sw::RHIFormat::Unknown ), static_cast<uint32>( pResource->getTextureFormat( 0 ) ) );
+
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for texture format query test" );
+}
+
+/**
  * @brief [RHITest] 커맨드 리스트 생성과 실행
  */
 SW_TEST_CASE( RHITest, CommandListCreationAndExecution )

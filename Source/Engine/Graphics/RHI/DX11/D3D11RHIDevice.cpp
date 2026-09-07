@@ -47,7 +47,9 @@ namespace sw
         , _depthEnabledState{ nullptr }
         , _depthDisabledState{ nullptr }
         , _linearSampler{ nullptr }
+        , _arrStaticSampler{}
         , _pHWnd{ nullptr }
+        , _backBufferFormat{ constant::kBackBufferFormat }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -65,7 +67,8 @@ namespace sw
 
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        _pHWnd = static_cast<HWND>( desc._pWindowHandle );
+        _pHWnd            = static_cast<HWND>( desc._pWindowHandle );
+        _backBufferFormat = desc._format;
 
         // Use FLIP_DISCARD to match DX12 (and DXGI HWND rules): after a flip-model
         // swapchain has been created for an HWND, subsequent DISCARD/blt chains on the
@@ -154,6 +157,38 @@ namespace sw
             sampDesc.MinLOD         = 0.0f;
             sampDesc.MaxLOD         = D3D11_FLOAT32_MAX;
             _device->CreateSamplerState( &sampDesc, _linearSampler.GetAddressOf() );
+
+            // 정적 샘플러 세트 s9..s15 — DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표. 비교 샘플러(7)는
+            // 에뮬 경로가 깊이를 직접 비교하므로 없다.
+            struct StaticSamplerSpec
+            {
+                D3D11_FILTER               _filter;
+                D3D11_TEXTURE_ADDRESS_MODE _address;
+                uint32                     _anisotropy;
+            };
+            const StaticSamplerSpec arrSpec[shaderslot::kStaticSamplerArrayCount] = {
+                {D3D11_FILTER_MIN_MAG_MIP_LINEAR,   D3D11_TEXTURE_ADDRESS_WRAP, 1}, // LINEAR_WRAP
+                {D3D11_FILTER_MIN_MAG_MIP_LINEAR,  D3D11_TEXTURE_ADDRESS_CLAMP, 1}, // LINEAR_CLAMP
+                { D3D11_FILTER_MIN_MAG_MIP_POINT,   D3D11_TEXTURE_ADDRESS_WRAP, 1}, // POINT_WRAP
+                { D3D11_FILTER_MIN_MAG_MIP_POINT,  D3D11_TEXTURE_ADDRESS_CLAMP, 1}, // POINT_CLAMP
+                {D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_MIRROR, 1}, // LINEAR_MIRROR
+                {       D3D11_FILTER_ANISOTROPIC,   D3D11_TEXTURE_ADDRESS_WRAP, 8}, // ANISO_WRAP
+                { D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_BORDER, 1}, // POINT_BORDER
+            };
+            for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
+            {
+                D3D11_SAMPLER_DESC staticDesc{};
+                staticDesc.Filter         = arrSpec[samplerIndex]._filter;
+                staticDesc.AddressU       = arrSpec[samplerIndex]._address;
+                staticDesc.AddressV       = arrSpec[samplerIndex]._address;
+                staticDesc.AddressW       = arrSpec[samplerIndex]._address;
+                staticDesc.MaxAnisotropy  = arrSpec[samplerIndex]._anisotropy;
+                staticDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+                staticDesc.MinLOD         = 0.0f;
+                staticDesc.MaxLOD         = D3D11_FLOAT32_MAX;
+                _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() );
+            }
+            bindStaticSamplers( _deviceContext.Get() );
         }
 
         // 풀스크린 삼각형 정점버퍼. **DX11 만 이게 없었다** — 멤버는 선언돼 있고 draw() 가 읽는데
@@ -245,6 +280,16 @@ namespace sw
         _swapChain.acquireNextImage( _device.Get() );
     }
 
+    void D3D11RHIDevice::bindStaticSamplers( ID3D11DeviceContext* pContext ) const
+    {
+        if ( pContext == nullptr || _arrStaticSampler[0] == nullptr )
+            return;
+        ID3D11SamplerState* arrSampler[shaderslot::kStaticSamplerArrayCount]{};
+        for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
+            arrSampler[samplerIndex] = _arrStaticSampler[samplerIndex].Get();
+        pContext->PSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
+    }
+
     void D3D11RHIDevice::beginFrame( const float4& clearColor )
     {
         if ( _deviceContext == nullptr || _swapChain.isValid() == false )
@@ -252,6 +297,8 @@ namespace sw
 
         // FLIP_DISCARD 는 백버퍼를 돌려 쓴다 — Present 가 보여줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
+        // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다 — 프레임마다 다시 건다(값싸다).
+        bindStaticSamplers( _deviceContext.Get() );
         if ( _swapChain.getBackBufferRtv() == nullptr )
             return;
 

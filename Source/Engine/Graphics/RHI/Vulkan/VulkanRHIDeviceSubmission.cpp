@@ -34,8 +34,9 @@ namespace sw
         // 이 링 슬롯의 펜스가 신호됐다는 건 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
         // GPU 작업이 실제로 끝났다는 뜻이다 — 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
-        // 이 링 슬롯에서 쓴 슬롯 세트들도 GPU 가 다 읽었다 — 풀을 통째로 비워 이번 프레임에 다시 쓴다.
-        resetSlotPoolForFrame( _currentFrame );
+        // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다 — 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
+        // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
+        resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
 
         VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
         if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
@@ -192,7 +193,7 @@ namespace sw
             return entry;
 
         // 풀은 리스트마다 전용이어야 한다 — VkCommandPool 은 외부 동기화 대상이라 두 스레드가 같은
-        // 풀에서 동시에 기록하면 정의되지 않은 동작이다.
+        // 풀에서 동시에 기록하면 정의되지 않은 동작이다. 슬롯 세트 풀 묶음도 같은 이유로 쌍마다 전용이다.
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -209,6 +210,13 @@ namespace sw
         {
             vkDestroyCommandPool( _device, entry._pool, nullptr );
             return VulkanCommandListEntry{};
+        }
+
+        {
+            // 풀 묶음은 디바이스가 소유한다 — 쌍은 값으로 복사돼 다니므로(지연 반환 람다 캡처) 빌려 쓰는 포인터만 든다.
+            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            _listCmdListDescriptorPoolSet.push_back( make_unique<VulkanDescriptorPoolSet>() );
+            entry._pDescriptorPoolSet = _listCmdListDescriptorPoolSet.back().get();
         }
         return entry;
     }

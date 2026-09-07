@@ -40,6 +40,7 @@ namespace sw
         , _materialFallbackBuffer{ 0 }
         , _materialFallbackSrv{ kInvalidDescriptorIndex }
         , _mapEnginePso{}
+        , _mapPresentPso{}
         , _transientWidth{ 0 }
         , _transientHeight{ 0 }
         , _outputRenderTarget{ 0 }

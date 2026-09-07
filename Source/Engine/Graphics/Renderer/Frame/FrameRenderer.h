@@ -307,6 +307,15 @@ namespace sw
                                                      const vector<string>* pExtraDefines      = nullptr );
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
+        /**
+         * @brief Present 패스 PSO 를 **대상 포맷별로** 얻습니다 (없으면 만든다).
+         * @details Present 의 대상은 둘이다 — 백버퍼(포맷은 디바이스가 실제로 채택한 값, Vulkan 은 서피스가
+         *          B8G8R8A8 만 줄 수 있다)와 에디터 GameView RT(R8G8B8A8). PSO 의 렌더타깃 포맷이 대상과
+         *          다르면 Vulkan 은 렌더패스 비호환으로 검증 레이어가 매 프레임 운다. 언리얼이 PSO 초기화자의
+         *          RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같은 방식이다 —
+         *          여기서는 Present 하나만 그 키가 포맷이라 맵 하나로 충분하다.
+         */
+        RHIPipelineStateHandle ensurePresentPso( RHIFormat targetFormat );
 
     private:
         /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
@@ -363,18 +372,20 @@ namespace sw
         static constexpr uint32 _s_kEnginePassCbSize = 512;
         /// @brief 엔진이 만들어 둔 패스별 PSO. 예전엔 string 키라 조회마다 string 을 만들었다.
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
-        unordered_map<hashed_string, uint32>                  _mapPassNameToIndex;
-        uint32                                                _transientWidth;
-        uint32                                                _transientHeight;
-        RHITextureHandle                                      _outputRenderTarget;
-        RHITextureHandle                                      _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
-        RHIDescriptorIndex                                    _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
-        FrameRendererStatus                                   _status;
-        string                                                _statusMessage;
-        uint8                                                 _bCallbacksBound     : 1;
-        uint8                                                 _bPassResourcesReady : 1;
-        uint8                                                 _bUseGpuDriven       : 1;
-        [[maybe_unused]] uint8                                _reservedFlags       : 5;
+        /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
+        unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
+        unordered_map<hashed_string, uint32>             _mapPassNameToIndex;
+        uint32                                           _transientWidth;
+        uint32                                           _transientHeight;
+        RHITextureHandle                                 _outputRenderTarget;
+        RHITextureHandle                                 _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
+        RHIDescriptorIndex                               _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
+        FrameRendererStatus                              _status;
+        string                                           _statusMessage;
+        uint8                                            _bCallbacksBound     : 1;
+        uint8                                            _bPassResourcesReady : 1;
+        uint8                                            _bUseGpuDriven       : 1;
+        [[maybe_unused]] uint8                           _reservedFlags       : 5;
 
         // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 웨이브끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와

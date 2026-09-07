@@ -20,7 +20,8 @@ namespace sw
          * @details `VulkanRHICommandList` 처럼 자기 버퍼/상태를 소유하는 쪽이 씁니다 — 여러 리스트가
          *          동시에 기록해도 서로의 바인딩 캐시를 건드리지 않습니다.
          */
-        VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer, VulkanRecordingState* pState );
+        VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer, VulkanRecordingState* pState,
+                                 VulkanDescriptorPoolSet* pDescriptorPoolSet );
         ~VulkanRHICommandContext() override = default;
 
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
@@ -82,12 +83,18 @@ namespace sw
         VkCommandBuffer _targetBuffer{ nullptr };
         /// @brief 이 컨텍스트가 갱신할 기록 상태. 리스트가 자기 것을 넘기면 서로 간섭하지 않는다.
         VulkanRecordingState* _pState{ nullptr };
+        /// @brief 슬롯 세트를 할당받는 풀 묶음. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 묶음을 쓴다.
+        VulkanDescriptorPoolSet* _pDescriptorPoolSet{ nullptr };
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 게 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;
 
     public:
-        /** @brief 기록 대상 버퍼를 교체합니다(소유자가 버퍼+풀 쌍을 바꿔 낄 때). */
-        void rebindCommandBuffer( VkCommandBuffer targetBuffer ) { _targetBuffer = targetBuffer; }
+        /** @brief 기록 대상 버퍼와 풀 묶음을 교체합니다(소유자가 버퍼+풀 쌍을 바꿔 낄 때). */
+        void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
+        {
+            _targetBuffer       = targetBuffer;
+            _pDescriptorPoolSet = pDescriptorPoolSet;
+        }
     };
 } // namespace sw

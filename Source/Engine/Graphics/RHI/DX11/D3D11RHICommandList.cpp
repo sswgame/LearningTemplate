@@ -62,8 +62,10 @@ namespace sw
     void D3D11RHICommandList::beginCommandList()
     {
         // FinishCommandList(FALSE, ...) 가 이전 실행 직후 Deferred Context 를 이미 기본 상태로
-        // 되돌려놨다 — 여기서는 이전에 제출한 네이티브 리스트 참조만 정리한다.
+        // 되돌려놨다 — 이전에 제출한 네이티브 리스트 참조를 정리하고, 그 기본 상태에 없는 정적 샘플러 세트를 다시 건다.
         _pFinishedList.Reset();
+        if ( _pDevice != nullptr )
+            _pDevice->bindStaticSamplers( _pNativeContext.Get() );
     }
 
     void D3D11RHICommandList::endCommandList()

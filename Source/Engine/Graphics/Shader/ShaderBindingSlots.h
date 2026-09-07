@@ -86,6 +86,39 @@ namespace sw
             inline constexpr uint32 kSlotBindingCount = SW_VK_SLOT_BINDING_COUNT;
         } // namespace vk
 
+        /**
+         * @brief DX11 정적 샘플러 세트 s9..s15 — 슬롯 결합 샘플러 뒤. 디바이스가 초기화 때 걸고 셰이더가 samplerId 로 고른다.
+         * @details DX11 이 SW_SAMPLER_* 를 존중하는 유일한 길이다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기). GL 은 없다.
+         */
+        namespace dx11
+        {
+            inline constexpr uint32 kStaticSampler0      = SW_DX11_STATIC_SAMPLER0;
+            inline constexpr uint32 kMaxSamplerSlotCount = SW_DX11_MAX_SAMPLER_SLOT_COUNT;
+            static_assert( SW_DX11_STATIC_SAMPLER1 == SW_DX11_STATIC_SAMPLER0 + 1 && SW_DX11_STATIC_SAMPLER2 == SW_DX11_STATIC_SAMPLER0 + 2 &&
+                               SW_DX11_STATIC_SAMPLER3 == SW_DX11_STATIC_SAMPLER0 + 3 && SW_DX11_STATIC_SAMPLER4 == SW_DX11_STATIC_SAMPLER0 + 4 &&
+                               SW_DX11_STATIC_SAMPLER5 == SW_DX11_STATIC_SAMPLER0 + 5 && SW_DX11_STATIC_SAMPLER6 == SW_DX11_STATIC_SAMPLER0 + 6,
+                           "DX11 정적 샘플러 슬롯은 연속이어야 한다 (PSSetSamplers 한 번에 건다)" );
+            static_assert( kStaticSampler0 >= kMaterialTexture0 + kMaterialTextureCount, "DX11 정적 샘플러가 슬롯 결합 샘플러(s0..s8)와 겹친다" );
+            static_assert( kStaticSampler0 + kStaticSamplerArrayCount <= kMaxSamplerSlotCount, "DX11 정적 샘플러가 샘플러 슬롯 수(16)를 넘는다" );
+        } // namespace dx11
+
+        /**
+         * @brief DX12 루트 시그니처 예산 — 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 디스크립터 테이블.
+         * @details 루트 시그니처는 64 dword 다. 루트 디스크립터는 2, 테이블은 1, 루트 상수는 dword 수만큼 든다.
+         *          예전엔 t/u 도 루트 디스크립터라 3*2 + 10*2 + 4*2 + 1 + 16 = 51 로 슬롯을 늘릴 여지가 없었다. 지금은
+         *          3*2 + 3*1 + 16 = 25 — 슬롯 수는 테이블 안에서 늘어나므로 예산에 들지 않는다.
+         */
+        namespace dx12
+        {
+            inline constexpr uint32 kRootBudgetDwords     = 64;
+            inline constexpr uint32 kRootDescriptorDwords = 2;
+            inline constexpr uint32 kRootTableDwords      = 1;
+            inline constexpr uint32 kRootCbvCount         = kConstantBufferSlotCount; ///< b0..b(N-1) 루트 CBV
+            inline constexpr uint32 kRootTableCount       = 3;                        ///< t 슬롯 테이블, u 슬롯 테이블, 텍스처 배열 테이블
+            inline constexpr uint32 kRootSignatureDwords  = kRootCbvCount * kRootDescriptorDwords + kRootTableCount * kRootTableDwords + kRootConstantDwords;
+            static_assert( kRootSignatureDwords <= kRootBudgetDwords, "DX12 루트 시그니처가 64 dword 예산을 넘는다" );
+        } // namespace dx12
+
         /// @brief OpenGL SSBO 번호 — u# 는 t# 와 겹치지 않게 SW_GL_UAV_BINDING0 부터 (DXC -fvk-u-shift 값이기도 하다).
         namespace gl
         {

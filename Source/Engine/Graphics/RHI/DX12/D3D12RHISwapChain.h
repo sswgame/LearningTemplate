@@ -90,8 +90,10 @@ namespace sw
 
         uint32 getBackBufferIndex() const { return _backBufferIndex; }
         uint32 getBufferCount() const { return _bufferCount; }
-        uint32 getWidth() const { return _width; }
-        uint32 getHeight() const { return _height; }
+        /** @brief 백버퍼 포맷 — DXGI 는 요청 포맷을 그대로 만든다(Vulkan 처럼 협상하지 않는다). */
+        RHIFormat getFormat() const { return _format; }
+        uint32    getWidth() const { return _width; }
+        uint32    getHeight() const { return _height; }
 
         /** @brief 현재 백버퍼 리소스. 준비 안 됐으면 nullptr. */
         ID3D12Resource* getCurrentBackBuffer() const;
@@ -115,6 +117,8 @@ namespace sw
         uint32 _height{ 0 };
         uint32 _bufferCount{ 2 };
         uint32 _backBufferIndex{ 0 };
+        /// @brief 백버퍼 포맷 (요청값 = 실제값).
+        RHIFormat _format{ constant::kBackBufferFormat };
 
         /// @brief 현재 백버퍼의 실제 리소스 상태. `transitionTo` 만 이 값을 바꿉니다.
         /// @details `_stateMutex` 로 보호한다 — RenderGraph::executeParallel 이 같은 웨이브의 패스

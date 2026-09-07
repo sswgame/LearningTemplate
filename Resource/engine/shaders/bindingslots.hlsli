@@ -20,16 +20,17 @@
  *   │ PassCB / 컴퓨트 CB │ b0           │ 루트 CBV            │ UBO  binding 0      │ UBO 0            │
  *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
  *   │ 엔진 텍스처 슬롯   │ t0..t3 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 0..3 │
- *   │ 인스턴스 구조버퍼  │ t4           │ 루트 SRV            │ SSBO binding 16+4   │ SSBO 4           │
+ *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
  *   │ 머티리얼 텍스처    │ t5..t8 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 5..8 │
- *   │ 머티리얼 데이터    │ t9           │ 루트 SRV            │ SSBO binding 16+9   │ SSBO 9           │
- *   │ 컴퓨트 읽기 버퍼   │ t0..t3       │ 루트 SRV            │ SSBO binding 16+#   │ SSBO #           │
- *   │ 컴퓨트 쓰기 버퍼   │ u0..u3       │ 루트 UAV            │ SSBO binding 32+#   │ SSBO 16+#        │
+ *   │ 머티리얼 데이터    │ t9           │ t 테이블            │ SSBO binding 16+9   │ SSBO 9           │
+ *   │ 컴퓨트 읽기 버퍼   │ t0..t3       │ t 테이블            │ SSBO binding 16+#   │ SSBO #           │
+ *   │ 컴퓨트 쓰기 버퍼   │ u0..u3       │ u 테이블            │ SSBO binding 32+#   │ SSBO 16+#        │
  *   │ bindless 텍스처    │ t0 space1    │ 테이블 (힙 전체)    │ set 1 binding 0     │ (없음)           │
- *   │ 정적 샘플러        │ s0           │ 정적 샘플러         │ set 1 binding 1     │ (결합 샘플러)    │
+ *   │ 정적 샘플러        │ s0           │ 정적 샘플러         │ set 1 binding 1     │ (결합 샘플러)    │  DX11: s9..s15 샘플러 상태
  *   │ 루트 상수          │ b0 space2    │ 32비트 루트 상수    │ 푸시 상수           │ (UBO 에뮬)       │
  *   └────────────────────┴──────────────┴─────────────────────┴─────────────────────┴──────────────────┘
- *   - DX12: 버퍼는 전부 루트 디스크립터(GPU 주소) — 디스크립터 힙에 쓸 일이 없고 테이블은 텍스처 배열 하나뿐이다.
+ *   - DX12: b# 는 루트 CBV(GPU 주소), t#/u# 슬롯은 디스크립터 테이블(오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사 — 언리얼
+ *     FD3D12DescriptorCache), 텍스처 배열은 힙 시작을 가리키는 테이블. 루트 예산은 3*2 + 3*1 + 16 = 25/64 dword (ShaderBindingSlots.h dx12).
  *   - Vulkan: set 0 은 "슬롯 세트" — 레지스터 종류별 시프트(DXC -fvk-b/t/u-shift)로 binding 이 정해진다. 드로우/디스패치
  *     직전에 바인딩 상태가 바뀌었으면 세트를 새로 할당해 쓴다(언리얼 Vulkan RHI 와 같은 방식). set 1 은 텍스처 배열.
  *   - OpenGL: DescriptorSet 을 무시하고 binding 만 본다 — b# 가 곧 UBO #, t# 가 곧 텍스처 유닛/SSBO #, u# 는 SSBO 16+#.
@@ -78,7 +79,7 @@
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
 #define SW_SLOT_MATERIAL_BUFFER        9
 
-#define SW_SRV_SLOT_COUNT              10  // t0..t9 — DX12 루트 SRV 수, Vulkan set 0 의 t 밴드 폭 이내
+#define SW_SRV_SLOT_COUNT              10  // t0..t9 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)
@@ -111,6 +112,19 @@
 #define SW_SAMPLER_ANISO_WRAP       5
 #define SW_SAMPLER_POINT_BORDER     6
 #define SW_SAMPLER_SHADOW_CMP       7
+
+// DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 슬롯 결합 샘플러(s0..s8, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
+// 초기화 때 한 번 걸어 두고 셰이더는 SW_SampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
+// 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은
+// SW_SAMPLER_* 를 DX11 도 존중하게 한 것이다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 세트가 없다.
+#define SW_DX11_STATIC_SAMPLER0        9
+#define SW_DX11_STATIC_SAMPLER1        10
+#define SW_DX11_STATIC_SAMPLER2        11
+#define SW_DX11_STATIC_SAMPLER3        12
+#define SW_DX11_STATIC_SAMPLER4        13
+#define SW_DX11_STATIC_SAMPLER5        14
+#define SW_DX11_STATIC_SAMPLER6        15
+#define SW_DX11_MAX_SAMPLER_SLOT_COUNT 16  // D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT
 
 // ------------------------------------------------------------------------------
 // 5) 네이티브 bindless 텍스처 배열 (DX12/Vulkan) — 슬롯 리소스와 다른 자리에 둔다.

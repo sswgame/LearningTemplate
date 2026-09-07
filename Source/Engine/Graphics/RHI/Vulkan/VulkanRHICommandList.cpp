@@ -13,7 +13,7 @@ namespace sw
         , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : VulkanCommandListEntry{} }
         , _bEntryDirty{ 0 }
         , _state{}
-        , _context{ pDevice, _entry._buffer, &_state }
+        , _context{ pDevice, _entry._buffer, &_state, _entry._pDescriptorPoolSet }
     {
         _pContext = &_context;
     }
@@ -38,7 +38,7 @@ namespace sw
         {
             _pDevice->recycleCommandListEntryDeferred( _entry );
             _entry = _pDevice->acquireCommandListEntry();
-            _context.rebindCommandBuffer( _entry._buffer );
+            _context.rebindCommandBuffer( _entry._buffer, _entry._pDescriptorPoolSet );
             _bEntryDirty = 0;
         }
 
@@ -46,6 +46,9 @@ namespace sw
             return;
 
         vkResetCommandBuffer( _entry._buffer, 0 );
+        // 이 쌍의 슬롯 세트들은 GPU 가 다 읽었다(재사용 풀은 펜스 통과분만 든다) — 커맨드 버퍼처럼 풀 묶음도 통째로 비운다.
+        if ( _entry._pDescriptorPoolSet != nullptr )
+            _pDevice->resetDescriptorPoolSet( *_entry._pDescriptorPoolSet );
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

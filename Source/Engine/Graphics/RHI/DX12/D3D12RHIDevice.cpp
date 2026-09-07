@@ -22,6 +22,7 @@ namespace sw
         , _rtvHeap{ nullptr }
         , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
+        , _offlineViewHeap{ nullptr }
         , _rootSignature{ nullptr }
         , _vertexBuffer{ nullptr }
         , _drawCommandSignature{ nullptr }
@@ -32,6 +33,9 @@ namespace sw
         , _arrFrameCmdAllocator{}
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
+        , _onlineBlockMutex{}
+        , _listFreeOnlineBlock{}
+        , _bOnlineHeapExhaustedLogged{ 0 }
         , _frameRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
@@ -95,6 +99,73 @@ namespace sw
     {
         const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuTextures.get( handle );
         return slot != nullptr ? slot->Get() : nullptr;
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::offlineDescriptorAt( uint32 index ) const
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE handle{};
+        if ( _offlineViewHeap == nullptr || index >= kOfflineDescriptorCount )
+            return handle;
+        handle = _offlineViewHeap->GetCPUDescriptorHandleForHeapStart();
+        handle.ptr += static_cast<SIZE_T>( index ) * _cbvDescriptorSize;
+        return handle;
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleCpuAt( uint32 index ) const
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE handle{};
+        if ( _cbvHeap == nullptr || index >= kMaxShaderVisibleDescriptors )
+            return handle;
+        handle = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
+        handle.ptr += static_cast<SIZE_T>( index ) * _cbvDescriptorSize;
+        return handle;
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleGpuAt( uint32 index ) const
+    {
+        D3D12_GPU_DESCRIPTOR_HANDLE handle{};
+        if ( _cbvHeap == nullptr || index >= kMaxShaderVisibleDescriptors )
+            return handle;
+        handle = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        handle.ptr += static_cast<UINT64>( index ) * _cbvDescriptorSize;
+        return handle;
+    }
+
+    uint32 D3D12RHIDevice::acquireOnlineBlock()
+    {
+        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        if ( _listFreeOnlineBlock.empty() )
+        {
+            if ( _bOnlineHeapExhaustedLogged == 0 )
+            {
+                _bOnlineHeapExhaustedLogged = 1;
+                SW_LOG_ERROR( "온라인 디스크립터 블록이 바닥났습니다 (%# x %#) — 이후 드로우는 직전 슬롯 테이블로 그립니다.",
+                              kOnlineBlockCount, kOnlineBlockDescriptorCount );
+            }
+            return UINT32_MAX;
+        }
+        const uint32 block = _listFreeOnlineBlock.back();
+        _listFreeOnlineBlock.pop_back();
+        return block;
+    }
+
+    void D3D12RHIDevice::releaseOnlineBlocksDeferred( D3D12RecordingState& state )
+    {
+        state._onlineCursor = 0;
+        state._onlineEnd    = 0;
+        if ( state._listOnlineBlock.empty() )
+            return;
+
+        // GPU 가 이 리스트의 테이블을 아직 읽는 중이다 — 현재 펜스가 지난 뒤에야 블록을 다시 내준다.
+        vector<uint32> listBlock = std::move( state._listOnlineBlock );
+        state._listOnlineBlock.clear();
+        auto recycleCb = [this, listBlock]()
+        {
+            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+            for ( const uint32 block : listBlock )
+                _listFreeOnlineBlock.push_back( block );
+        };
+        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
 
     RHIBufferHandle D3D12RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer )

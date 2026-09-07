@@ -80,6 +80,7 @@ namespace sw
         // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
         // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
         _activeFrameList->Close();
+        releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _activeFrameList );
         _listPendingSubmit.push_back( pList );
 
@@ -285,8 +286,10 @@ namespace sw
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다 — 실패 시 이번 프레임을 스킵한다.
             if ( FAILED( pAllocator->Reset() ) || FAILED( _commandList->Reset( pAllocator, nullptr ) ) )
                 return;
-            _frameStreamState._bRecording = 1;
-            _activeFrameList              = _commandList.Get();
+            _frameStreamState._bRecording      = 1;
+            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트 — 슬롯 테이블은 첫 드로우가 다시 굳힌다
+            _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
+            _activeFrameList                   = _commandList.Get();
             _frameStreamContext->rebindCommandList( _activeFrameList );
             bindBindlessRootState( _activeFrameList );
         }
@@ -331,6 +334,7 @@ namespace sw
             _activeFrameList->Close();
             _listPendingSubmit.push_back( _activeFrameList );
             _frameStreamState._bRecording = 0;
+            releaseOnlineBlocksDeferred( _frameStreamState );
         }
 
         // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.

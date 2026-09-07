@@ -278,7 +278,7 @@ namespace sw
                 namespace vk = shaderslot::vk;
                 vector<R> list;
                 auto      add = [&]( const utf8* pName, ShaderBindingKind kind, ShaderReservedLocation dx11, ShaderReservedLocation dx12,
-                                ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
+                                     ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
                 {
                     R r{};
                     r._name   = pName;
@@ -351,14 +351,16 @@ namespace sw
                      at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkTextureBinding ), none() );
                 add( shaderslot::resname::kBindlessRwTextures, ShaderBindingKind::RwTexture, none(),
                      at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkRwTextureBinding ), none() );
-                // 정적 샘플러 세트 — DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable). 에뮬은 결합 샘플러만 쓴다.
+                // 정적 샘플러 세트 — DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable).
+                // DX11 은 같은 세트를 s9..s15 샘플러 상태로 건다(bindStaticSamplers). GL 은 결합 샘플러뿐이라 없다.
                 add( shaderslot::resname::kSamplers, ShaderBindingKind::Sampler, none(),
                      none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
                 static string s_arrSamplerName[shaderslot::kStaticSamplerArrayCount];
                 for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
                 {
                     s_arrSamplerName[samplerIndex] = string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex );
-                    add( s_arrSamplerName[samplerIndex].c_str(), ShaderBindingKind::Sampler, none(), at( 0, samplerIndex ), none(), none() );
+                    add( s_arrSamplerName[samplerIndex].c_str(), ShaderBindingKind::Sampler, slotB( shaderslot::dx11::kStaticSampler0 + samplerIndex ),
+                         at( 0, samplerIndex ), none(), none() );
                 }
                 add( shaderslot::resname::kShadowSampler, ShaderBindingKind::Sampler, none(),
                      at( 0, shaderslot::kSamplerShadowCmp ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkShadowSamplerBinding ), none() );

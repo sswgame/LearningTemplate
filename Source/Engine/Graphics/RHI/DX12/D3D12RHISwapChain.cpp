@@ -15,6 +15,7 @@ namespace sw
         _width       = desc._width;
         _height      = desc._height;
         _bufferCount = desc._bufferCount;
+        _format      = desc._format;
         _state       = D3D12_RESOURCE_STATE_PRESENT;
 
         // 창이 없으면 네이티브 스왑체인도 없다. 크기만 기억해 두면 오프스크린 경로는 그대로 돈다.

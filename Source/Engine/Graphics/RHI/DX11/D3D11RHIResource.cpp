@@ -253,6 +253,19 @@ namespace sw
         return true;
     }
 
+    RHIFormat D3D11RHIResource::getTextureFormat( RHITextureHandle texture ) const
+    {
+        const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr )
+            return RHIFormat::Unknown;
+        D3D11_TEXTURE2D_DESC texDesc{};
+        pRecord->_texture->GetDesc( &texDesc );
+        // 깊이는 typeless 로 만들어져 DXGI 역변환이 Unknown 을 준다 — 레코드 플래그로 되돌린다.
+        if ( pRecord->_bDepth != 0 )
+            return RHIFormat::D24_UNORM_S8_UINT;
+        return fromDxgiFormat( texDesc.Format );
+    }
+
     bool D3D11RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );

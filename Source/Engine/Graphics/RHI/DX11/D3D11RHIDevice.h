@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 #include <shared_mutex>
 
@@ -86,6 +87,14 @@ namespace sw
 
         /** @brief 백엔드 타입 반환 (DirectX11) */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
+        /**
+         * @brief 정적 샘플러 세트를 컨텍스트의 PS 슬롯 s9..s15 에 겁니다.
+         * @details 즉시 컨텍스트는 초기화·리사이즈(ClearState 뒤)·beginFrame 에서, 지연 컨텍스트는 beginCommandList 마다 부른다 —
+         *          FinishCommandList/ClearState 가 컨텍스트 상태를 비우기 때문이다. 슬롯 결합 샘플러(s0..s8)는 bindShaderResource 가 건다.
+         */
+        void bindStaticSamplers( ID3D11DeviceContext* pContext ) const;
+        /** @brief 스왑체인이 만든 백버퍼 포맷 — 백버퍼 PSO 의 렌더타깃 포맷은 여기서 나온다. */
+        RHIFormat getBackBufferFormat() const override { return _backBufferFormat; }
 
         /** @brief 디스크립터 인덱스 테이블 (CB/UAV/텍스처) — 드로우 시 바인드 에뮬레이션. */
         bool supportsBindless() const override { return true; }
@@ -262,7 +271,10 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;
         Microsoft::WRL::ComPtr<ID3D11SamplerState>      _linearSampler;
-        HWND                                            _pHWnd;
+        /// @brief 정적 샘플러 세트(bindingslots.hlsli 4, DX12 와 같은 표) — s9..s15 에 건다. 셰이더가 SW_SampleIndexWith 의 samplerId 로 고른다.
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
+        HWND                                       _pHWnd;
+        RHIFormat                                  _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
 
         /// @brief 살아 있는 `D3D11RHICommandList` 들 — **소유하지 않는다.** 리사이즈 직전에
         ///        기록물을 버리게 하려고 들고 있다 (백버퍼 참조를 붙들고 있기 때문).

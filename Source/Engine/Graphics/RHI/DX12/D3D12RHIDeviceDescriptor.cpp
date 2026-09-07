@@ -35,14 +35,14 @@ namespace sw
 
     bool D3D12RHIDevice::createGlobalResources()
     {
-        // 루트 시그니처 (bindingslots.hlsli) — 언리얼식: 버퍼는 루트 디스크립터, 텍스처만 배열.
-        //  [0..1]   루트 CBV  b0..b1 (PassCB / MaterialCB·컴퓨트 CB)
-        //  [2..11]  루트 SRV  t0..t9 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9 — raw/구조 버퍼)
-        //  [12..15] 루트 UAV  u0..u3
-        //  [16]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
-        //  [17]     32비트 루트 상수 b0 space2 (setComputeRootConstants)
+        // 루트 시그니처 (bindingslots.hlsli) — 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.
+        //  [0..2]  루트 CBV  b0..b2 (PassCB / MaterialCB·컴퓨트 CB / 예비)
+        //  [3]     테이블: t0..t9 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9 — 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
+        //  [4]     테이블: u0..u3 space0 (컴퓨트 쓰기)
+        //  [5]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
+        //  [6]     32비트 루트 상수 b0 space2 (setComputeRootConstants)
         //  정적 샘플러 s0..s7 (bindingslots.hlsli 4 의 세트), space0.
-        // 비용: 2*2 + 10*2 + 4*2 + 1 + 16 = 49 dword (한계 64).
+        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). 예전엔 t/u 도 루트 디스크립터라 51 이었다.
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
@@ -63,10 +63,29 @@ namespace sw
         };
         for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
             setRootDescriptor( kCbvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
-        for ( uint32 slot = 0; slot < shaderslot::kSrvSlotCount; ++slot )
-            setRootDescriptor( kSrvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_SRV, slot );
-        for ( uint32 slot = 0; slot < shaderslot::kComputeUavSlotCount; ++slot )
-            setRootDescriptor( kUavRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_UAV, slot );
+
+        // t/u 슬롯 테이블 — 범위 하나씩. 테이블 시작은 드로우/디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
+        D3D12_DESCRIPTOR_RANGE srvSlotRange{};
+        srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        srvSlotRange.NumDescriptors                                  = shaderslot::kSrvSlotCount;
+        srvSlotRange.BaseShaderRegister                              = 0;
+        srvSlotRange.RegisterSpace                                   = 0;
+        srvSlotRange.OffsetInDescriptorsFromTableStart               = 0;
+        arrParam[kSrvTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kSrvTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kSrvTableParam].DescriptorTable.pDescriptorRanges   = &srvSlotRange;
+        arrParam[kSrvTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE uavSlotRange{};
+        uavSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        uavSlotRange.NumDescriptors                                  = shaderslot::kComputeUavSlotCount;
+        uavSlotRange.BaseShaderRegister                              = 0;
+        uavSlotRange.RegisterSpace                                   = 0;
+        uavSlotRange.OffsetInDescriptorsFromTableStart               = 0;
+        arrParam[kUavTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kUavTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kUavTableParam].DescriptorTable.pDescriptorRanges   = &uavSlotRange;
+        arrParam[kUavTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
 
         // 텍스처 테이블 — 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
         // g_SwBindlessRWTex2D[] (컴퓨트). 인덱스는 등록이 준 힙 슬롯이라 둘 다 offset 0 이다.

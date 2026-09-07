@@ -106,6 +106,38 @@ namespace sw
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 
+        // 오프라인(CPU 전용) 뷰 힙 — 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
+        // 등록은 뷰를 두 힙에 같은 인덱스로 만들고, 마지막 두 칸은 안 걸린 슬롯을 채우는 null 뷰다.
+        D3D12_DESCRIPTOR_HEAP_DESC offlineHeapDesc{};
+        offlineHeapDesc.NumDescriptors = kOfflineDescriptorCount;
+        offlineHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        offlineHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if ( FAILED( _device->CreateDescriptorHeap( &offlineHeapDesc, IID_PPV_ARGS( _offlineViewHeap.GetAddressOf() ) ) ) )
+            return false;
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullSrv{};
+            nullSrv.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+            nullSrv.Format                  = DXGI_FORMAT_R32_TYPELESS;
+            nullSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullSrv.Buffer.NumElements      = 1;
+            nullSrv.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+            _device->CreateShaderResourceView( nullptr, &nullSrv, offlineDescriptorAt( kOfflineNullSrvIndex ) );
+
+            D3D12_UNORDERED_ACCESS_VIEW_DESC nullUav{};
+            nullUav.ViewDimension      = D3D12_UAV_DIMENSION_BUFFER;
+            nullUav.Format             = DXGI_FORMAT_R32_TYPELESS;
+            nullUav.Buffer.NumElements = 1;
+            nullUav.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
+            _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUav, offlineDescriptorAt( kOfflineNullUavIndex ) );
+        }
+        {
+            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+            _listFreeOnlineBlock.clear();
+            for ( uint32 block = kOnlineBlockCount; block > 0; --block )
+                _listFreeOnlineBlock.push_back( block - 1 );
+            _bOnlineHeapExhaustedLogged = 0;
+        }
+
         for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
         {
             if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
@@ -168,6 +200,11 @@ namespace sw
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
         _cbvHeap.Reset();
+        _offlineViewHeap.Reset();
+        {
+            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+            _listFreeOnlineBlock.clear();
+        }
         _dsvHeap.Reset();
         _rtvHeap.Reset();
         _nextOffscreenDsvIndex = 0;
@@ -214,6 +251,7 @@ namespace sw
             if ( _commandQueue != nullptr )
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );
             _frameStreamState._bRecording = 0;
+            releaseOnlineBlocksDeferred( _frameStreamState );
         }
 
         waitForPreviousFrame();

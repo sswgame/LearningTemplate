@@ -385,6 +385,23 @@ SW_TEST_CASE( ShaderBindingContractTest, ReflectionNamesAreUniformAcrossBackends
  *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSamplerLinearWrap=s0 처럼 서로 다른 셰이더에 산다) 여기서
  *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
  */
+/**
+ * @brief [ShaderBindingContractTest] DX12 루트 시그니처 예산 — 슬롯 수를 늘려도 64 dword 안에 있어야 한다.
+ * @details 루트 배치는 계약(shaderslot::dx12)에서 나온다: CB 는 루트 CBV(2 dword), t/u 슬롯과 텍스처 배열은 테이블(1 dword),
+ *          루트 상수는 dword 수. 예전엔 t/u 도 루트 디스크립터라 51 이었고, 슬롯 하나가 2 dword 씩 예산을 먹었다.
+ *          이 테스트는 "슬롯을 늘리면 예산이 느는가" 를 숫자로 고정한다 — 테이블 안의 슬롯 수는 예산에 들지 않는다.
+ */
+SW_TEST_CASE( ShaderBindingContractTest, Dx12RootSignatureFitsBudget )
+{
+    namespace dx12 = sw::shaderslot::dx12;
+    SW_EXPECT_TRUE( dx12::kRootSignatureDwords <= dx12::kRootBudgetDwords );
+    // t 슬롯을 두 배로 늘려도 테이블이라 예산은 그대로다 (루트 디스크립터였다면 +20 dword).
+    const uint32 withDoubledSrvSlots = dx12::kRootCbvCount * dx12::kRootDescriptorDwords + dx12::kRootTableCount * dx12::kRootTableDwords + sw::shaderslot::kRootConstantDwords;
+    SW_EXPECT_EQUAL( dx12::kRootSignatureDwords, withDoubledSrvSlots );
+    // 루트 상수(16) + CBV 셋(6) + 테이블 셋(3) = 25 — 계약 값이 바뀌면 여기서 먼저 걸린다.
+    SW_EXPECT_EQUAL( 3u * 2u + 3u * 1u + 16u, dx12::kRootSignatureDwords );
+}
+
 SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )
 {
     const sw::vector<sw::ShaderReservedBinding>& list = sw::ShaderBindingContract::getReservedBindings();

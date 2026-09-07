@@ -46,9 +46,9 @@ namespace sw
         }
         else
         {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
             {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
                 return kInvalidDescriptorIndex;
             }
             index = _pDevice->_allocatedDescriptorsCount++;
@@ -73,12 +73,15 @@ namespace sw
 
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
         gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
+        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
         _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
+        _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
 
         if ( index >= _pDevice->_listRegisteredBindless.size() )
             _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]          = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredBindless[index]          = { pRes, cpuHandle, gpuHandle, offlineHandle };
         _pDevice->_listRegisteredBindless[index]._texture = texture;
 
         return index;
@@ -103,9 +106,9 @@ namespace sw
         }
         else
         {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
             {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
                 return kInvalidDescriptorIndex;
             }
             index = _pDevice->_allocatedDescriptorsCount++;
@@ -116,6 +119,8 @@ namespace sw
 
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
         gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
+        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
         // 구조 버퍼면 StructuredBuffer SRV (셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
         // 그 외(상수 버퍼 ring)면 CBV.
@@ -132,10 +137,12 @@ namespace sw
             srvDesc.Buffer.StructureByteStride = stride;
             srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
             _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, cpuHandle );
+            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
+            _pDevice->_device->CreateShaderResourceView( pRes, &srvDesc, offlineHandle );
 
             if ( index >= _pDevice->_listRegisteredBindless.size() )
                 _pDevice->_listRegisteredBindless.resize( index + 1 );
-            _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle };
+            _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
             _pDevice->_listRegisteredBindless[index]._buffer = buffer;
             return index;
         }
@@ -161,10 +168,11 @@ namespace sw
         }
 
         _pDevice->_device->CreateConstantBufferView( &cbvDesc, cpuHandle );
+        _pDevice->_device->CreateConstantBufferView( &cbvDesc, offlineHandle );
 
         if ( index >= _pDevice->_listRegisteredBindless.size() )
             _pDevice->_listRegisteredBindless.resize( index + 1 );
-        _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredBindless[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
         _pDevice->_listRegisteredBindless[index]._buffer = buffer;
 
         return index;
@@ -236,9 +244,9 @@ namespace sw
         }
         else
         {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
             {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
                 return kInvalidDescriptorIndex;
             }
             index = _pDevice->_allocatedDescriptorsCount++;
@@ -248,6 +256,8 @@ namespace sw
         cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
         gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
+        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
         // 구조 버퍼면 StructuredBuffer UAV, 아니면 RAW UAV (RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0).
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
@@ -269,10 +279,11 @@ namespace sw
             uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_RAW;
         }
         _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, offlineHandle );
 
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]         = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredUAV[index]         = { pRes, cpuHandle, gpuHandle, offlineHandle };
         _pDevice->_listRegisteredUAV[index]._buffer = buffer;
 
         return index;
@@ -297,9 +308,9 @@ namespace sw
         }
         else
         {
-            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+            if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
             {
-                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+                SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
                 return kInvalidDescriptorIndex;
             }
             index = _pDevice->_allocatedDescriptorsCount++;
@@ -309,6 +320,8 @@ namespace sw
         cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
         gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
+        const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
         uavDesc.Format               = pRes->GetDesc().Format;
@@ -316,10 +329,11 @@ namespace sw
         uavDesc.Texture2D.MipSlice   = 0;
         uavDesc.Texture2D.PlaneSlice = 0;
         _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
+        _pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, offlineHandle );
 
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             _pDevice->_listRegisteredUAV.resize( index + 1 );
-        _pDevice->_listRegisteredUAV[index]          = { pRes, cpuHandle, gpuHandle };
+        _pDevice->_listRegisteredUAV[index]          = { pRes, cpuHandle, gpuHandle, offlineHandle };
         _pDevice->_listRegisteredUAV[index]._texture = texture;
         return index;
     }

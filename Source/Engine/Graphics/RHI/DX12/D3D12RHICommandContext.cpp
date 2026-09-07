@@ -55,7 +55,9 @@ namespace sw
         pAllocator->Reset();
         _pCmdList->Reset( pAllocator, nullptr );
         _pState->_bRecording             = 1;
-        _pState->_boundNativeGraphicsPso = 0; // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
+        _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
+        _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트엔 슬롯 테이블도 없다 — 첫 드로우가 다시 굳힌다.
+        _pState->_arrSlotState[1]        = D3D12SlotTableState{};
         // 힙·루트 시그니처·텍스처 배열 테이블은 리스트가 열릴 때 한 번 — 이후 bind*() 는 루트 디스크립터(GPU 주소)만 쓴다.
         _pDevice->bindBindlessRootState( _pCmdList );
     }
@@ -87,6 +89,92 @@ namespace sw
                 address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
         }
         return address;
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHICommandContext::resolveOfflineView( RHIDescriptorIndex index, bool bUav ) const
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE none{};
+        if ( index == kInvalidDescriptorIndex )
+            return none;
+        // resolveBufferAddress 와 같은 이유로 락이 없다 — 레지스트리는 기록 중 불변이다.
+        const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
+            bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
+            return none;
+        const D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
+        if ( rec._resource == nullptr )
+            return none;
+        return rec._offlineCpuHandle;
+    }
+
+    bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )
+    {
+        if ( _pState->_onlineCursor + count > _pState->_onlineEnd )
+        {
+            const uint32 block = _pDevice->acquireOnlineBlock();
+            if ( block == UINT32_MAX )
+                return false;
+            _pState->_listOnlineBlock.push_back( block );
+            _pState->_onlineCursor = D3D12RHIDevice::kBindlessDescriptorCapacity + block * D3D12RHIDevice::kOnlineBlockDescriptorCount;
+            _pState->_onlineEnd    = _pState->_onlineCursor + D3D12RHIDevice::kOnlineBlockDescriptorCount;
+        }
+        outBase = _pState->_onlineCursor;
+        _pState->_onlineCursor += count;
+        return true;
+    }
+
+    bool D3D12RHICommandContext::writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView,
+                                                 D3D12_GPU_DESCRIPTOR_HANDLE& outTable )
+    {
+        if ( count == 0 || count > D3D12RHIDevice::kMaxSlotTableSize || nullView.ptr == 0 )
+            return false;
+        uint32 base{ 0 };
+        if ( allocateOnlineDescriptors( count, base ) == false )
+            return false;
+
+        // 원본은 슬롯마다 흩어져 있고(오프라인 힙 여기저기) 목적지는 연속 구간 하나다 — CopyDescriptors 의 N:1 형태.
+        D3D12_CPU_DESCRIPTOR_HANDLE arrSrc[D3D12RHIDevice::kMaxSlotTableSize]{};
+        UINT                        arrSrcSize[D3D12RHIDevice::kMaxSlotTableSize]{};
+        for ( uint32 slot = 0; slot < count; ++slot )
+        {
+            arrSrc[slot]     = ( pSlots[slot].ptr != 0 ) ? pSlots[slot] : nullView;
+            arrSrcSize[slot] = 1;
+        }
+        const D3D12_CPU_DESCRIPTOR_HANDLE dst     = _pDevice->shaderVisibleCpuAt( base );
+        const UINT                        dstSize = count;
+        _pDevice->_device->CopyDescriptors( 1, &dst, &dstSize, count, arrSrc, arrSrcSize, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+        outTable = _pDevice->shaderVisibleGpuAt( base );
+        return true;
+    }
+
+    void D3D12RHICommandContext::flushSlotTables( bool bCompute )
+    {
+        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )
+            return;
+        D3D12SlotTableState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
+
+        if ( state._bSrvDirty != 0 )
+        {
+            D3D12_GPU_DESCRIPTOR_HANDLE table{};
+            if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) )
+            {
+                if ( bCompute )
+                    _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+                else
+                    _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+                state._bSrvDirty = 0;
+            }
+        }
+        // u 테이블은 컴퓨트만 쓴다 — 그래픽스 스테이지엔 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
+        if ( bCompute && state._bUavDirty != 0 )
+        {
+            D3D12_GPU_DESCRIPTOR_HANDLE table{};
+            if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) )
+            {
+                _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
+                state._bUavDirty = 0;
+            }
+        }
     }
 
     void D3D12RHICommandContext::bindMeshVertexBuffer()
@@ -263,14 +351,16 @@ namespace sw
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 루트 SRV(GPU 주소). 텍스처 슬롯(t0..t3, 에뮬 전용)은 여기로 오지 않는다 —
-        // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다. 루트 SRV 는 raw/구조 버퍼만 받는다.
+        // 그래픽스 t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 직전 flushSlotTables 가 굳힌다.
+        // 뷰라서 버퍼든 텍스처든 같은 경로다(예전 루트 SRV 는 raw/구조 버퍼만 받았다).
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
-        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, false );
-        if ( address == 0 )
+        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
+        if ( view.ptr == 0 )
             return;
-        _pCmdList->SetGraphicsRootShaderResourceView( D3D12RHIDevice::kSrvRootParam0 + slot, address );
+        D3D12SlotTableState& state = _pState->_arrSlotState[0];
+        state._arrSrv[slot]        = view;
+        state._bSrvDirty           = 1;
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -322,13 +412,15 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 루트 UAV(GPU 주소). 인덱스는 UAV 레지스트리(registerBindlessUAV)의 것.
+        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessUAV)의 것. 디스패치 직전 굳힌다.
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount )
             return;
-        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, true, false );
-        if ( address == 0 )
+        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );
+        if ( view.ptr == 0 )
             return;
-        _pCmdList->SetComputeRootUnorderedAccessView( D3D12RHIDevice::kUavRootParam0 + slot, address );
+        D3D12SlotTableState& state = _pState->_arrSlotState[1];
+        state._arrUav[slot]        = view;
+        state._bUavDirty           = 1;
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -345,10 +437,12 @@ namespace sw
     {
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
-        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, false );
-        if ( address == 0 )
+        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
+        if ( view.ptr == 0 )
             return;
-        _pCmdList->SetComputeRootShaderResourceView( D3D12RHIDevice::kSrvRootParam0 + slot, address );
+        D3D12SlotTableState& state = _pState->_arrSlotState[1];
+        state._arrSrv[slot]        = view;
+        state._bSrvDirty           = 1;
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -373,7 +467,8 @@ namespace sw
             _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
-        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV).
+        // b0/b1 은 호출자가 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다 (루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
+        flushSlotTables( false );
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, 1, startVertex, 0 );
@@ -393,6 +488,7 @@ namespace sw
             _pCmdList->SetPipelineState( pPsoRec->_pso.Get() );
             _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
         }
+        flushSlotTables( false );
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         _pCmdList->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
@@ -424,6 +520,7 @@ namespace sw
     {
         if ( _pCmdList == nullptr )
             return;
+        flushSlotTables( true );
         _pCmdList->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
@@ -462,6 +559,7 @@ namespace sw
         // setVertexBuffer 가 걸어 둔 배치 메시 VB 를 덮어써서, ExecuteIndirect 가 36 정점을 3 정점짜리
         // 버퍼에서 읽어 화면에 찢어진 삼각형이 나왔다(범위 밖은 0 이라 죽지는 않아 더 늦게 드러났다).
         // 다른 세 백엔드는 원래 메시 VB 를 우선한다.
+        flushSlotTables( false );
         bindMeshVertexBufferOrFallback();
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         _pCmdList->ExecuteIndirect( _pDevice->_drawCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
@@ -477,6 +575,7 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
+        flushSlotTables( false );
         bindMeshVertexBufferOrFallback();
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
@@ -525,6 +624,7 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
+        flushSlotTables( false );
         bindMeshVertexBuffer();
         bindBoundIndexBuffer();
         _pCmdList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -540,6 +640,7 @@ namespace sw
         if ( pArgs == nullptr )
             return;
 
+        flushSlotTables( true );
         _pCmdList->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 
@@ -568,12 +669,14 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
 
-        _pState->_activeGraphicsPso                             = pso;
+        _pState->_activeGraphicsPso = pso;
+        // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다 — 이전 패스의 t 슬롯이 다음 테이블로 새지 않게(Vulkan setPipelineState 와 같다).
+        _pState->_arrSlotState[0]                               = D3D12SlotTableState{};
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
 
-        // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState) — PSO 만 바꾼다. 루트 인자는 유지된다.
+        // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState) — PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
         _pCmdList->SetPipelineState( pRecord->_pso.Get() );
         // draw()/drawInstanced()가 같은 PSO로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시.
         _pState->_boundNativeGraphicsPso = pso;
@@ -584,6 +687,7 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
 
+        _pState->_arrSlotState[1]                               = D3D12SlotTableState{}; // 컴퓨트 슬롯 상태도 PSO 단위
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;

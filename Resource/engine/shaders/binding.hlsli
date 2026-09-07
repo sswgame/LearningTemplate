@@ -222,6 +222,32 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, SW_SLOT_MATERIAL_TEX3 );
 
+#if defined( DX11 )
+// DX11 정적 샘플러 세트 s9..s15 (bindingslots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
+// DX12 와 같은 표(SW_SAMPLER_*)라 셰이더가 고른 samplerId 가 DX11 에서도 존중된다.
+SamplerState g_SwSampler0 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER0 ) );
+SamplerState g_SwSampler1 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER1 ) );
+SamplerState g_SwSampler2 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER2 ) );
+SamplerState g_SwSampler3 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER3 ) );
+SamplerState g_SwSampler4 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER4 ) );
+SamplerState g_SwSampler5 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER5 ) );
+SamplerState g_SwSampler6 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER6 ) );
+/** @brief 슬롯 텍스처를 정적 샘플러 세트의 samplerId 로 샘플링합니다 — SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기. */
+float4 SwSampleSlotWith( Texture2D tex, uint samplerId, float2 uv )
+{
+	switch ( samplerId )
+	{
+		case 1: return tex.Sample( g_SwSampler1, uv );
+		case 2: return tex.Sample( g_SwSampler2, uv );
+		case 3: return tex.Sample( g_SwSampler3, uv );
+		case 4: return tex.Sample( g_SwSampler4, uv );
+		case 5: return tex.Sample( g_SwSampler5, uv );
+		case 6: return tex.Sample( g_SwSampler6, uv );
+		default: return tex.Sample( g_SwSampler0, uv );
+	}
+}
+#endif
+
 float4 SW_SampleIndex( uint index, float2 uv )
 {
 	if ( index == SW_INVALID_INDEX )
@@ -237,11 +263,29 @@ float4 SW_SampleIndex( uint index, float2 uv )
 		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
 	return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 }
-/** @brief 에뮬 백엔드는 슬롯 결합 샘플러뿐이라 samplerId 를 무시한다 — 슬롯의 샘플러 상태는 엔진이 정한다. */
+#if defined( DX11 )
+/** @brief DX11: 텍스처는 슬롯 멀티플렉싱(SW_SampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerId 로 고른다. */
+float4 SW_SampleIndexWith( uint index, uint samplerId, float2 uv )
+{
+	if ( index == SW_INVALID_INDEX )
+		return float4( 0, 0, 0, 1 );
+	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
+		return SwSampleSlotWith( g_SwSlot0, samplerId, uv );
+	if ( index == g_GBufferAlbedoIndex || index == g_SourceDepthIndex )
+		return SwSampleSlotWith( g_SwSlot1, samplerId, uv );
+	if ( index == g_GBufferNormalIndex )
+		return SwSampleSlotWith( g_SwSlot2, samplerId, uv );
+	if ( index == g_SceneDepthIndex )
+		return SwSampleSlotWith( g_SwSlot3, samplerId, uv );
+	return SwSampleSlotWith( g_SwSlot0, samplerId, uv );
+}
+#else
+/** @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 samplerId 를 무시한다 — 슬롯의 샘플러 상태는 엔진이 정한다. */
 float4 SW_SampleIndexWith( uint index, uint samplerId, float2 uv )
 {
 	return SW_SampleIndex( index, uv ); // samplerId 는 쓰지 않는다
 }
+#endif
 /** @brief 에뮬 백엔드: 비교 샘플러가 없어 저장된 깊이를 읽어 직접 비교한다 (필터링 없는 하드 섀도). */
 float SW_SampleShadowCmp( uint index, float2 uv, float depth )
 {

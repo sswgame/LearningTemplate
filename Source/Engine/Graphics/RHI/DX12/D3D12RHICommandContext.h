@@ -77,7 +77,18 @@ namespace sw
          * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0.
          */
         D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUav, bool bConstantBuffer ) const;
-        void                      bindMeshVertexBuffer();
+        /** @brief 등록된 bindless 인덱스의 오프라인 뷰 핸들 (슬롯 테이블 복사 원본). 없으면 ptr 0. */
+        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUav ) const;
+        /**
+         * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 굳혀 루트 테이블로 겁니다 — 드로우/디스패치 직전 (Vulkan 의 flushSlotSet 과 같은 자리).
+         * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).
+         */
+        void flushSlotTables( bool bCompute );
+        /** @brief 슬롯 배열을 온라인 블록에 복사하고 테이블 GPU 핸들을 돌려줍니다. 안 걸린 슬롯은 nullView 로 채운다. */
+        bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
+        /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌린다. */
+        bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
+        void bindMeshVertexBuffer();
         /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
         void bindMeshVertexBufferOrFallback();
         void bindFullscreenVertexBuffer();

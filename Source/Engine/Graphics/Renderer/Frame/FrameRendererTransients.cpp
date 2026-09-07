@@ -204,6 +204,7 @@ namespace sw
             _taaHistory             = 0;
             _taaHistorySrv          = kInvalidDescriptorIndex;
             _mapEnginePso.clear();
+            _mapPresentPso.clear();
             _bPassResourcesReady = 0;
             return;
         }
@@ -217,6 +218,12 @@ namespace sw
             }
         }
         _mapEnginePso.clear();
+        for ( auto& [format, pso] : _mapPresentPso )
+        {
+            if ( pso != 0 )
+                _pDevice->getResource()->destroyPipelineState( pso );
+        }
+        _mapPresentPso.clear();
 
         _gpuScene.releaseGpu( _pDevice );
 
@@ -563,5 +570,21 @@ namespace sw
     {
         const auto it = _mapEnginePso.find( passType );
         return ( it != _mapEnginePso.end() ) ? it->second : 0;
+    }
+
+    RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
+    {
+        if ( targetFormat == RHIFormat::Unknown )
+            return getEnginePso( RenderPassType::Present );
+        const auto it = _mapPresentPso.find( targetFormat );
+        if ( it != _mapPresentPso.end() )
+            return it->second;
+
+        const RHIFormat              arrRtvFormat[] = { targetFormat };
+        const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
+                                                                            false, 1, arrRtvFormat );
+        // 실패해도 기록한다 — 매 프레임 다시 컴파일을 시도하지 않도록. 0 이면 호출부가 blit 폴백으로 간다.
+        _mapPresentPso.insert_or_assign( targetFormat, pso );
+        return pso;
     }
 } // namespace sw

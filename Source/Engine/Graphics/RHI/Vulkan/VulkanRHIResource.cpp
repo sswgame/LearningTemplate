@@ -210,7 +210,7 @@ namespace sw
         // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다 — 보수적인 마스크로 양쪽을 다 덮는다.
         constexpr VkAccessFlags        kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
         constexpr VkPipelineStageFlags kConsumerStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+                                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
 
         VkBufferMemoryBarrier barrier{};
         barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -580,6 +580,12 @@ namespace sw
         }
         pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         return true;
+    }
+
+    RHIFormat VulkanRHIResource::getTextureFormat( RHITextureHandle texture ) const
+    {
+        const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr ? static_cast<RHIFormat>( pRecord->_rhiFormat ) : RHIFormat::Unknown;
     }
 
     bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )

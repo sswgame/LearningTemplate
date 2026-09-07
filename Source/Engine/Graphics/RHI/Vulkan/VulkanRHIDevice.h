@@ -19,6 +19,23 @@ namespace sw
     class VulkanRHIResource;
 
     /**
+     * @struct VulkanDescriptorPoolSet
+     * @brief 커맨드 버퍼 하나가 슬롯 세트(set 0)를 할당받는 풀 묶음 — 언리얼 `FVulkanDescriptorPoolSetContainer` 와 같은 자리.
+     * @details VkDescriptorPool 은 외부 동기화 대상이라, 여러 리스트가 여러 스레드에서 동시에 기록하려면 **풀도 리스트마다
+     *          따로**여야 한다(커맨드 풀과 같은 제약). 예전엔 프레임 링 슬롯마다 풀 체인 하나를 두고 디바이스 전역
+     *          뮤텍스로 잠갔다 — 바인딩이 바뀌는 드로우마다 락이 걸려 웨이브 병렬 기록이 직렬화됐다.
+     *          이제 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 들고 다니고, 그 버퍼가 GPU 펜스를 통과해
+     *          재사용 풀로 돌아온 뒤에야 통째로 리셋된다 — 락이 없다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 쓴다.
+     *          풀 하나가 차면 다음 풀을 만든다(kMaxPoolsPerDescriptorPoolSet 까지).
+     */
+    struct VulkanDescriptorPoolSet
+    {
+        vector<VkDescriptorPool> _listPool;
+        uint32                   _cursor{ 0 };           ///< 지금 할당 중인 풀
+        uint8                    _bExhaustedLogged{ 0 }; ///< 상한 도달 로그를 한 번만
+    };
+
+    /**
      * @struct VulkanCommandListEntry
      * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀 + 커맨드 버퍼 쌍.
      * @details `VkCommandPool` 은 외부 동기화 대상이라 여러 스레드가 동시에 기록하려면 **리스트마다
@@ -28,6 +45,8 @@ namespace sw
     {
         VkCommandPool   _pool{ nullptr };
         VkCommandBuffer _buffer{ nullptr };
+        /// @brief 이 버퍼 전용 슬롯 세트 풀 묶음. 디바이스가 소유하고(_listCmdListDescriptorPoolSet) 쌍과 함께 빌려 준다.
+        VulkanDescriptorPoolSet* _pDescriptorPoolSet{ nullptr };
     };
 
     /// @brief 슬롯 세트의 원소 하나 — 어떤 버퍼의 어느 구간이 걸려 있나.
@@ -304,8 +323,8 @@ namespace sw
         static constexpr uint32 kBindlessStorageImageCount = 1024;
         /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수 — 바인딩 상태가 바뀔 때마다 하나씩 쓴다(배치·패스 단위). 차면 풀을 하나 더 만든다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
-        /** @brief 프레임 링 슬롯 하나가 가질 수 있는 최대 풀 수 — 넘으면 에러 로그 후 직전 세트로 그린다. */
-        static constexpr uint32 kMaxSlotPoolsPerFrame = 16;
+        /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수 — 넘으면 에러 로그 후 직전 세트로 그린다. */
+        static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
         /** @brief setComputeRootConstants 용량(dword) = 푸시 상수 크기. RHITypes.h 의 constant::kMinComputeRootConstantDwords 와 같다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
@@ -446,12 +465,19 @@ namespace sw
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다 (GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
-        /** @brief 이번 프레임 풀 체인에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만든다 (kMaxSlotPoolsPerFrame 까지). */
-        VkDescriptorSet allocateSlotSet();
+        /**
+         * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만든다 (kMaxPoolsPerDescriptorPoolSet 까지).
+         * @details 락이 없다 — 풀 묶음은 커맨드 버퍼 하나(= 기록 스레드 하나)의 것이다.
+         */
+        VkDescriptorSet allocateSlotSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 슬롯 세트 풀 하나를 만듭니다 (kSlotSetsPerPool 세트, 세트당 b/t/u 슬롯 전부 수용). */
         VkDescriptorPool createSlotPool();
-        /** @brief 프레임 링 슬롯의 슬롯 세트 풀을 통째로 비웁니다 (그 슬롯의 펜스가 신호된 뒤). */
-        void resetSlotPoolForFrame( uint32 frameIndex );
+        /** @brief 풀 묶음의 풀을 전부 비웁니다 — 그 버퍼의 GPU 펜스가 지난 뒤에만(프레임 링 슬롯 대기·재사용 풀 반환 뒤). */
+        void resetDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
+        /** @brief 풀 묶음의 풀을 전부 파괴합니다 (shutdown). */
+        void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
+        /** @brief 디바이스 프레임 스트림(즉시 컨텍스트)이 이번 링 슬롯에서 쓰는 풀 묶음. */
+        VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::kMaxFrameCountInFlight]; }
         /** @brief SRV/CB 레지스트리 인덱스 → 버퍼 핸들 (없으면 0). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 레지스트리 인덱스 → 버퍼 핸들 (없으면 0). */
@@ -620,16 +646,15 @@ namespace sw
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트 (b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열 + immutable sampler
         VkDescriptorSet       _textureSet;       ///< set 1 — 커맨드버퍼마다 한 번 바인딩
-        /// @brief 프레임 링별 슬롯 세트 풀 체인 — 하나가 차면 다음 풀을 만든다(언리얼처럼 자라고, beginFrame 이 통째로 리셋).
-        vector<VkDescriptorPool> _arrSlotPoolChain[constant::kMaxFrameCountInFlight];
-        uint32                   _arrSlotPoolCursor[constant::kMaxFrameCountInFlight]; ///< 체인에서 지금 할당 중인 풀
-        mutex                    _slotPoolMutex;                                       ///< 병렬 기록이 같은 프레임 풀에서 할당한다
-        uint8                    _bSlotPoolExhaustedLogged;
-        VkImage                  _bindlessDummyImage;
-        VkImageView              _bindlessDummyView;
-        VkDeviceMemory           _bindlessDummyMemory;
-        VkBuffer                 _dummyUBO; ///< 셰이더가 정적으로 참조하지만 안 걸린 b# 슬롯이 가리키는 0 채운 256 바이트
-        VkDeviceMemory           _dummyUBOMemory;
+        /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음 — beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋한다.
+        VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::kMaxFrameCountInFlight];
+        /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자 — 쌍과 수명이 같다(재사용 풀에 남고 shutdown 에서 파괴).
+        vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet;
+        VkImage                                     _bindlessDummyImage;
+        VkImageView                                 _bindlessDummyView;
+        VkDeviceMemory                              _bindlessDummyMemory;
+        VkBuffer                                    _dummyUBO; ///< 셰이더가 정적으로 참조하지만 안 걸린 b# 슬롯이 가리키는 0 채운 256 바이트
+        VkDeviceMemory                              _dummyUBOMemory;
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         vector<VulkanRenderPassRecord>            _listRenderPass;

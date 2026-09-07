@@ -20,7 +20,10 @@ namespace sw
     D3D12RHICommandList::~D3D12RHICommandList()
     {
         if ( _pDevice != nullptr )
+        {
+            _pDevice->releaseOnlineBlocksDeferred( _state );
             _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
+        }
     }
 
     void D3D12RHICommandList::beginCommandList()
@@ -63,6 +66,9 @@ namespace sw
     {
         if ( _entry._list != nullptr )
             _entry._list->Close();
+        // 이 리스트가 굳힌 슬롯 테이블(온라인 블록)은 제출 뒤 GPU 가 읽는다 — 얼로케이터처럼 펜스 뒤에 돌려준다.
+        if ( _pDevice != nullptr )
+            _pDevice->releaseOnlineBlocksDeferred( _state );
     }
 } // namespace sw
 

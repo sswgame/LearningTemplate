@@ -33,10 +33,11 @@ namespace sw
     }
 
     VulkanRHICommandContext::VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer,
-                                                      VulkanRecordingState* pState )
+                                                      VulkanRecordingState* pState, VulkanDescriptorPoolSet* pDescriptorPoolSet )
         : _pDevice{ pDevice }
         , _targetBuffer{ targetBuffer }
         , _pState{ pState }
+        , _pDescriptorPoolSet{ pDescriptorPoolSet }
     {
     }
 
@@ -68,7 +69,7 @@ namespace sw
             case RHIBufferState::ShaderResource:
                 access = VK_ACCESS_SHADER_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                 break;
             case RHIBufferState::IndirectArgument:
                 access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -81,7 +82,7 @@ namespace sw
             case RHIBufferState::VertexOrConstant:
                 access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                 break;
             case RHIBufferState::Index:
                 access = VK_ACCESS_INDEX_READ_BIT;
@@ -573,9 +574,11 @@ namespace sw
         if ( state._bDirty == 0 )
             return;
 
-        // 슬롯 상태가 바뀌었다 — 프레임 풀에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
+        // 슬롯 상태가 바뀌었다 — 이 버퍼의 풀 묶음에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
+        // 리스트는 자기 쌍의 묶음, 디바이스 프레임 스트림은 링 슬롯의 묶음 — 어느 쪽도 다른 스레드와 나누지 않으므로 락이 없다.
         // b 밴드는 셰이더가 정적으로 참조하므로 안 걸린 자리도 더미 UBO 로 채운다(픽스처의 MaterialCB 등).
-        const VkDescriptorSet set = _pDevice->allocateSlotSet();
+        VulkanDescriptorPoolSet& poolSet = ( _pDescriptorPoolSet != nullptr ) ? *_pDescriptorPoolSet : _pDevice->currentFrameDescriptorPoolSet();
+        const VkDescriptorSet    set     = _pDevice->allocateSlotSet( poolSet );
         if ( set == VK_NULL_HANDLE )
             return;
 

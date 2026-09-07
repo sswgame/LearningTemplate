@@ -91,6 +91,14 @@ namespace sw
         virtual void destroyTexture( RHITextureHandle texture ) = 0;
 
         /**
+         * @brief 텍스처가 실제로 만들어진 RHIFormat 을 돌려줍니다 (없는 핸들이면 Unknown).
+         * @details 렌더타깃에 그리는 PSO 는 **대상의 실제 포맷**으로 만들어야 한다 — 언리얼이 PSO 초기화자의
+         *          RenderTargetFormats 를 바인딩된 FRHITexture::GetFormat() 에서 뽑는 것과 같은 자리다.
+         *          백버퍼(핸들 0)는 여기가 아니라 `IRHIDevice::getBackBufferFormat()` 이 답한다.
+         */
+        virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
+
+        /**
          * @brief 2D 텍스처에 픽셀을 올립니다 — 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치).
          * @details 로드 시점용 동기 경로다. 반환했을 때 DX12/Vulkan 은 복사가 GPU 큐에서 뒤이은 드로우보다
          *          앞서도록 제출돼 있고(Vulkan 은 대기까지 함), DX11/GL 은 즉시 컨텍스트에 들어가 있다.

@@ -135,10 +135,10 @@ namespace sw
         vector<VkSurfaceFormatKHR> formats( formatCount );
         vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &formatCount, formats.data() );
 
-        // 백버퍼 포맷은 백엔드 간 계약이다(constant::kBackBufferFormat). 파이프라인이 그 포맷으로
-        // 렌더패스를 만들기 때문에, 여기서 다른 걸 고르면 백버퍼에 직접 그리는 패스가 통째로
-        // 렌더패스 비호환이 된다. 요청 포맷 → 대체 → 첫 번째 순으로 고르고, 요청을 못 맞추면
-        // getActualBackBufferFormat() 으로 실제 값을 보고한다(조용히 어긋나게 두지 않는다).
+        // 백버퍼 포맷은 요청값(constant::kBackBufferFormat)이지 보장이 아니다 — 서피스가 B8G8R8A8 만 줄 수 있다.
+        // 언리얼 FVulkanSwapChain 과 같은 규칙: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 되돌려 준다
+        // (getActualBackBufferFormat → IRHIDevice::getBackBufferFormat). 백버퍼에 그리는 PSO 는 그 값으로
+        // 만든다(FrameRenderer::ensurePresentPso) — 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
         const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedFormat );
         const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
 
@@ -160,9 +160,8 @@ namespace sw
         }
         if ( surfaceFormat.format != requestedFormat )
         {
-            SW_LOG_ERROR( "스왑체인이 요청 포맷(%#)을 지원하지 않아 %# 로 대체됐습니다 — 백버퍼를 직접 "
-                          "타깃으로 하는 파이프라인이 렌더패스 비호환이 될 수 있습니다.",
-                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
+            SW_LOG_INFO( "스왑체인이 요청 포맷(VkFormat %#) 대신 %# 를 채택했습니다 — 백버퍼 PSO 는 getBackBufferFormat() 으로 만든다.",
+                         static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;

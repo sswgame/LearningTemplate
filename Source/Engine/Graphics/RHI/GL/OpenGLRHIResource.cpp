@@ -314,6 +314,12 @@ namespace sw
         return true;
     }
 
+    RHIFormat OpenGLRHIResource::getTextureFormat( RHITextureHandle texture ) const
+    {
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr ? pRecord->_format : RHIFormat::Unknown;
+    }
+
     bool OpenGLRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );

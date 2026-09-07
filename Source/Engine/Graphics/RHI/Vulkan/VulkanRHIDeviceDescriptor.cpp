@@ -195,13 +195,13 @@ namespace sw
             if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
                 return false;
         }
-        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
+        for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
         {
             const VkDescriptorPool pool = createSlotPool();
             if ( pool == VK_NULL_HANDLE )
                 return false;
-            _arrSlotPoolChain[frameIndex].push_back( pool );
-            _arrSlotPoolCursor[frameIndex] = 0;
+            poolSet._listPool.push_back( pool );
+            poolSet._cursor = 0;
         }
 
         // 6) 셰이더가 정적으로 참조하지만 엔진이 안 건 b# 슬롯(픽스처의 MaterialCB 등)이 가리킬 0 채운 더미 UBO.
@@ -378,39 +378,37 @@ namespace sw
         return pool;
     }
 
-    VkDescriptorSet VulkanRHIDevice::allocateSlotSet()
+    VkDescriptorSet VulkanRHIDevice::allocateSlotSet( VulkanDescriptorPoolSet& poolSet )
     {
-        // 여러 리스트가 병렬로 기록하면서 같은 프레임 풀에서 할당한다 — 풀은 외부 동기화 대상이라 락을 건다.
-        std::scoped_lock<mutex> lock{ _slotPoolMutex };
-        const uint32            frameIndex = _currentFrame % constant::kMaxFrameCountInFlight;
+        // 락이 없다 — 풀 묶음은 커맨드 버퍼 하나의 것이고, 그 버퍼는 한 스레드만 기록한다(VkDescriptorPool 은 외부 동기화 대상).
         if ( _slotSetLayout == VK_NULL_HANDLE )
             return VK_NULL_HANDLE;
 
-        vector<VkDescriptorPool>& chain  = _arrSlotPoolChain[frameIndex];
-        uint32&                   cursor = _arrSlotPoolCursor[frameIndex];
+        vector<VkDescriptorPool>& listPool = poolSet._listPool;
+        uint32&                   cursor   = poolSet._cursor;
         while ( true )
         {
-            if ( cursor >= chain.size() )
+            if ( cursor >= listPool.size() )
             {
-                // 언리얼처럼 풀이 차면 하나 더 만든다. 만든 풀은 프레임 링 슬롯이 사는 동안 유지된다(리셋만 한다).
-                if ( chain.size() >= kMaxSlotPoolsPerFrame )
+                // 언리얼처럼 풀이 차면 하나 더 만든다. 만든 풀은 묶음이 사는 동안 유지된다(리셋만 한다).
+                if ( listPool.size() >= kMaxPoolsPerDescriptorPoolSet )
                 {
-                    if ( _bSlotPoolExhaustedLogged == 0 )
+                    if ( poolSet._bExhaustedLogged == 0 )
                     {
-                        _bSlotPoolExhaustedLogged = 1;
-                        SW_LOG_ERROR( "프레임 슬롯 세트 풀이 상한(%# x %#)에 닿았습니다 — 이 프레임의 나머지 드로우는 이전 세트로 그립니다.", kMaxSlotPoolsPerFrame, kSlotSetsPerPool );
+                        poolSet._bExhaustedLogged = 1;
+                        SW_LOG_ERROR( "슬롯 세트 풀 묶음이 상한(%# x %#)에 닿았습니다 — 이 버퍼의 나머지 드로우는 이전 세트로 그립니다.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
                     }
                     return VK_NULL_HANDLE;
                 }
                 const VkDescriptorPool pool = createSlotPool();
                 if ( pool == VK_NULL_HANDLE )
                     return VK_NULL_HANDLE;
-                chain.push_back( pool );
+                listPool.push_back( pool );
             }
 
             VkDescriptorSetAllocateInfo allocInfo{};
             allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool     = chain[cursor];
+            allocInfo.descriptorPool     = listPool[cursor];
             allocInfo.descriptorSetCount = 1;
             allocInfo.pSetLayouts        = &_slotSetLayout;
             VkDescriptorSet set{ VK_NULL_HANDLE };
@@ -423,16 +421,30 @@ namespace sw
         }
     }
 
-    void VulkanRHIDevice::resetSlotPoolForFrame( uint32 frameIndex )
+    void VulkanRHIDevice::resetDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet )
     {
-        std::scoped_lock<mutex> lock{ _slotPoolMutex };
-        if ( frameIndex >= constant::kMaxFrameCountInFlight )
+        if ( _device == VK_NULL_HANDLE )
             return;
-        for ( VkDescriptorPool pool : _arrSlotPoolChain[frameIndex] )
+        for ( VkDescriptorPool pool : poolSet._listPool )
         {
             if ( pool != VK_NULL_HANDLE )
                 vkResetDescriptorPool( _device, pool, 0 );
         }
-        _arrSlotPoolCursor[frameIndex] = 0;
+        poolSet._cursor = 0;
+    }
+
+    void VulkanRHIDevice::destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet )
+    {
+        if ( _device != VK_NULL_HANDLE )
+        {
+            for ( VkDescriptorPool pool : poolSet._listPool )
+            {
+                if ( pool != VK_NULL_HANDLE )
+                    vkDestroyDescriptorPool( _device, pool, nullptr );
+            }
+        }
+        poolSet._listPool.clear();
+        poolSet._cursor           = 0;
+        poolSet._bExhaustedLogged = 0;
     }
 } // namespace sw

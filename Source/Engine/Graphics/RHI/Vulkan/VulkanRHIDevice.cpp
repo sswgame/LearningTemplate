@@ -89,10 +89,8 @@ namespace sw
         , _slotSetLayout{ nullptr }
         , _textureSetLayout{ nullptr }
         , _textureSet{ nullptr }
-        , _arrSlotPoolChain{}
-        , _arrSlotPoolCursor{}
-        , _slotPoolMutex{}
-        , _bSlotPoolExhaustedLogged{ 0 }
+        , _arrFrameDescriptorPoolSet{}
+        , _listCmdListDescriptorPoolSet{}
         , _bindlessDummyImage{ nullptr }
         , _bindlessDummyView{ nullptr }
         , _bindlessDummyMemory{ nullptr }
@@ -321,15 +319,14 @@ namespace sw
                 vkDestroyDescriptorSetLayout( _device, _slotSetLayout, nullptr );
                 _slotSetLayout = nullptr;
             }
-            for ( vector<VkDescriptorPool>& chain : _arrSlotPoolChain )
+            for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
+                destroyDescriptorPoolSet( poolSet );
+            for ( unique_ptr<VulkanDescriptorPoolSet>& pPoolSet : _listCmdListDescriptorPoolSet )
             {
-                for ( VkDescriptorPool pool : chain )
-                {
-                    if ( pool != VK_NULL_HANDLE )
-                        vkDestroyDescriptorPool( _device, pool, nullptr );
-                }
-                chain.clear();
+                if ( pPoolSet != nullptr )
+                    destroyDescriptorPoolSet( *pPoolSet );
             }
+            _listCmdListDescriptorPoolSet.clear();
             if ( _dummyUBO )
             {
                 vkDestroyBuffer( _device, _dummyUBO, nullptr );

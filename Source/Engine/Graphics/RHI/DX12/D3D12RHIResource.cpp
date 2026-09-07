@@ -417,6 +417,22 @@ namespace sw
         return true;
     }
 
+    RHIFormat D3D12RHIResource::getTextureFormat( RHITextureHandle texture ) const
+    {
+        // 오프스크린 레코드는 요청 포맷을 그대로 들고 있다(깊이는 리소스가 typeless 라 GetDesc 로는 못 되돌린다).
+        const auto offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
+        if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
+        {
+            if ( offscreenIt->second._bHasDsv != 0 )
+                return RHIFormat::D24_UNORM_S8_UINT;
+            return fromDxgiFormat( offscreenIt->second._format );
+        }
+        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
+        if ( pTexture == nullptr )
+            return RHIFormat::Unknown;
+        return fromDxgiFormat( pTexture->GetDesc().Format );
+    }
+
     bool D3D12RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );

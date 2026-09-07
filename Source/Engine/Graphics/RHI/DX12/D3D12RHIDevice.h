@@ -28,6 +28,20 @@ namespace sw
     class D3D12RHIResource;
 
     /**
+     * @struct D3D12SlotTableState
+     * @brief 바인드 포인트(그래픽스/컴퓨트) 하나의 t/u 슬롯 테이블 상태 — 언리얼 FD3D12DescriptorCache 의 SRV/UAV 캐시와 같은 자리.
+     * @details bind*() 는 오프라인 힙의 뷰 핸들을 슬롯에 적어 두기만 하고, 드로우/디스패치 직전 flushSlotTables 가 바뀐
+     *          테이블만 온라인(셰이더 가시) 힙 블록에 복사해 루트 테이블로 건다. 안 걸린 슬롯은 null 뷰로 채운다.
+     */
+    struct D3D12SlotTableState
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE _arrSrv[shaderslot::kSrvSlotCount]{};        ///< t# 의 오프라인 뷰. ptr 0 = 안 걸림
+        D3D12_CPU_DESCRIPTOR_HANDLE _arrUav[shaderslot::kComputeUavSlotCount]{}; ///< u# 의 오프라인 뷰. ptr 0 = 안 걸림
+        uint8                       _bSrvDirty{ 1 };                             ///< 새 리스트는 테이블이 없으므로 첫 드로우에 반드시 굳힌다
+        uint8                       _bUavDirty{ 1 };
+    };
+
+    /**
      * @struct D3D12RecordingState
      * @brief "지금 이 커맨드 리스트가 기록 중" 상태 — 디바이스 전역이 아니라 리스트(컨텍스트)마다 있어야 한다.
      * @details 예전엔 이 필드들이 D3D12RHIDevice 에 있어서 Immediate/Deferred Context 가 사실상 같은
@@ -37,6 +51,13 @@ namespace sw
      */
     struct D3D12RecordingState
     {
+        /// @brief 바인드 포인트별 슬롯 테이블 상태 — [0] 그래픽스, [1] 컴퓨트. 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않는다.
+        D3D12SlotTableState _arrSlotState[2]{};
+        /// @brief 이 리스트가 빌린 온라인 힙 블록들 — 리스트가 닫힐 때 GPU 펜스 뒤 반납(releaseOnlineBlocksDeferred).
+        vector<uint32> _listOnlineBlock{};
+        /// @brief 지금 쓰는 온라인 블록의 커서/끝 (셰이더 가시 힙 인덱스). 같으면 블록이 없다.
+        uint32                 _onlineCursor{ 0 };
+        uint32                 _onlineEnd{ 0 };
         RHIBufferHandle        _boundMeshVb{ 0 };
         uint32                 _boundMeshStride{ 0 };
         uint32                 _boundMeshOffset{ 0 };
@@ -112,6 +133,24 @@ namespace sw
 
         /** @brief 백엔드 타입 반환 (DirectX12) */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX12; }
+
+        /**
+         * @brief 온라인(셰이더 가시) 힙 블록 하나를 빌립니다 — 슬롯 테이블을 굳힐 자리. 없으면 UINT32_MAX (한 번만 로그).
+         * @details 언리얼의 FD3D12SubAllocatedOnlineHeap 처럼 전역 힙의 뒤쪽 구간을 블록으로 잘라 컨텍스트마다 빌려 준다 —
+         *          테이블과 텍스처 배열이 같은 힙에 있어야 하기 때문이다(CBV_SRV_UAV 힙은 한 번에 하나만 걸린다).
+         *          여러 태스크 스레드가 부르므로 잠근다(블록 단위라 드로우마다 걸리지는 않는다).
+         */
+        uint32 acquireOnlineBlock();
+        /** @brief 기록 상태가 빌린 온라인 블록들을 현재 펜스 뒤에 프리리스트로 돌려보냅니다 (리스트가 닫힐 때). */
+        void releaseOnlineBlocksDeferred( D3D12RecordingState& state );
+        /** @brief 오프라인(CPU 전용) 뷰 힙의 index 번째 핸들. */
+        D3D12_CPU_DESCRIPTOR_HANDLE offlineDescriptorAt( uint32 index ) const;
+        /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들 (복사 목적지). */
+        D3D12_CPU_DESCRIPTOR_HANDLE shaderVisibleCpuAt( uint32 index ) const;
+        /** @brief 셰이더 가시 힙의 index 번째 GPU 핸들 (루트 테이블 인자). */
+        D3D12_GPU_DESCRIPTOR_HANDLE shaderVisibleGpuAt( uint32 index ) const;
+        /** @brief 스왑체인이 만든 백버퍼 포맷 — 백버퍼 PSO 의 렌더타깃 포맷은 여기서 나온다. */
+        RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
 
         /** @brief D3D12는 네이티브 Bindless(Unbounded Descriptor Table)를 지원함 (true 반환) */
         bool supportsBindless() const override { return true; }
@@ -235,15 +274,20 @@ namespace sw
 
         static constexpr uint32 kMaxOffscreenRtvs = 32;
         static constexpr uint32 kMaxOffscreenDsvs = 16;
-        // 루트 시그니처 — 슬롯 리소스는 전부 루트 디스크립터(GPU 주소)다: b# 루트 CBV, t# 루트 SRV, u# 루트 UAV
-        // (raw/구조 버퍼만 오므로 가능하다). 디스크립터 테이블은 텍스처 배열(t0 space1, 무제한) 하나뿐이고 힙 시작을 가리킨다.
+        // 루트 시그니처 — 언리얼 FD3D12RootSignature 와 같은 배치: b# 는 루트 CBV(GPU 주소), t#/u# 슬롯은 **디스크립터 테이블**
+        // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 건다 — FD3D12DescriptorCache), 텍스처 배열(t0 space1)은 힙 시작을
+        // 가리키는 테이블. 예산은 shaderslot::dx12 (25/64 dword) — 슬롯을 늘려도 테이블 안이라 예산이 안 는다.
         // 슬롯 번호는 bindingslots.hlsli(shaderslot) 가 정한다 — 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
         static constexpr uint32 kCbvRootParam0             = 0;                                                     ///< b0..b(N-1) 루트 CBV
-        static constexpr uint32 kSrvRootParam0             = kCbvRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) 루트 SRV
-        static constexpr uint32 kUavRootParam0             = kSrvRootParam0 + shaderslot::kSrvSlotCount;            ///< u0..u(N-1) 루트 UAV
-        static constexpr uint32 kBindlessTextureTableParam = kUavRootParam0 + shaderslot::kComputeUavSlotCount;     ///< t0 space1 무제한 텍스처 배열 테이블
+        static constexpr uint32 kSrvTableParam             = kCbvRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) space0 테이블
+        static constexpr uint32 kUavTableParam             = kSrvTableParam + 1;                                    ///< u0..u(N-1) space0 테이블
+        static constexpr uint32 kBindlessTextureTableParam = kUavTableParam + 1;                                    ///< t0/u0 space1 무제한 텍스처 배열 테이블
         static constexpr uint32 kRootConstantsParam        = kBindlessTextureTableParam + 1;                        ///< b0 space2 32비트 루트 상수 (setComputeRootConstants)
         static constexpr uint32 kRootParameterCount        = kRootConstantsParam + 1;
+        static_assert( kRootParameterCount == shaderslot::dx12::kRootCbvCount + shaderslot::dx12::kRootTableCount + 1,
+                       "루트 파라미터 배치가 shaderslot::dx12 예산 계산과 어긋난다" );
+        /// @brief 슬롯 테이블 하나의 최대 원소 수 (t 테이블과 u 테이블 중 큰 쪽).
+        static constexpr uint32 kMaxSlotTableSize = shaderslot::kSrvSlotCount > shaderslot::kComputeUavSlotCount ? shaderslot::kSrvSlotCount : shaderslot::kComputeUavSlotCount;
         /** @brief setComputeRootConstants 용량(dword). RHITypes.h 의 constant::kMinComputeRootConstantDwords 가 이 값을 기준으로 한다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
@@ -269,7 +313,17 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
         };
 
-        static constexpr uint32 kMaxShaderVisibleDescriptors = 32768;
+        // 셰이더 가시 힙 하나 = [레지스트리 구간 | 온라인 블록 구간]. 레지스트리는 bindless 인덱스 = 힙 슬롯(텍스처 배열이 힙 시작을
+        // 가리킨다), 온라인 구간은 슬롯 테이블을 굳히는 블록들(컨텍스트가 빌리고 펜스 뒤 반납). 언리얼의 bindless 힙 + 서브할당
+        // 온라인 힙과 같은 나눔이다. 오프라인(CPU 전용) 힙은 레지스트리와 같은 인덱스 공간 + null 뷰 둘.
+        static constexpr uint32 kMaxShaderVisibleDescriptors = 65536;
+        static constexpr uint32 kBindlessDescriptorCapacity  = 32768;
+        static constexpr uint32 kOnlineBlockDescriptorCount  = 512;
+        static constexpr uint32 kOnlineBlockCount            = ( kMaxShaderVisibleDescriptors - kBindlessDescriptorCapacity ) / kOnlineBlockDescriptorCount;
+        static constexpr uint32 kOfflineNullSrvIndex         = kBindlessDescriptorCapacity;     ///< 안 걸린 t 슬롯을 채우는 null 버퍼 SRV
+        static constexpr uint32 kOfflineNullUavIndex         = kBindlessDescriptorCapacity + 1; ///< 안 걸린 u 슬롯을 채우는 null 버퍼 UAV
+        static constexpr uint32 kOfflineDescriptorCount      = kBindlessDescriptorCapacity + 2;
+        static_assert( kOnlineBlockDescriptorCount >= kMaxSlotTableSize, "온라인 블록이 슬롯 테이블 하나보다 작다" );
 
         /// @brief 렌더 패스 서술 캐시
         struct D3D12RenderPassRecord
@@ -283,15 +337,16 @@ namespace sw
         struct BindlessResourceRecord
         {
             Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
-            D3D12_CPU_DESCRIPTOR_HANDLE            _cpuHandle{};
+            D3D12_CPU_DESCRIPTOR_HANDLE            _cpuHandle{}; ///< 셰이더 가시 힙 (텍스처 배열이 인덱스로 읽는 자리)
             D3D12_GPU_DESCRIPTOR_HANDLE            _gpuHandle{};
+            D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCpuHandle{}; ///< 오프라인 힙의 같은 뷰 — 슬롯 테이블 복사 원본(가시 힙은 복사 원본이 못 된다)
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
         };
 
-        /// @brief updateStructuredBuffer 전용 프레임 링 슬롯 — 매 호출마다 업로드 힙/커맨드리스트를
-        /// 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
-        /// 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU에서 끝났다).
+        // updateStructuredBuffer 전용 프레임 링 슬롯 — 매 호출마다 업로드 힙/커맨드리스트를
+        // 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
+        // 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU에서 끝났다).
         /**
          * @struct StructuredUploadSlot
          * @brief updateStructuredBuffer 가 쓰는 프레임 링 슬롯 하나 — 스테이징 힙 + 복사 얼로케이터/리스트.
@@ -317,8 +372,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
-        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature; ///< 그래픽스·컴퓨트 공용 (같은 블롭)
-        Microsoft::WRL::ComPtr<ID3D12Resource>            _vertexBuffer;  ///< 풀스크린 포스트 (정점 3개)
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _offlineViewHeap; ///< CPU 전용 뷰 힙 — 슬롯 테이블 CopyDescriptors 의 원본 + null 뷰
+        Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;   ///< 그래픽스·컴퓨트 공용 (같은 블롭)
+        Microsoft::WRL::ComPtr<ID3D12Resource>            _vertexBuffer;    ///< 풀스크린 포스트 (정점 3개)
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
@@ -340,8 +396,12 @@ namespace sw
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
         mutex                         _cmdListPoolMutex;
         vector<D3D12CommandListEntry> _listFreeCmdListEntry;
-        FrameResourceRing             _frameRing;
-        StructuredUploadSlot          _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
+        /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
+        mutex                _onlineBlockMutex;
+        vector<uint32>       _listFreeOnlineBlock;
+        uint8                _bOnlineHeapExhaustedLogged{ 0 };
+        FrameResourceRing    _frameRing;
+        StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
