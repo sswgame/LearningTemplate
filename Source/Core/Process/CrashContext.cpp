@@ -2,11 +2,17 @@
 
 #include "Core/Process/CrashContext.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include <chrono>
-#include <cstdio>
 #include <random>
+
+#if !defined( SW_PLATFORM_WINDOWS )
+    #include <fcntl.h>
+    #include <unistd.h>
+#endif
 
 namespace sw
 {
@@ -38,6 +44,58 @@ namespace sw
                 s_arrSession[digit] = kHex[( mixed >> ( digit * 4 ) ) & 0xFu];
             s_arrSession[16] = '\0';
             return s_arrSession;
+        }
+        /**
+         * @brief 버퍼 뒤에 포맷한 한 줄을 잇습니다 — **할당하지 않습니다**.
+         * @details formatstring 은 버퍼 **처음부터** 쓰므로, 이어 붙이려면 남은 자리를 직접 넘겨야 한다.
+         * @param inOutLength 현재 길이. 쓴 만큼 늘려서 돌려준다.
+         */
+        template <typename... Args>
+        void appendLine( utf8* pBuffer, uint32 capacity, uint32& inOutLength, string_view format, Args&&... args )
+        {
+            if ( inOutLength + 1 >= capacity )
+                return;
+            formatstring( pBuffer + inOutLength, capacity - inOutLength, format, std::forward<Args>( args )... );
+            inOutLength += static_cast<uint32>( StringUtil::strlen( pBuffer + inOutLength ) );
+        }
+
+        /**
+         * @brief 파일 하나를 통째로 씁니다 — **stdio 를 쓰지 않습니다**.
+         * @details fopen/fprintf 는 스트림 락을 잡고 내부 버퍼를 할당한다. 크래시 지점에서 힙이 깨져
+         *          있으면 거기서 다시 죽는다. OS 원시 호출은 그런 것이 없다(POSIX 에서는
+         *          async-signal-safe 이기도 하다). 할당 없이 먼저 쓰겠다는 이 경로의 취지가 이것이다.
+         *
+         * @note **FileUtil::writeFile 을 쓰면 안 된다.** normalizeSeparators 가 sw::string 을 만들어
+         *       힙을 쓰고 내부도 fopen/fwrite 다 — 크래시 경로에서 피해야 할 것 둘을 다 한다.
+         *       FileUtil 은 부팅 때(로그 폴더 준비 등) 쓰는 것이 맞고, 여기서는 아니다.
+         */
+        void writeWholeFile( const utf8* pPath, const utf8* pText, uint32 length )
+        {
+            if ( pPath == nullptr || pText == nullptr || length == 0 )
+                return;
+#if defined( SW_PLATFORM_WINDOWS )
+            const HANDLE hFile = CreateFileA( pPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
+            if ( hFile == INVALID_HANDLE_VALUE )
+                return;
+            DWORD written{ 0 };
+            WriteFile( hFile, pText, static_cast<DWORD>( length ), &written, nullptr );
+            CloseHandle( hFile );
+#else
+            const int32 fileDesc = ::open( pPath, O_WRONLY | O_CREAT | O_TRUNC, 0644 );
+            if ( fileDesc < 0 )
+                return;
+            ssize_t     remaining = static_cast<ssize_t>( length );
+            const utf8* pCursor   = pText;
+            while ( remaining > 0 )
+            {
+                const ssize_t written = ::write( fileDesc, pCursor, static_cast<size_t>( remaining ) );
+                if ( written <= 0 )
+                    break;
+                pCursor += written;
+                remaining -= written;
+            }
+            ::close( fileDesc );
+#endif
         }
     } // namespace
 
@@ -99,22 +157,28 @@ namespace sw
         utf8 arrPath[constant::kMaxBuffer1024]{};
         buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "txt" );
 
-        std::FILE* pFile = std::fopen( arrPath, "wb" );
-        if ( pFile == nullptr )
-            return;
-
-        std::fprintf( pFile, "session   : %s\n", getCrashSessionId() );
-        std::fprintf( pFile, "reason    : %s\n", ( pReason != nullptr ) ? pReason : "unknown" );
-        // uint64 는 %llu 와 폭이 같다(Types.h). 캐스팅 없이 그대로 넘긴다 — 기본 자료형 이름을 쓰지 않는다.
-        std::fprintf( pFile, "address   : 0x%llx\n", static_cast<uint64>( reinterpret_cast<uintptr_t>( pFaultAddress ) ) );
-        std::fprintf( pFile, "processId : %llu\n", processId );
-        std::fprintf( pFile, "threadId  : %llu\n", threadId );
+        // 한 버퍼에 다 만든 뒤 **한 번에** 쓴다. 줄마다 fprintf 를 부르면 그때마다 스트림 락과 내부
+        // 버퍼가 걸리고, 도중에 죽으면 반쯤 쓰인 파일이 남는다.
+        utf8   arrReport[constant::kMaxBuffer8192]{};
+        uint32 length{ 0 };
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "session   : %#\n", getCrashSessionId() );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "reason    : %#\n", ( pReason != nullptr ) ? pReason : "unknown" );
+        // 주소는 16진수여야 맵 파일·디스어셈블리와 맞춰 볼 수 있다 (CallStackCapture 도 같은 형식이다).
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "address   : 0x%#\n",
+                    Fmt( reinterpret_cast<uint64>( pFaultAddress ), Format().hex() ) );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "processId : %#\n", processId );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "threadId  : %#\n", threadId );
 
         const CrashContextStore& store = CrashContextStore::get();
         for ( uint32 entryIndex = 0; entryIndex < store._entryCount; ++entryIndex )
-            std::fprintf( pFile, "%-10s: %s\n", store._arrEntry[entryIndex]._key.c_str(), store._arrEntry[entryIndex]._value.c_str() );
+        {
+            // 키 폭을 맞춘다 — 위의 고정 항목과 세로가 맞아야 읽기 쉽다.
+            appendLine( arrReport, constant::kMaxBuffer8192, length, "%#: %#\n",
+                        Fmt( store._arrEntry[entryIndex]._key.c_str(), Format().width( 9 ).leftAlign() ),
+                        store._arrEntry[entryIndex]._value.c_str() );
+        }
 
-        std::fclose( pFile );
+        writeWholeFile( arrPath, arrReport, length );
     }
 
     void writeCrashStackFile( const utf8* pStackText )
@@ -123,12 +187,7 @@ namespace sw
             return;
         utf8 arrPath[constant::kMaxBuffer1024]{};
         buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
-
-        std::FILE* pFile = std::fopen( arrPath, "wb" );
-        if ( pFile == nullptr )
-            return;
-        std::fputs( pStackText, pFile );
-        std::fclose( pFile );
+        writeWholeFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) );
     }
 
     void CrashHandler::setContextValue( string_view key, string_view value )
