@@ -38,6 +38,14 @@ namespace sw
         ShaderStageFlag            _visibility{ ShaderStageFlag::None };
         vector<ShaderVariableInfo> _listCbMember; ///< kind==ConstantBuffer 일 때만 채움
         uint32                     _cbTotalSize{ 0 };
+        /**
+         * @brief StructuredBuffer<T> 원소 하나의 바이트 수 (kind==StructuredBuffer/RwStructuredBuffer 일 때만, 모르면 0).
+         * @details 셰이더가 선언한 stride 다 — 이 슬롯에 거는 버퍼는 같은 stride 로 만들어야 한다. DX11 은 SRV 의 구조
+         *          stride 가 셰이더 선언과 다르면 디버그 레이어가 드로우마다 오류를 내고(값도 보장되지 않는다), DX12 는
+         *          디스크립터 테이블의 StructuredBuffer SRV 가 같은 제약을 갖는다. 백엔드마다 값이 다를 수 있다
+         *          (DX 자연 패킹 / SPIR-V std430) — 그래서 레이아웃은 디바이스 백엔드로 빌드한 것을 쓴다.
+         */
+        uint32 _elementStride{ 0 };
     };
 
     /**

@@ -273,6 +273,16 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   엔진에 큐브/3D 텍스처 리소스 자체가 없어 바인딩만 먼저 열 이유가 없다. DX11/GL 의 머티리얼 단위 배치도 언리얼과 같다 —
   `FMeshDrawCommand` 병합은 셰이더 바인딩이 같을 때만 일어나고, 텍스처를 슬롯에 거는 플랫폼에서는 머티리얼 경계가 곧 바인딩 경계다.
 
+추가로 닫은 것 (2026-09-08, 위 검증 중에 드러난 것):
+- **머티리얼 폴백 원소 stride** — 머티리얼 없는 배치에 걸던 폴백이 256 바이트 원소 **하나를 공용**으로 썼다. 셰이더의
+  `SwMaterialData_t` 는 24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다(SRV 의 구조 stride 는
+  셰이더 선언과 같아야 한다). 언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같게
+  **stride 마다 하나**씩 만든다(`ensureMaterialFallbackBuffers`, PSO 를 다 등록한 뒤 셋업에서 — 기록 중에는 bindless 레지스트리를
+  못 바꾼다). 필요한 stride 는 `ShaderBindingSlot::_elementStride`(리플렉션의 구조버퍼 원소 레이아웃)가 준다.
+- **인스턴스 원소 레이아웃 테스트** — `g_SwInstances`(t4)는 C++ 이 쓰고 셰이더가 읽는 유일한 구조체인데 둘을 대조하는 것이
+  없었다. `ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의 stride·필드 오프셋을
+  `GpuInstance` 와 대조한다 — 오프셋을 일부러 4 틀리게 넣어 실패 메시지(파일 이름 + 숫자)까지 확인했다.
+
 ## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
 
 ```powershell

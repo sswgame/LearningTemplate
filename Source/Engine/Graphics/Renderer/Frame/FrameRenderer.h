@@ -232,7 +232,7 @@ namespace sw
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& ctx );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 로 등록합니다. */
-        void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch );
+        void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
@@ -308,6 +308,13 @@ namespace sw
         /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
         /**
+         * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다 (셋업 전용).
+         * @details 기록 중에는 만들 수 없다 — 버퍼 생성과 `registerBindlessResource` 는 bindless 레지스트리를 바꾸고,
+         *          패스 콜백은 태스크 워커에서 병렬로 돈다(`checkRegistryMutableNow` 가 감시하는 규칙).
+         *          그래서 PSO 를 다 등록한 뒤 여기서 한 번에 만든다.
+         */
+        void ensureMaterialFallbackBuffers();
+        /**
          * @brief Present 패스 PSO 를 **대상 포맷별로** 얻습니다 (없으면 만든다).
          * @details Present 의 대상은 둘이다 — 백버퍼(포맷은 디바이스가 실제로 채택한 값, Vulkan 은 서피스가
          *          B8G8R8A8 만 줄 수 있다)와 에디터 GameView RT(R8G8B8A8). PSO 의 렌더타깃 포맷이 대상과
@@ -361,8 +368,21 @@ namespace sw
          * @details DX12 루트 SRV 는 경계 검사가 없어 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)다 — 어떤 드로우도 빈 슬롯으로 나가지 않게
          *          항상 유효한 버퍼를 건다 (언리얼의 기본 머티리얼과 같은 자리).
          */
-        RHIBufferHandle    _materialFallbackBuffer;
-        RHIDescriptorIndex _materialFallbackSrv;
+        /**
+         * @struct MaterialFallbackBuffer
+         * @brief 머티리얼 없는 배치에 거는 0 채운 원소 하나짜리 구조버퍼 — **stride 마다 하나**.
+         * @details 언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같다.
+         *          예전엔 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData_t` 는
+         *          24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다.
+         */
+        struct MaterialFallbackBuffer
+        {
+            RHIBufferHandle    _buffer{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+        };
+
+        /// @brief stride → 폴백 버퍼. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
+        unordered_map<uint32, MaterialFallbackBuffer> _mapMaterialFallback;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
         ShaderBindingLayoutCache                                          _bindingLayoutCache;
         unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;

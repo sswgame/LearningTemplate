@@ -37,8 +37,7 @@ namespace sw
         , _frameCtx{}
         , _gpuCullCb{ 0 }
         , _gpuCullCbIndex{ kInvalidDescriptorIndex }
-        , _materialFallbackBuffer{ 0 }
-        , _materialFallbackSrv{ kInvalidDescriptorIndex }
+        , _mapMaterialFallback{}
         , _mapEnginePso{}
         , _mapPresentPso{}
         , _transientWidth{ 0 }

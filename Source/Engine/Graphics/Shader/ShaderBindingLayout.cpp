@@ -141,6 +141,26 @@ namespace sw
             }
         }
 
+        // 3) 구조버퍼 원소 stride — 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
+        //    이 슬롯에 거는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다.
+        for ( const auto& [stage, pReflection] : listStageReflection )
+        {
+            if ( pReflection == nullptr )
+                continue;
+            for ( const ShaderBufferInfo& element : pReflection->_listStructuredElement )
+            {
+                if ( element._totalSize == 0 )
+                    continue;
+                const hashed_string name{ static_cast<std::string_view>( element._name ) };
+                for ( ShaderBindingSlot& slot : layout._listSlot )
+                {
+                    const bool bStructured = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
+                    if ( bStructured && slot._name == name && slot._elementStride == 0 )
+                        slot._elementStride = element._totalSize;
+                }
+            }
+        }
+
         layout.rebuildIndex();
         layout.computeFingerprint();
         layout.buildBindPlan();

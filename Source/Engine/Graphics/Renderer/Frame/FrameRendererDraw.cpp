@@ -67,16 +67,23 @@ namespace sw
         ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
     }
 
-    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch )
+    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼 — 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다 (드로우별 CB 바인딩 없음).
         if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
         {
-            // 머티리얼 없는 배치 — 빈 슬롯으로 그리지 않는다(DX12 루트 SRV 는 경계 검사가 없어 GPU 폴트). 0 채운 폴백 원소를 건다.
-            if ( _materialFallbackBuffer != 0 && _materialFallbackSrv != kInvalidDescriptorIndex )
+            // 머티리얼 없는 배치 — 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
+            // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다 — 공용 256 바이트를 걸면 DX11 이 드로우마다
+            // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
+            const ShaderBindingLayout* pLayout = ( ctx._lastLayoutPso == pso ) ? ctx._pLastLayout : layoutForPso( pso );
+            const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
+            if ( pSlot == nullptr || pSlot->_elementStride == 0 )
+                return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다 — 걸 것도 없다.
+            const auto it = _mapMaterialFallback.find( pSlot->_elementStride );
+            if ( it != _mapMaterialFallback.end() && it->second._buffer != 0 && it->second._srv != kInvalidDescriptorIndex )
             {
-                ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, _materialFallbackBuffer, _materialFallbackSrv );
+                ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
                 ctx._passValues.setUint( passConstantNames()._swMaterialCount, 1u );
             }
             return;
@@ -197,7 +204,7 @@ namespace sw
                 continue;
             ctx._pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
 
-            registerMaterialBuffer( ctx, batch );
+            registerMaterialBuffer( ctx, batch, pso );
             if ( bFirstItem )
             {
                 commitBindlessTextureBindings( ctx );
@@ -260,7 +267,7 @@ namespace sw
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
                 ctx._passValues.setUint( passConstantNames()._instanceBase, batch._instanceBase );
-            registerMaterialBuffer( ctx, batch );
+            registerMaterialBuffer( ctx, batch, pso );
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
             ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );

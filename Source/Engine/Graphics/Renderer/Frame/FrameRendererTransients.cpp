@@ -50,26 +50,6 @@ namespace sw
         if ( _gpuCullCb != 0 )
             _gpuCullCbIndex = _pDevice->getResource()->registerBindlessResource( _gpuCullCb );
 
-        // 머티리얼 없는 배치용 폴백 원소(0 채움, 256 바이트 — 어떤 SwMaterialData_t 도 stride 가 이보다 작다).
-        {
-            constexpr uint32 kFallbackBytes = 256;
-            RHIBufferDesc    desc{};
-            desc._elementSize       = kFallbackBytes;
-            desc._elementCount      = 1;
-            desc._sizeBytes         = kFallbackBytes;
-            desc._usage             = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-            desc._pInitialData      = nullptr;
-            _materialFallbackBuffer = _pDevice->getResource()->createBuffer( desc );
-            if ( _materialFallbackBuffer == 0 )
-                _materialFallbackBuffer = _pDevice->getResource()->createStructuredBuffer( kFallbackBytes, 1 );
-            if ( _materialFallbackBuffer != 0 )
-            {
-                static const uint8 s_arrZero[kFallbackBytes]{};
-                _pDevice->getResource()->updateStructuredBuffer( _materialFallbackBuffer, s_arrZero, kFallbackBytes );
-                _materialFallbackSrv = _pDevice->getResource()->registerBindlessResource( _materialFallbackBuffer );
-            }
-        }
-
         constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
         const EngineData&   engineData         = engine::getEngineData();
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
@@ -126,6 +106,9 @@ namespace sw
         // 컴퓨트 컬링은 그 위의 선택 사항이라 여기 조건에 넣지 않는다(넣으면 컬링을 못 하는 백엔드가
         // 인다이렉트 경로를 통째로 잃고, 렌더 스레드에서 Mesh* 를 만지는 레거시 경로로 떨어진다).
         _bUseGpuDriven = ( gv_gpuDriven != 0 && caps._bIndirectDraw != 0 ) ? 1 : 0;
+
+        // 폴백 원소는 PSO 를 다 등록한 뒤에 만든다 — 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
+        ensureMaterialFallbackBuffers();
 
         _bPassResourcesReady = 1;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
@@ -195,14 +178,13 @@ namespace sw
         {
             _listPassCbSlot.clear();
             _passCbCursor.store( 0, std::memory_order_relaxed );
-            _frameCtx._passCb       = 0;
-            _frameCtx._passCbIndex  = kInvalidDescriptorIndex;
-            _gpuCullCb              = 0;
-            _gpuCullCbIndex         = kInvalidDescriptorIndex;
-            _materialFallbackBuffer = 0;
-            _materialFallbackSrv    = kInvalidDescriptorIndex;
-            _taaHistory             = 0;
-            _taaHistorySrv          = kInvalidDescriptorIndex;
+            _frameCtx._passCb      = 0;
+            _frameCtx._passCbIndex = kInvalidDescriptorIndex;
+            _gpuCullCb             = 0;
+            _gpuCullCbIndex        = kInvalidDescriptorIndex;
+            _mapMaterialFallback.clear();
+            _taaHistory    = 0;
+            _taaHistorySrv = kInvalidDescriptorIndex;
             _mapEnginePso.clear();
             _mapPresentPso.clear();
             _bPassResourcesReady = 0;
@@ -255,7 +237,9 @@ namespace sw
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
         releaseResource( _gpuCullCb, _gpuCullCbIndex );
-        releaseResource( _materialFallbackBuffer, _materialFallbackSrv );
+        for ( auto& [stride, fallback] : _mapMaterialFallback )
+            releaseResource( fallback._buffer, fallback._srv );
+        _mapMaterialFallback.clear();
         releaseResource( _taaHistory, _taaHistorySrv, true );
         _bPassResourcesReady = 0;
     }
@@ -570,6 +554,63 @@ namespace sw
     {
         const auto it = _mapEnginePso.find( passType );
         return ( it != _mapEnginePso.end() ) ? it->second : 0;
+    }
+
+    void FrameRenderer::ensureMaterialFallbackBuffers()
+    {
+        if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
+            return;
+
+        // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 같은 셰이더라도
+        // 백엔드마다 다르다(DX 자연 패킹 / SPIR-V std430) — 레이아웃은 이 디바이스의 백엔드로 빌드된 것이다.
+        vector<uint32> listStride;
+        {
+            std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+            for ( const auto& [pso, pLayout] : _mapPsoLayout )
+            {
+                if ( pLayout == nullptr )
+                    continue;
+                const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
+                if ( pSlot == nullptr )
+                    continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등) — 걸 것이 없다.
+                if ( pSlot->_elementStride == 0 )
+                {
+                    // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
+                    // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
+                    SW_LOG_ERROR( "PSO %# 의 머티리얼 버퍼 원소 stride 가 0 입니다 — 리플렉션이 g_SwMaterials 원소 레이아웃을 주지 않았습니다.", pso );
+                    continue;
+                }
+                if ( std::find( listStride.begin(), listStride.end(), pSlot->_elementStride ) == listStride.end() )
+                    listStride.push_back( pSlot->_elementStride );
+            }
+        }
+
+        for ( const uint32 stride : listStride )
+        {
+            if ( _mapMaterialFallback.find( stride ) != _mapMaterialFallback.end() )
+                continue;
+
+            RHIBufferDesc desc{};
+            desc._elementSize  = stride;
+            desc._elementCount = 1;
+            desc._sizeBytes    = stride;
+            desc._usage        = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+            desc._pInitialData = nullptr;
+
+            MaterialFallbackBuffer fallback{};
+            fallback._buffer = _pDevice->getResource()->createBuffer( desc );
+            if ( fallback._buffer == 0 )
+                fallback._buffer = _pDevice->getResource()->createStructuredBuffer( stride, 1 );
+            if ( fallback._buffer == 0 )
+            {
+                SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
+                continue;
+            }
+            const vector<uint8> zeroBytes( stride, 0 );
+            _pDevice->getResource()->updateStructuredBuffer( fallback._buffer, zeroBytes.data(), stride );
+            fallback._srv = _pDevice->getResource()->registerBindlessResource( fallback._buffer );
+            _mapMaterialFallback.insert_or_assign( stride, fallback );
+        }
     }
 
     RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
