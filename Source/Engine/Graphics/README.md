@@ -250,6 +250,29 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, `IRHIDevice::executeOffscreenPipelineSmoke`, FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
 - **Perf** — Transparent 연속 mesh/mat 머지, GpuScene 내용·카메라 핑거프린트 캐시, Deferred CL 기본·`_frameCmd` 재사용·Cmd reserve 256
 
+남은 것 (2026-09-07 바인딩 리워크 이후, 우선순위순):
+- **P1** — Vulkan Present 패스 렌더패스 포맷 불일치 (스왑체인 B8G8R8A8 vs 파이프라인 R8G8B8A8, 검증 레이어가 매 프레임 로그). 바인딩과 무관한 스왑체인 포맷 폴백 문제.
+- **P2** — Vulkan 슬롯 세트 풀이 디바이스 전역 뮤텍스 하나(`_slotPoolMutex`) — 웨이브 병렬 기록이 본격화되면 컨텍스트별 풀로.
+- **P2** — DX12 루트 시그니처 예산: 루트 CBV 3 + SRV 10 + UAV 4 = 51/64 dword. 슬롯을 더 늘리려면 t/u 를 테이블로 옮겨야 한다.
+- **P3** — 텍스처 배열 용량 고정(Vulkan 4096 / DX12 힙), 스트리밍·축출 없음. 큐브맵·3D 텍스처 배열 없음(계약 space1/set1 규칙도 같이 바꿔야 한다).
+- **P3** — DX11/GL 은 배치를 머티리얼 단위로 유지(텍스처를 t5..t8 슬롯에 걸어야 해서). 머티리얼을 넘어 합치려면 Texture2DArray/아틀라스가 필요.
+- **P3** — 에뮬 백엔드(DX11/GL)의 `SW_SampleIndexWith` 는 samplerId 를 무시한다(슬롯 결합 샘플러뿐).
+
+## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
+
+```powershell
+cmake --build --preset Ninja-Debug
+build/Ninja-Debug/Bin/App.exe --bake-shaders                                   # 구운 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingContractTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHITest.*                     # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RenderPassTest.*              # FrameRendererParityAllBackends 가 SceneColor 픽셀을 비교
+py -3 Scripts/dev/BackendSmoke.py                                                # 실제 앱 경로: 네 백엔드 PPM 평균·큐브 픽셀 수
+```
+
+- 백엔드는 `-dx11 / -dx12 / -vk / -gl` 플래그로 고른다. `-gv_rhiBackend=X` 는 무시된다.
+- DX11/DX12 디버그 레이어 메시지는 프레임 끝에 `[Error]` 로 로그에 나온다(`flushDebugMessages`). 스모크 로그의 `[Error]` 수가 0 이 아니면 읽어라.
+- 셰이더 .hlsli 를 고쳤으면 반드시 `--bake-shaders` 를 다시 돌린다 — 런타임은 매니페스트가 소스보다 오래되면 런타임 리플렉션으로 폴백하지만 테스트는 구운 바이너리를 본다.
+
 ---
 
 ## 더 볼 곳
