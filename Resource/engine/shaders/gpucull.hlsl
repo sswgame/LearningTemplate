@@ -47,7 +47,8 @@ struct GpuBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
-	uint2 pad;
+	uint bPreserveOrder; // 투명 배치 — CPU 가 정렬해 둔 순서가 곧 블렌딩 순서다
+	uint pad;
 };
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
@@ -92,8 +93,18 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	if (IsVisible(inst.boundsCenter, inst.boundsRadius) == false)
 		return;
 
+	// 순서를 지켜야 하는 배치(투명)는 압축하지 않는다. CPU 가 뒤에서 앞으로 정렬해 둔 순서가 곧
+	// 블렌딩 순서인데, 원자 연산이 주는 자리 번호는 **완료 순서**라 그 정렬을 부순다. 인스턴스는 배치마다
+	// 연속으로 놓이므로 instId 가 곧 자기 자리다 — 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다.
+	// (그래서 투명은 컬링 이득을 못 받는다. 정렬을 지키는 압축은 접두합이 필요하고, 투명은 보통 수가 적다.)
+	if (g_BatchInfo[batchIndex].bPreserveOrder != 0)
+	{
+		g_VisibleInstanceIds[instId] = instId;
+		return;
+	}
+
 	// 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
-	// 오프셋(startInstance)을 더해야 전역 자리가 된다.
+	// 오프셋을 더해야 전역 자리가 된다.
 	uint slot = 0;
 	InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, 1u, slot);
 

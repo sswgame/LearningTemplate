@@ -441,9 +441,17 @@ namespace sw
             _listTransparentBatch[batchIndex]._vertexBuffer = _listAllBatch[opaqueCount + batchIndex]._vertexBuffer;
         }
 
-        // CPU 스냅샷이 그대로면 인스턴스/간접 버퍼 재업로드 생략.
-        if ( _bCpuDirty == 0 && _instanceBuffer != 0 && _indirectArgsBuffer != 0 )
+        // CPU 스냅샷이 그대로면 인스턴스 버퍼 재업로드를 생략한다. **간접 인자는 예외다** —
+        // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안에는 매 프레임 0 으로 되돌려 놓아야 한다.
+        // 여기서 같이 건너뛰었더니 정적 씬에서 개수가 N, 2N, 3N ... 으로 끝없이 자랐다(드로우 비용이
+        // 계속 늘고, 이번 프레임에 쓰지 않은 가시 목록 자리를 읽는다). 움직이는 벤치와 한 프레임만
+        // 그리는 테스트가 둘 다 이걸 가리고 있었다.
+        if ( _bCpuDirty == 0 && _instanceBuffer != 0 && getIndirectArgsBuffer() != 0 )
+        {
+            if ( _bGpuFillsIndirectCounts != 0 )
+                refreshIndirectCounts( pDevice );
             return true;
+        }
 
         const uint32 instanceCount = static_cast<uint32>( _listInstance.size() );
         const uint32 argsCount     = static_cast<uint32>( _listAllBatch.size() );
@@ -496,34 +504,38 @@ namespace sw
 
         // 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
         // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
-        // 인스턴스와 같은 원소 수면 충분하다 — 배치마다 자기 구간(_instanceBase..)만 쓴다.
-        if ( _visibleInstanceBuffer == 0 || _visibleCapacity < instanceCount )
+        // **뷰마다 하나씩**이다 — 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
         {
-            if ( _visibleInstanceBuffer != 0 )
+            GpuCullViewResources& view = _arrCullView[viewIndex];
+            if ( view._visibleInstanceBuffer != 0 && view._visibleCapacity >= instanceCount )
+                continue;
+
+            if ( view._visibleInstanceBuffer != 0 )
             {
-                if ( _visibleInstanceSrv != kInvalidDescriptorIndex )
-                    pDevice->getResource()->unregisterBindlessResource( _visibleInstanceSrv );
-                if ( _visibleInstanceUav != kInvalidDescriptorIndex )
-                    pDevice->getResource()->unregisterBindlessUAV( _visibleInstanceUav );
-                pDevice->getResource()->destroyBuffer( _visibleInstanceBuffer );
-                _visibleInstanceBuffer = 0;
-                _visibleInstanceSrv    = kInvalidDescriptorIndex;
-                _visibleInstanceUav    = kInvalidDescriptorIndex;
+                if ( view._visibleInstanceSrv != kInvalidDescriptorIndex )
+                    pDevice->getResource()->unregisterBindlessResource( view._visibleInstanceSrv );
+                if ( view._visibleInstanceUav != kInvalidDescriptorIndex )
+                    pDevice->getResource()->unregisterBindlessUAV( view._visibleInstanceUav );
+                pDevice->getResource()->destroyBuffer( view._visibleInstanceBuffer );
+                view._visibleInstanceBuffer = 0;
+                view._visibleInstanceSrv    = kInvalidDescriptorIndex;
+                view._visibleInstanceUav    = kInvalidDescriptorIndex;
             }
-            if ( instanceCount > 0 )
+            if ( instanceCount == 0 )
+                continue;
+
+            RHIBufferDesc desc{};
+            desc._elementSize           = static_cast<uint32>( sizeof( uint32 ) );
+            desc._elementCount          = instanceCount;
+            desc._sizeBytes             = desc._elementSize * desc._elementCount;
+            desc._usage                 = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+            view._visibleInstanceBuffer = pDevice->getResource()->createBuffer( desc );
+            if ( view._visibleInstanceBuffer != 0 )
             {
-                RHIBufferDesc desc{};
-                desc._elementSize      = static_cast<uint32>( sizeof( uint32 ) );
-                desc._elementCount     = instanceCount;
-                desc._sizeBytes        = desc._elementSize * desc._elementCount;
-                desc._usage            = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-                _visibleInstanceBuffer = pDevice->getResource()->createBuffer( desc );
-                if ( _visibleInstanceBuffer != 0 )
-                {
-                    _visibleInstanceSrv = pDevice->getResource()->registerBindlessResource( _visibleInstanceBuffer );
-                    _visibleInstanceUav = pDevice->getResource()->registerBindlessUAV( _visibleInstanceBuffer );
-                    _visibleCapacity    = instanceCount;
-                }
+                view._visibleInstanceSrv = pDevice->getResource()->registerBindlessResource( view._visibleInstanceBuffer );
+                view._visibleInstanceUav = pDevice->getResource()->registerBindlessUAV( view._visibleInstanceBuffer );
+                view._visibleCapacity    = instanceCount;
             }
         }
 
@@ -531,8 +543,9 @@ namespace sw
         _listScratchBatchInfo.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            _listScratchBatchInfo[argIndex]._instanceBase  = _listAllBatch[argIndex]._instanceBase;
-            _listScratchBatchInfo[argIndex]._instanceCount = _listAllBatch[argIndex]._instanceCount;
+            _listScratchBatchInfo[argIndex]._instanceBase   = _listAllBatch[argIndex]._instanceBase;
+            _listScratchBatchInfo[argIndex]._instanceCount  = _listAllBatch[argIndex]._instanceCount;
+            _listScratchBatchInfo[argIndex]._bPreserveOrder = ( _listAllBatch[argIndex]._blendMode == RHIBlendMode::Transparent ) ? 1u : 0u;
         }
         if ( _batchInfoBuffer == 0 || _batchInfoCapacity < argsCount )
         {
@@ -570,16 +583,17 @@ namespace sw
         // 0 으로 올리면 안 된다 — 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
         // 그래서 "원한다"(_bWantGpuIndirectCounts)와 "실제로 된다"(_bGpuFillsIndirectCounts)를 나눠 둔다.
         _bGpuFillsIndirectCounts =
-            ( _bWantGpuIndirectCounts != 0 && _visibleInstanceBuffer != 0 && _batchInfoBuffer != 0 ) ? 1u : 0u;
+            ( _bWantGpuIndirectCounts != 0 && _batchInfoBuffer != 0 && hasAllCullViewBuffers() ) ? 1u : 0u;
 
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             _listScratchIndirectCmd[argIndex]._vertexCount = _listAllBatch[argIndex]._vertexCount;
-            // 컬링 컴퓨트가 개수를 만들면 **0 에서 시작**해야 한다 — InterlockedAdd 로 보이는 것만 센다.
-            // 컬링이 없으면 CPU 가 센 개수를 그대로 그린다.
-            _listScratchIndirectCmd[argIndex]._instanceCount =
-                ( _bGpuFillsIndirectCounts != 0 ) ? 0u : _listAllBatch[argIndex]._instanceCount;
+            // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다 — InterlockedAdd 로 보이는 것만 센다.
+            // 순서를 지켜야 하는 배치(투명)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
+            const bool bGpuCounts                                  = ( _bGpuFillsIndirectCounts != 0 ) &&
+                                                                     ( _listAllBatch[argIndex]._blendMode != RHIBlendMode::Transparent );
+            _listScratchIndirectCmd[argIndex]._instanceCount       = bGpuCounts ? 0u : _listAllBatch[argIndex]._instanceCount;
             _listScratchIndirectCmd[argIndex]._startVertexLocation = 0;
             // **0 이어야 한다.** 배치의 인스턴스 시작 오프셋은 셰이더가 루트 상수(g_InstanceBase)로 더한다.
             // 여기에도 넣으면 Vulkan 에서만 두 번 더해진다 — DX 의 SV_InstanceID 는 StartInstanceLocation 을
@@ -589,45 +603,83 @@ namespace sw
             _listScratchIndirectCmd[argIndex]._startInstanceLocation = 0;
         }
 
-        if ( _indirectArgsBuffer == 0 || _argsCapacity < argsCount )
+        // 간접 인자도 **뷰마다** 하나다 — 뷰별로 개수가 다르게 나오기 때문이다.
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
         {
-            if ( _indirectArgsBuffer != 0 )
+            GpuCullViewResources& view = _arrCullView[viewIndex];
+            if ( view._indirectArgsBuffer == 0 || view._argsCapacity < argsCount )
             {
-                if ( _indirectArgsUav != kInvalidDescriptorIndex )
-                    pDevice->getResource()->unregisterBindlessUAV( _indirectArgsUav );
-                pDevice->getResource()->destroyBuffer( _indirectArgsBuffer );
-                _indirectArgsBuffer = 0;
-                _indirectArgsUav    = kInvalidDescriptorIndex;
+                if ( view._indirectArgsBuffer != 0 )
+                {
+                    if ( view._indirectArgsUav != kInvalidDescriptorIndex )
+                        pDevice->getResource()->unregisterBindlessUAV( view._indirectArgsUav );
+                    pDevice->getResource()->destroyBuffer( view._indirectArgsBuffer );
+                    view._indirectArgsBuffer = 0;
+                    view._indirectArgsUav    = kInvalidDescriptorIndex;
+                }
+                if ( argsCount == 0 )
+                    continue;
+
+                RHIBufferDesc desc{};
+                desc._elementSize        = static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) );
+                desc._elementCount       = argsCount;
+                desc._sizeBytes          = desc._elementSize * desc._elementCount;
+                desc._usage              = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
+                desc._pInitialData       = _listScratchIndirectCmd.data();
+                view._indirectArgsBuffer = pDevice->getResource()->createBuffer( desc );
+                if ( view._indirectArgsBuffer == 0 )
+                {
+                    view._indirectArgsBuffer = pDevice->getResource()->createStructuredBuffer( desc._elementSize, desc._elementCount );
+                    if ( view._indirectArgsBuffer != 0 )
+                        pDevice->getResource()->updateStructuredBuffer( view._indirectArgsBuffer, _listScratchIndirectCmd.data(), desc._sizeBytes );
+                }
+                if ( view._indirectArgsBuffer != 0 )
+                {
+                    view._indirectArgsUav = pDevice->getResource()->registerBindlessUAV( view._indirectArgsBuffer );
+                    view._argsCapacity    = argsCount;
+                }
             }
-            RHIBufferDesc desc{};
-            desc._elementSize   = static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) );
-            desc._elementCount  = argsCount;
-            desc._sizeBytes     = desc._elementSize * desc._elementCount;
-            desc._usage         = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-            desc._pInitialData  = _listScratchIndirectCmd.data();
-            _indirectArgsBuffer = pDevice->getResource()->createBuffer( desc );
-            if ( _indirectArgsBuffer == 0 )
+            else if ( argsCount > 0 )
             {
-                _indirectArgsBuffer = pDevice->getResource()->createStructuredBuffer( desc._elementSize, desc._elementCount );
-                if ( _indirectArgsBuffer != 0 )
-                    pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, _listScratchIndirectCmd.data(), desc._sizeBytes );
+                pDevice->getResource()->updateStructuredBuffer( view._indirectArgsBuffer, _listScratchIndirectCmd.data(),
+                                                                argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
             }
-            if ( _indirectArgsBuffer != 0 )
-            {
-                _indirectArgsUav = pDevice->getResource()->registerBindlessUAV( _indirectArgsBuffer );
-                _argsCapacity    = argsCount;
-            }
-        }
-        else
-        {
-            pDevice->getResource()->updateStructuredBuffer( _indirectArgsBuffer, _listScratchIndirectCmd.data(),
-                                                            argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
 
         _indirectCommandCount = argsCount;
         _bCpuDirty            = 0;
 
-        return _instanceBuffer != 0 && _indirectArgsBuffer != 0;
+        return _instanceBuffer != 0 && getIndirectArgsBuffer() != 0;
+    }
+
+    bool GpuScene::hasAllCullViewBuffers() const
+    {
+        for ( const GpuCullViewResources& view : _arrCullView )
+        {
+            if ( view._indirectArgsBuffer == 0 || view._visibleInstanceBuffer == 0 )
+                return false;
+        }
+        return true;
+    }
+
+    void GpuScene::refreshIndirectCounts( IRHIDevice* pDevice )
+    {
+        const uint32 argsCount = static_cast<uint32>( _listAllBatch.size() );
+        if ( pDevice == nullptr || argsCount == 0 || _listScratchIndirectCmd.size() < argsCount )
+            return;
+
+        for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
+        {
+            const bool bGpuCounts                            = ( _listAllBatch[argIndex]._blendMode != RHIBlendMode::Transparent );
+            _listScratchIndirectCmd[argIndex]._instanceCount = bGpuCounts ? 0u : _listAllBatch[argIndex]._instanceCount;
+        }
+        for ( GpuCullViewResources& view : _arrCullView )
+        {
+            if ( view._indirectArgsBuffer == 0 )
+                continue;
+            pDevice->getResource()->updateStructuredBuffer( view._indirectArgsBuffer, _listScratchIndirectCmd.data(),
+                                                            argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+        }
     }
 
     void GpuScene::setIndirectCountsFilledByGpu( bool bByGpu )
@@ -661,43 +713,42 @@ namespace sw
             pDevice->getResource()->unregisterBindlessResource( _instanceSrv );
         if ( _instanceUav != kInvalidDescriptorIndex )
             pDevice->getResource()->unregisterBindlessUAV( _instanceUav );
-        if ( _visibleInstanceSrv != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessResource( _visibleInstanceSrv );
-        if ( _visibleInstanceUav != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessUAV( _visibleInstanceUav );
+        for ( GpuCullViewResources& view : _arrCullView )
+        {
+            if ( view._visibleInstanceSrv != kInvalidDescriptorIndex )
+                pDevice->getResource()->unregisterBindlessResource( view._visibleInstanceSrv );
+            if ( view._visibleInstanceUav != kInvalidDescriptorIndex )
+                pDevice->getResource()->unregisterBindlessUAV( view._visibleInstanceUav );
+            if ( view._indirectArgsUav != kInvalidDescriptorIndex )
+                pDevice->getResource()->unregisterBindlessUAV( view._indirectArgsUav );
+            if ( view._visibleInstanceBuffer != 0 )
+                pDevice->getResource()->destroyBuffer( view._visibleInstanceBuffer );
+            if ( view._indirectArgsBuffer != 0 )
+                pDevice->getResource()->destroyBuffer( view._indirectArgsBuffer );
+            view = GpuCullViewResources{};
+        }
         if ( _batchInfoSrv != kInvalidDescriptorIndex )
             pDevice->getResource()->unregisterBindlessResource( _batchInfoSrv );
-        if ( _indirectArgsUav != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessUAV( _indirectArgsUav );
         if ( _instanceBuffer != 0 )
             pDevice->getResource()->destroyBuffer( _instanceBuffer );
-        if ( _visibleInstanceBuffer != 0 )
-            pDevice->getResource()->destroyBuffer( _visibleInstanceBuffer );
         if ( _batchInfoBuffer != 0 )
             pDevice->getResource()->destroyBuffer( _batchInfoBuffer );
-        if ( _indirectArgsBuffer != 0 )
-            pDevice->getResource()->destroyBuffer( _indirectArgsBuffer );
-        _instanceBuffer        = 0;
-        _instanceSrv           = kInvalidDescriptorIndex;
-        _instanceUav           = kInvalidDescriptorIndex;
-        _visibleInstanceBuffer = 0;
-        _visibleInstanceSrv    = kInvalidDescriptorIndex;
-        _visibleInstanceUav    = kInvalidDescriptorIndex;
-        _visibleCapacity       = 0;
-        _batchInfoBuffer       = 0;
-        _batchInfoSrv          = kInvalidDescriptorIndex;
-        _batchInfoCapacity     = 0;
-        _indirectArgsBuffer    = 0;
-        _indirectArgsUav       = kInvalidDescriptorIndex;
-        _instanceCapacity      = 0;
-        _argsCapacity          = 0;
-        _indirectCommandCount  = 0;
-        _bCpuDirty             = 1;
+        _instanceBuffer       = 0;
+        _instanceSrv          = kInvalidDescriptorIndex;
+        _instanceUav          = kInvalidDescriptorIndex;
+        _batchInfoBuffer      = 0;
+        _batchInfoSrv         = kInvalidDescriptorIndex;
+        _batchInfoCapacity    = 0;
+        _instanceCapacity     = 0;
+        _indirectCommandCount = 0;
+        _spinInstanceCount    = 0;
+        _bCpuDirty            = 1;
         _materialRetire.flushAfterGpu( pDevice );
     }
 
     void GpuScene::exportCpuSnapshot( GpuScene& outSnapshot )
     {
+        outSnapshot._spinInstanceCount    = _spinInstanceCount;
         outSnapshot._listInstance         = _listInstance;
         outSnapshot._listOpaqueBatch      = _listOpaqueBatch;
         outSnapshot._listTransparentBatch = _listTransparentBatch;
@@ -716,6 +767,7 @@ namespace sw
         _listAllBatch         = std::move( snapshot._listAllBatch );
         _listMaterialGroup    = std::move( snapshot._listMaterialGroup );
         _indirectCommandCount = snapshot._indirectCommandCount;
+        _spinInstanceCount    = snapshot._spinInstanceCount;
         _bCpuDirty            = snapshot._bCpuDirty;
     }
 
@@ -731,6 +783,7 @@ namespace sw
     void GpuScene::buildBatches()
     {
         _listInstance.reserve( _listScratchCandidate.size() );
+        _spinInstanceCount = 0;
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다** (언리얼 GPUScene 의 영속 PrimitiveID 와 같은 자리).
         // 예전엔 여기서 그룹을 통째로 지우고 인스턴스마다 다시 부여했다 — 인스턴스 N 개와 머티리얼 M 종에
@@ -777,6 +830,8 @@ namespace sw
                         inst._materialIndex         = assignMaterialElement( cand._pMaterial, cand._pInstance, batch._materialGroup );
                         if ( batchEntryIndex == batchStart )
                             batch._materialIndex = inst._materialIndex;
+                        if ( inst._spinSeed != 0 )
+                            ++_spinInstanceCount;
                         _listInstance.push_back( inst );
                     }
                     _listOpaqueBatch.push_back( batch );
@@ -831,6 +886,8 @@ namespace sw
                         inst._materialIndex            = assignMaterialElement( entryCand._pMaterial, entryCand._pInstance, batch._materialGroup );
                         if ( batchEntryIndex == batchStart )
                             batch._materialIndex = inst._materialIndex;
+                        if ( inst._spinSeed != 0 )
+                            ++_spinInstanceCount;
                         _listInstance.push_back( inst );
                     }
                     _listTransparentBatch.push_back( batch );

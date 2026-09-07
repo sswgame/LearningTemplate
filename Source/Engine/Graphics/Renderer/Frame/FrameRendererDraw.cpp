@@ -69,11 +69,12 @@ namespace sw
         // 컬링이 실제로 목록을 만들었을 때만 건다 — 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
         // 예전처럼 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 전부 0 번 인스턴스를 그린다 — 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        if ( _bGpuCullingActive != 0 && _gpuScene.getVisibleInstanceBuffer() != 0 &&
-             _gpuScene.getVisibleInstanceSrv() != kInvalidDescriptorIndex )
+        const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullView );
+        if ( _bGpuCullingActive != 0 && cullView._visibleInstanceBuffer != 0 &&
+             cullView._visibleInstanceSrv != kInvalidDescriptorIndex )
         {
             ctx._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIds,
-                                                  _gpuScene.getVisibleInstanceBuffer(), _gpuScene.getVisibleInstanceSrv() );
+                                                  cullView._visibleInstanceBuffer, cullView._visibleInstanceSrv );
         }
     }
 
@@ -297,7 +298,9 @@ namespace sw
                 ctx._drawInstanceBase = batch._instanceBase;
             registerMaterialBuffer( ctx, batch, pso );
             bindForDraw( ctx, pso, batch._materialCb, batch._arrMaterialTexSrv );
-            ctx._pCmd->drawIndirect( _gpuScene.getIndirectArgsBuffer(),
+            // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
+            // 화면 안으로 그림자를 드리우는 물체가 사라진다.
+            ctx._pCmd->drawIndirect( _gpuScene.getCullView( ctx._cullView )._indirectArgsBuffer,
                                      ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
     }

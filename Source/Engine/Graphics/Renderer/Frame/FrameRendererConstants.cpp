@@ -43,6 +43,7 @@ namespace sw
         else
             buildLightViewProj( ctx, lightViewProj );
         ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
+        _cullShadowViewProj = lightViewProj;
 
         CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
         if ( pCam != nullptr )
@@ -54,6 +55,7 @@ namespace sw
             float4x4 viewProj = float4x4::Identity;
             buildViewProj( viewProj );
             ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+            _cullMainViewProj = viewProj;
         }
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
@@ -74,10 +76,13 @@ namespace sw
     {
         if ( pCamera == nullptr )
             return;
-        const float32 aspect = ( _transientHeight > 0 )
-                                 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
-                                 : ( 16.0f / 9.0f );
-        ctx._passValues.setMatrix( passConstantNames()._viewProj, pCamera->getViewProjectionMatrix( aspect ) );
+        const float32  aspect   = ( _transientHeight > 0 )
+                                    ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+                                    : ( 16.0f / 9.0f );
+        const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
+        ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다 — 같은 값을 여기 남긴다.
+        _cullMainViewProj = viewProj;
     }
 
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const

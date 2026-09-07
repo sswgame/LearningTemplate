@@ -111,9 +111,14 @@ namespace sw
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoGpuCull != 0 )
                 _mapEnginePso.insert_or_assign( RenderPassType::GpuCull, psoGpuCull );
+        }
 
-            // 인스턴스 애니메이션도 같은 컴퓨트 능력 위에 선다. 만들지 못하면 그 패스만 생략되고
-            // 회전은 CPU 가 올린 트랜스폼 그대로다(그리기는 영향 없음).
+        // 인스턴스 애니메이션은 **컬링 능력과 무관하다** — 구조버퍼 UAV 하나만 있으면 된다.
+        // 예전엔 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
+        // 같이 못 건다"는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
+        // 버퍼만 쓰므로 그 제약과 상관이 없는데 같이 꺼져서, DX11 에서만 큐브가 아예 돌지 않았다.
+        if ( caps._bCompute != 0 )
+        {
             const RHIPipelineStateHandle psoAnim =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoAnim != 0 )

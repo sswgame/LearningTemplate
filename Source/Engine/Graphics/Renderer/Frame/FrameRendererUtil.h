@@ -57,6 +57,39 @@ namespace sw
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
+        /**
+         * @brief viewProj 에서 절두체 여섯 평면을 뽑습니다 (Gribb-Hartmann).
+         * @details 평면은 `dot( plane.xyz, p ) + plane.w` 가 **안쪽에서 양수**가 되도록 만들고 길이를 1 로
+         *          맞춘다. 정규화해야 셰이더가 `< -radius` 로 반지름을 그대로 쓸 수 있다.
+         *
+         *          엔진은 행벡터 규약(`mul( v, M )`)이라 클립 좌표는 M 의 **열**과의 내적이다. 그래서 열을
+         *          더하고 뺀다. 깊이는 D3D 규약 [0,1] 이므로 near 는 열 2 하나다(OpenGL 의 [-1,1] 이었다면
+         *          w + z 였을 텐데, 이 엔진은 GL 도 glClipControl 로 D3D 규약에 맞춰 둔다).
+         * @param viewProj 뷰 x 프로젝션 행렬.
+         * @param outPlanes 왼/오/아래/위/근/원 순서로 채워지는 6 x 4 배열.
+         */
+        static void extractFrustumPlanes( const float4x4& viewProj, float32 ( &outPlanes )[6][4] )
+        {
+            // col( i ) = ( _1i, _2i, _3i, _4i ) — 행 우선 저장이라 열은 이렇게 모은다.
+            auto setPlane = [&outPlanes]( uint32 index, float32 x, float32 y, float32 z, float32 w )
+            {
+                const float32 length = MathUtil::sqrt( x * x + y * y + z * z );
+                const float32 scale  = ( length > 0.0f ) ? ( 1.0f / length ) : 0.0f;
+                outPlanes[index][0]  = x * scale;
+                outPlanes[index][1]  = y * scale;
+                outPlanes[index][2]  = z * scale;
+                outPlanes[index][3]  = w * scale;
+            };
+
+            const float4x4& v = viewProj;
+            setPlane( 0, v._14 + v._11, v._24 + v._21, v._34 + v._31, v._44 + v._41 ); // left
+            setPlane( 1, v._14 - v._11, v._24 - v._21, v._34 - v._31, v._44 - v._41 ); // right
+            setPlane( 2, v._14 + v._12, v._24 + v._22, v._34 + v._32, v._44 + v._42 ); // bottom
+            setPlane( 3, v._14 - v._12, v._24 - v._22, v._34 - v._32, v._44 - v._42 ); // top
+            setPlane( 4, v._13, v._23, v._33, v._43 );                                 // near (z >= 0)
+            setPlane( 5, v._14 - v._13, v._24 - v._23, v._34 - v._33, v._44 - v._43 ); // far
+        }
+
         static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
                                               std::initializer_list<const utf8*>             listName )
         {

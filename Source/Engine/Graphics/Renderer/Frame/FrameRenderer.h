@@ -137,9 +137,15 @@ namespace sw
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
             /// @brief 마지막으로 엔진 상수버퍼를 올린 시점의 (버퍼, 값 버전, 레지스트리 버전).
             ///        셋이 그대로면 그 드로우는 버퍼를 다시 만들 필요가 없다.
-            RHIBufferHandle            _lastCbBuffer{ 0 };
-            uint32                     _lastCbValuesVersion{ 0 };
-            uint32                     _lastCbRegistryVersion{ 0 };
+            RHIBufferHandle _lastCbBuffer{ 0 };
+            uint32          _lastCbValuesVersion{ 0 };
+            uint32          _lastCbRegistryVersion{ 0 };
+            /**
+             * @brief 이 패스가 어떤 뷰의 컬링 결과를 쓸지.
+             * @details 그림자 패스만 Shadow 이고 나머지는 Main 이다. 컬링 결과는 절두체에 종속이라
+             *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그린다.
+             */
+            GpuCullView                _cullView{ GpuCullView::Main };
             uint32                     _drawInstanceBase{ 0 };
             uint32                     _drawMaterialCount{ 0 };
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
@@ -404,6 +410,14 @@ namespace sw
          *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 전부 같은 인스턴스를 그린다.
          */
         uint8 _bGpuCullingActive;
+
+        /**
+         * @brief 이번 프레임 컬링에 쓸 뷰 행렬 — 메인 카메라와 그림자 라이트.
+         * @details `updatePassConstants` 가 상수버퍼에 넣는 값과 **같은 값**을 여기에도 둔다. 컬링은
+         *          기록 시작 전에 도는데, 그때는 패스 상수 버퍼에서 도로 꺼낼 방법이 없다.
+         */
+        float4x4 _cullMainViewProj{};
+        float4x4 _cullShadowViewProj{};
 
         /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 (업로드 전에 GpuScene 에 알린다). */
         bool wantsGpuGeneratedCommands() const;

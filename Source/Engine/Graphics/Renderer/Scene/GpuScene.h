@@ -42,6 +42,31 @@ namespace sw
     };
 
     /**
+     * @brief 컬링을 따로 도는 뷰. 언리얼이 뷰마다 `FInstanceCullingContext` 를 두는 자리와 같다.
+     * @details 컬링 결과(간접 인자 개수 + 가시 인스턴스 목록)는 **절두체에 종속**이다. 메인 카메라로 거른
+     *          목록을 그림자 패스가 쓰면, 화면 밖에 있지만 화면 안으로 그림자를 드리우는 물체가 사라진다.
+     *          그래서 뷰마다 자기 인자·목록을 갖는다.
+     */
+    enum class GpuCullView : uint32
+    {
+        Main   = 0, ///< 게임 카메라
+        Shadow = 1, ///< 그림자 라이트
+        Count  = 2
+    };
+
+    /** @brief 뷰 하나가 갖는 컬링 산출물 (간접 인자 + 가시 인스턴스 목록). */
+    struct GpuCullViewResources
+    {
+        RHIBufferHandle    _indirectArgsBuffer{ 0 };
+        RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
+        RHIBufferHandle    _visibleInstanceBuffer{ 0 };
+        RHIDescriptorIndex _visibleInstanceSrv = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _visibleInstanceUav = kInvalidDescriptorIndex;
+        uint32             _argsCapacity{ 0 };
+        uint32             _visibleCapacity{ 0 };
+    };
+
+    /**
      * @brief 배치의 인스턴스 구간 — 컬링 컴퓨트에게 "이 배치는 어디서 시작하나"를 알려준다.
      * @details 간접 인자의 `startInstance` 는 0 이어야 해서(Vulkan 의 InstanceIndex 가 firstInstance 를
      *          포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 시작점으로 쓸 수 없다. gpucull.hlsl 의
@@ -51,7 +76,15 @@ namespace sw
     {
         uint32 _instanceBase{ 0 };
         uint32 _instanceCount{ 0 };
-        uint32 _pad[2]{};
+        /**
+         * @brief 이 배치는 인스턴스 **순서를 지켜야 하는가** (투명 배치는 1).
+         * @details 불투명은 살아남은 것을 앞에서부터 채워도 되지만(InterlockedAdd 로 자리를 받는다),
+         *          투명은 CPU 가 뒤에서 앞으로 정렬해 둔 순서가 곧 블렌딩 순서다. 원자 연산이 주는 자리
+         *          번호는 완료 순서라 그 정렬을 부순다. 그래서 순서를 지켜야 하는 배치는 압축하지 않고
+         *          제자리 매핑(g_VisibleInstanceIds[instId] = instId)을 쓰고 개수는 CPU 가 채운다.
+         */
+        uint32 _bPreserveOrder{ 0 };
+        uint32 _pad{ 0 };
     };
 
     /// @brief 같은 메시/머티리얼의 인스턴스 배치
@@ -268,6 +301,12 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GpuInstance>& getInstances() const { return _listInstance; }
+        /**
+         * @brief GPU 회전을 요청한(시드가 0 이 아닌) 인스턴스 수.
+         * @details 0 이면 애니메이션 디스패치를 통째로 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도 매 프레임
+         *          인스턴스당 96 바이트를 읽고 아무 일도 하지 않는다.
+         */
+        uint32 getSpinInstanceCount() const { return _spinInstanceCount; }
         /** @brief 불투명 배치를 반환합니다. */
         const vector<GpuMeshBatch>& getOpaqueBatches() const { return _listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */
@@ -282,12 +321,8 @@ namespace sw
          *          못 만들면 kInvalidDescriptorIndex 라 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
         RHIDescriptorIndex getInstanceUav() const { return _instanceUav; }
-        /** @brief 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 압축해 채우고, 정점 셰이더가 이 순서로 읽는다. */
-        RHIBufferHandle getVisibleInstanceBuffer() const { return _visibleInstanceBuffer; }
-        /** @brief 가시 인스턴스 ID 버퍼의 SRV (그래픽스 t 슬롯). */
-        RHIDescriptorIndex getVisibleInstanceSrv() const { return _visibleInstanceSrv; }
-        /** @brief 가시 인스턴스 ID 버퍼의 UAV (컬링 컴퓨트 u 슬롯). */
-        RHIDescriptorIndex getVisibleInstanceUav() const { return _visibleInstanceUav; }
+        /** @brief 뷰 하나의 컬링 산출물 (간접 인자 + 가시 목록). */
+        const GpuCullViewResources& getCullView( GpuCullView view ) const { return _arrCullView[static_cast<uint32>( view )]; }
         /** @brief 배치 구간 버퍼의 SRV (컬링 컴퓨트 t1). */
         RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfoSrv; }
         /**
@@ -298,16 +333,22 @@ namespace sw
          */
         void setIndirectCountsFilledByGpu( bool bByGpu );
         /**
+         * @brief 간접 인자의 인스턴스 개수만 다시 올립니다 (배치 구성이 그대로일 때).
+         * @details 컬링 컴퓨트는 개수를 0 에서부터 센다. 그래서 씬이 하나도 안 바뀐 프레임에도 개수는
+         *          되돌려 놓아야 한다. 배치당 16 바이트뿐이라 전량 업로드해도 싸다.
+         */
+        void refreshIndirectCounts( IRHIDevice* pDevice );
+        /** @brief 모든 컬링 뷰가 간접 인자와 가시 목록을 다 갖췄는가 (하나라도 없으면 GPU 개수를 쓰면 안 된다). */
+        bool hasAllCullViewBuffers() const;
+        /**
          * @brief 마지막 upload 가 실제로 개수를 컴퓨트에 맡겼는가.
          * @details "원한다"와 "실제로 된다"는 다르다 — 가시 목록이나 배치 구간 버퍼를 못 만들었으면
          *          개수를 0 으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 **이 값**을 따라야
          *          한다. 둘이 어긋나면 개수 0 짜리 인자로 그리거나(빈 화면), 갱신 안 된 목록을 읽는다.
          */
         bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != 0; }
-        /** @brief 간접 인자 버퍼 핸들을 반환합니다. */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _indirectArgsBuffer; }
-        /** @brief 간접 인자 UAV 인덱스를 반환합니다. */
-        RHIDescriptorIndex getIndirectArgsUav() const { return _indirectArgsUav; }
+        /** @brief 메인 뷰의 간접 인자 버퍼 (isUploaded 등 뷰를 가리지 않는 검사용). */
+        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( GpuCullView::Main )]._indirectArgsBuffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief GPU에 올라갔는지 반환합니다. */
@@ -471,33 +512,30 @@ namespace sw
         GpuMaterialRetireQueue _materialRetire;
         TaskStageHandle        _snapshotStage;
         RHIBufferHandle        _instanceBuffer{ 0 };
-        RHIBufferHandle        _indirectArgsBuffer{ 0 };
         float3                 _lastCameraPos{};
         /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */
         uint64             _lastPrimitiveSetGeneration{ 0 };
-        RHIDescriptorIndex _instanceSrv     = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _instanceUav     = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _instanceSrv = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _instanceUav = kInvalidDescriptorIndex;
         /**
-         * @brief 가시 인스턴스 ID 버퍼 — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리.
+         * @brief 뷰별 컬링 산출물 — 언리얼 FInstanceCullingContext 가 뷰마다 있는 것과 같은 자리.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          `g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID]` 로 읽는다. 이게 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수가 없다).
+         *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트가 **각자** 갖는다.
          */
-        RHIBufferHandle    _visibleInstanceBuffer{ 0 };
-        RHIDescriptorIndex _visibleInstanceSrv = kInvalidDescriptorIndex;
-        RHIDescriptorIndex _visibleInstanceUav = kInvalidDescriptorIndex;
-        uint32             _visibleCapacity{ 0 };
-        RHIBufferHandle    _batchInfoBuffer{ 0 };
-        RHIDescriptorIndex _batchInfoSrv = kInvalidDescriptorIndex;
-        uint32             _batchInfoCapacity{ 0 };
+        GpuCullViewResources _arrCullView[static_cast<uint32>( GpuCullView::Count )];
+        RHIBufferHandle      _batchInfoBuffer{ 0 };
+        RHIDescriptorIndex   _batchInfoSrv = kInvalidDescriptorIndex;
+        uint32               _batchInfoCapacity{ 0 };
         /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
         uint8 _bWantGpuIndirectCounts{ 0 };
         /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).
-        uint8  _bGpuFillsIndirectCounts{ 0 };
+        uint8 _bGpuFillsIndirectCounts{ 0 };
+        /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
+        uint32 _spinInstanceCount{ 0 };
         uint32 _indirectCommandCount{ 0 };
         uint32 _instanceCapacity{ 0 };
-        uint32 _argsCapacity{ 0 };
         uint8  _bCpuDirty{ 1 };
         uint8  _bMergeAcrossMaterials{ 0 };
     };

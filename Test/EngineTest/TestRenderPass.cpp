@@ -1160,6 +1160,64 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 }
 
 /**
+ * @brief [GpuSceneTest] 절두체 평면을 viewProj 에서 제대로 뽑는지 (GPU 불필요).
+ * @details 이 계산이 **없어서** GPU 컬링이 켜 놓고도 한 번도 아무것도 거르지 않았다. 상수버퍼의 평면
+ *          배열이 0 인 채로 나갔고, 그러면 셰이더의 `dot( 0, center ) + 0 < -radius` 가 항상 거짓이라
+ *          모든 인스턴스가 통과한다. 화면은 멀쩡해 보이므로 픽셀로는 잡히지 않는다 — 컬링이 안 될 뿐
+ *          그림은 맞기 때문이다. 그래서 평면 자체를 CPU 에서 본다.
+ *
+ *          셰이더와 같은 판정식(`dot( plane.xyz, center ) + plane.w < -radius` 면 바깥)을 그대로 쓴다.
+ */
+SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
+{
+    // 원점을 바라보는 카메라 — 엔진 기본 카메라와 같은 자리에 둔다.
+    const sw::float3   eye{ 0.0f, 0.0f, 5.0f };
+    const sw::float4x4 view     = sw::float4x4::createLookAt( eye, sw::float3::Zero, sw::float3::Up );
+    const sw::float4x4 proj     = sw::float4x4::createPerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
+    const sw::float4x4 viewProj = view * proj;
+
+    float32 arrPlane[6][4]{};
+    sw::FrameRendererUtil::extractFrustumPlanes( viewProj, arrPlane );
+
+    // 평면은 정규화돼 있어야 한다 — 그래야 셰이더가 반지름을 그대로 비교할 수 있다.
+    for ( uint32 planeIndex = 0; planeIndex < 6; ++planeIndex )
+    {
+        const float32 length = sw::MathUtil::sqrt( arrPlane[planeIndex][0] * arrPlane[planeIndex][0] +
+                                                   arrPlane[planeIndex][1] * arrPlane[planeIndex][1] +
+                                                   arrPlane[planeIndex][2] * arrPlane[planeIndex][2] );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( length - 1.0f ) < 0.001f,
+                            ( sw::string( "평면 " ) + sw::to_string( planeIndex ) + " 가 정규화되지 않았다 (길이 " +
+                              sw::to_string( length ) + ")" )
+                                .c_str() );
+    }
+
+    // 셰이더와 같은 판정 — 하나라도 -radius 보다 작으면 바깥이다.
+    auto isVisible = [&arrPlane]( const sw::float3& center, float32 radius ) -> bool
+    {
+        for ( uint32 planeIndex = 0; planeIndex < 6; ++planeIndex )
+        {
+            const float32 distance = arrPlane[planeIndex][0] * center._x + arrPlane[planeIndex][1] * center._y +
+                                     arrPlane[planeIndex][2] * center._z + arrPlane[planeIndex][3];
+            if ( distance < -radius )
+                return false;
+        }
+        return true;
+    };
+
+    SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 0.0f, 0.0f, 0.0f }, 0.5f ), "카메라가 보는 원점이 절두체 밖으로 판정됐다" );
+    SW_EXPECT_TRUE_MSG( isVisible( eye + sw::float3{ 0.0f, 0.0f, -2.0f }, 0.5f ), "카메라 바로 앞이 절두체 밖으로 판정됐다" );
+
+    // 여기부터가 핵심 — 평면이 0 이면 아래 넷이 전부 "보인다"로 나온다.
+    SW_EXPECT_TRUE_MSG( isVisible( eye + sw::float3{ 0.0f, 0.0f, 20.0f }, 0.5f ) == false, "카메라 뒤가 걸러지지 않는다" );
+    SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 0.0f, 0.0f, -500.0f }, 0.5f ) == false, "원평면 너머가 걸러지지 않는다" );
+    SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 200.0f, 0.0f, 0.0f }, 0.5f ) == false, "화면 오른쪽 바깥이 걸러지지 않는다" );
+    SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 0.0f, 200.0f, 0.0f }, 0.5f ) == false, "화면 위쪽 바깥이 걸러지지 않는다" );
+
+    // 반지름이 크면 경계 밖이어도 걸리면 안 된다 (셰이더가 반지름을 그대로 쓰는지).
+    SW_EXPECT_TRUE_MSG( isVisible( sw::float3{ 200.0f, 0.0f, 0.0f }, 400.0f ), "반지름이 큰 물체를 잘못 걸렀다" );
+}
+
+/**
  * @brief [RenderPassTest] 컴퓨트가 만든 드로우 커맨드가 **보이는 인스턴스만** 고르는지 (4 백엔드).
  * @details 컬링 컴퓨트는 배치의 개수를 줄이는 데서 끝나지 않고, 살아남은 인스턴스 번호를 압축 목록
  *          (g_SwVisibleInstanceIds)에 적는다. 정점 셰이더는 그 목록으로 자기 인스턴스를 찾는다 —
