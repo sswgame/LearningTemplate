@@ -200,10 +200,21 @@ _kOutParamNamingRe = re.compile(
 _kFormatterCallRe = re.compile(
     r'\b(?:SW_LOG_(?:INFO|WARNING|ERROR|DEBUG|FATAL|TRACE|VERBOSE)|SW_ASSERT_MSG|formatstring|appendFormat|appendFormatLine)\s*\('
 )
-# 이 포매터가 파싱하지 못하는 printf 스펙: % 뒤에 플래그/폭/정밀도(. - + 공백 0-9)가 붙은 변환.
-# `%#`(플레이스홀더)과 `%s %d %u %f %x %p %zu %lld` 같은 맨 변환은 정상 처리되므로 제외한다.
+# 이 포매터가 파싱하지 못하는 printf 스펙.
+#
+# 예전에는 플래그·폭·정밀도가 붙은 스펙(`%.3f`, `%05d`)을 **전부** 막았다. 포매터가 맨 변환 문자만
+# 알아봐서 `%.3f` 를 쓰면 `%.` 까지만 먹고 `3f` 가 글자로 남았기 때문이다. 지금은 포매터가
+# `% [flags] [width] [.precision] [length] conversion` 을 그대로 읽으므로 그 규칙은 필요 없다.
+#
+# 남은 것은 정말로 못 읽는 둘이다:
+#  - `*` (인자로 주는 동적 폭/정밀도) — 인자 개수가 서식에 따라 달라져 타입세이프 경로와 맞지 않는다.
+#  - `%a` / `%A` (16진 부동소수) — 변환 자체가 구현되어 있지 않다.
+# `%n` 은 값을 쓰는 스펙이라 애초에 지원 대상이 아니고 보안상으로도 막는다.
+# 플래그 자리에 공백과 `#` 은 넣지 않는다 — `%#` 은 이 엔진의 플레이스홀더라, 그걸 플래그로 보면
+# "%# not found" 의 n 까지 %n 으로 읽어 오탐이 난다.
 _kBadPrintfSpecRe = re.compile(
-    r'%[-+ #0]*(?:\d+\.?\d*|\.\d+)[-+ #]*(?:hh|h|ll|l|z|j|t|L)?[diouxXeEfFgGaAcsp]'
+    r'%[-+0]*(?:\*[.\d]*|\d*\.\*)[-+]*(?:hh|h|ll|l|z|j|t|L)?[diouxXeEfFgGaAcsp]'
+    r'|%[-+0]*\d*(?:\.\d+)?(?:hh|h|ll|l|z|j|t|L)?[aAn]'
 )
 _kStringLiteralRe = re.compile(r'"((?:\\.|[^"\\])*)"')
 
@@ -1210,7 +1221,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 )
             )
 
-        # 타입세이프 포매터에 printf 플래그/폭/정밀도 스펙 사용 검사 (%.2f, %016llx, %#08X 등)
+        # 타입세이프 포매터가 못 읽는 스펙 검사 (동적 폭 `%*d`, 16진 부동소수 `%a`, `%n`)
         if _kFormatterCallRe.search(line):
             for strMatch in _kStringLiteralRe.finditer(line):
                 badSpec = _kBadPrintfSpecRe.search(strMatch.group(1))
@@ -1222,7 +1233,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                             rule_category="Style/LogFormatSpec",
                             message=(
                                 f"타입세이프 포매터가 파싱하지 못하는 printf 스펙 '{badSpec.group(0)}'이(가) 있습니다. "
-                                "`%#` 플레이스홀더 + Fmt(값, Format().precision(N)) / Format(폭, Format::Padding::Zero).hex() 를 사용하세요."
+                                "동적 폭/정밀도(*)와 %a/%n 은 지원하지 않습니다 — "
+                                "`%#` 플레이스홀더 + Fmt(값, Format()...) 로 쓰세요. "
+                                "폭·정밀도·플래그(%.3f, %05d, %-8s)는 이제 그대로 쓸 수 있습니다."
                             ),
                             snippet=trimmed,
                         )

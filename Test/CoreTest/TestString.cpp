@@ -830,3 +830,90 @@ SW_TEST_CASE( Core_String, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
     SW_EXPECT_EQUAL( sw::string( "Hello World" ), sw::string( combined.c_str() ) );
     SW_EXPECT_EQUAL( 11u, combined.size() );
 }
+
+/**
+ * @brief [Core_String] 표준 서식 지정자(정밀도·너비·플래그)를 formatstring 이 이해하는지
+ * @details 예전에는 `%#` 과 맨 변환 문자(`%d`, `%f`)만 알아봤다. 그래서 `%.3f` 를 쓰면 `%.` 까지만
+ *          플레이스홀더로 먹고 `3f` 가 글자로 남아 **조용히 틀린 출력**이 나왔다. 로그에서 소수점
+ *          자릿수를 맞추려면 Fmt(v, Format().precision(3)) 를 써야 했는데, 그게 불편해서 서식을 넓혔다.
+ */
+SW_TEST_CASE( Core_String, FormatStringSupportsPrintfSpecifiers )
+{
+    utf8 buffer[128]{};
+
+    // 정밀도 — 이게 예전에 깨지던 자리다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%.3f", 3.14159f );
+    SW_EXPECT_STREQ( "3.142", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%.0f", 2.7f );
+    SW_EXPECT_STREQ( "3", buffer );
+
+    // 너비 — 오른쪽 정렬이 기본.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%5d]", 42 );
+    SW_EXPECT_STREQ( "[   42]", buffer );
+
+    // 왼쪽 정렬 플래그.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%-5d]", 42 );
+    SW_EXPECT_STREQ( "[42   ]", buffer );
+
+    // 0 채우기.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%05d]", 42 );
+    SW_EXPECT_STREQ( "[00042]", buffer );
+
+    // 부호 표시.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%+d", 42 );
+    SW_EXPECT_STREQ( "+42", buffer );
+
+    // 너비 + 정밀도 조합.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%8.2f]", 3.14159f );
+    SW_EXPECT_STREQ( "[    3.14]", buffer );
+
+    // 길이 수식어는 읽고 버린다 — 값의 타입은 인자가 정한다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%llu", static_cast<uint64>( 1234567890123ull ) );
+    SW_EXPECT_STREQ( "1234567890123", buffer );
+
+    // 16진수는 서식 앞에 옵션이 붙어도 유지된다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%08x", 255u );
+    SW_EXPECT_STREQ( "000000ff", buffer );
+
+    // 기존 %# 은 그대로 동작해야 한다 (하위호환).
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "Value: %#", 42 );
+    SW_EXPECT_STREQ( "Value: 42", buffer );
+
+    // %% 는 리터럴 퍼센트.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%d%% done", 100 );
+    SW_EXPECT_STREQ( "100% done", buffer );
+}
+
+/**
+ * @brief [Core_String] 서식이 붙은 긴 문자열이 임시 버퍼 크기에서 잘리지 않는지
+ * @details 값은 256바이트 스택 버퍼(kTempBufferSize)를 거쳐 문자열이 된다. 문자열 인자는 그 버퍼를
+ *          건너뛰는 지름길이 있었는데 **서식 없는 경로에만** 있었다. 그래서 `%s` 는 멀쩡한데
+ *          `%-20s` 처럼 폭을 주는 순간 256자에서 잘렸다 — 로그에서 긴 메시지의 꼬리가 사라지는,
+ *          예전에 Vulkan 검증 메시지로 한 번 겪은 것과 같은 종류의 조용한 손실이다.
+ */
+SW_TEST_CASE( Core_String, FormatStringLongTextSurvivesWidthSpec )
+{
+    // 임시 버퍼(256)보다 확실히 긴 문자열.
+    sw::string longText;
+    longText.reserve( 600 );
+    for ( uint32 index = 0; index < 60; ++index )
+        longText += "0123456789";
+
+    utf8 buffer[1024]{};
+
+    // 폭 지정이 붙어도 전체가 나와야 한다 (폭보다 길면 패딩은 없다).
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%-20s", longText.c_str() );
+    SW_EXPECT_EQUAL( longText.size(), sw::StringUtil::strlen( buffer ) );
+    SW_EXPECT_STREQ( longText.c_str(), buffer );
+
+    // 서식 없는 경로도 그대로여야 한다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#", longText.c_str() );
+    SW_EXPECT_EQUAL( longText.size(), sw::StringUtil::strlen( buffer ) );
+
+    // 짧은 문자열은 폭 맞춤이 실제로 적용된다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%-6s]", "ab" );
+    SW_EXPECT_STREQ( "[ab    ]", buffer );
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%6s]", "ab" );
+    SW_EXPECT_STREQ( "[    ab]", buffer );
+}

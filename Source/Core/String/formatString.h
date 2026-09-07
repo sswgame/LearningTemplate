@@ -330,98 +330,174 @@ namespace sw
             bool   _bHasOverrideFormat{ false };
         };
 
+        /**
+         * @brief `%` 뒤의 표준 서식(플래그·너비·정밀도·길이·변환)을 읽어 Format 으로 옮깁니다.
+         * @details 문법은 printf 와 같다: `% [flags] [width] [.precision] [length] conversion`.
+         *          예전에는 `%#` 과 `%d` 같은 **맨 변환 문자만** 알아봤다. 그래서 `%.3f` 를 쓰면
+         *          `%.` 까지만 플레이스홀더로 먹고 `3f` 가 글자로 남았다 — 조용히 틀린 출력이 나온다.
+         *
+         *          Format 이 이미 정밀도·너비·부호·정렬·패딩을 다 갖고 있으므로, 여기서는 문자를 읽어
+         *          그 스위치를 켜 주기만 하면 된다. 값을 실제로 찍는 코드는 손대지 않는다.
+         * @param format     `%` 바로 다음부터의 남은 문자열.
+         * @param outFormat  읽어 낸 옵션을 켤 Format.
+         * @param outHasSpec 하나라도 옵션을 읽었으면 true.
+         * @return 소비한 길이(`%` 포함). 서식이 아니면 0.
+         */
+        static size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
+        {
+            size_t cursor{ 0 };
+            outHasSpec = false;
+
+            // 1) 플래그 — 순서는 상관없고 여러 개가 올 수 있다.
+            bool bDone{ false };
+            while ( cursor < format.size() && bDone == false )
+            {
+                switch ( format[cursor] )
+                {
+                    case '-':
+                        outFormat.leftAlign();
+                        outHasSpec = true;
+                        ++cursor;
+                        break;
+                    case '+':
+                        outFormat.showSign();
+                        outHasSpec = true;
+                        ++cursor;
+                        break;
+                    case '0':
+                        outFormat.zeroPad();
+                        outHasSpec = true;
+                        ++cursor;
+                        break;
+                    case ' ':
+                    case '#':
+                        // 공백 플래그와 대체 형식(0x 접두 등)은 이 포맷터에 대응하는 옵션이 없다.
+                        // **`%#` 은 이 엔진의 기본 플레이스홀더**라 여기까지 오지 않는다(위에서 먼저 걸린다).
+                        ++cursor;
+                        break;
+                    default:
+                        bDone = true;
+                        break;
+                }
+            }
+
+            // 2) 너비
+            uint32 widthValue{ 0 };
+            bool   bHasWidth{ false };
+            while ( cursor < format.size() && format[cursor] >= '0' && format[cursor] <= '9' )
+            {
+                widthValue = widthValue * 10u + static_cast<uint32>( format[cursor] - '0' );
+                bHasWidth  = true;
+                ++cursor;
+            }
+            if ( bHasWidth )
+            {
+                outFormat.width( static_cast<int32>( widthValue ) );
+                outHasSpec = true;
+            }
+
+            // 3) 정밀도
+            if ( cursor < format.size() && format[cursor] == '.' )
+            {
+                ++cursor;
+                uint32 precisionValue{ 0 };
+                while ( cursor < format.size() && format[cursor] >= '0' && format[cursor] <= '9' )
+                {
+                    precisionValue = precisionValue * 10u + static_cast<uint32>( format[cursor] - '0' );
+                    ++cursor;
+                }
+                // `%.f` 는 정밀도 0 이다 (printf 규약).
+                outFormat.precision( static_cast<int32>( precisionValue ) );
+                outHasSpec = true;
+            }
+
+            // 4) 길이 수식어 — 값의 타입은 인자가 정하므로 읽고 버린다.
+            if ( cursor + 1 < format.size() && format.substr( cursor, 2 ) == "ll" )
+                cursor += 2;
+            else if ( cursor < format.size() &&
+                      ( format[cursor] == 'l' || format[cursor] == 'z' || format[cursor] == 'h' || format[cursor] == 'j' ||
+                        format[cursor] == 't' ) )
+                ++cursor;
+
+            // 5) 변환 문자
+            if ( cursor >= format.size() )
+                return 0;
+
+            switch ( format[cursor] )
+            {
+                case 'x':
+                    outFormat.hex();
+                    outHasSpec = true;
+                    break;
+                case 'X':
+                    outFormat.hexUpper();
+                    outHasSpec = true;
+                    break;
+                case 'p':
+                    outFormat.hex();
+                    outHasSpec = true;
+                    break;
+                case 'o':
+                    outFormat.octal();
+                    outHasSpec = true;
+                    break;
+                case 'd':
+                case 'i':
+                case 'u':
+                case 'f':
+                case 'F':
+                case 'g':
+                case 'G':
+                case 'e':
+                case 'E':
+                case 's':
+                case 'c':
+                case '#': // 이 엔진의 기본 플레이스홀더 — 옵션만 앞에 붙은 경우
+                    break;
+                default:
+                    return 0; // 서식이 아니다
+            }
+            return cursor + 2; // `%` + 여기까지
+        }
+
         /** @brief 다음 플레이스홀더를 찾습니다. */
         static PlaceholderMatch findNextPlaceholder( string_view format ) noexcept
         {
             PlaceholderMatch match;
             size_t           charIndex{ 0 };
-            while ( charIndex < format.size() )
+            // 한 글자씩 훑지 않고 '%' 를 곧장 찾는다 — find 는 memchr 로 내려간다. 포맷 문자열은
+            // 대개 리터럴이 길고 플레이스홀더가 드물어서, 훑는 쪽이 이 함수의 대부분이었다.
+            while ( ( charIndex = format.find( '%', charIndex ) ) != string_view::npos )
             {
-                if ( format[charIndex] == '%' )
                 {
                     if ( charIndex + 1 < format.size() )
                     {
-                        utf8 nextChar = format[charIndex + 1];
-                        if ( nextChar == '%' )
+                        // `%%` 는 리터럴 퍼센트다.
+                        if ( format[charIndex + 1] == '%' )
                         {
                             charIndex += 2;
                             continue;
                         }
 
+                        Format       specFormat{};
+                        bool         bHasSpec{ false };
+                        const size_t consumed = parseFormatSpec( format.substr( charIndex + 1 ), specFormat, bHasSpec );
+                        if ( consumed > 0 )
+                        {
+                            match._pos                = charIndex;
+                            match._len                = consumed;
+                            match._overrideFormat     = specFormat;
+                            match._bHasOverrideFormat = bHasSpec;
+                            return match;
+                        }
+
+                        // 알아볼 수 없는 서식이어도 인자 하나는 소비한다 — 예전과 같은 동작이다.
                         match._pos = charIndex;
-                        if ( nextChar == '#' || nextChar == 's' || nextChar == 'd' || nextChar == 'i' ||
-                             nextChar == 'u' || nextChar == 'f' || nextChar == 'c' || nextChar == 'g' || nextChar == 'e' )
-                        {
-                            match._len = 2;
-                            return match;
-                        }
-                        if ( nextChar == 'x' )
-                        {
-                            match._len = 2;
-                            match._overrideFormat.hex();
-                            match._bHasOverrideFormat = true;
-                            return match;
-                        }
-                        if ( nextChar == 'X' )
-                        {
-                            match._len = 2;
-                            match._overrideFormat.hexUpper();
-                            match._bHasOverrideFormat = true;
-                            return match;
-                        }
-                        if ( nextChar == 'p' )
-                        {
-                            match._len = 2;
-                            match._overrideFormat.hex();
-                            match._bHasOverrideFormat = true;
-                            return match;
-                        }
-
-                        size_t remain = format.size() - ( charIndex + 1 );
-                        if ( remain >= 3 && format.substr( charIndex + 1, 2 ) == "ll" )
-                        {
-                            utf8 spec = format[charIndex + 3];
-                            if ( spec == 'd' || spec == 'i' || spec == 'u' || spec == 'x' || spec == 'X' )
-                            {
-                                match._len = 4;
-                                if ( spec == 'x' )
-                                {
-                                    match._overrideFormat.hex();
-                                    match._bHasOverrideFormat = true;
-                                }
-                                else if ( spec == 'X' )
-                                {
-                                    match._overrideFormat.hexUpper();
-                                    match._bHasOverrideFormat = true;
-                                }
-                                return match;
-                            }
-                        }
-                        if ( remain >= 2 && ( nextChar == 'l' || nextChar == 'z' || nextChar == 'h' ) )
-                        {
-                            utf8 spec = format[charIndex + 2];
-                            if ( spec == 'd' || spec == 'i' || spec == 'u' || spec == 'f' || spec == 'x' || spec == 'X' )
-                            {
-                                match._len = 3;
-                                if ( spec == 'x' )
-                                {
-                                    match._overrideFormat.hex();
-                                    match._bHasOverrideFormat = true;
-                                }
-                                else if ( spec == 'X' )
-                                {
-                                    match._overrideFormat.hexUpper();
-                                    match._bHasOverrideFormat = true;
-                                }
-                                return match;
-                            }
-                        }
-
                         match._len = 2;
                         return match;
                     }
                 }
-                ++charIndex;
+                ++charIndex; // 문자열 끝의 '%' — 더 볼 것이 없다
             }
             return match;
         }
@@ -510,9 +586,19 @@ namespace sw
         template <typename T>
         static uint32 addValueWithFormat( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format& format ) noexcept
         {
+            // 문자열류는 임시 버퍼를 거치지 않는다 — addValue 와 같은 이유다. arrTemp 는 256바이트라
+            // `%-20s` 에 긴 문자열을 주면 **거기서 잘린다**. 폭 맞춤은 원본 뷰 그대로 addPadding 이 한다.
+            // (그 지름길이 addValue 에만 있어서, 서식이 붙는 순간 조용히 잘리는 구멍이 있었다.)
+            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> )
+            {
+                return addPadding( pBuffer, pos, capacity, string_view{ value }, format );
+            }
+
             utf8         arrTemp[kTempBufferSize];
             const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), format );
-            return write( pBuffer, pos, capacity, string_view{ arrTemp, valueLength } );
+            // **addPadding 을 거쳐야 한다.** 예전엔 여기서 바로 write 했는데, 그러면 너비·정렬·0채우기가
+            // Fmt(v, Format()) 경로에서만 먹고 서식 문자열(`%5d`)로 준 것은 조용히 무시됐다.
+            return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
         }
 
         /** @brief 값을 문자열로 변환합니다. */
