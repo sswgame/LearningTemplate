@@ -283,13 +283,12 @@ namespace sw
                  _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
             {
                 bool bAllViewsCulled = true;
-                for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+                for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
                 {
-                    const GpuCullViewResources& view        = _gpuScene.getCullView( static_cast<GpuCullView>( viewIndex ) );
-                    const RHIBufferHandle       cullCb      = _arrGpuCullCb[viewIndex];
-                    const RHIDescriptorIndex    cullCbIndex = _arrGpuCullCbIndex[viewIndex];
+                    const GpuCullViewResources& view       = _gpuScene.getCullView( static_cast<RenderViewType>( viewIndex ) );
+                    const RenderView&           renderView = _arrView[viewIndex];
                     if ( view._indirectArgs._uav == kInvalidDescriptorIndex || view._visibleInstances._uav == kInvalidDescriptorIndex ||
-                         cullCb == 0 || cullCbIndex == kInvalidDescriptorIndex )
+                         renderView.isReadyForCulling() == false )
                     {
                         bAllViewsCulled = false;
                         continue;
@@ -302,15 +301,12 @@ namespace sw
                         uint32  _batchCount{ 0 };
                         uint32  _pad[2]{};
                     } cullParams{};
-                    // 절두체 평면은 그 뷰의 viewProj 에서 뽑는다. 예전엔 이 배열이 **0 인 채로 나갔고**,
-                    // 그러면 셰이더의 `dot(0, center) + 0 < -radius` 가 항상 거짓이라 컬링이 아무것도
-                    // 거르지 않았다(켜 놓고도 한 번도 걸러진 적이 없었다).
-                    const float4x4& cullViewProj =
-                        ( static_cast<GpuCullView>( viewIndex ) == GpuCullView::Shadow ) ? _cullShadowViewProj : _cullMainViewProj;
-                    FrameRendererUtil::extractFrustumPlanes( cullViewProj, cullParams._planes );
+                    // 절두체는 **뷰가 이미 들고 있다** — setViewProjection 이 행렬과 함께 갱신한다.
+                    // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 안 바뀌는 상태가 생길 수 있다.
+                    Memory::copy( cullParams._planes, renderView._arrFrustumPlane, sizeof( cullParams._planes ) );
                     cullParams._instanceCount = instanceCount;
                     cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
-                    _pDevice->getResource()->updateConstantBuffer( cullCb, &cullParams, sizeof( cullParams ) );
+                    _pDevice->getResource()->updateConstantBuffer( renderView._cullCb, &cullParams, sizeof( cullParams ) );
 
                     // 컬링이 쓰는 두 버퍼는 UAV 상태여야 한다. 간접 인자는 직전 프레임에 IndirectArgument 로,
                     // 가시 목록은 ShaderResource 로 두고 끝냈다.
@@ -321,7 +317,7 @@ namespace sw
                     _pCmd->setComputePipelineState( cullPso );
                     // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1)
                     // — gpucull.hlsl 레지스터와 1:1 대응. 인스턴스·배치 구간은 뷰가 공유한다(절두체만 다르다).
-                    _pCmd->bindComputeConstantBuffer( cullCbIndex, 0 );
+                    _pCmd->bindComputeConstantBuffer( renderView._cullCbIndex, 0 );
                     _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
                     _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
                     _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
@@ -350,9 +346,10 @@ namespace sw
                             uint32  _batchCount{ 0 };
                             uint32  _pad[2]{};
                         } sortParams{};
-                        sortParams._cameraPos[0]  = _cullCameraPos._x;
-                        sortParams._cameraPos[1]  = _cullCameraPos._y;
-                        sortParams._cameraPos[2]  = _cullCameraPos._z;
+                        // 정렬 키는 **그 뷰의 눈까지의 거리**다 — 뷰가 자기 위치를 들고 있다.
+                        sortParams._cameraPos[0]  = renderView._position._x;
+                        sortParams._cameraPos[1]  = renderView._position._y;
+                        sortParams._cameraPos[2]  = renderView._position._z;
                         sortParams._instanceCount = instanceCount;
                         sortParams._batchCount    = cullParams._batchCount;
                         // 값이 뷰마다 같으므로 버퍼 하나로 충분하다 — 다르게 만들 일이 생기면 컬링 CB 처럼
@@ -443,7 +440,7 @@ namespace sw
             if ( pCam != nullptr )
                 cameraPos = pCam->getCameraPosition();
         }
-        _cullCameraPos = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
+        view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
         _gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
@@ -512,7 +509,7 @@ namespace sw
         if ( packet._bHasViewProj != 0 )
         {
             _frameCtx._passValues.setMatrix( passConstantNames()._viewProj, packet._viewProj );
-            _cullMainViewProj = packet._viewProj; // 컬링 절두체도 패킷의 뷰를 따라가야 한다
+            view( RenderViewType::Main ).setViewProjection( packet._viewProj ); // 절두체도 함께 갱신된다
         }
         // 값 업로드/바인딩은 드로우 직전 ShaderBindingBinder 가 한다 — 여기서는 시드만 채운다.
         resetClearedAttachments();

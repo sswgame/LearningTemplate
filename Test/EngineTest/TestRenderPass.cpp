@@ -1176,8 +1176,10 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
     const sw::float4x4 proj     = sw::float4x4::createPerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
     const sw::float4x4 viewProj = view * proj;
 
-    float32 arrPlane[6][4]{};
-    sw::FrameRendererUtil::extractFrustumPlanes( viewProj, arrPlane );
+    // **실제 코드가 쓰는 경로**를 그대로 검증한다 — 뷰가 행렬과 절두체를 함께 갱신한다.
+    sw::RenderView renderView{};
+    renderView.setViewProjection( viewProj );
+    const float32( &arrPlane )[6][4] = renderView._arrFrustumPlane;
 
     // 평면은 정규화돼 있어야 한다 — 그래야 셰이더가 반지름을 그대로 비교할 수 있다.
     for ( uint32 planeIndex = 0; planeIndex < 6; ++planeIndex )

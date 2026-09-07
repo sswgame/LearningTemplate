@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
@@ -145,7 +146,7 @@ namespace sw
              * @details 그림자 패스만 Shadow 이고 나머지는 Main 이다. 컬링 결과는 절두체에 종속이라
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그린다.
              */
-            GpuCullView                _cullView{ GpuCullView::Main };
+            RenderViewType             _cullView{ RenderViewType::Main };
             uint32                     _drawInstanceBase{ 0 };
             uint32                     _drawMaterialCount{ 0 };
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
@@ -400,20 +401,18 @@ namespace sw
         /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
         std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
         /**
-         * @brief 컬링 상수버퍼 — **뷰마다 하나**. 절두체 평면이 뷰마다 다르기 때문이다.
-         * @details 하나를 나눠 쓰면 두 번째 디스패치의 업로드가 첫 번째가 읽을 내용을 덮어쓴다(CPU 는
-         *          디스패치 사이에 쓰지만 GPU 는 제출 뒤에 읽는다). 실제로 그러다가 메인 뷰가 **그림자
-         *          라이트의 좁은 직교 절두체**로 컬링돼 화면 절반이 사라졌다. 패스 상수버퍼에서 겪은 것과
-         *          같은 함정이다.
+         * @brief 이번 프레임의 뷰들 — 행렬·절두체·상수버퍼를 각자 소유합니다.
+         * @details 예전엔 이 셋이 `_cullMainViewProj` / `_cullShadowViewProj` / `_arrGpuCullCb` 로
+         *          흩어져 있었고, "이 값은 어느 뷰 것인가" 를 사람이 기억해야 했다. 그래서 두 번 틀렸다 —
+         *          한 번은 패스 상수버퍼를 드로우들이, 한 번은 컬링 상수버퍼를 뷰들이 나눠 썼다.
+         *          이제 뷰를 얻으면 그 뷰의 것이 딸려 온다.
          */
-        RHIBufferHandle    _arrGpuCullCb[static_cast<uint32>( GpuCullView::Count )]{};
-        RHIDescriptorIndex _arrGpuCullCbIndex[static_cast<uint32>( GpuCullView::Count )]{};
+        RenderView _arrView[static_cast<uint32>( RenderViewType::Count )]{};
+
         RHIBufferHandle    _instanceAnimCb;
         RHIDescriptorIndex _instanceAnimCbIndex;
         RHIBufferHandle    _instanceSortCb;
         RHIDescriptorIndex _instanceSortCbIndex;
-        /// @brief 이번 프레임 컬링·정렬에 쓸 카메라 위치 (정렬 키가 여기까지의 거리다).
-        float3 _cullCameraPos{};
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는가 (가시 목록이 유효한가).
          * @details 드로우가 가시 목록을 걸지 말지 정하는 값이다. 목록을 걸었는데 컬링이 안 돌면 셰이더가
@@ -421,13 +420,9 @@ namespace sw
          */
         uint8 _bGpuCullingActive;
 
-        /**
-         * @brief 이번 프레임 컬링에 쓸 뷰 행렬 — 메인 카메라와 그림자 라이트.
-         * @details `updatePassConstants` 가 상수버퍼에 넣는 값과 **같은 값**을 여기에도 둔다. 컬링은
-         *          기록 시작 전에 도는데, 그때는 패스 상수 버퍼에서 도로 꺼낼 방법이 없다.
-         */
-        float4x4 _cullMainViewProj{};
-        float4x4 _cullShadowViewProj{};
+        /** @brief 뷰 하나를 얻습니다 — 그 뷰의 행렬·절두체·상수버퍼가 함께 옵니다. */
+        RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
+        const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
 
         /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 (업로드 전에 GpuScene 에 알린다). */
         bool wantsGpuGeneratedCommands() const;

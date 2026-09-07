@@ -169,9 +169,9 @@ namespace sw
             const float4 clearVal = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kShadowMap, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
             beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
             // 그림자는 라이트 절두체로 거른 목록을 쓴다 (언리얼의 뷰별 인스턴스 컬링과 같은 자리).
-            ctx._cullView = GpuCullView::Shadow;
+            ctx._cullView = RenderViewType::Shadow;
             drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, false );
-            ctx._cullView = GpuCullView::Main;
+            ctx._cullView = RenderViewType::Main;
             ctx._pCmd->endRenderPass();
         }
         else if ( passType == RenderPassType::DepthPrepass )

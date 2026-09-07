@@ -46,11 +46,12 @@ namespace sw
             uint32  _pad[2]{};
         };
         // 뷰마다 하나씩 — 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
-            _arrGpuCullCb[viewIndex] = _pDevice->getResource()->createConstantBuffer( sizeof( GpuCullParams ) );
-            if ( _arrGpuCullCb[viewIndex] != 0 )
-                _arrGpuCullCbIndex[viewIndex] = _pDevice->getResource()->registerBindlessResource( _arrGpuCullCb[viewIndex] );
+            RenderView& renderView = _arrView[viewIndex];
+            renderView._cullCb     = _pDevice->getResource()->createConstantBuffer( sizeof( GpuCullParams ) );
+            if ( renderView._cullCb != 0 )
+                renderView._cullCbIndex = _pDevice->getResource()->registerBindlessResource( renderView._cullCb );
         }
 
         struct GpuAnimParams
@@ -273,10 +274,10 @@ namespace sw
             _passCbCursor.store( 0, std::memory_order_relaxed );
             _frameCtx._passCb      = 0;
             _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-            for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
+            for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
             {
-                _arrGpuCullCb[viewIndex]      = 0;
-                _arrGpuCullCbIndex[viewIndex] = kInvalidDescriptorIndex;
+                _arrView[viewIndex]._cullCb      = 0;
+                _arrView[viewIndex]._cullCbIndex = kInvalidDescriptorIndex;
             }
             _instanceAnimCb      = 0;
             _instanceAnimCbIndex = kInvalidDescriptorIndex;
@@ -336,8 +337,8 @@ namespace sw
         _passCbCursor.store( 0, std::memory_order_relaxed );
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( GpuCullView::Count ); ++viewIndex )
-            releaseResource( _arrGpuCullCb[viewIndex], _arrGpuCullCbIndex[viewIndex] );
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+            releaseResource( _arrView[viewIndex]._cullCb, _arrView[viewIndex]._cullCbIndex );
         releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
         releaseResource( _instanceSortCb, _instanceSortCbIndex );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )

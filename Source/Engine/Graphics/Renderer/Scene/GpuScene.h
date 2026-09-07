@@ -12,6 +12,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
 
 namespace sw
@@ -43,19 +44,11 @@ namespace sw
     };
 
     /**
-     * @brief 컬링을 따로 도는 뷰. 언리얼이 뷰마다 `FInstanceCullingContext` 를 두는 자리와 같다.
-     * @details 컬링 결과(간접 인자 개수 + 가시 인스턴스 목록)는 **절두체에 종속**이다. 메인 카메라로 거른
-     *          목록을 그림자 패스가 쓰면, 화면 밖에 있지만 화면 안으로 그림자를 드리우는 물체가 사라진다.
-     *          그래서 뷰마다 자기 인자·목록을 갖는다.
+     * @brief 뷰 하나가 갖는 컬링 산출물 (간접 인자 + 가시 인스턴스 목록).
+     * @details 컬링 결과는 **절두체에 종속**이다 — 메인 카메라로 거른 목록을 그림자 패스가 쓰면, 화면
+     *          밖에 있지만 화면 안으로 그림자를 드리우는 물체가 사라진다. 그래서 뷰마다 하나씩이다.
+     *          뷰의 **입력**(행렬·절두체·상수버퍼)은 RenderView 가 갖는다.
      */
-    enum class GpuCullView : uint32
-    {
-        Main   = 0, ///< 게임 카메라
-        Shadow = 1, ///< 그림자 라이트
-        Count  = 2
-    };
-
-    /** @brief 뷰 하나가 갖는 컬링 산출물 (간접 인자 + 가시 인스턴스 목록). */
     struct GpuCullViewResources
     {
         RHIStructuredBufferSlot _indirectArgs;
@@ -328,7 +321,7 @@ namespace sw
          */
         RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물 (간접 인자 + 가시 목록). */
-        const GpuCullViewResources& getCullView( GpuCullView view ) const { return _arrCullView[static_cast<uint32>( view )]; }
+        const GpuCullViewResources& getCullView( RenderViewType view ) const { return _arrCullView[static_cast<uint32>( view )]; }
         /** @brief 배치 구간 버퍼의 SRV (컬링 컴퓨트 t1). */
         RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
         /**
@@ -364,7 +357,7 @@ namespace sw
          */
         bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != 0; }
         /** @brief 메인 뷰의 간접 인자 버퍼 (isUploaded 등 뷰를 가리지 않는 검사용). */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( GpuCullView::Main )]._indirectArgs._buffer; }
+        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( RenderViewType::Main )]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief GPU에 올라갔는지 반환합니다. */
@@ -545,7 +538,7 @@ namespace sw
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수가 없다).
          *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트가 **각자** 갖는다.
          */
-        GpuCullViewResources    _arrCullView[static_cast<uint32>( GpuCullView::Count )];
+        GpuCullViewResources    _arrCullView[static_cast<uint32>( RenderViewType::Count )];
         RHIStructuredBufferSlot _batchInfo;
         /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
         uint8 _bWantGpuIndirectCounts{ 0 };
