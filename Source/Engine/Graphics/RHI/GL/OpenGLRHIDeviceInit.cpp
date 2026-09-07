@@ -257,7 +257,9 @@ namespace sw
         {
             SW_LOG_INFO( "OpenGL glad Loaded Successfully." );
 
-            // UPPER_LEFT + ZERO_TO_ONE = Direct3D 의 clip/NDC (프레임버퍼 원점 좌상단, 깊이 [0,1]).
+            // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 **원점**은 대상마다 달라야 해서 여기서 고정하지 않는다 —
+            // 오프스크린 FBO 는 UPPER_LEFT(행 순서를 DX 와 맞춤), 기본 프레임버퍼는 LOWER_LEFT(창 표시가 아래에서 위)로
+            // OpenGLRHICommandContext::beginRenderPass 가 매 패스 정한다. 여기서는 가능 여부만 확인하고 기본값을 깐다.
             // **이 호출은 선택이 아니다.** 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
             // 백엔드와 반대로 쌓인다 — 풀스크린 블릿은 DX 규약(NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 화면과
             // 스크린샷이 통째로 상하 반전된다. 깊이도 [-1,1] 로 남아 [0,1] 을 내보내는 투영이 버퍼의 절반만 쓴다.
@@ -280,7 +282,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_INFO( "OpenGL glClipControl: GL_UPPER_LEFT, GL_ZERO_TO_ONE (DirectX NDC / 좌상단 UV 와 일치)" );
+                    SW_LOG_INFO( "OpenGL glClipControl 사용 가능 — 깊이 [0,1] 고정. 클립 원점은 대상마다 정한다(오프스크린 UPPER_LEFT / 기본 프레임버퍼 LOWER_LEFT)." );
                 }
             }
             else

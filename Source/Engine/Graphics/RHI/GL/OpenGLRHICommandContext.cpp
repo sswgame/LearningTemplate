@@ -172,6 +172,16 @@ namespace sw
         }
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+
+        // 클립 원점은 **대상에 따라 달라야 한다.**
+        //  - FBO(오프스크린): GL_UPPER_LEFT — 텍스처 0 행이 화면 위가 되어 DX/Vulkan 과 행 순서가 같다.
+        //    이래야 SceneColor 를 읽거나 다시 샘플링할 때 백엔드끼리 그림이 일치한다.
+        //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT — 창에 보여줄 때 GL 은 y=0 을 **아래**로 표시한다.
+        //    여기에도 UPPER_LEFT 를 걸면 NDC 위쪽이 창 아래로 가서 화면만 상하가 뒤집힌다.
+        //    (오프스크린만 재던 스크린샷 검증은 이걸 못 잡았다 — 읽어 온 텍스처는 이미 맞아 있었다.)
+        // 풀스크린 블릿의 uv 는 DX 규약(NDC 위쪽 = uv.y 0)이라, 위 조합이면 두 경로 모두 바로 선다.
+        if ( glad_glClipControl != nullptr )
+            glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
         // bindShaderResource가 실제로 바인딩한 유닛만 언바인드한다(예전엔 0..15 전부 방어적으로 언바인드).
         const uint32 unbindMask = _pDevice->_boundTextureUnitMask;
         for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
@@ -253,6 +263,11 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+        // 패스 밖에서는 **GL 기본 상태**로 되돌린다. 엔진 패스를 거치지 않고 기본 프레임버퍼에 직접 그리는
+        // 코드(에디터 ImGui 백엔드가 그렇다)는 표준 GL 규약(좌하단 원점)을 가정한다 — 오프스크린 패스가
+        // 걸어 둔 UPPER_LEFT 가 남아 있으면 그쪽 UI 가 상하로 뒤집힌다.
+        if ( glad_glClipControl != nullptr )
+            glClipControl( GL_LOWER_LEFT, GL_ZERO_TO_ONE );
     }
 
     void OpenGLRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
