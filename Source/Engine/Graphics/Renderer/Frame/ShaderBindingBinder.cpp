@@ -203,6 +203,12 @@ namespace sw
         }
 
         // 3) 텍스처·구조버퍼 — 조회 키는 레이아웃이 이미 canonical 로 구워 뒀다.
+        //    등록 내용이 그대로면 이미 걸린 것과 같은 자원을 다시 거는 셈이라 건너뛴다(같은 패스 안의 두 번째
+        //    드로우부터가 대부분 그렇다). 백엔드도 값이 같으면 더럽힘 표시를 안 하지만, 여기서 끊으면
+        //    레지스트리 조회 자체가 사라진다. PSO 가 바뀌면 백엔드가 슬롯 상태를 비우므로 그때는 다시 건다.
+        if ( bEngineCbUpToDate )
+            return;
+
         for ( const ShaderResourceBind& bind : layout.getResourceBinds() )
         {
             if ( bind._kind == ShaderBindingKind::Texture )

@@ -358,9 +358,15 @@ namespace sw
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
         if ( view.ptr == 0 )
             return;
+        // **값이 실제로 달라질 때만** 더럽힘 표시를 한다. 바인더는 드로우마다 같은 버퍼를 다시 걸므로
+        // (인스턴스 버퍼·머티리얼 버퍼는 배치가 바뀌어도 대개 그대로다) 무조건 표시하면 드로우마다
+        // 디스크립터 10 개를 온라인 힙에 복사하고 테이블을 다시 걸게 된다.
+        // 언리얼 FD3D12DescriptorCache 도 테이블 내용이 그대로면 이미 건 테이블을 그대로 쓴다.
         D3D12SlotTableState& state = _pState->_arrSlotState[0];
-        state._arrSrv[slot]        = view;
-        state._bSrvDirty           = 1;
+        if ( state._arrSrv[slot].ptr == view.ptr )
+            return;
+        state._arrSrv[slot] = view;
+        state._bSrvDirty    = 1;
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -419,8 +425,10 @@ namespace sw
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
-        state._arrUav[slot]        = view;
-        state._bUavDirty           = 1;
+        if ( state._arrUav[slot].ptr == view.ptr )
+            return;
+        state._arrUav[slot] = view;
+        state._bUavDirty    = 1;
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -441,8 +449,10 @@ namespace sw
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
-        state._arrSrv[slot]        = view;
-        state._bSrvDirty           = 1;
+        if ( state._arrSrv[slot].ptr == view.ptr )
+            return;
+        state._arrSrv[slot] = view;
+        state._bSrvDirty    = 1;
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )

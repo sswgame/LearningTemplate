@@ -535,9 +535,12 @@ namespace sw
 
         VulkanSlotState&   state = _pState->_arrSlotState[bCompute ? 1 : 0];
         VulkanSlotBinding& slot  = state._arrSlot[bindingIndex];
-        slot._buffer             = pRecord->_buffer;
-        slot._offset             = 0;
-        slot._range              = pRecord->_size;
+
+        // 값이 그대로면 세트를 새로 할당하지 않는다 — 바인더는 드로우마다 같은 버퍼를 다시 건다.
+        VulkanSlotBinding candidate{};
+        candidate._buffer = pRecord->_buffer;
+        candidate._offset = 0;
+        candidate._range  = pRecord->_size;
         if ( bConstantBuffer )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다 — updateConstantBuffer 가
@@ -545,11 +548,18 @@ namespace sw
             const auto slotIt = _pDevice->_mapCbSlotSize.find( handle );
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             {
-                slot._range  = slotIt->second;
-                slot._offset = static_cast<uint64>( _pDevice->_currentFrame % constant::kMaxFrameCountInFlight ) * slotIt->second;
+                candidate._range  = slotIt->second;
+                candidate._offset = static_cast<uint64>( _pDevice->_currentFrame % constant::kMaxFrameCountInFlight ) * slotIt->second;
             }
         }
-        state._slotSetMask |= ( uint64{ 1 } << bindingIndex );
+
+        const uint64 slotBit     = ( uint64{ 1 } << bindingIndex );
+        const bool   bAlreadySet = ( state._slotSetMask & slotBit ) != 0;
+        if ( bAlreadySet && slot._buffer == candidate._buffer && slot._offset == candidate._offset && slot._range == candidate._range )
+            return; // 같은 값 — 세트를 새로 할당할 이유가 없다.
+
+        slot = candidate;
+        state._slotSetMask |= slotBit;
         state._bDirty = 1;
     }
 
