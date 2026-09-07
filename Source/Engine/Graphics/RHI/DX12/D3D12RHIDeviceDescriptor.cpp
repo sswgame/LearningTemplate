@@ -33,6 +33,29 @@ namespace sw
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
     }
 
+    void D3D12RHIDevice::refreshConstantBufferViews()
+    {
+        if ( _device == nullptr || _cbvHeap == nullptr )
+            return;
+
+        // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
+        // (드로우마다 하던 일이다 — updateConstantBuffer 주석 참고.) 기록 시작 전 단일 스레드 구간이라 락이 필요 없다.
+        const uint32 slot = _frameRing.currentIndex();
+        for ( BindlessResourceRecord& rec : _listRegisteredBindless )
+        {
+            if ( rec._resource == nullptr || rec._buffer == 0 )
+                continue;
+            const auto sizeIt = _mapCbAlignedSize.find( rec._buffer );
+            if ( sizeIt == _mapCbAlignedSize.end() )
+                continue; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
+
+            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
+            cbvDesc.BufferLocation = rec._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
+            cbvDesc.SizeInBytes    = sizeIt->second;
+            _device->CreateConstantBufferView( &cbvDesc, rec._cpuHandle );
+        }
+    }
+
     bool D3D12RHIDevice::createGlobalResources()
     {
         // 루트 시그니처 (bindingslots.hlsli) — 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.

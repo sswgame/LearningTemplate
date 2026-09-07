@@ -84,11 +84,29 @@ namespace sw
         if ( pSceneMaterial == nullptr )
             SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
 
-        shared_ptr<Mesh> cube = Mesh::createUnitCube();
-        if ( cube == nullptr )
+        // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
+        // 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
+        uint32 meshVariantCount = 1;
+        if ( GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>() )
         {
-            SW_LOG_ERROR( "[Bench] 단위 큐브를 만들지 못했습니다." );
-            return;
+            const GlobalVariableInfo* pVar = pGlobals->findVariable( "gv_benchMeshVariants" );
+            if ( pVar != nullptr )
+                meshVariantCount = static_cast<uint32>( MathUtil::max( 1, pVar->getValueAsInt() ) );
+        }
+        meshVariantCount = MathUtil::min( meshVariantCount, meshCount );
+
+        // 같은 기하를 여러 객체로 만든다 — 화면은 그대로고 배치만 갈린다(가시성 변수를 안 넣는다).
+        vector<shared_ptr<Mesh>> listMeshVariant;
+        listMeshVariant.reserve( meshVariantCount );
+        for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
+        {
+            shared_ptr<Mesh> variant = Mesh::createUnitCube();
+            if ( variant == nullptr )
+            {
+                SW_LOG_ERROR( "[Bench] 단위 큐브를 만들지 못했습니다." );
+                return;
+            }
+            listMeshVariant.push_back( std::move( variant ) );
         }
 
         // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
@@ -122,7 +140,7 @@ namespace sw
 
             const uint32 col = index % side;
             const uint32 row = index / side;
-            pMesh->setMesh( cube );
+            pMesh->setMesh( listMeshVariant[index % meshVariantCount] );
             // 기본 머티리얼은 씬 **로드** 경로(bindSceneMeshDefaults)에서만 붙는다.
             // createScene 으로 직접 만든 씬은 그 단계를 지나지 않으므로 여기서 붙여준다 —
             // 없으면 배치는 만들어지는데 화면에는 아무것도 안 나온다.
@@ -155,6 +173,7 @@ namespace sw
         _benchGridSide = side;
         frameBenchCamera( pScene, side, kBenchSpacing );
 
+        SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수). -gv_benchMeshVariants 로 바꾼다.", meshVariantCount );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#x%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
     }

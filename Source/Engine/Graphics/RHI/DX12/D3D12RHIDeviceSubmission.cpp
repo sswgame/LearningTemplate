@@ -275,6 +275,8 @@ namespace sw
         if ( _frameStreamState._bRecording == 0 )
         {
             waitForRingSlot();
+            // 링 슬롯이 정해졌다 — 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
+            refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다 — 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
             // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
             _listPendingSubmit.clear();

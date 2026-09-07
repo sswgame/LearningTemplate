@@ -108,6 +108,13 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
 
     /**
+     * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
+     * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 않는다.
+     *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 재거나 다중 배치 버그를 보려면 이 값을 올린다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
+
+    /**
      * @brief 프로파일 통계에서 버리는 초반 프레임 수.
      * @details 셰이더 컴파일·PSO 생성·트랜지언트 할당이 첫 프레임들을 크게 부풀린다. 섞으면
      *          평균이 그 한 번에 끌려가 아무것도 못 읽는다.

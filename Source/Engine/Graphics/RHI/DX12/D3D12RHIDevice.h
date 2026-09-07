@@ -283,6 +283,12 @@ namespace sw
          */
         void bindBindlessRootState( ID3D12GraphicsCommandList* pList );
         /**
+         * @brief 링 상수버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다 — 프레임당 한 번, 기록 시작 전.
+         * @details 예전엔 updateConstantBuffer 가 드로우마다 레지스트리를 훑어 이 일을 했다(O(등록수 x 드로우수)).
+         *          주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분하다.
+         */
+        void refreshConstantBufferViews();
+        /**
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
          */
         void flushDebugMessages( const utf8* pStage );

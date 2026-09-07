@@ -70,19 +70,11 @@ namespace sw
             return;
         Memory::copy( static_cast<uint8*>( mapIt->second ) + offset, pData, size );
 
-        // 드로우마다 도는 경로다. 레지스트리는 기록 중 불변이므로 락을 걸지 않는다
-        // (IRHIDevice::setParallelRecording 참고). 여러 스레드가 동시에 순회하므로 const 로 받아야
-        // 한다 — 비-const 순회는 읽기여도 "쓰기" 로 취급되어 레이스로 잡힌다.
-        const vector<D3D12RHIDevice::BindlessResourceRecord>& listBindless = _pDevice->_listRegisteredBindless;
-        for ( const D3D12RHIDevice::BindlessResourceRecord& rec : listBindless )
-        {
-            if ( rec._buffer != buffer || rec._resource == nullptr )
-                continue;
-            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-            cbvDesc.BufferLocation = rec._resource->GetGPUVirtualAddress() + offset;
-            cbvDesc.SizeInBytes    = alignedSize;
-            _pDevice->_device->CreateConstantBufferView( &cbvDesc, rec._cpuHandle );
-        }
+        // 힙의 CBV 는 여기서 갱신하지 않는다. 예전엔 드로우마다 **레지스트리 전체를 훑어** 이 버퍼를 가리키는
+        // 레코드마다 CreateConstantBufferView 를 다시 불렀다 — 등록 수 N, 프레임당 드로우 D 면 O(N·D) 다.
+        // 드로우별 상수버퍼 슬롯이 생기면서 N 이 수백으로 늘자 이 순회가 드로우 경로의 지배적 비용이 됐다.
+        // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다 —
+        // D3D12RHIDevice::refreshConstantBufferViews 가 beginFrame 에서 한 번에 한다.
     }
 
     RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
