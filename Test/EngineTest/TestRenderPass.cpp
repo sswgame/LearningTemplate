@@ -1217,6 +1217,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
     uint32  okCount{ 0 };
     bool    bHasReferenceMean{ false };
     float32 referenceMean[3]{};
+    uint32  referenceDrawnCount{ 0 };
 
     for ( sw::RHIBackend backend : backends )
     {
@@ -1234,26 +1235,37 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
         if ( bOk )
             bOk = scene.ensureDefaultCameras();
 
+        // 메시를 **여러 개** 만든다 — 배치 키에 메시가 들어가므로 곧 배치 수이고, 배치가 하나뿐이면
+        // 인스턴스 시작 오프셋이 늘 0 이라 인다이렉트 드로우의 백엔드 차이를 전혀 재지 못한다
+        // (Vulkan 의 gl_InstanceIndex 가 firstInstance 를 포함하는 문제가 그래서 오래 숨어 있었다).
+        constexpr uint32         kParityMeshCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kParityMeshCount];
         sw::shared_ptr<sw::Mesh> cube;
-        if ( bOk )
+        for ( uint32 meshIndex = 0; meshIndex < kParityMeshCount && bOk; ++meshIndex )
         {
-            cube               = sw::Mesh::createUnitCube();
-            sw::GameObject* go = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
-            bOk                = go != nullptr;
+            arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+            bOk                = arrMesh[meshIndex] != nullptr;
+            if ( bOk == false )
+                break;
+
+            sw::string      objectName = sw::string( "Cube" ) + sw::to_string( meshIndex );
+            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), objectName.size() ) );
+            bOk                        = go != nullptr;
             if ( bOk )
             {
                 sw::MeshComponent* meshComp = go->addComponent<sw::MeshComponent>();
                 bOk                         = meshComp != nullptr;
                 if ( bOk )
                 {
-                    meshComp->setMesh( cube );
+                    meshComp->setMesh( arrMesh[meshIndex] );
+                    meshComp->setLocalPosition( sw::float3{ ( static_cast<float32>( meshIndex ) - 1.0f ) * 1.2f, kParityCubeHeight, 0.0f } );
                     // 큐브를 카메라가 보는 원점보다 **위로** 올린다. 원점에 두면 화면 정중앙이라 그림이 세로로 대칭이고,
                     // 그러면 상하 반전을 평균으로도 무게중심으로도 잡을 수 없다 — OpenGL 이 실제로 뒤집혀 있었는데
                     // 이 테스트가 통과하던 이유다(평균·픽셀 수만 봤다).
-                    meshComp->setLocalPosition( sw::float3{ 0.0f, kParityCubeHeight, 0.0f } );
                 }
             }
         }
+        cube = arrMesh[0];
 
         if ( bOk )
         {
@@ -1319,7 +1331,8 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                     arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
                 if ( bHasReferenceMean == false )
                 {
-                    bHasReferenceMean = true;
+                    bHasReferenceMean   = true;
+                    referenceDrawnCount = drawnCount;
                     for ( uint32 channel = 0; channel < 3; ++channel )
                         referenceMean[channel] = arrMean[channel];
                 }
@@ -1330,12 +1343,25 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                         const float32 diff = arrMean[channel] > referenceMean[channel] ? arrMean[channel] - referenceMean[channel] : referenceMean[channel] - arrMean[channel];
                         SW_EXPECT_TRUE_MSG( diff <= 3.0f, ( label + ": SceneColor 평균이 첫 백엔드와 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
                     }
+
+                    // **그려진 픽셀 수**도 맞춘다. 평균은 화면 전체로 나눈 값이라 큐브 몇 개가 겹쳐 사라져도
+                    // 거의 안 움직인다 — 인다이렉트 드로우의 인스턴스 오프셋이 백엔드마다 다르게 먹던 버그가
+                    // 그래서 이 테스트를 통과했다. 배치가 여럿일 때 한 백엔드만 큐브를 잃으면 여기서 걸린다.
+                    const uint32 lowerBound = referenceDrawnCount - referenceDrawnCount / 8;
+                    const uint32 upperBound = referenceDrawnCount + referenceDrawnCount / 8;
+                    SW_EXPECT_TRUE_MSG( lowerBound <= drawnCount && drawnCount <= upperBound,
+                                        ( label + ": 그려진 픽셀 수가 첫 백엔드와 다르다 (" + sw::to_string( drawnCount ) + " vs " +
+                                          sw::to_string( referenceDrawnCount ) + ") — 배치별 인스턴스 오프셋을 의심하라" )
+                                            .c_str() );
                 }
             }
         }
 
-        if ( cube != nullptr )
-            cube->releaseGpu();
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseGpu();
+        }
         renderer.shutdown();
         device->shutdown();
         device.reset();

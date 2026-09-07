@@ -484,10 +484,15 @@ namespace sw
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            _listScratchIndirectCmd[argIndex]._vertexCount           = _listAllBatch[argIndex]._vertexCount;
-            _listScratchIndirectCmd[argIndex]._instanceCount         = _listAllBatch[argIndex]._instanceCount;
-            _listScratchIndirectCmd[argIndex]._startVertexLocation   = 0;
-            _listScratchIndirectCmd[argIndex]._startInstanceLocation = _listAllBatch[argIndex]._instanceBase;
+            _listScratchIndirectCmd[argIndex]._vertexCount         = _listAllBatch[argIndex]._vertexCount;
+            _listScratchIndirectCmd[argIndex]._instanceCount       = _listAllBatch[argIndex]._instanceCount;
+            _listScratchIndirectCmd[argIndex]._startVertexLocation = 0;
+            // **0 이어야 한다.** 배치의 인스턴스 시작 오프셋은 셰이더가 루트 상수(g_InstanceBase)로 더한다.
+            // 여기에도 넣으면 Vulkan 에서만 두 번 더해진다 — DX 의 SV_InstanceID 는 StartInstanceLocation 을
+            // 포함하지 않지만 SPIR-V 의 InstanceIndex 는 firstInstance 를 **포함**하기 때문이다(GL 은 빌드 때
+            // InstanceId 로 바꿔 구우므로 DX 와 같다). 그래서 배치가 둘 이상일 때 Vulkan 만 엉뚱한 인스턴스를
+            // 읽어 큐브가 겹쳐 그려졌다 — 벤치가 메시를 하나만 쓰던 동안(instanceBase 가 늘 0) 드러나지 않았다.
+            _listScratchIndirectCmd[argIndex]._startInstanceLocation = 0;
         }
 
         if ( _indirectArgsBuffer == 0 || _argsCapacity < argsCount )
