@@ -146,7 +146,7 @@ namespace sw
                 return false;
             // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다 — 이름이 없으면
             // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
-            utf16 arrName[64]{};
+            utf16 arrName[constant::kMaxBuffer64]{};
             swprintf_s( arrName, L"FrameStreamAllocator%u", frameIndex );
             _arrCommandAllocator[frameIndex]->SetName( arrName );
             swprintf_s( arrName, L"FrameCmdAllocator%u", frameIndex );

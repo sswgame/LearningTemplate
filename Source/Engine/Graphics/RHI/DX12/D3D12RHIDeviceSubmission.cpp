@@ -240,7 +240,7 @@ namespace sw
             return D3D12CommandListEntry{};
         }
         const uint32 entryIndex = _cmdListEntryCreated++;
-        utf16        arrName[64]{};
+        utf16        arrName[constant::kMaxBuffer64]{};
         swprintf_s( arrName, L"PoolAllocator%u", entryIndex );
         entry._allocator->SetName( arrName );
         swprintf_s( arrName, L"PoolList%u", entryIndex );

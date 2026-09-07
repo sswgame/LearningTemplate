@@ -92,17 +92,17 @@ namespace sw
         uint8                  _bActiveSwapchainRT : 1;
         [[maybe_unused]] uint8 _reserved           : 5;
 
-        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        RHIPipelineStateHandle _activeGraphicsPso;
 
-        RHIBufferHandle _boundMeshVb{ 0 };
-        uint32          _boundMeshStride{ sizeof( RHIVertex ) };
-        uint32          _boundMeshOffset{ 0 };
-        RHIBufferHandle _boundIndexBuffer{ 0 };
-        uint32          _boundIndexStride{ 4 };
-        uint32          _boundIndexOffset{ 0 };
+        RHIBufferHandle _boundMeshVb;
+        uint32          _boundMeshStride;
+        uint32          _boundMeshOffset;
+        RHIBufferHandle _boundIndexBuffer;
+        uint32          _boundIndexStride;
+        uint32          _boundIndexOffset;
 
         /// @brief 바인드 포인트별 슬롯 세트 상태 — [0] 그래픽스, [1] 컴퓨트. 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않는다.
-        VulkanSlotState _arrSlotState[2]{};
+        VulkanSlotState _arrSlotState[2];
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
@@ -110,6 +110,14 @@ namespace sw
             , _bTextureSetBound{ 0 }
             , _bActiveSwapchainRT{ 0 }
             , _reserved{ 0 }
+            , _activeGraphicsPso{ 0 }
+            , _boundMeshVb{ 0 }
+            , _boundMeshStride{ sizeof( RHIVertex ) }
+            , _boundMeshOffset{ 0 }
+            , _boundIndexBuffer{ 0 }
+            , _boundIndexStride{ 4 }
+            , _boundIndexOffset{ 0 }
+            , _arrSlotState{}
         {
         }
     };

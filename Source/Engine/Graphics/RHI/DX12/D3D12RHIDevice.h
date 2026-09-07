@@ -52,33 +52,48 @@ namespace sw
     struct D3D12RecordingState
     {
         /// @brief 바인드 포인트별 슬롯 테이블 상태 — [0] 그래픽스, [1] 컴퓨트. 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않는다.
-        D3D12SlotTableState _arrSlotState[2]{};
+        D3D12SlotTableState _arrSlotState[2];
         /// @brief 이 리스트가 빌린 온라인 힙 블록들 — 리스트가 닫힐 때 GPU 펜스 뒤 반납(releaseOnlineBlocksDeferred).
-        vector<uint32> _listOnlineBlock{};
+        vector<uint32> _listOnlineBlock;
         /// @brief 지금 쓰는 온라인 블록의 커서/끝 (셰이더 가시 힙 인덱스). 같으면 블록이 없다.
-        uint32                 _onlineCursor{ 0 };
-        uint32                 _onlineEnd{ 0 };
-        RHIBufferHandle        _boundMeshVb{ 0 };
-        uint32                 _boundMeshStride{ 0 };
-        uint32                 _boundMeshOffset{ 0 };
-        RHIBufferHandle        _boundIndexBuffer{ 0 };
-        uint32                 _boundIndexStride{ 4 };
-        uint32                 _boundIndexOffset{ 0 };
-        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        uint32                 _onlineCursor;
+        uint32                 _onlineEnd;
+        RHIBufferHandle        _boundMeshVb;
+        uint32                 _boundMeshStride;
+        uint32                 _boundMeshOffset;
+        RHIBufferHandle        _boundIndexBuffer;
+        uint32                 _boundIndexStride;
+        uint32                 _boundIndexOffset;
+        RHIPipelineStateHandle _activeGraphicsPso;
         /** @brief _pCmdList에 실제로 SetPipelineState/SetGraphicsRootSignature가 이미 나간 PSO 핸들.
          *  draw()/drawInstanced()가 _activeGraphicsPso와 같으면 재바인딩을 스킵한다. Reset() 직후에는
          *  0으로 되돌려야 한다(그 리스트엔 아직 아무 PSO도 안 걸렸으므로 캐시가 무효). */
-        RHIPipelineStateHandle _boundNativeGraphicsPso{ 0 };
-        RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments]{};
-        RHITextureHandle       _activeDepthTarget{ 0 };
-        uint32                 _activeColorTargetCount{ 0 };
+        RHIPipelineStateHandle _boundNativeGraphicsPso;
+        RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
+        RHITextureHandle       _activeDepthTarget;
+        uint32                 _activeColorTargetCount;
         uint8                  _bActiveSwapchainRT : 1;
         uint8                  _bRecording         : 1;
         [[maybe_unused]] uint8 _reserved           : 6;
 
         /** @brief 기록 안 한 상태로 초기화. */
         D3D12RecordingState()
-            : _bActiveSwapchainRT{ 0 }
+            : _arrSlotState{}
+            , _listOnlineBlock{}
+            , _onlineCursor{ 0 }
+            , _onlineEnd{ 0 }
+            , _boundMeshVb{ 0 }
+            , _boundMeshStride{ 0 }
+            , _boundMeshOffset{ 0 }
+            , _boundIndexBuffer{ 0 }
+            , _boundIndexStride{ 4 }
+            , _boundIndexOffset{ 0 }
+            , _activeGraphicsPso{ 0 }
+            , _boundNativeGraphicsPso{ 0 }
+            , _arrActiveColorTarget{}
+            , _activeDepthTarget{ 0 }
+            , _activeColorTargetCount{ 0 }
+            , _bActiveSwapchainRT{ 0 }
             , _bRecording{ 0 }
             , _reserved{ 0 }
         {

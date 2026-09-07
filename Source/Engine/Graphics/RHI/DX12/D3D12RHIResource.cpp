@@ -132,7 +132,7 @@ namespace sw
                 SW_LOG_ERROR( "openUploadSlot: failed to create copy command allocator" );
                 return false;
             }
-            utf16 arrName[64]{};
+            utf16 arrName[constant::kMaxBuffer64]{};
             swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
