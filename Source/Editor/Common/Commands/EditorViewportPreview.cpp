@@ -44,10 +44,7 @@ namespace sw::editor
 
             static GameObjectManager* getActiveObjectManager()
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return nullptr;
-                Scene* pScene = pSceneManager->getActiveScene();
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr )
                     return nullptr;
                 return pScene->getObjectManager();

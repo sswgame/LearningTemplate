@@ -162,13 +162,9 @@ namespace sw::editor
         if ( ImGui::Button( "Stop" ) )
         {
             EditorPlaySession::stop();
-            SceneManager* pSceneManager = editor::getService<SceneManager>();
-            if ( pSceneManager != nullptr )
-            {
-                Scene* pScene = pSceneManager->getActiveScene();
-                if ( pScene != nullptr )
-                    EditorContext::get()->getWorkspace().remapSelectionByObjectName( pScene->getObjectManager() );
-            }
+            GameObjectManager* pObjectManager = editor::getActiveObjectManager();
+            if ( pObjectManager != nullptr )
+                EditorContext::get()->getWorkspace().remapSelectionByObjectName( pObjectManager );
         }
         EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
     }

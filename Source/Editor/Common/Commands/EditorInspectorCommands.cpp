@@ -31,10 +31,7 @@ namespace sw::editor
             {
                 if ( objectId == 0 )
                     return nullptr;
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return nullptr;
-                Scene* pScene = pSceneManager->getActiveScene();
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return nullptr;
                 GameObject* pObj = pScene->getObjectManager()->findGameObjectById( objectId );

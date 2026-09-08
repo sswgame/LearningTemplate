@@ -253,8 +253,7 @@ namespace sw::editor
         if ( pMyMesh != nullptr )
             bottomOffset = scaleY * 0.5f;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        Scene*        pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
             translation._y = bottomOffset;

@@ -155,8 +155,7 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( "Active Scene & Component Distribution", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            SceneManager* pSceneManager = editor::getService<SceneManager>();
-            Scene*        pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+            Scene* pScene = editor::getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
                 GameObjectManager* pManager = pScene->getObjectManager();

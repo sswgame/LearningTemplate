@@ -182,10 +182,7 @@ namespace sw::editor
 
             static CameraComponent* getGameViewCamera()
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return nullptr;
-                return EditorCamera::ensure( pSceneManager->getActiveScene() );
+                return EditorCamera::ensure( editor::getActiveScene() );
             }
 
             static bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
@@ -255,10 +252,7 @@ namespace sw::editor
                 if ( pDrawList == nullptr )
                     return;
 
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
-                    return;
-                GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
 
@@ -359,12 +353,11 @@ namespace sw::editor
         const float32 fps         = ImGui::GetIO().Framerate;
         const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
 
-        SceneManager*      pSceneManager = editor::getService<SceneManager>();
-        Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-        GameObjectManager* pManager      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-        const uint32       totalObjects  = ( pManager != nullptr )
-                                             ? static_cast<uint32>( pManager->getAllGameObjects().size() )
-                                             : 0;
+        Scene*             pScene       = editor::getActiveScene();
+        GameObjectManager* pManager     = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        const uint32       totalObjects = ( pManager != nullptr )
+                                            ? static_cast<uint32>( pManager->getAllGameObjects().size() )
+                                            : 0;
 
         constexpr float32 overlayW = 160.0f;
         constexpr float32 overlayH = 72.0f;
@@ -633,13 +626,9 @@ namespace sw::editor
             processPicking( canvasPos, canvasSize, pCamera );
 
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager != nullptr )
-                {
-                    Scene* pScene = pSceneManager->getActiveScene();
-                    if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-                        pScene->getObjectManager()->flushSceneTransforms();
-                }
+                GameObjectManager* pObjectManager = editor::getActiveObjectManager();
+                if ( pObjectManager != nullptr )
+                    pObjectManager->flushSceneTransforms();
                 drawGizmo( arrView, arrProj, canvasPos, canvasSize );
             }
 
@@ -680,10 +669,7 @@ namespace sw::editor
         if ( bInside == false )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
         GameObjectManager* pManager = pScene->getObjectManager();
@@ -1234,10 +1220,7 @@ namespace sw::editor
         if ( EditorUtil::areSceneEditsAllowed() == false )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
 

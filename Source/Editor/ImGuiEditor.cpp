@@ -454,10 +454,7 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getViewportCamera() const
     {
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return nullptr;
-        return EditorCamera::getViewportCamera( pSceneManager->getActiveScene(), EditorPlaySession::isPlaying() );
+        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlaying() );
     }
 
     bool ImGuiEditor::isPlaying() const

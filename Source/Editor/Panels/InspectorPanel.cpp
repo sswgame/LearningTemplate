@@ -169,7 +169,7 @@ namespace sw::editor
             return;
         }
 
-        Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
             EditorWidgets::drawEmptyHint( "No active scene." );

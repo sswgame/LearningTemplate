@@ -39,11 +39,7 @@ namespace sw::editor
 
             static void beginPlayActiveScene()
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return;
-
-                Scene* pScene = pSceneManager->getActiveScene();
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr )
                     return;
 
@@ -56,11 +52,7 @@ namespace sw::editor
 
             static void endPlayActiveScene()
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return;
-
-                Scene* pScene = pSceneManager->getActiveScene();
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr )
                     return;
 
@@ -76,11 +68,7 @@ namespace sw::editor
                 s_listPlaySnapshots.clear();
                 s_bHasPlaySnapshot = false;
 
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return;
-
-                Scene* pScene = pSceneManager->getActiveScene();
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return;
 

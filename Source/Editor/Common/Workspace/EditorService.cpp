@@ -4,6 +4,9 @@
 
 #include "Core/Container/map.h"
 
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+
 SW_LOG_CALLER( "EditorService" );
 namespace sw::editor
 {
@@ -59,5 +62,17 @@ namespace sw::editor
     void setEditorData( EditorData* pData )
     {
         s_pEditorData = pData;
+    }
+
+    Scene* getActiveScene()
+    {
+        SceneManager* pSceneManager = getService<SceneManager>();
+        return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+    }
+
+    GameObjectManager* getActiveObjectManager()
+    {
+        Scene* pScene = getActiveScene();
+        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
     }
 } // namespace sw::editor

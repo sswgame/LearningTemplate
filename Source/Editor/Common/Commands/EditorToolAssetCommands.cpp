@@ -360,10 +360,7 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
 
@@ -454,10 +451,7 @@ namespace sw::editor
         if ( pLoaded == nullptr )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
-            return;
-        GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
+        GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return;
 
