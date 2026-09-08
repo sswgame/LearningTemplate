@@ -68,7 +68,7 @@ namespace sw
         };
 
         /** @brief 이벤트가 이 watch의 prefix/확장자와 맞으면 true. */
-        bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const;
+        bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const;
         /** @brief 파일 변경 이벤트를 워치 콜백으로 보냅니다. */
         void dispatchEvents( const vector<FileChangeEvent>& listEvent );
         /** @brief mtime 폴백으로 변경을 모읍니다. */
