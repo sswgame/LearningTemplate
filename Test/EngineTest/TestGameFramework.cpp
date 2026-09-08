@@ -837,6 +837,74 @@ SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_InvalidLookupAndNegativeIndexSaf
 }
 
 /**
+ * @brief [GameFrameworkTest] 기술 슬롯 수를 데이터가 정하는지 — 2칸 고정이 아니어야 한다
+ * @details 이 키트는 "턴제 전투" 라는 장르의 공통 뼈대인데, 예전에는 SpeciesDef 가 `_move0`/`_move1`
+ *          두 칸, PartyMember 가 `_pp0`/`_pp1` 두 칸으로 **게임 하나의 스키마를 박아** 두고 있었다.
+ *          기술이 넷인 턴제 게임은 이 키트로 만들 수 없었다. 슬롯 수가 데이터를 따라가는지 본다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_MoveSlotCountFollowsData )
+{
+    SpeciesCatalog catalog;
+
+    // 폴백 종족도 슬롯 목록을 갖는다 — PP 배열과 길이가 같아야 한다.
+    const SpeciesDef* pFallback = catalog.findSpecies( nullptr );
+    SW_ASSERT_NOT_NULL( pFallback );
+    SW_EXPECT_TRUE( pFallback->_listMoveIndex.empty() == false );
+
+    PartyMember wild = catalog.makeWild( pFallback->_id.c_str(), 5 );
+    SW_EXPECT_EQUAL( pFallback->_listMoveIndex.size(), wild._listPp.size() );
+
+    // 슬롯 번호로 기술을 찾는다. 범위를 넘으면 nullptr — "PP 가 없는 것" 과 같이 다뤄야 한다.
+    const MoveDef* pSlot0 = catalog.findMoveAtSlot( *pFallback, 0 );
+    SW_ASSERT_NOT_NULL( pSlot0 );
+    SW_EXPECT_TRUE( catalog.findMoveAtSlot( *pFallback, 9999 ) == nullptr );
+
+    // 슬롯이 넷인 종족을 손으로 세워도 PP 배열이 그대로 따라간다 (데이터가 정한다는 뜻).
+    SpeciesDef fourSlot{};
+    fourSlot._id            = pFallback->_id;
+    fourSlot._listMoveIndex = { 0, 1, 0, 1 };
+    SW_EXPECT_EQUAL( size_t( 4 ), fourSlot._listMoveIndex.size() );
+    SW_EXPECT_TRUE( catalog.findMoveAtSlot( fourSlot, 3 ) != nullptr );
+}
+
+/**
+ * @brief [GameFrameworkTest] 슬롯 수가 다른 파티도 세이브 왕복에서 보존되는지
+ */
+SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_VariableMoveSlotRoundtrip )
+{
+    const string savePath = "TestTemp/TurnBattleSaveGame_VariableSlots.sav";
+
+    TurnBattleSaveGame originalSlot;
+    originalSlot._mapPath = "Levels/SlotTest.scene";
+
+    PartyMember fourMoves{};
+    fourMoves._speciesId = "quad_caster";
+    fourMoves._nickname  = "Quad";
+    fourMoves._level     = 12;
+    fourMoves._hp        = 90;
+    fourMoves._hpMax     = 90;
+    fourMoves._listPp    = { 10, 20, 30, 40 };
+    originalSlot._listParty.push_back( fourMoves );
+
+    PartyMember oneMove{};
+    oneMove._speciesId = "single";
+    oneMove._listPp    = { 7 };
+    originalSlot._listParty.push_back( oneMove );
+
+    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( originalSlot, savePath ) );
+
+    TurnBattleSaveGame loaded;
+    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loaded, savePath ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), loaded._listParty.size() );
+    SW_EXPECT_EQUAL( size_t( 4 ), loaded._listParty[0]._listPp.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), loaded._listParty[1]._listPp.size() );
+    SW_EXPECT_EQUAL( int32( 40 ), loaded._listParty[0]._listPp[3] );
+    SW_EXPECT_EQUAL( int32( 7 ), loaded._listParty[1]._listPp[0] );
+
+    FileUtil::removeFile( savePath );
+}
+
+/**
  * @brief [GameFrameworkTest] TileMap 맵 경계 밖(-1, 99999) 쿼리 시 벽 판정(Solid) 및 크래시 방어 검증
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )

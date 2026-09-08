@@ -45,10 +45,24 @@ namespace sw
         float32 _attackCoolTime{ 1.5f };
         string  _projectilePrefab{};
 
-        // 애셋 경로 및 드롭
+        // 애셋 경로
         string _prefabPath{};
-        int32  _dropExp{ 10 };
-        int32  _dropGold{ 5 };
+
+        /**
+         * @brief 처치 보상 — 보상 이름 → 수량.
+         * @details 예전엔 `_dropExp` / `_dropGold` 두 칸이었다. 액션 게임의 보상이 경험치와 금화
+         *          둘뿐이라고 정해 둔 셈이라, 소울·탄약·파편을 주는 게임은 이 키트를 못 썼다.
+         *          `<Drop exp="10" gold="5" souls="3"/>` 처럼 **속성 이름이 곧 보상 이름**이다.
+         *          같은 프레임워크의 RuntimeHud 가 게이지를 이름 맵으로 다루는 것과 같은 방식이다.
+         */
+        unordered_map<hashed_string, int32> _mapDrop{};
+
+        /** @brief 보상 수량을 찾습니다. 없으면 fallback 입니다. */
+        int32 getDrop( const hashed_string& rewardId, int32 fallback = 0 ) const
+        {
+            const auto mapIter = _mapDrop.find( rewardId );
+            return mapIter != _mapDrop.end() ? mapIter->second : fallback;
+        }
     };
 
     /** @brief monsters.xml 몬스터 데이터 카탈로그 서비스 */

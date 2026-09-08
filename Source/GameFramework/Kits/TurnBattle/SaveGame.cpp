@@ -78,8 +78,7 @@ namespace sw
         m._level     = starterLevel;
         m._hp        = 20 + starterLevel * 2;
         m._hpMax     = m._hp;
-        m._pp0       = 35;
-        m._pp1       = 30;
+        m._listPp    = { 35, 30 };
         m._exp       = 0;
         m._expNext   = 40 + starterLevel * 10;
 
@@ -118,7 +117,15 @@ namespace sw
         for ( size_t partyIndex = 0; partyIndex < _listParty.size() && partyIndex < SaveGameInternal::partyCap(); ++partyIndex )
         {
             const PartyMember& m = _listParty[partyIndex];
-            sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".speciesId=" ).append( m._speciesId.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".nickname=" ).append( m._nickname.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".level=" ).append( m._level ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hp=" ).append( m._hp ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hpMax=" ).append( m._hpMax ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp0=" ).append( m._pp0 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp1=" ).append( m._pp1 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".exp=" ).append( m._exp ).append( '\n' );
+            sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".speciesId=" ).append( m._speciesId.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".nickname=" ).append( m._nickname.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".level=" ).append( m._level ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hp=" ).append( m._hp ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hpMax=" ).append( m._hpMax ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".exp=" ).append( m._exp ).append( '\n' );
+
+            // 슬롯 수가 데이터에 달렸으므로 개수를 함께 적는다. 예전 세이브는 pp0/pp1 두 칸이었고
+            // 읽는 쪽이 ppCount 가 없으면 그 형식으로 폴백한다.
+            sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".ppCount=" ).append( static_cast<int32>( m._listPp.size() ) ).append( '\n' );
+            for ( size_t slot = 0; slot < m._listPp.size(); ++slot )
+            {
+                sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp" ).append( static_cast<int32>( slot ) ).append( '=' ).append( m._listPp[slot] ).append( '\n' );
+            }
         }
 
         for ( const auto& [key, val] : _mapFlag )
@@ -187,9 +194,25 @@ namespace sw
             m._level = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level );
             m._hp    = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hp" ).c_str(), m._hp );
             m._hpMax = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hpMax" ).c_str(), m._hpMax );
-            m._pp0   = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp0" ).c_str(), m._pp0 );
-            m._pp1   = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp1" ).c_str(), m._pp1 );
             m._exp   = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "exp" ).c_str(), m._exp );
+
+            // ppCount 가 없으면 pp0/pp1 두 칸이던 예전 세이브다.
+            const int32 ppCount = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "ppCount" ).c_str(), -1 );
+            if ( ppCount >= 0 )
+            {
+                m._listPp.assign( static_cast<size_t>( ppCount ), 0 );
+                for ( int32 slot = 0; slot < ppCount; ++slot )
+                {
+                    const string key = string( "pp" ) + to_string( slot );
+                    m._listPp[static_cast<size_t>( slot )] =
+                        KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, key.c_str() ).c_str(), 0 );
+                }
+            }
+            else
+            {
+                m._listPp = { KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp0" ).c_str(), 35 ),
+                              KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp1" ).c_str(), 30 ) };
+            }
 
             if ( m._nickname.empty() )
             {

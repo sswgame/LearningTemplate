@@ -6,7 +6,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -27,15 +29,19 @@ namespace sw
         int32  _ppMax{ 35 };
     };
 
-    /** @brief 종족 한 행 (기초 스탯 + 기술 슬롯 인덱스) */
+    /**
+     * @brief 종족 한 행 (기초 스탯 + 기술 슬롯)
+     * @details 기술 슬롯 수는 **데이터가 정한다**. 예전엔 `_move0` / `_move1` 두 칸 고정이라
+     *          기술이 넷인 턴제 게임을 이 키트로 만들 수 없었다 — 장르 공통 뼈대가 게임 하나의
+     *          스키마를 박아 두고 있던 셈이다. XML 은 `move0`, `move1`, ... 를 없을 때까지 읽는다.
+     */
     struct SpeciesDef
     {
-        string _id{ "critter_a" };
-        string _name{ "Wild Critter" }; ///< 표시 이름 폴백
-        int32  _baseHp{ 40 };
-        int32  _baseAtk{ 10 };
-        int32  _move0{ 0 }; ///< MoveDef 인덱스
-        int32  _move1{ 1 };
+        string        _id{ "critter_a" };
+        string        _name{ "Wild Critter" }; ///< 표시 이름 폴백
+        int32         _baseHp{ 40 };
+        int32         _baseAtk{ 10 };
+        vector<int32> _listMoveIndex{ 0, 1 }; ///< MoveDef 인덱스 (슬롯 순서)
     };
 
     /** @brief 런타임 파티 멤버 (세이브에 들어감) */
@@ -54,10 +60,9 @@ namespace sw
         int32 _hp{ 40 };
         PROPERTY()
         int32 _hpMax{ 40 };
+        /** @brief 슬롯별 잔여 PP. SpeciesDef::_listMoveIndex 와 같은 길이·같은 순서다. */
         PROPERTY()
-        int32 _pp0{ 35 };
-        PROPERTY()
-        int32 _pp1{ 20 };
+        vector<int32> _listPp{ 35, 20 };
         PROPERTY()
         int32 _exp{ 0 };
         PROPERTY()
@@ -88,6 +93,9 @@ namespace sw
         /** @brief ID로 기술 인덱스를 찾습니다. */
         int32 findMoveIndex( const utf8* pId ) const;
 
+        /** @brief 종족의 슬롯 번호에 해당하는 기술을 찾습니다. 슬롯이 없으면 nullptr 입니다. */
+        const MoveDef* findMoveAtSlot( const SpeciesDef& species, size_t slot ) const;
+
         /** @brief 야생 조우용 파티 멤버를 만듭니다. */
         PartyMember makeWild( const utf8* pSpeciesId, int32 level = 5 ) const;
         /** @brief 스타터 파티 멤버를 만듭니다. */
@@ -98,8 +106,20 @@ namespace sw
 
     private:
         void seedFallback();
+        /** @brief _listMove / _listSpecies 로 id 조회 맵을 다시 만듭니다. */
+        void rebuildLookup();
 
         vector<MoveDef>    _listMove;
         vector<SpeciesDef> _listSpecies;
+
+        /**
+         * @brief id → 행 인덱스. 벡터가 정본이고 이건 조회용이다.
+         * @details 예전엔 id 조회가 벡터 선형 탐색 + string 비교였다. 형제 키트인 ActionCombat 의
+         *          MonsterDataCatalog 는 같은 문제를 이미 hashed_string 맵으로 풀고 있었는데,
+         *          한 프레임워크 안에서 같은 일을 두 방식으로 하고 있었다. 인덱스는 SpeciesDef 에
+         *          적혀 직렬화되므로 **벡터의 자리는 그대로 두고** 맵만 곁에 둔다.
+         */
+        unordered_map<hashed_string, size_t> _mapMoveIndex;
+        unordered_map<hashed_string, size_t> _mapSpeciesIndex;
     };
 } // namespace sw

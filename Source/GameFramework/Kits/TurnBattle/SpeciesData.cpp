@@ -28,8 +28,31 @@ namespace sw
         _listSpecies.clear();
         _listMove.push_back( { "tackle", "Tackle", 40, 35 } );
         _listMove.push_back( { "growl", "Growl", 0, 40 } );
-        _listSpecies.push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
-        _listSpecies.push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
+        _listSpecies.push_back( {
+            "critter_a",
+            "Wild Critter",
+            40,
+            10,
+            { 0, 1 }
+        } );
+        _listSpecies.push_back( {
+            "starter_a",
+            "Leaf Pup",
+            45,
+            11,
+            { 0, 1 }
+        } );
+        rebuildLookup();
+    }
+
+    void SpeciesCatalog::rebuildLookup()
+    {
+        _mapMoveIndex.clear();
+        _mapSpeciesIndex.clear();
+        for ( size_t moveIndex = 0; moveIndex < _listMove.size(); ++moveIndex )
+            _mapMoveIndex.insert_or_assign( hashed_string( _listMove[moveIndex]._id.c_str() ), moveIndex );
+        for ( size_t speciesIndex = 0; speciesIndex < _listSpecies.size(); ++speciesIndex )
+            _mapSpeciesIndex.insert_or_assign( hashed_string( _listSpecies[speciesIndex]._id.c_str() ), speciesIndex );
     }
 
     bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )
@@ -71,6 +94,9 @@ namespace sw
             }
         }
 
+        // 종족 파싱이 findMoveIndex 를 부르므로 기술 맵이 먼저 서 있어야 한다.
+        rebuildLookup();
+
         XmlNode speciesNode = root.child( "species" );
         if ( speciesNode.isValid() )
         {
@@ -85,13 +111,23 @@ namespace sw
                 def._name    = pName != nullptr ? pName : pId;
                 def._baseHp  = entryNode.attrInt( "baseHp", 1 );
                 def._baseAtk = entryNode.attrInt( "baseAtk", 1 );
-                def._move0   = findMoveIndex( entryNode.attr( "move0" ) );
-                def._move1   = findMoveIndex( entryNode.attr( "move1" ) );
-                def._move0   = MathUtil::max( def._move0, 0 );
-                def._move1   = MathUtil::max( def._move1, 0 );
+                // move0, move1, ... 을 끊길 때까지 읽는다 — 슬롯 수를 코드가 아니라 데이터가 정한다.
+                def._listMoveIndex.clear();
+                for ( int32 slot = 0;; ++slot )
+                {
+                    const string attrName = string( "move" ) + to_string( slot );
+                    const utf8*  pMoveId  = entryNode.attr( attrName.c_str() );
+                    if ( StringUtil::isNullOrEmpty( pMoveId ) )
+                        break;
+                    def._listMoveIndex.push_back( MathUtil::max( findMoveIndex( pMoveId ), 0 ) );
+                }
+                if ( def._listMoveIndex.empty() )
+                    def._listMoveIndex.push_back( 0 );
                 _listSpecies.push_back( std::move( def ) );
             }
         }
+
+        rebuildLookup();
 
         if ( _listMove.empty() || _listSpecies.empty() )
         {
@@ -111,11 +147,9 @@ namespace sw
             const_cast<SpeciesCatalog*>( this )->seedFallback();
         if ( pId == nullptr )
             return &_listSpecies[0];
-        for ( const SpeciesDef& speciesDef : _listSpecies )
-        {
-            if ( speciesDef._id == pId )
-                return &speciesDef;
-        }
+        const auto mapIter = _mapSpeciesIndex.find( hashed_string( pId ) );
+        if ( mapIter != _mapSpeciesIndex.end() && mapIter->second < _listSpecies.size() )
+            return &_listSpecies[mapIter->second];
         return &_listSpecies[0];
     }
 
@@ -132,12 +166,15 @@ namespace sw
     {
         if ( pId == nullptr )
             return -1;
-        for ( size_t moveIndex = 0; moveIndex < _listMove.size(); ++moveIndex )
-        {
-            if ( _listMove[moveIndex]._id == pId )
-                return static_cast<int32>( moveIndex );
-        }
-        return -1;
+        const auto mapIter = _mapMoveIndex.find( hashed_string( pId ) );
+        return mapIter != _mapMoveIndex.end() ? static_cast<int32>( mapIter->second ) : -1;
+    }
+
+    const MoveDef* SpeciesCatalog::findMoveAtSlot( const SpeciesDef& species, size_t slot ) const
+    {
+        if ( slot >= species._listMoveIndex.size() )
+            return nullptr;
+        return findMove( species._listMoveIndex[slot] );
     }
 
     PartyMember SpeciesCatalog::makeWild( const utf8* pSpeciesId, int32 level ) const
@@ -149,10 +186,15 @@ namespace sw
         m._level     = level;
         m._hpMax     = pSpecies->_baseHp + level * 2;
         m._hp        = m._hpMax;
-        m._pp0       = findMove( pSpecies->_move0 )->_ppMax;
-        m._pp1       = findMove( pSpecies->_move1 )->_ppMax;
-        m._exp       = 0;
-        m._expNext   = 40 + level * 10;
+        m._listPp.clear();
+        m._listPp.reserve( pSpecies->_listMoveIndex.size() );
+        for ( size_t slot = 0; slot < pSpecies->_listMoveIndex.size(); ++slot )
+        {
+            const MoveDef* pMove = findMoveAtSlot( *pSpecies, slot );
+            m._listPp.push_back( pMove != nullptr ? pMove->_ppMax : 0 );
+        }
+        m._exp     = 0;
+        m._expNext = 40 + level * 10;
         return m;
     }
 
@@ -165,5 +207,7 @@ namespace sw
     {
         _listMove.clear();
         _listSpecies.clear();
+        _mapMoveIndex.clear();
+        _mapSpeciesIndex.clear();
     }
 } // namespace sw

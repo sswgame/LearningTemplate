@@ -112,8 +112,15 @@ namespace sw
             XmlNode dropNode = node.child( "Drop" );
             if ( dropNode.isValid() )
             {
-                monsterDef._dropExp  = dropNode.attrInt( "exp", monsterDef._dropExp );
-                monsterDef._dropGold = dropNode.attrInt( "gold", monsterDef._dropGold );
+                // 속성 이름이 곧 보상 이름이다 — 코드가 보상 종류를 알 필요가 없다.
+                for ( XmlAttribute attr = dropNode.firstAttr(); attr.isValid(); attr = attr.next() )
+                {
+                    const utf8* pRewardId = attr.name();
+                    if ( StringUtil::isNullOrEmpty( pRewardId ) )
+                        continue;
+                    monsterDef._mapDrop.insert_or_assign( hashed_string( pRewardId ),
+                                                          dropNode.attrInt( pRewardId, 0 ) );
+                }
             }
 
             _mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;

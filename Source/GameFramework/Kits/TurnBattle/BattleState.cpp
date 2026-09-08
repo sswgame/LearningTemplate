@@ -144,9 +144,18 @@ namespace sw
     {
         const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
         const SpeciesDef*     pSpecies = pCatalog != nullptr ? pCatalog->findSpecies( attacker._speciesId.c_str() ) : nullptr;
-        const int32           mid      = ( pSpecies != nullptr ) ? ( ( moveSlot == 0 ) ? pSpecies->_move0 : pSpecies->_move1 ) : 0;
-        const MoveDef*        pMove    = pCatalog != nullptr ? pCatalog->findMove( mid ) : nullptr;
-        int32&                pp       = ( moveSlot == 0 ) ? attacker._pp0 : attacker._pp1;
+        const size_t          slot     = static_cast<size_t>( MathUtil::max( moveSlot, 0 ) );
+        const MoveDef*        pMove    = ( pCatalog != nullptr && pSpecies != nullptr ) ? pCatalog->findMoveAtSlot( *pSpecies, slot ) : nullptr;
+
+        // 슬롯 수는 데이터가 정하므로 없는 슬롯을 고를 수 있다 — PP 가 없는 것과 같이 다룬다.
+        if ( slot >= attacker._listPp.size() )
+        {
+            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
+                          attacker._nickname.c_str() );
+            return;
+        }
+
+        int32& pp = attacker._listPp[slot];
         if ( pp <= 0 )
         {
             formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
