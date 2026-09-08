@@ -685,6 +685,75 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 }
 
 /**
+ * @brief [RenderPassTest] 셰이더 핫리로드가 PSO 를 **실제로 다시 만드는지** 검증.
+ * @details PSO 는 바이트코드를 구워 넣은 객체다. onShaderRecompiled 가 바인딩 레이아웃만
+ *          새로 만들던 시절에는 셰이더를 고쳐도 화면이 시작 시 컴파일된 그대로였다 —
+ *          로그는 "Recompilation Succeeded" 를 찍는데 그림은 안 바뀌니 눈치채기 어려웠다.
+ *          LiveShaderTest 는 감시자와 include 파싱만 보므로 이 경로를 잡지 못한다.
+ *
+ *          네 백엔드 모두 PSO 를 RHIHandleTable(generation 팩드)로 발급하므로, 다시 만들면
+ *          핸들 값이 반드시 달라진다. 재생성 여부를 핸들로 판정하는 근거다.
+ */
+SW_TEST_CASE( RenderPassTest, ShaderRecompileRebuildsPipelineStates )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+    bool bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for shader recompile test" );
+
+    sw::FrameRenderer renderer;
+    SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
+    SW_EXPECT_TRUE( renderer.isReady() );
+
+    const sw::RHIPipelineStateHandle beforeForward = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
+    SW_EXPECT_TRUE_MSG( beforeForward != 0, "리로드 전 ForwardOpaque PSO 가 있어야 한다" );
+
+    sw::ShaderCompileResult result{};
+    result._bSuccess = true;
+    renderer.onShaderRecompiled( "engine/shaders/forwardlit.hlsl", result );
+
+    const sw::RHIPipelineStateHandle afterForward = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
+    SW_EXPECT_TRUE_MSG( afterForward != 0, "리로드 후 ForwardOpaque PSO 가 다시 만들어져야 한다" );
+    SW_EXPECT_TRUE_MSG( afterForward != beforeForward,
+                        "PSO 핸들이 그대로다 — 레이아웃만 갱신하고 파이프라인은 예전 바이트코드를 들고 있다" );
+
+    // 재생성 뒤에도 여전히 그릴 수 있어야 한다 (레이아웃·폴백 버퍼·콜백이 같이 재구축됐는지).
+    sw::Scene scene( "ShaderRecompileScene" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::GameObject*          pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( cube );
+
+    const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+    device->beginFrame( clear );
+    SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), nullptr, &scene ), "PSO 재생성 후 프레임 실행" );
+    device->endFrame( false, false );
+    device->waitIdle();
+
+    if ( cube != nullptr )
+        cube->releaseGpu();
+    renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
  * @brief executePacket()이 프레임마다 GpuScene GPU 버퍼를 재생성하지 않고 재사용하는지 검증.
  * @details GT/RT 소유권 분리(exportCpuSnapshot/adoptCpuSnapshot) 회귀 테스트 — 고치기 전에는
  *          FrameRenderer::_gpuScene이 매 프레임 통째로 덮어써져서 인스턴스 버퍼 핸들이 매번 바뀌었다

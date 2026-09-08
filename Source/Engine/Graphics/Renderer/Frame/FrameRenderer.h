@@ -536,7 +536,9 @@ namespace sw
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.
-        std::atomic<uint8>                   _bPresentPsoMissingLogged{ 0 };
+        std::atomic<uint8> _bPresentPsoMissingLogged{ 0 };
+        /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치 (드로우 경로라 프레임마다 찍으면 안 된다).
+        std::atomic<uint8>                   _bMaterialFallbackMissingLogged{ 0 };
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         uint32                               _transientWidth;
         uint32                               _transientHeight;

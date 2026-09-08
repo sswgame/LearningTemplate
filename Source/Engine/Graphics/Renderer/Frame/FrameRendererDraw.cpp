@@ -41,13 +41,18 @@ namespace sw
 
         _bindingLayoutCache.invalidateByShaderPath( shaderPath );
 
-        // 영향받는 PSO 를 특정하지 않고 전부 다시 만든다 (PSO 수는 소수). getOrBuild 가 재컴파일·리플렉션한다.
-        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
-        for ( const auto& entry : _mapPsoDesc )
-        {
-            const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( entry.second, _pDevice->getBackendType() );
-            _mapPsoLayout[entry.first]        = &layout;
-        }
+        // **PSO 를 실제로 다시 만든다.** 예전엔 여기서 바인딩 레이아웃만 새로 만들었는데, PSO 는
+        // 바이트코드를 구워 넣은 객체라 그것만으로는 화면이 시작 시 컴파일된 셰이더 그대로였다.
+        // 주석은 "전부 다시 만든다" 였지만 실제로 재생성하는 releasePassResources/ensurePassResources
+        // 는 loadPipeline 과 shutdown 에서만 불렀다.
+        //
+        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고
+        // (그래야 새 바이트코드를 집는다) EngineLoop 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
+        // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
+        releasePassResources();
+        ensurePassResources();
+        ensureTransientResources();
+        bindPassCallbacks();
     }
 
     const ShaderBindingLayout* FrameRenderer::layoutForPso( RHIPipelineStateHandle pso ) const
@@ -96,6 +101,13 @@ namespace sw
             {
                 ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
                 ctx._drawMaterialCount = 1u;
+            }
+            else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
+            {
+                // 여기서 조용히 나가면 t9 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
+                // 막는 것은 ensureMaterialPsos 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
+                SW_LOG_ERROR( "머티리얼 폴백 버퍼가 stride %# 에 없습니다 — 이 드로우는 g_SwMaterials 를 비운 채 나갑니다.",
+                              pSlot->_elementStride );
             }
             return;
         }
