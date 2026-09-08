@@ -243,6 +243,15 @@ namespace sw
                 continue;
             }
             _mapNameToSlot[slot._name] = index;
+
+            // 셰이더가 선언한 이름(`g_SwMaterials`)과 엔진이 쓰는 canonical 이름(`SwMaterials`)을 둘 다 건다.
+            // 리소스 바인딩 표(_listResourceBind)와 리소스 레지스트리는 canonical 키로 굽는데 이 색인만
+            // 원본 이름이라, find( "SwMaterials" ) 가 **언제나** nullptr 이었다. 그래서 머티리얼 없는 배치가
+            // 폴백 버퍼를 못 찾아 t9 를 비운 채 드로우를 냈고, Vulkan 이 초기화되지 않은 디스크립터를 읽어
+            // 디바이스를 잃었다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
+            const hashed_string canonicalName{ canonicalResourceView( slot._name.c_str(), false ) };
+            if ( canonicalName != slot._name && _mapNameToSlot.find( canonicalName ) == _mapNameToSlot.end() )
+                _mapNameToSlot[canonicalName] = index;
         }
     }
 

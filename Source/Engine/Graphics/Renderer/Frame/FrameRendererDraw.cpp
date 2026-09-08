@@ -132,14 +132,17 @@ namespace sw
         const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나 — 값·레지스트리 버전과 버퍼가 모두 그대로면 없다.
+        // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
+        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다 (FramePassContext::_lastBindPso 참고).
         const uint32 valuesVersion   = ctx._passValues.getVersion();
         const uint32 registryVersion = ctx._resourceRegistry.getVersion();
-        const bool   bUpToDate       = ( ctx._lastCbBuffer == engineCb._buffer ) && ( ctx._lastCbValuesVersion == valuesVersion ) &&
-                                       ( ctx._lastCbRegistryVersion == registryVersion );
+        const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
+                               ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
 
         ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                            engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
 
+        ctx._lastBindPso           = pso;
         ctx._lastCbBuffer          = engineCb._buffer;
         ctx._lastCbValuesVersion   = valuesVersion;
         ctx._lastCbRegistryVersion = registryVersion;

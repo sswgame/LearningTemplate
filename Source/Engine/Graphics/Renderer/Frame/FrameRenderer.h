@@ -164,6 +164,15 @@ namespace sw
             uint32          _lastCbValuesVersion{ 0 };
             uint32          _lastCbRegistryVersion{ 0 };
             /**
+             * @brief 마지막으로 리소스를 **실제로 건** PSO.
+             * @details 슬롯 상태는 PSO 단위다 — `setPipelineState` 는 이전 PSO 가 건 t/u 슬롯이 다음 PSO 로
+             *          새지 않게 슬롯 상태를 통째로 비운다. 그래서 값·레지스트리가 그대로여도 PSO 가 바뀌었으면
+             *          다시 걸어야 한다. 이걸 빼먹으면 배치가 퍼뮤테이션 PSO 로 갈아탄 순간 t9(g_SwMaterials)
+             *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
+             *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
+             */
+            RHIPipelineStateHandle _lastBindPso{ 0 };
+            /**
              * @brief 이 패스가 어떤 뷰의 컬링 결과를 쓸지.
              * @details 그림자 패스만 Shadow 이고 나머지는 Main 이다. 컬링 결과는 절두체에 종속이라
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그린다.
