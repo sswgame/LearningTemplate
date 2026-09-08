@@ -65,6 +65,10 @@ namespace sw::editor
         void processOrbitInput();
         void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
         void drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize );
+
+        /** @brief 다중 선택 기즈모를 조작합니다 (열거형은 ImGuizmo 에 묶이지 않도록 uint32 로 받는다). */
+        void manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
+                                   const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap );
         void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,

@@ -785,66 +785,7 @@ namespace sw::editor
         const bool bGroup = ( listGizmo.size() > 1 );
         if ( bGroup )
         {
-            if ( _bGizmoTracking == SW_FALSE )
-            {
-                float3 centroid{};
-                for ( GameObject* pObj : listGizmo )
-                    centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
-                const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
-                centroid               = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
-                float4x4 groupWorld{};
-                groupWorld._41 = centroid._x;
-                groupWorld._42 = centroid._y;
-                groupWorld._43 = centroid._z;
-                EditorViewportClientInternal::storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
-
-                if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-                {
-                    _listGizmoObject.clear();
-                    _listGizmoUndoXml.clear();
-                    _listGizmoRelativeWorld.clear();
-                    const float4x4 invGroup = groupWorld.invert();
-                    for ( GameObject* pObj : listGizmo )
-                    {
-                        _listGizmoObject.push_back( GameObjectPtr{ pObj } );
-                        _listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
-                        _listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
-                    }
-                }
-            }
-
-            if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
-            {
-                float4x4 dummyWorld{};
-                EditorViewportClientInternal::loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
-                const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
-                for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-                {
-                    GameObject* pObj = _listGizmoObject[objectIndex].get();
-                    if ( pObj == nullptr )
-                        continue;
-                    SceneComponent* pSc = pObj->getPrimarySceneComponent();
-                    if ( pSc == nullptr )
-                        continue;
-                    EditorViewportClientInternal::applyWorldMatrix( pSc, _listGizmoRelativeWorld[objectIndex] * dummyWorld );
-                }
-            }
-
-            if ( ImGuizmo::IsUsing() )
-            {
-                _bGizmoTracking = SW_TRUE;
-            }
-            else if ( _bGizmoTracking == SW_TRUE )
-            {
-                const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
-                for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
-                    EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
-                                                       "Gizmo Transform" );
-                _listGizmoObject.clear();
-                _listGizmoUndoXml.clear();
-                _listGizmoRelativeWorld.clear();
-                _bGizmoTracking = SW_FALSE;
-            }
+            manipulateGroupGizmo( pView, pProj, static_cast<uint32>( op ), static_cast<uint32>( mode ), listGizmo, bUseSnap, bUseSnap ? arrSnap : nullptr );
             return;
         }
 
@@ -895,6 +836,74 @@ namespace sw::editor
         {
             EditorSceneCommands::commitModify( pRaw, _gizmoUndoBeforeXml, "Gizmo Transform" );
             _gizmoUndoBeforeXml.clear();
+            _bGizmoTracking = SW_FALSE;
+        }
+    }
+
+    void EditorViewportClient::manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap )
+    {
+        // 헤더가 ImGuizmo 를 알 필요는 없다 — 열거형은 여기서만 되돌린다.
+        const ImGuizmo::OPERATION op   = static_cast<ImGuizmo::OPERATION>( operation );
+        const ImGuizmo::MODE      mode = static_cast<ImGuizmo::MODE>( gizmoMode );
+
+        if ( _bGizmoTracking == SW_FALSE )
+        {
+            float3 centroid{};
+            for ( GameObject* pObj : listGizmo )
+                centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
+            const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
+            centroid               = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
+            float4x4 groupWorld{};
+            groupWorld._41 = centroid._x;
+            groupWorld._42 = centroid._y;
+            groupWorld._43 = centroid._z;
+            EditorViewportClientInternal::storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
+
+            if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            {
+                _listGizmoObject.clear();
+                _listGizmoUndoXml.clear();
+                _listGizmoRelativeWorld.clear();
+                const float4x4 invGroup = groupWorld.invert();
+                for ( GameObject* pObj : listGizmo )
+                {
+                    _listGizmoObject.push_back( GameObjectPtr{ pObj } );
+                    _listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
+                    _listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
+                }
+            }
+        }
+
+        if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? pSnap : nullptr ) )
+        {
+            float4x4 dummyWorld{};
+            EditorViewportClientInternal::loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
+            const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+            for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+            {
+                GameObject* pObj = _listGizmoObject[objectIndex].get();
+                if ( pObj == nullptr )
+                    continue;
+                SceneComponent* pSc = pObj->getPrimarySceneComponent();
+                if ( pSc == nullptr )
+                    continue;
+                EditorViewportClientInternal::applyWorldMatrix( pSc, _listGizmoRelativeWorld[objectIndex] * dummyWorld );
+            }
+        }
+
+        if ( ImGuizmo::IsUsing() )
+        {
+            _bGizmoTracking = SW_TRUE;
+        }
+        else if ( _bGizmoTracking == SW_TRUE )
+        {
+            const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+            for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+                EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
+                                                   "Gizmo Transform" );
+            _listGizmoObject.clear();
+            _listGizmoUndoXml.clear();
+            _listGizmoRelativeWorld.clear();
             _bGizmoTracking = SW_FALSE;
         }
     }

@@ -33,6 +33,9 @@ namespace sw::editor
         /** @brief 실시간 FPS 및 씬 성능 진단 탭을 그립니다. */
         void drawPerformanceTab();
 
+        /** @brief 활성 씬의 컴포넌트 분포 섹션을 그립니다. */
+        void drawSceneDistributionSection();
+
     private:
         float32                     _arrFrameTimeHistory[120];
         uint32                      _historyOffset;

@@ -111,6 +111,48 @@ namespace sw::editor
 
         ImGui::Separator();
 
+        drawSceneDistributionSection();
+
+        if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            if ( _bCatalogDirty == SW_TRUE && _catalogJob.isPending() == false )
+            {
+                _catalogJob.request();
+                _bCatalogDirty = SW_FALSE;
+            }
+
+            EditorResourceCatalogCounts counts{};
+            if ( _catalogJob.take( counts ) )
+                _catalogCounts = counts;
+
+            if ( ImGui::Button( "Scan Resources" ) )
+                _bCatalogDirty = SW_TRUE;
+
+            ImGui::BulletText( "Scenes (.scene.xml): %zu", _catalogCounts._sceneCount );
+            ImGui::BulletText( "Prefabs (.prefab.xml): %zu", _catalogCounts._prefabCount );
+            ImGui::BulletText( "Textures (.png): %zu", _catalogCounts._textureCount );
+            ImGui::BulletText( "Shaders (.hlsl): %zu", _catalogCounts._shaderCount );
+        }
+
+        ImGui::Separator();
+
+        if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            TaskManager* pTaskManager = editor::getService<TaskManager>();
+            if ( pTaskManager != nullptr )
+            {
+                ImGui::BulletText( "Worker Threads: %u", pTaskManager->getWorkerCount() );
+                ImGui::BulletText( "Task System: Active" );
+            }
+            else
+            {
+                ImGui::TextDisabled( "TaskManager is not active." );
+            }
+        }
+    }
+
+    void ProfilerPanel::drawSceneDistributionSection()
+    {
         if ( ImGui::CollapsingHeader( "Active Scene & Component Distribution", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             SceneManager* pSceneManager = editor::getService<SceneManager>();
@@ -198,43 +240,6 @@ namespace sw::editor
         }
 
         ImGui::Separator();
-
-        if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
-        {
-            if ( _bCatalogDirty == SW_TRUE && _catalogJob.isPending() == false )
-            {
-                _catalogJob.request();
-                _bCatalogDirty = SW_FALSE;
-            }
-
-            EditorResourceCatalogCounts counts{};
-            if ( _catalogJob.take( counts ) )
-                _catalogCounts = counts;
-
-            if ( ImGui::Button( "Scan Resources" ) )
-                _bCatalogDirty = SW_TRUE;
-
-            ImGui::BulletText( "Scenes (.scene.xml): %zu", _catalogCounts._sceneCount );
-            ImGui::BulletText( "Prefabs (.prefab.xml): %zu", _catalogCounts._prefabCount );
-            ImGui::BulletText( "Textures (.png): %zu", _catalogCounts._textureCount );
-            ImGui::BulletText( "Shaders (.hlsl): %zu", _catalogCounts._shaderCount );
-        }
-
-        ImGui::Separator();
-
-        if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
-        {
-            TaskManager* pTaskManager = editor::getService<TaskManager>();
-            if ( pTaskManager != nullptr )
-            {
-                ImGui::BulletText( "Worker Threads: %u", pTaskManager->getWorkerCount() );
-                ImGui::BulletText( "Task System: Active" );
-            }
-            else
-            {
-                ImGui::TextDisabled( "TaskManager is not active." );
-            }
-        }
     }
 
     void ProfilerPanel::drawMemoryTab()

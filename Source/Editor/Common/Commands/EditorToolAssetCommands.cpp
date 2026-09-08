@@ -384,6 +384,13 @@ namespace sw::editor
             return;
         }
 
+        collectComponentOverrides( pInstance, pCdo, outOverride );
+
+        pManager->destroyObject( pCdo );
+    }
+
+    void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
+    {
         const SerializeContext& ctx = SerializeContext::getDefault();
         for ( Component* pInstComp : pInstance->getAllComponents() )
         {
@@ -425,12 +432,10 @@ namespace sw::editor
                 item._defaultValue    = EditorToolAssetInternal::formatPropertyValue( prop, pCdoComp );
                 item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstComp );
                 item._bModified       = ( cdoBytes != instBytes );
-                outOverride.push_back( std::move( item ) );
+                outListOverride.push_back( std::move( item ) );
             },
                 true );
         }
-
-        pManager->destroyObject( pCdo );
     }
 
     void EditorToolAssetCommands::revertPrefabOverride( GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath )

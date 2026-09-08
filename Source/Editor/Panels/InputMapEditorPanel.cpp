@@ -454,6 +454,17 @@ namespace sw::editor
         ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.5f, 1.0f ), "%s", pTypeName );
         ImGui::Separator();
 
+        drawKeyboardMonitor();
+
+        drawMouseMonitor();
+
+        drawGamepadMonitor();
+    }
+
+    void InputMapEditorPanel::drawKeyboardMonitor()
+    {
+        InputManager* pInput = getService<InputManager>();
+
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Keyboard Status", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
@@ -477,6 +488,11 @@ namespace sw::editor
             if ( bAnyKey == false )
                 ImGui::TextDisabled( "None" );
         }
+    }
+
+    void InputMapEditorPanel::drawMouseMonitor()
+    {
+        InputManager* pInput = getService<InputManager>();
 
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -504,6 +520,11 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextColored( pInput->isMouseButtonDown( MouseButton::Middle ) ? ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ) : ImVec4( 0.4f, 0.4f, 0.4f, 1.0f ), "[M]" );
         }
+    }
+
+    void InputMapEditorPanel::drawGamepadMonitor()
+    {
+        InputManager* pInput = getService<InputManager>();
 
         // 4) 게임패드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Gamepad 0 Status", ImGuiTreeNodeFlags_DefaultOpen ) )
