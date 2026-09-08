@@ -146,6 +146,65 @@ namespace sw
                 return listMerged;
             }
 
+            /**
+             * @brief `bin/<rhi>/bake.stamp` 에 셰이더 소스의 **내용 해시**를 적습니다.
+             * @details 쿠커(CookAssets.py)가 "지금 팩에 넣으려는 바이너리가 지금 이 소스에서 나온
+             *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
+             *          `git clone` 이 전부 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
+             *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다.
+             * @param binDirectory 매니페스트를 쓴 폴더 (`<domain>/shaders/bin/<rhi>`)
+             */
+            static void writeBakeStamp( string_view binDirectory )
+            {
+                // <domain>/shaders/bin/<rhi> → <domain>/shaders
+                const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
+                const string parentDir  = FileUtil::getDirectoryPart( rhiDir );
+                const string shadersDir = FileUtil::getDirectoryPart( parentDir );
+                if ( shadersDir.empty() )
+                    return;
+
+                vector<string> listSource;
+                FileUtil::collectFiles( shadersDir, ".hlsl", listSource, true, true );
+                FileUtil::collectFiles( shadersDir, ".hlsli", listSource, true, true );
+
+                vector<string> listLine;
+                listLine.reserve( listSource.size() );
+                for ( const string& sourcePath : listSource )
+                {
+                    const string normSource = FileUtil::normalizeSeparators( sourcePath );
+                    if ( normSource.find( "/bin/" ) != string::npos )
+                        continue;
+                    if ( normSource.size() <= shadersDir.size() + 1 )
+                        continue;
+
+                    vector<uint8> bytes;
+                    if ( FileUtil::readFile( normSource, bytes ) == false )
+                        continue;
+
+                    const uint64 hash    = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ),
+                                                                      bytes.size(), false );
+                    const string relPath = StringUtil::toLower( normSource.substr( shadersDir.size() + 1 ).c_str() );
+
+                    StringBuilder<constant::kMaxBuffer256> sb;
+                    sb.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
+                    sb.append( ' ' ).append( relPath );
+                    listLine.push_back( string( sb.c_str(), sb.size() ) );
+                }
+
+                std::sort( listLine.begin(), listLine.end() );
+
+                string text = "SWBAKE 1\n";
+                for ( const string& line : listLine )
+                {
+                    text += line;
+                    text += "\n";
+                }
+
+                const string stampPath = FileUtil::joinPath( rhiDir, "bake.stamp" );
+                if ( FileUtil::writeTextFile( stampPath, text ) == false )
+                    SW_LOG_WARNING( "베이크 스탬프 쓰기 실패: %#", stampPath.c_str() );
+            }
+
             static void collectAllRecipes( string_view rootDir, vector<BakeRecipe>& outListRecipe )
             {
                 EngineData engineData;
@@ -725,6 +784,7 @@ namespace sw
         for ( const auto& manifestPair : mapManifest )
         {
             ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first );
+            ShaderBakerInternal::writeBakeStamp( manifestPair.first );
         }
         ShaderReflectionLibrary::clearCache();
 

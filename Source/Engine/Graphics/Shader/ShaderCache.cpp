@@ -145,6 +145,14 @@ namespace sw
         // 라이브 컴파일 경로가 사실상 도달 불가였다 — 그 경로를 검증할 방법도 없었던 셈이다.
         const string prebakedRelPath = ShaderCacheInternal::makePrebakedRelativePath( desc._filePath, rhiFolder, stageTag, ext );
         bool         bPrebakedUsable = true;
+#if !defined( SW_SHIPPING )
+        // **파일 시간 비교는 개발 빌드에서만 한다.** 배포 빌드에는 다시 컴파일할 길이 없어서,
+        // 시간 하나가 어긋나면 폴백이 아니라 그대로 실패(화면이 빈다)다. 그런데 파일 시간은
+        // 내용과 무관하게 흔들린다 — `git clone` 은 모든 파일을 체크아웃 시각으로 덮어쓰므로
+        // 소스가 바이너리보다 나중에 쓰이는 순간 멀쩡한 팩이 통째로 거부된다.
+        // 배포물의 신선도는 쿠킹 단계가 bake.stamp 의 **내용 해시**로 이미 보증한다
+        // (CookAssets.py --verify-shaders). ShaderReflectionLibrary::tryGet 도 같은 이유로
+        // 이 검사를 개발 빌드에만 걸고 있다.
         if ( currentTimestamp != 0 )
         {
             const string prebakedAbsPath = ResourceUtil::getResourcePath( prebakedRelPath );
@@ -158,6 +166,7 @@ namespace sw
                 }
             }
         }
+#endif
 
         vector<uint8> prebakedBytes;
         if ( bPrebakedUsable && ResourceUtil::readBinaryResource( prebakedRelPath, prebakedBytes ) && prebakedBytes.empty() == false )
