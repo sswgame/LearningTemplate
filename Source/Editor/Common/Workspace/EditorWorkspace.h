@@ -13,7 +13,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
-#include "Editor/Common/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/ComponentPtr.h"

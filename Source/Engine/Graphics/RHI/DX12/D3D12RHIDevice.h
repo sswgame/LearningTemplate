@@ -15,7 +15,7 @@
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <shared_mutex>
 

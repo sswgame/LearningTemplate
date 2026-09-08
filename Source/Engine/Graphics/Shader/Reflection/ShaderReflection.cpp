@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflectionUtil.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
 
 SW_LOG_CALLER( "ShaderReflection" );
 namespace sw

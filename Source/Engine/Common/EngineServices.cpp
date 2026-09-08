@@ -10,7 +10,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"

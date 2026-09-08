@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <vulkan/vulkan.h>
 

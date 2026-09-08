@@ -8,8 +8,8 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include <imgui.h>
@@ -38,7 +38,7 @@ namespace sw::editor
         updateFocusedDocument();
         if ( isDocumentLoaded() == false )
         {
-            if ( EditorUtil::isTextureAssetPath( getLoadedAssetPath().c_str() ) )
+            if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, getLoadedAssetPath().c_str() ) )
             {
                 _atlasPath = getLoadedAssetPath().c_str();
             }

@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 

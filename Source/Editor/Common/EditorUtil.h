@@ -63,29 +63,9 @@ namespace sw::editor
         static string resolveEditorConfigFile( const utf8* pFileName );
 
         // ------------------------------------------------------------------------------
-        // 3) 애셋 판별 및 프리팹 스폰 유틸리티
+        // 3) 프리팹 스폰 · 편집 허용
+        //    애셋 종류 판별은 EditorAssetTypeRegistry::matches 가 정본입니다
         // ------------------------------------------------------------------------------
-        /** @brief 경로가 프리팹 애셋인지 여부를 반환합니다. */
-        static bool isPrefabAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 텍스처 애셋인지 여부를 반환합니다. */
-        static bool isTextureAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 머티리얼 애셋인지 여부를 반환합니다. */
-        static bool isMaterialAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 씬 애셋인지 여부를 반환합니다. */
-        static bool isSceneAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 셰이더 소스/바이너리인지 여부를 반환합니다. */
-        static bool isShaderAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 오디오 애셋인지 여부를 반환합니다. */
-        static bool isAudioAssetPath( const utf8* pPath );
-
-        /** @brief 경로가 데이터 테이블/로컬라이제이션 파일인지 여부를 반환합니다. */
-        static bool isDataAssetPath( const utf8* pPath );
-
         /** @brief 선택적 부모 아래 프리팹을 스폰합니다. 실패 시 로그 후 nullptr을 반환합니다. */
         static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent = nullptr );
 

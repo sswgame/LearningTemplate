@@ -9,13 +9,14 @@
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/EditorPlaySession.h"
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -100,22 +101,22 @@ namespace sw::editor
                 outEntry._title  = filename;
                 outEntry._detail = relPath;
 
-                if ( EditorUtil::isSceneAssetPath( file.c_str() ) )
+                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, file.c_str() ) )
                 {
                     outEntry._category = "Scene";
                     return true;
                 }
-                if ( EditorUtil::isPrefabAssetPath( file.c_str() ) )
+                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, file.c_str() ) )
                 {
                     outEntry._category = "Prefab";
                     return true;
                 }
-                if ( EditorUtil::isTextureAssetPath( file.c_str() ) )
+                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, file.c_str() ) )
                 {
                     outEntry._category = "Texture";
                     return true;
                 }
-                if ( EditorUtil::isShaderAssetPath( file.c_str() ) )
+                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, file.c_str() ) )
                 {
                     outEntry._category = "Shader";
                     return true;
@@ -249,10 +250,10 @@ namespace sw::editor
             return true;
 
         const string pathStr{ relativePath };
-        if ( EditorUtil::isSceneAssetPath( pathStr.c_str() ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pathStr.c_str() ) )
             return tryOpenScene( pathStr );
 
-        if ( EditorUtil::isMaterialAssetPath( pathStr.c_str() ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pathStr.c_str() ) )
         {
             pContext->getWorkspace().setFocusedAssetPath( pathStr.c_str() );
             pContext->getWorkspace().setInspectMode( InspectMode::Asset );
@@ -485,7 +486,7 @@ namespace sw::editor
         if ( pManager == nullptr || pPath == nullptr )
             return;
 
-        if ( EditorUtil::isPrefabAssetPath( pPath ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
         {
             GameObject* pSpawned = spawnPrefab( pManager, pPath, nullptr, "Spawn Prefab in Viewport" );
             if ( pSpawned == nullptr )
@@ -496,13 +497,13 @@ namespace sw::editor
             return;
         }
 
-        if ( EditorUtil::isSceneAssetPath( pPath ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
         {
             tryOpenScene( pPath );
             return;
         }
 
-        if ( EditorUtil::isTextureAssetPath( pPath ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
         {
             spawnSprite( pManager, pPath, spawnPos );
             return;

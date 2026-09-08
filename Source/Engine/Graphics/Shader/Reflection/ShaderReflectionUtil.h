@@ -3,7 +3,7 @@
  * @brief ShaderReflection 포맷별 TU 공유 선언.
  */
 #pragma once
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {

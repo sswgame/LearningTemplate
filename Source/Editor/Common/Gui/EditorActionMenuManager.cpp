@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorActionMenuManager.h"
+#include "Editor/Common/Gui/EditorActionMenuManager.h"
 
 #include <imgui.h>
 

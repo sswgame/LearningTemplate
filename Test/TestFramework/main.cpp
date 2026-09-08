@@ -15,7 +15,7 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"

@@ -201,21 +201,21 @@ if(COMMAND sw_setUnityBuild)
         # DelayLoadNotifyHook은 이미 EXCLUDE에 포함됨.
         # FrameRenderer/Material 분할 TU: 공유 내부 헤더의 Unity 병합을 피함.
         sw_skipUnitySources(Engine
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRenderer.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererResources.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPassExecute.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererDraw.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererConstants.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RenderPass/FrameRendererPso.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRenderer.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererTransients.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererDraw.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererConstants.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererPso.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/Material.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialPacking.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialIO.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialInstance.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialCache.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/IRHIDevice.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflection.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionSpirv.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/ShaderReflectionDx.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflection.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflectionSpirv.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflectionDx.cpp"
         )
     endif()
 endif()

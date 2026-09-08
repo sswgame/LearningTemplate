@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/ShaderBindingBinder.h"
-#include "Engine/Graphics/Shader/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

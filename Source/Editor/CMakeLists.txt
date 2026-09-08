@@ -5,7 +5,7 @@
 
 # ------------------------------------------------------------------------------
 # 1) EditorModule — Dev MODULE, imgui 계열만 직접 링크
-#    Unity OFF: TU 간 ODR/헬퍼 충돌이 정리될 때까지
+#    Unity ON: TU 내부 헬퍼는 전부 익명 네임스페이스의 *Internal 구조체로 묶여 있음
 #    Vulkan 백엔드 TU: Types.h 별칭이 PCH와 union 멤버 충돌 → 해당 파일만 PCH 제외
 # ------------------------------------------------------------------------------
 if(NOT SW_SHIPPING_BUILD)
@@ -48,7 +48,7 @@ if(NOT SW_SHIPPING_BUILD)
 	)
 
 	if(COMMAND sw_setUnityBuild)
-		sw_setUnityBuild(EditorModule OFF)
+		sw_setUnityBuild(EditorModule BATCH_SIZE 8)
 	endif()
 
 	set_source_files_properties(

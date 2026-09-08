@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderBindingLayoutCache.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Shader/ShaderBindingContract.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
-#include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
 {

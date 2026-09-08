@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #if __has_include( <pix3.h> )

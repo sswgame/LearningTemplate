@@ -110,11 +110,19 @@ function(sw_addReflectionStep TARGET_NAME)
         file(WRITE "${_swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
     endif()
 
+    # 헤더를 옮기기만 하면(내용은 그대로) mtime 이 안 바뀌어 파서가 다시 돌지 않고,
+    # 옛 경로를 #include 한 .gen.cpp 가 그대로 남아 빌드가 깨진다. 입력 경로 목록을
+    # 스탬프로 남겨 의존에 넣는다 — 내용이 같으면 COPYONLY 가 파일을 건드리지 않는다.
+    set(_swReflectInputList "${ARG_OUTPUT_DIR}/ReflectionInputs.list")
+    string(REPLACE ";" "\n" _swReflectInputText "${ARG_HEADERS}")
+    file(WRITE "${_swReflectInputList}.in" "${_swReflectInputText}\n")
+    configure_file("${_swReflectInputList}.in" "${_swReflectInputList}" COPYONLY)
+
     add_custom_command(
         OUTPUT ${generatedFiles}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
         COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs}
-        DEPENDS ${ARG_HEADERS} ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+        DEPENDS ${ARG_HEADERS} "${_swReflectInputList}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
         "${_swReflectBuiltins}" "${_swAnnotationMeta}" ${_swEmitTpls}
         ${_swParserConfigs}
         COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"

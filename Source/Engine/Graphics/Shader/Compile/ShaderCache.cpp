@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Graphics/Shader/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw

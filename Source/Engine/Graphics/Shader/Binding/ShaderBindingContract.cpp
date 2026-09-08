@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderBindingContract.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
 {

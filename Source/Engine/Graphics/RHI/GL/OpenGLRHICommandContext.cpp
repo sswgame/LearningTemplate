@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <glad/glad.h>
 

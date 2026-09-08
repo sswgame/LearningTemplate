@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {

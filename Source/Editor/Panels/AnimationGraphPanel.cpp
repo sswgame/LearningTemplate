@@ -5,8 +5,8 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimationGraphAsset.h"

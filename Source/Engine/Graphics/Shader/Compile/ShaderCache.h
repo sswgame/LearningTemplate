@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
 {

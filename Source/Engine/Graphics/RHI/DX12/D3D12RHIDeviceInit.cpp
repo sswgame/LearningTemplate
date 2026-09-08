@@ -10,7 +10,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
-    #include "Engine/Graphics/Shader/ShaderCache.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
 {

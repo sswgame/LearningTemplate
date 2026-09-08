@@ -7,8 +7,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {

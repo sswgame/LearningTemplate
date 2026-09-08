@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflectionUtil.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
 
 #if defined( SW_HAS_DXC_API )
     #include <dxcapi.h>

@@ -3,10 +3,10 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Graphics/Shader/ShaderBaker.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

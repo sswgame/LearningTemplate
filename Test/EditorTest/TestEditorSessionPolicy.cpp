@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 #include "TestFramework/TestFramework.h"
 

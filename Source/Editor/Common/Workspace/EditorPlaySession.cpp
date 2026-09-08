@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Uuid/Uuid.h"

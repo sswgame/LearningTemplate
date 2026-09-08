@@ -4,7 +4,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/EditorCamera.h"
+#include "Editor/Viewport/EditorCamera.h"
 
 #include "TestFramework/TestFramework.h"
 

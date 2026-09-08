@@ -9,8 +9,8 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-    #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
-    #include "Engine/Graphics/Shader/ShaderCache.h"
+    #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
 {

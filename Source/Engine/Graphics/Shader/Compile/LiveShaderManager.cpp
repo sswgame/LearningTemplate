@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/LiveShaderManager.h"
+#include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Shader/ShaderBaker.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 
 namespace sw

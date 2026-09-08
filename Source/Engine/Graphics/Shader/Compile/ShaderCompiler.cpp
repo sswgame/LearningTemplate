@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Engine/Graphics/Shader/ShaderBaker.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )

@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw
 {

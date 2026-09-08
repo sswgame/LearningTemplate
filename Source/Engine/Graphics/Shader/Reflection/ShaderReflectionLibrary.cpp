@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/ShaderReflectionLibrary.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Graphics/Shader/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 

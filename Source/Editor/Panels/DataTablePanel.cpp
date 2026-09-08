@@ -7,9 +7,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 #include <imgui.h>
 

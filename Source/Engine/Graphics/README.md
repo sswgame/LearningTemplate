@@ -24,10 +24,9 @@ DX11 · DX12 · OpenGL · Vulkan
 |------|------|
 | **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈 |
 | **Material/** | XML 머티리얼, 인스턴스, 패킹, 캐시 |
-| **Shader/** | 컴파일 · 리플렉션 · 배리언트 · 핫리로드 |
+| **Shader/** | `Compile/` 컴파일·캐시·베이크·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약 |
 | **Mesh/** | 메시 버퍼 |
-| **RenderPass/** | FrameRenderer, RenderGraph, GpuScene, RenderThread |
-| **Render/** | InstanceBuffer 등 보조 |
+| **Renderer/** | `Frame/` FrameRenderer · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스 · `Scene/` GpuScene · RenderThread |
 | **Debug/** | DebugDrawQueue (라인/스피어 큐 → Editor GameView ImGui 소비) |
 
 ---
@@ -47,7 +46,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | PSO / PipelineState | 셰이더+고정 상태 묶음 (그래픽스/컴퓨트) |
 | SwapChain | 화면 present용 백버퍼 체인 |
 | Material / MaterialInstance | 셰이더·파라미터 정의 / 인스턴스 값 |
-| ShaderVariant · Reflection · Compiler | 배리언트 키 · 바인딩 메타 · 컴파일 |
+| Compiler · Reflection · BindingLayout | HLSL 컴파일 · 바이트코드 바인딩 메타 · 병합된 조회 레이아웃 |
 | RenderPass (개념) | 한 번의 begin/end 렌더 타깃 구간 (XML 패스와 혼동 주의) |
 | RenderGraph | 패스·리소스 의존성 그래프로 프레임 순서 결정 |
 | FrameRenderer | 한 프레임: 패킷 → 그래프 → CL 기록/실행 |
@@ -68,12 +67,15 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
-| `ShaderCompiler` · `ShaderReflection` · `ShaderVariant` · `ShaderCache` · `LiveShaderManager` | Shader/ | 컴파일·리플렉션·배리언트·캐시·핫리로드 |
+| `ShaderCompiler` · `ShaderCache` · `ShaderBaker` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 오프라인 베이크, 핫리로드 |
+| `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
+| `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` | Mesh/ | 메시 버퍼 |
-| `FrameRenderer` · `RenderGraph` · `RenderThread` · `GpuScene` | RenderPass/ | 프레임 오케스트레이션 |
-| `RenderPassManager` · `RenderPassResource` · `RenderPipelineResource` | RenderPass/ | XML/에셋 쪽 패스·파이프라인 |
-| `RenderFramePacket` | RenderPass/ | 프레임 입력 패킷 |
-| `InstanceBuffer` | Render/ | 인스턴싱 보조 |
+| `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
+| `RenderGraph` | Renderer/Graph/ | 패스 의존성 정렬·배리어 추론 |
+| `RenderThread` · `GpuScene` | Renderer/ · Renderer/Scene/ | 렌더 스레드 루프 · 씬 GPU 스냅샷 |
+| `RenderPassManager` · `RenderPassResource` · `RenderPipelineResource` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
+| `RenderFramePacket` | Renderer/Frame/ | 프레임 입력 패킷 |
 | `DebugDrawQueue` | Debug/ | 디버그 드로우 큐 |
 
 ---
@@ -108,11 +110,11 @@ DX11 · DX12 · OpenGL · Vulkan
 | 궁금한 것 | 열 곳 |
 |-----------|--------|
 | 용어·클래스 역할 | 위 Glossary / 클래스 표 |
-| 한 프레임이 어떻게 도나 | `RenderPass/FrameRenderer.*` (+ `PassExecute` / `Draw` / `Pso` …) |
+| 한 프레임이 어떻게 도나 | `Renderer/Frame/FrameRenderer.*` (+ `PassExecute` / `Draw` / `Pso` …) |
 | 패스 순서·의존성 | `pipeline/*.xml` + `RenderGraph` |
 | 머티리얼 파라미터 | `Material/Material.*` · `MaterialInstance.*` |
 | GPU API 호출 | `RHI/IRHI*.h` → 활성 백엔드 `RHI/<Backend>/` |
-| 셰이더 컴파일 | `Shader/ShaderCompiler.*` · `ShaderReflection.*` |
+| 셰이더 컴파일 | `Shader/Compile/ShaderCompiler.*` · `Shader/Reflection/ShaderReflection.*` |
 
 `FrameRenderer` 는 **한 클래스·여러 .cpp** 로 이미 나뉘어 있습니다. 클래스를 더 쪼개기보다 파일 역할만 익히면 됩니다.
 
@@ -174,11 +176,11 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 | 파일 | 역할 |
 |------|------|
-| `Shader/ShaderBindingSlots.h` | 슬롯·공간·Vulkan 시프트 상수 (C++ 측). `Resource/engine/shaders/bindingslots.hlsli` 를 include 해 정본을 공유 |
-| `Shader/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
-| `Shader/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
-| `RenderPass/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
-| `RenderPass/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
+| `Shader/Binding/ShaderBindingSlots.h` | 슬롯·공간·Vulkan 시프트 상수 (C++ 측). `Resource/engine/shaders/bindingslots.hlsli` 를 include 해 정본을 공유 |
+| `Shader/Binding/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
+| `Shader/Binding/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
+| `Renderer/Frame/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
+| `Renderer/Frame/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
 | `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `SampleShadow/Source/...` 헬퍼 (4백엔드) |
 
 **셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로

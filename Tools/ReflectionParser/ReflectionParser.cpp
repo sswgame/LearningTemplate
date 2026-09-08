@@ -120,6 +120,29 @@ namespace sw
                  existingGen.find( cfg._emitFlagOpsMarker ) == string_view::npos );
     }
 
+    /**
+     * @brief 산출물 머리말에 적힌 원본 경로가 지금 입력과 같은지 확인합니다.
+     * @details 헤더를 **옮기기만** 하면 내용도 mtime 도 그대로라 타임스탬프 비교는 "최신" 이라고 답한다.
+     *          그런데 .gen.cpp 는 원본을 절대경로로 #include 하므로, 그대로 두면 없는 경로를 가리켜
+     *          빌드가 깨진다. 머리말의 경로를 대조해 이동을 잡는다.
+     */
+    static bool hasMatchingSourcePath( const string_view existingGen, const sw::string& inputFile )
+    {
+        const sw::string& marker = sw::ParserContext::getSharedConfig()._emitSourcePathMarker;
+        const size_t      begin  = existingGen.find( marker );
+        if ( begin == string_view::npos )
+            return false;
+
+        const size_t valueBegin = begin + marker.size();
+        size_t       valueEnd   = existingGen.find( '\n', valueBegin );
+        if ( valueEnd == string_view::npos )
+            valueEnd = existingGen.size();
+        while ( valueEnd > valueBegin && ( existingGen[valueEnd - 1] == '\r' || existingGen[valueEnd - 1] == ' ' ) )
+            --valueEnd;
+
+        return existingGen.substr( valueBegin, valueEnd - valueBegin ) == string_view( inputFile );
+    }
+
     /** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿보다 최신이면 true. */
     static bool isUpToDate( const sw::string& genPath, const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
     {
@@ -153,6 +176,8 @@ namespace sw
         const string_view existingGen( reinterpret_cast<const utf8*>( genHeadBytes.data() ), genHeadBytes.size() );
         const string_view existingHeader( reinterpret_cast<const utf8*>( headerHeadBytes.data() ), headerHeadBytes.size() );
         if ( isPlaceholder( existingGen ) || isPlaceholder( existingHeader ) )
+            return false;
+        if ( hasMatchingSourcePath( existingGen, inputFile ) == false )
             return false;
 
         return true;

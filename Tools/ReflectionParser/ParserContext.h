@@ -41,6 +41,8 @@ namespace sw
         string         _emitFlagOpsMarker;
         string         _emitRegisterTypeMarker;
         string         _emitRegisterEnumMarker;
+        /** @brief 산출물 머리말에 원본 헤더 경로를 적는 줄의 접두어 (FileHeader.tpl 의 "// Source: "). */
+        string _emitSourcePathMarker;
         /** @brief 소스 경로 부분문자열 -> 모듈 이름 규칙. 위에서부터 처음 맞는 것을 씁니다. */
         struct ModuleRule
         {

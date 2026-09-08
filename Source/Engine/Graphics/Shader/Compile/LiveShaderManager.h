@@ -6,7 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 
 namespace sw

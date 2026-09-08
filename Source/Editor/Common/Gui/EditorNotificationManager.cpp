@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Gui/EditorNotificationManager.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/String/fixed_string.h"

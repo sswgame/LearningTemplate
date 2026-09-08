@@ -10,10 +10,10 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"

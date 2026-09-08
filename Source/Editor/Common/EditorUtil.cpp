@@ -7,11 +7,11 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/EditorPlaySession.h"
-#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -252,47 +252,12 @@ namespace sw::editor
         return FileUtil::joinPath( configDir, pFileName );
     }
 
-    bool EditorUtil::isPrefabAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath );
-    }
-
-    bool EditorUtil::isTextureAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath );
-    }
-
-    bool EditorUtil::isMaterialAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pPath );
-    }
-
-    bool EditorUtil::isSceneAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath );
-    }
-
-    bool EditorUtil::isShaderAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, pPath );
-    }
-
-    bool EditorUtil::isAudioAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, pPath );
-    }
-
-    bool EditorUtil::isDataAssetPath( const utf8* pPath )
-    {
-        return EditorAssetTypeRegistry::matches( EditorAssetKind::Data, pPath );
-    }
-
     GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
     {
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
 
-        if ( isPrefabAssetPath( pPath ) == false )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) == false )
         {
             SW_LOG_TRACE( "Not a prefab path: %#", pPath );
             return nullptr;

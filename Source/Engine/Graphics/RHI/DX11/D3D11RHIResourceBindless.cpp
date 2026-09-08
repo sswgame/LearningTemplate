@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
-#include "Engine/Graphics/Shader/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw

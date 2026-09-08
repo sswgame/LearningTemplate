@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorCamera.h"
+#include "Editor/Viewport/EditorCamera.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"

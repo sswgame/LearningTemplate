@@ -10,11 +10,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
-#include "Engine/Graphics/Shader/ShaderBaker.h"
-#include "Engine/Graphics/Shader/ShaderBindingContract.h"
-#include "Engine/Graphics/Shader/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

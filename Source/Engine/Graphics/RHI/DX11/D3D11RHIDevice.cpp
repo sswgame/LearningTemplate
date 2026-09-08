@@ -11,7 +11,7 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-    #include "Engine/Graphics/Shader/ShaderCache.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
 {

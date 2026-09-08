@@ -7,8 +7,8 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Shader/ShaderBindingLayout.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {

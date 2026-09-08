@@ -17,7 +17,7 @@
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
-#include "Engine/Graphics/Shader/ShaderBindingLayoutCache.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
 namespace sw
 {

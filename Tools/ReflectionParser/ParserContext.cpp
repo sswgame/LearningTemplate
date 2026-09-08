@@ -160,6 +160,7 @@ namespace sw
                                                 {      &ParserClangConfig::_emitFlagOpsMarker,       jsonKeyConstants::kEmitFlagOpsMarker},
                                                 { &ParserClangConfig::_emitRegisterTypeMarker,  jsonKeyConstants::kEmitRegisterTypeMarker},
                                                 { &ParserClangConfig::_emitRegisterEnumMarker,  jsonKeyConstants::kEmitRegisterEnumMarker},
+                                                {   &ParserClangConfig::_emitSourcePathMarker,    jsonKeyConstants::kEmitSourcePathMarker},
                 } );
 
                 const auto itForbidden = obj.find( jsonKeyConstants::kEmitValueForbiddenBases );
@@ -326,6 +327,7 @@ namespace sw
         , _emitFlagOpsMarker{ "IsBitFlagEnum" }
         , _emitRegisterTypeMarker{ "RegisterType" }
         , _emitRegisterEnumMarker{ "RegisterEnum" }
+        , _emitSourcePathMarker{ "// Source: " }
         , _listModuleRule{ { "GameFramework", "GameFramework" }, { "Games", "SWGame" }, { "SWGame", "SWGame" }, { "Editor", "EditorModule" }, { "App", "App" } },
         _defaultModule{ "Engine" },
         _listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" },

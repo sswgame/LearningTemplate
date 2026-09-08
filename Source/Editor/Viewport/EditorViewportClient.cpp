@@ -12,13 +12,13 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/EditorCamera.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"

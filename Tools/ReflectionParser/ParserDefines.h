@@ -144,6 +144,7 @@ namespace sw
         inline static constexpr const utf8* kEmitFlagOpsMarker       = "flag_ops_marker";
         inline static constexpr const utf8* kEmitRegisterTypeMarker  = "register_type_marker";
         inline static constexpr const utf8* kEmitRegisterEnumMarker  = "register_enum_marker";
+        inline static constexpr const utf8* kEmitSourcePathMarker    = "source_path_marker";
 
         // parsing.*
         inline static constexpr const utf8* kParsingComponentBaseTypes = "component_base_types";

@@ -39,9 +39,12 @@ function(sw_skipUnitySources TARGET_NAME)
 		return()
 	endif()
 
+	# 없는 경로를 조용히 건너뛰면 파일이 옮겨졌을 때 제외가 무효가 된 걸 아무도 모른다
+	# (Renderer 재편 뒤 FrameRenderer 제외 6개가 그렇게 죽어 있었다). 경로가 틀리면 즉시 실패한다.
 	foreach(src IN LISTS ARGN)
-		if(EXISTS "${src}")
-			set_source_files_properties("${src}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+		if(NOT EXISTS "${src}")
+			message(FATAL_ERROR "[UnityBuild] sw_skipUnitySources(${TARGET_NAME}): 없는 경로 -> ${src}")
 		endif()
+		set_source_files_properties("${src}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 	endforeach()
 endfunction()

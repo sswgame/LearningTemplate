@@ -10,8 +10,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {
