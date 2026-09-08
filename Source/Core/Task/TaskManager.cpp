@@ -190,23 +190,37 @@ namespace sw
         atomic<int32> _refCount{ 1 };
     };
 
-    static void setTaskName( TaskNode* pNode, string_view name )
+    namespace
     {
+        /**
+         * @brief 이 번역 단위 전용 헬퍼.
+         * @details 예전엔 `setTaskName` 이 namespace sw 스코프의 자유 static 이었다. 흔한 이름이
+         *          외부에서 안 보일 뿐 TU 마다 하나씩 생긴다는 뜻이라, 유니티 빌드로 묶이는 순간
+         *          같은 이름을 가진 다른 파일과 재정의로 부딪힌다(AGENTS.md "Helpers: Util vs Internal").
+         *          Core 는 지금 유니티 대상이 아니지만, 규칙을 따르는 다른 서브시스템과 형태를 맞춘다.
+         *          TaskNode 정의 뒤에 와야 해서 파일 위쪽 익명 블록과 따로 둔다.
+         */
+        struct TaskManagerInternal
+        {
+            static void setTaskName( TaskNode* pNode, string_view name )
+            {
 #if !defined( SW_SHIPPING )
-        if ( pNode == nullptr )
-            return;
+                if ( pNode == nullptr )
+                    return;
 
-        uint32 len = static_cast<uint32>( name.size() );
-        if ( len > kTaskNameCapacity )
-            len = kTaskNameCapacity;
-        if ( len > 0 )
-            Memory::copy( pNode->_arrName, name.data(), len );
-        pNode->_arrName[len] = 0;
+                uint32 len = static_cast<uint32>( name.size() );
+                if ( len > kTaskNameCapacity )
+                    len = kTaskNameCapacity;
+                if ( len > 0 )
+                    Memory::copy( pNode->_arrName, name.data(), len );
+                pNode->_arrName[len] = 0;
 #else
-        (void)pNode;
-        (void)name;
+                (void)pNode;
+                (void)name;
 #endif
-    }
+            }
+        };
+    } // namespace
 
     class TaskNodePool
     {
@@ -651,7 +665,7 @@ namespace sw
 
         TaskNode* pNode = allocateNode();
         pNode->_pOwner  = this;
-        setTaskName( pNode, name );
+        TaskManagerInternal::setTaskName( pNode, name );
         pNode->_affinity = affinity;
         pNode->_callable = delegate;
         pNode->_state    = TaskState::Pending;
@@ -682,7 +696,7 @@ namespace sw
 
         TaskNode* pNode = allocateNode();
         pNode->_pOwner  = this;
-        setTaskName( pNode, name );
+        TaskManagerInternal::setTaskName( pNode, name );
         pNode->_affinity = affinity;
         pNode->_callable = TaskArgsPayload{ delegate, args };
         pNode->_state    = TaskState::Pending;
@@ -730,7 +744,7 @@ namespace sw
 
             pSubTask->_pOwner          = this;
             pSubTask->_pSharedCallable = pSharedCallable;
-            setTaskName( pSubTask, name );
+            TaskManagerInternal::setTaskName( pSubTask, name );
             pSubTask->_rangeStart = start;
             pSubTask->_rangeEnd   = end;
             pSubTask->_state      = TaskState::Pending;
@@ -774,7 +788,7 @@ namespace sw
 
             pSubTask->_pOwner          = this;
             pSubTask->_pSharedCallable = pSharedCallable;
-            setTaskName( pSubTask, "ParallelBlockTask" );
+            TaskManagerInternal::setTaskName( pSubTask, "ParallelBlockTask" );
             pSubTask->_rangeStart = chunkStart;
             pSubTask->_rangeEnd   = chunkEnd;
             pSubTask->_state      = TaskState::Pending;

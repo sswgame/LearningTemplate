@@ -450,9 +450,6 @@ namespace sw
         /** @brief 스테이지 노드가 유효한지 여부를 반환합니다. */
         bool isValid() const { return _node != nullptr; }
 
-        /** @brief 내부 StageNode 스마트 포인터를 반환합니다. */
-        shared_ptr<StageNode> getStageNode() const { return _node; }
-
         /**
          * @brief 특정 태스크를 이 스테이지에 추가합니다.
          * @param task 스테이지에 소속시킬 태스크 핸들
