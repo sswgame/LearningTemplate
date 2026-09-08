@@ -321,6 +321,23 @@ function(sw_addTestExecutable TARGET_NAME)
 		target_link_libraries(${TARGET_NAME} PRIVATE ${sw_flag_libraries})
 	endif()
 
+	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다.
+	# *.gen.cpp 의 등록기는 파일 스코프 static 이고 외부에서 참조되는 심볼이 없어서, Shipping
+	# 처럼 Engine 이 정적 라이브러리인 빌드에서는 링커가 그 오브젝트를 통째로 버린다. 그러면
+	# 타입은 (StaticType() 정의가 같은 파일에 있어) 살아남는데 **열거형만 조용히 사라진다** —
+	# KeyCodes::fromName 이 전부 Unknown 을 내서 InputMap XML 의 바인딩이 하나도 안 붙고,
+	# SaveGame 의 리플렉션 왕복도 깨진다. Source/App/CMakeLists.txt 의 같은 블록 참고.
+	if(SW_SHIPPING_BUILD AND WIN32)
+		foreach(reflLib IN LISTS ARG_LIBS)
+			if(TARGET ${reflLib})
+				get_target_property(reflLibType ${reflLib} TYPE)
+				if(reflLibType STREQUAL "STATIC_LIBRARY")
+					target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
+				endif()
+			endif()
+		endforeach()
+	endif()
+
 	target_compile_definitions(${TARGET_NAME}
 		PRIVATE
 		"SW_LOG_TAG=\"Test\""
