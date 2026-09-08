@@ -166,6 +166,7 @@ namespace sw
         , _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }
         , _cachedWorldMatrix{ float4x4::Identity }
         , _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }
+        , _pManager{ nullptr }
         , _pParent{ nullptr }
         , _listChild{}
         , _bIsTransformDirty{ SW_TRUE }
