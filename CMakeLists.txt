@@ -1,14 +1,7 @@
 # ==============================================================================
 # @file CMakeLists.txt
 # @brief SW Engine 최상위 루트 빌드 스크립트
-# ==============================================================================
-#
-# cmake/
-# Config/      — BuildOptions, GenerateConfigConstants
-# Environment/ — DetectToolchain, VcpkgIntegration, FindWindowsTools, PythonUtils
-# Modules/     — LoadCompileFlags (Compiler, Platform, Architecture, BuildType, Options, Toolchain)
-# Engine/      — ModuleBuildRules, RuntimeDependencies, ReflectionCodeGen, AssetAndToolTargets, RhiBackendSources
-#
+# @note cmake/ 의 계층과 각 파일의 역할은 cmake/README.md 가 정본이다.
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.24)
@@ -39,8 +32,12 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
+# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 TargetRules 보다 먼저다.
+# RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다.
 include(cmake/Modules/LoadCompileFlags.cmake)
-include(cmake/Engine/ModuleBuildRules.cmake)
+include(cmake/Engine/BuildLayout.cmake)
+include(cmake/Engine/TargetRules.cmake)
+include(cmake/Engine/ThirdPartyLibs.cmake)
 include(cmake/Engine/RuntimeDependencies.cmake)
 include(cmake/Engine/ReflectionCodeGen.cmake)
 

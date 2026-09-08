@@ -26,10 +26,6 @@ target_link_libraries(TestFramework
     sw_global_options
 )
 
-if(sw_flag_libraries)
-    target_link_libraries(TestFramework PRIVATE ${sw_flag_libraries})
-endif()
-
 target_compile_definitions(TestFramework PRIVATE "SW_LOG_TAG=\"Test\"")
 sw_configurePch(TestFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(TestFramework PROPERTIES FOLDER "Test")

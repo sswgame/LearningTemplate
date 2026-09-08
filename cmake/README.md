@@ -27,7 +27,10 @@ cmake/
 │   └── Toolchain/               — Vcpkg triplet 및 LLVM 바이너리 탐색
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]
-    ├── ModuleBuildRules.cmake   — 타겟 생성 헬퍼 (RHI, Kits, DllExports, OutputDir, AppDeps 등)
+    ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐
+    │                               (include 되는 순간 실행된다 — TargetRules 보다 먼저여야 한다)
+    ├── TargetRules.cmake         — 타겟을 어떻게 만드나: DLL export, RHI·키트·게임·테스트 팩토리, delay-load
+    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG, STATIC 폴백
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
     ├── RuntimeDependencies.cmake— DXC, Vulkan 레이어, mimalloc 런타임 DLL 복사
@@ -43,11 +46,12 @@ cmake/
 | option / C++ 매크로 | `SW_UPPER_SNAKE_CASE` | `SW_ENABLE_PCH`, `SW_EXPORTS`, `SW_MODULE_EXPORTS` |
 | 함수 내부 로컬 | `camelCase` (앞에 `_` 없음) | `kitType`, `libType`, `targetName` |
 
-## 주요 헬퍼 함수 (`ModuleBuildRules.cmake` & `AssetAndToolTargets.cmake`)
+## 주요 헬퍼 함수
 
 | 함수 | 용도 |
 |------|------|
 | `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`BuildOptions.cmake`) |
+| `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
 | `sw_configureAppDependencies` | App 타겟의 RHI 모듈, SWGame 딜레이로드/정적링크, CookAssets 의존성 자동 구성 |
 | `sw_addRhiBackendModule` | RHI 그래픽스 백엔드(`RHI_DX11` 등) MODULE 타겟 정의 및 공통 속성 바인딩 |
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |

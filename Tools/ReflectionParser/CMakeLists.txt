@@ -110,10 +110,6 @@ target_link_libraries(ReflectionParser
     sw_global_options
 )
 
-if(sw_flag_libraries)
-    target_link_libraries(ReflectionParser PRIVATE ${sw_flag_libraries})
-endif()
-
 target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"")
 sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 

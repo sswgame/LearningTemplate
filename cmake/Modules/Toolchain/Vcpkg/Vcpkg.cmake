@@ -12,7 +12,7 @@
 # 다음 configure에서 불필요한 재설치를 건너뛴다.
 #
 # @note 런타임 헬퍼(sw_copy_vcpkg_*)는 cmake/internal/VcpkgRuntime.cmake
-# VcpkgRuntime은 Targets.cmake의 sw_queueRuntimeCopy에 의존하므로 internal에 유지
+# VcpkgRuntime은 BuildLayout.cmake의 sw_queueRuntimeCopy에 의존하므로 internal에 유지
 # ==============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/GenerateConfigConstants.cmake" OPTIONAL)

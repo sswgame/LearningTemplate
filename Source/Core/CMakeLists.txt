@@ -76,10 +76,6 @@ target_include_directories(Core_objects
 target_link_libraries(Core_objects PUBLIC sw_public_source_includes)
 target_link_libraries(Core_objects PUBLIC sw_third_party_includes)
 
-if(sw_flag_libraries)
-	target_link_libraries(Core_objects PRIVATE ${sw_flag_libraries})
-endif()
-
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(Core_objects PRIVATE SW_EXPORTS)
 endif()

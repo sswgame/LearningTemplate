@@ -94,10 +94,6 @@ target_link_libraries(Engine
     ${ZLIB_LIBRARIES}
 )
 
-if(sw_flag_libraries)
-    target_link_libraries(Engine PRIVATE ${sw_flag_libraries})
-endif()
-
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
 sw_configurePch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
@@ -154,7 +150,7 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 4) export / IPO / delay-load 훅 경로 / 로그 태그 / Windows 시스템 라이브러리
-# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(Targets.cmake)이 참조
+# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(TargetRules.cmake)이 참조
 # ------------------------------------------------------------------------------
 sw_configureEngineDllExports(Engine ${coreLibType})
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")

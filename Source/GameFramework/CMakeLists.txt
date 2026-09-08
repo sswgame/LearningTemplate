@@ -28,10 +28,6 @@ target_link_libraries(GameFramework
 	sw_global_options
 )
 
-if(sw_flag_libraries)
-	target_link_libraries(GameFramework PRIVATE ${sw_flag_libraries})
-endif()
-
 target_compile_definitions(GameFramework
 	PRIVATE
 	"SW_LOG_TAG=\"GameFramework\""

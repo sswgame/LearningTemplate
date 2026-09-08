@@ -29,10 +29,6 @@ if(NOT SW_SHIPPING_BUILD)
 			sw_graphics_libs
 			sw_global_options
 	)
-	if(sw_flag_libraries)
-		target_link_libraries(EditorModule PRIVATE ${sw_flag_libraries})
-	endif()
-
 	target_compile_definitions(EditorModule
 		PRIVATE
 			"SW_LOG_TAG=\"Editor\""
