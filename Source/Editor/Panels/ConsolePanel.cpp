@@ -116,6 +116,35 @@ namespace sw::editor
             }
         }
 
+        drawConsoleToolbar( bNewLogs );
+
+        ImGui::Separator();
+
+        const string filterStr = StringUtil::trim( _filterBuffer.c_str() );
+
+        // 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
+        bool bLevelChanged{ false };
+        for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
+        {
+            if ( _arrCachedLevelEnabled[levelIndex] != _arrLevelEnabled[levelIndex] )
+            {
+                bLevelChanged = true;
+                break;
+            }
+        }
+
+        const bool bFilterChanged = ( filterStr != _cachedFilter );
+
+        if ( bNewLogs || bFilterChanged || bLevelChanged )
+        {
+            updateFilteredEntries( filterStr );
+        }
+
+        drawLogList( bNewLogs );
+    }
+
+    void ConsolePanel::drawConsoleToolbar( bool& bNewLogs )
+    {
         size_t errorCount{ 0 };
         size_t warnCount{ 0 };
         size_t infoCount{ 0 };
@@ -211,29 +240,10 @@ namespace sw::editor
         }
 
         EditorChrome::endToolbar();
+    }
 
-        ImGui::Separator();
-
-        const string filterStr = StringUtil::trim( _filterBuffer.c_str() );
-
-        // 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
-        bool bLevelChanged{ false };
-        for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
-        {
-            if ( _arrCachedLevelEnabled[levelIndex] != _arrLevelEnabled[levelIndex] )
-            {
-                bLevelChanged = true;
-                break;
-            }
-        }
-
-        const bool bFilterChanged = ( filterStr != _cachedFilter );
-
-        if ( bNewLogs || bFilterChanged || bLevelChanged )
-        {
-            updateFilteredEntries( filterStr );
-        }
-
+    void ConsolePanel::drawLogList( bool bNewLogs )
+    {
         editor::EditorSectionDesc logDesc{};
         logDesc._pId   = "##log_scroll";
         logDesc._kind  = editor::EditorSectionKind::Child;

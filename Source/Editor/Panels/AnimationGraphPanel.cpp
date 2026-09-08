@@ -78,6 +78,13 @@ namespace sw::editor
 
         tickPreview( ImGui::GetIO().DeltaTime );
 
+        drawAnimationToolbar();
+
+        drawAnimationCanvas();
+    }
+
+    void AnimationGraphPanel::drawAnimationToolbar()
+    {
         if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
         {
             if ( ImGui::Button( "Add Idle" ) )
@@ -147,7 +154,10 @@ namespace sw::editor
                                      EditorConfig::getActive()._animationGraphDataFile.c_str() );
         }
         EditorChrome::endToolbar();
+    }
 
+    void AnimationGraphPanel::drawAnimationCanvas()
+    {
         if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
                                      EditorConfig::getActive()._animationGraphSettingsFile.c_str() ) == false )
         {

@@ -81,50 +81,7 @@ namespace sw::editor
         const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
         if ( entry._bIsDirectory )
         {
-            const Color4 folderColor = EditorThemeUtil::getFolderColor();
-
-            // Card subtle border
-            pDrawList->AddRect( minVec, maxVec, IM_COL32( 40, 48, 62, 160 ), 4.0f );
-
-            // UE5 Style Layered Folder:
-            // 1) Back Tab & Back Plate (Deep Slate Accent)
-            const uint32 colBack = IM_COL32(
-                static_cast<int32>( folderColor._r * 110 + 15 ),
-                static_cast<int32>( folderColor._g * 125 + 20 ),
-                static_cast<int32>( folderColor._b * 165 + 30 ),
-                255 );
-            // 2) Front Pocket (Vibrant Theme Accent)
-            const uint32 colFront = IM_COL32(
-                static_cast<int32>( folderColor._r * 190 + 20 ),
-                static_cast<int32>( folderColor._g * 205 + 25 ),
-                static_cast<int32>( folderColor._b * 235 + 20 ),
-                255 );
-            // 3) Front Top Highlight Lip
-            const uint32 colLip = IM_COL32(
-                static_cast<int32>( folderColor._r * 255 ),
-                static_cast<int32>( folderColor._g * 255 ),
-                static_cast<int32>( folderColor._b * 255 ),
-                220 );
-
-            const float32 fLeft   = minPos._x + w * 0.18f;
-            const float32 fRight  = minPos._x + w * 0.82f;
-            const float32 fTabR   = minPos._x + w * 0.48f;
-            const float32 fTabTop = minPos._y + h * 0.20f;
-            const float32 fTop    = minPos._y + h * 0.28f;
-            const float32 fPktTop = minPos._y + h * 0.38f;
-            const float32 fBottom = minPos._y + h * 0.78f;
-
-            // Back Tab
-            pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colBack, 3.0f );
-            // Back Body
-            pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colBack, 3.0f );
-
-            // Front Pocket
-            pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
-            // Front Lip Highlight
-            pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colLip, 1.5f );
-            // Crisp Border
-            pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
+            drawFolderThumbnail( pDrawList, minPos, maxPos );
         }
 
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
@@ -229,6 +186,59 @@ namespace sw::editor
 
         // Sub-border
         pDrawList->AddRect( minVec, maxVec, IM_COL32( 50, 55, 65, 200 ), 4.0f );
+    }
+
+    void ContentBrowserPanel::drawFolderThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos )
+    {
+        const ImVec2  minVec{ minPos._x, minPos._y };
+        const ImVec2  maxVec{ maxPos._x, maxPos._y };
+        const float32 w = maxPos._x - minPos._x;
+        const float32 h = maxPos._y - minPos._y;
+
+        const Color4 folderColor = EditorThemeUtil::getFolderColor();
+
+        // Card subtle border
+        pDrawList->AddRect( minVec, maxVec, IM_COL32( 40, 48, 62, 160 ), 4.0f );
+
+        // UE5 Style Layered Folder:
+        // 1) Back Tab & Back Plate (Deep Slate Accent)
+        const uint32 colBack = IM_COL32(
+            static_cast<int32>( folderColor._r * 110 + 15 ),
+            static_cast<int32>( folderColor._g * 125 + 20 ),
+            static_cast<int32>( folderColor._b * 165 + 30 ),
+            255 );
+        // 2) Front Pocket (Vibrant Theme Accent)
+        const uint32 colFront = IM_COL32(
+            static_cast<int32>( folderColor._r * 190 + 20 ),
+            static_cast<int32>( folderColor._g * 205 + 25 ),
+            static_cast<int32>( folderColor._b * 235 + 20 ),
+            255 );
+        // 3) Front Top Highlight Lip
+        const uint32 colLip = IM_COL32(
+            static_cast<int32>( folderColor._r * 255 ),
+            static_cast<int32>( folderColor._g * 255 ),
+            static_cast<int32>( folderColor._b * 255 ),
+            220 );
+
+        const float32 fLeft   = minPos._x + w * 0.18f;
+        const float32 fRight  = minPos._x + w * 0.82f;
+        const float32 fTabR   = minPos._x + w * 0.48f;
+        const float32 fTabTop = minPos._y + h * 0.20f;
+        const float32 fTop    = minPos._y + h * 0.28f;
+        const float32 fPktTop = minPos._y + h * 0.38f;
+        const float32 fBottom = minPos._y + h * 0.78f;
+
+        // Back Tab
+        pDrawList->AddRectFilled( ImVec2( fLeft, fTabTop ), ImVec2( fTabR, fTop + 2.0f ), colBack, 3.0f );
+        // Back Body
+        pDrawList->AddRectFilled( ImVec2( fLeft, fTop ), ImVec2( fRight, fBottom ), colBack, 3.0f );
+
+        // Front Pocket
+        pDrawList->AddRectFilled( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), colFront, 3.0f );
+        // Front Lip Highlight
+        pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colLip, 1.5f );
+        // Crisp Border
+        pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
     }
 
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )

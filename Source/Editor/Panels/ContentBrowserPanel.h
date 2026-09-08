@@ -88,6 +88,9 @@ namespace sw::editor
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
 
+        /** @brief 폴더 카드 아이콘을 그립니다. */
+        void drawFolderThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos );
+
         /** @brief 폴더 이동 히스토리 항목 */
         struct HistoryEntry
         {
