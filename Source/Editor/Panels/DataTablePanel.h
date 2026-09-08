@@ -41,6 +41,10 @@ namespace sw::editor
 
     private:
         void drawLocalizationTab();
+        /** @brief 로컬라이즈 툴바를 그립니다. */
+        void drawLocalizationToolbar();
+        /** @brief 로컬라이즈 레코드 표를 그립니다. */
+        void drawLocalizationTable();
         void drawGameDataTab();
 
         void reloadLocalization();

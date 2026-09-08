@@ -278,100 +278,7 @@ namespace sw::editor
                     ImGui::SetScrollHereY( 0.25f );
                 pComp->setActive( bActive );
 
-                if ( ImGui::BeginPopupContextItem( "CompCardCtx" ) )
-                {
-                    const TypeInfo* pTInfo = pComp->getTypeInfo();
-                    if ( pTInfo != nullptr )
-                    {
-                        if ( ImGui::MenuItem( "Copy Component" ) )
-                        {
-                            workspace.copyComponent( pComp );
-                        }
-                        const string compTypeName = pComp->getComponentName().empty() == false
-                                                      ? pComp->getComponentName().c_str()
-                                                      : pTInfo->_name.c_str();
-                        const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
-                                                 workspace.getCopiedComponentTypeName() == compTypeName );
-                        if ( bCanPaste )
-                        {
-                            if ( ImGui::MenuItem( "Paste Component Values" ) )
-                            {
-                                workspace.pasteComponentValues( pComp );
-                            }
-                        }
-                        else
-                        {
-                            ImGui::BeginDisabled();
-                            ImGui::MenuItem( "Paste Component Values" );
-                            ImGui::EndDisabled();
-                        }
-
-                        if ( workspace.hasCopiedComponent() )
-                        {
-                            if ( ImGui::MenuItem( "Paste as New Component" ) )
-                            {
-                                workspace.pasteComponentAsNew( pObj );
-                            }
-                        }
-
-                        ImGui::Separator();
-                        if ( ImGui::BeginMenu( "Presets" ) )
-                        {
-                            static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
-                            ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf.data(),
-                                                      s_presetNameBuf.capacity() );
-                            ImGui::SameLine();
-                            if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
-                            {
-                                workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
-                                s_presetNameBuf.clear();
-                                _bComponentPresetDirty = SW_TRUE;
-                            }
-                            ImGui::Separator();
-
-                            if ( _bComponentPresetDirty == SW_TRUE && _componentPresetJob.isPending() == false )
-                            {
-                                _componentPresetJob.request(
-                                    EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
-                            }
-
-                            vector<string> listNewPresetFile;
-                            if ( _componentPresetJob.take( listNewPresetFile ) )
-                            {
-                                _listComponentPresetFile = std::move( listNewPresetFile );
-                                _bComponentPresetDirty   = SW_FALSE;
-                            }
-
-                            const string compPrefix = compTypeName + "_";
-                            bool         bFoundPresets{ false };
-                            for ( const string& presetFile : _listComponentPresetFile )
-                            {
-                                const string fname = FileUtil::getFileNamePart( presetFile );
-                                if ( StringUtil::startsWith( fname, compPrefix ) )
-                                {
-                                    bFoundPresets        = true;
-                                    string displayPreset = fname.substr( compPrefix.size() );
-                                    if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
-                                    {
-                                        displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
-                                    }
-                                    if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                                    {
-                                        workspace.loadComponentPreset( pComp, presetFile );
-                                    }
-                                }
-                            }
-                            if ( bFoundPresets == false )
-                                ImGui::TextDisabled( "No saved presets." );
-
-                            ImGui::EndMenu();
-                        }
-                    }
-                    ImGui::Separator();
-                    if ( ImGui::MenuItem( "Remove Component" ) )
-                        bRemove = true;
-                    ImGui::EndPopup();
-                }
+                drawComponentContextMenu( pObj, pComp, workspace, bRemove );
 
                 drawComponentSection( pComp, pRhiDevice );
                 EditorWidgets::endComponentCard();
@@ -388,6 +295,104 @@ namespace sw::editor
                     pObj->removeComponent( pComp );
                 break;
             }
+        }
+    }
+
+    void InspectorPanel::drawComponentContextMenu( GameObject* pObj, Component* pComp, EditorWorkspace& workspace, bool& bOutRemove )
+    {
+        if ( ImGui::BeginPopupContextItem( "CompCardCtx" ) )
+        {
+            const TypeInfo* pTInfo = pComp->getTypeInfo();
+            if ( pTInfo != nullptr )
+            {
+                if ( ImGui::MenuItem( "Copy Component" ) )
+                {
+                    workspace.copyComponent( pComp );
+                }
+                const string compTypeName = pComp->getComponentName().empty() == false
+                                              ? pComp->getComponentName().c_str()
+                                              : pTInfo->_name.c_str();
+                const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
+                                         workspace.getCopiedComponentTypeName() == compTypeName );
+                if ( bCanPaste )
+                {
+                    if ( ImGui::MenuItem( "Paste Component Values" ) )
+                    {
+                        workspace.pasteComponentValues( pComp );
+                    }
+                }
+                else
+                {
+                    ImGui::BeginDisabled();
+                    ImGui::MenuItem( "Paste Component Values" );
+                    ImGui::EndDisabled();
+                }
+
+                if ( workspace.hasCopiedComponent() )
+                {
+                    if ( ImGui::MenuItem( "Paste as New Component" ) )
+                    {
+                        workspace.pasteComponentAsNew( pObj );
+                    }
+                }
+
+                ImGui::Separator();
+                if ( ImGui::BeginMenu( "Presets" ) )
+                {
+                    static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
+                    ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf.data(),
+                                              s_presetNameBuf.capacity() );
+                    ImGui::SameLine();
+                    if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
+                    {
+                        workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
+                        s_presetNameBuf.clear();
+                        _bComponentPresetDirty = SW_TRUE;
+                    }
+                    ImGui::Separator();
+
+                    if ( _bComponentPresetDirty == SW_TRUE && _componentPresetJob.isPending() == false )
+                    {
+                        _componentPresetJob.request(
+                            EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
+                    }
+
+                    vector<string> listNewPresetFile;
+                    if ( _componentPresetJob.take( listNewPresetFile ) )
+                    {
+                        _listComponentPresetFile = std::move( listNewPresetFile );
+                        _bComponentPresetDirty   = SW_FALSE;
+                    }
+
+                    const string compPrefix = compTypeName + "_";
+                    bool         bFoundPresets{ false };
+                    for ( const string& presetFile : _listComponentPresetFile )
+                    {
+                        const string fname = FileUtil::getFileNamePart( presetFile );
+                        if ( StringUtil::startsWith( fname, compPrefix ) )
+                        {
+                            bFoundPresets        = true;
+                            string displayPreset = fname.substr( compPrefix.size() );
+                            if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
+                            {
+                                displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
+                            }
+                            if ( ImGui::MenuItem( displayPreset.c_str() ) )
+                            {
+                                workspace.loadComponentPreset( pComp, presetFile );
+                            }
+                        }
+                    }
+                    if ( bFoundPresets == false )
+                        ImGui::TextDisabled( "No saved presets." );
+
+                    ImGui::EndMenu();
+                }
+            }
+            ImGui::Separator();
+            if ( ImGui::MenuItem( "Remove Component" ) )
+                bOutRemove = true;
+            ImGui::EndPopup();
         }
     }
 

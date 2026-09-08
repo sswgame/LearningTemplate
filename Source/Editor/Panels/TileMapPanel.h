@@ -27,6 +27,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 타일맵 페인트 UI를 그립니다. */
         void drawContent() override;
+
+        /** @brief 경로·이름·크기·읽기/쓰기 컨트롤을 그립니다. */
+        void drawTileMapFileControls();
+        /** @brief 레이어 선택과 엣지 워프 프리셋을 그립니다. */
+        void drawLayerControls();
         bool saveDocument() override;
 
     private:

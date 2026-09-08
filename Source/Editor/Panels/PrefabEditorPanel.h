@@ -23,7 +23,12 @@ namespace sw::editor
         {
             return EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind::Prefab );
         }
-        void   drawContent() override;
+        void drawContent() override;
+
+        /** @brief 중첩 프리팹·서브 애셋 섹션을 그립니다. */
+        void drawNestedPrefabSection();
+        /** @brief 프리팹 오버라이드 표를 그립니다. */
+        void   drawOverrideTable();
         float2 getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
 
     private:

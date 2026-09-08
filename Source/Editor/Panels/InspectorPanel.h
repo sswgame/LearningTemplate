@@ -52,6 +52,8 @@ namespace sw::editor
         void drawPrefabLinkSection( GameObject* pObj, const string& prefabPath );
         /** @brief 선택된 오브젝트의 컴포넌트 카드 목록을 그립니다. */
         void drawComponentList( GameObject* pObj, EditorWorkspace& workspace );
+        /** @brief 컴포넌트 카드의 우클릭 메뉴를 그립니다. */
+        void drawComponentContextMenu( GameObject* pObj, Component* pComp, EditorWorkspace& workspace, bool& bOutRemove );
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
