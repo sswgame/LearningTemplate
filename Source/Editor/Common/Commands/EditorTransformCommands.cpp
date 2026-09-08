@@ -202,7 +202,7 @@ namespace sw::editor
             BoxCollider2DComponent* pBox = pGo->getComponent<BoxCollider2DComponent>();
             if ( pBox != nullptr )
             {
-                const float2 boxScl = pBox->getOffsetScaleVec();
+                const float2 boxScl = pBox->getOffsetScale();
                 bottomOffset        = boxScl._y * 0.5f;
             }
             MeshComponent* pMesh = pGo->getComponent<MeshComponent>();

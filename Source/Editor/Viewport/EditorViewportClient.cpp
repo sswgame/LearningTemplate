@@ -155,7 +155,7 @@ namespace sw::editor
                 if ( pBoxComp == nullptr || pBoxComp->isActive() == false )
                     return;
                 const float2  offsetPos = pBoxComp->getOffsetPosition();
-                const float2  offsetScl = pBoxComp->getOffsetScaleVec();
+                const float2  offsetScl = pBoxComp->getOffsetScale();
                 const float3  center    = pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
                 const float32 radius    = offsetScl.getLength() * 0.5f + 0.1f;
                 float32       hitT{ 0.0f };
@@ -277,7 +277,7 @@ namespace sw::editor
                             continue;
 
                         const float2  offsetPos = pBox->getOffsetPosition();
-                        const float2  offsetScl = pBox->getOffsetScaleVec();
+                        const float2  offsetScl = pBox->getOffsetScale();
                         const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
                         const float32 hx        = MathUtil::max( offsetScl._x * 0.5f, 0.05f );
                         const float32 hy        = MathUtil::max( offsetScl._y * 0.5f, 0.05f );
@@ -422,7 +422,7 @@ namespace sw::editor
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
 
         const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                                MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                              MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
         const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
         EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
     }
@@ -521,7 +521,7 @@ namespace sw::editor
             const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
             const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
             const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                                   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                                  MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
             pCam->lookAt( _cameraPos + forward );
         }
     }
@@ -924,7 +924,7 @@ namespace sw::editor
         BoxCollider2DComponent* pBox         = pRaw->getComponent<BoxCollider2DComponent>();
         if ( pBox != nullptr )
         {
-            const float2 scl = pBox->getOffsetScaleVec();
+            const float2 scl = pBox->getOffsetScale();
             objectRadius     = MathUtil::max( scl._x, scl._y ) * 0.6f;
         }
         MeshComponent* pMesh = pRaw->getComponent<MeshComponent>();
@@ -939,7 +939,7 @@ namespace sw::editor
         const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
         const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                               MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                              MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
 
         _cameraPos = _orbitTarget - forward * _orbitDistance;
     }
@@ -1038,8 +1038,8 @@ namespace sw::editor
                 const float32 newPitchRad = MathUtil::toRadian( _cameraRot._x );
                 const float32 newYawRad   = MathUtil::toRadian( _cameraRot._y );
                 const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ),
-                                          -MathUtil::sin( newPitchRad ),
-                                          MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
+                                         -MathUtil::sin( newPitchRad ),
+                                         MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
                 _cameraPos = _orbitTarget - newForward * _orbitDistance;
             }
         }

@@ -248,7 +248,7 @@ namespace sw::editor
         float32                 bottomOffset = 0.0f;
         BoxCollider2DComponent* pMyBox       = pObj->getComponent<BoxCollider2DComponent>();
         if ( pMyBox != nullptr )
-            bottomOffset = pMyBox->getOffsetScaleVec()._y * 0.5f;
+            bottomOffset = pMyBox->getOffsetScale()._y * 0.5f;
         MeshComponent* pMyMesh = pObj->getComponent<MeshComponent>();
         if ( pMyMesh != nullptr )
             bottomOffset = scaleY * 0.5f;
@@ -265,7 +265,7 @@ namespace sw::editor
         float32            hitY     = 0.0f;
         bool               bHit     = false;
 
-        const float32 halfExtentX = ( pMyBox != nullptr ) ? pMyBox->getOffsetScaleVec()._x * 0.5f : 0.5f;
+        const float32 halfExtentX = ( pMyBox != nullptr ) ? pMyBox->getOffsetScale()._x * 0.5f : 0.5f;
         const float32 halfExtentZ = 0.5f;
         const float32 startY      = translation._y + 10.0f;
         const AABB    movingBox{

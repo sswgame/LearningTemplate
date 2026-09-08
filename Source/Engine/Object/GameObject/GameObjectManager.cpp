@@ -59,9 +59,9 @@ namespace sw
                 // SubTickHandle -> 후보자 인덱스 빠른 매핑 맵 구성
                 unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
                 mapLookup.reserve( count );
-                for ( size_t idx = 0; idx < count; ++idx )
+                for ( size_t index = 0; index < count; ++index )
                 {
-                    mapLookup[{ listCandidate[idx]._componentId, listCandidate[idx]._subTickId }] = idx;
+                    mapLookup[{ listCandidate[index]._componentId, listCandidate[index]._subTickId }] = index;
                 }
 
                 // 선행 종속성 DAG 그래프(인접 리스트 및 In-degree) 구성
@@ -69,18 +69,18 @@ namespace sw
                 vector<uint32>         listInDegree( count, 0 );
                 bool                   bHasPrerequisites = false;
 
-                for ( size_t idx = 0; idx < count; ++idx )
+                for ( size_t index = 0; index < count; ++index )
                 {
-                    for ( const SubTickHandle& prereq : listCandidate[idx]._listPrerequisite )
+                    for ( const SubTickHandle& prereq : listCandidate[index]._listPrerequisite )
                     {
                         auto it = mapLookup.find( prereq );
                         if ( it != mapLookup.end() )
                         {
                             const size_t prereqIdx = it->second;
-                            if ( prereqIdx != idx )
+                            if ( prereqIdx != index )
                             {
-                                listAdj[prereqIdx].push_back( idx );
-                                ++listInDegree[idx];
+                                listAdj[prereqIdx].push_back( index );
+                                ++listInDegree[index];
                                 bHasPrerequisites = true;
                             }
                         }
@@ -90,11 +90,11 @@ namespace sw
                 // 종속성이 전혀 없는 경우: TickPhase + Priority 기준 단일 웨이브 안정 정렬 (Fast-Path)
                 if ( bHasPrerequisites == false )
                 {
-                    std::stable_sort( listCandidate.begin(), listCandidate.end(), []( const TickCandidate& a, const TickCandidate& b )
+                    std::stable_sort( listCandidate.begin(), listCandidate.end(), []( const TickCandidate& left, const TickCandidate& right )
                     {
-                        if ( a._orderKey != b._orderKey )
-                            return a._orderKey < b._orderKey;
-                        return a._originalIndex < b._originalIndex;
+                        if ( left._orderKey != right._orderKey )
+                            return left._orderKey < right._orderKey;
+                        return left._originalIndex < right._originalIndex;
                     } );
 
                     vector<GameObjectManager::TickExecutionItem> listSingleWave;
@@ -109,19 +109,19 @@ namespace sw
                 // Kahn 알고리즘 기반 DAG 레벨별 분할 웨이브 생성 (Topological Level Waves)
                 auto sortLevel = [&listCandidate]( vector<size_t>& listLevel )
                 {
-                    std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( size_t a, size_t b )
+                    std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( size_t left, size_t right )
                     {
-                        if ( listCandidate[a]._orderKey != listCandidate[b]._orderKey )
-                            return listCandidate[a]._orderKey < listCandidate[b]._orderKey;
-                        return listCandidate[a]._originalIndex < listCandidate[b]._originalIndex;
+                        if ( listCandidate[left]._orderKey != listCandidate[right]._orderKey )
+                            return listCandidate[left]._orderKey < listCandidate[right]._orderKey;
+                        return listCandidate[left]._originalIndex < listCandidate[right]._originalIndex;
                     } );
                 };
 
                 vector<size_t> listCurrentLevel;
-                for ( size_t idx = 0; idx < count; ++idx )
+                for ( size_t index = 0; index < count; ++index )
                 {
-                    if ( listInDegree[idx] == 0 )
-                        listCurrentLevel.push_back( idx );
+                    if ( listInDegree[index] == 0 )
+                        listCurrentLevel.push_back( index );
                 }
 
                 vector<vector<GameObjectManager::TickExecutionItem>> listDagWave;
@@ -156,17 +156,17 @@ namespace sw
                 if ( totalProcessed < count )
                 {
                     vector<size_t> listRemaining;
-                    for ( size_t idx = 0; idx < count; ++idx )
+                    for ( size_t index = 0; index < count; ++index )
                     {
-                        if ( listVisited[idx] == false )
-                            listRemaining.push_back( idx );
+                        if ( listVisited[index] == false )
+                            listRemaining.push_back( index );
                     }
                     sortLevel( listRemaining );
                     vector<GameObjectManager::TickExecutionItem> listFallbackWave;
                     listFallbackWave.reserve( listRemaining.size() );
-                    for ( size_t idx : listRemaining )
+                    for ( size_t index : listRemaining )
                     {
-                        listFallbackWave.push_back( { listCandidate[idx]._pComponent, listCandidate[idx]._handle, listCandidate[idx]._subTickId } );
+                        listFallbackWave.push_back( { listCandidate[index]._pComponent, listCandidate[index]._handle, listCandidate[index]._subTickId } );
                     }
                     listDagWave.push_back( std::move( listFallbackWave ) );
                 }
@@ -373,12 +373,12 @@ namespace sw
             const hashed_string                 uniqueName = makeUniqueNameUnlocked( name );
             pObj                                           = _poolGameObject.create( uniqueName );
 
-            const uint64 id      = generateNewId();
-            pObj->_objectId      = id;
-            pObj->_pOwnerManager = this;
+            const uint64 newObjectId = generateNewId();
+            pObj->_objectId          = newObjectId;
+            pObj->_pOwnerManager     = this;
 
             _mapNameToObject.insert_or_assign( uniqueName, pObj );
-            _mapIdToObject.insert_or_assign( id, pObj );
+            _mapIdToObject.insert_or_assign( newObjectId, pObj );
 
             _listPendingAdd.push_back( pObj );
         }
@@ -756,12 +756,12 @@ namespace sw
                         _listPendingAdd.pop_back();
                     }
 
-                    uint32 idx = pObj->_managerIndex;
-                    if ( idx < _listGameObject.size() && _listGameObject[idx] == pObj )
+                    uint32 index = pObj->_managerIndex;
+                    if ( index < _listGameObject.size() && _listGameObject[index] == pObj )
                     {
                         GameObject* pBackObj    = _listGameObject.back();
-                        _listGameObject[idx]    = pBackObj;
-                        pBackObj->_managerIndex = idx;
+                        _listGameObject[index]  = pBackObj;
+                        pBackObj->_managerIndex = index;
                         _listGameObject.pop_back();
                     }
                     _mapNameToObject.erase( pObj->getName() );
@@ -1088,9 +1088,9 @@ namespace sw
             return;
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        const uint64                        id = generateNewId();
-        pObj->_objectId                        = id;
-        pObj->_pOwnerManager                   = this;
+        const uint64                        newObjectId = generateNewId();
+        pObj->_objectId                                 = newObjectId;
+        pObj->_pOwnerManager                            = this;
 
         if ( _mapNameToObject.find( pObj->getName() ) != _mapNameToObject.end() )
         {
@@ -1098,7 +1098,7 @@ namespace sw
         }
 
         _mapNameToObject.insert_or_assign( pObj->getName(), pObj );
-        _mapIdToObject.insert_or_assign( id, pObj );
+        _mapIdToObject.insert_or_assign( newObjectId, pObj );
 
         _listPendingAdd.push_back( pObj );
     }

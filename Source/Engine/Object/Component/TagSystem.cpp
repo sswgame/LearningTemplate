@@ -15,20 +15,20 @@ namespace sw
             static inline std::shared_mutex                  s_mutex;
             static inline unordered_map<uint64, const utf8*> s_mapIdToStr;
 
-            static void registerTag( uint64 id, const utf8* pStr )
+            static void registerTag( uint64 tagId, const utf8* pStr )
             {
-                if ( id == 0 || pStr == nullptr )
+                if ( tagId == 0 || pStr == nullptr )
                     return;
                 std::unique_lock<std::shared_mutex> lock{ s_mutex };
-                s_mapIdToStr[id] = pStr;
+                s_mapIdToStr[tagId] = pStr;
             }
 
-            static const utf8* findString( uint64 id )
+            static const utf8* findString( uint64 tagId )
             {
-                if ( id == 0 )
+                if ( tagId == 0 )
                     return nullptr;
                 std::shared_lock<std::shared_mutex> lock{ s_mutex };
-                const auto                          iter = s_mapIdToStr.find( id );
+                const auto                          iter = s_mapIdToStr.find( tagId );
                 return iter != s_mapIdToStr.end() ? iter->second : nullptr;
             }
         };
@@ -46,7 +46,7 @@ namespace sw
 
     TagID TagID::request( string_view str )
     {
-        hashed_string hs{ str };
+        hashed_string hashedName{ str };
 
         uint64 hashValue = StringUtil::kOffset64;
         for ( size_t charIndex = 0; charIndex < str.length(); ++charIndex )
@@ -54,8 +54,8 @@ namespace sw
             hashValue = ( hashValue ^ static_cast<uint64>( str[charIndex] ) ) * StringUtil::kPrime64;
         }
 
-        TagRegistryInternal::registerTag( hashValue, hs.c_str() );
-        return TagID{ hashValue, hs.c_str() };
+        TagRegistryInternal::registerTag( hashValue, hashedName.c_str() );
+        return TagID{ hashValue, hashedName.c_str() };
     }
 
     TagContainer::TagContainer( std::initializer_list<TagID> tags )
