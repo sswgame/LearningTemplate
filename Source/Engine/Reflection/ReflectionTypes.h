@@ -249,8 +249,8 @@ namespace sw
         /** @brief 값 변경 콜백을 바인딩합니다. */
         void bindOnChanged( PropertyBindingDelegate delegate ) const { _onPropertyBoundChanged = std::move( delegate ); }
 
-        template <typename T, typename ObjectType>
         /** @brief 인스턴스 프로퍼티 값을 읽습니다. (비트필드 지원) */
+        template <typename T, typename ObjectType>
         T getValue( const ObjectType* pInstance ) const
         {
             if ( _bIsBitField == SW_TRUE )
@@ -271,8 +271,8 @@ namespace sw
             return *pPtr;
         }
 
-        template <typename T, typename ObjectType>
         /** @brief 인스턴스 프로퍼티 값을 쓰고 옵저버/바인딩을 알립니다. (비트필드 지원) */
+        template <typename T, typename ObjectType>
         void setValue( ObjectType* pInstance, const T& newValue ) const
         {
             if ( _bIsBitField == SW_TRUE )
@@ -324,8 +324,8 @@ namespace sw
                 _onPropertyBoundChanged( *this, pInstance );
         }
 
-        template <typename T>
         /** @brief 인스턴스 + 오프셋의 값 포인터. (비트필드는 nullptr 반환) */
+        template <typename T>
         T* getValuePtr( void* pInstance ) const
         {
             if ( _bIsBitField == SW_TRUE )
@@ -333,8 +333,8 @@ namespace sw
             return reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
         }
 
-        template <typename T>
         /** @brief 인스턴스 + 오프셋의 값 포인터. (비트필드는 nullptr 반환) */
+        template <typename T>
         const T* getValuePtr( const void* pInstance ) const
         {
             if ( _bIsBitField == SW_TRUE )
@@ -750,8 +750,8 @@ namespace sw
         /** @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 (평탄화 캐시 미사용 제로 할당 검색). */
         const PropertyInfo* findPropertyInHierarchy( const hashed_string& propertyNameOrAlias ) const;
 
-        template <typename Func>
         /** @brief 프로퍼티를 순회합니다. bIncludeBase가 true이면 상속 체인 포함. */
+        template <typename Func>
         void forEachProperty( Func&& func, bool bIncludeBase = false ) const
         {
             if ( bIncludeBase == false )
@@ -770,8 +770,8 @@ namespace sw
             }
         }
 
-        template <typename Func>
         /** @brief 메서드를 순회합니다. */
+        template <typename Func>
         void forEachMethod( Func&& func ) const
         {
             for ( const FunctionInfo& method : _listMethod )

@@ -352,8 +352,8 @@ namespace sw
 
                 while ( charIndex < content.size() && depth > 0 )
                 {
-                    const utf8 c = content[charIndex++];
-                    if ( c == '"' )
+                    const utf8 character = content[charIndex++];
+                    if ( character == '"' )
                     {
                         bInQuote = ( bInQuote == false );
                         continue;
@@ -361,12 +361,12 @@ namespace sw
                     if ( bInQuote )
                         continue;
 
-                    if ( c == '(' )
+                    if ( character == '(' )
                     {
                         ++depth;
                         continue;
                     }
-                    if ( c == ')' )
+                    if ( character == ')' )
                     {
                         --depth;
                         if ( depth == 0 )

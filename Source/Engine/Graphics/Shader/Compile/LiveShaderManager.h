@@ -68,7 +68,7 @@ namespace sw
 
     private:
         /** @brief ReloadFileManager 워치 콜백. */
-        void onWatchedFileChanged( const FileChangeEvent& ev );
+        void onWatchedFileChanged( const FileChangeEvent& changeEvent );
         /** @brief ReloadFileManager 워치를 뗍니다. */
         void detachReloadFileManager();
 

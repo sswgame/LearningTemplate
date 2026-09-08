@@ -71,84 +71,11 @@ namespace sw::editor
             markDocumentLoaded();
         }
 
-        const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
-        if ( focused.empty() == false )
-            ImGui::TextDisabled( "Focused: %s", focused.c_str() );
-
-        ImGui::InputText( "Path", _pathBuffer.data(), _pathBuffer.capacity() );
-        ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
-        ImGui::InputInt( "Width", &_inputWidth );
-        ImGui::SameLine();
-        ImGui::InputInt( "Height", &_inputHeight );
-        if ( ImGui::Button( "Apply Size" ) )
-        {
-            resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
-            notifyDocumentEdited( "Resize Tile Map" );
-        }
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Load" ) )
-        {
-            if ( loadXml( _pathBuffer.c_str() ) == false )
-                SW_LOG_WARNING( "%#", _status.c_str() );
-        }
-        ImGui::SameLine();
-        if ( ImGui::Button( "Save" ) )
-        {
-            if ( saveXml( _pathBuffer.c_str() ) )
-            {
-                _status = string( "Saved " ) + _pathBuffer.c_str();
-                clearDocumentDirty();
-            }
-            else
-                _status = "Save failed";
-        }
-
+        drawTileMapFileControls();
         ImGui::Checkbox( "Erase", &_bErase );
         ImGui::Separator();
 
-        const utf8* layerNames[] = { "Visual", "Walkable", "Encounter", "Warp", "PassThrough" };
-        int32       layerIdx     = static_cast<int32>( _layer );
-        if ( ImGui::Combo( "Layer", &layerIdx, layerNames, 5 ) )
-            _layer = static_cast<PaintLayer>( layerIdx );
-
-        if ( _layer == PaintLayer::Visual )
-        {
-            ImGui::InputInt( "Height", &_paintHeight );
-            ImGui::InputInt( "Atlas Id", &_atlasId );
-            ImGui::ColorEdit3( "Tint", _arrTint );
-        }
-        else if ( _layer == PaintLayer::Warp )
-        {
-            ImGui::InputText( "Warp Target", _warpTarget.data(), _warpTarget.capacity() );
-            ImGui::InputInt( "Target TX", &_warpTx );
-            ImGui::InputInt( "Target TY", &_warpTy );
-        }
-
-        ImGui::Separator();
-        ImGui::TextUnformatted( "Edge Warp Presets" );
-        const utf8*                            edges[] = { "N", "E", "S", "W" };
-        fixed_string<constant::kMaxBuffer128>* bufs[]  = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
-        for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
-        {
-            ImGui::PushID( edgeIndex );
-            ImGui::SetNextItemWidth( 180.0f );
-            ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f );
-            ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f );
-            ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
-            ImGui::SameLine();
-            if ( ImGui::Button( "Apply" ) )
-                paintEdgeWarp( edgeIndex );
-            ImGui::PopID();
-        }
-
-        ImGui::Separator();
+        drawLayerControls();
         ImGui::Text( "Grid %dx%d ??click to paint", _width, _height );
 
         constexpr float32 cell   = 18.0f;
@@ -216,6 +143,88 @@ namespace sw::editor
         }
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
+    }
+
+    void TileMapPanel::drawTileMapFileControls()
+    {
+        const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
+        if ( focused.empty() == false )
+            ImGui::TextDisabled( "Focused: %s", focused.c_str() );
+
+        ImGui::InputText( "Path", _pathBuffer.data(), _pathBuffer.capacity() );
+        ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
+        ImGui::InputInt( "Width", &_inputWidth );
+        ImGui::SameLine();
+        ImGui::InputInt( "Height", &_inputHeight );
+        if ( ImGui::Button( "Apply Size" ) )
+        {
+            resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
+            notifyDocumentEdited( "Resize Tile Map" );
+        }
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Load" ) )
+        {
+            if ( loadXml( _pathBuffer.c_str() ) == false )
+                SW_LOG_WARNING( "%#", _status.c_str() );
+        }
+        ImGui::SameLine();
+        if ( ImGui::Button( "Save" ) )
+        {
+            if ( saveXml( _pathBuffer.c_str() ) )
+            {
+                _status = string( "Saved " ) + _pathBuffer.c_str();
+                clearDocumentDirty();
+            }
+            else
+                _status = "Save failed";
+        }
+    }
+
+    void TileMapPanel::drawLayerControls()
+    {
+        const utf8* layerNames[] = { "Visual", "Walkable", "Encounter", "Warp", "PassThrough" };
+        int32       layerIdx     = static_cast<int32>( _layer );
+        if ( ImGui::Combo( "Layer", &layerIdx, layerNames, 5 ) )
+            _layer = static_cast<PaintLayer>( layerIdx );
+
+        if ( _layer == PaintLayer::Visual )
+        {
+            ImGui::InputInt( "Height", &_paintHeight );
+            ImGui::InputInt( "Atlas Id", &_atlasId );
+            ImGui::ColorEdit3( "Tint", _arrTint );
+        }
+        else if ( _layer == PaintLayer::Warp )
+        {
+            ImGui::InputText( "Warp Target", _warpTarget.data(), _warpTarget.capacity() );
+            ImGui::InputInt( "Target TX", &_warpTx );
+            ImGui::InputInt( "Target TY", &_warpTy );
+        }
+
+        ImGui::Separator();
+        ImGui::TextUnformatted( "Edge Warp Presets" );
+        const utf8*                            edges[] = { "N", "E", "S", "W" };
+        fixed_string<constant::kMaxBuffer128>* bufs[]  = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
+        for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
+        {
+            ImGui::PushID( edgeIndex );
+            ImGui::SetNextItemWidth( 180.0f );
+            ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth( 50.0f );
+            ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth( 50.0f );
+            ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
+            ImGui::SameLine();
+            if ( ImGui::Button( "Apply" ) )
+                paintEdgeWarp( edgeIndex );
+            ImGui::PopID();
+        }
+
+        ImGui::Separator();
     }
 
     void TileMapPanel::resize( int32 width, int32 height )

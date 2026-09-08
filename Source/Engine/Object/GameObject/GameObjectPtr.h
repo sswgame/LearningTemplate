@@ -8,11 +8,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_GameObjectPtr_Registrar;
-    } // namespace generated
-
     class GameObject;
     class GameObjectManager;
 
@@ -24,7 +19,6 @@ namespace sw
     REFLECT()
     struct SW_API GameObjectPtr
     {
-        friend struct ::sw::generated::sw_GameObjectPtr_Registrar;
         REFLECT_BODY();
 
     public:

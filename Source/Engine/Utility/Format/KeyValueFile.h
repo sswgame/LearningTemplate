@@ -86,11 +86,11 @@ namespace sw
                               string_view sectionName = {} );
 
         /**
-         * @brief 비어 있지 않고 주석이 아닌 각 줄에 fn(trimmedLine)을 호출합니다.
-         * @note 브래킷 섹션 헤더는 그대로 넘깁니다 (fn이 결정).
+         * @brief 비어 있지 않고 주석이 아닌 각 줄에 callback(trimmedLine)을 호출합니다.
+         * @note 브래킷 섹션 헤더는 그대로 넘깁니다 (callback이 결정).
          */
         template <typename Fn>
-        static void forEachContentLine( string_view text, Fn&& fn, utf8 commentChar = '#' )
+        static void forEachContentLine( string_view text, Fn&& callback, utf8 commentChar = '#' )
         {
             size_t begin{ 0 };
             while ( begin <= text.size() )
@@ -114,7 +114,7 @@ namespace sw
                 }
 
                 if ( line.empty() == false && line.front() != commentChar )
-                    fn( line );
+                    callback( line );
 
                 if ( end == text.size() )
                     break;

@@ -67,43 +67,11 @@ namespace sw
             {
                 if ( _pDpy != nullptr )
                     XSync( _pDpy, 0 );
-                const bool b                         = OpenGLRHIDeviceInternal::t_glxXError != 0;
+                const bool bHadError                 = OpenGLRHIDeviceInternal::t_glxXError != 0;
                 OpenGLRHIDeviceInternal::t_glxXError = 0;
-                return b;
+                return bHadError;
             }
         };
 #endif
-
-        static void applyVsyncInterval( void* pHdc, void* pHrc, bool vsync )
-        {
-            (void)pHdc;
-#if defined( SW_PLATFORM_WINDOWS )
-            (void)pHrc;
-            using PFNWGLSWAPINTERVALEXTPROC                       = BOOL( WINAPI* )( int32 );
-            static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
-            if ( s_wglSwapIntervalEXT != nullptr )
-                s_wglSwapIntervalEXT( vsync ? 1 : 0 );
-#elif defined( SW_PLATFORM_LINUX )
-            (void)pHrc;
-            using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
-            static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
-                reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
-            if ( s_glXSwapIntervalEXT != nullptr && pHdc != nullptr )
-            {
-                Display* pDpy = static_cast<Display*>( pHdc );
-                s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
-            }
-#elif defined( SW_PLATFORM_MACOS )
-            (void)pHdc;
-            if ( pHrc != nullptr )
-            {
-                id              context                               = static_cast<id>( pHrc );
-                GLint           interval                              = vsync ? 1 : 0;
-                constexpr GLint kNsOpenGlContextParameterSwapInterval = 222;
-                ( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
-                    context, sel_registerName( "setValues:forParameter:" ), &interval, kNsOpenGlContextParameterSwapInterval );
-            }
-#endif
-        }
     };
 } // namespace sw

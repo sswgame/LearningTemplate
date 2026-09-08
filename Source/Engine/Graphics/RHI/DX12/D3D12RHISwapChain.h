@@ -86,9 +86,7 @@ namespace sw
         bool isValid() const { return _swapChain != nullptr; }
 
         /** @brief 지금 그릴 수 있는 백버퍼가 준비돼 있는지. */
-        bool isBackBufferReady() const { return _backBufferIndex < _listBackBuffer.size(); }
-
-        uint32 getBackBufferIndex() const { return _backBufferIndex; }
+        bool   isBackBufferReady() const { return _backBufferIndex < _listBackBuffer.size(); }
         uint32 getBufferCount() const { return _bufferCount; }
         /** @brief 백버퍼 포맷 — DXGI 는 요청 포맷을 그대로 만든다(Vulkan 처럼 협상하지 않는다). */
         RHIFormat getFormat() const { return _format; }
@@ -102,7 +100,6 @@ namespace sw
         D3D12_CPU_DESCRIPTOR_HANDLE getCurrentRtv() const;
 
         D3D12_RESOURCE_STATES getState() const;
-        IDXGISwapChain3*      getNative() const { return _swapChain.Get(); }
 
     private:
         Microsoft::WRL::ComPtr<IDXGISwapChain3>        _swapChain;

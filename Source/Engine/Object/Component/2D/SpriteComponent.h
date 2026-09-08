@@ -12,16 +12,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_SpriteComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component" )
     class SW_API SpriteComponent : public MeshComponent
     {
-        friend struct ::sw::generated::sw_SpriteComponent_Registrar;
-
     public:
         REFLECT_BODY();
         SpriteComponent();

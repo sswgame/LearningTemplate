@@ -18,11 +18,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_GameObject_Registrar;
-    } // namespace generated
-
     class GameObjectManager;
     class ObjectStateSerializer;
     class SceneComponent;
@@ -36,7 +31,6 @@ namespace sw
     {
         friend class GameObjectManager;
         friend class ObjectStateSerializer;
-        friend struct ::sw::generated::sw_GameObject_Registrar;
 
     public:
         REFLECT_BODY();

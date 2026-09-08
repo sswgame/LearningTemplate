@@ -360,10 +360,7 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
 
@@ -384,6 +381,13 @@ namespace sw::editor
             return;
         }
 
+        collectComponentOverrides( pInstance, pCdo, outOverride );
+
+        pManager->destroyObject( pCdo );
+    }
+
+    void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
+    {
         const SerializeContext& ctx = SerializeContext::getDefault();
         for ( Component* pInstComp : pInstance->getAllComponents() )
         {
@@ -425,12 +429,10 @@ namespace sw::editor
                 item._defaultValue    = EditorToolAssetInternal::formatPropertyValue( prop, pCdoComp );
                 item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstComp );
                 item._bModified       = ( cdoBytes != instBytes );
-                outOverride.push_back( std::move( item ) );
+                outListOverride.push_back( std::move( item ) );
             },
                 true );
         }
-
-        pManager->destroyObject( pCdo );
     }
 
     void EditorToolAssetCommands::revertPrefabOverride( GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath )
@@ -449,10 +451,7 @@ namespace sw::editor
         if ( pLoaded == nullptr )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
-            return;
-        GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
+        GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return;
 

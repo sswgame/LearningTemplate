@@ -90,7 +90,6 @@ namespace sw
         VulkanSwapChainStatus present( VkQueue queue );
 
         bool isValid() const { return _swapChain != nullptr; }
-        bool hasSurface() const { return _surface != nullptr; }
 
         uint32 getImageIndex() const { return _imageIndex; }
         uint32 getImageCount() const { return static_cast<uint32>( _listImage.size() ); }
@@ -101,8 +100,7 @@ namespace sw
         /** @brief 실제로 채택된 백버퍼 포맷. 요청과 다를 수 있습니다. */
         RHIFormat getActualBackBufferFormat() const { return _actualBackBufferFormat; }
 
-        VkSurfaceKHR   getSurface() const { return _surface; }
-        VkSwapchainKHR getNative() const { return _swapChain; }
+        VkSurfaceKHR getSurface() const { return _surface; }
 
         /** @brief 현재 이미지. 준비 안 됐으면 nullptr. */
         VkImage getCurrentImage() const;

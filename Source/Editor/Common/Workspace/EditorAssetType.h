@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {
@@ -67,6 +68,26 @@ namespace sw::editor
         static const EditorAssetPanelMapping* getPanelMappings( uint32& outCount );
         /** @brief Assets 메뉴·도킹에 쓸 도구 패널 종류 목록입니다. */
         static const EditorAssetKind* getToolPanelKinds( uint32& outCount );
+
+        /**
+         * @brief 도구 패널 제목을 하나씩 넘겨 줍니다 (제목이 비어 있는 종류는 건너뜁니다).
+         * @details 호출부가 개수를 받아 인덱스로 돌고 빈 제목을 걸러내는 대여섯 줄을 매번 다시
+         *          쓰고 있었다(도킹 레이아웃·메뉴바). 순회는 레지스트리의 일이고, 쓰는 쪽은
+         *          유효한 제목만 받으면 된다.
+         */
+        template <typename Func>
+        static void forEachToolPanelTitle( Func&& func )
+        {
+            uint32                       kindCount{ 0 };
+            const EditorAssetKind* const pKind = getToolPanelKinds( kindCount );
+            for ( uint32 index = 0; index < kindCount; ++index )
+            {
+                const utf8* pTitle = getPanelTitle( pKind[index] );
+                if ( StringUtil::isNullOrEmpty( pTitle ) )
+                    continue;
+                func( pTitle );
+            }
+        }
         /** @brief 콘텐츠 브라우저 타입 필터 목록입니다. */
         static const EditorAssetBrowserFilter* getBrowserFilters( uint32& outCount );
         /** @brief 임포트 대화상자용 접미사를 outListExtension에 추가합니다. */

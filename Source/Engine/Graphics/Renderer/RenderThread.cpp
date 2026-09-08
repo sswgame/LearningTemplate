@@ -33,7 +33,6 @@ namespace sw
         , _bStop{ false }
         , _bContextBound{ false }
         , _arrRingBuffer{}
-        , _arrFrameAllocators{}
         , _head{ 0 }
         , _tail{ 0 }
     {
@@ -180,24 +179,6 @@ namespace sw
         // Game-thread / no-worker path: own context on this thread for the frame.
         ensureContextOnCurrentThread();
         executePacket( packet );
-        _arrFrameAllocators[0].reset();
-    }
-
-    void* RenderThread::allocateFrameMemory( size_t size, size_t alignment )
-    {
-        // Game Thread calls this to allocate data for the _head frame
-        uint32 currentHead = _head.load( std::memory_order_relaxed );
-        if ( _bRunning.load( std::memory_order_relaxed ) )
-        {
-            uint32 nextHead = ( currentHead + 1 ) % _s_kRingCapacity;
-            if ( nextHead == _tail.load( std::memory_order_acquire ) )
-            {
-                std::unique_lock<mutex> lock{ _mutex };
-                _cvProduce.wait( lock, [this, nextHead]()
-                { return _bStop.load( std::memory_order_relaxed ) || nextHead != _tail.load( std::memory_order_acquire ); } );
-            }
-        }
-        return _arrFrameAllocators[currentHead].allocate( size, alignment );
     }
 
     void RenderThread::threadMain()
@@ -219,7 +200,6 @@ namespace sw
 
             RenderFramePacket packet = std::move( _arrRingBuffer[currentTail] );
             executePacket( packet );
-            _arrFrameAllocators[currentTail].reset();
 
             {
                 std::scoped_lock<mutex> lock{ _mutex };
@@ -233,11 +213,6 @@ namespace sw
         {
             _pDevice->unbindGraphicsContext();
             _bContextBound = false;
-        }
-
-        for ( uint32 ringSlotIndex = 0; ringSlotIndex < _s_kRingCapacity; ++ringSlotIndex )
-        {
-            _arrFrameAllocators[ringSlotIndex].clear();
         }
     }
 

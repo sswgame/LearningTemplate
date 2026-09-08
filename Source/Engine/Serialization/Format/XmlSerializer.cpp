@@ -76,8 +76,8 @@ namespace sw
 
                 if ( pSeq != nullptr )
                 {
-                    const size_t sz = pSeq->getSize( pContainerPtr );
-                    for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
+                    const size_t elementCount = pSeq->getSize( pContainerPtr );
+                    for ( size_t elemIndex = 0; elemIndex < elementCount; ++elemIndex )
                     {
                         const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elemIndex );
                         if ( nested._elementNested != nullptr )

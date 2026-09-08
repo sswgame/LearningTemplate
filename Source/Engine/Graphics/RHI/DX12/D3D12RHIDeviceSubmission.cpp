@@ -104,12 +104,12 @@ namespace sw
         _frameStreamState._bRecording = 1;
         _frameStreamContext->rebindCommandList( pNextSegment );
 
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        pNextSegment->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        pNextSegment->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         pNextSegment->RSSetScissorRects( 1, &scissor );
@@ -199,11 +199,14 @@ namespace sw
 
     D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
     {
+        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
+        D3D12CommandListEntry entry;
         {
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             if ( _listFreeCmdListEntry.empty() == false )
             {
-                D3D12CommandListEntry entry = std::move( _listFreeCmdListEntry.back() );
+                entry = std::move( _listFreeCmdListEntry.back() );
                 _listFreeCmdListEntry.pop_back();
                 return entry;
             }
@@ -211,7 +214,6 @@ namespace sw
 
         // 풀이 비었으면 새로 만든다. 생성 직후의 리스트는 열린 상태라 바로 Close 해 둔다
         // (beginCommandList 가 Reset 으로 다시 연다).
-        D3D12CommandListEntry entry;
         if ( _device == nullptr )
             return entry;
 
@@ -226,7 +228,8 @@ namespace sw
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
                               static_cast<uint32>( _cmdListEntryCreated ) );
             flushDebugMessages( "acquireCommandListEntry" );
-            return D3D12CommandListEntry{};
+            entry = D3D12CommandListEntry{};
+            return entry;
         }
         const HRESULT listHr = _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
                                                            IID_PPV_ARGS( entry._list.GetAddressOf() ) );
@@ -237,7 +240,8 @@ namespace sw
                               static_cast<uint32>( listHr ),
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
                               static_cast<uint32>( _cmdListEntryCreated ) );
-            return D3D12CommandListEntry{};
+            entry = D3D12CommandListEntry{};
+            return entry;
         }
         const uint32 entryIndex = _cmdListEntryCreated++;
         utf16        arrName[constant::kMaxBuffer64]{};
@@ -263,11 +267,6 @@ namespace sw
             _listFreeCmdListEntry.push_back( entry );
         };
         _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
-    }
-
-    ID3D12CommandAllocator* D3D12RHIDevice::currentFrameCmdAllocator()
-    {
-        return _arrFrameCmdAllocator[_frameRing.currentIndex()].Get();
     }
 
     void D3D12RHIDevice::beginFrame( const float4& clearColor )
@@ -313,14 +312,14 @@ namespace sw
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
         constexpr float32 kDefaultViewportMaxDepth = 1.0f;
 
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
-        vp.MinDepth = kDefaultViewportMinDepth;
-        vp.MaxDepth = kDefaultViewportMaxDepth;
-        vp.TopLeftX = kDefaultViewportX;
-        vp.TopLeftY = kDefaultViewportY;
-        _activeFrameList->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = kDefaultViewportMinDepth;
+        viewport.MaxDepth = kDefaultViewportMaxDepth;
+        viewport.TopLeftX = kDefaultViewportX;
+        viewport.TopLeftY = kDefaultViewportY;
+        _activeFrameList->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         _activeFrameList->RSSetScissorRects( 1, &scissorRect );

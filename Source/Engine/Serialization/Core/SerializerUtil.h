@@ -118,7 +118,7 @@ namespace sw
         static const utf8* containerTypeTagName( hashed_string typeName );
 
         /** @brief 키 문자열이 일치하는지 비교합니다 (대소문자 옵션 지원). */
-        static bool keysEqual( string_view a, string_view b, bool bIgnoreCase );
+        static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
 
         /** @brief 프로퍼티 목록에서 키에 일치하는 프로퍼티 메타데이터를 검색합니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,

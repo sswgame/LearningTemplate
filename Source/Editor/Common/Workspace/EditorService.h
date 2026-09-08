@@ -9,6 +9,12 @@
 
 #include <type_traits>
 
+namespace sw
+{
+    class GameObjectManager;
+    class Scene;
+} // namespace sw
+
 namespace sw::editor
 {
     struct EditorData;
@@ -68,4 +74,18 @@ namespace sw::editor
 
     EditorData& getEditorData();
     void        setEditorData( EditorData* pData );
+
+    // ------------------------------------------------------------------------------
+    // 활성 씬 바로가기
+    //
+    // 에디터 코드는 거의 항상 "지금 편집 중인 씬"과 그 GameObjectManager 를 원한다. 그런데
+    // 거기까지 가려면 SceneManager 서비스 → getActiveScene() → getObjectManager() 를 거치며
+    // 단계마다 nullptr 을 확인해야 해서, 커맨드·패널마다 같은 대여섯 줄이 다시 쓰였다(24곳).
+    // 새 커맨드를 하나 더 쓸 때마다 그 검사를 또 쓰게 되고, 한 군데서 빠뜨리면 그때만
+    // 조용히 죽는다. 원하는 것을 한 줄로 돌려주고 실패는 nullptr 하나로 합친다.
+    // ------------------------------------------------------------------------------
+    /** @brief 지금 편집 중인 씬. 씬이 없으면 nullptr. */
+    Scene* getActiveScene();
+    /** @brief 지금 편집 중인 씬의 GameObjectManager. 씬이 없으면 nullptr. */
+    GameObjectManager* getActiveObjectManager();
 } // namespace sw::editor

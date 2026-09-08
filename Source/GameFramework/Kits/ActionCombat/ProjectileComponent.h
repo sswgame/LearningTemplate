@@ -8,16 +8,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_ProjectileComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API ProjectileComponent : public Component
     {
-        friend struct ::sw::generated::sw_ProjectileComponent_Registrar;
-
     public:
         REFLECT_BODY();
         ProjectileComponent();

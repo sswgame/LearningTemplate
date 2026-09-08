@@ -32,7 +32,6 @@ namespace sw
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
         , _mapTransient{}
-        , _mapTransientSrv{}
         , _listClearedThisFrame{}
         , _frameCtx{}
         , _instanceAnimCb{ 0 }

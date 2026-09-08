@@ -2,10 +2,10 @@
 $AliasRegs
 		}
 
-		${Id}_Registrar()
+		Registrar()
 		{
 			static ::sw::TypeRegistrar reg{ &RegisterType };
 		}
 	};
-	static ${Id}_Registrar s_${Id}_registrar{};
+	static Registrar<$FQN> s_${Id}_registrar{};
 

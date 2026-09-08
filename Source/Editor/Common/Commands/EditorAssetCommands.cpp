@@ -351,8 +351,7 @@ namespace sw::editor
             }
             if ( ws.isSceneDirty() )
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                Scene*        pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+                Scene* pScene = editor::getActiveScene();
                 if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
                 {
                     if ( saveActiveScene( {} ) == false )
@@ -527,9 +526,8 @@ namespace sw::editor
 
     void EditorAssetCommands::saveActiveSceneOrPrompt()
     {
-        EditorContext* pContext      = EditorContext::get();
-        SceneManager*  pSceneManager = editor::getService<SceneManager>();
-        Scene*         pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        EditorContext* pContext = EditorContext::get();
+        Scene*         pScene   = editor::getActiveScene();
         if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
         {
             if ( saveActiveScene( {} ) )
@@ -703,10 +701,7 @@ namespace sw::editor
             return false;
         }
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return false;
         GameObjectManager* pManager = pScene->getObjectManager();

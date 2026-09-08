@@ -6,16 +6,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_HPBarBaseComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "UI", DisplayName = "HP Bar Base Component", Tooltip = "Smooth lerping HP Bar floating UI component" )
     class SW_GF_API HPBarBaseComponent : public Component
     {
-        friend struct ::sw::generated::sw_HPBarBaseComponent_Registrar;
-
     public:
         REFLECT_BODY();
         HPBarBaseComponent();

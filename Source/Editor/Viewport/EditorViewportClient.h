@@ -54,24 +54,21 @@ namespace sw::editor
         void getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const;
 
         /** @brief 카메라 위치 및 회전 설정 */
-        void setCameraPosition( const float3& pos ) { _cameraPos = pos; }
-        void setCameraRotation( const float3& rot ) { _cameraRot = rot; }
-        void setOrbitTarget( const float3& target ) { _orbitTarget = target; }
-        void setCameraMode( CameraControlMode mode ) { _cameraMode = mode; }
 
         /** @brief 현재 선택된 GameObject로 카메라를 프레이밍(F key)합니다. */
         void frameSelected();
 
-        const float3&            getCameraPosition() const { return _cameraPos; }
-        const float3&            getCameraRotation() const { return _cameraRot; }
-        CameraControlMode        getCameraMode() const { return _cameraMode; }
-        ViewportToolbarSettings& getToolbarSettings() { return _toolbarSettings; }
+        const float3& getCameraPosition() const { return _cameraPos; }
 
     private:
         void processFlyInput( float32 deltaTime );
         void processOrbitInput();
         void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
         void drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize );
+
+        /** @brief 다중 선택 기즈모를 조작합니다 (열거형은 ImGuizmo 에 묶이지 않도록 uint32 로 받는다). */
+        void manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
+                                   const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap );
         void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,

@@ -2,9 +2,6 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
-#include "Core/String/StringUtil.h"
-#include "Core/String/string_splitter.h"
-
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
@@ -30,8 +27,8 @@ namespace sw
 namespace sw
 {
     BoxCollider2DComponent::BoxCollider2DComponent()
-        : _offsetPos{}
-        , _offsetScale{}
+        : _offsetPos{ 0.0f, 0.0f }
+        , _offsetScale{ 0.0f, 0.0f }
         , _pPhysics{ nullptr }
         , _physicsBody{}
         , _cachedMin{ 0.0f, 0.0f }
@@ -71,41 +68,11 @@ namespace sw
         syncPhysicsBody();
     }
 
-    float2 BoxCollider2DComponent::getOffsetPosition() const
-    {
-        float2 result{ 0.0f, 0.0f };
-        if ( _offsetPos.empty() == false )
-        {
-            string_splitter tokens( _offsetPos, { ",", " " } );
-            const auto&     listToken = tokens.getSplitList();
-            if ( listToken.size() >= 1 && listToken[0].empty() == false )
-                StringUtil::parseFloat( listToken[0], result._x );
-            if ( listToken.size() >= 2 && listToken[1].empty() == false )
-                StringUtil::parseFloat( listToken[1], result._y );
-        }
-        return result;
-    }
-
-    float2 BoxCollider2DComponent::getOffsetScaleVec() const
-    {
-        float2 result{ 0.0f, 0.0f };
-        if ( _offsetScale.empty() == false )
-        {
-            string_splitter tokens( _offsetScale, { ",", " " } );
-            const auto&     listToken = tokens.getSplitList();
-            if ( listToken.size() >= 1 && listToken[0].empty() == false )
-                StringUtil::parseFloat( listToken[0], result._x );
-            if ( listToken.size() >= 2 && listToken[1].empty() == false )
-                StringUtil::parseFloat( listToken[1], result._y );
-        }
-        return result;
-    }
-
     void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
     {
         const float3 worldPos = getWorldPosition();
-        const float2 offset   = getOffsetPosition();
-        const float2 scale    = getOffsetScaleVec();
+        const float2 offset   = _offsetPos;
+        const float2 scale    = _offsetScale;
         const float2 center{ worldPos._x + offset._x, worldPos._y + offset._y };
         const float2 halfSize{ scale._x * 0.5f, scale._y * 0.5f };
 

@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorFontSetup.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
@@ -134,7 +135,7 @@ namespace sw::editor
             EditorThemeUtil::loadFromConfig();
         }
 
-        EditorUtil::setupFonts();
+        EditorFontSetup::apply();
 
         BLOCK( "Platform Backend create / init" )
         {
@@ -453,10 +454,7 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getViewportCamera() const
     {
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return nullptr;
-        return EditorCamera::getViewportCamera( pSceneManager->getActiveScene(), EditorPlaySession::isPlaying() );
+        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlaying() );
     }
 
     bool ImGuiEditor::isPlaying() const

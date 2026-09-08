@@ -6,16 +6,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_GravityComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API GravityComponent : public Component
     {
-        friend struct ::sw::generated::sw_GravityComponent_Registrar;
-
     public:
         REFLECT_BODY();
         GravityComponent();

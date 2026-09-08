@@ -131,8 +131,8 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        uint32 w = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
-        uint32 h = beginInfo._height > 0 ? beginInfo._height : _pDevice->_height;
+        uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
+        uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : _pDevice->_height;
 
         const bool       bBindColor = beginInfo._bBindColor != 0;
         const bool       bHasDepth  = beginInfo._depthTarget != 0;
@@ -165,9 +165,9 @@ namespace sw
                 fbo        = pRec->_fbo;
                 bDepthOnly = pRec->_bDepthStencil != 0;
                 if ( beginInfo._width == 0 )
-                    w = pRec->_width;
+                    targetWidth = pRec->_width;
                 if ( beginInfo._height == 0 )
-                    h = pRec->_height;
+                    targetHeight = pRec->_height;
             }
         }
 
@@ -197,7 +197,7 @@ namespace sw
             }
         }
         _pDevice->_boundTextureUnitMask = 0;
-        glViewport( 0, 0, static_cast<GLsizei>( w ), static_cast<GLsizei>( h ) );
+        glViewport( 0, 0, static_cast<GLsizei>( targetWidth ), static_cast<GLsizei>( targetHeight ) );
 
         if ( bHasDepth || bDepthOnly )
         {
@@ -377,14 +377,14 @@ namespace sw
         }
     }
 
-    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // 그래픽스 bindConstantBuffer 와 같은 근거 — 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
         // 않으므로 b# 는 SPIR-V binding # 그대로다(gpucull 의 CullParams b0 = binding 0).
-        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+        if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
+             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
             return;
-        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
         if ( ubo != 0 )
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
@@ -513,17 +513,17 @@ namespace sw
         }
     }
 
-    void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
         // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는데(common.hlsli 가 항상 명시한다),
         // 엔진만 16+# 에 걸고 있었다. 그래서 셰이더가 PassCB 를 영영 못 읽어 g_ViewProj 가 0 이었고
         // OpenGL 은 메시를 하나도 그리지 못했다(드로우는 정상적으로 나가고 GL 에러도 없어 오래 걸렸다).
         // 확인 방법: 구운 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
-        if ( _pDevice->_bInitialized == SW_FALSE || cb == kInvalidDescriptorIndex ||
-             cb >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+        if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
+             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
             return;
-        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[cb]._buffer );
+        const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
         if ( ubo != 0 )
         {
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );

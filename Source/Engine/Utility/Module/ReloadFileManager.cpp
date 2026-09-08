@@ -56,11 +56,11 @@ namespace sw
                 if ( it->second != mtime )
                 {
                     it->second = mtime;
-                    FileChangeEvent ev{};
-                    ev._action    = FileWatcherAction::Modified;
-                    ev._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
-                    ev._filename  = filename;
-                    outListEvent.push_back( std::move( ev ) );
+                    FileChangeEvent changeEvent{};
+                    changeEvent._action    = FileWatcherAction::Modified;
+                    changeEvent._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
+                    changeEvent._filename  = filename;
+                    outListEvent.push_back( std::move( changeEvent ) );
                 }
             }
         };
@@ -166,30 +166,30 @@ namespace sw
                           _listWatch.end() );
     }
 
-    bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const
+    bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const
     {
-        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( ev._directory, ev._filename ) );
+        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
         const string prefix   = FileUtil::normalizePath( entry._pathPrefix );
 
         if ( FileUtil::startsWithPathComponent( fullPath, prefix ) == false )
             return false;
 
-        return extensionAllowed( entry, ev._filename );
+        return extensionAllowed( entry, changeEvent._filename );
     }
 
     void ReloadFileManager::dispatchEvents( const vector<FileChangeEvent>& listEvent )
     {
-        for ( const FileChangeEvent& ev : listEvent )
+        for ( const FileChangeEvent& changeEvent : listEvent )
         {
             bool bAnyMatch{ false };
             for ( const WatchEntry& entry : _listWatch )
             {
-                if ( matchesWatch( entry, ev ) == false )
+                if ( matchesWatch( entry, changeEvent ) == false )
                     continue;
 
                 bAnyMatch = true;
                 if ( entry._onMatch.isBound() )
-                    entry._onMatch( ev );
+                    entry._onMatch( changeEvent );
             }
 
             if ( bAnyMatch )
@@ -198,7 +198,7 @@ namespace sw
 // Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다 — 문자열만 만들고 아무도 안 쓰게 됐다.
 #if SW_LOG_LEVEL_COMPILED( 3 )
                 const utf8* pActionStr = "Unknown";
-                switch ( ev._action )
+                switch ( changeEvent._action )
                 {
                     case FileWatcherAction::Added:
                         pActionStr = "Added";
@@ -218,7 +218,7 @@ namespace sw
                     default:
                         break;
                 }
-                SW_LOG_TRACE( "%# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
+                SW_LOG_TRACE( "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
 #endif
             }
         }

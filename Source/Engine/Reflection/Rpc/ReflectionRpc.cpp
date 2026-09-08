@@ -54,15 +54,15 @@ namespace sw
                     return false;
                 };
 
-                bool ok{ false };
-                bool matched{ false };
+                bool bOk{ false };
+                bool bMatched{ false };
 
-#define TRY_PACK( NameStr, CppType )                                                 \
-    if ( matched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
-    {                                                                                \
-        matched         = true;                                                      \
-        const CppType v = value.getValue<CppType>();                                 \
-        ok              = writePayload( &v );                                        \
+#define TRY_PACK( NameStr, CppType )                                                  \
+    if ( bMatched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
+    {                                                                                 \
+        bMatched                 = true;                                              \
+        const CppType typedValue = value.getValue<CppType>();                         \
+        bOk                      = writePayload( &typedValue );                       \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_PACK( #Canon, CppType )
@@ -73,12 +73,12 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
 #undef TRY_PACK
 
-                if ( matched == false )
+                if ( bMatched == false )
                 {
                     SW_LOG_WARNING( "Unsupported arg type for pack: %#", typeName );
                     return false;
                 }
-                if ( ok == false )
+                if ( bOk == false )
                     return false;
 
                 const uint32 typeNameHash = typeHash.getHash();
@@ -109,7 +109,7 @@ namespace sw
                 const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
                 const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, serializeContext );
                 size_t              local{ 0 };
-                bool                matched{ false };
+                bool                bMatched{ false };
 
                 auto readInto = [&]( void* pDestination ) -> bool
                 {
@@ -119,14 +119,14 @@ namespace sw
                     return false;
                 };
 
-#define TRY_UNPACK( NameStr, CppType )                                               \
-    if ( matched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
-    {                                                                                \
-        matched = true;                                                              \
-        CppType v{};                                                                 \
-        if ( readInto( &v ) == false )                                               \
-            return false;                                                            \
-        args.add( v );                                                               \
+#define TRY_UNPACK( NameStr, CppType )                                                \
+    if ( bMatched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
+    {                                                                                 \
+        bMatched = true;                                                              \
+        CppType typedValue{};                                                         \
+        if ( readInto( &typedValue ) == false )                                       \
+            return false;                                                             \
+        args.add( typedValue );                                                       \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_UNPACK( #Canon, CppType )
@@ -137,7 +137,7 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
 #undef TRY_UNPACK
 
-                if ( matched == false )
+                if ( bMatched == false )
                 {
                     SW_LOG_WARNING( "Unsupported arg type for unpack: %#", typeName );
                     return false;

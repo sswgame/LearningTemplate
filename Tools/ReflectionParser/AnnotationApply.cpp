@@ -43,8 +43,8 @@ namespace sw
                 size_t valueEnd = valueStart;
                 while ( valueEnd < token.size() )
                 {
-                    const utf8 c = token[valueEnd];
-                    if ( c == ' ' || c == '\t' )
+                    const utf8 character = token[valueEnd];
+                    if ( character == ' ' || character == '\t' )
                         break;
                     ++valueEnd;
                 }
@@ -339,13 +339,13 @@ namespace sw
 
         for ( size_t charIndex = 0; charIndex < args.size(); ++charIndex )
         {
-            const utf8 c = args[charIndex];
-            if ( c == '"' )
+            const utf8 character = args[charIndex];
+            if ( character == '"' )
             {
                 bInQuote = ( bInQuote == false );
                 continue;
             }
-            if ( c == ',' && bInQuote == false )
+            if ( character == ',' && bInQuote == false )
             {
                 if ( charIndex > tokenStart )
                 {

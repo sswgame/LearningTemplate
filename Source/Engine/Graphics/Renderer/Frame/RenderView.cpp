@@ -31,12 +31,12 @@ namespace sw
         // Gribb-Hartmann. 엔진은 행벡터 규약(`mul( v, M )`)이라 클립 좌표는 M 의 **열**과의 내적이다 —
         // 그래서 열을 더하고 뺀다. 행 우선 저장이므로 col( i ) = ( _1i, _2i, _3i, _4i ) 이다.
         // 깊이는 D3D 규약 [0,1] 이라 near 는 열 2 하나다(GL 도 glClipControl 로 같은 규약에 맞춰 둔다).
-        const float4x4& v = viewProj;
-        setPlane( _arrFrustumPlane, 0, v._14 + v._11, v._24 + v._21, v._34 + v._31, v._44 + v._41 ); // left
-        setPlane( _arrFrustumPlane, 1, v._14 - v._11, v._24 - v._21, v._34 - v._31, v._44 - v._41 ); // right
-        setPlane( _arrFrustumPlane, 2, v._14 + v._12, v._24 + v._22, v._34 + v._32, v._44 + v._42 ); // bottom
-        setPlane( _arrFrustumPlane, 3, v._14 - v._12, v._24 - v._22, v._34 - v._32, v._44 - v._42 ); // top
-        setPlane( _arrFrustumPlane, 4, v._13, v._23, v._33, v._43 );                                 // near (z >= 0)
-        setPlane( _arrFrustumPlane, 5, v._14 - v._13, v._24 - v._23, v._34 - v._33, v._44 - v._43 ); // far
+        const float4x4& mat = viewProj;
+        setPlane( _arrFrustumPlane, 0, mat._14 + mat._11, mat._24 + mat._21, mat._34 + mat._31, mat._44 + mat._41 ); // left
+        setPlane( _arrFrustumPlane, 1, mat._14 - mat._11, mat._24 - mat._21, mat._34 - mat._31, mat._44 - mat._41 ); // right
+        setPlane( _arrFrustumPlane, 2, mat._14 + mat._12, mat._24 + mat._22, mat._34 + mat._32, mat._44 + mat._42 ); // bottom
+        setPlane( _arrFrustumPlane, 3, mat._14 - mat._12, mat._24 - mat._22, mat._34 - mat._32, mat._44 - mat._42 ); // top
+        setPlane( _arrFrustumPlane, 4, mat._13, mat._23, mat._33, mat._43 );                                         // near (z >= 0)
+        setPlane( _arrFrustumPlane, 5, mat._14 - mat._13, mat._24 - mat._23, mat._34 - mat._33, mat._44 - mat._43 ); // far
     }
 } // namespace sw

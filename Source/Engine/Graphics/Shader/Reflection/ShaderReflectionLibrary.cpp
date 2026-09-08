@@ -7,7 +7,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -301,6 +304,35 @@ namespace sw
 
         outReflection = entryIter->second;
         return true;
+    }
+
+    bool ShaderReflectionLibrary::getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
+    {
+        // 1순위: 쿠킹 시점에 구운 매니페스트. 배포 빌드는 이 경로만 쓴다 — DXIL 리플렉션은
+        // dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
+        if ( tryGet( desc, outReflection ) )
+            return true;
+
+#if defined( SW_SHIPPING )
+        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
+                      string( desc._filePath ).c_str() );
+        return false;
+#else
+        // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션. 셰이더를 막 고쳐 아직
+        // 베이킹하지 않았거나, 매니페스트가 소스보다 오래된 상태를 위한 폴백이다.
+        const ShaderCompileResult result = engine::areEngineServicesBound()
+                                             ? engine::getShaderCache().getOrCompile( desc )
+                                             : ShaderCompiler::compileHLSL( desc );
+        if ( result._bSuccess == false || result._bytecode.empty() )
+        {
+            SW_LOG_WARNING( "런타임 리플렉션 폴백 실패: '%#' (%#)", string( desc._filePath ).c_str(),
+                            result._errorMessage.c_str() );
+            return false;
+        }
+
+        outReflection = ShaderReflection::reflect( result._bytecode, desc._targetFormat );
+        return true;
+#endif
     }
 
     void ShaderReflectionLibrary::clearCache()

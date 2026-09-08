@@ -228,9 +228,9 @@ namespace sw
         }
     }
 
-    void LiveShaderManager::onWatchedFileChanged( const FileChangeEvent& ev )
+    void LiveShaderManager::onWatchedFileChanged( const FileChangeEvent& changeEvent )
     {
-        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( ev._directory, ev._filename ) );
+        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
         notifyFileChanged( fullPath );
     }
 

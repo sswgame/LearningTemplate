@@ -1025,14 +1025,14 @@ namespace sw
         return _pInput != nullptr && _pInput->wasPointerLeft();
     }
 
-    bool ActionMap::isPointerOverRect( int32 x, int32 y, int32 w, int32 h ) const
+    bool ActionMap::isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const
     {
         if ( _pInput == nullptr || _pInput->isPointerInside() == false )
             return false;
-        int32 mx{ 0 };
-        int32 my{ 0 };
-        _pInput->getMousePosition( mx, my );
-        return ( x <= mx && mx < ( x + w ) && y <= my && my < ( y + h ) );
+        int32 mouseX{ 0 };
+        int32 mouseY{ 0 };
+        _pInput->getMousePosition( mouseX, mouseY );
+        return ( x <= mouseX && mouseX < ( x + width ) && y <= mouseY && mouseY < ( y + height ) );
     }
 
     void ActionMap::ensureActionListed( const hashed_string& action )

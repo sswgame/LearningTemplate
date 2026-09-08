@@ -89,9 +89,9 @@ namespace sw
             AssetFormatVersion _fromVersion{ 0 };
 
             /** @brief 같으면 true를 반환합니다. */
-            bool operator==( const MigratorKey& o ) const
+            bool operator==( const MigratorKey& other ) const
             {
-                return _kind == o._kind && _fromVersion == o._fromVersion;
+                return _kind == other._kind && _fromVersion == other._fromVersion;
             }
         };
 
@@ -99,9 +99,9 @@ namespace sw
         struct MigratorKeyHash
         {
             /** @brief 호출 연산자입니다. */
-            size_t operator()( const MigratorKey& k ) const
+            size_t operator()( const MigratorKey& key ) const
             {
-                return ( static_cast<size_t>( k._kind ) << 16 ) ^ static_cast<size_t>( k._fromVersion );
+                return ( static_cast<size_t>( key._kind ) << 16 ) ^ static_cast<size_t>( key._fromVersion );
             }
         };
 

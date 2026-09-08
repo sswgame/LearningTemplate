@@ -296,8 +296,8 @@ namespace sw
         if ( readFile( relativePath, bytes ) == false )
             return false;
 
-        const string_view sv = FileUtil::skipUtf8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
-        outText.assign( sv.data(), sv.size() );
+        const string_view text = FileUtil::skipUtf8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
+        outText.assign( text.data(), text.size() );
         return true;
     }
 

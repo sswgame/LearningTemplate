@@ -22,12 +22,12 @@ namespace sw
             if ( opt._bSkipBracketSections != 0 && line.front() == '[' )
                 return;
 
-            const size_t eq = line.find( '=' );
-            if ( eq == string_view::npos || eq == 0 )
+            const size_t equalPos = line.find( '=' );
+            if ( equalPos == string_view::npos || equalPos == 0 )
                 return;
 
-            string_view key = StringUtil::trim( line.substr( 0, eq ) );
-            string_view val = StringUtil::trim( line.substr( eq + 1 ) );
+            string_view key = StringUtil::trim( line.substr( 0, equalPos ) );
+            string_view val = StringUtil::trim( line.substr( equalPos + 1 ) );
             if ( key.empty() )
                 return;
             outMap.emplace( string( key ), string( val ) );

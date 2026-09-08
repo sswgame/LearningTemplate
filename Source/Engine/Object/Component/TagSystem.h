@@ -12,10 +12,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_TagContainer_Registrar;
-    } // namespace generated
     // ------------------------------------------------------------------------------
     // 1) TagID — intern된 문자열 + 해시, 점 계층 (parent.child)
     // ------------------------------------------------------------------------------
@@ -91,8 +87,6 @@ namespace sw
     REFLECT()
     class SW_API TagContainer
     {
-        friend struct ::sw::generated::sw_TagContainer_Registrar;
-
     public:
         REFLECT_BODY();
         /** @brief 빈 컨테이너입니다. */

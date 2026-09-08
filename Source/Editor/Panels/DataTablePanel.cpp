@@ -135,6 +135,21 @@ namespace sw::editor
 
     void DataTablePanel::drawLocalizationTab()
     {
+        drawLocalizationToolbar();
+
+        ImGui::Separator();
+
+        if ( _bLocLoaded == SW_FALSE )
+        {
+            EditorWidgets::drawEmptyHint( "Loading localization..." );
+            return;
+        }
+
+        drawLocalizationTable();
+    }
+
+    void DataTablePanel::drawLocalizationToolbar()
+    {
         if ( EditorChrome::beginToolbar( "##locToolbar" ) )
         {
             EditorWidgets::drawSearchField( "##locFilter", _locFilter, "Search keys or translations...", 240.0f, false );
@@ -176,15 +191,10 @@ namespace sw::editor
             }
         }
         EditorChrome::endToolbar();
+    }
 
-        ImGui::Separator();
-
-        if ( _bLocLoaded == SW_FALSE )
-        {
-            EditorWidgets::drawEmptyHint( "Loading localization..." );
-            return;
-        }
-
+    void DataTablePanel::drawLocalizationTable()
+    {
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                           ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 

@@ -87,10 +87,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
-         * @param cb   bindless 디스크립터 인덱스 (엔진/머티리얼 CB).
-         * @param slot HLSL `register(bN)` 의 N. 네이티브 bindless 백엔드는 루트상수/CB에 인덱스만 기록해도 됩니다.
+         * @param constantBufferIndex bindless 디스크립터 인덱스 (엔진/머티리얼 CB).
+         * @param slot                HLSL `register(bN)` 의 N. 네이티브 bindless 백엔드는 루트상수/CB에 인덱스만 기록해도 됩니다.
          */
-        virtual void bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) = 0;
+        virtual void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 구조적/바이트주소 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.
@@ -102,10 +102,10 @@ namespace sw
         /**
          * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
          * @details gpucull 등 컴퓨트 패스 전용 — bindConstantBuffer 는 그래픽스 스테이지만 대상으로 합니다.
-         * @param cb   bindless 디스크립터 인덱스.
-         * @param slot HLSL `register(bN)` 의 N.
+         * @param constantBufferIndex bindless 디스크립터 인덱스.
+         * @param slot                HLSL `register(bN)` 의 N.
          */
-        virtual void bindComputeConstantBuffer( RHIDescriptorIndex cb, uint32 slot ) = 0;
+        virtual void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) = 0;
 
         /**
          * @brief 컴퓨트 스테이지에 읽기전용 구조적 SRV 버퍼를 지정한 레지스터 슬롯(tN)에 바인딩합니다.

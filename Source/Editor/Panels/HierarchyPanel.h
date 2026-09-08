@@ -25,6 +25,9 @@ namespace sw::editor
         /** @brief Hierarchy UI를 그립니다. */
         void drawContent() override;
 
+        /** @brief 복제·이름 변경·삭제 단축키를 처리합니다. */
+        void handleHierarchyShortcuts( GameObjectManager* pManager );
+
     private:
         uint64                                _renamingObjectId;
         fixed_string<constant::kMaxBuffer128> _filterBuffer;

@@ -5,6 +5,7 @@
 
 namespace sw::editor
 {
+    struct RawImageData;
     struct TextureImportRule;
 
     class TextureImportConfig;
@@ -53,6 +54,9 @@ namespace sw::editor
          * @return 성공 시 true
          */
         static bool bakeTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureBakeResult* pOutResult = nullptr );
+
+        /** @brief 스위즐·그린 채널 반전 등 채널 조작을 적용합니다. */
+        static void applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels );
 
         /**
          * @brief TextureImportConfig를 참조하여 상대 경로에 맞는 규칙을 자동 선택하고 베이킹합니다.

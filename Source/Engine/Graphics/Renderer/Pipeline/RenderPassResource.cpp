@@ -15,10 +15,6 @@ namespace sw
 {
     SW_LOG_CALLER( "RenderPassResource" );
 
-    namespace
-    {
-    } // namespace
-
     bool RenderPassResource::loadFromXmlFile( string_view assetRelativePath )
     {
         const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType<RenderPassDesc>();

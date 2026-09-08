@@ -34,8 +34,6 @@ namespace sw
         ModuleCompiler( const ModuleCompiler& )            = delete;
         ModuleCompiler& operator=( const ModuleCompiler& ) = delete;
 
-        /** @brief 라이브 리로드 매니저를 연결하여 초기화합니다. */
-        void initialize( LiveReloadManager* pLiveReloadManager );
         /** @brief 진행 중인 빌드를 중단하고 리소스를 해제합니다. */
         void shutdown();
 
@@ -88,7 +86,7 @@ namespace sw
         mutable mutex       _mutex;
         atomic<BuildState>  _buildState;
         /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는가 (핫리로드로는 해결 불가).
-        atomic<uint8>   _bBlockedByLoadedBinary{ 0 };
+        atomic<uint8>   _bBlockedByLoadedBinary;
         atomic<int32>   _lastExitCode;
         atomic<float32> _lastDurationSec;
         atomic<bool>    _bIsCompiling;

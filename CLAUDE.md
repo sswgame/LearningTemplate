@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Pending work lives in docs/06_Backlog.md
+
+**Read [docs/06_Backlog.md](docs/06_Backlog.md) before starting work.** It is the shared to-do list
+across machines and sessions: what is left, why it is ordered that way, the traps to know before
+touching it, and what was recently finished (so the same ground is not re-covered). Update it in the
+same commit as the work it describes.
+
 ## Conventions live in AGENTS.md
 
 **Read [AGENTS.md](AGENTS.md) before writing any C++, CMake, or Python in this repo.** It is the

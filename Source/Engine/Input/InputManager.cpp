@@ -224,10 +224,10 @@ namespace sw
         // 4) 활성 장치 자동 감지 (O(1) 플래그 쿼리)
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
         {
-            float32 sx{ 0.0f };
-            float32 sy{ 0.0f };
-            _pGamepad->getLeftStick( sx, sy );
-            const bool bStickActive = ( sx * sx + sy * sy ) > 0.04f;
+            float32 stickX{ 0.0f };
+            float32 stickY{ 0.0f };
+            _pGamepad->getLeftStick( stickX, stickY );
+            const bool bStickActive = ( stickX * stickX + stickY * stickY ) > 0.04f;
             if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
             {
                 setActiveDeviceType( InputDeviceType::GamepadXbox );

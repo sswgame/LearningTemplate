@@ -6,6 +6,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 #include "Engine/Animation/AnimClip.h"
@@ -29,19 +30,6 @@ namespace sw::editor
             static int32 pinOut( int32 nodeId )
             {
                 return nodeId * 10 + 2;
-            }
-
-            static ed::NodeId toNodeId( int32 id )
-            {
-                return ed::NodeId( static_cast<uintptr_t>( id ) );
-            }
-            static ed::PinId toPinId( int32 id )
-            {
-                return ed::PinId( static_cast<uintptr_t>( id ) );
-            }
-            static ed::LinkId toLinkId( int32 id )
-            {
-                return ed::LinkId( static_cast<uintptr_t>( id ) );
             }
         };
     } // namespace
@@ -78,6 +66,13 @@ namespace sw::editor
 
         tickPreview( ImGui::GetIO().DeltaTime );
 
+        drawAnimationToolbar();
+
+        drawAnimationCanvas();
+    }
+
+    void AnimationGraphPanel::drawAnimationToolbar()
+    {
         if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
         {
             if ( ImGui::Button( "Add Idle" ) )
@@ -147,7 +142,10 @@ namespace sw::editor
                                      EditorConfig::getActive()._animationGraphDataFile.c_str() );
         }
         EditorChrome::endToolbar();
+    }
 
+    void AnimationGraphPanel::drawAnimationCanvas()
+    {
         if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
                                      EditorConfig::getActive()._animationGraphSettingsFile.c_str() ) == false )
         {
@@ -157,17 +155,17 @@ namespace sw::editor
 
         for ( GraphNode& node : _listNode )
         {
-            const ed::NodeId nodeId = AnimationGraphPanelInternal::toNodeId( node._id );
+            const ed::NodeId nodeId = toNodeId( node._id );
             ed::BeginNode( nodeId );
             if ( _previewPlayer.getCurrentNodeName() == node._name && _previewPlayer.getCurrentNodeName().empty() == false )
                 ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
-            ed::BeginPin( AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+            ed::BeginPin( toPinId( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
             ImGui::TextUnformatted( "-> In" );
             ed::EndPin();
             ImGui::SameLine();
-            ed::BeginPin( AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+            ed::BeginPin( toPinId( AnimationGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
             ImGui::TextUnformatted( "Out ->" );
             ed::EndPin();
             ed::EndNode();
@@ -178,7 +176,7 @@ namespace sw::editor
 
         for ( const GraphLink& link : _listLink )
         {
-            ed::Link( AnimationGraphPanelInternal::toLinkId( link._id ), AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinIn( link._toNode ) ) );
+            ed::Link( toLinkId( link._id ), toPinId( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), toPinId( AnimationGraphPanelInternal::pinIn( link._toNode ) ) );
         }
 
         if ( ed::BeginCreate() )
@@ -285,7 +283,7 @@ namespace sw::editor
         {
             for ( GraphNode& node : data._listNode )
             {
-                const ImVec2 pos = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
+                const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
                 node._x          = pos.x;
                 node._y          = pos.y;
             }
@@ -347,7 +345,7 @@ namespace sw::editor
         bool bMoved{ false };
         for ( GraphNode& node : _listNode )
         {
-            const ImVec2 pos      = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
+            const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
             const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._x ) == false ) || ( MathUtil::nearEqual( pos.y, node._y ) == false );
             if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                 bMoved = true;

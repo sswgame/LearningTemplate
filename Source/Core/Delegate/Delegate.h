@@ -249,11 +249,11 @@ namespace sw
 
         /** @brief 람다 저장소를 관리합니다. */
         template <typename Lambda>
-        static void* lambdaManager( DelegateManagerOp op, void* pDest, const void* pSrc )
+        static void* lambdaManager( DelegateManagerOp managerOp, void* pDest, const void* pSrc )
         {
             constexpr bool bIsSBO = sizeof( Lambda ) <= kInlineBufferSize && alignof( Lambda ) <= alignof( std::max_align_t ) && std::is_nothrow_move_constructible_v<Lambda>;
 
-            switch ( op )
+            switch ( managerOp )
             {
                 case DelegateManagerOp::Copy:
                     if constexpr ( bIsSBO )

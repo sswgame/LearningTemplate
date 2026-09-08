@@ -21,13 +21,13 @@ namespace sw
         {
             static string_view unquote( string_view strView )
             {
-                string_view sv = StringUtil::trim( strView );
-                if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
+                string_view trimmed = StringUtil::trim( strView );
+                if ( trimmed.size() >= 2 && trimmed.front() == '"' && trimmed.back() == '"' )
                 {
-                    sv.remove_prefix( 1 );
-                    sv.remove_suffix( 1 );
+                    trimmed.remove_prefix( 1 );
+                    trimmed.remove_suffix( 1 );
                 }
-                return sv;
+                return trimmed;
             }
 
             template <typename T>
@@ -236,10 +236,10 @@ namespace sw
                 BinaryStreamReader reader{ pData, size };
                 if ( reader.skip( offset ) == false )
                     return false;
-                string_view sv;
-                if ( reader.readStringView( sv ) == false )
+                string_view text;
+                if ( reader.readStringView( text ) == false )
                     return false;
-                *static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
+                *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
                 offset                               = reader.getOffset();
                 return true;
             };
@@ -273,13 +273,13 @@ namespace sw
                 BinaryStreamReader reader{ pData, size };
                 if ( reader.skip( offset ) == false )
                     return false;
-                string_view sv;
-                if ( reader.readStringView( sv ) == false )
+                string_view text;
+                if ( reader.readStringView( text ) == false )
                     return false;
-                if ( sv.empty() )
+                if ( text.empty() )
                     *static_cast<TagID*>( pPtr ) = TagID{};
                 else
-                    *static_cast<TagID*>( pPtr ) = TagID::request( sv );
+                    *static_cast<TagID*>( pPtr ) = TagID::request( text );
                 offset = reader.getOffset();
                 return true;
             };

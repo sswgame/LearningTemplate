@@ -124,11 +124,11 @@ namespace sw
 
                 const string_view reqBase = attachKey.substr( 0, hashPos );
                 int32             reqOcc  = 0;
-                for ( size_t idx = hashPos + 1; idx < attachKey.size(); ++idx )
+                for ( size_t index = hashPos + 1; index < attachKey.size(); ++index )
                 {
-                    if ( attachKey[idx] < '0' || attachKey[idx] > '9' )
+                    if ( attachKey[index] < '0' || attachKey[index] > '9' )
                         return nullptr;
-                    reqOcc = reqOcc * 10 + ( attachKey[idx] - '0' );
+                    reqOcc = reqOcc * 10 + ( attachKey[index] - '0' );
                 }
 
                 int32           occ    = 0;
@@ -166,6 +166,7 @@ namespace sw
         , _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }
         , _cachedWorldMatrix{ float4x4::Identity }
         , _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }
+        , _pManager{ nullptr }
         , _pParent{ nullptr }
         , _listChild{}
         , _bIsTransformDirty{ SW_TRUE }

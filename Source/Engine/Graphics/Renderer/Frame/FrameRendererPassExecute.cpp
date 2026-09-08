@@ -258,7 +258,8 @@ namespace sw
 
             if ( colorTarget == names._transparentColor )
             {
-                const RHITextureHandle src = findTransient( FrameRendererUtil::Attachment::kLitColor ) != 0 ? findTransient( FrameRendererUtil::Attachment::kLitColor ) : findTransient( FrameRendererUtil::Attachment::kSceneColor );
+                const RHITextureHandle litColor = findTransient( FrameRendererUtil::Attachment::kLitColor );
+                const RHITextureHandle src      = litColor != 0 ? litColor : findTransient( FrameRendererUtil::Attachment::kSceneColor );
                 if ( src != 0 )
                     ctx._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
                 markAttachmentCleared( attachmentNames()._transparentColor );
@@ -429,11 +430,10 @@ namespace sw
 
     void FrameRenderer::registerPassTexture( FramePassContext& ctx, const hashed_string& canonicalName, string_view attachmentName )
     {
-        const RHITextureHandle tex = findTransient( attachmentName );
-        if ( tex != 0 && ctx._pCmd != nullptr )
-            ctx._pCmd->prepareTextureForShaderRead( tex );
-        const RHIDescriptorIndex srv = findTransientSrv( attachmentName );
-        ctx._resourceRegistry.registerTexture( canonicalName, tex, srv );
+        const TransientAttachment attachment = findTransientAttachment( attachmentName );
+        if ( attachment._texture != 0 && ctx._pCmd != nullptr )
+            ctx._pCmd->prepareTextureForShaderRead( attachment._texture );
+        ctx._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
     }
 
     void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )

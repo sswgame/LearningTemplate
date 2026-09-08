@@ -32,14 +32,14 @@ namespace sw
 
         const UINT alignedSize = MathUtil::max( MathUtil::align( size, 16u ), 16u );
 
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage          = D3D11_USAGE_DYNAMIC;
-        bd.ByteWidth      = alignedSize;
-        bd.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
-        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage          = D3D11_USAGE_DYNAMIC;
+        bufferDesc.ByteWidth      = alignedSize;
+        bufferDesc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
+        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        const HRESULT                        hr = _pDevice->_device->CreateBuffer( &bd, nullptr, buffer.GetAddressOf() );
+        const HRESULT                        hr = _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() );
         if ( FAILED( hr ) )
         {
             SW_LOG_ERROR( "CreateBuffer(constant) failed hr=0x%# size=%# aligned=%#",
@@ -70,15 +70,15 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage               = D3D11_USAGE_DEFAULT;
-        bd.ByteWidth           = elementSize * elementCount;
-        bd.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-        bd.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-        bd.StructureByteStride = elementSize;
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage               = D3D11_USAGE_DEFAULT;
+        bufferDesc.ByteWidth           = elementSize * elementCount;
+        bufferDesc.BindFlags           = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+        bufferDesc.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+        bufferDesc.StructureByteStride = elementSize;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bd, nullptr, buffer.GetAddressOf() ) ) )
+        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ) ) )
             return 0;
 
         ID3D11Buffer* pBuffer = buffer.Get();
@@ -117,13 +117,13 @@ namespace sw
         if ( sizeBytes == 0 || _pDevice->_device == nullptr )
             return 0;
 
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage     = D3D11_USAGE_DEFAULT;
-        bd.ByteWidth = sizeBytes;
-        bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage     = D3D11_USAGE_DEFAULT;
+        bufferDesc.ByteWidth = sizeBytes;
+        bufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
         // RAW 뷰는 허용된다(구조화와 달리). 컴퓨트 컬링은 D3D11 에서 끄지만(RHICapabilities 참고)
         // UAV 등록 경로가 이 플래그를 보고 raw UAV 를 만든다.
-        bd.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS | D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+        bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS | D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
         D3D11_SUBRESOURCE_DATA  initData{};
         D3D11_SUBRESOURCE_DATA* pInitData = nullptr;
@@ -134,7 +134,7 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bd, pInitData, buffer.GetAddressOf() ) ) )
+        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, pInitData, buffer.GetAddressOf() ) ) )
         {
             SW_LOG_ERROR( "createBuffer: 인다이렉트 인자 버퍼 생성 실패 (%# bytes)", sizeBytes );
             return 0;
@@ -172,17 +172,17 @@ namespace sw
         if ( _pDevice == nullptr || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        D3D11_BUFFER_DESC bd{};
-        bd.Usage          = D3D11_USAGE_DEFAULT;
-        bd.ByteWidth      = sizeBytes;
-        bd.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
-        bd.CPUAccessFlags = 0;
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage          = D3D11_USAGE_DEFAULT;
+        bufferDesc.ByteWidth      = sizeBytes;
+        bufferDesc.BindFlags      = D3D11_BIND_VERTEX_BUFFER;
+        bufferDesc.CPUAccessFlags = 0;
 
         D3D11_SUBRESOURCE_DATA init{};
         init.pSysMem = pData;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bd, &init, buffer.GetAddressOf() ) ) )
+        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, &init, buffer.GetAddressOf() ) ) )
             return 0;
 
         return _pDevice->storeBuffer( std::move( buffer ) );

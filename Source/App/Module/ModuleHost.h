@@ -78,17 +78,11 @@ namespace sw
         /** @brief 월드 틱 이후 에디터 Step을 소비합니다. */
         void endEditorFrame();
 
-        /** @brief 에디터 인스턴스 핸들을 반환합니다. */
+        /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 프레젠트 훅이 씁니다. */
         EditorHandle getEditor() const { return _editor; }
-        /** @brief 게임 인스턴스 핸들을 반환합니다. */
-        GameHandle getGame() const { return _game; }
-        /** @brief EditorAPI 테이블을 반환합니다. */
+        /** @brief EditorAPI 테이블을 반환합니다. App 의 프레젠트 훅이 씁니다. */
         const EditorAPI& getEditorAPI() const { return _editorApi; }
-        /** @brief GameAPI 테이블을 반환합니다. */
-        const GameAPI& getGameAPI() const { return _gameApi; }
-        /** @brief 에디터 모드인지를 반환합니다. */
-        bool isEditorEnabled() const { return _bEnableEditor == SW_TRUE; }
-        /** @brief ModuleCompiler 인스턴스를 반환합니다. */
+        /** @brief ModuleCompiler 인스턴스를 반환합니다. HostServiceList.xxx 가 모듈에 넘깁니다. */
         ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
         // 4) LiveReload 콜백 — LiveReloadManager의 델리게이트가 호출
@@ -112,6 +106,31 @@ namespace sw
         bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
 
     private:
+        /** @brief 에디터를 실제로 부를 수 있는 상태인가 (모드 켜짐 + 인스턴스 살아 있음). */
+        bool hasEditor() const { return _bEnableEditor == SW_TRUE && _editor != nullptr; }
+        /**
+         * @brief 이번 프레임 게임 로직을 돌려야 하는가.
+         * @details 에디터가 없으면 항상 돈다. 에디터가 있으면 Play 중일 때만 돈다 — 편집 중에
+         *          게임 update 가 돌면 저장하지 않은 씬을 게임 코드가 바꿔 버린다.
+         */
+        bool isGameplayActive() const;
+
+        /** @brief ModuleService 를 다시 만들어 에디터/게임 모듈에 넘깁니다. */
+        void rebindEditorService();
+        void rebindGameService();
+
+        /**
+         * @brief 에디터 인스턴스를 shutdown → destroy 하고 핸들을 비웁니다.
+         * @param bReleaseApiTable true 면 API 테이블과 타입 등록까지 놓습니다(모듈 언로드 직전).
+         *        RHI 핫스왑처럼 **같은 모듈로 다시 만들** 때는 false — 테이블을 그대로 재사용합니다.
+         */
+        void destroyEditorInstance( bool bReleaseApiTable );
+        void destroyGameInstance( bool bReleaseApiTable );
+
+        /** @brief 이미 바인딩된 API 테이블로 인스턴스를 만들고 초기화합니다. 실패하면 정리 후 false. */
+        bool createEditorInstance();
+        bool createGameInstance();
+
         void captureGameState();
         void restoreGameState();
         bool recreateEditorInstance( void* pEditorModule );

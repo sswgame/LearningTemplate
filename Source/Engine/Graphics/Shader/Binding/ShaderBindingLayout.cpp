@@ -162,7 +162,6 @@ namespace sw
         }
 
         layout.rebuildIndex();
-        layout.computeFingerprint();
         layout.buildBindPlan();
         return layout;
     }
@@ -244,85 +243,21 @@ namespace sw
                 continue;
             }
             _mapNameToSlot[slot._name] = index;
+
+            // 셰이더가 선언한 이름(`g_SwMaterials`)과 엔진이 쓰는 canonical 이름(`SwMaterials`)을 둘 다 건다.
+            // 리소스 바인딩 표(_listResourceBind)와 리소스 레지스트리는 canonical 키로 굽는데 이 색인만
+            // 원본 이름이라, find( "SwMaterials" ) 가 **언제나** nullptr 이었다. 그래서 머티리얼 없는 배치가
+            // 폴백 버퍼를 못 찾아 t9 를 비운 채 드로우를 냈고, Vulkan 이 초기화되지 않은 디스크립터를 읽어
+            // 디바이스를 잃었다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
+            const hashed_string canonicalName{ canonicalResourceView( slot._name.c_str(), false ) };
+            if ( canonicalName != slot._name && _mapNameToSlot.find( canonicalName ) == _mapNameToSlot.end() )
+                _mapNameToSlot[canonicalName] = index;
         }
-    }
-
-    void ShaderBindingLayout::computeFingerprint()
-    {
-        // 정렬된 (space, register, kind) 순서로 이름/멤버를 섞어 FNV-1a.
-        vector<const ShaderBindingSlot*> listSorted;
-        listSorted.reserve( _listSlot.size() );
-        for ( const ShaderBindingSlot& slot : _listSlot )
-            listSorted.push_back( &slot );
-        std::sort( listSorted.begin(), listSorted.end(), []( const ShaderBindingSlot* pA, const ShaderBindingSlot* pB )
-        {
-            if ( pA->_space != pB->_space )
-                return pA->_space < pB->_space;
-            if ( pA->_registerIndex != pB->_registerIndex )
-                return pA->_registerIndex < pB->_registerIndex;
-            return static_cast<uint8>( pA->_kind ) < static_cast<uint8>( pB->_kind );
-        } );
-
-        uint64 hash = 1469598103934665603ull; // FNV-1a offset basis
-        auto   mix  = [&hash]( const void* pData, size_t size )
-        {
-            const uint8* pBytes = static_cast<const uint8*>( pData );
-            for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
-            {
-                hash ^= pBytes[byteIndex];
-                hash *= 1099511628211ull; // FNV-1a prime
-            }
-        };
-
-        for ( const ShaderBindingSlot* pSlot : listSorted )
-        {
-            mix( &pSlot->_kind, sizeof( pSlot->_kind ) );
-            mix( &pSlot->_space, sizeof( pSlot->_space ) );
-            mix( &pSlot->_registerIndex, sizeof( pSlot->_registerIndex ) );
-            const uint32 nameHash = pSlot->_name.getHash();
-            mix( &nameHash, sizeof( nameHash ) );
-            for ( const ShaderVariableInfo& member : pSlot->_listCbMember )
-            {
-                mix( member._name.c_str(), member._name.size() );
-                mix( &member._offset, sizeof( member._offset ) );
-                mix( &member._size, sizeof( member._size ) );
-            }
-        }
-
-        _fingerprint = hash;
     }
 
     const ShaderBindingSlot* ShaderBindingLayout::find( hashed_string name ) const
     {
         auto it = _mapNameToSlot.find( name );
         return it != _mapNameToSlot.end() ? &_listSlot[it->second] : nullptr;
-    }
-
-    const ShaderBindingSlot* ShaderBindingLayout::findByRegister( ShaderBindingKind kind, uint32 space, uint32 registerIndex ) const
-    {
-        for ( const ShaderBindingSlot& slot : _listSlot )
-        {
-            if ( slot._kind == kind && slot._space == space && slot._registerIndex == registerIndex )
-                return &slot;
-        }
-        return nullptr;
-    }
-
-    bool ShaderBindingLayout::resolveCbMember( hashed_string cbName, hashed_string memberName, uint32& outOffset, uint32& outSize ) const
-    {
-        const ShaderBindingSlot* pSlot = find( cbName );
-        if ( pSlot == nullptr || pSlot->_kind != ShaderBindingKind::ConstantBuffer )
-            return false;
-
-        for ( const ShaderVariableInfo& member : pSlot->_listCbMember )
-        {
-            if ( hashed_string( static_cast<std::string_view>( member._name ) ) == memberName )
-            {
-                outOffset = member._offset;
-                outSize   = member._size;
-                return true;
-            }
-        }
-        return false;
     }
 } // namespace sw

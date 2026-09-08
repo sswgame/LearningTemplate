@@ -307,9 +307,9 @@ namespace sw
             return 0;
         }
 
-        auto toLoadOp = []( RHIRenderPassLoadOp op ) -> VkAttachmentLoadOp
+        auto toLoadOp = []( RHIRenderPassLoadOp loadOp ) -> VkAttachmentLoadOp
         {
-            switch ( op )
+            switch ( loadOp )
             {
                 case RHIRenderPassLoadOp::Clear:
                     return VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -322,9 +322,9 @@ namespace sw
             }
             return VK_ATTACHMENT_LOAD_OP_CLEAR;
         };
-        auto toStoreOp = []( RHIRenderPassStoreOp op ) -> VkAttachmentStoreOp
+        auto toStoreOp = []( RHIRenderPassStoreOp storeOp ) -> VkAttachmentStoreOp
         {
-            switch ( op )
+            switch ( storeOp )
             {
                 case RHIRenderPassStoreOp::Store:
                     return VK_ATTACHMENT_STORE_OP_STORE;

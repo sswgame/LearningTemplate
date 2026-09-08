@@ -286,6 +286,11 @@ namespace sw
                 std::scoped_lock<mutex> lock{ _materialPsoMutex };
                 _mapMaterialPso.clear();
             }
+            {
+                std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+                _mapPsoLayout.clear();
+                _mapPsoDesc.clear();
+            }
             _bPassResourcesReady = 0;
             return;
         }
@@ -317,6 +322,15 @@ namespace sw
                 _pDevice->getResource()->destroyPipelineState( pso );
         }
         _mapPresentPso.clear();
+
+        // 두 맵은 방금 파괴한 PSO 핸들로 키를 잡고 있다. 핸들이 generation 팩드라 되살아난
+        // 핸들이 옛 항목을 집는 일은 없지만, 셰이더 리로드마다 재생성을 도는 지금은 그대로 두면
+        // 죽은 항목(RHIPipelineStateDesc 통째)이 계속 쌓인다.
+        {
+            std::scoped_lock<mutex> lock{ _psoLayoutMutex };
+            _mapPsoLayout.clear();
+            _mapPsoDesc.clear();
+        }
 
         _gpuScene.releaseGpu( _pDevice );
 
@@ -545,7 +559,6 @@ namespace sw
         if ( _pDevice == nullptr )
         {
             _mapTransient.clear();
-            _mapTransientSrv.clear();
             _taaHistory      = 0;
             _taaHistorySrv   = kInvalidDescriptorIndex;
             _transientWidth  = 0;
@@ -566,20 +579,16 @@ namespace sw
             _taaHistory = 0;
         }
 
-        for ( auto& [name, srv] : _mapTransientSrv )
+        for ( auto& [name, attachment] : _mapTransient )
         {
             // 텍스처 SRV 인덱스다. 예전엔 버퍼용 해제로 넘겨서 버퍼 프리리스트가 오염됐고, 그 자리를
             // 인스턴스 구조버퍼가 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀌었다(Vulkan 검증 에러).
-            if ( srv != kInvalidDescriptorIndex )
-                _pDevice->getResource()->unregisterBindlessTexture( srv );
-        }
-        for ( auto& [name, tex] : _mapTransient )
-        {
-            if ( tex != 0 )
-                _pDevice->getResource()->destroyTexture( tex );
+            if ( attachment._srv != kInvalidDescriptorIndex )
+                _pDevice->getResource()->unregisterBindlessTexture( attachment._srv );
+            if ( attachment._texture != 0 )
+                _pDevice->getResource()->destroyTexture( attachment._texture );
         }
         _mapTransient.clear();
-        _mapTransientSrv.clear();
         _transientWidth  = 0;
         _transientHeight = 0;
     }
@@ -604,10 +613,8 @@ namespace sw
             SW_LOG_WARNING( "Failed to allocate transient '%#'", name );
             return;
         }
-        _mapTransient.emplace( name, handle );
         const RHIDescriptorIndex srv = _pDevice->getResource()->registerBindlessTexture( handle );
-        if ( srv != kInvalidDescriptorIndex )
-            _mapTransientSrv.emplace( name, srv );
+        _mapTransient.emplace( name, TransientAttachment{ handle, srv } );
     }
 
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
@@ -630,27 +637,27 @@ namespace sw
         return clearColor;
     }
 
+    FrameRenderer::TransientAttachment FrameRenderer::findTransientAttachment( string_view name ) const
+    {
+        const auto it = _mapTransient.find( name );
+        return it != _mapTransient.end() ? it->second : TransientAttachment{};
+    }
+
     RHITextureHandle FrameRenderer::findTransient( string_view name ) const
     {
         const auto it = _mapTransient.find( name );
-        return it != _mapTransient.end() ? it->second : 0;
+        return it != _mapTransient.end() ? it->second._texture : 0;
     }
 
-    RHIDescriptorIndex FrameRenderer::findTransientSrv( string_view name ) const
-    {
-        const auto it = _mapTransientSrv.find( name );
-        return it != _mapTransientSrv.end() ? it->second : kInvalidDescriptorIndex;
-    }
-
-    RHIFormat FrameRenderer::parseAttachmentFormat( string_view formatName ) const
+    RHIFormat FrameRenderer::parseAttachmentFormat( string_view formatName )
     {
         const string formatNt( formatName );
-        const string f = StringUtil::toUpper( formatNt.c_str() );
-        if ( f == "D24_UNORM_S8_UINT" || f == "D24S8" )
+        const string upperName = StringUtil::toUpper( formatNt.c_str() );
+        if ( upperName == "D24_UNORM_S8_UINT" || upperName == "D24S8" )
             return RHIFormat::D24_UNORM_S8_UINT;
-        if ( f == "R16G16B16A16_FLOAT" )
+        if ( upperName == "R16G16B16A16_FLOAT" )
             return RHIFormat::R16G16B16A16_FLOAT;
-        if ( f == "B8G8R8A8_UNORM" )
+        if ( upperName == "B8G8R8A8_UNORM" )
             return RHIFormat::B8G8R8A8_UNORM;
         return RHIFormat::R8G8B8A8_UNORM;
     }

@@ -14,16 +14,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_SpriteAnimatorComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
     class SW_API SpriteAnimatorComponent : public SceneComponent
     {
-        friend struct ::sw::generated::sw_SpriteAnimatorComponent_Registrar;
-
     public:
         REFLECT_BODY();
         SpriteAnimatorComponent();

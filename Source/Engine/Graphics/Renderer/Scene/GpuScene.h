@@ -152,9 +152,9 @@ namespace sw
         /** @brief 호출 연산자입니다. */
         size_t operator()( const GpuMaterialElementKey& key ) const
         {
-            size_t h = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
-            h ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
-            return h;
+            size_t hash = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
+            hash ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+            return hash;
         }
     };
 
@@ -219,7 +219,7 @@ namespace sw
      * @class GpuMaterialRetireQueue
      * @brief GT→RT 교차 MaterialInstance 수명 정책.
      * @details build 배치에 실린 인스턴스는 pin. 배치에서 빠지면 retire(프레임 지연).
-     *          GT는 isPinned이면 파괴하지 말고, flushAfterGpu 이후에 파괴합니다.
+     *          GT는 pin이 풀리기 전에 파괴하면 안 되고, flushAfterGpu 이후에 파괴합니다.
      */
     class SW_API GpuMaterialRetireQueue
     {
@@ -237,8 +237,6 @@ namespace sw
         void advanceFrame();
         /** @brief device.waitIdle() 후 pin/retire를 모두 비웁니다. */
         void flushAfterGpu( IRHIDevice* pDevice );
-        /** @brief GPU 경로가 아직 참조 중이면 true. */
-        bool isPinned( const MaterialInstance* pInstance ) const;
         /** @brief pin·retire를 즉시 비웁니다 (GPU sync 없음). */
         void clear();
 
@@ -270,7 +268,7 @@ namespace sw
         Material*         _pMaterial{ nullptr };
         MaterialInstance* _pInstance{ nullptr };
         /** @brief 메시·머티리얼·인스턴스가 같은지 비교합니다. */
-        bool operator==( const GpuSceneSortKey& o ) const { return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance; }
+        bool operator==( const GpuSceneSortKey& other ) const { return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance; }
     };
 
     struct GpuSceneSortEntry
@@ -391,8 +389,6 @@ namespace sw
         bool isCpuSnapshotDirty() const { return _bCpuDirty != 0; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
         const vector<GpuMaterialGroup>& getMaterialGroups() const { return _listMaterialGroup; }
-        /** @brief 배치가 가리키는 셰이더 퍼뮤테이션 목록 (CPU 스냅샷). 인덱스는 빌드가 바뀌어도 유지된다. */
-        const vector<GpuShaderPermutation>& getShaderPermutations() const { return _listShaderPermutation; }
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
         const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
         {
@@ -410,16 +406,10 @@ namespace sw
         static constexpr uint32 kInvalidMaterialGroup     = 0xFFFFFFFFu;
         static constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
-        /** @brief 배치 MaterialInstance pin/retire 정책. */
-        GpuMaterialRetireQueue& getMaterialRetireQueue() { return _materialRetire; }
-        /** @brief 배치 MaterialInstance pin/retire 정책. */
-        const GpuMaterialRetireQueue& getMaterialRetireQueue() const { return _materialRetire; }
         /** @brief 현재 배치로 pin을 맞추고, RT 프레임 끝에서 advanceFrame을 호출하세요. */
         void syncMaterialPins();
         /** @brief RT 프레임 종료 — retire 지연 카운트. */
         void advanceMaterialRetireFrame() { _materialRetire.advanceFrame(); }
-        /** @brief waitIdle 후 pin/retire 전부 해제 (핫스왑·셧다운). */
-        void flushMaterialRetire( IRHIDevice* pDevice ) { _materialRetire.flushAfterGpu( pDevice ); }
 
     private:
         /** @brief 후보를 GpuInstance scratch로 채웁니다. ParallelBlockDelegate 시그니처입니다. */
@@ -513,16 +503,16 @@ namespace sw
              *       방향(-0.0 과 0.0 을 다르게 봄)은 불필요한 재구축일 뿐이라 안전하다.
              *       비교 대상 블록은 모두 float 연속이라 패딩이 끼지 않는다.
              */
-            bool operator==( const DrawCandidate& o ) const
+            bool operator==( const DrawCandidate& other ) const
             {
-                return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance &&
-                       _blendMode == o._blendMode && _spinSeed == o._spinSeed &&
-                       Memory::compare( &_world, &o._world, sizeof( _world ) ) == 0 &&
-                       Memory::compare( &_boundsCenter, &o._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
-                       Memory::compare( &_boundsRadius, &o._boundsRadius, sizeof( _boundsRadius ) ) == 0;
+                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
+                       _blendMode == other._blendMode && _spinSeed == other._spinSeed &&
+                       Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
+                       Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
+                       Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
             }
             /** @brief operator== 의 부정입니다. */
-            bool operator!=( const DrawCandidate& o ) const { return ( *this == o ) == false; }
+            bool operator!=( const DrawCandidate& other ) const { return ( *this == other ) == false; }
 
             /**
              * @brief 배치가 묶이는 기준(메시·머티리얼·인스턴스·블렌드)이 같은지. 트랜스폼은 보지 않습니다.
@@ -530,10 +520,10 @@ namespace sw
              *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없다.
              *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬이다.
              */
-            bool hasSameBatchKey( const DrawCandidate& o ) const
+            bool hasSameBatchKey( const DrawCandidate& other ) const
             {
-                return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance &&
-                       _blendMode == o._blendMode;
+                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
+                       _blendMode == other._blendMode;
             }
         };
 
@@ -551,7 +541,7 @@ namespace sw
             Material*         _pMaterial{ nullptr };
             MaterialInstance* _pInstance{ nullptr };
             /** @brief 메시·머티리얼·인스턴스가 같은지 비교합니다. */
-            bool operator==( const SortKey& o ) const { return _pMesh == o._pMesh && _pMaterial == o._pMaterial && _pInstance == o._pInstance; }
+            bool operator==( const SortKey& other ) const { return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance; }
         };
 
         struct SortEntry

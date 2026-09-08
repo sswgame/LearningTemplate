@@ -14,11 +14,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_SceneComponent_Registrar;
-    } // namespace generated
-
     class GameObjectManager;
 
     /**
@@ -28,8 +23,6 @@ namespace sw
     REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy" )
     class SW_API SceneComponent : public Component
     {
-        friend struct ::sw::generated::sw_SceneComponent_Registrar;
-
     public:
         REFLECT_BODY();
 

@@ -57,8 +57,6 @@ namespace sw::editor
         void registerDefaultPopups();
         void clear();
 
-        const vector<EditorPopupEntry>& getPopups() const { return _listPopup; }
-
     private:
         vector<EditorPopupEntry> _listPopup;
         bool                     _bDefaultsRegistered{ false };

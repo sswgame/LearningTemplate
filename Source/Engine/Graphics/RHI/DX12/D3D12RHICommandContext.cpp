@@ -93,18 +93,17 @@ namespace sw
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHICommandContext::resolveOfflineView( RHIDescriptorIndex index, bool bUav ) const
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE none{};
         if ( index == kInvalidDescriptorIndex )
-            return none;
+            return D3D12_CPU_DESCRIPTOR_HANDLE{};
         // resolveBufferAddress 와 같은 이유로 락이 없다 — 레지스트리는 기록 중 불변이다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
-            return none;
-        const D3D12RHIDevice::BindlessResourceRecord& rec = listRegistry[index];
-        if ( rec._resource == nullptr )
-            return none;
-        return rec._offlineCpuHandle;
+            return D3D12_CPU_DESCRIPTOR_HANDLE{};
+        const D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
+        if ( record._resource == nullptr )
+            return D3D12_CPU_DESCRIPTOR_HANDLE{};
+        return record._offlineCpuHandle;
     }
 
     bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )
@@ -431,11 +430,11 @@ namespace sw
         state._bUavDirty    = 1;
     }
 
-    void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kConstantBufferSlotCount )
             return;
-        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( index, false, true );
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
         _pCmdList->SetComputeRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
@@ -504,7 +503,7 @@ namespace sw
         _pCmdList->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다 — 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
@@ -514,7 +513,7 @@ namespace sw
         }
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )
             return;
-        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( cb, false, true );
+        const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
         _pCmdList->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
@@ -539,14 +538,14 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
 
-        D3D12_VIEWPORT vp{};
-        vp.TopLeftX = viewport._x;
-        vp.TopLeftY = viewport._y;
-        vp.Width    = viewport._width;
-        vp.Height   = viewport._height;
-        vp.MinDepth = viewport._minDepth;
-        vp.MaxDepth = viewport._maxDepth;
-        _pCmdList->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT d3dViewport{};
+        d3dViewport.TopLeftX = viewport._x;
+        d3dViewport.TopLeftY = viewport._y;
+        d3dViewport.Width    = viewport._width;
+        d3dViewport.Height   = viewport._height;
+        d3dViewport.MinDepth = viewport._minDepth;
+        d3dViewport.MaxDepth = viewport._maxDepth;
+        _pCmdList->RSSetViewports( 1, &d3dViewport );
 
         D3D12_RECT scissor{
             static_cast<LONG>( viewport._x ),
@@ -777,12 +776,12 @@ namespace sw
 
         const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth();
         const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight();
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( vpW );
-        vp.Height   = static_cast<float32>( vpH );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        _pCmdList->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( vpW );
+        viewport.Height   = static_cast<float32>( vpH );
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        _pCmdList->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( vpW ), static_cast<LONG>( vpH ) };
         _pCmdList->RSSetScissorRects( 1, &scissor );

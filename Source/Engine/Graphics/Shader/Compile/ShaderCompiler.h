@@ -75,6 +75,29 @@ namespace sw
     {
         string _name;
         string _value;
+
+        /**
+         * @brief `"NAME=VALUE"` 또는 `"NAME"`(값 1) 한 줄을 매크로로 해석합니다.
+         * @details PSO 생성 경로(DX11/DX12/GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 쓴다 —
+         *          예전엔 백엔드마다 같은 파싱 람다를 복사해 두고 있었다.
+         */
+        static ShaderMacroDefine parse( string_view define )
+        {
+            ShaderMacroDefine macro{};
+            const string      defineNt( define );
+            const size_t      equalPos = defineNt.find( '=' );
+            if ( equalPos == string::npos )
+            {
+                macro._name  = defineNt;
+                macro._value = "1";
+            }
+            else
+            {
+                macro._name  = defineNt.substr( 0, equalPos );
+                macro._value = defineNt.substr( equalPos + 1 );
+            }
+            return macro;
+        }
     };
 
     /**

@@ -103,9 +103,6 @@ namespace sw
         /** @brief 스왑체인이 만든 백버퍼 포맷 — 백버퍼 PSO 의 렌더타깃 포맷은 여기서 나온다. */
         RHIFormat getBackBufferFormat() const override { return _backBufferFormat; }
 
-        /** @brief 디스크립터 인덱스 테이블 (CB/UAV/텍스처) — 드로우 시 바인드 에뮬레이션. */
-        bool supportsBindless() const override { return true; }
-
         /** @brief VS 가 StructuredBuffer SRV(g_SwInstances, t4)로 GPUScene 인스턴스 버퍼를 읽는다. */
         bool supportsInstancedSceneDraw() const override { return true; }
 
@@ -138,9 +135,6 @@ namespace sw
         bool bindGraphicsContext() override;
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
         void unbindGraphicsContext() override;
-
-        /** @brief IDXGISwapChain 인터페이스 포인터 반환 */
-        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
 
         /** @brief D3D11은 단일 큐 모델로 커맨드 큐 포인터가 없음 (nullptr) */
         void* getNativeCommandQueue() const override { return nullptr; }
@@ -311,26 +305,24 @@ namespace sw
         /** @brief 스텁 소멸. */
         ~D3D11RHIDevice() = default;
 
-        bool initializeInternal( const RHISwapChainDesc& ) { return false; }
-        void shutdownInternal() {}
-        void resize( uint32, uint32 ) {}
-        void beginFrame( const float4& ) {}
-        void endFrame( bool, bool = true ) {}
+        bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
+        void shutdownInternal() override {}
+        void resize( uint32, uint32 ) override {}
+        void beginFrame( const float4& ) override {}
+        void endFrame( bool, bool = true ) override {}
 
-        RHIBackend  getBackendType() const { return RHIBackend::DirectX11; }
-        bool        supportsBindless() const { return true; }
-        const utf8* getBackendName() const { return "Direct3D 11 (Not Supported on non-Windows)"; }
+        RHIBackend  getBackendType() const override { return RHIBackend::DirectX11; }
+        const utf8* getBackendName() const override { return "Direct3D 11 (Not Supported on non-Windows)"; }
 
-        void* getNativeDevice() const { return nullptr; }
-        void* getNativeContext() const { return nullptr; }
-        void* getNativeSwapChain() const override { return nullptr; }
-        void* getNativeCommandQueue() const { return nullptr; }
+        void* getNativeDevice() const override { return nullptr; }
+        void* getNativeContext() const override { return nullptr; }
+        void* getNativeCommandQueue() const override { return nullptr; }
 
         IRHIResource*       getResource() override { return nullptr; }
         IRHICommandContext* getFrameStreamContext() override { return nullptr; }
 
-        sw::unique_ptr<IRHICommandList> createCommandList() { return nullptr; }
-        void                            executeCommandList( IRHICommandList* ) {}
+        sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
+        void                            executeCommandList( IRHICommandList* ) override {}
     };
 } // namespace sw
 #endif

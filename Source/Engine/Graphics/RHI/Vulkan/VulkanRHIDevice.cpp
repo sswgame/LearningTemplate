@@ -281,8 +281,12 @@ namespace sw
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {
                 destroyOffscreenFramebuffer( record );
+                // 뷰는 이미지보다 **반드시 먼저** 없앤다. 깊이 텍스처의 `_sampleView` 가 여기서 빠져 있어서
+                // 살아 있는 뷰를 두고 vkDestroyImage 를 부르고 있었다 — destroyTexture 경로는 둘 다 지운다.
                 if ( record._imageView != VK_NULL_HANDLE )
                     vkDestroyImageView( _device, record._imageView, nullptr );
+                if ( record._sampleView != VK_NULL_HANDLE )
+                    vkDestroyImageView( _device, record._sampleView, nullptr );
                 if ( record._image != VK_NULL_HANDLE )
                     vkDestroyImage( _device, record._image, nullptr );
                 if ( record._memory != VK_NULL_HANDLE )

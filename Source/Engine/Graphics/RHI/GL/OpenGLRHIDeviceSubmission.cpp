@@ -10,6 +10,50 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief GL 스왑 인터벌(vsync) 을 플랫폼 API 로 넘깁니다.
+         * @details 예전엔 공유 헤더(OpenGLRHIDeviceInternal.h)에 있었다. 호출자는 여기 하나뿐인데
+         *          헤더에 두면 함수가 외부 링키지를 갖고, 그 안의 proc 주소 static 이 이 헤더를 컴파일한
+         *          바이너리(Engine.dll / RHI_GL.dll)마다 따로 생긴다(-Wunique-object-duplication).
+         *          vsync 가 **바뀔 때만** 부르므로 주소를 캐시해서 얻는 것도 사실상 없다.
+         */
+        struct OpenGLRHIDeviceSubmissionInternal
+        {
+            static void applyVsyncInterval( void* pHdc, void* pHrc, bool vsync )
+            {
+                (void)pHdc;
+#if defined( SW_PLATFORM_WINDOWS )
+                (void)pHrc;
+                using PFNWGLSWAPINTERVALEXTPROC                       = BOOL( WINAPI* )( int32 );
+                static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
+                if ( s_wglSwapIntervalEXT != nullptr )
+                    s_wglSwapIntervalEXT( vsync ? 1 : 0 );
+#elif defined( SW_PLATFORM_LINUX )
+                (void)pHrc;
+                using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
+                static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
+                    reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
+                if ( s_glXSwapIntervalEXT != nullptr && pHdc != nullptr )
+                {
+                    Display* pDpy = static_cast<Display*>( pHdc );
+                    s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
+                }
+#elif defined( SW_PLATFORM_MACOS )
+                (void)pHdc;
+                if ( pHrc != nullptr )
+                {
+                    id              context                               = static_cast<id>( pHrc );
+                    GLint           interval                              = vsync ? 1 : 0;
+                    constexpr GLint kNsOpenGlContextParameterSwapInterval = 222;
+                    ( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
+                        context, sel_registerName( "setValues:forParameter:" ), &interval, kNsOpenGlContextParameterSwapInterval );
+                }
+#endif
+            }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
@@ -47,7 +91,7 @@ namespace sw
         const int8 desired = vsync ? 1 : 0;
         if ( _lastVsync != desired )
         {
-            OpenGLRHIDeviceInternal::applyVsyncInterval( _pHDC, _pHRC, vsync );
+            OpenGLRHIDeviceSubmissionInternal::applyVsyncInterval( _pHDC, _pHRC, vsync );
             _lastVsync = desired;
         }
 

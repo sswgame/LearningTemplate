@@ -31,6 +31,13 @@ namespace sw::editor
     private:
         void drawActionMapTab();
         void drawDeviceMonitorTab();
+
+        /** @brief 키보드 실시간 상태를 그립니다. */
+        void drawKeyboardMonitor();
+        /** @brief 마우스 실시간 상태를 그립니다. */
+        void drawMouseMonitor();
+        /** @brief 게임패드 실시간 상태를 그립니다. */
+        void drawGamepadMonitor();
         void drawConflictMatrixTab();
         void drawOscilloscopeTab();
         void drawInputSimulatorTab();

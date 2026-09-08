@@ -178,8 +178,8 @@ namespace sw
                 if ( pSeq != nullptr )
                 {
                     dst.setArray();
-                    const size_t sz = pSeq->getSize( pContainerPtr );
-                    for ( size_t elementIndex = 0; elementIndex < sz; ++elementIndex )
+                    const size_t elementCount = pSeq->getSize( pContainerPtr );
+                    for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
                         const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elementIndex );
                         if ( bOwnedPtr )

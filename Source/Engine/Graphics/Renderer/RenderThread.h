@@ -8,7 +8,6 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Memory/LinearAllocator.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
@@ -58,9 +57,6 @@ namespace sw
         /** @brief 호출 스레드에서 패킷 하나를 처리합니다. */
         void executeInline( RenderFramePacket& packet );
 
-        /** @brief 현재 제출 대기 중인 프레임 패킷의 임시 메모리를 할당합니다. */
-        void* allocateFrameMemory( size_t size, size_t alignment = alignof( std::max_align_t ) );
-
         /** @brief 씬 렌더 후 Present 전 훅 (execute와 같은 스레드). */
         void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
         /** @brief Present 완료 후 훅 (멀티 뷰포트 / 플랫폼 윈도우 처리용). */
@@ -101,7 +97,6 @@ namespace sw
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
         // sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)
         std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
-        LinearAllocator                                 _arrFrameAllocators[_s_kRingCapacity];
         atomic<uint32>                                  _head; ///< 생산자(GT)가 씀
         atomic<uint32>                                  _tail; ///< Written by consumer (RT)
 

@@ -22,8 +22,6 @@ namespace sw
     Archive::Archive()
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -36,8 +34,6 @@ namespace sw
     Archive::Archive( string_view fileName, bool bReadMode )
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -47,7 +43,18 @@ namespace sw
     {
         if ( bReadMode )
         {
-            if ( ResourceUtil::readBinaryResource( fileName, _listBuffer ) )
+            // saveFile 은 FileUtil 로 경로에 그대로 쓴다. 읽기만 리소스 시스템을 타면 **쓴 곳과
+            // 다른 규칙으로 찾게 된다** — 세이브 파일처럼 리소스 루트 밖에 있는 파일은 Shipping
+            // 에서 느슨한 파일 조회가 꺼져 있어 팩에만 물어보고 그대로 실패한다. 그래서 쓴 것과
+            // 같은 규칙으로 먼저 찾고, 없을 때 리소스 id 로 해석한다(engine/... 같은 경로).
+            bool bLoaded = false;
+            if ( fileName.empty() == false && FileUtil::fileExists( fileName ) )
+                bLoaded = FileUtil::readFile( fileName, _listBuffer );
+
+            if ( bLoaded == false )
+                bLoaded = ResourceUtil::readBinaryResource( fileName, _listBuffer );
+
+            if ( bLoaded )
             {
                 _pData    = _listBuffer.data();
                 _dataSize = _listBuffer.size();
@@ -62,8 +69,6 @@ namespace sw
     Archive::Archive( const uint8* pData, uint64 size )
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ pData }
         , _dataSize{ size }
         , _offset{ 0 }

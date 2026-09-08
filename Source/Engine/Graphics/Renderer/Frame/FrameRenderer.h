@@ -126,6 +126,18 @@ namespace sw
 
     private:
         /**
+         * @brief 일시(트랜지언트) 첨부 하나 — 텍스처와 그 bindless SRV.
+         * @details 예전엔 이름이 같은 두 맵(`_mapTransient` / `_mapTransientSrv`)에 나뉘어 있었다.
+         *          이름 하나로 둘 다 필요한 자리가 패스마다 여러 번 도는데 그때마다 같은 문자열을
+         *          두 번 해시했고, 한쪽에만 넣고 다른 쪽을 빠뜨리면 조용히 어긋났다.
+         */
+        struct TransientAttachment
+        {
+            RHITextureHandle   _texture{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+        };
+
+        /**
          * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
          * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 예전에는 이 값들이 전부
          *          FrameRenderer 멤버였고 onGraphPassExecute 가 _pCmd 를 저장/복원했는데,
@@ -151,6 +163,15 @@ namespace sw
             RHIBufferHandle _lastCbBuffer{ 0 };
             uint32          _lastCbValuesVersion{ 0 };
             uint32          _lastCbRegistryVersion{ 0 };
+            /**
+             * @brief 마지막으로 리소스를 **실제로 건** PSO.
+             * @details 슬롯 상태는 PSO 단위다 — `setPipelineState` 는 이전 PSO 가 건 t/u 슬롯이 다음 PSO 로
+             *          새지 않게 슬롯 상태를 통째로 비운다. 그래서 값·레지스트리가 그대로여도 PSO 가 바뀌었으면
+             *          다시 걸어야 한다. 이걸 빼먹으면 배치가 퍼뮤테이션 PSO 로 갈아탄 순간 t9(g_SwMaterials)
+             *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
+             *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
+             */
+            RHIPipelineStateHandle _lastBindPso{ 0 };
             /**
              * @brief 이 패스가 어떤 뷰의 컬링 결과를 쓸지.
              * @details 그림자 패스만 Shadow 이고 나머지는 Main 이다. 컬링 결과는 절두체에 종속이라
@@ -312,12 +333,16 @@ namespace sw
         bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
         /** @brief 어태치먼트 클리어 색을 반환하거나, 없으면 기본값을 반환합니다. */
         float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
-        /** @brief 일시 텍스처 핸들을 찾습니다. */
+        /**
+         * @brief 일시 텍스처와 그 SRV 를 한 번의 조회로 찾습니다. 없으면 빈 값.
+         * @details 이름 하나로 둘 다 필요한 자리(registerPassTexture)가 패스마다 여러 번 돈다 —
+         *          맵이 둘이던 시절엔 같은 문자열을 두 번 해시했다.
+         */
+        TransientAttachment findTransientAttachment( string_view name ) const;
+        /** @brief 일시 텍스처 핸들을 찾습니다. 없으면 0. */
         RHITextureHandle findTransient( string_view name ) const;
-        /** @brief 일시 텍스처 SRV를 찾습니다. */
-        RHIDescriptorIndex findTransientSrv( string_view name ) const;
         /** @brief 포맷 이름을 RHIFormat으로 해석합니다. */
-        RHIFormat parseAttachmentFormat( string_view formatName ) const;
+        static RHIFormat parseAttachmentFormat( string_view formatName );
         /** @brief Present 소스 어태치먼트 이름을 결정합니다. */
         string resolvePresentSource() const;
         /** @brief 패스 타입으로 파이프라인 패스 서술을 찾습니다. */
@@ -396,19 +421,18 @@ namespace sw
         /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
 
     private:
-        IRHIDevice*                               _pDevice;
-        IRHIDevice*                               _pCmdOwnerDevice;
-        unique_ptr<IRHICommandList>               _frameCmd;
-        IRHICommandList*                          _pCmd;
-        Scene*                                    _pScene;
-        TaskManager*                              _pTaskManager;
-        GpuScene                                  _gpuScene;
-        RenderPipelineResource                    _pipelineResource;
-        RenderGraph                               _graph;
-        string                                    _pipelinePath;
-        float4                                    _clearColor;
-        unordered_map<string, RHITextureHandle>   _mapTransient;
-        unordered_map<string, RHIDescriptorIndex> _mapTransientSrv;
+        IRHIDevice*                                _pDevice;
+        IRHIDevice*                                _pCmdOwnerDevice;
+        unique_ptr<IRHICommandList>                _frameCmd;
+        IRHICommandList*                           _pCmd;
+        Scene*                                     _pScene;
+        TaskManager*                               _pTaskManager;
+        GpuScene                                   _gpuScene;
+        RenderPipelineResource                     _pipelineResource;
+        RenderGraph                                _graph;
+        string                                     _pipelinePath;
+        float4                                     _clearColor;
+        unordered_map<string, TransientAttachment> _mapTransient;
         /// @brief 이번 프레임에 이미 클리어한 첨부들. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호한다.
         vector<hashed_string> _listClearedThisFrame;
         mutable mutex         _clearedMutex;
@@ -512,7 +536,9 @@ namespace sw
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.
-        std::atomic<uint8>                   _bPresentPsoMissingLogged{ 0 };
+        std::atomic<uint8> _bPresentPsoMissingLogged{ 0 };
+        /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치 (드로우 경로라 프레임마다 찍으면 안 된다).
+        std::atomic<uint8>                   _bMaterialFallbackMissingLogged{ 0 };
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         uint32                               _transientWidth;
         uint32                               _transientHeight;

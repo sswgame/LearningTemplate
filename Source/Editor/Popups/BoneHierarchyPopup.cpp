@@ -136,7 +136,7 @@ namespace sw::editor
         ImGui::Text( "Selected Object: %s", name.c_str() );
         ImGui::Separator();
 
-        Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
         {
             GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );

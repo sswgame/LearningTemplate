@@ -28,5 +28,20 @@ namespace sw::editor
         static void processPendingSceneLoad();
         /** @brief 씬 세대 동기화와 미저장 확인 모달을 처리합니다. */
         static void processSceneSession();
+
+    private:
+        // draw() 가 순서대로 부르는 조각들. 메뉴 하나가 곧 함수 하나다.
+        /** @brief 새 씬·열기·저장 등 File 메뉴를 그립니다. */
+        static void drawFileMenu();
+        /** @brief 실행 취소·다시 실행 등 Edit 메뉴를 그립니다. */
+        static void drawEditMenu();
+        /** @brief 라이브 코딩 빌드 관련 Build 메뉴를 그립니다. */
+        static void drawBuildMenu();
+        /** @brief 애셋 종류별 도구 패널을 여는 Assets 메뉴를 그립니다. */
+        static void drawAssetsMenu();
+        /** @brief 패널 표시 토글과 도킹 레이아웃 초기화를 담은 Panel 메뉴를 그립니다. */
+        static void drawPanelMenu( EditorDockLayout& dockLayout );
+        /** @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다. */
+        static void drawStatusArea();
     };
 } // namespace sw::editor

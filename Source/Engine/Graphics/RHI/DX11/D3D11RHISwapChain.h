@@ -63,8 +63,6 @@ namespace sw
         /** @brief 백버퍼 텍스처를 새로 얻습니다(복사 대상용). 실패하면 nullptr. */
         Microsoft::WRL::ComPtr<ID3D11Texture2D> getBackBufferTexture() const;
 
-        IDXGISwapChain* getNative() const { return _swapChain.Get(); }
-
     private:
         Microsoft::WRL::ComPtr<IDXGISwapChain>         _swapChain;
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> _backBufferRtv;

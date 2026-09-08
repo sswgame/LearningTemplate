@@ -33,6 +33,10 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Output Log"; }
         /** @brief 필터, 레벨 토글, 로그 목록을 그립니다. */
         void drawContent() override;
+        /** @brief 지우기·필터·레벨 토글 툴바를 그립니다. */
+        void drawConsoleToolbar( bool& bNewLogs );
+        /** @brief 필터를 통과한 로그 목록을 그립니다. */
+        void drawLogList( bool bNewLogs );
         /** @brief Logger 구독을 해제합니다. */
         void shutdown( IRHIDevice* pRhiDevice ) override;
 

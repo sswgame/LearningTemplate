@@ -178,8 +178,8 @@ namespace sw::editor
                         if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
                             ImGui::OpenPopup( "AddCompFailed" );
                     }
-                    if ( pTypeInfo != nullptr && pTypeInfo->getTooltip().empty() == false && ImGui::IsItemHovered() )
-                        ImGui::SetTooltip( "%s", pTypeInfo->getTooltip().c_str() );
+                    if ( pTypeInfo != nullptr )
+                        EditorWidgets::drawTooltip( pTypeInfo->getTooltip().c_str() );
                 };
 
                 if ( bHasFilter )
@@ -521,7 +521,7 @@ namespace sw::editor
 
     void HierarchyPanel::drawContent()
     {
-        Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
             EditorWidgets::drawEmptyHint( "No active scene." );
@@ -588,58 +588,7 @@ namespace sw::editor
                 ImGui::EndDragDropTarget();
             }
 
-            // Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
-            if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
-            {
-                const ImGuiIO&               io      = ImGui::GetIO();
-                SelectionManager&            selMgr  = EditorContext::get()->getSelectionManager();
-                const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
-
-                if ( listSel.empty() == false )
-                {
-                    if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
-                    {
-                        vector<GameObject*> listNewCreated;
-                        for ( const GameObjectPtr& pGoPtr : listSel )
-                        {
-                            GameObject* pSrc = pGoPtr.get();
-                            if ( pSrc != nullptr )
-                            {
-                                GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
-                                if ( pNewGo != nullptr )
-                                    listNewCreated.push_back( pNewGo );
-                            }
-                        }
-                        if ( listNewCreated.empty() == false )
-                        {
-                            selMgr.clearObjectSelection();
-                            for ( GameObject* pNewGo : listNewCreated )
-                                selMgr.selectObject( GameObjectPtr{ pNewGo }, SelectionMode::Add );
-                        }
-                    }
-                    else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
-                    {
-                        GameObject* pSelected = listSel.back().get();
-                        if ( pSelected != nullptr )
-                        {
-                            _renamingObjectId = pSelected->getObjectId();
-                            formatstring( _renameBuffer.data(), _renameBuffer.capacity(), "%#", pSelected->getName().c_str() );
-                            _bFocusRenameInput = true;
-                        }
-                    }
-                    else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
-                    {
-                        for ( const GameObjectPtr& pGoPtr : listSel )
-                        {
-                            GameObject* pGo = pGoPtr.get();
-                            if ( pGo != nullptr )
-                                EditorSceneCommands::destroy( pManager, pGo );
-                        }
-                        selMgr.clearObjectSelection();
-                    }
-                }
-            }
-
+            handleHierarchyShortcuts( pManager );
             // 빈 공간 우클릭 메뉴
             if ( ImGui::BeginPopupContextWindow( "HierarchyEmptyCtx",
                                                  ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems ) )
@@ -652,5 +601,60 @@ namespace sw::editor
             }
         }
         EditorChrome::endSection();
+    }
+
+    void HierarchyPanel::handleHierarchyShortcuts( GameObjectManager* pManager )
+    {
+        // Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
+        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
+        {
+            const ImGuiIO&               io      = ImGui::GetIO();
+            SelectionManager&            selMgr  = EditorContext::get()->getSelectionManager();
+            const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+
+            if ( listSel.empty() == false )
+            {
+                if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
+                {
+                    vector<GameObject*> listNewCreated;
+                    for ( const GameObjectPtr& pGoPtr : listSel )
+                    {
+                        GameObject* pSrc = pGoPtr.get();
+                        if ( pSrc != nullptr )
+                        {
+                            GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
+                            if ( pNewGo != nullptr )
+                                listNewCreated.push_back( pNewGo );
+                        }
+                    }
+                    if ( listNewCreated.empty() == false )
+                    {
+                        selMgr.clearObjectSelection();
+                        for ( GameObject* pNewGo : listNewCreated )
+                            selMgr.selectObject( GameObjectPtr{ pNewGo }, SelectionMode::Add );
+                    }
+                }
+                else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
+                {
+                    GameObject* pSelected = listSel.back().get();
+                    if ( pSelected != nullptr )
+                    {
+                        _renamingObjectId = pSelected->getObjectId();
+                        formatstring( _renameBuffer.data(), _renameBuffer.capacity(), "%#", pSelected->getName().c_str() );
+                        _bFocusRenameInput = true;
+                    }
+                }
+                else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
+                {
+                    for ( const GameObjectPtr& pGoPtr : listSel )
+                    {
+                        GameObject* pGo = pGoPtr.get();
+                        if ( pGo != nullptr )
+                            EditorSceneCommands::destroy( pManager, pGo );
+                    }
+                    selMgr.clearObjectSelection();
+                }
+            }
+        }
     }
 } // namespace sw::editor

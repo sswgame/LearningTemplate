@@ -27,8 +27,7 @@ namespace sw::editor
             const utf8* _pLabel = "##value";
             void        showTooltipIfHovered( const PropertyInfo& prop )
             {
-                if ( prop._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
-                    ImGui::SetTooltip( "%s", prop._metadata._tooltip.c_str() );
+                EditorWidgets::drawTooltip( prop._metadata._tooltip.c_str() );
             }
             void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
             {
@@ -397,8 +396,7 @@ namespace sw::editor
                     ImGui::SameLine();
                     if ( ImGui::Button( "x##clear", ImVec2( buttonWidth, 0 ) ) )
                         pPtr->clear();
-                    if ( ImGui::IsItemHovered() )
-                        ImGui::SetTooltip( "Clear asset reference" );
+                    EditorWidgets::drawTooltip( "Clear asset reference" );
 
                     ImGui::PopID();
                     showTooltipIfHovered( prop );
@@ -536,8 +534,7 @@ namespace sw::editor
                     ImGui::SameLine();
                     if ( ImGui::Button( "x##clear", ImVec2( buttonWidth, 0 ) ) )
                         *pPtr = hashed_string{};
-                    if ( ImGui::IsItemHovered() )
-                        ImGui::SetTooltip( "Clear asset reference" );
+                    EditorWidgets::drawTooltip( "Clear asset reference" );
 
                     ImGui::PopID();
                     showTooltipIfHovered( prop );

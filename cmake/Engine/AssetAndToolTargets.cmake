@@ -59,9 +59,19 @@ if(Python3_Interpreter_FOUND)
 		message(FATAL_ERROR "[CookAssets] CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty — pack output path would resolve to the filesystem root.")
 	endif()
 
+	# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 구워둔 바이너리가 소스와 어긋나 있으면 화면이
+	# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
+	# 검증을 켠다: bake.stamp 의 내용 해시로 확인하고, 베이커(App.exe)가 있으면 스스로 다시
+	# 굽고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
+	# 이 검사를 걸 이유가 없다.
+	set(swCookArgs --all --output "${swPackOutputDir}")
+	if(SW_SHIPPING_BUILD)
+		list(APPEND swCookArgs --verify-shaders)
+	endif()
+
 	sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
 		COMMENT "Cooking scene XML, prefab XML and Resource packs to binary..."
-		ARGS --all --output "${swPackOutputDir}"
+		ARGS ${swCookArgs}
 	)
 	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 

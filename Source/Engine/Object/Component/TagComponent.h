@@ -9,18 +9,12 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_TagComponent_Registrar;
-    } // namespace generated
     /**
      * @brief GameObject의 태그를 담는 컴포넌트입니다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Tag Component", Tooltip = "GameObject Tag Container Component" )
     class SW_API TagComponent : public Component
     {
-        friend struct ::sw::generated::sw_TagComponent_Registrar;
-
     public:
         REFLECT_BODY();
         TagComponent();

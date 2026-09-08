@@ -94,21 +94,18 @@ namespace sw
         }
 
         /** @brief `vector<T*>` 등 소유 포인터 원소를 만들 팩토리를 설정합니다. */
-        SerializeContext& setOwnedPointerFactory( OwnedPointerCreateFn fn )
+        SerializeContext& setOwnedPointerFactory( OwnedPointerCreateFn createFn )
         {
-            _pOwnedPointerCreateFn = fn;
+            _pOwnedPointerCreateFn = createFn;
             return *this;
         }
 
         /** @brief 소유 포인터 인스턴스의 런타임 TypeInfo를 조회할 함수를 설정합니다. */
-        SerializeContext& setRuntimeTypeInfoFn( RuntimeTypeInfoFn fn )
+        SerializeContext& setRuntimeTypeInfoFn( RuntimeTypeInfoFn typeInfoFn )
         {
-            _pRuntimeTypeInfoFn = fn;
+            _pRuntimeTypeInfoFn = typeInfoFn;
             return *this;
         }
-
-        /** @brief 소유 포인터 팩토리 outer. */
-        void* getOuterInstance() const { return _pOuterInstance; }
 
         /** @brief 팩토리로 소유 포인터 인스턴스를 만듭니다. 없으면 nullptr. */
         void* createOwnedPointer( hashed_string typeName ) const
@@ -161,16 +158,16 @@ namespace sw
         }
 
         /** @brief ID에 매핑되는 역직렬화 인스턴스 주소를 등록합니다. */
-        void registerObjectWithId( uint32 id, void* pInstance ) const
+        void registerObjectWithId( uint32 objectId, void* pInstance ) const
         {
-            if ( id != 0 && pInstance != nullptr )
-                _mapIdToObject[id] = pInstance;
+            if ( objectId != 0 && pInstance != nullptr )
+                _mapIdToObject[objectId] = pInstance;
         }
 
         /** @brief ID로부터 역직렬화된 인스턴스 주소를 조회합니다. */
-        void* findObjectById( uint32 id ) const
+        void* findObjectById( uint32 objectId ) const
         {
-            const auto it = _mapIdToObject.find( id );
+            const auto it = _mapIdToObject.find( objectId );
             if ( it != _mapIdToObject.end() )
                 return it->second;
             return nullptr;

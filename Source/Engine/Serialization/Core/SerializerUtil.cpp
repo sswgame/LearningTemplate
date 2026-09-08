@@ -144,9 +144,9 @@ namespace sw
                 offset += sizeof( uint32 );
                 if ( offset + size > dataSize )
                     return false;
-                const bool ok = BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + offset, size, ctx );
+                const bool bOk = BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + offset, size, ctx );
                 offset += size;
-                return ok;
+                return bOk;
             }
         }
 
@@ -182,12 +182,12 @@ namespace sw
         ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
         if ( pSeq != nullptr )
         {
-            const size_t sz    = pSeq->getSize( pContainerPtr );
-            const uint32 count = static_cast<uint32>( sz );
-            const uint8* pB    = reinterpret_cast<const uint8*>( &count );
+            const size_t elementCount = pSeq->getSize( pContainerPtr );
+            const uint32 count        = static_cast<uint32>( elementCount );
+            const uint8* pB           = reinterpret_cast<const uint8*>( &count );
             listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
 
-            for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
+            for ( size_t elemIndex = 0; elemIndex < elementCount; ++elemIndex )
             {
                 const void* pElem = pSeq->getElementConst( pContainerPtr, elemIndex );
                 if ( nested._elementNested != nullptr )
@@ -201,9 +201,9 @@ namespace sw
         IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
         if ( pMapWrap != nullptr )
         {
-            const size_t sz    = pMapWrap->getSize( pContainerPtr );
-            const uint32 count = static_cast<uint32>( sz );
-            const uint8* pB    = reinterpret_cast<const uint8*>( &count );
+            const size_t elementCount = pMapWrap->getSize( pContainerPtr );
+            const uint32 count        = static_cast<uint32>( elementCount );
+            const uint8* pB           = reinterpret_cast<const uint8*>( &count );
             listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
 
             pMapWrap->forEach( pContainerPtr, [&]( const void* pKey, const void* pVal )
@@ -262,19 +262,19 @@ namespace sw
             {
                 pMapWrap->defaultConstructKey( listKBuf.data() );
                 pMapWrap->defaultConstructValue( listVBuf.data() );
-                bool ok = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx );
-                if ( ok )
+                bool bOk = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx );
+                if ( bOk )
                 {
                     if ( nested._elementNested != nullptr )
-                        ok = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx );
+                        bOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx );
                     else
-                        ok = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx );
+                        bOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx );
                 }
-                if ( ok )
+                if ( bOk )
                     pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
                 pMapWrap->destroyKey( listKBuf.data() );
                 pMapWrap->destroyValue( listVBuf.data() );
-                if ( ok == false )
+                if ( bOk == false )
                     return false;
             }
             return true;
@@ -328,11 +328,11 @@ namespace sw
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            string_view sv = valStr;
-            if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
-                sv = sv.substr( 1, sv.size() - 2 );
-            const int64 v = pEnumInfo->stringFlagsToValue( sv );
-            pEnumInfo->writeValueToMemory( pValPtr, v );
+            string_view flagsText = valStr;
+            if ( flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"' )
+                flagsText = flagsText.substr( 1, flagsText.size() - 2 );
+            const int64 flagsValue = pEnumInfo->stringFlagsToValue( flagsText );
+            pEnumInfo->writeValueToMemory( pValPtr, flagsValue );
             return true;
         }
 
@@ -363,9 +363,9 @@ namespace sw
         return SerializerUtil::parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx );
     }
 
-    bool SerializerUtil::keysEqual( string_view a, string_view b, bool bIgnoreCase )
+    bool SerializerUtil::keysEqual( string_view left, string_view right, bool bIgnoreCase )
     {
-        return StringUtil::equals( a, b, bIgnoreCase );
+        return StringUtil::equals( left, right, bIgnoreCase );
     }
 
     const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,

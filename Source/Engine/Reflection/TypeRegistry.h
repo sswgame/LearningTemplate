@@ -23,27 +23,27 @@ namespace sw
     {
         string_view inner;
 
-        const size_t eq = sig.find( constants::reflection::kSignatureEq );
-        if ( eq != string_view::npos )
+        const size_t equalPos = sig.find( constants::reflection::kSignatureEq );
+        if ( equalPos != string_view::npos )
         {
-            const size_t eqLength = StringUtil::strlen( constants::reflection::kSignatureEq );
-            inner                 = sig.substr( eq + eqLength );
-            const size_t semi     = inner.find( ';' );
-            const size_t br       = inner.find( ']' );
-            size_t       end      = inner.size();
-            if ( semi != string_view::npos )
-                end = semi;
-            if ( br != string_view::npos && br < end )
-                end = br;
+            const size_t eqLength     = StringUtil::strlen( constants::reflection::kSignatureEq );
+            inner                     = sig.substr( equalPos + eqLength );
+            const size_t semicolonPos = inner.find( ';' );
+            const size_t bracketPos   = inner.find( ']' );
+            size_t       end          = inner.size();
+            if ( semicolonPos != string_view::npos )
+                end = semicolonPos;
+            if ( bracketPos != string_view::npos && bracketPos < end )
+                end = bracketPos;
             inner = inner.substr( 0, end );
         }
         else
         {
-            constexpr string_view kMarker = constants::reflection::kTypeFqnPrefix;
-            const size_t          lt      = sig.find( kMarker );
-            const size_t          gt      = sig.rfind( '>' );
-            if ( lt != string_view::npos && gt != string_view::npos && gt > lt + kMarker.size() )
-                inner = sig.substr( lt + kMarker.size(), gt - lt - kMarker.size() );
+            constexpr string_view kMarker       = constants::reflection::kTypeFqnPrefix;
+            const size_t          markerPos     = sig.find( kMarker );
+            const size_t          closeAnglePos = sig.rfind( '>' );
+            if ( markerPos != string_view::npos && closeAnglePos != string_view::npos && closeAnglePos > markerPos + kMarker.size() )
+                inner = sig.substr( markerPos + kMarker.size(), closeAnglePos - markerPos - kMarker.size() );
         }
 
         inner                                           = StringUtil::trim( inner );
@@ -68,8 +68,8 @@ namespace sw
         return hashed_string( inner.data(), static_cast<uint32>( inner.size() ) );
     }
 
-    template <typename E>
     /** @brief 컴파일러 시그니처에서 enum FQN을 추출합니다. */
+    template <typename E>
     hashed_string typeFqn()
     {
         static const hashed_string kFqn = parseTypeFromSignature( SW_FUNCTION_SIGNATURE );
@@ -128,8 +128,8 @@ namespace sw
         /** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
 
-        template <typename T>
         /** @brief 템플릿 인자 타입 T의 TypeInfo를 조회합니다. */
+        template <typename T>
         const TypeInfo* findType() const
         {
             if constexpr ( HasStaticType_v<T> )
@@ -140,27 +140,27 @@ namespace sw
                 return findType( typeFqn<T>() );
         }
 
-        template <typename E>
         /** @brief 템플릿 enum 타입 E의 EnumInfo를 조회합니다. */
+        template <typename E>
         const EnumInfo* findEnum() const
         {
             return findEnumOf<E>();
         }
 
-        template <typename Func>
         /** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
+        template <typename Func>
         void forEachType( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [key, typeInfo] : _mapNameToClassType )
+            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
             {
-                if ( key == typeInfo._fullyQualifiedName )
-                    func( typeInfo );
+                (void)fqn;
+                func( typeInfo );
             }
         }
 
-        template <typename Func>
         /** @brief 등록된 모든 고유 EnumInfo를 순회합니다. */
+        template <typename Func>
         void forEachEnum( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
@@ -171,8 +171,8 @@ namespace sw
             }
         }
 
-        template <typename BaseType>
         /** @brief BaseType으로부터 파생된 모든 등록 TypeInfo 목록을 반환합니다. */
+        template <typename BaseType>
         vector<const TypeInfo*> getDerivedTypes() const
         {
             const TypeInfo* pBaseType = findType<BaseType>();
@@ -183,12 +183,11 @@ namespace sw
             vector<const TypeInfo*> listResult;
 
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [key, typeInfo] : _mapNameToClassType )
+            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
             {
-                if ( key == typeInfo._fullyQualifiedName && &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
-                {
+                (void)fqn;
+                if ( &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
                     listResult.push_back( &typeInfo );
-                }
             }
             return listResult;
         }
@@ -215,8 +214,8 @@ namespace sw
         /** @brief ENUM(Flags) / 비트플래그 EnumInfo에 대해 `(flags & contains) == contains`. */
         bool hasFlag( const hashed_string& enumName, int64 flags, int64 contains ) const;
 
-        template <typename E>
         /** @brief 템플릿 enum 값을 등록된 이름으로 변환합니다. */
+        template <typename E>
         const utf8* enumToString( E value ) const
         {
             static_assert( std::is_enum_v<E>, "enumToString requires an enum type" );
@@ -224,8 +223,8 @@ namespace sw
             return pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
         }
 
-        template <typename E>
         /** @brief 문자열을 템플릿 enum 값으로 파싱합니다. */
+        template <typename E>
         bool enumFromString( string_view name, E& outValue ) const
         {
             static_assert( std::is_enum_v<E>, "enumFromString requires an enum type" );
@@ -245,8 +244,8 @@ namespace sw
             return false;
         }
 
-        template <typename E>
         /** @brief 파싱에 실패하면 Invalid(없으면 0)를 돌려줍니다. */
+        template <typename E>
         E enumFromString( string_view name ) const
         {
             E value{};
@@ -254,7 +253,6 @@ namespace sw
             return value;
         }
 
-        template <typename E>
         /**
          * @brief 템플릿 비트플래그 enum에 대해 포함 여부를 검사합니다.
          * @details ENUM(Flags)로 등록된 타입인지 런타임에 검증합니다. 타입을 컴파일 타임에 알고
@@ -262,6 +260,7 @@ namespace sw
          *          sw::EnumUtil::hasFlag(Core/Common/EnumUtil.h)를 대신 사용하세요.
          *          실제 비트 연산 로직은 EnumUtil에만 있고, 여기서는 위임만 합니다.
          */
+        template <typename E>
         bool hasFlag( E flags, E contains ) const
         {
             static_assert( std::is_enum_v<E>, "hasFlag requires an enum type" );
@@ -278,8 +277,8 @@ namespace sw
         TaskValue invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args = {} ) const;
 
     private:
-        template <typename E>
         /** @brief 템플릿 enum의 FQN/리프로 EnumInfo를 찾습니다. */
+        template <typename E>
         const EnumInfo* findEnumOf() const
         {
             const hashed_string fqn   = typeFqn<E>();
@@ -300,11 +299,18 @@ namespace sw
             return nullptr;
         }
 
-        mutable std::shared_mutex              _mutex;
-        unordered_map<hashed_string, TypeInfo> _mapNameToClassType;
-        unordered_map<hashed_string, EnumInfo> _mapNameToEnum;
-        unordered_map<uint32, hashed_string>   _mapHashToCanonicalName;
-        hashed_string                          _activeModuleName;
+        mutable std::shared_mutex _mutex;
+        /**
+         * @brief FQN 하나당 TypeInfo **하나**. 짧은 이름·별칭은 값을 복사하지 않고 `_mapAliasToFqn`
+         *        으로 이 항목을 가리킨다 — `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
+         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 된다.
+         */
+        unordered_map<hashed_string, TypeInfo> _mapFqnToClassType;
+        /** @brief 짧은 이름·별칭 → FQN. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모인다. */
+        unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
+        unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
+        unordered_map<uint32, hashed_string>        _mapHashToCanonicalName;
+        hashed_string                               _activeModuleName;
     };
 
     // ------------------------------------------------------------------------------

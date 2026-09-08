@@ -173,20 +173,6 @@ namespace sw
         _listRetiring.clear();
     }
 
-    bool GpuMaterialRetireQueue::isPinned( const MaterialInstance* pInstance ) const
-    {
-        if ( pInstance == nullptr )
-            return false;
-        if ( _uniquePinned.find( const_cast<MaterialInstance*>( pInstance ) ) != _uniquePinned.end() )
-            return true;
-        for ( const RetireEntry& retireEntry : _listRetiring )
-        {
-            if ( retireEntry._pInstance == pInstance )
-                return true;
-        }
-        return false;
-    }
-
     void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup )
     {
         unordered_set<MaterialInstance*> uniqueLive;
@@ -842,10 +828,10 @@ namespace sw
                 bool       bKeyChange{ false };
                 if ( bEnd == false )
                 {
-                    const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                    const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial, a._pInstance ) != batchKeyMaterial( b._pMaterial, b._pInstance ) ) ||
-                                             ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
+                    const DrawCandidate& batchHead = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
+                    const DrawCandidate& current   = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
+                    bKeyChange                     = ( batchHead._pMesh != current._pMesh ) || ( batchKeyMaterial( batchHead._pMaterial, batchHead._pInstance ) != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
+                                                     ( _bMergeAcrossMaterials == 0 && batchHead._pInstance != current._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {

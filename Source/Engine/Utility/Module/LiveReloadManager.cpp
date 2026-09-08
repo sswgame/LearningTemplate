@@ -649,14 +649,14 @@ namespace sw
             const size_t waveEnd   = listReady.size();
             for ( size_t waveIndex = waveBegin; waveIndex < waveEnd; ++waveIndex )
             {
-                const string n = listReady[waveIndex];
-                listOrder.push_back( n );
+                const string readyModuleName = listReady[waveIndex];
+                listOrder.push_back( readyModuleName );
                 for ( const string& name : uniqueSubgraph )
                 {
                     const auto found = _mapModule.find( name );
                     for ( const string& dep : found->second._listDependsOn )
                     {
-                        if ( dep != n )
+                        if ( dep != readyModuleName )
                             continue;
 
                         uint32& deg = mapIndegree[name];

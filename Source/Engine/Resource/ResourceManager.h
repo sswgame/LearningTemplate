@@ -80,7 +80,7 @@ namespace sw
         const PrefabManager& getPrefabManager() const;
 
     private:
-        void onResourceFileChanged( const FileChangeEvent& ev );
+        void onResourceFileChanged( const FileChangeEvent& changeEvent );
 
     private:
         AssetDatabase                   _assetDatabase;

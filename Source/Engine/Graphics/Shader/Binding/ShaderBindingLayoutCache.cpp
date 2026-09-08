@@ -26,19 +26,7 @@ namespace sw
                 {
                     if ( define.empty() )
                         continue;
-                    ShaderMacroDefine macro{};
-                    const size_t      eq = define.find( '=' );
-                    if ( eq == string::npos )
-                    {
-                        macro._name  = define;
-                        macro._value = "1";
-                    }
-                    else
-                    {
-                        macro._name  = define.substr( 0, eq );
-                        macro._value = define.substr( eq + 1 );
-                    }
-                    outListDefine.push_back( std::move( macro ) );
+                    outListDefine.push_back( ShaderMacroDefine::parse( define ) );
                 }
             }
 
@@ -54,36 +42,13 @@ namespace sw
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;
 
-                // 1순위: 쿠킹 시점에 구운 리플렉션 매니페스트. 배포 빌드는 이 경로만 쓴다 —
-                // DXIL 리플렉션은 dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
-                if ( ShaderReflectionLibrary::tryGet( compileDesc, outReflection ) )
-                {
-                    // 바이너리를 읽는 순간 계약과 대조한다 — 어긋나면 로그에 이름·숫자로 남는다 (검증 에러는 안 난다).
-                    ShaderBindingContract::validate( outReflection, targetFormat, shaderPath );
-                    return true;
-                }
-
-#if defined( SW_SHIPPING )
-                SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
-                              string( shaderPath ).c_str() );
-                return false;
-#else
-                // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션. 셰이더를 막 고쳐
-                // 아직 베이킹하지 않은 상태를 위한 폴백이다.
-                const ShaderCompileResult result = engine::areEngineServicesBound()
-                                                     ? engine::getShaderCache().getOrCompile( compileDesc )
-                                                     : ShaderCompiler::compileHLSL( compileDesc );
-                if ( result._bSuccess == false || result._bytecode.empty() )
-                {
-                    SW_LOG_TRACE( "Layout: stage %# compile failed for '%#' (%#).",
-                                  static_cast<uint32>( stage ), string( shaderPath ).c_str(), result._errorMessage.c_str() );
+                // 매니페스트 우선 / 개발 빌드는 런타임 리플렉션 폴백 — 정책은 ShaderReflectionLibrary 한 곳에 있다.
+                if ( ShaderReflectionLibrary::getOrReflect( compileDesc, outReflection ) == false )
                     return false;
-                }
 
-                outReflection = ShaderReflection::reflect( result._bytecode, targetFormat );
+                // 리플렉션을 얻는 순간 계약과 대조한다 — 어긋나면 로그에 이름·숫자로 남는다 (검증 에러는 안 난다).
                 ShaderBindingContract::validate( outReflection, targetFormat, shaderPath );
                 return true;
-#endif
             }
         };
     } // namespace
@@ -200,11 +165,5 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         _mapEntry.clear();
-    }
-
-    uint32 ShaderBindingLayoutCache::getEntryCount() const
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        return static_cast<uint32>( _mapEntry.size() );
     }
 } // namespace sw

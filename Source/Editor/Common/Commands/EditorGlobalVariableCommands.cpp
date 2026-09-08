@@ -14,34 +14,29 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct EditorGlobalVariableCommandsInternal
-        {
-            static string getTypeString( const GlobalVariableInfo& info )
-            {
-                switch ( info._type )
-                {
-                    case GlobalVariableType::Boolean:
-                        return "Bool";
-                    case GlobalVariableType::Int32:
-                        return "Int32";
-                    case GlobalVariableType::Float:
-                        return "Float";
-                    case GlobalVariableType::String:
-                        return "String";
-                    case GlobalVariableType::Enum:
-                        return info._enumType.empty() == false ? info._enumType : "Enum";
-                    default:
-                        return "Unknown";
-                }
-            }
-        };
-    } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
+    string EditorGlobalVariableCommands::getTypeString( const GlobalVariableInfo& info )
+    {
+        switch ( info._type )
+        {
+            case GlobalVariableType::Boolean:
+                return "Bool";
+            case GlobalVariableType::Int32:
+                return "Int32";
+            case GlobalVariableType::Float:
+                return "Float";
+            case GlobalVariableType::String:
+                return "String";
+            case GlobalVariableType::Enum:
+                return info._enumType.empty() == false ? info._enumType : "Enum";
+            default:
+                return "Unknown";
+        }
+    }
+
     string EditorGlobalVariableCommands::getPresetFolderPath()
     {
         return ResourceUtil::getDomainFolderPath(
@@ -75,7 +70,7 @@ namespace sw::editor
 
             XmlNode varNode = root.appendChild( "Var" );
             varNode.appendAttr( "name", pInfo->_name );
-            varNode.appendAttr( "type", EditorGlobalVariableCommandsInternal::getTypeString( *pInfo ) );
+            varNode.appendAttr( "type", getTypeString( *pInfo ) );
             varNode.appendAttr( "value", pInfo->getValueAsString() );
         }
 

@@ -39,11 +39,10 @@ namespace sw::editor
         EditorNotificationManager()  = default;
         ~EditorNotificationManager() = default;
 
-        void   push( string_view title, string_view message, NotificationType type = NotificationType::Info,
-                     float32 durationSec = 4.0f, float32 progress = -1.0f );
-        void   updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );
-        size_t getNotificationCount() const { return _listNotification.size(); }
-        void   clear() { _listNotification.clear(); }
+        void push( string_view title, string_view message, NotificationType type = NotificationType::Info,
+                   float32 durationSec = 4.0f, float32 progress = -1.0f );
+        void updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );
+        void clear() { _listNotification.clear(); }
 
     private:
         vector<NotificationItem> _listNotification;

@@ -46,8 +46,8 @@ namespace sw
             if ( dist < 1e-4f )
                 return float2{ 0.0f, 0.0f };
 
-            const float32 r              = radius > 1e-4f ? radius : 64.0f;
-            const float32 normalizedDist = dist / r;
+            const float32 effectiveRadius = radius > 1e-4f ? radius : 64.0f;
+            const float32 normalizedDist  = dist / effectiveRadius;
             if ( normalizedDist <= deadzone )
                 return float2{ 0.0f, 0.0f };
 

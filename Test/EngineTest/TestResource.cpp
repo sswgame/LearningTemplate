@@ -362,10 +362,13 @@ SW_TEST_CASE( Engine_Resource, DdsLoaderLoadFromResource )
 {
     sw::ResourceUtil::initialize();
     sw::DdsImageData image;
-    SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "textures/splash.dds", image ) );
+    // **도메인까지 적은 engine 리소스**를 쓴다. 예전엔 도메인 없는 "textures/splash.dds" 였는데,
+    // 그건 editor 도메인 에셋이라 Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐).
+    // 느슨한 파일이 살아 있는 Dev 에서만 우연히 찾히던 경로다.
+    SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
     SW_EXPECT_TRUE( image.isValid() );
-    SW_EXPECT_EQUAL( 1376u, image._width );
-    SW_EXPECT_EQUAL( 768u, image._height );
+    SW_EXPECT_EQUAL( 64u, image._width );
+    SW_EXPECT_EQUAL( 64u, image._height );
 }
 
 /**
@@ -409,7 +412,7 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueDataRequest )
     sw::vector<uint8> loadedBytes;
 
     const bool bEnqueued = queue.requestAssetData(
-        "textures/splash.dds",
+        "engine/textures/perlin.dds",
         sw::StreamingPriority::Normal,
         SW_DELEGATE_LAMBDA(
             sw::OnStreamingDataCompleteDelegate,

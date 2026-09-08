@@ -75,7 +75,7 @@ namespace sw
         void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = handler; }
 
         /** @brief 윈도우 크기 변경 시 호출될 콜백을 설정합니다. */
-        void setResizeCallback( WindowResizeDelegate cb ) { _onResize = cb; }
+        void setResizeCallback( WindowResizeDelegate callback ) { _onResize = callback; }
 
         /** @brief 닫기 전에 호출됩니다. false면 닫기를 보류합니다. */
         void setCloseQueryHandler( WindowCloseQueryDelegate handler ) { _closeQuery = handler; }

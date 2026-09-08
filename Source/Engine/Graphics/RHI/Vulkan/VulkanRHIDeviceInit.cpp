@@ -238,25 +238,25 @@ namespace sw
             vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, queueFamilies.data() );
 
-            uint32 i{ 0 };
-            bool   found{ false };
+            uint32 queueFamilyIndex{ 0 };
+            bool   bFound{ false };
             for ( const VkQueueFamilyProperties& queueFamily : queueFamilies )
             {
                 if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
                 {
                     VkBool32 presentSupport{ false };
-                    vkGetPhysicalDeviceSurfaceSupportKHR( device, i, _swapChain.getSurface(), &presentSupport );
+                    vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport );
                     if ( presentSupport )
                     {
-                        _graphicsQueueFamilyIndex = i;
+                        _graphicsQueueFamilyIndex = queueFamilyIndex;
                         _physicalDevice           = device;
-                        found                     = true;
+                        bFound                    = true;
                         break;
                     }
                 }
-                i++;
+                queueFamilyIndex++;
             }
-            if ( found )
+            if ( bFound )
                 break;
         }
 

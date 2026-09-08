@@ -24,332 +24,345 @@
 SW_LOG_CALLER( "ReflectionParser" );
 namespace sw
 {
-    struct CommandLineArgs
+    namespace
     {
-        sw::vector<sw::string> _listInputFile;
-        sw::vector<sw::string> _listIncludePath;
-        sw::string             _outputDir;
-        sw::string             _builtinsPath;
-        sw::string             _annotationMetaPath;
-        sw::string             _emitTemplatesDir;
-        sw::string             _sourceRoot;          ///< 모듈 판별을 이 경로 기준 상대 경로로 수행
-        sw::string             _emitBuiltinsGenPath; ///< --builtins 와 함께 설정 시 ReflectBuiltins.gen.cpp 전용 모드
-        uint64                 _maxTemplateTimestamp    = 0;
-        uint64                 _builtinsTimestamp       = 0;
-        uint64                 _annotationMetaTimestamp = 0;
-    };
-
-    /** @brief --input/--output/--include/--builtins 등 CLI를 채웁니다. */
-    static bool parseCommandLine( int32 argc, utf8* argv[], CommandLineArgs& outCommandLineArgs )
-    {
-        for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
+        /**
+         * @brief 이 도구의 CLI 인자 한 벌.
+         * @details 이 번역 단위 밖에서 쓰지 않는다. 예전에는 헬퍼들과 함께 sw 네임스페이스에 그냥
+         *          놓여 있었는데, `CommandLineArgs` / `isUpToDate` / `isPlaceholder` 처럼 흔한 이름이
+         *          외부 링키지를 갖는다는 뜻이라 유니티 빌드에서 다른 파일과 부딪힐 수 있다
+         *          (AGENTS.md "Helpers: Util vs Internal"). 나머지 파서 파일들은 이미 이 형태다.
+         */
+        struct CommandLineArgs
         {
-            const string_view commandLineArg = argv[argIndex];
+            sw::vector<sw::string> _listInputFile;
+            sw::vector<sw::string> _listIncludePath;
+            sw::string             _outputDir;
+            sw::string             _builtinsPath;
+            sw::string             _annotationMetaPath;
+            sw::string             _emitTemplatesDir;
+            sw::string             _sourceRoot;          ///< 모듈 판별을 이 경로 기준 상대 경로로 수행
+            sw::string             _emitBuiltinsGenPath; ///< --builtins 와 함께 설정 시 ReflectBuiltins.gen.cpp 전용 모드
+            uint64                 _maxTemplateTimestamp    = 0;
+            uint64                 _builtinsTimestamp       = 0;
+            uint64                 _annotationMetaTimestamp = 0;
+        };
 
-            if ( commandLineArg == sw::cliConstants::kInput && argIndex + 1 < argc )
+        /** @brief ReflectionParser.cpp 전용 헬퍼 — main 의 단계 1~5 를 구성하는 조각들. */
+        struct ReflectionParserInternal
+        {
+            /** @brief --input/--output/--include/--builtins 등 CLI를 채웁니다. */
+            static bool parseCommandLine( int32 argc, utf8* argv[], CommandLineArgs& outCommandLineArgs )
             {
-                outCommandLineArgs._listInputFile.emplace_back( argv[++argIndex] );
+                for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
+                {
+                    const string_view commandLineArg = argv[argIndex];
+
+                    if ( commandLineArg == sw::cliConstants::kInput && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._listInputFile.emplace_back( argv[++argIndex] );
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kOutput && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._outputDir = argv[++argIndex];
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kInclude && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._listIncludePath.emplace_back( argv[++argIndex] );
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kBuiltins && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._builtinsPath = argv[++argIndex];
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kAnnotationMeta && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._annotationMetaPath = argv[++argIndex];
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kEmitTemplates && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._emitTemplatesDir = argv[++argIndex];
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kSourceRoot && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._sourceRoot = argv[++argIndex];
+                    }
+                    else if ( commandLineArg == sw::cliConstants::kEmitBuiltinsGen && argIndex + 1 < argc )
+                    {
+                        outCommandLineArgs._emitBuiltinsGenPath = argv[++argIndex];
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR( "Unknown argument: %#", argv[argIndex] );
+                        return false;
+                    }
+                }
+
+                if ( outCommandLineArgs._emitBuiltinsGenPath.empty() == false )
+                {
+                    if ( outCommandLineArgs._builtinsPath.empty() )
+                    {
+                        SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kBuiltins );
+                        return false;
+                    }
+                    return true;
+                }
+
+                if ( outCommandLineArgs._listInputFile.empty() )
+                {
+                    SW_LOG_ERROR( "No --input files specified." );
+                    return false;
+                }
+                if ( outCommandLineArgs._outputDir.empty() )
+                {
+                    SW_LOG_ERROR( "No --output directory specified." );
+                    return false;
+                }
+
+                return true;
             }
-            else if ( commandLineArg == sw::cliConstants::kOutput && argIndex + 1 < argc )
+
+            /** @brief 생성된 파일이 텅 빈 플레이스홀더(껍데기)인지 판별합니다. */
+            static bool isPlaceholder( const string_view existingGen )
             {
-                outCommandLineArgs._outputDir = argv[++argIndex];
+                const sw::ParserClangConfig& cfg = sw::ParserContext::getSharedConfig();
+                return existingGen.find( cfg._emitPlaceholderMarker ) != string_view::npos ||
+                       ( existingGen.find( cfg._emitRegenByParserMarker ) != string_view::npos &&
+                         existingGen.find( cfg._emitRegisterTypeMarker ) == string_view::npos &&
+                         existingGen.find( cfg._emitRegisterEnumMarker ) == string_view::npos &&
+                         existingGen.find( cfg._emitFlagOpsMarker ) == string_view::npos );
             }
-            else if ( commandLineArg == sw::cliConstants::kInclude && argIndex + 1 < argc )
+
+            /**
+             * @brief 산출물 머리말에 적힌 원본 경로가 지금 입력과 같은지 확인합니다.
+             * @details 헤더를 **옮기기만** 하면 내용도 mtime 도 그대로라 타임스탬프 비교는 "최신" 이라고 답한다.
+             *          그런데 .gen.cpp 는 원본을 절대경로로 #include 하므로, 그대로 두면 없는 경로를 가리켜
+             *          빌드가 깨진다. 머리말의 경로를 대조해 이동을 잡는다.
+             */
+            static bool hasMatchingSourcePath( const string_view existingGen, const sw::string& inputFile )
             {
-                outCommandLineArgs._listIncludePath.emplace_back( argv[++argIndex] );
+                const sw::string& marker = sw::ParserContext::getSharedConfig()._emitSourcePathMarker;
+                const size_t      begin  = existingGen.find( marker );
+                if ( begin == string_view::npos )
+                    return false;
+
+                const size_t valueBegin = begin + marker.size();
+                size_t       valueEnd   = existingGen.find( '\n', valueBegin );
+                if ( valueEnd == string_view::npos )
+                    valueEnd = existingGen.size();
+                while ( valueEnd > valueBegin && ( existingGen[valueEnd - 1] == '\r' || existingGen[valueEnd - 1] == ' ' ) )
+                    --valueEnd;
+
+                return existingGen.substr( valueBegin, valueEnd - valueBegin ) == string_view( inputFile );
             }
-            else if ( commandLineArg == sw::cliConstants::kBuiltins && argIndex + 1 < argc )
+
+            /** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿보다 최신이면 true. */
+            static bool isUpToDate( const sw::string& genPath, const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
             {
-                outCommandLineArgs._builtinsPath = argv[++argIndex];
+                if ( sw::FileUtil::fileExists( genPath ) == false || sw::FileUtil::fileExists( inputFile ) == false )
+                    return false;
+
+                const sw::string genHeaderPath =
+                    sw::ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitHeaderExtension );
+                if ( sw::FileUtil::fileExists( genHeaderPath ) == false )
+                    return false;
+
+                const uint64 genTime = sw::FileUtil::getFileTimestamp( genPath );
+                if ( genTime < sw::FileUtil::getFileTimestamp( inputFile ) )
+                    return false;
+                if ( commandLineArgs._builtinsTimestamp > 0 && genTime < commandLineArgs._builtinsTimestamp )
+                    return false;
+                if ( commandLineArgs._annotationMetaTimestamp > 0 && genTime < commandLineArgs._annotationMetaTimestamp )
+                    return false;
+                if ( commandLineArgs._maxTemplateTimestamp > 0 && genTime < commandLineArgs._maxTemplateTimestamp )
+                    return false;
+
+                // 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)
+                constexpr uint32  kPlaceholderProbeBytes = 4096;
+                sw::vector<uint8> genHeadBytes;
+                sw::vector<uint8> headerHeadBytes;
+                if ( sw::FileUtil::readFile( genPath, genHeadBytes, 0, kPlaceholderProbeBytes ) == false )
+                    return false;
+                if ( sw::FileUtil::readFile( genHeaderPath, headerHeadBytes, 0, kPlaceholderProbeBytes ) == false )
+                    return false;
+
+                const string_view existingGen( reinterpret_cast<const utf8*>( genHeadBytes.data() ), genHeadBytes.size() );
+                const string_view existingHeader( reinterpret_cast<const utf8*>( headerHeadBytes.data() ), headerHeadBytes.size() );
+                if ( isPlaceholder( existingGen ) || isPlaceholder( existingHeader ) )
+                    return false;
+                if ( hasMatchingSourcePath( existingGen, inputFile ) == false )
+                    return false;
+
+                return true;
             }
-            else if ( commandLineArg == sw::cliConstants::kAnnotationMeta && argIndex + 1 < argc )
+
+            /**
+             * @brief 소스 파일 텍스트에서 리플렉션 핵심 매크로 키워드가 존재하는지 SIMD 벡터화 스캔으로 고속 검사합니다.
+             */
+            static bool hasReflectionKeywords( string_view source )
             {
-                outCommandLineArgs._annotationMetaPath = argv[++argIndex];
-            }
-            else if ( commandLineArg == sw::cliConstants::kEmitTemplates && argIndex + 1 < argc )
-            {
-                outCommandLineArgs._emitTemplatesDir = argv[++argIndex];
-            }
-            else if ( commandLineArg == sw::cliConstants::kSourceRoot && argIndex + 1 < argc )
-            {
-                outCommandLineArgs._sourceRoot = argv[++argIndex];
-            }
-            else if ( commandLineArg == sw::cliConstants::kEmitBuiltinsGen && argIndex + 1 < argc )
-            {
-                outCommandLineArgs._emitBuiltinsGenPath = argv[++argIndex];
-            }
-            else
-            {
-                SW_LOG_ERROR( "Unknown argument: %#", argv[argIndex] );
+                const size_t length = source.size();
+                size_t       index  = source.find_first_of( "REPF" );
+                while ( index != string_view::npos )
+                {
+                    const utf8 c = source[index];
+                    if ( c == 'R' && index + 7 <= length && source.compare( index, 7, "REFLECT" ) == 0 )
+                        return true;
+                    if ( c == 'E' && index + 4 <= length && source.compare( index, 4, "ENUM" ) == 0 )
+                        return true;
+                    if ( c == 'P' && index + 8 <= length && source.compare( index, 8, "PROPERTY" ) == 0 )
+                        return true;
+                    if ( c == 'F' && index + 8 <= length && source.compare( index, 8, "FUNCTION" ) == 0 )
+                        return true;
+
+                    index = source.find_first_of( "REPF", index + 1 );
+                }
                 return false;
             }
-        }
 
-        if ( outCommandLineArgs._emitBuiltinsGenPath.empty() == false )
-        {
-            if ( outCommandLineArgs._builtinsPath.empty() )
+            /**
+             * @brief 파일 앞부분에서 REFLECT/ENUM/PROPERTY/FUNCTION 키워드를 검사합니다.
+             *
+             * [목적]: 리플렉션 매크로가 전혀 없는 헤더는 무거운 libclang 파싱을 아예 건너뛰어 빌드 시간을 크게 단축합니다.
+             */
+            static bool loadSourceIfHasReflectionKeywords( const sw::string& path, sw::string& outContent )
             {
-                SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kBuiltins );
-                return false;
+                if ( sw::FileUtil::readTextFile( path, outContent ) == false )
+                    return false;
+
+                return hasReflectionKeywords( outContent );
             }
-            return true;
-        }
 
-        if ( outCommandLineArgs._listInputFile.empty() )
-        {
-            SW_LOG_ERROR( "No --input files specified." );
-            return false;
-        }
-        if ( outCommandLineArgs._outputDir.empty() )
-        {
-            SW_LOG_ERROR( "No --output directory specified." );
-            return false;
-        }
-
-        return true;
-    }
-
-    /** @brief 생성된 파일이 텅 빈 플레이스홀더(껍데기)인지 판별합니다. */
-    static bool isPlaceholder( const string_view existingGen )
-    {
-        const sw::ParserClangConfig& cfg = sw::ParserContext::getSharedConfig();
-        return existingGen.find( cfg._emitPlaceholderMarker ) != string_view::npos ||
-               ( existingGen.find( cfg._emitRegenByParserMarker ) != string_view::npos &&
-                 existingGen.find( cfg._emitRegisterTypeMarker ) == string_view::npos &&
-                 existingGen.find( cfg._emitRegisterEnumMarker ) == string_view::npos &&
-                 existingGen.find( cfg._emitFlagOpsMarker ) == string_view::npos );
-    }
-
-    /**
-     * @brief 산출물 머리말에 적힌 원본 경로가 지금 입력과 같은지 확인합니다.
-     * @details 헤더를 **옮기기만** 하면 내용도 mtime 도 그대로라 타임스탬프 비교는 "최신" 이라고 답한다.
-     *          그런데 .gen.cpp 는 원본을 절대경로로 #include 하므로, 그대로 두면 없는 경로를 가리켜
-     *          빌드가 깨진다. 머리말의 경로를 대조해 이동을 잡는다.
-     */
-    static bool hasMatchingSourcePath( const string_view existingGen, const sw::string& inputFile )
-    {
-        const sw::string& marker = sw::ParserContext::getSharedConfig()._emitSourcePathMarker;
-        const size_t      begin  = existingGen.find( marker );
-        if ( begin == string_view::npos )
-            return false;
-
-        const size_t valueBegin = begin + marker.size();
-        size_t       valueEnd   = existingGen.find( '\n', valueBegin );
-        if ( valueEnd == string_view::npos )
-            valueEnd = existingGen.size();
-        while ( valueEnd > valueBegin && ( existingGen[valueEnd - 1] == '\r' || existingGen[valueEnd - 1] == ' ' ) )
-            --valueEnd;
-
-        return existingGen.substr( valueBegin, valueEnd - valueBegin ) == string_view( inputFile );
-    }
-
-    /** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿보다 최신이면 true. */
-    static bool isUpToDate( const sw::string& genPath, const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
-    {
-        if ( sw::FileUtil::fileExists( genPath ) == false || sw::FileUtil::fileExists( inputFile ) == false )
-            return false;
-
-        const sw::string genHeaderPath =
-            sw::ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitHeaderExtension );
-        if ( sw::FileUtil::fileExists( genHeaderPath ) == false )
-            return false;
-
-        const uint64 genTime = sw::FileUtil::getFileTimestamp( genPath );
-        if ( genTime < sw::FileUtil::getFileTimestamp( inputFile ) )
-            return false;
-        if ( commandLineArgs._builtinsTimestamp > 0 && genTime < commandLineArgs._builtinsTimestamp )
-            return false;
-        if ( commandLineArgs._annotationMetaTimestamp > 0 && genTime < commandLineArgs._annotationMetaTimestamp )
-            return false;
-        if ( commandLineArgs._maxTemplateTimestamp > 0 && genTime < commandLineArgs._maxTemplateTimestamp )
-            return false;
-
-        // 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)
-        constexpr uint32  kPlaceholderProbeBytes = 4096;
-        sw::vector<uint8> genHeadBytes;
-        sw::vector<uint8> headerHeadBytes;
-        if ( sw::FileUtil::readFile( genPath, genHeadBytes, 0, kPlaceholderProbeBytes ) == false )
-            return false;
-        if ( sw::FileUtil::readFile( genHeaderPath, headerHeadBytes, 0, kPlaceholderProbeBytes ) == false )
-            return false;
-
-        const string_view existingGen( reinterpret_cast<const utf8*>( genHeadBytes.data() ), genHeadBytes.size() );
-        const string_view existingHeader( reinterpret_cast<const utf8*>( headerHeadBytes.data() ), headerHeadBytes.size() );
-        if ( isPlaceholder( existingGen ) || isPlaceholder( existingHeader ) )
-            return false;
-        if ( hasMatchingSourcePath( existingGen, inputFile ) == false )
-            return false;
-
-        return true;
-    }
-
-    /**
-     * @brief 소스 파일 텍스트에서 리플렉션 핵심 매크로 키워드가 존재하는지 SIMD 벡터화 스캔으로 고속 검사합니다.
-     */
-    static bool hasReflectionKeywords( string_view source )
-    {
-        const size_t length = source.size();
-        size_t       index  = source.find_first_of( "REPF" );
-        while ( index != string_view::npos )
-        {
-            const utf8 c = source[index];
-            if ( c == 'R' && index + 7 <= length && source.compare( index, 7, "REFLECT" ) == 0 )
-                return true;
-            if ( c == 'E' && index + 4 <= length && source.compare( index, 4, "ENUM" ) == 0 )
-                return true;
-            if ( c == 'P' && index + 8 <= length && source.compare( index, 8, "PROPERTY" ) == 0 )
-                return true;
-            if ( c == 'F' && index + 8 <= length && source.compare( index, 8, "FUNCTION" ) == 0 )
-                return true;
-
-            index = source.find_first_of( "REPF", index + 1 );
-        }
-        return false;
-    }
-
-    /**
-     * @brief 파일 앞부분에서 REFLECT/ENUM/PROPERTY/FUNCTION 키워드를 검사합니다.
-     *
-     * [목적]: 리플렉션 매크로가 전혀 없는 헤더는 무거운 libclang 파싱을 아예 건너뛰어 빌드 시간을 크게 단축합니다.
-     */
-    static bool loadSourceIfHasReflectionKeywords( const sw::string& path, sw::string& outContent )
-    {
-        if ( sw::FileUtil::readTextFile( path, outContent ) == false )
-            return false;
-
-        return hasReflectionKeywords( outContent );
-    }
-
-    /**
-     * @brief 빈 AST 와 같은 생성물(.gen.cpp/.gen.h)을 씁니다.
-     * @details 리플렉션 매크로가 지워진 뒤에도 예전 registrar 가 남아 계속 컴파일되는 것을 막습니다.
-     */
-    static bool emitEmptyGenerated( const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
-    {
-        const sw::vector<sw::ParsedTypeInfo> noTypes;
-        const sw::vector<sw::ParsedEnumInfo> noEnums;
-
-        sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir, commandLineArgs._sourceRoot );
-        return generator.generate();
-    }
-
-    /** @brief 헤더 하나를 파싱·코드젠합니다. 최신이면 건너뛰고, 어노테이션이 없으면 비웁니다. */
-    static void processInputFile( const sw::string& inputFile, const CommandLineArgs& commandLineArgs, sw::atomic<int32>& errorCount )
-    {
-        const sw::string genPath =
-            sw::ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
-
-        if ( isUpToDate( genPath, inputFile, commandLineArgs ) )
-        {
-            SW_LOG_TRACE( "Up-to-date, skipping AST parsing: %#", inputFile );
-            return;
-        }
-
-        sw::string sourceContent;
-        if ( loadSourceIfHasReflectionKeywords( inputFile, sourceContent ) == false )
-        {
-            if ( sourceContent.empty() )
+            /**
+             * @brief 빈 AST 와 같은 생성물(.gen.cpp/.gen.h)을 씁니다.
+             * @details 리플렉션 매크로가 지워진 뒤에도 예전 registrar 가 남아 계속 컴파일되는 것을 막습니다.
+             */
+            static bool emitEmptyGenerated( const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
             {
-                ++errorCount;
-                return;
+                const sw::vector<sw::ParsedTypeInfo> noTypes;
+                const sw::vector<sw::ParsedEnumInfo> noEnums;
+
+                sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir, commandLineArgs._sourceRoot );
+                return generator.generate();
             }
-            SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
-            if ( emitEmptyGenerated( inputFile, commandLineArgs ) == false )
+
+            /** @brief 헤더 하나를 파싱·코드젠합니다. 최신이면 건너뛰고, 어노테이션이 없으면 비웁니다. */
+            static void processInputFile( const sw::string& inputFile, const CommandLineArgs& commandLineArgs, sw::atomic<int32>& errorCount )
             {
-                SW_LOG_ERROR( "Code generation failed: %#", inputFile );
-                ++errorCount;
+                const sw::string genPath =
+                    sw::ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
+
+                if ( isUpToDate( genPath, inputFile, commandLineArgs ) )
+                {
+                    SW_LOG_TRACE( "Up-to-date, skipping AST parsing: %#", inputFile );
+                    return;
+                }
+
+                sw::string sourceContent;
+                if ( loadSourceIfHasReflectionKeywords( inputFile, sourceContent ) == false )
+                {
+                    if ( sourceContent.empty() )
+                    {
+                        ++errorCount;
+                        return;
+                    }
+                    SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
+                    if ( emitEmptyGenerated( inputFile, commandLineArgs ) == false )
+                    {
+                        SW_LOG_ERROR( "Code generation failed: %#", inputFile );
+                        ++errorCount;
+                    }
+                    return;
+                }
+
+                SW_LOG_TRACE( "── Parsing: %#", inputFile );
+
+                sw::ParserContext context;
+                if ( context.parse( inputFile, commandLineArgs._listIncludePath, &sourceContent ) == false )
+                {
+                    SW_LOG_ERROR( "Parse failed: %#", inputFile );
+                    ++errorCount;
+                    return;
+                }
+
+                sw::AstVisitor visitor( context.getTranslationUnit() );
+                if ( visitor.visit() == false || visitor.hasError() )
+                {
+                    SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
+                    ++errorCount;
+                    return;
+                }
+
+                sw::CodeGenerator generator(
+                    visitor.getCollectedTypes(),
+                    visitor.getCollectedEnums(),
+                    inputFile,
+                    commandLineArgs._outputDir,
+                    commandLineArgs._sourceRoot );
+
+                if ( generator.generate() == false )
+                {
+                    SW_LOG_ERROR( "Code generation failed: %#", inputFile );
+                    ++errorCount;
+                    return;
+                }
+
+                if ( generator.getOutputFilePath().empty() == false )
+                    SW_LOG_TRACE( "Generated  : %#", generator.getOutputFilePath() );
             }
-            return;
-        }
 
-        SW_LOG_TRACE( "── Parsing: %#", inputFile );
+            /** @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다. */
+            static bool emitFlagOpsUmbrella( const CommandLineArgs& commandLineArgs )
+            {
+                const ParserClangConfig& cfg     = ParserContext::getSharedConfig();
+                const string             outPath = FileUtil::joinPath( commandLineArgs._outputDir, cfg._emitFlagOpsHeader );
 
-        sw::ParserContext context;
-        if ( context.parse( inputFile, commandLineArgs._listIncludePath, &sourceContent ) == false )
-        {
-            SW_LOG_ERROR( "Parse failed: %#", inputFile );
-            ++errorCount;
-            return;
-        }
+                CodeEmitBuffer buffer;
+                CodeEmit       e( buffer );
+                e.line( cfg._emitAutoGeneratedBanner );
+                e.line( emitDirectiveConstants::kPragmaOnce );
+                e.blank();
+                e.line( emitDirectiveConstants::kIfndefParser );
 
-        sw::AstVisitor visitor( context.getTranslationUnit() );
-        if ( visitor.visit() == false || visitor.hasError() )
-        {
-            SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
-            ++errorCount;
-            return;
-        }
+                bool bAnyFlags = false;
+                for ( const string& inputFile : commandLineArgs._listInputFile )
+                {
+                    const string genHeader = ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, cfg._emitHeaderExtension );
+                    string       genText;
+                    if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
+                        continue;
+                    if ( genText.find( cfg._emitFlagOpsMarker ) == string::npos )
+                        continue;
 
-        sw::CodeGenerator generator(
-            visitor.getCollectedTypes(),
-            visitor.getCollectedEnums(),
-            inputFile,
-            commandLineArgs._outputDir,
-            commandLineArgs._sourceRoot );
+                    bAnyFlags              = true;
+                    const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, commandLineArgs._listIncludePath );
+                    const string genInc    = FileUtil::getFileNamePart( genHeader );
+                    e.linef( "#include \"%#\"", headerInc );
+                    e.linef( "#include \"%#\"", genInc );
+                    e.blank();
+                }
 
-        if ( generator.generate() == false )
-        {
-            SW_LOG_ERROR( "Code generation failed: %#", inputFile );
-            ++errorCount;
-            return;
-        }
+                if ( bAnyFlags == false )
+                    e.line( emitDirectiveConstants::kNoEnumFlags );
+                e.line( emitDirectiveConstants::kEndif );
 
-        if ( generator.getOutputFilePath().empty() == false )
-            SW_LOG_TRACE( "Generated  : %#", generator.getOutputFilePath() );
-    }
-
-    /** @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다. */
-    static bool emitFlagOpsUmbrella( const CommandLineArgs& commandLineArgs )
-    {
-        const ParserClangConfig& cfg     = ParserContext::getSharedConfig();
-        const string             outPath = FileUtil::joinPath( commandLineArgs._outputDir, cfg._emitFlagOpsHeader );
-
-        CodeEmitBuffer buffer;
-        CodeEmit       e( buffer );
-        e.line( cfg._emitAutoGeneratedBanner );
-        e.line( emitDirectiveConstants::kPragmaOnce );
-        e.blank();
-        e.line( emitDirectiveConstants::kIfndefParser );
-
-        bool bAnyFlags = false;
-        for ( const string& inputFile : commandLineArgs._listInputFile )
-        {
-            const string genHeader = ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, cfg._emitHeaderExtension );
-            string       genText;
-            if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
-                continue;
-            if ( genText.find( cfg._emitFlagOpsMarker ) == string::npos )
-                continue;
-
-            bAnyFlags              = true;
-            const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, commandLineArgs._listIncludePath );
-            const string genInc    = FileUtil::getFileNamePart( genHeader );
-            e.linef( "#include \"%#\"", headerInc );
-            e.linef( "#include \"%#\"", genInc );
-            e.blank();
-        }
-
-        if ( bAnyFlags == false )
-            e.line( emitDirectiveConstants::kNoEnumFlags );
-        e.line( emitDirectiveConstants::kEndif );
-
-        const string newContent( buffer.view() );
-        if ( FileUtil::fileExists( outPath ) )
-        {
-            string existingContent;
-            FileUtil::readTextFile( outPath, existingContent );
-            if ( existingContent.empty() == false && existingContent == newContent )
+                const string newContent( buffer.view() );
+                if ( FileUtil::fileExists( outPath ) )
+                {
+                    string existingContent;
+                    FileUtil::readTextFile( outPath, existingContent );
+                    if ( existingContent.empty() == false && existingContent == newContent )
+                        return true;
+                }
+                if ( FileUtil::writeTextFile( outPath, newContent ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to write %#", outPath );
+                    return false;
+                }
+                SW_LOG_TRACE( "Generated  : %#", outPath );
                 return true;
-        }
-        if ( FileUtil::writeTextFile( outPath, newContent ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write %#", outPath );
-            return false;
-        }
-        SW_LOG_TRACE( "Generated  : %#", outPath );
-        return true;
-    }
-
+            }
+        };
+    } // namespace
 } // namespace sw
 
 /**
@@ -369,7 +382,7 @@ int32 main( int32 argc, utf8* argv[] )
 
     // 1) CLI
     sw::CommandLineArgs commandLineArgs;
-    if ( sw::parseCommandLine( argc, argv, commandLineArgs ) == false )
+    if ( sw::ReflectionParserInternal::parseCommandLine( argc, argv, commandLineArgs ) == false )
     {
         SW_LOG_ERROR(
             "Usage: ReflectionParser %# <header.h> %# <dir> [%# <ReflectBuiltins.h>] "
@@ -507,7 +520,7 @@ int32 main( int32 argc, utf8* argv[] )
                 "ParseHeader",
                 SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&commandLineArgs, &errorCount, inputFile]()
             {
-                sw::processInputFile( inputFile, commandLineArgs, errorCount );
+                sw::ReflectionParserInternal::processInputFile( inputFile, commandLineArgs, errorCount );
             } ) );
             handle.submit();
         }
@@ -516,7 +529,7 @@ int32 main( int32 argc, utf8* argv[] )
         taskManager.shutdown();
     }
 
-    if ( sw::emitFlagOpsUmbrella( commandLineArgs ) == false )
+    if ( sw::ReflectionParserInternal::emitFlagOpsUmbrella( commandLineArgs ) == false )
         errorCount.fetch_add( 1 );
 
     parseTimer.updateTimer();

@@ -72,43 +72,8 @@ namespace sw::editor
         }
 
         const size_t totalPixels = static_cast<size_t>( rawImage._width ) * static_cast<size_t>( rawImage._height );
-        uint8*       pData       = rawImage._bytes.data();
 
-        // 2) Apply Swizzle & Channel Manipulations
-        if ( rule._swizzle == TextureSwizzle::BGRA )
-        {
-            for ( size_t index = 0; index < totalPixels; ++index )
-            {
-                std::swap( pData[index * 4], pData[index * 4 + 2] );
-            }
-        }
-        else if ( rule._swizzle == TextureSwizzle::ARGB )
-        {
-            for ( size_t index = 0; index < totalPixels; ++index )
-            {
-                const uint8 a        = pData[index * 4];
-                pData[index * 4]     = pData[index * 4 + 1];
-                pData[index * 4 + 1] = pData[index * 4 + 2];
-                pData[index * 4 + 2] = pData[index * 4 + 3];
-                pData[index * 4 + 3] = a;
-            }
-        }
-        else if ( rule._swizzle == TextureSwizzle::RGB1 )
-        {
-            for ( size_t index = 0; index < totalPixels; ++index )
-            {
-                pData[index * 4 + 3] = 255;
-            }
-        }
-
-        // 3) Normal map green channel invert
-        if ( rule._bInvertGreen == SW_TRUE )
-        {
-            for ( size_t index = 0; index < totalPixels; ++index )
-            {
-                pData[index * 4 + 1] = 255 - pData[index * 4 + 1];
-            }
-        }
+        applyChannelManipulations( rawImage, rule, totalPixels );
 
         // 4) Build DirectXTex base Image
         DirectX::Image baseImage{};
@@ -235,6 +200,47 @@ namespace sw::editor
                      FileUtil::getFileSize( sourcePath ), outputSizeBytes );
 
         return true;
+    }
+
+    void TextureBaker::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )
+    {
+        uint8* pData = rawImage._bytes.data();
+
+        // 2) Apply Swizzle & Channel Manipulations
+        if ( rule._swizzle == TextureSwizzle::BGRA )
+        {
+            for ( size_t index = 0; index < totalPixels; ++index )
+            {
+                std::swap( pData[index * 4], pData[index * 4 + 2] );
+            }
+        }
+        else if ( rule._swizzle == TextureSwizzle::ARGB )
+        {
+            for ( size_t index = 0; index < totalPixels; ++index )
+            {
+                const uint8 a        = pData[index * 4];
+                pData[index * 4]     = pData[index * 4 + 1];
+                pData[index * 4 + 1] = pData[index * 4 + 2];
+                pData[index * 4 + 2] = pData[index * 4 + 3];
+                pData[index * 4 + 3] = a;
+            }
+        }
+        else if ( rule._swizzle == TextureSwizzle::RGB1 )
+        {
+            for ( size_t index = 0; index < totalPixels; ++index )
+            {
+                pData[index * 4 + 3] = 255;
+            }
+        }
+
+        // 3) Normal map green channel invert
+        if ( rule._bInvertGreen == SW_TRUE )
+        {
+            for ( size_t index = 0; index < totalPixels; ++index )
+            {
+                pData[index * 4 + 1] = 255 - pData[index * 4 + 1];
+            }
+        }
     }
 
     bool TextureBaker::bakeTextureWithConfig( string_view sourcePath, string_view outputPath, const TextureImportConfig& config, TextureBakeResult* pOutResult )

@@ -28,6 +28,17 @@ namespace sw::editor
         bool saveDocument() override;
 
     private:
+        /** @brief 노드 추가·저장·줌 등 그래프 툴바를 그립니다. */
+        void drawGraphToolbar();
+        /** @brief 노드 그래프 캔버스를 그립니다. */
+        void drawGraphCanvas( float32 canvasWidth );
+        /** @brief 노드들을 캔버스에 그립니다. */
+        void drawGraphNodes();
+        /** @brief 캔버스의 링크 생성·삭제 상호작용을 처리합니다. */
+        void handleCanvasInteractions();
+        /** @brief 선택된 노드의 상세 인스펙터를 그립니다. */
+        void drawSelectedNodeInspector();
+
         using DialogueNode = DialogueAssetNode;
         using DialogueLink = DialogueAssetLink;
 

@@ -52,9 +52,6 @@ namespace sw
         /** @brief 전체 캐시를 비웁니다. */
         void clear();
 
-        /** @brief 캐시 항목 수. */
-        uint32 getEntryCount() const;
-
     private:
         struct CacheEntry
         {

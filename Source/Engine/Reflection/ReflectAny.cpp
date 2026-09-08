@@ -85,14 +85,14 @@ namespace sw
                 if ( ( hex.size() % 2 ) != 0 )
                     return false;
                 any._bytes.resize( hex.size() / 2 );
-                const auto nibble = []( utf8 ch ) -> int32
+                const auto nibble = []( utf8 character ) -> int32
                 {
-                    if ( '0' <= ch && ch <= '9' )
-                        return ch - '0';
-                    if ( 'a' <= ch && ch <= 'f' )
-                        return ch - 'a' + 10;
-                    if ( 'A' <= ch && ch <= 'F' )
-                        return ch - 'A' + 10;
+                    if ( '0' <= character && character <= '9' )
+                        return character - '0';
+                    if ( 'a' <= character && character <= 'f' )
+                        return character - 'a' + 10;
+                    if ( 'A' <= character && character <= 'F' )
+                        return character - 'A' + 10;
                     return -1;
                 };
                 for ( size_t byteIndex = 0; byteIndex < any._bytes.size(); ++byteIndex )

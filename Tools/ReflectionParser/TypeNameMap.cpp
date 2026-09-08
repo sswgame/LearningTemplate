@@ -104,29 +104,31 @@ namespace sw
 
     string TypeNameMap::normalize( const string& clangSpelling ) const
     {
-        string t = TypeNameMapInternal::stripClangDecorations( clangSpelling );
-        if ( t.empty() )
-            return t;
+        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 재귀 호출마다 string 이 복사된다(이 함수는 템플릿 인자마다 자기를 다시 부른다).
+        string result = TypeNameMapInternal::stripClangDecorations( clangSpelling );
+        if ( result.empty() )
+            return result;
 
         // 1) std::__cxx11:: 인라인 네임스페이스 제거 (Linux Clang libstdc++ 대응)
         constexpr string_view kCxx11Prefix = "std::__cxx11::";
-        if ( StringUtil::startsWith( t, kCxx11Prefix ) )
+        if ( StringUtil::startsWith( result, kCxx11Prefix ) )
         {
-            t = "std::" + t.substr( kCxx11Prefix.size() );
+            result = "std::" + result.substr( kCxx11Prefix.size() );
         }
 
         // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
-        const size_t openAngle  = t.find( '<' );
-        const size_t closeAngle = t.rfind( '>' );
+        const size_t openAngle  = result.find( '<' );
+        const size_t closeAngle = result.rfind( '>' );
         if ( openAngle != string::npos && closeAngle != string::npos && openAngle < closeAngle )
         {
-            const string stem  = string{ StringUtil::trim( string_view{ t }.substr( 0, openAngle ) ) };
-            const string inner = string{ StringUtil::trim( string_view{ t }.substr( openAngle + 1, closeAngle - openAngle - 1 ) ) };
+            const string stem  = string{ StringUtil::trim( string_view{ result }.substr( 0, openAngle ) ) };
+            const string inner = string{ StringUtil::trim( string_view{ result }.substr( openAngle + 1, closeAngle - openAngle - 1 ) ) };
 
             const string         normStem = normalize( stem );
             const vector<string> listArg  = ParserUtil::splitCommaRespectingAngles( inner );
 
-            string result = normStem + "<";
+            result = normStem + "<";
             for ( size_t index = 0; index < listArg.size(); ++index )
             {
                 if ( index > 0 )
@@ -138,31 +140,34 @@ namespace sw
         }
 
         // 3) 사전(ReflectBuiltins 등)에서 직접 일치 확인
-        const auto it = _mapAliasToCanonical.find( t );
+        const auto it = _mapAliasToCanonical.find( result );
         if ( it != _mapAliasToCanonical.end() )
-            return it->second;
+        {
+            result = it->second;
+            return result;
+        }
 
         // 4) sw:: 최상위 엔진 네임스페이스 접두사 제거 후 재검색 (Linux Clang이 내부 타입을 FQN으로 내보내는 문제 대응)
         constexpr string_view kSwPrefix = "sw::";
-        if ( StringUtil::startsWith( t, kSwPrefix ) )
+        if ( StringUtil::startsWith( result, kSwPrefix ) )
         {
-            string     stripped   = t.substr( kSwPrefix.size() );
-            const auto itStripped = _mapAliasToCanonical.find( stripped );
+            result                = result.substr( kSwPrefix.size() );
+            const auto itStripped = _mapAliasToCanonical.find( result );
             if ( itStripped != _mapAliasToCanonical.end() )
-                return itStripped->second;
-            return stripped;
+                result = itStripped->second;
+            return result;
         }
 
         // 5) scopeLeaf fallback
-        const string_view bare = ParserUtil::scopeLeaf( t );
-        if ( bare != t )
+        const string_view bare = ParserUtil::scopeLeaf( result );
+        if ( bare != result )
         {
             const auto itBare = _mapAliasToCanonical.find( string{ bare } );
             if ( itBare != _mapAliasToCanonical.end() )
-                return itBare->second;
+                result = itBare->second;
         }
 
-        return t;
+        return result;
     }
 
     string normalizeTypeName( const string& clangSpelling )

@@ -114,15 +114,15 @@ namespace sw
                     return {};
 
                 CodeEmitBuffer buf;
-                CodeEmit       e( buf );
-                e.push( 3 );
-                const utf8* fn = bEnum ? "registry.registerEnumAlias" : "registry.registerTypeAlias";
+                CodeEmit       emit( buf );
+                emit.push( 3 );
+                const utf8* pRegisterFunc = bEnum ? "registry.registerEnumAlias" : "registry.registerTypeAlias";
                 for ( const string& alias : aliases )
                 {
                     if ( alias.empty() || alias == canonical )
                         continue;
-                    e.linef( "%#( \"%#\", \"%#\" );", fn, CodeEmit::escapeCppString( alias ),
-                             CodeEmit::escapeCppString( canonical ) );
+                    emit.linef( "%#( \"%#\", \"%#\" );", pRegisterFunc, CodeEmit::escapeCppString( alias ),
+                                CodeEmit::escapeCppString( canonical ) );
                 }
                 return string( buf.view() );
             }
@@ -301,56 +301,56 @@ namespace sw
      *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
      */
     template <typename TParsed>
-    static void emitCommonEditorMeta( CodeEmit& e, const TParsed& parsed, const string& prefix )
+    static void emitCommonEditorMeta( CodeEmit& emit, const TParsed& parsed, const string& prefix )
     {
-        e.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
-        e.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
-        e.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
+        emit.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
+        emit.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
+        emit.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
     }
 
     /**
      * @brief 커스텀 메타 페어 맵을 출력합니다. 세 scope 가 동일한 형태를 씁니다.
      */
     template <typename TParsed>
-    static void emitCustomMetaMap( CodeEmit& e, const TParsed& parsed, const string& prefix )
+    static void emitCustomMetaMap( CodeEmit& emit, const TParsed& parsed, const string& prefix )
     {
         if ( parsed._listCustomMeta.empty() )
             return;
-        e.linef( "%#_mapCustomMeta = {", prefix );
-        e.push();
+        emit.linef( "%#_mapCustomMeta = {", prefix );
+        emit.push();
         for ( const auto& [key, val] : parsed._listCustomMeta )
-            e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-        e.pop();
-        e.line( "};" );
+            emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+        emit.pop();
+        emit.line( "};" );
     }
 
-    void CodeGenerator::emitPropertyMetadata( CodeEmit& e, const ParsedPropertyInfo& prop ) const
+    void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const
     {
-        e.line( "#if !defined( SW_SHIPPING )" );
-        emitCommonEditorMeta( e, prop, "p._metadata." );
-        e.flagIf( prop._bHideInInspector != 0, "p._metadata._bHideInInspector", "SW_TRUE" );
-        emitCustomMetaMap( e, prop, "p._metadata." );
-        e.line( "#endif" );
+        emit.line( "#if !defined( SW_SHIPPING )" );
+        emitCommonEditorMeta( emit, prop, "p._metadata." );
+        emit.flagIf( prop._bHideInInspector != 0, "p._metadata._bHideInInspector", "SW_TRUE" );
+        emitCustomMetaMap( emit, prop, "p._metadata." );
+        emit.line( "#endif" );
 
-        e.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
-        e.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
-        e.flagIf( prop._bReadOnly != 0, "p._metadata._bReadOnly", "SW_TRUE" );
-        e.flagIf( prop._bXmlAttribute != 0, "p._metadata._bXmlAttribute", "SW_TRUE" );
-        e.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
-        e.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
-        e.flagIf( prop._bTransient != 0, "p._metadata._bTransient", "SW_TRUE" );
-        e.flagIf( prop._bSkipIfEmpty != 0, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
+        emit.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
+        emit.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
+        emit.flagIf( prop._bReadOnly != 0, "p._metadata._bReadOnly", "SW_TRUE" );
+        emit.flagIf( prop._bXmlAttribute != 0, "p._metadata._bXmlAttribute", "SW_TRUE" );
+        emit.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
+        emit.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
+        emit.flagIf( prop._bTransient != 0, "p._metadata._bTransient", "SW_TRUE" );
+        emit.flagIf( prop._bSkipIfEmpty != 0, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
         if ( prop._bHasRange != 0 )
         {
             // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가
             // **생성된 파일마다** 난다. 여기서 한 번 고치면 전부 사라진다.
-            e.linef( "p._metadata._minRange     = %#ff;", prop._minRange );
-            e.linef( "p._metadata._maxRange     = %#ff;", prop._maxRange );
-            e.assign( "p._metadata._bHasRange", "SW_TRUE" );
+            emit.linef( "p._metadata._minRange     = %#ff;", prop._minRange );
+            emit.linef( "p._metadata._maxRange     = %#ff;", prop._maxRange );
+            emit.assign( "p._metadata._bHasRange", "SW_TRUE" );
         }
     }
 
-    void CodeGenerator::emitNestedContainerTree( CodeEmit& e, const ParsedTypeInfo& typeInfo,
+    void CodeGenerator::emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
                                                  const ParsedPropertyInfo& prop ) const
     {
         if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
@@ -359,14 +359,14 @@ namespace sw
         const utf8*  outerKind    = containerKindExpr( prop._containerKind );
         const string outerWrapper = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
-        e.line( "{" );
-        e.push();
-        e.line( "auto nested0 = sw::make_shared<sw::NestedContainerInfo>();" );
-        e.assign( "nested0->_kind", outerKind );
-        e.linef( "nested0->_typeName = %#;", CodeEmit::hs( prop._containerTree->_typeName ) );
-        e.linef( "nested0->_elementTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
-        e.linef( "nested0->_keyTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
-        e.linef( "nested0->_wrapper = sw::make_shared<%#>();", outerWrapper );
+        emit.line( "{" );
+        emit.push();
+        emit.line( "auto nested0 = sw::make_shared<sw::NestedContainerInfo>();" );
+        emit.assign( "nested0->_kind", outerKind );
+        emit.linef( "nested0->_typeName = %#;", CodeEmit::hs( prop._containerTree->_typeName ) );
+        emit.linef( "nested0->_elementTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
+        emit.linef( "nested0->_keyTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
+        emit.linef( "nested0->_wrapper = sw::make_shared<%#>();", outerWrapper );
 
         const ParsedContainerNode* node     = prop._containerTree->_elementNested.get();
         ContainerKind              prevKind = prop._containerKind;
@@ -374,26 +374,26 @@ namespace sw
 
         if ( node != nullptr && node->_bIsContainer )
         {
-            e.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
+            emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
             while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
             {
                 const utf8* kind = containerKindExpr( node->_containerKind );
                 const utf8* peel = peelMember( prevKind );
-                e.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
+                emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
 
                 const string wrapperType = CodeGeneratorInternal::makeNestedWrapperType( node->_containerType, depth );
-                e.line( "{" );
-                e.push();
-                e.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
-                e.linef( "nested%#->_kind = %#;", depth, kind );
-                e.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
-                e.linef( "nested%#->_elementTypeName = %#;", depth,
-                         CodeEmit::hs( normalizeTypeName( node->_elementTypeName ) ) );
-                e.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( node->_keyTypeName ) );
-                e.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapperType );
-                e.linef( "nested%#->_elementNested = nested%#;", depth - 1, depth );
-                e.pop();
-                e.line( "}" );
+                emit.line( "{" );
+                emit.push();
+                emit.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
+                emit.linef( "nested%#->_kind = %#;", depth, kind );
+                emit.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
+                emit.linef( "nested%#->_elementTypeName = %#;", depth,
+                            CodeEmit::hs( normalizeTypeName( node->_elementTypeName ) ) );
+                emit.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( node->_keyTypeName ) );
+                emit.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapperType );
+                emit.linef( "nested%#->_elementNested = nested%#;", depth - 1, depth );
+                emit.pop();
+                emit.line( "}" );
 
                 prevKind = node->_containerKind;
                 node     = ( node->_elementNested != nullptr ) ? node->_elementNested.get() : nullptr;
@@ -401,19 +401,19 @@ namespace sw
             }
         }
 
-        e.assign( "p._nestedContainer", "nested0" );
-        e.pop();
-        e.line( "}" );
+        emit.assign( "p._nestedContainer", "nested0" );
+        emit.pop();
+        emit.line( "}" );
     }
 
-    void CodeGenerator::emitPropertyInfoEntry( CodeEmit& e, const ParsedTypeInfo& typeInfo,
+    void CodeGenerator::emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
                                                const ParsedPropertyInfo& prop ) const
     {
-        e.line( "[]() {" );
-        e.push();
+        emit.line( "[]() {" );
+        emit.push();
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입을 컴파일 타임에 막는다.
         // 목록은 parser_config 의 emit.value_forbidden_base_types 에서 온다(비면 생략).
-        e.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
+        emit.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
         const ParserClangConfig& cfg = ParserContext::getSharedConfig();
         if ( cfg._listValueForbiddenBaseType.empty() == false )
         {
@@ -426,21 +426,21 @@ namespace sw
                 condition += baseType;
                 condition += ", std::remove_cv_t<std::remove_reference_t<PropDecl>>>";
             }
-            e.linef( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (%#);",
-                     condition );
-            e.linef( "static_assert(!kIsInvalidValue, \"%#\");", cfg._valueForbiddenMessage );
+            emit.linef( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (%#);",
+                        condition );
+            emit.linef( "static_assert(!kIsInvalidValue, \"%#\");", cfg._valueForbiddenMessage );
         }
-        e.line( "sw::PropertyInfo p(" );
-        e.push();
-        e.linef( "%#,", CodeEmit::hs( prop._name ) );
-        e.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
+        emit.line( "sw::PropertyInfo p(" );
+        emit.push();
+        emit.linef( "%#,", CodeEmit::hs( prop._name ) );
+        emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
         if ( prop._bIsBitField == SW_TRUE )
         {
-            e.linef( "%#u,", prop._byteOffset );
+            emit.linef( "%#u,", prop._byteOffset );
         }
         else
         {
-            e.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
+            emit.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
         }
 
         if ( prop._bIsContainer )
@@ -448,90 +448,90 @@ namespace sw
             const utf8*  kindStr     = containerKindExpr( prop._containerKind );
             const string wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
-            e.line( "true," );
-            e.linef( "%#,", kindStr );
-            e.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
-            e.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
-            e.linef( "sw::make_shared<%#>() );", wrapperType );
+            emit.line( "true," );
+            emit.linef( "%#,", kindStr );
+            emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
+            emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
+            emit.linef( "sw::make_shared<%#>() );", wrapperType );
 
-            emitNestedContainerTree( e, typeInfo, prop );
+            emitNestedContainerTree( emit, typeInfo, prop );
         }
         else
         {
-            e.line( "false, sw::ContainerKind::None," );
-            e.line( "::sw::hashed_string(), ::sw::hashed_string(), nullptr );" );
+            emit.line( "false, sw::ContainerKind::None," );
+            emit.line( "::sw::hashed_string(), ::sw::hashed_string(), nullptr );" );
         }
 
-        e.pop(); // 생성자 인자 들여쓰기
+        emit.pop(); // 생성자 인자 들여쓰기
         if ( prop._bIsBitField == SW_TRUE )
         {
-            e.line( "p._bIsBitField = SW_TRUE;" );
-            e.linef( "p._bitOffset = %#;", prop._bitOffset );
-            e.linef( "p._bitMask = %#;", prop._bitMask );
+            emit.line( "p._bIsBitField = SW_TRUE;" );
+            emit.linef( "p._bitOffset = %#;", prop._bitOffset );
+            emit.linef( "p._bitMask = %#;", prop._bitMask );
         }
         if ( prop._listAlias.empty() == false )
         {
-            e.line( "p._listAlias = {" );
-            e.push();
+            emit.line( "p._listAlias = {" );
+            emit.push();
             for ( const string& alias : prop._listAlias )
-                e.linef( "%#,", CodeEmit::hs( alias ) );
-            e.pop();
-            e.line( "};" );
+                emit.linef( "%#,", CodeEmit::hs( alias ) );
+            emit.pop();
+            emit.line( "};" );
         }
-        emitPropertyMetadata( e, prop );
-        e.line( "return p;" );
-        e.pop();
-        e.line( "}()," );
+        emitPropertyMetadata( emit, prop );
+        emit.line( "return p;" );
+        emit.pop();
+        emit.line( "}()," );
     }
 
-    void CodeGenerator::emitMethodInvoker( CodeEmit& e, const ParsedTypeInfo& typeInfo,
+    void CodeGenerator::emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo,
                                            const ParsedFunctionInfo& method, const string& retType,
                                            const string& callArgs ) const
     {
-        e.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
-        e.line( "{" );
-        e.push();
+        emit.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
+        emit.line( "{" );
+        emit.push();
         if ( method._listParameterTypeName.empty() )
-            e.line( "(void)args;" );
+            emit.line( "(void)args;" );
 
         if ( method._bStatic != 0 && method._bConstructor == SW_FALSE )
         {
-            e.line( "(void)objPtr;" );
+            emit.line( "(void)objPtr;" );
             if ( retType == annotationConstants::kVoidTypeName )
             {
-                e.linef( "%#::%#(%#);", typeInfo._fullyQualifiedName, method._name, callArgs );
-                e.line( "return ::sw::TaskValue{};" );
+                emit.linef( "%#::%#(%#);", typeInfo._fullyQualifiedName, method._name, callArgs );
+                emit.line( "return ::sw::TaskValue{};" );
             }
             else
             {
-                e.linef( "return ::sw::TaskValue{ %#::%#(%#) };", typeInfo._fullyQualifiedName, method._name, callArgs );
+                emit.linef( "return ::sw::TaskValue{ %#::%#(%#) };", typeInfo._fullyQualifiedName, method._name, callArgs );
             }
         }
         else
         {
-            e.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
+            emit.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
             if ( method._bConstructor != 0 )
             {
-                e.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
-                e.line( "return ::sw::TaskValue{};" );
+                emit.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
+                emit.line( "return ::sw::TaskValue{};" );
             }
             else if ( retType == annotationConstants::kVoidTypeName )
             {
-                e.linef( "self->%#(%#);", method._name, callArgs );
-                e.line( "return ::sw::TaskValue{};" );
+                emit.linef( "self->%#(%#);", method._name, callArgs );
+                emit.line( "return ::sw::TaskValue{};" );
             }
             else
             {
-                e.linef( "return ::sw::TaskValue{ self->%#(%#) };", method._name, callArgs );
+                emit.linef( "return ::sw::TaskValue{ self->%#(%#) };", method._name, callArgs );
             }
         }
-        e.pop();
-        e.line( "};" );
-        e.line( "funcInfo._invoker = SW_DELEGATE_LAMBDA( ::sw::Delegate<::sw::TaskValue( void*, const ::sw::TaskArgs& )>, invokerCb );" );
-        e.line( "info._listMethod.push_back( funcInfo );" );
+        emit.pop();
+        emit.line( "};" );
+        emit.line( "funcInfo._invoker = SW_DELEGATE_LAMBDA( ::sw::Delegate<::sw::TaskValue( void*, const ::sw::TaskArgs& )>, invokerCb );" );
+        emit.line( "info._listMethod.push_back( funcInfo );" );
     }
 
-    void CodeGenerator::emitMethodList( CodeEmit& e, const ParsedTypeInfo& typeInfo ) const
+    void CodeGenerator::emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
         for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
         {
@@ -539,34 +539,34 @@ namespace sw
 
             const string lookupName = ( method._bConstructor != 0 ) ? CodeGeneratorInternal::makeCtorLookupName( method ) : method._name;
 
-            e.line( "{" );
-            e.push();
-            e.line( "::sw::FunctionInfo funcInfo;" );
-            e.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
-            e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
-            e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-            e.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName ) );
+            emit.line( "{" );
+            emit.push();
+            emit.line( "::sw::FunctionInfo funcInfo;" );
+            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
+            emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
+            emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
+            emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName ) );
 
-            e.line( "#if !defined( SW_SHIPPING )" );
-            emitCommonEditorMeta( e, method, "funcInfo._metadata." );
-            e.flagIf( method._bCallInEditor != 0, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
-            emitCustomMetaMap( e, method, "funcInfo._metadata." );
-            e.line( "#endif" );
+            emit.line( "#if !defined( SW_SHIPPING )" );
+            emitCommonEditorMeta( emit, method, "funcInfo._metadata." );
+            emit.flagIf( method._bCallInEditor != 0, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
+            emitCustomMetaMap( emit, method, "funcInfo._metadata." );
+            emit.line( "#endif" );
 
             if ( method._netRole != FunctionNetRole::Local )
-                e.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
+                emit.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
 
-            e.flagIf( method._bReliable != 0, "funcInfo._metadata._bReliable", "SW_TRUE" );
-            e.flagIf( method._bValidate != 0, "funcInfo._metadata._bValidate", "SW_TRUE" );
-            e.flagIf( method._bConstructor != 0, "funcInfo._metadata._bConstructor", "SW_TRUE" );
-            e.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
-            e.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
+            emit.flagIf( method._bReliable != 0, "funcInfo._metadata._bReliable", "SW_TRUE" );
+            emit.flagIf( method._bValidate != 0, "funcInfo._metadata._bValidate", "SW_TRUE" );
+            emit.flagIf( method._bConstructor != 0, "funcInfo._metadata._bConstructor", "SW_TRUE" );
+            emit.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
+            emit.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
 
             const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName );
 
-            emitMethodInvoker( e, typeInfo, method, retType, callArgs );
-            e.pop();
-            e.line( "}" );
+            emitMethodInvoker( emit, typeInfo, method, retType, callArgs );
+            emit.pop();
+            emit.line( "}" );
         }
     }
 
@@ -594,7 +594,7 @@ namespace sw
 
     void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
     {
-        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        const string registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
 
         CodeEmitBuffer flagsBuf;
         {
@@ -605,7 +605,7 @@ namespace sw
         }
 
         appendTemplate( out, tplConstants::kTypeRegistrarBegin, {
-                                                                    {        templateKeyConstants::kId,                           id},
+                                                                    {        templateKeyConstants::kId,                registrarName},
                                                                     {       templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
                                                                     {      templateKeyConstants::kName,               typeInfo._name},
                                                                     { templateKeyConstants::kParentFqn,          typeInfo._parentFQN},
@@ -613,32 +613,33 @@ namespace sw
                                                                     {     templateKeyConstants::kFlags,    string( flagsBuf.view() )},
         } );
 
-        CodeEmit e( out );
-        e.push( 3 );
+        CodeEmit emit( out );
+        emit.push( 3 );
 
-        e.line( "#if !defined( SW_SHIPPING )" );
-        emitCommonEditorMeta( e, typeInfo, "info._metadata." );
-        e.flagIf( typeInfo._bHideInMenu != 0, "info._metadata._bHideInMenu", "SW_TRUE" );
-        emitCustomMetaMap( e, typeInfo, "info._metadata." );
-        e.line( "#endif" );
+        emit.line( "#if !defined( SW_SHIPPING )" );
+        emitCommonEditorMeta( emit, typeInfo, "info._metadata." );
+        emit.flagIf( typeInfo._bHideInMenu != 0, "info._metadata._bHideInMenu", "SW_TRUE" );
+        emitCustomMetaMap( emit, typeInfo, "info._metadata." );
+        emit.line( "#endif" );
 
         if ( typeInfo._listProperty.empty() == false )
         {
-            e.line( "info._listProperty =" );
-            e.line( "{" );
-            e.push();
+            emit.line( "info._listProperty =" );
+            emit.line( "{" );
+            emit.push();
             for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
-                emitPropertyInfoEntry( e, typeInfo, prop );
-            e.pop();
-            e.line( "};" );
+                emitPropertyInfoEntry( emit, typeInfo, prop );
+            emit.pop();
+            emit.line( "};" );
         }
 
         if ( typeInfo._listMethod.empty() == false )
-            emitMethodList( e, typeInfo );
+            emitMethodList( emit, typeInfo );
 
         appendTemplate( out, tplConstants::kTypeRegistrarEnd,
                         {
-                            { templateKeyConstants::kId, id },
+                            { templateKeyConstants::kId, registrarName },
+                            { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName },
                             { templateKeyConstants::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
         } );
@@ -646,13 +647,13 @@ namespace sw
 
     void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const
     {
-        const string id = sanitizeIdentifier( enumInfo._fullyQualifiedName );
+        const string registrarName = sanitizeIdentifier( enumInfo._fullyQualifiedName );
 
         const ParsedEnumeratorInfo* invalidEn = findEnumerator( enumInfo, enumInfo._invalidEnumerator );
         const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
         appendTemplate( out, tplConstants::kEnumRegistrarBegin, {
-                                                                    {          templateKeyConstants::kId,                                                                    id},
+                                                                    {          templateKeyConstants::kId,                                                         registrarName},
                                                                     {         templateKeyConstants::kFqn,                                          enumInfo._fullyQualifiedName},
                                                                     {        templateKeyConstants::kName,                                                        enumInfo._name},
                                                                     {  templateKeyConstants::kModuleName,                                                       getModuleName()},
@@ -663,56 +664,57 @@ namespace sw
                                                                     {  templateKeyConstants::kCountValue,     countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
         } );
 
-        CodeEmit e( out );
-        e.push( 3 );
+        CodeEmit emit( out );
+        emit.push( 3 );
 
         if ( enumInfo._listCustomMeta.empty() == false )
         {
-            e.line( "#if !defined( SW_SHIPPING )" );
-            e.line( "info._mapCustomMeta = {" );
-            e.push();
+            emit.line( "#if !defined( SW_SHIPPING )" );
+            emit.line( "info._mapCustomMeta = {" );
+            emit.push();
             for ( const auto& [key, val] : enumInfo._listCustomMeta )
-                e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-            e.pop();
-            e.line( "};" );
-            e.line( "#endif" );
+                emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+            emit.pop();
+            emit.line( "};" );
+            emit.line( "#endif" );
         }
 
         if ( enumInfo._listEnumerator.empty() == false )
         {
-            e.line( "info._mapNameToValue =" );
-            e.line( "{" );
-            e.push();
+            emit.line( "info._mapNameToValue =" );
+            emit.line( "{" );
+            emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-                e.linef( "{ %#, %# },", CodeEmit::hs( en._name ), en._value );
-            e.pop();
-            e.line( "};" );
+                emit.linef( "{ %#, %# },", CodeEmit::hs( en._name ), en._value );
+            emit.pop();
+            emit.line( "};" );
 
-            e.line( "info._mapValueToName =" );
-            e.line( "{" );
-            e.push();
+            emit.line( "info._mapValueToName =" );
+            emit.line( "{" );
+            emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-                e.linef( "{ %#, %# },", en._value, CodeEmit::hs( en._name ) );
-            e.pop();
-            e.line( "};" );
+                emit.linef( "{ %#, %# },", en._value, CodeEmit::hs( en._name ) );
+            emit.pop();
+            emit.line( "};" );
         }
 
         for ( const auto& [alias, canonical] : enumInfo._listValueAlias )
         {
-            e.line( "{" );
-            e.push();
-            e.linef( "const auto it = info._mapNameToValue.find( %# );", CodeEmit::hs( canonical ) );
-            e.line( "if ( it != info._mapNameToValue.end() )" );
-            e.push();
-            e.linef( "info._mapNameToValue.insert_or_assign( %#, it->second );", CodeEmit::hs( alias ) );
-            e.pop();
-            e.pop();
-            e.line( "}" );
+            emit.line( "{" );
+            emit.push();
+            emit.linef( "const auto it = info._mapNameToValue.find( %# );", CodeEmit::hs( canonical ) );
+            emit.line( "if ( it != info._mapNameToValue.end() )" );
+            emit.push();
+            emit.linef( "info._mapNameToValue.insert_or_assign( %#, it->second );", CodeEmit::hs( alias ) );
+            emit.pop();
+            emit.pop();
+            emit.line( "}" );
         }
 
         appendTemplate( out, tplConstants::kEnumRegistrarEnd,
                         {
-                            { templateKeyConstants::kId, id },
+                            { templateKeyConstants::kId, registrarName },
+                            { templateKeyConstants::kFqn, enumInfo._fullyQualifiedName },
                             { templateKeyConstants::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
         } );
@@ -734,10 +736,10 @@ namespace sw
     bool CodeGenerator::emitGeneratedHeader() const
     {
         CodeEmitBuffer buffer;
-        CodeEmit       e( buffer );
-        e.line( ParserContext::getSharedConfig()._emitAutoGeneratedBanner );
-        e.line( "#pragma once" );
-        e.blank();
+        CodeEmit       emit( buffer );
+        emit.line( ParserContext::getSharedConfig()._emitAutoGeneratedBanner );
+        emit.line( "#pragma once" );
+        emit.blank();
 
         bool bNeedFlags = false;
         for ( const ParsedEnumInfo& enumInfo : _listEnum )
@@ -758,15 +760,15 @@ namespace sw
             // 코드젠하지 않고 Core/Common/EnumUtil.h의 제네릭 sw::IsBitFlagEnum<E> 트레이트 + 전역
             // 스코프 SFINAE 연산자로 통일합니다 — 로직이 모든 enum에서 동일해 타입별 코드젠이 필요
             // 없습니다. 여기서는 그 트레이트를 opt-in 하는 한 줄짜리 명시적 특수화만 생성합니다.
-            e.line( "#include \"Core/Common/EnumUtil.h\"" );
-            e.blank();
+            emit.line( "#include \"Core/Common/EnumUtil.h\"" );
+            emit.blank();
             for ( const ParsedEnumInfo& enumInfo : _listEnum )
             {
                 if ( enumInfo._bEmitFlagOps == 0 )
                     continue;
-                e.linef( "template <> struct sw::IsBitFlagEnum<%#> : std::true_type {};", enumInfo._fullyQualifiedName );
+                emit.linef( "template <> struct sw::IsBitFlagEnum<%#> : std::true_type {};", enumInfo._fullyQualifiedName );
             }
-            e.blank();
+            emit.blank();
         }
 
         const string newContent( buffer.view() );

@@ -74,8 +74,7 @@ namespace sw::editor
             if ( EditorWidgets::drawToggleButton( b2D ? "2D Mode" : "3D Mode", b2D ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
 
-            if ( ImGui::IsItemHovered() )
-                ImGui::SetTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );
+            EditorWidgets::drawTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );
         }
 
         EditorWidgets::drawToolbarSeparator();
@@ -131,10 +130,14 @@ namespace sw::editor
                         {
                             const CameraBookmark* pBm = ws.getCameraBookmark( slot );
                             if ( pBm != nullptr )
-                                ImGui::SetTooltip( "Pos: (%.1f, %.1f, %.1f)",
-                                                   static_cast<float64>( pBm->_position._x ),
-                                                   static_cast<float64>( pBm->_position._y ),
-                                                   static_cast<float64>( pBm->_position._z ) );
+                            {
+                                fixed_string<constant::kMaxBuffer128> tooltipText;
+                                formatstring( tooltipText.data(), tooltipText.capacity(), "Pos: (%.1f, %.1f, %.1f)",
+                                              static_cast<float64>( pBm->_position._x ),
+                                              static_cast<float64>( pBm->_position._y ),
+                                              static_cast<float64>( pBm->_position._z ) );
+                                EditorWidgets::drawTooltip( tooltipText.c_str() );
+                            }
                         }
                     }
                 }

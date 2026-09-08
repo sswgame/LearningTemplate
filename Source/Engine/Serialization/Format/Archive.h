@@ -83,11 +83,6 @@ namespace sw
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
         bool saveFile( string_view fileName ) const;
 
-        /** @brief 소스 파일의 디렉터리 경로를 반환합니다. */
-        const string& getSourceDirectory() const { return _sourceDirectory; }
-        /** @brief 소스 파일의 이름을 반환합니다. */
-        const string& getSourceFileName() const { return _sourceFileName; }
-
         /** @brief 지정된 크기만큼 바이트를 씁니다. */
         void writeBytes( const void* pBuffer, uint64 byteSize );
         /** @brief 지정된 크기만큼 바이트를 읽어옵니다. */
@@ -393,8 +388,6 @@ namespace sw
     private:
         StringPool             _stringPool;
         vector<uint8>          _listBuffer;
-        string                 _sourceDirectory;
-        string                 _sourceFileName;
         const uint8*           _pData;
         uint64                 _dataSize;
         uint64                 _offset;

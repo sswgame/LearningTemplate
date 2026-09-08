@@ -111,7 +111,6 @@ namespace sw::editor
         , _selectedComponentId{ 0 }
         , _observedSceneGeneration{ 0 }
         , _scrollToComponentId{ 0 }
-        , _scrollToObjectId{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
         , _pendingOpenPanelTitle{}
@@ -130,7 +129,6 @@ namespace sw::editor
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _gizmoOperation{ 0 }
         , _bGizmoLocalSpace{ SW_TRUE }
-        , _bBoneHierarchyPopupOpen{ SW_FALSE }
         , _bSceneDirty{ SW_FALSE }
         , _bPrefabIsolation{ SW_FALSE }
         , _reservedWorkspace{ 0 }
@@ -294,10 +292,7 @@ namespace sw::editor
         if ( pManager == nullptr )
             return;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return;
 
@@ -325,10 +320,7 @@ namespace sw::editor
         else
             _mapGameObjectToPrefab[objectId] = string{ prefabPath };
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return;
         pScene->setEntityPrefabPath( objectId, prefabPath );
@@ -340,10 +332,7 @@ namespace sw::editor
         if ( it != _mapGameObjectToPrefab.end() )
             return it->second;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return _emptyString;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return _emptyString;
         return pScene->getEntityPrefabPath( objectId );
@@ -538,10 +527,7 @@ namespace sw::editor
         if ( objectId == 0 )
             return nullptr;
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return nullptr;
-        Scene* pScene = pSceneManager->getActiveScene();
+        Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return nullptr;
 

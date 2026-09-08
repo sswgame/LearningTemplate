@@ -96,6 +96,40 @@ namespace sw::editor
 
         ImGui::Separator();
 
+        drawNestedPrefabSection();
+
+        drawOverrideTable();
+
+        ImGui::Separator();
+
+        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+        if ( bEditsAllowed == false )
+        {
+            ImGui::TextDisabled( "Scene edits locked until Stop." );
+            ImGui::BeginDisabled();
+        }
+
+        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
+        {
+            EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            scanPrefabOverrides( _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+        }
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
+        {
+            EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            scanPrefabOverrides( _selectedPrefabPath.c_str() );
+            SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
+        }
+
+        if ( bEditsAllowed == false )
+            ImGui::EndDisabled();
+    }
+
+    void PrefabEditorPanel::drawNestedPrefabSection()
+    {
         if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
@@ -115,7 +149,10 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Refresh Overrides" ) )
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
+    }
 
+    void PrefabEditorPanel::drawOverrideTable()
+    {
         if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
             ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f );
@@ -167,32 +204,5 @@ namespace sw::editor
 
             ImGui::EndTable();
         }
-
-        ImGui::Separator();
-
-        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
-        if ( bEditsAllowed == false )
-        {
-            ImGui::TextDisabled( "Scene edits locked until Stop." );
-            ImGui::BeginDisabled();
-        }
-
-        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
-        {
-            EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
-            scanPrefabOverrides( _selectedPrefabPath.c_str() );
-            SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
-        }
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
-        {
-            EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
-            scanPrefabOverrides( _selectedPrefabPath.c_str() );
-            SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
-        }
-
-        if ( bEditsAllowed == false )
-            ImGui::EndDisabled();
     }
 } // namespace sw::editor

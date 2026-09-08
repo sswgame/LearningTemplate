@@ -2,7 +2,6 @@
 
 #include "App/Module/ModuleCompiler.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
@@ -21,6 +20,7 @@ namespace sw
         , _targetName{}
         , _mutex{}
         , _buildState{ BuildState::Idle }
+        , _bBlockedByLoadedBinary{ 0 }
         , _lastExitCode{ 0 }
         , _lastDurationSec{ 0.0f }
         , _bIsCompiling{ false }
@@ -31,11 +31,6 @@ namespace sw
     ModuleCompiler::~ModuleCompiler()
     {
         shutdown();
-    }
-
-    void ModuleCompiler::initialize( LiveReloadManager* pLiveReloadManager )
-    {
-        _pLiveReloadManager = pLiveReloadManager;
     }
 
     void ModuleCompiler::shutdown()
@@ -144,8 +139,8 @@ namespace sw
         options._workingDirectory = buildDir;
         options._bCreateWindow    = false;
 
-        auto pProc = make_unique<Process>();
-        if ( pProc->launch( cmdLine, options ) == false )
+        unique_ptr<Process> pProcess = make_unique<Process>();
+        if ( pProcess->launch( cmdLine, options ) == false )
         {
             SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
@@ -156,27 +151,27 @@ namespace sw
 
         {
             std::lock_guard<mutex> lock( _mutex );
-            _pCurrentProcess = std::move( pProc );
+            _pCurrentProcess = std::move( pProcess );
         }
 
-        string singleLine;
-        while ( _pCurrentProcess != nullptr && _pCurrentProcess->readOutputLine( singleLine ) )
+        string outputLine;
+        while ( _pCurrentProcess != nullptr && _pCurrentProcess->readOutputLine( outputLine ) )
         {
-            if ( singleLine.empty() )
+            if ( outputLine.empty() )
                 continue;
 
             // 이미 로드된 DLL 을 다시 링크하려다 막힌 경우다. 링커 메시지만 보면 원인이 안 보이므로
             // 따로 표시해 두고 아래에서 사람이 읽을 수 있는 설명을 남긴다 — 핫리로드로 고칠 수 없는
             // 상황(엔진 자체가 바뀜)이라 재시작이 필요하다는 것이 요점이다.
-            if ( singleLine.find( "failed to write output" ) != string::npos && singleLine.find( "permission denied" ) != string::npos )
+            if ( outputLine.find( "failed to write output" ) != string::npos && outputLine.find( "permission denied" ) != string::npos )
                 _bBlockedByLoadedBinary.store( 1, std::memory_order_relaxed );
 
-            if ( singleLine.find( "FAILED:" ) != string::npos || singleLine.find( "error:" ) != string::npos || singleLine.find( "Error" ) != string::npos )
-                SW_LOG_ERROR( "%#", singleLine.c_str() );
-            else if ( singleLine.find( "warning:" ) != string::npos || singleLine.find( "Warning" ) != string::npos )
-                SW_LOG_WARNING( "%#", singleLine.c_str() );
+            if ( outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos )
+                SW_LOG_ERROR( "%#", outputLine.c_str() );
+            else if ( outputLine.find( "warning:" ) != string::npos || outputLine.find( "Warning" ) != string::npos )
+                SW_LOG_WARNING( "%#", outputLine.c_str() );
             else
-                SW_LOG_INFO( "%#", singleLine.c_str() );
+                SW_LOG_INFO( "%#", outputLine.c_str() );
         }
 
         int32 exitCode = -1;

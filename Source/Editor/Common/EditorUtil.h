@@ -1,6 +1,6 @@
 /**
  * @file EditorUtil.h
- * @brief EditorModule 유틸 (폰트 경로, 프로젝트 경로, 애셋 판별 등)
+ * @brief EditorModule 유틸 (프로젝트 경로, 애셋 판별, 씬 편집 정책 등 — UI 비의존)
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -15,33 +15,12 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 에디터 폰트·설정 경로 해석 및 공통 유틸리티 */
+    /** @brief 에디터 설정 경로 해석 및 공통 유틸리티. ImGui 에 의존하지 않는다(폰트는 Gui/EditorFontSetup). */
     class EditorUtil
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 폰트 — 시스템 디렉터리 · 후보 파일 탐색
-        //    에디터 리소스 Fonts를 먼저, 없으면 시스템 트리를 재귀 검색
-        // ------------------------------------------------------------------------------
-        /** @brief 플랫폼별 시스템 폰트 디렉터리 목록 (존재하는 경로만). */
-        static vector<string> getSystemFontsDirectories();
-
-        /**
-         * @brief 에디터 리소스 Fonts → 시스템 Fonts 순으로 폰트 파일을 찾습니다.
-         * @return 존재하면 절대 경로, 없으면 빈 문자열
-         */
-        static string resolveFontFile( const utf8* pFileName );
-
-        /**
-         * @brief 여러 파일명 후보를 순서대로 탐색합니다 (시스템 폰트 트리는 재귀 검색).
-         * @return 첫 번째 존재하는 절대 경로, 없으면 빈 문자열
-         */
-        static string resolveFontFile( const vector<string>& listFileName );
-        /** @brief EditorData 후보로 ImGui 본문·한글·아이콘 폰트를 구성합니다. */
-        static void setupFonts();
-
-        // ------------------------------------------------------------------------------
-        // 2) 프로젝트 루트 · Config/Editor
+        // 1) 프로젝트 루트 · Config/Editor
         //    Resource의 부모가 프로젝트 루트. 설정 폴더는 없으면 생성
         // ------------------------------------------------------------------------------
         /**

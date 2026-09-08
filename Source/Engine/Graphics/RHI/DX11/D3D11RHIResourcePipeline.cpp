@@ -35,24 +35,10 @@ namespace sw
 
     RHIPipelineStateHandle D3D11RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
-        auto fillDefines = [&]( ShaderCompileDesc& cd )
+        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
         {
-            for ( const string& def : desc._listShaderDefine )
-            {
-                ShaderMacroDefine m{};
-                const size_t      eq = def.find( '=' );
-                if ( eq == string::npos )
-                {
-                    m._name  = def;
-                    m._value = "1";
-                }
-                else
-                {
-                    m._name  = def.substr( 0, eq );
-                    m._value = def.substr( eq + 1 );
-                }
-                cd._listDefine.push_back( std::move( m ) );
-            }
+            for ( const string& define : desc._listShaderDefine )
+                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
         };
 
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
@@ -100,12 +86,12 @@ namespace sw
                 _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() );
         }
 
-        D3D11_RASTERIZER_DESC rd{};
-        rd.FillMode        = ( desc._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
-        rd.CullMode        = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
-        rd.DepthClipEnable = TRUE;
+        D3D11_RASTERIZER_DESC rasterizerDesc{};
+        rasterizerDesc.FillMode        = ( desc._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
+        rasterizerDesc.CullMode        = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
+        rasterizerDesc.DepthClipEnable = TRUE;
         if ( _pDevice != nullptr )
-            _pDevice->_device->CreateRasterizerState( &rd, pso._rasterizerState.GetAddressOf() );
+            _pDevice->_device->CreateRasterizerState( &rasterizerDesc, pso._rasterizerState.GetAddressOf() );
 
         if ( _pDevice != nullptr )
         {

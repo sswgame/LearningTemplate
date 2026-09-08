@@ -8,11 +8,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_CameraComponent_Registrar;
-    } // namespace generated
-
     /// @brief 카메라 Role 종류를 정의하는 열거형입니다.
     ENUM()
     enum class CameraRole : uint8
@@ -29,8 +24,6 @@ namespace sw
     REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera" )
     class SW_API CameraComponent : public SceneComponent
     {
-        friend struct ::sw::generated::sw_CameraComponent_Registrar;
-
     public:
         REFLECT_BODY();
 

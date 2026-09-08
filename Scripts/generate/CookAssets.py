@@ -321,6 +321,9 @@ def bakeShadersInternal(projectRoot: Path) -> bool:
     candidates = [
         projectRoot / "build/Ninja-Debug/Bin/App.exe",
         projectRoot / "build/Ninja-Release/Bin/App.exe",
+        # Shipping App 도 베이커를 링크한다(로그만 안 남는다). 두 번째 Shipping 빌드부터는
+        # 이 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시 굽는다.
+        projectRoot / "build/Ninja-Shipping/Bin/App.exe",
         projectRoot / "Bin/App.exe",
     ]
     appExe = None
@@ -334,6 +337,105 @@ def bakeShadersInternal(projectRoot: Path) -> bool:
     print(f"[CookAssets] Running headless shader bake: {appExe} --bake-shaders")
     res = subprocess.run([str(appExe), "--bake-shaders"])
     return res.returncode == 0
+
+
+_kBakeStampFileName = "bake.stamp"
+_kBakeStampHeader = "SWBAKE 1"
+_kFnv1a64Offset = 14695981039346656037
+_kFnv1a64Prime = 1099511628211
+
+
+def computeFnv1a64Internal(data: bytes) -> int:
+    """StringUtil::computeHash64(bIgnoreCase=false) 와 같은 FNV-1a 64비트 해시입니다."""
+    h = _kFnv1a64Offset
+    for b in data:
+        h = ((h ^ b) * _kFnv1a64Prime) & 0xFFFFFFFFFFFFFFFF
+    return h
+
+
+def collectShaderSourceHashesInternal(shadersDir: Path) -> dict[str, str]:
+    """shaders/ 아래 .hlsl/.hlsli 의 내용 해시를 { 상대경로: hex } 로 모읍니다 (bin/ 제외)."""
+    result: dict[str, str] = {}
+    for path in sorted(shadersDir.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in (".hlsl", ".hlsli"):
+            continue
+        rel = normalizePath(str(path.relative_to(shadersDir))).lower()
+        if rel.startswith("bin/") or "/bin/" in rel:
+            continue
+        result[rel] = "%016x" % computeFnv1a64Internal(path.read_bytes())
+    return result
+
+
+def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
+    """구워둔 셰이더가 **지금 소스에서 나온 것인지** 확인하고 문제 목록을 돌려줍니다.
+
+    파일 시간이 아니라 bake.stamp 의 내용 해시로 본다 — git clone 은 모든 파일의 mtime 을
+    체크아웃 시각으로 덮어써서 시간 비교가 무의미하다. Shipping 은 런타임 컴파일이 없어
+    구운 것이 낡으면 화면이 통째로 비므로, 여기서 막지 못하면 그대로 배포된다.
+    """
+    problems: list[str] = []
+    resourceDir = projectRoot / "Resource"
+
+    domains: list[Path] = []
+    for name in ("engine", "common"):
+        d = resourceDir / name
+        if d.is_dir():
+            domains.append(d)
+    gameDir = resourceDir / "game"
+    if gameDir.is_dir():
+        domains.extend(sorted(sub for sub in gameDir.iterdir() if sub.is_dir()))
+
+    for domainDir in domains:
+        shadersDir = domainDir / "shaders"
+        if not shadersDir.is_dir():
+            continue
+
+        expected = collectShaderSourceHashesInternal(shadersDir)
+        if not expected:
+            continue
+
+        label = f"{domainDir.name}/shaders"
+        binDir = shadersDir / "bin" / targetRhi
+        if not binDir.is_dir():
+            problems.append(f"{label}: '{targetRhi}' 바이너리 폴더가 없습니다 (한 번도 베이킹하지 않았습니다)")
+            continue
+
+        stampPath = binDir / _kBakeStampFileName
+        if not stampPath.is_file():
+            problems.append(f"{label}: {_kBakeStampFileName} 이 없습니다 (베이커가 남기는 파일입니다)")
+            continue
+
+        lines = stampPath.read_text(encoding="utf-8").splitlines()
+        if not lines or lines[0].strip() != _kBakeStampHeader:
+            problems.append(f"{label}: {_kBakeStampFileName} 형식을 알 수 없습니다")
+            continue
+
+        stamped: dict[str, str] = {}
+        for line in lines[1:]:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(" ", 1)
+            if len(parts) != 2:
+                continue
+            stamped[parts[1].strip()] = parts[0].strip()
+
+        for rel, digest in sorted(expected.items()):
+            if rel not in stamped:
+                problems.append(f"{label}/{rel}: 베이킹한 적 없는 셰이더입니다")
+            elif stamped[rel] != digest:
+                problems.append(f"{label}/{rel}: 소스가 바뀌었는데 다시 굽지 않았습니다")
+        for rel in sorted(set(stamped) - set(expected)):
+            problems.append(f"{label}/{rel}: 사라진 셰이더가 스탬프에 남아 있습니다")
+
+        if not any(child.suffix.lower() in (".dxil", ".dxbc", ".spv") for child in binDir.iterdir()):
+            problems.append(f"{label}: '{targetRhi}' 바이너리가 하나도 없습니다")
+        if not (binDir / "reflection.manifest").is_file():
+            problems.append(f"{label}: '{targetRhi}' 리플렉션 매니페스트가 없습니다")
+
+    return problems
 
 
 def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
@@ -565,6 +667,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
     parser.add_argument("--target-rhi", type=str, default="", help="타깃 RHI 백엔드 (DirectX12, Vulkan, DirectX11)")
     parser.add_argument("--bake-shaders", action="store_true", help="패킹 전 App.exe --bake-shaders 를 실행하여 셰이더 일괄 사전 빌드")
+    parser.add_argument("--verify-shaders", action="store_true", help="구운 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
 
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
@@ -590,6 +693,22 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         targetRhi = resolveTargetRhiInternal(packConfig, cliRhi=args.target_rhi, projectRoot=projectRoot)
         print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")
+
+        if args.verify_shaders:
+            problems = verifyShaderBakeInternal(projectRoot, targetRhi)
+            # 낡았을 뿐이라면 베이커가 있는 자리에서는 스스로 고친다 — 로컬 Shipping 빌드가
+            # 셰이더 한 줄 고칠 때마다 손으로 --bake-shaders 를 부르라고 요구할 이유는 없다.
+            if problems and not args.bake_shaders and bakeShadersInternal(projectRoot):
+                problems = verifyShaderBakeInternal(projectRoot, targetRhi)
+            if problems:
+                print("[CookAssets Error] 구워둔 셰이더가 현재 소스와 맞지 않습니다.", file=sys.stderr)
+                print("                   배포 빌드는 런타임 컴파일이 없어 이대로 패킹하면 화면이 비게 됩니다.", file=sys.stderr)
+                for problem in problems[:20]:
+                    print(f"                   - {problem}", file=sys.stderr)
+                if len(problems) > 20:
+                    print(f"                   ... 외 {len(problems) - 20}건", file=sys.stderr)
+                print("                   해결: build/Ninja-Debug/Bin/App.exe --bake-shaders", file=sys.stderr)
+                return 1
         outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
         success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi)
         if not success:
