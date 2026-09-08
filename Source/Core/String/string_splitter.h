@@ -232,15 +232,15 @@ namespace sw
         }
         else if ( listDelim.size() == 1 )
         {
-            const auto& d = *listDelim.begin();
-            if ( d.length() == 1 )
+            const auto& delimiter = *listDelim.begin();
+            if ( delimiter.length() == 1 )
             {
-                _charDelim = d[0];
+                _charDelim = delimiter[0];
                 _mode      = Mode::Char;
             }
             else
             {
-                _strDelim = d;
+                _strDelim = delimiter;
                 _mode     = Mode::String;
             }
             advance();
