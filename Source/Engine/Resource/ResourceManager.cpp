@@ -87,13 +87,13 @@ namespace sw
         _pReloadFileManager = nullptr;
     }
 
-    void ResourceManager::onResourceFileChanged( const FileChangeEvent& ev )
+    void ResourceManager::onResourceFileChanged( const FileChangeEvent& changeEvent )
     {
-        if ( ev._action != FileWatcherAction::Modified )
+        if ( changeEvent._action != FileWatcherAction::Modified )
             return;
 
         string relPath{};
-        if ( FileUtil::makePathRelative( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( ev._directory, ev._filename ), relPath ) == false )
+        if ( FileUtil::makePathRelative( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
             return;
 
         if ( relPath.empty() )
@@ -101,7 +101,7 @@ namespace sw
 
         SW_LOG_INFO( "Hot-Reloading asset: %#", relPath.c_str() );
 
-        const string extension{ FileUtil::getExtension( ev._filename ) };
+        const string extension{ FileUtil::getExtension( changeEvent._filename ) };
         if ( extension == ".mat" )
         {
             // Try to reload from cache

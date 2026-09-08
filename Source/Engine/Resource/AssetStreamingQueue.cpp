@@ -13,7 +13,6 @@ namespace sw
 {
     AssetStreamingQueue::AssetStreamingQueue()
         : _mutex{}
-        , _listPendingRequest{}
         , _mapLoadedAsset{}
         , _uniqueActiveRequest{}
         , _mapInFlightCallback{}
@@ -42,7 +41,6 @@ namespace sw
         }
 
         std::scoped_lock<mutex> lock{ _mutex };
-        _listPendingRequest.clear();
         _uniqueActiveRequest.clear();
         _mapInFlightCallback.clear();
         _mapInFlightDataCallback.clear();
@@ -58,6 +56,8 @@ namespace sw
 
     bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, OnStreamingCompleteDelegate onComplete )
     {
+        // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
+        (void)priority;
         if ( assetPath.empty() )
             return false;
 
@@ -83,12 +83,6 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightCallback[pathStr].push_back( onComplete );
 
-        StreamingRequest req{};
-        req._assetPath  = pathStr;
-        req._priority   = priority;
-        req._onComplete = onComplete;
-        _listPendingRequest.push_back( req );
-
         if ( engine::areEngineServicesBound() )
         {
             TaskManager& taskManager = engine::getTaskManager();
@@ -104,15 +98,6 @@ namespace sw
             const bool bExists       = ResourceUtil::hasResource( pathStr );
             _mapLoadedAsset[pathStr] = bExists;
             _uniqueActiveRequest.erase( pathStr );
-
-            for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
-            {
-                if ( it->_assetPath == pathStr )
-                {
-                    _listPendingRequest.erase( it );
-                    break;
-                }
-            }
 
             auto itCallbacks = _mapInFlightCallback.find( pathStr );
             if ( itCallbacks != _mapInFlightCallback.end() )
@@ -134,6 +119,8 @@ namespace sw
 
     bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, OnStreamingDataCompleteDelegate onComplete )
     {
+        // StreamingPriority 는 아직 순서에 반영되지 않는다 (헤더의 enum 주석 참고).
+        (void)priority;
         if ( assetPath.empty() )
             return false;
 
@@ -152,11 +139,6 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightDataCallback[pathStr].push_back( onComplete );
 
-        StreamingRequest req{};
-        req._assetPath = pathStr;
-        req._priority  = priority;
-        _listPendingRequest.push_back( req );
-
         if ( engine::areEngineServicesBound() )
         {
             TaskManager& taskManager = engine::getTaskManager();
@@ -173,15 +155,6 @@ namespace sw
             const bool    bSuccess   = ResourceUtil::readBinaryResource( pathStr, bytes );
             _mapLoadedAsset[pathStr] = bSuccess;
             _uniqueActiveRequest.erase( pathStr );
-
-            for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
-            {
-                if ( it->_assetPath == pathStr )
-                {
-                    _listPendingRequest.erase( it );
-                    break;
-                }
-            }
 
             auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
             if ( itDataCallbacks != _mapInFlightDataCallback.end() )
@@ -248,15 +221,6 @@ namespace sw
         _mapLoadedAsset[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
 
-        for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
-        {
-            if ( it->_assetPath == pathStr )
-            {
-                _listPendingRequest.erase( it );
-                break;
-            }
-        }
-
         auto itCallbacks = _mapInFlightCallback.find( pathStr );
         if ( itCallbacks != _mapInFlightCallback.end() )
         {
@@ -322,15 +286,6 @@ namespace sw
         }
 
         ++_mapRequestGeneration[pathStr];
-
-        for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
-        {
-            if ( it->_assetPath == pathStr )
-            {
-                _listPendingRequest.erase( it );
-                break;
-            }
-        }
     }
 
     void AssetStreamingQueue::sweepUnusedCache()
@@ -356,7 +311,7 @@ namespace sw
     size_t AssetStreamingQueue::getPendingCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _listPendingRequest.size();
+        return _uniqueActiveRequest.size();
     }
 
     size_t AssetStreamingQueue::getCompletedCount() const

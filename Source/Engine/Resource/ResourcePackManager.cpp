@@ -236,9 +236,9 @@ namespace sw
             _listMountedPack.push_back( std::move( mounted ) );
 
             // 우선순위 내림차순 정렬 (높은 priority가 앞쪽)
-            std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), []( const MountedPack& a, const MountedPack& b )
+            std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), []( const MountedPack& left, const MountedPack& right )
             {
-                return a._priority > b._priority;
+                return left._priority > right._priority;
             } );
         }
 

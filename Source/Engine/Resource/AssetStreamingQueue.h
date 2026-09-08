@@ -11,6 +11,10 @@ namespace sw
     /**
      * @enum StreamingPriority
      * @brief 에셋 비동기 스트리밍 우선순위
+     * @warning **지금은 순서에 반영되지 않는다.** 요청은 받는 즉시 TaskManager 로 넘어가고
+     *          TaskManager 에는 우선순위 큐가 없다(affinity 만 있다). 값은 호출부 의도를
+     *          남겨 두기 위해 받아 두며, 실제 정렬은 TaskManager 가 우선순위를 갖게 된 뒤에
+     *          붙일 자리다. 예전엔 요청마다 이 값을 구조체에 저장했지만 읽는 곳이 없었다.
      */
     enum class StreamingPriority : uint8
     {
@@ -22,17 +26,6 @@ namespace sw
 
     using OnStreamingCompleteDelegate     = Delegate<void( string_view, bool )>;
     using OnStreamingDataCompleteDelegate = Delegate<void( string_view, bool, const vector<uint8>& )>;
-
-    /**
-     * @struct StreamingRequest
-     * @brief 비동기 스트리밍 작업 단위
-     */
-    struct SW_API StreamingRequest
-    {
-        string                      _assetPath{};
-        StreamingPriority           _priority{ StreamingPriority::Normal };
-        OnStreamingCompleteDelegate _onComplete{};
-    };
 
     /**
      * @class AssetStreamingQueue
@@ -81,7 +74,6 @@ namespace sw
 
     private:
         mutable mutex                                                  _mutex;
-        vector<StreamingRequest>                                       _listPendingRequest;
         unordered_map<string, bool>                                    _mapLoadedAsset;
         unordered_set<string>                                          _uniqueActiveRequest;
         unordered_map<string, vector<OnStreamingCompleteDelegate>>     _mapInFlightCallback;
