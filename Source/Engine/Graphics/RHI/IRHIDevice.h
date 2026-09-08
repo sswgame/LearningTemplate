@@ -115,9 +115,6 @@ namespace sw
         /** @brief 현재 RHI 백엔드 종류를 반환합니다. */
         virtual RHIBackend getBackendType() const = 0;
 
-        /** @brief 현재 백엔드가 Bindless(무제한 리소스 배열)를 지원하는지 반환합니다. */
-        virtual bool supportsBindless() const = 0;
-
         /**
          * @brief GPU 셰이더가 디스크립터 인덱스로 텍스처를 샘플링하는지 (DX12 힙 / VK indexing).
          * @note false면 CPU가 그 인덱스로 슬롯을 바인딩해야 합니다 (DX11/GL 에뮬레이션).
@@ -162,9 +159,6 @@ namespace sw
 
         /** @brief 네이티브 컨텍스트 포인터 (ID3D11DeviceContext, EGLContext 등). */
         virtual void* getNativeContext() const = 0;
-
-        /** @brief 네이티브 스왑체인 포인터. */
-        virtual void* getNativeSwapChain() const = 0;
 
         /** @brief 네이티브 커맨드 큐 포인터. */
         virtual void* getNativeCommandQueue() const = 0;

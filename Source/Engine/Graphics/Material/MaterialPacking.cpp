@@ -60,9 +60,9 @@ namespace sw
                 {        "Volume",      MaterialPropertyType::Texture3D,  4},
             };
 
-            static bool iequals( string_view a, const utf8* pB )
+            static bool iequals( string_view value, const utf8* pExpected )
             {
-                return StringUtil::equals( a, pB, true );
+                return StringUtil::equals( value, pExpected, true );
             }
 
             static int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
@@ -74,9 +74,9 @@ namespace sw
 
                 // Numeric literal
                 {
-                    int64 v{ 0 };
-                    if ( StringUtil::parseInt64( name, v, 0 ) )
-                        return v;
+                    int64 parsedValue{ 0 };
+                    if ( StringUtil::parseInt64( name, parsedValue, 0 ) )
+                        return parsedValue;
                 }
 
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
@@ -125,17 +125,17 @@ namespace sw
             static uint32 parseChannelMask( string_view value )
             {
                 const string valueNt( value );
-                const string v = StringUtil::trim( valueNt.c_str() );
-                if ( v.empty() )
+                const string trimmedValue = StringUtil::trim( valueNt.c_str() );
+                if ( trimmedValue.empty() )
                     return 0xFu;
 
                 // Numeric
-                uint64 n{ 0 };
-                if ( StringUtil::parseUInt64( v, n, 0 ) )
-                    return static_cast<uint32>( n );
+                uint64 numericValue{ 0 };
+                if ( StringUtil::parseUInt64( trimmedValue, numericValue, 0 ) )
+                    return static_cast<uint32>( numericValue );
 
                 uint32 mask{ 0 };
-                for ( utf8 charByte : v )
+                for ( utf8 charByte : trimmedValue )
                 {
                     switch ( StringUtil::toUpperChar( charByte ) )
                     {
@@ -164,20 +164,20 @@ namespace sw
                 if ( need == 0 || packSize < need || pDst == nullptr )
                     return false;
 
-                string_splitter ss( value, { " ", "	", "," } );
-                const auto&     tokens = ss.getSplitList();
+                string_splitter splitter( value, { " ", "	", "," } );
+                const auto&     tokens = splitter.getSplitList();
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color )
                 {
                     float32* pPtr  = reinterpret_cast<float32*>( pDst );
                     uint32   count = need / 4;
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
-                        float32 f{ 0.0f };
+                        float32 component{ 0.0f };
                         if ( propIndex < tokens.size() )
-                            StringUtil::parseFloat( tokens[propIndex], f );
+                            StringUtil::parseFloat( tokens[propIndex], component );
                         else
-                            f = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
-                        pPtr[propIndex] = f;
+                            component = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
+                        pPtr[propIndex] = component;
                     }
                     return true;
                 }
@@ -187,10 +187,10 @@ namespace sw
                     uint32  count = need / 4;
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
-                        uint64 u{ 0 };
+                        uint64 component{ 0 };
                         if ( propIndex < tokens.size() )
-                            StringUtil::parseUInt64( tokens[propIndex], u, 10 );
-                        pPtr[propIndex] = static_cast<uint32>( u );
+                            StringUtil::parseUInt64( tokens[propIndex], component, 10 );
+                        pPtr[propIndex] = static_cast<uint32>( component );
                     }
                     return true;
                 }
@@ -200,10 +200,10 @@ namespace sw
                     uint32 count = need / 4;
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
-                        int32 n{ 0 };
+                        int32 component{ 0 };
                         if ( propIndex < tokens.size() )
-                            StringUtil::parseInt( tokens[propIndex], n, 10 );
-                        pPtr[propIndex] = n;
+                            StringUtil::parseInt( tokens[propIndex], component, 10 );
+                        pPtr[propIndex] = component;
                     }
                     return true;
                 }
@@ -229,17 +229,17 @@ namespace sw
                     return;
                 for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
                 {
-                    MaterialEnumEntry e{};
-                    e._name        = MaterialUtil::fieldText( item, "name" );
-                    const string v = MaterialUtil::fieldText( item, "value" );
-                    if ( v.empty() == false )
+                    MaterialEnumEntry entry{};
+                    entry._name            = MaterialUtil::fieldText( item, "name" );
+                    const string valueText = MaterialUtil::fieldText( item, "value" );
+                    if ( valueText.empty() == false )
                     {
                         uint64 val{ 0 };
-                        StringUtil::parseUInt64( v, val, 0 );
-                        e._value = static_cast<uint32>( val );
+                        StringUtil::parseUInt64( valueText, val, 0 );
+                        entry._value = static_cast<uint32>( val );
                     }
-                    if ( e._name.empty() == false )
-                        outListEntry.push_back( std::move( e ) );
+                    if ( entry._name.empty() == false )
+                        outListEntry.push_back( std::move( entry ) );
                 }
             }
 
@@ -250,13 +250,13 @@ namespace sw
                     return;
                 for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
                 {
-                    string v = nodeText( item );
-                    if ( v.empty() )
-                        v = MaterialUtil::fieldText( item, "value" );
-                    if ( v.empty() )
-                        v = MaterialUtil::fieldText( item, "name" );
-                    if ( v.empty() == false )
-                        outListItem.push_back( std::move( v ) );
+                    string itemText = nodeText( item );
+                    if ( itemText.empty() )
+                        itemText = MaterialUtil::fieldText( item, "value" );
+                    if ( itemText.empty() )
+                        itemText = MaterialUtil::fieldText( item, "name" );
+                    if ( itemText.empty() == false )
+                        outListItem.push_back( std::move( itemText ) );
                 }
             }
 
@@ -369,9 +369,9 @@ namespace sw
         if ( typeName.empty() == false )
         {
             uint32                     ignored{ 0 };
-            const MaterialPropertyType t = MaterialUtil::stringToType( typeName, ignored );
-            if ( t != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( t ) == false && MaterialUtil::isTextureType( t ) == false && t != MaterialPropertyType::Enum && t != MaterialPropertyType::BitFlag && t != MaterialPropertyType::Range && t != MaterialPropertyType::Color && t != MaterialPropertyType::ChannelMask && t != MaterialPropertyType::Bool )
-                return t;
+            const MaterialPropertyType reflectedType = MaterialUtil::stringToType( typeName, ignored );
+            if ( reflectedType != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( reflectedType ) == false && MaterialUtil::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool )
+                return reflectedType;
             // Bool from HLSL often reported as Bool
             if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )
                 return MaterialPropertyType::Uint;
@@ -613,9 +613,9 @@ namespace sw
         parent.appendAttr( pName, value );
     }
 
-    RHIBlendMode MaterialUtil::parseBlendMode( string_view s )
+    RHIBlendMode MaterialUtil::parseBlendMode( string_view modeName )
     {
-        if ( MaterialPackingInternal::iequals( s, "Transparent" ) || MaterialPackingInternal::iequals( s, "AlphaBlend" ) )
+        if ( MaterialPackingInternal::iequals( modeName, "Transparent" ) || MaterialPackingInternal::iequals( modeName, "AlphaBlend" ) )
             return RHIBlendMode::Transparent;
         return RHIBlendMode::Opaque;
     }
@@ -625,19 +625,19 @@ namespace sw
         return mode == RHIBlendMode::Transparent ? "Transparent" : "Opaque";
     }
 
-    MaterialQualityLevel MaterialUtil::parseQuality( string_view s )
+    MaterialQualityLevel MaterialUtil::parseQuality( string_view qualityName )
     {
         const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
         int64           value{ 0 };
-        if ( pInfo != nullptr && pInfo->tryParse( s, value ) )
+        if ( pInfo != nullptr && pInfo->tryParse( qualityName, value ) )
             return static_cast<MaterialQualityLevel>( value );
         return MaterialQualityLevel::High;
     }
 
-    const utf8* MaterialUtil::qualityToString( MaterialQualityLevel q )
+    const utf8* MaterialUtil::qualityToString( MaterialQualityLevel quality )
     {
         const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
-        const utf8*     pStr  = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( q ) ) : nullptr;
+        const utf8*     pStr  = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( quality ) ) : nullptr;
         if ( pStr != nullptr )
             return pStr;
         return "High";
@@ -691,18 +691,18 @@ namespace sw
             }
         }
 
-        XmlNode mcs = perm.child( "_multiCompiles" );
-        if ( mcs.isValid() )
+        XmlNode multiCompileNode = perm.child( "_multiCompiles" );
+        if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = mcs.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = multiCompileNode.child( "item" ); item; item = item.next( "item" ) )
             {
-                MaterialMultiCompile mc{};
-                mc._name     = MaterialUtil::fieldText( item, "name" );
-                mc._selected = MaterialUtil::fieldText( item, "selected" );
-                XmlNode opts = item.child( "_options" );
-                MaterialPackingInternal::parseStringListItems( opts, mc._listOption );
-                if ( mc._selected.empty() == false || mc._listOption.empty() == false )
-                    out._listMultiCompile.push_back( std::move( mc ) );
+                MaterialMultiCompile multiCompile{};
+                multiCompile._name     = MaterialUtil::fieldText( item, "name" );
+                multiCompile._selected = MaterialUtil::fieldText( item, "selected" );
+                XmlNode opts           = item.child( "_options" );
+                MaterialPackingInternal::parseStringListItems( opts, multiCompile._listOption );
+                if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
+                    out._listMultiCompile.push_back( std::move( multiCompile ) );
             }
         }
     }
@@ -783,20 +783,20 @@ namespace sw
             MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SPLINEMESH" );
     }
 
-    void MaterialUtil::appendQualityDefines( MaterialQualityLevel q, vector<string>& outListDefine )
+    void MaterialUtil::appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine )
     {
-        MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
-        MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( MaterialUtil::qualityToString( q ) ) );
+        MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( quality ) ) );
+        MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY_" ) + StringUtil::toUpper( MaterialUtil::qualityToString( quality ) ) );
     }
 
     uint64 MaterialUtil::hashDefines( const vector<string>& listDefine )
     {
-        uint64 h = StringUtil::kOffset64;
+        uint64 hash = StringUtil::kOffset64;
         for ( const string& defineStr : listDefine )
         {
-            h = StringUtil::computeHash64( defineStr, false, h );
-            h = ( h ^ 0xFFull ) * StringUtil::kPrime64;
+            hash = StringUtil::computeHash64( defineStr, false, hash );
+            hash = ( hash ^ 0xFFull ) * StringUtil::kPrime64;
         }
-        return h;
+        return hash;
     }
 } // namespace sw

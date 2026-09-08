@@ -47,6 +47,22 @@ namespace sw
          */
         static bool tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
 
+        /**
+         * @brief 리플렉션을 구합니다 — 구운 매니페스트가 정본이고, 개발 빌드는 런타임 리플렉션으로 폴백합니다.
+         * @details `tryGet` 은 "매니페스트에 있는가" 만 답한다. 없거나 소스보다 오래됐을 때 무엇을 할지는
+         *          **정책**이고, 정책은 한 곳에만 있어야 한다. 예전엔 ShaderBindingLayoutCache 만 폴백을
+         *          갖고 Material 은 그냥 XML 순서 패킹으로 남았다 — 그러면 셰이더는 24바이트 원소를 읽는데
+         *          엔진은 256바이트(상수버퍼 크기) stride 로 올려, 한 배치의 두 번째 머티리얼부터 통째로
+         *          어긋난다. 화면에는 "두 큐브가 같은 색" 으로, DX11 디버그 레이어에는
+         *          "structure stride 256 vs 24" 로 나온다.
+         *
+         *          매니페스트 신선도 판정은 **초 단위**다(FileUtil::getFileTimestamp). 베이크 직후 소스를
+         *          같은 초에 건드리기만 해도 RHI 폴더 넷 중 일부만 신선 판정을 받는 일이 실제로 있었다 —
+         *          그래서 폴백이 없으면 백엔드마다 다른 결과가 나온다.
+         * @return 리플렉션을 얻으면 true. Shipping 에서는 매니페스트에 없으면 false (런타임 컴파일 없음).
+         */
+        static bool getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
+
         /** @brief 캐시를 비웁니다 (셰이더 재베이킹 후 등). */
         static void clearCache();
     };

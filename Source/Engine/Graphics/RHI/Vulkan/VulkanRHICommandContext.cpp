@@ -69,7 +69,7 @@ namespace sw
             case RHIBufferState::ShaderResource:
                 access = VK_ACCESS_SHADER_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                 break;
             case RHIBufferState::IndirectArgument:
                 access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -82,7 +82,7 @@ namespace sw
             case RHIBufferState::VertexOrConstant:
                 access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                 break;
             case RHIBufferState::Index:
                 access = VK_ACCESS_INDEX_READ_BIT;
@@ -431,12 +431,12 @@ namespace sw
         _pState->_bRenderPassActive = SW_TRUE;
 
         // Match DX12 beginRenderPass: viewport = pass extent, DX Y orientation.
-        RHIViewport vp{};
-        vp._width    = static_cast<float32>( extent.width );
-        vp._height   = static_cast<float32>( extent.height );
-        vp._minDepth = 0.0f;
-        vp._maxDepth = 1.0f;
-        setViewport( vp );
+        RHIViewport viewport{};
+        viewport._width    = static_cast<float32>( extent.width );
+        viewport._height   = static_cast<float32>( extent.height );
+        viewport._minDepth = 0.0f;
+        viewport._maxDepth = 1.0f;
+        setViewport( viewport );
     }
 
     void VulkanRHICommandContext::endRenderPass()
@@ -529,11 +529,11 @@ namespace sw
         setSlot( true, shaderslot::vk::kTShift + slot, index, false, false );
     }
 
-    void VulkanRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         if ( slot >= shaderslot::kConstantBufferSlotCount )
             return;
-        setSlot( true, shaderslot::vk::kBShift + slot, index, false, true );
+        setSlot( true, shaderslot::vk::kBShift + slot, constantBufferIndex, false, true );
     }
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -747,7 +747,7 @@ namespace sw
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    void VulkanRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // b# → 슬롯 세트의 b 밴드. 링 상수버퍼는 이번 프레임 슬롯 구간을 건다. 세트는 드로우 직전 flushSlotSet 이 굳힌다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
@@ -755,7 +755,7 @@ namespace sw
             SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 슬롯 세트의 b 자리 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
             return;
         }
-        setSlot( false, shaderslot::vk::kBShift + slot, cb, false, true );
+        setSlot( false, shaderslot::vk::kBShift + slot, constantBufferIndex, false, true );
     }
 
     void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )

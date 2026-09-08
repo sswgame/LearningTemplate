@@ -312,14 +312,14 @@ namespace sw
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
         constexpr float32 kDefaultViewportMaxDepth = 1.0f;
 
-        D3D11_VIEWPORT vp;
-        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
-        vp.MinDepth = kDefaultViewportMinDepth;
-        vp.MaxDepth = kDefaultViewportMaxDepth;
-        vp.TopLeftX = kDefaultViewportX;
-        vp.TopLeftY = kDefaultViewportY;
-        _deviceContext->RSSetViewports( 1, &vp );
+        D3D11_VIEWPORT viewport;
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = kDefaultViewportMinDepth;
+        viewport.MaxDepth = kDefaultViewportMaxDepth;
+        viewport.TopLeftX = kDefaultViewportX;
+        viewport.TopLeftY = kDefaultViewportY;
+        _deviceContext->RSSetViewports( 1, &viewport );
     }
 
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )

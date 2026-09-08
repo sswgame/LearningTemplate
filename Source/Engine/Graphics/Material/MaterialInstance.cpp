@@ -326,9 +326,9 @@ namespace sw
             return *pVal;
         if ( _pParentMaterial != nullptr )
         {
-            float32 v = defaultValue;
-            if ( _pParentMaterial->getParameterFloat( name, v ) )
-                return v;
+            float32 value = defaultValue;
+            if ( _pParentMaterial->getParameterFloat( name, value ) )
+                return value;
         }
         return defaultValue;
     }
@@ -515,26 +515,26 @@ namespace sw
         self->_desc._listOverride.clear();
         for ( const auto& [name, value] : _listValueOverride )
         {
-            MaterialInstanceDesc::Override o{};
-            o._name  = name.c_str() ? name.c_str() : "";
-            o._value = value;
-            self->_desc._listOverride.push_back( std::move( o ) );
+            MaterialInstanceDesc::Override overrideItem{};
+            overrideItem._name  = name.c_str() ? name.c_str() : "";
+            overrideItem._value = value;
+            self->_desc._listOverride.push_back( std::move( overrideItem ) );
         }
         self->_desc._listKeyword.clear();
         for ( const auto& [name, enabled] : _listKeywordOverride )
         {
-            MaterialInstanceDesc::KeywordOverride k{};
-            k._name     = name.c_str() ? name.c_str() : "";
-            k._bEnabled = enabled;
-            self->_desc._listKeyword.push_back( std::move( k ) );
+            MaterialInstanceDesc::KeywordOverride keywordItem{};
+            keywordItem._name     = name.c_str() ? name.c_str() : "";
+            keywordItem._bEnabled = enabled;
+            self->_desc._listKeyword.push_back( std::move( keywordItem ) );
         }
         self->_desc._listMultiCompile.clear();
         for ( const auto& [name, selected] : _listMultiCompileOverride )
         {
-            MaterialInstanceDesc::MultiCompileOverride m{};
-            m._name     = name.c_str() ? name.c_str() : "";
-            m._selected = selected;
-            self->_desc._listMultiCompile.push_back( std::move( m ) );
+            MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
+            multiCompileItem._name     = name.c_str() ? name.c_str() : "";
+            multiCompileItem._selected = selected;
+            self->_desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
         }
         if ( _qualityOverride != MaterialQualityLevel::Count )
             self->_desc._quality = MaterialUtil::qualityToString( _qualityOverride );
@@ -568,12 +568,12 @@ namespace sw
         {
             for ( XmlNode item = overrides.child( "item" ); item; item = item.next( "item" ) )
             {
-                MaterialInstanceDesc::Override o{};
-                o._name      = MaterialUtil::fieldText( item, "name" );
-                o._value     = MaterialUtil::fieldText( item, "value" );
-                o._assetPath = MaterialUtil::fieldText( item, "assetPath" );
-                if ( o._name.empty() == false )
-                    _desc._listOverride.push_back( std::move( o ) );
+                MaterialInstanceDesc::Override overrideItem{};
+                overrideItem._name      = MaterialUtil::fieldText( item, "name" );
+                overrideItem._value     = MaterialUtil::fieldText( item, "value" );
+                overrideItem._assetPath = MaterialUtil::fieldText( item, "assetPath" );
+                if ( overrideItem._name.empty() == false )
+                    _desc._listOverride.push_back( std::move( overrideItem ) );
             }
         }
         XmlNode keywords = root.child( "_keywords" );
@@ -581,23 +581,23 @@ namespace sw
         {
             for ( XmlNode item = keywords.child( "item" ); item; item = item.next( "item" ) )
             {
-                MaterialInstanceDesc::KeywordOverride k{};
-                k._name     = MaterialUtil::fieldText( item, "name" );
-                k._bEnabled = MaterialUtil::parseBoolField( item, "bEnabled", true );
-                if ( k._name.empty() == false )
-                    _desc._listKeyword.push_back( std::move( k ) );
+                MaterialInstanceDesc::KeywordOverride keywordItem{};
+                keywordItem._name     = MaterialUtil::fieldText( item, "name" );
+                keywordItem._bEnabled = MaterialUtil::parseBoolField( item, "bEnabled", true );
+                if ( keywordItem._name.empty() == false )
+                    _desc._listKeyword.push_back( std::move( keywordItem ) );
             }
         }
-        XmlNode mcs = root.child( "_multiCompiles" );
-        if ( mcs.isValid() )
+        XmlNode multiCompileNode = root.child( "_multiCompiles" );
+        if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = mcs.child( "item" ); item; item = item.next( "item" ) )
+            for ( XmlNode item = multiCompileNode.child( "item" ); item; item = item.next( "item" ) )
             {
-                MaterialInstanceDesc::MultiCompileOverride m{};
-                m._name     = MaterialUtil::fieldText( item, "name" );
-                m._selected = MaterialUtil::fieldText( item, "selected" );
-                if ( m._name.empty() == false )
-                    _desc._listMultiCompile.push_back( std::move( m ) );
+                MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
+                multiCompileItem._name     = MaterialUtil::fieldText( item, "name" );
+                multiCompileItem._selected = MaterialUtil::fieldText( item, "selected" );
+                if ( multiCompileItem._name.empty() == false )
+                    _desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
             }
         }
 

@@ -38,7 +38,6 @@ namespace sw
         RHIDescriptorIndex getSrv() const { return _srv; }
         uint32             getWidth() const { return _width; }
         uint32             getHeight() const { return _height; }
-        uint32             getMipCount() const { return _mipCount; }
         RHIFormat          getFormat() const { return _format; }
         const string&      getPath() const { return _path; }
 

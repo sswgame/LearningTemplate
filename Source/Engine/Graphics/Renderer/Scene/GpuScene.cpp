@@ -173,20 +173,6 @@ namespace sw
         _listRetiring.clear();
     }
 
-    bool GpuMaterialRetireQueue::isPinned( const MaterialInstance* pInstance ) const
-    {
-        if ( pInstance == nullptr )
-            return false;
-        if ( _uniquePinned.find( const_cast<MaterialInstance*>( pInstance ) ) != _uniquePinned.end() )
-            return true;
-        for ( const RetireEntry& retireEntry : _listRetiring )
-        {
-            if ( retireEntry._pInstance == pInstance )
-                return true;
-        }
-        return false;
-    }
-
     void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup )
     {
         unordered_set<MaterialInstance*> uniqueLive;
@@ -633,8 +619,8 @@ namespace sw
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             // 압축을 포기한 배치(Preserve)만 CPU 개수를 그대로 두고, 나머지는 컴퓨트가 0 부터 센다.
-            const bool bPreserve                             = ( argIndex < _listScratchBatchInfo.size() ) &&
-                                                               ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
+            const bool bPreserve = ( argIndex < _listScratchBatchInfo.size() ) &&
+                                   ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
             _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _listAllBatch[argIndex]._instanceCount : 0u;
         }
         for ( GpuCullViewResources& view : _arrCullView )
@@ -842,10 +828,10 @@ namespace sw
                 bool       bKeyChange{ false };
                 if ( bEnd == false )
                 {
-                    const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                    const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange             = ( a._pMesh != b._pMesh ) || ( batchKeyMaterial( a._pMaterial, a._pInstance ) != batchKeyMaterial( b._pMaterial, b._pInstance ) ) ||
-                                             ( _bMergeAcrossMaterials == 0 && a._pInstance != b._pInstance );
+                    const DrawCandidate& batchHead = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
+                    const DrawCandidate& current   = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
+                    bKeyChange                     = ( batchHead._pMesh != current._pMesh ) || ( batchKeyMaterial( batchHead._pMaterial, batchHead._pInstance ) != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
+                                 ( _bMergeAcrossMaterials == 0 && batchHead._pInstance != current._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -1034,7 +1020,7 @@ namespace sw
             // 다시 만든다 — 구조버퍼의 stride 는 뷰에 박혀 있어 셰이더 선언과 달라지면 안 된다.
             const uint32 capacityElements = MathUtil::max( elementCount * 2u, 16u );
             const bool   bRecreate        = ( gpu._slot._buffer == 0 ) || ( gpu._slot._elementSize != stride ) ||
-                                            ( gpu._slot._capacityElements < capacityElements );
+                                   ( gpu._slot._capacityElements < capacityElements );
             if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
                                            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {

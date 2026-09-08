@@ -101,12 +101,6 @@ namespace sw
         return _computeRootConstantUbo != 0;
     }
 
-    uint32 OpenGLRHIDevice::ensureCompositeFbo( RHITextureHandle color, RHITextureHandle depth )
-    {
-        RHITextureHandle arrColor[1] = { color };
-        return ensureCompositeFboMRT( arrColor, color != 0 ? 1u : 0u, depth );
-    }
-
     uint32 OpenGLRHIDevice::ensureCompositeFboMRT( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth )
     {
         CompositeFboKey key{};

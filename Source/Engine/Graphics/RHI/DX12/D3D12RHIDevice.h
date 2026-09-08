@@ -167,9 +167,6 @@ namespace sw
         /** @brief 스왑체인이 만든 백버퍼 포맷 — 백버퍼 PSO 의 렌더타깃 포맷은 여기서 나온다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
 
-        /** @brief D3D12는 네이티브 Bindless(Unbounded Descriptor Table)를 지원함 (true 반환) */
-        bool supportsBindless() const override { return true; }
-
         /** @brief 루트 시그니처의 무제한 텍스처 배열 테이블(t0 space1)로 g_SwBindlessTex2D[] 를 샘플링한다 (SM6.6 힙 인덱싱 아님). */
         bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != 0; }
 
@@ -197,9 +194,6 @@ namespace sw
          *          그걸 그대로 돌려주면 닫힌 리스트에 기록하게 되어 UI 가 통째로 사라진다.
          */
         void* getNativeContext() const override { return _activeFrameList != nullptr ? _activeFrameList : _commandList.Get(); }
-
-        /** @brief IDXGISwapChain3 포인터 반환 */
-        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
 
         /** @brief ID3D12CommandQueue 포인터 반환 */
         void* getNativeCommandQueue() const override { return _commandQueue.Get(); }
@@ -233,15 +227,6 @@ namespace sw
         void signalCurrentFrame();
         /** @brief 현재 링 슬롯의 커맨드 얼로케이터입니다 (디바이스 프레임 스트림 전용). */
         ID3D12CommandAllocator* currentAllocator();
-        /**
-         * @brief 현재 링 슬롯의 `D3D12RHICommandList` 전용 얼로케이터입니다.
-         * @details 프레임 스트림용 `_arrCommandAllocator` 와 별개 — 같은 프레임 안에서 스왑체인 begin/end(프레임 스트림
-         *          리스트)와 `FrameRenderer` 의 진짜 네이티브 리스트가 동시에 "열려" 있을 수 있으므로,
-         *          같은 얼로케이터를 공유하면 안 된다(D3D12 는 열린 리스트가 있는 얼로케이터를 Reset 하면
-         *          안 됨). 링 인덱스는 `waitForRingSlot()` 이 이미 이번 프레임에 정한 것을 그대로 쓴다
-         *          (다시 대기하지 않음 — 한 프레임에 한 번만 전진).
-         */
-        ID3D12CommandAllocator* currentFrameCmdAllocator();
 
     public:
         /**
@@ -508,12 +493,10 @@ namespace sw
         void endFrame( bool, bool = true ) override {}
 
         RHIBackend  getBackendType() const override { return RHIBackend::DirectX12; }
-        bool        supportsBindless() const override { return true; }
         const utf8* getBackendName() const override { return "Direct3D 12 (Not Supported on non-Windows)"; }
 
         void* getNativeDevice() const override { return nullptr; }
         void* getNativeContext() const override { return nullptr; }
-        void* getNativeSwapChain() const { return nullptr; }
         void* getNativeCommandQueue() const override { return nullptr; }
 
         IRHIResource*       getResource() override { return nullptr; }

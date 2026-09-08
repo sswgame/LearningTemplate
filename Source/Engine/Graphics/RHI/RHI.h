@@ -61,8 +61,6 @@ namespace sw
         bool hasPendingBackendChange() const { return _bPendingBackendChange == SW_TRUE; }
         /** @brief 대기 중인 백엔드를 가져가고 플래그를 해제합니다. */
         RHIBackend consumePendingBackendChange();
-        /** @brief 커밋된 백엔드를 설정합니다 (핵스왁 성공/실패 후 동기화용). */
-        void setCommittedBackend( RHIBackend backend ) { _committedRHIBackend = backend; }
         /** @brief 커밋된 백엔드를 반환합니다. */
         RHIBackend getCommittedBackend() const { return _committedRHIBackend; }
 

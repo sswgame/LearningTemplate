@@ -162,8 +162,8 @@ namespace sw
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
         for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
         {
-            arrColorBlendAttachment[blendIndex].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                                      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             arrColorBlendAttachment[blendIndex].blendEnable         = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
             arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -307,9 +307,9 @@ namespace sw
             return 0;
         }
 
-        auto toLoadOp = []( RHIRenderPassLoadOp op ) -> VkAttachmentLoadOp
+        auto toLoadOp = []( RHIRenderPassLoadOp loadOp ) -> VkAttachmentLoadOp
         {
-            switch ( op )
+            switch ( loadOp )
             {
                 case RHIRenderPassLoadOp::Clear:
                     return VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -322,9 +322,9 @@ namespace sw
             }
             return VK_ATTACHMENT_LOAD_OP_CLEAR;
         };
-        auto toStoreOp = []( RHIRenderPassStoreOp op ) -> VkAttachmentStoreOp
+        auto toStoreOp = []( RHIRenderPassStoreOp storeOp ) -> VkAttachmentStoreOp
         {
-            switch ( op )
+            switch ( storeOp )
             {
                 case RHIRenderPassStoreOp::Store:
                     return VK_ATTACHMENT_STORE_OP_STORE;
@@ -340,8 +340,8 @@ namespace sw
         VkAttachmentReference   colorRefs[kMaxColorAttachments]{};
         const uint32            colorCount =
             desc._listColorAttachment.size() > kMaxColorAttachments
-                ? kMaxColorAttachments
-                : static_cast<uint32>( desc._listColorAttachment.size() );
+                           ? kMaxColorAttachments
+                           : static_cast<uint32>( desc._listColorAttachment.size() );
 
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {

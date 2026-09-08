@@ -89,17 +89,11 @@ namespace sw
 
         /** @brief 이름으로 슬롯을 찾는다 (없으면 nullptr). */
         const ShaderBindingSlot* find( hashed_string name ) const;
-        /** @brief (종류, space, register) 로 슬롯을 찾는다. */
-        const ShaderBindingSlot* findByRegister( ShaderBindingKind kind, uint32 space, uint32 registerIndex ) const;
-        /** @brief CB 이름 + 멤버 이름으로 오프셋/크기를 찾는다. 없으면 false. */
-        bool resolveCbMember( hashed_string cbName, hashed_string memberName, uint32& outOffset, uint32& outSize ) const;
 
         /** @brief 전체 슬롯 목록. */
         const vector<ShaderBindingSlot>& getSlots() const { return _listSlot; }
         /** @brief 슬롯이 하나도 없으면 true (컴파일/리플렉션 실패 등). */
         bool isEmpty() const { return _listSlot.empty(); }
-        /** @brief 레이아웃 내용 핑거프린트 (핫리로드 변경 감지용). */
-        uint64 fingerprint() const { return _fingerprint; }
 
         // ------------------------------------------------------------------------------
         // 드로우 경로용 사전 계산 — buildBindPlan() 이 한 번만 채운다
@@ -113,13 +107,11 @@ namespace sw
 
     private:
         void rebuildIndex();
-        void computeFingerprint();
         /** @brief 드로우마다 반복하던 계산을 여기서 한 번만 한다 (build 끝에서 호출). */
         void buildBindPlan();
 
         vector<ShaderBindingSlot>            _listSlot;
         unordered_map<hashed_string, uint32> _mapNameToSlot;
-        uint64                               _fingerprint{ 0 };
 
         uint32                       _engineCbSize{ 0 };
         vector<ShaderEngineCbMember> _listEngineCbMember;

@@ -82,8 +82,13 @@ namespace sw
             return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
         }
 
-        static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
-                                              std::initializer_list<const utf8*>             listName )
+        /**
+         * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 돌려줍니다 (없으면 nullptr).
+         * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받는다.
+         */
+        template <typename TAttachmentMap>
+        static const utf8* pickFirstExisting( const TAttachmentMap&              mapAttachment,
+                                              std::initializer_list<const utf8*> listName )
         {
             for ( const utf8* pName : listName )
             {

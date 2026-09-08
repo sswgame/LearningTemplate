@@ -33,17 +33,17 @@ namespace sw
         static void appendAttr( XmlNode parent, const utf8* pName, string_view value );
         static void appendBoolAttr( XmlNode parent, const utf8* pName, bool value );
 
-        static RHIBlendMode         parseBlendMode( string_view s );
+        static RHIBlendMode         parseBlendMode( string_view modeName );
         static const utf8*          blendModeToString( RHIBlendMode mode );
-        static MaterialQualityLevel parseQuality( string_view s );
-        static const utf8*          qualityToString( MaterialQualityLevel q );
+        static MaterialQualityLevel parseQuality( string_view qualityName );
+        static const utf8*          qualityToString( MaterialQualityLevel quality );
 
         static void parsePermutationNode( XmlNode root, MaterialPermutationDesc& out );
         static void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm );
 
         static void   appendUniqueDefine( vector<string>& outListDefine, string_view def );
         static void   appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );
-        static void   appendQualityDefines( MaterialQualityLevel q, vector<string>& outListDefine );
+        static void   appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine );
         static uint64 hashDefines( const vector<string>& listDefine );
     };
 } // namespace sw

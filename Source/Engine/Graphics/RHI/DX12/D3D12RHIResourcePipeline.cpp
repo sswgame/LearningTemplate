@@ -36,24 +36,10 @@ namespace sw
     RHIPipelineStateHandle D3D12RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        auto                                        fillDefines = [&]( ShaderCompileDesc& cd )
+        auto                                        fillDefines = [&]( ShaderCompileDesc& compileDesc )
         {
-            for ( const string& def : desc._listShaderDefine )
-            {
-                ShaderMacroDefine m{};
-                const size_t      eq = def.find( '=' );
-                if ( eq == string::npos )
-                {
-                    m._name  = def;
-                    m._value = "1";
-                }
-                else
-                {
-                    m._name  = def.substr( 0, eq );
-                    m._value = def.substr( eq + 1 );
-                }
-                cd._listDefine.push_back( std::move( m ) );
-            }
+            for ( const string& define : desc._listShaderDefine )
+                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
         };
 
         ShaderCompileDesc vsDesc{};

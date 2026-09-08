@@ -79,9 +79,6 @@ namespace sw
         /** @brief 백엔드 타입 반환 (OpenGL) */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
 
-        /** @brief Descriptor-index tables for UBO/SSBO/texture (bind-at-draw / image units). */
-        bool supportsBindless() const override { return true; }
-
         /** @brief VS 가 SSBO(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽는다 (glBindBufferBase). */
         bool supportsInstancedSceneDraw() const override { return true; }
 
@@ -110,9 +107,6 @@ namespace sw
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
         void unbindGraphicsContext() override;
 
-        /** @brief Native DC 포인터 반환 */
-        void* getNativeSwapChain() const override { return _pHDC; }
-
         /** @brief OpenGL은 커맨드 큐가 없음 (nullptr) */
         void* getNativeCommandQueue() const override { return nullptr; }
 
@@ -131,8 +125,6 @@ namespace sw
 
         /** @brief 컴퓨트 루트 상수 UBO를 확보합니다. */
         bool ensureComputeRootConstantUbo();
-        /** @brief 합성 FBO를 확보합니다. */
-        uint32 ensureCompositeFbo( RHITextureHandle color, RHITextureHandle depth );
         /** @brief MRT 합성 FBO를 확보합니다. */
         uint32 ensureCompositeFboMRT( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth );
         /** @brief 불투명 핸들을 GLuint 이름으로 풉니다. */
@@ -196,13 +188,13 @@ namespace sw
             /** @brief 호출 연산자입니다. */
             size_t operator()( const CompositeFboKey& key ) const
             {
-                size_t h = static_cast<size_t>( key._depth ) * 1315423911u;
-                h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+                size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
+                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
-                    h ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
                 }
-                return h;
+                return hash;
             }
         };
 

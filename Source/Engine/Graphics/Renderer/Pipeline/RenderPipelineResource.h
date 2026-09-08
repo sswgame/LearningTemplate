@@ -84,8 +84,7 @@ namespace sw
          */
         uint32 validate( string_view sourcePath );
 
-        const vector<RenderGraphPassDesc>&  getGraphPass() const { return _desc._listPass; }
-        const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
+        const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
 
     private:
         /** @brief TaskArgs: this, path string. */

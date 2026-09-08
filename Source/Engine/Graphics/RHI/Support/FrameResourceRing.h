@@ -54,11 +54,6 @@ namespace sw
         /** @brief 현재 슬롯 펜스 값에 대한 참조를 반환합니다. */
         uint64& currentFenceValue();
 
-        /** @brief 업로드 영역 용량을 반환합니다. */
-        uint64 getUploadCapacity() const { return _uploadCapacity; }
-        /** @brief 현재 슬롯의 업로드 bump 오프셋을 반환합니다. */
-        uint64 getUploadOffset() const { return _arrSlot[_frameIndex]._uploadOffset; }
-
         /**
          * @brief 현재 슬롯 업로드 영역에서 bump 할당합니다.
          * @return 용량을 넘으면 false.

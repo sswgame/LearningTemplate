@@ -122,13 +122,13 @@ namespace sw
         Display* pDpy = (Display*)desc._pWindowDisplay;
         Window   win  = (Window)(uintptr_t)desc._pWindowHandle;
 
-        XWindowAttributes wa{};
-        if ( XGetWindowAttributes( pDpy, win, &wa ) == 0 || wa.visual == nullptr )
+        XWindowAttributes windowAttributes{};
+        if ( XGetWindowAttributes( pDpy, win, &windowAttributes ) == 0 || windowAttributes.visual == nullptr )
         {
             SW_LOG_ERROR( "XGetWindowAttributes failed" );
             return false;
         }
-        const VisualID windowVisualId = XVisualIDFromVisual( wa.visual );
+        const VisualID windowVisualId = XVisualIDFromVisual( windowAttributes.visual );
 
         int32        fbcount{ 0 };
         GLXFBConfig* pFbcAll = glXGetFBConfigs( pDpy, DefaultScreen( pDpy ), &fbcount );

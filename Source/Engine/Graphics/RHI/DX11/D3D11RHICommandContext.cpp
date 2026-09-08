@@ -155,12 +155,12 @@ namespace sw
         else if ( _pDevice->_depthDisabledState )
             _pContext->OMSetDepthStencilState( _pDevice->_depthDisabledState.Get(), 0 );
 
-        D3D11_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight() );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        _pContext->RSSetViewports( 1, &vp );
+        D3D11_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight() );
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        _pContext->RSSetViewports( 1, &viewport );
     }
 
     void D3D11RHICommandContext::endRenderPass()
@@ -299,12 +299,12 @@ namespace sw
         _pContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex cb, uint32 slot )
+    void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        if ( _pContext == nullptr || cb == kInvalidDescriptorIndex ||
-             cb >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        if ( _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
+             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( cb ) );
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
         if ( pCb == nullptr )
             return;
         _pContext->VSSetConstantBuffers( slot, 1, &pCb );
@@ -330,12 +330,12 @@ namespace sw
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
     }
 
-    void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        if ( _pContext == nullptr || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        if ( _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
+             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
             return;
-        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( index ) );
+        ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
         if ( pCb == nullptr )
             return;
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );

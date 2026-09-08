@@ -67,9 +67,9 @@ namespace sw
             {
                 if ( _pDpy != nullptr )
                     XSync( _pDpy, 0 );
-                const bool b                         = OpenGLRHIDeviceInternal::t_glxXError != 0;
+                const bool bHadError                 = OpenGLRHIDeviceInternal::t_glxXError != 0;
                 OpenGLRHIDeviceInternal::t_glxXError = 0;
-                return b;
+                return bHadError;
             }
         };
 #endif

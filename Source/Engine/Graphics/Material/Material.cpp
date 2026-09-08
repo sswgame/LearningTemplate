@@ -241,7 +241,7 @@ namespace sw
         desc._stage        = ShaderStage::Pixel;
         desc._targetFormat = RHI::getShaderTargetFormat( pDevice->getBackendType() );
         ShaderReflectionData reflection{};
-        if ( ShaderReflectionLibrary::tryGet( desc, reflection ) == false )
+        if ( ShaderReflectionLibrary::getOrReflect( desc, reflection ) == false )
         {
             SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — XML 순서 패킹으로 남습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
             return false;
@@ -333,7 +333,7 @@ namespace sw
             return true;
         }
 
-        bool ok{ true };
+        bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
             // Textures / keywords / UI-only fields are not MaterialCB variables.
@@ -362,7 +362,7 @@ namespace sw
                     {
                         SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
                                         prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size );
-                        ok = false;
+                        bAllPacked = false;
                     }
                 }
 
@@ -373,7 +373,7 @@ namespace sw
             if ( found == false )
             {
                 SW_LOG_WARNING( "Property '%#' missing in shader reflection.", prop._name.c_str() );
-                ok = false;
+                bAllPacked = false;
             }
         }
 
@@ -391,7 +391,7 @@ namespace sw
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
         _data._listBuffer.resize( alignedTotal, 0 );
         _desc._listProperty = _data._listProperty;
-        return ok;
+        return bAllPacked;
     }
 
     bool Material::rebuildPackedBuffer()
@@ -471,11 +471,11 @@ namespace sw
         }
 
         _data._listBuffer.assign( maxEnd, 0 );
-        bool ok{ true };
+        bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
-                ok = false;
+                bAllPacked = false;
         }
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
@@ -483,7 +483,7 @@ namespace sw
             _data._listBuffer.resize( alignedTotal, 0 );
 
         _desc._listProperty = _data._listProperty;
-        return ok;
+        return bAllPacked;
     }
 
     bool Material::resetPropertyToDefault( IRHIDevice* pRhi, hashed_string name )
@@ -650,12 +650,12 @@ namespace sw
                 return;
             }
         }
-        MaterialMultiCompile mc{};
-        mc._name     = name.c_str() ? name.c_str() : "";
-        mc._selected = string( selectedOption );
+        MaterialMultiCompile multiCompile{};
+        multiCompile._name     = name.c_str() ? name.c_str() : "";
+        multiCompile._selected = string( selectedOption );
         if ( selectedOption.empty() == false )
-            mc._listOption.push_back( string( selectedOption ) );
-        _desc._permutations._listMultiCompile.push_back( std::move( mc ) );
+            multiCompile._listOption.push_back( string( selectedOption ) );
+        _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
         _bDefinesDirty = 1;
     }
 

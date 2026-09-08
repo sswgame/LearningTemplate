@@ -165,8 +165,6 @@ namespace sw
         /** @brief 백엔드 타입 반환 (Vulkan) */
         RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
 
-        bool supportsBindless() const override { return true; }
-
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );
@@ -175,10 +173,6 @@ namespace sw
             return caps;
         }
 
-        /** @brief 디바이스가 선택한 depth/stencil VkFormat */
-        uint32 getDepthFormat() const { return _depthFormat; }
-        /** @brief depth 포맷에 stencil plane이 있으면 true */
-        bool depthFormatHasStencil() const { return _bDepthHasStencil != 0; }
         /** @brief depth 이미지 aspect 마스크 (VkImageAspectFlags) */
         uint32 depthAspectMask() const;
 
@@ -204,9 +198,6 @@ namespace sw
             return cmd;
         }
 
-        /** @brief Native VkSwapchainKHR 핸들 반환 */
-        void* getNativeSwapChain() const override { return _swapChain.getNative(); }
-
         /** @brief Native VkQueue 핸들 반환 */
         void* getNativeCommandQueue() const override { return _graphicsQueue; }
 
@@ -226,7 +217,6 @@ namespace sw
         VkInstance       getInstance() const { return _instance; }
         VkPhysicalDevice getPhysicalDevice() const { return _physicalDevice; }
         VkDevice         getDevice() const { return _device; }
-        VkRenderPass     getRenderPass() const { return _renderPass; }
 
         /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
@@ -392,15 +382,15 @@ namespace sw
             /** @brief 호출 연산자입니다. */
             size_t operator()( const CompositeFbKey& key ) const
             {
-                size_t h = static_cast<size_t>( key._depth ) * 1315423911u;
-                h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
-                h ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
+                size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
+                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+                hash ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
-                    h ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
-                    h ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
+                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
                 }
-                return h;
+                return hash;
             }
         };
 
@@ -439,13 +429,13 @@ namespace sw
             /** @brief 호출 연산자입니다. */
             size_t operator()( const PipelineRpKey& key ) const
             {
-                size_t h = static_cast<size_t>( key._depthFormat ) * 1315423911u;
-                h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+                size_t hash = static_cast<size_t>( key._depthFormat ) * 1315423911u;
+                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
-                    h ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
                 }
-                return h;
+                return hash;
             }
         };
 

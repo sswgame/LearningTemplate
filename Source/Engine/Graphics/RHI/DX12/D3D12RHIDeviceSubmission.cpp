@@ -104,12 +104,12 @@ namespace sw
         _frameStreamState._bRecording = 1;
         _frameStreamContext->rebindCommandList( pNextSegment );
 
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        pNextSegment->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        pNextSegment->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         pNextSegment->RSSetScissorRects( 1, &scissor );
@@ -265,11 +265,6 @@ namespace sw
         _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
 
-    ID3D12CommandAllocator* D3D12RHIDevice::currentFrameCmdAllocator()
-    {
-        return _arrFrameCmdAllocator[_frameRing.currentIndex()].Get();
-    }
-
     void D3D12RHIDevice::beginFrame( const float4& clearColor )
     {
         if ( _frameStreamState._bRecording == 0 )
@@ -313,14 +308,14 @@ namespace sw
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
         constexpr float32 kDefaultViewportMaxDepth = 1.0f;
 
-        D3D12_VIEWPORT vp{};
-        vp.Width    = static_cast<float32>( _swapChain.getWidth() );
-        vp.Height   = static_cast<float32>( _swapChain.getHeight() );
-        vp.MinDepth = kDefaultViewportMinDepth;
-        vp.MaxDepth = kDefaultViewportMaxDepth;
-        vp.TopLeftX = kDefaultViewportX;
-        vp.TopLeftY = kDefaultViewportY;
-        _activeFrameList->RSSetViewports( 1, &vp );
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = kDefaultViewportMinDepth;
+        viewport.MaxDepth = kDefaultViewportMaxDepth;
+        viewport.TopLeftX = kDefaultViewportX;
+        viewport.TopLeftY = kDefaultViewportY;
+        _activeFrameList->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         _activeFrameList->RSSetScissorRects( 1, &scissorRect );

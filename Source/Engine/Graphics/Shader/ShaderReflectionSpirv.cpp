@@ -78,44 +78,44 @@ namespace sw
                     return "Float";
                 }
 
-                const SpirvType& t = it->second;
-                switch ( t._kind )
+                const SpirvType& spirvType = it->second;
+                switch ( spirvType._kind )
                 {
                     case SpirvType::Kind::Bool:
                         outSize = 4;
                         return "Bool";
                     case SpirvType::Kind::Int:
-                        outSize = t._width / 8;
-                        return ( t._width == 64 ) ? "Int64" : ( t._width == 16 ? "Int16" : "Int" );
+                        outSize = spirvType._width / 8;
+                        return ( spirvType._width == 64 ) ? "Int64" : ( spirvType._width == 16 ? "Int16" : "Int" );
                     case SpirvType::Kind::Uint:
-                        outSize = t._width / 8;
-                        return ( t._width == 64 ) ? "Uint64" : ( t._width == 16 ? "Uint16" : "Uint" );
+                        outSize = spirvType._width / 8;
+                        return ( spirvType._width == 64 ) ? "Uint64" : ( spirvType._width == 16 ? "Uint16" : "Uint" );
                     case SpirvType::Kind::Float:
-                        outSize = t._width / 8;
-                        return ( t._width == 64 ) ? "Double" : "Float";
+                        outSize = spirvType._width / 8;
+                        return ( spirvType._width == 64 ) ? "Double" : "Float";
                     case SpirvType::Kind::Vector:
                     {
                         uint32 subSize = 4;
-                        string subName = resolveSpirvTypeName( t._subTypeId, mapType, subSize );
-                        outSize        = subSize * t._count;
-                        return subName + to_string( t._count );
+                        string subName = resolveSpirvTypeName( spirvType._subTypeId, mapType, subSize );
+                        outSize        = subSize * spirvType._count;
+                        return subName + to_string( spirvType._count );
                     }
                     case SpirvType::Kind::Matrix:
                     {
                         uint32 colSize = 16;
-                        resolveSpirvTypeName( t._subTypeId, mapType, colSize );
-                        outSize = colSize * t._count;
-                        if ( t._count == 4 )
+                        resolveSpirvTypeName( spirvType._subTypeId, mapType, colSize );
+                        outSize = colSize * spirvType._count;
+                        if ( spirvType._count == 4 )
                             return "Float4x4";
-                        return "Float" + to_string( t._count ) + "x" + to_string( t._count );
+                        return "Float" + to_string( spirvType._count ) + "x" + to_string( spirvType._count );
                     }
                     case SpirvType::Kind::Array:
                     {
                         // 배열 크기 = (원소 수 - 1) * stride + 원소 크기 (마지막 원소 뒤 패딩 없음 — DX 리플렉션과 같은 규칙).
                         uint32       elemSize = 4;
-                        const string elemName = resolveSpirvTypeName( t._subTypeId, mapType, elemSize );
-                        const uint32 stride   = t._arrayStride > 0 ? t._arrayStride : elemSize;
-                        outSize               = t._count > 0 ? ( t._count - 1 ) * stride + elemSize : elemSize;
+                        const string elemName = resolveSpirvTypeName( spirvType._subTypeId, mapType, elemSize );
+                        const uint32 stride   = spirvType._arrayStride > 0 ? spirvType._arrayStride : elemSize;
+                        outSize               = spirvType._count > 0 ? ( spirvType._count - 1 ) * stride + elemSize : elemSize;
                         return elemName;
                     }
                     case SpirvType::Kind::Unknown:

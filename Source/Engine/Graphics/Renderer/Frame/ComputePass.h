@@ -40,9 +40,6 @@ namespace sw
         void dispatch( IRHICommandList* pCmdList, const ComputeDispatchParams& params );
         void clearBindings();
 
-        const string&          getPassName() const { return _passName; }
-        RHIPipelineStateHandle getPipelineState() const { return _computePso; }
-
     private:
         string                                    _passName;
         RHIPipelineStateHandle                    _computePso;

@@ -39,24 +39,10 @@ namespace sw
         ScopedOpenGLContext                        ctxScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        auto fillDefines = [&]( ShaderCompileDesc& cd )
+        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
         {
-            for ( const string& def : desc._listShaderDefine )
-            {
-                ShaderMacroDefine m{};
-                const size_t      eq = def.find( '=' );
-                if ( eq == string::npos )
-                {
-                    m._name  = def;
-                    m._value = "1";
-                }
-                else
-                {
-                    m._name  = def.substr( 0, eq );
-                    m._value = def.substr( eq + 1 );
-                }
-                cd._listDefine.push_back( std::move( m ) );
-            }
+            for ( const string& define : desc._listShaderDefine )
+                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
         };
 
         ShaderCompileDesc vsDesc{};
@@ -89,30 +75,30 @@ namespace sw
                 return 0;
             }
 
-            GLuint vs = glCreateShader( GL_VERTEX_SHADER );
-            GLuint ps = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
+            GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
+            GLuint pixelShader  = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
 
-            glShaderBinary( 1, &vs, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
-            glSpecializeShader( vs, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
+            glSpecializeShader( vertexShader, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
 
             if ( bHasPixelShader )
             {
-                glShaderBinary( 1, &ps, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
-                glSpecializeShader( ps, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
+                glSpecializeShader( pixelShader, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
             }
 
             GLint vsCompiled = GL_FALSE;
             GLint psCompiled = GL_FALSE;
-            glGetShaderiv( vs, GL_COMPILE_STATUS, &vsCompiled );
+            glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &vsCompiled );
             if ( bHasPixelShader )
-                glGetShaderiv( ps, GL_COMPILE_STATUS, &psCompiled );
+                glGetShaderiv( pixelShader, GL_COMPILE_STATUS, &psCompiled );
 
             if ( vsCompiled == GL_TRUE && ( bHasPixelShader == false || psCompiled == GL_TRUE ) )
             {
                 GLuint program = glCreateProgram();
-                glAttachShader( program, vs );
+                glAttachShader( program, vertexShader );
                 if ( bHasPixelShader )
-                    glAttachShader( program, ps );
+                    glAttachShader( program, pixelShader );
                 glLinkProgram( program );
 
                 GLint isLinked{ 0 };
@@ -133,18 +119,18 @@ namespace sw
                 GLchar infoLog[constant::kMaxBuffer1024];
                 if ( vsCompiled != GL_TRUE )
                 {
-                    glGetShaderInfoLog( vs, sizeof( infoLog ), nullptr, infoLog );
+                    glGetShaderInfoLog( vertexShader, sizeof( infoLog ), nullptr, infoLog );
                     SW_LOG_ERROR( "VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
                 }
                 if ( bHasPixelShader && psCompiled != GL_TRUE )
                 {
-                    glGetShaderInfoLog( ps, sizeof( infoLog ), nullptr, infoLog );
+                    glGetShaderInfoLog( pixelShader, sizeof( infoLog ), nullptr, infoLog );
                     SW_LOG_ERROR( "PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
                 }
             }
-            glDeleteShader( vs );
-            if ( ps != 0 )
-                glDeleteShader( ps );
+            glDeleteShader( vertexShader );
+            if ( pixelShader != 0 )
+                glDeleteShader( pixelShader );
         }
 
         if ( record._program == 0 )
@@ -184,18 +170,18 @@ namespace sw
                 return 0;
             }
 
-            GLuint cs = glCreateShader( GL_COMPUTE_SHADER );
+            GLuint computeShader = glCreateShader( GL_COMPUTE_SHADER );
 
-            glShaderBinary( 1, &cs, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
-            glSpecializeShader( cs, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
+            glSpecializeShader( computeShader, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
 
             GLint csCompiled = GL_FALSE;
-            glGetShaderiv( cs, GL_COMPILE_STATUS, &csCompiled );
+            glGetShaderiv( computeShader, GL_COMPILE_STATUS, &csCompiled );
 
             if ( csCompiled == GL_TRUE )
             {
                 GLuint program = glCreateProgram();
-                glAttachShader( program, cs );
+                glAttachShader( program, computeShader );
                 glLinkProgram( program );
 
                 GLint isLinked{ 0 };
@@ -213,10 +199,10 @@ namespace sw
             else
             {
                 GLchar infoLog[constant::kMaxBuffer1024];
-                glGetShaderInfoLog( cs, sizeof( infoLog ), nullptr, infoLog );
+                glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
                 SW_LOG_ERROR( "Compute shader specialize/compile failed: %#", infoLog );
             }
-            glDeleteShader( cs );
+            glDeleteShader( computeShader );
         }
         if ( record._program == 0 )
             return 0;

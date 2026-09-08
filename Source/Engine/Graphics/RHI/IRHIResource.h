@@ -64,10 +64,10 @@ namespace sw
             const uint32    elemCount = desc._elementCount > 0
                                           ? desc._elementCount
                                           : ( desc._sizeBytes > 0 ? ( desc._sizeBytes / elemSize ) : 1u );
-            RHIBufferHandle h         = createStructuredBuffer( elemSize, elemCount );
-            if ( h != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
-                updateStructuredBuffer( h, desc._pInitialData, desc._sizeBytes );
-            return h;
+            RHIBufferHandle buffer    = createStructuredBuffer( elemSize, elemCount );
+            if ( buffer != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+                updateStructuredBuffer( buffer, desc._pInitialData, desc._sizeBytes );
+            return buffer;
         }
 
         /** @brief 인덱스 버퍼 (uint16/uint32). */

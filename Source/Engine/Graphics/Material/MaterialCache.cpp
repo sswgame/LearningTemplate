@@ -149,7 +149,7 @@ namespace sw
     {
         if ( pDevice == nullptr || _impl == nullptr )
             return false;
-        bool                                ok{ true };
+        bool                                bAllReinitialized{ true };
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         for ( auto& [path, entry] : _impl->_mapEntry )
         {
@@ -158,12 +158,12 @@ namespace sw
             if ( entry._material->initialize( pDevice, path ) == false )
             {
                 SW_LOG_ERROR( "reinitialize failed for %#", path.c_str() );
-                ok = false;
+                bAllReinitialized = false;
                 continue;
             }
             entry._bGpuInit = true;
         }
-        return ok;
+        return bAllReinitialized;
     }
 
     void MaterialCache::clear()
