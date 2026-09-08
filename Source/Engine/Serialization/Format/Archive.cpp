@@ -22,8 +22,6 @@ namespace sw
     Archive::Archive()
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -36,8 +34,6 @@ namespace sw
     Archive::Archive( string_view fileName, bool bReadMode )
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -62,8 +58,6 @@ namespace sw
     Archive::Archive( const uint8* pData, uint64 size )
         : _stringPool{}
         , _listBuffer{}
-        , _sourceDirectory{}
-        , _sourceFileName{}
         , _pData{ pData }
         , _dataSize{ size }
         , _offset{ 0 }

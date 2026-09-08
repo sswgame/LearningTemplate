@@ -96,25 +96,25 @@ namespace sw
             {
                 void*  pDest = pProp->getRawPtr( pTargetInstance );
                 size_t local{ 0 };
-                bool   ok{ true };
+                bool   bOk{ true };
                 if ( pProp->_bIsBitField == SW_TRUE )
                 {
                     bool bVal = false;
-                    ok        = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, ctx );
-                    if ( ok )
+                    bOk       = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, ctx );
+                    if ( bOk )
                         pProp->setValue<bool>( pTargetInstance, bVal );
                 }
                 else if ( pDest != nullptr )
                 {
                     if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
                     {
-                        ok = SerializerUtil::deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
-                                                                               local, ctx );
+                        bOk = SerializerUtil::deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
+                                                                                local, ctx );
                     }
                     else
-                        ok = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );
+                        bOk = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );
                 }
-                if ( ok == false )
+                if ( bOk == false )
                     return false;
             }
             else

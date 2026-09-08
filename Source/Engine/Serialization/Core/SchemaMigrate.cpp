@@ -33,14 +33,14 @@ namespace sw
                 return true;
             }
 
-            static string_view stripJsonQuotes( string_view s )
+            static string_view stripJsonQuotes( string_view text )
             {
-                if ( s.size() >= 2 && s.front() == '"' && s.back() == '"' )
+                if ( text.size() >= 2 && text.front() == '"' && text.back() == '"' )
                 {
-                    s.remove_prefix( 1 );
-                    s.remove_suffix( 1 );
+                    text.remove_prefix( 1 );
+                    text.remove_suffix( 1 );
                 }
-                return s;
+                return text;
             }
 
             static bool isStringType( hashed_string typeName )
@@ -81,23 +81,23 @@ namespace sw
             {
                 if ( payloadSize == sizeof( int32 ) )
                 {
-                    int32 v{ 0 };
-                    readPod( pPayload, payloadSize, v );
-                    out = sw::to_string( v );
+                    int32 value{ 0 };
+                    readPod( pPayload, payloadSize, value );
+                    out = sw::to_string( value );
                     return true;
                 }
                 if ( payloadSize == sizeof( int64 ) )
                 {
-                    int64 v{ 0 };
-                    readPod( pPayload, payloadSize, v );
-                    out = sw::to_string( v );
+                    int64 value{ 0 };
+                    readPod( pPayload, payloadSize, value );
+                    out = sw::to_string( value );
                     return true;
                 }
                 if ( payloadSize == sizeof( float32 ) )
                 {
-                    float32 v{ 0 };
-                    readPod( pPayload, payloadSize, v );
-                    out = sw::to_string( v );
+                    float32 value{ 0 };
+                    readPod( pPayload, payloadSize, value );
+                    out = sw::to_string( value );
                     return true;
                 }
                 return false;
@@ -111,9 +111,9 @@ namespace sw
                 string_splitter splitter( pDottedPath, { "." } );
                 for ( string_view token : splitter.getSplitList() )
                 {
-                    string_view t = StringUtil::trim( token );
-                    if ( t.empty() == false )
-                        listPart.push_back( string{ t } );
+                    string_view trimmedToken = StringUtil::trim( token );
+                    if ( trimmedToken.empty() == false )
+                        listPart.push_back( string{ trimmedToken } );
                 }
                 return listPart;
             }
@@ -359,8 +359,8 @@ namespace sw
                 Memory::copy( &len, pPayload, sizeof( uint32 ) );
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
-                    const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
+                    const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
+                    return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, ctx );
                 }
             }
         }
@@ -372,8 +372,8 @@ namespace sw
             Memory::copy( &len, pPayload, sizeof( uint32 ) );
             if ( sizeof( uint32 ) + len == payloadSize )
             {
-                const string_view sv{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return parseTextValueCoerced( pPropPtr, targetTypeName, sv, ctx );
+                const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
+                return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, ctx );
             }
         }
 

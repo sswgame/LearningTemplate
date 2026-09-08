@@ -89,9 +89,9 @@ namespace sw
             string str;
             if ( inArchive.readString( str ) == false )
                 return false;
-            const uint32 id = static_cast<uint32>( _listString.size() );
+            const uint32 stringId = static_cast<uint32>( _listString.size() );
             _listString.push_back( std::move( str ) );
-            _mapStringToId.emplace( _listString.back(), id );
+            _mapStringToId.emplace( _listString.back(), stringId );
         }
         return true;
     }
