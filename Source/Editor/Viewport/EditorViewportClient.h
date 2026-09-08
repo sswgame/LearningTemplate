@@ -54,18 +54,11 @@ namespace sw::editor
         void getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const;
 
         /** @brief 카메라 위치 및 회전 설정 */
-        void setCameraPosition( const float3& pos ) { _cameraPos = pos; }
-        void setCameraRotation( const float3& rot ) { _cameraRot = rot; }
-        void setOrbitTarget( const float3& target ) { _orbitTarget = target; }
-        void setCameraMode( CameraControlMode mode ) { _cameraMode = mode; }
 
         /** @brief 현재 선택된 GameObject로 카메라를 프레이밍(F key)합니다. */
         void frameSelected();
 
-        const float3&            getCameraPosition() const { return _cameraPos; }
-        const float3&            getCameraRotation() const { return _cameraRot; }
-        CameraControlMode        getCameraMode() const { return _cameraMode; }
-        ViewportToolbarSettings& getToolbarSettings() { return _toolbarSettings; }
+        const float3& getCameraPosition() const { return _cameraPos; }
 
     private:
         void processFlyInput( float32 deltaTime );

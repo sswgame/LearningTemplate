@@ -111,7 +111,6 @@ namespace sw::editor
         , _selectedComponentId{ 0 }
         , _observedSceneGeneration{ 0 }
         , _scrollToComponentId{ 0 }
-        , _scrollToObjectId{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
         , _pendingOpenPanelTitle{}
@@ -130,7 +129,6 @@ namespace sw::editor
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _gizmoOperation{ 0 }
         , _bGizmoLocalSpace{ SW_TRUE }
-        , _bBoneHierarchyPopupOpen{ SW_FALSE }
         , _bSceneDirty{ SW_FALSE }
         , _bPrefabIsolation{ SW_FALSE }
         , _reservedWorkspace{ 0 }

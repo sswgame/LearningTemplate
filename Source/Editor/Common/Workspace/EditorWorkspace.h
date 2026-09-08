@@ -80,7 +80,6 @@ namespace sw::editor
         uint64        getSelectedComponentId() const { return _selectedComponentId; }
         void          setSelectedComponentId( uint64 id ) { _selectedComponentId = id; }
         string        getSelectedObjectName() const;
-        const string& getSelectedComponentKey() const { return _selectedComponentKey; }
         void          setSelectedComponentKey( string_view key ) { _selectedComponentKey = key; }
         void          clearSelection();
 
@@ -94,8 +93,7 @@ namespace sw::editor
         const string& getFocusedAssetPath() const { return _focusedAssetPath; }
         void          setFocusedAssetPath( const utf8* pPath );
 
-        InspectMode getInspectMode() const { return _inspectMode; }
-        void        setInspectMode( InspectMode mode ) { _inspectMode = mode; }
+        void setInspectMode( InspectMode mode ) { _inspectMode = mode; }
 
         // ------------------------------------------------------------------------------
         // 3) 기즈모 — 조작 모드 / 로컬 스페이스
@@ -109,9 +107,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 4) 윈도우 열기 요청 — 메뉴가 쓰고 셸이 consume
         // ------------------------------------------------------------------------------
-        const string& getPendingOpenPanelTitle() const { return _pendingOpenPanelTitle; }
-        void          requestOpenPanel( const utf8* pTitle );
-        bool          consumeOpenPanel( string& outTitle );
+        void requestOpenPanel( const utf8* pTitle );
+        bool consumeOpenPanel( string& outTitle );
 
         // ------------------------------------------------------------------------------
         // 5) 씬 열기 — FileDialog는 백그라운드, consume은 메인 스레드
@@ -147,12 +144,6 @@ namespace sw::editor
         uint64 getScrollToComponentId() const { return _scrollToComponentId; }
         void   setScrollToComponentId( uint64 id ) { _scrollToComponentId = id; }
 
-        uint64 getScrollToObjectId() const { return _scrollToObjectId; }
-        void   setScrollToObjectId( uint64 id ) { _scrollToObjectId = id; }
-
-        bool getBoneHierarchyPopupOpen() const { return _bBoneHierarchyPopupOpen; }
-        void setBoneHierarchyPopupOpen( bool bOpen ) { _bBoneHierarchyPopupOpen = bOpen; }
-
         // ------------------------------------------------------------------------------
         // 7) 프리팹 애셋 매핑 (에디터 전용 메타데이터)
         // ------------------------------------------------------------------------------
@@ -171,15 +162,13 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
         // ------------------------------------------------------------------------------
-        void                 copyComponent( const Component* pComp );
-        bool                 hasCopiedComponent() const;
-        const string&        getCopiedComponentXml() const { return _copiedComponentXml; }
-        const vector<uint8>& getCopiedComponentBytes() const { return _copiedComponentBytes; }
-        const string&        getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-        bool                 pasteComponentValues( Component* pTargetComp );
-        Component*           pasteComponentAsNew( GameObject* pTargetObj );
-        bool                 saveComponentPreset( const Component* pComp, string_view presetName );
-        bool                 loadComponentPreset( Component* pComp, string_view presetFilePath );
+        void          copyComponent( const Component* pComp );
+        bool          hasCopiedComponent() const;
+        const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
+        bool          pasteComponentValues( Component* pTargetComp );
+        Component*    pasteComponentAsNew( GameObject* pTargetObj );
+        bool          saveComponentPreset( const Component* pComp, string_view presetName );
+        bool          loadComponentPreset( Component* pComp, string_view presetFilePath );
 
         void alignSelectedObjects( AlignAxis axis, AlignType type );
         void distributeSelectedObjects( AlignAxis axis );
@@ -210,7 +199,6 @@ namespace sw::editor
         uint64                        _selectedComponentId;
         uint64                        _observedSceneGeneration;
         uint64                        _scrollToComponentId;
-        uint64                        _scrollToObjectId;
         string                        _selectedComponentKey;
         string                        _focusedAssetPath;
         string                        _pendingOpenPanelTitle;
@@ -229,10 +217,9 @@ namespace sw::editor
         InspectMode                   _inspectMode;
         EditorPendingSceneAction      _pendingSceneAction;
         int32                         _gizmoOperation;
-        uint8                         _bGizmoLocalSpace        : 1;
-        uint8                         _bBoneHierarchyPopupOpen : 1;
-        uint8                         _bSceneDirty             : 1;
-        uint8                         _bPrefabIsolation        : 1;
-        [[maybe_unused]] uint8        _reservedWorkspace       : 4;
+        uint8                         _bGizmoLocalSpace  : 1;
+        uint8                         _bSceneDirty       : 1;
+        uint8                         _bPrefabIsolation  : 1;
+        [[maybe_unused]] uint8        _reservedWorkspace : 4;
     };
 } // namespace sw::editor

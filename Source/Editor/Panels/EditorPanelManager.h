@@ -62,7 +62,6 @@ namespace sw::editor
         }
 
         const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
-        vector<EditorPanelEntry>&       getPanelsMutable() { return _listPanel; }
         IEditorPanel*                   findPanel( string_view panelId ) const;
         bool                            setPanelOpen( string_view panelId, bool bOpen );
         void                            clear();

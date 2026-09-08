@@ -13,6 +13,7 @@ namespace sw::editor
     {
         struct EditorBackgroundIoInternal
         {
+            /** @brief TaskManager 가 없으면(테스트·초기화 전) 같은 스레드에서 바로 돌립니다. */
             static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
             {
                 TaskManager* pTaskManager = editor::getService<TaskManager>();
@@ -31,575 +32,173 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    struct EditorFileCollectJob::State
-    {
-        mutable mutex          _mutex{};
-        string                 _folder{};
-        string                 _extension{};
-        vector<string>         _listResult{};
-        uint32                 _generation{ 0 };
-        uint8                  _bRecursive : 1;
-        uint8                  _bPending   : 1;
-        uint8                  _bReady     : 1;
-        [[maybe_unused]] uint8 _reserved   : 5;
-
-        State()
-            : _mutex{}
-            , _folder{}
-            , _extension{}
-            , _listResult{}
-            , _generation{ 0 }
-            , _bRecursive{ SW_FALSE }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorFileCollectJob::EditorFileCollectJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorFileCollectJob
+    // ======================================================================
 
     void EditorFileCollectJob::request( string_view folder, string_view extension, bool recursive )
     {
-        if ( _pState == nullptr )
-            return;
+        EditorFileCollectInput input;
+        input._folder     = string{ folder };
+        input._extension  = string{ extension };
+        input._bRecursive = recursive;
 
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_folder     = string{ folder };
-            _pState->_extension  = string{ extension };
-            _pState->_bRecursive = recursive ? SW_TRUE : SW_FALSE;
-            _pState->_bPending   = SW_TRUE;
-            _pState->_bReady     = SW_FALSE;
-            _pState->_listResult.clear();
-            generation = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( std::move( input ) );
         EditorBackgroundIoInternal::submitOrRun( "EditorFileCollect",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorFileCollectJob::take( vector<string>& outList )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outList            = std::move( _pState->_listResult );
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorFileCollectJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorFileCollectJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        string folder;
-        string extension;
-        bool   bRecursive = false;
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-            folder     = pState->_folder;
-            extension  = pState->_extension;
-            bRecursive = ( pState->_bRecursive == SW_TRUE );
-        }
+        EditorFileCollectInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         vector<string> listFile;
-        FileUtil::collectFiles( folder, extension, listFile, bRecursive, false );
+        FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, false );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_listResult = std::move( listFile );
-        pState->_bReady     = SW_TRUE;
-        pState->_bPending   = SW_FALSE;
+        publish( pState, generation, std::move( listFile ) );
     }
 
-    struct EditorLocalizationLoadJob::State
-    {
-        mutable mutex          _mutex{};
-        vector<LocRecord>      _listResult{};
-        uint32                 _generation{ 0 };
-        uint8                  _bPending : 1;
-        uint8                  _bReady   : 1;
-        [[maybe_unused]] uint8 _reserved : 6;
-
-        State()
-            : _mutex{}
-            , _listResult{}
-            , _generation{ 0 }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorLocalizationLoadJob::EditorLocalizationLoadJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorLocalizationLoadJob
+    // ======================================================================
 
     void EditorLocalizationLoadJob::request()
     {
-        if ( _pState == nullptr )
-            return;
-
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
-            _pState->_listResult.clear();
-            generation = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( {} );
         EditorBackgroundIoInternal::submitOrRun( "EditorLocalizationLoad",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorLocalizationLoadJob::take( vector<LocRecord>& outList )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outList            = std::move( _pState->_listResult );
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorLocalizationLoadJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorLocalizationLoadJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-        }
+        EditorBackgroundNoInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         vector<LocRecord> listRecord;
         EditorDataTableCommands::loadLocalization( listRecord );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_listResult = std::move( listRecord );
-        pState->_bReady     = SW_TRUE;
-        pState->_bPending   = SW_FALSE;
+        publish( pState, generation, std::move( listRecord ) );
     }
 
-    struct EditorGameDataScanJob::State
-    {
-        mutable mutex             _mutex{};
-        vector<GameDataFileEntry> _listResult{};
-        uint32                    _generation{ 0 };
-        uint8                     _bPending : 1;
-        uint8                     _bReady   : 1;
-        [[maybe_unused]] uint8    _reserved : 6;
-
-        State()
-            : _mutex{}
-            , _listResult{}
-            , _generation{ 0 }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorGameDataScanJob::EditorGameDataScanJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorGameDataScanJob
+    // ======================================================================
 
     void EditorGameDataScanJob::request()
     {
-        if ( _pState == nullptr )
-            return;
-
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
-            _pState->_listResult.clear();
-            generation = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( {} );
         EditorBackgroundIoInternal::submitOrRun( "EditorGameDataScan",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorGameDataScanJob::take( vector<GameDataFileEntry>& outList )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outList            = std::move( _pState->_listResult );
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorGameDataScanJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorGameDataScanJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-        }
+        EditorBackgroundNoInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         vector<GameDataFileEntry> listEntry;
         EditorDataTableCommands::collectGameDataFiles( listEntry );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_listResult = std::move( listEntry );
-        pState->_bReady     = SW_TRUE;
-        pState->_bPending   = SW_FALSE;
+        publish( pState, generation, std::move( listEntry ) );
     }
 
-    struct EditorResourceIndexJob::State
-    {
-        mutable mutex                    _mutex{};
-        vector<EditorResourceIndexEntry> _listResult{};
-        uint32                           _generation{ 0 };
-        uint8                            _bPending : 1;
-        uint8                            _bReady   : 1;
-        [[maybe_unused]] uint8           _reserved : 6;
-
-        State()
-            : _mutex{}
-            , _listResult{}
-            , _generation{ 0 }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorResourceIndexJob::EditorResourceIndexJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorResourceIndexJob
+    // ======================================================================
 
     void EditorResourceIndexJob::request()
     {
-        if ( _pState == nullptr )
-            return;
-
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
-            _pState->_listResult.clear();
-            generation = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( {} );
         EditorBackgroundIoInternal::submitOrRun( "EditorResourceIndex",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorResourceIndexJob::take( vector<EditorResourceIndexEntry>& outList )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outList            = std::move( _pState->_listResult );
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorResourceIndexJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorResourceIndexJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-        }
+        EditorBackgroundNoInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         vector<EditorResourceIndexEntry> listEntry;
         EditorAssetCommands::collectResourceIndex( listEntry );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_listResult = std::move( listEntry );
-        pState->_bReady     = SW_TRUE;
-        pState->_bPending   = SW_FALSE;
+        publish( pState, generation, std::move( listEntry ) );
     }
 
-    struct EditorFolderListingJob::State
-    {
-        mutable mutex                    _mutex{};
-        string                           _folder{};
-        vector<EditorFolderListingEntry> _listResult{};
-        uint32                           _generation{ 0 };
-        uint8                            _bPending : 1;
-        uint8                            _bReady   : 1;
-        [[maybe_unused]] uint8           _reserved : 6;
-
-        State()
-            : _mutex{}
-            , _folder{}
-            , _listResult{}
-            , _generation{ 0 }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorFolderListingJob::EditorFolderListingJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorFolderListingJob
+    // ======================================================================
 
     void EditorFolderListingJob::request( string_view folderAbs )
     {
-        if ( _pState == nullptr )
-            return;
+        EditorFolderListingInput input;
+        input._folder = string{ folderAbs };
 
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_folder   = string{ folderAbs };
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
-            _pState->_listResult.clear();
-            generation = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( std::move( input ) );
         EditorBackgroundIoInternal::submitOrRun( "EditorFolderListing",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorFolderListingJob::take( vector<EditorFolderListingEntry>& outList )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outList            = std::move( _pState->_listResult );
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorFolderListingJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorFolderListingJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        string folder;
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-            folder = pState->_folder;
-        }
+        EditorFolderListingInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         vector<EditorFolderListingEntry> listEntry;
-        EditorAssetCommands::collectFolderListing( folder, listEntry );
+        EditorAssetCommands::collectFolderListing( input._folder, listEntry );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_listResult = std::move( listEntry );
-        pState->_bReady     = SW_TRUE;
-        pState->_bPending   = SW_FALSE;
+        publish( pState, generation, std::move( listEntry ) );
     }
 
-    struct EditorResourceCatalogJob::State
-    {
-        mutable mutex               _mutex{};
-        EditorResourceCatalogCounts _counts{};
-        uint32                      _generation{ 0 };
-        uint8                       _bPending : 1;
-        uint8                       _bReady   : 1;
-        [[maybe_unused]] uint8      _reserved : 6;
-
-        State()
-            : _mutex{}
-            , _counts{}
-            , _generation{ 0 }
-            , _bPending{ SW_FALSE }
-            , _bReady{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    EditorResourceCatalogJob::EditorResourceCatalogJob()
-        : _pState{ sw::make_shared<State>() }
-    {
-    }
+    // ======================================================================
+    // EditorResourceCatalogJob
+    // ======================================================================
 
     void EditorResourceCatalogJob::request()
     {
-        if ( _pState == nullptr )
-            return;
-
-        uint32 generation = 0;
-        {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            ++_pState->_generation;
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
-            _pState->_counts   = {};
-            generation         = _pState->_generation;
-        }
-
+        const uint32 generation = beginRequest( {} );
         EditorBackgroundIoInternal::submitOrRun( "EditorResourceCatalog",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
 
-    bool EditorResourceCatalogJob::take( EditorResourceCatalogCounts& outCounts )
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        if ( _pState->_bReady == SW_FALSE )
-            return false;
-        outCounts          = _pState->_counts;
-        _pState->_bReady   = SW_FALSE;
-        _pState->_bPending = SW_FALSE;
-        return true;
-    }
-
-    bool EditorResourceCatalogJob::isPending() const
-    {
-        if ( _pState == nullptr )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
-        return _pState->_bPending == SW_TRUE;
-    }
-
     void EditorResourceCatalogJob::runJob( const TaskArgs& args )
     {
-        shared_ptr<State> pState = args.get<shared_ptr<State>>( 0 );
-        const uint32      gen    = args.get<uint32>( 1 );
-        if ( pState == nullptr )
-            return;
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
 
-        {
-            std::scoped_lock<mutex> lock{ pState->_mutex };
-            if ( gen != pState->_generation )
-                return;
-        }
+        EditorBackgroundNoInput input;
+        if ( readInput( pState, generation, input ) == false )
+            return;
 
         EditorResourceCatalogCounts counts{};
         EditorAssetCommands::collectResourceCatalogCounts( counts );
 
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        if ( gen != pState->_generation )
-            return;
-        pState->_counts   = counts;
-        pState->_bReady   = SW_TRUE;
-        pState->_bPending = SW_FALSE;
+        publish( pState, generation, std::move( counts ) );
     }
 } // namespace sw::editor

@@ -8,6 +8,7 @@ find_package(directxtex CONFIG REQUIRED)
 sw_addTestExecutable(EditorTest
 	SOURCES
 		TestEditorAssetType.cpp
+		TestEditorBackgroundJob.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorViewportMath.cpp
 		TestSelectionManager.cpp

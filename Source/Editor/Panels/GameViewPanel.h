@@ -27,8 +27,6 @@ namespace sw::editor
         /** @brief 창이 숨겨지면 Game View 포커스를 해제합니다. */
         void onPanelCollapsed() override;
 
-        EditorViewportClient& getViewportClient() { return _viewportClient; }
-
     private:
         /** @brief Play/Sim/Pause/Step/Stop 버튼을 그립니다. */
         void drawTransportControls();
