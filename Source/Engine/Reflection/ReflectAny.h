@@ -30,8 +30,8 @@ namespace sw
         bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
 
         /** @brief 리플렉트 타입 T에서 ReflectAny를 만듭니다. */
-        template <typename T>
         /** @brief 만듭니다. */
+        template <typename T>
         static ReflectAny make( const T& value )
         {
             if constexpr ( HasReflectStaticType<T>::value )
@@ -45,8 +45,8 @@ namespace sw
                 return ReflectAny{};
         }
 
-        template <typename T>
         /** @brief 저장된 값을 T로 꺼냅니다. */
+        template <typename T>
         bool tryGet( T& out ) const
         {
             if constexpr ( HasReflectStaticType<T>::value )
