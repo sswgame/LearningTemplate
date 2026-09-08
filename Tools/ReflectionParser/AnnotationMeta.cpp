@@ -78,12 +78,12 @@ namespace sw
             if ( currentScope.empty() )
                 continue;
 
-            const size_t eq = line.find( '=' );
-            if ( eq == string::npos )
+            const size_t equalPos = line.find( '=' );
+            if ( equalPos == string::npos )
                 continue;
 
-            const string left  = StringUtil::trim( line.substr( 0, eq ).c_str() );
-            const string right = StringUtil::trim( line.substr( eq + 1 ).c_str() );
+            const string left  = StringUtil::trim( line.substr( 0, equalPos ).c_str() );
+            const string right = StringUtil::trim( line.substr( equalPos + 1 ).c_str() );
             const size_t dot   = left.find( '.' );
             if ( dot == string::npos || dot == 0 || dot + 1 >= left.size() )
             {

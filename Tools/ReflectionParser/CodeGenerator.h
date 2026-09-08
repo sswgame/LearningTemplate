@@ -29,7 +29,6 @@ namespace sw
         /** @brief 생성된 .gen.cpp 경로를 반환합니다. */
         const string& getOutputFilePath() const { return _outputFilePath; }
         /** @brief 생성된 .gen.h 경로를 반환합니다. */
-        const string& getOutputHeaderPath() const { return _outputHeaderPath; }
 
     private:
         // ------------------------------------------------------------------------------
@@ -40,15 +39,15 @@ namespace sw
         /** @brief TypeRegistrar 본문을 출력합니다. */
         void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */
-        void emitPropertyInfoEntry( CodeEmit& e, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+        void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 프로퍼티 메타데이터(카테고리·별칭 등)를 출력합니다. */
-        void emitPropertyMetadata( CodeEmit& e, const ParsedPropertyInfo& prop ) const;
+        void emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const;
         /** @brief 중첩 컨테이너 트리를 출력합니다. */
-        void emitNestedContainerTree( CodeEmit& e, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+        void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 메서드 목록을 출력합니다. */
-        void emitMethodList( CodeEmit& e, const ParsedTypeInfo& typeInfo ) const;
+        void emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 호출용 invoker 람다를 출력합니다. */
-        void emitMethodInvoker( CodeEmit& e, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
+        void emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
                                 const string& retType, const string& callArgs ) const;
         /** @brief ReflectTypeTraits 특화를 출력합니다. */
         void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;

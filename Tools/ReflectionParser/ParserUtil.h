@@ -57,13 +57,13 @@ namespace sw
 
             for ( size_t index = 0; index < inner.size(); ++index )
             {
-                const utf8 c = inner[index];
-                if ( c == '<' )
+                const utf8 character = inner[index];
+                if ( character == '<' )
                     ++depth;
-                else if ( c == '>' )
+                else if ( character == '>' )
                     --depth;
 
-                if ( c == ',' && depth == 0 )
+                if ( character == ',' && depth == 0 )
                 {
                     if ( index > tokenStart )
                     {
@@ -91,15 +91,6 @@ namespace sw
             if ( last != string_view::npos && last + 2 < name.size() )
                 name = name.substr( last + 2 );
             return name;
-        }
-
-        /** @brief FQN(예: "sw::EState::Idle")에서 상위 네임스페이스/스코프를 추출합니다. */
-        static string_view enclosingNamespaceOf( string_view fqn )
-        {
-            const size_t pos = fqn.rfind( "::" );
-            if ( pos == string_view::npos )
-                return {};
-            return fqn.substr( 0, pos );
         }
     };
 } // namespace sw

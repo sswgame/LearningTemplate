@@ -16,15 +16,15 @@ namespace sw
         struct EmitTemplateStoreInternal
         {
             /** @brief 식별자 시작 문자인지 판별합니다. */
-            static bool isIdentStart( const utf8 c )
+            static bool isIdentStart( const utf8 character )
             {
-                return ( 'A' <= c && c <= 'Z' ) || ( 'a' <= c && c <= 'z' ) || c == '_';
+                return ( 'A' <= character && character <= 'Z' ) || ( 'a' <= character && character <= 'z' ) || character == '_';
             }
 
             /** @brief 식별자 중간 문자인지 판별합니다. */
-            static bool isIdentChar( const utf8 c )
+            static bool isIdentChar( const utf8 character )
             {
-                return isIdentStart( c ) || ( '0' <= c && c <= '9' );
+                return isIdentStart( character ) || ( '0' <= character && character <= '9' );
             }
 
             /** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열 뷰를 반환합니다. */

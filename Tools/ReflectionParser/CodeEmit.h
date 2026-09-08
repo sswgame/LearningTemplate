@@ -41,9 +41,6 @@ namespace sw
             _indent = static_cast<uint8>( ( _indent > levels ) ? ( _indent - levels ) : 0 );
             return *this;
         }
-        /** @brief 현재 들여쓰기 단계를 반환합니다. */
-        uint8 indentLevel() const noexcept { return _indent; }
-
         // ------------------------------------------------------------------------------
         // 2) emit — 원문·줄·할당·플래그
         // ------------------------------------------------------------------------------
@@ -86,14 +83,6 @@ namespace sw
             return linef( "%# = %#;", lhs, rhs );
         }
 
-        /** @brief cond가 참이면 `lhs = rhs;` 를 출력합니다. */
-        CodeEmit& assignIf( bool cond, const string_view lhs, const string_view rhs )
-        {
-            if ( cond )
-                assign( lhs, rhs );
-            return *this;
-        }
-
         /** @brief cond가 참이면 비트/불리언 플래그 `field = value;` 를 출력합니다. */
         CodeEmit& flagIf( bool cond, const string_view field, const string_view value = "1" )
         {
@@ -120,9 +109,6 @@ namespace sw
             b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( string( name ) ) );
             return string( b.view() );
         }
-
-        /** @brief 빈 `::sw::hashed_string()` 표현식을 반환합니다. */
-        static string hsEmpty() { return "::sw::hashed_string()"; }
 
         /** @brief 이스케이프된 C++ 문자열 리터럴 `"..."` 을 만듭니다. */
         static string quoted( const string_view value )
