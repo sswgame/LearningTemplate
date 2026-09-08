@@ -25,6 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorWorkspace;
+
     /** @brief 현재 아웃라이너 선택을 검사하고 편집합니다 */
     class InspectorPanel : public IEditorPanel
     {
@@ -46,6 +48,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 현재 선택 섹션을 그립니다. */
         void drawSelectionSection();
+        /** @brief 프리팹 인스턴스일 때 적용·되돌리기·연결 해제 버튼을 그립니다. */
+        void drawPrefabLinkSection( GameObject* pObj, const string& prefabPath );
+        /** @brief 선택된 오브젝트의 컴포넌트 카드 목록을 그립니다. */
+        void drawComponentList( GameObject* pObj, EditorWorkspace& workspace );
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
@@ -60,6 +66,12 @@ namespace sw::editor
         void drawPropertyWidget( void* pInstance, const PropertyInfo& prop );
         /** @brief 위젯 본문. 통지 판정은 감싸는 drawPropertyWidget 이 합니다. */
         void drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop );
+        /** @brief 열거형 프로퍼티 위젯을 그립니다. */
+        void drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly );
+        /** @brief 컨테이너 프로퍼티 위젯을 그립니다. */
+        void drawContainerProperty( void* pInstance, const PropertyInfo& prop, bool bReadOnly );
+        /** @brief 구조체·문자열 프로퍼티 위젯을 그립니다. */
+        void drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType );
         /**
          * @brief 인스펙터가 값을 바꿨음을 편집 대상에 알립니다.
          * @details 이게 없으면 인스펙터 편집은 아무에게도 보이지 않는 변경이 된다. 위젯 대부분이

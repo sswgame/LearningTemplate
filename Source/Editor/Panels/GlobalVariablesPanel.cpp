@@ -22,6 +22,10 @@
 
 namespace sw::editor
 {
+    /** @brief 변수 목록 테이블 공통 플래그. */
+    constexpr ImGuiTableFlags kGlobalVarTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                                                     ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
+
     namespace
     {
         struct GlobalVariablesPanelInternal
@@ -224,6 +228,35 @@ namespace sw::editor
         if ( pGvm == nullptr )
             return;
 
+        drawVariableToolbar( *pGvm );
+
+        // 2) 변수 목록 수집
+        const vector<string> listAllName   = pGvm->collectVariableNames();
+        const uint32         totalVarCount = pGvm->getVariableCount();
+
+        vector<GlobalVariableInfo*> listFiltered;
+        listFiltered.reserve( listAllName.size() );
+
+        for ( const string& varName : listAllName )
+        {
+            GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
+            if ( pInfo == nullptr )
+                continue;
+            if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _searchFilter.c_str() ) )
+                listFiltered.push_back( pInfo );
+        }
+
+        std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
+
+        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
+
+        drawPinnedSection( *pGvm );
+
+        drawVariableTable( listFiltered );
+    }
+
+    void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )
+    {
         // 1) 상단 툴바 (검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴)
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
         {
@@ -238,7 +271,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Reset All" ) )
             {
-                pGvm->resetAllToDefault();
+                gvm.resetAllToDefault();
                 markSessionDirty();
             }
 
@@ -316,30 +349,10 @@ namespace sw::editor
         EditorChrome::endToolbar();
 
         ImGui::Separator();
+    }
 
-        // 2) 변수 목록 수집
-        const vector<string> listAllName   = pGvm->collectVariableNames();
-        const uint32         totalVarCount = pGvm->getVariableCount();
-
-        vector<GlobalVariableInfo*> listFiltered;
-        listFiltered.reserve( listAllName.size() );
-
-        for ( const string& varName : listAllName )
-        {
-            GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
-            if ( pInfo == nullptr )
-                continue;
-            if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _searchFilter.c_str() ) )
-                listFiltered.push_back( pInfo );
-        }
-
-        std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
-
-        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
-
-        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                                ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
-
+    void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )
+    {
         // 3) ⭐ 핀 고정된 즐겨찾기 변수 섹션
         if ( _uniquePinnedVar.empty() == false )
         {
@@ -358,7 +371,7 @@ namespace sw::editor
 
                     for ( const string& pinnedName : _uniquePinnedVar )
                     {
-                        GlobalVariableInfo* pInfo = pGvm->findVariable( pinnedName );
+                        GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
                         if ( pInfo != nullptr )
                         {
                             ImGui::PushID( ( "Pinned_" + pInfo->_name ).c_str() );
@@ -371,7 +384,10 @@ namespace sw::editor
             }
             ImGui::Separator();
         }
+    }
 
+    void GlobalVariablesPanel::drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered )
+    {
         // 4) 메인 변수 테이블 (그룹 또는 비그룹)
         if ( _bGroupByModule == SW_TRUE )
         {
@@ -402,7 +418,7 @@ namespace sw::editor
                 if ( bModuleHeaderOpen )
                 {
                     const string tableId = "GvTable_" + currentModule;
-                    if ( ImGui::BeginTable( tableId.c_str(), 5, kTableFlags, ImVec2( 0.0f, 0.0f ) ) )
+                    if ( ImGui::BeginTable( tableId.c_str(), 5, kGlobalVarTableFlags, ImVec2( 0.0f, 0.0f ) ) )
                     {
                         ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
                         ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );
@@ -426,7 +442,7 @@ namespace sw::editor
         }
         else
         {
-            if ( ImGui::BeginTable( "GlobalVarsTable", 5, kTableFlags, ImVec2( 0.0f, -1.0f ) ) )
+            if ( ImGui::BeginTable( "GlobalVarsTable", 5, kGlobalVarTableFlags, ImVec2( 0.0f, -1.0f ) ) )
             {
                 ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f );
                 ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f );

@@ -16,6 +16,8 @@
 namespace sw
 {
     struct GlobalVariableInfo;
+
+    class GlobalVariableManager;
 } // namespace sw
 
 namespace sw::editor
@@ -36,6 +38,12 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Global Variables"; }
         /** @brief 전역 변수 UI를 그립니다. */
         void drawContent() override;
+        /** @brief 검색·그룹화·리셋·프리셋 툴바를 그립니다. */
+        void drawVariableToolbar( GlobalVariableManager& gvm );
+        /** @brief 핀 고정된 즐겨찾기 변수 섹션을 그립니다. */
+        void drawPinnedSection( GlobalVariableManager& gvm );
+        /** @brief 그룹/비그룹 모드로 변수 테이블을 그립니다. */
+        void drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered );
         /** @brief 기본 창 크기를 반환합니다. */
         float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
         /** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */

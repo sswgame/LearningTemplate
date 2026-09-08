@@ -201,28 +201,7 @@ namespace sw::editor
 
         const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectId() );
         if ( pfbPath.empty() == false )
-        {
-            EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
-            EditorWidgets::drawTooltip( "프리팹 인스턴스입니다" );
-            ImGui::SameLine();
-            ImGui::TextDisabled( "%s", pfbPath.c_str() );
-
-            if ( ImGui::Button( "Apply to Prefab" ) )
-                EditorInspectorCommands::applyToPrefab( pObj, pfbPath );
-            EditorWidgets::drawTooltip( "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다" );
-
-            ImGui::SameLine();
-            if ( ImGui::Button( "Revert to Prefab" ) )
-                EditorInspectorCommands::revertToPrefab( pObj, pfbPath );
-            EditorWidgets::drawTooltip( "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" );
-
-            ImGui::SameLine();
-            if ( ImGui::Button( "Unlink" ) )
-                EditorInspectorCommands::unlinkPrefab( pObj );
-            EditorWidgets::drawTooltip( "프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환합니다" );
-
-            ImGui::Separator();
-        }
+            drawPrefabLinkSection( pObj, pfbPath );
 
         EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, "Search properties..." );
         EditorWidgets::drawTooltip( "프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다" );
@@ -239,6 +218,38 @@ namespace sw::editor
             _pEditTargetObject = nullptr;
         }
 
+        drawComponentList( pObj, ws );
+
+        if ( bEditsAllowed == false )
+            ImGui::EndDisabled();
+    }
+
+    void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const string& prefabPath )
+    {
+        EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
+        EditorWidgets::drawTooltip( "프리팹 인스턴스입니다" );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%s", prefabPath.c_str() );
+
+        if ( ImGui::Button( "Apply to Prefab" ) )
+            EditorInspectorCommands::applyToPrefab( pObj, prefabPath );
+        EditorWidgets::drawTooltip( "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다" );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Revert to Prefab" ) )
+            EditorInspectorCommands::revertToPrefab( pObj, prefabPath );
+        EditorWidgets::drawTooltip( "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Unlink" ) )
+            EditorInspectorCommands::unlinkPrefab( pObj );
+        EditorWidgets::drawTooltip( "프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환합니다" );
+
+        ImGui::Separator();
+    }
+
+    void InspectorPanel::drawComponentList( GameObject* pObj, EditorWorkspace& workspace )
+    {
         ImGui::SeparatorText( "Components" );
         EditorContext*           pSelEditorContext = EditorContext::get();
         IRHIDevice*              pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
@@ -252,13 +263,13 @@ namespace sw::editor
             bool        bActive = pComp->isActive();
             bool        bRemove{ false };
             const bool  bAccent   = isA<SceneComponent>( pComp );
-            const bool  bScrollTo = ( ws.getScrollToComponentId() != 0 &&
-                                      ws.getScrollToComponentId() == pComp->getComponentId() );
+            const bool  bScrollTo = ( workspace.getScrollToComponentId() != 0 &&
+                                     workspace.getScrollToComponentId() == pComp->getComponentId() );
 
             if ( bScrollTo )
             {
                 ImGui::SetNextItemOpen( true );
-                ws.setScrollToComponentId( 0 );
+                workspace.setScrollToComponentId( 0 );
             }
 
             if ( EditorWidgets::beginComponentCard( pName, pComp->getComponentId(), &bActive, &bRemove, bAccent ) )
@@ -274,18 +285,18 @@ namespace sw::editor
                     {
                         if ( ImGui::MenuItem( "Copy Component" ) )
                         {
-                            ws.copyComponent( pComp );
+                            workspace.copyComponent( pComp );
                         }
                         const string compTypeName = pComp->getComponentName().empty() == false
                                                       ? pComp->getComponentName().c_str()
                                                       : pTInfo->_name.c_str();
-                        const bool   bCanPaste    = ( ws.hasCopiedComponent() &&
-                                                      ws.getCopiedComponentTypeName() == compTypeName );
+                        const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
+                                                 workspace.getCopiedComponentTypeName() == compTypeName );
                         if ( bCanPaste )
                         {
                             if ( ImGui::MenuItem( "Paste Component Values" ) )
                             {
-                                ws.pasteComponentValues( pComp );
+                                workspace.pasteComponentValues( pComp );
                             }
                         }
                         else
@@ -295,11 +306,11 @@ namespace sw::editor
                             ImGui::EndDisabled();
                         }
 
-                        if ( ws.hasCopiedComponent() )
+                        if ( workspace.hasCopiedComponent() )
                         {
                             if ( ImGui::MenuItem( "Paste as New Component" ) )
                             {
-                                ws.pasteComponentAsNew( pObj );
+                                workspace.pasteComponentAsNew( pObj );
                             }
                         }
 
@@ -312,7 +323,7 @@ namespace sw::editor
                             ImGui::SameLine();
                             if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
                             {
-                                ws.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
+                                workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
                                 s_presetNameBuf.clear();
                                 _bComponentPresetDirty = SW_TRUE;
                             }
@@ -346,7 +357,7 @@ namespace sw::editor
                                     }
                                     if ( ImGui::MenuItem( displayPreset.c_str() ) )
                                     {
-                                        ws.loadComponentPreset( pComp, presetFile );
+                                        workspace.loadComponentPreset( pComp, presetFile );
                                     }
                                 }
                             }
@@ -378,9 +389,6 @@ namespace sw::editor
                 break;
             }
         }
-
-        if ( bEditsAllowed == false )
-            ImGui::EndDisabled();
     }
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )
@@ -580,97 +588,92 @@ namespace sw::editor
                 return;
         }
 
-        const utf8* pLabel    = "##value";
-        const bool  bReadOnly = prop._metadata._bReadOnly != 0;
+        const bool bReadOnly = prop._metadata._bReadOnly != 0;
 
         auto*           pRegistry = editor::getService<TypeRegistry>();
         const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
         {
-            int32* pEnumValue = prop.getValuePtr<int32>( pInstance );
-            if ( pEnumValue == nullptr )
-                return;
+            drawEnumProperty( pInstance, prop, *pEnumInfo, bReadOnly );
+            return;
+        }
 
-            if ( pEnumInfo->_bIsBitFlag )
+        if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+        {
+            drawContainerProperty( pInstance, prop, bReadOnly );
+            return;
+        }
+
+        const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
+        if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
+        {
+            drawStructOrStringProperty( pInstance, prop, pFieldType );
+            return;
+        }
+
+        ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
+    }
+
+    void InspectorPanel::drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
+    {
+        const utf8* pLabel    = "##value";
+        auto*       pRegistry = editor::getService<TypeRegistry>();
+
+        int32* pEnumValue = prop.getValuePtr<int32>( pInstance );
+        if ( pEnumValue == nullptr )
+            return;
+
+        if ( enumInfo._bIsBitFlag )
+        {
+            string previewStr;
+            for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
             {
-                string previewStr;
-                for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+                const int32 val32 = static_cast<int32>( val );
+                if ( val32 != 0 && ( *pEnumValue & val32 ) == val32 )
                 {
-                    const int32 val32 = static_cast<int32>( val );
-                    if ( val32 != 0 && ( *pEnumValue & val32 ) == val32 )
-                    {
-                        if ( previewStr.empty() == false )
-                            previewStr += " | ";
-                        previewStr += nameHashed.c_str();
-                    }
+                    if ( previewStr.empty() == false )
+                        previewStr += " | ";
+                    previewStr += nameHashed.c_str();
                 }
-                if ( previewStr.empty() )
-                    previewStr = ( *pEnumValue == 0 ) ? "None" : "<Unknown>";
-
-                if ( bReadOnly )
-                {
-                    ImGui::TextDisabled( "%s", pLabel );
-                    ImGui::SameLine();
-                    ImGui::TextUnformatted( previewStr.c_str() );
-                    return;
-                }
-
-                if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) )
-                {
-                    if ( ImGui::SmallButton( "Select All" ) )
-                    {
-                        for ( const auto& [val, _] : pEnumInfo->_mapValueToName )
-                            *pEnumValue |= static_cast<int32>( val );
-                    }
-                    ImGui::SameLine();
-                    if ( ImGui::SmallButton( "Clear All" ) )
-                    {
-                        *pEnumValue = 0;
-                    }
-                    ImGui::Separator();
-
-                    for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
-                    {
-                        const int32 val32 = static_cast<int32>( val );
-                        if ( val32 == 0 )
-                            continue;
-                        bool bChecked = ( ( *pEnumValue & val32 ) == val32 );
-                        if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
-                        {
-                            if ( bChecked )
-                                *pEnumValue |= val32;
-                            else
-                                *pEnumValue &= ~val32;
-                        }
-                    }
-                    ImGui::EndCombo();
-                }
-                InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
-                return;
             }
+            if ( previewStr.empty() )
+                previewStr = ( *pEnumValue == 0 ) ? "None" : "<Unknown>";
 
-            const utf8* pName = pRegistry->enumToString( prop._typeName, *pEnumValue );
             if ( bReadOnly )
             {
                 ImGui::TextDisabled( "%s", pLabel );
                 ImGui::SameLine();
-                ImGui::TextUnformatted( pName != nullptr ? pName : "<Unknown>" );
+                ImGui::TextUnformatted( previewStr.c_str() );
                 return;
             }
 
-            const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
-
-            if ( ImGui::BeginCombo( pLabel, pPreview ) )
+            if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) )
             {
-                for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+                if ( ImGui::SmallButton( "Select All" ) )
                 {
-                    const int32 val32     = static_cast<int32>( val );
-                    const utf8* name      = nameHashed.c_str();
-                    bool        bSelected = ( val32 == *pEnumValue );
-                    if ( ImGui::Selectable( name, bSelected ) )
-                        *pEnumValue = val32;
-                    if ( bSelected )
-                        ImGui::SetItemDefaultFocus();
+                    for ( const auto& [val, _] : enumInfo._mapValueToName )
+                        *pEnumValue |= static_cast<int32>( val );
+                }
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Clear All" ) )
+                {
+                    *pEnumValue = 0;
+                }
+                ImGui::Separator();
+
+                for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
+                {
+                    const int32 val32 = static_cast<int32>( val );
+                    if ( val32 == 0 )
+                        continue;
+                    bool bChecked = ( ( *pEnumValue & val32 ) == val32 );
+                    if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
+                    {
+                        if ( bChecked )
+                            *pEnumValue |= val32;
+                        else
+                            *pEnumValue &= ~val32;
+                    }
                 }
                 ImGui::EndCombo();
             }
@@ -678,87 +681,116 @@ namespace sw::editor
             return;
         }
 
-        if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+        const utf8* pName = pRegistry->enumToString( prop._typeName, *pEnumValue );
+        if ( bReadOnly )
         {
-            void* pContainer = prop.getRawPtr( pInstance );
-            if ( pContainer != nullptr )
-            {
-                ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-                if ( pSeq != nullptr )
-                {
-                    const size_t                          count = pSeq->getSize( pContainer );
-                    fixed_string<constant::kMaxBuffer128> headerBuf;
-                    formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
-
-                    if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
-                    {
-                        if ( bReadOnly == false )
-                        {
-                            if ( ImGui::SmallButton( "+ Add" ) )
-                                pSeq->addElementDefault( pContainer );
-                            ImGui::SameLine();
-                            if ( ImGui::SmallButton( "Clear" ) )
-                                pSeq->clear( pContainer );
-                            ImGui::Separator();
-                        }
-
-                        const size_t newCount = pSeq->getSize( pContainer );
-                        for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
-                        {
-                            void* pElem = pSeq->getElement( pContainer, elemIndex );
-                            if ( pElem == nullptr )
-                                continue;
-
-                            ImGui::PushID( static_cast<int32>( elemIndex ) );
-                            ImGui::AlignTextToFramePadding();
-                            ImGui::Text( "[%zu]", elemIndex );
-                            ImGui::SameLine();
-
-                            PropertyInfo elemProp{};
-                            elemProp._typeName = prop._elementTypeName;
-                            elemProp._name     = prop._name;
-                            elemProp._metadata = prop._metadata;
-
-                            ImGui::SetNextItemWidth( -FLT_MIN );
-                            drawPropertyWidget( pElem, elemProp );
-                            ImGui::PopID();
-                        }
-                        ImGui::TreePop();
-                    }
-                    return;
-                }
-            }
-        }
-
-        const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
-        if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
-        {
-            void* pNestedPtr = prop.getRawPtr( pInstance );
-            if ( pNestedPtr == nullptr )
-                return;
-
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4{ 0.15f, 0.15f, 0.15f, 1.0f } );
-            bool bNodeOpen = ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "[%s]", prop._typeName.c_str() );
-            ImGui::PopStyleColor();
-
-            if ( bNodeOpen )
-            {
-                pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
-                {
-                    ImGui::PushID( nestedProp._name.c_str() );
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::BulletText( "%s", InspectorPanelInternal::propLabel( nestedProp ) );
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth( -FLT_MIN );
-                    drawPropertyWidget( pNestedPtr, nestedProp );
-                    ImGui::PopID();
-                } );
-                ImGui::TreePop();
-            }
+            ImGui::TextDisabled( "%s", pLabel );
+            ImGui::SameLine();
+            ImGui::TextUnformatted( pName != nullptr ? pName : "<Unknown>" );
             return;
         }
 
-        ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
+        const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
+
+        if ( ImGui::BeginCombo( pLabel, pPreview ) )
+        {
+            for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )
+            {
+                const int32 val32     = static_cast<int32>( val );
+                const utf8* name      = nameHashed.c_str();
+                bool        bSelected = ( val32 == *pEnumValue );
+                if ( ImGui::Selectable( name, bSelected ) )
+                    *pEnumValue = val32;
+                if ( bSelected )
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
+        return;
+    }
+
+    void InspectorPanel::drawContainerProperty( void* pInstance, const PropertyInfo& prop, bool bReadOnly )
+    {
+        const utf8* pLabel = "##value";
+
+        void* pContainer = prop.getRawPtr( pInstance );
+        if ( pContainer != nullptr )
+        {
+            ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+            if ( pSeq != nullptr )
+            {
+                const size_t                          count = pSeq->getSize( pContainer );
+                fixed_string<constant::kMaxBuffer128> headerBuf;
+                formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
+
+                if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
+                {
+                    if ( bReadOnly == false )
+                    {
+                        if ( ImGui::SmallButton( "+ Add" ) )
+                            pSeq->addElementDefault( pContainer );
+                        ImGui::SameLine();
+                        if ( ImGui::SmallButton( "Clear" ) )
+                            pSeq->clear( pContainer );
+                        ImGui::Separator();
+                    }
+
+                    const size_t newCount = pSeq->getSize( pContainer );
+                    for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
+                    {
+                        void* pElem = pSeq->getElement( pContainer, elemIndex );
+                        if ( pElem == nullptr )
+                            continue;
+
+                        ImGui::PushID( static_cast<int32>( elemIndex ) );
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text( "[%zu]", elemIndex );
+                        ImGui::SameLine();
+
+                        PropertyInfo elemProp{};
+                        elemProp._typeName = prop._elementTypeName;
+                        elemProp._name     = prop._name;
+                        elemProp._metadata = prop._metadata;
+
+                        ImGui::SetNextItemWidth( -FLT_MIN );
+                        drawPropertyWidget( pElem, elemProp );
+                        ImGui::PopID();
+                    }
+                    ImGui::TreePop();
+                }
+                return;
+            }
+        }
+    }
+
+    void InspectorPanel::drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType )
+    {
+        const utf8* pLabel = "##value";
+
+        void* pNestedPtr = prop.getRawPtr( pInstance );
+        if ( pNestedPtr == nullptr )
+            return;
+
+        ImGui::PushStyleColor( ImGuiCol_Header, ImVec4{ 0.15f, 0.15f, 0.15f, 1.0f } );
+        bool bNodeOpen = ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "[%s]", prop._typeName.c_str() );
+        ImGui::PopStyleColor();
+
+        if ( bNodeOpen )
+        {
+            pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
+            {
+                ImGui::PushID( nestedProp._name.c_str() );
+                ImGui::AlignTextToFramePadding();
+                ImGui::BulletText( "%s", InspectorPanelInternal::propLabel( nestedProp ) );
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth( -FLT_MIN );
+                drawPropertyWidget( pNestedPtr, nestedProp );
+                ImGui::PopID();
+            } );
+            ImGui::TreePop();
+        }
+        return;
     }
 
     void InspectorPanel::drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo )

@@ -198,6 +198,30 @@ namespace sw::editor
             return;
         }
 
+        drawGraphNodes();
+
+        // 링크 렌더링
+        for ( const DialogueLink& link : _listLink )
+        {
+            ed::Link( DialogueGraphPanelInternal::toLinkId( link._id ), DialogueGraphPanelInternal::toPinId( link._fromPin ), DialogueGraphPanelInternal::toPinId( link._toPin ) );
+        }
+
+        handleCanvasInteractions();
+        // 선택 노드 추적
+        ed::NodeId  selectedNodes[1];
+        const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
+        if ( count > 0 )
+            _selectedNodeId = static_cast<int32>( selectedNodes[0].Get() );
+
+        _nodeGraph.applyContentFitIfNeeded();
+        cacheNodeLayout();
+
+        _nodeGraph.endCanvas();
+        EditorChrome::endSection();
+    }
+
+    void DialogueGraphPanel::drawGraphNodes()
+    {
         // 노드 렌더링
         for ( DialogueNode& node : _listNode )
         {
@@ -312,13 +336,10 @@ namespace sw::editor
             if ( _nodeGraph.needsContentFit() )
                 ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
         }
+    }
 
-        // 링크 렌더링
-        for ( const DialogueLink& link : _listLink )
-        {
-            ed::Link( DialogueGraphPanelInternal::toLinkId( link._id ), DialogueGraphPanelInternal::toPinId( link._fromPin ), DialogueGraphPanelInternal::toPinId( link._toPin ) );
-        }
-
+    void DialogueGraphPanel::handleCanvasInteractions()
+    {
         // 새 링크 생성 처리
         if ( ed::BeginCreate() )
         {
@@ -394,18 +415,6 @@ namespace sw::editor
             }
             ed::EndDelete();
         }
-
-        // 선택 노드 추적
-        ed::NodeId  selectedNodes[1];
-        const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
-        if ( count > 0 )
-            _selectedNodeId = static_cast<int32>( selectedNodes[0].Get() );
-
-        _nodeGraph.applyContentFitIfNeeded();
-        cacheNodeLayout();
-
-        _nodeGraph.endCanvas();
-        EditorChrome::endSection();
     }
 
     void DialogueGraphPanel::drawSelectedNodeInspector()
