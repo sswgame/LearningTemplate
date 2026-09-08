@@ -33,6 +33,18 @@ namespace sw
 </Prefab>)";
                 sw::FileUtil::writeTextFile( path, pXmlContent );
             }
+
+            // 쿠킹본(.prefab.bin)도 같이 만들어 둔다. PrefabManager::getOrLoad 는 Shipping 에서
+            // **바이너리만** 읽으므로(XML 은 Dev 전용 경로다), XML 만 두면 스폰 검증이 배포 빌드에서
+            // 그냥 죽는다. 쿠커가 하는 일과 같은 변환을 테스트가 자기 손으로 해 둔다.
+            sw::string binPath = path;
+            binPath.replace( binPath.size() - 4, 4, ".bin" );
+            if ( sw::FileUtil::fileExists( binPath ) == false )
+            {
+                sw::PrefabAsset cooked;
+                if ( cooked.loadFromXmlFile( path ) )
+                    cooked.saveToBinaryFile( binPath );
+            }
             return path;
         }
 
