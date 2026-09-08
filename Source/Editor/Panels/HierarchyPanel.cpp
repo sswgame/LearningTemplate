@@ -178,8 +178,8 @@ namespace sw::editor
                         if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
                             ImGui::OpenPopup( "AddCompFailed" );
                     }
-                    if ( pTypeInfo != nullptr && pTypeInfo->getTooltip().empty() == false && ImGui::IsItemHovered() )
-                        ImGui::SetTooltip( "%s", pTypeInfo->getTooltip().c_str() );
+                    if ( pTypeInfo != nullptr )
+                        EditorWidgets::drawTooltip( pTypeInfo->getTooltip().c_str() );
                 };
 
                 if ( bHasFilter )

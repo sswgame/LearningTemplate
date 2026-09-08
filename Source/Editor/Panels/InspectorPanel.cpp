@@ -518,8 +518,7 @@ namespace sw::editor
 
                     ImGui::AlignTextToFramePadding();
                     ImGui::TextUnformatted( InspectorPanelInternal::propLabel( *prop ) );
-                    if ( prop->_metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
-                        ImGui::SetTooltip( "%s", prop->_metadata._tooltip.c_str() );
+                    EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
 
                     if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
                     {
@@ -543,8 +542,7 @@ namespace sw::editor
                     {
                         ImGui::SameLine();
                         ImGui::TextDisabled( "(T)" );
-                        if ( ImGui::IsItemHovered() )
-                            ImGui::SetTooltip( "Transient property: not saved to disk" );
+                        EditorWidgets::drawTooltip( "Transient property: not saved to disk" );
                     }
 
                     ImGui::TableNextColumn();
@@ -839,8 +837,7 @@ namespace sw::editor
                                                              _lastInvokeResult.capacity() );
                 }
                 ImGui::PopStyleColor( 3 );
-                if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
-                    ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
+                EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
                 ImGui::PopID();
                 continue;
             }
@@ -853,8 +850,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::TextColored( ImVec4{ 0.3f, 0.8f, 1.0f, 1.0f }, "[Editor]" );
             }
-            if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
-                ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
+            EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
             bool bArgsOk{ true };
             for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
             {

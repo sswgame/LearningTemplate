@@ -270,8 +270,12 @@ namespace sw::editor
                 ImGui::SameLine( 0.0f, 0.0f );
                 ImGui::TextUnformatted( entry._message.c_str() );
 
-                if ( ImGui::IsItemHovered() && entry._file.empty() == false )
-                    ImGui::SetTooltip( "%s(%d)", entry._file.c_str(), entry._line );
+                if ( entry._file.empty() == false )
+                {
+                    fixed_string<constant::kMaxBuffer256> tooltipText;
+                    formatstring( tooltipText.data(), tooltipText.capacity(), "%s(%d)", entry._file.c_str(), entry._line );
+                    EditorWidgets::drawTooltip( tooltipText.c_str() );
+                }
 
                 if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) )
                 {
