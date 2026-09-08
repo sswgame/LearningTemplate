@@ -322,6 +322,36 @@ namespace sw
         _deviceContext->RSSetViewports( 1, &vp );
     }
 
+    namespace
+    {
+        /**
+         * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
+         * @details D3D11 은 이걸 **WARNING** 으로 낸다. 그런데 결과는 조용한 실패다 — 런타임이 한쪽을
+         *          NULL 로 강제하고 셰이더는 0 을 읽는다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
+         *          남아서 DX11 만 화면에 아무것도 못 그리던 게 이 경고 뒤에 숨어 있었고, 심각도로
+         *          거른 탓에 로그에 한 줄도 안 나왔다. 그래서 해저드만은 ERROR 로 올린다.
+         */
+        bool isHazardMessage( D3D11_MESSAGE_ID id )
+        {
+            switch ( id )
+            {
+                case D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_PSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_GSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_HSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_DSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_CSSETSHADERRESOURCES_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_CSSETUNORDEREDACCESSVIEWS_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETS_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETSANDUNORDEREDACCESSVIEWS_HAZARD:
+                case D3D11_MESSAGE_ID_DEVICE_SOSETTARGETS_HAZARD:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    } // namespace
+
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
     {
     #if defined( SW_DEBUG )
@@ -339,7 +369,8 @@ namespace sw
             D3D11_MESSAGE* pMessage = reinterpret_cast<D3D11_MESSAGE*>( bytes.data() );
             if ( FAILED( queue->GetMessage( messageIndex, pMessage, &length ) ) )
                 continue;
-            if ( pMessage->Severity == D3D11_MESSAGE_SEVERITY_CORRUPTION || pMessage->Severity == D3D11_MESSAGE_SEVERITY_ERROR )
+            if ( pMessage->Severity == D3D11_MESSAGE_SEVERITY_CORRUPTION || pMessage->Severity == D3D11_MESSAGE_SEVERITY_ERROR ||
+                 isHazardMessage( pMessage->ID ) )
                 SW_LOG_ERROR( "[%#] %#", pStage, pMessage->pDescription );
         }
         queue->ClearStoredMessages();
@@ -505,6 +536,14 @@ namespace sw
         if ( index >= _listRegisteredUAV.size() )
             return nullptr;
         return _listRegisteredUAV[index];
+    }
+
+    RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listUavSourceBuffer.size() )
+            return RHIBufferHandle{ 0 };
+        return _listUavSourceBuffer[index];
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer )

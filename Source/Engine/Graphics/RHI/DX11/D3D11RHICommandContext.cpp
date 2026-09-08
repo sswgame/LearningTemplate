@@ -187,9 +187,21 @@ namespace sw
 
     void D3D11RHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        // D3D11 has no explicit buffer state transitions; GPU sync is via Flush / FinishCommandList.
-        (void)buffer;
-        (void)newState;
+        // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 no-op 인 것은 아니다 — 같은 리소스를
+        // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
+        // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(인스턴스 버퍼 t4 가 그랬다).
+        // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
+        if ( _pContext == nullptr || _pState == nullptr || buffer == 0 || newState == RHIBufferState::UnorderedAccess )
+            return;
+
+        ID3D11UnorderedAccessView* pNull{ nullptr };
+        for ( uint32 slot = 0; slot < D3D11_PS_CS_UAV_REGISTER_COUNT; ++slot )
+        {
+            if ( _pState->_arrComputeUavBuffer[slot] != buffer )
+                continue;
+            _pContext->CSSetUnorderedAccessViews( slot, 1, &pNull, nullptr );
+            _pState->_arrComputeUavBuffer[slot] = 0;
+        }
     }
 
     void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
@@ -199,6 +211,9 @@ namespace sw
         {
             ID3D11UnorderedAccessView* pUav = uav.Get();
             _pContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
+            // 어느 버퍼가 어느 슬롯에 걸렸는지 남긴다 — transitionBuffer 가 이걸 보고 뗀다.
+            if ( _pState != nullptr && slot < D3D11_PS_CS_UAV_REGISTER_COUNT )
+                _pState->_arrComputeUavBuffer[slot] = _pDevice->uavSourceBufferAt( index );
         }
     }
 

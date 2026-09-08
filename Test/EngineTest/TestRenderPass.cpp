@@ -2184,6 +2184,126 @@ SW_TEST_CASE( RenderPassTest, MultiBatchPassKeepsPerBatchConstants )
 }
 
 /**
+ * @brief 인스턴스 애니메이션 컴퓨트가 돈 뒤에도 인스턴스 버퍼를 정점 셰이더가 읽을 수 있어야 한다.
+ * @details 이 프리패스는 인스턴스 버퍼를 **UAV 로 쓴 다음** 같은 프레임에 정점 셰이더가 SRV 로 읽는다.
+ *          D3D11 은 같은 리소스를 출력과 입력에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를
+ *          조용히 NULL 로 강제한다 — 경고만 나오고 화면에서는 전부 사라진다. 실제로 DX11 앱이 그랬다.
+ *
+ *          패리티 테스트가 이걸 못 잡았던 이유는 그 씬에 spinSeed 를 세운 인스턴스가 하나도 없어서
+ *          디스패치 자체가 건너뛰어졌기 때문이다. 여기서는 **반드시 세운다**.
+ *
+ *          회전각은 시간에 따라 달라지므로 백엔드 사이 픽셀 수를 비교하지 않는다. 각 백엔드가
+ *          "무언가를 그렸는지" 만 본다 — 이 버그의 증상이 정확히 "아무것도 안 그린다" 였다.
+ */
+SW_TEST_CASE( RenderPassTest, InstanceAnimationKeepsInstancesReadable )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    uint32 attemptedCount{ 0 };
+
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+
+        ++attemptedCount;
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "InstanceAnimScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        constexpr uint32         kAnimMeshCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kAnimMeshCount];
+        for ( uint32 meshIndex = 0; meshIndex < kAnimMeshCount && bOk; ++meshIndex )
+        {
+            arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+            bOk                = arrMesh[meshIndex] != nullptr;
+            if ( bOk == false )
+                break;
+
+            sw::string      objectName = sw::string( "SpinCube" ) + sw::to_string( meshIndex );
+            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), static_cast<uint32>( objectName.size() ) ) );
+            bOk                        = go != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* meshComp = go->addComponent<sw::MeshComponent>();
+                bOk                         = meshComp != nullptr;
+                if ( bOk )
+                {
+                    meshComp->setMesh( arrMesh[meshIndex] );
+                    meshComp->setLocalPosition( sw::float3{ ( static_cast<float32>( meshIndex ) - 1.0f ) * 1.2f, 1.0f, 0.0f } );
+                    // **이게 핵심이다.** 0 이 아니어야 dispatchInstanceAnimation 이 실제로 돈다.
+                    meshComp->setGpuSpinSeed( meshIndex + 1u );
+                }
+            }
+        }
+
+        // 두 프레임 돌린다 — 첫 프레임에 UAV 로 쓰고 두 번째 프레임이 그걸 SRV 로 읽는 순서까지 태운다.
+        for ( uint32 frame = 0; frame < 2 && bOk; ++frame )
+        {
+            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+            device->beginFrame( clear );
+            bOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        if ( bOk )
+        {
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+            const bool            bRead  = renderer.readbackTransient( "SceneColor", bytes, layout, format );
+            SW_EXPECT_TRUE_MSG( bRead, "SceneColor readback" );
+            if ( bRead )
+            {
+                const uint32 pixelCount = layout._width * layout._height;
+                uint32       drawnCount{ 0 };
+                for ( uint32 y = 0; y < layout._height; ++y )
+                {
+                    const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+                    for ( uint32 x = 0; x < layout._width; ++x )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                        const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                        const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                        if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                            ++drawnCount;
+                    }
+                }
+                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+                SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
+                                    ( label + ": 인스턴스 애니메이션 뒤 SceneColor 가 비었다 (drawn " + sw::to_string( drawnCount ) + "/" +
+                                      sw::to_string( pixelCount ) + ") — UAV 를 떼지 않아 정점 셰이더가 인스턴스를 못 읽는지 의심하라" )
+                                        .c_str() );
+            }
+        }
+
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseGpu();
+        }
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+
+        SW_EXPECT_TRUE_MSG( bOk, ( sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) ) + " execute" ).c_str() );
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for instance animation test" );
+}
+
+/**
  * @brief FrameRenderer 패리티 스모크 — DX11 / DX12 / Vulkan / OpenGL 각각 begin→execute→end(no present)
  * @details Present 없이 waitIdle까지. 가용 백엔드는 전부 성공해야 한다.
  */

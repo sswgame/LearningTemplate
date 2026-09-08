@@ -39,6 +39,13 @@ namespace sw
         uint32                 _boundMeshStride{ 0 };
         uint32                 _boundMeshOffset{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        /**
+         * @brief CS UAV 슬롯마다 지금 걸려 있는 버퍼 (0 = 없음).
+         * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 걸 수 없다. UAV 를 안 떼면
+         *          런타임이 **SRV 쪽을 조용히 NULL 로 강제한다**(경고만 나온다). 그래서 어느 슬롯에
+         *          어떤 버퍼가 걸려 있는지 기록해 두고 transitionBuffer 가 읽기 상태로 돌릴 때 뗀다.
+         */
+        RHIBufferHandle _arrComputeUavBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
     };
 
     /**
@@ -190,6 +197,8 @@ namespace sw
         RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 UAV입니다(참조를 하나 올려 돌려줍니다). 범위 밖이면 nullptr입니다. */
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUavAt( RHIDescriptorIndex index ) const;
+        /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들 (없으면 0). SRV/UAV 해저드를 풀 때 쓴다. */
+        RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
 
         /** @brief 컴퓨트 루트 상수 CB를 확보합니다. */
         bool ensureComputeRootConstantCB();
