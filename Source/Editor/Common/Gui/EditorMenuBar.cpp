@@ -93,6 +93,18 @@ namespace sw::editor
         if ( ImGui::BeginMainMenuBar() == false )
             return;
 
+        drawFileMenu();
+        drawEditMenu();
+        drawBuildMenu();
+        drawAssetsMenu();
+        drawPanelMenu( dockLayout );
+        drawStatusArea();
+
+        ImGui::EndMainMenuBar();
+    }
+
+    void EditorMenuBar::drawFileMenu()
+    {
         if ( ImGui::BeginMenu( "File" ) )
         {
             if ( ImGui::MenuItem( ICON_FA_FILE "  New Scene" ) )
@@ -127,7 +139,10 @@ namespace sw::editor
 
             ImGui::EndMenu();
         }
+    }
 
+    void EditorMenuBar::drawEditMenu()
+    {
         if ( ImGui::BeginMenu( "Edit" ) )
         {
             if ( ImGui::MenuItem( ICON_FA_ROTATE_LEFT "  Undo", "Ctrl+Z", false, EditorPlaySession::isStopped() ) )
@@ -145,7 +160,10 @@ namespace sw::editor
 
             ImGui::EndMenu();
         }
+    }
 
+    void EditorMenuBar::drawBuildMenu()
+    {
         if ( ImGui::BeginMenu( "Build" ) )
         {
             IModuleCompiler* pCompiler  = getService<IModuleCompiler>();
@@ -183,7 +201,10 @@ namespace sw::editor
 
             ImGui::EndMenu();
         }
+    }
 
+    void EditorMenuBar::drawAssetsMenu()
+    {
         if ( ImGui::BeginMenu( "Assets" ) )
         {
             uint32                 kindCount{ 0 };
@@ -198,7 +219,10 @@ namespace sw::editor
             }
             ImGui::EndMenu();
         }
+    }
 
+    void EditorMenuBar::drawPanelMenu( EditorDockLayout& dockLayout )
+    {
         if ( ImGui::BeginMenu( "Panel" ) )
         {
             ImGui::SeparatorText( "Panels" );
@@ -228,7 +252,10 @@ namespace sw::editor
 
             ImGui::EndMenu();
         }
+    }
 
+    void EditorMenuBar::drawStatusArea()
+    {
         constexpr float32 statusW = 460.0f;
         ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
 
@@ -326,8 +353,6 @@ namespace sw::editor
             ImGui::Text( "OpenGL 에디터 지원: %s", bGl ? "사용 가능" : "미지원" );
             ImGui::EndTooltip();
         }
-
-        ImGui::EndMainMenuBar();
     }
 
     void EditorMenuBar::drawThemeDialog()

@@ -14,6 +14,7 @@
 #include "Editor/Common/EditorCamera.h"
 #include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorFontSetup.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
@@ -134,7 +135,7 @@ namespace sw::editor
             EditorThemeUtil::loadFromConfig();
         }
 
-        EditorUtil::setupFonts();
+        EditorFontSetup::apply();
 
         BLOCK( "Platform Backend create / init" )
         {

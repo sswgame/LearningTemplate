@@ -108,69 +108,82 @@ namespace sw::editor
 
         tickPreview( ImGui::GetIO().DeltaTime );
 
-        BLOCK( "Toolbar" )
-        {
-            if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
-            {
-                if ( ImGui::Button( "+ Dialogue" ) )
-                {
-                    addNode( DialogueAssetNodeType::Dialogue, "NPC", "Enter dialogue text..." );
-                    notifyDocumentEdited( "Add Dialogue Node" );
-                }
-                ImGui::SameLine();
-                if ( ImGui::Button( "+ Choice" ) )
-                {
-                    addNode( DialogueAssetNodeType::Choice, "", "Player options" );
-                    notifyDocumentEdited( "Add Dialogue Node" );
-                }
-                ImGui::SameLine();
-                if ( ImGui::Button( "+ Branch" ) )
-                {
-                    addNode( DialogueAssetNodeType::Branch, "", "flag.visited == 1" );
-                    notifyDocumentEdited( "Add Dialogue Node" );
-                }
-                ImGui::SameLine();
-                if ( ImGui::Button( "+ Action" ) )
-                {
-                    addNode( DialogueAssetNodeType::Action, "", "give_item:potion:1" );
-                    notifyDocumentEdited( "Add Dialogue Node" );
-                }
-                ImGui::SameLine();
-                if ( ImGui::Button( "+ End" ) )
-                {
-                    addNode( DialogueAssetNodeType::End );
-                    notifyDocumentEdited( "Add Dialogue Node" );
-                }
-                ImGui::SameLine();
-                EditorWidgets::drawToolbarSeparator();
-                if ( ImGui::Button( "Save" ) )
-                    saveGraphData();
-                ImGui::SameLine();
-                if ( ImGui::Button( "Reload" ) )
-                    loadGraphData();
-                ImGui::SameLine();
-                if ( ImGui::Button( "Reset Default" ) )
-                {
-                    _listNode.clear();
-                    _listLink.clear();
-                    ensureDefaults();
-                    _nodeGraph.requestContentFit();
-                    notifyDocumentEdited( "Reset Dialogue Graph" );
-                }
-                ImGui::SameLine();
-                if ( ImGui::Button( "Zoom Fit" ) )
-                    _nodeGraph.requestContentFit();
-                drawPreviewToolbar();
+        drawGraphToolbar();
 
-                ImGui::SameLine();
-                ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
-            }
-            EditorChrome::endToolbar();
-        }
-
+        // 노드를 고르면 오른쪽에 인스펙터가 붙으므로 캔버스가 그만큼 좁아진다.
         const float32 availWidth  = ImGui::GetContentRegionAvail().x;
         const float32 canvasWidth = _selectedNodeId > 0 ? availWidth * 0.72f : availWidth;
+        drawGraphCanvas( canvasWidth );
 
+        if ( _selectedNodeId > 0 )
+        {
+            ImGui::SameLine();
+            drawSelectedNodeInspector();
+        }
+    }
+
+    void DialogueGraphPanel::drawGraphToolbar()
+    {
+        if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
+        {
+            if ( ImGui::Button( "+ Dialogue" ) )
+            {
+                addNode( DialogueAssetNodeType::Dialogue, "NPC", "Enter dialogue text..." );
+                notifyDocumentEdited( "Add Dialogue Node" );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "+ Choice" ) )
+            {
+                addNode( DialogueAssetNodeType::Choice, "", "Player options" );
+                notifyDocumentEdited( "Add Dialogue Node" );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "+ Branch" ) )
+            {
+                addNode( DialogueAssetNodeType::Branch, "", "flag.visited == 1" );
+                notifyDocumentEdited( "Add Dialogue Node" );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "+ Action" ) )
+            {
+                addNode( DialogueAssetNodeType::Action, "", "give_item:potion:1" );
+                notifyDocumentEdited( "Add Dialogue Node" );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "+ End" ) )
+            {
+                addNode( DialogueAssetNodeType::End );
+                notifyDocumentEdited( "Add Dialogue Node" );
+            }
+            ImGui::SameLine();
+            EditorWidgets::drawToolbarSeparator();
+            if ( ImGui::Button( "Save" ) )
+                saveGraphData();
+            ImGui::SameLine();
+            if ( ImGui::Button( "Reload" ) )
+                loadGraphData();
+            ImGui::SameLine();
+            if ( ImGui::Button( "Reset Default" ) )
+            {
+                _listNode.clear();
+                _listLink.clear();
+                ensureDefaults();
+                _nodeGraph.requestContentFit();
+                notifyDocumentEdited( "Reset Dialogue Graph" );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "Zoom Fit" ) )
+                _nodeGraph.requestContentFit();
+            drawPreviewToolbar();
+
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
+        }
+        EditorChrome::endToolbar();
+    }
+
+    void DialogueGraphPanel::drawGraphCanvas( float32 canvasWidth )
+    {
         editor::EditorSectionDesc canvasDesc{};
         canvasDesc._pId       = "DialogueCanvasRegion";
         canvasDesc._kind      = editor::EditorSectionKind::Child;
@@ -393,102 +406,100 @@ namespace sw::editor
 
         _nodeGraph.endCanvas();
         EditorChrome::endSection();
+    }
 
-        // 2) 선택된 노드 상세 인스펙터 패널
-        if ( _selectedNodeId > 0 )
+    void DialogueGraphPanel::drawSelectedNodeInspector()
+    {
+        editor::EditorSectionDesc inspectorDesc{};
+        inspectorDesc._pId   = "DialogueNodeInspector";
+        inspectorDesc._kind  = editor::EditorSectionKind::Child;
+        inspectorDesc._flags = editor::EditorSectionFlags::Border;
+        EditorChrome::beginSection( inspectorDesc );
+
+        DialogueNode* pSelectedNode{ nullptr };
+        for ( DialogueNode& node : _listNode )
         {
-            ImGui::SameLine();
-            editor::EditorSectionDesc inspectorDesc{};
-            inspectorDesc._pId   = "DialogueNodeInspector";
-            inspectorDesc._kind  = editor::EditorSectionKind::Child;
-            inspectorDesc._flags = editor::EditorSectionFlags::Border;
-            EditorChrome::beginSection( inspectorDesc );
-
-            DialogueNode* pSelectedNode{ nullptr };
-            for ( DialogueNode& node : _listNode )
+            if ( node._id == _selectedNodeId )
             {
-                if ( node._id == _selectedNodeId )
-                {
-                    pSelectedNode = &node;
-                    break;
-                }
+                pSelectedNode = &node;
+                break;
             }
-
-            if ( pSelectedNode != nullptr )
-            {
-                ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
-                ImGui::Separator();
-
-                if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
-                {
-                    fixed_string<constant::kMaxBuffer64> speakerBuf{ pSelectedNode->_speaker.c_str() };
-                    if ( ImGui::InputText( "Speaker", speakerBuf.data(), speakerBuf.capacity() ) )
-                        pSelectedNode->_speaker = speakerBuf.c_str();
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-
-                    fixed_string<constant::kMaxBuffer512> textBuf{ pSelectedNode->_text.c_str() };
-                    if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
-                        pSelectedNode->_text = textBuf.c_str();
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                }
-                else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
-                {
-                    fixed_string<constant::kMaxBuffer128> promptBuf{ pSelectedNode->_text.c_str() };
-                    if ( ImGui::InputText( "Prompt", promptBuf.data(), promptBuf.capacity() ) )
-                        pSelectedNode->_text = promptBuf.c_str();
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-
-                    ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoice.size() );
-                    for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
-                    {
-                        ImGui::PushID( static_cast<int32>( choiceIndex ) );
-                        fixed_string<constant::kMaxBuffer128> choiceBuf{ pSelectedNode->_listChoice[choiceIndex].c_str() };
-                        if ( ImGui::InputText( "##Choice", choiceBuf.data(), choiceBuf.capacity() ) )
-                            pSelectedNode->_listChoice[choiceIndex] = choiceBuf.c_str();
-                        if ( ImGui::IsItemDeactivatedAfterEdit() )
-                            notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                        ImGui::SameLine();
-                        if ( ImGui::Button( "X" ) )
-                        {
-                            pSelectedNode->_listChoice.erase( pSelectedNode->_listChoice.begin() + choiceIndex );
-                            notifyDocumentEdited( "Edit Dialogue Node" );
-                            ImGui::PopID();
-                            break;
-                        }
-                        ImGui::PopID();
-                    }
-
-                    if ( ImGui::Button( "+ Add Choice Option" ) )
-                    {
-                        pSelectedNode->_listChoice.push_back( "New choice option" );
-                        notifyDocumentEdited( "Edit Dialogue Node" );
-                    }
-                }
-                else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
-                {
-                    fixed_string<constant::kMaxBuffer128> condBuf{ pSelectedNode->_condition.c_str() };
-                    if ( ImGui::InputText( "Condition", condBuf.data(), condBuf.capacity() ) )
-                        pSelectedNode->_condition = condBuf.c_str();
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                    ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
-                }
-                else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
-                {
-                    fixed_string<constant::kMaxBuffer128> cmdBuf{ pSelectedNode->_actionCommand.c_str() };
-                    if ( ImGui::InputText( "Command", cmdBuf.data(), cmdBuf.capacity() ) )
-                        pSelectedNode->_actionCommand = cmdBuf.c_str();
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                    ImGui::TextDisabled( "Ex: give_item:potion:3" );
-                }
-            }
-
-            EditorChrome::endSection();
         }
+
+        if ( pSelectedNode != nullptr )
+        {
+            ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
+            ImGui::Separator();
+
+            if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
+            {
+                fixed_string<constant::kMaxBuffer64> speakerBuf{ pSelectedNode->_speaker.c_str() };
+                if ( ImGui::InputText( "Speaker", speakerBuf.data(), speakerBuf.capacity() ) )
+                    pSelectedNode->_speaker = speakerBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+
+                fixed_string<constant::kMaxBuffer512> textBuf{ pSelectedNode->_text.c_str() };
+                if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                    pSelectedNode->_text = textBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            }
+            else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
+            {
+                fixed_string<constant::kMaxBuffer128> promptBuf{ pSelectedNode->_text.c_str() };
+                if ( ImGui::InputText( "Prompt", promptBuf.data(), promptBuf.capacity() ) )
+                    pSelectedNode->_text = promptBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+
+                ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoice.size() );
+                for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
+                {
+                    ImGui::PushID( static_cast<int32>( choiceIndex ) );
+                    fixed_string<constant::kMaxBuffer128> choiceBuf{ pSelectedNode->_listChoice[choiceIndex].c_str() };
+                    if ( ImGui::InputText( "##Choice", choiceBuf.data(), choiceBuf.capacity() ) )
+                        pSelectedNode->_listChoice[choiceIndex] = choiceBuf.c_str();
+                    if ( ImGui::IsItemDeactivatedAfterEdit() )
+                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    ImGui::SameLine();
+                    if ( ImGui::Button( "X" ) )
+                    {
+                        pSelectedNode->_listChoice.erase( pSelectedNode->_listChoice.begin() + choiceIndex );
+                        notifyDocumentEdited( "Edit Dialogue Node" );
+                        ImGui::PopID();
+                        break;
+                    }
+                    ImGui::PopID();
+                }
+
+                if ( ImGui::Button( "+ Add Choice Option" ) )
+                {
+                    pSelectedNode->_listChoice.push_back( "New choice option" );
+                    notifyDocumentEdited( "Edit Dialogue Node" );
+                }
+            }
+            else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
+            {
+                fixed_string<constant::kMaxBuffer128> condBuf{ pSelectedNode->_condition.c_str() };
+                if ( ImGui::InputText( "Condition", condBuf.data(), condBuf.capacity() ) )
+                    pSelectedNode->_condition = condBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
+            }
+            else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
+            {
+                fixed_string<constant::kMaxBuffer128> cmdBuf{ pSelectedNode->_actionCommand.c_str() };
+                if ( ImGui::InputText( "Command", cmdBuf.data(), cmdBuf.capacity() ) )
+                    pSelectedNode->_actionCommand = cmdBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                ImGui::TextDisabled( "Ex: give_item:potion:3" );
+            }
+        }
+
+        EditorChrome::endSection();
     }
 
     void DialogueGraphPanel::ensureDefaults()
