@@ -152,10 +152,10 @@ namespace sw
         void forEachType( Func&& func ) const
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [key, typeInfo] : _mapNameToClassType )
+            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
             {
-                if ( key == typeInfo._fullyQualifiedName )
-                    func( typeInfo );
+                (void)fqn;
+                func( typeInfo );
             }
         }
 
@@ -183,12 +183,11 @@ namespace sw
             vector<const TypeInfo*> listResult;
 
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const auto& [key, typeInfo] : _mapNameToClassType )
+            for ( const auto& [fqn, typeInfo] : _mapFqnToClassType )
             {
-                if ( key == typeInfo._fullyQualifiedName && &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
-                {
+                (void)fqn;
+                if ( &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
                     listResult.push_back( &typeInfo );
-                }
             }
             return listResult;
         }
@@ -300,11 +299,18 @@ namespace sw
             return nullptr;
         }
 
-        mutable std::shared_mutex              _mutex;
-        unordered_map<hashed_string, TypeInfo> _mapNameToClassType;
-        unordered_map<hashed_string, EnumInfo> _mapNameToEnum;
-        unordered_map<uint32, hashed_string>   _mapHashToCanonicalName;
-        hashed_string                          _activeModuleName;
+        mutable std::shared_mutex _mutex;
+        /**
+         * @brief FQN 하나당 TypeInfo **하나**. 짧은 이름·별칭은 값을 복사하지 않고 `_mapAliasToFqn`
+         *        으로 이 항목을 가리킨다 — `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
+         *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 된다.
+         */
+        unordered_map<hashed_string, TypeInfo> _mapFqnToClassType;
+        /** @brief 짧은 이름·별칭 → FQN. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모인다. */
+        unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
+        unordered_map<hashed_string, EnumInfo>      _mapNameToEnum;
+        unordered_map<uint32, hashed_string>        _mapHashToCanonicalName;
+        hashed_string                               _activeModuleName;
     };
 
     // ------------------------------------------------------------------------------

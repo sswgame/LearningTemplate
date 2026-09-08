@@ -437,8 +437,15 @@ namespace sw
         else if ( stored._moduleName.empty() )
             stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
 
-        auto existingIt = _mapNameToClassType.find( stored._fullyQualifiedName );
-        if ( existingIt != _mapNameToClassType.end() )
+        // 타입 하나가 곧 TypeInfo 하나다. 예전엔 FQN 키와 짧은 이름 키에 **각각 복사본**을 넣어서,
+        // 같은 타입이라도 `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 돌려줬다.
+        // `const TypeInfo*` 를 키로 쓰는 쪽(GameObjectManager 의 컴포넌트 풀)은 그 둘을 다른 타입으로
+        // 보고 조회에 실패했고, 풀에서 꺼낸 메모리를 힙 해제로 반납해 힙을 깨뜨렸다.
+        const hashed_string canonicalKey =
+            stored._fullyQualifiedName.empty() == false ? stored._fullyQualifiedName : stored._name;
+
+        auto existingIt = _mapFqnToClassType.find( canonicalKey );
+        if ( existingIt != _mapFqnToClassType.end() )
         {
             stored._typeId = existingIt->second._typeId;
         }
@@ -449,11 +456,11 @@ namespace sw
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
 
-        _mapNameToClassType.insert_or_assign( stored._fullyQualifiedName, stored );
-        _mapHashToCanonicalName.insert_or_assign( stored._fullyQualifiedName.getHash(), canonicalName );
-        if ( stored._name.empty() == false && stored._name != stored._fullyQualifiedName )
+        _mapFqnToClassType.insert_or_assign( canonicalKey, stored );
+        _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
+        if ( stored._name.empty() == false && stored._name != canonicalKey )
         {
-            _mapNameToClassType.insert_or_assign( stored._name, stored );
+            _mapAliasToFqn.insert_or_assign( stored._name, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
         }
     }
@@ -500,10 +507,19 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         hashed_string                       hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
-        for ( auto it = _mapNameToClassType.begin(); it != _mapNameToClassType.end(); )
+        for ( auto it = _mapFqnToClassType.begin(); it != _mapFqnToClassType.end(); )
         {
             if ( it->second._moduleName == hashModule )
-                it = _mapNameToClassType.erase( it );
+                it = _mapFqnToClassType.erase( it );
+            else
+                ++it;
+        }
+
+        // 사라진 타입을 가리키던 별칭도 같이 걷어낸다. 남겨두면 조회가 빈 항목을 타고 nullptr 를 낸다.
+        for ( auto it = _mapAliasToFqn.begin(); it != _mapAliasToFqn.end(); )
+        {
+            if ( _mapFqnToClassType.find( it->second ) == _mapFqnToClassType.end() )
+                it = _mapAliasToFqn.erase( it );
             else
                 ++it;
         }
@@ -517,10 +533,19 @@ namespace sw
         }
 
         _mapHashToCanonicalName.clear();
-        for ( const auto& [key, info] : _mapNameToClassType )
+        for ( const auto& [fqn, info] : _mapFqnToClassType )
         {
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
-            _mapHashToCanonicalName.insert_or_assign( key.getHash(), canonicalName );
+            _mapHashToCanonicalName.insert_or_assign( fqn.getHash(), canonicalName );
+        }
+        for ( const auto& [alias, fqn] : _mapAliasToFqn )
+        {
+            const auto typeIt = _mapFqnToClassType.find( fqn );
+            if ( typeIt == _mapFqnToClassType.end() )
+                continue;
+            const TypeInfo&     info          = typeIt->second;
+            const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
+            _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
     }
 
@@ -532,23 +557,34 @@ namespace sw
             return;
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapNameToClassType.find( hashed_string( pCanonicalName ) );
-        if ( it == _mapNameToClassType.end() )
+
+        // pCanonicalName 자체가 짧은 이름(=별칭)일 수 있으니 FQN 까지 한 번 더 따라간다.
+        hashed_string canonicalKey{ pCanonicalName };
+        if ( _mapFqnToClassType.find( canonicalKey ) == _mapFqnToClassType.end() )
+        {
+            const auto redirectIt = _mapAliasToFqn.find( canonicalKey );
+            if ( redirectIt == _mapAliasToFqn.end() )
+                return;
+            canonicalKey = redirectIt->second;
+        }
+
+        const auto typeIt = _mapFqnToClassType.find( canonicalKey );
+        if ( typeIt == _mapFqnToClassType.end() )
             return;
 
-        // insert_or_assign: 핫리로드 재등록 시 옛 TypeInfo 복사본이 남지 않게 함.
-        const TypeInfo      stored        = it->second;
+        // insert_or_assign: 핫리로드 재등록 시 옛 별칭이 남지 않게 함.
+        const TypeInfo&     stored        = typeIt->second;
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string aliasHash{ pAliasName };
 
-        _mapNameToClassType.insert_or_assign( aliasHash, stored );
+        _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
         _mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
 
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
         {
             const hashed_string qualHash{ qualified.c_str() };
-            _mapNameToClassType.insert_or_assign( qualHash, stored );
+            _mapAliasToFqn.insert_or_assign( qualHash, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( qualHash.getHash(), canonicalName );
         }
     }
@@ -576,8 +612,17 @@ namespace sw
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapNameToClassType.find( nameOrFqn );
-        return it != _mapNameToClassType.end() ? &it->second : nullptr;
+
+        const auto it = _mapFqnToClassType.find( nameOrFqn );
+        if ( it != _mapFqnToClassType.end() )
+            return &it->second;
+
+        const auto aliasIt = _mapAliasToFqn.find( nameOrFqn );
+        if ( aliasIt == _mapAliasToFqn.end() )
+            return nullptr;
+
+        const auto canonicalIt = _mapFqnToClassType.find( aliasIt->second );
+        return canonicalIt != _mapFqnToClassType.end() ? &canonicalIt->second : nullptr;
     }
 
     const EnumInfo* TypeRegistry::findEnum( const hashed_string& nameOrFqn ) const

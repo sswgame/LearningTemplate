@@ -706,17 +706,26 @@ namespace sw
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다.
         pComp->onUnregister( *this );
 
+        // 풀 포인터만 잠금 안에서 집고 **소멸자는 잠금 밖에서** 부른다. ~SceneComponent 는
+        // detachFromComponent 를 타고 (un)registerRootSceneComponent 로 다시 들어오는데, 그쪽도
+        // 같은 _mutex 를 unique 로 잡는다 — shared_mutex 는 재귀적이지 않아서 그대로 멈춘다.
+        // 풀은 한 번 만들어지면 매니저가 죽을 때까지 그 자리에 있고 자체 잠금을 들고 있으므로,
+        // 포인터를 밖으로 들고 나가도 안전하다.
+        PoolAllocator*  pPool     = nullptr;
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::shared_lock<std::shared_mutex> lock{ _mutex };
             auto                                iter = _mapComponentPool.find( pTypeInfo );
-            if ( iter != _mapComponentPool.end() && iter->second != nullptr )
-            {
-                pComp->~Component();
-                iter->second->free( pComp );
-                return;
-            }
+            if ( iter != _mapComponentPool.end() )
+                pPool = iter->second.get();
+        }
+
+        if ( pPool != nullptr )
+        {
+            pComp->~Component();
+            pPool->free( pComp );
+            return;
         }
 
         sw_delete( pComp );
