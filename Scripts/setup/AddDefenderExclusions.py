@@ -14,6 +14,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import getProjectRoot
+
 
 def isUserAdmin() -> bool:
     """현재 프로세스가 관리자 권한으로 실행 중인지 확인합니다."""
@@ -37,7 +40,7 @@ def requestAdminElevation() -> None:
 
 def addDefenderExclusions() -> None:
     """Windows Defender 제외 경로/프로세스를 등록하고 Unblock-File을 수행합니다."""
-    projectRoot = Path(__file__).resolve().parents[2]
+    projectRoot = getProjectRoot()
     projectDir = str(projectRoot)
 
     print("=" * 60)

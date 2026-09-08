@@ -134,3 +134,19 @@ def platformScriptCommand(scriptPath: PathLike) -> list[str]:
         return ["cmd", "/c", resolved]
     return ["bash", resolved]
 
+
+def useUtf8Stdout() -> None:
+    """
+    표준 출력을 UTF-8 로 맞춥니다.
+
+    이 저장소의 스크립트 메시지는 한국어라, Windows 콘솔 기본 코덱(cp949)에서는 em-dash 같은
+    글자 하나로 UnicodeEncodeError 가 나며 스크립트가 통째로 죽는다. 검사 결과를 알리려던
+    print 가 검사 자체를 실패시키는 셈이다. 세 스크립트만 이걸 손으로 해 두고 여섯은 안 하고
+    있어서, 어느 스크립트가 안전한지 알 수 없었다.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass

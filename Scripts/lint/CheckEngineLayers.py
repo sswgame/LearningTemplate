@@ -33,6 +33,7 @@ from common import (
     kFileEngineServices,
     normalizePath,
     startsWithPathComponent,
+    useUtf8Stdout,
 )
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
@@ -129,6 +130,8 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
 
 
 def main() -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(description="Engine 레이어 금지 include 검사")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
     parser.add_argument("--strict", action="store_true", help="내부 reverse-edge도 실패로 처리")

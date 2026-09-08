@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppSourceExtensions
+from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppSourceExtensions, useUtf8Stdout
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -245,6 +245,8 @@ def processFile(filePath: Path, repositoryRoot: Path,
 
 
 def main() -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(description="Include 순서 검사")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
     args = parser.parse_args()

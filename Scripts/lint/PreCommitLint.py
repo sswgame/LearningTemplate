@@ -34,6 +34,7 @@ from common import (
     getProjectRoot,
     getStagedCppFiles,
     runClangFormatBatch,
+    useUtf8Stdout,
 )
 
 
@@ -111,6 +112,8 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
 
 def main() -> int:
+    useUtf8Stdout()
+
     projectRoot = getProjectRoot()
     allStagedFiles = getAllStagedFiles(projectRoot)
 

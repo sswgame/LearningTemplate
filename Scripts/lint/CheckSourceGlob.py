@@ -32,6 +32,7 @@ from common import (
     kDirSourceGameFramework,
     kDirSourceGames,
     startsWithPathComponent,
+    useUtf8Stdout,
 )
 
 _kScanRoots = (
@@ -46,7 +47,47 @@ _kScanRoots = (
 _kIgnoreSubdirs = ("Graphics/RHI/Modules/", "/Linux/", "/Mac/", "/Cocoa", "/X11")
 
 
+def pickBuildDirInternal(repo: Path) -> Path | None:
+    """
+    compile_commands.json 을 읽을 빌드 트리를 고릅니다.
+
+    예전엔 `sorted(..., reverse=True)[0]`, 즉 **역알파벳순 첫 번째**였다. 그건 아무 의미도 담지
+    않은 순서라 build/ 에 디렉터리가 하나 늘어나는 것만으로 대상이 바뀐다. 실제로 Test-Unity 가
+    생기자 그쪽을 읽어 210개를 "빠졌다"고 오탐했다(Unity 빌드에는 개별 .cpp 가 없다).
+    이제 .clangd 가 가리키는 트리를 먼저 보고, 없으면 가장 최근에 갱신된 것을 쓴다.
+    """
+    rootDb = repo / "build" / "compile_commands.json"
+    if rootDb.is_file():
+        return rootDb.parent
+
+    preferred = readClangdBuildDirInternal(repo)
+    if preferred is not None and (preferred / "compile_commands.json").is_file():
+        return preferred
+
+    candidates = list((repo / "build").glob("*/compile_commands.json"))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime).parent
+
+
+def readClangdBuildDirInternal(repo: Path) -> Path | None:
+    """.clangd 의 CompilationDatabase 항목이 가리키는 빌드 트리 (없으면 None)."""
+    clangdFile = repo / ".clangd"
+    if not clangdFile.is_file():
+        return None
+    for line in clangdFile.read_text(encoding="utf-8", errors="ignore").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("CompilationDatabase:"):
+            continue
+        value = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+        if value:
+            return (repo / value).resolve()
+    return None
+
+
 def main() -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(description="소스 GLOB 누락 검사")
     parser.add_argument("--root", type=Path, default=None)
     parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
@@ -60,10 +101,7 @@ def main() -> int:
     # 지연 로딩 훅 및 모듈 엔트리는 의도된 특수 케이스이므로 검사 대상에 포함합니다.
     buildDir = args.build
     if buildDir is None:
-        candidates = sorted((repo / "build").glob("*/compile_commands.json"), reverse=True)
-        if (repo / "build" / "compile_commands.json").is_file():
-            candidates.insert(0, repo / "build" / "compile_commands.json")
-        buildDir = candidates[0].parent if candidates else None
+        buildDir = pickBuildDirInternal(repo)
     else:
         buildDir = buildDir.resolve()
 
@@ -74,6 +112,14 @@ def main() -> int:
 
     compiledFiles: set[str] = set()
     data = json.loads((buildDir / "compile_commands.json").read_text(encoding="utf-8"))
+
+    # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
+    # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
+    if any("unity_" in entry.get("file", "") for entry in data):
+        print(f"[CheckSourceGlob] {buildDir.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다.")
+        print(f"[CheckSourceGlob] scanned {len(sources)} translation units under Source/")
+        return 0
+
     for entry in data:
         filePath = Path(entry.get("file", "")).resolve()
         try:

@@ -28,7 +28,7 @@ if sys.platform == "win32":
         pass
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common import getProjectRoot, useUtf8Stdout
 
 _kAllowedUppercaseBasenames = {"README.md"}
 
@@ -76,6 +76,8 @@ def checkResourceCasing(projectRoot: Path, targetFiles: Sequence[str] | None = N
 
 
 def main() -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(description="Resource 하위 소문자 명명 규칙 검사")
     parser.add_argument("--root", type=Path, default=None, help="프로젝트 루트 디렉터리")
     parser.add_argument("files", nargs="*", help="검사할 특정 파일 경로 목록 (생략 시 전체 Resource/ 검사)")

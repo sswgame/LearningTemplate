@@ -18,6 +18,10 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import getProjectRoot
 
 BACKENDS = [("DirectX12", "dx12"), ("Vulkan", "vk"), ("DirectX11", "dx11"), ("OpenGL", "gl")]
 BACKGROUND = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
@@ -48,7 +52,9 @@ def main():
     parser.add_argument("--meshes", type=int, default=16)
     args = parser.parse_args()
 
-    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 손으로 세던 상위 디렉터리 개수(parents[3])는 스크립트가 한 칸만 옮겨져도 조용히 틀린다.
+    # 공용 getProjectRoot 는 CMakeLists.txt 를 찾아 올라간다.
+    repo = str(getProjectRoot())
     bin_dir = os.path.join(repo, "build", args.preset, "Bin")
     app = os.path.join(bin_dir, "App.exe")
     if os.path.exists(app) is False:

@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import functools
 import json
 import os
 import re
@@ -50,6 +51,7 @@ from common import (
     kCppHeaderExtensions,
     kCppSourceExtensions,
     normalizePath,
+    useUtf8Stdout,
 )
 
 # --- 1. 자료구조 정의 --------------------------------------------------------
@@ -1061,6 +1063,15 @@ def extractClassMembersInternal(content: str) -> dict[str, list[str]]:
 
 # --- 4. 파일별 컨벤션 검사 로직 ----------------------------------------------
 
+@functools.lru_cache(maxsize=None)
+def readHeaderClassMembersInternal(headerPath: Path) -> dict:
+    """짝 헤더의 클래스 멤버 맵. 헤더는 자기 차례에도 스캔되므로 캐시가 없으면 두 번 읽고 두 번 판다."""
+    try:
+        return extractClassMembersInternal(headerPath.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[ConventionViolation]:
     violations: list[ConventionViolation] = []
     relPath = normalizePath(filePath.relative_to(rootDir))
@@ -1085,8 +1096,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             matchingHeader = filePath.with_suffix(".hpp")
         if matchingHeader.is_file():
             try:
-                headerContent = matchingHeader.read_text(encoding="utf-8")
-                classMemberMap.update(extractClassMembersInternal(headerContent))
+                classMemberMap.update(readHeaderClassMembersInternal(matchingHeader))
             except Exception:
                 pass
 
@@ -1644,11 +1654,7 @@ def runConventionsCheck(rootDir: Path | None = None,
 
 
 def main() -> int:
-    if hasattr(sys.stdout, "reconfigure"):
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
+    useUtf8Stdout()
 
     parser = argparse.ArgumentParser(description="SW Engine C++ 코딩 컨벤션 검사기")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트 디렉터리 경로")

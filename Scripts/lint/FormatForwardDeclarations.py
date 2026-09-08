@@ -32,6 +32,7 @@ from common import (
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
+    useUtf8Stdout,
 )
 
 _kSingleFwdRe = re.compile(
@@ -225,6 +226,8 @@ def formatForwardDeclarationsBatch(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(
         description="전방 선언(Forward Declaration) 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)"
     )

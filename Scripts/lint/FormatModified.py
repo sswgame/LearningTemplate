@@ -19,10 +19,12 @@ sys.path.insert(0, str(scriptDir.parent))
 
 import CheckIncludeOrder
 import FormatForwardDeclarations
-from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch
+from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch, useUtf8Stdout
 
 
 def main() -> int:
+    useUtf8Stdout()
+
     projectRoot = getProjectRoot()
     modifiedFiles = getModifiedCppFiles(projectRoot)
 

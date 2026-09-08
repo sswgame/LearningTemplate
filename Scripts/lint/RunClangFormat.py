@@ -26,10 +26,13 @@ from common import (
     getModifiedCppFiles,
     getProjectRoot,
     runClangFormatBatch,
+    useUtf8Stdout,
 )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    useUtf8Stdout()
+
     parser = argparse.ArgumentParser(description="C++ 소스코드에 clang-format을 적용합니다.")
     parser.add_argument(
         "files",
