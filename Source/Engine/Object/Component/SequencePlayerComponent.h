@@ -13,16 +13,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_SequencePlayerComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "Cinematics", DisplayName = "Sequence Player Component", Tooltip = "Plays a SequenceAsset timeline against named scene objects" )
     class SW_API SequencePlayerComponent : public Component
     {
-        friend struct ::sw::generated::sw_SequencePlayerComponent_Registrar;
-
     public:
         REFLECT_BODY();
         SequencePlayerComponent();

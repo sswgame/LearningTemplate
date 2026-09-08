@@ -11,11 +11,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_DirectionalLightComponent_Registrar;
-    } // namespace generated
-
     /**
      * @class DirectionalLightComponent
      * @brief 방향광 하나. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
@@ -29,8 +24,6 @@ namespace sw
     REFLECT( Category = "Rendering 3D", DisplayName = "Directional Light", Tooltip = "Scene key light and shadow volume" )
     class SW_API DirectionalLightComponent : public SceneComponent
     {
-        friend struct ::sw::generated::sw_DirectionalLightComponent_Registrar;
-
     public:
         REFLECT_BODY();
 

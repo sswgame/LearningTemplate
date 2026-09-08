@@ -8,16 +8,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_DontDestroyOnLoadComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API DontDestroyOnLoadComponent : public Component
     {
-        friend struct ::sw::generated::sw_DontDestroyOnLoadComponent_Registrar;
-
     public:
         REFLECT_BODY();
         DontDestroyOnLoadComponent();

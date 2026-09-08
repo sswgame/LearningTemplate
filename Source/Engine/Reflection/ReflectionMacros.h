@@ -19,6 +19,21 @@ namespace sw
     struct TypeInfo;
 } // namespace sw
 
+namespace sw::generated
+{
+    /**
+     * @brief 생성 코드가 타입마다 특수화하는 등록기. 선언만 여기 있고 정의는 .gen.cpp 가 낸다.
+     * @details 등록기는 `offsetof( Foo, _privateField )` 로 private 멤버를 만지므로 friend 여야 한다.
+     *          예전엔 등록기 이름이 타입마다 달라서(`sw_Foo_Registrar`) 헤더마다 두 줄을 손으로 적었다 —
+     *          클래스 앞의 전방 선언 블록과 클래스 안의 friend 선언이다. 인자 없는 REFLECT_BODY() 는
+     *          그 이름을 만들어낼 수 없고, 한정된 friend 선언은 이름을 새로 도입하지 않아 전방 선언을
+     *          없앨 수도 없었다. 등록기를 타입으로 특수화되는 **템플릿**으로 두면 이름이 필요 없어져
+     *          `template <typename> friend struct` 한 줄로 REFLECT_BODY() 안에 접힌다.
+     */
+    template <typename T>
+    struct Registrar;
+} // namespace sw::generated
+
 #if defined( __REFLECT_PARSER__ )
     /** @brief 타입 리플렉션 대상. 선택 플래그: Abstract, Static */
     #define REFLECT( ... )  __attribute__( ( annotate( "REFLECT;" #__VA_ARGS__ ) ) )
@@ -42,6 +57,8 @@ namespace sw
      *       나머지 줄이 네임스페이스 스코프로 새어 나간다.
      */
     #define REFLECT_BODY()                                                               \
+        template <typename>                                                              \
+        friend struct ::sw::generated::Registrar;                                        \
         void        __sw_reflect_body() __attribute__( ( annotate( "REFLECT_BODY" ) ) ); \
         const void* swReflectSelf() const
 #else
@@ -58,6 +75,8 @@ namespace sw
      *       나머지 줄이 네임스페이스 스코프로 새어 나간다.
      */
     #define REFLECT_BODY()                         \
+        template <typename>                        \
+        friend struct ::sw::generated::Registrar;  \
         static const ::sw::TypeInfo* StaticType(); \
         auto                         swReflectSelf() const -> decltype( this )
 #endif

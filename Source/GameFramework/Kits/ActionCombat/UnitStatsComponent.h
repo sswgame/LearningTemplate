@@ -8,16 +8,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_UnitStatsComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
     class SW_GF_API UnitStatsComponent : public Component
     {
-        friend struct ::sw::generated::sw_UnitStatsComponent_Registrar;
-
     public:
         REFLECT_BODY();
         UnitStatsComponent();

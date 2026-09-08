@@ -6,16 +6,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_DamageUIComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API DamageUIComponent : public Component
     {
-        friend struct ::sw::generated::sw_DamageUIComponent_Registrar;
-
     public:
         REFLECT_BODY();
         DamageUIComponent();

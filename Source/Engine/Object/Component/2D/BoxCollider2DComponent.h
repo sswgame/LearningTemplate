@@ -16,16 +16,9 @@ namespace sw
 {
     class PhysicsWorld;
 
-    namespace generated
-    {
-        struct sw_BoxCollider2DComponent_Registrar;
-    } // namespace generated
-
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
     class SW_API BoxCollider2DComponent : public SceneComponent
     {
-        friend struct ::sw::generated::sw_BoxCollider2DComponent_Registrar;
-
     public:
         REFLECT_BODY();
         BoxCollider2DComponent();

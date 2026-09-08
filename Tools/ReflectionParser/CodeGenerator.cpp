@@ -639,6 +639,7 @@ namespace sw
         appendTemplate( out, tplConstants::kTypeRegistrarEnd,
                         {
                             { templateKeyConstants::kId, registrarName },
+                            { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName },
                             { templateKeyConstants::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
         } );
@@ -713,6 +714,7 @@ namespace sw
         appendTemplate( out, tplConstants::kEnumRegistrarEnd,
                         {
                             { templateKeyConstants::kId, registrarName },
+                            { templateKeyConstants::kFqn, enumInfo._fullyQualifiedName },
                             { templateKeyConstants::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
         } );

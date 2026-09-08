@@ -1,5 +1,6 @@
 	// ── $FQN ──────────────────────────────
-	struct ${Id}_Registrar
+	template <>
+	struct Registrar<$FQN>
 	{
 		static void RegisterEnum(::sw::TypeRegistry& registry)
 		{

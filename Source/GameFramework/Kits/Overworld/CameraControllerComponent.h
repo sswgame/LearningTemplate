@@ -6,16 +6,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_CameraControllerComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API CameraControllerComponent : public Component
     {
-        friend struct ::sw::generated::sw_CameraControllerComponent_Registrar;
-
     public:
         REFLECT_BODY();
         CameraControllerComponent();

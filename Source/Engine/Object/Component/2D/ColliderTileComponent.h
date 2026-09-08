@@ -12,16 +12,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_ColliderTileComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_API ColliderTileComponent : public Component
     {
-        friend struct ::sw::generated::sw_ColliderTileComponent_Registrar;
-
     public:
         REFLECT_BODY();
         ColliderTileComponent();

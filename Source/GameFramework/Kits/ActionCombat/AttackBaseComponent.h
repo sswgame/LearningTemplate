@@ -8,16 +8,9 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_AttackBaseComponent_Registrar;
-    } // namespace generated
-
     REFLECT()
     class SW_GF_API AttackBaseComponent : public Component
     {
-        friend struct ::sw::generated::sw_AttackBaseComponent_Registrar;
-
     public:
         REFLECT_BODY();
         AttackBaseComponent();

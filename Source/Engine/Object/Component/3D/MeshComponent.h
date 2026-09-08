@@ -14,11 +14,6 @@
 
 namespace sw
 {
-    namespace generated
-    {
-        struct sw_MeshComponent_Registrar;
-    } // namespace generated
-
     class GameObjectManager;
     class Material;
     class MaterialInstance;
@@ -32,7 +27,6 @@ namespace sw
     REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer" )
     class SW_API MeshComponent : public SceneComponent
     {
-        friend struct ::sw::generated::sw_MeshComponent_Registrar;
         /// 등록부 슬롯과 더티 플래그를 관리하는 유일한 주체.
         friend class PrimitiveRegistry;
 
