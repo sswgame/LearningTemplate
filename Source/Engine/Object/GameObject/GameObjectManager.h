@@ -78,6 +78,15 @@ namespace sw
         GameObject* findGameObjectById( uint64 objectId ) const;
 
         /** @brief 등록된 모든 GameObject 목록의 스냅샷을 반환합니다. pending-add를 포함하며 목록을 바꾸지 않습니다. */
+        /**
+         * @brief 살아 있는 오브젝트를 outList 에 채웁니다 (호출부 버퍼 재사용).
+         * @details 같은 클래스의 findGameObjectsByTag 와 같은 규약이다. 값 반환형은 호출마다 씬
+         *          전체를 새로 할당·복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
+         *          쓴다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않는다.
+         */
+        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+
+        /** @brief 살아 있는 오브젝트 목록을 새 벡터로 돌려줍니다 (한 번만 쓰는 곳 전용). */
         vector<GameObject*> getAllGameObjects() const;
 
         /** @brief 힙 할당 없이 등록된 모든 유효한 GameObject를 순회합니다. */

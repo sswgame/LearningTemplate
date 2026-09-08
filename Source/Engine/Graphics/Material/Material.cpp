@@ -53,7 +53,9 @@ namespace sw
         , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
+        , _cachedShaderPathHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
+        , _bShaderPathHashDirty{ SW_TRUE }
         , _reservedMaterial{ 0 }
     {
         _asyncLoadState->_pMaterial = this;
@@ -759,6 +761,24 @@ namespace sw
             _bDefinesDirty         = 0;
         }
         return _listCachedDefine;
+    }
+
+    void Material::setShaderPath( string_view shaderPath )
+    {
+        if ( _desc._shaderPath == shaderPath )
+            return;
+        _desc._shaderPath     = shaderPath;
+        _bShaderPathHashDirty = SW_TRUE;
+    }
+
+    uint64 Material::getShaderPathHash() const
+    {
+        if ( _bShaderPathHashDirty != 0 )
+        {
+            _cachedShaderPathHash = StringUtil::computeHash64( _desc._shaderPath, false, StringUtil::kOffset64 );
+            _bShaderPathHashDirty = SW_FALSE;
+        }
+        return _cachedShaderPathHash;
     }
 
     uint64 Material::getPermutationHash() const

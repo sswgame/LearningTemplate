@@ -435,13 +435,19 @@ namespace sw
         return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
     }
 
+    void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
+    {
+        outListGameObject.clear();
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        outListGameObject.reserve( _listGameObject.size() + _listPendingAdd.size() );
+        outListGameObject.insert( outListGameObject.end(), _listGameObject.begin(), _listGameObject.end() );
+        outListGameObject.insert( outListGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+    }
+
     vector<GameObject*> GameObjectManager::getAllGameObjects() const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        vector<GameObject*>                 listAllGameObject;
-        listAllGameObject.reserve( _listGameObject.size() + _listPendingAdd.size() );
-        listAllGameObject.insert( listAllGameObject.end(), _listGameObject.begin(), _listGameObject.end() );
-        listAllGameObject.insert( listAllGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+        vector<GameObject*> listAllGameObject;
+        getAllGameObjects( listAllGameObject );
         return listAllGameObject;
     }
 

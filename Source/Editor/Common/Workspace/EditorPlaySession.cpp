@@ -74,9 +74,13 @@ namespace sw::editor
 
                 GameObjectManager* pObjects = pScene->getObjectManager();
                 EditorContext*     pContext = EditorContext::get();
-                s_listPlaySnapshots.reserve( pObjects->getAllGameObjects().size() );
+                // 예전엔 여기서 getAllGameObjects() 를 두 번 불렀다 — 개수를 세려고 한 번,
+                // 순회하려고 한 번. 값 반환형이라 씬 전체를 두 번 할당·복사했다.
+                vector<GameObject*> listAllObject;
+                pObjects->getAllGameObjects( listAllObject );
+                s_listPlaySnapshots.reserve( listAllObject.size() );
 
-                for ( GameObject* pObj : pObjects->getAllGameObjects() )
+                for ( GameObject* pObj : listAllObject )
                 {
                     if ( pObj == nullptr )
                         continue;
@@ -132,8 +136,11 @@ namespace sw::editor
                         uniqueSnapIds.insert( snap._objectId );
                     }
 
+                    vector<GameObject*> listAllObject;
+                    pObjects->getAllGameObjects( listAllObject );
+
                     vector<GameObject*> listToDestroy;
-                    for ( GameObject* pObj : pObjects->getAllGameObjects() )
+                    for ( GameObject* pObj : listAllObject )
                     {
                         if ( pObj != nullptr && uniqueSnapIds.find( pObj->getObjectId() ) == uniqueSnapIds.end() )
                             listToDestroy.push_back( pObj );

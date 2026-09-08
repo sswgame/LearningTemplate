@@ -142,6 +142,21 @@ namespace sw
         uint64 getPermutationHash() const;
         /** @brief 셰이더 경로를 반환합니다. */
         const string& getShaderPath() const { return _desc._shaderPath; }
+
+        /**
+         * @brief 셰이더 경로를 바꾸고 경로 해시 캐시를 무효화합니다.
+         * @details `getDesc()._shaderPath` 를 직접 쓰면 캐시가 옛 경로를 계속 들고 있다. 경로를
+         *          바꾸는 곳은 여기를 쓴다.
+         */
+        void setShaderPath( string_view shaderPath );
+
+        /**
+         * @brief 셰이더 경로의 해시 (경로가 바뀔 때만 다시 계산).
+         * @details GpuScene 이 배치 키를 만들 때 인스턴스마다 불린다. 예전엔 그때마다 경로 문자열을
+         *          다시 해시했다 — 경로는 머티리얼 수명 동안 거의 안 바뀌는데 프레임마다 인스턴스
+         *          수만큼 해시하고 있었다. 정의(define) 해시가 이미 쓰는 더티 플래그 방식과 같다.
+         */
+        uint64 getShaderPathHash() const;
         /** @brief 머티리얼 이름을 반환합니다. */
         const string& getName() const { return _desc._name; }
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */
@@ -187,7 +202,9 @@ namespace sw
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;
-        mutable uint8          _bDefinesDirty    : 1;
-        [[maybe_unused]] uint8 _reservedMaterial : 7;
+        mutable uint64         _cachedShaderPathHash;
+        mutable uint8          _bDefinesDirty        : 1;
+        mutable uint8          _bShaderPathHashDirty : 1;
+        [[maybe_unused]] uint8 _reservedMaterial     : 6;
     };
 } // namespace sw

@@ -245,8 +245,8 @@ namespace sw::editor
         string shaderPath = _shaderPath.c_str();
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
-            _shaderPath                     = shaderPath;
-            _material.getDesc()._shaderPath = _shaderPath.c_str();
+            _shaderPath = shaderPath;
+            _material.setShaderPath( _shaderPath.c_str() );
             notifyDocumentEdited( "Edit Material Shader", "material-shader" );
         }
 
@@ -285,8 +285,8 @@ namespace sw::editor
     {
         if ( getLoadedAssetPath().empty() )
             return false;
-        _material.getDesc()._name       = _name.c_str();
-        _material.getDesc()._shaderPath = _shaderPath.c_str();
+        _material.getDesc()._name = _name.c_str();
+        _material.setShaderPath( _shaderPath.c_str() );
         if ( _material.saveToFile( getLoadedAssetPath() ) == false )
         {
             _status = "Save failed";

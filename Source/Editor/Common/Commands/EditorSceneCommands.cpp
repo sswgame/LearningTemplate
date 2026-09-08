@@ -283,7 +283,9 @@ namespace sw::editor
             }
         }
 
-        const vector<GameObject*>& listAll = pManager->getAllGameObjects();
+        // 반환값에 const& 를 걸면 복사가 없어 보이지만, 값 반환형이라 방금 벡터 하나를 할당했다.
+        vector<GameObject*> listAll;
+        pManager->getAllGameObjects( listAll );
         for ( const GameObject* pOther : listAll )
         {
             if ( pOther == nullptr || pOther == pObj )

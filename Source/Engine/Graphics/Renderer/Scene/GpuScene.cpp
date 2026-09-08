@@ -128,7 +128,7 @@ namespace sw
             return 0;
         // 인스턴스가 있으면 그 해시를 쓴다 — 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모 것을 이미 포함한다.
         const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
-        uint64       hash       = StringUtil::computeHash64( pMaterial->getShaderPath(), false, StringUtil::kOffset64 );
+        uint64       hash       = pMaterial->getShaderPathHash();
         hash ^= defineHash + 0x9e3779b97f4a7c15ull + ( hash << 6 ) + ( hash >> 2 );
         return hash;
     }
@@ -822,16 +822,22 @@ namespace sw
         if ( _listScratchTransparentIdx.empty() == false )
         {
             uint32 batchStart{ 0 };
+
+            // 배치 헤드의 키는 배치가 닫힐 때만 바뀐다. 예전엔 반복마다 헤드와 현재 것을 **둘 다**
+            // batchKeyMaterial 로 다시 구했다 — 배치 하나가 N 개면 헤드 키를 N 번 다시 만든 셈이다.
+            const DrawCandidate* pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[0]];
+            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_pMaterial, pBatchHead->_pInstance );
+
             for ( uint32 entryIndex = 1; entryIndex <= _listScratchTransparentIdx.size(); ++entryIndex )
             {
                 const bool bEnd = entryIndex == _listScratchTransparentIdx.size();
                 bool       bKeyChange{ false };
                 if ( bEnd == false )
                 {
-                    const DrawCandidate& batchHead = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                    const DrawCandidate& current   = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
-                    bKeyChange                     = ( batchHead._pMesh != current._pMesh ) || ( batchKeyMaterial( batchHead._pMaterial, batchHead._pInstance ) != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
-                                                     ( _bMergeAcrossMaterials == 0 && batchHead._pInstance != current._pInstance );
+                    const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
+                    bKeyChange                   = ( pBatchHead->_pMesh != current._pMesh ) ||
+                                                   ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
+                                                   ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -871,6 +877,11 @@ namespace sw
                     _listTransparentBatch.push_back( batch );
                     _listAllBatch.push_back( batch );
                     batchStart = entryIndex;
+                    if ( bEnd == false )
+                    {
+                        pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
+                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_pMaterial, pBatchHead->_pInstance );
+                    }
                 }
             }
         }

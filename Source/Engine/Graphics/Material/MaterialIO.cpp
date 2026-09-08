@@ -142,10 +142,10 @@ namespace sw
              false )
             return false;
 
-        _desc             = MaterialDesc{};
-        _desc._name       = MaterialUtil::fieldText( root, "name" );
-        _desc._shaderPath = MaterialUtil::fieldText( root, "shaderPath" );
-        _desc._blendMode  = MaterialUtil::fieldText( root, "blendMode" );
+        _desc       = MaterialDesc{};
+        _desc._name = MaterialUtil::fieldText( root, "name" );
+        setShaderPath( MaterialUtil::fieldText( root, "shaderPath" ) );
+        _desc._blendMode = MaterialUtil::fieldText( root, "blendMode" );
 
         XmlNode props = root.child( "_properties" );
         if ( props.isValid() )
@@ -177,7 +177,7 @@ namespace sw
         self->_desc._listProperty = _data._listProperty;
         self->_desc._blendMode    = MaterialUtil::blendModeToString( _blendMode );
         self->_desc._name         = _desc._name;
-        self->_desc._shaderPath   = _desc._shaderPath;
+        self->setShaderPath( _desc._shaderPath );
     }
 
 } // namespace sw
