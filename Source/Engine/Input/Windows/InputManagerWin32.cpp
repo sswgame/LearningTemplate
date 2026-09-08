@@ -107,16 +107,16 @@ namespace sw
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
-                    int32 mx = 0;
-                    int32 my = 0;
+                    int32 mouseX = 0;
+                    int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mx, my );
+                        _pMouse->getPosition( mouseX, mouseY );
                     if ( event._lParam != 0 )
                     {
-                        mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
                         if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mx, my );
+                            _pMouse->setPosition( mouseX, mouseY );
                     }
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
@@ -130,7 +130,7 @@ namespace sw
                             SetCapture( pHwnd );
                     }
 
-                    postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mx, my, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseButtonDown( btn, mouseX, mouseY, modMask ) );
                 }
                 break;
             }
@@ -142,21 +142,21 @@ namespace sw
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
-                    int32 mx = 0;
-                    int32 my = 0;
+                    int32 mouseX = 0;
+                    int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mx, my );
+                        _pMouse->getPosition( mouseX, mouseY );
                     if ( event._lParam != 0 )
                     {
-                        mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
                         if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mx, my );
+                            _pMouse->setPosition( mouseX, mouseY );
                     }
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
                         _pMouse->setButtonDown( btn, true );
-                    postRawEvent( RawInputEvent::makeMouseDoubleClick( btn, mx, my, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseDoubleClick( btn, mouseX, mouseY, modMask ) );
                 }
                 break;
             }
@@ -168,16 +168,16 @@ namespace sw
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
-                    int32 mx = 0;
-                    int32 my = 0;
+                    int32 mouseX = 0;
+                    int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mx, my );
+                        _pMouse->getPosition( mouseX, mouseY );
                     if ( event._lParam != 0 )
                     {
-                        mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                        my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+                        mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+                        mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
                         if ( _pMouse != nullptr )
-                            _pMouse->setPosition( mx, my );
+                            _pMouse->setPosition( mouseX, mouseY );
                     }
                     const uint8 modMask = getWin32ModifierMaskInternal();
                     if ( _pMouse != nullptr )
@@ -188,17 +188,17 @@ namespace sw
                         ReleaseCapture();
                     }
 
-                    postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mx, my, modMask ) );
+                    postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modMask ) );
                 }
                 break;
             }
             case WM_MOUSEMOVE:
             {
-                const int32 mx = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
-                const int32 my = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
+                const int32 mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
+                const int32 mouseY = static_cast<int32>( static_cast<int16>( HIWORD( event._lParam ) ) );
                 if ( _pMouse != nullptr )
-                    _pMouse->setPosition( mx, my );
-                postRawEvent( RawInputEvent::makeMouseMove( mx, my ) );
+                    _pMouse->setPosition( mouseX, mouseY );
+                postRawEvent( RawInputEvent::makeMouseMove( mouseX, mouseY ) );
                 break;
             }
             case WM_MOUSEWHEEL:
@@ -323,17 +323,17 @@ namespace sw
             _pMouse->setButtonDown( MouseButton::X1, ( GetAsyncKeyState( VK_XBUTTON1 ) & 0x8000 ) != 0 );
             _pMouse->setButtonDown( MouseButton::X2, ( GetAsyncKeyState( VK_XBUTTON2 ) & 0x8000 ) != 0 );
 
-            POINT pt{};
-            if ( GetCursorPos( &pt ) )
+            POINT cursorPoint{};
+            if ( GetCursorPos( &cursorPoint ) )
             {
                 IWindow* pWindow = IWindow::getActiveWindow();
                 if ( pWindow != nullptr )
                 {
                     HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
                     if ( pHwnd != nullptr )
-                        ScreenToClient( pHwnd, &pt );
+                        ScreenToClient( pHwnd, &cursorPoint );
                 }
-                _pMouse->setPosition( static_cast<int32>( pt.x ), static_cast<int32>( pt.y ) );
+                _pMouse->setPosition( static_cast<int32>( cursorPoint.x ), static_cast<int32>( cursorPoint.y ) );
             }
         }
     }
@@ -422,17 +422,17 @@ namespace sw
             SystemParametersInfo( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
             SystemParametersInfo( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
 
-            STICKYKEYS sk = AccessibilityInternal::s_prevStickyKeys;
-            sk.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &sk, 0 );
+            STICKYKEYS stickyKeys = AccessibilityInternal::s_prevStickyKeys;
+            stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
-            TOGGLEKEYS tk = AccessibilityInternal::s_prevToggleKeys;
-            tk.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &tk, 0 );
+            TOGGLEKEYS toggleKeys = AccessibilityInternal::s_prevToggleKeys;
+            toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
-            FILTERKEYS fk = AccessibilityInternal::s_prevFilterKeys;
-            fk.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &fk, 0 );
+            FILTERKEYS filterKeys = AccessibilityInternal::s_prevFilterKeys;
+            filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
             AccessibilityInternal::s_bDisabled = true;
         }

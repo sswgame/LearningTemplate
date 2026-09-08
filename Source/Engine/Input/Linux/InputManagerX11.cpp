@@ -237,11 +237,11 @@ namespace sw
             }
             case MotionNotify:
             {
-                const int32 mx = static_cast<int32>( pXev->xmotion.x );
-                const int32 my = static_cast<int32>( pXev->xmotion.y );
+                const int32 mouseX = static_cast<int32>( pXev->xmotion.x );
+                const int32 mouseY = static_cast<int32>( pXev->xmotion.y );
                 if ( _pMouse != nullptr )
-                    _pMouse->setPosition( mx, my );
-                postRawEvent( RawInputEvent::makeMouseMove( mx, my ) );
+                    _pMouse->setPosition( mouseX, mouseY );
+                postRawEvent( RawInputEvent::makeMouseMove( mouseX, mouseY ) );
                 break;
             }
             case EnterNotify:

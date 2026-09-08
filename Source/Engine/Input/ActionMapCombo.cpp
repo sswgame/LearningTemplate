@@ -110,34 +110,34 @@ namespace sw
 
     bool ActionMap::checkCommandPattern( const hashed_string& pattern, float32 maxWindowSeconds ) const
     {
-        string_view sv = pattern.view();
-        if ( sv.empty() || _commandHistoryCount == 0 )
+        string_view patternText = pattern.view();
+        if ( patternText.empty() || _commandHistoryCount == 0 )
             return false;
 
         vector<hashed_string> listExpected;
         string                actionToken;
 
-        for ( size_t index = 0; index < sv.size(); ++index )
+        for ( size_t index = 0; index < patternText.size(); ++index )
         {
-            const utf8 ch = sv[index];
-            if ( ch == '2' )
+            const utf8 character = patternText[index];
+            if ( character == '2' )
                 listExpected.push_back( hashed_string( "Down" ) );
-            else if ( ch == '3' )
+            else if ( character == '3' )
                 listExpected.push_back( hashed_string( "DownRight" ) );
-            else if ( ch == '6' )
+            else if ( character == '6' )
                 listExpected.push_back( hashed_string( "Right" ) );
-            else if ( ch == '4' )
+            else if ( character == '4' )
                 listExpected.push_back( hashed_string( "Left" ) );
-            else if ( ch == '1' )
+            else if ( character == '1' )
                 listExpected.push_back( hashed_string( "DownLeft" ) );
-            else if ( ch == '7' )
+            else if ( character == '7' )
                 listExpected.push_back( hashed_string( "UpLeft" ) );
-            else if ( ch == '8' )
+            else if ( character == '8' )
                 listExpected.push_back( hashed_string( "Up" ) );
-            else if ( ch == '9' )
+            else if ( character == '9' )
                 listExpected.push_back( hashed_string( "UpRight" ) );
             else
-                actionToken.push_back( ch );
+                actionToken.push_back( character );
         }
 
         if ( actionToken.empty() == false )

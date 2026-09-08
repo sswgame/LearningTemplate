@@ -227,9 +227,9 @@ namespace sw
         for ( const InputReplayFrame& frame : _listFrame )
         {
             const uint32  tickNumber = frame._tickNumber;
-            const float32 dt         = frame._deltaTime;
+            const float32 deltaTime  = frame._deltaTime;
             const uint8*  pTick      = reinterpret_cast<const uint8*>( &tickNumber );
-            const uint8*  pDt        = reinterpret_cast<const uint8*>( &dt );
+            const uint8*  pDt        = reinterpret_cast<const uint8*>( &deltaTime );
             bytes.insert( bytes.end(), pTick, pTick + sizeof( uint32 ) );
             bytes.insert( bytes.end(), pDt, pDt + sizeof( float32 ) );
 

@@ -448,7 +448,7 @@ namespace sw
         bool                 isPointerHovering() const;
         bool                 wasPointerHoverEntered() const;
         bool                 wasPointerHoverLeft() const;
-        bool                 isPointerOverRect( int32 x, int32 y, int32 w, int32 h ) const;
+        bool                 isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
         static ActionTrigger actionTriggerFromName( string_view name );
         static const utf8*   actionTriggerToName( ActionTrigger trigger );
 

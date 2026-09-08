@@ -302,15 +302,15 @@ namespace sw
             }
             case BindingKind::Axis1DComposite:
             {
-                IInputDevice* pNegDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pPosDev = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                float32       v       = 0.0f;
+                IInputDevice* pNegDev   = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
+                IInputDevice* pPosDev   = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
+                float32       axisValue = 0.0f;
                 if ( pNegDev != nullptr && pNegDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
-                    v -= 1.0f;
+                    axisValue -= 1.0f;
                 if ( pPosDev != nullptr && pPosDev->isControlDown( binding._arrSlot[1]._controlIndex ) )
-                    v += 1.0f;
-                outValue = float2{ v, 0.0f };
-                return v != 0.0f;
+                    axisValue += 1.0f;
+                outValue = float2{ axisValue, 0.0f };
+                return axisValue != 0.0f;
             }
             case BindingKind::Vector2DComposite:
             {
@@ -344,12 +344,12 @@ namespace sw
                 GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
                 if ( pPad != nullptr && pPad->isConnected() )
                 {
-                    float32 sx{ 0.0f };
-                    float32 sy{ 0.0f };
+                    float32 stickX{ 0.0f };
+                    float32 stickY{ 0.0f };
                     if ( binding._stick == GamepadStick::Left )
-                        pPad->getLeftStick( sx, sy );
+                        pPad->getLeftStick( stickX, stickY );
                     else
-                        pPad->getRightStick( sx, sy );
+                        pPad->getRightStick( stickX, stickY );
 
                     const float32 inDeadzone  = binding._deadzone;
                     const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
@@ -357,11 +357,11 @@ namespace sw
 
                     if ( _deadzoneShape == DeadzoneShape::Radial )
                     {
-                        const float32 mag = MathUtil::sqrt( sx * sx + sy * sy );
+                        const float32 mag = MathUtil::sqrt( stickX * stickX + stickY * stickY );
                         if ( mag <= inDeadzone )
                         {
-                            sx = 0.0f;
-                            sy = 0.0f;
+                            stickX = 0.0f;
+                            stickY = 0.0f;
                         }
                         else
                         {
@@ -370,8 +370,8 @@ namespace sw
                             {
                                 norm = MathUtil::pow( norm, binding._responseExponent );
                             }
-                            sx = ( sx / mag ) * norm;
-                            sy = ( sy / mag ) * norm;
+                            stickX = ( stickX / mag ) * norm;
+                            stickY = ( stickY / mag ) * norm;
                         }
                     }
                     else // Axial
@@ -388,14 +388,14 @@ namespace sw
                             }
                             return ( val > 0.0f ? 1.0f : -1.0f ) * norm;
                         };
-                        sx = applyAxialDeadzone( sx );
-                        sy = applyAxialDeadzone( sy );
+                        stickX = applyAxialDeadzone( stickX );
+                        stickY = applyAxialDeadzone( stickY );
                     }
 
-                    sx *= _gamepadSensitivity._x;
-                    sy *= _gamepadSensitivity._y;
-                    outValue = float2{ sx, sy };
-                    return ( sx != 0.0f || sy != 0.0f );
+                    stickX *= _gamepadSensitivity._x;
+                    stickY *= _gamepadSensitivity._y;
+                    outValue = float2{ stickX, stickY };
+                    return ( stickX != 0.0f || stickY != 0.0f );
                 }
                 return false;
             }
