@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -57,21 +58,6 @@ namespace sw::editor
             static int32 pinChoice( int32 nodeId, int32 choiceIndex )
             {
                 return nodeId * 100 + kPinChoiceBase + choiceIndex;
-            }
-
-            static ed::NodeId toNodeId( int32 id )
-            {
-                return ed::NodeId( static_cast<uintptr_t>( id ) );
-            }
-
-            static ed::PinId toPinId( int32 id )
-            {
-                return ed::PinId( static_cast<uintptr_t>( id ) );
-            }
-
-            static ed::LinkId toLinkId( int32 id )
-            {
-                return ed::LinkId( static_cast<uintptr_t>( id ) );
             }
         };
     } // namespace
@@ -203,7 +189,7 @@ namespace sw::editor
         // 링크 렌더링
         for ( const DialogueLink& link : _listLink )
         {
-            ed::Link( DialogueGraphPanelInternal::toLinkId( link._id ), DialogueGraphPanelInternal::toPinId( link._fromPin ), DialogueGraphPanelInternal::toPinId( link._toPin ) );
+            ed::Link( toLinkId( link._id ), toPinId( link._fromPin ), toPinId( link._toPin ) );
         }
 
         handleCanvasInteractions();
@@ -225,7 +211,7 @@ namespace sw::editor
         // 노드 렌더링
         for ( DialogueNode& node : _listNode )
         {
-            const ed::NodeId nodeId = DialogueGraphPanelInternal::toNodeId( node._id );
+            const ed::NodeId nodeId = toNodeId( node._id );
             ed::BeginNode( nodeId );
 
             switch ( node._type )
@@ -233,7 +219,7 @@ namespace sw::editor
                 case DialogueAssetNodeType::Start:
                 {
                     ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.3f, 1.0f ), "[START]" );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
                     ImGui::TextUnformatted( "Next ->" );
                     ed::EndPin();
                     break;
@@ -241,11 +227,11 @@ namespace sw::editor
                 case DialogueAssetNodeType::Dialogue:
                 {
                     ImGui::TextColored( ImVec4( 0.4f, 0.7f, 1.0f, 1.0f ), "[DIALOGUE: %s]", node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
                     ImGui::TextUnformatted( "-> In" );
                     ed::EndPin();
                     ImGui::SameLine();
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
                     ImGui::TextUnformatted( "Next ->" );
                     ed::EndPin();
 
@@ -268,13 +254,13 @@ namespace sw::editor
                 case DialogueAssetNodeType::Choice:
                 {
                     ImGui::TextColored( ImVec4( 0.8f, 0.5f, 1.0f, 1.0f ), "[CHOICE]" );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
                     ImGui::TextUnformatted( "-> In" );
                     ed::EndPin();
 
                     if ( node._listChoice.empty() )
                     {
-                        ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+                        ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
                         ImGui::TextUnformatted( "Choice 0 ->" );
                         ed::EndPin();
                     }
@@ -282,7 +268,7 @@ namespace sw::editor
                     {
                         for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
                         {
-                            ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+                            ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
                             ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
                             ed::EndPin();
                         }
@@ -292,16 +278,16 @@ namespace sw::editor
                 case DialogueAssetNodeType::Branch:
                 {
                     ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "[BRANCH]" );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
                     ImGui::TextUnformatted( "-> In" );
                     ed::EndPin();
                     ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
 
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
                     ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
                     ed::EndPin();
                     ImGui::SameLine();
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
                     ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
                     ed::EndPin();
                     break;
@@ -309,11 +295,11 @@ namespace sw::editor
                 case DialogueAssetNodeType::Action:
                 {
                     ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.9f, 1.0f ), "[ACTION]" );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
                     ImGui::TextUnformatted( "-> In" );
                     ed::EndPin();
                     ImGui::SameLine();
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
                     ImGui::TextUnformatted( "Next ->" );
                     ed::EndPin();
                     ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
@@ -322,7 +308,7 @@ namespace sw::editor
                 case DialogueAssetNodeType::End:
                 {
                     ImGui::TextColored( ImVec4( 0.9f, 0.3f, 0.3f, 1.0f ), "[END]" );
-                    ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
                     ImGui::TextUnformatted( "-> In" );
                     ed::EndPin();
                     break;
@@ -627,7 +613,7 @@ namespace sw::editor
         bool bMoved{ false };
         for ( DialogueNode& node : _listNode )
         {
-            const ImVec2 pos      = ed::GetNodePosition( DialogueGraphPanelInternal::toNodeId( node._id ) );
+            const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
             const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._x ) == false ) && ( MathUtil::nearEqual( pos.y, node._y ) == false );
             if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                 bMoved = true;

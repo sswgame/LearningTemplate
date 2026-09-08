@@ -30,25 +30,6 @@ namespace sw::editor
     {
         struct GlobalVariablesPanelInternal
         {
-            static string getTypeString( const GlobalVariableInfo& info )
-            {
-                switch ( info._type )
-                {
-                    case GlobalVariableType::Boolean:
-                        return "Bool";
-                    case GlobalVariableType::Int32:
-                        return "Int32";
-                    case GlobalVariableType::Float:
-                        return "Float";
-                    case GlobalVariableType::String:
-                        return "String";
-                    case GlobalVariableType::Enum:
-                        return info._enumType.empty() == false ? info._enumType : "Enum";
-                    default:
-                        return "Unknown";
-                }
-            }
-
             static bool matchFilter( const GlobalVariableInfo& info, const utf8* pFilter )
             {
                 if ( StringUtil::isNullOrEmpty( pFilter ) )
@@ -501,7 +482,7 @@ namespace sw::editor
 
         // Type 컬럼
         ImGui::TableNextColumn();
-        ImGui::TextDisabled( "%s", GlobalVariablesPanelInternal::getTypeString( info ).c_str() );
+        ImGui::TextDisabled( "%s", EditorGlobalVariableCommands::getTypeString( info ).c_str() );
 
         // Value / Widget 컬럼
         ImGui::TableNextColumn();

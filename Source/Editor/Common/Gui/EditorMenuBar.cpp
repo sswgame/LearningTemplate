@@ -207,16 +207,11 @@ namespace sw::editor
     {
         if ( ImGui::BeginMenu( "Assets" ) )
         {
-            uint32                 kindCount{ 0 };
-            const EditorAssetKind* pKind = EditorAssetTypeRegistry::getToolPanelKinds( kindCount );
-            for ( uint32 index = 0; index < kindCount; ++index )
+            EditorAssetTypeRegistry::forEachToolPanelTitle( []( const utf8* pTitle )
             {
-                const utf8* pTitle = EditorAssetTypeRegistry::getPanelTitle( pKind[index] );
-                if ( StringUtil::isNullOrEmpty( pTitle ) )
-                    continue;
                 if ( ImGui::MenuItem( pTitle ) )
                     EditorContext::get()->getWorkspace().requestOpenPanel( pTitle );
-            }
+            } );
             ImGui::EndMenu();
         }
     }

@@ -7,6 +7,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+namespace sw
+{
+    struct GlobalVariableInfo;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -16,6 +21,13 @@ namespace sw::editor
     class EditorGlobalVariableCommands
     {
     public:
+        /**
+         * @brief 전역 변수 타입을 표시용 문자열로 바꿉니다 (Enum 은 열거형 이름).
+         * @details 패널과 프리셋 저장이 같은 이름을 써야 해서 여기 한 곳에만 둔다 —
+         *          예전엔 두 벌이라 GlobalVariableType 이 늘면 한쪽을 빠뜨리게 돼 있었다.
+         */
+        static string getTypeString( const GlobalVariableInfo& info );
+
         /** @brief 현재 전역 변수 값을 프리셋 XML로 저장합니다. */
         static bool savePreset( const string& filePath, const string& presetName );
         /** @brief 프리셋 XML을 읽어 전역 변수에 적용합니다. */

@@ -156,16 +156,10 @@ namespace sw::editor
 
         ImGui::DockBuilderDockWindow( "Game View", dockMain );
         ImGui::DockBuilderDockWindow( "Profiler", dockMain );
-        uint32                 kindCount{ 0 };
-        const EditorAssetKind* pKind = EditorAssetTypeRegistry::getToolPanelKinds( kindCount );
-        for ( uint32 index = 0; index < kindCount; ++index )
+        EditorAssetTypeRegistry::forEachToolPanelTitle( [dockMain]( const utf8* pTitle )
         {
-            const utf8* pTitle = EditorAssetTypeRegistry::getPanelTitle( pKind[index] );
-            if ( StringUtil::isNullOrEmpty( pTitle ) )
-                continue;
-
             ImGui::DockBuilderDockWindow( pTitle, dockMain );
-        }
+        } );
 
         ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
         ImGui::DockBuilderDockWindow( "Output Log", dockBottom );
