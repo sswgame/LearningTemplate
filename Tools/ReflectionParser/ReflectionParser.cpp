@@ -375,12 +375,37 @@ namespace sw
  *  4) ParserContext 공유 clang 설정 1회 로드
  *  5) 타임스탬프 캐시 후 TaskManager 워커 풀에서 processInputFile
  */
+namespace
+{
+    /**
+     * @brief main 이 어디서 빠져나가든 로거를 내린다.
+     * @details 예전엔 `logger->shutdown(); return 1;` 을 조기 반환마다 손으로 적었다(11곳).
+     *          로거는 비동기라 내리지 않으면 마지막 메시지가 유실되는데, 실패 경로일수록 그
+     *          메시지가 필요하다. 새 조기 반환을 넣는 사람이 잊을 수 있는 구조였다.
+     */
+    class LoggerScope
+    {
+    public:
+        LoggerScope()
+            : _logger{ sw::make_unique<sw::Logger>() }
+        {
+            _logger->initialize();
+        }
+        ~LoggerScope() { _logger->shutdown(); }
+
+        LoggerScope( const LoggerScope& )            = delete;
+        LoggerScope& operator=( const LoggerScope& ) = delete;
+
+    private:
+        sw::unique_ptr<sw::Logger> _logger;
+    };
+} // namespace
+
 int32 main( int32 argc, utf8* argv[] )
 {
-    sw::unique_ptr<sw::Logger> logger = sw::make_unique<sw::Logger>();
-    logger->initialize();
+    const LoggerScope loggerScope;
 
-    // 1) CLI
+    // CLI
     sw::CommandLineArgs commandLineArgs;
     if ( sw::ReflectionParserInternal::parseCommandLine( argc, argv, commandLineArgs ) == false )
     {
@@ -392,41 +417,36 @@ int32 main( int32 argc, utf8* argv[] )
             sw::cliConstants::kInput, sw::cliConstants::kOutput, sw::cliConstants::kBuiltins,
             sw::cliConstants::kAnnotationMeta, sw::cliConstants::kEmitTemplates,
             sw::cliConstants::kBuiltins, sw::cliConstants::kEmitTemplates, sw::cliConstants::kEmitBuiltinsGen );
-        logger->shutdown();
         return 1;
     }
 
-    // 2) ReflectBuiltins.gen.cpp 전용 모드
+    // ReflectBuiltins.gen.cpp 전용 모드
     if ( commandLineArgs._emitBuiltinsGenPath.empty() == false )
     {
         if ( commandLineArgs._emitTemplatesDir.empty() )
         {
             SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kEmitTemplates );
-            logger->shutdown();
             return 1;
         }
         if ( sw::EmitTemplateStore::instance().loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
         {
             SW_LOG_ERROR( "Failed to load --emit-templates: %#", commandLineArgs._emitTemplatesDir );
-            logger->shutdown();
             return 1;
         }
         const bool ok = sw::emitReflectBuiltinsGen( commandLineArgs._builtinsPath, commandLineArgs._emitBuiltinsGenPath );
-        logger->shutdown();
         return ok ? 0 : 1;
     }
 
-    // 3) 출력 디렉터리를 인클루드 경로 최상단에 1회 선행 배치 (스레드별 벡터 복사/삽입 제거)
+    // 출력 디렉터리를 인클루드 경로 최상단에 1회 선행 배치 (스레드별 벡터 복사/삽입 제거)
     if ( commandLineArgs._outputDir.empty() == false )
         commandLineArgs._listIncludePath.insert( commandLineArgs._listIncludePath.begin(), commandLineArgs._outputDir );
 
-    // 3) 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
+    // 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
     if ( commandLineArgs._builtinsPath.empty() == false )
     {
         if ( sw::loadReflectBuiltins( commandLineArgs._builtinsPath ) == false )
         {
             SW_LOG_ERROR( "Failed to load --builtins: %#", commandLineArgs._builtinsPath );
-            logger->shutdown();
             return 1;
         }
     }
@@ -440,7 +460,6 @@ int32 main( int32 argc, utf8* argv[] )
         if ( sw::AnnotationMeta::instance().loadFile( commandLineArgs._annotationMetaPath ) == false )
         {
             SW_LOG_ERROR( "Failed to load --annotation-meta: %#", commandLineArgs._annotationMetaPath );
-            logger->shutdown();
             return 1;
         }
     }
@@ -454,25 +473,22 @@ int32 main( int32 argc, utf8* argv[] )
         if ( sw::EmitTemplateStore::instance().loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
         {
             SW_LOG_ERROR( "Failed to load --emit-templates: %#", commandLineArgs._emitTemplatesDir );
-            logger->shutdown();
             return 1;
         }
     }
     else
     {
         SW_LOG_ERROR( "%# <Templates dir> is required.", sw::cliConstants::kEmitTemplates );
-        logger->shutdown();
         return 1;
     }
 
-    // 4) clang 공통 인자 (parser_config) 1회 캐시
+    // clang 공통 인자 (parser_config) 1회 캐시
     if ( sw::ParserContext::ensureSharedConfig() == false )
     {
-        logger->shutdown();
         return 1;
     }
 
-    // 5) 증분 스킵용 타임스탬프 + 파일별 병렬 파싱
+    // 증분 스킵용 타임스탬프 + 파일별 병렬 파싱
     if ( commandLineArgs._builtinsPath.empty() == false && sw::FileUtil::fileExists( commandLineArgs._builtinsPath ) )
         commandLineArgs._builtinsTimestamp = sw::FileUtil::getFileTimestamp( commandLineArgs._builtinsPath );
 
@@ -510,7 +526,6 @@ int32 main( int32 argc, utf8* argv[] )
         if ( taskManager.initialize( workerCount ) == false )
         {
             SW_LOG_ERROR( "Failed to initialize TaskManager." );
-            logger->shutdown();
             return 1;
         }
 
@@ -541,6 +556,5 @@ int32 main( int32 argc, utf8* argv[] )
     else
         SW_LOG_ERROR( "Done in %# ms with %# error(s).", elapsedMs, totalErrors );
 
-    logger->shutdown();
     return totalErrors == 0 ? 0 : 1;
 }
