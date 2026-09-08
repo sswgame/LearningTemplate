@@ -11,6 +11,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineData.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/ShaderBindingSlots.h"
@@ -103,10 +105,54 @@ namespace sw
                 outListRecipe.push_back( std::move( recipe ) );
             }
 
+            /** @brief 씬 메시를 그리는 패스 하나 — 머티리얼과 곱해 변형을 만들 대상이다. */
+            struct MeshPassInfo
+            {
+                string         _shaderPath;
+                string         _vertexEntryPoint;
+                string         _pixelEntryPoint;
+                vector<string> _listPermutation;
+                bool           _bUsesMaterialShader{ false };
+                bool           _bHasPixelStage{ false };
+            };
+
+            /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 동일한** define 목록. */
+            struct MaterialVariantInfo
+            {
+                string         _shaderPath;
+                vector<string> _listDefine;
+            };
+
+            /** @brief 두 define 목록을 합칩니다(중복 제거, 앞쪽 우선). */
+            static vector<string> mergeDefines( const vector<string>& listLeft, const vector<string>& listRight )
+            {
+                vector<string> listMerged = listLeft;
+                for ( const string& define : listRight )
+                {
+                    if ( define.empty() )
+                        continue;
+                    bool bFound = false;
+                    for ( const string& existing : listMerged )
+                    {
+                        if ( existing == define )
+                        {
+                            bFound = true;
+                            break;
+                        }
+                    }
+                    if ( bFound == false )
+                        listMerged.push_back( define );
+                }
+                return listMerged;
+            }
+
             static void collectAllRecipes( string_view rootDir, vector<BakeRecipe>& outListRecipe )
             {
                 EngineData engineData;
                 engineData.loadFromResource();
+
+                vector<MeshPassInfo>        listMeshPass;
+                vector<MaterialVariantInfo> listMaterialVariant;
 
                 // 1) RenderPipeline XMLs (pipeline/*.xml)
                 vector<string> listXmlFile;
@@ -129,6 +175,19 @@ namespace sw
                             shaderPath = findDefaultShaderForPassType( pass._type, engineData );
                         if ( shaderPath.empty() )
                             continue;
+
+                        // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다 (아래 4단계).
+                        if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
+                        {
+                            MeshPassInfo passInfo;
+                            passInfo._shaderPath          = shaderPath;
+                            passInfo._vertexEntryPoint    = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
+                            passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
+                            passInfo._listPermutation     = pass._listPermutation;
+                            passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
+                            passInfo._bHasPixelStage      = pass._type != "Shadow" && pass._type != "DepthPrepass";
+                            listMeshPass.push_back( std::move( passInfo ) );
+                        }
 
                         // Compute Shader
                         if ( pass._computeEntryPoint.empty() == false || pass._type == "Compute" )
@@ -220,34 +279,46 @@ namespace sw
                 FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true, true );
                 for ( const string& matPath : listMaterialFile )
                 {
-                    XmlDocument doc;
-                    if ( doc.loadFile( matPath ) == false )
+                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 예전엔 여기서 XML 의
+                    // `_alwaysDefines` 만 손으로 긁었다 — 런타임은 거기에 품질·SHADER_LOD·usage·정적
+                    // 스위치·멀티컴파일까지 얹으므로, 구운 변형은 런타임이 **한 번도 요청하지 않는**
+                    // 해시였다. 같은 함수를 부르면 어긋날 자리가 없다.
+                    Material material;
+                    if ( material.loadFromFile( matPath ) == false )
                         continue;
-                    XmlNode root = doc.root();
-                    if ( root.isValid() == false )
-                        continue;
-                    const utf8* pShaderPath = root.attr( "shaderPath" );
-                    if ( pShaderPath == nullptr || *pShaderPath == '\0' )
+                    if ( material.getShaderPath().empty() )
                         continue;
 
-                    vector<string> listMatDefines;
-                    XmlNode        permNode = root.child( "_permutations" );
-                    if ( permNode.isValid() )
+                    MaterialVariantInfo variant;
+                    variant._shaderPath = material.getShaderPath();
+                    variant._listDefine = material.getCachedShaderDefines();
+                    listMaterialVariant.push_back( variant );
+
+                    appendRecipeUnique( outListRecipe, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
+                    appendRecipeUnique( outListRecipe, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                }
+
+                // 4) 패스 x 머티리얼 — 런타임이 실제로 요구하는 조합
+                //
+                // FrameRenderer::createMaterialPsoVariant 는 패스 PSO 의 define 위에 머티리얼 define 을
+                // 얹어 변형 PSO 를 만든다. 즉 런타임이 찾는 것은 패스 단독도 머티리얼 단독도 아닌
+                // **둘의 합집합**이다. 위의 1)/3) 만 구워두면 그림자·불투명 패스가 머티리얼 메시를
+                // 그릴 때마다 미스가 나고, Shipping 은 런타임 컴파일이 없어 드로우가 통째로 사라진다.
+                for ( const MeshPassInfo& passInfo : listMeshPass )
+                {
+                    for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
-                        XmlNode alwaysDefinesNode = permNode.child( "_alwaysDefines" );
-                        if ( alwaysDefinesNode.isValid() )
-                        {
-                            for ( XmlNode item = alwaysDefinesNode.child( "item" ); item.isValid(); item = item.next( "item" ) )
-                            {
-                                const utf8* pText = item.text();
-                                if ( pText != nullptr && *pText != '\0' )
-                                    listMatDefines.push_back( pText );
-                            }
-                        }
-                    }
+                        // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다 — 그림자·뎁스는 자기 셰이더에
+                        // define 만 얹는다(usesMaterialShader 와 같은 규칙).
+                        const string& shaderPath = passInfo._bUsesMaterialShader ? variant._shaderPath : passInfo._shaderPath;
+                        if ( shaderPath.empty() )
+                            continue;
 
-                    appendRecipeUnique( outListRecipe, pShaderPath, "VSMain", ShaderStage::Vertex, listMatDefines );
-                    appendRecipeUnique( outListRecipe, pShaderPath, "PSMain", ShaderStage::Pixel, listMatDefines );
+                        const vector<string> listCombined = mergeDefines( passInfo._listPermutation, variant._listDefine );
+                        appendRecipeUnique( outListRecipe, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listCombined );
+                        if ( passInfo._bHasPixelStage )
+                            appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
+                    }
                 }
             }
         };
@@ -263,7 +334,25 @@ namespace sw
         if ( listPermutation.empty() )
             return 0;
 
-        vector<string> listSorted = listPermutation;
+        // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다. 런타임은 ShaderMacroDefine::parse 로 값 없는
+        // define 에 "1" 을 채운 **뒤** 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
+        // 베이크와 런타임에서 서로 다른 해시가 된다 — 구워둔 변형을 아무도 못 찾는다. 파이프라인
+        // XML 은 `SW_FORWARD=1` 처럼 값을 적어 우연히 맞았고, 값이 없는 머티리얼 define 은 전부
+        // 어긋나 있었다. 두 오버로드가 같은 문자열을 보도록 여기서 맞춘다.
+        vector<string> listSorted;
+        listSorted.reserve( listPermutation.size() );
+        for ( const string& def : listPermutation )
+        {
+            if ( def.empty() )
+                continue;
+            if ( def.find( '=' ) == string::npos )
+                listSorted.push_back( def + "=1" );
+            else
+                listSorted.push_back( def );
+        }
+        if ( listSorted.empty() )
+            return 0;
+
         std::sort( listSorted.begin(), listSorted.end() );
 
         uint64 hash{ 14695981039346656037ull }; // FNV-1a 64-bit offset basis
