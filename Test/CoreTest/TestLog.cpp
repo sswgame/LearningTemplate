@@ -48,7 +48,7 @@ namespace
         }
 
         /** @brief 수집된 로그 목록입니다. */
-        const sw::vector<sw::LogEntry>& getEntries() const
+        [[maybe_unused]] const sw::vector<sw::LogEntry>& getEntries() const
         {
             return _listEntry;
         }
@@ -64,6 +64,9 @@ namespace
         sw::DelegateHandle       _handle;
     };
 
+// 이 캡처는 Debug 전용 테스트에서만 쓴다 — Verbose/Trace 가 컴파일되지 않는 빌드에서는 잡을 로그가 없다.
+// 쓰는 쪽과 같은 가드 안에 둔다(밖에 두면 아무도 안 쓰는 멤버가 된다).
+#if defined( SW_DEBUG )
     /**
      * @class ThreadSafeLogCapture
      * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 싱크
@@ -115,6 +118,7 @@ namespace
         sw::vector<sw::LogEntry> _listEntry;
         sw::DelegateHandle       _handle;
     };
+#endif // SW_DEBUG
 } // namespace
 
 // ------------------------------------------------------------------------------

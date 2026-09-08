@@ -319,11 +319,9 @@ namespace sw
                 it->second._arrayStride = stride;
         }
 
-        /**
-         * 변수의 포인터 → 배열(무제한/고정) → 구조체 순으로 벗겨 "블록 구조체" 타입 id 를 돌려준다.
-         * bindless `ConstantBuffer<T> name[]` 는 Uniform 포인터 → OpTypeRuntimeArray → Block 구조체다.
-         * @param outIsArray 무제한/고정 배열이었으면 true (bindCount 0 으로 보고한다).
-         */
+        // 변수의 포인터 → 배열(무제한/고정) → 구조체 순으로 벗겨 "블록 구조체" 타입 id 를 돌려준다.
+        // bindless `ConstantBuffer<T> name[]` 는 Uniform 포인터 → OpTypeRuntimeArray → Block 구조체다.
+        // outIsArray 는 무제한/고정 배열이었으면 true 다 (bindCount 0 으로 보고한다).
         auto resolveBlockStruct = [&]( uint32 pointerTypeId, bool& outIsArray ) -> uint32
         {
             outIsArray = false;
@@ -437,7 +435,7 @@ namespace sw
                     if ( innerId != 0 )
                     {
                         const auto&  offsetMap  = mapMemberOffset[blockTypeId];
-                        const auto   offIt      = offsetMap.find( 0 );
+                        const auto   offIt      = offsetMap.find( 0u ); // 키가 uint32 다 — 부호 있는 리터럴이면 이종 키 오버로드로 샌다
                         const uint32 baseOffset = ( offIt != offsetMap.end() ) ? offIt->second : 0;
                         appendStructMembers( innerId, baseOffset, buf );
                     }

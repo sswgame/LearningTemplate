@@ -1508,7 +1508,7 @@ SW_TEST_CASE( RenderPassTest, MainPassCullsWithCameraFrustumNotLight )
             for ( uint32 sideIndex = 0; sideIndex < 2 && bOk; ++sideIndex )
             {
                 sw::string      name = sw::string( "FarCube" ) + sw::to_string( sideIndex );
-                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), static_cast<uint32>( name.size() ) ) );
                 bOk                  = pObj != nullptr;
                 if ( bOk == false )
                     break;
@@ -1638,7 +1638,7 @@ SW_TEST_CASE( RenderPassTest, TransparentOrderMatchesAcrossBackends )
             for ( uint32 cubeIndex = 0; cubeIndex < kCubeCount && bOk; ++cubeIndex )
             {
                 sw::string      name = sw::string( "Glass" ) + sw::to_string( cubeIndex );
-                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), static_cast<uint32>( name.size() ) ) );
                 bOk                  = pObj != nullptr;
                 if ( bOk == false )
                     break;
@@ -1814,7 +1814,7 @@ SW_TEST_CASE( RenderPassTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
             for ( uint32 objectIndex = 0; objectIndex < kObjectCount && bOk; ++objectIndex )
             {
                 sw::string      name = sw::string( "CullCube" ) + sw::to_string( objectIndex );
-                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), name.size() ) );
+                sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), static_cast<uint32>( name.size() ) ) );
                 bOk                  = pObj != nullptr;
                 if ( bOk )
                 {
@@ -2231,7 +2231,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
                 break;
 
             sw::string      objectName = sw::string( "Cube" ) + sw::to_string( meshIndex );
-            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), objectName.size() ) );
+            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), static_cast<uint32>( objectName.size() ) ) );
             bOk                        = go != nullptr;
             if ( bOk )
             {

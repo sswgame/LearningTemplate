@@ -146,10 +146,6 @@ namespace sw
             /** @brief 패스 스코프 이름→리소스 레지스트리. 패스 시작마다 새로 시작(reset) — 병렬 기록 시
              *         패스마다 독립이어야 하므로 FrameRenderer 공유 멤버가 아니라 여기 둔다. */
             FrameResourceRegistry _resourceRegistry{};
-            /** @brief bindForDraw가 마지막으로 조회한 PSO→레이아웃. 같은 PSO로 연속 드로우할 때
-             *         layoutForPso()의 뮤텍스+해시맵 조회를 스킵하는 패스-로컬 1-entry 캐시. */
-            /// @brief 이 드로우의 루트 상수 값 — 배치마다 바뀐다(인스턴스 시작 오프셋, 머티리얼 원소 수).
-            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
             /// @brief 마지막으로 엔진 상수버퍼를 올린 시점의 (버퍼, 값 버전, 레지스트리 버전).
             ///        셋이 그대로면 그 드로우는 버퍼를 다시 만들 필요가 없다.
             RHIBufferHandle _lastCbBuffer{ 0 };
@@ -160,9 +156,13 @@ namespace sw
              * @details 그림자 패스만 Shadow 이고 나머지는 Main 이다. 컬링 결과는 절두체에 종속이라
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그린다.
              */
-            RenderViewType             _cullView{ RenderViewType::Main };
-            uint32                     _drawInstanceBase{ 0 };
-            uint32                     _drawMaterialCount{ 0 };
+            RenderViewType _cullView{ RenderViewType::Main };
+            /// @brief 이 드로우의 루트 상수 값 — 배치마다 바뀐다(인스턴스 시작 오프셋, 머티리얼 원소 수).
+            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
+            uint32 _drawInstanceBase{ 0 };
+            uint32 _drawMaterialCount{ 0 };
+            /// @brief bindForDraw 가 마지막으로 조회한 PSO→레이아웃. 같은 PSO 로 연속 드로우할 때
+            ///        layoutForPso() 의 뮤텍스+해시맵 조회를 건너뛰는 패스-로컬 1-entry 캐시.
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
             const ShaderBindingLayout* _pLastLayout{ nullptr };
         };
@@ -265,7 +265,6 @@ namespace sw
         void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 직접 그립니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-        /** @brief GpuScene CPU 스냅샷을 배치당 drawInstanced 로 그립니다 (GPU-driven 꺼짐). */
         /** @brief GpuScene 배치를 간접 드로우로 그립니다. */
         void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
@@ -334,7 +333,6 @@ namespace sw
                                                      const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
                                                      bool                  bDefaultDepthWrite = true,
                                                      const vector<string>* pExtraDefines      = nullptr );
-        /** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
         /**
          * @struct MaterialPsoEntry
          * @brief (패스, 머티리얼 퍼뮤테이션) 하나에 대응하는 PSO.
@@ -419,7 +417,6 @@ namespace sw
          * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
          */
         FramePassContext _frameCtx;
-        /** @brief 한 프레임이 쓸 수 있는 패스 상수 버퍼 슬롯 수. */
         /// @brief 상수버퍼 슬롯 최소 개수. 드로우마다 하나씩 나눠 주므로 배치 수에 따라 아래에서 더 키운다.
         static constexpr uint32 _s_kPassCbSlotCount = 64;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지 어림값 (그림자·프리패스·불투명·반투명).
@@ -484,17 +481,16 @@ namespace sw
          */
         CpuTimer _animTimer;
         /**
-         * @brief 머티리얼 데이터 버퍼가 없는 배치(머티리얼 없는 메시)에 거는 0 채운 원소 하나짜리 구조버퍼.
-         * @details DX12 루트 SRV 는 경계 검사가 없어 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)다 — 어떤 드로우도 빈 슬롯으로 나가지 않게
-         *          항상 유효한 버퍼를 건다 (언리얼의 기본 머티리얼과 같은 자리).
-         */
-        /**
          * @brief 머티리얼 없는 배치에 거는 0 채운 원소 하나짜리 구조버퍼 — **stride 마다 하나**.
-         * @details 언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같다.
+         * @details DX12 루트 SRV 는 경계 검사가 없어 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)다 —
+         *          어떤 드로우도 빈 슬롯으로 나가지 않게 항상 유효한 버퍼를 건다(언리얼의 기본 머티리얼 자리).
+         *
+         *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같다.
          *          예전엔 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData_t` 는
          *          24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈다.
+         *
+         *          키는 stride 다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
          */
-        /// @brief stride → 폴백 버퍼. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
         unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
         /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
         ShaderBindingLayoutCache                                          _bindingLayoutCache;

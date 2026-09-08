@@ -12,8 +12,6 @@ namespace sw
 {
     namespace
     {
-        constexpr float4 kDefaultKeyLightDirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
-        constexpr float4 kDefaultKeyLightColor{ 1.0f, 0.82f, 0.62f, 0.28f };
         constexpr float4 kDefaultShadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
@@ -88,7 +86,11 @@ namespace sw
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
     {
         (void)ctx;
-        float3 lightDir = float3{ kDefaultKeyLightDirIntensity._x, kDefaultKeyLightDirIntensity._y, kDefaultKeyLightDirIntensity._z }.normalize();
+        // **이번 프레임의 라이트**를 쓴다. 예전엔 여기만 .cpp 안 constexpr 을 봤다 — 패킷이 다른 방향을
+        // 실어 주면 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
+        // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
+        const float4& dirIntensity = _frameLight._dirIntensity;
+        float3        lightDir     = float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }.normalize();
         if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
             lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 

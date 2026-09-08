@@ -78,7 +78,13 @@ namespace sw
                 return GL_RG;
             case RHIFormat::R32_FLOAT:
                 return GL_RED;
-            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
+            case RHIFormat::BC1_UNORM:
+            case RHIFormat::BC2_UNORM:
+            case RHIFormat::BC3_UNORM:
+            case RHIFormat::BC4_UNORM:
+            case RHIFormat::BC5_UNORM:
+            case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
+            case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
             default:
                 return 0;
         }
@@ -98,7 +104,13 @@ namespace sw
                 return GL_FLOAT;
             case RHIFormat::D24_UNORM_S8_UINT:
                 return GL_UNSIGNED_INT_24_8;
-            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
+            case RHIFormat::BC1_UNORM:
+            case RHIFormat::BC2_UNORM:
+            case RHIFormat::BC3_UNORM:
+            case RHIFormat::BC4_UNORM:
+            case RHIFormat::BC5_UNORM:
+            case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
+            case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
             default:
                 return 0;
         }

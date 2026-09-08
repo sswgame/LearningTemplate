@@ -90,10 +90,6 @@ namespace sw
 #endif
 
             /**
-             * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
-             * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
-             */
-            /**
              * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다 (InstanceIndex→InstanceId, VertexIndex→VertexId).
              * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 낸다. ARB_gl_spirv 는 그 둘을
              *          지원하지 않아 드라이버가 조용히 0 을 돌려줬다 — 인스턴스드 드로우가 전부 원소 0 을 읽어 큐브 16개가 한
@@ -138,6 +134,10 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
+             * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
+             */
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
                 if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )

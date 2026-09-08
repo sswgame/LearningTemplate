@@ -194,7 +194,9 @@ namespace sw
 
             if ( bAnyMatch )
             {
-#if !defined( SW_SHIPPING )
+// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. 예전엔 "Shipping 아님" 이었는데,
+// Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다 — 문자열만 만들고 아무도 안 쓰게 됐다.
+#if SW_LOG_LEVEL_COMPILED( 3 )
                 const utf8* pActionStr = "Unknown";
                 switch ( ev._action )
                 {

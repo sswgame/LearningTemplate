@@ -56,12 +56,6 @@ namespace sw
     };
 
     /**
-     * @brief 배치의 인스턴스 구간 — 컬링 컴퓨트에게 "이 배치는 어디서 시작하나"를 알려준다.
-     * @details 간접 인자의 `startInstance` 는 0 이어야 해서(Vulkan 의 InstanceIndex 가 firstInstance 를
-     *          포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 시작점으로 쓸 수 없다. gpucull.hlsl 의
-     *          GpuBatchInfo 와 레이아웃이 같아야 한다.
-     */
-    /**
      * @brief 배치의 가시 목록 정렬 방식.
      * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 완료 순서로 정해진다. 불투명은 상관없지만
      *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 **GPU 에서 깊이순으로 다시
@@ -78,6 +72,12 @@ namespace sw
     /// @brief 한 배치에서 GPU 정렬로 다룰 수 있는 최대 인스턴스 수 (instancesort.hlsl 의 SW_SORT_MAX_ELEMENTS).
     inline constexpr uint32 kGpuSortMaxElements = 512;
 
+    /**
+     * @brief 배치의 인스턴스 구간 — 컬링 컴퓨트에게 "이 배치는 어디서 시작하나"를 알려준다.
+     * @details 간접 인자의 `startInstance` 는 0 이어야 해서(Vulkan 의 InstanceIndex 가 firstInstance 를
+     *          포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 시작점으로 쓸 수 없다. gpucull.hlsl 의
+     *          GpuBatchInfo 와 레이아웃이 같아야 한다.
+     */
     struct GpuBatchInfo
     {
         uint32 _instanceBase{ 0 };
@@ -131,11 +131,6 @@ namespace sw
     };
 
     /**
-     * @struct GpuMaterialGroup
-     * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록 — CPU 스냅샷의 일부.
-     * @details 원소 순서가 곧 materialIndex 다. 같은 셰이더를 쓰는 머티리얼/인스턴스는 구조체 레이아웃이 같아 한 버퍼에 쌓인다.
-     */
-    /**
      * @struct GpuMaterialElementKey
      * @brief 머티리얼 데이터 원소 하나를 가리키는 키 — (머티리얼, 인스턴스) 쌍.
      * @details 인스턴스가 없으면 머티리얼 자신이 원소다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 한다.
@@ -182,6 +177,11 @@ namespace sw
         uint64 _hash{ 0 };
     };
 
+    /**
+     * @struct GpuMaterialGroup
+     * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록 — CPU 스냅샷의 일부.
+     * @details 원소 순서가 곧 materialIndex 다. 같은 셰이더를 쓰는 머티리얼/인스턴스는 구조체 레이아웃이 같아 한 버퍼에 쌓인다.
+     */
     struct GpuMaterialGroup
     {
         string                                     _shaderPath;
@@ -426,11 +426,11 @@ namespace sw
         void fillScratchRange( uint32 start, uint32 end );
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
         void buildBatches();
-        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup. */
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
         void retireUnusedMaterialElements();
         /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다 (그룹 기준이 바뀌었을 때). */
-        void   resetMaterialRegistry();
+        void resetMaterialRegistry();
+        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup. */
         uint32 materialGroupFor( const Material* pMaterial );
         /**
          * @brief (머티리얼, 인스턴스) 의 퍼뮤테이션 해시 — 셰이더 경로와 정적 define 을 함께 봅니다.

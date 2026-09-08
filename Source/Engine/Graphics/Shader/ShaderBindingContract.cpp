@@ -165,15 +165,23 @@ namespace sw
                 return false;
             }
 
+            /**
+             * @brief `[shift, shift + width)` 안에 드는가.
+             * @details 부호 없는 뺄셈이라 `binding < shift` 면 아주 큰 값으로 감겨 width 를 넘는다 —
+             *          그래서 하한 비교가 따로 필요 없다. b 밴드의 shift 는 0 이라 `binding >= 0` 이
+             *          늘 참이었고, 컴파일러가 그걸 짚어 줬다.
+             */
+            static bool inBand( uint32 binding, uint32 shift, uint32 width ) { return ( binding - shift ) < width; }
+
             /// @brief Vulkan 세트 0 binding 이 어느 레지스터 밴드(b/t/u)인가. 밴드 밖이면 Other.
             static RegisterClass vulkanBandOf( uint32 binding )
             {
                 namespace vk = shaderslot::vk;
-                if ( binding >= vk::kBShift && binding < vk::kBShift + vk::kBandWidth )
+                if ( inBand( binding, vk::kBShift, vk::kBandWidth ) )
                     return RegisterClass::ConstantBuffer;
-                if ( binding >= vk::kTShift && binding < vk::kTShift + vk::kBandWidth )
+                if ( inBand( binding, vk::kTShift, vk::kBandWidth ) )
                     return RegisterClass::ShaderResource;
-                if ( binding >= vk::kUShift && binding < vk::kUShift + vk::kBandWidth )
+                if ( inBand( binding, vk::kUShift, vk::kBandWidth ) )
                     return RegisterClass::UnorderedAccess;
                 return RegisterClass::Other;
             }
