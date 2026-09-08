@@ -178,17 +178,18 @@ namespace sw
 
     VulkanCommandListEntry VulkanRHIDevice::acquireCommandListEntry()
     {
+        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않는다.
+        VulkanCommandListEntry entry{};
         {
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             if ( _listFreeCmdListEntry.empty() == false )
             {
-                VulkanCommandListEntry entry = _listFreeCmdListEntry.back();
+                entry = _listFreeCmdListEntry.back();
                 _listFreeCmdListEntry.pop_back();
                 return entry;
             }
         }
 
-        VulkanCommandListEntry entry{};
         if ( _device == nullptr )
             return entry;
 
@@ -199,7 +200,10 @@ namespace sw
         poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
         if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &entry._pool ) != VK_SUCCESS )
-            return VulkanCommandListEntry{};
+        {
+            entry = VulkanCommandListEntry{};
+            return entry;
+        }
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -209,7 +213,8 @@ namespace sw
         if ( vkAllocateCommandBuffers( _device, &allocInfo, &entry._buffer ) != VK_SUCCESS )
         {
             vkDestroyCommandPool( _device, entry._pool, nullptr );
-            return VulkanCommandListEntry{};
+            entry = VulkanCommandListEntry{};
+            return entry;
         }
 
         {

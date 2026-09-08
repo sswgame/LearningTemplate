@@ -1091,11 +1091,11 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
     // 빠져 구워둔 셰이더 변형과 맞지 않는 머티리얼이 만들어진다 — 그러면 검증하려던 것과 다른 걸 재게 된다.
     auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
     {
+        // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
-        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
-            return nullptr;
-        if ( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
-            return nullptr;
+        if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+             material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+            material.reset();
         return material;
     };
 
@@ -1174,9 +1174,10 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
     // 실제 에셋을 읽어 스위치만 바꾼다 — XML 을 손으로 지으면 _permutations 가 빠져 다른 걸 재게 된다.
     auto makeMaterial = []() -> sw::unique_ptr<sw::Material>
     {
+        // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
         if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
-            return nullptr;
+            material.reset();
         return material;
     };
 
@@ -1930,11 +1931,11 @@ SW_TEST_CASE( RenderPassTest, PerBatchMaterialColorsReachShader )
         // getBuffer() 를 구조버퍼 원소로 패킹하므로 여기까지면 충분하다.
         auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
         {
+            // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
-            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
-                return nullptr;
-            if ( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
-                return nullptr;
+            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+                 material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                material.reset();
             return material;
         };
 

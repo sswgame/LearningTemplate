@@ -199,11 +199,14 @@ namespace sw
 
     D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
     {
+        // 반환 대상은 이 하나다 — 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
+        D3D12CommandListEntry entry;
         {
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             if ( _listFreeCmdListEntry.empty() == false )
             {
-                D3D12CommandListEntry entry = std::move( _listFreeCmdListEntry.back() );
+                entry = std::move( _listFreeCmdListEntry.back() );
                 _listFreeCmdListEntry.pop_back();
                 return entry;
             }
@@ -211,7 +214,6 @@ namespace sw
 
         // 풀이 비었으면 새로 만든다. 생성 직후의 리스트는 열린 상태라 바로 Close 해 둔다
         // (beginCommandList 가 Reset 으로 다시 연다).
-        D3D12CommandListEntry entry;
         if ( _device == nullptr )
             return entry;
 
@@ -226,7 +228,8 @@ namespace sw
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
                               static_cast<uint32>( _cmdListEntryCreated ) );
             flushDebugMessages( "acquireCommandListEntry" );
-            return D3D12CommandListEntry{};
+            entry = D3D12CommandListEntry{};
+            return entry;
         }
         const HRESULT listHr = _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
                                                            IID_PPV_ARGS( entry._list.GetAddressOf() ) );
@@ -237,7 +240,8 @@ namespace sw
                               static_cast<uint32>( listHr ),
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
                               static_cast<uint32>( _cmdListEntryCreated ) );
-            return D3D12CommandListEntry{};
+            entry = D3D12CommandListEntry{};
+            return entry;
         }
         const uint32 entryIndex = _cmdListEntryCreated++;
         utf16        arrName[constant::kMaxBuffer64]{};
