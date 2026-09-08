@@ -28,29 +28,32 @@ namespace sw
 {
     namespace
     {
-        ModuleHost* s_pCurrentModuleHost{ nullptr };
-
-        enum class ModuleTarget : uint8
+        /** @brief 이 TU 로컬 헬퍼 모음 (유니티 빌드 이름 충돌을 피하려 TU 이름을 붙인다). */
+        struct ModuleHostInternal
         {
-            Editor,
-            Game
-        };
+            enum class Target : uint8
+            {
+                Editor,
+                Game
+            };
 
-        template <ModuleTarget Target>
-        void buildModuleService( ModuleService& outService )
-        {
-            engine::fillModuleServices( outService, Target == ModuleTarget::Game );
+            /** @brief 호스트가 제공하는 서비스 표를 만듭니다. 게임 모듈에는 gameAllowed=1 만 노출됩니다. */
+            template <Target TargetModule>
+            static void buildModuleService( const ModuleHost* pHost, ModuleService& outService )
+            {
+                engine::fillModuleServices( outService, TargetModule == Target::Game );
 
 #define SW_HOST_SERVICE( member, Tag, Type, getter, gameAllowed )                             \
-    if constexpr ( Target == ModuleTarget::Editor || ( ( gameAllowed ) == 1 ) )               \
+    if constexpr ( TargetModule == Target::Editor || ( ( gameAllowed ) == 1 ) )               \
     {                                                                                         \
         outService.arrServices[internal::toRawServiceId( internal::ModuleServiceId::Type )] = \
-            ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getter() : nullptr;   \
+            ( pHost != nullptr ) ? pHost->getter() : nullptr;                                 \
     }
 
 #include "RuntimeAPI/Service/HostServiceList.xxx"
 #undef SW_HOST_SERVICE
-        }
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -81,12 +84,11 @@ namespace sw
 
     bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule )
     {
-        s_pCurrentModuleHost = this;
-        _pLiveReloadManager  = pLiveReloadManager;
-        _pRHI                = pRHI;
-        _pWindow             = pWindow;
-        _pRenderThread       = pRenderThread;
-        _bEnableEditor       = bEnableEditor ? SW_TRUE : SW_FALSE;
+        _pLiveReloadManager = pLiveReloadManager;
+        _pRHI               = pRHI;
+        _pWindow            = pWindow;
+        _pRenderThread      = pRenderThread;
+        _bEnableEditor      = bEnableEditor ? SW_TRUE : SW_FALSE;
 
 #if !defined( SW_SHIPPING )
         _moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
@@ -127,14 +129,14 @@ namespace sw
         {
             BLOCK( "게임플레이 키트 및 SWGame 모듈 등록" )
             {
-                const string   gameFrameWorkModule = "GameFramework";
-                vector<string> listGameModule{ gameFrameWorkModule };
+                const string   gameFrameworkModule = "GameFramework";
+                vector<string> listGameModule{ gameFrameworkModule };
 
                 for ( const GameKitConfig& kitConfig : listGameKitModule )
                 {
                     vector<string> listDep = kitConfig._listDependencyModule;
                     if ( listDep.empty() )
-                        listDep.push_back( gameFrameWorkModule );
+                        listDep.push_back( gameFrameworkModule );
 
                     if ( _pLiveReloadManager->registerModule( kitConfig._name, listDep ) == false )
                     {
@@ -178,11 +180,12 @@ namespace sw
             _moduleCompiler.reset();
         }
 
-        if ( s_pCurrentModuleHost == this )
-            s_pCurrentModuleHost = nullptr;
-
-        onBeforeEditorReload();
-        onBeforeGameReload();
+        // 에디터·게임을 한 번의 드레인으로 내린다. 예전엔 onBefore*Reload 를 그대로 불러서
+        // drainRenderWorkers 가 두 번 돌았다 — 종료 경로에서 태스크 펜싱 타임아웃을 두 번 기다린다.
+        drainRenderWorkers();
+        captureGameState();
+        destroyEditorInstance( true );
+        destroyGameInstance( true );
 
         if ( _pLiveReloadManager != nullptr )
         {
@@ -195,10 +198,16 @@ namespace sw
     // 프레임 단위 처리
     // ======================================================================
 
-    void ModuleHost::updateEditorUI( float32 deltaTime )
+    bool ModuleHost::isGameplayActive() const
     {
-        std::ignore = deltaTime;
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.updateUI == nullptr )
+        if ( hasEditor() == false || _editorApi.isPlaying == nullptr )
+            return true;
+        return _editorApi.isPlaying( _editor );
+    }
+
+    void ModuleHost::updateEditorUI( float32 /*deltaTime*/ )
+    {
+        if ( hasEditor() == false || _editorApi.updateUI == nullptr )
             return;
 
         _editorApi.updateUI( _editor );
@@ -206,21 +215,19 @@ namespace sw
 
     void ModuleHost::updateGame( float32 deltaTime )
     {
-        const bool bGameplay = ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) );
-        if ( _game != nullptr && _gameApi.update != nullptr && bGameplay )
+        if ( _game != nullptr && _gameApi.update != nullptr && isGameplayActive() )
             _gameApi.update( _game, deltaTime );
     }
 
     void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
     {
-        const bool bGameplay = ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) );
-        if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && bGameplay )
+        if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && isGameplayActive() )
             _gameApi.fixedUpdate( _game, fixedDeltaTime );
     }
 
     bool ModuleHost::onWindowMessage( const NativeWindowEvent& event )
     {
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.processEvent == nullptr )
+        if ( hasEditor() == false || _editorApi.processEvent == nullptr )
             return false;
 
         // 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
@@ -232,7 +239,7 @@ namespace sw
         renderTarget = 0;
         width        = 0;
         height       = 0;
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.getGameViewport == nullptr )
+        if ( hasEditor() == false || _editorApi.getGameViewport == nullptr )
             return;
 
         _editorApi.getGameViewport( _editor, &renderTarget, &width, &height );
@@ -240,14 +247,14 @@ namespace sw
 
     CameraComponent* ModuleHost::getViewportCamera() const
     {
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.getViewportCamera == nullptr )
+        if ( hasEditor() == false || _editorApi.getViewportCamera == nullptr )
             return nullptr;
         return static_cast<CameraComponent*>( _editorApi.getViewportCamera( _editor ) );
     }
 
     bool ModuleHost::shouldTickScene() const
     {
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr )
+        if ( hasEditor() == false )
             return true;
         if ( _editorApi.isPaused != nullptr && _editorApi.isPaused( _editor ) )
         {
@@ -259,7 +266,7 @@ namespace sw
 
     void ModuleHost::endEditorFrame()
     {
-        if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.endFrame == nullptr )
+        if ( hasEditor() == false || _editorApi.endFrame == nullptr )
             return;
         _editorApi.endFrame( _editor );
     }
@@ -271,16 +278,7 @@ namespace sw
     void ModuleHost::onBeforeEditorReload()
     {
         drainRenderWorkers();
-
-        if ( _editor != nullptr && _editorApi.shutdown != nullptr )
-            _editorApi.shutdown( _editor );
-        if ( _editor != nullptr && _editorApi.destroy != nullptr )
-            _editorApi.destroy( _editor );
-        if ( _editorApi.bindService != nullptr )
-            _editorApi.bindService( nullptr );
-        _editor    = nullptr;
-        _editorApi = {};
-        engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+        destroyEditorInstance( true );
     }
 
     void ModuleHost::onAfterEditorReload( void* pLibraryModule )
@@ -291,23 +289,10 @@ namespace sw
             return;
         }
 
-        _editor = _editorApi.create();
-        if ( _editor == nullptr )
+        if ( createEditorInstance() == false )
         {
-            SW_LOG_ERROR( "Failed to create Editor instance" );
             _editorApi = {};
-            poisonLiveReload( "Editor create failed after reload" );
-            return;
-        }
-
-        if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize Editor instance" );
-            if ( _editorApi.destroy != nullptr )
-                _editorApi.destroy( _editor );
-            _editor    = nullptr;
-            _editorApi = {};
-            poisonLiveReload( "Editor initialize failed after reload" );
+            poisonLiveReload( "Editor create/initialize failed after reload" );
             return;
         }
 
@@ -322,7 +307,7 @@ namespace sw
     {
         drainRenderWorkers();
 
-        if ( _bEnableEditor == SW_TRUE && _editor != nullptr && _editorApi.stopSimulation != nullptr )
+        if ( hasEditor() && _editorApi.stopSimulation != nullptr )
         {
             SW_LOG_INFO( "Stopping editor simulation before game module reload." );
             _editorApi.stopSimulation( _editor );
@@ -332,19 +317,7 @@ namespace sw
             return;
 
         captureGameState();
-
-        if ( _gameApi.shutdown != nullptr )
-            _gameApi.shutdown( _game );
-        if ( _gameApi.destroy != nullptr )
-            _gameApi.destroy( _game );
-
-        engine::unregisterModuleTypes( sw::config::kTargetGameModule );
-
-        if ( _gameApi.bindService != nullptr )
-            _gameApi.bindService( nullptr );
-
-        _game    = nullptr;
-        _gameApi = {};
+        destroyGameInstance( true );
     }
 
     void ModuleHost::onAfterGameReload( void* pLibraryModule )
@@ -365,23 +338,10 @@ namespace sw
         }
 #endif
 
-        _game = _gameApi.create();
-        if ( _game == nullptr )
+        if ( createGameInstance() == false )
         {
-            SW_LOG_ERROR( "Failed to create Game instance" );
             _gameApi = {};
-            poisonLiveReload( "Game create failed after reload" );
-            return;
-        }
-
-        if ( _gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize Game instance" );
-            if ( _gameApi.destroy != nullptr )
-                _gameApi.destroy( _game );
-            _game    = nullptr;
-            _gameApi = {};
-            poisonLiveReload( "Game initialize failed after reload" );
+            poisonLiveReload( "Game create/initialize failed after reload" );
             return;
         }
 
@@ -475,12 +435,7 @@ namespace sw
             return false;
         }
 
-        if ( _editorApi.bindService != nullptr )
-        {
-            ModuleService editorService{};
-            buildModuleService<ModuleTarget::Editor>( editorService );
-            _editorApi.bindService( &editorService );
-        }
+        rebindEditorService();
 
         engine::registerModuleTypes( sw::config::kTargetEditorModule );
         return _editorApi.create != nullptr && _editorApi.destroy != nullptr;
@@ -507,12 +462,7 @@ namespace sw
         }
 #endif
 
-        if ( _gameApi.bindService != nullptr )
-        {
-            ModuleService gameService{};
-            buildModuleService<ModuleTarget::Game>( gameService );
-            _gameApi.bindService( &gameService );
-        }
+        rebindGameService();
 
         engine::registerModuleTypes( sw::config::kTargetGameModule );
         return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
@@ -523,21 +473,9 @@ namespace sw
         drainRenderWorkers();
         captureGameState();
 
-        if ( _editor != nullptr && _editorApi.shutdown != nullptr )
-            _editorApi.shutdown( _editor );
-        if ( _editor != nullptr && _editorApi.destroy != nullptr )
-            _editorApi.destroy( _editor );
-        if ( _editorApi.bindService != nullptr )
-            _editorApi.bindService( nullptr );
-        _editor = nullptr;
-
-        if ( _game != nullptr && _gameApi.shutdown != nullptr )
-            _gameApi.shutdown( _game );
-        if ( _game != nullptr && _gameApi.destroy != nullptr )
-            _gameApi.destroy( _game );
-        if ( _gameApi.bindService != nullptr )
-            _gameApi.bindService( nullptr );
-        _game = nullptr;
+        // API 테이블은 그대로 둔다 — 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
+        destroyEditorInstance( false );
+        destroyGameInstance( false );
     }
 
     bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
@@ -588,36 +526,15 @@ namespace sw
         if ( _bEnableEditor == SW_FALSE )
             return true;
 
+        // 테이블이 비어 있으면 모듈에서 다시 바인딩해야 한다 — 리로드 경로가 그 일을 한다.
         if ( _editorApi.create == nullptr || _editorApi.initialize == nullptr )
         {
             onAfterEditorReload( pEditorModule );
             return _editor != nullptr;
         }
 
-        if ( _editorApi.bindService != nullptr )
-        {
-            ModuleService editorService{};
-            buildModuleService<ModuleTarget::Editor>( editorService );
-            _editorApi.bindService( &editorService );
-        }
-
-        _editor = _editorApi.create();
-        if ( _editor == nullptr )
-        {
-            SW_LOG_ERROR( "Failed to create Editor instance after RHI swap" );
-            return false;
-        }
-
-        if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize Editor instance after RHI swap" );
-            if ( _editorApi.destroy != nullptr )
-                _editorApi.destroy( _editor );
-            _editor = nullptr;
-            return false;
-        }
-
-        return true;
+        rebindEditorService();
+        return createEditorInstance();
     }
 
     bool ModuleHost::recreateGameInstance( void* pGameModule )
@@ -633,30 +550,112 @@ namespace sw
             return _game != nullptr;
         }
 
-        if ( _gameApi.bindService != nullptr )
+        rebindGameService();
+        if ( createGameInstance() == false )
+            return false;
+
+        restoreGameState();
+        return true;
+    }
+
+    // ======================================================================
+    // 인스턴스 생성·파괴 — 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다
+    // ======================================================================
+
+    void ModuleHost::rebindEditorService()
+    {
+        if ( _editorApi.bindService == nullptr )
+            return;
+
+        ModuleService editorService{};
+        ModuleHostInternal::buildModuleService<ModuleHostInternal::Target::Editor>( this, editorService );
+        _editorApi.bindService( &editorService );
+    }
+
+    void ModuleHost::rebindGameService()
+    {
+        if ( _gameApi.bindService == nullptr )
+            return;
+
+        ModuleService gameService{};
+        ModuleHostInternal::buildModuleService<ModuleHostInternal::Target::Game>( this, gameService );
+        _gameApi.bindService( &gameService );
+    }
+
+    void ModuleHost::destroyEditorInstance( bool bReleaseApiTable )
+    {
+        if ( _editor != nullptr && _editorApi.shutdown != nullptr )
+            _editorApi.shutdown( _editor );
+        if ( _editor != nullptr && _editorApi.destroy != nullptr )
+            _editorApi.destroy( _editor );
+        if ( _editorApi.bindService != nullptr )
+            _editorApi.bindService( nullptr );
+        _editor = nullptr;
+
+        if ( bReleaseApiTable )
         {
-            ModuleService gameService{};
-            buildModuleService<ModuleTarget::Game>( gameService );
-            _gameApi.bindService( &gameService );
+            _editorApi = {};
+            engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+        }
+    }
+
+    void ModuleHost::destroyGameInstance( bool bReleaseApiTable )
+    {
+        if ( _game != nullptr && _gameApi.shutdown != nullptr )
+            _gameApi.shutdown( _game );
+        if ( _game != nullptr && _gameApi.destroy != nullptr )
+            _gameApi.destroy( _game );
+
+        if ( bReleaseApiTable )
+            engine::unregisterModuleTypes( sw::config::kTargetGameModule );
+
+        if ( _gameApi.bindService != nullptr )
+            _gameApi.bindService( nullptr );
+        _game = nullptr;
+
+        if ( bReleaseApiTable )
+            _gameApi = {};
+    }
+
+    bool ModuleHost::createEditorInstance()
+    {
+        _editor = _editorApi.create();
+        if ( _editor == nullptr )
+        {
+            SW_LOG_ERROR( "Failed to create Editor instance" );
+            return false;
         }
 
+        if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
+        {
+            SW_LOG_ERROR( "Failed to initialize Editor instance" );
+            if ( _editorApi.destroy != nullptr )
+                _editorApi.destroy( _editor );
+            _editor = nullptr;
+            return false;
+        }
+
+        return true;
+    }
+
+    bool ModuleHost::createGameInstance()
+    {
         _game = _gameApi.create();
         if ( _game == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create Game instance after RHI swap" );
+            SW_LOG_ERROR( "Failed to create Game instance" );
             return false;
         }
 
         if ( _gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() ) == false )
         {
-            SW_LOG_ERROR( "Failed to initialize Game instance after RHI swap" );
+            SW_LOG_ERROR( "Failed to initialize Game instance" );
             if ( _gameApi.destroy != nullptr )
                 _gameApi.destroy( _game );
             _game = nullptr;
             return false;
         }
 
-        restoreGameState();
         return true;
     }
 } // namespace sw

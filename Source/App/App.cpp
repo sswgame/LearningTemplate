@@ -42,8 +42,9 @@ namespace sw
         , _moduleHost{ nullptr }
         , _window{ nullptr }
         , _maxFrameDeltaTime{ 0.1f }
-        , _bEnableEditor{ false }
-        , _bHandlingRhiBackendChange{ false }
+        , _bEnableEditor{ SW_FALSE }
+        , _bHandlingRhiBackendChange{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -87,42 +88,74 @@ namespace sw
 
         _maxFrameDeltaTime = pEngineConfig->_maxFrameDeltaTime;
 
-        uint32 width  = pEngineConfig->_window._width;
-        uint32 height = pEngineConfig->_window._height;
-        pCommandLineManager->getArgument( CommandLineArgument::WIDTH, width );
-        pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, height );
-
         // 2. 윈도우 소유권 획득 (초기화 중에는 숨김 상태로 시작)
-        //    EngineLoop::initialize 가 플랫폼 윈도우를 만들어 IWindow::setActiveWindow 로 넘겨두면
-        //    여기서 App 의 unique_ptr 이 그 소유권을 입양합니다. (전역 포인터는 관찰용으로만 유지)
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
+        if ( acquireMainWindow( *pEngineConfig, *pCommandLineManager ) == false )
+        {
+            splash.dismiss();
+            return false;
+        }
 
+        // 3. ModuleHost (에디터/게임 라이프사이클) 바인딩
+        splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
+        if ( startModules() == false )
+        {
+            splash.dismiss();
+            return false;
+        }
+
+        // 4. 윈도우 콜백 및 이벤트 라우팅 설정
+        splash.updateStatus( "Finalizing Setup...", 0.95f );
+        bindHostCallbacks();
+
+        splash.updateStatus( "Ready", 1.0f );
+
+        // 준비 완료 -> 스플래시 창을 닫고 메인 윈도우를 화면에 표시
+        splash.dismiss();
+        _window->showWindow( true );
+
+        return true;
+    }
+
+    bool App::acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager )
+    {
+        uint32 width  = engineConfig._window._width;
+        uint32 height = engineConfig._window._height;
+        commandLineManager.getArgument( CommandLineArgument::WIDTH, width );
+        commandLineManager.getArgument( CommandLineArgument::HEIGHT, height );
+
+        // EngineLoop::initialize 가 플랫폼 윈도우를 만들어 IWindow::setActiveWindow 로 넘겨뒀으면
+        // (그쪽은 release() 로 소유권을 놓는다) 여기서 App 의 unique_ptr 이 입양한다.
+        // 전역 포인터는 그 뒤로 관찰용으로만 남는다.
         _window.reset( IWindow::getActiveWindow() );
         if ( _window == nullptr )
         {
             _window = IWindow::createPlatformWindow();
-            if ( _window == nullptr || _window->initializeWindow( pEngineConfig->_window._title.c_str(), width, height ) == false )
+            if ( _window == nullptr || _window->initializeWindow( engineConfig._window._title.c_str(), width, height ) == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );
-                splash.dismiss();
                 return false;
             }
             _window->showWindow( false );
             IWindow::setActiveWindow( _window.get() );
         }
 
-        pCommandLineManager->getArgument( CommandLineArgument::ENABLE_EDITOR, _bEnableEditor );
+        bool bEnableEditor = false;
+        commandLineManager.getArgument( CommandLineArgument::ENABLE_EDITOR, bEnableEditor );
 
-        const RHICapabilities caps = RHIAvailability::query( gv_rhiBackend );
-        if ( _bEnableEditor && caps._bEditorSupported == false )
+        const RHICapabilities capabilities = RHIAvailability::query( gv_rhiBackend );
+        if ( bEnableEditor && capabilities._bEditorSupported == false )
         {
             SW_LOG_WARNING( "Editor requested but backend %# does not set _bEditorSupported — disabling editor.", RHI::getBackendTypeName( gv_rhiBackend ) );
-            _bEnableEditor = false;
+            bEnableEditor = false;
         }
+        _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
-        splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
+        return true;
+    }
 
-        // 3. ModuleHost (에디터/게임 라이프사이클) 바인딩
+    bool App::startModules()
+    {
         vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
         const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
@@ -132,23 +165,23 @@ namespace sw
             listGameKitModule = pAppConfig->_listGameKitModule;
 #endif
 
-        _moduleHost        = make_unique<ModuleHost>();
-        const bool bResult = _moduleHost->initialize( _engineLoop.getLiveReloadManager(),
-                                                      _engineLoop.getRHI(),
-                                                      _window.get(),
-                                                      _engineLoop.getRenderThread(),
-                                                      _bEnableEditor,
-                                                      listGameKitModule );
-        if ( bResult == false )
+        _moduleHost = make_unique<ModuleHost>();
+        if ( _moduleHost->initialize( _engineLoop.getLiveReloadManager(),
+                                      _engineLoop.getRHI(),
+                                      _window.get(),
+                                      _engineLoop.getRenderThread(),
+                                      _bEnableEditor == SW_TRUE,
+                                      listGameKitModule ) == false )
         {
             SW_LOG_ERROR( "ModuleHost initialization failed." );
-            splash.dismiss();
             return false;
         }
 
-        splash.updateStatus( "Finalizing Setup...", 0.95f );
+        return true;
+    }
 
-        // 4. 윈도우 콜백 및 이벤트 라우팅 설정
+    void App::bindHostCallbacks()
+    {
         _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
         _window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
@@ -158,14 +191,6 @@ namespace sw
 
         _engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
-
-        splash.updateStatus( "Ready", 1.0f );
-
-        // 준비 완료 -> 스플래시 창을 닫고 메인 윈도우를 화면에 표시
-        splash.dismiss();
-        _window->showWindow( true );
-
-        return true;
     }
 
     void App::shutdown()
@@ -215,7 +240,7 @@ namespace sw
 
         while ( _window->processMessages() )
         {
-            // 프로파일 실행(-ProfileFrames N)은 목표 프레임을 채우면 스스로 끝난다.
+            // 프로파일 실행(-gv_profileFrames=N)은 목표 프레임을 채우면 스스로 끝난다.
             if ( _engineLoop.wantsQuit() )
             {
                 _window->requestClose();
@@ -228,13 +253,7 @@ namespace sw
 
             _engineLoop.beginFrame();
 
-            _engineLoop.updateShellActions( deltaTime );
-            _engineLoop.pollDebugHotkeys( SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
-            if ( _bEnableEditor && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
-            {
-                onForceReload( config::kTargetEditorModule );
-                SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
-            }
+            pollReloadHotkeys( deltaTime );
 
             while ( accumulator >= kFixedDeltaTime )
             {
@@ -244,7 +263,7 @@ namespace sw
 
             _moduleHost->updateGame( deltaTime );
 
-            if ( _bEnableEditor )
+            if ( _bEnableEditor == SW_TRUE )
                 _moduleHost->updateEditorUI( deltaTime );
 
             uint64 gameRenderTarget   = 0;
@@ -254,24 +273,43 @@ namespace sw
             // 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
             // 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
             ViewCameraProviderDelegate viewCameraProvider{};
-            if ( _bEnableEditor )
+            if ( _bEnableEditor == SW_TRUE )
                 viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
             const bool bTickScene = _moduleHost->shouldTickScene();
             _engineLoop.tick( deltaTime, gameRenderTarget, gameViewportWidth, gameViewportHeight, viewCameraProvider, bTickScene );
-            if ( _bEnableEditor )
+            if ( _bEnableEditor == SW_TRUE )
                 _moduleHost->endEditorFrame();
 
-            const RHI* pRHI = _engineLoop.getRHI();
-            if ( pRHI != nullptr && pRHI->hasPendingBackendChange() )
-            {
-                if ( applyPendingBackendChange() == false )
-                {
-                    SW_LOG_ERROR( "Backend soft-recreate failed." );
-                    gv_rhiBackend = pRHI->getCommittedBackend();
-                }
-            }
+            applyBackendChangeIfPending();
 
             _engineLoop.endFrame();
+        }
+    }
+
+    void App::pollReloadHotkeys( float32 deltaTime )
+    {
+        _engineLoop.updateShellActions( deltaTime );
+        _engineLoop.pollDebugHotkeys( SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
+
+        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
+        {
+            onForceReload( config::kTargetEditorModule );
+            SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
+        }
+    }
+
+    void App::applyBackendChangeIfPending()
+    {
+        const RHI* pRHI = _engineLoop.getRHI();
+        if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
+            return;
+
+        if ( applyPendingBackendChange() == false )
+        {
+            SW_LOG_ERROR( "Backend soft-recreate failed." );
+            // 되돌림 대입은 onRhiBackendChanged 를 다시 부르지만, 커밋된 백엔드와 같은 값이면
+            // RHI::schedulePendingBackendChange 가 no-op 이라 재시도 루프가 되지 않는다.
+            gv_rhiBackend = pRHI->getCommittedBackend();
         }
     }
 
@@ -320,12 +358,12 @@ namespace sw
 
         // 아래에서 gv_rhiBackend 로 되돌림 대입을 하면 이 콜백이 다시 불린다.
         // 되돌림 대상 자체가 사용 불가/에디터 미지원이면 무한 재귀가 되므로 재진입을 막는다.
-        if ( _bHandlingRhiBackendChange )
+        if ( _bHandlingRhiBackendChange == SW_TRUE )
             return;
-        _bHandlingRhiBackendChange = true;
+        _bHandlingRhiBackendChange = SW_TRUE;
 
         const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
-        if ( _bEnableEditor && RHIAvailability::query( requestedBackend )._bEditorSupported == false )
+        if ( _bEnableEditor == SW_TRUE && RHIAvailability::query( requestedBackend )._bEditorSupported == false )
         {
             SW_LOG_WARNING( "Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
             gv_rhiBackend = pRHI->getCommittedBackend();
@@ -335,7 +373,7 @@ namespace sw
             pRHI->schedulePendingBackendChange( requestedBackend );
         }
 
-        _bHandlingRhiBackendChange = false;
+        _bHandlingRhiBackendChange = SW_FALSE;
     }
 
     bool App::applyPendingBackendChange()
@@ -382,9 +420,16 @@ namespace sw
         pLiveReloadManager->triggerReload( pModuleName );
     }
 
-    void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket )
+    void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        std::ignore = framePacket;
+        // 이 훅은 렌더 스레드가 부른다. ModuleHost 가 사라진 뒤에는 불리지 않는다 —
+        // shutdown 이 ModuleHost 를 지우기 전에 drainRenderWorkers 로 큐를 비우고, 그 시점엔
+        // 메인 루프가 이미 끝나 새 프레임이 들어오지 않는다. 훅 델리게이트 자체를 여기서 끊는
+        // 것은 오히려 위험하다: RenderThread::setPresentHook 은 잠금 없는 대입이라 렌더 스레드가
+        // 도는 중에 바꾸면 레이스가 된다(실제로 종료 시 크래시했다). 아래 검사는 그 불변식이
+        // 깨졌을 때 죽는 대신 조용히 넘어가기 위한 것이다.
+        if ( _moduleHost == nullptr )
+            return;
 
         const EditorHandle pEditor = _moduleHost->getEditor();
         if ( pEditor == nullptr )
@@ -398,9 +443,10 @@ namespace sw
             editorAPI.render( pEditor, &renderDevice );
     }
 
-    void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket )
+    void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        std::ignore = framePacket;
+        if ( _moduleHost == nullptr )
+            return;
 
         const EditorHandle pEditor = _moduleHost->getEditor();
         if ( pEditor == nullptr )

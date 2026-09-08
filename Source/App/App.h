@@ -12,9 +12,11 @@
 
 namespace sw
 {
+    struct EngineConfig;
     struct GlobalVariableInfo;
     struct NativeWindowEvent;
 
+    class CommandLineManager;
     class IWindow;
     class ModuleHost;
 
@@ -33,6 +35,20 @@ namespace sw
         void run();
 
     private:
+        // 부팅 단계 — initialize() 가 순서대로 부른다.
+        /** @brief 플랫폼 윈도우를 확보합니다. EngineLoop 이 이미 만들어 뒀으면 그 소유권을 넘겨받습니다. */
+        bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
+        /** @brief 에디터/게임 모듈을 로드하고 ModuleHost 를 세웁니다. */
+        bool startModules();
+        /** @brief 윈도우 콜백·전역 변수 훅·프레젠트 훅을 연결합니다. */
+        void bindHostCallbacks();
+
+        // 프레임 단계 — run() 이 순서대로 부른다.
+        /** @brief 셸 액션을 갱신하고 리로드 단축키를 처리합니다. */
+        void pollReloadHotkeys( float32 deltaTime );
+        /** @brief 예약된 RHI 백엔드 교체가 있으면 적용하고, 실패하면 이전 백엔드로 되돌립니다. */
+        void applyBackendChangeIfPending();
+
         /** @brief 윈도우 리사이즈 콜백 */
         void onResize( const uint32 width, const uint32 height );
         /** @brief 네이티브 윈도우 이벤트 라우팅 */
@@ -56,8 +72,10 @@ namespace sw
         unique_ptr<IWindow>    _window;
 
         float32 _maxFrameDeltaTime;
-        bool    _bEnableEditor;
+
+        uint8 _bEnableEditor : 1;
         /** @brief gv_rhiBackend 되돌림 대입이 변경 콜백을 재귀 호출하는 것을 막습니다. */
-        bool _bHandlingRhiBackendChange;
+        uint8                  _bHandlingRhiBackendChange : 1;
+        [[maybe_unused]] uint8 _reserved                  : 6;
     };
 } // namespace sw
