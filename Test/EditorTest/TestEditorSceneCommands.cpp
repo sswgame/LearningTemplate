@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -26,8 +27,15 @@ SW_TEST_CASE( EditorSceneCommandsTest, ParentCycleDetection )
     SW_ASSERT_NOT_NULL( pGrandChild );
     SW_ASSERT_NOT_NULL( pOther );
 
-    pChild->attachToParent( pRoot );
-    pGrandChild->attachToParent( pChild );
+    // 부모-자식 관계는 SceneComponent 사이에서 맺어진다 — GameObject::attachToParent 는
+    // 양쪽에 SceneComponent 가 없으면 아무 것도 하지 않고 false 를 돌려준다.
+    pRoot->addComponent<SceneComponent>();
+    pChild->addComponent<SceneComponent>();
+    pGrandChild->addComponent<SceneComponent>();
+    pOther->addComponent<SceneComponent>();
+
+    SW_ASSERT_TRUE( pChild->attachToParent( pRoot ) );
+    SW_ASSERT_TRUE( pGrandChild->attachToParent( pChild ) );
 
     // 1. 자기 자신을 부모로 지정하는 경우 방어
     SW_EXPECT_TRUE( EditorSceneCommands::wouldCreateParentCycle( pRoot, pRoot ) );
