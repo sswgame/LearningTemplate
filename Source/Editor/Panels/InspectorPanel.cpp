@@ -179,7 +179,7 @@ namespace sw::editor
         GameObject* pObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
         if ( pObj == nullptr )
         {
-            ImGui::TextDisabled( "Selected object no longer exists." );
+            EditorWidgets::drawEmptyHint( "Selected object no longer exists." );
             ws.clearSelection();
             return;
         }
@@ -465,7 +465,7 @@ namespace sw::editor
                 _pEditTargetComponent = nullptr;
             }
             else
-                ImGui::TextDisabled( "No TypeInfo registered for this component." );
+                EditorWidgets::drawEmptyHint( "No TypeInfo registered for this component." );
         }
 
         if ( pInspector != nullptr )
@@ -800,7 +800,7 @@ namespace sw::editor
     {
         if ( pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty() )
         {
-            ImGui::TextDisabled( "No FUNCTION() methods." );
+            EditorWidgets::drawEmptyHint( "No FUNCTION() methods." );
             return;
         }
 

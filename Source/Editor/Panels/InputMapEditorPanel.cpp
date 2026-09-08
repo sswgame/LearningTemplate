@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -421,7 +422,7 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
         {
-            ImGui::TextDisabled( "InputManager service is not available." );
+            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
             return;
         }
 
@@ -585,7 +586,7 @@ namespace sw::editor
             }
             else
             {
-                ImGui::TextDisabled( "No Gamepad Connected on Port 0." );
+                EditorWidgets::drawEmptyHint( "No Gamepad Connected on Port 0." );
             }
         }
     }
@@ -715,7 +716,7 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
         {
-            ImGui::TextDisabled( "InputManager service is not available." );
+            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
             return;
         }
 

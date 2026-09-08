@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-09 · 기준 커밋 `488f6b4f`
+> 마지막 갱신: 2026-09-09 · 기준 커밋 `85e6e108`
 
 ---
 
@@ -44,7 +44,7 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
-### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **다음에 할 것**
+### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **진행 중**
 
 공용 위젯은 이미 충분하다(`Common/Widgets/EditorWidgets.h` 27개 +
 `Common/Gui/EditorChrome.h` 12개). 문제는 **채택률**이다.
@@ -57,12 +57,21 @@ cd build/Ninja-Debug/Bin
 | `TileMapPanel` | 42 | 1 |
 | `SpriteClipPanel` | 40 | 1 |
 
-구체적으로 남은 것: 빈 상태 안내 11곳이 `EditorWidgets::drawEmptyHint` 대신
-`ImGui::TextDisabled` 직접 호출이다.
+**빈 상태 안내는 마쳤다.** 82곳의 `ImGui::TextDisabled` 를 한 곳씩 보고 **본문 빈 상태인 12곳만**
+`EditorWidgets::drawEmptyHint` 로 옮겼다(ContentBrowser 1 · GlobalVariables 1 · InputMapEditor 3 ·
+Inspector 3 · Material 1 · Profiler 3).
 
-> **주의**: 그중 일부는 메뉴·표 안에 있어 기계적으로 치환하면 UI 가 달라진다.
-> `drawEmptyHint` 는 현재 `TextDisabled` 와 동작이 같지만, 의미를 드러내는 것이 목적이므로
-> "정말 빈 상태 안내인 자리"에만 적용한다. 한 곳씩 눈으로 볼 것.
+옮기지 **않은** 자리와 이유 — 다음에 같은 판단을 반복하지 않도록 적어 둔다:
+
+- **메뉴 안 3곳** (`Hierarchy` 의 컴포넌트 추가 메뉴 2곳, `Inspector` 의 프리셋 메뉴 1곳).
+  `EndMenu()` 로 닫히는 팝업 안이라 백로그의 경고대로 두었다.
+- **상태줄 2곳** (`Sequencer` 의 파일명 라벨, `Inspector` 의 "Scene edits locked" 칩 옆).
+  `SameLine` 으로 붙은 인라인 라벨이고, 한쪽 분기만 바꾸면 같은 줄이 두 API 로 갈린다.
+- **진행 상태 1곳** (`GlobalVariables` 의 "Scanning presets...").  비어 있는 게 아니라 **기다리는**
+  중이다. 빈 상태와 로딩 상태는 나중에 다르게 보여야 할 자리다.
+
+남은 것은 표의 **호출 수** 자체다 — `InputMapEditorPanel` 313 · `ProfilerPanel` 94 등은 빈 상태가
+아니라 위젯·레이아웃 조립이라 1-2 의 골격 추출과 같이 가야 줄어든다.
 
 ### 1-2. 목록형 패널 골격 추출
 
@@ -90,6 +99,10 @@ cd build/Ninja-Debug/Bin
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
 무관하다. 재현되면 따로 볼 것.
+
+> 2026-09-09 추가: "테스트는 초록인데 앱만 깨진다" 의 실례가 하나 나왔다(3절의 DX11 항목).
+> 원인은 테스트 씬이 그 코드 경로를 **아예 안 태우고 있던** 것이었다. 위 SEGFAULT 도
+> 재현을 기다리기보다 "그 테스트가 실제로 무엇을 태우는가" 를 먼저 보는 편이 빠를 수 있다.
 
 ---
 
@@ -132,3 +145,29 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 - DXGI 뷰포트 보정을 백엔드 밖으로 (`cb99db8f`)
 - 타입 이름·노드 id 변환·도구 패널 순회 통합 (`d9e0a21a`)
 - 툴팁을 공용 위젯 하나로 — 지연·줄바꿈이 제각각이었다 (`488f6b4f`)
+- 빈 상태 안내 12곳을 `EditorWidgets::drawEmptyHint` 로 (1-1 의 앞부분)
+
+**에디터·Shader 폴더 재편** (`799484f3`)
+- `Shader/` 를 `Compile/` · `Reflection/` · `Binding/` 으로. `Renderer/` 를 나눴을 때와 같은 기준.
+- `Common/Workspace/` 에 섞여 있던 ImGui 드로잉 둘(토스트·우클릭 메뉴)을 `Common/Gui/` 로,
+  세션 상태를 `Common/Workspace/` 로, `EditorCamera` 를 `Viewport/` 로.
+- `EditorUtil::isXxxAssetPath` 7개 삭제 — `EditorAssetTypeRegistry::matches` 가 정본인데 입구가
+  둘이었다.
+- `EditorModule` Unity 빌드 ON. "ODR 충돌이 정리될 때까지" 라던 주석은 이미 유효하지 않았다.
+
+**파일을 옮기면 include 말고도 깨지는 것들** (`799484f3`)
+- `ReflectionParser` 가 헤더 이동을 감지 못 했다. `git mv` 는 mtime 을 안 바꾸는데 `.gen.cpp` 는
+  원본을 절대경로로 include 한다 → 산출물 머리말의 `// Source:` 경로를 대조하게 했다.
+- `sw_skipUnitySources` 가 없는 경로를 조용히 넘겨서 Renderer 재편 이후 제외 6개가 죽어 있었다
+  → `FATAL_ERROR`.
+- 병합에서 또 드러났다: `Test/EditorTest/CMakeLists.txt` 의 소스 목록. **경로를 문자열로 적어 둔
+  곳**은 컴파일러가 안 잡는다.
+
+**DX11 이 앱에서 아무것도 안 그리던 문제** (`913f13ae`)
+- `instanceanim` 컴퓨트가 인스턴스 버퍼를 UAV 로 쓴 뒤 정점 셰이더가 SRV 로 읽는데, D3D11 은
+  같은 리소스를 출력과 입력에 동시에 걸 수 없어 런타임이 **SRV 를 NULL 로 강제**했다.
+  `transitionBuffer` 가 no-op 이라 UAV 를 안 뗐다 — 배리어는 없어도 의무는 있었다.
+- 로그에 한 줄도 안 나온 이유: D3D11 은 이 해저드를 WARNING 으로 낸다. 심각도로 거르고 있었다
+  → 해저드 ID 만 ERROR 로 올린다.
+- 테스트가 못 잡은 이유: 패리티 테스트 씬에 `spinSeed` 가 없어 컴퓨트가 **아예 안 돌았다**
+  → `RenderPassTest.InstanceAnimationKeepsInstancesReadable` 신설.

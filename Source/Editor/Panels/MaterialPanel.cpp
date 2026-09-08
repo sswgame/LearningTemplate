@@ -221,7 +221,7 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            ImGui::TextDisabled( "Focus a .mat / .material asset to edit." );
+            EditorWidgets::drawEmptyHint( "Focus a .mat / .material asset to edit." );
             return;
         }
 

@@ -662,7 +662,7 @@ namespace sw::editor
     {
         if ( _breadcrumb.empty() )
         {
-            ImGui::TextDisabled( "Select a folder" );
+            EditorWidgets::drawEmptyHint( "Select a folder" );
             return;
         }
 

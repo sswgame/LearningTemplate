@@ -302,7 +302,7 @@ namespace sw::editor
                 }
                 else if ( _listPresetFile.empty() )
                 {
-                    ImGui::TextDisabled( "No presets found." );
+                    EditorWidgets::drawEmptyHint( "No presets found." );
                 }
                 else
                 {

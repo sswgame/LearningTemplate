@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
@@ -146,7 +147,7 @@ namespace sw::editor
             }
             else
             {
-                ImGui::TextDisabled( "TaskManager is not active." );
+                EditorWidgets::drawEmptyHint( "TaskManager is not active." );
             }
         }
     }
@@ -234,7 +235,7 @@ namespace sw::editor
             }
             else
             {
-                ImGui::TextDisabled( "No active scene loaded." );
+                EditorWidgets::drawEmptyHint( "No active scene loaded." );
             }
         }
 
@@ -246,7 +247,7 @@ namespace sw::editor
         MemoryProfiler* pProfiler = editor::getService<MemoryProfiler>();
         if ( pProfiler == nullptr )
         {
-            ImGui::TextDisabled( "MemoryProfiler is not active." );
+            EditorWidgets::drawEmptyHint( "MemoryProfiler is not active." );
             return;
         }
         MemoryProfiler& profiler = *pProfiler;
