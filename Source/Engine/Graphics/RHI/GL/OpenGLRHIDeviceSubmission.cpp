@@ -6,6 +6,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
+#include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -19,40 +20,6 @@ namespace sw
          *          바이너리(Engine.dll / RHI_GL.dll)마다 따로 생긴다(-Wunique-object-duplication).
          *          vsync 가 **바뀔 때만** 부르므로 주소를 캐시해서 얻는 것도 사실상 없다.
          */
-        struct OpenGLRHIDeviceSubmissionInternal
-        {
-            static void applyVsyncInterval( void* pHdc, void* pHrc, bool vsync )
-            {
-                (void)pHdc;
-#if defined( SW_PLATFORM_WINDOWS )
-                (void)pHrc;
-                using PFNWGLSWAPINTERVALEXTPROC                       = BOOL( WINAPI* )( int32 );
-                static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
-                if ( s_wglSwapIntervalEXT != nullptr )
-                    s_wglSwapIntervalEXT( vsync ? 1 : 0 );
-#elif defined( SW_PLATFORM_LINUX )
-                (void)pHrc;
-                using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
-                static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
-                    reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
-                if ( s_glXSwapIntervalEXT != nullptr && pHdc != nullptr )
-                {
-                    Display* pDpy = static_cast<Display*>( pHdc );
-                    s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
-                }
-#elif defined( SW_PLATFORM_MACOS )
-                (void)pHdc;
-                if ( pHrc != nullptr )
-                {
-                    id              context                               = static_cast<id>( pHrc );
-                    GLint           interval                              = vsync ? 1 : 0;
-                    constexpr GLint kNsOpenGlContextParameterSwapInterval = 222;
-                    ( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
-                        context, sel_registerName( "setValues:forParameter:" ), &interval, kNsOpenGlContextParameterSwapInterval );
-                }
-#endif
-            }
-        };
     } // namespace
 } // namespace sw
 
@@ -65,10 +32,8 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( _pHDC != nullptr && _pHRC != nullptr )
-            wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) );
-#endif
+        if ( _platformContext != nullptr )
+            _platformContext->reacquireForFrame();
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다 — beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 담당하고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다
@@ -91,21 +56,15 @@ namespace sw
         const int8 desired = vsync ? 1 : 0;
         if ( _lastVsync != desired )
         {
-            OpenGLRHIDeviceSubmissionInternal::applyVsyncInterval( _pHDC, _pHRC, vsync );
+            if ( _platformContext != nullptr )
+                _platformContext->setSwapInterval( vsync );
             _lastVsync = desired;
         }
 
-#if defined( SW_PLATFORM_WINDOWS )
-        // Ensure the RHI context is current after ImGui multi-viewport may have switched DCs.
-        if ( _pHDC && _pHRC )
-            wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) );
-        SwapBuffers( static_cast<HDC>( _pHDC ) );
-#elif defined( SW_PLATFORM_LINUX )
-        glXSwapBuffers( (Display*)_pHDC, (Window)(uintptr_t)_pHWnd );
-#elif defined( SW_PLATFORM_MACOS )
-        id context = (id)_pHRC;
-        ( (void ( * )( id, SEL ))objc_msgSend )( context, sel_registerName( "flushBuffer" ) );
-#endif
+        // 스왑 직전 컨텍스트 되찾기는 플랫폼이 필요할 때만 한다 (WGL 은 ImGui 멀티 뷰포트 때문에
+        // 반드시 필요하고, GLX·NSGL 은 예전에도 하지 않았다).
+        if ( _platformContext != nullptr )
+            _platformContext->present();
         _releaseQueue.tickFrame();
     }
 

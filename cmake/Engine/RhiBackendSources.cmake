@@ -37,6 +37,10 @@ set(SW_RHI_GL_DEVICE_SOURCES
     "${swRhiRoot}/GL/OpenGLRHIResource.cpp"
     "${swRhiRoot}/GL/OpenGLRHIResourceBindless.cpp"
     "${swRhiRoot}/GL/OpenGLRHIResourcePipeline.cpp"
+    "${swRhiRoot}/GL/Platform/IOpenGLPlatformContext.cpp"
+    "${swRhiRoot}/GL/Platform/WglPlatformContext.cpp"
+    "${swRhiRoot}/GL/Platform/GlxPlatformContext.cpp"
+    "${swRhiRoot}/GL/Platform/NsglPlatformContext.cpp"
 )
 set(SW_RHI_VULKAN_DEVICE_SOURCES
     "${swRhiRoot}/Vulkan/VulkanRHICommandContext.cpp"

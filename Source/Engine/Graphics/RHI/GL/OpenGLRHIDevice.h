@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -226,6 +227,10 @@ namespace sw
             uint8             _reserved : 7;
         };
 
+        /** @brief 플랫폼 GL 컨텍스트(WGL/GLX/NSGL). 생성·바인딩·프레젠트·VSync 를 전부 여기가 안다. */
+        unique_ptr<IOpenGLPlatformContext> _platformContext;
+
+        /** @brief getNativeDevice 계약용 복사본 — 실제 소유는 _platformContext 다. */
         void*  _pHDC;
         void*  _pHRC;
         void*  _pHWnd;
