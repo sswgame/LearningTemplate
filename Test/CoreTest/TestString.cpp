@@ -954,3 +954,48 @@ SW_TEST_CASE( Core_String, FormatSpecifierFollowsPlaceholder )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "crc=%#x", 255 );
     SW_EXPECT_STREQ( "crc=ff", buffer );
 }
+
+/**
+ * @brief [Core_String] stristr 은 널 종단자를 지나 읽지 않는다
+ * @details `stristr` 은 `string_view( pStr, subLen )` 를 만들어 비교한다 — 남은 문자열이 검색어보다
+ *          짧아도 길이를 `subLen` 으로 잡으므로, 읽어 보면 종단자 뒤로 넘어갈 것처럼 생겼다.
+ *          **실제로는 넘어가지 않는다.** `equals` 의 비교 루프가 첫 불일치에서 끊기고, 널 종단자는
+ *          검색어의 어떤 문자와도(검색어에는 널이 없다) 반드시 불일치하기 때문이다. 즉 안전한
+ *          이유가 구현 세부(단축 평가)에 걸려 있다.
+ *
+ *          그 세부가 깨지면 바로 경계 초과 읽기가 된다 — 예컨대 비교를 한 번에 여러 바이트씩
+ *          처리하도록 "최적화" 하는 순간이다. 그래서 가드 페이지로 고정한다: 문자열을 페이지
+ *          마지막 바이트에 붙여 놓고 다음 페이지를 접근 불가로 만들면, 한 바이트라도 넘어가는
+ *          순간 죽는다. 에디터 검색 필드가 이 경로를 매 프레임 탄다(필드보다 긴 검색어).
+ */
+SW_TEST_CASE( Core_String, StristrStopsAtTerminator )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo( &sysInfo );
+    const size_t pageSize = static_cast<size_t>( sysInfo.dwPageSize );
+
+    // 두 페이지를 잡고 뒤 페이지를 접근 불가로 바꾼다.
+    utf8* pBase = static_cast<utf8*>( VirtualAlloc( nullptr, pageSize * 2, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE ) );
+    SW_ASSERT_TRUE( pBase != nullptr );
+
+    DWORD oldProtect{ 0 };
+    SW_EXPECT_TRUE( VirtualProtect( pBase + pageSize, pageSize, PAGE_NOACCESS, &oldProtect ) != 0 );
+
+    // "ab\0" 의 종단자가 첫 페이지의 **마지막 바이트**가 되도록 붙인다.
+    utf8* pHaystack = pBase + pageSize - 3;
+    pHaystack[0]    = 'a';
+    pHaystack[1]    = 'b';
+    pHaystack[2]    = '\0';
+
+    // 건초더미(2글자)보다 긴 검색어 — 길이만 보면 다음 페이지까지 읽어야 하는 모양이다.
+    SW_EXPECT_TRUE( sw::StringUtil::stristr( pHaystack, "abcdefghij" ) == nullptr );
+    SW_EXPECT_TRUE( sw::StringUtil::stristr( pHaystack, "bc" ) == nullptr );
+
+    // 정상 동작도 같이 확인한다.
+    SW_EXPECT_TRUE( sw::StringUtil::stristr( pHaystack, "AB" ) == pHaystack );
+    SW_EXPECT_TRUE( sw::StringUtil::stristr( pHaystack, "b" ) == pHaystack + 1 );
+
+    VirtualFree( pBase, 0, MEM_RELEASE );
+#endif
+}

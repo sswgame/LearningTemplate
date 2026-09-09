@@ -9,6 +9,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -72,7 +73,7 @@ namespace sw::editor
                 }
 
                 // 3) General name matching
-                return StringUtil::stristr( pObj->getName().c_str(), pFilter ) != nullptr;
+                return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
             }
 
             static bool subtreeMatchesFilter( GameObject* pObj, const utf8* pFilter )
@@ -166,7 +167,8 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( 180.0f );
                 ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf.data(),
                                           s_searchBuf.capacity() );
-                const bool bHasFilter = ( s_searchBuf.empty() == false );
+                const EditorListFilter compFilter{ s_searchBuf.c_str() };
+                const bool             bHasFilter = compFilter.isActive();
 
                 auto* pRegistry = editor::getService<TypeRegistry>();
 
@@ -193,8 +195,7 @@ namespace sw::editor
                             continue;
 
                         const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
-                        if ( StringUtil::stristr( pDisplayName, s_searchBuf.c_str() ) != nullptr ||
-                             StringUtil::stristr( typeName.c_str(), s_searchBuf.c_str() ) != nullptr )
+                        if ( compFilter.matchesAny( { string_view{ pDisplayName }, typeName.view() } ) )
                         {
                             drawItem( typeName, pTypeInfo );
                             ++matchCount;
@@ -551,12 +552,24 @@ namespace sw::editor
         treeDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( treeDesc ) )
         {
+            // `drawGameObjectNode` 는 서브트리가 필터에 안 걸리면 조용히 빠진다. 그래서 같은 술어로
+            // 미리 세어, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
+            const EditorListFilter treeFilter{ _filterBuffer.c_str() };
+            uint32                 visibleRootCount{ 0 };
+
             for ( GameObject* pObj : listObject )
             {
                 if ( pObj != nullptr && pObj->getParent() == nullptr )
+                {
                     HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer,
                                                                 _bFocusRenameInput );
+                    if ( HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() ) )
+                        ++visibleRootCount;
+                }
             }
+
+            if ( visibleRootCount == 0 && treeFilter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( treeFilter.getText() );
 
             // Empty area Drag & Drop Target for SW_ASSET_PATH
             if ( ImGui::BeginDragDropTarget() )

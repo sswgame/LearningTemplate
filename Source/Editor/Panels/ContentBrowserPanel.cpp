@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -399,10 +400,7 @@ namespace sw::editor
 
     bool ContentBrowserPanel::passesSearchFilter( const AssetEntry& entry ) const
     {
-        if ( _searchBuffer.empty() )
-            return true;
-
-        return StringUtil::stristr( entry._name.c_str(), _searchBuffer.c_str() ) != nullptr;
+        return EditorListFilter{ _searchBuffer.c_str() }.matches( entry._name );
     }
 
     void ContentBrowserPanel::drawToolbar()
@@ -643,7 +641,11 @@ namespace sw::editor
         drawBreadcrumbs();
         ImGui::Separator();
 
-        if ( _viewMode == ViewMode::Tiles )
+        // 걸러져서 0건인 것과 폴더가 정말 빈 것은 다르게 말해 준다.
+        const EditorListFilter filter{ _searchBuffer.c_str() };
+        if ( listVisible.empty() && filter.isActive() )
+            EditorWidgets::drawNoSearchResultHint( filter.getText() );
+        else if ( _viewMode == ViewMode::Tiles )
             drawTilesView( listVisible );
         else
             drawListView( listVisible );

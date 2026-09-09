@@ -85,6 +85,15 @@ namespace sw::editor
         static void drawEmptyHint( const utf8* pText );
 
         /**
+         * @brief 검색 결과가 0건일 때의 안내.
+         * @details **데이터가 없는 것과 필터가 걸러낸 것은 다르다.** 기존 안내 문구 20곳은 전부
+         *          앞쪽(데이터·서비스 없음)이어서, 아무것도 맞지 않는 검색어를 치면 설명 없는 빈
+         *          상자만 남았다 — 고장처럼 보인다. 필터를 되짚어 주면 지울 것이 무엇인지 바로 안다.
+         * @param filter 현재 걸린 검색 문자열. 비어 있으면 필터 언급 없이 안내합니다.
+         */
+        static void drawNoSearchResultHint( string_view filter );
+
+        /**
          * @brief 건수 라벨. total이 0이면 "12 items", 아니면 "12 / 40 lines".
          */
         static void drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit = nullptr );

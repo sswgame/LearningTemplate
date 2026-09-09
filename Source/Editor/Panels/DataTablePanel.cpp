@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
@@ -198,6 +199,28 @@ namespace sw::editor
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                           ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 
+        // 표를 열기 **전에** 걸러 둔다. 표가 남은 영역을 모두 차지하므로 0건 안내를 표 뒤에 그리면
+        // 화면 밖으로 밀린다 — 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
+        const EditorListFilter filter{ _locFilter.c_str() };
+
+        vector<size_t> listVisibleIndex;
+        listVisibleIndex.reserve( _listLocRecord.size() );
+        for ( size_t recordIndex = 0; recordIndex < _listLocRecord.size(); ++recordIndex )
+        {
+            const LocRecord& rec = _listLocRecord[recordIndex];
+            if ( filter.matchesAny( { rec._key, rec._enUS, rec._koKR, rec._jaJP } ) )
+                listVisibleIndex.push_back( recordIndex );
+        }
+
+        if ( listVisibleIndex.empty() )
+        {
+            if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else
+                EditorWidgets::drawEmptyHint( "No localization records." );
+            return;
+        }
+
         if ( ImGui::BeginTable( "##locTable", 5, flags, ImGui::GetContentRegionAvail() ) )
         {
             ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch, 0.25f );
@@ -209,20 +232,9 @@ namespace sw::editor
 
             int32 deleteIndex = -1;
 
-            for ( size_t recordIndex = 0; recordIndex < _listLocRecord.size(); ++recordIndex )
+            for ( const size_t recordIndex : listVisibleIndex )
             {
                 LocRecord& rec = _listLocRecord[recordIndex];
-
-                if ( _locFilter.empty() == false )
-                {
-                    if ( StringUtil::stristr( rec._key.c_str(), _locFilter.c_str() ) == nullptr &&
-                         StringUtil::stristr( rec._enUS.c_str(), _locFilter.c_str() ) == nullptr &&
-                         StringUtil::stristr( rec._koKR.c_str(), _locFilter.c_str() ) == nullptr &&
-                         StringUtil::stristr( rec._jaJP.c_str(), _locFilter.c_str() ) == nullptr )
-                    {
-                        continue;
-                    }
-                }
 
                 ImGui::PushID( static_cast<int32>( recordIndex ) );
                 ImGui::TableNextRow();

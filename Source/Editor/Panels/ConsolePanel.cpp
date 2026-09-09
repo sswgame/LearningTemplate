@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include <imgui.h>
@@ -73,6 +74,8 @@ namespace sw::editor
 
     void ConsolePanel::updateFilteredEntries( const string& filterStr )
     {
+        const EditorListFilter filter{ filterStr };
+
         _listVisible.clear();
         _listVisible.reserve( _listDrawSnapshot.size() );
 
@@ -82,18 +85,8 @@ namespace sw::editor
             if ( levelIndex >= 4 || _arrLevelEnabled[levelIndex] == false )
                 continue;
 
-            if ( filterStr.empty() == false )
-            {
-                auto contains = [&]( const string& text )
-                {
-                    if ( text.empty() )
-                        return false;
-                    return StringUtil::stristr( text.c_str(), filterStr.c_str() ) != nullptr;
-                };
-
-                if ( contains( entry._message ) == false && contains( entry._tag ) == false && contains( entry._file ) == false )
-                    continue;
-            }
+            if ( filter.matchesAny( { entry._message, entry._tag, entry._file } ) == false )
+                continue;
 
             _listVisible.push_back( &entry );
         }
@@ -250,6 +243,19 @@ namespace sw::editor
         logDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining |
                          editor::EditorSectionFlags::HorizontalScrollbar;
         EditorChrome::beginSection( logDesc );
+
+        // 0건의 이유를 구분해서 말해 준다 — 로그가 아직 없는 것, 검색어가 걸러낸 것, 레벨을 전부
+        // 끈 것은 서로 다른 상황이고 고치는 방법도 다르다. 예전에는 셋 다 빈 상자였다.
+        if ( _listVisible.empty() )
+        {
+            const EditorListFilter filter{ _cachedFilter };
+            if ( _listDrawSnapshot.empty() )
+                EditorWidgets::drawEmptyHint( "No log output yet." );
+            else if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else
+                EditorWidgets::drawEmptyHint( "All log levels are hidden. Re-enable one in the toolbar." );
+        }
 
         ImGuiListClipper clipper;
         clipper.Begin( static_cast<int32>( _listVisible.size() ) );

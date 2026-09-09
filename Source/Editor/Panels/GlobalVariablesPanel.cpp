@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -30,16 +31,6 @@ namespace sw::editor
     {
         struct GlobalVariablesPanelInternal
         {
-            static bool matchFilter( const GlobalVariableInfo& info, const utf8* pFilter )
-            {
-                if ( StringUtil::isNullOrEmpty( pFilter ) )
-                    return true;
-
-                return StringUtil::stristr( info._name.c_str(), pFilter ) != nullptr ||
-                       StringUtil::stristr( info._description.c_str(), pFilter ) != nullptr ||
-                       StringUtil::stristr( info._moduleName.c_str(), pFilter ) != nullptr;
-            }
-
             static bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )
             {
                 if ( pA->_moduleName != pB->_moduleName )
@@ -215,6 +206,8 @@ namespace sw::editor
         const vector<string> listAllName   = pGvm->collectVariableNames();
         const uint32         totalVarCount = pGvm->getVariableCount();
 
+        const EditorListFilter filter{ _searchFilter.c_str() };
+
         vector<GlobalVariableInfo*> listFiltered;
         listFiltered.reserve( listAllName.size() );
 
@@ -223,7 +216,7 @@ namespace sw::editor
             GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
             if ( pInfo == nullptr )
                 continue;
-            if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _searchFilter.c_str() ) )
+            if ( filter.matchesAny( { pInfo->_name, pInfo->_description, pInfo->_moduleName } ) )
                 listFiltered.push_back( pInfo );
         }
 
@@ -232,6 +225,16 @@ namespace sw::editor
         EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
 
         drawPinnedSection( *pGvm );
+
+        // 걸러져서 0건인 것과 애초에 없는 것은 다르게 말해 준다. 예전에는 둘 다 설명 없는 빈 표였다.
+        if ( listFiltered.empty() )
+        {
+            if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else
+                EditorWidgets::drawEmptyHint( "No global variables registered." );
+            return;
+        }
 
         drawVariableTable( listFiltered );
     }

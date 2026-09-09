@@ -36,8 +36,8 @@ cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 �
 ctest --preset Ninja-Debug-lint               # 컨벤션·include 순서
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 166 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 29 / SmokeTest 19
-#   Shipping : 158 / 421 / 96 / 29 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 167 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
+#   Shipping : 159 / 421 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
 ctest --test-dir build/Ninja-Debug -L nogpu
@@ -69,9 +69,9 @@ cd build/Ninja-Debug/Bin
 
 > **2026-09-09 측정 결과 — 표의 전제가 일부 틀렸다.** 세 패널이 "툴바 → 검색 → 목록/표 → 상태줄"
 > 이라는 같은 뼈대를 쓴다고 적어 두었지만, `ProfilerPanel` 은 **목록 패널이 아니다** — 탭 +
-> `CollapsingHeader` + 통계표다. 검색도 목록도 상태줄도 없다. 그래서 `EditorListPanel` 골격(1-2)을
+> `CollapsingHeader` + 통계표다. 검색도 목록도 상태줄도 없다. 그래서 `EditorListPanel` 골격(예전 1-2)을
 > 만들어도 이 패널의 94개 호출은 줄지 않는다. 골격을 만들기 전에 나머지 패널도 실제 모양을
-> 확인해야 한다(지금 표는 호출 수만 세었다).
+> 확인해야 한다(지금 표는 호출 수만 세었다). **→ 확인했다. 3절 "검색 필터" 항목에 결과를 적었다.**
 >
 > 대신 `ProfilerPanel` 에서 **다른 종류의 문제**를 찾아 고쳤다 — `HierarchyPanel` 뱃지와 같은
 > 패턴이다. 컴포넌트 분포표가 타입 이름 5개(`SceneComponent`·`MeshComponent`·`SpriteComponent`·
@@ -111,30 +111,24 @@ Inspector 3 · Material 1 · Profiler 3).
   중이다. 빈 상태와 로딩 상태는 나중에 다르게 보여야 할 자리다.
 
 남은 것은 표의 **호출 수** 자체다 — `InputMapEditorPanel` 313 · `ProfilerPanel` 94 등은 빈 상태가
-아니라 위젯·레이아웃 조립이라 1-2 의 골격 추출과 같이 가야 줄어든다.
+아니라 위젯·레이아웃 조립이다. 목록형 골격(예전 1-2)을 만들면 줄어든다고 적어 두었지만, 측정해 보니
+골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
+것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
-### 1-2. 목록형 패널 골격 추출
+### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
-여러 패널이 "툴바 → 검색 → 목록/표 → 상태줄" 이라는 같은 뼈대를 각자 조립한다.
-문서형 패널은 `Common/Gui/EditorDocumentPanel` 이 이미 그 역할을 하지만 채택이 제한적이다.
-목록형 골격(가칭 `EditorListPanel`)을 두면 새 패널이 본문만 채우면 된다.
-
-범위가 넓고 검증이 실기동뿐이므로 **한 패널씩 옮기고 매번 실기동 확인**한다.
-
-### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
-
-분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1, 1-2)을 먼저 한다.
+분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1 공용 위젯 채택)을 먼저 한다.
 목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
 (단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-4. 되살리지 못한 테스트
+### 1-3. 되살리지 못한 테스트
 
 `Test/EditorTest/TestEditorSceneCommands.cpp` 는 되살렸지만(현재 EditorTest 27개에 포함),
 `EditorContext` 가 UI 매니저 전부를 `unique_ptr` 로 소유하는 구조는 그대로다. 더 깊은 분리
 (패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
 그때 소유 구조부터 정한다.
 
-### 1-5. 확인만 하고 넘어간 것
+### 1-4. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
@@ -174,7 +168,7 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 **요청한 "나머지 문제" 처리 (3건 전부)**
 
 1. **Engine 강결합 해체 (10 → 7)** — 아래 항목.
-2. **에디터 패널 검증 수단** — `-gv_editorPanelDump=N` (0절 참고). 백로그 1-1·1-2 는 이제 화면을
+2. **에디터 패널 검증 수단** — `-gv_editorPanelDump=N` (0절 참고). 공용 위젯 채택·목록형 골격 항목은 이제 화면을
    보지 않고도 검증할 수 있다. 리팩터 자체는 사람이 한 패널씩 가는 편이 맞아 남겨 두었다.
 3. **GL 플랫폼 컨텍스트 분리** — `Graphics/RHI/GL/Platform/` 에 `IOpenGLPlatformContext` +
    WGL/GLX/NSGL 세 구현. `OpenGLRHIDevice` 의 플랫폼 분기 **14개 → 0개**. 플랫폼을 하나 더
@@ -188,6 +182,57 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
    - 검증: 네 백엔드(`-dx12 -dx11 -vk -gl`) 모두 종료 코드 0 / `[Error]` 0건.
      GL + 에디터의 에러 3건은 이 변경과 무관한 기존 버그였고(스태시로 기준선을 다시 빌드해
      확인했다), **그 다음에 따로 고쳤다** — 아래 "GL 컨텍스트" 항목.
+
+**검색 필터를 한 곳으로, 그리고 "0건" 을 말하게 한다 (예전 1-2 "목록형 패널 골격")**
+
+백로그에 "여러 패널이 툴바 → 검색 → 목록 → 상태줄을 각자 조립한다" 고 적어 두고 `EditorListPanel`
+골격을 만들자고 했다. **전제가 또 틀렸다** — 17개 패널을 세어 보니 조립은 이미 공유되고 있었다:
+`EditorChrome::beginToolbar` 10개, `EditorWidgets::drawSearchField` 6개(= 검색 있는 패널 전부),
+`drawCountLabel` 4개. 골격을 또 만들면 이미 공유된 것을 한 겹 더 싸는 일이다. 게다가 목록형으로
+보이는 패널조차 모양이 제각각이어서(ContentBrowser 2분할, DataTable 탭, GlobalVariables 표 3개,
+Hierarchy 트리+드래그드롭+단축키) 하나의 템플릿에 들어가는 패널이 사실상 없다.
+
+**실제로 복사되고 있던 것은 판정 로직이었다.** 검색 가능한 6개 패널이 `matchFilter` 를 각자 썼다 —
+"필터가 비면 전부 통과" 가드 + 필드 수만 다른 `stristr` 체인(Console 3 · ContentBrowser 1 ·
+DataTable 4 · GlobalVariables 3 · Hierarchy 1 · Inspector 3). 이 가드를 빼먹으면 조용히 반대로
+동작한다 — `stristr( x, "" )` 는 nullptr 을 주므로 **필터가 비었을 때 목록이 전부 사라진다.**
+
+- `Common/Widgets/EditorListFilter` — 필터를 한 번 정규화(trim)해 들고 항목마다 판정만 한다.
+  ImGui 에 의존하지 않으므로 단위 테스트가 붙는다(EditorTest +5). 필드는 `string_view` 로 받는다 —
+  종단자 없는 조각도 안전하다(`stristr` 은 널 종단 문자열만 받는다).
+- 6개 패널이 전부 이것을 쓴다. `Source/Editor/Panels` 에 손으로 쓴 검색 술어는 남아 있지 않다.
+- `DataTablePanel` 은 행 루프 안에서 필터링하던 것을 표 열기 **전에** 걸러 두도록 바꿨다. 0건 여부를
+  알아야 안내를 그릴 수 있고(표가 남은 영역을 다 차지해서 표 뒤에 그리면 화면 밖으로 밀린다),
+  행마다 필터를 다시 만들지 않는 효과도 같이 온다.
+
+**진짜 구멍은 "0건" 이었다.** 기존 안내 문구 20곳은 **전부** 데이터·서비스가 없다는 뜻이고,
+"검색어가 아무것도 맞히지 못했다" 를 말하는 곳은 **한 곳도 없었다.** 아무것도 맞지 않는 검색어를
+치면 설명 없는 빈 상자가 남는다 — 고장처럼 보인다. 복사할 선례가 없으니 새 패널도 똑같이 빠뜨린다.
+`EditorWidgets::drawNoSearchResultHint( filter )` 를 만들어 6개 패널에 붙였다. `ConsolePanel` 은
+0건의 이유를 셋으로 나눈다(로그가 아직 없음 / 검색어가 걸러냄 / 레벨을 전부 끔) — 고치는 방법이
+서로 다르기 때문이다.
+
+**이번에는 UI 변경을 실제로 측정했다.** 생성자에서 필터를 아무것도 안 맞는 값으로 시작시켜
+`-gv_editorPanelDump` 를 찍고, 힌트만 끈 빌드와 비교했다(측정 후 계측은 걷었다):
+
+```
+힌트 없음: Output Log/##log_scroll  vtx=0  <== BLANK      ← 빈 패널 1개, 경고 발생
+          Content Browser/##cb_assets vtx=24
+힌트 있음: Output Log/##log_scroll  vtx=104               ← 빈 패널 0개
+          Content Browser/##cb_assets vtx=128
+```
+
+**도구가 실제 결함을 잡았다** — 맞지 않는 검색어가 패널을 진짜로 비웠고, 힌트가 그것을 없앤다.
+다만 `Hierarchy`·`Inspector`·`DataTable`·`GlobalVariables` 의 0건 분기는 **런타임에서 확인하지
+못했다**: 활성 게임이 `Empty` 뿐이라 씬 오브젝트가 없어 Hierarchy 는 "No active scene." 로 빠지고,
+Inspector 는 선택이 없어 "Nothing selected." 로 빠지며, DataTable 은 도구 패널이라 닫힌 채 뜬다.
+이 네 곳은 술어 단위 테스트 + 코드 검토까지다. 씬이 있는 게임이 생기면 같은 방법으로 확인할 수 있다.
+
+**곁가지로 확인한 것 — `StringUtil::stristr` 은 정상이다.** `string_view( pStr, subLen )` 를 만들어
+비교하므로 남은 길이가 검색어보다 짧으면 종단자를 지나 읽을 것처럼 보였다. 가드 페이지 테스트로
+확인하니 **넘어가지 않는다** — `equals` 의 비교 루프가 첫 불일치에서 끊기고, 널 종단자는 검색어의
+어떤 문자와도 반드시 불일치한다. 안전한 이유가 단축 평가라는 구현 세부에 걸려 있으므로(비교를 여러
+바이트씩 처리하도록 "최적화" 하면 바로 깨진다) 테스트는 남겼다: `Core_String.StristrStopsAtTerminator`.
 
 **GL 컨텍스트를 기다려서 가져온다 — `-gl -EnableEditor` 에러 3건 해결**
 
@@ -288,7 +333,7 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
 - `EditorViewportPreview::isDialogueRunnerType` 의 이름 비교는 **남겼다.** 에디터는
   GameFramework 를 링크할 수 없으므로 리플렉션으로 찾는 것이 정해진 탈출구다(짧은 이름과 FQN 을
   둘 다 본다). 결함이 아니다.
-- **하지 않은 것**: 1-1(공용 위젯 채택)·1-2(목록형 패널 골격). 이 둘은 검증 수단이 **화면을 보는
+- **하지 않은 것**: 공용 위젯 채택(1-1)·목록형 패널 골격. 이 둘은 검증 수단이 **화면을 보는
   것**뿐이고(0절), 나는 종료 코드와 `[Error]` 개수만 볼 수 있다. 패널을 빈 화면으로 만들어 놓고도
   통과했다고 보고할 수 있는 작업이라 손대지 않았다. 사람이 띄워 보면서 한 패널씩 가는 편이 맞다.
 

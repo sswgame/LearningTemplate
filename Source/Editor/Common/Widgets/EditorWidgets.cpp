@@ -168,6 +168,18 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", pText );
     }
 
+    void EditorWidgets::drawNoSearchResultHint( string_view filter )
+    {
+        if ( filter.empty() )
+        {
+            drawEmptyHint( "No matches." );
+            return;
+        }
+
+        // 필터를 서식 **인자**로 넘긴다 — 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
+        ImGui::TextDisabled( "No matches for \"%.*s\".", static_cast<int32>( filter.size() ), filter.data() );
+    }
+
     void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )
     {
         const bool bHasUnit = ( StringUtil::isNullOrEmpty( pUnit ) == false );

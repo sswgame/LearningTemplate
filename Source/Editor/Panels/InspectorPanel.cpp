@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -264,7 +265,7 @@ namespace sw::editor
             bool        bRemove{ false };
             const bool  bAccent   = isA<SceneComponent>( pComp );
             const bool  bScrollTo = ( workspace.getScrollToComponentId() != 0 &&
-                                      workspace.getScrollToComponentId() == pComp->getComponentId() );
+                                     workspace.getScrollToComponentId() == pComp->getComponentId() );
 
             if ( bScrollTo )
             {
@@ -313,7 +314,7 @@ namespace sw::editor
                                               ? pComp->getComponentName().c_str()
                                               : pTInfo->_name.c_str();
                 const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
-                                              workspace.getCopiedComponentTypeName() == compTypeName );
+                                         workspace.getCopiedComponentTypeName() == compTypeName );
                 if ( bCanPaste )
                 {
                     if ( ImGui::MenuItem( "Paste Component Values" ) )
@@ -478,28 +479,31 @@ namespace sw::editor
             return;
 
         map<string, vector<const PropertyInfo*>> grouped;
-        const bool                               bHasFilter = ( _propertyFilter.empty() == false );
+        const EditorListFilter                   filter{ _propertyFilter.c_str() };
 
         pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
         {
             if ( prop._metadata._bHideInInspector == SW_TRUE )
                 return;
 
-            if ( bHasFilter )
+            if ( filter.matchesAny( { string_view{ prop._name.c_str() },
+                                      string_view{ InspectorPanelInternal::propLabel( prop ) },
+                                      string_view{ prop._metadata._category.c_str() } } ) == false )
             {
-                const utf8* pLabelName = InspectorPanelInternal::propLabel( prop );
-                if ( StringUtil::stristr( prop._name.c_str(), _propertyFilter.c_str() ) == nullptr &&
-                     StringUtil::stristr( pLabelName, _propertyFilter.c_str() ) == nullptr &&
-                     StringUtil::stristr( prop._metadata._category.c_str(), _propertyFilter.c_str() ) == nullptr )
-                {
-                    return;
-                }
+                return;
             }
 
             const string category =
                 prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
             grouped[category].push_back( &prop );
         } );
+
+        // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 말한다 — 예전에는 빈 공간이었다.
+        if ( grouped.empty() && filter.isActive() )
+        {
+            EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            return;
+        }
 
         for ( const auto& [category, props] : grouped )
         {
