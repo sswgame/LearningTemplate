@@ -11,15 +11,21 @@
  * @brief [Engine_CommandLine] Width 기본값 존재
  */
 
-SW_TEST_CASE( Engine_CommandLine, DefaultValueForWidthExists )
+SW_TEST_CASE( Engine_CommandLine, WindowSizeHasNoCommandLineDefault )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
 
-    int32 width{ 0 };
-    bool  hasWidth = cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width );
-    SW_EXPECT_TRUE( hasWidth );
-    SW_EXPECT_EQUAL( 1280, width );
+    // 창 크기의 기본값은 EngineConfig 가 갖는다. 여기서 기본값을 돌려주면 호출부의
+    //   h = config._window._height;  getArgument( HEIGHT, h );
+    // 가 설정값을 항상 덮어쓴다 — 실제로 1280×720 설정이 무시되고 1280×1280 으로 떴다.
+    int32 width{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
+    SW_EXPECT_EQUAL( -1, width );
+
+    int32 height{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, height ) );
+    SW_EXPECT_EQUAL( -1, height );
 }
 
 /**

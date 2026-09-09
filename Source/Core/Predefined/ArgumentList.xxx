@@ -1,5 +1,12 @@
-SW_REGISTER_ARGUMENT( WIDTH, true, 1280, true, "W" )
-SW_REGISTER_ARGUMENT( HEIGHT, true, 1280, true, "H" )
+// 창 크기의 기본값은 **EngineConfig 가 갖는다** (`_window._width` / `_height`).
+// 여기서 네 번째 인자(bUseDefaultValue)를 켜 두면 getArgument 가 인자를 주지 않아도 등록된
+// 기본값으로 true 를 돌려주고, 호출부의
+//   uint32 h = config._window._height;  getArgument( HEIGHT, h );
+// 패턴이 설정값을 **항상** 덮어쓴다. 실제로 1280×720 설정이 무시되고 창이 1280×1280 으로
+// 떴다 — WIDTH 의 기본값이 설정값과 같아서 폭만 우연히 맞아 아무도 눈치채지 못했다.
+// VSYNC 가 처음부터 bUseDefaultValue=false 인 것과 같은 이유다.
+SW_REGISTER_ARGUMENT( WIDTH, true, 1280, false, "W" )
+SW_REGISTER_ARGUMENT( HEIGHT, true, 1280, false, "H" )
 SW_REGISTER_ARGUMENT( VSYNC, false, false, false, )
 SW_REGISTER_ARGUMENT( DIRECTX_11, false, false, true, "dx11", "d3d11" )
 SW_REGISTER_ARGUMENT( DIRECTX_12, false, false, true, "dx12", "d3d12" )

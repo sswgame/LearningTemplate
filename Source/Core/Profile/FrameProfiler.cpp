@@ -21,10 +21,12 @@ namespace sw
                 std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() );
         }
 
+        // 이 둘은 report() 의 표 출력에만 쓰인다. 배포본에서는 SW_LOG_INFO 가 사라져 report()
+        // 본문이 통째로 빠지므로 여기도 같은 조건으로 묶는다 — 안 묶으면 쓰이지 않는 함수 경고가 난다.
+#if SW_LOG_LEVEL_COMPILED( 2 )
         /**
          * @brief 나노초를 마이크로초 정수로 바꿉니다.
-         * @details 로거 포맷은 `%#` 뿐이라 폭·정밀도 지정자가 없다. 실수로 찍으면 자릿수가 제각각이라
-         *          표가 어긋나므로 정수 us 로 고정한다.
+         * @details 실수로 찍으면 값마다 소수 자릿수가 달라져 표가 어긋난다. 정수 us 로 고정한다.
          */
         uint64 toMicros( uint64 nanos ) { return nanos / 1000; }
 
@@ -36,6 +38,7 @@ namespace sw
             while ( out.size() < width && out.size() + 1 < out.capacity() )
                 out.append( " " );
         }
+#endif
     } // namespace
 
     FrameProfiler& FrameProfiler::get()
@@ -127,8 +130,11 @@ namespace sw
         _frameCount.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void FrameProfiler::report( const utf8* pTitle ) const
+    void FrameProfiler::report( [[maybe_unused]] const utf8* pTitle ) const
     {
+        // 보고는 Info 로그로만 나간다. 배포본에서는 SW_LOG_INFO 가 사라지므로 아래 전부가 출력
+        // 없는 계산이 된다 — 구간을 다 돌고 평균까지 내고 버렸다. 로그가 컴파일될 때만 돈다.
+#if SW_LOG_LEVEL_COMPILED( 2 )
         const uint64 frames = _frameCount.load( std::memory_order_relaxed );
         if ( frames == 0 )
         {
@@ -159,6 +165,7 @@ namespace sw
                          nameCol.c_str(), avgUs, toMicros( scope._minNanos ), toMicros( scope._maxNanos ),
                          perFrameX10 / 10, perFrameX10 % 10 );
         }
+#endif
     }
 
     void FrameProfiler::reset()

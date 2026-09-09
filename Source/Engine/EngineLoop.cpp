@@ -386,6 +386,7 @@ namespace sw
             {
                 uint32 windowWidth  = pEngineConfig->_window._width;
                 uint32 windowHeight = pEngineConfig->_window._height;
+                // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
                 _commandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
                 _commandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
