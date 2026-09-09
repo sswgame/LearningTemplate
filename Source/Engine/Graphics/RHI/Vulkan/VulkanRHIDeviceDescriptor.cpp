@@ -396,7 +396,7 @@ namespace sw
                     if ( poolSet._bExhaustedLogged == 0 )
                     {
                         poolSet._bExhaustedLogged = 1;
-                        SW_LOG_ERROR( "슬롯 세트 풀 묶음이 상한(%# x %#)에 닿았습니다 — 이 버퍼의 나머지 드로우는 이전 세트로 그립니다.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
+                        SW_LOG_ERROR( "슬롯 세트 풀 묶음이 상한(%#×%#)에 닿았습니다 — 이 버퍼의 나머지 드로우는 이전 세트로 그립니다.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
                     }
                     return VK_NULL_HANDLE;
                 }

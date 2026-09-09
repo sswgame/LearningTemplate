@@ -67,7 +67,7 @@ namespace sw
         if ( _hWnd == nullptr )
             return false;
 
-        SW_LOG_INFO( "Native Win32 Window created successfully! (%#x%#)", width, height );
+        SW_LOG_INFO( "Native Win32 Window created successfully! (%#×%#)", width, height );
         return true;
     }
 

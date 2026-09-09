@@ -917,3 +917,40 @@ SW_TEST_CASE( Core_String, FormatStringLongTextSurvivesWidthSpec )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%6s]", "ab" );
     SW_EXPECT_STREQ( "[    ab]", buffer );
 }
+
+/**
+ * @brief [Core_String] `%#` 뒤 문자는 서식 지시자로 읽힌다 — 치수 로그가 걸린 덫
+ * @details `%#x%#` 를 "가로x세로" 로 읽으려는 실수가 저장소에 16곳 있었고, 전부 가로를
+ *          16진수로 찍고 있었다(1280 → 500). 공백도 플래그라 `%# x %#` 도 같은 결과다.
+ *          여기서 그 규약을 고정해 둔다 — 구분자로 쓸 수 있는 것과 없는 것을 같이 적는다.
+ */
+SW_TEST_CASE( Core_String, FormatSpecifierFollowsPlaceholder )
+{
+    utf8 buffer[128]{};
+
+    // 'x' 는 변환 문자다 — 리터럴이 아니라 16진수 지시자로 읽힌다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#x%#", 1280, 720 );
+    SW_EXPECT_STREQ( "500720", buffer );
+
+    // 공백은 플래그로 받지 않는다 — 뒤 단어의 첫 글자를 먹지 않아야 한다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# x %#", 1280, 720 );
+    SW_EXPECT_STREQ( "1280 x 720", buffer );
+
+    // 실제로 깨져 있던 문장들 — 첫 글자가 변환 문자인 단어가 뒤에 온다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# Passed, %# Failed", 3, 0 );
+    SW_EXPECT_STREQ( "3 Passed, 0 Failed", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# of %# slots", 5, 8 );
+    SW_EXPECT_STREQ( "5 of 8 slots", buffer );
+
+    // 변환 문자도 플래그도 아닌 구분자는 리터럴로 남는다 — 치수 로그는 이 형태를 쓴다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#Ã%#", 1280, 720 );
+    SW_EXPECT_STREQ( "1280Ã720", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "(%#, %#)", 1280, 720 );
+    SW_EXPECT_STREQ( "(1280, 720)", buffer );
+
+    // 의도된 16진수는 그대로 유효하다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "crc=%#x", 255 );
+    SW_EXPECT_STREQ( "crc=ff", buffer );
+}

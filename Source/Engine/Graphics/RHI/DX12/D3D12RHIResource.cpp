@@ -330,7 +330,7 @@ namespace sw
                                                                        resDesc.Height, resDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, static_cast<uint32>( resDesc.Width ), resDesc.Height, static_cast<uint32>( resDesc.MipLevels ) );
             return false;
         }

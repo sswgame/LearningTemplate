@@ -534,7 +534,7 @@ namespace sw
         _width  = width;
         _height = height;
         glViewport( 0, 0, static_cast<GLsizei>( width ), static_cast<GLsizei>( height ) );
-        SW_LOG_TRACE( "OpenGL RHI Resized to %# x %#", width, height );
+        SW_LOG_TRACE( "OpenGL RHI Resized to %#×%#", width, height );
     }
 
     bool OpenGLRHIDevice::bindGraphicsContext()

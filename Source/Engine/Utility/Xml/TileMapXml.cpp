@@ -155,7 +155,7 @@ namespace sw
             }
         }
 
-        SW_LOG_INFO( "Loaded '%#' (%#x%#) scene=%# role=%# encounters=%#",
+        SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%# encounters=%#",
                      _name, _width, _height, _scenePath, _role,
                      static_cast<uint32>( _listEncounterEntry.size() ) );
         return true;

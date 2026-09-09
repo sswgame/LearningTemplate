@@ -549,7 +549,7 @@ namespace sw
             SW_LOG_ERROR( "dumpTransientToPpm: 파일 쓰기 실패 (%#).", string( outFilePath ).c_str() );
             return false;
         }
-        SW_LOG_INFO( "Screenshot: '%#' %#x%# -> %#", string( attachmentName ).c_str(), layout._width, layout._height,
+        SW_LOG_INFO( "Screenshot: '%#' %#×%# -> %#", string( attachmentName ).c_str(), layout._width, layout._height,
                      string( outFilePath ).c_str() );
         return true;
     }

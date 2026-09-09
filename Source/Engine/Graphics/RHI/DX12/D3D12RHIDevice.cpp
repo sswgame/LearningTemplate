@@ -139,7 +139,7 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == 0 )
             {
                 _bOnlineHeapExhaustedLogged = 1;
-                SW_LOG_ERROR( "온라인 디스크립터 블록이 바닥났습니다 (%# x %#) — 이후 드로우는 직전 슬롯 테이블로 그립니다.",
+                SW_LOG_ERROR( "온라인 디스크립터 블록이 바닥났습니다 (%#×%#) — 이후 드로우는 직전 슬롯 테이블로 그립니다.",
                               kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
             return UINT32_MAX;

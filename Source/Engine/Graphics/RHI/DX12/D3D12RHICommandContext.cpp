@@ -307,7 +307,7 @@ namespace sw
                 if ( _pDevice->_bBlitMismatchLogged == 0 )
                 {
                     _pDevice->_bBlitMismatchLogged = 1;
-                    SW_LOG_ERROR( "blitTexture: CopyResource 불가 — src(fmt=%# %#x%#) dst(fmt=%# %#x%#). 복사를 건너뜁니다.",
+                    SW_LOG_ERROR( "blitTexture: CopyResource 불가 — src(fmt=%# %#×%#) dst(fmt=%# %#×%#). 복사를 건너뜁니다.",
                                   static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
                                   static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
                 }

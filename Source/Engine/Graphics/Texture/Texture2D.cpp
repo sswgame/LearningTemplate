@@ -104,7 +104,7 @@ namespace sw
         _handle                 = pResource->createTexture2D( desc );
         if ( _handle == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#x%#, %# mips)", relativePath.data(), desc._width, desc._height, desc._mipLevels );
+            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath.data(), desc._width, desc._height, desc._mipLevels );
             return false;
         }
 
@@ -135,7 +135,7 @@ namespace sw
         _height   = desc._height;
         _mipCount = desc._mipLevels;
         _format   = format;
-        SW_LOG_INFO( "Texture2D '%#' ready: %#x%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
+        SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
                      static_cast<uint32>( _format ), _srv );
         return true;
     }

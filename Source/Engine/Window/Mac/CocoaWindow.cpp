@@ -142,7 +142,7 @@ namespace sw
             _pCocoaDelegate = closeDelegate;
         }
 
-        SW_LOG_INFO( "Native Cocoa Window created successfully! (%#x%#)", width, height );
+        SW_LOG_INFO( "Native Cocoa Window created successfully! (%#×%#)", width, height );
         return true;
     }
 

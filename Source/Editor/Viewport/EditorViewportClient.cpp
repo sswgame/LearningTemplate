@@ -381,7 +381,7 @@ namespace sw::editor
         pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
 
         fixed_string<constant::kMaxBuffer32> arrRes;
-        formatstring( arrRes.data(), arrRes.capacity(), "Res: %#x%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
+        formatstring( arrRes.data(), arrRes.capacity(), "Res: %#×%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
                       Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
         pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
     }
@@ -415,7 +415,7 @@ namespace sw::editor
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
 
         const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                                MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                              MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
         const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
         EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
     }
@@ -514,7 +514,7 @@ namespace sw::editor
             const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
             const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
             const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                                   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                                  MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
             pCam->lookAt( _cameraPos + forward );
         }
     }
@@ -934,7 +934,7 @@ namespace sw::editor
         const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
         const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
-                               MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+                              MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
 
         _cameraPos = _orbitTarget - forward * _orbitDistance;
     }
@@ -1033,8 +1033,8 @@ namespace sw::editor
                 const float32 newPitchRad = MathUtil::toRadian( _cameraRot._x );
                 const float32 newYawRad   = MathUtil::toRadian( _cameraRot._y );
                 const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ),
-                                          -MathUtil::sin( newPitchRad ),
-                                          MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
+                                         -MathUtil::sin( newPitchRad ),
+                                         MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
                 _cameraPos = _orbitTarget - newForward * _orbitDistance;
             }
         }

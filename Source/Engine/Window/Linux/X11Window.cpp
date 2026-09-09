@@ -64,7 +64,7 @@ namespace sw
         _x11WmDelete  = wmDeleteMessage;
         _bShouldClose = SW_FALSE;
 
-        SW_LOG_INFO( "Native X11 Window created successfully! (%#x%#)", width, height );
+        SW_LOG_INFO( "Native X11 Window created successfully! (%#×%#)", width, height );
         return true;
     }
 

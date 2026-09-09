@@ -239,7 +239,7 @@ namespace sw
                                                                texDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#x%#, %# mips)",
+            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, texDesc.Width, texDesc.Height, texDesc.MipLevels );
             return false;
         }
@@ -350,7 +350,7 @@ namespace sw
 
         if ( FAILED( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ) ) )
         {
-            SW_LOG_ERROR( "Failed to create Texture2D (%#x%#).", desc._width, desc._height );
+            SW_LOG_ERROR( "Failed to create Texture2D (%#×%#).", desc._width, desc._height );
             return 0;
         }
 

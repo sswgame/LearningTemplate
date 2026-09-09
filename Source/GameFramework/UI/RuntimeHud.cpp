@@ -123,7 +123,7 @@ namespace sw
     {
         if ( _dialogue.empty() == false || _fadeAlpha > 0.01f )
         {
-            SW_LOG_TRACE( "rect=(%#,%# %#x%#) fade=%# dlg='%#' gauges=%#",
+            SW_LOG_TRACE( "rect=(%#,%# %#×%#) fade=%# dlg='%#' gauges=%#",
                           _screen._x, _screen._y, _screen._w, _screen._h,
                           _fadeAlpha, _dialogue, static_cast<int32>( _mapGauge.size() ) );
         }

@@ -187,7 +187,7 @@ namespace sw
         // 다시 부르므로 여기서는 조용히 물러난다.
         if ( extent.width == 0 || extent.height == 0 )
         {
-            SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#x%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
+            SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#×%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
                           extent.width, extent.height );
             return false;
         }

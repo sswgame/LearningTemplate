@@ -226,7 +226,7 @@ namespace sw
         frameCameras( pScene, side, kBenchSpacing );
 
         SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수). -gv_benchMeshVariants 로 바꾼다.", meshVariantCount );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#x%# 격자로 만들었습니다.",
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#×%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
     }
 
