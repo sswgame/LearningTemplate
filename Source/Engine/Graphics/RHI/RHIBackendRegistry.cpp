@@ -175,6 +175,23 @@ namespace sw
         return nullptr;
     }
 
+    string RHIBackendRegistry::describeRegisteredBackends() const
+    {
+        string result;
+        for ( const RHIBackendEntry& entry : _listEntry )
+        {
+            if ( entry._factory.isBound() == false )
+                continue;
+            if ( result.empty() == false )
+                result.append( ", " );
+            result.append( RHI::getBackendTypeName( entry._backend ) );
+        }
+
+        if ( result.empty() )
+            result.append( "(없음)" );
+        return result;
+    }
+
     unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
     {
 #if defined( SW_RHI_AS_MODULES )
@@ -184,7 +201,11 @@ namespace sw
         const RHIBackendEntry* pEntry = findBackend( backend );
         if ( pEntry == nullptr || pEntry->_factory.isBound() == false )
         {
-            SW_LOG_ERROR( "No factory registered for backend %#", static_cast<int32>( backend ) );
+            // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
+            // 없다. 배포본은 SW_RHI_TARGET_* 로 고른 백엔드 **하나만** 링크하므로, 무엇이 있는지
+            // 같이 알려 준다.
+            SW_LOG_ERROR( "%# 백엔드는 이 빌드에 없습니다. 사용 가능: %#",
+                          RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );
             return nullptr;
         }
         if ( RHIAvailability::isAvailable( backend ) == false )

@@ -3,9 +3,9 @@
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/String/TagID.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 

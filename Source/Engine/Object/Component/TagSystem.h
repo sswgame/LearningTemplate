@@ -1,88 +1,24 @@
 /**
  * @file TagSystem.h
- * @brief 태그 ID·계층·컨테이너 API
+ * @brief 태그 집합·질의 API (`TagID` 자체는 `Core/String/TagID.h`).
+ *
+ * @details 여기 남은 것은 **리플렉션이 필요한 것들**이다 — `PROPERTY` 로 직렬화되는 태그 집합
+ *          (`TagContainer`)과 질의(`TagQuery`). `TagID` 는 Core 기능만 쓰는 값 타입이라
+ *          `Core/String/TagID.h` 로 내렸다(이유는 그 파일의 @note 참고).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/TagID.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) TagID — intern된 문자열 + 해시, 점 계층 (parent.child)
-    // ------------------------------------------------------------------------------
-    struct SW_API TagID
-    {
-        uint64      _id{ 0 };
-        const utf8* _pString{ nullptr }; ///< 태그 문자열 (리터럴 또는 intern된 문자열)
-
-        /** @brief 빈 태그입니다. */
-        constexpr TagID() = default;
-        /** @brief ID와 문자열로 태그를 만듭니다. */
-        constexpr TagID( uint64 id, const utf8* pStr = nullptr )
-            : _id{ id }
-            , _pString{ pStr } {}
-
-        /** @brief ID가 같은지 비교합니다. */
-        constexpr bool operator==( const TagID& other ) const { return _id == other._id; }
-        /** @brief ID가 다른지 비교합니다. */
-        constexpr bool operator!=( const TagID& other ) const { return _id != other._id; }
-        /** @brief ID 오름차순으로 비교합니다. */
-        constexpr bool operator<( const TagID& other ) const { return _id < other._id; }
-
-        /** @brief 유효한 태그인지 반환합니다. */
-        constexpr bool isValid() const { return _id != 0; }
-
-        /** @brief 태그의 문자열을 반환합니다 (레지스트리 역조회 포함). */
-        const utf8* getString() const;
-
-        /** @brief parentTag가 자신과 같거나 조상 체인에 있으면 true */
-        bool isSubtagOf( const TagID& parentTag ) const
-        {
-            if ( _id == parentTag._id )
-                return true;
-
-            const utf8* pSource = getString();
-            const utf8* pParent = parentTag.getString();
-            if ( pSource == nullptr || pParent == nullptr )
-                return false;
-
-            while ( *pParent != '\0' )
-            {
-                if ( *pSource != *pParent )
-                    return false;
-                ++pSource;
-                ++pParent;
-            }
-            return *pSource == '.';
-        }
-
-        /** @brief 런타임에 태그를 만들거나 가져옵니다 (문자열 intern). */
-        static TagID request( string_view str );
-    };
-
-    // ------------------------------------------------------------------------------
-    // 2) intern — 런타임은 TagID::request, 리터럴은 ""_tag
-    // ------------------------------------------------------------------------------
-    /** @brief 리터럴에서 컴파일 타임 태그를 만듭니다. */
-    constexpr TagID operator""_tag( const utf8* pStr, size_t len )
-    {
-        uint64 hash = StringUtil::kOffset64;
-
-        for ( size_t charIndex = 0; charIndex < len; ++charIndex )
-        {
-            hash = ( hash ^ static_cast<uint64>( pStr[charIndex] ) ) * StringUtil::kPrime64;
-        }
-
-        return TagID( hash, pStr );
-    }
-
-    // ------------------------------------------------------------------------------
-    // 3) TagContainer — GameObject에 붙는 태그 집합
+    // 1) TagContainer — GameObject에 붙는 태그 집합
     // ------------------------------------------------------------------------------
     REFLECT()
     class SW_API TagContainer
@@ -130,7 +66,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) TagQuery & TagQueryExpr — 복합 불리언 AST 질의 표현식 시스템
+    // 2) TagQuery & TagQueryExpr — 복합 불리언 AST 질의 표현식 시스템
     // ------------------------------------------------------------------------------
     enum class TagQueryExprType : uint8
     {

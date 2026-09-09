@@ -6,8 +6,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ComponentHandle.h"
 
-#include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw

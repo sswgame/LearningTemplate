@@ -46,6 +46,13 @@ namespace sw
         /** @brief 등록된 백엔드 항목을 찾습니다. */
         const RHIBackendEntry* findBackend( RHIBackend backend ) const;
 
+        /**
+         * @brief 지금 등록된 백엔드 이름을 쉼표로 이어 돌려줍니다 (오류 메시지용).
+         * @details 배포본은 `SW_RHI_TARGET_*` 로 고른 **하나만** 링크한다. 요청한 백엔드가 없을 때
+         *          무엇이 있는지 같이 알려 주지 않으면, 설정 파일을 고친 사람이 원인을 알 수 없다.
+         */
+        string describeRegisteredBackends() const;
+
         /** @brief 등록된 팩토리로 IRHIDevice를 만듭니다. */
         unique_ptr<IRHIDevice> createDevice( RHIBackend backend ) const;
 

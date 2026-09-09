@@ -81,41 +81,48 @@ _kRootLayerName = "<root>"
 # ------------------------------------------------------------------------------
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다. 같은 티어끼리는 서로 참조해도 된다.
 #
-# 이 표는 include 그래프를 Tarjan SCC 로 줄여 위상 정렬해서 얻었다. 손으로 고른 순서가 아니다.
+# 이 표는 include 그래프를 Tarjan SCC 로 줄여 위상 정렬해서 얻었다. 손으로 고른 순서가 아니므로,
+# 코드가 바뀌면 표도 다시 계산해야 한다.
 #
-# **티어 2 의 열 폴더는 하나의 강결합 묶음이다.** Config·Graphics·Module·Object·Reflection·
-# Resource·Scene·Sequencer·Serialization·Window 이 서로 도달 가능하다(씬이 에셋을 읽고,
-# 컴포넌트가 머티리얼을 들고, 리플렉션이 직렬화를 부르고, 핫리로드가 씬의 TypeInfo 를 다시
-# 묶는다). 그 안에는 지킬 수 있는 순서가 없으므로 **순서를 주장하지 않는다** — 묶음을 풀어내는
-# 일과 측정된 엣지 수는 docs/06_Backlog.md 에 적혀 있다. 거짓인 순서를 문서에 남겨 두는 것보다
-# 참인 경계를 검사하는 편이 낫다.
+# **티어 4 의 일곱 폴더는 하나의 강결합 묶음이다.** Graphics·Module·Object·Resource·Scene·
+# Sequencer·Window 이 서로 도달 가능하다(씬이 에셋을 읽고, 컴포넌트가 머티리얼을 들고, 핫리로드가
+# 씬의 TypeInfo 를 다시 묶고, 그래픽스가 스왑체인 때문에 창을 안다). 그 안에는 지킬 수 있는
+# 순서가 없으므로 순서를 주장하지 않는다 — 남은 엣지와 푸는 순서는 docs/06_Backlog.md 에 있다.
+#
+# 예전에는 이 묶음이 **열 개**였다. Reflection·Serialization·Config 가 끌려 들어가 있었고, 원인은
+# 세 줄이었다: 직렬화기가 TagID·ComponentHandle 때문에 Object 를 include 했고(두 타입 모두
+# Core 기능만 쓰는 값 타입인데 Object/Component/ 에 있었다), Reflection 이 ReflectAny·Rpc 의
+# 인코딩 때문에 Serialization 을 include 했고, EngineConfig 가 RHIBackend 이름 하나 때문에
+# RHITypes.h(732줄) 전체를 끌어왔다.
 # ------------------------------------------------------------------------------
 _kEngineTier: dict[str, int] = {
     # 0: 토대 — Engine 의 어느 것도 참조하지 않는다.
     "Common": 0,
+    "Physics": 0,
     "Utility": 0,
-    # 1: 코어가 쓰는 잎 서브시스템 — 코어를 거꾸로 참조하지 않는다.
+    # 1: 리플렉션과, 코어가 쓰는 잎 서브시스템.
     "Animation": 1,
     "Audio": 1,
     "Localization": 1,
-    "Physics": 1,
+    "Reflection": 1,
     "Spatial": 1,
-    # 2: 코어 묶음 (강결합). 내부 순서는 없다.
-    "Config": 2,
-    "Graphics": 2,
-    "Module": 2,
-    "Object": 2,
-    "Reflection": 2,
-    "Resource": 2,
-    "Scene": 2,
-    "Sequencer": 2,
+    # 2: 리플렉션 위에 올라가는 직렬화.
+    "Dialogue": 2,
     "Serialization": 2,
-    "Window": 2,
-    # 3: 코어 위에 올라가는 것.
-    "Dialogue": 3,
-    "Input": 3,
-    # 4: 전부를 엮는 자리.
-    _kRootLayerName: 4,
+    # 3: 설정 — 리플렉션·직렬화로 읽히고, 코어가 읽는다.
+    "Config": 3,
+    # 4: 코어 묶음 (강결합). 내부 순서는 없다.
+    "Graphics": 4,
+    "Module": 4,
+    "Object": 4,
+    "Resource": 4,
+    "Scene": 4,
+    "Sequencer": 4,
+    "Window": 4,
+    # 5: 코어 위에 올라가는 것.
+    "Input": 5,
+    # 6: 전부를 엮는 자리.
+    _kRootLayerName: 6,
 }
 
 # 티어가 아니라 **prelude·경로 헬퍼**인 헤더. 어느 티어에서 include 해도 된다.

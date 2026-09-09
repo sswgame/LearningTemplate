@@ -12,18 +12,32 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
-| 0 | `Common` · `Utility` | 토대. Engine 의 어느 것도 참조하지 않는다. |
-| 1 | `Animation` · `Audio` · `Localization` · `Physics` · `Spatial` | 코어가 쓰는 잎 서브시스템. 코어를 거꾸로 참조하지 않는다. |
-| 2 | `Config` · `Graphics` · `Module` · `Object` · `Reflection` · `Resource` · `Scene` · `Sequencer` · `Serialization` · `Window` | **코어 묶음 — 강결합이다. 내부 순서는 없다.** |
-| 3 | `Dialogue` · `Input` | 코어 위에 올라가는 것. |
-| 4 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
+| 0 | `Common` · `Physics` · `Utility` | 토대. Engine 의 어느 것도 참조하지 않는다. |
+| 1 | `Reflection` · `Animation` · `Audio` · `Localization` · `Spatial` | 리플렉션과, 코어가 쓰는 잎 서브시스템. |
+| 2 | `Serialization` · `Dialogue` | 리플렉션 위에 올라가는 직렬화. |
+| 3 | `Config` | 리플렉션·직렬화로 읽히고, 코어가 읽는다. |
+| 4 | `Graphics` · `Module` · `Object` · `Resource` · `Scene` · `Sequencer` · `Window` | **코어 묶음 — 강결합이다. 내부 순서는 없다.** |
+| 5 | `Input` | 코어 위에 올라가는 것. |
+| 6 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
-**티어 2 는 하나의 강결합 묶음입니다.** 열 폴더가 서로 도달 가능합니다 — 씬이 에셋을 읽고,
-컴포넌트가 머티리얼을 들고, 리플렉션이 직렬화를 부르고, 핫리로드가 씬의 TypeInfo 를 다시
-묶습니다. 그러니 "Reflection 이 Object 보다 아래" 같은 **내부 순서를 주장하지 않습니다.**
-거짓인 순서를 문서에 적어 두는 것보다, 참인 경계(티어 간 방향)를 검사하는 편이 낫습니다.
-묶음을 풀어내는 일은 [docs/06_Backlog.md](../../docs/06_Backlog.md) 에 측정된 엣지 수와 함께
-적혀 있습니다.
+**티어 4 는 하나의 강결합 묶음입니다.** 일곱 폴더가 서로 도달 가능합니다 — 씬이 에셋을 읽고,
+컴포넌트가 머티리얼을 들고, 핫리로드가 씬의 TypeInfo 를 다시 묶고, 그래픽스가 스왑체인 때문에
+창을 압니다. 그러니 그 안의 **내부 순서를 주장하지 않습니다.** 거짓인 순서를 문서에 적어 두는
+것보다, 참인 경계(티어 간 방향)를 검사하는 편이 낫습니다. 남은 엣지와 푸는 순서는
+[docs/06_Backlog.md](../../docs/06_Backlog.md) 에 있습니다.
+
+> 이 묶음은 **열 개였습니다.** `Reflection`·`Serialization`·`Config` 가 끌려 들어가 있었고,
+> 원인은 세 줄이었습니다.
+>
+> - 직렬화기가 `TagID`·`ComponentHandle` 때문에 `Object` 를 include 했습니다. 두 타입 모두
+>   **Core 기능만 쓰는 값 타입**인데 `Object/Component/` 에 있었습니다 → `Core/String/TagID.h`,
+>   `Core/Container/ComponentHandle.h` 로 내렸습니다(후자는 형제 `ObjectHandle` 옆입니다).
+> - `Reflection` 이 `ReflectAny`·`Rpc` 의 **인코딩** 때문에 `Serialization` 을 include 했습니다
+>   → 규칙 하나로 정리했습니다: **리플렉션 타입의 인코딩은 Serialization 이 갖는다**
+>   (`SerializeReflectAny.cpp`, `SerializeReflectionRpc.cpp`). 선언은 Reflection 에 남습니다.
+> - `EngineConfig` 가 `RHIBackend` **이름 하나** 때문에 `RHITypes.h`(732줄, 44개 타입)를 전부
+>   끌어왔습니다 → `Config/RHIBackendType.h` 로 옮겼습니다. "어느 백엔드를 쓰는가" 는 설정값이고,
+>   `Graphics` 는 이미 `Config` 를 참조합니다.
 
 티어가 아닌 것이 둘 있습니다. 검사도 이 둘을 예외로 둡니다.
 

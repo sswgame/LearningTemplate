@@ -498,12 +498,18 @@ namespace sw
                 _frameRenderer->shutdown();
             if ( _rhi != nullptr )
             {
-                if ( _resourceManager != nullptr && _rhi->getDevice().getNativeDevice() != nullptr )
+                // 디바이스 생성이 실패하면 RHI 객체는 있어도 **디바이스가 없다**. getDevice() 는
+                // 널 참조 역참조이므로 hasDevice() 로 먼저 막는다 — 이게 없어서 "요청한 백엔드가
+                // 이 빌드에 없다" 라는 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝났다.
+                if ( _rhi->hasDevice() )
                 {
-                    _resourceManager->getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
-                    _resourceManager->getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
+                    if ( _resourceManager != nullptr && _rhi->getDevice().getNativeDevice() != nullptr )
+                    {
+                        _resourceManager->getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
+                        _resourceManager->getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
+                    }
+                    _rhi->getDevice().waitIdle();
                 }
-                _rhi->getDevice().waitIdle();
                 _rhi->shutdown();
             }
         }

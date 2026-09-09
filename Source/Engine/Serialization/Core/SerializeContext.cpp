@@ -3,15 +3,16 @@
 #include "Engine/Serialization/Core/SerializeContext.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/TagID.h"
 
-#include "Engine/Object/Component/ComponentHandle.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
+#include "Engine/Serialization/Core/SerializeReflectAny.h"
 
 namespace sw
 {

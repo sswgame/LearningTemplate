@@ -1,6 +1,11 @@
 /**
  * @file ReflectAny.h
  * @brief 다형 REFLECT 값용 타입 태그 바이너리 블롭 (SerializeReference 스타일).
+ *
+ * @note `makeFrom` / `tryGetFrom` 의 **정의는 여기 없다** —
+ *       `Engine/Serialization/Core/SerializeReflectAny.cpp` 에 있다. 바이트를 어떻게 채우는지는
+ *       BinarySerializer 의 규약이고, Reflection 이 Serialization 을 참조하면 둘이 서로를
+ *       참조하는 순환이 된다(그 이유는 해당 파일의 헤더 주석 참고).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -9,8 +14,6 @@
 namespace sw
 {
     struct TypeInfo;
-
-    class SerializeContext;
 
     /**
      * @brief 리플렉트 값을 (typeFqn + BinarySerializer 페이로드)로 저장합니다.
@@ -61,6 +64,4 @@ namespace sw
         }
     };
 
-    /** @brief SerializeContext에 ReflectAny 텍스트/바이너리 핸들러를 등록합니다. */
-    SW_API void registerReflectAnyHandlers( SerializeContext& ctx );
 } // namespace sw

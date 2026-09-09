@@ -9,6 +9,7 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -42,19 +43,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 백엔드 · 포맷 — API 종류, ImGui Vulkan 핸들, 픽셀 포맷
     // ------------------------------------------------------------------------------
-    /**
-     * @enum RHIBackend
-     * @brief 엔진이 지원하는 크로스 플랫폼 Graphics API
-     */
-    ENUM()
-    enum class RHIBackend : uint32
-    {
-        DirectX11 = 0, ///< Direct3D 11
-        DirectX12 = 1, ///< Direct3D 12 (Bindless)
-        Vulkan    = 2, ///< Vulkan 1.3 (Bindless)
-        OpenGL    = 3, ///< OpenGL 4.5+
-    };
-
     /**
      * @enum RHIFormat
      * @brief 텍스처·렌더 타깃·픽셀 데이터 포맷

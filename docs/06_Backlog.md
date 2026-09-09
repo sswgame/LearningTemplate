@@ -131,6 +131,16 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+**요청한 "나머지 문제" 처리 — Engine 강결합 해체 (10 → 7)**
+자세한 내용은 아래 3절의 해당 항목과 `Source/Engine/README.md` 의 티어 표에 있다.
+부수로 드러난 버그 둘도 같이 고쳤다:
+- **초기화 실패 경로가 SEGFAULT 로 끝났다.** 요청한 백엔드가 이 빌드에 없으면
+  `RHI` 객체는 생기지만 디바이스가 없는데, `EngineLoop::shutdown` 이 `hasDevice()` 검사 없이
+  `getDevice()` 를 역참조했다. 설정에 `DirectX11` 을 적은 Shipping 빌드(DX12 전용)에서 재현되고,
+  Debug 에서도 `RHI_DX11.dll` 을 숨기면 같다. 이제 정상 종료(`main` 의 `return -1`)한다.
+- **그 오류 메시지가 `No factory registered for backend 0` 이었다.** 설정 파일을 고친 사람이
+  원인을 알 수 없다 → `DirectX11 백엔드는 이 빌드에 없습니다. 사용 가능: DirectX12`.
+
 **폴더 개편 중에 드러난 실제 버그 셋** (각각 별도 커밋)
 - `formatstring` 이 공백을 플래그로 받아 `%#` 뒤 단어의 첫 글자를 먹고 있었다. 테스트 요약이
   `0ailed`, `%# of %#` 는 8진수, `%# present` 는 16진수 — 해당 로그가 82곳. 호출부가 아니라
@@ -237,7 +247,28 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 예전에는 손으로 고른 네 쌍(`Utility->Graphics` 등)만 **경고로 찍고 실패시키지 않았다**.
 지금은 include 그래프를 Tarjan SCC 로 줄여 얻은 티어 표를 쓰고, 위반은 실패다.
 
-> ### Engine 코어 열 폴더는 하나의 강결합 묶음이다 — 남은 큰 일
+> ### Engine 코어 묶음 — 열에서 일곱으로 줄였다 (남은 것은 컴포넌트 모델 설계)
+>
+> **해결:** `Reflection`·`Serialization`·`Config` 가 묶음에서 빠졌다. 원인은 세 줄이었다.
+>
+> - 직렬화기가 `TagID`·`ComponentHandle` 때문에 `Object` 를 include 했다. 두 타입 모두 **Core
+>   기능만 쓰는 값 타입**인데 `Object/Component/` 에 분류되어 있었다 → `Core/String/TagID.h`,
+>   `Core/Container/ComponentHandle.h`(형제 `ObjectHandle` 옆). 이 엣지 하나로 10→8 이 됐다.
+> - `Reflection` 이 `ReflectAny`·`Rpc` 의 **인코딩** 때문에 `Serialization` 을 include 했다 →
+>   규칙 하나로 정리: **리플렉션 타입의 인코딩은 Serialization 이 갖는다**
+>   (`SerializeReflectAny.cpp`, `SerializeReflectionRpc.cpp`). 선언은 Reflection 에 남는다.
+> - `EngineConfig` 가 `RHIBackend` **이름 하나** 때문에 `RHITypes.h`(732줄)를 전부 끌어왔다 →
+>   `Config/RHIBackendType.h`. "어느 백엔드를 쓰는가" 는 설정값이고 `Graphics` 는 이미 `Config` 를
+>   참조한다(14곳). 8→7.
+>
+> 이제 아래 절반이 **완전히 정렬**된다: Common/Physics/Utility → Reflection → Serialization →
+> Config → 코어 7 → Input → 루트. `CheckEngineLayers` 의 티어 표를 그대로 갱신했고 위반은 0이다
+> (음성 테스트로 잡히는 것도 확인했다).
+>
+> **남은 7 묶음은 성격이 다르다** — 컴포넌트가 머티리얼을 들고 씬이 에셋을 읽는 것은 컴포넌트
+> 모델 자체의 설계다. 측정된 엣지:
+
+> ### (옛 측정) Engine 코어 열 폴더는 하나의 강결합 묶음이다
 >
 > `Config` `Graphics` `Module` `Object` `Reflection` `Resource` `Scene` `Sequencer`
 > `Serialization` `Window` 이 서로 도달 가능하다. README 가 주장했던 5단 순서는 **사실이

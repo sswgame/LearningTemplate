@@ -1,6 +1,10 @@
 /**
  * @file ReflectionRpc.h
  * @brief FUNCTION 호출을 Binary 봉투로 로컬 pack/unpack (네트워크 전송은 별도)
+ *
+ * @note 구현은 `Engine/Serialization/Core/SerializeReflectionRpc.cpp` 에 있다. 인자 마샬링은
+ *       BinarySerializer 의 규약이고, Reflection 이 Serialization 을 참조하면 둘이 서로를
+ *       참조하는 순환이 된다.
  */
 #pragma once
 #include "Core/Task/TaskTypes.h"

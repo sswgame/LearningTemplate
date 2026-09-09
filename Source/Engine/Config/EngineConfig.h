@@ -4,7 +4,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Config/IConfig.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

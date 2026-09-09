@@ -1,10 +1,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
-
-#include "Engine/Object/Component/ComponentHandle.h"
 
 namespace sw
 {
