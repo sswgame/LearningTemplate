@@ -53,5 +53,31 @@ namespace sw::editor
         static void snapTranslationToSurface( GameObject* pObj, float3& translation, float32 scaleY );
         /** @brief 전/후 스냅샷으로 Undo를 기록합니다. */
         static void commitModify( GameObject* pObj, string_view beforeXml, string_view undoLabel );
+
+        /** @brief 씬 통계 한 줄 — 컴포넌트 타입 이름과 그 인스턴스 수. */
+        struct ComponentDistributionRow
+        {
+            string _typeName;
+            uint32 _instanceCount{ 0 };
+        };
+
+        /** @brief 씬 전체 집계. 행은 인스턴스 수 내림차순, 같으면 이름 오름차순이다. */
+        struct SceneStatistics
+        {
+            uint32                           _objectCount{ 0 };
+            uint32                           _rootCount{ 0 };
+            uint32                           _componentCount{ 0 };
+            vector<ComponentDistributionRow> _listDistribution;
+        };
+
+        /**
+         * @brief 씬의 오브젝트·컴포넌트를 세고 타입별 분포를 만듭니다.
+         * @details 예전에는 ProfilerPanel 이 타입 **이름 5개를 손으로 나열**하고 `getComponent<T>()`
+         *          로 각각 셌다. 그래서 (1) 게임이 만든 컴포넌트는 표에 아예 안 나오고,
+         *          (2) 한 오브젝트에 같은 타입이 여럿이어도 1 로 세서 "Active Instances" 라는 열
+         *          이름과 맞지 않았다. 리플렉션 TypeInfo 로 묶으면 둘 다 해결되고, 엔진이 컴포넌트를
+         *          늘릴 때 패널을 고칠 필요가 없다.
+         */
+        static SceneStatistics collectSceneStatistics( GameObjectManager* pManager );
     };
 } // namespace sw::editor

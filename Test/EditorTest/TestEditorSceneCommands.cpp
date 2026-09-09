@@ -85,3 +85,62 @@ SW_TEST_CASE( EditorSceneCommandsTest, ApplyTransformAndSnapshotSafety )
     EditorSceneCommands::applyLocalTransform( nullptr, targetPos, targetRot, targetScale );
     SW_EXPECT_TRUE( EditorSceneCommands::captureSnapshot( nullptr ).empty() );
 }
+
+/**
+ * @brief [EditorSceneCommandsTest] 컴포넌트 분포는 리플렉션으로 세고 인스턴스 단위로 센다
+ * @details 예전에는 ProfilerPanel 이 타입 이름 5개를 손으로 나열하고 `getComponent<T>()` 로 셌다.
+ *          그래서 (1) 게임이 만든 컴포넌트는 표에 안 나왔고, (2) 한 오브젝트에 같은 타입이 여럿이어도
+ *          1 로 세서 "Active Instances" 라는 열 이름과 맞지 않았다. 그 두 가지를 여기서 고정한다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstance )
+{
+    GameObjectManager manager;
+
+    // 빈 씬 — 0 이어야 하고 분포는 비어 있어야 한다.
+    const EditorSceneCommands::SceneStatistics emptyStats = EditorSceneCommands::collectSceneStatistics( &manager );
+    SW_EXPECT_EQUAL( 0u, emptyStats._objectCount );
+    SW_EXPECT_EQUAL( 0u, emptyStats._componentCount );
+    SW_EXPECT_TRUE( emptyStats._listDistribution.empty() );
+
+    // nullptr 도 안전해야 한다 (패널이 씬 없이 부를 수 있다).
+    const EditorSceneCommands::SceneStatistics nullStats = EditorSceneCommands::collectSceneStatistics( nullptr );
+    SW_EXPECT_EQUAL( 0u, nullStats._objectCount );
+
+    GameObject* pRoot  = manager.createGameObject( hashed_string( "Root" ) );
+    GameObject* pChild = manager.createGameObject( hashed_string( "Child" ) );
+    SW_ASSERT_NOT_NULL( pRoot );
+    SW_ASSERT_NOT_NULL( pChild );
+
+    SceneComponent* pRootScene  = pRoot->addComponent<SceneComponent>();
+    SceneComponent* pChildScene = pChild->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRootScene );
+    SW_ASSERT_NOT_NULL( pChildScene );
+
+    // 같은 타입을 한 오브젝트에 둘 붙인다 — 예전 방식이라면 1 로 셌을 자리다.
+    SceneComponent* pExtraScene = pRoot->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pExtraScene );
+
+    const EditorSceneCommands::SceneStatistics stats = EditorSceneCommands::collectSceneStatistics( &manager );
+
+    SW_EXPECT_EQUAL( 2u, stats._objectCount );
+    SW_EXPECT_EQUAL( 3u, stats._componentCount );
+    SW_ASSERT_TRUE( stats._listDistribution.empty() == false );
+
+    // 분포는 타입 이름으로 묶이고, 인스턴스 수(3)가 오브젝트 수(2)가 아니어야 한다.
+    uint32 sceneComponentCount = 0;
+    for ( const EditorSceneCommands::ComponentDistributionRow& row : stats._listDistribution )
+    {
+        if ( row._typeName == "SceneComponent" )
+            sceneComponentCount = row._instanceCount;
+    }
+    SW_EXPECT_EQUAL( 3u, sceneComponentCount );
+
+    // 많은 것부터 정렬된다 (같으면 이름순).
+    for ( size_t index = 1; index < stats._listDistribution.size(); ++index )
+    {
+        const EditorSceneCommands::ComponentDistributionRow& prev = stats._listDistribution[index - 1];
+        const EditorSceneCommands::ComponentDistributionRow& cur  = stats._listDistribution[index];
+        SW_EXPECT_TRUE( prev._instanceCount > cur._instanceCount ||
+                        ( prev._instanceCount == cur._instanceCount && prev._typeName <= cur._typeName ) );
+    }
+}

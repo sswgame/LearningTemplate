@@ -324,4 +324,55 @@ namespace sw::editor
         const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
         EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, undoLabel );
     }
+
+    EditorSceneCommands::SceneStatistics EditorSceneCommands::collectSceneStatistics( GameObjectManager* pManager )
+    {
+        SceneStatistics stats{};
+        if ( pManager == nullptr )
+            return stats;
+
+        // 타입 이름 → 인스턴스 수. 이름으로 묶으므로 등록된 어떤 컴포넌트든(게임·키트 것 포함) 잡힌다.
+        map<string, uint32> mapTypeToCount;
+
+        pManager->forEachGameObject( [&]( GameObject* pObj )
+        {
+            if ( pObj == nullptr )
+                return;
+
+            ++stats._objectCount;
+            if ( pObj->getParent() == nullptr )
+                ++stats._rootCount;
+
+            pObj->forEachComponent( [&]( Component* pComp )
+            {
+                if ( pComp == nullptr )
+                    return;
+
+                ++stats._componentCount;
+
+                const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+                if ( pTypeInfo == nullptr )
+                    return;
+
+                // 인스턴스마다 센다 — 한 오브젝트에 같은 타입이 여럿이면 그 수만큼이다.
+                ++mapTypeToCount[string{ pTypeInfo->_name.c_str() }];
+            } );
+        } );
+
+        stats._listDistribution.reserve( mapTypeToCount.size() );
+        for ( const auto& [typeName, count] : mapTypeToCount )
+            stats._listDistribution.push_back( ComponentDistributionRow{ typeName, count } );
+
+        // 많은 것부터 보여 주는 편이 읽기 쉽다. 수가 같으면 이름순으로 안정화한다.
+        std::sort( stats._listDistribution.begin(), stats._listDistribution.end(),
+                   []( const ComponentDistributionRow& lhs, const ComponentDistributionRow& rhs )
+        {
+            if ( lhs._instanceCount != rhs._instanceCount )
+                return lhs._instanceCount > rhs._instanceCount;
+            return lhs._typeName < rhs._typeName;
+        } );
+
+        return stats;
+    }
+
 } // namespace sw::editor

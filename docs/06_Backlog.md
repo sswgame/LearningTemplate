@@ -63,6 +63,25 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **진행 중**
 
+> **2026-09-09 측정 결과 — 표의 전제가 일부 틀렸다.** 세 패널이 "툴바 → 검색 → 목록/표 → 상태줄"
+> 이라는 같은 뼈대를 쓴다고 적어 두었지만, `ProfilerPanel` 은 **목록 패널이 아니다** — 탭 +
+> `CollapsingHeader` + 통계표다. 검색도 목록도 상태줄도 없다. 그래서 `EditorListPanel` 골격(1-2)을
+> 만들어도 이 패널의 94개 호출은 줄지 않는다. 골격을 만들기 전에 나머지 패널도 실제 모양을
+> 확인해야 한다(지금 표는 호출 수만 세었다).
+>
+> 대신 `ProfilerPanel` 에서 **다른 종류의 문제**를 찾아 고쳤다 — `HierarchyPanel` 뱃지와 같은
+> 패턴이다. 컴포넌트 분포표가 타입 이름 5개(`SceneComponent`·`MeshComponent`·`SpriteComponent`·
+> `BoxCollider2DComponent`·`CameraComponent`)를 손으로 나열하고 `getComponent<T>()` 로 각각 셌다.
+> 결과: 게임이 만든 컴포넌트는 표에 **아예 안 나오고**, 한 오브젝트에 같은 타입이 여럿이어도 1 로
+> 세서 "Active Instances" 라는 열 이름과 맞지 않았다. 집계를 `EditorSceneCommands::
+> collectSceneStatistics` 로 옮기고(ImGui 무의존 → 테스트 있음) 리플렉션 `TypeInfo` 로 묶는다.
+> 표 코드 25줄이 루프 하나가 되고, 엔진·게임이 컴포넌트를 늘릴 때 이 패널을 고칠 일이 없다.
+>
+> **검증에서 배운 것**: `-gv_editorPanelDump` 의 정점 수는 **클리핑된 내용을 구분하지 못한다.**
+> Profiler 패널은 기본 레이아웃에서 높이 139px 이라 분포표가 화면 밖이고, 변경 전후 정점 수가
+> 똑같이 1028 이었다. 그려지는 코드는 실행되지만 픽셀은 확인되지 않는다 — 그래서 집계 쪽에
+> 단위 테스트를 붙였다. 도구는 "패널이 비었는가" 를 잡고, "표 내용이 맞는가" 는 테스트가 잡는다.
+
 공용 위젯은 이미 충분하다(`Common/Widgets/EditorWidgets.h` 27개 +
 `Common/Gui/EditorChrome.h` 12개). 문제는 **채택률**이다.
 
@@ -98,20 +117,73 @@ Inspector 3 · Material 1 · Profiler 3).
 
 범위가 넓고 검증이 실기동뿐이므로 **한 패널씩 옮기고 매번 실기동 확인**한다.
 
-### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
+### 1-3. GL 컨텍스트 소유권에 중재자가 없다 — `-gl -EnableEditor` 에러 3건
+
+**증상.** `-gl -EnableEditor` 로 띄우면 매번 에러 3건이 난다(기능은 돈다 — 패널 14개, 빈 패널 0개,
+종료 코드 0). GL 외 백엔드는 0건이다.
+
+```
+[RHI] [OpenGL] [Error] - bindGraphicsContext wglMakeCurrent failed (err=170)   ← ERROR_BUSY
+[RHI] [OpenGL] [Error] - bindGraphicsContext wglMakeCurrent failed (err=170)
+[Editor] [ImGuiOpenGL] [Error] - Failed to resolve GL texture for RHI handle ...
+```
+
+**원인 (스레드 ID 를 찍어 확정했다).** GL 디바이스는 `requiresExclusiveContextThread()==true` 다 —
+컨텍스트는 한 스레드만 가질 수 있다. 관측된 순서:
+
+```
+CLEAR tid=22008(UI)  → OK tid=22008 ...   UI 스레드가 디바이스·에디터를 초기화하며 쥔다
+CLEAR tid=22008                            RenderThread::start 가 UI 쪽을 놓는다
+OK    tid=9652(워커) → CLEAR tid=9652      워커가 프레임마다 쥐고 놓는다
+FAIL  tid=22008 err=170                    ← UI 가 프레임 **도중**에 가로채려다 실패
+FAIL  tid=22008 err=170
+OK    tid=9652                             워커가 다시 쥔다
+```
+
+**UI 스레드에서 GL 컨텍스트를 요구하는 경로가 둘이다** — 그래서 한 줄로 못 고친다.
+1. `ImGuiOpenGLRendererBackend::initialize/shutdown` 이 `ImGui_ImplOpenGL3_Init/Shutdown`(GPU 작업)을
+   UI 스레드에서 하면서 스스로 `bindGraphicsContext()` 를 부른다. 이 백엔드는
+   `requiresRenderThreadContext()==true` 를 선언하는데, `ImGuiEditor` 는 그 선언을 **프레임 작업에만**
+   반영하고 `initialize`/`shutdown` 에는 반영하지 않는다.
+2. `OpenGLRHICommandList` 가 기록 스레드에서 `bindGraphicsContext()` 를 부른다 — 태스크 워커나
+   UI 스레드가 커맨드 리스트를 기록하면 그쪽도 컨텍스트를 요구한다.
+
+세 번째 에러(`Failed to resolve GL texture`)는 같은 뿌리다 — UI 스레드가 아직 렌더 스레드만 만들 수
+있는 GPU 상태(`getNativeTextureName`)를 묻는다.
+
+**시도했지만 통하지 않은 것.** `createEditorInstance` 앞에 `drainRenderWorkers()` 를 넣어 봤다.
+효과가 없었다 — 에디터 `initialize` 자체가 스플래시/비동기 RenderPass 로드로 **프레임을 돌리기
+때문에** 백엔드가 바인딩할 시점에는 워커가 이미 다시 돌고 있다. 동기화로는 안 되고, **UI 스레드의
+GPU 작업을 없애야** 한다.
+
+**제안하는 방향** (작은 것부터, 각각 독립):
+1. `ImGuiOpenGLRendererBackend::initialize` 를 "디바이스만 기억하고 GPU 초기화는 미룸" 으로 바꾼다.
+   실제 `ImGui_ImplOpenGL3_Init` 은 렌더 스레드에서 도는 첫 `newFrame()` 이 한다(그 함수는 이미
+   렌더 스레드다). 바인딩/언바인딩을 UI 스레드에서 하지 않는다.
+2. `shutdown` 은 미룰 대상이 없다(다음 프레임이 없다). 에디터를 내리기 전에 렌더 워커를
+   `stop()` 까지 하면 컨텍스트가 자유로워진다 — `submit()` 이 `gv_useRenderThread` 와 `_bRunning` 이
+   다르면 스스로 다시 띄우므로 자기 치유된다. 다만 리로드마다 워커를 재시작하는 비용이 생긴다.
+3. `OpenGLRHICommandList` 기록은 "렌더 스레드에서만 기록" 규약을 세우고 어기면 잡는 편이 낫다.
+   지금은 어느 스레드든 기록할 수 있고 그때마다 컨텍스트를 빼앗는다.
+
+**왜 지금 안 고쳤나.** GL 은 보조 백엔드이고 증상은 기동 로그 3줄이다(기능 실패는 관측되지 않았다).
+반면 고치려면 "어느 스레드가 GL 컨텍스트를 갖는가" 라는 규약을 세워야 하고, 그건 1-1·1-2 보다
+범위가 크다. 진단은 위에 다 적어 두었으니 착수할 때 다시 재현할 필요는 없다.
+
+### 1-4. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1, 1-2)을 먼저 한다.
 목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
 (단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-4. 되살리지 못한 테스트
+### 1-5. 되살리지 못한 테스트
 
 `Test/EditorTest/TestEditorSceneCommands.cpp` 는 되살렸지만(현재 EditorTest 27개에 포함),
 `EditorContext` 가 UI 매니저 전부를 `unique_ptr` 로 소유하는 구조는 그대로다. 더 깊은 분리
 (패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
 그때 소유 구조부터 정한다.
 
-### 1-5. 확인만 하고 넘어간 것
+### 1-6. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
@@ -164,7 +236,7 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
      WGL 만 구현했다. GLX·NSGL 은 예전에도 여기서 아무것도 하지 않았다.
    - 검증: 네 백엔드(`-dx12 -dx11 -vk -gl`) 모두 종료 코드 0 / `[Error]` 0건.
      **GL + 에디터는 변경 전에도 에러 3건이 있었고(ERROR_BUSY 2 + 텍스처 해석 1), 변경 후에도
-     같은 3건이다** — 스태시로 기준선을 다시 빌드해 비교했다. 이 3건은 별도 문제로 남는다.
+     같은 3건이다** — 스태시로 기준선을 다시 빌드해 비교했다. 원인은 아래 1-3 에 적었다.
 
 **요청한 "나머지 문제" 처리 — Engine 강결합 해체 (10 → 7)**
 자세한 내용은 아래 3절의 해당 항목과 `Source/Engine/README.md` 의 티어 표에 있다.

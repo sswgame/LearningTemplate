@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -159,76 +160,30 @@ namespace sw::editor
             Scene* pScene = editor::getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                GameObjectManager* pManager = pScene->getObjectManager();
+                // 집계는 ImGui 를 모르는 EditorSceneCommands 가 한다(테스트가 붙어 있다).
+                // 이 패널은 그려 주기만 한다 — 타입 이름을 여기서 알 필요가 없다.
+                const EditorSceneCommands::SceneStatistics stats =
+                    EditorSceneCommands::collectSceneStatistics( pScene->getObjectManager() );
 
-                size_t totalObjects{ 0 };
-                size_t rootCount{ 0 };
-                size_t totalComponents{ 0 };
-                size_t sceneCompCount{ 0 };
-                size_t meshCompCount{ 0 };
-                size_t spriteCompCount{ 0 };
-                size_t box2dCompCount{ 0 };
-                size_t cameraCompCount{ 0 };
+                ImGui::BulletText( "Total GameObjects: %u (Roots: %u)", stats._objectCount, stats._rootCount );
+                ImGui::BulletText( "Total Attached Components: %u", stats._componentCount );
 
-                pManager->forEachGameObject( [&]( GameObject* pObj )
-                {
-                    if ( pObj == nullptr )
-                        return;
-                    ++totalObjects;
-                    if ( pObj->getParent() == nullptr )
-                        ++rootCount;
-                    totalComponents += pObj->getComponentCount();
-
-                    if ( pObj->getComponent<SceneComponent>() != nullptr )
-                        ++sceneCompCount;
-                    if ( pObj->getComponent<MeshComponent>() != nullptr )
-                        ++meshCompCount;
-                    if ( pObj->getComponent<SpriteComponent>() != nullptr )
-                        ++spriteCompCount;
-                    if ( pObj->getComponent<BoxCollider2DComponent>() != nullptr )
-                        ++box2dCompCount;
-                    if ( pObj->getComponent<CameraComponent>() != nullptr )
-                        ++cameraCompCount;
-                } );
-
-                ImGui::BulletText( "Total GameObjects: %zu (Roots: %zu)", totalObjects, rootCount );
-                ImGui::BulletText( "Total Attached Components: %zu", totalComponents );
-
-                if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+                if ( stats._listDistribution.empty() )
+                    EditorWidgets::drawEmptyHint( "No components in the active scene." );
+                else if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
                 {
                     ImGui::TableSetupColumn( "Component Type" );
                     ImGui::TableSetupColumn( "Active Instances" );
                     ImGui::TableHeadersRow();
 
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "SceneComponent" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%zu", sceneCompCount );
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "MeshComponent" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%zu", meshCompCount );
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "SpriteComponent" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%zu", spriteCompCount );
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "BoxCollider2DComponent" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%zu", box2dCompCount );
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "CameraComponent" );
-                    ImGui::TableNextColumn();
-                    ImGui::Text( "%zu", cameraCompCount );
+                    for ( const EditorSceneCommands::ComponentDistributionRow& row : stats._listDistribution )
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted( row._typeName.c_str() );
+                        ImGui::TableNextColumn();
+                        ImGui::Text( "%u", row._instanceCount );
+                    }
 
                     ImGui::EndTable();
                 }
