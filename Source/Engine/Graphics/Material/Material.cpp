@@ -411,6 +411,11 @@ namespace sw
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
                 prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+
+            // 이 자리에 packSize 계산과 빈 if 블록이 있었다 — 계산한 값을 아무도 읽지 않았고
+            // 블록 본문은 주석뿐이었다. 실제 오프셋 패킹은 아래 두 번째 순회가 packSize 를 다시
+            // 구해서 한다. 이 순회가 하는 일은 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을
+            // 채우는 것까지다.
         }
 
         bool anyExplicitOffset{ false };

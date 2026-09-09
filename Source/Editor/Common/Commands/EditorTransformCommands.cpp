@@ -119,10 +119,14 @@ namespace sw::editor
             if ( bSuccess == false && xmlFallback.empty() == false )
                 bSuccess = XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
 
-            // 실패해도 컴포넌트는 남긴다(사용자가 붙여넣기를 요청했다). 다만 값이 기본값이라는
-            // 것을 알려야 한다 — 예전에는 결과를 아무도 읽지 않아 조용히 빈 컴포넌트가 생겼다.
+            // 예전에는 이 결과를 **아무도 읽지 않았다.** 둘 다 실패해도 값이 하나도 안 들어간
+            // 컴포넌트를 붙여 놓고 "붙여넣기" 실행 취소 항목까지 남겨서, 쓰는 사람은 왜 비었는지
+            // 알 수 없었다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
             if ( bSuccess == false )
-                SW_LOG_WARNING( "Paste Component: 값 복원에 실패했습니다 — 기본값으로 추가합니다 (%#)", string{ typeName }.c_str() );
+            {
+                SW_LOG_WARNING( "Paste Component as New: %# 의 값을 읽지 못했습니다. 빈 컴포넌트가 추가됩니다.",
+                                string{ typeName }.c_str() );
+            }
 
             const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
             EditorTransaction::recordModify( GameObjectPtr{ pTargetObj }, beforeXml, afterXml, "Paste Component as New" );

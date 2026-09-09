@@ -33,12 +33,18 @@ namespace sw
             static string makePrefabCacheKey( string_view assetRelativePath )
             {
                 string key = FileUtil::normalizePath( assetRelativePath );
-                if ( FileUtil::hasExtension( key, ".bin" ) )
-                    key.resize( key.size() - 4 );
-                else if ( FileUtil::hasExtension( key, ".xml" ) )
-                    key.resize( key.size() - 4 );
-                else if ( FileUtil::hasExtension( key, ".json" ) )
-                    key.resize( key.size() - 5 );
+
+                // 확장자 길이를 손으로 쓰지 않는다. 예전에는 `.bin`/`.xml` 은 -4, `.json` 은 -5 로
+                // 따로 적어서, 확장자를 하나 더 넣을 때 길이를 같이 고쳐야 했다 — 숫자와 문자열이
+                // 떨어져 있으면 어긋난다.
+                for ( const string_view extension : { ".bin", ".xml", ".json" } )
+                {
+                    if ( FileUtil::hasExtension( key, extension ) )
+                    {
+                        key.resize( key.size() - extension.size() );
+                        break;
+                    }
+                }
                 return key;
             }
 

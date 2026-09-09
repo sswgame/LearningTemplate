@@ -108,7 +108,7 @@ namespace sw
 
     Scene::~Scene()
     {
-        shutdown();
+        Scene::shutdown();
     }
 
     /**

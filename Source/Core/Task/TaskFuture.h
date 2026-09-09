@@ -128,6 +128,10 @@ namespace sw
                     else
                         _continuation = std::move( cont );
                 }
+                // `cont` 는 위 else 분기(= bExecuteImmediately 가 false)에서만 이동한다. 여기서는
+                // 단축 평가로 bExecuteImmediately 가 true 일 때만 읽으므로 이동된 값을 보지 않는다.
+                // 검사기가 두 조건의 상관을 모델링하지 못한다.
+                // NOLINTNEXTLINE(bugprone-use-after-move)
                 if ( bExecuteImmediately && cont.isBound() )
                     cont( *reinterpret_cast<const T*>( &_storage ) );
             }

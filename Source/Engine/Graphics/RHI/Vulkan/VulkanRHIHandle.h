@@ -8,8 +8,11 @@
  * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIDeviceInternal.h` 를 포함한다.
  */
 #pragma once
+// 인자를 `##` 로 붙이고 선언자 이름으로도 쓴다 — 괄호를 씌우면 둘 다 깨진다.
+// NOLINTBEGIN(bugprone-macro-parentheses)
 
 #define SW_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;
+// NOLINTEND(bugprone-macro-parentheses)
 SW_VK_DEFINE_HANDLE( VkInstance )
 SW_VK_DEFINE_HANDLE( VkPhysicalDevice )
 SW_VK_DEFINE_HANDLE( VkDevice )

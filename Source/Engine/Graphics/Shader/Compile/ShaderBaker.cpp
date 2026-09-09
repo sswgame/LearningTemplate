@@ -562,8 +562,9 @@ namespace sw
                 return ".dxbc";
             case ShaderTargetFormat::DXIL_D3D12:
                 return ".dxil";
+            // 둘 다 SPIR-V 라 확장자가 같다. 따로 적어 두면 "우연히 같은 값" 처럼 보여서, 한쪽만
+            // 바꾸는 실수가 나기 쉽다 — 같이 묶어 같아야 한다는 것을 드러낸다.
             case ShaderTargetFormat::SPIRV_Vulkan:
-                return ".spv";
             case ShaderTargetFormat::SPIRV_OpenGL:
                 return ".spv";
             case ShaderTargetFormat::Count:

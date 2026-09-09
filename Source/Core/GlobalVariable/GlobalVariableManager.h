@@ -170,35 +170,40 @@ namespace sw
     #define SW_GVM_MODULE_HEAD() ( ::sw::GlobalVariableRegistrar::getHead() )
 #endif
 
+// 아래 정의들에서 `name` 은 **선언자 이름**이자 `#name`(문자열화), `sw_reg_##name`(붙여쓰기)로
+// 쓰인다 — 셋 다 괄호를 씌우면 깨진다. 값 인자(`defaultVal`)는 괄호·static_cast 로 이미 막아 두었다.
+// NOLINTBEGIN(bugprone-macro-parentheses)
 /** @brief bool 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
-#define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )   \
-    extern bool                          name;              \
-    bool                                 name = defaultVal; \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Boolean, &name, bool( defaultVal ), desc )
+#define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )       \
+    extern bool                          name;                  \
+    bool                                 name = ( defaultVal ); \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Boolean, &name, static_cast<bool>( defaultVal ), desc )
 
 /** @brief int32 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
-#define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )    \
-    extern int32                         name;              \
-    int32                                name = defaultVal; \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Int32, &name, int32( defaultVal ), desc )
+#define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )        \
+    extern int32                         name;                  \
+    int32                                name = ( defaultVal ); \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Int32, &name, static_cast<int32>( defaultVal ), desc )
 
 /** @brief float32 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
-#define SW_GLOBAL_VARIABLE_FLOAT( name, defaultVal, desc )  \
-    extern float32                       name;              \
-    float32                              name = defaultVal; \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Float, &name, float32( defaultVal ), desc )
+#define SW_GLOBAL_VARIABLE_FLOAT( name, defaultVal, desc )      \
+    extern float32                       name;                  \
+    float32                              name = ( defaultVal ); \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Float, &name, static_cast<float32>( defaultVal ), desc )
 
 /** @brief sw::string 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
-#define SW_GLOBAL_VARIABLE_STRING( name, defaultVal, desc ) \
-    extern sw::string                    name;              \
-    sw::string                           name = defaultVal; \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::String, &name, sw::string( defaultVal ), desc )
+#define SW_GLOBAL_VARIABLE_STRING( name, defaultVal, desc )     \
+    extern sw::string                    name;                  \
+    sw::string                           name = ( defaultVal ); \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::String, &name, sw::string{ ( defaultVal ) }, desc )
 
 /** @brief enum 전역 변수를 정의하고 모듈 리스트에 등록합니다. */
 #define SW_GLOBAL_VARIABLE_ENUM( name, enumType, defaultVal, desc ) \
     extern enumType                      name;                      \
-    enumType                             name = defaultVal;         \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Enum, &name, int32( defaultVal ), desc, #enumType, "", static_cast<uint32>( sizeof( enumType ) ) )
+    enumType                             name = ( defaultVal );     \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Enum, &name, static_cast<int32>( defaultVal ), desc, #enumType, "", static_cast<uint32>( sizeof( enumType ) ) )
+
+// NOLINTEND(bugprone-macro-parentheses)
 
 /** @brief 다른 TU 에서 bool 전역 변수를 참조합니다. */
 #define SW_EXTERN_GLOBAL_VARIABLE_BOOL( name ) extern bool name

@@ -218,10 +218,10 @@ namespace sw
         // 1·3번 분기의 본문이 같다 — 중복이 아니라 **순서가 규약이다.** 이동이 던질 수 있으면
         // 복사를 먼저 고른다(복사는 실패해도 원본이 남아 되돌릴 수 있다). 복사조차 안 되면 그때
         // 던지는 이동을 쓴다. 셋을 합치면 이 우선순위가 사라진다.
-        // NOLINTNEXTLINE(bugprone-branch-clone)
         for ( size_t index = 0; index < _size; ++index )
         {
             if constexpr ( std::is_nothrow_move_constructible_v<T> )
+                // NOLINTNEXTLINE(bugprone-branch-clone)
                 sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
             else if constexpr ( std::is_copy_constructible_v<T> )
                 sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );

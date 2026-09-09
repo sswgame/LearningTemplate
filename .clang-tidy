@@ -16,7 +16,8 @@ Checks: >
   -bugprone-invalid-enum-default-initialization,
   -bugprone-derived-method-shadowing-base-method,
   -bugprone-std-namespace-modification,
-  -clang-analyzer-optin.core.EnumCastOutOfRange
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -clang-analyzer-optin.performance.Padding
 
 # -bugprone-easily-swappable-parameters
 #     같은 타입 인자가 인접하면 전부 짚는다(Core/App 43건, Engine/Editor 115건). 수학·그래픽스
@@ -27,6 +28,13 @@ Checks: >
 #     비트 플래그 조합을 열거형으로 캐스팅하면 "유효 범위 밖" 이라고 짚는다(39건). 조합값이
 #     열거자와 일대일로 맞지 않는 것은 플래그의 정의다 — formatString 의 Flags, Win32 의
 #     _MINIDUMP_TYPE(4165) 등이 전부 이 경우다. 플래그 enum 을 쓰는 한 영구 오탐이다.
+#
+# -clang-analyzer-optin.performance.Padding
+#     멤버 재배열로 구조체를 줄이라는 제안이다. 실제로 걸린 셋은 전부 **인스턴스가 하나뿐인**
+#     매니저(TaskManager 230B, AssetStreamingQueue 95B)이거나 20행짜리 정적 표(TypeRow 행당 8B)라
+#     아끼는 양이 무의미하다. 반면 대가는 작지 않다 — 이 저장소는 "생성자 초기화는 선언 순서"
+#     규약이라 멤버를 옮기면 초기화 목록도 같이 옮겨야 하고, 표는 위치 기반 초기화라 모든 행을
+#     다시 써야 한다. 대량 배열로 쓰이는 뜨거운 구조체가 생기면 그때 개별로 재어 보는 편이 낫다.
 #
 # 아래 셋은 clang-tidy 22 에서 새로 생긴 검사다. 전수로 훑어 보고(2026-09-10) 이 코드베이스에서는
 # 전부 영구 오탐이라 끈다.

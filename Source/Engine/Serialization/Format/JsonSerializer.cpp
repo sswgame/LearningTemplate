@@ -66,10 +66,10 @@ namespace sw
 
                 const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
                 const bool          bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-                                                  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-                                                  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+                                         resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+                                         resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
                 const bool          bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-                                                  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+                                       resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
                 const bool          bIsEnum   = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
                 if ( bIsString || bIsEnum )
@@ -654,9 +654,9 @@ namespace sw
         uint32 softVer{ 0 };
         if ( deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, &softVer, ctx ) == false )
             return false;
-        if ( pLegacyPtr == nullptr )
-            outVersion = softVer;
-        else if ( softVer != 0 )
+        // 두 분기가 같은 일을 했다(`pLegacyPtr == nullptr` 이거나 `softVer != 0` 이면 대입).
+        // 조건으로 합치면 무엇을 보고 정하는지가 한 줄에 보인다 — 동작은 그대로다.
+        if ( pLegacyPtr == nullptr || softVer != 0 )
             outVersion = softVer;
 
         return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,

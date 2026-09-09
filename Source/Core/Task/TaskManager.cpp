@@ -529,6 +529,9 @@ namespace sw
     {
     }
 
+    // 소멸자에서 예외가 나가면 종료된다. `shutdown()` 이 잠그는 뮤텍스는 시스템 오류일 때만
+    // 던지는데, 그 상황은 소멸자에서 복구할 방법이 없다 — 종료가 맞는 동작이다.
+    // NOLINTNEXTLINE(bugprone-exception-escape)
     TaskManager::~TaskManager()
     {
         shutdown();

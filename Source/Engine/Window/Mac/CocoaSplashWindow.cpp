@@ -14,7 +14,7 @@ namespace sw
 
     CocoaSplashWindow::~CocoaSplashWindow()
     {
-        dismiss();
+        CocoaSplashWindow::dismiss();
     }
 
     bool CocoaSplashWindow::initialize( const utf8* /*pTitle*/, const utf8* pInitialStatus, uint32 width, uint32 height )

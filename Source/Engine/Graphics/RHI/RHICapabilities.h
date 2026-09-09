@@ -39,9 +39,9 @@ namespace sw
         static bool isAvailable( RHIBackend backend ) noexcept
         {
             // DX11·DX12 가 같은 답을 내는 것은 의도다 — 둘 다 Windows 전용이다.
-            // NOLINTNEXTLINE(bugprone-branch-clone)
             switch ( backend )
             {
+                // NOLINTNEXTLINE(bugprone-branch-clone)
                 case RHIBackend::DirectX11:
                 case RHIBackend::DirectX12:
 #if defined( SW_PLATFORM_WINDOWS )

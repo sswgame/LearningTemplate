@@ -164,58 +164,67 @@ ContentBrowser 가 썼다). 즉 테마를 바꿔도 이 글자들은 안 바뀌�
 골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
 것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
-### 1-2. clang-tidy 지적 — 분류는 끝났고 판단만 남았다
+### 1-2. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
-`py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. **이 PC 에는 clang-tidy 가 없었다** — 저장소가 받아
-두는 `Tools/LLVM` 은 clang-tidy 를 뺀 축소판이라 스크립트가 "찾지 못했습니다" 로 끝났다. 이제
-Visual Studio 가 같이 설치하는 LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
+`py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
+이라는 다른 답을 받았다. 둘 다 맞다 — clang-tidy 버전이 다르면 검사 목록이 다르다. 그래서 숫자만
+적으면 다음 사람이 헷갈린다. 버전을 같이 적는다.
 
-clang-tidy 22 로 올라가며 검사가 늘어 고유 지적이 65 → 308건이 됐다. 늘어난 243건은 **새 검사
-넷**이 전부이고, 하나씩 훑어 처리해 **308 → 87 → 76 → 72건**이 됐다(전부 실측, 2026-09-10).
-남은 72건은 아래 일곱 종류가 전부이고, `DeadStores`·`ArrayBound`·`use-after-move`·
-`unhandled-self-assignment`·`implicit-widening` 은 **0건**이다:
+- **clang-tidy 20 기준(한쪽 PC)**: 110 → 65 → 20 → **0건**. 고칠 수 있으면 고치고, 구조적으로
+  불가능한 자리는 `NOLINTNEXTLINE` + 이유를 남겼다.
+- **clang-tidy 22 기준(다른 PC)**: 같은 코드가 **308건**이 된다. 늘어난 243건은 22 에서 새로 생긴
+  검사 넷이 전부다. 하나씩 훑어 **72건**까지 줄였다(아래 표).
+
+**이 PC 에 clang-tidy 가 아예 없기도 했다** — 저장소가 받아 두는 `Tools/LLVM` 은 clang-tidy 를 뺀
+축소판이라 스크립트가 "찾지 못했습니다" 로 끝났다. 이제 Visual Studio 가 같이 설치하는
+LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
+
+**새로 뜨는 지적은 분류하지 않은 새 코드다.** 판단해서 고치거나, 의도한 것이면 그 자리에
+`NOLINTNEXTLINE` 과 **이유**를 함께 남긴다. 이유 없는 NOLINT 는 다음 사람이 되살리고 같은 분류를
+다시 하게 만든다.
+
+검사 목록은 `.clang-tidy` 가 정한다. 끈 검사는 다섯이고 각각 왜 이 코드베이스에서 쓸 수 없는지
+실측과 함께 적혀 있다: `easily-swappable-parameters` · `EnumCastOutOfRange` · `Padding` ·
+`invalid-enum-default-initialization` · `derived-method-shadowing-base-method` ·
+`std-namespace-modification`.
+
+**clang-tidy 22 의 새 검사 넷은 이렇게 처리했다:**
 
 | 종류 | 처리 |
 |---|---|
 | `bugprone-throwing-static-initialization` 179 | **150건은 `SW_LOG_CALLER` 하나가 냈다.** `Logger::registerCaller` 를 `noexcept` 로 만들어 없앴다 — 고정 배열과 뮤텍스뿐이라 실제로 던질 것이 없고, 정적 초기화에서 부르는 함수라는 계약을 타입에 못박는 편이 맞다. 남은 29건은 전역 변수 등록자·설정 싱글턴처럼 **시작 시 실패가 곧 종료**인 자리다 |
-| `bugprone-invalid-enum-default-initialization` 48 | **껐다.** `D3D11_RASTERIZER_DESC desc{}` 처럼 SDK 구조체를 0 으로 비우면 그 안의 열거형이 짚힌다 — 48건 전부 D3D11/D3D12/Vulkan 열거형이고 우리 열거형은 0건이다 |
-| `bugprone-derived-method-shadowing-base-method` 11 | **껐다.** `REFLECT_BODY()` 가 클래스마다 `swReflectSelf` 를 정의한다. NOLINT 는 매크로 안에 넣을 수 없어 REFLECT 를 쓰는 모든 자리에 붙여야 한다 |
-| `bugprone-std-namespace-modification` 10 | **껐다.** `std::hash` 특수화다 — 프로그램 정의 타입에 대한 특수화는 `[namespace.std]` 가 허용한다 |
+| `bugprone-invalid-enum-default-initialization` 48 | **껐다.** `D3D11_RASTERIZER_DESC desc{}` 처럼 SDK 구조체를 0 으로 비우면 그 안의 열거형이 짚힌다 — 열거형 19종이 전부 D3D11/D3D12/Vulkan 타입이고 우리 열거형은 0건이다(전수 확인) |
+| `bugprone-derived-method-shadowing-base-method` 11 | **껐다.** 11건 전부 `REFLECT_BODY()` 가 만드는 `swReflectSelf` 다(전수 확인). NOLINT 는 매크로 안에 넣을 수 없어 REFLECT 를 쓰는 모든 자리에 붙여야 한다 |
+| `bugprone-std-namespace-modification` 10 | **껐다.** 10건 전부 `tuple_size`/`tuple_element`/`hash`/`equal_to` 를 프로그램 정의 타입에 특수화한 것으로 `[namespace.std]` 가 허용한다(전수 확인). 그중 `tuple_size<FormattedValue<T>>` 만 `integral_constant<uint32,2>` 였어서 표준대로 `size_t` 로 맞췄다 |
 | `bugprone-command-processor` 1 | **고쳤다.** ContentBrowser 의 "Show in Explorer" 가 `system()` 이었다 — 셸을 거쳐 경로의 `&`·`"` 가 명령으로 해석되고 콘솔 창이 깜빡였다. `EditorAssetCommands::showInFileExplorer` 로 옮겨 셸 없이 프로세스를 띄운다(macOS `open -R`, 리눅스 `xdg-open` 도 같이) |
-
-**`clang-analyzer-optin.cplusplus.VirtualCall` 의 `Component.cpp` 는 진짜였다.** 1회차에서 "한 번
-더 볼 값이 있다" 고 미뤄 둔 자리다. `Component::Component()` 가 `initialize()` 를 부르고, 그 안에서
-**가상** `getTypeInfo()` 로 기본값을 적용하고 있었다. 기반 생성자 시점에는 파생 구현으로
-디스패치되지 않으므로 언제나 `Component` 의 TypeInfo 가 나왔다 — 파생 컴포넌트의 리플렉션 기본값은
-**한 번도 적용된 적이 없고**, 대신 컴포넌트를 만들 때마다 쓸모없는 타입 조회를 한 번씩 했다. 정본은
-생성 이후에 파생 타입으로 부르는 `applyTypeDefaults` 이고(GameObject::addComponent ·
-GameObjectManager 둘 다 이미 그렇게 한다), 생성자의 호출은 지웠다.
 
 **분류만 해 두었던 것도 다시 봤다. 절반은 오탐이 아니라 "확신할 수 없게 쓰인 코드" 였다.**
 
-- `bugprone-use-after-move` 2건 — 오탐이 아니었다. `StringBuilder::appendFormat` 은 **재시도
-  루프 안에서 같은 인자 팩을 다시 forward** 했고, `TaskFuture::setContinuation` 은 옮긴 델리게이트를
-  bool 플래그에 기대어 다시 읽었다. 둘 다 고쳤다(0건).
-- `clang-analyzer-security.ArrayBound` 4 → 1. `&vec._x` 를 넘겨 인덱스로 읽던 세 자리를
-  `const float3&`/`const float4&` 로 바꿨다. 남은 하나는 `float4x4::data()` 를 쓰는 자리라
-  NOLINT + 이유(레이아웃은 static_assert 가 지킨다)로 닫았다.
-- `bugprone-implicit-widening-of-multiplication-result` 4 → 0. 명시적 캐스트.
-- `clang-analyzer-deadcode.DeadStores` 4 → 0. Material 의 죽은 계산은 **미완성 코드의 흔적**이었고
-  (빈 `if` 와 짝), 에디터의 붙여넣기는 **실패를 아무도 읽지 않고 있었다**. 열거형→이름 두 곳은
-  값을 먼저 넣고 switch 로 덮어쓰는 대신 돌려주는 함수로 바꿨다.
-- `bugprone-unhandled-self-assignment` 1 → 0. `fs = fs.c_str()` 가 자기 버퍼를 자기에게 memcpy
-  하고 있었다(가드 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
+- `bugprone-use-after-move` — `StringBuilder::appendFormat` 은 **재시도 루프 안에서 같은 인자 팩을
+  다시 forward** 했고, `TaskFuture::setContinuation` 은 옮긴 델리게이트를 bool 플래그에 기대어 다시
+  읽었다. 둘 다 억제가 아니라 코드로 풀었다.
+- `clang-analyzer-security.ArrayBound` — `&vec._x` 를 넘겨 인덱스로 읽던 **세 자리는 시그니처를
+  `const float3&`/`const float4&` 로 바꿔** UB 자체를 없앴다(내부 호출부뿐이라 C-ABI 제약이 없었다).
+  남은 하나는 `float4x4::data()` 를 쓰는 자리라 NOLINT + 이유로 닫았다 — 레이아웃은
+  `MatrixMath.h` 의 `static_assert( sizeof(float4x4) == 16 * sizeof(float32) )` 가 지킨다.
+- `bugprone-implicit-widening-of-multiplication-result` — 명시적 캐스트.
+- `clang-analyzer-deadcode.DeadStores` — Material 의 죽은 계산은 **미완성 코드의 흔적**이었고(빈
+  `if` 와 짝), 에디터의 붙여넣기는 **실패를 아무도 읽지 않고 있었다**. 열거형→이름 두 곳은 값을
+  먼저 넣고 switch 로 덮어쓰는 대신 돌려주는 함수로 바꿔 억제 없이 없앴다.
+- `bugprone-unhandled-self-assignment` — `fs = fs.c_str()` 가 자기 버퍼를 자기에게 memcpy 하고
+  있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-나머지 오탐 판정은 그대로다(합 43건 + 위 `throwing-static-initialization` 29건 = 72건):
+clang-tidy 22 에서 남은 것(합 72건, 이 병합 이후 `Padding` 을 끄면 69건이 된다 — 다시 재야 한다):
 
 | 종류 | 건수 | 판정 |
 |---|---|---|
-| `clang-analyzer-optin.cplusplus.VirtualCall` | 13 | **오탐.** 생성/파괴와 `initialize`/`shutdown` 을 분리하는 구조를 분석기가 가상 디스패치 문제로 본다 |
+| `bugprone-throwing-static-initialization` | 29 | 전역 변수 등록자·설정 싱글턴. 시작 시 실패가 곧 종료다 |
+| `clang-analyzer-optin.cplusplus.VirtualCall` | 13 | **오탐.** 생성/파괴와 `initialize`/`shutdown` 을 분리하는 구조를 분석기가 가상 디스패치 문제로 본다(파괴 중 호출 12곳은 클래스 이름으로 한정해 의도를 코드로 적었다) |
 | `bugprone-macro-parentheses` | 12 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`) |
 | `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다 |
 | `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘긴다 |
-| `clang-analyzer-optin.performance.Padding` | 3 | 구조체 멤버 순서 제안. `TaskManager` 는 230바이트가 패딩이지만 인스턴스가 하나다 |
+| `clang-analyzer-optin.performance.Padding` | 3 | 이 병합으로 `.clang-tidy` 에서 껐다 — 인스턴스가 하나뿐인 매니저·정적 표라 아끼는 양이 무의미하다 |
 | `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 뮤텍스 락이 이론상 던진다 — 현재 동작이 의도와 맞다 |
 
 ### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
@@ -370,6 +379,57 @@ ReflectionNamesAreUniformAcrossBackends` 가 "forwardlit_ps g_SwMaterials 원소
    - 검증: 네 백엔드(`-dx12 -dx11 -vk -gl`) 모두 종료 코드 0 / `[Error]` 0건.
      GL + 에디터의 에러 3건은 이 변경과 무관한 기존 버그였고(스태시로 기준선을 다시 빌드해
      확인했다), **그 다음에 따로 고쳤다** — 아래 "GL 컨텍스트" 항목.
+
+**전수 조사 3회차 — 남은 지적을 0 으로 (65 → 0건)**
+
+남은 65건을 하나씩 판단했다. 고칠 수 있으면 고치고, 구조적으로 불가능한 자리는 **이유를 적어**
+NOLINT 했다. 이유 없는 억제는 남기지 않았다.
+
+**찾은 실제 결함**
+
+- **`Component` 생성자가 가상 함수를 불러 기본값이 틀린 타입으로 적용됐다.** 생성자가
+  `initialize()` → 가상 `getTypeInfo()` 를 부르는데, 생성 중에는 객체가 아직 `Component` 라
+  **파생 타입이 아니라 기반 타입**의 TypeInfo 가 나온다. 즉 `MeshComponent` 를 만들어도
+  "Component" 이름으로 기본값을 찾았다. 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨
+  준다 — `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
+  `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 즉 생성자 호출은 **중복이면서 틀린 조회**였고,
+  컴포넌트를 만들 때마다 헛일을 했다. 호출과 (호출자가 없어진) `initialize()` 를 걷어냈다.
+  안전한지 확인한 근거: `initialize()` 는 `private` 이고 호출자가 생성자뿐이며, 기본값 데이터는
+  게임이 `setPath` 를 부르지 않으면 아예 로드되지 않는다(`Resource/` 에 `<Defaults>` 노드도 없다).
+- **`FrameRendererPassExecute` 의 SSAO PSO 폴백이 자기 자신이었다.**
+  `getEnginePso(SSAO) != 0 ? getEnginePso(SSAO) : getEnginePso(SSAO)` — 참·거짓이 같아 아무 효과가
+  없고 함수만 세 번 불렀다. 형제 패스는 전부 **다른** PSO 로 폴백한다(DepthPrepass→Shadow,
+  GBufferAlbedo→GBuffer, Tonemap→Present). 복사하면서 대체 대상을 바꾸지 않은 자리다. 폴백을
+  짐작해 넣지 않고, PSO 가 0 이면 `drawFullscreen` 이 건너뛰므로 형제들처럼 그대로 넘기게 했다.
+- **`StringBuilder::appendFormat` 이 재시도 루프에서 매번 `std::forward` 했다.** 버퍼가 모자라면
+  같은 인자로 다시 포맷하는데, 그때는 이미 이동된 값을 쓰게 된다. `formatstring` 은 값을 읽어
+  찍기만 하므로 lvalue 로 넘겨 위험 자체를 없앴다.
+- **컴포넌트 붙여넣기가 실패를 삼켰다.** `pasteComponentAsNew` 가 역직렬화 결과를 계산해 놓고
+  **아무도 읽지 않았다.** 둘 다 실패해도 빈 컴포넌트를 붙이고 "붙여넣기" 실행 취소 항목까지
+  남겨서, 쓰는 사람은 왜 비었는지 알 수 없었다. 경고 로그를 남긴다.
+- **`Material` 의 죽은 코드.** 첫 순회가 `packSize` 를 계산했지만 뒤따르는 `if` 는 본문이 주석뿐인
+  빈 블록이었고 값은 아무도 읽지 않았다. 실제 패킹은 두 번째 순회가 다시 계산해서 한다.
+- **콘텐츠 브라우저 필터 라벨이 `string_view` 였다.** 쓰는 쪽 셋이 모두 곧바로 `.data()` 를 ImGui 로
+  넘기는데 ImGui 는 널 종단을 요구한다. 지금 표가 전부 리터럴이라 우연히 맞을 뿐이라, 타입을
+  `const utf8*` 로 바꿔 계약을 적었다.
+- 소멸자·생성자에서의 가상 호출 12곳을 클래스 이름으로 한정했다. 파괴 중에는 파생 재정의가 이미
+  사라진 뒤라 이 클래스의 것이 불린다 — 지금 동작이 의도한 것이므로 코드로 적었다.
+- `.bin`/`.xml` 은 -4, `.json` 은 -5 처럼 확장자 길이를 손으로 쓰던 자리를 표로 돌게 했다.
+  `Json`/`Xml` 직렬화의 같은 본문 두 분기는 조건으로 합쳤다. `ShaderBaker` 의 SPIR-V 두 케이스는
+  묶어서 "같아야 한다" 를 드러냈다.
+
+**오탐이라 이유만 남긴 것** — 다시 판단하지 말 것:
+`Base{ std::move(other) }` 뒤의 파생 멤버 읽기(기반 부분객체만 이동한다), 타입 이름·`##` 인자를
+받는 매크로(괄호를 씌우면 문법이 깨진다), 순서가 규약인 분기(vector 재할당의 이동/복사 우선순위,
+Windows 전용 DX11·DX12, "여기서 안 하고 아래서 한다" 는 케이스 묶음), 크기를 함께 넘기는
+`append(data(), count)`(커스텀 string 의 오버로드를 인식하지 못한다), `float3`/`float4x4` 를
+연속 float 로 훑는 자리(배치는 옆의 `static_assert` 가 보장한다), 뮤텍스 락이 던질 수 있어
+noexcept 와 어긋난다는 지적(잠그지 못하는 상황은 복구 대상이 아니다).
+
+**끈 검사 하나 추가** — `clang-analyzer-optin.performance.Padding`. 걸린 셋이 전부 인스턴스가
+하나뿐인 매니저이거나 20행짜리 정적 표라 아끼는 양이 무의미한데, 이 저장소는 "생성자 초기화는
+선언 순서" 규약이라 멤버를 옮기면 초기화 목록도 같이 옮겨야 한다. 대량 배열로 쓰이는 뜨거운
+구조체가 생기면 그때 개별로 재는 편이 낫다.
 
 **전수 조사 2회차 — 분류해 둔 것을 실제로 고친다 (65건까지)**
 

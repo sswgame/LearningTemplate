@@ -21,11 +21,17 @@ namespace sw
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {
-        // 여기서 기본값을 적용하지 않는다. 기본값은 **파생 타입의** TypeInfo 로 찾아야 하는데,
-        // 기반 생성자가 도는 시점의 `getTypeInfo()` 는 아직 파생 구현으로 디스패치되지 않아
-        // 언제나 `Component` 의 것을 돌려줬다 — 파생 컴포넌트의 기본값은 한 번도 적용된 적이
-        // 없고, 대신 컴포넌트를 만들 때마다 쓸모없는 타입 조회를 한 번씩 했다.
-        // 정본은 `GameObject::addComponent` / `GameObjectManager` 가 부르는 applyTypeDefaults 다.
+        // **여기서 기본값을 적용하지 않는다.** 예전에는 `initialize()` 를 불렀고 그 안에서 가상
+        // `getTypeInfo()` 를 썼는데, 생성 중에는 객체가 아직 Component 라 **파생 타입이 아니라
+        // 기반 타입의 TypeInfo** 가 나온다. 즉 MeshComponent 를 만들어도 "Component" 이름으로
+        // 기본값을 찾았다.
+        //
+        // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다 —
+        // `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
+        // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 생성자 호출은 중복이면서 틀린 조회였다.
+        //
+        // 기반 타입 노드(`<SceneComponent>` 같은)도 기본값을 가질 수 있으므로, 상속 체인을
+        // 뿌리 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
     }
 
     Component::Component( Component&& other ) noexcept

@@ -14,7 +14,7 @@ namespace sw
         , _bAnyKeyPressed{ SW_FALSE }
         , _reserved{ 0 }
     {
-        resetState();
+        KeyboardDevice::resetState();
     }
 
     void KeyboardDevice::poll( [[maybe_unused]] float32 deltaTime )

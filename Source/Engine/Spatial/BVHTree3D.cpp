@@ -552,7 +552,7 @@ namespace sw
         //
         // 분석기는 `data()` 를 따라가 `&_11` 하나짜리 필드를 [0..15] 로 읽는다고 본다. 행렬이 16개
         // float 이 연속이라는 것은 `float4x4` 의 static_assert( sizeof == 16 * sizeof(float32) ) 가
-        // 컴파일 타임에 지킨다 — 그 가정을 한 곳에 모으려고 만든 것이 data() 다.
+        // 컴파일 타임에 지킨다(MatrixMath.h) — 그 가정을 한 곳에 모으려고 만든 것이 data() 다.
         // NOLINTBEGIN(clang-analyzer-security.ArrayBound)
         float4 arrPlane[6] = {
             float4{pArr[3] + pArr[0], pArr[7] + pArr[4],  pArr[11] + pArr[8], pArr[15] + pArr[12]},

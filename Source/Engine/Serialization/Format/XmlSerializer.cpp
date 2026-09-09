@@ -989,9 +989,9 @@ namespace sw
         uint32 softVer{ 0 };
         if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, &softVer, ctx ) == false )
             return false;
-        if ( pLegacyPtr == nullptr )
-            outVersion = softVer;
-        else if ( softVer != 0 )
+        // 두 분기가 같은 일을 했다(`pLegacyPtr == nullptr` 이거나 `softVer != 0` 이면 대입).
+        // 조건으로 합치면 무엇을 보고 정하는지가 한 줄에 보인다 — 동작은 그대로다.
+        if ( pLegacyPtr == nullptr || softVer != 0 )
             outVersion = softVer;
 
         return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
