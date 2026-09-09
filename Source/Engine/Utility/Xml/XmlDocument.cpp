@@ -76,8 +76,8 @@ namespace sw
                     ++indentLen;
 
                 // 접을 대상: 충분히 길고, 여는 태그이며, 속성이 둘 이상인 줄.
-                const bool   bOpenTag   = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
-                                          line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
+                const bool bOpenTag = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
+                                      line[indentLen + 1] != '/' && line[indentLen + 1] != '!' && line[indentLen + 1] != '?';
                 const size_t firstSpace = line.find( ' ', indentLen );
 
                 listAttrEnd.clear();
@@ -94,6 +94,8 @@ namespace sw
                 }
 
                 // 태그 + 첫 속성은 같은 줄에 둔다 — 무슨 요소인지가 먼저 보여야 한다.
+                // 길이를 함께 넘기므로 널 종단이 필요 없다(검사기가 (ptr, count) 오버로드를 모른다).
+                // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                 result.append( line.data(), listAttrEnd[0] );
 
                 // 이어지는 속성은 **첫 속성과 같은 열**에 세운다. `<TagName ` 만큼의 폭을 들여쓰기
@@ -107,6 +109,7 @@ namespace sw
                         ++tokenStart;
 
                     result.push_back( '\n' );
+                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                     result.append( line.data(), indentLen );
                     result.append( alignColumn, ' ' );
                     result.append( line.data() + tokenStart, listAttrEnd[attrIndex] - tokenStart );

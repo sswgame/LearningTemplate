@@ -179,6 +179,9 @@ namespace sw
                     }
                     break;
                 }
+                // 두 묶음 모두 break 지만 뜻이 다르다 — 위는 "여기서 안 하고 아래 표에서 한다",
+                // 아래는 "정말 할 일이 없다". 합치면 그 구분이 사라진다.
+                // NOLINTNEXTLINE(bugprone-branch-clone)
                 case ShaderBindingKind::Texture:
                 case ShaderBindingKind::StructuredBuffer:
                     break; // 아래 getResourceBinds() 표에서 한 번에 처리한다

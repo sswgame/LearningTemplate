@@ -42,7 +42,7 @@ namespace sw
         , _bHasSubRect{ SW_FALSE }
         , _reserved{ 0 }
     {
-        resetState();
+        MouseDevice::resetState();
     }
 
     void MouseDevice::poll( [[maybe_unused]] float32 deltaTime )

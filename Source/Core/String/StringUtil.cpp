@@ -1295,6 +1295,9 @@ namespace sw
             return string{ afterText };
         string result;
         result.reserve( prefixLength + span._removed.size() + suffixLength );
+        // `data()` 를 넘기지만 **길이도 함께** 넘긴다 — 널 종단을 기대하는 호출이 아니다.
+        // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 인식하지 못한다.
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         result.append( afterText.data(), prefixLength );
         result.append( span._removed );
         if ( suffixLength > 0 )
@@ -1310,6 +1313,8 @@ namespace sw
             return string{ beforeText };
         string result;
         result.reserve( prefixLength + span._added.size() + suffixLength );
+        // 위와 같다 — 길이를 함께 넘긴다.
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         result.append( beforeText.data(), prefixLength );
         result.append( span._added );
         if ( suffixLength > 0 )

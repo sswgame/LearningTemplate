@@ -546,6 +546,10 @@ namespace sw
 
     void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const
     {
+        // 벡터·행렬을 연속된 float 로 훑는 자리다. 형식적으로는 배열이 아닌 멤버를 배열로 읽는
+        // 것이라 분석기가 짚지만, 배치는 `float3`/`float4x4` 옆의 static_assert 가 컴파일 타임에
+        // 보장한다. 없애려면 이 경계의 시그니처를 값 타입으로 바꿔야 하는데 C-ABI 제약이 있다.
+        // NOLINTBEGIN(clang-analyzer-security.ArrayBound)
         const float32* pArr = viewProj.data();
         // Extract 6 frustum planes from column-major viewProj matrix
         // Left, Right, Bottom, Top, Near, Far
@@ -557,6 +561,7 @@ namespace sw
             float4{          pArr[2],           pArr[6],            pArr[10],            pArr[14]},
             float4{pArr[3] - pArr[2], pArr[7] - pArr[6], pArr[11] - pArr[10], pArr[15] - pArr[14]}
         };
+        // NOLINTEND(clang-analyzer-security.ArrayBound)
 
         for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
         {

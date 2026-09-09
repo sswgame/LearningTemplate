@@ -129,7 +129,7 @@ namespace sw
 
     Win32SplashWindow::~Win32SplashWindow()
     {
-        dismiss();
+        Win32SplashWindow::dismiss();
     }
 
     LRESULT CALLBACK Win32SplashWindow::splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )

@@ -22,7 +22,7 @@ namespace sw
 
     X11Window::~X11Window()
     {
-        destroy();
+        X11Window::destroy();
     }
 
 #if defined( SW_PLATFORM_LINUX )

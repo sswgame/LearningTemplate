@@ -50,7 +50,7 @@ namespace sw::editor
                         continue;
                     if ( EditorAssetTypeRegistry::matches( pFilter[index]._kind, path ) == false )
                         continue;
-                    return pFilter[index]._label.data();
+                    return pFilter[index]._label;
                 }
                 return "File";
             }
@@ -447,14 +447,14 @@ namespace sw::editor
             const EditorAssetBrowserFilter* pFilter  = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
             const utf8*                     pPreview = "All";
             if ( _filterIndex < filterCount )
-                pPreview = pFilter[_filterIndex]._label.data();
+                pPreview = pFilter[_filterIndex]._label;
             ImGui::SetNextItemWidth( 110.0f );
             if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
             {
                 for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
                 {
                     const bool bSelected = ( _filterIndex == filterIdx );
-                    if ( ImGui::Selectable( pFilter[filterIdx]._label.data(), bSelected ) )
+                    if ( ImGui::Selectable( pFilter[filterIdx]._label, bSelected ) )
                         _filterIndex = filterIdx;
                     if ( bSelected )
                         ImGui::SetItemDefaultFocus();

@@ -246,6 +246,10 @@ namespace sw
                 {
                     glDrawBuffer( GL_BACK );
                 }
+                // 벡터·행렬을 연속된 float 로 훑는 자리다. 형식적으로는 배열이 아닌 멤버를 배열로 읽는
+                // 것이라 분석기가 짚지만, 배치는 `float3`/`float4x4` 옆의 static_assert 가 컴파일 타임에
+                // 보장한다. 없애려면 이 경계의 시그니처를 값 타입으로 바꿔야 하는데 C-ABI 제약이 있다.
+                // NOLINTNEXTLINE(clang-analyzer-security.ArrayBound)
                 glClearColor( pClear[0], pClear[1], pClear[2], pClear[3] );
                 glClear( GL_COLOR_BUFFER_BIT );
             }

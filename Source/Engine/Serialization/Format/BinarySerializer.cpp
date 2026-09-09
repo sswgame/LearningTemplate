@@ -159,7 +159,7 @@ namespace sw
                 continue;
             ++propCount;
         }
-        outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + propCount * 32 );
+        outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         writer.write( propCount );
 
         for ( const PropertyInfo& prop : listProp )

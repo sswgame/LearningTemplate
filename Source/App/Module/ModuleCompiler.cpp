@@ -35,7 +35,7 @@ namespace sw
 
     void ModuleCompiler::shutdown()
     {
-        cancel();
+        ModuleCompiler::cancel();
         if ( _workerThread.joinable() )
             _workerThread.join();
     }

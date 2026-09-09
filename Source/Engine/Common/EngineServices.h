@@ -30,9 +30,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct EngineServices
     {
+// 인자가 **타입 이름과 선언자 이름**이라 괄호를 씌울 수 없다 — `(Type)* (member)` 는 문법이 아니다.
+// NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       Type* member{ nullptr };
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Type* member{ nullptr };
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             Type* member{ nullptr };
+// NOLINTEND(bugprone-macro-parentheses)
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST

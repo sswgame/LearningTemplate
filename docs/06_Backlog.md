@@ -125,25 +125,17 @@ Inspector 3 · Material 1 · Profiler 3).
 골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
 것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
-### 1-2. clang-tidy 지적 65건 — 분류는 끝났고 판단만 남았다
+### 1-2. clang-tidy — 남은 지적은 0건이다
 
-`py -3 Scripts/lint/RunClangTidy.py` 가 고유 지적 65건을 낸다(처음 훑을 때 110건에서 줄었다).
-**이미 전부 한 번 훑었으니 같은 분류를 다시 하지 말 것.** 오탐으로 판정한 자리는
-`NOLINTNEXTLINE` + 이유 주석을 달아 두었으므로, 새로 뜨는 것은 분류하지 않은 새 코드다.
+`py -3 Scripts/lint/RunClangTidy.py` 가 **지적 없음**을 낸다(처음 훑을 때 노이즈 포함 ~300건,
+정리 후 110 → 65 → 20 → 0).
 
-| 종류 | 건수 | 판정 |
-|---|---|---|
-| `clang-analyzer-optin.cplusplus.VirtualCall` | 14 | **대부분 오탐.** 이 엔진은 생성/파괴와 `initialize`/`shutdown` 을 분리하는데 분석기가 소멸자→`shutdown` 을 가상 디스패치 문제로 본다. `Component.cpp:271` 만 한 번 더 볼 값이 있다 |
-| `bugprone-macro-parentheses` | 14 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`). RuntimeAPI 의 두 매크로는 NOLINT 처리함 |
-| `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다(vector 재할당의 이동/복사 우선순위, Windows 전용 DX11·DX12) |
-| `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘기는 자리다 — 커스텀 `string` 의 오버로드를 인식하지 못한다. (실제였던 `XmlSerializer` 두 곳은 고쳤다) |
-| `clang-analyzer-deadcode.DeadStores` | 4 | 의도된 기본값이거나 영향 없음 |
-| `clang-analyzer-security.ArrayBound` | 4 | **기술적으로 UB.** `&float3::_x` 를 `const float32*` 로 넘겨 `[1]`·`[2]` 를 읽는 관용구다. `data()` 를 추가해 **찾은 자리는 전부 옮겼고**(아래 3절) 남은 것은 분석기가 경계를 넘어 추론한 경로다. 더 줄이려면 C-ABI 경계의 시그니처를 `const float3&` 로 바꿔야 한다 |
-| `bugprone-implicit-widening-of-multiplication-result` | 4 | 남은 것은 `reserve` 힌트(`propCount * 32`)와 SPIR-V 파서다 — 파서는 위에서 `offset + instrWords > wordCount` 로 경계를 막고 instrWords 가 16비트라 넘칠 수 없다 |
-| `clang-analyzer-optin.performance.Padding` | 3 | 구조체 멤버 순서 제안. 영향 낮음 |
-| `bugprone-use-after-move` | 2 | **오탐.** `Base{ std::move( other ) }` 는 기반 부분객체만 이동한다 |
-| `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 둘 다 뮤텍스 락이 이론상 던질 수 있다. 이 저장소는 `/EHsc` 로 예외를 켜 두고 복구 불가 상황은 종료시키는 쪽이라 현재 동작이 의도와 맞다 — 바꿀 근거가 생기면 그때 본다 |
-| `bugprone-unhandled-self-assignment` | 1 | **오탐.** `this != &rhs` 가드가 있다 |
+**새로 뜨는 지적은 분류하지 않은 새 코드다.** 판단해서 고치거나, 의도한 것이면 그 자리에
+`NOLINTNEXTLINE` 과 **이유**를 함께 남긴다. 이유 없는 NOLINT 는 다음 사람이 되살리고 같은 분류를
+다시 하게 만든다.
+
+검사 목록을 바꿀 때는 `.clang-tidy` 를 본다. 끈 검사는 셋뿐이고 각각 왜 이 코드베이스에서 쓸 수
+없는지 실측과 함께 적혀 있다(`easily-swappable-parameters`, `EnumCastOutOfRange`, `Padding`).
 
 ### 1-3. ASan: 모듈을 해제한 뒤 적재하면 초기화가 실패한다 (미해결)
 
@@ -242,6 +234,57 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
    - 검증: 네 백엔드(`-dx12 -dx11 -vk -gl`) 모두 종료 코드 0 / `[Error]` 0건.
      GL + 에디터의 에러 3건은 이 변경과 무관한 기존 버그였고(스태시로 기준선을 다시 빌드해
      확인했다), **그 다음에 따로 고쳤다** — 아래 "GL 컨텍스트" 항목.
+
+**전수 조사 3회차 — 남은 지적을 0 으로 (65 → 0건)**
+
+남은 65건을 하나씩 판단했다. 고칠 수 있으면 고치고, 구조적으로 불가능한 자리는 **이유를 적어**
+NOLINT 했다. 이유 없는 억제는 남기지 않았다.
+
+**찾은 실제 결함**
+
+- **`Component` 생성자가 가상 함수를 불러 기본값이 틀린 타입으로 적용됐다.** 생성자가
+  `initialize()` → 가상 `getTypeInfo()` 를 부르는데, 생성 중에는 객체가 아직 `Component` 라
+  **파생 타입이 아니라 기반 타입**의 TypeInfo 가 나온다. 즉 `MeshComponent` 를 만들어도
+  "Component" 이름으로 기본값을 찾았다. 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨
+  준다 — `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
+  `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 즉 생성자 호출은 **중복이면서 틀린 조회**였고,
+  컴포넌트를 만들 때마다 헛일을 했다. 호출과 (호출자가 없어진) `initialize()` 를 걷어냈다.
+  안전한지 확인한 근거: `initialize()` 는 `private` 이고 호출자가 생성자뿐이며, 기본값 데이터는
+  게임이 `setPath` 를 부르지 않으면 아예 로드되지 않는다(`Resource/` 에 `<Defaults>` 노드도 없다).
+- **`FrameRendererPassExecute` 의 SSAO PSO 폴백이 자기 자신이었다.**
+  `getEnginePso(SSAO) != 0 ? getEnginePso(SSAO) : getEnginePso(SSAO)` — 참·거짓이 같아 아무 효과가
+  없고 함수만 세 번 불렀다. 형제 패스는 전부 **다른** PSO 로 폴백한다(DepthPrepass→Shadow,
+  GBufferAlbedo→GBuffer, Tonemap→Present). 복사하면서 대체 대상을 바꾸지 않은 자리다. 폴백을
+  짐작해 넣지 않고, PSO 가 0 이면 `drawFullscreen` 이 건너뛰므로 형제들처럼 그대로 넘기게 했다.
+- **`StringBuilder::appendFormat` 이 재시도 루프에서 매번 `std::forward` 했다.** 버퍼가 모자라면
+  같은 인자로 다시 포맷하는데, 그때는 이미 이동된 값을 쓰게 된다. `formatstring` 은 값을 읽어
+  찍기만 하므로 lvalue 로 넘겨 위험 자체를 없앴다.
+- **컴포넌트 붙여넣기가 실패를 삼켰다.** `pasteComponentAsNew` 가 역직렬화 결과를 계산해 놓고
+  **아무도 읽지 않았다.** 둘 다 실패해도 빈 컴포넌트를 붙이고 "붙여넣기" 실행 취소 항목까지
+  남겨서, 쓰는 사람은 왜 비었는지 알 수 없었다. 경고 로그를 남긴다.
+- **`Material` 의 죽은 코드.** 첫 순회가 `packSize` 를 계산했지만 뒤따르는 `if` 는 본문이 주석뿐인
+  빈 블록이었고 값은 아무도 읽지 않았다. 실제 패킹은 두 번째 순회가 다시 계산해서 한다.
+- **콘텐츠 브라우저 필터 라벨이 `string_view` 였다.** 쓰는 쪽 셋이 모두 곧바로 `.data()` 를 ImGui 로
+  넘기는데 ImGui 는 널 종단을 요구한다. 지금 표가 전부 리터럴이라 우연히 맞을 뿐이라, 타입을
+  `const utf8*` 로 바꿔 계약을 적었다.
+- 소멸자·생성자에서의 가상 호출 12곳을 클래스 이름으로 한정했다. 파괴 중에는 파생 재정의가 이미
+  사라진 뒤라 이 클래스의 것이 불린다 — 지금 동작이 의도한 것이므로 코드로 적었다.
+- `.bin`/`.xml` 은 -4, `.json` 은 -5 처럼 확장자 길이를 손으로 쓰던 자리를 표로 돌게 했다.
+  `Json`/`Xml` 직렬화의 같은 본문 두 분기는 조건으로 합쳤다. `ShaderBaker` 의 SPIR-V 두 케이스는
+  묶어서 "같아야 한다" 를 드러냈다.
+
+**오탐이라 이유만 남긴 것** — 다시 판단하지 말 것:
+`Base{ std::move(other) }` 뒤의 파생 멤버 읽기(기반 부분객체만 이동한다), 타입 이름·`##` 인자를
+받는 매크로(괄호를 씌우면 문법이 깨진다), 순서가 규약인 분기(vector 재할당의 이동/복사 우선순위,
+Windows 전용 DX11·DX12, "여기서 안 하고 아래서 한다" 는 케이스 묶음), 크기를 함께 넘기는
+`append(data(), count)`(커스텀 string 의 오버로드를 인식하지 못한다), `float3`/`float4x4` 를
+연속 float 로 훑는 자리(배치는 옆의 `static_assert` 가 보장한다), 뮤텍스 락이 던질 수 있어
+noexcept 와 어긋난다는 지적(잠그지 못하는 상황은 복구 대상이 아니다).
+
+**끈 검사 하나 추가** — `clang-analyzer-optin.performance.Padding`. 걸린 셋이 전부 인스턴스가
+하나뿐인 매니저이거나 20행짜리 정적 표라 아끼는 양이 무의미한데, 이 저장소는 "생성자 초기화는
+선언 순서" 규약이라 멤버를 옮기면 초기화 목록도 같이 옮겨야 한다. 대량 배열로 쓰이는 뜨거운
+구조체가 생기면 그때 개별로 재는 편이 낫다.
 
 **전수 조사 2회차 — 분류해 둔 것을 실제로 고친다 (65건까지)**
 

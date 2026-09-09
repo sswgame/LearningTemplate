@@ -25,7 +25,7 @@ namespace sw
      */
     enum class PredefinedNameType : uint8
     {
-#define REGISTER_NAME( index, name ) NameType_##name = index,
+#define REGISTER_NAME( index, name ) NameType_##name = ( index ),
 #include "Core/Predefined/PredefinedNameType.xxx"
 
 #undef REGISTER_NAME

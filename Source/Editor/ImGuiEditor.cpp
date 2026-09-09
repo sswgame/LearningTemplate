@@ -90,7 +90,7 @@ namespace sw::editor
 
     ImGuiEditor::~ImGuiEditor()
     {
-        shutdown();
+        ImGuiEditor::shutdown();
     }
 
     bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )

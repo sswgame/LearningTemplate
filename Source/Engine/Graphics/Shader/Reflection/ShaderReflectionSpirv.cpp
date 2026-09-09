@@ -187,7 +187,7 @@ namespace sw
             {
                 const uint32 target = pWords[offset + 1];
                 const utf8*  pStr   = reinterpret_cast<const utf8*>( &pWords[offset + 2] );
-                const size_t maxLen = ( instrWords - 2 ) * 4;
+                const size_t maxLen = static_cast<size_t>( instrWords - 2 ) * 4;
                 mapName[target]     = string( pStr, strnlen( pStr, maxLen ) );
             }
             else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberName && instrWords >= 4 )
@@ -195,7 +195,7 @@ namespace sw
                 const uint32 target                = pWords[offset + 1];
                 const uint32 memberIndex           = pWords[offset + 2];
                 const utf8*  pStr                  = reinterpret_cast<const utf8*>( &pWords[offset + 3] );
-                const size_t maxLen                = ( instrWords - 3 ) * 4;
+                const size_t maxLen                = static_cast<size_t>( instrWords - 3 ) * 4;
                 mapMemberName[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
             }
             else if ( opcode == ShaderReflectionSpirvInternal::kOpDecorate && instrWords >= 3 )

@@ -52,10 +52,15 @@ namespace sw
 
     static void setVkClearColor( VkClearValue& dst, const float32* pClear )
     {
+        // 벡터·행렬을 연속된 float 로 훑는 자리다. 형식적으로는 배열이 아닌 멤버를 배열로 읽는
+        // 것이라 분석기가 짚지만, 배치는 `float3`/`float4x4` 옆의 static_assert 가 컴파일 타임에
+        // 보장한다. 없애려면 이 경계의 시그니처를 값 타입으로 바꿔야 하는데 C-ABI 제약이 있다.
+        // NOLINTBEGIN(clang-analyzer-security.ArrayBound)
         dst.color.float32[0] = pClear[0];
         dst.color.float32[1] = pClear[1];
         dst.color.float32[2] = pClear[2];
         dst.color.float32[3] = pClear[3];
+        // NOLINTEND(clang-analyzer-security.ArrayBound)
     }
 
     static void mapStateVal( RHIBufferState state, VkAccessFlags& access, VkPipelineStageFlags& stage )
@@ -69,7 +74,7 @@ namespace sw
             case RHIBufferState::ShaderResource:
                 access = VK_ACCESS_SHADER_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                 break;
             case RHIBufferState::IndirectArgument:
                 access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -82,7 +87,7 @@ namespace sw
             case RHIBufferState::VertexOrConstant:
                 access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
                 stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                 break;
             case RHIBufferState::Index:
                 access = VK_ACCESS_INDEX_READ_BIT;

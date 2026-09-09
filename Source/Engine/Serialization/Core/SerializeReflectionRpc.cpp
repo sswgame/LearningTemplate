@@ -192,7 +192,7 @@ namespace sw
         const uint32            count            = args.getCount();
         const uint8*            pCountBytes      = reinterpret_cast<const uint8*>( &count );
 
-        out._argumentBytes.reserve( sizeof( uint32 ) + count * 32 );
+        out._argumentBytes.reserve( sizeof( uint32 ) + static_cast<size_t>( count ) * 32 );
         out._argumentBytes.insert( out._argumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )

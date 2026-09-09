@@ -49,7 +49,7 @@ namespace sw
 
     CocoaWindow::~CocoaWindow()
     {
-        destroy();
+        CocoaWindow::destroy();
     }
 
 #if defined( SW_PLATFORM_MACOS )

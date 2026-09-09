@@ -19,7 +19,7 @@ namespace sw
 
     X11SplashWindow::~X11SplashWindow()
     {
-        dismiss();
+        X11SplashWindow::dismiss();
     }
 
 #if defined( SW_PLATFORM_LINUX )

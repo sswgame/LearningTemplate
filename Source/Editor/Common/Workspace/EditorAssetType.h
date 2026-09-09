@@ -38,7 +38,14 @@ namespace sw::editor
     /** @brief 콘텐츠 브라우저 타입 필터 한 줄 */
     struct EditorAssetBrowserFilter
     {
-        string_view     _label;
+        /**
+         * @brief 콤보에 그대로 넘기는 라벨. **널 종단 문자열이다.**
+         * @details 예전에는 `string_view` 였는데 쓰는 쪽이 셋 다 곧바로 `.data()` 를 ImGui 로
+         *          넘겼다 — ImGui 는 널 종단을 요구하지만 `string_view` 는 그것을 보장하지 않는다.
+         *          지금 표가 전부 리터럴이라 우연히 맞을 뿐, 누가 부분 문자열을 넣으면 조용히
+         *          범위를 넘어 읽는다. 타입으로 계약을 적어 둔다.
+         */
+        const utf8*     _label;
         EditorAssetKind _kind;
         bool            _bOther;
     };

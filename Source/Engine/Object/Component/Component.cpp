@@ -21,7 +21,14 @@ namespace sw
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {
-        initialize();
+        // **여기서 기본값을 적용하지 않는다.** 예전에는 `initialize()` 를 불렀고 그 안에서 가상
+        // `getTypeInfo()` 를 썼는데, 생성 중에는 객체가 아직 Component 라 **파생 타입이 아니라
+        // 기반 타입의 TypeInfo** 가 나온다. 즉 MeshComponent 를 만들어도 "Component" 이름으로
+        // 기본값을 찾았다.
+        //
+        // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다 —
+        // `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
+        // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 생성자 호출은 중복이면서 틀린 조회였다.
     }
 
     Component::Component( Component&& other ) noexcept
@@ -264,13 +271,6 @@ namespace sw
         if ( _bActive.load( std::memory_order_relaxed ) == false )
             return false;
         return _pOwner == nullptr || _pOwner->isActiveInHierarchy();
-    }
-
-    void Component::initialize()
-    {
-        const TypeInfo* pTypeInfo = getTypeInfo();
-        if ( pTypeInfo != nullptr )
-            ComponentDefaults::applyDefaults( this, *pTypeInfo );
     }
 
     atomic<uint64> Component::_s_nextComponentId = 1;

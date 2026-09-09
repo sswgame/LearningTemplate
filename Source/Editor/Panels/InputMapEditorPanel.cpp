@@ -427,8 +427,11 @@ namespace sw::editor
         }
 
         // 1) 활성 장치 상태
-        const InputDeviceType devType   = pInput->getActiveDeviceType();
-        const utf8*           pTypeName = "Unknown";
+        const InputDeviceType devType = pInput->getActiveDeviceType();
+        // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
+        // 보이지만, 열거자가 늘면 이 값이 화면에 나와야 한다.
+        // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+        const utf8* pTypeName = "Unknown";
         switch ( devType )
         {
             case InputDeviceType::KeyboardMouse:
@@ -533,7 +536,10 @@ namespace sw::editor
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const GamepadBatteryInfo batInfo = pGamepad->getBatteryInfo();
-                const utf8*              pBatStr = "Unknown";
+                // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
+                // 보이지만, 열거자가 늘면 이 값이 화면에 나와야 한다.
+                // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+                const utf8* pBatStr = "Unknown";
                 switch ( batInfo._level )
                 {
                     case GamepadBatteryLevel::Empty:

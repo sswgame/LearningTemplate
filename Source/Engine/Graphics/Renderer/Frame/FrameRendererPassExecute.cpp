@@ -204,7 +204,7 @@ namespace sw
             const float4 clearColor = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferAlbedo, float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
             const bool   bHasNormal = findTransient( FrameRendererUtil::Attachment::kGBufferNormal ) != 0;
             const bool   bUseMrt    = bHasNormal && _pDevice->supportsMultiRenderTarget() &&
-                                      getEnginePso( RenderPassType::GBuffer ) != 0;
+                                 getEnginePso( RenderPassType::GBuffer ) != 0;
             if ( bUseMrt )
             {
                 const float4              normalClear  = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::kNormalClear );
@@ -253,8 +253,8 @@ namespace sw
             const AttachmentNames& names = attachmentNames();
             const hashed_string&   colorTarget =
                 findTransient( names._transparentColor.view() ) != 0
-                    ? names._transparentColor
-                    : ( findTransient( names._litColor.view() ) != 0 ? names._litColor : names._sceneColor );
+                      ? names._transparentColor
+                      : ( findTransient( names._litColor.view() ) != 0 ? names._litColor : names._sceneColor );
 
             if ( colorTarget == names._transparentColor )
             {
@@ -279,9 +279,16 @@ namespace sw
             const hashed_string&   aoTarget = findTransient( names._aoColor.view() ) != 0 ? names._aoColor : names._sceneColor;
             registerPassTexture( ctx, attachmentNames()._sceneDepth, FrameRendererUtil::Attachment::kSceneDepth );
             registerPassTexture( ctx, attachmentNames()._gbufferNormal, FrameRendererUtil::Attachment::kGBufferNormal );
-            const RHIPipelineStateHandle aoPso =
-                getEnginePso( RenderPassType::SSAO ) != 0 ? getEnginePso( RenderPassType::SSAO ) : getEnginePso( RenderPassType::SSAO );
-            executeFullscreenPass( aoPso, aoTarget, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+            // 여기 `getEnginePso(SSAO) != 0 ? getEnginePso(SSAO) : getEnginePso(SSAO)` 가 있었다 —
+            // 참·거짓이 같아 아무 효과가 없고 함수만 세 번 불렀다. 형제 패스들은 폴백이 **다른**
+            // PSO 다(DepthPrepass→Shadow, GBufferAlbedo→GBuffer, Tonemap→Present). 즉 복사할 때
+            // 대체 대상을 바꾸지 않은 자리다.
+            //
+            // 폴백을 **짐작해서 넣지 않는다.** SSAO 가 없을 때 무엇을 대신 그릴지는 설계 판단이고,
+            // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다 — Lighting·Bloom·Outline 도
+            // 폴백 없이 그대로 넘긴다. 그 형태로 맞춘다. 대체 패스가 필요하다고 판단되면 그때
+            // 형제들처럼 명시적으로 적는다.
+            executeFullscreenPass( getEnginePso( RenderPassType::SSAO ), aoTarget, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
         }
         else if ( passType == RenderPassType::Bloom )
         {

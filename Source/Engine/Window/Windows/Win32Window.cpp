@@ -22,7 +22,7 @@ namespace sw
 
     Win32Window::~Win32Window()
     {
-        destroy();
+        Win32Window::destroy();
     }
 
     /**

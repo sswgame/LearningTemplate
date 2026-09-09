@@ -320,7 +320,7 @@ namespace sw
 
     XAudio2System::~XAudio2System()
     {
-        shutdown();
+        XAudio2System::shutdown();
     }
 
     bool XAudio2System::initialize()
@@ -379,6 +379,9 @@ namespace sw
     {
         if ( _impl == nullptr || _impl->_bInitialized == 0 )
             return;
+        // 소멸자가 `XAudio2System::shutdown()` 을 한정해서 부르므로 파괴 중 가상 디스패치는 없다.
+        // 여기서 `stopMusic()` 까지 한정하면 **정상 종료 경로**에서 파생 재정의가 무시되므로 두지 않는다.
+        // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
         stopMusic();
         for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
         {

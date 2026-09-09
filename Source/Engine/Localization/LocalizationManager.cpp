@@ -42,6 +42,9 @@ namespace sw
         _nextCallbackId   = other._nextCallbackId;
     }
 
+    // `std::lock` 은 시스템 오류일 때 던질 수 있어 noexcept 와 어긋난다고 짚힌다. 뮤텍스를 잠그지
+    // 못하는 상황은 복구 대상이 아니므로 종료가 맞고, noexcept 는 그 의도를 적은 것이다.
+    // NOLINTNEXTLINE(bugprone-exception-escape)
     LocalizationManager& LocalizationManager::operator=( LocalizationManager&& other ) noexcept
     {
         if ( this != &other )
