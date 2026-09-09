@@ -95,6 +95,10 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking source GLOB coverage vs compile_commands..."
 		ARGS --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
 	)
+	sw_addRepoPythonTarget(CheckDataFileReferences "${SW_SCRIPT_LINT_CHECK_DATA_FILE_REFERENCES}"
+		COMMENT "Checking that every X-macro list file is actually included..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -148,5 +152,14 @@ function(sw_registerLintTests)
 			--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
 		)
 		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+
+	if(TARGET CheckDataFileReferences)
+		add_test(
+			NAME CheckDataFileReferences
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_DATA_FILE_REFERENCES}"
+			--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckDataFileReferences PROPERTIES LABELS "lint" TIMEOUT 30)
 	endif()
 endfunction()

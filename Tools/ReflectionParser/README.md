@@ -106,8 +106,8 @@ ReflectionParser/
 ├─ ReflectBuiltinsLoader.*       # ReflectBuiltins.h / .gen.cpp
 ├─ TypeNameMap.*                 # 스칼라 타입 별칭
 ├─ ContainerTypeMap.*            # Vector/Map 등 규칙
-├─ PredefinedReflectAnnotation.xxx
-├─ PredefinedAnnotationKind.xxx
+├─ PredefinedReflectAnnotation.xxx  # clang annotate 매크로 목록
+├─ PredefinedAnnotationField.xxx    # 애노테이션 필드 → 멤버 대입 표
 ├─ Templates/                    # emit 골격 (.tpl)
 ├─ CMakeLists.txt
 └─ README.md
@@ -118,6 +118,7 @@ ReflectionParser/
 | 경로 | 역할 |
 |------|------|
 | `Source/Core/Predefined/AnnotationMeta.txt` | 어노테이션 별칭 표 |
+| `Source/Core/Predefined/PredefinedAnnotationKind.xxx` | 애노테이션 종류 — `AnnotationMeta.h` 가 여기서 전개한다. 예전에 이 폴더에 같은 이름의 사본이 있었는데 아무도 include 하지 않는 죽은 파일이었다(`Scripts/lint/CheckDataFileReferences.py` 가 이제 막는다) |
 | `Source/Engine/Reflection/ReflectBuiltins.h` | 빌트인 타입 → `ReflectBuiltins.gen.cpp` |
 | `Config/Environment/parser_config.defaults.json` | clang 인자·경로·emit·tuning |
 | `Config/Environment/toolchain_config.json` | LLVM/MSVC 절대 경로 (`SetupEnvironment.py`) |

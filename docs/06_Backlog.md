@@ -150,7 +150,33 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 진행한 폴더: `App`(`6efa4fd2`) · `RuntimeAPI`(`06889dc7`) · `Core`(`58c1ac30`) ·
 `Engine`(`83b6ea60`) · `GameFramework`(아래).
-남은 것: `Tools/ReflectionParser`.
+**모두 끝났다.** `App`(`6efa4fd2`) · `RuntimeAPI`(`06889dc7`) · `Core`(`58c1ac30`) ·
+`Engine`(`83b6ea60`) · `GameFramework`(`bfb00e1d`) · `Games`(`71c4e0aa`) · `Editor`(`cb55af53`) ·
+`Tools/ReflectionParser`(아래).
+
+**ReflectionParser — 죽은 X-macro 사본을 없애고 재발을 검사로 막았다**
+- `.xxx` 목록 파일 **사본 6개**가 아무도 include 하지 않는 상태로 있었다. 이게 왜 나쁜지는
+  내가 직접 겪었다 — 창 크기 버그를 고치려고 `Source/Core/CommandLine/ArgumentList.xxx` 를
+  수정했는데 빌드 결과가 바뀌지 않았다. 실제로 include 되는 것은
+  `Source/Core/Predefined/ArgumentList.xxx` 였고, 죽은 쪽은 폴더 이름상 먼저 찾게 되는 자리에
+  있으면서 `LANGUAGE`·`BAKE_SHADERS` 가 빠진 낡은 상태였다.
+- 지운 것: `Core/Predefined/PredefinedEnumBitFlagTags.xxx`,
+  `Engine/Reflection/PredefinedEnumBitFlagTags.xxx`(둘 다 `REGISTER_ENUM_BITFLAG_TAG` 를 쓰는
+  곳이 없다 — 비트플래그는 이제 명시 애노테이션과 2의 거듭제곱 자동 판정으로 잡는다),
+  `Engine/Reflection/PredefinedContainerKind.xxx`, `Engine/Reflection/PredefinedFunctionNetRole.xxx`,
+  `Tools/ReflectionParser/PredefinedAnnotationKind.xxx`(전부 `Core/Predefined/` 쪽을 include 한다),
+  `Config/Reflection/AnnotationMeta.txt`(CMake·Constants.py 둘 다 `Source/Core/Predefined/` 를 쓴다
+  — 이 폴더는 비어서 사라졌다).
+- `Scripts/lint/CheckDataFileReferences.py` 신설 + CTest `lint` 등록(이제 lint 6개). 규칙:
+  `Source/**`·`Tools/**` 의 모든 `.xxx` 는 include 또는 경로 참조가 하나는 있어야 한다.
+  음성 테스트로 확인했다 — 죽은 사본을 되살리면 실패한다.
+  (그 과정에서 검사 스크립트의 **독스트링에 적은 예시 경로**가 참조로 집계되어 한 번 통과해
+  버렸다. 자기 자신은 세지 않게 고쳤다.)
+- `cmake/Engine/GeneratedConstants.cmake` 는 **자동 생성물**이다. lint 경로 상수는
+  `Scripts/common/Constants.py` 와 `Scripts/setup/GenerateCMakeConstants.py` 에 넣어야 한다 —
+  생성물을 직접 고치면 다음 configure 가 지운다(이것도 한 번 겪었다).
+- ReflectionParser README 의 파일 트리가 죽은 사본을 싣고 실제 파일
+  (`PredefinedAnnotationField.xxx`)은 빠뜨리고 있었다 — 고쳤다.
 
 **Editor — README 가 이미 정확했다. 고칠 것은 하나였다**
 - `Source/Editor/README.md` 는 "어디에 두나" 표(ImGui 그림 / 상태만 / 바꾸거나 읽고 쓰기)까지
