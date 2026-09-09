@@ -22,18 +22,25 @@ sw_addTestExecutable(SmokeTest
 		"unit;module;nogpu"
 	TIMEOUT
 		180
+	# ASan 의 전역 오버플로 검사를 이 스위트에서만 끈다.
+	#
+	# 이 ASan 런타임은 **DLL 을 내려도 그 모듈의 전역 등록을 지우지 않는다.** 측정값:
+	# report_globals=2 로 찍어 보면 이 스위트 한 번에 "Added Global" 5241건, 제거 0건이다.
+	# 그래서 모듈을 내린 뒤 다음 모듈이 그 주소 범위에 매핑되면, 새 DLL 이 **자기 전역을**
+	# 읽는데도 앞 모듈이 남긴 레드존을 밟아 global-buffer-overflow 로 보고된다(실제로 잡힌
+	# 것은 RHI_DX12 의 정적 초기화가 SW_LOG_CALLER 의 __FILE__ 를 읽는 자리였다). 게다가
+	# 보고하려고 주소를 설명하는 순간 이미 언매핑된 모듈의 디스크립터를 역참조해
+	# "nested bug in the same thread, aborting" 으로 프로세스가 죽는다 — 예전에 보이던
+	# LoadLibrary err=1114 와 맨 세그폴트가 이것이다.
+	#
+	# 이 스위트는 존재 이유가 모듈을 올렸다 내리는 것이라 우회할 방법이 없다. 전역 검사만
+	# 끄면 힙·스택·use-after-free 는 그대로 잡히고 19개 케이스가 전부 돈다(예전에는 스위트째
+	# Disabled 였다). 다른 4개 테스트는 전역 검사를 켠 채로 남는다.
+	ASAN_OPTIONS
+		report_globals=0
 )
 
 target_include_directories(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/App")
-
-# ASan 빌드에서는 이 스위트를 비활성한다. 케이스 대부분이 모듈을 올렸다 내리는 핫리로드 경로인데,
-# ASan 에서 그 경로가 두 번째 DLL 의 정적 초기화를 실패시킨다(8/8 결정적, 원인 미규명 — 배제한
-# 가설들과 12줄 재현은 docs/06_Backlog.md 의 "ASan: 모듈 해제 후 적재"). 한 케이스만의 문제가
-# 아니라 LiveReload* 전반이 걸리므로 스위트 단위로 끈다. 바이너리는 계속 빌드되므로 손으로
-# 돌려 볼 수 있고, 원인이 잡히면 이 블록만 지우면 된다.
-if(SW_ENABLE_SANITIZER AND BUILD_TESTING)
-	set_tests_properties(SmokeTest PROPERTIES DISABLED TRUE)
-endif()
 
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE

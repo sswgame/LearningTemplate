@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-09 · 기준 커밋 `e6973186`
+> 마지막 갱신: 2026-09-10 · 기준 커밋 `1e59128d`
 
 ---
 
@@ -25,7 +25,20 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=40 -dx12 -EnableEditor -gv_editorPanelDump=25 > after.log
 ```
 
-현재 기준선: **창 14개 · 내용 없는 패널 0개.** 정점 수가 정확히 같기를 기대하면 안 된다 —
+**도구 패널까지 재려면 `-gv_editorOpenAllPanels=1` 을 같이 준다.** 기본 레이아웃에는 도구 패널
+(Sequencer·Material·Prefab·TileMap·SpriteClip·AnimGraph·DialogueGraph·DataTable·InputMap)이 닫혀
+있어서 덤프가 다섯 개만 본다. 이 스위치는 (1) 등록된 패널을 전부 열고, (2) 저장된 도킹 레이아웃을
+적용하지 않으며(도킹하면 같은 노드의 탭 중 앞의 하나만 그려진다), (3) 첫 사용 크기를 900×620 으로
+준다(ImGui 기본 크기는 내부 Child 를 9px 로 눌러 "내용 없음" 오탐을 만든다 — 실제로 봤다). 켠
+실행의 가시성·레이아웃은 **저장하지 않는다.**
+
+```powershell
+./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40
+```
+
+현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 1개**.
+그 1개는 `Sequencer/00000379`(ImSequencer 가 만드는 자식 창)이고, 부모 드로우리스트에 그려서
+정점이 자식으로 안 잡히는 것으로 의심하나 **확인하지 않았다.** 정점 수가 정확히 같기를 기대하면 안 된다 —
 폰트·DPI·도킹·애니메이션이 값을 흔든다. 보는 것은 "0 이 아닌가" 와 "창 목록이 그대로인가" 다.
 (도구가 실제로 잡는지 확인했다: `HierarchyPanel::drawContent` 를 즉시 return 으로 막으면
 `Hierarchy ... vtx=0 <== BLANK` 와 "내용 없는 패널 1개" 가 나온다.)
@@ -45,9 +58,9 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 168 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
-#   Shipping : 160 / 421 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
-#   ASan     : SmokeTest 는 Disabled (아래 1-3). 나머지 4개는 보고 0건으로 통과하고 전체 21초다.
+#   Debug    : CoreTest 169 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
+#   Shipping : 161 / 421 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
 ctest --test-dir build/Ninja-Debug -L nogpu
@@ -120,75 +133,73 @@ Inspector 3 · Material 1 · Profiler 3).
 - **진행 상태 1곳** (`GlobalVariables` 의 "Scanning presets...").  비어 있는 게 아니라 **기다리는**
   중이다. 빈 상태와 로딩 상태는 나중에 다르게 보여야 할 자리다.
 
+**2026-09-10: 텍스트 입력을 공용 위젯으로 옮겼다.** 표에 적힌 "공용 위젯 사용 0" 은 채택률
+문제로 보였지만, 실제로 8개 패널에 복사돼 있던 것은 위젯이 아니라 **임시 버퍼를 만들어 넣었다
+빼는 다섯 줄**이었다(`fixed_string<N> buf{ text.c_str() }` → `InputText` → 되돌려 담기). 크기를
+자리마다 골랐고(64·128·256·512) 그 크기를 넘으면 잘렸다 — 게다가 `fixed_string` 은 넘치는 입력에서
+버퍼 밖을 쓰고 있었다(3절). `EditorWidgets::drawTextField( label, string&, width )` 하나로 16곳을
+옮겼고, 손으로 만든 임시 버퍼 InputText 는 남아 있지 않다.
+
 남은 것은 표의 **호출 수** 자체다 — `InputMapEditorPanel` 313 · `ProfilerPanel` 94 등은 빈 상태가
 아니라 위젯·레이아웃 조립이다. 목록형 골격(예전 1-2)을 만들면 줄어든다고 적어 두었지만, 측정해 보니
 골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
 것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
-### 1-2. clang-tidy 지적 65건 — 분류는 끝났고 판단만 남았다
+### 1-2. clang-tidy 지적 — 분류는 끝났고 판단만 남았다
 
-`py -3 Scripts/lint/RunClangTidy.py` 가 고유 지적 65건을 낸다(처음 훑을 때 110건에서 줄었다).
-**이미 전부 한 번 훑었으니 같은 분류를 다시 하지 말 것.** 오탐으로 판정한 자리는
-`NOLINTNEXTLINE` + 이유 주석을 달아 두었으므로, 새로 뜨는 것은 분류하지 않은 새 코드다.
+`py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. **이 PC 에는 clang-tidy 가 없었다** — 저장소가 받아
+두는 `Tools/LLVM` 은 clang-tidy 를 뺀 축소판이라 스크립트가 "찾지 못했습니다" 로 끝났다. 이제
+Visual Studio 가 같이 설치하는 LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
+
+clang-tidy 22 로 올라가며 검사가 늘어 고유 지적이 65 → 308건이 됐다. 늘어난 243건은 **새 검사
+넷**이 전부이고, 하나씩 훑어 처리해 **87건**이 됐다(2026-09-10):
+
+| 종류 | 처리 |
+|---|---|
+| `bugprone-throwing-static-initialization` 179 | **150건은 `SW_LOG_CALLER` 하나가 냈다.** `Logger::registerCaller` 를 `noexcept` 로 만들어 없앴다 — 고정 배열과 뮤텍스뿐이라 실제로 던질 것이 없고, 정적 초기화에서 부르는 함수라는 계약을 타입에 못박는 편이 맞다. 남은 29건은 전역 변수 등록자·설정 싱글턴처럼 **시작 시 실패가 곧 종료**인 자리다 |
+| `bugprone-invalid-enum-default-initialization` 48 | **껐다.** `D3D11_RASTERIZER_DESC desc{}` 처럼 SDK 구조체를 0 으로 비우면 그 안의 열거형이 짚힌다 — 48건 전부 D3D11/D3D12/Vulkan 열거형이고 우리 열거형은 0건이다 |
+| `bugprone-derived-method-shadowing-base-method` 11 | **껐다.** `REFLECT_BODY()` 가 클래스마다 `swReflectSelf` 를 정의한다. NOLINT 는 매크로 안에 넣을 수 없어 REFLECT 를 쓰는 모든 자리에 붙여야 한다 |
+| `bugprone-std-namespace-modification` 10 | **껐다.** `std::hash` 특수화다 — 프로그램 정의 타입에 대한 특수화는 `[namespace.std]` 가 허용한다 |
+| `bugprone-command-processor` 1 | **고쳤다.** ContentBrowser 의 "Show in Explorer" 가 `system()` 이었다 — 셸을 거쳐 경로의 `&`·`"` 가 명령으로 해석되고 콘솔 창이 깜빡였다. `EditorAssetCommands::showInFileExplorer` 로 옮겨 셸 없이 프로세스를 띄운다(macOS `open -R`, 리눅스 `xdg-open` 도 같이) |
+
+**`clang-analyzer-optin.cplusplus.VirtualCall` 의 `Component.cpp` 는 진짜였다.** 1회차에서 "한 번
+더 볼 값이 있다" 고 미뤄 둔 자리다. `Component::Component()` 가 `initialize()` 를 부르고, 그 안에서
+**가상** `getTypeInfo()` 로 기본값을 적용하고 있었다. 기반 생성자 시점에는 파생 구현으로
+디스패치되지 않으므로 언제나 `Component` 의 TypeInfo 가 나왔다 — 파생 컴포넌트의 리플렉션 기본값은
+**한 번도 적용된 적이 없고**, 대신 컴포넌트를 만들 때마다 쓸모없는 타입 조회를 한 번씩 했다. 정본은
+생성 이후에 파생 타입으로 부르는 `applyTypeDefaults` 이고(GameObject::addComponent ·
+GameObjectManager 둘 다 이미 그렇게 한다), 생성자의 호출은 지웠다.
+
+나머지 오탐 판정은 그대로다(아래는 요약 — 자리마다 `NOLINTNEXTLINE` 과 이유 주석이 있다):
 
 | 종류 | 건수 | 판정 |
 |---|---|---|
-| `clang-analyzer-optin.cplusplus.VirtualCall` | 14 | **대부분 오탐.** 이 엔진은 생성/파괴와 `initialize`/`shutdown` 을 분리하는데 분석기가 소멸자→`shutdown` 을 가상 디스패치 문제로 본다. `Component.cpp:271` 만 한 번 더 볼 값이 있다 |
-| `bugprone-macro-parentheses` | 14 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`). RuntimeAPI 의 두 매크로는 NOLINT 처리함 |
-| `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다(vector 재할당의 이동/복사 우선순위, Windows 전용 DX11·DX12) |
-| `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘기는 자리다 — 커스텀 `string` 의 오버로드를 인식하지 못한다. (실제였던 `XmlSerializer` 두 곳은 고쳤다) |
+| `clang-analyzer-optin.cplusplus.VirtualCall` | 13 | **오탐.** 생성/파괴와 `initialize`/`shutdown` 을 분리하는 구조를 분석기가 가상 디스패치 문제로 본다 |
+| `bugprone-macro-parentheses` | 12 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`) |
+| `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다 |
+| `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘긴다 |
 | `clang-analyzer-deadcode.DeadStores` | 4 | 의도된 기본값이거나 영향 없음 |
-| `clang-analyzer-security.ArrayBound` | 4 | **기술적으로 UB.** `&float3::_x` 를 `const float32*` 로 넘겨 `[1]`·`[2]` 를 읽는 관용구다. `data()` 를 추가해 **찾은 자리는 전부 옮겼고**(아래 3절) 남은 것은 분석기가 경계를 넘어 추론한 경로다. 더 줄이려면 C-ABI 경계의 시그니처를 `const float3&` 로 바꿔야 한다 |
-| `bugprone-implicit-widening-of-multiplication-result` | 4 | 남은 것은 `reserve` 힌트(`propCount * 32`)와 SPIR-V 파서다 — 파서는 위에서 `offset + instrWords > wordCount` 로 경계를 막고 instrWords 가 16비트라 넘칠 수 없다 |
+| `clang-analyzer-security.ArrayBound` | 4 | `&float3::_x` 관용구. `data()` 로 옮길 수 있는 자리는 전부 옮겼고, 남은 것은 C-ABI 경계의 시그니처를 바꿔야 한다 |
+| `bugprone-implicit-widening-of-multiplication-result` | 4 | `reserve` 힌트와 SPIR-V 파서. 경계를 위에서 막는다 |
 | `clang-analyzer-optin.performance.Padding` | 3 | 구조체 멤버 순서 제안. 영향 낮음 |
 | `bugprone-use-after-move` | 2 | **오탐.** `Base{ std::move( other ) }` 는 기반 부분객체만 이동한다 |
-| `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 둘 다 뮤텍스 락이 이론상 던질 수 있다. 이 저장소는 `/EHsc` 로 예외를 켜 두고 복구 불가 상황은 종료시키는 쪽이라 현재 동작이 의도와 맞다 — 바꿀 근거가 생기면 그때 본다 |
+| `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 뮤텍스 락이 이론상 던진다 — 현재 동작이 의도와 맞다 |
 | `bugprone-unhandled-self-assignment` | 1 | **오탐.** `this != &rhs` 가드가 있다 |
 
-### 1-3. ASan: 모듈을 해제한 뒤 적재하면 초기화가 실패한다 (미해결)
-
-`SmokeTest` 는 ASan 빌드에서 **스위트째 Disabled 다**(`Test/SmokeTest/CMakeLists.txt`). 모듈을
-올렸다 내리고 다음 모듈을 올리면 두 번째 DLL 의 정적 초기화가 실패한다(`LoadLibrary` → 1114
-`ERROR_DLL_INIT_FAILED`). **8/8 결정적이다.**
-
-처음에는 `Architecture.AllRHIModulesAbiStampExports` 한 케이스만 스킵했는데, 그 뒤
-`Architecture.LiveReloadGenreKitsIndividuallyAndCascaded` 에서 **같은 결함이 또 났다**(EditorModule 을
-내리고 GF 키트를 올리는 경로). 케이스 하나의 문제가 아니라 `LiveReload*` 전반이 걸리므로 스위트
-단위로 끈다. 바이너리는 계속 빌드되니 손으로 돌려 볼 수 있고, 원인이 잡히면 그 블록만 지우면 된다.
-
-측정해서 **배제한** 것 — 다시 하지 말 것:
-
-- 비-ASan 빌드는 통과한다(19/19). ASan 에서도 모듈을 **개별로** 올리면 전부 정상이다.
-- 장난감 ASan DLL 로 적재→해제→적재: 정상. CRT weak 전역을 일부러 품게 해도 정상. 즉
-  "ASan 이 DLL 언로드를 못 버틴다" 는 설명은 **틀렸다.**
-- 구조 문제도 아니다. `RHI_DX12.dll` 은 `Logger::registerCaller` 를 `Engine.dll` 에서
-  **임포트**한다(Core 사본 중복이 아니다). `registerCaller` 의 경계도 정확하다(배열 512/가드 512).
-- `Engine.dll` 이 의존성으로만 올라왔다가 같이 내려가는 변종은 **Engine 을 고정하면 사라진다**
-  (`err=1114` → `err=0`). 하지만 SmokeTest 는 Engine 을 링크해 이미 고정돼 있으므로 그 설명은
-  여기 맞지 않다 — **남은 트리거를 못 찾았다.** 장난감과 다른 점은 SmokeTest 가 워커 6개가 도는
-  멀티스레드 상태라는 것이다.
-
-ASan 의 첫 진단은 CRT 내부 `_Avx2WmemEnabledWeakValue` 의 odr-violation 이고, 보고 도중
-`nested bug in the same thread` 로 중단되어 전역 귀속까지 가지 못한다. `handle_segv=0` 으로 두면
-맨 세그폴트(139)가 된다 — ASan 이 만들어낸 가짜가 아니라 실제 접근 위반이다.
-
-재현: `build/Ninja-Debug-ASAN/Bin` 에서 ASan 으로 빌드한 12줄 호스트로
-`LoadLibrary("RHI_DX11.dll")` → `FreeLibrary` → `LoadLibrary("RHI_DX12.dll")`.
-
-### 1-4. 100줄 넘는 함수 20개 — 우선순위 낮음
+### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1 공용 위젯 채택)을 먼저 한다.
 목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
 (단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-5. 되살리지 못한 테스트
+### 1-4. 되살리지 못한 테스트
 
 `Test/EditorTest/TestEditorSceneCommands.cpp` 는 되살렸지만(현재 EditorTest 27개에 포함),
 `EditorContext` 가 UI 매니저 전부를 `unique_ptr` 로 소유하는 구조는 그대로다. 더 깊은 분리
 (패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
 그때 소유 구조부터 정한다.
 
-### 1-6. 확인만 하고 넘어간 것
+### 1-5. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
@@ -221,9 +232,57 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 ---
 
-## 3. 최근에 끝낸 일 (2026-09-08 ~ 09)
+## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10
+
+**`fixed_string` 이 용량을 넘는 입력에서 버퍼 밖을 썼다.** 생성자·대입·`insert`·`append`·
+`push_back` 이 전부 같은 모양이었다 — 길이가 N 을 넘는지 `SW_LOG_ASSERT` 로 **알리기만 하고 원래
+길이 그대로 복사**했다. 단정은 실행을 멈추지 않는다(Debug 는 브레이크, 그 밖은 로그만). 에디터가
+이 함정을 16곳에서 밟고 있었다(`fixed_string<128> buf{ text.c_str() }` 패턴). 모든 쓰기 경로를
+`clampToCapacity`/`clampToRemaining` 두 헬퍼로 모으고, 보고는 **단정에서 경고로** 내렸다 — 넘치는
+길이는 데이터에서 오지(긴 대사·긴 경로) 프로그래밍 계약 위반이 아니다.
+`Core_String.FixedStringTruncatesInsteadOfOverflowing` 으로 고정했다(문자열 뒤에 감시값을 두고
+잘림과 이웃 보존을 함께 본다). 옛 코드로 되돌리면 첫 케이스에서 프로세스가 죽는 것까지 확인했다.
+
+**에디터 텍스트 입력을 `EditorWidgets::drawTextField` 하나로.** 8개 패널이 임시 버퍼를 만들어
+넣었다 빼는 다섯 줄을 각자 적고 있었고, 버퍼 크기(64·128·256·512)를 자리마다 골랐다. ImGui 의
+리사이즈 콜백으로 `string` 자체를 버퍼로 쓰므로 **길이 상한이 없다.** 16곳을 옮겼고 손으로 만든
+임시 버퍼 InputText 는 남아 있지 않다(타입이 다른 `hashed_string` 3곳 제외).
+
+**`-gv_editorOpenAllPanels=1`** — 0절 참고. 이걸로 바로 드러난 것: DataTable 패널이 열릴 때마다
+빈 경로로 파일을 읽어 `[Error]` 3건(활성 게임에 `data/localization` 도메인이 없다), 그리고
+`Config/Editor/DialogueGraphEditor.json` 이 `.gitignore` 에 빠져 있던 것.
+
+**`bake.stamp` 해시가 PC 마다 달랐다.** 셰이더 소스를 바이트 그대로 해싱하는데 `.gitattributes`
+가 없어 줄 끝이 체크아웃마다 다를 수 있다 — 실제로 `instancesort.hlsl` 하나만 LF 였다. 두 PC 가
+서로의 스탬프를 번갈아 덮어쓰고 있었다(Shipping 을 빌드할 때마다 작업 트리가 더러워진 원인).
+CR 을 뺀 바이트로 해싱하고(굽는 쪽·확인하는 쪽 같은 정규화) 형식을 `SWBAKE 2` 로 올렸다.
+
+**ASan: 모듈을 해제한 뒤 적재하면 실패하던 문제 — 원인 규명, SmokeTest 복귀.** 예전에는 스위트째
+Disabled 였고 원인을 "못 찾았다" 고 적어 두었다. `detect_odr_violation=0` 덕분에 ODR 보고가
+앞을 가리지 않게 되자 진짜 보고가 나왔다: `RHI_DX12.dll` 의 정적 초기화가 `SW_LOG_CALLER` 의
+`__FILE__` 를 읽는 자리에서 global-buffer-overflow. 이유는 **이 ASan 런타임이 DLL 을 내려도 그
+모듈의 전역 등록을 지우지 않는 것**이다 — `report_globals=2` 로 세어 보면 스위트 한 번에
+"Added Global" 5241건, 제거 **0건**이다. 그래서 다음 모듈이 그 주소 범위에 매핑되면 자기 전역을
+읽는데도 앞 모듈이 남긴 레드존을 밟는다. 보고하려고 주소를 설명하는 순간 이미 언매핑된 모듈의
+디스크립터를 역참조해 "nested bug in the same thread, aborting" 으로 죽는다 — 예전에 보이던
+`LoadLibrary err=1114` 와 맨 세그폴트가 이것이다. 이 스위트는 존재 이유가 모듈 적재·해제라
+우회할 수 없으므로 **SmokeTest 에서만** `report_globals=0` 을 주고 스위트를 되살렸다(힙·스택·
+use-after-free 는 그대로 잡힌다). ASan nogpu 5/5, 30초.
+
+**Shipping 테스트가 도구가 없어서 실패하고 있었다.** `ShaderBindingContractTest.
+ReflectionNamesAreUniformAcrossBackends` 가 "forwardlit_ps g_SwMaterials 원소 없음: dx12" 로
+떨어졌다. 셰이더가 아니라 `dxcompiler.dll` 이 없어서 DXIL 리플렉션을 못 얻은 것이었다 —
+`sw_copyDxcDlls(EngineTest)` 가 `NOT SW_SHIPPING_BUILD` 로 막혀 있었다. 테스트 바이너리는 `Bin`
+이 아니라 `TestBin` 으로 나가므로 배포물에 섞이지 않는다. 가드를 걷었다.
+
+**정적 분석·기타** — 위 1-2 참고. `Component` 의 기반 생성자 가상 호출(파생 기본값이 한 번도
+적용되지 않던 것), ContentBrowser 의 `system()`, `Logger::registerCaller` noexcept, 그리고
+`SW_ACTIVE_GAME` 이 낡은 캐시를 가리킬 때의 오류 메시지(가능한 게임 목록과 고치는 법을 같이
+알려준다 — Ninja-Debug-ASAN 이 없어진 'Demo' 를 들고 있어서 configure 조차 못 했다).
 
 **요청한 "나머지 문제" 처리 (3건 전부)**
 

@@ -225,6 +225,8 @@ endfunction()
 # 그래서 한 곳으로 빼고 양쪽이 부른다 — 새 테스트를 손으로 등록해도 이 줄만 부르면 된다.
 # ------------------------------------------------------------------------------
 function(sw_applySanitizerTestProperties TEST_NAME)
+	cmake_parse_arguments(ARG "" "" "ASAN_OPTIONS" ${ARGN})
+
 	if(NOT SW_ENABLE_SANITIZER)
 		return()
 	endif()
@@ -245,14 +247,20 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	# 보고 자체도 이 구조에서는 영구 오탐이다: 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
 	# EditorModule) 같은 SDK·CRT 헤더를 포함하니 헤더가 박는 전역이 DLL 마다 생긴다 — 나온 것이
 	# `d3d11.h` 의 D3D11_DEFAULT 와 CRT 내부 _Avx2WmemEnabledWeakValue 다.
+	# 테스트별 추가 옵션. 지금 쓰는 곳은 SmokeTest 하나다 — 아래 report_globals 주석 참고.
+	set(swAsanOptions "detect_odr_violation=0")
+	foreach(swAsanOption IN LISTS ARG_ASAN_OPTIONS)
+		string(APPEND swAsanOptions ":${swAsanOption}")
+	endforeach()
+
 	set_tests_properties(${TEST_NAME} PROPERTIES
 		TIMEOUT ${swCurrentTimeout}
-		ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0"
+		ENVIRONMENT "ASAN_OPTIONS=${swAsanOptions}"
 	)
 endfunction()
 
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
 
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
@@ -337,7 +345,7 @@ function(sw_addTestExecutable TARGET_NAME)
 		# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
 		# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
 		#
-		sw_applySanitizerTestProperties(${TARGET_NAME})
+		sw_applySanitizerTestProperties(${TARGET_NAME} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 	endif()
 endfunction()
 
