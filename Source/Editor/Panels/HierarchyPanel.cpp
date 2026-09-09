@@ -306,7 +306,7 @@ namespace sw::editor
 
                 EditorWorkspace& ws        = EditorContext::get()->getWorkspace();
                 const bool       bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-                                               ws.getSelectedComponentId() == pSceneComp->getComponentId() );
+                                         ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
                 const utf8* pCompName = pSceneComp->getComponentName().empty() == false
                                           ? pSceneComp->getComponentName().c_str()
@@ -375,6 +375,8 @@ namespace sw::editor
                 }
                 ImGui::SameLine();
 
+                // 뱃지는 리플렉션 Category 에서 끌어온다 — 위 컴포넌트 추가 메뉴가 이미 쓰는
+                // 그 데이터다. 타입 이름을 비교하면 게임이 넣은 컴포넌트는 뱃지가 없다.
                 string badgeStr;
                 for ( const Component* pComp : pObj->getAllComponents() )
                 {
@@ -383,21 +385,7 @@ namespace sw::editor
                     const TypeInfo* pT = pComp->getTypeInfo();
                     if ( pT == nullptr )
                         continue;
-                    const hashed_string& typeName = pT->_name;
-                    if ( typeName == hashed_string( "CameraComponent" ) )
-                        badgeStr += " [Cam]";
-                    else if ( typeName == hashed_string( "MeshComponent" ) )
-                        badgeStr += " [Mesh]";
-                    else if ( typeName == hashed_string( "SpriteComponent" ) )
-                        badgeStr += " [Sprite]";
-                    else if ( typeName == hashed_string( "SpriteAnimatorComponent" ) )
-                        badgeStr += " [Anim]";
-                    else if ( typeName == hashed_string( "BoxCollider2DComponent" ) )
-                        badgeStr += " [Col]";
-                    else if ( typeName == hashed_string( "UnitStatsComponent" ) )
-                        badgeStr += " [Stats]";
-                    else if ( typeName == hashed_string( "HPBarBaseComponent" ) )
-                        badgeStr += " [UI]";
+                    EditorUtil::appendCategoryBadge( pT->getCategory(), badgeStr );
                 }
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
@@ -485,7 +473,7 @@ namespace sw::editor
 
                         EditorWorkspace& ws            = EditorContext::get()->getWorkspace();
                         const bool       bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-                                                           ws.getSelectedComponentId() == pComp->getComponentId() );
+                                                     ws.getSelectedComponentId() == pComp->getComponentId() );
 
                         const utf8* pCompName = pComp->getComponentName().empty() == false
                                                   ? pComp->getComponentName().c_str()

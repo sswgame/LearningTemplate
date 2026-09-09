@@ -95,4 +95,22 @@ namespace sw::editor
     {
         return EditorSessionPolicy::areSceneEditsAllowed( EditorPlaySession::isStopped() );
     }
+
+    void EditorUtil::appendCategoryBadge( string_view category, string& inoutBadge )
+    {
+        if ( category.empty() )
+            return;
+
+        // 같은 Category 의 컴포넌트가 여럿 붙어 있으면 뱃지도 여럿이 된다 — 한 번만 넣는다.
+        string token{ "[" };
+        token.append( string{ category } );
+        token.append( "]" );
+        if ( inoutBadge.find( token ) != string::npos )
+            return;
+
+        if ( inoutBadge.empty() == false )
+            inoutBadge.append( " " );
+        inoutBadge.append( token );
+    }
+
 } // namespace sw::editor

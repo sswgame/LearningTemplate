@@ -50,5 +50,17 @@ namespace sw::editor
 
         /** @brief Play가 정지 상태이면 씬 오브젝트 편집이 허용됩니다. */
         static bool areSceneEditsAllowed();
+
+        /**
+         * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다.
+         * @param category 컴포넌트 타입의 리플렉션 Category (`TypeInfo::getCategory`).
+         * @param inoutBadge 누적 중인 뱃지 문자열. 비어 있지 않으면 앞에 공백이 붙습니다.
+         * @details 예전에는 Hierarchy 패널이 타입 **이름** 7개를 if/else 로 비교해 뱃지를 골랐다.
+         *          게임이 자기 컴포넌트를 넣으면 뱃지가 없었고, 엔진이 컴포넌트를 늘릴 때마다 그
+         *          패널을 같이 고쳐야 했다. 같은 파일이 "컴포넌트 추가" 메뉴에서는 이미
+         *          `getCategory()` 로 묶고 있었다 — 데이터는 있었는데 한쪽만 안 쓰고 있었다.
+         *          같은 Category 는 한 번만 넣는다.
+         */
+        static void appendCategoryBadge( string_view category, string& inoutBadge );
     };
 } // namespace sw::editor

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
 #include "TestFramework/TestFramework.h"
@@ -89,4 +90,34 @@ SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
     const sw::editor::EditorAssetBrowserFilter* pFilters    = sw::editor::EditorAssetTypeRegistry::getBrowserFilters( filterCount );
     SW_ASSERT_NOT_NULL( pFilters );
     SW_EXPECT_TRUE( filterCount > 0 );
+}
+
+/**
+ * @brief [Editor] 계층 뱃지는 리플렉션 Category 에서 나온다
+ * @details 예전에는 Hierarchy 패널이 타입 이름 7개를 if/else 로 비교했다 — 게임이 자기
+ *          컴포넌트를 넣으면 뱃지가 없고, 엔진이 컴포넌트를 늘리면 패널을 같이 고쳐야 했다.
+ *          Category 를 쓰면 등록된 어떤 컴포넌트든 뱃지가 붙는다. 그 규약을 여기서 고정한다.
+ */
+SW_TEST_CASE( Editor, HierarchyBadgeComesFromReflectionCategory )
+{
+    sw::string badge;
+
+    // Category 가 없으면 아무것도 붙지 않는다 (예전의 else 분기와 같다).
+    sw::editor::EditorUtil::appendCategoryBadge( "", badge );
+    SW_EXPECT_TRUE( badge.empty() );
+
+    sw::editor::EditorUtil::appendCategoryBadge( "Camera", badge );
+    SW_EXPECT_STREQ( "[Camera]", badge.c_str() );
+
+    // 두 번째부터는 공백으로 띄운다.
+    sw::editor::EditorUtil::appendCategoryBadge( "Rendering 3D", badge );
+    SW_EXPECT_STREQ( "[Camera] [Rendering 3D]", badge.c_str() );
+
+    // 같은 Category 컴포넌트가 여럿 붙어 있어도 뱃지는 하나다.
+    sw::editor::EditorUtil::appendCategoryBadge( "Rendering 3D", badge );
+    SW_EXPECT_STREQ( "[Camera] [Rendering 3D]", badge.c_str() );
+
+    // 다른 Category 는 계속 쌓인다 — 게임이 만든 Category 도 그대로 뜬다.
+    sw::editor::EditorUtil::appendCategoryBadge( "MyGameStuff", badge );
+    SW_EXPECT_STREQ( "[Camera] [Rendering 3D] [MyGameStuff]", badge.c_str() );
 }
