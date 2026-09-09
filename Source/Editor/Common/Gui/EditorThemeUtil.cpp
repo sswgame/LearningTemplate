@@ -373,6 +373,22 @@ namespace sw::editor
             ImGui::TextColored( EditorThemeInternal::toImVec4( getSuccessColor() ), "%s", pText );
     }
 
+    void EditorThemeUtil::textInfo( const utf8* pText )
+    {
+        if ( pText != nullptr )
+            ImGui::TextColored( EditorThemeInternal::toImVec4( getInfoColor() ), "%s", pText );
+    }
+
+    void EditorThemeUtil::pushTextColor( const Color4& color )
+    {
+        ImGui::PushStyleColor( ImGuiCol_Text, EditorThemeInternal::toImVec4( color ) );
+    }
+
+    void EditorThemeUtil::popTextColor()
+    {
+        ImGui::PopStyleColor();
+    }
+
     void EditorThemeUtil::textWarning( const utf8* pText )
     {
         if ( pText != nullptr )

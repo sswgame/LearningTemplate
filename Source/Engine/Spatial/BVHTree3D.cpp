@@ -549,6 +549,11 @@ namespace sw
         const float32* pArr = viewProj.data();
         // Extract 6 frustum planes from column-major viewProj matrix
         // Left, Right, Bottom, Top, Near, Far
+        //
+        // 분석기는 `data()` 를 따라가 `&_11` 하나짜리 필드를 [0..15] 로 읽는다고 본다. 행렬이 16개
+        // float 이 연속이라는 것은 `float4x4` 의 static_assert( sizeof == 16 * sizeof(float32) ) 가
+        // 컴파일 타임에 지킨다 — 그 가정을 한 곳에 모으려고 만든 것이 data() 다.
+        // NOLINTBEGIN(clang-analyzer-security.ArrayBound)
         float4 arrPlane[6] = {
             float4{pArr[3] + pArr[0], pArr[7] + pArr[4],  pArr[11] + pArr[8], pArr[15] + pArr[12]},
             float4{pArr[3] - pArr[0], pArr[7] - pArr[4],  pArr[11] - pArr[8], pArr[15] - pArr[12]},
@@ -557,6 +562,7 @@ namespace sw
             float4{          pArr[2],           pArr[6],            pArr[10],            pArr[14]},
             float4{pArr[3] - pArr[2], pArr[7] - pArr[6], pArr[11] - pArr[10], pArr[15] - pArr[14]}
         };
+        // NOLINTEND(clang-analyzer-security.ArrayBound)
 
         for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
         {

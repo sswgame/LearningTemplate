@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
@@ -70,11 +71,11 @@ namespace sw::editor
         if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectId ) )
             scanPrefabOverrides( pScanPath );
 
-        ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
+        EditorThemeUtil::textInfo( "Prefab Asset:" );
         ImGui::SameLine();
         ImGui::Text( "%s", _selectedPrefabPath.empty() ? "(none)" : _selectedPrefabPath.c_str() );
 
-        ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Active Instance:" );
+        EditorThemeUtil::textInfo( "Active Instance:" );
         ImGui::SameLine();
         ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
 
@@ -175,16 +176,22 @@ namespace sw::editor
 
                 ImGui::TableNextColumn();
                 if ( item._bModified )
-                    ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.3f, 1.0f ), "* %s", item._propertyName.c_str() );
+                {
+                    EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                    ImGui::Text( "* %s", item._propertyName.c_str() );
+                    EditorThemeUtil::popTextColor();
+                }
                 else
+                {
                     ImGui::Text( "%s", item._propertyName.c_str() );
+                }
 
                 ImGui::TableNextColumn();
                 ImGui::TextDisabled( "%s", item._defaultValue.c_str() );
 
                 ImGui::TableNextColumn();
                 if ( item._bModified )
-                    ImGui::TextColored( ImVec4( 0.4f, 1.0f, 0.4f, 1.0f ), "%s", item._overriddenValue.c_str() );
+                    EditorThemeUtil::textSuccess( item._overriddenValue.c_str() );
                 else
                     ImGui::Text( "%s", item._overriddenValue.c_str() );
 

@@ -95,6 +95,17 @@ namespace sw::editor
         static void textWarning( const utf8* pText );
         static void textError( const utf8* pText );
         static void textMuted( const utf8* pText );
+        static void textInfo( const utf8* pText );
+
+        /**
+         * @brief 다음에 그릴 텍스트에 테마 색을 씌웁니다. `popTextColor()` 와 짝입니다.
+         * @details `textSuccess` 류는 서식이 없는 문자열만 받는다. `"Frame #%u"` 처럼 서식이 필요한
+         *          자리는 이 짝으로 감싸고 평소처럼 `ImGui::Text` 를 부른다 — 색을 고르는 곳은
+         *          여전히 테마 하나다.
+         */
+        static void pushTextColor( const Color4& color );
+        /** @brief pushTextColor() 와 짝을 이룹니다. */
+        static void popTextColor();
 
         static void pushAccentButton( float32 alpha = 1.0f );
         static void popAccentButton();

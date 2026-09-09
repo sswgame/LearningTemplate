@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -268,7 +269,9 @@ namespace sw::editor
 
                 ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
                 ImGui::SameLine( 0.0f, 0.0f );
-                ImGui::TextColored( ImVec4( 0.45f, 0.85f, 0.95f, 1.0f ), " [%s]", entry._tag.c_str() );
+                EditorThemeUtil::pushTextColor( EditorThemeUtil::getInfoColor() );
+                ImGui::Text( " [%s]", entry._tag.c_str() );
+                EditorThemeUtil::popTextColor();
                 ImGui::SameLine( 0.0f, 0.0f );
                 ImGui::TextColored( ConsolePanelInternal::colorForLevel( entry._level ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
                 ImGui::SameLine( 0.0f, 0.0f );

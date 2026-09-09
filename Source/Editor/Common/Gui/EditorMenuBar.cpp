@@ -308,17 +308,19 @@ namespace sw::editor
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                ImGui::TextColored( ImVec4( 0.95f, 0.75f, 0.25f, 1.0f ), ICON_FA_SPINNER " Compiling..." );
+                EditorThemeUtil::textWarning( ICON_FA_SPINNER " Compiling..." );
                 EditorWidgets::drawTooltip( "현재 백그라운드에서 모듈을 빌드하고 있습니다" );
             }
             else if ( state == BuildState::Success )
             {
-                ImGui::TextColored( ImVec4( 0.35f, 0.85f, 0.35f, 1.0f ), ICON_FA_CIRCLE_CHECK " Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                EditorThemeUtil::pushTextColor( EditorThemeUtil::getSuccessColor() );
+                ImGui::Text( ICON_FA_CIRCLE_CHECK " Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( "마지막 빌드가 성공적으로 완료되었습니다" );
             }
             else if ( state == BuildState::Failed )
             {
-                ImGui::TextColored( ImVec4( 0.95f, 0.35f, 0.35f, 1.0f ), ICON_FA_CIRCLE_XMARK " Build Failed" );
+                EditorThemeUtil::textError( ICON_FA_CIRCLE_XMARK " Build Failed" );
                 EditorWidgets::drawTooltip( "빌드에 실패했습니다. 콘솔 창에서 상세 오류를 확인하세요." );
             }
             else

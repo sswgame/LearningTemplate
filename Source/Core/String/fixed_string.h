@@ -372,8 +372,8 @@ namespace sw
 
     // 자기대입은 아래 `this != &rhs` 로 막는다. copy-and-swap 이 아니어서 검사기가 짚지만,
     // 고정 버퍼라 교환할 동적 자원이 없다 — 가드가 필요충분하다.
-    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
     template <typename T, uint32 N>
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment) — 위 주석 참고. template 줄 위에 두면 적용되지 않는다.
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const basic_fixed_string& rhs )
     {
         if ( this != &rhs )

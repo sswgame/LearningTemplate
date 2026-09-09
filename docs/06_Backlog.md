@@ -142,8 +142,25 @@ Inspector 3 · Material 1 · Profiler 3).
 버퍼 밖을 쓰고 있었다(3절). `EditorWidgets::drawTextField( label, string&, width )` 하나로 16곳을
 옮겼고, 손으로 만든 임시 버퍼 InputText 는 남아 있지 않다.
 
-남은 것은 표의 **호출 수** 자체다 — `InputMapEditorPanel` 313 · `ProfilerPanel` 94 등은 빈 상태가
-아니라 위젯·레이아웃 조립이다. 목록형 골격(예전 1-2)을 만들면 줄어든다고 적어 두었지만, 측정해 보니
+**2026-09-10: 상태색을 테마에서 가져오게 했다.** 남은 호출 수를 뜯어 보니 `TextColored` 가
+`InputMapEditorPanel` 에만 23개였고, 전부 `ImVec4` 리터럴을 자리마다 새로 적고 있었다 — 같은 뜻의
+**초록이 여섯 가지**(0.2/1/0.2, 0.2/1/0.3, 0.2/1/0.5, 0.2/1/0.4, 0.4/1/0.4, 0.35/0.85/0.35),
+호박색 여섯, 빨강 다섯이다. 그런데 `EditorThemeUtil` 에는 이미 테마별 상태색과
+`textSuccess`/`textWarning`/`textError`/`textMuted` 가 있었고 **아무도 쓰지 않았다**(색 게터만
+ContentBrowser 가 썼다). 즉 테마를 바꿔도 이 글자들은 안 바뀌었다. 상태 의미가 분명한 23곳을
+테마 API 로 옮기고, 서식이 필요한 자리를 위해 `pushTextColor`/`popTextColor` 와 `textInfo` 를 더했다.
+남긴 것: Dialogue 노드 뱃지(START/CHOICE/BRANCH…)와 플랫폼 브랜드색은 **분류색**이지 상태색이
+아니다 — 상태색으로 접으면 뜻이 사라진다.
+
+**측정해서 기각한 것 — 표(Table) 골격.** `BeginTable` + `TableSetupColumn` × N + `TableHeadersRow`
+가 15곳에 있어 공통부처럼 보였다. 세어 보니 3열 표는 5문장 → 골격을 쓰면 배열 3줄 + desc 4줄로
+**늘어난다.** 7열 표에서만 이득이고 전체로는 60줄 남짓이며, 대신 어떤 ImGui 플래그가 걸리는지가
+한 겹 숨는다. 안 만든다.
+
+**복사된 블록도 찾아봤다** — Editor 전체에서 5줄 이상 동일한 블록을 서로 다른 파일 간에 훑으니
+`}` · `namespace` 닫기 같은 뼈대만 나왔다. 남은 호출 수는 **패널마다 고유한 조립**이지 중복이
+아니다. `InputMapEditorPanel` 302개의 절반은 `SameLine` 37 · `Text` 36 · `Button` 32 · `Separator` 23
+이다 — 이걸 감싸면 읽기만 나빠진다. 1-1 은 여기서 닫는다. 목록형 골격(예전 1-2)을 만들면 줄어든다고 적어 두었지만, 측정해 보니
 골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
 것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
@@ -154,7 +171,7 @@ Inspector 3 · Material 1 · Profiler 3).
 Visual Studio 가 같이 설치하는 LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 clang-tidy 22 로 올라가며 검사가 늘어 고유 지적이 65 → 308건이 됐다. 늘어난 243건은 **새 검사
-넷**이 전부이고, 하나씩 훑어 처리해 **87건**이 됐다(2026-09-10):
+넷**이 전부이고, 하나씩 훑어 처리해 **87건 → 76건 → 72건**이 됐다(2026-09-10):
 
 | 종류 | 처리 |
 |---|---|
@@ -172,7 +189,23 @@ clang-tidy 22 로 올라가며 검사가 늘어 고유 지적이 65 → 308건�
 생성 이후에 파생 타입으로 부르는 `applyTypeDefaults` 이고(GameObject::addComponent ·
 GameObjectManager 둘 다 이미 그렇게 한다), 생성자의 호출은 지웠다.
 
-나머지 오탐 판정은 그대로다(아래는 요약 — 자리마다 `NOLINTNEXTLINE` 과 이유 주석이 있다):
+**분류만 해 두었던 것도 다시 봤다. 절반은 오탐이 아니라 "확신할 수 없게 쓰인 코드" 였다.**
+
+- `bugprone-use-after-move` 2건 — 오탐이 아니었다. `StringBuilder::appendFormat` 은 **재시도
+  루프 안에서 같은 인자 팩을 다시 forward** 했고, `TaskFuture::setContinuation` 은 옮긴 델리게이트를
+  bool 플래그에 기대어 다시 읽었다. 둘 다 고쳤다(0건).
+- `clang-analyzer-security.ArrayBound` 4 → 1. `&vec._x` 를 넘겨 인덱스로 읽던 세 자리를
+  `const float3&`/`const float4&` 로 바꿨다. 남은 하나는 `float4x4::data()` 를 쓰는 자리라
+  NOLINT + 이유(레이아웃은 static_assert 가 지킨다)로 닫았다.
+- `bugprone-implicit-widening-of-multiplication-result` 4 → 0. 명시적 캐스트.
+- `clang-analyzer-deadcode.DeadStores` 4 → 0. Material 의 죽은 계산은 **미완성 코드의 흔적**이었고
+  (빈 `if` 와 짝), 에디터의 붙여넣기는 **실패를 아무도 읽지 않고 있었다**. 열거형→이름 두 곳은
+  값을 먼저 넣고 switch 로 덮어쓰는 대신 돌려주는 함수로 바꿨다.
+- `bugprone-unhandled-self-assignment` 1 → 0. `fs = fs.c_str()` 가 자기 버퍼를 자기에게 memcpy
+  하고 있었다(가드 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
+  있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
+
+나머지 오탐 판정은 그대로다(아래는 요약):
 
 | 종류 | 건수 | 판정 |
 |---|---|---|
@@ -180,13 +213,8 @@ GameObjectManager 둘 다 이미 그렇게 한다), 생성자의 호출은 지�
 | `bugprone-macro-parentheses` | 12 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`) |
 | `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다 |
 | `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘긴다 |
-| `clang-analyzer-deadcode.DeadStores` | 4 | 의도된 기본값이거나 영향 없음 |
-| `clang-analyzer-security.ArrayBound` | 4 | `&float3::_x` 관용구. `data()` 로 옮길 수 있는 자리는 전부 옮겼고, 남은 것은 C-ABI 경계의 시그니처를 바꿔야 한다 |
-| `bugprone-implicit-widening-of-multiplication-result` | 4 | `reserve` 힌트와 SPIR-V 파서. 경계를 위에서 막는다 |
-| `clang-analyzer-optin.performance.Padding` | 3 | 구조체 멤버 순서 제안. 영향 낮음 |
-| `bugprone-use-after-move` | 2 | **오탐.** `Base{ std::move( other ) }` 는 기반 부분객체만 이동한다 |
+| `clang-analyzer-optin.performance.Padding` | 3 | 구조체 멤버 순서 제안. `TaskManager` 는 230바이트가 패딩이지만 인스턴스가 하나다 |
 | `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 뮤텍스 락이 이론상 던진다 — 현재 동작이 의도와 맞다 |
-| `bugprone-unhandled-self-assignment` | 1 | **오탐.** `this != &rhs` 가드가 있다 |
 
 ### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
 

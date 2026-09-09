@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -24,6 +25,53 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 이 TU 로컬 헬퍼 (유니티 빌드 이름 충돌을 피하려 TU 이름을 붙인다). */
+        struct InputMapEditorPanelInternal
+        {
+            /**
+             * @brief 활성 입력 장치 종류의 표시 이름.
+             * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 죽은 저장이 된다(분석기가
+             *          열거자를 전부 알기 때문에 default 도 죽는다). 돌려주는 함수면 그런 자리가 없다.
+             */
+            static const utf8* deviceTypeName( InputDeviceType type )
+            {
+                switch ( type )
+                {
+                    case InputDeviceType::KeyboardMouse:
+                        return "Keyboard & Mouse";
+                    case InputDeviceType::GamepadXbox:
+                        return "Xbox Gamepad";
+                    case InputDeviceType::GamepadPlayStation:
+                        return "PlayStation Gamepad";
+                    case InputDeviceType::GamepadSwitch:
+                        return "Nintendo Switch Gamepad";
+                    default:
+                        return "Unknown";
+                }
+            }
+
+            /** @brief 게임패드 배터리 잔량의 표시 이름. */
+            static const utf8* batteryLevelName( GamepadBatteryLevel level )
+            {
+                switch ( level )
+                {
+                    case GamepadBatteryLevel::Empty:
+                        return "Empty";
+                    case GamepadBatteryLevel::Low:
+                        return "Low";
+                    case GamepadBatteryLevel::Medium:
+                        return "Medium";
+                    case GamepadBatteryLevel::Full:
+                        return "Full (100%)";
+                    default:
+                        return "Unknown";
+                }
+            }
+        };
+    } // namespace
+
     SW_LOG_CALLER( "InputMapEditorPanel" );
 
     InputMapEditorPanel::InputMapEditorPanel()
@@ -192,7 +240,7 @@ namespace sw::editor
         if ( _bDirty == SW_TRUE )
         {
             ImGui::SameLine();
-            ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "* Unsaved changes" );
+            EditorThemeUtil::textWarning( "* Unsaved changes" );
         }
 
         ImGui::Separator();
@@ -240,7 +288,7 @@ namespace sw::editor
 
                     ImGui::TableNextColumn();
                     if ( _actionMap.getCurrentTopLayer() == layerName.view() )
-                        ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ), "Top (Active)" );
+                        EditorThemeUtil::textSuccess( "Top (Active)" );
                     else if ( bEnabled )
                         ImGui::Text( "Active" );
                     else
@@ -279,25 +327,29 @@ namespace sw::editor
 
                 ImGui::TableNextColumn();
                 const string glyph = _actionMap.getGlyphForAction( actionName.view() );
-                ImGui::TextColored( ImVec4( 0.3f, 0.8f, 1.0f, 1.0f ), "%s", glyph.c_str() );
+                EditorThemeUtil::textInfo( glyph.c_str() );
 
                 ImGui::TableNextColumn();
                 const bool        bDown = _actionMap.isActionDown( actionName );
                 const bool        bTrig = _actionMap.wasActionTriggered( actionName );
                 const ActionPhase phase = _actionMap.getActionPhase( actionName );
                 if ( bTrig )
-                    ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "TRIGGERED" );
+                    EditorThemeUtil::textError( "TRIGGERED" );
                 else if ( bDown )
-                    ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.3f, 1.0f ), "DOWN" );
+                    EditorThemeUtil::textSuccess( "DOWN" );
                 else if ( phase != ActionPhase::None )
-                    ImGui::TextColored( ImVec4( 0.8f, 0.8f, 0.2f, 1.0f ), "ONGOING" );
+                    EditorThemeUtil::textWarning( "ONGOING" );
                 else
                     ImGui::TextDisabled( "Idle" );
 
                 ImGui::TableNextColumn();
                 const float32 holdSec = _actionMap.getActionHoldDuration( actionName );
                 if ( holdSec > 0.0f )
-                    ImGui::TextColored( ImVec4( 0.9f, 0.7f, 0.2f, 1.0f ), "%.2f s", static_cast<float64>( holdSec ) );
+                {
+                    EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                    ImGui::Text( "%.2f s", static_cast<float64>( holdSec ) );
+                    EditorThemeUtil::popTextColor();
+                }
                 else
                     ImGui::Text( "0.00 s" );
 
@@ -420,29 +472,12 @@ namespace sw::editor
 
         // 1) 활성 장치 상태
         const InputDeviceType devType   = pInput->getActiveDeviceType();
-        const utf8*           pTypeName = "Unknown";
-        switch ( devType )
-        {
-            case InputDeviceType::KeyboardMouse:
-                pTypeName = "Keyboard & Mouse";
-                break;
-            case InputDeviceType::GamepadXbox:
-                pTypeName = "Xbox Gamepad";
-                break;
-            case InputDeviceType::GamepadPlayStation:
-                pTypeName = "PlayStation Gamepad";
-                break;
-            case InputDeviceType::GamepadSwitch:
-                pTypeName = "Nintendo Switch Gamepad";
-                break;
-            default:
-                break; // 위 선언의 "Unknown" 을 그대로 쓴다
-        }
+        const utf8*           pTypeName = InputMapEditorPanelInternal::deviceTypeName( devType );
 
         ImGui::Text( "Active Device:" );
 
         ImGui::SameLine();
-        ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.5f, 1.0f ), "%s", pTypeName );
+        EditorThemeUtil::textSuccess( pTypeName );
         ImGui::Separator();
 
         drawKeyboardMonitor();
@@ -471,7 +506,9 @@ namespace sw::editor
                     if ( pName != nullptr )
                     {
                         ImGui::SameLine();
-                        ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "[%s]", pName );
+                        EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
+                        ImGui::Text( "[%s]", pName );
+                        EditorThemeUtil::popTextColor();
                         bAnyKey = true;
                     }
                 }
@@ -524,25 +561,7 @@ namespace sw::editor
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const GamepadBatteryInfo batInfo = pGamepad->getBatteryInfo();
-                const utf8*              pBatStr = "Unknown";
-                switch ( batInfo._level )
-                {
-                    case GamepadBatteryLevel::Empty:
-                        pBatStr = "Empty";
-                        break;
-                    case GamepadBatteryLevel::Low:
-                        pBatStr = "Low";
-                        break;
-                    case GamepadBatteryLevel::Medium:
-                        pBatStr = "Medium";
-                        break;
-                    case GamepadBatteryLevel::Full:
-                        pBatStr = "Full (100%)";
-                        break;
-                    default:
-                        break; // 위 선언의 "Unknown" 을 그대로 쓴다
-                }
-                ImGui::Text( "Battery: %s", pBatStr );
+                ImGui::Text( "Battery: %s", InputMapEditorPanelInternal::batteryLevelName( batInfo._level ) );
 
                 float32 lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
                 pGamepad->getLeftStick( lx, ly );
@@ -637,13 +656,13 @@ namespace sw::editor
                         bFoundConflict = true;
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
-                        ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "%s", nameA.c_str() );
+                        EditorThemeUtil::textError( nameA.c_str() );
 
                         ImGui::TableNextColumn();
-                        ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "%s", nameB.c_str() );
+                        EditorThemeUtil::textError( nameB.c_str() );
 
                         ImGui::TableNextColumn();
-                        ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "%s", glyphA.c_str() );
+                        EditorThemeUtil::textWarning( glyphA.c_str() );
 
                         ImGui::TableNextColumn();
                         ImGui::PushID( static_cast<int32>( idxA * 1000 + idxB ) );
@@ -672,7 +691,7 @@ namespace sw::editor
         if ( bFoundConflict == false )
         {
             ImGui::Spacing();
-            ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ), "✓ Zero Conflicts Detected! All key bindings are completely unique." );
+            EditorThemeUtil::textSuccess( "✓ Zero Conflicts Detected! All key bindings are completely unique." );
         }
     }
 
@@ -797,7 +816,9 @@ namespace sw::editor
         // 녹화 제어
         if ( _replay.isRecording() )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.2f, 0.2f, 1.0f ), "● RECORDING LIVE INPUTS... (Frames: %u)", _replay.getFrameCount() );
+            EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
+            ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", _replay.getFrameCount() );
+            EditorThemeUtil::popTextColor();
             ImGui::SameLine();
             if ( ImGui::Button( "■ Stop Recording" ) )
                 _replay.stopRecording();
@@ -860,7 +881,7 @@ namespace sw::editor
                           Fmt( static_cast<float64>( pCurrentFrame->_deltaTime ), Format().precision( 4 ) ),
                           static_cast<uint32>( pCurrentFrame->_snapshot._buttonMask ),
                           static_cast<int32>( pCurrentFrame->_listRawEvent.size() ) );
-            ImGui::TextColored( ImVec4( 0.3f, 0.8f, 1.0f, 1.0f ), "%s", frameBuf.c_str() );
+            EditorThemeUtil::textInfo( frameBuf.c_str() );
         }
     }
 
@@ -960,7 +981,7 @@ namespace sw::editor
         ImGui::SameLine();
         const bool bPatternMatched = _actionMap.checkCommandPattern( _testComboPattern.c_str(), 0.8f );
         if ( bPatternMatched )
-            ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ), "MATCHED! (Success)" );
+            EditorThemeUtil::textSuccess( "MATCHED! (Success)" );
         else
             ImGui::TextDisabled( "Waiting for input..." );
 
