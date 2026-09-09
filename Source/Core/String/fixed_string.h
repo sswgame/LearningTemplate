@@ -15,7 +15,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) basic_fixed_string — 스택 N 문자. 넘치면 assert, 힙 동적 할당 0건
+    // 1) basic_fixed_string — 스택 N 문자. 넘치면 잘라내고 경고, 힙 동적 할당 0건
     // ------------------------------------------------------------------------------
     /**
      * @class basic_fixed_string
@@ -23,6 +23,9 @@ namespace sw
      * @tparam T 문자 타입 (`utf8` 또는 `utf16`)
      * @tparam N 저장 가능한 최대 문자 개수 (널 종료 문자 `\0` 공간 1바이트는 내부에 자동 확보됨)
      * @details
+     * - **용량을 넘으면 자른다**:
+     *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 만큼은 **버려지고**, 버퍼 밖은 절대
+     *   건드리지 않습니다. 길이를 잃으면 안 되는 문자열에는 `sw::string` 을 씁니다.
      * - **0-Allocation & Cache Locality**:
      *   문자열 데이터를 스택에 즉시 인라인으로 보관하여 힙 파편화를 100% 방지하고 CPU L1/L2 캐시 적중률을 극대화합니다.
      * - **std::basic_string_view 완벽 호환**:
@@ -83,8 +86,7 @@ namespace sw
             : _arrData{}
             , _size{ 0 }
         {
-            const uint32 length = rhs.size();
-            SW_LOG_ASSERT( length <= N, "Source basic_fixed_string exceeds capacity" );
+            const uint32 length = clampToCapacity( rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
             _size           = length;
             _arrData[_size] = T{ 0 };
@@ -100,8 +102,7 @@ namespace sw
         template <uint32 M>
         basic_fixed_string& operator=( const basic_fixed_string<T, M>& rhs )
         {
-            const uint32 length = rhs.size();
-            SW_LOG_ASSERT( length <= N, "Source basic_fixed_string exceeds capacity" );
+            const uint32 length = clampToCapacity( rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
             _size           = length;
             _arrData[_size] = T{ 0 };
@@ -279,6 +280,35 @@ namespace sw
         operator std::basic_string_view<T>() const noexcept { return { _arrData, size() }; }
 
     private:
+        /**
+         * @brief 용량 N 을 넘는 길이를 N 으로 잘라 돌려줍니다.
+         * @details 예전에는 `SW_LOG_ASSERT` 로 알리기만 하고 **원래 길이 그대로 복사**했습니다. 단정은
+         *          실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 용량을 넘는 문자열이
+         *          들어오면 스택의 `_arrData` 뒤를 그대로 덮어썼습니다 — 버퍼 오버플로입니다.
+         * @details 넘치는 길이는 **데이터에서 온다**(긴 대사·긴 경로). 프로그래밍 계약 위반이 아니므로
+         *          단정으로 멈추지 않고 잘라낸 뒤 경고로 남깁니다. 경고는 Shipping 에도 남습니다.
+         */
+        static uint32 clampToCapacity( size_t length )
+        {
+            if ( length <= static_cast<size_t>( N ) )
+                return static_cast<uint32>( length );
+
+            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
+            return N;
+        }
+
+        /** @brief 남은 자리(N - currentSize)에 맞게 추가 길이를 잘라 돌려줍니다. */
+        static uint32 clampToRemaining( uint32 currentSize, size_t length )
+        {
+            const size_t remaining = static_cast<size_t>( N ) - static_cast<size_t>( currentSize );
+            if ( length <= remaining )
+                return static_cast<uint32>( length );
+
+            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
+                            static_cast<uint32>( length ) );
+            return static_cast<uint32>( remaining );
+        }
+
         T              _arrData[N + 1];
         mutable uint32 _size;
     };
@@ -298,8 +328,7 @@ namespace sw
     {
         if ( pStr != nullptr )
         {
-            const uint32 length = StringUtil::strlen( pStr );
-            SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
+            const uint32 length = clampToCapacity( StringUtil::strlen( pStr ) );
             Memory::copy( _arrData, pStr, sizeof( T ) * length );
             _size = length;
         }
@@ -309,32 +338,27 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string<T>& str )
         : _arrData{}
-        , _size{ 0 }
+        , _size{ clampToCapacity( str.length() ) }
     {
-        SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
-        _size           = static_cast<uint32>( str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string_view<T>& str )
         : _arrData{}
-        , _size{ 0 }
+        , _size{ clampToCapacity( str.length() ) }
     {
-        SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
-        _size           = static_cast<uint32>( str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const uint32 count, T ch )
         : _arrData{}
-        , _size{ count }
+        , _size{ clampToCapacity( count ) }
     {
-        SW_LOG_ASSERT( count <= N, "String too int32 for basic_fixed_string capacity" );
-        std::fill_n( _arrData, count, ch );
+        std::fill_n( _arrData, _size, ch );
         _arrData[_size] = T{ 0 };
     }
 
@@ -365,8 +389,7 @@ namespace sw
     {
         if ( pStr != nullptr )
         {
-            const uint32 length = StringUtil::strlen( pStr );
-            SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
+            const uint32 length = clampToCapacity( StringUtil::strlen( pStr ) );
             Memory::copy( _arrData, pStr, sizeof( T ) * length );
             _size = length;
         }
@@ -381,9 +404,8 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string<T>& str )
     {
-        SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
-        _size           = static_cast<uint32>( str.length() );
+        _size = clampToCapacity( str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
         return *this;
     }
@@ -391,9 +413,8 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string_view<T>& str )
     {
-        SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
-        _size           = static_cast<uint32>( str.length() );
+        _size = clampToCapacity( str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
         _arrData[_size] = T{ 0 };
         return *this;
     }
@@ -473,11 +494,16 @@ namespace sw
 
         const uint32 currentSize = size();
         SW_LOG_ASSERT( pos <= currentSize, "Insert position out of range" );
-        SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
+        if ( pos > currentSize )
+            return *this;
 
-        Memory::move( _arrData + pos + length, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
-        Memory::copy( _arrData + pos, pStr, sizeof( T ) * length );
-        _size = currentSize + length;
+        const uint32 fitLength = clampToRemaining( currentSize, length );
+        if ( fitLength == 0 )
+            return *this;
+
+        Memory::move( _arrData + pos + fitLength, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
+        Memory::copy( _arrData + pos, pStr, sizeof( T ) * fitLength );
+        _size = currentSize + fitLength;
 
         return *this;
     }
@@ -509,7 +535,12 @@ namespace sw
     void basic_fixed_string<T, N>::push_back( T ch )
     {
         const uint32 currentSize = size();
-        SW_LOG_ASSERT( currentSize < N, "basic_fixed_string capacity exceeded" );
+        if ( currentSize >= N )
+        {
+            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - push_back dropped", N );
+            return;
+        }
+
         _arrData[currentSize] = ch;
         _size                 = currentSize + 1;
         _arrData[_size]       = T{ 0 };
@@ -531,8 +562,7 @@ namespace sw
         if ( pStr != nullptr )
         {
             const uint32 currentSize = size();
-            const uint32 length      = StringUtil::strlen( pStr );
-            SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
+            const uint32 length      = clampToRemaining( currentSize, StringUtil::strlen( pStr ) );
             Memory::copy( _arrData + currentSize, pStr, sizeof( T ) * length );
             _size           = currentSize + length;
             _arrData[_size] = T{ 0 };
@@ -546,9 +576,9 @@ namespace sw
         if ( count == 0 )
             return *this;
         const uint32 currentSize = size();
-        SW_LOG_ASSERT( currentSize + count <= N, "basic_fixed_string::append - count exceeds capacity" );
-        std::fill_n( _arrData + currentSize, count, c );
-        _size           = currentSize + count;
+        const uint32 fitCount    = clampToRemaining( currentSize, count );
+        std::fill_n( _arrData + currentSize, fitCount, c );
+        _size           = currentSize + fitCount;
         _arrData[_size] = T{ 0 };
         return *this;
     }
@@ -557,8 +587,7 @@ namespace sw
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const std::basic_string_view<T>& str )
     {
         const uint32 currentSize = size();
-        const uint32 length      = static_cast<uint32>( str.length() );
-        SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
+        const uint32 length      = clampToRemaining( currentSize, str.length() );
         Memory::copy( _arrData + currentSize, str.data(), sizeof( T ) * length );
         _size           = currentSize + length;
         _arrData[_size] = T{ 0 };

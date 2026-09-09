@@ -256,6 +256,97 @@ SW_TEST_CASE( Core_String, FixedStringFullCoverage )
 }
 
 /**
+ * @brief [Core_String] 용량을 넘는 입력은 잘리고 버퍼 밖은 건드리지 않는다
+ * @details 예전에는 단정으로 알리기만 하고 **원래 길이 그대로 복사**해서 `_arrData` 뒤(여기서는
+ *          `_canary`)를 덮어썼다. 단정은 실행을 멈추지 않고 Shipping 에서는 사라지므로 그대로
+ *          스택 오버플로였다. 이 테스트는 잘리는지(size)와 이웃을 안 건드리는지(canary)를 함께 본다.
+ */
+SW_TEST_CASE( Core_String, FixedStringTruncatesInsteadOfOverflowing )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing fixed_string capacity overflow truncation" );
+
+    /** @brief 문자열 바로 뒤에 감시값을 두어 버퍼 밖 쓰기를 잡는다. */
+    struct Guarded
+    {
+        sw::fixed_string<8> _text;
+        uint64              _canary;
+    };
+
+    static constexpr uint64 kCanary = 0xA5A5A5A5A5A5A5A5ull;
+    const sw::string        longText( 64, 'x' );
+
+    // 1) C 문자열 대입
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = longText.c_str();
+
+        SW_EXPECT_EQUAL( 8u, guarded._text.size() );
+        SW_EXPECT_EQUAL( sw::string( "xxxxxxxx" ), sw::string( guarded._text.c_str() ) );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 2) std::basic_string 대입
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = longText;
+
+        SW_EXPECT_EQUAL( 8u, guarded._text.size() );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 3) 뒤에 붙이기 — 남은 자리만큼만 들어간다
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = "abc";
+        guarded._text.append( "0123456789" );
+
+        SW_EXPECT_EQUAL( 8u, guarded._text.size() );
+        SW_EXPECT_EQUAL( sw::string( "abc01234" ), sw::string( guarded._text.c_str() ) );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 4) 꽉 찬 뒤의 push_back 은 버려진다 (예전에는 _arrData[N + 1] 을 썼다)
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = "01234567";
+        guarded._text.push_back( '!' );
+
+        SW_EXPECT_EQUAL( 8u, guarded._text.size() );
+        SW_EXPECT_EQUAL( sw::string( "01234567" ), sw::string( guarded._text.c_str() ) );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 5) 가운데 삽입 — 꼬리는 지키고 삽입분만 자른다
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = "abcd";
+        guarded._text.insert( 2, "0123456789" );
+
+        SW_EXPECT_EQUAL( 8u, guarded._text.size() );
+        SW_EXPECT_EQUAL( sw::string( "ab0123cd" ), sw::string( guarded._text.c_str() ) );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 6) 문자 채우기 생성자 · 더 큰 용량에서 좁혀 담기
+    {
+        const sw::fixed_string<8>  filled( 64u, 'y' );
+        const sw::fixed_string<64> big( longText.c_str() );
+        const sw::fixed_string<8>  narrowed( big );
+
+        SW_EXPECT_EQUAL( 8u, filled.size() );
+        SW_EXPECT_EQUAL( sw::string( "yyyyyyyy" ), sw::string( filled.c_str() ) );
+        SW_EXPECT_EQUAL( 64u, big.size() );
+        SW_EXPECT_EQUAL( 8u, narrowed.size() );
+        SW_EXPECT_EQUAL( sw::string( "xxxxxxxx" ), sw::string( narrowed.c_str() ) );
+    }
+}
+
+/**
  * @brief [Core_String] 포맷 문자열 유틸
  */
 SW_TEST_CASE( Core_String, FormatStringUtility )
