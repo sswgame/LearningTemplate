@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -468,25 +469,15 @@ namespace sw
         if ( fileName.empty() )
             return 0;
 
-        const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, filePath.c_str(), "rb" );
-#else
-        pFile = fopen( filePath.c_str(), "rb" );
-#endif
-        if ( pFile == nullptr )
+        // 크기만 알면 되는데 파일을 열고 끝까지 탐색하고 있었다. 바로 위 getFileTimestamp 와
+        // 같은 방식으로 묻는다 — 핸들도, 플랫폼 분기도 필요 없다.
+        const string    filePath = normalizeSeparators( fileName );
+        std::error_code errorCode;
+        const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
+        if ( errorCode.value() != 0 )
             return 0;
 
-#if defined( SW_PLATFORM_WINDOWS )
-        _fseeki64( pFile, 0, SEEK_END );
-        const int64 size = _ftelli64( pFile );
-#else
-        fseeko( pFile, 0, SEEK_END );
-        const off_t size = ftello( pFile );
-#endif
-        std::fclose( pFile );
-        return ( size > 0 ) ? static_cast<uint64>( size ) : 0;
+        return static_cast<uint64>( size );
     }
 
     bool FileUtil::copyFile( string_view source, string_view destination )
@@ -536,12 +527,7 @@ namespace sw
             return false;
 
         const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, filePath.c_str(), "wb" );
-#else
-        pFile = fopen( filePath.c_str(), "wb" );
-#endif
+        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "wb" );
         if ( pFile == nullptr )
             return false;
 
@@ -553,25 +539,14 @@ namespace sw
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint32 offset, const uint32 maxReadCount )
     {
         const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, filePath.c_str(), "rb" );
-#else
-        pFile = fopen( filePath.c_str(), "rb" );
-#endif
+        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
         if ( pFile == nullptr )
         {
             SW_LOG_ERROR( "File not found: %#", fileName );
             return false;
         }
 
-#if defined( SW_PLATFORM_WINDOWS )
-        _fseeki64( pFile, 0, SEEK_END );
-        const int64 fileSize = _ftelli64( pFile );
-#else
-        fseeko( pFile, 0, SEEK_END );
-        const off_t fileSize = ftello( pFile );
-#endif
+        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
         if ( fileSize < 0 )
         {
             std::fclose( pFile );
@@ -588,11 +563,7 @@ namespace sw
         }
 
         const uint64 dataSize = MathUtil::min( uFileSize - offset, static_cast<uint64>( maxReadCount ) );
-#if defined( SW_PLATFORM_WINDOWS )
-        _fseeki64( pFile, static_cast<int64>( offset ), SEEK_SET );
-#else
-        fseeko( pFile, static_cast<off_t>( offset ), SEEK_SET );
-#endif
+        PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET );
         outBytes.resize( dataSize );
         if ( dataSize > 0 )
         {
@@ -607,27 +578,14 @@ namespace sw
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
         const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, filePath.c_str(), "rb" );
-#else
-        pFile = fopen( filePath.c_str(), "rb" );
-#endif
+        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
         if ( pFile == nullptr )
         {
             SW_LOG_ERROR( "File not found: %#", fileName );
             return false;
         }
 
-#if defined( SW_PLATFORM_WINDOWS )
-        _fseeki64( pFile, 0, SEEK_END );
-        const int64 fileSize = _ftelli64( pFile );
-        _fseeki64( pFile, 0, SEEK_SET );
-#else
-        fseeko( pFile, 0, SEEK_END );
-        const off_t fileSize = ftello( pFile );
-        fseeko( pFile, 0, SEEK_SET );
-#endif
+        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
         if ( fileSize < 0 )
         {
             std::fclose( pFile );
@@ -644,13 +602,11 @@ namespace sw
         }
         std::fclose( pFile );
 
-        if ( outText.size() >= 3 &&
-             static_cast<uint8>( outText[0] ) == 0xEF &&
-             static_cast<uint8>( outText[1] ) == 0xBB &&
-             static_cast<uint8>( outText[2] ) == 0xBF )
-        {
-            outText.erase( 0, 3 );
-        }
+        // BOM 판정은 아래 skipUtf8Bom 이 정본이다. 여기서 바이트를 또 세고 있었다 — 한쪽만
+        // 고치면 읽기 경로와 질의 경로가 서로 다른 답을 준다.
+        const string_view withoutBom = skipUtf8Bom( outText );
+        if ( withoutBom.size() != outText.size() )
+            outText.erase( 0, outText.size() - withoutBom.size() );
 
         return true;
     }
@@ -658,12 +614,7 @@ namespace sw
     bool FileUtil::writeTextFile( string_view fileName, string_view text )
     {
         const string filePath = normalizeSeparators( fileName );
-        FILE*        pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, filePath.c_str(), "wb" );
-#else
-        pFile = fopen( filePath.c_str(), "wb" );
-#endif
+        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "wb" );
         if ( pFile == nullptr )
             return false;
 

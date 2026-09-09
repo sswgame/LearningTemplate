@@ -184,33 +184,68 @@ namespace sw
                 }
             }
 
+            /** @brief 로케일 변환이 실패했음을 나타내는 값 (C 런타임 규약). */
+            static constexpr size_t kConversionFailed = static_cast<size_t>( -1 );
+
+            /**
+             * @brief wide → 로케일 멀티바이트 변환 원시 연산.
+             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 크기만 돌려줍니다.
+             * @return 널 종료를 포함한 바이트 수. 실패하면 kConversionFailed.
+             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둔다. 예전에는 "크기 질의 → 버퍼
+             *          준비 → 변환" 전체를 두 방향(utf16→locale, locale→utf16)이 각자 적어서
+             *          같은 #if 가 네 벌이었다.
+             */
+            static size_t wideToMultiByteInternal( utf8* pOutBuffer, size_t bufferSize, const utf16* pInput )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                size_t convertedSize{ 0 };
+                if ( wcstombs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
+                    return kConversionFailed;
+                return convertedSize;
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+                const size_t writtenSize = wcstombs( pOutBuffer, pInput, bufferSize );
+                if ( writtenSize == kConversionFailed )
+                    return kConversionFailed;
+                // POSIX 는 널 종료를 세지 않는다. Windows 쪽과 같은 규약으로 맞춘다.
+                return writtenSize + 1;
+#else
+    #error "Unsupported platform"
+#endif
+            }
+
+            /**
+             * @brief 로케일 멀티바이트 → wide 변환 원시 연산.
+             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 문자 수만 돌려줍니다.
+             * @return 널 종료를 포함한 문자 수. 실패하면 kConversionFailed.
+             */
+            static size_t multiByteToWideInternal( utf16* pOutBuffer, size_t bufferSize, const utf8* pInput )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                size_t convertedSize{ 0 };
+                if ( mbstowcs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
+                    return kConversionFailed;
+                return convertedSize;
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+                const size_t writtenSize = mbstowcs( pOutBuffer, pInput, bufferSize );
+                if ( writtenSize == kConversionFailed )
+                    return kConversionFailed;
+                return writtenSize + 1;
+#else
+    #error "Unsupported platform"
+#endif
+            }
+
             static string utf16ToLocaleInternal( const utf16* pInput )
             {
                 if ( pInput == nullptr || *pInput == L'\0' )
                     return {};
 
-                size_t requiredSize{ 0 };
-#if defined( SW_PLATFORM_WINDOWS )
-                wcstombs_s( &requiredSize, nullptr, 0, pInput, 0 );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-                requiredSize = wcstombs( nullptr, pInput, 0 );
-                if ( requiredSize != static_cast<size_t>( -1 ) )
-                    ++requiredSize;
-#else
-    #error "Unsupported platform"
-#endif
-                if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
+                const size_t requiredSize = wideToMultiByteInternal( nullptr, 0, pInput );
+                if ( requiredSize == 0 || requiredSize == kConversionFailed )
                     return {};
 
                 string buffer( requiredSize - 1, '\0' );
-#if defined( SW_PLATFORM_WINDOWS )
-                wcstombs_s( nullptr, buffer.data(), requiredSize, pInput, requiredSize );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-                wcstombs( buffer.data(), pInput, requiredSize );
-#else
-    #error "Unsupported platform"
-#endif
-
+                wideToMultiByteInternal( buffer.data(), requiredSize, pInput );
                 return buffer;
             }
 
@@ -219,28 +254,12 @@ namespace sw
                 if ( pInput == nullptr || *pInput == '\0' )
                     return {};
 
-                size_t requiredSize{ 0 };
-#if defined( SW_PLATFORM_WINDOWS )
-                mbstowcs_s( &requiredSize, nullptr, 0, pInput, 0 );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-                requiredSize = mbstowcs( nullptr, pInput, 0 );
-                if ( requiredSize != static_cast<size_t>( -1 ) )
-                    ++requiredSize;
-#else
-    #error "Unsupported platform"
-#endif
-                if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
+                const size_t requiredSize = multiByteToWideInternal( nullptr, 0, pInput );
+                if ( requiredSize == 0 || requiredSize == kConversionFailed )
                     return {};
 
                 wstring buffer( requiredSize - 1, L'\0' );
-#if defined( SW_PLATFORM_WINDOWS )
-                mbstowcs_s( nullptr, buffer.data(), requiredSize, pInput, requiredSize );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-                mbstowcs( buffer.data(), pInput, requiredSize );
-#else
-    #error "Unsupported platform"
-#endif
-
+                multiByteToWideInternal( buffer.data(), requiredSize, pInput );
                 return buffer;
             }
 

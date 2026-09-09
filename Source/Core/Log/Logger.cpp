@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/CrashContext.h"
@@ -520,11 +521,7 @@ namespace sw
             _currentLogFileName = expectedFileName.c_str();
 
             const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );
-#if defined( SW_PLATFORM_WINDOWS )
-            fopen_s( &_pFile, logPath.c_str(), "a" );
-#else
-            _pFile = fopen( logPath.c_str(), "a" );
-#endif
+            _pFile               = PlatformFileUtil::openFile( logPath.c_str(), "a" );
         }
 
         if ( _pFile == nullptr )
