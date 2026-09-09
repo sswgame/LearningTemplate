@@ -233,7 +233,7 @@ namespace sw
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
             {
                 const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
-                const float32*            pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
+                const float4&             clear  = beginInfo._arrClearColor[attachmentIndex];
                 if ( loadOp != RHIRenderPassLoadOp::Clear )
                     continue;
 
@@ -246,7 +246,7 @@ namespace sw
                 {
                     glDrawBuffer( GL_BACK );
                 }
-                glClearColor( pClear[0], pClear[1], pClear[2], pClear[3] );
+                glClearColor( clear._x, clear._y, clear._z, clear._w );
                 glClear( GL_COLOR_BUFFER_BIT );
             }
         }

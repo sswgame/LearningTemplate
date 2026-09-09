@@ -398,7 +398,6 @@ namespace sw
 
     bool Material::rebuildPackedBuffer()
     {
-        uint32 currentOffset{ 0 };
         _data._listBuffer.clear();
 
         for ( MaterialProperty& prop : _data._listProperty )
@@ -412,18 +411,6 @@ namespace sw
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
                 prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
-
-            uint32 packSize = prop._size;
-            if ( packSize == 0 )
-                packSize = MaterialUtil::packedSizeOf( prop._shaderType );
-            if ( packSize == 0 )
-                packSize = 4;
-
-            // If offsets already assigned (reflection), keep them; else sequential HLSL-like pack
-            if ( prop._offset == 0 && currentOffset != 0 )
-            {
-                // first property may legitimately be 0; only auto-assign when all zeros
-            }
         }
 
         bool anyExplicitOffset{ false };
@@ -435,17 +422,11 @@ namespace sw
                 break;
             }
         }
-        // Also treat single property at 0 with size set from reflection as explicit if multiple props have mixed
-        bool useSequential{ true };
-        if ( anyExplicitOffset )
-            useSequential = false;
-        else
-        {
-            // If more than one prop has non-zero size and first has offset 0 only ??sequential
-            useSequential = true;
-        }
+        // 리플렉션이 오프셋을 준 재질은 그 값을 그대로 쓰고, 하나도 없을 때만 HLSL 규칙으로
+        // 순서대로 쌓는다.
+        const bool useSequential = ( anyExplicitOffset == false );
 
-        currentOffset = 0;
+        uint32 currentOffset{ 0 };
         uint32 maxEnd{ 0 };
         for ( MaterialProperty& prop : _data._listProperty )
         {

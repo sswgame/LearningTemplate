@@ -119,6 +119,11 @@ namespace sw::editor
             if ( bSuccess == false && xmlFallback.empty() == false )
                 bSuccess = XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
 
+            // 실패해도 컴포넌트는 남긴다(사용자가 붙여넣기를 요청했다). 다만 값이 기본값이라는
+            // 것을 알려야 한다 — 예전에는 결과를 아무도 읽지 않아 조용히 빈 컴포넌트가 생겼다.
+            if ( bSuccess == false )
+                SW_LOG_WARNING( "Paste Component: 값 복원에 실패했습니다 — 기본값으로 추가합니다 (%#)", string{ typeName }.c_str() );
+
             const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
             EditorTransaction::recordModify( GameObjectPtr{ pTargetObj }, beforeXml, afterXml, "Paste Component as New" );
             return pNewComp;

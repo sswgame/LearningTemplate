@@ -196,16 +196,20 @@ namespace sw
 
             void setContinuation( Delegate<void()> cont )
             {
-                bool bExecuteImmediately = false;
+                // 이미 끝났으면 지금 부르고, 아니면 보관한다. **락 밖에서 부른다** — 콜백이 다시
+                // 이 future 를 건드릴 수 있다. 옮긴 값을 조건으로 되살려 쓰지 않도록 갈 곳을
+                // 하나씩만 정한다(예전에는 bool 플래그와 std::move 가 서로를 배제한다는 사실에
+                // 기대고 있어서, 읽는 사람도 분석기도 use-after-move 로 볼 수밖에 없었다).
+                Delegate<void()> immediate;
                 {
                     std::scoped_lock<mutex> lock{ _mutex };
                     if ( _bReady.load( std::memory_order_acquire ) )
-                        bExecuteImmediately = true;
+                        immediate = std::move( cont );
                     else
                         _continuation = std::move( cont );
                 }
-                if ( bExecuteImmediately && cont.isBound() )
-                    cont();
+                if ( immediate.isBound() )
+                    immediate();
             }
         };
     } // namespace internal

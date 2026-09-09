@@ -436,8 +436,7 @@ namespace sw::editor
                 pTypeName = "Nintendo Switch Gamepad";
                 break;
             default:
-                pTypeName = "Unknown";
-                break;
+                break; // 위 선언의 "Unknown" 을 그대로 쓴다
         }
 
         ImGui::Text( "Active Device:" );
@@ -541,8 +540,7 @@ namespace sw::editor
                         pBatStr = "Full (100%)";
                         break;
                     default:
-                        pBatStr = "Unknown";
-                        break;
+                        break; // 위 선언의 "Unknown" 을 그대로 쓴다
                 }
                 ImGui::Text( "Battery: %s", pBatStr );
 

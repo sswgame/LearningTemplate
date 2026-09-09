@@ -384,9 +384,16 @@ namespace sw
         return *this;
     }
 
+    // 자기 대입은 `fs = fs.c_str()` 로 들어온다 — 자기 버퍼를 자기에게 memcpy 하는 것은 UB 라
+    // 아래에서 주소를 비교해 막는다. 검사기는 copy-and-swap 이 아니라고 짚지만 고정 버퍼에는
+    // 교환할 동적 자원이 없다.
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const T* pStr )
     {
+        if ( pStr == _arrData )
+            return *this;
+
         if ( pStr != nullptr )
         {
             const uint32 length = clampToCapacity( StringUtil::strlen( pStr ) );

@@ -430,7 +430,7 @@ namespace sw
 
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.batches" );
-            sortTransparent( cameraPos.data() );
+            sortTransparent( cameraPos );
 
             // 배치 구성이 그대로면 **다시 나누지 않는다** — 인스턴스 값만 제자리에서 갱신한다.
             // 예전엔 물체가 하나만 움직여도 인스턴스·배치 목록을 통째로 비우고 다시 만들었다(측정에서
@@ -619,8 +619,8 @@ namespace sw
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             // 압축을 포기한 배치(Preserve)만 CPU 개수를 그대로 두고, 나머지는 컴퓨트가 0 부터 센다.
-            const bool bPreserve = ( argIndex < _listScratchBatchInfo.size() ) &&
-                                   ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
+            const bool bPreserve                             = ( argIndex < _listScratchBatchInfo.size() ) &&
+                                                               ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
             _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _listAllBatch[argIndex]._instanceCount : 0u;
         }
         for ( GpuCullViewResources& view : _arrCullView )
@@ -694,13 +694,12 @@ namespace sw
         _bCpuDirty            = snapshot._bCpuDirty;
     }
 
-    void GpuScene::sortTransparent( const float32* pCameraPos )
+    void GpuScene::sortTransparent( const float3& cameraPos )
     {
-        if ( pCameraPos == nullptr || _listScratchTransparentIdx.size() <= 1 )
+        if ( _listScratchTransparentIdx.size() <= 1 )
             return;
-        const float3 camPos{ pCameraPos[0], pCameraPos[1], pCameraPos[2] };
         std::sort( _listScratchTransparentIdx.begin(), _listScratchTransparentIdx.end(), [&]( uint32 idxA, uint32 idxB )
-        { return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, camPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, camPos ); } );
+        { return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, cameraPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, cameraPos ); } );
     }
 
     bool GpuScene::refreshInstancesInPlace()
@@ -836,8 +835,8 @@ namespace sw
                 {
                     const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange                   = ( pBatchHead->_pMesh != current._pMesh ) ||
-                                 ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
-                                 ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
+                                                   ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
+                                                   ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -1031,7 +1030,7 @@ namespace sw
             // 다시 만든다 — 구조버퍼의 stride 는 뷰에 박혀 있어 셰이더 선언과 달라지면 안 된다.
             const uint32 capacityElements = MathUtil::max( elementCount * 2u, 16u );
             const bool   bRecreate        = ( gpu._slot._buffer == 0 ) || ( gpu._slot._elementSize != stride ) ||
-                                   ( gpu._slot._capacityElements < capacityElements );
+                                            ( gpu._slot._capacityElements < capacityElements );
             if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
                                            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {

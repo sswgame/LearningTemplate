@@ -446,7 +446,7 @@ namespace sw
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
         /** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */
-        void sortTransparent( const float32* pCameraPos );
+        void sortTransparent( const float3& cameraPos );
         /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
         /** @brief 직전 후보와 배치 키가 모두 같은지(= 트랜스폼만 달라졌는지) 확인합니다. */

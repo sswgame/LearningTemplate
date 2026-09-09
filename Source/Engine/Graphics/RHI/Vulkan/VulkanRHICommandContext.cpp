@@ -50,12 +50,12 @@ namespace sw
 
     SW_LOG_CALLER( "Vulkan" );
 
-    static void setVkClearColor( VkClearValue& dst, const float32* pClear )
+    static void setVkClearColor( VkClearValue& dst, const float4& clear )
     {
-        dst.color.float32[0] = pClear[0];
-        dst.color.float32[1] = pClear[1];
-        dst.color.float32[2] = pClear[2];
-        dst.color.float32[3] = pClear[3];
+        dst.color.float32[0] = clear._x;
+        dst.color.float32[1] = clear._y;
+        dst.color.float32[2] = clear._z;
+        dst.color.float32[3] = clear._w;
     }
 
     static void mapStateVal( RHIBufferState state, VkAccessFlags& access, VkPipelineStageFlags& stage )
@@ -360,8 +360,7 @@ namespace sw
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
-                const float32* pClear = &beginInfo._arrClearColor[colorIndex]._x;
-                setVkClearColor( clearValues[clearCount++], pClear );
+                setVkClearColor( clearValues[clearCount++], beginInfo._arrClearColor[colorIndex] );
             }
             if ( key._depth != 0 )
             {
@@ -407,8 +406,7 @@ namespace sw
                 _pState->_bRenderPassActive = SW_FALSE;
             }
 
-            const float32* pClear = &beginInfo._arrClearColor[0]._x;
-            setVkClearColor( clearValues[0], pClear );
+            setVkClearColor( clearValues[0], beginInfo._arrClearColor[0] );
             clearCount = 1;
         }
 
