@@ -160,14 +160,10 @@ namespace sw
         if ( _pDisplay == nullptr || _pRenderContext == nullptr )
             return false;
 
-        if ( glXMakeCurrent( static_cast<Display*>( _pDisplay ),
-                             static_cast<Window>( _windowHandle ),
-                             static_cast<GLXContext>( _pRenderContext ) ) == 0 )
-        {
-            SW_LOG_ERROR( "bindGraphicsContext glXMakeCurrent failed" );
-            return false;
-        }
-        return true;
+        // 로그를 남기지 않는다 - 경합은 정상이고 알릴 책임은 호출부에 있다(WGL 과 같은 규약).
+        return glXMakeCurrent( static_cast<Display*>( _pDisplay ),
+                               static_cast<Window>( _windowHandle ),
+                               static_cast<GLXContext>( _pRenderContext ) ) != 0;
     }
 
     bool GlxPlatformContext::isCurrent() const

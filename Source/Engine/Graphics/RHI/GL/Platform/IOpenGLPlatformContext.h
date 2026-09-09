@@ -58,7 +58,12 @@ namespace sw
         /** @brief 컨텍스트를 해제합니다. 두 번 불러도 안전합니다. */
         virtual void destroy() = 0;
 
-        /** @brief 이 스레드에 컨텍스트를 바인딩합니다. */
+        /**
+         * @brief 이 스레드에 컨텍스트를 바인딩합니다.
+         * @note 실패해도 **로그를 남기지 않습니다.** 다른 스레드가 쥐고 있는 것은 정상 경합이고,
+         *       기다릴지 포기할지와 알릴지는 호출부가 정합니다
+         *       (`OpenGLRHIDevice::bindGraphicsContext` / `acquireGraphicsContextBlocking`).
+         */
         virtual bool makeCurrent() = 0;
         /** @brief 이 스레드의 current 컨텍스트가 내 것이면 true. 조회 수단이 없으면 false. */
         virtual bool isCurrent() const = 0;

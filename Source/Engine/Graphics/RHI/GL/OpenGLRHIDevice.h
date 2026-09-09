@@ -102,6 +102,19 @@ namespace sw
         void* getNativeContext() const override { return _pHRC; }
 
         bool requiresExclusiveContextThread() const override { return true; }
+
+        /** @brief 컨텍스트를 기다리다 포기하는 시간. 렌더 워커는 프레임 끝마다 놓으므로 한 프레임이면 넉넉하다. */
+        static constexpr uint32 kContextAcquireTimeoutMs = 250;
+
+        /**
+         * @brief 컨텍스트를 이 스레드로 가져옵니다. 다른 스레드가 쥐고 있으면 놓을 때까지 기다립니다.
+         * @details GL 컨텍스트는 한 스레드만 current 로 가질 수 있다. 렌더 워커는 프레임이 끝나면
+         *          놓으므로(`RenderThread::executePacket`) 기다리면 한 프레임 안에 차례가 온다.
+         *          그래서 `bindGraphicsContext` 처럼 한 번 시도하고 포기하는 대신 조용히 다시 집는다.
+         * @param timeoutMs 포기까지 기다리는 시간(ms).
+         * @return 가져왔으면 true. 제한 시간을 넘기면 false 이며 그때만 로그를 남긴다.
+         */
+        bool acquireGraphicsContextBlocking( uint32 timeoutMs = kContextAcquireTimeoutMs );
         bool bindGraphicsContext() override;
         /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지. ScopedOpenGLContext 가 남의 바인딩을 풀지 않게 하는 근거. */
         bool isGraphicsContextCurrent() const;
@@ -299,7 +312,10 @@ namespace sw
         {
             if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false )
             {
-                _bNeedsUnbind = _pDevice->bindGraphicsContext();
+                // **기다려서** 가져온다. 한 번 시도하고 포기하면 `_bNeedsUnbind` 만 false 가 되고 본문은
+                // 그대로 실행돼서, 컨텍스트 없이 glGen* 이 나가 리소스가 조용히 만들어지지 않았다.
+                // 렌더 워커가 프레임 끝마다 놓으므로 차례를 기다리는 편이 맞다.
+                _bNeedsUnbind = _pDevice->acquireGraphicsContextBlocking();
             }
         }
 

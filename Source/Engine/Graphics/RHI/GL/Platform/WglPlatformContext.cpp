@@ -148,12 +148,11 @@ namespace sw
         if ( _pDeviceContext == nullptr || _pRenderContext == nullptr )
             return false;
 
-        if ( wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) ) == FALSE )
-        {
-            SW_LOG_ERROR( "bindGraphicsContext wglMakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
-            return false;
-        }
-        return true;
+        // **로그를 남기지 않는다.** 다른 스레드가 컨텍스트를 쥐고 있는 것(ERROR_BUSY)은 정상
+        // 경합이고, 기다릴지 포기할지는 호출부가 정한다. 실패를 알릴 필요가 있는 호출부는
+        // `OpenGLRHIDevice::bindGraphicsContext` 가, 기다리는 쪽은
+        // `acquireGraphicsContextBlocking` 이 각자 로그를 남긴다.
+        return wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) ) != FALSE;
     }
 
     bool WglPlatformContext::isCurrent() const

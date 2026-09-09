@@ -313,7 +313,40 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
             return false;
-        return _platformContext->makeCurrent();
+
+        // 플랫폼 구현은 조용하므로(경합은 정상이다) 실패 로그는 여기서 남긴다. 기다리지 않는
+        // 호출부는 이 한 번의 시도로 끝낸다.
+        if ( _platformContext->makeCurrent() == false )
+        {
+            SW_LOG_ERROR( "bindGraphicsContext failed - the context is held by another thread" );
+            return false;
+        }
+        return true;
+    }
+
+    bool OpenGLRHIDevice::acquireGraphicsContextBlocking( uint32 timeoutMs )
+    {
+        if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
+            return false;
+
+        // 경합이 없을 때의 정상 경로 - 대개 여기서 끝난다.
+        if ( _platformContext->makeCurrent() )
+            return true;
+
+        // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다 - 시도마다 로그를 남기면 정상
+        // 경합이 오류로 보인다(실제로 -gl -EnableEditor 의 ERROR_BUSY 2건이 그것이었다).
+        const std::chrono::steady_clock::time_point deadline =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds( timeoutMs );
+        while ( std::chrono::steady_clock::now() < deadline )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            if ( _platformContext->makeCurrent() )
+                return true;
+        }
+
+        SW_LOG_ERROR( "acquireGraphicsContextBlocking timed out - GL calls on this thread will be dropped (ms=%#)",
+                      timeoutMs );
+        return false;
     }
 
     bool OpenGLRHIDevice::isGraphicsContextCurrent() const
