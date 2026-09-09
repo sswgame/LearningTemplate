@@ -45,6 +45,24 @@
 
 경계가 흐려지면 테스트가 먼저 막힙니다 — `Test/EditorTest` 는 ImGui 없이 도는 것만 검증합니다.
 
+## 그려진 결과를 검증하는 법
+
+`Test/EditorTest` 가 ImGui 없이 도는 것만 본다는 뜻은, **패널을 비워 놓고도 테스트가 통과한다**는
+뜻입니다. 화면을 직접 볼 수 없을 때(CI·자동화·원격)는 `-gv_editorPanelDump=N` 을 씁니다.
+
+```powershell
+./App.exe -gv_profileFrames=40 -dx12 -EnableEditor -gv_editorPanelDump=25
+```
+
+N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 수** · 활성/접힘/숨김)과 요약을 로그에
+남깁니다. **보이는데 정점이 0인 패널**이 곧 빈 패널입니다. 컨테이너(자식이 내용을 든 창)와 순수
+오버레이(`NoInputs` — ImGuizmo 의 `gizmo` 가 그렇습니다)는 정상적으로 비므로 빼고 셉니다.
+
+구현은 `Common/Gui/EditorPanelDump.*` 이고, 스위치 선언은 `Engine/EngineLoop.cpp` 에 있습니다 —
+커맨드라인은 모듈 로드 전에 파싱되므로 EditorModule 이 선언한 전역 변수는 `-gv_...` 로 설정할 수
+없습니다(파서가 조용히 무시합니다). 기준선과 비교 방법은
+[docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
+
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.

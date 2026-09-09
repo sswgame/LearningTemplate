@@ -15,6 +15,7 @@
 #include "Editor/Common/Gui/EditorFontSetup.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
+#include "Editor/Common/Gui/EditorPanelDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -319,6 +320,10 @@ namespace sw::editor
         BLOCK( "ImGui EndFrame / Platform Windows Update" )
         {
             endFrame();
+
+            // EndFrame 이후여야 창의 DrawList 가 이번 프레임의 최종 내용을 담는다.
+            // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
+            EditorPanelDump::dumpIfRequested();
 
             // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신·보조 뷰포트 렌더)을
             // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.

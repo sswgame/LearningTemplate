@@ -96,6 +96,22 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
 
     /**
+     * @brief `-gv_editorPanelDump=<N>` — N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
+     * @details 에디터 기능인데 **선언이 Engine 에 있는 이유**: 커맨드라인은 모듈이 로드되기 전에
+     *          파싱되므로, EditorModule 이 선언한 전역 변수는 `-gv_...` 로 설정할 수 없다(파서가
+     *          "해당 Argument 없음" 으로 무시한다). 진단 스위치는 다른 gv_ 들과 같은 자리에 둔다.
+     *          읽는 쪽은 `Editor/Common/Gui/EditorPanelDump.cpp` 다. 0 이면 아무것도 하지 않는다.
+     */
+    // EditorModule 이 DLL 경계를 넘어 읽으므로 SW_API 로 내보낸다. SW_GLOBAL_VARIABLE_INT 는
+    // SW_API 를 붙이지 않으므로(Engine 내부 전용 변수가 대부분) 여기서는 직접 정의하고 등록한다 —
+    // gv_rhiBackend / gv_useRenderThread 가 같은 이유로 같은 형태다.
+    extern SW_API int32                  gv_editorPanelDump;
+    SW_API int32                         gv_editorPanelDump = 0;
+    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorPanelDump(
+        SW_GVM_MODULE_HEAD(), "gv_editorPanelDump", ::sw::GlobalVariableType::Int32, &gv_editorPanelDump, int32( 0 ),
+        "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
+
+    /**
      * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.

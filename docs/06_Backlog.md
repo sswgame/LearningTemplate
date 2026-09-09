@@ -13,6 +13,23 @@
 에디터 패널에는 **단위 테스트가 없다.** 컴파일이 통과해도 화면이 비어 있을 수 있다.
 따라서 패널·위젯을 건드렸다면 반드시 실행해서 확인한다.
 
+**화면을 볼 수 없을 때는 `-gv_editorPanelDump=N` 을 쓴다.** N 번째 ImGui 프레임에 창 하나당 한 줄
+(이름 · 크기 · 정점 수 · 활성/접힘/숨김)과 요약을 로그에 남긴다. **보이는데 정점이 0인 패널**이
+곧 빈 패널이고, 컨테이너(자식이 내용을 든 창)와 순수 오버레이(`NoInputs`, 예: ImGuizmo 의 `gizmo`)는
+빼고 센다. 패널을 고치기 전후로 이 블록을 비교하면 된다.
+
+```powershell
+cd build/Ninja-Debug/Bin
+./App.exe -gv_profileFrames=40 -dx12 -EnableEditor -gv_editorPanelDump=25 > before.log
+# ... 패널 수정 후 ...
+./App.exe -gv_profileFrames=40 -dx12 -EnableEditor -gv_editorPanelDump=25 > after.log
+```
+
+현재 기준선: **창 14개 · 내용 없는 패널 0개.** 정점 수가 정확히 같기를 기대하면 안 된다 —
+폰트·DPI·도킹·애니메이션이 값을 흔든다. 보는 것은 "0 이 아닌가" 와 "창 목록이 그대로인가" 다.
+(도구가 실제로 잡는지 확인했다: `HierarchyPanel::drawContent` 를 즉시 return 으로 막으면
+`Hierarchy ... vtx=0 <== BLANK` 와 "내용 없는 패널 1개" 가 나온다.)
+
 ```powershell
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다
