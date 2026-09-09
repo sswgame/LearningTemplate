@@ -340,7 +340,7 @@ def bakeShadersInternal(projectRoot: Path) -> bool:
 
 
 _kBakeStampFileName = "bake.stamp"
-_kBakeStampHeader = "SWBAKE 1"
+_kBakeStampHeader = "SWBAKE 2"
 _kFnv1a64Offset = 14695981039346656037
 _kFnv1a64Prime = 1099511628211
 
@@ -354,7 +354,13 @@ def computeFnv1a64Internal(data: bytes) -> int:
 
 
 def collectShaderSourceHashesInternal(shadersDir: Path) -> dict[str, str]:
-    """shaders/ 아래 .hlsl/.hlsli 의 내용 해시를 { 상대경로: hex } 로 모읍니다 (bin/ 제외)."""
+    """shaders/ 아래 .hlsl/.hlsli 의 내용 해시를 { 상대경로: hex } 로 모읍니다 (bin/ 제외).
+
+    CR 을 뺀 바이트로 해싱합니다(스탬프 버전 2). 저장소에 `.gitattributes` 가 없어 체크아웃마다 줄
+    끝이 달라질 수 있고, 바이트를 그대로 해싱하면 같은 소스가 PC 마다 다른 값을 냅니다 — 그러면
+    Shipping 빌드가 매번 스탬프를 다시 써서 작업 트리가 더러워집니다. `ShaderBaker::writeBakeStamp`
+    가 같은 정규화를 합니다.
+    """
     result: dict[str, str] = {}
     for path in sorted(shadersDir.rglob("*")):
         if not path.is_file():
@@ -364,7 +370,7 @@ def collectShaderSourceHashesInternal(shadersDir: Path) -> dict[str, str]:
         rel = normalizePath(str(path.relative_to(shadersDir))).lower()
         if rel.startswith("bin/") or "/bin/" in rel:
             continue
-        result[rel] = "%016x" % computeFnv1a64Internal(path.read_bytes())
+        result[rel] = "%016x" % computeFnv1a64Internal(path.read_bytes().replace(b"\r", b""))
     return result
 
 

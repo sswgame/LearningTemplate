@@ -1,6 +1,6 @@
-SWBAKE 1
-0cd857f7f10a5800 computetestgeometry.hlsl
-8922272a2a2ef05b computetexturewrite.hlsl
-a364f3c84cd057a8 sampleindirect.hlsl
-ba79f5174e871db4 samplecompute.hlsl
-eac2f3f6b4773a9d postoutline.hlsl
+SWBAKE 2
+0ffdaf48fc69fe16 samplecompute.hlsl
+1d0f2a698ee705f7 sampleindirect.hlsl
+2e0d8f7b60df9680 computetestgeometry.hlsl
+326dc306361a03d3 computetexturewrite.hlsl
+6e7b06e0de522d69 postoutline.hlsl

@@ -151,7 +151,8 @@ namespace sw
              * @details 쿠커(CookAssets.py)가 "지금 팩에 넣으려는 바이너리가 지금 이 소스에서 나온
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 전부 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
-             *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다.
+             *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다. 해시는 CR 을
+             *          뺀 바이트로 계산한다(버전 2) — 아래 정규화 주석 참고.
              * @param binDirectory 매니페스트를 쓴 폴더 (`<domain>/shaders/bin/<rhi>`)
              */
             static void writeBakeStamp( string_view binDirectory )
@@ -181,8 +182,21 @@ namespace sw
                     if ( FileUtil::readFile( normSource, bytes ) == false )
                         continue;
 
-                    const uint64 hash    = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ),
-                                                                      bytes.size(), false );
+                    // 줄바꿈을 LF 로 맞춘 뒤 해싱한다. 이 저장소에는 `.gitattributes` 가 없어 같은 커밋도
+                    // 체크아웃마다 줄 끝이 달라질 수 있고(실제로 `instancesort.hlsl` 하나만 LF 였다),
+                    // 바이트를 그대로 해싱하면 **같은 소스가 PC 마다 다른 값**을 낸다. 그러면 한쪽에서
+                    // Shipping 을 빌드할 때마다 스탬프가 다시 쓰여 작업 트리가 더러워지고, 두 PC 가
+                    // 서로의 스탬프를 번갈아 덮어쓴다.
+                    vector<uint8> normalizedByte;
+                    normalizedByte.reserve( bytes.size() );
+                    for ( const uint8 byte : bytes )
+                    {
+                        if ( byte != static_cast<uint8>( '\r' ) )
+                            normalizedByte.push_back( byte );
+                    }
+
+                    const uint64 hash    = StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ),
+                                                                      normalizedByte.size(), false );
                     const string relPath = StringUtil::toLower( normSource.substr( shadersDir.size() + 1 ).c_str() );
 
                     StringBuilder<constant::kMaxBuffer256> sb;
@@ -193,7 +207,7 @@ namespace sw
 
                 std::sort( listLine.begin(), listLine.end() );
 
-                string text = "SWBAKE 1\n";
+                string text = "SWBAKE 2\n";
                 for ( const string& line : listLine )
                 {
                     text += line;
