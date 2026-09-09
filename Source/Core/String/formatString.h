@@ -903,12 +903,17 @@ namespace sw
 namespace std
 {
     template <typename T>
-    /** @brief FormattedValue 는 (값, Format) 두 원소입니다. */
-    struct tuple_size<sw::FormattedValue<T>> : integral_constant<uint32, 2>
+    /**
+     * @brief FormattedValue 는 (값, Format) 두 원소입니다.
+     * @details `tuple_size` 특수화는 `integral_constant<size_t, N>` 에서 파생해야 표준을 따른다
+     *          (`std::tuple_size<E>::value` 의 타입이 `size_t` 다). 예전에는 `uint32` 였다 —
+     *          구조적 바인딩이 우연히 동작했을 뿐 [tuple.helper] 의 요구는 아니었다.
+     */
+    struct tuple_size<sw::FormattedValue<T>> : integral_constant<size_t, 2>
     {
     };
 
-    template <uint32 TIndex, typename TType>
+    template <size_t TIndex, typename TType>
     /** @brief 0 은 값 타입, 1 은 Format 입니다. */
     struct tuple_element<TIndex, sw::FormattedValue<TType>>
     {

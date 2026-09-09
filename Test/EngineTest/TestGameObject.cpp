@@ -1,10 +1,12 @@
 #include "pch.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -3218,6 +3220,55 @@ SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
 /**
  * @brief [GameObjectHierarchy] refreshActiveInHierarchy 부모-자식-손자 다계층 합성 활성 상태 엣지 케이스 검증
  */
+/**
+ * @brief [ComponentDefaults] gamedata 의 기본값은 **기반 타입 노드부터** 적용된다
+ * @details 예전에는 기반 기본값 적용이 `Component` 생성자에 있었는데, 기반 생성자 시점에는 가상
+ *          `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나왔다
+ *          — 중간 기반(`SceneComponent`)의 기본값은 한 번도 적용된 적이 없고, 파생 기본값은
+ *          등록 시점의 `applyTypeDefaults` 가 따로 넣고 있었다. 생성자 호출을 걷어내면서 적용을
+ *          한 곳(`applyTypeDefaults`)으로 모았고, 이제 뿌리 → 파생 순서로 체인 전체를 적용한다.
+ *          이 테스트는 그 순서를 고정한다: 기반 노드의 값이 들어가고, 같은 프로퍼티를 파생이
+ *          다시 적으면 파생이 이긴다.
+ */
+SW_TEST_CASE( ComponentDefaults, BaseTypeDefaultsApplyBeforeDerived )
+{
+    const sw::string defaultsPath =
+        sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_component_defaults_chain.xml" );
+
+    // SceneComponent(기반)가 Scale 을, MeshComponent(파생)가 BoundsRadius 를 정한다.
+    const sw::string xml =
+        "<GameData>\n"
+        "  <Defaults>\n"
+        "    <SceneComponent _localScale=\"2,3,4\" />\n"
+        "    <MeshComponent _boundsRadius=\"7.5\" />\n"
+        "  </Defaults>\n"
+        "</GameData>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, xml ) );
+
+    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+    sw::Component::setDefaultGamedataPath( defaultsPath );
+
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "DefaultsChainTarget" ) );
+        sw::MeshComponent*    pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+        SW_ASSERT_TRUE( pMesh != nullptr );
+
+        // 기반(SceneComponent) 노드가 적용됐는가 — 예전에는 여기가 (1,1,1) 이었다.
+        const sw::float3 scale = pMesh->getLocalScale();
+        SW_EXPECT_TRUE( sw::MathUtil::nearEqual( scale._x, 2.0f ) );
+        SW_EXPECT_TRUE( sw::MathUtil::nearEqual( scale._y, 3.0f ) );
+        SW_EXPECT_TRUE( sw::MathUtil::nearEqual( scale._z, 4.0f ) );
+
+        // 파생(MeshComponent) 노드도 그대로 적용된다.
+        SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 7.5f ) );
+    }
+
+    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::ComponentDefaults::reloadDefaults();
+    sw::FileUtil::removeFile( defaultsPath );
+}
+
 SW_TEST_CASE( GameObjectHierarchy, ActiveInHierarchyCompoundEvaluation )
 {
     sw::GameObjectManager manager;

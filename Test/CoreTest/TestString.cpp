@@ -332,7 +332,22 @@ SW_TEST_CASE( Core_String, FixedStringTruncatesInsteadOfOverflowing )
         SW_EXPECT_EQUAL( kCanary, guarded._canary );
     }
 
-    // 6) 문자 채우기 생성자 · 더 큰 용량에서 좁혀 담기
+    // 6) 자기 대입 — 두 경로 모두 자기 버퍼를 자기에게 복사하지 않는다
+    {
+        Guarded guarded{};
+        guarded._canary = kCanary;
+        guarded._text   = "abcd";
+
+        guarded._text = guarded._text; // 같은 타입 대입: this != &rhs 가드
+        SW_EXPECT_EQUAL( sw::string( "abcd" ), sw::string( guarded._text.c_str() ) );
+
+        guarded._text = guarded._text.c_str(); // 포인터 별칭 대입: pStr == _arrData 가드
+        SW_EXPECT_EQUAL( sw::string( "abcd" ), sw::string( guarded._text.c_str() ) );
+        SW_EXPECT_EQUAL( 4u, guarded._text.size() );
+        SW_EXPECT_EQUAL( kCanary, guarded._canary );
+    }
+
+    // 7) 문자 채우기 생성자 · 더 큰 용량에서 좁혀 담기
     {
         const sw::fixed_string<8>  filled( 64u, 'y' );
         const sw::fixed_string<64> big( longText.c_str() );

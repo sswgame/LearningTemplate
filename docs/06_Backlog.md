@@ -60,8 +60,8 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
-#   Shipping : 161 / 421 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
+#   Shipping : 161 / 422 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -271,6 +271,39 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (재검증)
+
+**억제한 것들이 정말 안전한지 하나씩 실증했다.** 억제는 판단이고, 판단은 근거가 남아야 다음 사람이
+다시 세우지 않는다.
+
+- **ASan `report_globals=0`(SmokeTest 전용)** — 네 가지 결함을 일부러 내는 12줄 프로브를 ASan 으로
+  빌드해 같은 옵션으로 돌렸다: heap-buffer-overflow · heap-use-after-free · stack-buffer-overflow 는
+  **그대로 잡히고**, global-buffer-overflow 만 안 잡힌다(끈 검사가 그것 하나라는 뜻이다). 기본
+  옵션으로 돌리면 그 global 도 잡히는 것까지 확인해 프로브 자체가 유효함을 보였다. 다른 네 테스트는
+  기본값이라 global 검사도 그대로다.
+- **`.clang-tidy` 에서 끈 검사 셋** — 전수로 확인했다. `invalid-enum-default-initialization` 48건은
+  열거형 종류가 19가지인데 **전부 D3D11/D3D12/Vulkan SDK 타입**이고 `sw::` 열거형은 0건이다.
+  `derived-method-shadowing-base-method` 11건은 **전부 `swReflectSelf`** 다.
+  `std-namespace-modification` 10건은 전부 `tuple_size`/`tuple_element`/`hash`/`equal_to` 를
+  프로그램 정의 타입에 대해 특수화한 것으로 `[namespace.std]` 가 허용하는 형태다 — 다만 그중
+  `tuple_size<FormattedValue<T>>` 이 `integral_constant<uint32,2>` 였다. 표준은 `size_t` 를 요구하므로
+  (구조적 바인딩이 우연히 동작했을 뿐) `size_t` 로 맞췄다.
+- **NOLINT 두 곳** — `BVHTree3D` 의 근거로 든 `static_assert( sizeof(float4x4) == 16 * sizeof(float32) )`
+  가 `MatrixMath.h:471` 에 실제로 있다. `fixed_string` 의 자기대입은 주장만 있고 시험이 없었으므로
+  두 경로(`fs = fs`, `fs = fs.c_str()`)를 테스트로 고정했다.
+- **패널 덤프의 "정수 id 자식 창" 규칙** — 실제 덤프에서 이 규칙에 걸리는 창은 `Sequencer/00000379`
+  하나뿐이다. 우리 자식 창은 전부 문자열 id 라 가려지지 않는다.
+
+**그리고 이번 세션의 변경 하나가 동작을 바꿨다는 것을 찾아 고쳤다.** `Component` 생성자에서
+기본값 적용을 걷어내면서, gamedata 의 **기반 타입 노드**(`<SceneComponent>` 같은)가 적용될 자리가
+사라졌다. 예전 코드도 온전하지는 않았다 — 기반 생성자에서는 가상 `getTypeInfo()` 가 파생으로
+디스패치되지 않아 언제나 `Component` 노드 하나만 봤고, 중간 기반은 한 번도 적용된 적이 없다.
+이제 `applyTypeDefaults` 가 상속 체인을 **뿌리 → 파생** 순서로 전부 적용한다(파생이 마지막에
+덮어쓴다). `EngineTest.ComponentDefaults.BaseTypeDefaultsApplyBeforeDerived` 로 고정했고, 고치기
+전 코드로 되돌리면 기반 값 세 개가 실패하는 것까지 확인했다.
+(곁들여 배운 것: 벡터 기본값의 텍스트 형식은 **쉼표 구분**이다 — `"2,3,4"`. 공백으로 적으면
+파싱이 조용히 실패하고 값이 그대로 남는다.)
 
 ### 2026-09-10
 

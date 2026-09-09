@@ -53,6 +53,9 @@ namespace sw
         static void        reloadDefaults();
 
     private:
+        /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 그 타입의 프로퍼티에 주입합니다. */
+        static void applyNodeToProperties( void* pInstance, const TypeInfo& typeInfo, const XmlNode& compNode );
+
         void ensureDefaultsLoaded();
 
         XmlDocument   _defaultsDoc;
