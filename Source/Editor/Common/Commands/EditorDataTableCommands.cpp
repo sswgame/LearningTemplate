@@ -57,7 +57,13 @@ namespace sw::editor
 
             static void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecord )
             {
+                // 활성 게임에 `data/localization` 도메인이 없으면 locFolder 가 비고, joinPath 는 빈
+                // 경로를 돌려준다. 그대로 내려보내면 파일 계층이 "File not found: " 로 **이름 없는**
+                // 에러를 언어 수만큼 남긴다 — 없는 것은 파일이 아니라 폴더다.
                 const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+                if ( path.empty() )
+                    return;
+
                 JsonDocument doc;
                 if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
                     return;
@@ -84,7 +90,7 @@ namespace sw::editor
                 }
 
                 const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
-                if ( doc.saveFile( path, 4 ) == false )
+                if ( path.empty() || doc.saveFile( path, 4 ) == false )
                     return;
 
                 LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();

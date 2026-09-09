@@ -90,6 +90,7 @@ Config/Editor/imgui.ini
 Config/Editor/windows.ini
 Config/Editor/*.local.json
 Config/Editor/AnimationGraph.json
+Config/Editor/DialogueGraphEditor.json
 Config/Editor/AnimationGraphData.json
 Config/Editor/SpriteClip.json
 

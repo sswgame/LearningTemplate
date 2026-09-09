@@ -16,6 +16,12 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+namespace sw
+{
+    /** @brief `-gv_editorOpenAllPanels=1` — 선언은 `Engine/EngineLoop.cpp` 에 있다(읽기만 한다). */
+    extern SW_API int32 gv_editorOpenAllPanels;
+} // namespace sw
+
 namespace sw::editor
 {
     SW_LOG_CALLER( "EditorDockLayout" );
@@ -50,7 +56,11 @@ namespace sw::editor
     void EditorDockLayout::applyIniFilename() const
     {
         ImGuiIO& io = ImGui::GetIO();
-        if ( _imguiIniPath.empty() == false )
+
+        // 진단 스위치가 켜져 있으면 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹된 패널은 같은 노드에
+        // 탭으로 쌓여 **앞의 하나만 그려지므로**, 전부 열어도 뒤의 것은 여전히 확인되지 않는다.
+        // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
+        if ( _imguiIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
             io.IniFilename = _imguiIniPath.c_str();
         else
             io.IniFilename = nullptr;
@@ -58,6 +68,19 @@ namespace sw::editor
 
     void EditorDockLayout::loadPanelVisibility()
     {
+        // 진단 스위치가 켜져 있으면 저장된 가시성을 **읽지 않는다**. 도구 패널은 기본이 닫힘이고
+        // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
+        if ( gv_editorOpenAllPanels != 0 )
+        {
+            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            {
+                if ( entry._pInstance != nullptr )
+                    entry._pInstance->setOpen( true );
+            }
+            SW_LOG_INFO( "gv_editorOpenAllPanels: 등록된 패널을 전부 열었습니다 (windows.ini 복원 건너뜀)." );
+            return;
+        }
+
         if ( _windowsIniPath.empty() || FileUtil::fileExists( _windowsIniPath ) == false )
             return;
 
@@ -81,7 +104,9 @@ namespace sw::editor
 
     void EditorDockLayout::save()
     {
-        if ( _windowsIniPath.empty() == false )
+        // 전부 열어 둔 상태를 사용자의 레이아웃으로 굳히지 않는다 — 진단용으로 한 번 켠 스위치가
+        // 다음 실행부터 항상 모든 패널을 여는 일이 없어야 한다.
+        if ( _windowsIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
         {
             KeyValueMap visibilityKv;
             for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
@@ -115,7 +140,12 @@ namespace sw::editor
         const ImGuiID        dockspaceId = ImGui::DockSpaceOverViewport(
             ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
-        if ( _bApplied == SW_FALSE )
+        if ( _bApplied == SW_FALSE && gv_editorOpenAllPanels != 0 )
+        {
+            // 기본 도킹 배치를 적용하지 않는다(위 applyIniFilename 참고) — 전부 떠 있는 창으로 둔다.
+            _bApplied = SW_TRUE;
+        }
+        else if ( _bApplied == SW_FALSE )
         {
             const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceId );
             const bool                 bEmpty =

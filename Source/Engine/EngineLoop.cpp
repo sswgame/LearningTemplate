@@ -112,6 +112,20 @@ namespace sw
         "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
 
     /**
+     * @brief `-gv_editorOpenAllPanels=1` — 시작할 때 도구 패널까지 전부 엽니다.
+     * @details 도구 패널(Sequencer·Material·InputMap·DataTable…)은 기본이 닫힘이라
+     *          `-gv_editorPanelDump` 가 늘 기본 레이아웃의 다섯 개만 보고 있었다. 나머지는 사람이 창을
+     *          띄워 메뉴에서 열어 보기 전에는 비어 있어도 알 수 없었다 — 패널을 고치고 "검증했다"고
+     *          말할 수 있는 범위가 그만큼 좁았다. 이 스위치를 주면 덤프가 등록된 패널 전부를 덮는다.
+     *          `gv_editorPanelDump` 와 같은 이유로 선언이 여기 있고 EditorModule 이 읽는다.
+     */
+    extern SW_API int32                  gv_editorOpenAllPanels;
+    SW_API int32                         gv_editorOpenAllPanels = 0;
+    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorOpenAllPanels(
+        SW_GVM_MODULE_HEAD(), "gv_editorOpenAllPanels", ::sw::GlobalVariableType::Int32, &gv_editorOpenAllPanels, int32( 0 ),
+        "시작할 때 도구 패널까지 전부 연다 (0=사용 안 함)" );
+
+    /**
      * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.

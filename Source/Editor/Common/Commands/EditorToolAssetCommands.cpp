@@ -52,6 +52,11 @@ namespace sw::editor
                 return absPath;
             }
 
+            /**
+             * @brief 열린 문서 경로가 비면 에디터 기본 문서 경로로 떨어집니다. **둘 다 없으면 빈
+             *        문자열**이고, 그때 파일 계층까지 내려가면 `File not found: ` 처럼 이름이 빈
+             *        에러가 남습니다 — 부르는 쪽에서 빈 경로를 먼저 걸러야 합니다.
+             */
             static string resolveAnimGraphPath( string_view path )
             {
                 if ( path.empty() == false )
@@ -144,12 +149,16 @@ namespace sw::editor
     bool EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
+        if ( resolved.empty() )
+            return false;
         return outData.loadFromFile( resolved );
     }
 
     bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
+        if ( resolved.empty() )
+            return false;
         if ( data.saveToFile( resolved ) == false )
             return false;
         SW_LOG_INFO( "Saved %#", resolved.c_str() );
@@ -159,12 +168,16 @@ namespace sw::editor
     bool EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
+        if ( resolved.empty() )
+            return false;
         return outData.loadFromFile( resolved );
     }
 
     bool EditorToolAssetCommands::saveDialogueGraph( const DialogueGraphAsset& data, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
+        if ( resolved.empty() )
+            return false;
         if ( data.saveToFile( resolved ) == false )
             return false;
         SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), resolved.c_str() );
@@ -323,6 +336,8 @@ namespace sw::editor
     bool EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
     {
         const string resolved = EditorToolAssetInternal::resolveExistingOrRelativePath( path );
+        if ( resolved.empty() )
+            return false;
         return outAsset.loadFromFile( resolved );
     }
 
