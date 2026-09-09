@@ -135,7 +135,17 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 진행한 폴더: `App`(`6efa4fd2`) · `RuntimeAPI`(`06889dc7`) · `Core`(`58c1ac30`) ·
 `Engine`(`83b6ea60`) · `GameFramework`(아래).
-남은 폴더: `Games` · `Editor`, 그리고 `Tools/ReflectionParser`.
+남은 폴더: `Editor`, 그리고 `Tools/ReflectionParser`.
+
+**Games — 온보딩 안내가 존재하지 않는 전역 변수를 가리키고 있었다**
+- README 가 `kGameFrameworkModuleName` · `kGameKitModules` · `kGameModuleName` 세 전역 변수로
+  핫리로드 대상을 설명했다. **코드베이스에 그 이름은 하나도 없다.** 정본은
+  `Config/App/AppConfig.json` 의 `_listGameKitModule` 이다. "새 게임 추가" 5단계 중 5번을
+  그대로 따르면 아무 일도 일어나지 않았다.
+- `Empty` 템플릿의 95% 가 메시 벤치 하네스였다(375줄 중 ~340줄). README 1번이 "이 폴더를
+  복사하라" 이므로 새 게임은 벤치를 같이 들고 시작했다 → `BenchScene.{h,cpp}` 로 떼어내
+  `EmptyGame` 을 ~40줄 템플릿으로 되돌렸다. 지울 경계를 파일 경계와 맞췄다.
+  `Scripts/dev/BackendSmoke.py` 가 `-gv_benchMeshes` 에 기대므로 타깃·플래그는 그대로 두었다.
 
 **GameFramework — 리플렉션이 조용히 누락되는 덫 둘, 그리고 키트 소속 기준이 없던 것**
 - 리플렉션 대상 헤더를 소스와 **다른 규칙**으로 모으고 있었다. `GameFramework` 는
