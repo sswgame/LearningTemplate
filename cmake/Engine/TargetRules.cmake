@@ -138,9 +138,11 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${KIT_NAME})
 	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
 
-	file(GLOB kitHeaders "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+	# 헤더 목록을 넘기지 않는다. sw_addReflectionStep 이 REFLECT/ENUM 매크로를 가진 헤더를
+	# **재귀로** 찾아낸다. 예전에는 여기서 GLOB 으로 키트 루트의 *.h 만 모았는데, 소스는
+	# GLOB_RECURSE 였다 — 키트 안에 하위 폴더를 만들면 .cpp 는 컴파일되고 그 안의 REFLECT()
+	# 타입만 조용히 등록되지 않았다.
 	sw_addReflectionStep(${KIT_NAME}
-		HEADERS ${kitHeaders}
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	)
 endfunction()

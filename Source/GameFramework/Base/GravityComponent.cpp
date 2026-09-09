@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/ActionCombat/GravityComponent.h"
+#include "GameFramework/Base/GravityComponent.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 
