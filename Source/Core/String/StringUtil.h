@@ -294,8 +294,14 @@ namespace sw
             uint64 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                const uint64 c = bIgnoreCase ? static_cast<uint64>( toLowerChar( pStr[charIndex] ) ) : static_cast<uint64>( static_cast<uint8>( pStr[charIndex] ) );
-                hash           = ( hash ^ c ) * kPrime64;
+                // **두 경로 모두 uint8 을 거친다.** 예전에는 bIgnoreCase 쪽만 부호 확장됐다 —
+                // `char` 가 음수면(UTF-8 의 0x80 이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여
+                // 들어가, 같은 바이트가 경로에 따라 다른 값으로 해싱됐다. 게다가 `char` 의 부호성은
+                // 구현 정의라서 **플랫폼이 바뀌면 해시가 달라졌다**(ARM 은 unsigned char).
+                const uint8  byteValue = static_cast<uint8>( pStr[charIndex] );
+                const uint64 c         = bIgnoreCase ? static_cast<uint64>( static_cast<uint8>( toLowerChar( pStr[charIndex] ) ) )
+                                                     : static_cast<uint64>( byteValue );
+                hash                   = ( hash ^ c ) * kPrime64;
             }
             return hash;
         }

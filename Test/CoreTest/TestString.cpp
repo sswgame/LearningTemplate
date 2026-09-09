@@ -999,3 +999,44 @@ SW_TEST_CASE( Core_String, StristrStopsAtTerminator )
     VirtualFree( pBase, 0, MEM_RELEASE );
 #endif
 }
+
+/**
+ * @brief [Core_String] 비-ASCII 바이트를 부호 없이 다룬다
+ * @details `char` 의 부호성은 구현 정의이고, UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다.
+ *          그대로 int 로 넓히면 두 가지가 깨졌다:
+ *
+ *          1. `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답했다.
+ *             `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 같은 함수의 대소문자 구분 경로는
+ *             이미 `uint8` 로 비교하고 있어서 두 모드가 서로 다른 순서를 냈다.
+ *          2. `computeHash64` 는 `bIgnoreCase` 경로만 부호 확장됐다(기본값이 true 다). 같은 바이트가
+ *             경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는 해시 자체가
+ *             달라진다.
+ */
+SW_TEST_CASE( Core_String, NonAsciiBytesAreUnsigned )
+{
+    // "가" = EA B0 80 — 모든 바이트가 signed char 에서 음수다.
+    const sw::string korean{ "\xEA\xB0\x80" };
+    const sw::string ascii{ "a" };
+
+    // 부호 없는 바이트 비교라면 0xEA > 0x61 이므로 한글이 뒤에 온다.
+    SW_EXPECT_TRUE( sw::StringUtil::compare( korean, ascii, false ) > 0 );
+    SW_EXPECT_TRUE( sw::StringUtil::compare( korean, ascii, true ) > 0 );
+    SW_EXPECT_TRUE( sw::StringUtil::compare( ascii, korean, true ) < 0 );
+
+    // 두 모드의 순서가 일치해야 한다 — 예전에는 ignoreCase 쪽만 뒤집혀 있었다.
+    const int32 sensitive   = sw::StringUtil::compare( korean, ascii, false );
+    const int32 insensitive = sw::StringUtil::compare( korean, ascii, true );
+    SW_EXPECT_TRUE( ( sensitive > 0 ) == ( insensitive > 0 ) );
+
+    // 포인터 오버로드도 같아야 한다.
+    SW_EXPECT_TRUE( sw::StringUtil::compare( korean.c_str(), ascii.c_str(), true ) > 0 );
+
+    // 비-ASCII 에는 대소문자가 없으므로 두 해시 경로가 같은 값을 내야 한다.
+    const uint64 hashIgnore = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), true );
+    const uint64 hashExact  = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), false );
+    SW_EXPECT_EQUAL( hashExact, hashIgnore );
+
+    // ASCII 는 예전 동작 그대로여야 한다(대문자만 접힌다).
+    SW_EXPECT_EQUAL( sw::StringUtil::computeHash64( "ABC", 3, true ), sw::StringUtil::computeHash64( "abc", 3, true ) );
+    SW_EXPECT_TRUE( sw::StringUtil::computeHash64( "ABC", 3, false ) != sw::StringUtil::computeHash64( "abc", 3, false ) );
+}

@@ -184,6 +184,17 @@ namespace sw
         float32 _y;
         float32 _z;
 
+        /**
+         * @brief 3개 성분을 연속된 float 배열로 봅니다.
+         * @details `&v._x` 를 `const float32*` 로 넘겨 `[1]`·`[2]` 를 읽는 코드가 여럿 있다.
+         *          형식적으로는 배열이 아닌 멤버를 배열로 읽는 것이라 정적 분석기가 경계 위반으로
+         *          짚는다. 여기로 모으면 가정이 한 곳에 있고, 아래 static_assert 가 그 가정(패딩
+         *          없음)을 컴파일 타임에 지킨다.
+         */
+        const float32* data() const noexcept { return &_x; }
+        /** @brief 쓰기 가능한 오버로드. */
+        float32* data() noexcept { return &_x; }
+
         /** @brief (0, 0, 0) 으로 둡니다. */
         constexpr float3() noexcept
             : _x{ 0.f }
@@ -317,6 +328,8 @@ namespace sw
         /** @brief 뺄셈을 수행합니다. */
         float3 operator-() const noexcept;
     };
+
+    static_assert( sizeof( float3 ) == 3 * sizeof( float32 ), "float3 must be 3 contiguous floats" );
 
     /** @brief 덧셈을 수행합니다. */
     inline float3 operator+( const float3& lhs, const float3& rhs ) noexcept { return float3{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z }; }

@@ -235,7 +235,7 @@ namespace sw::editor
         _height            = height;
         _inputWidth        = width;
         _inputHeight       = height;
-        const size_t count = static_cast<size_t>( _width * _height );
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         _listWalkable.assign( count, 1 );
         _listEncounter.assign( count, 0 );
         _listPassThrough.assign( count, 0 );
@@ -447,6 +447,7 @@ namespace sw::editor
 
     size_t TileMapPanel::indexOf( int32 x, int32 y ) const
     {
-        return static_cast<size_t>( y * _width + x );
+        // 곱셈을 size_t 로 한다(Engine 의 TileMap::indexOf 와 같은 이유).
+        return static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
     }
 } // namespace sw::editor

@@ -150,8 +150,10 @@ namespace sw
         {
             if ( _splashData._bIsBgra == SW_FALSE )
             {
-                const int32 totalPixels = static_cast<int32>( _splashData._width * _splashData._height );
-                for ( int32 index = 0; index < totalPixels; ++index )
+                // 픽셀 수와 바이트 오프셋을 size_t 로 센다. int 로 곱하면 큰 이미지에서 넘치고,
+                // 그 값이 포인터 오프셋으로 쓰이므로 버퍼 밖을 가리킨다.
+                const size_t totalPixels = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height );
+                for ( size_t index = 0; index < totalPixels; ++index )
                 {
                     uint8* pPixel = _splashData.getPixels() + ( index * 4 );
                     std::swap( pPixel[0], pPixel[2] );

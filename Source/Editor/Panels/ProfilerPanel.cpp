@@ -36,9 +36,9 @@ namespace sw::editor
                 if ( bytes < 1024 )
                     formatstring( out.data(), out.capacity(), "%# B", bytes );
 
-                else if ( bytes < 1024 * 1024 )
+                else if ( bytes < uint64{ 1024 } * 1024 )
                     formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / 1024.0, Format().precision( 2 ) ) );
-                else if ( bytes < 1024 * 1024 * 1024 )
+                else if ( bytes < uint64{ 1024 } * 1024 * 1024 )
                     formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
                 else
                     formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ), Format().precision( 2 ) ) );

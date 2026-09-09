@@ -53,4 +53,7 @@ if(BUILD_TESTING)
 		RUN_SERIAL TRUE
 		TIMEOUT 180
 	)
+
+	# 이 테스트는 손으로 등록하므로 sw_addTestExecutable 의 ASan 보정을 받지 못한다. 직접 부른다.
+	sw_applySanitizerTestProperties(EngineTest_NoGPU)
 endif()

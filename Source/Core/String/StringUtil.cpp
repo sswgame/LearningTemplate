@@ -648,6 +648,9 @@ namespace sw
         return std::wcscmp( pLhs, pRhs ) == 0;
     }
 
+    // 바이트를 **부호 없이** 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가
+    // 음수가 되어, 한글처럼 비-ASCII 가 섞인 문자열이 ASCII 보다 **작다고** 나왔다(strcmp 규약의
+    // 반대다). 정렬·이진 검색에 이 함수를 쓰는 쪽이 일관되지 않게 동작한다.
     int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
     {
         const size_t minLen = ( lhs.size() < rhs.size() ) ? lhs.size() : rhs.size();
@@ -655,8 +658,8 @@ namespace sw
         {
             for ( size_t charIndex = 0; charIndex < minLen; ++charIndex )
             {
-                const int32 c1 = static_cast<int32>( toLowerChar( lhs[charIndex] ) );
-                const int32 c2 = static_cast<int32>( toLowerChar( rhs[charIndex] ) );
+                const int32 c1 = static_cast<int32>( static_cast<uint8>( toLowerChar( lhs[charIndex] ) ) );
+                const int32 c2 = static_cast<int32>( static_cast<uint8>( toLowerChar( rhs[charIndex] ) ) );
                 if ( c1 != c2 )
                     return c1 - c2;
             }
@@ -720,8 +723,8 @@ namespace sw
         {
             while ( *pLhs != '\0' && *pRhs != '\0' )
             {
-                const int32 c1 = static_cast<int32>( toLowerChar( *pLhs ) );
-                const int32 c2 = static_cast<int32>( toLowerChar( *pRhs ) );
+                const int32 c1 = static_cast<int32>( static_cast<uint8>( toLowerChar( *pLhs ) ) );
+                const int32 c2 = static_cast<int32>( static_cast<uint8>( toLowerChar( *pRhs ) ) );
                 if ( c1 != c2 )
                     return c1 - c2;
                 ++pLhs;

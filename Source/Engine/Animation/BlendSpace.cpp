@@ -86,8 +86,11 @@ namespace sw
             return _listSample.front()._pose;
 
         // Inverse Distance Weighting (IDW)
-        float32      totalWeight = 0.0f;
-        float32      arrWeight[constant::kMaxBuffer32];
+        float32 totalWeight = 0.0f;
+        // 0 으로 시작한다. 위에서 empty 를 걸렀으니 실제로는 쓰기 전에 읽히지 않지만, 그 사실이
+        // `MathUtil::min` 을 거친 sampleCount 에 숨어 있어 읽는 사람도 분석기도 확신할 수 없다.
+        // 32개 float 을 0 으로 두는 비용은 없다.
+        float32      arrWeight[constant::kMaxBuffer32]{};
         const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( constant::kMaxBuffer32 ) );
         const float2 targetParam{ paramX, paramY };
 

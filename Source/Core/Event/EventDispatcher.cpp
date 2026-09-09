@@ -27,7 +27,7 @@ namespace sw
         , _mapChannelDelegate{}
         , _mapChannelDispatchTable{}
         , _mapChannelQueue{}
-        , _arrFrameAllocator{ LinearAllocator{ 1024 * 64 }, LinearAllocator{ 1024 * 64 } }
+        , _arrFrameAllocator{ LinearAllocator{ constant::kDefaultLinearCapacity }, LinearAllocator{ constant::kDefaultLinearCapacity } }
         , _arrListOverflowAllocation{}
         , _activeAllocatorIndex{ 0 }
     {

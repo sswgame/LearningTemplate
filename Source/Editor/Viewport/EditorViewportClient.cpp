@@ -103,7 +103,7 @@ namespace sw::editor
                 float3 translation{};
                 float3 rotationDeg{};
                 float3 scale{};
-                ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
+                ImGuizmo::DecomposeMatrixToComponents( arrMatrix, translation.data(), rotationDeg.data(), scale.data() );
                 pSc->setLocalPosition( translation );
                 pSc->setLocalRotation( float3{ MathUtil::toRadian( rotationDeg._x ), MathUtil::toRadian( rotationDeg._y ),
                                                MathUtil::toRadian( rotationDeg._z ) } );
@@ -801,7 +801,7 @@ namespace sw::editor
             float3 translation{};
             float3 rotationDeg{};
             float3 scale{};
-            ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
+            ImGuizmo::DecomposeMatrixToComponents( arrMatrix, translation.data(), rotationDeg.data(), scale.data() );
 
             if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
                 EditorSceneCommands::snapTranslationToSurface( pRaw, translation, scale._y );

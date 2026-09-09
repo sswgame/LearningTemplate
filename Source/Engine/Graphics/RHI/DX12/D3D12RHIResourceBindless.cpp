@@ -69,10 +69,10 @@ namespace sw
             srvDesc.Format = resFmt;
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
 
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
         const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
@@ -115,10 +115,10 @@ namespace sw
         }
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
 
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
         const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
@@ -253,9 +253,9 @@ namespace sw
         }
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
         const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 
@@ -317,9 +317,9 @@ namespace sw
         }
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart() );
-        cpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        cpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle( _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-        gpuHandle.ptr += index * _pDevice->_cbvDescriptorSize;
+        gpuHandle.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         // 같은 뷰를 오프라인 힙에도 만든다 — 슬롯 테이블(t#/u#)은 여기서 온라인 블록으로 복사한다.
         const D3D12_CPU_DESCRIPTOR_HANDLE offlineHandle = _pDevice->offlineDescriptorAt( index );
 

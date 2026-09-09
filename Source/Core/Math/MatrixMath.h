@@ -213,6 +213,17 @@ namespace sw
         float32 _31, _32, _33, _34;
         float32 _41, _42, _43, _44;
 
+        /**
+         * @brief 16개 성분을 연속된 float 배열로 봅니다 (행 우선).
+         * @details GPU 업로드·프러스텀 추출처럼 행렬을 배열로 훑는 코드가 `&m._11` 을 받아
+         *          `[0..15]` 로 읽는다. 그것은 형식적으로 **배열이 아닌 멤버를 배열로 읽는 것**이라
+         *          정적 분석기가 경계 위반으로 짚는다. 여기로 모으면 가정이 한 곳에 있고, 아래
+         *          static_assert 가 그 가정(패딩 없음)을 컴파일 타임에 지킨다.
+         */
+        const float32* data() const noexcept { return &_11; }
+        /** @brief 쓰기 가능한 오버로드. */
+        float32* data() noexcept { return &_11; }
+
         /** @brief 단위 행렬로 둡니다. */
         constexpr float4x4() noexcept
             : _11{ 1.f }
@@ -455,6 +466,9 @@ namespace sw
         /** @brief 뺄셈을 수행합니다. */
         float4x4 operator-() const noexcept;
     };
+
+    // data() 가 [0..15] 를 돌려줄 수 있다는 가정을 못 박는다. 패딩이 끼면 여기서 막힌다.
+    static_assert( sizeof( float4x4 ) == 16 * sizeof( float32 ), "float4x4 must be 16 contiguous floats" );
 
     /** @brief 덧셈을 수행합니다. */
     inline float4x4 operator+( const float4x4& lhs, const float4x4& rhs ) noexcept { return float4x4{ lhs._11 + rhs._11, lhs._12 + rhs._12, lhs._13 + rhs._13, lhs._14 + rhs._14, lhs._21 + rhs._21, lhs._22 + rhs._22, lhs._23 + rhs._23, lhs._24 + rhs._24, lhs._31 + rhs._31, lhs._32 + rhs._32, lhs._33 + rhs._33, lhs._34 + rhs._34, lhs._41 + rhs._41, lhs._42 + rhs._42, lhs._43 + rhs._43, lhs._44 + rhs._44 }; }

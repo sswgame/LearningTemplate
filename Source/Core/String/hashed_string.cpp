@@ -33,7 +33,11 @@ namespace sw
 
     void HashedStringPool::shutdown() noexcept
     {
-        SW_ASSERT( s_pInstance != nullptr && s_pInstanceWide != nullptr );
+        // 단정만으로는 부족하다 — Shipping 에서 SW_ASSERT 는 사라지므로 initialize 전에 또는 두 번
+        // 불리면 널을 역참조한다. shutdown 은 여러 번 불려도 안전해야 한다.
+        if ( s_pInstance == nullptr || s_pInstanceWide == nullptr )
+            return;
+
         s_pInstance->clear();
         s_pInstanceWide->clear();
         s_pInstance     = nullptr;

@@ -220,6 +220,9 @@ namespace sw::editor
                 listFiltered.push_back( pInfo );
         }
 
+        // 포인터를 담은 컨테이너를 정렬하지만 **비교는 포인터 값이 아니라 (모듈, 이름)** 으로 한다.
+        // 전역 변수 이름은 GlobalVariableManager 의 키라 유일하므로 순서가 매번 같다.
+        // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
         std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );

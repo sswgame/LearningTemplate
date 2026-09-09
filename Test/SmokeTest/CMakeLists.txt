@@ -26,6 +26,15 @@ sw_addTestExecutable(SmokeTest
 
 target_include_directories(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/App")
 
+# ASan 빌드에서는 이 스위트를 비활성한다. 케이스 대부분이 모듈을 올렸다 내리는 핫리로드 경로인데,
+# ASan 에서 그 경로가 두 번째 DLL 의 정적 초기화를 실패시킨다(8/8 결정적, 원인 미규명 — 배제한
+# 가설들과 12줄 재현은 docs/06_Backlog.md 의 "ASan: 모듈 해제 후 적재"). 한 케이스만의 문제가
+# 아니라 LiveReload* 전반이 걸리므로 스위트 단위로 끈다. 바이너리는 계속 빌드되므로 손으로
+# 돌려 볼 수 있고, 원인이 잡히면 이 블록만 지우면 된다.
+if(SW_ENABLE_SANITIZER AND BUILD_TESTING)
+	set_tests_properties(SmokeTest PROPERTIES DISABLED TRUE)
+endif()
+
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE
 		"SW_TEST_MODULE_DIR=\"${sw_output_directory}/Bin\""

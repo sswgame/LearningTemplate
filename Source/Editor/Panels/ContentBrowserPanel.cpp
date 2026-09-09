@@ -114,16 +114,28 @@ namespace sw::editor
         else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
         {
             // Checkerboard background
-            constexpr float32 chk = 6.0f;
-            for ( float32 y = minPos._y + 4.0f; y < maxPos._y - 4.0f; y += chk )
+            // 격자를 **정수 인덱스로** 돈다. 예전에는 float 변수를 루프 카운터로 써서 반복마다
+            // 오차가 쌓였고(칸 수가 경계에서 하나 달라질 수 있다) 칸 색을 정하려고 다시 나눗셈을
+            // 해야 했다. 인덱스로 돌면 위치는 곱셈 한 번이고 색은 인덱스 합의 홀짝이다.
+            constexpr float32 chk    = 6.0f;
+            const float32     startX = minPos._x + 4.0f;
+            const float32     startY = minPos._y + 4.0f;
+            const int32       countX = static_cast<int32>( MathUtil::max( ( maxPos._x - 4.0f - startX ) / chk, 0.0f ) ) + 1;
+            const int32       countY = static_cast<int32>( MathUtil::max( ( maxPos._y - 4.0f - startY ) / chk, 0.0f ) ) + 1;
+
+            for ( int32 indexY = 0; indexY < countY; ++indexY )
             {
-                for ( float32 x = minPos._x + 4.0f; x < maxPos._x - 4.0f; x += chk )
+                const float32 y = startY + static_cast<float32>( indexY ) * chk;
+                if ( y >= maxPos._y - 4.0f )
+                    break;
+
+                for ( int32 indexX = 0; indexX < countX; ++indexX )
                 {
-                    const bool bDark =
-                        ( static_cast<int32>( ( x - minPos._x ) / chk ) +
-                          static_cast<int32>( ( y - minPos._y ) / chk ) ) %
-                            2 ==
-                        0;
+                    const float32 x = startX + static_cast<float32>( indexX ) * chk;
+                    if ( x >= maxPos._x - 4.0f )
+                        break;
+
+                    const bool bDark = ( ( indexX + indexY ) % 2 ) == 0;
                     pDrawList->AddRectFilled( ImVec2( x, y ), ImVec2( x + chk, y + chk ),
                                               bDark ? IM_COL32( 38, 40, 46, 255 ) : IM_COL32( 58, 62, 70, 255 ) );
                 }

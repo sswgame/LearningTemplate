@@ -546,7 +546,7 @@ namespace sw
 
     void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const
     {
-        const float32* pArr = &viewProj._11;
+        const float32* pArr = viewProj.data();
         // Extract 6 frustum planes from column-major viewProj matrix
         // Left, Right, Bottom, Top, Near, Far
         float4 arrPlane[6] = {

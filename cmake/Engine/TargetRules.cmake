@@ -216,6 +216,41 @@ function(sw_addGameModule TARGET_NAME)
 endfunction()
 
 # 테스트 실행 파일 타겟을 정의하고 공통 PCH, 로그 태그, CTest 등록을 수행합니다.
+# ------------------------------------------------------------------------------
+# ASan 테스트 보정 — 등록된 CTest 이름 하나에 적용한다.
+#
+# `sw_addTestExecutable` 안에만 두었다가 **손으로 add_test 한 테스트가 빠졌다**
+# (EngineTest_NoGPU). 그쪽만 평시 타임아웃을 써서 ASan 에서 혼자 타임아웃으로 떨어졌고,
+# 스위트 전체 시간은 198초인데 한 테스트가 시간 초과라는 모순된 결과가 나왔다.
+# 그래서 한 곳으로 빼고 양쪽이 부른다 — 새 테스트를 손으로 등록해도 이 줄만 부르면 된다.
+# ------------------------------------------------------------------------------
+function(sw_applySanitizerTestProperties TEST_NAME)
+	if(NOT SW_ENABLE_SANITIZER)
+		return()
+	endif()
+
+	# ASan 은 실행을 한 자릿수 배로 늦춘다. 평시 기준을 그대로 쓰면 테스트가 전부 타임아웃으로
+	# 떨어져 결함처럼 보인다.
+	get_test_property(${TEST_NAME} TIMEOUT swCurrentTimeout)
+	if(NOT swCurrentTimeout)
+		set(swCurrentTimeout 30)
+	endif()
+	math(EXPR swCurrentTimeout "${swCurrentTimeout} * 10")
+
+	# ODR 검사는 **아예 끈다(0).** 처음에는 1 로 두려 했다 — 크기가 다른 중복만 보고하니 진짜 ODR
+	# 버그는 남는다는 계산이었다. 그런데 레벨 1 도 등록된 전역 전체를 훑는 비용은 그대로 치른다.
+	# 모듈을 반복해 올리고 내리는 SmokeTest 가 비-ASan 6.9초 → ASan 1800초 초과(타임아웃)가 됐고,
+	# 0 으로 바꾸자 5초로 끝났다. 260배는 오버헤드가 아니라 사용 불가다.
+	#
+	# 보고 자체도 이 구조에서는 영구 오탐이다: 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
+	# EditorModule) 같은 SDK·CRT 헤더를 포함하니 헤더가 박는 전역이 DLL 마다 생긴다 — 나온 것이
+	# `d3d11.h` 의 D3D11_DEFAULT 와 CRT 내부 _Avx2WmemEnabledWeakValue 다.
+	set_tests_properties(${TEST_NAME} PROPERTIES
+		TIMEOUT ${swCurrentTimeout}
+		ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0"
+	)
+endfunction()
+
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS" ${ARGN})
 
@@ -280,13 +315,6 @@ function(sw_addTestExecutable TARGET_NAME)
 			set(timeout ${ARG_TIMEOUT})
 		endif()
 
-		# ASan 은 실행을 한 자릿수 배로 늦춘다. 평시 기준 타임아웃을 그대로 쓰면 **테스트가 전부
-		# 타임아웃으로 실패한다** — 실제로 Windows ASan 에서 5개 테스트가 모두 그렇게 떨어졌고,
-		# 결함처럼 보였다. 넉넉히 곱해 둔다(느린 것은 여기서 잡을 문제가 아니다).
-		if(SW_ENABLE_SANITIZER)
-			math(EXPR timeout "${timeout} * 10")
-		endif()
-
 		set(labels "unit")
 
 		if(ARG_LABELS)
@@ -309,13 +337,7 @@ function(sw_addTestExecutable TARGET_NAME)
 		# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
 		# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
 		#
-		# 끄지(0) 않고 1 로 둔다: **크기가 다른** 중복만 보고하므로 진짜 ODR 버그(같은 이름, 다른
-		# 정의)는 계속 잡히고, 위의 동일 크기 중복만 조용해진다.
-		if(SW_ENABLE_SANITIZER)
-			set_tests_properties(${TARGET_NAME} PROPERTIES
-				ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=1"
-			)
-		endif()
+		sw_applySanitizerTestProperties(${TARGET_NAME})
 	endif()
 endfunction()
 
