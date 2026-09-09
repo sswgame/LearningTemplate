@@ -381,9 +381,7 @@ namespace sw::editor
                     const float32 itemWidth   = ImGui::CalcItemWidth();
                     ImGui::SetNextItemWidth( ( itemWidth > buttonWidth + 10.0f ) ? itemWidth - buttonWidth - 4.0f : itemWidth );
 
-                    fixed_string<constant::kMaxBuffer512> buf{ pPtr->c_str() };
-                    if ( ImGui::InputText( "##assetInput", buf.data(), buf.capacity() ) )
-                        *pPtr = buf.c_str();
+                    EditorWidgets::drawTextField( "##assetInput", *pPtr );
 
                     if ( ImGui::BeginDragDropTarget() )
                     {
@@ -404,9 +402,7 @@ namespace sw::editor
                     return true;
                 }
 
-                fixed_string<constant::kMaxBuffer512> buf{ pPtr->c_str() };
-                if ( ImGui::InputText( _pLabel, buf.data(), buf.capacity() ) )
-                    *pPtr = buf.c_str();
+                EditorWidgets::drawTextField( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
                 InspectorPropertyUndo::trackString( pPtr, _pLabel );
                 return true;

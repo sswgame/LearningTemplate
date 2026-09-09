@@ -172,12 +172,7 @@ namespace sw::editor
     {
         ImGui::Text( "InputMap Resource:" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 260.0f );
-        fixed_string<constant::kMaxBuffer128> pathBuf{ _inputMapPath.c_str() };
-        if ( ImGui::InputText( "##InputMapPath", pathBuf.data(), pathBuf.capacity() ) )
-        {
-            _inputMapPath = pathBuf.c_str();
-        }
+        EditorWidgets::drawTextField( "##InputMapPath", _inputMapPath, 260.0f );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Reload" ) )
@@ -333,10 +328,7 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( "Add New Action / Layer" ) )
         {
-            fixed_string<constant::kMaxBuffer64> nameBuf{ _newActionName.c_str() };
-            ImGui::SetNextItemWidth( 200.0f );
-            if ( ImGui::InputText( "New Action Name", nameBuf.data(), nameBuf.capacity() ) )
-                _newActionName = nameBuf.c_str();
+            EditorWidgets::drawTextField( "New Action Name", _newActionName, 200.0f );
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
@@ -792,10 +784,7 @@ namespace sw::editor
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
         ImGui::Separator();
 
-        fixed_string<constant::kMaxBuffer128> pathBuf{ _replayFilePath.c_str() };
-        ImGui::SetNextItemWidth( 260.0f );
-        if ( ImGui::InputText( "Replay File", pathBuf.data(), pathBuf.capacity() ) )
-            _replayFilePath = pathBuf.c_str();
+        EditorWidgets::drawTextField( "Replay File", _replayFilePath, 260.0f );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
@@ -968,10 +957,7 @@ namespace sw::editor
         ImGui::Text( "Fighting Game Combo Tester & Input Buffer Inspector" );
         ImGui::Separator();
 
-        fixed_string<constant::kMaxBuffer64> patternBuf{ _testComboPattern.c_str() };
-        ImGui::SetNextItemWidth( 150.0f );
-        if ( ImGui::InputText( "Combo Pattern (Numpad Notation)", patternBuf.data(), patternBuf.capacity() ) )
-            _testComboPattern = patternBuf.c_str();
+        EditorWidgets::drawTextField( "Combo Pattern (Numpad Notation)", _testComboPattern, 150.0f );
 
         ImGui::SameLine();
         const bool bPatternMatched = _actionMap.checkCommandPattern( _testComboPattern.c_str(), 0.8f );

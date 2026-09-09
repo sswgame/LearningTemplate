@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -182,19 +183,11 @@ namespace sw::editor
 
         if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
         {
-            Item&                                 item = _sequence->_listItem[static_cast<size_t>( _selected )];
-            fixed_string<constant::kMaxBuffer128> nameBuf{ item._name.c_str() };
-            if ( ImGui::InputText( "Clip Name", nameBuf.data(), nameBuf.capacity() ) )
-            {
-                item._name = nameBuf.c_str();
-            }
+            Item& item = _sequence->_listItem[static_cast<size_t>( _selected )];
+            EditorWidgets::drawTextField( "Clip Name", item._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
-            fixed_string<constant::kMaxBuffer128> targetBuf{ item._targetObject.c_str() };
-            if ( ImGui::InputText( "Target Object", targetBuf.data(), targetBuf.capacity() ) )
-            {
-                item._targetObject = targetBuf.c_str();
-            }
+            EditorWidgets::drawTextField( "Target Object", item._targetObject );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
             float32 arrTranslation[3] = { item._translation._x, item._translation._y, item._translation._z };

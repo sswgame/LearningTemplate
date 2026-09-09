@@ -138,6 +138,18 @@ namespace sw::editor
         static bool drawSearchFilter( const utf8* pId, string& filterText, float32 width = 0.0f );
 
         /**
+         * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력. 값이 바뀌면 true.
+         * @details 패널들이 `fixed_string<N> buf{ text.c_str() }` 로 임시 버퍼를 만들어 넣었다 빼는 일을
+         *          16곳에서 각자 하고 있었다. 버퍼 크기(64·128·256·512)를 자리마다 골랐고, **그 크기를
+         *          넘는 문자열은 잘려서 되돌아갔다** — 긴 대사 한 줄을 편집하면 꼬리가 사라진다.
+         *          여기서는 ImGui 의 리사이즈 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없다.
+         * @param pLabel ImGui 라벨(`##` 접두면 라벨을 감춥니다)
+         * @param text   편집 대상. 바뀔 때만 갱신됩니다.
+         * @param width  0 이면 ImGui 기본, 음수면 남는 자리 전부, 양수면 그 폭
+         */
+        static bool drawTextField( const utf8* pLabel, string& text, float32 width = 0.0f );
+
+        /**
          * @brief 애셋 경로 표시, 드래그앤드롭 수신(Payload), 클리어/찾아보기 버튼을 지원하는 애셋 슬롯을 그립니다.
          */
         static bool drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt = nullptr,

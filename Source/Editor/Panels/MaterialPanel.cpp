@@ -186,13 +186,7 @@ namespace sw::editor
                     case MaterialPropertyType::Unknown:
                     default:
                     {
-                        fixed_string<constant::kMaxBuffer256> arrValue{ prop._value.c_str() };
-                        if ( ImGui::InputText( pLabel, arrValue.data(), arrValue.capacity() ) )
-                        {
-                            prop._value = arrValue.c_str();
-                            return true;
-                        }
-                        return false;
+                        return EditorWidgets::drawTextField( pLabel, prop._value );
                     }
                 }
             }

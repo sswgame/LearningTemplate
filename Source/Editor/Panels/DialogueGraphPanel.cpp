@@ -428,9 +428,7 @@ namespace sw::editor
 
             if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
             {
-                fixed_string<constant::kMaxBuffer64> speakerBuf{ pSelectedNode->_speaker.c_str() };
-                if ( ImGui::InputText( "Speaker", speakerBuf.data(), speakerBuf.capacity() ) )
-                    pSelectedNode->_speaker = speakerBuf.c_str();
+                EditorWidgets::drawTextField( "Speaker", pSelectedNode->_speaker );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
@@ -442,9 +440,7 @@ namespace sw::editor
             }
             else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
             {
-                fixed_string<constant::kMaxBuffer128> promptBuf{ pSelectedNode->_text.c_str() };
-                if ( ImGui::InputText( "Prompt", promptBuf.data(), promptBuf.capacity() ) )
-                    pSelectedNode->_text = promptBuf.c_str();
+                EditorWidgets::drawTextField( "Prompt", pSelectedNode->_text );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
@@ -452,9 +448,7 @@ namespace sw::editor
                 for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
                 {
                     ImGui::PushID( static_cast<int32>( choiceIndex ) );
-                    fixed_string<constant::kMaxBuffer128> choiceBuf{ pSelectedNode->_listChoice[choiceIndex].c_str() };
-                    if ( ImGui::InputText( "##Choice", choiceBuf.data(), choiceBuf.capacity() ) )
-                        pSelectedNode->_listChoice[choiceIndex] = choiceBuf.c_str();
+                    EditorWidgets::drawTextField( "##Choice", pSelectedNode->_listChoice[choiceIndex] );
                     if ( ImGui::IsItemDeactivatedAfterEdit() )
                         notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
                     ImGui::SameLine();
@@ -476,18 +470,14 @@ namespace sw::editor
             }
             else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
             {
-                fixed_string<constant::kMaxBuffer128> condBuf{ pSelectedNode->_condition.c_str() };
-                if ( ImGui::InputText( "Condition", condBuf.data(), condBuf.capacity() ) )
-                    pSelectedNode->_condition = condBuf.c_str();
+                EditorWidgets::drawTextField( "Condition", pSelectedNode->_condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
                 ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
             }
             else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
             {
-                fixed_string<constant::kMaxBuffer128> cmdBuf{ pSelectedNode->_actionCommand.c_str() };
-                if ( ImGui::InputText( "Command", cmdBuf.data(), cmdBuf.capacity() ) )
-                    pSelectedNode->_actionCommand = cmdBuf.c_str();
+                EditorWidgets::drawTextField( "Command", pSelectedNode->_actionCommand );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
                 ImGui::TextDisabled( "Ex: give_item:potion:3" );

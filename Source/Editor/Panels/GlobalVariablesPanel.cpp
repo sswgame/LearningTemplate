@@ -124,11 +124,10 @@ namespace sw::editor
                     }
                     case GlobalVariableType::String:
                     {
-                        const string                          strVal = info.getValueAsString();
-                        fixed_string<constant::kMaxBuffer512> arrBuf{ strVal.c_str() };
-                        if ( ImGui::InputText( "##val", arrBuf.data(), arrBuf.capacity() ) )
+                        string strVal = info.getValueAsString();
+                        if ( EditorWidgets::drawTextField( "##val", strVal ) )
                         {
-                            info.setValueAsString( arrBuf.c_str() );
+                            info.setValueAsString( strVal.c_str() );
                             bChanged = true;
                         }
                         break;

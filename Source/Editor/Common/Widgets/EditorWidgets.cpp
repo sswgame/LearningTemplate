@@ -22,6 +22,25 @@ namespace sw::editor
             {
                 return ImVec4( c._r, c._g, c._b, c._a );
             }
+
+            /**
+             * @brief InputText 가 요구하는 만큼 `string` 버퍼를 늘려 준다.
+             * @details ImGui 는 자신이 아는 크기를 넘겨받으면 이 콜백으로 되묻는다. 늘린 뒤 새 주소를
+             *          돌려주지 않으면 옛 버퍼를 계속 쓰므로 `Buf` 갱신까지가 한 쌍이다.
+             */
+            static int32 resizeStringCallback( ImGuiInputTextCallbackData* pData )
+            {
+                if ( pData == nullptr || pData->EventFlag != ImGuiInputTextFlags_CallbackResize )
+                    return 0;
+
+                string* pText = static_cast<string*>( pData->UserData );
+                if ( pText == nullptr )
+                    return 0;
+
+                pText->resize( static_cast<size_t>( pData->BufTextLen ) );
+                pData->Buf = pText->data();
+                return 0;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -269,6 +288,18 @@ namespace sw::editor
         if ( bChanged )
             filterText = arrBuffer;
         return bChanged;
+    }
+
+    bool EditorWidgets::drawTextField( const utf8* pLabel, string& text, float32 width )
+    {
+        if ( width < 0.0f )
+            ImGui::SetNextItemWidth( -1.0f );
+        else if ( width > 0.0f )
+            ImGui::SetNextItemWidth( width );
+
+        // 버퍼로 `string` 을 그대로 넘긴다. 모자라면 아래 콜백이 늘려 주므로 길이 상한이 없다.
+        return ImGui::InputText( pLabel != nullptr ? pLabel : "##text", text.data(), text.capacity() + 1,
+                                 ImGuiInputTextFlags_CallbackResize, &EditorWidgetsInternal::resizeStringCallback, &text );
     }
 
     bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )

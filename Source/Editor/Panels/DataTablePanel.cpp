@@ -245,33 +245,24 @@ namespace sw::editor
 
                 // Col 1: en_US
                 ImGui::TableSetColumnIndex( 1 );
-                fixed_string<constant::kMaxBuffer512> arrEnBuf{ rec._enUS.c_str() };
-                ImGui::SetNextItemWidth( -1.0f );
-                if ( ImGui::InputText( "##en", arrEnBuf.data(), arrEnBuf.capacity() ) )
+                if ( EditorWidgets::drawTextField( "##en", rec._enUS, -1.0f ) )
                 {
-                    rec._enUS      = arrEnBuf.c_str();
                     rec._bModified = true;
                     markLocDirty();
                 }
 
                 // Col 2: ko_KR
                 ImGui::TableSetColumnIndex( 2 );
-                fixed_string<constant::kMaxBuffer512> arrKoBuf{ rec._koKR.c_str() };
-                ImGui::SetNextItemWidth( -1.0f );
-                if ( ImGui::InputText( "##ko", arrKoBuf.data(), arrKoBuf.capacity() ) )
+                if ( EditorWidgets::drawTextField( "##ko", rec._koKR, -1.0f ) )
                 {
-                    rec._koKR      = arrKoBuf.c_str();
                     rec._bModified = true;
                     markLocDirty();
                 }
 
                 // Col 3: ja_JP
                 ImGui::TableSetColumnIndex( 3 );
-                fixed_string<constant::kMaxBuffer512> arrJaBuf{ rec._jaJP.c_str() };
-                ImGui::SetNextItemWidth( -1.0f );
-                if ( ImGui::InputText( "##ja", arrJaBuf.data(), arrJaBuf.capacity() ) )
+                if ( EditorWidgets::drawTextField( "##ja", rec._jaJP, -1.0f ) )
                 {
-                    rec._jaJP      = arrJaBuf.c_str();
                     rec._bModified = true;
                     markLocDirty();
                 }
