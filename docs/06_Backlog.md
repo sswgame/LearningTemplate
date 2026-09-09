@@ -94,15 +94,7 @@ Inspector 3 · Material 1 · Profiler 3).
 (패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
 그때 소유 구조부터 정한다.
 
-### 1-5. 커밋된 셰이더 베이크가 소스보다 낡았다 — **미처리**
-
-Shipping 을 빌드하면 `Resource/engine/shaders/bin/dx12/bake.stamp` 의 `instancesort.hlsl` 해시가
-`cd4ffd32…` → `006d8174…` 로 바뀌고 94개 바이너리가 다시 구워진다. 즉 **커밋된 베이크 산출물이
-현재 소스와 맞지 않는다**(누군가 `.hlsl` 을 고치고 재베이크를 커밋하지 않았다). 베이커가 스스로
-고치므로 빌드는 깨지지 않지만, Shipping 을 빌드할 때마다 작업 트리가 94개 바이너리로 더러워진다.
-이번 App 개편 커밋에는 섞지 않고 되돌렸다 — **재베이크만 담은 커밋 하나로 정리할 것.**
-
-### 1-6. 확인만 하고 넘어간 것
+### 1-5. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
@@ -217,6 +209,12 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
   최종 산출물로 굳어 영구히 링크가 깨지던 덫을 스탬프로 해소.
 - Scripts: CheckSourceGlob 이 빌드 트리를 역알파벳순으로 골라 Unity 트리를 읽고 210개를
   오탐하던 것을 `.clangd` 기준으로. 출력 인코딩을 `common.useUtf8Stdout()` 한 곳으로(9개 전부).
+
+**커밋된 `bake.stamp` 가 소스보다 낡아 있었다.** 네 백엔드 스탬프 모두 `instancesort.hlsl` 의
+해시를 옛 값(`cd4ffd32…`)으로 적고 있었다. 구워진 `.dxbc`/`.spv` 자체는 현재 소스와 같았으므로
+**기록만** 낡은 것이었고, Shipping 을 빌드할 때마다 작업 트리가 더러워졌다. 스탬프만 갱신해
+따로 커밋했다. (처음 관찰에서 "94개 바이너리가 다시 구워진다" 고 적었는데, 그건 그 빌드 디렉터리의
+첫 전체 쿠킹이었고 소스 변경 때문이 아니었다.)
 
 **성능은 세 번 재고 세 번 기각했다.** GpuScene 배치 키 중복 계산(3670→3761us, 차이 없음),
 린트 ProcessPool 전환(5.3→9.4s, 더 느림), 짝 헤더 파싱 메모이즈(차이 없음). 남긴 변경은

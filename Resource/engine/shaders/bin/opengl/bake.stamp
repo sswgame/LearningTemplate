@@ -1,4 +1,5 @@
 SWBAKE 1
+006d8174ea6f5f38 instancesort.hlsl
 0a2d30244f3f0df4 common.hlsli
 23ce21a7b181bf69 deferredlighting.hlsl
 283e1f43555c1271 fullscreentriangle.hlsl
@@ -15,7 +16,6 @@ a689a9077341aa30 tonemap.hlsl
 af02b5e8a77a1f52 instanceanim.hlsl
 c2008a1ab357e535 postbloom.hlsl
 c92a49648af36bac sprite2d.hlsl
-cd4ffd324dfc3d39 instancesort.hlsl
 d5c3e5882bd9fba0 binding.hlsli
 d5f304c60557f204 taa.hlsl
 eac2f3f6b4773a9d postoutline.hlsl
