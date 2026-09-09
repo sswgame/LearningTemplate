@@ -46,11 +46,46 @@ namespace sw
             }
 
             /**
+             * @brief `BeginChild( int )` 로 만든 서드파티 자식 창인지 판별합니다.
+             * @details 우리 패널은 자식 창에 늘 문자열 id 를 준다(`##log_scroll`, `GvTable_...`).
+             *          숫자만으로 된 이름은 라이브러리가 정수 id 로 만든 것이고, 그런 위젯은 **부모의
+             *          드로우리스트에 그리는 경우가 있다.** 확인한 예: ImSequencer 는 함수 앞머리에서
+             *          `GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )` 안에서도 계속 그 리스트에
+             *          그린다(vcpkg imguizmo 1.10 의 ImSequencer.cpp 81행 vs 165행). 그래서 자식 창
+             *          `00000379`(=889)은 정점이 0 인데 화면에는 타임라인이 그려져 있다. 우리가 판별할
+             *          방법이 없으므로 빈 패널로 세지 않는다.
+             */
+            static bool isThirdPartyNumberedChild( const ImGuiWindow* pWindow )
+            {
+                if ( pWindow->ParentWindow == nullptr || pWindow->Name == nullptr )
+                    return false;
+
+                const utf8* pLastSegment = pWindow->Name;
+                for ( const utf8* pCursor = pWindow->Name; *pCursor != '\0'; ++pCursor )
+                {
+                    if ( *pCursor == '/' )
+                        pLastSegment = pCursor + 1;
+                }
+                if ( *pLastSegment == '\0' )
+                    return false;
+
+                for ( const utf8* pCursor = pLastSegment; *pCursor != '\0'; ++pCursor )
+                {
+                    const bool bHexDigit = ( *pCursor >= '0' && *pCursor <= '9' ) || ( *pCursor >= 'A' && *pCursor <= 'F' ) ||
+                                           ( *pCursor >= 'a' && *pCursor <= 'f' );
+                    if ( bHexDigit == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /**
              * @brief 정점이 0 인 것이 **정상인** 창인지 판별합니다.
-             * @details 세 종류가 그렇다.
+             * @details 네 종류가 그렇다.
              *          (1) 도킹 호스트처럼 **자식이 내용을 들고 있는 컨테이너**,
              *          (2) 배경을 그리지 않는 창,
-             *          (3) **입력을 전혀 받지 않는 순수 오버레이** — ImGuizmo 가 만드는 `gizmo` 창이
+             *          (3) 라이브러리가 정수 id 로 만든 자식 창(위 참고),
+             *          (4) **입력을 전혀 받지 않는 순수 오버레이** — ImGuizmo 가 만드는 `gizmo` 창이
              *              그렇다. 선택이 없으면 그릴 것이 없다. 사용자가 조작하는 패널은 `NoInputs`
              *              를 갖지 않으므로, 이 조건이 진짜 고장을 가릴 일은 없다.
              *          이것까지 경고하면 매 실행마다 거짓 경보가 나서 아무도 이 도구를 믿지 않는다.
@@ -60,6 +95,8 @@ namespace sw
                 if ( pWindow->DC.ChildWindows.Size > 0 )
                     return true;
                 if ( ( pWindow->Flags & ImGuiWindowFlags_NoBackground ) != 0 )
+                    return true;
+                if ( isThirdPartyNumberedChild( pWindow ) )
                     return true;
                 return ( pWindow->Flags & ImGuiWindowFlags_NoInputs ) == ImGuiWindowFlags_NoInputs;
             }

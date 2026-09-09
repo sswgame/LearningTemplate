@@ -36,9 +36,11 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40
 ```
 
-현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 1개**.
-그 1개는 `Sequencer/00000379`(ImSequencer 가 만드는 자식 창)이고, 부모 드로우리스트에 그려서
-정점이 자식으로 안 잡히는 것으로 의심하나 **확인하지 않았다.** 정점 수가 정확히 같기를 기대하면 안 된다 —
+현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 0개**.
+(전부 열었을 때 한 번 나왔던 `Sequencer/00000379` 는 확인해서 닫았다 — ImSequencer 가 함수 앞머리에서
+`GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )`(=0x379) 안에서도 그 리스트에 그리기 때문에
+자식의 정점이 0 이다. 라이브러리가 **정수 id 로 만든 자식 창**은 우리가 판별할 수 없으므로 세지
+않는다 — 우리 자식 창은 늘 문자열 id 를 쓴다.) 정점 수가 정확히 같기를 기대하면 안 된다 —
 폰트·DPI·도킹·애니메이션이 값을 흔든다. 보는 것은 "0 이 아닌가" 와 "창 목록이 그대로인가" 다.
 (도구가 실제로 잡는지 확인했다: `HierarchyPanel::drawContent` 를 즉시 return 으로 막으면
 `Hierarchy ... vtx=0 <== BLANK` 와 "내용 없는 패널 1개" 가 나온다.)
