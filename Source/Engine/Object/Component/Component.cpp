@@ -21,7 +21,11 @@ namespace sw
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {
-        initialize();
+        // 여기서 기본값을 적용하지 않는다. 기본값은 **파생 타입의** TypeInfo 로 찾아야 하는데,
+        // 기반 생성자가 도는 시점의 `getTypeInfo()` 는 아직 파생 구현으로 디스패치되지 않아
+        // 언제나 `Component` 의 것을 돌려줬다 — 파생 컴포넌트의 기본값은 한 번도 적용된 적이
+        // 없고, 대신 컴포넌트를 만들 때마다 쓸모없는 타입 조회를 한 번씩 했다.
+        // 정본은 `GameObject::addComponent` / `GameObjectManager` 가 부르는 applyTypeDefaults 다.
     }
 
     Component::Component( Component&& other ) noexcept
@@ -264,13 +268,6 @@ namespace sw
         if ( _bActive.load( std::memory_order_relaxed ) == false )
             return false;
         return _pOwner == nullptr || _pOwner->isActiveInHierarchy();
-    }
-
-    void Component::initialize()
-    {
-        const TypeInfo* pTypeInfo = getTypeInfo();
-        if ( pTypeInfo != nullptr )
-            ComponentDefaults::applyDefaults( this, *pTypeInfo );
     }
 
     atomic<uint64> Component::_s_nextComponentId = 1;

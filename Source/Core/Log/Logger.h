@@ -128,8 +128,13 @@ namespace sw
         DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) override;
         /** @brief 핸들로 리스너를 뗍니다. */
         void removeLogWrittenListener( const DelegateHandle& handle ) override;
-        /** @brief 소스 파일 경로별 Caller 이름을 등록합니다. */
-        static void registerCaller( string_view filePath, string_view callerName );
+        /**
+         * @brief 소스 파일 경로별 Caller 이름을 등록합니다. **던지지 않습니다.**
+         * @details `SW_LOG_CALLER` 가 정적 초기화에서 부르므로 여기서 예외가 나오면 잡을 곳이
+         *          없다(std::terminate). 내부는 고정 배열과 뮤텍스뿐이라 던질 것이 없고, 그
+         *          사실을 타입으로 못박아 정적 초기화가 안전하다는 것을 계약으로 만든다.
+         */
+        static void registerCaller( string_view filePath, string_view callerName ) noexcept;
         /** @brief 소스 파일 경로에 매핑된 Caller 이름을 반환합니다. */
         static const utf8* getCaller( const utf8* pFile );
 
@@ -226,11 +231,11 @@ namespace sw
 /**
  * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
  */
-#define SW_LOG_CALLER( name )                                                                              \
-    namespace                                                                                              \
-    {                                                                                                      \
-        [[maybe_unused]] static const bool SW_CONCAT( _s_logCallerRegistered_, __COUNTER__ ) = []() { \
-			::sw::Logger::registerCaller( __FILE__, name );                                           \
+#define SW_LOG_CALLER( name )                                                                                       \
+    namespace                                                                                                       \
+    {                                                                                                               \
+        [[maybe_unused]] static const bool SW_CONCAT( _s_logCallerRegistered_, __COUNTER__ ) = []() noexcept { \
+			::sw::Logger::registerCaller( __FILE__, name );                                    \
 			return true; }(); \
     }
 

@@ -259,11 +259,7 @@ namespace sw::editor
         if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
         {
             if ( ImGui::MenuItem( "Show in Explorer" ) )
-            {
-                fixed_string<constant::kMaxBuffer512> arrCmd;
-                formatstring( arrCmd.data(), arrCmd.capacity(), "explorer.exe /select,\"%s\"", entry._absolutePath.c_str() );
-                system( arrCmd.c_str() );
-            }
+                EditorAssetCommands::showInFileExplorer( entry._absolutePath );
 
             if ( ImGui::MenuItem( "Copy Relative Path" ) )
             {

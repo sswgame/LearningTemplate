@@ -135,7 +135,7 @@ namespace sw
         _onLogWritten.remove( handle );
     }
 
-    void Logger::registerCaller( string_view filePath, string_view callerName )
+    void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
     {
         string_view fileName;
         FileUtil::getFileNamePart( filePath, fileName );

@@ -89,6 +89,14 @@ namespace sw::editor
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
         /** @brief 애셋 파일과 짝 .meta를 삭제합니다. */
         static bool deleteAsset( string_view absolutePath );
+
+        /**
+         * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
+         * @details 예전에는 `system( "explorer.exe /select,\"...\"" )` 이었다. 셸을 거치면
+         *          경로 안의 `&`·`"` 가 명령으로 해석되고, 콘솔 창이 한 번 깜빡이며, Windows
+         *          말고는 아무것도 하지 않았다. 셸 없이 프로세스를 직접 띄운다.
+         */
+        static bool showInFileExplorer( string_view absolutePath );
         /** @brief Resource 트리에서 씬/프리팹/텍스처/셰이더/데이터를 분류해 채웁니다. */
         static void collectResourceIndex( vector<EditorResourceIndexEntry>& outList );
         /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */

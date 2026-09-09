@@ -13,6 +13,9 @@ Checks: >
   bugprone-*,
   clang-analyzer-*,
   -bugprone-easily-swappable-parameters,
+  -bugprone-invalid-enum-default-initialization,
+  -bugprone-derived-method-shadowing-base-method,
+  -bugprone-std-namespace-modification,
   -clang-analyzer-optin.core.EnumCastOutOfRange
 
 # -bugprone-easily-swappable-parameters
@@ -24,6 +27,24 @@ Checks: >
 #     비트 플래그 조합을 열거형으로 캐스팅하면 "유효 범위 밖" 이라고 짚는다(39건). 조합값이
 #     열거자와 일대일로 맞지 않는 것은 플래그의 정의다 — formatString 의 Flags, Win32 의
 #     _MINIDUMP_TYPE(4165) 등이 전부 이 경우다. 플래그 enum 을 쓰는 한 영구 오탐이다.
+#
+# 아래 셋은 clang-tidy 22 에서 새로 생긴 검사다. 전수로 훑어 보고(2026-09-10) 이 코드베이스에서는
+# 전부 영구 오탐이라 끈다.
+#
+# -bugprone-invalid-enum-default-initialization
+#     `D3D11_RASTERIZER_DESC desc{}` 처럼 SDK 구조체를 0 으로 초기화하면 그 안의 열거형 필드가
+#     "0 값 열거자가 없다" 고 짚힌다(48건: D3D11/D3D12/Vulkan 열거형뿐, 우리 열거형은 0건).
+#     `Desc{}` 로 비우고 필요한 필드를 채우는 것이 이 API 들이 요구하는 사용법이다.
+#
+# -bugprone-derived-method-shadowing-base-method
+#     `REFLECT_BODY()` 가 클래스마다 `swReflectSelf` 를 정의한다(11건). 가상 함수가 아니라 각
+#     타입이 자기 자신을 보고하는 규약이고, NOLINT 는 매크로 안에 넣을 수 없다(매크로 확장은
+#     주석을 옮기지 못해 REFLECT 를 쓰는 모든 자리에 붙여야 한다).
+#
+# -bugprone-std-namespace-modification
+#     `std::hash` 특수화 10건이다. 프로그램 정의 타입에 대한 표준 라이브러리 클래스 템플릿
+#     특수화는 [namespace.std] 가 명시적으로 허용한다 — 우리가 쓰는 컨테이너를 unordered_map
+#     키로 넣으려면 다른 방법이 없다.
 
 HeaderFilterRegex: 'Source[/\].*\.(h|hpp)$'
 WarningsAsErrors: ''

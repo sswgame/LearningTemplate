@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
+import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -37,15 +38,50 @@ from common import getProjectRoot, useUtf8Stdout
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
 
+def findVisualStudioClangTidyInternal() -> list[pathlib.Path]:
+    """Visual Studio 가 함께 설치하는 clang-tidy 후보를 최신 버전부터 돌려줍니다."""
+    listFound: list[pathlib.Path] = []
+    for programFiles in (r"C:\Program Files", r"C:\Program Files (x86)"):
+        vsRoot = pathlib.Path(programFiles) / "Microsoft Visual Studio"
+        if vsRoot.is_dir() is False:
+            continue
+        for versionDir in sorted(vsRoot.iterdir(), reverse=True):
+            if versionDir.is_dir() is False:
+                continue
+            for editionDir in sorted(versionDir.iterdir()):
+                llvmBin = editionDir / "VC" / "Tools" / "Llvm"
+                for relative in ("x64/bin/clang-tidy.exe", "bin/clang-tidy.exe"):
+                    candidate = llvmBin / relative
+                    if candidate.is_file():
+                        listFound.append(candidate)
+    return listFound
+
+
 def findClangTidy() -> str:
-    """clang-tidy 실행 파일 경로. PATH 에 없으면 LLVM 기본 설치 위치를 본다."""
-    for candidate in ("clang-tidy", r"C:\Utility\LLVM\bin\clang-tidy.exe", "/usr/bin/clang-tidy"):
+    """clang-tidy 실행 파일 경로.
+
+    PATH → 저장소가 부트스트랩한 Tools/LLVM → 흔한 LLVM 설치 위치 → **Visual Studio 가 함께
+    설치하는 LLVM** 순으로 본다. 마지막 후보가 필요한 이유: 이 저장소가 받아 두는 Tools/LLVM 은
+    clang-tidy 를 포함하지 않는 축소판이라, 별도 LLVM 을 설치하지 않은 PC 에서는 정적 분석을
+    아예 돌릴 수 없었다("clang-tidy 를 찾지 못했습니다" 로 끝났다). VS 를 깔면 대개 같이 있다.
+    """
+    candidates: list[str] = ["clang-tidy"]
+    candidates.append(str(getProjectRoot() / "Tools" / "LLVM" / "bin" / "clang-tidy.exe"))
+    candidates.append(r"C:\Utility\LLVM\bin\clang-tidy.exe")
+    candidates.append(r"C:\Program Files\LLVM\bin\clang-tidy.exe")
+    candidates.extend(str(path) for path in findVisualStudioClangTidyInternal())
+    candidates.append("/usr/bin/clang-tidy")
+
+    for candidate in candidates:
         try:
             subprocess.run([candidate, "--version"], capture_output=True, check=True)
             return candidate
         except (OSError, subprocess.CalledProcessError):
             continue
     print("[RunClangTidy] clang-tidy 를 찾지 못했습니다. LLVM 설치를 확인하세요.")
+    print("[RunClangTidy] 찾아본 곳:")
+    for candidate in candidates:
+        print(f"  - {candidate}")
     sys.exit(2)
 
 

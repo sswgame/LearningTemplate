@@ -204,7 +204,6 @@ namespace sw
         hashed_string getComponentName() const { return _componentName; }
 
     private:
-        void                  initialize();
         bool                  isSubTickActiveSlow( uint32 subTickId ) const;
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 

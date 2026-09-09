@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
@@ -608,6 +609,39 @@ namespace sw::editor
         if ( FileUtil::fileExists( metaPath ) )
             FileUtil::removeFile( metaPath );
         return bRemoved;
+    }
+
+    bool EditorAssetCommands::showInFileExplorer( string_view absolutePath )
+    {
+        if ( absolutePath.empty() )
+            return false;
+
+        const string path = FileUtil::normalizeSeparators( absolutePath );
+        string       command;
+#if defined( SW_PLATFORM_WINDOWS )
+        // explorer 는 백슬래시만 받는다(슬래시를 주면 선택이 안 되고 내 문서를 연다).
+        string windowsPath = path;
+        for ( utf8& ch : windowsPath )
+        {
+            if ( ch == '/' )
+                ch = '\\';
+        }
+        command = "explorer.exe /select,\"" + windowsPath + "\"";
+#elif defined( SW_PLATFORM_MACOS )
+        command = "open -R \"" + path + "\"";
+#else
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 가 표준이 아니다 — 폴더까지만 연다.
+        command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
+#endif
+
+        ProcessOptions options{};
+        options._bCreateWindow = false;
+        if ( Process::execute( command, options ) != 0 )
+        {
+            SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
+            return false;
+        }
+        return true;
     }
 
     void EditorAssetCommands::collectResourceIndex( vector<EditorResourceIndexEntry>& outList )
