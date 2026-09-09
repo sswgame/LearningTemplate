@@ -51,12 +51,12 @@ namespace sw
         using hash_type  = N;
 
     public:
-        static constexpr uint32 kChunkShift     = 10;                /**< 청크 크기 비트 시프트 (1024 = 2^10) */
-        static constexpr uint32 kChunkSize      = 1u << kChunkShift; /**< 한 청크당 엔트리 개수 (1024개) */
-        static constexpr uint32 kChunkMask      = kChunkSize - 1u;   /**< 청크 내 오프셋 마스크 */
-        static constexpr uint32 kMaxChunks      = 64;                /**< 최대 청크 개수 (총 65,536개 수용) */
-        static constexpr uint32 kNumShards      = 32;                /**< 해시 분할 락 샤드 개수 */
-        static constexpr size_t kArenaBlockSize = 64 * 1024;         /**< 문자열 아레나 블록 크기 (64KB) */
+        static constexpr uint32 kChunkShift     = 10;                  /**< 청크 크기 비트 시프트 (1024 = 2^10) */
+        static constexpr uint32 kChunkSize      = 1u << kChunkShift;   /**< 한 청크당 엔트리 개수 (1024개) */
+        static constexpr uint32 kChunkMask      = kChunkSize - 1u;     /**< 청크 내 오프셋 마스크 */
+        static constexpr uint32 kMaxChunks      = 64;                  /**< 최대 청크 개수 (총 65,536개 수용) */
+        static constexpr uint32 kNumShards      = 32;                  /**< 해시 분할 락 샤드 개수 */
+        static constexpr size_t kArenaBlockSize = size_t{ 64 } * 1024; /**< 문자열 아레나 블록 크기 (64KB) */
 
         /** @brief intern 해시를 unordered_map 키로 씁니다. */
         struct HashFunc

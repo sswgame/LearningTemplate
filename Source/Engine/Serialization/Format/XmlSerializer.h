@@ -66,8 +66,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 읽기 — 루트, 값/속성, 배열/맵 순회
         // ------------------------------------------------------------------------------
-        /** @brief XML 역직렬화를 시작합니다. */
-        virtual bool initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName ) = 0;
+        /**
+         * @brief XML 역직렬화를 시작합니다.
+         * @note XML 을 **`string_view` 로** 받습니다. 예전에는 `const utf8*` 였는데, 호출부가
+         *       `string_view::data()` 를 넘기면서 길이가 사라졌다 — 뷰가 더 큰 버퍼의 일부면
+         *       널 종단이 없어 파서가 끝을 넘어 읽는다. `XmlDocument::parse` 는 원래부터
+         *       `string_view` 를 받아 `load_buffer(data, size)` 로 안전하게 읽으므로,
+         *       이 중간 계층이 길이를 버리던 것이 유일한 구멍이었다.
+         */
+        virtual bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
         /** @brief 현재 부모 요소의 XML attribute를 읽습니다. */
@@ -172,7 +179,7 @@ namespace sw
         string endSerialize() override;
 
         /** @brief XML 역직렬화를 시작합니다. */
-        bool initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName ) override;
+        bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML attribute를 읽습니다. */

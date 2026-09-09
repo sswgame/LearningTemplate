@@ -35,6 +35,15 @@ cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다
 ctest --preset Ninja-Debug-lint               # 컨벤션·include 순서
 
+# 정적 분석 (게이트 아님 — 판단이 필요한 자료다). 검사 목록은 루트 .clang-tidy 가 정한다.
+py -3 Scripts/lint/RunClangTidy.py
+py -3 Scripts/lint/RunClangTidy.py --filter Core
+
+# ASan (Windows) — 2026-09-09 부터 실제로 빌드된다
+cmake --preset Ninja-Debug-ASAN
+cmake --build --preset Ninja-Debug-ASAN
+ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
+
 # 테스트 (현재 기준선)
 #   Debug    : CoreTest 167 / EngineTest 423 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
 #   Shipping : 159 / 421 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
@@ -115,20 +124,65 @@ Inspector 3 · Material 1 · Profiler 3).
 골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
 것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
 
-### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
+### 1-2. clang-tidy 지적 110건 — 분류는 끝났고 판단만 남았다
+
+`py -3 Scripts/lint/RunClangTidy.py` 가 고유 지적 110건을 낸다. **이미 전부 한 번 훑었으니 같은
+분류를 다시 하지 말 것.** 오탐으로 판정한 자리는 `NOLINTNEXTLINE` + 이유 주석을 달아 두었으므로,
+새로 뜨는 것은 분류하지 않은 새 코드다.
+
+| 종류 | 건수 | 판정 |
+|---|---|---|
+| `bugprone-use-after-move` | 18 | **오탐.** `Base{ std::move( other ) }` 는 기반 부분객체만 이동한다 — 이후 파생 멤버 읽기는 정의된 동작이다. 검사기가 슬라이싱을 모델링하지 못한다 |
+| `bugprone-implicit-widening-of-multiplication-result` | 17 | **절반은 실제.** `int * int` 를 size_t 에 넣는 자리로 큰 값에서 넘친다. TileMap·TileMapXml·Defines·hashed_string 은 고쳤고 셰이더 리플렉션·직렬화 쪽이 남았다 |
+| `clang-analyzer-optin.cplusplus.VirtualCall` | 14 | **대부분 오탐.** 이 엔진은 생성/파괴와 `initialize`/`shutdown` 을 분리하는데 분석기가 소멸자→`shutdown` 을 가상 디스패치 문제로 본다. `Component.cpp:271` 만 한 번 더 볼 값이 있다 |
+| `bugprone-macro-parentheses` | 14 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`) |
+| `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다(vector 재할당의 이동/복사 우선순위, Windows 전용 DX11·DX12) |
+| `bugprone-suspicious-stringview-data-usage` | 7 | **섞여 있다.** `append( data(), count )` 처럼 크기를 넘기면 오탐(커스텀 `string` 을 인식 못 함). 반면 `XmlSerializer` 의 두 곳은 **실제였고 고쳤다** |
+| `bugprone-misplaced-widening-cast` | 6 | 위 widening 과 같은 부류. TileMap 쪽은 고쳤다 |
+| `clang-analyzer-security.ArrayBound` | 4 | **기술적으로 UB.** `&float3::_x` 를 `const float32*` 로 넘겨 `[1]`·`[2]` 를 읽는 관용구다. 고치려면 경계 시그니처를 `const float3&` 로 바꿔야 하니 C-ABI 제약을 먼저 확인할 것 |
+| `clang-analyzer-core.CallAndMessage` | 3 | **하나는 실제였고 고쳤다**(BattleState 널 역참조). 남은 둘은 재확인 필요 |
+| `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 이 저장소는 예외 대신 `SW_ABORT` 규칙인데 `Core/Memory/Memory.h:67` 에 `throw std::bad_alloc()` 이 남아 있다 — 같이 볼 것 |
+| 나머지(DeadStores·Padding·signed-char-misuse) | 12 | 영향 낮음 |
+
+### 1-3. ASan: 모듈을 해제한 뒤 적재하면 초기화가 실패한다 (미해결)
+
+`SmokeTest` 의 `Architecture.AllRHIModulesAbiStampExports` 는 ASan 빌드에서 **스킵한다.** 모듈을
+올렸다 내리고 다음 모듈을 올리면 두 번째 DLL 의 정적 초기화가 실패한다(`LoadLibrary` → 1114
+`ERROR_DLL_INIT_FAILED`). **8/8 결정적이다.**
+
+측정해서 **배제한** 것 — 다시 하지 말 것:
+
+- 비-ASan 빌드는 통과한다(19/19). ASan 에서도 모듈을 **개별로** 올리면 전부 정상이다.
+- 장난감 ASan DLL 로 적재→해제→적재: 정상. CRT weak 전역을 일부러 품게 해도 정상. 즉
+  "ASan 이 DLL 언로드를 못 버틴다" 는 설명은 **틀렸다.**
+- 구조 문제도 아니다. `RHI_DX12.dll` 은 `Logger::registerCaller` 를 `Engine.dll` 에서
+  **임포트**한다(Core 사본 중복이 아니다). `registerCaller` 의 경계도 정확하다(배열 512/가드 512).
+- `Engine.dll` 이 의존성으로만 올라왔다가 같이 내려가는 변종은 **Engine 을 고정하면 사라진다**
+  (`err=1114` → `err=0`). 하지만 SmokeTest 는 Engine 을 링크해 이미 고정돼 있으므로 그 설명은
+  여기 맞지 않다 — **남은 트리거를 못 찾았다.** 장난감과 다른 점은 SmokeTest 가 워커 6개가 도는
+  멀티스레드 상태라는 것이다.
+
+ASan 의 첫 진단은 CRT 내부 `_Avx2WmemEnabledWeakValue` 의 odr-violation 이고, 보고 도중
+`nested bug in the same thread` 로 중단되어 전역 귀속까지 가지 못한다. `handle_segv=0` 으로 두면
+맨 세그폴트(139)가 된다 — ASan 이 만들어낸 가짜가 아니라 실제 접근 위반이다.
+
+재현: `build/Ninja-Debug-ASAN/Bin` 에서 ASan 으로 빌드한 12줄 호스트로
+`LoadLibrary("RHI_DX11.dll")` → `FreeLibrary` → `LoadLibrary("RHI_DX12.dll")`.
+
+### 1-4. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1 공용 위젯 채택)을 먼저 한다.
 목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
 (단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-3. 되살리지 못한 테스트
+### 1-5. 되살리지 못한 테스트
 
 `Test/EditorTest/TestEditorSceneCommands.cpp` 는 되살렸지만(현재 EditorTest 27개에 포함),
 `EditorContext` 가 UI 매니저 전부를 `unique_ptr` 로 소유하는 구조는 그대로다. 더 깊은 분리
 (패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
 그때 소유 구조부터 정한다.
 
-### 1-4. 확인만 하고 넘어간 것
+### 1-6. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했고 재실행 3회는 모두 통과했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는
@@ -182,6 +236,72 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
    - 검증: 네 백엔드(`-dx12 -dx11 -vk -gl`) 모두 종료 코드 0 / `[Error]` 0건.
      GL + 에디터의 에러 3건은 이 변경과 무관한 기존 버그였고(스태시로 기준선을 다시 빌드해
      확인했다), **그 다음에 따로 고쳤다** — 아래 "GL 컨텍스트" 항목.
+
+**잠재 결함 전수 조사 — 도구를 먼저 고쳐야 결함이 보였다**
+
+ASan 과 clang-tidy 를 돌렸더니 **둘 다 쓸 수 없는 상태**였다. 도구를 고치는 것이 조사의 절반이었다.
+
+**Windows ASan 빌드는 한 번도 완주한 적이 없었다** (CI 는 Linux ASan 만 돌린다 — `ci.yml`).
+세 군데가 독립적으로 막고 있었고 전부 고쳤다:
+
+1. ASan 런타임 DLL 을 `Bin/` 에만 복사했다. 코드젠 도구는 `BuildTools/` 에 있어 못 찾고
+   `0xc0000135` 로 뜨지 못한다 → **빌드가 코드젠 단계에서 죽었다.** 두 곳 모두에 복사한다.
+2. `/MD` 를 FORCE 하는데(clang-cl ASan 은 디버그 CRT 를 지원하지 않는다 — `/MDd` 로 바꾸면
+   컴파일러가 거부한다) vcpkg 는 Debug 구성에서 `/MDd` 라이브러리를 물려줬다.
+   `_ITERATOR_DEBUG_LEVEL` 이 어긋나 `EditorModule.dll` 링크가 섰다. 임포트 구성을 Release 로
+   매핑하고 런타임 DLL 도 릴리스 쪽을 직접 staging 한다(applocal 경로는 툴체인에 박혀 있어
+   그냥 두면 `z.dll` 이 없어 `CoreTest.exe` 가 뜨지 못한다).
+3. `/fsanitize=address` 를 켜면 MSVC STL 이 컨테이너에 ASan 주석을 달고 오브젝트에
+   `annotate_string`/`annotate_vector`/`annotate_optional` 표시를 심는다. ASan 없이 빌드된 vcpkg
+   라이브러리와 또 어긋난다. 개별 매크로를 막으면 다음 것이 나오므로 우산 매크로
+   `_DISABLE_STL_ANNOTATION` 하나로 끈다(잃는 것은 STL 컨테이너 오버플로 탐지뿐이다).
+
+그 위에 ASan 을 **실제로 쓸 수 있게** 한 것:
+
+- **타임아웃.** 평시 기준을 그대로 써서 5개 테스트가 **전부 타임아웃으로 실패**하고 있었다.
+  결함처럼 보이지만 설정 문제다. `SW_ENABLE_SANITIZER` 면 10배로 둔다.
+- **ODR 오탐.** 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*, EditorModule) 같은 SDK·CRT 헤더를
+  포함하니, 헤더가 박는 전역이 DLL 마다 생겨 ASan 이 ODR 위반으로 본다 — 나온 것이 `d3d11.h` 의
+  `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 영구 오탐이므로 CTest 환경에
+  `detect_odr_violation=1` 을 둔다. **끄지(0) 않는다** — 크기가 다른 진짜 ODR 버그는 계속 잡힌다.
+- 결과: `CoreTest` 167/167, `ReflectionTest` 100, `EditorTest` 34/34 가 ASan 하에서 보고 0건.
+
+**clang-tidy 는 오탐이 신호를 덮고 있었다.** 설정을 저장소에 넣어 구조적으로 막았다:
+
+- `.clang-tidy` — 이 코드베이스에서 **쓸 수 없다고 실측한** 두 검사만 끈다.
+  `bugprone-easily-swappable-parameters` 158건, `clang-analyzer-optin.core.EnumCastOutOfRange`
+  39건(비트 플래그 조합). 끈 이유를 파일에 적었다.
+- `Scripts/lint/RunClangTidy.py` — 한 명령으로 같은 설정. 가장 큰 것은 **`/Y-` 로 MSVC PCH 옵션을
+  무효화**한 것이다. clang-tidy 는 그 PCH 를 쓸 수 없는데 `/Yu`·`/FI` 가 남아 헤더를 두 경로 표기로
+  두 번 파싱한다. `#pragma once` 가 같은 파일로 보지 못해 **"redefinition of ..." 오류가 쏟아졌다**
+  — 정의는 하나뿐인데도. Core/Memory 기준 지적 3건 → 진짜 1건으로 줄었다.
+- 결과: 노이즈 포함 ~300건 → 고유 110건. 종류별 판정은 위 1-2 에 적었다.
+
+**그렇게 해서 찾은 실제 결함 (전부 고쳤다)**
+
+- **`BattleState::applyMove` 널 역참조.** 종족·카탈로그 조회가 실패하면 `pMove` 가 nullptr 인데
+  `dmg == 0` 분기가 `pMove->_name` 을 무방비로 읽었다. `dmg > 0` 분기는 `pMove != nullptr` 을
+  함의해 안전했기 때문에 **정상 데이터로는 절대 걸리지 않았다** — 기술 데이터가 빠지면 크래시다.
+- **XML 역직렬화가 길이를 버렸다.** `IXmlBackend::initXmlDeserialization` 이 `const utf8*` 를 받아
+  호출부가 `string_view::data()` 를 넘기며 길이를 잃었다. 뷰가 더 큰 버퍼의 일부면 널 종단이 없어
+  파서가 끝을 넘어 읽는다. `XmlDocument::parse` 는 원래부터 `string_view` 를 받아
+  `load_buffer(data, size)` 로 안전하게 읽으므로 **이 중간 계층만 구멍이었다.** 인터페이스를
+  `string_view` 로 바꿔 길이를 끝까지 흘려보낸다(구현체 셋 — 테스트의 `SimpleXmlBackend` 포함).
+- **Windows ASan 에서 누수 검사가 도는 척만 했다.** Linux/macOS 는 ASan 이면 LSAN 으로 갈라 두었는데
+  **Windows 만 ASan 여부를 보지 않고** CRT 검사를 골랐다. ASan 이 힙을 대체하므로 `_Crt*` 가 전부
+  무효가 된다. 유일한 증상이 "set but not used" 경고 둘이었고 Windows ASan 빌드를 처음 돌리고
+  나서야 보였다.
+- **`int` 곱셈 후 size_t 확대** 네 곳(`TileMap::indexOf`, `TileMap`/`TileMapXml` 의
+  `_width*_height`, `Defines.h`·`hashed_string.h` 의 크기 상수). 넘친 뒤 확대되므로 캐스트가 값을
+  지켜 주는 것처럼 보이지만 이미 틀린 값이다.
+- `FrameDoubleBuffer` 의 기본 용량이 숫자로 박혀 있었다 → 같은 파일이 이미 쓰는
+  `constant::kDefaultFrameArenaCapacity` 로.
+
+**확인했지만 결함이 아니었던 것** (같은 의심을 반복하지 않도록): `fixed_string`·`Delegate` 의
+자기대입(가드 있음), `Memory.h` 의 `static_assert(sizeof(T)>0)`(불완전 타입 가드 관용구),
+`'0'+digit` 좁힘(48–57), DX11·DX12 동일 분기(Windows 전용), `XmlDocument` 의
+`append(data(), count)`(크기를 넘긴다), `StringUtil::stristr`(가드 페이지 테스트로 확인 —
+`equals` 의 단축 평가가 종단자에서 끊는다).
 
 **검색 필터를 한 곳으로, 그리고 "0건" 을 말하게 한다 (예전 1-2 "목록형 패널 골격")**
 

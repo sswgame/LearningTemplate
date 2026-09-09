@@ -639,13 +639,13 @@ namespace sw
         return _impl->_doc.saveToString();
     }
 
-    bool XmlDocumentBackend::initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName )
+    bool XmlDocumentBackend::initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName )
     {
         _impl->_doc.clear();
-        if ( StringUtil::isNullOrEmpty( pXmlStr ) )
+        if ( xmlStr.empty() )
             return false;
 
-        if ( _impl->_doc.parse( pXmlStr ) == false )
+        if ( _impl->_doc.parse( xmlStr ) == false )
             return false;
 
         string  sTag = Impl::sanitizeTag( pRootTagName );
@@ -839,7 +839,7 @@ namespace sw
 
         backend.setIgnoreCaseKeys( ctx.ignoreCaseKeys() );
 
-        if ( backend.initXmlDeserialization( xmlStr.data(), typeInfo._name.c_str() ) == false )
+        if ( backend.initXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
         if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
@@ -940,7 +940,7 @@ namespace sw
 
         XmlDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );
-        if ( backend.initXmlDeserialization( xmlStr.data(), typeInfo._name.c_str() ) == false )
+        if ( backend.initXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
         if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
             return false;

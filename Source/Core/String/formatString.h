@@ -772,7 +772,7 @@ namespace sw
                     for ( utf8* p = pBuf; p != pPtr; ++p )
                     {
                         if ( 'a' <= *p && *p <= 'f' )
-                            *p = *p - 'a' + 'A';
+                            *p = static_cast<utf8>( *p - 'a' + 'A' );
                     }
                 }
                 *pPtr = '\0';
@@ -834,7 +834,7 @@ namespace sw
                 uint64 temp      = int_part;
                 while ( temp > 0 )
                 {
-                    *pCurrent++ = '0' + ( temp % 10 );
+                    *pCurrent++ = static_cast<utf8>( '0' + ( temp % 10 ) );
                     temp /= 10;
                 }
                 std::reverse( pIntStart, pCurrent );

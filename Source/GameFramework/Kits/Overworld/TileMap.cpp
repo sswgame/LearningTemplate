@@ -156,7 +156,7 @@ namespace sw
             return;
         _width             = width;
         _height            = height;
-        const size_t count = static_cast<size_t>( _width * _height );
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         _listWalkable.assign( count, 1 );
         _listEncounter.assign( count, 0 );
         _listPassThrough.assign( count, 0 );

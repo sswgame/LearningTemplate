@@ -280,6 +280,13 @@ function(sw_addTestExecutable TARGET_NAME)
 			set(timeout ${ARG_TIMEOUT})
 		endif()
 
+		# ASan 은 실행을 한 자릿수 배로 늦춘다. 평시 기준 타임아웃을 그대로 쓰면 **테스트가 전부
+		# 타임아웃으로 실패한다** — 실제로 Windows ASan 에서 5개 테스트가 모두 그렇게 떨어졌고,
+		# 결함처럼 보였다. 넉넉히 곱해 둔다(느린 것은 여기서 잡을 문제가 아니다).
+		if(SW_ENABLE_SANITIZER)
+			math(EXPR timeout "${timeout} * 10")
+		endif()
+
 		set(labels "unit")
 
 		if(ARG_LABELS)
@@ -294,6 +301,20 @@ function(sw_addTestExecutable TARGET_NAME)
 
 		if(ARG_RUN_SERIAL)
 			set_tests_properties(${TARGET_NAME} PROPERTIES RUN_SERIAL TRUE)
+		endif()
+
+		# ASan 의 ODR 검사를 완화한다. 이 엔진은 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
+		# EditorModule) 그 DLL 들이 같은 SDK·CRT 헤더를 포함한다. 그러면 헤더가 박는 전역이
+		# DLL 마다 생기고 ASan 은 그것을 ODR 위반으로 본다 — 실제로 나온 것이
+		# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
+		# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
+		#
+		# 끄지(0) 않고 1 로 둔다: **크기가 다른** 중복만 보고하므로 진짜 ODR 버그(같은 이름, 다른
+		# 정의)는 계속 잡히고, 위의 동일 크기 중복만 조용해진다.
+		if(SW_ENABLE_SANITIZER)
+			set_tests_properties(${TARGET_NAME} PROPERTIES
+				ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=1"
+			)
 		endif()
 	endif()
 endfunction()

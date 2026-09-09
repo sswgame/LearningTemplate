@@ -197,6 +197,9 @@ namespace sw
 // 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. 예전엔 "Shipping 아님" 이었는데,
 // Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다 — 문자열만 만들고 아무도 안 쓰게 됐다.
 #if SW_LOG_LEVEL_COMPILED( 3 )
+                // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
+                // 보이지만, 열거자가 늘면 이 값이 로그에 남아야 한다.
+                // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
                 const utf8* pActionStr = "Unknown";
                 switch ( changeEvent._action )
                 {

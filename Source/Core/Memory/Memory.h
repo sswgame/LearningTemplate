@@ -65,7 +65,7 @@ namespace sw
             throw std::bad_alloc();
         }
 
-        void deallocate( T* p, size_t ) noexcept { Memory::freeMemory( p ); }
+        void deallocate( T* p, size_t ) noexcept { Memory::freeMemory( static_cast<void*>( p ) ); }
     };
 
     template <typename T, typename U>
@@ -114,10 +114,12 @@ void sw_delete_array_func( T* pPtr )
     }
 }
 
-#define sw_malloc( size )        sw::Memory::allocMemory( size )
-#define sw_free( pPtr )          sw::Memory::freeMemory( pPtr )
-#define sw_new                   new ( sw::MemoryAllocTag{} )
-#define sw_placement_new( pPtr ) new ( pPtr )
+#define sw_malloc( size ) sw::Memory::allocMemory( size )
+#define sw_free( pPtr )   sw::Memory::freeMemory( pPtr )
+#define sw_new            new ( sw::MemoryAllocTag{} )
+// `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가
+// 암시적 다단 포인터 변환이 되어, 의도한 것인지 읽는 사람이 알 수 없다.
+#define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )
 #define sw_delete                sw_delete_func
 #define sw_delete_array          sw_delete_array_func
 
@@ -133,6 +135,9 @@ namespace sw
 
         void operator()( T* pPtr ) const
         {
+            // 불완전 타입 삭제를 막는 표준 관용구다. sizeof 는 0 이 될 수 없으니 비교가 무의미해
+            // 보이지만, **T 가 불완전하면 sizeof 자체가 컴파일되지 않는다** — 그게 목적이다.
+            // NOLINTNEXTLINE(bugprone-sizeof-expression)
             static_assert( sizeof( T ) > 0, "can't delete an incomplete type" );
             sw_delete_func( pPtr );
         }

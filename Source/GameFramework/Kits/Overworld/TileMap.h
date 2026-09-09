@@ -161,7 +161,12 @@ namespace sw
         /** @brief 좌표가 맵 범위 안인지 반환합니다. */
         bool inBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 행 우선 1차원 인덱스를 반환합니다. */
-        size_t indexOf( int32 x, int32 y ) const { return static_cast<size_t>( y * _width + x ); }
+        size_t indexOf( int32 x, int32 y ) const
+        {
+            // 곱셈을 size_t 로 한다. int 로 곱하면 큰 맵에서 넘친 뒤에 확대되므로, 캐스트가 값을
+            // 지켜 주는 것처럼 보이지만 이미 틀린 값이다. (좌표 유효성은 inBounds 가 본다.)
+            return static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+        }
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 

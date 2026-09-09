@@ -1285,10 +1285,10 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         return _result;
     }
 
-    bool initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTag ) override
+    bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTag ) override
     {
         (void)pRootTag;
-        sw::string str( pXmlStr );
+        sw::string str( xmlStr );
         size_t     pos{ 0 };
         while ( ( pos = str.find( '<', pos ) ) != sw::string::npos )
         {
@@ -2568,7 +2568,7 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
     funcInfo._name     = "addScore";
     funcInfo._hashName = sw::hashed_string( "addScore" );
     funcInfo._invoker  = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-    {
+     {
         static_cast<InvokableTestActor*>( pObjPtr )->addScore( args.get<int32>( 0 ) );
         return sw::TaskValue{};
     } );
@@ -2687,7 +2687,7 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
     funcInfo._returnTypeName        = "void";
     funcInfo._listParameterTypeName = { "sw::int32" };
     funcInfo._invoker               = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-    {
+                  {
         static_cast<FunctionAnnotatedActor*>( pObjPtr )->takeDamage( args.get<int32>( 0 ) );
         return sw::TaskValue{};
     } );

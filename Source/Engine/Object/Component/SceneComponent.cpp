@@ -176,6 +176,11 @@ namespace sw
         _bCanEverTick = SW_FALSE;
     }
 
+    // `Component{ std::move( other ) }` 는 **기반 부분객체만** 이동한다. 기반 이동 생성자는 파생
+    // 멤버(_localPosition 등)에 손댈 수 없으므로 그 뒤에 other 의 파생 멤버를 읽는 것은 정의된
+    // 동작이고, 파생 클래스 이동 생성자의 표준 관용구다. 검사기가 기반으로의 슬라이싱을 모델링하지
+    // 못해 "used after move" 로 본다.
+    // NOLINTBEGIN(bugprone-use-after-move)
     SceneComponent::SceneComponent( SceneComponent&& other ) noexcept
         : Component{ std::move( other ) }
         , _localPosition{ other._localPosition }
@@ -272,6 +277,8 @@ namespace sw
              propertyName == hashed_string( "_localScale" ) )
             markTransformDirty();
     }
+
+    // NOLINTEND(bugprone-use-after-move)
 
     void SceneComponent::setLocalPosition( const float3& pos )
     {

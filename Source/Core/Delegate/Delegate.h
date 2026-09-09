@@ -57,6 +57,9 @@ namespace sw
         Delegate( Delegate&& other ) noexcept { moveFrom( std::move( other ) ); }
 
         /** @brief 복사 대입합니다. */
+        // 자기대입은 `this != &other` 로 막는다 — release() 가 먼저 돌기 때문에 이 가드가 없으면
+        // 자기 저장소를 해제한 뒤 읽는다. copy-and-swap 이 아니라 검사기가 짚지만 가드가 정답이다.
+        // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
         Delegate& operator=( const Delegate& other )
         {
             if ( this != &other )

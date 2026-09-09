@@ -63,7 +63,7 @@ namespace sw
             _height = 8;
         }
 
-        const size_t count = static_cast<size_t>( _width * _height );
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         _listWalkable.assign( count, 1 );
         _listEncounter.assign( count, 0 );
         _listPassThrough.assign( count, 0 );
@@ -193,7 +193,7 @@ namespace sw
         spawn.appendAttr( "y", _spawnY );
 
         XmlNode      tiles = root.appendChild( "tiles" );
-        const size_t count = static_cast<size_t>( _width * _height );
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
         {
             XmlNode       tileNode   = tiles.appendChild( "t" );

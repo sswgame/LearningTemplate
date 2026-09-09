@@ -151,7 +151,7 @@ namespace sw
     {
     public:
         /** @brief 양쪽 아레나를 같은 용량으로 준비합니다. */
-        explicit FrameDoubleBuffer( size_t arenaCapacity = 1024 * 1024 )
+        explicit FrameDoubleBuffer( size_t arenaCapacity = constant::kDefaultFrameArenaCapacity )
             : _arrArena{ FrameArenaAllocator{ arenaCapacity }, FrameArenaAllocator{ arenaCapacity } }
             , _activeBufferIndex{ 0 } {}
 
