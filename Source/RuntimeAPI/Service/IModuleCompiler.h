@@ -1,6 +1,10 @@
 /**
  * @file IModuleCompiler.h
- * @brief 인-에디터 백그라운드 컴파일러 서비스 인터페이스 (C-ABI/서비스 로케이터 통신 규약)
+ * @brief 인-에디터 백그라운드 컴파일러 서비스 인터페이스
+ *
+ * @note 이것은 **C-ABI 가 아니라 C++ 가상 함수 테이블**이다. 서비스 로케이터로 건네지므로
+ *       호스트와 모듈이 같은 툴체인·같은 플래그로 빌드된다는 전제에 의존한다. 진짜 C 경계는
+ *       `ABI/` 쪽의 함수 포인터 테이블뿐이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -55,7 +59,12 @@ namespace sw
         virtual float32 getLastDurationSec() const = 0;
         /** @brief 마지막 빌드 프로세스의 종료 코드를 반환합니다. (0 = 성공) */
         virtual int32 getLastExitCode() const = 0;
-        /** @brief 현재 또는 마지막으로 컴파일된 타겟 이름을 반환합니다. */
+        /**
+         * @brief 현재 또는 마지막으로 컴파일된 타겟 이름을 반환합니다.
+         * @note **값으로 돌려주는 것이 의도다.** 이름은 빌드 워커 스레드가 갱신하므로 구현이
+         *       잠금 아래에서 복사해 넘긴다. `const utf8*` 로 바꾸면 호출자가 잠금 밖에서
+         *       읽게 되어 데이터 레이스가 된다.
+         */
         virtual string getTargetName() const = 0;
     };
 } // namespace sw

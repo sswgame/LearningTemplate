@@ -10,11 +10,7 @@
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) 핸들
-    // ------------------------------------------------------------------------------
-    /** @brief 게임 인스턴스를 가리키는 불투명(opaque) 핸들 */
-    using GameHandle = void*;
+    // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다 — GameHandle 포함.
 
     struct ModuleService;
 
@@ -38,9 +34,6 @@ namespace sw
 
     /** @brief SWGame export 심볼: exportGameAPI */
     using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutApi );
-
-    class IRHIDevice;
-    class IWindow;
 } // namespace sw
 
 extern "C"

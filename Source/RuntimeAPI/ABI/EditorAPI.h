@@ -10,13 +10,7 @@
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) 핸들
-    // ------------------------------------------------------------------------------
-    /** @brief 에디터 인스턴스를 가리키는 불투명(opaque) 핸들 */
-    using EditorHandle = void*;
-    /** @brief 텍스처를 가리키는 핸들 */
-    using TextureHandle = uint64;
+    // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다 — EditorHandle, TextureHandle 포함.
 
     struct ModuleService;
     struct NativeWindowEvent;
@@ -50,9 +44,6 @@ namespace sw
 
     /** @brief EditorModule이 export하는 API 테이블 심볼 이름: exportEditorAPI */
     using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
-
-    class IRHIDevice;
-    class IWindow;
 } // namespace sw
 
 extern "C"
