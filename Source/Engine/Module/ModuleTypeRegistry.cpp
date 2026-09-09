@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"

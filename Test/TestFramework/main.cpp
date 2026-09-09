@@ -19,15 +19,15 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Module/LiveReloadManager.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
-#include "Engine/Utility/Module/LiveReloadManager.h"
-#include "Engine/Utility/Module/ModuleTypeRegistry.h"
-#include "Engine/Utility/Module/ReloadFileManager.h"
 
 #include "GameFramework/Base/GameService.h"
 

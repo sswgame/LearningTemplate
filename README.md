@@ -452,7 +452,7 @@ octree.querySphere( sw::float3( 15.0f, 5.0f, 15.0f ), 25.0f, listExplosionTarget
 텍스처, 셰이더, XML 파일이 외부 툴에서 수정되면 실시간으로 감지하여 콜백을 실행합니다.
 
 ```cpp
-#include "Engine/Utility/Module/ReloadFileManager.h"
+#include "Engine/Module/ReloadFileManager.h"
 
 // 셰이더 파일 수정 시 자동 리로드 콜백 등록
 auto handle = sw::ReloadFileManager::get().registerWatch(

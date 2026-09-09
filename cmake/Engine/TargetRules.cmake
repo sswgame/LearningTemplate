@@ -317,7 +317,7 @@ function(sw_addDelayloadHook TARGET_NAME)
 	endif()
 
 	if(NOT swHookSrc OR NOT EXISTS "${swHookSrc}")
-		set(swHookSrc "${CMAKE_SOURCE_DIR}/Source/Engine/Utility/Module/DelayLoadNotifyHook.cpp")
+		set(swHookSrc "${CMAKE_SOURCE_DIR}/Source/Engine/Module/DelayLoadNotifyHook.cpp")
 
 		if(NOT EXISTS "${swHookSrc}")
 			message(WARNING "[sw_addDelayloadHook] DelayLoadNotifyHook.cpp not found: ${swHookSrc}")

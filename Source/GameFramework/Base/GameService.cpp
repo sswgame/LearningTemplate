@@ -4,7 +4,7 @@
 
 #include "Core/Container/map.h"
 
-#include "Engine/Utility/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

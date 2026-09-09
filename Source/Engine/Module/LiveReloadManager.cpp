@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Module/LiveReloadManager.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
@@ -8,10 +8,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"

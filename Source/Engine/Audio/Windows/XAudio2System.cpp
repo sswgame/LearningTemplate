@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Audio/XAudio2System.h"
+#include "Engine/Audio/Windows/XAudio2System.h"
 
-#include "Core/Task/TaskManager.h"
+#if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/Task/TaskManager.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Common/EngineServices.h"
+    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Common/EngineServices.h"
 
 namespace sw
 {
-#if defined( SW_PLATFORM_WINDOWS )
     namespace
     {
         struct XAudio2SystemInternal
@@ -243,19 +243,14 @@ namespace sw
             }
         };
     } // namespace
-#endif
 } // namespace sw
 
 namespace sw
 {
     SW_LOG_CALLER( "XAudio2System" );
 
-#if defined( SW_PLATFORM_WINDOWS )
-#endif
-
     struct XAudio2SystemImpl
     {
-#if defined( SW_PLATFORM_WINDOWS )
         static constexpr size_t                                           kMaxIdleVoices = 32;
         IXAudio2*                                                         _pXAudio{ nullptr };
         IXAudio2MasteringVoice*                                           _pMasterVoice{ nullptr };
@@ -296,7 +291,6 @@ namespace sw
             }
             return pShared;
         }
-#endif
         string                 _musicPath;
         float32                _masterVolume{ 1.0f };
         float32                _musicVolume{ 1.0f };
@@ -336,7 +330,6 @@ namespace sw
         if ( _impl->_bInitialized != 0 )
             return true;
 
-#if defined( SW_PLATFORM_WINDOWS )
         HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
         if ( hr == S_OK || hr == S_FALSE )
             _impl->_bComInitialized = 1;
@@ -374,9 +367,6 @@ namespace sw
         _impl->_pMasterVoice = pMasterVoice;
         _impl->_pMasterVoice->SetVolume( _impl->_bMuted ? 0.0f : _impl->_masterVolume );
         SW_LOG_INFO( "XAudio2 mastering voice ready." );
-#else
-        SW_LOG_INFO( "Null audio backend." );
-#endif
 
         _impl->_bInitialized = 1;
         return true;
@@ -390,7 +380,6 @@ namespace sw
         if ( _impl == nullptr || _impl->_bInitialized == 0 )
             return;
         stopMusic();
-#if defined( SW_PLATFORM_WINDOWS )
         for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
         {
             if ( voiceBuffer._pVoice != nullptr )
@@ -433,7 +422,6 @@ namespace sw
             std::scoped_lock<mutex> lock{ _impl->_clipCacheMutex };
             _impl->_mapClipCache.clear();
         }
-#endif
         _impl->_bInitialized = 0;
         SW_LOG_INFO( "Shut down." );
     }
@@ -443,12 +431,9 @@ namespace sw
      */
     void XAudio2System::update( float32 )
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl == nullptr )
             return;
-    #if defined( SW_PLATFORM_WINDOWS )
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-    #endif
+        std::scoped_lock<mutex>                     lock{ _impl->_voiceMutex };
         vector<XAudio2SystemInternal::VoiceBuffer>& voices = _impl->_listActiveVoice;
         for ( size_t voiceIndex = 0; voiceIndex < voices.size(); )
         {
@@ -482,7 +467,6 @@ namespace sw
             }
             ++voiceIndex;
         }
-#endif
     }
 
     /**
@@ -500,13 +484,8 @@ namespace sw
     {
         if ( path.empty() || _impl == nullptr )
             return false;
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_musicPath == path && _impl->_pMusicVoice != nullptr )
             return true;
-#else
-        if ( _impl->_musicPath == path )
-            return true;
-#endif
         stopMusic();
         return playInternal( path, true );
     }
@@ -518,10 +497,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-#if defined( SW_PLATFORM_WINDOWS )
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMusicVoice != nullptr )
         {
             _impl->_pMusicVoice->Stop( 0 );
@@ -529,7 +505,6 @@ namespace sw
             _impl->_pMusicVoice = nullptr;
         }
         _impl->_pMusicClip.reset();
-#endif
         _impl->_musicPath.clear();
     }
 
@@ -537,26 +512,18 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-#if defined( SW_PLATFORM_WINDOWS )
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMusicVoice != nullptr )
             _impl->_pMusicVoice->Stop( 0 );
-#endif
     }
 
     void XAudio2System::resumeMusic()
     {
         if ( _impl == nullptr )
             return;
-#if defined( SW_PLATFORM_WINDOWS )
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMusicVoice != nullptr )
             _impl->_pMusicVoice->Start( 0 );
-#endif
     }
 
     void XAudio2System::setMasterVolume( float32 volume )
@@ -564,10 +531,8 @@ namespace sw
         if ( _impl == nullptr )
             return;
         _impl->_masterVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMasterVoice != nullptr )
             _impl->_pMasterVoice->SetVolume( _impl->_bMuted != 0 ? 0.0f : _impl->_masterVolume );
-#endif
     }
 
     float32 XAudio2System::getMasterVolume() const
@@ -580,13 +545,9 @@ namespace sw
         if ( _impl == nullptr )
             return;
         _impl->_musicVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
-#if defined( SW_PLATFORM_WINDOWS )
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMusicVoice != nullptr )
             _impl->_pMusicVoice->SetVolume( _impl->_bMuted != 0 ? 0.0f : _impl->_musicVolume );
-#endif
     }
 
     float32 XAudio2System::getMusicVolume() const
@@ -599,17 +560,13 @@ namespace sw
         if ( _impl == nullptr )
             return;
         _impl->_sfxVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
-#if defined( SW_PLATFORM_WINDOWS )
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
-        const float32 effectiveVol = _impl->_bMuted != 0 ? 0.0f : _impl->_sfxVolume;
+        const float32           effectiveVol = _impl->_bMuted != 0 ? 0.0f : _impl->_sfxVolume;
         for ( XAudio2SystemInternal::VoiceBuffer& vb : _impl->_listActiveVoice )
         {
             if ( vb._pVoice != nullptr )
                 vb._pVoice->SetVolume( effectiveVol );
         }
-#endif
     }
 
     float32 XAudio2System::getSfxVolume() const
@@ -622,10 +579,8 @@ namespace sw
         if ( _impl == nullptr )
             return;
         _impl->_bMuted = bMute ? 1 : 0;
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl->_pMasterVoice != nullptr )
             _impl->_pMasterVoice->SetVolume( _impl->_bMuted ? 0.0f : _impl->_masterVolume );
-#endif
     }
 
     bool XAudio2System::isMuted() const
@@ -640,7 +595,6 @@ namespace sw
 
     void XAudio2System::playDecodedClipTask( const TaskArgs& args )
     {
-#if defined( SW_PLATFORM_WINDOWS )
         if ( _impl == nullptr || _impl->_pXAudio == nullptr )
             return;
 
@@ -726,9 +680,6 @@ namespace sw
         pVoice->Start( 0 );
         SW_LOG_TRACE( "Playing %# (%# loop=%#)", abs, static_cast<uint32>( audioBuffer.AudioBytes ),
                       loop ? 1 : 0 );
-#else
-        (void)args;
-#endif
     }
 
     /**
@@ -742,7 +693,6 @@ namespace sw
         if ( path.empty() )
             return false;
 
-#if defined( SW_PLATFORM_WINDOWS )
         if ( ResourceUtil::hasResource( path ) == false )
         {
             SW_LOG_WARNING( "Audio resource not found: %#", string( path ) );
@@ -770,11 +720,6 @@ namespace sw
             _impl->_musicPath = requestedPath;
 
         return true;
-#else
-        (void)loop;
-        _impl->_musicPath = string( path );
-        SW_LOG_TRACE( "play (null): %#", string( path ) );
-        return true;
-#endif
     }
 } // namespace sw
+#endif

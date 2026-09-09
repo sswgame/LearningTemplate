@@ -3,7 +3,7 @@
 #include "Engine/Audio/IAudioSystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Audio/XAudio2System.h"
+    #include "Engine/Audio/Windows/XAudio2System.h"
 #else
     #include "Engine/Audio/NullAudioSystem.h"
 #endif

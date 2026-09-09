@@ -1,6 +1,11 @@
 /**
  * @file XAudio2System.h
- * @brief 오디오 퍼사드 (Windows에서 XAudio2 + Media Foundation 디코드).
+ * @brief Windows 전용 오디오 퍼사드 (XAudio2 + Media Foundation 디코드).
+ *
+ * @note 이 클래스는 Windows 에서만 생성된다 — IAudioSystem::create() 가 다른 플랫폼에서는
+ *       NullAudioSystem 을 돌려준다. 그래서 구현 .cpp 는 파일 전체가 SW_PLATFORM_WINDOWS 가드
+ *       안에 있다(Window/Windows · Input/Windows 와 같은 형태). 예전에는 이 파일이 모든
+ *       플랫폼에서 컴파일되느라 몸통 안에 #if 가 22개 들어 있었다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

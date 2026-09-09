@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Frame/ComputePass.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
+#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -13,7 +14,6 @@
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 #include "Engine/Spatial/SpatialOctree.h"
 #include "Engine/Spatial/SpatialQuadTree.h"
-#include "Engine/Utility/Module/ReloadFileManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -168,7 +168,7 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
     bool       bCallbackCalled = false;
     const auto handle          = manager.registerWatch( "Resource/shaders", { ".hlsl" },
                                                         SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-    {
+             {
         bCallbackCalled = true;
     } ) );
 
@@ -556,8 +556,8 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
     sw::vector<sw::ObjectHandle> listAabb;
     const sw::AABB               testBox{
-        {-1.0f, -1.0f,  0.0f},
-        { 6.0f,  5.0f, 15.0f}
+                      {-1.0f, -1.0f,  0.0f},
+                      { 6.0f,  5.0f, 15.0f}
     };
     bvh.queryAABB( testBox, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );

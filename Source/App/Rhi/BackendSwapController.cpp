@@ -11,7 +11,7 @@
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Module/LiveReloadManager.h"
 
 #include "sw/config/ConfigConstants.h"
 

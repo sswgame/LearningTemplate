@@ -7,11 +7,15 @@ Engine 레이어 금지 include 검사.
   1) Source/Engine/** 에서 Editor / GameFramework / Games 경로 include 금지.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
      (게임 쪽은 GameFramework/Base/GameService.h 의 game:: 만 사용).
-  3) 의도 레이어(문서):
-       Common/Utility → Reflection/Serialization → Object/Scene → Graphics/Input/Audio/Window
-       Physics / Animation 은 experimental stub.
+  3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
+
+티어는 **include 그래프에서 계산한 것**이다. 예전에는 손으로 고른 네 쌍(Utility->Graphics 등)만
+경고로 찍고 실패시키지 않았다 — 근거 없는 목록이라 늘릴 기준도 없고, 실패하지 않으니 쌓여도
+아무도 몰랐다. 지금은 전체 그래프를 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓴다.
 
   python Scripts/lint/CheckEngineLayers.py [--root <repo>] [--strict]
+
+(--strict 는 남겨 두었지만 이제 기본 동작과 같다. 티어 위반은 항상 실패다.)
 """
 
 from __future__ import annotations
@@ -71,13 +75,76 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     ),
 ]
 
-# 엄격 모드(--strict): 상위 레이어를 역참조하는 인클루드 관계 목록
-_kStrictReverse: list[tuple[str, str]] = [
-    ("Utility", "Graphics"),
-    ("Reflection", "Object"),
-    ("Physics", "Graphics"),
-    ("Animation", "Graphics"),
-]
+# Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
+_kRootLayerName = "<root>"
+
+# ------------------------------------------------------------------------------
+# Engine 내부 티어 — 숫자가 큰 쪽이 위다. 같은 티어끼리는 서로 참조해도 된다.
+#
+# 이 표는 include 그래프를 Tarjan SCC 로 줄여 위상 정렬해서 얻었다. 손으로 고른 순서가 아니다.
+#
+# **티어 2 의 열 폴더는 하나의 강결합 묶음이다.** Config·Graphics·Module·Object·Reflection·
+# Resource·Scene·Sequencer·Serialization·Window 이 서로 도달 가능하다(씬이 에셋을 읽고,
+# 컴포넌트가 머티리얼을 들고, 리플렉션이 직렬화를 부르고, 핫리로드가 씬의 TypeInfo 를 다시
+# 묶는다). 그 안에는 지킬 수 있는 순서가 없으므로 **순서를 주장하지 않는다** — 묶음을 풀어내는
+# 일과 측정된 엣지 수는 docs/06_Backlog.md 에 적혀 있다. 거짓인 순서를 문서에 남겨 두는 것보다
+# 참인 경계를 검사하는 편이 낫다.
+# ------------------------------------------------------------------------------
+_kEngineTier: dict[str, int] = {
+    # 0: 토대 — Engine 의 어느 것도 참조하지 않는다.
+    "Common": 0,
+    "Utility": 0,
+    # 1: 코어가 쓰는 잎 서브시스템 — 코어를 거꾸로 참조하지 않는다.
+    "Animation": 1,
+    "Audio": 1,
+    "Localization": 1,
+    "Physics": 1,
+    "Spatial": 1,
+    # 2: 코어 묶음 (강결합). 내부 순서는 없다.
+    "Config": 2,
+    "Graphics": 2,
+    "Module": 2,
+    "Object": 2,
+    "Reflection": 2,
+    "Resource": 2,
+    "Scene": 2,
+    "Sequencer": 2,
+    "Serialization": 2,
+    "Window": 2,
+    # 3: 코어 위에 올라가는 것.
+    "Dialogue": 3,
+    "Input": 3,
+    # 4: 전부를 엮는 자리.
+    _kRootLayerName: 4,
+}
+
+# 티어가 아니라 **prelude·경로 헬퍼**인 헤더. 어느 티어에서 include 해도 된다.
+#   - EngineMinimal.h / Common.h : 타입 별칭과 전방 선언만 모은 우산 헤더.
+#   - ResourceUtil.h             : 리소스 경로 해석 static 헬퍼. loadFromResource 진입점이 쓴다.
+_kUbiquitousHeaders: frozenset[str] = frozenset(
+    {
+        "Engine/EngineMinimal.h",
+        "Engine/Common/Common.h",
+        "Engine/Resource/ResourceUtil.h",
+    }
+)
+
+# 티어가 아니라 **배선**인 파일. 모든 서브시스템을 알아야 하므로 티어 검사에서 뺀다.
+#   - EngineServices.cpp   : 서비스 로케이터 구현. 노출하는 모든 매니저를 include 해야 한다.
+#   - ReflectGenerated.h   : .gen.cpp 전용 preamble.
+#   - ResourceManager.cpp  : 리소스 파사드 구현.
+_kWiringFiles: frozenset[str] = frozenset(
+    {
+        "Source/Engine/Common/EngineServices.cpp",
+        "Source/Engine/Reflection/ReflectGenerated.h",
+        "Source/Engine/Resource/ResourceManager.cpp",
+    }
+)
+
+
+def engineTierOfInternal(folderName: str) -> int | None:
+    """Engine 최상위 폴더 이름의 티어. 표에 없으면 None (새 폴더 = 검사 실패)."""
+    return _kEngineTier.get(folderName)
 
 
 def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[list[str], list[str], str | None]:
@@ -101,30 +168,39 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
                 if includeHitsBanInternal(normalizedInclude, bannedPattern):
                     fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
-    sourceLayer = ""
-    enginePrefixLen = len(kDirSourceEngine) + 1
-    if startsWithPathComponent(relativeFilePath, kDirSourceEngine) and "/" in relativeFilePath[enginePrefixLen:]:
-        sourceLayer = relativeFilePath[enginePrefixLen:].split("/", 1)[0]
+    del strict  # 티어 위반은 항상 실패다 — 옛 --strict 는 기본 동작이 되었다.
 
-    # ReflectGenerated.h는 .gen.cpp 리플렉션 생성 코드 전용 preamble이며, ResourceManager.cpp는 파사드 구현체입니다.
-    if relativeFilePath.endswith("ReflectGenerated.h") or relativeFilePath.endswith("ResourceManager.cpp"):
-        return fileViolations, [], None
+    if startsWithPathComponent(relativeFilePath, kDirSourceEngine) is False:
+        return fileViolations, fileStrictWarns, None
+    if relativeFilePath in _kWiringFiles:
+        return fileViolations, fileStrictWarns, None
+
+    enginePrefixLen = len(kDirSourceEngine) + 1
+    engineRelativePath = relativeFilePath[enginePrefixLen:]
+    sourceLayer = engineRelativePath.split("/", 1)[0] if "/" in engineRelativePath else _kRootLayerName
+    sourceTier = engineTierOfInternal(sourceLayer)
+    if sourceTier is None:
+        fileViolations.append(f"{relativeFilePath}: Engine 최상위 폴더 '{sourceLayer}' 가 티어 표(_kEngineTier)에 없습니다.")
+        return fileViolations, fileStrictWarns, None
 
     for includePath in _kIncludeRe.findall(text):
         normalizedInclude = normalizePath(includePath)
-        if "Engine/" not in normalizedInclude:
+        if normalizedInclude.startswith("Engine/") is False:
             continue
-        destParts = normalizedInclude.split("Engine/", 1)[-1].split("/")
-        if not destParts:
+        if normalizedInclude in _kUbiquitousHeaders:
             continue
-        destLayer = destParts[0]
-        for sourceBannedLayer, destBannedLayer in _kStrictReverse:
-            if sourceLayer == sourceBannedLayer and destLayer == destBannedLayer:
-                violationMessage = f'{relativeFilePath}: #include "{includePath}"  (레이어 {sourceBannedLayer}->{destBannedLayer})'
-                if strict:
-                    fileViolations.append(violationMessage)
-                else:
-                    fileStrictWarns.append(violationMessage)
+        destRelative = normalizedInclude[len("Engine/") :]
+        destLayer = destRelative.split("/", 1)[0] if "/" in destRelative else _kRootLayerName
+        if destLayer == sourceLayer:
+            continue
+        destTier = engineTierOfInternal(destLayer)
+        if destTier is None:
+            fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (티어 표에 없는 폴더 \'{destLayer}\')')
+            continue
+        if destTier > sourceTier:
+            fileViolations.append(
+                f'{relativeFilePath}: #include "{includePath}"  (티어 {sourceLayer}(T{sourceTier}) -> {destLayer}(T{destTier}))'
+            )
 
     return fileViolations, fileStrictWarns, None
 
@@ -134,7 +210,7 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description="Engine 레이어 금지 include 검사")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--strict", action="store_true", help="내부 reverse-edge도 실패로 처리")
+    parser.add_argument("--strict", action="store_true", help="(옛 옵션) 티어 위반은 이제 항상 실패한다")
     args = parser.parse_args()
     repo = (args.root or getProjectRoot()).resolve()
     engineDir = repo / kDirSourceEngine

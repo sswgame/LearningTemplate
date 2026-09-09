@@ -7,6 +7,7 @@
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -77,13 +78,7 @@ namespace sw
             return false;
 
         const string normalizedPath = FileUtil::normalizeSeparators( packFilePath );
-        FILE*        pFile{ nullptr };
-
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, normalizedPath.c_str(), "rb" );
-#else
-        pFile = fopen( normalizedPath.c_str(), "rb" );
-#endif
+        FILE*        pFile          = PlatformFileUtil::openFile( normalizedPath.c_str(), "rb" );
 
         if ( pFile == nullptr )
         {
@@ -217,11 +212,7 @@ namespace sw
 
             auto* pFile = static_cast<FILE*>( _pFileHandle );
 
-#if defined( SW_PLATFORM_WINDOWS )
-            _fseeki64( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
-#else
-            fseeko( pFile, static_cast<off_t>( entry._dataOffset ), SEEK_SET );
-#endif
+            PlatformFileUtil::seekTo( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
 
             const size_t readBytes = std::fread( outBytes.data(), 1, entry._uncompressedSize, pFile );
             if ( readBytes != entry._uncompressedSize )
@@ -243,11 +234,7 @@ namespace sw
 
                 auto* pFile = static_cast<FILE*>( _pFileHandle );
 
-#if defined( SW_PLATFORM_WINDOWS )
-                _fseeki64( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
-#else
-                fseeko( pFile, static_cast<off_t>( entry._dataOffset ), SEEK_SET );
-#endif
+                PlatformFileUtil::seekTo( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
 
                 const size_t readBytes = std::fread( compressedBytes.data(), 1, entry._compressedSize, pFile );
                 if ( readBytes != entry._compressedSize )
@@ -346,11 +333,7 @@ namespace sw
         if ( bHasStringPool && _header._stringPoolSize > 0 )
         {
             _stringPoolBytes.resize( _header._stringPoolSize );
-#if defined( SW_PLATFORM_WINDOWS )
-            _fseeki64( pFile, static_cast<int64>( _header._stringPoolOffset ), SEEK_SET );
-#else
-            fseeko( pFile, static_cast<off_t>( _header._stringPoolOffset ), SEEK_SET );
-#endif
+            PlatformFileUtil::seekTo( pFile, static_cast<int64>( _header._stringPoolOffset ), SEEK_SET );
             if ( std::fread( _stringPoolBytes.data(), 1, _header._stringPoolSize, pFile ) != _header._stringPoolSize )
             {
                 SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
@@ -362,11 +345,7 @@ namespace sw
         vector<PackFileEntryOnDisk> listDiskEntry;
         listDiskEntry.resize( _header._fileCount );
 
-#if defined( SW_PLATFORM_WINDOWS )
-        _fseeki64( pFile, static_cast<int64>( _header._indexOffset ), SEEK_SET );
-#else
-        fseeko( pFile, static_cast<off_t>( _header._indexOffset ), SEEK_SET );
-#endif
+        PlatformFileUtil::seekTo( pFile, static_cast<int64>( _header._indexOffset ), SEEK_SET );
 
         const size_t expectedBytes = _header._fileCount * sizeof( PackFileEntryOnDisk );
         if ( std::fread( listDiskEntry.data(), 1, expectedBytes, pFile ) != expectedBytes )

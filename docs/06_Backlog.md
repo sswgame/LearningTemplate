@@ -131,10 +131,46 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
-**Source 폴더를 순서대로 개편 중 (App → RuntimeAPI → Core → …)**
+**Source 폴더를 순서대로 개편 중 (App → RuntimeAPI → Core → Engine → …)**
 
-진행한 폴더: `App`(`6efa4fd2`) · `RuntimeAPI`(`06889dc7`) · `Core`(아래).
-남은 폴더: `Engine` · `GameFramework` · `Games` · `Editor`, 그리고 `Tools/ReflectionParser`.
+진행한 폴더: `App`(`6efa4fd2`) · `RuntimeAPI`(`06889dc7`) · `Core`(`58c1ac30`) · `Engine`(아래).
+남은 폴더: `GameFramework` · `Games` · `Editor`, 그리고 `Tools/ReflectionParser`.
+
+**Engine — 문서에 적힌 레이어 순서가 코드와 달랐다**
+- `Audio/XAudio2System` 이 모든 플랫폼에서 컴파일되며 `#if` 22개로 몸통을 비우고 있었다.
+  `IAudioSystem::create()` 는 이미 Windows 에서만 이 클래스를 만드는데도 그랬다
+  → `Audio/Windows/` 로 옮기고 파일 전체 가드 1개로(= `Window/Windows`·`Input/Windows` 형태).
+- `Utility/Module` → `Module` 로 승격. LiveReloadManager 가 로드된 모든 Scene 의
+  GameObjectManager 를 다시 묶는 **상위 서브시스템**인데 최하위 티어 폴더에 있었다.
+- `ResourcePackReader` 의 플랫폼 분기 5벌을 Core 의 `PlatformFileUtil` 로 (Core 차례의 남은 일).
+- DX11 `isHazardMessage` 의 `switch` 가 `-Wswitch-enum` 경고를 냈다(1328개 중 10개만 다룸)
+  → 목록 순회로. 경고를 억누르지 않고 없앴다.
+
+**`CheckEngineLayers` 의 내부 레이어 규칙을 근거 있는 것으로 바꿨다.**
+예전에는 손으로 고른 네 쌍(`Utility->Graphics` 등)만 **경고로 찍고 실패시키지 않았다**.
+지금은 include 그래프를 Tarjan SCC 로 줄여 얻은 티어 표를 쓰고, 위반은 실패다.
+
+> ### Engine 코어 열 폴더는 하나의 강결합 묶음이다 — 남은 큰 일
+>
+> `Config` `Graphics` `Module` `Object` `Reflection` `Resource` `Scene` `Sequencer`
+> `Serialization` `Window` 이 서로 도달 가능하다. README 가 주장했던 5단 순서는 **사실이
+> 아니었다.** 묶음 안의 엣지 수(측정값, 소수 방향이 고칠 후보):
+>
+> | 엣지 | 수 | 내용 |
+> |---|---|---|
+> | `Object -> Graphics` | 3 | `MeshComponent` 가 Material·Mesh·RHITypes 를 든다 |
+> | `Scene -> Graphics` | 5 | `Scene.cpp` 가 FrameRenderer·MaterialCache·IRHIDevice 를 부른다 |
+> | `Reflection -> Serialization` | 4 | `ReflectAny.cpp` 가 직렬화기를 부른다 |
+> | `Serialization -> Object` | 3 | `SerializeContext`·`SchemaMigrate` 가 TagSystem·ComponentHandle 을 안다 |
+> | `Object -> Scene` | 6 | `ComponentPtr.cpp` 가 SceneManager 로 핸들을 푼다 |
+> | `Object -> Sequencer` | 3 | `SequencePlayerComponent` (반대 방향도 3) |
+> | `Config -> Graphics` | 1 | `EngineConfig` 가 `RHIBackend` 열거형을 든다 |
+> | `Graphics`/`Resource` `-> Module` | 3 | 셰이더·리소스 핫리로드가 `ReloadFileManager` 를 쓴다 |
+>
+> 풀어내는 순서 제안(작은 것부터, 각각 독립): ① `Config -> Graphics` — `RHIBackend` 를
+> `Config` 나 더 아래로 내린다. ② `Serialization -> Object` — 컴포넌트 핸들 해석을 콜백으로
+> 받는다. ③ `Reflection -> Serialization` — `ReflectAny` 의 직렬화를 등록 가능한 훅으로.
+> ④ 나머지(`Object`/`Scene` ↔ `Graphics`)는 컴포넌트 모델 자체의 설계라 별개의 큰 일이다.
 
 **Core — 같은 플랫폼 분기가 세 파일에 복사돼 있었다**
 - `PlatformFileUtil` 신설. `fopen_s`↔`fopen`, `_fseeki64`↔`fseeko`, `_ftelli64`↔`ftello` 의
