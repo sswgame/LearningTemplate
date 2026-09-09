@@ -72,6 +72,7 @@ namespace sw
         , _pWindow{ nullptr }
         , _pRenderThread{ nullptr }
         , _listGameSavedState{}
+        , _frameState{}
         , _bEnableEditor{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -182,10 +183,7 @@ namespace sw
 
         // 에디터·게임을 한 번의 드레인으로 내린다. 예전엔 onBefore*Reload 를 그대로 불러서
         // drainRenderWorkers 가 두 번 돌았다 — 종료 경로에서 태스크 펜싱 타임아웃을 두 번 기다린다.
-        drainRenderWorkers();
-        captureGameState();
-        destroyEditorInstance( true );
-        destroyGameInstance( true );
+        suspendModules( ModuleScope::Both, true );
 
         if ( _pLiveReloadManager != nullptr )
         {
@@ -198,61 +196,14 @@ namespace sw
     // 프레임 단위 처리
     // ======================================================================
 
-    bool ModuleHost::isGameplayActive() const
+    bool ModuleHost::queryGameplayActive() const
     {
         if ( hasEditor() == false || _editorApi.isPlaying == nullptr )
             return true;
         return _editorApi.isPlaying( _editor );
     }
 
-    void ModuleHost::updateEditorUI( float32 /*deltaTime*/ )
-    {
-        if ( hasEditor() == false || _editorApi.updateUI == nullptr )
-            return;
-
-        _editorApi.updateUI( _editor );
-    }
-
-    void ModuleHost::updateGame( float32 deltaTime )
-    {
-        if ( _game != nullptr && _gameApi.update != nullptr && isGameplayActive() )
-            _gameApi.update( _game, deltaTime );
-    }
-
-    void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
-    {
-        if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && isGameplayActive() )
-            _gameApi.fixedUpdate( _game, fixedDeltaTime );
-    }
-
-    bool ModuleHost::onWindowMessage( const NativeWindowEvent& event )
-    {
-        if ( hasEditor() == false || _editorApi.processEvent == nullptr )
-            return false;
-
-        // 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
-        return _editorApi.processEvent( _editor, &event );
-    }
-
-    void ModuleHost::getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const
-    {
-        renderTarget = 0;
-        width        = 0;
-        height       = 0;
-        if ( hasEditor() == false || _editorApi.getGameViewport == nullptr )
-            return;
-
-        _editorApi.getGameViewport( _editor, &renderTarget, &width, &height );
-    }
-
-    CameraComponent* ModuleHost::getViewportCamera() const
-    {
-        if ( hasEditor() == false || _editorApi.getViewportCamera == nullptr )
-            return nullptr;
-        return static_cast<CameraComponent*>( _editorApi.getViewportCamera( _editor ) );
-    }
-
-    bool ModuleHost::shouldTickScene() const
+    bool ModuleHost::queryTickScene() const
     {
         if ( hasEditor() == false )
             return true;
@@ -264,11 +215,74 @@ namespace sw
         return true;
     }
 
+    void ModuleHost::sampleGameViewport()
+    {
+        _frameState._gameViewportTarget = 0;
+        _frameState._gameViewportWidth  = 0;
+        _frameState._gameViewportHeight = 0;
+        if ( hasEditor() == false || _editorApi.getGameViewport == nullptr )
+            return;
+
+        _editorApi.getGameViewport( _editor,
+                                    &_frameState._gameViewportTarget,
+                                    &_frameState._gameViewportWidth,
+                                    &_frameState._gameViewportHeight );
+    }
+
+    void ModuleHost::beginFrame()
+    {
+        _frameState                  = ModuleFrameState{};
+        _frameState._bGameplayActive = queryGameplayActive() ? SW_TRUE : SW_FALSE;
+    }
+
+    void ModuleHost::updateGame( float32 deltaTime )
+    {
+        if ( _game != nullptr && _gameApi.update != nullptr && _frameState._bGameplayActive == SW_TRUE )
+            _gameApi.update( _game, deltaTime );
+    }
+
+    void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
+    {
+        if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE )
+            _gameApi.fixedUpdate( _game, fixedDeltaTime );
+    }
+
+    void ModuleHost::updateEditorUI( float32 /*deltaTime*/ )
+    {
+        if ( hasEditor() == false )
+            return;
+
+        if ( _editorApi.updateUI != nullptr )
+            _editorApi.updateUI( _editor );
+
+        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고,
+        // 씬을 한 칸 틱한 다음 endEditorFrame 에서 소비된다 — 이 질의를 프레임 앞으로 옮기면
+        // Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
+        _frameState._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
+        sampleGameViewport();
+    }
+
     void ModuleHost::endEditorFrame()
     {
         if ( hasEditor() == false || _editorApi.endFrame == nullptr )
             return;
         _editorApi.endFrame( _editor );
+    }
+
+    bool ModuleHost::onWindowMessage( const NativeWindowEvent& event )
+    {
+        if ( hasEditor() == false || _editorApi.processEvent == nullptr )
+            return false;
+
+        // 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
+        return _editorApi.processEvent( _editor, &event );
+    }
+
+    CameraComponent* ModuleHost::getViewportCamera() const
+    {
+        if ( hasEditor() == false || _editorApi.getViewportCamera == nullptr )
+            return nullptr;
+        return static_cast<CameraComponent*>( _editorApi.getViewportCamera( _editor ) );
     }
 
     // ======================================================================
@@ -277,8 +291,7 @@ namespace sw
 
     void ModuleHost::onBeforeEditorReload()
     {
-        drainRenderWorkers();
-        destroyEditorInstance( true );
+        suspendModules( ModuleScope::Editor, true );
     }
 
     void ModuleHost::onAfterEditorReload( void* pLibraryModule )
@@ -305,19 +318,7 @@ namespace sw
 
     void ModuleHost::onBeforeGameReload()
     {
-        drainRenderWorkers();
-
-        if ( hasEditor() && _editorApi.stopSimulation != nullptr )
-        {
-            SW_LOG_INFO( "Stopping editor simulation before game module reload." );
-            _editorApi.stopSimulation( _editor );
-        }
-
-        if ( _game == nullptr )
-            return;
-
-        captureGameState();
-        destroyGameInstance( true );
+        suspendModules( ModuleScope::Game, true );
     }
 
     void ModuleHost::onAfterGameReload( void* pLibraryModule )
@@ -468,14 +469,29 @@ namespace sw
         return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
     }
 
-    void ModuleHost::onBeforeRhiSwap()
+    void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseApiTable )
     {
         drainRenderWorkers();
-        captureGameState();
 
-        // API 테이블은 그대로 둔다 — 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
-        destroyEditorInstance( false );
-        destroyGameInstance( false );
+        const bool bSuspendEditor = scope != ModuleScope::Game;
+        const bool bSuspendGame   = scope != ModuleScope::Editor;
+
+        // 게임만 내릴 때는 에디터가 남아 Play 상태를 유지한다 — 인스턴스가 없는 동안 죽은 게임을
+        // 계속 돌리려 하므로 먼저 시뮬레이션을 멈춘다. 에디터도 같이 내릴 때는 아래에서 인스턴스
+        // 자체가 사라지므로 멈출 대상이 없다.
+        const bool bStopSimulation = bSuspendGame && bSuspendEditor == false && hasEditor() && _editorApi.stopSimulation != nullptr;
+        if ( bStopSimulation )
+        {
+            SW_LOG_INFO( "Stopping editor simulation before game module reload." );
+            _editorApi.stopSimulation( _editor );
+        }
+
+        if ( bSuspendGame )
+            captureGameState();
+        if ( bSuspendEditor )
+            destroyEditorInstance( bReleaseApiTable );
+        if ( bSuspendGame )
+            destroyGameInstance( bReleaseApiTable );
     }
 
     bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )

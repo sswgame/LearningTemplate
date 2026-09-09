@@ -8,7 +8,6 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Time/CpuTimer.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -41,9 +40,11 @@ namespace sw
         : _engineLoop{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
-        , _maxFrameDeltaTime{ 0.1f }
+        , _frameTimeline{}
+        , _backendSwap{}
+        , _viewCameraProvider{}
+        , _forceReloadHandler{}
         , _bEnableEditor{ SW_FALSE }
-        , _bHandlingRhiBackendChange{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -86,7 +87,9 @@ namespace sw
             return false;
         }
 
-        _maxFrameDeltaTime = pEngineConfig->_maxFrameDeltaTime;
+        _frameTimeline.configure( pEngineConfig->_maxFrameDeltaTime,
+                                  pEngineConfig->_fixedDeltaTime,
+                                  pEngineConfig->_maxFixedStepPerFrame );
 
         // 2. 윈도우 소유권 획득 (초기화 중에는 숨김 상태로 시작)
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
@@ -185,9 +188,14 @@ namespace sw
         _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
         _window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
-        GlobalVariableInfo* pRHIBackendVar = engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
-        if ( pRHIBackendVar != nullptr )
-            pRHIBackendVar->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &App::onRhiBackendChanged, this );
+        // 루프 안에서 매 프레임 다시 만들던 것들이다. 바인딩 대상이 프레임마다 바뀌지 않으므로
+        // 여기서 한 번 묶고, 에디터 뷰 카메라는 에디터 모드에서만 묶는다 — 비어 있다는 사실이
+        // "씬 카메라를 쓴다" 는 뜻이라 루프에서 모드 분기를 할 필요가 없다.
+        _forceReloadHandler = SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this );
+        if ( _bEnableEditor == SW_TRUE )
+            _viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
+
+        _backendSwap.initialize( &_engineLoop, _moduleHost.get(), _bEnableEditor == SW_TRUE );
 
         _engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
@@ -195,12 +203,12 @@ namespace sw
 
     void App::shutdown()
     {
-        if ( _engineLoop.isHeadless() )
-        {
-            _engineLoop.shutdown();
-            return;
-        }
+        // 전역 변수 훅은 그 변수를 소유한 GlobalVariableManager(EngineLoop 소유)가 사라지기
+        // 전에 떼어 낸다. 헤드리스 부팅처럼 연결되지 않은 경우에는 아무것도 하지 않는다.
+        _backendSwap.shutdown();
 
+        // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다 — 아래 경로가 그대로 no-op 이므로
+        // 모드 분기를 따로 두지 않는다.
         // NOTE: ModuleHost를 EngineLoop보다 먼저 종료해야 합니다.
         //       에디터 shutdown이 Game View RT를 해제할 때 RenderThread와 RHI Device를 사용합니다.
         BLOCK( "Game / Editor 인스턴스 정리" )
@@ -226,17 +234,14 @@ namespace sw
 
     void App::run()
     {
-        if ( _engineLoop.isHeadless() )
+        // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --bake-shaders)은 창을 만들지 않으므로
+        // 여기서 끝난다 — 모드 플래그가 아니라 실제 선행 조건으로 적는다.
+        if ( _window == nullptr )
             return;
 
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)..." );
 
-        CpuTimer frameTimer;
-        frameTimer.resetTimer();
-        frameTimer.startTimer();
-
-        float32           accumulator     = 0.0f;
-        constexpr float32 kFixedDeltaTime = 1.0f / 60.0f;
+        _frameTimeline.start();
 
         while ( _window->processMessages() )
         {
@@ -247,70 +252,55 @@ namespace sw
                 break;
             }
 
-            frameTimer.updateTimer();
-            const float32 deltaTime = MathUtil::min( frameTimer.getDeltaTime(), _maxFrameDeltaTime );
-            accumulator += deltaTime;
+            const FrameTime frameTime = _frameTimeline.advance();
 
             _engineLoop.beginFrame();
+            // 에디터 Play/Pause 상태를 여기서 한 번 래치한다 — 아래 고정 스텝이 여러 번 돌아도
+            // DLL 경계를 넘어 다시 묻지 않고, 모든 단계가 같은 답을 본다.
+            _moduleHost->beginFrame();
 
-            pollReloadHotkeys( deltaTime );
+            pollReloadHotkeys( frameTime._deltaTime );
 
-            while ( accumulator >= kFixedDeltaTime )
-            {
-                _moduleHost->fixedUpdateGame( kFixedDeltaTime );
-                accumulator -= kFixedDeltaTime;
-            }
+            for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
+                _moduleHost->fixedUpdateGame( frameTime._fixedDeltaTime );
 
-            _moduleHost->updateGame( deltaTime );
+            _moduleHost->updateGame( frameTime._deltaTime );
+            // 에디터가 없으면 즉시 반환한다. 이 호출이 게임 뷰포트 RT 와 씬 틱 여부를 확정한다.
+            _moduleHost->updateEditorUI( frameTime._deltaTime );
 
-            if ( _bEnableEditor == SW_TRUE )
-                _moduleHost->updateEditorUI( deltaTime );
-
-            uint64 gameRenderTarget   = 0;
-            uint32 gameViewportWidth  = 0;
-            uint32 gameViewportHeight = 0;
-            _moduleHost->getGameViewport( gameRenderTarget, gameViewportWidth, gameViewportHeight );
             // 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
             // 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
-            ViewCameraProviderDelegate viewCameraProvider{};
-            if ( _bEnableEditor == SW_TRUE )
-                viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
-            const bool bTickScene = _moduleHost->shouldTickScene();
-            _engineLoop.tick( deltaTime, gameRenderTarget, gameViewportWidth, gameViewportHeight, viewCameraProvider, bTickScene );
-            if ( _bEnableEditor == SW_TRUE )
-                _moduleHost->endEditorFrame();
+            const ModuleFrameState& frameState = _moduleHost->getFrameState();
+            _engineLoop.tick( frameTime._deltaTime,
+                              frameState._gameViewportTarget,
+                              frameState._gameViewportWidth,
+                              frameState._gameViewportHeight,
+                              _viewCameraProvider,
+                              frameState._bTickScene == SW_TRUE );
+            _moduleHost->endEditorFrame();
 
-            applyBackendChangeIfPending();
+            _backendSwap.applyIfPending();
 
             _engineLoop.endFrame();
         }
     }
 
-    void App::pollReloadHotkeys( float32 deltaTime )
+    void App::pollReloadHotkeys( [[maybe_unused]] float32 deltaTime )
     {
+#if !defined( SW_SHIPPING )
         _engineLoop.updateShellActions( deltaTime );
-        _engineLoop.pollDebugHotkeys( SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
+        _engineLoop.pollDebugHotkeys( _forceReloadHandler );
 
-        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
+        const bool bReloadEditorRequested = _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction );
+        if ( bReloadEditorRequested )
         {
             onForceReload( config::kTargetEditorModule );
             SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
         }
-    }
-
-    void App::applyBackendChangeIfPending()
-    {
-        const RHI* pRHI = _engineLoop.getRHI();
-        if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
-            return;
-
-        if ( applyPendingBackendChange() == false )
-        {
-            SW_LOG_ERROR( "Backend soft-recreate failed." );
-            // 되돌림 대입은 onRhiBackendChanged 를 다시 부르지만, 커밋된 백엔드와 같은 값이면
-            // RHI::schedulePendingBackendChange 가 no-op 이라 재시도 루프가 되지 않는다.
-            gv_rhiBackend = pRHI->getCommittedBackend();
-        }
+#endif
+        // Shipping 에는 리로드할 모듈이 없다. 예전에는 셸 ActionMap 을 리소스에서 올려 매 프레임
+        // 갱신했지만 그 입력 상태를 질의하는 코드가 하나도 없었다 — 배포 빌드에서 아무도 읽지
+        // 않는 입력을 계속 돌리던 자리다.
     }
 
     void App::onResize( const uint32 width, const uint32 height )
@@ -348,67 +338,6 @@ namespace sw
     CameraComponent* App::getEditorViewCamera()
     {
         return _moduleHost != nullptr ? _moduleHost->getViewportCamera() : nullptr;
-    }
-
-    void App::onRhiBackendChanged( const GlobalVariableInfo* pInfo )
-    {
-        RHI* pRHI = _engineLoop.getRHI();
-        if ( pInfo == nullptr || pRHI == nullptr )
-            return;
-
-        // 아래에서 gv_rhiBackend 로 되돌림 대입을 하면 이 콜백이 다시 불린다.
-        // 되돌림 대상 자체가 사용 불가/에디터 미지원이면 무한 재귀가 되므로 재진입을 막는다.
-        if ( _bHandlingRhiBackendChange == SW_TRUE )
-            return;
-        _bHandlingRhiBackendChange = SW_TRUE;
-
-        const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
-        if ( _bEnableEditor == SW_TRUE && RHIAvailability::query( requestedBackend )._bEditorSupported == false )
-        {
-            SW_LOG_WARNING( "Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
-            gv_rhiBackend = pRHI->getCommittedBackend();
-        }
-        else
-        {
-            pRHI->schedulePendingBackendChange( requestedBackend );
-        }
-
-        _bHandlingRhiBackendChange = SW_FALSE;
-    }
-
-    bool App::applyPendingBackendChange()
-    {
-        if ( _moduleHost == nullptr )
-            return false;
-
-        void* pEditorModule{ nullptr };
-        void* pGameModule{ nullptr };
-#if !defined( SW_SHIPPING )
-        const LiveReloadManager* pLiveReloadManager = _engineLoop.getLiveReloadManager();
-        if ( pLiveReloadManager != nullptr )
-        {
-            pEditorModule = pLiveReloadManager->getModuleHandle( sw::config::kTargetEditorModule );
-            pGameModule   = pLiveReloadManager->getModuleHandle( sw::config::kTargetGameModule );
-        }
-#endif
-
-        _moduleHost->drainRenderWorkers();
-        _moduleHost->onBeforeRhiSwap();
-
-        const bool bSwapOk = _engineLoop.applyPendingBackendChange();
-        RHI*       pRHI    = _engineLoop.getRHI();
-        if ( pRHI == nullptr || pRHI->hasDevice() == false )
-        {
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );
-            return false;
-        }
-
-        const bool bReinitOk = _moduleHost->reinitializeAfterRhiSwap( pEditorModule, pGameModule );
-        if ( bReinitOk == false )
-            SW_LOG_ERROR( "reinitializeAfterRhiSwap 실패." );
-        if ( bSwapOk == false )
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — 이전 백엔드로 복구한 뒤 모듈을 재생성했습니다." );
-        return bSwapOk && bReinitOk;
     }
 
     void App::onForceReload( const utf8* pModuleName )
