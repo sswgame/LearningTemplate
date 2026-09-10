@@ -126,6 +126,22 @@ namespace sw
         "시작할 때 도구 패널까지 전부 연다 (0=사용 안 함)" );
 
     /**
+     * @brief `-gv_editorStartupScene=<리소스 경로>` — 에디터가 시작할 때 이 씬을 엽니다.
+     * @details 실기동 검증이 오래 **빈 씬만** 보고 있었다. 활성 게임이 `Empty` 라 맵이 없어서
+     *          `SceneManager` 가 씬 없이 뜨고 내려간다 — 그래서 오브젝트를 도는 코드(뷰포트 피킹·
+     *          컴포넌트 시각화·Hierarchy 트리·Profiler 분포표·씬 세대 변경 훅)가 검증에서 한 번도
+     *          실행되지 않았다. 이 스위치로 테스트 씬을 열면 그 경로가 전부 켜진다.
+     *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
+     *          `gv_editorPanelDump` 와 같은 이유로 선언이 여기 있고 EditorModule 이 읽는다
+     *          (커맨드라인은 모듈 로드 전에 파싱된다).
+     */
+    extern SW_API string                 gv_editorStartupScene;
+    SW_API string                        gv_editorStartupScene{};
+    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorStartupScene(
+        SW_GVM_MODULE_HEAD(), "gv_editorStartupScene", ::sw::GlobalVariableType::String, &gv_editorStartupScene, string{},
+        "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
+
+    /**
      * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.

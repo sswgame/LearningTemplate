@@ -99,6 +99,11 @@ Config/Editor/SpriteClip.json
 /NodeEditor.json
 Resource/config/editor/
 Resource/Config/Editor/
+# 쿠킹 산출물 — 원본은 .prefab.xml/.scene.xml 이고 .bin 은 CookAssets.py 가 만든다.
+# 무시하지 않으면 Shipping 을 빌드할 때마다 작업 트리가 더러워진다(예전에 bake.stamp 로 같은 일을 겪었다).
+Resource/**/*.prefab.bin
+Resource/**/maps/*.bin
+Resource/**/scenes/*.bin
 Resource/cache/
 Resource/Cache/
 /cache/

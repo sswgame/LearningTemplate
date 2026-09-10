@@ -38,25 +38,29 @@ cd build/Ninja-Debug/Bin
 
 현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 0개**.
 
-> ⚠️ **이 실기동 검증은 빈 씬을 본다.** `SW_ACTIVE_GAME=Empty` 는 맵이 없고 저장소에
-> `.scene.xml` 자체가 없다 — 로그를 보면 `SceneManager` 가 씬 없이 Initialized → Shut down 한다.
-> 따라서 이 게이트는 **오브젝트를 도는 코드 경로를 전혀 태우지 않는다**: 뷰포트 피킹, 컴포넌트
-> 시각화, Hierarchy 트리, Profiler 의 컴포넌트 분포표, 씬 세대 변경 훅
-> (`syncAfterSceneGenerationChange`) 모두 해당한다. 정점 수 비교가 증명하는 것은 그리드·통계·
-> 방향 큐브처럼 **오브젝트와 무관한** 그리기가 그대로라는 것까지다.
+> ⚠️ **기본 실기동 검증은 빈 씬을 본다.** `SW_ACTIVE_GAME=Empty` 는 맵이 없어서 `SceneManager` 가
+> 씬 없이 뜨고 내려간다 — 오브젝트를 도는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
+> Profiler 분포표 · 씬 세대 변경 훅)가 하나도 실행되지 않는다. 정점 수 742 비교가 증명하는 것은
+> 오브젝트와 무관한 그리기(그리드·통계·큐브)까지다.
 >
-> 오브젝트 경로는 단위 테스트로 덮는다(피킹은 `TestEditorViewportPick` 7케이스). 실기동으로도
-> 덮고 싶으면 **작은 테스트 씬 애셋**이 필요하다 — 오브젝트 몇 개(메시·스프라이트·콜라이더·
-> 카메라 하나씩)와 프리팹 인스턴스 하나면 위 경로가 전부 켜진다. 콘텐츠를 추가하는 결정이라
-> 여기서는 하지 않았다.
-
-(전부 열었을 때 한 번 나왔던 `Sequencer/00000379` 는 확인해서 닫았다 — ImSequencer 가 함수 앞머리에서
-`GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )`(=0x379) 안에서도 그 리스트에 그리기 때문에
-자식의 정점이 0 이다. 라이브러리가 **정수 id 로 만든 자식 창**은 우리가 판별할 수 없으므로 세지
-않는다 — 우리 자식 창은 늘 문자열 id 를 쓴다.) 정점 수가 정확히 같기를 기대하면 안 된다 —
-폰트·DPI·도킹·애니메이션이 값을 흔든다. 보는 것은 "0 이 아닌가" 와 "창 목록이 그대로인가" 다.
-(도구가 실제로 잡는지 확인했다: `HierarchyPanel::drawContent` 를 즉시 return 으로 막으면
-`Hierarchy ... vtx=0 <== BLANK` 와 "내용 없는 패널 1개" 가 나온다.)
+> **테스트 씬을 쓰면 그 경로가 켜진다** (2026-09-10 추가):
+>
+> ```powershell
+> # PowerShell 은 점이 든 인자를 쪼갠다 — **반드시 따옴표로 감쌀 것**
+> ./App.exe -gv_profileFrames=60 -dx12 -EnableEditor `
+>   "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml" -gv_editorPanelDump=40
+> ```
+>
+> 확인된 차이: Hierarchy 정점 **56 → 228**, Game View **742 → 1766**, 창 14개 → 15개.
+> 즉 트리·콜라이더 와이어프레임·카메라 프러스텀이 실제로 그려진다.
+> 애셋은 `Resource/game/empty/maps/editortest.scene.xml` 과
+> `Resource/game/empty/prefabs/testprop.prefab.xml` 이고, **엔진 직렬화기로 생성**했다(손으로 쓴
+> XML 이 아니다 — 임베디드 오브젝트 XML 은 리플렉션 산출물이라 손으로 쓰면 깨진다).
+>
+> **주의 1**: 이 스위치를 쓰면 **종료 시 크래시한다** — 아래 1-B. 기본 게이트(스위치 없음)는
+> 네 백엔드 모두 종료 코드 0 · `[Error]` 0건 · vtx=742 로 그대로다.
+> **주의 2**: 씬의 메시·스프라이트·카메라는 **원점에 겹쳐 로드된다** — 1-A(상속 PROPERTY 가
+> 직렬화되지 않는 결함) 때문이다. 그것을 고치면 애셋을 다시 생성해야 한다.
 
 ```powershell
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
@@ -136,6 +140,41 @@ cd build/Ninja-Debug/Bin
 시작하고, `ComponentDefaults`·`SchemaMigrate` 가 보는 프로퍼티 집합이 늘어난다. 확인할 것:
 `getPropertiesWithBase()` 가 파생이 같은 이름을 다시 선언한 경우를 어떻게 다루는지(중복 방출),
 그리고 기본값 적용이 두 번 되지 않는지. **엔진 전역 포맷 의미 변경이라 사용자 결정이 필요하다.**
+
+### 1-B. 테스트 씬을 로드하면 **종료 시 컴포넌트 풀 해제가 깨진다** — 재현 한 줄
+
+테스트 씬 애셋을 넣자마자 나온 크래시다. 재현:
+
+```powershell
+cd build/Ninja-Debug/Bin
+./App.exe -gv_profileFrames=60 -dx12 -EnableEditor `
+  "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml"
+# 종료 코드 -2147483645 (0x80000003, 디버그 브레이크)
+```
+
+**증상**: 종료 경로에서 `PoolAllocator::free` 의 단정이 걸린다 —
+`"Pointer does not belong to any allocated chunk!"`. 스택은
+`SceneManager::shutdown` → `~Scene` → `~GameObjectManager` → `clear()` → `~GameObject` →
+`clearComponents` → `destroyComponentInstance` → `PoolAllocator::free` 다.
+
+**좁혀 둔 것** (다음 사람이 여기서 이어가면 된다):
+
+- 임시 로그로 확인: 크래시는 **첫 번째 풀 해제**에서 난다(마침 `CameraComponent` 였다). 즉 그
+  타입이 특별한 것이 아니라 **그 전에 이미 힙/풀이 깨져 있다.**
+- 엔티티 하나(`TestCollider` = SceneComponent + BoxCollider2D)만 남긴 최소 씬은 **정상 종료**하고
+  CameraComponent 두 개를 깨끗이 해제한다. 즉 최소 씬에 없는 무엇이 원인이다 — 남은 용의자는
+  MeshComponent · SpriteComponent · DirectionalLightComponent · 두 번째 CameraComponent ·
+  부모-자식(`TestParent`).
+- `-gv_benchMeshes=8` 로 **코드로 만든** 씬은 종료 코드 0 이다. 그래서 스폰 자체가 아니라
+  **XML 로드 경로**(`Scene::instantiate` → `ObjectStateSerializer::loadFromXmlString` →
+  `addComponentByName` 팩토리)와 관련될 가능성이 높다.
+- 배제한 가설: 모든 컴포넌트 클래스에 `REFLECT_BODY()` 가 있어 파생 타입이 기반의 `TypeInfo` 를
+  공유하는 경우는 아니다(전수 확인). 즉 풀 키(`StaticType()`)와 해제 키(`getTypeInfo()`)가
+  엇갈리는 단순한 경우는 아니다.
+- 다음 단계 제안: 엔티티를 하나씩 늘려 이분하고(최소 씬이 통과하므로 이분이 잘 듣는다),
+  잡히면 ASan(`Ninja-Debug-ASAN`)으로 같은 씬을 로드해 진짜 덮어쓴 지점을 찾는다.
+  풀 블록 크기는 `getOrCreateComponentPool( pTypeInfo, sizeof( T ) )` 가 **처음 만든 타입 기준**
+  이라는 점을 먼저 의심할 만하다.
 
 ### 1-0. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
 

@@ -1,0 +1,8 @@
+<Prefab formatVersion="0" name="TestProp">
+	<GameObject _schemaVersion="0" _name="TestProp" _bActive="true">
+		<_listComponent>
+			<SpriteComponent _meshName="" _materialName="" _textureName="" _spriteName="" />
+			<BoxCollider2DComponent _offsetPos="0,0" _offsetScale="1,1" _colliderType="0" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

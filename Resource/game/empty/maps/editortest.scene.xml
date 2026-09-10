@@ -1,0 +1,79 @@
+<Scene formatVersion="0" name="EditorTest">
+	<entities>
+		<entity name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestMesh">
+			<GameObject _schemaVersion="0" _name="TestMesh" _bActive="true">
+				<_listComponent>
+					<MeshComponent _meshId="" _boundsRadius="0.866" _blendMode="null" _gpuSpinSeed="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestSprite">
+			<GameObject _schemaVersion="0" _name="TestSprite" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _meshName="" _materialName="" _textureName="" _spriteName="" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestCollider">
+			<GameObject _schemaVersion="0" _name="TestCollider" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="2,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<BoxCollider2DComponent _offsetPos="0,0" _offsetScale="1.5,1.5" _colliderType="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestGameCamera">
+			<GameObject _schemaVersion="0" _name="TestGameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestKeyLight">
+			<GameObject _schemaVersion="0" _name="TestKeyLight" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.28"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity name="TestParent">
+			<GameObject _schemaVersion="0" _name="TestParent" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,2,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

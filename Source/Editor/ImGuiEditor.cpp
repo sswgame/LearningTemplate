@@ -45,6 +45,12 @@
 #include <ImGuizmo.h>
 #include <implot.h>
 
+namespace sw
+{
+    /** @brief `-gv_editorStartupScene=<경로>` — 선언은 `Engine/EngineLoop.cpp` 에 있다(읽기만 한다). */
+    extern SW_API string gv_editorStartupScene;
+} // namespace sw
+
 namespace sw::editor
 {
     namespace
@@ -209,6 +215,15 @@ namespace sw::editor
             _editorContext->getPanelManager().registerDefaultPanels();
             EditorCommandGui::registerDefaults();
             _dockLayout.loadPanelVisibility();
+
+            // `-gv_editorStartupScene=<경로>` — 검증용. 선언은 Engine/EngineLoop.cpp 에 있다.
+            // 빈 씬만 보던 실기동 검증이 오브젝트를 도는 코드까지 덮게 하는 스위치다.
+            if ( gv_editorStartupScene.empty() == false )
+            {
+                SW_LOG_INFO( "시작 씬을 엽니다: %#", gv_editorStartupScene.c_str() );
+                if ( EditorAssetCommands::loadScene( gv_editorStartupScene ) == false )
+                    SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", gv_editorStartupScene.c_str() );
+            }
         }
 
         if ( pWindow != nullptr )
