@@ -100,7 +100,6 @@ namespace sw::editor
         , _selectedGlyphPlatform{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
-        , _bDirty{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -234,10 +233,10 @@ namespace sw::editor
         if ( ImGui::Button( "Revert All to Default" ) )
         {
             _actionMap.resetAllBindingsToDefault();
-            _bDirty = SW_TRUE;
+            markDocumentDirty();
         }
 
-        if ( _bDirty == SW_TRUE )
+        if ( isDocumentDirty() )
         {
             ImGui::SameLine();
             EditorThemeUtil::textWarning( "* Unsaved changes" );
@@ -279,7 +278,7 @@ namespace sw::editor
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
                     {
                         _actionMap.setLayerEnabled( layerName.view(), bEnabled );
-                        _bDirty = SW_TRUE;
+                        markDocumentDirty();
                     }
                     ImGui::PopID();
 
@@ -368,7 +367,7 @@ namespace sw::editor
                 if ( ImGui::Button( "Reset" ) )
                 {
                     _actionMap.resetActionToDefault( actionName.view() );
-                    _bDirty = SW_TRUE;
+                    markDocumentDirty();
                 }
                 ImGui::PopID();
             }
@@ -394,7 +393,7 @@ namespace sw::editor
                 const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( _newActionValueType, 0, 2 )];
                 _actionMap.createAction( _newActionName.c_str(), valueType );
                 _newActionName = "";
-                _bDirty        = SW_TRUE;
+                markDocumentDirty();
             }
         }
     }
@@ -421,7 +420,7 @@ namespace sw::editor
                     if ( pInput->wasKeyPressed( k ) )
                     {
                         _actionMap.rebindKey( _selectedAction.c_str(), k, _capturingBindIndex );
-                        _bDirty        = SW_TRUE;
+                        markDocumentDirty();
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -441,7 +440,7 @@ namespace sw::editor
 
                     {
                         _actionMap.rebindKey( _selectedAction.c_str(), k, _capturingBindIndex );
-                        _bDirty        = SW_TRUE;
+                        markDocumentDirty();
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -679,7 +678,7 @@ namespace sw::editor
                         if ( ImGui::Button( "Unbind B" ) )
                         {
                             _actionMap.rebindKey( nameB.c_str(), Key::Unknown, 0 );
-                            _bDirty = SW_TRUE;
+                            markDocumentDirty();
                         }
                         ImGui::PopID();
                     }
@@ -1006,14 +1005,29 @@ namespace sw::editor
     void InputMapEditorPanel::reloadFromFile()
     {
         _actionMap.loadFromResource( _inputMapPath.c_str() );
-        _bDirty = SW_FALSE;
+        clearDocumentDirty();
         SW_LOG_INFO( "Reloaded InputMap from %#", _inputMapPath.c_str() );
     }
 
-    void InputMapEditorPanel::saveToFile()
+    bool InputMapEditorPanel::saveToFile()
     {
-        _actionMap.saveUserBindings( _inputMapPath.c_str() );
-        _bDirty = SW_FALSE;
+        if ( _actionMap.saveUserBindings( _inputMapPath.c_str() ) == false )
+        {
+            SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
+            return false;
+        }
+        clearDocumentDirty();
         SW_LOG_INFO( "Saved InputMap to %#", _inputMapPath.c_str() );
+        return true;
+    }
+
+    bool InputMapEditorPanel::saveDocument()
+    {
+        return saveToFile();
+    }
+
+    void InputMapEditorPanel::revertDocument()
+    {
+        reloadFromFile();
     }
 } // namespace sw::editor

@@ -11,6 +11,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorBackgroundJob.cpp
 		TestEditorCommandRegistry.cpp
 		TestEditorListFilter.cpp
+		TestEditorPanelDocument.cpp
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorViewportMath.cpp

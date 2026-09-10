@@ -12,7 +12,12 @@ namespace sw::editor
     {
         EditorChrome::setNextPanelSize( getInitialPanelSize() );
 
-        if ( EditorChrome::beginPanel( getPanelTitle(), getOpenPtr(), getPanelFlags() ) == false )
+        // 미저장 표시는 파생의 getPanelFlags() 재정의와 무관하게 항상 붙는다.
+        EditorPanelFlags panelFlags = getPanelFlags();
+        if ( _bDocumentDirty )
+            panelFlags |= EditorPanelFlags::UnsavedDocument;
+
+        if ( EditorChrome::beginPanel( getPanelTitle(), getOpenPtr(), panelFlags ) == false )
         {
             _bWindowFocused = false;
             onPanelCollapsed();

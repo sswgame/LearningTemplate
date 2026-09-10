@@ -22,9 +22,6 @@ namespace sw::editor
     public:
         bool        isToolPanel() const override { return true; }
         const utf8* getPanelTitle() const override;
-        bool        trySaveDirtyDocument() override;
-        bool        isDocumentDirty() const override { return _bDocumentDirty == SW_TRUE; }
-        void        discardDirtyDocument() override;
 
     protected:
         /**
@@ -45,11 +42,13 @@ namespace sw::editor
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
         void          markDocumentLoaded();
         bool          isDocumentLoaded() const;
-        void          markDocumentDirty();
-        void          clearDocumentDirty();
 
-        /** @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다. */
-        virtual bool saveDocument() = 0;
+        /**
+         * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다.
+         * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시
+         *          구현해야 하므로 여기서 다시 순수 가상으로 못박습니다 — 잊으면 컴파일이 막힙니다.
+         */
+        bool saveDocument() override = 0;
         /** @brief 편집 단위 Undo를 남기고 dirty로 표시합니다. */
         void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
         /** @brief 로드/저장 직후 Undo 기준 텍스트를 맞춥니다. */
@@ -68,8 +67,6 @@ namespace sw::editor
             return maxId + 1;
         }
 
-        EditorPanelFlags getPanelFlags() const override;
-
     private:
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
@@ -80,8 +77,7 @@ namespace sw::editor
         string                 _documentUndoBaseline;
         string                 _lastSavedDocumentText;
         uint8                  _bLoaded        : 1;
-        uint8                  _bDocumentDirty : 1;
         uint8                  _bConfirmSwitch : 1;
-        [[maybe_unused]] uint8 _reserved       : 5;
+        [[maybe_unused]] uint8 _reserved       : 6;
     };
 } // namespace sw::editor

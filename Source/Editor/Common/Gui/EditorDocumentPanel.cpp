@@ -20,7 +20,6 @@ namespace sw::editor
         , _documentUndoBaseline{}
         , _lastSavedDocumentText{}
         , _bLoaded{ SW_FALSE }
-        , _bDocumentDirty{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -54,8 +53,8 @@ namespace sw::editor
         _loadedAssetPath = string{ focused };
         _pendingFocusPath.clear();
         _bLoaded        = SW_FALSE;
-        _bDocumentDirty = SW_FALSE;
         _bConfirmSwitch = SW_FALSE;
+        clearDocumentDirty();
     }
 
     void EditorDocumentPanel::updateFocusedDocument()
@@ -82,29 +81,14 @@ namespace sw::editor
 
     void EditorDocumentPanel::markDocumentLoaded()
     {
-        _bLoaded        = SW_TRUE;
-        _bDocumentDirty = SW_FALSE;
+        _bLoaded = SW_TRUE;
+        clearDocumentDirty();
         syncDocumentUndoBaseline();
     }
 
     bool EditorDocumentPanel::isDocumentLoaded() const
     {
         return _bLoaded == SW_TRUE;
-    }
-
-    void EditorDocumentPanel::markDocumentDirty()
-    {
-        _bDocumentDirty = SW_TRUE;
-    }
-
-    void EditorDocumentPanel::clearDocumentDirty()
-    {
-        _bDocumentDirty = SW_FALSE;
-    }
-
-    void EditorDocumentPanel::discardDirtyDocument()
-    {
-        clearDocumentDirty();
     }
 
     void EditorDocumentPanel::syncDocumentUndoBaseline()
@@ -141,20 +125,6 @@ namespace sw::editor
             coalesceKey );
         _documentUndoBaseline = after;
         markDocumentDirty();
-    }
-
-    bool EditorDocumentPanel::trySaveDirtyDocument()
-    {
-        if ( isDocumentDirty() == false )
-            return false;
-        return saveDocument();
-    }
-
-    EditorPanelFlags EditorDocumentPanel::getPanelFlags() const
-    {
-        if ( isDocumentDirty() )
-            return EditorPanelFlags::UnsavedDocument;
-        return EditorPanelFlags::None;
     }
 
     void EditorDocumentPanel::drawUnsavedDocumentPopup()

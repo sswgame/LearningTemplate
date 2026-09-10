@@ -153,44 +153,28 @@ namespace sw::editor
         , _presetNameBuf{}
         , _bGroupByModule{ SW_TRUE }
         , _bPresetListDirty{ SW_TRUE }
-        , _bSessionDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
-    bool GlobalVariablesPanel::isDocumentDirty() const
+    bool GlobalVariablesPanel::saveDocument()
     {
-        return _bSessionDirty == SW_TRUE;
-    }
-
-    bool GlobalVariablesPanel::trySaveDirtyDocument()
-    {
-        if ( isDocumentDirty() == false )
-            return false;
         if ( EditorGlobalVariableCommands::saveSessionPreset() == false )
             return false;
-        _bSessionDirty = SW_FALSE;
+        clearDocumentDirty();
         return true;
     }
 
-    void GlobalVariablesPanel::discardDirtyDocument()
+    void GlobalVariablesPanel::revertDocument()
     {
         GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
         if ( pGvm != nullptr )
             pGvm->resetAllToDefault();
-        _bSessionDirty = SW_FALSE;
-    }
-
-    EditorPanelFlags GlobalVariablesPanel::getPanelFlags() const
-    {
-        if ( isDocumentDirty() )
-            return EditorPanelFlags::UnsavedDocument;
-        return EditorPanelFlags::None;
     }
 
     void GlobalVariablesPanel::markSessionDirty()
     {
-        _bSessionDirty = SW_TRUE;
+        markDocumentDirty();
     }
 
     void GlobalVariablesPanel::drawContent()
@@ -285,7 +269,7 @@ namespace sw::editor
                     EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() );
                     _presetNameBuf.clear();
                     _bPresetListDirty = SW_TRUE;
-                    _bSessionDirty    = SW_FALSE;
+                    clearDocumentDirty();
                 }
 
                 ImGui::Separator();
@@ -324,7 +308,7 @@ namespace sw::editor
                         if ( ImGui::MenuItem( displayName.c_str() ) )
                         {
                             EditorGlobalVariableCommands::loadPreset( presetFile );
-                            _bSessionDirty = SW_FALSE;
+                            clearDocumentDirty();
                         }
                     }
                 }

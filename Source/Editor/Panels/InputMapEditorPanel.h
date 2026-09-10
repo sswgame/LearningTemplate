@@ -28,6 +28,16 @@ namespace sw::editor
         void        drawContent() override;
         bool        isToolPanel() const override { return true; }
 
+        /**
+         * @brief InputMap XML 을 씁니다.
+         * @details 예전에는 이 패널이 자기 `_bDirty` 만 들고 문서 계약을 구현하지 않아서,
+         *          화면에는 "* Unsaved changes" 를 띄우면서 Ctrl+S 는 이 파일이 아니라 **씬을**
+         *          저장했고(`saveFocusedOrScene` 이 이 패널을 dirty 로 보지 못했다) 종료 확인도
+         *          이 편집을 세지 않아 조용히 사라졌다. 이제 기반이 dirty 비트를 든다.
+         */
+        bool saveDocument() override;
+        void revertDocument() override;
+
     private:
         void drawActionMapTab();
         void drawDeviceMonitorTab();
@@ -53,7 +63,7 @@ namespace sw::editor
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
 
         void reloadFromFile();
-        void saveToFile();
+        bool saveToFile();
 
     private:
         static constexpr size_t kPlotSampleCount = 120;
@@ -83,8 +93,7 @@ namespace sw::editor
         int32                  _selectedGlyphPlatform;
         uint8                  _bLoaded       : 1;
         uint8                  _bCapturingKey : 1;
-        uint8                  _bDirty        : 1;
         uint8                  _bPlotPaused   : 1;
-        [[maybe_unused]] uint8 _reserved      : 4;
+        [[maybe_unused]] uint8 _reserved      : 5;
     };
 } // namespace sw::editor

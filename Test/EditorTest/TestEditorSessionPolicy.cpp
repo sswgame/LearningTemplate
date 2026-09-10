@@ -46,14 +46,6 @@ SW_TEST_CASE( EditorSessionPolicyTest, NodeMoveDirtyOnlyAfterLayoutReady )
     SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( true, true ) );
 }
 
-SW_TEST_CASE( EditorSessionPolicyTest, ToolSessionDirtyCombinesSources )
-{
-    SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::isToolSessionDirty( false, false, false ) );
-    SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::isToolSessionDirty( true, false, false ) );
-    SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::isToolSessionDirty( false, true, false ) );
-    SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::isToolSessionDirty( false, false, true ) );
-}
-
 SW_TEST_CASE( EditorSessionPolicyTest, DocumentCoalesceKeyIsPerProperty )
 {
     SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::shouldCoalesceDocumentEdits( "material-prop:Albedo", "material-prop:Albedo" ) );

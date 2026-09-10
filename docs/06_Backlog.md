@@ -60,8 +60,8 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 40 / SmokeTest 19
-#   Shipping : 161 / 422 / 96 / 40 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 44 / SmokeTest 19
+#   Shipping : 161 / 422 / 96 / 44 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -297,6 +297,48 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (미저장 문서 계약을 기반으로)
+
+**InputMapEditorPanel 의 편집이 조용히 사라지고 있었다.** 이 패널은 자기 `_bDirty` 를 들고
+화면에 "* Unsaved changes" 까지 띄웠지만, `IEditorPanel` 의 문서 계약
+(`isDocumentDirty`/`trySaveDirtyDocument`/`discardDirtyDocument`)을 **하나도 구현하지 않았다.**
+그래서:
+
+- `Ctrl+S` 를 이 패널에 포커스를 두고 눌러도 `saveFocusedDirtyDocument()` 가 이 패널을 dirty 로
+  보지 못해 false 를 돌려주고, `saveFocusedOrScene` 이 대신 **씬을** 저장했다.
+- 종료·새 씬·씬 열기의 미저장 확인은 `countDirtyDocuments()` 로 세는데 이 패널이 0 으로 세어졌다.
+  `saveAllDirtyDocuments()`·`discardAllDirtyDocuments()` 도 건너뛰었다 — 즉 편집이 사라졌다.
+- 제목의 미저장 표시(`UnsavedDocument`)도 붙지 않았다.
+
+원인은 계약이 **가상 함수 넷 + getPanelFlags 재정의**여서, 패널마다 자기 dirty 플래그를 들고
+같은 것을 다시 구현해야 했다는 것이다. 실제로 세 패널(`EditorDocumentPanel`·`DataTablePanel`·
+`GlobalVariablesPanel`)이 네 메서드와 `getPanelFlags` 의 같은 분기를 각자 복사하고 있었고, 넷째는
+복사하지 않아 반쪽이 되었다.
+
+**dirty 비트를 `IEditorPanel` 이 들게 했다.** `isDocumentDirty()` 는 더 이상 가상이 아니고,
+파생은 `markDocumentDirty()` 로 알리고 `saveDocument()`/`revertDocument()` 만 구현한다.
+`trySaveDirtyDocument`/`discardDirtyDocument` 는 기반이 dirty 를 보고 그 둘을 부른다. 미저장
+표시는 `draw()` 가 dirty 를 보고 스스로 더하므로, 다른 플래그 때문에 `getPanelFlags()` 를
+재정의한 패널도 표시를 잃지 않는다. 이제 **반쪽 구현이 불가능하다** — 패널이 dirty 를 알리는
+유일한 방법이 기반 비트이기 때문이다.
+
+계약은 ImGui 없이 컴파일되므로(두 함수를 헤더 인라인으로 내렸다) 가짜 패널로 테스트가 붙는다 —
+`TestEditorPanelDocument.cpp` 5케이스: 알림이 잡히는지 · dirty 일 때만 저장하는지 ·
+**저장 실패 시 dirty 가 남는지**(종료를 멈추는 근거다) · 버리기가 되돌리기를 부르는지 ·
+문서 없는 패널이 조용히 지나가는지. `EditorTest` 40 → **44**
+(쓰이지 않게 된 `EditorSessionPolicy::isToolSessionDirty` 와 그 케이스 1개를 걷어냈다).
+
+감사로 확인한 것: 이제 문서 계약을 재정의하는 자리는 `saveDocument`/`revertDocument` 뿐이고,
+패널에 남은 `*Dirty` 비트는 전부 **캐시 무효화** 플래그다(ContentBrowser 의 루트·폴더 목록,
+GlobalVariables 의 프리셋 목록, Profiler 의 카탈로그, Inspector 의 프리셋 목록) — 문서 dirty 가
+아니다. `DataTablePanel` 의 `_bLocDirty`/`_bGameDataDirty` 만 남았고, 이는 문서가 둘이라 어느
+쪽을 저장할지 알아야 하기 때문이며 `syncDocumentDirty()` 한 곳에서 기반 비트와 맞춘다.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5(양쪽), 린트 6/6, 네 백엔드 실기동 종료 코드 0 ·
+`[Error]` 0건, 전부 열기 덤프 창 29개/빈 패널 0개.
+**한계**: 계약 자체는 테스트가 잡지만, "어떤 패널이 계약을 쓰는가" 는 테스트가 잡지 못한다.
+새 패널이 또 자기 플래그를 만들면 위 감사 grep 으로만 보인다.
 
 ### 2026-09-10 (에디터 커맨드 SSOT)
 

@@ -42,6 +42,7 @@
 | 새로 쓰는 것 | 자리 |
 |---|---|
 | 메뉴·단축키·커맨드 팔레트에 나타날 동작 | `Common/Gui/EditorCommandGui.cpp` 의 커맨드 표 (아래) |
+| 저장되지 않을 수 있는 편집 | `IEditorPanel` 의 문서 계약 (아래) — 자기 dirty 플래그 금지 |
 | ImGui 를 그린다 | `Common/Gui/` · `Common/Widgets/` · `Panels/` · `Popups/` |
 | ImGui 없이 상태만 든다 | `Common/Workspace/` |
 | ImGui 없이 무언가를 바꾸거나 읽고 쓴다 | `Common/Commands/` |
@@ -73,6 +74,29 @@ Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 In
 comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp | sed 's/.*"\(.*\)"/\1/' | sort) \
          <(grep -o '{ "[a-z][a-zA-Z.]*"' Source/Editor/Common/Gui/EditorCommandGui.cpp | sed 's/{ "\(.*\)"/\1/' | sort)
 ```
+
+## 저장되지 않은 편집을 다루는 법
+
+패널이 편집을 들고 있으면 **`IEditorPanel` 의 문서 계약**을 씁니다. 파생이 할 일은 둘뿐입니다:
+편집이 생겼을 때 `markDocumentDirty()` 를 부르고, `saveDocument()`(성공 시 true)와 되돌릴 것이
+있으면 `revertDocument()` 를 구현하는 것. dirty 비트는 **기반이 듭니다.**
+
+그러면 이것이 전부 자동으로 따라옵니다 — 제목의 미저장 표시(`UnsavedDocument`), `Ctrl+S`
+(`EditorAssetCommands::saveFocusedOrScene` → 포커스된 더티 문서), 종료·씬 전환 확인 모달의
+개수 집계(`EditorPanelManager::countDirtyDocuments`), 전체 저장·버리기.
+
+**자기 dirty 플래그를 새로 만들지 마십시오.** 예전에는 이 계약이 네 개의 가상 함수였고, 세 패널
+(`EditorDocumentPanel`·`DataTablePanel`·`GlobalVariablesPanel`)이 똑같은 구현을 각자 복사했으며,
+`InputMapEditorPanel` 은 `_bDirty` 만 두고 계약을 아예 구현하지 않았습니다 — 그래서 화면에는
+"* Unsaved changes" 를 띄우면서 `Ctrl+S` 는 InputMap 이 아니라 **씬을** 저장했고, 종료 확인은
+그 편집을 세지 않아 조용히 사라졌습니다.
+
+문서 하나가 애셋 경로와 연동되는 도구 패널은 `Common/Gui/EditorDocumentPanel` 을 상속하십시오
+(포커스 추적 · Undo 기준선 · 문서 전환 확인 팝업까지 얹어 줍니다). 한 패널이 문서를 둘 이상
+들면(`DataTablePanel`) 기반 비트는 "무언가 바뀌었다"만 말하므로, 어느 쪽인지는 패널이 자기
+반쪽 비트로 알고 한곳에서 동기화합니다(`syncDocumentDirty`).
+
+계약 자체는 ImGui 없이 컴파일되므로 테스트가 있습니다: `Test/EditorTest/TestEditorPanelDocument.cpp`.
 
 ## 그려진 결과를 검증하는 법
 

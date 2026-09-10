@@ -38,52 +38,55 @@ namespace sw::editor
     {
     }
 
-    bool DataTablePanel::isDocumentDirty() const
+    /**
+     * @brief 두 문서(로컬라이즈·게임 데이터)를 한 패널이 들기 때문에 dirty 한 쪽만 저장합니다.
+     * @details 기반의 dirty 비트는 "무언가 바뀌었다"만 말하므로, 어느 쪽인지는 여기 두 비트가 안다.
+     */
+    bool DataTablePanel::saveDocument()
     {
-        return EditorSessionPolicy::isToolSessionDirty( _bLocDirty == SW_TRUE, _bGameDataDirty == SW_TRUE, false );
-    }
-
-    bool DataTablePanel::trySaveDirtyDocument()
-    {
-        if ( isDocumentDirty() == false )
-            return false;
         if ( _bLocDirty == SW_TRUE )
             saveLocalization();
         if ( _bGameDataDirty == SW_TRUE )
             saveSelectedGameDataFile();
-        return isDocumentDirty() == false;
+        return _bLocDirty == SW_FALSE && _bGameDataDirty == SW_FALSE;
     }
 
-    void DataTablePanel::discardDirtyDocument()
+    void DataTablePanel::revertDocument()
     {
         if ( _bLocDirty == SW_TRUE )
         {
             EditorDataTableCommands::loadLocalization( _listLocRecord );
             _bLocLoaded = SW_TRUE;
             _bLocDirty  = SW_FALSE;
+            syncDocumentDirty();
         }
         if ( _bGameDataDirty == SW_TRUE )
         {
             _selectedGameDataRawText = _savedGameDataRawText;
             _bGameDataDirty          = SW_FALSE;
+            syncDocumentDirty();
         }
-    }
-
-    EditorPanelFlags DataTablePanel::getPanelFlags() const
-    {
-        if ( isDocumentDirty() )
-            return EditorPanelFlags::UnsavedDocument;
-        return EditorPanelFlags::None;
     }
 
     void DataTablePanel::markLocDirty()
     {
         _bLocDirty = SW_TRUE;
+        syncDocumentDirty();
     }
 
     void DataTablePanel::markGameDataDirty()
     {
         _bGameDataDirty = SW_TRUE;
+        syncDocumentDirty();
+    }
+
+    void DataTablePanel::syncDocumentDirty()
+    {
+        const bool bAnyDirty = ( _bLocDirty == SW_TRUE || _bGameDataDirty == SW_TRUE );
+        if ( bAnyDirty )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
     }
 
     void DataTablePanel::pollBackgroundJobs()
@@ -359,6 +362,7 @@ namespace sw::editor
     {
         _bLocDirty  = SW_FALSE;
         _bLocLoaded = SW_FALSE;
+        syncDocumentDirty();
         _locJob.request();
     }
 
@@ -366,6 +370,7 @@ namespace sw::editor
     {
         EditorDataTableCommands::saveLocalization( _listLocRecord );
         _bLocDirty = SW_FALSE;
+        syncDocumentDirty();
     }
 
     void DataTablePanel::reloadGameDataFiles()
@@ -383,6 +388,7 @@ namespace sw::editor
         FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
         _savedGameDataRawText = _selectedGameDataRawText;
         _bGameDataDirty       = SW_FALSE;
+        syncDocumentDirty();
     }
 
     void DataTablePanel::saveSelectedGameDataFile()
@@ -395,6 +401,7 @@ namespace sw::editor
             return;
         _savedGameDataRawText = _selectedGameDataRawText;
         _bGameDataDirty       = SW_FALSE;
+        syncDocumentDirty();
         SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
     }
 } // namespace sw::editor
