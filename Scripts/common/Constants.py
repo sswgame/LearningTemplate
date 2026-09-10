@@ -120,6 +120,7 @@ kKeySccacheDownloadUrls = "sccache_download_urls"
 kKeyLlvmToolsSubdir = "llvm_tools_subdir"
 kKeyLlvmSearchRoots = "llvm_search_roots"
 kKeyLlvmDownloadUrls = "llvm_download_urls"
+kKeyClangFormatVersion = "clang_format_version"
 kKeyLlvmAutoBootstrap = "llvm_auto_bootstrap"
 
 kKeyVcpkgToolsSubdir = "vcpkg_tools_subdir"

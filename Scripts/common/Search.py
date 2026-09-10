@@ -174,15 +174,59 @@ def findFirstValidRoot(templates: Iterable[str],
     )
 
 
+def _naturalVersionKeyInternal(text: str) -> list[Any]:
+    """`llvm-9` 와 `llvm-21` 을 사전순이 아니라 숫자로 비교하기 위한 정렬 키입니다."""
+    parts: list[Any] = []
+    digits = ""
+    for ch in text:
+        if ch.isdigit():
+            digits += ch
+            continue
+        if digits:
+            parts.append(int(digits))
+            digits = ""
+        parts.append(ch)
+    if digits:
+        parts.append(int(digits))
+    # int 와 str 이 섞이면 비교가 터진다 — 종류를 앞에 붙여 같은 종류끼리만 비교되게 한다.
+    return [(0, v, "") if isinstance(v, int) else (1, 0, v) for v in parts]
+
+
+def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
+    """
+    `*` 가 든 절대 경로 항목을 실제로 존재하는 디렉터리들로 펼칩니다.
+
+    손으로 `/usr/lib/llvm-20 … llvm-14` 를 나열해 두면 배포판이 새 메이저를 올릴 때마다 목록
+    밖으로 조용히 비켜간다(실제로 llvm-21 이 그랬다). 펼친 결과는 **높은 버전이 먼저** 오도록
+    자연순 내림차순으로 둔다 — 먼저 찾은 것을 쓰는 탐색이므로 최신이 앞이어야 한다.
+
+    `${sourceDir}` 같은 템플릿이 든 항목은 여기서 건드리지 않는다 — 확장은 뒷단이 한다.
+    """
+    expanded: list[str] = []
+    for root in roots:
+        if "*" not in root or "${" in root:
+            expanded.append(root)
+            continue
+        try:
+            matches = [str(m) for m in Path("/").glob(root.lstrip("/")) if m.is_dir()] if root.startswith("/") \
+                else [str(m) for m in Path(".").glob(root) if m.is_dir()]
+        except OSError:
+            matches = []
+        expanded.extend(sorted(matches, key=_naturalVersionKeyInternal, reverse=True))
+    return expanded
+
+
 def platformSearchRoots(search: dict[str, Any], rootsKey: str) -> list[str]:
     """
     설정 파일(search_paths.json)에서 현재 OS 플랫폼(windows, linux, darwin)에 해당하는 탐색 경로 목록을 가져옵니다.
+
+    `*` 가 든 항목은 실제 디렉터리로 펼쳐진다(자연순 내림차순).
     """
     raw = search.get(rootsKey, [])
     if isinstance(raw, dict):
-        return list(raw.get(platformKey(), []) or [])
+        return expandSearchRootGlobsInternal(list(raw.get(platformKey(), []) or []))
     if isinstance(raw, list):
-        return [str(item) for item in raw]
+        return expandSearchRootGlobsInternal([str(item) for item in raw])
     return []
 
 

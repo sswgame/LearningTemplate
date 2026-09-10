@@ -17,7 +17,7 @@
     "llvm_auto_bootstrap": true,
     "llvm_download_urls": {
         "windows": "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/clang+llvm-20.1.8-x86_64-pc-windows-msvc.tar.xz",
-        "linux": "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04.tar.xz",
+        "linux": "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-Linux-X64.tar.xz",
         "darwin": ""
     },
     "llvm_search_roots": {
@@ -27,13 +27,7 @@
             "${sourceDir}/${llvm_tools_subdir}"
         ],
         "linux": [
-            "/usr/lib/llvm-20",
-            "/usr/lib/llvm-19",
-            "/usr/lib/llvm-18",
-            "/usr/lib/llvm-17",
-            "/usr/lib/llvm-16",
-            "/usr/lib/llvm-15",
-            "/usr/lib/llvm-14",
+            "/usr/lib/llvm-*",
             "/usr",
             "${sourceDir}/${llvm_tools_subdir}"
         ],
@@ -46,5 +40,6 @@
     "vcpkg_git_commit": "",
     "vcpkg_auto_bootstrap": true,
     "vcpkg_search_roots": [],
-    "vcpkg_installed_rel": "build/vcpkg_installed"
+    "vcpkg_installed_rel": "build/vcpkg_installed",
+    "clang_format_version": "20.1.8"
 }
