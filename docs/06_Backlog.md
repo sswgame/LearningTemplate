@@ -78,9 +78,10 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 428 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
-#   Shipping : 161(+8 skip) / 426(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
-#   (2026-09-10 실측. EngineTest 는 GPU 포함 전체 수이고, ctest 의 EngineTest_NoGPU 는 400 이다.)
+#   Debug    : CoreTest 171 / EngineTest 435 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
+#   Shipping : 163(+8 skip) / 407(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   (2026-09-11 실측. Debug EngineTest 는 GPU 포함 전체 수이고 ctest 의 EngineTest_NoGPU 는 409,
+#    Shipping 의 407(+2 skip)은 그 NoGPU 수다 — Shipping 은 GPU 스위트를 애초에 돌리지 않는다.)
 #   WSL-Debug: ctest 12/12 (린트 6 포함). EngineTest 는 418 통과 + 8 skip = 426 이고,
 #              스킵은 DX11/DX12 처럼 리눅스에 아예 없는 타깃들이다. (2026-09-11 실측)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
@@ -286,6 +287,38 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (Shipping 에서만 지던 테스트 둘 — 테스트 호스트가 앱과 다른 세상을 보고 있었다)
+
+`Engine_Resource.AssetDatabaseKnowsAssetsBeforeTheyAreLoaded` 와
+`SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 가 **Shipping 에서만** 졌다(Debug 통과).
+원인이 둘이었고, 둘 다 "테스트 호스트가 앱과 다른 상태에서 돈다" 는 같은 종류였다.
+
+**1. 테스트 호스트가 설정을 활성화하지 않았다.** `ResourceManager::loadAssetRegistries` 는 게임 도메인
+레지스트리 경로를 `GameConfig::getActive()._packRoot` 로 만드는데, `TestFramework/main.cpp` 는
+`GameConfig::setActive` 를 부른 적이 없어 그 항목이 늘 비었다. 그래서 시작 시점 GUID 표에 engine·common
+**3 항목**만 실렸다(앱은 5). 느슨한 `Resource/` 트리만 있는 Dev 에서는 `.meta` 스캔 폴백이 대신 채워
+줘서 안 드러났다 — 팩이 하나라도 실리면(Shipping) `registered > 0` 이 되어 그 폴백은 돌지 않는다.
+이제 테스트 호스트도 앱과 같은 순서로 `EngineConfig`(검색 우선순위) · `GameConfig`(setActive) 를
+활성화하고 `loadAssetRegistries()` 를 다시 부른다. **리플렉션 등록을 리소스 초기화 앞으로 옮겼다** —
+설정 역직렬화가 `TypeInfo` 를 쓰므로 순서를 어기면 세그폴트다(실제로 한 번 났다). `EngineLoop` 도
+같은 순서다.
+
+**2. 팩 테스트가 전역 VFS 를 비우고 되돌리지 않았다.** `Engine_ResourcePack` 의 셋이 우선순위·오버라이드를
+보려고 `ResourceUtil::getPackManager().unmountAll()` 을 부른다. 그 판은 프로세스 전체가 쓰는 것이라,
+뒤에 도는 `SceneTest` 가 팩을 통째로 잃고 쿠킹된 씬 바이너리를 못 찾았다. **단독으로 돌리면 통과해서**
+오래 원인이 안 잡혔다 — ctest 로 스위트 전체를 돌려야 재현된다. `GlobalVfsScope` RAII 를 그 셋에 붙여
+마운트·검색 우선순위·loose 허용을 시작 시점으로 되돌린다. 되돌릴 때 쓰라고 `ResourceManager::initialize`
+의 팩 탐색을 `mountStartupPacks()` 로 뽑았다(후보 경로 목록이 두 곳에 복사되지 않도록).
+
+**추적 순서가 핵심이었다.** "Shipping 만 진다" 에서 바로 코드를 고치지 않고, (a) Debug 테스트 바이너리를
+**Shipping 팩이 있는 디렉터리에서** 돌려 Info 로그를 보고("에셋 레지스트리 3 항목"), (b) `readFile` 에
+임시 Warning 프로브를 박아 팩 조회가 실제로 성공하는지 확인하고(성공했다 — 앱과 테스트 호스트가 같은
+지점에서 갈리지 않는다는 뜻), (c) ctest 와 단독 실행이 다르다는 것을 보고 상태 오염으로 좁혔다.
+
+**검증**: Shipping nogpu **5/5**(EngineTest_NoGPU 407 통과 + 2 스킵, 실패 0) · Debug nogpu 5/5 ·
+Debug EngineTest 전체 **435/435** · 린트 6/6 · 빌드 경고 0 · 에디터 DX12 실기동 종료 0 · Shipping 앱
+실기동 종료 0. 0절의 기준선 숫자도 이 실측으로 갱신했다(예전 값은 2026-09-10 것이라 어긋나 있었다).
 
 ### 2026-09-11 (API 에 섞여 있던 테스트 전용 함수 다섯을 걷어냈다)
 

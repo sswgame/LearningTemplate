@@ -56,6 +56,14 @@ namespace sw
          */
         uint32 loadAssetRegistries();
 
+        /**
+         * @brief 실행 파일 옆(또는 프로젝트)의 `Packs/` 를 찾아 전부 마운트합니다.
+         * @details `initialize` 가 한 번 부른다. 전역 VFS 를 헤집는 테스트가 시작 시점 상태로
+         *          되돌릴 때도 이것을 쓴다 — 후보 경로 목록을 두 곳에 복사해 두면 한쪽만 바뀐다.
+         * @return 하나라도 마운트했으면 true.
+         */
+        bool mountStartupPacks();
+
         /** @brief 핫리로드 감시를 위해 ReloadFileManager를 연결합니다. */
         void attachReloadFileManager( ReloadFileManager& reloadFiles );
         /** @brief ReloadFileManager 연결을 해제합니다. */

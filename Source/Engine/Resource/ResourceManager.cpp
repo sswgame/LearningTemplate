@@ -40,31 +40,37 @@ namespace sw
             return false;
         }
 
-        if ( _pPackManager != nullptr )
-        {
-            // 팩 폴더는 **실행 파일 기준**으로 찾는다. 예전엔 "Bin/Packs" 라는 상대 경로 하나뿐이라
-            // 작업 디렉터리가 프로젝트 루트일 때만 맞았다. EngineLoop 은 이미 실행 파일 기준으로
-            // 찾고 있어서 App 은 멀쩡했지만, EngineLoop 을 거치지 않고 ResourceManager 만 직접
-            // 세우는 쪽(테스트·툴)은 아무 것도 마운트하지 못한다 — Shipping 은 느슨한 Resource/ 가
-            // 없으니 그대로 모든 리소스 로드 실패가 된다.
-            const string exeDir         = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-            const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
-                                            "Packs",
-                                            FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" ),
-                                            "Bin/Packs" };
-            for ( const string& packsDir : arrCandidate )
-            {
-                if ( packsDir.empty() )
-                    continue;
-                if ( _pPackManager->scanAndMountPacks( packsDir, ResourceUtil::getSearchPriority() ) )
-                    break;
-            }
-        }
+        mountStartupPacks();
 
         loadAssetRegistries();
 
         _assetFormatRegistry.ensureBuiltins();
         return true;
+    }
+
+    bool ResourceManager::mountStartupPacks()
+    {
+        if ( _pPackManager == nullptr )
+            return false;
+
+        // 팩 폴더는 **실행 파일 기준**으로 찾는다. 예전엔 "Bin/Packs" 라는 상대 경로 하나뿐이라
+        // 작업 디렉터리가 프로젝트 루트일 때만 맞았다. EngineLoop 은 이미 실행 파일 기준으로
+        // 찾고 있어서 App 은 멀쩡했지만, EngineLoop 을 거치지 않고 ResourceManager 만 직접
+        // 세우는 쪽(테스트·툴)은 아무 것도 마운트하지 못한다 — Shipping 은 느슨한 Resource/ 가
+        // 없으니 그대로 모든 리소스 로드 실패가 된다.
+        const string exeDir         = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+        const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
+                                        "Packs",
+                                        FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" ),
+                                        "Bin/Packs" };
+        for ( const string& packsDir : arrCandidate )
+        {
+            if ( packsDir.empty() )
+                continue;
+            if ( _pPackManager->scanAndMountPacks( packsDir, ResourceUtil::getSearchPriority() ) )
+                return true;
+        }
+        return false;
     }
 
     uint32 ResourceManager::loadAssetRegistries()

@@ -9,6 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourcePackReader.h"
 #include "Engine/Resource/ResourcePackTypes.h"
@@ -24,6 +25,40 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @struct GlobalVfsScope
+         * @brief 전역 VFS 를 헤집는 테스트가 끝날 때 시작 시점 마운트로 되돌립니다.
+         * @details 이 파일의 테스트들은 우선순위·오버라이드를 보려고 `unmountAll()` 로 판을 비운다.
+         *          그런데 그 판은 **프로세스 전체가 쓰는 것**이라, 되돌리지 않으면 뒤에 도는 테스트가
+         *          팩을 통째로 잃는다. Dev 에서는 느슨한 `Resource/` 트리가 가려 주지만 배포본은 팩이
+         *          전부다 — 실제로 `SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 가 쿠킹된 씬
+         *          바이너리를 못 찾아 **Shipping 에서만** 졌고, 단독으로 돌리면 통과해서 오래 원인이
+         *          안 잡혔다. 검색 우선순위도 같은 이유로 되돌린다.
+         */
+        struct GlobalVfsScope
+        {
+            GlobalVfsScope()
+                : _listSearchPriority{ ResourceUtil::getSearchPriority() }
+            {
+            }
+
+            ~GlobalVfsScope()
+            {
+                ResourcePackManager& packManager = ResourceUtil::getPackManager();
+                packManager.unmountAll();
+                packManager.setAllowLooseFiles( true );
+                ResourceUtil::setSearchPriority( _listSearchPriority );
+                engine::getResourceManager().mountStartupPacks();
+                engine::getResourceManager().loadAssetRegistries();
+            }
+
+            GlobalVfsScope( const GlobalVfsScope& )            = delete;
+            GlobalVfsScope& operator=( const GlobalVfsScope& ) = delete;
+
+        private:
+            vector<string> _listSearchPriority;
+        };
+
         /**
          * @brief 테스트용 팩 파일을 생성하는 헬퍼 함수
          */
@@ -203,6 +238,8 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
 {
+    const sw::GlobalVfsScope vfsScope;
+
     const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_engine.pack" );
     const sw::string gamePack   = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_main.pack" );
     const sw::string dlcPack    = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_dlc_exp1.pack" );
@@ -303,6 +340,8 @@ SW_TEST_CASE( Engine_ResourcePack, DlcEntitlementProtection )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
 {
+    const sw::GlobalVfsScope vfsScope;
+
     const sw::string packPath  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_opt.pack" );
     const sw::string loosePath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_file.xml" );
 
@@ -338,6 +377,8 @@ SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
 {
+    const sw::GlobalVfsScope vfsScope;
+
     const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "engine_autotest.pack" );
     const sw::string commonPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "common_autotest.pack" );
     const sw::string gamePack   = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "game_main_autotest.pack" );
