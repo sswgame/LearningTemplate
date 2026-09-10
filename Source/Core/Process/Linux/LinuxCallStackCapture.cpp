@@ -9,6 +9,10 @@
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
+    // REG_RIP 등 시그널 컨텍스트의 레지스터 인덱스가 여기 있다 (glibc 는 _GNU_SOURCE 를 요구한다).
+    #include <sys/ucontext.h>
+    #include <ucontext.h>
+
 namespace sw
 {
     static atomic<int32> s_initRefCount{ 0 };
@@ -58,14 +62,79 @@ namespace sw
         outStack._hash = hash;
     }
 
+    namespace
+    {
+        /**
+         * @brief 시그널 컨텍스트(ucontext_t)에서 폴트가 난 명령 주소를 꺼냅니다.
+         * @return 알 수 없는 아키텍처거나 컨텍스트가 없으면 nullptr.
+         */
+        void* faultProgramCounterInternal( const void* pPlatformContext )
+        {
+            if ( pPlatformContext == nullptr )
+                return nullptr;
+
+            const ucontext_t* pContext = static_cast<const ucontext_t*>( pPlatformContext );
+    #if defined( __x86_64__ )
+            return reinterpret_cast<void*>( pContext->uc_mcontext.gregs[REG_RIP] );
+    #elif defined( __i386__ )
+            return reinterpret_cast<void*>( pContext->uc_mcontext.gregs[REG_EIP] );
+    #elif defined( __aarch64__ )
+            return reinterpret_cast<void*>( pContext->uc_mcontext.pc );
+    #elif defined( __arm__ )
+            return reinterpret_cast<void*>( pContext->uc_mcontext.arm_pc );
+    #else
+            (void)pContext;
+            return nullptr;
+    #endif
+        }
+    } // namespace
+
     void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext )
     {
-        (void)pPlatformContext;
-        CallStack shallow{};
-        capture( shallow, 1 );
-        outStack._frameCount = shallow._frameCount;
-        for ( uint32 frameIndex = 0; frameIndex < shallow._frameCount; ++frameIndex )
-            outStack._arrFrame[frameIndex] = shallow._arrFrame[frameIndex];
+        outStack._frameCount = 0;
+
+        // glibc 의 backtrace() 는 시그널 트램폴린에 CFI 가 있어 **폴트 지점까지** 걸어 내려간다.
+        // 문제는 그 위에 핸들러 프레임(이 함수·reportCrash·onFatalSignal·트램폴린)이 얹혀 있다는 것뿐이다.
+        // 그래서 컨텍스트에서 폴트 PC 를 꺼내 그 프레임을 찾아 **거기서부터** 담는다 — 스택이 폴트 지점에서
+        // 시작하는 Windows(StackWalk64 + CONTEXT) 와 같은 모양이 된다.
+        void*       arrTempFrame[DeepCallStack::kMaxFrames + 16];
+        const int32 count = backtrace( arrTempFrame, static_cast<int32>( DeepCallStack::kMaxFrames + 16 ) );
+        if ( count <= 0 )
+            return;
+
+        void* pFaultPc = faultProgramCounterInternal( pPlatformContext );
+
+        int32 startIndex = 0;
+        if ( pFaultPc != nullptr )
+        {
+            // 폴트 PC 와 정확히 같은 프레임을 찾는다. 못 찾으면(트램폴린 모양이 다른 환경) 폴트 PC 를
+            // 0번 프레임으로 직접 얹어, 적어도 어디서 죽었는지는 리포트에 남게 한다.
+            int32 matchIndex = -1;
+            for ( int32 frameIndex = 0; frameIndex < count; ++frameIndex )
+            {
+                if ( arrTempFrame[frameIndex] == pFaultPc )
+                {
+                    matchIndex = frameIndex;
+                    break;
+                }
+            }
+            if ( matchIndex >= 0 )
+            {
+                startIndex = matchIndex;
+            }
+            else
+            {
+                outStack._arrFrame[0] = pFaultPc;
+                outStack._frameCount  = 1;
+            }
+        }
+
+        for ( int32 frameIndex = startIndex; frameIndex < count; ++frameIndex )
+        {
+            if ( outStack._frameCount >= DeepCallStack::kMaxFrames )
+                break;
+            outStack._arrFrame[outStack._frameCount++] = arrTempFrame[frameIndex];
+        }
     }
 
     namespace

@@ -26,6 +26,20 @@ namespace sw
         atomic<bool> s_bReporting{ false };
 
         /**
+         * @brief 대체 시그널 스택.
+         *
+         * 스택 오버플로로 난 SIGSEGV 는 스택이 이미 바닥난 상태라, 핸들러를 그 스택 위에서 실행할 수
+         * 없다 — 핸들러 진입 자체가 다시 폴트나고 프로세스는 **아무 기록도 없이** 죽는다. 정작 가장
+         * 알고 싶은 크래시가 그렇게 사라진다. 별도 스택을 깔고 SA_ONSTACK 으로 거기서 돌린다.
+         */
+        // 최신 glibc 의 SIGSTKSZ 는 sysconf() 로 바뀌어 상수가 아니다 — 정적 배열에 쓸 수 없으므로
+        // 넉넉한 고정 크기를 쓴다. 리포트 경로가 스택에 얹는 것은 StringBuilder<8192> 와
+        // DeepCallStack(64 프레임) 정도이고, 나머지는 힙이다.
+        constexpr size_t kSignalStackSize = 128 * 1024;
+        uint8            s_arrSignalStack[kSignalStackSize];
+        constexpr int32  kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+
+        /**
          * @brief 폴트 종류와 콜 스택을 로그로 남깁니다.
          */
         void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext )
@@ -88,10 +102,23 @@ namespace sw
             }
         }
 
-        void onFatalSignal( int32 signalNumber )
+        /**
+         * @brief SA_SIGINFO 핸들러 — 폴트 주소와 레지스터 컨텍스트를 함께 받습니다.
+         *
+         * 예전엔 `std::signal` 을 썼다. 그건 siginfo 도 ucontext 도 주지 않아서 폴트 주소가 늘
+         * nullptr 이었고, 스택도 폴트 지점이 아니라 핸들러 안에서 시작했다 — Windows 쪽은
+         * EXCEPTION_POINTERS 로 둘 다 받아 쓰고 있어 리포트 품질이 한쪽만 크게 떨어졌다.
+         */
+        void onFatalSignal( int32 signalNumber, siginfo_t* pSignalInfo, void* pPlatformContext )
         {
-            reportCrash( signalName( signalNumber ), nullptr, nullptr );
-            std::signal( signalNumber, SIG_DFL );
+            const void* pFaultAddress = ( pSignalInfo != nullptr ) ? pSignalInfo->si_addr : nullptr;
+            reportCrash( signalName( signalNumber ), pFaultAddress, pPlatformContext );
+
+            // 기본 동작으로 되돌려 다시 올린다 — 코어 덤프가 켜져 있으면 그때 남는다.
+            struct sigaction restoreAction{};
+            restoreAction.sa_handler = SIG_DFL;
+            sigemptyset( &restoreAction.sa_mask );
+            sigaction( signalNumber, &restoreAction, nullptr );
             std::raise( signalNumber );
         }
     } // namespace
@@ -103,11 +130,31 @@ namespace sw
 
         CallStackCapture::initialize();
 
-        std::signal( SIGSEGV, &onFatalSignal );
-        std::signal( SIGBUS, &onFatalSignal );
-        std::signal( SIGILL, &onFatalSignal );
-        std::signal( SIGFPE, &onFatalSignal );
-        std::signal( SIGABRT, &onFatalSignal );
+        // 스택 오버플로에서도 핸들러가 돌 수 있도록 먼저 대체 스택을 깐다.
+        stack_t signalStack{};
+        signalStack.ss_sp    = s_arrSignalStack;
+        signalStack.ss_size  = kSignalStackSize;
+        signalStack.ss_flags = 0;
+        const bool bAltStack = ( sigaltstack( &signalStack, nullptr ) == 0 );
+        if ( bAltStack == false )
+        {
+            SW_LOG_WARNING( "sigaltstack failed — 스택 오버플로 크래시는 기록되지 않습니다." );
+        }
+
+        struct sigaction action{};
+        action.sa_sigaction = &onFatalSignal;
+        sigemptyset( &action.sa_mask );
+        action.sa_flags = SA_SIGINFO | SA_RESTART;
+        if ( bAltStack )
+            action.sa_flags |= SA_ONSTACK;
+
+        for ( int32 signalNumber : kArrFatalSignal )
+        {
+            if ( sigaction( signalNumber, &action, nullptr ) != 0 )
+            {
+                SW_LOG_WARNING( "sigaction(%#) failed — 이 시그널은 기록되지 않습니다.", signalNumber );
+            }
+        }
 
         SW_LOG_TRACE( "Crash handler installed." );
     }
@@ -117,11 +164,17 @@ namespace sw
         if ( s_bInstalled.exchange( false ) == false )
             return;
 
-        std::signal( SIGSEGV, SIG_DFL );
-        std::signal( SIGBUS, SIG_DFL );
-        std::signal( SIGILL, SIG_DFL );
-        std::signal( SIGFPE, SIG_DFL );
-        std::signal( SIGABRT, SIG_DFL );
+        struct sigaction restoreAction{};
+        restoreAction.sa_handler = SIG_DFL;
+        sigemptyset( &restoreAction.sa_mask );
+        for ( int32 signalNumber : kArrFatalSignal )
+            sigaction( signalNumber, &restoreAction, nullptr );
+
+        // 대체 스택도 걷는다 — s_arrSignalStack 은 정적이라 남아 있어도 되지만, 커널이 이 프로세스에
+        // 대해 들고 있는 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트·툴)와 얽히지 않는다.
+        stack_t disableStack{};
+        disableStack.ss_flags = SS_DISABLE;
+        sigaltstack( &disableStack, nullptr );
 
         CallStackCapture::shutdown();
     }
