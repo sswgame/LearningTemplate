@@ -17,9 +17,14 @@
 
 namespace sw
 {
-    extern int32 gv_gpuCulling;
-
     SW_LOG_CALLER( "FrameRenderer" );
+
+    /**
+     * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
+     * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
+     *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
      * @brief `-gv_viewMode=<0|1|2>` — 씬 지오메트리 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe).

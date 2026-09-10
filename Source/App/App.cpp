@@ -107,6 +107,8 @@ namespace sw
             return false;
         }
 
+        warnUnclaimedGlobalOverrides();
+
         // 4. 윈도우 콜백 및 이벤트 라우팅 설정
         splash.updateStatus( "Finalizing Setup...", 0.95f );
         bindHostCallbacks();
@@ -181,6 +183,23 @@ namespace sw
         }
 
         return true;
+    }
+
+    void App::warnUnclaimedGlobalOverrides() const
+    {
+        const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
+        if ( pCommandLineManager == nullptr )
+            return;
+
+        // 모르는 `-gv_*` 키는 파서가 버리지 않고 보류표에 남긴다 — 모듈이 선언하는 변수는 파싱
+        // 시점에 아직 없기 때문이다. 모듈이 다 올라온 지금까지도 가져간 임자가 없으면 오타다.
+        // 표는 비우지 않는다: 핫 리로드로 나중에 올라오는 모듈이 여전히 가져갈 수 있다.
+        const vector<string> listPendingName = pCommandLineManager->collectPendingGlobalNames();
+        for ( const string& pendingName : listPendingName )
+        {
+            if ( engine::getGlobalVariableManager().findVariable( pendingName ) == nullptr )
+                SW_LOG_WARNING( "%#: 그런 전역 변수가 없습니다. 무시됩니다", pendingName.c_str() );
+        }
     }
 
     void App::bindHostCallbacks()

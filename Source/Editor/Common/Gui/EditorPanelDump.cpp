@@ -5,20 +5,10 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/EditorGlobalVariable.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
-
-namespace sw
-{
-    /**
-     * @brief `-gv_editorPanelDump=N` — 선언은 `Engine/EngineLoop.cpp` 에 있다.
-     * @details 커맨드라인은 모듈 로드 전에 파싱되므로 EditorModule 이 선언한 전역 변수는
-     *          `-gv_...` 로 설정할 수 없다(파서가 "해당 Argument 없음" 으로 무시한다). 그래서 선언은
-     *          Engine 의 진단 스위치 블록에 두고 여기서는 읽기만 한다. 모듈 경계를 넘어 읽으므로
-     *          `SW_API` 다 — `gv_rhiBackend` · `gv_useRenderThread` 와 같은 형태다.
-     */
-    extern SW_API int32 gv_editorPanelDump;
-} // namespace sw
 
 namespace sw
 {

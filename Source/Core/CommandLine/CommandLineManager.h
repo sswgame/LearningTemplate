@@ -134,6 +134,17 @@ namespace sw
         template <typename T>
         void addArgument( const std::initializer_list<string_view>& listSynonym, bool bMustHaveValue, T defaultValue, bool bUseDefaultValue );
 
+        /**
+         * @brief 아직 등록된 인자가 없어 보류해 둔 `gv_` 값을 찾습니다.
+         * @details 커맨드라인은 모듈(EditorModule·SWGame)이 로드되기 **전에** 파싱된다. 그래서 모듈이
+         *          선언하는 전역 변수의 값은 파싱 시점에 갈 곳이 없다 — 버리는 대신 여기 남겨 두고,
+         *          모듈이 늦게 등록할 때 `GlobalVariableManager` 가 꺼내 쓴다.
+         */
+        bool findPendingGlobalValue( string_view name, string& outValue ) const;
+
+        /** @brief 보류 중인 `gv_` 키 이름을 전부 돌려줍니다 (오타 진단용). */
+        vector<string> collectPendingGlobalNames() const;
+
     private:
         /** @brief 단일 인자 라인(예: "--width=1280" 또는 "-fullscreen")을 파싱하여 사전에 적용 */
         void parseArgumentLine( string_view argumentLine );
@@ -149,9 +160,14 @@ namespace sw
          */
         static string_view argumentEnumToString( CommandLineArgument argument );
 
-        static constexpr auto                                  kLineDelim = ";";
+        static constexpr auto kLineDelim = ";";
+        /** @brief 보류표에 담을 키의 접두어. 이것으로 시작하는 미등록 키만 남긴다. */
+        static constexpr auto kGlobalVariablePrefix = "gv_";
+
         vector<ArgumentInfo>                                   _listArgument;
         unordered_map<string, uint32, StringHash, StringEqual> _mapArgument;
+        /** @brief 등록된 인자가 없어 보류해 둔 `gv_` 키 → 값. 모듈이 늦게 선언할 때 꺼내 쓴다. */
+        unordered_map<string, string, StringHash, StringEqual> _mapPendingGlobal;
     };
 
     template <typename T>

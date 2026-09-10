@@ -8,6 +8,7 @@
 #include "GameFramework/Base/GameService.h"
 
 #include "Games/Empty/BenchScene.h"
+#include "Games/Empty/EmptyGlobalVariable.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
 
@@ -27,6 +28,11 @@ namespace sw
 
     bool EmptyGame::onInitialize()
     {
+        // 이 모듈의 전역 변수를 매니저에 올린다. 커맨드라인은 모듈 로드 전에 파싱되므로 값은
+        // 파서의 보류표에 있고, 등록하는 이 순간 적용된다 — 아래에서 gv_benchMeshes 를 읽기 전에
+        // 반드시 먼저 와야 한다.
+        game::registerGlobalVariables();
+
         // 이 템플릿이 하는 일은 벤치 하네스를 깨우는 것뿐이다. 새 게임을 시작하면 아래 두 줄과
         // BenchScene.* 를 지우고 자기 씬을 세운다.
         _benchScene = make_unique<BenchScene>();
@@ -45,6 +51,13 @@ namespace sw
         }
 
         return true;
+    }
+
+    void EmptyGame::onShutdown()
+    {
+        // 매니저가 들고 있는 것은 이 DLL 안의 주소다 — 모듈이 내려가기 전에 반드시 걷어내야 한다.
+        // (서비스는 아직 바인딩돼 있다. ModuleHost 는 shutdown 뒤에 bindService(nullptr) 을 부른다.)
+        game::unregisterGlobalVariables();
     }
 
     void EmptyGame::onUpdate( float32 deltaTime )

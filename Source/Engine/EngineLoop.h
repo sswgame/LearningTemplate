@@ -8,6 +8,7 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Utility/Debug/FrameProfileSession.h"
 
 namespace sw
 {
@@ -98,20 +99,12 @@ namespace sw
         void updateShellActions( float32 deltaTime );
 
         /**
-         * @brief 엔진이 스스로 종료를 원하면 true (`-ProfileFrames N` 을 다 채운 경우).
+         * @brief 엔진이 스스로 종료를 원하면 true (`-gv_profileFrames=N` 을 다 채운 경우).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알린다.
          */
-        bool wantsQuit() const { return _bWantsQuit != 0; }
+        bool wantsQuit() const { return _profileSession.wantsQuit(); }
 
-        /** @brief `-ProfileFrames N` 의 N. 0 이면 계측하지 않습니다. */
-        uint64 _profileFrameTarget{ 0 };
-        /** @brief 보고를 이미 냈으면 true — 매 프레임 다시 찍지 않습니다. */
-        uint8 _bProfileReported{ 0 };
-        /** @brief 프로파일 목표 프레임을 채워 종료하려 하면 true. */
-        uint8 _bWantsQuit{ 0 };
-        /** @brief 워밍업 구간을 이미 버렸으면 true. */
-        uint8 _bProfileWarmedUp{ 0 };
-        void  pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
+        void pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
         /** @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다. */
         bool wasDebugActionTriggered( string_view actionName ) const;
 
@@ -170,5 +163,8 @@ namespace sw
 
         bool _bShellActionsBound;
         bool _bHeadless;
+
+        /** @brief `-gv_profileFrames` 계측 한 판. 판정은 전부 이 안에 있고 루프는 두 줄만 부른다. */
+        FrameProfileSession _profileSession;
     };
 } // namespace sw

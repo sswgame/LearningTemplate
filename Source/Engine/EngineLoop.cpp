@@ -59,134 +59,11 @@
 namespace sw
 {
     /**
-     * @brief `-gv_benchMeshes=N` — 게임이 시작 시 만들 벤치 큐브 수. 0 이면 만들지 않습니다.
-     * @details 커맨드라인 인자를 게임 모듈이 직접 읽을 수는 없다(CommandLineManager 는
-     *          gameAllowed=0). 전역 변수는 엔진이 선언·바인딩하고 게임은 허용된
-     *          GlobalVariableManager 서비스로 읽으므로, 경계를 넘지 않고 값을 전달할 수 있다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
-
-    /** @brief `-gv_profileFrames=N` — 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다. */
-    SW_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
-
-    /**
-     * @brief `-gv_defaultMaterial=<path>` — 씬 기본 머티리얼을 EngineData 대신 이 경로로.
-     * @details 벤치·시각 검증용(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 본다).
-     *          비어 있으면 EngineData._defaultMaterial.
-     */
-    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
-
-    /**
-     * @brief `-gv_screenshot=<파일경로>` — SceneColor 를 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
-     * @details Win32 PrintWindow 캡처는 DX11/GL/Vulkan 에서 빈 화면이 자주 나온다 — 스왑체인이 GDI 로
-     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2D).
-     *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
-     */
-    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "트랜지언트를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
-
-    /** @brief `-gv_screenshotAttachment=<이름>` — 덤프할 트랜지언트 첨부 이름. 비면 SceneColor. */
-    SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "덤프할 트랜지언트 이름 (비면 SceneColor)" );
-
-    /**
-     * @brief `-gv_screenshotFrame=<N>` — 몇 번째 프레임에서 찍을지 정합니다 (기본 10).
-     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이
-     *          필요하다. 예전엔 워밍업 10프레임이 고정이라 `-gv_profileFrames` 를 아무리 늘려도 늘 같은
-     *          시각이 찍혔고, 그걸 모르고 비교하면 "움직이지 않는다"는 잘못된 결론이 나온다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
-
-    /**
-     * @brief `-gv_editorPanelDump=<N>` — N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
-     * @details 에디터 기능인데 **선언이 Engine 에 있는 이유**: 커맨드라인은 모듈이 로드되기 전에
-     *          파싱되므로, EditorModule 이 선언한 전역 변수는 `-gv_...` 로 설정할 수 없다(파서가
-     *          "해당 Argument 없음" 으로 무시한다). 진단 스위치는 다른 gv_ 들과 같은 자리에 둔다.
-     *          읽는 쪽은 `Editor/Common/Gui/EditorPanelDump.cpp` 다. 0 이면 아무것도 하지 않는다.
-     */
-    // EditorModule 이 DLL 경계를 넘어 읽으므로 SW_API 로 내보낸다. SW_GLOBAL_VARIABLE_INT 는
-    // SW_API 를 붙이지 않으므로(Engine 내부 전용 변수가 대부분) 여기서는 직접 정의하고 등록한다 —
-    // gv_rhiBackend / gv_useRenderThread 가 같은 이유로 같은 형태다.
-    extern SW_API int32                  gv_editorPanelDump;
-    SW_API int32                         gv_editorPanelDump = 0;
-    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorPanelDump(
-        SW_GVM_MODULE_HEAD(), "gv_editorPanelDump", ::sw::GlobalVariableType::Int32, &gv_editorPanelDump, int32( 0 ),
-        "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
-
-    /**
-     * @brief `-gv_editorOpenAllPanels=1` — 시작할 때 도구 패널까지 전부 엽니다.
-     * @details 도구 패널(Sequencer·Material·InputMap·DataTable…)은 기본이 닫힘이라
-     *          `-gv_editorPanelDump` 가 늘 기본 레이아웃의 다섯 개만 보고 있었다. 나머지는 사람이 창을
-     *          띄워 메뉴에서 열어 보기 전에는 비어 있어도 알 수 없었다 — 패널을 고치고 "검증했다"고
-     *          말할 수 있는 범위가 그만큼 좁았다. 이 스위치를 주면 덤프가 등록된 패널 전부를 덮는다.
-     *          `gv_editorPanelDump` 와 같은 이유로 선언이 여기 있고 EditorModule 이 읽는다.
-     */
-    extern SW_API int32                  gv_editorOpenAllPanels;
-    SW_API int32                         gv_editorOpenAllPanels = 0;
-    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorOpenAllPanels(
-        SW_GVM_MODULE_HEAD(), "gv_editorOpenAllPanels", ::sw::GlobalVariableType::Int32, &gv_editorOpenAllPanels, int32( 0 ),
-        "시작할 때 도구 패널까지 전부 연다 (0=사용 안 함)" );
-
-    /**
-     * @brief `-gv_editorStartupScene=<리소스 경로>` — 에디터가 시작할 때 이 씬을 엽니다.
-     * @details 실기동 검증이 오래 **빈 씬만** 보고 있었다. 활성 게임이 `Empty` 라 맵이 없어서
-     *          `SceneManager` 가 씬 없이 뜨고 내려간다 — 그래서 오브젝트를 도는 코드(뷰포트 피킹·
-     *          컴포넌트 시각화·Hierarchy 트리·Profiler 분포표·씬 세대 변경 훅)가 검증에서 한 번도
-     *          실행되지 않았다. 이 스위치로 테스트 씬을 열면 그 경로가 전부 켜진다.
-     *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
-     *          `gv_editorPanelDump` 와 같은 이유로 선언이 여기 있고 EditorModule 이 읽는다
-     *          (커맨드라인은 모듈 로드 전에 파싱된다).
-     */
-    extern SW_API string                 gv_editorStartupScene;
-    SW_API string                        gv_editorStartupScene{};
-    static ::sw::GlobalVariableRegistrar sw_reg_gv_editorStartupScene(
-        SW_GVM_MODULE_HEAD(), "gv_editorStartupScene", ::sw::GlobalVariableType::String, &gv_editorStartupScene, string{},
-        "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
-
-    /**
-     * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
-     * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
-     *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
-
-    /**
      * @brief `-gv_crashTest=1` — RHI 초기화 직후 일부러 크래시를 냅니다 (리포트 경로 검증용).
      * @details 크래시 리포트는 크래시가 나야만 만들어진다. 그래서 "덤프가 제대로 써지는가" 는 일부러
      *          죽여 보는 것 말고는 확인할 방법이 없다 — 배포하고 나서 안 된다는 걸 알면 늦다.
      */
     SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
-
-    /**
-     * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
-     * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
-     *          경로에 실제 부하를 거는 유일한 방법이다.
-     * @warning **DX12 에서 100% 크래시한다.** 렌더 중 상수버퍼를 만들면서 커맨드 얼로케이터가
-     *          사용 중에 Reset 되는 기존 버그(간헐 3/8)를 확실히 터뜨린다. 그래서 기본은 꺼 두되,
-     *          그 버그를 재현·수정할 때 쓰라고 남겨 둔다. DX11/Vulkan/GL 은 정상이다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
-
-    /**
-     * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
-     * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 않는다.
-     *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 재거나 다중 배치 버그를 보려면 이 값을 올린다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
-
-    /**
-     * @brief `-gv_benchTransparent=<퍼센트>` — 벤치 큐브 중 이 비율을 투명으로 만듭니다 (0=전부 불투명).
-     * @details 투명 경로는 불투명과 다른 길을 간다 — 배치가 깊이순으로 갈리고, 컬링이 압축한 순서를
-     *          instancesort 가 되돌리며, 블렌딩 PSO 를 쓴다. 벤치가 전부 불투명이면 그 길을 한 번도
-     *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
-     *          인스턴스가 여럿 들어간다 — 그래야 배치 안의 정렬이 실제로 검사된다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
-
-    /**
-     * @brief 프로파일 통계에서 버리는 초반 프레임 수.
-     * @details 셰이더 컴파일·PSO 생성·트랜지언트 할당이 첫 프레임들을 크게 부풀린다. 섞으면
-     *          평균이 그 한 번에 끌려가 아무것도 못 읽는다.
-     */
-    static constexpr uint64 kProfileWarmupFrames = 60;
 
     namespace
     {
@@ -517,12 +394,7 @@ namespace sw
             }
         }
 
-        if ( gv_profileFrames > 0 )
-        {
-            _profileFrameTarget = static_cast<uint64>( gv_profileFrames );
-            FrameProfiler::get().setEnabled( true );
-            SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임", kProfileWarmupFrames, gv_profileFrames );
-        }
+        _profileSession.begin();
 
         MemoryProfiler::captureMemoryLeakBaseline();
 
@@ -743,31 +615,8 @@ namespace sw
 
     void EngineLoop::endFrame()
     {
-        FrameProfiler& profiler = FrameProfiler::get();
-        profiler.endFrame();
-
-        // 워밍업(셰이더 컴파일·PSO 생성·트랜지언트 할당)이 첫 프레임들을 크게 부풀린다.
-        // 그 구간을 통계에 섞으면 평균이 의미를 잃으므로 버리고 다시 센다.
-        if ( _profileFrameTarget > 0 && _bProfileReported == 0 )
-        {
-            const uint64 frames = profiler.getFrameCount();
-            if ( _bProfileWarmedUp == 0 && frames >= kProfileWarmupFrames )
-            {
-                // reset() 은 프레임 카운터도 0 으로 되돌린다 — 플래그가 없으면 이 조건이 매 60
-                // 프레임마다 다시 참이 되어 영원히 워밍업만 한다.
-                _bProfileWarmedUp = 1;
-                profiler.reset();
-                SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.",
-                             kProfileWarmupFrames, _profileFrameTarget );
-            }
-            else if ( _bProfileWarmedUp != 0 && frames >= _profileFrameTarget )
-            {
-                _bProfileReported = 1;
-                profiler.report( "frame breakdown" );
-                profiler.setEnabled( false );
-                _bWantsQuit = 1;
-            }
-        }
+        FrameProfiler::get().endFrame();
+        _profileSession.onFrameEnd();
 
         if ( _inputManager != nullptr )
             _inputManager->endFrame();

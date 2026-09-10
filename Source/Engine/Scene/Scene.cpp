@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/Scene.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -23,7 +24,12 @@
 
 namespace sw
 {
-    extern string gv_defaultMaterial;
+    /**
+     * @brief `-gv_defaultMaterial=<path>` — 씬 기본 머티리얼을 EngineData 대신 이 경로로.
+     * @details 벤치·시각 검증용(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 본다).
+     *          비어 있으면 EngineData._defaultMaterial.
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
 
     namespace
     {
@@ -34,7 +40,7 @@ namespace sw
              */
             static string resolveDefaultMaterialPath()
             {
-                // -gv_defaultMaterial 이 있으면 그것이 먼저다(EngineLoop.cpp 선언, 같은 모듈).
+                // -gv_defaultMaterial 이 있으면 그것이 먼저다(선언은 이 파일 위쪽).
                 if ( gv_defaultMaterial.empty() == false )
                     return gv_defaultMaterial;
                 return engine::getEngineData()._defaultMaterial;

@@ -2,13 +2,9 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 
-#include <imgui.h>
+#include "Editor/Common/EditorGlobalVariable.h"
 
-namespace sw
-{
-    /** @brief `-gv_editorOpenAllPanels=1` — 선언은 `Engine/EngineLoop.cpp` 에 있다(읽기만 한다). */
-    extern SW_API int32 gv_editorOpenAllPanels;
-} // namespace sw
+#include <imgui.h>
 
 namespace sw::editor
 {

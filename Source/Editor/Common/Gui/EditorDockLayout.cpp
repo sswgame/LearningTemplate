@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/EditorGlobalVariable.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -15,12 +16,6 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-
-namespace sw
-{
-    /** @brief `-gv_editorOpenAllPanels=1` — 선언은 `Engine/EngineLoop.cpp` 에 있다(읽기만 한다). */
-    extern SW_API int32 gv_editorOpenAllPanels;
-} // namespace sw
 
 namespace sw::editor
 {

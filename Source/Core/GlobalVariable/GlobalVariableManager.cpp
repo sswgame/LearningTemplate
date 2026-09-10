@@ -292,6 +292,9 @@ namespace sw
         if ( pCmdLineManager == nullptr )
             return;
 
+        // 파싱이 끝난 뒤 등록되는 변수(= 모듈이 선언한 것)가 보류값을 꺼낼 수 있도록 잡아 둔다.
+        _pCmdLineManager = pCmdLineManager;
+
         for ( const auto& [name, info] : _mapVariable )
         {
             if ( std::holds_alternative<int32>( info._defaultValue ) )
@@ -399,7 +402,24 @@ namespace sw
         info._moduleName   = string{ moduleName };
         info._typeSize     = typeSize;
 
-        _mapVariable.emplace( strName, std::move( info ) );
+        const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( info ) );
+
+        // 모듈(EditorModule·SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기 온다.
+        // 그 값은 CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다 — 이것이
+        // 없으면 `-gv_editorPanelDump=25` 같은 모듈 스위치가 조용히 무시된다. 엔진 자신의 변수는
+        // registerToCommandLine 이전에 등록되므로 여기 걸리지 않고 updateFromCommandLine 이 맡는다.
+        // 잠금 안이므로 매니저의 setValueFromString(재잠금)이 아니라 info 쪽을 직접 부른다.
+        if ( _pCmdLineManager != nullptr && bInserted )
+        {
+            string pendingValue;
+            if ( _pCmdLineManager->findPendingGlobalValue( strName, pendingValue ) )
+            {
+                iter->second.setValueFromString( pendingValue );
+                if ( iter->second._onValueChanged.isBound() )
+                    iter->second._onValueChanged( &iter->second );
+            }
+        }
+
         return true;
     }
 

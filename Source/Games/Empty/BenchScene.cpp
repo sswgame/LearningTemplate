@@ -2,7 +2,6 @@
 
 #include "Games/Empty/BenchScene.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -18,6 +17,8 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Base/GameService.h"
+
+#include "Games/Empty/EmptyGlobalVariable.h"
 
 namespace sw
 {
@@ -43,18 +44,13 @@ namespace sw
 
     bool BenchScene::spawnFromGlobals()
     {
-        // 커맨드라인은 게임에 열려 있지 않다(CommandLineManager gameAllowed=0). 엔진이 선언한
-        // 전역 변수를 허용된 서비스로 읽는다 — `-gv_benchMeshes=5000` 처럼 준다.
-        GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>();
-        if ( pGlobals == nullptr )
+        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager gameAllowed=0), 이 스위치는 이제
+        // **이 모듈이 선언한다**(EmptyGlobalVariable.cpp). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
+        // 예전 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽혔다.
+        if ( gv_benchMeshes <= 0 )
             return false;
 
-        const GlobalVariableInfo* pBenchMeshes = pGlobals->findVariable( "gv_benchMeshes" );
-        const int32               meshCount    = pBenchMeshes != nullptr ? pBenchMeshes->getValueAsInt() : 0;
-        if ( meshCount <= 0 )
-            return false;
-
-        spawn( static_cast<uint32>( meshCount ) );
+        spawn( static_cast<uint32>( gv_benchMeshes ) );
         return isActive();
     }
 
@@ -87,14 +83,8 @@ namespace sw
 
         // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
         // 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
-        uint32 meshVariantCount = 1;
-        if ( GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>() )
-        {
-            const GlobalVariableInfo* pVar = pGlobals->findVariable( "gv_benchMeshVariants" );
-            if ( pVar != nullptr )
-                meshVariantCount = static_cast<uint32>( MathUtil::max( 1, pVar->getValueAsInt() ) );
-        }
-        meshVariantCount = MathUtil::min( meshVariantCount, meshCount );
+        uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
+        meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
         // 같은 기하를 여러 객체로 만든다 — 화면은 그대로고 배치만 갈린다(가시성 변수를 안 넣는다).
         vector<shared_ptr<Mesh>> listMeshVariant;
@@ -119,20 +109,10 @@ namespace sw
         _listBenchMesh.reserve( meshCount );
 
         // 큐브별 머티리얼 인스턴스는 DX12 크래시를 재현하는 용도라 기본은 꺼 둔다.
-        bool bPerCubeMaterial = false;
-        if ( GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>() )
-        {
-            const GlobalVariableInfo* pVar = pGlobals->findVariable( "gv_benchMaterialInstances" );
-            bPerCubeMaterial               = ( pVar != nullptr && pVar->getValueAsInt() != 0 );
-        }
+        const bool bPerCubeMaterial = ( gv_benchMaterialInstances != 0 );
 
-        uint32 transparentPercent = 0;
-        if ( GlobalVariableManager* pGlobals = game::getService<GlobalVariableManager>() )
-        {
-            const GlobalVariableInfo* pVar  = pGlobals->findVariable( "gv_benchTransparent" );
-            const int32               value = ( pVar != nullptr ) ? pVar->getValueAsInt() : 0;
-            transparentPercent              = ( value > 0 ) ? static_cast<uint32>( MathUtil::min( value, 100 ) ) : 0u;
-        }
+        const uint32 transparentPercent =
+            ( gv_benchTransparent > 0 ) ? static_cast<uint32>( MathUtil::min( gv_benchTransparent, 100 ) ) : 0u;
 
         // 투명은 **별도 머티리얼 에셋**이다 — 블렌드 모드가 머티리얼의 성질이고 알파 사용 여부가
         // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문이다. 메시에 플래그를 세우는

@@ -47,6 +47,13 @@ namespace sw
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /** @brief 에디터/게임 모듈을 로드하고 ModuleHost 를 세웁니다. */
         bool startModules();
+        /**
+         * @brief 모듈이 다 올라온 뒤에도 임자가 없는 `-gv_*` 인자를 한 번 경고합니다.
+         * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류한다(모듈이 선언하는 변수는 파싱 시점에
+         *          아직 없다). 그래서 오타가 즉시 걸리지 않는다 — 여기서 대신 알린다.
+         */
+        void warnUnclaimedGlobalOverrides() const;
+
         /** @brief 윈도우 콜백·전역 변수 훅·프레젠트 훅을 연결합니다. */
         void bindHostCallbacks();
 

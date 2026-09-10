@@ -12,11 +12,28 @@
 
 namespace sw
 {
-    extern string gv_screenshot;
-    extern string gv_screenshotAttachment;
-    extern int32  gv_screenshotFrame;
-
     SW_LOG_CALLER( "RenderThread" );
+
+    /**
+     * @brief `-gv_screenshot=<파일경로>` — SceneColor 를 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
+     * @details Win32 PrintWindow 캡처는 DX11/GL/Vulkan 에서 빈 화면이 자주 나온다 — 스왑체인이 GDI 로
+     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2D).
+     *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
+     * @note 셋 다 이 파일이 유일한 소비자다 — 예전엔 선언이 `EngineLoop.cpp` 에 있고 여기서 `extern` 으로
+     *       끌어 썼다. 타입이 어긋나도 링커까지 가야 걸리는 형태라, 쓰는 자리로 내렸다.
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "트랜지언트를 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+
+    /** @brief `-gv_screenshotAttachment=<이름>` — 덤프할 트랜지언트 첨부 이름. 비면 SceneColor. */
+    SW_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "덤프할 트랜지언트 이름 (비면 SceneColor)" );
+
+    /**
+     * @brief `-gv_screenshotFrame=<N>` — 몇 번째 프레임에서 찍을지 정합니다 (기본 10).
+     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이
+     *          필요하다. 예전엔 워밍업 10프레임이 고정이라 `-gv_profileFrames` 를 아무리 늘려도 늘 같은
+     *          시각이 찍혔고, 그걸 모르고 비교하면 "움직이지 않는다"는 잘못된 결론이 나온다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 제출할지(기본), 잘릴 때마다 바로 제출할지.
     // 정의는 RHI.cpp — 여기서는 프레임마다 디바이스로 밀어넣기만 한다.

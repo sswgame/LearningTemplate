@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorGlobalVariable.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
@@ -44,12 +45,6 @@
 #include <ImGuiNotify.hpp>
 #include <ImGuizmo.h>
 #include <implot.h>
-
-namespace sw
-{
-    /** @brief `-gv_editorStartupScene=<경로>` — 선언은 `Engine/EngineLoop.cpp` 에 있다(읽기만 한다). */
-    extern SW_API string gv_editorStartupScene;
-} // namespace sw
 
 namespace sw::editor
 {
@@ -106,6 +101,11 @@ namespace sw::editor
         SW_LOG_TRACE( "Initialize start." );
         if ( _bInitialized != SW_FALSE )
             return true;
+
+        // 이 모듈의 전역 변수를 매니저에 올린다. 커맨드라인은 모듈 로드 전에 파싱되므로 값은
+        // 파서의 보류표에 있고, 등록하는 이 순간 적용된다 — 아래에서 gv_editorStartupScene 을
+        // 읽기 전에 반드시 먼저 와야 한다.
+        registerGlobalVariables();
         if ( pWindow == nullptr || pRhiDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
@@ -269,6 +269,10 @@ namespace sw::editor
     {
         if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
             return;
+
+        // 매니저가 들고 있는 것은 이 DLL 안의 주소다 — 모듈이 내려가기 전에 반드시 걷어내야 한다.
+        // (서비스는 아직 바인딩돼 있다. ModuleHost 는 shutdown 뒤에 bindService(nullptr) 을 부른다.)
+        unregisterGlobalVariables();
 
         IWindow* pActiveWindow = IWindow::getActiveWindow();
         if ( pActiveWindow != nullptr )

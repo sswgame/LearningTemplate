@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `77f4b224`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `3bae842c`
 
 ---
 
@@ -286,6 +286,101 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (API 에 섞여 있던 테스트 전용 함수 다섯을 걷어냈다)
+
+"공개 API 에 에디터/테스트 목적 함수가 있는가" 로 `RuntimeAPI` → `Engine`/`Core` 공개 헤더 → RHI 인터페이스를
+훑고, 후보마다 **호출자를 전부 확인해** 다섯을 걷었다. 판정 기준은 "이름이 수상한가" 가 아니라 **누가 부르는가**
+였다 — 이름만 보면 `getMapEntry` 는 평범한 접근자이고, `executeOffscreenPipelineSmoke` 는 이름이 스모크라고
+말하고 있었는데도 `SW_API` 인터페이스 안에 있었다.
+
+- **`IRHIDevice::executeOffscreenPipelineSmoke`** — RT 만들고 → 렌더패스 열고 → 그리고 → 읽고 → 지우는 80줄짜리
+  검증 루틴이 RHI 디바이스 인터페이스의 한 섹션(`9) 오프스크린 검증`)을 통째로 차지하고 있었다. 부르는 곳은
+  `TestRHI.cpp` 셋뿐인데 `SW_SHIPPING` 가드가 없어 **배포 바이너리에도 들어갔다.** 쓰는 것이 전부 공개 RHI
+  인터페이스라 `TestRHI.cpp` 의 익명 네임스페이스로 그대로 내렸다(`IRHIDevice&` 를 첫 인자로). 덤으로 헤더에
+  선언 없이 떠 있던 `/** 스왑체인과 백버퍼 크기를 바꿉니다 */` 고아 주석과, `.cpp` 에서 쓸모없어진 include
+  셋(`IRHICommandList.h`·`IRHIResource.h`·`ShaderBindingSlots.h`)도 같이 걷혔다.
+- **`ReflectionRpc::packAndInvoke`** — 주석부터 "테스트용 왕복" 이었고 호출자는 `TestReflection.cpp` 하나. 테스트가
+  `packCall` + `unpackAndInvoke` 두 줄을 직접 부르게 하고 지웠다.
+- **`InputManager::injectSnapshot`** — 히스토리 버퍼에 합성 스냅샷을 밀어 넣는 백도어. 호출자는 테스트 하나였고,
+  정작 리플레이 재생 경로(`InputReplay::updatePlayback`)는 `postRawEvent` 를 쓴다. 지우고 테스트는 실제 경로로
+  바꿨다 — 마우스 버튼을 눌러 한 프레임 돌리고 `recordSnapshot` 이 남긴 것을 본다(`InputMutingAndInjection` →
+  `InputMutingAndSnapshotRecording`). **검사 범위가 늘었다**: 예전 테스트는 버퍼 왕복만 봤고 아무도
+  `recordSnapshot` 의 마스크 조립을 보지 않았다.
+- **`ResourcePackReader::getMapEntry`** — 주석은 "디버깅/테스트용" 인데 저장소 전체에 호출자가 **0** 이었다. 내부
+  FAT 맵을 통째로 노출만 하고 아무도 안 쓰는 죽은 API 라 삭제.
+- **`EngineLoop` 의 공개 계측 멤버 넷** (`_profileFrameTarget`·`_bProfileReported`·`_bWantsQuit`·`_bProfileWarmedUp`)
+  — `SW_API` 클래스의 public 구역에, 그것도 함수들 사이에 끼어 있었다. 만지는 곳은 `EngineLoop.cpp` 자신뿐이고
+  밖으로 알릴 것은 `wantsQuit()` 하나다. **private 로 내린 뒤 `FrameProfileSession`(`Engine/Utility/Debug/`)
+  으로 아예 빼냈다** — 상태 넷과 `tick` 한가운데 박혀 있던 워밍업·보고·종료 판정 스무 줄이 한 타입으로 모이고,
+  `EngineLoop` 은 `begin` / `onFrameEnd` 두 줄과 `wantsQuit()` 위임만 남는다. **상속이 아니라 합성인 이유**:
+  `EngineLoop` 은 가상 함수가 하나도 없고 App 이 값으로 들고 있다(`App.h` 의 `EngineLoop _engineLoop;`).
+  계측 하나 때문에 `SW_API` 클래스에 vtable 을 만들고 App 의 소유 모델을 포인터로 바꿀 일이 아니다.
+  동작은 그대로다 — Debug 실측 `-gv_profileFrames=40` 이 워밍업 60 폐기 → 40 프레임 측정 → 표 출력 →
+  종료 코드 0 으로 예전과 같다.
+
+**이어서 — 검증용 `gv_` 들을 쓰는 자리로 내렸다.** `EngineLoop.cpp` 이 gv_ 선언의 잡동사니 서랍이 돼 있었다.
+선언은 거기 있고 읽는 쪽은 다른 파일에서 `extern` 으로 끌어 쓰는 형태라, **타입이 어긋나도 링커까지 가야
+걸린다.** 소비자가 Engine 안에 있는 여섯을 소비자 파일로 옮기고 `extern` 재선언을 지웠다.
+
+| 옮긴 것 | 간 곳 | 소비자 |
+|---|---|---|
+| `gv_profileFrames` | `Utility/Debug/FrameProfileSession.cpp` | `FrameProfileSession::begin()` (이제 인자 없이 스스로 읽는다) |
+| `gv_screenshot` · `gv_screenshotAttachment` · `gv_screenshotFrame` | `Graphics/Renderer/RenderThread.cpp` | `RenderThread` 스크린샷 경로 |
+| `gv_gpuCulling` | `Graphics/Renderer/Frame/FrameRenderer.cpp` | `FrameRenderer` 컬링 디스패치 판정 |
+| `gv_defaultMaterial` | `Scene/Scene.cpp` | `resolveDefaultMaterialPath` |
+
+**그리고 모듈이 자기 전역 변수를 스스로 등록하게 만들어, 남은 일곱도 제 모듈로 보냈다.** 묶여 있던 것은
+규칙이 아니라 **순서**였다: `EngineLoop::initialize` 가 `registerPendingVariables("Engine")` →
+`registerToCommandLine` → `parse(argv)` → `updateFromCommandLine` 순으로 도는데 모듈은 그 **뒤에**
+로드되고, `CommandLineManager::parseArgumentLine` 이 모르는 키를 경고만 찍고 **값을 버렸다**.
+기계장치는 절반이 이미 있었다 — 모듈별 헤드 체인(`GlobalVariableRegistrar::linkTo`),
+`registerPendingVariables`, 그리고 **호출자가 0이던** `unregisterVariablesByModule`. 배선만 없었다.
+
+- **보류표**: 미등록 키가 `gv_` 로 시작하면 버리지 않고 `_mapPendingGlobal` 에 남긴다. 표는 비우지
+  않는다 — 핫 리로드로 모듈이 다시 올라와도 커맨드라인 값은 프로세스 수명 내내 유효해야 한다.
+- **늦은 적용**: `GlobalVariableManager::registerVariable` 이 등록 직후 보류값을 꺼내 적용한다.
+  엔진 자신의 변수는 `registerToCommandLine` **이전에** 등록되므로 여기 걸리지 않는다(기존
+  `updateFromCommandLine` 경로 그대로).
+- **오타 감지**: 즉시 경고가 사라지므로 `App::warnUnclaimedGlobalOverrides()` 가 모듈이 다 올라온 뒤
+  임자 없는 키를 한 번 경고한다. 표는 비우지 않으니 나중에 로드되는 모듈이 여전히 가져갈 수 있다.
+- **모듈 쪽 보일러플레이트는 매크로 한 쌍**(`SW_DECLARE_MODULE_GLOBAL_VARIABLES` /
+  `SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES`)으로 접었다. 모듈이 쓸 것은 헤드 매크로를 갈아 끼우는 두 줄
+  (전처리기 지시자는 매크로 안에 못 넣는다)과 이 매크로 두 개가 전부다. 등록/해제 호출 지점은
+  `ImGuiEditor::initialize/shutdown` 과 `EmptyGame::onInitialize/onShutdown` 이다 — `ModuleHost` 가
+  `bindService` **뒤에** `initialize` 를, `shutdown` **뒤에** `bindService(nullptr)` 을 부르므로 둘 다
+  서비스가 살아 있는 구간이다.
+
+부수 효과 하나: `BenchScene` 이 이제 `findVariable("gv_benchMeshes")` 문자열 조회 대신 변수를 **직접**
+읽는다(같은 모듈이니까). 예전 조회는 이름을 잘못 쓰면 조용히 0 으로 읽혔다.
+
+`EngineLoop.cpp` 에 남은 전역 변수는 **자기가 읽는 `gv_crashTest` 하나**다.
+
+**검증**(전부 실측)
+- Engine 쪽 여섯: `-gv_screenshot` 이 1280×720 PPM 을 뽑고, `-gv_defaultMaterial=…benchtextured.material`
+  이 픽셀을 바꾼다(평균 R 33.73→33.53, B 46.72→45.59). `-gv_gpuCulling=0` 은 픽셀이 같은데 이건 문서대로다
+  (간접 인자를 GpuScene 이 CPU 에서 이미 채우므로 디스패치만 빼도 화면은 같다).
+- 에디터 셋: `-gv_editorOpenAllPanels=1 -gv_editorPanelDump=40` → "전부 열었습니다" + 창 30개·내용 없는
+  패널 0개. `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml` → "시작 씬을 엽니다" + 창 15개.
+- 벤치 넷: `-gv_benchMeshes=64 -gv_benchMeshVariants=4` → "메시 종류 4개", "큐브 64개". **Shipping(정적 링크)**
+  에서도 같은 스위치가 먹는다 — Info 로그가 없으므로 스크린샷으로 확인했다(평균 R 31.00→34.20).
+- 오타: `-gv_typoHere=3` → `gv_typoHere: 그런 전역 변수가 없습니다` (Debug·Shipping 양쪽).
+- 어느 실행에도 `already registered` 경고가 없다(= 등록/해제가 짝이 맞는다).
+
+**남긴 것과 이유.** 에디터 전용인데 엔진 쪽에 있는 것들(RHI 의 ImGui 네이티브 핸들 넷, `CommandStack`,
+`SW_API` 로 내보낸 `gv_editor*` 셋, `SceneManager::getFrameRenderer`, RuntimeAPI 의 `EditorAPI`·`IModuleCompiler`)은
+**의도된 경계**다 — 전부 그 자리에 있는 이유가 주석에 있고, 이미 `gameAllowed=0`·Shipping 미생성으로 좁혀져 있다.
+테스트만 부르는 미배선 기능들(`Component::registerSubTick`·`SceneDocument::saveBinary`·`SceneManager::createScene`·
+`FrameRenderer::findPsoDesc` 등)도 "아직 런타임이 안 쓰는 기능" 이지 테스트 목적 함수가 아니라 그대로 둔다.
+
+**검증**: Debug/Shipping 빌드 경고 0, 린트 6/6, Debug nogpu 5/5, `RHITest.*` 13/13(GPU, `OffscreenDrawIsReadable`
+포함), 에디터 DX12 실기동 종료 0 · `[Error]`/`[Warning]` 0건.
+
+> **Shipping nogpu 에 선행 실패 2건이 있다(이 작업과 무관).** `Engine_Resource.AssetDatabaseKnowsAssetsBeforeTheyAreLoaded`
+> 와 `SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 가 Shipping 에서만 진다(Debug 는 둘 다 통과).
+> 이 작업을 `git stash` 하고 HEAD 를 다시 빌드해도 **같은 둘이 같은 자리에서** 지는 것을 확인했다 —
+> 0절의 "Shipping 426(+2 skip)" 기준선은 지금 실측과 다르다(EngineTest_NoGPU 405/409, 실패 2 · 스킵 2).
+> 둘 다 팩의 `assetregistry.txt` / 쿠킹된 씬 바이너리를 읽는 경로라 그쪽을 봐야 한다.
 
 ### 2026-09-11 (리눅스 전용 코드를 Windows 수준으로 — 크래시 리포트가 핵심)
 

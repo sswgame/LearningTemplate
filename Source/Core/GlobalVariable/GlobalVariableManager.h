@@ -87,7 +87,11 @@ namespace sw
         GlobalVariableManager& operator=( const GlobalVariableManager& ) = delete;
 
         /** @brief 모든 변수를 기본값으로 되돌립니다. */
-        void shutdown() { resetAllToDefault(); }
+        void shutdown()
+        {
+            resetAllToDefault();
+            _pCmdLineManager = nullptr;
+        }
 
         /** @brief 커맨드라인 매니저에 변수들을 등록합니다. */
         void registerToCommandLine( class CommandLineManager* pCmdLineManager );
@@ -125,6 +129,13 @@ namespace sw
     private:
         mutable std::shared_mutex                 _mutex;
         unordered_map<string, GlobalVariableInfo> _mapVariable;
+        /**
+         * @brief `registerToCommandLine` 이 물려 준 파서. 늦게 등록되는 변수의 보류값을 여기서 꺼낸다.
+         * @details 소유하지 않는다 — 둘 다 `EngineLoop` 이 들고 있고, 선언 순서상 이 매니저가 먼저
+         *          파괴된다. 모듈은 `CommandLineManager` 를 서비스로 못 받으므로(gameAllowed=0)
+         *          보류값을 꺼내는 경로는 이 포인터뿐이다.
+         */
+        class CommandLineManager* _pCmdLineManager{ nullptr };
     };
 
     // ------------------------------------------------------------------------------
@@ -215,3 +226,65 @@ namespace sw
 #define SW_EXTERN_GLOBAL_VARIABLE_STRING( name ) extern sw::string name
 /** @brief 다른 TU 에서 enum 전역 변수를 참조합니다. */
 #define SW_EXTERN_GLOBAL_VARIABLE_ENUM( name, enumType ) extern enumType name
+
+// ------------------------------------------------------------------------------
+// 5) 모듈 로컬 등록 — 로드된 DLL(EditorModule·SWGame)이 자기 변수를 스스로 올리고 내린다
+// ------------------------------------------------------------------------------
+/**
+ * @brief 모듈 전용 등록 리스트와 등록/해제 함수를 **선언**합니다 (모듈의 전역 변수 헤더에서).
+ * @param ns `sw` 하위 네임스페이스 이름 (예: `editor`, `game`). 그 안에 `getService` 가 있어야 합니다.
+ * @details 모듈의 전역 변수는 Engine.dll 헤드가 아니라 **모듈 로컬 헤드**에 붙어야 한다. 그래야
+ *          언로드될 때 `unregisterVariablesByModule` 이 통째로 걷어내고, 매니저가 사라진 DLL 안의
+ *          주소를 계속 가리키지 않는다.
+ * @note 헤드 매크로를 갈아 끼우는 두 줄은 각 모듈 헤더에 직접 쓴다 — 전처리기 지시자는 매크로 안에
+ *       넣을 수 없다.
+ *       @code
+ *       #undef SW_GVM_MODULE_HEAD
+ *       #define SW_GVM_MODULE_HEAD() ( ::sw::game::getGlobalVariableHead() )
+ *       SW_DECLARE_MODULE_GLOBAL_VARIABLES( game );
+ *       @endcode
+ */
+#define SW_DECLARE_MODULE_GLOBAL_VARIABLES( ns )                                                             \
+    namespace sw::ns                                                                                         \
+    {                                                                                                        \
+        /** @brief 이 모듈 전용 등록 리스트 헤드. 함수 지역 static 이라 정적 초기화 순서에 걸리지 않는다. */ \
+        ::sw::GlobalVariableRegistrar*& getGlobalVariableHead();                                             \
+        /** @brief 이 모듈의 전역 변수를 매니저에 올리고 커맨드라인 보류값을 적용받습니다. */                \
+        void registerGlobalVariables();                                                                      \
+        /** @brief 등록을 해제합니다. 모듈이 내려가기 전에 반드시 불러야 합니다. */                          \
+        void unregisterGlobalVariables();                                                                    \
+    }                                                                                                        \
+    static_assert( true, "뒤따르는 세미콜론을 삼킨다" )
+
+/**
+ * @brief `SW_DECLARE_MODULE_GLOBAL_VARIABLES` 로 선언한 것을 **구현**합니다 (모듈의 전역 변수 .cpp 에서).
+ * @param ns 선언 때와 같은 네임스페이스 이름.
+ * @param moduleName 매니저에 기록할 모듈 이름 (예: `config::kTargetGameModule`).
+ * @details 등록 시점이 중요하다 — 커맨드라인은 모듈이 로드되기 **전에** 파싱되므로 `-gv_...` 값은
+ *          파서의 보류표에 남아 있고, `registerPendingVariables` 가 도는 그 순간 적용된다. 그래서
+ *          모듈은 자기 변수를 읽기 **전에** `registerGlobalVariables()` 를 불러야 한다.
+ */
+#define SW_IMPLEMENT_MODULE_GLOBAL_VARIABLES( ns, moduleName )                                 \
+    namespace sw::ns                                                                           \
+    {                                                                                          \
+        ::sw::GlobalVariableRegistrar*& getGlobalVariableHead()                                \
+        {                                                                                      \
+            static ::sw::GlobalVariableRegistrar* s_pHead{ nullptr };                          \
+            return s_pHead;                                                                    \
+        }                                                                                      \
+        void registerGlobalVariables()                                                         \
+        {                                                                                      \
+            ::sw::GlobalVariableManager* pManager = getService<::sw::GlobalVariableManager>(); \
+            if ( pManager == nullptr )                                                         \
+                return;                                                                        \
+            pManager->registerPendingVariables( moduleName, getGlobalVariableHead() );         \
+        }                                                                                      \
+        void unregisterGlobalVariables()                                                       \
+        {                                                                                      \
+            ::sw::GlobalVariableManager* pManager = getService<::sw::GlobalVariableManager>(); \
+            if ( pManager == nullptr )                                                         \
+                return;                                                                        \
+            pManager->unregisterVariablesByModule( moduleName );                               \
+        }                                                                                      \
+    }                                                                                          \
+    static_assert( true, "뒤따르는 세미콜론을 삼킨다" )

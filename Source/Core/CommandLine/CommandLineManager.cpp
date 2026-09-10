@@ -122,6 +122,18 @@ namespace sw
 
         if ( iter == _mapArgument.end() )
         {
+            // 모듈(EditorModule·SWGame)이 선언하는 전역 변수는 **이 시점에 아직 없다** — 커맨드라인은
+            // 모듈이 로드되기 전에 파싱된다. 버리면 그 스위치는 영영 먹지 않으므로 보류표에 남겨 두고,
+            // 모듈이 늦게 등록할 때 GlobalVariableManager::registerVariable 이 꺼내 적용한다.
+            // 표는 비우지 않는다 — 핫 리로드로 모듈이 다시 올라와도 커맨드라인 값은 프로세스 수명
+            // 내내 유효해야 한다. 대신 오타를 놓치지 않도록, 모듈 로드가 끝난 뒤 아무도 가져가지 않은
+            // 키를 App 이 한 번 경고한다(collectPendingGlobalNames).
+            if ( cleanKey.rfind( kGlobalVariablePrefix, 0 ) == 0 )
+            {
+                _mapPendingGlobal[string{ cleanKey }] = string{ valueStr };
+                return;
+            }
+
             SW_LOG_WARNING( "%#에 해당하는 Argument는 없습니다. 무시됩니다", string( rawKey ).c_str() );
             return;
         }
@@ -144,6 +156,25 @@ namespace sw
             argument._value = true;
 
         argument._bParsed = 1;
+    }
+
+    bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
+    {
+        const auto iter = _mapPendingGlobal.find( name );
+        if ( iter == _mapPendingGlobal.end() )
+            return false;
+
+        outValue = iter->second;
+        return true;
+    }
+
+    vector<string> CommandLineManager::collectPendingGlobalNames() const
+    {
+        vector<string> listName;
+        listName.reserve( _mapPendingGlobal.size() );
+        for ( auto iter = _mapPendingGlobal.begin(); iter != _mapPendingGlobal.end(); ++iter )
+            listName.push_back( iter->first );
+        return listName;
     }
 
     // ============================================================================
