@@ -30,6 +30,8 @@ namespace sw
             return msg.find( "DXC and D3DCompiler" ) != sw::string::npos ||
                    msg.find( "dxcompiler" ) != sw::string::npos ||
                    msg.find( "SPIR-V CodeGen not available" ) != sw::string::npos ||
+                   // 그 타깃 자체가 이 OS 에 없는 경우 (예: 비 Windows 의 DXBC/D3D11).
+                   msg.find( "unavailable on this platform" ) != sw::string::npos ||
                    msg.find( "Failed to compile shader" ) != sw::string::npos;
         }
 
@@ -89,6 +91,12 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
         if ( vsResult._errorMessage.find( "SPIR-V CodeGen not available" ) != sw::string::npos )
         {
             SW_LOG_WARNING( "DXC dxcompiler.dll on this host does not support SPIR-V CodeGen. Skipping SPIR-V assertion." );
+            continue;
+        }
+        if ( vsResult._errorMessage.find( "unavailable on this platform" ) != sw::string::npos )
+        {
+            // 이 타깃만 이 OS 에 없다 — 나머지 타깃 검증은 그대로 이어간다.
+            SW_LOG_WARNING( "Target unavailable on this platform, skipping: %#", vsResult._errorMessage.c_str() );
             continue;
         }
         if ( sw::isShaderCompilerUnavailable( vsResult ) )

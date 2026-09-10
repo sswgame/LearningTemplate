@@ -48,8 +48,9 @@ namespace sw
                 {
                 }
 
-                STDMETHOD( Open )( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
-                                   LPCVOID* ppData, UINT* pBytes ) override
+                STDMETHOD( Open )
+                ( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
+                  LPCVOID* ppData, UINT* pBytes ) override
                 {
                     (void)includeType;
                     (void)pParentData;
@@ -77,7 +78,8 @@ namespace sw
                     return E_FAIL;
                 }
 
-                STDMETHOD( Close )( LPCVOID pData ) override
+                STDMETHOD( Close )
+                ( LPCVOID pData ) override
                 {
                     if ( pData != nullptr )
                         Memory::freeMemory( const_cast<void*>( pData ) );
@@ -406,6 +408,19 @@ namespace sw
             }
         }
 #endif // SW_PLATFORM_WINDOWS
+
+#if !defined( SW_PLATFORM_WINDOWS )
+        // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
+        // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
+        // 모른다며 "invalid profile vs_5_0" 로 죽는다 — 그 메시지로는 "이 플랫폼엔 D3D11 이 없다"는
+        // 진짜 이유가 드러나지 않아 호출부가 환경 문제와 셰이더 문제를 구분하지 못한다.
+        if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+        {
+            result._bSuccess     = false;
+            result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
+            return result;
+        }
+#endif // !SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
         BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" )
