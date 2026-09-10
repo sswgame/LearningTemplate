@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/empty",
-    "_gameDataFile": "data/gamedata.xml"
+    "_gameDataFile": "data/gamedata.xml",
+    "_startupScene": "game/empty/maps/editortest.scene.xml"
 }

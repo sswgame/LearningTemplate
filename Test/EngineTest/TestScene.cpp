@@ -202,3 +202,27 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     sw::FileUtil::removeFile( tempSceneXml );
 }
+
+/**
+ * @brief [SceneTest] 커밋된 테스트 씬의 TestProp 은 옛 경로(old/)를 가리키지만 GUID 로 실제 프리팹을 찾는다.
+ * @details 시작 시점 AssetDatabase(.meta 스캔 / 배포본은 assetregistry.txt)가 있어야 통과한다 — 로드된 적 없는
+ *          에셋의 GUID 를 알아야 하므로. 배포본의 같은 경로는 SCN1 이 prefabGuid 를 실어야 열린다(쿠커가 그것을
+ *          빠뜨리고 있었다). GPU 가 필요 없다(nogpu).
+ */
+SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
+{
+    sw::ResourceUtil::initialize();
+    sw::SceneDocument doc{};
+    SW_ASSERT_TRUE( doc.load( "game/empty/maps/editortest.scene.xml" ) );
+
+    bool bFound = false;
+    for ( const sw::SceneDocument::EntityNode& node : doc._listEntityNode )
+    {
+        if ( node._name != "TestProp" )
+            continue;
+        bFound = true;
+        SW_EXPECT_STREQ( "game/empty/prefabs/testprop.prefab.xml", node._prefab.c_str() );
+        SW_EXPECT_STREQ( "deb66c15-3534-4b79-b3de-a2080d7c5ffe", node._prefabGuid.c_str() );
+    }
+    SW_EXPECT_TRUE_MSG( bFound, "테스트 씬에 TestProp 이 없다 — 이 검증이 아무것도 보지 않았다" );
+}

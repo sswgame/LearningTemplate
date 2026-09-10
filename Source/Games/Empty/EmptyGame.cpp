@@ -2,6 +2,11 @@
 
 #include "Games/Empty/EmptyGame.h"
 
+#include "Engine/Config/GameConfig.h"
+#include "Engine/Scene/SceneManager.h"
+
+#include "GameFramework/Base/GameService.h"
+
 #include "Games/Empty/BenchScene.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
@@ -27,6 +32,17 @@ namespace sw
         _benchScene = make_unique<BenchScene>();
         if ( _benchScene->spawnFromGlobals() == false )
             _benchScene.reset();
+
+        // 벤치가 아니면 GameConfig 의 시작 씬을 연다. 예전엔 에디터 밖의 실행은 씬 없이 떴다(백로그 0절의 "빈 씬"
+        // 함정) — 배포본이 씬 로드 경로(SCN1 · 프리팹 GUID 해석)를 실제로 태우는 자리이기도 하다. 에디터가 자기
+        // 시작 씬(-gv_editorStartupScene)을 열면 그 요청이 뒤에 큐잉되어 이긴다(SceneManager 는 마지막 요청을 남긴다).
+        if ( _benchScene == nullptr )
+        {
+            const string& startupScene  = GameConfig::getActive()._startupScene;
+            SceneManager* pSceneManager = game::getService<SceneManager>();
+            if ( startupScene.empty() == false && pSceneManager != nullptr && pSceneManager->requestLoadAsync( startupScene ) == false )
+                SW_LOG_ERROR( "Startup scene load request failed: %#", startupScene.c_str() );
+        }
 
         return true;
     }

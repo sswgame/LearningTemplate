@@ -36,14 +36,17 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40
 ```
 
-현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 0개**.
+현재 기준선 (2026-09-11, 시작 씬 = 테스트 씬): **기본 창 15개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 ·
+내용 없는 패널 0개**. (시작 씬이 없던 때는 기본 창 14개였다.)
 
-> ⚠️ **기본 실기동 검증은 빈 씬을 본다.** `SW_ACTIVE_GAME=Empty` 는 맵이 없어서 `SceneManager` 가
-> 씬 없이 뜨고 내려간다 — 오브젝트를 도는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
-> Profiler 분포표 · 씬 세대 변경 훅)가 하나도 실행되지 않는다. 정점 수 742 비교가 증명하는 것은
-> 오브젝트와 무관한 그리기(그리드·통계·큐브)까지다.
+> **2026-09-11 부터 기본 실기동도 씬을 본다.** `GameConfig._startupScene` 이 `game/empty/maps/editortest.scene.xml`
+> 을 가리키고, Empty 게임이 벤치(`-gv_benchMeshes`)가 아니면 시작 시 그 씬을 연다 — 에디터 유무와 무관하게,
+> 배포본도 같다. 예전엔 `SW_ACTIVE_GAME=Empty` 가 맵이 없어 `SceneManager` 가 씬 없이 뜨고 내려갔고,
+> 오브젝트를 도는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 · Profiler 분포표 · 씬 세대 변경 훅)가
+> 하나도 실행되지 않았다. 단, 테스트 씬의 메시는 `_meshId` 가 비어 있어 **화면에는 기하가 없다** — 스크린샷
+> 비교가 필요하면 벤치 큐브(`-gv_benchMeshes`)를 쓴다.
 >
-> **테스트 씬을 쓰면 그 경로가 켜진다** (2026-09-10 추가):
+> **다른 씬을 열려면** (`-gv_editorStartupScene` 은 게임 요청 뒤에 큐잉되어 이긴다):
 >
 > ```powershell
 > # PowerShell 은 점이 든 인자를 쪼갠다 — **반드시 따옴표로 감쌀 것**
@@ -203,8 +206,7 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 > 을 `testprop_moved.prefab.xml` 로 옮기고(.meta 의 sourcePath 도 같이) 옛 경로를 가리키는 씬을 둘 띄웠다:
 > **경로만** 있는 씬은 `[Error] Not found: .../testprop.prefab.xml` 뒤에 소스 트리에 남아 있던 **낡은
 > `testprop.prefab.bin`** 으로 조용히 물러났고, **GUID 가 있는** 씬은 레지스트리로 `testprop_moved.prefab.xml`
-> 을 찾아 로드했다. 배포본(팩) 경로는 같은 코드(`loadRegistry`)가 "5 항목 (팩 assetregistry.txt)" 로 채우는
-> 것까지만 봤다 — Shipping 은 시작 씬이 없어 씬 로드 자체를 태울 수 없다.
+> 을 찾아 로드했다. 배포본 경로는 2026-09-11 에 시작 씬을 걸고 A/B 로 닫았다 — 3절 "배포본이 씬을 연다" 항목.
 >
 > 곁들여 본 것: `CookPrefabs` 가 소스 트리 안에 `*.prefab.bin` 을 남기고, `PrefabAsset` 은 XML 을 못 찾으면
 > 그 .bin 으로 물러난다. 위 실험에서 옮긴 프리팹의 옛 .bin 이 실패를 가렸다 — 이름을 바꾸거나 지운 프리팹이
@@ -245,6 +247,30 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (배포본이 씬을 연다 — 시작 씬을 걸자 쿠커의 씬 바이너리가 두 곳에서 어긋나 있었다)
+
+"테스트 씬을 일단 Shipping 의 시작 씬으로 하고 GUID 복구를 배포본에서도 보자" 는 요청이었다. 시작 씬은
+`GameConfig._startupScene`(JSON → Shipping 은 `ShippingHostDefaults.h` 로 베이크)이고, Empty 게임이 벤치가 아닐 때
+`onInitialize` 에서 `requestLoadAsync` 한다. 걸자마자 배포본이 **한 번도 씬을 연 적이 없어** 숨어 있던 것 둘이 나왔다:
+
+1. **쿠커의 씬 파일 이름이 런타임과 달랐다.** `SceneDocument::load` 는 `<name>.scene.xml` 의 짝을
+   `<name>.scene.bin` 으로 찾는데 `CookScenes` 는 `.scene` 까지 벗겨 `<name>.bin` 을 만들었다 — 배포본은
+   "Shipping requires cooked binary scene" 으로 끝났을 경로다.
+2. **SCN1 에 `prefabGuid` 가 없었다.** C++ `saveBinary/loadBinary` 는 엔티티마다 이름·프리팹·GUID·본문 넷을
+   읽는데 Python 쿠커는 셋만 썼다 — 스트림이 어긋나게 읽히고, 읽혔다 해도 배포본은 옮긴 프리팹을 GUID 로
+   찾을 길이 없었다. 순서를 C++ 과 맞췄다.
+
+테스트 씬에 **옮긴 프리팹 항목**을 넣었다: `TestProp` 은 일부러 옛 경로(`prefabs/old/`)를 가리키고 GUID 가 정본이다.
+- Dev(에디터 없이): 시작 씬 로드 → `Loaded 'TestProp' from .../prefabs/testprop.prefab.xml` — .meta 스캔 표로 찾았다.
+- **Shipping A/B**: GUID 가 있는 팩 → `[Error]` **0**. 같은 씬에서 `prefabGuid` 만 지우고 다시 쿠킹 → `[Error]` 2
+  (`Binary read failed ... prefabs/old/testprop.prefab.bin`, `Shipping requires cooked binary`). 배포본이 팩의
+  `assetregistry.txt` 로 GUID → 경로를 해석한다는 것이 이 차이다.
+- `SceneTest.EditorTestSceneResolvesMovedPrefabByGuid`(nogpu) 가 Dev 쪽을 고정한다. Python SCN1 과 C++ 리더의
+  형식 일치는 이 A/B 로만 확인했다 — Python 쪽 단위 테스트 기반이 없다.
+
+부수 효과: 기본 실기동이 이제 씬을 본다(0절 기준선 14 → 15 창). 테스트 씬은 기하가 없어(메시 id 비어 있음)
+스크린샷으로는 안 보인다 — 화면 검증엔 여전히 벤치 큐브를 쓴다.
 
 ### 2026-09-10 (백엔드 넷의 서술체 해석을 한 곳으로 + 로그 파일 이름이 `.txt` 를 잃던 것)
 

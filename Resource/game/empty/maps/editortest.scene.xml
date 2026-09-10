@@ -117,5 +117,8 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<!-- 옮긴 프리팹을 GUID 로 찾는지 보는 항목: 경로는 일부러 옛 위치(old/)이고 GUID 가 정본이다.
+		     Dev 는 시작 시 .meta 스캔으로, 배포본은 팩의 assetregistry.txt 로 prefabs/testprop 을 찾아야 한다. -->
+		<entity name="TestProp" prefab="game/empty/prefabs/old/testprop.prefab.xml" prefabGuid="deb66c15-3534-4b79-b3de-a2080d7c5ffe" />
 	</entities>
 </Scene>
