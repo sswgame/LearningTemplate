@@ -38,17 +38,17 @@ namespace sw
             static constexpr uint8 kAxisDPadX        = 6;
             static constexpr uint8 kAxisDPadY        = 7;
 
-            static constexpr uint8 kButtonA             = 0;
-            static constexpr uint8 kButtonB             = 1;
-            static constexpr uint8 kButtonX             = 2;
-            static constexpr uint8 kButtonY             = 3;
-            static constexpr uint8 kButtonLeftShoulder  = 4;
-            static constexpr uint8 kButtonRightShoulder = 5;
-            static constexpr uint8 kButtonBack          = 6;
-            static constexpr uint8 kButtonStart         = 7;
-            [[maybe_unused]] static constexpr uint8 kButtonGuide = 8; ///< GamepadButton에 대응값 없음 (무시).
-            static constexpr uint8 kButtonLeftThumb     = 9;
-            static constexpr uint8 kButtonRightThumb    = 10;
+            static constexpr uint8                  kButtonA             = 0;
+            static constexpr uint8                  kButtonB             = 1;
+            static constexpr uint8                  kButtonX             = 2;
+            static constexpr uint8                  kButtonY             = 3;
+            static constexpr uint8                  kButtonLeftShoulder  = 4;
+            static constexpr uint8                  kButtonRightShoulder = 5;
+            static constexpr uint8                  kButtonBack          = 6;
+            static constexpr uint8                  kButtonStart         = 7;
+            [[maybe_unused]] static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton에 대응값 없음 (무시).
+            static constexpr uint8                  kButtonLeftThumb     = 9;
+            static constexpr uint8                  kButtonRightThumb    = 10;
 
             /** @brief js_event 축 값(-32767~32767)을 [-1, 1] 스틱 축으로 정규화합니다. bInvertY면 부호를 뒤집습니다. */
             static float32 normalizeStickAxis( int16 rawValue, bool bInvert )
