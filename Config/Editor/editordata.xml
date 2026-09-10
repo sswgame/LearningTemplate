@@ -1,9 +1,7 @@
 <EditorData _defaultMap=""
 			_warpMap=""
 			_spriteAtlas=""
-			_defaultMaterial="engine/materials/defaultmaterial.material"
 			_fontSize="16"
-			_playerSpeed="5"
 			_clearColor="0.12,0.15,0.18,1"
 			_editorFolder="editor"
 			_fontsFolder="fonts">

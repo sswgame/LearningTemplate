@@ -12,6 +12,7 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
@@ -119,7 +120,9 @@ namespace sw::editor
 
         destroyGameView();
 
-        constexpr float4 kGameViewClearColor{ 0.12f, 0.15f, 0.18f, 1.0f };
+        // editordata.xml 의 _clearColor 를 쓴다. 예전에는 여기에 같은 값을 손으로 박아 두어
+        // XML 을 고쳐도 아무 일도 일어나지 않았다 (설정이 조용히 무시되는 자리였다).
+        const float4 gameViewClearColor = editor::getEditorData()._clearColor;
 
         RHITextureDesc rtDesc{};
         rtDesc._width             = width;
@@ -128,7 +131,7 @@ namespace sw::editor
         rtDesc._bIsRenderTarget   = SW_TRUE;
         rtDesc._bIsShaderResource = SW_TRUE;
         rtDesc._mipLevels         = 1;
-        rtDesc._clearColor        = kGameViewClearColor;
+        rtDesc._clearColor        = gameViewClearColor;
 
         _gameView._renderTarget = _pRhiDevice->getResource()->createTexture2D( rtDesc );
         if ( _gameView._renderTarget == 0 )

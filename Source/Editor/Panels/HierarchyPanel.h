@@ -29,6 +29,14 @@ namespace sw::editor
         void handleHierarchyShortcuts( GameObjectManager* pManager );
 
     private:
+        /**
+         * @brief 프레임마다 다시 채우는 오브젝트 스냅샷 (용량 재사용).
+         * @details 트리를 그리는 도중 오브젝트가 지워지거나 재부모화될 수 있으므로 스냅샷이
+         *          필요하다 — 매니저를 잠근 채로 그리면 그 변경이 같은 스레드에서 배타 락을
+         *          다시 잡아 교착한다. 다만 값 반환 getAllGameObjects() 는 호출마다 새로
+         *          할당하므로, 버퍼를 들고 out 파라미터 오버로드를 쓴다.
+         */
+        vector<GameObject*>                   _listSceneObject;
         uint64                                _renamingObjectId;
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         fixed_string<constant::kMaxBuffer256> _renameBuffer;

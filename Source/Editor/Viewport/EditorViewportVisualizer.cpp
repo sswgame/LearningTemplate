@@ -8,13 +8,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
 
@@ -27,13 +25,9 @@ namespace sw::editor
             /** @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다. */
             static void drawColliders( const EditorViewportVisualizerArgs& args )
             {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( pManager == nullptr )
-                    return;
-
                 constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
 
-                for ( GameObject* pObj : pManager->getAllGameObjects() )
+                for ( GameObject* pObj : *args._pListObject )
                 {
                     if ( pObj == nullptr || pObj->isActive() == false )
                         continue;
@@ -69,13 +63,9 @@ namespace sw::editor
             /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. */
             static void drawCameraFrustums( const EditorViewportVisualizerArgs& args )
             {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( pManager == nullptr )
-                    return;
-
                 constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
 
-                for ( GameObject* pObj : pManager->getAllGameObjects() )
+                for ( GameObject* pObj : *args._pListObject )
                 {
                     if ( pObj == nullptr || pObj->isActive() == false )
                         continue;
@@ -148,7 +138,7 @@ namespace sw::editor
 
     void EditorViewportVisualizer::drawAll( const EditorViewportVisualizerArgs& args, uint32 visualizerMask )
     {
-        if ( args._pDrawList == nullptr || args._pViewProj == nullptr )
+        if ( args._pDrawList == nullptr || args._pViewProj == nullptr || args._pListObject == nullptr )
             return;
 
         for ( uint32 index = 0; index < EditorViewportVisualizerInternal::kRowCount; ++index )

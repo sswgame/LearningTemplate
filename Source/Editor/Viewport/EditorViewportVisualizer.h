@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
@@ -12,6 +13,7 @@ struct ImDrawList;
 namespace sw
 {
     class CameraComponent;
+    class GameObject;
 } // namespace sw
 
 namespace sw::editor
@@ -24,6 +26,12 @@ namespace sw::editor
         float2           _canvasPos{};
         float2           _canvasSize{};
         CameraComponent* _pActiveCamera{ nullptr }; ///< 자기 자신은 프러스텀을 그리지 않습니다
+        /**
+         * @brief 이 프레임의 오브젝트 스냅샷. 호출부가 재사용 버퍼로 채워 넘깁니다.
+         * @details 시각화마다 씬 목록을 따로 받으면 프레임마다 시각화 수만큼 씬 전체를 힙에
+         *          복사한다(값 반환 getAllGameObjects()). 한 번 채워 함께 본다.
+         */
+        const vector<GameObject*>* _pListObject{ nullptr };
     };
 
     /**

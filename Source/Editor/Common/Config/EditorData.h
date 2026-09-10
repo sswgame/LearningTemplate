@@ -33,15 +33,11 @@ namespace sw::editor
         string _warpMap{};
         PROPERTY()
         string _spriteAtlas{};
-        PROPERTY()
-        string _defaultMaterial{ "engine/materials/defaultmaterial.material" };
 
         PROPERTY()
         float32 _fontSize{ 16.0f };
         PROPERTY()
-        float32 _playerSpeed{ 5.0f };
-        PROPERTY()
-        float4 _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f };
+        float4 _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }; ///< Game View 렌더 타깃 클리어 색
 
         PROPERTY()
         string _editorFolder{ "editor" };

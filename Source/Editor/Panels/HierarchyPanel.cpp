@@ -517,8 +517,8 @@ namespace sw::editor
             return;
         }
 
-        GameObjectManager*         pManager   = pScene->getObjectManager();
-        const vector<GameObject*>& listObject = pManager->getAllGameObjects();
+        GameObjectManager* pManager = pScene->getObjectManager();
+        pManager->getAllGameObjects( _listSceneObject );
 
         // 상단 툴바: 생성 버튼 + 검색창
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
@@ -557,7 +557,7 @@ namespace sw::editor
             const EditorListFilter treeFilter{ _filterBuffer.c_str() };
             uint32                 visibleRootCount{ 0 };
 
-            for ( GameObject* pObj : listObject )
+            for ( GameObject* pObj : _listSceneObject )
             {
                 if ( pObj != nullptr && pObj->getParent() == nullptr )
                 {

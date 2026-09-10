@@ -108,11 +108,9 @@ namespace sw::editor
         const float32 fps         = ImGui::GetIO().Framerate;
         const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
 
-        Scene*             pScene       = editor::getActiveScene();
-        GameObjectManager* pManager     = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-        const uint32       totalObjects = ( pManager != nullptr )
-                                            ? static_cast<uint32>( pManager->getAllGameObjects().size() )
-                                            : 0;
+        // 개수만 필요하므로 이 프레임에 이미 만들어 둔 스냅샷을 본다 (예전에는 여기서 씬 전체를
+        // 다시 힙에 복사해 .size() 만 읽었다).
+        const uint32 totalObjects = static_cast<uint32>( _listSceneObject.size() );
 
         constexpr float32 overlayW = 160.0f;
         constexpr float32 overlayH = 72.0f;
@@ -375,12 +373,19 @@ namespace sw::editor
             if ( _toolbarSettings._bShowGrid )
                 drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
 
+            // 이 프레임의 스냅샷을 한 번만 만든다. 시각화와 아래 통계 오버레이가 함께 본다.
+            _listSceneObject.clear();
+            GameObjectManager* pSnapshotManager = editor::getActiveObjectManager();
+            if ( pSnapshotManager != nullptr )
+                pSnapshotManager->getAllGameObjects( _listSceneObject );
+
             EditorViewportVisualizerArgs visualizerArgs{};
             visualizerArgs._pDrawList     = ImGui::GetWindowDrawList();
             visualizerArgs._pViewProj     = &viewProj;
             visualizerArgs._canvasPos     = canvasPos;
             visualizerArgs._canvasSize    = canvasSize;
             visualizerArgs._pActiveCamera = pCamera;
+            visualizerArgs._pListObject   = &_listSceneObject;
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );

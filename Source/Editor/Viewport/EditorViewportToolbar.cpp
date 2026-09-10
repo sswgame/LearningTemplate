@@ -62,11 +62,18 @@ namespace sw::editor
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.28f, 0.28f, 0.32f, 1.0f } );
 
         {
+            // 이 콤보는 **아직 아무 일도 하지 않는다.** `_renderMode` 를 읽는 곳이 렌더러에 없다 —
+            // 고르면 값만 바뀌고 화면은 그대로였다. 거짓 컨트롤보다 비활성 컨트롤이 정직하다.
+            // 연결하려면 렌더러 쪽 작업이 필요하다: 파이프라인 리소스에 채우기 모드를 노출하고
+            // 와이어프레임 PSO 변형을 만들고, 프레임 렌더러가 뷰 모드를 골라야 한다.
+            // (RHI 는 네 백엔드 모두 RHIFillMode::Wireframe 을 지원한다.) 자세한 것은 백로그.
+            ImGui::BeginDisabled();
             ImGui::SetNextItemWidth( 85.0f );
             const utf8* arrModeLabel[] = { "Lit", "Unlit", "Wireframe" };
             int32       modeIndex      = static_cast<int32>( settings._renderMode );
-            if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 ) )
-                settings._renderMode = static_cast<ViewportRenderMode>( modeIndex );
+            ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 );
+            ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( "뷰 모드 전환은 아직 렌더러에 연결되지 않았습니다 (백로그 참고)" );
         }
 
         EditorWidgets::drawToolbarSeparator();

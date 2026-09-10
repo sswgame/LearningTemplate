@@ -66,11 +66,15 @@ namespace sw
             };
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-            psoDesc.InputLayout              = { inputElementDescs, _countof( inputElementDescs ) };
-            psoDesc.pRootSignature           = _pDevice->_rootSignature.Get();
-            psoDesc.VS                       = { vsResult._bytecode.data(), vsResult._bytecode.size() };
-            psoDesc.PS                       = { psResult._bytecode.data(), psResult._bytecode.size() };
-            psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+            psoDesc.InputLayout    = { inputElementDescs, _countof( inputElementDescs ) };
+            psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
+            psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
+            psoDesc.PS             = { psResult._bytecode.data(), psResult._bytecode.size() };
+            // DX11·Vulkan·GL 은 desc._fillMode 를 읽는데 여기만 SOLID 로 못박혀 있었다 —
+            // Wireframe 을 요청한 파이프라인이 DX12 에서만 조용히 솔리드로 그려졌다.
+            psoDesc.RasterizerState.FillMode = ( desc._fillMode == RHIFillMode::Wireframe )
+                                                 ? D3D12_FILL_MODE_WIREFRAME
+                                                 : D3D12_FILL_MODE_SOLID;
             psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
                                                  ? D3D12_CULL_MODE_FRONT
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
