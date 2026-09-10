@@ -84,6 +84,17 @@ namespace sw
             return false;
         }
 
+        // 이 백엔드는 셰이더를 SPIR-V 로만 올린다(DXC → SPIR-V → glSpecializeShader). ARB_gl_spirv 가
+        // 없으면 PSO 를 단 하나도 만들지 못해 "초기화는 성공했는데 화면이 텅 비는" 상태가 된다.
+        // 그대로 두면 호출부가 이 백엔드를 멀쩡한 것으로 믿고 계속 쓴다 — 여기서 실패로 끊어야
+        // RHI::createDevice 가 null 을 돌려주고 상위(테스트/렌더러)가 다른 백엔드로 넘어간다.
+        // WSL 의 Mesa 드라이버(llvmpipe/d3d12)가 이 확장을 노출하지 않아 실제로 걸린다.
+        if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
+        {
+            SW_LOG_WARNING( "OpenGL 백엔드를 쓸 수 없습니다 — GL_ARB_gl_spirv 없음(glShaderBinary/glSpecializeShader null)." );
+            return false;
+        }
+
         _bInitialized = SW_TRUE;
 
         {
