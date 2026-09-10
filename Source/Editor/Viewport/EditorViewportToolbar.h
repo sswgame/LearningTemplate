@@ -8,14 +8,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 뷰포트 렌더 모드 */
-    enum class ViewportRenderMode : uint8
-    {
-        Lit = 0,
-        Unlit,
-        Wireframe
-    };
-
     /** @brief 뷰포트 툴바 설정 데이터 */
     struct ViewportToolbarSettings
     {
@@ -29,18 +21,20 @@ namespace sw::editor
          *          툴바에도 체크박스를 손으로 적었다. 지금은 표가 개수를 정하므로 시각화를 더해도
          *          이 구조체와 툴바는 그대로다. 초기값은 생성자가 표에서 받아 채운다.
          */
-        uint32             _visualizerMask{ 0 };
-        int32              _requestedBookmarkSlot{ -1 };
-        ViewportRenderMode _renderMode{ ViewportRenderMode::Lit };
-        bool               _bGridSnap{ false };
-        bool               _bRotationSnap{ false };
-        bool               _bScaleSnap{ false };
-        bool               _bShowStats{ true };
-        bool               _bShowGrid{ true };
-        bool               _bShowOrientationCube{ true };
-        bool               _bShowRuler{ false };
-        bool               _bIs2DMode{ false };
-        bool               _bSurfaceSnap{ false };
+        uint32 _visualizerMask{ 0 };
+        int32  _requestedBookmarkSlot{ -1 };
+        // 뷰 모드(Lit/Unlit/Wireframe)는 여기 없다 — 정본은 `FrameRenderer` 다. 같은 값을 두 곳에
+        // 두면 반드시 어긋난다(커맨드라인 `-gv_viewMode` 나 코드가 바꾸면 툴바가 거짓을 보인다).
+        // 툴바는 매 프레임 렌더러에서 읽어 표시하고 고르면 렌더러에 쓴다.
+        bool _bGridSnap{ false };
+        bool _bRotationSnap{ false };
+        bool _bScaleSnap{ false };
+        bool _bShowStats{ true };
+        bool _bShowGrid{ true };
+        bool _bShowOrientationCube{ true };
+        bool _bShowRuler{ false };
+        bool _bIs2DMode{ false };
+        bool _bSurfaceSnap{ false };
     };
 
     /**

@@ -10,9 +10,13 @@
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+
+#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -48,6 +52,16 @@ namespace sw::editor
                         value = arrValue[currentIndex];
                 }
             }
+
+            /**
+             * @brief 지금 붙어 있는 FrameRenderer (없으면 nullptr).
+             * @details 씬이 없거나(스플래시 중) 디바이스를 다시 만드는 중에는 없다 — 그때 콤보는 비활성이다.
+             */
+            static FrameRenderer* findFrameRenderer()
+            {
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                return ( pSceneManager != nullptr ) ? pSceneManager->getFrameRenderer() : nullptr;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -62,18 +76,22 @@ namespace sw::editor
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.28f, 0.28f, 0.32f, 1.0f } );
 
         {
-            // 이 콤보는 **아직 아무 일도 하지 않는다.** `_renderMode` 를 읽는 곳이 렌더러에 없다 —
-            // 고르면 값만 바뀌고 화면은 그대로였다. 거짓 컨트롤보다 비활성 컨트롤이 정직하다.
-            // 연결하려면 렌더러 쪽 작업이 필요하다: 파이프라인 리소스에 채우기 모드를 노출하고
-            // 와이어프레임 PSO 변형을 만들고, 프레임 렌더러가 뷰 모드를 골라야 한다.
-            // (RHI 는 네 백엔드 모두 RHIFillMode::Wireframe 을 지원한다.) 자세한 것은 백로그.
-            ImGui::BeginDisabled();
+            // 렌더러가 뷰 모드를 실제로 읽는다(`FrameRenderer::setViewMode`). 값이 아니라 **렌더러 상태**가
+            // 정본이므로 매 프레임 렌더러에서 읽어 표시한다 — 커맨드라인(`-gv_viewMode`)이나 다른 경로가
+            // 모드를 바꿨을 때 툴바가 거짓을 보이지 않는다.
+            FrameRenderer* pRenderer = EditorViewportToolbarInternal::findFrameRenderer();
+
+            ImGui::BeginDisabled( pRenderer == nullptr );
             ImGui::SetNextItemWidth( 85.0f );
             const utf8* arrModeLabel[] = { "Lit", "Unlit", "Wireframe" };
-            int32       modeIndex      = static_cast<int32>( settings._renderMode );
-            ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 );
+            int32       modeIndex =
+                ( pRenderer != nullptr ) ? static_cast<int32>( pRenderer->getViewMode() ) : static_cast<int32>( RenderViewMode::Lit );
+            if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 ) && pRenderer != nullptr )
+                pRenderer->setViewMode( static_cast<RenderViewMode>( modeIndex ) );
             ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( "뷰 모드 전환은 아직 렌더러에 연결되지 않았습니다 (백로그 참고)" );
+            EditorWidgets::drawTooltip( pRenderer != nullptr
+                                            ? "Lit / Unlit(알베도만) / Wireframe — 씬 지오메트리 보기 방식"
+                                            : "렌더러가 아직 붙지 않았습니다" );
         }
 
         EditorWidgets::drawToolbarSeparator();

@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
@@ -109,6 +110,16 @@ namespace sw
          * @param outFormat 첨부의 RHIFormat (채널 순서 해석용).
          */
         bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
+
+        /**
+         * @brief 씬 지오메트리 보기 방식을 정합니다 (Lit/Unlit/Wireframe).
+         * @details 다음 프레임의 `ensureMaterialPsos` 가 그 모드의 PSO 변형을 만들고 드로우가 그것을 고른다 —
+         *          모드를 바꾼 프레임에 셰이더 컴파일이 한 번 끼고, 그 뒤로는 캐시에서 나온다.
+         *          렌더 스레드가 드로우마다 읽으므로 atomic 이다(락을 걸 자리가 아니다).
+         */
+        void setViewMode( RenderViewMode viewMode );
+        /** @brief 현재 보기 방식. */
+        RenderViewMode getViewMode() const;
 
         /** @brief 패스 타입에 대응하는 엔진 PSO. 없으면 0. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
@@ -382,7 +393,7 @@ namespace sw
          *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 게 아니다.
          */
         MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                   const GpuShaderPermutation& permutation );
+                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode );
         /**
          * @brief 상수버퍼 슬롯을 하나 빌립니다 — **드로우마다** 하나씩. 없으면 false.
          * @details 슬롯을 드로우 단위로 나누는 이유: `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰는데
@@ -533,6 +544,13 @@ namespace sw
          */
         unordered_map<uint64, MaterialPsoEntry> _mapMaterialPso;
         mutable mutex                           _materialPsoMutex;
+        /**
+         * @brief 현재 보기 방식 (`RenderViewMode`).
+         * @details 드로우 경로가 배치마다 읽고 UI 스레드가 쓴다. 값 하나뿐이라 atomic 으로 충분하다 —
+         *          프레임 중간에 바뀌어도 최악은 한 프레임이 섞여 그려지는 것이고, PSO 변형은
+         *          `ensureMaterialPsos` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있다.
+         */
+        std::atomic<uint8> _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) };
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.

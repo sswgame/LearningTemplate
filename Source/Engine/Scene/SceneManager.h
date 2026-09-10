@@ -57,6 +57,12 @@ namespace sw
         void setRhiDevice( IRHIDevice* pRhiDevice ) { _pRHIDevice = pRhiDevice; }
         /** @brief 새로 활성화된 씬에 전달할 FrameRenderer를 설정합니다. */
         void setFrameRenderer( FrameRenderer* pFrameRenderer ) { _pFrameRenderer = pFrameRenderer; }
+        /**
+         * @brief 현재 붙어 있는 FrameRenderer 입니다 (없으면 nullptr).
+         * @details 에디터가 렌더러 상태(뷰 모드 등)를 정할 때 쓰는 유일한 경로다 — Engine 은 Editor 를
+         *          include 할 수 없으므로 방향은 항상 Editor -> Engine 이다.
+         */
+        FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
 
         /** @brief 현재 활성화된(주요) 씬 반환 */
         Scene* getActiveScene() const { return _pActiveScene; }

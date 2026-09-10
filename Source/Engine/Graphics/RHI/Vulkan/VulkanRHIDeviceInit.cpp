@@ -327,6 +327,10 @@ namespace sw
         // 검은 픽셀로 드러난다(DX12 루트 SRV 는 이 보호가 없어 셰이더 쪽 클램프가 따로 있다: binding.hlsli SwLoadInstance).
         deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;
         deviceFeatures.samplerAnisotropy  = availableFeatures.samplerAnisotropy; // 정적 샘플러 세트의 ANISO_WRAP (없으면 createDescriptorResources 가 1.0 으로 만든다)
+        // 와이어프레임(VK_POLYGON_MODE_LINE). DX11/DX12/GL 은 별도 기능 플래그가 없어 그냥 되는데
+        // Vulkan 만 디바이스 생성 때 켜야 한다 — 안 켜면 파이프라인 생성이 검증 오류로 거절되고,
+        // 그 PSO 가 0 으로 돌아와 조용히 솔리드로 그려졌다. 뷰 모드를 붙이며 드러난 결함이다.
+        deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
         // RW 텍스처 배열(RWTexture2D<float4>[] — 포맷 미지정 스토리지 이미지)의 읽기/쓰기.
         deviceFeatures.shaderStorageImageWriteWithoutFormat   = availableFeatures.shaderStorageImageWriteWithoutFormat;
         deviceFeatures.shaderStorageImageReadWithoutFormat    = availableFeatures.shaderStorageImageReadWithoutFormat;
@@ -337,6 +341,7 @@ namespace sw
         deviceFeatures.shaderSampledImageArrayDynamicIndexing  = availableFeatures.shaderSampledImageArrayDynamicIndexing;
         _bMultiDrawIndirect                                    = availableFeatures.multiDrawIndirect ? 1 : 0;
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
+        _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
 
         VkPhysicalDeviceVulkan12Features available12{};
         available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;

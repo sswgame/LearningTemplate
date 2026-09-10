@@ -391,6 +391,22 @@ namespace sw
                         appendRecipeUnique( outListRecipe, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listCombined );
                         if ( passInfo._bHasPixelStage )
                             appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
+
+                        // 5) 그 위의 **뷰 모드** 축 — 런타임이 요구하는 조합은 (패스 x 머티리얼 x 뷰 모드) 다.
+                        //
+                        // Wireframe 은 래스터라이저 상태만 바꾸므로 새 바이트코드가 필요 없지만 Unlit 은
+                        // 퍼뮤테이션이다. 굽지 않으면 Shipping 에서 그 PSO 생성이 실패하고 패스 PSO 로
+                        // 물러나 **조용히 Lit 으로 그려진다** — 값은 바뀌는데 화면은 그대로인, 이 기능을
+                        // 처음 막아 두게 만든 바로 그 증상이다.
+                        // 뷰 모드를 받는 패스만이다(FrameRendererUtil::appliesViewMode 와 같은 규칙 —
+                        // 그림자·뎁스는 머티리얼 셰이더를 안 쓰므로 _bUsesMaterialShader 로 갈린다).
+                        if ( passInfo._bUsesMaterialShader )
+                        {
+                            const vector<string> listUnlit = mergeDefines( listCombined, { string( kViewModeUnlitDefine ) } );
+                            appendRecipeUnique( outListRecipe, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listUnlit );
+                            if ( passInfo._bHasPixelStage )
+                                appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listUnlit );
+                        }
                     }
                 }
             }

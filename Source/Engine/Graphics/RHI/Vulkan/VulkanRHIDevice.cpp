@@ -62,6 +62,7 @@ namespace sw
         , _bMultiDrawIndirect{ SW_FALSE }
         , _bDrawIndirectCount{ SW_FALSE }
         , _bSamplerAnisotropy{ SW_FALSE }
+        , _bFillModeNonSolid{ SW_FALSE }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
         , _linuxWsi{ 0 }

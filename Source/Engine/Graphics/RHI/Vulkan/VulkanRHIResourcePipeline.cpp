@@ -146,10 +146,13 @@ namespace sw
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable        = VK_FALSE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        rasterizer.polygonMode             = ( desc._fillMode == RHIFillMode::Wireframe ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth               = 1.0f;
-        rasterizer.cullMode                = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
-        rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 파이프라인 생성 자체가 거절된다 — 화면이 비는 대신
+        // 솔리드로 그린다(요청은 "보기 방식" 이고, 그리지 못하는 것보다 다르게 보이는 편이 낫다).
+        const bool bWantWireframe = ( desc._fillMode == RHIFillMode::Wireframe ) && ( _pDevice->_bFillModeNonSolid != 0 );
+        rasterizer.polygonMode    = bWantWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth      = 1.0f;
+        rasterizer.cullMode       = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace      = VK_FRONT_FACE_CLOCKWISE;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -162,8 +165,8 @@ namespace sw
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
         for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
         {
-            arrColorBlendAttachment[blendIndex].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                                      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             arrColorBlendAttachment[blendIndex].blendEnable         = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
             arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -340,8 +343,8 @@ namespace sw
         VkAttachmentReference   colorRefs[kMaxColorAttachments]{};
         const uint32            colorCount =
             desc._listColorAttachment.size() > kMaxColorAttachments
-                ? kMaxColorAttachments
-                : static_cast<uint32>( desc._listColorAttachment.size() );
+                           ? kMaxColorAttachments
+                           : static_cast<uint32>( desc._listColorAttachment.size() );
 
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {

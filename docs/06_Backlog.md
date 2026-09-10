@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-10 · 기준 커밋 `29903f2b`
+> 마지막 갱신: 2026-09-10 · 기준 커밋 `dbf38329`
 
 ---
 
@@ -75,8 +75,8 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 426 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
-#   Shipping : 161(+8 skip) / 424(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   Debug    : CoreTest 169 / EngineTest 428 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
+#   Shipping : 161(+8 skip) / 426(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
 #   (2026-09-10 실측. EngineTest 는 GPU 포함 전체 수이고, ctest 의 EngineTest_NoGPU 는 400 이다.)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
@@ -92,6 +92,20 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=40 -gl   -EnableEditor    # 2026-09-09 부터 여기도 [Error] 0건이다
 ```
 
+**뷰 모드(Lit/Unlit/Wireframe)는 픽셀로 잰다.** `-gv_viewMode=<0|1|2>` 가 에디터 없이도 모드를
+고르므로 `-gv_screenshot` 과 같이 쓰면 헤드리스로 확인된다. 눈으로 보지 말고 **배경과 다른 픽셀
+수**를 세라 — 와이어프레임은 같은 장면에서 약 1/7 로 준다(실측: 68,000 → 9,800~10,300, 네 백엔드).
+
+```powershell
+cd build/Ninja-Debug/Bin
+./App.exe -dx12 -gv_benchMeshes=8 -gv_profileFrames=20 -gv_viewMode=2 "-gv_screenshot=wire.ppm"
+```
+
+**애니메이션이 도는 장면은 두 판을 그냥 빼면 안 된다.** GPU 인스턴스 회전이 벽시계로 돌아
+같은 명령을 두 번 돌려도 픽셀이 조금씩 다르다(실측 잡음: 채널의 0.36%, 평균 |차| 0.054).
+차이를 주장하려면 **같은 모드 두 판**을 먼저 재서 잡음 바닥을 정하고 그것과 비교하라
+(Lit↔Unlit 은 4.33% · 0.224 로 바닥의 열 배가 넘는다).
+
 **함정**
 
 - `-gv_rhiBackend` 는 App 이 무시한다. `-dx11 / -dx12 / -vk / -gl` 을 쓴다.
@@ -106,23 +120,7 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
-### 1-1. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
-
-뷰포트 툴바 맨 앞의 콤보는 **아무 일도 하지 않았다** — `ViewportToolbarSettings::_renderMode` 를
-읽는 코드가 어디에도 없다(쓰기만 하고, 콤보 자신이 되읽을 뿐이었다). 고르면 값만 바뀌고 화면은
-그대로였다. 지금은 **비활성 + 툴팁**으로 사실을 표시해 두었다(거짓 컨트롤보다 정직한 비활성).
-
-연결하려면 렌더러 작업이 필요하다:
-
-- RHI 는 **네 백엔드 모두 준비되어 있다** — `RHIFillMode::Wireframe` 을 DX11·Vulkan·GL 이 읽고,
-  DX12 도 이제 읽는다(예전에는 `D3D12_FILL_MODE_SOLID` 로 못박혀 있었다. 아래 3절 참고).
-- 없는 것은 그 위 계층이다: `RenderPipelineResource`/`RenderPassResource` 에 채우기 모드가
-  노출되지 않고(`Graphics/Renderer` 어디에도 `fillMode` 가 없다), 와이어프레임 PSO 변형도,
-  프레임 렌더러가 뷰 모드를 고르는 경로도 없다.
-- Unlit 은 셰이더/파이프라인 변형이 더 필요하다(조명 항을 빼는 패스나 셰이더 순열).
-- 연결한 뒤에는 콤보의 `BeginDisabled`/툴팁을 걷고, 네 백엔드에서 실기동으로 확인할 것.
-
-### 1-2. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
+### 1-1. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
 `py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
 이라는 다른 답을 받았다. 둘 다 맞다 — clang-tidy 버전이 다르면 검사 목록이 다르다.
@@ -193,29 +191,38 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-clang-tidy 22 에서 남은 것(합 72건, 이 병합 이후 `Padding` 을 끄면 69건이 된다 — 다시 재야 한다):
+### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
-| 종류 | 건수 | 판정 |
-|---|---|---|
-| `bugprone-throwing-static-initialization` | 29 | 전역 변수 등록자·설정 싱글턴. 시작 시 실패가 곧 종료다 |
-| `clang-analyzer-optin.cplusplus.VirtualCall` | 13 | **오탐.** 생성/파괴와 `initialize`/`shutdown` 을 분리하는 구조를 분석기가 가상 디스패치 문제로 본다(파괴 중 호출 12곳은 클래스 이름으로 한정해 의도를 코드로 적었다) |
-| `bugprone-macro-parentheses` | 12 | **오탐.** 인자가 **타입 이름**이라 괄호를 씌우면 문법이 깨진다(`sw_new (EditorClass)()`) |
-| `bugprone-branch-clone` | 8 | **오탐.** 본문이 같아도 분기 **순서가 규약**인 자리다 |
-| `bugprone-suspicious-stringview-data-usage` | 5 | **오탐.** `append( data(), count )` 처럼 크기를 함께 넘긴다 |
-| `clang-analyzer-optin.performance.Padding` | 3 | 이 병합으로 `.clang-tidy` 에서 껐다 — 인스턴스가 하나뿐인 매니저·정적 표라 아끼는 양이 무의미하다 |
-| `bugprone-exception-escape` | 2 | `~TaskManager`, `LocalizationManager::operator=`. 뮤텍스 락이 이론상 던진다 — 현재 동작이 의도와 맞다 |
+분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
+먼저 없애고, 그러고도 긴 함수가 문제로 남으면 그때 본다. 목록이 필요하면 다중 행 시그니처를
+중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다(단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-3. 100줄 넘는 함수 20개 — 우선순위 낮음
+### 1-3. 확인만 하고 넘어간 것
 
-분해 자체는 코드 총량을 줄이지 않는다. 공통부 추출(1-1 공용 위젯 채택)을 먼저 한다.
-목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
-(단순 정규식은 여러 줄 시그니처를 잘못 잰다).
+> 2026-09-10: **Shipping 실기동에 `[Error]` 1건이 예전부터 있다.**
+> `리플렉션 매니페스트에 'engine/shaders/shadowdepth.hlsl' 가 없습니다 — 셰이더를 다시 베이킹해야
+> 합니다` (`ShaderReflectionLibrary.cpp:318`). **내 변경 때문이 아니라는 것을 확인했다** —
+> 작업 트리의 `Resource/` 와 `ShaderBaker.cpp` 를 통째로 stash 하고 Shipping 을 다시 쿠킹해 돌려도
+> 같은 오류가 **똑같이 1건** 난다(뷰 모드와 무관하게 Lit 에서도 난다).
+> 매니페스트 조회 키는 (셰이더 경로 + 퍼뮤테이션 해시)이므로, 빠진 것은 파일이 아니라 **그 조합**이다.
+> 그림자 패스가 런타임에 머티리얼 define 을 얹어 만드는 조합 중 하나가 쿠킹 목록에 없다는 뜻이고,
+> 손댈 곳은 `ShaderBaker` 의 4) 패스 x 머티리얼 단계다(런타임이 실제로 요구한 키를 로그로 찍어
+> 쿠킹 목록과 맞춰 보는 것이 가장 빠르다). Shipping 은 런타임 컴파일이 없으므로 이 조합은
+> **리플렉션 없이** 그려진다 — 지금 화면에 눈에 띄는 문제는 없지만 조용한 실패다.
 
-### 1-4. 확인만 하고 넘어간 것
 
-> 2026-09-09 추가: Shipping 빌드에 `FrameProfiler.cpp` 경고 3건(`avgUs`/`perFrameX10` 미사용,
-> `pTitle` 미사용 파라미터)이 **예전부터** 있다. 보고 경로가 Shipping 에서 컴파일 아웃되면서 남은
-> 변수들이다.
+> 2026-09-10: **한 번 나오고 재현되지 않은 DX12 DEVICE_HUNG.** 백엔드 넷 × 뷰 모드 둘을 연속으로
+> 8회 띄우던 중 DX12 한 판이
+> `ID3D12CommandAllocator::Reset: 'StructuredUploadAllocator0' is being reset before previous
+> executions associated with the allocator have completed` → `DEVICE_HUNG` 으로 죽었다(그 뒤
+> `openUploadSlot: copy command list Reset failed` 109건). 같은 명령을 단독으로 5회 반복하면
+> 실패 0이라 GPU 가 붐빌 때만 드러나는 업로드 링의 펜스 대기 구멍으로 보인다. 다시 보이면
+> 여기서부터 본다 — 예전 SEGFAULT 항목처럼, **재현을 기다리지 말고 그 얼로케이터가 어느 펜스를
+> 기다리는지 먼저 읽는 편이 빠르다**(3절의 그 항목이 그렇게 풀렸다).
+
+> 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
+> 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
+> 가 붙어 있다(`4b522bab`). 지금 Shipping 빌드 경고는 0건이다.
 
 ---
 
@@ -246,6 +253,56 @@ clang-tidy 22 에서 남은 것(합 72건, 이 병합 이후 `Padding` 을 끄�
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (뷰 모드를 렌더러에 연결하고, 그 과정에서 결함 둘을 찾았다 — 예전 1-1)
+
+뷰포트 툴바의 Lit/Unlit/Wireframe 콤보가 **아무 일도 하지 않아** 비활성으로 막아 두었던 항목이다.
+"연결하려면 파이프라인 리소스에 채우기 모드를 노출하고 와이어프레임 PSO 변형을 만들고 프레임
+렌더러가 모드를 골라야 한다" 고 적어 두었는데, **셋 다 필요 없었다.** 이미 있는 것을 잘못 읽고
+있었다 — `RHIPipelineStateDesc` 에 `_fillMode` 와 `_listShaderDefine` 이 있고, 배치마다 PSO 를
+고르는 캐시(`_mapMaterialPso`)도 있다. 없던 것은 **그 캐시의 키에 뷰 모드라는 축**뿐이었다.
+
+- `materialPsoKey( 패스 PSO, 퍼뮤테이션 해시, 뷰 모드 )` — 모드가 키의 한 축이 되어, 모드를
+  되돌리면 이미 만든 PSO 가 캐시에서 다시 나온다(다시 컴파일하지 않는다).
+- 뷰 모드는 머티리얼 퍼뮤테이션 **뒤에** 얹는다. 순서가 반대면 머티리얼이 셰이더 경로를 갈아탈 때
+  방금 넣은 define 이 다른 셰이더로 넘어가 의미가 달라진다.
+- 머티리얼이 **없는** 배치에도 변형이 필요하다(퍼뮤테이션 해시 0). 이걸 빼면 머티리얼 없는 메시만
+  솔리드로 남아 화면이 섞인다.
+- 그림자·뎁스 프리패스는 **제외한다**(`FrameRendererUtil::appliesViewMode`). 와이어프레임으로
+  그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를 와이어프레임으로 채우면 이후 패스의
+  뎁스 테스트가 삼각형 내부를 전부 버려 화면이 빈다.
+- Unlit 은 `SW_VIEWMODE_UNLIT=1` 퍼뮤테이션이다. `forwardlit.hlsl` 이 조명·그림자·림 계산을 통째로
+  컴파일 아웃한다 — 런타임 분기가 아니라서 그림자 맵 샘플까지 빠진다. 정본 문자열은
+  `FrameRendererUtil.h` 의 `kViewModeUnlitDefine` 하나다(셰이더와 어긋나면 조용히 안 바뀐다).
+- 툴바는 값을 들고 있지 않고 **매 프레임 렌더러에서 읽어** 표시한다 — 커맨드라인이나 다른 경로가
+  모드를 바꿔도 콤보가 거짓을 보이지 않는다.
+
+**연결하고 나서야 드러난 결함 둘.** 둘 다 뷰 모드보다 훨씬 넓은 문제였다.
+
+1. **GT→RT 스냅샷이 퍼뮤테이션 표를 안 보내고 있었다.** 배치의 `_shaderPermutation` 은
+   `GpuScene::getShaderPermutations()` 의 **인덱스**인데 `exportCpuSnapshot`/`adoptCpuSnapshot` 이
+   그 표를 옮기지 않았다. 받는 쪽에서 `findShaderPermutation` 이 **언제나 nullptr** 이었고, 그래서
+   패킷 경로(= 실제 앱과 에디터가 쓰는 경로)에서는 **머티리얼 퍼뮤테이션이 하나도 걸리지 않았다** —
+   유리 머티리얼의 `MATERIAL_BLEND_TRANSLUCENT` 가 화면에 닿은 적이 없다.
+   `MaterialPermutationDrivesBatchPso` 가 통과하고 있었던 이유는 그 테스트가 동기 `execute()`
+   경로만 태우기 때문이다. **두 경로를 가르는 테스트가 없으면 한쪽만 죽어도 초록이다** —
+   `GpuSceneTest.CpuSnapshotCarriesShaderPermutations` 가 그 자리를 메운다(GPU 불필요).
+   보낼 때는 복사, 받을 때는 이동이다 — 표는 GT 가 계속 늘려 가는 정본이라 빼앗아 오면 다음
+   프레임의 인덱스가 0 부터 다시 매겨진다.
+2. **Vulkan 은 `fillModeNonSolid` 를 켠 적이 없었다.** 백로그에 "RHI 는 네 백엔드 모두 준비되어
+   있다" 고 적어 두었지만 절반만 맞았다 — Vulkan 은 `desc._fillMode` 를 **읽기는** 하는데, 그 기능을
+   디바이스 생성 때 켜지 않으면 `VK_POLYGON_MODE_LINE` 파이프라인이 검증에서 거절된다. 켜고,
+   못 켜는 디바이스에서는 Solid 로 물러난다(화면이 비는 것보다 다르게 보이는 편이 낫다).
+
+**검증은 픽셀로 했다.** PSO 디스크립터만 보면 "PSO 는 제대로 만들었는데 화면은 그대로" 를 못 잡는다
+— 실제로 처음 통과한 단위 테스트가 그 상태였고, 스크린샷을 보고서야 1번 결함을 찾았다.
+네 백엔드 모두 배경과 다른 픽셀이 약 68,000 → 9,800~10,300 으로 줄었다(6.6~6.9배).
+Unlit 은 같은 모드 두 판의 잡음 바닥(0.36% · 0.054) 대비 4.33% · 0.224 로 갈린다.
+`RenderPassTest.ViewModeSelectsDistinctPipelineStates` 가 네 백엔드에서 PSO 쪽을 함께 지킨다
+(모드마다 다른 PSO, 와이어프레임의 fill/cull, Unlit 의 define, 그림자 패스 제외, 되돌리면 캐시 재사용).
+
+**검증**: Debug 428/428 · Shipping 426/428(스킵 2는 Dev 전용) · nogpu 5/5 · 린트 6/6 · 컨벤션 0건 ·
+Debug·Shipping 경고 0 · 네 백엔드 × 뷰 모드 둘로 에디터 실기동(테스트 씬) 종료 코드 0 · `[Error]` 0건.
 
 ### 2026-09-10 (드물게 SEGFAULT 하던 RHITest 의 원인을 찾았다 — 예전 1-5)
 

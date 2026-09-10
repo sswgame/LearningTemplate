@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -18,6 +20,14 @@ namespace sw
     extern int32 gv_gpuCulling;
 
     SW_LOG_CALLER( "FrameRenderer" );
+
+    /**
+     * @brief `-gv_viewMode=<0|1|2>` — 씬 지오메트리 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe).
+     * @details 에디터 뷰포트 콤보와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다 —
+     *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
+     *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_viewMode, 0, "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -85,6 +95,11 @@ namespace sw
             bindServices( pTaskManager );
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getTaskManager() );
+
+        // 커맨드라인이 뷰 모드를 정했으면 여기서 받는다. 에디터가 있으면 툴바가 다시 덮어쓴다 —
+        // 초기값이므로 순서가 맞다.
+        if ( gv_viewMode > 0 )
+            setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );
 
         // 동기 경로(execute)는 이 GpuScene 이 직접 배치를 만든다 — 패킷 경로의 GT GpuScene 은 EngineLoop 가 같은 값을 준다.
         _gpuScene.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );

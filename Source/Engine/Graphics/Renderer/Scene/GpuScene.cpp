@@ -619,8 +619,8 @@ namespace sw
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             // 압축을 포기한 배치(Preserve)만 CPU 개수를 그대로 두고, 나머지는 컴퓨트가 0 부터 센다.
-            const bool bPreserve                             = ( argIndex < _listScratchBatchInfo.size() ) &&
-                                                               ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
+            const bool bPreserve = ( argIndex < _listScratchBatchInfo.size() ) &&
+                                   ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
             _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _listAllBatch[argIndex]._instanceCount : 0u;
         }
         for ( GpuCullViewResources& view : _arrCullView )
@@ -677,9 +677,15 @@ namespace sw
         outSnapshot._listTransparentBatch = _listTransparentBatch;
         outSnapshot._listAllBatch         = _listAllBatch;
         outSnapshot._listMaterialGroup    = _listMaterialGroup;
-        outSnapshot._indirectCommandCount = _indirectCommandCount;
-        outSnapshot._bCpuDirty            = _bCpuDirty;
-        _bCpuDirty                        = 0;
+        // 배치의 _shaderPermutation 은 이 표의 **인덱스**다. 표를 함께 보내지 않으면 받는 쪽에서
+        // findShaderPermutation 이 늘 nullptr 을 돌려주고, 머티리얼 퍼뮤테이션이 통째로 사라진다.
+        // 옮기는 것이 아니라 복사다 — 이 표는 GT 가 계속 들고 늘려 가는 정본이고, 빼앗아 가면
+        // 다음 프레임의 인덱스가 0 부터 다시 매겨져 배치가 엉뚱한 퍼뮤테이션을 가리킨다.
+        // 머티리얼 종류 수만큼이라 바로 위의 인스턴스·배치 복사에 비하면 작다.
+        outSnapshot._listShaderPermutation = _listShaderPermutation;
+        outSnapshot._indirectCommandCount  = _indirectCommandCount;
+        outSnapshot._bCpuDirty             = _bCpuDirty;
+        _bCpuDirty                         = 0;
     }
 
     void GpuScene::adoptCpuSnapshot( GpuScene&& snapshot )
@@ -689,9 +695,11 @@ namespace sw
         _listTransparentBatch = std::move( snapshot._listTransparentBatch );
         _listAllBatch         = std::move( snapshot._listAllBatch );
         _listMaterialGroup    = std::move( snapshot._listMaterialGroup );
-        _indirectCommandCount = snapshot._indirectCommandCount;
-        _spinInstanceCount    = snapshot._spinInstanceCount;
-        _bCpuDirty            = snapshot._bCpuDirty;
+        // 스냅샷은 여기서 버려지므로 표는 옮겨 받는다(exportCpuSnapshot 이 GT 쪽 정본을 복사해 준다).
+        _listShaderPermutation = std::move( snapshot._listShaderPermutation );
+        _indirectCommandCount  = snapshot._indirectCommandCount;
+        _spinInstanceCount     = snapshot._spinInstanceCount;
+        _bCpuDirty             = snapshot._bCpuDirty;
     }
 
     void GpuScene::sortTransparent( const float3& cameraPos )
@@ -835,8 +843,8 @@ namespace sw
                 {
                     const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange                   = ( pBatchHead->_pMesh != current._pMesh ) ||
-                                                   ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
-                                                   ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
+                                 ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
+                                 ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -1030,7 +1038,7 @@ namespace sw
             // 다시 만든다 — 구조버퍼의 stride 는 뷰에 박혀 있어 셰이더 선언과 달라지면 안 된다.
             const uint32 capacityElements = MathUtil::max( elementCount * 2u, 16u );
             const bool   bRecreate        = ( gpu._slot._buffer == 0 ) || ( gpu._slot._elementSize != stride ) ||
-                                            ( gpu._slot._capacityElements < capacityElements );
+                                   ( gpu._slot._capacityElements < capacityElements );
             if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
                                            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {

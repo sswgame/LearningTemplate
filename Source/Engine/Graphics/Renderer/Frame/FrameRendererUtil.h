@@ -12,6 +12,32 @@
 
 namespace sw
 {
+    /**
+     * @enum RenderViewMode
+     * @brief 씬 지오메트리를 어떻게 보여줄지 — 에디터 뷰포트의 Lit/Unlit/Wireframe.
+     * @details 렌더 상태(채우기 모드)와 셰이더 퍼뮤테이션(조명 항)을 함께 가르는 값이라 어느 한쪽에만
+     *          둘 수 없다. `FrameRenderer` 가 PSO 변형 키의 한 축으로 들고 있고, 배치 PSO 를 고를 때
+     *          머티리얼 퍼뮤테이션과 **같은 자리**에서 적용된다 — 그래서 와이어프레임이 머티리얼 변형을
+     *          잃지 않는다(반투명 유리가 와이어프레임에서도 반투명 퍼뮤테이션으로 그려진다).
+     * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<0|1|2>` 로 고를 수 있어 스크린샷
+     *       비교로 검증된다 — 뷰 모드가 픽셀을 바꾸는지를 에디터를 띄우지 않고 확인할 수 있다.
+     */
+    enum class RenderViewMode : uint8
+    {
+        Lit = 0,   ///< 조명·그림자를 다 계산한 기본 화면
+        Unlit,     ///< 알베도만 — 조명 항이 셰이더에서 컴파일 아웃된다
+        Wireframe, ///< 삼각형 외곽선만 (RHIFillMode::Wireframe)
+
+        Count
+    };
+
+    /**
+     * @brief Unlit 뷰 모드가 셰이더에 넘기는 define.
+     * @details 여기가 유일한 정본이다 — 이 문자열과 `.hlsl` 의 `#if defined(...)` 가 어긋나면
+     *          컴파일은 되고 화면만 안 바뀐다(조용한 실패). 셰이더를 더할 때 이 이름을 보라.
+     */
+    inline constexpr const utf8* kViewModeUnlitDefine = "SW_VIEWMODE_UNLIT=1";
+
     /** @brief FrameRenderer TU 공유 패스/어태치먼트 이름과 헬퍼 */
     struct FrameRendererUtil
     {
@@ -78,6 +104,20 @@ namespace sw
          *          머티리얼이 선언한 .hlsl 로 갈아탄다.
          */
         static bool usesMaterialShader( RenderPassType passType )
+        {
+            return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
+        }
+
+        /**
+         * @brief 이 패스에 뷰 모드(Unlit/Wireframe)를 적용하는가.
+         * @details 화면 색을 만드는 지오메트리 패스만이다. 그림자·뎁스 프리패스는 **제외한다** —
+         *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
+         *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 전부 버려 화면이 빈다.
+         *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 늘 Solid·Lit 로 둔다.
+         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 따로 둔다 —
+         *       한쪽이 바뀔 때 다른 쪽이 조용히 따라가면 안 된다.
+         */
+        static bool appliesViewMode( RenderPassType passType )
         {
             return drawsSceneMeshes( passType ) && passType != RenderPassType::Shadow && passType != RenderPassType::DepthPrepass;
         }

@@ -2719,3 +2719,250 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
     sw::FileUtil::removeFile( testPath );
 }
+
+/**
+ * @brief [RenderPassTest] 뷰 모드(Lit/Unlit/Wireframe)가 **PSO 를 실제로 가르는지** 검증.
+ * @details 이 기능이 조용히 죽는 방식은 하나다 — 값은 바뀌는데 드로우가 고르는 PSO 는 그대로인 것.
+ *          예전 툴바 콤보가 정확히 그 상태였다(값만 바뀌고 화면은 그대로). 그래서 여기서는 화면이
+ *          아니라 **드로우가 고른 PSO 의 디스크립터**를 본다 — 픽셀 비교는 인스턴스 애니메이션이
+ *          벽시계로 도는 탓에 프레임마다 달라져 판정 근거가 못 된다.
+ *
+ *          함께 보는 것: 그림자 패스는 뷰 모드를 **받지 않아야** 한다(와이어프레임 그림자를 구우면
+ *          그림자가 선 몇 개로 남는다), 모드를 되돌리면 캐시에서 같은 PSO 가 다시 나와야 한다.
+ */
+SW_TEST_CASE( RenderPassTest, ViewModeSelectsDistinctPipelineStates )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
+    {
+        for ( const sw::string& defineStr : desc._listShaderDefine )
+        {
+            if ( defineStr == pDefine )
+                return true;
+        }
+        return false;
+    };
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+
+        const sw::string  label = sw::string( device->getBackendName() );
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "ViewModeScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        sw::shared_ptr<sw::Mesh> mesh;
+        if ( bOk )
+        {
+            mesh = sw::Mesh::createUnitCube();
+            bOk  = mesh != nullptr;
+        }
+        if ( bOk )
+        {
+            sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "ViewModeCube" ) );
+            bOk                  = pObj != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+                bOk                          = pMeshComp != nullptr;
+                if ( bOk )
+                    pMeshComp->setMesh( mesh );
+            }
+        }
+
+        // 모드를 바꾸고 한 프레임 돌리면 그 모드의 PSO 변형이 만들어진다. 그 뒤 드로우가 고를 PSO 를
+        // 조회한다 — drawGpuBatches 가 배치마다 부르는 것과 같은 함수다.
+        auto renderOneFrame = [&]() -> bool
+        {
+            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+            device->beginFrame( clear );
+            const bool bFrameOk = renderer.execute( device.get(), nullptr, &scene );
+            device->endFrame( false, false );
+            device->waitIdle();
+            return bFrameOk;
+        };
+
+        if ( bOk )
+            bOk = renderOneFrame();
+
+        if ( bOk )
+        {
+            const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getOpaqueBatches();
+            SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 불투명 배치가 없다" ).c_str() );
+
+            const sw::RHIPipelineStateHandle passPso   = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
+            const sw::RHIPipelineStateHandle shadowPso = renderer.getEnginePso( sw::RenderPassType::Shadow );
+            if ( batches.empty() == false && passPso != 0 )
+            {
+                const sw::GpuMeshBatch& batch = batches[0];
+
+                // ── Lit: 패스 PSO 그대로, Solid ──────────────────────────────
+                const sw::RHIPipelineStateHandle litPso = renderer.psoForBatch( passPso, batch );
+                sw::RHIPipelineStateDesc         litDesc{};
+                SW_EXPECT_TRUE_MSG( renderer.findPsoDesc( litPso, litDesc ),
+                                    ( label + ": Lit PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( litDesc._fillMode == sw::RHIFillMode::Solid,
+                                    ( label + ": Lit 인데 채우기 모드가 Solid 가 아니다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( hasDefine( litDesc, "SW_VIEWMODE_UNLIT=1" ) == false,
+                                    ( label + ": Lit 인데 Unlit define 이 들어 있다" ).c_str() );
+
+                // ── Wireframe ────────────────────────────────────────────────
+                renderer.setViewMode( sw::RenderViewMode::Wireframe );
+                SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": 와이어프레임 프레임 실행 실패" ).c_str() );
+
+                const sw::RHIPipelineStateHandle wirePso = renderer.psoForBatch( passPso, batch );
+                SW_EXPECT_TRUE_MSG( wirePso != litPso,
+                                    ( label + ": 와이어프레임인데 드로우가 Lit 과 같은 PSO 를 고른다 — 모드가 화면에 닿지 않는다" )
+                                        .c_str() );
+                sw::RHIPipelineStateDesc wireDesc{};
+                if ( renderer.findPsoDesc( wirePso, wireDesc ) )
+                {
+                    SW_EXPECT_TRUE_MSG( wireDesc._fillMode == sw::RHIFillMode::Wireframe,
+                                        ( label + ": 와이어프레임 PSO 의 채우기 모드가 Wireframe 이 아니다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( wireDesc._cullMode == sw::RHICullMode::None,
+                                        ( label + ": 와이어프레임인데 컬링이 남아 뒷면 선이 사라진다" ).c_str() );
+                    // 렌더 상태 중 **패스가 정하는 것**은 그대로여야 한다.
+                    SW_EXPECT_TRUE_MSG( wireDesc._bEnableDepthTest == litDesc._bEnableDepthTest,
+                                        ( label + ": 뷰 모드 변형이 패스의 뎁스 테스트를 바꿨다" ).c_str() );
+                }
+                else
+                {
+                    SW_EXPECT_TRUE_MSG( false, ( label + ": 와이어프레임 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
+                }
+
+                // 그림자 패스는 뷰 모드를 받지 않는다.
+                sw::RHIPipelineStateDesc shadowDesc{};
+                if ( shadowPso != 0 && renderer.findPsoDesc( renderer.psoForBatch( shadowPso, batch ), shadowDesc ) )
+                {
+                    SW_EXPECT_TRUE_MSG( shadowDesc._fillMode == sw::RHIFillMode::Solid,
+                                        ( label + ": 그림자 패스가 와이어프레임으로 구워진다" ).c_str() );
+                }
+
+                // ── Unlit ────────────────────────────────────────────────────
+                renderer.setViewMode( sw::RenderViewMode::Unlit );
+                SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Unlit 프레임 실행 실패" ).c_str() );
+
+                const sw::RHIPipelineStateHandle unlitPso = renderer.psoForBatch( passPso, batch );
+                SW_EXPECT_TRUE_MSG( unlitPso != litPso && unlitPso != wirePso,
+                                    ( label + ": Unlit 이 다른 모드와 같은 PSO 를 고른다" ).c_str() );
+                sw::RHIPipelineStateDesc unlitDesc{};
+                if ( renderer.findPsoDesc( unlitPso, unlitDesc ) )
+                {
+                    SW_EXPECT_TRUE_MSG( hasDefine( unlitDesc, "SW_VIEWMODE_UNLIT=1" ),
+                                        ( label + ": Unlit PSO 에 define 이 없다 — 조명이 그대로 컴파일된다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( unlitDesc._fillMode == sw::RHIFillMode::Solid,
+                                        ( label + ": Unlit 인데 채우기 모드가 Solid 가 아니다" ).c_str() );
+                }
+                else
+                {
+                    SW_EXPECT_TRUE_MSG( false, ( label + ": Unlit PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
+                }
+
+                // ── 되돌리기: 캐시에서 같은 PSO 가 나와야 한다 ────────────────
+                renderer.setViewMode( sw::RenderViewMode::Lit );
+                SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Lit 복귀 프레임 실행 실패" ).c_str() );
+                SW_EXPECT_TRUE_MSG( renderer.psoForBatch( passPso, batch ) == litPso,
+                                    ( label + ": Lit 로 돌아왔는데 다른 PSO 가 나온다 — 캐시가 모드를 구분하지 못한다" ).c_str() );
+            }
+        }
+        else
+        {
+            SW_EXPECT_TRUE_MSG( false, ( label + ": 뷰 모드 씬 준비 실패" ).c_str() );
+        }
+
+        if ( mesh != nullptr )
+            mesh->releaseGpu();
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for view mode test" );
+}
+
+/**
+ * @brief [GpuSceneTest] CPU 스냅샷이 **퍼뮤테이션 표까지** 건너오는지 검증.
+ * @details 배치의 `_shaderPermutation` 은 `GpuScene::getShaderPermutations()` 의 **인덱스**다. 표를
+ *          함께 보내지 않으면 받는 쪽에서 `findShaderPermutation` 이 늘 nullptr 을 돌려주고, 배치는
+ *          퍼뮤테이션이 없는 것처럼 보인다 — 실제로 그랬다. 그 결과 패킷 경로(= 실제 앱과 에디터가
+ *          쓰는 경로)에서는 머티리얼 퍼뮤테이션이 **하나도** 걸리지 않았고, 유리 머티리얼의
+ *          `MATERIAL_BLEND_TRANSLUCENT` 도 화면에 닿은 적이 없었다.
+ *
+ *          `MaterialPermutationDrivesBatchPso` 는 동기 `execute()` 경로만 태우므로 이 결함을 볼 수
+ *          없었다 — 두 경로를 가르는 것이 이 테스트의 존재 이유다. GPU 가 필요 없다.
+ */
+SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
+{
+    sw::unique_ptr<sw::Material> materialGlass = sw::make_unique<sw::Material>();
+    SW_ASSERT_TRUE( materialGlass->loadFromFile( "engine/materials/glassmaterial.material" ) );
+
+    sw::Scene scene( "SnapshotPermutationScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::createUnitCube();
+    SW_ASSERT_NOT_NULL( mesh.get() );
+
+    sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "GlassCube" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMeshComp );
+    pMeshComp->setMesh( mesh );
+    pMeshComp->setMaterial( materialGlass.get() );
+
+    // 게임 스레드 쪽 GpuScene — 여기가 퍼뮤테이션 표의 정본이다.
+    sw::GpuScene gtScene;
+    gtScene.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, 0.0f }, nullptr );
+
+    const sw::vector<sw::GpuMeshBatch>& gtBatches = gtScene.getTransparentBatches();
+    SW_ASSERT_TRUE( gtBatches.empty() == false ); // 반투명 머티리얼인데 반투명 배치가 없으면 전제가 깨진 것이다
+    const uint32 permutationIndex = gtBatches[0]._shaderPermutation;
+    SW_ASSERT_TRUE( permutationIndex != sw::GpuScene::kInvalidShaderPermutation ); // 배치에 퍼뮤테이션이 붙어야 한다
+
+    const sw::GpuShaderPermutation* pGtPermutation = gtScene.findShaderPermutation( permutationIndex );
+    SW_ASSERT_NOT_NULL( pGtPermutation );
+
+    // 패킷을 거쳐 렌더 스레드 쪽 GpuScene 으로 옮긴다 (EngineLoop 가 매 프레임 하는 그대로).
+    sw::GpuScene packetScene;
+    gtScene.exportCpuSnapshot( packetScene );
+    sw::GpuScene rtScene;
+    rtScene.adoptCpuSnapshot( std::move( packetScene ) );
+
+    const sw::vector<sw::GpuMeshBatch>& rtBatches = rtScene.getTransparentBatches();
+    SW_EXPECT_TRUE_MSG( rtBatches.empty() == false, "스냅샷에 반투명 배치가 없다" );
+    if ( rtBatches.empty() == false )
+    {
+        SW_EXPECT_TRUE_MSG( rtBatches[0]._shaderPermutation == permutationIndex,
+                            "스냅샷의 배치가 다른 퍼뮤테이션 인덱스를 가리킨다" );
+
+        const sw::GpuShaderPermutation* pRtPermutation = rtScene.findShaderPermutation( permutationIndex );
+        // 여기가 결함의 자리다 — 표가 안 오면 받는 쪽에서 머티리얼 퍼뮤테이션이 통째로 사라진다.
+        SW_EXPECT_NOT_NULL( pRtPermutation );
+        if ( pRtPermutation != nullptr )
+        {
+            SW_EXPECT_TRUE_MSG( pRtPermutation->_hash == pGtPermutation->_hash,
+                                "스냅샷의 퍼뮤테이션 해시가 원본과 다르다" );
+            SW_EXPECT_TRUE_MSG( pRtPermutation->_listDefine.size() == pGtPermutation->_listDefine.size(),
+                                "스냅샷의 퍼뮤테이션 define 개수가 원본과 다르다" );
+        }
+    }
+
+    // 정본은 GT 에 남아 있어야 한다 — 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
+    SW_EXPECT_NOT_NULL( gtScene.findShaderPermutation( permutationIndex ) );
+
+    if ( mesh != nullptr )
+        mesh->releaseGpu();
+}
