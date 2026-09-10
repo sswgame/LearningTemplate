@@ -258,7 +258,7 @@ namespace sw
                             passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                             passInfo._listPermutation     = pass._listPermutation;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
-                            passInfo._bHasPixelStage      = pass._type != "Shadow" && pass._type != "DepthPrepass";
+                            passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment );
                             listMeshPass.push_back( std::move( passInfo ) );
                         }
 
@@ -274,8 +274,9 @@ namespace sw
                             const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
                             appendRecipeUnique( outListRecipe, shaderPath, vsEntry, ShaderStage::Vertex, pass._listPermutation );
 
-                            // Pixel Shader (Shadow/DepthPrepass passes without pixel output omit PS)
-                            if ( pass._type != "Shadow" && pass._type != "DepthPrepass" )
+                            // 픽셀 셰이더 — 컬러 출력이 없는 패스(그림자·뎁스 프리패스)엔 없다. 예전엔 여기서 타입
+                            // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
+                            if ( FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment ) )
                             {
                                 const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                                 appendRecipeUnique( outListRecipe, shaderPath, psEntry, ShaderStage::Pixel, pass._listPermutation );

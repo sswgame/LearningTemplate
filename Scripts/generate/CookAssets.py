@@ -438,8 +438,26 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
 
         if not any(child.suffix.lower() in (".dxil", ".dxbc", ".spv") for child in binDir.iterdir()):
             problems.append(f"{label}: '{targetRhi}' 바이너리가 하나도 없습니다")
-        if not (binDir / "reflection.manifest").is_file():
+        manifestPath = binDir / "reflection.manifest"
+        if not manifestPath.is_file():
             problems.append(f"{label}: '{targetRhi}' 리플렉션 매니페스트가 없습니다")
+        else:
+            # 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 **소스**가 바뀌었는지만 보므로
+            # 베이커의 레시피 목록이 늘어난 경우(새 퍼뮤테이션 축)는 여기가 아니면 못 잡는다 — 실제로 Unlit x
+            # 머티리얼 바이너리가 커밋돼 있는데 매니페스트에는 없어서, 배포 빌드가 맞는 바이트코드를 리플렉션
+            # 없이 바인딩하고 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로라
+            # 바이트 검색으로 충분하다. 다시 구우면 매니페스트는 현재 레시피로 새로 쓰이므로, 그 뒤에도 남는
+            # 바이너리는 레시피에서 빠진 낡은 파일이다.
+            manifestBytes = manifestPath.read_bytes()
+            uncovered = sorted(
+                child.name
+                for child in binDir.iterdir()
+                if child.suffix.lower() in (".dxil", ".dxbc", ".spv") and child.name.encode("utf-8") not in manifestBytes
+            )
+            if uncovered:
+                sample = ", ".join(uncovered[:3]) + (" ..." if len(uncovered) > 3 else "")
+                # 메시지에 cp949 밖 문자(—)를 쓰지 않는다 — Windows 콘솔에서 print 자체가 죽는다.
+                problems.append(f"{label}: '{targetRhi}' 매니페스트에 없는 바이너리 {len(uncovered)}개 ({sample}): 다시 굽거나 낡은 파일을 지우십시오")
 
     return problems
 

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -489,4 +490,30 @@ SW_TEST_CASE( Engine_Resource, AbsolutePathPreservation )
     SW_EXPECT_STREQ( winAbs.c_str(), sw::ResourceUtil::makeAbsolutePath( winAbs ).c_str() );
 
     SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( posixAbs ).empty() );
+}
+
+/**
+ * @brief [Engine_Resource] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
+ * @details Shipping 은 .meta 를 팩에 넣지 않는다(PackConfig `*.meta` 제외). 예전엔 로드가 실패하면 GUID 를 새로 만들어
+ *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material.meta 의 GUID 가 바뀌었다.
+ *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
+ */
+SW_TEST_CASE( Engine_Resource, EnsureMetaNeverRewritesExistingMetaFile )
+{
+    sw::ResourceUtil::initialize();
+    const utf8*      pAsset      = "engine/materials/defaultmaterial.material";
+    const sw::string metaAbsPath = sw::ResourceUtil::getResourcePath( "engine/materials/defaultmaterial.material.meta" );
+    const uint64     mtimeBefore = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
+
+    sw::AssetDatabase db;
+    const sw::Uuid    guid = db.ensureMeta( pAsset );
+#if defined( SW_SHIPPING )
+    SW_EXPECT_TRUE_MSG( guid.isNull(), "배포 빌드가 .meta 없이 GUID 를 지어냈다" );
+#else
+    SW_EXPECT_TRUE_MSG( guid.isNull() == false, "개발 빌드가 기존 .meta 의 GUID 를 읽지 못했다" );
+    SW_EXPECT_TRUE_MSG( metaAbsPath.empty() == false, "개발 빌드에서 .meta 경로를 찾지 못했다 — 검증이 비었다" );
+#endif
+
+    const uint64 mtimeAfter = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
+    SW_EXPECT_TRUE_MSG( mtimeBefore == mtimeAfter, ".meta 가 다시 쓰였다 — 작업 트리가 더러워진다" );
 }

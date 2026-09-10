@@ -1512,6 +1512,13 @@ SW_TEST_CASE( RenderPassTest, MaterialPermutationDrivesBatchPso )
                     {
                         SW_EXPECT_TRUE_MSG( shadowBatchDesc._vertexShaderPath == shadowDesc._vertexShaderPath,
                                             ( label + ": 그림자 패스가 머티리얼 셰이더로 갈아탔다" ).c_str() );
+                        // 컬러 출력이 없는 패스는 픽셀 스테이지가 없고, 머티리얼 변형도 그대로 물려받아야 한다.
+                        // 여기에 PS 가 남으면 (shadowdepth · PSMain · 머티리얼 define) 조합을 베이커는 굽지 않으므로
+                        // Shipping 이 매니페스트 미스를 낸다 — 실제로 났던 [Error] 다.
+                        SW_EXPECT_TRUE_MSG( shadowDesc._numRenderTargets == 0 && shadowDesc._pixelShaderPath.empty(),
+                                            ( label + ": 그림자 패스 PSO 에 픽셀 스테이지가 있다" ).c_str() );
+                        SW_EXPECT_TRUE_MSG( shadowBatchDesc._pixelShaderPath.empty() && shadowBatchDesc._pixelEntryPoint.empty(),
+                                            ( label + ": 그림자 패스의 머티리얼 변형에 픽셀 스테이지가 있다" ).c_str() );
                     }
                 }
             }

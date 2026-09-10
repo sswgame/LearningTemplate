@@ -496,7 +496,7 @@ namespace sw
         for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
         {
             if ( att._name == attachmentName )
-                return parseAttachmentFormat( att._format );
+                return FrameRendererUtil::parseAttachmentFormat( att._format );
         }
         return fallback;
     }

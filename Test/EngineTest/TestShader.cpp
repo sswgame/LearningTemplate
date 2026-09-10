@@ -3,6 +3,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -659,4 +661,134 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
         clearerThread.join();
 
     SW_EXPECT_TRUE( clearsDone.load() > 0 );
+}
+
+// ------------------------------------------------------------------------------
+// ShaderBakerTest — 베이커와 PSO 생성이 같은 규칙을 보는가
+// ------------------------------------------------------------------------------
+/**
+ * @brief [ShaderBakerTest] 컬러 출력이 없는 패스(그림자·뎁스 프리패스)에는 픽셀 스테이지가 없다.
+ * @details Shipping 실기동의 `리플렉션 매니페스트에 'engine/shaders/shadowdepth.hlsl' 가 없습니다` 가 이 자리였다.
+ *          베이커는 타입 **문자열**로 "그림자엔 PS 없음" 을 정하고, 런타임은 PS 경로를 늘 채워서 머티리얼 define 을
+ *          얹은 그림자 변형이 DX12 에서 PS 리플렉션을 요구했다. 이제 둘 다 `FrameRendererUtil::hasPixelStage` 하나를
+ *          본다 — 실제 파이프라인 XML 둘과 합성 선언으로 그 규칙을 고정한다. GPU 가 필요 없다(nogpu).
+ */
+SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
+{
+    sw::ResourceUtil::initialize();
+
+    // 1) 실제 파이프라인 — 그림자 패스는 PS 없음, 씬 메시를 그리는 나머지는 PS 있음.
+    const utf8* arrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
+    for ( const utf8* pPipeline : arrPipeline )
+    {
+        const sw::string absPath = sw::ResourceUtil::getResourcePath( pPipeline );
+        SW_EXPECT_TRUE_MSG( absPath.empty() == false, pPipeline );
+        if ( absPath.empty() )
+            continue;
+
+        sw::RenderPipelineResource pipelineRes;
+        SW_EXPECT_TRUE_MSG( pipelineRes.loadFromXmlFile( absPath ), pPipeline );
+
+        uint32 depthOnlyCount{ 0 };
+        uint32 colorPassCount{ 0 };
+        for ( const sw::RenderGraphPassDesc& pass : pipelineRes.getGraphPass() )
+        {
+            const bool bHasPixelStage = sw::FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment );
+            if ( sw::FrameRendererUtil::isDepthOnlyPassType( pass._resolvedType ) )
+            {
+                SW_EXPECT_TRUE_MSG( bHasPixelStage == false,
+                                    ( sw::string( pPipeline ) + ": " + pass._name + " 에 픽셀 스테이지가 있다" ).c_str() );
+                ++depthOnlyCount;
+            }
+            else if ( sw::FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
+            {
+                SW_EXPECT_TRUE_MSG( bHasPixelStage,
+                                    ( sw::string( pPipeline ) + ": " + pass._name + " 에 픽셀 스테이지가 없다" ).c_str() );
+                ++colorPassCount;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( depthOnlyCount >= 1,
+                            ( sw::string( pPipeline ) + ": 그림자 패스가 없다 — 이 검증이 아무것도 보지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( colorPassCount >= 1, ( sw::string( pPipeline ) + ": 컬러 패스가 없다" ).c_str() );
+    }
+
+    // 2) 합성 선언 — 규칙 자체를 고정한다.
+    sw::vector<sw::RenderPassAttachment> listAttachment( 3 );
+    listAttachment[0]._name   = "Depth";
+    listAttachment[0]._format = "D24_UNORM_S8_UINT";
+    listAttachment[1]._name   = "ColorA";
+    listAttachment[1]._format = "R16G16B16A16_FLOAT";
+    listAttachment[2]._name   = "ColorB";
+    listAttachment[2]._format = "R8G8B8A8_UNORM";
+
+    // 뎁스만 출력 → 컬러 0, PS 없음.
+    sw::RenderGraphPassDesc depthPass;
+    depthPass._resolvedType = sw::RenderPassType::Shadow;
+    depthPass._listOutput   = { "Depth" };
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::hasPixelStage( depthPass, listAttachment ) );
+
+    // 컬러 둘 + 뎁스 → 2, 포맷은 선언 순서대로(뎁스는 건너뛴다).
+    sw::RenderGraphPassDesc mrtPass;
+    mrtPass._resolvedType = sw::RenderPassType::GBuffer;
+    mrtPass._listOutput   = { "ColorA", "Depth", "ColorB" };
+    sw::RHIFormat arrFormat[sw::kMaxColorAttachments]{};
+    SW_EXPECT_EQUAL( 2u, sw::FrameRendererUtil::collectColorOutputFormats( mrtPass, listAttachment, arrFormat, sw::kMaxColorAttachments, 1 ) );
+    SW_EXPECT_TRUE( arrFormat[0] == sw::RHIFormat::R16G16B16A16_FLOAT );
+    SW_EXPECT_TRUE( arrFormat[1] == sw::RHIFormat::R8G8B8A8_UNORM );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::hasPixelStage( mrtPass, listAttachment ) );
+
+    // 출력 선언이 없으면 타입이 정한다 — 그림자·뎁스 프리패스는 0, 그 밖은 1 (registerPso 가 넘기는 기본값과 같다).
+    sw::RenderGraphPassDesc barePass;
+    barePass._resolvedType = sw::RenderPassType::DepthPrepass;
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::hasPixelStage( barePass, listAttachment ) );
+    barePass._resolvedType = sw::RenderPassType::ForwardOpaque;
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::hasPixelStage( barePass, listAttachment ) );
+
+    // 선언은 있는데 어태치먼트를 못 찾으면 알 수 없으므로 물러난 값이다.
+    sw::RenderGraphPassDesc unknownPass;
+    unknownPass._resolvedType = sw::RenderPassType::ForwardOpaque;
+    unknownPass._listOutput   = { "NoSuchAttachment" };
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::collectColorOutputFormats( unknownPass, listAttachment, nullptr, sw::kMaxColorAttachments, 1 ) );
+}
+
+/**
+ * @brief [ShaderBakerTest] 셰이더 캐시가 읽는 파일 이름은 베이커가 쓰는 이름과 같고, 퍼뮤테이션마다 다르다.
+ * @details 예전엔 캐시가 스템과 스테이지만으로 이름을 만들어 **모든 퍼뮤테이션이 해시 0 바이너리를 읽었다** —
+ *          베이크 바이너리가 있는 한 SW_FORWARD·MATERIAL_BLEND_TRANSLUCENT·SW_VIEWMODE_UNLIT 이 GPU 에 닿지
+ *          않았다. 리플렉션 매니페스트는 해시로 찾았으니 레이아웃만 맞고 바이트코드는 틀린 어긋남이었다.
+ *          Vulkan 에서 Lit/Unlit 스크린샷이 잡음 바닥과 같게 나와 드러났다. GPU 가 필요 없다(nogpu).
+ */
+SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
+{
+    sw::ShaderCompileDesc plain{};
+    plain._filePath     = "engine/shaders/forwardlit.hlsl";
+    plain._entryPoint   = "PSMain";
+    plain._stage        = sw::ShaderStage::Pixel;
+    plain._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
+
+    sw::ShaderCompileDesc unlit = plain;
+    unlit._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
+    unlit._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_VIEWMODE_UNLIT=1" ) );
+
+    const sw::string plainPath = sw::ShaderCache::makePrebakedRelativePath( plain );
+    const sw::string unlitPath = sw::ShaderCache::makePrebakedRelativePath( unlit );
+    SW_EXPECT_STREQ( "engine/shaders/bin/vulkan/forwardlit_ps.spv", plainPath.c_str() );
+    SW_EXPECT_TRUE_MSG( unlitPath != plainPath, "퍼뮤테이션이 다른데 같은 바이너리를 읽는다 — define 이 GPU 에 닿지 않는다" );
+
+    // 베이커가 굽는 이름과 글자 단위로 같아야 한다(다른 규칙이 하나라도 있으면 그 규칙이 정본을 이긴다).
+    const sw::string bakedName = sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Pixel, "PSMain",
+                                                                         sw::ShaderBaker::computePermutationHash( unlit._listDefine ), ".spv" );
+    SW_EXPECT_STREQ( ( sw::string( "engine/shaders/bin/vulkan/" ) + bakedName ).c_str(), unlitPath.c_str() );
+
+    // 로컬 라이브 캐시도 같은 이름을 쓴다 — 처음 컴파일된 퍼뮤테이션이 나머지를 덮으면 안 된다.
+    const sw::string plainLocal = sw::ShaderCache::makeLocalCachePath( plain );
+    const sw::string unlitLocal = sw::ShaderCache::makeLocalCachePath( unlit );
+    SW_EXPECT_TRUE( plainLocal != unlitLocal );
+    SW_EXPECT_TRUE( unlitLocal.find( bakedName ) != sw::string::npos );
+
+    // define 순서는 해시에 영향이 없다 — 런타임이 어떤 순서로 얹든 같은 파일이어야 한다.
+    sw::ShaderCompileDesc reordered = plain;
+    reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_VIEWMODE_UNLIT=1" ) );
+    reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
+    SW_EXPECT_STREQ( unlitPath.c_str(), sw::ShaderCache::makePrebakedRelativePath( reordered ).c_str() );
 }

@@ -405,7 +405,7 @@ namespace sw
 
         for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
         {
-            const RHIFormat format = parseAttachmentFormat( att._format );
+            const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( att._format );
             allocTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._clearColor );
         }
 
@@ -493,7 +493,7 @@ namespace sw
         {
             if ( att._name == attachmentName )
             {
-                outFormat = parseAttachmentFormat( att._format );
+                outFormat = FrameRendererUtil::parseAttachmentFormat( att._format );
                 break;
             }
         }
@@ -647,19 +647,6 @@ namespace sw
     {
         const auto it = _mapTransient.find( name );
         return it != _mapTransient.end() ? it->second._texture : 0;
-    }
-
-    RHIFormat FrameRenderer::parseAttachmentFormat( string_view formatName )
-    {
-        const string formatNt( formatName );
-        const string upperName = StringUtil::toUpper( formatNt.c_str() );
-        if ( upperName == "D24_UNORM_S8_UINT" || upperName == "D24S8" )
-            return RHIFormat::D24_UNORM_S8_UINT;
-        if ( upperName == "R16G16B16A16_FLOAT" )
-            return RHIFormat::R16G16B16A16_FLOAT;
-        if ( upperName == "B8G8R8A8_UNORM" )
-            return RHIFormat::B8G8R8A8_UNORM;
-        return RHIFormat::R8G8B8A8_UNORM;
     }
 
     string FrameRenderer::resolvePresentSource() const

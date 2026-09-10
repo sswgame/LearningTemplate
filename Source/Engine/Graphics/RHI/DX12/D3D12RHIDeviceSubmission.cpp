@@ -191,6 +191,19 @@ namespace sw
         _frameRing.beginFrame( _fence->GetCompletedValue() );
     }
 
+    bool D3D12RHIDevice::waitForFenceValue( uint64 fenceValue )
+    {
+        if ( _fence == nullptr )
+            return false;
+        if ( _fence->GetCompletedValue() >= fenceValue )
+            return true;
+        if ( _fenceEvent == nullptr )
+            return false;
+        if ( FAILED( _fence->SetEventOnCompletion( fenceValue, _fenceEvent ) ) )
+            return false;
+        return WaitForSingleObject( _fenceEvent, 2000 ) == WAIT_OBJECT_0;
+    }
+
     void D3D12RHIDevice::signalCurrentFrame()
     {
         if ( _commandQueue == nullptr || _fence == nullptr )

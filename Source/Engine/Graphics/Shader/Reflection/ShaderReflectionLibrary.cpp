@@ -314,8 +314,22 @@ namespace sw
             return true;
 
 #if defined( SW_SHIPPING )
-        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
-                      string( desc._filePath ).c_str() );
+        // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다 — 베이커가 쓰는 파일 이름 그대로
+        // 적어야 "그 셰이더는 구웠는데?" 로 끝나지 않는다. define 목록까지 붙여 어느 조합인지 바로 보이게 한다.
+        const string missingKey = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage, desc._entryPoint,
+                                                                      ShaderBaker::computePermutationHash( desc._listDefine ),
+                                                                      ShaderBaker::getExtensionForFormat( desc._targetFormat ) );
+        string       defineList;
+        for ( const ShaderMacroDefine& define : desc._listDefine )
+        {
+            if ( defineList.empty() == false )
+                defineList += ' ';
+            defineList += define._name;
+            defineList += '=';
+            defineList += define._value;
+        }
+        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' (%#, define: %#) 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
+                      string( desc._filePath ).c_str(), missingKey.c_str(), defineList.c_str() );
         return false;
 #else
         // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션. 셰이더를 막 고쳐 아직

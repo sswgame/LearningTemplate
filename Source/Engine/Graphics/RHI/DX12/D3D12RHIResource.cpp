@@ -128,10 +128,25 @@ namespace sw
             swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
-        else if ( bNewFencePeriod && FAILED( slot._copyAllocator->Reset() ) )
+        else if ( bNewFencePeriod )
         {
-            SW_LOG_ERROR( "openUploadSlot: copy allocator Reset failed" );
-            return false;
+            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
+            // 끝냈다는 뜻이 아니다 — signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
+            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 했다
+            // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
+            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence — 그 구간의 제출 뒤에
+            // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
+            if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
+            {
+                SW_LOG_ERROR( "openUploadSlot: previous copies on allocator %# have not completed (fence %#)",
+                              slotIndex, slot._resetFence );
+                return false;
+            }
+            if ( FAILED( slot._copyAllocator->Reset() ) )
+            {
+                SW_LOG_ERROR( "openUploadSlot: copy allocator Reset failed" );
+                return false;
+            }
         }
         if ( bNewFencePeriod )
             slot._uploadOffset = 0;
@@ -168,12 +183,8 @@ namespace sw
         if ( FAILED( _pDevice->_commandQueue->Signal( _pDevice->_fence.Get(), fenceToWait ) ) )
             return false;
         _pDevice->_fenceValue++;
-        if ( _pDevice->_fence->GetCompletedValue() < fenceToWait )
-        {
-            _pDevice->_fence->SetEventOnCompletion( fenceToWait, _pDevice->_fenceEvent );
-            if ( WaitForSingleObject( _pDevice->_fenceEvent, 2000 ) != WAIT_OBJECT_0 )
-                return false;
-        }
+        if ( _pDevice->waitForFenceValue( fenceToWait ) == false )
+            return false;
         _pDevice->_releaseQueue.tickCompleted( _pDevice->_fence->GetCompletedValue() );
         return true;
     }

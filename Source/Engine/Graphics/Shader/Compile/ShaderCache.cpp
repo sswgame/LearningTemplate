@@ -19,37 +19,14 @@ namespace sw
     {
         struct ShaderCacheInternal
         {
-            static string getStemLower( string_view filePath )
+            /** @brief 베이커가 쓰는 파일 이름 그대로 — 스템·스테이지·진입점·퍼뮤테이션 해시. 규칙은 한 곳(ShaderBaker)뿐이다. */
+            static string makeBinaryFileName( const ShaderCompileDesc& desc )
             {
-                const string fileName = FileUtil::getFileNamePart( filePath );
-                const string stem     = FileUtil::removeExtension( fileName );
-                return StringUtil::toLower( stem.c_str() );
-            }
-
-            static string makePrebakedRelativePath( string_view filePath, string_view rhiFolder,
-                                                    string_view stageTag, string_view ext )
-            {
-                const string norm       = FileUtil::normalizeSeparators( filePath );
-                const string stem       = getStemLower( norm );
-                const string fileSuffix = stem + "_" + string( stageTag ) + string( ext );
-
-                const size_t pos = norm.find( "shaders/" );
-                if ( pos != string::npos )
-                {
-                    const string prefix = norm.substr( 0, pos + sizeof( "shaders/" ) - 1 );
-                    return prefix + "bin/" + string( rhiFolder ) + "/" + fileSuffix;
-                }
-
-                return string( "shaders/bin/" ) + string( rhiFolder ) + "/" + fileSuffix;
-            }
-
-            static string makeLocalCachePath( string_view filePath, string_view rhiFolder,
-                                              string_view stageTag, string_view ext )
-            {
-                const string norm       = FileUtil::normalizeSeparators( filePath );
-                const string stem       = getStemLower( norm );
-                const string fileSuffix = stem + "_" + string( stageTag ) + string( ext );
-                return FileUtil::joinPath( FileUtil::joinPath( "Saved/ShaderCache", rhiFolder ), fileSuffix );
+                const string fileName = FileUtil::getFileNamePart( desc._filePath );
+                const string stem     = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
+                return ShaderBaker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
+                                                           ShaderBaker::computePermutationHash( desc._listDefine ),
+                                                           ShaderBaker::getExtensionForFormat( desc._targetFormat ) );
             }
         };
     } // namespace
@@ -57,6 +34,27 @@ namespace sw
 
 namespace sw
 {
+    string ShaderCache::makePrebakedRelativePath( const ShaderCompileDesc& desc )
+    {
+        const string      norm      = FileUtil::normalizeSeparators( desc._filePath );
+        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
+        const string      fileName  = ShaderCacheInternal::makeBinaryFileName( desc );
+
+        const size_t pos = norm.find( "shaders/" );
+        if ( pos != string::npos )
+        {
+            const string prefix = norm.substr( 0, pos + sizeof( "shaders/" ) - 1 );
+            return prefix + "bin/" + string( rhiFolder ) + "/" + fileName;
+        }
+        return string( "shaders/bin/" ) + string( rhiFolder ) + "/" + fileName;
+    }
+
+    string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
+    {
+        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
+        return FileUtil::joinPath( FileUtil::joinPath( "Saved/ShaderCache", rhiFolder ), ShaderCacheInternal::makeBinaryFileName( desc ) );
+    }
+
     ShaderCache::ShaderCache()
         : _mapCache{}
         , _mutexCache{}
@@ -109,12 +107,8 @@ namespace sw
             }
         }
 
-        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
-        const string_view stageTag  = ShaderBaker::getStageTag( desc._stage );
-        const string_view ext       = ShaderBaker::getExtensionForFormat( desc._targetFormat );
-
-        // 1순위 (로컬 라이브 수정 캐시: Saved/ShaderCache/)
-        const string localCachePath = ShaderCacheInternal::makeLocalCachePath( desc._filePath, rhiFolder, stageTag, ext );
+        // 1순위 (로컬 라이브 수정 캐시: Saved/ShaderCache/) — 파일 이름에 퍼뮤테이션 해시가 들어간다(헤더 주석 참고).
+        const string localCachePath = makeLocalCachePath( desc );
         if ( FileUtil::fileExists( localCachePath ) )
         {
             const uint64 localMtime = FileUtil::getFileTimestamp( localCachePath );
@@ -143,7 +137,7 @@ namespace sw
         // **소스보다 오래된 바이너리는 쓰지 않는다.** 예전엔 .dxil 이 있기만 하면 무조건 이겼다.
         // 그래서 HLSL 을 고쳐도 화면은 그대로였고(리베이크 전까지), 엔진 셰이더에 대해서는
         // 라이브 컴파일 경로가 사실상 도달 불가였다 — 그 경로를 검증할 방법도 없었던 셈이다.
-        const string prebakedRelPath = ShaderCacheInternal::makePrebakedRelativePath( desc._filePath, rhiFolder, stageTag, ext );
+        const string prebakedRelPath = makePrebakedRelativePath( desc );
         bool         bPrebakedUsable = true;
 #if !defined( SW_SHIPPING )
         // **파일 시간 비교는 개발 빌드에서만 한다.** 배포 빌드에는 다시 컴파일할 길이 없어서,
@@ -203,8 +197,9 @@ namespace sw
         }
         return compiledResult;
 #else
-        SW_LOG_ERROR( "Precompiled shader binary not found in shipping pack: '%#' [%#] (RHI: %#)",
-                      desc._filePath.c_str(), desc._entryPoint.c_str(), rhiFolder.data() );
+        // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다 — 찾던 이름(RHI 폴더 포함) 그대로 적는다.
+        SW_LOG_ERROR( "Precompiled shader binary not found in shipping pack: '%#' [%#] — %#",
+                      desc._filePath.c_str(), desc._entryPoint.c_str(), prebakedRelPath.c_str() );
         ShaderCompileResult failedResult{};
         failedResult._bSuccess     = false;
         failedResult._errorMessage = "Shader binary missing in shipping pack";

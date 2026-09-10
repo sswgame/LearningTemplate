@@ -50,15 +50,24 @@ namespace sw
         fillDefines( vsDesc );
         ShaderCompileResult vsResult = compileShader( vsDesc );
 
-        ShaderCompileDesc psDesc{};
-        psDesc._filePath     = desc._pixelShaderPath;
-        psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
-        psDesc._stage        = ShaderStage::Pixel;
-        psDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
-        fillDefines( psDesc );
-        ShaderCompileResult psResult = compileShader( psDesc );
+        // 뎁스만 쓰는 파이프라인(RT 0 개)은 픽셀 스테이지가 없다 — GL·Vulkan 과 같은 규칙이다. 여기만 PS 를
+        // 무조건 컴파일해서, 그림자 패스에 머티리얼 define 을 얹은 변형이 DX12 에서만 PS 리플렉션을 요구했고
+        // Shipping 매니페스트에는 그 조합이 없었다(베이커는 그 패스에 PS 가 없다고 본다).
+        const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+        const bool          bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
+        ShaderCompileResult psResult{};
+        if ( bHasPixelShader )
+        {
+            ShaderCompileDesc psDesc{};
+            psDesc._filePath     = desc._pixelShaderPath;
+            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
+            psDesc._stage        = ShaderStage::Pixel;
+            psDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
+            fillDefines( psDesc );
+            psResult = compileShader( psDesc );
+        }
 
-        if ( vsResult._bSuccess && psResult._bSuccess )
+        if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
         {
             D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
                 {"POSITION", 0,    DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -69,7 +78,8 @@ namespace sw
             psoDesc.InputLayout    = { inputElementDescs, _countof( inputElementDescs ) };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
-            psoDesc.PS             = { psResult._bytecode.data(), psResult._bytecode.size() };
+            if ( bHasPixelShader )
+                psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
             // DX11·Vulkan·GL 은 desc._fillMode 를 읽는데 여기만 SOLID 로 못박혀 있었다 —
             // Wireframe 을 요청한 파이프라인이 DX12 에서만 조용히 솔리드로 그려졌다.
             psoDesc.RasterizerState.FillMode = ( desc._fillMode == RHIFillMode::Wireframe )
@@ -80,7 +90,8 @@ namespace sw
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
             psoDesc.SampleMask               = MathUtil::MaxUInt32;
             psoDesc.PrimitiveTopologyType    = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-            psoDesc.NumRenderTargets         = desc._numRenderTargets > 0 ? desc._numRenderTargets : 1;
+            // 뎁스 전용은 RT 0 개다 — 예전엔 1 로 올려 R8G8B8A8 을 선언했는데 실제로는 DSV 만 바인딩된다.
+            psoDesc.NumRenderTargets = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
             for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )

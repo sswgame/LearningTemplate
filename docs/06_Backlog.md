@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-10 · 기준 커밋 `dbf38329`
+> 마지막 갱신: 2026-09-10 · 기준 커밋 `b7b6c5b5`
 
 ---
 
@@ -199,26 +199,22 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 ### 1-3. 확인만 하고 넘어간 것
 
-> 2026-09-10: **Shipping 실기동에 `[Error]` 1건이 예전부터 있다.**
-> `리플렉션 매니페스트에 'engine/shaders/shadowdepth.hlsl' 가 없습니다 — 셰이더를 다시 베이킹해야
-> 합니다` (`ShaderReflectionLibrary.cpp:318`). **내 변경 때문이 아니라는 것을 확인했다** —
-> 작업 트리의 `Resource/` 와 `ShaderBaker.cpp` 를 통째로 stash 하고 Shipping 을 다시 쿠킹해 돌려도
-> 같은 오류가 **똑같이 1건** 난다(뷰 모드와 무관하게 Lit 에서도 난다).
-> 매니페스트 조회 키는 (셰이더 경로 + 퍼뮤테이션 해시)이므로, 빠진 것은 파일이 아니라 **그 조합**이다.
-> 그림자 패스가 런타임에 머티리얼 define 을 얹어 만드는 조합 중 하나가 쿠킹 목록에 없다는 뜻이고,
-> 손댈 곳은 `ShaderBaker` 의 4) 패스 x 머티리얼 단계다(런타임이 실제로 요구한 키를 로그로 찍어
-> 쿠킹 목록과 맞춰 보는 것이 가장 빠르다). Shipping 은 런타임 컴파일이 없으므로 이 조합은
-> **리플렉션 없이** 그려진다 — 지금 화면에 눈에 띄는 문제는 없지만 조용한 실패다.
+> 2026-09-10: **머티리얼 없는 배치의 Unlit 변형은 굽지 않는다** (코드를 읽어 안 것이지 실기동에서 본 것은
+> 아니다). `ensureMaterialPsos` 는 퍼뮤테이션이 없는 배치에도 뷰 모드 변형(패스 define +
+> `SW_VIEWMODE_UNLIT=1`)을 만드는데, 베이커의 5) 뷰 모드 축은 머티리얼 루프 **안**에만 있어
+> (패스 define + Unlit) 조합은 없다. Shipping 에서 머티리얼 없는 메시를 Unlit 으로 보면 그 PSO 는
+> 실패하고 Lit 으로 물러난다. 벤치 큐브는 이 경우가 **아니다** — Shipping 에서 `-gv_viewMode=1` 로 돌려도
+> 미스가 없었다(기본 머티리얼이 붙는다). 고치려면 5) 를 머티리얼 루프 밖으로도 한 번 돌리면 된다.
 
+> 2026-09-10: **Shipping 에서 에셋 GUID 해석은 죽어 있다.** PackConfig 가 `*.meta` 를 팩에서 빼므로
+> `AssetDatabase` 가 빈 채로 뜨고, 씬·프리팹의 `_prefabGuid` → 경로 해석은 늘 실패해 경로 폴백으로
+> 간다. 이번에 "실행마다 새 GUID 를 지어내 소스 트리에 쓰던" 쪽은 막았지만(3절), GUID 를 배포본에서도
+> 살릴지(`.meta` 를 팩에 넣고 팩에서 등록하는 코드가 필요)는 **결정하지 않았다**. 경로 폴백이 있는 한
+> 화면에 드러나는 문제는 없다.
 
-> 2026-09-10: **한 번 나오고 재현되지 않은 DX12 DEVICE_HUNG.** 백엔드 넷 × 뷰 모드 둘을 연속으로
-> 8회 띄우던 중 DX12 한 판이
-> `ID3D12CommandAllocator::Reset: 'StructuredUploadAllocator0' is being reset before previous
-> executions associated with the allocator have completed` → `DEVICE_HUNG` 으로 죽었다(그 뒤
-> `openUploadSlot: copy command list Reset failed` 109건). 같은 명령을 단독으로 5회 반복하면
-> 실패 0이라 GPU 가 붐빌 때만 드러나는 업로드 링의 펜스 대기 구멍으로 보인다. 다시 보이면
-> 여기서부터 본다 — 예전 SEGFAULT 항목처럼, **재현을 기다리지 말고 그 얼로케이터가 어느 펜스를
-> 기다리는지 먼저 읽는 편이 빠르다**(3절의 그 항목이 그렇게 풀렸다).
+> 2026-09-10: **Vulkan `createPipelineState` 는 스테이지 이름을 `"VSMain"`/`"PSMain"` 으로 박아 둔다.**
+> 컴파일은 `desc._vertexEntryPoint` 로 하면서 `pName` 은 고정이라, 파이프라인 XML 이 다른 진입점을
+> 쓰는 순간 Vulkan 만 파이프라인 생성에 실패한다. 지금 XML 은 전부 기본 진입점이라 안 드러난다.
 
 > 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
 > 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
@@ -253,6 +249,82 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (1-3 의 두 항목을 닫으면서 셋을 더 찾았다 — 그중 하나는 셰이더 퍼뮤테이션 전체)
+
+"확인만 하고 넘어간 것" 둘을 재현을 기다리지 않고 코드로 풀었다. 그 과정에서 세 결함이 더 나왔고,
+마지막 것이 가장 넓었다.
+
+1. **그림자 패스의 픽셀 스테이지 — 베이커와 런타임이 다른 규칙을 보고 있었다.** Shipping 의
+   `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 는 (shadowdepth · **PSMain** · 머티리얼
+   define 해시) 조합이었다. 베이커는 타입 **문자열**(`_type != "Shadow"`)로 "그림자엔 PS 없음" 을 정해
+   VS 만 굽고, 런타임 `createPsoForPassType` 은 PS 경로를 늘 채웠다. 그림자 패스에 머티리얼 define 을
+   얹은 변형(`createMaterialPsoVariant` 는 패스 desc 를 그대로 물려받는다)이 DX12 에서만 PS 를
+   컴파일·리플렉션했고(GL·Vulkan 은 자기 판단으로 떼고 있었다 — 백엔드마다 달랐다), 그 키가 매니페스트에
+   없었다. 이제 규칙은 하나다: **컬러 출력이 없는 패스에는 픽셀 스테이지가 없다.**
+   `FrameRendererUtil::collectColorOutputFormats/hasPixelStage` 를 PSO 생성과 베이커가 같이 부르고,
+   `createPsoForPassType` 은 RT 0 개면 PS 경로를 비운다. DX12 백엔드도 GL·Vulkan 과 같은 `bDepthOnly`
+   규칙을 갖게 됐다(NumRenderTargets 도 0 — 예전엔 1 로 올려 R8G8B8A8 을 선언하면서 DSV 만 바인딩했다).
+   `parseAttachmentFormat` 은 `FrameRendererUtil` 로 옮겼다(베이커도 써야 해서).
+   테스트: `ShaderBakerTest.DepthOnlyPassesHaveNoPixelStage`(nogpu, 실제 파이프라인 둘 + 합성 선언),
+   `RenderPassTest.MaterialPermutationDrivesBatchPso` 에 "그림자 패스와 그 머티리얼 변형에 PS 없음" 단언.
+   매니페스트 미스 메시지는 이제 **찾던 파일 이름과 define 목록**을 찍는다 — "그 셰이더는 구웠는데?" 로
+   끝나지 않도록.
+
+2. **DX12 업로드 얼로케이터가 자기 펜스를 기다리지 않았다.** `openUploadSlot` 은 "펜스 값이 바뀌었다 =
+   앞 구간의 복사가 끝났다" 로 보고 Reset 했다. 그런데 `signalCurrentFrame` 은 Signal 을 **올리기만
+   하고 기다리지 않는다.** 프레임 끝 Signal 직후, 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면
+   GPU 가 그 복사를 도는 중에 Reset 이 나갔다 — GPU 가 붐빌 때만 보이던 이유다. 링 슬롯 대기가 가려
+   줄 것이라 기대하지 않고 `D3D12RHIDevice::waitForFenceValue( slot._resetFence )` 로 그 얼로케이터의
+   펜스를 직접 기다린다(보통 이미 지나 있어 비용 없음). `waitForQueueDrain` 도 같은 헬퍼를 쓴다.
+
+3. **Vulkan `createPipelineState` 가 `_listShaderDefine` 을 아예 안 읽고 있었다.** 다른 세 백엔드의
+   `fillDefines` 가 여기만 없었다. 디스크립터에는 define 이 있으니 디스크립터를 보는 테스트는 초록이었다.
+
+4. **Shipping 실기동이 소스 트리의 `.meta` 를 덮어썼다.** PackConfig 가 `*.meta` 를 팩에서 빼므로
+   `ensureMeta` 는 로드에 실패하고 → GUID 를 **새로 만들어** → `Resource/engine/materials/
+   defaultmaterial.material.meta` 에 썼다. 실행마다 GUID 가 바뀌고 작업 트리가 더러워진다(이 세션의
+   첫 Shipping 실행 한 번에 그렇게 됐다). 배포 빌드는 GUID 를 지어내지도 쓰지도 않는다 — 없으면 null 이고
+   호출부는 전부 그것을 허용한다. `Engine_Resource.EnsureMetaNeverRewritesExistingMetaFile` 이 mtime 으로
+   지킨다(Shipping 에서는 null GUID 까지).
+
+5. **`ShaderCache` 가 베이크 바이너리를 (스템·스테이지)만으로 찾았다 — 퍼뮤테이션 해시가 빠졌다.**
+   가장 넓은 결함이다. 베이커는 `forwardlit_ps_6866dd9f.spv` 처럼 해시마다 굽는데 캐시는 늘
+   `forwardlit_ps.spv`(define 없음)를 읽었다. 그래서 베이크 바이너리가 소스보다 새로운 한
+   `SW_FORWARD=1` · `MATERIAL_BLEND_TRANSLUCENT` · `SW_VIEWMODE_UNLIT=1` 이 **네 백엔드 어디서도 GPU 에
+   닿지 않았다.** 리플렉션 매니페스트는 해시 키로 찾았으니 레이아웃은 맞고 바이트코드만 틀린, 가장 조용한
+   어긋남이다. 로컬 라이브 캐시(`Saved/ShaderCache`)도 같은 이름이라 처음 컴파일된 퍼뮤테이션이 나머지를
+   덮었다. 이름 규칙은 이제 `ShaderBaker::computeBinaryFileName` 하나이고 캐시·LiveShaderManager 가
+   `ShaderCache::makePrebakedRelativePath/makeLocalCachePath(desc)` 로만 경로를 만든다.
+   `ShaderBakerTest.CachePathCarriesPermutationHash` 가 베이커 이름과 글자 단위로 대조한다.
+   **왜 지난 검증이 통과했나:** 뷰 모드 커밋 때는 방금 고친 `forwardlit.hlsl` 이 베이크보다 새로워
+   런타임 컴파일(define 포함)로 갔고, 그 뒤 재베이크하자 해시 0 파일이 이기며 조용히 죽었다.
+
+6. **커밋된 리플렉션 매니페스트가 커밋된 바이너리보다 낡아 있었다.** 5번을 고치자 Shipping 의 Unlit 이
+   처음으로 **맞는** 바이트코드(`forwardlit_*_bed29a95.dxil` 등, Unlit x 머티리얼)를 집었는데 매니페스트
+   (74 항목이어야 할 것이 그 키들 없이 커밋돼 있었다)에는 리플렉션이 없어, 바인더가 빈 레이아웃으로
+   드로우를 내고 DX12 가 **DEVICE_HUNG** 으로 죽었다 — `tryGet` 주석이 경고하던 바로 그 경로다. 5번
+   이전에는 해시 0 바이트코드(리플렉션 있음)를 읽었으니 우연히 안 죽었을 뿐이다. `App.exe --bake-shaders`
+   로 다시 굽자(바이너리 0개 갱신, 매니페스트만 74 항목으로) 사라졌다. **Shipping 쿠킹도 이 상태를 못
+   잡았다** — `bake.stamp` 는 소스 해시만 보므로 레시피 축이 늘어 바이너리는 있는데 매니페스트가 낡은
+   경우는 통과시켰다. `CookAssets.py --verify-shaders` 가 이제 **매니페스트에 없는 바이너리**도 문제로
+   보고 재베이크를 걸며, 그래도 남으면 낡은 파일이라고 이름을 찍고 세운다(HEAD 의 옛 매니페스트로 되돌려
+   실제로 잡히는 것을 확인했다).
+
+**검증은 분포로 했다.** 벤치 큐브는 벽시계로 돌아 픽셀 단위 비교는 잡음 바닥이 3~4% 라 판정이 안 된다
+(에디터 씬 덤프는 SceneColor 가 비어 있었다). 대신 모서리 색을 배경으로 빼고 전경 평균 휘도를 비교했다.
+Lit ↔ Unlit 의 전경 평균 휘도 차: **고치기 전** DX12 −0.09 · Vulkan −0.34(같은 모드 두 판의 잡음
+바닥 −0.04 / −0.64 안), **고친 뒤** DX12 **+60.8** · Vulkan **+60.1** · DX11 **+59.9** · GL **+60.2**
+(잡음 바닥 전부 ±0.8 안). 수단은 `-gv_screenshot` PPM 을 모서리 색 기준으로 전경만 남겨 평균 휘도를 비교하는
+스크립트다 — 뷰 모드·머티리얼 퍼뮤테이션처럼 "define 이 닿았는가" 를 볼 때 이 지표를 쓸 것.
+
+**검증**: Debug CoreTest 169/169 · ReflectionTest 100/101(스킵 1) · EditorTest 51/51 · SmokeTest 18/19(스킵 1) ·
+EngineTest **431/431**(새 케이스 3) · nogpu 5/5 · 린트 전부 OK · 컨벤션 0건 · Debug·Shipping 경고 0.
+Shipping(DX12): 벤치+머티리얼 Lit **`[Error]` 0**(1-3 의 그 오류가 사라졌다), 벤치 Unlit `[Error]` 0(고치는
+도중엔 6번의 DEVICE_HUNG 이 났었다), 소스 트리 `.meta` 변경 없음. DX12 업로드 레이스 스트레스: 에디터 +
+테스트 씬으로 네 백엔드 × 뷰 모드 둘 연속 8회 + DX12 3000 큐브·머티리얼 인스턴스·에디터 5회 — 종료 코드 0,
+`[Error]` 0, "is being reset"/DEVICE_HUNG 0. (이 PC 의 Shipping 프리셋은 테스트 실행 파일을 만들지 않아
+Shipping 테스트 수는 재지 않았다.) 리플렉션 매니페스트 넷이 이 커밋에 같이 갱신된다(항목 74).
 
 ### 2026-09-10 (뷰 모드를 렌더러에 연결하고, 그 과정에서 결함 둘을 찾았다 — 예전 1-1)
 

@@ -227,6 +227,12 @@ namespace sw
          */
         void waitForRingSlot();
         /**
+         * @brief 펜스가 fenceValue 에 닿을 때까지 기다립니다(이미 지났으면 바로 true). 2초 안에 못 닿으면 false.
+         * @details 링 슬롯 대기와 달리 **특정 값 하나**만 본다 — "이 얼로케이터의 마지막 제출이 끝났는가" 처럼
+         *          프레임 링과 무관한 자리의 대기다. Signal 되지 않은 값을 넘기면 타임아웃으로 끝난다.
+         */
+        bool waitForFenceValue( uint64 fenceValue );
+        /**
          * @brief 현재 링 슬롯에 펜스를 기록하고 해제 큐를 진행합니다. GPU를 기다리지 않습니다.
          */
         void signalCurrentFrame();

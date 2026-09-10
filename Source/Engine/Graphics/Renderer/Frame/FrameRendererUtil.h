@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -83,6 +85,87 @@ namespace sw
         static constexpr float32 kGpuSpinSpeedRange = 1.75f;
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+
+        /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM. */
+        static RHIFormat parseAttachmentFormat( string_view formatName )
+        {
+            const string formatNt( formatName );
+            const string upperName = StringUtil::toUpper( formatNt.c_str() );
+            if ( upperName == "D24_UNORM_S8_UINT" || upperName == "D24S8" )
+                return RHIFormat::D24_UNORM_S8_UINT;
+            if ( upperName == "R16G16B16A16_FLOAT" )
+                return RHIFormat::R16G16B16A16_FLOAT;
+            if ( upperName == "B8G8R8A8_UNORM" )
+                return RHIFormat::B8G8R8A8_UNORM;
+            return RHIFormat::R8G8B8A8_UNORM;
+        }
+
+        /** @brief 뎁스만 쓰는 패스 타입인가 — 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거다. */
+        static bool isDepthOnlyPassType( RenderPassType passType )
+        {
+            return passType == RenderPassType::Shadow || passType == RenderPassType::DepthPrepass;
+        }
+
+        /**
+         * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 돌려주는 값은 컬러 RT 수.
+         * @details PSO 생성(createPsoForPassType)과 셰이더 베이커가 **같은 답**을 내야 하는 규칙이다 — 컬러
+         *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
+         *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 돌려준다(호출자가 패스 타입으로 정한 값).
+         *          선언은 있는데 어태치먼트를 하나도 못 찾으면 같은 값이다.
+         * @param pOutFormat 컬러 포맷을 받을 배열(nullptr 이면 세기만 한다)
+         * @param capacity   pOutFormat 의 크기 — 그보다 많은 컬러 출력은 버린다
+         */
+        static uint32 collectColorOutputFormats( const RenderGraphPassDesc&          pass,
+                                                 const vector<RenderPassAttachment>& listAttachment,
+                                                 RHIFormat*                          pOutFormat,
+                                                 uint32                              capacity,
+                                                 uint32                              fallbackCount )
+        {
+            if ( pass._listOutput.empty() )
+                return fallbackCount;
+
+            uint32 colorCount{ 0 };
+            bool   bHasDepthOutput{ false };
+            for ( const string& outName : pass._listOutput )
+            {
+                if ( colorCount >= capacity )
+                    break;
+                for ( const RenderPassAttachment& att : listAttachment )
+                {
+                    if ( att._name != outName )
+                        continue;
+                    const RHIFormat format = parseAttachmentFormat( att._format );
+                    if ( isDepthFormat( format ) )
+                    {
+                        bHasDepthOutput = true;
+                    }
+                    else
+                    {
+                        if ( pOutFormat != nullptr )
+                            pOutFormat[colorCount] = format;
+                        ++colorCount;
+                    }
+                    break;
+                }
+            }
+            if ( colorCount > 0 )
+                return colorCount;
+            return bHasDepthOutput ? 0u : fallbackCount;
+        }
+
+        /**
+         * @brief 이 패스에 픽셀 스테이지가 있는가 — 컬러 출력이 하나라도 있어야 한다.
+         * @details 셰이더 베이커가 "이 패스의 PS 를 굽는가" 를 정할 때 쓴다. 런타임은 같은 규칙을
+         *          createPsoForPassType 이 RT 수로 적용한다(RT 0 개 → PS 경로를 비운다). 예전엔 베이커가
+         *          타입 **문자열**로 "그림자엔 PS 없음" 을 정하고 런타임은 PS 경로를 늘 채워서, 그림자 패스에
+         *          머티리얼 define 을 얹은 변형이 DX12 에서 PS 리플렉션을 요구했고 매니페스트엔 그 조합이
+         *          없었다 — Shipping 실기동의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 가 그것이다.
+         */
+        static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
+        {
+            const uint32 fallbackCount = isDepthOnlyPassType( pass._resolvedType ) ? 0u : 1u;
+            return collectColorOutputFormats( pass, listAttachment, nullptr, kMaxColorAttachments, fallbackCount ) > 0;
+        }
 
         /**
          * @brief 이 패스가 씬 메시(GpuScene 배치)를 그리는가.

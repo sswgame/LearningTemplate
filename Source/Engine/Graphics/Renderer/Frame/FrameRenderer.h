@@ -352,8 +352,6 @@ namespace sw
         TransientAttachment findTransientAttachment( string_view name ) const;
         /** @brief 일시 텍스처 핸들을 찾습니다. 없으면 0. */
         RHITextureHandle findTransient( string_view name ) const;
-        /** @brief 포맷 이름을 RHIFormat으로 해석합니다. */
-        static RHIFormat parseAttachmentFormat( string_view formatName );
         /** @brief Present 소스 어태치먼트 이름을 결정합니다. */
         string resolvePresentSource() const;
         /** @brief 패스 타입으로 파이프라인 패스 서술을 찾습니다. */

@@ -147,12 +147,9 @@ namespace sw
                     ShaderCompileResult newResult = ShaderCompiler::compileHLSL( watchedInfo._desc );
                     if ( newResult._bSuccess )
                     {
-                        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( watchedInfo._desc._targetFormat );
-                        const string_view stageTag  = ShaderBaker::getStageTag( watchedInfo._desc._stage );
-                        const string_view ext       = ShaderBaker::getExtensionForFormat( watchedInfo._desc._targetFormat );
-                        const string      fileName  = FileUtil::getFileNamePart( watchedInfo._desc._filePath );
-                        const string      stem      = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
-                        const string      localPath = FileUtil::joinPath( FileUtil::joinPath( "Saved/ShaderCache", rhiFolder ), stem + "_" + string( stageTag ) + string( ext ) );
+                        // 캐시가 읽는 이름 그대로 쓴다 — 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
+                        // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
+                        const string localPath = ShaderCache::makeLocalCachePath( watchedInfo._desc );
 
                         const string localDir = FileUtil::getDirectoryPart( localPath );
                         if ( localDir.empty() == false )

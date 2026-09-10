@@ -119,32 +119,10 @@ namespace sw
         }
         else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
         {
-            uint32 colorCount{ 0 };
-            bool   bHasDepthOutput{ false };
-            for ( const string& outName : pPassDesc->_listOutput )
-            {
-                if ( colorCount >= kMaxColorAttachments )
-                    break;
-                for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
-                {
-                    if ( att._name == outName )
-                    {
-                        const RHIFormat fmt = parseAttachmentFormat( att._format );
-                        if ( FrameRendererUtil::isDepthFormat( fmt ) == false )
-                        {
-                            desc._arrRtvFormat[colorCount++] = fmt;
-                        }
-                        else
-                        {
-                            bHasDepthOutput = true;
-                        }
-                        break;
-                    }
-                }
-            }
-            desc._numRenderTargets = ( colorCount > 0 ) ? colorCount : ( bHasDepthOutput ? 0 : 1 );
-            if ( desc._numRenderTargets == 1 && colorCount == 0 )
-                desc._arrRtvFormat[0] = RHIFormat::R8G8B8A8_UNORM;
+            // 출력 선언에서 컬러 RT 를 센다 — 베이커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
+            // 컬러를 못 찾으면 호출자가 넘긴 수로 물러난다(못 찾은 자리의 포맷은 desc 기본값 그대로).
+            desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats(
+                *pPassDesc, _pipelineResource.getDesc()._listAttachment, desc._arrRtvFormat, kMaxColorAttachments, numRenderTargets );
         }
         else
         {
@@ -152,6 +130,17 @@ namespace sw
             {
                 desc._arrRtvFormat[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
             }
+        }
+
+        // 컬러 출력이 없는 패스(그림자·뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
+        // 않는다 — 여기서 정하지 않으면 백엔드마다 달랐다: GL·Vulkan 은 자기 판단으로 뗐고 DX12 는 PS 를 컴파일·
+        // 리플렉션까지 했다. 그 위에 머티리얼 define 을 얹은 변형(createMaterialPsoVariant 는 이 desc 를 그대로
+        // 물려받는다)은 베이커가 굽지 않아 Shipping 에서 매니페스트 미스로 떨어졌다. 베이커 쪽 같은 규칙은
+        // FrameRendererUtil::hasPixelStage 다.
+        if ( desc._numRenderTargets == 0 )
+        {
+            desc._pixelShaderPath.clear();
+            desc._pixelEntryPoint.clear();
         }
         const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
         registerPsoLayout( handle, desc );

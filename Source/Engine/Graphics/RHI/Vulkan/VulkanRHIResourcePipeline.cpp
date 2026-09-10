@@ -42,11 +42,21 @@ namespace sw
 
     RHIPipelineStateHandle VulkanRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
+        // desc._listShaderDefine 을 컴파일 요청에 옮긴다. 다른 세 백엔드는 처음부터 했는데 여기만 빠져 있어서
+        // Vulkan 은 SW_FORWARD·머티리얼 퍼뮤테이션·SW_VIEWMODE_UNLIT 을 한 번도 컴파일러에 넘긴 적이 없었다 —
+        // PSO 디스크립터에는 define 이 들어 있으니 디스크립터를 보는 테스트는 초록이었고, 화면만 안 바뀌었다.
+        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
+        {
+            for ( const string& define : desc._listShaderDefine )
+                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
+        };
+
         ShaderCompileDesc vsDesc{};
-        vsDesc._filePath             = desc._vertexShaderPath;
-        vsDesc._entryPoint           = desc._vertexEntryPoint;
-        vsDesc._stage                = ShaderStage::Vertex;
-        vsDesc._targetFormat         = ShaderTargetFormat::SPIRV_Vulkan;
+        vsDesc._filePath     = desc._vertexShaderPath;
+        vsDesc._entryPoint   = desc._vertexEntryPoint.empty() ? "VSMain" : desc._vertexEntryPoint;
+        vsDesc._stage        = ShaderStage::Vertex;
+        vsDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
+        fillDefines( vsDesc );
         ShaderCompileResult vsResult = VulkanRHIResourcePipelineInternal::compileShader( vsDesc );
 
         const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
@@ -56,10 +66,11 @@ namespace sw
         {
             ShaderCompileDesc psDesc{};
             psDesc._filePath     = desc._pixelShaderPath;
-            psDesc._entryPoint   = desc._pixelEntryPoint;
+            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
             psDesc._stage        = ShaderStage::Pixel;
             psDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-            psResult             = VulkanRHIResourcePipelineInternal::compileShader( psDesc );
+            fillDefines( psDesc );
+            psResult = VulkanRHIResourcePipelineInternal::compileShader( psDesc );
         }
 
         if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
