@@ -188,7 +188,7 @@ namespace sw
             const uint32 calculatedChecksum = calculateChecksum( pDst, outUncompressedSize );
             if ( calculatedChecksum != header._checksum )
             {
-                SW_LOG_ERROR( "Checksum mismatch: expected %#x, got %#x", header._checksum, calculatedChecksum );
+                SW_LOG_ERROR( "Checksum mismatch: expected %x, got %x", header._checksum, calculatedChecksum );
                 return false;
             }
         }

@@ -1025,22 +1025,34 @@ SW_TEST_CASE( Core_String, FormatStringLongTextSurvivesWidthSpec )
 }
 
 /**
- * @brief [Core_String] `%#` 뒤 문자는 서식 지시자로 읽힌다 — 치수 로그가 걸린 덫
- * @details `%#x%#` 를 "가로x세로" 로 읽으려는 실수가 저장소에 16곳 있었고, 전부 가로를
- *          16진수로 찍고 있었다(1280 → 500). 공백도 플래그라 `%# x %#` 도 같은 결과다.
- *          여기서 그 규약을 고정해 둔다 — 구분자로 쓸 수 있는 것과 없는 것을 같이 적는다.
+ * @brief [Core_String] `%#` 은 옵션이 붙지 않는 순수 자리표다 — 뒤 글자는 무조건 리터럴, 서식은 printf 형으로.
+ * @details `#` 뒤를 서식으로 읽던 시절엔 `%#x%#`(가로x세로)가 가로를 16진수로 찍고(1280 → 500, 16곳),
+ *          `%#s`(초) 가 단위 `s` 를 삼키고(5곳), `%#.txt` 가 `.tx` 를 잃어 로그 파일이 `.txt` 없이 남았다.
+ *          세 번 다 사고였고 그 문법을 쓰려던 사람은 없었다. 여기서 새 규약을 고정한다.
  */
-SW_TEST_CASE( Core_String, FormatSpecifierFollowsPlaceholder )
+SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
 {
     utf8 buffer[128]{};
 
-    // 'x' 는 변환 문자다 — 리터럴이 아니라 16진수 지시자로 읽힌다.
+    // `%#` 뒤의 'x' 는 리터럴이다 — 치수 로그의 "가로x세로".
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#x%#", 1280, 720 );
-    SW_EXPECT_STREQ( "500720", buffer );
+    SW_EXPECT_STREQ( "1280x720", buffer );
+
+    // 단위를 붙여 쓴 로그 — 'd', 's', 't' 가 서식으로 읽히지 않는다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#dB %#s %#time", 3, 2.5f, 7 );
+    SW_EXPECT_STREQ( "3dB 2.500000s 7time", buffer );
+
+    // 서식은 printf 형으로 — 너비·정렬·0채움·16진수·정밀도·부호. 타입은 인자가 정한다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%3d|%-5s|%08x|%.2f|%+d]", 7, "w", 255, 3.14159, 5 );
+    SW_EXPECT_STREQ( "[  7|w    |000000ff|3.14|+5]", buffer );
 
     // 공백은 플래그로 받지 않는다 — 뒤 단어의 첫 글자를 먹지 않아야 한다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# x %#", 1280, 720 );
     SW_EXPECT_STREQ( "1280 x 720", buffer );
+
+    // 알아볼 수 없는 `%…` 는 리터럴이고 인자를 소비하지 않는다 — 뒤 인자가 밀리지 않아야 한다. `%%` 는 퍼센트.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "100% done, %q=%#, %%=%#, tail%", 1, 2 );
+    SW_EXPECT_STREQ( "100% done, %q=1, %=2, tail%", buffer );
 
     // 실제로 깨져 있던 문장들 — 첫 글자가 변환 문자인 단어가 뒤에 온다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# Passed, %# Failed", 3, 0 );
@@ -1056,8 +1068,8 @@ SW_TEST_CASE( Core_String, FormatSpecifierFollowsPlaceholder )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "(%#, %#)", 1280, 720 );
     SW_EXPECT_STREQ( "(1280, 720)", buffer );
 
-    // 의도된 16진수는 그대로 유효하다.
-    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "crc=%#x", 255 );
+    // 의도된 16진수는 printf 형으로 쓴다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "crc=%x", 255 );
     SW_EXPECT_STREQ( "crc=ff", buffer );
 }
 
@@ -1148,9 +1160,9 @@ SW_TEST_CASE( Core_String, NonAsciiBytesAreUnsigned )
 }
 
 /**
- * @brief [Core_String] `%#` 바로 뒤의 `.확장자` 는 정밀도가 아니다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
+ * @brief [Core_String] `%#` 바로 뒤의 `.확장자` 는 리터럴이다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
  * @details `%#.txt` 를 "정밀도 0 + 길이 수식어 t + 16진수 x" 로 읽어 `.tx` 가 사라지고 `t` 만 남았다.
- *          정밀도는 숫자가 따라올 때만이다. 숫자 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
+ *          이제 `%#` 은 두 글자만 소비한다. printf 형 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
  */
 SW_TEST_CASE( Core_String, FormatPlaceholderFollowedByExtensionIsLiteral )
 {

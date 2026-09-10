@@ -280,7 +280,17 @@ namespace sw
     // 3) FormatString — %# 를 인자로 치환해 버퍼에 씀
     //    자유 함수 formatstring 이 이 static 을 호출
     // ------------------------------------------------------------------------------
-    /** @brief printf 스타일 %# 포맷을 버퍼에 씁니다. */
+    /**
+     * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류다.
+     * @details - `%#` — **옵션이 붙지 않는 순수 자리표.** `%#` 두 글자만 소비하고 뒤 글자는 무조건 리터럴이다.
+     *            그래서 `%#dB`·`%#x%#`·`%#s`·`%#.txt` 가 전부 글자 그대로 나온다. 예전엔 `#` 뒤를 printf 서식으로
+     *            읽어 `%#x%#` 가 가로를 16진수로, `%#s` 가 단위 `s` 를 삼키고, `%#.txt` 가 `.tx` 를 잃었다 —
+     *            세 번 다 사고였고, 그 문법을 쓰려던 사람은 없었다.
+     *          - printf 형 — 서식이 필요하면 이쪽이다: `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그·너비·정밀도·
+     *            길이 수식어·변환 문자를 printf 대로 읽되 **타입은 인자가 정한다**(`%d` 에 문자열을 줘도 문자열이 나온다).
+     *            공백 플래그(`% d`)는 받지 않는다.
+     *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 준다.
+     */
     class FormatString
     {
     public:
@@ -369,11 +379,9 @@ namespace sw
                         outHasSpec = true;
                         ++cursor;
                         break;
-                    case '#':
-                        // 대체 형식(0x 접두 등)은 이 포맷터에 대응하는 옵션이 없다. `%#` 은 이
-                        // 엔진의 기본 플레이스홀더이므로 여기서 읽고 버린다.
-                        ++cursor;
-                        break;
+                    // `#` 은 여기 없다 — `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 이 파서에
+                    // 들어오지 않는다. 예전엔 여기서 `#` 을 플래그로 읽고 뒤를 계속 서식으로 해석해 `%#x%#`·`%#s`·`%#.txt`
+                    // 가 전부 깨졌다. printf 의 `#`(대체 형식) 자체는 이 포맷터에 대응 옵션이 없어 지원하지 않는다.
                     // 공백은 **플래그로 받지 않는다.** printf 의 공백 플래그는 이 포맷터에
                     // 대응하는 옵션이 없어 아무 일도 하지 않았는데, 받아들이는 바람에 `%#` 뒤에
                     // 오는 단어의 첫 글자가 변환 문자로 읽혔다 — "%# Failed" 가 'F' 를 먹어
@@ -401,11 +409,9 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 3) 정밀도 — **숫자가 따라올 때만** 정밀도다. printf 는 `%.f` 를 정밀도 0 으로 보지만 이 엔진의
-            // 플레이스홀더는 `%#` 이라 `%#.txt` 같은 리터럴이 흔하다. 예전엔 여기서 `.` 을 먹고 길이 수식어 `t`,
-            // 변환 문자 `x` 까지 읽어 "정밀도 0 의 16진수" 로 해석했다 — 로그 파일 이름이 `LOG_..._<id>t` 로
-            // 끝났고(.tx 가 사라졌다) `*.txt` 로 찾으면 아무것도 안 나왔다. 저장소에 `%.f` 꼴은 없다.
-            if ( cursor + 1 < format.size() && format[cursor] == '.' && format[cursor + 1] >= '0' && format[cursor + 1] <= '9' )
+            // 3) 정밀도 — printf 규약 그대로다(`%.f` 는 정밀도 0). `%#.txt` 가 여기로 들어와 `.tx` 를 잃던 사고는
+            // `%#` 을 순수 자리표로 만들어 원천에서 막았다(위 `#` 주석).
+            if ( cursor < format.size() && format[cursor] == '.' )
             {
                 ++cursor;
                 uint32 precisionValue{ 0 };
@@ -462,7 +468,6 @@ namespace sw
                 case 'E':
                 case 's':
                 case 'c':
-                case '#': // 이 엔진의 기본 플레이스홀더 — 옵션만 앞에 붙은 경우
                     break;
                 default:
                     return 0; // 서식이 아니다
@@ -489,6 +494,16 @@ namespace sw
                             continue;
                         }
 
+                        // `%#` 은 옵션이 붙지 않는 순수 자리표다 — 두 글자만 소비하고 뒤는 무조건 리터럴이다.
+                        // 서식이 필요하면 printf 형(`%3d`, `%.2f`, `%08x`)을 쓴다. `#` 을 플래그로 읽던 시절엔
+                        // `%#x%#`(가로x세로)가 16진수, `%#s`(초) 가 `s` 를 삼킴, `%#.txt` 가 `.tx` 를 잃음 — 셋 다 사고였다.
+                        if ( format[charIndex + 1] == '#' )
+                        {
+                            match._pos = charIndex;
+                            match._len = 2;
+                            return match;
+                        }
+
                         Format       specFormat{};
                         bool         bHasSpec{ false };
                         const size_t consumed = parseFormatSpec( format.substr( charIndex + 1 ), specFormat, bHasSpec );
@@ -501,10 +516,11 @@ namespace sw
                             return match;
                         }
 
-                        // 알아볼 수 없는 서식이어도 인자 하나는 소비한다 — 예전과 같은 동작이다.
-                        match._pos = charIndex;
-                        match._len = 2;
-                        return match;
+                        // 알아볼 수 없는 `%…` 는 서식이 아니다 — `%` 를 리터럴로 두고 **인자를 소비하지 않는다.**
+                        // 예전엔 두 글자를 먹고 인자 하나를 소비했다: "100% done %#" 에서 `% d` 가 인자를 삼켜 뒤의
+                        // 인자가 전부 한 칸씩 밀렸다. printf 라면 미정의 동작인 자리인데, 밀리는 쪽이 훨씬 찾기 어렵다.
+                        ++charIndex;
+                        continue;
                     }
                 }
                 ++charIndex; // 문자열 끝의 '%' — 더 볼 것이 없다
