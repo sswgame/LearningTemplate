@@ -30,21 +30,6 @@ namespace sw
             static constexpr uint32      kSceneBinMagic   = 0x53434E31u; // 'SCN1'
             static constexpr uint32      kSceneBinVersion = 0;
 
-            static string absoluteWritePath( string_view path )
-            {
-                if ( FileUtil::isAbsolutePath( path ) )
-                    return FileUtil::normalizeSeparators( path );
-
-                string result = ResourceUtil::getResourcePath( path );
-                if ( result.empty() )
-                {
-                    result = ResourceUtil::makeAbsolutePath( path );
-                    if ( result.empty() )
-                        result = path;
-                }
-                return result;
-            }
-
             static void appendNodeXml( StringBuilder<constant::kMaxBuffer8192>& out, XmlNode node )
             {
                 if ( node.isValid() == false )
@@ -249,7 +234,7 @@ namespace sw
             }
         }
 
-        const string absPath = SceneDocumentInternal::absoluteWritePath( path );
+        const string absPath = ResourceUtil::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -376,7 +361,7 @@ namespace sw
             arch << entity._embeddedXml;
         }
 
-        const string absPath = SceneDocumentInternal::absoluteWritePath( path );
+        const string absPath = ResourceUtil::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );

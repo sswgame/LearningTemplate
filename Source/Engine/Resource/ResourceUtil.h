@@ -54,6 +54,18 @@ namespace sw
         static string makeAbsolutePath( string_view relativePath );
 
         /**
+         * @brief 아직 없는 파일을 **쓰기 위한** 절대 경로를 정합니다.
+         * @param path 절대 경로 · 전역 ID · 이미 있는 팩 상대 키 중 무엇이든 받습니다.
+         * @return 쓰기에 쓸 절대 경로. 아무것도 해석되지 않으면 인자를 그대로 돌려줍니다.
+         * @details 저장하는 쪽은 `getResourcePath` 만으로는 안 된다 — 그것은 **이미 있는** 파일만
+         *          찾으므로 새 파일에는 empty 를 돌려주고, 그러면 호출부가 상대 경로로 파일을 써서
+         *          `Resource/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다(`PrefabAsset` 이
+         *          실제로 그랬다 — 애셋은 Bin 아래, `.meta` 는 `Resource/` 아래로 갈라졌다).
+         *          해석 순서를 여기 한 번만 적어 두고 모든 세이버가 같이 쓴다.
+         */
+        static string getWritePath( string_view path );
+
+        /**
          * @brief 상대 리소스 경로를 해석한 뒤 텍스트로 읽습니다 (VFS 팩 우선 조회).
          * @param relativePath 팩 상대 키 또는 전역 ID (해석 실패 시 인자 그대로 open 시도)
          * @param outText 읽은 UTF-8 본문

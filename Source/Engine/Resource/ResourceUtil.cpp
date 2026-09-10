@@ -251,6 +251,20 @@ namespace sw
         return found;
     }
 
+    string ResourceUtil::getWritePath( string_view path )
+    {
+        if ( FileUtil::isAbsolutePath( path ) )
+            return FileUtil::normalizeSeparators( path );
+
+        // NRVO 가 걸리도록 이름 있는 값 하나로 모아 한 번만 돌려준다.
+        string result = getResourcePath( path );
+        if ( result.empty() )
+            result = makeAbsolutePath( path );
+        if ( result.empty() )
+            result = string{ path };
+        return result;
+    }
+
     string ResourceUtil::makeAbsolutePath( string_view relativePath )
     {
         if ( relativePath.empty() )

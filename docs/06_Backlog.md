@@ -103,6 +103,40 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
+### 1-A. 직렬화기가 **상속된 PROPERTY 를 저장·로드하지 않는다** — 결정 필요
+
+테스트 씬 애셋을 만들다 발견했고, **왕복 테스트로 확정**했다
+(`Test/EngineTest/TestObjectStateRoundTrip.cpp`). 지금은 그 케이스를 `SW_TEST_SKIP` 으로 두었다 —
+고치면 SKIP 한 줄만 지우면 통과한다.
+
+**증거**: `SceneComponent` 를 직접 붙인 오브젝트는 위치가 왕복한다. `MeshComponent`(=
+`SceneComponent` 상속)에 위치·스케일을 주고 저장하면 **XML 에 아예 안 들어가고** 로드해도
+기본값이다. 실제로 생성한 씬 애셋에서도 `<MeshComponent _meshId="" _boundsRadius=…>` 처럼
+트랜스폼 속성이 없다.
+
+**원인**: `TypeInfo::forEachProperty( func, bIncludeBase = false )` 의 기본값. 이 기본값으로
+부르는 곳이 전부다 — `XmlSerializer` 3곳 · `JsonSerializer` 2곳 · `ObjectDiffSerializer` ·
+`SchemaMigrate` 2곳 · `ComponentDefaults`. 즉 상속 PROPERTY 는 어느 경로에서도 직렬화되지 않는다.
+
+**영향 범위** (전부 같은 `ObjectStateSerializer` 경로다):
+
+- **씬 저장/로드** — 모든 메시·스프라이트·카메라·라이트·콜라이더의 트랜스폼이 사라진다
+  (가장 파생 타입이 정확히 `SceneComponent` 인 오브젝트만 살아남는다).
+- **프리팹 저장/로드** — 같다.
+- **Undo 스냅샷** — `EditorTransaction::captureSnapshot` 이 같은 직렬화기를 쓴다. 즉 기즈모로
+  옮긴 뒤 Ctrl+Z 가 위치를 되돌리지 못할 것으로 보인다(에디터에서 실제로 눌러 확인해야 한다).
+- **프리팹 오버라이드 diff** — `ObjectDiffSerializer` 도 같은 기본값이라 트랜스폼 오버라이드가
+  잡히지 않는다.
+
+**왜 지금까지 안 드러났나**: 저장소에 `.scene.xml` 이 **하나도 없었다.** 씬을 저장·로드하는
+유일한 주체가 에디터이고, 실기동 검증은 빈 씬을 봤다(0절).
+
+**고치려면** `bIncludeBase = true` 로 넘기면 되지만 네 하위 시스템의 의미가 함께 바뀐다 —
+저장 파일이 커지고(추가만 되므로 옛 파일 로드는 그대로), 프리팹 오버라이드가 트랜스폼을 잡기
+시작하고, `ComponentDefaults`·`SchemaMigrate` 가 보는 프로퍼티 집합이 늘어난다. 확인할 것:
+`getPropertiesWithBase()` 가 파생이 같은 이름을 다시 선언한 경우를 어떻게 다루는지(중복 방출),
+그리고 기본값 적용이 두 번 되지 않는지. **엔진 전역 포맷 의미 변경이라 사용자 결정이 필요하다.**
+
 ### 1-0. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
 
 뷰포트 툴바 맨 앞의 콤보는 **아무 일도 하지 않았다** — `ViewportToolbarSettings::_renderMode` 를
@@ -309,6 +343,27 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (프리팹 저장이 엉뚱한 폴더에 쓰고 있었다 — 저장 경로 해석 통일)
+
+테스트 씬 애셋을 만들려고 프리팹을 저장하다 드러났다. 두 결함이 겹쳐 있었다:
+
+1. **상위 폴더를 만들지 않았다.** `PrefabAsset::saveToXmlFile`/`saveToJsonFile`/`saveToBinaryFile`
+   은 폴더가 없으면 쓰기가 실패하는데 **로그도 남기지 않고** false 만 돌려줬다(로더는 실패를
+   모두 로그한다). `SceneDocument::saveXml` 은 `createParentDirectory` 를 부른다. 맞췄고,
+   세 세이버 모두 실패 시 오류를 남긴다.
+2. **경로 해석이 달랐다.** `PrefabAsset` 은 `ResourceUtil::getResourcePath` 만 쓰고 실패 시
+   **상대 경로를 그대로** 넘겼다 — `getResourcePath` 는 *이미 있는* 파일만 찾으므로 새 파일에는
+   늘 empty 다. 그래서 애셋이 `Resource/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어졌다.
+   실제로 확인했다: 프리팹은 `build/Ninja-Debug/Bin/game/empty/prefabs/` 에, 그 `.meta` 는
+   `Resource/game/empty/prefabs/` 에 — **애셋과 메타가 다른 폴더로 갈렸다.**
+
+해석 순서를 `ResourceUtil::getWritePath` 하나로 모았다(절대 → 기존 리소스 → 도메인 루트 조합 →
+인자 그대로). `SceneDocument` 의 사설 헬퍼 `absoluteWritePath` 를 지우고 양쪽이 같이 쓴다 —
+앞으로 세이버를 추가할 때 올바른 동작이 기본값이 된다.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5, 린트 6/6. 프리팹이 `Resource/game/empty/prefabs/`
+에 저장되는 것을 실기동으로 확인했다(고치기 전에는 로그가 상대 경로를 찍었다).
 
 ### 2026-09-10 (씬을 바꿔도 이전 씬을 가리키는 상태가 남아 있었다)
 
