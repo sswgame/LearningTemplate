@@ -361,8 +361,13 @@ namespace sw
         static constexpr string_view kDigitLower        = "0123456789abcdefghijklmnopqrstuvwxyz";
         static constexpr string_view kDigitUpper        = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         static constexpr size_t      kIntegerBufferSize = 64;
-        static constexpr size_t      kFloatBufferSize   = 128;
-        static constexpr size_t      kTempBufferSize    = 256;
+        /**
+         * @brief 실수 고정소수점의 최대 길이 — 부호 1 + 정수부 309 (DBL_MAX) + '.' + 정밀도 최대 255 + NUL = 567.
+         * @details 예전엔 128 이라 |x| ≥ 1e121 이면 to_chars 가 실패하고 "폴백" 으로 떨어졌는데, 그 폴백은
+         *          `static_cast<uint64>( value )` 로 시작해 UB 였다(쓰레기 숫자). 담을 수 있게 키우고 폴백은 지웠다.
+         */
+        static constexpr size_t kFloatBufferSize = 640;
+        static constexpr size_t kTempBufferSize  = kFloatBufferSize;
 
         template <typename T>
         /** @brief FormattedValue 가 아니면 false 입니다. */
@@ -601,10 +606,7 @@ namespace sw
             if ( match._pos != string_view::npos )
             {
                 pos = writeFormatPrefix( pBuffer, pos, capacity, format.substr( 0, match._pos ) );
-                if ( match._bHasOverrideFormat )
-                    pos = addValueWithFormat( pBuffer, pos, capacity, std::forward<T>( value ), match._overrideFormat );
-                else
-                    pos = addValue( pBuffer, pos, capacity, std::forward<T>( value ) );
+                pos = addValue( pBuffer, pos, capacity, std::forward<T>( value ), match._bHasOverrideFormat ? &match._overrideFormat : nullptr );
 
                 string_view nextFormat = format.substr( match._pos + match._len );
                 if constexpr ( sizeof...( args ) > 0 )
@@ -641,77 +643,62 @@ namespace sw
             return pos + copyLength;
         }
 
-        /** @brief 추가합니다. */
+        /**
+         * @brief 값 하나를 버퍼에 붙입니다. pSpec 은 서식 문자열(`%5d` 등)이 준 서식이고, 없으면 nullptr.
+         * @details 서식의 출처가 둘이다 — 서식 문자열(pSpec)과 `Fmt( v, Format )` 의 값 쪽 서식. 값 **변환**(기수·정밀도)은
+         *          Fmt 가 있으면 Fmt 의 것, 없으면 pSpec 의 것이고, **너비·정렬**은 pSpec 이 있으면 pSpec, 없으면 Fmt 의 것이다.
+         *          예전엔 서식 유무로 함수가 둘이어서 문자열 지름길·널 가드·Fmt 풀기가 두 번 복제돼 있었다.
+         *
+         *          문자열류는 임시 버퍼를 거치지 않는다 — 임시 버퍼(kTempBufferSize)를 거치면 긴 C 문자열이 거기서 잘렸다
+         *          (Vulkan 검증 메시지의 꼬리가 사라져 진단이 안 됐다). 단, 널은 지름길을 타면 안 된다: `string_view{ nullptr }`
+         *          는 strlen(nullptr) 이라 SEGFAULT 다(`nullptr` 리터럴도 C++17 에선 string_view 로 변환 "가능" 해서 여기로 온다).
+         */
         template <typename T>
-        static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value ) noexcept
+        static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format* pSpec ) noexcept
         {
-            // 문자열류 인자는 임시 버퍼를 거치지 않는다. 아래 arrTemp 는 kTempBufferSize(256) 라,
-            // `SW_LOG_ERROR("%#", pMessage)` 처럼 긴 C 문자열을 넘기면 **256자에서 잘렸다** —
-            // Vulkan 검증 메시지의 꼬리("... is type UNIFORM_BUFFER but <실제 타입>")가 그렇게
-            // 사라져서 디스크립터 불일치를 진단할 수 없었다. write() 는 목적지 용량만큼 복사하므로
-            // 문자열은 곧장 넘기면 된다. 서식(폭/정밀도)이 붙은 값은 기존 경로를 그대로 탄다.
-            // 단, 널은 지름길을 타면 안 된다 — `string_view{ nullptr }` 는 strlen(nullptr) 이라 SEGFAULT 다.
-            // `nullptr` 리터럴은 C++17 에서 string_view 로 변환 "가능" 해서 여기로 들어왔고(아래 (null) 분기가 죽어 있었다),
-            // 널 `const utf8*` 도 마찬가지였다: SW_LOG_ERROR( "%#", pMessage ) 에 null 을 주면 로거가 죽었다.
             if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> &&
                            std::is_null_pointer_v<std::decay_t<T>> == false )
             {
+                string_view text{};
                 if constexpr ( std::is_pointer_v<std::decay_t<T>> )
                 {
-                    if ( value == nullptr )
-                        return write( pBuffer, pos, capacity, "(null)" );
+                    text = ( value == nullptr ) ? string_view{ "(null)" } : string_view{ value };
                 }
-                return write( pBuffer, pos, capacity, string_view{ value } );
+                else
+                {
+                    text = string_view{ value };
+                }
+                return pSpec != nullptr ? addPadding( pBuffer, pos, capacity, text, *pSpec ) : write( pBuffer, pos, capacity, text );
             }
-
-            utf8 arrTemp[kTempBufferSize];
-
-            if constexpr ( is_formatted_value_v<T> )
+            else if constexpr ( is_formatted_value_v<T> )
             {
-                const uint32 valueLength = valueToString( arrTemp, value.getValue(), value.getFormat() );
-                return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, value.getFormat() );
+                const Format& padFormat = pSpec != nullptr ? *pSpec : value.getFormat();
+                return appendConverted( pBuffer, pos, capacity, value.getValue(), value.getFormat(), padFormat );
             }
             else
             {
-                const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), Format{} );
-                return write( pBuffer, pos, capacity, string_view{ arrTemp, valueLength } );
+                const Format format = pSpec != nullptr ? *pSpec : Format{};
+                return appendConverted( pBuffer, pos, capacity, std::forward<T>( value ), format, format );
             }
         }
 
-        /** @brief 추가합니다. */
+        /**
+         * @brief 문자열이 아닌 값을 변환해 붙입니다 — 목적지에 자리가 있으면 **바로 그 자리에** 변환합니다.
+         * @details 예전엔 항상 kTempBufferSize 짜리 스택 임시에 변환한 뒤 복사했다. 너비 맞춤이 없고 목적지에 변환 최대
+         *          길이만큼 남아 있으면(로그 버퍼 8 KB 는 거의 늘 그렇다) 임시도 복사도 없다. 그 밖(패딩이 필요하거나 버퍼
+         *          끝에 가까울 때)에만 임시를 거친다 — 잘림 규칙(앞부분만 남는다)은 그때 write 가 그대로 지킨다.
+         */
         template <typename T>
-        static uint32 addValueWithFormat( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format& format ) noexcept
+        static uint32 appendConverted( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value,
+                                       const Format& convertFormat, const Format& padFormat ) noexcept
         {
-            // 문자열류는 임시 버퍼를 거치지 않는다 — addValue 와 같은 이유다. arrTemp 는 256바이트라
-            // `%-20s` 에 긴 문자열을 주면 **거기서 잘린다**. 폭 맞춤은 원본 뷰 그대로 addPadding 이 한다.
-            // (그 지름길이 addValue 에만 있어서, 서식이 붙는 순간 조용히 잘리는 구멍이 있었다.)
-            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> &&
-                           std::is_null_pointer_v<std::decay_t<T>> == false )
-            {
-                if constexpr ( std::is_pointer_v<std::decay_t<T>> )
-                {
-                    if ( value == nullptr )
-                        return addPadding( pBuffer, pos, capacity, "(null)", format );
-                }
-                return addPadding( pBuffer, pos, capacity, string_view{ value }, format );
-            }
+            const uint32 remaining = ( pos + 1 < capacity ) ? ( capacity - 1 - pos ) : 0;
+            if ( padFormat.hasWidth() == false && remaining >= kTempBufferSize )
+                return pos + valueToString( pBuffer + pos, std::forward<T>( value ), convertFormat );
 
-            utf8 arrTemp[kTempBufferSize];
-            if constexpr ( is_formatted_value_v<T> )
-            {
-                // `%5d` 같은 서식에 Fmt(v, Format()) 를 준 경우 — 값 변환은 Fmt 의 서식(기수·정밀도)으로, 너비·정렬은
-                // 서식 문자열로 한다. 예전엔 래퍼를 풀지 않고 valueToString 에 넘겨 "[unsupported type]" 이 찍혔다
-                // (미지원 타입을 컴파일 오류로 바꾸자 이 죽은 경로가 드러났다).
-                const uint32 valueLength = valueToString( arrTemp, value.getValue(), value.getFormat() );
-                return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
-            }
-            else
-            {
-                const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), format );
-                // **addPadding 을 거쳐야 한다.** 예전엔 여기서 바로 write 했는데, 그러면 너비·정렬·0채우기가
-                // Fmt(v, Format()) 경로에서만 먹고 서식 문자열(`%5d`)로 준 것은 조용히 무시됐다.
-                return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
-            }
+            utf8         arrTemp[kTempBufferSize];
+            const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), convertFormat );
+            return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, padFormat );
         }
 
         /** @brief 값을 문자열로 변환합니다. */
@@ -925,48 +912,16 @@ namespace sw
             const int32 precision = format.hasPrecision() ? format.getPrecision() : 6;
             auto [pPtr, ec]       = std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
 
-            if ( static_cast<int32>( ec ) == 0 )
+            // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 여기서 실패할 수 없다 — 그래도 실패하면 조용한 쓰레기가
+            // 아니라 눈에 띄는 표식을 남긴다(예전 "폴백" 은 uint64 캐스트 UB 였다).
+            if ( static_cast<int32>( ec ) != 0 )
             {
-                *pPtr = '\0';
-                return static_cast<size_t>( pPtr - pBuf );
+                SW_ASSERT( false && "floatToString: to_chars failed" );
+                Memory::copy( pCurrent, "?", 2 );
+                return static_cast<size_t>( pCurrent - pBuf ) + 1;
             }
-            return static_cast<size_t>( pCurrent - pBuf ) + fallbackFloatToString( pCurrent, value, precision );
-        }
-
-        /** @brief 실수를 문자열로 변환합니다(폴백). */
-        static size_t fallbackFloatToString( utf8* pBuf, const float64 value, const int32 precision ) noexcept
-        {
-            utf8*  pCurrent = pBuf;
-            uint64 int_part = static_cast<uint64>( value );
-
-            if ( int_part == 0 )
-                *pCurrent++ = '0';
-            else
-            {
-                utf8*  pIntStart = pCurrent;
-                uint64 temp      = int_part;
-                while ( temp > 0 )
-                {
-                    *pCurrent++ = static_cast<utf8>( '0' + ( temp % 10 ) );
-                    temp /= 10;
-                }
-                std::reverse( pIntStart, pCurrent );
-            }
-
-            if ( precision > 0 )
-            {
-                *pCurrent++  = '.';
-                float64 frac = value - static_cast<float64>( int_part );
-                for ( int32 precisionIndex = 0; precisionIndex < precision; ++precisionIndex )
-                {
-                    frac *= 10.0;
-                    const int32 digit = static_cast<int32>( frac ) % 10;
-                    *pCurrent++       = static_cast<utf8>( '0' + digit );
-                    frac -= digit;
-                }
-            }
-            *pCurrent = '\0';
-            return static_cast<size_t>( pCurrent - pBuf );
+            *pPtr = '\0';
+            return static_cast<size_t>( pPtr - pBuf );
         }
 
         /** @brief 추가합니다. */

@@ -1197,3 +1197,25 @@ SW_TEST_CASE( Core_String, FormatPlaceholderFollowedByExtensionIsLiteral )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#. done", "x" );
     SW_EXPECT_STREQ( "x. done", buffer );
 }
+
+/**
+ * @brief [Core_String] 큰 실수는 고정소수점 자릿수를 전부 담는다 — 예전엔 |x| ≥ 1e121 에서 uint64 캐스트 UB 폴백으로 떨어졌다.
+ * @details 1e300 의 double 값은 정수부 301자리(1000000000000000052504760255…)다. 그리고 값 변환은 목적지에 자리가 있으면
+ *          바로 쓰고, 작은 버퍼에서는 임시를 거쳐 앞부분만 남긴다 — 두 경로의 결과가 같아야 한다.
+ */
+SW_TEST_CASE( Core_String, FormatStringHugeFloatAndDirectWrite )
+{
+    utf8 wide[1024]{};
+    sw::formatstring( wide, static_cast<uint32>( sizeof( wide ) ), "%#", 1e300 );
+    SW_EXPECT_EQUAL( 301u + 7u, static_cast<uint32>( sw::StringUtil::strlen( wide ) ) ); // 301자리 + ".000000"
+    SW_EXPECT_TRUE( string_view( wide ).substr( 0, 29 ) == "10000000000000000525047602552" );
+    SW_EXPECT_TRUE( string_view( wide ).substr( 301 ) == ".000000" );
+
+    // 목적지가 넉넉한 경우(직접 쓰기)와 빠듯한 경우(임시 경유)가 같은 글자를 낸다. 빠듯한 쪽은 앞부분만 남는다.
+    utf8 direct[1024]{};
+    utf8 tight[12]{};
+    sw::formatstring( direct, static_cast<uint32>( sizeof( direct ) ), "v=%# %#", 1234567, 3.5 );
+    sw::formatstring( tight, static_cast<uint32>( sizeof( tight ) ), "v=%# %#", 1234567, 3.5 );
+    SW_EXPECT_STREQ( "v=1234567 3.500000", direct );
+    SW_EXPECT_STREQ( "v=1234567 3", tight );
+}
