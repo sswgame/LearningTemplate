@@ -29,9 +29,13 @@ namespace sw
         {
             static inline XIM    s_pInputMethod{ nullptr };
             static inline XIC    s_pInputContext{ nullptr };
-            static inline void*  s_pImWindow{ nullptr }; ///< XIC를 만들 때 사용한 Display* (창이 바뀌면 재생성).
-            static inline Cursor s_invisibleCursor{ 0 }; ///< X11 None(리소스 없음). X11MacroUndef.h가 None 매크로를 지우므로 리터럴 0을 씁니다.
+            static inline void*  s_pImDisplay{ nullptr };     ///< XIC를 만들 때 쓴 Display*.
+            static inline Window s_imWindow{ 0 };             ///< XIC의 XNClientWindow. **창이 바뀌면 반드시 재생성해야 한다.**
+            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음). X11MacroUndef.h가 None 매크로를 지우므로 리터럴 0을 씁니다.
+            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display* (다르면 다시 만든다).
             static inline bool   s_bAccessibilityDisabled{ false };
+            /** @brief 창이 X11 포커스를 쥐고 있는가 (FocusIn/FocusOut 로 갱신). 보조 폴링 생략 판단에 쓴다. */
+            static inline bool   s_bWindowFocused{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
 
             /** @brief 활성 창에 대한 XIC를 지연 생성해 반환합니다 (실패하면 nullptr). */
@@ -46,7 +50,10 @@ namespace sw
                 if ( pDisplay == nullptr || x11Window == 0 )
                     return nullptr;
 
-                if ( s_pInputContext != nullptr && s_pImWindow == pDisplay )
+                // 예전엔 Display 만 비교했다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
+                // 창을 반복 생성/파괴) 캐시된 XIC 가 **이미 파괴된 Window** 를 XNClientWindow 로 물고 있어
+                // 텍스트 입력이 조용히 죽는다. 창까지 함께 봐야 한다.
+                if ( s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window )
                     return s_pInputContext;
 
                 if ( s_pInputContext != nullptr )
@@ -70,22 +77,55 @@ namespace sw
                                              XNClientWindow, x11Window,
                                              XNFocusWindow, x11Window,
                                              nullptr );
-                s_pImWindow     = pDisplay;
+                s_pImDisplay    = pDisplay;
+                s_imWindow      = x11Window;
                 return s_pInputContext;
             }
 
             /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서"를 만들어 캐싱합니다. */
             static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
             {
-                if ( s_invisibleCursor != 0 )
+                // 커서도 Display 소유 리소스다 — 다른 Display 에서 그대로 쓰면 잘못된 리소스 id 가 된다.
+                if ( s_invisibleCursor != 0 && s_pCursorDisplay == pDisplay )
                     return s_invisibleCursor;
+                if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
+                {
+                    XFreeCursor( static_cast<Display*>( s_pCursorDisplay ), s_invisibleCursor );
+                    s_invisibleCursor = 0;
+                }
 
                 XColor      dummyColor{};
                 const uint8 arrPixelData[1] = { 0 };
                 Pixmap      pixmap          = XCreateBitmapFromData( pDisplay, x11Window, reinterpret_cast<const utf8*>( arrPixelData ), 1, 1 );
                 s_invisibleCursor           = XCreatePixmapCursor( pDisplay, pixmap, pixmap, &dummyColor, &dummyColor, 0, 0 );
                 XFreePixmap( pDisplay, pixmap );
+                s_pCursorDisplay = pDisplay;
                 return s_invisibleCursor;
+            }
+
+            /** @brief XIM/XIC 와 커서를 해제합니다. 창이나 Display 가 사라지기 전에 불러야 합니다. */
+            static void releaseAll()
+            {
+                if ( s_pInputContext != nullptr )
+                {
+                    XDestroyIC( s_pInputContext );
+                    s_pInputContext = nullptr;
+                }
+                if ( s_pInputMethod != nullptr )
+                {
+                    XCloseIM( s_pInputMethod );
+                    s_pInputMethod = nullptr;
+                }
+                s_pImDisplay = nullptr;
+                s_imWindow   = 0;
+
+                if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
+                {
+                    XFreeCursor( static_cast<Display*>( s_pCursorDisplay ), s_invisibleCursor );
+                }
+                s_invisibleCursor = 0;
+                s_pCursorDisplay  = nullptr;
+                s_bWindowFocused  = false;
             }
         };
     } // namespace
@@ -100,6 +140,13 @@ namespace sw
         // 마우스는 창 밖에서 버튼을 뗀 경우 등 이벤트를 놓칠 수 있는 경로가 있어 위치/버튼을 보조로 폴링합니다.
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
+            return;
+
+        // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
+        // 보조 폴링이 필요 없다. XQueryPointer 는 **서버 동기 왕복**이라 프레임마다 물면 그대로 비용이다
+        // (Win32 의 GetAsyncKeyState/GetCursorPos 는 값싼 호출이라 그쪽엔 없던 문제다).
+        // 놓칠 수 있는 건 "창 밖에서 뗀 버튼" 이고 그건 포인터가 나갔거나 포커스를 잃은 경우다.
+        if ( _pMouse->isPointerInside() && X11InputInternal::s_bWindowFocused )
             return;
 
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
@@ -253,9 +300,11 @@ namespace sw
                     _pMouse->setPointerInsideState( false );
                 break;
             case FocusIn:
+                X11InputInternal::s_bWindowFocused = true;
                 onWindowFocusGained();
                 break;
             case FocusOut:
+                X11InputInternal::s_bWindowFocused = false;
                 onWindowFocusLost();
                 break;
             case ConfigureNotify:
@@ -387,6 +436,10 @@ namespace sw
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
+        // 이 함수가 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC/커서 해제도 여기서 한다.
+        // Display 가 닫히기 전에 풀어야 X 리소스가 남지 않는다.
+        X11InputInternal::releaseAll();
+
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false )
             return;
