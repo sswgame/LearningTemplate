@@ -599,8 +599,9 @@ namespace sw
         uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가 (와이어프레임 뷰 모드)
         uint16                  _bSwapChainDirty         : 1; ///< resize/present 결과로 예약된 스왑체인 재생성 요청
         uint16                  _bDepthHasStencil        : 1; ///< _depthFormat에 stencil plane 포함
+        uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
-        [[maybe_unused]] uint16 _reservedVulkan          : 4;
+        [[maybe_unused]] uint16 _reservedVulkan          : 3;
 
         VkSampler _defaultSampler;
 

@@ -38,20 +38,32 @@ namespace sw
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
         resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
 
-        VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
-        if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
+        // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 아직 쥐고 있다. Vulkan 에는
+        // present 말고 이미지를 돌려주는 길이 없으니, 다시 획득하지 말고 그 이미지에 덮어 그린다.
+        // 매 프레임 새로 획득하면 이미지가 하나씩 소진되고, 개수를 넘기는 순간 acquire 가
+        // UINT64_MAX 타임아웃으로 영원히 막힌다 — endFrame(bPresent=false) 로 도는 경로에서 실제로 걸렸다.
+        if ( _bSwapChainImageHeld == SW_FALSE )
         {
-            recreateSwapChain();
-            if ( _swapChain.isValid() == false )
+            VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
+            if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
+            {
+                recreateSwapChain();
+                if ( _swapChain.isValid() == false )
+                    return;
+
+                status = _swapChain.acquireNextImage( _device, _currentFrame );
+            }
+
+            // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" — 위에서 이미 한 번 다시
+            // 만들어 봤으므로 그대로 진행한다.
+            if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
                 return;
 
-            status = _swapChain.acquireNextImage( _device, _currentFrame );
+            _bSwapChainImageHeld = SW_TRUE;
+            // 방금 획득한 이미지의 가용 세마포어는 이 프레임의 첫 제출이 딱 한 번 기다린다.
+            // 이미지를 물려받은 프레임은 기다릴 시그널이 없으므로 이 플래그를 세우지 않는다.
+            _bFrameAcquireWaitPending = 1;
         }
-
-        // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" — 위에서 이미 한 번 다시
-        // 만들어 봤으므로 그대로 진행한다.
-        if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
-            return;
 
         // 이 이미지를 마지막으로 쓴 프레임이 아직 GPU 에 있으면 그 펜스를 기다린 뒤에 덮어쓴다.
         const uint32 imageIndex = _swapChain.getImageIndex();
@@ -69,9 +81,8 @@ namespace sw
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
-        _activeFrameBuffer        = _listCommandBuffer[_currentFrame];
-        _frameSegmentCursor       = 0;
-        _bFrameAcquireWaitPending = 1;
+        _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
+        _frameSegmentCursor = 0;
         _listPendingSubmit.clear();
 
         // 새 커맨드버퍼엔 아직 아무 세트도 안 걸림 — flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
@@ -140,9 +151,14 @@ namespace sw
         submitInfo.commandBufferCount = static_cast<uint32>( _listPendingSubmit.size() );
         submitInfo.pCommandBuffers    = _listPendingSubmit.data();
 
+        // renderFinished 를 기다리는 건 present 뿐이다. present 하지 않는 프레임까지 시그널하면
+        // 아무도 소비하지 않은 이진 세마포어를 거듭 시그널하게 되어 규약 위반이다.
         VkSemaphore arrSignalSemaphore[] = { _swapChain.getRenderFinishedSemaphore() };
-        submitInfo.signalSemaphoreCount  = 1;
-        submitInfo.pSignalSemaphores     = arrSignalSemaphore;
+        if ( bPresent )
+        {
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores    = arrSignalSemaphore;
+        }
 
         // 이 제출에 새 세대 번호를 매긴다 — 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame의 tickCompleted) 보류된다.
@@ -157,6 +173,9 @@ namespace sw
                 // 다음 beginFrame에서 스왑체인을 재생성합니다.
                 _bSwapChainDirty = 1;
             }
+            // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도
+            // 이미지 자체가 사라지므로, 어느 쪽이든 더 이상 쥐고 있지 않다.
+            _bSwapChainImageHeld = SW_FALSE;
         }
 
         _listPendingSubmit.clear();

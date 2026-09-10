@@ -65,6 +65,7 @@ namespace sw
         , _bFillModeNonSolid{ SW_FALSE }
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
+        , _bSwapChainImageHeld{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _reservedVulkan{ 0 }
         , _defaultSampler{ nullptr }

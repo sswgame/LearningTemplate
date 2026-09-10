@@ -483,6 +483,10 @@ namespace sw
             return;
         vkDeviceWaitIdle( _device );
 
+        // 아래에서 스왑체인을 통째로 버린다 — 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
+        // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
+        _bSwapChainImageHeld = SW_FALSE;
+
         // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 재생성합니다.
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
