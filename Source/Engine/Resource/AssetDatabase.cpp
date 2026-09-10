@@ -231,8 +231,12 @@ namespace sw
         if ( FileUtil::directoryExists( absoluteRoot ) == false )
             return 0;
 
+        // 절대 경로는 대소문자를 **보존**해서 받아야 한다(refreshFolder 와 같은 규칙). normalizePath 는
+        // 경로 전체를 소문자로 내리는데, 그러면 실제 디렉터리 이름이 섞여 있는 구간(예: .../LearningTemplate/Resource)
+        // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRelativePath 의 루트 비교가 어긋난다.
+        // 소문자화는 상대 경로가 된 뒤 toRelativePath 안에서 한 번만 한다.
         vector<string> listMeta;
-        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true, true );
+        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true, false );
 
         uint32 count{ 0 };
         for ( const string& metaAbs : listMeta )
