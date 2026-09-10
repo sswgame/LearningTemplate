@@ -50,10 +50,12 @@ namespace sw
         /** @brief force-feedback fd를 닫고 관련 상태를 리셋합니다. */
         void closeForceFeedback();
 
-        int32                  _fdJoystick;      /**< /dev/input/jsN 파일 디스크립터. 미연결이면 invalid_index::kInt32(POSIX open() 실패 규약과 동일한 -1). */
-        int32                  _fdForceFeedback; /**< 대응하는 /dev/input/eventN 파일 디스크립터 (럼블용). 없으면 invalid_index::kInt32. */
-        int16                  _ffEffectId;      /**< ioctl( EVIOCSFF )로 업로드한 FF_RUMBLE 이펙트 ID. 없으면 invalid_index::kInt16. */
-        float32                _reconnectTimer;  /**< 미연결 상태에서 재오픈 시도까지 남은 시간(초). XInput과 동일하게 폴링 스팸을 막음. */
+        int32                  _fdJoystick;        /**< /dev/input/jsN 파일 디스크립터. 미연결이면 invalid_index::kInt32(POSIX open() 실패 규약과 동일한 -1). */
+        int32                  _fdForceFeedback;   /**< 대응하는 /dev/input/eventN 파일 디스크립터 (럼블용). 없으면 invalid_index::kInt32. */
+        int16                  _ffEffectId;        /**< ioctl( EVIOCSFF )로 업로드한 FF_RUMBLE 이펙트 ID. 없으면 invalid_index::kInt16. */
+        uint16                 _ffStrongMagnitude; /**< 마지막으로 올린 강모터 세기. 같은 값이면 재업로드를 건너뛴다. */
+        uint16                 _ffWeakMagnitude;   /**< 마지막으로 올린 약모터 세기. */
+        float32                _reconnectTimer;    /**< 미연결 상태에서 재오픈 시도까지 남은 시간(초). XInput과 동일하게 폴링 스팸을 막음. */
         uint8                  _bConnected        : 1;
         uint8                  _bHasForceFeedback : 1; /**< _fdForceFeedback가 유효하고 이펙트 업로드까지 성공했는지. */
         [[maybe_unused]] uint8 _reservedPad       : 6;

@@ -50,6 +50,13 @@ namespace sw
             static constexpr uint8                  kButtonLeftThumb     = 9;
             static constexpr uint8                  kButtonRightThumb    = 10;
 
+            /** @brief EVIOCGBIT 이 채운 커널 비트맵에서 특정 기능 비트가 켜져 있는지 봅니다. */
+            static bool testFeatureBit( const uintptr_t* pBits, uint32 bitIndex )
+            {
+                constexpr uint32 kBitsPerWord = static_cast<uint32>( sizeof( uintptr_t ) * 8 );
+                return ( ( pBits[bitIndex / kBitsPerWord] >> ( bitIndex % kBitsPerWord ) ) & uintptr_t{ 1 } ) != 0;
+            }
+
             /** @brief js_event 축 값(-32767~32767)을 [-1, 1] 스틱 축으로 정규화합니다. bInvertY면 부호를 뒤집습니다. */
             static float32 normalizeStickAxis( int16 rawValue, bool bInvert )
             {
@@ -106,6 +113,8 @@ namespace sw
         , _fdJoystick{ invalid_index::kInt32 }
         , _fdForceFeedback{ invalid_index::kInt32 }
         , _ffEffectId{ invalid_index::kInt16 }
+        , _ffStrongMagnitude{ 0 }
+        , _ffWeakMagnitude{ 0 }
         , _reconnectTimer{ 1.0f }
         , _bConnected{ SW_FALSE }
         , _bHasForceFeedback{ SW_FALSE }
@@ -190,6 +199,14 @@ namespace sw
             return;
         }
 
+        // 예전엔 비트맵을 **받아만 두고 검사하지 않아** 럼블이 없는 노드도 통과했다. 그러면
+        // setVibration 이 매번 EVIOCSFF 에서 실패한다 — 지원 여부는 여기서 한 번에 가린다.
+        if ( GamepadJoystickInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
+        {
+            close( fd );
+            return;
+        }
+
         _fdForceFeedback = fd;
     }
 
@@ -205,6 +222,8 @@ namespace sw
             close( _fdForceFeedback );
             _fdForceFeedback = invalid_index::kInt32;
         }
+        _ffStrongMagnitude = 0;
+        _ffWeakMagnitude   = 0;
         _bHasForceFeedback = SW_FALSE;
     }
 
@@ -302,17 +321,26 @@ namespace sw
         if ( _fdForceFeedback < 0 )
             return true;
 
-        // 매번 기존 이펙트를 지우고 새 세기로 다시 업로드합니다 (evdev FF 이펙트는 세기를 직접
-        // 갱신하는 API가 없어, 지우고 다시 만드는 편이 가장 단순하고 안전합니다).
+        const uint16 strongMagnitude = static_cast<uint16>( MathUtil::clamp( leftMotor, 0.0f, 1.0f ) * 0xFFFFu );
+        const uint16 weakMagnitude   = static_cast<uint16>( MathUtil::clamp( rightMotor, 0.0f, 1.0f ) * 0xFFFFu );
+
+        // 같은 세기를 다시 요청하면 할 일이 없다. 게임이 매 프레임 같은 값으로 부르는 것은 흔한데,
+        // 아래 경로는 호출마다 ioctl 두 번 + write 한 번이라 그대로 두면 프레임마다 그 값을 문다.
+        // (XInput 의 XInputSetState 는 값싼 호출이라 Windows 에는 없던 문제다.)
+        if ( _bHasForceFeedback == SW_TRUE && strongMagnitude == _ffStrongMagnitude && weakMagnitude == _ffWeakMagnitude )
+            return true;
+
+        // evdev FF 이펙트는 세기를 직접 갱신하는 API가 없어, 지우고 다시 만듭니다.
         if ( _ffEffectId >= 0 )
         {
             ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
             _ffEffectId = invalid_index::kInt16;
         }
 
-        const bool bBothZero = ( leftMotor <= 0.0f && rightMotor <= 0.0f );
-        if ( bBothZero )
+        if ( strongMagnitude == 0 && weakMagnitude == 0 )
         {
+            _ffStrongMagnitude = 0;
+            _ffWeakMagnitude   = 0;
             _bHasForceFeedback = SW_FALSE;
             return true;
         }
@@ -320,8 +348,8 @@ namespace sw
         ff_effect effect{};
         effect.type                      = FF_RUMBLE;
         effect.id                        = -1; // -1 = 새 이펙트 슬롯 할당 요청
-        effect.u.rumble.strong_magnitude = static_cast<uint16>( MathUtil::clamp( leftMotor, 0.0f, 1.0f ) * 0xFFFFu );
-        effect.u.rumble.weak_magnitude   = static_cast<uint16>( MathUtil::clamp( rightMotor, 0.0f, 1.0f ) * 0xFFFFu );
+        effect.u.rumble.strong_magnitude = strongMagnitude;
+        effect.u.rumble.weak_magnitude   = weakMagnitude;
         effect.replay.length             = 0; // 0 = stop 이벤트를 받을 때까지 재생 지속
         effect.replay.delay              = 0;
 
@@ -342,6 +370,8 @@ namespace sw
             return false;
         }
 
+        _ffStrongMagnitude = strongMagnitude;
+        _ffWeakMagnitude   = weakMagnitude;
         _bHasForceFeedback = SW_TRUE;
         return true;
     }
@@ -355,6 +385,8 @@ namespace sw
             ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
             _ffEffectId = invalid_index::kInt16;
         }
+        _ffStrongMagnitude = 0;
+        _ffWeakMagnitude   = 0;
         _bHasForceFeedback = SW_FALSE;
     }
 } // namespace sw
