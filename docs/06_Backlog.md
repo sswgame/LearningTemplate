@@ -308,6 +308,14 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
   실행 자체가 안 된다. 그런데도 훅은 "포맷팅 규칙에 어긋나는 파일이 있습니다" 라고 **거짓
   보고**했다. 이제 버전까지 맞는 것만 고르고, 고정본을 못 구하면 있는 것으로 돌리되 결과가
   달라질 수 있음을 분명히 알린다.
+- **도구 버전을 키 하나로 올리고 URL 은 그것을 참조한다.** `llvm_version`·`ninja_version`·
+  `sccache_version` 을 두고, `loadSearchPaths` 가 설정 안의 `${key}` 를 같은 설정의 최상위
+  스칼라로 치환한다(`expandSelfReferencesInternal`). 버전이 URL 안에 두 번씩 박혀 있으면 올릴 때
+  여러 줄을 손대야 하고 플랫폼 하나를 빠뜨리면 그때부터 PC 마다 다른 버전을 쓴다 — 실제로
+  Windows 20.1.8 / Linux 18.1.8 로 갈려 있었다. `${sourceDir}`·`${ProgramFiles}` 처럼 여기서 값을
+  알 수 없는 것은 건드리지 않는다(경로 확장은 쓰는 자리에서 맥락을 갖고 한다).
+- **clang-format 만은 버전을 따로 둔다.** `llvm_version` 에 묶으면 컴파일러를 올리는 순간
+  코드베이스가 통째로 재포맷된다 — 그 둘은 같은 이유로 움직이지 않아야 한다.
 - **`platformSearchRoots` 가 `*` 를 펼친다.** `llvm_search_roots.linux` 의
   `/usr/lib/llvm-20 … llvm-14` 손목록을 `/usr/lib/llvm-*` 로 바꿨다. `8bda8366` 이
   `ReflectionParser/CMakeLists.txt` 와 `ci.yml` 에서 걷어낸 함정이 이 JSON 에는 남아 있어

@@ -78,6 +78,36 @@ def updateToolchainConfig(key: str, value: Any) -> None:
     configFile.write_text(json.dumps(configData, indent=4), encoding="utf-8")
 
 
+def expandSelfReferencesInternal(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    설정 안의 `${key}` 를 **같은 설정의 최상위 스칼라 값**으로 치환합니다.
+
+    도구 버전이 URL 안에 두 번씩 박혀 있으면(`llvmorg-20.1.8/clang+llvm-20.1.8-…`) 올릴 때마다
+    여러 줄을 손대야 하고, 플랫폼 하나를 빠뜨리면 그때부터 PC 마다 다른 버전을 쓰게 된다 —
+    실제로 Windows 20.1.8 / Linux 18.1.8 로 갈려 있었다. 버전을 키 하나로 두고 URL 은 그것을
+    참조하게 하면 올릴 자리가 한 곳뿐이다.
+
+    `${sourceDir}`·`${ProgramFiles}` 처럼 여기서 값을 알 수 없는 것은 **건드리지 않는다** —
+    경로 확장은 쓰는 자리에서 `expandPathTemplate` 이 맥락을 갖고 한다.
+    """
+    scalars = {key: str(value) for key, value in config.items() if isinstance(value, (str, int, float))}
+    if not scalars:
+        return config
+
+    def substituteInternal(value: Any) -> Any:
+        if isinstance(value, str):
+            for key, replacement in scalars.items():
+                value = value.replace(f"${{{key}}}", replacement)
+            return value
+        if isinstance(value, dict):
+            return {k: substituteInternal(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [substituteInternal(v) for v in value]
+        return value
+
+    return {key: substituteInternal(value) for key, value in config.items()}
+
+
 def loadSearchPaths() -> dict[str, Any]:
     """
     도구 탐색 경로 설정(search_paths.json)을 읽어 반환합니다.
@@ -113,7 +143,7 @@ def loadSearchPaths() -> dict[str, Any]:
         raise RuntimeError(f"Failed to load or parse defaults from {defaultsPath}")
 
     local = readJsonDictInternal(jsonPath, kFileSearchPaths)
-    return mergeJsonDictInternal(defaults, local)
+    return expandSelfReferencesInternal(mergeJsonDictInternal(defaults, local))
 
 
 def recordEnginePath(key: str, path: str | Path) -> str:
