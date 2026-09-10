@@ -133,10 +133,25 @@ cd build/Ninja-Debug/Bin
 `C:\Utility\LLVM`(21.1.1)과 VS BuildTools(22.1.3)를 함께 갖고 있고, 탐색 순서상
 **기본은 21** 이 잡힌다. 22 로 재려면 경로를 명시해야 한다(경로는 `--clang-tidy` 로 넘긴다).
 
-- **clang-tidy 20 기준(한쪽 PC)**: 110 → 65 → 20 → **0건**. 고칠 수 있으면 고치고, 구조적으로
-  불가능한 자리는 `NOLINTNEXTLINE` + 이유를 남겼다.
-- **clang-tidy 22 기준(다른 PC)**: 같은 코드가 **308건**이 된다. 늘어난 243건은 22 에서 새로 생긴
-  검사 넷이 전부다. 하나씩 훑어 **72건**까지 줄였다(아래 표).
+- **clang-tidy 20 기준(한쪽 PC)**: 110 → 65 → 20 → **0건**.
+- **clang-tidy 22 기준**: 예전엔 308 → 72건이었다. **2026-09-10 재측정(22.1.3, 전체 트리):
+  30건이고 종류는 하나뿐이다** — `bugprone-throwing-static-initialization`.
+  예전 72건에 있던 나머지 다섯 종류(`VirtualCall` 13 · `macro-parentheses` 12 · `branch-clone` 8 ·
+  `suspicious-stringview-data-usage` 5 · `exception-escape` 2)와 `Padding` 3 은 **이제 뜨지 않는다**
+  (`Padding` 은 `.clang-tidy` 에서 껐고, 나머지는 22.1.3 에서 안 짚는다 — 또 버전 차이다).
+
+**남은 30건은 고치지 않는다 — 판단이다.** 전부 정적 저장 기간 객체의 초기화이고, 두 부류다:
+전역 변수 등록자(`sw_reg_gv_*`, 약 18건)와 설정 싱글턴·컨테이너 정적(`s_map*`, `s_list*`, 약 12건).
+둘 다 **시작 시 실패가 곧 종료**인 자리다.
+
+> `Logger::registerCaller` 를 `noexcept` 로 만들어 150건을 없앤 전례가 있어 같은 수를 쓰고 싶어지지만,
+> 여기는 다르다. `GlobalVariableRegistrar` 는 `string` 멤버 넷과 `variant<…, string>` 을 들고 있어
+> **실제로 던질 수 있다**(할당). Logger 는 "고정 배열과 뮤텍스뿐" 이라 못 던지는 것이 근거였다.
+> 던질 수 있는 생성자에 `noexcept` 를 붙이는 것은 분석기를 침묵시키는 대신 정보를 지우는 거래다 —
+> 하지 않는다.
+
+**숫자가 늘어도 회귀가 아닐 수 있다.** 이 건수는 전역 변수 개수를 따라간다 — 29 → 30 이 된 것은
+`gv_editorStartupScene` 을 추가했기 때문이다. 새 지적이 뜨면 **종류**를 먼저 보라.
 
 **이 PC 에 clang-tidy 가 아예 없기도 했다** — 저장소가 받아 두는 `Tools/LLVM` 은 clang-tidy 를 뺀
 축소판이라 스크립트가 "찾지 못했습니다" 로 끝났다. 이제 Visual Studio 가 같이 설치하는
@@ -198,21 +213,9 @@ clang-tidy 22 에서 남은 것(합 72건, 이 병합 이후 `Padding` 을 끄�
 
 ### 1-4. 확인만 하고 넘어간 것
 
-Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
-했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는 무관하다.
-
-**2026-09-10 재현 시도: 8회 모두 통과했다** — 그 케이스만 5회, Shipping `EngineTest` 전체 3회
-(421/423, 2 스킵). 한 번 본 것으로 "확정" 하지 않는 것과 같은 이유로, 8회 통과했다고 없는 일이
-되는 것도 아니다. 다시 보이면 그때는 재현율부터 재고, 그 테스트가 실제로 무엇을 태우는지를 먼저
-본다(아래 2026-09-09 메모).
-
 > 2026-09-09 추가: Shipping 빌드에 `FrameProfiler.cpp` 경고 3건(`avgUs`/`perFrameX10` 미사용,
 > `pTitle` 미사용 파라미터)이 **예전부터** 있다. 보고 경로가 Shipping 에서 컴파일 아웃되면서 남은
-> 변수들이다. App 개편과 무관하므로 건드리지 않았다.
->
-> 2026-09-09 추가: "테스트는 초록인데 앱만 깨진다" 의 실례가 하나 나왔다(3절의 DX11 항목).
-> 원인은 테스트 씬이 그 코드 경로를 **아예 안 태우고 있던** 것이었다. 위 SEGFAULT 도
-> 재현을 기다리기보다 "그 테스트가 실제로 무엇을 태우는가" 를 먼저 보는 편이 빠를 수 있다.
+> 변수들이다.
 
 ---
 
@@ -243,6 +246,34 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (드물게 SEGFAULT 하던 RHITest 의 원인을 찾았다 — 예전 1-5)
+
+`RHITest.CommandListCreationAndExecution` 이 Shipping 에서 **한 번** SEGFAULT 하고 그 뒤 8회
+재현되지 않아 "다시 보이면 그때 본다" 로 남겨 두었던 항목이다. 백로그 자신의 조언대로
+"그 테스트가 실제로 무엇을 태우는가" 를 먼저 읽어서 원인을 찾았다 — 재현을 기다릴 필요가 없었다.
+
+**테스트가 디바이스를 커맨드 리스트보다 먼저 파괴한다.** `shutdownDeviceWithWindow` 가
+`device->shutdown(); device.reset();` 을 하는데 그 시점에 `cmdList` 는 아직 살아 있고, 스코프를
+벗어날 때 소멸자가 죽은 디바이스를 만진다. 두 백엔드의 소멸자가 모두 `_pDevice` 를 역참조한다 —
+DX11 은 `unregisterCommandList`, DX12 는 `releaseOnlineBlocksDeferred` + `recycleCommandListEntryDeferred`.
+
+**그런데 DX11 만 보호가 있었다.** `D3D11RHIDevice::shutdown` 은 살아 있는 커맨드 리스트를 모두
+`detachFromDevice()` 하고, 코드에 이유까지 적혀 있다("커맨드 리스트는 디바이스보다 오래 살 수
+있다"). **DX12 에는 그 등록부가 아예 없었다.** 테스트가 DX11 → DX12 → GL 순으로 시도하므로
+보통은 DX11 이 잡혀 가려졌고, DX11 이 실패하는 환경에서만 터졌다 — 재현율이 낮았던 이유다.
+
+두 곳을 고쳤다:
+
+1. **DX12 에 라이브 커맨드 리스트 등록부를 넣었다**(DX11 과 같은 형태) — 생성 시 등록, 소멸 시
+   해제, `shutdownInternal` 이 남은 것을 `detachFromDevice()` 한다. detach 는 디바이스를 다시
+   부르지 않고 자기 것만 놓는다. 이 결함은 테스트만의 문제가 아니었다 — **커맨드 리스트를 든 채
+   디바이스를 내리는 모든 코드**가 같은 함정이었다.
+2. **테스트가 올바른 순서를 보이게 했다** — `cmdList.reset()` 을 디바이스 종료 앞에 둔다.
+   디바이스에 보호를 넣었더라도 테스트가 잘못된 순서를 가르치면 안 된다.
+
+**검증**: 그 케이스만 10회 반복 — 실패 0. `RHITest.*` 13/13. Debug·Shipping 경고 0,
+nogpu 5/5(양쪽), 린트 6/6.
 
 ### 2026-09-10 (컴포넌트 풀을 TypeInfo 포인터로 키잡던 것 — 예전 1-B 크래시의 원인)
 

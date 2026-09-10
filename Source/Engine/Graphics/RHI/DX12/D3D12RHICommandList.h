@@ -53,6 +53,17 @@ namespace sw
         void beginCommandList() override;
         void endCommandList() override;
 
+        /**
+         * @brief 디바이스와의 연결을 끊습니다. **디바이스가 내려갈 때 디바이스가 부릅니다.**
+         * @details 커맨드 리스트는 디바이스보다 오래 살 수 있다 — 그러면 소멸자가 이미 파괴된
+         *          디바이스에 반납을 시도한다(`releaseOnlineBlocksDeferred`·
+         *          `recycleCommandListEntryDeferred`). DX11 은 이 보호를 처음부터 갖고 있었는데
+         *          DX12 에는 없어서, 커맨드 리스트를 든 채 디바이스를 내리면 종료 시 죽었다
+         *          (`RHITest.CommandListCreationAndExecution` 이 드물게 SEGFAULT 한 원인).
+         *          여기서는 디바이스를 다시 부르지 않고 자기 것만 놓는다.
+         */
+        void detachFromDevice();
+
     private:
         D3D12RHIDevice*        _pDevice;
         D3D12CommandListEntry  _entry;            ///< 이 리스트 전용 커맨드 리스트 + 얼로케이터

@@ -200,6 +200,19 @@ namespace sw
         waitForPreviousFrame();
         _releaseQueue.flushAll();
 
+        // 커맨드 리스트는 디바이스보다 오래 살 수 있다. 여기서 연결을 끊지 않으면 그쪽 소멸자가
+        // 이미 파괴된 이 디바이스에 리스트·온라인 블록을 반납하려 든다. DX11 은 이 보호를 갖고
+        // 있었는데 DX12 에는 없었다.
+        {
+            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+            for ( D3D12RHICommandList* pLiveList : _listLiveCmdList )
+            {
+                if ( pLiveList != nullptr )
+                    pLiveList->detachFromDevice();
+            }
+            _listLiveCmdList.clear();
+        }
+
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _listRenderPass.clear();

@@ -204,6 +204,11 @@ namespace sw
         /** @brief 독립 커맨드 리스트 생성 */
         unique_ptr<IRHICommandList> createCommandList() override;
 
+        /** @brief 살아 있는 커맨드 리스트를 등록합니다 (소유하지 않는 참조). */
+        void registerCommandList( D3D12RHICommandList* pCmdList );
+        /** @brief 등록을 해제합니다. */
+        void unregisterCommandList( D3D12RHICommandList* pCmdList );
+
         /** @brief 독립 커맨드 리스트 제출 */
         void beginFrame( const float4& clearColor ) override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
@@ -402,6 +407,10 @@ namespace sw
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
         mutex                         _cmdListPoolMutex;
         vector<D3D12CommandListEntry> _listFreeCmdListEntry;
+
+        /** @brief 살아 있는 커맨드 리스트 (소유하지 않는다). 종료할 때 연결을 끊어 준다. */
+        mutex                        _liveCmdListMutex;
+        vector<D3D12RHICommandList*> _listLiveCmdList;
         /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
         mutex                _onlineBlockMutex;
         vector<uint32>       _listFreeOnlineBlock;

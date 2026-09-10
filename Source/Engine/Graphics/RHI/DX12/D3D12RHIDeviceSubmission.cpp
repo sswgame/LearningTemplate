@@ -33,6 +33,25 @@ namespace sw
         return list;
     }
 
+    void D3D12RHIDevice::registerCommandList( D3D12RHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        _listLiveCmdList.push_back( pCmdList );
+    }
+
+    void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
+    {
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        for ( size_t index = 0; index < _listLiveCmdList.size(); ++index )
+        {
+            if ( _listLiveCmdList[index] != pCmdList )
+                continue;
+            _listLiveCmdList[index] = _listLiveCmdList.back();
+            _listLiveCmdList.pop_back();
+            return;
+        }
+    }
+
     ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()
     {
         D3D12CommandListEntry entry = acquireCommandListEntry();

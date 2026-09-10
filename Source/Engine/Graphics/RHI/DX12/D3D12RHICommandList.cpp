@@ -15,15 +15,28 @@ namespace sw
         , _context{ pDevice, _entry._list.Get(), &_state }
     {
         _pContext = &_context;
+        if ( _pDevice != nullptr )
+            _pDevice->registerCommandList( this );
     }
 
     D3D12RHICommandList::~D3D12RHICommandList()
     {
         if ( _pDevice != nullptr )
         {
+            _pDevice->unregisterCommandList( this );
             _pDevice->releaseOnlineBlocksDeferred( _state );
             _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
         }
+    }
+
+    void D3D12RHICommandList::detachFromDevice()
+    {
+        // 디바이스가 내려가는 중이다 — 반납하지 않고 놓는다. 온라인 블록 풀과 리스트 풀은
+        // 디바이스가 곧 통째로 비운다.
+        _state    = D3D12RecordingState{};
+        _entry    = D3D12CommandListEntry{};
+        _pDevice  = nullptr;
+        _pContext = nullptr;
     }
 
     void D3D12RHICommandList::beginCommandList()

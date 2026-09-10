@@ -715,6 +715,11 @@ SW_TEST_CASE( RHITest, CommandListCreationAndExecution )
         rhiDevice->executeCommandList( cmdList.get() );
     }
 
+    // 커맨드 리스트를 **디바이스보다 먼저** 놓는다. 소멸자가 디바이스에 리스트를 반납하므로
+    // 순서가 뒤집히면 이미 파괴된 디바이스를 만진다 — 이 테스트가 드물게 SEGFAULT 한 이유다.
+    // (디바이스 쪽에도 보호를 넣었지만, 올바른 사용 순서를 테스트가 먼저 보여야 한다.)
+    cmdList.reset();
+
     shutdownDeviceWithWindow( rhiDevice, window );
 }
 
