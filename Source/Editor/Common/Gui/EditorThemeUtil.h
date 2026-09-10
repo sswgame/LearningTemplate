@@ -16,6 +16,7 @@ namespace sw::editor
         DeepCharcoal,   ///< 차콜/무광 블랙 미니멀 테마
         MidnightBlue,   ///< 미드나잇 블루 하이테크 테마
         ClassicDark,    ///< ImGui 기본 클래식 다크 테마
+        Count           ///< 프리셋 표(EditorThemeUtil.cpp)와 개수를 맞추는 데 쓰입니다
     };
 
     /** @brief Look & Feel 테마 파라미터 구조체 */

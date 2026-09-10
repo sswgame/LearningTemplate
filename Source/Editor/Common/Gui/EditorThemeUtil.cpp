@@ -32,7 +32,139 @@ namespace sw::editor
                     MathUtil::clamp( c._b * factor, 0.0f, 1.0f ),
                     alpha );
             }
+
+            /**
+             * @brief 프리셋 하나의 정의. 이름과 팔레트가 **여기 한 줄에** 모여 있습니다.
+             * @details 예전에는 프리셋을 하나 더하려면 네 곳을 맞춰 고쳐야 했습니다 —
+             *          `applyPreset` 의 팔레트 switch, `loadFromConfig` 의 문자열→열거형 사다리,
+             *          `saveToConfig` 의 열거형→문자열 switch, 그리고 대화상자의 이름 배열.
+             *          뒤 셋은 같은 사실을 세 번 적은 것이었고, 이름 배열은 **열거형 순서에
+             *          인덱스로 묶여** 있어 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 줬습니다.
+             */
+            struct ThemePresetRow
+            {
+                EditorThemePreset _preset;
+                const utf8*       _pConfigId;    ///< EditorConfig 에 저장되는 이름
+                const utf8*       _pDisplayName; ///< 콤보에 보이는 이름
+                /** @brief true면 창 색을 우리 팔레트로 덮지 않고 ImGui 기본 다크를 씁니다. */
+                bool              _bUseImGuiDarkColors;
+                EditorThemeConfig _config;
+            };
+
+            static const ThemePresetRow* getPresetRows( uint32& outCount );
+
+            /** @brief 해당 프리셋의 행입니다. 모르는 값이면 첫 행(기본)입니다. */
+            static const ThemePresetRow& findRow( EditorThemePreset preset )
+            {
+                uint32                      rowCount{ 0 };
+                const ThemePresetRow* const pRow = getPresetRows( rowCount );
+                for ( uint32 index = 0; index < rowCount; ++index )
+                {
+                    if ( pRow[index]._preset == preset )
+                        return pRow[index];
+                }
+                return pRow[0];
+            }
+
+            /** @brief 저장된 이름의 행입니다. 못 찾으면 첫 행(기본)입니다. */
+            static const ThemePresetRow& findRowByConfigId( string_view configId )
+            {
+                uint32                      rowCount{ 0 };
+                const ThemePresetRow* const pRow = getPresetRows( rowCount );
+                for ( uint32 index = 0; index < rowCount; ++index )
+                {
+                    if ( configId == pRow[index]._pConfigId )
+                        return pRow[index];
+                }
+                return pRow[0];
+            }
+
+            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 되읽습니다. */
+            static void readGeometryFromStyle( EditorThemeConfig& outConfig )
+            {
+                const ImGuiStyle& style      = ImGui::GetStyle();
+                outConfig._windowRounding    = style.WindowRounding;
+                outConfig._frameRounding     = style.FrameRounding;
+                outConfig._popupRounding     = style.PopupRounding;
+                outConfig._tabRounding       = style.TabRounding;
+                outConfig._scrollbarRounding = style.ScrollbarRounding;
+                outConfig._grabRounding      = style.GrabRounding;
+            }
         };
+
+        const EditorThemeInternal::ThemePresetRow* EditorThemeInternal::getPresetRows( uint32& outCount )
+        {
+            static const ThemePresetRow arrRow[] = {
+                {  EditorThemePreset::ModernDark,   "ModernDark", "Modern Dark (UE5 / JetBrains)", false,
+                 EditorThemeConfig{ EditorThemePreset::ModernDark,
+                 Color4{ 0.27f, 0.57f, 1.0f, 1.0f }, // Electric Blue
+                 Color4{ 0.10f, 0.11f, 0.14f, 1.0f },
+                 Color4{ 0.13f, 0.15f, 0.19f, 1.0f },
+                 Color4{ 0.18f, 0.21f, 0.28f, 1.0f },
+                 Color4{ 0.15f, 0.17f, 0.22f, 1.0f },
+                 Color4{ 0.22f, 0.26f, 0.33f, 1.0f },
+                 Color4{ 0.20f, 0.75f, 0.35f, 1.0f },
+                 Color4{ 0.95f, 0.70f, 0.15f, 1.0f },
+                 Color4{ 0.95f, 0.30f, 0.25f, 1.0f },
+                 Color4{ 0.30f, 0.70f, 0.95f, 1.0f },
+                 Color4{ 0.55f, 0.60f, 0.68f, 1.0f },
+                 4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
+
+                {EditorThemePreset::DeepCharcoal, "DeepCharcoal",    "Deep Charcoal (Minimalist)", false,
+                 EditorThemeConfig{ EditorThemePreset::DeepCharcoal,
+                 Color4{ 0.35f, 0.70f, 0.95f, 1.0f }, // Ice Blue
+                 Color4{ 0.08f, 0.08f, 0.09f, 1.0f },
+                 Color4{ 0.11f, 0.11f, 0.13f, 1.0f },
+                 Color4{ 0.16f, 0.16f, 0.19f, 1.0f },
+                 Color4{ 0.13f, 0.13f, 0.16f, 1.0f },
+                 Color4{ 0.20f, 0.20f, 0.24f, 1.0f },
+                 Color4{ 0.25f, 0.80f, 0.40f, 1.0f },
+                 Color4{ 0.90f, 0.75f, 0.20f, 1.0f },
+                 Color4{ 0.90f, 0.30f, 0.30f, 1.0f },
+                 Color4{ 0.35f, 0.75f, 0.90f, 1.0f },
+                 Color4{ 0.50f, 0.55f, 0.60f, 1.0f },
+                 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 2.0f }},
+
+                {EditorThemePreset::MidnightBlue, "MidnightBlue",     "Midnight Blue (High-Tech)", false,
+                 EditorThemeConfig{ EditorThemePreset::MidnightBlue,
+                 Color4{ 0.40f, 0.55f, 1.0f, 1.0f }, // Neon Indigo
+                 Color4{ 0.07f, 0.09f, 0.14f, 1.0f },
+                 Color4{ 0.09f, 0.12f, 0.18f, 1.0f },
+                 Color4{ 0.14f, 0.19f, 0.28f, 1.0f },
+                 Color4{ 0.11f, 0.15f, 0.22f, 1.0f },
+                 Color4{ 0.18f, 0.25f, 0.36f, 1.0f },
+                 Color4{ 0.20f, 0.85f, 0.50f, 1.0f },
+                 Color4{ 1.0f, 0.75f, 0.20f, 1.0f },
+                 Color4{ 1.0f, 0.35f, 0.35f, 1.0f },
+                 Color4{ 0.40f, 0.75f, 1.0f, 1.0f },
+                 Color4{ 0.50f, 0.60f, 0.75f, 1.0f },
+                 4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
+
+                // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
+                // (textSuccess/textWarning/...)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다 —
+                // 예전에는 이 프리셋이 s_activeTheme 을 갱신하지 않아 **이전 테마의 색**이 나왔다.
+                { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
+                 EditorThemeConfig{ EditorThemePreset::ClassicDark,
+                 Color4{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
+                 Color4{ 0.06f, 0.06f, 0.06f, 1.0f },
+                 Color4{ 0.10f, 0.10f, 0.10f, 1.0f },
+                 Color4{ 0.16f, 0.29f, 0.48f, 1.0f },
+                 Color4{ 0.16f, 0.29f, 0.48f, 1.0f },
+                 Color4{ 0.43f, 0.43f, 0.50f, 1.0f },
+                 Color4{ 0.20f, 0.75f, 0.35f, 1.0f },
+                 Color4{ 0.95f, 0.70f, 0.15f, 1.0f },
+                 Color4{ 0.95f, 0.30f, 0.25f, 1.0f },
+                 Color4{ 0.30f, 0.70f, 0.95f, 1.0f },
+                 Color4{ 0.50f, 0.50f, 0.50f, 1.0f },
+                 0.0f, 0.0f, 0.0f, 4.0f, 9.0f, 0.0f }}
+            };
+
+            static_assert( sizeof( arrRow ) / sizeof( arrRow[0] ) == static_cast<size_t>( EditorThemePreset::Count ),
+                           "EditorThemePreset 과 프리셋 표의 개수가 다릅니다" );
+
+            outCount = static_cast<uint32>( sizeof( arrRow ) / sizeof( arrRow[0] ) );
+            return arrRow;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -45,77 +177,23 @@ namespace sw::editor
 
     void EditorThemeUtil::applyPreset( EditorThemePreset preset )
     {
-        EditorThemeConfig config{};
-        config._preset = preset;
+        const EditorThemeInternal::ThemePresetRow& row = EditorThemeInternal::findRow( preset );
 
-        switch ( preset )
+        EditorThemeConfig config = row._config;
+        config._preset           = row._preset;
+
+        if ( row._bUseImGuiDarkColors )
         {
-            case EditorThemePreset::ModernDark:
-                config._accentColor       = Color4{ 0.27f, 0.57f, 1.0f, 1.0f }; // Electric Blue
-                config._windowBg          = Color4{ 0.10f, 0.11f, 0.14f, 1.0f };
-                config._panelBg           = Color4{ 0.13f, 0.15f, 0.19f, 1.0f };
-                config._headerBg          = Color4{ 0.18f, 0.21f, 0.28f, 1.0f };
-                config._frameBg           = Color4{ 0.15f, 0.17f, 0.22f, 1.0f };
-                config._border            = Color4{ 0.22f, 0.26f, 0.33f, 1.0f };
-                config._successColor      = Color4{ 0.20f, 0.75f, 0.35f, 1.0f };
-                config._warningColor      = Color4{ 0.95f, 0.70f, 0.15f, 1.0f };
-                config._errorColor        = Color4{ 0.95f, 0.30f, 0.25f, 1.0f };
-                config._infoColor         = Color4{ 0.30f, 0.70f, 0.95f, 1.0f };
-                config._textMuted         = Color4{ 0.55f, 0.60f, 0.68f, 1.0f };
-                config._windowRounding    = 4.0f;
-                config._frameRounding     = 3.0f;
-                config._popupRounding     = 4.0f;
-                config._tabRounding       = 4.0f;
-                config._scrollbarRounding = 6.0f;
-                config._grabRounding      = 3.0f;
-                break;
+            // 창 색은 ImGui 기본 다크를 그대로 쓴다 (지오메트리는 건드리지 않는다).
+            ImGui::StyleColorsDark();
 
-            case EditorThemePreset::DeepCharcoal:
-                config._accentColor       = Color4{ 0.35f, 0.70f, 0.95f, 1.0f }; // Ice Blue
-                config._windowBg          = Color4{ 0.08f, 0.08f, 0.09f, 1.0f };
-                config._panelBg           = Color4{ 0.11f, 0.11f, 0.13f, 1.0f };
-                config._headerBg          = Color4{ 0.16f, 0.16f, 0.19f, 1.0f };
-                config._frameBg           = Color4{ 0.13f, 0.13f, 0.16f, 1.0f };
-                config._border            = Color4{ 0.20f, 0.20f, 0.24f, 1.0f };
-                config._successColor      = Color4{ 0.25f, 0.80f, 0.40f, 1.0f };
-                config._warningColor      = Color4{ 0.90f, 0.75f, 0.20f, 1.0f };
-                config._errorColor        = Color4{ 0.90f, 0.30f, 0.30f, 1.0f };
-                config._infoColor         = Color4{ 0.35f, 0.75f, 0.90f, 1.0f };
-                config._textMuted         = Color4{ 0.50f, 0.55f, 0.60f, 1.0f };
-                config._windowRounding    = 2.0f;
-                config._frameRounding     = 2.0f;
-                config._popupRounding     = 2.0f;
-                config._tabRounding       = 2.0f;
-                config._scrollbarRounding = 4.0f;
-                config._grabRounding      = 2.0f;
-                break;
-
-            case EditorThemePreset::MidnightBlue:
-                config._accentColor       = Color4{ 0.40f, 0.55f, 1.0f, 1.0f }; // Neon Indigo
-                config._windowBg          = Color4{ 0.07f, 0.09f, 0.14f, 1.0f };
-                config._panelBg           = Color4{ 0.09f, 0.12f, 0.18f, 1.0f };
-                config._headerBg          = Color4{ 0.14f, 0.19f, 0.28f, 1.0f };
-                config._frameBg           = Color4{ 0.11f, 0.15f, 0.22f, 1.0f };
-                config._border            = Color4{ 0.18f, 0.25f, 0.36f, 1.0f };
-                config._successColor      = Color4{ 0.20f, 0.85f, 0.50f, 1.0f };
-                config._warningColor      = Color4{ 1.0f, 0.75f, 0.20f, 1.0f };
-                config._errorColor        = Color4{ 1.0f, 0.35f, 0.35f, 1.0f };
-                config._infoColor         = Color4{ 0.40f, 0.75f, 1.0f, 1.0f };
-                config._textMuted         = Color4{ 0.50f, 0.60f, 0.75f, 1.0f };
-                config._windowRounding    = 4.0f;
-                config._frameRounding     = 3.0f;
-                config._popupRounding     = 4.0f;
-                config._tabRounding       = 4.0f;
-                config._scrollbarRounding = 6.0f;
-                config._grabRounding      = 3.0f;
-                break;
-
-            case EditorThemePreset::ClassicDark:
-                ImGui::StyleColorsDark();
-                return;
-
-            default:
-                break;
+            // 예전에는 여기서 그대로 return 해서 s_activeTheme 이 **이전 프리셋에 머물렀다**.
+            // 그래서 (1) 이 선택이 저장되지 않고(saveToConfig 가 옛 이름을 썼다) (2) 콤보가 옛
+            // 프리셋을 선택된 것으로 보여 주고 (3) textWarning 등 상태색 API 가 옛 테마 색을 냈다.
+            // 지오메트리는 현재 스타일에서 되읽어 기록이 화면과 어긋나지 않게 한다.
+            EditorThemeInternal::readGeometryFromStyle( config );
+            EditorThemeInternal::s_activeTheme = config;
+            return;
         }
 
         applyTheme( config );
@@ -233,14 +311,7 @@ namespace sw::editor
     {
         const EditorConfig& cfg = EditorConfig::getActive();
 
-        EditorThemePreset preset = EditorThemePreset::ModernDark;
-        if ( cfg._themePreset == "DeepCharcoal" )
-            preset = EditorThemePreset::DeepCharcoal;
-        else if ( cfg._themePreset == "MidnightBlue" )
-            preset = EditorThemePreset::MidnightBlue;
-        else if ( cfg._themePreset == "ClassicDark" )
-            preset = EditorThemePreset::ClassicDark;
-
+        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigId( cfg._themePreset )._preset;
         applyPreset( preset );
 
         if ( preset != EditorThemePreset::ClassicDark )
@@ -268,24 +339,7 @@ namespace sw::editor
         EditorConfig cfg = EditorConfig::getActive();
 
         const EditorThemeConfig& themeCfg = EditorThemeInternal::s_activeTheme;
-        switch ( themeCfg._preset )
-        {
-            case EditorThemePreset::ModernDark:
-                cfg._themePreset = "ModernDark";
-                break;
-            case EditorThemePreset::DeepCharcoal:
-                cfg._themePreset = "DeepCharcoal";
-                break;
-            case EditorThemePreset::MidnightBlue:
-                cfg._themePreset = "MidnightBlue";
-                break;
-            case EditorThemePreset::ClassicDark:
-                cfg._themePreset = "ClassicDark";
-                break;
-            default:
-                cfg._themePreset = "ModernDark";
-                break;
-        }
+        cfg._themePreset                  = EditorThemeInternal::findRow( themeCfg._preset )._pConfigId;
 
         cfg._themeAccentR        = themeCfg._accentColor._r;
         cfg._themeAccentG        = themeCfg._accentColor._g;
@@ -443,19 +497,30 @@ namespace sw::editor
         {
             EditorThemeConfig cfg = EditorThemeInternal::s_activeTheme;
 
-            // 1) 프리셋 선택
-            const utf8* arrPresetNames[] = {
-                "Modern Dark (UE5 / JetBrains)",
-                "Deep Charcoal (Minimalist)",
-                "Midnight Blue (High-Tech)",
-                "Classic Dark (Default ImGui)" };
+            // 1) 프리셋 선택 — 이름과 순서는 프리셋 표에서 온다.
+            //    예전에는 이름 배열을 따로 적고 `static_cast<int32>( _preset )` 로 인덱스를 삼았다.
+            //    열거형 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 주는 결합이었다.
+            uint32                                           rowCount{ 0 };
+            const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
 
-            int32 currentPreset = static_cast<int32>( cfg._preset );
-            if ( ImGui::Combo( "Theme Preset", &currentPreset, arrPresetNames, IM_ARRAYSIZE( arrPresetNames ) ) )
+            const utf8* arrPresetName[static_cast<size_t>( EditorThemePreset::Count )]{};
+            int32       currentPreset{ 0 };
+            for ( uint32 index = 0; index < rowCount; ++index )
             {
-                applyPreset( static_cast<EditorThemePreset>( currentPreset ) );
-                saveToConfig();
-                cfg = EditorThemeInternal::s_activeTheme;
+                arrPresetName[index] = pRow[index]._pDisplayName;
+                if ( pRow[index]._preset == cfg._preset )
+                    currentPreset = static_cast<int32>( index );
+            }
+
+            if ( ImGui::Combo( "Theme Preset", &currentPreset, arrPresetName, static_cast<int32>( rowCount ) ) )
+            {
+                const uint32 selected = static_cast<uint32>( currentPreset );
+                if ( selected < rowCount )
+                {
+                    applyPreset( pRow[selected]._preset );
+                    saveToConfig();
+                    cfg = EditorThemeInternal::s_activeTheme;
+                }
             }
             EditorWidgets::drawTooltip( "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다" );
 

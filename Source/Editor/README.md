@@ -75,6 +75,16 @@ comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp 
          <(grep -o '{ "[a-z][a-zA-Z.]*"' Source/Editor/Common/Gui/EditorCommandGui.cpp | sed 's/{ "\(.*\)"/\1/' | sort)
 ```
 
+## 테마 프리셋을 하나 더하려면
+
+`Common/Gui/EditorThemeUtil.cpp` 의 프리셋 표(`getPresetRows`)에 한 줄을 넣고 열거형에 값을
+하나 더하면 끝입니다 — 저장 이름 · 콤보 라벨 · 팔레트가 그 한 줄에 있고, 대화상자의 콤보와
+`EditorConfig` 저장·복원이 모두 표에서 나옵니다. 표와 열거형의 개수는 `static_assert` 가 맞춥니다.
+
+예전에는 네 곳을 맞춰 고쳐야 했고(팔레트 switch · 문자열→열거형 사다리 · 열거형→문자열 switch ·
+이름 배열), 이름 배열은 **열거형 순서에 인덱스로 묶여** 있어서 순서를 바꾸면 콤보가 조용히 틀린
+이름을 보여 줬습니다.
+
 ## 저장되지 않은 편집을 다루는 법
 
 패널이 편집을 들고 있으면 **`IEditorPanel` 의 문서 계약**을 씁니다. 파생이 할 일은 둘뿐입니다:

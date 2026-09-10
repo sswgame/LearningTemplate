@@ -298,6 +298,35 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-10 (테마 프리셋 표 + ClassicDark 가 저장되지 않던 버그)
+
+프리셋을 하나 더하려면 `EditorThemeUtil.cpp` **네 곳**을 맞춰 고쳐야 했다 — `applyPreset` 의
+팔레트 switch(데이터라 불가피), `loadFromConfig` 의 문자열→열거형 사다리, `saveToConfig` 의
+열거형→문자열 switch, `drawThemeSettingsDialog` 의 이름 배열. 뒤 셋은 같은 사실(이름↔열거형)을
+세 번 적은 것이고, 이름 배열은 `static_cast<int32>( _preset )` 을 인덱스로 써서 **열거형 순서에
+묶여** 있었다 — 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 준다.
+
+정의를 표(`getPresetRows`) 하나로 모았다: `{ 열거형, 저장 이름, 콤보 라벨, ImGui 기본색 사용 여부,
+팔레트 }`. 콤보는 표 순서로 만들고 현재 항목은 **열거형 비교**로 찾으므로 인덱스 결합이 없다.
+표와 열거형의 개수는 `static_assert` 로 맞춘다(`EditorThemePreset::Count` 추가).
+
+**그 과정에서 찾은 버그: Classic Dark 선택이 저장되지 않았다.** `applyPreset( ClassicDark )` 가
+`ImGui::StyleColorsDark()` 를 부르고 **그대로 return** 해서 `s_activeTheme` 이 이전 프리셋에 머물렀다.
+그래서 (1) `saveToConfig()` 가 옛 이름을 써 다음 실행에 옛 테마로 돌아갔고 (2) 대화상자 콤보가
+옛 프리셋을 선택된 것으로 보여 줬고 (3) `textSuccess`/`textWarning`/... 상태색 API 가 옛 테마의
+색을 냈다. 이제 프리셋과 상태색을 기록하고, 지오메트리는 현재 스타일에서 되읽어 기록이 화면과
+어긋나지 않게 한다 — **창 색은 여전히 `StyleColorsDark()` 그대로여서 보이는 모습은 안 바뀐다.**
+
+**실증**: `EditorConfig.json` 의 `_themePreset` 을 `ClassicDark` 로 두고 실기동해 `loadFromConfig`
+직후의 활성 프리셋을 임시 로그로 찍었다 — 고치기 전 `0`(ModernDark), 고친 뒤 `3`(ClassicDark).
+확인 후 로그와 설정 파일을 되돌렸다.
+
+**남긴 것**: Classic Dark 에서 액센트·라운딩을 편집하면 우리 팔레트가 적용되어 사실상 프리셋을
+벗어난다. 예전에도 그랬고(다만 *이전* 테마의 팔레트로 튀었다) 지금은 최소한 예측 가능하다.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5, 린트 6/6, 네 백엔드 실기동 종료 코드 0 · `[Error]`
+0건, 전부 열기 덤프 창 29개/빈 패널 0개.
+
 ### 2026-09-10 (미저장 문서 계약을 기반으로)
 
 **InputMapEditorPanel 의 편집이 조용히 사라지고 있었다.** 이 패널은 자기 `_bDirty` 를 들고
