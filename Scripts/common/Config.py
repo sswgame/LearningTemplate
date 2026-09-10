@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -83,9 +82,15 @@ def loadSearchPaths() -> dict[str, Any]:
     """
     도구 탐색 경로 설정(search_paths.json)을 읽어 반환합니다.
 
-    - search_paths.json 파일이 없으면 defaults 기본 설정 파일을 복사하여 생성합니다.
-    - 로컬 파일이 이미 존재하더라도 기본값과 병합하여 새로 추가된 키를 자동으로 보완합니다.
+    - search_paths.json 이 없으면 **빈 오버라이드 파일**로 만듭니다.
+    - 로컬 파일의 값이 기본값을 덮어씁니다(리스트는 통째로 교체, 없는 키는 기본값 유지).
     - search_paths.defaults.json 이 존재하지 않거나 유효하지 않으면 예외를 발생시킵니다.
+
+    예전엔 defaults 를 **통째로 복사**해 두었다. 그러면 로컬 파일이 모든 키를 갖게 되고, 로컬이
+    우선이므로 defaults 를 아무리 고쳐도 그 PC 에는 **영원히 닿지 않는다** — 손으로 나열한
+    `/usr/lib/llvm-20 … llvm-14` 같은 목록이 새 배포판에서 비켜가도 고칠 방법이 없었다.
+    이제 로컬 파일에는 사용자가 실제로 바꾼 것만 남으므로, 나머지는 defaults 를 따라 개선된다.
+    (이미 통째로 복사된 파일이 있다면 지우면 기본값으로 돌아온다 — 도구 캐시일 뿐 잃을 것이 없다.)
     """
     configDir = getProjectRoot() / kDirConfigEnv
     jsonPath = configDir / kFileSearchPaths
@@ -98,9 +103,9 @@ def loadSearchPaths() -> dict[str, Any]:
     if not jsonPath.is_file():
         try:
             configDir.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(defaultsPath, jsonPath)
-        except Exception as exception:
-            sys.stderr.write(f"[Config Error] Failed to copy {kFileSearchPathsDefaults}: {exception}\n")
+            jsonPath.write_text("{\n}\n", encoding="utf-8")
+        except OSError as exception:
+            sys.stderr.write(f"[Config Error] Failed to create {kFileSearchPaths}: {exception}\n")
 
     defaults = readJsonDictInternal(defaultsPath, kFileSearchPathsDefaults)
     if not defaults:
