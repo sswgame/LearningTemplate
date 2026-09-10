@@ -312,12 +312,6 @@ namespace sw
         return _packFilePath;
     }
 
-    const unordered_map<uint64, PackFileEntry>& ResourcePackReader::getMapEntry() const
-    {
-        std::lock_guard<mutex> lock( _fileMutex );
-        return _mapEntry;
-    }
-
     bool ResourcePackReader::loadIndexTable()
     {
         if ( _pFileHandle == nullptr || _header._fileCount == 0 )

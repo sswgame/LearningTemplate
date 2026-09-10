@@ -61,6 +61,99 @@ namespace
             window.reset();
         }
     }
+
+    /**
+     * @brief Present 없이 오프스크린 RT로 파이프라인을 검증합니다.
+     * @details createTexture2D → beginRenderPass → setPSO → fullscreen draw → (선택) readback → destroy.
+     *          pOutPixels 를 주면 그린 결과를 CPU 로 읽어 온다 — "크래시 안 났다"가 아니라 "실제로
+     *          그려졌다"를 검사할 수 있다. 백엔드별 렌더타깃 경로를 같은 기준으로 비교하는 유일한 방법이다.
+     * @note 예전엔 이것이 `IRHIDevice::executeOffscreenPipelineSmoke` 라는 **엔진 API** 였다. 부르는
+     *       곳은 이 파일뿐인데 배포 바이너리까지 따라 들어갔다. 쓰는 것은 전부 공개 RHI 인터페이스라
+     *       검증 코드가 있어야 할 자리인 여기로 내렸다.
+     * @return 성공 시 true. pso==0 이면 false.
+     */
+    bool executeOffscreenPipelineSmoke( sw::IRHIDevice& device, sw::RHIPipelineStateHandle pso,
+                                        sw::RHIDescriptorIndex materialCb = sw::kInvalidDescriptorIndex,
+                                        uint32 width = 64, uint32 height = 64,
+                                        sw::vector<uint8>*     pOutPixels = nullptr,
+                                        sw::RHITextureMipSpan* pOutLayout = nullptr )
+    {
+        if ( pso == 0 || width == 0 || height == 0 )
+            return false;
+        sw::IRHIResource* pResource = device.getResource();
+        if ( pResource == nullptr )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
+            return false;
+        }
+        if ( device.getCapabilities()._bOffscreenRT == 0 )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
+            return false;
+        }
+
+        sw::RHITextureDesc desc{};
+        desc._width             = width;
+        desc._height            = height;
+        desc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
+        desc._bIsRenderTarget   = 1;
+        desc._bIsShaderResource = 1;
+        desc._clearColor        = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+
+        const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+        if ( rt == 0 )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
+            return false;
+        }
+
+        bool bOk{ true };
+
+        // Present 없이 beginRenderPass → PSO → fullscreen draw (모든 백엔드).
+        sw::unique_ptr<sw::IRHICommandList> cmd = device.createCommandList();
+        if ( cmd == nullptr )
+        {
+            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );
+            bOk = false;
+        }
+        else
+        {
+            sw::RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+            beginInfo._bBindColor = 1;
+            beginInfo._width      = width;
+            beginInfo._height     = height;
+
+            sw::RHIViewport viewport{};
+            viewport._width  = static_cast<float32>( width );
+            viewport._height = static_cast<float32>( height );
+
+            cmd->beginCommandList();
+            cmd->setViewport( viewport );
+            cmd->beginRenderPass( beginInfo );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( materialCb, sw::shaderslot::kMaterialConstantBuffer );
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+            cmd->endCommandList();
+            // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.
+            device.executeCommandListImmediate( cmd.get() );
+            device.waitIdle();
+        }
+
+        // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
+        if ( bOk && pOutPixels != nullptr && pOutLayout != nullptr )
+        {
+            if ( pResource->readbackTexture2D( rt, 0, *pOutPixels, *pOutLayout ) == false )
+            {
+                SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2D failed" );
+                bOk = false;
+            }
+        }
+
+        pResource->destroyTexture( rt );
+        return bOk;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -184,7 +277,7 @@ SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
         if ( pso != 0 )
         {
             // Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
-            const bool bSmoke = device->executeOffscreenPipelineSmoke( pso );
+            const bool bSmoke = executeOffscreenPipelineSmoke( *device, pso );
             if ( bSmoke == false )
                 SW_LOG_WARNING( "Offscreen pipeline smoke failed (backend %#) — create path still counted",
                                 static_cast<uint32>( backend ) );
@@ -249,7 +342,7 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
     // Present(beginFrame/endFrame)는 DX12에서 soft-CL 드로우와 섞이면 Device Removed가 나기 쉬움.
     // 수명 검증은 bindless 등록 + Present 없는 오프스크린 RT 경로로 한다.
     SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != 0 );
-    SW_EXPECT_TRUE( rhiDevice->executeOffscreenPipelineSmoke( 0 ) == false ); // pso==0 → false
+    SW_EXPECT_TRUE( executeOffscreenPipelineSmoke( *rhiDevice, 0 ) == false ); // pso==0 → false
     {
         sw::RHIPipelineStateDesc psoDesc{};
         psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
@@ -261,7 +354,7 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
         const sw::RHIPipelineStateHandle pso = rhiDevice->getResource()->createPipelineState( psoDesc );
         if ( pso != 0 )
         {
-            const bool bSmoke = rhiDevice->executeOffscreenPipelineSmoke( pso, descIdx );
+            const bool bSmoke = executeOffscreenPipelineSmoke( *rhiDevice, pso, descIdx );
             SW_EXPECT_TRUE_MSG( bSmoke, "Offscreen bindless smoke failed" );
             rhiDevice->getResource()->destroyPipelineState( pso );
         }
@@ -587,7 +680,7 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
         {
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
-            const bool            bSmoke = device->executeOffscreenPipelineSmoke( pso, cbIndex, 64, 64, &pixels, &layout );
+            const bool            bSmoke = executeOffscreenPipelineSmoke( *device, pso, cbIndex, 64, 64, &pixels, &layout );
             SW_EXPECT_TRUE_MSG( bSmoke, "executeOffscreenPipelineSmoke(readback) 실패" );
             if ( bSmoke )
             {

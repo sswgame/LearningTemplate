@@ -53,24 +53,6 @@ namespace sw
         /** @brief GPU의 대기 중인 작업을 모두 끝낼 때까지 기다립니다. */
         virtual void waitIdle() {}
 
-        /** @brief 스왑체인과 백버퍼 크기를 바꿉니다. */
-        // ------------------------------------------------------------------------------
-        // 9) 오프스크린 검증 — Present 없는 파이프라인 smoke
-        // ------------------------------------------------------------------------------
-        /**
-         * @brief Present 없이 오프스크린 RT로 파이프라인을 검증합니다.
-         * @details createTexture2D → beginRenderPass → setPSO → drawFullscreen → (선택) readback → destroy.
-         *          pOutPixels 를 주면 그린 결과를 CPU 로 읽어 온다 — "크래시 안 났다"가 아니라 "실제로
-         *          그려졌다"를 검사할 수 있다. 백엔드별 렌더타깃 경로를 같은 기준으로 비교하는 유일한 방법이다.
-         * @return 성공 시 true. pso==0 이면 false.
-         */
-        bool executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso,
-                                            RHIDescriptorIndex     materialCb = kInvalidDescriptorIndex,
-                                            uint32                 width      = 64,
-                                            uint32                 height     = 64,
-                                            vector<uint8>*         pOutPixels = nullptr,
-                                            RHITextureMipSpan*     pOutLayout = nullptr );
-
         // ------------------------------------------------------------------------------
         // 10) 능력 · 스레드 — 백엔드 종류, bindless, 컨텍스트 소유
         // ------------------------------------------------------------------------------

@@ -702,9 +702,12 @@ SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
 }
 
 /**
- * @brief [InputManagerTest] 입력 뮤트(Mute) 및 상태 주입(Injection) 검증
+ * @brief [InputManagerTest] 입력 뮤트(Mute) 및 스냅샷 기록 검증
+ * @details 예전엔 `InputManager::injectSnapshot` 으로 히스토리에 스냅샷을 직접 밀어 넣었다. 그 함수는
+ *          부르는 곳이 이 테스트뿐인 백도어였고, 정작 런타임이 쓰는 `recordSnapshot` 경로는 아무도
+ *          검사하지 않았다. 이제 실제 경로로 — 버튼을 눌러 프레임을 돌리고 기록시켜 — 확인한다.
  */
-SW_TEST_CASE( InputManagerTest, InputMutingAndInjection )
+SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
@@ -719,19 +722,20 @@ SW_TEST_CASE( InputManagerTest, InputMutingAndInjection )
 
     input.setInputMuted( false );
 
-    // Snapshot 직접 주입
-    sw::InputSnapshot snap{};
-    snap._tickNumber = 200;
-    snap._buttonMask = 0x1ULL;
-    snap._moveVector = { 1.0f, 0.0f };
-    input.injectSnapshot( snap );
+    // 뮤트를 풀면 같은 경로가 다시 상태를 만든다 — 마우스 버튼을 눌러 한 프레임 돌린다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
 
-    const sw::InputSnapshot* pInjected = input.getSnapshot( 200 );
-    SW_EXPECT_TRUE( pInjected != nullptr );
-    if ( pInjected != nullptr )
+    input.recordSnapshot( 200 );
+
+    const sw::InputSnapshot* pRecorded = input.getSnapshot( 200 );
+    SW_EXPECT_TRUE( pRecorded != nullptr );
+    if ( pRecorded != nullptr )
     {
-        SW_EXPECT_EQUAL( 0x1ULL, pInjected->_buttonMask );
-        SW_EXPECT_NEAR_EQUAL( 1.0f, pInjected->_moveVector._x, 1e-4f );
+        // 버튼 마스크는 게임패드가 0..15, 마우스가 16.. 이다 (MouseButton::Left = 0 → 비트 16).
+        SW_EXPECT_EQUAL( 1ULL << 16, pRecorded->_buttonMask );
+        SW_EXPECT_EQUAL( 200u, pRecorded->_tickNumber );
     }
 
     input.shutdown();

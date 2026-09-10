@@ -190,7 +190,6 @@ namespace sw
         const InputHistoryBuffer& getInputHistory() const { return _inputHistory; }
 
         void injectRawEvent( const RawInputEvent& evt ) { postRawEvent( evt ); }
-        void injectSnapshot( const InputSnapshot& snapshot );
 
         // ------------------------------------------------------------------------------
         // 7) 플랫폼 네이티브 이벤트 처리 및 접근성 제어

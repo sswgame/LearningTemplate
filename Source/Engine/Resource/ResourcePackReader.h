@@ -76,9 +76,6 @@ namespace sw
         /** @brief 마운트된 .pack 파일의 물리 경로 */
         const string& getPackPath() const;
 
-        /** @brief 팩 내 모든 FAT 엔트리 맵 반환 (디버깅/테스트용) */
-        const unordered_map<uint64, PackFileEntry>& getMapEntry() const;
-
     private:
         bool loadIndexTable();
         bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;

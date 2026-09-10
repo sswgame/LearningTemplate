@@ -6,10 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -55,87 +52,6 @@ namespace sw
         , _renderPassManager{ nullptr }
         , _bPreferredVSync{ false }
     {
-    }
-
-    bool IRHIDevice::executeOffscreenPipelineSmoke( RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                                    uint32 width, uint32 height,
-                                                    vector<uint8>* pOutPixels, RHITextureMipSpan* pOutLayout )
-    {
-        if ( pso == 0 || width == 0 || height == 0 )
-            return false;
-        IRHIResource* pResource = getResource();
-        if ( pResource == nullptr )
-        {
-            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
-            return false;
-        }
-        if ( getCapabilities()._bOffscreenRT == 0 )
-        {
-            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
-            return false;
-        }
-
-        RHITextureDesc desc{};
-        desc._width             = width;
-        desc._height            = height;
-        desc._format            = RHIFormat::R8G8B8A8_UNORM;
-        desc._bIsRenderTarget   = 1;
-        desc._bIsShaderResource = 1;
-        desc._clearColor        = float4{ 0.05f, 0.05f, 0.08f, 1.0f };
-
-        const RHITextureHandle rt = pResource->createTexture2D( desc );
-        if ( rt == 0 )
-        {
-            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
-            return false;
-        }
-
-        bool bOk{ true };
-
-        // Present 없이 beginRenderPass → PSO → fullscreen draw (모든 백엔드).
-        unique_ptr<IRHICommandList> cmd = createCommandList();
-        if ( cmd == nullptr )
-        {
-            SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );
-            bOk = false;
-        }
-        else
-        {
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( rt, desc._clearColor, RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = 1;
-            beginInfo._width      = width;
-            beginInfo._height     = height;
-
-            RHIViewport viewport{};
-            viewport._width  = static_cast<float32>( width );
-            viewport._height = static_cast<float32>( height );
-
-            cmd->beginCommandList();
-            cmd->setViewport( viewport );
-            cmd->beginRenderPass( beginInfo );
-            cmd->setPipelineState( pso );
-            cmd->bindConstantBuffer( materialCb, shaderslot::kMaterialConstantBuffer );
-            cmd->draw( 3, 0 );
-            cmd->endRenderPass();
-            cmd->endCommandList();
-            // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.
-            executeCommandListImmediate( cmd.get() );
-            waitIdle();
-        }
-
-        // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
-        if ( bOk && pOutPixels != nullptr && pOutLayout != nullptr )
-        {
-            if ( pResource->readbackTexture2D( rt, 0, *pOutPixels, *pOutLayout ) == false )
-            {
-                SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2D failed" );
-                bOk = false;
-            }
-        }
-
-        pResource->destroyTexture( rt );
-        return bOk;
     }
 
     // 요청 백버퍼 포맷 — 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리. 0 = R8G8B8A8(계약 기본), 1 = B8G8R8A8.

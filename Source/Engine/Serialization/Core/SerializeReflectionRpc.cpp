@@ -237,16 +237,4 @@ namespace sw
 
         return engine::getTypeRegistry().invokeMethod( pInstance, typeFqn, methodName, unpacked );
     }
-
-    bool ReflectionRpc::packAndInvoke( void* pInstance, const hashed_string& typeFqn, const hashed_string& methodName,
-                                       const TaskArgs& args, TaskValue* pOutResult )
-    {
-        RpcEnvelope envelope;
-        if ( packCall( envelope, typeFqn, methodName, args ) == false )
-            return false;
-        TaskValue result = unpackAndInvoke( pInstance, envelope );
-        if ( pOutResult != nullptr )
-            *pOutResult = result;
-        return true;
-    }
 } // namespace sw

@@ -3053,9 +3053,13 @@ SW_TEST_CASE( Reflection_Serialization, ReflectionRpcPackInvoke )
     actor._hp = 100;
     sw::TaskArgs args;
     args.add( int32{ 25 } );
-    sw::TaskValue result;
-    SW_EXPECT_TRUE( sw::ReflectionRpc::packAndInvoke( &actor, sw::hashed_string( "sw::RpcDemoActor" ),
-                                                      sw::hashed_string( "applyDamage" ), args, &result ) );
+
+    // 봉투를 싸고(pack) 다시 풀어(invoke) 왕복시킨다 — 예전엔 이 두 줄을 묶은 packAndInvoke 가
+    // 엔진 API 에 있었지만 부르는 곳이 이 테스트뿐이라 테스트로 내렸다.
+    sw::RpcEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
+                                                 sw::hashed_string( "applyDamage" ), args ) );
+    sw::ReflectionRpc::unpackAndInvoke( &actor, envelope );
     SW_EXPECT_EQUAL( 75, actor._hp );
 }
 

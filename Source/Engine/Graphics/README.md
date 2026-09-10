@@ -249,7 +249,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **P2** — 전 백엔드(DX12/DX11/Vulkan/OpenGL) soft `Cmd` replay(`RHIDeferredCommandList`) 제거,
   즉시 호출하는 네이티브 `IRHICommandList`로 전환 완료 — DX11은 `FinishCommandList`, DX12는 자신만의
   `ID3D12GraphicsCommandList`, Vulkan/OpenGL은 기존 `*RHICommandContext`를 그대로 감싸 즉시 호출
-- **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, `IRHIDevice::executeOffscreenPipelineSmoke`, FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
+- **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, 오프스크린 파이프라인 스모크(2026-09-11 에 `TestRHI.cpp` 로 내렸다 — 부르는 곳이 테스트뿐이었다), FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
 - **Perf** — Transparent 연속 mesh/mat 머지, GpuScene 내용·카메라 핑거프린트 캐시, Deferred CL 기본·`_frameCmd` 재사용·Cmd reserve 256
 
 2026-09-07 바인딩 리워크 이후 남았던 것 — 상용 엔진(언리얼)이 같은 문제를 어떻게 푸는지에 맞춰 닫았다:

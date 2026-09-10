@@ -526,11 +526,6 @@ namespace sw
         return pPad != nullptr ? pPad->playVibration( leftMotor, rightMotor, durationSeconds ) : false;
     }
 
-    void InputManager::injectSnapshot( const InputSnapshot& snapshot )
-    {
-        _inputHistory.recordSnapshot( snapshot );
-    }
-
     void InputManager::recordSnapshot( uint32 tickNumber )
     {
         InputSnapshot snapshot{};

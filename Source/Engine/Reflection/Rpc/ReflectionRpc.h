@@ -50,9 +50,5 @@ namespace sw
 
         /** @brief 인자를 푼 뒤 TypeRegistry::invokeMethod로 로컬 호출합니다. */
         static TaskValue unpackAndInvoke( void* pInstance, const RpcEnvelope& envelope );
-
-        /** @brief 테스트용 왕복: pack 후 즉시 invoke. */
-        static bool packAndInvoke( void* pInstance, const hashed_string& typeFqn, const hashed_string& methodName,
-                                   const TaskArgs& args, TaskValue* pOutResult = nullptr );
     };
 } // namespace sw
