@@ -20,7 +20,15 @@ namespace sw
         struct LinuxFileWatcherInternal
         {
             static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            static constexpr uint32 kInotifyMask            = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
+            /**
+             * @brief 큐에 쌓아 둘 이벤트 상한.
+             *
+             * pollEvents 를 부르는 쪽이 없거나 멈춰 있는 동안(에디터 미실행, 쿠킹 중) 파일 활동이 많으면
+             * 큐가 끝없이 자란다. 상한에 걸리면 개별 이벤트 대신 합성 rescan 하나로 접는다 — 커널
+             * 큐가 넘칠 때(IN_Q_OVERFLOW) 이미 쓰고 있는 방식과 같다.
+             */
+            static constexpr size_t kMaxQueuedEvent = 4096;
+            static constexpr uint32 kInotifyMask    = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
             static string makeRelativePath( string_view root, string_view absolutePath )
             {
@@ -49,6 +57,7 @@ namespace sw
         , _wakeFd{ -1 }
         , _bIsWatching{ false }
         , _bRecursive{ true }
+        , _bEventQueueOverflowed{ false }
     {
     }
 
@@ -90,6 +99,9 @@ namespace sw
         const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
         if ( bAdded == false )
         {
+            // 하위 디렉터리 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기 오는 건
+            // **루트조차** 못 건 경우뿐이라 감시 자체가 성립하지 않는다.
+            SW_LOG_ERROR( "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
             stopWatching();
             return false;
         }
@@ -109,6 +121,17 @@ namespace sw
         {
             outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
             _listEventQueue.clear();
+        }
+
+        if ( _bEventQueueOverflowed )
+        {
+            // 버린 것이 있었다 — 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
+            FileChangeEvent rescanEvent{};
+            rescanEvent._action    = FileWatcherAction::Modified;
+            rescanEvent._directory = _directoryPath;
+            outListEvent.push_back( std::move( rescanEvent ) );
+            _bEventQueueOverflowed = false;
+            return count + 1;
         }
         return count;
     }
@@ -263,15 +286,23 @@ namespace sw
 
         namespace fs = std::filesystem;
         std::error_code ec;
+        uint32          failedCount{ 0 };
         for ( fs::recursive_directory_iterator it( directoryPath, fs::directory_options::skip_permission_denied, ec ), end;
               it != end && ec == std::error_code{}; it.increment( ec ) )
         {
             if ( it->is_directory( ec ) == false )
                 continue;
             if ( addWatchDirectory( it->path().string() ) == false )
-            {
-                SW_LOG_WARNING( "Failed to watch subdirectory: %#", it->path().string().c_str() );
-            }
+                ++failedCount;
+        }
+
+        // 실패는 대개 디렉터리마다 나는 게 아니라 한도(max_user_watches)를 넘긴 순간부터 전부 난다 —
+        // 디렉터리별로 찍으면 로그가 묻히므로 한 줄로 모으고, 흔한 원인을 같이 적는다.
+        if ( failedCount > 0 )
+        {
+            SW_LOG_WARNING( "%# 개 하위 디렉터리를 감시하지 못했습니다 — 그 아래 변경은 감지되지 않습니다. "
+                            "inotify 한도일 수 있습니다(/proc/sys/fs/inotify/max_user_watches).",
+                            failedCount );
         }
         return true;
     }
@@ -282,7 +313,7 @@ namespace sw
         const int32  wd         = inotify_add_watch( _inotifyFd, normalized.c_str(), LinuxFileWatcherInternal::kInotifyMask );
         if ( wd < 0 )
         {
-            SW_LOG_ERROR( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
+            SW_LOG_TRACE( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
             return false;
         }
 
@@ -312,6 +343,22 @@ namespace sw
         eventObj._filename  = relative.empty() ? name : relative;
 
         std::scoped_lock<mutex> lock{ _eventMutex };
+
+        if ( _listEventQueue.size() >= LinuxFileWatcherInternal::kMaxQueuedEvent )
+        {
+            _bEventQueueOverflowed = true;
+            return;
+        }
+
+        // 한 번 저장하면 커널이 IN_MODIFY 와 IN_CLOSE_WRITE 를 잇달아 준다 — 둘 다 Modified 로 접히므로
+        // 같은 파일에 같은 동작이 연달아 들어오면 하나로 합친다. 중복 리로드를 그만큼 줄인다.
+        if ( _listEventQueue.empty() == false )
+        {
+            const FileChangeEvent& last = _listEventQueue.back();
+            if ( last._action == eventObj._action && last._filename == eventObj._filename )
+                return;
+        }
+
         _listEventQueue.push_back( std::move( eventObj ) );
     }
 } // namespace sw

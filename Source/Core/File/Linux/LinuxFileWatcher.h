@@ -63,6 +63,8 @@ namespace sw
         int32                   _wakeFd;
         atomic<bool>            _bIsWatching;
         bool                    _bRecursive;
+        /** @brief 큐가 상한에 걸려 이벤트를 버렸는가. 다음 pollEvents 가 합성 rescan 하나로 알린다. */
+        bool _bEventQueueOverflowed;
     };
 } // namespace sw
 
