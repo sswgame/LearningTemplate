@@ -37,6 +37,19 @@ cd build/Ninja-Debug/Bin
 ```
 
 현재 기준선: **기본 창 14개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 · 내용 없는 패널 0개**.
+
+> ⚠️ **이 실기동 검증은 빈 씬을 본다.** `SW_ACTIVE_GAME=Empty` 는 맵이 없고 저장소에
+> `.scene.xml` 자체가 없다 — 로그를 보면 `SceneManager` 가 씬 없이 Initialized → Shut down 한다.
+> 따라서 이 게이트는 **오브젝트를 도는 코드 경로를 전혀 태우지 않는다**: 뷰포트 피킹, 컴포넌트
+> 시각화, Hierarchy 트리, Profiler 의 컴포넌트 분포표, 씬 세대 변경 훅
+> (`syncAfterSceneGenerationChange`) 모두 해당한다. 정점 수 비교가 증명하는 것은 그리드·통계·
+> 방향 큐브처럼 **오브젝트와 무관한** 그리기가 그대로라는 것까지다.
+>
+> 오브젝트 경로는 단위 테스트로 덮는다(피킹은 `TestEditorViewportPick` 7케이스). 실기동으로도
+> 덮고 싶으면 **작은 테스트 씬 애셋**이 필요하다 — 오브젝트 몇 개(메시·스프라이트·콜라이더·
+> 카메라 하나씩)와 프리팹 인스턴스 하나면 위 경로가 전부 켜진다. 콘텐츠를 추가하는 결정이라
+> 여기서는 하지 않았다.
+
 (전부 열었을 때 한 번 나왔던 `Sequencer/00000379` 는 확인해서 닫았다 — ImSequencer 가 함수 앞머리에서
 `GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )`(=0x379) 안에서도 그 리스트에 그리기 때문에
 자식의 정점이 0 이다. 라이브러리가 **정수 id 로 만든 자식 창**은 우리가 판별할 수 없으므로 세지
@@ -296,6 +309,49 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (씬을 바꿔도 이전 씬을 가리키는 상태가 남아 있었다)
+
+"선언만 있고 아무도 부르지 않는 함수" 를 훑었다(Editor 헤더 선언 528개 → 트리 전체 등장이
+2회 이하인 것 **27개**). 대부분은 그냥 죽은 편의 API 였지만, `EditorWorkspace` 의 세 개는
+**불려야 하는데 안 불리고 있었다** — 이름 그대로 씬이 바뀔 때 버려야 하는 상태다.
+
+`EditorAssetCommands::syncAfterSceneGenerationChange` 는 씬 세대가 바뀐 것을 아는 **유일한**
+자리다(`setObservedSceneGeneration` 호출부가 여기뿐이다). 여기서 dirty·선택을 지우고 프리팹
+맵을 다시 만들지만, 다음 셋은 그대로 남겼다. 오브젝트 ID 는 `GameObjectManager` 마다 다시
+시작하므로 남은 상태는 **새 씬의 엉뚱한 오브젝트에 붙는다**:
+
+- **Undo 스택** — 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. Edit 메뉴는 Undo 를 켜 둔 채로
+  두고, 누르면 아무 일도 없거나(guid 조회 실패) 재사용된 ID 를 통해 다른 오브젝트를 덮어쓴다.
+  (`EditorPlaySession` 은 플레이 전이마다 비운다 — 씬 전환만 빠져 있었다.)
+- **GUID 맵**(`clearGuidMap`) — Undo·PIE 복원이 오브젝트를 다시 찾는 신분증이다
+  (`findGameObjectByGuid`). 낡은 `guid → 옛 ID` 가 남으면 새 씬에서 같은 ID 를 쓰는 오브젝트가
+  잡히고, `getOrAssignGuid` 는 새 오브젝트에 **옛 guid** 를 돌려준다. 씬을 갈아탈수록 늘기도 한다.
+- **프리팹 Isolation**(`clearPrefabIsolation`) — 프레임이 옛 씬의 오브젝트 ID 를 든다. 격리 중에
+  씬을 열면(막는 가드가 없다) `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라 믿고,
+  `exitPrefabIsolation` 이 새 씬의 무관한 오브젝트를 되살린다.
+
+세 clear 함수는 모두 순수 상태 리셋이라(오브젝트를 만지지 않는다) 사라진 씬에 대해 부르는 것이
+정확히 맞다. 프리팹 맵만 버리지 않고 다시 만든다(새 씬에도 인스턴스가 있다).
+
+**검증의 한계 — 중요**: 이 훅은 **빈 씬 실기동에서 한 번도 실행되지 않는다.** 활성 게임이
+`Empty` 라 씬이 로드되지 않아 세대가 0에 머문다(임시 로그로 확인: 60프레임 동안 훅 미발동).
+그래서 이 수정의 근거는 코드 수준이다 — 세 함수의 본문, 훅이 유일한 세대 감지 지점인 것,
+GUID 맵/Isolation 프레임이 ID 로 옛 씬을 가리키는 것을 읽어서 확인했다. 실기동은 "빈 씬
+경로를 깨지 않는다" 까지만 보증한다. 0절에 이 게이트의 사각지대를 적어 두었다.
+
+**측정해 둔 죽은 API 27개** (지우는 것은 판단이 필요해 두었다):
+`EditorThemeUtil` 9개(`getBorderColor`·`getPanelBgColor`·`getWindowBgColor`·`push/popAccentButton`·
+`push/popAccentHeader`·`textAccent`·`textMuted`) · `EditorWidgets` 4개(`acceptAssetDrop`·
+`drawHelpMarker`·`drawPropertyRowBegin/End` 짝 전체·`drawSearchFilter` — 이건 쓰이는
+`drawSearchField` 의 죽은 사촌이라 잘못 부르기 쉽다) · `AssetEditorManager` 2개(등록 확장점) ·
+`EditorWorkspace` 의 `removeGuid`·`isGameObjectPrefabInstance`·`clearGameObjectPrefabMap`
+(마지막은 rebuild 가 대신하므로 정상) · `EditorTransaction::captureBinarySnapshot` ·
+`EditorInspectorCommands::pushStringEdit` · `EditorDataTableCommands::hasModifiedLocalization` ·
+`EditorGlobalVariableCommands` 2개 · `EditorAssetTypeRegistry::getPanelMappings`.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5(양쪽), 린트 6/6, 네 백엔드 실기동 종료 코드 0 ·
+`[Error]` 0건 · `Game View` 정점 수 742 동일, 전부 열기 창 29개/빈 패널 0개.
 
 ### 2026-09-10 (핫 리로드·종료 때 언맵된 DLL 로 뛰는 Undo 스택, 그리고 조용한 실패 셋)
 

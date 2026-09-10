@@ -34,6 +34,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw::editor
@@ -407,6 +408,29 @@ namespace sw::editor
         ws.setObservedSceneGeneration( generation );
         ws.clearSceneDirty();
         ws.clearSelection();
+
+        /**
+         * 이전 씬을 가리키던 상태를 버린다. 오브젝트 ID 는 `GameObjectManager` 마다 다시 시작하므로,
+         * 남겨 두면 **새 씬의 엉뚱한 오브젝트에 붙는다.**
+         *
+         * - **Undo 스택**: 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. 비우지 않으면 Edit 메뉴가
+         *   Undo 를 켜 둔 채로 두고, 눌러도 아무 일도 없거나(guid 조회 실패) 재사용된 ID 를 통해
+         *   다른 오브젝트를 덮어쓴다.
+         * - **GUID 맵**: Undo·PIE 복원이 오브젝트를 다시 찾는 신분증이다(`findGameObjectByGuid`).
+         *   낡은 `guid → 옛 오브젝트 ID` 항목이 남으면 새 씬에서 같은 ID 를 쓰는 오브젝트가 잡히고,
+         *   `getOrAssignGuid` 도 새 오브젝트에 옛 guid 를 돌려준다. 씬을 오래 갈아타면 계속 늘기도 한다.
+         * - **프리팹 Isolation**: 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
+         *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라 믿고, `exitPrefabIsolation`
+         *   이 새 씬의 무관한 오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다 — 상태만 버린다.
+         *
+         * 프리팹 맵은 버리지 않고 아래에서 **다시 만든다** (새 씬에도 프리팹 인스턴스가 있다).
+         */
+        CommandStack* pCommandStack = editor::getService<CommandStack>();
+        if ( pCommandStack != nullptr )
+            pCommandStack->clear();
+        ws.clearGuidMap();
+        ws.clearPrefabIsolation();
+
         Scene*             pScene   = pSceneManager->getActiveScene();
         GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         ws.rebuildGameObjectPrefabMap( pManager );
