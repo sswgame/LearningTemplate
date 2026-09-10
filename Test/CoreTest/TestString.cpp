@@ -1054,6 +1054,23 @@ SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "100% done, %q=%#, %%=%#, tail%", 1, 2 );
     SW_EXPECT_STREQ( "100% done, %q=1, %=2, tail%", buffer );
 
+    // 인자 수는 검사하지 않는다 — 남는 인자는 버려지고, 모자라면 리터럴 `%#` 가 남아 보인다 (컴파일 시점 검사는
+    // C++20 의 consteval 포맷 타입으로 갈 때 함수인 채로 넣는다).
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "a=%#", 1, 2, 3 );
+    SW_EXPECT_STREQ( "a=1", buffer );
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "a=%# b=%#", 1 );
+    SW_EXPECT_STREQ( "a=1 b=%#", buffer );
+
+    // 널 포인터는 종류와 무관하게 (null) — `nullptr` 리터럴과 널 `const utf8*` 는 예전엔 string_view 지름길에서
+    // strlen(nullptr) 로 죽었다(이 테스트가 처음 SEGFAULT 로 잡았다).
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# %# %# %-8s|", nullptr, static_cast<const void*>( nullptr ),
+                      static_cast<const utf8*>( nullptr ), static_cast<const utf8*>( nullptr ) );
+    SW_EXPECT_STREQ( "(null) (null) (null) (null)  |", buffer );
+
+    // printf 서식 + Fmt 값 — 변환은 Fmt 의 서식(16진수), 너비는 서식 문자열. 예전엔 "[unsupported type]" 이었다.
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%6d]", sw::Fmt( 255, sw::Format().hex() ) );
+    SW_EXPECT_STREQ( "[    ff]", buffer );
+
     // 실제로 깨져 있던 문장들 — 첫 글자가 변환 문자인 단어가 뒤에 온다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# Passed, %# Failed", 3, 0 );
     SW_EXPECT_STREQ( "3 Passed, 0 Failed", buffer );

@@ -248,6 +248,30 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-11 (`formatstring` 남은 구멍 — 미지원 타입은 컴파일 오류로, 널 문자열은 (null) 로; 인자 수 검사는 보류)
+
+규칙을 확정하고 나서 남은 것은 문법이 아니라 "실패가 조용한" 자리였다. 잘림(호출자가 버퍼를 정한 것 — `fixed_string`
+때와 같은 판단으로 API 를 바꾸지 않는다)과 `%g/%e`(쓰는 곳이 없다)는 두고, 둘을 닫았다.
+
+- **string 으로 변환할 수 없는 타입은 컴파일 오류다.** 예전엔 컴파일되고 런타임에 `[unsupported type]` 이 찍혔다. 이걸
+  `static_assert` 로 바꾸자 죽은 경로가 하나 드러났다: printf 서식(`%5d`)에 `Fmt(v, …)` 를 주면 래퍼를 풀지 않고
+  변환에 넘겨 `[unsupported type]` 이 나오던 자리 — 이제 값 변환은 Fmt 의 서식(기수·정밀도), 너비·정렬은 서식 문자열이다.
+- 널 포인터 표기 통일: `(void*)nullptr` 도 `(null)` (예전엔 `0`). 그 테스트가 **SEGFAULT** 로 하나를 더 잡았다 —
+  문자열 지름길(`string_view{ value }`)이 `nullptr` 리터럴과 널 `const utf8*` 를 그대로 받아 `strlen(nullptr)` 했다.
+  `SW_LOG_ERROR( "%#", pMessage )` 에 null 을 주면 로거가 죽던 자리다. 지름길이 널을 거르고 `(null)` 을 쓴다.
+
+**인자 수 불일치는 보류했다 — 결정이다.** 남는 인자는 버려지고 모자라면 리터럴 `%#` 가 남는 지금 동작 그대로다.
+컴파일 시점 검사를 두 형태로 만들어 봤다: (1) `SW_FORMAT_CHECKED( buf, cap, "…", … )` 매크로(포맷 리터럴을 지역
+타입의 `static constexpr` 접근자에 실어 `static_assert`, fmt 의 `FMT_STRING` 수법) — 로그 854곳이 전부 통과해
+인자 수가 틀린 로그는 실제로 없다는 것까지 확인했다; (2) `formatstring` 이름 자체를 그 매크로로. 둘 다 **쓰지 않기로
+했다** — 호출부에 매크로가 보이거나 함수 이름을 매크로가 가로채는 형태는 원하는 모양이 아니다. C++17 에서 함수 인자로
+들어온 리터럴은 상수식이 아니라 함수인 채로는 불가능하다. **C++20 으로 올릴 때 `consteval` 포맷 타입(std::format 방식)으로
+함수인 채로 넣는다** — 그때 포맷이 데이터에서 오는 13곳(`BattleState` 의 현지화 문자열 10곳, `MemoryProfiler`·
+`CrashContext`·`StringBuilder` 포워딩 3곳)은 `runtimeFormat( str )` 로 표시한다. 런타임 표식(` [+N args]`)도 같은 이유로
+넣었다가 뺐다. 파서(`parseFormatSpec`·`findNextPlaceholder`)를 `constexpr` 로 만든 것은 남겨 뒀다 — 그때 그대로 쓴다.
+
+`PlaceholderNeverTakesSpecifiers` 에 널 포인터 넷·`%6d`+Fmt 케이스.
+
 ### 2026-09-11 (`formatstring` 규칙 확정 — `%#` 은 순수 자리표, 서식은 printf 형, 모르는 `%…` 는 리터럴)
 
 `%#` 을 어떻게 쓸 생각이었는지가 결정의 근거였다: **`%#` 에 `%3d` 처럼 옵션을 붙일 생각은 처음부터 없었다.**

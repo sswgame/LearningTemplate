@@ -282,6 +282,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류다.
+     * @note 인자 수는 검사하지 않는다 — 남는 인자는 버려지고, 모자라면 리터럴 `%#` 가 남아 보인다. C++17 에서 함수 인자로
+     *       들어온 리터럴은 상수식이 아니라 컴파일 시점 검사는 매크로로만 가능한데, 그 형태는 쓰지 않기로 했다 — C++20 의
+     *       `consteval` 포맷 타입(std::format 방식)으로 갈 때 함수인 채로 넣는다.
      * @details - `%#` — **옵션이 붙지 않는 순수 자리표.** `%#` 두 글자만 소비하고 뒤 글자는 무조건 리터럴이다.
      *            그래서 `%#dB`·`%#x%#`·`%#s`·`%#.txt` 가 전부 글자 그대로 나온다. 예전엔 `#` 뒤를 printf 서식으로
      *            읽어 `%#x%#` 가 가로를 16진수로, `%#s` 가 단위 `s` 를 삼키고, `%#.txt` 가 `.tx` 를 잃었다 —
@@ -353,7 +356,7 @@ namespace sw
          * @param outHasSpec 하나라도 옵션을 읽었으면 true.
          * @return 소비한 길이(`%` 포함). 서식이 아니면 0.
          */
-        static size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
+        static constexpr size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
         {
             size_t cursor{ 0 };
             outHasSpec = false;
@@ -476,7 +479,7 @@ namespace sw
         }
 
         /** @brief 다음 플레이스홀더를 찾습니다. */
-        static PlaceholderMatch findNextPlaceholder( string_view format ) noexcept
+        static constexpr PlaceholderMatch findNextPlaceholder( string_view format ) noexcept
         {
             PlaceholderMatch match;
             size_t           charIndex{ 0 };
@@ -565,6 +568,8 @@ namespace sw
                     return writeFormatPrefix( pBuffer, pos, capacity, nextFormat );
             }
 
+            // 자리표는 없는데 인자가 남았다 — 남는 인자는 조용히 버린다(모자란 쪽은 리터럴 `%#` 가 남아 보인다). 인자 수
+            // 검사는 C++20 의 consteval 포맷 타입으로 갈 때 함수인 채로 넣는다(클래스 주석 참고).
             return writeFormatPrefix( pBuffer, pos, capacity, format );
         }
 
@@ -589,8 +594,17 @@ namespace sw
             // Vulkan 검증 메시지의 꼬리("... is type UNIFORM_BUFFER but <실제 타입>")가 그렇게
             // 사라져서 디스크립터 불일치를 진단할 수 없었다. write() 는 목적지 용량만큼 복사하므로
             // 문자열은 곧장 넘기면 된다. 서식(폭/정밀도)이 붙은 값은 기존 경로를 그대로 탄다.
-            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> )
+            // 단, 널은 지름길을 타면 안 된다 — `string_view{ nullptr }` 는 strlen(nullptr) 이라 SEGFAULT 다.
+            // `nullptr` 리터럴은 C++17 에서 string_view 로 변환 "가능" 해서 여기로 들어왔고(아래 (null) 분기가 죽어 있었다),
+            // 널 `const utf8*` 도 마찬가지였다: SW_LOG_ERROR( "%#", pMessage ) 에 null 을 주면 로거가 죽었다.
+            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> &&
+                           std::is_null_pointer_v<std::decay_t<T>> == false )
             {
+                if constexpr ( std::is_pointer_v<std::decay_t<T>> )
+                {
+                    if ( value == nullptr )
+                        return write( pBuffer, pos, capacity, "(null)" );
+                }
                 return write( pBuffer, pos, capacity, string_view{ value } );
             }
 
@@ -615,16 +629,33 @@ namespace sw
             // 문자열류는 임시 버퍼를 거치지 않는다 — addValue 와 같은 이유다. arrTemp 는 256바이트라
             // `%-20s` 에 긴 문자열을 주면 **거기서 잘린다**. 폭 맞춤은 원본 뷰 그대로 addPadding 이 한다.
             // (그 지름길이 addValue 에만 있어서, 서식이 붙는 순간 조용히 잘리는 구멍이 있었다.)
-            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> )
+            if constexpr ( is_formatted_value_v<T> == false && std::is_convertible_v<std::decay_t<T>, string_view> &&
+                           std::is_null_pointer_v<std::decay_t<T>> == false )
             {
+                if constexpr ( std::is_pointer_v<std::decay_t<T>> )
+                {
+                    if ( value == nullptr )
+                        return addPadding( pBuffer, pos, capacity, "(null)", format );
+                }
                 return addPadding( pBuffer, pos, capacity, string_view{ value }, format );
             }
 
-            utf8         arrTemp[kTempBufferSize];
-            const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), format );
-            // **addPadding 을 거쳐야 한다.** 예전엔 여기서 바로 write 했는데, 그러면 너비·정렬·0채우기가
-            // Fmt(v, Format()) 경로에서만 먹고 서식 문자열(`%5d`)로 준 것은 조용히 무시됐다.
-            return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
+            utf8 arrTemp[kTempBufferSize];
+            if constexpr ( is_formatted_value_v<T> )
+            {
+                // `%5d` 같은 서식에 Fmt(v, Format()) 를 준 경우 — 값 변환은 Fmt 의 서식(기수·정밀도)으로, 너비·정렬은
+                // 서식 문자열로 한다. 예전엔 래퍼를 풀지 않고 valueToString 에 넘겨 "[unsupported type]" 이 찍혔다
+                // (미지원 타입을 컴파일 오류로 바꾸자 이 죽은 경로가 드러났다).
+                const uint32 valueLength = valueToString( arrTemp, value.getValue(), value.getFormat() );
+                return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
+            }
+            else
+            {
+                const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), format );
+                // **addPadding 을 거쳐야 한다.** 예전엔 여기서 바로 write 했는데, 그러면 너비·정렬·0채우기가
+                // Fmt(v, Format()) 경로에서만 먹고 서식 문자열(`%5d`)로 준 것은 조용히 무시됐다.
+                return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, format );
+            }
         }
 
         /** @brief 값을 문자열로 변환합니다. */
@@ -667,6 +698,12 @@ namespace sw
                 }
                 else
                 {
+                    // 널은 종류와 무관하게 (null) — `nullptr` 리터럴만 (null) 이고 `(void*)nullptr` 은 `0` 이던 불일치.
+                    if ( value == nullptr )
+                    {
+                        Memory::copy( pBuf, "(null)", 7 );
+                        return 6;
+                    }
                     Format hexFormat = format;
                     hexFormat.hexUpper();
                     return integerToString( pBuf, reinterpret_cast<uintptr_t>( value ), hexFormat );
@@ -708,8 +745,10 @@ namespace sw
             }
             else
             {
-                SW_ASSERT( false );
-                return "[unsupported type]";
+                // 문자열로 변환할 수 없는 타입은 컴파일에서 막는다 — 예전엔 컴파일되고 런타임에 "[unsupported type]" 이
+                // 찍혔다. 호출부에서 toString() 을 거치라는 뜻이다. sizeof(T)==0 은 T 에 의존하는 항상-거짓이다.
+                static_assert( sizeof( T ) == 0, "formatstring: string 으로 변환할 수 없는 타입입니다 - toString() 을 거치십시오" );
+                return {};
             }
         }
 
