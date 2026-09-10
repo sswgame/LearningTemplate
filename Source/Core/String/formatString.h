@@ -282,9 +282,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류다.
-     * @note 인자 수는 검사하지 않는다 — 남는 인자는 버려지고, 모자라면 리터럴 `%#` 가 남아 보인다. C++17 에서 함수 인자로
-     *       들어온 리터럴은 상수식이 아니라 컴파일 시점 검사는 매크로로만 가능한데, 그 형태는 쓰지 않기로 했다 — C++20 의
-     *       `consteval` 포맷 타입(std::format 방식)으로 갈 때 함수인 채로 넣는다.
+     * @note 인자 수는 **Debug 에서 실행 시점에** 대조한다 — 포맷을 훑으며 자리표를 소비하는 그 자리에서, 인자가 남았는데
+     *       자리표가 없거나 자리표가 남았는데 인자가 없으면 디버그 브레이크. 따로 세는 패스는 없다(비용은 나머지 문자열
+     *       한 번 memchr). 컴파일 시점은 C++17 에서 함수인 채로는 불가능하다(함수 인자로 들어온 리터럴은 상수식이 아니다;
+     *       매크로 우회는 쓰지 않기로 했다) — C++20 의 `consteval` 포맷 타입으로 갈 때 옮긴다. 실행 시점 검사는 그 대신
+     *       현지화처럼 **데이터에서 오는 포맷**까지 본다. Release/Shipping 에선 아무것도 하지 않는다.
      * @details - `%#` — **옵션이 붙지 않는 순수 자리표.** `%#` 두 글자만 소비하고 뒤 글자는 무조건 리터럴이다.
      *            그래서 `%#dB`·`%#x%#`·`%#s`·`%#.txt` 가 전부 글자 그대로 나온다. 예전엔 `#` 뒤를 printf 서식으로
      *            읽어 `%#x%#` 가 가로를 16진수로, `%#s` 가 단위 `s` 를 삼키고, `%#.txt` 가 `.tx` 를 잃었다 —
@@ -305,11 +307,54 @@ namespace sw
 
             uint32 pos{ 0 };
             if constexpr ( sizeof...( args ) > 0 )
+            {
                 pos = formatInternal( pBuffer, 0, capacity, format, std::forward<Args>( args )... );
+            }
             else
+            {
+                // 인자가 없으니 자리표도 없어야 한다 — 있으면 호출부가 인자를 빠뜨린 것이다.
+#if defined( SW_DEBUG )
+                if ( findNextPlaceholder( format )._pos != string_view::npos )
+                    reportArgumentMismatch( format, "placeholders but no arguments" );
+#endif
                 pos = write( pBuffer, 0, capacity, format );
+            }
 
             pBuffer[MathUtil::min( pos, capacity - 1 )] = '\0';
+        }
+
+        /**
+         * @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 세웁니다 — 어느 포맷인지 stderr 에 찍고 디버그 브레이크.
+         * @details 브레이크만 하면 크래시 덤프에 주소만 남아 어느 로그인지 찾을 수 없다(실제로 그랬다). 포매터 안이라
+         *          로거를 부를 수 없으니(재귀) fputs 로 직접 쓴다. Release/Shipping 에선 호출되지 않는다.
+         */
+        static void reportArgumentMismatch( string_view format, const utf8* pReason ) noexcept
+        {
+            std::fputs( "[formatstring] argument/placeholder mismatch (", stderr );
+            std::fputs( pReason, stderr );
+            std::fputs( "): \"", stderr );
+            std::fwrite( format.data(), 1, format.size(), stderr );
+            std::fputs( "\"\n", stderr );
+            std::fflush( stderr );
+            SW_ASSERT( false && "formatstring: argument/placeholder mismatch" );
+        }
+
+        /**
+         * @brief 포맷이 소비할 인자 수 — `%#` 과 유효한 printf 서식이 각 1개. `%%` 와 알아볼 수 없는 `%…` 는 0.
+         * @details 실행 경로는 이걸 쓰지 않는다(포맷을 훑는 김에 검사한다). 리터럴에 대해 `static_assert` 로 규칙을 고정하는
+         *          테스트와, C++20 `consteval` 로 옮길 때의 정본이다. 세는 규칙은 쓰는 규칙(findNextPlaceholder) 그대로다.
+         */
+        static constexpr uint32 countPlaceholders( string_view format ) noexcept
+        {
+            uint32 count{ 0 };
+            while ( true )
+            {
+                const PlaceholderMatch match = findNextPlaceholder( format );
+                if ( match._pos == string_view::npos )
+                    return count;
+                ++count;
+                format = format.substr( match._pos + match._len );
+            }
         }
 
     private:
@@ -563,13 +608,24 @@ namespace sw
 
                 string_view nextFormat = format.substr( match._pos + match._len );
                 if constexpr ( sizeof...( args ) > 0 )
+                {
                     return formatInternal( pBuffer, pos, capacity, nextFormat, std::forward<Args>( args )... );
+                }
                 else
+                {
+                    // 마지막 인자를 썼다 — 나머지에 자리표가 남아 있으면 호출부가 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
+#if defined( SW_DEBUG )
+                    if ( findNextPlaceholder( nextFormat )._pos != string_view::npos )
+                        reportArgumentMismatch( nextFormat, "more placeholders than arguments" );
+#endif
                     return writeFormatPrefix( pBuffer, pos, capacity, nextFormat );
+                }
             }
 
-            // 자리표는 없는데 인자가 남았다 — 남는 인자는 조용히 버린다(모자란 쪽은 리터럴 `%#` 가 남아 보인다). 인자 수
-            // 검사는 C++20 의 consteval 포맷 타입으로 갈 때 함수인 채로 넣는다(클래스 주석 참고).
+            // 자리표는 없는데 인자가 남았다 — 호출부가 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
+#if defined( SW_DEBUG )
+            reportArgumentMismatch( format, "more arguments than placeholders" );
+#endif
             return writeFormatPrefix( pBuffer, pos, capacity, format );
         }
 

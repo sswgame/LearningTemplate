@@ -1054,12 +1054,12 @@ SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "100% done, %q=%#, %%=%#, tail%", 1, 2 );
     SW_EXPECT_STREQ( "100% done, %q=1, %=2, tail%", buffer );
 
-    // 인자 수는 검사하지 않는다 — 남는 인자는 버려지고, 모자라면 리터럴 `%#` 가 남아 보인다 (컴파일 시점 검사는
-    // C++20 의 consteval 포맷 타입으로 갈 때 함수인 채로 넣는다).
-    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "a=%#", 1, 2, 3 );
-    SW_EXPECT_STREQ( "a=1", buffer );
-    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "a=%# b=%#", 1 );
-    SW_EXPECT_STREQ( "a=1 b=%#", buffer );
+    // 인자 수 불일치는 Debug 에서 포맷을 훑는 자리의 단언(디버그 브레이크)이 잡는다 — 그래서 여기서 재현할 수 없다.
+    // 세는 규칙만 고정한다: `%#`·printf 서식은 1, `%%`·모르는 `%…` 는 0. 리터럴은 컴파일 시점에도 셀 수 있다.
+    static_assert( sw::FormatString::countPlaceholders( "a=%# b=%3d c=%.2f %% %q tail%" ) == 3, "%#, %3d, %.2f 만 자리표다" );
+    static_assert( sw::FormatString::countPlaceholders( "no placeholders" ) == 0 );
+    static_assert( sw::FormatString::countPlaceholders( "%#x%# %#s %#.txt" ) == 4 );
+    SW_EXPECT_EQUAL( 2u, sw::FormatString::countPlaceholders( sw::string( "%#-%#" ) ) );
 
     // 널 포인터는 종류와 무관하게 (null) — `nullptr` 리터럴과 널 `const utf8*` 는 예전엔 string_view 지름길에서
     // strlen(nullptr) 로 죽었다(이 테스트가 처음 SEGFAULT 로 잡았다).

@@ -391,7 +391,7 @@ namespace sw::editor
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 if ( badgeStr.empty() == false )
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %#%###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
                 else
                     formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectId );
 
