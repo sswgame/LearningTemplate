@@ -9,7 +9,7 @@ Linux 및 WSL 개발 환경에 필요한 홈 디렉터리 설정을 자동으로
 2. ~/.bashrc, ~/.profile 에 DEBUGINFOD_URLS 환경변수 비우기
 3. 파일 다이얼로그 도구(zenity/kdialog/yad) 존재 여부 검사 및 안내
 4. 클립보드 도구(xclip/xsel/wl-copy) 존재 여부 검사 및 안내
-5. Vulkan/XCB 그래픽스 개발 패키지 존재 여부 안내 (apt 설치 안내)
+5. Vulkan/XCB/Wayland 그래픽스 개발 패키지 존재 여부 안내 (apt 설치 안내)
 
 CMake configure 시 SetupEnvironment.py 에서 자동 호출되며, 수동 실행도 가능합니다:
   python3 Scripts/setup/SetupLinuxDevEnvironment.py
@@ -147,7 +147,7 @@ def checkClipboardTools() -> None:
 
 def checkGraphicsDevPackages() -> None:
     """
-    Vulkan/GL/XCB 개발 헤더 힌트 (빌드 시 필요).
+    Vulkan/GL/XCB/Wayland 개발 헤더 힌트 (빌드 시 필요).
     패키지 매니저 상태는 파일 존재로만 대략 확인합니다.
     """
     hints: list[str] = []
@@ -157,6 +157,10 @@ def checkGraphicsDevPackages() -> None:
     if not (usrInclude / "vulkan/vulkan.h").is_file() and not (usrInclude / "vulkan/vulkan_core.h").is_file():
         if not any((usrInclude / relPath).is_file() for relPath in ("vulkan/vulkan.h", "vulkan/vulkan.hpp")):
             hints.append("libvulkan-dev")
+    # vcpkg vulkan-validationlayers 는 WSI 백엔드를 끌 수 없어 wayland-client.pc 를 무조건 요구한다.
+    # 없으면 포트 configure 가 pkg_check_modules 에서 실패하므로 여기서 미리 잡는다.
+    if not (usrInclude / "wayland-client.h").is_file():
+        hints.append("libwayland-dev")
     if hints:
         host = "WSL" if isWslInternal() else "Linux"
         print(
@@ -165,7 +169,7 @@ def checkGraphicsDevPackages() -> None:
             f"e.g. sudo apt install {' '.join(hints)}"
         )
     else:
-        print("[SetupLinuxDevEnvironment] graphics headers: ok (xcb/vulkan)")
+        print("[SetupLinuxDevEnvironment] graphics headers: ok (xcb/vulkan/wayland)")
 
 
 def setupLinuxDevEnvironment(home: Path | None = None) -> int:
