@@ -344,8 +344,8 @@ namespace sw
         {
             // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가
             // **생성된 파일마다** 난다. 여기서 한 번 고치면 전부 사라진다.
-            emit.linef( "p._metadata._minRange     = %#ff;", prop._minRange );
-            emit.linef( "p._metadata._maxRange     = %#ff;", prop._maxRange );
+            emit.linef( "p._metadata._minRange     = %#f;", prop._minRange );
+            emit.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
             emit.assign( "p._metadata._bHasRange", "SW_TRUE" );
         }
     }

@@ -46,7 +46,7 @@ namespace sw
             static constexpr uint8 kButtonRightShoulder = 5;
             static constexpr uint8 kButtonBack          = 6;
             static constexpr uint8 kButtonStart         = 7;
-            static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton에 대응값 없음 (무시).
+            [[maybe_unused]] static constexpr uint8 kButtonGuide = 8; ///< GamepadButton에 대응값 없음 (무시).
             static constexpr uint8 kButtonLeftThumb     = 9;
             static constexpr uint8 kButtonRightThumb    = 10;
 
