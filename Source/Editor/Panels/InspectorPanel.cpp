@@ -133,20 +133,11 @@ namespace sw::editor
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
 
-        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
-        {
-            const ImGuiIO& io = ImGui::GetIO();
-            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_Z, false ) )
-            {
-                if ( editor::getService<CommandStack>()->canUndo() )
-                    editor::getService<CommandStack>()->undo();
-            }
-            else if ( io.KeyCtrl && ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) || ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_Z, false ) ) ) )
-            {
-                if ( editor::getService<CommandStack>()->canRedo() )
-                    editor::getService<CommandStack>()->redo();
-            }
-        }
+        // Undo/Redo 단축키는 여기서 처리하지 않는다. 예전에는 이 패널이 Ctrl+Z 를 따로 받았는데
+        // 전역 처리기(EditorCommandGui)도 같은 프레임에 받아 **두 번 되돌렸다** — ImGui 의
+        // IsKeyPressed 는 소비되지 않으므로 두 호출자가 모두 true 를 본다. 게다가 이쪽 경로는
+        // 플레이 중 가드도, 텍스트 입력 중 가드도 없어서 값을 타이핑하다 Ctrl+Z 를 누르면 씬 편집이
+        // 되돌아갔다. 지금은 edit.undo / edit.redo 커맨드가 유일한 처리자다.
 
         EditorWidgets::popInspectorStyle();
     }

@@ -2,25 +2,17 @@
 
 #include "Editor/Popups/CommandPalettePopup.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -55,199 +47,6 @@ namespace sw::editor
                 }
                 return false;
             }
-
-            static void palettePlay()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
-                {
-                    pContext->getNotificationManager().push( "Play", "Scene has unsaved changes. Use Game View Play to confirm.",
-                                                             NotificationType::Warning );
-                    return;
-                }
-                EditorPlaySession::play();
-            }
-
-            static void paletteSaveScene()
-            {
-                EditorAssetCommands::saveFocusedOrScene();
-            }
-
-            static void paletteExit()
-            {
-                EditorAssetCommands::requestExit();
-            }
-
-            static GameObject* palettePrimaryObject()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return nullptr;
-                return pContext->getSelectionManager().getPrimaryObject().get();
-            }
-
-            static Component* paletteSelectedComponent()
-            {
-                EditorContext* pContext = EditorContext::get();
-                GameObject*    pObj     = palettePrimaryObject();
-                if ( pContext == nullptr || pObj == nullptr )
-                    return nullptr;
-                const uint64 componentId = pContext->getWorkspace().getSelectedComponentId();
-                if ( componentId == 0 )
-                    return nullptr;
-                return pObj->findComponentById( componentId );
-            }
-
-            static void paletteWarn( const utf8* pTitle, const utf8* pDetail )
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( pTitle, pDetail, NotificationType::Warning );
-            }
-
-            static void palettePasteValues()
-            {
-                EditorContext* pContext = EditorContext::get();
-                Component*     pComp    = paletteSelectedComponent();
-                if ( pContext == nullptr || pComp == nullptr )
-                {
-                    paletteWarn( "Paste", "Select a component first" );
-                    return;
-                }
-                if ( pContext->getWorkspace().hasCopiedComponent() == false )
-                {
-                    paletteWarn( "Paste", "Clipboard is empty" );
-                    return;
-                }
-                pContext->getWorkspace().pasteComponentValues( pComp );
-            }
-
-            static void palettePasteAsNew()
-            {
-                EditorContext* pContext = EditorContext::get();
-                GameObject*    pObj     = palettePrimaryObject();
-                if ( pContext == nullptr || pObj == nullptr )
-                {
-                    paletteWarn( "Paste", "Select an object first" );
-                    return;
-                }
-                if ( pContext->getWorkspace().hasCopiedComponent() == false )
-                {
-                    paletteWarn( "Paste", "Clipboard is empty" );
-                    return;
-                }
-                pContext->getWorkspace().pasteComponentAsNew( pObj );
-            }
-
-            static void onLoadPresetDialogResult( const vector<string>& listPath )
-            {
-                if ( listPath.empty() )
-                    return;
-                Component* pComp = paletteSelectedComponent();
-                if ( pComp == nullptr )
-                {
-                    paletteWarn( "Preset", "Select a component first" );
-                    return;
-                }
-                EditorTransformCommands::loadComponentPreset( pComp, listPath[0] );
-            }
-
-            static void onSavePresetDialogResult( const vector<string>& listPath )
-            {
-                if ( listPath.empty() )
-                    return;
-                Component* pComp = paletteSelectedComponent();
-                if ( pComp == nullptr )
-                {
-                    paletteWarn( "Preset", "Select a component first" );
-                    return;
-                }
-                const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPath[0] ) );
-                if ( fileName.empty() )
-                    return;
-                EditorTransformCommands::saveComponentPreset( pComp, fileName );
-            }
-
-            static void paletteLoadPreset()
-            {
-                if ( paletteSelectedComponent() == nullptr )
-                {
-                    paletteWarn( "Preset", "Select a component first" );
-                    return;
-                }
-                FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Open;
-                params._title               = "Load Component Preset";
-                params._description         = "Component Preset";
-                params._bEnableMultiselect  = false;
-                params._listFilterExtension = { ".preset.xml", ".xml" };
-                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
-            }
-
-            static void paletteSavePreset()
-            {
-                if ( paletteSelectedComponent() == nullptr )
-                {
-                    paletteWarn( "Preset", "Select a component first" );
-                    return;
-                }
-                FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Save;
-                params._title               = "Save Component Preset";
-                params._description         = "Component Preset";
-                params._bEnableMultiselect  = false;
-                params._listFilterExtension = { ".preset.xml" };
-                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
-            }
-
-            static void paletteDistributeX()
-            {
-                EditorTransformCommands::distributeSelectedObjects( AlignAxis::X );
-            }
-
-            static void paletteDistributeY()
-            {
-                EditorTransformCommands::distributeSelectedObjects( AlignAxis::Y );
-            }
-
-            static void paletteDistributeZ()
-            {
-                EditorTransformCommands::distributeSelectedObjects( AlignAxis::Z );
-            }
-
-            static void paletteAlignX()
-            {
-                EditorTransformCommands::alignSelectedObjects( AlignAxis::X, AlignType::Center );
-            }
-
-            static void paletteAlignY()
-            {
-                EditorTransformCommands::alignSelectedObjects( AlignAxis::Y, AlignType::Center );
-            }
-
-            static void paletteAlignZ()
-            {
-                EditorTransformCommands::alignSelectedObjects( AlignAxis::Z, AlignType::Center );
-            }
-
-            static void paletteSnapToGround()
-            {
-                EditorTransformCommands::snapSelectedToGround();
-            }
-
-            static void paletteApplyPrefab()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-                GameObject* pObj = pContext->getSelectionManager().getPrimaryObject().get();
-                string      path = pContext->getWorkspace().getFocusedAssetPath();
-                if ( path.empty() && pObj != nullptr )
-                    path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );
-                EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -259,56 +58,10 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     CommandPalettePopup::CommandPalettePopup()
         : IEditorPopup{ false }
-        , _listStaticCommand{}
         , _listAllCommand{}
         , _selectedIndex{ 0 }
         , _bJustOpened{ false }
     {
-        registerCommandInstance( "Play", "Play", "Start play-in-editor",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::palettePlay(); } ) );
-        registerCommandInstance( "Scene", "Save Scene", "Write the active scene, or prompt Save As if unsaved",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteSaveScene(); } ) );
-        registerCommandInstance( "File", "Exit", "Close the editor after unsaved-change confirmation",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteExit(); } ) );
-        registerCommandInstance( "Clipboard", "Paste Component Values", "Overwrite the selected component from the clipboard",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::palettePasteValues(); } ) );
-        registerCommandInstance( "Clipboard", "Paste Component As New", "Add the copied component to the selected object",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::palettePasteAsNew(); } ) );
-        registerCommandInstance( "Preset", "Load Component Preset", "Apply a .preset.xml to the selected component",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteLoadPreset(); } ) );
-        registerCommandInstance( "Preset", "Save Component Preset", "Write the selected component to a preset file",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteSavePreset(); } ) );
-        registerCommandInstance( "Transform", "Align X", "Align selected objects on X",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteAlignX(); } ) );
-        registerCommandInstance( "Transform", "Align Y", "Align selected objects on Y",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteAlignY(); } ) );
-        registerCommandInstance( "Transform", "Align Z", "Align selected objects on Z",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteAlignZ(); } ) );
-        registerCommandInstance( "Transform", "Distribute X", "Evenly space selected objects on X",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteDistributeX(); } ) );
-        registerCommandInstance( "Transform", "Distribute Y", "Evenly space selected objects on Y",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteDistributeY(); } ) );
-        registerCommandInstance( "Transform", "Distribute Z", "Evenly space selected objects on Z",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteDistributeZ(); } ) );
-        registerCommandInstance( "Transform", "Snap to Ground", "Snap selected objects onto the ground plane",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteSnapToGround(); } ) );
-        registerCommandInstance( "Prefab", "Apply Overrides", "Write instance overrides back to the prefab template",
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-        { CommandPalettePopupInternal::paletteApplyPrefab(); } ) );
     }
 
     // ------------------------------------------------------------------------------
@@ -334,28 +87,9 @@ namespace sw::editor
         return EditorContext::get()->getPopupManager().isPopupOpen( "CommandPalette" );
     }
 
-    void CommandPalettePopup::registerCommand( string_view category, string_view label, string_view detail,
-                                               Delegate<void()> action )
-    {
-        CommandPalettePopup* pPopup = EditorContext::get()->getPopupManager().findPopup<CommandPalettePopup>( "CommandPalette" );
-        if ( pPopup != nullptr )
-            pPopup->registerCommandInstance( category, label, detail, std::move( action ) );
-    }
-
     // ------------------------------------------------------------------------------
     // Instance Implementations
     // ------------------------------------------------------------------------------
-    void CommandPalettePopup::registerCommandInstance( string_view category, string_view label, string_view detail,
-                                                       Delegate<void()> action )
-    {
-        CommandPaletteEntry entry;
-        entry._category = string{ category };
-        entry._label    = string{ label };
-        entry._detail   = string{ detail };
-        entry._action   = std::move( action );
-        _listStaticCommand.push_back( std::move( entry ) );
-    }
-
     void CommandPalettePopup::onOpen()
     {
         _bJustOpened   = true;
@@ -366,9 +100,25 @@ namespace sw::editor
 
     void CommandPalettePopup::rebuildDynamicEntries()
     {
-        _listAllCommand = _listStaticCommand;
+        _listAllCommand.clear();
 
-        // 1) 등록된 모든 에디터 패널 토글 커맨드
+        // 1) 커맨드 레지스트리에 등록된 커맨드 — 메뉴·단축키와 같은 정의다
+        for ( const EditorCommandDesc& desc : EditorContext::get()->getCommandRegistry().getCommands() )
+        {
+            if ( desc._bPaletteVisible == false )
+                continue;
+
+            const string        commandId = desc._id;
+            CommandPaletteEntry entry;
+            entry._category = desc._category;
+            entry._label    = desc._label;
+            entry._detail   = desc._detail;
+            entry._action   = [commandId]()
+            { EditorContext::get()->getCommandRegistry().execute( commandId ); };
+            _listAllCommand.push_back( std::move( entry ) );
+        }
+
+        // 2) 등록된 모든 에디터 패널 토글 커맨드
         for ( const EditorPanelEntry& win : EditorContext::get()->getPanelManager().getPanels() )
         {
             const string        panelId  = win._id;
@@ -382,7 +132,7 @@ namespace sw::editor
             _listAllCommand.push_back( std::move( entry ) );
         }
 
-        // 2) 씬 내 게임오브젝트 검색 커맨드
+        // 3) 씬 내 게임오브젝트 검색 커맨드
         SceneManager* pSceneManager = editor::getService<SceneManager>();
         if ( pSceneManager != nullptr )
         {

@@ -18,11 +18,13 @@
   - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL
 - **Gui/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,
   `EditorDocumentPanel`, `EditorThemeUtil`, `EditorNotificationManager`(토스트),
-  `EditorActionMenuManager`(우클릭 메뉴), 인터페이스 `IEditorPanel` / `IEditorPopup`
+  `EditorActionMenuManager`(우클릭 메뉴), `EditorCommandGui`(커맨드 표 · 전역 단축키 · 메뉴 항목),
+  인터페이스 `IEditorPanel` / `IEditorPopup`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
 - **Workspace/**: ImGui 없는 **상태** — 컨텍스트·선택·트랜잭션(Undo)·서비스 로케이터·애셋 종류 ·
   플레이(PIE) 세션(`EditorPlaySession`, `EditorSessionPolicy`)
-- **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO.
+- **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
+  그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
 - **Asset/**: 텍스처 임포트·베이크·감시 (`TextureBaker`, `TextureWatcher`, `ImageUtil`)
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
@@ -39,11 +41,38 @@
 
 | 새로 쓰는 것 | 자리 |
 |---|---|
+| 메뉴·단축키·커맨드 팔레트에 나타날 동작 | `Common/Gui/EditorCommandGui.cpp` 의 커맨드 표 (아래) |
 | ImGui 를 그린다 | `Common/Gui/` · `Common/Widgets/` · `Panels/` · `Popups/` |
 | ImGui 없이 상태만 든다 | `Common/Workspace/` |
 | ImGui 없이 무언가를 바꾸거나 읽고 쓴다 | `Common/Commands/` |
 
 경계가 흐려지면 테스트가 먼저 막힙니다 — `Test/EditorTest` 는 ImGui 없이 도는 것만 검증합니다.
+
+## 커맨드를 하나 더하려면
+
+메뉴 항목 · 전역 단축키 · 커맨드 팔레트 항목은 **한 정의에서 나옵니다** —
+`Common/Gui/EditorCommandGui.cpp` 의 `_s_arrCommandRow` 표입니다. 한 줄을 넣으면
+팔레트에 바로 나타나고(`_bPaletteVisible`), 단축키를 적었으면 전역에서 바로 먹습니다.
+메뉴에 **보이게** 하려면 `EditorMenuBar` 의 원하는 메뉴에서 `EditorCommandGui::drawMenuItem( "<id>" )`
+를 한 줄 부르십시오 — 라벨·아이콘·단축키 표기·활성 조건·툴팁은 표에서 옵니다.
+
+예전에는 같은 커맨드가 메뉴·단축키 사다리·팔레트 목록 **세 곳**에 따로 적혀 있었고, 그래서
+실제로 어긋났습니다: `F7`(게임 컴파일)은 어느 라벨에도 없었고, `Ctrl+Shift+Z`(다시 실행)는
+Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 Inspector 가 같은 프레임에 모두
+받아 **두 번 되돌렸습니다**(ImGui 의 `IsKeyPressed` 는 소비되지 않습니다). 정의를 모은 뒤에는
+`EditorCommandRegistry::validate` 가 중복 id·중복 조합을 시작할 때 잡습니다
+(`Test/EditorTest/TestEditorCommandRegistry.cpp`).
+
+**단축키 라벨을 손으로 적지 마십시오.** 툴팁의 `(Ctrl+S)` 도 표의 조합에서 만들어 붙습니다 —
+그래야 조합을 바꿀 때 라벨이 거짓말을 하지 않습니다.
+
+메뉴에서 부르는 id 가 표에 없으면 그 항목은 조용히 사라집니다(경고만 남습니다). 메뉴를 손댔으면
+다음 한 줄로 대조하십시오:
+
+```bash
+comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp | sed 's/.*"\(.*\)"/\1/' | sort) \
+         <(grep -o '{ "[a-z][a-zA-Z.]*"' Source/Editor/Common/Gui/EditorCommandGui.cpp | sed 's/{ "\(.*\)"/\1/' | sort)
+```
 
 ## 그려진 결과를 검증하는 법
 

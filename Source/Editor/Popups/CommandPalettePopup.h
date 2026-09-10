@@ -26,6 +26,10 @@ namespace sw::editor
     /**
      * @class CommandPalettePopup
      * @brief Ctrl+Shift+P / Ctrl+Space 로 열리는 글로벌 액션 & 오브젝트 & 윈도우 퍼지 검색기
+     * @details 커맨드를 **가지고 있지 않습니다** — 매번 열릴 때 `EditorCommandRegistry` 와 패널
+     *          목록과 활성 씬을 읽어 목록을 만듭니다. 팔레트에 커맨드를 더하려면
+     *          `EditorCommandGui::registerDefaults` 의 표에 한 줄을 넣으십시오. 그러면 메뉴와
+     *          단축키에도 같이 나타납니다 (예전에는 여기에 따로 적어야 해서 서로 어긋났습니다).
      */
     class CommandPalettePopup : public IEditorPopup
     {
@@ -46,14 +50,6 @@ namespace sw::editor
         static void close();
         static void toggle();
         static bool isOpen();
-        static void registerCommand( string_view category, string_view label, string_view detail,
-                                     Delegate<void()> action );
-
-        // ------------------------------------------------------------------------------
-        // 인스턴스 메서드
-        // ------------------------------------------------------------------------------
-        void registerCommandInstance( string_view category, string_view label, string_view detail,
-                                      Delegate<void()> action );
 
     protected:
         virtual void drawContent() override;
@@ -63,7 +59,6 @@ namespace sw::editor
         void rebuildDynamicEntries();
 
     private:
-        vector<CommandPaletteEntry>           _listStaticCommand;
         vector<CommandPaletteEntry>           _listAllCommand;
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         int32                                 _selectedIndex{ 0 };

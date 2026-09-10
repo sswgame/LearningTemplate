@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
@@ -205,6 +206,7 @@ namespace sw::editor
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
+            EditorCommandGui::registerDefaults();
             _dockLayout.loadPanelVisibility();
         }
 
@@ -303,7 +305,7 @@ namespace sw::editor
             _dockLayout.beginDockspace();
         }
 
-        EditorMenuBar::processHotkeys();
+        EditorCommandGui::processHotkeys();
         EditorMenuBar::processOpenPanelRequests();
         EditorMenuBar::processSceneSession();
 

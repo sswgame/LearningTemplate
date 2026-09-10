@@ -11,6 +11,7 @@ namespace sw::editor
 {
     class AssetEditorManager;
     class EditorActionMenuManager;
+    class EditorCommandRegistry;
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
@@ -53,6 +54,7 @@ namespace sw::editor
         EditorWorkspace&           getWorkspace() { return *_pWorkspace; }
         EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
         EditorActionMenuManager&   getActionMenuManager() { return *_pActionMenuManager; }
+        EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
         EditorPopupManager&        getPopupManager() { return *_pPopupManager; }
         AssetEditorManager&        getAssetEditorManager() { return *_pAssetEditorManager; }
@@ -76,6 +78,7 @@ namespace sw::editor
         unique_ptr<EditorWorkspace>           _pWorkspace;
         unique_ptr<EditorNotificationManager> _pNotificationManager;
         unique_ptr<EditorActionMenuManager>   _pActionMenuManager;
+        unique_ptr<EditorCommandRegistry>     _pCommandRegistry;
         unique_ptr<EditorPanelManager>        _pPanelManager;
         unique_ptr<EditorPopupManager>        _pPopupManager;
         unique_ptr<AssetEditorManager>        _pAssetEditorManager;

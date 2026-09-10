@@ -7,6 +7,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -158,23 +159,15 @@ namespace sw::editor
                 {
                     ImGui::Text( "Multi-Object Alignment" );
                     ImGui::Separator();
-                    EditorWorkspace& ws = pContext->getWorkspace();
-                    if ( ImGui::MenuItem( "Snap to Ground (Y=0)" ) )
-                        ws.snapSelectedToGround();
+                    EditorCommandGui::drawMenuItem( "transform.snapToGround" );
                     ImGui::Separator();
-                    if ( ImGui::MenuItem( "Align X (Center)" ) )
-                        ws.alignSelectedObjects( AlignAxis::X, AlignType::Center );
-                    if ( ImGui::MenuItem( "Align Y (Center)" ) )
-                        ws.alignSelectedObjects( AlignAxis::Y, AlignType::Center );
-                    if ( ImGui::MenuItem( "Align Z (Center)" ) )
-                        ws.alignSelectedObjects( AlignAxis::Z, AlignType::Center );
+                    EditorCommandGui::drawMenuItem( "transform.alignX" );
+                    EditorCommandGui::drawMenuItem( "transform.alignY" );
+                    EditorCommandGui::drawMenuItem( "transform.alignZ" );
                     ImGui::Separator();
-                    if ( ImGui::MenuItem( "Distribute X Evenly" ) )
-                        ws.distributeSelectedObjects( AlignAxis::X );
-                    if ( ImGui::MenuItem( "Distribute Y Evenly" ) )
-                        ws.distributeSelectedObjects( AlignAxis::Y );
-                    if ( ImGui::MenuItem( "Distribute Z Evenly" ) )
-                        ws.distributeSelectedObjects( AlignAxis::Z );
+                    EditorCommandGui::drawMenuItem( "transform.distributeX" );
+                    EditorCommandGui::drawMenuItem( "transform.distributeY" );
+                    EditorCommandGui::drawMenuItem( "transform.distributeZ" );
                     ImGui::EndPopup();
                 }
             }

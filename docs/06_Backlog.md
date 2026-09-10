@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-10 · 기준 커밋 `1e59128d`
+> 마지막 갱신: 2026-09-10 · 기준 커밋 `f9fc5d0f`
 
 ---
 
@@ -60,8 +60,8 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 34 / SmokeTest 19
-#   Shipping : 161 / 422 / 96 / 34 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 40 / SmokeTest 19
+#   Shipping : 161 / 422 / 96 / 40 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -89,6 +89,23 @@ cd build/Ninja-Debug/Bin
 ---
 
 ## 1. 남은 일 (우선순위 순)
+
+### 1-0. 뷰포트가 컴포넌트 종류를 손으로 나열한다 — **다음 후보**
+
+커맨드 레지스트리(3절)와 **같은 종류의 문제**가 `EditorViewportClient.cpp` 에 남아 있다. 여기가
+에디터에서 가장 큰 파일(63KB)인 이유의 일부이기도 하다.
+
+- **피킹**이 `considerMeshPick` · `considerSpritePick` · `considerBoxPick` · `considerScenePick` 로
+  타입마다 함수 하나씩이다. 즉 **게임이 만든 컴포넌트는 뷰포트에서 클릭으로 집을 수 없다.**
+  ProfilerPanel 의 컴포넌트 분포표에서 이미 고친 것과 같은 결함이다(3절 2026-09-09 항목).
+- **디버그 시각화**도 같다. `drawDebugVisualizers` 가 BoxCollider2D 와 CameraComponent 만 알고,
+  각각 `ViewportToolbarSettings` 의 bool 하나 + 툴바 체크박스 하나와 짝지어 있다. 오버레이를
+  하나 더하려면 세 파일 네 곳을 고쳐야 한다.
+- 후보 구조: `{ 이름, 컴포넌트 getter, 반지름/모양 함수 }` 표 하나로 피킹을, 오버레이는
+  `IEditorViewportOverlay` + 등록으로. 그러면 새 오버레이는 파일 하나와 등록 한 줄이 된다.
+- **주의**: 반지름 계산이 타입마다 다르다(Mesh 는 bounds×scale, Sprite 는 scale×0.7+0.1,
+  Box 는 offsetScale 길이×0.5+0.1). 표로 접을 때 이 값을 바꾸면 클릭 판정이 달라진다 —
+  숫자를 그대로 옮기고, 옮긴 뒤 실기동으로 오브젝트를 집어 확인할 것.
 
 ### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **진행 중**
 
@@ -280,6 +297,52 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (에디터 커맨드 SSOT)
+
+**에디터 커맨드 하나가 세 곳에 따로 적혀 있었다.** `EditorMenuBar` 의 메뉴 항목(라벨·아이콘·
+단축키 **문자열**·툴팁·활성 조건·동작), 같은 파일의 `processHotkeys` 키 사다리(조합 → 동작),
+`CommandPalettePopup` 의 정적 목록(분류·라벨·설명·동작). 세 곳이 서로를 모르니 실제로 어긋났다:
+
+- **`Ctrl+Z` 가 두 번 되돌렸다.** 전역 `processHotkeys` 와 `InspectorPanel::drawContent` 가 각각
+  `undo()` 를 불렀고, ImGui 의 `IsKeyPressed` 는 소비되지 않으므로 같은 프레임에 두 호출자가
+  모두 true 를 본다. Inspector 가 포커스면 두 칸 되돌아갔다. 게다가 Inspector 경로에는 플레이
+  중 가드도, `WantTextInput` 가드도 없어서 값을 타이핑하다 Ctrl+Z 를 누르면 씬 편집이 되돌아갔다.
+- **`F7`(게임 컴파일)은 어느 라벨에도 없었다.** 키 사다리에만 있어서 아무도 모른다.
+- **`Ctrl+Shift+Z`(다시 실행)는 Inspector 가 포커스일 때만 먹었다.** 메뉴는 `Ctrl+Y` 만 알렸다.
+  게다가 전역 `Ctrl+Z` 는 Shift 가 눌렸는지 확인하지 않아서 `Ctrl+Shift+Z` 에 undo 까지 함께 발동했다.
+- **팔레트의 "Save Scene" 은 `saveFocusedOrScene()` 을 불렀다** — 메뉴의 "Save" 와 같은 동작이고
+  메뉴의 "Save Scene"(`saveActiveSceneOrPrompt`)이 아니다. 라벨이 거짓이었다.
+- **정렬/분배 7개는 세 경로였다** — 뷰포트 툴바는 `EditorWorkspace` 전달자를, 팔레트는
+  `EditorTransformCommands` 를 직접 불렀고 라벨도 달랐다("Align X" vs "Align X (Center)").
+
+정의를 `Common/Gui/EditorCommandGui.cpp` 의 표 **하나**로 모았다(커맨드 27개). 세 표면은 그것을
+읽기만 한다 — 메뉴는 `drawMenuItem( "<id>" )` 한 줄, 단축키는 표를 훑는 루프 하나, 팔레트는
+열릴 때 레지스트리를 읽는다. 커맨드를 하나 더하면 세 곳에 동시에 나타난다. 단축키 라벨과 툴팁의
+`(Ctrl+S)` 도 표의 조합에서 만들어 붙으므로 라벨이 실제 처리와 어긋날 수 없다.
+
+모델(`Common/Commands/EditorCommandRegistry`)은 **ImGui 없이** 컴파일되므로 테스트가 붙는다
+(`EditorTest` 34 → 40). 그중 하나가 **중복 조합 검사**다 — 두 커맨드가 같은 키 조합을 주장하면
+`validate()` 가 잡고, 에디터 시작 시 `[Error]` 로 남으므로 실기동 검증(0절)이 게이트가 된다.
+위의 Ctrl+Z 중복이 다시 들어올 수 없다는 뜻이다.
+
+단축키 조합 비교를 **정확 비교로 바꿨다**(예전엔 필요한 수정자만 확인했다). Alt+F4 처럼 OS 가
+가로채는 것은 `kDisplayOnly` 비트로 라벨에만 남긴다 — 처리하는 척하지 않는다.
+
+**곁들여 없앤 것**: `EditorWorkspace` 의 정렬·분배·바닥 스냅 전달자 3개(유일한 호출자가
+뷰포트 툴바였다), `CommandPalettePopup::registerCommand`/`registerCommandInstance`(호출자 0),
+그리고 그 파일의 정적 커맨드 목록. 팔레트는 이제 커맨드를 **가지지 않고 읽기만** 한다.
+
+**검증**: Debug/Shipping 빌드 경고 0, nogpu 5/5(Debug·Shipping), 린트 6/6, 컨벤션 0건,
+네 백엔드 실기동(`-dx12/-dx11/-vk/-gl`) 종료 코드 0 · `[Error]` 0건,
+패널 덤프 기본 **창 14개/빈 패널 0개** · 전부 열기 **창 29개/빈 패널 0개**(기준선과 같다).
+런타임에 커맨드 27개가 실제로 등록되는 것도 임시 로그로 확인한 뒤 로그를 걷었다.
+
+**남은 구멍 하나**: 메뉴가 부르는 id 가 표에 없으면 그 항목은 조용히 사라진다(경고만 남고,
+메뉴를 열지 않는 헤드리스 실행에서는 그 경고조차 나오지 않는다). 메뉴를 손댔으면
+`Source/Editor/README.md` 의 "커맨드를 하나 더하려면" 절에 있는 `comm` 한 줄로 대조할 것.
+린트로 승격하는 것은 스크립트 등록(GeneratedConstants·AssetAndToolTargets·PreCommitLint)까지
+건드려야 해서 이번에는 하지 않았다.
 
 ### 2026-09-10 (재검증)
 

@@ -2,33 +2,27 @@
 
 #include "Editor/Common/Gui/EditorMenuBar.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
@@ -42,44 +36,6 @@ namespace sw::editor
         struct EditorMenuBarInternal
         {
             inline static bool _s_bShowThemeSettings = false;
-
-            static void onOpenSceneDialogResult( const vector<string>& listPath )
-
-            {
-                if ( listPath.empty() == false )
-                    EditorContext::get()->getWorkspace().requestLoadScene( listPath[0] );
-            }
-
-            static void saveSceneOrPrompt()
-            {
-                EditorAssetCommands::saveActiveSceneOrPrompt();
-            }
-
-            static void saveFocusedOrScene()
-            {
-                EditorAssetCommands::saveFocusedOrScene();
-            }
-
-            static void openSceneFileDialog()
-            {
-                FileDialogParams params{};
-                params._type                = FileDialogParams::Type::Open;
-                params._title               = "Open Scene";
-                params._description         = "Scene";
-                params._bEnableMultiselect  = false;
-                params._listFilterExtension = { ".scene.xml", ".xml" };
-
-                const string activePack = GameConfig::getActive()._packRoot;
-                const string mapsDir    = ResourceUtil::getDomainFolderPath( activePack, path::kMapsFolder );
-                if ( FileUtil::directoryExists( mapsDir ) )
-                    params._initialDirectory = mapsDir;
-                else if ( ResourceUtil::getDomainFolderPath( activePack ).empty() == false )
-                    params._initialDirectory = ResourceUtil::getDomainFolderPath( activePack );
-                else if ( ResourceUtil::getDomainFolderPath( path::kGamePack ).empty() == false )
-                    params._initialDirectory = ResourceUtil::getDomainFolderPath( path::kGamePack );
-
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -107,35 +63,17 @@ namespace sw::editor
     {
         if ( ImGui::BeginMenu( "File" ) )
         {
-            if ( ImGui::MenuItem( ICON_FA_FILE "  New Scene" ) )
-                EditorAssetCommands::tryCreateNewScene();
-            EditorWidgets::drawTooltip( "새로운 빈 씬을 생성합니다" );
-
-            if ( ImGui::MenuItem( ICON_FA_FOLDER_OPEN "  Open Scene...", "Ctrl+O" ) )
-                EditorMenuBarInternal::openSceneFileDialog();
-            EditorWidgets::drawTooltip( "디스크에서 기존 씬 파일(.scene.xml)을 엽니다 (Ctrl+O)" );
-
-            if ( ImGui::MenuItem( ICON_FA_FLOPPY_DISK "  Save", "Ctrl+S" ) )
-                EditorMenuBarInternal::saveFocusedOrScene();
-            EditorWidgets::drawTooltip( "현재 포커스된 에셋 또는 활성 씬을 저장합니다 (Ctrl+S)" );
-
-            if ( ImGui::MenuItem( ICON_FA_FLOPPY_DISK "  Save Scene" ) )
-                EditorMenuBarInternal::saveSceneOrPrompt();
-            EditorWidgets::drawTooltip( "현재 활성화된 씬을 디스크에 저장합니다" );
+            EditorCommandGui::drawMenuItem( "scene.new" );
+            EditorCommandGui::drawMenuItem( "scene.open" );
+            EditorCommandGui::drawMenuItem( "asset.save" );
+            EditorCommandGui::drawMenuItem( "scene.saveScene" );
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( ICON_FA_MAGNIFYING_GLASS "  Quick Open...", "Ctrl+P" ) )
-                QuickLauncherPopup::open();
-            EditorWidgets::drawTooltip( "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다 (Ctrl+P)" );
-
-            if ( ImGui::MenuItem( ICON_FA_TERMINAL "  Command Palette...", "Ctrl+Shift+P / Ctrl+Space" ) )
-                CommandPalettePopup::open();
-            EditorWidgets::drawTooltip( "에디터 명령 및 액션을 검색하여 실행합니다 (Ctrl+Shift+P / Ctrl+Space)" );
+            EditorCommandGui::drawMenuItem( "editor.quickOpen" );
+            EditorCommandGui::drawMenuItem( "editor.commandPalette" );
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( ICON_FA_RIGHT_FROM_BRACKET "  Exit", "Alt+F4" ) )
-                EditorAssetCommands::requestExit();
-            EditorWidgets::drawTooltip( "에디터를 종료합니다 (Alt+F4)" );
+            EditorCommandGui::drawMenuItem( "editor.exit" );
 
             ImGui::EndMenu();
         }
@@ -145,18 +83,11 @@ namespace sw::editor
     {
         if ( ImGui::BeginMenu( "Edit" ) )
         {
-            if ( ImGui::MenuItem( ICON_FA_ROTATE_LEFT "  Undo", "Ctrl+Z", false, EditorPlaySession::isStopped() ) )
-                getService<CommandStack>()->undo();
-            EditorWidgets::drawTooltip( "마지막 편집 작업을 되돌립니다 (Ctrl+Z)" );
-
-            if ( ImGui::MenuItem( ICON_FA_ROTATE_RIGHT "  Redo", "Ctrl+Y", false, EditorPlaySession::isStopped() ) )
-                getService<CommandStack>()->redo();
-            EditorWidgets::drawTooltip( "되돌린 편집 작업을 다시 실행합니다 (Ctrl+Y)" );
+            EditorCommandGui::drawMenuItem( "edit.undo" );
+            EditorCommandGui::drawMenuItem( "edit.redo" );
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( ICON_FA_PALETTE "  Theme & Look and Feel..." ) )
-                EditorMenuBarInternal::_s_bShowThemeSettings = true;
-            EditorWidgets::drawTooltip( "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다" );
+            EditorCommandGui::drawMenuItem( "editor.themeSettings" );
 
             ImGui::EndMenu();
         }
@@ -166,38 +97,12 @@ namespace sw::editor
     {
         if ( ImGui::BeginMenu( "Build" ) )
         {
-            IModuleCompiler* pCompiler  = getService<IModuleCompiler>();
-            const bool       bCompiling = ( pCompiler != nullptr && pCompiler->isCompiling() );
-
-            if ( ImGui::MenuItem( ICON_FA_HAMMER "  Compile Game (SWGame)", "Ctrl+Alt+F11", false, bCompiling == false ) )
-            {
-                if ( pCompiler != nullptr )
-                    pCompiler->compileModule( "SWGame" );
-            }
-            EditorWidgets::drawTooltip( "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다 (Ctrl+Alt+F11)" );
-
-            if ( ImGui::MenuItem( ICON_FA_WRENCH "  Compile Editor (EditorModule)", nullptr, false, bCompiling == false ) )
-            {
-                if ( pCompiler != nullptr )
-                    pCompiler->compileModule( "EditorModule" );
-            }
-            EditorWidgets::drawTooltip( "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다" );
-
-            if ( ImGui::MenuItem( ICON_FA_BOXES_STACKED "  Compile All Modules", "Ctrl+Shift+B", false, bCompiling == false ) )
-            {
-                if ( pCompiler != nullptr )
-                    pCompiler->compileAll();
-            }
-            EditorWidgets::drawTooltip( "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다 (Ctrl+Shift+B)" );
+            EditorCommandGui::drawMenuItem( "build.compileGame" );
+            EditorCommandGui::drawMenuItem( "build.compileEditor" );
+            EditorCommandGui::drawMenuItem( "build.compileAll" );
 
             ImGui::Separator();
-
-            if ( ImGui::MenuItem( ICON_FA_BAN "  Cancel Build", nullptr, false, bCompiling ) )
-            {
-                if ( pCompiler != nullptr )
-                    pCompiler->cancel();
-            }
-            EditorWidgets::drawTooltip( "현재 진행 중인 컴파일 작업을 취소합니다" );
+            EditorCommandGui::drawMenuItem( "build.cancel" );
 
             ImGui::EndMenu();
         }
@@ -358,47 +263,9 @@ namespace sw::editor
             EditorThemeUtil::drawThemeSettingsDialog( &EditorMenuBarInternal::_s_bShowThemeSettings );
     }
 
-    void EditorMenuBar::processHotkeys()
-
+    void EditorMenuBar::openThemeDialog()
     {
-        ImGuiIO& io = ImGui::GetIO();
-        if ( io.WantTextInput == false )
-        {
-            IModuleCompiler* pCompiler = getService<IModuleCompiler>();
-
-            if ( io.KeyCtrl || io.KeySuper )
-            {
-                if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) && EditorPlaySession::isStopped() )
-                    getService<CommandStack>()->undo();
-                if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) && EditorPlaySession::isStopped() )
-                    getService<CommandStack>()->redo();
-                if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
-                    EditorMenuBarInternal::openSceneFileDialog();
-                if ( ImGui::IsKeyPressed( ImGuiKey_S, false ) )
-                    EditorMenuBarInternal::saveFocusedOrScene();
-                if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_P, false ) )
-                    CommandPalettePopup::toggle();
-                else if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) )
-                    QuickLauncherPopup::toggle();
-                if ( ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
-                    CommandPalettePopup::toggle();
-                if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_F11, false ) )
-                {
-                    if ( pCompiler != nullptr )
-                        pCompiler->compileModule( "SWGame" );
-                }
-                if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_B, false ) )
-                {
-                    if ( pCompiler != nullptr )
-                        pCompiler->compileAll();
-                }
-            }
-            else if ( ImGui::IsKeyPressed( ImGuiKey_F7, false ) )
-            {
-                if ( pCompiler != nullptr )
-                    pCompiler->compileModule( "SWGame" );
-            }
-        }
+        EditorMenuBarInternal::_s_bShowThemeSettings = true;
     }
 
     void EditorMenuBar::processOpenPanelRequests()

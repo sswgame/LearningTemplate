@@ -170,9 +170,8 @@ namespace sw::editor
         bool          saveComponentPreset( const Component* pComp, string_view presetName );
         bool          loadComponentPreset( Component* pComp, string_view presetFilePath );
 
-        void alignSelectedObjects( AlignAxis axis, AlignType type );
-        void distributeSelectedObjects( AlignAxis axis );
-        void snapSelectedToGround();
+        // 정렬·분배·바닥 스냅은 여기 전달자를 두지 않는다 — 뷰포트 툴바가 유일한 호출자였고
+        // 지금은 커맨드 레지스트리(transform.*)를 거친다. 로직은 EditorTransformCommands 다.
 
         bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
         const string&               getPrefabIsolationPrefabPath() const;

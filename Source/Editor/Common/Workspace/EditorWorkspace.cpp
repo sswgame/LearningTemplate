@@ -410,21 +410,6 @@ namespace sw::editor
         return EditorTransformCommands::loadComponentPreset( pComp, presetFilePath );
     }
 
-    void EditorWorkspace::snapSelectedToGround()
-    {
-        EditorTransformCommands::snapSelectedToGround();
-    }
-
-    void EditorWorkspace::alignSelectedObjects( AlignAxis axis, AlignType type )
-    {
-        EditorTransformCommands::alignSelectedObjects( axis, type );
-    }
-
-    void EditorWorkspace::distributeSelectedObjects( AlignAxis axis )
-    {
-        EditorTransformCommands::distributeSelectedObjects( axis );
-    }
-
     const string& EditorWorkspace::getPrefabIsolationPrefabPath() const
     {
         if ( _listPrefabIsolationFrame.empty() )

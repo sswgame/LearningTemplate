@@ -9,12 +9,14 @@ sw_addTestExecutable(EditorTest
 	SOURCES
 		TestEditorAssetType.cpp
 		TestEditorBackgroundJob.cpp
+		TestEditorCommandRegistry.cpp
 		TestEditorListFilter.cpp
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorViewportMath.cpp
 		TestSelectionManager.cpp
 		TestTexturePipeline.cpp
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTransformCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
