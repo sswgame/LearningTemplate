@@ -49,13 +49,6 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SceneComponentTransformSurvivesXml )
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurvivesXml )
 {
-    // 지금은 실패한다 — 모든 직렬화기가 `TypeInfo::forEachProperty` 를 기본값으로 부르고, 그
-    // 기본값은 `bIncludeBase = false` 다(XmlSerializer 3곳 · JsonSerializer 2곳 ·
-    // ObjectDiffSerializer · SchemaMigrate 2곳 · ComponentDefaults). 그래서 상속된 PROPERTY 가
-    // 저장도 되지 않고 로드도 되지 않는다. 이 케이스는 **원하는 동작을 적어 둔 것**이고,
-    // 고치면 아래 SKIP 한 줄만 지우면 통과한다. 경위와 영향 범위는 docs/06_Backlog.md 를 볼 것.
-    SW_TEST_SKIP( "직렬화기가 상속 PROPERTY 를 훑지 않는다 — 백로그 항목 참고" );
-
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "MeshSource" ) );
     SW_ASSERT_NOT_NULL( pSource );

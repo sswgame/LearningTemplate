@@ -1,8 +1,27 @@
 <Prefab formatVersion="0" name="TestProp">
 	<GameObject _schemaVersion="0" _name="TestProp" _bActive="true">
 		<_listComponent>
-			<SpriteComponent _meshName="" _materialName="" _textureName="" _spriteName="" />
-			<BoxCollider2DComponent _offsetPos="0,0" _offsetScale="1,1" _colliderType="0" />
+			<SpriteComponent _localPosition="3,0.5,0"
+			                 _localRotation="0,0,0"
+			                 _localScale="1,1,1"
+			                 _attachOwner="None"
+			                 _attachComponent="None"
+			                 _meshId=""
+			                 _boundsRadius="0.866"
+			                 _blendMode="null"
+			                 _gpuSpinSeed="0"
+			                 _meshName=""
+			                 _materialName=""
+			                 _textureName=""
+			                 _spriteName="" />
+			<BoxCollider2DComponent _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="1,1"
+			                        _colliderType="0" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

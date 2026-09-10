@@ -532,7 +532,7 @@ namespace sw
             if ( prop._metadata._bTransient == SW_TRUE )
                 return;
             JsonSerializerInternal::writeProperty( dst, prop, pInstance, ctx );
-        } );
+        }, true /* 상속 PROPERTY 포함 */ );
     }
 
     bool JsonSerializer::readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
@@ -629,7 +629,7 @@ namespace sw
             if ( prop._metadata._bTransient == SW_TRUE )
                 return;
             JsonSerializerInternal::writeProperty( root, prop, pInstance, ctx );
-        } );
+        }, true /* 상속 PROPERTY 포함 */ );
         return doc.dump();
     }
 

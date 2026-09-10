@@ -157,7 +157,7 @@ namespace sw
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
             }
-        } );
+        }, true /* 상속 PROPERTY 포함 */ );
         return pBase;
     }
 
@@ -191,7 +191,7 @@ namespace sw
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
             }
-        } );
+        }, true /* 상속 PROPERTY 포함 */ );
     }
 
     const SchemaOrphanValue* SchemaMigrateContext::findOrphan( hashed_string name ) const

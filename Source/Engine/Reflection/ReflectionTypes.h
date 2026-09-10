@@ -750,7 +750,19 @@ namespace sw
         /** @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 (평탄화 캐시 미사용 제로 할당 검색). */
         const PropertyInfo* findPropertyInHierarchy( const hashed_string& propertyNameOrAlias ) const;
 
-        /** @brief 프로퍼티를 순회합니다. bIncludeBase가 true이면 상속 체인 포함. */
+        /**
+         * @brief 프로퍼티를 순회합니다. bIncludeBase가 true이면 상속 체인 포함.
+         * @details **직렬화는 true 를 써야 한다.** 기본값이 false 라서 오래도록 `XmlSerializer`·
+         *          `JsonSerializer`·`ObjectDiffSerializer` 가 **상속된 PROPERTY 를 저장도 로드도
+         *          하지 않았다** — 컴포넌트에서는 그것이 곧 `SceneComponent` 의 트랜스폼이라,
+         *          씬·프리팹·Undo 스냅샷에서 메시·스프라이트·카메라의 위치가 사라졌다
+         *          (`BinarySerializer` 만 처음부터 `getPropertiesWithBase()` 를 써서 옳았다).
+         *          `getPropertiesWithBase()` 는 기반 먼저, 파생이 같은 이름을 **덮어쓰는** 순서로
+         *          평탄화하고 캐시하므로 중복 방출은 없다.
+         * @note 상속 체인을 **호출부가 직접 도는** 코드(`ComponentDefaults` 가 레벨마다 자기 XML
+         *       노드를 찾아 적용한다)는 false 가 맞다 — true 로 주면 같은 값을 여러 노드에서
+         *       중복 적용한다.
+         */
         template <typename Func>
         void forEachProperty( Func&& func, bool bIncludeBase = false ) const
         {

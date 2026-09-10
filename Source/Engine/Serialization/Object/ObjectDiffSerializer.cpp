@@ -58,7 +58,7 @@ namespace sw
             outDiffBytes.insert( outDiffBytes.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
             outDiffBytes.insert( outDiffBytes.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
             outDiffBytes.insert( outDiffBytes.end(), modBytes.begin(), modBytes.end() );
-        } );
+        }, true /* 상속 PROPERTY 포함 */ );
 
         return true;
     }

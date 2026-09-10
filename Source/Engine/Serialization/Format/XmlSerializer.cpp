@@ -318,7 +318,7 @@ namespace sw
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
                         }
                     }
-                } );
+                }, true /* 상속 PROPERTY 포함 */ );
             }
 
             static bool isNameKnown( const unordered_set<string>& uniqueKnownNames, const utf8* pChildName )
@@ -433,7 +433,7 @@ namespace sw
                         else
                             SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );
                     }
-                } );
+                }, true /* 상속 PROPERTY 포함 */ );
 
                 (void)uniqueSeen;
                 if ( pOutListOrphan != nullptr )
@@ -456,7 +456,7 @@ namespace sw
                         if ( alias.empty() == false )
                             uniqueKnownNames.insert( alias.c_str() );
                     }
-                } );
+                }, true /* 상속 PROPERTY 포함 */ );
 
                 // 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
                 // 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.

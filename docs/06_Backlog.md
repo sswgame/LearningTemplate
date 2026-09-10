@@ -59,8 +59,6 @@ cd build/Ninja-Debug/Bin
 >
 > **주의 1**: 이 스위치를 쓰면 **종료 시 크래시한다** — 아래 1-B. 기본 게이트(스위치 없음)는
 > 네 백엔드 모두 종료 코드 0 · `[Error]` 0건 · vtx=742 로 그대로다.
-> **주의 2**: 씬의 메시·스프라이트·카메라는 **원점에 겹쳐 로드된다** — 1-A(상속 PROPERTY 가
-> 직렬화되지 않는 결함) 때문이다. 그것을 고치면 애셋을 다시 생성해야 한다.
 
 ```powershell
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
@@ -106,40 +104,6 @@ cd build/Ninja-Debug/Bin
 ---
 
 ## 1. 남은 일 (우선순위 순)
-
-### 1-A. 직렬화기가 **상속된 PROPERTY 를 저장·로드하지 않는다** — 결정 필요
-
-테스트 씬 애셋을 만들다 발견했고, **왕복 테스트로 확정**했다
-(`Test/EngineTest/TestObjectStateRoundTrip.cpp`). 지금은 그 케이스를 `SW_TEST_SKIP` 으로 두었다 —
-고치면 SKIP 한 줄만 지우면 통과한다.
-
-**증거**: `SceneComponent` 를 직접 붙인 오브젝트는 위치가 왕복한다. `MeshComponent`(=
-`SceneComponent` 상속)에 위치·스케일을 주고 저장하면 **XML 에 아예 안 들어가고** 로드해도
-기본값이다. 실제로 생성한 씬 애셋에서도 `<MeshComponent _meshId="" _boundsRadius=…>` 처럼
-트랜스폼 속성이 없다.
-
-**원인**: `TypeInfo::forEachProperty( func, bIncludeBase = false )` 의 기본값. 이 기본값으로
-부르는 곳이 전부다 — `XmlSerializer` 3곳 · `JsonSerializer` 2곳 · `ObjectDiffSerializer` ·
-`SchemaMigrate` 2곳 · `ComponentDefaults`. 즉 상속 PROPERTY 는 어느 경로에서도 직렬화되지 않는다.
-
-**영향 범위** (전부 같은 `ObjectStateSerializer` 경로다):
-
-- **씬 저장/로드** — 모든 메시·스프라이트·카메라·라이트·콜라이더의 트랜스폼이 사라진다
-  (가장 파생 타입이 정확히 `SceneComponent` 인 오브젝트만 살아남는다).
-- **프리팹 저장/로드** — 같다.
-- **Undo 스냅샷** — `EditorTransaction::captureSnapshot` 이 같은 직렬화기를 쓴다. 즉 기즈모로
-  옮긴 뒤 Ctrl+Z 가 위치를 되돌리지 못할 것으로 보인다(에디터에서 실제로 눌러 확인해야 한다).
-- **프리팹 오버라이드 diff** — `ObjectDiffSerializer` 도 같은 기본값이라 트랜스폼 오버라이드가
-  잡히지 않는다.
-
-**왜 지금까지 안 드러났나**: 저장소에 `.scene.xml` 이 **하나도 없었다.** 씬을 저장·로드하는
-유일한 주체가 에디터이고, 실기동 검증은 빈 씬을 봤다(0절).
-
-**고치려면** `bIncludeBase = true` 로 넘기면 되지만 네 하위 시스템의 의미가 함께 바뀐다 —
-저장 파일이 커지고(추가만 되므로 옛 파일 로드는 그대로), 프리팹 오버라이드가 트랜스폼을 잡기
-시작하고, `ComponentDefaults`·`SchemaMigrate` 가 보는 프로퍼티 집합이 늘어난다. 확인할 것:
-`getPropertiesWithBase()` 가 파생이 같은 이름을 다시 선언한 경우를 어떻게 다루는지(중복 방출),
-그리고 기본값 적용이 두 번 되지 않는지. **엔진 전역 포맷 의미 변경이라 사용자 결정이 필요하다.**
 
 ### 1-B. 테스트 씬을 로드하면 **종료 시 컴포넌트 풀 해제가 깨진다** — 재현 한 줄
 
@@ -382,6 +346,36 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (직렬화기가 상속 PROPERTY 를 빠뜨리던 것을 고쳤다 — 예전 1-A)
+
+`TypeInfo::forEachProperty( func, bIncludeBase = false )` 의 **기본값** 때문에 `XmlSerializer`·
+`JsonSerializer`·`ObjectDiffSerializer`·`SchemaMigrate` 가 상속된 PROPERTY 를 저장도 로드도 하지
+않았다. 컴포넌트에서는 그것이 곧 `SceneComponent` 의 트랜스폼이라, 씬·프리팹·Undo 스냅샷에서
+메시·스프라이트·카메라의 **위치가 사라졌다**.
+
+**의도가 어느 쪽인지는 코드가 말해 준다**: `BinarySerializer` 는 처음부터
+`getPropertiesWithBase()` 를 쓴다. 즉 쿠킹된 바이너리에는 트랜스폼이 있고 XML/JSON 원본에는
+없는 상태였다. 여덟 자리(Xml 3 · Json 2 · ObjectDiff 1 · SchemaMigrate 2)에 `true` 를 넘긴다.
+
+**`ComponentDefaults` 는 일부러 그대로 뒀다.** 거기는 상속 체인을 **호출부가 직접** 돌면서
+레벨마다 자기 XML 노드(`<SceneComponent>`, `<MeshComponent>` …)를 찾아 자기 프로퍼티만 적용한다.
+`true` 를 주면 같은 기반 값을 여러 노드에서 중복 적용한다. 판단 근거를 `forEachProperty` 선언부
+주석에 남겼다 — 다음 사람이 여기서 같은 고민을 반복하지 않도록.
+
+중복 방출 걱정은 없다: `getPropertiesWithBase()` 가 기반 먼저 넣고 파생이 같은 이름을 **덮어쓰는**
+순서로 평탄화하며 결과를 캐시한다.
+
+**검증**: `TestObjectStateRoundTrip.DerivedComponentInheritedTransformSurvivesXml` 의 `SW_TEST_SKIP`
+을 걷었고 통과한다(고치기 전에는 위치·스케일 6개 단정이 모두 실패했다). Debug·Shipping 경고 0,
+nogpu 5/5 **양쪽 모두 회귀 없음**, 린트 6/6, 컨벤션 0건, 기본 게이트 네 백엔드 vtx=742 동일.
+테스트 씬 애셋을 다시 생성해 `<MeshComponent _localPosition=… _localScale=…>` 처럼 트랜스폼이
+실제로 들어간 것을 확인했다(프리팹도 같다).
+
+**곁들여 알게 된 것**: `SpriteComponent` 는 `SceneComponent` 가 아니라 **`MeshComponent` 를**
+상속한다(이제 `_meshId`·`_boundsRadius` 가 함께 직렬화된다).
+
+**1-B(종료 시 풀 해제 단정)는 이 수정과 무관했다** — 고친 뒤에도 그대로 재현된다. 별개 버그다.
 
 ### 2026-09-10 (프리팹 저장이 엉뚱한 폴더에 쓰고 있었다 — 저장 경로 해석 통일)
 
