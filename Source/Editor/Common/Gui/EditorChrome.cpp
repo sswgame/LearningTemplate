@@ -292,13 +292,13 @@ namespace sw::editor
         overlayDesc._pId        = desc._pId != nullptr ? desc._pId : "##SearchOverlay";
         overlayDesc._pOpen      = desc._pOpen;
         overlayDesc._anchorPos  = float2{ viewportPos._x + viewportSize._x * 0.5f,
-                                          viewportPos._y + viewportSize._y * desc._viewportYFrac };
+                                         viewportPos._y + viewportSize._y * desc._viewportYFrac };
         overlayDesc._pivot      = float2{ 0.5f, 0.5f };
         overlayDesc._size       = desc._size;
         overlayDesc._rounding   = desc._rounding;
         overlayDesc._borderSize = desc._borderSize;
         overlayDesc._flags      = EditorOverlayFlags::NoTitleBar | EditorOverlayFlags::NoResize |
-                                  EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
+                             EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
 
         ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ desc._bgColor._x, desc._bgColor._y, desc._bgColor._z, desc._bgColor._w } );
         ImGui::PushStyleColor( ImGuiCol_Border,

@@ -1254,7 +1254,8 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
     class CustomVirtualStick : public IInputDevice
     {
     public:
-        CustomVirtualStick() : _bTriggerDown{ false } {}
+        CustomVirtualStick()
+            : _bTriggerDown{ false } {}
         virtual ~CustomVirtualStick() override = default;
 
         InputDeviceKind getDeviceKind() const override { return InputDeviceKind::Custom; }

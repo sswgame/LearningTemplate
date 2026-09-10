@@ -149,7 +149,7 @@ namespace sw
         const uint32 valuesVersion   = ctx._passValues.getVersion();
         const uint32 registryVersion = ctx._resourceRegistry.getVersion();
         const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
-                                       ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
+                               ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
 
         ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                            engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );

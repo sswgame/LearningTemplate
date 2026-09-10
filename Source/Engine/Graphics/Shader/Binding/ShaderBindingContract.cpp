@@ -286,7 +286,7 @@ namespace sw
                 namespace vk = shaderslot::vk;
                 vector<R> list;
                 auto      add = [&]( const utf8* pName, ShaderBindingKind kind, ShaderReservedLocation dx11, ShaderReservedLocation dx12,
-                                     ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
+                                ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
                 {
                     R r{};
                     r._name   = pName;

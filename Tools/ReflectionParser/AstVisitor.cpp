@@ -1035,8 +1035,8 @@ namespace sw
         {
             const bool bHasFunction = AstVisitorInternal::hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
                                       AstVisitorInternal::sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-            const bool bHasBody     = AstVisitorInternal::hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-                                      ( AstVisitorInternal::cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+            const bool bHasBody = AstVisitorInternal::hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+                                  ( AstVisitorInternal::cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
             if ( bHasFunction || bHasBody )
             {
                 CXCursor   parent         = clang_getCursorSemanticParent( cursor );
