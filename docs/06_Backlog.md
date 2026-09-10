@@ -199,9 +199,19 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 ### 1-3. 확인만 하고 넘어간 것
 
-> 2026-09-10: **프리팹 GUID 참조는 배포본에서 처음으로 살아 있다** — 씬을 저장한 뒤 프리팹을 옮겨 보는
-> 실기동 검증은 아직 안 했다(단위 테스트는 시작 시점 표와 레지스트리 형식만 본다). 배포본에서 에셋 이름을
-> 바꾸는 시나리오가 생기면 `SceneDocument` 의 GUID 해석 경로를 팩으로 한 번 태워 볼 것.
+> 2026-09-10: **프리팹을 옮긴 뒤 GUID 복구를 실기동으로 확인했다** (Dev, 에디터 + 임시 씬). `testprop.prefab.xml`
+> 을 `testprop_moved.prefab.xml` 로 옮기고(.meta 의 sourcePath 도 같이) 옛 경로를 가리키는 씬을 둘 띄웠다:
+> **경로만** 있는 씬은 `[Error] Not found: .../testprop.prefab.xml` 뒤에 소스 트리에 남아 있던 **낡은
+> `testprop.prefab.bin`** 으로 조용히 물러났고, **GUID 가 있는** 씬은 레지스트리로 `testprop_moved.prefab.xml`
+> 을 찾아 로드했다. 배포본(팩) 경로는 같은 코드(`loadRegistry`)가 "5 항목 (팩 assetregistry.txt)" 로 채우는
+> 것까지만 봤다 — Shipping 은 시작 씬이 없어 씬 로드 자체를 태울 수 없다.
+>
+> 곁들여 본 것: `CookPrefabs` 가 소스 트리 안에 `*.prefab.bin` 을 남기고, `PrefabAsset` 은 XML 을 못 찾으면
+> 그 .bin 으로 물러난다. 위 실험에서 옮긴 프리팹의 옛 .bin 이 실패를 가렸다 — 이름을 바꾸거나 지운 프리팹이
+> 낡은 .bin 으로 되살아나는 경로다. `.bin` 은 `.gitignore` 되어 있다(쿠킹 산출물로 명시) — 남는 물음은 "XML 이
+> 없으면 .bin 으로 물러나는 것" 이 맞는가다. 배포본은 .bin 만 있으니 폴백이 필요하지만, Dev 에서 XML 이 사라진
+> 자리를 낡은 .bin 이 메우면 위처럼 실패가 가려진다. Dev 에서는 XML 이 정본이므로 .bin 폴백을 경고로 격상하거나
+> 쿠커 산출물을 소스 트리 밖으로 옮기는 것이 후보다.
 
 > 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
 > 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
