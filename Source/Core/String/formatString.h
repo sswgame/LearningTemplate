@@ -257,16 +257,6 @@ namespace sw
         /** @brief 이 값에 적용할 Format 입니다. */
         constexpr const Format& getFormat() const noexcept { return _format; }
 
-        /** @brief 0 이면 값, 1 이면 Format 입니다 (tuple 프로토콜). */
-        template <uint32 TIndex>
-        constexpr decltype( auto ) get() const noexcept
-        {
-            if constexpr ( TIndex == 0 )
-                return getValue();
-            else if constexpr ( TIndex == 1 )
-                return getFormat();
-        }
-
     private:
         T      _value;
         Format _format;
@@ -282,19 +272,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류다.
-     * @note 인자 수는 **Debug 에서 실행 시점에** 대조한다 — 포맷을 훑으며 자리표를 소비하는 그 자리에서, 인자가 남았는데
-     *       자리표가 없거나 자리표가 남았는데 인자가 없으면 디버그 브레이크. 따로 세는 패스는 없다(비용은 나머지 문자열
-     *       한 번 memchr). 컴파일 시점은 C++17 에서 함수인 채로는 불가능하다(함수 인자로 들어온 리터럴은 상수식이 아니다;
-     *       매크로 우회는 쓰지 않기로 했다) — C++20 의 `consteval` 포맷 타입으로 갈 때 옮긴다. 실행 시점 검사는 그 대신
-     *       현지화처럼 **데이터에서 오는 포맷**까지 본다. Release/Shipping 에선 아무것도 하지 않는다.
-     * @details - `%#` — **옵션이 붙지 않는 순수 자리표.** `%#` 두 글자만 소비하고 뒤 글자는 무조건 리터럴이다.
-     *            그래서 `%#dB`·`%#x%#`·`%#s`·`%#.txt` 가 전부 글자 그대로 나온다. 예전엔 `#` 뒤를 printf 서식으로
-     *            읽어 `%#x%#` 가 가로를 16진수로, `%#s` 가 단위 `s` 를 삼키고, `%#.txt` 가 `.tx` 를 잃었다 —
-     *            세 번 다 사고였고, 그 문법을 쓰려던 사람은 없었다.
-     *          - printf 형 — 서식이 필요하면 이쪽이다: `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그·너비·정밀도·
-     *            길이 수식어·변환 문자를 printf 대로 읽되 **타입은 인자가 정한다**(`%d` 에 문자열을 줘도 문자열이 나온다).
-     *            공백 플래그(`% d`)는 받지 않는다.
+     * @details - `%#` — 옵션이 붙지 않는 순수 자리표. 두 글자만 소비하고 뒤 글자는 리터럴이다(`%#dB`, `%#x%#`, `%#.txt`).
+     *          - printf 형 — 서식이 필요하면 이쪽: `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그·너비·정밀도·길이 수식어·
+     *            변환 문자를 printf 대로 읽되 타입은 인자가 정한다(`%d` 에 문자열을 줘도 문자열). 공백 플래그(`% d`)는 없다.
+     *          - `%%` 는 퍼센트. 알아볼 수 없는 `%…` 는 리터럴이고 인자를 소비하지 않는다.
      *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 준다.
+     * @note 인자 수는 Debug 에서 실행 시점에 대조한다 — 자리표를 소비하는 자리에서, 따로 세는 패스 없이. 컴파일 시점 검사는
+     *       C++17 에서 함수인 채로는 불가능하다(C++20 `consteval` 포맷 타입으로 갈 때 옮긴다). 실행 시점 검사는 데이터에서
+     *       오는 포맷(현지화)까지 본다. Release/Shipping 에선 아무것도 하지 않는다.
      */
     class FormatString
     {
@@ -323,11 +308,7 @@ namespace sw
             pBuffer[MathUtil::min( pos, capacity - 1 )] = '\0';
         }
 
-        /**
-         * @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 세웁니다 — 어느 포맷인지 stderr 에 찍고 디버그 브레이크.
-         * @details 브레이크만 하면 크래시 덤프에 주소만 남아 어느 로그인지 찾을 수 없다(실제로 그랬다). 포매터 안이라
-         *          로거를 부를 수 없으니(재귀) fputs 로 직접 쓴다. Release/Shipping 에선 호출되지 않는다.
-         */
+        /** @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 세웁니다 — 어느 포맷인지 stderr 에 찍고(로거는 재귀라 못 쓴다) 디버그 브레이크. */
         static void reportArgumentMismatch( string_view format, const utf8* pReason ) noexcept
         {
             std::fputs( "[formatstring] argument/placeholder mismatch (", stderr );
@@ -339,11 +320,7 @@ namespace sw
             SW_ASSERT( false && "formatstring: argument/placeholder mismatch" );
         }
 
-        /**
-         * @brief 포맷이 소비할 인자 수 — `%#` 과 유효한 printf 서식이 각 1개. `%%` 와 알아볼 수 없는 `%…` 는 0.
-         * @details 실행 경로는 이걸 쓰지 않는다(포맷을 훑는 김에 검사한다). 리터럴에 대해 `static_assert` 로 규칙을 고정하는
-         *          테스트와, C++20 `consteval` 로 옮길 때의 정본이다. 세는 규칙은 쓰는 규칙(findNextPlaceholder) 그대로다.
-         */
+        /** @brief 포맷이 소비할 인자 수 — `%#` 과 유효한 printf 서식이 각 1개, `%%`·모르는 `%…` 는 0. 실행 경로는 안 쓰고 테스트의 static_assert 용이다. */
         static constexpr uint32 countPlaceholders( string_view format ) noexcept
         {
             uint32 count{ 0 };
@@ -361,11 +338,7 @@ namespace sw
         static constexpr string_view kDigitLower        = "0123456789abcdefghijklmnopqrstuvwxyz";
         static constexpr string_view kDigitUpper        = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         static constexpr size_t      kIntegerBufferSize = 64;
-        /**
-         * @brief 실수 고정소수점의 최대 길이 — 부호 1 + 정수부 309 (DBL_MAX) + '.' + 정밀도 최대 255 + NUL = 567.
-         * @details 예전엔 128 이라 |x| ≥ 1e121 이면 to_chars 가 실패하고 "폴백" 으로 떨어졌는데, 그 폴백은
-         *          `static_cast<uint64>( value )` 로 시작해 UB 였다(쓰레기 숫자). 담을 수 있게 키우고 폴백은 지웠다.
-         */
+        /** @brief 실수 고정소수점의 최대 길이 — 부호 1 + 정수부 309 (DBL_MAX) + '.' + 정밀도 최대 255 + NUL = 567. to_chars 가 실패할 수 없다. */
         static constexpr size_t kFloatBufferSize = 640;
         static constexpr size_t kTempBufferSize  = kFloatBufferSize;
 
@@ -394,13 +367,9 @@ namespace sw
         };
 
         /**
-         * @brief `%` 뒤의 표준 서식(플래그·너비·정밀도·길이·변환)을 읽어 Format 으로 옮깁니다.
-         * @details 문법은 printf 와 같다: `% [flags] [width] [.precision] [length] conversion`.
-         *          예전에는 `%#` 과 `%d` 같은 **맨 변환 문자만** 알아봤다. 그래서 `%.3f` 를 쓰면
-         *          `%.` 까지만 플레이스홀더로 먹고 `3f` 가 글자로 남았다 — 조용히 틀린 출력이 나온다.
-         *
-         *          Format 이 이미 정밀도·너비·부호·정렬·패딩을 다 갖고 있으므로, 여기서는 문자를 읽어
-         *          그 스위치를 켜 주기만 하면 된다. 값을 실제로 찍는 코드는 손대지 않는다.
+         * @brief `%` 뒤의 printf 서식(플래그·너비·정밀도·길이·변환)을 읽어 Format 으로 옮깁니다.
+         * @details 문법은 printf 와 같다: `% [flags] [width] [.precision] [length] conversion`. 문자를 읽어 Format 의
+         *          스위치를 켜 주기만 한다 — 값을 찍는 코드는 손대지 않는다.
          * @param format     `%` 바로 다음부터의 남은 문자열.
          * @param outFormat  읽어 낸 옵션을 켤 Format.
          * @param outHasSpec 하나라도 옵션을 읽었으면 true.
@@ -432,15 +401,8 @@ namespace sw
                         outHasSpec = true;
                         ++cursor;
                         break;
-                    // `#` 은 여기 없다 — `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 이 파서에
-                    // 들어오지 않는다. 예전엔 여기서 `#` 을 플래그로 읽고 뒤를 계속 서식으로 해석해 `%#x%#`·`%#s`·`%#.txt`
-                    // 가 전부 깨졌다. printf 의 `#`(대체 형식) 자체는 이 포맷터에 대응 옵션이 없어 지원하지 않는다.
-                    // 공백은 **플래그로 받지 않는다.** printf 의 공백 플래그는 이 포맷터에
-                    // 대응하는 옵션이 없어 아무 일도 하지 않았는데, 받아들이는 바람에 `%#` 뒤에
-                    // 오는 단어의 첫 글자가 변환 문자로 읽혔다 — "%# Failed" 가 'F' 를 먹어
-                    // "0ailed" 가 되고, "%# of 8" 은 'o' 때문에 8진수로 찍혔다. 저장소에 그런
-                    // 로그가 82곳 있었다. 공백을 만나면 서식이 아니라고 보고(return 0) 평범한
-                    // `%#` 플레이스홀더로 되돌린다. 진짜 진수 지시자는 `%#x` 처럼 붙여 쓴다.
+                    // `#` 은 플래그가 아니다 — `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 여기 오지 않는다.
+                    // 공백도 플래그로 받지 않는다 — 받으면 `%# Failed` 의 'F' 가 변환 문자로 읽힌다. 서식이 아니면 return 0.
                     default:
                         bDone = true;
                         break;
@@ -462,8 +424,7 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 3) 정밀도 — printf 규약 그대로다(`%.f` 는 정밀도 0). `%#.txt` 가 여기로 들어와 `.tx` 를 잃던 사고는
-            // `%#` 을 순수 자리표로 만들어 원천에서 막았다(위 `#` 주석).
+            // 3) 정밀도 — printf 규약 그대로다(`%.f` 는 정밀도 0).
             if ( cursor < format.size() && format[cursor] == '.' )
             {
                 ++cursor;
@@ -491,9 +452,7 @@ namespace sw
 
             switch ( format[cursor] )
             {
-                // 주의: `%#` **바로 뒤**의 문자가 진수 지시자다. 그래서 "%#x%#" 은 "가로x세로" 가
-                // 아니라 "가로를 16진수로" 라는 뜻이 된다 — 실제로 해상도 로그 16곳이 폭을
-                // 16진수로 찍고 있었다(1280 → 500). 리터럴 'x' 를 쓰려면 "%#×%#" 처럼 띄운다.
+                // 진수 지시자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버린다.
                 case 'x':
                     outFormat.hex();
                     outHasSpec = true;
@@ -547,9 +506,7 @@ namespace sw
                             continue;
                         }
 
-                        // `%#` 은 옵션이 붙지 않는 순수 자리표다 — 두 글자만 소비하고 뒤는 무조건 리터럴이다.
-                        // 서식이 필요하면 printf 형(`%3d`, `%.2f`, `%08x`)을 쓴다. `#` 을 플래그로 읽던 시절엔
-                        // `%#x%#`(가로x세로)가 16진수, `%#s`(초) 가 `s` 를 삼킴, `%#.txt` 가 `.tx` 를 잃음 — 셋 다 사고였다.
+                        // `%#` 은 순수 자리표 — 두 글자만 소비하고 뒤는 리터럴이다. 서식이 필요하면 printf 형을 쓴다.
                         if ( format[charIndex + 1] == '#' )
                         {
                             match._pos = charIndex;
@@ -569,9 +526,7 @@ namespace sw
                             return match;
                         }
 
-                        // 알아볼 수 없는 `%…` 는 서식이 아니다 — `%` 를 리터럴로 두고 **인자를 소비하지 않는다.**
-                        // 예전엔 두 글자를 먹고 인자 하나를 소비했다: "100% done %#" 에서 `% d` 가 인자를 삼켜 뒤의
-                        // 인자가 전부 한 칸씩 밀렸다. printf 라면 미정의 동작인 자리인데, 밀리는 쪽이 훨씬 찾기 어렵다.
+                        // 알아볼 수 없는 `%…` 는 서식이 아니다 — `%` 를 리터럴로 두고 인자를 소비하지 않는다(소비하면 뒤 인자가 밀린다).
                         ++charIndex;
                         continue;
                     }
@@ -581,7 +536,7 @@ namespace sw
             return match;
         }
 
-        /** @brief 기록합니다. */
+        /** @brief 자리표 사이의 리터럴 구간을 씁니다 — `%%` 는 `%` 하나로. */
         static uint32 writeFormatPrefix( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view prefix ) noexcept
         {
             size_t prefixIndex{ 0 };
@@ -598,7 +553,7 @@ namespace sw
             return pos;
         }
 
-        /** @brief 내부 포맷팅을 수행합니다. */
+        /** @brief 자리표 하나에 인자 하나를 붙이고 나머지로 재귀합니다. */
         template <typename T, typename... Args>
         static uint32 formatInternal( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view format, T&& value, Args&&... args ) noexcept
         {
@@ -631,7 +586,7 @@ namespace sw
             return writeFormatPrefix( pBuffer, pos, capacity, format );
         }
 
-        /** @brief 기록합니다. */
+        /** @brief 문자열을 용량 안에서 복사합니다 — 잘리면 앞부분만 남는다. */
         SW_INLINE static uint32 write( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, string_view str ) noexcept
         {
             if ( pos >= capacity - 1 )
@@ -645,13 +600,9 @@ namespace sw
 
         /**
          * @brief 값 하나를 버퍼에 붙입니다. pSpec 은 서식 문자열(`%5d` 등)이 준 서식이고, 없으면 nullptr.
-         * @details 서식의 출처가 둘이다 — 서식 문자열(pSpec)과 `Fmt( v, Format )` 의 값 쪽 서식. 값 **변환**(기수·정밀도)은
-         *          Fmt 가 있으면 Fmt 의 것, 없으면 pSpec 의 것이고, **너비·정렬**은 pSpec 이 있으면 pSpec, 없으면 Fmt 의 것이다.
-         *          예전엔 서식 유무로 함수가 둘이어서 문자열 지름길·널 가드·Fmt 풀기가 두 번 복제돼 있었다.
-         *
-         *          문자열류는 임시 버퍼를 거치지 않는다 — 임시 버퍼(kTempBufferSize)를 거치면 긴 C 문자열이 거기서 잘렸다
-         *          (Vulkan 검증 메시지의 꼬리가 사라져 진단이 안 됐다). 단, 널은 지름길을 타면 안 된다: `string_view{ nullptr }`
-         *          는 strlen(nullptr) 이라 SEGFAULT 다(`nullptr` 리터럴도 C++17 에선 string_view 로 변환 "가능" 해서 여기로 온다).
+         * @details 값 변환(기수·정밀도)은 Fmt 가 있으면 Fmt 의 서식, 없으면 pSpec; 너비·정렬은 pSpec 이 있으면 pSpec, 없으면 Fmt.
+         *          문자열류는 임시 버퍼를 거치지 않는다(거치면 긴 문자열이 거기서 잘린다). 널 포인터는 지름길을 타면 안 된다 —
+         *          `string_view{ nullptr }` 는 strlen(nullptr) 이다(`nullptr` 리터럴도 C++17 에선 string_view 로 변환 "가능").
          */
         template <typename T>
         static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format* pSpec ) noexcept
@@ -683,10 +634,8 @@ namespace sw
         }
 
         /**
-         * @brief 문자열이 아닌 값을 변환해 붙입니다 — 목적지에 자리가 있으면 **바로 그 자리에** 변환합니다.
-         * @details 예전엔 항상 kTempBufferSize 짜리 스택 임시에 변환한 뒤 복사했다. 너비 맞춤이 없고 목적지에 변환 최대
-         *          길이만큼 남아 있으면(로그 버퍼 8 KB 는 거의 늘 그렇다) 임시도 복사도 없다. 그 밖(패딩이 필요하거나 버퍼
-         *          끝에 가까울 때)에만 임시를 거친다 — 잘림 규칙(앞부분만 남는다)은 그때 write 가 그대로 지킨다.
+         * @brief 문자열이 아닌 값을 변환해 붙입니다 — 너비 맞춤이 없고 목적지에 자리가 있으면 바로 그 자리에 변환한다.
+         * @details 그 밖(패딩이 필요하거나 버퍼 끝에 가까울 때)에만 임시를 거친다. 잘림 규칙(앞부분만 남는다)은 write 가 지킨다.
          */
         template <typename T>
         static uint32 appendConverted( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value,
@@ -741,7 +690,7 @@ namespace sw
                 }
                 else
                 {
-                    // 널은 종류와 무관하게 (null) — `nullptr` 리터럴만 (null) 이고 `(void*)nullptr` 은 `0` 이던 불일치.
+                    // 널은 종류와 무관하게 (null).
                     if ( value == nullptr )
                     {
                         Memory::copy( pBuf, "(null)", 7 );
@@ -788,8 +737,7 @@ namespace sw
             }
             else
             {
-                // 문자열로 변환할 수 없는 타입은 컴파일에서 막는다 — 예전엔 컴파일되고 런타임에 "[unsupported type]" 이
-                // 찍혔다. 호출부에서 toString() 을 거치라는 뜻이다. sizeof(T)==0 은 T 에 의존하는 항상-거짓이다.
+                // 문자열로 변환할 수 없는 타입은 컴파일 오류다 — 호출부에서 toString() 을 거친다. sizeof(T)==0 은 T 에 의존하는 항상-거짓.
                 static_assert( sizeof( T ) == 0, "formatstring: string 으로 변환할 수 없는 타입입니다 - toString() 을 거치십시오" );
                 return {};
             }
@@ -830,7 +778,7 @@ namespace sw
             return static_cast<uint32>( pPtr - pBuf ) + fallbackIntegerToString( pPtr, absoluteValue, format.getBase() );
         }
 
-        /** @brief 정수를 문자열로 변환합니다(폴백). */
+        /** @brief 2진수를 만듭니다 — tryFastIntConversion 이 맡지 않는 기수. */
         static uint32 fallbackIntegerToString( utf8* pBuf, uint64 value, Format::Base base ) noexcept
         {
             if ( value == 0 )
@@ -855,7 +803,7 @@ namespace sw
             return static_cast<uint32>( pBuf - pStart );
         }
 
-        /** @brief 정수 고속 변환을 시도합니다. */
+        /** @brief to_chars 로 변환합니다(2진수 제외). 실패하면 invalid_index. */
         template <typename IntType>
         static uint32 tryFastIntConversion( utf8* pBuf, IntType value, Format::Base base )
         {
@@ -912,8 +860,7 @@ namespace sw
             const int32 precision = format.hasPrecision() ? format.getPrecision() : 6;
             auto [pPtr, ec]       = std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
 
-            // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 여기서 실패할 수 없다 — 그래도 실패하면 조용한 쓰레기가
-            // 아니라 눈에 띄는 표식을 남긴다(예전 "폴백" 은 uint64 캐스트 UB 였다).
+            // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 실패할 수 없다 — 그래도 나면 조용한 쓰레기 대신 표식을 남긴다.
             if ( static_cast<int32>( ec ) != 0 )
             {
                 SW_ASSERT( false && "floatToString: to_chars failed" );
@@ -924,7 +871,7 @@ namespace sw
             return static_cast<size_t>( pPtr - pBuf );
         }
 
-        /** @brief 추가합니다. */
+        /** @brief 너비·정렬·0채움을 적용해 씁니다. 너비가 없으면 write 와 같다. */
         static uint32 addPadding( utf8* SW_RESTRICT pBuffer, uint32 pos, const uint32 capacity, string_view str, const Format& fmt ) noexcept
         {
             const int32 padding = fmt.hasWidth() ? ( fmt.getWidth() - static_cast<int32>( str.size() ) ) : 0;
@@ -967,25 +914,3 @@ namespace sw
     template <typename... Args>
     void formatstring( utf8* pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept { FormatString::formatstring( pBuffer, capacity, format, std::forward<Args>( args )... ); }
 } // namespace sw
-
-namespace std
-{
-    template <typename T>
-    /**
-     * @brief FormattedValue 는 (값, Format) 두 원소입니다.
-     * @details `tuple_size` 특수화는 `integral_constant<size_t, N>` 에서 파생해야 표준을 따른다
-     *          (`std::tuple_size<E>::value` 의 타입이 `size_t` 다). 예전에는 `uint32` 였다 —
-     *          구조적 바인딩이 우연히 동작했을 뿐 [tuple.helper] 의 요구는 아니었다.
-     */
-    struct tuple_size<sw::FormattedValue<T>> : integral_constant<size_t, 2>
-    {
-    };
-
-    template <size_t TIndex, typename TType>
-    /** @brief 0 은 값 타입, 1 은 Format 입니다. */
-    struct tuple_element<TIndex, sw::FormattedValue<TType>>
-    {
-
-        using type = conditional_t<TIndex == 0, TType, sw::Format>;
-    };
-} // namespace std
