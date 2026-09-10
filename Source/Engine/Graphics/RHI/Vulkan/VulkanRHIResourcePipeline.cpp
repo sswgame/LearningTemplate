@@ -107,7 +107,9 @@ namespace sw
         vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
         vertShaderStageInfo.module = vertShaderModule;
-        vertShaderStageInfo.pName  = "VSMain";
+        // 컴파일에 쓴 진입점과 같은 이름이어야 한다 — 예전엔 "VSMain" 으로 박혀 있어 파이프라인 XML 이 다른 진입점을
+        // 쓰는 순간 Vulkan 만 파이프라인 생성에 실패할 자리였다(desc 는 이 함수가 끝날 때까지 살아 있다).
+        vertShaderStageInfo.pName = vsDesc._entryPoint.c_str();
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         if ( bHasPixelShader )
@@ -115,7 +117,7 @@ namespace sw
             fragShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             fragShaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
             fragShaderStageInfo.module = fragShaderModule;
-            fragShaderStageInfo.pName  = "PSMain";
+            fragShaderStageInfo.pName  = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint.c_str();
         }
 
         VkPipelineShaderStageCreateInfo arrShaderStage[] = { vertShaderStageInfo, fragShaderStageInfo };

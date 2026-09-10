@@ -160,6 +160,9 @@ namespace sw
          *          타입 **문자열**로 "그림자엔 PS 없음" 을 정하고 런타임은 PS 경로를 늘 채워서, 그림자 패스에
          *          머티리얼 define 을 얹은 변형이 DX12 에서 PS 리플렉션을 요구했고 매니페스트엔 그 조합이
          *          없었다 — Shipping 실기동의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 가 그것이다.
+         * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙인다(clip 을 위해). 알파 마스크가
+         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 한다 — 베이커도 이 함수를
+         *       보므로 그때도 고칠 자리는 여기 하나다.
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
         {

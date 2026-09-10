@@ -47,6 +47,14 @@ namespace sw
         bool initialize();
         /** @brief Material/GUID 맵을 비우고 마운트된 팩을 정리합니다. */
         void shutdown();
+        /**
+         * @brief 에셋 식별자(GUID) 표를 채웁니다. 돌려주는 값은 등록 수.
+         * @details 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt` 를 읽고(배포본은 .meta 를 싣지 않는다), 하나도
+         *          없으면(느슨한 트리) 리소스 루트의 `.meta` 를 훑는다. `initialize` 가 한 번 부르고, EngineLoop 이
+         *          GameConfig 를 활성화하고 팩을 마운트한 **뒤** 다시 부른다 — 게임 도메인(`_packRoot`)은 그때야
+         *          알 수 있다. 두 번 불러도 같은 매핑을 덮어쓸 뿐이다.
+         */
+        uint32 loadAssetRegistries();
 
         /** @brief 핫리로드 감시를 위해 ReloadFileManager를 연결합니다. */
         void attachReloadFileManager( ReloadFileManager& reloadFiles );

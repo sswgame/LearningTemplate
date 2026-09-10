@@ -517,3 +517,59 @@ SW_TEST_CASE( Engine_Resource, EnsureMetaNeverRewritesExistingMetaFile )
     const uint64 mtimeAfter = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
     SW_EXPECT_TRUE_MSG( mtimeBefore == mtimeAfter, ".meta 가 다시 쓰였다 — 작업 트리가 더러워진다" );
 }
+
+/**
+ * @brief [Engine_Resource] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
+ * @details 이 형식은 `CookAssets.py buildAssetRegistryInternal` 이 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
+ */
+SW_TEST_CASE( Engine_Resource, AssetRegistryTextRegistersMappings )
+{
+    sw::AssetDatabase db;
+    const sw::Uuid    guidA = sw::Uuid::generate();
+    const sw::Uuid    guidB = sw::Uuid::generate();
+    const sw::string  text  = sw::string( "# header comment\r\n" ) + guidA.toString() + " game/empty/readme.md\r\n" + "\n" +
+                            "not-a-guid engine/materials/x.material\n" + guidB.toString() + " engine/materials/defaultmaterial.material\n" +
+                            guidB.toString() + "\n";
+
+    SW_EXPECT_EQUAL( 2u, db.loadRegistryText( text ) );
+    SW_EXPECT_EQUAL( 2u, db.getAssetCount() );
+
+    sw::string outPath;
+    SW_EXPECT_TRUE( db.tryGetPath( guidA, outPath ) );
+    SW_EXPECT_STREQ( "game/empty/readme.md", outPath.c_str() );
+
+    sw::Uuid outGuid{};
+    SW_EXPECT_TRUE( db.tryGetGuid( "engine/materials/defaultmaterial.material", outGuid ) );
+    SW_EXPECT_TRUE( outGuid == guidB );
+}
+
+/**
+ * @brief [Engine_Resource] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
+ * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. 예전엔 ensureMeta 를 거친 에셋만 표에 있어서 이름을 바꾼
+ *          프리팹의 GUID 복구가 우연히만 동작했다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.
+ */
+SW_TEST_CASE( Engine_Resource, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
+{
+    sw::ResourceUtil::initialize();
+    const utf8*      pAsset  = "game/empty/readme.md";
+    const sw::string metaAbs = sw::ResourceUtil::getResourcePath( "game/empty/readme.md.meta" );
+    SW_EXPECT_TRUE_MSG( metaAbs.empty() == false, "readme.md.meta 를 찾지 못했다 — 검증이 비었다" );
+    if ( metaAbs.empty() )
+        return;
+
+    sw::string metaText;
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( metaAbs, metaText ) );
+    const size_t keyPos = metaText.find( "guid=" );
+    SW_EXPECT_TRUE( keyPos != sw::string::npos );
+    size_t lineEnd = metaText.find( '\n', keyPos );
+    if ( lineEnd == sw::string::npos )
+        lineEnd = metaText.size();
+    sw::string expected = metaText.substr( keyPos + 5, lineEnd - keyPos - 5 );
+    while ( expected.empty() == false && ( expected.back() == '\r' || expected.back() == ' ' ) )
+        expected.pop_back();
+
+    const sw::Uuid* pGuid = sw::engine::getResourceManager().getAssetDatabase().getGuid( pAsset );
+    SW_EXPECT_TRUE_MSG( pGuid != nullptr, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
+    if ( pGuid != nullptr )
+        SW_EXPECT_STREQ( expected.c_str(), pGuid->toString().c_str() );
+}

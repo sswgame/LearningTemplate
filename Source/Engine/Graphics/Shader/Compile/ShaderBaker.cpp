@@ -409,6 +409,18 @@ namespace sw
                                 appendRecipeUnique( outListRecipe, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listUnlit );
                         }
                     }
+
+                    // 머티리얼이 **없는** 배치의 뷰 모드 변형 — 런타임은 퍼뮤테이션 없는 배치에도 (패스 define + Unlit) 을
+                    // 만든다(ensureMaterialPsos 의 bHasPlain). 언리얼은 모든 메시에 머티리얼(기본 머티리얼)이 있어 이 축이
+                    // 없지만, 여기는 머티리얼 없는 메시가 패스 PSO 로 그려지므로 그 변형도 굽는다. 위의 머티리얼 루프
+                    // 안에만 두면 이 조합이 빠져 Shipping 에서 그 메시만 Lit 으로 물러난다.
+                    if ( passInfo._bUsesMaterialShader )
+                    {
+                        const vector<string> listPlainUnlit = mergeDefines( passInfo._listPermutation, { string( kViewModeUnlitDefine ) } );
+                        appendRecipeUnique( outListRecipe, passInfo._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listPlainUnlit );
+                        if ( passInfo._bHasPixelStage )
+                            appendRecipeUnique( outListRecipe, passInfo._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listPlainUnlit );
+                    }
                 }
             }
         };

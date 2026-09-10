@@ -68,6 +68,26 @@ namespace sw
         /** @brief 절대 폴더를 스캔해 에셋을 등록하고 .meta를 로드/생성합니다 (*.meta 제외). */
         uint32 refreshFolder( string_view absoluteFolder, bool bCreateMissing = true );
 
+        /**
+         * @brief 리소스 루트 아래의 모든 `.meta` 를 재귀로 읽어 등록합니다(만들지는 않는다). 돌려주는 값은 등록 수.
+         * @details 시작 시점에 표를 채우는 개발 빌드 경로다. 예전엔 `ensureMeta` 를 거친 에셋만 알아서, 이름을
+         *          바꾼 프리팹의 GUID 복구가 "그 세션에서 먼저 로드됐을 때만" 동작했다 — 유니티의 GUID 표,
+         *          언리얼의 AssetRegistry 는 시작부터 전체를 안다.
+         */
+        uint32 scanMetaFiles( string_view absoluteRoot );
+
+        /**
+         * @brief 쿠커가 만든 레지스트리(`<domain>/assetregistry.txt`)를 리소스 경로로 읽어 등록합니다. 없으면 0.
+         * @details 배포 빌드는 `.meta` 를 싣지 않으므로(PackConfig `*.meta` 제외) 이 파일이 GUID 의 유일한 출처다.
+         */
+        uint32 loadRegistry( string_view registryRelativePath );
+
+        /**
+         * @brief 레지스트리 본문을 등록합니다. 한 줄에 `<guid> <sourcePath>`, `#` 으로 시작하면 주석. 돌려주는 값은 등록 수.
+         * @details 형식은 `CookAssets.py` 의 `buildAssetRegistryInternal` 이 정본이다 — 둘이 어긋나면 배포본만 조용히 GUID 를 잃는다.
+         */
+        uint32 loadRegistryText( string_view text );
+
         /** @brief 경로↔GUID 맵을 비웁니다. */
         void clear();
 

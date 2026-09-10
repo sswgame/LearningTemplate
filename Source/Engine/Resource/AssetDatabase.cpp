@@ -226,6 +226,68 @@ namespace sw
         return count;
     }
 
+    uint32 AssetDatabase::scanMetaFiles( string_view absoluteRoot )
+    {
+        if ( FileUtil::directoryExists( absoluteRoot ) == false )
+            return 0;
+
+        vector<string> listMeta;
+        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true, true );
+
+        uint32 count{ 0 };
+        for ( const string& metaAbs : listMeta )
+        {
+            const string metaRel = toRelativePath( metaAbs );
+            if ( metaRel.size() <= string_view( path::kMetaExtension ).size() )
+                continue;
+            const string assetRel = metaRel.substr( 0, metaRel.size() - string_view( path::kMetaExtension ).size() );
+            if ( registerExisting( assetRel ) )
+                ++count;
+        }
+        return count;
+    }
+
+    uint32 AssetDatabase::loadRegistry( string_view registryRelativePath )
+    {
+        if ( ResourceUtil::hasResource( registryRelativePath ) == false )
+            return 0;
+        string text;
+        if ( ResourceUtil::readTextResource( registryRelativePath, text ) == false )
+            return 0;
+        return loadRegistryText( text );
+    }
+
+    uint32 AssetDatabase::loadRegistryText( string_view text )
+    {
+        uint32 count{ 0 };
+        size_t lineStart{ 0 };
+        while ( lineStart < text.size() )
+        {
+            size_t lineEnd = text.find( '\n', lineStart );
+            if ( lineEnd == string_view::npos )
+                lineEnd = text.size();
+            string_view line = text.substr( lineStart, lineEnd - lineStart );
+            lineStart        = lineEnd + 1;
+
+            while ( line.empty() == false && ( line.back() == '\r' || line.back() == ' ' || line.back() == '\t' ) )
+                line.remove_suffix( 1 );
+            if ( line.empty() || line.front() == '#' )
+                continue;
+
+            const size_t space = line.find( ' ' );
+            if ( space == string_view::npos || space + 1 >= line.size() )
+                continue;
+
+            Uuid guid{};
+            if ( Uuid::tryParse( string( line.substr( 0, space ) ).c_str(), guid ) == false || guid.isNull() )
+                continue;
+
+            registerMapping( line.substr( space + 1 ), guid );
+            ++count;
+        }
+        return count;
+    }
+
     void AssetDatabase::clear()
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };

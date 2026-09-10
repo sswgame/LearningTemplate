@@ -410,6 +410,9 @@ namespace sw
                     _resourceManager->getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
                 }
             }
+            // GameConfig 가 활성화되고 팩이 마운트된 뒤라야 게임 도메인의 레지스트리(`<packRoot>/assetregistry.txt`)를
+            // 찾을 수 있다 — ResourceManager::initialize 시점엔 _packRoot 가 비어 있어 engine/common 만 실렸다.
+            _resourceManager->loadAssetRegistries();
 
             if ( pEngineConfig->_engineData.empty() == false )
                 _engineData->loadFromResource( pEngineConfig->_engineData );

@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -60,8 +61,38 @@ namespace sw
             }
         }
 
+        loadAssetRegistries();
+
         _assetFormatRegistry.ensureBuiltins();
         return true;
+    }
+
+    uint32 ResourceManager::loadAssetRegistries()
+    {
+        // 에셋 식별자(GUID) 표를 시작 시점에 채운다. 예전엔 ensureMeta 를 거친 에셋만 알아서, 이름을 바꾼 프리팹의
+        // GUID 복구가 "그 세션에서 먼저 로드됐을 때만" 동작했고 배포본은 .meta 를 싣지 않아 아예 빈 표였다.
+        // 팩이면 쿠커가 만든 assetregistry.txt 를 도메인마다 읽고, 없으면(느슨한 트리) .meta 를 훑는다 —
+        // 유니티의 GUID 표, 언리얼의 AssetRegistry 가 하는 일이다.
+        uint32       registered{ 0 };
+        const string gameRoot      = GameConfig::getActive()._packRoot;
+        const string arrRegistry[] = { "engine/assetregistry.txt", "common/assetregistry.txt",
+                                       gameRoot.empty() ? string{} : gameRoot + "/assetregistry.txt" };
+        for ( const string& registryPath : arrRegistry )
+        {
+            if ( registryPath.empty() == false )
+                registered += _assetDatabase.loadRegistry( registryPath );
+        }
+        // 어느 경로로 채웠는지 같이 적는다 — 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
+        if ( registered > 0 )
+        {
+            SW_LOG_INFO( "에셋 레지스트리 %# 항목 (팩 assetregistry.txt)", registered );
+        }
+        else if ( ResourceUtil::getRootFolderPath().empty() == false )
+        {
+            registered = _assetDatabase.scanMetaFiles( ResourceUtil::getRootFolderPath() );
+            SW_LOG_INFO( "에셋 레지스트리 %# 항목 (.meta 스캔)", registered );
+        }
+        return registered;
     }
 
     void ResourceManager::shutdown()

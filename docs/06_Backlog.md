@@ -199,22 +199,9 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 ### 1-3. 확인만 하고 넘어간 것
 
-> 2026-09-10: **머티리얼 없는 배치의 Unlit 변형은 굽지 않는다** (코드를 읽어 안 것이지 실기동에서 본 것은
-> 아니다). `ensureMaterialPsos` 는 퍼뮤테이션이 없는 배치에도 뷰 모드 변형(패스 define +
-> `SW_VIEWMODE_UNLIT=1`)을 만드는데, 베이커의 5) 뷰 모드 축은 머티리얼 루프 **안**에만 있어
-> (패스 define + Unlit) 조합은 없다. Shipping 에서 머티리얼 없는 메시를 Unlit 으로 보면 그 PSO 는
-> 실패하고 Lit 으로 물러난다. 벤치 큐브는 이 경우가 **아니다** — Shipping 에서 `-gv_viewMode=1` 로 돌려도
-> 미스가 없었다(기본 머티리얼이 붙는다). 고치려면 5) 를 머티리얼 루프 밖으로도 한 번 돌리면 된다.
-
-> 2026-09-10: **Shipping 에서 에셋 GUID 해석은 죽어 있다.** PackConfig 가 `*.meta` 를 팩에서 빼므로
-> `AssetDatabase` 가 빈 채로 뜨고, 씬·프리팹의 `_prefabGuid` → 경로 해석은 늘 실패해 경로 폴백으로
-> 간다. 이번에 "실행마다 새 GUID 를 지어내 소스 트리에 쓰던" 쪽은 막았지만(3절), GUID 를 배포본에서도
-> 살릴지(`.meta` 를 팩에 넣고 팩에서 등록하는 코드가 필요)는 **결정하지 않았다**. 경로 폴백이 있는 한
-> 화면에 드러나는 문제는 없다.
-
-> 2026-09-10: **Vulkan `createPipelineState` 는 스테이지 이름을 `"VSMain"`/`"PSMain"` 으로 박아 둔다.**
-> 컴파일은 `desc._vertexEntryPoint` 로 하면서 `pName` 은 고정이라, 파이프라인 XML 이 다른 진입점을
-> 쓰는 순간 Vulkan 만 파이프라인 생성에 실패한다. 지금 XML 은 전부 기본 진입점이라 안 드러난다.
+> 2026-09-10: **프리팹 GUID 참조는 배포본에서 처음으로 살아 있다** — 씬을 저장한 뒤 프리팹을 옮겨 보는
+> 실기동 검증은 아직 안 했다(단위 테스트는 시작 시점 표와 레지스트리 형식만 본다). 배포본에서 에셋 이름을
+> 바꾸는 시나리오가 생기면 `SceneDocument` 의 GUID 해석 경로를 팩으로 한 번 태워 볼 것.
 
 > 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
 > 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
@@ -249,6 +236,37 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (상용 엔진과 대조해 남은 셋을 닫았다)
+
+앞 항목이 남긴 "확인만 한 것" 셋을 언리얼·유니티가 같은 자리를 어떻게 두는지와 대조했다.
+
+- **머티리얼 없는 배치의 Unlit 변형** — 언리얼은 모든 메시에 (기본) 머티리얼이 있어 이 축 자체가 없다.
+  여기는 머티리얼 없는 메시가 패스 PSO 로 그려지므로 런타임이 만드는 (패스 define + Unlit) 을 베이커도
+  굽는다(머티리얼 루프 밖에서 한 번 더). 다시 굽자 새 바이너리가 생겼다 — 이전엔 정말 빠져 있었다.
+- **배포본의 에셋 GUID** — 유니티는 시작 시 GUID 표를, 언리얼은 AssetRegistry 를 통째로 안다. 여기는
+  Dev 에서도 `refreshFolder` 를 아무도 안 불러 `ensureMeta` 를 거친 에셋만 알았고(이름 바꾼 프리팹 복구가
+  "그 세션에서 먼저 로드됐을 때만" 동작), 배포본은 `.meta` 를 싣지 않아 빈 표였다. 이제
+  `ResourceManager::initialize` 가 표를 채운다: 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt`
+  (`<guid> <sourcePath>` 한 줄씩, `CookAssets.py buildAssetRegistryInternal`), 느슨한 트리면 `.meta` 재귀
+  스캔(`AssetDatabase::scanMetaFiles`). `.meta` 자체는 여전히 싣지 않는다 — 배포본이 읽을 것은 표 하나면
+  된다(유니티도 .meta 를 싣지 않는다). `Engine_Resource.AssetDatabaseKnowsAssetsBeforeTheyAreLoaded`
+  (아무 테스트도 로드하지 않는 `readme.md` 의 GUID 를 시작 시점에 아는가)와
+  `AssetRegistryTextRegistersMappings`(형식·깨진 줄) 로 고정했다.
+- **Vulkan 스테이지 이름** — 컴파일에 쓴 진입점을 그대로 `pName` 에 준다. 언리얼도 진입점 문자열 하나를
+  컴파일과 파이프라인에 같이 쓴다.
+- **덧붙인 확장점** — `hasPixelStage` 주석에 언리얼이 마스크드 머티리얼의 그림자에만 PS 를 붙인다는 것을
+  적었다. 알파 마스크가 들어오면 "머티리얼이 픽셀 폐기를 요구하는가" 축이 그 함수 한 곳에 더해진다.
+
+**함정 하나**: `ResourceManager::initialize` 는 `GameConfig::setActive` **보다 먼저** 돈다. 그래서 처음엔
+engine/common 의 3 항목만 실리고 게임 도메인 2 항목이 빠졌다 — Shipping 팩을 Dev `Bin/Packs` 에 복사해 돌려
+보고 잡았다(로그가 "(팩 assetregistry.txt)" / "(.meta 스캔)" 으로 출처를 찍는다). 지금은 EngineLoop 이 설정
+활성화와 팩 마운트 뒤에 `loadAssetRegistries()` 를 한 번 더 부른다.
+
+**검증**: 느슨한 트리 "5 항목 (.meta 스캔)", 팩 "5 항목 (팩 assetregistry.txt)". Debug 전 스위트 통과
+(EngineTest **433/433**, 새 케이스 2) · nogpu 5/5 · GPU 파이프라인 15/15 · 린트 OK · 경고 0. Shipping(DX12)
+벤치+머티리얼 Unlit/Lit `[Error]` 0, 팩에 `assetregistry.txt` 포함(engine 249→266 파일, game_empty 5→6).
+새 바이너리 32개(머티리얼 없는 Unlit 변형)와 매니페스트 넷이 같이 커밋된다.
 
 ### 2026-09-10 (1-3 의 두 항목을 닫으면서 셋을 더 찾았다 — 그중 하나는 셰이더 퍼뮤테이션 전체)
 

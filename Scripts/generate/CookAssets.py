@@ -508,6 +508,34 @@ def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12
     return True
 
 
+_kAssetRegistryFileName = "assetregistry.txt"
+
+
+def buildAssetRegistryInternal(domainDir: Path) -> bytes:
+    """도메인 아래 모든 .meta 를 `<guid> <sourcePath>` 한 줄씩으로 모읍니다 (AssetDatabase::loadRegistryText 가 읽는 형식).
+
+    배포본은 .meta 를 싣지 않으므로(PackConfig `*.meta` 제외) 이 파일이 배포본 GUID 의 유일한 출처다.
+    없으면 씬·프리팹의 GUID 참조가 전부 경로 폴백으로 가고, 이름을 바꾼 에셋은 배포본에서만 못 찾는다.
+    """
+    lines: list[str] = []
+    for metaPath in sorted(domainDir.rglob("*.meta")):
+        guid = ""
+        sourcePath = ""
+        for rawLine in metaPath.read_text(encoding="utf-8", errors="replace").splitlines():
+            key, sep, value = rawLine.strip().partition("=")
+            if not sep:
+                continue
+            if key == "guid":
+                guid = value.strip()
+            elif key == "sourcePath":
+                sourcePath = normalizePath(value.strip())
+        if guid and sourcePath:
+            lines.append(f"{guid} {sourcePath}")
+    if not lines:
+        return b""
+    return ("# <guid> <sourcePath> - CookAssets.py buildAssetRegistryInternal\n" + "\n".join(lines) + "\n").encode("utf-8")
+
+
 def cookPack(
     sourceDir: Path,
     outPackPath: Path,
@@ -516,13 +544,14 @@ def cookPack(
     stripDebugStrings: bool = True,
     packConfig: dict | None = None,
     targetRhi: str = "dx12",
+    extraEntries: list[tuple[str, bytes]] | None = None,
 ) -> bool:
-    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다."""
+    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다. extraEntries 는 디스크에 없는 (상대경로, 바이트) 항목이다."""
     if not sourceDir.is_dir():
         print(f"[CookAssets Error] Source directory does not exist: {sourceDir}", file=sys.stderr)
         return False
 
-    fileEntries: list[tuple[str, Path, int]] = []
+    fileEntries: list[tuple[str, Path | bytes, int]] = []
     for p in sorted(sourceDir.rglob("*")):
         if p.is_file():
             rel = p.relative_to(sourceDir).as_posix()
@@ -530,6 +559,8 @@ def cookPack(
                 continue
             pathHash = fnv1a64Internal(rel)
             fileEntries.append((rel, p, pathHash))
+    for rel, data in extraEntries or []:
+        fileEntries.append((rel, data, fnv1a64Internal(rel)))
 
     fileEntries.sort(key=lambda item: item[2])
     fileCount = len(fileEntries)
@@ -558,7 +589,7 @@ def cookPack(
     entryFormat, entrySize, _ = _gPackFormatSpec["_entryLayout"]
 
     for index, (rel, filePath, pathHash) in enumerate(fileEntries):
-        rawBytes = filePath.read_bytes()
+        rawBytes = filePath if isinstance(filePath, bytes) else filePath.read_bytes()
         rawSize = len(rawBytes)
         crc = binascii.crc32(rawBytes) & 0xFFFFFFFF
 
@@ -669,7 +700,9 @@ def cookAllPacks(
                 targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
 
     for src, out, dlcId in targets:
-        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi)
+        registry = buildAssetRegistryInternal(src)
+        extra = [(_kAssetRegistryFileName, registry)] if registry else None
+        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi, extraEntries=extra)
         if not success:
             allSuccess = False
 
