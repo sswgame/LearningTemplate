@@ -4,8 +4,9 @@
 Scripts/generate/CookAssets.py
 
 SW Engine 통합 에셋 쿠커:
-  1. Prefabs: Resource/**/prefabs/*.prefab.xml -> *.prefab.bin (PFB2 바이너리)
-  2. Scenes:  Resource/**/scenes/*.scene.xml   -> *.scene.bin  (SCN1 바이너리)
+  1. Prefabs: Resource/**/prefabs/*.prefab.xml -> <cooked-dir>/**/prefabs/*.prefab.bin (PFB2 바이너리)
+  2. Scenes:  Resource/**/*.scene.xml          -> <cooked-dir>/**/<name>.bin           (SCN1 바이너리)
+     (산출물은 소스 옆이 아니라 스테이징 폴더에 쓰고, 팩에는 같은 상대 경로로 병합한다)
   3. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
 
 사용법:
@@ -153,10 +154,24 @@ def writePfb2Internal(outPath: Path, name: str, body: str) -> bool:
     return writeBinaryIfChanged(outPath, blob)
 
 
-def cookPrefabs(resourceRoot: Path | None = None) -> int:
-    """게임 리소스 폴더 내의 .prefab.xml 파일들을 찾아 .prefab.bin으로 변환합니다."""
+def cookedOutputPathInternal(sourceFile: Path, resourceDir: Path, cookedDir: Path, outputName: str) -> Path:
+    """쿠킹 산출물의 스테이징 경로: `<cookedDir>/<Resource 기준 상대 폴더>/<outputName>`.
+
+    산출물은 소스 옆이 아니라 `build/<preset>/Cooked/` 에 쓴다. 소스 옆에 두면 (1) `.gitignore` 로 가려야
+    하고, (2) 소스가 옮겨지거나 지워진 뒤에도 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다
+    (프리팹을 옮기는 실험에서 실제로 그랬다). 팩에 들어가는 상대 경로는 그대로다 — 팩은 "어디에 있었나" 가
+    아니라 "팩 안의 상대 경로" 로 정해지므로 cookPack 이 스테이징 폴더를 같은 경로로 병합한다.
+    """
+    relDir = sourceFile.parent.relative_to(resourceDir)
+    return cookedDir / relDir / outputName
+
+
+def cookPrefabs(resourceRoot: Path | None = None, cookedDir: Path | None = None) -> int:
+    """게임 리소스 폴더 내의 .prefab.xml 파일들을 찾아 .prefab.bin으로 변환합니다 (스테이징 폴더에)."""
     projectRoot = getProjectRoot()
-    root = resourceRoot or (projectRoot / "Resource" / "game")
+    resourceDir = projectRoot / "Resource"
+    cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
+    root = resourceRoot or (resourceDir / "game")
     if not root.is_dir():
         print(f"[CookPrefabs] Directory not found: {root} (skipping)")
         return 0
@@ -172,7 +187,7 @@ def cookPrefabs(resourceRoot: Path | None = None) -> int:
 
     def cookOne(sourceFile: Path) -> bool:
         name, body = readXmlPrefabInternal(sourceFile)
-        outputBinaryFile = sourceFile.with_suffix(".bin")
+        outputBinaryFile = cookedOutputPathInternal(sourceFile, resourceDir, cookedDir, sourceFile.with_suffix(".bin").name)
         wrote = writePfb2Internal(outputBinaryFile, name, body)
         if wrote:
             print(f"[CookPrefabs] {sourceFile.name} -> {outputBinaryFile.name} ('{name}')")
@@ -236,9 +251,12 @@ def writeScn1Internal(outputPath: Path, sceneName: str, entitiesList: list[tuple
     return writeBinaryIfChanged(outputPath, b"".join(chunks))
 
 
-def cookScenes(resourceRoot: Path | None = None) -> int:
-    """Resource 하위의 모든 .scene.xml 파일을 .scene.bin으로 변환합니다."""
-    root = resourceRoot or (getProjectRoot() / "Resource")
+def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None) -> int:
+    """Resource 하위의 모든 .scene.xml 파일을 .bin 으로 변환합니다 (스테이징 폴더에)."""
+    projectRoot = getProjectRoot()
+    resourceDir = projectRoot / "Resource"
+    cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
+    root = resourceRoot or resourceDir
     if not root.is_dir():
         print(f"[CookScenes] Resource dir not found: {root}")
         return 0
@@ -249,7 +267,7 @@ def cookScenes(resourceRoot: Path | None = None) -> int:
         return 0
 
     def cookOne(xmlPath: Path) -> bool:
-        outputBinaryFile = xmlPath.with_suffix("").with_suffix(".bin")
+        outputBinaryFile = cookedOutputPathInternal(xmlPath, resourceDir, cookedDir, xmlPath.with_suffix("").with_suffix(".bin").name)
         sceneName, entitiesList = readXmlSceneInternal(xmlPath)
         wrote = writeScn1Internal(outputBinaryFile, sceneName, entitiesList)
         if wrote:
@@ -462,6 +480,16 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
     return problems
 
 
+def isCookedArtifactInternal(relPath: str) -> bool:
+    """쿠커가 만드는 산출물 이름인가 — .prefab.bin, maps/·scenes/ 아래 .bin (씬). 소스 트리에서 보이면 잔재다."""
+    normRel = normalizePath(relPath).lower()
+    if normRel.endswith(".prefab.bin"):
+        return True
+    if normRel.endswith(".bin") and ("/maps/" in f"/{normRel}" or "/scenes/" in f"/{normRel}"):
+        return True
+    return False
+
+
 def shouldIncludeFileInternal(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
     """PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다."""
     normRel = normalizePath(relPath).lower()
@@ -545,20 +573,39 @@ def cookPack(
     packConfig: dict | None = None,
     targetRhi: str = "dx12",
     extraEntries: list[tuple[str, bytes]] | None = None,
+    stagedDir: Path | None = None,
 ) -> bool:
-    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다. extraEntries 는 디스크에 없는 (상대경로, 바이트) 항목이다."""
+    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다.
+
+    extraEntries 는 디스크에 없는 (상대경로, 바이트) 항목, stagedDir 은 쿠커가 산출물을 쓴 스테이징 폴더다 —
+    그 안의 파일은 sourceDir 기준과 **같은 상대 경로** 로 들어간다(팩 안 경로는 지금까지와 바이트 단위로 같다).
+    """
     if not sourceDir.is_dir():
         print(f"[CookAssets Error] Source directory does not exist: {sourceDir}", file=sys.stderr)
         return False
 
     fileEntries: list[tuple[str, Path | bytes, int]] = []
+    staleCooked: list[str] = []
     for p in sorted(sourceDir.rglob("*")):
         if p.is_file():
             rel = p.relative_to(sourceDir).as_posix()
             if packConfig and not shouldIncludeFileInternal(rel, packConfig, targetRhi=targetRhi):
                 continue
+            if isCookedArtifactInternal(rel):
+                # 산출물은 이제 스테이징에만 있다. 소스 트리에 남은 것은 옛 쿠킹의 잔재이고, Dev 런타임이 소스가
+                # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
+                staleCooked.append(rel)
+                continue
             pathHash = fnv1a64Internal(rel)
             fileEntries.append((rel, p, pathHash))
+    if staleCooked:
+        sample = ", ".join(staleCooked[:3]) + (" ..." if len(staleCooked) > 3 else "")
+        print(f"[CookAssets Warning] {sourceDir.name}: 소스 트리에 낡은 쿠킹 산출물 {len(staleCooked)}개 ({sample}) - 지우십시오. 팩에는 넣지 않습니다.", file=sys.stderr)
+    if stagedDir is not None and stagedDir.is_dir():
+        for p in sorted(stagedDir.rglob("*")):
+            if p.is_file():
+                rel = p.relative_to(stagedDir).as_posix()
+                fileEntries.append((rel, p, fnv1a64Internal(rel)))
     for rel, data in extraEntries or []:
         fileEntries.append((rel, data, fnv1a64Internal(rel)))
 
@@ -678,9 +725,11 @@ def cookAllPacks(
     isShipping: bool = True,
     packConfig: dict | None = None,
     targetRhi: str = "dx12",
+    cookedDir: Path | None = None,
 ) -> bool:
-    """engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다."""
+    """engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다. cookedDir 은 프리팹·씬 산출물의 스테이징 루트다."""
     resourceDir = projectRoot / "Resource"
+    cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
     outputDir.mkdir(parents=True, exist_ok=True)
     allSuccess = True
 
@@ -702,7 +751,9 @@ def cookAllPacks(
     for src, out, dlcId in targets:
         registry = buildAssetRegistryInternal(src)
         extra = [(_kAssetRegistryFileName, registry)] if registry else None
-        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi, extraEntries=extra)
+        staged = cookedDir / src.relative_to(resourceDir)
+        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
+                           extraEntries=extra, stagedDir=staged)
         if not success:
             allSuccess = False
 
@@ -720,6 +771,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scenes-only", action="store_true", help="씬 바이너리(.scene.bin)만 쿠킹")
     parser.add_argument("--packs-only", action="store_true", help="리소스 팩(.pack)만 쿠킹")
     parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
+    parser.add_argument("--cooked-dir", type=str, default="", help="프리팹·씬 쿠킹 산출물 스테이징 디렉터리 (기본: build/*/Bin/Cooked)")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
     parser.add_argument("--target-rhi", type=str, default="", help="타깃 RHI 백엔드 (DirectX12, Vulkan, DirectX11)")
@@ -736,11 +788,13 @@ def main(argv: list[str] | None = None) -> int:
     doScenes = args.scenes_only or (not args.prefabs_only and not args.packs_only)
     doPacks = args.packs_only or (not args.prefabs_only and not args.scenes_only)
 
+    cookedDir = Path(args.cooked_dir) if args.cooked_dir else resolveDefaultOutputDir(projectRoot, "Cooked")
+
     exitCode = 0
     if doPrefabs:
-        exitCode = cookPrefabs() or exitCode
+        exitCode = cookPrefabs(cookedDir=cookedDir) or exitCode
     if doScenes:
-        exitCode = cookScenes() or exitCode
+        exitCode = cookScenes(cookedDir=cookedDir) or exitCode
     if doPacks:
         stripNames = not args.include_debug_names
         configPath = Path(args.config) if args.config else (projectRoot / kFilePackConfig)
@@ -767,7 +821,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("                   해결: build/Ninja-Debug/Bin/App.exe --bake-shaders", file=sys.stderr)
                 return 1
         outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
-        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi)
+        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi, cookedDir=cookedDir)
         if not success:
             exitCode = 1
 

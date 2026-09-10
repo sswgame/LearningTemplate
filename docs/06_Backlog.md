@@ -208,10 +208,9 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 >
 > 곁들여 본 것: `CookPrefabs` 가 소스 트리 안에 `*.prefab.bin` 을 남기고, `PrefabAsset` 은 XML 을 못 찾으면
 > 그 .bin 으로 물러난다. 위 실험에서 옮긴 프리팹의 옛 .bin 이 실패를 가렸다 — 이름을 바꾸거나 지운 프리팹이
-> 낡은 .bin 으로 되살아나는 경로다. `.bin` 은 `.gitignore` 되어 있다(쿠킹 산출물로 명시). 배포본은 .bin 만 있으니
-> 폴백 자체는 필요하다 — 그래서 Dev 에서는 폴백을 남기되 **경고로 격상**했다(`Source prefab missing - loaded stale
-> cooked binary instead: <bin> (source <xml>)`). 위 실험을 다시 돌리면 그 경고가 난다. 언리얼·유니티의 에디터는
-> 쿠킹 데이터를 아예 안 보므로, 쿠커 산출물을 소스 트리 밖으로 옮기는 것이 다음 단계 후보다.
+> 낡은 .bin 으로 되살아나는 경로였다. 두 단계로 닫았다: 먼저 Dev 의 폴백을 **경고로 격상**했고(`Source prefab
+> missing - loaded stale cooked binary instead`), 그 다음 **산출물을 소스 트리 밖으로 옮겼다** — 3절 "쿠킹 산출물
+> 스테이징" 항목. 이제 Dev 는 소스 옆에 .bin 이 없으므로 그 폴백 자체가 걸리지 않는다.
 
 > 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
 > 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
@@ -246,6 +245,23 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (쿠킹 산출물 스테이징 — 프리팹·씬 .bin 을 소스 트리 밖으로)
+
+"쿠커 산출물이 Resource 에 없으면 패키징이 안 되지 않나" 가 질문이었다. 답은 **팩은 "디스크 어디에 있었나"가
+아니라 "팩 안의 상대 경로"로 정해진다** 는 것이다 — 그래서 산출물을 밖에 두고 쿠커가 같은 상대 경로로 병합하면
+팩은 그대로다(`assetregistry.txt` 가 이미 그 방식이었다).
+
+- `CookPrefabs`/`CookScenes` 는 이제 `build/<preset>/Cooked/<Resource 기준 상대 폴더>/` 에 쓴다
+  (`--cooked-dir`, cmake 가 `${CMAKE_BINARY_DIR}/Cooked` 를 넘긴다). `cookPack` 은 도메인마다 그 스테이징
+  폴더를 소스 트리와 같은 상대 경로로 병합한다.
+- 소스 트리에 남은 옛 산출물(`*.prefab.bin`, `maps|scenes/*.bin`)은 팩에 **넣지 않고** 경고로 이름을 찍는다 —
+  Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리는 파일이므로 지우는 것이 맞다. 그래서 `.gitignore`
+  의 세 줄도 걷었다: 잔재가 untracked 로 보여야 지운다.
+- **빼지 않는 것**: `shaders/bin/` 은 커밋되는 산출물이고 Dev 도 2순위로 읽으므로 그대로 Resource 안이다.
+- 검증은 바이트로 했다: 바꾸기 전 팩 셋과 바꾼 뒤 팩 셋(잔재가 아직 있을 때, 지운 뒤)을 `--include-debug-names`
+  로 구워 `cmp` — engine/common/game_empty **셋 다 동일**. Shipping 빌드가 `build/Ninja-Shipping/Cooked/` 에 쓰고
+  Resource/ 는 깨끗하며 실행 `[Error]` 0. PrefabTest·SceneTest·Engine_Resource 42/42.
 
 ### 2026-09-10 (상용 엔진과 대조해 남은 셋을 닫았다)
 

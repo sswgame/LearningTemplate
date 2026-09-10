@@ -64,7 +64,9 @@ if(Python3_Interpreter_FOUND)
 	# 검증을 켠다: bake.stamp 의 내용 해시로 확인하고, 베이커(App.exe)가 있으면 스스로 다시
 	# 굽고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
 	# 이 검사를 걸 이유가 없다.
-	set(swCookArgs --all --output "${swPackOutputDir}")
+	# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
+	# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
+	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked")
 	if(SW_SHIPPING_BUILD)
 		list(APPEND swCookArgs --verify-shaders)
 	endif()
