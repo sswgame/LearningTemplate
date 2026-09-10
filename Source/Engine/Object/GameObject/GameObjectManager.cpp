@@ -721,8 +721,9 @@ namespace sw
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {
+            // 키는 FQN 이다 — 이유는 getOrCreateComponentPool 주석 참고.
             std::shared_lock<std::shared_mutex> lock{ _mutex };
-            auto                                iter = _mapComponentPool.find( pTypeInfo );
+            auto                                iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
             if ( iter != _mapComponentPool.end() )
                 pPool = iter->second.get();
         }
@@ -849,7 +850,7 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _poolGameObject.clear();
-            for ( auto& [pTypeInfo, pPool] : _mapComponentPool )
+            for ( auto& [typeFqn, pPool] : _mapComponentPool )
             {
                 if ( pPool != nullptr )
                     pPool->clear();

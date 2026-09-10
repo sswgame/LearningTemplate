@@ -57,8 +57,8 @@ cd build/Ninja-Debug/Bin
 > `Resource/game/empty/prefabs/testprop.prefab.xml` 이고, **엔진 직렬화기로 생성**했다(손으로 쓴
 > XML 이 아니다 — 임베디드 오브젝트 XML 은 리플렉션 산출물이라 손으로 쓰면 깨진다).
 >
-> **주의 1**: 이 스위치를 쓰면 **종료 시 크래시한다** — 아래 1-B. 기본 게이트(스위치 없음)는
-> 네 백엔드 모두 종료 코드 0 · `[Error]` 0건 · vtx=742 로 그대로다.
+> 기본 게이트(스위치 없음)는 네 백엔드 모두 종료 코드 0 · `[Error]` 0건 · vtx=742,
+> 테스트 씬을 열면 네 백엔드 모두 종료 코드 0 · `[Error]` 0건 · vtx=1766 이다.
 
 ```powershell
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
@@ -104,41 +104,6 @@ cd build/Ninja-Debug/Bin
 ---
 
 ## 1. 남은 일 (우선순위 순)
-
-### 1-B. 테스트 씬을 로드하면 **종료 시 컴포넌트 풀 해제가 깨진다** — 재현 한 줄
-
-테스트 씬 애셋을 넣자마자 나온 크래시다. 재현:
-
-```powershell
-cd build/Ninja-Debug/Bin
-./App.exe -gv_profileFrames=60 -dx12 -EnableEditor `
-  "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml"
-# 종료 코드 -2147483645 (0x80000003, 디버그 브레이크)
-```
-
-**증상**: 종료 경로에서 `PoolAllocator::free` 의 단정이 걸린다 —
-`"Pointer does not belong to any allocated chunk!"`. 스택은
-`SceneManager::shutdown` → `~Scene` → `~GameObjectManager` → `clear()` → `~GameObject` →
-`clearComponents` → `destroyComponentInstance` → `PoolAllocator::free` 다.
-
-**좁혀 둔 것** (다음 사람이 여기서 이어가면 된다):
-
-- 임시 로그로 확인: 크래시는 **첫 번째 풀 해제**에서 난다(마침 `CameraComponent` 였다). 즉 그
-  타입이 특별한 것이 아니라 **그 전에 이미 힙/풀이 깨져 있다.**
-- 엔티티 하나(`TestCollider` = SceneComponent + BoxCollider2D)만 남긴 최소 씬은 **정상 종료**하고
-  CameraComponent 두 개를 깨끗이 해제한다. 즉 최소 씬에 없는 무엇이 원인이다 — 남은 용의자는
-  MeshComponent · SpriteComponent · DirectionalLightComponent · 두 번째 CameraComponent ·
-  부모-자식(`TestParent`).
-- `-gv_benchMeshes=8` 로 **코드로 만든** 씬은 종료 코드 0 이다. 그래서 스폰 자체가 아니라
-  **XML 로드 경로**(`Scene::instantiate` → `ObjectStateSerializer::loadFromXmlString` →
-  `addComponentByName` 팩토리)와 관련될 가능성이 높다.
-- 배제한 가설: 모든 컴포넌트 클래스에 `REFLECT_BODY()` 가 있어 파생 타입이 기반의 `TypeInfo` 를
-  공유하는 경우는 아니다(전수 확인). 즉 풀 키(`StaticType()`)와 해제 키(`getTypeInfo()`)가
-  엇갈리는 단순한 경우는 아니다.
-- 다음 단계 제안: 엔티티를 하나씩 늘려 이분하고(최소 씬이 통과하므로 이분이 잘 듣는다),
-  잡히면 ASan(`Ninja-Debug-ASAN`)으로 같은 씬을 로드해 진짜 덮어쓴 지점을 찾는다.
-  풀 블록 크기는 `getOrCreateComponentPool( pTypeInfo, sizeof( T ) )` 가 **처음 만든 타입 기준**
-  이라는 점을 먼저 의심할 만하다.
 
 ### 1-0. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
 
@@ -346,6 +311,45 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (컴포넌트 풀을 TypeInfo 포인터로 키잡던 것 — 예전 1-B 크래시의 원인)
+
+테스트 씬을 로드하면 **종료할 때 반드시 죽었다**(`PoolAllocator::free` 의 "Pointer does not
+belong to any allocated chunk" 단정, 종료 코드 0x80000003). 이제 고쳤다.
+
+**추적 과정** (같은 방법이 다음에도 쓸 만하다):
+
+1. 엔티티를 하나만 남긴 씬 7개로 이분했다 → **CameraComponent 를 담은 씬만** 죽었다
+   (메시·스프라이트·콜라이더·라이트·부모자식 씬은 모두 종료 코드 0).
+2. 생성·해제를 짝지어 로그했다 → 카메라 3개가 **같은 매니저**에서 풀 할당되고, 죽는 것은
+   **첫 번째**였다. 그 포인터만 나머지 둘과 1.7MB 떨어져 있었다(= 다른 청크).
+3. `clear()` 는 종료 시 한 번뿐이고 그 전에 풀을 비운 적도 없었다 → "청크가 미리 해제됐다"는
+   가설은 탈락.
+4. `TypeInfo` **포인터**를 찍어 확정: 카메라 #1 은 `typeInfo=…657064` 로 만들어졌는데 해제할 때는
+   `typeInfo=…351976` 였다. **같은 클래스에 TypeInfo 인스턴스가 둘** 있었다.
+
+**원인**: `_mapComponentPool` 이 `const TypeInfo*` 를 키로 썼다. 모듈(SWGame·EditorModule)이
+로드되며 리플렉션을 다시 등록하고 `rebindAllCachedTypeInfo()` 가 기존 컴포넌트의 캐시된 TypeInfo 를
+새 인스턴스로 갈아끼운다. 그래서 **모듈 로드 전에 만든 컴포넌트**는 생성 때의 풀(옛 TypeInfo 키)과
+해제 때 찾는 풀(새 TypeInfo 키)이 달라지고, 엉뚱한 풀에 블록을 반납한다.
+
+**왜 카메라만이었나**: 카메라는 모듈 로드 **전**(엔진의 기본 카메라)과 **후**(에디터 카메라·씬의
+카메라) 양쪽에서 만들어지는 유일한 컴포넌트라, 한 타입에 풀이 둘 생겼다. 다른 타입은 로드 후에만
+만들어져 풀이 하나뿐이었고, 풀이 없으면 `sw_delete` 로 빠져 우연히 짝이 맞았다.
+
+**수정**: 키를 `TypeInfo::_fullyQualifiedName`(재등록에도 변하지 않는다)으로 바꿨다. 근거를
+`getOrCreateComponentPool` 주석에 남겼다.
+
+**영향**: 이 결함은 씬 로드에 국한되지 않는다 — **모듈 핫 리로드 후 생성 이전 컴포넌트를 파괴하는
+모든 경로**가 같은 함정이었다. 지금까지 드러나지 않은 이유는 저장소에 씬 애셋이 없어서 로드된
+컴포넌트가 존재한 적이 없었기 때문이다.
+
+**단위 테스트는 붙이지 못했다** — 재현에 같은 클래스의 두 번째 `TypeInfo` 등록(=모듈 로드)이
+필요하고 그것은 테스트 프로세스에서 만들 수 없다. 대신 실기동 재현이 게이트다: 테스트 씬을 열고
+종료 코드 0 이어야 한다(위 0절 명령).
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5(양쪽), 린트 6/6, 컨벤션 0건.
+네 백엔드 × 두 경로 모두 종료 코드 0 · `[Error]` 0건 — 기본 vtx=742, 테스트 씬 vtx=1766.
 
 ### 2026-09-10 (직렬화기가 상속 PROPERTY 를 빠뜨리던 것을 고쳤다 — 예전 1-A)
 

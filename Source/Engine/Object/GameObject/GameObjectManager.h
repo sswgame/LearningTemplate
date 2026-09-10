@@ -330,25 +330,35 @@ namespace sw
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
         hashed_string makeUniqueNameUnlocked( hashed_string requested ) const;
 
+        /**
+         * @brief 타입별 컴포넌트 풀을 얻거나 만듭니다.
+         * @details 키는 **FQN 이고 TypeInfo 포인터가 아니다.** 한 클래스에 `TypeInfo` 인스턴스가 둘 이상
+         *          생길 수 있다 — 모듈(SWGame·EditorModule)이 로드되며 리플렉션을 다시 등록하고,
+         *          `rebindAllCachedTypeInfo()` 가 기존 컴포넌트의 캐시된 TypeInfo 를 새 인스턴스로
+         *          갈아끼운다. 포인터로 키를 잡으면 **생성 때와 해제 때가 서로 다른 풀**을 가리켜서,
+         *          `destroyComponentInstance` 가 엉뚱한 풀에 블록을 반납하고
+         *          `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk" 단정이
+         *          걸린다(테스트 씬을 로드한 뒤 종료할 때 실제로 그랬다). FQN 은 재등록에도 변하지 않는다.
+         */
         PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
         {
-            if ( pTypeInfo == nullptr )
+            if ( pTypeInfo == nullptr || pTypeInfo->_fullyQualifiedName.empty() )
                 return nullptr;
 
             std::unique_lock<std::shared_mutex> lock{ _mutex };
-            auto                                iter = _mapComponentPool.find( pTypeInfo );
+            auto                                iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
             if ( iter != _mapComponentPool.end() )
                 return iter->second.get();
 
-            auto           pNewPool      = make_unique<PoolAllocator>( typeSize, 64u, true );
-            PoolAllocator* pRaw          = pNewPool.get();
-            _mapComponentPool[pTypeInfo] = std::move( pNewPool );
+            auto           pNewPool                           = make_unique<PoolAllocator>( typeSize, 64u, true );
+            PoolAllocator* pRaw                               = pNewPool.get();
+            _mapComponentPool[pTypeInfo->_fullyQualifiedName] = std::move( pNewPool );
             return pRaw;
         }
 
     private:
-        TypedPoolAllocator<GameObject>                            _poolGameObject;
-        unordered_map<const TypeInfo*, unique_ptr<PoolAllocator>> _mapComponentPool;
+        TypedPoolAllocator<GameObject>                          _poolGameObject;
+        unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN (TypeInfo 포인터는 재등록으로 바뀐다)
 
         vector<GameObject*>                       _listGameObject;
         unordered_map<hashed_string, GameObject*> _mapNameToObject;
