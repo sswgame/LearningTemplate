@@ -44,7 +44,28 @@ _kScanRoots = (
     kDirSourceCore,
 )
 
-_kIgnoreSubdirs = ("Graphics/RHI/Modules/", "/Linux/", "/Mac/", "/Cocoa", "/X11")
+# 어느 플랫폼에서도 빌드에 안 들어가는 자리 (MODULE 정의 디렉터리).
+_kIgnoreSubdirsAlways = ("Graphics/RHI/Modules/",)
+
+# OS 전용 소스는 **그 OS 가 아닐 때만** 빠져 있는 게 정상이다. 예전엔 이 목록이 Windows 기준으로
+# 고정돼 있어서(리눅스/맥 것만 무시) 리눅스 빌드에서 DX11/DX12/Windows 소스 23개가 통째로
+# "빠졌다"고 잡혔다. 반대로 리눅스에서 빌드하면서 /Linux/ 를 무시하면 진짜 누락도 놓친다 —
+# 그래서 호스트에 따라 반대편만 무시한다.
+_kIgnoreSubdirsNonWindows = ("/Windows/", "/DX11/", "/DX12/", "DelayLoadNotifyHook")
+_kIgnoreSubdirsNonLinux = ("/Linux/", "/X11")
+_kIgnoreSubdirsNonMac = ("/Mac/", "/Cocoa")
+
+
+def buildIgnoreSubdirsInternal() -> tuple[str, ...]:
+    """호스트 플랫폼에서 빌드되지 않는 것이 정상인 경로 조각들을 모읍니다."""
+    ignores = list(_kIgnoreSubdirsAlways)
+    if not sys.platform.startswith("win"):
+        ignores.extend(_kIgnoreSubdirsNonWindows)
+    if not sys.platform.startswith("linux"):
+        ignores.extend(_kIgnoreSubdirsNonLinux)
+    if sys.platform != "darwin":
+        ignores.extend(_kIgnoreSubdirsNonMac)
+    return tuple(ignores)
 
 
 def pickBuildDirInternal(repo: Path) -> Path | None:
@@ -128,10 +149,11 @@ def main() -> int:
             compiledFiles.add(filePath.as_posix().lower())
 
     missingSources: list[str] = []
+    ignoreSubdirs = buildIgnoreSubdirsInternal()
     for sourcePath in sources:
         relativeSourcePath = sourcePath.resolve().relative_to(repo).as_posix()
         # MODULE entries / inactive packs / other-OS sources are expected absences.
-        if any(ignore in relativeSourcePath for ignore in _kIgnoreSubdirs):
+        if any(ignore in relativeSourcePath for ignore in ignoreSubdirs):
             continue
         if startsWithPathComponent(relativeSourcePath, kDirSourceGames):
             active = f"/{args.active_game}/"
