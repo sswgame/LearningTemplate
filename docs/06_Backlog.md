@@ -202,26 +202,24 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 먼저 없애고, 그러고도 긴 함수가 문제로 남으면 그때 본다. 목록이 필요하면 다중 행 시그니처를
 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다(단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-2b. WSL(리눅스) 빌드 — **선다. 남은 건 clang-format 조달뿐**
+### 1-2b. WSL(리눅스) 빌드 — **선다**
 
 2026-09-11 에 `WSL-Debug` 를 끝까지 세웠다. 빌드는 **오류·경고 0**, `ctest` 는 **12/12 통과**
 (린트 6 + GPU 포함 전체). 그 과정에서 드러난 결함 다섯은 3절 항목으로 고쳤다 — 대부분
 "윈도우 밖에서 한 번도 안 돌려본 코드"가 아니라 **플랫폼과 무관한 잠복 버그**였다(Vulkan
-스왑체인 교착이 대표적이다).
+스왑체인 교착이 대표적이다). clang-format 조달과 LLVM 경로 손목록도 같은 날 닫았다(3절).
 
-**남은 일 — clang-format 을 리눅스에서 구할 수 없다.**
+**남은 것 — 포맷된 적 없는 파일 11 개**
 
-- `Config/Environment/search_paths.json` 의 `llvm_download_urls.linux` 가 **ubuntu-18.04 용
-  LLVM 18.1.8** 로 고정이라, 받아 놓아도 `libtinfo.so.5` 가 없어 실행되지 않는다(현대 우분투는
-  `.so.6`, 심볼 버전이 달라 심링크 우회도 안 통한다). 그러면 pre-commit 5단계가 "포맷팅 규칙에
-  어긋나는 파일이 있습니다" 라고 **거짓 보고**한다 — 실제로는 도구가 못 뜬 것이다.
-  같은 릴리스의 리눅스 자산은 20.1.8 부터 `LLVM-20.1.8-Linux-X64.tar.xz` **2 GB** 라
-  clang-format 하나 때문에 받기엔 과하다. `sudo apt install clang-format` 이 정답에 가깝다.
-- `llvm_search_roots.linux` 가 아직 `/usr/lib/llvm-20 … llvm-14` **손목록**이다. `8bda8366` 이
-  `ReflectionParser/CMakeLists.txt` 와 `ci.yml` 에서 걷어낸 바로 그 함정이 이 JSON 에는 남아
-  있어서, llvm-21 인 이 PC 는 distro clang-format 을 깔아도 목록 밖이라 못 찾는다.
-- 그래서 할 일은 셋: 손목록을 glob 으로, 조달한 clang-format 이 **실제로 실행되는지** 확인한 뒤
-  못 뜨면 사유를 그대로 말하게, 그리고 `SetupLinuxDevEnvironment` 에 clang-format 검사 추가.
+`Source/Editor/Common/Config/EditorConfig.cpp`, `EditorChrome.cpp`, `EditorNotificationManager.cpp`,
+`RHIReleaseQueue.cpp`, `VulkanRHICommandContext.cpp`, `FrameRendererDraw.cpp`,
+`ShaderBindingContract.cpp`, `Test/CoreTest/TestDelegate.cpp`, `TestEditorCommandStack.cpp`,
+`TestGameFramework.cpp`, `Tools/ReflectionParser/AstVisitor.cpp`.
+
+clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프트가 아니라 애초에 포매터를 거친
+적이 없는 파일들이다(훅은 staged 파일만 본다). 손대는 김에 같이 포맷하면 그 커밋의 진짜 변경이
+묻히므로, **기계적 정리 한 번으로 따로** 하는 게 낫다.
+
 
 **그대로 유효한 함정 (환경)**
 
@@ -283,6 +281,42 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (clang-format 을 버전 하나로 고정하고, LLVM 경로 손목록을 glob 으로)
+
+**왜 갈렸나.** 두 갈래였다. `llvm_download_urls` 의 핀이 Windows 20.1.8 / Linux 18.1.8 로 서로
+달랐고(누군가 한쪽만 올렸다), 더 근본적으로는 `llvm_search_roots` 가 **시스템 LLVM 을 먼저**
+쓰기 때문에 실제 버전이 "그 PC 에 뭐가 깔렸느냐" 로 정해졌다. 핀을 맞춰도 이쪽으로 계속 갈린다.
+
+빈말이 아니다 — 18 과 20 은 이 저장소 400 파일 중 **2 개**를 다르게 포맷한다. 동아시아 문자 폭
+계산이 달라져 한글 주석이 든 정렬 블록이 갈린다. 두 PC 가 서로의 커밋을 되돌리는 종류의 차이다.
+
+- **clang-format 은 고정, 빌드용 LLVM 은 최신.** 포매터는 "설치된 것" 이 아니라 "정해진 것" 을
+  써야 한다(최신을 자동으로 따라가면 한 PC 가 업데이트되는 순간 코드베이스가 재포맷된다).
+  반대로 clang/libclang 은 최신을 찾아 쓰는 게 맞다. 그래서 둘을 갈랐다.
+- **`clang_format_version` 하나만 남겼다(20.1.8 — 저장소가 이미 이걸로 포맷돼 있다).** URL 은
+  PyPI 에서 받아 온다. LLVM 공식 릴리스는 전체 배포판만 올려서, clang-format 하나 때문에
+  335 MB(리눅스 18) 나 2 GB(20.1.8 의 `LLVM-*-Linux-X64.tar.xz`) 를 받아야 했다. PyPI 의
+  `clang-format` 패키지는 **바이너리 하나만** 담은 휠(1.4~1.7 MB)을 플랫폼별로 내고 버전이
+  LLVM 릴리스를 그대로 따른다. 휠 URL 엔 해시가 박혀 손으로 적어 둘 수 없으므로 버전만 고정하고
+  URL 조회는 `resolveClangFormatWheelUrlInternal` 이 한다 — 버전을 올릴 땐 문자열 하나만 고친다.
+- **tarball 에서 clang-format 만 꺼내던 `extractClangFormatFromArchiveInternal` 은 지웠다.**
+  따로 구할 길이 없어서 있던 코드였고, 이제 필요 없다. `llvm_download_urls` 자체는 clang-cl /
+  libclang 부트스트랩에 계속 쓰이므로 남긴다.
+- **찾은 clang-format 이 실제로 뜨는지 확인한다.** 파일이 있다는 것만으로는 부족했다 —
+  ubuntu-18.04 빌드는 `libtinfo.so.5` 를 찾는데 요즘 배포판엔 `.so.6` 뿐이고 심볼 버전이 달라
+  실행 자체가 안 된다. 그런데도 훅은 "포맷팅 규칙에 어긋나는 파일이 있습니다" 라고 **거짓
+  보고**했다. 이제 버전까지 맞는 것만 고르고, 고정본을 못 구하면 있는 것으로 돌리되 결과가
+  달라질 수 있음을 분명히 알린다.
+- **`platformSearchRoots` 가 `*` 를 펼친다.** `llvm_search_roots.linux` 의
+  `/usr/lib/llvm-20 … llvm-14` 손목록을 `/usr/lib/llvm-*` 로 바꿨다. `8bda8366` 이
+  `ReflectionParser/CMakeLists.txt` 와 `ci.yml` 에서 걷어낸 함정이 이 JSON 에는 남아 있어
+  llvm-21 인 이 PC 를 비켜가고 있었다. 펼친 결과는 자연순 내림차순이라 최신이 앞에 온다
+  (`llvm-9` 가 `llvm-21` 을 이기지 않는다).
+
+> 검증: `Tools/LLVM/bin/clang-format` 을 지우고 `ensureClangFormat()` 을 돌려 1 MiB 를 받아
+> 20.1.8 이 서는 것을 확인했다. 재실행은 받지 않는다. `platformSearchRoots` 는
+> `/usr/lib/llvm-21` 을 찾아내고 `SetupLlvm.py` 가 그걸 쓴다.
 
 ### 2026-09-11 (WSL 빌드를 세우자 드러난 결함 다섯 — 대부분 플랫폼과 무관한 잠복 버그였다)
 
