@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-10 · 기준 커밋 `b7b6c5b5`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `77f4b224`
 
 ---
 
@@ -200,6 +200,22 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 먼저 없애고, 그러고도 긴 함수가 문제로 남으면 그때 본다. 목록이 필요하면 다중 행 시그니처를
 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다(단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
+### 1-2b. WSL(리눅스) 빌드 — **보류, 사용자가 WSL 익스텐션으로 진행한다**
+
+윈도우 밖에서 한 번도 돌려보지 않은 코드가 있으므로 `WSL-Debug` 프리셋을 세워 보다가 두 가지를 배웠고,
+그 중 하나는 코드로 고쳤다(3절 항목). 남은 것은 실제 빌드·테스트를 끝까지 돌리는 일이다.
+
+- **`/mnt/d` (DrvFs) 에서는 configure 가 안 된다.** `configure_file` 이 `Operation not permitted` 로 죽는다.
+  최소 재현: 세 줄짜리 `CMakeLists.txt` 하나로도 DrvFs 에서는 실패하고 `~` (ext4) 에서는 성공한다. 그래서
+  `base-wsl` 프리셋의 `remoteCopySources`(rsync) 가 원래 옳은 전제였다 — **리눅스 쪽 파일시스템으로 복사해
+  거기서 빌드해야 한다.**
+- **첫 configure 는 오래 걸린다.** WSL 에 `clang-format` 이 없으면 `SetupLlvm` 이 clang-format 하나를 꺼내려고
+  LLVM 배포 tarball(약 335 MB)을 통째로 받는다. `sudo apt install clang-format` 을 먼저 하면 건너뛴다.
+  vcpkg 도 리눅스 바이너리를 새로 부트스트랩하고 포트를 소스에서 굽는다(캐시가 윈도우 것뿐이다).
+- 곁가지로 확인한 것: `SetupVcpkg.py --install` 은 `scripts/buildsystems/vcpkg.cmake` 만 보고 "찾았다" 고
+  끝낸다. 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg.exe` 만 있고 `vcpkg` 바이너리가 없는데도 성공을
+  보고한다(툴체인 파일이 알아서 부트스트랩하므로 치명적이진 않다). 플랫폼 바이너리까지 보게 하는 것은 남은 일.
+
 ### 1-3. 확인만 하고 넘어간 것
 
 > 2026-09-10: **프리팹을 옮긴 뒤 GUID 복구를 실기동으로 확인했다** (Dev, 에디터 + 임시 씬). `testprop.prefab.xml`
@@ -247,6 +263,20 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (리눅스 LLVM 탐색 — 손으로 든 버전 목록이 새 배포판에서 조용히 비켜간다)
+
+- `Tools/ReflectionParser/CMakeLists.txt` 가 `/usr/lib/llvm-20 … llvm-14` 를 **손으로 나열**하고 있었다.
+  이 PC 의 WSL 은 **llvm-21** 이라 목록 밖이고, 그러면 libclang 을 못 찾아 `SW_REQUIRE_REFLECTION=ON`
+  에서 configure 가 죽는다. 목록 대신 `/usr/lib/llvm-*` 를 glob 해 **설치된 것 중 가장 높은 메이저**를
+  고른다(자연순 내림차순).
+- `find_library` 의 이름 목록도 같은 문제였다(`clang-20 … clang-14`). distro 는 `libclang-21.so` 처럼
+  버전이 붙은 이름만 두기도 하므로 `libclang-*.so` 를 glob 해 이름을 만들어 넘긴다.
+- `.github/workflows/ci.yml` 의 `LLVM_DIR` 탐색 루프도 같은 손목록이었다 — `ls -d /usr/lib/llvm-* | sort -V -r`
+  로 바꿨다. 러너 이미지가 LLVM 을 올릴 때마다 워크플로를 고쳐야 하는 함정을 없앤다.
+
+> 검증: 두 블록만 떼어 WSL 에서 `cmake -P` 로 돌렸다 — `Using distro LLVM: /usr/lib/llvm-21`,
+> `LIBCLANG_LIB=/usr/lib/llvm-21/lib/libclang.so`. 전체 빌드로는 확인하지 않았다(1-2b 보류).
 
 ### 2026-09-11 (`formatstring` 정리 — tuple 프로토콜 제거, 사연 주석 정리; `.cpp` 분리는 재 보고 폐기)
 
