@@ -12,6 +12,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorViewportPick.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -19,7 +20,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorCamera.h"
+#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -65,30 +68,6 @@ namespace sw::editor
                 return true;
             }
 
-            static bool rayHitsSphere( const float3& origin, const float3& dir, const float3& center, float32 radius, float32& outT )
-            {
-                const float3  m     = origin - center;
-                const float32 b     = m.dot( dir );
-                const float32 c     = m.dot( m ) - radius * radius;
-                const bool    bAway = ( c > 0.0f && b > 0.0f );
-                if ( bAway )
-                    return false;
-
-                const float32 discr = b * b - c;
-                if ( discr < 0.0f )
-                    return false;
-
-                const float32 sqrtDiscr = MathUtil::sqrt( discr );
-                float32       hitT      = -b - sqrtDiscr;
-                if ( hitT < 0.0f )
-                    hitT = -b + sqrtDiscr;
-                if ( hitT < 0.0f )
-                    return false;
-
-                outT = hitT;
-                return true;
-            }
-
             static void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
             {
                 if ( pSc == nullptr )
@@ -110,233 +89,9 @@ namespace sw::editor
                 pSc->setLocalScale( scale );
             }
 
-            static void considerMeshPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-                                          Component*& pBestComp )
-            {
-                MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
-                if ( pMeshComp == nullptr || pMeshComp->isActive() == false || pMeshComp->isVisible() == false )
-                    return;
-                const float3  scale    = pMeshComp->getLocalScale();
-                const float32 absX     = MathUtil::abs( scale._x );
-                const float32 absY     = MathUtil::abs( scale._y );
-                const float32 absZ     = MathUtil::abs( scale._z );
-                const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
-                const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
-                float32       hitT{ 0.0f };
-                if ( rayHitsSphere( nearPt, dir, pMeshComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
-                    return;
-                bestT     = hitT;
-                pBestObj  = pObj;
-                pBestComp = pMeshComp;
-            }
-
-            static void considerSpritePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-                                            Component*& pBestComp )
-            {
-                SpriteComponent* pSpriteComp = pObj->getComponent<SpriteComponent>();
-                if ( pSpriteComp == nullptr || pSpriteComp->isActive() == false )
-                    return;
-                const float3  scale  = pSpriteComp->getLocalScale();
-                const float32 absX   = MathUtil::abs( scale._x );
-                const float32 absY   = MathUtil::abs( scale._y );
-                const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
-                float32       hitT{ 0.0f };
-                if ( rayHitsSphere( nearPt, dir, pSpriteComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
-                    return;
-                bestT     = hitT;
-                pBestObj  = pObj;
-                pBestComp = pSpriteComp;
-            }
-
-            static void considerBoxPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-                                         Component*& pBestComp )
-            {
-                BoxCollider2DComponent* pBoxComp = pObj->getComponent<BoxCollider2DComponent>();
-                if ( pBoxComp == nullptr || pBoxComp->isActive() == false )
-                    return;
-                const float2  offsetPos = pBoxComp->getOffsetPosition();
-                const float2  offsetScl = pBoxComp->getOffsetScale();
-                const float3  center    = pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-                const float32 radius    = offsetScl.getLength() * 0.5f + 0.1f;
-                float32       hitT{ 0.0f };
-                if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) == false || hitT >= bestT )
-                    return;
-                bestT     = hitT;
-                pBestObj  = pObj;
-                pBestComp = pBoxComp;
-            }
-
-            static void considerScenePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
-                                           Component*& pBestComp )
-            {
-                SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
-                if ( pSceneComp == nullptr || pSceneComp->isActive() == false )
-                    return;
-                float32 hitT{ 0.0f };
-                if ( rayHitsSphere( nearPt, dir, pSceneComp->getWorldPosition(), 0.35f, hitT ) == false || hitT >= bestT )
-                    return;
-                bestT     = hitT;
-                pBestObj  = pObj;
-                pBestComp = pSceneComp;
-            }
-
             static CameraComponent* getGameViewCamera()
             {
                 return EditorCamera::ensure( editor::getActiveScene() );
-            }
-
-            static bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
-                                              const float2& canvasSize, ImVec2& outScreenPt )
-            {
-                const float4 clip = float4::transform( float4{ worldPt, 1.0f }, viewProj );
-                if ( clip._w <= 0.001f )
-                    return false;
-                const float32 invW = 1.0f / clip._w;
-                const float32 x    = clip._x * invW;
-                const float32 y    = clip._y * invW;
-
-                outScreenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
-                outScreenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
-                return true;
-            }
-
-            /**
-             * @brief 월드 선분을 화면 선분으로 — **근평면에서 잘라서** 낸다.
-             * @details 점 단위로 투영하면 끝점 하나가 카메라 뒤에 있는 선분을 통째로 버리게 된다. 그리드는
-             *          카메라를 중심으로 ±kGridExtent 로 깔리므로 카메라를 가로지르는 선이 대부분이다 —
-             *          그래서 격자가 한두 줄만 남았다. 동차 좌표에서 w 가 근평면을 넘는 지점을 찾아 그 점으로 자른다.
-             * @return 선분 전체가 카메라 뒤면 false.
-             */
-            static bool projectSegmentToScreen( const float4x4& viewProj, const float3& worldA, const float3& worldB,
-                                                const float2& canvasPos, const float2& canvasSize,
-                                                ImVec2& outScreenA, ImVec2& outScreenB )
-            {
-                constexpr float32 kNearW = 0.001f;
-
-                float4 clipA = float4::transform( float4{ worldA, 1.0f }, viewProj );
-                float4 clipB = float4::transform( float4{ worldB, 1.0f }, viewProj );
-                if ( clipA._w <= kNearW && clipB._w <= kNearW )
-                    return false;
-
-                // 한쪽만 뒤에 있으면 w == kNearW 가 되는 지점까지 당긴다. 동차 좌표는 선형이라 clip 공간에서 바로 보간된다.
-                if ( clipA._w <= kNearW )
-                {
-                    const float32 t = ( kNearW - clipA._w ) / ( clipB._w - clipA._w );
-                    clipA           = clipA + ( clipB - clipA ) * t;
-                }
-                else if ( clipB._w <= kNearW )
-                {
-                    const float32 t = ( kNearW - clipB._w ) / ( clipA._w - clipB._w );
-                    clipB           = clipB + ( clipA - clipB ) * t;
-                }
-
-                auto toScreen = []( const float4& clip, const float2& pos, const float2& size ) -> ImVec2
-                {
-                    const float32 invW = 1.0f / clip._w;
-                    const float32 x    = clip._x * invW;
-                    const float32 y    = clip._y * invW;
-                    ImVec2        screenPt;
-                    screenPt.x = pos._x + ( x * 0.5f + 0.5f ) * size._x;
-                    screenPt.y = pos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * size._y;
-                    return screenPt;
-                };
-                outScreenA = toScreen( clipA, canvasPos, canvasSize );
-                outScreenB = toScreen( clipB, canvasPos, canvasSize );
-                return true;
-            }
-
-            static void drawDebugVisualizers( ImDrawList* pDrawList, const float4x4& viewProj, const float2& canvasPos,
-                                              const float2& canvasSize, const ViewportToolbarSettings& settings,
-                                              CameraComponent* pActiveCamera )
-            {
-                if ( pDrawList == nullptr )
-                    return;
-
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( pManager == nullptr )
-                    return;
-
-                const vector<GameObject*>& listObject = pManager->getAllGameObjects();
-
-                // 1) BoxCollider2D 와이어프레임 렌더링
-                if ( settings._bShowColliders )
-                {
-                    constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
-                    for ( GameObject* pObj : listObject )
-                    {
-                        if ( pObj == nullptr || pObj->isActive() == false )
-                            continue;
-                        BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
-                        if ( pBox == nullptr || pBox->isActive() == false )
-                            continue;
-
-                        const float2  offsetPos = pBox->getOffsetPosition();
-                        const float2  offsetScl = pBox->getOffsetScale();
-                        const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-                        const float32 hx        = MathUtil::max( offsetScl._x * 0.5f, 0.05f );
-                        const float32 hy        = MathUtil::max( offsetScl._y * 0.5f, 0.05f );
-
-                        const float3 p0{ center._x - hx, center._y - hy, center._z };
-                        const float3 p1{ center._x + hx, center._y - hy, center._z };
-                        const float3 p2{ center._x + hx, center._y + hy, center._z };
-                        const float3 p3{ center._x - hx, center._y + hy, center._z };
-
-                        ImVec2 s0, s1, s2, s3;
-                        if ( projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
-                             projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
-                             projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
-                             projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
-                        {
-                            pDrawList->AddLine( s0, s1, colWire, 1.5f );
-                            pDrawList->AddLine( s1, s2, colWire, 1.5f );
-                            pDrawList->AddLine( s2, s3, colWire, 1.5f );
-                            pDrawList->AddLine( s3, s0, colWire, 1.5f );
-                        }
-                    }
-                }
-
-                // 2) CameraComponent Frustum 와이어프레임 렌더링
-                if ( settings._bShowCameras )
-                {
-                    constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
-                    for ( GameObject* pObj : listObject )
-                    {
-                        if ( pObj == nullptr || pObj->isActive() == false )
-                            continue;
-                        CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-                        if ( pCam == nullptr || pCam == pActiveCamera || pCam->isActive() == false )
-                            continue;
-
-                        const float4x4 camWorld = pCam->getWorldMatrix();
-                        const float3   eye      = float3{ camWorld._41, camWorld._42, camWorld._43 };
-                        const float3   rgt      = float3{ camWorld._11, camWorld._12, camWorld._13 };
-                        const float3   up       = float3{ camWorld._21, camWorld._22, camWorld._23 };
-                        const float3   fwd      = float3{ camWorld._31, camWorld._32, camWorld._33 };
-
-                        const float3 nearCenter = eye + fwd * 1.0f;
-                        const float3 p0         = nearCenter - rgt * 0.6f - up * 0.4f;
-                        const float3 p1         = nearCenter + rgt * 0.6f - up * 0.4f;
-                        const float3 p2         = nearCenter + rgt * 0.6f + up * 0.4f;
-                        const float3 p3         = nearCenter - rgt * 0.6f + up * 0.4f;
-
-                        ImVec2 sEye, s0, s1, s2, s3;
-                        if ( projectPointToScreen( viewProj, eye, canvasPos, canvasSize, sEye ) &&
-                             projectPointToScreen( viewProj, p0, canvasPos, canvasSize, s0 ) &&
-                             projectPointToScreen( viewProj, p1, canvasPos, canvasSize, s1 ) &&
-                             projectPointToScreen( viewProj, p2, canvasPos, canvasSize, s2 ) &&
-                             projectPointToScreen( viewProj, p3, canvasPos, canvasSize, s3 ) )
-                        {
-                            pDrawList->AddLine( sEye, s0, colCamWire, 1.2f );
-                            pDrawList->AddLine( sEye, s1, colCamWire, 1.2f );
-                            pDrawList->AddLine( sEye, s2, colCamWire, 1.2f );
-                            pDrawList->AddLine( sEye, s3, colCamWire, 1.2f );
-                            pDrawList->AddLine( s0, s1, colCamWire, 1.2f );
-                            pDrawList->AddLine( s1, s2, colCamWire, 1.2f );
-                            pDrawList->AddLine( s2, s3, colCamWire, 1.2f );
-                            pDrawList->AddLine( s3, s0, colCamWire, 1.2f );
-                        }
-                    }
-                }
             }
         };
     } // namespace
@@ -407,6 +162,8 @@ namespace sw::editor
         , _bGizmoTracking{ SW_FALSE }
         , _reservedGizmo{ 0 }
     {
+        // 어떤 시각화가 기본으로 켜지는지는 시각화 표가 정한다.
+        _toolbarSettings._visualizerMask = EditorViewportVisualizer::getDefaultMask();
     }
 
     void EditorViewportClient::getViewMatrix( float32* pOutMatrix ) const
@@ -618,8 +375,13 @@ namespace sw::editor
             if ( _toolbarSettings._bShowGrid )
                 drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
 
-            EditorViewportClientInternal::drawDebugVisualizers( ImGui::GetWindowDrawList(), viewProj, canvasPos, canvasSize, _toolbarSettings,
-                                                                pCamera );
+            EditorViewportVisualizerArgs visualizerArgs{};
+            visualizerArgs._pDrawList     = ImGui::GetWindowDrawList();
+            visualizerArgs._pViewProj     = &viewProj;
+            visualizerArgs._canvasPos     = canvasPos;
+            visualizerArgs._canvasSize    = canvasSize;
+            visualizerArgs._pActiveCamera = pCamera;
+            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
 
@@ -693,35 +455,21 @@ namespace sw::editor
             return;
         dir = dir * ( 1.0f / dirLen );
 
-        GameObject* pBestObj{ nullptr };
-        Component*  pBestComp{ nullptr };
-        float32     bestT{ MathUtil::MaxFloat };
+        EditorPickRay pickRay{};
+        pickRay._origin    = nearPt;
+        pickRay._direction = dir;
 
-        const bool b2DMode = _toolbarSettings._bIs2DMode;
-        pManager->forEachGameObject( [&]( GameObject* pObj )
+        // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
+        EditorPickResult pickResult{};
+        if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) )
         {
-            if ( pObj == nullptr || pObj->isActive() == false )
-                return;
-
-            if ( b2DMode )
-            {
-                EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-                EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-                EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-            }
-            else
-            {
-                EditorViewportClientInternal::considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-                EditorViewportClientInternal::considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-                EditorViewportClientInternal::considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-            }
-            EditorViewportClientInternal::considerScenePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
-        } );
-
-        if ( pBestObj != nullptr )
-            EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestComp } );
+            EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pickResult._pObject },
+                                                                  ComponentPtr{ pickResult._pComponent } );
+        }
         else
+        {
             EditorContext::get()->getWorkspace().clearSelection();
+        }
     }
 
     void EditorViewportClient::drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos,
@@ -1077,7 +825,7 @@ namespace sw::editor
                 const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
-                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
+                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
                 {
                     pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1086,7 +834,7 @@ namespace sw::editor
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
-                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
+                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
                 {
                     pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1114,7 +862,7 @@ namespace sw::editor
                 const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
-                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
+                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
                 {
                     pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1123,7 +871,7 @@ namespace sw::editor
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
-                if ( EditorViewportClientInternal::projectSegmentToScreen( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
+                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
                 {
                     pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
                 }
@@ -1187,8 +935,8 @@ namespace sw::editor
         if ( _bRulerActive == SW_TRUE )
         {
             ImVec2 sStart, sEnd;
-            if ( EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&
-                 EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
+            if ( EditorViewportProjectionUtil::projectPoint( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&
+                 EditorViewportProjectionUtil::projectPoint( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
             {
                 // Measurement line
                 pDrawList->AddLine( sStart, sEnd, IM_COL32( 255, 215, 40, 240 ), 2.5f );

@@ -60,8 +60,8 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 44 / SmokeTest 19
-#   Shipping : 161 / 422 / 96 / 44 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
+#   Shipping : 161 / 422 / 96 / 51 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -89,23 +89,6 @@ cd build/Ninja-Debug/Bin
 ---
 
 ## 1. 남은 일 (우선순위 순)
-
-### 1-0. 뷰포트가 컴포넌트 종류를 손으로 나열한다 — **다음 후보**
-
-커맨드 레지스트리(3절)와 **같은 종류의 문제**가 `EditorViewportClient.cpp` 에 남아 있다. 여기가
-에디터에서 가장 큰 파일(63KB)인 이유의 일부이기도 하다.
-
-- **피킹**이 `considerMeshPick` · `considerSpritePick` · `considerBoxPick` · `considerScenePick` 로
-  타입마다 함수 하나씩이다. 즉 **게임이 만든 컴포넌트는 뷰포트에서 클릭으로 집을 수 없다.**
-  ProfilerPanel 의 컴포넌트 분포표에서 이미 고친 것과 같은 결함이다(3절 2026-09-09 항목).
-- **디버그 시각화**도 같다. `drawDebugVisualizers` 가 BoxCollider2D 와 CameraComponent 만 알고,
-  각각 `ViewportToolbarSettings` 의 bool 하나 + 툴바 체크박스 하나와 짝지어 있다. 오버레이를
-  하나 더하려면 세 파일 네 곳을 고쳐야 한다.
-- 후보 구조: `{ 이름, 컴포넌트 getter, 반지름/모양 함수 }` 표 하나로 피킹을, 오버레이는
-  `IEditorViewportOverlay` + 등록으로. 그러면 새 오버레이는 파일 하나와 등록 한 줄이 된다.
-- **주의**: 반지름 계산이 타입마다 다르다(Mesh 는 bounds×scale, Sprite 는 scale×0.7+0.1,
-  Box 는 offsetScale 길이×0.5+0.1). 표로 접을 때 이 값을 바꾸면 클릭 판정이 달라진다 —
-  숫자를 그대로 옮기고, 옮긴 뒤 실기동으로 오브젝트를 집어 확인할 것.
 
 ### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **진행 중**
 
@@ -297,6 +280,46 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-10 (뷰포트 피킹·시각화의 컴포넌트 종류 나열 제거 — 예전 1-0)
+
+**게임이 만든 컴포넌트는 뷰포트에서 클릭으로 집히지 않았다.** `EditorViewportClient.cpp` 안에
+`considerMeshPick`·`considerSpritePick`·`considerBoxPick`·`considerScenePick` 네 함수가 엔진 타입을
+손으로 나열했고, 마지막 폴백은 `getPrimarySceneComponent()` **하나만** 봤다 — 게임 컴포넌트가 주
+컴포넌트가 아니면 후보에 아예 들어가지 못했다.
+
+피킹을 `Common/Commands/EditorViewportPick` 으로 옮겼다(ImGui 없음 → **테스트가 붙는다**).
+종류를 아는 제공자는 표의 한 줄이고(`_order3D`/`_order2D` 가 동거리 우선순위를 정한다 — 2D 에서
+스프라이트가 메시보다 앞서는 규약을 그대로 옮겼다), 전용 제공자가 못 잡은 오브젝트는 그
+오브젝트의 **모든** `SceneComponent` 를 기본 반지름 0.35 로 훑는다. RTTI 가 꺼져 있어
+`dynamic_cast` 를 쓸 수 없으므로 리플렉션 `castTo` 로 판별한다.
+
+`TestEditorViewportPick.cpp` 7케이스 — 레이-구 교차(맞음·빗나감·뒤쪽·원점이 안에 있는 경우) ·
+제공자 표가 비지 않았는지 · 전용 종류 없는 컴포넌트가 집히는지 · **주 컴포넌트가 아닌
+SceneComponent 가 집히는지** · 가까운 오브젝트 우선 · 비활성 제외 · 빈 씬/널 안전.
+폴백을 옛 코드(주 컴포넌트만)로 되돌리면 `NonPrimarySceneComponentIsPickable` 이 실패하는 것까지
+확인했다. EditorTest 44 → **51**.
+
+**디버그 시각화도 같은 문제였다.** `drawDebugVisualizers` 가 BoxCollider2D 와 CameraComponent 를
+손으로 나열하고, 각자 `ViewportToolbarSettings` 의 bool 하나 + 툴바 체크박스 하나에 짝지어 있었다 —
+시각화를 하나 더하려면 세 파일 네 곳을 고쳐야 했다. `Viewport/EditorViewportVisualizer` 의 표로
+모았고(라벨·툴팁·기본값·그리기 함수가 한 줄), **툴바 체크박스가 그 표에서 만들어진다.** 설정은
+bool 두 개 대신 `_visualizerMask` 하나이고 기본값은 표가 정한다(뷰포트 설정은 저장되지 않으므로
+표현을 바꿔도 마이그레이션이 없다).
+
+공유 투영 헬퍼는 `Viewport/EditorViewportProjection` 으로 뺐다. 헤더는 `struct ImVec2;` 전방
+선언만 두어 ImGui 를 include 하지 않는다(`EditorViewportClient.h` 의 `ImDrawList` 와 같은 방식) —
+그래서 호출부를 고칠 필요가 없었다.
+
+`EditorViewportClient.cpp` 는 1278줄 → **1026줄**(62KB → 48KB)로 줄었고, 남은 것은 카메라 조작·
+기즈모·그리드·자·통계 오버레이다.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5(양쪽), 린트 6/6, 컨벤션 0건, 네 백엔드 실기동 종료
+코드 0 · `[Error]` 0건, 덤프 창 14개·전부 열기 29개 / 빈 패널 0개.
+**그리기가 그대로인지**는 스태시로 기준선을 다시 빌드해 `Game View` 창의 정점 수를 비교했다 —
+고치기 전·후 모두 **742**로 같다(그리드·자·오버레이가 전부 이 창에 그려진다).
+**한계**: 클릭 자체는 실기동으로만 확인할 수 있다. 어느 컴포넌트가 선택되는지는 이제 단위
+테스트가 잡지만, ImGui 의 히트 판정·기즈모 우선순위는 사람이 눌러 봐야 한다.
 
 ### 2026-09-10 (테마 프리셋 표 + ClassicDark 가 저장되지 않던 버그)
 

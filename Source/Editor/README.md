@@ -34,7 +34,8 @@
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
   Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장
-- **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`)
+- **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
+  화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 표(`EditorViewportVisualizer`)
 - **Popups/**: 커맨드 팔레트, 퀵 런처, 본 계층 팝업
 
 ### 어디에 두나
@@ -84,6 +85,22 @@ comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp 
 예전에는 네 곳을 맞춰 고쳐야 했고(팔레트 switch · 문자열→열거형 사다리 · 열거형→문자열 switch ·
 이름 배열), 이름 배열은 **열거형 순서에 인덱스로 묶여** 있어서 순서를 바꾸면 콤보가 조용히 틀린
 이름을 보여 줬습니다.
+
+## 뷰포트에서 컴포넌트를 집거나 그리려면
+
+**피킹**은 `Common/Commands/EditorViewportPick` 이 합니다(ImGui 없음 → 테스트 있음).
+고유한 경계가 있는 종류는 그 안의 제공자 표에 한 줄을 넣고, 그렇지 않은 컴포넌트는
+**아무것도 하지 않아도** 집힙니다 — 전용 제공자가 못 잡은 오브젝트는 그 오브젝트의 모든
+`SceneComponent` 를 기본 반지름(`kFallbackRadius`)으로 훑기 때문입니다. 그래서 게임이 만든
+컴포넌트도 클릭으로 선택됩니다(예전에는 주 컴포넌트 하나만 봐서 안 됐습니다).
+
+**디버그 시각화**는 `Viewport/EditorViewportVisualizer` 의 표에 한 줄이면 됩니다 —
+라벨·툴팁·기본값·그리기 함수가 한 줄에 있고, **툴바 체크박스도 그 표에서 만들어집니다.**
+예전에는 시각화마다 `ViewportToolbarSettings` 의 bool 하나 + 툴바 체크박스 + 그리기 분기를
+세 파일에 나눠 적어야 했습니다.
+
+월드 → 화면 변환은 `Viewport/EditorViewportProjection` 을 씁니다. 선분은 반드시
+`projectSegment` 로 — 점 단위로 투영하면 카메라를 가로지르는 선이 통째로 사라집니다.
 
 ## 저장되지 않은 편집을 다루는 법
 

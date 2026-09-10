@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include <imgui.h>
 
@@ -95,10 +96,28 @@ namespace sw::editor
             ImGui::Checkbox( "Grid", &settings._bShowGrid );
             ImGui::SameLine();
             ImGui::Checkbox( "Cube", &settings._bShowOrientationCube );
-            ImGui::SameLine();
-            ImGui::Checkbox( "Col", &settings._bShowColliders );
-            ImGui::SameLine();
-            ImGui::Checkbox( "Cam", &settings._bShowCameras );
+
+            // 컴포넌트 시각화 체크박스는 시각화 표에서 만든다 — 시각화를 더해도 여기는 그대로다.
+            uint32                                     visualizerCount{ 0 };
+            const EditorViewportVisualizer::Row* const pVisualizerRow = EditorViewportVisualizer::getRows( visualizerCount );
+            for ( uint32 index = 0; index < visualizerCount; ++index )
+            {
+                const uint32 maskBit = EditorViewportVisualizer::getMaskBit( index );
+                bool         bOn     = ( settings._visualizerMask & maskBit ) != 0;
+
+                ImGui::SameLine();
+                ImGui::PushID( static_cast<int32>( index ) );
+                if ( ImGui::Checkbox( pVisualizerRow[index]._pToggleLabel, &bOn ) )
+                {
+                    if ( bOn )
+                        settings._visualizerMask |= maskBit;
+                    else
+                        settings._visualizerMask &= ~maskBit;
+                }
+                EditorWidgets::drawTooltip( pVisualizerRow[index]._pTooltip );
+                ImGui::PopID();
+            }
+
             ImGui::SameLine();
             ImGui::Checkbox( "Surf", &settings._bSurfaceSnap );
         }
