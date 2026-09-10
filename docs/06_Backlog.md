@@ -297,6 +297,56 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-10 (핫 리로드·종료 때 언맵된 DLL 로 뛰는 Undo 스택, 그리고 조용한 실패 셋)
+
+**Undo 스택이 에디터 모듈보다 오래 산다.** `CommandStack` 은 `EngineLoop` 이 소유하고
+(`_commandStack`), 거기에 쌓는 것은 **전부 에디터**다 — `EditorTransaction` 이 넣는 커맨드는
+패널의 `this` 를 잡은 **람다** 델리게이트이고, 그 람다의 코드와 소멸자
+(`Delegate::_managerFunc`)는 `EditorModule.dll` 안에 있다. 그런데 `ImGuiEditor::shutdown()` 이
+이 스택을 비우지 않았다. 그래서 두 경로가 언맵된 이미지로 뛴다:
+
+- **핫 리로드**: EditorModule 을 다시 컴파일하면(Build 메뉴에 있다) DLL 이 언맵·재맵되는데
+  스택에는 옛 이미지의 델리게이트가 남는다 → 그 뒤 `Ctrl+Z` 가 사라진 코드를 부른다.
+- **종료**: `App::shutdown()` 이 `_moduleHost->shutdown()`(모듈 내림) → `_engineLoop.shutdown()`
+  (`_commandStack.reset()`) 순서다. 즉 델리게이트 **소멸자**가 언맵된 DLL 로 점프한다
+  (`Delegate::release()` 가 `_managerFunc` 를 부른다 — 람다 델리게이트만 이 필드가 채워진다).
+
+넣은 쪽이 치우게 했다 — `ImGuiEditor::shutdown()` 이 모듈이 내려가기 전에 스택을 비운다.
+`EditorPlaySession::setState` 가 전이마다 같은 이유로 비우고 있어 선례도 있고, 에디터 밖에서
+이 스택에 push 하는 코드는 **없음을 확인**했다(`Source/Editor` 밖에는 소유·바인딩만 있다).
+**트레이드오프**: 에디터 핫 리로드 후 Undo 히스토리가 사라진다. 유지하려면 커맨드가
+직렬화 가능해야 하고(모듈에 묶인 람다가 아니라), 그건 별개의 큰 작업이다. 지금 선택지는
+"비우기" 와 "언맵된 코드로 뛰기" 뿐이다.
+
+**실증에 대한 한계**: 헤드리스 실행에서는 편집이 없어 스택이 **0개**다(임시 로그로 확인).
+즉 이 결함은 사용자가 실제로 편집한 뒤 리로드하거나 종료할 때만 드러난다 — 그래서 지금까지
+안 잡혔다. 크래시 재현은 만들지 않았고, 근거는 코드 수준이다(언로드 순서 + `release()` 가
+모듈 함수 포인터를 부른다는 점).
+
+**그리고 조용히 실패하던 자리 셋에 피드백을 붙였다.** 백로그가 예전에 같은 종류
+("에디터의 붙여넣기는 실패를 아무도 읽지 않고 있었다")를 고친 적이 있는데 남아 있었다:
+
+- `EditorAssetCommands::loadScene` — `requestLoadAsync` 실패 시 **로그도 알림도 없이** false 만
+  돌려줬고 호출부도 그 값을 읽지 않는다. 사용자가 씬을 골랐는데 아무 일도 일어나지 않는다.
+- `EditorTransformCommands::loadComponentPreset` — 파일이 없거나 XML 이 그 컴포넌트 타입과
+  맞지 않으면 실패하는데 반환값을 버렸다. "프리셋을 골랐는데 아무 일도 없다".
+- `EditorTransformCommands::saveComponentPreset` — 같은 형태(쓰기 실패).
+
+**이번 라운드에 훑고 결함이 없다고 확인한 것** (같은 곳을 다시 파지 않도록):
+
+- `formatstring` 의 `%s`·`%d` 혼용 — 정상이다. 이 포매터는 `%s`/`%d`/`%f` 등을 모두
+  "다음 인자" 자리표로 받는다(`%#` 이 기본형일 뿐).
+- **멤버 인덱스 경계** — `_selectedFrame`·`_selectedKey`·`_selected`·`_selectedGameDataIndex`·
+  `_filterIndex`·`_historyIndex`·팔레트 `_selectedIndex` 전부 접근 직전에 범위를 검사한다.
+- **백그라운드 잡 수명** — `EditorBackgroundJob` 이 상태를 `shared_ptr` 로 워커에 넘기고 세대
+  번호로 낡은 결과를 버린다. 패널이 먼저 사라져도 안전하다.
+- **엔진에 남는 다른 콜백** — Logger 구독은 `ConsolePanel` 이 소멸자·shutdown 양쪽에서 해제하고,
+  창 닫기 핸들러는 `ImGuiEditor::shutdown` 이 비운다. 에디터는 엔진 파일 감시자에 등록하지 않는다.
+- `EditorConfig` 필드 16개 — 읽히지 않는 것 없음.
+
+**검증**: Debug·Shipping 경고 0, nogpu 5/5(양쪽), 린트 6/6, 네 백엔드 실기동 종료 코드 0 ·
+`[Error]` 0건 · `Game View` 정점 수 742 동일, 전부 열기 창 29개/빈 패널 0개.
+
 ### 2026-09-10 (구조를 정리하다 드러난 결함 다섯 개)
 
 리팩터 뒤에 도구를 다시 돌리고(clang-tidy 85 TU **0건**, ASan nogpu **5/5**) "쓰기만 하고 읽지

@@ -34,6 +34,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -257,6 +258,21 @@ namespace sw::editor
         IWindow* pActiveWindow = IWindow::getActiveWindow();
         if ( pActiveWindow != nullptr )
             pActiveWindow->setCloseQueryHandler( {} );
+
+        /**
+         * Undo 스택은 **엔진이 소유**하고(EngineLoop::_commandStack) 이 모듈보다 오래 산다. 그런데
+         * 거기에 쌓는 것은 전부 에디터다 — `EditorTransaction` 이 넣는 커맨드는 패널의 `this` 를
+         * 잡은 **람다** 델리게이트이고, 그 람다의 코드와 소멸자(`Delegate::_managerFunc`)는
+         * EditorModule.dll 안에 있다. 그래서 비우지 않고 내려가면:
+         *   - 핫 리로드 후 Ctrl+Z 가 이미 언맵된 옛 이미지의 코드를 부른다.
+         *   - 종료 시에는 App 이 모듈을 먼저 내리고(App::shutdown → ModuleHost) 그 다음에
+         *     `_commandStack` 을 파괴하므로, 델리게이트 소멸자가 언맵된 DLL 로 점프한다.
+         * 넣은 쪽이 치운다. 에디터 밖에서 이 스택에 push 하는 코드는 없다(PlaySession 도 전이마다
+         * 같은 이유로 비운다).
+         */
+        CommandStack* pCommandStack = editor::getService<CommandStack>();
+        if ( pCommandStack != nullptr )
+            pCommandStack->clear();
 
         waitForDrawSnapshotIdle();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )

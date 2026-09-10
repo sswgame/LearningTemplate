@@ -278,7 +278,18 @@ namespace sw::editor
         }
 
         if ( pSceneManager->requestLoadAsync( loadPath ) == false )
+        {
+            // 예전에는 조용히 false 만 돌려줬다 — 사용자가 씬을 골랐는데 아무 일도 일어나지 않고
+            // 로그에도 남지 않았다. 호출부도 이 반환값을 읽지 않는다.
+            SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
+            EditorContext* pFailContext = EditorContext::get();
+            if ( pFailContext != nullptr )
+            {
+                pFailContext->getNotificationManager().push( "Scene", "Failed to open the scene",
+                                                             NotificationType::Error );
+            }
             return false;
+        }
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )

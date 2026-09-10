@@ -228,7 +228,10 @@ namespace sw::editor
                     warn( "Preset", "Select a component first" );
                     return;
                 }
-                EditorTransformCommands::loadComponentPreset( pComp, listPath[0] );
+                // 반환값을 버리면 "프리셋을 골랐는데 아무 일도 없다" 가 된다 (파일이 없거나
+                // XML 이 그 컴포넌트 타입과 맞지 않으면 실패한다).
+                if ( EditorTransformCommands::loadComponentPreset( pComp, listPath[0] ) == false )
+                    warn( "Preset", "Failed to apply the preset to this component" );
             }
 
             static void onSavePresetDialogResult( const vector<string>& listPath )
@@ -244,7 +247,8 @@ namespace sw::editor
                 const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPath[0] ) );
                 if ( fileName.empty() )
                     return;
-                EditorTransformCommands::saveComponentPreset( pComp, fileName );
+                if ( EditorTransformCommands::saveComponentPreset( pComp, fileName ) == false )
+                    warn( "Preset", "Failed to write the preset file" );
             }
 
             static void commandLoadComponentPreset()
