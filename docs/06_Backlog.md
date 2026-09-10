@@ -208,10 +208,10 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 >
 > 곁들여 본 것: `CookPrefabs` 가 소스 트리 안에 `*.prefab.bin` 을 남기고, `PrefabAsset` 은 XML 을 못 찾으면
 > 그 .bin 으로 물러난다. 위 실험에서 옮긴 프리팹의 옛 .bin 이 실패를 가렸다 — 이름을 바꾸거나 지운 프리팹이
-> 낡은 .bin 으로 되살아나는 경로다. `.bin` 은 `.gitignore` 되어 있다(쿠킹 산출물로 명시) — 남는 물음은 "XML 이
-> 없으면 .bin 으로 물러나는 것" 이 맞는가다. 배포본은 .bin 만 있으니 폴백이 필요하지만, Dev 에서 XML 이 사라진
-> 자리를 낡은 .bin 이 메우면 위처럼 실패가 가려진다. Dev 에서는 XML 이 정본이므로 .bin 폴백을 경고로 격상하거나
-> 쿠커 산출물을 소스 트리 밖으로 옮기는 것이 후보다.
+> 낡은 .bin 으로 되살아나는 경로다. `.bin` 은 `.gitignore` 되어 있다(쿠킹 산출물로 명시). 배포본은 .bin 만 있으니
+> 폴백 자체는 필요하다 — 그래서 Dev 에서는 폴백을 남기되 **경고로 격상**했다(`Source prefab missing - loaded stale
+> cooked binary instead: <bin> (source <xml>)`). 위 실험을 다시 돌리면 그 경고가 난다. 언리얼·유니티의 에디터는
+> 쿠킹 데이터를 아예 안 보므로, 쿠커 산출물을 소스 트리 밖으로 옮기는 것이 다음 단계 후보다.
 
 > 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
 > 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`

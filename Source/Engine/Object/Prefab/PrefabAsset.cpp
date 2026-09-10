@@ -466,15 +466,16 @@ namespace sw
             return nullptr;
         }
 #else
-        if ( bJson )
+        const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
+        if ( bSourceLoaded == false )
         {
-            if ( asset->loadFromJsonFile( resolvedPath ) == false && asset->loadFromBinaryFile( binPath ) == false )
+            if ( asset->loadFromBinaryFile( binPath ) == false )
                 return nullptr;
-        }
-        else
-        {
-            if ( asset->loadFromXmlFile( resolvedPath ) == false && asset->loadFromBinaryFile( binPath ) == false )
-                return nullptr;
+            // Dev 는 소스(XML/JSON)가 정본이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
+            // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다 — 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
+            // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼·유니티의 에디터는 쿠킹 데이터를 아예 안 본다;
+            // 여기는 폴백을 남기되 두 경로를 다 적어 왜 그 내용이 나왔는지 바로 보이게 한다.
+            SW_LOG_WARNING( "Source prefab missing - loaded stale cooked binary instead: %# (source %#)", binPath, resolvedPath );
         }
 #endif
 
