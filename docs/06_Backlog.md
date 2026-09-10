@@ -246,6 +246,25 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-10 (백엔드 넷의 서술체 해석을 한 곳으로 + 로그 파일 이름이 `.txt` 를 잃던 것)
+
+**`RHIShaderRequest`** — `RHIPipelineStateDesc` 를 셰이더 컴파일 요청으로 해석하는 규칙(진입점 기본값, define 파싱,
+"RT 0 개 + 뎁스 테스트 = 픽셀 스테이지 없음", RT 수 정규화, 캐시-아니면-컴파일)이 DX11·DX12·GL·Vulkan 에 네 번
+복사돼 있었다. 오늘 하루에만 그 복사본 중 Vulkan 은 define 을, DX12 는 뎁스 전용 판정을 빠뜨리고 있었다는 것이
+드러났다 — 네 곳에 있는 규칙은 한 곳만 빠져도 조용히 어긋난다. 이제 `Support/RHIShaderRequest.h` 의
+`resolveGraphics( desc, targetFormat )` 이 한 번 해석한 `RHIGraphicsShaderRequest`(VS/PS 요청 + 판정 사실)를
+백엔드가 **받기만** 한다. 백엔드 고유의 것(입력 레이아웃·상태 객체·API 호출)은 그대로다 — 정책은 Engine,
+메커니즘은 디바이스. 다음에 축이 들어오면(마스크드 그림자의 PS) 고칠 자리는 이 함수와 `hasPixelStage` 둘이다.
+`RHIShaderRequestTest.ResolvesEntryPointsDefinesAndDepthOnly`(nogpu) 가 규칙을 고정한다. DX11 도 이제 뎁스 전용
+파이프라인에 PS 를 붙이지 않는다(예전엔 경로만 있으면 붙였다).
+
+**`%#.txt` 가 정밀도로 읽혔다.** 로그 파일 이름이 `LOG_2026-9-10-21_<id>t` 로 끝나고 있었다 — 포맷 파서가
+`%#` 뒤의 `.` 을 정밀도(숫자 없음 = 0), `t` 를 길이 수식어, `x` 를 16진수 변환 문자로 읽어 `.tx` 를 삼켰다.
+그래서 Shipping 이 `Saved/Logs` 에 Warning 이상을 **잘 쓰고 있었는데도** `*.txt` 로 찾으면 아무것도 안 나왔다
+(오늘 "Shipping 은 로그를 안 남긴다" 고 오해한 이유다 — Info 가 컴파일 아웃되는 것은 의도이고 언리얼과 같다).
+정밀도는 **숫자가 따라올 때만**이다(`%.f` 꼴은 저장소에 없다). `Core_String.FormatPlaceholderFollowedByExtensionIsLiteral`
+로 고정했다(`%#.%#` 버전 표기와 `%.2f` 는 그대로).
+
 ### 2026-09-10 (쿠킹 산출물 스테이징 — 프리팹·씬 .bin 을 소스 트리 밖으로)
 
 "쿠커 산출물이 Resource 에 없으면 패키징이 안 되지 않나" 가 질문이었다. 답은 **팩은 "디스크 어디에 있었나"가

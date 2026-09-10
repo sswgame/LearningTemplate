@@ -13,22 +13,13 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include <glad/glad.h>
 
 namespace sw
 {
-    namespace
-    {
-        ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
-        {
-            if ( engine::areEngineServicesBound() )
-                return engine::getShaderCache().getOrCompile( desc );
-            return ShaderCompiler::compileHLSL( desc );
-        }
-    } // namespace
-
     SW_LOG_CALLER( "OpenGLRHIResource" );
 
     RHIPipelineStateHandle OpenGLRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
@@ -39,33 +30,15 @@ namespace sw
         ScopedOpenGLContext                        ctxScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
-        {
-            for ( const string& define : desc._listShaderDefine )
-                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
-        };
-
-        ShaderCompileDesc vsDesc{};
-        vsDesc._filePath     = desc._vertexShaderPath;
-        vsDesc._entryPoint   = desc._vertexEntryPoint.empty() ? "VSMain" : desc._vertexEntryPoint;
-        vsDesc._stage        = ShaderStage::Vertex;
-        vsDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
-        fillDefines( vsDesc );
-        ShaderCompileResult vsResult = compileShader( vsDesc );
-
-        const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-        const bool          bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
-        ShaderCompileResult psResult{};
-        ShaderCompileDesc   psDesc{};
+        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
+        const ShaderCompileDesc&       vsDesc          = request._vertex;
+        const ShaderCompileDesc&       psDesc          = request._pixel;
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( vsDesc );
+        ShaderCompileResult            psResult{};
         if ( bHasPixelShader )
-        {
-            psDesc._filePath     = desc._pixelShaderPath;
-            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
-            psDesc._stage        = ShaderStage::Pixel;
-            psDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
-            fillDefines( psDesc );
-            psResult = compileShader( psDesc );
-        }
+            psResult = RHIShaderRequest::compile( psDesc );
 
         if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
         {
@@ -160,7 +133,7 @@ namespace sw
         csDesc._entryPoint           = entryPoint;
         csDesc._stage                = ShaderStage::Compute;
         csDesc._targetFormat         = ShaderTargetFormat::SPIRV_OpenGL;
-        ShaderCompileResult csResult = compileShader( csDesc );
+        ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
 
         if ( csResult._bSuccess )
         {

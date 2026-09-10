@@ -3,6 +3,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
@@ -791,4 +792,64 @@ SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
     reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_VIEWMODE_UNLIT=1" ) );
     reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
     SW_EXPECT_STREQ( unlitPath.c_str(), sw::ShaderCache::makePrebakedRelativePath( reordered ).c_str() );
+}
+
+// ------------------------------------------------------------------------------
+// RHIShaderRequestTest — 서술체 해석은 한 곳이다
+// ------------------------------------------------------------------------------
+/**
+ * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 백엔드 넷이 각자 갖던 것.
+ * @details 진입점 기본값, define 은 두 스테이지에, RT 0 개 + 뎁스 테스트면 픽셀 스테이지 없음(경로가 있어도),
+ *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 네 곳에 복사돼 있을 때 Vulkan 은 define 을, DX12 는 뎁스 전용 판정을
+ *          빠뜨렸다 — 규칙이 한 곳이면 빠질 자리가 없다. GPU 가 필요 없다(nogpu).
+ */
+SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
+{
+    sw::RHIPipelineStateDesc desc{};
+    desc._vertexShaderPath = "engine/shaders/forwardlit.hlsl";
+    desc._pixelShaderPath  = "engine/shaders/forwardlit.hlsl";
+    desc._listShaderDefine = { "SW_FORWARD=1", "FOO" };
+
+    // 1) 기본: 진입점 기본값, define 은 두 스테이지에, RT 1.
+    const sw::RHIGraphicsShaderRequest plain = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_TRUE( plain._bHasPixelShader != SW_FALSE );
+    SW_EXPECT_TRUE( plain._bDepthOnly == SW_FALSE );
+    SW_EXPECT_EQUAL( 1u, plain._numRenderTargets );
+    SW_EXPECT_STREQ( "VSMain", plain._vertex._entryPoint.c_str() );
+    SW_EXPECT_STREQ( "PSMain", plain._pixel._entryPoint.c_str() );
+    SW_EXPECT_TRUE( plain._vertex._stage == sw::ShaderStage::Vertex && plain._pixel._stage == sw::ShaderStage::Pixel );
+    SW_EXPECT_TRUE( plain._vertex._targetFormat == sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_EQUAL( 2u, plain._vertex._listDefine.size() );
+    SW_EXPECT_EQUAL( 2u, plain._pixel._listDefine.size() );
+    SW_EXPECT_STREQ( "FOO", plain._pixel._listDefine[1]._name.c_str() );
+    SW_EXPECT_STREQ( "1", plain._pixel._listDefine[1]._value.c_str() ); // 값 없는 define 은 1
+
+    // 2) 명시한 진입점은 그대로.
+    desc._vertexEntryPoint                   = "MyVS";
+    desc._pixelEntryPoint                    = "MyPS";
+    const sw::RHIGraphicsShaderRequest named = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::SPIRV_Vulkan );
+    SW_EXPECT_STREQ( "MyVS", named._vertex._entryPoint.c_str() );
+    SW_EXPECT_STREQ( "MyPS", named._pixel._entryPoint.c_str() );
+
+    // 3) 뎁스 전용(RT 0 + 뎁스 테스트): 경로가 있어도 PS 없음, RT 0.
+    desc._numRenderTargets                       = 0;
+    desc._bEnableDepthTest                       = SW_TRUE;
+    const sw::RHIGraphicsShaderRequest depthOnly = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXBC_D3D11 );
+    SW_EXPECT_TRUE( depthOnly._bDepthOnly != SW_FALSE );
+    SW_EXPECT_TRUE( depthOnly._bHasPixelShader == SW_FALSE );
+    SW_EXPECT_EQUAL( 0u, depthOnly._numRenderTargets );
+
+    // 4) RT 0 인데 뎁스 테스트가 없으면 뎁스 전용이 아니다 — RT 는 1 로 올리고 PS 는 붙는다.
+    desc._bEnableDepthTest                     = SW_FALSE;
+    const sw::RHIGraphicsShaderRequest noDepth = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::SPIRV_OpenGL );
+    SW_EXPECT_TRUE( noDepth._bDepthOnly == SW_FALSE );
+    SW_EXPECT_TRUE( noDepth._bHasPixelShader != SW_FALSE );
+    SW_EXPECT_EQUAL( 1u, noDepth._numRenderTargets );
+
+    // 5) PS 경로가 비면 PS 없음 (RT 는 그대로).
+    desc._numRenderTargets = 2;
+    desc._pixelShaderPath.clear();
+    const sw::RHIGraphicsShaderRequest noPs = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_TRUE( noPs._bHasPixelShader == SW_FALSE );
+    SW_EXPECT_EQUAL( 2u, noPs._numRenderTargets );
 }

@@ -11,6 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
@@ -20,58 +21,21 @@
 
 namespace sw
 {
-    namespace
-    {
-        // 이름은 클래스(VulkanRHIResource)가 아니라 **이 TU**(…ResourcePipeline)를 따른다. 같은 클래스를 여러 .cpp 로
-        // 나눠 구현하므로 클래스 이름으로 지으면 유니티 빌드에서 다른 조각의 같은 이름과 재정의로 부딪힌다(실제로 부딪혔다).
-        struct VulkanRHIResourcePipelineInternal
-        {
-            static ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
-            {
-                if ( engine::areEngineServicesBound() )
-                    return engine::getShaderCache().getOrCompile( desc );
-                return ShaderCompiler::compileHLSL( desc );
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "VulkanRHIResource" );
 
     RHIPipelineStateHandle VulkanRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
-        // desc._listShaderDefine 을 컴파일 요청에 옮긴다. 다른 세 백엔드는 처음부터 했는데 여기만 빠져 있어서
-        // Vulkan 은 SW_FORWARD·머티리얼 퍼뮤테이션·SW_VIEWMODE_UNLIT 을 한 번도 컴파일러에 넘긴 적이 없었다 —
-        // PSO 디스크립터에는 define 이 들어 있으니 디스크립터를 보는 테스트는 초록이었고, 화면만 안 바뀌었다.
-        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
-        {
-            for ( const string& define : desc._listShaderDefine )
-                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
-        };
-
-        ShaderCompileDesc vsDesc{};
-        vsDesc._filePath     = desc._vertexShaderPath;
-        vsDesc._entryPoint   = desc._vertexEntryPoint.empty() ? "VSMain" : desc._vertexEntryPoint;
-        vsDesc._stage        = ShaderStage::Vertex;
-        vsDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-        fillDefines( vsDesc );
-        ShaderCompileResult vsResult = VulkanRHIResourcePipelineInternal::compileShader( vsDesc );
-
-        const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-        const bool          bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
-        ShaderCompileResult psResult{};
+        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정·RT 수)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
+        // 예전엔 여기서 직접 읽으면서 define 을 아예 안 옮겨, Vulkan 만 SW_FORWARD·머티리얼 퍼뮤테이션·SW_VIEWMODE_UNLIT 을
+        // 컴파일러에 넘긴 적이 없었다 — 네 곳에 복사된 규칙은 한 곳만 빠져도 그렇게 조용히 어긋난다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
+        const ShaderCompileDesc&       vsDesc          = request._vertex;
+        const ShaderCompileDesc&       psDesc          = request._pixel;
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( vsDesc );
+        ShaderCompileResult            psResult{};
         if ( bHasPixelShader )
-        {
-            ShaderCompileDesc psDesc{};
-            psDesc._filePath     = desc._pixelShaderPath;
-            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
-            psDesc._stage        = ShaderStage::Pixel;
-            psDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-            fillDefines( psDesc );
-            psResult = VulkanRHIResourcePipelineInternal::compileShader( psDesc );
-        }
+            psResult = RHIShaderRequest::compile( psDesc );
 
         if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
         {
@@ -117,7 +81,7 @@ namespace sw
             fragShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             fragShaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
             fragShaderStageInfo.module = fragShaderModule;
-            fragShaderStageInfo.pName  = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint.c_str();
+            fragShaderStageInfo.pName  = psDesc._entryPoint.c_str();
         }
 
         VkPipelineShaderStageCreateInfo arrShaderStage[] = { vertShaderStageInfo, fragShaderStageInfo };
@@ -172,7 +136,7 @@ namespace sw
         multisampling.sampleShadingEnable  = VK_FALSE;
         multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        const uint32 numRT      = bDepthOnly ? 0u : ( ( desc._numRenderTargets > 0 ) ? desc._numRenderTargets : 1u );
+        const uint32 numRT      = request._numRenderTargets;
         const uint32 blendCount = ( numRT > kMaxColorAttachments ) ? kMaxColorAttachments : numRT;
 
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
@@ -250,7 +214,7 @@ namespace sw
         csDesc._entryPoint           = entryPoint;
         csDesc._stage                = ShaderStage::Compute;
         csDesc._targetFormat         = ShaderTargetFormat::SPIRV_Vulkan;
-        ShaderCompileResult csResult = VulkanRHIResourcePipelineInternal::compileShader( csDesc );
+        ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
 
         if ( csResult._bSuccess == false )
         {

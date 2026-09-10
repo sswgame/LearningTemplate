@@ -13,22 +13,10 @@
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-namespace sw
-{
-    namespace
-    {
-        ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
-        {
-            if ( engine::areEngineServicesBound() )
-                return engine::getShaderCache().getOrCompile( desc );
-            return ShaderCompiler::compileHLSL( desc );
-        }
-    } // namespace
-} // namespace sw
-
 namespace sw
 {
     SW_LOG_CALLER( "D3D12RHIResource" );
@@ -36,36 +24,16 @@ namespace sw
     RHIPipelineStateHandle D3D12RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-        auto                                        fillDefines = [&]( ShaderCompileDesc& compileDesc )
-        {
-            for ( const string& define : desc._listShaderDefine )
-                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
-        };
 
-        ShaderCompileDesc vsDesc{};
-        vsDesc._filePath     = desc._vertexShaderPath;
-        vsDesc._entryPoint   = desc._vertexEntryPoint.empty() ? "VSMain" : desc._vertexEntryPoint;
-        vsDesc._stage        = ShaderStage::Vertex;
-        vsDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
-        fillDefines( vsDesc );
-        ShaderCompileResult vsResult = compileShader( vsDesc );
-
-        // 뎁스만 쓰는 파이프라인(RT 0 개)은 픽셀 스테이지가 없다 — GL·Vulkan 과 같은 규칙이다. 여기만 PS 를
-        // 무조건 컴파일해서, 그림자 패스에 머티리얼 define 을 얹은 변형이 DX12 에서만 PS 리플렉션을 요구했고
-        // Shipping 매니페스트에는 그 조합이 없었다(베이커는 그 패스에 PS 가 없다고 본다).
-        const bool          bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-        const bool          bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
-        ShaderCompileResult psResult{};
+        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정·RT 수)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
+        // 예전엔 여기서 직접 읽으면서 뎁스 전용 판정만 빠져, 그림자 패스에 머티리얼 define 을 얹은 변형이 DX12 에서만
+        // PS 리플렉션을 요구했다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult        = RHIShaderRequest::compile( request._vertex );
+        ShaderCompileResult            psResult{};
         if ( bHasPixelShader )
-        {
-            ShaderCompileDesc psDesc{};
-            psDesc._filePath     = desc._pixelShaderPath;
-            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
-            psDesc._stage        = ShaderStage::Pixel;
-            psDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
-            fillDefines( psDesc );
-            psResult = compileShader( psDesc );
-        }
+            psResult = RHIShaderRequest::compile( request._pixel );
 
         if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
         {
@@ -91,7 +59,7 @@ namespace sw
             psoDesc.SampleMask               = MathUtil::MaxUInt32;
             psoDesc.PrimitiveTopologyType    = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 0 개다 — 예전엔 1 로 올려 R8G8B8A8 을 선언했는데 실제로는 DSV 만 바인딩된다.
-            psoDesc.NumRenderTargets = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
+            psoDesc.NumRenderTargets = request._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
             for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )
@@ -150,7 +118,7 @@ namespace sw
             csDesc._entryPoint      = entryPoint;
             csDesc._stage           = ShaderStage::Compute;
             csDesc._targetFormat    = ShaderTargetFormat::DXIL_D3D12;
-            ShaderCompileResult res = compileShader( csDesc );
+            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess )
             {
                 D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};

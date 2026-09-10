@@ -401,8 +401,11 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 3) 정밀도
-            if ( cursor < format.size() && format[cursor] == '.' )
+            // 3) 정밀도 — **숫자가 따라올 때만** 정밀도다. printf 는 `%.f` 를 정밀도 0 으로 보지만 이 엔진의
+            // 플레이스홀더는 `%#` 이라 `%#.txt` 같은 리터럴이 흔하다. 예전엔 여기서 `.` 을 먹고 길이 수식어 `t`,
+            // 변환 문자 `x` 까지 읽어 "정밀도 0 의 16진수" 로 해석했다 — 로그 파일 이름이 `LOG_..._<id>t` 로
+            // 끝났고(.tx 가 사라졌다) `*.txt` 로 찾으면 아무것도 안 나왔다. 저장소에 `%.f` 꼴은 없다.
+            if ( cursor + 1 < format.size() && format[cursor] == '.' && format[cursor + 1] >= '0' && format[cursor + 1] <= '9' )
             {
                 ++cursor;
                 uint32 precisionValue{ 0 };
@@ -411,7 +414,6 @@ namespace sw
                     precisionValue = precisionValue * 10u + static_cast<uint32>( format[cursor] - '0' );
                     ++cursor;
                 }
-                // `%.f` 는 정밀도 0 이다 (printf 규약).
                 outFormat.precision( static_cast<int32>( precisionValue ) );
                 outHasSpec = true;
             }

@@ -13,22 +13,10 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-namespace sw
-{
-    namespace
-    {
-        ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
-        {
-            if ( engine::areEngineServicesBound() )
-                return engine::getShaderCache().getOrCompile( desc );
-            return ShaderCompiler::compileHLSL( desc );
-        }
-    } // namespace
-} // namespace sw
-
 namespace sw
 {
     SW_LOG_CALLER( "D3D11" );
@@ -41,16 +29,14 @@ namespace sw
                 compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
         };
 
+        // 서술체 해석(진입점 기본값·define·뎁스 전용 판정)은 RHIShaderRequest 하나가 한다 — 백엔드는 받기만 한다.
+        // (컴퓨트 경로는 아래에서 fillDefines 를 그대로 쓴다 — 그래픽스 요청에는 컴퓨트 스테이지가 없다.)
+        const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
+
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( desc._vertexShaderPath.empty() == false )
         {
-            ShaderCompileDesc vsDesc{};
-            vsDesc._filePath     = desc._vertexShaderPath;
-            vsDesc._entryPoint   = desc._vertexEntryPoint.empty() ? "VSMain" : desc._vertexEntryPoint;
-            vsDesc._stage        = ShaderStage::Vertex;
-            vsDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
-            fillDefines( vsDesc );
-            ShaderCompileResult res = compileShader( vsDesc );
+            ShaderCompileResult res = RHIShaderRequest::compile( request._vertex );
             if ( res._bSuccess )
             {
                 _pDevice->_device->CreateVertexShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._vs.GetAddressOf() );
@@ -61,15 +47,10 @@ namespace sw
                 _pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
             }
         }
-        if ( desc._pixelShaderPath.empty() == false )
+        // 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다 — 다른 세 백엔드와 같은 규칙이다.
+        if ( request._bHasPixelShader != SW_FALSE )
         {
-            ShaderCompileDesc psDesc{};
-            psDesc._filePath     = desc._pixelShaderPath;
-            psDesc._entryPoint   = desc._pixelEntryPoint.empty() ? "PSMain" : desc._pixelEntryPoint;
-            psDesc._stage        = ShaderStage::Pixel;
-            psDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
-            fillDefines( psDesc );
-            ShaderCompileResult res = compileShader( psDesc );
+            ShaderCompileResult res = RHIShaderRequest::compile( request._pixel );
             if ( res._bSuccess )
                 _pDevice->_device->CreatePixelShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._ps.GetAddressOf() );
         }
@@ -81,7 +62,7 @@ namespace sw
             csDesc._stage        = ShaderStage::Compute;
             csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
             fillDefines( csDesc );
-            ShaderCompileResult res = compileShader( csDesc );
+            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess )
                 _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() );
         }
@@ -129,7 +110,7 @@ namespace sw
             csDesc._entryPoint      = entryPoint;
             csDesc._stage           = ShaderStage::Compute;
             csDesc._targetFormat    = ShaderTargetFormat::DXBC_D3D11;
-            ShaderCompileResult res = compileShader( csDesc );
+            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
                 return 0;
         }

@@ -1146,3 +1146,25 @@ SW_TEST_CASE( Core_String, NonAsciiBytesAreUnsigned )
     SW_EXPECT_EQUAL( sw::StringUtil::computeHash64( "ABC", 3, true ), sw::StringUtil::computeHash64( "abc", 3, true ) );
     SW_EXPECT_TRUE( sw::StringUtil::computeHash64( "ABC", 3, false ) != sw::StringUtil::computeHash64( "abc", 3, false ) );
 }
+
+/**
+ * @brief [Core_String] `%#` 바로 뒤의 `.확장자` 는 정밀도가 아니다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
+ * @details `%#.txt` 를 "정밀도 0 + 길이 수식어 t + 16진수 x" 로 읽어 `.tx` 가 사라지고 `t` 만 남았다.
+ *          정밀도는 숫자가 따라올 때만이다. 숫자 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
+ */
+SW_TEST_CASE( Core_String, FormatPlaceholderFollowedByExtensionIsLiteral )
+{
+    utf8 buffer[128]{};
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "LOG_%#-%#_%#.txt", 2026, 9, "8a19215712386c90" );
+    SW_EXPECT_STREQ( "LOG_2026-9_8a19215712386c90.txt", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "api %#.%#.%#", 1, 3, 250 );
+    SW_EXPECT_STREQ( "api 1.3.250", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%.2f", 3.14159 );
+    SW_EXPECT_STREQ( "3.14", buffer );
+
+    sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#. done", "x" );
+    SW_EXPECT_STREQ( "x. done", buffer );
+}
