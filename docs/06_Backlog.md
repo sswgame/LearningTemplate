@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-10 · 기준 커밋 `f9fc5d0f`
+> 마지막 갱신: 2026-09-10 · 기준 커밋 `29903f2b`
 
 ---
 
@@ -75,8 +75,9 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 169 / EngineTest 424 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
-#   Shipping : 161 / 422 / 96 / 51 / 1        ← 차이는 전부 Dev 전용 케이스의 정상 스킵
+#   Debug    : CoreTest 169 / EngineTest 426 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
+#   Shipping : 161(+8 skip) / 424(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   (2026-09-10 실측. EngineTest 는 GPU 포함 전체 수이고, ctest 의 EngineTest_NoGPU 는 400 이다.)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -105,7 +106,7 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
-### 1-0. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
+### 1-1. 뷰포트 뷰 모드(Lit/Unlit/Wireframe)를 렌더러에 연결한다
 
 뷰포트 툴바 맨 앞의 콤보는 **아무 일도 하지 않았다** — `ViewportToolbarSettings::_renderMode` 를
 읽는 코드가 어디에도 없다(쓰기만 하고, 콤보 자신이 되읽을 뿐이었다). 고르면 값만 바뀌고 화면은
@@ -121,85 +122,16 @@ cd build/Ninja-Debug/Bin
 - Unlit 은 셰이더/파이프라인 변형이 더 필요하다(조명 항을 빼는 패스나 셰이더 순열).
 - 연결한 뒤에는 콤보의 `BeginDisabled`/툴팁을 걷고, 네 백엔드에서 실기동으로 확인할 것.
 
-### 1-1. 공용 위젯을 안 쓰는 패널 정리 — **진행 중**
-
-> **2026-09-09 측정 결과 — 표의 전제가 일부 틀렸다.** 세 패널이 "툴바 → 검색 → 목록/표 → 상태줄"
-> 이라는 같은 뼈대를 쓴다고 적어 두었지만, `ProfilerPanel` 은 **목록 패널이 아니다** — 탭 +
-> `CollapsingHeader` + 통계표다. 검색도 목록도 상태줄도 없다. 그래서 `EditorListPanel` 골격(예전 1-2)을
-> 만들어도 이 패널의 94개 호출은 줄지 않는다. 골격을 만들기 전에 나머지 패널도 실제 모양을
-> 확인해야 한다(지금 표는 호출 수만 세었다). **→ 확인했다. 3절 "검색 필터" 항목에 결과를 적었다.**
->
-> 대신 `ProfilerPanel` 에서 **다른 종류의 문제**를 찾아 고쳤다 — `HierarchyPanel` 뱃지와 같은
-> 패턴이다. 컴포넌트 분포표가 타입 이름 5개(`SceneComponent`·`MeshComponent`·`SpriteComponent`·
-> `BoxCollider2DComponent`·`CameraComponent`)를 손으로 나열하고 `getComponent<T>()` 로 각각 셌다.
-> 결과: 게임이 만든 컴포넌트는 표에 **아예 안 나오고**, 한 오브젝트에 같은 타입이 여럿이어도 1 로
-> 세서 "Active Instances" 라는 열 이름과 맞지 않았다. 집계를 `EditorSceneCommands::
-> collectSceneStatistics` 로 옮기고(ImGui 무의존 → 테스트 있음) 리플렉션 `TypeInfo` 로 묶는다.
-> 표 코드 25줄이 루프 하나가 되고, 엔진·게임이 컴포넌트를 늘릴 때 이 패널을 고칠 일이 없다.
->
-> **검증에서 배운 것**: `-gv_editorPanelDump` 의 정점 수는 **클리핑된 내용을 구분하지 못한다.**
-> Profiler 패널은 기본 레이아웃에서 높이 139px 이라 분포표가 화면 밖이고, 변경 전후 정점 수가
-> 똑같이 1028 이었다. 그려지는 코드는 실행되지만 픽셀은 확인되지 않는다 — 그래서 집계 쪽에
-> 단위 테스트를 붙였다. 도구는 "패널이 비었는가" 를 잡고, "표 내용이 맞는가" 는 테스트가 잡는다.
-
-공용 위젯은 이미 충분하다(`Common/Widgets/EditorWidgets.h` 27개 +
-`Common/Gui/EditorChrome.h` 12개). 문제는 **채택률**이다.
-
-| 패널 | ImGui 직접 호출 | 공용 위젯 사용 |
-|---|---|---|
-| `InputMapEditorPanel` | 313 | **0** |
-| `ProfilerPanel` | 94 | **0** |
-| `PrefabEditorPanel` | 52 | **0** |
-| `TileMapPanel` | 42 | 1 |
-| `SpriteClipPanel` | 40 | 1 |
-
-**빈 상태 안내는 마쳤다.** 82곳의 `ImGui::TextDisabled` 를 한 곳씩 보고 **본문 빈 상태인 12곳만**
-`EditorWidgets::drawEmptyHint` 로 옮겼다(ContentBrowser 1 · GlobalVariables 1 · InputMapEditor 3 ·
-Inspector 3 · Material 1 · Profiler 3).
-
-옮기지 **않은** 자리와 이유 — 다음에 같은 판단을 반복하지 않도록 적어 둔다:
-
-- **메뉴 안 3곳** (`Hierarchy` 의 컴포넌트 추가 메뉴 2곳, `Inspector` 의 프리셋 메뉴 1곳).
-  `EndMenu()` 로 닫히는 팝업 안이라 백로그의 경고대로 두었다.
-- **상태줄 2곳** (`Sequencer` 의 파일명 라벨, `Inspector` 의 "Scene edits locked" 칩 옆).
-  `SameLine` 으로 붙은 인라인 라벨이고, 한쪽 분기만 바꾸면 같은 줄이 두 API 로 갈린다.
-- **진행 상태 1곳** (`GlobalVariables` 의 "Scanning presets...").  비어 있는 게 아니라 **기다리는**
-  중이다. 빈 상태와 로딩 상태는 나중에 다르게 보여야 할 자리다.
-
-**2026-09-10: 텍스트 입력을 공용 위젯으로 옮겼다.** 표에 적힌 "공용 위젯 사용 0" 은 채택률
-문제로 보였지만, 실제로 8개 패널에 복사돼 있던 것은 위젯이 아니라 **임시 버퍼를 만들어 넣었다
-빼는 다섯 줄**이었다(`fixed_string<N> buf{ text.c_str() }` → `InputText` → 되돌려 담기). 크기를
-자리마다 골랐고(64·128·256·512) 그 크기를 넘으면 잘렸다 — 게다가 `fixed_string` 은 넘치는 입력에서
-버퍼 밖을 쓰고 있었다(3절). `EditorWidgets::drawTextField( label, string&, width )` 하나로 16곳을
-옮겼고, 손으로 만든 임시 버퍼 InputText 는 남아 있지 않다.
-
-**2026-09-10: 상태색을 테마에서 가져오게 했다.** 남은 호출 수를 뜯어 보니 `TextColored` 가
-`InputMapEditorPanel` 에만 23개였고, 전부 `ImVec4` 리터럴을 자리마다 새로 적고 있었다 — 같은 뜻의
-**초록이 여섯 가지**(0.2/1/0.2, 0.2/1/0.3, 0.2/1/0.5, 0.2/1/0.4, 0.4/1/0.4, 0.35/0.85/0.35),
-호박색 여섯, 빨강 다섯이다. 그런데 `EditorThemeUtil` 에는 이미 테마별 상태색과
-`textSuccess`/`textWarning`/`textError`/`textMuted` 가 있었고 **아무도 쓰지 않았다**(색 게터만
-ContentBrowser 가 썼다). 즉 테마를 바꿔도 이 글자들은 안 바뀌었다. 상태 의미가 분명한 23곳을
-테마 API 로 옮기고, 서식이 필요한 자리를 위해 `pushTextColor`/`popTextColor` 와 `textInfo` 를 더했다.
-남긴 것: Dialogue 노드 뱃지(START/CHOICE/BRANCH…)와 플랫폼 브랜드색은 **분류색**이지 상태색이
-아니다 — 상태색으로 접으면 뜻이 사라진다.
-
-**측정해서 기각한 것 — 표(Table) 골격.** `BeginTable` + `TableSetupColumn` × N + `TableHeadersRow`
-가 15곳에 있어 공통부처럼 보였다. 세어 보니 3열 표는 5문장 → 골격을 쓰면 배열 3줄 + desc 4줄로
-**늘어난다.** 7열 표에서만 이득이고 전체로는 60줄 남짓이며, 대신 어떤 ImGui 플래그가 걸리는지가
-한 겹 숨는다. 안 만든다.
-
-**복사된 블록도 찾아봤다** — Editor 전체에서 5줄 이상 동일한 블록을 서로 다른 파일 간에 훑으니
-`}` · `namespace` 닫기 같은 뼈대만 나왔다. 남은 호출 수는 **패널마다 고유한 조립**이지 중복이
-아니다. `InputMapEditorPanel` 302개의 절반은 `SameLine` 37 · `Text` 36 · `Button` 32 · `Separator` 23
-이다 — 이걸 감싸면 읽기만 나빠진다. 1-1 은 여기서 닫는다. 목록형 골격(예전 1-2)을 만들면 줄어든다고 적어 두었지만, 측정해 보니
-골격은 이미 있었다(아래 3절 "검색 필터" 항목). 이 두 패널의 호출 수는 **목록형이 아니라서** 남은
-것이므로, 줄이려면 각자의 모양에 맞는 공통부를 따로 찾아야 한다.
-
 ### 1-2. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
 `py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
-이라는 다른 답을 받았다. 둘 다 맞다 — clang-tidy 버전이 다르면 검사 목록이 다르다. 그래서 숫자만
-적으면 다음 사람이 헷갈린다. 버전을 같이 적는다.
+이라는 다른 답을 받았다. 둘 다 맞다 — clang-tidy 버전이 다르면 검사 목록이 다르다.
+
+**2026-09-10: 그 혼란을 도구가 스스로 막게 했다.** 이제 스크립트가 실행 파일 경로와 버전을 보고
+머리에 찍고, `--clang-tidy <경로>` 로 버전을 고정할 수 있다. 숫자를 적을 때 버전을 손으로
+덧붙이는 규율에 의존하지 않는다. 한 PC 에 여러 버전이 깔려 있기도 하다 — 이 PC 는
+`C:\Utility\LLVM`(21.1.1)과 VS BuildTools(22.1.3)를 함께 갖고 있고, 탐색 순서상
+**기본은 21** 이 잡힌다. 22 로 재려면 경로를 명시해야 한다(경로는 `--clang-tidy` 로 넘긴다).
 
 - **clang-tidy 20 기준(한쪽 PC)**: 110 → 65 → 20 → **0건**. 고칠 수 있으면 고치고, 구조적으로
   불가능한 자리는 `NOLINTNEXTLINE` + 이유를 남겼다.
@@ -264,14 +196,7 @@ clang-tidy 22 에서 남은 것(합 72건, 이 병합 이후 `Padding` 을 끄�
 목록이 필요하면 다중 행 시그니처를 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다
 (단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-4. 되살리지 못한 테스트
-
-`Test/EditorTest/TestEditorSceneCommands.cpp` 는 되살렸지만(현재 EditorTest 27개에 포함),
-`EditorContext` 가 UI 매니저 전부를 `unique_ptr` 로 소유하는 구조는 그대로다. 더 깊은 분리
-(패널·팝업 매니저 소유를 컨텍스트 밖으로)는 영향 범위가 커서 하지 않았다. 필요해지면
-그때 소유 구조부터 정한다.
-
-### 1-5. 확인만 하고 넘어간 것
+### 1-4. 확인만 하고 넘어간 것
 
 Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한 번** SEGFAULT
 했다. EngineTest 는 Editor 를 링크하지 않으므로 에디터 변경과는 무관하다.
@@ -299,6 +224,13 @@ Shipping `EngineTest` 에서 `RHITest.CommandListCreationAndExecution` 이 **한
   복사해야 할 것이 남아 있으면 그 자리가 다음 리팩터 대상이다.
 - 주석과 커밋 메시지는 한국어. 규칙은 [AGENTS.md](../AGENTS.md) 와
   [04_CodingGuidelines.md](04_CodingGuidelines.md).
+
+### 안 하기로 한 것 (다시 제안하지 말 것)
+
+- **`EditorContext` 의 소유 구조를 더 쪼개는 것.** 컨텍스트가 UI 매니저 전부를 `unique_ptr` 로
+  들고 있다. 조회/생명주기를 두 TU 로 갈라 `EditorContext` 를 **조회만** 하는 코드가 ImGui 없이
+  링크되게 해 둔 것으로 충분하다(그래서 `Test/EditorTest` 가 성립한다). 패널·팝업 매니저 소유를
+  컨텍스트 밖으로 빼는 것은 영향 범위가 크고 얻는 것이 없다 — 필요해지면 그때 소유 구조부터 정한다.
 
 ### 편집 함정
 

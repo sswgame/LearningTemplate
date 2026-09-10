@@ -151,6 +151,18 @@ def summarize(diagnosticText: str) -> None:
         print(f"  {line.strip()}")
 
 
+def getClangTidyVersionInternal(tidyExe: str) -> str:
+    """clang-tidy 가 스스로 보고하는 버전 한 줄. 못 얻으면 사유를 돌려준다."""
+    try:
+        completed = subprocess.run([tidyExe, "--version"], capture_output=True, check=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as exception:
+        return f"버전 확인 실패: {exception}"
+    for line in completed.stdout.splitlines():
+        if "version" in line.lower():
+            return line.strip()
+    return completed.stdout.strip().splitlines()[0] if completed.stdout.strip() else "버전 미보고"
+
+
 def main() -> int:
     useUtf8Stdout()
     projectRoot = getProjectRoot()
@@ -160,10 +172,16 @@ def main() -> int:
     parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Core)")
     parser.add_argument("--jobs", type=int, default=5, help="병렬 실행 수")
     parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
+    parser.add_argument("--clang-tidy", default="", dest="clangTidy",
+                        help="쓸 clang-tidy 실행 파일 (버전을 고정해 비교할 때)")
     args = parser.parse_args()
 
     buildDir = projectRoot / "build" / args.preset
-    tidyExe = findClangTidy()
+    tidyExe = args.clangTidy or findClangTidy()
+    # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 예전에 두 PC 가 같은 코드에서
+    # "0건" 과 "72건" 이라는 다른 답을 받아 서로를 의심했다. 숫자만으로는 비교할 수 없다.
+    print(f"[RunClangTidy] {tidyExe}")
+    print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
     listUnit = collectTranslationUnits(buildDir, args.filter)
 
     if not listUnit:
