@@ -4,11 +4,11 @@ Scripts/setup/SetupLinuxDevEnvironment.py
 Linux 및 WSL 개발 환경에 필요한 홈 디렉터리 설정을 자동으로 구성합니다.
 
 적용 내용 (중복 실행 안전):
-1. ~/.gdbinit 에 Ubuntu debuginfod 비활성화 설정 추가
-   (VS Code/Cursor cppdbg가 "Downloading separate debug info..." 에서 멈추는 문제 방지)
-2. ~/.bashrc, ~/.profile 에 DEBUGINFOD_URLS 환경변수 비우기
-3. 파일 다이얼로그 도구(zenity/kdialog/yad) 존재 여부 검사 및 안내
-4. 클립보드 도구(xclip/xsel/wl-copy) 존재 여부 검사 및 안내
+1. ~/.bashrc, ~/.profile 에 DEBUGINFOD_URLS 환경변수 비우기
+   (debuginfod 서버가 느리면 디버거가 "Downloading separate debug info..." 에서 멈춘다)
+2. 파일 다이얼로그 도구(zenity/kdialog/yad) 존재 여부 검사 및 안내
+3. 클립보드 도구(xclip/xsel/wl-copy) 존재 여부 검사 및 안내
+4. 디버거(lldb) 존재 여부 검사 및 안내
 5. Vulkan/XCB/Wayland 그래픽스 개발 패키지 존재 여부 안내 (apt 설치 안내)
 
 CMake configure 시 SetupEnvironment.py 에서 자동 호출되며, 수동 실행도 가능합니다:
@@ -28,17 +28,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 _kMarker = "Template engine linux-dev"
 
-_kGdbinitBlock = f"""\
-# >>> {_kMarker} (자동 생성됨 - 수동 편집 금지)
-# debuginfod 서버 지연/접속 불가로 인한 GDB 디버깅 멈춤 현상 방지
-set debuginfod urls
-set debuginfod enabled off
-# <<< {_kMarker}
-"""
-
 _kShellBlock = f"""\
 # >>> {_kMarker} (자동 생성됨 - 수동 편집 금지)
-# Ubuntu debuginfod 비활성화 (서버 다운 시 VS Code/Cursor GDB 중단 방지)
+# Ubuntu debuginfod 비활성화 (서버 다운 시 디버거가 심볼 내려받다 멈추는 것 방지)
 unset DEBUGINFOD_URLS
 export DEBUGINFOD_URLS=
 # <<< {_kMarker}
@@ -92,18 +84,15 @@ def upsertManagedBlockInternal(path: Path, block: str) -> str:
     return "created" if not text.strip() else "updated"
 
 
-def setupGdbDebuginfod(home: Path | None = None) -> None:
-    """~/.gdbinit 및 *rc에 debuginfod 비활성화를 적용합니다."""
+def setupDebuginfod(home: Path | None = None) -> None:
+    """
+    *rc 에 debuginfod 비활성화를 적용합니다.
+
+    lldb 도 DEBUGINFOD_URLS 를 따르므로(LLVM 18+) 환경변수만 비우면 디버거 종류와 무관하게
+    막힌다. 그래서 디버거별 설정 파일은 건드리지 않는다.
+    """
     homeDir = home or Path.home()
     actions: list[str] = []
-
-    gdbinit = homeDir / ".gdbinit"
-    if gdbinit.exists():
-        status = upsertManagedBlockInternal(gdbinit, _kGdbinitBlock)
-    else:
-        gdbinit.write_text(_kGdbinitBlock, encoding="utf-8", newline="\n")
-        status = "created"
-    actions.append(f".gdbinit:{status}")
 
     for name in (".bashrc", ".profile"):
         status = upsertManagedBlockInternal(homeDir / name, _kShellBlock)
@@ -145,6 +134,24 @@ def checkClipboardTools() -> None:
     )
 
 
+def checkDebugger() -> None:
+    """
+    디버거(lldb) 존재 여부를 안내합니다.
+
+    .vscode/launch.json 의 WSL 구성은 CodeLLDB 를 쓰므로 lldb 가 없으면 디버깅이 시작되지
+    않습니다. 빌드에는 영향이 없어 조용히 지나가기 쉬운 항목이라 여기서 같이 알려 줍니다.
+    """
+    if tool := next((name for name in ("lldb", "lldb-21", "lldb-20") if shutil.which(name)), None):
+        print(f"[SetupLinuxDevEnvironment] debugger: {tool}")
+        return
+
+    host = "WSL" if isWslInternal() else "Linux"
+    print(
+        f"[SetupLinuxDevEnvironment] {host}: no debugger (lldb). "
+        f"launch.json 의 WSL 구성은 CodeLLDB 를 쓴다 — e.g. sudo apt install lldb"
+    )
+
+
 def checkGraphicsDevPackages() -> None:
     """
     Vulkan/GL/XCB/Wayland 개발 헤더 힌트 (빌드 시 필요).
@@ -174,22 +181,23 @@ def checkGraphicsDevPackages() -> None:
 
 def setupLinuxDevEnvironment(home: Path | None = None) -> int:
     """
-    Linux/WSL 환경에 필요한 개발 도구 검사 및 GDB 디버깅 환경(debuginfod 등)을 자동 설정합니다.
+    Linux/WSL 환경에 필요한 개발 도구 검사 및 디버깅 환경(debuginfod 등)을 자동 설정합니다.
     """
     if not isLinuxInternal():
         print("[SetupLinuxDevEnvironment] skip (not Linux)")
         return 0
 
-    setupGdbDebuginfod(home=home)
+    setupDebuginfod(home=home)
     checkFileDialogTools()
     checkClipboardTools()
+    checkDebugger()
     checkGraphicsDevPackages()
     return 0
 
 
 def parseArgs(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Apply Linux/WSL developer home settings (debuginfod/GDB)."
+        description="Apply Linux/WSL developer home settings (debuginfod)."
     )
     parser.add_argument(
         "--home",

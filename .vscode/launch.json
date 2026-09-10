@@ -159,6 +159,98 @@
             "sourceLanguages": [
                 "cpp"
             ]
+        },
+        {
+            "name": "App + Editor Vulkan (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
+            "args": [
+                "-vulkan",
+                "-EnableEditor"
+            ],
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "App + Editor OpenGL (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
+            "args": [
+                "-opengl",
+                "-EnableEditor"
+            ],
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "App Game Vulkan (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
+            "args": [
+                "-vulkan"
+            ],
+            "cwd": "${workspaceFolder}",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "EngineTest (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/EngineTest",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "CoreTest (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/CoreTest",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "SmokeTest (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/SmokeTest",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "ReflectionTest (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/ReflectionTest",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
         }
     ]
 }
