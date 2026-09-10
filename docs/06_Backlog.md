@@ -81,6 +81,8 @@ ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 #   Debug    : CoreTest 169 / EngineTest 428 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
 #   Shipping : 161(+8 skip) / 426(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
 #   (2026-09-10 실측. EngineTest 는 GPU 포함 전체 수이고, ctest 의 EngineTest_NoGPU 는 400 이다.)
+#   WSL-Debug: ctest 12/12 (린트 6 포함). EngineTest 는 418 통과 + 8 skip = 426 이고,
+#              스킵은 DX11/DX12 처럼 리눅스에 아예 없는 타깃들이다. (2026-09-11 실측)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
 #   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
 #   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
@@ -200,21 +202,39 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 먼저 없애고, 그러고도 긴 함수가 문제로 남으면 그때 본다. 목록이 필요하면 다중 행 시그니처를
 중괄호 깊이로 정확히 재는 스크립트를 만들어 뽑는다(단순 정규식은 여러 줄 시그니처를 잘못 잰다).
 
-### 1-2b. WSL(리눅스) 빌드 — **보류, 사용자가 WSL 익스텐션으로 진행한다**
+### 1-2b. WSL(리눅스) 빌드 — **선다. 남은 건 clang-format 조달뿐**
 
-윈도우 밖에서 한 번도 돌려보지 않은 코드가 있으므로 `WSL-Debug` 프리셋을 세워 보다가 두 가지를 배웠고,
-그 중 하나는 코드로 고쳤다(3절 항목). 남은 것은 실제 빌드·테스트를 끝까지 돌리는 일이다.
+2026-09-11 에 `WSL-Debug` 를 끝까지 세웠다. 빌드는 **오류·경고 0**, `ctest` 는 **12/12 통과**
+(린트 6 + GPU 포함 전체). 그 과정에서 드러난 결함 다섯은 3절 항목으로 고쳤다 — 대부분
+"윈도우 밖에서 한 번도 안 돌려본 코드"가 아니라 **플랫폼과 무관한 잠복 버그**였다(Vulkan
+스왑체인 교착이 대표적이다).
 
-- **`/mnt/d` (DrvFs) 에서는 configure 가 안 된다.** `configure_file` 이 `Operation not permitted` 로 죽는다.
-  최소 재현: 세 줄짜리 `CMakeLists.txt` 하나로도 DrvFs 에서는 실패하고 `~` (ext4) 에서는 성공한다. 그래서
-  `base-wsl` 프리셋의 `remoteCopySources`(rsync) 가 원래 옳은 전제였다 — **리눅스 쪽 파일시스템으로 복사해
-  거기서 빌드해야 한다.**
-- **첫 configure 는 오래 걸린다.** WSL 에 `clang-format` 이 없으면 `SetupLlvm` 이 clang-format 하나를 꺼내려고
-  LLVM 배포 tarball(약 335 MB)을 통째로 받는다. `sudo apt install clang-format` 을 먼저 하면 건너뛴다.
-  vcpkg 도 리눅스 바이너리를 새로 부트스트랩하고 포트를 소스에서 굽는다(캐시가 윈도우 것뿐이다).
-- 곁가지로 확인한 것: `SetupVcpkg.py --install` 은 `scripts/buildsystems/vcpkg.cmake` 만 보고 "찾았다" 고
-  끝낸다. 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg.exe` 만 있고 `vcpkg` 바이너리가 없는데도 성공을
-  보고한다(툴체인 파일이 알아서 부트스트랩하므로 치명적이진 않다). 플랫폼 바이너리까지 보게 하는 것은 남은 일.
+**남은 일 — clang-format 을 리눅스에서 구할 수 없다.**
+
+- `Config/Environment/search_paths.json` 의 `llvm_download_urls.linux` 가 **ubuntu-18.04 용
+  LLVM 18.1.8** 로 고정이라, 받아 놓아도 `libtinfo.so.5` 가 없어 실행되지 않는다(현대 우분투는
+  `.so.6`, 심볼 버전이 달라 심링크 우회도 안 통한다). 그러면 pre-commit 5단계가 "포맷팅 규칙에
+  어긋나는 파일이 있습니다" 라고 **거짓 보고**한다 — 실제로는 도구가 못 뜬 것이다.
+  같은 릴리스의 리눅스 자산은 20.1.8 부터 `LLVM-20.1.8-Linux-X64.tar.xz` **2 GB** 라
+  clang-format 하나 때문에 받기엔 과하다. `sudo apt install clang-format` 이 정답에 가깝다.
+- `llvm_search_roots.linux` 가 아직 `/usr/lib/llvm-20 … llvm-14` **손목록**이다. `8bda8366` 이
+  `ReflectionParser/CMakeLists.txt` 와 `ci.yml` 에서 걷어낸 바로 그 함정이 이 JSON 에는 남아
+  있어서, llvm-21 인 이 PC 는 distro clang-format 을 깔아도 목록 밖이라 못 찾는다.
+- 그래서 할 일은 셋: 손목록을 glob 으로, 조달한 clang-format 이 **실제로 실행되는지** 확인한 뒤
+  못 뜨면 사유를 그대로 말하게, 그리고 `SetupLinuxDevEnvironment` 에 clang-format 검사 추가.
+
+**그대로 유효한 함정 (환경)**
+
+- **`/mnt/d` (DrvFs) 에서는 configure 가 안 된다.** `configure_file` 이 `Operation not permitted`
+  로 죽는다. 리눅스 파일시스템(`~`, ext4)으로 옮겨 빌드해야 한다.
+- **`libwayland-dev` 가 필요하다.** vcpkg `vulkan-validationlayers` 는 WSI 백엔드를 끌 수 없어
+  `wayland-client.pc` 를 무조건 요구한다. 이제 `SetupLinuxDevEnvironment` 가 미리 알려 준다.
+- **GPU 는 없다.** `/dev/dxg` 와 WSLg 가 있어도 Vulkan 은 `llvmpipe`(type=CPU) 하나만 잡히고,
+  GL 은 `ARB_gl_spirv` 가 없어 백엔드가 스스로 빠진다. 즉 WSL 에서 도는 렌더링 테스트는
+  소프트웨어 래스터라이저 위의 것이다 — API 오용은 잡지만 드라이버 거동은 검증하지 못한다.
+- 곁가지: `SetupVcpkg.py --install` 은 `scripts/buildsystems/vcpkg.cmake` 만 보고 "찾았다" 고
+  끝낸다. 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg.exe` 만 있고 `vcpkg` 바이너리가
+  없는데도 성공을 보고한다(툴체인이 알아서 부트스트랩하므로 치명적이진 않다).
 
 ### 1-3. 확인만 하고 넘어간 것
 
@@ -263,6 +283,40 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (WSL 빌드를 세우자 드러난 결함 다섯 — 대부분 플랫폼과 무관한 잠복 버그였다)
+
+`WSL-Debug` 를 끝까지 돌린 결과다. 빌드 오류·경고 0, `ctest` 12/12. 하나하나가 별도 커밋이다.
+
+- **리플렉션 코드젠이 `1.000000ff` 를 뱉었다.** `%#` 을 순수 자리표로 확정한(`50c57a18`) 뒤
+  `CodeGenerator.cpp` 의 `"%#ff;"` 두 줄만 옛 규칙(변환 문자를 먹던 시절)에 남아 있었다.
+  뒤따르는 `ff` 가 리터럴이 되어 범위가 붙은 PROPERTY 의 `.gen.cpp` 가 전부 깨졌다.
+  Windows 에서 안 드러난 건 그쪽 생성 파일이 규칙 변경 전 것이라 그대로였기 때문이다.
+- **Vulkan 이 present 없는 프레임마다 스왑체인 이미지를 새로 물었다.** `beginFrame` 은 항상
+  acquire 하는데 `endFrame` 은 `bPresent` 일 때만 present 한다. Vulkan 엔 present 말고 이미지를
+  돌려주는 길이 없어, 이미지 개수를 넘기는 순간 `UINT64_MAX` acquire 가 영원히 막힌다.
+  `GpuSceneBufferReusedAcrossPackets` 가 8 프레임을 그렇게 돌아 교착했다(180 초 타임아웃).
+  **플랫폼 문제가 아니다** — Windows 는 그 테스트가 DX11 을 먼저 잡아 Vulkan 에 닿지 않았을 뿐.
+  덤으로 아무도 기다리지 않는 `renderFinished` 를 매 프레임 거듭 시그널하던 규약 위반도 닫았다.
+- **GL 이 `ARB_gl_spirv` 없이도 초기화 성공을 보고했다.** 셰이더를 SPIR-V 로만 올리는 백엔드가
+  PSO 를 하나도 못 만드는 상태로 "정상" 을 반환해, 렌더링 검증 7 건이 "큐브가 그려지지 않았다"
+  로 떨어졌다. 실패 문구에 원인이 전혀 안 드러나는 종류다. 이제 초기화에서 끊어 상위가 건너뛴다.
+- **`.meta` 스캔이 절대 경로를 소문자로 내렸다.** `scanMetaFiles` 만 `bNormalizePath=true` 로
+  수집해 `/home/…/LearningTemplate/Resource` 까지 소문자가 되고, 루트 비교가 어긋나 전부 버려졌다
+  (레지스트리 0 항목). 바로 위 `refreshFolder` 는 `false` 로 대소문자를 보존하고 있었다.
+  대소문자를 가리는 파일시스템에서만 드러난다. 두 테스트가 함께 풀렸다.
+- **비 Windows 의 DXBC 타깃이 `invalid profile vs_5_0` 로 죽었다.** FXC 블록이 `#if` 로 빠지는
+  플랫폼에서 타깃이 DXC 로 흘러가 SM5 프로파일을 거부당했다. 사유를 분명히 돌려주고, 테스트는
+  해당 타깃만 건너뛴다(테스트 전체를 스킵하면 리눅스의 DXIL/SPIR-V 검증까지 날아간다).
+- 곁들여: `CheckSourceGlob` 의 "다른 OS 소스" 무시 목록이 Windows 기준으로 굳어 있어 리눅스에서
+  DX11/DX12/Windows 소스 23 개를 오탐했다 — 호스트에 맞춰 반대편만 무시하게 했다.
+  `.vscode/launch.json` 은 전부 Windows 전용이었어서 CodeLLDB 기반 WSL 구성 7 개를 넣었고,
+  `SetupLinuxDevEnvironment` 에 `libwayland-dev`·lldb 검사를 더했다.
+
+> 검증: `cmake --build --preset WSL-Debug` 경고 0, `ctest --test-dir build/WSL-Debug` 12/12.
+> `EngineTest` 단독 418 통과 + 8 skip. 교착하던 `engine` 스위트는 180 초 타임아웃 → 11.7 초.
+> **Windows 에서는 아직 안 돌렸다** — 위 다섯 중 Vulkan·GL·ShaderCompiler 는 Windows 경로도
+> 건드리므로(정상 경로 동작은 그대로일 것이나) 그쪽 실측이 남아 있다.
 
 ### 2026-09-11 (리눅스 LLVM 탐색 — 손으로 든 버전 목록이 새 배포판에서 조용히 비켜간다)
 
