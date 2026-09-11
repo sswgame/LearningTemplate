@@ -23,6 +23,52 @@ namespace sw
                 return slot - bandShift;
             return slot;
         }
+
+        void setVkClearColor( VkClearValue& dst, const float4& clear )
+        {
+            dst.color.float32[0] = clear._x;
+            dst.color.float32[1] = clear._y;
+            dst.color.float32[2] = clear._z;
+            dst.color.float32[3] = clear._w;
+        }
+
+        void mapStateVal( RHIBufferState state, VkAccessFlags& access, VkPipelineStageFlags& stage )
+        {
+            switch ( state )
+            {
+                case RHIBufferState::UnorderedAccess:
+                    access = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                    break;
+                case RHIBufferState::ShaderResource:
+                    access = VK_ACCESS_SHADER_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                    break;
+                case RHIBufferState::IndirectArgument:
+                    access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+                    break;
+                case RHIBufferState::CopyDest:
+                    access = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    break;
+                case RHIBufferState::VertexOrConstant:
+                    access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                    break;
+                case RHIBufferState::Index:
+                    access = VK_ACCESS_INDEX_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+                    break;
+                case RHIBufferState::Common:
+                default:
+                    access = 0;
+                    stage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    break;
+            }
+        }
     } // namespace
 
     VulkanRHICommandContext::VulkanRHICommandContext( VulkanRHIDevice* pDevice )
@@ -49,52 +95,6 @@ namespace sw
     }
 
     SW_LOG_CALLER( "Vulkan" );
-
-    static void setVkClearColor( VkClearValue& dst, const float4& clear )
-    {
-        dst.color.float32[0] = clear._x;
-        dst.color.float32[1] = clear._y;
-        dst.color.float32[2] = clear._z;
-        dst.color.float32[3] = clear._w;
-    }
-
-    static void mapStateVal( RHIBufferState state, VkAccessFlags& access, VkPipelineStageFlags& stage )
-    {
-        switch ( state )
-        {
-            case RHIBufferState::UnorderedAccess:
-                access = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-                stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                break;
-            case RHIBufferState::ShaderResource:
-                access = VK_ACCESS_SHADER_READ_BIT;
-                stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-                break;
-            case RHIBufferState::IndirectArgument:
-                access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-                stage  = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
-                break;
-            case RHIBufferState::CopyDest:
-                access = VK_ACCESS_TRANSFER_WRITE_BIT;
-                stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
-                break;
-            case RHIBufferState::VertexOrConstant:
-                access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
-                stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                break;
-            case RHIBufferState::Index:
-                access = VK_ACCESS_INDEX_READ_BIT;
-                stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-                break;
-            case RHIBufferState::Common:
-            default:
-                access = 0;
-                stage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                break;
-        }
-    }
 
     void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {

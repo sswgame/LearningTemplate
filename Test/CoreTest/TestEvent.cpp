@@ -4,15 +4,33 @@
 
 #include "TestFramework/TestFramework.h"
 
-static int32 s_LastResizeWidth{ 0 };
-static int32 s_LastResizeHeight{ 0 };
-
-/** @brief 리사이즈 이벤트에서 너비·높이를 기록합니다. */
-static void onWindowResize( const sw::WindowResizeEvent& e )
+namespace
 {
-    s_LastResizeWidth  = e._width;
-    s_LastResizeHeight = e._height;
-}
+    int32 s_LastResizeWidth{ 0 };
+    int32 s_LastResizeHeight{ 0 };
+
+    /** @brief 리사이즈 이벤트에서 너비·높이를 기록합니다. */
+    void onWindowResize( const sw::WindowResizeEvent& e )
+    {
+        s_LastResizeWidth  = e._width;
+        s_LastResizeHeight = e._height;
+    }
+
+    bool s_bWindowClosed{ false };
+    bool s_bWindowActivated{ false };
+
+    /** @brief 창 닫기 이벤트를 기록합니다. */
+    void onWindowClose( const sw::WindowCloseEvent& )
+    {
+        s_bWindowClosed = true;
+    }
+
+    /** @brief 창 활성화 여부를 기록합니다. */
+    void onWindowActivate( const sw::WindowActivateEvent& e )
+    {
+        s_bWindowActivated = e._bIsActivate;
+    }
+} // namespace
 
 // ------------------------------------------------------------------------------
 // 1) Engine_Event — 디스패치·채널 필터
@@ -43,21 +61,6 @@ SW_TEST_CASE( Engine_Event, DispatcherPushAndDispatch )
 
     dispatcher.unsubscribe<sw::WindowResizeEvent>( del );
     dispatcher.clear();
-}
-
-static bool s_bWindowClosed{ false };
-static bool s_bWindowActivated{ false };
-
-/** @brief 창 닫기 이벤트를 기록합니다. */
-static void onWindowClose( const sw::WindowCloseEvent& )
-{
-    s_bWindowClosed = true;
-}
-
-/** @brief 창 활성화 여부를 기록합니다. */
-static void onWindowActivate( const sw::WindowActivateEvent& e )
-{
-    s_bWindowActivated = e._bIsActivate;
 }
 
 /**

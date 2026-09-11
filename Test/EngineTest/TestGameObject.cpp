@@ -489,33 +489,36 @@ namespace sw
                                           sizeof( MockPoolLifecycleComponent ) );
     }
 
-    /** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
-    static void RegisterMockComponents( GameObjectManager& manager )
+    namespace
     {
-        MockMeshComponent::StaticType();
-        MockAudioComponent::StaticType();
-        MockCallbackComponent::StaticType();
-        MockTickSceneComponent::StaticType();
-        MockRootComponent::StaticType();
-        MockBasePawnComponent::StaticType();
-        MockVehicleComponent::StaticType();
-        MockFlyingVehicleComponent::StaticType();
-        MockMidTickDeactivatorComponent::StaticType();
-        MockSubTickStressComponent::StaticType();
-        MockPoolLifecycleComponent::StaticType();
+        /** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
+        void RegisterMockComponents( GameObjectManager& manager )
+        {
+            MockMeshComponent::StaticType();
+            MockAudioComponent::StaticType();
+            MockCallbackComponent::StaticType();
+            MockTickSceneComponent::StaticType();
+            MockRootComponent::StaticType();
+            MockBasePawnComponent::StaticType();
+            MockVehicleComponent::StaticType();
+            MockFlyingVehicleComponent::StaticType();
+            MockMidTickDeactivatorComponent::StaticType();
+            MockSubTickStressComponent::StaticType();
+            MockPoolLifecycleComponent::StaticType();
 
-        manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
-        manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
-        manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
-        manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
-        manager.registerComponentType<MockRootComponent>( hashed_string( "MockRootComponent" ) );
-        manager.registerComponentType<MockBasePawnComponent>( hashed_string( "MockBasePawnComponent" ) );
-        manager.registerComponentType<MockVehicleComponent>( hashed_string( "MockVehicleComponent" ) );
-        manager.registerComponentType<MockFlyingVehicleComponent>( hashed_string( "MockFlyingVehicleComponent" ) );
-        manager.registerComponentType<MockMidTickDeactivatorComponent>( hashed_string( "MockMidTickDeactivatorComponent" ) );
-        manager.registerComponentType<MockSubTickStressComponent>( hashed_string( "MockSubTickStressComponent" ) );
-        manager.registerComponentType<MockPoolLifecycleComponent>( hashed_string( "MockPoolLifecycleComponent" ) );
-    }
+            manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
+            manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
+            manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
+            manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
+            manager.registerComponentType<MockRootComponent>( hashed_string( "MockRootComponent" ) );
+            manager.registerComponentType<MockBasePawnComponent>( hashed_string( "MockBasePawnComponent" ) );
+            manager.registerComponentType<MockVehicleComponent>( hashed_string( "MockVehicleComponent" ) );
+            manager.registerComponentType<MockFlyingVehicleComponent>( hashed_string( "MockFlyingVehicleComponent" ) );
+            manager.registerComponentType<MockMidTickDeactivatorComponent>( hashed_string( "MockMidTickDeactivatorComponent" ) );
+            manager.registerComponentType<MockSubTickStressComponent>( hashed_string( "MockSubTickStressComponent" ) );
+            manager.registerComponentType<MockPoolLifecycleComponent>( hashed_string( "MockPoolLifecycleComponent" ) );
+        }
+    } // namespace
 } // namespace sw
 
 // ------------------------------------------------------------------------------

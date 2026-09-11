@@ -8,6 +8,21 @@ namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
 
+    namespace
+    {
+        /** @brief VkResult 를 프레임 루프가 분기하는 네 갈래로 접습니다. */
+        VulkanSwapChainStatus toSwapChainStatus( VkResult result )
+        {
+            if ( result == VK_SUCCESS )
+                return VulkanSwapChainStatus::Success;
+            if ( result == VK_SUBOPTIMAL_KHR )
+                return VulkanSwapChainStatus::Suboptimal;
+            if ( result == VK_ERROR_OUT_OF_DATE_KHR )
+                return VulkanSwapChainStatus::OutOfDate;
+            return VulkanSwapChainStatus::Failed;
+        }
+    } // namespace
+
     bool VulkanRHISwapChain::createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, uint32 linuxWsi )
     {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -383,21 +398,6 @@ namespace sw
         _listImage.clear();
         _imageIndex = 0;
     }
-
-    namespace
-    {
-        /** @brief VkResult 를 프레임 루프가 분기하는 네 갈래로 접습니다. */
-        VulkanSwapChainStatus toSwapChainStatus( VkResult result )
-        {
-            if ( result == VK_SUCCESS )
-                return VulkanSwapChainStatus::Success;
-            if ( result == VK_SUBOPTIMAL_KHR )
-                return VulkanSwapChainStatus::Suboptimal;
-            if ( result == VK_ERROR_OUT_OF_DATE_KHR )
-                return VulkanSwapChainStatus::OutOfDate;
-            return VulkanSwapChainStatus::Failed;
-        }
-    } // namespace
 
     VulkanSwapChainStatus VulkanRHISwapChain::acquireNextImage( VkDevice device, uint32 frameSlot )
     {

@@ -14,107 +14,106 @@
 
 namespace sw
 {
-    namespace
-    {
-    } // namespace
-
     SW_LOG_CALLER( "OpenGLRHIResource" );
 
-    // S3TC 는 확장이라 glad 헤더에 없다 — 값은 EXT_texture_compression_s3tc 그대로다.
-    static constexpr GLenum kGlCompressedRgbaS3tcDxt1 = 0x83F1;
-    static constexpr GLenum kGlCompressedRgbaS3tcDxt3 = 0x83F2;
-    static constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
-    static constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
-
-    static GLenum toGlInternalFormat( RHIFormat format )
+    namespace
     {
-        switch ( format )
-        {
-            case RHIFormat::BC1_UNORM:
-                return kGlCompressedRgbaS3tcDxt1;
-            case RHIFormat::BC2_UNORM:
-                return kGlCompressedRgbaS3tcDxt3;
-            case RHIFormat::BC3_UNORM:
-                return kGlCompressedRgbaS3tcDxt5;
-            case RHIFormat::BC4_UNORM:
-                return GL_COMPRESSED_RED_RGTC1;
-            case RHIFormat::BC5_UNORM:
-                return kGlCompressedRgRgtc2;
-            case RHIFormat::BC7_UNORM:
-                return GL_COMPRESSED_RGBA_BPTC_UNORM;
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::B8G8R8A8_UNORM:
-                return GL_RGBA8;
-            case RHIFormat::R16G16B16A16_FLOAT:
-                return GL_RGBA16F;
-            case RHIFormat::D24_UNORM_S8_UINT:
-                return GL_DEPTH24_STENCIL8;
-            case RHIFormat::R32G32B32_FLOAT:
-                return GL_RGB32F;
-            case RHIFormat::R32G32_FLOAT:
-                return GL_RG32F;
-            case RHIFormat::R32_FLOAT:
-                return GL_R32F;
-            case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
-            default:
-                return 0;
-        }
-    }
+        // S3TC 는 확장이라 glad 헤더에 없다 — 값은 EXT_texture_compression_s3tc 그대로다.
+        constexpr GLenum kGlCompressedRgbaS3tcDxt1 = 0x83F1;
+        constexpr GLenum kGlCompressedRgbaS3tcDxt3 = 0x83F2;
+        constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
+        constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
 
-    static GLenum toGlFormat( RHIFormat format )
-    {
-        switch ( format )
+        GLenum toGlInternalFormat( RHIFormat format )
         {
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::R16G16B16A16_FLOAT:
-                return GL_RGBA;
-            case RHIFormat::B8G8R8A8_UNORM:
-                return GL_BGRA;
-            case RHIFormat::D24_UNORM_S8_UINT:
-                return GL_DEPTH_STENCIL;
-            case RHIFormat::R32G32B32_FLOAT:
-                return GL_RGB;
-            case RHIFormat::R32G32_FLOAT:
-                return GL_RG;
-            case RHIFormat::R32_FLOAT:
-                return GL_RED;
-            case RHIFormat::BC1_UNORM:
-            case RHIFormat::BC2_UNORM:
-            case RHIFormat::BC3_UNORM:
-            case RHIFormat::BC4_UNORM:
-            case RHIFormat::BC5_UNORM:
-            case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
-            case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
-            default:
-                return 0;
+            switch ( format )
+            {
+                case RHIFormat::BC1_UNORM:
+                    return kGlCompressedRgbaS3tcDxt1;
+                case RHIFormat::BC2_UNORM:
+                    return kGlCompressedRgbaS3tcDxt3;
+                case RHIFormat::BC3_UNORM:
+                    return kGlCompressedRgbaS3tcDxt5;
+                case RHIFormat::BC4_UNORM:
+                    return GL_COMPRESSED_RED_RGTC1;
+                case RHIFormat::BC5_UNORM:
+                    return kGlCompressedRgRgtc2;
+                case RHIFormat::BC7_UNORM:
+                    return GL_COMPRESSED_RGBA_BPTC_UNORM;
+                case RHIFormat::R8G8B8A8_UNORM:
+                case RHIFormat::B8G8R8A8_UNORM:
+                    return GL_RGBA8;
+                case RHIFormat::R16G16B16A16_FLOAT:
+                    return GL_RGBA16F;
+                case RHIFormat::D24_UNORM_S8_UINT:
+                    return GL_DEPTH24_STENCIL8;
+                case RHIFormat::R32G32B32_FLOAT:
+                    return GL_RGB32F;
+                case RHIFormat::R32G32_FLOAT:
+                    return GL_RG32F;
+                case RHIFormat::R32_FLOAT:
+                    return GL_R32F;
+                case RHIFormat::Unknown: ///< 첨부 없음 — GL 에는 대응 값이 없다.
+                default:
+                    return 0;
+            }
         }
-    }
 
-    static GLenum toGlType( RHIFormat format )
-    {
-        switch ( format )
+        GLenum toGlFormat( RHIFormat format )
         {
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::B8G8R8A8_UNORM:
-                return GL_UNSIGNED_BYTE;
-            case RHIFormat::R16G16B16A16_FLOAT:
-            case RHIFormat::R32G32B32_FLOAT:
-            case RHIFormat::R32G32_FLOAT:
-            case RHIFormat::R32_FLOAT:
-                return GL_FLOAT;
-            case RHIFormat::D24_UNORM_S8_UINT:
-                return GL_UNSIGNED_INT_24_8;
-            case RHIFormat::BC1_UNORM:
-            case RHIFormat::BC2_UNORM:
-            case RHIFormat::BC3_UNORM:
-            case RHIFormat::BC4_UNORM:
-            case RHIFormat::BC5_UNORM:
-            case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
-            case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
-            default:
-                return 0;
+            switch ( format )
+            {
+                case RHIFormat::R8G8B8A8_UNORM:
+                case RHIFormat::R16G16B16A16_FLOAT:
+                    return GL_RGBA;
+                case RHIFormat::B8G8R8A8_UNORM:
+                    return GL_BGRA;
+                case RHIFormat::D24_UNORM_S8_UINT:
+                    return GL_DEPTH_STENCIL;
+                case RHIFormat::R32G32B32_FLOAT:
+                    return GL_RGB;
+                case RHIFormat::R32G32_FLOAT:
+                    return GL_RG;
+                case RHIFormat::R32_FLOAT:
+                    return GL_RED;
+                case RHIFormat::BC1_UNORM:
+                case RHIFormat::BC2_UNORM:
+                case RHIFormat::BC3_UNORM:
+                case RHIFormat::BC4_UNORM:
+                case RHIFormat::BC5_UNORM:
+                case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
+                case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
+                default:
+                    return 0;
+            }
         }
-    }
+
+        GLenum toGlType( RHIFormat format )
+        {
+            switch ( format )
+            {
+                case RHIFormat::R8G8B8A8_UNORM:
+                case RHIFormat::B8G8R8A8_UNORM:
+                    return GL_UNSIGNED_BYTE;
+                case RHIFormat::R16G16B16A16_FLOAT:
+                case RHIFormat::R32G32B32_FLOAT:
+                case RHIFormat::R32G32_FLOAT:
+                case RHIFormat::R32_FLOAT:
+                    return GL_FLOAT;
+                case RHIFormat::D24_UNORM_S8_UINT:
+                    return GL_UNSIGNED_INT_24_8;
+                case RHIFormat::BC1_UNORM:
+                case RHIFormat::BC2_UNORM:
+                case RHIFormat::BC3_UNORM:
+                case RHIFormat::BC4_UNORM:
+                case RHIFormat::BC5_UNORM:
+                case RHIFormat::BC7_UNORM: ///< 압축 포맷 — glCompressedTexImage 경로로 가므로 여기서는 대응이 없다.
+                case RHIFormat::Unknown:   ///< 첨부 없음 — GL 에는 대응 값이 없다.
+                default:
+                    return 0;
+            }
+        }
+    } // namespace
 
     uint32 OpenGLRHIDevice::getGLTextureName( RHITextureHandle texture ) const
     {

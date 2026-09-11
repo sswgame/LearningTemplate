@@ -23,10 +23,6 @@
 
 namespace sw::editor
 {
-    /** @brief 변수 목록 테이블 공통 플래그. */
-    constexpr ImGuiTableFlags kGlobalVarTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                                     ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
-
     namespace
     {
         struct GlobalVariablesPanelInternal
@@ -140,6 +136,11 @@ namespace sw::editor
             }
         };
     } // namespace
+
+    /** @brief 변수 목록 테이블 공통 플래그. */
+    constexpr ImGuiTableFlags kGlobalVarTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                                                     ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
+
 } // namespace sw::editor
 
 namespace sw::editor

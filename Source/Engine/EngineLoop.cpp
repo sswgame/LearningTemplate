@@ -59,13 +59,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_crashTest=1` — RHI 초기화 직후 일부러 크래시를 냅니다 (리포트 경로 검증용).
-     * @details 크래시 리포트는 크래시가 나야만 만들어진다. 그래서 "덤프가 제대로 써지는가" 는 일부러
-     *          죽여 보는 것 말고는 확인할 방법이 없다 — 배포하고 나서 안 된다는 걸 알면 늦다.
-     */
-    SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
-
     namespace
     {
         struct EngineLoopInternal
@@ -85,6 +78,14 @@ namespace sw
             }
         };
     } // namespace
+
+    /**
+     * @brief `-gv_crashTest=1` — RHI 초기화 직후 일부러 크래시를 냅니다 (리포트 경로 검증용).
+     * @details 크래시 리포트는 크래시가 나야만 만들어진다. 그래서 "덤프가 제대로 써지는가" 는 일부러
+     *          죽여 보는 것 말고는 확인할 방법이 없다 — 배포하고 나서 안 된다는 걸 알면 늦다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
+
 } // namespace sw
 
 namespace sw

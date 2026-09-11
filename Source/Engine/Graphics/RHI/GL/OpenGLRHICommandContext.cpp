@@ -9,6 +9,24 @@
 
 namespace sw
 {
+    namespace
+    {
+        GLenum toGlPrimitive( RHIPrimitiveTopology topology )
+        {
+            switch ( topology )
+            {
+                case RHIPrimitiveTopology::TriangleList:
+                    return GL_TRIANGLES;
+                case RHIPrimitiveTopology::LineList:
+                    return GL_LINES;
+                case RHIPrimitiveTopology::PointList:
+                    return GL_POINTS;
+                default:
+                    return GL_TRIANGLES;
+            }
+        }
+    } // namespace
+
     OpenGLRHICommandContext::OpenGLRHICommandContext( OpenGLRHIDevice* pDevice )
         : _pDevice{ pDevice }
         , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
@@ -19,21 +37,6 @@ namespace sw
         : _pDevice{ pDevice }
         , _pState{ pState }
     {
-    }
-
-    static GLenum toGlPrimitive( RHIPrimitiveTopology topology )
-    {
-        switch ( topology )
-        {
-            case RHIPrimitiveTopology::TriangleList:
-                return GL_TRIANGLES;
-            case RHIPrimitiveTopology::LineList:
-                return GL_LINES;
-            case RHIPrimitiveTopology::PointList:
-                return GL_POINTS;
-            default:
-                return GL_TRIANGLES;
-        }
     }
 
     void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )

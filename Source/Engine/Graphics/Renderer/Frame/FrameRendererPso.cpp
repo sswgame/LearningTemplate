@@ -12,6 +12,51 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief (패스 PSO, 퍼뮤테이션, 뷰 모드) 캐시 키.
+         * @details 뷰 모드가 키의 한 축이다 — 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
+         *          모드를 되돌리면 이미 만들어 둔 것이 다시 나온다(다시 컴파일하지 않는다).
+         */
+        uint64 materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode )
+        {
+            uint64 key = static_cast<uint64>( passPso ) * 0x9e3779b97f4a7c15ull;
+            key ^= permutationHash + 0x9e3779b97f4a7c15ull + ( key << 6 ) + ( key >> 2 );
+            key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
+            return key;
+        }
+
+        /**
+         * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true.
+         * @details Lit 는 아무것도 하지 않는다 — 그것이 패스가 이미 만들어 둔 상태다.
+         */
+        bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
+        {
+            if ( viewMode == RenderViewMode::Wireframe )
+            {
+                desc._fillMode = RHIFillMode::Wireframe;
+                // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
+                // 상자가 열린 것처럼 보인다 — 에디터의 와이어프레임은 관례적으로 양면이다.
+                desc._cullMode = RHICullMode::None;
+                return true;
+            }
+            if ( viewMode == RenderViewMode::Unlit )
+            {
+                // 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라
+                // 그림자 샘플링·림 라이트까지 같이 빠진다.
+                for ( const string& existing : desc._listShaderDefine )
+                {
+                    if ( existing == kViewModeUnlitDefine )
+                        return false;
+                }
+                desc._listShaderDefine.push_back( kViewModeUnlitDefine );
+                return true;
+            }
+            return false;
+        }
+    } // namespace
+
     RHIPipelineStateHandle FrameRenderer::createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets,
                                                            const RHIFormat* pRtvFormats, bool bBlend, bool bDepthWrite )
     {
@@ -146,51 +191,6 @@ namespace sw
         registerPsoLayout( handle, desc );
         return handle;
     }
-
-    namespace
-    {
-        /**
-         * @brief (패스 PSO, 퍼뮤테이션, 뷰 모드) 캐시 키.
-         * @details 뷰 모드가 키의 한 축이다 — 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
-         *          모드를 되돌리면 이미 만들어 둔 것이 다시 나온다(다시 컴파일하지 않는다).
-         */
-        uint64 materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode )
-        {
-            uint64 key = static_cast<uint64>( passPso ) * 0x9e3779b97f4a7c15ull;
-            key ^= permutationHash + 0x9e3779b97f4a7c15ull + ( key << 6 ) + ( key >> 2 );
-            key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
-            return key;
-        }
-
-        /**
-         * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true.
-         * @details Lit 는 아무것도 하지 않는다 — 그것이 패스가 이미 만들어 둔 상태다.
-         */
-        bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
-        {
-            if ( viewMode == RenderViewMode::Wireframe )
-            {
-                desc._fillMode = RHIFillMode::Wireframe;
-                // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
-                // 상자가 열린 것처럼 보인다 — 에디터의 와이어프레임은 관례적으로 양면이다.
-                desc._cullMode = RHICullMode::None;
-                return true;
-            }
-            if ( viewMode == RenderViewMode::Unlit )
-            {
-                // 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라
-                // 그림자 샘플링·림 라이트까지 같이 빠진다.
-                for ( const string& existing : desc._listShaderDefine )
-                {
-                    if ( existing == kViewModeUnlitDefine )
-                        return false;
-                }
-                desc._listShaderDefine.push_back( kViewModeUnlitDefine );
-                return true;
-            }
-            return false;
-        }
-    } // namespace
 
     FrameRenderer::MaterialPsoEntry FrameRenderer::createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
                                                                              const GpuShaderPermutation* pPermutation,

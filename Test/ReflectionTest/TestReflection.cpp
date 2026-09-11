@@ -83,144 +83,207 @@ namespace sw
     };
 } // namespace sw
 
-/** @brief DummyActor 등 수동 TypeInfo 를 레지스트리에 등록합니다. */
-static void RegisterTypes( sw::TypeRegistry& registry )
+namespace
 {
+    /** @brief DummyActor 등 수동 TypeInfo 를 레지스트리에 등록합니다. */
+    void RegisterTypes( sw::TypeRegistry& registry )
     {
-        sw::TypeInfo info;
-        info._name               = sw::hashed_string( "DummyBase" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::DummyBase" );
-        info._parentFQN          = sw::hashed_string( "" );
-        info._size               = sizeof( sw::DummyBase );
-        registry.registerClass( info );
+        {
+            sw::TypeInfo info;
+            info._name               = sw::hashed_string( "DummyBase" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::DummyBase" );
+            info._parentFQN          = sw::hashed_string( "" );
+            info._size               = sizeof( sw::DummyBase );
+            registry.registerClass( info );
+        }
+
+        {
+            sw::TypeInfo info;
+            info._name               = sw::hashed_string( "DummyActor" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::DummyActor" );
+            info._parentFQN          = sw::hashed_string( "sw::DummyBase" );
+            info._size               = sizeof( sw::DummyActor );
+            info._listProperty =
+                {
+                    {   sw::hashed_string( "_hp" ),   sw::hashed_string( "int32" ),
+                     SW_OFFSET_OF( sw::DummyActor,    _hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+                    { sw::hashed_string( "_name" ),  sw::hashed_string( "string" ),
+                     SW_OFFSET_OF( sw::DummyActor,  _name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+                    {sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ),
+                     SW_OFFSET_OF( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+            };
+            registry.registerClass( info );
+        }
+
+        {
+            sw::TypeInfo info;
+            info._name               = sw::hashed_string( "ComplexData" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::ComplexData" );
+            info._parentFQN          = sw::hashed_string( "" );
+            info._size               = sizeof( sw::ComplexData );
+            info._listProperty =
+                {
+                    { sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
+                     SW_OFFSET_OF( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+                    { sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
+                     SW_OFFSET_OF( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+                    { sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
+                     SW_OFFSET_OF( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+                    { sw::hashed_string( "_listScore" ), sw::hashed_string( "vector" ),
+                     SW_OFFSET_OF( sw::ComplexData, _listScore ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
+                     sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
+                    { sw::hashed_string( "_mapStat" ), sw::hashed_string( "map" ),
+                     SW_OFFSET_OF( sw::ComplexData, _mapStat ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
+                     sw::make_shared<sw::MapWrapper<sw::map<sw::string, int32>>>() },
+            };
+            registry.registerClass( info );
+        }
+
+        {
+            sw::TypeInfo info;
+            info._name               = sw::hashed_string( "NarrowEnumHost" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnumHost" );
+            info._parentFQN          = sw::hashed_string( "" );
+            info._size               = sizeof( sw::NarrowEnumHost );
+            info._listProperty =
+                {
+                    { sw::hashed_string( "_mode" ), sw::hashed_string( "sw::NarrowEnum" ),
+                     SW_OFFSET_OF( sw::NarrowEnumHost, _mode ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+            };
+            registry.registerClass( info );
+        }
     }
 
+    /** @brief DummyType / DummyBitFlag 를 레지스트리에 등록합니다. */
+    void RegisterEnums( sw::TypeRegistry& registry )
     {
-        sw::TypeInfo info;
-        info._name               = sw::hashed_string( "DummyActor" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::DummyActor" );
-        info._parentFQN          = sw::hashed_string( "sw::DummyBase" );
-        info._size               = sizeof( sw::DummyActor );
-        info._listProperty =
-            {
-                {   sw::hashed_string( "_hp" ),   sw::hashed_string( "int32" ),
-                 SW_OFFSET_OF( sw::DummyActor,    _hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                { sw::hashed_string( "_name" ),  sw::hashed_string( "string" ),
-                 SW_OFFSET_OF( sw::DummyActor,  _name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                {sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ),
-                 SW_OFFSET_OF( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-        };
-        registry.registerClass( info );
+
+        {
+            sw::EnumInfo info;
+            info._name               = sw::hashed_string( "DummyType" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
+            info._size               = static_cast<uint8>( sizeof( sw::DummyType ) );
+            info._bIsBitFlag         = SW_FALSE;
+            info._mapNameToValue =
+                {
+                    { sw::hashed_string( "None" ), 0},
+                    {sw::hashed_string( "TypeA" ), 1},
+                    {sw::hashed_string( "TypeB" ), 2},
+            };
+            info._mapValueToName =
+                {
+                    {0,  sw::hashed_string( "None" )},
+                    {1, sw::hashed_string( "TypeA" )},
+                    {2, sw::hashed_string( "TypeB" )},
+            };
+            registry.registerEnum( info );
+        }
+
+        {
+            sw::EnumInfo info;
+            info._name               = sw::hashed_string( "DummyBitFlag" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
+            info._size               = static_cast<uint8>( sizeof( sw::DummyBitFlag ) );
+            info._bIsBitFlag         = SW_TRUE;
+            info._mapNameToValue =
+                {
+                    {   sw::hashed_string( "None" ), 0},
+                    {sw::hashed_string( "OptionA" ), 1},
+                    {sw::hashed_string( "OptionB" ), 2},
+                    {sw::hashed_string( "OptionC" ), 4},
+            };
+            info._mapValueToName =
+                {
+                    {0,    sw::hashed_string( "None" )},
+                    {1, sw::hashed_string( "OptionA" )},
+                    {2, sw::hashed_string( "OptionB" )},
+                    {4, sw::hashed_string( "OptionC" )},
+            };
+            registry.registerEnum( info );
+        }
+
+        {
+            sw::EnumInfo info;
+            info._name               = sw::hashed_string( "NarrowEnum" );
+            info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnum" );
+            info._size               = static_cast<uint8>( sizeof( sw::NarrowEnum ) );
+            info._bIsBitFlag         = SW_FALSE;
+            info._mapNameToValue =
+                {
+                    {sw::hashed_string( "Zero" ), 0},
+                    { sw::hashed_string( "One" ), 1},
+                    { sw::hashed_string( "Two" ), 2},
+            };
+            info._mapValueToName =
+                {
+                    {0, sw::hashed_string( "Zero" )},
+                    {1,  sw::hashed_string( "One" )},
+                    {2,  sw::hashed_string( "Two" )},
+            };
+            registry.registerEnum( info );
+        }
     }
 
+    /** @brief 골든 테스트용 고정 상태의 NestedContainerActor 를 만듭니다. */
+    sw::NestedContainerActor makeGoldenNestedActor()
     {
-        sw::TypeInfo info;
-        info._name               = sw::hashed_string( "ComplexData" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::ComplexData" );
-        info._parentFQN          = sw::hashed_string( "" );
-        info._size               = sizeof( sw::ComplexData );
-        info._listProperty =
-            {
-                { sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
-                 SW_OFFSET_OF( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-                { sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
-                 SW_OFFSET_OF( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-                { sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
-                 SW_OFFSET_OF( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-                { sw::hashed_string( "_listScore" ), sw::hashed_string( "vector" ),
-                 SW_OFFSET_OF( sw::ComplexData, _listScore ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
-                 sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
-                { sw::hashed_string( "_mapStat" ), sw::hashed_string( "map" ),
-                 SW_OFFSET_OF( sw::ComplexData, _mapStat ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
-                 sw::make_shared<sw::MapWrapper<sw::map<sw::string, int32>>>() },
+        sw::NestedContainerActor src;
+        src._grid = {
+            { 1, 2 },
+            { 3, 4, 5 }
         };
-        registry.registerClass( info );
+        src._namedRows["a"] = { 1.0f, 2.5f };
+        src._namedRows["b"] = { -3.25f };
+        // 중첩 맵 / 구조체 원소도 골든에 포함해 표기 변화를 놓치지 않게 한다.
+        src._nestedMap["out"]["x"] = 7;
+        src._listInner.push_back( sw::NestedInner{ 11 } );
+        src._mapInner["m"]._x = 33;
+        src._inner._x         = 42;
+        return src;
     }
 
+    /** @brief 바이트 버퍼를 소문자 16진 문자열로 인코딩합니다. */
+    sw::string toHexString( const sw::vector<uint8>& bytes )
     {
-        sw::TypeInfo info;
-        info._name               = sw::hashed_string( "NarrowEnumHost" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnumHost" );
-        info._parentFQN          = sw::hashed_string( "" );
-        info._size               = sizeof( sw::NarrowEnumHost );
-        info._listProperty =
-            {
-                { sw::hashed_string( "_mode" ), sw::hashed_string( "sw::NarrowEnum" ),
-                 SW_OFFSET_OF( sw::NarrowEnumHost, _mode ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-        };
-        registry.registerClass( info );
-    }
-}
-
-/** @brief DummyType / DummyBitFlag 를 레지스트리에 등록합니다. */
-static void RegisterEnums( sw::TypeRegistry& registry )
-{
-
-    {
-        sw::EnumInfo info;
-        info._name               = sw::hashed_string( "DummyType" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
-        info._size               = static_cast<uint8>( sizeof( sw::DummyType ) );
-        info._bIsBitFlag         = SW_FALSE;
-        info._mapNameToValue =
-            {
-                { sw::hashed_string( "None" ), 0},
-                {sw::hashed_string( "TypeA" ), 1},
-                {sw::hashed_string( "TypeB" ), 2},
-        };
-        info._mapValueToName =
-            {
-                {0,  sw::hashed_string( "None" )},
-                {1, sw::hashed_string( "TypeA" )},
-                {2, sw::hashed_string( "TypeB" )},
-        };
-        registry.registerEnum( info );
+        static constexpr utf8 kDigit[] = "0123456789abcdef";
+        sw::string            out;
+        out.reserve( bytes.size() * 2 );
+        for ( uint8 byteValue : bytes )
+        {
+            out.push_back( kDigit[byteValue >> 4] );
+            out.push_back( kDigit[byteValue & 0x0F] );
+        }
+        return out;
     }
 
+    /** @brief 골든 문자열 비교 — 불일치 시 양쪽을 stdout 에 찍고 실패로 이어지도록 false 반환. */
+    bool goldenEq( const utf8* pLabel, const sw::string& actual, const utf8* pExpected )
     {
-        sw::EnumInfo info;
-        info._name               = sw::hashed_string( "DummyBitFlag" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
-        info._size               = static_cast<uint8>( sizeof( sw::DummyBitFlag ) );
-        info._bIsBitFlag         = SW_TRUE;
-        info._mapNameToValue =
-            {
-                {   sw::hashed_string( "None" ), 0},
-                {sw::hashed_string( "OptionA" ), 1},
-                {sw::hashed_string( "OptionB" ), 2},
-                {sw::hashed_string( "OptionC" ), 4},
-        };
-        info._mapValueToName =
-            {
-                {0,    sw::hashed_string( "None" )},
-                {1, sw::hashed_string( "OptionA" )},
-                {2, sw::hashed_string( "OptionB" )},
-                {4, sw::hashed_string( "OptionC" )},
-        };
-        registry.registerEnum( info );
+        if ( actual == pExpected )
+            return true;
+        std::fprintf( stdout, "[golden %s]\n---expected---\n%s\n---actual---\n%s\n", pLabel, pExpected, actual.c_str() );
+        std::fflush( stdout );
+        return false;
     }
 
+    /** @brief 한 인스턴스의 5개 골든(Json/Xml/Bin/JsonVer/BinVer)을 검증합니다. */
+    bool checkGoldenSet( const utf8* pLabel, const void* pInstance, const sw::TypeInfo& typeInfo,
+                         const utf8* pJson, const utf8* pXml, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
     {
-        sw::EnumInfo info;
-        info._name               = sw::hashed_string( "NarrowEnum" );
-        info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnum" );
-        info._size               = static_cast<uint8>( sizeof( sw::NarrowEnum ) );
-        info._bIsBitFlag         = SW_FALSE;
-        info._mapNameToValue =
-            {
-                {sw::hashed_string( "Zero" ), 0},
-                { sw::hashed_string( "One" ), 1},
-                { sw::hashed_string( "Two" ), 2},
-        };
-        info._mapValueToName =
-            {
-                {0, sw::hashed_string( "Zero" )},
-                {1,  sw::hashed_string( "One" )},
-                {2,  sw::hashed_string( "Two" )},
-        };
-        registry.registerEnum( info );
+        sw::vector<uint8> bin;
+        sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
+        sw::vector<uint8> binVer;
+        sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer );
+
+        bool bOk = true;
+        bOk &= goldenEq( pLabel, sw::JsonSerializer::serialize( pInstance, typeInfo ), pJson );
+        bOk &= goldenEq( pLabel, sw::XmlSerializer::serialize( pInstance, typeInfo ), pXml );
+        bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
+        bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
+        bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
+        return bOk;
     }
-}
+} // namespace
 
 struct RegistrarInit
 {
@@ -2776,69 +2839,6 @@ SW_TEST_CASE( Reflection_Serialization, NestedStructAndContainersRoundtrip )
     SW_EXPECT_EQUAL( 4, dstJson._grid[1][1] );
     SW_EXPECT_EQUAL( 42, dstJson._inner._x );
 }
-
-namespace
-{
-    /** @brief 골든 테스트용 고정 상태의 NestedContainerActor 를 만듭니다. */
-    sw::NestedContainerActor makeGoldenNestedActor()
-    {
-        sw::NestedContainerActor src;
-        src._grid = {
-            { 1, 2 },
-            { 3, 4, 5 }
-        };
-        src._namedRows["a"] = { 1.0f, 2.5f };
-        src._namedRows["b"] = { -3.25f };
-        // 중첩 맵 / 구조체 원소도 골든에 포함해 표기 변화를 놓치지 않게 한다.
-        src._nestedMap["out"]["x"] = 7;
-        src._listInner.push_back( sw::NestedInner{ 11 } );
-        src._mapInner["m"]._x = 33;
-        src._inner._x         = 42;
-        return src;
-    }
-
-    /** @brief 바이트 버퍼를 소문자 16진 문자열로 인코딩합니다. */
-    sw::string toHexString( const sw::vector<uint8>& bytes )
-    {
-        static constexpr utf8 kDigit[] = "0123456789abcdef";
-        sw::string            out;
-        out.reserve( bytes.size() * 2 );
-        for ( uint8 byteValue : bytes )
-        {
-            out.push_back( kDigit[byteValue >> 4] );
-            out.push_back( kDigit[byteValue & 0x0F] );
-        }
-        return out;
-    }
-
-    /** @brief 골든 문자열 비교 — 불일치 시 양쪽을 stdout 에 찍고 실패로 이어지도록 false 반환. */
-    bool goldenEq( const utf8* pLabel, const sw::string& actual, const utf8* pExpected )
-    {
-        if ( actual == pExpected )
-            return true;
-        std::fprintf( stdout, "[golden %s]\n---expected---\n%s\n---actual---\n%s\n", pLabel, pExpected, actual.c_str() );
-        std::fflush( stdout );
-        return false;
-    }
-
-    /** @brief 한 인스턴스의 5개 골든(Json/Xml/Bin/JsonVer/BinVer)을 검증합니다. */
-    bool checkGoldenSet( const utf8* pLabel, const void* pInstance, const sw::TypeInfo& typeInfo,
-                         const utf8* pJson, const utf8* pXml, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
-    {
-        sw::vector<uint8> bin;
-        sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
-        sw::vector<uint8> binVer;
-        sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer );
-
-        bool bOk = true;
-        bOk &= goldenEq( pLabel, sw::JsonSerializer::serialize( pInstance, typeInfo ), pJson );
-        bOk &= goldenEq( pLabel, sw::XmlSerializer::serialize( pInstance, typeInfo ), pXml );
-        bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
-        bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
-        bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
-        return bOk;
-    }
-} // namespace
 
 /**
  * @brief [Reflection_Serialization] 직렬화 3포맷의 정확한 출력을 골든으로 고정합니다.

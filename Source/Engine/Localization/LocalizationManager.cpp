@@ -20,6 +20,12 @@ namespace sw
 {
     SW_LOG_CALLER( "LocalizationManager" );
 
+    namespace
+    {
+        constexpr uint32 kLocPackBinaryMagic   = 0x31434F4C; // 'LOC1'
+        constexpr uint32 kLocPackBinaryVersion = 1;
+    } // namespace
+
     LocalizationManager::LocalizationManager()
         : _mutex{}
         , _currentLanguage{}
@@ -210,12 +216,6 @@ namespace sw
         SW_LOG_INFO( "Loaded %# language files from %#", loadedCount, string( directoryPath ).c_str() );
         return loadedCount > 0;
     }
-
-    namespace
-    {
-        constexpr uint32 kLocPackBinaryMagic   = 0x31434F4C; // 'LOC1'
-        constexpr uint32 kLocPackBinaryVersion = 1;
-    } // namespace
 
     bool LocalizationManager::setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
     {

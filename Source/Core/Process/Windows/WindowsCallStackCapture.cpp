@@ -10,11 +10,73 @@
 
 namespace sw
 {
-    // DeadlockDetector / MemoryProfiler / CrashHandler 가 각자 initialize·shutdown 한다.
-    // bool 래치로 두면 먼저 shutdown 한 쪽이 SymCleanup 을 불러 나머지의 심볼화가 죽는다
-    // (특히 종료 중 크래시에서 스택을 못 남긴다). 참조 카운트로 마지막 소유자만 정리한다.
-    static atomic<int32> s_initRefCount{ 0 };
-    static mutex         s_symbolMutex{};
+    namespace
+    {
+        // DeadlockDetector / MemoryProfiler / CrashHandler 가 각자 initialize·shutdown 한다.
+        // bool 래치로 두면 먼저 shutdown 한 쪽이 SymCleanup 을 불러 나머지의 심볼화가 죽는다
+        // (특히 종료 중 크래시에서 스택을 못 남긴다). 참조 카운트로 마지막 소유자만 정리한다.
+        atomic<int32> s_initRefCount{ 0 };
+        mutex         s_symbolMutex{};
+
+        /** @brief CallStack / DeepCallStack 공용 심볼화 본체입니다. */
+        string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
+        {
+            if ( ppFrame == nullptr || frameCount == 0 )
+                return "[Empty CallStack]";
+
+            // 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
+            StringBuilder<constant::kMaxBuffer8192> sb;
+
+            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면
+            // 교착 대신 주소만 출력한다(맵 파일로 후처리 가능).
+            std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
+            if ( lock.owns_lock() == false )
+            {
+                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                {
+                    sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,
+                                     Fmt( reinterpret_cast<uint64>( ppFrame[frameIndex] ), Format().hex() ) );
+                }
+                return string( sb.view() );
+            }
+
+            HANDLE                      process = GetCurrentProcess();
+            alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
+            SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
+            pSymbol->SizeOfStruct               = sizeof( SYMBOL_INFO );
+            pSymbol->MaxNameLen                 = MAX_SYM_NAME;
+
+            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
+                DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
+                if ( address == 0 )
+                    continue;
+
+                DWORD64 displacement = 0;
+                if ( SymFromAddr( process, address, &displacement, pSymbol ) )
+                {
+                    DWORD           displacementLine = 0;
+                    IMAGEHLP_LINE64 lineInfo         = {};
+                    lineInfo.SizeOfStruct            = sizeof( IMAGEHLP_LINE64 );
+
+                    if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
+                    {
+                        sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
+                    }
+                    else
+                    {
+                        sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
+                    }
+                }
+                else
+                {
+                    sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
+                }
+            }
+
+            return string( sb.view() );
+        }
+    } // namespace
 
     void CallStackCapture::initialize()
     {
@@ -104,68 +166,6 @@ namespace sw
             outStack._arrFrame[outStack._frameCount++] = reinterpret_cast<void*>( frame.AddrPC.Offset );
         }
     }
-
-    namespace
-    {
-        /** @brief CallStack / DeepCallStack 공용 심볼화 본체입니다. */
-        string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
-        {
-            if ( ppFrame == nullptr || frameCount == 0 )
-                return "[Empty CallStack]";
-
-            // 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
-            StringBuilder<constant::kMaxBuffer8192> sb;
-
-            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면
-            // 교착 대신 주소만 출력한다(맵 파일로 후처리 가능).
-            std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
-            if ( lock.owns_lock() == false )
-            {
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-                {
-                    sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,
-                                     Fmt( reinterpret_cast<uint64>( ppFrame[frameIndex] ), Format().hex() ) );
-                }
-                return string( sb.view() );
-            }
-
-            HANDLE                      process = GetCurrentProcess();
-            alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
-            SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
-            pSymbol->SizeOfStruct               = sizeof( SYMBOL_INFO );
-            pSymbol->MaxNameLen                 = MAX_SYM_NAME;
-
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
-                if ( address == 0 )
-                    continue;
-
-                DWORD64 displacement = 0;
-                if ( SymFromAddr( process, address, &displacement, pSymbol ) )
-                {
-                    DWORD           displacementLine = 0;
-                    IMAGEHLP_LINE64 lineInfo         = {};
-                    lineInfo.SizeOfStruct            = sizeof( IMAGEHLP_LINE64 );
-
-                    if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
-                    {
-                        sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
-                    }
-                    else
-                    {
-                        sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
-                    }
-                }
-                else
-                {
-                    sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
-                }
-            }
-
-            return string( sb.view() );
-        }
-    } // namespace
 
     string CallStackCapture::symbolize( const CallStack& stack )
     {

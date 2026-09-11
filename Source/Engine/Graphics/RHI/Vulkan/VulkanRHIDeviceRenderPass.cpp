@@ -11,6 +11,23 @@
 
 namespace sw
 {
+    namespace
+    {
+        VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )
+        {
+            switch ( loadOp )
+            {
+                case RHIRenderPassLoadOp::Load:
+                    return VK_ATTACHMENT_LOAD_OP_LOAD;
+                case RHIRenderPassLoadOp::DontCare:
+                    return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                case RHIRenderPassLoadOp::Clear:
+                default:
+                    return VK_ATTACHMENT_LOAD_OP_CLEAR;
+            }
+        }
+    } // namespace
+
     void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
                                                    uint32 targetLayout, uint32 aspect )
     {
@@ -28,20 +45,6 @@ namespace sw
     }
 
     SW_LOG_CALLER( "Vulkan" );
-
-    static VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )
-    {
-        switch ( loadOp )
-        {
-            case RHIRenderPassLoadOp::Load:
-                return VK_ATTACHMENT_LOAD_OP_LOAD;
-            case RHIRenderPassLoadOp::DontCare:
-                return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            case RHIRenderPassLoadOp::Clear:
-            default:
-                return VK_ATTACHMENT_LOAD_OP_CLEAR;
-        }
-    }
 
     bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
     {

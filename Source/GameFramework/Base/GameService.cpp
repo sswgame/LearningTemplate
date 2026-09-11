@@ -11,6 +11,12 @@
 SW_LOG_CALLER( "GameService" );
 namespace sw
 {
+    namespace
+    {
+        ModuleService      s_gameService{};
+        map<uint64, void*> s_mapLocalService{};
+    } // namespace
+
     SW_GF_API void registerGameFrameworkTypes()
     {
         if ( game::areGameServicesBound() )
@@ -18,12 +24,6 @@ namespace sw
             engine::registerModuleTypes( "GameFramework" );
         }
     }
-
-    namespace
-    {
-        ModuleService      s_gameService{};
-        map<uint64, void*> s_mapLocalService{};
-    } // namespace
 
     namespace game
     {

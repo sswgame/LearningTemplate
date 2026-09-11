@@ -33,122 +33,128 @@ static GLXContext s_MainContext{ nullptr };
 
 #if defined( SW_PLATFORM_WINDOWS )
 
-static bool CreateDeviceWGL( HWND hWnd, WGL_WindowData* pData )
+namespace
 {
-    HDC                   hDc = GetDC( hWnd );
-    PIXELFORMATDESCRIPTOR pfd{};
-    pfd.nSize        = sizeof( pfd );
-    pfd.nVersion     = 1;
-    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-    pfd.iPixelType   = PFD_TYPE_RGBA;
-    pfd.cColorBits   = 32;
-    pfd.cDepthBits   = 24;
-    pfd.cStencilBits = 8;
+    bool CreateDeviceWGL( HWND hWnd, WGL_WindowData* pData )
+    {
+        HDC                   hDc = GetDC( hWnd );
+        PIXELFORMATDESCRIPTOR pfd{};
+        pfd.nSize        = sizeof( pfd );
+        pfd.nVersion     = 1;
+        pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        pfd.iPixelType   = PFD_TYPE_RGBA;
+        pfd.cColorBits   = 32;
+        pfd.cDepthBits   = 24;
+        pfd.cStencilBits = 8;
 
-    int32 pf = ChoosePixelFormat( hDc, &pfd );
-    if ( pf == 0 )
-        return false;
-    if ( SetPixelFormat( hDc, pf, &pfd ) == FALSE )
-        return false;
-    ReleaseDC( hWnd, hDc );
+        int32 pf = ChoosePixelFormat( hDc, &pfd );
+        if ( pf == 0 )
+            return false;
+        if ( SetPixelFormat( hDc, pf, &pfd ) == FALSE )
+            return false;
+        ReleaseDC( hWnd, hDc );
 
-    pData->_hDC = GetDC( hWnd );
-    return true;
-}
+        pData->_hDC = GetDC( hWnd );
+        return true;
+    }
 
-static void CleanupDeviceWGL( HWND hWnd, WGL_WindowData* pData )
-{
-    wglMakeCurrent( nullptr, nullptr );
-    ReleaseDC( hWnd, pData->_hDC );
-}
+    void CleanupDeviceWGL( HWND hWnd, WGL_WindowData* pData )
+    {
+        wglMakeCurrent( nullptr, nullptr );
+        ReleaseDC( hWnd, pData->_hDC );
+    }
 
-static void Hook_Renderer_CreateWindow( ImGuiViewport* pViewport )
-{
-    WGL_WindowData* pData = sw_new WGL_WindowData();
-    CreateDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
-    pViewport->RendererUserData = pData;
-}
+    void Hook_Renderer_CreateWindow( ImGuiViewport* pViewport )
+    {
+        WGL_WindowData* pData = sw_new WGL_WindowData();
+        CreateDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
+        pViewport->RendererUserData = pData;
+    }
 
-static void Hook_Renderer_DestroyWindow( ImGuiViewport* pViewport )
-{
-    if ( pViewport->RendererUserData != nullptr )
+    void Hook_Renderer_DestroyWindow( ImGuiViewport* pViewport )
+    {
+        if ( pViewport->RendererUserData != nullptr )
+        {
+            WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
+            CleanupDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
+            sw_delete( pData );
+            pViewport->RendererUserData = nullptr;
+        }
+    }
+
+    void Hook_Platform_RenderWindow( ImGuiViewport* pViewport, void* )
     {
         WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
-        CleanupDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
+        if ( pData != nullptr )
+            wglMakeCurrent( pData->_hDC, s_MainWindowRC );
+    }
+
+    void Hook_Renderer_SwapBuffers( ImGuiViewport* pViewport, void* )
+    {
+        WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
+        if ( pData != nullptr )
+        {
+            SwapBuffers( pData->_hDC );
+            wglMakeCurrent( nullptr, nullptr );
+        }
+    }
+} // namespace
+#elif defined( SW_PLATFORM_LINUX )
+namespace
+{
+    void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* pViewport )
+    {
+        if ( s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr )
+            return;
+        GLX_WindowData* pData = sw_new GLX_WindowData();
+        pData->_pDisplay      = s_MainDisplay;
+        pData->_win           = static_cast<Window>( reinterpret_cast<uintptr_t>( pViewport->PlatformHandleRaw ) );
+
+        XWindowAttributes attrs{};
+        XVisualInfo*      pVi{ nullptr };
+        if ( pData->_win != 0 && XGetWindowAttributes( pData->_pDisplay, pData->_win, &attrs ) != 0 && attrs.visual != nullptr )
+        {
+            XVisualInfo templateInfo{};
+            templateInfo.visualid = XVisualIDFromVisual( attrs.visual );
+            int32 count{ 0 };
+            pVi = XGetVisualInfo( pData->_pDisplay, VisualIDMask, &templateInfo, &count );
+        }
+        if ( pVi != nullptr )
+        {
+            pData->_ctx = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, 1 );
+            XFree( pVi );
+        }
+        pViewport->RendererUserData = pData;
+    }
+
+    void Hook_Renderer_DestroyWindow_GLX( ImGuiViewport* pViewport )
+    {
+        if ( pViewport == nullptr || pViewport->RendererUserData == nullptr )
+            return;
+        GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
+        if ( pData->_ctx != nullptr )
+            glXDestroyContext( pData->_pDisplay, pData->_ctx );
         sw_delete( pData );
         pViewport->RendererUserData = nullptr;
     }
-}
 
-static void Hook_Platform_RenderWindow( ImGuiViewport* pViewport, void* )
-{
-    WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
-    if ( pData != nullptr )
-        wglMakeCurrent( pData->_hDC, s_MainWindowRC );
-}
-
-static void Hook_Renderer_SwapBuffers( ImGuiViewport* pViewport, void* )
-{
-    WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
-    if ( pData != nullptr )
+    void Hook_Platform_RenderWindow_GLX( ImGuiViewport* pViewport, void* )
     {
-        SwapBuffers( pData->_hDC );
-        wglMakeCurrent( nullptr, nullptr );
+        GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
+        if ( pData != nullptr )
+            glXMakeCurrent( pData->_pDisplay, pData->_win, pData->_ctx ? pData->_ctx : s_MainContext );
     }
-}
-#elif defined( SW_PLATFORM_LINUX )
-static void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* pViewport )
-{
-    if ( s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr )
-        return;
-    GLX_WindowData* pData = sw_new GLX_WindowData();
-    pData->_pDisplay      = s_MainDisplay;
-    pData->_win           = static_cast<Window>( reinterpret_cast<uintptr_t>( pViewport->PlatformHandleRaw ) );
 
-    XWindowAttributes attrs{};
-    XVisualInfo*      pVi{ nullptr };
-    if ( pData->_win != 0 && XGetWindowAttributes( pData->_pDisplay, pData->_win, &attrs ) != 0 && attrs.visual != nullptr )
+    void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
     {
-        XVisualInfo templateInfo{};
-        templateInfo.visualid = XVisualIDFromVisual( attrs.visual );
-        int32 count{ 0 };
-        pVi = XGetVisualInfo( pData->_pDisplay, VisualIDMask, &templateInfo, &count );
+        GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
+        if ( pData != nullptr )
+        {
+            glXSwapBuffers( pData->_pDisplay, pData->_win );
+            glXMakeCurrent( pData->_pDisplay, 0, nullptr );
+        }
     }
-    if ( pVi != nullptr )
-    {
-        pData->_ctx = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, 1 );
-        XFree( pVi );
-    }
-    pViewport->RendererUserData = pData;
-}
-
-static void Hook_Renderer_DestroyWindow_GLX( ImGuiViewport* pViewport )
-{
-    if ( pViewport == nullptr || pViewport->RendererUserData == nullptr )
-        return;
-    GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
-    if ( pData->_ctx != nullptr )
-        glXDestroyContext( pData->_pDisplay, pData->_ctx );
-    sw_delete( pData );
-    pViewport->RendererUserData = nullptr;
-}
-
-static void Hook_Platform_RenderWindow_GLX( ImGuiViewport* pViewport, void* )
-{
-    GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
-    if ( pData != nullptr )
-        glXMakeCurrent( pData->_pDisplay, pData->_win, pData->_ctx ? pData->_ctx : s_MainContext );
-}
-
-static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
-{
-    GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
-    if ( pData != nullptr )
-    {
-        glXSwapBuffers( pData->_pDisplay, pData->_win );
-        glXMakeCurrent( pData->_pDisplay, 0, nullptr );
-    }
-}
+} // namespace
 #endif
 
 namespace sw::editor

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `51c25100`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `03f1b3a8`
 
 ---
 
@@ -288,6 +288,46 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (익명 네임스페이스 마무리 — 최상단 정렬, 중첩 0, TU 지역 free 함수 26 개를 안으로)
+
+**규칙.** `.cpp` 의 TU 지역 헬퍼는 **익명 네임스페이스 하나**에, **스코프 최상단**에 둔다. `static` 자유
+함수는 쓰지 않는다(AGENTS.md "Helpers: Util vs Internal" — 흔한 이름이 외부에 안 보일 뿐 TU 마다 하나씩
+생겨 유니티 빌드에서 부딪힌다).
+
+**한 것 셋**
+
+1. **최상단 정렬 9 개.** 블록이 하나지만 스코프 중간에 있던 파일들. 넷은 그대로 올라갔고
+   (`EngineLoop`·`GlobalVariablesPanel`·`GameService`·`FrameRendererPso` 등), `WindowsCallStackCapture` ·
+   `MacCallStackCapture` 는 블록보다 앞에 있던 파일 스코프 `static` 둘을 **블록 안으로** 넣어 올렸다
+   (`LinuxCallStackCapture` 와 같은 처방 — 같은 내부 링키지이고 이쪽이 현대 관용구다).
+2. **중첩 익명 네임스페이스: 0 건.** 훑어서 확인했다.
+3. **free 함수 26 개를 익명 네임스페이스 안으로.** 헤더에 선언된 공개 API 와 `main` 은 당연히 제외하고,
+   TU 지역인 것만 골랐다(GL/Vulkan 변환 헬퍼, ImGui 백엔드 훅, 테스트 헬퍼, 코드젠 템플릿 헬퍼).
+   `static` 키워드는 뗐다 — 익명 네임스페이스가 이미 내부 링키지를 준다.
+
+**끝난 상태**
+
+- 익명 네임스페이스가 둘 이상인 파일: **2 개** (둘 다 정당하다)
+  - `ImGuiOpenGLRendererBackend.cpp` — `#if WINDOWS` / `#elif LINUX` 로 **상호 배타적**이라 실제 번역
+    단위에는 하나뿐이다. 합치면 두 플랫폼 코드가 섞인다.
+  - `TestGameObject.cpp` — 두 블록 사이에 `REFLECT_BODY()` 로 코드젠되는 Mock 컴포넌트 11 개가 있다.
+    **REFLECT 타입은 익명 네임스페이스로 못 옮긴다**(생성된 `.gen.cpp` 가 `sw::MockX` 를 이름으로 참조한다).
+- 익명 네임스페이스 밖 free 함수: **6 개** (전부 정당하다) — `main` 셋과, Tools 헤더에 선언된
+  `loadReflectBuiltins` · `emitReflectBuiltinsGen` · `normalizeTypeName`.
+- `Scene.cpp` 은 블록이 최상단이 **아닌 채로 둔다.** 바로 위 `SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, … )`
+  을 블록 안의 `SceneInternal` 이 쓰는데, 그 매크로는 `extern` 을 붙여 **외부 링키지를 의도**하므로
+  익명 네임스페이스에 넣을 수 없다.
+
+**작업하며 배운 것 — 올리기 전에 반드시 확인할 것**
+
+블록을 위로 올리면 **그 사이에 선언된 것에 대한 의존이 깨진다.** 이번에 컴파일러가 네 번 잡았다:
+`TaskManager`(`TaskNode` 불완전 타입) · `Scene`(`gv_defaultMaterial`) · `WindowsCallStackCapture`·
+`MacCallStackCapture`(`s_symbolMutex`) · `OpenGLRHIResource`(`kGl*` 상수) · `TestEvent`(`s_b*` 플래그) ·
+`TestGameObject`(Mock 클래스). **기계적으로 올리지 말고 매번 빌드로 확인한다.**
+곁들여 `OpenGLRHIResource.cpp` 에 **비어 있는 익명 네임스페이스**가 방치돼 있어 걷어냈다.
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6.
 
 ### 2026-09-11 (익명 네임스페이스를 파일당 하나로 — 합칠 수 없는 둘은 사유를 적어 둔다)
 

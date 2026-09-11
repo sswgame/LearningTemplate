@@ -3,11 +3,14 @@
 #include "TestFramework/TestFramework.h"
 
 static int32 s_TestValue{ 0 };
-/** @brief 자유 함수 델리게이트가 누적할 값을 더합니다. */
-static void freeFunctionTest( int32 val )
+namespace
 {
-    s_TestValue += val;
-}
+    /** @brief 자유 함수 델리게이트가 누적할 값을 더합니다. */
+    void freeFunctionTest( int32 val )
+    {
+        s_TestValue += val;
+    }
+} // namespace
 
 struct DummyListener
 {

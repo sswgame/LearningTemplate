@@ -127,6 +127,36 @@ namespace sw
                 return string( buf.view() );
             }
         };
+
+        /**
+         * @brief 세 scope(REFLECT/PROPERTY/FUNCTION)가 공통으로 쓰는 편집기 메타를 출력합니다.
+         * @param prefix 대상 접두사. 예: "p._metadata." / "info._metadata."
+         * @details Category/DisplayName/Tooltip 은 스코프마다 대상만 다르고 형태가 같아 여기 모읍니다.
+         *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
+         */
+        template <typename TParsed>
+        void emitCommonEditorMeta( CodeEmit& emit, const TParsed& parsed, const string& prefix )
+        {
+            emit.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
+            emit.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
+            emit.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
+        }
+
+        /**
+         * @brief 커스텀 메타 페어 맵을 출력합니다. 세 scope 가 동일한 형태를 씁니다.
+         */
+        template <typename TParsed>
+        void emitCustomMetaMap( CodeEmit& emit, const TParsed& parsed, const string& prefix )
+        {
+            if ( parsed._listCustomMeta.empty() )
+                return;
+            emit.linef( "%#_mapCustomMeta = {", prefix );
+            emit.push();
+            for ( const auto& [key, val] : parsed._listCustomMeta )
+                emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+            emit.pop();
+            emit.line( "};" );
+        }
     } // namespace
 } // namespace sw
 
@@ -292,36 +322,6 @@ namespace sw
                                                                            {      templateKeyConstants::kName,                                     typeInfo._name},
                                                                            {templateKeyConstants::kModuleName,                                    getModuleName()},
         } );
-    }
-
-    /**
-     * @brief 세 scope(REFLECT/PROPERTY/FUNCTION)가 공통으로 쓰는 편집기 메타를 출력합니다.
-     * @param prefix 대상 접두사. 예: "p._metadata." / "info._metadata."
-     * @details Category/DisplayName/Tooltip 은 스코프마다 대상만 다르고 형태가 같아 여기 모읍니다.
-     *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
-     */
-    template <typename TParsed>
-    static void emitCommonEditorMeta( CodeEmit& emit, const TParsed& parsed, const string& prefix )
-    {
-        emit.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
-        emit.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
-        emit.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
-    }
-
-    /**
-     * @brief 커스텀 메타 페어 맵을 출력합니다. 세 scope 가 동일한 형태를 씁니다.
-     */
-    template <typename TParsed>
-    static void emitCustomMetaMap( CodeEmit& emit, const TParsed& parsed, const string& prefix )
-    {
-        if ( parsed._listCustomMeta.empty() )
-            return;
-        emit.linef( "%#_mapCustomMeta = {", prefix );
-        emit.push();
-        for ( const auto& [key, val] : parsed._listCustomMeta )
-            emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-        emit.pop();
-        emit.line( "};" );
     }
 
     void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const
