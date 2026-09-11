@@ -300,7 +300,9 @@ namespace sw::editor
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
 
-        waitForDrawSnapshotIdle();
+        // 기다리지 않는다. 여기 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로
+        // 렌더 워커를 재운 뒤다 — 기다릴 상대가 없다.
+        abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )
             snapshot.clear();
 
@@ -445,6 +447,15 @@ namespace sw::editor
         std::ignore = pRhiDevice;
         // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
         // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
+        _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
+    }
+
+    void ImGuiEditor::abandonPendingDraw()
+    {
+        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 풀어 준다" 는 약속이다.
+        // 렌더 워커가 재워지면 그 약속을 지킬 주체가 사라지므로, 재운 쪽이 여기로 알려 준다.
+        // 이게 없으면 다음 waitForDrawSnapshotIdle 이 영원히 돌아오지 않는다 — 에디터 모듈
+        // 핫리로드가 실제로 여기서 멈췄다(destroyEditorInstance → shutdown → 무한 대기).
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 

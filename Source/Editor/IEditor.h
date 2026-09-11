@@ -42,6 +42,14 @@ namespace sw
         virtual void render( IRHIDevice* pRhiDevice ) = 0;
         /** @brief 메인 스왑체인 Present 이후 호출 (멀티 뷰포트 보조 윈도우 렌더) */
         virtual void postPresent( IRHIDevice* pRhiDevice ) = 0;
+        /**
+         * @brief 렌더 대기 중인 draw 스냅샷 표시를 버립니다 — **소비자가 더 이상 없을 때** 호출합니다.
+         * @details `updateUI` 는 스냅샷을 publish 하면서 "렌더 대기" 로 표시하고, 그것을 푸는 것은
+         *          렌더 스레드의 `postPresent` 뿐이다. 모듈 리로드·RHI 교체처럼 렌더 워커를 먼저
+         *          재우는 경로에서는 그 `postPresent` 가 영영 오지 않아, 다음 `updateUI` 나
+         *          `shutdown` 이 무한 대기한다. 재운 쪽이 이 전이를 알려 준다.
+         */
+        virtual void abandonPendingDraw() = 0;
 
         // ------------------------------------------------------------------------------
         // 3) 입력 · ImGui 텍스처

@@ -47,6 +47,8 @@ namespace sw
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::render, static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                                                  \
         pOutApi->postPresent = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle )                                                                                                            \
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::postPresent, static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                                             \
+        pOutApi->abandonPendingDraw = []( sw::EditorHandle editorHandle )                                                                                                                                          \
+        { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::abandonPendingDraw ); };                                                                                                       \
         pOutApi->processEvent = []( sw::EditorHandle editorHandle, const sw::NativeWindowEvent* pEvent ) -> bool                                                                                                   \
         { return pEvent != nullptr ? sw::ModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::processEvent, *pEvent ) : false; };                                                      \
         pOutApi->registerTexture = []( sw::EditorHandle editorHandle, sw::TextureHandle textureHandle ) -> void*                                                                                                   \

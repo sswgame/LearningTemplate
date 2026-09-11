@@ -398,6 +398,13 @@ namespace sw
         if ( _pRHI != nullptr )
             _pRHI->getDevice().waitIdle();
 
+        // 렌더 워커를 재웠으면 에디터의 "렌더 대기" 표시도 같이 버려야 한다.
+        // 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 방금 그 스레드를 재웠다.
+        // 알려 주지 않으면 다음 updateUI 나 shutdown 이 waitForDrawSnapshotIdle 에서
+        // 영원히 돌아오지 않는다 — 에디터 모듈 핫리로드가 실제로 여기서 멈췄다.
+        if ( _editor != nullptr && _editorApi.abandonPendingDraw != nullptr )
+            _editorApi.abandonPendingDraw( _editor );
+
         // 비동기 태스크 펜싱 (Module Unload 전 안전 보장). 타임아웃은 LiveReloadManager 폴백과 공유합니다.
         if ( engine::areEngineServicesBound() )
         {

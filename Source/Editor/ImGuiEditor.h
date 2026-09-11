@@ -46,6 +46,7 @@ namespace sw::editor
         void render( IRHIDevice* pRhiDevice ) override;
         /** @brief 메인 스왑체인 Present 이후 멀티 뷰포트를 렌더합니다. */
         void postPresent( IRHIDevice* pRhiDevice ) override;
+        void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
         /** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
