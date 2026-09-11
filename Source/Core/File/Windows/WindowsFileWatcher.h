@@ -51,8 +51,15 @@ namespace sw
         mutex                   _eventMutex;
         string                  _directoryPath;
         vector<FileChangeEvent> _listEventQueue;
-        atomic<bool>            _bIsWatching;
-        bool                    _bRecursive;
+        /**
+         * @brief 큐가 상한에 걸려 개별 이벤트를 버렸다는 표시입니다.
+         * @details 상한에 걸리면 개별 이벤트 대신 합성 리스캔(파일 이름이 빈 Modified) 하나로 접는다 —
+         *          `ReadDirectoryChangesW` 버퍼 오버플로 때 이미 쓰던 방식과 같고, Linux 워처와도 같다.
+         *          예전에는 Windows 만 상한이 없어 폴링이 밀리면 큐가 끝없이 자랐다.
+         */
+        bool         _bEventQueueOverflowed;
+        atomic<bool> _bIsWatching;
+        bool         _bRecursive;
     };
 
 } // namespace sw

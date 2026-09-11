@@ -279,6 +279,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (같은 병을 앓을 자리를 다시 훑었다 — 넷은 깨끗했고, 워처 오버플로 하나가 진짜였다)
+
+이번 세션에서 잡은 결함의 **모양**으로 저장소를 다시 봤다: 조용히 기본값으로 떨어지는 설정 ·
+영영 매칭될 수 없는 필터 · 두 벌로 적힌 목록 · 호출부가 0인 배선 API.
+
+**1) 설정 폴백 — 이상 없음.** `JsonSerializer::loadFile` 은 키 하나만 어긋나도 파일 전체를 실패로
+돌리므로, `Config/**/*.json` 의 모든 `_키` 를 저장소의 `PROPERTY()` 이름과 정적으로 대조했다 →
+고아 키 0 (`PackConfig.json` 의 `_compression_note` 는 파이썬 쿠커가 읽는 파일이라 무관하다).
+실기동 경고·에러 0. 공백 구분 float 벡터도 더는 없다.
+> 남은 것: `EditorConfig::loadFromHost` 는 실패 시 "cpp defaults" 라고 적지만 실제로는 **부분적으로
+> 채워진** 구조체를 그대로 쓴다 — 메시지가 거짓이다. 고치지 않았다(동작은 무해).
+
+**2) 매칭 — 이상 없음.** `hasExtension` 에 복합 접미사를 넘기는 곳 0. `startsWithPathComponent` 의
+열두 호출부는 전부 절대↔절대 또는 상대↔상대다. Windows·Linux 워처의 이벤트 모양(`_directory` =
+감시 루트 절대 경로, `_filename` = 그 아래 상대 경로)이 같다 — 그래서 절대 접두어 수정이 양쪽에 맞는다.
+
+**3) 워처 오버플로 — 진짜였고, 고쳤다.** 세 워처 모두 알림을 잃으면 `_filename` 이 빈 `Modified`
+하나(리스캔 신호)를 보내는데, 확장자 필터가 그것을 **조용히 버리고 있었다**. "파일 변화가 수백
+개면 반영되나" 의 답이 "아니오, 그리고 아무도 모른다" 였다. 게다가 Windows·Mac 은 큐 상한이 없어
+폴링이 밀리면 끝없이 자랐고, Windows 는 Linux 가 하는 연속 중복 병합도 없었다.
+- 리스캔 신호는 `ReloadFileManager::expandRescanEvents` 가 **직전 드레인 이후 mtime 인 파일**로
+  펼친다. 소비자는 평소와 같은 파일 단위 이벤트만 받는다 — 리스캔이 있었는지 알 필요가 없다.
+  **평소에는 폴링이 없다**: OS 가 유실을 알린 그 한 번만, 감시 트리 안에서, stat 으로 끝낸다.
+  (기준선 맵을 시작 시 심는 안도 있었지만 시작 훑기와 이벤트마다의 맵 갱신이 든다 — 시각 창이 더 싸다.
+  `FileUtil::getCurrentFileTimestamp` 를 더해 파일 시각과 **같은 시계** 로 잰다; `system_clock` 은 기원이 다르다.)
+- 큐 상한 `IFileWatcher::_s_kMaxQueuedEvent`(4096) 를 셋이 공유한다. 처음엔 `constant` 네임스페이스에
+  뒀는데, 이 계층 밖에서 쓰지 않는 값이라 클래스 정적으로 옮겼다 — `constant` 는 가로지르는 값만.
+- Windows 도 같은 파일·같은 동작 연속은 하나로 합친다(한 번 저장에 LAST_WRITE·SIZE 가 잇달아 온다).
+
+실측(상한을 2로 낮춰 강제): 파일 셋을 20번씩 저장 → 리로드 **60/60**, 리스캔 19회가 유실분을 되찾았고
+경고는 0. 상한 4096 복구 후 정상 경로는 1건 → 1건. Linux 워처는 WSL 에서 문법 검사 통과.
+**Mac 워처는 이 저장소에 프리셋이 없어 컴파일된 적이 없다** — 이번 수정도 읽어서만 확인했다.
+
+**4) 두 벌 목록 — 하나 남음(사소).** `{ ".ini", ".kv" }` 가 `LocalizationManager` 와 `StringTable`
+에 각각 있다. 같은 모듈 안이고 둘 다 한 줄이라 두었다.
+
+**5) 호출부 0 인 배선 API — 다섯, 손대지 않았다.** 정규식 스캔은 매크로 호출(`SW_LOG_CALLER` →
+`registerCaller`)을 못 보므로 후보 34개를 "저장소 전체 언급 ≤ 2회" 로 다시 걸렀다:
+`ComputePass::bindSrv` · `bindUav` / `KeyboardDevice::notifyTextInput`(텍스트 입력을 읽는 쪽도 없다) /
+`AssetEditorManager::registerAssetEditor`(오버라이드 표가 항상 비어 있다) / `InputManager::unregisterDevice`
+(등록만 셋, 해제는 0). 지우거나 잇거나는 각 기능의 결정이라 여기서는 목록만 남긴다.
+
 ### 2026-09-12 (확장자를 한 표로 모으고, 죽은 것은 지우고, 남은 것은 실제 동작에 붙였다)
 
 에셋 확장자가 **세 곳**에 적혀 있었다. `EditorAssetType.cpp` 안에서만 두 벌(매칭 규칙 표와 패널

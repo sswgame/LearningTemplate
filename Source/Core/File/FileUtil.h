@@ -135,8 +135,14 @@ namespace sw
         /** @brief 실행 파일 경로를 반환합니다. */
         static string getExecutablePath();
 
-        /** @brief 파일 수정 시각(타임스탬프)을 반환합니다. */
+        /** @brief 파일 수정 시각(타임스탬프)을 반환합니다. 초 단위다. */
         static uint64 getFileTimestamp( string_view fileName );
+        /**
+         * @brief 지금 시각을 `getFileTimestamp` 와 **같은 시계·같은 단위**로 돌려줍니다.
+         * @details 파일 시각은 `std::filesystem` 의 파일 시계로 나온다 — `system_clock` 과 기원이 다를 수
+         *          있어 그쪽 `now()` 와 비교하면 틀린다. "이 시각 이후 바뀐 파일" 을 고르려면 이것을 쓴다.
+         */
+        static uint64 getCurrentFileTimestamp();
         /** @brief 파일 크기를 반환합니다. */
         static uint64 getFileSize( string_view fileName );
         /** @brief 파일을 복사합니다. */

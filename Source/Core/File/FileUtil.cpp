@@ -484,6 +484,12 @@ namespace sw
         return std::chrono::duration_cast<std::chrono::duration<uint64>>( tim.time_since_epoch() ).count();
     }
 
+    uint64 FileUtil::getCurrentFileTimestamp()
+    {
+        const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
+        return std::chrono::duration_cast<std::chrono::duration<uint64>>( now.time_since_epoch() ).count();
+    }
+
     uint64 FileUtil::getFileSize( string_view fileName )
     {
         if ( fileName.empty() )

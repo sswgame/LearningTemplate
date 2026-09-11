@@ -71,6 +71,11 @@ namespace sw
         bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const;
         /** @brief 파일 변경 이벤트를 워치 콜백으로 보냅니다. */
         void dispatchEvents( const vector<FileChangeEvent>& listEvent );
+        /**
+         * @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다.
+         * @param sinceTimestamp 이 시각(파일 시계, 초) 이후 mtime 인 파일만 낸다 — 직전 드레인 시각.
+         */
+        void expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp );
         /** @brief mtime 폴백으로 변경을 모읍니다. */
         void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
         /** @brief 파일 확장자가 watch 허용 목록에 있으면 true. */
@@ -80,6 +85,7 @@ namespace sw
         vector<WatchEntry>            _listWatch;
         uint64                        _nextWatchId{ 1 };
         unordered_map<string, uint64> _mapPollMtime;
+        uint64                        _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
         bool                          _bUseMtimePoll{ false };
     };
 } // namespace sw

@@ -52,8 +52,10 @@ namespace sw
         mutex                   _eventMutex;
         string                  _directoryPath;
         vector<FileChangeEvent> _listEventQueue;
-        atomic<bool>            _bIsWatching;
-        bool                    _bRecursive;
+        /** @brief 큐 상한에 걸려 개별 이벤트를 버렸다는 표시입니다(Windows·Linux 와 같은 약속). */
+        bool         _bEventQueueOverflowed;
+        atomic<bool> _bIsWatching;
+        bool         _bRecursive;
     };
 } // namespace sw
 

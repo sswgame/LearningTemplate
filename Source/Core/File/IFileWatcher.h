@@ -79,5 +79,15 @@ namespace sw
     protected:
         /** @brief 인터페이스만 두며 감시는 시작하지 않습니다. */
         IFileWatcher() = default;
+
+        /**
+         * @brief 폴링 전까지 쌓아 둘 변경 이벤트의 상한입니다. **구현 셋이 같은 값을 써야 한다.**
+         * @details `pollEvents` 를 부르는 쪽이 없거나 밀리는 동안(대량 임포트·브랜치 전환) 큐가 끝없이
+         *          자라지 않게 한다. 상한에 걸리면 개별 이벤트 대신 **합성 리스캔 하나**로 접는다 —
+         *          `_filename` 이 빈 `Modified` 가 그 약속이고, 받는 쪽은 그것을 "전부 다시 봐라" 로 읽는다.
+         *          값이 플랫폼마다 다르면 같은 부하에서 한쪽만 이벤트를 잃는다 — 그 차이는 그 플랫폼에서
+         *          돌려 보기 전에는 드러나지 않는다. 이 계층 밖에서는 쓰지 않으므로 `constant` 가 아니라 여기 둔다.
+         */
+        static constexpr size_t _s_kMaxQueuedEvent = 4096;
     };
 } // namespace sw

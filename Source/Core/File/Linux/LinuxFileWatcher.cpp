@@ -20,15 +20,7 @@ namespace sw
         struct LinuxFileWatcherInternal
         {
             static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            /**
-             * @brief 큐에 쌓아 둘 이벤트 상한.
-             *
-             * pollEvents 를 부르는 쪽이 없거나 멈춰 있는 동안(에디터 미실행, 쿠킹 중) 파일 활동이 많으면
-             * 큐가 끝없이 자란다. 상한에 걸리면 개별 이벤트 대신 합성 rescan 하나로 접는다 — 커널
-             * 큐가 넘칠 때(IN_Q_OVERFLOW) 이미 쓰고 있는 방식과 같다.
-             */
-            static constexpr size_t kMaxQueuedEvent = 4096;
-            static constexpr uint32 kInotifyMask    = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
+            static constexpr uint32 kInotifyMask            = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
             static string makeRelativePath( string_view root, string_view absolutePath )
             {
@@ -342,7 +334,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _eventMutex };
 
-        if ( _listEventQueue.size() >= LinuxFileWatcherInternal::kMaxQueuedEvent )
+        if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
         {
             _bEventQueueOverflowed = true;
             return;

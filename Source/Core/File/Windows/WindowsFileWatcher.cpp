@@ -22,6 +22,7 @@ namespace sw
         , _eventMutex{}
         , _directoryPath{}
         , _listEventQueue{}
+        , _bEventQueueOverflowed{ false }
         , _bIsWatching{ false }
         , _bRecursive{ true }
     {
@@ -81,6 +82,18 @@ namespace sw
         {
             outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
             _listEventQueue.clear();
+        }
+
+        if ( _bEventQueueOverflowed )
+        {
+            // 버린 것이 있었다 — 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
+            // 파일 이름이 빈 Modified 가 그 약속이다(버퍼 오버플로 때와 같은 모양).
+            FileChangeEvent rescanEvent{};
+            rescanEvent._action    = FileWatcherAction::Modified;
+            rescanEvent._directory = _directoryPath;
+            outListEvent.push_back( std::move( rescanEvent ) );
+            _bEventQueueOverflowed = false;
+            return count + 1;
         }
         return count;
     }
@@ -169,7 +182,10 @@ namespace sw
                     eventObj._directory = _directoryPath;
                     eventObj._filename  = "";
                     eventObj._action    = FileWatcherAction::Modified;
-                    _listEventQueue.push_back( std::move( eventObj ) );
+                    if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
+                        _bEventQueueOverflowed = true;
+                    else
+                        _listEventQueue.push_back( std::move( eventObj ) );
                     continue;
                 }
 
@@ -208,7 +224,18 @@ namespace sw
                             break;
                     }
 
-                    _listEventQueue.push_back( eventObj );
+                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 온다 — 둘 다 Modified 로 접히므로 같은 파일에
+                    // 같은 동작이 연달아 들어오면 하나로 합친다(Linux 워처와 같다). 큐 압력이 그만큼 준다.
+                    const bool bDuplicate = _listEventQueue.empty() == false &&
+                                            _listEventQueue.back()._action == eventObj._action &&
+                                            _listEventQueue.back()._filename == eventObj._filename;
+                    if ( bDuplicate == false )
+                    {
+                        if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
+                            _bEventQueueOverflowed = true;
+                        else
+                            _listEventQueue.push_back( eventObj );
+                    }
 
                     if ( pNotify->NextEntryOffset == 0 )
                         break;

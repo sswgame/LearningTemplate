@@ -110,6 +110,7 @@ namespace sw
         _bUseMtimePoll = true;
         SW_LOG_INFO( "ReloadFileManager: Using mtime poll fallback (no native file watcher)." );
 #endif
+        _lastDrainTimestamp = FileUtil::getCurrentFileTimestamp();
         return true;
     }
 
@@ -129,6 +130,10 @@ namespace sw
     {
         vector<FileChangeEvent> listEvent;
 
+        // 잃은 알림은 "직전 드레인 이후" 에 일어났다 — 그 시각을 지금 이 드레인의 시각으로 갈아 끼우기 전에 붙잡는다.
+        const uint64 sinceTimestamp = _lastDrainTimestamp;
+        _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
+
         if ( _fileWatcher )
             _fileWatcher->pollEvents( listEvent );
         else if ( _bUseMtimePoll )
@@ -136,6 +141,10 @@ namespace sw
         else
             return;
 
+        if ( listEvent.empty() )
+            return;
+
+        expandRescanEvents( listEvent, sinceTimestamp );
         if ( listEvent.empty() )
             return;
 
@@ -169,9 +178,8 @@ namespace sw
 
     bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent ) const
     {
-        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
         const string prefix   = FileUtil::normalizePath( entry._pathPrefix );
-
+        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
         if ( FileUtil::startsWithPathComponent( fullPath, prefix ) == false )
             return false;
 
@@ -226,6 +234,68 @@ namespace sw
 #endif
             }
         }
+    }
+
+    void ReloadFileManager::expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp )
+    {
+        // 파일 이름이 빈 Modified 는 워처의 **리스캔 신호**다 — 큐 상한이나 버퍼 오버플로로 개별 알림을
+        // 잃었다는 뜻이다(브랜치 전환·쿠킹·대량 임포트). OS 는 잃은 알림을 돌려주지 않으므로 무엇이
+        // 바뀌었는지는 상태를 대조해서만 안다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
+        // 직전 드레인 이후 mtime 인 파일만, stat 으로 끝낸다 — 평소에는 폴링이 없다.
+        // 소비자는 평소와 같은 파일 단위 이벤트만 받고 리스캔이 있었는지 알 필요가 없다.
+        bool bRescan{ false };
+        for ( size_t index = 0; index < outListEvent.size(); )
+        {
+            if ( outListEvent[index]._filename.empty() == false )
+            {
+                ++index;
+                continue;
+            }
+            bRescan = true;
+            outListEvent.erase( outListEvent.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+        if ( bRescan == false )
+            return;
+
+        // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다 — 리로드는 멱등이지만 두 번 할 이유는 없다.
+        vector<string> listSeen;
+        listSeen.reserve( outListEvent.size() );
+        for ( const FileChangeEvent& changeEvent : outListEvent )
+            listSeen.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+
+        uint32 found{ 0 };
+        for ( const WatchEntry& entry : _listWatch )
+        {
+            if ( FileUtil::directoryExists( entry._pathPrefix ) == false )
+                continue;
+
+            vector<string> listFile;
+            FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
+            for ( const string& filePath : listFile )
+            {
+                if ( extensionAllowed( entry, filePath ) == false )
+                    continue;
+                if ( FileUtil::getFileTimestamp( filePath ) < sinceTimestamp )
+                    continue;
+
+                const string normalized = FileUtil::normalizePath( filePath );
+                if ( std::find( listSeen.begin(), listSeen.end(), normalized ) != listSeen.end() )
+                    continue;
+                listSeen.push_back( normalized );
+
+                string relative{};
+                if ( FileUtil::makePathRelative( entry._pathPrefix, filePath, relative ) == false || relative.empty() )
+                    continue;
+
+                FileChangeEvent changeEvent{};
+                changeEvent._action    = FileWatcherAction::Modified;
+                changeEvent._directory = entry._pathPrefix;
+                changeEvent._filename  = relative;
+                outListEvent.push_back( std::move( changeEvent ) );
+                ++found;
+            }
+        }
+        SW_LOG_INFO( "파일 변경이 한꺼번에 몰려 워처가 개별 알림을 잃었습니다 — 감시 트리를 대조해 %# 개를 되찾았습니다.", found );
     }
 
     void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& outListEvent )
