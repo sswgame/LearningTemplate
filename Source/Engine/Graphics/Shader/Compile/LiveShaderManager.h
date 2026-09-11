@@ -15,11 +15,15 @@ namespace sw
     /**
      * @class LiveShaderManager
      * @brief 등록된 셰이더를 **요청이 있을 때** 다시 컴파일합니다.
-     * @details `watchShader` 로 등록해 두고, `triggerReloadAll` 로 큐에 넣은 뒤 `update` 가 실제로
-     *          컴파일한다. 트리거는 디버그 액션 `ReloadShaders`(Ctrl+F8) 다.
+     * @details `triggerReloadAll` 이 큐를 채우고 `update` 가 실제로 컴파일한다. 트리거는 디버그 액션
+     *          `ReloadShaders`(Ctrl+F8) 다. 큐를 채울 때 **`ShaderCache` 가 들고 있는 목록**을 쓴다 —
+     *          이 실행에서 실제로 컴파일된 셰이더가 곧 리로드 대상이기 때문이다.
+     *
+     *          예전에는 `watchShader` 로 채우는 자기 등록표를 봤는데, 그 함수의 호출부가 하나도 없어서
+     *          단축키가 빈 표를 돌았다 — 리로드가 아무 일도 하지 않았다.
      *
      *          `.hlsl` 파일 감시로 **자동** 재컴파일하던 경로는 없앴다. 그 배선(`attachReloadFileManager`)
-     *          은 호출부가 하나도 없어 등록된 적이 없었고, 앞으로도 자동 재컴파일 계획이 없다.
+     *          역시 호출부가 없어 등록된 적이 없었고, 앞으로도 자동 재컴파일 계획이 없다.
      */
     class SW_API LiveShaderManager
     {
@@ -41,9 +45,6 @@ namespace sw
         /** @brief 논리 라벨로 초기화합니다. */
         bool initialize( string_view label = "Shaders" );
 
-        /** @brief 셰이더와 선택 재컴파일 콜백을 등록합니다. */
-        void watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled = {} );
-
         /** @brief 어떤 감시 셰이더든 재컴파일되면 호출되는 전역 콜백을 설정합니다 (PSO 바인딩 레이아웃 무효화용). */
         void setOnAnyShaderRecompiled( const ShaderRecompiledDelegate& onAnyRecompiled ) { _onAnyRecompiled = onAnyRecompiled; }
 
@@ -53,22 +54,18 @@ namespace sw
         /** @brief 등록 목록과 큐를 비웁니다. */
         void shutdown();
 
-        /** @brief 등록된 셰이더를 모두 리로드 큐에 넣습니다. */
+        /**
+         * @brief 이 실행에서 컴파일된 셰이더를 모두 리로드 큐에 넣습니다.
+         * @details 대상 목록은 `ShaderCache::collectCompiledDescs` 에서 가져온다 — 별도 등록표를 두지
+         *          않는 이유는 클래스 주석 참고.
+         */
         void triggerReloadAll();
 
     private:
-        /// @brief 등록된 셰이더 하나
-        struct WatchedShaderInfo
-        {
-            ShaderCompileDesc        _desc;
-            ShaderRecompiledDelegate _onRecompiled;
-        };
-
-        mutable std::shared_mutex                        _mutex;
-        unordered_map<string, vector<WatchedShaderInfo>> _mapWatchedShader;
-        vector<string>                                   _listPendingReloadPath;
-        ShaderRecompiledDelegate                         _onAnyRecompiled;
-        string                                           _label;
-        bool                                             _bInitialized{ false };
+        mutable std::shared_mutex _mutex;
+        vector<ShaderCompileDesc> _listPendingReload;
+        ShaderRecompiledDelegate  _onAnyRecompiled;
+        string                    _label;
+        bool                      _bInitialized{ false };
     };
 } // namespace sw

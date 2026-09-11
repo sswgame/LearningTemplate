@@ -125,6 +125,7 @@ namespace sw
                     std::scoped_lock<mutex> lock{ _mutexCache };
                     ShaderCacheEntry        entry{};
                     entry._lastTimestamp = currentTimestamp;
+                    entry._desc          = desc;
                     entry._result        = result;
                     _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
                     return result;
@@ -173,6 +174,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutexCache };
             ShaderCacheEntry        entry{};
             entry._lastTimestamp = currentTimestamp;
+            entry._desc          = desc;
             entry._result        = result;
             _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
             return result;
@@ -192,6 +194,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutexCache };
             ShaderCacheEntry        entry{};
             entry._lastTimestamp = currentTimestamp;
+            entry._desc          = desc;
             entry._result        = compiledResult;
             _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
         }
@@ -211,5 +214,18 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutexCache };
         _mapCache.clear();
+    }
+
+    void ShaderCache::collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutexCache };
+        outListDesc.clear();
+        outListDesc.reserve( _mapCache.size() );
+        for ( const pair<const string, ShaderCacheEntry>& entry : _mapCache )
+        {
+            // 파일 경로가 없는 항목은 다시 컴파일할 수 없다.
+            if ( entry.second._desc._filePath.empty() == false )
+                outListDesc.push_back( entry.second._desc );
+        }
     }
 } // namespace sw

@@ -8,14 +8,17 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
 {
-    /// @brief 디스크 캐시 한 항목 (바이트코드 + 해시)
+    /// @brief 디스크 캐시 한 항목 (컴파일 요청 + 바이트코드 + 해시)
     struct ShaderCacheEntry
     {
+        /** @brief 이 항목을 만든 컴파일 요청. 수동 리로드가 이것으로 다시 컴파일합니다. */
+        ShaderCompileDesc   _desc;
         uint64              _lastTimestamp{ 0 };
         ShaderCompileResult _result;
     };
@@ -41,6 +44,14 @@ namespace sw
         void clearCache();
 
         /**
+         * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
+         * @details **"이 실행에서 실제로 쓰이는 셰이더" 의 정본이 여기다.** 수동 리로드는 따로 등록표를
+         *          두지 않고 이것을 쓴다 — 예전에는 `LiveShaderManager` 가 자기 표를 들고 있었는데
+         *          채우는 호출부가 하나도 없어서 리로드 단축키가 빈 표를 돌았다.
+         */
+        void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
+
+        /**
          * @brief 이 컴파일 요청이 읽을 사전 베이크 바이너리의 리소스 상대 경로 (`<domain>/shaders/bin/<rhi>/<이름>`).
          * @details 파일 이름은 `ShaderBaker::computeBinaryFileName` 그대로다 — 스템·스테이지·진입점·**퍼뮤테이션 해시**.
          *          예전엔 여기서 스템과 스테이지만으로 이름을 만들어 해시가 빠졌다. 베이커는 퍼뮤테이션마다 다른 파일을
@@ -59,6 +70,6 @@ namespace sw
 
     private:
         unordered_map<string, ShaderCacheEntry> _mapCache;
-        mutex                                   _mutexCache;
+        mutable mutex                           _mutexCache;
     };
 } // namespace sw

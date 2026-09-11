@@ -11,6 +11,39 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct LiveShaderManagerInternal
+        {
+            /**
+             * @brief 스코프 동안 ShaderCompiler 의 디스크 캐시를 끕니다.
+             * @details 수동 리로드가 이것을 켜 둔 채로 컴파일하면 **바뀐 `.hlsli` 가 반영되지 않는다.**
+             *          그 캐시의 키는 `max(.hlsl mtime, 공유 헤더 타임스탬프)` 인데, 뒤쪽이
+             *          `ShaderBaker::getSharedHeaderTimestamp` 의 함수 지역 static 이라 프로세스당 한 번만
+             *          계산된다. `.hlsli` 만 고치면 두 값이 다 그대로여서 옛 바이트코드가 그대로 돌아온다.
+             */
+            struct ScopedDiskCacheBypass
+            {
+                ScopedDiskCacheBypass()
+                    : _bPrevEnabled{ ShaderCompiler::isDiskCacheEnabled() }
+                {
+                    ShaderCompiler::enableDiskCache( false );
+                }
+
+                ~ScopedDiskCacheBypass() { ShaderCompiler::enableDiskCache( _bPrevEnabled ); }
+
+                ScopedDiskCacheBypass( const ScopedDiskCacheBypass& )            = delete;
+                ScopedDiskCacheBypass& operator=( const ScopedDiskCacheBypass& ) = delete;
+
+            private:
+                bool _bPrevEnabled;
+            };
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     SW_LOG_CALLER( "LiveShaderManager" );
 
     LiveShaderManager::LiveShaderManager() = default;
@@ -27,29 +60,19 @@ namespace sw
         return true;
     }
 
-    void LiveShaderManager::watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled )
+    void LiveShaderManager::triggerReloadAll()
     {
-        BLOCK( "LiveShaderManager 셰이더 등록" )
-        {
-            string ioPath = ResourceUtil::getResourcePath( desc._filePath );
-            if ( ioPath.empty() )
-                ioPath = desc._filePath;
+        if ( _bInitialized == false || engine::areEngineServicesBound() == false )
+            return;
 
-            // Map / notify keys are lowercase; I/O keeps the real FS path.
-            const string keyPath = FileUtil::normalizePath( ioPath );
+        // 등록표를 따로 두지 않는다 — **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다.
+        // 예전에는 `watchShader` 로 채우는 자기 표를 봤는데 그 함수의 호출부가 하나도 없어서,
+        // 단축키를 눌러도 빈 표를 돌고 아무 일도 일어나지 않았다.
+        vector<ShaderCompileDesc> listDesc;
+        engine::getShaderCache().collectCompiledDescs( listDesc );
 
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            _mapWatchedShader[keyPath].push_back( { desc, onRecompiled } );
-
-            if ( _bInitialized == false )
-            {
-                string dirPart = FileUtil::getDirectoryPart( desc._filePath );
-                if ( dirPart.empty() == false )
-                    initialize( dirPart );
-            }
-
-            SW_LOG_INFO( "Registered live shader watch target: %#", ioPath.c_str() );
-        }
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        _listPendingReload = std::move( listDesc );
     }
 
     void LiveShaderManager::update()
@@ -57,78 +80,57 @@ namespace sw
         if ( _bInitialized == false )
             return;
 
-        if ( _listPendingReloadPath.empty() == false )
+        vector<ShaderCompileDesc> listToCompile;
         {
-            vector<string> listReloadToProcess;
-            {
-                std::unique_lock<std::shared_mutex> lock{ _mutex };
-                listReloadToProcess = std::move( _listPendingReloadPath );
-                _listPendingReloadPath.clear();
-            }
-
-            for ( const string& changedPath : listReloadToProcess )
-            {
-                vector<WatchedShaderInfo> listToCompile;
-                {
-                    std::shared_lock<std::shared_mutex>                        lock{ _mutex };
-                    unordered_map<string, vector<WatchedShaderInfo>>::iterator it = _mapWatchedShader.find( changedPath );
-                    if ( it != _mapWatchedShader.end() )
-                        listToCompile = it->second;
-                }
-
-                for ( WatchedShaderInfo& watchedInfo : listToCompile )
-                {
-                    SW_LOG_INFO( "Recompiling shader live: %# (Entry: %#)",
-                                 watchedInfo._desc._filePath.c_str(), watchedInfo._desc._entryPoint.c_str() );
-
-                    ShaderCompileResult newResult = ShaderCompiler::compileHLSL( watchedInfo._desc );
-                    if ( newResult._bSuccess )
-                    {
-                        // 캐시가 읽는 이름 그대로 쓴다 — 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
-                        // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
-                        const string localPath = ShaderCache::makeLocalCachePath( watchedInfo._desc );
-
-                        const string localDir = FileUtil::getDirectoryPart( localPath );
-                        if ( localDir.empty() == false )
-                            FileUtil::ensureDirectoryExists( localDir );
-                        FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() );
-
-                        engine::getShaderCache().clearCache();
-                        SW_LOG_INFO( "Live Shader Recompilation Succeeded for %#!",
-                                     watchedInfo._desc._filePath.c_str() );
-
-                        if ( watchedInfo._onRecompiled.isBound() )
-                            watchedInfo._onRecompiled( changedPath, newResult );
-                        if ( _onAnyRecompiled.isBound() )
-                            _onAnyRecompiled( watchedInfo._desc._filePath, newResult );
-                    }
-                    else
-                    {
-                        SW_LOG_ERROR( "Live Shader Recompilation Failed for %#:\n%#",
-                                      watchedInfo._desc._filePath.c_str(), newResult._errorMessage.c_str() );
-                    }
-                }
-            }
+            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            if ( _listPendingReload.empty() )
+                return;
+            listToCompile = std::move( _listPendingReload );
+            _listPendingReload.clear();
         }
+
+        // 컴파일하는 동안만 디스크 캐시를 우회한다 (ScopedDiskCacheBypass 주석 참고).
+        const LiveShaderManagerInternal::ScopedDiskCacheBypass bypass;
+
+        uint32 succeeded = 0;
+        for ( const ShaderCompileDesc& desc : listToCompile )
+        {
+            const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( desc );
+            if ( newResult._bSuccess == false )
+            {
+                SW_LOG_ERROR( "Live Shader Recompilation Failed for %# (Entry: %#):\n%#",
+                              desc._filePath.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
+                continue;
+            }
+
+            // 캐시가 읽는 이름 그대로 쓴다 — 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
+            // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
+            const string localPath = ShaderCache::makeLocalCachePath( desc );
+            const string localDir  = FileUtil::getDirectoryPart( localPath );
+            if ( localDir.empty() == false )
+                FileUtil::ensureDirectoryExists( localDir );
+
+            // 방금 쓴 파일의 mtime 이 소스보다 새로우므로 다음 getOrCompile 이 이 바이트코드를 집는다
+            // (ShaderCache 의 1순위가 이 로컬 라이브 캐시다).
+            FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() );
+
+            ++succeeded;
+            if ( _onAnyRecompiled.isBound() )
+                _onAnyRecompiled( desc._filePath, newResult );
+        }
+
+        // 인메모리 캐시는 마지막에 한 번만 비운다 — 셰이더마다 비우면 같은 패스의 남은 재컴파일이
+        // 방금 지운 항목을 다시 채워 넣는다.
+        if ( engine::areEngineServicesBound() )
+            engine::getShaderCache().clearCache();
+
+        SW_LOG_INFO( "Shader reload: %# / %# succeeded.", succeeded, static_cast<uint32>( listToCompile.size() ) );
     }
 
     void LiveShaderManager::shutdown()
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        _mapWatchedShader.clear();
-        _listPendingReloadPath.clear();
+        _listPendingReload.clear();
         _bInitialized = false;
     }
-
-    void LiveShaderManager::triggerReloadAll()
-    {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        _listPendingReloadPath.clear();
-        _listPendingReloadPath.reserve( _mapWatchedShader.size() );
-        for ( const pair<const string, vector<WatchedShaderInfo>>& pair : _mapWatchedShader )
-        {
-            _listPendingReloadPath.push_back( pair.first );
-        }
-    }
-
 } // namespace sw
