@@ -202,9 +202,7 @@ namespace sw::editor
             if ( StringUtil::stristr( item._title.c_str(), _searchBuffer.c_str() ) != nullptr ||
                  StringUtil::stristr( item._detail.c_str(), _searchBuffer.c_str() ) != nullptr ||
                  StringUtil::stristr( item._category.c_str(), _searchBuffer.c_str() ) != nullptr )
-            {
                 listFiltered.push_back( &item );
-            }
         }
 
         const int32 filteredCount = static_cast<int32>( listFiltered.size() );

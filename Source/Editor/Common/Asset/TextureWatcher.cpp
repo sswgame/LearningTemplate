@@ -122,9 +122,7 @@ namespace sw::editor
         for ( const auto& ev : listEvent )
         {
             if ( ev._action == FileWatcherAction::Added || ev._action == FileWatcherAction::Modified )
-            {
                 processFileChange( ev._directory, ev._filename );
-            }
         }
     }
 
@@ -189,9 +187,7 @@ namespace sw::editor
             if ( bNeedsBake )
             {
                 if ( TextureBaker::bakeTextureWithConfig( filePath, outputPath, _config ) )
-                {
                     ++bakeCount;
-                }
             }
         }
 

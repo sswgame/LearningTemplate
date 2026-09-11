@@ -120,9 +120,7 @@ namespace sw
                 s_imWindow   = 0;
 
                 if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
-                {
                     XFreeCursor( static_cast<Display*>( s_pCursorDisplay ), s_invisibleCursor );
-                }
                 s_invisibleCursor = 0;
                 s_pCursorDisplay  = nullptr;
                 s_bWindowFocused  = false;
@@ -344,13 +342,9 @@ namespace sw
             return;
 
         if ( bVisible )
-        {
             XUndefineCursor( pDisplay, x11Window );
-        }
         else
-        {
             XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateInvisibleCursor( pDisplay, x11Window ) );
-        }
         XFlush( pDisplay );
     }
 

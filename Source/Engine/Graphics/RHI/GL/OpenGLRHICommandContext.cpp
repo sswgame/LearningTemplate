@@ -528,9 +528,7 @@ namespace sw
             return;
         const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
         if ( ubo != 0 )
-        {
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
-        }
     }
 
     void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )

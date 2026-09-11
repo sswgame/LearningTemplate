@@ -81,9 +81,7 @@ namespace sw
 
         std::lock_guard<mutex> lock( _mutex );
         if ( _pCurrentProcess != nullptr )
-        {
             _pCurrentProcess->terminate( 1 );
-        }
     }
 
     float32 ModuleCompiler::getElapsedTimeSec() const
@@ -107,9 +105,7 @@ namespace sw
 
         if ( FileUtil::fileExists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
              FileUtil::fileExists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
-        {
             resultDir = parentDir;
-        }
 
         return resultDir;
     }
@@ -131,9 +127,7 @@ namespace sw
 
         string cmdLine = "cmake --build \"" + buildDir + "\"";
         if ( targetName.empty() == false )
-        {
             cmdLine += " --target " + targetName;
-        }
 
         ProcessOptions options{};
         options._workingDirectory = buildDir;
@@ -201,9 +195,7 @@ namespace sw
             SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
 
             if ( _pLiveReloadManager != nullptr && targetName.empty() == false )
-            {
                 _pLiveReloadManager->triggerReload( targetName );
-            }
         }
         else
         {

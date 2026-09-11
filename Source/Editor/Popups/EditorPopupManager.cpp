@@ -83,9 +83,7 @@ namespace sw::editor
         for ( EditorPopupEntry& entry : _listPopup )
         {
             if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
-            {
                 entry._pInstance->draw();
-            }
         }
     }
 

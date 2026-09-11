@@ -220,9 +220,7 @@ namespace sw
 
             // 접근성 토글 처리
             if ( actionEntry._bPressed == SW_TRUE && actionEntry._bToggleMode == SW_TRUE )
-            {
                 actionEntry._bToggleState = ( actionEntry._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
-            }
 
             // 커맨드 이력 기록 (Ring Buffer)
             if ( actionEntry._bTriggered == SW_TRUE )
@@ -367,9 +365,7 @@ namespace sw
                         {
                             float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( mag - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
                             if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
-                            {
                                 norm = MathUtil::pow( norm, binding._responseExponent );
-                            }
                             stickX = ( stickX / mag ) * norm;
                             stickY = ( stickY / mag ) * norm;
                         }
@@ -383,9 +379,7 @@ namespace sw
                                 return 0.0f;
                             float32 norm = deadRange > 0.0001f ? MathUtil::clamp( ( absVal - inDeadzone ) / deadRange, 0.0f, 1.0f ) : 1.0f;
                             if ( binding._responseExponent != 1.0f && binding._responseExponent > 0.0f )
-                            {
                                 norm = MathUtil::pow( norm, binding._responseExponent );
-                            }
                             return ( val > 0.0f ? 1.0f : -1.0f ) * norm;
                         };
                         stickX = applyAxialDeadzone( stickX );

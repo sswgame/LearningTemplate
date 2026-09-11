@@ -162,9 +162,7 @@ namespace sw
     inline T* vector<T, Allocator>::get_inline_ptr()
     {
         if constexpr ( has_inline_allocator<Allocator>::value )
-        {
             return this->Allocator::get_inline_buffer();
-        }
         return nullptr;
     }
 
@@ -172,9 +170,7 @@ namespace sw
     inline const T* vector<T, Allocator>::get_inline_ptr() const
     {
         if constexpr ( has_inline_allocator<Allocator>::value )
-        {
             return const_cast<vector*>( this )->Allocator::get_inline_buffer();
-        }
         return nullptr;
     }
 
@@ -182,9 +178,7 @@ namespace sw
     inline size_t vector<T, Allocator>::get_inline_cap() const
     {
         if constexpr ( has_inline_allocator<Allocator>::value )
-        {
             return const_cast<vector*>( this )->Allocator::get_inline_capacity();
-        }
         return 0;
     }
 
@@ -204,9 +198,7 @@ namespace sw
     inline void vector<T, Allocator>::do_deallocate( T* p, size_t n )
     {
         if ( p )
-        {
             Allocator::deallocate( p, n );
-        }
     }
 
     template <typename T, typename Allocator>
@@ -373,9 +365,7 @@ namespace sw
     {
         clearInternal();
         if ( is_inline( _pData ) == false )
-        {
             do_deallocate( _pData, _capacity );
-        }
     }
 
     template <typename T, typename Allocator>

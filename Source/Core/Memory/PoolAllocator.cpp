@@ -56,9 +56,7 @@ namespace sw
             _mutex.lock();
 
         if ( _pFreeList == nullptr )
-        {
             allocateChunk();
-        }
 
         if ( _pFreeList == nullptr )
         {

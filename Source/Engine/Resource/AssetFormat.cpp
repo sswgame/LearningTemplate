@@ -99,9 +99,7 @@ namespace sw
 
         writeXmlVersion( root, currentVersion );
         if ( pOutSourceVersion != nullptr && *pOutSourceVersion < currentVersion )
-        {
             SW_LOG_INFO( "Upgraded kind=%# formatVersion %# -> %#", static_cast<uint32>( kind ), *pOutSourceVersion, currentVersion );
-        }
         return true;
     }
 } // namespace sw

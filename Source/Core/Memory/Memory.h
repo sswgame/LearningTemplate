@@ -88,13 +88,9 @@ void sw_delete_func( T* pPtr )
     {
         pPtr->~T();
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
-        {
             sw::Memory::alignedFree( pPtr );
-        }
         else
-        {
             sw::Memory::freeMemory( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
-        }
     }
 }
 
@@ -104,13 +100,9 @@ void sw_delete_array_func( T* pPtr )
     if ( pPtr != nullptr )
     {
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
-        {
             sw::Memory::alignedFree( pPtr );
-        }
         else
-        {
             sw::Memory::freeMemory( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
-        }
     }
 }
 

@@ -168,13 +168,9 @@ namespace sw
         , _mode{ Mode::Char }
     {
         if ( _str.empty() == true )
-        {
             _mode = Mode::End;
-        }
         else
-        {
             advance();
-        }
     }
 
     template <typename T>

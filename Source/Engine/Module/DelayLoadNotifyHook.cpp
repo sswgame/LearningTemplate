@@ -44,13 +44,9 @@ namespace sw
             else if ( dliNotify == dliFailGetProc )
             {
                 if ( pPdli->dlp.fImportByName )
-                {
                     SW_LOG_ERROR( "DelayLoad failed to find procedure '%#' in '%#'", pPdli->dlp.szProcName, pPdli->szDll );
-                }
                 else
-                {
                     SW_LOG_ERROR( "DelayLoad failed to find procedure ordinal %# in '%#'", pPdli->dlp.dwOrdinal, pPdli->szDll );
-                }
             }
             return nullptr;
         }

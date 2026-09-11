@@ -104,9 +104,7 @@ namespace sw
             if constexpr ( HasStaticType_v<From> )
             {
                 if ( pSrcType == nullptr || ( pToType != nullptr && pSrcType != pToType && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) == false ) )
-                {
                     pSrcType = From::StaticType();
-                }
             }
         }
         else if constexpr ( HasStaticType_v<From> )

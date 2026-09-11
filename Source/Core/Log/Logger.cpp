@@ -358,9 +358,7 @@ namespace sw
         const utf8*  pEffectiveMsg    = ( pMessage != nullptr ) ? pMessage : "";
         const utf8*  pEffectiveCaller = pCaller;
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
-        {
             pEffectiveCaller = getCaller( pFile );
-        }
 
         // 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};

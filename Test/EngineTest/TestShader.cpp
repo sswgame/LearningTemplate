@@ -57,9 +57,7 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
     sw::ShaderCache         shaderCache;
     sw::ShaderCompileResult cacheResult = shaderCache.getOrCompile( desc );
     if ( sw::isShaderCompilerUnavailable( cacheResult ) )
-    {
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    }
 
     SW_EXPECT_TRUE( cacheResult._bSuccess );
     SW_EXPECT_FALSE( cacheResult._bytecode.empty() );
@@ -100,9 +98,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
             continue;
         }
         if ( sw::isShaderCompilerUnavailable( vsResult ) )
-        {
             SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-        }
 
         attemptedAny = true;
         SW_EXPECT_TRUE( vsResult._bSuccess );
@@ -120,9 +116,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
     }
 
     if ( attemptedAny == false )
-    {
         SW_TEST_SKIP( "No shader targets compilable in this environment" );
-    }
 }
 
 /**
@@ -165,9 +159,7 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
     // 1차 컴파일 (캐시 미스 -> 디스크 저장)
     sw::ShaderCompileResult result1 = sw::ShaderCompiler::compileHLSL( desc );
     if ( sw::isShaderCompilerUnavailable( result1 ) )
-    {
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    }
 
     SW_EXPECT_TRUE( result1._bSuccess );
     SW_EXPECT_FALSE( result1._bytecode.empty() );
@@ -210,9 +202,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
     // 1) DX11 컴파일 및 캐시 등록
     sw::ShaderCompileResult dx11Res1 = shaderCache.getOrCompile( dx11Desc );
     if ( sw::isShaderCompilerUnavailable( dx11Res1 ) )
-    {
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    }
     SW_EXPECT_TRUE( dx11Res1._bSuccess );
 
     // 2) DX12 컴파일 및 캐시 등록 (DX11 캐시와 독립적으로 보관되어야 함)
@@ -260,9 +250,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
 
     sw::ShaderCompileResult res11 = sw::ShaderCompiler::compileHLSL( dx11Desc );
     if ( sw::isShaderCompilerUnavailable( res11 ) )
-    {
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    }
     SW_EXPECT_TRUE( res11._bSuccess );
 
     sw::ShaderCompileResult res12 = sw::ShaderCompiler::compileHLSL( dx12Desc );

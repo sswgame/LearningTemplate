@@ -115,9 +115,7 @@ namespace sw::editor
 
         InputManager* pInput = getService<InputManager>();
         if ( pInput != nullptr && _actionMap.getInputManager() != pInput )
-        {
             _actionMap.setInputManager( pInput );
-        }
 
         // ActionPhase 상태 머신·커맨드 히스토리·버퍼 만료 타이머 등은 update() 안에서만 갱신되므로
         // 매 프레임 호출해야 액션 테이블/콤보 테스터/버퍼링 데모가 실제로 동작합니다.
@@ -151,9 +149,7 @@ namespace sw::editor
 
         // 리플레이 재생 업데이트
         if ( _replay.isPlaying() && pInput != nullptr )
-        {
             _replay.updatePlayback( ImGui::GetIO().DeltaTime, pInput );
-        }
 
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
         {
@@ -866,9 +862,7 @@ namespace sw::editor
         int32       frameIdx  = static_cast<int32>( _replay.getCurrentFrameIndex() );
         const int32 maxFrames = _replay.getFrameCount() > 0 ? static_cast<int32>( _replay.getFrameCount() - 1 ) : 0;
         if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
-        {
             _replay.seek( static_cast<uint32>( frameIdx ) );
-        }
 
         const InputReplayFrame* pCurrentFrame = _replay.getCurrentFrame();
         if ( pCurrentFrame != nullptr )

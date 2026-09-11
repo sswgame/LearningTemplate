@@ -28,9 +28,7 @@ namespace sw
         void writeAt( size_t offset, const T& value )
         {
             if ( offset + sizeof( T ) <= _buffer.size() )
-            {
                 Memory::copy( _buffer.data() + offset, &value, sizeof( T ) );
-            }
         }
 
         void writeString( string_view str )
@@ -65,9 +63,7 @@ namespace sw
         {
             write( static_cast<uint32>( bytes.size() ) );
             if ( bytes.empty() == false )
-            {
                 _buffer.insert( _buffer.end(), bytes.begin(), bytes.end() );
-            }
         }
 
         void writeRawBytes( const void* pData, size_t size )

@@ -74,9 +74,7 @@ namespace sw
         while ( proc.readOutputLine( line ) )
         {
             if ( onOutput.isBound() )
-            {
                 onOutput( line, false );
-            }
         }
 
         return proc.waitForExit();

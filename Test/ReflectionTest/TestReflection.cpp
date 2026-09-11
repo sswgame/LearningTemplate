@@ -635,9 +635,7 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 
     if ( sw::FileUtil::fileExists( parserExe ) == false &&
          sw::FileUtil::fileExists( parserExe + ".exe" ) == false )
-    {
         SW_TEST_SKIP( "ReflectionParser executable not found in binary directory" );
-    }
 
     sw::ResourceUtil::initialize();
     const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
@@ -1034,13 +1032,9 @@ SW_TEST_CASE( Reflection_Containers, MapWrapper )
         const sw::string* key = static_cast<const sw::string*>( pKPtr );
         const int32*      val = static_cast<const int32*>( pVPtr );
         if ( *key == "Atk" )
-        {
             SW_EXPECT_EQUAL( 50, *val );
-        }
         if ( *key == "Def" )
-        {
             SW_EXPECT_EQUAL( 20, *val );
-        }
     } );
 
     SW_EXPECT_EQUAL( 2, elementCount );
@@ -1836,9 +1830,7 @@ SW_TEST_CASE( Reflection_EnumInfo, ValueToString )
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
-    {
         return;
-    }
 
     SW_EXPECT_EQUAL( sw::string( "None" ), sw::string( info->toString( 0 ).c_str() ) );
     SW_EXPECT_EQUAL( sw::string( "TypeA" ), sw::string( info->toString( 1 ).c_str() ) );
@@ -1854,9 +1846,7 @@ SW_TEST_CASE( Reflection_EnumInfo, InvalidValueReturnsDefault )
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
-    {
         return;
-    }
 
     sw::hashed_string name = info->toString( 999 );
     SW_EXPECT_TRUE( name == sw::hashed_string() );
@@ -1879,9 +1869,7 @@ SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
     SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
     if ( typeInfoFqn == nullptr )
-    {
         return;
-    }
 
     sw::InnerNamespaceForTest::OuterStruct instance;
     instance._outerValue = 123;
@@ -1889,9 +1877,7 @@ SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
     const sw::PropertyInfo* prop = typeInfoFqn->findProperty( sw::hashed_string( "_outerValue" ) );
     SW_EXPECT_TRUE( prop != nullptr );
     if ( prop != nullptr )
-    {
         SW_EXPECT_EQUAL( 123, *prop->getValuePtr<int32>( &instance ) );
-    }
 }
 
 /**
@@ -1908,9 +1894,7 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerStruct )
     SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
     if ( typeInfoFqn == nullptr )
-    {
         return;
-    }
 
     sw::InnerNamespaceForTest::OuterStruct::InnerStruct instance;
     instance._innerData = "TestNested";
@@ -3193,9 +3177,7 @@ SW_TEST_CASE( Reflection_Serialization, ReflectAnyPolymorphic )
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssetPathActor" ) );
     if ( typeInfo == nullptr )
-    {
         SW_TEST_SKIP( "AssetPathActor type not registered" );
-    }
     const sw::PropertyInfo* albedo = typeInfo->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_TRUE( albedo != nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata._bAssetPath ) );

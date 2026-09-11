@@ -141,14 +141,10 @@ namespace sw
             vector<string> listMacroArgument;
             if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
                  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, listMacroArgument ) )
-            {
                 ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( listMacroArgument, typeCount );
-            }
             else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) &&
                       ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, listMacroArgument ) )
-            {
                 ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( listMacroArgument, containerCount );
-            }
         }
 
         TypeNameMap::instance().setLoaded( true );
@@ -174,9 +170,7 @@ namespace sw
             vector<string> listMacroArgument;
             if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
                  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, listMacroArgument ) )
-            {
                 ReflectBuiltinsLoaderInternal::appendBuiltinTypeRow( listMacroArgument, listRow );
-            }
         }
 
         if ( listRow.empty() )

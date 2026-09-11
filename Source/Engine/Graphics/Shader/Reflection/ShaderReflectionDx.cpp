@@ -375,9 +375,7 @@ namespace sw
                             GetProcAddress( hDll, "DxcCreateInstance" ) );
                     }
                     if ( s_fnDxcCreateInstance == nullptr )
-                    {
                         SW_LOG_WARNING( "dxcompiler.dll loaded but DxcCreateInstance not found." );
-                    }
                 }
                 return s_fnDxcCreateInstance;
             }

@@ -62,9 +62,7 @@ namespace sw
                 {
                     const string_view token{ listPriorityEffective[index] };
                     if ( matchesTokenCaseInsensitive( stem, token ) )
-                    {
                         return static_cast<int32>( ( priorityCount - index ) * 1000 );
-                    }
                 }
 
                 // 2. 패치 접두사(patch_)가 붙은 경우 대상 모듈 우선순위 + 500 가중치 부여
@@ -75,9 +73,7 @@ namespace sw
                     {
                         const string_view token{ listPriorityEffective[index] };
                         if ( matchesTokenCaseInsensitive( subStem, token ) )
-                        {
                             return static_cast<int32>( ( priorityCount - index ) * 1000 ) + 500;
-                        }
                     }
                     // 모듈 미지정 전체 단독 핫픽스 팩 (최상위 우선순위)
                     return static_cast<int32>( ( priorityCount + 1 ) * 1000 );
@@ -188,9 +184,7 @@ namespace sw
 
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
-        {
             effectivePriority = ResourcePackManagerInternal::calculatePackDefaultPriority( packFilePath, ResourceUtil::getSearchPriority() );
-        }
 
         auto pReader = make_unique<ResourcePackReader>();
         if ( pReader->open( normalizedPath ) == false )
@@ -271,9 +265,7 @@ namespace sw
         for ( auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr )
-            {
                 mounted._pReader->close();
-            }
         }
         _listMountedPack.clear();
     }
@@ -441,9 +433,7 @@ namespace sw
 
             const int32 priority = ResourcePackManagerInternal::calculatePackDefaultPriority( packPath, listPriority );
             if ( mountPack( packPath, priority ) )
-            {
                 bAnyMounted = true;
-            }
         }
 
         return bAnyMounted;

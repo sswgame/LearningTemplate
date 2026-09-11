@@ -184,9 +184,7 @@ namespace sw
                         _pMouse->setButtonDown( btn, false );
 
                     if ( ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0 )
-                    {
                         ReleaseCapture();
-                    }
 
                     postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modMask ) );
                 }

@@ -168,9 +168,7 @@ namespace sw::editor
                         formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1,
                                       bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
                         if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
-                        {
                             settings._requestedBookmarkSlot = static_cast<int32>( slot );
-                        }
                         if ( ImGui::IsItemHovered() && bHas )
                         {
                             const CameraBookmark* pBm = ws.getCameraBookmark( slot );

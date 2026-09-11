@@ -28,6 +28,7 @@ sys.path.insert(0, str(scriptDir.parent))
 import CheckCodeConventions
 import CheckIncludeOrder
 import CheckResourceCasing
+import FormatBranchBraces
 import FormatForwardDeclarations
 from common import (
     getAllStagedFiles,
@@ -165,6 +166,17 @@ def main() -> int:
                         print(f"    - {violation}")
             except Exception as exception:
                 print(f"  [Warning] {filePath.relative_to(projectRoot)} Forward Declaration 검사 중 오류: {exception}")
+
+        # 한 줄짜리 if 본문의 중괄호 검사
+        for filePath in stagedCppFiles:
+            try:
+                braceViolations = FormatBranchBraces.processFile(filePath, checkOnly=True)
+                if braceViolations:
+                    hasErrors = True
+                    for violation in braceViolations:
+                        print(f"    - {violation}")
+            except Exception as exception:
+                print(f"  [Warning] {filePath.relative_to(projectRoot)} 분기 중괄호 검사 중 오류: {exception}")
 
         # 4. 코딩 컨벤션 검사
         print("\n[4/5] 코딩 컨벤션 검사...")

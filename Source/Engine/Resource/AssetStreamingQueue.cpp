@@ -36,9 +36,7 @@ namespace sw
     void AssetStreamingQueue::shutdown()
     {
         if ( engine::areEngineServicesBound() )
-        {
             engine::getTaskManager().waitAll();
-        }
 
         std::scoped_lock<mutex> lock{ _mutex };
         _uniqueActiveRequest.clear();
@@ -189,9 +187,7 @@ namespace sw
         } ) );
 
         if ( bRequested == false )
-        {
             pPromise->setValue( false );
-        }
         return pPromise->getFuture();
     }
 
@@ -204,13 +200,9 @@ namespace sw
         vector<uint8> bytes;
         bool          bSuccess = false;
         if ( bFetchData )
-        {
             bSuccess = ResourceUtil::readBinaryResource( pathStr, bytes );
-        }
         else
-        {
             bSuccess = ResourceUtil::hasResource( pathStr );
-        }
 
         std::scoped_lock<mutex> innerLock{ _mutex };
 

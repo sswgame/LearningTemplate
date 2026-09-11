@@ -220,9 +220,7 @@ namespace sw
                 {
                     auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() )
-                    {
                         outListHandle.push_back( handle );
-                    }
                 }
             }
 

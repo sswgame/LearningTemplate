@@ -91,9 +91,7 @@ namespace sw
         {
             _vibrationDurationTimer -= deltaTime;
             if ( _vibrationDurationTimer <= 0.0f )
-            {
                 stopVibration();
-            }
         }
     }
 

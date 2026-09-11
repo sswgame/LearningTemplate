@@ -109,9 +109,7 @@ namespace sw
         Display*          pDisplay = static_cast<Display*>( _pX11Display );
         XWindowAttributes wa{};
         if ( XGetWindowAttributes( pDisplay, _x11Window, &wa ) != 0 )
-        {
             return wa.map_state == IsViewable;
-        }
         return false;
     }
 

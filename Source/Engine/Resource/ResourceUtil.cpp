@@ -200,9 +200,7 @@ namespace sw
 
         uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
         if ( folderName.empty() == false )
-        {
             cacheKeyHash = StringUtil::computeHash64( folderName, true, cacheKeyHash );
-        }
 
         {
             std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
@@ -364,15 +362,11 @@ namespace sw
         {
             const string absPath = getResourcePath( relativePath );
             if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
-            {
                 return FileUtil::readFile( absPath, outBytes );
-            }
         }
 
         if ( packManager.readFile( normalizedKey, outBytes ) )
-        {
             return true;
-        }
 
         if ( packManager.isAllowLooseFiles() )
         {
@@ -483,9 +477,7 @@ namespace sw
                     {
                         const string normPack = FileUtil::normalizeSeparators( packFolder );
                         if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
-                        {
                             _s_listResourceFolder.push_back( normPack );
-                        }
                     }
                     if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), gameDir ) == _s_listResourceFolder.end() )
                         _s_listResourceFolder.push_back( gameDir );

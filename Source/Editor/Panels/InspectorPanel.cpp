@@ -298,9 +298,7 @@ namespace sw::editor
             if ( pTInfo != nullptr )
             {
                 if ( ImGui::MenuItem( "Copy Component" ) )
-                {
                     workspace.copyComponent( pComp );
-                }
                 const string compTypeName = pComp->getComponentName().empty() == false
                                               ? pComp->getComponentName().c_str()
                                               : pTInfo->_name.c_str();
@@ -309,9 +307,7 @@ namespace sw::editor
                 if ( bCanPaste )
                 {
                     if ( ImGui::MenuItem( "Paste Component Values" ) )
-                    {
                         workspace.pasteComponentValues( pComp );
-                    }
                 }
                 else
                 {
@@ -323,9 +319,7 @@ namespace sw::editor
                 if ( workspace.hasCopiedComponent() )
                 {
                     if ( ImGui::MenuItem( "Paste as New Component" ) )
-                    {
                         workspace.pasteComponentAsNew( pObj );
-                    }
                 }
 
                 ImGui::Separator();
@@ -366,13 +360,9 @@ namespace sw::editor
                             bFoundPresets        = true;
                             string displayPreset = fname.substr( compPrefix.size() );
                             if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
-                            {
                                 displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
-                            }
                             if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                            {
                                 workspace.loadComponentPreset( pComp, presetFile );
-                            }
                         }
                     }
                     if ( bFoundPresets == false )
@@ -480,9 +470,7 @@ namespace sw::editor
             if ( filter.matchesAny( { string_view{ prop._name.c_str() },
                                       string_view{ InspectorPanelInternal::propLabel( prop ) },
                                       string_view{ prop._metadata._category.c_str() } } ) == false )
-            {
                 return;
-            }
 
             const string category =
                 prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
@@ -654,9 +642,7 @@ namespace sw::editor
                 }
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Clear All" ) )
-                {
                     *pEnumValue = 0;
-                }
                 ImGui::Separator();
 
                 for ( const auto& [val, nameHashed] : enumInfo._mapValueToName )

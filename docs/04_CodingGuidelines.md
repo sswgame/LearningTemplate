@@ -65,6 +65,8 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
    - 외부 ThirdParty 헤더
 
 ### 분기문 및 초기화 규칙
+- 본문이 한 줄인 `if` 는 중괄호를 생략합니다. `else` / `else if` 가 붙은 사슬은 **모든 갈래가 한 줄일 때만** 생략하고, 한 갈래라도 여러 줄이면 전부 중괄호를 유지합니다.
+- 반복문(`for` / `while` / `do`)은 본문이 한 줄이어도 **항상 중괄호를 유지**합니다. `Scripts/lint/FormatBranchBraces.py` 가 `if` 계열만 정리하며, clang-format 의 `RemoveBracesLLVM` 은 반복문까지 벗겨내므로 쓰지 않습니다.
 - 부울(bool) 타입이 아닌 포인터 등은 명시적으로 `== nullptr` 혹은 `== false` 로 비교하세요. `!_bValid` 보다는 `_bValid == false` 를 권장합니다.
 - 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교합니다.
 - 생성자에서 멤버를 초기화할 때는 선언 순서대로 정렬해야 하며, 중괄호 `{}` 초기화를 사용하세요. 한 줄에 1개 멤버씩 초기화하며 다음 줄에 `,`로 시작합니다.

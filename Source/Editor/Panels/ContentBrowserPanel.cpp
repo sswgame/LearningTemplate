@@ -262,14 +262,10 @@ namespace sw::editor
                 EditorAssetCommands::showInFileExplorer( entry._absolutePath );
 
             if ( ImGui::MenuItem( "Copy Relative Path" ) )
-            {
                 ImGui::SetClipboardText( entry._relativePath.c_str() );
-            }
 
             if ( ImGui::MenuItem( "Copy Absolute Path" ) )
-            {
                 ImGui::SetClipboardText( entry._absolutePath.c_str() );
-            }
 
             ImGui::Separator();
             if ( ImGui::MenuItem( "Delete" ) )
@@ -910,9 +906,7 @@ namespace sw::editor
             if ( bSameAsCurrent == false )
             {
                 if ( _historyIndex >= 0 && _historyIndex + 1 < static_cast<int32>( _listHistory.size() ) )
-                {
                     _listHistory.erase( _listHistory.begin() + ( _historyIndex + 1 ), _listHistory.end() );
-                }
                 HistoryEntry newEntry;
                 newEntry._folderPathAbs = normalizedPath;
                 newEntry._breadcrumb    = string{ breadcrumb };

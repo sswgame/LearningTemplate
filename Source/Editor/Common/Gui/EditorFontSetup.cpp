@@ -38,17 +38,13 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
                 utf16 windowsDir[constant::kMaxPathSize];
                 if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDir ), constant::kMaxPathSize ) != 0 )
-                {
                     appendIfDirectory( listDir, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
-                }
 
 #elif defined( SW_PLATFORM_LINUX )
                 appendIfDirectory( listDir, "/usr/share/fonts" );
                 appendIfDirectory( listDir, "/usr/local/share/fonts" );
                 if ( const utf8* pHome = std::getenv( "HOME" ) )
-                {
                     appendIfDirectory( listDir, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
-                }
 
 #elif defined( SW_PLATFORM_MACOS )
                 appendIfDirectory( listDir, "/System/Library/Fonts" );
@@ -61,9 +57,7 @@ namespace sw::editor
                 {
                     struct passwd* pPw = getpwuid( getuid() );
                     if ( pPw != nullptr && pPw->pw_dir != nullptr )
-                    {
                         appendIfDirectory( listDir, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
-                    }
                 }
 
 #endif

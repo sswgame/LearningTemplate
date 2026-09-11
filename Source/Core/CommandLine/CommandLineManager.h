@@ -177,26 +177,18 @@ namespace sw
 
         const auto iter = _mapArgument.find( key );
         if ( iter == _mapArgument.end() )
-        {
             return false;
-        }
 
         const uint32        argumentIndex = iter->second;
         const ArgumentInfo& argument      = _listArgument[argumentIndex];
 
         const ArgumentInfo::Value* pTargetValue{ nullptr };
         if ( argument._bParsed != 0 )
-        {
             pTargetValue = &argument._value;
-        }
         else if ( argument._bUseDefaultValue != 0 )
-        {
             pTargetValue = &argument._defaultValue;
-        }
         else
-        {
             return false;
-        }
 
         if constexpr ( std::is_same_v<T, bool> )
         {

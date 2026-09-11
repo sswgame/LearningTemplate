@@ -78,9 +78,7 @@ namespace sw
                     if ( readPos + literalLength + 2 < srcSize &&
                          pInput[readPos + literalLength] == pInput[readPos + literalLength + 1] &&
                          pInput[readPos + literalLength] == pInput[readPos + literalLength + 2] )
-                    {
                         break;
-                    }
                     ++literalLength;
                 }
 

@@ -45,27 +45,19 @@ namespace sw
                 {
                     const HRESULT hrCo = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
                     if ( SUCCEEDED( hrCo ) )
-                    {
                         _bCoInit = SW_TRUE;
-                    }
 
                     const HRESULT hrMf = MFStartup( MF_VERSION );
                     if ( SUCCEEDED( hrMf ) )
-                    {
                         _bMfInit = SW_TRUE;
-                    }
                 }
 
                 ~ScopedThreadComAndMf()
                 {
                     if ( _bMfInit == SW_TRUE )
-                    {
                         MFShutdown();
-                    }
                     if ( _bCoInit == SW_TRUE )
-                    {
                         CoUninitialize();
-                    }
                 }
             };
 
@@ -454,17 +446,11 @@ namespace sw
                 v._pVoice->Stop( 0 );
                 v._pVoice->FlushSourceBuffers();
                 if ( _impl->_listIdleVoice.size() < XAudio2SystemImpl::kMaxIdleVoices )
-                {
                     _impl->_listIdleVoice.push_back( std::move( v ) );
-                }
                 else
-                {
                     v._pVoice->DestroyVoice();
-                }
                 if ( voiceIndex + 1 < voices.size() )
-                {
                     voices[voiceIndex] = std::move( voices.back() );
-                }
                 voices.pop_back();
                 continue;
             }
@@ -627,9 +613,7 @@ namespace sw
                 {
                     pVoice = _impl->_listIdleVoice[idx]._pVoice;
                     if ( idx + 1 < _impl->_listIdleVoice.size() )
-                    {
                         _impl->_listIdleVoice[idx] = std::move( _impl->_listIdleVoice.back() );
-                    }
                     _impl->_listIdleVoice.pop_back();
                     break;
                 }

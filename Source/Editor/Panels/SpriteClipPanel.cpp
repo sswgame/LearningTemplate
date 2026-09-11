@@ -39,9 +39,7 @@ namespace sw::editor
         if ( isDocumentLoaded() == false )
         {
             if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, getLoadedAssetPath().c_str() ) )
-            {
                 _atlasPath = getLoadedAssetPath().c_str();
-            }
             else
                 loadJson();
             markDocumentLoaded();

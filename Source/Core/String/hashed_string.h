@@ -316,9 +316,7 @@ namespace sw
             {
                 Entry* pChunk = _arrChunk[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
                 if ( pChunk != nullptr )
-                {
                     Memory::freeMemory( pChunk );
-                }
             }
 
             for ( value_type* pBlock : _listArenaBlock )

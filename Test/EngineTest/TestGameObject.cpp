@@ -225,9 +225,7 @@ namespace sw
         {
             SceneComponent::onTick( deltaTime );
             if ( _pTickOrderLog != nullptr )
-            {
                 _pTickOrderLog->push_back( _componentTag );
-            }
         }
 
         void onSubTick( uint32 subTickId, float32 deltaTime ) override
@@ -381,14 +379,10 @@ namespace sw
             }
 
             if ( _pTargetComp != nullptr && _targetSubTickId != 0 )
-            {
                 _pTargetComp->setSubTickActive( _targetSubTickId, false );
-            }
 
             if ( _selfSubTickToUnregister != 0 )
-            {
                 unregisterSubTick( _selfSubTickToUnregister );
-            }
         }
     };
 
@@ -641,9 +635,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
             sw::MockMeshComponent* meshComp = actor->getComponent<sw::MockMeshComponent>();
             SW_EXPECT_NOT_NULL( meshComp );
             if ( meshComp != nullptr )
-            {
                 SW_EXPECT_EQUAL( 1, meshComp->_tickCount );
-            }
         }
     }
 }
@@ -1420,9 +1412,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, SubTickDynamicLifecycleAndActiveToggle
     manager.tick( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listTickOrder.size() );
     if ( listTickOrder.size() == 1 )
-    {
         SW_EXPECT_EQUAL( "Actor", listTickOrder[0] );
-    }
 
     // 동적 제어: SubTick 1 다시 활성화
     listTickOrder.clear();
@@ -2635,9 +2625,7 @@ SW_TEST_CASE( GameObjectTest, DeepHierarchyMatrixCompositionStressTest )
         pComp->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) ); // 각 단계마다 +1 X 이동
 
         if ( depthIndex > 0 )
-        {
             SW_EXPECT_TRUE( pNode->attachToParent( listNode[depthIndex - 1] ) );
-        }
 
         listNode.push_back( pNode );
     }
@@ -2694,9 +2682,7 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
         pNode->addComponent<sw::MockAudioComponent>();
 
         if ( depthIndex > 0 )
-        {
             SW_EXPECT_TRUE( pNode->attachToParent( listNode[depthIndex - 1] ) );
-        }
 
         listNode.push_back( pNode );
     }
@@ -2776,9 +2762,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         pObj->addComponent<sw::MockMeshComponent>();
 
         if ( index > 0 && ( index % 3 != 0 ) )
-        {
             pObj->attachToParent( listAliveObject[index / 2] );
-        }
 
         listAliveObject.push_back( pObj );
     }
@@ -2835,9 +2819,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                     pNewObj->addComponent<sw::MockMeshComponent>();
 
                     if ( listAliveObject.empty() == false )
-                    {
                         pNewObj->attachToParent( listAliveObject.back() );
-                    }
                     listAliveObject.push_back( pNewObj );
                 }
             }

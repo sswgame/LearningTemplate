@@ -292,9 +292,7 @@ namespace sw
             {
                 const string projectPacksDir = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" );
                 if ( FileUtil::directoryExists( projectPacksDir ) )
-                {
                     _resourceManager->getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
-                }
             }
             // GameConfig 가 활성화되고 팩이 마운트된 뒤라야 게임 도메인의 레지스트리(`<packRoot>/assetregistry.txt`)를
             // 찾을 수 있다 — ResourceManager::initialize 시점엔 _packRoot 가 비어 있어 engine/common 만 실렸다.
@@ -618,9 +616,7 @@ namespace sw
             }
 
             if ( _renderThread != nullptr )
-            {
                 _renderThread->submit( std::move( packet ) );
-            }
         }
     }
 

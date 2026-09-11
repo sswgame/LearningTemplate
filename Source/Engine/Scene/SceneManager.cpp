@@ -319,9 +319,7 @@ namespace sw
             {
                 SW_LOG_TRACE( "Discarding completed load in favor of queued '%#'", nextPath );
                 if ( _asyncLoad != nullptr )
-                {
                     _asyncLoad->_promise.setValue( nullptr );
-                }
                 if ( pendingScene != nullptr )
                 {
                     pendingScene->shutdown();

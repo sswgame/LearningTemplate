@@ -210,9 +210,7 @@ namespace sw
 
         if ( outImage._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || outImage._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
              outImage._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb )
-        {
             outImage._bIsBgra = SW_TRUE;
-        }
 
         if ( bufferSize < dataOffset )
         {

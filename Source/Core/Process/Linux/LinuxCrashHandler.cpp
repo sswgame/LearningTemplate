@@ -137,9 +137,7 @@ namespace sw
         signalStack.ss_flags = 0;
         const bool bAltStack = ( sigaltstack( &signalStack, nullptr ) == 0 );
         if ( bAltStack == false )
-        {
             SW_LOG_WARNING( "sigaltstack failed — 스택 오버플로 크래시는 기록되지 않습니다." );
-        }
 
         struct sigaction action{};
         action.sa_sigaction = &onFatalSignal;
@@ -151,9 +149,7 @@ namespace sw
         for ( int32 signalNumber : kArrFatalSignal )
         {
             if ( sigaction( signalNumber, &action, nullptr ) != 0 )
-            {
                 SW_LOG_WARNING( "sigaction(%#) failed — 이 시그널은 기록되지 않습니다.", signalNumber );
-            }
         }
 
         SW_LOG_TRACE( "Crash handler installed." );

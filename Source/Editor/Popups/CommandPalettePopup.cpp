@@ -188,9 +188,7 @@ namespace sw::editor
             {
                 if ( CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
                      CommandPalettePopupInternal::fuzzyMatch( entry._detail, pattern ) )
-                {
                     listFiltered.push_back( &entry );
-                }
             }
 
             const bool bExecuteSelected =

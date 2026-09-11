@@ -260,9 +260,7 @@ namespace sw
 
         if ( pTaskManager == nullptr || pDevice == nullptr || _listCompiledExecutionOrder.size() <= 1 ||
              pDevice->getCapabilities()._bParallelCommandRecording == 0 )
-        {
             return execute( context );
-        }
 
         context.reset();
 
@@ -365,9 +363,7 @@ namespace sw
             for ( ParallelPassEntry& entry : listPassEntry )
             {
                 if ( entry._pPassCmdList != nullptr )
-                {
                     pDevice->executeCommandList( entry._pPassCmdList.get() );
-                }
             }
         }
 

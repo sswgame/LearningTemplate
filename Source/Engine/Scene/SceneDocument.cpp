@@ -113,18 +113,12 @@ namespace sw
 
         const utf8* pSceneName = root.attr( "name" );
         if ( pSceneName == nullptr )
-        {
             pSceneName = root.childText( SceneDocumentInternal::kName );
-        }
 
         if ( pSceneName != nullptr )
-        {
             _name = pSceneName;
-        }
         else
-        {
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
-        }
 
         XmlNode entities = root.child( SceneDocumentInternal::kEntities );
 
@@ -136,33 +130,21 @@ namespace sw
                 EntityNode  node{};
                 const utf8* pName = entityNode.attr( SceneDocumentInternal::kName );
                 if ( pName == nullptr )
-                {
                     pName = entityNode.childText( SceneDocumentInternal::kName );
-                }
                 if ( pName != nullptr )
-                {
                     node._name = pName;
-                }
 
                 const utf8* pPrefabGuid = entityNode.attr( "prefabGuid" );
                 if ( pPrefabGuid == nullptr )
-                {
                     pPrefabGuid = entityNode.childText( "prefabGuid" );
-                }
                 if ( pPrefabGuid != nullptr )
-                {
                     node._prefabGuid = pPrefabGuid;
-                }
 
                 const utf8* pPrefab = entityNode.attr( SceneDocumentInternal::kPrefab );
                 if ( pPrefab == nullptr )
-                {
                     pPrefab = entityNode.childText( SceneDocumentInternal::kPrefab );
-                }
                 if ( pPrefab != nullptr )
-                {
                     node._prefab = pPrefab;
-                }
 
                 // GUID 기반 경로 해석 (파일 이동/이름 변경에 대한 자동 복구)
                 if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
@@ -185,9 +167,7 @@ namespace sw
                 }
 
                 if ( node._name.empty() )
-                {
                     node._name = SceneDocumentInternal::kDefaultEntity;
-                }
                 _listEntityNode.push_back( std::move( node ) );
             }
         }

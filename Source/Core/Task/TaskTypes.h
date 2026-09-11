@@ -189,13 +189,9 @@ namespace sw
             SW_ASSERT( _pVtable->_typeSize == sizeof( Stored ) );
 #endif
             if constexpr ( kIsInline<Stored> )
-            {
                 return reinterpret_cast<const Stored*>( _arrStorage );
-            }
             else
-            {
                 return *reinterpret_cast<const Stored* const*>( _arrStorage );
-            }
         }
 
         template <typename T>

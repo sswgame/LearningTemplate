@@ -581,9 +581,7 @@ namespace sw
             {
                 writer.writeVarUInt( static_cast<uint64>( rec._size ) );
                 if ( rec._size > 0 )
-                {
                     writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
-                }
             }
         }
         else
@@ -596,9 +594,7 @@ namespace sw
                 writer.writeVarUInt( static_cast<uint64>( rec._index ) );
                 writer.writeVarUInt( static_cast<uint64>( rec._size ) );
                 if ( rec._size > 0 )
-                {
                     writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
-                }
             }
         }
     }

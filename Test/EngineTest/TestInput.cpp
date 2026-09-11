@@ -473,16 +473,12 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
         {
             const uint32 receivedIndex = arrBatch[batchIndex]._payload._keyData._nativeVirtualKey;
             if ( receivedIndex != nextExpectedIndex )
-            {
                 bOrderingValid = false;
-            }
             ++nextExpectedIndex;
             ++consumedCount;
         }
         if ( drained == 0 )
-        {
             std::this_thread::yield();
-        }
     }
 
     producerThread.join();

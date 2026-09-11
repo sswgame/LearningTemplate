@@ -197,9 +197,7 @@ namespace sw
 
         vector<string> listFilePath;
         if ( FileUtil::collectFiles( directoryPath, filterExtension, listFilePath, bRecursive ) == false || listFilePath.empty() )
-        {
             return false;
-        }
 
         uint32 loadedCount{ 0 };
         for ( const string& filePath : listFilePath )
@@ -239,9 +237,7 @@ namespace sw
             // Check if a pre-cooked binary pack exists in the directory (e.g. localization.loc.bin)
             const string binPackPath = FileUtil::joinPath( absDirPath, "localization.loc.bin" );
             if ( FileUtil::fileExists( binPackPath ) )
-            {
                 bLoadedAny = loadFromBinaryPack( binPackPath );
-            }
 
             if ( bLoadedAny == false )
             {
@@ -268,9 +264,7 @@ namespace sw
         {
             const CommandLineManager& cmd = engine::getCommandLineManager();
             if ( cmd.getArgument( CommandLineArgument::LANGUAGE, preferredLang ) == false || preferredLang.empty() )
-            {
                 cmd.getArgument( "lang", preferredLang );
-            }
         }
 
         if ( preferredLang.empty() || hasLanguage( preferredLang ) == false )
@@ -323,23 +317,17 @@ namespace sw
             const uint32 codeLen = static_cast<uint32>( langCode.size() );
             appendBytes( &codeLen, sizeof( codeLen ) );
             if ( codeLen > 0 )
-            {
                 appendBytes( langCode.data(), codeLen );
-            }
 
             // Encode language table
             vector<uint8> tableBuffer;
             if ( pTable != nullptr )
-            {
                 pTable->saveToBinaryBuffer( tableBuffer );
-            }
 
             const uint32 tableSize = static_cast<uint32>( tableBuffer.size() );
             appendBytes( &tableSize, sizeof( tableSize ) );
             if ( tableSize > 0 )
-            {
                 appendBytes( tableBuffer.data(), tableSize );
-            }
         }
 
         return FileUtil::writeFile( filePath, buffer.data(), buffer.size() );
@@ -350,13 +338,9 @@ namespace sw
         vector<uint8> buffer;
         bool          bRead = ResourceUtil::readBinaryResource( filePath, buffer );
         if ( bRead == false )
-        {
             bRead = FileUtil::readFile( filePath, buffer );
-        }
         if ( bRead == false || buffer.size() < 12 )
-        {
             return false;
-        }
 
         const uint8* pPtr = buffer.data();
         const uint8* pEnd = buffer.data() + buffer.size();
@@ -381,18 +365,14 @@ namespace sw
         for ( uint32 index = 0; index < languageCount; ++index )
         {
             if ( pPtr + sizeof( uint32 ) > pEnd )
-            {
                 return false;
-            }
 
             uint32 codeLen{ 0 };
             Memory::copy( &codeLen, pPtr, sizeof( codeLen ) );
             pPtr += sizeof( codeLen );
 
             if ( pPtr + codeLen + sizeof( uint32 ) > pEnd )
-            {
                 return false;
-            }
 
             string langCode( reinterpret_cast<const utf8*>( pPtr ), codeLen );
             pPtr += codeLen;
@@ -402,17 +382,13 @@ namespace sw
             pPtr += sizeof( tableSize );
 
             if ( pPtr + tableSize > pEnd )
-            {
                 return false;
-            }
 
             if ( tableSize > 0 )
             {
                 auto pTable = make_unique<StringTable>();
                 if ( pTable->loadFromBinaryBuffer( pPtr, tableSize ) )
-                {
                     registerLanguageTable( langCode, std::move( pTable ) );
-                }
             }
 
             pPtr += tableSize;

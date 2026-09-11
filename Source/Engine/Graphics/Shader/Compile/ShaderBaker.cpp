@@ -91,9 +91,7 @@ namespace sw
                          existing._permHash == permHash &&
                          existing._entryPoint == entryPoint &&
                          existing._shaderPath == normPath )
-                    {
                         return;
-                    }
                 }
 
                 BakeRecipe recipe;
@@ -803,9 +801,7 @@ namespace sw
                 {
                     ShaderBakeResult result{};
                     if ( bakeShader( absPath, outPath, recipe._entryPoint, recipe._stage, fmt, &recipe._listPermutation, &result ) )
-                    {
                         ++totalBaked;
-                    }
                 }
 
                 // 새로 구웠든 이미 최신이든 매니페스트에는 항상 넣는다 — 바이너리만 최신이고

@@ -235,9 +235,7 @@ namespace sw::editor
             {
                 EditorContext* pCurrentContext = EditorContext::get();
                 if ( pCurrentContext != nullptr && guid.isNull() == false )
-                {
                     pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), guid );
-                }
                 ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
                 ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
                 if ( pCurrentContext != nullptr )
@@ -278,9 +276,7 @@ namespace sw::editor
             {
                 EditorContext* pCurrentContext = EditorContext::get();
                 if ( pCurrentContext != nullptr && guid.isNull() == false )
-                {
                     pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), guid );
-                }
                 ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
                 ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
                 if ( pCurrentContext != nullptr )

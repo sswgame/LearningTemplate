@@ -97,9 +97,7 @@ namespace sw::editor
         EditorContext* pContext   = EditorContext::get();
         const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( pSrc->getObjectId() ) : string{};
         if ( prefabPath.empty() == false && pContext != nullptr )
-        {
             pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
-        }
         EditorTransaction::recordCreation( GameObjectPtr{ pNewObj }, "Duplicate GameObject" );
         select( pNewObj, SelectionMode::Replace );
         return pNewObj;

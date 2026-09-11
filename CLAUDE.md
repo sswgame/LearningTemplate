@@ -70,6 +70,7 @@ py -3 Scripts/lint/CheckCodeConventions.py --files <path>  # single file
 py -3 Scripts/lint/CheckIncludeOrder.py
 py -3 Scripts/lint/CheckEngineLayers.py                    # Engine must not include Editor/GameFramework/Games
 py -3 Scripts/lint/CheckResourceCasing.py                  # everything under Resource/ must be lowercase
+py -3 Scripts/lint/FormatBranchBraces.py --check            # single-line `if` bodies must have no braces
 py -3 Scripts/lint/FormatModified.py                       # clang-format the working-tree changes
 ```
 

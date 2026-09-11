@@ -19,6 +19,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import FormatBranchBraces
 import FormatForwardDeclarations
 from common import (
     collectSourceFiles,
@@ -68,6 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     FormatForwardDeclarations.formatForwardDeclarationsBatch(fileList, checkOnly=False)
+    FormatBranchBraces.formatBranchBracesBatch(fileList, checkOnly=False)
 
     print(f"[RunClangFormat] {len(fileList)}개 파일에 대해 clang-format 적용 중...", file=sys.stderr)
     return runClangFormatBatch(fileList, checkOnly=False, cwd=root)

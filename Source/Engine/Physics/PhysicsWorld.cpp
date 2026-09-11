@@ -120,9 +120,7 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         const PhysicsBody*                  pBody = _bodies.get( handle );
         if ( pBody != nullptr )
-        {
             removeBodyFromGrid( handle, pBody->_aabb );
-        }
         _bodies.erase( handle );
     }
 
@@ -258,9 +256,7 @@ namespace sw
                 {
                     auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
                     if ( it != _mapGrid.end() )
-                    {
                         listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
-                    }
                 }
             }
         }
@@ -349,9 +345,7 @@ namespace sw
                 {
                     auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
                     if ( it != _mapGrid.end() )
-                    {
                         listCandidateHandle.insert( listCandidateHandle.end(), it->second.begin(), it->second.end() );
-                    }
                 }
             }
         }

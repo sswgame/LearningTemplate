@@ -142,9 +142,7 @@ namespace sw
                 // 패딩 추가
                 const size_t padding = static_cast<size_t>( alignedOffset - curOffset );
                 if ( padding > 0 )
-                {
                     dataStreamBytes.insert( dataStreamBytes.end(), padding, 0 );
-                }
 
                 dataStreamBytes.insert( dataStreamBytes.end(), compressedPayloadBytes.begin(), compressedPayloadBytes.end() );
                 curOffset = alignedOffset + compSize;
@@ -183,9 +181,7 @@ namespace sw
 
             // 3. 페이로드 기록
             if ( dataStreamBytes.empty() == false )
-            {
                 std::fwrite( dataStreamBytes.data(), 1, dataStreamBytes.size(), pFile );
-            }
 
             // 4. FAT 인덱스까지 패딩
             const size_t fatPadding = static_cast<size_t>( header._indexOffset - ( kPackSectorAlignment + header._totalDataSize ) );
@@ -197,15 +193,11 @@ namespace sw
 
             // 5. FAT 인덱스 테이블 기록
             if ( listDiskEntry.empty() == false )
-            {
                 std::fwrite( listDiskEntry.data(), 1, listDiskEntry.size() * sizeof( PackFileEntryOnDisk ), pFile );
-            }
 
             // 6. 스트링 풀 기록
             if ( bIncludeDebugStringPool && stringPoolBytes.empty() == false )
-            {
                 std::fwrite( stringPoolBytes.data(), 1, stringPoolBytes.size(), pFile );
-            }
 
             std::fclose( pFile );
             return true;
@@ -618,9 +610,7 @@ SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
 
                 sw::string text;
                 if ( manager.readTextFile( fileName, text ) && text == expected )
-                {
                     successCount.fetch_add( 1, std::memory_order_relaxed );
-                }
             }
         } );
     }

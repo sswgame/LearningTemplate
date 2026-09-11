@@ -60,13 +60,9 @@ namespace sw
                     lineInfo.SizeOfStruct            = sizeof( IMAGEHLP_LINE64 );
 
                     if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
-                    {
                         sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
-                    }
                     else
-                    {
                         sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
-                    }
                 }
                 else
                 {

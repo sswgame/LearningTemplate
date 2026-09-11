@@ -140,9 +140,7 @@ SW_TEST_CASE( Core_Log, LogFolderExists )
 {
     const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     if ( folderPath.empty() == false )
-    {
         SW_EXPECT_TRUE( sw::FileUtil::directoryExists( folderPath ) );
-    }
 }
 
 /**

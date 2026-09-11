@@ -109,9 +109,7 @@ namespace sw
             {
                 outItem = _pBuffer[t & _capacityMask].load( std::memory_order_relaxed );
                 if ( _top.compare_exchange_strong( t, t + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
-                {
                     return false;
-                }
                 return true;
             }
             return false;

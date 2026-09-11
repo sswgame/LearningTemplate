@@ -322,9 +322,7 @@ namespace sw
         ~ScopedOpenGLContext()
         {
             if ( _bNeedsUnbind && _pDevice != nullptr )
-            {
                 _pDevice->unbindGraphicsContext();
-            }
         }
     };
 } // namespace sw

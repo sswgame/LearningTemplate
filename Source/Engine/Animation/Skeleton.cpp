@@ -46,13 +46,9 @@ namespace sw
         {
             Bone& bone = _listBone[index];
             if ( 0 <= bone._parentIndex && static_cast<size_t>( bone._parentIndex ) < index )
-            {
                 bone._characterSpaceTransform = _listBone[static_cast<size_t>( bone._parentIndex )]._characterSpaceTransform * bone._boneSpaceTransform;
-            }
             else
-            {
                 bone._characterSpaceTransform = bone._boneSpaceTransform;
-            }
 
             _listSkinningMatrix[index] = bone._characterSpaceTransform * bone._invReferencePose;
         }

@@ -127,9 +127,7 @@ namespace sw
             SceneManager& sceneMgr = engine::getSceneManager();
             Scene*        pScene   = sceneMgr.getActiveScene();
             if ( pScene != nullptr )
-            {
                 pObjMgr = pScene->getObjectManager();
-            }
         }
 
         if ( pObjMgr == nullptr )
@@ -152,9 +150,7 @@ namespace sw
                 }
 
                 if ( bComponentFound && pFound->getName() == _targetObjectName && _pCachedPtr->getComponentName() == _targetComponentType )
-                {
                     return; // 캐시 유효
-                }
             }
         }
 

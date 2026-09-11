@@ -76,9 +76,7 @@ namespace sw::editor
             {
                 const JsonValue item = arrValue.at( index );
                 if ( item.isString() )
-                {
                     outListItem.push_back( item.asString() );
-                }
             }
         }
     } // namespace

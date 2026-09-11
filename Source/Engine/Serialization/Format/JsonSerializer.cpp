@@ -422,9 +422,7 @@ namespace sw
                     else if ( field.isNumber() )
                         bVal = ( field.asInt() != 0 );
                     else if ( field.isString() )
-                    {
                         bVal = StringUtil::parseBool( field.asString(), false );
-                    }
                     prop.setValue<bool>( pInstance, bVal );
                     return true;
                 }

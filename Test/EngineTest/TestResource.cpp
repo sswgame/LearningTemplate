@@ -56,9 +56,7 @@ SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
     // 팩 상대 키(engine/common/game/editor 팩 아래 — Resource/ 자체가 아님).
     const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "shaders/samplecompute.hlsl" );
     if ( shaderPath.empty() )
-    {
         SW_TEST_SKIP( "samplecompute.hlsl not found under domain roots; skip path resolution check" );
-    }
 
     const sw::string lowerPath = sw::FileUtil::normalizePath( shaderPath );
     SW_EXPECT_TRUE_MSG( lowerPath.find( "samplecompute.hlsl" ) != sw::string::npos, shaderPath.c_str() );

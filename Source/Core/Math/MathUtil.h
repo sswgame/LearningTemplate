@@ -283,13 +283,9 @@ namespace sw
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
             if constexpr ( std::is_integral_v<T> )
-            {
                 return T( 0 );
-            }
             else
-            {
                 return x - MathUtil::floor( x );
-            }
         }
     };
 } // namespace sw

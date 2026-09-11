@@ -29,9 +29,7 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _mapCodec.empty() )
-        {
             registerBuiltinCodecs();
-        }
     }
 
     void CompressionCodecRegistry::shutdown()

@@ -218,9 +218,7 @@ namespace sw
         CodeEmitBuffer buffer;
 
         if ( _listType.empty() && _listEnum.empty() )
-        {
             buffer.appendFormat( "// No reflected types found in %#\n", _sourceFilePath );
-        }
 
         if ( _listType.empty() == false || _listEnum.empty() == false )
         {
@@ -435,13 +433,9 @@ namespace sw
         emit.linef( "%#,", CodeEmit::hs( prop._name ) );
         emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
         if ( prop._bIsBitField == SW_TRUE )
-        {
             emit.linef( "%#u,", prop._byteOffset );
-        }
         else
-        {
             emit.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
-        }
 
         if ( prop._bIsContainer )
         {

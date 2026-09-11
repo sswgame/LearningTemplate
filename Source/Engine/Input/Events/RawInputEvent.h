@@ -240,9 +240,7 @@ namespace sw
             evt._deviceKind  = InputDeviceKind::Keyboard;
             const size_t len = text.size() < 31 ? text.size() : 31;
             if ( len > 0 )
-            {
                 Memory::copy( evt._payload._textData._arrUtf8, text.data(), len );
-            }
             evt._payload._textData._arrUtf8[len] = '\0';
             return evt;
         }
@@ -254,9 +252,7 @@ namespace sw
             evt._deviceKind  = InputDeviceKind::Keyboard;
             const size_t len = text.size() < 31 ? text.size() : 31;
             if ( len > 0 )
-            {
                 Memory::copy( evt._payload._textData._arrUtf8, text.data(), len );
-            }
             evt._payload._textData._arrUtf8[len] = '\0';
             return evt;
         }

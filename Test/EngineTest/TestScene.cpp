@@ -186,9 +186,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     SW_ASSERT_TRUE( doc.saveXml( tempSceneXml ) );
 
     if ( sw::engine::areEngineServicesBound() )
-    {
         sw::engine::getResourceManager().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
-    }
 
     sw::SceneDocument loadedDoc{};
     SW_ASSERT_TRUE( loadedDoc.loadXml( tempSceneXml ) );
@@ -196,9 +194,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listEntityNode[0]._name.c_str() );
     SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listEntityNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
-    {
         SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
-    }
 
     sw::FileUtil::removeFile( tempSceneXml );
 }

@@ -1109,9 +1109,7 @@ namespace sw
         pObj->_pOwnerManager                            = this;
 
         if ( _mapNameToObject.find( pObj->getName() ) != _mapNameToObject.end() )
-        {
             pObj->_name = makeUniqueNameUnlocked( pObj->getName() );
-        }
 
         _mapNameToObject.insert_or_assign( pObj->getName(), pObj );
         _mapIdToObject.insert_or_assign( newObjectId, pObj );

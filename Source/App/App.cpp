@@ -346,9 +346,7 @@ namespace sw
 
         // 에디터가 가로채지 않은 경우에만 게임 InputManager로 전달
         if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
-        {
             engine::getInputManager().processNativeEvent( event );
-        }
 
         // Win32 OS 레벨 포커스/활성화(DefWindowProc)가 정상 동작하도록 false 반환
         return false;

@@ -341,9 +341,7 @@ SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAll )
     sw::TaskHandle whenAllTask = taskMgr.whenAll( { t1, t2, t3 }, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&whenAllExecuted, &completedCount]()
     {
         if ( completedCount.load() == 3 )
-        {
             whenAllExecuted = true;
-        }
     } ) );
 
     t1.submit();

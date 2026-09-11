@@ -364,9 +364,7 @@ namespace sw
             memEntry._stringPoolOffset = diskEntry._stringPoolOffset;
 
             if ( _stringPoolBytes.empty() == false && diskEntry._stringPoolOffset < _stringPoolBytes.size() )
-            {
                 memEntry._debugRelativePath = reinterpret_cast<const utf8*>( _stringPoolBytes.data() + diskEntry._stringPoolOffset );
-            }
 
             _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );
         }

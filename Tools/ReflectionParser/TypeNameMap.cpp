@@ -113,9 +113,7 @@ namespace sw
         // 1) std::__cxx11:: 인라인 네임스페이스 제거 (Linux Clang libstdc++ 대응)
         constexpr string_view kCxx11Prefix = "std::__cxx11::";
         if ( StringUtil::startsWith( result, kCxx11Prefix ) )
-        {
             result = "std::" + result.substr( kCxx11Prefix.size() );
-        }
 
         // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
         const size_t openAngle  = result.find( '<' );

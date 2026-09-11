@@ -99,9 +99,7 @@ namespace sw
                  StringUtil::equals( pName, "defaultLanguage" ) ||
                  StringUtil::equals( pName, "fallbackLanguage" ) ||
                  StringUtil::equals( pName, "inputMap" ) )
-            {
                 continue;
-            }
 
             if ( StringUtil::equals( pName, "custom" ) )
             {

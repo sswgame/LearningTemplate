@@ -354,9 +354,7 @@ namespace sw
     {
         const TagComponent* pTagComp = getComponent<TagComponent>();
         if ( pTagComp == nullptr )
-        {
             return query.matches( s_emptyTags );
-        }
         return pTagComp->matchesQuery( query );
     }
 
@@ -364,9 +362,7 @@ namespace sw
     {
         const TagComponent* pTagComp = getComponent<TagComponent>();
         if ( pTagComp == nullptr )
-        {
             return s_emptyTags;
-        }
         return pTagComp->getTags();
     }
 

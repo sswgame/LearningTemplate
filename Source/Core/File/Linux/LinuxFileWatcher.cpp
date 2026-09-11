@@ -257,9 +257,7 @@ namespace sw
                     {
                         const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
                         if ( addWatchDirectory( childDir ) == false )
-                        {
                             SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
-                        }
                         pushEvent( FileWatcherAction::Added, watchedDir, name );
                         continue;
                     }

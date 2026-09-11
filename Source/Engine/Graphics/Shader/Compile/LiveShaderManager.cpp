@@ -134,9 +134,7 @@ namespace sw
                     std::shared_lock<std::shared_mutex>                        lock{ _mutex };
                     unordered_map<string, vector<WatchedShaderInfo>>::iterator it = _mapWatchedShader.find( changedPath );
                     if ( it != _mapWatchedShader.end() )
-                    {
                         listToCompile = it->second;
-                    }
                 }
 
                 for ( WatchedShaderInfo& watchedInfo : listToCompile )

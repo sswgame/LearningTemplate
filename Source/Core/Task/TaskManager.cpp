@@ -140,9 +140,7 @@ namespace sw
                 arrInlineCopy[index] = _arrInlineNode[index];
             }
             if ( _pOverflow != nullptr )
-            {
                 listOverflowCopy = *_pOverflow;
-            }
             unlock();
 
             for ( uint32 index = 0; index < inlineCopyCount; ++index )
@@ -347,9 +345,7 @@ namespace sw
         if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
         {
             if ( _pOwner != nullptr )
-            {
                 _pOwner->deallocateNode( this );
-            }
         }
     }
 
@@ -1087,9 +1083,7 @@ namespace sw
         {
             const ParallelTaskScope parallelScope{};
             if ( del.isBound() )
-            {
                 del( _rangeStart, _rangeEnd );
-            }
         }
     };
 
@@ -1255,13 +1249,9 @@ namespace sw
                 while ( _queueMainThread.enqueue( pNode ) == false )
                 {
                     if ( isMainThread() )
-                    {
                         dispatchMainThreadTasks();
-                    }
                     else
-                    {
                         std::this_thread::yield();
-                    }
                 }
                 std::scoped_lock<mutex> waitLock{ _waitAllMutex };
                 _cvWaitAll.notify_one();

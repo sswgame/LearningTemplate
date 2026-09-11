@@ -120,9 +120,7 @@ namespace sw
         {
             _arrKeyMask[word] &= ~bit;
             if ( bWasDown )
-            {
                 _arrReleasedMask[word] |= bit;
-            }
         }
     }
 

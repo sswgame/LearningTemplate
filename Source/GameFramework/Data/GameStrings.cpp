@@ -30,9 +30,7 @@ namespace sw
 
         const bool bLoaded = pLoc->loadLanguageResource( "default", assetRelativePath );
         if ( bLoaded )
-        {
             pLoc->setCurrentLanguage( "default" );
-        }
         return bLoaded;
     }
 

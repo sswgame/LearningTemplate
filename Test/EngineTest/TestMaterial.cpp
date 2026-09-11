@@ -192,9 +192,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     const sw::MaterialProperty* colorProp = material.findProperty( sw::hashed_string( "color" ) );
     SW_EXPECT_TRUE( colorProp != nullptr );
     if ( colorProp )
-    {
         SW_EXPECT_TRUE( colorProp->_defaultValue.find( "1.0" ) != sw::string::npos || colorProp->_defaultValue.find( "1" ) != sw::string::npos );
-    }
 
     SW_EXPECT_TRUE( material.setPropertyValue( nullptr, sw::hashed_string( "roughness" ), "0.9" ) );
     SW_EXPECT_TRUE( material.resetPropertyToDefault( nullptr, sw::hashed_string( "roughness" ) ) );

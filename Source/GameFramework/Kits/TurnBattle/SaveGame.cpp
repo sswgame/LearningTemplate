@@ -107,9 +107,7 @@ namespace sw
     bool TurnBattleSaveGame::saveToFile( string_view path ) const
     {
         if ( StringUtil::endsWith( path, ".sav", false ) || StringUtil::endsWith( path, ".bin", false ) )
-        {
             return SaveGameSerializer::saveGameToSlot( *this, path );
-        }
 
         StringBuilder<constant::kMaxBuffer2048> sb;
         sb.append( "map=" ).append( _mapPath.c_str() ).append( "\nx=" ).append( _playerX ).append( "\ny=" ).append( _playerY ).append( "\npartyCount=" ).append( static_cast<int32>( _listParty.size() ) ).append( '\n' );

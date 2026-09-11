@@ -75,9 +75,7 @@ namespace sw
                 for ( const string& filePath : listFile )
                 {
                     if ( filePath.find( "_temp_" ) != string::npos )
-                    {
                         FileUtil::removeFile( filePath );
-                    }
                 }
             }
         };
@@ -173,9 +171,7 @@ namespace sw
         {
             auto mapIt = _mapModule.find( *it );
             if ( mapIt != _mapModule.end() )
-            {
                 unloadModule( mapIt->second );
-            }
         }
         _mapModule.clear();
     }

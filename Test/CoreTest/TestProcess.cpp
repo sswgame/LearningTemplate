@@ -28,9 +28,7 @@ SW_TEST_CASE( Core_Process, LaunchAndReadOutput )
     while ( proc.readOutputLine( line ) )
     {
         if ( line.find( "SW_PROCESS_TEST_OUTPUT" ) != sw::string::npos )
-        {
             bFound = true;
-        }
     }
 
     const int32 exitCode = proc.waitForExit();

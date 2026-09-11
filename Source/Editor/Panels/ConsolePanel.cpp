@@ -130,9 +130,7 @@ namespace sw::editor
         const bool bFilterChanged = ( filterStr != _cachedFilter );
 
         if ( bNewLogs || bFilterChanged || bLevelChanged )
-        {
             updateFilteredEntries( filterStr );
-        }
 
         drawLogList( bNewLogs );
     }

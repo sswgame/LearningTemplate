@@ -481,9 +481,7 @@ int32 main( int32 argc, utf8* argv[] )
 
     // clang 공통 인자 (parser_config) 1회 캐시
     if ( sw::ParserContext::ensureSharedConfig() == false )
-    {
         return 1;
-    }
 
     // 증분 스킵용 타임스탬프 + 파일별 병렬 파싱
     if ( commandLineArgs._builtinsPath.empty() == false && sw::FileUtil::fileExists( commandLineArgs._builtinsPath ) )

@@ -390,9 +390,7 @@ namespace sw
         _listPropertyWithBase.clear();
         _listPropertyWithBase.reserve( totalCount );
         if ( pParentProps != nullptr )
-        {
             _listPropertyWithBase = *pParentProps;
-        }
 
         for ( const PropertyInfo& prop : _listProperty )
         {
@@ -446,13 +444,9 @@ namespace sw
 
         auto existingIt = _mapFqnToClassType.find( canonicalKey );
         if ( existingIt != _mapFqnToClassType.end() )
-        {
             stored._typeId = existingIt->second._typeId;
-        }
         else
-        {
             stored._typeId = _s_typeIdCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        }
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
 

@@ -20,9 +20,7 @@ namespace sw
     SW_GF_API void registerGameFrameworkTypes()
     {
         if ( game::areGameServicesBound() )
-        {
             engine::registerModuleTypes( "GameFramework" );
-        }
     }
 
     namespace game

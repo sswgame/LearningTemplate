@@ -1114,9 +1114,7 @@ namespace sw
         else if ( base == 16 )
         {
             if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
                 trimmed.remove_prefix( 2 );
-            }
         }
 
         if ( base < 2 || base > 36 || trimmed.empty() )
@@ -1180,9 +1178,7 @@ namespace sw
         else if ( base == 16 )
         {
             if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
                 trimmed.remove_prefix( 2 );
-            }
         }
 
         if ( base < 2 || base > 36 || trimmed.empty() )
@@ -1240,9 +1236,7 @@ namespace sw
         else if ( base == 16 )
         {
             if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
-            {
                 trimmed.remove_prefix( 2 );
-            }
         }
 
         if ( base < 2 || base > 36 || trimmed.empty() )

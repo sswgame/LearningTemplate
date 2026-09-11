@@ -181,9 +181,7 @@ namespace test
         {
             sw::Logger::setGlobalSink( _pOldSink );
             if ( _pOldSink != nullptr )
-            {
                 _pOldSink->writeLog( sw::LogLevel::Info, "Test", nullptr, "<<< [Defensive Test] Expected Error/Warning validation scope ended <<<", __FILE__, __LINE__ );
-            }
         }
 
         ScopedDefensiveTestLog( const ScopedDefensiveTestLog& )            = delete;

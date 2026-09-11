@@ -216,9 +216,7 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
         ~TestPoolObject()
         {
             if ( _pDestructFlag != nullptr )
-            {
                 *_pDestructFlag = true;
-            }
         }
     };
 

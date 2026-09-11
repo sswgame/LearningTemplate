@@ -189,6 +189,26 @@
     ```
 3. if문 안의 코드가 1줄인 경우 괄호를 생략한다.
    - 단 else/else if문과 존재한다면, 해당 블록들도 1줄이 아니면 괄호를 사용한다.
+     (사슬 중 한 갈래라도 여러 줄이면 모든 갈래가 괄호를 유지한다.)
+   - **반복문(for/while/do)은 본문이 1줄이어도 괄호를 유지한다.** if 계열만 생략 대상이다.
+   - `Scripts/lint/FormatBranchBraces.py` 가 자동 정리 및 검사한다. clang-format 의
+     `RemoveBracesLLVM` 은 반복문 괄호까지 벗겨내므로 쓰지 않는다.
+    ```cpp
+    //BAD
+    if (pOwner == nullptr)
+    {
+        return;
+    }
+    for (int32 index = 0; index < count; ++index)
+        step(index);
+    //GOOD
+    if (pOwner == nullptr)
+        return;
+    for (int32 index = 0; index < count; ++index)
+    {
+        step(index);
+    }
+    ```
 4. if문 초기화는 사용하지 않는다.
 5. 조건이 여러 개일 때, 뜻이 불명확해보이거나, 3개 이상이면 지역변수로 조건 내용을 정의하여 사용한다.
 6. 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따른다.

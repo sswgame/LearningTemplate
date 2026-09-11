@@ -88,9 +88,7 @@ namespace sw
                 end = stackTrace.size();
             string line = stackTrace.substr( start, end - start );
             if ( line.empty() == false )
-            {
                 SW_LOG_ERROR( "  %s", line.c_str() );
-            }
             start = end + 1;
         }
 

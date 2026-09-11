@@ -39,9 +39,7 @@ namespace sw
     bool StringTable::loadFromFile( const string& filePath )
     {
         if ( FileUtil::hasExtension( filePath, ".bin" ) )
-        {
             return loadFromBinaryFile( filePath );
-        }
 
         string text;
         if ( ResourceUtil::readTextResource( filePath, text ) == false && FileUtil::readTextFile( filePath, text ) == false )
@@ -86,9 +84,7 @@ namespace sw
             appendBytes( &keyHash, sizeof( keyHash ) );
             appendBytes( &strLen, sizeof( strLen ) );
             if ( strLen > 0 )
-            {
                 appendBytes( str.data(), strLen );
-            }
         }
 
         return true;
@@ -105,9 +101,7 @@ namespace sw
     bool StringTable::loadFromBinaryBuffer( const uint8* pData, size_t size )
     {
         if ( pData == nullptr || size < 12 )
-        {
             return false;
-        }
 
         const uint8* pPtr = pData;
         const uint8* pEnd = pData + size;
@@ -166,9 +160,7 @@ namespace sw
     {
         vector<uint8> buffer;
         if ( ( ResourceUtil::readBinaryResource( filePath, buffer ) == false && FileUtil::readFile( filePath, buffer ) == false ) || buffer.size() < 12 )
-        {
             return false;
-        }
         const bool bLoaded = loadFromBinaryBuffer( buffer.data(), buffer.size() );
         if ( bLoaded )
             SW_LOG_INFO( "Loaded %# strings from binary %#.", _mapTable.size(), string( filePath ).c_str() );

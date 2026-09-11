@@ -861,9 +861,7 @@ namespace sw
     {
         const bool bOk = _stringPool.loadFromArchive( *this );
         if ( bOk == false )
-        {
             _bError = SW_TRUE;
-        }
         return bOk;
     }
 

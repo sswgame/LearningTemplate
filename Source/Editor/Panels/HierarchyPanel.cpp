@@ -371,9 +371,7 @@ namespace sw::editor
                 // 1) Visibility Toggle Icon (Eye)
                 bool bActive = pObj->isActiveInHierarchy();
                 if ( ImGui::Button( bActive ? "[V]" : "[.]", ImVec2{ 24.0f, 0.0f } ) )
-                {
                     pObj->setActive( bActive == false );
-                }
                 ImGui::SameLine();
 
                 // 뱃지는 리플렉션 Category 에서 끌어온다 — 위 컴포넌트 추가 메뉴가 이미 쓰는
@@ -438,9 +436,7 @@ namespace sw::editor
                         renamingObjectId = 0;
                     }
                     if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-                    {
                         renamingObjectId = 0;
-                    }
                 }
 
                 drawGameObjectContextMenu( pObj, pManager );

@@ -51,13 +51,9 @@ namespace sw
         void deallocate( T* p, size_t n ) noexcept
         {
             if ( p == reinterpret_cast<T*>( _buffer ) )
-            {
                 _isUsed = false;
-            }
             else
-            {
                 sw::Allocator<T>().deallocate( p, n );
-            }
         }
 
         // sw::vector 가 SBO 여부를 감지할 수 있도록 버퍼 포인터 제공

@@ -65,9 +65,7 @@ namespace sw
         ~ScopedScratchInstance()
         {
             if ( _pInstance != nullptr && _pTypeInfo != nullptr )
-            {
                 destroyScratchInstance( _pInstance, *_pTypeInfo );
-            }
         }
 
         ScopedScratchInstance( const ScopedScratchInstance& )                = delete;

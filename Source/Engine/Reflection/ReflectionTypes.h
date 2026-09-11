@@ -258,13 +258,9 @@ namespace sw
                 const uint8* pByte = reinterpret_cast<const uint8*>( pInstance ) + _offset;
                 const bool   bVal  = ( ( *pByte & _bitMask ) != 0 );
                 if constexpr ( std::is_same_v<T, bool> )
-                {
                     return bVal;
-                }
                 else
-                {
                     return static_cast<T>( bVal ? 1 : 0 );
-                }
             }
 
             const T* pPtr = reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );

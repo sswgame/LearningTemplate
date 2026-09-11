@@ -86,9 +86,7 @@ namespace sw::editor
             ImGui::TableNextColumn();
             const bool bZeroSelected = ( currIndex == 0 );
             if ( ImGui::Selectable( "[Initial State]##entry0", bZeroSelected, ImGuiSelectableFlags_SpanAllColumns ) )
-            {
                 cmdStack.jumpTo( 0 );
-            }
 
             // 각 명령 엔트리 (1..cmdCount)
             for ( size_t cmdIndex = 0; cmdIndex < cmdCount; ++cmdIndex )
@@ -121,9 +119,7 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( stepNum ) );
                 if ( ImGui::Selectable( labelBuf.c_str(), bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
-                {
                     cmdStack.jumpTo( stepNum );
-                }
                 ImGui::PopID();
 
                 if ( bIsUndone )

@@ -248,9 +248,7 @@ namespace sw
                     ensureLayer( compLayer );
                 }
                 if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
-                {
                     bindVector2D( pActionName, upKey, downKey, leftKey, rightKey, deadzone, compLayer.view() );
-                }
             }
 
             // 3) <axis1d> 태그 파싱
@@ -266,9 +264,7 @@ namespace sw
                     ensureLayer( axisLayer );
                 }
                 if ( posKey != Key::Unknown && negKey != Key::Unknown )
-                {
                     bindAxis1DComposite( pActionName, negKey, posKey, axisLayer.view() );
-                }
             }
 
             // 4) <stick> 태그 파싱
@@ -311,9 +307,7 @@ namespace sw
                     ensureLayer( chordLayer );
                 }
                 if ( modKey != Key::Unknown && trigKey != Key::Unknown )
-                {
                     bindChord( pActionName, modKey, trigKey, trig, chordLayer.view() );
-                }
             }
         };
 

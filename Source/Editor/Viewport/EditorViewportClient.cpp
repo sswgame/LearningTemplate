@@ -245,9 +245,7 @@ namespace sw::editor
                 }
 
                 if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false )
-                {
                     frameSelected();
-                }
             }
 
             if ( io.KeyAlt )
@@ -776,9 +774,7 @@ namespace sw::editor
             pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
 
             if ( ax._depth > -0.2f && ax._label[0] != '-' )
-            {
                 pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._label );
-            }
 
             if ( bHovered && ImGui::IsMouseClicked( 0 ) )
             {
@@ -831,18 +827,14 @@ namespace sw::editor
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
-                {
                     pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
-                }
 
                 // Horizontal lines parallel to X
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                {
                     pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
-                }
             }
         }
         else
@@ -868,18 +860,14 @@ namespace sw::editor
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
-                {
                     pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
-                }
 
                 // Line parallel to X
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                {
                     pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
-                }
             }
         }
     }

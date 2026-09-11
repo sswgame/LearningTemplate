@@ -100,9 +100,7 @@ namespace sw
             SceneManager& sceneMgr = engine::getSceneManager();
             Scene*        pScene   = sceneMgr.getActiveScene();
             if ( pScene != nullptr )
-            {
                 pObjMgr = pScene->getObjectManager();
-            }
         }
 
         if ( pObjMgr == nullptr )
@@ -113,9 +111,7 @@ namespace sw
         {
             GameObject* pFound = pObjMgr->findGameObjectById( _cachedObjectId );
             if ( pFound != nullptr && pFound == _pCachedPtr && pFound->getName() == _targetName && pFound->isPendingKill() == false )
-            {
                 return; // 캐시 유효
-            }
         }
 
         // 2) 느린 경로: 이름으로 룩업하여 갱신 (핫리로드 후 등)

@@ -650,9 +650,7 @@ namespace sw
              static_cast<uint8>( text[0] ) == 0xEF &&
              static_cast<uint8>( text[1] ) == 0xBB &&
              static_cast<uint8>( text[2] ) == 0xBF )
-        {
             return text.substr( 3 );
-        }
         return text;
     }
 

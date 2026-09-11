@@ -225,13 +225,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeQueueBasicAndConcurrent )
         {
             int32 val{ 0 };
             if ( queue.pop( val ) )
-            {
                 receivedCount++;
-            }
             else
-            {
                 std::this_thread::yield();
-            }
         }
     } );
 
@@ -506,9 +502,7 @@ SW_TEST_CASE( Core_DataStructure, MapAndSetOperations )
     auto itBravo = mapA.find( "Bravo" );
     SW_EXPECT_TRUE( itBravo != mapA.end() );
     if ( itBravo != mapA.end() )
-    {
         SW_EXPECT_EQUAL( 20, itBravo->second );
-    }
 
     mapA.erase( "Alpha" );
     SW_EXPECT_EQUAL( 2u, mapA.size() );
@@ -562,9 +556,7 @@ SW_TEST_CASE( Core_DataStructure, UnorderedMapAndSetOperations )
     auto it = uMap.find( 100 );
     SW_EXPECT_TRUE( it != uMap.end() );
     if ( it != uMap.end() )
-    {
         SW_EXPECT_EQUAL( sw::string( "OneHundred" ), it->second );
-    }
 
     uMap.erase( 100 );
     SW_EXPECT_EQUAL( 2u, uMap.size() );

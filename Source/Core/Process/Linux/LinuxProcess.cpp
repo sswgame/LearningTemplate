@@ -30,9 +30,7 @@ namespace sw
 
         string cmd = string( command );
         if ( options._workingDirectory.empty() == false )
-        {
             cmd = "cd \"" + options._workingDirectory + "\" && " + cmd;
-        }
         cmd += " 2>&1";
 
         FILE* pPipe = popen( cmd.c_str(), "r" );

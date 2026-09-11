@@ -207,9 +207,7 @@ namespace sw
         {
             _buttonMask &= ~bit;
             if ( bWasDown )
-            {
                 _releasedMask |= bit;
-            }
         }
     }
 

@@ -302,9 +302,7 @@ namespace sw::editor
                         string                displayName   = fname;
                         constexpr string_view kPresetSuffix = ".gvpreset.xml";
                         if ( StringUtil::endsWith( displayName, kPresetSuffix, true ) )
-                        {
                             displayName = displayName.substr( 0, displayName.size() - kPresetSuffix.size() );
-                        }
 
                         if ( ImGui::MenuItem( displayName.c_str() ) )
                         {

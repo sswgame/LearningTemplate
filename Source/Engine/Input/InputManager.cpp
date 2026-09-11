@@ -197,9 +197,7 @@ namespace sw
     {
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
-        {
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
-        }
 
         // 1) 등록된 모든 장치에 대해 프레임 시작 (이전 프레임 엣지 초기화) 및 폴링 호출
         for ( auto& pDev : _listDevice )
@@ -229,15 +227,11 @@ namespace sw
             _pGamepad->getLeftStick( stickX, stickY );
             const bool bStickActive = ( stickX * stickX + stickY * stickY ) > 0.04f;
             if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
-            {
                 setActiveDeviceType( InputDeviceType::GamepadXbox );
-            }
         }
 
         if ( _pKeyboard != nullptr && _pKeyboard->wasAnyKeyPressed() )
-        {
             setActiveDeviceType( InputDeviceType::KeyboardMouse );
-        }
 
         if ( _pMouse != nullptr )
         {
@@ -245,9 +239,7 @@ namespace sw
             int32 mdy{ 0 };
             _pMouse->getDelta( mdx, mdy );
             if ( _pMouse->wasAnyButtonPressed() || mdx != 0 || mdy != 0 || _pMouse->getMouseWheel() != 0.0f )
-            {
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
-            }
         }
     }
 
@@ -533,22 +525,14 @@ namespace sw
 
         // 1) 2D 축 벡터 (Move & Look)
         if ( _pActionMap != nullptr && _pActionMap->hasAction( "Move" ) )
-        {
             snapshot._moveVector = _pActionMap->getVector2D( "Move" );
-        }
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-        {
             _pGamepad->getLeftStick( snapshot._moveVector._x, snapshot._moveVector._y );
-        }
 
         if ( _pActionMap != nullptr && _pActionMap->hasAction( "Look" ) )
-        {
             snapshot._lookVector = _pActionMap->getVector2D( "Look" );
-        }
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-        {
             _pGamepad->getRightStick( snapshot._lookVector._x, snapshot._lookVector._y );
-        }
 
         // 2) 아날로그 트리거
         snapshot._leftTrigger  = getGamepadLeftTrigger();
@@ -561,9 +545,7 @@ namespace sw
             for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( GamepadButton::Count ); ++btnIndex )
             {
                 if ( _pGamepad->isButtonDown( static_cast<GamepadButton>( btnIndex ) ) )
-                {
                     mask |= ( 1ULL << btnIndex );
-                }
             }
         }
 
@@ -572,9 +554,7 @@ namespace sw
             for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( MouseButton::Count ); ++btnIndex )
             {
                 if ( _pMouse->isButtonDown( static_cast<MouseButton>( btnIndex ) ) )
-                {
                     mask |= ( 1ULL << ( 16 + btnIndex ) );
-                }
             }
         }
 
@@ -585,9 +565,7 @@ namespace sw
             for ( uint32 actionIndex = 0; actionIndex < actionCount; ++actionIndex )
             {
                 if ( _pActionMap->isActionDown( listAction[actionIndex] ) )
-                {
                     mask |= ( 1ULL << ( 32 + actionIndex ) );
-                }
             }
         }
 

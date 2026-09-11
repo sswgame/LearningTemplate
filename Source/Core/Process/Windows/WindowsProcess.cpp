@@ -184,9 +184,7 @@ namespace sw
 
         DWORD exitCode = 0;
         if ( GetExitCodeProcess( static_cast<HANDLE>( _pNativeHandle ), &exitCode ) != FALSE )
-        {
             return exitCode == STILL_ACTIVE;
-        }
         return false;
     }
 } // namespace sw

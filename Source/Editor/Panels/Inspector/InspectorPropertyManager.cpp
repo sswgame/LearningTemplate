@@ -271,9 +271,7 @@ namespace sw::editor
                         return true;
                     }
                     if ( ImGui::Checkbox( _pLabel, &bVal ) )
-                    {
                         prop.setValue<bool>( pInstance, bVal );
-                    }
                     showTooltipIfHovered( prop );
                     return true;
                 }
@@ -313,9 +311,7 @@ namespace sw::editor
                         return true;
                     }
                     if ( ImGui::Checkbox( _pLabel, &bVal ) )
-                    {
                         prop.setValue<bool>( pInstance, bVal );
-                    }
                     showTooltipIfHovered( prop );
                     return true;
                 }

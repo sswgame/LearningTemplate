@@ -45,16 +45,12 @@ SW_TEST_CASE( Engine_GlobalVariable, Registration )
     sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
     SW_EXPECT_TRUE( pFloatInfo != nullptr );
     if ( pFloatInfo != nullptr )
-    {
         SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
-    }
 
     sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
     SW_EXPECT_TRUE( pStrInfo != nullptr );
     if ( pStrInfo != nullptr )
-    {
         SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
-    }
 
     const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
     SW_EXPECT_TRUE( varCount >= 4u );

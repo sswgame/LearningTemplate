@@ -218,9 +218,7 @@ namespace sw
             if ( entry._framesLeft > 0 )
                 --entry._framesLeft;
             if ( entry._framesLeft > 0 )
-            {
                 _listRetiring[write++] = entry;
-            }
         }
         _listRetiring.resize( write );
     }
@@ -503,9 +501,7 @@ namespace sw
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuInstance ) ), instanceCount, kInstanceUsage, true, true,
                                         _listInstance.data() ) )
-        {
             _instances.upload( pDevice, _listInstance.data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
-        }
 
         // 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
         // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
@@ -535,9 +531,7 @@ namespace sw
         constexpr RHIBufferUsage kBatchInfoUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuBatchInfo ) ), argsCount, kBatchInfoUsage, true, false,
                                         _listScratchBatchInfo.data() ) )
-        {
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GpuBatchInfo ) ) );
-        }
 
         // 컴퓨트가 개수를 만들려면 **가시 목록과 배치 구간이 둘 다** 있어야 한다. 하나라도 없으면 개수를
         // 0 으로 올리면 안 된다 — 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.

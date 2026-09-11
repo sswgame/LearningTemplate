@@ -406,9 +406,7 @@ namespace sw
         VulkanRHIDevice::VulkanRenderPassRecord& record = _pDevice->_listRenderPass[pass - 1];
         if ( record._bOwned != 0 && record._renderPass != VK_NULL_HANDLE &&
              record._renderPass != _pDevice->_renderPass )
-        {
             vkDestroyRenderPass( _pDevice->_device, record._renderPass, nullptr );
-        }
         record = {};
     }
 } // namespace sw

@@ -163,9 +163,7 @@ namespace sw::editor
         // 7) Save DDS to output file
         const string outputDir = FileUtil::getDirectoryPart( outputPath );
         if ( outputDir.empty() == false )
-        {
             FileUtil::ensureDirectoryExists( outputDir );
-        }
 
         const wstring wOutPath = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
 
@@ -247,9 +245,7 @@ namespace sw::editor
     {
         TextureImportRule rule;
         if ( config.matchRule( sourcePath, rule ) == false )
-        {
             SW_LOG_WARNING( "No matching rule found in config for %#; using default rule.", sourcePath.data() );
-        }
 
         return bakeTexture( sourcePath, outputPath, rule, pOutResult );
     }

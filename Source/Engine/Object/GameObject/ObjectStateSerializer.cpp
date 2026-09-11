@@ -289,9 +289,7 @@ namespace sw
                 uint32          ver{ 0 };
                 const TypeInfo* pTypeInfo = pComp->getTypeInfo();
                 if ( pTypeInfo != nullptr )
-                {
                     BinarySerializer::deserializeVersioned( ver, pComp, *pTypeInfo, compDataBytes.data(), compDataBytes.size(), kObjectReflectedSchemaVersion );
-                }
                 SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
                 if ( pSceneComp != nullptr )
                     pSceneComp->markTransformDirty();

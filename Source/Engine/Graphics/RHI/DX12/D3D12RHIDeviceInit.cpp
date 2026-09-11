@@ -66,13 +66,9 @@ namespace sw
         if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
         {
             if ( options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3 )
-            {
                 SW_LOG_TRACE( "Device supports Resource Binding Tier 3 (Bindless)." );
-            }
             else
-            {
                 SW_LOG_WARNING( "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
-            }
         }
 
     #if defined( SW_DEBUG )

@@ -243,9 +243,7 @@ namespace sw
 
                 D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
                 if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
-                {
                     SW_LOG_ERROR( "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
-                }
             }
         }
     #else

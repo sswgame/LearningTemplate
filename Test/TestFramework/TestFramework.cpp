@@ -66,9 +66,7 @@ namespace test
             if ( arg == "--test_filter" || arg == "--gtest_filter" )
             {
                 if ( argIndex + 1 < argc && argv[argIndex + 1] != nullptr )
-                {
                     setFilter( sw::string( trimArgValue( argv[++argIndex] ) ) );
-                }
                 continue;
             }
 
@@ -83,16 +81,12 @@ namespace test
         _currentContext.addFailure( condition, file, line, message );
         std::fprintf( stdout, "\n  [FAILED] %s:%d\n    Condition: %s\n", file.c_str(), line, condition.c_str() );
         if ( message.empty() == false )
-        {
             std::fprintf( stdout, "    Message  : %s\n", message.c_str() );
-        }
         std::fflush( stdout );
         SW_LOG_ERROR( "\n  [FAILED] %#:%#", file.c_str(), line );
         SW_LOG_ERROR( "    Condition: %#", condition.c_str() );
         if ( message.empty() == false )
-        {
             SW_LOG_ERROR( "    Message  : %#", message.c_str() );
-        }
     }
 
     void TestRegistry::skipCurrentTest( [[maybe_unused]] const sw::string& reason, [[maybe_unused]] const sw::string& file, [[maybe_unused]] int32 line )
@@ -138,9 +132,7 @@ namespace test
         SW_LOG_INFO( "====================================================" );
         SW_LOG_INFO( " Running %# / %# Test Cases...", runnableCount, static_cast<uint32>( _listTest.size() ) );
         if ( filteredOut > 0 )
-        {
             SW_LOG_INFO( " Filtered out: %#", filteredOut );
-        }
         SW_LOG_INFO( "====================================================" );
 
         sw::vector<sw::string> listFailedTestName;

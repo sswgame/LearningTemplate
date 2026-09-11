@@ -101,9 +101,7 @@ SW_TEST_CASE( Physics, SpatialGridMultiCellQuery )
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), hits.size() );
     if ( hits.empty() == false )
-    {
         SW_EXPECT_EQUAL( hNear, hits[0] );
-    }
 }
 
 SW_TEST_CASE( Physics, BodyAabbDynamicRelocation )
@@ -136,9 +134,7 @@ SW_TEST_CASE( Physics, BodyAabbDynamicRelocation )
     world.queryAabb( movedBox, 0, hits );
     SW_EXPECT_EQUAL( 1u, hits.size() );
     if ( hits.empty() == false )
-    {
         SW_EXPECT_EQUAL( handle, hits[0] );
-    }
 }
 
 SW_TEST_CASE( Physics, SpatialGridMassiveBodiesStressTest )
