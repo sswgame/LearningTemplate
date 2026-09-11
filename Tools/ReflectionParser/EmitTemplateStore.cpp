@@ -46,12 +46,6 @@ namespace sw
     {
     }
 
-    EmitTemplateStore& EmitTemplateStore::instance()
-    {
-        static EmitTemplateStore s_store;
-        return s_store;
-    }
-
     void EmitTemplateStore::clear()
     {
         _mapTemplate.clear();

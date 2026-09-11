@@ -20,9 +20,6 @@ namespace sw
         EmitTemplateStore();
         ~EmitTemplateStore() = default;
 
-        /** @brief 프로세스 전역 템플릿 저장소를 반환합니다. */
-        static EmitTemplateStore& instance();
-
         /** @brief 로드된 템플릿을 비웁니다. */
         void clear();
         /** @brief 절대 경로 디렉터리에서 *.tpl 을 로드합니다. */

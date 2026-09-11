@@ -388,11 +388,13 @@ namespace sw
             struct FieldCollector
             {
                 vector<ParsedPropertyInfo>* _pProperties = nullptr;
+                const ParserSession*        _pSession    = nullptr;
                 uint8                       _bHasError : 1;
                 [[maybe_unused]] uint8      _reserved  : 7;
 
                 FieldCollector()
                     : _pProperties{ nullptr }
+                    , _pSession{ nullptr }
                     , _bHasError{ SW_FALSE }
                     , _reserved{ 0 }
                 {
@@ -403,12 +405,14 @@ namespace sw
             {
                 vector<ParsedFunctionInfo>*         _pMethods;
                 const MultiAnnotationSearch::Entry* _pFuncEntry;
+                const ParserSession*                _pSession;
                 uint8                               _bSkipConstructors : 1; ///< Abstract / Static 타입
                 [[maybe_unused]] uint8              _reserved          : 7;
 
                 MethodCollector()
                     : _pMethods{ nullptr }
                     , _pFuncEntry{ nullptr }
+                    , _pSession{ nullptr }
                     , _bSkipConstructors{ SW_FALSE }
                     , _reserved{ 0 }
                 {
@@ -481,23 +485,25 @@ namespace sw
 
             /** @brief 맵/시퀀스 템플릿 인자로 키·원소·중첩 노드를 채웁니다. */
             static sw::shared_ptr<ParsedContainerNode> nestedContainerFromArg( CXType type, int32 numClangArgs, int32 index,
-                                                                               const string& spellingFallback )
+                                                                               const string&        spellingFallback,
+                                                                               const ParserSession& session )
             {
                 sw::shared_ptr<ParsedContainerNode> nested;
                 if ( 0 <= index && index < numClangArgs )
                 {
                     const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
                     if ( argType.kind != CXType_Invalid )
-                        nested = parseContainerFromType( argType );
+                        nested = parseContainerFromType( argType, session );
                 }
                 if ( ( nested == nullptr || nested->_bIsContainer == SW_FALSE ) && spellingFallback.empty() == SW_FALSE )
-                    nested = parseContainerFromTypeSpelling( spellingFallback );
+                    nested = parseContainerFromTypeSpelling( spellingFallback, session );
                 if ( nested != nullptr && nested->_bIsContainer == SW_FALSE )
                     nested.reset();
                 return nested;
             }
 
-            static void fillContainerNodeArgs( ParsedContainerNode& node, const string& typeSpelling, CXType type )
+            static void fillContainerNodeArgs( ParsedContainerNode& node, const string& typeSpelling, CXType type,
+                                               const ParserSession& session )
             {
                 const vector<string> args = extractTemplateArgs( typeSpelling );
                 const int32          numClangArgs =
@@ -507,23 +513,24 @@ namespace sw
                 {
                     if ( args.size() >= 2 )
                     {
-                        node._keyTypeName     = normalizeTypeName( args[0] );
-                        node._elementTypeName = normalizeTypeName( args[1] );
-                        node._elementNested   = nestedContainerFromArg( type, numClangArgs, 1, args[1] );
+                        node._keyTypeName     = session._typeNameMap.normalize( args[0] );
+                        node._elementTypeName = session._typeNameMap.normalize( args[1] );
+                        node._elementNested   = nestedContainerFromArg( type, numClangArgs, 1, args[1], session );
                     }
                 }
                 else if ( args.empty() == SW_FALSE )
                 {
-                    node._elementTypeName = normalizeTypeName( args[0] );
-                    node._elementNested   = nestedContainerFromArg( type, numClangArgs, 0, args[0] );
+                    node._elementTypeName = session._typeNameMap.normalize( args[0] );
+                    node._elementNested   = nestedContainerFromArg( type, numClangArgs, 0, args[0], session );
                 }
             }
 
             /** @brief 표기 문자열만으로 컨테이너 노드를 만듭니다 (clang 타입 없음). */
-            static sw::shared_ptr<ParsedContainerNode> parseContainerFromTypeSpelling( const string& typeSpelling )
+            static sw::shared_ptr<ParsedContainerNode> parseContainerFromTypeSpelling( const string&        typeSpelling,
+                                                                                       const ParserSession& session )
             {
                 sw::shared_ptr<ParsedContainerNode> node = sw::make_shared<ParsedContainerNode>();
-                const ContainerTypeRule*            rule = ContainerTypeMap::instance().match( typeSpelling );
+                const ContainerTypeRule*            rule = session._containerTypeMap.match( typeSpelling );
                 if ( rule == nullptr )
                 {
                     node->_bIsContainer = SW_FALSE;
@@ -535,12 +542,12 @@ namespace sw
                 node->_typeName      = rule->_match;
                 CXType invalid{};
                 invalid.kind = CXType_Invalid;
-                fillContainerNodeArgs( *node, typeSpelling, invalid );
+                fillContainerNodeArgs( *node, typeSpelling, invalid, session );
                 return node;
             }
 
             /** @brief clang 타입(또는 표기 폴백)으로 컨테이너 트리를 만듭니다. */
-            static sw::shared_ptr<ParsedContainerNode> parseContainerFromType( CXType type )
+            static sw::shared_ptr<ParsedContainerNode> parseContainerFromType( CXType type, const ParserSession& session )
             {
                 sw::shared_ptr<ParsedContainerNode> node = sw::make_shared<ParsedContainerNode>();
                 if ( type.kind == CXType_Invalid )
@@ -559,14 +566,14 @@ namespace sw
                     node->_bIsContainer                  = SW_TRUE;
                     node->_containerKind                 = kind;
                     node->_containerType                 = wrapperStem;
-                    const ContainerTypeRule* builtinRule = ContainerTypeMap::instance().match( spelling );
+                    const ContainerTypeRule* builtinRule = session._containerTypeMap.match( spelling );
                     if ( builtinRule != nullptr )
                         node->_typeName = builtinRule->_match;
-                    fillContainerNodeArgs( *node, spelling, type );
+                    fillContainerNodeArgs( *node, spelling, type, session );
                     return node;
                 }
 
-                const ContainerTypeRule* rule = ContainerTypeMap::instance().match( spelling );
+                const ContainerTypeRule* rule = session._containerTypeMap.match( spelling );
                 if ( rule == nullptr )
                 {
                     node->_bIsContainer = SW_FALSE;
@@ -576,14 +583,14 @@ namespace sw
                 node->_containerKind = rule->_kind;
                 node->_containerType = rule->_type;
                 node->_typeName      = rule->_match;
-                fillContainerNodeArgs( *node, spelling, type );
+                fillContainerNodeArgs( *node, spelling, type, session );
                 return node;
             }
 
             /** @brief 필드 타입의 컨테이너 트리를 프로퍼티에 복사합니다. */
-            static void parseContainerDetails( ParsedPropertyInfo& prop, CXType fieldType )
+            static void parseContainerDetails( ParsedPropertyInfo& prop, CXType fieldType, const ParserSession& session )
             {
-                prop._containerTree = parseContainerFromType( fieldType );
+                prop._containerTree = parseContainerFromType( fieldType, session );
                 if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != 0 )
                 {
                     prop._bIsContainer    = SW_TRUE;
@@ -613,7 +620,7 @@ namespace sw
                 const CXType       fieldType = clang_getCursorType( cursor );
                 prop._name                   = cxStringToStd( clang_getCursorSpelling( cursor ) );
                 prop._typeName =
-                    normalizeTypeName( cxStringToStd( clang_getTypeSpelling( fieldType ) ) );
+                    collector->_pSession->_typeNameMap.normalize( cxStringToStd( clang_getTypeSpelling( fieldType ) ) );
                 if ( clang_Cursor_isBitField( cursor ) != 0 )
                 {
                     const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );
@@ -635,8 +642,8 @@ namespace sw
                         prop._bitMask    = static_cast<uint8>( 1u << ( bitOffset % 8 ) );
                     }
                 }
-                sw::AnnotationApply::parsePropertyAnnotation( search._spelling, prop );
-                parseContainerDetails( prop, fieldType );
+                sw::AnnotationApply::parsePropertyAnnotation( search._spelling, prop, collector->_pSession->_annotationMeta );
+                parseContainerDetails( prop, fieldType, *collector->_pSession );
                 collector->_pProperties->push_back( std::move( prop ) );
                 return CXChildVisit_Continue;
             }
@@ -678,20 +685,21 @@ namespace sw
                     for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
                     {
                         const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-                        method._listParameterTypeName.push_back( normalizeTypeName(
+                        method._listParameterTypeName.push_back( collector->_pSession->_typeNameMap.normalize(
                             cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
                     }
 
                     if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound == SW_TRUE )
                     {
-                        sw::AnnotationApply::parseFunctionAnnotation( collector->_pFuncEntry->_spelling, method );
+                        sw::AnnotationApply::parseFunctionAnnotation( collector->_pFuncEntry->_spelling, method,
+                                                                      collector->_pSession->_annotationMeta );
                     }
                     else
                     {
                         AnnotationSearch search{ annotationConstants::kFunctionPrefix };
                         clang_visitChildren( cursor, annotationSearchVisitor, &search );
                         if ( search._bFound == SW_TRUE )
-                            sw::AnnotationApply::parseFunctionAnnotation( search._spelling, method );
+                            sw::AnnotationApply::parseFunctionAnnotation( search._spelling, method, collector->_pSession->_annotationMeta );
                     }
 
                     collector->_pMethods->push_back( std::move( method ) );
@@ -731,7 +739,7 @@ namespace sw
 
                 ParsedFunctionInfo method;
                 method._name           = cxStringToStd( clang_getCursorSpelling( cursor ) );
-                method._returnTypeName = normalizeTypeName(
+                method._returnTypeName = collector->_pSession->_typeNameMap.normalize(
                     cxStringToStd( clang_getTypeSpelling( clang_getCursorResultType( cursor ) ) ) );
                 method._bStatic = clang_CXXMethod_isStatic( cursor ) != 0 ? SW_TRUE : SW_FALSE;
                 method._bConst  = clang_CXXMethod_isConst( cursor ) != 0 ? SW_TRUE : SW_FALSE;
@@ -740,12 +748,12 @@ namespace sw
                 for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
                 {
                     const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-                    method._listParameterTypeName.push_back( normalizeTypeName(
+                    method._listParameterTypeName.push_back( collector->_pSession->_typeNameMap.normalize(
                         cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
                 }
 
                 if ( bHasFuncAnn )
-                    sw::AnnotationApply::parseFunctionAnnotation( funcSpelling, method );
+                    sw::AnnotationApply::parseFunctionAnnotation( funcSpelling, method, collector->_pSession->_annotationMeta );
 
                 collector->_pMethods->push_back( std::move( method ) );
                 return CXChildVisit_Continue;
@@ -982,8 +990,9 @@ namespace sw
 
 namespace sw
 {
-    AstVisitor::AstVisitor( CXTranslationUnit translationUnit )
+    AstVisitor::AstVisitor( CXTranslationUnit translationUnit, const ParserSession& session )
         : _translationUnit{ translationUnit }
+        , _pSession{ &session }
         , _listType{}
         , _listEnum{}
         , _bHasError{ SW_FALSE }
@@ -1133,7 +1142,7 @@ namespace sw
                 reflectSearch._bFound   = reflectSearch._spelling.empty() == false ? SW_TRUE : SW_FALSE;
             }
             if ( reflectSearch._bFound == SW_TRUE )
-                sw::AnnotationApply::parseReflectAnnotation( reflectSearch._spelling, typeInfo );
+                sw::AnnotationApply::parseReflectAnnotation( reflectSearch._spelling, typeInfo, _pSession->_annotationMeta );
             // C++ 순수 가상 함수가 포함된 추상 클래스이면 UCLASS(Abstract)처럼 플래그 설정
             if ( clang_CXXRecord_isAbstract( cursor ) != 0 )
                 typeInfo._bAbstract = SW_TRUE;
@@ -1145,7 +1154,9 @@ namespace sw
             collect._bases._ownerFQN            = typeInfo._fullyQualifiedName;
             collect._methods._bSkipConstructors = ( typeInfo._bAbstract == SW_TRUE || typeInfo._bStatic == SW_TRUE ) ? SW_TRUE : SW_FALSE;
             collect._fields._pProperties        = &typeInfo._listProperty;
+            collect._fields._pSession           = _pSession;
             collect._methods._pMethods          = &typeInfo._listMethod;
+            collect._methods._pSession          = _pSession;
             clang_visitChildren( cursor, AstVisitorInternal::structMemberCollectVisitor, &collect );
             if ( collect._fields._bHasError == SW_TRUE || collect._bases._bHasError == SW_TRUE )
             {
@@ -1210,7 +1221,7 @@ namespace sw
                 enumSpelling = enumSearch._spelling;
             }
             if ( enumSpelling.empty() == false )
-                sw::AnnotationApply::parseEnumAnnotation( enumSpelling, enumInfo );
+                sw::AnnotationApply::parseEnumAnnotation( enumSpelling, enumInfo, _pSession->_annotationMeta );
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
         }

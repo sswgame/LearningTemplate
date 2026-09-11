@@ -18,12 +18,6 @@ namespace sw
     {
     }
 
-    AnnotationMeta& AnnotationMeta::instance()
-    {
-        static AnnotationMeta s_meta;
-        return s_meta;
-    }
-
     void AnnotationMeta::clear()
     {
         _mapBare.clear();

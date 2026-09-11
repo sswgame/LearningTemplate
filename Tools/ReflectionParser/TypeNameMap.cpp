@@ -57,12 +57,6 @@ namespace sw
     {
     }
 
-    TypeNameMap& TypeNameMap::instance()
-    {
-        static TypeNameMap s_map;
-        return s_map;
-    }
-
     void TypeNameMap::clear()
     {
         _mapAliasToCanonical.clear();
@@ -168,8 +162,4 @@ namespace sw
         return result;
     }
 
-    string normalizeTypeName( const string& clangSpelling )
-    {
-        return TypeNameMap::instance().normalize( clangSpelling );
-    }
 } // namespace sw

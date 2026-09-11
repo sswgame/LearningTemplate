@@ -16,12 +16,6 @@ namespace sw
     {
     }
 
-    ContainerTypeMap& ContainerTypeMap::instance()
-    {
-        static ContainerTypeMap s_map;
-        return s_map;
-    }
-
     void ContainerTypeMap::clear()
     {
         _listRule.clear();

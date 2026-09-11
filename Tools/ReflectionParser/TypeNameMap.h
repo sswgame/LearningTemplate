@@ -19,9 +19,6 @@ namespace sw
         TypeNameMap();
         ~TypeNameMap() = default;
 
-        /** @brief 프로세스 전역 타입명 맵을 반환합니다. */
-        static TypeNameMap& instance();
-
         /** @brief builtins 등록이 완료되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
@@ -46,9 +43,4 @@ namespace sw
         [[maybe_unused]] uint8        _reserved : 7;
     };
 
-    // ------------------------------------------------------------------------------
-    // 2) parse — 전역 맵으로 clang 표기 정규화
-    // ------------------------------------------------------------------------------
-    /** @brief 전역 TypeNameMap 으로 clang 표기를 canonical 로 정규화합니다. */
-    string normalizeTypeName( const string& clangSpelling );
 } // namespace sw

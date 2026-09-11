@@ -7,6 +7,7 @@
 #include "Engine/EngineMinimal.h"
 
 #include "ReflectionParser/ParsedReflection.h"
+#include "ReflectionParser/ParserSession.h"
 
 #include <clang-c/Index.h>
 
@@ -21,7 +22,7 @@ namespace sw
     class AstVisitor
     {
     public:
-        explicit AstVisitor( CXTranslationUnit translationUnit );
+        AstVisitor( CXTranslationUnit translationUnit, const ParserSession& session );
 
         /** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. 에러가 없으면 true를 반환합니다. */
         bool visit();
@@ -43,6 +44,7 @@ namespace sw
 
     private:
         CXTranslationUnit      _translationUnit;
+        const ParserSession*   _pSession;
         vector<ParsedTypeInfo> _listType;
         vector<ParsedEnumInfo> _listEnum;
         uint8                  _bHasError : 1;

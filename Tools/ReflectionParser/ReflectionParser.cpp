@@ -18,6 +18,7 @@
 #include "ReflectionParser/ParsedReflection.h"
 #include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserSession.h"
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/ReflectBuiltinsLoader.h"
 
@@ -236,17 +237,20 @@ namespace sw
              * @brief 빈 AST 와 같은 생성물(.gen.cpp/.gen.h)을 씁니다.
              * @details 리플렉션 매크로가 지워진 뒤에도 예전 registrar 가 남아 계속 컴파일되는 것을 막습니다.
              */
-            static bool emitEmptyGenerated( const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
+            static bool emitEmptyGenerated( const sw::string& inputFile, const CommandLineArgs& commandLineArgs,
+                                            const sw::ParserSession& session )
             {
                 const sw::vector<sw::ParsedTypeInfo> noTypes;
                 const sw::vector<sw::ParsedEnumInfo> noEnums;
 
-                sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir, commandLineArgs._sourceRoot );
+                sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir, session,
+                                             commandLineArgs._sourceRoot );
                 return generator.generate();
             }
 
             /** @brief 헤더 하나를 파싱·코드젠합니다. 최신이면 건너뛰고, 어노테이션이 없으면 비웁니다. */
-            static void processInputFile( const sw::string& inputFile, const CommandLineArgs& commandLineArgs, sw::atomic<int32>& errorCount )
+            static void processInputFile( const sw::string& inputFile, const CommandLineArgs& commandLineArgs,
+                                          const sw::ParserSession& session, sw::atomic<int32>& errorCount )
             {
                 const sw::string genPath =
                     sw::ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
@@ -266,7 +270,7 @@ namespace sw
                         return;
                     }
                     SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
-                    if ( emitEmptyGenerated( inputFile, commandLineArgs ) == false )
+                    if ( emitEmptyGenerated( inputFile, commandLineArgs, session ) == false )
                     {
                         SW_LOG_ERROR( "Code generation failed: %#", inputFile );
                         ++errorCount;
@@ -284,7 +288,7 @@ namespace sw
                     return;
                 }
 
-                sw::AstVisitor visitor( context.getTranslationUnit() );
+                sw::AstVisitor visitor( context.getTranslationUnit(), session );
                 if ( visitor.visit() == false || visitor.hasError() )
                 {
                     SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
@@ -297,6 +301,7 @@ namespace sw
                     visitor.getCollectedEnums(),
                     inputFile,
                     commandLineArgs._outputDir,
+                    session,
                     commandLineArgs._sourceRoot );
 
                 if ( generator.generate() == false )
@@ -402,6 +407,10 @@ int32 main( int32 argc, utf8* argv[] )
 {
     const sw::LoggerScope loggerScope;
 
+    // 파서 한 번 실행이 쓰는 표들 — 여기가 소유자다. 예전에는 넷이 각자 instance() 싱글턴이라
+    // 채우는 곳과 읽는 곳이 호출 그래프에 드러나지 않았다.
+    sw::ParserSession session;
+
     // CLI
     sw::CommandLineArgs commandLineArgs;
     if ( sw::ReflectionParserInternal::parseCommandLine( argc, argv, commandLineArgs ) == false )
@@ -425,12 +434,12 @@ int32 main( int32 argc, utf8* argv[] )
             SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kEmitTemplates );
             return 1;
         }
-        if ( sw::EmitTemplateStore::instance().loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
+        if ( session._emitTemplateStore.loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
         {
             SW_LOG_ERROR( "Failed to load --emit-templates: %#", commandLineArgs._emitTemplatesDir );
             return 1;
         }
-        const bool ok = sw::emitReflectBuiltinsGen( commandLineArgs._builtinsPath, commandLineArgs._emitBuiltinsGenPath );
+        const bool ok = sw::emitReflectBuiltinsGen( commandLineArgs._builtinsPath, commandLineArgs._emitBuiltinsGenPath, session );
         return ok ? 0 : 1;
     }
 
@@ -441,7 +450,7 @@ int32 main( int32 argc, utf8* argv[] )
     // 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
     if ( commandLineArgs._builtinsPath.empty() == false )
     {
-        if ( sw::loadReflectBuiltins( commandLineArgs._builtinsPath ) == false )
+        if ( sw::loadReflectBuiltins( commandLineArgs._builtinsPath, session ) == false )
         {
             SW_LOG_ERROR( "Failed to load --builtins: %#", commandLineArgs._builtinsPath );
             return 1;
@@ -454,7 +463,7 @@ int32 main( int32 argc, utf8* argv[] )
 
     if ( commandLineArgs._annotationMetaPath.empty() == false )
     {
-        if ( sw::AnnotationMeta::instance().loadFile( commandLineArgs._annotationMetaPath ) == false )
+        if ( session._annotationMeta.loadFile( commandLineArgs._annotationMetaPath ) == false )
         {
             SW_LOG_ERROR( "Failed to load --annotation-meta: %#", commandLineArgs._annotationMetaPath );
             return 1;
@@ -467,7 +476,7 @@ int32 main( int32 argc, utf8* argv[] )
 
     if ( commandLineArgs._emitTemplatesDir.empty() == false )
     {
-        if ( sw::EmitTemplateStore::instance().loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
+        if ( session._emitTemplateStore.loadDirectory( commandLineArgs._emitTemplatesDir ) == false )
         {
             SW_LOG_ERROR( "Failed to load --emit-templates: %#", commandLineArgs._emitTemplatesDir );
             return 1;
@@ -528,9 +537,9 @@ int32 main( int32 argc, utf8* argv[] )
         {
             sw::TaskHandle handle = taskManager.emplaceTask(
                 "ParseHeader",
-                SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&commandLineArgs, &errorCount, inputFile]()
+                SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&commandLineArgs, &session, &errorCount, inputFile]()
             {
-                sw::ReflectionParserInternal::processInputFile( inputFile, commandLineArgs, errorCount );
+                sw::ReflectionParserInternal::processInputFile( inputFile, commandLineArgs, session, errorCount );
             } ) );
             handle.submit();
         }

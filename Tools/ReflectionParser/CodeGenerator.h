@@ -7,6 +7,7 @@
 
 #include "ReflectionParser/CodeEmit.h"
 #include "ReflectionParser/ParsedReflection.h"
+#include "ReflectionParser/ParserSession.h"
 
 namespace sw
 {
@@ -22,6 +23,7 @@ namespace sw
             const vector<ParsedEnumInfo>& enums,
             const string&                 sourceFilePath,
             const string&                 outputDir,
+            const ParserSession&          session,
             const string&                 sourceRoot = string{} );
 
         /** @brief .gen.cpp / .gen.h 를 생성합니다. */
@@ -80,13 +82,14 @@ namespace sw
         static const utf8* peelMember( ContainerKind kind );
 
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
-        static void appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                    const unordered_map<string, string>& vars );
-        static void appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                    std::initializer_list<pair<string_view, string_view>> vars );
+        void appendTemplate( CodeEmitBuffer& out, const string_view name,
+                             const unordered_map<string, string>& vars ) const;
+        void appendTemplate( CodeEmitBuffer& out, const string_view name,
+                             std::initializer_list<pair<string_view, string_view>> vars ) const;
 
     private:
         const vector<ParsedTypeInfo>& _listType;
+        const ParserSession&          _session;
         const vector<ParsedEnumInfo>& _listEnum;
         string                        _sourceFilePath;
         /** @brief 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다. */

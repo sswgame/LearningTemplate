@@ -57,7 +57,7 @@ namespace sw
                 }
             }
 
-            static void registerBuiltinTypeLine( const vector<string>& listMacroArgument, uint32& typeCount )
+            static void registerBuiltinTypeLine( const vector<string>& listMacroArgument, uint32& typeCount, TypeNameMap& outMap )
             {
                 if ( listMacroArgument.size() < 4 )
                     return;
@@ -72,15 +72,16 @@ namespace sw
                         continue;
                     listAlias.push_back( listMacroArgument[argIndex] );
                 }
-                TypeNameMap::instance().registerEntry( listMacroArgument[0], ns, listAlias );
+                outMap.registerEntry( listMacroArgument[0], ns, listAlias );
                 ++typeCount;
             }
 
-            static void registerBuiltinContainerLine( const vector<string>& listMacroArgument, uint32& containerCount )
+            static void registerBuiltinContainerLine( const vector<string>& listMacroArgument, uint32& containerCount,
+                                                      ContainerTypeMap& outMap )
             {
                 if ( listMacroArgument.size() < 3 )
                     return;
-                ContainerTypeMap::instance().registerRule( listMacroArgument[0], listMacroArgument[1], listMacroArgument[2] );
+                outMap.registerRule( listMacroArgument[0], listMacroArgument[1], listMacroArgument[2] );
                 ++containerCount;
             }
 
@@ -119,7 +120,7 @@ namespace sw
 
 namespace sw
 {
-    bool loadReflectBuiltins( const string_view absPath )
+    bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession )
     {
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
@@ -128,8 +129,8 @@ namespace sw
             return false;
         }
 
-        TypeNameMap::instance().clear();
-        ContainerTypeMap::instance().clear();
+        outSession._typeNameMap.clear();
+        outSession._containerTypeMap.clear();
 
         uint32         typeCount      = 0;
         uint32         containerCount = 0;
@@ -141,19 +142,21 @@ namespace sw
             vector<string> listMacroArgument;
             if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
                  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, listMacroArgument ) )
-                ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( listMacroArgument, typeCount );
+                ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( listMacroArgument, typeCount, outSession._typeNameMap );
             else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) &&
                       ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, listMacroArgument ) )
-                ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( listMacroArgument, containerCount );
+                ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( listMacroArgument, containerCount,
+                                                                             outSession._containerTypeMap );
         }
 
-        TypeNameMap::instance().setLoaded( true );
-        ContainerTypeMap::instance().setLoaded( true );
+        outSession._typeNameMap.setLoaded( true );
+        outSession._containerTypeMap.setLoaded( true );
         SW_LOG_TRACE( "types=%# containers=%# (%#)", typeCount, containerCount, absPath );
         return typeCount > 0 || containerCount > 0;
     }
 
-    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath )
+    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath,
+                                 const ParserSession& session )
     {
         string text;
         if ( FileUtil::readTextFile( builtinsAbsPath, text ) == false )
@@ -179,7 +182,7 @@ namespace sw
             return false;
         }
 
-        const EmitTemplateStore& tpls = EmitTemplateStore::instance();
+        const EmitTemplateStore& tpls = session._emitTemplateStore;
         if ( tpls.isLoaded() == false || tpls.has( tplConstants::kBuiltinFileHeader ) == false ||
              tpls.has( tplConstants::kBuiltinTypeRegistrar ) == false || tpls.has( tplConstants::kBuiltinFileFooter ) == false )
         {

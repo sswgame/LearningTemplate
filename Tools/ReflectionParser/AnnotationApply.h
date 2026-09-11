@@ -7,6 +7,8 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 
+#include "ReflectionParser/AnnotationMeta.h"
+
 namespace sw
 {
     struct ParsedEnumInfo;
@@ -26,9 +28,9 @@ namespace sw
         /** @brief 따옴표를 존중하며 쉼표로 인자 토큰을 나눕니다. */
         static vector<string> splitAnnotationArgs( string_view args );
 
-        static void parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo );
-        static void parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo );
-        static void parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop );
-        static void parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method );
+        static void parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo, const AnnotationMeta& meta );
+        static void parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo, const AnnotationMeta& meta );
+        static void parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop, const AnnotationMeta& meta );
+        static void parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method, const AnnotationMeta& meta );
     };
 } // namespace sw

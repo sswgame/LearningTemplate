@@ -49,9 +49,6 @@ namespace sw
         AnnotationMeta();
         ~AnnotationMeta() = default;
 
-        /** @brief 프로세스 전역 어노테이션 메타를 반환합니다. */
-        static AnnotationMeta& instance();
-
         /** @brief AnnotationMeta.txt 를 로드합니다. */
         bool loadFile( const string_view absPath );
         /** @brief 파일이 로드되었는지 반환합니다. */

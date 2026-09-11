@@ -56,7 +56,7 @@ namespace sw
             /**
              * @brief 생성자 검색을 위한 고유 식별자 문자열(예: `$ctor(int32,float32)`)을 구성합니다.
              */
-            static string makeCtorLookupName( const ParsedFunctionInfo& method )
+            static string makeCtorLookupName( const ParsedFunctionInfo& method, const ParserSession& session )
             {
                 StringBuilder<constant::kMaxBuffer1024> b;
                 b.append( annotationConstants::kCtorLookupName );
@@ -67,7 +67,7 @@ namespace sw
                     {
                         if ( paramIndex > 0 )
                             b.append( ',' );
-                        b.append( normalizeTypeName( method._listParameterTypeName[paramIndex] ) );
+                        b.append( session._typeNameMap.normalize( method._listParameterTypeName[paramIndex] ) );
                     }
                     b.append( ')' );
                 }
@@ -77,7 +77,7 @@ namespace sw
             /**
              * @brief 타입 이름 목록을 C++ 배열 초기화 구문 `{ "int32", "string" }` 형태로 포맷팅합니다.
              */
-            static string makeQuotedTypeList( const vector<string>& listType )
+            static string makeQuotedTypeList( const vector<string>& listType, const ParserSession& session )
             {
                 StringBuilder<constant::kMaxBuffer1024> b;
                 b.append( "{ " );
@@ -85,7 +85,7 @@ namespace sw
                 {
                     if ( typeIndex > 0 )
                         b.append( ", " );
-                    b.appendFormat( "\"%#\"", normalizeTypeName( listType[typeIndex] ) );
+                    b.appendFormat( "\"%#\"", session._typeNameMap.normalize( listType[typeIndex] ) );
                 }
                 b.append( " }" );
                 return string( b.view() );
@@ -94,14 +94,15 @@ namespace sw
             /**
              * @brief 런타임 동적 함수 호출(Invoker)을 위한 인자 추출 구문 `args.get<T>(0), args.get<T>(1)...`을 생성합니다.
              */
-            static string makeInvokerCallArgs( const vector<string>& listType )
+            static string makeInvokerCallArgs( const vector<string>& listType, const ParserSession& session )
             {
                 StringBuilder<constant::kMaxBuffer1024> b;
                 for ( size_t typeIndex = 0; typeIndex < listType.size(); ++typeIndex )
                 {
                     if ( typeIndex > 0 )
                         b.append( ", " );
-                    b.appendFormat( "args.get<%#>( %# )", normalizeTypeName( listType[typeIndex] ), static_cast<uint32>( typeIndex ) );
+                    b.appendFormat( "args.get<%#>( %# )", session._typeNameMap.normalize( listType[typeIndex] ),
+                                    static_cast<uint32>( typeIndex ) );
                 }
                 return string( b.view() );
             }
@@ -167,8 +168,10 @@ namespace sw
         const vector<ParsedEnumInfo>& enums,
         const string&                 sourceFilePath,
         const string&                 outputDir,
+        const ParserSession&          session,
         const string&                 sourceRoot )
         : _listType{ types }
+        , _session{ session }
         , _listEnum{ enums }
         , _sourceFilePath{ sourceFilePath }
         , _sourceRoot{ sourceRoot }
@@ -179,15 +182,15 @@ namespace sw
     }
 
     void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                        const unordered_map<string, string>& vars )
+                                        const unordered_map<string, string>& vars ) const
     {
-        out.append( EmitTemplateStore::instance().render( name, vars ) );
+        out.append( _session._emitTemplateStore.render( name, vars ) );
     }
 
     void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
-                                        std::initializer_list<pair<string_view, string_view>> vars )
+                                        std::initializer_list<pair<string_view, string_view>> vars ) const
     {
-        out.append( EmitTemplateStore::instance().render( name, vars ) );
+        out.append( _session._emitTemplateStore.render( name, vars ) );
     }
 
     const utf8* CodeGenerator::containerKindExpr( const ContainerKind kind )
@@ -202,7 +205,7 @@ namespace sw
 
     bool CodeGenerator::generate()
     {
-        if ( EmitTemplateStore::instance().isLoaded() == false )
+        if ( _session._emitTemplateStore.isLoaded() == false )
         {
             SW_LOG_ERROR( "Emit templates not loaded (pass --emit-templates <dir>)." );
             return false;
@@ -362,8 +365,8 @@ namespace sw
         emit.line( "auto nested0 = sw::make_shared<sw::NestedContainerInfo>();" );
         emit.assign( "nested0->_kind", outerKind );
         emit.linef( "nested0->_typeName = %#;", CodeEmit::hs( prop._containerTree->_typeName ) );
-        emit.linef( "nested0->_elementTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
-        emit.linef( "nested0->_keyTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
+        emit.linef( "nested0->_elementTypeName = %#;", CodeEmit::hs( _session._typeNameMap.normalize( prop._elementTypeName ) ) );
+        emit.linef( "nested0->_keyTypeName = %#;", CodeEmit::hs( _session._typeNameMap.normalize( prop._keyTypeName ) ) );
         emit.linef( "nested0->_wrapper = sw::make_shared<%#>();", outerWrapper );
 
         const ParsedContainerNode* node     = prop._containerTree->_elementNested.get();
@@ -386,7 +389,7 @@ namespace sw
                 emit.linef( "nested%#->_kind = %#;", depth, kind );
                 emit.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
                 emit.linef( "nested%#->_elementTypeName = %#;", depth,
-                            CodeEmit::hs( normalizeTypeName( node->_elementTypeName ) ) );
+                            CodeEmit::hs( _session._typeNameMap.normalize( node->_elementTypeName ) ) );
                 emit.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( node->_keyTypeName ) );
                 emit.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapperType );
                 emit.linef( "nested%#->_elementNested = nested%#;", depth - 1, depth );
@@ -431,7 +434,7 @@ namespace sw
         emit.line( "sw::PropertyInfo p(" );
         emit.push();
         emit.linef( "%#,", CodeEmit::hs( prop._name ) );
-        emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
+        emit.linef( "%#,", CodeEmit::hs( _session._typeNameMap.normalize( prop._typeName ) ) );
         if ( prop._bIsBitField == SW_TRUE )
             emit.linef( "%#u,", prop._byteOffset );
         else
@@ -444,8 +447,8 @@ namespace sw
 
             emit.line( "true," );
             emit.linef( "%#,", kindStr );
-            emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
-            emit.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
+            emit.linef( "%#,", CodeEmit::hs( _session._typeNameMap.normalize( prop._elementTypeName ) ) );
+            emit.linef( "%#,", CodeEmit::hs( _session._typeNameMap.normalize( prop._keyTypeName ) ) );
             emit.linef( "sw::make_shared<%#>() );", wrapperType );
 
             emitNestedContainerTree( emit, typeInfo, prop );
@@ -529,9 +532,9 @@ namespace sw
     {
         for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
         {
-            const string retType = normalizeTypeName( method._returnTypeName );
+            const string retType = _session._typeNameMap.normalize( method._returnTypeName );
 
-            const string lookupName = ( method._bConstructor != 0 ) ? CodeGeneratorInternal::makeCtorLookupName( method ) : method._name;
+            const string lookupName = ( method._bConstructor != 0 ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
 
             emit.line( "{" );
             emit.push();
@@ -539,7 +542,7 @@ namespace sw
             emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
             emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
             emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-            emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName ) );
+            emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName, _session ) );
 
             emit.line( "#if !defined( SW_SHIPPING )" );
             emitCommonEditorMeta( emit, method, "funcInfo._metadata." );
@@ -556,7 +559,7 @@ namespace sw
             emit.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
             emit.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
 
-            const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName );
+            const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName, _session );
 
             emitMethodInvoker( emit, typeInfo, method, retType, callArgs );
             emit.pop();

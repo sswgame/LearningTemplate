@@ -366,14 +366,13 @@ namespace sw
     }
 
     /** @brief REFLECT(...) 토큰을 ParsedTypeInfo 플래그·별칭에 적용합니다. */
-    void AnnotationApply::parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo )
+    void AnnotationApply::parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo, const AnnotationMeta& meta )
     {
         string_view prefix    = annotationConstants::kReflectPrefix;
         size_t      prefixPos = annotationSpelling.find( prefix );
         if ( prefixPos == string_view::npos )
             return;
 
-        const AnnotationMeta& meta = AnnotationMeta::instance();
         for ( const string& token :
               splitAnnotationArgs( annotationSpelling.substr( prefixPos + prefix.size() ) ) )
         {
@@ -416,13 +415,12 @@ namespace sw
     }
 
     /** @brief ENUM(...) 토큰을 ParsedEnumInfo 에 적용합니다. */
-    void AnnotationApply::parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo )
+    void AnnotationApply::parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo, const AnnotationMeta& meta )
     {
         const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kEnumPrefix );
         if ( annotationSpelling.find( annotationConstants::kEnumPrefix ) == string_view::npos )
             return;
 
-        const AnnotationMeta& meta = AnnotationMeta::instance();
         for ( const string& token : splitAnnotationArgs( args ) )
         {
             if ( token.empty() )
@@ -454,13 +452,12 @@ namespace sw
     }
 
     /** @brief PROPERTY(...) 토큰을 ParsedPropertyInfo 에 적용합니다. */
-    void AnnotationApply::parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop )
+    void AnnotationApply::parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop, const AnnotationMeta& meta )
     {
         const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kPropertyPrefix );
         if ( annotationSpelling.find( annotationConstants::kPropertyPrefix ) == string_view::npos )
             return;
 
-        const AnnotationMeta& meta = AnnotationMeta::instance();
         for ( const string& token : splitAnnotationArgs( args ) )
         {
             if ( token.empty() )
@@ -482,13 +479,12 @@ namespace sw
     }
 
     /** @brief FUNCTION(...) 토큰을 ParsedFunctionInfo 에 적용합니다. */
-    void AnnotationApply::parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method )
+    void AnnotationApply::parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method, const AnnotationMeta& meta )
     {
         const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kFunctionPrefix );
         if ( annotationSpelling.find( annotationConstants::kFunctionPrefix ) == string_view::npos )
             return;
 
-        const AnnotationMeta& meta = AnnotationMeta::instance();
         for ( const string& token : splitAnnotationArgs( args ) )
         {
             if ( token.empty() )

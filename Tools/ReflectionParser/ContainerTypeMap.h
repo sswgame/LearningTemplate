@@ -28,9 +28,6 @@ namespace sw
         ContainerTypeMap();
         ~ContainerTypeMap() = default;
 
-        /** @brief 프로세스 전역 컨테이너 맵을 반환합니다. */
-        static ContainerTypeMap& instance();
-
         /** @brief builtins 등록이 완료되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
