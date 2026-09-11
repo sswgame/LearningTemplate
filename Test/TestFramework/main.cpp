@@ -157,17 +157,15 @@ int main( int32 argc, utf8* argv[] )
     if ( pGameConfig != nullptr )
         sw::GameConfig::setActive( *pGameConfig );
 
-    // GameConfig 가 활성화된 뒤에 검색 루트를 계산해야 "game" 토큰이 팩 루트로 풀린다.
-    // 설정의 우선순위 목록이 비어 있어도 재계산은 건너뛰면 안 된다.
-    const sw::vector<sw::string> listResourcePriority =
-        ( pEngineConfig != nullptr && pEngineConfig->_listResourcePriority.empty() == false )
-            ? pEngineConfig->_listResourcePriority
-            : sw::ResourceUtil::getSearchPriority();
-    sw::ResourceUtil::setSearchPriority( listResourcePriority );
-
-    // 여기서 도는 mountStartupPacks() · loadAssetRegistries() 가 **유일한 호출**이다.
     if ( resourceManager->initialize() == false )
         return -1;
+
+    // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의
+    // 인자에 드러나 있다. 우선순위 적용 · 팩 마운트 · 레지스트리 적재가 한 호출로 묶여 있다.
+    if ( pEngineConfig != nullptr )
+        resourceManager->mountContent( pEngineConfig->_listResourcePriority );
+    else
+        resourceManager->mountContent( {} );
 
     if ( taskManager->initialize() == false )
         return -1;

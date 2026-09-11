@@ -40,12 +40,20 @@ namespace sw
             return false;
         }
 
-        mountStartupPacks();
-
-        loadAssetRegistries();
-
         _assetFormatRegistry.ensureBuiltins();
         return true;
+    }
+
+    bool ResourceManager::mountContent( const vector<string>& listSearchPriority )
+    {
+        // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
+        // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
+        if ( listSearchPriority.empty() == false )
+            ResourceUtil::setSearchPriority( listSearchPriority );
+
+        const bool bMounted = mountStartupPacks();
+        loadAssetRegistries();
+        return bMounted;
     }
 
     bool ResourceManager::mountStartupPacks()

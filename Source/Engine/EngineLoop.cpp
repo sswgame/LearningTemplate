@@ -264,8 +264,8 @@ namespace sw
         // 설정은 리소스 초기화보다 **먼저** 읽는다.
         //
         // ConfigManager 가 필요한 것은 `ResourceUtil` 이 이미 찾아 둔 프로젝트 루트 하나뿐이다.
-        // 반대로 `ResourceManager::initialize` 는 GameConfig 의 `_packRoot` 와 검색 우선순위가
-        // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽을 수 있다.
+        // 반대로 `ResourceManager::mountContent` 는 GameConfig 의 `_packRoot` 가 정해져 있어야
+        // 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽을 수 있다.
         //
         // 예전에는 순서가 반대였고, 그래서 리소스를 먼저 세운 뒤 설정을 읽고 **팩 마운트와 레지스트리
         // 로드를 한 번 더** 해서 메웠다. 보정이 필요하다는 것 자체가 순서가 틀렸다는 신호였다.
@@ -287,22 +287,17 @@ namespace sw
                 kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
-
-            // GameConfig 가 활성화된 **뒤에 반드시 한 번은** 검색 루트를 다시 계산해야 한다.
-            // ResourceUtil::initialize() 시점에는 `_packRoot` 가 비어 있어 "game" 토큰이 아무 루트도
-            // 만들지 못한다. 설정의 우선순위 목록이 비어 있어도 재계산은 건너뛰면 안 된다.
-            const vector<string> listResourcePriority = pEngineConfig->_listResourcePriority.empty()
-                                                          ? ResourceUtil::getSearchPriority()
-                                                          : pEngineConfig->_listResourcePriority;
-            ResourceUtil::setSearchPriority( listResourcePriority );
         }
 
         BLOCK( "Task / Resource / Scene 초기화" )
         {
-            // 여기서 도는 mountStartupPacks() · loadAssetRegistries() 가 **유일한 호출**이다.
-            // 위에서 GameConfig 와 검색 우선순위를 이미 정해 두었으므로 한 번에 제대로 실린다.
             if ( _resourceManager->initialize() == false )
                 return false;
+
+            // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 이제
+            // `mountContent` 의 인자에 드러나 있다. 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다.
+            _resourceManager->mountContent( pEngineConfig->_listResourcePriority );
+
             if ( _taskManager->initialize() == false )
                 return false;
             if ( _reloadFileManager->initialize() == false )

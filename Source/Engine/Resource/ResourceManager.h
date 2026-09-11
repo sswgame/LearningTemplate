@@ -45,20 +45,36 @@ namespace sw
          * @return 프로젝트 루트를 찾으면 true.
          */
         bool initialize();
+
+        /**
+         * @brief 콘텐츠를 올립니다 — 검색 우선순위 적용 → 시작 팩 마운트 → 에셋 레지스트리 적재.
+         * @param listSearchPriority 검색 우선순위 토큰 목록. 비우면 지금 설정된 것을 그대로 쓴다.
+         * @return 팩을 하나라도 마운트했으면 true (느슨한 `Resource/` 트리만 있으면 false).
+         *
+         * @details **`GameConfig::setActive` 뒤에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
+         *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채 팩이 실리고 GUID 표도
+         *          engine/common 만 채워진다.
+         *
+         *          `initialize()` 에서 갈라낸 이유가 그것이다. 예전에는 초기화가 이 일까지 같이 해서
+         *          "설정이 먼저" 라는 전제가 호출부에 드러나지 않았고, 그래서 순서가 뒤집힌 채로
+         *          **마운트와 레지스트리 적재를 뒤에서 한 번 더** 해서 메우고 있었다. 이제 전제가
+         *          인자로 드러나고, 우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않는다.
+         */
+        bool mountContent( const vector<string>& listSearchPriority );
+
         /** @brief Material/GUID 맵을 비우고 마운트된 팩을 정리합니다. */
         void shutdown();
         /**
          * @brief 에셋 식별자(GUID) 표를 채웁니다. 돌려주는 값은 등록 수.
          * @details 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt` 를 읽고(배포본은 .meta 를 싣지 않는다), 하나도
-         *          없으면(느슨한 트리) 리소스 루트의 `.meta` 를 훑는다. `initialize` 가 한 번 부르고, EngineLoop 이
-         *          GameConfig 를 활성화하고 팩을 마운트한 **뒤** 다시 부른다 — 게임 도메인(`_packRoot`)은 그때야
-         *          알 수 있다. 두 번 불러도 같은 매핑을 덮어쓸 뿐이다.
+         *          없으면(느슨한 트리) 리소스 루트의 `.meta` 를 훑는다. 보통은 `mountContent` 가 부른다.
+         *          전역 VFS 를 헤집은 테스트가 되돌릴 때 직접 부른다.
          */
         uint32 loadAssetRegistries();
 
         /**
          * @brief 실행 파일 옆(또는 프로젝트)의 `Packs/` 를 찾아 전부 마운트합니다.
-         * @details `initialize` 가 한 번 부른다. 전역 VFS 를 헤집는 테스트가 시작 시점 상태로
+         * @details 보통은 `mountContent` 가 부른다. 전역 VFS 를 헤집는 테스트가 시작 시점 상태로
          *          되돌릴 때도 이것을 쓴다 — 후보 경로 목록을 두 곳에 복사해 두면 한쪽만 바뀐다.
          * @return 하나라도 마운트했으면 true.
          */
