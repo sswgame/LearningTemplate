@@ -39,6 +39,13 @@ namespace sw::editor
         EditorNotificationManager()  = default;
         ~EditorNotificationManager() = default;
 
+        /**
+         * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**
+         * @details 목록은 락이 없다 — `updateAndDraw` 가 매 프레임 같은 벡터를 순회하고 지우므로, 다른
+         *          스레드에서 push 하면 순회 중 재할당으로 죽는다. 백그라운드에서 알리고 싶으면 결과를
+         *          큐에 담아 메인 스레드에서 꺼내 push 한다(`EditorBackgroundIo` 의 publish 방식,
+         *          파일 다이얼로그는 `FileUtil::pumpFileDialogResults` 가 그렇게 넘겨준다).
+         */
         void push( string_view title, string_view message, NotificationType type = NotificationType::Info,
                    float32 durationSec = 4.0f, float32 progress = -1.0f );
         void updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );

@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -648,14 +649,39 @@ namespace sw
         }
     }
 
+    namespace
+    {
+        /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 한 건. */
+        struct FileDialogResult
+        {
+            FileDialogDelegate _delegate{};
+            vector<string>     _listPath{};
+        };
+
+        /** @brief 파일 다이얼로그 결과 큐 — 담는 쪽은 분리 스레드, 꺼내는 쪽은 메인 스레드다. */
+        struct FileDialogQueueInternal
+        {
+            inline static mutex                    _s_mutex{};
+            inline static vector<FileDialogResult> _s_listResult{};
+            /// @brief cancelFileDialogResults 가 올린다. 이미 열려 있는 다이얼로그의 결과를 버리는 표식이다.
+            inline static uint32 _s_generation{ 0 };
+        };
+    } // namespace
+
     void FileUtil::openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess )
     {
-        std::thread(
-            [delegateCallback = std::move( onSuccess ), params]
-        {
-            if ( delegateCallback.isBound() == false )
-                return;
+        if ( onSuccess.isBound() == false )
+            return;
 
+        uint32 openGeneration{ 0 };
+        {
+            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            openGeneration = FileDialogQueueInternal::_s_generation;
+        }
+
+        std::thread(
+            [delegateCallback = std::move( onSuccess ), params, openGeneration]
+        {
             vector<string> listResult;
             bool           bSuccess{ false };
 
@@ -670,10 +696,49 @@ namespace sw
             SW_LOG_WARNING( "openFileDialog is not supported on this platform." );
 #endif
 
-            if ( bSuccess && listResult.empty() == false )
-                delegateCallback( listResult );
+            if ( bSuccess == false || listResult.empty() )
+                return;
+
+            // **여기서 델리게이트를 부르지 않는다.** 이 스레드는 메인 스레드와 아무 약속이 없다.
+            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            if ( FileDialogQueueInternal::_s_generation != openGeneration )
+                return; // 여는 사이에 취소됐다 — 델리게이트가 가리키던 모듈이 이미 없을 수 있다.
+            FileDialogResult result;
+            result._delegate = delegateCallback;
+            result._listPath = std::move( listResult );
+            FileDialogQueueInternal::_s_listResult.push_back( std::move( result ) );
         } )
             .detach();
+    }
+
+    void FileUtil::pumpFileDialogResults()
+    {
+        vector<FileDialogResult> listReady;
+        {
+            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            if ( FileDialogQueueInternal::_s_listResult.empty() )
+                return;
+            listReady.swap( FileDialogQueueInternal::_s_listResult );
+        }
+
+        // 델리게이트는 **락 밖에서** 부른다 — 콜백이 다시 다이얼로그를 열면 같은 뮤텍스를 재진입한다.
+        for ( FileDialogResult& result : listReady )
+        {
+            if ( result._delegate.isBound() )
+                result._delegate( result._listPath );
+        }
+    }
+
+    void FileUtil::cancelFileDialogResults()
+    {
+        vector<FileDialogResult> listDropped;
+        {
+            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            ++FileDialogQueueInternal::_s_generation;
+            listDropped.swap( FileDialogQueueInternal::_s_listResult );
+        }
+        // 델리게이트 파괴도 락 밖에서 한다.
+        listDropped.clear();
     }
 
     bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive )

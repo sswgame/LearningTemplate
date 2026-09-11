@@ -3,6 +3,7 @@
 #include "Editor/ImGuiEditor.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
@@ -273,6 +274,11 @@ namespace sw::editor
         // 매니저가 들고 있는 것은 이 DLL 안의 주소다 — 모듈이 내려가기 전에 반드시 걷어내야 한다.
         // (서비스는 아직 바인딩돼 있다. ModuleHost 는 shutdown 뒤에 bindService(nullptr) 을 부른다.)
         unregisterGlobalVariables();
+
+        // 열려 있는 파일 다이얼로그의 결과 델리게이트도 같은 이유로 끊는다 — 그 델리게이트는 이 DLL 안의
+        // 함수와 `this` 를 잡고 있고, 네이티브 다이얼로그는 사용자가 닫을 때까지 떠 있다. 아래 Undo 스택과
+        // 같은 종류의 함정이다.
+        FileUtil::cancelFileDialogResults();
 
         IWindow* pActiveWindow = IWindow::getActiveWindow();
         if ( pActiveWindow != nullptr )

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `7e64cde7`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `6415f703`
 
 ---
 
@@ -288,6 +288,63 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (Source/ 훑기 — 파일 다이얼로그 콜백이 분리 스레드에서 씬을 고치고 있었다)
+
+`Source/` 792 파일 157k 줄을 결함 *부류* 별로 훑었다. 확인된 넷을 고쳤다.
+
+**1. 파일 다이얼로그 콜백이 분리 스레드에서 라이브 상태를 고쳤다 (원인 한 곳을 고쳤다)**
+
+`FileUtil::openFileDialog` 는 `std::thread(...).detach()` 로 다이얼로그를 띄우고 **그 스레드에서**
+델리게이트를 불렀다. 네이티브 다이얼로그는 사용자가 닫을 때까지 안 돌아오므로 스레드 자체는 옳다.
+문제는 **결과를 그 스레드에서 처리**한 것이다:
+
+- `onSaveSceneDialogResult` 가 `saveActiveScene()` 으로 **메인 스레드가 tick·렌더 중인 씬을 직렬화**했다.
+- 프리셋 콜백 둘이 `loadComponentPreset()` 으로 **살아 있는 컴포넌트에 역직렬화**했다.
+- 셋 다 `NotificationManager::push()` 로 UI 스레드가 매 프레임 순회·삭제하는 벡터에 락 없이 넣었다.
+
+올바른 방식은 저장소 안에 이미 둘 있었다 — `requestLoadScene`(뮤텍스 큐) 과
+`ContentBrowserPanel::onImportDialogResult`(뮤텍스 큐 + `processPendingImports`). 즉 규칙이 아니라
+**적용이 절반만** 돼 있었다. 호출부를 하나씩 고치는 대신 **`openFileDialog` 의 계약을 바꿨다**:
+결과는 큐에 담기고 `FileUtil::pumpFileDialogResults()` 가 **메인 스레드에서** 델리게이트를 부른다
+(`EngineLoop::tick` 의 "핫 리로드 / 씬 트랜지션 / 이벤트" 블록에서 매 프레임). 호출부는 전부 자동으로
+옳아졌고, 앞으로 다이얼로그를 새로 쓰는 사람이 같은 함정을 밟을 자리가 없다.
+
+수명도 같이 닫았다. 델리게이트는 `EditorModule.dll` 안의 `this`·함수 포인터를 그대로 들고,
+`Delegate::isBound()` 는 함수 포인터가 널인지만 본다(생존 확인 없음). 다이얼로그를 열어 둔 채 핫
+리로드/종료가 나면 언맵된 코드로 뛴다 — Undo 스택이 겪은 것과 같은 함정이다. `cancelFileDialogResults()`
+를 `ImGuiEditor::shutdown` 의 **바로 그 자리**(전역 변수 해제 옆)에 두고, 세대 번호로 이미 열려 있는
+다이얼로그의 결과까지 버린다.
+
+> 알림 매니저에는 **락을 넣지 않았다.** 다이얼로그가 메인 스레드로 옮겨진 뒤 push 호출부 16 곳이
+> 전부 메인 스레드다(백그라운드 IO 는 `publish` 로 이미 메인에서 꺼낸다). 대신 그 불변식을 헤더
+> 주석으로 못박았다 — 근거 없는 동기화를 늘리는 것보다 낫다.
+
+**2. 세이브가 씬 스냅샷 실패를 흔적 없이 삼켰다 — 처음 본 것보다 가벼웠다**
+
+`serializeState` 가 `serializeSceneObjects` 의 반환값을 버리고 빈 섹션을 썼다. 처음엔 실패로 끊었는데
+**그게 틀렸다** — 씬 없이 커스텀 상태만 스냅샷하는 것은 지원되는 사용법이고
+(`GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip` 이 그렇게 쓴다) 끊자마자 그 테스트가 졌다.
+동작은 그대로 두고 **경고만** 남겼다. 실제 결함은 "빈 세이브가 나와도 아무 흔적이 없다" 쪽이었다.
+
+**3. `InspectorPropertyUndo` 의 두 함수가 38 줄 동일했다** — `trackActiveItemEdit` 하나로 합쳤다.
+각자 제 static 맵을 들고 있어 동작은 맞았지만 한쪽만 고치면 갈라진다. 첫 인자가 유효성 가드로만
+쓰인다는 것도 주석으로 남겼다(스냅샷은 값이 아니라 오브젝트 XML 로 뜬다).
+
+**4. 죽은 API 둘을 걷어냈다** — `ObjectStateSerializer::openSaveFileDialog`/`openLoadFileDialog` 는
+호출부가 없었다(`[[maybe_unused]]` 로 억제돼 있었다). 아이러니하게도 다이얼로그 수명 규칙을 제대로
+지킨 유일한 코드였는데, 그 규칙이 이제 `FileUtil` 에서 강제되므로 같이 걷었다.
+
+**확인했고 깨끗한 것** (다시 파지 않도록)
+
+- `onTick` 16 개 전부 공유 상태·정적·매니저 접근 없음 — CLAUDE.md 함정 #1 은 지켜지고 있다.
+- `attachToParent` 호출부 어디도 tick 경로가 아니다.
+- `ResourceUtil` 경로 캐시는 `setSearchPriority` 끝에서 무효화된다.
+- `XmlNode::attrInt/attrFloat` 의 반환값 무시는 fallback 선주입 관용구라 정상. `Archive::readBytes` 는
+  sticky `isError()` 가 받는다.
+- 로그의 `%s` 는 지원되는 printf 형이다(`%#` 관례와의 편차일 뿐, 버그 아님).
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6, 에디터 DX12 실기동 종료 0 · `[Error]` 0 건.
 
 ### 2026-09-11 (GPU 가 필요한 테스트를 스위트로 갈라 `nogpu` 를 실제로 nogpu 로 만든다)
 

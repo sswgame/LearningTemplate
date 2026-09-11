@@ -174,8 +174,17 @@ namespace sw
         arch << StateEnvelopeInternal::kVersion;
 
         // 1) 씬 오브젝트 바이너리 스냅샷
+        //
+        // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원되는 사용법이라
+        // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다) 여기서 끊으면 안 된다.
+        // 다만 예전엔 반환값을 **아무 흔적 없이** 버렸다 — 씬이 있어야 할 상황에서 오브젝트가 하나도 없는
+        // 세이브가 나와도 로드할 때까지 아무도 몰랐다. 빈 섹션은 그대로 쓰되 실마리는 남긴다.
         vector<uint8> bytesScene;
-        serializeSceneObjects( bytesScene );
+        if ( serializeSceneObjects( bytesScene ) == false )
+        {
+            SW_LOG_WARNING( "씬 오브젝트 스냅샷이 비었습니다 — 활성 씬이 없거나 게임 서비스가 바인딩되지 않았습니다. "
+                            "커스텀 상태만 저장됩니다." );
+        }
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 스냅샷
@@ -183,8 +192,13 @@ namespace sw
         const void*     pStateInstance = getStateInstance();
         if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
         {
+            // serialize 는 void 라 성공 여부를 돌려주지 않는다. 결과가 비면 **단정하지 않고 남긴다** —
+            // 프로퍼티가 없는 상태 타입도 있을 수 있어 여기서 실패로 끊으면 멀쩡한 저장을 막는다.
+            // 나중에 "상태가 비어서 돌아왔다" 를 추적할 실마리는 있어야 한다.
             vector<uint8> bytesState;
             BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState );
+            if ( bytesState.empty() )
+                SW_LOG_WARNING( "'%#' 의 커스텀 상태가 빈 채로 직렬화되었습니다 — 로드하면 기본값이 됩니다.", pStateTypeInfo->_name.c_str() );
             arch.writeSection( bytesState.data(), static_cast<uint32>( bytesState.size() ) );
         }
         else

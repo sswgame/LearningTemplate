@@ -43,19 +43,26 @@ namespace sw::editor
     {
         struct EditorAssetCommandsInternal
         {
+            /// @brief 파일 다이얼로그 결과 — `FileUtil::pumpFileDialogResults` 가 **메인 스레드에서** 부른다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )
                     return;
-                if ( EditorAssetCommands::saveActiveScene( listPath[0] ) )
+
+                // 같은 함수 안에서 한 번은 검사하고 한 번은 그냥 역참조하고 있었다 — 하나로 맞춘다.
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
+
+                if ( EditorAssetCommands::saveActiveScene( listPath[0] ) == false )
                 {
-                    EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
-                    EditorContext* pContext = EditorContext::get();
-                    if ( pContext != nullptr && pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
-                        EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
+                    pContext->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+                    return;
                 }
-                else
-                    EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+
+                pContext->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+                if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
+                    EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
             }
 
             static bool isPlayStoppedForSceneSwap()

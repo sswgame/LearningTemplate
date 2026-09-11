@@ -59,18 +59,12 @@ namespace sw
         [[maybe_unused]] static bool rebindSceneHierarchyFromJson( GameObject* pGameObject, string_view jsonString );
 
         // ------------------------------------------------------------------------------
-        // 2) 파일 · 다이얼로그
+        // 2) 파일
         // ------------------------------------------------------------------------------
         /** @brief GameObject 상태를 XML 파일로 저장합니다. */
         static bool saveToXmlFile( const GameObject* pGameObject, string_view filePath );
 
         /** @brief XML 파일에서 GameObject 상태를 로드합니다. */
         static bool loadFromXmlFile( GameObject* pGameObject, string_view filePath );
-
-        /** @brief 저장용 파일 다이얼로그를 엽니다. */
-        [[maybe_unused]] static void openSaveFileDialog( const GameObject* pGameObject, FileDialogDelegate onSaveDone = {} );
-
-        /** @brief 로드용 파일 다이얼로그를 엽니다. */
-        [[maybe_unused]] static void openLoadFileDialog( GameObject* pGameObject, FileDialogDelegate onLoadDone = {} );
     };
 } // namespace sw

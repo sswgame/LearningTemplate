@@ -6,6 +6,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/FrameArenaAllocator.h"
@@ -544,6 +545,8 @@ namespace sw
 #endif
             if ( _reloadFileManager != nullptr )
                 _reloadFileManager->update();
+            // 파일 다이얼로그 결과를 **여기서** 메인 스레드로 넘긴다 — 다이얼로그는 분리 스레드가 띄운다.
+            FileUtil::pumpFileDialogResults();
             engine::getAssetStreamingQueue().update();
 
             if ( _sceneManager != nullptr )

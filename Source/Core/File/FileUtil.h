@@ -160,8 +160,31 @@ namespace sw
         /** @brief UTF-8 BOM(0xEF, 0xBB, 0xBF)이 버퍼 시작 부분에 포함되어 있다면 포인터와 크기를 3바이트 건너뛰도록 조정합니다. */
         static void skipUtf8Bom( const uint8*& pData, size_t& size );
 
-        /** @brief 네이티브 파일 다이얼로그를 엽니다. */
+        /**
+         * @brief 네이티브 파일 다이얼로그를 엽니다. **결과 델리게이트는 메인 스레드에서 불립니다.**
+         * @details 다이얼로그 자체는 분리(detached) 스레드가 띄운다 — 네이티브 다이얼로그는 사용자가 닫을 때까지
+         *          돌아오지 않으므로 그 자리에서 기다리면 프레임이 멈춘다. 그래서 **결과만** 큐에 담고,
+         *          `pumpFileDialogResults` 가 메인 스레드에서 꺼내 델리게이트를 부른다.
+         *
+         *          예전엔 그 스레드에서 곧바로 델리게이트를 불렀다. 그러면 콜백이 씬·컴포넌트·에디터 상태처럼
+         *          메인 스레드가 매 프레임 만지는 것들을 **동시에** 고치게 된다(실제로 씬 직렬화와 컴포넌트
+         *          역직렬화가 그 스레드에서 돌고 있었다). 호출부마다 큐를 하나씩 두는 대신 여기서 한 번 막는다.
+         * @param params 다이얼로그 설정
+         * @param onSuccess 사용자가 파일을 고른 경우 **메인 스레드에서** 불릴 델리게이트 (취소하면 불리지 않는다)
+         */
         static void openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess );
+        /**
+         * @brief 완료된 파일 다이얼로그 결과를 처리합니다 — **메인 스레드에서 프레임마다** 부릅니다.
+         * @details 아무도 부르지 않으면 결과가 전달되지 않을 뿐 경합은 없다(헤드리스·도구 실행이 그렇다).
+         */
+        static void pumpFileDialogResults();
+        /**
+         * @brief 아직 전달되지 않은 파일 다이얼로그 결과를 버립니다 — 종료·모듈 언로드 때 부릅니다.
+         * @details 델리게이트는 로드 가능한 모듈(EditorModule 등) 안의 코드를 가리킬 수 있고, 델리게이트는
+         *          대상의 생존을 확인하지 않는다. 그 모듈이 내려가기 전에 이걸 불러 끊어야 한다. 이미 열려
+         *          있는 다이얼로그의 결과도 세대 번호로 함께 버려진다.
+         */
+        static void cancelFileDialogResults();
         /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 수집합니다.
          * @details 실제 파일시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려준다**(구분자만 `/`). 그대로
