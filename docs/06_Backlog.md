@@ -211,30 +211,25 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 "윈도우 밖에서 한 번도 안 돌려본 코드"가 아니라 **플랫폼과 무관한 잠복 버그**였다(Vulkan
 스왑체인 교착이 대표적이다). clang-format 조달과 LLVM 경로 손목록도 같은 날 닫았다(3절).
 
-**남은 것 — 포맷된 적 없는 파일 22 개** (2026-09-12 재측정. 예전에 적힌 11 개는 낡은 수치였다)
+**포맷 관련은 없다 (2026-09-12 확인).** 예전에 "포맷된 적 없는 파일 11 개" 로 적혀 있었고, 같은 날
+내가 그것을 "실측 22 개" 로 고쳤는데 **둘 다 틀렸다.** 저장소가 고정한
+`Tools/LLVM/bin/clang-format.exe`(20.1.8) 로 전수 조사하면 **0 개**다.
 
-Editor: `Common/Config/EditorConfig.cpp` · `Common/Gui/EditorChrome.cpp` ·
-`Common/Gui/EditorNotificationManager.cpp` · `Panels/HierarchyPanel.cpp` · `Panels/InspectorPanel.cpp` ·
-`Viewport/EditorViewportClient.cpp`
+**PATH 의 clang-format 으로 재면 안 된다.** 내 PC 의 PATH 에는 22.1.8 이 있어서 22 개가 나왔다 —
+버전이 다르면 같은 파일을 다르게 포맷하므로 그 수는 아무 의미가 없다. `Scripts/common/Host.py` 의
+`resolveClangFormat` 이 toolchain_config → `Tools/LLVM/bin` 을 먼저 보고 PATH 는 마지막에 보는 것도
+같은 이유이고, 그 함수의 주석이 "한쪽에서 커밋한 줄을 다른 쪽 훅이 거부하는 왕복" 을 이미 적어 두었다.
+pre-commit 게이트(`runClangFormatBatch`)도 같은 고정 바이너리를 쓴다.
 
-Engine: `Graphics/RHI/Support/RHIReleaseQueue.cpp` · `Graphics/RHI/Vulkan/VulkanRHICommandContext.cpp` ·
-`Graphics/RHI/Vulkan/VulkanRHIResource.cpp` · `Graphics/RHI/Vulkan/VulkanRHIResourcePipeline.cpp` ·
-`Graphics/Renderer/Frame/FrameRendererDraw.cpp` · `Graphics/Renderer/Frame/FrameRendererPassExecute.cpp` ·
-`Graphics/Renderer/Scene/GpuScene.cpp` · `Graphics/Shader/Binding/ShaderBindingContract.cpp` ·
-`Serialization/Format/JsonSerializer.cpp` · `Utility/Xml/XmlDocument.cpp`
+세려면 저장소 것을 명시한다:
 
-Test/Tools: `CoreTest/TestDelegate.cpp` · `EngineTest/TestCompressionAndSpatial.cpp` ·
-`EngineTest/TestEditorCommandStack.cpp` · `EngineTest/TestResource.cpp` · `ReflectionTest/TestReflection.cpp` ·
-`Tools/ReflectionParser/AstVisitor.cpp`
+```bash
+CF=Tools/LLVM/bin/clang-format.exe
+find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name '*.inl' \) -print0 \
+  | xargs -0 -P 8 -n 1 -I{} sh -c "\"$CF\" --dry-run --ferror-limit=0 \"{}\" 2>&1 | grep -q warning: && echo {}"
+```
 
-**세는 법**: `clang-format --dry-run` 을 여러 파일에 한 번에 돌리면 결과가 조용히 잘린다.
-파일당 한 번씩 돌려야 한다 — `xargs -P 8 -n 1 -I{} sh -c 'clang-format --dry-run --ferror-limit=0 "{}" 2>&1 | grep -q warning: && echo "{}"'`.
-`PreCommitLint.py` 의 포맷 게이트도 배치라, 위반이 대량으로 쌓이면 조용히 통과시킬 수 있다.
-
-clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프트가 아니라 애초에 포매터를 거친
-적이 없는 파일들이다(훅은 staged 파일만 본다). 손대는 김에 같이 포맷하면 그 커밋의 진짜 변경이
-묻히므로, **기계적 정리 한 번으로 따로** 하는 게 낫다.
-
+(파일당 한 번씩 돌리는 이유: `--dry-run` 은 여러 파일을 한 번에 주면 결과가 조용히 잘린다.)
 
 **그대로 유효한 함정 (환경)**
 
@@ -460,9 +455,11 @@ pre-commit 이 잡는다.
 (전역 219건에서 끊겼고, 보고된 파일은 `find` 순서상 맨 앞인 `Source/App` · `Source/Core` 뿐이었다).
 
 - `PreCommitLint.py` 의 `runClangFormatBatch(checkOnly=True)` 도 같은 방식이다. 스테이지된 파일에
-  위반이 대량으로 쌓이면 게이트가 조용히 통과시킬 수 있다. **지금 트리에 clang-format 이 걸리는
-  파일이 22개 남아 있다** (이번 변경과 무관한 기존 드리프트, 파일당 1회씩 돌려 센 수).
+  위반이 대량으로 쌓이면 게이트가 조용히 통과시킬 수 있다.
 - **숫자를 도구 하나로만 세지 말 것.** 이번에도 독립적으로 센 스캔이 어긋나서 잡았다.
+- **그런데 같은 날 나는 또 틀렸다.** 여기 "트리에 22 개가 남아 있다" 고 적었는데, 그건 PATH 의
+  clang-format **22.1.8** 로 센 수였다. 저장소가 고정한 `Tools/LLVM/bin/clang-format.exe`(20.1.8)
+  로는 **0 개**다. 도구를 바꿔 세는 것은 세는 법을 바꾸는 것과 같다 — 1-2b 절에 정정해 두었다.
 
 **부수 발견**: `Source/Core/String/StringBuilder.h` 는 한글 주석 안에 실제 NUL 바이트가 한 개 들어
 있어 git 이 이 파일을 **바이너리로 취급**한다(diff 가 `Bin 12931 -> 12893 bytes` 로만 나온다).
