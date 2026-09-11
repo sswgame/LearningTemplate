@@ -135,6 +135,9 @@ namespace sw
     {
         HashedStringPool::initialize();
 
+        /** @brief 설정 블록에서 채우고 아래 RHI·EngineData 블록이 이어서 읽는다. */
+        const EngineConfig* pEngineConfig = nullptr;
+
         BLOCK( "Logger / DeadlockDetector / MemoryProfiler / CommandLine / GVM 초기화" )
         {
             _logger = make_unique<Logger>();
@@ -258,8 +261,46 @@ namespace sw
             engine::registerModuleTypes( "GameFramework" );
         }
 
+        // 설정은 리소스 초기화보다 **먼저** 읽는다.
+        //
+        // ConfigManager 가 필요한 것은 `ResourceUtil` 이 이미 찾아 둔 프로젝트 루트 하나뿐이다.
+        // 반대로 `ResourceManager::initialize` 는 GameConfig 의 `_packRoot` 와 검색 우선순위가
+        // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽을 수 있다.
+        //
+        // 예전에는 순서가 반대였고, 그래서 리소스를 먼저 세운 뒤 설정을 읽고 **팩 마운트와 레지스트리
+        // 로드를 한 번 더** 해서 메웠다. 보정이 필요하다는 것 자체가 순서가 틀렸다는 신호였다.
+        BLOCK( "엔진 설정 로드 (리소스 초기화보다 먼저)" )
+        {
+            // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다 — 작업 디렉터리
+            // 기준으로만 찾으면 전부 "없음"이 되어 조용히 기본값으로 떨어진다. Resource/ 를 찾을 때
+            // 이미 알아낸 프로젝트 루트를 기준으로 넘겨준다.
+            _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+
+            const hashed_string kEngineConfigHash = hashed_string{ "EngineConfig" };
+            pEngineConfig                         = _configManager->ensureConfig<EngineConfig>(
+                kEngineConfigHash, config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
+            if ( pEngineConfig == nullptr )
+                return false;
+
+            const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
+            const GameConfig*   pGameConfig     = _configManager->ensureConfig<GameConfig>(
+                kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+            if ( pGameConfig != nullptr )
+                GameConfig::setActive( *pGameConfig );
+
+            // GameConfig 가 활성화된 **뒤에 반드시 한 번은** 검색 루트를 다시 계산해야 한다.
+            // ResourceUtil::initialize() 시점에는 `_packRoot` 가 비어 있어 "game" 토큰이 아무 루트도
+            // 만들지 못한다. 설정의 우선순위 목록이 비어 있어도 재계산은 건너뛰면 안 된다.
+            const vector<string> listResourcePriority = pEngineConfig->_listResourcePriority.empty()
+                                                          ? ResourceUtil::getSearchPriority()
+                                                          : pEngineConfig->_listResourcePriority;
+            ResourceUtil::setSearchPriority( listResourcePriority );
+        }
+
         BLOCK( "Task / Resource / Scene 초기화" )
         {
+            // 여기서 도는 mountStartupPacks() · loadAssetRegistries() 가 **유일한 호출**이다.
+            // 위에서 GameConfig 와 검색 우선순위를 이미 정해 두었으므로 한 번에 제대로 실린다.
             if ( _resourceManager->initialize() == false )
                 return false;
             if ( _taskManager->initialize() == false )
@@ -275,50 +316,8 @@ namespace sw
                 return false;
         }
 
-        BLOCK( "엔진 기본 설정 로드 및 RHI 백엔드 선정 & 초기화" )
+        BLOCK( "EngineData 로드 및 RHI 백엔드 선정 & 초기화" )
         {
-            // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다 — 작업 디렉터리
-            // 기준으로만 찾으면 전부 "없음"이 되어 조용히 기본값으로 떨어진다. Resource/ 를 찾을 때
-            // 이미 알아낸 프로젝트 루트를 기준으로 넘겨준다.
-            _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
-
-            const hashed_string kEngineConfigHash = hashed_string{ "EngineConfig" };
-            const EngineConfig* pEngineConfig     = _configManager->ensureConfig<EngineConfig>(
-                kEngineConfigHash, config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
-            if ( pEngineConfig == nullptr )
-                return false;
-
-            const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
-            const GameConfig*   pGameConfig     = _configManager->ensureConfig<GameConfig>(
-                kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
-            if ( pGameConfig != nullptr )
-                GameConfig::setActive( *pGameConfig );
-
-            // GameConfig 가 활성화된 **뒤에 반드시 한 번은** 검색 루트를 다시 계산해야 한다.
-            // ResourceUtil::initialize() 시점에는 `_packRoot` 가 비어 있어 "game" 토큰이 아무 루트도
-            // 만들지 못한다. 예전에는 이 재계산이 EngineConfig 의 우선순위 목록이 비어 있지 않을
-            // 때에만 돌아서, 목록을 비워 두면 게임 팩이 검색 루트에서 통째로 빠진 채 남았다.
-            const vector<string> listResourcePriority = pEngineConfig->_listResourcePriority.empty()
-                                                          ? ResourceUtil::getSearchPriority()
-                                                          : pEngineConfig->_listResourcePriority;
-            ResourceUtil::setSearchPriority( listResourcePriority );
-
-            const string exeDir      = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-            const string exePacksDir = FileUtil::joinPath( exeDir, "Packs" );
-            if ( FileUtil::directoryExists( exePacksDir ) )
-            {
-                _resourceManager->getPackManager().scanAndMountPacks( exePacksDir, pEngineConfig->_listResourcePriority );
-            }
-            else
-            {
-                const string projectPacksDir = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" );
-                if ( FileUtil::directoryExists( projectPacksDir ) )
-                    _resourceManager->getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
-            }
-            // GameConfig 가 활성화되고 팩이 마운트된 뒤라야 게임 도메인의 레지스트리(`<packRoot>/assetregistry.txt`)를
-            // 찾을 수 있다 — ResourceManager::initialize 시점엔 _packRoot 가 비어 있어 engine/common 만 실렸다.
-            _resourceManager->loadAssetRegistries();
-
             if ( pEngineConfig->_engineData.empty() == false )
                 _engineData->loadFromResource( pEngineConfig->_engineData );
             else
