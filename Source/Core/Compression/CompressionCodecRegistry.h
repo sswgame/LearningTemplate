@@ -12,11 +12,15 @@ namespace sw
      * @brief 압축 코덱 관리 및 팩토리 레지스트리
      * @details 런타임에 다양한 압축 알고리즘을 등록, 조회, 교체할 수 있는 레지스트리입니다.
      *
-     *          **소유는 Core 다.** 예전에는 `EngineLoop` 이 인스턴스를 들고 엔진 서비스로 공개했는데,
-     *          정작 이걸 봐야 하는 `CompressionStream` 은 Core 에 있어서 **닿을 수 없었다**(Core → Engine
-     *          은 레이어 역행이다). 그래서 `pRegistry` 매개변수는 있는데 아무도 넘기지 않았고,
-     *          `registerCodec` 은 호출부가 하나도 없었다 — 문서가 약속한 LZ4/Zstd 확장이 통째로 죽어
-     *          있었다. 프로세스 기본 인스턴스를 Core 가 들면 그 구멍이 사라진다.
+     *          **소유는 `EngineLoop`(테스트에서는 테스트 호스트)이고, Core 에는 포인터 슬롯만 둔다.**
+     *          `CompressionStream` 이 Core 에 있어서 엔진 서비스 테이블에 닿을 수 없기 때문이다
+     *          (Core → Engine 은 레이어 역행). `Logger` 가 `setGlobalSink` 로 푸는 것과 같은 모양이다.
+     *
+     *          이 슬롯이 없던 시절에는 `pRegistry` 매개변수가 있는데 아무도 넘기지 않아 **항상**
+     *          내장 코덱으로 갔고, `registerCodec` 은 호출부가 하나도 없었다 — 문서가 약속한 LZ4/Zstd
+     *          확장이 통째로 죽어 있었다. 그 다음에는 `getDefault()` 가 함수 지역 static 을 들고 있었는데,
+     *          그러면 **테스트 호스트가 서비스에 꽂는 인스턴스와 스트림이 보는 인스턴스가 갈라진다**
+     *          (실제로 갈라져 있었다). 소유를 하나로 두고 슬롯이 그것을 가리키게 해서 둘 다 닫는다.
      *
      *          **팩(`ResourcePackReader`)은 여기를 쓰지 않는다.** 팩은 자기 포맷 enum(`PackCompressionType`)
      *          을 디스크에 박고 직접 해제한다. 두 enum 은 서로 다른 파일의 독립된 포맷이라(값도 2·3 에서
@@ -32,12 +36,20 @@ namespace sw
         CompressionCodecRegistry& operator=( const CompressionCodecRegistry& ) = delete;
 
         /**
-         * @brief 이 프로세스의 기본 레지스트리입니다.
-         * @details `CompressionStream` 이 레지스트리를 따로 받지 않았을 때 보는 곳이다. 생성자가 내장
-         *          코덱을 채우므로 `initialize` 전에도 쓸 수 있다(도구·테스트 경로).
-         * @note 실체는 `Engine.dll`(Core 가 흡수된다)에 하나뿐이다 — 로드되는 모듈들도 같은 것을 본다.
+         * @brief 이 프로세스에서 쓸 레지스트리를 슬롯에 바인딩합니다. 소유는 호출자입니다.
+         * @details 바인딩 지점은 `EngineLoop::initialize` 와 `TestFramework/main.cpp` 둘뿐이고,
+         *          같은 포인터를 엔진 서비스에도 꽂아야 두 경로가 하나로 남는다.
+         *          해제할 때 `nullptr` 로 되돌린다 — 소유자가 죽은 뒤 슬롯이 가리키면 안 된다.
          */
-        static CompressionCodecRegistry& getDefault();
+        static void setActive( CompressionCodecRegistry* pRegistry );
+
+        /**
+         * @brief 바인딩된 레지스트리입니다. 아직 없으면 `nullptr`.
+         * @details `CompressionStream` 이 레지스트리를 따로 받지 않았을 때 보는 곳이다. 널이면
+         *          스트림은 내장 코덱으로 물러난다(Core 만 링크하는 도구 경로).
+         * @note 슬롯의 실체는 `Engine.dll`(Core 가 흡수된다)에 하나뿐이다 — 로드되는 모듈들도 같은 것을 본다.
+         */
+        static CompressionCodecRegistry* getActive();
 
         void initialize();
         void shutdown();

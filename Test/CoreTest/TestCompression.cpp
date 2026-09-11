@@ -134,14 +134,14 @@ namespace
  */
 SW_TEST_CASE( Core_Compression, RegisteredCodecIsUsedByStream )
 {
-    sw::CompressionCodecRegistry& registry  = sw::CompressionCodecRegistry::getDefault();
+    sw::CompressionCodecRegistry& registry  = *sw::CompressionCodecRegistry::getActive();
     const bool                    bHadCodec = registry.isCodecRegistered( sw::CompressionCodecType::Custom );
 
     registry.registerCodec( sw::make_unique<XorTestCodec>() );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadCodec]()
     {
         if ( bHadCodec == false )
-            sw::CompressionCodecRegistry::getDefault().unregisterCodec( sw::CompressionCodecType::Custom );
+            sw::CompressionCodecRegistry::getActive()->unregisterCodec( sw::CompressionCodecType::Custom );
     } ) );
 
     const sw::string original = "registered-codec-must-be-used";

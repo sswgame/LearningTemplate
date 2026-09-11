@@ -204,13 +204,15 @@ namespace sw
             _debugDrawQueue     = make_unique<DebugDrawQueue>();
             _frameDoubleBuffer  = make_unique<FrameDoubleBuffer>();
             _rhiBackendRegistry = make_unique<RHIBackendRegistry>();
-            // 코덱 레지스트리는 **Core 가 소유**한다 — 이걸 봐야 하는 CompressionStream 이 Core 에 있어서,
-            // 엔진이 들고 있으면 닿지 못한다. 여기서는 내장 코덱이 채워져 있는지만 확인하고 서비스로 공개한다.
-            CompressionCodecRegistry::getDefault().initialize();
+            // 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 보도록 슬롯에 꽂는다 —
+            // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
+            _compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
+            _compressionCodecRegistry->initialize();
+            CompressionCodecRegistry::setActive( _compressionCodecRegistry.get() );
             // 외부 라이브러리 코덱은 **여기서** 등록한다. Core 는 압축 라이브러리에 종속되지 않게 두므로
             // (ReflectionParser 가 Core 를 링크한다) LZ4/Zstd 는 Engine 이 들고 와 붙인다.
-            CompressionCodecRegistry::getDefault().registerCodec( make_unique<Lz4CompressionCodec>() );
-            CompressionCodecRegistry::getDefault().registerCodec( make_unique<ZstdCompressionCodec>() );
+            _compressionCodecRegistry->registerCodec( make_unique<Lz4CompressionCodec>() );
+            _compressionCodecRegistry->registerCodec( make_unique<ZstdCompressionCodec>() );
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
             _componentDefaults = make_unique<ComponentDefaults>();
@@ -235,7 +237,7 @@ namespace sw
             services._pDebugDrawQueue           = _debugDrawQueue.get();
             services._pFrameDoubleBuffer        = _frameDoubleBuffer.get();
             services._pRHIBackendRegistry       = _rhiBackendRegistry.get();
-            services._pCompressionCodecRegistry = &CompressionCodecRegistry::getDefault();
+            services._pCompressionCodecRegistry = _compressionCodecRegistry.get();
             services._pShaderCache              = _shaderCache.get();
             services._pComponentDefaults        = _componentDefaults.get();
             services._pFrameProfiler            = _frameProfiler.get();
@@ -466,9 +468,8 @@ namespace sw
                 _memoryProfiler->shutdown();
             if ( _shaderCache != nullptr )
                 _shaderCache->shutdown();
-            // 코덱 레지스트리는 **비우지 않는다.** 프로세스가 소유하므로 여기서 shutdown 하면 엔진을
-            // 내린 뒤 도구·테스트가 쓰는 압축 경로에서 내장 코덱이 사라진다. 모듈이 등록한 코덱을
-            // 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
+            // 코덱 레지스트리는 여기서 shutdown 하지 않는다 — 아래 reset 블록에서 슬롯을 끊고 통째로
+            // 없앤다. 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
             if ( _logger != nullptr )
                 _logger->shutdown();
 
@@ -489,6 +490,11 @@ namespace sw
             _rhiBackendRegistry.reset();
             _shaderCache.reset();
             _componentDefaults.reset();
+            _frameProfiler.reset();
+            // 슬롯부터 끊는다 — 소유자가 죽은 뒤에도 슬롯이 가리키고 있으면 엔진을 내린 다음의
+            // 압축 경로가 해제된 레지스트리를 읽는다. 끊고 나면 CompressionStream 은 내장 코덱으로 문다.
+            CompressionCodecRegistry::setActive( nullptr );
+            _compressionCodecRegistry.reset();
 
             // [Note] ResourceManager는 가장 밑바탕이 되는 시스템입니다.
             // 다른 매니저들의 reset() 시 소멸자가 호출되며 들고 있던 리소스들을 해제하는데,

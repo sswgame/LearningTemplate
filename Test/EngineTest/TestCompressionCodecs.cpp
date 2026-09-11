@@ -204,7 +204,7 @@ SW_TEST_CASE( Engine_Compression, RegisteredExternalCodecsAreReachableFromStream
 {
     // **테스트 호스트는 EngineLoop 을 돌리지 않는다** — 앱에서는 거기서 등록하지만 여기서는 없다.
     // 스킵하면 아무것도 증명하지 못하므로 직접 등록해서 "등록하면 스트림이 집어 쓴다" 를 확인한다.
-    sw::CompressionCodecRegistry& registry = sw::CompressionCodecRegistry::getDefault();
+    sw::CompressionCodecRegistry& registry = *sw::CompressionCodecRegistry::getActive();
     const bool                    bHadLz4  = registry.isCodecRegistered( sw::CompressionCodecType::LZ4 );
     const bool                    bHadZstd = registry.isCodecRegistered( sw::CompressionCodecType::Zstd );
 
@@ -215,7 +215,7 @@ SW_TEST_CASE( Engine_Compression, RegisteredExternalCodecsAreReachableFromStream
 
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadLz4, bHadZstd]()
     {
-        sw::CompressionCodecRegistry& reg = sw::CompressionCodecRegistry::getDefault();
+        sw::CompressionCodecRegistry& reg = *sw::CompressionCodecRegistry::getActive();
         if ( bHadLz4 == false )
             reg.unregisterCodec( sw::CompressionCodecType::LZ4 );
         if ( bHadZstd == false )

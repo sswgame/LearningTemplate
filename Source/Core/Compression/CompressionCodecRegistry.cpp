@@ -4,11 +4,31 @@
 
 #include "Core/Compression/NullCompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "Compression" );
+
+    namespace
+    {
+        /**
+         * @brief 활성 레지스트리 슬롯 — 인스턴스가 아니라 **포인터**다. 소유는 EngineLoop/테스트 호스트.
+         * @details 렌더 스레드·잡 스레드가 압축 경로를 동시에 타므로 원자로 읽고 쓴다.
+         */
+        atomic<CompressionCodecRegistry*> s_pActiveRegistry{ nullptr };
+    } // namespace
+
+    void CompressionCodecRegistry::setActive( CompressionCodecRegistry* pRegistry )
+    {
+        s_pActiveRegistry.store( pRegistry, std::memory_order_release );
+    }
+
+    CompressionCodecRegistry* CompressionCodecRegistry::getActive()
+    {
+        return s_pActiveRegistry.load( std::memory_order_acquire );
+    }
 
     CompressionCodecRegistry::CompressionCodecRegistry()
         : _mutex{}
@@ -16,13 +36,6 @@ namespace sw
         , _defaultCodecType{ CompressionCodecType::RLE }
     {
         registerBuiltinCodecs();
-    }
-
-    CompressionCodecRegistry& CompressionCodecRegistry::getDefault()
-    {
-        // 함수 지역 static 이라 첫 사용 시점에 만들어진다 — 정적 초기화 순서에 걸리지 않는다.
-        static CompressionCodecRegistry s_default;
-        return s_default;
     }
 
     void CompressionCodecRegistry::initialize()

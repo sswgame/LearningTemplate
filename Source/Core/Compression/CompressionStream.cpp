@@ -13,19 +13,22 @@ namespace sw
     namespace
     {
         /**
-         * @brief 코덱을 고릅니다 — 넘겨받은 레지스트리, 없으면 **프로세스 기본 레지스트리**.
+         * @brief 코덱을 고릅니다 — 넘겨받은 레지스트리, 없으면 **바인딩된 활성 레지스트리**.
          * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩 코덱으로 갔다. 그런데 넘기는 호출부가
          *          하나도 없어서(레지스트리를 엔진이 들고 있었고 Core 는 거기 닿지 못한다) **항상**
-         *          하드코딩으로 갔고, 등록한 코덱은 쓰이지 않았다. 이제 기본 레지스트리를 본다.
-         *          그것도 비어 있을 때만(shutdown 이후 등) 내장 코덱으로 물러난다.
+         *          하드코딩으로 갔고, 등록한 코덱은 쓰이지 않았다. 이제 활성 레지스트리를 본다.
+         *          슬롯이 비었거나(Core 만 링크하는 도구) 코덱이 없을 때만 내장 코덱으로 물러난다.
          */
         ICompressionCodec* resolveCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
         {
             if ( pRegistry == nullptr )
-                pRegistry = &CompressionCodecRegistry::getDefault();
+                pRegistry = CompressionCodecRegistry::getActive();
 
-            if ( ICompressionCodec* pCodec = pRegistry->getCodec( type ) )
-                return pCodec;
+            if ( pRegistry != nullptr )
+            {
+                if ( ICompressionCodec* pCodec = pRegistry->getCodec( type ) )
+                    return pCodec;
+            }
 
             static NullCompressionCodec s_nullCodec;
             static RleCompressionCodec  s_rleCodec;

@@ -80,6 +80,9 @@ int main( int32 argc, utf8* argv[] )
     deadlockDetector->initialize();
     memoryProfiler->initialize();
     compressionCodecRegistry->initialize();
+    // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
+    // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
+    sw::CompressionCodecRegistry::setActive( compressionCodecRegistry.get() );
     shaderCache->initialize();
     commandLineManager->initialize();
     globalVarManager->registerPendingVariables( "Engine", sw::GlobalVariableRegistrar::getHead() );
@@ -188,6 +191,7 @@ int main( int32 argc, utf8* argv[] )
     frameProfiler.reset();
     componentDefaults.reset();
     shaderCache.reset();
+    sw::CompressionCodecRegistry::setActive( nullptr );
     compressionCodecRegistry.reset();
     frameDoubleBuffer.reset();
     debugDrawQueue.reset();

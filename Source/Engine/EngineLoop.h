@@ -160,6 +160,8 @@ namespace sw
         unique_ptr<ShaderCache>         _shaderCache;
         unique_ptr<ComponentDefaults>   _componentDefaults;
         unique_ptr<FrameProfiler>       _frameProfiler;
+        /** @brief 압축 코덱 레지스트리. Core 의 CompressionStream 이 보도록 setActive 로 슬롯에 꽂는다. */
+        unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
 
         bool _bShellActionsBound;
         bool _bHeadless;
