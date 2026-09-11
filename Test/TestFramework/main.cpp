@@ -77,6 +77,14 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::FrameProfiler>            frameProfiler            = sw::make_unique<sw::FrameProfiler>();
 
     logger->initialize();
+    // 리소스 루트는 로거 다음에 찾는다(EngineLoop 과 같은 순서) — 실패했을 때의 진단이 남아야 하고,
+    // 아래 `configManager->setRootDirectory` 가 여기서 정해지는 프로젝트 루트를 바로 쓴다.
+    // 예전에는 `resourceManager->initialize()` 가 대신 불러 줬는데, 그건 설정보다 뒤였다.
+    if ( sw::ResourceUtil::initialize() == false )
+    {
+        SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
+        return -1;
+    }
     deadlockDetector->initialize();
     memoryProfiler->initialize();
     compressionCodecRegistry->initialize();
@@ -122,35 +130,44 @@ int main( int32 argc, utf8* argv[] )
     // ------------------------------------------------------------------------------
     // 1) 부트스트랩 — 리소스·태스크·씬·입력, 리플렉션 등록
     // ------------------------------------------------------------------------------
-    // 리플렉션은 리소스보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
-    // EngineLoop 도 같은 순서다(registerModuleTypes → ResourceManager::initialize → 설정 로드).
+    // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
     sw::engine::registerModuleTypes( "Engine" );
     sw::engine::registerModuleTypes( "GameFramework" );
     typeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 
-    if ( resourceManager->initialize() == false )
-        return -1;
-
-    // 설정을 앱과 같은 순서로 활성화한다. 이게 없으면 게임 도메인(`game/<pack>`)이 통째로 빠진다 —
-    // `loadAssetRegistries` 가 `GameConfig::getActive()._packRoot` 로 게임 레지스트리 경로를 만드는데,
-    // 활성 설정이 없으면 그 항목이 비어 engine/common 만 실린다. 그러면 시작 시점 GUID 표가 반쪽이
-    // 되고, GUID 로 옮긴 프리팹을 되찾는 경로가 죽는다.
+    // 설정은 리소스 초기화보다 **먼저** 읽는다 — EngineLoop 과 같은 순서다.
+    //
+    // `ResourceManager::initialize` 가 `mountStartupPacks` · `loadAssetRegistries` 를 하는데,
+    // `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임 레지스트리 경로를 만든다.
+    // 활성 설정이 없으면 그 항목이 비어 engine/common 만 실리고, 시작 시점 GUID 표가 반쪽이 되어
+    // GUID 로 옮긴 프리팹을 되찾는 경로가 죽는다.
     // 느슨한 `Resource/` 트리만 있는 Dev 에서는 `.meta` 스캔 폴백이 대신 채워 줘서 오래 드러나지
     // 않았다 — 팩이 하나라도 실리면(Shipping) `registered > 0` 이 되어 그 폴백은 돌지 않는다.
-    // App 은 EngineLoop 이 같은 자리에서 `loadAssetRegistries()` 를 한 번 더 부른다.
+    //
+    // 예전에는 리소스를 먼저 세운 뒤 설정을 읽고 `loadAssetRegistries()` 를 한 번 더 불러 메웠다.
+    // 게다가 `setSearchPriority` 가 `GameConfig::setActive` **보다 먼저**라, 그 재계산에서도 "game"
+    // 토큰이 풀리지 않았다.
     configManager->setRootDirectory( sw::ResourceUtil::getProjectFolderPath() );
 
     const sw::EngineConfig* pEngineConfig = configManager->ensureConfig<sw::EngineConfig>(
         sw::hashed_string{ "EngineConfig" }, sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
-    if ( pEngineConfig != nullptr && pEngineConfig->_listResourcePriority.empty() == false )
-        sw::ResourceUtil::setSearchPriority( pEngineConfig->_listResourcePriority );
 
     const sw::GameConfig* pGameConfig = configManager->ensureConfig<sw::GameConfig>(
         sw::hashed_string{ "GameConfig" }, sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
     if ( pGameConfig != nullptr )
         sw::GameConfig::setActive( *pGameConfig );
 
-    resourceManager->loadAssetRegistries();
+    // GameConfig 가 활성화된 뒤에 검색 루트를 계산해야 "game" 토큰이 팩 루트로 풀린다.
+    // 설정의 우선순위 목록이 비어 있어도 재계산은 건너뛰면 안 된다.
+    const sw::vector<sw::string> listResourcePriority =
+        ( pEngineConfig != nullptr && pEngineConfig->_listResourcePriority.empty() == false )
+            ? pEngineConfig->_listResourcePriority
+            : sw::ResourceUtil::getSearchPriority();
+    sw::ResourceUtil::setSearchPriority( listResourcePriority );
+
+    // 여기서 도는 mountStartupPacks() · loadAssetRegistries() 가 **유일한 호출**이다.
+    if ( resourceManager->initialize() == false )
+        return -1;
 
     if ( taskManager->initialize() == false )
         return -1;
