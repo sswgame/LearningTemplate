@@ -24,11 +24,16 @@ namespace sw
         {
             static bool loadTextByExtension( StringTable& table, string_view path, string_view text )
             {
-                if ( FileUtil::hasExtension( path, ".xml" ) )
-                    return table.loadFromXmlText( text );
-                if ( FileUtil::hasAnyExtension( path, { ".ini", ".kv" } ) )
-                    return table.loadFromKeyValueText( text );
-                return table.loadFromJsonText( text );
+                switch ( StringTable::detectTextFormat( path ) )
+                {
+                    case StringTableTextFormat::Xml:
+                        return table.loadFromXmlText( text );
+                    case StringTableTextFormat::KeyValue:
+                        return table.loadFromKeyValueText( text );
+                    case StringTableTextFormat::Json:
+                    default:
+                        return table.loadFromJsonText( text );
+                }
             }
         };
     } // namespace
@@ -36,6 +41,21 @@ namespace sw
 
 namespace sw
 {
+    StringTableTextFormat StringTable::detectTextFormat( string_view path )
+    {
+        if ( FileUtil::hasExtension( path, ".xml" ) )
+            return StringTableTextFormat::Xml;
+        if ( FileUtil::hasAnyExtension( path, { ".ini", ".kv" } ) )
+            return StringTableTextFormat::KeyValue;
+        return StringTableTextFormat::Json;
+    }
+
+    const vector<string_view>& StringTable::getTextExtensions()
+    {
+        static const vector<string_view> s_listExtension{ ".json", ".xml", ".ini", ".kv" };
+        return s_listExtension;
+    }
+
     bool StringTable::loadFromFile( const string& filePath )
     {
         if ( FileUtil::hasExtension( filePath, ".bin" ) )

@@ -123,11 +123,16 @@ namespace sw
 
     bool LocalizationManager::loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text )
     {
-        if ( FileUtil::hasExtension( pathHint, ".xml" ) )
-            return loadLanguageXml( languageCode, text );
-        if ( FileUtil::hasAnyExtension( pathHint, { ".ini", ".kv" } ) )
-            return loadLanguageKeyValue( languageCode, text );
-        return loadLanguageJson( languageCode, text );
+        switch ( StringTable::detectTextFormat( pathHint ) )
+        {
+            case StringTableTextFormat::Xml:
+                return loadLanguageXml( languageCode, text );
+            case StringTableTextFormat::KeyValue:
+                return loadLanguageKeyValue( languageCode, text );
+            case StringTableTextFormat::Json:
+            default:
+                return loadLanguageJson( languageCode, text );
+        }
     }
 
     bool LocalizationManager::loadLanguageJson( string_view languageCode, string_view jsonText )
@@ -241,10 +246,9 @@ namespace sw
 
             if ( bLoadedAny == false )
             {
-                bLoadedAny = loadLanguageDirectory( absDirPath, ".json", true ) || bLoadedAny;
-                bLoadedAny = loadLanguageDirectory( absDirPath, ".xml", true ) || bLoadedAny;
-                bLoadedAny = loadLanguageDirectory( absDirPath, ".ini", true ) || bLoadedAny;
-                bLoadedAny = loadLanguageDirectory( absDirPath, ".kv", true ) || bLoadedAny;
+                // 텍스트 확장자 목록은 StringTable 이 정본이다 — 여기 따로 적으면 셋째 목록이 된다.
+                for ( const string_view extension : StringTable::getTextExtensions() )
+                    bLoadedAny = loadLanguageDirectory( absDirPath, extension, true ) || bLoadedAny;
                 bLoadedAny = loadLanguageDirectory( absDirPath, ".bin", true ) || bLoadedAny;
             }
         }

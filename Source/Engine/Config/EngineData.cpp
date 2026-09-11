@@ -23,10 +23,11 @@ namespace sw
             return false;
         }
 
-        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다 — 그래서 실패해도 내장 기본값으로 동작한다.
+        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. loadFile 이 false 여도 그 앞까지 읽은 값은 이미
+        // 들어가 있다 — 리소스 경로라 "없음" 과 "일부 실패" 를 여기서 가르지 못하므로 둘 다 사실대로 적는다.
         if ( XmlSerializer::loadFile( path, this, *pTypeInfo ) == false )
         {
-            SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
+            SW_LOG_WARNING( "EngineData 를 읽지 못했거나 일부 필드가 어긋났습니다 — 읽힌 값은 쓰고 나머지는 내장 기본값입니다: %#", path );
             return false;
         }
 

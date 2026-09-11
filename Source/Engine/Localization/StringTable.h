@@ -8,9 +8,26 @@
 
 namespace sw
 {
+    /** @brief 로컬라이제이션 텍스트 파일의 형식. 경로 확장자로 정한다. */
+    enum class StringTableTextFormat : uint8
+    {
+        Json = 0, ///< 확장자를 모르면 여기로 온다
+        Xml,
+        KeyValue ///< `.ini` · `.kv`
+    };
+
     class SW_API StringTable
     {
     public:
+        /**
+         * @brief 경로 확장자로 텍스트 형식을 정합니다. **형식↔확장자 대응은 여기 하나다.**
+         * @details 예전에는 `StringTable` 과 `LocalizationManager` 가 각자 `{ ".ini", ".kv" }` 를 들고
+         *          같은 분기를 두 번 적었다. 목록이 둘이면 한쪽만 늘어난다.
+         */
+        static StringTableTextFormat detectTextFormat( string_view path );
+        /** @brief 텍스트 형식으로 읽을 수 있는 확장자 목록입니다. 디렉터리를 훑을 때 이 순서로 시도한다. */
+        static const vector<string_view>& getTextExtensions();
+
         bool        loadFromFile( const string& filePath );
         bool        loadFromJsonText( string_view jsonText );
         bool        loadFromXmlText( string_view xmlText );

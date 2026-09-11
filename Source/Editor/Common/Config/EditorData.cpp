@@ -42,10 +42,14 @@ namespace sw::editor
             return false;
         }
 
-        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다 — 실패해도 내장 기본값으로 동작한다.
+        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. 다만 loadFile 이 false 를 돌려줘도 그 앞까지
+        // 읽은 값은 **이미 들어가 있다** — "기본값" 은 파일이 없을 때만 참이라 두 경우를 갈라 말한다.
         if ( JsonSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
         {
-            SW_LOG_WARNING( "Using built-in defaults; failed to read %#", absPath );
+            if ( FileUtil::fileExists( absPath ) == false )
+                SW_LOG_INFO( "editordata 파일이 없어 내장 기본값을 씁니다: %#", absPath );
+            else
+                SW_LOG_WARNING( "editordata 의 일부 필드를 읽지 못했습니다(키 오타·형식) — 읽힌 값은 쓰고 나머지는 기본값입니다. 파일을 확인하세요: %#", absPath );
             return false;
         }
 
