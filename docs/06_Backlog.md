@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `a51775f8`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `db12d022`
 
 ---
 
@@ -288,6 +288,64 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (코덱 레지스트리가 구조적으로 고립돼 있었다 — 문서가 약속한 확장점이 죽어 있었다)
+
+"`EngineLoop::getCompressionCodecRegistry()` 호출부가 0" 은 증상이었다. 파고드니 계통 전체가 떠 있었다.
+
+**무엇이 끊겨 있었나**
+
+`CompressionCodecRegistry` 는 정식 엔진 서비스였다(`EngineServiceList.xxx`, `required=1`). `EngineLoop` 이
+만들고·초기화하고·공개하고·종료했다. 그런데:
+
+- `engine::getCompressionCodecRegistry()` 호출부 **0**
+- `registerCodec` / `unregisterCodec` 호출부 **0**
+- `CompressionStream::resolveCodec( type, pRegistry )` 는 레지스트리를 **받도록 설계돼 있는데** 넘기는
+  호출부가 없어 **항상** 하드코딩 코덱(`s_nullCodec`/`s_rleCodec`)으로 갔다
+
+**원인은 레이어였다.** 레지스트리 인스턴스는 `Engine` 이 들고, 그것을 봐야 하는 `CompressionStream` 은
+`Core` 에 있다. Core → Engine 은 역행이라 닿을 수 없다. 그래서 `pRegistry` 매개변수는 영원히 널이었다.
+README §4.3 의 "LZ4/Zstd 등록" 예제는 **아무 일도 하지 않는 코드**였다.
+
+**고친 방식 — 소유를 Core 로 내렸다**
+
+`CompressionCodecRegistry::getDefault()`(프로세스 하나, 함수 지역 static). `resolveCodec` 은 레지스트리를
+못 받으면 그것을 본다. `EngineLoop` 은 인스턴스를 만들지 않고 `initialize()` 만 부른 뒤 서비스 포인터를
+거기로 맞춘다 — 기존 호출부(`engine::getCompressionCodecRegistry()`)는 그대로 동작한다.
+
+- **엔진 종료 때 `shutdown()` 하지 않는다.** 프로세스가 소유하므로 비우면 엔진을 내린 뒤 도구·테스트가
+  쓰는 압축 경로에서 내장 코덱이 사라진다.
+- `EngineLoop` 의 멤버와 (쓰이지 않던) 접근자는 걷어냈다.
+
+**팩은 손대지 않았다 — 지금이 맞다**
+
+처음엔 `ResourcePackReader` 를 레지스트리에 물리려 했는데 **틀린 방향이었다.** 두 enum 은 서로 다른
+파일의 **독립된 on-disk 포맷**이다:
+
+| 값 | `PackCompressionType` (팩 엔트리) | `CompressionCodecType` (스트림 컨테이너 헤더) |
+|---|---|---|
+| 2 | **Zlib** | **LZ4** |
+| 3 | **LZ4** | **Zstd** |
+
+0·1·255 가 같아서 평행해 보이지만 2·3 에서 갈리고, `CompressionCodecType` 에는 **Zlib 이 없다.**
+`static_cast` 로 이으면 팩의 Zlib 이 LZ4 로 읽힌다. 엮으면 한쪽 포맷 변경이 다른 쪽을 끌고 간다.
+**팩이 자기 포맷을 직접 해제하는 지금이 맞다.**
+
+**증명**
+
+`Core_Compression.RegisteredCodecIsUsedByStream` — 바이트를 0xA5 와 XOR 하는 시험 코덱을 기본
+레지스트리에 등록하고, **레지스트리를 넘기지 않은 채** `CompressionStream` 으로 압축해 페이로드가
+XOR 되었는지 본다. 구코드에서는 `Zstd` 가 하드코딩 분기의 `s_nullCodec` 으로 가므로 반드시 진다.
+
+**남은 것 (알고 두는 것)**
+
+- 팩 포맷이 선언한 `LZ4`·`Custom` 은 리더가 `"Unsupported compression type %# in pack"` 으로 **거부**한다.
+  포맷이 약속만 하고 구현이 없다 — 팩에 LZ4 를 넣으려면 팩 쪽에 따로 구현해야 한다.
+- 모듈이 등록한 코덱은 **그 모듈이 거둬야 한다.** 레지스트리는 `Engine.dll` 에 살아 모듈보다 오래 간다
+  — Undo 스택·전역 변수와 같은 함정이라 `registerCodec` 주석과 README 에 적었다.
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6, `Core_Compression` 5/5,
+에디터 DX12 실기동 종료 0 · `[Error]` 0 건.
 
 ### 2026-09-11 (단순 래퍼 정리 — 473 후보 중 실제로 걷어낼 것은 넷뿐이었다)
 

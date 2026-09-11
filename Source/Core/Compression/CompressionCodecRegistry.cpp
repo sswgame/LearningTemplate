@@ -18,6 +18,13 @@ namespace sw
         registerBuiltinCodecs();
     }
 
+    CompressionCodecRegistry& CompressionCodecRegistry::getDefault()
+    {
+        // 함수 지역 static 이라 첫 사용 시점에 만들어진다 — 정적 초기화 순서에 걸리지 않는다.
+        static CompressionCodecRegistry s_default;
+        return s_default;
+    }
+
     void CompressionCodecRegistry::initialize()
     {
         std::scoped_lock<mutex> lock{ _mutex };

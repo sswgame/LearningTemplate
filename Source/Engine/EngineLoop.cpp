@@ -198,12 +198,13 @@ namespace sw
 #if !defined( SW_SHIPPING )
             _commandStack = make_unique<CommandStack>();
 #endif
-            _debugOverlayState        = make_unique<DebugOverlayState>();
-            _debugDrawQueue           = make_unique<DebugDrawQueue>();
-            _frameDoubleBuffer        = make_unique<FrameDoubleBuffer>();
-            _rhiBackendRegistry       = make_unique<RHIBackendRegistry>();
-            _compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
-            _compressionCodecRegistry->initialize();
+            _debugOverlayState  = make_unique<DebugOverlayState>();
+            _debugDrawQueue     = make_unique<DebugDrawQueue>();
+            _frameDoubleBuffer  = make_unique<FrameDoubleBuffer>();
+            _rhiBackendRegistry = make_unique<RHIBackendRegistry>();
+            // 코덱 레지스트리는 **Core 가 소유**한다 — 이걸 봐야 하는 CompressionStream 이 Core 에 있어서,
+            // 엔진이 들고 있으면 닿지 못한다. 여기서는 내장 코덱이 채워져 있는지만 확인하고 서비스로 공개한다.
+            CompressionCodecRegistry::getDefault().initialize();
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
             _componentDefaults = make_unique<ComponentDefaults>();
@@ -227,7 +228,7 @@ namespace sw
             services._pDebugDrawQueue           = _debugDrawQueue.get();
             services._pFrameDoubleBuffer        = _frameDoubleBuffer.get();
             services._pRHIBackendRegistry       = _rhiBackendRegistry.get();
-            services._pCompressionCodecRegistry = _compressionCodecRegistry.get();
+            services._pCompressionCodecRegistry = &CompressionCodecRegistry::getDefault();
             services._pShaderCache              = _shaderCache.get();
             services._pComponentDefaults        = _componentDefaults.get();
 
@@ -459,8 +460,9 @@ namespace sw
                 _memoryProfiler->shutdown();
             if ( _shaderCache != nullptr )
                 _shaderCache->shutdown();
-            if ( _compressionCodecRegistry != nullptr )
-                _compressionCodecRegistry->shutdown();
+            // 코덱 레지스트리는 **비우지 않는다.** 프로세스가 소유하므로 여기서 shutdown 하면 엔진을
+            // 내린 뒤 도구·테스트가 쓰는 압축 경로에서 내장 코덱이 사라진다. 모듈이 등록한 코덱을
+            // 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
             if ( _logger != nullptr )
                 _logger->shutdown();
 
@@ -479,7 +481,6 @@ namespace sw
             _debugDrawQueue.reset();
             _frameDoubleBuffer.reset();
             _rhiBackendRegistry.reset();
-            _compressionCodecRegistry.reset();
             _shaderCache.reset();
             _componentDefaults.reset();
 

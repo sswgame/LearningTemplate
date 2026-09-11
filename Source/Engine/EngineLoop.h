@@ -111,16 +111,15 @@ namespace sw
         // ----------------------------------------------------------------------
         // Getter (App이 ModuleHost 등과 연동하기 위해 필요)
         // ----------------------------------------------------------------------
-        LiveReloadManager*        getLiveReloadManager() const { return _liveReloadManager.get(); }
-        ConfigManager*            getConfigManager() const { return _configManager.get(); }
-        CommandLineManager*       getCommandLineManager() const { return _commandLineManager.get(); }
-        LocalizationManager*      getLocalizationManager() const { return _localizationManager.get(); }
-        RHI*                      getRHI() const { return _rhi.get(); }
-        RenderThread*             getRenderThread() const { return _renderThread.get(); }
-        CompressionCodecRegistry* getCompressionCodecRegistry() const { return _compressionCodecRegistry.get(); }
-        ShaderCache*              getShaderCache() const { return _shaderCache.get(); }
-        ComponentDefaults*        getComponentDefaults() const { return _componentDefaults.get(); }
-        bool                      isHeadless() const { return _bHeadless; }
+        LiveReloadManager*   getLiveReloadManager() const { return _liveReloadManager.get(); }
+        ConfigManager*       getConfigManager() const { return _configManager.get(); }
+        CommandLineManager*  getCommandLineManager() const { return _commandLineManager.get(); }
+        LocalizationManager* getLocalizationManager() const { return _localizationManager.get(); }
+        RHI*                 getRHI() const { return _rhi.get(); }
+        RenderThread*        getRenderThread() const { return _renderThread.get(); }
+        ShaderCache*         getShaderCache() const { return _shaderCache.get(); }
+        ComponentDefaults*   getComponentDefaults() const { return _componentDefaults.get(); }
+        bool                 isHeadless() const { return _bHeadless; }
 
     private:
         /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
@@ -149,17 +148,16 @@ namespace sw
         unique_ptr<RenderThread>          _renderThread;
         /** @brief GT 쪽 영속 GpuScene — buildFromScene의 콘텐츠 해시 캐싱이 프레임 간 유지되도록 여기 소유.
          *         매 프레임 CPU 스냅샷만 exportCpuSnapshot으로 뽑아 RenderFramePacket에 담아 RT로 넘긴다. */
-        GpuScene                             _gtGpuScene;
-        unique_ptr<EngineData>               _engineData;
-        unique_ptr<AssetStreamingQueue>      _assetStreamingQueue;
-        unique_ptr<CommandStack>             _commandStack;
-        unique_ptr<DebugOverlayState>        _debugOverlayState;
-        unique_ptr<DebugDrawQueue>           _debugDrawQueue;
-        unique_ptr<FrameDoubleBuffer>        _frameDoubleBuffer;
-        unique_ptr<RHIBackendRegistry>       _rhiBackendRegistry;
-        unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
-        unique_ptr<ShaderCache>              _shaderCache;
-        unique_ptr<ComponentDefaults>        _componentDefaults;
+        GpuScene                        _gtGpuScene;
+        unique_ptr<EngineData>          _engineData;
+        unique_ptr<AssetStreamingQueue> _assetStreamingQueue;
+        unique_ptr<CommandStack>        _commandStack;
+        unique_ptr<DebugOverlayState>   _debugOverlayState;
+        unique_ptr<DebugDrawQueue>      _debugDrawQueue;
+        unique_ptr<FrameDoubleBuffer>   _frameDoubleBuffer;
+        unique_ptr<RHIBackendRegistry>  _rhiBackendRegistry;
+        unique_ptr<ShaderCache>         _shaderCache;
+        unique_ptr<ComponentDefaults>   _componentDefaults;
 
         bool _bShellActionsBound;
         bool _bHeadless;

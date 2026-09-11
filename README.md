@@ -236,6 +236,18 @@ void registerCustomCodecs()
 }
 ```
 
+> **레지스트리는 `Core` 가 소유합니다** (`CompressionCodecRegistry::getDefault()` — 프로세스에 하나).
+> `engine::getCompressionCodecRegistry()` 는 그것을 가리키는 서비스라 어느 쪽으로 등록해도 같습니다.
+> 등록한 코덱은 `CompressionStream`(즉 `Archive`·`BinarySerializer` 의 압축 섹션)이 **바로 집어 씁니다.**
+>
+> 주의할 것 둘:
+>
+> - **로드 가능한 모듈에서 등록했다면 그 모듈의 shutdown 에서 `unregisterCodec` 하십시오.** 레지스트리는
+>   `Engine.dll` 에 살아 모듈보다 오래 갑니다 — 모듈이 내려가면 남은 코덱의 vtable 이 언맵된 주소가 됩니다.
+> - **리소스 팩(`.pack`)은 이 레지스트리를 쓰지 않습니다.** 팩은 자기 포맷 enum(`PackCompressionType`)을
+>   엔트리 헤더에 박고 직접 해제합니다. 두 enum 은 서로 다른 파일의 독립된 포맷이라(값도 2·3 에서
+>   어긋납니다) 엮지 않습니다.
+
 ---
 
 ### 4.4 C++ 실무 사용 예제 코드
