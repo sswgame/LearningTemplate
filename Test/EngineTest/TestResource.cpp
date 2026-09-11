@@ -306,6 +306,14 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
                                              static_cast<uint64>( sw::StringUtil::strlen( kDlcContent ) ) ) );
 
     // 3. DLC가 1순위인 우선순위 목록 적용
+    //    검색 우선순위는 **프로세스 전역**이다. 아래 단언 중 하나가 깨져 여기서 빠져나가면 다음
+    //    테스트들이 DLC 우선순위를 그대로 물려받으므로, 복구를 손으로 하지 않고 걸어 둔다.
+    const sw::vector<sw::string> listSavedPriority = sw::ResourceUtil::getSearchPriority();
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [listSavedPriority]()
+    {
+        sw::ResourceUtil::setSearchPriority( listSavedPriority );
+    } ) );
+
     const sw::vector<sw::string> listDlcFirstPriority = { "dlc/test_dlc", "game", "common", "engine", "editor" };
     SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listDlcFirstPriority ) );
 

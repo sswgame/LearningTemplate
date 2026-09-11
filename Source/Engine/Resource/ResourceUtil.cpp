@@ -23,6 +23,14 @@ namespace sw
             inline static unordered_map<uint64, string> _s_mapResolvedPath{};
 
             /**
+             * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
+             * @details 늦게 온 스레드는 첫 호출이 **끝날 때까지 막힌다** — 초기화 도중의 빈 경로를
+             *          보는 경우가 생기지 않는다. 이 안에서 `_s_pathCacheMutex` 를 다시 잡는데,
+             *          반대 순서로 잡는 곳은 없다.
+             */
+            inline static std::once_flag _s_initOnce{};
+
+            /**
              * @brief 전역 ID(`engine/`·`common/`·`editor/`·`game/<pack>/`)를 도메인 루트로 매핑합니다.
              * @param lowerRel normalizePath 된 상대 키
              * @param outRoot 도메인 절대 루트
@@ -140,50 +148,63 @@ namespace sw
 
     bool ResourceUtil::initialize()
     {
-        if ( _s_bInitialize.load( std::memory_order_acquire ) )
-            return true;
-        _s_bInitialize.store( true, std::memory_order_release );
-
+        // `_s_bInitialize` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
+        //
+        // 예전에는 본문 맨 앞에서 이 플래그를 켰고, 그래서 두 가지가 깨져 있었다:
+        //  1) 루트를 못 찾아 false 로 나가도 "초기화됨" 으로 남는다. `App::initialize` 는 반환값을
+        //     보지 않으므로, 실패를 검사하는 유일한 호출부(`ResourceManager::initialize`)가 그 다음에
+        //     true 를 받아 **빈 경로로** 팩 마운트와 레지스트리 로드를 진행한다.
+        //  2) 다른 스레드가 초기화 도중에 true 를 보고 아직 비어 있는 경로를 읽는다.
+        //
+        // `call_once` 는 콜러블이 **예외 없이 반환하면 완료로 표시**한다. 그래서 성패는 콜러블 안에서
+        // 플래그에 남기고, 돌려주는 값은 그 플래그를 읽는다 — 본문을 그냥 감싸기만 하면 실패가 사라진다.
+        std::call_once( ResourceUtilInternal::_s_initOnce, []()
         {
-            std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-            ResourceUtilInternal::_s_mapResolvedPath.clear();
-        }
-
-        string currentPath = FileUtil::getCurrentPath();
-        string rootPath;
-        while ( currentPath.empty() == false )
-        {
-            const string folderPath = FileUtil::joinPath( currentPath, path::kResourceFolder );
-            if ( FileUtil::directoryExists( folderPath ) )
             {
-                rootPath = currentPath;
-                break;
+                std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+                ResourceUtilInternal::_s_mapResolvedPath.clear();
             }
-            const string parent = FileUtil::getDirectoryPart( currentPath );
-            if ( parent.empty() || parent == currentPath )
-                break;
-            currentPath = parent;
-        }
 
-        SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder를 찾지 못했습니다" );
-        if ( rootPath.empty() )
-            return false;
+            string currentPath = FileUtil::getCurrentPath();
+            string rootPath;
+            while ( currentPath.empty() == false )
+            {
+                const string folderPath = FileUtil::joinPath( currentPath, path::kResourceFolder );
+                if ( FileUtil::directoryExists( folderPath ) )
+                {
+                    rootPath = currentPath;
+                    break;
+                }
+                const string parent = FileUtil::getDirectoryPart( currentPath );
+                if ( parent.empty() || parent == currentPath )
+                    break;
+                currentPath = parent;
+            }
 
-        SW_LOG_INFO( "RootFolder : %#", rootPath );
+            SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder를 찾지 못했습니다" );
+            if ( rootPath.empty() )
+                return; // 플래그를 켜지 않는다 — initialize() 가 false 를 돌려준다.
 
-        _s_projectFolderPath = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
+            SW_LOG_INFO( "RootFolder : %#", rootPath );
 
-        const string resourceRoot = FileUtil::joinPath( rootPath, path::kResourceFolder );
+            _s_projectFolderPath = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
 
-        // Canonical top-level Resource/ root (all domains are dynamically resolved under this).
-        _s_resourceRootFolderPath =
-            FileUtil::directoryExists( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
+            const string resourceRoot = FileUtil::joinPath( rootPath, path::kResourceFolder );
 
-        if ( _s_listSearchPriority.empty() )
-            _s_listSearchPriority = getDefaultSearchPriority();
+            // Canonical top-level Resource/ root (all domains are dynamically resolved under this).
+            _s_resourceRootFolderPath =
+                FileUtil::directoryExists( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
 
-        setSearchPriority( _s_listSearchPriority );
-        return true;
+            if ( _s_listSearchPriority.empty() )
+                _s_listSearchPriority = getDefaultSearchPriority();
+
+            setSearchPriority( _s_listSearchPriority );
+
+            // 여기까지 와야 상태가 전부 채워진 것이다.
+            _s_bInitialize.store( true, std::memory_order_release );
+        } );
+
+        return _s_bInitialize.load( std::memory_order_acquire );
     }
 
     string ResourceUtil::getResourcePath( string_view filePath, string_view folderName )
