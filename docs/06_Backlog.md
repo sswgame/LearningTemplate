@@ -279,6 +279,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (같은 병 — "한쪽만 만드는 값을 스냅샷이 매 프레임 옮긴다" — 를 다시 훑었다)
+
+`_indirectCommandCount` 의 모양으로 `GpuScene` 을 전수 조사했다: 필드 74개 각각의 **작성 함수(GT 빌드 vs RT 업로드)**
+와 **스냅샷 전송 여부(export/adopt)** 를 표로 만들었다. 옮기는 필드는 여덟이고, 그중 RT 가 쓰는 값이 옮겨지던 것은
+그 하나뿐이었다. 배치 안의 핸들(`_vertexBuffer` · `_materialCb`)과 머티리얼 그룹의 GPU 버퍼는 RT 가 **생략 경로 전에
+매 프레임 다시 채우거나**(`applyInstanceCbsVal` · `uploadMeshesVal`) **RT 소유 맵에 셰이더 경로로 보관해**(`_mapMaterialGpu`)
+스냅샷을 넘어 살아남는다 — 개수 필드가 따랐어야 할 설계다. GT 가 RT 전용 게터를 읽는 곳도 0.
+
+**그런데 같은 이유로 생긴 다른 결함이 하나 있다 — `GpuMaterialRetireQueue`.** 아직 고치지 않았다.
+- `GpuScene` 은 GT 빌더와 RT 소유자로 **같은 타입이 두 인스턴스**다. 큐도 인스턴스마다 하나씩이라
+  `syncFromBatches`(pin) 는 GT 쪽(`buildBatches`)에서, `advanceFrame` · `flushAfterGpu` 는 RT 쪽에서 돈다 —
+  **프로토콜의 두 반쪽이 서로 다른 객체 위에 있다.** GT 큐는 pin 만 쌓이고 RT 큐는 늘 빈 목록을 세고 있다.
+- 게다가 큐의 공개 API 는 sync/advance/flush/clear 뿐이고 `_uniquePinned` · `_listRetiring` 을 읽는 코드가 **저장소에
+  없다.** "GT 는 pin 이 풀리기 전에 파괴하면 안 된다" 는 헤더의 계약을 확인하는 곳이 하나도 없다.
+- 그 계약이 지키려던 위험은 실재한다. 스냅샷은 `Material*` · `MaterialInstance*` 를 **생포인터로** 싣고
+  (`GpuMeshBatch::_pMaterialInstance`, `GpuMaterialGroup::_listEntry`), RT 는 매 프레임 그것을 역참조한다
+  (`applyInstanceCbsVal` 의 `applyToGpu`, `uploadMaterialGroups` 의 `getBuffer`). 소유는 `MeshComponent` 의 `shared_ptr`
+  하나이고, 오브젝트 파괴나 `setMaterialInstance` 교체에 RT 동기화가 없다(`waitIdle` 은 씬 전환 한 곳뿐이고 그것도
+  디바이스 idle 이지 **패킷 링(깊이 3)** 을 비우는 게 아니다). 즉 실행 중 메시 하나를 지우거나 인스턴스를 바꾸면
+  최대 세 프레임 동안 RT 가 해제된 메모리를 읽을 수 있다. **재현은 하지 않았다** — 헤드리스로 인스턴스를 교체하는
+  스위치가 없다(벤치는 시작 시 한 번만 `setMaterialInstance`). ASAN 프리셋 + 에디터에서 큐브 삭제로 확인할 수 있다.
+- 고치는 방향(둘 중 하나, 앞이 낫다): ① 스냅샷이 `shared_ptr<MaterialInstance>` 를 실어 **패킷이 곧 수명**이 되게
+  하고 큐를 지운다 — 배치·그룹 원소는 머티리얼 종류 수만큼이라 참조 카운트 비용은 작다. ② 큐를 RT 인스턴스 하나에
+  두고 스냅샷이 pin 목록을 실어 나르며, GT 가 파괴 전에 RT 의 답을 묻는다 — 프로토콜이 늘고 지연이 생긴다.
+
+**`FrameDoubleBuffer`(프레임 아레나 GT/RT 더블 버퍼)는 아무도 쓰지 않는다.** 서비스로 등록되고 매 프레임
+`swapAndResetPrevious` 가 돌지만 `getFrameDoubleBuffer()` 호출부가 0이다. 결함은 아니고 죽은 장치다 — 남긴다/지운다는
+메모리 설계의 결정이라 목록만 둔다.
+
 ### 2026-09-12 (에디터에서 카메라를 움직일 때만 메시가 보이던 것 — 렌더 스레드 값이 매 프레임 0 으로 덮였다)
 
 **증상**: 에디터 뷰포트에서 WASD 로 날 때만 큐브가 보이고, 손을 떼면 사라진다. 그리드는 그대로다.
