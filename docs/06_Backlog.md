@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-12 · 기준 커밋 `4163684a`
+> 마지막 갱신: 2026-09-12 · 기준 커밋 `f30f228d`
 
 ---
 
@@ -211,12 +211,25 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
 "윈도우 밖에서 한 번도 안 돌려본 코드"가 아니라 **플랫폼과 무관한 잠복 버그**였다(Vulkan
 스왑체인 교착이 대표적이다). clang-format 조달과 LLVM 경로 손목록도 같은 날 닫았다(3절).
 
-**남은 것 — 포맷된 적 없는 파일 11 개**
+**남은 것 — 포맷된 적 없는 파일 22 개** (2026-09-12 재측정. 예전에 적힌 11 개는 낡은 수치였다)
 
-`Source/Editor/Common/Config/EditorConfig.cpp`, `EditorChrome.cpp`, `EditorNotificationManager.cpp`,
-`RHIReleaseQueue.cpp`, `VulkanRHICommandContext.cpp`, `FrameRendererDraw.cpp`,
-`ShaderBindingContract.cpp`, `Test/CoreTest/TestDelegate.cpp`, `TestEditorCommandStack.cpp`,
-`TestGameFramework.cpp`, `Tools/ReflectionParser/AstVisitor.cpp`.
+Editor: `Common/Config/EditorConfig.cpp` · `Common/Gui/EditorChrome.cpp` ·
+`Common/Gui/EditorNotificationManager.cpp` · `Panels/HierarchyPanel.cpp` · `Panels/InspectorPanel.cpp` ·
+`Viewport/EditorViewportClient.cpp`
+
+Engine: `Graphics/RHI/Support/RHIReleaseQueue.cpp` · `Graphics/RHI/Vulkan/VulkanRHICommandContext.cpp` ·
+`Graphics/RHI/Vulkan/VulkanRHIResource.cpp` · `Graphics/RHI/Vulkan/VulkanRHIResourcePipeline.cpp` ·
+`Graphics/Renderer/Frame/FrameRendererDraw.cpp` · `Graphics/Renderer/Frame/FrameRendererPassExecute.cpp` ·
+`Graphics/Renderer/Scene/GpuScene.cpp` · `Graphics/Shader/Binding/ShaderBindingContract.cpp` ·
+`Serialization/Format/JsonSerializer.cpp` · `Utility/Xml/XmlDocument.cpp`
+
+Test/Tools: `CoreTest/TestDelegate.cpp` · `EngineTest/TestCompressionAndSpatial.cpp` ·
+`EngineTest/TestEditorCommandStack.cpp` · `EngineTest/TestResource.cpp` · `ReflectionTest/TestReflection.cpp` ·
+`Tools/ReflectionParser/AstVisitor.cpp`
+
+**세는 법**: `clang-format --dry-run` 을 여러 파일에 한 번에 돌리면 결과가 조용히 잘린다.
+파일당 한 번씩 돌려야 한다 — `xargs -P 8 -n 1 -I{} sh -c 'clang-format --dry-run --ferror-limit=0 "{}" 2>&1 | grep -q warning: && echo "{}"'`.
+`PreCommitLint.py` 의 포맷 게이트도 배치라, 위반이 대량으로 쌓이면 조용히 통과시킬 수 있다.
 
 clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프트가 아니라 애초에 포매터를 거친
 적이 없는 파일들이다(훅은 staged 파일만 본다). 손대는 김에 같이 포맷하면 그 커밋의 진짜 변경이
@@ -235,24 +248,6 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 - 곁가지: `SetupVcpkg.py --install` 은 `scripts/buildsystems/vcpkg.cmake` 만 보고 "찾았다" 고
   끝낸다. 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg.exe` 만 있고 `vcpkg` 바이너리가
   없는데도 성공을 보고한다(툴체인이 알아서 부트스트랩하므로 치명적이진 않다).
-
-### 1-3. 확인만 하고 넘어간 것
-
-> 2026-09-10: **프리팹을 옮긴 뒤 GUID 복구를 실기동으로 확인했다** (Dev, 에디터 + 임시 씬). `testprop.prefab.xml`
-> 을 `testprop_moved.prefab.xml` 로 옮기고(.meta 의 sourcePath 도 같이) 옛 경로를 가리키는 씬을 둘 띄웠다:
-> **경로만** 있는 씬은 `[Error] Not found: .../testprop.prefab.xml` 뒤에 소스 트리에 남아 있던 **낡은
-> `testprop.prefab.bin`** 으로 조용히 물러났고, **GUID 가 있는** 씬은 레지스트리로 `testprop_moved.prefab.xml`
-> 을 찾아 로드했다. 배포본 경로는 2026-09-11 에 시작 씬을 걸고 A/B 로 닫았다 — 3절 "배포본이 씬을 연다" 항목.
->
-> 곁들여 본 것: `CookPrefabs` 가 소스 트리 안에 `*.prefab.bin` 을 남기고, `PrefabAsset` 은 XML 을 못 찾으면
-> 그 .bin 으로 물러난다. 위 실험에서 옮긴 프리팹의 옛 .bin 이 실패를 가렸다 — 이름을 바꾸거나 지운 프리팹이
-> 낡은 .bin 으로 되살아나는 경로였다. 두 단계로 닫았다: 먼저 Dev 의 폴백을 **경고로 격상**했고(`Source prefab
-> missing - loaded stale cooked binary instead`), 그 다음 **산출물을 소스 트리 밖으로 옮겼다** — 3절 "쿠킹 산출물
-> 스테이징" 항목. 이제 Dev 는 소스 옆에 .bin 이 없으므로 그 폴백 자체가 걸리지 않는다.
-
-> 2026-09-09 에 적었던 `FrameProfiler.cpp` Shipping 경고 3건은 **이미 해결되어 있었다** —
-> 보고 본문 전체가 `#if SW_LOG_LEVEL_COMPILED( 2 )` 로 감싸였고 `pTitle` 에는 `[[maybe_unused]]`
-> 가 붙어 있다(`4b522bab`). 지금 Shipping 빌드 경고는 0건이다.
 
 ---
 
@@ -288,6 +283,96 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-12 (기동 순서를 바로잡았다 — 보정 재실행이 있다는 것 자체가 신호였다)
+
+`ResourceUtil` 싱글턴 이야기에서 시작했는데, 값어치 있는 것은 싱글턴이 아니라 **그 주위의 순서**였다.
+넷 다 "소유와 전제가 흐릿해서" 생긴 것이다.
+
+**1) 실패해도 "초기화됨" 으로 남았다** (`84f89d38`). `ResourceUtil::initialize` 가 플래그를 본문
+**맨 앞에서** 켰다. 루트를 못 찾아 `false` 로 나가도 플래그는 켜진 채라, 실패를 검사하는 유일한
+호출부(`ResourceManager::initialize`)가 그 다음에 `true` 를 받아 **빈 경로로** 팩 마운트와 레지스트리
+로드를 진행했다. Debug 는 어설트가 먼저 멈추지만 Release/Shipping 은 로그만 남기고 계속 간다.
+`std::once_flag` 로 바꾸고 플래그의 뜻을 "시작했다" → **"성공했다"** 로 바꿨다.
+함정: `call_once` 는 콜러블이 예외 없이 반환하면 완료로 표시한다 — 본문을 그냥 감싸면 `false` 가
+사라지므로 성패를 플래그에 남기고 그것을 돌려줘야 한다.
+
+**2) 진단이 통째로 사라지고 있었다** (`ff2ec3fe`). `App::initialize` 맨 앞, **로거가 서기도 전에**
+`ResourceUtil::initialize()` 를 불렀다. `RootFolder` 로그와 어설트 메시지가 갈 곳이 없었고 반환값도
+보지 않았다. once_flag 라 두 번째 호출은 다시 찍지 않으므로 **첫 호출이 로거 뒤여야** 한다.
+`EngineLoop::initialize` 의 로거·크래시핸들러 직후로 옮겼다.
+실측 — 정상 실행: 전 `(아무 줄도 없음)` → 후 `RootFolder : D:/...`.
+`Resource/` 없는 곳: 전 출력 없음 → 후 `ASSERT failed / RootFolder를 찾지 못했습니다`.
+
+**3) 설정이 리소스 초기화보다 뒤였다** (`cca44202`, 테스트 호스트는 `366a615d`).
+`ResourceManager::initialize`(팩 마운트 + 레지스트리 로드)가 `GameConfig` 활성화 **전에** 돌아서
+게임 도메인이 빠진 채 실렸고, 그래서 뒤에서 **같은 일을 한 번 더** 해서 메우고 있었다.
+ConfigManager 가 필요한 것은 `ResourceUtil::getProjectFolderPath()` 하나뿐이라 설정을 앞으로 옮겼다.
+테스트 호스트는 한 가지 더 나빴다 — `setSearchPriority` 가 `GameConfig::setActive` **보다 먼저**라
+그 보정에서도 "game" 토큰이 안 풀렸다.
+실측(`App.exe` 의 "에셋 레지스트리" 로그 줄 수): **2줄 → 1줄**. EngineTest 도 같다.
+
+**4) 전제를 인자로 끌어올렸다** (`0ab705e0`). `ResourceManager::initialize()` 가 콘텐츠 적재까지
+하면서 "설정이 먼저" 라는 전제가 시그니처에도 호출부에도 없었다. `initialize()`(메커니즘) /
+`mountContent( priority )`(콘텐츠)로 갈랐다. 우선순위 적용과 마운트는 `mountContent` **안에서**
+붙여 뒀다 — 호출자에게 두 단계로 맡기면 순서를 뒤집거나 사이에 다른 것을 끼울 수 있다.
+경로 해석만 필요한 쪽은 이제 `initialize()` 만 부르고 팩 마운트 비용을 내지 않는다.
+
+**전수 확인은 런타임 계측으로 했다.** 정적 grep 은 무해한 것만 잔뜩 나온다. "게임 팩이 검색 루트에
+들어오기 전에 도는 리소스 조회" 를 세니 App·에디터·테스트 전 실행에서 **0건**이었고, 음성 대조로
+수정 전 순서를 되돌리니 **12건**(`assetregistry.txt`·머티리얼 `.meta`)이 잡혔다 — 계측이 실제로
+동작함을 확인한 뒤의 0 이라야 의미가 있다. "로거가 서기 전에 버려지는 로그" 도 같은 방식으로 셌다:
+App 0건, 테스트의 17건은 전부 `ScopedLogSuppressor` 가 일부러 끈 것이었다.
+
+**남은 것**: `ResourceUtil` 을 소유 객체로 바꾸는 전면 전환은 하지 않았다 — 호출부 247곳인데
+`SW_API` 로 export 되어 모듈들이 이미 같은 실체를 본다(DLL 경계 이득 없음). 실익이던 위 두 가지만 가져왔다.
+
+### 2026-09-12 (셰이더·코드 핫리로드 — 셋 다 "돌고 있다고 믿었지만 안 돌던" 것이었다)
+
+**셰이더 자동 재컴파일은 한 번도 동작한 적이 없었다** (`81b027b8`).
+`LiveShaderManager::attachReloadFileManager` 의 호출부가 **하나도 없어서** `registerWatch` 가 영영
+돌지 않았다. 앞으로도 계획이 없으므로 감시 경로를 지웠다(`notifyFileChanged` · include 역추적 표 ·
+`ShaderIncludeResolver` 포함). 수동 리로드(Ctrl+F8)는 남긴다.
+
+**그런데 수동 리로드도 안 돌고 있었다** (`84b9d42f`). `watchShader` 역시 프로덕션 호출부가 0이라
+`triggerReloadAll` 이 **빈 표**를 돌았다. 등록표를 없애고 **`ShaderCache` 를 정본**으로 썼다 —
+이 실행에서 실제로 컴파일된 셰이더가 곧 리로드 대상이다(`ShaderCacheEntry` 가 `ShaderCompileDesc`
+를 함께 든다). 표를 둘 두고 한쪽만 채워지는 구조가 원인이었다.
+
+**`.hlsli` 수정이 무시됐다.** 컴파일 캐시 키는 `max(.hlsl mtime, 공유 헤더 타임스탬프)` 인데 뒤쪽이
+`ShaderBaker::getSharedHeaderTimestamp` 의 함수 지역 static 이라 **프로세스당 한 번**만 계산된다.
+처음엔 캐시를 통째로 우회해서 고쳤는데, 그러면 **편집과 무관한 셰이더까지 전부** 다시 컴파일된다
+(실측 35개 전부). 우회 대신 `invalidateSharedHeaderTimestamp()` 로 키를 정확하게 만들고 캐시가
+거르게 했다(`8bd0e265`). 바이트코드가 같으면 로컬 캐시에 쓰지도 않는다 — 덮어쓰면 mtime 이
+새로워져 무관한 셰이더까지 다시 읽히고 PSO 도 전부 재생성된다.
+
+실측(실행 중 편집 → 리로드): 아무것도 안 고침 **35개 확인 / 0개 갱신**,
+`fullscreenblit.hlsl` 픽셀 수정 **35개 확인 / 1개 갱신**(PSMain=WRITE, VSMain=SKIP, 나머지 33개 캐시 히트).
+
+> **측정 함정 둘.** (1) 앱을 띄우기 **전에** 고치면 기동 시점 `getOrCompile` 이 이미 반영하므로
+> "0개 갱신" 이 나온다 — 리로드는 실행 중 편집이 대상이다. (2) `FileUtil::getFileTimestamp` 는
+> **초 단위**라 같은 초에 두 번 쓰면 값이 같다. 테스트는 수정 시각을 명시적으로 밀어야 결정적이다.
+
+**코드 핫리로드: 게임은 정상, 에디터는 멈췄다** (`f30f228d`).
+SWGame 은 실행 중 소스 수정 → 컴파일 → 스왑 → 새 코드 실행 → 씬 상태 복원까지 전부 확인했다.
+에디터 모듈은 컴파일과 스왑은 성공하는데 **3회 중 2회 영구 정지**했다.
+
+원인은 draw 스냅샷 프로토콜의 빠진 전이다. `_inFlightDrawSlot` 은 `updateUI`(UI 스레드)가
+publish 하면서 **세우고** `postPresent`(렌더 스레드)만 **푼다**. 리로드 경로는
+`drainRenderWorkers()` 로 렌더 워커를 먼저 재우므로 풀 주체가 사라지는데,
+`waitForDrawSnapshotIdle()` 은 타임아웃도 탈출 조건도 없는 spin 이다. 게임 모듈 리로드가 멀쩡했던
+이유도 같다 — `suspendModules(Game)` 은 `destroyEditorInstance` 를 부르지 않아 이 spin 을 안 탄다.
+
+전이를 하나 추가했다(획득 → present **또는 → 포기**): `IEditor::abandonPendingDraw()` +
+EditorAPI C-ABI 한 항목, `drainRenderWorkers()` 가 재운 직후 호출. 재운 쪽이 알려 주는 것이 맞다 —
+에디터는 소비자가 사라졌는지 알 방법이 없다. `shutdown()` 도 기다리지 않고 버린다.
+검증: 수정 전 2/3 정지 → 수정 후 **4/4 정상 종료**, 네 번 모두 스왑이 실제로 일어난 상태에서.
+
+> **EditorAPI 테이블이 바뀌었다.** App 과 EditorModule 을 **같이** 다시 빌드할 것.
+>
+> **행·크래시를 쫓을 때 `SW_LOG_*` 를 믿지 말 것.** 비동기 로거라 정지 직전 메시지가 통째로
+> 사라진다. 이번에도 그것 때문에 "계측이 안 돌았다" 고 한 번 잘못 읽었다 —
+> `fopen`+`fprintf`+`fflush`+`fclose` 동기 기록으로 바꾸니 한 번에 지점이 잡혔다.
 
 ### 2026-09-12 (싱글턴 걷어내기 — 넷은 옮겼고, 옮길 수 없는 것에는 이유가 있다)
 
