@@ -45,6 +45,12 @@ namespace sw::editor
     {
         struct EditorViewportClientInternal
         {
+            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다 — 예전에는 각자 리터럴을 들고 있었고
+            // 3D 그리드는 X·Z 가 뒤바뀐 채였다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)다.
+            static constexpr ImU32 _s_kColorAxisX = IM_COL32( 235, 65, 65, 255 );
+            static constexpr ImU32 _s_kColorAxisY = IM_COL32( 65, 220, 95, 255 );
+            static constexpr ImU32 _s_kColorAxisZ = IM_COL32( 65, 130, 245, 255 );
+
             static void storeColumnMajor( float32* pOut, const float4x4& matrix )
             {
                 const float4x4 columnMajor = matrix.transpose();
@@ -726,18 +732,18 @@ namespace sw::editor
         };
 
         AxisItem arrAxis[6] = {
-            { float3{ 1.0f, 0.0f, 0.0f }, IM_COL32( 235,  65,  65, 255 ),  "X", 0.0f, float2{},
-             float3{ 0.0f, -90.0f, 0.0f }},
-            {float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130,  60,  60, 200 ), "-X", 0.0f, float2{},
+            { float3{ 1.0f, 0.0f, 0.0f }, EditorViewportClientInternal::_s_kColorAxisX, "X", 0.0f, float2{},
+             float3{ 0.0f, -90.0f, 0.0f } },
+            { float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130, 60, 60, 200 ), "-X", 0.0f, float2{},
              float3{ 0.0f, 90.0f, 0.0f } },
-            { float3{ 0.0f, 1.0f, 0.0f },  IM_COL32( 65, 220,  95, 255 ),  "Y", 0.0f, float2{},
+            { float3{ 0.0f, 1.0f, 0.0f }, EditorViewportClientInternal::_s_kColorAxisY, "Y", 0.0f, float2{},
              float3{ 89.0f, 0.0f, 0.0f } },
-            {float3{ 0.0f, -1.0f, 0.0f },  IM_COL32( 50, 130,  70, 200 ), "-Y", 0.0f, float2{},
-             float3{ -89.0f, 0.0f, 0.0f }},
-            { float3{ 0.0f, 0.0f, 1.0f },  IM_COL32( 65, 130, 245, 255 ),  "Z", 0.0f, float2{},
-             float3{ 0.0f, 180.0f, 0.0f }},
-            {float3{ 0.0f, 0.0f, -1.0f },  IM_COL32( 50,  70, 140, 200 ), "-Z", 0.0f, float2{},
-             float3{ 0.0f, 0.0f, 0.0f }  }
+            { float3{ 0.0f, -1.0f, 0.0f }, IM_COL32( 50, 130, 70, 200 ), "-Y", 0.0f, float2{},
+             float3{ -89.0f, 0.0f, 0.0f } },
+            { float3{ 0.0f, 0.0f, 1.0f }, EditorViewportClientInternal::_s_kColorAxisZ, "Z", 0.0f, float2{},
+             float3{ 0.0f, 180.0f, 0.0f } },
+            { float3{ 0.0f, 0.0f, -1.0f }, IM_COL32( 50, 70, 140, 200 ), "-Z", 0.0f, float2{},
+             float3{ 0.0f, 0.0f, 0.0f } }
         };
 
         for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
@@ -817,24 +823,25 @@ namespace sw::editor
                 const bool    bOriginY = ( MathUtil::abs( centerY + current ) < 0.01f );
                 const bool    bMajor   = ( index % 5 == 0 );
 
-                const ImU32 colX = bOriginX ? IM_COL32( 65, 220, 95, 180 )
-                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colY = bOriginY ? IM_COL32( 220, 60, 60, 180 )
-                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                // x == 0 인 선은 Y 방향으로 뻗는다 — Y 축. y == 0 인 선이 X 축이다.
+                const ImU32 colAlongY = bOriginX ? EditorViewportClientInternal::_s_kColorAxisY
+                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colAlongX = bOriginY ? EditorViewportClientInternal::_s_kColorAxisX
+                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
                 // Vertical lines parallel to Y
                 const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
                 const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
                 ImVec2       sY0, sY1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
-                    pDrawList->AddLine( sY0, sY1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sY0, sY1, colAlongY, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
                 // Horizontal lines parallel to X
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colY, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sX0, sX1, colAlongX, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
             }
         }
         else
@@ -850,24 +857,26 @@ namespace sw::editor
                 const bool    bOriginZ = ( MathUtil::abs( centerZ + current ) < 0.01f );
                 const bool    bMajor   = ( index % 5 == 0 );
 
-                const ImU32 colX = bOriginX ? IM_COL32( 220, 60, 60, 180 )
-                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colZ = bOriginZ ? IM_COL32( 60, 110, 240, 180 )
-                                            : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                // x == 0 인 선은 Z 방향으로 뻗는다 — 그것이 **Z 축**이다. z == 0 인 선이 X 축이다.
+                // 예전에는 이 둘의 색이 바뀌어 있어 그리드의 축 색이 오리엔테이션 큐브·기즈모와 달랐다.
+                const ImU32 colAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
+                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const ImU32 colAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX
+                                                 : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
 
                 // Line parallel to Z
                 const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
                 const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
                 ImVec2       sZ0, sZ1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
-                    pDrawList->AddLine( sZ0, sZ1, colX, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sZ0, sZ1, colAlongZ, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
 
                 // Line parallel to X
                 const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
                 ImVec2       sX0, sX1;
                 if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colZ, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
+                    pDrawList->AddLine( sX0, sX1, colAlongX, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
             }
         }
     }

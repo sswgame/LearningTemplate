@@ -678,9 +678,12 @@ namespace sw
         // 다음 프레임의 인덱스가 0 부터 다시 매겨져 배치가 엉뚱한 퍼뮤테이션을 가리킨다.
         // 머티리얼 종류 수만큼이라 바로 위의 인스턴스·배치 복사에 비하면 작다.
         outSnapshot._listShaderPermutation = _listShaderPermutation;
-        outSnapshot._indirectCommandCount  = _indirectCommandCount;
-        outSnapshot._bCpuDirty             = _bCpuDirty;
-        _bCpuDirty                         = 0;
+        // `_indirectCommandCount` 는 싣지 않는다 — **렌더 스레드가 upload() 에서 만드는 값**이다. GT 쪽은 업로드를
+        // 하지 않으므로 늘 0 이고, 그것을 매 프레임 옮겨 주면 RT 의 값을 0 으로 덮어쓴다. 더티 프레임은
+        // upload() 가 뒤에서 다시 세워 가려지고, 조용한 프레임(카메라·씬 그대로)만 0 인 채 컬링에 들어가
+        // 배치 0개로 디스패치했다 — 에디터에서 카메라를 움직일 때만 메시가 보이던 원인이다.
+        outSnapshot._bCpuDirty = _bCpuDirty;
+        _bCpuDirty             = 0;
     }
 
     void GpuScene::adoptCpuSnapshot( GpuScene&& snapshot )
@@ -692,9 +695,9 @@ namespace sw
         _listMaterialGroup    = std::move( snapshot._listMaterialGroup );
         // 스냅샷은 여기서 버려지므로 표는 옮겨 받는다(exportCpuSnapshot 이 GT 쪽 정본을 복사해 준다).
         _listShaderPermutation = std::move( snapshot._listShaderPermutation );
-        _indirectCommandCount  = snapshot._indirectCommandCount;
-        _spinInstanceCount     = snapshot._spinInstanceCount;
-        _bCpuDirty             = snapshot._bCpuDirty;
+        // _indirectCommandCount 는 받지 않는다 — 이 쪽(RT)의 upload() 가 정한 값이 다음 업로드까지 유효하다.
+        _spinInstanceCount = snapshot._spinInstanceCount;
+        _bCpuDirty         = snapshot._bCpuDirty;
     }
 
     void GpuScene::sortTransparent( const float3& cameraPos )

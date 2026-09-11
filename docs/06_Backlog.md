@@ -279,6 +279,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (에디터에서 카메라를 움직일 때만 메시가 보이던 것 — 렌더 스레드 값이 매 프레임 0 으로 덮였다)
+
+**증상**: 에디터 뷰포트에서 WASD 로 날 때만 큐브가 보이고, 손을 떼면 사라진다. 그리드는 그대로다.
+
+**헤드리스 재현**: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60` 의 `SceneColor` 가
+배경 아닌 픽셀 **0** (렌더 스레드 on/off · Vulkan 전부). 에디터 없이는 26k. `-gv_gpuCulling=0` 을 주면 에디터에서도
+18k → **GPU 커맨드 생성 경로**의 문제로 좁혀졌다.
+
+**원인**: `GpuScene::_indirectCommandCount` 는 `upload()` 만이 세우는 값인데(마지막 업로드의 간접 인자 개수),
+`upload()` 는 렌더 스레드에서만 돈다. 게임 스레드의 `_gtGpuScene` 은 업로드를 하지 않으므로 그 값이 늘 0 이고,
+`exportCpuSnapshot` → `adoptCpuSnapshot` 이 그 0 을 **매 프레임** RT 로 옮겨 RT 값을 덮어썼다.
+- 더티 프레임(카메라 이동 · 씬 변경): 뒤이어 `upload()` 전체 경로가 돌며 값을 다시 세운다 → 보인다.
+- 조용한 프레임: `upload()` 가 재업로드 생략 경로로 가서 값이 0 인 채 `dispatchCullAndSort` 에 들어간다 →
+  컬링 컴퓨트가 **배치 0개**로 디스패치 → 간접 인자가 0 으로 남고 `drawIndirect` 가 아무것도 안 그린다.
+
+동기 프로브로 확정: 에디터 조용한 프레임 `inst=1 cmds=0`, 에디터 없는 벤치는 `cmds=1` — 벤치는 매 프레임
+`dirty=1` 이라(회전 큐브) 조용한 프레임이 아예 없어서 기준선이 이 구멍을 가렸다.
+
+**수정**: 이 필드는 스냅샷에 싣지 않는다 — RT 가 `upload()` 에서 정한 값이 다음 업로드까지 유효하다.
+수정 후 같은 재현 4구성 전부 18.6k(에디터) / 27.7k(에디터 없음). 패널 덤프 창 15개 · 빈 패널 0개.
+
+> **같은 모양을 조심할 것.** 스냅샷은 "GT 가 만든 것" 만 옮겨야 한다. RT 가 업로드하면서 파생하는 값을
+> 함께 옮기면 GT 의 빈 값이 정본을 덮는다. `_listOpaqueBatch`/`_listTransparentBatch` 도 GT 가 만들고 RT 가
+> `upload()` 에서 핸들만 채워 넣는 구조라 지금은 괜찮지만, RT 만 아는 값을 GpuScene 에 더할 때 이 목록을 보라.
+
+**같은 세션 — 3D 그리드의 축 색이 X·Z 가 뒤바뀌어 있었다.** `drawAdaptiveGrid` 의 3D 분기는 `x == 0` 인 선
+(Z 방향으로 뻗는 **Z 축**)을 빨강으로, `z == 0` 인 선(**X 축**)을 파랑으로 그렸다. 오리엔테이션 큐브 · ImGuizmo 는
+X 빨강 · Y 초록 · Z 파랑이다. 축 색을 `EditorViewportClientInternal::_s_kColorAxisX/Y/Z` 하나로 모아 그리드와
+큐브가 같은 값을 보게 했다(2D 분기는 원래 맞았다).
+
 ### 2026-09-12 (`ComputePass` 를 지웠다 — 컴퓨트 셰이더는 살아 있고, 래퍼만 죽어 있었다)
 
 호출부 0 배선 API 목록에서 `ComputePass::bindSrv/bindUav` 가 나와 "컴퓨트가 안 쓰이나" 를 확인했다.

@@ -585,6 +585,12 @@ namespace sw
         uint8 _bGpuFillsIndirectCounts{ 0 };
         /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
         uint32 _spinInstanceCount{ 0 };
+        /**
+         * @brief 마지막 upload() 가 올린 간접 인자 개수 — **렌더 스레드 소유**다.
+         * @details GT 쪽 GpuScene 은 업로드를 하지 않으므로 이 값을 만들 수 없다. 그래서 exportCpuSnapshot /
+         *          adoptCpuSnapshot 은 이 필드를 **옮기지 않는다** — 옮기면 GT 의 0 이 RT 값을 매 프레임 덮어써,
+         *          업로드를 건너뛰는 조용한 프레임에 컬링이 배치 0개로 돌고 아무것도 그려지지 않는다.
+         */
         uint32 _indirectCommandCount{ 0 };
         uint8  _bCpuDirty{ 1 };
         uint8  _bMergeAcrossMaterials{ 0 };
