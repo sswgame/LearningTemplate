@@ -319,6 +319,23 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 > 누군가 "대칭을 맞춘다"며 되살린다. **디코딩에는 32비트가 있다**: 그쪽은 캐스팅이 아니라
 > uint32/int32 범위를 벗어난 값을 거르는 실제 검사를 한다.
 
+**에디터 커맨드 표 — 여덟을 걷어내고 여섯을 둘로 접었다**
+
+커맨드 표는 `Delegate<void()>` / `Delegate<bool()>` 을 든다. 그러면 판단 기준이 분명해진다 —
+**대상이 이미 그 모양이면 표가 직접 가리키면 되고, 감싸는 것은 이름만 하나 늘리는 것이다.**
+
+- 걷어낸 여덟: `commandSave` · `commandSaveScene` · `commandQuickOpen` · `commandCommandPalette` ·
+  `commandExit` · `commandThemeSettings` · `commandSnapToGround` · `isPlayStopped`. 대상이 전부
+  `static void f()` / `static bool f()` 라 표가 `&EditorAssetCommands::saveFocusedOrScene` 처럼
+  **직접** 가리킨다.
+- 축만 다른 여섯(`commandAlignX/Y/Z` · `commandDistributeX/Y/Z`)은 표가 `void()` 를 요구하므로
+  **함수 자체는 있어야 한다**(대상이 인자를 받는다). 다만 축마다 하나씩 적을 이유는 없어서
+  `commandAlign<TAxis>` · `commandDistribute<TAxis>` 템플릿 둘로 접었다 — 표는 그대로
+  `&commandAlign<AlignAxis::X>` 를 가리킨다.
+- 남은 것의 이유를 **파일 머리에 적어 뒀다**(반환형 맞추기 · 인자 박기 · 대상 찾아오기 셋 중 하나).
+  안 적으면 다음 사람이 "마저 정리" 하다 `commandNewScene`(대상이 `bool`)이나
+  `commandUndo`(`getService<CommandStack>()`)를 깨뜨린다.
+
 **곁들여 — 호출부가 0 인 접근자 여섯** (이번엔 손대지 않았다, 판단 필요)
 
 `ModuleHost::getModuleCompiler` · `EngineLoop::getCompressionCodecRegistry` ·
