@@ -53,7 +53,8 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 - `PassConstantValues` — 이름으로 담아 두는 패스 상수 값 저장소
 - `FrameResourceRegistry` — 패스 스코프 이름→리소스 매핑
 - `RenderFramePacket` — 게임 스레드 → 렌더 스레드로 넘기는 프레임 데이터
-- `ComputePass` — 비동기 컴퓨트 디스패치
+- 컴퓨트 디스패치(애니메이션·컬링·정렬)는 `FrameRenderer::dispatchInstanceAnimation` / `dispatchCullAndSort` 가
+  커맨드 리스트에 직접 건다 — 별도 래퍼 클래스는 없다(`ComputePass` 는 쓰이지 않은 채 남아 있어 지웠다)
 
 ### RenderThread
 

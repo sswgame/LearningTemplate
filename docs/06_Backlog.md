@@ -279,6 +279,16 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (`ComputePass` 를 지웠다 — 컴퓨트 셰이더는 살아 있고, 래퍼만 죽어 있었다)
+
+호출부 0 배선 API 목록에서 `ComputePass::bindSrv/bindUav` 가 나와 "컴퓨트가 안 쓰이나" 를 확인했다.
+아니다 — `instanceanim` · `gpucull` · `instancesort` 세 셰이더는 매 프레임 돌고, `FrameRenderer::dispatchInstanceAnimation`
+/ `dispatchCullAndSort` 가 **커맨드 리스트에 직접** 건다. 죽은 것은 그 위에 얹으려던 `ComputePass` 래퍼 —
+메서드 둘이 아니라 **클래스 전체**가 생성처 0이었다(자기 파일 둘 + 테스트의 `#include` 한 줄). 앞서 문서를
+"실제 헤더에 맞춰" 고친 적이 있는데, 그 헤더를 만드는 코드가 없다는 것은 그때 보지 못했다 — 문서와 헤더가
+서로 맞는 것과 둘 다 실제 경로와 무관한 것은 다른 문제다. 클래스·테스트 include·README 5.11 예제·Renderer README
+항목을 함께 지우고, 5.11 은 실제 경로(직접 바인딩 + 전이)로 다시 썼다.
+
 ### 2026-09-12 (같은 병을 앓을 자리를 다시 훑었다 — 넷은 깨끗했고, 워처 오버플로 하나가 진짜였다)
 
 이번 세션에서 잡은 결함의 **모양**으로 저장소를 다시 봤다: 조용히 기본값으로 떨어지는 설정 ·
@@ -982,6 +992,8 @@ ILogSink  ← 전역 파사드 (그대로)
   (`registerBindlessTexture` / `registerBindlessResource` / `registerBindlessUAV`, 해제는 짝을 맞춰야 한다).
 - `sw::ComputePass` 는 있지만 **API 가 달랐다.** 문서는 `initialize(device, pso)` + `dispatch(ctx,64,1,1)`
   였는데 실제는 `setComputePipelineState` · `bindUav` · `bindSrv` · `dispatch(pCmdList, ComputeDispatchParams)` 다.
+  → **2026-09-12 에 클래스 자체를 지웠다.** 문서를 헤더에 맞춰 고쳤지만 그 헤더를 만드는 곳이 저장소에 하나도
+  없었다 — 컴퓨트는 `FrameRenderer` 가 커맨드 리스트에 직접 건다(아래 같은 날 항목).
 
 둘 다 실제 헤더를 보고 다시 썼다. 필드 이름(`_indexCountPerInstance` 등)까지 대조했다.
 

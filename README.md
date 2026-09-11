@@ -60,7 +60,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [8. 멀티스레드 태스크 시스템 (Task DAG)](#58-멀티스레드-태스크-시스템-task-dag)
    - [9. 오디오 및 2D 물리 시스템](#59-오디오-및-2d-물리-시스템)
    - [10. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#510-비동기-에셋-스트리밍-큐-assetstreamingqueue)
-   - [11. GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)](#511-gpu-driven-간접-드로우--비동기-컴퓨트-indirectdrawbuffer--computepass)
+   - [11. GPU-Driven 간접 드로우 & 컴퓨트 디스패치](#511-gpu-driven-간접-드로우--컴퓨트-디스패치)
    - [12. 티어-3 바인드리스 리소스 테이블 (BindlessTable)](#512-티어-3-바인드리스-리소스-테이블-bindlesstable)
    - [13. RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석](#513-rendergraph-순차-쓰기rmw-의존성-및-리소스-수명-주기-분석)
    - [14. C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation--state-machine-taskfuture--taskpromise)
@@ -555,36 +555,39 @@ sw::AssetStreamingQueue::get().tick();
 
 ---
 
-### 5.11 GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)
+### 5.11 GPU-Driven 간접 드로우 & 컴퓨트 디스패치
 
-CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인과 **비동기 컴퓨트 셰이더 디스패치**를 지원합니다.
+CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인입니다.
+프로덕션 컴퓨트 셰이더는 셋 — `instanceanim.hlsl`(인스턴스 애니메이션) · `gpucull.hlsl`(컬링 + 커맨드 생성) ·
+`instancesort.hlsl`(투명 바이토닉 정렬) — 이고 `FrameRenderer::dispatchInstanceAnimation` /
+`dispatchCullAndSort` 가 돌립니다.
 
-간접 인자는 **전용 버퍼 클래스가 아니라 일반 RHI 버퍼**에 담고, 커맨드 리스트가 그 버퍼를 읽어
-드로우/디스패치합니다. 인자 구조체는 `RHIDrawIndexedIndirectCommand`(`Engine/Graphics/RHI/RHITypes.h`)입니다.
+**컴퓨트 디스패치에는 별도 래퍼 클래스가 없습니다.** 커맨드 리스트가 직접 파이프라인·리소스 바인딩·디스패치를
+받습니다 — 예전에 `ComputePass` 라는 래퍼가 있었지만 어디에서도 만들어지지 않은 채 남아 있어 2026-09-12 에 지웠습니다.
+간접 인자도 전용 버퍼 클래스가 아니라 **일반 RHI 버퍼**에 담고, 인자 구조체는
+`RHIDrawIndexedIndirectCommand`(`Engine/Graphics/RHI/RHITypes.h`)입니다.
 
 ```cpp
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Renderer/Frame/ComputePass.h"
 
-// 1. 간접 인자 버퍼 — 컴퓨트 컬링이 채우고, 드로우가 그대로 읽는다.
-sw::RHIDrawIndexedIndirectCommand cmd{};
-cmd._indexCountPerInstance = 36;
-cmd._instanceCount         = 500;
-// argBuffer 는 IRHIResource::createBuffer 로 만든 UAV 겸용 버퍼다.
+// 1. 쓰기 전에 UAV 상태로 옮긴다 — 이 전이 없이 쓰면 DX12/Vulkan 에서 쓰기가 조용히 무효다.
+pCmd->transitionBuffer( instanceBuffer, sw::RHIBufferState::UnorderedAccess );
 
-// 2. 비동기 컴퓨트 패스로 컬링을 돌린다.
-sw::ComputePass cullingPass{ "GpuCull" };
-cullingPass.setComputePipelineState( cullPso );
-cullingPass.bindUav( 0, argBufferUavIndex );   // 인자 버퍼에 쓰기
-cullingPass.bindSrv( 0, instanceBufferIndex ); // 인스턴스 읽기
+// 2. 파이프라인 · 상수버퍼(b0) · UAV(u0) 를 셰이더 레지스터와 1:1 로 건다.
+pCmd->setComputePipelineState( cullPso );
+pCmd->bindComputeConstantBuffer( cullCbIndex, 0 );
+pCmd->bindComputeUAV( instanceUavIndex, 0 );
+pCmd->dispatchCompute( threadGroupCount, 1, 1 );
 
-sw::ComputeDispatchParams dispatchParams{};
-dispatchParams._threadGroupCountX = 64;
-cullingPass.dispatch( pCmdList, dispatchParams );
+// 3. 다음 소비자(정점 셰이더·간접 드로우)가 읽기 전에 전이를 되돌린다.
+pCmd->transitionBuffer( instanceBuffer, sw::RHIBufferState::ShaderResource );
 
-// 3. 컬링 결과를 CPU 가 보지 않고 그대로 드로우한다.
-pCmdList->drawIndexedIndirect( argBuffer );
+// 4. 컬링이 채운 인자 버퍼를 CPU 가 보지 않고 그대로 드로우한다.
+pCmd->drawIndexedIndirect( argBuffer );
 ```
+
+실제 순서와 배리어 사유는 `FrameRenderer.cpp` 의 두 함수에 주석으로 적혀 있습니다 — 문서 예제보다 그쪽이 정본입니다.
 
 ---
 
