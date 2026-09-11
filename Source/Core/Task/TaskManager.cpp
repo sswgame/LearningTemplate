@@ -167,6 +167,25 @@ namespace sw
 
         void release();
 
+        /**
+         * @brief 디버깅·프로파일링용 이름을 설정합니다 (용량 초과는 잘라 담습니다).
+         * @details 예전엔 익명 네임스페이스 안의 자유 헬퍼였다. 하는 일이 전부 이 구조체 자기 필드
+         *          조작인데 **완전한 TaskNode 가 필요해서** 파일 위쪽 익명 블록에 못 들어갔고, 그래서
+         *          블록이 하나 더 있었다. TaskNode 는 위쪽 블록의 `kTaskNameCapacity` 를 쓰므로 순서를
+         *          뒤집을 수도 없었다. 데이터가 있는 자리로 옮기니 그 블록 자체가 필요 없어졌다.
+         */
+        void setName( [[maybe_unused]] string_view name )
+        {
+#if !defined( SW_SHIPPING )
+            uint32 len = static_cast<uint32>( name.size() );
+            if ( len > kTaskNameCapacity )
+                len = kTaskNameCapacity;
+            if ( len > 0 )
+                Memory::copy( _arrName, name.data(), len );
+            _arrName[len] = 0;
+#endif
+        }
+
 #if !defined( SW_SHIPPING )
         utf8 _arrName[kTaskNameCapacity + 1]{};
 #endif
@@ -189,38 +208,6 @@ namespace sw
         atomic<int32> _activeChildren{ 0 };
         atomic<int32> _refCount{ 1 };
     };
-
-    namespace
-    {
-        /**
-         * @brief 이 번역 단위 전용 헬퍼.
-         * @details 예전엔 `setTaskName` 이 namespace sw 스코프의 자유 static 이었다. 흔한 이름이
-         *          외부에서 안 보일 뿐 TU 마다 하나씩 생긴다는 뜻이라, 유니티 빌드로 묶이는 순간
-         *          같은 이름을 가진 다른 파일과 재정의로 부딪힌다(AGENTS.md "Helpers: Util vs Internal").
-         *          Core 는 지금 유니티 대상이 아니지만, 규칙을 따르는 다른 서브시스템과 형태를 맞춘다.
-         *          TaskNode 정의 뒤에 와야 해서 파일 위쪽 익명 블록과 따로 둔다.
-         */
-        struct TaskManagerInternal
-        {
-            static void setTaskName( TaskNode* pNode, string_view name )
-            {
-#if !defined( SW_SHIPPING )
-                if ( pNode == nullptr )
-                    return;
-
-                uint32 len = static_cast<uint32>( name.size() );
-                if ( len > kTaskNameCapacity )
-                    len = kTaskNameCapacity;
-                if ( len > 0 )
-                    Memory::copy( pNode->_arrName, name.data(), len );
-                pNode->_arrName[len] = 0;
-#else
-                (void)pNode;
-                (void)name;
-#endif
-            }
-        };
-    } // namespace
 
     class TaskNodePool
     {
@@ -668,7 +655,7 @@ namespace sw
 
         TaskNode* pNode = allocateNode();
         pNode->_pOwner  = this;
-        TaskManagerInternal::setTaskName( pNode, name );
+        pNode->setName( name );
         pNode->_affinity = affinity;
         pNode->_callable = delegate;
         pNode->_state    = TaskState::Pending;
@@ -699,7 +686,7 @@ namespace sw
 
         TaskNode* pNode = allocateNode();
         pNode->_pOwner  = this;
-        TaskManagerInternal::setTaskName( pNode, name );
+        pNode->setName( name );
         pNode->_affinity = affinity;
         pNode->_callable = TaskArgsPayload{ delegate, args };
         pNode->_state    = TaskState::Pending;
@@ -747,7 +734,7 @@ namespace sw
 
             pSubTask->_pOwner          = this;
             pSubTask->_pSharedCallable = pSharedCallable;
-            TaskManagerInternal::setTaskName( pSubTask, name );
+            pSubTask->setName( name );
             pSubTask->_rangeStart = start;
             pSubTask->_rangeEnd   = end;
             pSubTask->_state      = TaskState::Pending;
@@ -791,7 +778,7 @@ namespace sw
 
             pSubTask->_pOwner          = this;
             pSubTask->_pSharedCallable = pSharedCallable;
-            TaskManagerInternal::setTaskName( pSubTask, "ParallelBlockTask" );
+            pSubTask->setName( "ParallelBlockTask" );
             pSubTask->_rangeStart = chunkStart;
             pSubTask->_rangeEnd   = chunkEnd;
             pSubTask->_state      = TaskState::Pending;

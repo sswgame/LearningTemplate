@@ -24,14 +24,6 @@
 
 #include "TestFramework/TestFramework.h"
 
-namespace
-{
-    [[maybe_unused]] void fillGameService( sw::ModuleService& gameService )
-    {
-        sw::engine::fillModuleServices( gameService, true );
-    }
-} // namespace
-
 #if !defined( SW_SHIPPING )
 
 namespace sw
@@ -842,7 +834,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
     if ( api.bindService )
     {
         sw::ModuleService gameService{};
-        fillGameService( gameService );
+        sw::engine::fillModuleServices( gameService, true );
         api.bindService( &gameService );
     }
 
@@ -961,7 +953,7 @@ SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
         if ( api.bindService )
         {
             sw::ModuleService gameService{};
-            fillGameService( gameService );
+            sw::engine::fillModuleServices( gameService, true );
             api.bindService( &gameService );
         }
 

@@ -362,6 +362,29 @@ namespace sw
                 return true;
             }
         };
+
+        /**
+         * @brief main 이 어디서 빠져나가든 로거를 내린다.
+         * @details 예전엔 `logger->shutdown(); return 1;` 을 조기 반환마다 손으로 적었다(11곳).
+         *          로거는 비동기라 내리지 않으면 마지막 메시지가 유실되는데, 실패 경로일수록 그
+         *          메시지가 필요하다. 새 조기 반환을 넣는 사람이 잊을 수 있는 구조였다.
+         */
+        class LoggerScope
+        {
+        public:
+            LoggerScope()
+                : _logger{ sw::make_unique<sw::Logger>() }
+            {
+                _logger->initialize();
+            }
+            ~LoggerScope() { _logger->shutdown(); }
+
+            LoggerScope( const LoggerScope& )            = delete;
+            LoggerScope& operator=( const LoggerScope& ) = delete;
+
+        private:
+            sw::unique_ptr<sw::Logger> _logger;
+        };
     } // namespace
 } // namespace sw
 
@@ -375,35 +398,9 @@ namespace sw
  *  4) ParserContext 공유 clang 설정 1회 로드
  *  5) 타임스탬프 캐시 후 TaskManager 워커 풀에서 processInputFile
  */
-namespace
-{
-    /**
-     * @brief main 이 어디서 빠져나가든 로거를 내린다.
-     * @details 예전엔 `logger->shutdown(); return 1;` 을 조기 반환마다 손으로 적었다(11곳).
-     *          로거는 비동기라 내리지 않으면 마지막 메시지가 유실되는데, 실패 경로일수록 그
-     *          메시지가 필요하다. 새 조기 반환을 넣는 사람이 잊을 수 있는 구조였다.
-     */
-    class LoggerScope
-    {
-    public:
-        LoggerScope()
-            : _logger{ sw::make_unique<sw::Logger>() }
-        {
-            _logger->initialize();
-        }
-        ~LoggerScope() { _logger->shutdown(); }
-
-        LoggerScope( const LoggerScope& )            = delete;
-        LoggerScope& operator=( const LoggerScope& ) = delete;
-
-    private:
-        sw::unique_ptr<sw::Logger> _logger;
-    };
-} // namespace
-
 int32 main( int32 argc, utf8* argv[] )
 {
-    const LoggerScope loggerScope;
+    const sw::LoggerScope loggerScope;
 
     // CLI
     sw::CommandLineArgs commandLineArgs;

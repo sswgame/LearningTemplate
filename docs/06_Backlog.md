@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `54dd5876`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `51c25100`
 
 ---
 
@@ -300,20 +300,32 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 앞에 있어서 그대로는 못 올렸다 — 그 둘을 익명 네임스페이스 안으로 넣었다(같은 내부 링키지이고 이쪽이
 현대 관용구다). 곁들여 직전 커밋에서 `FileUtil.cpp` 중간에 새로 만든 블록도 최상단으로 올렸다.
 
-**합칠 수 없는 것 3 개 — 다시 시도하지 말 것**
+**나머지 3 개 — 막고 있던 것을 없애서 결국 다 합쳤다**
 
-- **`Source/Core/Task/TaskManager.cpp`.** 뒤 블록이 **두 블록 사이에서 정의되는 `TaskNode`** 의 멤버를
-  건드린다. 올리면 `error: member access into incomplete type 'TaskNode'` 로 선다(실제로 해 보고 되돌렸다).
-  합치려면 타입 정의를 옮겨야 하는데 그건 별개의 리팩터다.
-- **`Test/SmokeTest/TestSmoke.cpp`.** 두 블록의 **스코프가 다르다**(파일 스코프 / `namespace sw` 안).
-  게다가 뒤 블록은 `#if !defined( SW_SHIPPING )` 안에 있고 앞 블록은 그 밖이라, 합치면 배포 빌드에
-  없어야 할 것이 들어온다.
-- **`Tools/ReflectionParser/ReflectionParser.cpp`.** 역시 스코프가 다르다. 앞 블록은 `namespace sw` 안의
-  파서 헬퍼들이고, 뒤 블록은 전역 스코프의 `LoggerScope` 로 **`main` 이 쓴다**. `namespace sw` 로 옮기면
-  `main` 쪽에서 이름을 한정해야 하고, main 전용 헬퍼를 엔진 네임스페이스에 넣는 것도 맞지 않는다.
+처음엔 "스코프/의존성 때문에 불가"로 적었는데, 셋 다 **장애물 자체가 설계 흠**이었다.
+
+- **`Source/Core/Task/TaskManager.cpp`.** 뒤 블록의 `setTaskName` 이 완전한 `TaskNode` 를 요구하는데,
+  `TaskNode` 는 앞 블록의 `kTaskNameCapacity` 를 쓴다 — 앞뒤로 묶여 순서를 바꿀 수 없었다. 그런데 그
+  함수가 하는 일은 **전부 `TaskNode` 자기 필드 조작**이었다. `TaskNode::setName` 멤버로 옮기니 블록이
+  통째로 필요 없어졌다. 호출부 넷은 바로 앞줄에서 이미 포인터를 역참조하고 있어 널 검사도 군더더기였다.
+- **`Test/SmokeTest/TestSmoke.cpp`.** 파일 스코프 블록에 든 것은 `fillGameService` **한 줄짜리 래퍼**
+  하나뿐이었고, 그것 때문에 스코프가 다른 블록이 하나 더 있었다. 호출부 둘에서
+  `sw::engine::fillModuleServices( gameService, true )` 를 직접 부르게 하니 블록이 사라졌다.
+  (`#if !defined(SW_SHIPPING)` 영역이 둘로 갈려 있어 래퍼를 어느 한쪽으로 옮길 수는 없었다.)
+- **`Tools/ReflectionParser/ReflectionParser.cpp`.** 전역 스코프 블록의 `LoggerScope` 를 `namespace sw`
+  익명 블록으로 옮기고 `main` 에서 `sw::LoggerScope` 로 쓴다. 같은 파일의 `main` 이 이미
+  `sw::CommandLineArgs` 를 그렇게 쓰고 있어서 형태가 맞는다 — 이 도구의 TU 지역 헬퍼는 원래 거기 산다.
+
+**결과: 프로젝트 `.cpp` 에 익명 네임스페이스가 둘 이상인 파일은 0 개다.**
+
+> **남은 것(이번엔 손대지 않음):** 블록이 **하나뿐이지만 스코프 최상단이 아닌** 파일이 9 개 있다 —
+> `WindowsCallStackCapture.cpp`(앞 75줄) · `VulkanRHISwapChain.cpp`(320줄) · `FrameRendererPso.cpp`(109줄) ·
+> `LocalizationManager.cpp`(159줄) · `MacCallStackCapture.cpp`(47줄) · `GameService.cpp`(7줄) ·
+> `GlobalVariablesPanel.cpp`(2줄) · `EngineLoop.cpp`(1줄) · `Scene.cpp`(1줄).
+> 올리려면 TaskManager 때와 같은 의존성 확인이 파일마다 필요하다(앞에 있는 타입 정의를 쓰는지).
 
 검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6.
-(`LinuxCallStackCapture.cpp` 는 여기서 컴파일할 수 없다 — CI 의 Linux 잡이 본다.)
+(`LinuxCallStackCapture.cpp`·`MacCallStackCapture.cpp` 는 여기서 컴파일할 수 없다 — CI 의 Linux 잡이 본다.)
 
 ### 2026-09-11 (Source/ 훑기 — 파일 다이얼로그 콜백이 분리 스레드에서 씬을 고치고 있었다)
 
