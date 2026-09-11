@@ -22,7 +22,7 @@ namespace sw
      *          예전에는 `watchShader` 로 채우는 자기 등록표를 봤는데, 그 함수의 호출부가 하나도 없어서
      *          단축키가 빈 표를 돌았다 — 리로드가 아무 일도 하지 않았다.
      *
-     *          `.hlsl` 파일 감시로 **자동** 재컴파일하던 경로는 없앴다. 그 배선(`attachReloadFileManager`)
+     *          `.hlsl` 파일 감시로 **자동** 재컴파일하던 경로는 없앴다. 그 배선
      *          역시 호출부가 없어 등록된 적이 없었고, 앞으로도 자동 재컴파일 계획이 없다.
      */
     class SW_API LiveShaderManager

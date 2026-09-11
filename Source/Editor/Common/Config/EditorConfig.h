@@ -12,7 +12,7 @@ namespace sw::editor
 {
     /**
      * @brief Dev/에디터 호스트 설정 (Shipping 미포함)
-     * @details editordata·유저 레이아웃 경로. 맵/아틀라스 등 시드는 Config/Editor/editordata.xml.
+     * @details editordata·유저 레이아웃 경로. 맵/아틀라스 등 시드는 Config/Editor/editordata.json.
      */
     REFLECT()
     struct EditorConfig : IConfig
@@ -20,7 +20,7 @@ namespace sw::editor
         REFLECT_BODY();
 
         PROPERTY()
-        string _editorData{ "Config/Editor/editordata.xml" };
+        string _editorData{ "Config/Editor/editordata.json" };
 
         PROPERTY()
         string _configFolder{ "Config" };

@@ -10,7 +10,7 @@
 #include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -41,7 +41,7 @@ namespace sw::editor
         }
 
         // 파일에 없는 필드는 멤버 초기값이 그대로 남는다 — 실패해도 내장 기본값으로 동작한다.
-        if ( XmlSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
+        if ( JsonSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
         {
             SW_LOG_WARNING( "Using built-in defaults; failed to read %#", absPath );
             return false;

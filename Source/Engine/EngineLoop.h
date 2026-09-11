@@ -37,7 +37,6 @@ namespace sw
     class LocalizationManager;
     class Logger;
     class MemoryProfiler;
-    class ReloadFileManager;
     class RenderThread;
     class ResourceManager;
     class RHI;
@@ -139,7 +138,6 @@ namespace sw
         unique_ptr<ResourceManager>       _resourceManager;
         unique_ptr<RHI>                   _rhi;
         unique_ptr<LiveReloadManager>     _liveReloadManager;
-        unique_ptr<ReloadFileManager>     _reloadFileManager;
         unique_ptr<SceneManager>          _sceneManager;
         unique_ptr<InputManager>          _inputManager;
         unique_ptr<ActionMap>             _mapDebugAction;

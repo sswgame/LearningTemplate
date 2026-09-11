@@ -97,6 +97,14 @@ namespace sw::editor
         }
         /** @brief 콘텐츠 브라우저 타입 필터 목록입니다. */
         static const EditorAssetBrowserFilter* getBrowserFilters( uint32& outCount );
+        /**
+         * @brief 지정 종류의 접미사를 outListSuffix 에 더합니다(중복은 건너뜁니다).
+         * @details 파일 감시 필터처럼 "이 종류의 파일" 을 골라야 하는 쪽이 확장자 목록을
+         *          따로 적지 않게 한다 — 목록이 둘이면 한쪽만 늘어난다. 실제로 리소스
+         *          감시가 `.mat` 만 보고 있어서, 저장소의 `.material` 은 하나도 안 걸렸다.
+         */
+        static void appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix );
+
         /** @brief 임포트 대화상자용 접미사를 outListExtension에 추가합니다. */
         static void appendImportExtensions( vector<string>& outListExtension );
 

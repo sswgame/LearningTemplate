@@ -43,7 +43,6 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
-#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
@@ -109,7 +108,6 @@ namespace sw
         , _resourceManager{ nullptr }
         , _rhi{ nullptr }
         , _liveReloadManager{ nullptr }
-        , _reloadFileManager{ nullptr }
         , _sceneManager{ nullptr }
         , _inputManager{ nullptr }
         , _mapDebugAction{ nullptr }
@@ -203,7 +201,6 @@ namespace sw
 #if !defined( SW_SHIPPING )
             _liveReloadManager = make_unique<LiveReloadManager>();
 #endif
-            _reloadFileManager   = make_unique<ReloadFileManager>();
             _sceneManager        = make_unique<SceneManager>();
             _inputManager        = make_unique<InputManager>();
             _audioSystem         = IAudioSystem::create();
@@ -300,9 +297,6 @@ namespace sw
 
             if ( _taskManager->initialize() == false )
                 return false;
-            if ( _reloadFileManager->initialize() == false )
-                return false;
-            _resourceManager->attachReloadFileManager( *_reloadFileManager );
             if ( _sceneManager->initialize() == false )
                 return false;
             if ( _inputManager->initialize() == false )
@@ -465,10 +459,6 @@ namespace sw
                 _inputManager->shutdown();
             if ( _audioSystem != nullptr )
                 _audioSystem->shutdown();
-            if ( _resourceManager != nullptr )
-                _resourceManager->detachReloadFileManager();
-            if ( _reloadFileManager != nullptr )
-                _reloadFileManager->shutdown();
             if ( _liveReloadManager != nullptr )
                 _liveReloadManager->shutdown();
             if ( _taskManager != nullptr )
@@ -490,7 +480,6 @@ namespace sw
             _inputManager.reset();
             _audioSystem.reset();
             _eventDispatcher.reset();
-            _reloadFileManager.reset();
             _liveReloadManager.reset();
             _engineData.reset();
             _assetStreamingQueue.reset();
@@ -568,8 +557,6 @@ namespace sw
             }
     #endif
 #endif
-            if ( _reloadFileManager != nullptr )
-                _reloadFileManager->update();
             // 파일 다이얼로그 결과를 **여기서** 메인 스레드로 넘긴다 — 다이얼로그는 분리 스레드가 띄운다.
             FileUtil::pumpFileDialogResults();
             engine::getAssetStreamingQueue().update();

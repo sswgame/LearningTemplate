@@ -21,6 +21,7 @@
 #include "Editor/Common/Gui/EditorPanelDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -352,6 +353,11 @@ namespace sw::editor
         EditorCommandGui::processHotkeys();
         EditorMenuBar::processOpenPanelRequests();
         EditorMenuBar::processSceneSession();
+
+        // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
+        // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
+        if ( _editorContext != nullptr )
+            _editorContext->getAssetHotReload().update();
 
         BLOCK( "Editor Panels Draw" )
         {

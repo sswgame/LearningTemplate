@@ -9,7 +9,7 @@
 | `Config/Engine/EngineConfig.json` | 런타임 창/RHI/`enginedata` 포인터 (C++ `EngineConfig`) | 베이크되어 exe에 포함, 디스크 불필요 |
 | `Config/Game/GameConfig.json` | 팩 루트·gamedata 파일명 | 베이크 |
 | `Config/App/AppConfig.json` | Dev 게임킷 모듈 목록 | 미포함 (정적 링크) |
-| `Config/Editor/` | `EditorConfig.json` + `editordata.xml` + 유저 레이아웃 | 미포함 |
+| `Config/Editor/` | `EditorConfig.json` + `editordata.json` + 유저 레이아웃 | 미포함 |
 | `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
 
 ## Environment (툴체인)

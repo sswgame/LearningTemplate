@@ -7,7 +7,7 @@
 | Engine | `engine/` | 파이프라인, 코어 셰이더, 폴백 머티리얼, 내장 텍스처, 셸 InputMap, `enginedata.xml` |
 | Common | `common/` | 게임 팩이 공유하는 셰이더(아웃라인, 샘플 컴퓨트 등) |
 | Game | `game/<pack>/` | 해당 게임 콘텐츠(맵, 프리팹, 텍스처, 오디오, `gamedata.xml`) |
-| Editor | `editor/` | 에디터가 배포물에서 읽는 에셋(스플래시 텍스처 등). **`editordata.xml` 은 여기가 아니라 `Config/Editor/` 에 있다** — 에디터 도구 시드는 배포되지 않는다 |
+| Editor | `editor/` | 에디터가 배포물에서 읽는 에셋(스플래시 텍스처 등). **`editordata.json` 은 여기가 아니라 `Config/Editor/` 에 있다** — 에디터 도구 시드는 배포되지 않는다 |
 
 ## 경로 규칙
 

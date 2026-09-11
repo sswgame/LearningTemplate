@@ -24,7 +24,6 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
-#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -58,7 +57,6 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::TypeRegistry>             typeRegistry             = sw::make_unique<sw::TypeRegistry>();
     sw::unique_ptr<sw::LocalizationManager>      localizationManager      = sw::make_unique<sw::LocalizationManager>();
     sw::unique_ptr<sw::LiveReloadManager>        liveReloadManager        = sw::make_unique<sw::LiveReloadManager>();
-    sw::unique_ptr<sw::ReloadFileManager>        reloadFileManager        = sw::make_unique<sw::ReloadFileManager>();
     sw::unique_ptr<sw::SceneManager>             sceneManager             = sw::make_unique<sw::SceneManager>();
     sw::unique_ptr<sw::InputManager>             inputManager             = sw::make_unique<sw::InputManager>();
     sw::unique_ptr<sw::CommandStack>             commandStack             = sw::make_unique<sw::CommandStack>();
@@ -169,8 +167,6 @@ int main( int32 argc, utf8* argv[] )
 
     if ( taskManager->initialize() == false )
         return -1;
-    if ( reloadFileManager->initialize() == false )
-        return -1;
     if ( sceneManager->initialize() == false )
         return -1;
     if ( inputManager->initialize() == false )
@@ -183,9 +179,6 @@ int main( int32 argc, utf8* argv[] )
     sceneManager->shutdown();
     inputManager->shutdown();
     audioSystem->shutdown();
-    if ( resourceManager != nullptr )
-        resourceManager->detachReloadFileManager();
-    reloadFileManager->shutdown();
     liveReloadManager->shutdown();
     taskManager->shutdown();
     globalVarManager->shutdown();
@@ -218,7 +211,6 @@ int main( int32 argc, utf8* argv[] )
     rhiRegistry.reset();
     inputManager.reset();
     sceneManager.reset();
-    reloadFileManager.reset();
     liveReloadManager.reset();
     localizationManager.reset();
     commandStack.reset();

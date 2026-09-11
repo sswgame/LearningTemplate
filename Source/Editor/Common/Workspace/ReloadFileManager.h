@@ -30,7 +30,7 @@ namespace sw
      * @brief FileWatcher로 리소스 변경을 폴링하고, 등록된 path prefix + 확장자 매칭 시에만 콜백을 호출합니다.
      * @note Windows: ReadDirectoryChangesW. Linux: inotify. Other platforms: mtime poll fallback.
      */
-    class SW_API ReloadFileManager
+    class ReloadFileManager
     {
     public:
         /** @brief 워치 목록을 비운 채 시작합니다. */

@@ -16,6 +16,7 @@
 #include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -57,6 +58,7 @@ namespace sw::editor
         _pPanelManager              = make_unique<EditorPanelManager>();
         _pPopupManager              = make_unique<EditorPopupManager>();
         _pAssetEditorManager        = make_unique<AssetEditorManager>();
+        _pAssetHotReload            = make_unique<AssetHotReload>();
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
 
@@ -67,6 +69,10 @@ namespace sw::editor
         _pInspectorComponentManager->registerDefaults();
         _pInspectorPropertyManager->registerDefaults();
         _pPopupManager->registerDefaultPopups();
+
+        // 에셋 핫리로드는 개발 기능이라 **에디터가 켜져 있을 때만** 감시가 돈다.
+        // 리소스 루트가 없으면(팩만 실린 실행) 조용히 꺼진 채로 둔다.
+        _pAssetHotReload->initialize();
     }
 
     void EditorContext::shutdown()
@@ -78,6 +84,7 @@ namespace sw::editor
 
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
+        _pAssetHotReload.reset();
         _pAssetEditorManager.reset();
         _pPopupManager.reset();
         _pPanelManager.reset();
@@ -120,7 +127,7 @@ namespace sw::editor
 
         destroyGameView();
 
-        // editordata.xml 의 _clearColor 를 쓴다. 예전에는 여기에 같은 값을 손으로 박아 두어
+        // editordata.json 의 _clearColor 를 쓴다. 예전에는 여기에 같은 값을 손으로 박아 두어
         // XML 을 고쳐도 아무 일도 일어나지 않았다 (설정이 조용히 무시되는 자리였다).
         const float4 gameViewClearColor = editor::getEditorData()._clearColor;
 

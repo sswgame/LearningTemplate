@@ -16,6 +16,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorSessionPolicy.cpp
 		TestEditorViewportMath.cpp
 		TestEditorViewportPick.cpp
+		TestReloadFileManager.cpp
 		TestSelectionManager.cpp
 		TestTexturePipeline.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
@@ -31,6 +32,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorTransaction.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWorkspace.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ReloadFileManager.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/SelectionManager.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"

@@ -25,8 +25,6 @@ namespace sw
         , _textureCache{ make_unique<TextureCache>() }
         , _prefabManager{ make_unique<PrefabManager>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
-        , _resourceWatchHandle{}
-        , _pReloadFileManager{ nullptr }
     {
     }
 
@@ -111,8 +109,6 @@ namespace sw
 
     void ResourceManager::shutdown()
     {
-        detachReloadFileManager();
-
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 
@@ -127,52 +123,6 @@ namespace sw
     {
         engine::getAssetStreamingQueue().sweepUnusedCache();
         // Note: MaterialCache automatically cleans up materials with 0 refcount in release().
-    }
-
-    void ResourceManager::attachReloadFileManager( ReloadFileManager& reloadFileManager )
-    {
-        detachReloadFileManager();
-        _pReloadFileManager = &reloadFileManager;
-
-        vector<string>         listExtension{ ".mat", ".prefab", ".json", ".xml", ".glTF", ".gltf", ".obj" };
-        FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &ResourceManager::onResourceFileChanged, this ) };
-        _resourceWatchHandle = _pReloadFileManager->registerWatch( "Resource/", listExtension, fileWatchDelegate );
-    }
-
-    void ResourceManager::detachReloadFileManager()
-    {
-        if ( _resourceWatchHandle.isValid() && _pReloadFileManager != nullptr )
-        {
-            _pReloadFileManager->unregisterWatch( _resourceWatchHandle );
-            _resourceWatchHandle = {};
-        }
-        _pReloadFileManager = nullptr;
-    }
-
-    void ResourceManager::onResourceFileChanged( const FileChangeEvent& changeEvent )
-    {
-        if ( changeEvent._action != FileWatcherAction::Modified )
-            return;
-
-        string relPath{};
-        if ( FileUtil::makePathRelative( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
-            return;
-
-        if ( relPath.empty() )
-            return;
-
-        SW_LOG_INFO( "Hot-Reloading asset: %#", relPath.c_str() );
-
-        const string extension{ FileUtil::getExtension( changeEvent._filename ) };
-        if ( extension == ".mat" )
-        {
-            // Try to reload from cache
-            _materialCache->reload( relPath );
-        }
-        else if ( extension == ".prefab" )
-        {
-            // Future expansion for prefabs if needed.
-        }
     }
 
     MaterialCache& ResourceManager::getMaterialManager()

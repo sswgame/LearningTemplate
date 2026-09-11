@@ -8,13 +8,14 @@
  *   - ShaderCache — 셰이더 컴파일 결과 캐시 (RHI)
  *   - RenderPassManager — GPU 디바이스가 소유
  *   - ConfigManager — Config/ 호스트 JSON (Resource/ 아님)
- *   - StringTable · ReloadFileManager · SceneManager
+ *   - StringTable · SceneManager
+ *   - 파일 감시 · 에셋 핫리로드 — **개발 기능이라 에디터가 소유**한다(Editor/Common/Workspace).
+ *     배포본에는 에디터가 없으므로 감시 스레드도 없다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 
@@ -80,11 +81,6 @@ namespace sw
          */
         bool mountStartupPacks();
 
-        /** @brief 핫리로드 감시를 위해 ReloadFileManager를 연결합니다. */
-        void attachReloadFileManager( ReloadFileManager& reloadFiles );
-        /** @brief ReloadFileManager 연결을 해제합니다. */
-        void detachReloadFileManager();
-
         /** @brief 불필요한 캐시 및 스트리밍 큐 대기 내역을 정리하여 메모리를 반환합니다. */
         void garbageCollectUnusedAssets();
 
@@ -112,16 +108,11 @@ namespace sw
         const PrefabManager& getPrefabManager() const;
 
     private:
-        void onResourceFileChanged( const FileChangeEvent& changeEvent );
-
-    private:
         AssetDatabase                   _assetDatabase;
         AssetFormatRegistry             _assetFormatRegistry;
         unique_ptr<MaterialCache>       _materialCache;
         unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabManager>       _prefabManager;
         unique_ptr<ResourcePackManager> _pPackManager;
-        FileWatchHandle                 _resourceWatchHandle;
-        ReloadFileManager*              _pReloadFileManager;
     };
 } // namespace sw

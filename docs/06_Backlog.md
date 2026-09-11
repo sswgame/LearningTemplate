@@ -279,6 +279,53 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (에셋 핫리로드를 에디터로 내렸다 — 그리고 그것도 한 번도 돈 적이 없었다)
+
+`ResourceManager` 가 `Resource/` 전체에 파일 감시를 걸고 있었다. 배포본에도 감시 스레드가 뜨고
+이벤트가 쌓이는데, 그 이벤트로 할 일(에셋을 고쳐서 바로 보기)은 **에디터에만 있다.**
+`ReloadFileManager` 를 `Source/Engine/Module/` → `Source/Editor/Common/Workspace/` 로 옮기고,
+`EditorContext` 가 `AssetHotReload` 로 소유한다. 에디터가 없으면 감시도 없다.
+(`SW_API` 도 뗐다 — Engine.dll export 매크로라 EditorModule 에 붙으면 dllimport 가 된다.)
+
+**옮기려고 열어 보니 이 기능도 돌고 있지 않았다.** 원인이 두 겹이다.
+
+1. **감시 접두어가 상대 경로였다.** `registerWatch( "Resource/", ... )` 인데, 워처가 올리는
+   이벤트의 `_directory` 는 워처가 연 **절대 경로**(`D:/…/Resource`)다. 접두어 비교
+   (`startsWithPathComponent`)가 **항상** 실패한다. 이제 `ResourceUtil::getRootFolderPath()` 를 넘긴다.
+2. **확장자가 `.mat` 이었다.** 저장소의 머티리얼은 전부 `.material` 이라 하나도 안 걸린다.
+   게다가 필터에는 일곱(`.mat .prefab .json .xml .glTF .gltf .obj`)이 적혀 있고 처리는 `.mat` 하나뿐이라,
+   나머지 여섯은 이벤트를 받아 놓고 조용히 버렸다 — 감시 비용만 내는 자리였다.
+
+**그래서 목록을 하나로 만들었다.** 코드에는 "다시 읽는 방법이 있는 종류" 표만 둔다
+(`AssetHotReload` 의 `_s_arrReloadRule`, 지금은 Material 하나). 확장자는 이미 정본이 있다 —
+`EditorAssetTypeRegistry`(`appendSuffixes(kind)` 추가). 감시 필터와 디스패치가 같은 곳에서 나오므로
+"필터는 통과했는데 처리기가 없다" 가 생길 수 없다.
+
+**무엇을 감시할지는 설정이 정한다** — `editordata.json` 의 `_listHotReloadExtension`.
+비우면 처리기가 있는 확장자 전부. 처리기가 없는 확장자를 적으면 **경고를 남기고 뺀다**
+(조용히 버리지 않는다). 변경이 쏟아지는 폴더를 잠시 빼려면 이 목록을 좁히면 된다.
+
+실측(`-EnableEditor`, 동기 프로브 — 비동기 로거는 강제 종료 때 마지막 줄을 잃는다):
+`.material` 수정 → `RELOAD engine/materials/defaultmaterial.material` 1건, 무관한 `.txt` 수정 → 0건.
+설정을 `[.material, .png]` 로 두면 워치 1개 + `'.png' 는 처리기가 없어 무시합니다` 경고.
+패널 덤프 **창 15개 · 내용 없는 패널 0개**(기준선과 같다).
+
+**`editordata` 를 XML → JSON 으로 바꿨다** (`Config/Editor/editordata.json`). 읽는 쪽은
+`XmlSerializer::loadFile` → `JsonSerializer::loadFile` 한 줄이고, 경로 상수는
+`Scripts/common/Constants.py`(SSOT) → `GenerateCMakeConstants.py` 로 다시 생성했다.
+
+> **float4 를 JSON 에 쓸 때는 쉼표다.** 텍스트 핸들러
+> (`SerializeContext` 의 `registerVectorTextHandler`)가 `','` 로만 자른다. 공백 구분
+> (`"0.12 0.15 0.18 1.0"`)은 파싱에 실패하고, `JsonSerializer::loadFile` 은 필드 하나만 실패해도
+> **파일 전체를 버리고 기본값으로 돌아간다**. `Config/Engine/EngineConfig.json` 의 `_window._clearColor`
+> 가 그 형태로 들어 있었다 — 값이 마침 C++ 기본값과 같아 아무도 눈치채지 못했다. 같이 고쳤다.
+> (JSON 에는 주석이 없다. XML 에 달아 두던 설명은 `EditorData.h` 와 `Config/README.md` 로 옮겼다.)
+
+**아직 남은 것 — 감시 자체의 한계** (이번 이동과 별개, `Core/File`):
+- Windows `_listEventQueue` 에 상한이 없다 (Linux 는 `kMaxQueuedEvent = 4096` + 합성 리스캔).
+- Windows 오버플로 리스캔 이벤트는 `_filename` 이 비어 있어 확장자 필터에 걸려 조용히 버려진다.
+- `Editor/Common/Asset/TextureWatcher` 는 프로덕션 호출부가 **0개**다 — 같은 자리에 감시자가 둘 있는 셈이다.
+
 ### 2026-09-12 (기동 순서를 바로잡았다 — 보정 재실행이 있다는 것 자체가 신호였다)
 
 `ResourceUtil` 싱글턴 이야기에서 시작했는데, 값어치 있는 것은 싱글턴이 아니라 **그 주위의 순서**였다.
@@ -2574,7 +2621,7 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
 > | `Object -> Scene` | 6 | `ComponentPtr.cpp` 가 SceneManager 로 핸들을 푼다 |
 > | `Object -> Sequencer` | 3 | `SequencePlayerComponent` (반대 방향도 3) |
 > | `Config -> Graphics` | 1 | `EngineConfig` 가 `RHIBackend` 열거형을 든다 |
-> | `Graphics`/`Resource` `-> Module` | 3 | 셰이더·리소스 핫리로드가 `ReloadFileManager` 를 쓴다 |
+> | ~~`Graphics`/`Resource` `-> Module`~~ | ~~3~~ | **2026-09-12 해소** — `ReloadFileManager` 는 에디터 소유가 됐다 |
 >
 > 풀어내는 순서 제안(작은 것부터, 각각 독립): ① `Config -> Graphics` — `RHIBackend` 를
 > `Config` 나 더 아래로 내린다. ② `Serialization -> Object` — 컴포넌트 핸들 해석을 콜백으로

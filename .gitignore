@@ -85,7 +85,7 @@ Config/Environment/search_paths.json
 Config/toolchain_config.json
 Config/parser_config.json
 Config/search_paths.json
-# Editor user layouts (committed: EditorConfig.json, editordata.xml)
+# Editor user layouts (committed: EditorConfig.json, editordata.json)
 Config/Editor/imgui.ini
 Config/Editor/windows.ini
 Config/Editor/*.local.json

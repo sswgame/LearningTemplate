@@ -5,7 +5,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Renderer/Frame/ComputePass.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
-#include "Engine/Module/ReloadFileManager.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -155,26 +154,6 @@ SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
     assetMeta._assetType  = "Texture";
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::AssetPicker ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( assetMeta, "string" ) ) );
     SW_EXPECT_TRUE( strstr( sw::PropertyMetaHint::getAssetFilter( assetMeta ), "*.png" ) != nullptr );
-}
-
-// ------------------------------------------------------------------------------
-// 8) ReloadFileManager 등록 및 해제 라이프사이클
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
-{
-    sw::ReloadFileManager manager;
-    SW_EXPECT_TRUE( manager.initialize() );
-
-    bool       bCallbackCalled = false;
-    const auto handle          = manager.registerWatch( "Resource/shaders", { ".hlsl" },
-                                                        SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-             {
-        bCallbackCalled = true;
-    } ) );
-
-    SW_EXPECT_TRUE( handle.isValid() );
-    manager.unregisterWatch( handle );
-    manager.shutdown();
 }
 
 // ------------------------------------------------------------------------------

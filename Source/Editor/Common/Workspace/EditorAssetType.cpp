@@ -292,6 +292,22 @@ namespace sw::editor
         return kArrBrowserFilter;
     }
 
+    void EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix )
+    {
+        for ( const TypeRow& row : kArrType )
+        {
+            if ( row._kind != kind || row._pSuffix == nullptr )
+                continue;
+            for ( uint32 index = 0; index < row._suffixCount; ++index )
+            {
+                const string_view suffix = row._pSuffix[index];
+                if ( EditorAssetTypeInternal::containsSuffix( outListSuffix, suffix ) )
+                    continue;
+                outListSuffix.push_back( string{ suffix } );
+            }
+        }
+    }
+
     void EditorAssetTypeRegistry::appendImportExtensions( vector<string>& outListExtension )
     {
         for ( const TypeRow& row : kArrType )

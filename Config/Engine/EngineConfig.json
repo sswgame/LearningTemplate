@@ -5,7 +5,7 @@
         "_bVSync": false,
         "_title": "SWEngine - 2D Action Demo",
         "_defaultRHI": "DirectX12",
-        "_clearColor": "0.12 0.15 0.18 1.0"
+        "_clearColor": "0.12,0.15,0.18,1"
     },
     "_engineData": "engine/data/enginedata.xml",
     "_maxFrameDeltaTime": 0.1,

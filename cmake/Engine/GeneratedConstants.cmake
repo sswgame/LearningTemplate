@@ -26,7 +26,7 @@ set(SW_FILE_RUNTIME_ENGINE_CONFIG "Config/Engine/EngineConfig.json")
 set(SW_FILE_RUNTIME_APP_CONFIG "Config/App/AppConfig.json")
 set(SW_FILE_RUNTIME_EDITOR_CONFIG "Config/Editor/EditorConfig.json")
 set(SW_FILE_RUNTIME_GAME_CONFIG "Config/Game/GameConfig.json")
-set(SW_FILE_RUNTIME_EDITOR_DATA "Config/Editor/editordata.xml")
+set(SW_FILE_RUNTIME_EDITOR_DATA "Config/Editor/editordata.json")
 
 set(SW_FILE_TPL_BUILTIN_HEADER "BuiltinFileHeader.tpl")
 set(SW_FILE_TPL_BUILTIN_REGISTRAR "BuiltinTypeRegistrar.tpl")

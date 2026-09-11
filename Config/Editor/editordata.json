@@ -1,0 +1,34 @@
+{
+    "_defaultMap": "",
+    "_warpMap": "",
+    "_spriteAtlas": "",
+    "_fontSize": 16,
+    "_clearColor": "0.12,0.15,0.18,1",
+    "_editorFolder": "editor",
+    "_fontsFolder": "fonts",
+    "_listBaseFont": [
+        "consola.ttf",
+        "Consolas.ttf",
+        "DejaVuSansMono.ttf",
+        "DejaVuSansMono-Bold.ttf",
+        "LiberationMono-Regular.ttf",
+        "NotoSansMono-Regular.ttf",
+        "UbuntuMono-R.ttf",
+        "FreeMono.ttf"
+    ],
+    "_listKoreanFont": [
+        "malgun.ttf",
+        "malgunsl.ttf",
+        "NanumGothic.ttf",
+        "NanumBarunGothic.ttf",
+        "NotoSansCJK-Regular.ttc",
+        "NotoSansCJKkr-Regular.otf",
+        "NotoSansKR-Regular.otf",
+        "DroidSansFallbackFull.ttf"
+    ],
+    "_listHotReloadExtension": [
+        ".material",
+        ".mat",
+        "._material"
+    ]
+}

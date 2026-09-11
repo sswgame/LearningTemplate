@@ -21,7 +21,7 @@ kFileRuntimeEngineConfig = "Config/Engine/EngineConfig.json"
 kFileRuntimeAppConfig = "Config/App/AppConfig.json"
 kFileRuntimeEditorConfig = "Config/Editor/EditorConfig.json"
 kFileRuntimeGameConfig = "Config/Game/GameConfig.json"
-kFileRuntimeEditorData = "Config/Editor/editordata.xml"
+kFileRuntimeEditorData = "Config/Editor/editordata.json"
 kFileShippingHostDefaultsHeader = "ShippingHostDefaults.h"
 kFilePackConfig = "Config/Engine/PackConfig.json"
 
