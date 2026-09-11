@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-12 · 기준 커밋 `f18e78e6`
+> 마지막 갱신: 2026-09-12 · 기준 커밋 `4163684a`
 
 ---
 
@@ -288,6 +288,61 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-12 (싱글턴 걷어내기 — 넷은 옮겼고, 옮길 수 없는 것에는 이유가 있다)
+
+저장소 전체에서 명시적 `instance()` / `get()` 싱글턴은 **아홉 개**였다. 그중 넷을 명시적 소유로
+옮겼다. 기준은 하나다 — **소유자가 존재할 수 있는가.**
+
+**옮긴 것**
+
+1. `FrameProfiler` (`3afcaa21`) — `Source/Core/Profile/` → `Source/Engine/Utility/Debug/` 로 옮기고
+   `EngineLoop` 이 `unique_ptr` 로 소유, `EngineServiceList.xxx` 에 등록. 옮길 수 있었던 이유는
+   **`Source/Core` 안에서 쓰는 곳이 자기 자신 말고 0개**였기 때문이다 — 호출부가 전부 Engine 이면
+   헤더가 Core 에 있을 이유가 없다.
+2. `CompressionCodecRegistry::getDefault()` (`7445bb94`) — Logger 패턴(`setGlobalSink`)과 같은
+   모양으로, 인스턴스는 `EngineLoop` 이 들고 Core 에는 **포인터 슬롯만** 둔다. 여기서 **실재하던
+   갈라짐**을 하나 닫았다: `EngineLoop` 은 서비스에 싱글턴을 꽂았는데 `TestFramework/main.cpp` 는
+   자기 `unique_ptr` 인스턴스를 꽂아서, 테스트에서는 `engine::getCompressionCodecRegistry()` 와
+   `CompressionStream` 이 서로 다른 레지스트리를 보고 있었다.
+3. 에디터 전역 상태 (`72fa7020`) — 플레이 세션(재생 상태·스텝·롤백 스냅샷)과 활성 테마를
+   `EditorContext` 소유로. 정적 파사드(`EditorPlaySession` · `EditorThemeUtil`)는 그대로 두어
+   호출부 65곳은 안 건드렸다.
+4. ReflectionParser 의 `instance()` 넷 (`4163684a`) — `ParserSession` 을 `main` 이 소유하고
+   아래로 내려준다. `TypeNameMap::normalize` 를 감싸던 `normalizeTypeName()` 자유 함수도 삭제했다
+   — 호출부 열아홉 곳이 전역을 쓴다는 사실을 감추고 있었다.
+
+**옮기지 않은 것과 이유**
+
+- `CrashContextStore::get()` — 크래시 시그널/SEH 핸들러가 읽는다. 콜백에 컨텍스트를 못 넘기고,
+  그 시점엔 소유자가 이미 파괴됐을 수 있다.
+- `MemoryProfiler::s_activeProfiler`, `LiveReloadManager::s_delayLoadManager` — 전역
+  `operator new/delete` 훅과 delay-load 훅. **둘 다 이미 바인딩 슬롯이지 싱글턴이 아니다**
+  (인스턴스는 `EngineLoop` 이 `unique_ptr` 로 든다).
+- 등록자 헤드 넷(`TypeRegistrar` · `EnumRegistrar` · `ComponentFactoryRegistrar` ·
+  `GlobalVariableRegistrar`), `TestRegistry::getInstance()` — `main` **이전** 정적 초기화 시점에
+  자기 등록한다. 소유자가 존재할 수 없는 시점이다.
+- `TagID` · `hashed_string` 인터닝 테이블 — 인터닝은 "같은 문자열 → 같은 ID" 가 프로세스 전역에서
+  성립해야 의미가 있다. 소유자를 두면 ID 수명이 소유자에 묶인다.
+- `ResourceUtil` 의 정적 멤버 다섯 — 형태상 가장 싱글턴이지만 **호출부가 247곳**이다. 이득 대비
+  변경량이 가장 나빠 미뤘다.
+- `ParserContext::s_sharedConfig` — `once_flag` 로 한 번 채우는 설정. `getSharedConfig()` 호출부
+  20곳이고 성격이 `instance()` 와 다르다.
+
+**함정 둘**
+
+- **테마를 컨텍스트로 옮기자 순서 버그가 생겼다.** `EditorThemeUtil::loadFromConfig()` 가
+  `EditorContext::initialize()`(그 안에서 `setActive`) 보다 **먼저** 불리고 있었다. 상태를 컨텍스트로
+  옮기면 그 시점에는 갈 곳이 없어 **조용히 버려진다**. `_themePreset` 을 MidnightBlue 로 바꿔 두고
+  프로브를 박아 실측했다: 고친 뒤 applyPreset 전 0 → 후 2, 순서를 되돌리면 후에도 0.
+  **상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 볼 것.**
+- **핫리로드 근거는 틀렸다.** 처음에 "에디터 정적을 `EditorContext` 로 옮기면 핫리로드를 견딘다"
+  고 적었는데, `ImGuiEditor` 가 `EditorContext` 를 소유하고 **둘 다 EditorModule 에 살아서**
+  리로드되면 같이 죽는다. 이 변경의 이득은 수명이 명시적이 되는 것이지 리로드 내성이 아니다.
+
+**코드젠 도구는 생성물로 검증한다.** ReflectionParser 변경은 컴파일 통과로 부족하다 —
+`build/<preset>/generated` 를 지우고 새 파서로 재생성, 변경을 stash 하고 옛 파서로 다시 재생성해
+`diff -r` 로 맞췄다. **149개 파일 차이 0.**
 
 ### 2026-09-12 (한 줄짜리 if 의 중괄호를 기계로 걷어낸다 — 규칙은 있었지만 아무도 강제하지 않았다)
 
