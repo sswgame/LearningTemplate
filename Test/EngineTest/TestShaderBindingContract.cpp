@@ -286,7 +286,14 @@ SW_TEST_CASE( ShaderBindingContractTest, ReflectionNamesAreUniformAcrossBackends
                 stem = stem.substr( 0, dot );
 
             const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, format );
-            sw::vector<PerFormat>&         listPer    = mapShader[stem];
+            // **리플렉션이 빈 것은 "레이아웃이 없다" 가 아니라 "이 플랫폼에 그 포맷의 리플렉터가 없다" 다.**
+            // DXBC/DXIL 리플렉션은 Windows 전용(FXC/DXC)이라 리눅스에서는 dx11·dx12 바이너리가 통째로 빈
+            // 결과를 낸다. 그걸 "찾았다" 로 세면 g_SwMaterials 가 없다며 리눅스에서만 진다 — 셰이더가
+            // 아니라 도구가 없어서 나는 실패다. AllBakedShadersMatchContract 가 이미 같은 규칙을 쓴다.
+            if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() &&
+                 reflection._listStructuredElement.empty() )
+                continue;
+            sw::vector<PerFormat>& listPer = mapShader[stem];
             if ( listPer.size() != kFormatCount )
                 listPer.resize( kFormatCount );
             PerFormat& per = listPer[formatIndex];

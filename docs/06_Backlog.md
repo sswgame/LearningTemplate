@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `b0517ba1`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `e8ecd8c3`
 
 ---
 
@@ -287,6 +287,46 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (CI 가 2026-09-07 부터 빨갛다 — 리눅스 실패 둘을 닫았다, Windows 는 남았다)
+
+**CI 는 `b0c52f7c`(2026-09-07 16:20) 를 끝으로 계속 실패해 왔다.** 55 개 런이 연속 실패인데
+로컬은 늘 초록이라 아무도 눈치채지 못했다. 실패 잡은 셋 — Windows Debug · Linux Debug · Linux ASan
+이고, 전부 `Test` 단계다. Shipping 둘은 `-R CoreTest` 만 돌려서 통과한다.
+
+> 런 상태는 공개 API 로 볼 수 있다(로그 본문은 관리자 권한이 필요하다):
+> `curl -s "https://api.github.com/repos/sswgame/LearningTemplate/actions/runs?per_page=30&branch=main"`
+
+**닫은 것 1 — `RenderPassTest.MaterialPermutationDrivesBatchPso` 만 스킵이 아니라 단언이었다.**
+CI 러너에는 X11 디스플레이가 없어 창이 안 열리고(`Failed to open X11 Display!`) 네 백엔드가 전부
+초기화에 실패한다. 형제 여덟(카메라 컬링·투명 정렬·뷰 모드 등)은 그때 `SW_TEST_SKIP` 으로 빠지는데
+이 하나만 `SW_EXPECT_TRUE_MSG( attemptedCount > 0 )` 이라 혼자 졌다. 같은 규칙으로 맞췄다.
+
+**닫은 것 2 — 리플렉션이 빈 것을 "레이아웃이 없다" 로 셌다.**
+`ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends` 가
+`forwardlit_ps g_SwMaterials 원소 없음: dx11 / dx12` 로 졌다. DXBC/DXIL 리플렉션은 Windows 전용
+(FXC/DXC)이라 리눅스에서는 그 둘이 **통째로 빈 결과**를 낸다. 그걸 `bFound = true` 로 세니
+비교 기준(`pRef`)이 dx11 이 되고, 있지도 않은 원소를 요구해 리눅스에서만 졌다 — 셰이더가 아니라
+도구가 없어서 나는 실패다. 형제 `AllBakedShadersMatchContract` 는 이미 같은 규칙을 쓰고 있었다.
+
+> **이 둘은 바로 앞 커밋(`e8ecd8c3`, 경로 소문자화 수정)이 드러낸 것이다.** 그전까지는 리눅스에서
+> 구운 바이너리를 **하나도 못 읽어** 셋이 통째로 스킵됐다. 읽히기 시작하자 비로소 이 계약 검사가
+> 리눅스에서 실제로 돌았고, 그제서야 플랫폼 구멍이 드러났다. 스킵은 실패보다 조용해서 더 오래 숨는다.
+
+**남은 것 — Windows Debug.** GH Windows 러너에는 GPU 가 없고 DX11/DX12 가 Basic Render Driver
+(WARP)로 **초기화에 성공한다.** 그래서 리눅스처럼 스킵되지 않고 픽셀 검증 테스트들이 실제로 돌아서
+진다(`b0517ba1` 런에서 6 건). `MainPassCullsWithCameraFrustumNotLight` ·
+`TransparentOrderMatchesAcrossBackends` 둘이 확인됐고 나머지 넷은 미확인이다. 실패 메시지를
+받아야 방향이 정해진다 — `좌 0, 우 0` 이면 WARP 가 컴퓨트 컬링/인디렉트를 못 하는 것이므로
+초기화에서 끊어 스킵시켜야 하고(백로그의 GL `ARB_gl_spirv` 건과 같은 처방), 숫자가 어중간하면
+소프트웨어 래스터라이저의 실제 렌더링 차이라 허용 오차나 필터 쪽을 손봐야 한다.
+
+**곁들여 확인한 것:** CI 전용 `SW_ENABLE_UNITY_BUILD=ON` 은 범인이 아니다. 로컬에서
+`cmake --preset Ninja-Debug -B build/Unity-Debug -DSW_ENABLE_UNITY_BUILD=ON` 으로 그대로 빌드해
+경고·오류 0 을 확인했다.
+
+검증: Debug 빌드 경고 0, nogpu 5/5, 린트 6/6, ShaderBindingContractTest 7/7 (Windows 로컬은 네
+리플렉터가 다 있어 가드가 걸리지 않는다 — 커버리지는 그대로다).
 
 ### 2026-09-11 (리눅스 CI 가 구운 셰이더를 전부 못 읽던 것 — 디렉터리 열거가 경로를 소문자로 눌렀다)
 

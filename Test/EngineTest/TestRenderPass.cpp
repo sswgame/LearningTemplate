@@ -1533,7 +1533,11 @@ SW_TEST_CASE( RenderPassTest, MaterialPermutationDrivesBatchPso )
             mesh->releaseGpu();
     }
 
-    SW_EXPECT_TRUE_MSG( attemptedCount > 0, "백엔드를 하나도 초기화하지 못했다 — 이 테스트는 아무것도 검증하지 않았다" );
+    // 형제 여덟(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다. 예전엔 여기만 단언이라
+    // **디스플레이가 없는 CI 러너에서 이 테스트 하나만 졌다** — X11 디스플레이가 없으면 창이 안 열려
+    // 네 백엔드가 전부 초기화에 실패하고, 그건 결함이 아니라 그 환경에 GPU 가 없다는 뜻이다.
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend available for material permutation PSO test" );
 }
 
 /**
