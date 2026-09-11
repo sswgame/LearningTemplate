@@ -8,7 +8,9 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Profile/FrameProfiler.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -26,7 +28,7 @@ namespace sw
             return;
 
         _frameTarget = static_cast<uint64>( gv_profileFrames );
-        FrameProfiler::get().setEnabled( true );
+        engine::getFrameProfiler().setEnabled( true );
         SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임", kWarmupFrames, _frameTarget );
     }
 
@@ -35,7 +37,7 @@ namespace sw
         if ( _frameTarget == 0 || _bReported == SW_TRUE )
             return;
 
-        FrameProfiler& profiler = FrameProfiler::get();
+        FrameProfiler& profiler = engine::getFrameProfiler();
         const uint64   frames   = profiler.getFrameCount();
 
         // 워밍업(셰이더 컴파일·PSO 생성·트랜지언트 할당)이 첫 프레임들을 크게 부풀린다.

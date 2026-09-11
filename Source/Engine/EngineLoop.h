@@ -27,6 +27,7 @@ namespace sw
     class DebugDrawQueue;
     class EventDispatcher;
     class FrameDoubleBuffer;
+    class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
     class IAudioSystem;
@@ -158,6 +159,7 @@ namespace sw
         unique_ptr<RHIBackendRegistry>  _rhiBackendRegistry;
         unique_ptr<ShaderCache>         _shaderCache;
         unique_ptr<ComponentDefaults>   _componentDefaults;
+        unique_ptr<FrameProfiler>       _frameProfiler;
 
         bool _bShellActionsBound;
         bool _bHeadless;

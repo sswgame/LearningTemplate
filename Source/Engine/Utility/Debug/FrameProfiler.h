@@ -24,9 +24,13 @@ namespace sw
 {
     /**
      * @class FrameProfiler
-     * @brief 이름 붙은 구간의 프레임당 시간·호출수를 모읍니다. 프로세스 전역 싱글턴입니다.
+     * @brief 이름 붙은 구간의 프레임당 시간·호출수를 모읍니다.
      * @details 병렬 패스 기록이 여러 스레드에서 동시에 같은 구간을 누적하므로 relaxed 원자 덧셈을
      *          쓴다. 구간은 이름당 슬롯 하나로 고정되고, 슬롯 번호는 매크로가 static 으로 캐시한다.
+     *
+     *          소유는 `EngineLoop` 이고 조회는 `engine::getFrameProfiler()` 다. 예전에는
+     *          `get()` 이 함수 지역 static 을 들고 있는 싱글턴이었는데, 그러면 수명이 아무에게도
+     *          속하지 않아 종료 순서를 정할 수 없었다.
      */
     class SW_API FrameProfiler
     {
@@ -36,8 +40,7 @@ namespace sw
         /** @brief 슬롯을 못 받았을 때의 값. */
         static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
 
-        /** @brief 프로세스 전역 인스턴스입니다. */
-        static FrameProfiler& get();
+        FrameProfiler() = default;
 
         /**
          * @brief 이름을 슬롯에 등록하고 번호를 돌려줍니다. 같은 이름이면 같은 번호입니다.
@@ -69,8 +72,6 @@ namespace sw
         void reset();
 
     private:
-        FrameProfiler() = default;
-
         /** @brief 구간 하나의 누적치. */
         struct Scope
         {
@@ -122,18 +123,18 @@ namespace sw
  */
 #define SW_PROFILE_SCOPE( name )                                            \
     static const uint32 SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =     \
-        ::sw::FrameProfiler::get().registerScope( name );                   \
+        ::sw::engine::getFrameProfiler().registerScope( name );             \
     ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ ) \
     {                                                                       \
         SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                       \
     }
 
 /** @brief name 카운터에 value 를 더합니다(드로우 수 등). 시간이 아닙니다. */
-#define SW_PROFILE_COUNT( name, value )                                                      \
-    do                                                                                       \
-    {                                                                                        \
-        static const uint32 SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ) =                 \
-            ::sw::FrameProfiler::get().registerScope( name );                                \
-        ::sw::FrameProfiler::get().addCount( SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ), \
-                                             static_cast<uint64>( value ) );                 \
+#define SW_PROFILE_COUNT( name, value )                                                            \
+    do                                                                                             \
+    {                                                                                              \
+        static const uint32 SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ) =                       \
+            ::sw::engine::getFrameProfiler().registerScope( name );                                \
+        ::sw::engine::getFrameProfiler().addCount( SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ), \
+                                                   static_cast<uint64>( value ) );                 \
     } while ( false )

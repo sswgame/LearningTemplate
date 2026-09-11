@@ -1,12 +1,14 @@
 #include "pch.h"
 
-#include "Core/Profile/FrameProfiler.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+
+#include "Engine/Common/EngineServices.h"
 
 #include <chrono>
 
@@ -40,13 +42,6 @@ namespace sw
         }
 #endif
     } // namespace
-
-    FrameProfiler& FrameProfiler::get()
-    {
-        // 함수 지역 static — 로거보다 먼저 초기화될 위험이 없다.
-        static FrameProfiler s_instance;
-        return s_instance;
-    }
 
     uint32 FrameProfiler::registerScope( const utf8* pName )
     {
@@ -189,7 +184,7 @@ namespace sw
         : _startNanos{ 0 }
         , _slot{ slot }
     {
-        if ( slot < FrameProfiler::kMaxScope && FrameProfiler::get().isEnabled() )
+        if ( slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )
             _startNanos = nowNanos();
         else
             _slot = FrameProfiler::kInvalidSlot;
@@ -199,6 +194,6 @@ namespace sw
     {
         if ( _slot >= FrameProfiler::kMaxScope )
             return;
-        FrameProfiler::get().addSample( _slot, nowNanos() - _startNanos );
+        engine::getFrameProfiler().addSample( _slot, nowNanos() - _startNanos );
     }
 } // namespace sw

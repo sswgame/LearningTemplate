@@ -3,9 +3,9 @@
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Profile/FrameProfiler.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {

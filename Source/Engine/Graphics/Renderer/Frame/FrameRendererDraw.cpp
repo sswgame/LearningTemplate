@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Math/MatrixMath.h"
-#include "Core/Profile/FrameProfiler.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
@@ -19,6 +18,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {

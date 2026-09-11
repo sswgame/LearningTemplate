@@ -40,6 +40,7 @@ SW_ENGINE_SERVICE( _pRHIBackendRegistry, class, RHIBackendRegistry, getRHIBacken
 SW_ENGINE_SERVICE( _pCompressionCodecRegistry, class, CompressionCodecRegistry, getCompressionCodecRegistry, 1, 1 )
 SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, 1, 1 )
 SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, 1, 1 )
+SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, 1, 1 )
 
 SW_ENGINE_SERVICE_CONST( _pEngineData, struct, EngineData, getEngineData, 1, 0 )
 

@@ -12,7 +12,6 @@
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
-#include "Core/Profile/FrameProfiler.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -54,6 +53,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Window/IWindow.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -214,6 +214,7 @@ namespace sw
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
             _componentDefaults = make_unique<ComponentDefaults>();
+            _frameProfiler     = make_unique<FrameProfiler>();
 
             EngineServices services{};
             services._pCommandLineManager       = _commandLineManager.get();
@@ -237,6 +238,7 @@ namespace sw
             services._pCompressionCodecRegistry = &CompressionCodecRegistry::getDefault();
             services._pShaderCache              = _shaderCache.get();
             services._pComponentDefaults        = _componentDefaults.get();
+            services._pFrameProfiler            = _frameProfiler.get();
 
             engine::bindEngineServices( services );
             engine::registerModuleTypes( "Engine" );
@@ -533,7 +535,7 @@ namespace sw
         if ( _bHeadless )
             return;
 
-        FrameProfiler& profiler = FrameProfiler::get();
+        FrameProfiler& profiler = engine::getFrameProfiler();
         profiler.beginFrame();
 
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
@@ -622,7 +624,7 @@ namespace sw
 
     void EngineLoop::endFrame()
     {
-        FrameProfiler::get().endFrame();
+        engine::getFrameProfiler().endFrame();
         _profileSession.onFrameEnd();
 
         if ( _inputManager != nullptr )

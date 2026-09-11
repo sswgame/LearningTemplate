@@ -32,6 +32,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 #include "GameFramework/Base/GameService.h"
 
@@ -73,6 +74,7 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::CompressionCodecRegistry> compressionCodecRegistry = sw::make_unique<sw::CompressionCodecRegistry>();
     sw::unique_ptr<sw::ShaderCache>              shaderCache              = sw::make_unique<sw::ShaderCache>();
     sw::unique_ptr<sw::ComponentDefaults>        componentDefaults        = sw::make_unique<sw::ComponentDefaults>();
+    sw::unique_ptr<sw::FrameProfiler>            frameProfiler            = sw::make_unique<sw::FrameProfiler>();
 
     logger->initialize();
     deadlockDetector->initialize();
@@ -111,6 +113,7 @@ int main( int32 argc, utf8* argv[] )
     services._pCompressionCodecRegistry = compressionCodecRegistry.get();
     services._pShaderCache              = shaderCache.get();
     services._pComponentDefaults        = componentDefaults.get();
+    services._pFrameProfiler            = frameProfiler.get();
     sw::engine::bindEngineServices( services );
 
     // ------------------------------------------------------------------------------
@@ -182,6 +185,7 @@ int main( int32 argc, utf8* argv[] )
 
     sw::engine::unbindEngineServices();
 
+    frameProfiler.reset();
     componentDefaults.reset();
     shaderCache.reset();
     compressionCodecRegistry.reset();
