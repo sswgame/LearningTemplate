@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
@@ -13,9 +14,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Compression/Lz4CompressionCodec.h"
+#include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Reflection/TypeRegistry.h"
-
-#include <zlib.h>
 
 namespace sw
 {
@@ -385,32 +386,50 @@ namespace sw
             return true;
         }
 
-        if ( type == PackCompressionType::RLE )
+        // **코덱 구현은 공유하고, 고르는 것은 팩이 자기 enum 으로 한다.**
+        // 팩의 `PackCompressionType` 과 스트림의 `CompressionCodecType` 은 서로 다른 파일의 독립된
+        // on-disk 포맷이라 값이 다르다 — 숫자를 건너다니지 않고 여기서 직접 고른다.
+        // (예전에는 RLE 은 코덱 클래스를, zlib 은 `uncompress` 를 이 함수 안에서 직접 불렀다.)
+        RleCompressionCodec  rleCodec;
+        ZlibCompressionCodec zlibCodec;
+        Lz4CompressionCodec  lz4Codec;
+
+        ICompressionCodec* pCodec{ nullptr };
+        switch ( type )
         {
-            RleCompressionCodec codec;
-            size_t              decompressedSize{ 0 };
-            return codec.decompress( pSrc, srcSize, pDst, dstSize, decompressedSize );
+            case PackCompressionType::RLE:
+                pCodec = &rleCodec;
+                break;
+            case PackCompressionType::Zlib:
+                pCodec = &zlibCodec;
+                break;
+            case PackCompressionType::LZ4:
+                pCodec = &lz4Codec;
+                break;
+            case PackCompressionType::None:   // 위에서 이미 돌려보냈다
+            case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것 — 엔진은 모른다
+            default:
+                break;
         }
 
-        if ( type == PackCompressionType::Zlib )
+        if ( pCodec == nullptr )
         {
-            // 예전엔 이 파일 안에 자체 인플레이터를 들고 있었는데, 동적 허프만(BTYPE=2)을 아예
-            // 거부하고 fixed 경로도 거리 코드를 LSB-first 로 읽는 등 온전하지 않았다. 팩을 한 번도
-            // 못 읽던 동안 검증될 기회가 없던 코드다 — 표준 zlib 으로 대체했다.
-            uLongf      destLen = static_cast<uLongf>( dstSize );
-            const int32 result  = uncompress( static_cast<Bytef*>( pDst ), &destLen,
-                                              reinterpret_cast<const Bytef*>( pSrc ), static_cast<uLong>( srcSize ) );
-            if ( result != Z_OK )
-            {
-                SW_LOG_ERROR( "zlib uncompress 실패 (code %#, src %# → dst %# bytes)",
-                              result, static_cast<uint32>( srcSize ), static_cast<uint32>( dstSize ) );
-                return false;
-            }
-            return static_cast<size_t>( destLen ) == dstSize;
+            SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );
+            return false;
         }
 
-        SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );
-        return false;
+        size_t decompressedSize{ 0 };
+        if ( pCodec->decompress( pSrc, srcSize, pDst, dstSize, decompressedSize ) == false )
+            return false;
+
+        // 엔트리 헤더가 말한 원본 크기와 실제로 푼 크기가 달라지면 그대로 쓰면 안 된다.
+        if ( decompressedSize != dstSize )
+        {
+            SW_LOG_ERROR( "%# 해제 크기가 엔트리와 다릅니다 (%# != %#)", pCodec->getCodecName(),
+                          static_cast<uint64>( decompressedSize ), static_cast<uint64>( dstSize ) );
+            return false;
+        }
+        return true;
     }
 
 } // namespace sw

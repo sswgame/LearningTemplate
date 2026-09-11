@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/pair.h"
 #include "Core/File/FileUtil.h"
@@ -8,6 +9,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Compression/Lz4CompressionCodec.h"
+#include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
@@ -100,14 +103,27 @@ namespace sw
                 const uint32 uncompSize = static_cast<uint32>( content.size() );
                 const uint32 crc        = StringUtil::computeCrc32( content.data(), uncompSize );
 
+                // 팩이 자기 enum 으로 코덱을 고르는 것은 리더와 같다 — 여기서도 같은 코덱 클래스를 쓴다.
+                RleCompressionCodec  rleCodec;
+                ZlibCompressionCodec zlibCodec;
+                Lz4CompressionCodec  lz4Codec;
+
+                ICompressionCodec* pCodec{ nullptr };
+                if ( compression == PackCompressionType::RLE )
+                    pCodec = &rleCodec;
+                else if ( compression == PackCompressionType::Zlib )
+                    pCodec = &zlibCodec;
+                else if ( compression == PackCompressionType::LZ4 )
+                    pCodec = &lz4Codec;
+
                 vector<uint8> compressedPayloadBytes;
-                if ( compression == PackCompressionType::RLE && uncompSize > 0 )
+                if ( pCodec != nullptr && uncompSize > 0 )
                 {
-                    RleCompressionCodec codec;
-                    const size_t        bound = codec.compressBound( uncompSize );
+                    const size_t bound = pCodec->compressBound( uncompSize );
                     compressedPayloadBytes.resize( bound );
                     size_t compSize = 0;
-                    codec.compress( content.data(), uncompSize, compressedPayloadBytes.data(), bound, compSize );
+                    if ( pCodec->compress( content.data(), uncompSize, compressedPayloadBytes.data(), bound, compSize ) == false )
+                        return false;
                     compressedPayloadBytes.resize( compSize );
                 }
                 else
@@ -236,6 +252,58 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 // ------------------------------------------------------------------------------
 // Test 2: VFS 우선순위 오버라이드 스택 검증 (patch > patch_dlc > dlc > game > common > engine)
 // ------------------------------------------------------------------------------
+/**
+ * @brief [Engine_ResourcePack] 팩이 코덱마다 왕복되는가 — RLE · Zlib · LZ4.
+ * @details 팩은 **자기 포맷 enum(`PackCompressionType`)으로** 코덱을 고른다. 스트림 쪽
+ *          `CompressionCodecType` 과 값이 다르고 엮지 않는다 — 구현만 공유한다.
+ *          예전에는 리더가 RLE·Zlib 만 알았고 선언돼 있던 `LZ4` 는 "Unsupported" 로 거부했다.
+ */
+SW_TEST_CASE( Engine_ResourcePack, EveryPackCodecRoundTrips )
+{
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
+        { "maps/title.scene.xml", "<Scene name=\"Title\" version=\"1.0\"/>" },
+        { "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}" },
+        { "text/long.txt", sw::string( 4096, 'A' ) },
+    };
+
+    struct CodecCase
+    {
+        sw::PackCompressionType _type;
+        const utf8*             _pName;
+    };
+    const CodecCase arrCase[] = {
+        {sw::PackCompressionType::None, "None"},
+        { sw::PackCompressionType::RLE,  "RLE"},
+        {sw::PackCompressionType::Zlib, "Zlib"},
+        { sw::PackCompressionType::LZ4,  "LZ4"},
+    };
+
+    for ( const CodecCase& codecCase : arrCase )
+    {
+        const sw::string packPath = sw::FileUtil::joinPath(
+            sw::FileUtil::getCurrentPath(), sw::string( "test_codec_" ) + codecCase._pName + ".pack" );
+
+        SW_EXPECT_TRUE_MSG( sw::createTestPackFile( packPath, 0, codecCase._type, listFile, false ), codecCase._pName );
+
+        sw::ResourcePackReader reader;
+        SW_EXPECT_TRUE_MSG( reader.open( packPath ), codecCase._pName );
+        if ( reader.isOpen() == false )
+            continue;
+        SW_EXPECT_EQUAL( reader.getFileCount(), static_cast<uint32>( listFile.size() ) );
+
+        for ( const auto& [relPath, expected] : listFile )
+        {
+            sw::vector<uint8> bytes;
+            SW_EXPECT_TRUE_MSG( reader.readFile( relPath, bytes ), codecCase._pName );
+            const sw::string restored( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
+            SW_EXPECT_EQUAL( expected, restored );
+        }
+
+        reader.close();
+        sw::FileUtil::removeFile( packPath );
+    }
+}
+
 SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
 {
     const sw::GlobalVfsScope vfsScope;
