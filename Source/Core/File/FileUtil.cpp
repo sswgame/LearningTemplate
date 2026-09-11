@@ -24,6 +24,25 @@ namespace sw
 {
     SW_LOG_CALLER( "FileUtil" );
 
+    namespace
+    {
+        /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 한 건. */
+        struct FileDialogResult
+        {
+            FileDialogDelegate _delegate{};
+            vector<string>     _listPath{};
+        };
+
+        /** @brief 파일 다이얼로그 결과 큐 — 담는 쪽은 분리 스레드, 꺼내는 쪽은 메인 스레드다. */
+        struct FileDialogQueueInternal
+        {
+            inline static mutex                    _s_mutex{};
+            inline static vector<FileDialogResult> _s_listResult{};
+            /// @brief cancelFileDialogResults 가 올린다. 이미 열려 있는 다이얼로그의 결과를 버리는 표식이다.
+            inline static uint32 _s_generation{ 0 };
+        };
+    } // namespace
+
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
     {
         const size_t found = fullPath.find_last_of( "/\\" );
@@ -648,25 +667,6 @@ namespace sw
             size -= 3;
         }
     }
-
-    namespace
-    {
-        /** @brief 다이얼로그 스레드가 담고 메인 스레드가 꺼내는 결과 한 건. */
-        struct FileDialogResult
-        {
-            FileDialogDelegate _delegate{};
-            vector<string>     _listPath{};
-        };
-
-        /** @brief 파일 다이얼로그 결과 큐 — 담는 쪽은 분리 스레드, 꺼내는 쪽은 메인 스레드다. */
-        struct FileDialogQueueInternal
-        {
-            inline static mutex                    _s_mutex{};
-            inline static vector<FileDialogResult> _s_listResult{};
-            /// @brief cancelFileDialogResults 가 올린다. 이미 열려 있는 다이얼로그의 결과를 버리는 표식이다.
-            inline static uint32 _s_generation{ 0 };
-        };
-    } // namespace
 
     void FileUtil::openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess )
     {

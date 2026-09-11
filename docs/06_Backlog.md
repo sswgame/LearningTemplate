@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `6415f703`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `54dd5876`
 
 ---
 
@@ -288,6 +288,32 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (익명 네임스페이스를 파일당 하나로 — 합칠 수 없는 둘은 사유를 적어 둔다)
+
+`.cpp` 에 익명 네임스페이스가 여러 개로 흩어져 있으면 하나로 합쳐 스코프 최상단에 둔다. 프로젝트
+코드에서 둘 이상이던 파일은 **7 개**였다(`Tools/vcpkg/buildtrees` 는 외부 의존성이라 제외).
+
+**합친 것 4 개** — `Logger.cpp` · `D3D11RHIDevice.cpp` · `ShaderBindingLayout.cpp` ·
+`LinuxCallStackCapture.cpp`. 앞 셋은 첫 블록이 이미 `namespace sw` 최상단이라 뒤 블록 내용만 올렸다.
+`LinuxCallStackCapture.cpp` 는 파일 스코프 `static` 둘(`s_initRefCount`·`s_symbolMutex`)이 블록보다
+앞에 있어서 그대로는 못 올렸다 — 그 둘을 익명 네임스페이스 안으로 넣었다(같은 내부 링키지이고 이쪽이
+현대 관용구다). 곁들여 직전 커밋에서 `FileUtil.cpp` 중간에 새로 만든 블록도 최상단으로 올렸다.
+
+**합칠 수 없는 것 3 개 — 다시 시도하지 말 것**
+
+- **`Source/Core/Task/TaskManager.cpp`.** 뒤 블록이 **두 블록 사이에서 정의되는 `TaskNode`** 의 멤버를
+  건드린다. 올리면 `error: member access into incomplete type 'TaskNode'` 로 선다(실제로 해 보고 되돌렸다).
+  합치려면 타입 정의를 옮겨야 하는데 그건 별개의 리팩터다.
+- **`Test/SmokeTest/TestSmoke.cpp`.** 두 블록의 **스코프가 다르다**(파일 스코프 / `namespace sw` 안).
+  게다가 뒤 블록은 `#if !defined( SW_SHIPPING )` 안에 있고 앞 블록은 그 밖이라, 합치면 배포 빌드에
+  없어야 할 것이 들어온다.
+- **`Tools/ReflectionParser/ReflectionParser.cpp`.** 역시 스코프가 다르다. 앞 블록은 `namespace sw` 안의
+  파서 헬퍼들이고, 뒤 블록은 전역 스코프의 `LoggerScope` 로 **`main` 이 쓴다**. `namespace sw` 로 옮기면
+  `main` 쪽에서 이름을 한정해야 하고, main 전용 헬퍼를 엔진 네임스페이스에 넣는 것도 맞지 않는다.
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6.
+(`LinuxCallStackCapture.cpp` 는 여기서 컴파일할 수 없다 — CI 의 Linux 잡이 본다.)
 
 ### 2026-09-11 (Source/ 훑기 — 파일 다이얼로그 콜백이 분리 스레드에서 씬을 고치고 있었다)
 

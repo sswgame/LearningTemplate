@@ -31,6 +31,10 @@ namespace sw
         CallerEntry             s_arrCallerEntry[kMaxCallerEntries]{};
         size_t                  s_callerEntryCount{ 0 };
         mutex                   s_callerMutex{};
+
+        /// @brief 런타임 상세도. 기본 Info — 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘린다.
+        atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
+
     } // namespace
 
     Logger::Logger()
@@ -183,12 +187,6 @@ namespace sw
     {
         return _logFolderPath;
     }
-
-    namespace
-    {
-        /// @brief 런타임 상세도. 기본 Info — 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘린다.
-        atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
-    } // namespace
 
     void Logger::setRuntimeVerbosity( LogLevel level )
     {

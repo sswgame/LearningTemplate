@@ -23,6 +23,38 @@ namespace sw
         constexpr uint32 kDefaultNumerator  = 60;
         constexpr uint32 kDefaultDenomiator = 1;
 
+        /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록. */
+        constexpr D3D11_MESSAGE_ID arrHazardMessageId[] = {
+            D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_PSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_GSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_HSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_DSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_CSSETSHADERRESOURCES_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_CSSETUNORDEREDACCESSVIEWS_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETSANDUNORDEREDACCESSVIEWS_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETS_HAZARD,
+            D3D11_MESSAGE_ID_DEVICE_SOSETTARGETS_HAZARD,
+        };
+
+        /**
+         * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
+         * @details D3D11 은 이걸 **WARNING** 으로 낸다. 그런데 결과는 조용한 실패다 — 런타임이 한쪽을
+         *          NULL 로 강제하고 셰이더는 0 을 읽는다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
+         *          남아서 DX11 만 화면에 아무것도 못 그리던 게 이 경고 뒤에 숨어 있었고, 심각도로
+         *          거른 탓에 로그에 한 줄도 안 나왔다. 그래서 해저드만은 ERROR 로 올린다.
+         */
+        bool isHazardMessage( D3D11_MESSAGE_ID id )
+        {
+            // switch 로 적으면 -Wswitch-enum 이 나머지 1318개를 다루라고 요구한다. 경고를 끄는
+            // 대신 목록 순회로 바꾼다 — ID 를 더 넣을 때도 한 줄이다.
+            for ( const D3D11_MESSAGE_ID hazardId : arrHazardMessageId )
+            {
+                if ( id == hazardId )
+                    return true;
+            }
+            return false;
+        }
     } // namespace
 
     D3D11RHIDevice::D3D11RHIDevice()
@@ -321,42 +353,6 @@ namespace sw
         viewport.TopLeftY = kDefaultViewportY;
         _deviceContext->RSSetViewports( 1, &viewport );
     }
-
-    namespace
-    {
-        /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록. */
-        constexpr D3D11_MESSAGE_ID arrHazardMessageId[] = {
-            D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_PSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_GSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_HSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_DSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_CSSETSHADERRESOURCES_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_CSSETUNORDEREDACCESSVIEWS_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETSANDUNORDEREDACCESSVIEWS_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_OMSETRENDERTARGETS_HAZARD,
-            D3D11_MESSAGE_ID_DEVICE_SOSETTARGETS_HAZARD,
-        };
-
-        /**
-         * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
-         * @details D3D11 은 이걸 **WARNING** 으로 낸다. 그런데 결과는 조용한 실패다 — 런타임이 한쪽을
-         *          NULL 로 강제하고 셰이더는 0 을 읽는다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
-         *          남아서 DX11 만 화면에 아무것도 못 그리던 게 이 경고 뒤에 숨어 있었고, 심각도로
-         *          거른 탓에 로그에 한 줄도 안 나왔다. 그래서 해저드만은 ERROR 로 올린다.
-         */
-        bool isHazardMessage( D3D11_MESSAGE_ID id )
-        {
-            // switch 로 적으면 -Wswitch-enum 이 나머지 1318개를 다루라고 요구한다. 경고를 끄는
-            // 대신 목록 순회로 바꾼다 — ID 를 더 넣을 때도 한 줄이다.
-            for ( const D3D11_MESSAGE_ID hazardId : arrHazardMessageId )
-            {
-                if ( id == hazardId )
-                    return true;
-            }
-            return false;
-        }
-    } // namespace
 
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
     {

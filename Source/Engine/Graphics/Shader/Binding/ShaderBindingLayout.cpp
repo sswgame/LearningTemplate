@@ -55,6 +55,17 @@ namespace sw
                     return ShaderStageFlag::None;
             }
         }
+
+        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` → `"ShadowMap"` (레지스트리 조회 키). */
+        string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
+        {
+            string_view name = identifier;
+            if ( name.size() > 2 && name[0] == 'g' && name[1] == '_' )
+                name = name.substr( 2 );
+            if ( bStripIndexSuffix && name.size() > 5 && name.substr( name.size() - 5 ) == "Index" )
+                name = name.substr( 0, name.size() - 5 );
+            return name;
+        }
     } // namespace
 
     ShaderBindingKind ShaderBindingLayout::kindFromTypeLabel( string_view typeLabel )
@@ -165,20 +176,6 @@ namespace sw
         layout.buildBindPlan();
         return layout;
     }
-
-    namespace
-    {
-        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` → `"ShadowMap"` (레지스트리 조회 키). */
-        string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
-        {
-            string_view name = identifier;
-            if ( name.size() > 2 && name[0] == 'g' && name[1] == '_' )
-                name = name.substr( 2 );
-            if ( bStripIndexSuffix && name.size() > 5 && name.substr( name.size() - 5 ) == "Index" )
-                name = name.substr( 0, name.size() - 5 );
-            return name;
-        }
-    } // namespace
 
     void ShaderBindingLayout::buildBindPlan()
     {
