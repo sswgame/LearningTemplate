@@ -1,6 +1,10 @@
 /**
  * @file EditorConfig.h
- * @brief Host JSON 에디터 설정 (경로·레이아웃·툴 파일명). XML 시드는 EditorData.
+ * @brief **앱이 다시 쓰는** 에디터 상태 (Config/Editor/EditorConfig.json).
+ *
+ * @details 여기 있는 값은 에디터가 `saveToHost()` 로 **파일 전체를 다시 생성**하며 덮어쓴다
+ *          (테마 대화상자의 저장). 그래서 손으로 적은 것 — 주석·순서·손으로 고른 목록 —
+ *          은 여기 두면 안 된다. 그런 설정은 읽기 전용인 `EditorData`(editordata.json) 에 있다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -11,40 +15,14 @@
 namespace sw::editor
 {
     /**
-     * @brief Dev/에디터 호스트 설정 (Shipping 미포함)
-     * @details editordata·유저 레이아웃 경로. 맵/아틀라스 등 시드는 Config/Editor/editordata.json.
+     * @brief 에디터가 저장하는 상태 (Shipping 미포함)
+     * @details 지금은 테마뿐이다. **필드를 늘리기 전에** 그 값을 앱이 쓰는지 사람이 쓰는지 보라 —
+     *          사람이 쓰는 것은 `EditorData` 다.
      */
     REFLECT()
     struct EditorConfig : IConfig
     {
         REFLECT_BODY();
-
-        PROPERTY()
-        string _editorData{ "Config/Editor/editordata.json" };
-
-        PROPERTY()
-        string _configFolder{ "Config" };
-
-        PROPERTY()
-        string _editorConfigFolder{ "Editor" };
-
-        PROPERTY()
-        string _imguiIniFile{ "imgui.ini" };
-
-        PROPERTY()
-        string _windowsIniFile{ "windows.ini" };
-
-        PROPERTY()
-        string _animationGraphSettingsFile{ "AnimationGraph.json" };
-
-        PROPERTY()
-        string _animationGraphDataFile{ "AnimationGraphData.json" };
-
-        PROPERTY()
-        string _dialogueGraphDataFile{ "DialogueGraphData.json" };
-
-        PROPERTY()
-        string _spriteClipFile{ "SpriteClip.json" };
 
         PROPERTY()
         string _themePreset{ "ModernDark" };

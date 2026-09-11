@@ -10,7 +10,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -61,21 +61,21 @@ namespace sw::editor
             {
                 if ( path.empty() == false )
                     return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
+                return EditorUtil::resolveEditorConfigFile( getEditorData()._animationGraphDataFile.c_str() );
             }
 
             static string resolveDialogueGraphPath( string_view path )
             {
                 if ( path.empty() == false )
                     return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._dialogueGraphDataFile.c_str() );
+                return EditorUtil::resolveEditorConfigFile( getEditorData()._dialogueGraphDataFile.c_str() );
             }
 
             static string resolveSpriteClipPath( string_view path )
             {
                 if ( path.empty() == false )
                     return resolveExistingOrRelativePath( path );
-                return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
+                return EditorUtil::resolveEditorConfigFile( getEditorData()._spriteClipFile.c_str() );
             }
 
             static string formatPropertyValue( const PropertyInfo& prop, const void* pInstance )

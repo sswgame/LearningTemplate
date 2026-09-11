@@ -38,14 +38,14 @@ namespace sw::editor
 
     string EditorUtil::getEditorConfigDirectory()
     {
-        const EditorConfig& editorCfg   = EditorConfig::getActive();
-        const string        projectRoot = getProjectRootPath();
+        const EditorData& editorData  = getEditorData();
+        const string      projectRoot = getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
 
         const string configDir =
-            FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorCfg._configFolder ), editorCfg._editorConfigFolder );
-        const string markerFile = FileUtil::joinPath( configDir, editorCfg._imguiIniFile );
+            FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorData._configFolder ), editorData._editorConfigFolder );
+        const string markerFile = FileUtil::joinPath( configDir, editorData._imguiIniFile );
         FileUtil::createParentDirectory( markerFile );
         return configDir;
     }

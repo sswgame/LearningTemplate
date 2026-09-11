@@ -279,6 +279,25 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (설정 파일의 경계를 "누가 쓰는가" 로 다시 그었다)
+
+`EditorConfig.json` 과 `editordata.json` 의 차이가 이름만으로는 보이지 않았다. 실제 차이는
+**앱이 다시 쓰는가** 다 — `EditorConfig::saveToHost()` 는 테마를 저장할 때 구조체에서 파일
+**전체를 새로 생성**한다(저장소의 `_themeWindowRounding: 10` 이 C++ 기본값 `4.0f` 와 다른 것이
+그 흔적이다). `EditorData` 에는 저장 경로가 아예 없다 — 읽기 전용이다.
+
+그런데 경계가 그 선을 따르지 않았다. 손으로 정하는 경로·파일명(`_configFolder` ·
+`_editorConfigFolder` · `_imguiIniFile` · `_windowsIniFile` · 툴 데이터 파일 넷)이 **기계가
+덮어쓰는 파일** 안에 있었다. 그 파일에 주석이나 손으로 고른 순서를 남기면 테마 한 번 바꿀 때
+사라진다. 여덟 필드를 `EditorData` 로 옮겼다. `EditorConfig` 에는 이제 테마만 남는다.
+
+`EditorConfig._editorData`(editordata.json 의 경로)도 없앴다. 기본값 아닌 값을 넣은 곳이 없었고,
+경로의 정본은 이미 `Scripts/common/Constants.py` 다 — 손으로 적는 경로를 기계가 다시 쓰는 파일에
+두는 것 자체가 위 문제였다. `loadFromHostPath()` 는 인자 없이 상수로 간다.
+
+검증: 실기동에서 `imgui.ini` · `windows.ini` 가 그대로 `Config/Editor/` 에 해석됐고(옮긴 필드가
+실제로 읽힌다는 뜻), 패널 덤프 창 15개 · 내용 없는 패널 0개.
+
 ### 2026-09-12 (에셋 핫리로드를 에디터로 내렸다 — 그리고 그것도 한 번도 돈 적이 없었다)
 
 `ResourceManager` 가 `Resource/` 전체에 파일 감시를 걸고 있었다. 배포본에도 감시 스레드가 뜨고

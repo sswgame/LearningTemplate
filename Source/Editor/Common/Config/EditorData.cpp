@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -20,7 +19,10 @@ namespace sw::editor
 
     bool EditorData::loadFromHostPath( string_view hostRelativePath )
     {
-        string rel = hostRelativePath.empty() == false ? string( hostRelativePath ) : EditorConfig::getActive()._editorData;
+        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 예전에는 `EditorConfig._editorData`
+        // 로 한 번 더 갈 수 있었는데, 그 필드를 기본값 아닌 값으로 둔 곳이 없었고 **테마를 저장할
+        // 때마다 기계가 다시 쓰는 파일**에 손으로 적는 경로를 두는 셈이었다.
+        string rel = string( hostRelativePath );
         if ( rel.empty() )
             rel = string( config::kFileRuntimeEditorData );
 

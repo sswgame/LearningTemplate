@@ -119,7 +119,7 @@ namespace sw::editor
         {
             EditorConfig::loadFromHost();
             _editorData = make_unique<EditorData>();
-            _editorData->loadFromHostPath( EditorConfig::getActive()._editorData );
+            _editorData->loadFromHostPath();
             editor::setEditorData( _editorData.get() );
         }
 #endif

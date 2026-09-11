@@ -68,6 +68,32 @@ namespace sw::editor
             "DroidSansFallbackFull.ttf",
         };
 
+        // ------------------------------------------------------------------------------
+        // 설정 폴더와 툴 파일명 — 손으로 정하고, 앱은 다시 쓰지 않는다.
+        //
+        // 예전에는 EditorConfig 에 있었다. 그 파일은 테마를 바꿀 때마다 `saveToHost()` 가
+        // **통째로 다시 생성**하므로, 손으로 적은 값이 기계가 덮어쓰는 파일 안에 섞여 있었다.
+        // 경계는 "무슨 내용인가" 가 아니라 **"누가 쓰는가"** 다 — 앱이 쓰는 것만 EditorConfig 에 둔다.
+        // ------------------------------------------------------------------------------
+        PROPERTY()
+        string _configFolder{ "Config" };
+        PROPERTY()
+        string _editorConfigFolder{ "Editor" };
+
+        PROPERTY()
+        string _imguiIniFile{ "imgui.ini" };
+        PROPERTY()
+        string _windowsIniFile{ "windows.ini" };
+
+        PROPERTY()
+        string _animationGraphSettingsFile{ "AnimationGraph.json" };
+        PROPERTY()
+        string _animationGraphDataFile{ "AnimationGraphData.json" };
+        PROPERTY()
+        string _dialogueGraphDataFile{ "DialogueGraphData.json" };
+        PROPERTY()
+        string _spriteClipFile{ "SpriteClip.json" };
+
         /**
          * @brief 실행 중 다시 읽을 에셋 확장자. **비우면 처리기가 있는 확장자 전부**를 봅니다.
          * @details 무엇을 감시할지는 설정이 정하고, 다시 읽는 방법이 있는지는 코드가 정한다

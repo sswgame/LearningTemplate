@@ -1,13 +1,4 @@
 {
-    "_editorData": "Config/Editor/editordata.json",
-    "_configFolder": "Config",
-    "_editorConfigFolder": "Editor",
-    "_imguiIniFile": "imgui.ini",
-    "_windowsIniFile": "windows.ini",
-    "_animationGraphSettingsFile": "AnimationGraph.json",
-    "_animationGraphDataFile": "AnimationGraphData.json",
-    "_dialogueGraphDataFile": "DialogueGraphData.json",
-    "_spriteClipFile": "SpriteClip.json",
     "_themePreset": "ModernDark",
     "_themeAccentR": 0.27,
     "_themeAccentG": 0.57,
