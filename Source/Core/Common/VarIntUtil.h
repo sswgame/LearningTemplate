@@ -14,6 +14,13 @@ namespace sw
      */
     struct VarIntUtil
     {
+        // **인코딩에는 32비트 오버로드가 없다 (의도된 비대칭이다).**
+        // 32비트 값을 `encodeVarUInt64` 에 넘기면 승격되어 같은 바이트가 나온다 — 오버로드는
+        // `static_cast` 한 줄을 감싸는 것 말고 하는 일이 없었고, 실제로 아무도 쓰지 않았다
+        // (`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
+        // 반대로 **디코딩에는 있다** — 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을
+        // 거르는 실제 검사를 하기 때문이다.
+
         /**
          * @brief 64비트 부호 없는 정수를 LEB128 가변 길이 바이트열로 벡터에 추가합니다.
          * @param value 인코딩할 64비트 정수 (0~127: 1B, 128~16383: 2B 등)
@@ -36,28 +43,12 @@ namespace sw
         }
 
         /**
-         * @brief 32비트 부호 없는 정수를 LEB128 가변 길이 바이트열로 벡터에 추가합니다.
-         */
-        static size_t encodeVarUInt32( uint32 value, vector<uint8>& outBytes )
-        {
-            return encodeVarUInt64( static_cast<uint64>( value ), outBytes );
-        }
-
-        /**
          * @brief 64비트 부호 있는 정수를 ZigZag 인코딩 후 LEB128로 벡터에 추가합니다.
          */
         static size_t encodeVarInt64( int64 value, vector<uint8>& outBytes )
         {
             const uint64 zigZag = static_cast<uint64>( ( value << 1 ) ^ ( value >> 63 ) );
             return encodeVarUInt64( zigZag, outBytes );
-        }
-
-        /**
-         * @brief 32비트 부호 있는 정수를 ZigZag 인코딩 후 LEB128로 벡터에 추가합니다.
-         */
-        static size_t encodeVarInt32( int32 value, vector<uint8>& outBytes )
-        {
-            return encodeVarInt64( static_cast<int64>( value ), outBytes );
         }
 
         /**

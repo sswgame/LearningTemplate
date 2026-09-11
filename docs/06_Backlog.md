@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `cbf7c839`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `a51775f8`
 
 ---
 
@@ -288,6 +288,45 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (단순 래퍼 정리 — 473 후보 중 실제로 걷어낼 것은 넷뿐이었다)
+
+본문이 "다른 함수 호출 한 줄"뿐인 함수를 전부 뽑았다(473 개). **대부분은 정당했다** — 남긴 이유를
+적어 둔다. 다음에 같은 조사를 하는 사람이 같은 길을 다시 걷지 않도록.
+
+**유지 (래퍼처럼 보이지만 아니다)**
+
+- **주소로 등록되는 것.** `commandSave` · `commandUndo` 등 에디터 커맨드 20여 개는 커맨드 표에
+  `&commandSave` 로 **함수 포인터가 실린다.** 인라인하면 표가 성립하지 않는다.
+- **X-매크로 디스패치 표.** `applyReflectAlias` 등 8 개는 `PredefinedAnnotationField.xxx` 의
+  `REGISTER_ANNOTATION_FIELD( Reflect, StringFn, Alias, applyReflectAlias )` 가 **이름으로** 집는다.
+- **리플렉션 노출 함수.** `UnitStatsComponent::heal20` 은 `FUNCTION( … CallInEditor )` 다 — 에디터가
+  인자 없이 부를 버튼을 만들려고 **일부러** 인자를 박아 둔 것이다.
+- **컨테이너/인터페이스 API 별칭.** `push`→`enqueue`, `reserve`→`rehash`, `reset`→`set`,
+  `shutdown`→`clearCache` 류. 표준 라이브러리 관례이거나 인터페이스 구현이다.
+- **접근자.** `getResource()`→`_resourceImpl.get()` 같은 것. 래퍼가 아니라 캡슐화다.
+
+**걷어낸 것 넷**
+
+- `InputManager::injectRawEvent` — `postRawEvent` 의 순수 별칭인데 **호출부가 0 개**였다. 게다가
+  `postRawEvent` 의 `bool` 반환을 버려서, 썼더라도 실패를 삼켰을 것이다.
+- `quaternion::toEuler` — `getEulerAngles()` 별칭. 쓰는 곳은 테스트 하나뿐이었다. 같은 것에 이름이
+  둘이면 읽는 사람이 "다른가?" 를 확인해야 한다. 테스트를 실제 이름으로 바꾸고 지웠다.
+- `VarIntUtil::encodeVarUInt32` / `encodeVarInt32` — `static_cast` 한 줄을 감싼 것이고 **호출부 0**.
+  32비트 값을 64비트 인코더에 넘기면 승격되어 같은 바이트가 나온다(`BinaryStream` 이 이미 그렇게 쓴다).
+
+> **인코딩만 32비트 짝이 없는 것은 의도된 비대칭이다.** 헤더에 그 이유를 적어 뒀다 — 안 적으면
+> 누군가 "대칭을 맞춘다"며 되살린다. **디코딩에는 32비트가 있다**: 그쪽은 캐스팅이 아니라
+> uint32/int32 범위를 벗어난 값을 거르는 실제 검사를 한다.
+
+**곁들여 — 호출부가 0 인 접근자 여섯** (이번엔 손대지 않았다, 판단 필요)
+
+`ModuleHost::getModuleCompiler` · `EngineLoop::getCompressionCodecRegistry` ·
+`DebugDrawQueue::getLineCount` · `getSphereCount` · `BattleState::getFoeName` · `getStatusText`.
+전부 정의만 있고 부르는 곳이 없다. 템플릿 저장소라 "확장하는 쪽이 쓸 API" 로 남겨둔 것일 수 있어
+기계적으로 지우지 않았다.
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽, 린트 6/6.
 
 ### 2026-09-11 (로거를 파사드와 장치로 가른다 — 콘솔·파일이 뮤텍스 하나를 함께 잠그고 있었다)
 

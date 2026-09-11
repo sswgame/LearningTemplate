@@ -289,7 +289,7 @@ SW_TEST_CASE( Core_Math, QuaternionFullTest )
     SW_EXPECT_NEAR_EQUAL( 1.0f, slerpQ.norm(), 1e-4f );
 
     sw::quaternion qYawPitchRoll = sw::quaternion::createFromYawPitchRoll( sw::MathUtil::toRadian( 45.0f ), 0.0f, 0.0f );
-    sw::float3     euler         = qYawPitchRoll.toEuler();
+    sw::float3     euler         = qYawPitchRoll.getEulerAngles();
     SW_EXPECT_NEAR_EQUAL( sw::MathUtil::toRadian( 45.0f ), euler._y, 1e-3f );
 }
 

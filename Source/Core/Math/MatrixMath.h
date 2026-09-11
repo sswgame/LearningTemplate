@@ -153,8 +153,6 @@ namespace sw
          * @brief 오일러 각(피치/요/롤)을 반환합니다
          */
         float3 getEulerAngles() const noexcept;
-        /** @brief 오일러 각으로 변환합니다. */
-        float3 toEuler() const noexcept { return getEulerAngles(); }
         /**
          * @brief 행렬로 변환합니다
          */
