@@ -8,37 +8,10 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Module/ReloadFileManager.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "LiveShaderManager" );
-
-    vector<string> ShaderIncludeResolver::parseIncludes( string_view shaderSource )
-    {
-        vector<string> listInclude;
-        listInclude.reserve( 8 );
-        const string_view view( shaderSource );
-
-        string_view::size_type pos{ 0 };
-        while ( ( pos = view.find( "#include", pos ) ) != string_view::npos )
-        {
-            pos += 8;
-            string_view::size_type quoteStart = view.find( '"', pos );
-            if ( quoteStart == string_view::npos )
-                break;
-
-            string_view::size_type quoteEnd = view.find( '"', quoteStart + 1 );
-            if ( quoteEnd == string_view::npos )
-                break;
-
-            string includeFile( view.substr( quoteStart + 1, quoteEnd - quoteStart - 1 ) );
-            listInclude.push_back( includeFile );
-            pos = quoteEnd + 1;
-        }
-
-        return listInclude;
-    }
 
     LiveShaderManager::LiveShaderManager() = default;
 
@@ -47,28 +20,11 @@ namespace sw
         shutdown();
     }
 
-    bool LiveShaderManager::initialize( string_view watchDirectory )
+    bool LiveShaderManager::initialize( string_view label )
     {
-        _watchDirectory = watchDirectory;
-        _bInitialized   = true;
+        _label        = label;
+        _bInitialized = true;
         return true;
-    }
-
-    void LiveShaderManager::attachReloadFileManager( ReloadFileManager& reloadFiles )
-    {
-        detachReloadFileManager();
-        _pReloadFiles = &reloadFiles;
-
-        const string shaderWatchRoot = ResourceUtil::getRootFolderPath();
-        if ( shaderWatchRoot.empty() )
-        {
-            SW_LOG_WARNING( "Resource root empty; shader file watch not registered." );
-            return;
-        }
-
-        FileWatchMatchDelegate fileWatchDelegate =
-            SW_DELEGATE_METHOD( FileWatchMatchDelegate, &LiveShaderManager::onWatchedFileChanged, this );
-        _fileWatchHandle = _pReloadFiles->registerWatch( shaderWatchRoot, { ".hlsl", ".hlsli" }, fileWatchDelegate );
     }
 
     void LiveShaderManager::watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled )
@@ -84,23 +40,6 @@ namespace sw
 
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _mapWatchedShader[keyPath].push_back( { desc, onRecompiled } );
-
-            vector<uint8> fileBytes;
-            if ( FileUtil::readFile( ioPath, fileBytes ) && fileBytes.empty() == false )
-            {
-                string         sourceText( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size() );
-                vector<string> listIncludeFile = ShaderIncludeResolver::parseIncludes( sourceText );
-                string         shaderDir       = FileUtil::getDirectoryPart( ioPath );
-
-                for ( const string& inc : listIncludeFile )
-                {
-                    string incPath = ResourceUtil::getResourcePath( inc );
-                    if ( incPath.empty() )
-                        incPath = shaderDir.empty() ? string( inc ) : FileUtil::joinPath( shaderDir, inc );
-                    incPath = FileUtil::normalizePath( incPath );
-                    _mapIncludeDependency[incPath].push_back( keyPath );
-                }
-            }
 
             if ( _bInitialized == false )
             {
@@ -175,11 +114,8 @@ namespace sw
 
     void LiveShaderManager::shutdown()
     {
-        detachReloadFileManager();
-
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _mapWatchedShader.clear();
-        _mapIncludeDependency.clear();
         _listPendingReloadPath.clear();
         _bInitialized = false;
     }
@@ -195,45 +131,4 @@ namespace sw
         }
     }
 
-    void LiveShaderManager::notifyFileChanged( string_view path )
-    {
-        if ( _bInitialized == false )
-            return;
-
-        const string normalized = FileUtil::normalizePath( path );
-
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-
-        auto enqueueUnique = [this]( const string& filePath )
-        {
-            if ( std::find( _listPendingReloadPath.begin(), _listPendingReloadPath.end(), filePath ) == _listPendingReloadPath.end() )
-                _listPendingReloadPath.push_back( filePath );
-        };
-
-        if ( _mapWatchedShader.find( normalized ) != _mapWatchedShader.end() )
-            enqueueUnique( normalized );
-
-        const unordered_map<string, vector<string>>::const_iterator includeIt = _mapIncludeDependency.find( normalized );
-        if ( includeIt != _mapIncludeDependency.end() )
-        {
-            for ( const string& shaderPath : includeIt->second )
-            {
-                enqueueUnique( shaderPath );
-            }
-        }
-    }
-
-    void LiveShaderManager::onWatchedFileChanged( const FileChangeEvent& changeEvent )
-    {
-        const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-        notifyFileChanged( fullPath );
-    }
-
-    void LiveShaderManager::detachReloadFileManager()
-    {
-        if ( _pReloadFiles != nullptr && _fileWatchHandle.isValid() )
-            _pReloadFiles->unregisterWatch( _fileWatchHandle );
-        _fileWatchHandle = {};
-        _pReloadFiles    = nullptr;
-    }
 } // namespace sw

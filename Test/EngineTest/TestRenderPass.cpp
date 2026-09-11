@@ -689,7 +689,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
  * @details PSO 는 바이트코드를 구워 넣은 객체다. onShaderRecompiled 가 바인딩 레이아웃만
  *          새로 만들던 시절에는 셰이더를 고쳐도 화면이 시작 시 컴파일된 그대로였다 —
  *          로그는 "Recompilation Succeeded" 를 찍는데 그림은 안 바뀌니 눈치채기 어려웠다.
- *          LiveShaderTest 는 감시자와 include 파싱만 보므로 이 경로를 잡지 못한다.
+ *          LiveShaderTest 는 등록과 리로드 큐만 보므로 이 경로를 잡지 못한다.
  *
  *          네 백엔드 모두 PSO 를 RHIHandleTable(generation 팩드)로 발급하므로, 다시 만들면
  *          핸들 값이 반드시 달라진다. 재생성 여부를 핸들로 판정하는 근거다.

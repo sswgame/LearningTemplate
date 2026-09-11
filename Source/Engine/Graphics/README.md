@@ -67,7 +67,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
-| `ShaderCompiler` · `ShaderCache` · `ShaderBaker` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 오프라인 베이크, 핫리로드 |
+| `ShaderCompiler` · `ShaderCache` · `ShaderBaker` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 오프라인 베이크, 수동 리로드 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` | Mesh/ | 메시 버퍼 |

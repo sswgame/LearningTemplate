@@ -46,7 +46,7 @@ namespace sw
         // 주석은 "전부 다시 만든다" 였지만 실제로 재생성하는 releasePassResources/ensurePassResources
         // 는 loadPipeline 과 shutdown 에서만 불렀다.
         //
-        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고
+        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고(수동 리로드)
         // (그래야 새 바이트코드를 집는다) EngineLoop 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
         // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
         releasePassResources();

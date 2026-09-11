@@ -1,27 +1,26 @@
 /**
  * @file LiveShaderManager.h
- * @brief 파일 감시로 셰이더를 다시 컴파일합니다.
+ * @brief 등록된 셰이더를 요청 시 다시 컴파일합니다 (수동 리로드).
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Module/ReloadFileManager.h"
 
 namespace sw
 {
     using ShaderRecompiledDelegate = Delegate<void( string_view, const ShaderCompileResult& )>;
 
-    /// @brief #include 경로를 리소스에서 해석
-    class SW_API ShaderIncludeResolver
-    {
-    public:
-        /** @brief 셰이더 소스에서 #include 경로를 뽑습니다. */
-        static vector<string> parseIncludes( string_view shaderSource );
-    };
-
-    /// @brief 파일 감시로 셰이더를 다시 컴파일
+    /**
+     * @class LiveShaderManager
+     * @brief 등록된 셰이더를 **요청이 있을 때** 다시 컴파일합니다.
+     * @details `watchShader` 로 등록해 두고, `triggerReloadAll` 로 큐에 넣은 뒤 `update` 가 실제로
+     *          컴파일한다. 트리거는 디버그 액션 `ReloadShaders`(Ctrl+F8) 다.
+     *
+     *          `.hlsl` 파일 감시로 **자동** 재컴파일하던 경로는 없앴다. 그 배선(`attachReloadFileManager`)
+     *          은 호출부가 하나도 없어 등록된 적이 없었고, 앞으로도 자동 재컴파일 계획이 없다.
+     */
     class SW_API LiveShaderManager
     {
     public:
@@ -39,14 +38,8 @@ namespace sw
         /** @brief 이동 대입을 금지합니다. */
         LiveShaderManager& operator=( LiveShaderManager&& ) = delete;
 
-        /** @brief 논리 감시 디렉터리 라벨로 초기화합니다. */
-        bool initialize( string_view watchDirectory = "Shaders" );
-
-        /**
-         * @brief .hlsl/.hlsli ReloadFileManager 워치를 이 매니저가 소유합니다.
-         * @note ReloadFileManager::initialize 이후 호출. shutdown / 재연결 시 해제.
-         */
-        void attachReloadFileManager( ReloadFileManager& reloadFiles );
+        /** @brief 논리 라벨로 초기화합니다. */
+        bool initialize( string_view label = "Shaders" );
 
         /** @brief 셰이더와 선택 재컴파일 콜백을 등록합니다. */
         void watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled = {} );
@@ -57,22 +50,14 @@ namespace sw
         /** @brief 대기 중인 리로드 경로를 비우고 다시 컴파일합니다. */
         void update();
 
-        /** @brief 워치/큐를 비우고 파일 워처를 뗍니다. */
+        /** @brief 등록 목록과 큐를 비웁니다. */
         void shutdown();
 
-        /** @brief 감시 중인 셰이더를 모두 리로드 큐에 넣습니다. */
+        /** @brief 등록된 셰이더를 모두 리로드 큐에 넣습니다. */
         void triggerReloadAll();
 
-        /** @brief 변경된 경로(셰이더 또는 include)를 큐에 넣습니다. */
-        void notifyFileChanged( string_view path );
-
     private:
-        /** @brief ReloadFileManager 워치 콜백. */
-        void onWatchedFileChanged( const FileChangeEvent& changeEvent );
-        /** @brief ReloadFileManager 워치를 뗍니다. */
-        void detachReloadFileManager();
-
-        /// @brief 감시 중인 셰이더 경로와 의존 include
+        /// @brief 등록된 셰이더 하나
         struct WatchedShaderInfo
         {
             ShaderCompileDesc        _desc;
@@ -81,12 +66,9 @@ namespace sw
 
         mutable std::shared_mutex                        _mutex;
         unordered_map<string, vector<WatchedShaderInfo>> _mapWatchedShader;
-        unordered_map<string, vector<string>>            _mapIncludeDependency;
         vector<string>                                   _listPendingReloadPath;
         ShaderRecompiledDelegate                         _onAnyRecompiled;
-        string                                           _watchDirectory;
-        ReloadFileManager*                               _pReloadFiles{ nullptr };
-        FileWatchHandle                                  _fileWatchHandle{};
+        string                                           _label;
         bool                                             _bInitialized{ false };
     };
 } // namespace sw

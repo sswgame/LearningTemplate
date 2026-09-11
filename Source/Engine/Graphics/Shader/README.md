@@ -19,8 +19,8 @@ Shader/
   이름과 달리 `ResourceManager` 가 아닙니다 — 셰이더 바이트코드는 RHI/컴파일러 수명입니다.
 - `ShaderBaker` — 오프라인 베이크. `App.exe --bake-shaders` 가 여기를 부릅니다.
   바이너리와 함께 **리플렉션 매니페스트**(`Reflection/ShaderReflectionLibrary`)도 굽습니다.
-- `LiveShaderManager` — `.hlsl`/`.hlsli` 파일 감시 → 재컴파일. `ShaderIncludeResolver` 가
-  `#include` 를 따라가서 `.hlsli` 하나를 고쳐도 그걸 쓰는 셰이더가 전부 다시 컴파일되게 합니다.
+- `LiveShaderManager` — 등록된 셰이더를 **요청 시** 다시 컴파일합니다. `ReloadShaders`(Ctrl+F8) 가
+  `triggerReloadAll` → `update` 를 돌립니다. 파일 감시로 자동 재컴파일하던 경로는 없앴습니다.
 
 ### Reflection/ — 바이트코드에서 바인딩 메타로
 
