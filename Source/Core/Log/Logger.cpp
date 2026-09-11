@@ -2,15 +2,13 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/File/FileUtil.h"
-#include "Core/File/PlatformFileUtil.h"
+#include "Core/Log/ConsoleLogOutput.h"
+#include "Core/Log/FileLogOutput.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashContext.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -38,29 +36,30 @@ namespace sw
     } // namespace
 
     Logger::Logger()
-        : _logFolderPath{}
-        , _currentLogFileName{}
-        , _onLogWritten{}
+        : _onLogWritten{}
+        , _listOutput{}
+        , _pFileOutput{ nullptr }
         , _queue{}
         , _workerThread{}
         , _cv{}
         , _mutex{}
         , _cvMutex{}
         , _timeMutex{}
-        , _pFile{ nullptr }
-        , _pCachedConsoleHandle{ nullptr }
         , _cachedTimeSec{ 0 }
         , _cachedYear{ 0 }
         , _cachedMonth{ 0 }
         , _cachedDay{ 0 }
         , _cachedHour{ 0 }
-        , _lastLogHour{ -1 }
-        , _defaultConsoleAttribute{ 0 }
         , _bIsRunning{ false }
         , _bInitialized{ false }
-        , _bHasConsole{ false }
         , _arrCachedDateStr{}
     {
+        // 기본 장치 둘. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
+        auto fileOutput = make_unique<FileLogOutput>();
+        _pFileOutput    = fileOutput.get();
+        _listOutput.push_back( make_unique<ConsoleLogOutput>() );
+        _listOutput.push_back( std::move( fileOutput ) );
+
         ILogSink* pExpected{ nullptr };
         s_globalSink.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
     }
@@ -79,7 +78,15 @@ namespace sw
         if ( _bInitialized )
             return;
 
-        initializeInternal();
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            for ( unique_ptr<ILogOutput>& output : _listOutput )
+            {
+                if ( output != nullptr )
+                    output->open();
+            }
+        }
+
         _bIsRunning.store( true, std::memory_order_release );
         _workerThread = std::thread( &Logger::workerLoop, this );
         _bInitialized = true;
@@ -102,14 +109,12 @@ namespace sw
         flushQueue();
 
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _pFile != nullptr )
+        for ( unique_ptr<ILogOutput>& output : _listOutput )
         {
-            std::fflush( _pFile );
-            std::fclose( _pFile );
-            _pFile = nullptr;
+            if ( output != nullptr )
+                output->close();
         }
         _onLogWritten.removeAll();
-        _lastLogHour  = -1;
         _bInitialized = false;
     }
 
@@ -183,9 +188,23 @@ namespace sw
         return nullptr;
     }
 
+    void Logger::addOutput( unique_ptr<ILogOutput> output )
+    {
+        if ( output == nullptr )
+            return;
+
+        const bool bNeedsOpen = _bInitialized;
+        if ( bNeedsOpen )
+            output->open();
+
+        std::scoped_lock<mutex> lock{ _mutex };
+        _listOutput.push_back( std::move( output ) );
+    }
+
     const string& Logger::getLogFolderPath()
     {
-        return _logFolderPath;
+        static const string s_empty{};
+        return ( _pFileOutput != nullptr ) ? _pFileOutput->getLogFolderPath() : s_empty;
     }
 
     void Logger::setRuntimeVerbosity( LogLevel level )
@@ -235,38 +254,6 @@ namespace sw
         pSink->removeLogWrittenListener( handle );
     }
 
-    void Logger::initializeInternal()
-    {
-        const string execPath = FileUtil::getExecutablePath();
-        const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
-
-        _logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
-        FileUtil::ensureDirectoryExists( _logFolderPath );
-        // 크래시 덤프·리포트도 같은 폴더에 둔다 — 고객이 한 폴더만 보내면 되도록.
-        setCrashReportFolder( _logFolderPath );
-
-#if defined( SW_PLATFORM_WINDOWS )
-        SetConsoleOutputCP( CP_UTF8 );
-        SetConsoleCP( CP_UTF8 );
-
-        const HANDLE consoleHandle = GetStdHandle( STD_OUTPUT_HANDLE );
-        DWORD        dwMode{ 0 };
-        if ( consoleHandle != nullptr && consoleHandle != INVALID_HANDLE_VALUE && GetConsoleMode( consoleHandle, &dwMode ) )
-        {
-            CONSOLE_SCREEN_BUFFER_INFO consoleInfo{};
-            GetConsoleScreenBufferInfo( consoleHandle, &consoleInfo );
-            _pCachedConsoleHandle    = consoleHandle;
-            _defaultConsoleAttribute = static_cast<uint16>( consoleInfo.wAttributes );
-            _bHasConsole             = true;
-        }
-        else
-        {
-            _pCachedConsoleHandle = nullptr;
-            _bHasConsole          = false;
-        }
-#endif
-    }
-
     void Logger::workerLoop()
     {
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
@@ -276,9 +263,7 @@ namespace sw
             while ( _queue.dequeue( record ) )
             {
                 bProcessedAny = true;
-                std::scoped_lock<mutex> lock{ _mutex };
-                writeLogConsole( record._level, record._formatted.c_str() );
-                writeLogFile( record._level, record._year, record._month, record._day, record._hour, record._formatted.c_str() );
+                dispatchToOutputs( record );
             }
 
             if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
@@ -297,10 +282,27 @@ namespace sw
         LogRecord record;
         while ( _queue.dequeue( record ) )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            writeLogConsole( record._level, record._formatted.c_str() );
-            writeLogFile( record._level, record._year, record._month, record._day, record._hour, record._formatted.c_str() );
+            dispatchToOutputs( record );
         }
+    }
+
+    void Logger::dispatchToOutputs( const LogRecord& record )
+    {
+        // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다 — 장치가 저마다 제 락을 갖고 있고,
+        // 느린 파일 I/O 가 콘솔을 막지 않게 하는 것이 이 분리의 목적이다.
+        ILogOutput* arrDevice[8]{};
+        uint32      deviceCount{ 0 };
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            for ( unique_ptr<ILogOutput>& output : _listOutput )
+            {
+                if ( output != nullptr && deviceCount < SW_COUNT_OF( arrDevice ) )
+                    arrDevice[deviceCount++] = output.get();
+            }
+        }
+
+        for ( uint32 index = 0; index < deviceCount; ++index )
+            arrDevice[index]->write( record );
     }
 
     void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
@@ -409,15 +411,7 @@ namespace sw
             listenersCopy.broadcast( entry );
         }
 
-        // 5단계: 콘솔 및 파일 비동기 I/O 큐 인큐 (초기화 전이거나 큐 풀일 경우 동기 폴백)
-        if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            writeLogConsole( level, pFormattedBuffer );
-            writeLogFile( level, year, month, day, hour, pFormattedBuffer );
-            return;
-        }
-
+        // 5단계: 비동기 I/O 큐 인큐 (초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다)
         LogRecord record;
         record._level     = level;
         record._formatted = pFormattedBuffer;
@@ -426,108 +420,20 @@ namespace sw
         record._day       = day;
         record._hour      = hour;
 
+        if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
+        {
+            dispatchToOutputs( record );
+            return;
+        }
+
         if ( _queue.enqueue( std::move( record ) ) == false )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            writeLogConsole( level, pFormattedBuffer );
-            writeLogFile( level, year, month, day, hour, pFormattedBuffer );
+            // enqueue 가 실패했으면 record 는 옮겨지지 않았다 — 그대로 동기로 쓴다.
+            dispatchToOutputs( record );
             return;
         }
 
         _cv.notify_one();
-    }
-
-    void Logger::writeLogConsole( LogLevel level, const utf8* pMessage )
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( _bHasConsole && _pCachedConsoleHandle != nullptr )
-        {
-            HANDLE                consoleHandle = static_cast<HANDLE>( _pCachedConsoleHandle );
-            static constexpr WORD arrLevelColor[] =
-                {
-                    FOREGROUND_RED | FOREGROUND_INTENSITY,
-                    FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,
-                    FOREGROUND_GREEN | FOREGROUND_INTENSITY,
-                    FOREGROUND_INTENSITY,
-                };
-
-            SetConsoleTextAttribute( consoleHandle, arrLevelColor[static_cast<int32>( level )] );
-            std::fputs( pMessage, stdout );
-            if ( level == LogLevel::Error )
-                std::fflush( stdout );
-            SetConsoleTextAttribute( consoleHandle, static_cast<WORD>( _defaultConsoleAttribute ) );
-        }
-        else
-        {
-            std::fputs( pMessage, stdout );
-            if ( level == LogLevel::Error )
-                std::fflush( stdout );
-            OutputDebugStringA( pMessage );
-        }
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-        // Linux/POSIX ANSI Escape Sequences: Bold Red (Error), Bold Yellow (Warning), Bold Green (Info), Gray (Trace)
-        static constexpr const utf8* arrAnsiColor[] =
-            {
-                "\033[1;31m", // Error: Bold Red
-                "\033[1;33m", // Warning: Bold Yellow
-                "\033[1;32m", // Info: Bold Green
-                "\033[0;90m", // Trace: Gray
-            };
-        static constexpr const utf8* kAnsiReset = "\033[0m";
-
-        const int32 index = static_cast<int32>( level );
-        if ( 0 <= index && index < static_cast<int32>( LogLevel::Count ) )
-        {
-            std::fputs( arrAnsiColor[index], stdout );
-            std::fputs( pMessage, stdout );
-            std::fputs( kAnsiReset, stdout );
-        }
-        else
-        {
-            std::fputs( pMessage, stdout );
-        }
-        if ( level == LogLevel::Error )
-            std::fflush( stdout );
-#else
-        std::ignore = level;
-        std::fputs( pMessage, stdout );
-        if ( level == LogLevel::Error )
-            std::fflush( stdout );
-#endif
-    }
-
-    void Logger::writeLogFile( LogLevel level, const int32 year, const int32 month, const int32 day, const int32 hour, const utf8* pFormattedBuffer )
-    {
-        if ( _bInitialized == false )
-            return;
-
-        if ( _pFile == nullptr || hour != _lastLogHour )
-        {
-            if ( _pFile != nullptr )
-            {
-                std::fclose( _pFile );
-                _pFile = nullptr;
-            }
-
-            _lastLogHour = hour;
-            // **세션 ID 를 파일 이름에 넣는다.** 예전엔 시간별로만 갈려서 같은 시간에 여러 번 실행하면
-            // 로그가 한 파일에 섞였다 — 배포본은 크래시 뒤 바로 재실행하는 일이 잦아 그게 기본 상황이다.
-            // 크래시 덤프도 같은 세션 ID 를 쓰므로 둘을 짝지을 수 있다.
-            fixed_string<constant::kMaxBuffer128> expectedFileName{};
-            formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt", year, month, day, hour,
-                          getCrashSessionId() );
-            _currentLogFileName = expectedFileName.c_str();
-
-            const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );
-            _pFile               = PlatformFileUtil::openFile( logPath.c_str(), "a" );
-        }
-
-        if ( _pFile == nullptr )
-            return;
-
-        std::fputs( pFormattedBuffer, _pFile );
-        if ( level == LogLevel::Error )
-            std::fflush( _pFile );
     }
 
 } // namespace sw

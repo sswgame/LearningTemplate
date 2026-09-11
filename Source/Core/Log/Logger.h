@@ -16,6 +16,8 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Log/ILogOutput.h"
+#include "Core/Log/LogTypes.h"
 #include "Core/String/formatString.h"
 
 #if !defined( SW_LOG_TAG )
@@ -25,54 +27,18 @@
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) LogLevel / LogEntry / LogRecord — 심각도 + 한 줄 기록 + 비동기 큐 레코드
-    // ------------------------------------------------------------------------------
-    /**
-     * @enum LogLevel
-     * @brief 로그의 중요도/심각도 레벨 식별자
-     */
-    enum class LogLevel
-    {
-        Error,   /**< 심각한 오류, 프로그램 흐름에 영향 */
-        Warning, /**< 경고, 잠재적인 문제 내포 */
-        Info,    /**< 일반적인 정보 (초기화, 종료 등) */
-        Trace,   /**< 상세한 디버그 추적 정보 */
-        Count    /**< 로그 레벨의 총 개수 */
-    };
-
-    /** @brief 싱크·리스너에 넘기는 한 줄입니다. */
-    struct LogEntry
-    {
-        string   _tag;
-        string   _caller;
-        string   _message;
-        string   _file;
-        string   _timeStamp;
-        int32    _line{ 0 };
-        LogLevel _level = LogLevel::Info;
-    };
-
-    /** @brief 비동기 락-프리 큐 전송용 로그 레코드 */
-    struct LogRecord
-    {
-        string   _formatted;
-        int32    _year{ 0 };
-        int32    _month{ 0 };
-        int32    _day{ 0 };
-        int32    _hour{ 0 };
-        LogLevel _level = LogLevel::Info;
-    };
-
-    SW_DECLARE_MULTI_CAST_DELEGATE( void, LogWrittenMulticast, const LogEntry& );
-    using LogWrittenDelegate = Delegate<void( const LogEntry& )>;
+    class FileLogOutput;
 
     // ------------------------------------------------------------------------------
-    // 2) ILogSink — 콘솔/파일 구현을 갈아 끼울 수 있는 출력면
+    // 2) ILogSink — 매크로가 말을 거는 전역 파사드 (장치는 ILogOutput 이다)
     // ------------------------------------------------------------------------------
     /**
      * @class ILogSink
-     * @brief 로그 출력을 담당하는 추상 인터페이스
+     * @brief 로깅 파사드 — 포맷·리스너·로그 폴더까지 책임지는 "로거 전체" 의 이음매
+     * @details **출력 장치 인터페이스가 아닙니다.** 한 줄이 실제로 나가는 곳은 `ILogOutput`
+     *          (`ConsoleLogOutput` · `FileLogOutput`)이고, 그쪽을 여러 개 물고 있는 것이 `Logger` 다.
+     *          이 인터페이스는 **로거 전체를 감싸거나 갈아 끼우는** 자리다 — 테스트 프레임워크가
+     *          로그를 가로채려고 이걸 구현해 기존 싱크를 감싼다(`TestFramework.h`).
      */
     class SW_API ILogSink
     {
@@ -104,7 +70,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @class Logger
-     * @brief 전역 로깅 시스템 및 기본 파일/콘솔 ILogSink 구현체 (Lock-Free Async Ring Buffer 기반)
+     * @brief 기본 로깅 파사드 — 포맷·타임스탬프·리스너·비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
+     * @details 예전에는 이 클래스가 콘솔 쓰기와 파일 롤오버까지 직접 했고, 뮤텍스 **하나**가 둘을 함께
+     *          잠갔습니다 — 파일 I/O 가 느리면 콘솔도 멈췄습니다. 지금은 장치마다 제 락을 갖습니다.
+     *          기본으로 콘솔·파일 출력을 하나씩 달고 시작하며, `addOutput` 으로 더 붙일 수 있습니다
+     *          (에디터 패널·네트워크 등 — 그때 이 클래스를 고칠 일은 없습니다).
      */
     class SW_API Logger final : public ILogSink
     {
@@ -138,7 +108,13 @@ namespace sw
         /** @brief 소스 파일 경로에 매핑된 Caller 이름을 반환합니다. */
         static const utf8* getCaller( const utf8* pFile );
 
-        /** @brief 로그 파일이 있는 폴더 경로입니다. */
+        /**
+         * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 즉시 `open` 합니다.
+         * @param output 소유권을 가져갑니다. 널이면 무시합니다.
+         */
+        void addOutput( unique_ptr<ILogOutput> output );
+
+        /** @brief 로그 파일이 있는 폴더 경로입니다 — 파일 출력에 물어 답합니다. */
         const string& getLogFolderPath() override;
         /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
         static void setGlobalSink( ILogSink* pSink );
@@ -164,40 +140,31 @@ namespace sw
         static bool shouldLog( LogLevel level ) { return static_cast<int32>( level ) <= static_cast<int32>( getRuntimeVerbosity() ); }
 
     private:
-        /** @brief 폴더·파일명을 준비하고 첫 파일을 엽니다. */
-        void initializeInternal();
         /** @brief 백그라운드 I/O 작업자 루프입니다. */
         void workerLoop();
         /** @brief 큐에 남은 로그를 모두 비우고 기록합니다. */
         void flushQueue();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 즉시 씁니다. */
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
-        /** @brief 레벨 색으로 콘솔에 한 줄을 씁니다. */
-        void writeLogConsole( LogLevel level, const utf8* pMessage );
-        /** @brief 시각이 바뀌면 파일을 갈아 끼운 뒤 한 줄을 씁니다. */
-        void writeLogFile( LogLevel level, int32 year, int32 month, int32 day, int32 hour, const utf8* pFormattedBuffer );
+        /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 제 락을 갖습니다. */
+        void dispatchToOutputs( const LogRecord& record );
 
-        string                           _logFolderPath;
-        string                           _currentLogFileName;
         LogWrittenMulticast              _onLogWritten;
+        vector<unique_ptr<ILogOutput>>   _listOutput;
+        FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유. getLogFolderPath 용 비소유 포인터
         ConcurrentQueue<LogRecord, 4096> _queue;
         std::thread                      _workerThread;
         std::condition_variable_any      _cv;
-        mutex                            _mutex;     ///< 파일 쓰기 및 리스너 호출 동기화용 메인 뮤텍스
-        mutex                            _cvMutex;   ///< 조건 변수 대기용 뮤텍스
-        mutex                            _timeMutex; ///< 타임스탬프 계산 및 문자열 캐시 동기화용 뮤텍스
-        std::FILE*                       _pFile;
-        void*                            _pCachedConsoleHandle; ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시
-        std::time_t                      _cachedTimeSec;        ///< 초 단위 캐시된 시스템 시간
+        mutex                            _mutex;         ///< 리스너 목록 + 출력 목록 동기화용
+        mutex                            _cvMutex;       ///< 조건 변수 대기용 뮤텍스
+        mutex                            _timeMutex;     ///< 타임스탬프 계산 및 문자열 캐시 동기화용 뮤텍스
+        std::time_t                      _cachedTimeSec; ///< 초 단위 캐시된 시스템 시간
         int32                            _cachedYear;
         int32                            _cachedMonth;
         int32                            _cachedDay;
         int32                            _cachedHour;
-        int32                            _lastLogHour;             ///< 시간별 로그 파일 롤오버 감지용
-        uint16                           _defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
         atomic<bool>                     _bIsRunning;
         bool                             _bInitialized;
-        bool                             _bHasConsole;                              ///< 표준 출력 콘솔 유효성 여부
         utf8                             _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
     };
 } // namespace sw

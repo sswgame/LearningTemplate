@@ -8,6 +8,14 @@
 - **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `DeadlockDetector`, `DataRaceDetector`
 - **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러)
 - **Container/**: `DynamicBitset` · **String/** · **File/** · **Event/** · **Delegate/**
+- **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
+  - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
+    Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).
+  - `ILogOutput` / `ConsoleLogOutput` / `FileLogOutput` — 완성된 한 줄이 실제로 나가는 장치.
+    **장치마다 제 락을 갖는다.** 예전엔 뮤텍스 하나가 콘솔·파일 쓰기를 함께 잠가, 느린 파일 I/O 가
+    콘솔까지 멈춰 세웠다. 출력을 더 붙이려면 `Logger::addOutput` 을 쓴다 — `Logger` 를 고칠 일은 없다.
+  - 값 타입(`LogLevel` · `LogEntry` · `LogRecord`)은 `LogTypes.h` 에 있다. 두 층이 함께 쓰므로
+    한쪽 헤더에 두면 장치가 파사드를 include 하게 되어 방향이 뒤집힌다.
 
 ## 플랫폼 의존 코드는 어디에 두는가
 

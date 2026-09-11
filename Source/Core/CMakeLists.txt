@@ -20,6 +20,8 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/PlatformFileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/GlobalVariable/GlobalVariableManager.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Log/ConsoleLogOutput.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Log/FileLogOutput.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Log/Logger.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Math/MatrixMath.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Math/VectorMath.cpp"
