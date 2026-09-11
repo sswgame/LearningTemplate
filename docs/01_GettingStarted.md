@@ -7,10 +7,20 @@ SW Engine 프로젝트를 로컬 환경에 구성하고 첫 번째 빌드를 수
 ## 1. 사전 요구 사항 (Prerequisites)
 
 엔진을 빌드하려면 다음 도구들이 시스템에 설치되어 있어야 합니다:
-- **Windows 10/11**
+
+**공통**
 - **Python 3.8+** (스크립트 실행 및 vcpkg 설정용)
 - **Git**
-- **Visual Studio 2022** (C++ 데스크톱 개발 워크로드)
+
+**Windows** (기본 개발 환경)
+- **Windows 10/11**
+- **Visual Studio 2022** (C++ 데스크톱 개발 워크로드 — Windows SDK 와 MSVC 헤더가 필요하다.
+  컴파일러 자체는 `SetupEnvironment.py` 가 받는 clang-cl 을 쓴다)
+
+**Linux / WSL** (`WSL-*` 프리셋, CI 의 ubuntu 잡과 같은 환경)
+- `py -3 Scripts/setup/SetupLinuxDevEnvironment.py` 가 필요한 패키지를 알려 준다(X11·Wayland·
+  Vulkan 개발 헤더, LLVM). WSL 에서는 **리눅스 파일시스템(`~`)에 클론해야 한다** — `/mnt/...`(DrvFs)
+  에서는 `configure_file` 이 `Operation not permitted` 로 죽는다.
 
 ## 2. 환경 구성 및 의존성 설치
 
@@ -25,6 +35,9 @@ py -3 Scripts/setup/SetupEnvironment.py
 
 # 2. vcpkg를 초기화하고 vcpkg.json에 명시된 모든 패키지를 설치
 py -3 Scripts/setup/SetupVcpkg.py --install
+
+# 3. 커밋 전 컨벤션·포맷 검사를 걸어 두는 git 훅 설치 (권장)
+py -3 Scripts/setup/InstallGitHooks.py
 ```
 이 과정은 최초 1회만 수행하면 되며, 필요한 경우 시간이 다소 소요될 수 있습니다.
 
@@ -54,9 +67,17 @@ cmake --build --preset Ninja-Debug
 ### 자동화 테스트 실행 (CTest)
 엔진 코어나 리플렉션 시스템이 정상적으로 동작하는지 확인하려면 다음 명령어를 사용하세요:
 ```powershell
-cd build/Ninja-Debug
-ctest -C Debug --output-on-failure
+# GPU 없이 도는 집합 (CI 와 같다) — 평소엔 이걸 쓴다
+ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure
+
+# 컨벤션·include 순서 등 Python 정적 검사만
+ctest --preset Ninja-Debug-lint
+
+# 전체 (GPU 가 있어야 하는 렌더링 검증까지)
+ctest --test-dir build/Ninja-Debug --output-on-failure
 ```
+> Ninja 는 단일 구성(single-config) 생성기라 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다.
+> 구성은 프리셋(=빌드 디렉터리)이 정합니다.
 
 ---
 [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 서브시스템 개요](02_EngineSubsystems.md)

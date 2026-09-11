@@ -51,8 +51,11 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate c
 
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`. Run them from
   `build/<preset>/Bin` (working directory matters — they resolve `Resource/` relative to it).
-- CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with RHI/Window/Shader
-  suites filtered out. Labels: `nogpu` (CI-safe), `lint`, `unit`, `engine`.
+- CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites that
+  need a real GPU or window filtered out (`RHITest`, `WindowTest`, `ShaderCompilerTest`, `LiveShaderTest`,
+  `RenderPassGpuTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`** — the filter
+  is by suite name, not a hand-kept list of cases.
+- Labels: `nogpu` (CI-safe), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
 
 ## Linting

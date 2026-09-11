@@ -7,12 +7,12 @@
 | Engine | `engine/` | 파이프라인, 코어 셰이더, 폴백 머티리얼, 내장 텍스처, 셸 InputMap, `enginedata.xml` |
 | Common | `common/` | 게임 팩이 공유하는 셰이더(아웃라인, 샘플 컴퓨트 등) |
 | Game | `game/<pack>/` | 해당 게임 콘텐츠(맵, 프리팹, 텍스처, 오디오, `gamedata.xml`) |
-| Editor | `editor/` | 에디터 부트스트랩(`editordata.xml`). 유저 레이아웃은 `Config/Editor` |
+| Editor | `editor/` | 에디터가 배포물에서 읽는 에셋(스플래시 텍스처 등). **`editordata.xml` 은 여기가 아니라 `Config/Editor/` 에 있다** — 에디터 도구 시드는 배포되지 않는다 |
 
 ## 경로 규칙
 
 - 코드에서 드라이브 절대경로는 쓰지 않습니다.
 - 검색 시 경로는 소문자로 정규화됩니다. 파일명은 소문자·숫자·언더바를 권장합니다.
-- 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/level01.xml`, `editor/data/editordata.xml`
+- 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/level01.xml`, `editor/textures/splash.dds`
 - 팩 상대 키: `pipeline/forwardpipeline.xml` → `game/<pack>/` → `common/` → `engine/` → `editor/` 순으로 검색
 - 셸 InputMap: `engine/input/default.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`

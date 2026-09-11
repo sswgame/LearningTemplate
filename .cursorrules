@@ -114,11 +114,11 @@
 
 예를 들면 다음과 같다
 """ <기존 후>
-#include "Engine/Object/Component.h"
+#include "Engine/Object/Component/Component.h"
 
 #include "Core/Log/Logger.h"
-#include "Engine/Object/ComponentDefaults.h"
-#include "Engine/Object/GameObject.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include <algorithm>
 #include <utility>
@@ -126,9 +126,9 @@
 """ <수정 후> // 여기선 정렬까진 하진 않았으나 정렬도 해야한다.
 #include "pch.h"
 
-#include "Engine/Object/Component.h"
-#include "Engine/Object/ComponentDefaults.h"
-#include "Engine/Object/GameObject.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 
@@ -241,6 +241,25 @@ namespace sw
 } // namespace sw
 ```
 3. bind/get 로케이터용 `s_*`만 있는 상태는 구현 블록 익명 네임스페이스에 둔다.
+
+### 익명 네임스페이스는 파일당 하나, 스코프 최상단에
+
+1. `.cpp` 의 익명 네임스페이스는 **최대 하나**이고, 그것을 감싸는 네임스페이스의 맨 위에 둔다
+   (`SW_LOG_CALLER` 가 있으면 그 바로 아래). 번역 단위 지역인 것 — 헬퍼 구조체 · 상수 · `s_*` 상태 ·
+   free 함수 — 은 전부 그 안에 넣는다.
+2. **free `static` 함수를 쓰지 않는다.** 익명 네임스페이스가 이미 내부 링키지를 주므로, 안으로 옮길 때
+   `static` 키워드는 뗀다.
+3. **위로 올리면 빌드가 깨질 수 있다.** 블록은 자신이 쓰지 않는 것들 위에만 놓을 수 있다. 참조하는
+   타입 정의·상수·`s_*` 변수를 지나쳐 올리면 컴파일 오류다 — 옮긴 뒤 반드시 빌드한다. 그 의존 대상이
+   자신도 번역 단위 지역(파일 스코프 `static`)이면 **블록 안으로 같이** 옮긴다.
+4. 정당한 예외 넷 (전부 이유가 있다):
+   - 상호 배타적인 전처리 분기(`#if SW_PLATFORM_WINDOWS` / `#elif SW_PLATFORM_LINUX`)의 블록들은
+     실제 번역 단위에는 하나뿐이다. 합치지 않는다.
+   - `REFLECT` 코드젠 타입은 익명 네임스페이스로 못 옮긴다 — 생성된 `.gen.cpp` 가 한정 이름
+     (`sw::MockMeshComponent`)으로 참조한다.
+   - `SW_GLOBAL_VARIABLE_*` 은 `extern` 을 붙여 **외부 링키지를 의도**하므로 밖에 둔다.
+   - `main` 과 헤더에 선언된 함수는 네임스페이스 스코프에 그대로 둔다.
+
 4. 이 규칙은 `Source/` 와 `Tools/ReflectionParser/` 에 적용한다.
 
 ### const 사용 규칙

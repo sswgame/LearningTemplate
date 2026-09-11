@@ -338,8 +338,8 @@ pObjectManager->findGameObjectsByTag( "Player.Hero"_tag, listPlayers );
 
 ```cpp
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Renderer/FrameRenderer.h"
-#include "Engine/Graphics/Renderer/RenderGraph.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
 // 1. 프레임 렌더러 초기화 (원하는 RHI 백엔드 선택)
 // gv_rhiBackend = "DirectX12" 또는 "Vulkan", "DirectX11", "OpenGL"
@@ -500,8 +500,8 @@ sw::TaskManager::get().parallelFor( 0, 10000, []( size_t index )
 ### 5.9 오디오 및 2D 물리 시스템
 
 ```cpp
-#include "Engine/Audio/AudioSystem.h"
-#include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Physics/PhysicsWorld.h"
 
 // 오디오 사운드 재생
 sw::AudioSystem::get().playSound( "Resource/audio/sfx_jump.wav", 1.0f );
@@ -547,24 +547,31 @@ sw::AssetStreamingQueue::get().tick();
 
 CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인과 **비동기 컴퓨트 셰이더 디스패치**를 지원합니다.
 
+간접 인자는 **전용 버퍼 클래스가 아니라 일반 RHI 버퍼**에 담고, 커맨드 리스트가 그 버퍼를 읽어
+드로우/디스패치합니다. 인자 구조체는 `RHIDrawIndexedIndirectCommand`(`Engine/Graphics/RHI/RHITypes.h`)입니다.
+
 ```cpp
-#include "Engine/Graphics/Renderer/IndirectDrawBuffer.h"
-#include "Engine/Graphics/Renderer/ComputePass.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Frame/ComputePass.h"
 
-// 1. Indirect Draw Argument 버퍼 구성
-sw::IndirectDrawBuffer indirectBuffer;
-indirectBuffer.initialize( pRhiDevice, 1024 ); // 최대 1024개 간접 드로우 명령
-
+// 1. 간접 인자 버퍼 — 컴퓨트 컬링이 채우고, 드로우가 그대로 읽는다.
 sw::RHIDrawIndexedIndirectCommand cmd{};
-cmd.indexCountPerInstance = 36;
-cmd.instanceCount = 500;
-indirectBuffer.setCommand( 0, cmd );
-indirectBuffer.flushToGPU( pRhiDevice );
+cmd._indexCountPerInstance = 36;
+cmd._instanceCount         = 500;
+// argBuffer 는 IRHIResource::createBuffer 로 만든 UAV 겸용 버퍼다.
 
-// 2. 비동기 컴퓨트 패스 (Compute Pass) 디스패치
-sw::ComputePass cullingPass;
-cullingPass.initialize( pRhiDevice, pComputePipeline );
-cullingPass.dispatch( pRhiContext, 64, 1, 1 ); // (64 * 64 threads)
+// 2. 비동기 컴퓨트 패스로 컬링을 돌린다.
+sw::ComputePass cullingPass{ "GpuCull" };
+cullingPass.setComputePipelineState( cullPso );
+cullingPass.bindUav( 0, argBufferUavIndex );   // 인자 버퍼에 쓰기
+cullingPass.bindSrv( 0, instanceBufferIndex ); // 인스턴스 읽기
+
+sw::ComputeDispatchParams dispatchParams{};
+dispatchParams._threadGroupCountX = 64;
+cullingPass.dispatch( pCmdList, dispatchParams );
+
+// 3. 컬링 결과를 CPU 가 보지 않고 그대로 드로우한다.
+pCmdList->drawIndexedIndirect( argBuffer );
 ```
 
 ---
@@ -573,18 +580,29 @@ cullingPass.dispatch( pRhiContext, 64, 1, 1 ); // (64 * 64 threads)
 
 DirectX 12 / Vulkan의 티어-3 바인드리스(Bindless Resource Indexing)를 통해 수만 개의 텍스처와 버퍼를 전역 인덱스로 셰이더에서 즉시 접근할 수 있도록 관리합니다.
 
+별도의 테이블 클래스는 없습니다 — **인덱스 발급은 `IRHIResource` 가 직접** 합니다
+(`Engine/Graphics/RHI/IRHIResource.h`). 백엔드마다 디스크립터 힙/디스크립터 세트 구현이 달라도
+호출부는 인덱스 하나만 다룹니다.
+
 ```cpp
-#include "Engine/Graphics/RHI/BindlessTable.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResource.h"
 
-sw::BindlessTable bindlessTable;
-bindlessTable.initialize( 65536 ); // 64K 슬롯 예약
+sw::IRHIResource* pResource = pRhiDevice->getResource();
 
-// 텍스처 핸들 바인딩 및 인덱스 발급
-uint32 textureDescriptorIndex = bindlessTable.allocateTextureSlot( textureHandle );
+// 텍스처 · 버퍼 · UAV 마다 발급 함수가 따로 있다 (해제도 짝을 맞춰야 한다).
+sw::RHIDescriptorIndex albedoIndex = pResource->registerBindlessTexture( textureHandle );
+sw::RHIDescriptorIndex materialIndex = pResource->registerBindlessResource( materialBuffer );
 
-// 셰이더에 단일 인덱스(uint32)만 Push Constant/Root Constant로 전달:
-// MaterialData { uint32 albedoTextureId; };
+// 셰이더에는 인덱스(uint32)만 넘어간다:
+// StructuredBuffer<SwMaterialData> g_SwMaterials; ... g_SwMaterials[materialIndex]
+
+pResource->unregisterBindlessTexture( albedoIndex );
+pResource->unregisterBindlessResource( materialIndex );
 ```
+
+> **짝을 지켜야 한다.** 텍스처 인덱스를 `unregisterBindlessResource` 에 넘기면 엉뚱한 슬롯이 풀린다
+> — 헤더 주석이 그 경고를 달고 있는 이유다.
 
 ---
 
@@ -595,7 +613,7 @@ uint32 textureDescriptorIndex = bindlessTable.allocateTextureSlot( textureHandle
 RenderGraph는 패스 간 자원 의존성을 DAG 위상 정렬할 때 **Read-Modify-Write (동일 리소스 읽기 및 덮어쓰기)** 및 **순차 쓰기(Sequential Multi-Write)** 체인을 자동으로 추적하며, VRAM 앨리어싱(Transient Aliasing)을 위한 리소스 수명 주기(First ~ Last Pass)를 산출합니다.
 
 ```cpp
-#include "Engine/Graphics/Renderer/RenderGraph.h"
+#include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
 sw::RenderGraph graph;
 // Pass A(쓰기) -> Pass B(읽기 & 덮어쓰기) -> Pass C(읽기)

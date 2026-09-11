@@ -1,6 +1,6 @@
 # ReflectionParser (리플렉션 파서)
 
-> **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 서브시스템 목록](../../../docs/02_EngineSubsystems.md)**
+> **[🏠 위키 홈으로 돌아가기](../../README.md)** | **[📖 서브시스템 목록](../../docs/02_EngineSubsystems.md)**
 
 엔진/게임 헤더의 `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM` 등을 **libclang으로 파싱**해  
 런타임 메타데이터 소스(`*.gen.cpp` / `*.gen.h`)를 만드는 **호스트 콘솔 도구**입니다.

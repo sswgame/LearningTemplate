@@ -263,7 +263,7 @@ tm.shutdown();
 - App이 `EngineLoop` 초기화 때 TaskManager를 만들고 `engine::bindEngineServices` 로 붙입니다.  
 - 게임 모듈은 보통 **직접 TaskManager를 만들지 않고**, 이미 돌아가는 엔진 서비스를 쓰거나 Object씬/리소스 API** 뒤에 숨은 비동기를 사용합니다.
 
-Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README](../../Object/README.md) / lint와 같습니다.  
+Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README](../../Engine/Object/README.md) / lint와 같습니다.  
 게임 쪽에서 비동기가 필요하면 엔진이 제공하는 고수준 API(씬 비동기 로드 등)를 우선하세요.
 
 ---

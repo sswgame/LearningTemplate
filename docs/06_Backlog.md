@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `03f1b3a8`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `82ba41ec`
 
 ---
 
@@ -288,6 +288,49 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (문서 점검 — 없는 API 를 설명하던 README 절 둘을 실제 API 로 다시 썼다)
+
+프로젝트 `.md` 41 개(+ `.cursorrules`)를 기계적으로 대조했다. **링크·경로·예제 include 를 실제 트리와
+맞춰 보는 방식**이라 "읽어 보니 이상하다" 가 아니라 검증된 것만 고쳤다.
+
+**가장 큰 것 — 루트 `README.md` 의 5.11 · 5.12 절이 존재하지 않는 클래스를 설명하고 있었다**
+
+- `sw::IndirectDrawBuffer` — **저장소 어디에도 없다.** 간접 인자는 전용 클래스가 아니라 일반 RHI
+  버퍼에 담고 `IRHICommandList::drawIndexedIndirect` 가 읽는다. 인자 구조체는
+  `RHIDrawIndexedIndirectCommand`(`RHITypes.h`)다.
+- `sw::BindlessTable` — **없다.** 인덱스 발급은 `IRHIResource` 가 직접 한다
+  (`registerBindlessTexture` / `registerBindlessResource` / `registerBindlessUAV`, 해제는 짝을 맞춰야 한다).
+- `sw::ComputePass` 는 있지만 **API 가 달랐다.** 문서는 `initialize(device, pso)` + `dispatch(ctx,64,1,1)`
+  였는데 실제는 `setComputePipelineState` · `bindUav` · `bindSrv` · `dispatch(pCmdList, ComputeDispatchParams)` 다.
+
+둘 다 실제 헤더를 보고 다시 썼다. 필드 이름(`_indexCountPerInstance` 등)까지 대조했다.
+
+**나머지**
+
+- **깨진 마크다운 링크 5 개** — 전부 상대 경로 깊이 오류였다(`../../../../README.md` 등). 이제 0 개다.
+- **예제 `#include` 14 개가 실제 경로와 달랐다.** `Renderer/FrameRenderer.h` → `Renderer/Frame/FrameRenderer.h`,
+  `Renderer/RenderGraph.h` → `Renderer/Graph/RenderGraph.h`, `Audio/AudioSystem.h` → `Audio/IAudioSystem.h`,
+  `Physics/PhysicsSystem.h` → `Physics/PhysicsWorld.h`, `Object/Component.h` → `Object/Component/Component.h` 등.
+- **`Resource/README.md` 가 `editordata.xml` 을 `editor/data/` 에 있다고 했다.** 실제로는
+  `Config/Editor/editordata.xml` 이고 `Resource/editor/` 에는 스플래시 텍스처만 있다(헤더 주석도
+  "배포 Resource data 아님" 이라고 적고 있다).
+- **`Test/README.md` 가 테스트 프로젝트를 4 개라고 했다** — `EditorTest` 가 빠져 있었다. 라벨 목록에도
+  `editor` 가 없었고, lint 를 둘이라고 했는데 실제로는 여섯이다. `ctest -C Debug` 도 고쳤다 — Ninja 는
+  단일 구성 생성기라 `-C` 는 아무 일도 하지 않는다.
+- **`ARCHITECTURE.md` · `CLAUDE.md`** — CTest 타깃 목록에 `EditorTest` 추가, `EngineTest_NoGPU` 필터 설명을
+  `RenderPassGpuTest` 포함해 갱신, 라벨 8 개 전부 표기.
+- **`docs/01_GettingStarted.md`** 가 Windows 전용 시절에 멈춰 있었다 — WSL/리눅스 경로(`SetupLinuxDevEnvironment.py`,
+  DrvFs 함정)와 git 훅 설치를 넣고 테스트 명령을 실제 형태로 고쳤다.
+- **규칙 문서 넷**(`AGENTS.md` · `GEMINI.md` · `.cursorrules` · `docs/04_CodingGuidelines.md`)에 이번에
+  저장소 전체에 강제한 **익명 네임스페이스 규칙**을 적었다(파일당 하나 · 최상단 · free `static` 금지 ·
+  예외 넷 · "올리기 전에 빌드로 확인").
+
+**점검 방법** (다음에도 쓸 수 있다): 마크다운 링크와 백틱 경로를 뽑아 `os.path.exists` 로 대조하고,
+예제 `#include` 를 소스 루트들과 대조한다. 산문 축약 경로(`Common/Gui/...`)는 오탐이므로 슬래시가 든
+것만 보되 링크는 전부 본다.
+
+검증: 린트 6/6. 깨진 링크 0 · stale include 0.
 
 ### 2026-09-11 (익명 네임스페이스 마무리 — 최상단 정렬, 중첩 0, TU 지역 free 함수 26 개를 안으로)
 

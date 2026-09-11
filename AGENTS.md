@@ -139,6 +139,25 @@ namespace sw
   `VulkanRHIResourceInternal`. Enforced by `CheckCodeConventions.py`
   (`Naming/DuplicateInternalHelper`, full-scan only).
 
+### One anonymous namespace per file, at the top of its scope
+
+- A `.cpp` has **at most one** anonymous namespace, placed at the top of the namespace that
+  encloses it (right after `SW_LOG_CALLER`, if present). Everything translation-unit-local —
+  helper structs, constants, `s_*` state, free functions — lives in it.
+- **Do not write free `static` functions.** The anonymous namespace already gives internal
+  linkage, so drop the `static` keyword when you move one in.
+- **Hoisting can break the build.** The block may only sit above things it does not use.
+  Moving it past a type definition, a constant or an `s_*` variable that it references is a
+  compile error, so build after you move one. If the dependency is itself translation-unit-local
+  (a file-scope `static`), move it **into** the block instead.
+- Legitimate exceptions, all of which are load-bearing:
+  - Blocks in mutually exclusive preprocessor branches (`#if SW_PLATFORM_WINDOWS` /
+    `#elif SW_PLATFORM_LINUX`) are one block per translation unit. Do not merge them.
+  - `REFLECT`-generated types cannot move into an anonymous namespace — the generated
+    `.gen.cpp` refers to them by qualified name (`sw::MockMeshComponent`).
+  - `SW_GLOBAL_VARIABLE_*` declares `extern`; it is deliberately external linkage and stays out.
+  - `main` and functions declared in a header stay at namespace scope.
+
 ## C++ style
 
 - Follow `.clang-format`.
