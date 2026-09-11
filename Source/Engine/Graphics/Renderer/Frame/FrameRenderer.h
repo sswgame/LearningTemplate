@@ -397,7 +397,7 @@ namespace sw
          * @details 슬롯을 드로우 단위로 나누는 이유: `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰는데
          *          GPU 는 제출 뒤에 읽는다. 그래서 여러 드로우가 같은 버퍼를 쓰면 전부 마지막에 쓴 값을 본다.
          *          배치마다 `g_InstanceBase`·`g_SwMaterialCount` 가 다르므로, 한 패스에 드로우가 둘 이상이면
-         *          앞 배치가 뒤 배치의 인스턴스를 읽어 엉뚱한 자리에 그려진다(RenderPassTest.MultiBatchPassKeepsPerBatchConstants).
+         *          앞 배치가 뒤 배치의 인스턴스를 읽어 엉뚱한 자리에 그려진다(RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants).
          *          언리얼도 드로우별 느슨한 파라미터는 드로우마다 유니폼 버퍼를 따로 잡는다.
          */
         bool acquireCbSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );

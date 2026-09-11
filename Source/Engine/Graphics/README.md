@@ -230,7 +230,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
 | DX11/GL prepareTexture가 “미구현 stub” | **의도적** 상태리스 no-op |
 | `-gv_rhiBackend=Vulkan` 으로 백엔드 선택 | 무시된다 — EngineConfig `_defaultRHI` 가 덮어쓴다. `-dx11` / `-dx12` / `-vk` / `-gl` 플래그를 쓴다 (스모크가 이 실수로 네 번 다 DX12 를 돌렸다) |
-| 백엔드 패리티를 "실행 성공" 으로 판정 | `RenderPassTest.FrameRendererParityAllBackends` 는 SceneColor 를 읽어 큐브 픽셀과 평균을 비교한다 — 픽셀을 보지 않는 스모크는 아무것도 증명하지 않는다 |
+| 백엔드 패리티를 "실행 성공" 으로 판정 | `RenderPassGpuTest.FrameRendererParityAllBackends` 는 SceneColor 를 읽어 큐브 픽셀과 평균을 비교한다 — 픽셀을 보지 않는 스모크는 아무것도 증명하지 않는다 |
 
 ---
 
@@ -294,7 +294,7 @@ OpenGL 이 상하 반전으로 그리고 있었다 (2026-09-08):
   [0,1] 을 내보내는 투영이 깊이 버퍼의 절반만 썼다(대소는 유지돼 그림자·깊이 테스트는 정상, 정밀도만 절반).
 - 이제 함수 포인터로 판단하고 `glGetIntegerv( GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE )` 로 **실제로 걸렸는지 GL 에 되묻는다.**
   못 걸면 에러 로그를 남긴다 — 조용히 지나가는 것이 이 버그의 본체였다.
-- **왜 안 잡혔나**: `RenderPassTest.FrameRendererParityAllBackends` 가 채널 평균과 그려진 픽셀 수만 비교했다 — 둘 다 상하
+- **왜 안 잡혔나**: `RenderPassGpuTest.FrameRendererParityAllBackends` 가 채널 평균과 그려진 픽셀 수만 비교했다 — 둘 다 상하
   반전에 무관하다. 게다가 큐브를 원점(= 카메라가 보는 지점)에 두어 그림이 세로로 대칭이라 어떤 지표로도 잡을 수 없었다.
   이제 큐브를 원점 위로 올려 비대칭하게 만들고 **그려진 픽셀의 무게중심이 이미지 위쪽인지** 단언한다. 수정을 되돌려
   OpenGL 만 실패하는 것(`무게중심 y=1055 가 중앙 640 보다 아래`)을 확인한 뒤 되살렸다.
@@ -307,7 +307,7 @@ Graphics 감사 후 고친 것 (2026-09-08):
   이제 `bindForDraw` 가 드로우마다 슬롯을 잡고(언리얼의 드로우별 유니폼 버퍼와 같은 자리), 슬롯 수는 배치 수에
   맞춰 **기록 시작 전에** 늘린다(`ensurePassCbCapacity` — 기록 중에는 버퍼 생성·bindless 등록을 못 한다).
 - **검증 공백이 그걸 가리고 있었다.** 벤치 씬도 패리티 테스트도 메시를 하나만 써서 배치가 늘 하나였다.
-  `RenderPassTest.MultiBatchPassKeepsPerBatchConstants` 가 같은 큐브를 두 번 따로 만들어 배치를 가르고 좌우
+  `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 같은 큐브를 두 번 따로 만들어 배치를 가르고 좌우
   양쪽에 그려졌는지 본다. 수정 전 DX11 은 왼쪽 0 픽셀, DX12 는 오른쪽 0 픽셀이었다.
 - **Present PSO 를 기록 중에 만들고 있었다.** 포맷별 캐시를 넣으면서 없으면 그 자리에서 만들게 뒀는데, 그 자리가
   태스크 워커였다. PSO 생성은 `RHIHandleTable`(락 없음)과 Vulkan 렌더패스 캐시(락 없음)를 건드린다.
@@ -361,7 +361,7 @@ cmake --build --preset Ninja-Debug
 build/Ninja-Debug/Bin/App.exe --bake-shaders                                   # 구운 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingContractTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHITest.*                     # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RenderPassTest.*              # FrameRendererParityAllBackends 가 SceneColor 픽셀을 비교
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RenderPassTest.*,RenderPassGpuTest.*   # FrameRendererParityAllBackends 가 SceneColor 픽셀을 비교
 py -3 Scripts/dev/BackendSmoke.py                                                # 실제 앱 경로: 네 백엔드 PPM 평균·큐브 픽셀 수
 ```
 

@@ -635,7 +635,7 @@ namespace
 /**
  * @brief FrameRenderer 파이프라인 로드 + 씬 execute 스모크 (RenderThread와 동일 begin/execute/end)
  */
-SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
+SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> device;
@@ -694,7 +694,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
  *          네 백엔드 모두 PSO 를 RHIHandleTable(generation 팩드)로 발급하므로, 다시 만들면
  *          핸들 값이 반드시 달라진다. 재생성 여부를 핸들로 판정하는 근거다.
  */
-SW_TEST_CASE( RenderPassTest, ShaderRecompileRebuildsPipelineStates )
+SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> device;
@@ -759,7 +759,7 @@ SW_TEST_CASE( RenderPassTest, ShaderRecompileRebuildsPipelineStates )
  *          FrameRenderer::_gpuScene이 매 프레임 통째로 덮어써져서 인스턴스 버퍼 핸들이 매번 바뀌었다
  *          (직전 프레임 버퍼/디스크립터는 releaseGpu() 없이 버려지는 누수였음).
  */
-SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
+SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> device;
@@ -830,7 +830,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBufferReusedAcrossPackets )
  *          독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 웨이브 경계를 넘나드는
  *          제출 순서(웨이브마다 먼저 제출 후 다음 웨이브)까지 실제로 동작하는지 확인한다.
  */
-SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallelRunsOnRealDevice )
+SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> device;
@@ -989,7 +989,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
  *          텍스처가 어긋난 것이었다(Shading 별칭 미해석, 풀스크린 PSO 의 뎁스 포맷, TAA 히스토리
  *          포맷 하드코딩). 검증 레이어 오류가 0 인지도 같이 봐야 의미가 있다.
  */
-SW_TEST_CASE( RenderPassTest, FrameRendererDeferredPipelineParallelWaves )
+SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> device;
@@ -1392,7 +1392,7 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
  *          픽셀로는 잡기 어렵다. 알파 경로가 컴파일됐는지 여부는 겹치는 곳의 색만 바꾸는데, 그 색은
  *          조명·톤매핑을 타고 흔들린다. 그래서 **드로우가 실제로 고른 PSO 의 디스크립터**를 본다.
  */
-SW_TEST_CASE( RenderPassTest, MaterialPermutationDrivesBatchPso )
+SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -1551,7 +1551,7 @@ SW_TEST_CASE( RenderPassTest, MaterialPermutationDrivesBatchPso )
  *          비추므로 x = ±2.5 는 확실히 밖이고, 카메라는 z 를 뒤로 물리면 그만큼 넓게 본다.
  *          뷰를 잘못 쓰면 이 큐브들이 통째로 사라진다.
  */
-SW_TEST_CASE( RenderPassTest, MainPassCullsWithCameraFrustumNotLight )
+SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -1673,7 +1673,7 @@ SW_TEST_CASE( RenderPassTest, MainPassCullsWithCameraFrustumNotLight )
  *          씬은 **완전히 정적**이어야 한다(회전 시드 없음, 시간에 의존하는 것 없음). 안 그러면 백엔드마다
  *          측정 시각이 달라 비교 자체가 성립하지 않는다.
  */
-SW_TEST_CASE( RenderPassTest, TransparentOrderMatchesAcrossBackends )
+SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -1845,7 +1845,7 @@ SW_TEST_CASE( RenderPassTest, TransparentOrderMatchesAcrossBackends )
  *          그래서 **메시 하나를 여럿이 공유해 한 배치에 인스턴스를 여러 개** 만들고, 그중 절반을 카메라
  *          뒤로 보낸다. 화면에 남아야 할 둘이 좌우에 제대로 찍히는지 본다.
  */
-SW_TEST_CASE( RenderPassTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
+SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -1979,7 +1979,7 @@ SW_TEST_CASE( RenderPassTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
  *          백엔드 색공간에 따라 흔들리지만, 같은 조명을 받는 두 큐브 사이의 R-B 대소는 흔들리지 않는다.
  *          픽셀 수로 세었을 때는 백엔드마다 값이 널뛰어 판정이 되지 않았다.
  */
-SW_TEST_CASE( RenderPassTest, PerBatchMaterialColorsReachShader )
+SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -2149,7 +2149,7 @@ SW_TEST_CASE( RenderPassTest, PerBatchMaterialColorsReachShader )
  *          그래서 같은 큐브를 **두 번 따로 만들어** 포인터를 다르게 하고(기하는 동일해 가시성 변수를 없앤다)
  *          좌우로 떨어뜨린 뒤, 화면 좌우 양쪽에 모두 그려졌는지 본다.
  */
-SW_TEST_CASE( RenderPassTest, MultiBatchPassKeepsPerBatchConstants )
+SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -2276,7 +2276,7 @@ SW_TEST_CASE( RenderPassTest, MultiBatchPassKeepsPerBatchConstants )
  *          회전각은 시간에 따라 달라지므로 백엔드 사이 픽셀 수를 비교하지 않는다. 각 백엔드가
  *          "무언가를 그렸는지" 만 본다 — 이 버그의 증상이 정확히 "아무것도 안 그린다" 였다.
  */
-SW_TEST_CASE( RenderPassTest, InstanceAnimationKeepsInstancesReadable )
+SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -2388,7 +2388,7 @@ SW_TEST_CASE( RenderPassTest, InstanceAnimationKeepsInstancesReadable )
  * @brief FrameRenderer 패리티 스모크 — DX11 / DX12 / Vulkan / OpenGL 각각 begin→execute→end(no present)
  * @details Present 없이 waitIdle까지. 가용 백엔드는 전부 성공해야 한다.
  */
-SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
+SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
@@ -2741,7 +2741,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
  *          함께 보는 것: 그림자 패스는 뷰 모드를 **받지 않아야** 한다(와이어프레임 그림자를 구우면
  *          그림자가 선 몇 개로 남는다), 모드를 되돌리면 캐시에서 같은 PSO 가 다시 나와야 한다.
  */
-SW_TEST_CASE( RenderPassTest, ViewModeSelectsDistinctPipelineStates )
+SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };

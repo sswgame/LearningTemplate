@@ -71,7 +71,7 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 ## 알아 둘 것
 
 - **기본 씬에는 메시가 없습니다.** `SW_ACTIVE_GAME` 이 `Empty` 라서, 앱을 그냥 띄우면 드로우
-  경로는 거의 실행되지 않습니다. 드로우 경로를 확인하려면 `EngineTest --test_filter=RenderPassTest.*`
+  경로는 거의 실행되지 않습니다. 드로우 경로를 확인하려면 `EngineTest --test_filter=RenderPassTest.*,RenderPassGpuTest.*`
   를 보세요 — 큐브를 넣고 실제로 그립니다.
 - **`forwardpipeline` 은 완전한 체인**이라 웨이브가 전부 1개입니다. 병렬 기록을 실제로 돌려
   보려면 `deferredpipeline` 을 써야 합니다(웨이브0 = Shadow + GBuffer).

@@ -44,11 +44,20 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) ctest — NoGPU 필터 (RHI/Window/Shader 등 제외)
+#
+# **실제 RHI 디바이스를 만드는 케이스는 스위트 이름으로 가른다** — `RenderPassGpuTest`. 예전엔
+# `-RenderPassTest.FrameRenderer*` 처럼 이름을 하나씩 적었는데, 2026-09-08 에 들어온 픽셀 리드백
+# 테스트 여섯이 그 이름 규칙을 비켜가면서 그대로 CI 로 들어갔다. CI 러너에는 GPU 가 없다 —
+# 리눅스는 X11 디스플레이가 없어 조용히 스킵되지만, Windows 는 DX11/DX12 가 Basic Render
+# Driver(WARP)로 **초기화에 성공해서** 픽셀 검증이 실제로 돌고 진다. 이름 목록은 또 썩으므로
+# 스위트로 가른다: 디바이스가 필요하면 `RenderPassGpuTest` 에 넣으면 된다.
+#
+# 이 케이스들은 사라지지 않는다 — GPU 가 있는 개발자가 돌리는 `EngineTest` 전체에는 그대로 있다.
 # ------------------------------------------------------------------------------
 if(BUILD_TESTING)
 	add_test(
 		NAME EngineTest_NoGPU
-		COMMAND EngineTest --test_filter=-RHITest.*,-WindowTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*,-RenderPassTest.FrameRenderer*
+		COMMAND EngineTest --test_filter=-RHITest.*,-WindowTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*,-RenderPassGpuTest.*
 	)
 	set_tests_properties(EngineTest_NoGPU PROPERTIES
 		WORKING_DIRECTORY "${sw_output_directory}/Bin"

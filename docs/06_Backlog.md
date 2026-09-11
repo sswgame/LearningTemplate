@@ -79,9 +79,10 @@ ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
 #   Debug    : CoreTest 171 / EngineTest 435 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
-#   Shipping : 163(+8 skip) / 407(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
-#   (2026-09-11 실측. Debug EngineTest 는 GPU 포함 전체 수이고 ctest 의 EngineTest_NoGPU 는 409,
-#    Shipping 의 407(+2 skip)은 그 NoGPU 수다 — Shipping 은 GPU 스위트를 애초에 돌리지 않는다.)
+#   Shipping : 163(+8 skip) / 396(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   (2026-09-11 실측. Debug EngineTest 는 GPU 포함 전체 수이고 ctest 의 EngineTest_NoGPU 는 398,
+#    Shipping 의 396(+2 skip)도 그 NoGPU 수다 — Shipping 은 GPU 스위트를 애초에 돌리지 않는다.
+#    409 → 398 은 실제 디바이스를 만드는 14 개를 `RenderPassGpuTest` 스위트로 갈라 뺀 결과다.)
 #   WSL-Debug: ctest 12/12 (린트 6 포함). EngineTest 는 418 통과 + 8 skip = 426 이고,
 #              스킵은 DX11/DX12 처럼 리눅스에 아예 없는 타깃들이다. (2026-09-11 실측)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
@@ -287,6 +288,53 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (GPU 가 필요한 테스트를 스위트로 갈라 `nogpu` 를 실제로 nogpu 로 만든다)
+
+Windows Debug CI 가 여섯 건으로 졌다 — 전부 **픽셀 리드백** 테스트다.
+
+```
+ Tests passed: 403 / 409 (0 skipped)
+ Tests failed (6):
+   - RenderPassTest.MainPassCullsWithCameraFrustumNotLight
+   - RenderPassTest.TransparentOrderMatchesAcrossBackends
+   - RenderPassTest.GpuGeneratedCommandsDrawOnlyVisibleInstances
+   - RenderPassTest.PerBatchMaterialColorsReachShader
+   - RenderPassTest.MultiBatchPassKeepsPerBatchConstants
+   - RenderPassTest.InstanceAnimationKeepsInstancesReadable
+```
+
+**`0 skipped` 가 핵심이다.** 리눅스 러너는 X11 디스플레이가 없어 창이 안 열리고 그래서 디바이스
+테스트가 조용히 스킵된다. 그런데 **Windows 러너는 GPU 가 없는데도 DX11/DX12 가 Basic Render
+Driver(WARP)로 초기화에 성공한다.** 그래서 스킵되지 않고 픽셀 검증이 실제로 돌아서 진다.
+PSO 수준만 보는 형제들(`MaterialPermutationDrivesBatchPso`·`ViewModeSelectsDistinctPipelineStates`)은
+같은 러너에서 통과한다 — 갈리는 선은 "디바이스를 만드는가" 가 아니라 "픽셀을 읽는가" 다.
+
+**왜 새는 구멍이었나.** 필터가 이름 목록이었다: `-RenderPassTest.FrameRenderer*`. 그 이름 규칙을
+정할 당시의 디바이스 테스트는 전부 `FrameRenderer…` 였다. 2026-09-08 에 들어온 여섯은 이름이 달라
+그대로 CI 에 들어갔고, 그날부터 Windows Debug 가 빨갛다. 이름 목록은 또 썩는다.
+
+**고친 방식.** 실제 RHI 디바이스를 만드는 케이스 **14 개를 `RenderPassGpuTest` 스위트로 옮기고**,
+필터를 `-RenderPassGpuTest.*` 하나로 줄였다. 앞으로는 디바이스가 필요하면 그 스위트에 넣으면 된다.
+`RenderPassTest` 에는 디바이스 없이 도는 22 개가 남는다. **테스트가 사라지지는 않는다** — GPU 가
+있는 개발자가 돌리는 `EngineTest` 전체(435)에는 그대로 있고, 거기서 넷 다 통과한다.
+
+```powershell
+# GPU 스위트만 따로 (실제 GPU 필요)
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RenderPassGpuTest.*
+```
+
+> **PowerShell 함정:** `--test_filter=...` 처럼 쉼표가 든 인자는 **반드시 따옴표로 감싸라.**
+> 안 감싸면 PowerShell 이 쪼개서 앞의 한 토큰만 먹는다 — 필터가 안 듣는데 오류도 안 난다.
+> (실제로 한 번 속았다. `'--test_filter=-RHITest.*,-RenderPassGpuTest.*'`)
+
+**남은 의문 — WARP 에서 왜 지는지는 미확인이다.** 실제 GPU 넷에서는 여섯 다 통과한다. 픽셀이 아예
+0 이면 WARP 가 컴퓨트 컬링/인디렉트를 못 하는 것이고, 어중간하면 소프트웨어 래스터라이저의 렌더링
+차이다. 판정하려면 실패 메시지(`… 큐브가 사라졌다 (좌 N, 우 M …)`)가 필요하다. CI 를 초록으로
+되돌리는 것과 이 판정은 별개다 — `nogpu` 라벨에 픽셀 검증을 넣은 것 자체가 계약 위반이었다.
+
+검증: Debug·Shipping 빌드 경고 0, nogpu 5/5 양쪽(Debug EngineTest_NoGPU 398/398,
+Shipping 396+2 skip), 린트 6/6, `EngineTest` 전체 435/435.
 
 ### 2026-09-11 (CI 가 2026-09-07 부터 빨갛다 — 리눅스 실패 둘을 닫았다, Windows 는 남았다)
 
