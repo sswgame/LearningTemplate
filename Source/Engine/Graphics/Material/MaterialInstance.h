@@ -3,6 +3,8 @@
  * @brief 마스터 Material 위의 드로우/액터 단위 오버라이드
  */
 #pragma once
+#include "Core/Memory/Memory.h"
+
 #include "Engine/Graphics/Material/Material.h"
 
 namespace sw
@@ -16,8 +18,15 @@ namespace sw
     public:
         /** @brief 부모 없는 인스턴스. */
         MaterialInstance();
-        /** @brief 마스터 머티리얼에 붙입니다. */
+        /** @brief 마스터 머티리얼에 붙입니다. 렌더에 실을 것이면 create() 로 만든다. */
         explicit MaterialInstance( Material* pParentMaterial );
+        /**
+         * @brief Engine.dll 안에서 shared_ptr 로 만듭니다.
+         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 산다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께
+         *          실으므로 게임 모듈이 만든 인스턴스를 엔진이 마지막까지 들 수 있고, 모듈이 내려간 뒤 놓으면
+         *          없는 코드로 뛰어든다. 여기서 만들면 누가 마지막에 놓든 Engine 코드다.
+         */
+        static shared_ptr<MaterialInstance> create( Material* pParentMaterial );
         /** @brief 오버라이드 CB를 정리합니다. */
         ~MaterialInstance();
 

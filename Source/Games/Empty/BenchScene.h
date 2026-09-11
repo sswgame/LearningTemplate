@@ -67,7 +67,7 @@ namespace sw
         /** @brief 벤치 큐브. 씬이 이들을 소유하며, 벤치 실행 중에는 파괴되지 않습니다. */
         vector<MeshComponent*> _listBenchMesh;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
-        unique_ptr<Material> _glassMaterial;
+        shared_ptr<Material> _glassMaterial;
         /** @brief 애니메이션 누적 시간. */
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */

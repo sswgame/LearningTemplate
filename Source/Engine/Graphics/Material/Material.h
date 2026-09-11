@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
@@ -20,11 +21,22 @@ namespace sw
     class IRHIDevice;
 
     /// @brief 셰이더 permutation과 패킹 CB를 가진 머티리얼 에셋
-    class SW_API Material
+    /*
+     * enable_shared_from_this 인 이유: 렌더 패킷(GpuScene 스냅샷)이 이 객체의 **소유를 함께 싣기** 위해서다.
+     * 렌더 스레드는 씬을 못 보고 패킷만 받는데, 게임 스레드가 오브젝트를 지우거나 인스턴스를 바꾼 뒤에도
+     * 큐에 남은 패킷(링 깊이만큼)이 이 머티리얼을 역참조한다. 소유가 패킷을 따라가면 그 창이 사라진다.
+     * 그래서 렌더에 실리는 Material 은 반드시 shared_ptr 로 소유돼야 한다 — 그리고 **반드시 create() 로 만든다.**
+     * shared_ptr 의 제어 블록(소멸 코드)은 make_shared 를 부른 쪽 DLL 에 산다. 게임 모듈이 만든 머티리얼을
+     * 엔진(GpuScene 스냅샷)이 마지막까지 들고 있다가 모듈이 내려간 뒤 놓으면 이미 없는 코드로 뛰어든다 —
+     * 실제로 벤치 종료에서 그렇게 죽었다. create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
+     */
+    class SW_API Material : public std::enable_shared_from_this<Material>
     {
     public:
-        /** @brief 빈 머티리얼 에셋. */
+        /** @brief 빈 머티리얼 에셋. 렌더에 실을 것이면 create() 로 만든다 — 위 머리 주석. */
         Material();
+        /** @brief Engine.dll 안에서 shared_ptr 로 만듭니다 — 모듈 경계를 넘어 소유돼도 안전한 유일한 방법. */
+        static shared_ptr<Material> create();
         /** @brief GPU 버퍼와 비동기 로드를 정리합니다. */
         ~Material();
 

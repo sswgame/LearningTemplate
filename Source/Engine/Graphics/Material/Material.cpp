@@ -40,6 +40,11 @@ namespace sw
         , _bShaderFeature{ SW_TRUE }
         , _reserved{ 0 } {}
 
+    shared_ptr<Material> Material::create()
+    {
+        return make_shared<Material>();
+    }
+
     Material::Material()
         : _desc{}
         , _data{}

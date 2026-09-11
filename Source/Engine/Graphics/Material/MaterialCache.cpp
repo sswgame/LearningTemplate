@@ -18,7 +18,7 @@ namespace sw
     {
         struct Entry
         {
-            unique_ptr<Material> _material;
+            shared_ptr<Material> _material; ///< shared 인 이유는 Material.h 머리 주석 — 렌더 패킷이 소유를 빌린다
             string               _path;
             uint32               _refCount{ 0 };
             bool                 _bGpuInit{ false };
@@ -58,7 +58,7 @@ namespace sw
         Impl::Entry& entry = _impl->_mapEntry[key];
         if ( entry._material == nullptr )
         {
-            entry._material = make_unique<Material>();
+            entry._material = Material::create();
             entry._path     = key;
         }
         ++entry._refCount;

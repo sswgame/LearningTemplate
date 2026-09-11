@@ -138,7 +138,7 @@ namespace sw
          * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
          *        프레임 수 (RenderThread 패킷 링 깊이).
          * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
-         *          해제를 미뤄야 한다 (예: GpuMaterialRetireQueue::kRetireFrameDelay). GPU 인플라이트
+         *          해제를 미뤄야 한다 (예: GpuScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
          *          값인 kMaxFrameCountInFlight 와는 별개 개념 — 혼동하지 말 것.
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;

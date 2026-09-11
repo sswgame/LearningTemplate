@@ -279,6 +279,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (렌더 패킷이 머티리얼의 소유를 쥔다 — 죽은 retire 큐를 지우고, ASAN 으로 전후를 쟀다)
+
+**증상(재현)**: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` — 패킷을 내보낸 **뒤에** GT 가 머티리얼·인스턴스의
+소유를 전부 놓고 그 패킷을 실행한다(에디터에서 오브젝트 삭제·인스턴스 교체가 RT 보다 먼저 일어나는 순서).
+수정 전 ASAN: `heap-use-after-free` @ `MaterialInstance::applyToGpu` ← `applyInstanceCbsVal` ← `GpuScene::upload`
+← `executePacket`, 해제 주체는 GT 가 놓은 `shared_ptr`. 예측한 경로 그대로였다.
+
+**근본 수정 — 패킷이 소유한다.** 스냅샷(`GpuMeshBatch` · `GpuMaterialGroup::_listEntry` · 내부 후보)이 `Material` 과
+`MaterialInstance` 를 `shared_ptr` 로 싣는다. `Material` 은 `enable_shared_from_this` 가 됐고 소유자(MaterialCache ·
+BenchScene · 테스트)는 전부 `shared_ptr` 다. shared 로 소유되지 않은 머티리얼은 실을 수 없다 — 생포인터로 조용히 싣는
+것이 곧 예전의 해제 후 사용이므로, 한 번 크게 말하고 그 메시는 그리지 않는다(`GpuSceneInternal::shareMaterial`).
+`GpuMaterialRetireQueue` · `syncMaterialPins` · `advanceMaterialRetireFrame` 은 지웠다 — 소유가 패킷을 따라가면 큐가 할
+일이 없다. 사용처 0 이던 공개 `GpuSceneDrawCandidate` 도 같이 지웠다.
+
+**그 뒤 두 번 더 잡혔다 — 둘 다 소유가 제대로 넘어갔기 때문에 드러난 것이다.**
+1. `~MaterialInstance` 가 **죽은 디바이스**에 `shutdown()` 을 불렀다(ASAN). 인스턴스가 이제 정당하게 RT 쪽 `GpuScene`
+   에 살아남는데, `FrameRenderer::shutdown()` 이 그 스냅샷을 놓지 않아 렌더러 소멸(디바이스 사후)까지 들고 있었다.
+   `shutdown()` 이 `releaseGpu` + `clear()` 로 디바이스가 살아 있을 때 놓는다. `EngineLoop::shutdown` 도 `_gtGpuScene`
+   을 같은 시점에 비운다.
+   > 소멸자의 `_gpuDeviceGeneration == RHI::getDeviceGeneration()` 가드는 **한 번도 막지 못한다** — 세대를 올리는
+   > 코드가 저장소에 없다. 순서를 맞춘 것이지 가드를 고친 것이 아니다.
+2. **벤치가 종료에서 세그폴트했다** — 로그의 "Shutdown cleanly" 뒤, 즉 `SWGame.dll` 이 내려간 뒤다. BenchScene 이
+   `make_shared` 로 만든 인스턴스의 **제어 블록(소멸 코드)이 게임 모듈 안에** 있고, 이제 엔진(GpuScene)이 마지막
+   참조를 들고 있다가 모듈이 사라진 뒤 놓는다 → 없는 코드로 뛰어든다. "모듈의 정적은 핫리로드에서 죽는다" 의
+   `shared_ptr` 판이다. `Material::create()` / `MaterialInstance::create()` 를 Engine 에 두고 모두 그것으로 만든다 —
+   누가 마지막에 놓든 Engine 코드다. (부수: `Material*` 인자는 ADL 로 `std::make_shared` 를 끌어와 모호해지므로
+   팩토리 안에서도 `sw::make_shared` 로 한정한다.)
+
+**덤으로 고쳐진 잠복 버그**: 후보 수집에서 인스턴스를 블렌드 판단 **뒤에** 채워서 "인스턴스의 부모 머티리얼이 블렌드를
+정한다" 는 폴백이 한 번도 걸리지 않았다. 순서를 바로잡았고, 그 폴백이 안 걸리는 데 기대던 테스트
+(`GpuSceneTransparentDifferentKeysStaySeparate`) 는 투명 머티리얼(`glassmaterial`)을 부모로 준다.
+
+**검증**: ASAN — 재현 테스트 수정 전 UAF → 수정 후 1/1, `RenderPassGpuTest` 15/15 · `RenderPassTest` 22/22 (sanitizer 0).
+Debug — GPU 스위트 15/15, nogpu 5/5, 린트 4/4. 실기동 — 벤치 3구성(에디터 DX12/Vulkan · 에디터 없음) 종료 0,
+배경 아닌 픽셀 18.6k/27.6k(변경 전과 같다), 패널 덤프 창 15개 · 빈 패널 0개.
+
 ### 2026-09-12 (같은 병 — "한쪽만 만드는 값을 스냅샷이 매 프레임 옮긴다" — 를 다시 훑었다)
 
 `_indirectCommandCount` 의 모양으로 `GpuScene` 을 전수 조사했다: 필드 74개 각각의 **작성 함수(GT 빌드 vs RT 업로드)**
@@ -287,7 +323,7 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 매 프레임 다시 채우거나**(`applyInstanceCbsVal` · `uploadMeshesVal`) **RT 소유 맵에 셰이더 경로로 보관해**(`_mapMaterialGpu`)
 스냅샷을 넘어 살아남는다 — 개수 필드가 따랐어야 할 설계다. GT 가 RT 전용 게터를 읽는 곳도 0.
 
-**그런데 같은 이유로 생긴 다른 결함이 하나 있다 — `GpuMaterialRetireQueue`.** 아직 고치지 않았다.
+**그런데 같은 이유로 생긴 다른 결함이 하나 있었다 — `GpuMaterialRetireQueue`.** (같은 날 아래 항목에서 ①안으로 고쳤다.)
 - `GpuScene` 은 GT 빌더와 RT 소유자로 **같은 타입이 두 인스턴스**다. 큐도 인스턴스마다 하나씩이라
   `syncFromBatches`(pin) 는 GT 쪽(`buildBatches`)에서, `advanceFrame` · `flushAfterGpu` 는 RT 쪽에서 돈다 —
   **프로토콜의 두 반쪽이 서로 다른 객체 위에 있다.** GT 큐는 pin 만 쌓이고 RT 큐는 늘 빈 목록을 세고 있다.

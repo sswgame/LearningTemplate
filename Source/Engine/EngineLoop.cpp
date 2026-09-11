@@ -431,6 +431,9 @@ namespace sw
                 _renderThread->waitIdle();
                 _renderThread->stop();
             }
+            // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼·인스턴스)를 들고 있다 — 렌더러와 같은 시점에 놓는다.
+            // 소멸자에 맡기면 디바이스가 사라진 뒤에 놓게 된다.
+            _gtGpuScene.clear();
             if ( _frameRenderer != nullptr )
                 _frameRenderer->shutdown();
             if ( _rhi != nullptr )

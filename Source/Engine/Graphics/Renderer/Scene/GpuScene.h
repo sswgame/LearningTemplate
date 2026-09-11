@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Container/unordered_set.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -100,8 +99,13 @@ namespace sw
         uint32             _materialIndex{ 0 };
         RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
-        /** @brief 배치가 쓰는 부모 머티리얼 — 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자. */
-        Material* _pMaterial{ nullptr };
+        /**
+         * @brief 배치가 쓰는 부모 머티리얼 — 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자.
+         * @details **소유를 함께 싣는다.** 렌더 스레드는 이 배치가 든 패킷을 다 쓸 때까지 이 머티리얼을 역참조하므로,
+         *          게임 스레드가 먼저 놓아도 살아 있어야 한다. 예전에는 생포인터였고 그 사이를 pin/retire 큐가
+         *          지킨다고 돼 있었지만 그 큐의 답을 읽는 곳이 없었다 — 소유가 패킷을 따라가면 큐가 필요 없다.
+         */
+        shared_ptr<Material> _material;
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스 — _listMaterialGroup. 없으면 kInvalidMaterialGroup. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
@@ -126,8 +130,8 @@ namespace sw
          */
         RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-        /** @brief RT가 draw 직전에 applyToGpu. 수명은 GpuScene pin/retire 큐로 관리. */
-        MaterialInstance* _pMaterialInstance{ nullptr };
+        /** @brief RT 가 draw 직전에 applyToGpu 한다. 수명은 이 shared_ptr 이 쥔다 — 패킷이 살아 있는 동안 산다. */
+        shared_ptr<MaterialInstance> _materialInstance;
     };
 
     /**
@@ -144,6 +148,18 @@ namespace sw
         {
             return _pMaterial == other._pMaterial && _pInstance == other._pInstance;
         }
+    };
+
+    /**
+     * @struct GpuMaterialElement
+     * @brief 머티리얼 데이터 원소 하나 — (머티리얼, 인스턴스) 쌍의 **소유**.
+     * @details 키(`GpuMaterialElementKey`)는 정체성이라 생포인터고, 원소는 렌더 스레드가 `getBuffer()` 로 읽으므로
+     *          소유를 든다. 인스턴스가 없으면 머티리얼 자신이 원소다.
+     */
+    struct GpuMaterialElement
+    {
+        shared_ptr<Material>         _material;
+        shared_ptr<MaterialInstance> _instance;
     };
 
     /// @brief GpuMaterialElementKey 해시 — 포인터 둘을 섞는다.
@@ -184,8 +200,8 @@ namespace sw
      */
     struct GpuMaterialGroup
     {
-        string                                     _shaderPath;
-        vector<pair<Material*, MaterialInstance*>> _listEntry;
+        string                     _shaderPath;
+        vector<GpuMaterialElement> _listEntry;
         /**
          * @brief 원소 키 → `_listEntry` 인덱스.
          * @details 예전엔 인스턴스마다 `_listEntry` 를 처음부터 훑어 같은 쌍을 찾았다 — 인스턴스 N 개와 머티리얼 M 종에
@@ -213,53 +229,6 @@ namespace sw
         RHIStructuredBufferSlot _slot;
         /** @brief 마지막으로 올린 바이트 — 같으면 업로드를 건너뛴다 (언리얼처럼 더티만 올린다). */
         vector<uint8> _lastBytes;
-    };
-
-    /**
-     * @class GpuMaterialRetireQueue
-     * @brief GT→RT 교차 MaterialInstance 수명 정책.
-     * @details build 배치에 실린 인스턴스는 pin. 배치에서 빠지면 retire(프레임 지연).
-     *          GT는 pin이 풀리기 전에 파괴하면 안 되고, flushAfterGpu 이후에 파괴합니다.
-     */
-    class SW_API GpuMaterialRetireQueue
-    {
-    public:
-        /** @brief RenderThread 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같아야 안전합니다 —
-         *         그보다 짧으면 아직 큐잉된(미소비) 패킷이 참조 중인 MaterialInstance를 조기 파괴할 수 있습니다. */
-        static constexpr uint32 kRetireFrameDelay = constant::kRenderFrameQueueDepth;
-
-        /**
-         * @brief 현재 배치와 머티리얼 그룹에 실린 인스턴스를 pin하고, 빠진 것은 retire 큐로 옮깁니다.
-         * @details 배치를 셰이더 타입으로 합치면 배치의 _pMaterialInstance 는 대표 하나뿐이라, 그룹 원소(머티리얼·인스턴스 쌍)도 본다.
-         */
-        void syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup );
-        /** @brief RT 프레임 종료 시 호출 — retire 카운트를 줄입니다 (waitIdle 없음). */
-        void advanceFrame();
-        /** @brief device.waitIdle() 후 pin/retire를 모두 비웁니다. */
-        void flushAfterGpu( IRHIDevice* pDevice );
-        /** @brief pin·retire를 즉시 비웁니다 (GPU sync 없음). */
-        void clear();
-
-    private:
-        struct RetireEntry
-        {
-            MaterialInstance* _pInstance{ nullptr };
-            uint32            _framesLeft{ 0 };
-        };
-
-        unordered_set<MaterialInstance*> _uniquePinned;
-        vector<RetireEntry>              _listRetiring;
-    };
-
-    struct GpuSceneDrawCandidate
-    {
-        float4x4          _world{};
-        float3            _boundsCenter{};
-        float32           _boundsRadius{ 1.0f };
-        Mesh*             _pMesh{ nullptr };
-        Material*         _pMaterial{ nullptr };
-        MaterialInstance* _pInstance{ nullptr };
-        uint32            _blendMode{ 0 };
     };
 
     struct GpuSceneSortKey
@@ -406,11 +375,6 @@ namespace sw
         static constexpr uint32 kInvalidMaterialGroup     = 0xFFFFFFFFu;
         static constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
-        /** @brief 현재 배치로 pin을 맞추고, RT 프레임 끝에서 advanceFrame을 호출하세요. */
-        void syncMaterialPins();
-        /** @brief RT 프레임 종료 — retire 지연 카운트. */
-        void advanceMaterialRetireFrame() { _materialRetire.advanceFrame(); }
-
     private:
         /** @brief 후보를 GpuInstance scratch로 채웁니다. ParallelBlockDelegate 시그니처입니다. */
         void fillScratchRange( uint32 start, uint32 end );
@@ -433,7 +397,7 @@ namespace sw
          * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 돌려줍니다 (GT, buildBatches 안).
          * @details 같은 쌍은 같은 원소를 공유한다. 인스턴스마다 부른다 — 배치를 셰이더 타입으로 합치면 한 배치 안에 여러 원소가 산다.
          */
-        uint32 assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex );
+        uint32 assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex );
         /**
          * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼, 아니면 그 머티리얼 자신.
          * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
@@ -480,13 +444,13 @@ namespace sw
         /// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate
         {
-            float4x4          _world{};
-            float3            _boundsCenter{};
-            float32           _boundsRadius{ 1.0f };
-            Mesh*             _pMesh{ nullptr };
-            Material*         _pMaterial{ nullptr };
-            MaterialInstance* _pInstance{ nullptr };
-            uint32            _blendMode{ 0 };
+            float4x4                     _world{};
+            float3                       _boundsCenter{};
+            float32                      _boundsRadius{ 1.0f };
+            Mesh*                        _pMesh{ nullptr };
+            shared_ptr<Material>         _material;
+            shared_ptr<MaterialInstance> _instance;
+            uint32                       _blendMode{ 0 };
             /// @brief GPU 회전 애니메이션 시드 (0 = 없음). MeshComponent 가 준다 → GpuInstance::_spinSeed.
             uint32 _spinSeed{ 0 };
 
@@ -505,7 +469,7 @@ namespace sw
              */
             bool operator==( const DrawCandidate& other ) const
             {
-                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
+                return _pMesh == other._pMesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
@@ -522,7 +486,7 @@ namespace sw
              */
             bool hasSameBatchKey( const DrawCandidate& other ) const
             {
-                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
+                return _pMesh == other._pMesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode;
             }
         };
@@ -564,7 +528,6 @@ namespace sw
         /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
         vector<uint32> _listBuiltTransparentIdx;
 
-        GpuMaterialRetireQueue  _materialRetire;
         TaskStageHandle         _snapshotStage;
         RHIStructuredBufferSlot _instances;
         float3                  _lastCameraPos{};

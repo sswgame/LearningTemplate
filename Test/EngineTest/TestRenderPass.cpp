@@ -572,10 +572,12 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )
     sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
+    // 블렌드 모드는 **부모 머티리얼**이 정한다(GpuScene::buildFromScene). 예전에는 그 폴백이 순서 버그로 한 번도
+    // 걸리지 않아 컴포넌트의 Transparent 가 우연히 이겼다 — 이제는 투명 머티리얼을 부모로 줘야 투명 배치가 된다.
     sw::Material master;
-    SW_EXPECT_TRUE( master.loadFromFile( "engine/materials/defaultmaterial.material" ) );
-    sw::shared_ptr<sw::MaterialInstance> a = sw::make_shared<sw::MaterialInstance>( &master );
-    sw::shared_ptr<sw::MaterialInstance> b = sw::make_shared<sw::MaterialInstance>( &master );
+    SW_EXPECT_TRUE( master.loadFromFile( "engine/materials/glassmaterial.material" ) );
+    sw::shared_ptr<sw::MaterialInstance> a = sw::MaterialInstance::create( &master );
+    sw::shared_ptr<sw::MaterialInstance> b = sw::MaterialInstance::create( &master );
 
     {
         sw::GameObject*    go = objects->createGameObject( sw::hashed_string( "T0" ) );
@@ -816,6 +818,93 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
     if ( cube != nullptr )
         cube->releaseGpu();
 
+    renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
+ * @brief [RenderPassGpuTest] 패킷에 실린 머티리얼·인스턴스는 GT 가 소유를 놓아도 RT 가 그 패킷을 다 쓸 때까지 산다.
+ * @details 렌더 스레드는 씬을 못 보고 스냅샷만 받는다. 스냅샷이 생포인터만 들고 있으면 GT 가 오브젝트를
+ *          지우거나 인스턴스를 바꾼 직후 ≤ 패킷 링 깊이 프레임 동안 RT 가 해제된 메모리를 읽는다
+ *          (`applyInstanceCbsVal` 의 applyToGpu, `uploadMaterialGroups` 의 getBuffer). 여기서는 패킷을
+ *          내보낸 **뒤에** GT 쪽 소유를 전부 놓고 그 패킷을 실행한다 — ASAN 빌드에서 use-after-free 로
+ *          잡히던 순서다. 스냅샷이 소유를 함께 실어야만 통과한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+    bool bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for material lifetime test" );
+
+    sw::FrameRenderer renderer;
+    SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
+
+    sw::Scene scene( "MaterialLifetimeScene" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+    SW_ASSERT_NOT_NULL( go );
+    sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( mesh );
+    mesh->setMesh( cube );
+
+    // GT 소유: 머티리얼 하나 + 그 인스턴스 하나. 아래에서 둘 다 놓는다.
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    mesh->setMaterial( material.get() );
+    mesh->setMaterialInstance( instance );
+
+    sw::GpuScene gtGpuScene;
+    sw::float4   clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+
+    // 1 프레임: 정상 경로로 한 번 올린다 (버퍼·CB 가 만들어진다).
+    {
+        sw::RenderFramePacket packet{};
+        packet._bValid = 1;
+        gtGpuScene.buildFromScene( &scene, packet._cameraPos, nullptr );
+        gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+        device->beginFrame( clear );
+        SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
+        device->endFrame( false, false );
+    }
+
+    // 2 프레임: 패킷을 먼저 내보내고, **그 다음** GT 가 소유를 전부 놓는다 — 실제 에디터에서
+    // 오브젝트 삭제·인스턴스 교체가 RT 보다 먼저 일어나는 순서다.
+    sw::RenderFramePacket lateePacket{};
+    lateePacket._bValid = 1;
+    gtGpuScene.buildFromScene( &scene, lateePacket._cameraPos, nullptr );
+    gtGpuScene.exportCpuSnapshot( lateePacket._gpuScene );
+    SW_ASSERT_TRUE( lateePacket._gpuScene.getInstances().empty() == false );
+
+    mesh->setMaterialInstance( nullptr );
+    mesh->setMaterial( nullptr );
+    gtGpuScene.clear(); // GT 쪽 빌드 캐시도 놓는다 — 이제 살아 있는 참조는 패킷 안의 것뿐이어야 한다
+    instance.reset();
+    material.reset();
+
+    device->beginFrame( clear );
+    SW_EXPECT_TRUE( renderer.executePacket( device.get(), lateePacket ) );
+    device->endFrame( false, false );
+
+    device->waitIdle();
+    if ( cube != nullptr )
+        cube->releaseGpu();
     renderer.shutdown();
     device->shutdown();
     device.reset();
@@ -1066,8 +1155,8 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
     sw::shared_ptr<sw::Mesh>     mesh      = sw::Mesh::createUnitCube();
-    sw::unique_ptr<sw::Material> materialA = sw::make_unique<sw::Material>();
-    sw::unique_ptr<sw::Material> materialB = sw::make_unique<sw::Material>();
+    sw::shared_ptr<sw::Material> materialA = sw::Material::create();
+    sw::shared_ptr<sw::Material> materialB = sw::Material::create();
     SW_ASSERT_TRUE( mesh != nullptr && materialA != nullptr && materialB != nullptr );
 
     auto addObject = [&]( const utf8* pName, sw::Material* pMaterial, float32 offsetX ) -> sw::GameObject*
@@ -1095,7 +1184,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
         {
             for ( uint32 index = 0; index < group._listEntry.size(); ++index )
             {
-                if ( group._listEntry[index].first == pMaterial )
+                if ( group._listEntry[index]._material.get() == pMaterial )
                     return static_cast<int32>( index );
             }
         }
@@ -1127,7 +1216,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
     pMeshB->setVisible( false );
     sw::MeshComponent* pMeshA = pObjA->getComponent<sw::MeshComponent>();
     SW_ASSERT_TRUE( pMeshA != nullptr );
-    for ( uint32 buildIndex = 0; buildIndex < sw::GpuMaterialRetireQueue::kRetireFrameDelay + 3; ++buildIndex )
+    for ( uint32 buildIndex = 0; buildIndex < sw::constant::kRenderFrameQueueDepth + 3; ++buildIndex )
     {
         pMeshA->setLocalPosition( sw::float3{ -1.0f + static_cast<float32>( buildIndex ) * 0.01f, 0.0f, 0.0f } );
         gpuScene.buildFromScene( &scene, cameraPos, nullptr );
@@ -1137,7 +1226,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
     SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialA.get() ) == firstA, "남아 있는 머티리얼의 인덱스는 회수 뒤에도 그대로여야 한다" );
 
     // 회수된 자리는 새 머티리얼이 재사용한다 — 자리를 옮기지 않으므로 A 의 인덱스는 여전히 그대로다.
-    sw::unique_ptr<sw::Material> materialC = sw::make_unique<sw::Material>();
+    sw::shared_ptr<sw::Material> materialC = sw::Material::create();
     SW_ASSERT_TRUE( addObject( "MatC", materialC.get(), 2.0f ) != nullptr );
     gpuScene.buildFromScene( &scene, cameraPos, nullptr );
     SW_EXPECT_TRUE_MSG( findElementIndex( gpuScene, materialC.get() ) == firstB, "회수된 자리를 새 머티리얼이 재사용해야 한다" );
@@ -1158,18 +1247,18 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 {
     // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다. XML 을 손으로 지어내면 퍼뮤테이션 선언(_permutations)이
     // 빠져 구워둔 셰이더 변형과 맞지 않는 머티리얼이 만들어진다 — 그러면 검증하려던 것과 다른 걸 재게 된다.
-    auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
+    auto makeMaterial = []( const utf8* pColor ) -> sw::shared_ptr<sw::Material>
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
-        sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
              material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
             material.reset();
         return material;
     };
 
-    sw::unique_ptr<sw::Material> materialRed  = makeMaterial( "1.0 0.05 0.05 1.0" );
-    sw::unique_ptr<sw::Material> materialBlue = makeMaterial( "0.05 0.05 1.0 1.0" );
+    sw::shared_ptr<sw::Material> materialRed  = makeMaterial( "1.0 0.05 0.05 1.0" );
+    sw::shared_ptr<sw::Material> materialBlue = makeMaterial( "0.05 0.05 1.0 1.0" );
     SW_ASSERT_TRUE( materialRed != nullptr && materialBlue != nullptr );
 
     // 프로퍼티 값이 다르면 패킹된 바이트도 달라야 한다 — 같은 셰이더라 레이아웃은 같고 값만 다르다.
@@ -1220,7 +1309,7 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
         SW_ASSERT_TRUE( batch._materialGroup < gpuScene.getMaterialGroups().size() );
         const sw::GpuMaterialGroup& group = gpuScene.getMaterialGroups()[batch._materialGroup];
         SW_ASSERT_TRUE( batch._materialIndex < group._listEntry.size() );
-        SW_EXPECT_TRUE_MSG( group._listEntry[batch._materialIndex].first == batch._pMaterial,
+        SW_EXPECT_TRUE_MSG( group._listEntry[batch._materialIndex]._material == batch._material,
                             "배치의 materialIndex 가 다른 머티리얼의 원소를 가리킨다" );
     }
 
@@ -1241,17 +1330,17 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
 {
     // 실제 에셋을 읽어 스위치만 바꾼다 — XML 을 손으로 지으면 _permutations 가 빠져 다른 걸 재게 된다.
-    auto makeMaterial = []() -> sw::unique_ptr<sw::Material>
+    auto makeMaterial = []() -> sw::shared_ptr<sw::Material>
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
-        sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false )
             material.reset();
         return material;
     };
 
-    sw::unique_ptr<sw::Material> materialPlain    = makeMaterial();
-    sw::unique_ptr<sw::Material> materialSwitched = makeMaterial();
+    sw::shared_ptr<sw::Material> materialPlain    = makeMaterial();
+    sw::shared_ptr<sw::Material> materialSwitched = makeMaterial();
     SW_ASSERT_TRUE( materialPlain != nullptr && materialSwitched != nullptr );
 
     // 같은 셰이더, 같은 블렌드 모드. 다른 것은 정적 스위치 하나뿐이다.
@@ -1307,7 +1396,7 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
             if ( defineStr == "MATERIAL_NORMALMAP" )
                 bHasNormalMap = true;
         }
-        if ( batch._pMaterial == materialSwitched.get() )
+        if ( batch._material == materialSwitched )
         {
             bFoundSwitched = true;
             SW_EXPECT_TRUE_MSG( bHasNormalMap, "스위치를 켠 머티리얼의 배치인데 그 키워드가 퍼뮤테이션에 없다" );
@@ -1420,7 +1509,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
         // 실제 에셋을 쓴다 — 손으로 지은 XML 은 _permutations 가 빠져 검증하려던 것과 다른 걸 재게 된다.
-        sw::unique_ptr<sw::Material> materialGlass = sw::make_unique<sw::Material>();
+        sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
         if ( bOk )
             bOk = materialGlass->loadFromFile( "engine/materials/glassmaterial.material" );
 
@@ -1702,11 +1791,11 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         // 배치 안의 정렬이 실제로 검사된다. 따로 주면 배치가 하나씩 갈려 검사할 순서가 없다.
         // 로드하지 않은 씬은 기본 머티리얼이 없다(getMaterial 이 null) — 에셋을 직접 읽고 알파만 낮춘다.
         sw::shared_ptr<sw::Mesh>     sharedMesh;
-        sw::unique_ptr<sw::Material> glassMaterial;
+        sw::shared_ptr<sw::Material> glassMaterial;
         if ( bOk )
         {
             sharedMesh    = sw::Mesh::createUnitCube();
-            glassMaterial = sw::make_unique<sw::Material>();
+            glassMaterial = sw::Material::create();
             // 반투명 전용 에셋 — blendMode 와 퍼뮤테이션이 불투명과 다르다. 예전처럼 불투명 에셋에
             // 알파만 낮춰 쓰면 "머티리얼은 불투명인데 블렌딩으로 그린다"는 어긋난 상태를 검증하게 된다.
             bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" );
@@ -2009,18 +2098,18 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         // initialize 가 아니라 loadFromFile 을 쓴다 — initialize 는 텍스처 에셋 해석까지 하므로 에셋
         // 시스템이 없는 테스트 프로세스에서는 못 쓴다. GPUScene 은 머티리얼 상수버퍼가 아니라
         // getBuffer() 를 구조버퍼 원소로 패킹하므로 여기까지면 충분하다.
-        auto makeMaterial = []( const utf8* pColor ) -> sw::unique_ptr<sw::Material>
+        auto makeMaterial = []( const utf8* pColor ) -> sw::shared_ptr<sw::Material>
         {
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
-            sw::unique_ptr<sw::Material> material = sw::make_unique<sw::Material>();
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
             if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
                  material->setPropertyValue( nullptr, sw::hashed_string( "color" ), pColor ) == false )
                 material.reset();
             return material;
         };
 
-        sw::unique_ptr<sw::Material> materialRed;
-        sw::unique_ptr<sw::Material> materialBlue;
+        sw::shared_ptr<sw::Material> materialRed;
+        sw::shared_ptr<sw::Material> materialBlue;
         if ( bOk )
         {
             materialRed  = makeMaterial( "1.0 0.02 0.02 1.0" );
@@ -2918,7 +3007,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
  */
 SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
 {
-    sw::unique_ptr<sw::Material> materialGlass = sw::make_unique<sw::Material>();
+    sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
     SW_ASSERT_TRUE( materialGlass->loadFromFile( "engine/materials/glassmaterial.material" ) );
 
     sw::Scene scene( "SnapshotPermutationScene" );

@@ -73,6 +73,12 @@ namespace sw
         , _bGpuDirty{ SW_TRUE }
         , _instReserved{ 0 } {}
 
+    shared_ptr<MaterialInstance> MaterialInstance::create( Material* pParentMaterial )
+    {
+        // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다 — 한정해야 sw 것이 잡힌다.
+        return sw::make_shared<MaterialInstance>( pParentMaterial );
+    }
+
     MaterialInstance::MaterialInstance( Material* pParentMaterial )
         : _pParentMaterial{ pParentMaterial }
         , _desc{}

@@ -142,6 +142,13 @@ namespace sw
         if ( _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty() )
             return;
 
+        // 스냅샷이 든 머티리얼·인스턴스의 소유를 **디바이스가 살아 있을 때** 놓는다. 스냅샷은 소유를 함께
+        // 실으므로(GpuScene.h) 여기서 비우지 않으면 렌더러가 죽을 때까지 그것들이 살아, 디바이스가 먼저
+        // 사라진 뒤 소멸자가 죽은 디바이스에 GPU 자원을 돌려주려 한다(ASAN 이 잡았다).
+        if ( _pDevice != nullptr )
+            _gpuScene.releaseGpu( _pDevice );
+        _gpuScene.clear();
+
         releaseTransientResources();
         releasePassResources();
         _graph.clear();
@@ -489,8 +496,7 @@ namespace sw
         }
 
         const bool bOk = submitGraph( pDevice );
-        _gpuScene.advanceMaterialRetireFrame();
-        _pScene = nullptr;
+        _pScene        = nullptr;
         return bOk;
     }
 
@@ -562,7 +568,6 @@ namespace sw
             return false;
 
         const bool bOk = submitGraph( pDevice );
-        _gpuScene.advanceMaterialRetireFrame();
         return bOk;
     }
 } // namespace sw

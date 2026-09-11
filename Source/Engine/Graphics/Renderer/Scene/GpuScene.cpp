@@ -58,14 +58,33 @@ namespace sw
                     batch._arrMaterialTexSrv[texIndex] = listSrv[texIndex];
             }
 
+            /**
+             * @brief 원시 포인터로 받은 머티리얼의 소유를 빌립니다. shared_ptr 로 소유되지 않았으면 nullptr.
+             * @details 스냅샷은 소유를 함께 실어야 하므로(Material.h 머리 주석) 빌릴 수 없는 머티리얼은 실을 수 없다.
+             *          조용히 생포인터로 싣는 것이 예전의 해제 후 사용이었다 — 대신 한 번 크게 말하고 빼놓는다.
+             */
+            static shared_ptr<Material> shareMaterial( Material* pMaterial )
+            {
+                if ( pMaterial == nullptr )
+                    return nullptr;
+                shared_ptr<Material> material = pMaterial->weak_from_this().lock();
+                static bool          s_bLogged{ false }; // 빌드는 게임 스레드 하나에서만 돈다
+                if ( material == nullptr && s_bLogged == false )
+                {
+                    s_bLogged = true;
+                    SW_LOG_ERROR( "shared_ptr 로 소유되지 않은 Material 은 렌더 패킷에 실을 수 없습니다 — MaterialCache 나 Material::create() 로 만드십시오. 이 메시는 그리지 않습니다." );
+                }
+                return material;
+            }
+
             static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& listBatch )
             {
                 for ( GpuMeshBatch& batch : listBatch )
                 {
-                    if ( batch._pMaterialInstance == nullptr )
+                    if ( batch._materialInstance == nullptr )
                         continue;
-                    if ( batch._pMaterialInstance->applyToGpu( pDevice ) )
-                        batch._materialCb = batch._pMaterialInstance->getDescriptorIndex();
+                    if ( batch._materialInstance->applyToGpu( pDevice ) )
+                        batch._materialCb = batch._materialInstance->getDescriptorIndex();
                 }
             }
 
@@ -104,12 +123,6 @@ namespace sw
         _listScratchOpaqueEntry.clear();
         _listScratchTransparentIdx.clear();
         invalidateBuildCache();
-        _materialRetire.clear();
-    }
-
-    void GpuScene::syncMaterialPins()
-    {
-        _materialRetire.syncFromBatches( _listOpaqueBatch, _listTransparentBatch, _listMaterialGroup );
     }
 
     void GpuScene::setMergeBatchesAcrossMaterials( bool bMerge )
@@ -168,69 +181,6 @@ namespace sw
         return pMaterial;
     }
 
-    void GpuMaterialRetireQueue::clear()
-    {
-        _uniquePinned.clear();
-        _listRetiring.clear();
-    }
-
-    void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent, const vector<GpuMaterialGroup>& listGroup )
-    {
-        unordered_set<MaterialInstance*> uniqueLive;
-        auto                             collect = [&]( const vector<GpuMeshBatch>& listBatch )
-        {
-            for ( const GpuMeshBatch& batch : listBatch )
-            {
-                if ( batch._pMaterialInstance != nullptr )
-                    uniqueLive.insert( batch._pMaterialInstance );
-            }
-        };
-        collect( listOpaque );
-        collect( listTransparent );
-        for ( const GpuMaterialGroup& group : listGroup )
-        {
-            for ( const auto& entry : group._listEntry )
-            {
-                if ( entry.second != nullptr )
-                    uniqueLive.insert( entry.second );
-            }
-        }
-
-        for ( MaterialInstance* pInst : _uniquePinned )
-        {
-            if ( uniqueLive.find( pInst ) == uniqueLive.end() )
-            {
-                RetireEntry entry{};
-                entry._pInstance  = pInst;
-                entry._framesLeft = kRetireFrameDelay;
-                _listRetiring.push_back( entry );
-            }
-        }
-
-        _uniquePinned = std::move( uniqueLive );
-    }
-
-    void GpuMaterialRetireQueue::advanceFrame()
-    {
-        uint32 write{ 0 };
-        for ( uint32 index = 0; index < _listRetiring.size(); ++index )
-        {
-            RetireEntry& entry = _listRetiring[index];
-            if ( entry._framesLeft > 0 )
-                --entry._framesLeft;
-            if ( entry._framesLeft > 0 )
-                _listRetiring[write++] = entry;
-        }
-        _listRetiring.resize( write );
-    }
-
-    void GpuMaterialRetireQueue::flushAfterGpu( IRHIDevice* pDevice )
-    {
-        if ( pDevice != nullptr )
-            pDevice->waitIdle();
-        clear();
-    }
-
     bool GpuScene::hasSameBatchKeysAsBuilt() const
     {
         if ( _listBuiltCandidate.size() != _listScratchCandidate.size() )
@@ -263,7 +213,7 @@ namespace sw
                 continue;
             }
             // 합치기가 켜져 있으면 같은 셰이더 타입은 머티리얼·인스턴스가 달라도 한 키다 — 파라미터는 원소 인덱스로 읽는다.
-            SortKey key{ cand._pMesh, batchKeyMaterial( cand._pMaterial, cand._pInstance ), _bMergeAcrossMaterials != 0 ? nullptr : cand._pInstance };
+            SortKey key{ cand._pMesh, batchKeyMaterial( cand._material.get(), cand._instance.get() ), _bMergeAcrossMaterials != 0 ? nullptr : cand._instance.get() };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -350,9 +300,11 @@ namespace sw
                 cand._boundsRadius = pMeshComp->getBoundsRadius();
                 cand._spinSeed     = pMeshComp->getGpuSpinSeed();
                 cand._pMesh        = pMesh;
-                cand._pMaterial    = pMeshComp->getMaterial();
-                if ( cand._pMaterial == nullptr )
-                    cand._pMaterial = pScene->getMaterial(); // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼)
+                // 스냅샷은 소유를 함께 싣는다 — 렌더 스레드가 패킷을 다 쓸 때까지 머티리얼·인스턴스가 살아야 한다.
+                cand._instance = pMeshComp->getMaterialInstance();
+                cand._material = GpuSceneInternal::shareMaterial( pMeshComp->getMaterial() );
+                if ( cand._material == nullptr )
+                    cand._material = GpuSceneInternal::shareMaterial( pScene->getMaterial() ); // 머티리얼 없는 메시는 씬 기본 머티리얼로 (언리얼의 기본 머티리얼)
 
                 // **블렌드 모드는 머티리얼의 성질이다** — 언리얼도 블렌드 모드가 머티리얼 에셋에 있고,
                 // 그 값이 셰이더 퍼뮤테이션(불투명/반투명)을 가른다. 메시가 뒤집을 수 있게 두면 불투명으로
@@ -361,12 +313,12 @@ namespace sw
                 // 인스턴스만 붙은 메시는 **인스턴스의 부모 머티리얼**이 정본이다(인스턴스는 값만 덮어쓰고
                 // 블렌드 모드는 갖지 않는다). 둘 다 없을 때만 컴포넌트 값을 쓴다 — 머티리얼이 없는
                 // 디버그·픽스처 메시가 그 경우다.
-                const Material* pBlendSource = cand._pMaterial;
-                if ( pBlendSource == nullptr && cand._pInstance != nullptr )
-                    pBlendSource = cand._pInstance->getParent();
+                // (예전에는 인스턴스를 이 판단 **뒤에** 채워서 이 폴백이 한 번도 걸리지 않았다.)
+                const Material* pBlendSource = cand._material.get();
+                if ( pBlendSource == nullptr && cand._instance != nullptr )
+                    pBlendSource = cand._instance->getParent();
                 cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
                                                               : static_cast<uint32>( pMeshComp->getBlendMode() );
-                cand._pInstance = pMeshComp->getRawMaterialInstance();
                 _listScratchCandidate.push_back( cand );
             }
         }
@@ -661,7 +613,6 @@ namespace sw
         _indirectCommandCount = 0;
         _spinInstanceCount    = 0;
         _bCpuDirty            = 1;
-        _materialRetire.flushAfterGpu( pDevice );
     }
 
     void GpuScene::exportCpuSnapshot( GpuScene& outSnapshot )
@@ -782,13 +733,18 @@ namespace sw
                 {
                     const SortKey& key = _listScratchOpaqueEntry[batchStart]._key;
                     GpuMeshBatch   batch{};
-                    batch._pMesh             = key._pMesh;
-                    batch._vertexCount       = batch._pMesh->getVertexCount();
-                    batch._instanceBase      = static_cast<uint32>( _listInstance.size() );
-                    batch._instanceCount     = entryIndex - batchStart;
-                    batch._blendMode         = RHIBlendMode::Opaque;
-                    batch._pMaterialInstance = key._pInstance;
-                    batch._pMaterial         = key._pMaterial;
+                    batch._pMesh         = key._pMesh;
+                    batch._vertexCount   = batch._pMesh->getVertexCount();
+                    batch._instanceBase  = static_cast<uint32>( _listInstance.size() );
+                    batch._instanceCount = entryIndex - batchStart;
+                    batch._blendMode     = RHIBlendMode::Opaque;
+                    // 키의 포인터는 정체성이고 소유는 배치 머리 후보의 것을 빌린다. 합치기가 켜지면 키의 인스턴스는
+                    // nullptr 이라 배치에는 인스턴스를 싣지 않는다 — 원소 표(_listEntry)가 인스턴스마다 소유를 든다.
+                    {
+                        const DrawCandidate& headCand = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx];
+                        batch._material               = GpuSceneInternal::shareMaterial( key._pMaterial );
+                        batch._materialInstance       = ( key._pInstance != nullptr ) ? headCand._instance : nullptr;
+                    }
                     if ( key._pInstance != nullptr )
                         batch._materialCb = key._pInstance->getDescriptorIndex();
                     else
@@ -807,7 +763,7 @@ namespace sw
                         const DrawCandidate& cand   = _listScratchCandidate[srcIdx];
                         GpuInstance          inst   = _listScratchRaw[srcIdx];
                         inst._meshBatchIndex        = batchIndex;
-                        inst._materialIndex         = assignMaterialElement( cand._pMaterial, cand._pInstance, batch._materialGroup );
+                        inst._materialIndex         = assignMaterialElement( cand._material, cand._instance, batch._materialGroup );
                         if ( batchEntryIndex == batchStart )
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
@@ -831,7 +787,7 @@ namespace sw
             // 배치 헤드의 키는 배치가 닫힐 때만 바뀐다. 예전엔 반복마다 헤드와 현재 것을 **둘 다**
             // batchKeyMaterial 로 다시 구했다 — 배치 하나가 N 개면 헤드 키를 N 번 다시 만든 셈이다.
             const DrawCandidate* pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[0]];
-            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_pMaterial, pBatchHead->_pInstance );
+            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_instance.get() );
 
             for ( uint32 entryIndex = 1; entryIndex <= _listScratchTransparentIdx.size(); ++entryIndex )
             {
@@ -841,27 +797,27 @@ namespace sw
                 {
                     const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange                   = ( pBatchHead->_pMesh != current._pMesh ) ||
-                                 ( pBatchHeadKey != batchKeyMaterial( current._pMaterial, current._pInstance ) ) ||
-                                 ( _bMergeAcrossMaterials == 0 && pBatchHead->_pInstance != current._pInstance );
+                                 ( pBatchHeadKey != batchKeyMaterial( current._material.get(), current._instance.get() ) ) ||
+                                 ( _bMergeAcrossMaterials == 0 && pBatchHead->_instance != current._instance );
                 }
                 if ( bEnd || bKeyChange )
                 {
                     const DrawCandidate& cand = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
                     GpuMeshBatch         batch{};
-                    batch._pMesh             = cand._pMesh;
-                    batch._vertexCount       = batch._pMesh->getVertexCount();
-                    batch._instanceBase      = static_cast<uint32>( _listInstance.size() );
-                    batch._instanceCount     = entryIndex - batchStart;
-                    batch._blendMode         = RHIBlendMode::Transparent;
-                    batch._pMaterialInstance = cand._pInstance;
-                    batch._pMaterial         = cand._pMaterial;
-                    if ( cand._pInstance != nullptr )
-                        batch._materialCb = cand._pInstance->getDescriptorIndex();
+                    batch._pMesh            = cand._pMesh;
+                    batch._vertexCount      = batch._pMesh->getVertexCount();
+                    batch._instanceBase     = static_cast<uint32>( _listInstance.size() );
+                    batch._instanceCount    = entryIndex - batchStart;
+                    batch._blendMode        = RHIBlendMode::Transparent;
+                    batch._materialInstance = cand._instance;
+                    batch._material         = cand._material;
+                    if ( cand._instance.get() != nullptr )
+                        batch._materialCb = cand._instance.get()->getDescriptorIndex();
                     else
-                        batch._materialCb = cand._pMaterial ? cand._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
-                    GpuSceneInternal::fillMaterialTextureSrvs( batch, cand._pMaterial );
-                    batch._materialGroup     = materialGroupFor( cand._pMaterial );
-                    batch._shaderPermutation = shaderPermutationFor( cand._pMaterial, cand._pInstance );
+                        batch._materialCb = cand._material.get() ? cand._material.get()->getDescriptorIndex() : kInvalidDescriptorIndex;
+                    GpuSceneInternal::fillMaterialTextureSrvs( batch, cand._material.get() );
+                    batch._materialGroup     = materialGroupFor( cand._material.get() );
+                    batch._shaderPermutation = shaderPermutationFor( cand._material.get(), cand._instance.get() );
                     batch._materialIndex     = 0;
 
                     const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
@@ -871,7 +827,7 @@ namespace sw
                         const DrawCandidate& entryCand = _listScratchCandidate[srcIdx];
                         GpuInstance          inst      = _listScratchRaw[srcIdx];
                         inst._meshBatchIndex           = batchIndex;
-                        inst._materialIndex            = assignMaterialElement( entryCand._pMaterial, entryCand._pInstance, batch._materialGroup );
+                        inst._materialIndex            = assignMaterialElement( entryCand._material, entryCand._instance, batch._materialGroup );
                         if ( batchEntryIndex == batchStart )
                             batch._materialIndex = inst._materialIndex;
                         if ( inst._spinSeed != 0 )
@@ -885,37 +841,35 @@ namespace sw
                     if ( bEnd == false )
                     {
                         pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_pMaterial, pBatchHead->_pInstance );
+                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_instance.get() );
                     }
                 }
             }
         }
-
-        syncMaterialPins();
     }
 
     void GpuScene::retireUnusedMaterialElements()
     {
         // 이번 빌드에서 안 쓰인 원소는 바로 지우지 않는다 — 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
-        // GpuMaterialRetireQueue 와 같은 지연 기준을 쓴다.
-        if ( _buildCounter <= GpuMaterialRetireQueue::kRetireFrameDelay )
+        // 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다 — 큐잉된 패킷이 아직 원소를 읽을 수 있다.
+        if ( _buildCounter <= constant::kRenderFrameQueueDepth )
             return;
-        const uint64 staleBefore = _buildCounter - GpuMaterialRetireQueue::kRetireFrameDelay;
+        const uint64 staleBefore = _buildCounter - constant::kRenderFrameQueueDepth;
 
         for ( GpuMaterialGroup& group : _listMaterialGroup )
         {
             for ( uint32 index = 0; index < group._listEntry.size(); ++index )
             {
-                if ( group._listEntry[index].first == nullptr )
+                if ( group._listEntry[index]._material == nullptr )
                     continue;
                 if ( group._listEntryLastSeenBuild[index] >= staleBefore )
                     continue;
 
-                const GpuMaterialElementKey key{ group._listEntry[index].first, group._listEntry[index].second };
+                const GpuMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
                 group._mapEntryToIndex.erase( key );
                 // 자리는 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
-                group._listEntry[index] = pair<Material*, MaterialInstance*>{ nullptr, nullptr };
+                group._listEntry[index] = GpuMaterialElement{};
                 group._listFreeEntry.push_back( index );
                 group._bHasLast = 0;
             }
@@ -947,8 +901,10 @@ namespace sw
         return groupIndex;
     }
 
-    uint32 GpuScene::assignMaterialElement( Material* pMaterial, MaterialInstance* pInstance, uint32 groupIndex )
+    uint32 GpuScene::assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex )
     {
+        Material* const         pMaterial = material.get();
+        MaterialInstance* const pInstance = instance.get();
         if ( pMaterial == nullptr || groupIndex >= _listMaterialGroup.size() )
             return 0;
         GpuMaterialGroup&           group = _listMaterialGroup[groupIndex];
@@ -968,12 +924,12 @@ namespace sw
             // 회수된 자리를 재사용한다 — 새 자리를 늘리면 버퍼가 단조 증가한다.
             elementIndex = group._listFreeEntry.back();
             group._listFreeEntry.pop_back();
-            group._listEntry[elementIndex] = pair<Material*, MaterialInstance*>{ pMaterial, pInstance };
+            group._listEntry[elementIndex] = GpuMaterialElement{ material, instance };
             group._mapEntryToIndex.emplace( key, elementIndex );
         }
         else
         {
-            group._listEntry.push_back( pair<Material*, MaterialInstance*>{ pMaterial, pInstance } );
+            group._listEntry.push_back( GpuMaterialElement{ material, instance } );
             group._listEntryLastSeenBuild.push_back( 0 );
             elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
             group._mapEntryToIndex.emplace( key, elementIndex );
@@ -1001,7 +957,7 @@ namespace sw
             uint32 stride{ 0 };
             for ( const auto& entry : group._listEntry )
             {
-                Material* pMaterial = entry.first;
+                Material* pMaterial = entry._material.get();
                 if ( pMaterial == nullptr )
                     continue;
                 // 레이아웃 정본은 셰이더 — 이 백엔드의 리플렉션으로 오프셋·stride 를 맞춘 뒤 바이트를 읽는다(백엔드마다 한 번).
@@ -1021,8 +977,8 @@ namespace sw
             _listMaterialScratch.assign( needBytes, 0 );
             for ( uint32 element = 0; element < elementCount; ++element )
             {
-                const Material*         pMaterial = group._listEntry[element].first;
-                const MaterialInstance* pInstance = group._listEntry[element].second;
+                const Material*         pMaterial = group._listEntry[element]._material.get();
+                const MaterialInstance* pInstance = group._listEntry[element]._instance.get();
                 if ( pMaterial == nullptr )
                     continue;
                 const vector<uint8>& bytes = ( pInstance != nullptr && pInstance->getBuffer().empty() == false ) ? pInstance->getBuffer() : pMaterial->getBuffer();
