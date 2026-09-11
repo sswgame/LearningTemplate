@@ -16,6 +16,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/Lz4CompressionCodec.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/ZstdCompressionCodec.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -393,6 +394,7 @@ namespace sw
         RleCompressionCodec  rleCodec;
         ZlibCompressionCodec zlibCodec;
         Lz4CompressionCodec  lz4Codec;
+        ZstdCompressionCodec zstdCodec;
 
         ICompressionCodec* pCodec{ nullptr };
         switch ( type )
@@ -405,6 +407,9 @@ namespace sw
                 break;
             case PackCompressionType::LZ4:
                 pCodec = &lz4Codec;
+                break;
+            case PackCompressionType::Zstd:
+                pCodec = &zstdCodec;
                 break;
             case PackCompressionType::None:   // 위에서 이미 돌려보냈다
             case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것 — 엔진은 모른다

@@ -1,5 +1,16 @@
 {
   "target_rhi": "DirectX12",
+  "_compression_note": [
+    "팩 압축 코덱을 고른다. 이름은 Config/Engine/PackFormat.json 의 compression.codecs 에 있는 것만 쓴다.",
+    "Zlib 은 파이썬 표준 라이브러리라 추가 설치가 필요 없다(기본값).",
+    "LZ4 는 pip 의 lz4, Zstd 는 pip 의 zstandard 가 있어야 쿠킹된다 — 없으면 쿠킹이 그 자리에서 멈춘다.",
+    "실측(1MB 모사 데이터): Zlib 기준 대비 LZ4 는 크지만 해제가 3배 빠르고, Zstd 는 가장 작다.",
+    "level 0 = 코덱 기본값."
+  ],
+  "compression": {
+    "codec": "Zlib",
+    "level": 0
+  },
   "shader_cook": {
     "exclude_raw_hlsl": true
   },

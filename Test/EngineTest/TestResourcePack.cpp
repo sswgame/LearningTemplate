@@ -11,6 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/Lz4CompressionCodec.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/ZstdCompressionCodec.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
@@ -107,6 +108,7 @@ namespace sw
                 RleCompressionCodec  rleCodec;
                 ZlibCompressionCodec zlibCodec;
                 Lz4CompressionCodec  lz4Codec;
+                ZstdCompressionCodec zstdCodec;
 
                 ICompressionCodec* pCodec{ nullptr };
                 if ( compression == PackCompressionType::RLE )
@@ -115,6 +117,8 @@ namespace sw
                     pCodec = &zlibCodec;
                 else if ( compression == PackCompressionType::LZ4 )
                     pCodec = &lz4Codec;
+                else if ( compression == PackCompressionType::Zstd )
+                    pCodec = &zstdCodec;
 
                 vector<uint8> compressedPayloadBytes;
                 if ( pCodec != nullptr && uncompSize > 0 )

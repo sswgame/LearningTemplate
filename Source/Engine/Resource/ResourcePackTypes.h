@@ -36,10 +36,14 @@ namespace sw
     {
         None   = 0, ///< 무압축 (Pass-through)
         RLE    = 1, ///< 고속 Run-Length Encoding
-        Zlib   = 2, ///< Zlib / Deflate 압축 (표준)
-        LZ4    = 3, ///< LZ4 초고속 압축
+        Zlib   = 2, ///< Zlib / Deflate (쿠커가 파이썬이라 기본값 — 표준 라이브러리에 들어 있다)
+        LZ4    = 3, ///< LZ4 초고속 압축 (해제가 가장 빠르다)
+        Zstd   = 4, ///< Zstandard (크기가 가장 작다 — 배포물용)
         Custom = 255
     };
+
+    // **값은 디스크에 박힌다 — 새 코덱은 뒤에 덧붙이기만 한다.** 기존 값을 옮기면 이미 구운 팩을
+    // 못 읽는다. 스트림 쪽 `CompressionCodecType` 과는 일부러 값이 다르다(독립된 포맷이다).
 
     /**
      * @enum PackEncryptionType
@@ -59,6 +63,7 @@ namespace sw
     static_assert( static_cast<uint32>( PackCompressionType::RLE ) == packformat::kCompressionRLE );
     static_assert( static_cast<uint32>( PackCompressionType::Zlib ) == packformat::kCompressionZlib );
     static_assert( static_cast<uint32>( PackCompressionType::LZ4 ) == packformat::kCompressionLZ4 );
+    static_assert( static_cast<uint32>( PackCompressionType::Zstd ) == packformat::kCompressionZstd );
     static_assert( static_cast<uint32>( PackEncryptionType::None ) == packformat::kEncryptionNone );
     static_assert( static_cast<uint32>( PackEncryptionType::SimpleXor ) == packformat::kEncryptionSimpleXor );
     static_assert( static_cast<uint32>( PackEncryptionType::AES256GCM ) == packformat::kEncryptionAES256GCM );

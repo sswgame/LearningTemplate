@@ -112,8 +112,9 @@ _kFlagHasStringPool = _gPackFormatSpec["flags"]["HasStringPool"]
 _kFlagHasCrc32 = _gPackFormatSpec["flags"]["HasCrc32"]
 _kFlagEncrypted = _gPackFormatSpec["flags"]["Encrypted"]
 
-_kCompressionNone = _gPackFormatSpec["compression"]["codecs"]["None"]
-_kCompressionZlib = _gPackFormatSpec["compression"]["codecs"]["Zlib"]
+_kCompressionCodecs = _gPackFormatSpec["compression"]["codecs"]
+_kCompressionNone = _kCompressionCodecs["None"]
+_kCompressionZlib = _kCompressionCodecs["Zlib"]
 _kEncryptionNone = _gPackFormatSpec["encryption"]["None"]
 _kDeflateStrategy = _gPackFormatSpec["compression"].get("deflateStrategy", "default")
 
@@ -300,6 +301,58 @@ def _deflateForReaderInternal(rawBytes: bytes) -> bytes:
         compressor = zlib.compressobj(9, zlib.DEFLATED, 15, 9, zlib.Z_FIXED)
         return compressor.compress(rawBytes) + compressor.flush()
     return zlib.compress(rawBytes, level=9)
+
+
+def resolveCompressionCodecInternal(packConfig: dict | None) -> tuple[int, int]:
+    """PackConfig 의 `compression` 을 (코덱 값, 레벨) 로 풉니다. 없으면 Zlib 기본입니다."""
+    section = (packConfig or {}).get("compression") or {}
+    name = str(section.get("codec", "Zlib"))
+    level = int(section.get("level", 0))
+
+    if name not in _kCompressionCodecs:
+        known = ", ".join(sorted(_kCompressionCodecs))
+        raise SystemExit(
+            f"[Pack] PackConfig.compression.codec='{name}' 은 팩 포맷에 없는 코덱입니다. 가능한 값: {known}"
+        )
+    return int(_kCompressionCodecs[name]), level
+
+
+def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> bytes:
+    """팩 코덱으로 한 항목을 압축합니다.
+
+    **모듈이 없으면 조용히 물러나지 않고 그 자리에서 멈춥니다.** 설정이 LZ4 인데 zlib 으로 구우면
+    설정과 산출물이 달라지고, 그 사실은 한참 뒤 배포본에서야 드러납니다.
+    """
+    if compression == _kCompressionZlib:
+        return _deflateForReaderInternal(rawBytes)
+
+    if compression == _kCompressionCodecs.get("LZ4"):
+        try:
+            import lz4.block  # type: ignore
+        except ImportError as exc:
+            raise SystemExit(
+                "[Pack] LZ4 로 굽도록 설정돼 있는데 파이썬 lz4 모듈이 없습니다.  py -3 -m pip install lz4"
+            ) from exc
+        # 리더는 raw LZ4 블록을 기대한다(엔트리 헤더에 원본 크기가 이미 있다).
+        mode = "high_compression" if level > 0 else "default"
+        if mode == "high_compression":
+            return lz4.block.compress(rawBytes, mode=mode, compression=level, store_size=False)
+        return lz4.block.compress(rawBytes, mode=mode, store_size=False)
+
+    if compression == _kCompressionCodecs.get("Zstd"):
+        try:
+            import zstandard  # type: ignore
+        except ImportError as exc:
+            raise SystemExit(
+                "[Pack] Zstd 로 굽도록 설정돼 있는데 파이썬 zstandard 모듈이 없습니다.  py -3 -m pip install zstandard"
+            ) from exc
+        compressor = zstandard.ZstdCompressor(level=level if level > 0 else 3)
+        return compressor.compress(rawBytes)
+
+    if compression == _kCompressionNone:
+        return rawBytes
+
+    raise SystemExit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
 
 
 def fnv1a64Internal(path: str) -> int:
@@ -580,6 +633,7 @@ def cookPack(
     outPackPath: Path,
     dlcAppId: int = 0,
     compression: int = _kCompressionZlib,
+    compressionLevel: int = 0,
     stripDebugStrings: bool = True,
     packConfig: dict | None = None,
     targetRhi: str = "dx12",
@@ -653,10 +707,7 @@ def cookPack(
 
         # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
         # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
-        if compression == _kCompressionZlib:
-            payload = _deflateForReaderInternal(rawBytes)
-        else:
-            payload = rawBytes
+        payload = compressPayloadInternal(rawBytes, compression, compressionLevel)
 
         compressedSize = len(payload)
         dataOffsetAligned = alignOffsetInternal(dataOffset)
@@ -744,6 +795,11 @@ def cookAllPacks(
     outputDir.mkdir(parents=True, exist_ok=True)
     allSuccess = True
 
+    # 압축 코덱은 PackConfig 가 정한다(설치가 필요한 코덱은 모듈이 없으면 여기서 멈춘다).
+    packCompression, packCompressionLevel = resolveCompressionCodecInternal(packConfig)
+    codecName = next((n for n, v in _kCompressionCodecs.items() if v == packCompression), str(packCompression))
+    print(f"[PackCooker] 압축 코덱: {codecName} (level {packCompressionLevel})")
+
     targets: list[tuple[Path, Path, int]] = []
     engineDir = resourceDir / "engine"
     if engineDir.is_dir():
@@ -763,7 +819,8 @@ def cookAllPacks(
         registry = buildAssetRegistryInternal(src)
         extra = [(_kAssetRegistryFileName, registry)] if registry else None
         staged = cookedDir / src.relative_to(resourceDir)
-        success = cookPack(src, out, dlcAppId=dlcId, stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
+        success = cookPack(src, out, dlcAppId=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
+                           stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
                            extraEntries=extra, stagedDir=staged)
         if not success:
             allSuccess = False
