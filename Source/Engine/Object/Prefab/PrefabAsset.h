@@ -75,6 +75,15 @@ namespace sw
         GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath,
                            const utf8* pInstanceName = nullptr, const uint8* pInstanceDiff = nullptr,
                            size_t instanceDiffSize = 0 );
+        /**
+         * @brief 캐시에서 프리팹 하나를 버립니다 — 다음 `loadPrefab` 이 디스크를 다시 읽는다 (에디터 핫리로드).
+         * @details **이미 스폰된 오브젝트는 바뀌지 않는다.** 프리팹은 스폰 시점에 복사되는 틀이라,
+         *          살아 있는 인스턴스를 거슬러 고치려면 그것은 다른 기능이다(프리팹 오버라이드 전파).
+         *          여기서 보장하는 것은 "다음에 스폰하면 고친 내용이 나온다" 하나다.
+         * @return 캐시에 있어서 버렸으면 true.
+         */
+        bool reload( string_view assetRelativePath );
+
         /** @brief 저작본을 PFB2 binary로 쿠킹합니다. */
         bool cookPrefabToBinary( string_view sourceRelativePath, string_view binRelativePath );
 

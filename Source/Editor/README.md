@@ -26,7 +26,7 @@
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
-- **Asset/**: 텍스처 임포트·베이크·감시 (`TextureBaker`, `TextureWatcher`, `ImageUtil`)
+- **Asset/**: 텍스처 임포트·베이크 (`TextureBaker`, `TextureImportConfig`, `ImageUtil`). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
 
 ### 기능

@@ -6,11 +6,17 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/TextureBaker.h"
+#include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -20,6 +26,9 @@ namespace sw::editor
     {
         struct AssetHotReloadInternal
         {
+            /** @brief 소스 이미지를 두는 폴더. 구운 DDS 는 옆 `textures/` 로 간다. */
+            inline static constexpr const utf8* _s_pRawTextureFolder = "textures_raw";
+
             /** @brief 에셋 종류 하나를 어떻게 다시 읽을지. */
             struct ReloadRule
             {
@@ -35,12 +44,80 @@ namespace sw::editor
                     pResources->getMaterialManager().reload( relativePath );
             }
 
+            static void reloadPrefab( string_view relativePath )
+            {
+                ResourceManager* pResources = getService<ResourceManager>();
+                if ( pResources == nullptr )
+                    return;
+
+                // 캐시만 버린다 — 이미 스폰된 오브젝트는 그대로다(그건 오버라이드 전파라는 다른 기능이다).
+                pResources->getPrefabManager().reload( relativePath );
+            }
+
+            /** @brief `textures_raw/` 아래 소스 이미지를 옆 `textures/` 의 DDS 로 굽습니다. */
+            static bool bakeSourceImage( string_view relativePath )
+            {
+                const string absPath = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), relativePath );
+                const size_t rawPos  = FileUtil::normalizeSeparators( absPath ).find( _s_pRawTextureFolder );
+                if ( rawPos == string::npos )
+                    return false;
+
+                const string normalized = FileUtil::normalizeSeparators( absPath );
+                const string outputPath = FileUtil::replaceExtension(
+                    normalized.substr( 0, rawPos ) + "textures" + normalized.substr( rawPos + strlen( _s_pRawTextureFolder ) ), ".dds" );
+
+                // 설정은 매번 읽는다 — 작은 JSON 이고, 사람이 이미지를 저장했을 때만 온다.
+                // 한 번 읽어 캐시하면 임포트 규칙을 고쳐도 재시작 전까지 반영되지 않는다.
+                TextureImportConfig config{};
+                config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
+                if ( TextureBaker::bakeTextureWithConfig( normalized, outputPath, config ) == false )
+                {
+                    SW_LOG_ERROR( "텍스처 베이크 실패: %#", relativePath );
+                    return false;
+                }
+
+                // 구운 DDS 가 감시 대상이라, 그 쓰기가 다시 이벤트로 돌아와 캐시를 갱신한다.
+                SW_LOG_INFO( "텍스처를 구웠습니다: %# -> %#", relativePath, outputPath.c_str() );
+                return true;
+            }
+
+            static void reloadTexture( string_view relativePath )
+            {
+                // 런타임이 읽는 것은 DDS 뿐이다(`Texture2D::loadFromResource` -> `DdsLoader`).
+                // 소스 이미지는 **굽는 것**이 리로드다 — 구운 결과가 다음 이벤트로 돌아온다.
+                if ( FileUtil::hasExtension( relativePath, ".dds" ) )
+                {
+                    ResourceManager* pResources = getService<ResourceManager>();
+                    EditorContext*   pContext   = EditorContext::get();
+                    if ( pResources == nullptr || pContext == nullptr )
+                        return;
+                    pResources->getTextureManager().reload( relativePath, pContext->getRhiDevice() );
+                    return;
+                }
+
+                if ( FileUtil::hasExtension( relativePath, ".hdr" ) )
+                {
+                    // 굽지 않는다. 디코더가 stb_image 의 8비트 경로라(`ImageUtil::loadImageFromMemory`)
+                    // HDR 을 구우면 값이 잘려 나간다 — 조용히 망가뜨리느니 하지 않는다고 말한다.
+                    SW_LOG_WARNING( "HDR 은 자동 베이크 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
+                    return;
+                }
+
+                if ( bakeSourceImage( relativePath ) == false )
+                {
+                    // `textures_raw/` 밖의 소스 이미지는 굽는 규칙이 없다. 어디에 둬야 하는지 말해 준다.
+                    SW_LOG_WARNING( "소스 이미지는 `%#` 아래에 있어야 구워집니다: %#", _s_pRawTextureFolder, relativePath );
+                }
+            }
+
             // **다시 읽는 방법이 있는 종류만** 여기 있다. 확장자는 여기 적지 않는다 —
             // 그것은 `EditorAssetTypeRegistry` 의 일이고, 목록이 둘이면 한쪽만 늘어난다.
             // (실제로 예전 감시는 `.mat` 만 보고 있었고, 저장소의 에셋은 전부 `.material` 이라
             //  머티리얼 핫리로드가 한 번도 걸린 적이 없다.)
             inline static constexpr ReloadRule _s_arrReloadRule[] = {
-                { EditorAssetKind::Material, &reloadMaterial },
+                {EditorAssetKind::Material, &reloadMaterial},
+                { EditorAssetKind::Texture,  &reloadTexture},
+                {  EditorAssetKind::Prefab,   &reloadPrefab},
             };
 
             /** @brief 처리기가 있는 종류의 확장자를 전부 모읍니다. */

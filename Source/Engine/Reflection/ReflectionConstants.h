@@ -54,23 +54,9 @@ namespace sw::constants::propertyHint
     inline constexpr const utf8* kUint8      = "uint8";
     inline constexpr const utf8* kBoolPrefix = "b";
 
-    /** @brief 에셋 타입 및 대응 다이얼로그 필터 정의 구조체 */
-    struct AssetFilterDef
-    {
-        const utf8* _assetType;
-        const utf8* _filter;
-    };
-
-    /** @brief 에셋 타입별 파일 다이얼로그 필터 매핑 데이터 테이블 */
-    inline constexpr AssetFilterDef kArrAssetFilters[] = {
-        { "Texture",     "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0"},
-        {  "Sprite",     "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0"},
-        {"Material",    "Material Files (*.material;*.mat)\0*.material;*.mat\0"},
-        {  "Shader",            "Shader Files (*.hlsl;*.glsl)\0*.hlsl;*.glsl\0"},
-        {   "Scene", "Scene Files (*.scene;*.scene.xml)\0*.scene;*.scene.xml\0"},
-        {   "Audio",     "Audio Files (*.wav;*.ogg;*.mp3)\0*.wav;*.ogg;*.mp3\0"},
-    };
-
-    /** @brief 기본 전체 파일 필터입니다. */
-    inline constexpr const utf8* kFilterAll = "All Files (*.*)\0*.*\0";
+    // 에셋 타입별 **파일 다이얼로그 필터 표는 여기 두지 않는다.** 확장자는 에디터가 아는 것이고
+    // (`Editor/Common/Workspace/EditorAssetType`), Engine 은 Editor 를 볼 수 없다 — 여기에 두면
+    // 같은 목록이 두 벌이 되어 한쪽만 늙는다. 실제로 그랬다: 이 표는 `*.mat` 와 `*.glsl` 를
+    // 광고하고 있었는데 저장소에 `.mat` 은 없고 엔진은 GLSL 을 컴파일하지 않는다.
+    // 인스펙터의 에셋 필드는 드래그앤드롭 + 텍스트라 이 표를 **한 번도 읽지 않았다**(2026-09-12 삭제).
 } // namespace sw::constants::propertyHint

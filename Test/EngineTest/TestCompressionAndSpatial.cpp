@@ -153,7 +153,6 @@ SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
     assetMeta._bAssetPath = 1;
     assetMeta._assetType  = "Texture";
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::AssetPicker ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( assetMeta, "string" ) ) );
-    SW_EXPECT_TRUE( strstr( sw::PropertyMetaHint::getAssetFilter( assetMeta ), "*.png" ) != nullptr );
 }
 
 // ------------------------------------------------------------------------------

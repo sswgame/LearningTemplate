@@ -93,6 +93,8 @@ namespace sw::editor
         string _dialogueGraphDataFile{ "DialogueGraphData.json" };
         PROPERTY()
         string _spriteClipFile{ "SpriteClip.json" };
+        PROPERTY()
+        string _textureImportConfigFile{ "TextureImportConfig.json" };
 
         /**
          * @brief 실행 중 다시 읽을 에셋 확장자. **비우면 처리기가 있는 확장자 전부**를 봅니다.

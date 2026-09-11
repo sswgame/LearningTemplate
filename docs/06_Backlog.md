@@ -279,6 +279,61 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (확장자를 한 표로 모으고, 죽은 것은 지우고, 남은 것은 실제 동작에 붙였다)
+
+에셋 확장자가 **세 곳**에 적혀 있었다. `EditorAssetType.cpp` 안에서만 두 벌(매칭 규칙 표와 패널
+접미사 매핑), 그리고 Engine 의 `ReflectionConstants.h` 에 또 한 벌. 두 벌이면 한쪽만 늙는다 —
+실제로 `._material` 과 `.mat` 은 양쪽에 있었고 `.hlsli` 는 양쪽에 없었다.
+
+**1) 에디터 표 여섯을 하나로 묶었다.** 종류 하나를 고치려면 매칭 규칙 · 패널 제목 · 도구 패널
+목록 · 패널 접미사 매핑 · 브라우저 필터 · "Other" 제외 목록 여섯 군데를 찾아야 했다. 이제
+`AssetKindRow` 한 줄이 그 종류에 대해 에디터가 아는 전부를 들고, 나머지 다섯은 **거기서
+만들어진다**. 한 종류가 줄을 둘 이상 가질 수 있다(SpriteClip 은 문서 접미사 + 이미지 확장자).
+줄 순서가 곧 브라우저 필터와 도구 패널의 표시 순서다.
+
+**2) Engine 의 필터 표는 지웠다.** `ReflectionConstants.h` 의 `kArrAssetFilters` 는 Engine 에 있는데
+확장자는 에디터가 아는 것이다(Engine 은 Editor 를 못 본다). 게다가 **아무도 읽지 않았다** —
+인스펙터의 에셋 필드는 드래그앤드롭 + 텍스트라 파일 다이얼로그를 열지 않는다. 유일한 독자는
+테스트 한 줄이었다. 표와 `PropertyMetaHint::getAssetFilter` 를 함께 지웠다. 에셋 피커를 실제로
+만들 때는 에디터 쪽 `EditorAssetTypeRegistry` 를 쓰면 된다.
+
+**3) 죽은 확장자를 걷어냈다.** `._material`(오타로 보인다) · `.mat`(파일도 코드도 0) ·
+`.pfb`(`loadPrefab` 이 모르는 이름) · `.glsl` `.vert` `.frag`(엔진은 HLSL 전용) · `.csv`(참조 0) ·
+`.mp3` `.ogg`(디코더 없음 — XAudio2 는 `.wav` 만 읽는다). `.spv` 도 뺐다 — **구운 산출물**이라
+셰이더 소스로 세면 콘텐츠 브라우저가 빌드 출력 178개를 에셋으로 보여 준다.
+빠져 있던 `.hlsli` 는 넣었다(공유 헤더는 진짜 셰이더 소스다). 지운 것은 테스트에 **음성으로**
+못 박았다 — 되살아나면 거기서 걸린다.
+
+**4) 분류만 되고 아무 데도 안 닿던 확장자를 붙였다.** 지금까지 핫리로드 처리기는 머티리얼
+하나였다.
+- **프리팹** — `PrefabManager::reload` 추가(캐시만 버린다. 이미 스폰된 오브젝트는 그대로다 —
+  그건 오버라이드 전파라는 다른 기능이다).
+- **텍스처** — `TextureCache::reload` 추가. `Texture2D` 객체는 그대로 두고 내용만 갈아 끼운다
+  (머티리얼이 포인터를 빌려 가 있다). bindless SRV 인덱스가 곧바로 프리리스트로 돌아가므로
+  `waitIdle` 이 필요하다 — `MaterialCache::reload` 와 같은 이유다.
+- **소스 이미지**(`.png` `.jpg` `.jpeg` `.tga` `.bmp`) — `textures_raw/` 아래면 옆 `textures/` 의
+  DDS 로 **굽는다**. 런타임이 읽는 것은 DDS 뿐이다(`Texture2D::loadFromResource` → `DdsLoader`).
+  구운 DDS 가 다시 이벤트로 돌아와 캐시를 갱신한다.
+- **`.hdr` 은 굽지 않는다.** 디코더가 stb_image 의 8비트 경로라 구우면 값이 잘린다. 조용히
+  망가뜨리는 대신 **이유를 로그로 말한다**.
+
+**`TextureWatcher` 를 지웠다.** 프로덕션 호출부가 0인 두 번째 감시자였고, 그 베이크 로직이
+이제 `AssetHotReload` 안에 있다. 감시자는 하나다.
+
+**복합 접미사가 한 번도 안 걸리고 있었다.** `ReloadFileManager::extensionAllowed` 가
+`FileUtil::hasExtension`(마지막 점 뒤만 본다)을 써서 `.prefab.xml` 이 영영 매칭되지 않았다.
+접미사 비교로 바꿨다 — 프리팹 리로드가 등록은 되는데 이벤트를 못 받던 원인이다.
+
+> **`editordata.json` 의 `_listHotReloadExtension` 은 비워 두는 것이 기본이다**(= 처리기가 있는
+> 확장자 전부). 손으로 목록을 박아 두면 처리기가 늘어도 따라오지 않는다 — 실제로 `.material`
+> 하나만 적힌 채로 텍스처·프리팹 처리기가 감시 밖에 있었다. 좁히고 싶을 때만 적는다.
+
+실측(`-EnableEditor`, 동기 프로브): 감시 확장자 12개, `.material` · `.prefab.xml` · `.dds` ·
+`.hdr` 수정이 각각 정확히 1건씩 디스패치됐고 `.hdr` 은 "8비트로 잘린다" 안내를 남겼다.
+패널 덤프 기본 **창 15개 · 빈 패널 0개**, 전부 열기 **창 30개**(빈 것으로 보이는 넷은 컨테이너
+둘 · `gizmo` 오버레이 · `Sequencer/00000379` — **변경 전 실행과 완전히 같다**. 위 기준선 줄의
+"29개" 는 이 PC 실측과 다르다).
+
 ### 2026-09-12 (설정 파일의 경계를 "누가 쓰는가" 로 다시 그었다)
 
 `EditorConfig.json` 과 `editordata.json` 의 차이가 이름만으로는 보이지 않았다. 실제 차이는

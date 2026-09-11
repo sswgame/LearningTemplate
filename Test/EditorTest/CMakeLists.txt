@@ -37,7 +37,6 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureBaker.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureWatcher.cpp"
 	LIBS
 		Engine
 		Microsoft::DirectXTex

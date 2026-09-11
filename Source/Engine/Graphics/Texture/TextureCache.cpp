@@ -51,6 +51,25 @@ namespace sw
         return entry._texture.get();
     }
 
+    void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr )
+            return;
+        const string key = FileUtil::normalizePath( relativePath );
+
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        auto                                it = _impl->_mapEntry.find( key );
+        if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
+            return;
+
+        // 이전 프레임이 아직 이 텍스처의 bindless SRV 인덱스를 읽고 있을 수 있다. shutdown() 은
+        // 인덱스를 곧바로 프리리스트로 돌려주므로, 기다리지 않고 다시 올리면 같은 인덱스를 받은
+        // 다른 텍스처를 읽는 조용한 오염이 된다 (MaterialCache::reload 와 같은 이유).
+        pDevice->waitIdle();
+        it->second._texture->shutdown( pDevice );
+        if ( it->second._texture->loadFromResource( pDevice, key ) == false )
+            SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
+    }
     void TextureCache::release( string_view relativePath, IRHIDevice* pDevice )
     {
         if ( relativePath.empty() || _impl == nullptr )

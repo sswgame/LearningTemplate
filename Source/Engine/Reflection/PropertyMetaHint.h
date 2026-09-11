@@ -36,10 +36,5 @@ namespace sw
          * @brief 슬라이더용 범위 값을 반환합니다.
          */
         static bool getSliderRange( const PropertyMetadata& meta, float32& outMin, float32& outMax );
-
-        /**
-         * @brief 에셋 피커가 허용할 확장자 필터를 반환합니다.
-         */
-        static const utf8* getAssetFilter( const PropertyMetadata& meta );
     };
 } // namespace sw

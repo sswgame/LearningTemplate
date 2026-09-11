@@ -14,6 +14,7 @@
     "_animationGraphDataFile": "AnimationGraphData.json",
     "_dialogueGraphDataFile": "DialogueGraphData.json",
     "_spriteClipFile": "SpriteClip.json",
+    "_textureImportConfigFile": "TextureImportConfig.json",
     "_listBaseFont": [
         "consola.ttf",
         "Consolas.ttf",
@@ -34,9 +35,5 @@
         "NotoSansKR-Regular.otf",
         "DroidSansFallbackFull.ttf"
     ],
-    "_listHotReloadExtension": [
-        ".material",
-        ".mat",
-        "._material"
-    ]
+    "_listHotReloadExtension": []
 }

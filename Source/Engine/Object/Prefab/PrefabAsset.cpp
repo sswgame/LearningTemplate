@@ -425,6 +425,16 @@ namespace sw
         PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outListPath );
     }
 
+    bool PrefabManager::reload( string_view assetRelativePath )
+    {
+        if ( assetRelativePath.empty() )
+            return false;
+
+        const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
+
+        std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+        return _mapCache.erase( cacheKey ) > 0;
+    }
     PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
     {
         string resolvedPath{ assetRelativePath };

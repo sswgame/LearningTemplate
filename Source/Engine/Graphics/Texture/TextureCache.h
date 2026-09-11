@@ -27,6 +27,13 @@ namespace sw
 
         /** @brief 경로의 텍스처를 확보하고 GPU 에 올립니다. 실패하면 nullptr. */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
+        /**
+         * @brief 경로의 텍스처를 디스크에서 다시 읽어 GPU 에 올립니다 (에디터 핫리로드).
+         * @details 캐시에 없으면 아무 일도 하지 않는다 — 아무도 안 쓰는 것을 올릴 이유가 없다.
+         *          `Texture2D` 객체는 **그대로 두고** 내용만 갈아 끼운다. 머티리얼이 포인터를
+         *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킨다.
+         */
+        void reload( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
         void release( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 모든 텍스처의 GPU 자원을 해제합니다(디바이스 교체 전). */

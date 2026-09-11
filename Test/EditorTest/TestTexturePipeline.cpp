@@ -5,7 +5,6 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureBaker.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/Asset/TextureWatcher.h"
 
 #include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"

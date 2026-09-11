@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/ReloadFileManager.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -252,9 +253,11 @@ namespace sw
         if ( entry._listExtension.empty() )
             return true;
 
+        // **접미사**로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
+        // 접미사가 영영 걸리지 않았다 — 프리팹 핫리로드가 등록은 되는데 이벤트를 못 받았다.
         for ( const string& allowed : entry._listExtension )
         {
-            if ( FileUtil::hasExtension( filename, allowed ) )
+            if ( StringUtil::endsWith( filename, allowed, true ) )
                 return true;
         }
         return false;

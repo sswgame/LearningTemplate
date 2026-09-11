@@ -63,14 +63,4 @@ namespace sw
         return true;
     }
 
-    const utf8* PropertyMetaHint::getAssetFilter( const PropertyMetadata& meta )
-    {
-        for ( const constants::propertyHint::AssetFilterDef& mapping : constants::propertyHint::kArrAssetFilters )
-        {
-            if ( meta._assetType == mapping._assetType )
-                return mapping._filter;
-        }
-
-        return constants::propertyHint::kFilterAll;
-    }
 } // namespace sw
