@@ -7,6 +7,7 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
@@ -17,7 +18,30 @@ namespace sw::editor
     {
         struct EditorThemeInternal
         {
-            inline static EditorThemeConfig s_activeTheme{};
+            /**
+             * @brief 컨텍스트가 없을 때 돌려줄 기본 테마입니다. **상수라 상태가 아니다.**
+             * @details 색 게터들이 `const Color4&` 를 돌려주므로 임시를 참조로 넘길 수 없다.
+             */
+            static const EditorThemeConfig& fallbackTheme()
+            {
+                static const EditorThemeConfig kFallback{};
+                return kFallback;
+            }
+
+            /** @brief 지금 적용된 테마. 소유는 `EditorContext` 이고, 없으면 기본값을 본다. */
+            static const EditorThemeConfig& activeTheme()
+            {
+                EditorContext* pContext = EditorContext::get();
+                return pContext != nullptr ? pContext->getThemeConfig() : fallbackTheme();
+            }
+
+            /** @brief 테마를 바꿔 씁니다. 컨텍스트가 없으면 조용히 무시한다(적용할 UI 가 없다). */
+            static void setActiveTheme( const EditorThemeConfig& config )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext != nullptr )
+                    pContext->getThemeConfig() = config;
+            }
 
             static ImVec4 toImVec4( const Color4& c, float32 alphaMultiplier = 1.0f )
             {
@@ -172,7 +196,7 @@ namespace sw::editor
 {
     const EditorThemeConfig& EditorThemeUtil::getActiveTheme()
     {
-        return EditorThemeInternal::s_activeTheme;
+        return EditorThemeInternal::activeTheme();
     }
 
     void EditorThemeUtil::applyPreset( EditorThemePreset preset )
@@ -192,7 +216,7 @@ namespace sw::editor
             // 프리셋을 선택된 것으로 보여 주고 (3) textWarning 등 상태색 API 가 옛 테마 색을 냈다.
             // 지오메트리는 현재 스타일에서 되읽어 기록이 화면과 어긋나지 않게 한다.
             EditorThemeInternal::readGeometryFromStyle( config );
-            EditorThemeInternal::s_activeTheme = config;
+            EditorThemeInternal::setActiveTheme( config );
             return;
         }
 
@@ -201,7 +225,7 @@ namespace sw::editor
 
     void EditorThemeUtil::applyTheme( const EditorThemeConfig& config )
     {
-        EditorThemeInternal::s_activeTheme = config;
+        EditorThemeInternal::setActiveTheme( config );
 
         ImGuiStyle& style = ImGui::GetStyle();
 
@@ -316,7 +340,7 @@ namespace sw::editor
 
         if ( preset != EditorThemePreset::ClassicDark )
         {
-            EditorThemeConfig themeCfg = EditorThemeInternal::s_activeTheme;
+            EditorThemeConfig themeCfg = EditorThemeInternal::activeTheme();
             if ( cfg._themeAccentR > 0.0f || cfg._themeAccentG > 0.0f || cfg._themeAccentB > 0.0f )
                 themeCfg._accentColor = Color4{ cfg._themeAccentR, cfg._themeAccentG, cfg._themeAccentB, 1.0f };
 
@@ -338,7 +362,7 @@ namespace sw::editor
     {
         EditorConfig cfg = EditorConfig::getActive();
 
-        const EditorThemeConfig& themeCfg = EditorThemeInternal::s_activeTheme;
+        const EditorThemeConfig& themeCfg = EditorThemeInternal::activeTheme();
         cfg._themePreset                  = EditorThemeInternal::findRow( themeCfg._preset )._pConfigId;
 
         cfg._themeAccentR        = themeCfg._accentColor._r;
@@ -354,7 +378,7 @@ namespace sw::editor
 
     void EditorThemeUtil::setAccentColor( const Color4& accentColor )
     {
-        EditorThemeConfig cfg = EditorThemeInternal::s_activeTheme;
+        EditorThemeConfig cfg = EditorThemeInternal::activeTheme();
         cfg._accentColor      = accentColor;
         applyTheme( cfg );
         saveToConfig();
@@ -362,57 +386,57 @@ namespace sw::editor
 
     const Color4& EditorThemeUtil::getAccentColor()
     {
-        return EditorThemeInternal::s_activeTheme._accentColor;
+        return EditorThemeInternal::activeTheme()._accentColor;
     }
 
     const Color4& EditorThemeUtil::getWindowBgColor()
     {
-        return EditorThemeInternal::s_activeTheme._windowBg;
+        return EditorThemeInternal::activeTheme()._windowBg;
     }
 
     const Color4& EditorThemeUtil::getPanelBgColor()
     {
-        return EditorThemeInternal::s_activeTheme._panelBg;
+        return EditorThemeInternal::activeTheme()._panelBg;
     }
 
     const Color4& EditorThemeUtil::getHeaderBgColor()
     {
-        return EditorThemeInternal::s_activeTheme._headerBg;
+        return EditorThemeInternal::activeTheme()._headerBg;
     }
 
     const Color4& EditorThemeUtil::getFrameBgColor()
     {
-        return EditorThemeInternal::s_activeTheme._frameBg;
+        return EditorThemeInternal::activeTheme()._frameBg;
     }
 
     const Color4& EditorThemeUtil::getBorderColor()
     {
-        return EditorThemeInternal::s_activeTheme._border;
+        return EditorThemeInternal::activeTheme()._border;
     }
 
     const Color4& EditorThemeUtil::getSuccessColor()
     {
-        return EditorThemeInternal::s_activeTheme._successColor;
+        return EditorThemeInternal::activeTheme()._successColor;
     }
 
     const Color4& EditorThemeUtil::getWarningColor()
     {
-        return EditorThemeInternal::s_activeTheme._warningColor;
+        return EditorThemeInternal::activeTheme()._warningColor;
     }
 
     const Color4& EditorThemeUtil::getErrorColor()
     {
-        return EditorThemeInternal::s_activeTheme._errorColor;
+        return EditorThemeInternal::activeTheme()._errorColor;
     }
 
     const Color4& EditorThemeUtil::getInfoColor()
     {
-        return EditorThemeInternal::s_activeTheme._infoColor;
+        return EditorThemeInternal::activeTheme()._infoColor;
     }
 
     const Color4& EditorThemeUtil::getTextMutedColor()
     {
-        return EditorThemeInternal::s_activeTheme._textMuted;
+        return EditorThemeInternal::activeTheme()._textMuted;
     }
 
     void EditorThemeUtil::textAccent( const utf8* pText )
@@ -495,7 +519,7 @@ namespace sw::editor
         ImGui::SetNextWindowSize( ImVec2( 460.0f, 380.0f ), ImGuiCond_FirstUseEver );
         if ( ImGui::Begin( ICON_FA_PALETTE "  Theme & Look and Feel", pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
-            EditorThemeConfig cfg = EditorThemeInternal::s_activeTheme;
+            EditorThemeConfig cfg = EditorThemeInternal::activeTheme();
 
             // 1) 프리셋 선택 — 이름과 순서는 프리셋 표에서 온다.
             //    예전에는 이름 배열을 따로 적고 `static_cast<int32>( _preset )` 로 인덱스를 삼았다.
@@ -519,7 +543,7 @@ namespace sw::editor
                 {
                     applyPreset( pRow[selected]._preset );
                     saveToConfig();
-                    cfg = EditorThemeInternal::s_activeTheme;
+                    cfg = EditorThemeInternal::activeTheme();
                 }
             }
             EditorWidgets::drawTooltip( "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다" );

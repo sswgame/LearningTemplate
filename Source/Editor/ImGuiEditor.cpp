@@ -141,8 +141,6 @@ namespace sw::editor
 
             _dockLayout.setupPersistencePaths();
             _dockLayout.applyIniFilename();
-
-            EditorThemeUtil::loadFromConfig();
         }
 
         EditorFontSetup::apply();
@@ -210,6 +208,9 @@ namespace sw::editor
         {
             _editorContext = make_unique<EditorContext>();
             _editorContext->initialize();
+            // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다 — 테마 상태를 컨텍스트가 들고 있으므로,
+            // 앞에서 부르면 적용된 테마가 갈 곳이 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
+            EditorThemeUtil::loadFromConfig();
             _editorContext->setRhiDevice( pRhiDevice );
             _editorContext->setRendererBackend( _rendererBackend.get() );
 

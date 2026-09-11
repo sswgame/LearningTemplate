@@ -2,6 +2,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -73,6 +76,12 @@ namespace sw::editor
         void                  ensureGameViewSize( uint32 width, uint32 height );
         void                  destroyGameView();
 
+        /** @brief 플레이(PIE) 세션 상태입니다. 조작은 `EditorPlaySession` 을 통합니다. */
+        PlaySessionData& getPlaySessionData() { return _playSessionData; }
+
+        /** @brief 지금 적용된 테마입니다. 조작은 `EditorThemeUtil` 을 통합니다. */
+        EditorThemeConfig& getThemeConfig() { return _themeConfig; }
+
     private:
         unique_ptr<SelectionManager>          _pSelectionManager;
         unique_ptr<EditorWorkspace>           _pWorkspace;
@@ -87,6 +96,8 @@ namespace sw::editor
         IRHIDevice*                           _pRhiDevice;
         IImGuiRendererBackend*                _pRendererBackend;
         EditorGameView                        _gameView;
+        PlaySessionData                       _playSessionData;
+        EditorThemeConfig                     _themeConfig;
 
         uint8                  _bGameViewHovered : 1;
         uint8                  _bGameViewFocused : 1;

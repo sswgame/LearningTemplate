@@ -5,6 +5,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Uuid/Uuid.h"
 
 namespace sw::editor
 {
@@ -16,8 +19,45 @@ namespace sw::editor
     };
 
     /**
+     * @struct PlaySessionData
+     * @brief 플레이 세션이 들고 있는 상태 전부. **소유는 `EditorContext`** 입니다.
+     * @details 예전에는 이것들이 `EditorPlaySession.cpp` 의 파일 정적이었다. 그러면 수명이
+     *          아무에게도 속하지 않아, 컨텍스트가 다시 만들어져도 앞 세션의 스냅샷과 재생
+     *          상태가 그대로 남는다. 컨텍스트가 들면 컨텍스트와 함께 나고 죽는다.
+     */
+    struct PlaySessionData
+    {
+        /** @brief 롤백용 오브젝트 스냅샷 하나. */
+        struct ObjectSnapshot
+        {
+            Uuid          _guid{};
+            uint64        _objectId{ 0 };
+            string        _name;
+            vector<uint8> _bytes;
+            string        _xml;
+        };
+
+        vector<ObjectSnapshot> _listSnapshot;
+        PlaySessionState       _state{ PlaySessionState::Stopped };
+        uint8                  _bStepPending : 1;
+        uint8                  _bHasSnapshot : 1;
+        [[maybe_unused]] uint8 _reserved     : 6;
+
+        PlaySessionData()
+            : _listSnapshot{}
+            , _state{ PlaySessionState::Stopped }
+            , _bStepPending{ SW_FALSE }
+            , _bHasSnapshot{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
+    };
+
+    /**
      * @class EditorPlaySession
      * @brief 에디터 Play-In-Editor (PIE) 시뮬레이션 수명주기 및 씬 롤백을 관리합니다.
+     * @details 상태는 `EditorContext` 가 들고 있고(`PlaySessionData`), 이 클래스는 그것을 조작하는
+     *          정적 파사드다. 컨텍스트가 없으면 "정지" 로 답한다.
      */
     class EditorPlaySession
     {

@@ -22,21 +22,6 @@ namespace sw::editor
     {
         struct EditorPlaySessionInternal
         {
-            inline static PlaySessionState s_playState = PlaySessionState::Stopped;
-            inline static uint8            s_bStepPending{ SW_FALSE };
-
-            struct ObjectSnapshot
-            {
-                Uuid          _guid{};
-                uint64        _objectId{ 0 };
-                string        _name;
-                vector<uint8> _bytes;
-                string        _xml;
-            };
-
-            static inline vector<ObjectSnapshot> s_listPlaySnapshots;
-            static inline bool                   s_bHasPlaySnapshot{ false };
-
             static void beginPlayActiveScene()
             {
                 Scene* pScene = editor::getActiveScene();
@@ -63,10 +48,10 @@ namespace sw::editor
                 pObjects->endPlay();
             }
 
-            static void capturePlaySnapshot()
+            static void capturePlaySnapshot( PlaySessionData& data )
             {
-                s_listPlaySnapshots.clear();
-                s_bHasPlaySnapshot = false;
+                data._listSnapshot.clear();
+                data._bHasSnapshot = SW_FALSE;
 
                 Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
@@ -78,14 +63,14 @@ namespace sw::editor
                 // 순회하려고 한 번. 값 반환형이라 씬 전체를 두 번 할당·복사했다.
                 vector<GameObject*> listAllObject;
                 pObjects->getAllGameObjects( listAllObject );
-                s_listPlaySnapshots.reserve( listAllObject.size() );
+                data._listSnapshot.reserve( listAllObject.size() );
 
                 for ( GameObject* pObj : listAllObject )
                 {
                     if ( pObj == nullptr )
                         continue;
 
-                    ObjectSnapshot entry;
+                    PlaySessionData::ObjectSnapshot entry;
                     entry._objectId = pObj->getObjectId();
                     entry._name     = pObj->getName().c_str();
                     if ( pContext != nullptr )
@@ -95,32 +80,32 @@ namespace sw::editor
                         entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
 
                     if ( entry._bytes.empty() == false || entry._xml.empty() == false )
-                        s_listPlaySnapshots.push_back( std::move( entry ) );
+                        data._listSnapshot.push_back( std::move( entry ) );
                 }
 
-                s_bHasPlaySnapshot = true;
+                data._bHasSnapshot = SW_TRUE;
                 SW_LOG_TRACE( "Play snapshot captured (%# objects).",
-                              static_cast<uint32>( s_listPlaySnapshots.size() ) );
+                              static_cast<uint32>( data._listSnapshot.size() ) );
             }
 
-            static void restorePlaySnapshot()
+            static void restorePlaySnapshot( PlaySessionData& data )
             {
-                if ( s_bHasPlaySnapshot == false )
+                if ( data._bHasSnapshot == SW_FALSE )
                     return;
 
                 SceneManager* pSceneManager = editor::getService<SceneManager>();
                 if ( pSceneManager == nullptr )
                 {
-                    s_listPlaySnapshots.clear();
-                    s_bHasPlaySnapshot = false;
+                    data._listSnapshot.clear();
+                    data._bHasSnapshot = SW_FALSE;
                     return;
                 }
 
                 Scene* pScene = pSceneManager->getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                 {
-                    s_listPlaySnapshots.clear();
-                    s_bHasPlaySnapshot = false;
+                    data._listSnapshot.clear();
+                    data._bHasSnapshot = SW_FALSE;
                     return;
                 }
 
@@ -130,8 +115,8 @@ namespace sw::editor
                 // 1. 플레이 도중 생성된 오브젝트 파괴
                 {
                     unordered_set<uint64> uniqueSnapIds;
-                    uniqueSnapIds.reserve( s_listPlaySnapshots.size() );
-                    for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
+                    uniqueSnapIds.reserve( data._listSnapshot.size() );
+                    for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                     {
                         uniqueSnapIds.insert( snap._objectId );
                     }
@@ -153,7 +138,7 @@ namespace sw::editor
 
                 // 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성
                 unordered_map<uint64, GameObject*> mapRestored;
-                for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
+                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
                     GameObject* pObj = pObjects->findGameObjectById( snap._objectId );
                     if ( pObj == nullptr && snap._guid.isNull() == false && pContext != nullptr )
@@ -188,7 +173,7 @@ namespace sw::editor
                 }
 
                 // 3. 계층 관계 리바인딩 (XML 스냅샷 폴백용)
-                for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
+                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
                     if ( snap._xml.empty() )
                         continue;
@@ -206,10 +191,21 @@ namespace sw::editor
                 }
 
                 SW_LOG_TRACE( "Play snapshot restored (%# objects).",
-                              static_cast<uint32>( s_listPlaySnapshots.size() ) );
+                              static_cast<uint32>( data._listSnapshot.size() ) );
 
-                s_listPlaySnapshots.clear();
-                s_bHasPlaySnapshot = false;
+                data._listSnapshot.clear();
+                data._bHasSnapshot = SW_FALSE;
+            }
+
+            /**
+             * @brief 컨텍스트가 들고 있는 플레이 상태입니다. 컨텍스트가 없으면 nullptr.
+             * @details 에디터 셸이 아직 안 섰거나 이미 내려간 시점에도 이 파사드가 불릴 수 있다
+             *          (패널 정리 경로). 그때는 "정지" 로 답해야 한다.
+             */
+            static PlaySessionData* data()
+            {
+                EditorContext* pContext = EditorContext::get();
+                return pContext != nullptr ? &pContext->getPlaySessionData() : nullptr;
             }
         };
     } // namespace
@@ -221,55 +217,65 @@ namespace sw::editor
 
     PlaySessionState EditorPlaySession::getState()
     {
-        return EditorPlaySessionInternal::s_playState;
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr ? pData->_state : PlaySessionState::Stopped;
     }
 
     bool EditorPlaySession::isPlaying()
     {
-        if ( EditorPlaySessionInternal::s_bStepPending == SW_TRUE )
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData == nullptr )
+            return false;
+        if ( pData->_bStepPending == SW_TRUE )
             return true;
-        return EditorPlaySessionInternal::s_playState == PlaySessionState::Playing;
+        return pData->_state == PlaySessionState::Playing;
     }
 
     bool EditorPlaySession::isPaused()
     {
-        return EditorPlaySessionInternal::s_playState == PlaySessionState::Paused;
+        return getState() == PlaySessionState::Paused;
     }
 
     bool EditorPlaySession::isStopped()
     {
-        return EditorPlaySessionInternal::s_playState == PlaySessionState::Stopped;
+        return getState() == PlaySessionState::Stopped;
     }
 
     bool EditorPlaySession::hasPendingStep()
     {
-        return EditorPlaySessionInternal::s_bStepPending == SW_TRUE;
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr && pData->_bStepPending == SW_TRUE;
     }
 
     void EditorPlaySession::stepOnce()
     {
-        if ( EditorPlaySessionInternal::s_playState == PlaySessionState::Stopped )
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData == nullptr )
+            return;
+        if ( pData->_state == PlaySessionState::Stopped )
             setState( PlaySessionState::Playing );
-        EditorPlaySessionInternal::s_bStepPending = SW_TRUE;
+        pData->_bStepPending = SW_TRUE;
     }
 
     void EditorPlaySession::consumePendingStep()
     {
-        if ( EditorPlaySessionInternal::s_bStepPending == SW_FALSE )
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData == nullptr || pData->_bStepPending == SW_FALSE )
             return;
-        EditorPlaySessionInternal::s_bStepPending = SW_FALSE;
-        if ( EditorPlaySessionInternal::s_playState == PlaySessionState::Playing )
-            EditorPlaySessionInternal::s_playState = PlaySessionState::Paused;
+        pData->_bStepPending = SW_FALSE;
+        if ( pData->_state == PlaySessionState::Playing )
+            pData->_state = PlaySessionState::Paused;
     }
 
     void EditorPlaySession::setState( PlaySessionState state )
     {
-        if ( EditorPlaySessionInternal::s_playState == state )
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData == nullptr || pData->_state == state )
             return;
 
-        EditorPlaySessionInternal::s_bStepPending = SW_FALSE;
-        const PlaySessionState previous           = EditorPlaySessionInternal::s_playState;
-        EditorPlaySessionInternal::s_playState    = state;
+        pData->_bStepPending            = SW_FALSE;
+        const PlaySessionState previous = pData->_state;
+        pData->_state                   = state;
 
         CommandStack* pCommandStack = editor::getService<CommandStack>();
         if ( pCommandStack != nullptr )
@@ -278,7 +284,7 @@ namespace sw::editor
         // Stopped → Playing: 스냅샷 캡처 후 beginPlay
         if ( previous == PlaySessionState::Stopped && state == PlaySessionState::Playing )
         {
-            EditorPlaySessionInternal::capturePlaySnapshot();
+            EditorPlaySessionInternal::capturePlaySnapshot( *pData );
             EditorPlaySessionInternal::beginPlayActiveScene();
         }
 
@@ -286,7 +292,7 @@ namespace sw::editor
         if ( ( previous == PlaySessionState::Playing || previous == PlaySessionState::Paused ) && state == PlaySessionState::Stopped )
         {
             EditorPlaySessionInternal::endPlayActiveScene();
-            EditorPlaySessionInternal::restorePlaySnapshot();
+            EditorPlaySessionInternal::restorePlaySnapshot( *pData );
         }
     }
 
