@@ -95,8 +95,16 @@ namespace sw
          *          **모든 .hlsli 중 최신값**으로 넉넉하게 잡는다 — 과하게 굽는 쪽이 안전하다.
          */
         static uint64 computeEffectiveSourceTimestamp( string_view absShaderPath );
-        /** @brief Resource 아래 모든 .hlsli 중 가장 새로운 타임스탬프 (프로세스당 한 번만 훑는다). */
+        /** @brief Resource 아래 모든 .hlsli 중 가장 새로운 타임스탬프 (값을 캐시한다). */
         static uint64 getSharedHeaderTimestamp();
+
+        /**
+         * @brief 캐시된 공유 헤더 타임스탬프를 버려, 다음 조회가 다시 훑게 합니다.
+         * @details 실행 중 `.hlsli` 를 고치고 수동 리로드를 누르는 경로에서만 부른다. 이걸 안 부르면
+         *          컴파일 캐시의 키가 그대로라 **바뀐 헤더가 반영되지 않는다** — 로그는 성공을 찍는데
+         *          화면은 그대로인, 가장 조용한 종류의 어긋남이다.
+         */
+        static void invalidateSharedHeaderTimestamp();
 
         /** @brief 타깃 포맷에 해당하는 서브폴더 이름("dx11", "dx12", "vulkan", "opengl")을 반환합니다. */
         static string_view getSubfolderForFormat( ShaderTargetFormat format );

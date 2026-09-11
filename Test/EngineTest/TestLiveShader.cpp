@@ -1,10 +1,14 @@
 #include "pch.h"
 
 #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <chrono>
+#include <filesystem>
 
 // ------------------------------------------------------------------------------
 // 1) LiveShaderTest — 수동 리로드 대상 수집
@@ -72,7 +76,8 @@ SW_TEST_CASE( LiveShaderTest, ManualReloadWithNoTargetsIsNoop )
  *          `ShaderBaker::getSharedHeaderTimestamp` 의 함수 지역 static 이라 **프로세스당 한 번만**
  *          계산된다. `.hlsli` 만 고치면 두 값이 다 그대로라 옛 바이트코드가 그대로 돌아온다 —
  *          로그는 "Succeeded" 를 찍는데 화면은 안 바뀌는, 가장 조용한 종류의 어긋남이다.
- *          그래서 리로드는 컴파일하는 동안 디스크 캐시를 우회한다.
+ *          그래서 리로드는 그 타임스탬프를 한 번 버린다 — 캐시를 통째로 우회하지는 않는다.
+ *          우회하면 이번 편집과 무관한 셰이더까지 전부 다시 컴파일된다.
  */
 SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 {
@@ -112,16 +117,24 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     // `.hlsli` 만 고친다 — `.hlsl` 의 mtime 은 그대로다.
     sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 7.0\n" );
 
-    // 디스크 캐시를 켜 둔 채로는 **옛 바이트코드가 그대로 돌아온다** (위 @details 참고).
-    const sw::ShaderCompileResult cached = sw::ShaderCompiler::compileHLSL( desc );
-    SW_ASSERT_TRUE( cached._bSuccess );
-    SW_EXPECT_TRUE( cached._bytecode == first._bytecode );
+    // `FileUtil::getFileTimestamp` 는 **초 단위**라, 같은 초에 두 번 쓰면 값이 같다. 테스트가
+    // 실행 속도에 따라 흔들리지 않도록 수정 시각을 명시적으로 밀어 둔다.
+    // (실사용에서는 저장하고 단축키를 누르기까지 1초 이상 걸리므로 문제가 되지 않는다.)
+    {
+        const std::filesystem::file_time_type written = std::filesystem::last_write_time( includeAbs.c_str() );
+        std::filesystem::last_write_time( includeAbs.c_str(), written + std::chrono::seconds( 5 ) );
+    }
 
-    // 리로드가 하는 것과 같은 우회 — 이때는 새 바이트코드가 나와야 한다.
-    const bool bPrevEnabled = sw::ShaderCompiler::isDiskCacheEnabled();
-    sw::ShaderCompiler::enableDiskCache( false );
+    // 공유 헤더 타임스탬프가 얼어붙어 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
+    const sw::ShaderCompileResult stale = sw::ShaderCompiler::compileHLSL( desc );
+    SW_ASSERT_TRUE( stale._bSuccess );
+    SW_EXPECT_TRUE( stale._bytecode == first._bytecode );
+
+    // 수동 리로드가 하는 것과 같다 — 타임스탬프를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
+    // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
+    // 다시 컴파일된다.
+    sw::ShaderBaker::invalidateSharedHeaderTimestamp();
     const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHLSL( desc );
-    sw::ShaderCompiler::enableDiskCache( bPrevEnabled );
 
     SW_ASSERT_TRUE( reloaded._bSuccess );
     SW_EXPECT_TRUE( reloaded._bytecode != first._bytecode );

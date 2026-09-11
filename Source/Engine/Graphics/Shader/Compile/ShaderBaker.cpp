@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -28,6 +29,11 @@ namespace sw
     {
         struct ShaderBakerInternal
         {
+            /** @brief 공유 헤더(.hlsli) 최신 타임스탬프 캐시. 트리 전체를 매번 훑을 수는 없다. */
+            inline static mutex  _s_sharedHeaderMutex{};
+            inline static uint64 _s_sharedHeaderTimestamp{ 0 };
+            inline static bool   _s_bSharedHeaderCached{ false };
+
             struct BakeRecipe
             {
                 string         _shaderPath;
@@ -537,21 +543,33 @@ namespace sw
 
     uint64 ShaderBaker::getSharedHeaderTimestamp()
     {
-        // getOrCompile 이 PSO 마다 부르므로 프로세스당 한 번만 훑는다. 실행 중 헤더를 고치는
-        // 라이브 리로드는 어차피 명시적으로 재컴파일하는 경로를 따로 탄다.
-        static const uint64 s_timestamp = []() -> uint64
+        // getOrCompile 이 PSO 마다 부르므로 값을 캐시한다 — 트리 전체를 매번 훑을 수는 없다.
+        // 다만 **프로세스당 한 번**으로 얼려 두면 안 된다. 실행 중 `.hlsli` 를 고치고 수동 리로드를
+        // 눌러도 키가 그대로라 컴파일 캐시가 옛 바이트코드를 돌려준다. 리로드가
+        // invalidateSharedHeaderTimestamp() 로 한 번 버려 준다.
+        std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
+        if ( ShaderBakerInternal::_s_bSharedHeaderCached )
+            return ShaderBakerInternal::_s_sharedHeaderTimestamp;
+
+        uint64       newest  = 0;
+        const string rootDir = ResourceUtil::getRootFolderPath();
+        if ( rootDir.empty() == false )
         {
-            const string rootDir = ResourceUtil::getRootFolderPath();
-            if ( rootDir.empty() )
-                return 0;
             vector<string> listHeader;
             FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true );
-            uint64 newest = 0;
             for ( const string& headerPath : listHeader )
                 newest = MathUtil::max( newest, FileUtil::getFileTimestamp( headerPath ) );
-            return newest;
-        }();
-        return s_timestamp;
+        }
+
+        ShaderBakerInternal::_s_sharedHeaderTimestamp = newest;
+        ShaderBakerInternal::_s_bSharedHeaderCached   = true;
+        return newest;
+    }
+
+    void ShaderBaker::invalidateSharedHeaderTimestamp()
+    {
+        std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
+        ShaderBakerInternal::_s_bSharedHeaderCached = false;
     }
 
     uint64 ShaderBaker::computeEffectiveSourceTimestamp( string_view absShaderPath )

@@ -15,29 +15,17 @@ namespace sw
     {
         struct LiveShaderManagerInternal
         {
-            /**
-             * @brief 스코프 동안 ShaderCompiler 의 디스크 캐시를 끕니다.
-             * @details 수동 리로드가 이것을 켜 둔 채로 컴파일하면 **바뀐 `.hlsli` 가 반영되지 않는다.**
-             *          그 캐시의 키는 `max(.hlsl mtime, 공유 헤더 타임스탬프)` 인데, 뒤쪽이
-             *          `ShaderBaker::getSharedHeaderTimestamp` 의 함수 지역 static 이라 프로세스당 한 번만
-             *          계산된다. `.hlsli` 만 고치면 두 값이 다 그대로여서 옛 바이트코드가 그대로 돌아온다.
-             */
-            struct ScopedDiskCacheBypass
+            /** @brief 파일 내용이 주어진 바이트열과 같은지 봅니다. 파일이 없으면 false. */
+            static bool fileHasSameBytes( const string& filePath, const vector<uint8>& bytes )
             {
-                ScopedDiskCacheBypass()
-                    : _bPrevEnabled{ ShaderCompiler::isDiskCacheEnabled() }
-                {
-                    ShaderCompiler::enableDiskCache( false );
-                }
+                if ( FileUtil::fileExists( filePath ) == false )
+                    return false;
 
-                ~ScopedDiskCacheBypass() { ShaderCompiler::enableDiskCache( _bPrevEnabled ); }
-
-                ScopedDiskCacheBypass( const ScopedDiskCacheBypass& )            = delete;
-                ScopedDiskCacheBypass& operator=( const ScopedDiskCacheBypass& ) = delete;
-
-            private:
-                bool _bPrevEnabled;
-            };
+                vector<uint8> listExisting;
+                if ( FileUtil::readFile( filePath, listExisting ) == false )
+                    return false;
+                return listExisting == bytes;
+            }
         };
     } // namespace
 } // namespace sw
@@ -65,6 +53,11 @@ namespace sw
         if ( _bInitialized == false || engine::areEngineServicesBound() == false )
             return;
 
+        // 공유 헤더(.hlsli) 타임스탬프 캐시를 한 번 버린다. 이게 없으면 컴파일 캐시의 키가 그대로라
+        // **바뀐 헤더가 반영되지 않는다.** 반대로 캐시를 통째로 우회하지는 않는다 — 그러면 이번
+        // 편집과 무관한 셰이더까지 전부 다시 컴파일한다. 키를 정확하게 만들어 두고 캐시가 거르게 한다.
+        ShaderBaker::invalidateSharedHeaderTimestamp();
+
         // 등록표를 따로 두지 않는다 — **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다.
         // 예전에는 `watchShader` 로 채우는 자기 표를 봤는데 그 함수의 호출부가 하나도 없어서,
         // 단축키를 눌러도 빈 표를 돌고 아무 일도 일어나지 않았다.
@@ -89,16 +82,18 @@ namespace sw
             _listPendingReload.clear();
         }
 
-        // 컴파일하는 동안만 디스크 캐시를 우회한다 (ScopedDiskCacheBypass 주석 참고).
-        const LiveShaderManagerInternal::ScopedDiskCacheBypass bypass;
-
-        uint32 succeeded = 0;
+        uint32 changed = 0;
+        uint32 failed  = 0;
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
+            // 컴파일 캐시는 켜 둔 채로 돈다 — 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
+            // 타지 않는다. 키에 `.hlsl` mtime 과 공유 헤더 타임스탬프가 들어 있으므로, 방금 무효화한
+            // 덕분에 바뀐 것만 실제로 다시 컴파일된다.
             const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( desc );
             if ( newResult._bSuccess == false )
             {
-                SW_LOG_ERROR( "Live Shader Recompilation Failed for %# (Entry: %#):\n%#",
+                ++failed;
+                SW_LOG_ERROR( "Shader reload failed for %# (Entry: %#):\n%#",
                               desc._filePath.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
                 continue;
             }
@@ -106,7 +101,13 @@ namespace sw
             // 캐시가 읽는 이름 그대로 쓴다 — 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
             // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
             const string localPath = ShaderCache::makeLocalCachePath( desc );
-            const string localDir  = FileUtil::getDirectoryPart( localPath );
+
+            // **바이트가 같으면 쓰지 않는다.** 그냥 덮어쓰면 mtime 이 새로워져 ShaderCache 가 무관한
+            // 셰이더까지 디스크에서 다시 읽고, PSO 도 전부 다시 만들게 된다.
+            if ( LiveShaderManagerInternal::fileHasSameBytes( localPath, newResult._bytecode ) )
+                continue;
+
+            const string localDir = FileUtil::getDirectoryPart( localPath );
             if ( localDir.empty() == false )
                 FileUtil::ensureDirectoryExists( localDir );
 
@@ -114,17 +115,20 @@ namespace sw
             // (ShaderCache 의 1순위가 이 로컬 라이브 캐시다).
             FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() );
 
-            ++succeeded;
+            ++changed;
             if ( _onAnyRecompiled.isBound() )
                 _onAnyRecompiled( desc._filePath, newResult );
         }
 
-        // 인메모리 캐시는 마지막에 한 번만 비운다 — 셰이더마다 비우면 같은 패스의 남은 재컴파일이
-        // 방금 지운 항목을 다시 채워 넣는다.
-        if ( engine::areEngineServicesBound() )
+        if ( changed > 0 && engine::areEngineServicesBound() )
+        {
+            // 인메모리 캐시는 마지막에 한 번만 비운다 — 셰이더마다 비우면 같은 패스의 남은 재컴파일이
+            // 방금 지운 항목을 다시 채워 넣는다.
             engine::getShaderCache().clearCache();
+        }
 
-        SW_LOG_INFO( "Shader reload: %# / %# succeeded.", succeeded, static_cast<uint32>( listToCompile.size() ) );
+        SW_LOG_INFO( "Shader reload: %# 개 확인, %# 개 갱신, %# 개 실패.",
+                     static_cast<uint32>( listToCompile.size() ), changed, failed );
     }
 
     void LiveShaderManager::shutdown()
