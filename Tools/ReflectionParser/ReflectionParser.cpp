@@ -498,7 +498,7 @@ int32 main( int32 argc, utf8* argv[] )
     if ( commandLineArgs._emitTemplatesDir.empty() == false )
     {
         sw::vector<sw::string> listTemplate;
-        if ( sw::FileUtil::collectFiles( commandLineArgs._emitTemplatesDir, sw::ParserContext::getSharedConfig()._emitTemplateExtension, listTemplate, false, false ) )
+        if ( sw::FileUtil::collectFiles( commandLineArgs._emitTemplatesDir, sw::ParserContext::getSharedConfig()._emitTemplateExtension, listTemplate, false ) )
         {
             for ( const sw::string& tplPath : listTemplate )
             {

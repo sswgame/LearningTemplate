@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-11 · 기준 커밋 `3bae842c`
+> 마지막 갱신: 2026-09-11 · 기준 커밋 `b0517ba1`
 
 ---
 
@@ -287,6 +287,45 @@ clang-format **18 과도 20 과도** 일치하지 않는다 — 버전 드리프
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 10)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-11 (리눅스 CI 가 구운 셰이더를 전부 못 읽던 것 — 디렉터리 열거가 경로를 소문자로 눌렀다)
+
+리눅스 CI 로그가 구운 `.spv` 를 줄줄이 "File not found" 로 뱉었다. 그런데 그 파일들은 **전부 커밋되어
+있었다.** 단서는 경로 자체였다:
+
+```
+resource/engine/shaders/bin/opengl/deferredlighting_vs.spv 를 못 찾음
+ -> /home/runner/work/LearningTemplate/LearningTemplate/Source/Core/File/FileUtil.cpp:545
+```
+
+같은 로그 줄 안에서 **소스 위치는 `LearningTemplate/…/Resource`** 인데 **찾는 경로만
+`learningtemplate/…/resource`** 다. 환경이 아니라 우리 코드가 경로를 소문자로 누른 것이다.
+
+**원인.** `FileUtil::collectFiles`/`collectFolders` 의 `bNormalizePath` 기본값이 `true` 였고, 그 기본값은
+**방금 파일시스템에서 훑어 온 절대 경로를 통째로 `normalizePath`(= 전체 소문자화)** 했다. `Resource/` 아래는
+`CheckResourceCasing` 이 소문자를 강제하므로 소문자화가 바꾸는 것은 사실상 **루트 접두사뿐**이다 — 그건
+그 PC 의 실제 디렉터리 이름이라 절대 건드리면 안 되는 구간이다. 윈도우는 대소문자를 안 가려서 그대로
+열렸고, 리눅스에서만 열거한 파일이 즉시 "없는 파일"이 됐다.
+
+`FileUtil` 헤더에 이미 규칙이 적혀 있었다 — *"맵 키는 normalizePath, open 은 normalizeSeparators"*.
+열거 결과는 **여는 경로**이므로 소문자화는 애초에 규칙 위반이었다.
+
+**고친 방식.** 플래그를 끄는 게 아니라 **매개변수를 없앴다.** 호출부 30 곳을 전부 확인했더니 결과를 쓰는
+곳은 예외 없이 실제 I/O(`readFile`·`getFileTimestamp`·`removeFile`·`loadFromFile`·`mountPack`·텍스처 베이크)
+였고, 소문자가 필요한 곳은 **하나도 없었다.** 확장자 비교(`hasExtension`)와 팩 우선순위
+(`matchesTokenCaseInsensitive`)는 원래 대소문자를 안 가리므로 영향이 없다. 키가 필요한 쪽은 예전부터
+받은 뒤에 직접 `normalizePath` 한다(`AssetDatabase::toRelativePath`, `ShaderBaker::writeBakeStamp`).
+
+이미 호출부 절반 이상이 `false` 를 명시하고 있었다 — 같은 함정을 한 곳씩 피해 온 흔적이다.
+`AssetDatabase::scanMetaFiles` 에는 그 사연이 주석으로 남아 있었는데, 그때 **함수 쪽을 고치지 않아서**
+나머지 호출부가 그대로 남았다. 기본값이 함정이면 호출부마다 다시 밟는다.
+
+**회귀 테스트.** `Core_File.CollectPreservesPathCase` — 대문자가 섞인 임시 디렉터리
+(`SwCollectCaseRoot/MixedCaseSub/MixedCaseAsset.Bin`)를 만들고, 수집한 경로가 **만든 문자열과 바이트까지
+같은지** 본다. 윈도우에서는 소문자 경로로도 파일이 열려 버리므로 `readFile` 성공 여부만으로는 못 잡는다 —
+그래서 문자열 동등성을 본다.
+
+검증: Debug 빌드 경고 0, nogpu 5/5, 린트 6/6.
 
 ### 2026-09-11 (Shipping 에서만 지던 테스트 둘 — 테스트 호스트가 앱과 다른 세상을 보고 있었다)
 

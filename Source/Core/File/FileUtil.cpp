@@ -676,7 +676,7 @@ namespace sw
             .detach();
     }
 
-    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive, const bool bNormalizePath )
+    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive )
     {
         if ( directoryExists( directory ) == false )
             return false;
@@ -696,7 +696,7 @@ namespace sw
                 if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
                     continue;
 
-                outListFilePath.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+                outListFilePath.push_back( string( genericView ) );
             }
         }
         else
@@ -711,14 +711,14 @@ namespace sw
                 if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
                     continue;
 
-                outListFilePath.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+                outListFilePath.push_back( string( genericView ) );
             }
         }
 
         return true;
     }
 
-    bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive, const bool bNormalizePath )
+    bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive )
     {
         if ( directoryExists( directory ) == false )
             return false;
@@ -734,7 +734,7 @@ namespace sw
 
                 const string genericStd = entry.path().generic_string().c_str();
                 string_view  genericView{ genericStd };
-                outListFolder.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+                outListFolder.push_back( string( genericView ) );
             }
         }
         else
@@ -746,7 +746,7 @@ namespace sw
 
                 const string genericStd = entry.path().generic_string().c_str();
                 string_view  genericView{ genericStd };
-                outListFolder.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+                outListFolder.push_back( string( genericView ) );
             }
         }
 

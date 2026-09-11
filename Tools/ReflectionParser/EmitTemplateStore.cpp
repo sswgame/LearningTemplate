@@ -69,7 +69,7 @@ namespace sw
         }
 
         vector<string> listFile;
-        FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, listFile, false, false );
+        FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, listFile, false );
 
         uint32 count = 0;
         for ( const string& filePath : listFile )

@@ -428,7 +428,7 @@ namespace sw
             return false;
 
         vector<string> listCandidateFile;
-        FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false, true );
+        FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false );
 
         if ( listCandidateFile.empty() )
             return false;

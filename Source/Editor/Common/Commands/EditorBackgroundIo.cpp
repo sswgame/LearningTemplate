@@ -59,7 +59,7 @@ namespace sw::editor
             return;
 
         vector<string> listFile;
-        FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, false );
+        FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive );
 
         publish( pState, generation, std::move( listFile ) );
     }

@@ -436,7 +436,7 @@ namespace sw
             if ( FileUtil::directoryExists( llvmClangDir ) )
             {
                 vector<string> listClangSubFolder;
-                FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false, false );
+                FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false );
                 for ( const string& folder : listClangSubFolder )
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );

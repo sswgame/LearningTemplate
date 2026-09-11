@@ -165,8 +165,8 @@ namespace sw
                     return;
 
                 vector<string> listSource;
-                FileUtil::collectFiles( shadersDir, ".hlsl", listSource, true, true );
-                FileUtil::collectFiles( shadersDir, ".hlsli", listSource, true, true );
+                FileUtil::collectFiles( shadersDir, ".hlsl", listSource, true );
+                FileUtil::collectFiles( shadersDir, ".hlsli", listSource, true );
 
                 vector<string> listLine;
                 listLine.reserve( listSource.size() );
@@ -229,7 +229,7 @@ namespace sw
 
                 // 1) RenderPipeline XMLs (pipeline/*.xml)
                 vector<string> listXmlFile;
-                FileUtil::collectFiles( rootDir, ".xml", listXmlFile, true, true );
+                FileUtil::collectFiles( rootDir, ".xml", listXmlFile, true );
 
                 for ( const string& xmlPath : listXmlFile )
                 {
@@ -350,7 +350,7 @@ namespace sw
 
                 // 3) Material assets (.material)
                 vector<string> listMaterialFile;
-                FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true, true );
+                FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
                 for ( const string& matPath : listMaterialFile )
                 {
                     // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 예전엔 여기서 XML 의
@@ -547,7 +547,7 @@ namespace sw
             if ( rootDir.empty() )
                 return 0;
             vector<string> listHeader;
-            FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true, true );
+            FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true );
             uint64 newest = 0;
             for ( const string& headerPath : listHeader )
                 newest = MathUtil::max( newest, FileUtil::getFileTimestamp( headerPath ) );

@@ -111,14 +111,14 @@ namespace sw::editor
     bool EditorGlobalVariableCommands::collectPresetFiles( vector<string>& outList )
     {
         outList.clear();
-        FileUtil::collectFiles( getPresetFolderPath(), ".gvpreset.xml", outList, false, false );
+        FileUtil::collectFiles( getPresetFolderPath(), ".gvpreset.xml", outList, false );
         return true;
     }
 
     bool EditorGlobalVariableCommands::collectComponentPresetFiles( vector<string>& outList )
     {
         outList.clear();
-        FileUtil::collectFiles( getComponentPresetFolderPath(), ".preset.xml", outList, false, false );
+        FileUtil::collectFiles( getComponentPresetFolderPath(), ".preset.xml", outList, false );
         return true;
     }
 

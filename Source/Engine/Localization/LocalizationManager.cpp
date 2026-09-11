@@ -190,7 +190,7 @@ namespace sw
         }
 
         vector<string> listFilePath;
-        if ( FileUtil::collectFiles( directoryPath, filterExtension, listFilePath, bRecursive, false ) == false || listFilePath.empty() )
+        if ( FileUtil::collectFiles( directoryPath, filterExtension, listFilePath, bRecursive ) == false || listFilePath.empty() )
         {
             return false;
         }

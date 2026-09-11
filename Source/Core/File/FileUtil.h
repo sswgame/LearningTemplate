@@ -162,10 +162,15 @@ namespace sw
 
         /** @brief 네이티브 파일 다이얼로그를 엽니다. */
         static void openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess );
-        /** @brief 디렉터리에서 확장자 필터에 맞는 파일을 수집합니다. */
-        static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, bool bNormalizePath = true );
-        /** @brief 디렉터리 하위의 폴더를 수집합니다. */
-        static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive, bool bNormalizePath = true );
+        /**
+         * @brief 디렉터리에서 확장자 필터에 맞는 파일을 수집합니다.
+         * @details 실제 파일시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려준다**(구분자만 `/`). 그대로
+         *          열 수 있는 경로여야 하기 때문이다 — 대소문자를 구분하는 파일시스템에서는 소문자로 누른
+         *          경로가 곧 "파일 없음"이다. 맵 키가 필요하면 받는 쪽에서 normalizePath 한다.
+         */
+        static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive );
+        /** @brief 디렉터리 하위의 폴더를 수집합니다 (경로 규칙은 collectFiles 와 같다). */
+        static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
 
         /** @brief 플랫폼 공유 라이브러리 접두사(예: lib)를 반환합니다. */
         static string_view getSharedLibraryPrefix();

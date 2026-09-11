@@ -240,7 +240,7 @@ namespace sw
             else
             {
                 vector<string> listFile;
-                FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true, false );
+                FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
                 for ( const string& filePath : listFile )
                     ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, filePath );
             }

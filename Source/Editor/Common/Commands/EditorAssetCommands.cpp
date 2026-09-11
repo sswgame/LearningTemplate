@@ -688,7 +688,7 @@ namespace sw::editor
             return;
 
         vector<string> listAllFile;
-        FileUtil::collectFiles( resourceFolder, "", listAllFile, true, false );
+        FileUtil::collectFiles( resourceFolder, "", listAllFile, true );
 
         outList.reserve( listAllFile.size() );
         for ( const string& file : listAllFile )
@@ -707,8 +707,8 @@ namespace sw::editor
 
         vector<string> listFolder;
         vector<string> listFile;
-        FileUtil::collectFolders( folderAbs, listFolder, false, false );
-        FileUtil::collectFiles( folderAbs, {}, listFile, false, false );
+        FileUtil::collectFolders( folderAbs, listFolder, false );
+        FileUtil::collectFiles( folderAbs, {}, listFile, false );
 
         const string& resourceRoot = ResourceUtil::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
@@ -725,7 +725,7 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
             return;
 
-        FileUtil::collectFolders( folderAbs, outList, false, false );
+        FileUtil::collectFolders( folderAbs, outList, false );
         for ( string& child : outList )
             child = FileUtil::normalizeSeparators( child );
     }
@@ -740,10 +740,10 @@ namespace sw::editor
         vector<string> listPrefab;
         vector<string> listTexture;
         vector<string> listShader;
-        FileUtil::collectFiles( resPath, ".scene.xml", listScene, true, false );
-        FileUtil::collectFiles( resPath, ".prefab.xml", listPrefab, true, false );
-        FileUtil::collectFiles( resPath, ".png", listTexture, true, false );
-        FileUtil::collectFiles( resPath, ".hlsl", listShader, true, false );
+        FileUtil::collectFiles( resPath, ".scene.xml", listScene, true );
+        FileUtil::collectFiles( resPath, ".prefab.xml", listPrefab, true );
+        FileUtil::collectFiles( resPath, ".png", listTexture, true );
+        FileUtil::collectFiles( resPath, ".hlsl", listShader, true );
 
         outCounts._sceneCount   = listScene.size();
         outCounts._prefabCount  = listPrefab.size();

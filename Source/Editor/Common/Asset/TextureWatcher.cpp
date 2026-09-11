@@ -166,7 +166,7 @@ namespace sw::editor
             return 0;
 
         vector<string> listFilePath;
-        FileUtil::collectFiles( _watchDirectory, "", listFilePath, true, true );
+        FileUtil::collectFiles( _watchDirectory, "", listFilePath, true );
 
         uint32 bakeCount = 0;
         for ( const auto& filePath : listFilePath )

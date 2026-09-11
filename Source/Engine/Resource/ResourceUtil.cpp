@@ -478,7 +478,7 @@ namespace sw
                 if ( gameDir.empty() == false && FileUtil::directoryExists( gameDir ) )
                 {
                     vector<string> listPackFolder;
-                    FileUtil::collectFolders( gameDir, listPackFolder, false, false );
+                    FileUtil::collectFolders( gameDir, listPackFolder, false );
                     for ( const string& packFolder : listPackFolder )
                     {
                         const string normPack = FileUtil::normalizeSeparators( packFolder );

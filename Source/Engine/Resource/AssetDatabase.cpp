@@ -195,7 +195,7 @@ namespace sw
             return 0;
 
         vector<string> listFile;
-        FileUtil::collectFiles( absoluteFolder, {}, listFile, false, false );
+        FileUtil::collectFiles( absoluteFolder, {}, listFile, false );
         for ( const string& filePath : listFile )
         {
             string rel;
@@ -236,7 +236,7 @@ namespace sw
         // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRelativePath 의 루트 비교가 어긋난다.
         // 소문자화는 상대 경로가 된 뒤 toRelativePath 안에서 한 번만 한다.
         vector<string> listMeta;
-        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true, false );
+        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true );
 
         uint32 count{ 0 };
         for ( const string& metaAbs : listMeta )

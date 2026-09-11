@@ -164,7 +164,7 @@ namespace sw::editor
         const string dataFolder = getGameDataFolderPath();
 
         vector<string> listFile;
-        FileUtil::collectFiles( dataFolder, ".xml", listFile, false, false );
+        FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
 
         for ( const string& file : listFile )
         {
