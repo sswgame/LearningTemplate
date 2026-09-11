@@ -23,7 +23,6 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -53,7 +52,8 @@ namespace sw
 
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
-        ResourceUtil::initialize();
+        // 리소스 루트 탐색은 EngineLoop 이 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때의
+        // 진단이 로거가 없어 사라지고, 반환값도 여기서는 볼 것이 없었다.
 
         // 1. 코어 매니저들은 모두 EngineLoop가 초기화 (헤드리스 작업 처리 포함)
         if ( _engineLoop.initialize( argc, pArgv ) == false )

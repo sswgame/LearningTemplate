@@ -143,6 +143,17 @@ namespace sw
             // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다.
             CrashHandler::initialize();
 
+            // 리소스 루트는 **로거·크래시 핸들러 다음**에 찾는다. 예전에는 `App::initialize` 맨 앞,
+            // 그러니까 로거가 서기도 전에 불렀다 — 루트를 못 찾았을 때의 진단(`RootFolder` 로그와
+            // 어설트 메시지)이 통째로 사라졌고, 반환값도 보지 않아 실패가 조용했다.
+            // `initialize()` 는 once_flag 라 두 번째 호출은 아무것도 다시 찍지 않으므로,
+            // **첫 호출이 로거 뒤에 와야** 진단이 남는다.
+            if ( ResourceUtil::initialize() == false )
+            {
+                SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
+                return false;
+            }
+
             // 크래시 리포트에 함께 나갈 값들 — 덤프만으로는 알 수 없는 것들이다.
             // 백엔드는 RHI 초기화 뒤에 다시 덮어쓴다(여기서는 아직 정해지지 않았을 수 있다).
 #if defined( SW_SHIPPING )
@@ -283,8 +294,14 @@ namespace sw
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
 
-            if ( pEngineConfig->_listResourcePriority.empty() == false )
-                ResourceUtil::setSearchPriority( pEngineConfig->_listResourcePriority );
+            // GameConfig 가 활성화된 **뒤에 반드시 한 번은** 검색 루트를 다시 계산해야 한다.
+            // ResourceUtil::initialize() 시점에는 `_packRoot` 가 비어 있어 "game" 토큰이 아무 루트도
+            // 만들지 못한다. 예전에는 이 재계산이 EngineConfig 의 우선순위 목록이 비어 있지 않을
+            // 때에만 돌아서, 목록을 비워 두면 게임 팩이 검색 루트에서 통째로 빠진 채 남았다.
+            const vector<string> listResourcePriority = pEngineConfig->_listResourcePriority.empty()
+                                                          ? ResourceUtil::getSearchPriority()
+                                                          : pEngineConfig->_listResourcePriority;
+            ResourceUtil::setSearchPriority( listResourcePriority );
 
             const string exeDir      = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
             const string exePacksDir = FileUtil::joinPath( exeDir, "Packs" );
