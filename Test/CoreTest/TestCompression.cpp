@@ -101,7 +101,7 @@ namespace
     public:
         static constexpr uint8 kMask = 0xA5;
 
-        sw::CompressionCodecType getCodecType() const override { return sw::CompressionCodecType::Zstd; }
+        sw::CompressionCodecType getCodecType() const override { return sw::CompressionCodecType::Custom; }
         const utf8*              getCodecName() const override { return "XorTest"; }
         size_t                   compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
 
@@ -135,13 +135,13 @@ namespace
 SW_TEST_CASE( Core_Compression, RegisteredCodecIsUsedByStream )
 {
     sw::CompressionCodecRegistry& registry  = sw::CompressionCodecRegistry::getDefault();
-    const bool                    bHadCodec = registry.isCodecRegistered( sw::CompressionCodecType::Zstd );
+    const bool                    bHadCodec = registry.isCodecRegistered( sw::CompressionCodecType::Custom );
 
     registry.registerCodec( sw::make_unique<XorTestCodec>() );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadCodec]()
     {
         if ( bHadCodec == false )
-            sw::CompressionCodecRegistry::getDefault().unregisterCodec( sw::CompressionCodecType::Zstd );
+            sw::CompressionCodecRegistry::getDefault().unregisterCodec( sw::CompressionCodecType::Custom );
     } ) );
 
     const sw::string original = "registered-codec-must-be-used";
@@ -149,7 +149,7 @@ SW_TEST_CASE( Core_Compression, RegisteredCodecIsUsedByStream )
     // **레지스트리를 넘기지 않는다** — 기본 레지스트리를 보는지가 이 테스트의 요점이다.
     sw::vector<uint8> compressedStream;
     SW_EXPECT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream,
-                                                           sw::CompressionCodecType::Zstd ) );
+                                                           sw::CompressionCodecType::Custom ) );
 
     // 페이로드가 XOR 되어 있어야 한다 — 내장 코덱으로 갔다면 원문 그대로다.
     SW_EXPECT_TRUE( compressedStream.size() > sizeof( sw::CompressionHeader ) );

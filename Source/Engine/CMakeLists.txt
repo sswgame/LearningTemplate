@@ -49,6 +49,24 @@ endforeach()
 # ResourcePackReader 가 uncompress 를 직접 부른다.
 find_package(ZLIB REQUIRED)
 
+# LZ4 · Zstd 코덱(Engine/Compression). zlib 과 같은 이유로 **Engine 에만** 붙인다 —
+# Core 는 압축 라이브러리에 종속되지 않게 두고, ReflectionParser 가 끌고 가지 않게 한다.
+find_package(lz4 CONFIG REQUIRED)
+find_package(zstd CONFIG REQUIRED)
+
+# zstd 는 vcpkg 구성(정적/공유)에 따라 노출하는 타겟 이름이 다르다. 하나만 적으면 다른 구성에서
+# configure 가 조용히 지나가고 링크에서 터진다 — zlib 이 준 교훈과 같은 자리다.
+if(TARGET zstd::libzstd)
+	set(swZstdTarget zstd::libzstd)
+elseif(TARGET zstd::libzstd_shared)
+	set(swZstdTarget zstd::libzstd_shared)
+elseif(TARGET zstd::libzstd_static)
+	set(swZstdTarget zstd::libzstd_static)
+else()
+	message(FATAL_ERROR "zstd 임포트 타겟을 찾지 못했습니다 (zstd::libzstd / _shared / _static).")
+endif()
+message(STATUS "[Engine] lz4=lz4::lz4 zstd=${swZstdTarget}")
+
 # 무엇으로 풀렸는지 configure 로그에 남긴다. 이 줄이 없던 동안 Linux CI 가
 # `libEngine.so: undefined reference to uncompress` 로 두 번 깨졌고, 그때마다 링크 구문만 보고는
 # ZLIB::ZLIB 이 실제로 무엇을 가리키는지(정적/공유, debug/release, vcpkg/시스템) 알 수 없었다.
@@ -92,6 +110,10 @@ target_link_libraries(Engine
     # `optimized;<경로>;debug;<경로>` 형태의 **확정된 경로 목록**이라 타겟 속성 해석에 좌우되지 않는다.
     # 둘 다 걸어 어느 한쪽이 비어도 심볼이 남지 않게 한다(중복 지정은 링커가 무시한다).
     ${ZLIB_LIBRARIES}
+
+    # LZ4 · Zstd — CompressionCodecRegistry 에 EngineLoop 이 등록하는 코덱들이 쓴다.
+    lz4::lz4
+    ${swZstdTarget}
 )
 
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)

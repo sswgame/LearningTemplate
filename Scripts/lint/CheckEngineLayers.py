@@ -98,6 +98,9 @@ _kRootLayerName = "<root>"
 _kEngineTier: dict[str, int] = {
     # 0: 토대 — Engine 의 어느 것도 참조하지 않는다.
     "Common": 0,
+    # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
+    # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
+    "Compression": 0,
     "Physics": 0,
     "Utility": 0,
     # 1: 리플렉션과, 코어가 쓰는 잎 서브시스템.

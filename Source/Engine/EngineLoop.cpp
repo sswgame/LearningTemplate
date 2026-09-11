@@ -18,6 +18,8 @@
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Compression/Lz4CompressionCodec.h"
+#include "Engine/Compression/ZstdCompressionCodec.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
@@ -205,6 +207,10 @@ namespace sw
             // 코덱 레지스트리는 **Core 가 소유**한다 — 이걸 봐야 하는 CompressionStream 이 Core 에 있어서,
             // 엔진이 들고 있으면 닿지 못한다. 여기서는 내장 코덱이 채워져 있는지만 확인하고 서비스로 공개한다.
             CompressionCodecRegistry::getDefault().initialize();
+            // 외부 라이브러리 코덱은 **여기서** 등록한다. Core 는 압축 라이브러리에 종속되지 않게 두므로
+            // (ReflectionParser 가 Core 를 링크한다) LZ4/Zstd 는 Engine 이 들고 와 붙인다.
+            CompressionCodecRegistry::getDefault().registerCodec( make_unique<Lz4CompressionCodec>() );
+            CompressionCodecRegistry::getDefault().registerCodec( make_unique<ZstdCompressionCodec>() );
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
             _componentDefaults = make_unique<ComponentDefaults>();

@@ -57,6 +57,8 @@
       "platform": "windows | linux"
     },
     "stb",
-    "zlib"
+    "zlib",
+    "lz4",
+    "zstd"
   ]
 }
