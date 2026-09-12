@@ -4,6 +4,12 @@
 
 namespace sw
 {
+    AnimClip::AnimClip()
+        : _name{}
+        , _durationSeconds{ 1.0f }
+    {
+    }
+
     AnimClip::AnimClip( string_view name, float32 durationSeconds )
         : _name{ name }
         , _durationSeconds{ durationSeconds > 0.0f ? durationSeconds : 1.0f } {}

@@ -11,10 +11,10 @@ namespace sw
      */
     struct SW_API DualQuaternion
     {
-        quaternion _real{ 0.0f, 0.0f, 0.0f, 1.0f };
-        quaternion _dual{ 0.0f, 0.0f, 0.0f, 0.0f };
+        quaternion _real;
+        quaternion _dual;
 
-        DualQuaternion() = default;
+        DualQuaternion();
         DualQuaternion( const quaternion& r, const float3& t );
         DualQuaternion( const quaternion& real, const quaternion& dual );
 

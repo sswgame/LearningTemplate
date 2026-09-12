@@ -82,11 +82,11 @@ namespace sw
 
         VulkanRHIDevice* _pDevice;
         /// @brief 이 컨텍스트가 기록할 버퍼. nullptr 이면 디바이스가 지금 연 버퍼를 따라간다.
-        VkCommandBuffer _targetBuffer{ nullptr };
+        VkCommandBuffer _targetBuffer;
         /// @brief 이 컨텍스트가 갱신할 기록 상태. 리스트가 자기 것을 넘기면 서로 간섭하지 않는다.
-        VulkanRecordingState* _pState{ nullptr };
+        VulkanRecordingState* _pState;
         /// @brief 슬롯 세트를 할당받는 풀 묶음. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 묶음을 쓴다.
-        VulkanDescriptorPoolSet* _pDescriptorPoolSet{ nullptr };
+        VulkanDescriptorPoolSet* _pDescriptorPoolSet;
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 게 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;

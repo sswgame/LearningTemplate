@@ -248,7 +248,7 @@ namespace sw
         D3D11RecordingState _recordingState;
 
         /// @brief 드라이버가 커맨드 리스트를 네이티브 지원하면 SW_TRUE — 병렬 기록 capability의 근거.
-        uint8 _bDriverCommandLists{ SW_FALSE };
+        uint8 _bDriverCommandLists;
 
         /// @brief 디스크립터 레지스트리 보호용. 커맨드 기록(D3D11RHICommandContext의 바인드 경로)이
         /// 인덱스로 이 목록들을 읽는 동안, register/unregister가 push_back으로 재할당을 일으키면

@@ -564,13 +564,13 @@ namespace sw
             uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
         };
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
-        uint32               _frameSegmentCursor{ 0 };
+        uint32               _frameSegmentCursor;
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는가 (첫 제출만 건다).
-        uint8 _bFrameAcquireWaitPending{ 0 };
+        uint8 _bFrameAcquireWaitPending;
         /// @brief b1(MaterialCB) 푸시 상수 경로 안내를 한 번만 남기기 위한 래치.
-        uint8 _bMaterialCbSlotWarned{ 0 };
+        uint8 _bMaterialCbSlotWarned;
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
-        VkCommandBuffer _activeFrameBuffer{ nullptr };
+        VkCommandBuffer _activeFrameBuffer;
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;

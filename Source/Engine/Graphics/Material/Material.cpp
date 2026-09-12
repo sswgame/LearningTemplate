@@ -52,6 +52,7 @@ namespace sw
         , _constantBuffer{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _elementStride{ 0 }
+        , _shaderLayoutBackendMask{ 0 }
         , _pRHIDevice{ nullptr }
         , _listAcquiredTexturePath{}
         , _listMaterialTextureSrv{}

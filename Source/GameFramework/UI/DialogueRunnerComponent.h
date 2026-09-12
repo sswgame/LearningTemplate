@@ -46,7 +46,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
-        string _graphPath{};
+        string _graphPath;
 
         using OnDialogueLineFunc     = OnDialogueLineDelegate;
         using OnDialogueChoicesFunc  = OnDialogueChoicesDelegate;

@@ -16,6 +16,7 @@ namespace sw
         : _pDevice{ pDevice }
         , _pContext{ pContext }
         , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
+        , _bAnnotationQueried{ false }
     {
     }
 
@@ -24,6 +25,7 @@ namespace sw
         : _pDevice{ pDevice }
         , _pContext{ pContext }
         , _pState{ pState }
+        , _bAnnotationQueried{ false }
     {
     }
 

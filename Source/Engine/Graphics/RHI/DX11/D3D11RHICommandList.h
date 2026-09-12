@@ -68,7 +68,7 @@ namespace sw
         /** @brief 디바이스에 Deferred Context 생성을 요청합니다. */
         static Microsoft::WRL::ComPtr<ID3D11DeviceContext> createNativeContext( D3D11RHIDevice* pDevice );
 
-        D3D11RHIDevice*                             _pDevice{ nullptr };
+        D3D11RHIDevice*                             _pDevice;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _pNativeContext;
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
         D3D11RHICommandContext                      _context;

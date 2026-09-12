@@ -65,6 +65,7 @@ namespace sw
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
         , _gpuTextures{}
+        , _bDriverCommandLists{ SW_FALSE }
         , _listRegisteredBindless{}
         , _listBindlessFree{}
         , _listRegisteredTexture{}

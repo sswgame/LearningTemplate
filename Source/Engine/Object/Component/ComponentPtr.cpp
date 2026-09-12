@@ -25,6 +25,7 @@ namespace sw
         , _targetComponentType{}
         , _pCachedPtr{ pTarget }
         , _cachedObjectId{ 0 }
+        , _pManager{ nullptr }
     {
         if ( pTarget != nullptr && pTarget->getOwner() != nullptr )
         {

@@ -170,21 +170,21 @@ namespace sw
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
-        string                                _name{};
-        string                                _sourcePath{}; ///< loadFromXml 경로
-        string                                _scenePath{};  ///< 대응 씬 XML
-        string                                _role{};       ///< ZoneRole 힌트 문자열
-        int32                                 _width{ 0 };
-        int32                                 _height{ 0 };
-        int32                                 _spawnX{ 1 };
-        int32                                 _spawnY{ 1 };
-        vector<uint8>                         _listWalkable{};
-        vector<uint8>                         _listEncounter{};
-        vector<uint8>                         _listPassThrough{};
-        vector<TileVisual>                    _listVisual{};
-        vector<TileWarp>                      _listWarp{};
-        vector<TileEncounterEntry>            _listEncounterEntry{};
-        mutable unordered_map<uint64, size_t> _mapWarpIndex{};
+        string                                _name;
+        string                                _sourcePath; ///< loadFromXml 경로
+        string                                _scenePath;  ///< 대응 씬 XML
+        string                                _role;       ///< ZoneRole 힌트 문자열
+        int32                                 _width;
+        int32                                 _height;
+        int32                                 _spawnX;
+        int32                                 _spawnY;
+        vector<uint8>                         _listWalkable;
+        vector<uint8>                         _listEncounter;
+        vector<uint8>                         _listPassThrough;
+        vector<TileVisual>                    _listVisual;
+        vector<TileWarp>                      _listWarp;
+        vector<TileEncounterEntry>            _listEncounterEntry;
+        mutable unordered_map<uint64, size_t> _mapWarpIndex;
     };
 
 } // namespace sw

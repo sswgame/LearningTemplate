@@ -42,6 +42,10 @@ namespace sw
         , _renderPassLoad{ nullptr }
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
+        , _frameSegmentCursor{ 0 }
+        , _bFrameAcquireWaitPending{ 0 }
+        , _bMaterialCbSlotWarned{ 0 }
+        , _activeFrameBuffer{ nullptr }
         , _listCommandBuffer{}
         , _listInFlightFence{}
         , _listImagesInFlight{}

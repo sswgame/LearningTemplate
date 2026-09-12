@@ -61,7 +61,7 @@ namespace sw::editor
     private:
         vector<CommandPaletteEntry>           _listAllCommand;
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
-        int32                                 _selectedIndex{ 0 };
-        bool                                  _bJustOpened{ false };
+        int32                                 _selectedIndex;
+        bool                                  _bJustOpened;
     };
 } // namespace sw::editor

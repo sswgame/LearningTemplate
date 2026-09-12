@@ -57,6 +57,8 @@ namespace sw
         : _pInitWindow{ nullptr }
         , _renderPassManager{ nullptr }
         , _bPreferredVSync{ false }
+        , _bImmediateSubmit{ false }
+        , _bParallelRecording{ false }
     {
     }
 

@@ -193,7 +193,7 @@ namespace sw
          *          _commandList 는 '첫 세그먼트'일 뿐이고 커맨드 리스트가 제출될 때마다 닫힌다 —
          *          그걸 그대로 돌려주면 닫힌 리스트에 기록하게 되어 UI 가 통째로 사라진다.
          */
-        void* getNativeContext() const override { return _activeFrameList != nullptr ? _activeFrameList : _commandList.Get(); }
+        void* getNativeContext() const override { return _pActiveFrameList != nullptr ? _pActiveFrameList : _commandList.Get(); }
 
         /** @brief ID3D12CommandQueue 포인터 반환 */
         void* getNativeCommandQueue() const override { return _commandQueue.Get(); }
@@ -403,11 +403,11 @@ namespace sw
         /// @brief 프레임 스트림을 자를 때마다 풀에서 빌린 추가 세그먼트들(프레임 끝에 반납).
         vector<D3D12CommandListEntry> _listFrameSegment;
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수 — 풀이 무한히 늘어나는지 보기 위한 계측.
-        std::atomic<uint32> _cmdListEntryCreated{ 0 };
+        std::atomic<uint32> _cmdListEntryCreated;
         /// @brief blitTexture 포맷/크기 불일치 경고를 한 번만 남기기 위한 래치.
-        uint8 _bBlitMismatchLogged{ 0 };
+        uint8 _bBlitMismatchLogged;
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 _commandList 로 시작한다.
-        ID3D12GraphicsCommandList* _activeFrameList{ nullptr };
+        ID3D12GraphicsCommandList* _pActiveFrameList;
         /// @brief `D3D12RHICommandList`(진짜 네이티브 프레임 리스트) 전용 얼로케이터 링 — 프레임 스트림과 별개.
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> _arrFrameCmdAllocator[constant::kMaxFrameCountInFlight];
         /// @brief 병렬 기록용 리스트/얼로케이터 재사용 풀. 태스크 스레드에서 동시에 빌려가므로 잠근다.
@@ -420,7 +420,7 @@ namespace sw
         /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
         mutex                _onlineBlockMutex;
         vector<uint32>       _listFreeOnlineBlock;
-        uint8                _bOnlineHeapExhaustedLogged{ 0 };
+        uint8                _bOnlineHeapExhaustedLogged;
         FrameResourceRing    _frameRing;
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 

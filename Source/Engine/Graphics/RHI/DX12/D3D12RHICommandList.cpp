@@ -11,6 +11,7 @@ namespace sw
     D3D12RHICommandList::D3D12RHICommandList( D3D12RHIDevice* pDevice )
         : _pDevice{ pDevice }
         , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : D3D12CommandListEntry{} }
+        , _bEntryDirty{ 0 }
         , _state{}
         , _context{ pDevice, _entry._list.Get(), &_state }
     {

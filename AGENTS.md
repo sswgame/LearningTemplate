@@ -180,7 +180,14 @@ namespace sw
 - Follow `.clang-format`.
 - When a constructor exists, initialize fields in the constructor (not in the
   header), in declaration order. Use brace initialization. Put one initializer
-  per line, with subsequent lines beginning with `,`.
+  per line, with subsequent lines beginning with `,`. An initial value has exactly
+  one home: writing it in both places hides which one wins (the constructor does) and
+  invites changing only one of them. Enforced by `CheckCodeConventions.py`
+  (`Style/HeaderMemberInitializer`, full-scan only — it has to read the header and the
+  `.cpp` together). Three cases keep their header defaults, because there the header is
+  the only place the value can live: a class whose default constructor is `= default` or
+  defined inline in the header, a delegating constructor (`: Self( ... )` cannot carry
+  member initializers — the target carries them), and a type with no constructor at all.
 - Arrange fields to minimize byte padding; use bit packing where appropriate.
 - Do not compare booleans through negation: write explicit comparisons such as
   `if (_bValid == false)`. Explicitly compare pointers to `nullptr` when needed.

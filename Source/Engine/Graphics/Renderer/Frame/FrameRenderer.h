@@ -480,10 +480,10 @@ namespace sw
         };
         vector<PassCbSlot> _listPassCbSlot;
         /// @brief 지금까지 한 프레임에서 쓴 슬롯 수의 최댓값 — 다음 프레임 용량 산정의 바닥값(단조 증가).
-        std::atomic<uint32> _passCbHighWater{ 0 };
-        std::atomic<uint32> _passCbCursor{ 0 };
+        std::atomic<uint32> _passCbHighWater;
+        std::atomic<uint32> _passCbCursor;
         /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
-        std::atomic<uint8> _bPassCbExhaustedLogged{ 0 };
+        std::atomic<uint8> _bPassCbExhaustedLogged;
         /**
          * @brief 이번 프레임의 뷰들 — 행렬·절두체·상수버퍼를 각자 소유합니다.
          * @details 예전엔 이 셋이 `_cullMainViewProj` / `_cullShadowViewProj` / `_arrGpuCullCb` 로
@@ -491,7 +491,7 @@ namespace sw
          *          한 번은 패스 상수버퍼를 드로우들이, 한 번은 컬링 상수버퍼를 뷰들이 나눠 썼다.
          *          이제 뷰를 얻으면 그 뷰의 것이 딸려 온다.
          */
-        RenderView _arrView[static_cast<uint32>( RenderViewType::Count )]{};
+        RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
 
         RHIBufferHandle    _instanceAnimCb;
         RHIDescriptorIndex _instanceAnimCbIndex;
@@ -564,13 +564,13 @@ namespace sw
          *          프레임 중간에 바뀌어도 최악은 한 프레임이 섞여 그려지는 것이고, PSO 변형은
          *          `ensureMaterialPsos` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있다.
          */
-        std::atomic<uint8> _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) };
+        std::atomic<uint8> _viewMode;
         /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
         unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.
-        std::atomic<uint8> _bPresentPsoMissingLogged{ 0 };
+        std::atomic<uint8> _bPresentPsoMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치 (드로우 경로라 프레임마다 찍으면 안 된다).
-        std::atomic<uint8>                   _bMaterialFallbackMissingLogged{ 0 };
+        std::atomic<uint8>                   _bMaterialFallbackMissingLogged;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         uint32                               _transientWidth;
         uint32                               _transientHeight;
@@ -587,7 +587,7 @@ namespace sw
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
         // 같은 바이트를 read-modify-write 해서 서로의 값을 날린다 — 독립 원자 변수로 뺀다.
         /// @brief 이번 프레임에 DepthPrepass 가 실행됐는가 (ForwardOpaque 의 PSO 선택에 쓴다).
-        std::atomic<uint8>          _bHasExecutedDepthPrepass{ 0 };
+        std::atomic<uint8>          _bHasExecutedDepthPrepass;
         RenderGraphExecutionContext _graphContext;
     };
 } // namespace sw

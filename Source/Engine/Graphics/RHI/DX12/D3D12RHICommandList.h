@@ -66,8 +66,8 @@ namespace sw
 
     private:
         D3D12RHIDevice*        _pDevice;
-        D3D12CommandListEntry  _entry;            ///< 이 리스트 전용 커맨드 리스트 + 얼로케이터
-        uint8                  _bEntryDirty{ 0 }; ///< 현재 쌍에 이미 기록한 적이 있는가(있으면 다음 begin 때 교체)
+        D3D12CommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 리스트 + 얼로케이터
+        uint8                  _bEntryDirty; ///< 현재 쌍에 이미 기록한 적이 있는가(있으면 다음 begin 때 교체)
         D3D12RecordingState    _state;
         D3D12RHICommandContext _context;
     };

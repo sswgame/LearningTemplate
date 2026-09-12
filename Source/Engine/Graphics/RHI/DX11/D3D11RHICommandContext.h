@@ -64,10 +64,10 @@ namespace sw
         D3D11RHIDevice*            _pDevice;
         ID3D11DeviceContext*       _pContext;
         /// @brief 이 컨텍스트가 갱신할 기록 상태.
-        D3D11RecordingState* _pState{ nullptr };
+        D3D11RecordingState* _pState;
         /** @brief _pContext 수명 동안 불변이라 최초 QueryInterface 결과를 재사용한다(마커마다 QI 방지). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
-        bool                                              _bAnnotationQueried{ false };
+        bool                                              _bAnnotationQueried;
     };
 } // namespace sw
 #endif

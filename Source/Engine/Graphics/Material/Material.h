@@ -223,8 +223,8 @@ namespace sw
         MaterialData               _data;
         RHIBufferHandle            _constantBuffer;
         RHIDescriptorIndex         _descriptorIndex;
-        uint32                     _elementStride;                /**< g_SwMaterials 원소 stride (리플렉션). 0 = 구조버퍼 머티리얼 아님 */
-        uint32                     _shaderLayoutBackendMask{ 0 }; /**< ensureShaderLayout 을 끝낸 백엔드 비트 */
+        uint32                     _elementStride;           /**< g_SwMaterials 원소 stride (리플렉션). 0 = 구조버퍼 머티리얼 아님 */
+        uint32                     _shaderLayoutBackendMask; /**< ensureShaderLayout 을 끝낸 백엔드 비트 */
         IRHIDevice*                _pRHIDevice;
         vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로 — shutdown 때 그대로 돌려준다
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬 백엔드 슬롯 바인딩용)

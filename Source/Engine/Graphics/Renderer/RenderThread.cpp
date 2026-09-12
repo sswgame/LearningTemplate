@@ -49,6 +49,9 @@ namespace sw
         , _bRunning{ false }
         , _bStop{ false }
         , _bContextBound{ false }
+        , _bLastImmediateSubmit{ false }
+        , _bScreenshotTaken{ 0 }
+        , _screenshotFrameCounter{ 0 }
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }

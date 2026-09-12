@@ -53,6 +53,6 @@ namespace sw
         void             bindMeshVaoAttribs( uint32 vbo );
         OpenGLRHIDevice* _pDevice;
         /// @brief 이 컨텍스트가 갱신할 기록 상태.
-        OpenGLRecordingState* _pState{ nullptr };
+        OpenGLRecordingState* _pState;
     };
 } // namespace sw

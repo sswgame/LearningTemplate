@@ -68,9 +68,9 @@ namespace sw
         PROPERTY()
         hashed_string _targetComponentType;
 
-        mutable Component*             _pCachedPtr{ nullptr };
-        mutable uint64                 _cachedObjectId{ 0 };
-        mutable sw::GameObjectManager* _pManager{ nullptr };
+        mutable Component*             _pCachedPtr;
+        mutable uint64                 _cachedObjectId;
+        mutable sw::GameObjectManager* _pManager;
     };
 
 } // namespace sw

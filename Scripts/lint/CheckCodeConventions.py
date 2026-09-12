@@ -1607,6 +1607,131 @@ def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path
     return violations
 
 
+
+_kHeaderTypeHeadRe = re.compile(r"^(\s*)(class|struct)\s+(?:SW_\w+\s+|[A-Z]\w*_API\s+)?([A-Z]\w*)\b")
+_kHeaderMemberRe = re.compile(
+    r"^(?P<indent>\s+)"
+    r"(?P<attr>(?:\[\[[^\]]*\]\]\s*|alignas\s*\([^)]*\)\s*|mutable\s+)*)"
+    r"(?P<decl>(?!return\b|using\b|typedef\b|friend\b|static\b|enum\b|struct\b|class\b)"
+    r"[A-Za-z_][\w:<>,\*&\s]*?)"
+    r"\s(?P<name>_\w+)\s*(?P<arr>(?:\[[^\]]*\]\s*)*)"
+    r"(?P<bits>:\s*\d+\s*)?"
+    r"(?P<init>(?:\{[^{}]*\}|=\s*[^;]+))?\s*;\s*(?P<trail>(?://|/\*).*)?$")
+
+
+def findCtorInitListClassesInternal(cppContent: str) -> set[str]:
+    """`.cpp` 에서 **초기화 리스트를 가진** 생성자를 정의하는 클래스 이름들을 모읍니다 (위임 생성자는 제외)."""
+    result: set[str] = set()
+    lines = cppContent.splitlines()
+    for index, line in enumerate(lines):
+        match = re.match(r"^\s*([A-Z]\w*)::\1\s*\(", line)
+        if match is None:
+            continue
+        className = match.group(1)
+        depth, cursor = 0, index
+        while cursor < len(lines):
+            depth += lines[cursor].count("(") - lines[cursor].count(")")
+            if depth <= 0:
+                break
+            cursor += 1
+        tail = lines[cursor].rsplit(")", 1)[-1].strip()
+        if tail.startswith("="):
+            continue
+        listLine = cursor if tail.startswith(":") else cursor + 1
+        while listLine < len(lines) and lines[listLine].strip() == "":
+            listLine += 1
+        if listLine >= len(lines):
+            continue
+        stripped = lines[listLine].strip()
+        if not stripped.startswith(":"):
+            continue
+        # 위임 생성자(`: ClassName( ... )`)는 멤버 초기화자를 가질 수 없다 — 규칙의 대상이 아니다.
+        if re.match(r"^:\s*" + re.escape(className) + r"\s*\(", stripped):
+            continue
+        result.add(className)
+    return result
+
+
+def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+    """
+    생성자가 초기화 리스트로 멤버를 채우는 클래스가, 헤더에서도 기본값을 주고 있는지 검사합니다.
+
+    한 멤버의 초기값이 두 곳에 적히면 어느 쪽이 이기는지 읽어서는 알 수 없고(생성자가 이긴다), 값을 고칠 때
+    한쪽만 고치는 일이 생깁니다. 정본은 하나여야 합니다 — 생성자가 있으면 생성자입니다.
+    헤더와 `.cpp` 를 같이 봐야 알 수 있으므로 **전체 스캔에서만** 돕니다.
+    """
+    violations: list[ConventionViolation] = []
+    mapCppToHeader = {}
+    for filePath in filesToScan:
+        if filePath.suffix.lower() == ".h":
+            mapCppToHeader[filePath] = filePath.with_suffix(".cpp")
+
+    for headerPath, cppPath in mapCppToHeader.items():
+        if not cppPath.is_file():
+            continue
+        try:
+            headerContent = headerPath.read_text(encoding="utf-8", errors="ignore")
+            cppContent = cppPath.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        ctorClasses = findCtorInitListClassesInternal(cppContent)
+        if not ctorClasses:
+            continue
+        try:
+            relPath = normalizePath(headerPath.relative_to(projectRoot))
+        except ValueError:
+            relPath = normalizePath(headerPath)
+
+        # 헤더에서 = default 기본 생성자나 인라인 생성자를 가진 클래스는 헤더 기본값이 유일한 초기화다.
+        exempt: set[str] = set()
+        for className in ctorClasses:
+            pattern = re.compile(r"^\s*(?:explicit\s+)?" + re.escape(className) + r"\s*\(\s*\)\s*(.*)$", re.M)
+            for m in pattern.finditer(headerContent):
+                tail = m.group(1).strip()
+                if "=default" in tail.replace(" ", "") or tail.startswith("{") or tail.startswith(":"):
+                    exempt.add(className)
+
+        stack: list[tuple[str, int]] = []
+        depth = 0
+        pending: str | None = None
+        for lineNum, line in enumerate(headerContent.splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*", "#")):
+                depth += line.count("{") - line.count("}")
+                while stack and depth <= stack[-1][1]:
+                    stack.pop()
+                continue
+            headMatch = _kHeaderTypeHeadRe.match(line)
+            if headMatch is not None and not stripped.endswith(";"):
+                pending = headMatch.group(3)
+            openBraces = line.count("{")
+            if openBraces and pending is not None:
+                stack.append((pending, depth))
+                pending = None
+            current = stack[-1][0] if stack else None
+            if current in ctorClasses and current not in exempt:
+                memberMatch = _kHeaderMemberRe.match(line.rstrip())
+                if (memberMatch is not None
+                        and "(" not in memberMatch.group("decl")
+                        and memberMatch.group("bits") is None
+                        and memberMatch.group("init")):
+                    violations.append(ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Style/HeaderMemberInitializer",
+                        message=(f"'{current}' 는 생성자에서 초기화 리스트를 쓰는데 "
+                                 f"멤버 '{memberMatch.group('name')}' 는 헤더에서도 기본값을 줍니다. "
+                                 "초기값의 정본은 한 곳이어야 합니다."),
+                        snippet=stripped,
+                        suggested_fix=f"헤더의 기본값을 지우고 {current} 생성자의 초기화 리스트에 "
+                                      "**선언 순서대로** 넣으세요.",
+                    ))
+            depth += openBraces - line.count("}")
+            while stack and depth <= stack[-1][1]:
+                stack.pop()
+    return violations
+
+
 def runConventionsCheck(rootDir: Path | None = None,
                         specificFiles: list[str] | None = None) -> list[ConventionViolation]:
     """
@@ -1649,6 +1774,7 @@ def runConventionsCheck(rootDir: Path | None = None,
 
     # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
     allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
+    allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
 
     return allViolations
 

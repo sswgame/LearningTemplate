@@ -596,12 +596,12 @@ namespace sw
         vector<hashed_string>                _listLayerName;
         vector<hashed_string>                _listLayerStack;
         BufferedActionItem                   _arrBufferedAction[kMaxBufferedActions];
-        uint32                               _bufferedActionCount{ 0 };
-        uint32                               _bufferedActionHead{ 0 };
+        uint32                               _bufferedActionCount;
+        uint32                               _bufferedActionHead;
         CommandHistoryEntry                  _arrCommandHistory[kMaxCommandHistory];
-        uint32                               _commandHistoryCount{ 0 };
-        uint32                               _commandHistoryHead{ 0 };
-        uint32                               _nextGeneration{ 1 };
+        uint32                               _commandHistoryCount;
+        uint32                               _commandHistoryHead;
+        uint32                               _nextGeneration;
         hashed_string                        _defaultLayerName;
         float2                               _mouseSensitivity;
         float2                               _gamepadSensitivity;

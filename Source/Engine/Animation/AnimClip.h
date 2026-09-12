@@ -25,7 +25,7 @@ namespace sw
     {
     public:
         /** @brief 기본 클립입니다. */
-        AnimClip() = default;
+        AnimClip();
         /** @brief 이름과 길이로 클립을 만듭니다. */
         AnimClip( string_view name, float32 durationSeconds );
 
@@ -47,6 +47,6 @@ namespace sw
 
     private:
         string  _name;
-        float32 _durationSeconds{ 1.0f };
+        float32 _durationSeconds;
     };
 } // namespace sw

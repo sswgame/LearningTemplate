@@ -23,6 +23,7 @@ namespace sw
         , _listVisual{}
         , _listWarp{}
         , _listEncounterEntry{}
+        , _mapWarpIndex{}
     {
     }
 

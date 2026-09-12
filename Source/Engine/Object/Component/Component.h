@@ -212,10 +212,10 @@ namespace sw
         uint64        _componentId;   ///< 컴포넌트 고유 시리얼 ID
         hashed_string _componentName; ///< 컴포넌트 식별 이름
 
-        atomic<uint64>      _subTickActiveMask{ 0 };                ///< 서브틱 1~63 활성 상태 O(1) 원자적 비트마스크
-        atomic<bool>        _bActive{ true };                       ///< 컴포넌트 개별 활성화
-        atomic<bool>        _bIsPendingKill{ false };               ///< 지연 삭제 플래그
-        TickGroup           _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
+        atomic<uint64>      _subTickActiveMask; ///< 서브틱 1~63 활성 상태 O(1) 원자적 비트마스크
+        atomic<bool>        _bActive;           ///< 컴포넌트 개별 활성화
+        atomic<bool>        _bIsPendingKill;    ///< 지연 삭제 플래그
+        TickGroup           _tickGroup;         ///< TickGroup 슬롯
         uint8               _bCanEverTick  : 1;
         uint8               _reservedFlags : 7;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록

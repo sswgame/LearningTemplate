@@ -70,8 +70,8 @@ namespace sw
             uint64 _uploadOffset{ 0 };
         };
 
-        Slot   _arrSlot[constant::kMaxFrameCountInFlight]{};
-        uint64 _uploadCapacity{ 0 };
-        uint32 _frameIndex{ 0 };
+        Slot   _arrSlot[constant::kMaxFrameCountInFlight];
+        uint64 _uploadCapacity;
+        uint32 _frameIndex;
     };
 } // namespace sw

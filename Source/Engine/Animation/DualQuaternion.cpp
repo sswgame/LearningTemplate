@@ -6,6 +6,12 @@
 
 namespace sw
 {
+    DualQuaternion::DualQuaternion()
+        : _real{ 0.0f, 0.0f, 0.0f, 1.0f }
+        , _dual{ 0.0f, 0.0f, 0.0f, 0.0f }
+    {
+    }
+
     DualQuaternion::DualQuaternion( const quaternion& r, const float3& t )
         : _real{ r }
         , _dual{

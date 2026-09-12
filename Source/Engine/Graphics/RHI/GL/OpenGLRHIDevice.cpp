@@ -50,6 +50,7 @@ namespace sw
         , _lastVsync{ -1 }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _boundTextureUnitMask{ 0 }
     {
         _resourceImpl = sw::make_unique<OpenGLRHIResource>( this );
     }

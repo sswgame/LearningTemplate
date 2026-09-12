@@ -109,6 +109,6 @@ namespace sw
         hashed_string                                              _previousMode;
         unordered_map<hashed_string, shared_ptr<IGameModeHandler>> _mapHandler;
         ModeChangedDelegate                                        _onModeChanged;
-        bool                                                       _bIsTransitioning{ false };
+        bool                                                       _bIsTransitioning;
     };
 } // namespace sw

@@ -13,6 +13,7 @@ namespace sw
         , _previousMode{}
         , _mapHandler{}
         , _onModeChanged{}
+        , _bIsTransitioning{ false }
     {
     }
 

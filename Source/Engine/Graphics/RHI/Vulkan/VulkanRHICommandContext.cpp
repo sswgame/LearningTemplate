@@ -75,6 +75,7 @@ namespace sw
         : _pDevice{ pDevice }
         , _targetBuffer{ nullptr }
         , _pState{ pDevice != nullptr ? &pDevice->_recordingState : nullptr }
+        , _pDescriptorPoolSet{ nullptr }
     {
     }
 

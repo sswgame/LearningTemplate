@@ -152,7 +152,7 @@ namespace sw
         string                                     _description;
         string                                     _enumType;
         string                                     _moduleName;
-        uint32                                     _typeSize{ 4 };
+        uint32                                     _typeSize;
         GlobalVariableRegistrar*                   _pNext;
 
         /**

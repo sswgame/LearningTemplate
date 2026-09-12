@@ -30,6 +30,9 @@ namespace sw
         , _dispatchCommandSignature{ nullptr }
         , _arrCommandAllocator{}
         , _commandList{ nullptr }
+        , _cmdListEntryCreated{ 0 }
+        , _bBlitMismatchLogged{ 0 }
+        , _pActiveFrameList{ nullptr }
         , _arrFrameCmdAllocator{}
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}

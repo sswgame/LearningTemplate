@@ -42,10 +42,10 @@ namespace sw
         void endCommandList() override;
 
     private:
-        VulkanRHIDevice*        _pDevice{ nullptr };
-        VulkanCommandListEntry  _entry{};          ///< 이 리스트 전용 커맨드 풀 + 커맨드 버퍼
-        uint8                   _bEntryDirty{ 0 }; ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체)
-        VulkanRecordingState    _state{};
+        VulkanRHIDevice*        _pDevice;
+        VulkanCommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 풀 + 커맨드 버퍼
+        uint8                   _bEntryDirty; ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체)
+        VulkanRecordingState    _state;
         VulkanRHICommandContext _context;
     };
 } // namespace sw

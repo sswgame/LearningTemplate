@@ -26,8 +26,8 @@ namespace test
         void                   deferCleanup( sw::Delegate<void()> cleanup ) const;
 
     private:
-        TestContext*           _pContext{ nullptr };
-        sw::GameObjectManager* _pObjectManager{ nullptr };
+        TestContext*           _pContext;
+        sw::GameObjectManager* _pObjectManager;
         sw::vector<uint64>     _listBaselineObjectId;
     };
 } // namespace test

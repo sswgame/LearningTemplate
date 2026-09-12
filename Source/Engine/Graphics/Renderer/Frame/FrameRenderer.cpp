@@ -49,6 +49,10 @@ namespace sw
         , _mapTransient{}
         , _listClearedThisFrame{}
         , _frameCtx{}
+        , _passCbHighWater{ 0 }
+        , _passCbCursor{ 0 }
+        , _bPassCbExhaustedLogged{ 0 }
+        , _arrView{}
         , _instanceAnimCb{ 0 }
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
         , _instanceSortCb{ 0 }
@@ -56,7 +60,10 @@ namespace sw
         , _bGpuCullingActive{ 0 }
         , _mapMaterialFallback{}
         , _mapEnginePso{}
+        , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _mapPresentPso{}
+        , _bPresentPsoMissingLogged{ 0 }
+        , _bMaterialFallbackMissingLogged{ 0 }
         , _transientWidth{ 0 }
         , _transientHeight{ 0 }
         , _outputRenderTarget{ 0 }
@@ -67,6 +74,7 @@ namespace sw
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _bHasExecutedDepthPrepass{ 0 }
         , _graphContext{}
     {
     }

@@ -276,8 +276,8 @@ namespace sw
         unique_ptr<RenderPassManager> _renderPassManager;
         bool                          _bPreferredVSync;
         /// @brief setImmediateSubmit 참고 — 프레임 스트림을 자를 때마다 즉시 제출할지.
-        bool _bImmediateSubmit{ false };
+        bool _bImmediateSubmit;
         /// @brief setParallelRecording 참고 — 지금이 병렬 패스 기록 구간인가.
-        bool _bParallelRecording{ false };
+        bool _bParallelRecording;
     };
 } // namespace sw

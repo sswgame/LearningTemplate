@@ -86,7 +86,7 @@ namespace sw
     void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
         auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
-        if ( pNative == nullptr || _commandQueue == nullptr || _activeFrameList == nullptr )
+        if ( pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr )
             return;
 
         ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
@@ -98,9 +98,9 @@ namespace sw
         // 그래프 뒤에 실행됐다 — 오프스크린 경로의 게임 RT 클리어가 대표적이다.
         // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
         // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
-        _activeFrameList->Close();
+        _pActiveFrameList->Close();
         releaseOnlineBlocksDeferred( _frameStreamState );
-        _listPendingSubmit.push_back( _activeFrameList );
+        _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
 
         // 즉시 모드에서도 잘라 담은 순서 그대로 내보내므로 실행 순서는 같다 — 제출 시점만 앞당긴다.
@@ -111,7 +111,7 @@ namespace sw
         }
 
         ID3D12GraphicsCommandList* pNextSegment = beginNextFrameSegment();
-        _activeFrameList                        = pNextSegment;
+        _pActiveFrameList                       = pNextSegment;
         if ( pNextSegment == nullptr )
         {
             _frameStreamState._bRecording = 0;
@@ -322,9 +322,9 @@ namespace sw
             _frameStreamState._bRecording      = 1;
             _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트 — 슬롯 테이블은 첫 드로우가 다시 굳힌다
             _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
-            _activeFrameList                   = _commandList.Get();
-            _frameStreamContext->rebindCommandList( _activeFrameList );
-            bindBindlessRootState( _activeFrameList );
+            _pActiveFrameList                  = _commandList.Get();
+            _frameStreamContext->rebindCommandList( _pActiveFrameList );
+            bindBindlessRootState( _pActiveFrameList );
         }
         _swapChain.acquireNextImage();
 
@@ -351,21 +351,21 @@ namespace sw
         viewport.MaxDepth = kDefaultViewportMaxDepth;
         viewport.TopLeftX = kDefaultViewportX;
         viewport.TopLeftY = kDefaultViewportY;
-        _activeFrameList->RSSetViewports( 1, &viewport );
+        _pActiveFrameList->RSSetViewports( 1, &viewport );
 
         D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
-        _activeFrameList->RSSetScissorRects( 1, &scissorRect );
+        _pActiveFrameList->RSSetScissorRects( 1, &scissorRect );
     }
 
     void D3D12RHIDevice::endFrame( bool vsync, bool bPresent )
     {
         if ( bPresent )
-            _swapChain.transitionTo( _activeFrameList, D3D12_RESOURCE_STATE_PRESENT );
+            _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
-        if ( _frameStreamState._bRecording != 0 && _activeFrameList != nullptr )
+        if ( _frameStreamState._bRecording != 0 && _pActiveFrameList != nullptr )
         {
-            _activeFrameList->Close();
-            _listPendingSubmit.push_back( _activeFrameList );
+            _pActiveFrameList->Close();
+            _listPendingSubmit.push_back( _pActiveFrameList );
             _frameStreamState._bRecording = 0;
             releaseOnlineBlocksDeferred( _frameStreamState );
         }
@@ -377,7 +377,7 @@ namespace sw
                                                 _listPendingSubmit.data() );
         }
         _listPendingSubmit.clear();
-        _activeFrameList = nullptr;
+        _pActiveFrameList = nullptr;
 
         // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
         for ( D3D12CommandListEntry& segment : _listFrameSegment )
