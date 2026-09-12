@@ -91,6 +91,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief Ready 상태면 true. */
         bool isReady() const { return _status == FrameRendererStatus::Ready; }
+
+        /**
+         * @brief GPU 메시 모프 진단 모드를 코드에서 고릅니다 (`-gv_morphDiag` 와 같은 값 체계, 음수 = 전역 변수 따름).
+         * @details 테스트가 쓴다. 2(컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물림)의 정답은 **레스트 포즈와 같은
+         *          그림**이라, 이 모드 하나로 "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수
+         *          있다. OpenGL 드라이버가 early-return 모양의 `SwMorphElementOf` 를 잘못 컴파일해 한 칸 어긋난
+         *          원소를 읽던 버그가 정확히 이 단언에 걸린다(binding.hlsli 주석 참고).
+         */
+        void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
         /** @brief 초기화/파이프라인 상태를 반환합니다. */
         FrameRendererStatus getStatus() const { return _status; }
         /** @brief Failed일 때 원인 메시지 (그 외 empty). */
@@ -532,6 +541,8 @@ namespace sw
         GpuMeshMorphPool _meshMorphPool;
         /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는가.
         uint8 _bMorphBindsRest;
+        /// @brief `setMeshMorphDiag` 가 준 값. 음수면 전역 변수 `gv_morphDiag` 를 따른다.
+        int32 _meshMorphDiagOverride;
         /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점. 스크래치 — 프레임 밖에서 의미 없다.
         vector<GpuMorphVertex> _listScratchMorphTag;
         /// @brief 이번 프레임 모프 대상 메시 — 프레임마다 할당하지 않으려고 들고 있는다.
@@ -567,6 +578,8 @@ namespace sw
          *          뒤에 두면 컬링이 한 프레임 늦은 모양으로 판정한다.
          */
         void dispatchMeshMorph();
+        /** @brief 지금 적용되는 모프 진단 모드 — 오버라이드가 있으면 그것, 없으면 `gv_morphDiag`. */
+        int32 getEffectiveMeshMorphDiag() const;
         /**
          * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 깊이순으로 되돌립니다 (gpucull/instancesort.hlsl).
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인/그림자)마다 자기 인자·목록을 따로 만든다.

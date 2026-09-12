@@ -79,6 +79,15 @@ namespace sw
                 SW_LOG_ERROR( "glClipControl 을 쓸 수 없습니다 (GL 4.5 / ARB_clip_control 필요) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다." );
             }
 
+            // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX·Vulkan 은 FIRST 라, `nointerpolation`
+            // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 전부
+            // 같아 증상이 없지만, 정점마다 다른 flat 값을 넘기는 날 GL 만 다른 그림을 낸다 — 백엔드 하나만
+            // 조용히 다른 종류의 버그는 여기서 미리 막는다.
+            if ( glad_glProvokingVertex != nullptr )
+                glProvokingVertex( GL_FIRST_VERTEX_CONVENTION );
+            else
+                SW_LOG_WARNING( "glProvokingVertex 를 쓸 수 없습니다 — nointerpolation 값이 DX·Vulkan 과 다른 정점에서 옵니다." );
+
             // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다 —
             // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
             // 인스턴스(t4)·가시 목록(t10)·모프 정점(t11)을 읽으므로, 한도가 그보다 작으면 링크는

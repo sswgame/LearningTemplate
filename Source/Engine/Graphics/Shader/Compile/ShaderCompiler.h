@@ -111,6 +111,14 @@ namespace sw
         vector<ShaderMacroDefine> _listDefine;                                      ///< 추가 전처리 매크로 (-D NAME=VALUE)
         ShaderStage               _stage        = ShaderStage::Vertex;              ///< 컴파일 대상 셰이더 스테이지
         ShaderTargetFormat        _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
+        /**
+         * @brief 디버그 정보 + 최적화 끔(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`)으로 컴파일할지.
+         * @details 예전엔 **빌드 구성**(SW_DEBUG)이 이걸 정했다. 그러면 구운 바이너리(저장소에 커밋되고 배포에
+         *          실리는 것)의 내용이 "어느 App.exe 가 베이커로 돌았나" 에 따라 달라진다 — 쿠커가 Debug 를
+         *          먼저 집으므로 커밋된 셰이더가 전부 무최적화였다. 지금은 **요청하는 쪽**이 정한다: 런타임
+         *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 베이커는 절대 켜지 않는다.
+         */
+        uint8 _bDebugCodegen = SW_FALSE;
     };
 
     /**

@@ -79,6 +79,7 @@ namespace sw
         , _meshMorphCb{ 0 }
         , _meshMorphCbIndex{ kInvalidDescriptorIndex }
         , _bMorphBindsRest{ SW_FALSE }
+        , _meshMorphDiagOverride{ -1 }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ SW_FALSE }
@@ -334,14 +335,20 @@ namespace sw
         }
     }
 
+    int32 FrameRenderer::getEffectiveMeshMorphDiag() const
+    {
+        return ( _meshMorphDiagOverride >= 0 ) ? _meshMorphDiagOverride : gv_morphDiag;
+    }
+
     void FrameRenderer::dispatchMeshMorph()
     {
+        const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다 — 배치의 base 가 kInvalidBase 로 남아 셰이더가
         // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같은 자리). 자세한 사연은 RHICapabilities.h.
         _bMorphBindsRest = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
-        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && gv_morphDiag == 0 )
+        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 )
             return;
 
         // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
@@ -375,7 +382,7 @@ namespace sw
             return;
 
         // 진단 2 — 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 물린다(위 gv 주석 참고).
-        if ( gv_morphDiag == 2 )
+        if ( morphDiag == 2 )
         {
             _bMorphBindsRest = SW_TRUE;
             return;
@@ -385,7 +392,7 @@ namespace sw
         //          건너뛴다. 그러면 한 장으로 "정점 셰이더가 제 원소를 짚었는가"(번호표)와 "그 원소의
         //          위치가 정점 스트림과 같은가"를 **따로** 볼 수 있다 — 값만 비교해서는 둘을 못 가른다.
         //          백로그 1-4 의 OpenGL 증상을 좁힌 것이 이 모드다.
-        if ( gv_morphDiag == 3 )
+        if ( morphDiag == 3 )
         {
             _listScratchMorphTag.clear();
             _listScratchMorphTag.reserve( _meshMorphPool.getVertexCount() );

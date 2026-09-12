@@ -3795,3 +3795,174 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     }
     SW_EXPECT_TRUE_MSG( notUpCount == 0, "바닥 평면의 노멀이 +Y 가 아니다" );
 }
+
+/**
+ * @brief GPU 메시 모프의 **정점 셰이더 풀 읽기**가 네 백엔드에서 같은지 픽셀로 봅니다.
+ * @details 세 장을 찍는다 — (A) 모프 안 켬(레스트), (B) 모프 켜되 컴퓨트 없이 **레스트 버퍼를 그대로 풀에
+ *          물림**(`setMeshMorphDiag(2)`), (C) 진짜 모프. B 의 정답은 A 와 **같은 그림**이다: 풀 원소 i 가
+ *          정점 i 의 레스트 값이므로 정점 셰이더가 제 원소를 읽으면 레스트와 픽셀이 같아야 한다.
+ *          OpenGL 드라이버가 early-return 모양의 `SwMorphElementOf` 를 잘못 컴파일해 정점마다 **한 칸 앞
+ *          원소**를 읽던 버그가 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
+ *          만 본다 — 시간에 따라 움직이므로 A 와 **달라야** 한다.
+ *          이 케이스가 없던 동안 GL 은 능력표로 꺼 두어 조용히 레스트를 그렸고, 원인은 두 세션 동안 셰이더
+ *          바깥(업로드·바인딩·인덱싱)에서 헛되이 찾았다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균.
+    struct Snapshot
+    {
+        uint32  _drawnCount{ 0 };
+        float32 _arrMean[3]{};
+        bool    _bOk{ false };
+    };
+
+    auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
+    {
+        Snapshot result{};
+        // 풀 빌드·GpuScene 업로드가 한 프레임 늦으므로 몇 프레임 돌린 뒤 읽는다.
+        constexpr uint32 kFrames = 4;
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < kFrames; ++frame )
+        {
+            device.beginFrame( clear );
+            if ( renderer.execute( &device, &scene ) == false )
+                return result;
+            device.endFrame( false, false );
+            device.waitIdle();
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+            return result;
+
+        uint64 arrSum[3]{};
+        for ( uint32 y = 0; y < layout._height; ++y )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+            for ( uint32 x = 0; x < layout._width; ++x )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                arrSum[0] += r;
+                arrSum[1] += pPixel[1];
+                arrSum[2] += b;
+                // 파이프라인 클리어 색(31, 38, 46) 이 아니면 그려진 픽셀이다 — FrameRendererParityAllBackends 와 같은 기준.
+                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                    ++result._drawnCount;
+            }
+        }
+        const uint32 pixelCount = layout._width * layout._height;
+        for ( uint32 channel = 0; channel < 3; ++channel )
+            result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+        result._bOk = pixelCount > 0;
+        return result;
+    };
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "MorphPoolIdentityScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // 메시를 **여럿** 둔다 — 풀 시작 오프셋(g_MorphVertexBase)이 배치마다 달라야 "오프셋 + vid" 가 실제로 검증된다.
+        constexpr uint32         kMeshCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kMeshCount];
+        for ( uint32 meshIndex = 0; meshIndex < kMeshCount && bOk; ++meshIndex )
+        {
+            arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
+            bOk                = arrMesh[meshIndex] != nullptr;
+            if ( bOk == false )
+                break;
+            sw::string      objectName = sw::string( "MorphCube" ) + sw::to_string( meshIndex );
+            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), static_cast<uint32>( objectName.size() ) ) );
+            bOk                        = go != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* meshComp = go->addComponent<sw::MeshComponent>();
+                bOk                         = meshComp != nullptr;
+                if ( bOk )
+                {
+                    meshComp->setMesh( arrMesh[meshIndex] );
+                    meshComp->setLocalPosition( sw::float3{ ( static_cast<float32>( meshIndex ) - 1.0f ) * 1.2f, 1.0f, 0.0f } );
+                }
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+
+        if ( bOk )
+        {
+            // (A) 레스트 — 모프를 요청하지 않은 메시는 입력 스트림 그대로 그려진다.
+            renderer.setMeshMorphDiag( 0 );
+            const Snapshot rest = snapshot( renderer, *device, scene );
+            SW_EXPECT_TRUE_MSG( rest._bOk && rest._drawnCount > 0, ( label + ": 레스트 그림을 못 읽었다" ).c_str() );
+
+            // (B) 풀 항등 — 모프를 켜되 컴퓨트를 건너뛰고 레스트 버퍼를 정점 셰이더에 물린다. 정답은 A 다.
+            for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+                mesh->setGpuMorphEnabled( true );
+            renderer.setMeshMorphDiag( 2 );
+            const Snapshot identity = snapshot( renderer, *device, scene );
+            SW_EXPECT_TRUE_MSG( identity._bOk, ( label + ": 풀 항등 그림을 못 읽었다" ).c_str() );
+            if ( rest._bOk && identity._bOk )
+            {
+                const uint32 tolerance = rest._drawnCount / 50 + 8; // 2% + 가장자리 AA 여유
+                const uint32 low       = rest._drawnCount > tolerance ? rest._drawnCount - tolerance : 0;
+                SW_EXPECT_TRUE_MSG( low <= identity._drawnCount && identity._drawnCount <= rest._drawnCount + tolerance,
+                                    ( label + ": 풀에서 읽은 레스트가 입력 스트림의 레스트와 다르다 (drawn " + sw::to_string( identity._drawnCount ) +
+                                      " vs " + sw::to_string( rest._drawnCount ) + ") — 정점 셰이더가 다른 원소를 읽고 있다" )
+                                        .c_str() );
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const float32 diff = identity._arrMean[channel] > rest._arrMean[channel] ? identity._arrMean[channel] - rest._arrMean[channel]
+                                                                                             : rest._arrMean[channel] - identity._arrMean[channel];
+                    SW_EXPECT_TRUE_MSG( diff <= 2.0f, ( label + ": 풀 항등 그림의 평균이 레스트와 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
+                }
+            }
+
+            // (C) 진짜 모프 — 컴퓨트가 정점을 밀었으니 레스트와 **달라야** 한다. 같으면 모프가 아예 안 걸린 것이다.
+            renderer.setMeshMorphDiag( 1 );
+            const Snapshot morphed = snapshot( renderer, *device, scene );
+            SW_EXPECT_TRUE_MSG( morphed._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
+            if ( rest._bOk && morphed._bOk )
+            {
+                const uint32 diffCount = morphed._drawnCount > rest._drawnCount ? morphed._drawnCount - rest._drawnCount : rest._drawnCount - morphed._drawnCount;
+                SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 50,
+                                    ( label + ": 모프를 켰는데 그림이 레스트와 같다 (drawn " + sw::to_string( morphed._drawnCount ) + " vs " +
+                                      sw::to_string( rest._drawnCount ) + ") — 컴퓨트 결과가 정점 셰이더에 닿지 않는다" )
+                                        .c_str() );
+            }
+            renderer.setMeshMorphDiag( -1 );
+        }
+
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseRhi( device.get() );
+        }
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
+}

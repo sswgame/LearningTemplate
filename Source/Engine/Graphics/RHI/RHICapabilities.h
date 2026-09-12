@@ -123,13 +123,11 @@ namespace sw
                     caps._bComputeRootConstants = SW_TRUE;
                     caps._bIndirectDraw         = SW_TRUE;
                     caps._bGpuCulling           = SW_TRUE;
-                    // **GL 만 꺼져 있다.** 원인은 아직 안 닫혔다 — 배제한 것과 남은 한 문장은 백로그 1-4 다.
-                    // 요약: 컴퓨트도, 업로드도, 버퍼 내용도, 바인딩도, 인덱싱도, 루트 상수도, 간접 인자도
-                    // 아니다(전부 되읽어 확인했다). 남은 사실은 하나다 — 정점 셰이더가 계산한 원소 번호가
-                    // **정점 스트림이 준 정점보다 하나 앞선다**. 원인을 찾기 전에는 켜지 않는다:
-                    // 백엔드 하나만 조용히 다른 그림을 내는 것이 이 저장소에서 가장 비싼 버그였다.
-                    // 지금은 GL 이 레스트 포즈로 깨끗이 폴백한다(`-gv_morphDiag` 로 강제로 켜 볼 수 있다).
-                    caps._bGpuMeshMorph             = SW_FALSE;
+                    // 오래 꺼져 있었다 — GL 만 정점 셰이더가 풀에서 **한 칸 앞 원소**를 읽었다. 엔진이 준 바이트는
+                    // 전부 되읽어 맞았고, 원인은 드라이버가 early-return 모양의 `SwMorphElementOf` (DXC 가
+                    // OpSwitch(0) 구조로 내는 코드) 를 잘못 컴파일한 것이었다. 분기 없는 한 식으로 바꾸자 네
+                    // 백엔드가 같다(binding.hlsli 주석). 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 잡는다.
+                    caps._bGpuMeshMorph             = SW_TRUE;
                     caps._bMultiDrawIndirect        = SW_TRUE;
                     caps._bParallelCommandRecording = SW_FALSE;
 #if defined( SW_PLATFORM_WINDOWS )

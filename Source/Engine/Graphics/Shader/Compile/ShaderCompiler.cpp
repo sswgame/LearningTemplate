@@ -263,6 +263,10 @@ namespace sw
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
                 // ShaderBaker 의 유효 소스 해시(모든 .hlsli 포함) 를 키에 섞는다.
                 hash = StringUtil::computeHash64( to_string( ShaderBaker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
+                // 디버그 코드젠 여부도 키다 — 같은 소스라도 바이트코드가 다르다.
+                // string_view 로 넘긴다 — 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
+                // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
+                hash = StringUtil::computeHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
 
                 fixed_string<constant::kMaxBuffer64> buf;
                 formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );
@@ -352,9 +356,8 @@ namespace sw
             if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
             {
                 UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
-    #if defined( SW_DEBUG )
-                compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-    #endif
+                if ( desc._bDebugCodegen != SW_FALSE )
+                    compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
                 Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
                 Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
@@ -580,10 +583,12 @@ namespace sw
                         listArgument.push_back( listDefineArg.back().c_str() );
                     }
 
-    #if defined( SW_DEBUG )
-                    listArgument.push_back( L"-Zi" );
-                    listArgument.push_back( L"-Od" );
-    #endif
+                    // 디버그 코드젠은 빌드 구성이 아니라 **요청**이 정한다 (ShaderCompileDesc::_bDebugCodegen).
+                    if ( desc._bDebugCodegen != SW_FALSE )
+                    {
+                        listArgument.push_back( L"-Zi" );
+                        listArgument.push_back( L"-Od" );
+                    }
 
                     DxcBuffer sourceBuffer{};
                     sourceBuffer.Ptr      = sourceBlob->GetBufferPointer();

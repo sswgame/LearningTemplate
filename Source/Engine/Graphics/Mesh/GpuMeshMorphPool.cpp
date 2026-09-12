@@ -80,12 +80,15 @@ namespace sw
         constexpr RHIBufferUsage kRestUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         constexpr RHIBufferUsage kMorphUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource |
                                                RHIBufferUsage::UnorderedAccess;
-        const uint32 stride = static_cast<uint32>( sizeof( GpuMorphVertex ) );
+        // 버퍼 원소는 **float4** 이고 정점 하나가 원소 둘이다 — 셰이더 선언(`StructuredBuffer<float4>`)과
+        // stride 가 같아야 DX11 이 SRV 를 받는다. 바이트 수는 정점 × sizeof(GpuMorphVertex) 그대로다.
+        const uint32 stride       = static_cast<uint32>( sizeof( float4 ) );
+        const uint32 elementCount = _vertexCount * kMorphFloat4PerVertex;
 
         // 레스트는 내용을 실어 만든다(한 번). 결과는 컴퓨트가 채우므로 초기값이 필요 없다.
-        if ( _rest.ensureCapacity( pDevice, stride, _vertexCount, kRestUsage, true, false, listRest.data() ) )
-            _rest.upload( pDevice, listRest.data(), _vertexCount * stride );
-        _morph.ensureCapacity( pDevice, stride, _vertexCount, kMorphUsage, true, true, nullptr );
+        if ( _rest.ensureCapacity( pDevice, stride, elementCount, kRestUsage, true, false, listRest.data() ) )
+            _rest.upload( pDevice, listRest.data(), elementCount * stride );
+        _morph.ensureCapacity( pDevice, stride, elementCount, kMorphUsage, true, true, nullptr );
 
         // UAV 를 못 받으면(백엔드·드라이버가 거절) 모프는 조용히 꺼진다 — 그리기는 레스트로 살아 있다.
         if ( _morph._uav == kInvalidDescriptorIndex )

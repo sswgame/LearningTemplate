@@ -37,10 +37,11 @@ namespace sw
 
     /**
      * @struct GpuMorphVertex
-     * @brief 모프 풀의 원소 — 셰이더의 `SwVertexData`(binding.hlsli) 와 레이아웃이 같아야 합니다.
-     * @details `RHIVertex` 를 그대로 쓰지 않는 이유는 **정렬**이다. std430 은 vec4 를 16 바이트 경계에
-     *          맞추므로 `float3` 뒤의 `float4` 가 어긋난다 — DX/Vulkan 은 DXC 가 명시 오프셋을 적어
-     *          넘어가지만 OpenGL 에서는 기하가 무너진다(실제로 GL 만 그랬다). 그래서 전부 `float4` 다.
+     * @brief 모프 풀의 정점 하나 — GPU 에서는 **float4 둘**로 보인다(`g_SwMorphVertices`, binding.hlsli).
+     * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 다. 처음엔 구조체였고 레이아웃도
+     *          네 백엔드가 같았는데 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽었다(사연은
+     *          binding.hlsli). 그래서 버퍼의 원소는 float4 이고 정점당 `kMorphFloat4PerVertex` 개다 —
+     *          이 구조체는 CPU 가 채우는 모양일 뿐이며, 바이트 배치는 float4 둘과 같다.
      */
     struct GpuMorphVertex
     {
@@ -48,7 +49,10 @@ namespace sw
         float4 _normal{};   ///< 변형된 노멀 — 컴퓨트가 위치와 **같이** 다시 만든다. w 는 쓰지 않는다.
     };
 
-    static_assert( sizeof( GpuMorphVertex ) == 32, "모프 풀 원소는 float4 둘(32바이트)이어야 한다 — 셰이더 SwVertexData 와 같은 크기" );
+    static_assert( sizeof( GpuMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
+
+    /// @brief 정점 하나가 차지하는 버퍼 원소(float4) 수. 셰이더의 `SW_MORPH_FLOAT4_PER_VERTEX` 와 같아야 한다.
+    inline constexpr uint32 kMorphFloat4PerVertex = 2;
 
     /**
      * @class GpuMeshMorphPool

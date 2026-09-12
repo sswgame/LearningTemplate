@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `ef165c97`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `bc81d8d0`
 
 ---
 
@@ -214,76 +214,14 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-4. GPU 메시 모프의 **OpenGL** 경로 — 정점 셰이더가 짚은 원소가 한 칸 어긋난다
+### 1-4b. `glProvokingVertex( FIRST )` 는 걸었다 — **검증 테스트가 남았다**
 
-`_bGpuMeshMorph` 를 **GL 만** 끄고 있다. 폴백은 깨끗하다(모프 켬/끔 40,388 vs 40,421 · 사실상 동일).
-**DX12 · DX11 · Vulkan 은 정상이다**(모프 켜면 각각 37,639 / 38,048 / 37,797 — 레스트 40,3xx 에서
-같은 폭으로 줄어든다). 측정은 전부 진짜 백엔드 플래그(`-dx12/-dx11/-vk/-gl`)로 했다.
+GL 기본은 LAST, DirectX·Vulkan 은 FIRST 라 `nointerpolation` 값이 삼각형의 다른 정점에서 온다. 디바이스
+초기화에서 FIRST 로 맞췄다(`OpenGLRHIDeviceInit.cpp`). 그런데 지금 flat 으로 넘기는 값(`materialIndex`)은
+배치 안에서 전부 같아서 **이 한 줄이 실제로 그림을 바꾸는지 확인할 방법이 없다** — 눈으로도, 기존
+테스트로도. 정점마다 다른 `nointerpolation` 값을 넘기는 셰이더로 네 백엔드가 같은 그림을 내는지 보는
+`RenderPassGpuTest` 케이스를 만들어야 닫힌다. 그때까지는 "설정은 했지만 검증되지 않은 한 줄" 이다.
 
-**먼저: 예전에 여기 적혀 있던 결론 두 개는 틀렸다.**
-- ~~"Vulkan 도 깨져 있다"~~ — 그건 **구운 셰이더가 낡았던 것**이다. `forwardlit` 바이너리가 라이트
-  버퍼 이전 것으로 커밋돼 있었다(2-x "베이크 신선도" 참고, 이번에 고쳤다). 다시 구워 재니 맞는다.
-- ~~"컴퓨트의 레스트 버퍼 읽기(t0)가 틀린다"~~ — **컴퓨트는 무죄다.** `-gv_morphDiag=2` 는 컴퓨트를
-  아예 돌리지 않고 레스트 버퍼를 정점 셰이더에 그대로 물리는데, GL 은 **그래도 무너진다**
-  (30,015 vs 레스트 40,368). DX12·DX11·Vulkan 은 이 설정에서 레스트와 같은 그림을 낸다.
-
-**남은 사실은 한 문장이다.** 정점 셰이더가 계산한 풀 원소 번호가, **정점 스트림이 그 정점에 준
-데이터보다 한 칸 앞선다**. `-gv_morphDiag=3`(원소마다 노멀 자리에 자기 번호를 적어 올린다)으로
-"제 원소를 짚었는가" 와 "그 원소의 내용이 스트림과 같은가" 를 갈라 보면 GL 은:
-- 번호표는 **맞다** (`pool[el].nrm.x == el`) — 읽기와 인덱싱 자체는 정상이다.
-- 위치는 **틀리다**. 내 위치를 가진 원소를 찾아 그 번호표를 읽으면 **정확히 `el + 1`** 이다.
-- 마지막 정점은 `el + 1` 이 범위를 넘어 폴백으로 떨어진다(그림에 노란 픽셀 ~730개).
-
-**배제한 것 (전부 되읽어 실측했다)**
-1. ~~컴퓨트 셰이더~~ — 위 `-gv_morphDiag=2`.
-2. ~~CPU 업로드·버퍼 내용~~ — `glGetBufferSubData` 로 SSBO 를 되읽었다. 원소 0·1·2 가 정확히
-   `Mesh::getVertices()[0..2]` 이고 번호표도 0·1·2 다.
-3. ~~정점 버퍼 내용·스트라이드·오프셋~~ — 같은 방식으로 VBO 를 되읽었다. stride 48 · offset 0 ·
-   앞 세 정점이 `getVertices()` 와 일치.
-4. ~~구조버퍼 바인딩~~ — 슬롯 11 에 걸린 GL 이름을 찍어 확인했다.
-5. ~~드로우별 루트 상수~~ — `g_MorphVertexBase` 와 `g_InstanceBase` 를 색으로 찍었다. 둘 다 0.
-6. ~~간접 드로우 인자~~ — 되읽으면 `{36,1,0,0}`(정점 36 · 인스턴스 1 · first 0 · baseInstance 0).
-7. ~~인다이렉트 경로 자체~~ — 인자를 CPU 로 되읽어 `glDrawArraysInstanced` 로 직접 그려도 같다.
-8. ~~GPU 컬링~~ — `-gv_gpuCulling=0` 도 같다.
-9. ~~`SV_VertexID` 의 SPIR-V 내장 변수 선택~~ — `VertexIndex`(42) 를 `VertexId`(5) 로 바꿔 굽는
-   패치를 꺼서 `VertexIndex` 그대로 둬도 같다. 양 끝(`vid==0`, `vid>=36`)을 색으로 찍으면
-   DX12·Vulkan·GL 이 같은 그림이다.
-10. ~~SPIR-V 레이아웃~~ — `ArrayStride 32` · 멤버 오프셋 0/16 이 네 백엔드 모두 같다.
-
-**다음에 볼 것**
-- GL 스펙상 `glDrawArrays*` 계열에서 `gl_VertexID` 와 정점 속성 인출 인덱스는 **같은 값**이어야
-  한다. 위 사실들은 그 둘이 1 만큼 어긋난다고 말한다 — 즉 남은 자리는 (a) 드라이버의 SPIR-V
-  경로, (b) 아직 안 본 GL 상태(VAO 잔여 상태·`glVertexAttribDivisor`·프로보킹 정점) 둘 중 하나다.
-- **`glProvokingVertex` 를 한 번도 부르지 않는다**(GL 기본 = LAST, DX·Vulkan = FIRST). 지금은
-  `nointerpolation` 값(`materialIndex`)이 배치 안에서 전부 같아 증상이 없지만, 정점마다 다른
-  flat 값을 넘기는 날 **GL 만** 다른 그림을 낸다. 이 항목과 별개로 닫아 둘 것.
-- 정점 데이터를 입력 어셈블러에서 구조버퍼로 옮기는 전환(언리얼의 manual vertex fetch)은 **정확히
-  이 경로**에 기댄다. 지금 전환하면 OpenGL 의 폴백이 "레스트 포즈" 가 아니라 **아무것도 안 그려짐**이
-  된다. 그래서 이 항목이 그 전환보다 앞이다.
-
-**재현 방법** (도구는 전부 저장소에 있다)
-
-```powershell
-cd build/Ninja-Debug/Bin
-# 레스트 · 컴퓨트 없이 레스트 버퍼 물림 · 전체 경로 를 백엔드마다 한 장씩
-./App.exe -gl   -gv_benchMeshes=300 -gv_benchMeshShapes=1 -gv_benchMeshMorph=1 -gv_morphDiag=2 `
-          -gv_screenshot=gl_diag2.ppm -gv_screenshotFrame=10 -gv_profileFrames=20
-./App.exe -dx12 -gv_benchMeshes=300 -gv_benchMeshShapes=1 -gv_benchMeshMorph=1 -gv_morphDiag=2 `
-          -gv_screenshot=dx12_diag2.ppm -gv_screenshotFrame=10 -gv_profileFrames=20
-```
-
-
-### 1-4b. OpenGL 이 `glProvokingVertex` 를 한 번도 부르지 않는다
-
-GL 기본은 **LAST**, DirectX·Vulkan 은 **FIRST** 다. 지금은 `nointerpolation` 으로 넘기는 값이
-`materialIndex` 하나뿐이고 그 값이 배치 안에서 전부 같아서 증상이 없다 — 정점마다 다른 flat 값을
-넘기는 날 **GL 만** 다른 그림을 낸다. 이 저장소에서 가장 비싼 종류의 버그(백엔드 하나만 조용히
-다르다)의 씨앗이므로, 증상이 나기 전에 `glProvokingVertex( GL_FIRST_VERTEX_CONVENTION )` 을
-디바이스 초기화에 한 줄 넣어 닫는다.
-
-**검증은 눈으로 안 된다.** 정점마다 다른 flat 값을 넘기는 셰이더가 지금 없으므로, 닫을 때
-`RenderPassGpuTest` 에 "정점마다 다른 `nointerpolation` 값을 넘겨 네 백엔드가 같은 그림을 내는가"
-케이스를 같이 만든다. 그게 없으면 이 한 줄은 검증되지 않은 채로 남는다.
 
 ### 1-4c. `RHITest.OffscreenDrawIsReadable` 이 Vulkan·OpenGL 에서 실패한다 (기존 결함)
 
@@ -393,6 +331,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (GL 모프가 산다 — 드라이버가 early-return 을 잘못 컴파일하고 있었다)
+
+**네 백엔드 전부 GPU 메시 모프가 켜져 있다.** 모프 끔→켬 그려진 픽셀: dx12 40,338→37,588 · dx11
+40,370→38,043 · vk 40,374→37,811 · **gl 40,404→38,378**. `_bGpuMeshMorph` 에 예외가 없다.
+
+**원인.** 정점 셰이더의 `SwMorphElementOf` 가 평범한 early-return 이었다:
+`if ( base == INVALID || … ) return INVALID; element = base + vid; return element < count ? element : INVALID;`.
+DXC 는 이것을 SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, **OpenGL 드라이버가 그 모양을 잘못
+컴파일했다** — 같은 인보케이션에서 같은 UBO 멤버(`g_MorphVertexBase`)를 세 번 읽는 자리 중 덧셈에 쓰인
+것만 -1 이 됐다(팩 프로브로 `el=vid-1, vid, base=0` 을 삼각형마다 읽어 확정). 결과는 정점마다 **한 칸 앞
+원소**를 읽는 것이고, 마지막 정점은 범위를 넘어 폴백(노란 픽셀 ~730개)이었다. 분기 없는 한 식
+(`bValid ? element : INVALID`)으로 바꾸자 GL 도 `el == vid == base + vid`. DX12·DX11·Vulkan 은 같은 소스로
+처음부터 멀쩡했다.
+
+**왜 오래 걸렸나.** 두 세션 동안 셰이더 **바깥**만 팠다 — 컴퓨트, 업로드, 버퍼 내용, 바인딩, 인덱싱,
+루트 상수, 간접 인자, 컬링, `VertexId` 내장 변수, 구조체 레이아웃(평면 float4 배열로 바꿔도 같았다).
+전부 되읽어 맞았고, 그 "전부 맞는데 틀린다" 가 곧 답이었다: 남는 건 셰이더 컴파일뿐이다. 결정타는
+프로브를 **보간 없이**(`nointerpolation` 슬롯에 `el|vid<<8|base<<16` 을 실어) 읽은 것 — 보간된 색으로는
+"둘의 짝이 어긋난다" 까지만 보이고 어느 쪽이 얼마나인지는 안 보였다.
+
+**같이 닫은 것.**
+- **Debug 빌드가 `-Zi -Od` 로 굽고 있었다.** 쿠커가 Debug `App.exe` 를 먼저 집으므로 저장소에 커밋되고
+  배포에 실리는 바이너리가 전부 무최적화였다. 디버그 코드젠은 빌드 구성이 아니라 **요청**이 정한다
+  (`ShaderCompileDesc::_bDebugCodegen`): 런타임 라이브 컴파일만 Debug 에서 켜고 베이커는 절대 켜지 않는다.
+  캐시 키(인메모리·로컬 오버라이드 폴더·컴파일러 디스크)에 그 여부가 들어간다.
+- 그 키에 리터럴을 그대로 넘겼다가 `computeHash64( const char*, length, bIgnoreCase )` 오버로드에 묶여
+  **키가 상수**가 됐고, 모든 셰이더가 캐시 파일 하나를 공유해 DX12 가 PS 자리에 `vs_5_0` 을 받았다.
+  `string_view` 로 넘겨야 한다 — 같은 실수를 할 자리가 그 함수에 하나 더 있다(`to_string(...)` 은 string 이라 안전).
+- 모프 풀 원소를 `struct { float4 pos; float4 nrm; }` 에서 **평면 `float4` 배열**(정점당 둘)로 바꿨다. 원인은
+  아니었지만 드라이버가 볼 구조체가 하나 줄고 C++ 스트라이드가 `sizeof(float4)` 로 단순해져 그대로 둔다.
+- `glProvokingVertex( FIRST )` — 1-4b 에 검증 테스트가 남았다.
+
+**회귀는 픽셀로 잡는다.** `RenderPassGpuTest.MorphPoolIdentityMatchesRest` — (A) 레스트, (B) 컴퓨트 없이
+레스트 버퍼를 풀에 물림(`FrameRenderer::setMeshMorphDiag(2)`, 정답은 A 와 같은 그림), (C) 진짜 모프(A 와
+달라야 함)를 네 백엔드에서 찍는다. early-return 을 되돌려 돌리면 **GL 에서만** "정점 셰이더가 다른 원소를
+읽고 있다 (286,505 vs 561,645)" 로 떨어지는 것을 확인했다(변이 테스트).
+
 
 ### 2026-09-13 (구워 둔 셰이더가 소스와 어긋난 채 커밋돼 있었다)
 

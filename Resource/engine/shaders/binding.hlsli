@@ -114,23 +114,19 @@ struct SwVertexInput
 };
 
 // ------------------------------------------------------------------------------
-// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GpuMorphVertex` 와 레이아웃 일치.
+// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GpuMorphVertex` 와 바이트 배치 일치(float4 둘).
 //      메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
 //      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
-// **전부 float4 다.** float3 뒤에 float4 를 두면 std430 이 vec4 를 16 바이트 경계에 맞추는데
-// DX/Vulkan 은 DXC 가 명시 오프셋을 적어 그대로 읽는다 — 그러면 OpenGL(ARB_gl_spirv)에서만
-// 어긋나 기하가 무너진다(실제로 그랬다). 풀 원소는 엔진 내부 형식이라 `RHIVertex` 와 같을 이유가
-// 없으므로 정렬이 안전한 모양으로 둔다.
+// **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 둘 — [2i] 위치, [2i+1] 노멀(w 는 안 쓴다).
+// 처음엔 `struct { float4 pos; float4 nrm; }` 였고 레이아웃도 네 백엔드가 같았다(ArrayStride 32 ·
+// 오프셋 0/16). 그런데 OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽었다** — 원소 번호를 노멀
+// 자리에 적어 올리면 번호는 맞는데 위치는 옆 원소 것이었고, 그 값이 셰이더를 어떻게 짜느냐에
+// 따라 달라졌다. 엔진이 준 바이트는 되읽어 전부 확인했으므로 남는 건 드라이버의 SPIR-V 경로가
+// 구조체 멤버 로드를 다루는 방식이다. 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
-// 예전엔 색을 같이 담았는데 아무도 읽지 않았다(정점당 16바이트 × 풀 상한 400만 = 64MB).
-struct SwVertexData
-{
-	float4 pos;
-	float4 nrm; // 변형된 노멀 — 컴퓨트가 위치와 **같이** 다시 만든다(w 는 쓰지 않는다)
-};
-
-SW_DECLARE_STRUCTURED_BUFFER( SwVertexData, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
+#define SW_MORPH_FLOAT4_PER_VERTEX 2u
+SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
 
 /**
  * @brief 이 정점의 풀 원소 번호 — 모프 대상이 아니면 `SW_INVALID_INDEX`.
@@ -138,12 +134,18 @@ SW_DECLARE_STRUCTURED_BUFFER( SwVertexData, g_SwMorphVertices, SW_SLOT_MORPH_VER
  *          (3) 예산이 모자라 이 메시가 풀에 못 들어갔을 수 있다. 셋 다 "레스트 포즈로 그린다" 로
  *          끝나야 한다 — 언리얼도 스킨 캐시가 차면 일반 경로로 되돌아간다.
  */
+// **분기 없는 한 식이어야 한다.** 처음엔 `if (base == INVALID || …) return INVALID;` 로 시작하는 평범한
+// early-return 이었다. DXC 는 그것을 SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가
+// 그 모양을 잘못 컴파일해 **같은 인보케이션에서 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 냈다 —
+// 결과는 정점마다 한 칸 앞 원소를 읽는 것. DX12·DX11·Vulkan 은 같은 소스로 멀쩡했다.
+// 여기서 분기를 없애자 GL 도 같아졌다. 이 함수를 고칠 일이 있으면 분기 없이 유지할 것 —
+// 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
 uint SwMorphElementOf( uint vertexId )
 {
-	if ( SW_DRAW_MORPH_BASE == SW_INVALID_INDEX || g_SwMorphVerticesIndex == SW_INVALID_INDEX )
-		return SW_INVALID_INDEX;
-	const uint element = SW_DRAW_MORPH_BASE + vertexId;
-	return ( element < g_SwMorphVertexCount ) ? element : SW_INVALID_INDEX;
+	const uint base    = SW_DRAW_MORPH_BASE;
+	const uint element = base + vertexId;
+	const bool bValid  = ( base != SW_INVALID_INDEX ) && ( g_SwMorphVerticesIndex != SW_INVALID_INDEX ) && ( element < g_SwMorphVertexCount );
+	return bValid ? element : SW_INVALID_INDEX;
 }
 
 /**
@@ -160,8 +162,8 @@ void SwLoadMorphedVertex( uint vertexId, float3 restPosition, float3 restNormal,
 	const uint element = SwMorphElementOf( vertexId );
 	if ( element == SW_INVALID_INDEX )
 		return;
-	outPosition = g_SwMorphVertices[element].pos.xyz;
-	outNormal   = g_SwMorphVertices[element].nrm.xyz;
+	outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+	outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
 }
 
 /**
@@ -171,7 +173,7 @@ void SwLoadMorphedVertex( uint vertexId, float3 restPosition, float3 restNormal,
 float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
 {
 	const uint element = SwMorphElementOf( vertexId );
-	return ( element == SW_INVALID_INDEX ) ? restPosition : g_SwMorphVertices[element].pos.xyz;
+	return ( element == SW_INVALID_INDEX ) ? restPosition : g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
 }
 
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.

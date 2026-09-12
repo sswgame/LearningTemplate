@@ -64,6 +64,7 @@ namespace sw
 
         StringBuilder<constant::kMaxBuffer64> sb;
         sb.appendFormat( "%#", Fmt( sourceHash, Format( 16, Format::Padding::Zero ).hex() ) );
+        sb.append( desc._bDebugCodegen != SW_FALSE ? "-dbg" : "-opt" ); // 같은 소스라도 코드젠이 다르면 다른 파일이다
 
         const string rhiDir    = FileUtil::joinPath( "Saved/ShaderCache", rhiFolder );
         const string sourceDir = FileUtil::joinPath( rhiDir, string( sb.c_str(), sb.size() ) );
@@ -102,6 +103,7 @@ namespace sw
 
         StringBuilder<constant::kMaxBuffer256> sb;
         sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
+        sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
         for ( const auto& def : desc._listDefine )
         {
             sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
@@ -197,7 +199,13 @@ namespace sw
         // 3순위 (런타임 DXC 컴파일 폴백 — Dev 모드 전용)
 #if !defined( SW_SHIPPING )
         BLOCK( "캐시 미스: HLSL 컴파일 및 로컬 캐시 업데이트" )
-        ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( desc );
+        // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 — RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
+        // 베이커는 이 경로를 타지 않으므로 구운 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
+        ShaderCompileDesc liveDesc = desc;
+    #if defined( SW_DEBUG )
+        liveDesc._bDebugCodegen = SW_TRUE;
+    #endif
+        ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( liveDesc );
         if ( compiledResult._bSuccess )
         {
             const string localDir = FileUtil::getDirectoryPart( localCachePath );

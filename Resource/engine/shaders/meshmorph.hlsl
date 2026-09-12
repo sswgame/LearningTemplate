@@ -16,12 +16,9 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSrv, 0 ) / bindComputeUAV( morphUav, 0 ).
  */
 
-// binding.hlsli 의 SwVertexData 와 **같은 레이아웃이어야 한다** — 정렬 사연은 그쪽 주석 참고.
-struct SwVertexData
-{
-	float4 pos;
-	float4 nrm;
-};
+// binding.hlsli 의 g_SwMorphVertices 와 **같은 배치여야 한다** — 정점 하나 = float4 둘([2i] 위치,
+// [2i+1] 노멀). 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽었다).
+#define SW_MORPH_FLOAT4_PER_VERTEX 2u
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 {
@@ -31,8 +28,8 @@ SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 	uint  g_MorphVertexCount;
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( SwVertexData, g_RestVertices, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( SwVertexData, g_MorphVerticesRW, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
 
 [numthreads(64, 1, 1)]
 void CSMain(uint3 dtid : SV_DispatchThreadID)
@@ -41,12 +38,14 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	if (idx >= g_MorphVertexCount)
 		return;
 
-	const SwVertexData rest = g_RestVertices[idx];
+	const uint   element = idx * SW_MORPH_FLOAT4_PER_VERTEX;
+	const float4 restPos = g_RestVertices[element];
+	const float4 restNrm = g_RestVertices[element + 1u];
 
 	// 변형은 **정점 노멀 방향**으로 민다. 예전엔 원점 기준 방향을 법선 대신 썼다 — 정점에 노멀이
 	// 없던 시절의 대용이고, 원점 중심 도형에만 맞는 가정이었다(바닥 평면 같은 건 엉뚱하게 밀린다).
-	const float3 restPosition = rest.pos.xyz;
-	const float3 restNormal   = normalize(rest.nrm.xyz);
+	const float3 restPosition = restPos.xyz;
+	const float3 restNormal   = normalize(restNrm.xyz);
 
 	// 위상을 위치에서 뽑아 정점마다 어긋나게 한다 — 전부 같은 위상이면 도형이 통째로 커졌다 작아질 뿐
 	// 모양이 변하지 않아, 변형이 실제로 걸렸는지 그림으로 구분할 수 없다.
@@ -63,8 +62,6 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	const float3 gradient      = float3(gradientScale, gradientScale, gradientScale);
 	const float3 tangentialGradient = gradient - restNormal * dot(gradient, restNormal);
 
-	SwVertexData morphed;
-	morphed.pos = float4(restPosition + restNormal * (wave * g_Amplitude), 1.0f);
-	morphed.nrm = float4(normalize(restNormal - tangentialGradient), 0.0f);
-	g_MorphVerticesRW[idx] = morphed;
+	g_MorphVerticesRW[element]      = float4(restPosition + restNormal * (wave * g_Amplitude), 1.0f);
+	g_MorphVerticesRW[element + 1u] = float4(normalize(restNormal - tangentialGradient), 0.0f);
 }
