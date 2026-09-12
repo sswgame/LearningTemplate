@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Window/IWindow.h"
 
@@ -45,7 +46,12 @@ namespace sw
 
     SW_LOG_CALLER( "RHI" );
 
-    IRHIDevice::~IRHIDevice() = default;
+    IRHIDevice::~IRHIDevice()
+    {
+        // shutdown 을 거치지 않고 사라지는 디바이스(테스트가 만든 것, 초기화 실패 경로)도 세대를 올려야 한다.
+        // 두 번 올라가도 상관없다 — 단조 증가하는 번호이고, 쓰는 쪽은 "같은가" 만 본다.
+        RHI::advanceDeviceGeneration();
+    }
 
     IRHIDevice::IRHIDevice()
         : _pInitWindow{ nullptr }
@@ -102,6 +108,9 @@ namespace sw
             _renderPassManager.reset();
         }
         shutdownInternal();
+
+        // 여기서 이 디바이스의 GPU 리소스가 전부 사라졌다 — 그 핸들을 기억하던 객체들이 더는 만지지 않게 한다.
+        RHI::advanceDeviceGeneration();
     }
 
     RenderPassManager& IRHIDevice::getRenderPassManager() const

@@ -89,17 +89,27 @@ namespace sw
         bool hasDevice() const { return _device != nullptr; }
 
         /**
-         * @brief 디바이스가 파괴될 때마다 올라가는 세대 번호입니다.
+         * @brief 디바이스가 죽을 때마다 올라가는 세대 번호입니다.
          * @details GPU 버퍼를 들고 있는 엔진 객체(Mesh 등)는 디바이스를 **생 포인터**로 기억한다.
          *          디바이스가 먼저 죽고 나서 그 포인터로 destroy 를 부르면 UAF 다. 업로드 시점의
          *          세대를 함께 기억해 두고, 세대가 달라졌으면 손대지 않는다 — 어차피 디바이스
-         *          shutdown 이 자기 버퍼를 전부 해제한다.
+         *          shutdown 이 자기 버퍼를 전부 해제한다(`RHIResidentBuffer` 가 그 판단을 한다).
+         *
+         *          **올리는 것은 `IRHIDevice` 자신이다**(shutdown 과 소멸자). 예전에는 `RHI` 매니저의 두 경로만
+         *          올려서, `RHI::createDevice` 로 직접 만든 디바이스(테스트가 그렇게 쓴다)가 죽어도 세대가 그대로였다 —
+         *          그 디바이스에 올린 메시가 계속 "상주" 라고 답했다. 세는 쪽을 **죽는 자리**로 옮겨 빠질 길을 없앴다.
          */
         static uint64 getDeviceGeneration() { return _s_deviceGeneration; }
         /** @brief 활성 IRHIDevice를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
 
     private:
+        /**
+         * @brief 세대를 올립니다. **디바이스가 죽는 순간에만** 부릅니다 — 그래서 `IRHIDevice` 에게만 열려 있습니다.
+         */
+        static void advanceDeviceGeneration() { ++_s_deviceGeneration; }
+        friend class IRHIDevice;
+
         unique_ptr<IRHIDevice> _device;
 
         /** @brief 디바이스 파괴마다 증가. 0 은 "업로드된 적 없음" 을 뜻합니다. */
