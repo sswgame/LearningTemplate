@@ -226,14 +226,7 @@ namespace sw
         }
     }
 
-    void GpuScene::fillScratchRange( uint32 start, uint32 end )
-    {
-        // 포인터는 병렬 구간에 들어가기 전에 뽑아 둔다(prepareScratchPointers).
-        GpuSceneInternal::fillRangePtr( _pScratchCandidateBase, _pScratchRawBase, start, end );
-    }
-
-    void GpuScene::buildFromScene( Scene* pScene, const float3& cameraPos,
-                                   TaskManager* pTaskManager )
+    void GpuScene::buildFromScene( Scene* pScene, const float3& cameraPos )
     {
         SW_PROFILE_SCOPE( "GT.GpuScene.build" );
 
@@ -349,24 +342,9 @@ namespace sw
         if ( bContentSame == false )
         {
             SW_PROFILE_SCOPE( "GT.GpuScene.build.fill" );
-            // 병렬로 나눠 쓰기 전에 버퍼 주소를 한 번만 확정한다. 워커가 컨테이너를 직접 만지면
-            // 서로 다른 원소를 써도 레이스 감지기가 "writer N 개"로 본다.
-            _pScratchCandidateBase = _listScratchCandidate.data();
-            _pScratchRawBase       = _listScratchRaw.data();
-
-            if ( pTaskManager != nullptr && count >= 8 && pTaskManager->getWorkerCount() > 0 )
-            {
-                if ( _snapshotStage.isValid() == false )
-                    _snapshotStage = pTaskManager->createAnonymousStage( "GpuSceneSnapshot" );
-
-                TaskHandle handle = pTaskManager->emplaceParallelBlock(
-                    0, count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &GpuScene::fillScratchRange, this ) );
-                _snapshotStage.addTask( handle );
-                handle.submit();
-                pTaskManager->waitStage( _snapshotStage );
-            }
-            else
-                GpuSceneInternal::fillRangePtr( _pScratchCandidateBase, _pScratchRawBase, 0, count );
+            // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다** — 원소당 일이
+            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GpuScene.h buildFromScene 주석의 숫자).
+            GpuSceneInternal::fillRangePtr( _listScratchCandidate.data(), _listScratchRaw.data(), 0, count );
 
             if ( bBatchKeysSame == false )
             {

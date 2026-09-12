@@ -470,7 +470,7 @@ namespace sw
                 cameraPos = pCam->getCameraPosition();
         }
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
-        _gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
+        _gpuScene.buildFromScene( pScene, cameraPos );
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );

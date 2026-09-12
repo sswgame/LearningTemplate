@@ -295,6 +295,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (인스턴스 채우기를 워커로 나눈 것이 **모든 크기에서 지고 있었다**)
+
+Release 로 재 보니 게임 스레드 비용을 `GT.GpuScene.build.fill` 이 혼자 먹고 있었다 — 400개 메시에서
+`build` 394us 중 **361us**. 원소당 하는 일은 필드 다섯 개 복사다. 그 일을 워커로 나누느라 디스패치
+(`createAnonymousStage` · `emplaceParallelBlock` · `submit` · `waitStage`)를 매 프레임 왕복했다.
+
+A/B (Release, 각 3회, `-gv_benchMeshVariants=8`, `fill` 평균 us):
+
+| 메시 수 | 병렬(기존) | 인라인 |
+| --- | --- | --- |
+| 400 | 358 / 370 / 344 | 1 / 1 / 2 |
+| 4,000 | 175 / 230 / 241 | 20 / 16 / 19 |
+| 20,000 | 196 / 219 / 221 | 99 / 101 / 97 |
+
+**어느 크기에서도 병렬이 이기지 못한다.** 20,000개에서도 인라인이 두 배 빠르다 — 일이 메모리 대역폭
+바운드라 스레드를 더 붙여도 얻을 것이 없고, 대기 비용만 남는다. 그래서 병렬 경로를 **지웠다**(폴백으로
+남기지 않는다 — 안 쓰이는 경로는 조용히 썩는다).
+
+`GT.GpuScene.build` 전체 평균: 400개 390/402/376us → **40/36/34us**. 4,000개 515/599/612 → 331/360/308.
+덤으로 `buildFromScene` 의 `TaskManager*` 인자가 사라졌다(그 인자를 쓰던 곳이 여기뿐이었다) — 테스트
+서른 자리가 넘기던 `nullptr` 도 함께. `fillScratchRange` · `_snapshotStage` · `_pScratchCandidateBase` ·
+`_pScratchRawBase` 삭제.
+
+400개 기준 지금 프레임은 GT 33us · RT `executeParallel` 331us 로, 게임 스레드는 더 이상 지배적이지 않다.
+20,000개에서는 `batches` 1,020us · `collect` 732us · `RT.GpuScene.upload` 2,824us 가 남는데, 그 규모를
+실제로 쓰는 워크로드가 생기면 그때 잰다.
+
 ### 2026-09-12 (FrameRenderer::execute 의 죽은 Material 인자를 뗀다)
 
 머티리얼은 렌더 패킷(`GpuSceneSnapshot`)을 타고 간다. 그 전 시절의 인자가 시그니처에 남아 있었다 — 함수 본문이

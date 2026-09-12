@@ -294,13 +294,14 @@ namespace sw
         /** @brief CPU/GPU 스냅샷을 비웁니다. */
         void clear();
         /**
-         * @brief MeshComponent를 수집합니다. 개수가 많으면 TaskManager 병렬 샤드를 씁니다.
-         * @param pTaskManager 선택적 병렬 구축. null이면 단일 스레드 수집
+         * @brief MeshComponent를 수집해 CPU 스냅샷을 만듭니다 (게임 스레드).
          * @details 내용·카메라가 이전과 같으면 재구축을 건너뜁니다. 카메라만 바뀌면
          *          transparent 재정렬 + 배치 재구성만 합니다.
+         * @note 전부 이 스레드에서 합니다. 인스턴스 채우기를 워커로 나눠 봤지만 **모든 크기에서 졌다** —
+         *       원소당 일이 필드 몇 개 복사라 디스패치·대기 비용이 일 자체보다 훨씬 크다
+         *       (400개 358us → 1us, 20,000개 219us → 99us). 다시 나누자고 제안하기 전에 그 숫자를 볼 것.
          */
-        void buildFromScene( Scene* pScene, const float3& cameraPos,
-                             TaskManager* pTaskManager = nullptr );
+        void buildFromScene( Scene* pScene, const float3& cameraPos );
         /** @brief 인스턴스 SRV와 배치별 간접 인자를 업로드합니다 (RT/디바이스 스레드). */
         bool upload( IRHIDevice* pDevice );
         /** @brief GPU 버퍼를 해제합니다. */
@@ -412,8 +413,6 @@ namespace sw
         static constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
     private:
-        /** @brief 후보를 GpuInstance scratch로 채웁니다. ParallelBlockDelegate 시그니처입니다. */
-        void fillScratchRange( uint32 start, uint32 end );
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
         void buildBatches();
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
@@ -530,9 +529,6 @@ namespace sw
         /** @brief 마지막으로 반영된 후보 집합. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
         vector<DrawCandidate> _listBuiltCandidate;
         vector<GpuInstance>   _listScratchRaw;
-        /** @brief 병렬 채우기 구간에서 쓰는 버퍼 주소. 디스패치 직전에 한 번만 확정합니다. */
-        const DrawCandidate* _pScratchCandidateBase{ nullptr };
-        GpuInstance*         _pScratchRawBase{ nullptr };
 
         struct SortKey
         {
@@ -563,7 +559,6 @@ namespace sw
         /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
         vector<uint32> _listBuiltTransparentIdx;
 
-        TaskStageHandle         _snapshotStage;
         RHIStructuredBufferSlot _instances;
         float3                  _lastCameraPos{};
         /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */

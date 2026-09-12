@@ -648,7 +648,7 @@ namespace sw
                     packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
                     packet._bHasViewProj = 1;
                 }
-                _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos, _taskManager.get() );
+                _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos );
 
                 // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
                 // 하면 된다 — 예전에는 새 메시가 등장한 프레임의 RT 가 정점 버퍼 생성을 통째로 뒤집어썼다.
