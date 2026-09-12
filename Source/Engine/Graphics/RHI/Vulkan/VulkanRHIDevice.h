@@ -15,6 +15,25 @@
 
 namespace sw
 {
+    /**
+     * @struct RHIVulkanNativeHandles
+     * @brief Vulkan 위에 얹히는 외부 라이브러리에 넘길 opaque 핸들 묶음.
+     * @details 전부 `void*` 라 이 구조체 자체는 Vulkan 헤더를 요구하지 않는다.
+     *          이미지 개수 기본값은 디바이스가 실제 스왑체인 값으로 덮어쓴다 — 여기 기본값은 그때까지의
+     *          자리표시자라서, 매직 넘버 대신 계약 상수를 쓴다.
+     */
+    struct RHIVulkanNativeHandles
+    {
+        void*  _pInstance{ nullptr };
+        void*  _pPhysicalDevice{ nullptr };
+        void*  _pDevice{ nullptr };
+        void*  _pGraphicsQueue{ nullptr };
+        void*  _pRenderPass{ nullptr };
+        uint32 _queueFamily{ 0 };
+        uint32 _minImageCount{ constant::kMaxFrameCountInFlight };
+        uint32 _imageCount{ constant::kMaxFrameCountInFlight };
+    };
+
     class VulkanRHICommandContext;
     class VulkanRHIResource;
 
@@ -213,7 +232,7 @@ namespace sw
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
-        /** @brief ImGui용 네이티브 Vulkan 핸들을 조회합니다. */
+        /** @brief 네이티브 Vulkan 핸들 접근자. */
         VkInstance       getInstance() const { return _instance; }
         VkPhysicalDevice getPhysicalDevice() const { return _physicalDevice; }
         VkDevice         getDevice() const { return _device; }
@@ -221,7 +240,17 @@ namespace sw
         /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
-        bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const override
+        /**
+         * @brief Vulkan 초기화에 필요한 네이티브 핸들 묶음을 채웁니다.
+         * @details **가상으로 둔다.** 부르는 쪽(에디터 MODULE)은 `getBackendType()` 으로 Vulkan 임을 확인하고
+         *          이 타입으로 캐스팅해 부른다. 가상이면 호출이 vtable 을 타므로 이 심볼을 링크할 필요가 없다 —
+         *          RHI 백엔드는 CMake MODULE 이라 애초에 링크 대상이 아니다.
+         *
+         *          예전에는 이것이 `IRHIDevice` 의 가상 함수였다. 그러면 Vulkan 이 아닌 세 백엔드가 "나는
+         *          Vulkan 이 아니다" 라고 답하는 빈 구현을 지고, 그 헤더를 여는 39개 파일이 Vulkan 어휘를
+         *          함께 졌다. 백엔드 전용인 것은 백엔드에 둔다.
+         */
+        virtual bool queryNativeHandles( RHIVulkanNativeHandles& out ) const
         {
             out._pInstance       = _instance;
             out._pPhysicalDevice = _physicalDevice;
@@ -236,9 +265,6 @@ namespace sw
             out._minImageCount = out._imageCount;
             return _device != nullptr;
         }
-
-        /** @brief 텍스처의 VkImageView를 조회합니다. */
-        bool queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const override;
 
         /** @brief 네이티브 텍스처 포인터 반환 (VkImageView) */
         void* getNativeTexturePointer( RHITextureHandle texture ) const override;

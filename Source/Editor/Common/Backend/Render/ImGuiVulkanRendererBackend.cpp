@@ -3,6 +3,7 @@
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
@@ -79,8 +80,14 @@ namespace sw::editor
         if ( pRhiDevice == nullptr )
             return false;
 
-        RHIVulkanImGuiNative vkNative{};
-        if ( pRhiDevice->queryVulkanImGuiNative( vkNative ) == false || vkNative._pDevice == nullptr )
+        // 이 백엔드는 Vulkan 전용이다. 타입을 확인하고 그 디바이스에게 직접 묻는다 — RHI 공통
+        // 인터페이스에 Vulkan 전용 함수를 만들지 않기 위해서다. 호출은 가상이라 vtable 을 타므로
+        // MODULE 인 RHI_Vulkan 을 링크하지 않는다.
+        if ( pRhiDevice->getBackendType() != RHIBackend::Vulkan )
+            return false;
+
+        RHIVulkanNativeHandles vkNative{};
+        if ( static_cast<VulkanRHIDevice*>( pRhiDevice )->queryNativeHandles( vkNative ) == false || vkNative._pDevice == nullptr )
             return false;
 
         _pRHIDevice = pRhiDevice;
@@ -263,7 +270,10 @@ namespace sw::editor
             return nullptr;
 
         void* pImageViewPtr{ nullptr };
-        if ( _pRHIDevice->queryVulkanTextureView( texture, pImageViewPtr ) == false || pImageViewPtr == nullptr )
+        // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다 — 전용 조회 함수가 따로 있었는데
+        // 이 범용 함수와 **같은 값을 같은 방법으로** 돌려주고 있었다. 중복을 지우고 범용 쪽으로 모았다.
+        pImageViewPtr = _pRHIDevice->getNativeTexturePointer( texture );
+        if ( pImageViewPtr == nullptr )
         {
             SW_LOG_ERROR( "Failed to resolve VkImageView for RHI handle %#", texture );
             return nullptr;

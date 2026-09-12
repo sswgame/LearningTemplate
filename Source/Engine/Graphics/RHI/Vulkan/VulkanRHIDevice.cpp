@@ -444,16 +444,6 @@ namespace sw
         }
     }
 
-    bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const
-    {
-        pOutImageView                   = nullptr;
-        const VulkanTextureRecord* pTex = resolveTexture( texture );
-        if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE )
-            return false;
-        pOutImageView = reinterpret_cast<void*>( pTex->_imageView );
-        return true;
-    }
-
     void* VulkanRHIDevice::getNativeTexturePointer( RHITextureHandle texture ) const
     {
         const VulkanTextureRecord* pTex = resolveTexture( texture );

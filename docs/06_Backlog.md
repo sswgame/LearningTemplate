@@ -295,6 +295,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-13 (범용 RHI 인터페이스에서 Vulkan 을 걷어낸다 — 그리고 그중 절반은 중복이었다)
+
+`IRHIDevice` 는 네 백엔드를 추상화하는 인터페이스인데 Vulkan 전용 API 를 들고 있었다:
+구조체 `RHIVulkanImGuiNative` 와 가상 함수 `queryVulkanImGuiNative` · `queryVulkanTextureView`.
+DX12 · DX11 · GL 은 "나는 Vulkan 이 아니다" 라고 답하는 빈 구현을 지고 있었고, 이 헤더를 여는 39개 파일이
+Vulkan 어휘를 함께 졌다. 이름도 **부르는 쪽(ImGui)** 의 것이 주는 쪽에 새어 들어와 있었다.
+
+**절반은 애초에 중복이었다.** `queryVulkanTextureView( tex, out )` 와 이미 있던 범용 가상 함수
+`getNativeTexturePointer( tex )` 는 **같은 일을 같은 방법으로** 한다 — 둘 다 텍스처를 해석해
+`_imageView` 를 돌려준다. 전용 함수를 지우고 에디터가 범용 쪽을 쓰게 했다.
+
+**남은 하나(초기화 핸들 묶음)는 백엔드로 내렸다.** `RHIVulkanNativeHandles` 와 `queryNativeHandles` 는
+이제 `VulkanRHIDevice.h` 에 있다. 받는 쪽(에디터의 Vulkan ImGui 백엔드)은 `getBackendType()` 으로
+Vulkan 임을 확인하고 그 타입으로 캐스팅해 부른다.
+
+**왜 캐스팅해도 되는가 — 실제로 확인했다.** RHI 백엔드는 `add_library(... MODULE)` 이고 `EditorModule` 은
+`Engine` · `RuntimeAPI` · imgui 만 링크한다. 그래서 백엔드의 심볼을 링크할 수 없다. 그런데 **호출이
+가상이면 vtable 을 타므로 심볼이 필요 없다** — 캐스팅해 부르는 코드를 실제로 넣고 빌드해 링크가 되는 것을
+확인했다. 그래서 `queryNativeHandles` 는 아무것도 override 하지 않지만 `virtual` 로 둔다. 그 이유가
+주석에 적혀 있으니 지우지 말 것.
+
+**치른 값.** 에디터가 `VulkanRHIDevice` 의 **클래스 레이아웃**에 의존하게 된다. `RHIModuleAbi.h` 의 스탬프는
+"IRHIDevice / IRHICommandList / IRHICommandContext 의 public 표면" 만 덮고 concrete 클래스 레이아웃은 덮지
+않는다. 즉 백엔드만 다시 빌드하고 에디터를 안 고치면 스탬프가 잡아 주지 않는다. 지금은 한 CMake 빌드가
+전부를 같이 짓고 핫리로드 대상도 EditorModule · SWGame 뿐이라 실질 위험은 없지만, **RHI 백엔드를 따로
+배포하기 시작하면 이 자리가 먼저 깨진다.**
+
+**결과.** `IRHIDevice.h` 에 남은 "Vulkan" 은 전부 "이 인터페이스가 네 백엔드를 추상화한다" 는 설명 문장뿐이고,
+Vulkan 전용 API 는 0 이다.
+
+**검증.** Debug · Shipping 빌드 종료 0 · GPU 19/19 · RHITest 13/13 · nogpu 5/5 · 린트 7/7.
+에디터 4백엔드 기동 전부 종료 0 · 창 15 · 빈 패널 0 · 오류 0. **Vulkan 에디터의 Game View 정점 1798** —
+바꾼 텍스처 경로(`getNativeTexturePointer` → VkImageView)가 실제로 그린다는 뜻이다.
+교체 5구성 종료 0 · 오류 0.
+
+> **함정: 에디터 교체 스크린샷의 비배경 픽셀 수는 세션 간 비교용이 아니다.** 이 값이 5,7xx 에서
+> 15,xxx 로 뛰어 회귀를 의심했는데, 변경을 빼고 같은 실행을 재 보니 **15,824 로 같았다.** 원인은 코드가
+> 아니라 `Config/Editor/imgui.ini`(git 미추적 로컬 상태)에 저장된 도킹 레이아웃이 `-gv_editorOpenAllPanels=1`
+> 실행 뒤에 바뀐 것이었다. 에디터 없는 교체 4구성(10,2xx)은 레이아웃과 무관하므로 그쪽이 비교 가능한 지표다.
+
 ### 2026-09-12 (안 쓰이는 공개 API 를 "앞으로 필요한가" 로 가른다 — 지울 것과 이어야 할 것)
 
 Engine 공개 메서드 중 **선언 파일 밖에서 아무도 부르지 않는 것이 248개**였다. 지금 안 쓰인다는 것만으로는

@@ -11,6 +11,7 @@
 
 namespace sw
 {
+
     class IRHICommandContext;
     class IRHICommandList;
     class IRHIResource;
@@ -134,7 +135,7 @@ namespace sw
         virtual const utf8* getBackendName() const = 0;
 
         // ------------------------------------------------------------------------------
-        // 11) 네이티브 핸들 — 디바이스/컨텍스트/스왑체인/큐, ImGui Vulkan
+        // 11) 네이티브 핸들 — 디바이스/컨텍스트/스왑체인/큐
         // ------------------------------------------------------------------------------
         /** @brief 네이티브 디바이스 포인터 (ID3D12Device, VkDevice 등). */
         virtual void* getNativeDevice() const = 0;
@@ -163,25 +164,6 @@ namespace sw
         {
             (void)texture;
             return nullptr;
-        }
-
-        /**
-         * @brief Vulkan ImGui 초기화용 native 핸들. 비-Vulkan이면 false.
-         */
-        virtual bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const
-        {
-            (void)out;
-            return false;
-        }
-
-        /**
-         * @brief Vulkan ImGui 텍스처 등록용 VkImageView. 비-Vulkan/미존재면 false.
-         */
-        virtual bool queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const
-        {
-            (void)texture;
-            pOutImageView = nullptr;
-            return false;
         }
 
         /** @brief initializeInternal에 넘길 윈도우를 저장합니다. */

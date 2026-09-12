@@ -41,7 +41,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) 백엔드 · 포맷 — API 종류, ImGui Vulkan 핸들, 픽셀 포맷
+    // 2) 백엔드 · 포맷 — API 종류, 픽셀 포맷
     // ------------------------------------------------------------------------------
     /**
      * @enum RHIFormat
@@ -143,24 +143,6 @@ namespace sw
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;
     } // namespace constant
-
-    /**
-     * @struct RHIVulkanImGuiNative
-     * @brief Vulkan ImGui init용 opaque 핸들 묶음 (Editor가 concrete VulkanRHIDevice에 의존하지 않도록)
-     * @details 이미지 개수 기본값은 디바이스가 실제 스왑체인 값으로 덮어쓴다 — 여기 기본값은 그때까지의
-     *          자리표시자라서, 매직 넘버 대신 계약 상수를 쓴다.
-     */
-    struct RHIVulkanImGuiNative
-    {
-        void*  _pInstance{ nullptr };
-        void*  _pPhysicalDevice{ nullptr };
-        void*  _pDevice{ nullptr };
-        void*  _pGraphicsQueue{ nullptr };
-        void*  _pRenderPass{ nullptr };
-        uint32 _queueFamily{ 0 };
-        uint32 _minImageCount{ constant::kMaxFrameCountInFlight };
-        uint32 _imageCount{ constant::kMaxFrameCountInFlight };
-    };
 
     // ------------------------------------------------------------------------------
     // 3) 스왑체인 · 뷰포트 · 인디렉트 커맨드
