@@ -37,7 +37,38 @@ namespace sw
     struct RHIVertex
     {
         float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
-        float32 _arrColor[4];    ///< 정점 색상 (R, G, B, A)
+        /**
+         * @brief 정점 노멀 (X, Y, Z) — 정규화되어 있어야 합니다.
+         * @details 예전에는 없었고, 셰이더가 위치로 **지어내고** 있었다(`DemoCubeNormal`) — 원점 중심
+         *          박스형 도형에만 맞는 함수라 평면·구·원뿔은 조용히 틀린 빛을 받았다. 바닥 평면을
+         *          `y = 0` 에 두면 `|y|` 가 0 이라 ±X/±Z 노멀이 나와 바닥이 옆을 보는 것처럼 칠해졌다.
+         */
+        float32 _arrNormal[3];
+        /**
+         * @brief 텍스처 좌표 (U, V).
+         * @details 노멀과 **같은 함정**이었다 — 셰이더가 `localPos.xy * 0.5 + 0.5` 로 지어내고 있어서,
+         *          원점 중심 단위 도형이 아니면 알베도 텍스처가 엉뚱하게 붙었고 도형의 옆면·뚜껑은
+         *          아예 같은 자리를 물고 있었다. 도형 생성기가 면마다 제대로 펼쳐 준다.
+         */
+        float32 _arrUv[2];
+        float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
+    };
+
+    /**
+     * @struct RHIVertexAttribute
+     * @brief 정점 속성 하나의 선언 — 네 백엔드가 **같은 표**를 읽어 각자의 입력 레이아웃을 만듭니다.
+     * @details 예전에는 DX11·DX12·Vulkan·GL 이 이 표를 각자 손으로 적고 있었다. 속성을 하나 더하려면
+     *          네 곳을 같이 고쳐야 하고, 한 곳을 빠뜨리면 그 백엔드만 조용히 다른 그림을 낸다 —
+     *          이 저장소에서 가장 비싼 종류의 버그다. 표를 하나로 두면 그럴 자리가 없다.
+     * @note `_location` 은 HLSL 선언 **순서**와 같아야 한다(Vulkan location · GL 정점 속성 번호).
+     *       DX 는 시맨틱 이름으로 묶으므로 `_pSemanticName` 이 그 역할을 한다.
+     */
+    struct RHIVertexAttribute
+    {
+        const utf8* _pSemanticName;  ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
+        uint32      _location;       ///< Vulkan location / GL 정점 속성 번호.
+        uint32      _componentCount; ///< float 개수 (2·3·4). 백엔드가 자기 포맷 enum 으로 옮긴다.
+        uint32      _byteOffset;     ///< `RHIVertex` 안의 바이트 오프셋.
     };
 
     // ------------------------------------------------------------------------------
@@ -111,6 +142,22 @@ namespace sw
          *          (`D3D12_TEXTURE_DATA_PITCH_ALIGNMENT`)은 이름만 같은 별개 개념이니 섞지 말 것.
          */
         inline constexpr uint32 kConstantBufferAlignment = 256;
+
+        /**
+         * @brief 정점 입력 레이아웃의 **정본** — 네 백엔드가 이 표만 읽는다.
+         * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 이다. 속성을 더하려면 여기 한 줄과
+         *          `RHIVertex` 멤버 하나만 고치면 되고, 백엔드는 손대지 않는다.
+         * @note 오프셋을 손으로 적지 않는다 — `SW_OFFSET_OF` 라 구조체를 바꾸면 자동으로 따라온다.
+         *       예전에 네 백엔드가 각자 `0` 과 `12` 를 적어 두고 있었다.
+         */
+        inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
+            {"POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition )},
+            {  "NORMAL", 1, 3, SW_OFFSET_OF( RHIVertex,   _arrNormal )},
+            {"TEXCOORD", 2, 2, SW_OFFSET_OF( RHIVertex,       _arrUv )},
+            {   "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex,    _arrColor )},
+        };
+        /// @brief 정점 속성 수. 백엔드가 배열 크기를 직접 세지 않도록 함께 둔다.
+        inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );
 
         /** @brief uploadTexture2D 가 한 번에 받는 밉 수 상한 — 2^16 텍스처의 전체 체인(17단) 을 덮는다. */
         inline constexpr uint32 kMaxTextureMipCount = 17;

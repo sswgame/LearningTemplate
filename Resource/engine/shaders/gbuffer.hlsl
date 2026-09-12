@@ -1,11 +1,5 @@
 #include "binding.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -19,16 +13,17 @@ struct PSOutput
 	float4 normal : SV_TARGET1;
 };
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 {
 	PSInput output;
-	const float3 localPos = SwLoadMorphPosition(vid, input.pos);
+	float3 localPos;
+	float3 localNormal;
+	SwLoadMorphedVertex(vid, input.pos, input.nrm, localPos, localNormal);
 	float4x4 world = SwLoadInstanceWorld(iid);
 	float4 worldPos = mul(float4(localPos, 1.0f), world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.col = input.col;
-	float3 n = DemoCubeNormal(localPos);
-	output.nrm = normalize(mul(float4(n, 0.0f), world).xyz);
+	output.nrm = normalize(mul(float4(localNormal, 0.0f), world).xyz);
 	return output;
 }
 

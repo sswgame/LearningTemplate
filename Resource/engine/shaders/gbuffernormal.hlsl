@@ -1,25 +1,18 @@
 #include "binding.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float3 nrm : TEXCOORD0;
 };
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
+PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
 	float4x4 world = SwLoadInstanceWorld(iid);
 	float4 worldPos = mul(float4(input.pos, 1.0f), world);
 	output.pos = mul(worldPos, g_ViewProj);
-	float3 n = DemoCubeNormal(input.pos);
-	output.nrm = normalize(mul(float4(n, 0.0f), world).xyz);
+	output.nrm = normalize(mul(float4(input.nrm, 0.0f), world).xyz);
 	return output;
 }
 

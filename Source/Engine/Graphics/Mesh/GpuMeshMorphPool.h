@@ -38,15 +38,17 @@ namespace sw
     /**
      * @struct GpuMorphVertex
      * @brief 모프 풀의 원소 — 셰이더의 `SwVertexData`(binding.hlsli) 와 레이아웃이 같아야 합니다.
-     * @details `RHIVertex`(float3 + float4 = 28바이트)를 그대로 쓰지 않는 이유는 **정렬**이다. std430 은
-     *          vec4 를 16 바이트 경계에 맞추므로 float3 뒤의 float4 가 어긋난다 — DX/Vulkan 은 DXC 가
-     *          명시 오프셋을 적어 넘어가지만 OpenGL 에서는 기하가 무너진다(실제로 GL 만 그랬다).
+     * @details `RHIVertex` 를 그대로 쓰지 않는 이유는 **정렬**이다. std430 은 vec4 를 16 바이트 경계에
+     *          맞추므로 `float3` 뒤의 `float4` 가 어긋난다 — DX/Vulkan 은 DXC 가 명시 오프셋을 적어
+     *          넘어가지만 OpenGL 에서는 기하가 무너진다(실제로 GL 만 그랬다). 그래서 전부 `float4` 다.
      */
     struct GpuMorphVertex
     {
-        float32 _arrPosition[4]{}; ///< w 는 쓰지 않는다(정렬용).
-        float32 _arrColor[4]{};
+        float4 _position{}; ///< w 는 쓰지 않는다(정렬용).
+        float4 _normal{};   ///< 변형된 노멀 — 컴퓨트가 위치와 **같이** 다시 만든다. w 는 쓰지 않는다.
     };
+
+    static_assert( sizeof( GpuMorphVertex ) == 32, "모프 풀 원소는 float4 둘(32바이트)이어야 한다 — 셰이더 SwVertexData 와 같은 크기" );
 
     /**
      * @class GpuMeshMorphPool

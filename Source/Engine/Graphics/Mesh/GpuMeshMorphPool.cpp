@@ -62,11 +62,9 @@ namespace sw
             for ( const RHIVertex& vertex : listVertex )
             {
                 GpuMorphVertex morphVertex{};
-                morphVertex._arrPosition[0] = vertex._arrPosition[0];
-                morphVertex._arrPosition[1] = vertex._arrPosition[1];
-                morphVertex._arrPosition[2] = vertex._arrPosition[2];
-                morphVertex._arrPosition[3] = 1.0f;
-                Memory::copy( morphVertex._arrColor, vertex._arrColor, sizeof( morphVertex._arrColor ) );
+                morphVertex._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
+                // 레스트 노멀도 함께 올린다 — 컴퓨트가 변형된 노멀을 만들려면 원래 노멀이 있어야 한다.
+                morphVertex._normal = float4{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2], 0.0f };
                 listRest.push_back( morphVertex );
             }
             _vertexCount += count;

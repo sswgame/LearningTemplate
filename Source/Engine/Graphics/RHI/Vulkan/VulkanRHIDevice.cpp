@@ -222,9 +222,11 @@ namespace sw
         BLOCK( "Fullscreen Triangle" )
         {
             const RHIVertex arrFullscreenVert[3] = {
-                {{ -1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { 3.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { -1.0f, 3.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다 — 레이아웃을 채우려고 +Z 를 둔다.
+                // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
+                {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+                { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
+                { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             };
             const RHIBufferHandle vbHandle =
                 createVulkanBuffer( static_cast<uint32>( sizeof( arrFullscreenVert ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, arrFullscreenVert );

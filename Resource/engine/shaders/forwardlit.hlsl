@@ -1,11 +1,5 @@
 #include "lighting.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -28,19 +22,25 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 {
 	PSInput output;
-	// GPU 가 변형한 정점이 있으면 그걸 쓴다(모프 안 하면 입력 스트림 그대로).
-	const float3 localPos = SwLoadMorphPosition(vid, input.pos);
+	// GPU 가 변형한 정점이 있으면 그걸 쓴다(모프 안 하면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
+	float3 localPos;
+	float3 localNormal;
+	SwLoadMorphedVertex(vid, input.pos, input.nrm, localPos, localNormal);
 	SwInstanceData inst = SwLoadInstance(iid);
 	float4 worldPos = mul(float4(localPos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.wpos = worldPos.xyz;
 	output.col = input.col;
-	output.uv  = localPos.xy * float2(0.5f, -0.5f) + 0.5f;
-	float3 n = DemoCubeNormal(localPos);
-	output.nrm = normalize(mul(float4(n, 0.0f), inst.world).xyz);
+	// UV 는 정점 속성이다. 예전엔 `localPos.xy * 0.5 + 0.5` 로 **지어내고** 있어서 — 노멀과 같은
+	// 함정이다 — 원점 중심 단위 도형이 아니면 텍스처가 엉뚱하게 붙고, 도형의 옆면과 뚜껑이
+	// 같은 자리를 물었다(도형이 XY 평면에 투영되므로 앞뒤가 겹친다).
+	output.uv = input.uv;
+	// 월드 노멀. 비균등 스케일에서는 역전치 행렬이 맞지만 이 엔진의 인스턴스는 균등 스케일이라
+	// 월드 행렬을 그대로 쓴다 — 비균등 스케일을 넣는 날 여기가 먼저 틀린다.
+	output.nrm = normalize(mul(float4(localNormal, 0.0f), inst.world).xyz);
 	output.materialIndex = inst.materialIndex;
 	return output;
 }

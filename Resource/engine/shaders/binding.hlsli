@@ -98,36 +98,80 @@ struct SwInstanceData
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 1-2) GPU 가 변형한 정점 (메시 모프). C++ RHIVertex 와 레이아웃 일치 (float3 + float4 = 28 바이트).
+// 1-1b) 정점 입력 — **정본은 C++ 의 `constant::arrVertexAttribute` 다.** 이 구조체는 그 표와
+//       순서·개수가 같아야 한다.
+// ------------------------------------------------------------------------------
+// **쓰지 않는 속성도 반드시 선언한다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·OpenGL 은 **선언 순서로
+// location 을 매긴다** — 중간 속성을 빼면 그 뒤가 통째로 한 칸씩 당겨져, 색을 읽으려던 셰이더가
+// 노멀을 읽는다. DX 에서는 멀쩡하고 그 둘에서만 조용히 틀리는, 이 저장소에서 가장 비싼 종류의 버그다.
+// 그래서 메시를 그리는 셰이더는 전부 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
+struct SwVertexInput
+{
+	float3 pos : POSITION;
+	float3 nrm : NORMAL;
+	float2 uv  : TEXCOORD0;
+	float4 col : COLOR;
+};
+
+// ------------------------------------------------------------------------------
+// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GpuMorphVertex` 와 레이아웃 일치.
 //      메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
 //      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
-// **float4 두 개다.** float3 뒤에 float4 를 두면 원소가 28 바이트인데, std430 은 vec4 를 16 바이트
-// 경계에 맞춘다 — DX/Vulkan 은 DXC 가 명시 오프셋을 적어 그대로 읽지만 OpenGL(ARB_gl_spirv)에서는
-// 어긋나 기하가 무너진다(실제로 GL 만 그랬다). 풀 원소는 엔진 내부 형식이라 RHIVertex 와 같을 이유가
-// 없으므로 정렬이 안전한 모양으로 둔다. pos.w · col 은 지금 쓰지 않지만 자리를 비워 두지 않는다.
+// **전부 float4 다.** float3 뒤에 float4 를 두면 std430 이 vec4 를 16 바이트 경계에 맞추는데
+// DX/Vulkan 은 DXC 가 명시 오프셋을 적어 그대로 읽는다 — 그러면 OpenGL(ARB_gl_spirv)에서만
+// 어긋나 기하가 무너진다(실제로 그랬다). 풀 원소는 엔진 내부 형식이라 `RHIVertex` 와 같을 이유가
+// 없으므로 정렬이 안전한 모양으로 둔다.
+// 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
+// 예전엔 색을 같이 담았는데 아무도 읽지 않았다(정점당 16바이트 × 풀 상한 400만 = 64MB).
 struct SwVertexData
 {
 	float4 pos;
-	float4 col;
+	float4 nrm; // 변형된 노멀 — 컴퓨트가 위치와 **같이** 다시 만든다(w 는 쓰지 않는다)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwVertexData, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
 
 /**
- * @brief 이 정점의 위치 — 모프 대상이면 GPU 가 변형한 값을, 아니면 입력 스트림 값을 돌려준다.
+ * @brief 이 정점의 풀 원소 번호 — 모프 대상이 아니면 `SW_INVALID_INDEX`.
  * @details 폴백이 조건 셋인 이유: (1) 이 배치가 모프 대상이 아니거나, (2) 풀이 안 걸렸거나,
  *          (3) 예산이 모자라 이 메시가 풀에 못 들어갔을 수 있다. 셋 다 "레스트 포즈로 그린다" 로
  *          끝나야 한다 — 언리얼도 스킨 캐시가 차면 일반 경로로 되돌아간다.
  */
-float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
+uint SwMorphElementOf( uint vertexId )
 {
 	if ( SW_DRAW_MORPH_BASE == SW_INVALID_INDEX || g_SwMorphVerticesIndex == SW_INVALID_INDEX )
-		return restPosition;
+		return SW_INVALID_INDEX;
 	const uint element = SW_DRAW_MORPH_BASE + vertexId;
-	if ( element >= g_SwMorphVertexCount )
-		return restPosition;
-	return g_SwMorphVertices[element].pos.xyz;
+	return ( element < g_SwMorphVertexCount ) ? element : SW_INVALID_INDEX;
+}
+
+/**
+ * @brief 이 정점의 위치·노멀 — 모프 대상이면 GPU 가 변형한 값을, 아니면 입력 스트림 값을 돌려준다.
+ * @details 위치와 노멀을 **함께** 돌려주는 이유는 둘이 같이 변하기 때문이다. 예전에는 위치만
+ *          바꿔 주는 함수였는데, 그때는 셰이더가 노멀을 위치로 지어내고 있어서(`DemoCubeNormal`)
+ *          모프된 위치에서 다시 지어내면 얼추 맞아떨어졌다. 이제 노멀이 정점 속성이므로 그냥 두면
+ *          **레스트 포즈의 노멀**이 남아 변형된 표면이 원래 모양대로 칠해진다.
+ */
+void SwLoadMorphedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+{
+	outPosition        = restPosition;
+	outNormal          = restNormal;
+	const uint element = SwMorphElementOf( vertexId );
+	if ( element == SW_INVALID_INDEX )
+		return;
+	outPosition = g_SwMorphVertices[element].pos.xyz;
+	outNormal   = g_SwMorphVertices[element].nrm.xyz;
+}
+
+/**
+ * @brief 위치만 필요한 패스(그림자·뎁스 프리패스)를 위한 짧은 형태.
+ * @note 노멀을 읽지 않으므로 그 로드가 통째로 빠진다 — 뎁스 전용 패스는 그게 비용의 전부다.
+ */
+float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
+{
+	const uint element = SwMorphElementOf( vertexId );
+	return ( element == SW_INVALID_INDEX ) ? restPosition : g_SwMorphVertices[element].pos.xyz;
 }
 
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
@@ -483,17 +527,6 @@ SW_SURFACE_OUTPUT SwStoreSurface( float4 litColor, float4 albedo, float3 worldNo
 	output.color = litColor;
 	return output;
 #endif
-}
-
-// 축 정렬 데모 큐브 노멀 — createUnitCube 가 만드는 큐브에만 맞는다(정점에 노멀이 없어서 위치로 만든다).
-float3 DemoCubeNormal( float3 pos )
-{
-	float3 a = abs( pos );
-	if ( a.x >= a.y && a.x >= a.z )
-		return float3( sign( pos.x ), 0.0f, 0.0f );
-	if ( a.y >= a.x && a.y >= a.z )
-		return float3( 0.0f, sign( pos.y ), 0.0f );
-	return float3( 0.0f, 0.0f, sign( pos.z ) );
 }
 
 #endif // SW_ENGINE_BINDING_HLSLI

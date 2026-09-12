@@ -402,8 +402,8 @@ namespace sw
         const float32 size = halfExtent * 2.6f;
         pMesh->setMesh( MeshUtil::createPlane( 24 ) );
         pMesh->setLocalScale( float3{ size, 1.0f, size } );
-        // 평면의 면은 로컬 y = +0.5 다(MeshUtil::createPlane 주석) — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
-        pMesh->setLocalPosition( float3{ 0.0f, -1.1f, 0.0f } );
+        // 평면의 면은 이제 로컬 y = 0 이다 — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
+        pMesh->setLocalPosition( float3{ 0.0f, -0.6f, 0.0f } );
         pMesh->setVisible( true );
 
         SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );

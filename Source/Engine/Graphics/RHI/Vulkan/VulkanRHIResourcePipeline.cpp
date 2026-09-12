@@ -94,19 +94,22 @@ namespace sw
         bindingDescription.stride    = static_cast<uint32>( sizeof( RHIVertex ) );
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        VkVertexInputAttributeDescription arrAttributeDescription[2]{};
-        arrAttributeDescription[0].binding  = 0;
-        arrAttributeDescription[0].location = 0;
-        arrAttributeDescription[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        arrAttributeDescription[0].offset   = SW_OFFSET_OF( RHIVertex, _arrPosition );
-        arrAttributeDescription[1].binding  = 0;
-        arrAttributeDescription[1].location = 1;
-        arrAttributeDescription[1].format   = VK_FORMAT_R32G32B32A32_SFLOAT;
-        arrAttributeDescription[1].offset   = SW_OFFSET_OF( RHIVertex, _arrColor );
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — DX11·DX12·GL 과 같은 표다.
+        VkVertexInputAttributeDescription arrAttributeDescription[constant::kVertexAttributeCount]{};
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            const RHIVertexAttribute& attribute              = constant::arrVertexAttribute[attributeIndex];
+            arrAttributeDescription[attributeIndex].binding  = 0;
+            arrAttributeDescription[attributeIndex].location = attribute._location;
+            arrAttributeDescription[attributeIndex].format   = ( attribute._componentCount == 4 ) ? VK_FORMAT_R32G32B32A32_SFLOAT
+                                                             : ( attribute._componentCount == 2 ) ? VK_FORMAT_R32G32_SFLOAT
+                                                                                                  : VK_FORMAT_R32G32B32_SFLOAT;
+            arrAttributeDescription[attributeIndex].offset   = attribute._byteOffset;
+        }
 
         vertexInputInfo.vertexBindingDescriptionCount   = 1;
         vertexInputInfo.pVertexBindingDescriptions      = &bindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = 2;
+        vertexInputInfo.vertexAttributeDescriptionCount = constant::kVertexAttributeCount;
         vertexInputInfo.pVertexAttributeDescriptions    = arrAttributeDescription;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};

@@ -1,17 +1,11 @@
 #include "binding.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
 };
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 {
 	PSInput output;
 	// 그림자도 같은 정점을 봐야 한다 — 모프를 여기서 빼면 물체와 그림자의 모양이 어긋난다.

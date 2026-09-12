@@ -20,7 +20,7 @@
 struct SwVertexData
 {
 	float4 pos;
-	float4 col;
+	float4 nrm;
 };
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
@@ -41,19 +41,30 @@ void CSMain(uint3 dtid : SV_DispatchThreadID)
 	if (idx >= g_MorphVertexCount)
 		return;
 
-	SwVertexData vertex = g_RestVertices[idx];
+	const SwVertexData rest = g_RestVertices[idx];
 
-	// 위치를 **원점에서 바깥으로** 밀고 당긴다. 법선이 따로 없으므로(RHIVertex 는 위치와 색뿐)
-	// 원점 기준 방향을 법선 대신 쓴다 — 내장 도형이 전부 원점 중심이라 성립한다.
-	const float3 rest   = vertex.pos.xyz;
-	const float  radius = length(rest);
-	const float3 dir    = radius > 1e-5f ? rest / radius : float3(0.0f, 1.0f, 0.0f);
+	// 변형은 **정점 노멀 방향**으로 민다. 예전엔 원점 기준 방향을 법선 대신 썼다 — 정점에 노멀이
+	// 없던 시절의 대용이고, 원점 중심 도형에만 맞는 가정이었다(바닥 평면 같은 건 엉뚱하게 밀린다).
+	const float3 restPosition = rest.pos.xyz;
+	const float3 restNormal   = normalize(rest.nrm.xyz);
 
 	// 위상을 위치에서 뽑아 정점마다 어긋나게 한다 — 전부 같은 위상이면 도형이 통째로 커졌다 작아질 뿐
 	// 모양이 변하지 않아, 변형이 실제로 걸렸는지 그림으로 구분할 수 없다.
-	const float phase = (rest.x + rest.y + rest.z) * g_Frequency;
+	const float phase = (restPosition.x + restPosition.y + restPosition.z) * g_Frequency;
 	const float wave  = sin(g_Time * 2.0f + phase);
 
-	vertex.pos = float4(rest + dir * (wave * g_Amplitude), 1.0f);
-	g_MorphVerticesRW[idx] = vertex;
+	// **노멀도 같이 만든다.** 위치만 바꾸면 변형된 표면이 원래 모양의 빛을 받는다 — 물결이 이는데
+	// 음영은 가만히 있어서 "변형이 안 걸렸나" 로 보인다.
+	//
+	// 높이장 변위의 표준 근사다: 표면을 노멀 방향으로 h 만큼 밀면 새 노멀은 normalize(n - ∇_t h) 다
+	// (∇_t 는 h 의 기울기에서 노멀 성분을 뺀 접선 성분). 여기서 h = A*sin(2t + F*(x+y+z)) 이므로
+	// ∇h = A*F*cos(2t + F*(x+y+z)) * (1,1,1) 이다. 진폭이 작을 때의 근사이고, 이 용도에는 충분하다.
+	const float  gradientScale = g_Amplitude * g_Frequency * cos(g_Time * 2.0f + phase);
+	const float3 gradient      = float3(gradientScale, gradientScale, gradientScale);
+	const float3 tangentialGradient = gradient - restNormal * dot(gradient, restNormal);
+
+	SwVertexData morphed;
+	morphed.pos = float4(restPosition + restNormal * (wave * g_Amplitude), 1.0f);
+	morphed.nrm = float4(normalize(restNormal - tangentialGradient), 0.0f);
+	g_MorphVerticesRW[idx] = morphed;
 }

@@ -40,11 +40,19 @@ namespace sw
             if ( res._bSuccess )
             {
                 _pDevice->_device->CreateVertexShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._vs.GetAddressOf() );
-                D3D11_INPUT_ELEMENT_DESC inputElementDescs[] = {
-                    {"POSITION", 0,    DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-                    {   "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
-                };
-                _pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
+                // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — DX12·Vulkan·GL 과 같은 표다.
+                D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
+                for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+                {
+                    const RHIVertexAttribute& attribute               = constant::arrVertexAttribute[attributeIndex];
+                    arrInputElement[attributeIndex].SemanticName      = attribute._pSemanticName;
+                    arrInputElement[attributeIndex].Format            = ( attribute._componentCount == 4 ) ? DXGI_FORMAT_R32G32B32A32_FLOAT
+                                                                      : ( attribute._componentCount == 2 ) ? DXGI_FORMAT_R32G32_FLOAT
+                                                                                                           : DXGI_FORMAT_R32G32B32_FLOAT;
+                    arrInputElement[attributeIndex].AlignedByteOffset = attribute._byteOffset;
+                    arrInputElement[attributeIndex].InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+                }
+                _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
             }
         }
         // 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다 — 다른 세 백엔드와 같은 규칙이다.

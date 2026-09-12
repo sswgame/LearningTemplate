@@ -1,11 +1,5 @@
 #include "binding.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -22,7 +16,7 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
+PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID)
 {
 	PSInput output;
 

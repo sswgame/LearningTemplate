@@ -37,13 +37,22 @@ namespace sw
 
         if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
         {
-            D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-                {"POSITION", 0,    DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-                {   "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-            };
+            // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다 — 예전엔 네 백엔드가
+            // 각자 손으로 적어, 속성을 하나 더하면 네 곳을 같이 고쳐야 했다.
+            D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            {
+                const RHIVertexAttribute& attribute               = constant::arrVertexAttribute[attributeIndex];
+                arrInputElement[attributeIndex].SemanticName      = attribute._pSemanticName;
+                arrInputElement[attributeIndex].Format            = ( attribute._componentCount == 4 ) ? DXGI_FORMAT_R32G32B32A32_FLOAT
+                                                                  : ( attribute._componentCount == 2 ) ? DXGI_FORMAT_R32G32_FLOAT
+                                                                                                       : DXGI_FORMAT_R32G32B32_FLOAT;
+                arrInputElement[attributeIndex].AlignedByteOffset = attribute._byteOffset;
+                arrInputElement[attributeIndex].InputSlotClass    = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            }
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-            psoDesc.InputLayout    = { inputElementDescs, _countof( inputElementDescs ) };
+            psoDesc.InputLayout    = { arrInputElement, constant::kVertexAttributeCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
             if ( bHasPixelShader )

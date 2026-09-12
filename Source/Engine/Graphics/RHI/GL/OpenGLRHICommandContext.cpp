@@ -431,12 +431,14 @@ namespace sw
         const GLsizei stride = static_cast<GLsizei>( _pState->_boundMeshStride );
         glBindVertexArray( _pDevice->_meshVao );
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
-        glEnableVertexAttribArray( 0 );
-        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
-        glEnableVertexAttribArray( 1 );
-        glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-                               reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 건다 — DX11·DX12·Vulkan 과 같은 표다.
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+            glEnableVertexAttribArray( attribute._location );
+            glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE, stride,
+                                   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + attribute._byteOffset ) ) );
+        }
     }
 
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )

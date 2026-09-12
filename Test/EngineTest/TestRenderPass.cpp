@@ -3715,3 +3715,83 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
     window->destroy();
     window.reset();
 }
+
+/**
+ * @brief [MeshPrimitiveTest] 내장 도형의 **정점 노멀·UV** 가 쓸 만한 값인지 (GPU 불필요).
+ * @details 노멀과 UV 는 오래 **셰이더가 지어내고** 있었다 — 노멀은 `DemoCubeNormal( 위치 )`, UV 는
+ *          `localPos.xy * 0.5 + 0.5`. 둘 다 "원점 중심 박스형 단위 도형" 에만 맞는 가정이라 평면·구·
+ *          원뿔은 조용히 틀린 빛을 받고 텍스처가 엉뚱하게 붙었다. 이제 정점 속성이므로 **생성기가
+ *          제대로 채웠는지**가 유일한 실패 지점이다.
+ * @note 바깥을 향하는지는 `normal · position >= 0` 으로 본다 — 원점 중심 볼록 도형에서만 성립하는
+ *       판정이라 평면은 따로 본다(면이 원점을 지나므로 내적이 0 이다).
+ */
+SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
+{
+    const utf8* arrPrimitiveId[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
+
+    for ( const utf8* pId : arrPrimitiveId )
+    {
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pId );
+        SW_ASSERT_TRUE( mesh != nullptr );
+        const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
+        SW_ASSERT_TRUE( listVertex.size() >= 3 );
+
+        uint32 badLengthCount = 0;
+        uint32 inwardCount    = 0;
+        uint32 badUvCount     = 0;
+        for ( const sw::RHIVertex& vertex : listVertex )
+        {
+            const sw::float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
+            const sw::float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+
+            // 정규화되어 있지 않으면 조명이 도형마다 다른 밝기를 받는다 — 셰이더가 다시 정규화해 주더라도
+            // 0 벡터는 살릴 수 없다(그 정점만 까맣게 죽는다).
+            if ( sw::MathUtil::abs( normal.getLength() - 1.0f ) > 0.001f )
+                ++badLengthCount;
+            // 안쪽을 향하는 노멀은 빛을 반대로 받는다 — 그림에서는 "저 면만 어둡다" 로만 보인다.
+            if ( normal.dot( position ) < -0.001f )
+                ++inwardCount;
+            if ( vertex._arrUv[0] < -0.001f || vertex._arrUv[0] > 1.001f || vertex._arrUv[1] < -0.001f ||
+                 vertex._arrUv[1] > 1.001f )
+                ++badUvCount;
+        }
+
+        SW_EXPECT_TRUE_MSG( badLengthCount == 0, "정점 노멀이 정규화되어 있지 않다" );
+        SW_EXPECT_TRUE_MSG( inwardCount == 0, "정점 노멀이 안쪽을 향한다" );
+        SW_EXPECT_TRUE_MSG( badUvCount == 0, "UV 가 0..1 밖이다" );
+        if ( badLengthCount != 0 || inwardCount != 0 || badUvCount != 0 )
+        {
+            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 노멀 길이 %#, 안쪽 %#, UV 범위 %#", pId, badLengthCount,
+                          inwardCount, badUvCount );
+        }
+
+        // 곡면은 **면마다 노멀이 달라야** 한다 — 전부 같으면 평면 음영으로 되돌아간 것이다.
+        if ( sw::StringUtil::equals( pId, "Sphere", true ) )
+        {
+            bool bFoundDifferent = false;
+            for ( const sw::RHIVertex& vertex : listVertex )
+            {
+                if ( sw::MathUtil::abs( vertex._arrNormal[0] - listVertex[0]._arrNormal[0] ) > 0.01f )
+                {
+                    bFoundDifferent = true;
+                    break;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( bFoundDifferent, "구의 노멀이 전부 같다 — 부드러운 음영이 아니라 평면 음영이다" );
+        }
+    }
+
+    // 바닥 평면은 면이 원점을 지나므로 위 판정이 안 맞는다 — 노멀이 +Y 인지 직접 본다.
+    // 이것이 틀리면 바닥이 **옆을 보는 것처럼** 칠해진다(정점 노멀이 없던 시절의 그 증상이다).
+    sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
+    SW_ASSERT_TRUE( plane != nullptr );
+    const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getVertices();
+    SW_ASSERT_TRUE( listPlaneVertex.empty() == false );
+    uint32 notUpCount = 0;
+    for ( const sw::RHIVertex& vertex : listPlaneVertex )
+    {
+        if ( vertex._arrNormal[1] < 0.999f )
+            ++notUpCount;
+    }
+    SW_EXPECT_TRUE_MSG( notUpCount == 0, "바닥 평면의 노멀이 +Y 가 아니다" );
+}
