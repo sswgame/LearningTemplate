@@ -29,6 +29,10 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 {
 	float4x4 g_LightViewProj;
 	float4x4 g_ViewProj;
+	// 뷰-투영의 역행렬 — 디퍼드 조명이 **깊이에서 월드 위치를 복원**하는 데 쓴다(G버퍼에 위치를
+	// 따로 굽지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
+	// 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
+	float4x4 g_InvViewProj;
 	float4x4 g_World;
 	float4   g_KeyLightDirIntensity;
 	float4   g_KeyLightColor;
@@ -48,6 +52,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwVisibleInstanceIdsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
 	uint     g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
 	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
+	uint     g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
+	uint     g_SwLightCount;              // 그 버퍼의 원소 수 (0 이면 PassCB 키라이트 폴백)
 };
 
 // ------------------------------------------------------------------------------

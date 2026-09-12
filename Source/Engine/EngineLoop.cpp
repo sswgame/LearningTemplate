@@ -32,6 +32,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
@@ -638,6 +639,10 @@ namespace sw
                     packet._lightViewProj     = pLight->castsShadow() ? pLight->buildShadowViewProj() : float4x4{};
                     packet._bHasLight         = SW_TRUE;
                 }
+
+                // 씬의 **모든** 라이트 — 방향광·점광·스폿이 한 목록으로 간다. 위의 키라이트는 그림자
+                // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다.
+                collectSceneLights( pActiveScene, packet._listLight );
 
                 pActiveScene->ensureDefaultCameras();
                 // 위의 핫리로드/씬 전환/씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다.

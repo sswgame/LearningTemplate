@@ -324,6 +324,8 @@ namespace sw
     {
         hashed_string _lightViewProj{ "g_LightViewProj" };
         hashed_string _viewProj{ "g_ViewProj" };
+        /// @brief 뷰-투영의 역행렬 — 디퍼드 조명이 깊이에서 월드 위치를 복원한다.
+        hashed_string _invViewProj{ "g_InvViewProj" };
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };
@@ -346,6 +348,10 @@ namespace sw
         hashed_string _swVisibleInstanceIds{ "SwVisibleInstanceIds" };
         /// @brief 배치의 머티리얼 데이터 구조버퍼 (binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록한다.
         hashed_string _swMaterials{ "SwMaterials" };
+        /// @brief 씬 라이트 구조버퍼 (lighting.hlsli g_SwLights ↔ "SwLights"). 패스당 한 번 건다.
+        hashed_string _swLights{ "SwLights" };
+        /// @brief 그 버퍼의 원소 수 ↔ PassCB g_SwLightCount. 0 이면 셰이더가 키라이트로 폴백한다.
+        hashed_string _swLightCount{ "g_SwLightCount" };
     };
 
     /**

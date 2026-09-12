@@ -58,7 +58,24 @@ namespace sw
          */
         inline constexpr uint32 kVisibleInstanceBuffer = SW_SLOT_VISIBLE_INSTANCE_SRV;
         inline constexpr uint32 kMorphVertexBuffer     = SW_SLOT_MORPH_VERTEX_SRV;
-        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
+        /**
+         * @brief 씬의 라이트 목록(g_SwLights) — 방향광·점광이 한 버퍼에 섞인다.
+         * @details 포워드와 디퍼드가 **같은 버퍼를 같은 루프로** 읽는다. 상수버퍼가 아닌 이유는
+         *          인스턴스·머티리얼과 같다 — 개수가 씬마다 다르고, 패스당 한 번 걸면 드로우 사이에
+         *          바인딩이 바뀌지 않는다.
+         */
+        inline constexpr uint32 kLightBuffer  = SW_SLOT_LIGHT_SRV;
+        inline constexpr uint32 kSrvSlotCount = SW_SRV_SLOT_COUNT;
+
+        // ------------------------------------------------------------------------------
+        // 2-1) 라이트 원소의 타입 값 — bindingslots.hlsli 가 정본이다(셰이더와 같은 파일).
+        // ------------------------------------------------------------------------------
+        inline constexpr uint32 kLightTypeDirectional = SW_LIGHT_TYPE_DIRECTIONAL;
+        inline constexpr uint32 kLightTypePoint       = SW_LIGHT_TYPE_POINT;
+        inline constexpr uint32 kLightTypeSpot        = SW_LIGHT_TYPE_SPOT;
+        inline constexpr uint32 kLightTypeCount       = SW_LIGHT_TYPE_COUNT;
+        /// @brief 한 프레임에 GPU 로 보내는 라이트 수 상한 — 넘으면 엔진이 잘라 보내고 경고한다.
+        inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트 / 샘플러
@@ -177,8 +194,12 @@ namespace sw
                        "머티리얼 텍스처 슬롯은 연속이어야 한다 (셰이더가 서수로 고른다)" );
         static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount, "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이어야 한다" );
         static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1, "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이어야 한다" );
-        static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1 && kMorphVertexBuffer + 1 == kSrvSlotCount,
-                       "모프 정점 버퍼는 가시 목록 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1, "모프 정점 버퍼는 가시 목록 다음이어야 한다" );
+        static_assert( kLightBuffer == kMorphVertexBuffer + 1 && kLightBuffer + 1 == kSrvSlotCount,
+                       "라이트 버퍼는 모프 정점 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
+                           kLightTypeSpot < kLightTypeCount,
+                       "라이트 타입 값이 타입 수 안에 있어야 한다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,

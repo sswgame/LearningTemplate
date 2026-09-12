@@ -15,9 +15,9 @@
  * 저장소·컴포넌트 풀·팩토리·틱 웨이브를 들고 있어서, 능력을 따로 떼어 두면 컴포넌트가 자기가
  * 쓰는 것만 들고 있으면 된다.
  *
- * @note 프리미티브 등록부와 달리 **더티 표시도 인덱스도 없다.** 빛은 몇 개뿐이라 제거가 선형
- *       탐색으로 충분하고, 렌더러는 매 프레임 값을 새로 읽으므로 "무엇이 바뀌었나"를 알 필요가 없다.
- *       빛이 많아지는 날(점광·스포트) 그때 프리미티브 쪽 구조를 따라가면 된다.
+ * @note 더티 표시는 없다. 렌더러가 매 프레임 값을 새로 읽어 GPU 버퍼를 다시 채우므로 "무엇이
+ *       바뀌었나" 를 알 필요가 없다 — 프리미티브와 달리 라이트는 원소가 64 바이트뿐이다.
+ *       제거는 선형 탐색이다. 점광이 수백 개인 벤치에서도 제거는 씬을 내릴 때만 일어난다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -28,6 +28,8 @@
 namespace sw
 {
     class DirectionalLightComponent;
+    class PointLightComponent;
+    class SpotLightComponent;
 
     /**
      * @class LightRegistry
@@ -59,9 +61,35 @@ namespace sw
          */
         const vector<DirectionalLightComponent*>& getAllDirectional() const { return _listDirectional; }
 
+        /** @brief 점광을 등록합니다. 붙을 때 1회. 이미 등록됐으면 무시합니다. */
+        void addPoint( PointLightComponent* pComp );
+        /** @brief 점광을 등록 해제합니다. 멱등입니다. */
+        void removePoint( PointLightComponent* pComp );
+
+        /**
+         * @brief 등록된 점광 목록입니다. 소유하지 않습니다.
+         * @details 방향광과 같은 규약 — 활성 판정은 부르는 쪽이 한다.
+         */
+        const vector<PointLightComponent*>& getAllPoint() const { return _listPoint; }
+
+        /** @brief 스포트라이트를 등록합니다. 붙을 때 1회. 이미 등록됐으면 무시합니다. */
+        void addSpot( SpotLightComponent* pComp );
+        /** @brief 스포트라이트를 등록 해제합니다. 멱등입니다. */
+        void removeSpot( SpotLightComponent* pComp );
+
+        /**
+         * @brief 등록된 스포트라이트 목록입니다. 소유하지 않습니다.
+         * @details 방향광·점광과 같은 규약 — 활성 판정은 부르는 쪽이 한다.
+         */
+        const vector<SpotLightComponent*>& getAllSpot() const { return _listSpot; }
+
     private:
         /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
         vector<DirectionalLightComponent*> _listDirectional;
+        /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
+        vector<PointLightComponent*> _listPoint;
+        /** @brief 소유하지 않습니다 — 수명은 GameObject 가 쥡니다. */
+        vector<SpotLightComponent*> _listSpot;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고, 조회는 게임 스레드 한 곳입니다. */
         mutable mutex _mutex;
     };

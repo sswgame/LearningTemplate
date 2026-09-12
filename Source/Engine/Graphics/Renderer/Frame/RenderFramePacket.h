@@ -5,6 +5,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 
 namespace sw
@@ -26,7 +27,14 @@ namespace sw
         /** @brief xyz = 빛이 나아가는 방향, w = 세기. */
         float4 _lightDirIntensity;
         /** @brief rgb = 빛 색, a = 환경광. */
-        float4           _lightColorAmbient;
+        float4 _lightColorAmbient;
+        /**
+         * @brief 이 프레임의 **모든** 라이트 (방향광 + 점광). 값으로 싣는다.
+         * @details 렌더 스레드는 씬을 볼 수 없으므로(`_pScene` 은 늘 null) 라이트도 패킷으로만 온다.
+         *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나온다 —
+         *          라이트 목록이 비어도 예전과 같은 그림이 나오는 폴백 경로이기도 하다.
+         */
+        vector<GpuLight> _listLight;
         RHITextureHandle _gameRenderTarget; ///< 0 = backbuffer path
         uint32           _viewportWidth;
         uint32           _viewportHeight;

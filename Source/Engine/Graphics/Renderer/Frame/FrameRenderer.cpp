@@ -544,6 +544,10 @@ namespace sw
         _pDevice            = pDevice;
         _pScene             = pScene;
         _outputRenderTarget = 0;
+        // 씬 직접 경로(에디터·테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다 — 경로마다 조명이
+        // 다르면 에디터에서 본 그림과 게임 화면이 갈린다.
+        collectSceneLights( pScene, _listScratchLight );
+        _lightBuffer.update( pDevice, _listScratchLight );
         ensurePassResources();
         ensureTransientResources();
         resetPassCbRing();
@@ -618,6 +622,9 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 씬의 모든 라이트 — 방향광·점광이 한 버퍼에 섞여 올라가고 포워드·디퍼드가 같이 읽는다.
+        // 비어 있으면 셰이더가 위의 키라이트로 폴백하므로 라이트 컴포넌트가 없는 씬도 그대로 그려진다.
+        _lightBuffer.update( pDevice, packet._listLight );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
@@ -629,10 +636,7 @@ namespace sw
         // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 세운다.
         updatePassConstants( _frameCtx );
         if ( packet._bHasViewProj != SW_FALSE )
-        {
-            _frameCtx._passValues.setMatrix( passConstantNames()._viewProj, packet._viewProj );
-            view( RenderViewType::Main ).setViewProjection( packet._viewProj ); // 절두체도 함께 갱신된다
-        }
+            applyViewProjection( _frameCtx, packet._viewProj ); // 역행렬·절두체도 함께 갱신된다
         // 값 업로드/바인딩은 드로우 직전 ShaderBindingBinder 가 한다 — 여기서는 시드만 채운다.
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );

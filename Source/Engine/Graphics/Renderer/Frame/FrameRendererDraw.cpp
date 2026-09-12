@@ -93,6 +93,16 @@ namespace sw
         }
     }
 
+    void FrameRenderer::registerLightBuffer( FramePassContext& ctx )
+    {
+        // 개수는 버퍼가 없어도 채운다 — 셰이더는 0 이면 PassCB 키라이트로 폴백한다.
+        ctx._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
+        if ( _lightBuffer.isBindable() == false )
+            return;
+        const RHIStructuredBufferSlot& buffer = _lightBuffer.getBuffer();
+        ctx._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
+    }
+
     void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼 — 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).

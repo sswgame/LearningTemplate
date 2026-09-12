@@ -93,7 +93,13 @@
 // 안 걸려 있으면(SW_INVALID_INDEX) 입력 스트림을 그대로 쓴다.
 #define SW_SLOT_MORPH_VERTEX_SRV       11
 
-#define SW_SRV_SLOT_COUNT              12  // t0..t11 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// 씬의 라이트 목록 (StructuredBuffer<SwLightData> g_SwLights). 방향광·점광이 한 버퍼에 섞여 들어가고,
+// 포워드와 디퍼드가 **같은 버퍼를 같은 루프로** 읽는다 — 조명 식이 두 벌이면 둘은 반드시 갈라진다.
+// 인스턴스·머티리얼과 같은 이유로 상수버퍼가 아니라 구조버퍼다: 개수가 씬마다 다르고, 패스당 한 번
+// 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약). 언리얼의 라이트 데이터 버퍼와 같은 자리.
+#define SW_SLOT_LIGHT_SRV              12
+
+#define SW_SRV_SLOT_COUNT              13  // t0..t12 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)
@@ -175,5 +181,19 @@
 #define SW_GL_IMAGE_UNIT1              1
 #define SW_GL_IMAGE_UNIT2              2
 #define SW_GL_IMAGE_UNIT3              3
+
+// ------------------------------------------------------------------------------
+// 8) 라이트 타입 — g_SwLights 원소의 `directionType.w` 에 들어가는 값.
+//    슬롯 번호는 아니지만 **C++ 와 셰이더가 같아야 하는 숫자**라 정본을 여기 둔다(이 파일이 양쪽에서 include 된다).
+//    값을 두 군데 두면 언젠가 갈라진다 — 그때 증상은 "빛 하나가 조용히 엉뚱하게 계산된다" 다.
+// ------------------------------------------------------------------------------
+#define SW_LIGHT_TYPE_DIRECTIONAL      0
+#define SW_LIGHT_TYPE_POINT            1
+#define SW_LIGHT_TYPE_SPOT             2
+#define SW_LIGHT_TYPE_COUNT            3
+
+// 한 프레임에 GPU 로 보내는 라이트 수 상한. 넘으면 엔진이 잘라 보내고 경고한다 —
+// 셰이더 루프가 이 수를 넘게 도는 일은 없다(g_SwLightCount 가 이 값으로 클램프된다).
+#define SW_MAX_FRAME_LIGHT             256
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

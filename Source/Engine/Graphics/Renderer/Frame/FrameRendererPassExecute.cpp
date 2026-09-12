@@ -135,6 +135,9 @@ namespace sw
             ctx._pCmd->beginEventMarker( arrPassName );
         }
         ctx._resourceRegistry.reset();
+        // 라이트는 **패스 종류를 가리지 않는다** — 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
+        // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 건다.
+        registerLightBuffer( ctx );
 
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받던 시절엔 패스마다 여기서
         // 다시 intern 했다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 전부 코드 리터럴이라

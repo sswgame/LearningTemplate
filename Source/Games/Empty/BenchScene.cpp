@@ -11,6 +11,8 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -253,6 +255,8 @@ namespace sw
         }
 
         spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
+        spawnBenchLights( pScene, halfExtentOf( side, kBenchSpacing ) );
+        spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
         _benchGridSide = side;
         frameCameras( pScene, side, kBenchSpacing );
 
@@ -315,6 +319,94 @@ namespace sw
         pLight->setIntensity( 1.6f );
 
         SW_LOG_INFO( "[Bench] 주광을 만들었습니다 (그림자 볼륨 반경 %#).", static_cast<int32>( halfExtent * 1.15f ) );
+    }
+
+    void BenchScene::spawnBenchLights( Scene* pScene, float32 halfExtent )
+    {
+        const int32 lightCount = gv_benchLights;
+        if ( pScene == nullptr || lightCount <= 0 )
+            return;
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+
+        // 반경은 비용을 정하는 값이다 — 기본값은 격자 간격의 몇 배로 두어, 한 픽셀에 라이트가
+        // 여럿 닿게 한다(그래야 루프가 실제로 돌아 라이트 수에 따른 비용이 측정된다).
+        const float32 radius = ( gv_benchLightRadius > 0.0f ) ? gv_benchLightRadius : ( kBenchSpacing * 3.0f );
+
+        for ( int32 lightIndex = 0; lightIndex < lightCount; ++lightIndex )
+        {
+            // 결정적 해시 — 실행마다 같은 자리에 놓여야 스크린샷 비교가 성립한다.
+            uint32 hash = static_cast<uint32>( lightIndex ) * 2654435761u;
+            hash ^= hash >> 15;
+            hash *= 2246822519u;
+            hash ^= hash >> 13;
+
+            const float32 unitX = static_cast<float32>( ( hash >> 0 ) & 0x3FFu ) / 1023.0f;
+            const float32 unitY = static_cast<float32>( ( hash >> 10 ) & 0x3FFu ) / 1023.0f;
+            const float32 unitZ = static_cast<float32>( ( hash >> 20 ) & 0x3FFu ) / 1023.0f;
+
+            const float3 position{ ( unitX * 2.0f - 1.0f ) * halfExtent,
+                                   1.0f + unitY * 3.0f,
+                                   ( unitZ * 2.0f - 1.0f ) * halfExtent };
+            const float3 color{ 0.3f + unitZ * 0.7f, 0.3f + unitX * 0.7f, 0.3f + unitY * 0.7f };
+
+            GameObject* pLightObject = pObjects->createGameObject( hashed_string( "BenchLight" ) );
+            if ( pLightObject == nullptr )
+                continue;
+
+            // 홀수 번째는 스포트라이트 — 점광만 두면 원뿔 감쇠 분기가 한 번도 실행되지 않는다.
+            if ( ( lightIndex & 1 ) != 0 )
+            {
+                SpotLightComponent* pSpot = pLightObject->addComponent<SpotLightComponent>();
+                if ( pSpot == nullptr )
+                    continue;
+                pSpot->setColor( color );
+                pSpot->setIntensity( 4.0f );
+                pSpot->setRadius( radius );
+                pSpot->setOuterConeAngle( 0.6f );
+                pSpot->setInnerConeAngle( 0.25f );
+                pSpot->setLocalPosition( position ); // 회전은 주지 않는다 — 기본 방향이 아래다
+                continue;
+            }
+
+            PointLightComponent* pPoint = pLightObject->addComponent<PointLightComponent>();
+            if ( pPoint == nullptr )
+                continue;
+            pPoint->setColor( color );
+            pPoint->setIntensity( 2.5f );
+            pPoint->setRadius( radius );
+            pPoint->setLocalPosition( position );
+        }
+
+        SW_LOG_INFO( "[Bench] 라이트 %#개를 흩뿌렸습니다 (반경 %#, 절반은 스포트). -gv_benchLightRadius 로 반경을 바꾼다.",
+                     lightCount, static_cast<int32>( radius ) );
+    }
+
+    void BenchScene::spawnGround( Scene* pScene, float32 halfExtent )
+    {
+        if ( pScene == nullptr || gv_benchGround == 0 )
+            return;
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+
+        GameObject* pGroundObject = pObjects->createGameObject( hashed_string( "BenchGround" ) );
+        if ( pGroundObject == nullptr )
+            return;
+        MeshComponent* pMesh = pGroundObject->addComponent<MeshComponent>();
+        if ( pMesh == nullptr )
+            return;
+
+        // 격자보다 넉넉히 크게 — 그림자 볼륨 가장자리가 화면 안에 들어오면 "그림자가 잘렸다" 로 오인한다.
+        const float32 size = halfExtent * 2.6f;
+        pMesh->setMesh( MeshUtil::createPlane( 24 ) );
+        pMesh->setLocalScale( float3{ size, 1.0f, size } );
+        // 평면의 면은 로컬 y = +0.5 다(MeshUtil::createPlane 주석) — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
+        pMesh->setLocalPosition( float3{ 0.0f, -1.1f, 0.0f } );
+        pMesh->setVisible( true );
+
+        SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );
     }
 
     void BenchScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )

@@ -18,6 +18,7 @@
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
+#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
@@ -306,6 +307,12 @@ namespace sw
         FrameLightState _frameLight;
         /** @brief 카메라에서 뷰/투영을 적용합니다. */
         void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
+        /**
+         * @brief 뷰-투영과 **그 역행렬**을 함께 적용합니다.
+         * @details 둘을 따로 채우면 언젠가 한쪽만 갱신된다 — 그러면 디퍼드가 복원한 월드 위치가
+         *          지난 프레임의 카메라를 가리키고, 증상은 "빛이 한 프레임 늦게 따라온다" 다.
+         */
+        void applyViewProjection( FramePassContext& ctx, const float4x4& viewProj );
         /** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
         void buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const;
         /** @brief 카메라 뷰-투영 행렬을 만듭니다. */
@@ -321,6 +328,12 @@ namespace sw
         void registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& ctx );
+        /**
+         * @brief 씬 라이트 구조버퍼를 "SwLights" 로 등록합니다 — **모든 패스**에 건다.
+         * @details 인스턴스 버퍼와 달리 지오메트리 패스 전용이 아니다. 디퍼드 조명은 풀스크린
+         *          패스라 `registerInstanceBuffer` 를 타지 않는데, 라이트는 바로 거기서 필요하다.
+         */
+        void registerLightBuffer( FramePassContext& ctx );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 직접 그립니다. */
@@ -512,7 +525,11 @@ namespace sw
         /// @brief GPU 가 변형한 정점 풀 — RT 소유(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
         /// @brief 이번 프레임 모프 대상 메시 — 프레임마다 할당하지 않으려고 들고 있는다.
-        vector<Mesh*>      _listScratchMorphMesh;
+        vector<Mesh*> _listScratchMorphMesh;
+        /// @brief 씬 라이트 구조버퍼 — RT 소유. 포워드·디퍼드가 같은 버퍼를 읽는다.
+        GpuLightBuffer _lightBuffer;
+        /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼 — 프레임마다 할당하지 않으려고 들고 있는다.
+        vector<GpuLight>   _listScratchLight;
         RHIBufferHandle    _instanceSortCb;
         RHIDescriptorIndex _instanceSortCbIndex;
         /**

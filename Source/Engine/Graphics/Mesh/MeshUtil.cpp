@@ -117,6 +117,8 @@ namespace sw
             return createUnitCube();
         if ( StringUtil::equals( meshId, "Quad", true ) || StringUtil::equals( meshId, "Rect", true ) )
             return createRectMesh();
+        if ( StringUtil::equals( meshId, "Plane", true ) || StringUtil::equals( meshId, "Ground", true ) )
+            return createPlane();
         if ( StringUtil::equals( meshId, "Sphere", true ) )
             return createSphere();
         if ( StringUtil::equals( meshId, "Cylinder", true ) )
@@ -294,6 +296,71 @@ namespace sw
             {  { 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
         };
+        mesh->setVertices( std::move( listVert ) );
+        return mesh;
+    }
+
+    shared_ptr<Mesh> MeshUtil::createPlane( uint32 segmentCount )
+    {
+        segmentCount = MathUtil::max( segmentCount, 1u );
+
+        auto              mesh = Mesh::create();
+        vector<RHIVertex> listVert;
+        listVert.reserve( static_cast<size_t>( segmentCount ) * segmentCount * 6 );
+
+        // 면은 로컬 y = +0.5 — 큐브 윗면과 같은 자리다. 이유는 헤더 주석 참고(정점에 노멀이 없다).
+        constexpr float32 kSurfaceY = 0.5f;
+        const float32     step      = 1.0f / static_cast<float32>( segmentCount );
+
+        auto cornerAt = [&]( uint32 ix, uint32 iz ) -> float3
+        {
+            return float3{ -0.5f + static_cast<float32>( ix ) * step, kSurfaceY,
+                           -0.5f + static_cast<float32>( iz ) * step };
+        };
+
+        for ( uint32 iz = 0; iz < segmentCount; ++iz )
+        {
+            for ( uint32 ix = 0; ix < segmentCount; ++ix )
+            {
+                const float3 p00 = cornerAt( ix, iz );
+                const float3 p10 = cornerAt( ix + 1, iz );
+                const float3 p11 = cornerAt( ix + 1, iz + 1 );
+                const float3 p01 = cornerAt( ix, iz + 1 );
+
+                // 체크무늬로 칠한다. 단색이면 그림자 경계는 보여도 **면이 어디까지인지**가 안 보여서,
+                // 그림자가 맞는 자리에 졌는지 판단할 기준이 사라진다.
+                const bool    bDark = ( ( ix + iz ) & 1u ) != 0u;
+                const float32 tone  = bDark ? 0.52f : 0.72f;
+                const float4  color{ tone, tone, tone * 1.05f, 1.0f };
+
+                // 위에서 내려다볼 때 앞면이 되도록 감는다(이 엔진의 앞면 규약).
+                listVert.push_back( RHIVertex{
+                    { p00._x, p00._y, p00._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+                listVert.push_back( RHIVertex{
+                    { p01._x, p01._y, p01._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+                listVert.push_back( RHIVertex{
+                    { p11._x, p11._y, p11._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+                listVert.push_back( RHIVertex{
+                    { p00._x, p00._y, p00._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+                listVert.push_back( RHIVertex{
+                    { p11._x, p11._y, p11._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+                listVert.push_back( RHIVertex{
+                    { p10._x, p10._y, p10._z },
+                    { color._x, color._y, color._z, color._w }
+                } );
+            }
+        }
+
         mesh->setVertices( std::move( listVert ) );
         return mesh;
     }

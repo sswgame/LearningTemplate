@@ -1,4 +1,4 @@
-#include "binding.hlsli"
+#include "lighting.hlsli"
 
 struct VSInput
 {
@@ -13,6 +13,9 @@ struct PSInput
 	float2 uv  : TEXCOORD0;
 	float3 nrm : TEXCOORD1;
 	nointerpolation uint materialIndex : TEXCOORD2; // GPUScene 인스턴스가 준 머티리얼 원소
+	// 월드 위치를 넘긴다 — 점광의 거리 감쇠와 그림자 투영이 둘 다 이걸 쓴다. 예전엔 그림자를
+	// **로컬 좌표로 만든 UV**(localPos.xy*0.5+0.5)로 읽고 있었다. 그건 그림자가 아니라 무늬다.
+	float3 wpos : TEXCOORD3;
 };
 
 // defaultmaterial.material 의 프로퍼티 순서·타입과 1:1 (color/roughness/albedoMap). 머티리얼 패커는
@@ -33,6 +36,7 @@ PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 	SwInstanceData inst = SwLoadInstance(iid);
 	float4 worldPos = mul(float4(localPos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
+	output.wpos = worldPos.xyz;
 	output.col = input.col;
 	output.uv  = localPos.xy * float2(0.5f, -0.5f) + 0.5f;
 	float3 n = DemoCubeNormal(localPos);
@@ -60,15 +64,9 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	// 조명 코드가 통째로 컴파일 아웃되므로 런타임 분기가 아니다(언리얼의 베이스 패스와 같은 구성).
 	return SwStoreSurface(float4(0, 0, 0, 0), albedo, N);
 #else
-	float3 L = normalize(-g_KeyLightDirIntensity.xyz);
-	float  ndotl = saturate(dot(N, L));
-
-	float2 shadowUV = saturate(input.uv + g_ShadowParams.zw);
-	float  shadowSample = SampleShadow(shadowUV).r;
-	float  shadow = lerp(1.0f - g_ShadowParams.y, 1.0f, saturate(shadowSample + g_ShadowParams.x));
-
-	float3 ambient = g_KeyLightColor.rgb * g_KeyLightColor.a;
-	float3 lit = albedo.rgb * (ambient + ndotl * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb) * shadow;
+	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
+	float  shadow = SwSampleShadowAtWorld(input.wpos);
+	float3 lit = SwShadeLights(albedo.rgb, input.wpos, N, shadow);
 	float rim = pow(1.0f - saturate(dot(N, float3(0, 0, 1))), 2.0f) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;
 

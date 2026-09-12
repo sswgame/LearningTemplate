@@ -27,8 +27,19 @@ namespace sw
     {
         /** @brief 원점 중심 단위 큐브(범위 [-0.5,0.5], 면별 색). */
         static shared_ptr<Mesh> createUnitCube();
-        /** @brief 원점 중심 단위 2D 쿼드(범위 [-0.5,0.5]). */
+        /** @brief 원점 중심 단위 2D 쿼드(범위 [-0.5,0.5]). XY 평면이라 화면을 마주 본다. */
         static shared_ptr<Mesh> createRectMesh();
+        /**
+         * @brief 위를 향한 바닥 평면(XZ, 한 변 1). 그림자를 **받아 보이게 하는** 면이다.
+         * @param segmentCount 한 변의 분할 수(최소 1). 나누는 이유는 정점 색·조명이 정점 단위로
+         *        보간되기 때문이다 — 한 장짜리 쿼드는 네 꼭짓점 사이가 선형으로 늘어나 빛이 뭉갠다.
+         * @note **면이 로컬 y = +0.5 에 있다**(y = 0 이 아니다). 이 엔진의 정점에는 노멀이 없어서
+         *       셰이더가 위치로 노멀을 만드는데(`DemoCubeNormal`), y = 0 인 평면은 |y| 가 0 이라
+         *       ±X/±Z 노멀을 받아 **바닥이 옆을 보는 것처럼** 칠해진다. 면을 큐브의 윗면 자리에
+         *       두면 그 함수가 +Y 를 돌려준다 — 지금 큐브 윗면이 제대로 칠해지는 것과 같은 이유다.
+         *       진짜 해법은 정점에 노멀을 넣는 것이고, 그건 백로그에 있다.
+         */
+        static shared_ptr<Mesh> createPlane( uint32 segmentCount = 8 );
         /**
          * @brief 원점 중심 UV 구(지름 1).
          * @param stackCount 위아래 분할 수(최소 2), @param sliceCount 둘레 분할 수(최소 3).

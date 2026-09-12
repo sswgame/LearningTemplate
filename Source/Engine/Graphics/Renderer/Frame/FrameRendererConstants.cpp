@@ -52,8 +52,7 @@ namespace sw
         {
             float4x4 viewProj = float4x4::Identity;
             buildViewProj( viewProj );
-            ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
-            view( RenderViewType::Main ).setViewProjection( viewProj );
+            applyViewProjection( ctx, viewProj );
         }
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
@@ -78,7 +77,15 @@ namespace sw
                                     ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
                                     : ( 16.0f / 9.0f );
         const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
+        applyViewProjection( ctx, viewProj );
+    }
+
+    void FrameRenderer::applyViewProjection( FramePassContext& ctx, const float4x4& viewProj )
+    {
         ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+        // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
+        // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고 그 증상은 "빛이 한 프레임 늦게 따라온다" 다.
+        ctx._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다 — 뷰에 같은 값을 남긴다.
         view( RenderViewType::Main ).setViewProjection( viewProj );
     }
@@ -102,7 +109,12 @@ namespace sw
         // 예전엔 view/ortho 성분을 직접 써 넣었다. createLookAt/createOrthographic 과 같은 행렬이지만
         // 손으로 쓰면 어떤 규약(좌수, 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과
         // 어긋나도 드러나지 않는다.
-        outMat = float4x4::createLookAt( eye, float3::Zero, up ) * float4x4::createOrthographic( kLightOrthoExtent, kLightOrthoExtent, -kLightDistance, kLightDistance );
+        // 깊이 범위는 **눈을 기준으로** 잡는다 — 자세한 사연은 DirectionalLightComponent::buildShadowViewProj.
+        // 여기도 같은 실수를 하고 있었다(값을 두 군데 두면 갈라진다는 위 주석의 실례다).
+        constexpr float32 kLightOrthoHalf = kLightOrthoExtent * 0.5f;
+        outMat                            = float4x4::createLookAt( eye, float3::Zero, up ) *
+                 float4x4::createOrthographic( kLightOrthoExtent, kLightOrthoExtent,
+                                               kLightDistance - kLightOrthoHalf, kLightDistance + kLightOrthoHalf );
     }
 
     void FrameRenderer::buildViewProj( float4x4& outMat ) const

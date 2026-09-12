@@ -92,9 +92,17 @@ namespace sw
         const float3 up  = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
         const float3 eye = lightDir * -_shadowDistance;
 
-        const float32 extent = _shadowExtent * 2.0f;
+        // **깊이 범위는 눈을 기준으로 잡는다.** 예전엔 `(-거리, +거리)` 였는데, 눈이 원점에서 거리만큼
+        // 떨어져 원점을 보고 있으므로 씬의 뷰 z 는 거리 언저리다 — `createOrthographic` 은
+        // `z' = (z_view - near) / (far - near)` 라 그 범위에서는 씬 전체가 z' ≈ 1(원평면)로 뭉갠다.
+        // 그러면 깊이 비교가 늘 "가려지지 않음" 이 되어 **그림자가 한 번도 진 적이 없었다**.
+        // 원점에서 반경 `_shadowExtent` 안의 점은 뷰 z 가 [거리 - 반경, 거리 + 반경] 이므로 그대로 쓴다.
+        // (거리가 반경보다 작으면 near 가 음수가 되는데, 직교 투영에는 문제가 되지 않는다 — 선형 사상일 뿐이다.)
+        const float32 extent    = _shadowExtent * 2.0f;
+        const float32 nearPlane = _shadowDistance - _shadowExtent;
+        const float32 farPlane  = _shadowDistance + _shadowExtent;
         return float4x4::createLookAt( eye, float3::Zero, up ) *
-               float4x4::createOrthographic( extent, extent, -_shadowDistance, _shadowDistance );
+               float4x4::createOrthographic( extent, extent, nearPlane, farPlane );
     }
 
     void DirectionalLightComponent::onRegister( GameObjectManager& manager )

@@ -71,6 +71,17 @@ namespace sw
 
         /** @brief 씬에 주광을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
         void spawnLight( Scene* pScene, float32 halfExtent );
+        /**
+         * @brief `-gv_benchLights=N` 개의 점광·스포트라이트를 격자 위에 흩뿌립니다.
+         * @details 자리는 **결정적 해시**로 정한다 — 실행마다 같은 그림이 나와야 스크린샷 비교가 된다.
+         *          홀수 번째는 스포트라이트다(점광만 두면 원뿔 감쇠 경로가 한 번도 안 돈다).
+         */
+        void spawnBenchLights( Scene* pScene, float32 halfExtent );
+        /**
+         * @brief `-gv_benchGround=1` 이면 격자 아래에 바닥 평면을 깝니다.
+         * @details 그림자를 **받을 면**이다. 큐브만 떠 있으면 그림자가 어디에 지는지 그림으로 볼 수 없다.
+         */
+        void spawnGround( Scene* pScene, float32 halfExtent );
         /** @brief 씬의 모든 카메라를 격자에 맞춥니다(에디터 뷰포트 카메라 포함). */
         void frameCameras( Scene* pScene, uint32 side, float32 spacing );
         /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */

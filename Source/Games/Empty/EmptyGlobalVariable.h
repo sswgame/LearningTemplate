@@ -95,4 +95,30 @@ namespace sw
      *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 그림이 실제로 달라지는지로 본다.
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMeshMorph );
+
+    /**
+     * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).
+     * @details 라이트 수를 늘리면 **픽셀당 루프가 길어진다** — 디퍼드는 화면 픽셀 수만큼, 포워드는
+     *          오버드로를 포함한 픽셀 수만큼이다. 그래서 두 경로의 라이트 비용이 어떻게 갈리는지를
+     *          이 스위치 하나로 잰다(`-gv_deferred` 와 함께 쓴다).
+     * @note 홀수 번째는 스포트라이트다 — 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다.
+     * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchLights );
+
+    /**
+     * @brief `-gv_benchLightRadius=<유닛>` — 벤치 라이트가 닿는 반경 (0 이면 격자 간격에서 정한다).
+     * @details 반경은 **비용을 정하는 값**이다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
+     *          작으면 감쇠가 0 이라 일찍 빠진다 — 타일 컬링의 효과를 재려면 이 값을 흔들어야 한다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_FLOAT( gv_benchLightRadius );
+
+    /**
+     * @brief `-gv_benchGround=1` — 격자 아래에 바닥 평면을 깝니다.
+     * @details **그림자를 눈으로 확인하려면 받을 면이 있어야 한다.** 큐브만 떠 있으면 그림자는 다른
+     *          큐브 위에만 지고, 그것도 큐브가 서로 떨어져 있어 거의 보이지 않는다 — 그림자 투영이
+     *          맞는지 그림으로 판단할 수가 없었다.
+     * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchGround );
 } // namespace sw

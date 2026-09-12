@@ -305,6 +305,8 @@ namespace sw
             _instanceAnimCbIndex = kInvalidDescriptorIndex;
             _instanceSortCb      = 0;
             _instanceSortCbIndex = kInvalidDescriptorIndex;
+            _meshMorphCb         = 0;
+            _meshMorphCbIndex    = kInvalidDescriptorIndex;
             _mapMaterialFallback.clear();
             _taaHistory    = 0;
             _taaHistorySrv = kInvalidDescriptorIndex;
@@ -393,6 +395,11 @@ namespace sw
             releaseResource( _arrView[viewIndex]._cullCb, _arrView[viewIndex]._cullCbIndex );
         releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
         releaseResource( _instanceSortCb, _instanceSortCbIndex );
+        // 모프 상수버퍼와 모프 풀은 여태 **한 번도 놓지 않고 있었다** — 형제(anim·sort)만 적혀 있었다.
+        // 디바이스가 바뀌면 옛 디바이스의 버퍼와 bindless 항목이 그대로 남는다.
+        releaseResource( _meshMorphCb, _meshMorphCbIndex );
+        _meshMorphPool.release( _pDevice );
+        _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
             fallbackSlot.release( _pDevice );
         _mapMaterialFallback.clear();
