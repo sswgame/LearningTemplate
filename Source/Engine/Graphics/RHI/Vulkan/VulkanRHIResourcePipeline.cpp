@@ -281,7 +281,7 @@ namespace sw
     {
         VulkanRHIDevice::VulkanRenderPassRecord record{};
 
-        if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == 0 )
+        if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == SW_FALSE )
         {
             SW_LOG_ERROR( "createRenderPass requires color or depth attachments." );
             return 0;
@@ -340,7 +340,7 @@ namespace sw
 
         VkAttachmentReference depthRef{};
         uint32                attachCount = colorCount;
-        if ( desc._bHasDepthStencil != 0 )
+        if ( desc._bHasDepthStencil != SW_FALSE )
         {
             attachments[attachCount].format         = static_cast<VkFormat>( _pDevice->_depthFormat );
             attachments[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;

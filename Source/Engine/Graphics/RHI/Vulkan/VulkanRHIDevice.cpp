@@ -43,8 +43,8 @@ namespace sw
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
         , _frameSegmentCursor{ 0 }
-        , _bFrameAcquireWaitPending{ 0 }
-        , _bMaterialCbSlotWarned{ 0 }
+        , _bFrameAcquireWaitPending{ SW_FALSE }
+        , _bMaterialCbSlotWarned{ SW_FALSE }
         , _activeFrameBuffer{ nullptr }
         , _listCommandBuffer{}
         , _listInFlightFence{}

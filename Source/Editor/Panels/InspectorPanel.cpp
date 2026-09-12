@@ -574,7 +574,7 @@ namespace sw::editor
                 return;
         }
 
-        const bool bReadOnly = prop._metadata._bReadOnly != 0;
+        const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
         auto*           pRegistry = editor::getService<TypeRegistry>();
         const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
@@ -791,7 +791,7 @@ namespace sw::editor
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
             // 생성자 인보커는 raw 스토리지(placement-new)를 기대합니다 — 살아있는 인스펙터 인스턴스에는 안전하지 않습니다.
-            if ( method._metadata._bConstructor != 0 )
+            if ( method._metadata._bConstructor != SW_FALSE )
                 continue;
 
             const utf8* pLabelName = method._name.c_str();
@@ -800,7 +800,7 @@ namespace sw::editor
 
             const uint32 paramCount = static_cast<uint32>( method._listParameterTypeName.size() );
 
-            if ( method._metadata._bCallInEditor != 0 && paramCount == 0 )
+            if ( method._metadata._bCallInEditor != SW_FALSE && paramCount == 0 )
             {
                 ImGui::PushID( method._hashName.c_str() );
                 ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.42f, 0.65f, 1.0f } );
@@ -826,7 +826,7 @@ namespace sw::editor
             ImGui::PushID( method._hashName.c_str() );
             ImGui::Text( "%s (%s)", pLabelName,
                          method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
-            if ( method._metadata._bCallInEditor != 0 )
+            if ( method._metadata._bCallInEditor != SW_FALSE )
             {
                 ImGui::SameLine();
                 ImGui::TextColored( ImVec4{ 0.3f, 0.8f, 1.0f, 1.0f }, "[Editor]" );

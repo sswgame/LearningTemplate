@@ -47,7 +47,7 @@ namespace sw
         if ( _graph.compile() == false )
             SW_LOG_ERROR( "Callback bind compile failed" );
         else
-            _bCallbacksBound = 1;
+            _bCallbacksBound = SW_TRUE;
     }
 
     void FrameRenderer::onGraphWavePrologue( const RenderGraphWaveContext& waveCtx )
@@ -359,7 +359,7 @@ namespace sw
             {
                 registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
                 RHIRenderPassBeginInfo beginInfo{};
-                beginInfo._bBindColor        = 1;
+                beginInfo._bBindColor        = SW_TRUE;
                 beginInfo._arrColorTarget[0] = dstTarget;
                 beginInfo._colorTargetCount  = 1;
                 beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
@@ -375,7 +375,7 @@ namespace sw
             {
                 RHIRenderPassBeginInfo beginInfo{};
                 beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
-                beginInfo._bBindColor = 1;
+                beginInfo._bBindColor = SW_TRUE;
                 ctx._pCmd->beginRenderPass( beginInfo );
                 drawFullscreen( ctx, 0, passCb );
                 ctx._pCmd->endRenderPass();
@@ -403,7 +403,7 @@ namespace sw
             return;
 
         RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor       = 1;
+        beginInfo._bBindColor       = SW_TRUE;
         beginInfo._depthLoadOp      = depthLoad;
         beginInfo._clearDepth       = 1.0f;
         beginInfo._depthTarget      = depthName.empty() ? 0 : findTransient( depthName );
@@ -425,7 +425,7 @@ namespace sw
         if ( ctx._pCmd == nullptr )
             return;
         RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor       = 0;
+        beginInfo._bBindColor       = SW_FALSE;
         beginInfo._colorTargetCount = 0;
         beginInfo._depthTarget      = findTransient( depthName );
         beginInfo._depthLoadOp      = depthLoad;

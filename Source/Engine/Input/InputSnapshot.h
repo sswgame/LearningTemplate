@@ -17,7 +17,7 @@ namespace sw
     struct SW_API InputSnapshot
     {
         uint32  _tickNumber{ 0 };
-        uint64  _buttonMask{ 0 };          ///< 최대 64개 액션/버튼 눌림 비트마스크
+        uint64  _buttonMask{ SW_FALSE };   ///< 최대 64개 액션/버튼 눌림 비트마스크
         float2  _moveVector{ 0.0f, 0.0f }; ///< 이동 2D 벡터
         float2  _lookVector{ 0.0f, 0.0f }; ///< 시점 2D 벡터
         float32 _leftTrigger{ 0.0f };      ///< LT 아날로그 압력 (0.0 ~ 1.0)

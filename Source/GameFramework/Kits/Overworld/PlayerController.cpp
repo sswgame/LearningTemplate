@@ -43,7 +43,7 @@ namespace sw
         _loco.update( deltaTime );
         _stepCooldown -= deltaTime;
 
-        if ( _bInputEnabled == 0 )
+        if ( _bInputEnabled == SW_FALSE )
             return;
         if ( _loco.canAcceptMoveInput() == false )
             return;
@@ -57,7 +57,7 @@ namespace sw
         if ( pActionMap->wasActionTriggered( "Interact" ) )
         {
             _loco.beginInteract();
-            _bInteractPending = 1;
+            _bInteractPending = SW_TRUE;
             return;
         }
 
@@ -89,34 +89,34 @@ namespace sw
 
     bool PlayerController::consumeMovedFlag()
     {
-        const bool v = _bMoved != 0;
-        _bMoved      = 0;
+        const bool v = _bMoved != SW_FALSE;
+        _bMoved      = SW_FALSE;
         return v;
     }
 
     bool PlayerController::consumeWarpRequest( string& outMapPath, int32& outSpawnX, int32& outSpawnY )
     {
-        if ( _bWarpPending == 0 )
+        if ( _bWarpPending == SW_FALSE )
             return false;
         outMapPath = _pendingWarpMap;
         outSpawnX  = _pendingWarpSpawnX;
         outSpawnY  = _pendingWarpSpawnY;
         _pendingWarpMap.clear();
-        _bWarpPending = 0;
+        _bWarpPending = SW_FALSE;
         return true;
     }
 
     bool PlayerController::consumeEncounterRequest()
     {
-        const bool v       = _bEncounterPending != 0;
-        _bEncounterPending = 0;
+        const bool v       = _bEncounterPending != SW_FALSE;
+        _bEncounterPending = SW_FALSE;
         return v;
     }
 
     bool PlayerController::consumeInteractRequest()
     {
-        const bool v      = _bInteractPending != 0;
-        _bInteractPending = 0;
+        const bool v      = _bInteractPending != SW_FALSE;
+        _bInteractPending = SW_FALSE;
         return v;
     }
 
@@ -154,7 +154,7 @@ namespace sw
         _loco.notifyStepStarted();
         _tileX  = nextX;
         _tileY  = nextY;
-        _bMoved = 1;
+        _bMoved = SW_TRUE;
 
         const TileWarp* pWarp = _pTileMap->findWarp( _tileX, _tileY );
         if ( pWarp != nullptr )
@@ -162,7 +162,7 @@ namespace sw
             _pendingWarpMap    = pWarp->_targetMap;
             _pendingWarpSpawnX = pWarp->_targetTileX;
             _pendingWarpSpawnY = pWarp->_targetTileY;
-            _bWarpPending      = 1;
+            _bWarpPending      = SW_TRUE;
             SW_LOG_TRACE( "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawnX, _pendingWarpSpawnY );
         }
         else if ( _pTileMap->isEncounterTile( _tileX, _tileY ) )
@@ -170,7 +170,7 @@ namespace sw
             const uint32 period = _encounterRate > 0.01f ? static_cast<uint32>( 1.0f / _encounterRate ) : 3u;
             if ( ( ++_encounterStepCounter % ( period < 1 ? 3u : period ) ) == 0 )
             {
-                _bEncounterPending = 1;
+                _bEncounterPending = SW_TRUE;
                 SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tileX, _tileY );
             }
         }

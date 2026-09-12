@@ -33,7 +33,7 @@ namespace sw
             return;
 
         // 워커에서 만들어도 되는지는 백엔드가 말한다 — OpenGL 은 컨텍스트가 스레드에 묶여 안 된다.
-        _bParallel = ( pDevice->getCapabilities()._bThreadSafeResourceCreation != 0 ) ? SW_TRUE : SW_FALSE;
+        _bParallel = ( pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE ) ? SW_TRUE : SW_FALSE;
         SW_LOG_INFO( "GPU 업로드 큐: %# (백엔드 %#)",
                      _bParallel == SW_TRUE ? "워커 병렬" : "인라인(이 백엔드는 워커 생성 불가)",
                      pDevice->getBackendName() );

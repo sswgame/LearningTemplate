@@ -86,7 +86,7 @@ namespace
             SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
             return false;
         }
-        if ( device.getCapabilities()._bOffscreenRT == 0 )
+        if ( device.getCapabilities()._bOffscreenRT == SW_FALSE )
         {
             SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
             return false;
@@ -96,8 +96,8 @@ namespace
         desc._width             = width;
         desc._height            = height;
         desc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
-        desc._bIsRenderTarget   = 1;
-        desc._bIsShaderResource = 1;
+        desc._bIsRenderTarget   = SW_TRUE;
+        desc._bIsShaderResource = SW_TRUE;
         desc._clearColor        = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
 
         const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
@@ -120,7 +120,7 @@ namespace
         {
             sw::RHIRenderPassBeginInfo beginInfo{};
             beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = 1;
+            beginInfo._bBindColor = SW_TRUE;
             beginInfo._width      = width;
             beginInfo._height     = height;
 
@@ -190,24 +190,24 @@ SW_TEST_CASE( RHITest, CapabilityMatrixNativeVsEmulated )
     using sw::RHIBackend;
 
     const sw::RHICapabilities dx12 = RHIAvailability::query( RHIBackend::DirectX12 );
-    SW_EXPECT_TRUE( dx12._bBindless != 0 );
-    SW_EXPECT_TRUE( dx12._bNativeBindless != 0 );
-    SW_EXPECT_TRUE( dx12._bOffscreenRT != 0 );
+    SW_EXPECT_TRUE( dx12._bBindless != SW_FALSE );
+    SW_EXPECT_TRUE( dx12._bNativeBindless != SW_FALSE );
+    SW_EXPECT_TRUE( dx12._bOffscreenRT != SW_FALSE );
 
     const sw::RHICapabilities dx11 = RHIAvailability::query( RHIBackend::DirectX11 );
-    SW_EXPECT_TRUE( dx11._bBindless != 0 );
-    SW_EXPECT_TRUE( dx11._bNativeBindless == 0 );
-    SW_EXPECT_TRUE( dx11._bOffscreenRT != 0 );
+    SW_EXPECT_TRUE( dx11._bBindless != SW_FALSE );
+    SW_EXPECT_TRUE( dx11._bNativeBindless == SW_FALSE );
+    SW_EXPECT_TRUE( dx11._bOffscreenRT != SW_FALSE );
 
     const sw::RHICapabilities gl = RHIAvailability::query( RHIBackend::OpenGL );
-    SW_EXPECT_TRUE( gl._bBindless != 0 );
-    SW_EXPECT_TRUE( gl._bNativeBindless == 0 );
-    SW_EXPECT_TRUE( gl._bOffscreenRT != 0 );
+    SW_EXPECT_TRUE( gl._bBindless != SW_FALSE );
+    SW_EXPECT_TRUE( gl._bNativeBindless == SW_FALSE );
+    SW_EXPECT_TRUE( gl._bOffscreenRT != SW_FALSE );
 
     const sw::RHICapabilities vk = RHIAvailability::query( RHIBackend::Vulkan );
-    SW_EXPECT_TRUE( vk._bBindless != 0 );
-    SW_EXPECT_TRUE( vk._bNativeBindless != 0 );
-    SW_EXPECT_TRUE( vk._bOffscreenRT != 0 );
+    SW_EXPECT_TRUE( vk._bBindless != SW_FALSE );
+    SW_EXPECT_TRUE( vk._bNativeBindless != SW_FALSE );
+    SW_EXPECT_TRUE( vk._bOffscreenRT != SW_FALSE );
 }
 
 /**
@@ -341,7 +341,7 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 
     // Present(beginFrame/endFrame)는 DX12에서 soft-CL 드로우와 섞이면 Device Removed가 나기 쉬움.
     // 수명 검증은 bindless 등록 + Present 없는 오프스크린 RT 경로로 한다.
-    SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != 0 );
+    SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != SW_FALSE );
     SW_EXPECT_TRUE( executeOffscreenPipelineSmoke( *rhiDevice, 0 ) == false ); // pso==0 → false
     {
         sw::RHIPipelineStateDesc psoDesc{};
@@ -411,8 +411,8 @@ SW_TEST_CASE( RHITest, BindlessTextureReleaseKeepsBufferIndices )
         texDesc._width                     = 4;
         texDesc._height                    = 4;
         texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
-        texDesc._bIsRenderTarget           = 1;
-        texDesc._bIsShaderResource         = 1;
+        texDesc._bIsRenderTarget           = SW_TRUE;
+        texDesc._bIsShaderResource         = SW_TRUE;
         const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
         SW_ASSERT_TRUE( texture != 0 );
         const sw::RHIDescriptorIndex textureSrv = pResource->registerBindlessTexture( texture );
@@ -489,7 +489,7 @@ SW_TEST_CASE( RHITest, UploadTexture2DAllBackends )
         texDesc._height                    = 4;
         texDesc._mipLevels                 = 3;
         texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
-        texDesc._bIsShaderResource         = 1;
+        texDesc._bIsShaderResource         = SW_TRUE;
         const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
         SW_ASSERT_TRUE( texture != 0 );
 
@@ -585,7 +585,7 @@ SW_TEST_CASE( RHITest, TextureReadbackMatchesUpload )
             texDesc._height                    = testCase._height;
             texDesc._mipLevels                 = testCase._mips;
             texDesc._format                    = testCase._format;
-            texDesc._bIsShaderResource         = 1;
+            texDesc._bIsShaderResource         = SW_TRUE;
             const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
             SW_EXPECT_TRUE_MSG( texture != 0, testCase._pName );
             if ( texture == 0 )
@@ -1000,8 +1000,8 @@ SW_TEST_CASE( RHITest, ComputeTextureUavWriteIsReadable )
         texDesc._height                    = kSize;
         texDesc._mipLevels                 = 1;
         texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
-        texDesc._bIsShaderResource         = 1;
-        texDesc._bIsUnorderedAccess        = 1;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        texDesc._bIsUnorderedAccess        = SW_TRUE;
         const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
         SW_EXPECT_TRUE_MSG( texture != 0, pName );
         const sw::RHIDescriptorIndex uav = texture != 0 ? pResource->registerBindlessTextureUAV( texture ) : sw::kInvalidDescriptorIndex;

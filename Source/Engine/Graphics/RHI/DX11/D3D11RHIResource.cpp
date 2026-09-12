@@ -228,7 +228,7 @@ namespace sw
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr )
             return false;
-        if ( pRecord->_bDepth != 0 )
+        if ( pRecord->_bDepth != SW_FALSE )
             return false;
 
         D3D11_TEXTURE2D_DESC texDesc{};
@@ -261,7 +261,7 @@ namespace sw
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         // 깊이는 typeless 로 만들어져 DXGI 역변환이 Unknown 을 준다 — 레코드 플래그로 되돌린다.
-        if ( pRecord->_bDepth != 0 )
+        if ( pRecord->_bDepth != SW_FALSE )
             return RHIFormat::D24_UNORM_S8_UINT;
         return fromDxgiFormat( texDesc.Format );
     }
@@ -271,7 +271,7 @@ namespace sw
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr )
             return false;
-        if ( pRecord->_bDepth != 0 )
+        if ( pRecord->_bDepth != SW_FALSE )
             return false;
 
         D3D11_TEXTURE2D_DESC texDesc{};
@@ -314,7 +314,7 @@ namespace sw
         if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
 
-        const bool bDepth = desc._bIsDepthStencil != 0;
+        const bool bDepth = desc._bIsDepthStencil != SW_FALSE;
 
         D3D11_TEXTURE2D_DESC texDesc{};
         texDesc.Width     = desc._width;

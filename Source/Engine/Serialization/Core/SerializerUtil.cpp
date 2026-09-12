@@ -356,7 +356,7 @@ namespace sw
 
     bool SerializerUtil::applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
     {
-        if ( pPropPtr == nullptr || prop._bIsContainer != 0 )
+        if ( pPropPtr == nullptr || prop._bIsContainer != SW_FALSE )
             return false;
         if ( prop._metadata._defaultValue.empty() )
             return false;

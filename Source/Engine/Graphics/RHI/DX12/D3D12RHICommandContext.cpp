@@ -46,7 +46,7 @@ namespace sw
 {
     void D3D12RHICommandContext::ensureRecording()
     {
-        if ( _pDevice == nullptr || _pState->_bRecording != 0 )
+        if ( _pDevice == nullptr || _pState->_bRecording != SW_FALSE )
             return;
         _pDevice->waitForRingSlot();
         ID3D12CommandAllocator* pAllocator = _pDevice->currentAllocator();
@@ -54,7 +54,7 @@ namespace sw
             return;
         pAllocator->Reset();
         _pCmdList->Reset( pAllocator, nullptr );
-        _pState->_bRecording             = 1;
+        _pState->_bRecording             = SW_TRUE;
         _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트엔 아직 아무 PSO도 안 걸림 — 캐시 무효화.
         _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트엔 슬롯 테이블도 없다 — 첫 드로우가 다시 굳힌다.
         _pState->_arrSlotState[1]        = D3D12SlotTableState{};
@@ -152,7 +152,7 @@ namespace sw
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
 
-        if ( state._bSrvDirty != 0 )
+        if ( state._bSrvDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
             if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) )
@@ -161,17 +161,17 @@ namespace sw
                     _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
                 else
                     _pCmdList->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
-                state._bSrvDirty = 0;
+                state._bSrvDirty = SW_FALSE;
             }
         }
         // u 테이블은 컴퓨트만 쓴다 — 그래픽스 스테이지엔 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
-        if ( bCompute && state._bUavDirty != 0 )
+        if ( bCompute && state._bUavDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
             if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) )
             {
                 _pCmdList->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
-                state._bUavDirty = 0;
+                state._bUavDirty = SW_FALSE;
             }
         }
     }
@@ -261,7 +261,7 @@ namespace sw
             return;
 
         auto srcIt = _pDevice->_mapOffscreenTexture.find( src );
-        if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != 0 )
+        if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != SW_FALSE )
             return;
 
         _pDevice->noteBarrierDuringRecording( "blitTexture(src)" );
@@ -288,7 +288,7 @@ namespace sw
             if ( pDstRes == nullptr )
                 return;
             auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
-            if ( dstIt == _pDevice->_mapOffscreenTexture.end() || dstIt->second._bHasDsv != 0 )
+            if ( dstIt == _pDevice->_mapOffscreenTexture.end() || dstIt->second._bHasDsv != SW_FALSE )
                 return;
             dstStateBefore = dstIt->second._state;
         }
@@ -304,9 +304,9 @@ namespace sw
                  srcDesc.Height != dstDesc.Height || srcDesc.DepthOrArraySize != dstDesc.DepthOrArraySize ||
                  srcDesc.MipLevels != dstDesc.MipLevels )
             {
-                if ( _pDevice->_bBlitMismatchLogged == 0 )
+                if ( _pDevice->_bBlitMismatchLogged == SW_FALSE )
                 {
-                    _pDevice->_bBlitMismatchLogged = 1;
+                    _pDevice->_bBlitMismatchLogged = SW_TRUE;
                     SW_LOG_ERROR( "blitTexture: CopyResource 불가 — src(fmt=%# %#×%#) dst(fmt=%# %#×%#). 복사를 건너뜁니다.",
                                   static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
                                   static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
@@ -365,7 +365,7 @@ namespace sw
         if ( state._arrSrv[slot].ptr == view.ptr )
             return;
         state._arrSrv[slot] = view;
-        state._bSrvDirty    = 1;
+        state._bSrvDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -376,7 +376,7 @@ namespace sw
         auto it = _pDevice->_mapOffscreenTexture.find( texture );
         if ( it == _pDevice->_mapOffscreenTexture.end() )
             return;
-        if ( it->second._bHasRtv == 0 && it->second._bHasDsv == 0 )
+        if ( it->second._bHasRtv == SW_FALSE && it->second._bHasDsv == SW_FALSE )
             return;
 
         _pDevice->noteBarrierDuringRecording( "prepareTextureForShaderRead" );
@@ -410,7 +410,7 @@ namespace sw
             const auto              it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it == _pDevice->_mapOffscreenTexture.end() )
                 return;
-            bDepth = it->second._bHasDsv != 0;
+            bDepth = it->second._bHasDsv != SW_FALSE;
         }
         transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
     }
@@ -427,7 +427,7 @@ namespace sw
         if ( state._arrUav[slot].ptr == view.ptr )
             return;
         state._arrUav[slot] = view;
-        state._bUavDirty    = 1;
+        state._bUavDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -451,7 +451,7 @@ namespace sw
         if ( state._arrSrv[slot].ptr == view.ptr )
             return;
         state._arrSrv[slot] = view;
-        state._bSrvDirty    = 1;
+        state._bSrvDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -695,7 +695,7 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
 
-        const bool bBindColor = beginInfo._bBindColor != 0;
+        const bool bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool bHasDepth  = beginInfo._depthTarget != 0;
         if ( bBindColor == false && bHasDepth == false )
             return;
@@ -703,7 +703,7 @@ namespace sw
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[kMaxColorAttachments]{};
         uint32                      rtCount{ 0 };
         _pState->_activeColorTargetCount = 0;
-        _pState->_bActiveSwapchainRT     = 0;
+        _pState->_bActiveSwapchainRT     = SW_FALSE;
 
         const uint32 wantCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
         for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -719,13 +719,13 @@ namespace sw
                 _pDevice->_swapChain.transitionTo( _pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = _pDevice->_swapChain.getCurrentRtv();
                 bValid                                  = true;
-                _pState->_bActiveSwapchainRT            = 1;
+                _pState->_bActiveSwapchainRT            = SW_TRUE;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
             }
             else
             {
                 auto it = _pDevice->_mapOffscreenTexture.find( colorHandle );
-                if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == 0 )
+                if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == SW_FALSE )
                 {
                     if ( attachmentIndex > 0 )
                         break;
@@ -755,7 +755,7 @@ namespace sw
         if ( bHasDepth )
         {
             auto depthIt = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
-            if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != 0 )
+            if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != SW_FALSE )
             {
                 _pDevice->noteBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
@@ -791,7 +791,7 @@ namespace sw
     {
         _pState->_activeColorTargetCount = 0;
         _pState->_activeDepthTarget      = 0;
-        _pState->_bActiveSwapchainRT     = 0;
+        _pState->_bActiveSwapchainRT     = SW_FALSE;
     }
 
     void D3D12RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )

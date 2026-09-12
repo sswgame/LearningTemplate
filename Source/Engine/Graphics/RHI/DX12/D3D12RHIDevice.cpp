@@ -31,14 +31,14 @@ namespace sw
         , _arrCommandAllocator{}
         , _commandList{ nullptr }
         , _cmdListEntryCreated{ 0 }
-        , _bBlitMismatchLogged{ 0 }
+        , _bBlitMismatchLogged{ SW_FALSE }
         , _pActiveFrameList{ nullptr }
         , _arrFrameCmdAllocator{}
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
         , _onlineBlockMutex{}
         , _listFreeOnlineBlock{}
-        , _bOnlineHeapExhaustedLogged{ 0 }
+        , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _frameRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
@@ -139,9 +139,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _onlineBlockMutex };
         if ( _listFreeOnlineBlock.empty() )
         {
-            if ( _bOnlineHeapExhaustedLogged == 0 )
+            if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
-                _bOnlineHeapExhaustedLogged = 1;
+                _bOnlineHeapExhaustedLogged = SW_TRUE;
                 SW_LOG_ERROR( "온라인 디스크립터 블록이 바닥났습니다 (%#×%#) — 이후 드로우는 직전 슬롯 테이블로 그립니다.",
                               kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }

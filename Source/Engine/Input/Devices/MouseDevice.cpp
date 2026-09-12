@@ -31,7 +31,7 @@ namespace sw
         , _clipSubRectRight{ 0 }
         , _clipSubRectBottom{ 0 }
         , _lockMode{ MouseLockMode::None }
-        , _buttonMask{ 0 }
+        , _buttonMask{ SW_FALSE }
         , _pressedMask{ 0 }
         , _releasedMask{ 0 }
         , _bCursorVisible{ SW_TRUE }
@@ -115,7 +115,7 @@ namespace sw
 
     void MouseDevice::resetState()
     {
-        _buttonMask                = 0;
+        _buttonMask                = SW_FALSE;
         _pressedMask               = 0;
         _releasedMask              = 0;
         _bAnyButtonPressed         = SW_FALSE;

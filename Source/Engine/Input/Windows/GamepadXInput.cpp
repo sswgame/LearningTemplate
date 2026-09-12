@@ -117,7 +117,7 @@ namespace sw
         if ( pfnGetState == nullptr )
         {
             _bConnected   = SW_FALSE;
-            _buttonMask   = 0;
+            _buttonMask   = SW_FALSE;
             _leftStickX   = 0.0f;
             _leftStickY   = 0.0f;
             _rightStickX  = 0.0f;
@@ -134,7 +134,7 @@ namespace sw
         if ( result != ERROR_SUCCESS )
         {
             _bConnected   = SW_FALSE;
-            _buttonMask   = 0;
+            _buttonMask   = SW_FALSE;
             _leftStickX   = 0.0f;
             _leftStickY   = 0.0f;
             _rightStickX  = 0.0f;
@@ -279,7 +279,7 @@ namespace sw
     {
         _prevButtonMask = _buttonMask;
         _bConnected     = SW_FALSE;
-        _buttonMask     = 0;
+        _buttonMask     = SW_FALSE;
         _leftStickX     = 0.0f;
         _leftStickY     = 0.0f;
         _rightStickX    = 0.0f;

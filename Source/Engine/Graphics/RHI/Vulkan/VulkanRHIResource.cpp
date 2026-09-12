@@ -355,7 +355,7 @@ namespace sw
 
         const VkFormat requested = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._format );
         VkFormat       format    = requested;
-        if ( desc._bIsDepthStencil != 0 || desc._format == sw::RHIFormat::D24_UNORM_S8_UINT )
+        if ( desc._bIsDepthStencil != SW_FALSE || desc._format == sw::RHIFormat::D24_UNORM_S8_UINT )
         {
             if ( _pDevice->_depthFormat == 0 )
             {
@@ -423,7 +423,7 @@ namespace sw
         vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 );
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        if ( desc._bIsDepthStencil != 0 )
+        if ( desc._bIsDepthStencil != SW_FALSE )
             aspect = static_cast<VkImageAspectFlags>( _pDevice->depthAspectMask() );
 
         VkImageViewCreateInfo viewInfo{};
@@ -445,7 +445,7 @@ namespace sw
             return 0;
         }
 
-        if ( desc._bIsDepthStencil != 0 )
+        if ( desc._bIsDepthStencil != SW_FALSE )
         {
             // 샘플용 뷰는 aspect 가 하나여야 한다 (DEPTH|STENCIL 뷰는 디스크립터에 못 쓴다). 그림자맵처럼
             // 깊이를 읽는 패스가 이 뷰로 bindless 등록된다 — registerBindlessTexture 참고.
@@ -469,7 +469,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
             return false;
-        if ( pRecord->_bDepthStencil != 0 )
+        if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
@@ -584,7 +584,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_commandPool == VK_NULL_HANDLE )
             return false;
-        if ( pRecord->_bDepthStencil != 0 || mip >= pRecord->_mipLevels )
+        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
             return false;
         if ( computeRHITextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;

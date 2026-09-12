@@ -15,7 +15,7 @@ namespace sw
 
     void FrameRenderer::ensurePassResources()
     {
-        if ( _pDevice == nullptr || _bPassResourcesReady != 0 )
+        if ( _pDevice == nullptr || _bPassResourcesReady != SW_FALSE )
             return;
 
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
@@ -124,7 +124,7 @@ namespace sw
 
         // Compute PSO: GpuCull — capabilities + 실제 PSO 생성 성공 시에만 GPU-driven.
         const RHICapabilities caps = _pDevice->getCapabilities();
-        if ( caps._bGpuCulling != 0 )
+        if ( caps._bGpuCulling != SW_FALSE )
         {
             const RHIPipelineStateHandle psoGpuCull =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
@@ -142,7 +142,7 @@ namespace sw
         // 예전엔 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
         // 같이 못 건다"는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
         // 버퍼만 쓰므로 그 제약과 상관이 없는데 같이 꺼져서, DX11 에서만 큐브가 아예 돌지 않았다.
-        if ( caps._bCompute != 0 )
+        if ( caps._bCompute != SW_FALSE )
         {
             const RHIPipelineStateHandle psoAnim =
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
@@ -154,7 +154,7 @@ namespace sw
         // 드로우 루프가 있었지만, 컬링·정렬·인스턴스 애니메이션이 전부 인다이렉트 경로에만 붙어 있어
         // 그걸 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
         // 여기서 크게 알린다.
-        if ( caps._bIndirectDraw == 0 )
+        if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
         // Present 변종도 PSO 등록 단계에서 만든다 — 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
@@ -163,7 +163,7 @@ namespace sw
         // 폴백 원소는 PSO 를 다 등록한 뒤에 만든다 — 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
 
-        _bPassResourcesReady = 1;
+        _bPassResourcesReady = SW_TRUE;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
                      getEnginePso( RenderPassType::Shadow ), getEnginePso( RenderPassType::ForwardOpaque ),
                      getEnginePso( RenderPassType::Transparent ), getEnginePso( RenderPassType::Lighting ),
@@ -297,7 +297,7 @@ namespace sw
                 _mapPsoLayout.clear();
                 _mapPsoDesc.clear();
             }
-            _bPassResourcesReady = 0;
+            _bPassResourcesReady = SW_FALSE;
             return;
         }
 
@@ -375,7 +375,7 @@ namespace sw
             fallbackSlot.release( _pDevice );
         _mapMaterialFallback.clear();
         releaseResource( _taaHistory, _taaHistorySrv, true );
-        _bPassResourcesReady = 0;
+        _bPassResourcesReady = SW_FALSE;
     }
 
     void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
@@ -476,8 +476,8 @@ namespace sw
         histDesc._width             = _transientWidth != 0 ? _transientWidth : FrameRendererUtil::kDefaultTransientSize;
         histDesc._height            = _transientHeight != 0 ? _transientHeight : FrameRendererUtil::kDefaultTransientSize;
         histDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
-        histDesc._bIsRenderTarget   = 1;
-        histDesc._bIsShaderResource = 1;
+        histDesc._bIsRenderTarget   = SW_TRUE;
+        histDesc._bIsShaderResource = SW_TRUE;
 
         _taaHistory = _pDevice->getResource()->createTexture2D( histDesc );
         if ( _taaHistory != 0 )
@@ -610,7 +610,7 @@ namespace sw
         desc._format                  = format;
         desc._bIsRenderTarget         = bDepth ? 0 : 1;
         desc._bIsDepthStencil         = bDepth ? 1 : 0;
-        desc._bIsShaderResource       = 1;
+        desc._bIsShaderResource       = SW_TRUE;
         desc._clearDepth              = clearColor._x;
         desc._clearColor              = clearColor;
         const RHITextureHandle handle = _pDevice->getResource()->createTexture2D( desc );

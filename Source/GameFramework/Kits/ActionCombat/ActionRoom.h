@@ -93,7 +93,7 @@ namespace sw
         /** @brief 룸 종류를 반환합니다. */
         ActionRoomKind getKind() const { return _kind; }
         /** @brief 클리어 여부를 반환합니다. */
-        bool isCleared() const { return _bCleared != 0; }
+        bool isCleared() const { return _bCleared != SW_FALSE; }
         /** @brief 플레이어 무적 여부를 반환합니다. */
         bool isPlayerInvulnerable() const { return _invulnTimer > 0.0f; }
         /** @brief 대시 쿨다운 게이지(0~1)를 반환합니다. */

@@ -39,7 +39,7 @@ namespace sw
         // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 예전엔 여기서 그냥 거부했다 —
         // 그러면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 돌려줘, Vulkan 만
         // 모든 픽셀이 "완전 그림자"(x0.56) 로 어두웠다(검증 에러 없음, 큐브는 다 보인다).
-        const bool        bDepth       = pResolved->_bDepthStencil != 0;
+        const bool        bDepth       = pResolved->_bDepthStencil != SW_FALSE;
         const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
         const uint32      sampleLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
                                                                      : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -169,7 +169,7 @@ namespace sw
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != 0 )
+        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
             return kInvalidDescriptorIndex;
 
         // 버퍼 UAV 와 같은 인덱스 공간 — 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.

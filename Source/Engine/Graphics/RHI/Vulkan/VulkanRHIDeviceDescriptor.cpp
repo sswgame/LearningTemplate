@@ -393,9 +393,9 @@ namespace sw
                 // 언리얼처럼 풀이 차면 하나 더 만든다. 만든 풀은 묶음이 사는 동안 유지된다(리셋만 한다).
                 if ( listPool.size() >= kMaxPoolsPerDescriptorPoolSet )
                 {
-                    if ( poolSet._bExhaustedLogged == 0 )
+                    if ( poolSet._bExhaustedLogged == SW_FALSE )
                     {
-                        poolSet._bExhaustedLogged = 1;
+                        poolSet._bExhaustedLogged = SW_TRUE;
                         SW_LOG_ERROR( "슬롯 세트 풀 묶음이 상한(%#×%#)에 닿았습니다 — 이 버퍼의 나머지 드로우는 이전 세트로 그립니다.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
                     }
                     return VK_NULL_HANDLE;
@@ -445,6 +445,6 @@ namespace sw
         }
         poolSet._listPool.clear();
         poolSet._cursor           = 0;
-        poolSet._bExhaustedLogged = 0;
+        poolSet._bExhaustedLogged = SW_FALSE;
     }
 } // namespace sw

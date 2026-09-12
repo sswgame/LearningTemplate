@@ -329,19 +329,19 @@ namespace sw
     {
         emit.line( "#if !defined( SW_SHIPPING )" );
         emitCommonEditorMeta( emit, prop, "p._metadata." );
-        emit.flagIf( prop._bHideInInspector != 0, "p._metadata._bHideInInspector", "SW_TRUE" );
+        emit.flagIf( prop._bHideInInspector != SW_FALSE, "p._metadata._bHideInInspector", "SW_TRUE" );
         emitCustomMetaMap( emit, prop, "p._metadata." );
         emit.line( "#endif" );
 
         emit.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
         emit.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
-        emit.flagIf( prop._bReadOnly != 0, "p._metadata._bReadOnly", "SW_TRUE" );
-        emit.flagIf( prop._bXmlAttribute != 0, "p._metadata._bXmlAttribute", "SW_TRUE" );
-        emit.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
-        emit.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
-        emit.flagIf( prop._bTransient != 0, "p._metadata._bTransient", "SW_TRUE" );
-        emit.flagIf( prop._bSkipIfEmpty != 0, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
-        if ( prop._bHasRange != 0 )
+        emit.flagIf( prop._bReadOnly != SW_FALSE, "p._metadata._bReadOnly", "SW_TRUE" );
+        emit.flagIf( prop._bXmlAttribute != SW_FALSE, "p._metadata._bXmlAttribute", "SW_TRUE" );
+        emit.flagIf( prop._bAssetPath != SW_FALSE, "p._metadata._bAssetPath", "SW_TRUE" );
+        emit.flagIf( prop._bPolymorphic != SW_FALSE, "p._metadata._bPolymorphic", "SW_TRUE" );
+        emit.flagIf( prop._bTransient != SW_FALSE, "p._metadata._bTransient", "SW_TRUE" );
+        emit.flagIf( prop._bSkipIfEmpty != SW_FALSE, "p._metadata._bSkipIfEmpty", "SW_TRUE" );
+        if ( prop._bHasRange != SW_FALSE )
         {
             // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가
             // **생성된 파일마다** 난다. 여기서 한 번 고치면 전부 사라진다.
@@ -491,7 +491,7 @@ namespace sw
         if ( method._listParameterTypeName.empty() )
             emit.line( "(void)args;" );
 
-        if ( method._bStatic != 0 && method._bConstructor == SW_FALSE )
+        if ( method._bStatic != SW_FALSE && method._bConstructor == SW_FALSE )
         {
             emit.line( "(void)objPtr;" );
             if ( retType == annotationConstants::kVoidTypeName )
@@ -507,7 +507,7 @@ namespace sw
         else
         {
             emit.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
-            if ( method._bConstructor != 0 )
+            if ( method._bConstructor != SW_FALSE )
             {
                 emit.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -534,30 +534,30 @@ namespace sw
         {
             const string retType = _session._typeNameMap.normalize( method._returnTypeName );
 
-            const string lookupName = ( method._bConstructor != 0 ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
+            const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
 
             emit.line( "{" );
             emit.push();
             emit.line( "::sw::FunctionInfo funcInfo;" );
-            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
+            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != SW_FALSE ) ? annotationConstants::kCtorLookupName : method._name ) );
             emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
             emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
             emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName, _session ) );
 
             emit.line( "#if !defined( SW_SHIPPING )" );
             emitCommonEditorMeta( emit, method, "funcInfo._metadata." );
-            emit.flagIf( method._bCallInEditor != 0, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
+            emit.flagIf( method._bCallInEditor != SW_FALSE, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
             emitCustomMetaMap( emit, method, "funcInfo._metadata." );
             emit.line( "#endif" );
 
             if ( method._netRole != FunctionNetRole::Local )
                 emit.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
 
-            emit.flagIf( method._bReliable != 0, "funcInfo._metadata._bReliable", "SW_TRUE" );
-            emit.flagIf( method._bValidate != 0, "funcInfo._metadata._bValidate", "SW_TRUE" );
-            emit.flagIf( method._bConstructor != 0, "funcInfo._metadata._bConstructor", "SW_TRUE" );
-            emit.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
-            emit.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
+            emit.flagIf( method._bReliable != SW_FALSE, "funcInfo._metadata._bReliable", "SW_TRUE" );
+            emit.flagIf( method._bValidate != SW_FALSE, "funcInfo._metadata._bValidate", "SW_TRUE" );
+            emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata._bConstructor", "SW_TRUE" );
+            emit.flagIf( method._bStatic != SW_FALSE, "funcInfo._metadata._bStatic", "SW_TRUE" );
+            emit.flagIf( method._bConst != SW_FALSE, "funcInfo._metadata._bConst", "SW_TRUE" );
 
             const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName, _session );
 
@@ -615,7 +615,7 @@ namespace sw
 
         emit.line( "#if !defined( SW_SHIPPING )" );
         emitCommonEditorMeta( emit, typeInfo, "info._metadata." );
-        emit.flagIf( typeInfo._bHideInMenu != 0, "info._metadata._bHideInMenu", "SW_TRUE" );
+        emit.flagIf( typeInfo._bHideInMenu != SW_FALSE, "info._metadata._bHideInMenu", "SW_TRUE" );
         emitCustomMetaMap( emit, typeInfo, "info._metadata." );
         emit.line( "#endif" );
 
@@ -761,7 +761,7 @@ namespace sw
             emit.blank();
             for ( const ParsedEnumInfo& enumInfo : _listEnum )
             {
-                if ( enumInfo._bEmitFlagOps == 0 )
+                if ( enumInfo._bEmitFlagOps == SW_FALSE )
                     continue;
                 emit.linef( "template <> struct sw::IsBitFlagEnum<%#> : std::true_type {};", enumInfo._fullyQualifiedName );
             }

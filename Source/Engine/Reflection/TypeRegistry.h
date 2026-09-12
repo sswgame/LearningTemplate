@@ -242,7 +242,7 @@ namespace sw
                 outValue = static_cast<E>( raw );
                 return true;
             }
-            outValue = static_cast<E>( ( pInfo->_bHasInvalid != 0 ) ? pInfo->_invalidValue : 0 );
+            outValue = static_cast<E>( ( pInfo->_bHasInvalid != SW_FALSE ) ? pInfo->_invalidValue : 0 );
             return false;
         }
 
@@ -267,7 +267,7 @@ namespace sw
         {
             static_assert( std::is_enum_v<E>, "hasFlag requires an enum type" );
             const EnumInfo* pInfo = findEnumOf<E>();
-            if ( pInfo == nullptr || pInfo->_bIsBitFlag == 0 )
+            if ( pInfo == nullptr || pInfo->_bIsBitFlag == SW_FALSE )
                 return false;
             return EnumUtil::hasFlag( flags, contains );
         }

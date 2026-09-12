@@ -57,7 +57,7 @@ namespace sw
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
-        , _bGpuCullingActive{ 0 }
+        , _bGpuCullingActive{ SW_FALSE }
         , _mapMaterialFallback{}
         , _mapEnginePso{}
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -171,7 +171,7 @@ namespace sw
         _pTaskManager    = nullptr;
         _status          = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
-        _bCallbacksBound = 0;
+        _bCallbacksBound = SW_FALSE;
         _pipelinePath.clear();
         SW_LOG_INFO( "Shut down." );
     }
@@ -179,7 +179,7 @@ namespace sw
     bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
     {
         _pipelinePath    = pipelineXmlPath;
-        _bCallbacksBound = 0;
+        _bCallbacksBound = SW_FALSE;
         _graph.clear();
         releaseTransientResources();
 
@@ -414,7 +414,7 @@ namespace sw
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
         _pCmd->beginCommandList();
-        _bGpuCullingActive = 0;
+        _bGpuCullingActive = SW_FALSE;
         _animTimer.updateTimer();
 
         // GPU 드리븐 프리패스 — **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
@@ -430,7 +430,7 @@ namespace sw
         // 컴파일 안 됐으면(getExecutionOrder()가 비어 있으면) 안전하게 기존 직렬 경로로 폴백한다 —
         // executeParallel 안에서 compile()이 그때 한 번 일어난다.
         const bool bCanRunParallel = _pTaskManager != nullptr &&
-                                     pDevice->getCapabilities()._bParallelCommandRecording != 0 &&
+                                     pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
                                      _graph.getExecutionOrder().size() > 1;
         if ( bCanRunParallel )
         {
@@ -484,7 +484,7 @@ namespace sw
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
         _gpuScene.upload( pDevice );
 
-        if ( _bCallbacksBound == 0 )
+        if ( _bCallbacksBound == SW_FALSE )
             bindPassCallbacks();
 
         // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다
@@ -523,12 +523,12 @@ namespace sw
         _gpuScene.adoptCpuSnapshot( std::move( packet._gpuScene ) );
 
         // 주광은 씬이 아니라 패킷으로 온다 — 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
-        if ( packet._bHasLight != 0 )
+        if ( packet._bHasLight != SW_FALSE )
         {
             _frameLight._dirIntensity       = packet._lightDirIntensity;
             _frameLight._colorAmbient       = packet._lightColorAmbient;
             _frameLight._shadowViewProj     = packet._lightViewProj;
-            _frameLight._bHasShadowViewProj = 1;
+            _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else
         {
@@ -544,7 +544,7 @@ namespace sw
         // 있었다). 같은 함수를 쓰고, 패킷이 자기 뷰 행렬을 갖고 있을 때만 그 위에 덮어쓴다.
         // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 세운다.
         updatePassConstants( _frameCtx );
-        if ( packet._bHasViewProj != 0 )
+        if ( packet._bHasViewProj != SW_FALSE )
         {
             _frameCtx._passValues.setMatrix( passConstantNames()._viewProj, packet._viewProj );
             view( RenderViewType::Main ).setViewProjection( packet._viewProj ); // 절두체도 함께 갱신된다
@@ -558,7 +558,7 @@ namespace sw
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
         _gpuScene.upload( pDevice );
 
-        if ( _bCallbacksBound == 0 )
+        if ( _bCallbacksBound == SW_FALSE )
             bindPassCallbacks();
 
         // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다

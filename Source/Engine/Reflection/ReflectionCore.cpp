@@ -651,14 +651,14 @@ namespace sw
         }
         if ( pInfo->tryParse( name, outValue ) && pInfo->isValidValue( outValue ) )
             return true;
-        outValue = ( pInfo->_bHasInvalid != 0 ) ? pInfo->_invalidValue : 0;
+        outValue = ( pInfo->_bHasInvalid != SW_FALSE ) ? pInfo->_invalidValue : 0;
         return false;
     }
 
     bool TypeRegistry::hasFlag( const hashed_string& enumName, int64 flags, int64 contains ) const
     {
         const EnumInfo* pInfo = findEnum( enumName );
-        if ( pInfo == nullptr || pInfo->_bIsBitFlag == 0 )
+        if ( pInfo == nullptr || pInfo->_bIsBitFlag == SW_FALSE )
             return false;
         return ( flags & contains ) == contains;
     }

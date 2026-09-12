@@ -137,7 +137,7 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueAsyncOperations )
 SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
 {
     sw::PropertyMetadata rangeMeta{};
-    rangeMeta._bHasRange = 1;
+    rangeMeta._bHasRange = SW_TRUE;
     rangeMeta._minRange  = 0.0f;
     rangeMeta._maxRange  = 100.0f;
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::Slider ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( rangeMeta, "float32" ) ) );
@@ -149,7 +149,7 @@ SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
     SW_EXPECT_NEAR_EQUAL( 100.0f, maxVal, 0.0001f );
 
     sw::PropertyMetadata assetMeta{};
-    assetMeta._bAssetPath = 1;
+    assetMeta._bAssetPath = SW_TRUE;
     assetMeta._assetType  = "Texture";
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::AssetPicker ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( assetMeta, "string" ) ) );
 }

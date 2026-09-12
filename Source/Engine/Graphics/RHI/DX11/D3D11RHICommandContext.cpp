@@ -35,7 +35,7 @@ namespace sw
             return;
 
         const D3D11RHIDevice::TextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
-        if ( pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != 0 )
+        if ( pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != SW_FALSE )
             return;
 
         Microsoft::WRL::ComPtr<ID3D11Texture2D> dstTex;
@@ -48,7 +48,7 @@ namespace sw
         else
         {
             const D3D11RHIDevice::TextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
-            if ( pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != 0 )
+            if ( pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE )
                 return;
             dstTex = pDstRecord->_texture;
         }
@@ -94,7 +94,7 @@ namespace sw
 
         ID3D11RenderTargetView* arrRtv[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
-        if ( beginInfo._bBindColor != 0 )
+        if ( beginInfo._bBindColor != SW_FALSE )
         {
             const uint32 wantCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u;
             for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )

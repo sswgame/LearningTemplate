@@ -295,6 +295,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-13 (SW_TRUE/SW_FALSE 를 써야 할 자리 415곳 — 그리고 린트가 이 규칙을 아예 안 보고 있었다)
+
+`uint8` 불리언(`_b*`)에 `SW_TRUE`/`SW_FALSE` 를 쓰라는 규칙은 `AGENTS.md` · `.cursorrules` ·
+`04_CodingGuidelines.md` **세 곳에** 적혀 있는데, `CheckCodeConventions.py` 에는 검사가 **하나도 없었다.**
+그래서 아무도 모르는 채로 415곳이 쌓였다. 한 파일 안에서 `_bGpuDirty = SW_TRUE` 와 `_bGpuDirty = 1` 이
+섞여 있는 자리도 있었다(`MaterialInstance.cpp`).
+
+**찾는 과정에서 탐지기를 세 번 고쳤다 — 오탐이 셋 다 이름 충돌이었다.**
+1. 처음엔 `true`/`false` 만 찾았다 → 2건. 둘 다 오탐이었다. `.cpp` 안의 지역 `struct` 가 헤더의 `uint8`
+   멤버와 **같은 이름**(`_bOwned`)을 쓰고 있었는데, 선언을 헤더에서만 모아서 타입을 잘못 붙였다.
+2. 선언을 `.cpp` 까지 모으고 이름이 양쪽 타입에 다 있으면 빼도록 고쳤다 → `true`/`false` 는 **0건**.
+3. 진짜 문제는 `true`/`false` 가 아니라 **생 `1`/`0`** 이었다. 그제야 415건이 나왔다.
+
+교훈은 탐지기 쪽이다 — **이름만으로 타입을 단정하면 안 된다.** 최종 판정은 "이 이름이 저장소 전체에서
+`uint8` 로만 선언되는가" 를 확인하고, 아니면 판단을 포기한다(오탐보다 누락이 낫다).
+
+| 형태 | 건수 |
+| --- | --- |
+| 생 `1`/`0` 대입 (`_bFlag = 1;`) | 185 |
+| 생 `1`/`0` 비교 (`_bFlag != 0`) | 192 |
+| 생 `1`/`0` 초기화 (`_bFlag{ 0 }`) | 37 |
+| 비교 없이 조건절 (`if ( _bDefinesDirty )`) | 2 |
+| `true`/`false` | 0 |
+
+**문자열 리터럴은 건드리지 않았다.** `ReflectionParser/CodeGenerator.cpp` 는 `"p._metadata._bReadOnly"` ·
+`"SW_TRUE"` 같은 **생성될 코드 문자열**을 들고 있으면서 동시에 `prop._bReadOnly != 0` 이라는 진짜 비교도
+한다. 치환 전에 리터럴 구간을 마스킹해 바깥만 바꿨고, 생성물이 그대로인 것은 `ReflectionTest` 통과로 봤다.
+
+**규칙을 린트가 지킨다.** `CheckCodeConventions.py` 에 `Style/BitfieldBoolean` 을 넣었다. 선언 타입을 알아야
+하므로 전체 스캔에서만 돈다. 일부러 한 줄을 `= 1` 로 되돌려 잡히는 것과, 되돌리면 다시 0 이 되는 것을
+확인했다. `AGENTS.md` 의 규칙 문장도 실제 범위에 맞췄다 — 예전에는 "`true`/`false` 대신" 이라고만 적혀
+있어서 **정작 415건이던 생 `1`/`0` 은 규칙 문장에 없었다.**
+
+**검증.** Debug · Release · Shipping 빌드 종료 0 · GPU 19/19 · RHITest 13/13 · nogpu 5/5(ReflectionTest 포함) ·
+린트 7/7 · 컨벤션 위반 0. 교체 5구성 종료 0 · 오류 0. 에디터 4백엔드 창 15 · 빈 패널 0 · 오류 0.
+
 ### 2026-09-13 (범용 RHI 인터페이스에서 Vulkan 을 걷어낸다 — 그리고 그중 절반은 중복이었다)
 
 `IRHIDevice` 는 네 백엔드를 추상화하는 인터페이스인데 Vulkan 전용 API 를 들고 있었다:

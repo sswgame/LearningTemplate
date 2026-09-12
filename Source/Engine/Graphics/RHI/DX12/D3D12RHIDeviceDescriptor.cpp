@@ -180,7 +180,7 @@ namespace sw
 
         Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
         Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-        _bBindlessRootSignature = 0;
+        _bBindlessRootSignature = SW_FALSE;
         if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
         {
             if ( errorBlob )
@@ -192,7 +192,7 @@ namespace sw
             SW_LOG_ERROR( "CreateRootSignature failed." );
             return false;
         }
-        _bBindlessRootSignature = 1;
+        _bBindlessRootSignature = SW_TRUE;
 
         D3D12_INDIRECT_ARGUMENT_DESC drawArg{};
         drawArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;

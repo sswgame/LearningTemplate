@@ -234,7 +234,7 @@ namespace sw
 
         const RHICapabilities currentCaps  = RHIAvailability::query( backend );
         const RHICapabilities previousCaps = RHIAvailability::query( previousBackend );
-        if ( ( currentCaps._bRequiresWindowRecreate != 0 || previousCaps._bRequiresWindowRecreate != 0 ) && pWindow != nullptr )
+        if ( ( currentCaps._bRequiresWindowRecreate != SW_FALSE || previousCaps._bRequiresWindowRecreate != SW_FALSE ) && pWindow != nullptr )
             pWindow->recreate();
 
         gv_rhiBackend = backend;

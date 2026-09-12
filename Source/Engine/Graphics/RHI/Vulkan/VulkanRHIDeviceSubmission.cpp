@@ -62,7 +62,7 @@ namespace sw
             _bSwapChainImageHeld = SW_TRUE;
             // 방금 획득한 이미지의 가용 세마포어는 이 프레임의 첫 제출이 딱 한 번 기다린다.
             // 이미지를 물려받은 프레임은 기다릴 시그널이 없으므로 이 플래그를 세우지 않는다.
-            _bFrameAcquireWaitPending = 1;
+            _bFrameAcquireWaitPending = SW_TRUE;
         }
 
         // 이 이미지를 마지막으로 쓴 프레임이 아직 GPU 에 있으면 그 펜스를 기다린 뒤에 덮어쓴다.
@@ -86,7 +86,7 @@ namespace sw
         _listPendingSubmit.clear();
 
         // 새 커맨드버퍼엔 아직 아무 세트도 안 걸림 — flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
-        _recordingState._bTextureSetBound = 0;
+        _recordingState._bTextureSetBound = SW_FALSE;
         _recordingState._arrSlotState[0]  = VulkanSlotState{};
         _recordingState._arrSlotState[1]  = VulkanSlotState{};
 
@@ -138,12 +138,12 @@ namespace sw
         // acquire 대기는 프레임당 한 번만 — 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
         VkSemaphore          arrWaitSemaphore[] = { _swapChain.getImageAvailableSemaphore( _currentFrame ) };
         VkPipelineStageFlags arrWaitStage[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        if ( _bFrameAcquireWaitPending != 0 )
+        if ( _bFrameAcquireWaitPending != SW_FALSE )
         {
             submitInfo.waitSemaphoreCount = 1;
             submitInfo.pWaitSemaphores    = arrWaitSemaphore;
             submitInfo.pWaitDstStageMask  = arrWaitStage;
-            _bFrameAcquireWaitPending     = 0;
+            _bFrameAcquireWaitPending     = SW_FALSE;
         }
 
         // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다 — 같은 큐에 대한
@@ -345,12 +345,12 @@ namespace sw
             flushInfo.commandBufferCount       = static_cast<uint32>( _listPendingSubmit.size() );
             flushInfo.pCommandBuffers          = _listPendingSubmit.data();
             const VkSemaphore acquireSemaphore = _swapChain.getImageAvailableSemaphore( _currentFrame );
-            if ( _bFrameAcquireWaitPending != 0 && acquireSemaphore != VK_NULL_HANDLE )
+            if ( _bFrameAcquireWaitPending != SW_FALSE && acquireSemaphore != VK_NULL_HANDLE )
             {
                 flushInfo.waitSemaphoreCount = 1;
                 flushInfo.pWaitSemaphores    = &acquireSemaphore;
                 flushInfo.pWaitDstStageMask  = &waitStage;
-                _bFrameAcquireWaitPending    = 0;
+                _bFrameAcquireWaitPending    = SW_FALSE;
             }
             vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
             _listPendingSubmit.clear();

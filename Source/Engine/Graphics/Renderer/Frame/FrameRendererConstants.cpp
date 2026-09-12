@@ -36,7 +36,7 @@ namespace sw
         // 뷰/라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다 — 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
         float4x4 lightViewProj{};
-        if ( _frameLight._bHasShadowViewProj != 0 )
+        if ( _frameLight._bHasShadowViewProj != SW_FALSE )
             lightViewProj = _frameLight._shadowViewProj;
         else
             buildLightViewProj( ctx, lightViewProj );

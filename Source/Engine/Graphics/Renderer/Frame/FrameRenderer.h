@@ -290,7 +290,7 @@ namespace sw
             float4   _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
             float4   _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
             float4x4 _shadowViewProj{};
-            uint8    _bHasShadowViewProj{ 0 };
+            uint8    _bHasShadowViewProj{ SW_FALSE };
         };
         FrameLightState _frameLight;
         /** @brief 카메라에서 뷰/투영을 적용합니다. */

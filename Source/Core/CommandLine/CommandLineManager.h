@@ -183,9 +183,9 @@ namespace sw
         const ArgumentInfo& argument      = _listArgument[argumentIndex];
 
         const ArgumentInfo::Value* pTargetValue{ nullptr };
-        if ( argument._bParsed != 0 )
+        if ( argument._bParsed != SW_FALSE )
             pTargetValue = &argument._value;
-        else if ( argument._bUseDefaultValue != 0 )
+        else if ( argument._bUseDefaultValue != SW_FALSE )
             pTargetValue = &argument._defaultValue;
         else
             return false;

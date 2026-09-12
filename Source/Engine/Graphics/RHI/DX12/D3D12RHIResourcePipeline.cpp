@@ -158,7 +158,7 @@ namespace sw
     {
         D3D12RHIDevice::D3D12RenderPassRecord record{};
         record._desc   = desc;
-        record._bAlive = 1;
+        record._bAlive = SW_TRUE;
         _pDevice->_listRenderPass.push_back( record );
         return _pDevice->_listRenderPass.size();
     }
@@ -167,7 +167,7 @@ namespace sw
     {
         if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
             return;
-        _pDevice->_listRenderPass[pass - 1]._bAlive = 0;
+        _pDevice->_listRenderPass[pass - 1]._bAlive = SW_FALSE;
     }
 } // namespace sw
 #endif

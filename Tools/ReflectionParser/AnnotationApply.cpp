@@ -154,8 +154,8 @@ namespace sw
 
             static void applyEnumFlags( ParsedEnumInfo& enumInfo )
             {
-                enumInfo._bIsBitFlag   = 1;
-                enumInfo._bEmitFlagOps = 1;
+                enumInfo._bIsBitFlag   = SW_TRUE;
+                enumInfo._bEmitFlagOps = SW_TRUE;
             }
 
             static void applyPropAlias( ParsedPropertyInfo& prop, const string& value )

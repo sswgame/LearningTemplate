@@ -11,7 +11,7 @@ namespace sw
     D3D12RHICommandList::D3D12RHICommandList( D3D12RHIDevice* pDevice )
         : _pDevice{ pDevice }
         , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : D3D12CommandListEntry{} }
-        , _bEntryDirty{ 0 }
+        , _bEntryDirty{ SW_FALSE }
         , _state{}
         , _context{ pDevice, _entry._list.Get(), &_state }
     {
@@ -53,12 +53,12 @@ namespace sw
         // 늘 따라잡아서 가려져 있었고, 에디터 없이 띄우면 곧바로 터졌다.
         // 그래서 두 번째 기록부터는 쌍을 통째로 갈아 낀다 — 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음),
         // 새 쌍은 이미 펜스를 통과한 것만 들어있는 풀에서 빌린다. 풀은 in-flight 깊이만큼만 늘어난다.
-        if ( _bEntryDirty != 0 )
+        if ( _bEntryDirty != SW_FALSE )
         {
             _pDevice->recycleCommandListEntryDeferred( std::move( _entry ) );
             _entry = _pDevice->acquireCommandListEntry();
             _context.rebindCommandList( _entry._list.Get() );
-            _bEntryDirty = 0;
+            _bEntryDirty = SW_FALSE;
         }
 
         if ( _entry._list == nullptr || _entry._allocator == nullptr )
@@ -70,8 +70,8 @@ namespace sw
         if ( FAILED( _entry._list->Reset( _entry._allocator.Get(), nullptr ) ) )
             return;
 
-        _bEntryDirty       = 1;
-        _state._bRecording = 1;
+        _bEntryDirty       = SW_TRUE;
+        _state._bRecording = SW_TRUE;
         // 힙·루트 시그니처·bindless 테이블 — 리스트마다 한 번. 이후는 루트 상수만 쓴다.
         _pDevice->bindBindlessRootState( _entry._list.Get() );
     }

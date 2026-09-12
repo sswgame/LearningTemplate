@@ -439,9 +439,9 @@ namespace sw
         /** @brief ENUM(Invalid/Count) 센티널을 반영한 유효성. 메타가 없으면 true. */
         bool isValidValue( int64 value ) const noexcept
         {
-            if ( _bHasInvalid != 0 && value == _invalidValue )
+            if ( _bHasInvalid != SW_FALSE && value == _invalidValue )
                 return false;
-            if ( _bHasCount != 0 && value >= _countValue )
+            if ( _bHasCount != SW_FALSE && value >= _countValue )
                 return false;
             return true;
         }
@@ -518,7 +518,7 @@ namespace sw
         {
             if ( isValidValue( value ) == false )
                 return nullptr;
-            const hashed_string name = ( _bIsBitFlag != 0 ) ? toStringFlags( value ) : toString( value );
+            const hashed_string name = ( _bIsBitFlag != SW_FALSE ) ? toStringFlags( value ) : toString( value );
             return name.empty() ? nullptr : name.c_str();
         }
 
@@ -551,7 +551,7 @@ namespace sw
                 }
             }
 
-            if ( _bIsBitFlag != 0 )
+            if ( _bIsBitFlag != SW_FALSE )
             {
                 outValue = stringFlagsToValue( name );
                 return isValidValue( outValue );
@@ -657,17 +657,17 @@ namespace sw
         bool isHiddenInMenu() const noexcept
         {
 #if !defined( SW_SHIPPING )
-            return _metadata._bHideInMenu != 0;
+            return _metadata._bHideInMenu != SW_FALSE;
 #else
             return false;
 #endif
         }
 
         /** @brief 팩토리/$ctor가 인스턴스를 만들 수 있으면 true. */
-        bool canConstruct() const noexcept { return _bAbstract == 0 && _bStatic == 0 && _bPrimitive == 0; }
+        bool canConstruct() const noexcept { return _bAbstract == SW_FALSE && _bStatic == SW_FALSE && _bPrimitive == SW_FALSE; }
 
         /** @brief REFLECT 없이 등록된 내장 타입 (int32, float32, …). */
-        bool isPrimitive() const noexcept { return _bPrimitive != 0; }
+        bool isPrimitive() const noexcept { return _bPrimitive != SW_FALSE; }
 
         /** @brief 직렬화/복사 시 memcpy POD 경로를 쓸 수 있으면 true. */
         bool usesPodCopyFastPath() const;
@@ -683,7 +683,7 @@ namespace sw
         /** @brief 이름→프로퍼티/메서드 조회 캐시를 만듭니다. */
         void buildLookupCache() const
         {
-            if ( _bIsCacheBuilt != 0 )
+            if ( _bIsCacheBuilt != SW_FALSE )
                 return;
 
             _mapNameToProperty.reserve( _listProperty.size() * 2 );

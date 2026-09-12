@@ -100,7 +100,7 @@ namespace sw
         desc._height            = image._height;
         desc._mipLevels         = image._mipCount > 0 ? image._mipCount : 1;
         desc._format            = format;
-        desc._bIsShaderResource = 1;
+        desc._bIsShaderResource = SW_TRUE;
         IRHIResource* pResource = pDevice->getResource();
         _handle                 = pResource->createTexture2D( desc );
         if ( _handle == 0 )

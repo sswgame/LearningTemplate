@@ -220,7 +220,7 @@ namespace sw
          */
         GpuMaterialElementKey _lastKey{};
         uint32                _lastIndex{ 0 };
-        uint8                 _bHasLast{ 0 };
+        uint8                 _bHasLast{ SW_FALSE };
     };
 
     /// @brief 그룹의 GPU 버퍼 — RT 소유, 셰이더 경로로 스냅샷을 넘어 재사용한다.
@@ -257,7 +257,7 @@ namespace sw
         /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
         uint32 _spinInstanceCount{ 0 };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는가. RT 는 0 이면 인스턴스 재업로드를 생략한다.
-        uint8 _bCpuDirty{ 1 };
+        uint8 _bCpuDirty{ SW_TRUE };
     };
 
     /**
@@ -361,7 +361,7 @@ namespace sw
          *          개수를 0 으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 **이 값**을 따라야
          *          한다. 둘이 어긋나면 개수 0 짜리 인자로 그리거나(빈 화면), 갱신 안 된 목록을 읽는다.
          */
-        bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != 0; }
+        bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != SW_FALSE; }
         /** @brief 메인 뷰의 간접 인자 버퍼 (isUploaded 등 뷰를 가리지 않는 검사용). */
         RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( RenderViewType::Main )]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
@@ -369,7 +369,7 @@ namespace sw
         /** @brief GPU에 올라갔는지 반환합니다. */
         bool isUploaded() const { return _instances._buffer != 0; }
         /** @brief 마지막 buildFromScene이 CPU 스냅샷을 바꿨으면 true. */
-        bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != 0; }
+        bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != SW_FALSE; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
         const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
 
@@ -558,9 +558,9 @@ namespace sw
         GpuCullViewResources    _arrCullView[static_cast<uint32>( RenderViewType::Count )];
         RHIStructuredBufferSlot _batchInfo;
         /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
-        uint8 _bWantGpuIndirectCounts{ 0 };
+        uint8 _bWantGpuIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).
-        uint8 _bGpuFillsIndirectCounts{ 0 };
+        uint8 _bGpuFillsIndirectCounts{ SW_FALSE };
         /**
          * @brief 마지막 upload() 가 올린 간접 인자 개수 — **렌더 스레드 소유**다.
          * @details GT 쪽 GpuScene 은 업로드를 하지 않으므로 이 값을 만들 수 없다. 그래서 exportCpuSnapshot /
@@ -568,6 +568,6 @@ namespace sw
          *          업로드를 건너뛰는 조용한 프레임에 컬링이 배치 0개로 돌고 아무것도 그려지지 않는다.
          */
         uint32 _indirectCommandCount{ 0 };
-        uint8  _bMergeAcrossMaterials{ 0 };
+        uint8  _bMergeAcrossMaterials{ SW_FALSE };
     };
 } // namespace sw

@@ -591,7 +591,7 @@ namespace sw
             static void parseContainerDetails( ParsedPropertyInfo& prop, CXType fieldType, const ParserSession& session )
             {
                 prop._containerTree = parseContainerFromType( fieldType, session );
-                if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != 0 )
+                if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != SW_FALSE )
                 {
                     prop._bIsContainer    = SW_TRUE;
                     prop._containerKind   = prop._containerTree->_containerKind;
@@ -1229,7 +1229,7 @@ namespace sw
         BLOCK( "Check BitFlag" )
         {
             // 명시적 BitFlag 어노테이션이 없더라도, 값이 모두 1, 2, 4, 8... 비트 패턴이면 BitFlag로 자동 감지
-            if ( enumInfo._bIsBitFlag == 0 )
+            if ( enumInfo._bIsBitFlag == SW_FALSE )
             {
                 bool  allPowerOf2  = enumInfo._listEnumerator.empty() == false;
                 int32 nonZeroCount = 0;
@@ -1246,7 +1246,7 @@ namespace sw
                     }
                 }
                 if ( allPowerOf2 && nonZeroCount > 1 )
-                    enumInfo._bIsBitFlag = 1;
+                    enumInfo._bIsBitFlag = SW_TRUE;
             }
         }
 

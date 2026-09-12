@@ -50,7 +50,7 @@ namespace sw
         , _bStop{ false }
         , _bContextBound{ false }
         , _bLastImmediateSubmit{ false }
-        , _bScreenshotTaken{ 0 }
+        , _bScreenshotTaken{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
         , _arrRingBuffer{}
         , _head{ 0 }
@@ -293,7 +293,7 @@ namespace sw
         if ( bOffscreen )
         {
             RHIRenderPassBeginInfo gameViewPass{};
-            gameViewPass._bBindColor        = 1;
+            gameViewPass._bBindColor        = SW_TRUE;
             gameViewPass._colorTargetCount  = 1;
             gameViewPass._arrColorTarget[0] = packet._gameRenderTarget;
             gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
@@ -313,7 +313,7 @@ namespace sw
         if ( pFrameStream != nullptr )
         {
             RHIRenderPassBeginInfo backbufferPass{};
-            backbufferPass._bBindColor        = 1;
+            backbufferPass._bBindColor        = SW_TRUE;
             backbufferPass._colorTargetCount  = 1;
             backbufferPass._arrColorTarget[0] = 0; // 0 = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 안 건드렸다
@@ -333,7 +333,7 @@ namespace sw
         //    읽어 보면 클리어 색만 나온다.
         //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다
         //    (그래서 처음엔 네 백엔드 중 하나만 지오메트리가 보였다).
-        if ( gv_screenshot.empty() == false && _bScreenshotTaken == 0 && _pFrameRenderer != nullptr )
+        if ( gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr )
         {
             // 최소 몇 프레임은 기다려야 한다 — 첫 프레임엔 GpuScene 업로드가 아직이라 그릴 게 없다.
             // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다).
@@ -343,7 +343,7 @@ namespace sw
                                                             : kScreenshotMinWarmupFrames;
             if ( ++_screenshotFrameCounter >= targetFrame )
             {
-                _bScreenshotTaken            = 1;
+                _bScreenshotTaken            = SW_TRUE;
                 const string_view attachment = gv_screenshotAttachment.empty()
                                                  ? string_view{ FrameRendererUtil::Attachment::kSceneColor }
                                                  : string_view{ gv_screenshotAttachment };

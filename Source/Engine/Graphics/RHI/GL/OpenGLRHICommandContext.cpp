@@ -45,7 +45,7 @@ namespace sw
             return;
 
         const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRec = _pDevice->resolveTexture( src );
-        if ( pSrcRec == nullptr || pSrcRec->_fbo == 0 || pSrcRec->_bDepthStencil != 0 )
+        if ( pSrcRec == nullptr || pSrcRec->_fbo == 0 || pSrcRec->_bDepthStencil != SW_FALSE )
             return;
 
         GLuint dstFbo{ 0 };
@@ -54,7 +54,7 @@ namespace sw
         if ( dst != 0 )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pDstRec = _pDevice->resolveTexture( dst );
-            if ( pDstRec == nullptr || pDstRec->_fbo == 0 || pDstRec->_bDepthStencil != 0 )
+            if ( pDstRec == nullptr || pDstRec->_fbo == 0 || pDstRec->_bDepthStencil != SW_FALSE )
                 return;
             dstFbo = pDstRec->_fbo;
             dstW   = pDstRec->_width;
@@ -137,7 +137,7 @@ namespace sw
         uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
         uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : _pDevice->_height;
 
-        const bool       bBindColor = beginInfo._bBindColor != 0;
+        const bool       bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool       bHasDepth  = beginInfo._depthTarget != 0;
         const uint32     colorCount = bBindColor ? ( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u ) : 0u;
         RHITextureHandle colorHandles[kMaxColorAttachments]{};
@@ -150,7 +150,7 @@ namespace sw
         if ( bDepthOnly == false && colorCount == 1 && colorHandles[0] != 0 )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pColorRec = _pDevice->resolveTexture( colorHandles[0] );
-            if ( pColorRec != nullptr && pColorRec->_bDepthStencil != 0 )
+            if ( pColorRec != nullptr && pColorRec->_bDepthStencil != SW_FALSE )
                 bDepthOnly = true;
         }
 
@@ -166,7 +166,7 @@ namespace sw
             if ( pRec != nullptr )
             {
                 fbo        = pRec->_fbo;
-                bDepthOnly = pRec->_bDepthStencil != 0;
+                bDepthOnly = pRec->_bDepthStencil != SW_FALSE;
                 if ( beginInfo._width == 0 )
                     targetWidth = pRec->_width;
                 if ( beginInfo._height == 0 )

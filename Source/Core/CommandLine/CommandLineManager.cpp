@@ -142,7 +142,7 @@ namespace sw
         ArgumentInfo& argument      = _listArgument[argumentIndex];
 
         // 필수 값 누락 검사
-        const bool bHasNoValue = ( argument._bMustHaveValue != 0 && bHasValue == false );
+        const bool bHasNoValue = ( argument._bMustHaveValue != SW_FALSE && bHasValue == false );
         if ( bHasNoValue )
         {
             SW_LOG_WARNING( "Value가 입력되지 않았습니다 : %#. 무시됩니다", string( rawKey ).c_str() );
@@ -155,7 +155,7 @@ namespace sw
         else
             argument._value = true;
 
-        argument._bParsed = 1;
+        argument._bParsed = SW_TRUE;
     }
 
     bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const

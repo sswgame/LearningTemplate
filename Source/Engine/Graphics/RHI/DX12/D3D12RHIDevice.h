@@ -38,8 +38,8 @@ namespace sw
     {
         D3D12_CPU_DESCRIPTOR_HANDLE _arrSrv[shaderslot::kSrvSlotCount]{};        ///< t# 의 오프라인 뷰. ptr 0 = 안 걸림
         D3D12_CPU_DESCRIPTOR_HANDLE _arrUav[shaderslot::kComputeUavSlotCount]{}; ///< u# 의 오프라인 뷰. ptr 0 = 안 걸림
-        uint8                       _bSrvDirty{ 1 };                             ///< 새 리스트는 테이블이 없으므로 첫 드로우에 반드시 굳힌다
-        uint8                       _bUavDirty{ 1 };
+        uint8                       _bSrvDirty{ SW_TRUE };                       ///< 새 리스트는 테이블이 없으므로 첫 드로우에 반드시 굳힌다
+        uint8                       _bUavDirty{ SW_TRUE };
     };
 
     /**
@@ -94,8 +94,8 @@ namespace sw
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
             , _activeColorTargetCount{ 0 }
-            , _bActiveSwapchainRT{ 0 }
-            , _bRecording{ 0 }
+            , _bActiveSwapchainRT{ SW_FALSE }
+            , _bRecording{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -169,16 +169,16 @@ namespace sw
         RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
 
         /** @brief 루트 시그니처의 무제한 텍스처 배열 테이블(t0 space1)로 g_SwBindlessTex2D[] 를 샘플링한다 (SM6.6 힙 인덱싱 아님). */
-        bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != 0; }
+        bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != SW_FALSE; }
 
         /** @brief VS 가 루트 SRV(t4)로 걸린 g_SwInstances 에서 인스턴스를 읽는다. */
-        bool supportsInstancedSceneDraw() const override { return _bBindlessRootSignature != 0; }
+        bool supportsInstancedSceneDraw() const override { return _bBindlessRootSignature != SW_FALSE; }
 
         /** @brief 런타임 native bindless 반영. */
         RHICapabilities getCapabilities() const override
         {
             RHICapabilities caps  = RHIAvailability::query( RHIBackend::DirectX12 );
-            caps._bNativeBindless = _bBindlessRootSignature != 0 ? 1u : 0u;
+            caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
             return caps;
         }
 

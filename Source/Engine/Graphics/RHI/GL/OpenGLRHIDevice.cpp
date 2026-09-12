@@ -123,7 +123,7 @@ namespace sw
             if ( key._arrColor[colorIndex] == 0 )
                 continue;
             const OpenGLTextureRecord* pRec = resolveTexture( key._arrColor[colorIndex] );
-            if ( pRec == nullptr || pRec->_bDepthStencil != 0 )
+            if ( pRec == nullptr || pRec->_bDepthStencil != SW_FALSE )
                 return 0;
             arrColorTex[attachedColors++] = pRec->_texture;
         }
@@ -132,7 +132,7 @@ namespace sw
         if ( depth != 0 )
         {
             const OpenGLTextureRecord* pDepthRec = resolveTexture( depth );
-            if ( pDepthRec == nullptr || pDepthRec->_bDepthStencil == 0 )
+            if ( pDepthRec == nullptr || pDepthRec->_bDepthStencil == SW_FALSE )
                 return 0;
             depthTex = pDepthRec->_texture;
         }

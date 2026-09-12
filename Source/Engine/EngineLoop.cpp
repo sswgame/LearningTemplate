@@ -631,7 +631,7 @@ namespace sw
                     packet._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
                     packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
                     packet._lightViewProj     = pLight->castsShadow() ? pLight->buildShadowViewProj() : float4x4{};
-                    packet._bHasLight         = 1;
+                    packet._bHasLight         = SW_TRUE;
                 }
 
                 pActiveScene->ensureDefaultCameras();
@@ -647,7 +647,7 @@ namespace sw
                             ? ( static_cast<float32>( packet._viewportWidth ) / static_cast<float32>( packet._viewportHeight ) )
                             : ( 16.0f / 9.0f );
                     packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
-                    packet._bHasViewProj = 1;
+                    packet._bHasViewProj = SW_TRUE;
                 }
                 _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos );
 

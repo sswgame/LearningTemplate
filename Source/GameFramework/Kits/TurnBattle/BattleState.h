@@ -61,7 +61,7 @@ namespace sw
         /** @brief 전투가 진행 중인지 반환합니다. */
         bool isActive() const { return _phase != BattlePhase::Inactive && _phase != BattlePhase::Ended; }
         /** @brief 플레이어가 승리했는지 반환합니다. */
-        bool playerWon() const { return _bPlayerWon != 0; }
+        bool playerWon() const { return _bPlayerWon != SW_FALSE; }
         /** @brief 현재 전투 페이즈를 반환합니다. */
         BattlePhase getPhase() const { return _phase; }
         /** @brief 적 닉네임을 반환합니다. */

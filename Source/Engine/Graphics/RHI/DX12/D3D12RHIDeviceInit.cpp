@@ -92,7 +92,7 @@ namespace sw
         if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
             return false;
 
-        _bBindlessRootSignature = 0;
+        _bBindlessRootSignature = SW_FALSE;
         _frameStreamState       = D3D12RecordingState{};
 
         // 백버퍼와 오프스크린 렌더타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
@@ -151,7 +151,7 @@ namespace sw
             _listFreeOnlineBlock.clear();
             for ( uint32 block = kOnlineBlockCount; block > 0; --block )
                 _listFreeOnlineBlock.push_back( block - 1 );
-            _bOnlineHeapExhaustedLogged = 0;
+            _bOnlineHeapExhaustedLogged = SW_FALSE;
         }
 
         for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
@@ -173,7 +173,7 @@ namespace sw
             return false;
 
         _commandList->Close();
-        _frameStreamState._bRecording = 0;
+        _frameStreamState._bRecording = SW_FALSE;
         _frameRing.reset( 0 );
 
         _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
@@ -250,9 +250,9 @@ namespace sw
         {
             allocator.Reset();
         }
-        _frameStreamState._bRecording = 0;
+        _frameStreamState._bRecording = SW_FALSE;
         _frameStreamContext.reset();
-        _bBindlessRootSignature = 0;
+        _bBindlessRootSignature = SW_FALSE;
         _fence.Reset();
         _commandQueue.Reset();
         _device.Reset();
@@ -273,13 +273,13 @@ namespace sw
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;
 
-        if ( _frameStreamState._bRecording != 0 && _commandList != nullptr )
+        if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
             _commandList->Close();
             ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
             if ( _commandQueue != nullptr )
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );
-            _frameStreamState._bRecording = 0;
+            _frameStreamState._bRecording = SW_FALSE;
             releaseOnlineBlocksDeferred( _frameStreamState );
         }
 

@@ -67,8 +67,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool    bReadOnly = prop._metadata._bReadOnly != 0;
-                const bool    bHasRange = prop._metadata._bHasRange != 0;
+                const bool    bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+                const bool    bHasRange = prop._metadata._bHasRange != SW_FALSE;
                 const float32 minF      = prop._metadata._minRange;
                 const float32 maxF      = prop._metadata._maxRange;
                 const int32   minI      = static_cast<int32>( minF );
@@ -102,8 +102,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool    bReadOnly = prop._metadata._bReadOnly != 0;
-                const bool    bHasRange = prop._metadata._bHasRange != 0;
+                const bool    bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+                const bool    bHasRange = prop._metadata._bHasRange != SW_FALSE;
                 const float32 minF      = prop._metadata._minRange;
                 const float32 maxF      = prop._metadata._maxRange;
                 const int32   minI      = static_cast<int32>( minF );
@@ -144,8 +144,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool    bReadOnly = prop._metadata._bReadOnly != 0;
-                const bool    bHasRange = prop._metadata._bHasRange != 0;
+                const bool    bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+                const bool    bHasRange = prop._metadata._bHasRange != SW_FALSE;
                 const float32 minF      = prop._metadata._minRange;
                 const float32 maxF      = prop._metadata._maxRange;
                 const int32   minI      = static_cast<int32>( minF );
@@ -187,8 +187,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool    bReadOnly = prop._metadata._bReadOnly != 0;
-                const bool    bHasRange = prop._metadata._bHasRange != 0;
+                const bool    bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+                const bool    bHasRange = prop._metadata._bHasRange != SW_FALSE;
                 const float32 minF      = prop._metadata._minRange;
                 const float32 maxF      = prop._metadata._maxRange;
                 const string  fmt       = getFormatWithUnits( prop, "%.2f" );
@@ -220,8 +220,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool    bReadOnly = prop._metadata._bReadOnly != 0;
-                const bool    bHasRange = prop._metadata._bHasRange != 0;
+                const bool    bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+                const bool    bHasRange = prop._metadata._bHasRange != SW_FALSE;
                 const float32 minF      = prop._metadata._minRange;
                 const float32 maxF      = prop._metadata._maxRange;
                 const string  fmt       = getFormatWithUnits( prop, "%.2f" );
@@ -260,7 +260,7 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly = prop._metadata._bReadOnly != 0;
+                const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
                 if ( prop._bIsBitField == SW_TRUE )
                 {
@@ -300,7 +300,7 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly = prop._metadata._bReadOnly != 0;
+                const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
                 if ( prop._bIsBitField == SW_TRUE )
                 {
@@ -341,7 +341,7 @@ namespace sw::editor
                     return true;
 
                 bool value = pPtr->load( std::memory_order_relaxed );
-                if ( prop._metadata._bReadOnly != 0 )
+                if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, value ? "true" : "false" );
                     return true;
@@ -358,8 +358,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly  = prop._metadata._bReadOnly != 0;
-                const bool bAssetPath = prop._metadata._bAssetPath != 0 || prop._metadata._assetType.empty() == false;
+                const bool bReadOnly  = prop._metadata._bReadOnly != SW_FALSE;
+                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
                 string* pPtr = prop.getValuePtr<string>( pInstance );
                 if ( pPtr == nullptr )
@@ -410,7 +410,7 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly = prop._metadata._bReadOnly != 0;
+                const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
                 float3* pPtr = prop.getValuePtr<float3>( pInstance );
                 if ( pPtr == nullptr )
@@ -438,7 +438,7 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly = prop._metadata._bReadOnly != 0;
+                const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
                 float2* pPtr = prop.getValuePtr<float2>( pInstance );
                 if ( pPtr == nullptr )
@@ -463,7 +463,7 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly = prop._metadata._bReadOnly != 0;
+                const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
                 float4* pPtr = prop.getValuePtr<float4>( pInstance );
                 if ( pPtr == nullptr )
@@ -492,8 +492,8 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop ) override
             {
-                const bool bReadOnly  = prop._metadata._bReadOnly != 0;
-                const bool bAssetPath = prop._metadata._bAssetPath != 0 || prop._metadata._assetType.empty() == false;
+                const bool bReadOnly  = prop._metadata._bReadOnly != SW_FALSE;
+                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
                 hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
                 if ( pPtr == nullptr )

@@ -153,7 +153,7 @@ namespace sw
     bool ZoneRuntime::isClearGateLocked() const
     {
         const ZoneDef* pZone = getActiveZone();
-        return pZone != nullptr && pZone->_bClearGateLocked != 0;
+        return pZone != nullptr && pZone->_bClearGateLocked != SW_FALSE;
     }
 
     bool ZoneRuntime::activeHasTag( string_view tag ) const

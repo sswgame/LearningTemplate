@@ -324,15 +324,15 @@ namespace sw
 
         HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
         if ( hr == S_OK || hr == S_FALSE )
-            _impl->_bComInitialized = 1;
+            _impl->_bComInitialized = SW_TRUE;
         else if ( hr == RPC_E_CHANGED_MODE )
-            _impl->_bComInitialized = 0;
+            _impl->_bComInitialized = SW_FALSE;
         else
             SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
         const HRESULT mfHr = MFStartup( MF_VERSION );
         if ( SUCCEEDED( mfHr ) )
-            _impl->_bMfInitialized = 1;
+            _impl->_bMfInitialized = SW_TRUE;
         else
             SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
@@ -403,15 +403,15 @@ namespace sw
             _impl->_pXAudio->Release();
             _impl->_pXAudio = nullptr;
         }
-        if ( _impl->_bMfInitialized != 0 )
+        if ( _impl->_bMfInitialized != SW_FALSE )
         {
             MFShutdown();
-            _impl->_bMfInitialized = 0;
+            _impl->_bMfInitialized = SW_FALSE;
         }
-        if ( _impl->_bComInitialized != 0 )
+        if ( _impl->_bComInitialized != SW_FALSE )
         {
             CoUninitialize();
-            _impl->_bComInitialized = 0;
+            _impl->_bComInitialized = SW_FALSE;
         }
         {
             std::scoped_lock<mutex> lock{ _impl->_clipCacheMutex };
@@ -521,7 +521,7 @@ namespace sw
             return;
         _impl->_masterVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         if ( _impl->_pMasterVoice != nullptr )
-            _impl->_pMasterVoice->SetVolume( _impl->_bMuted != 0 ? 0.0f : _impl->_masterVolume );
+            _impl->_pMasterVoice->SetVolume( _impl->_bMuted != SW_FALSE ? 0.0f : _impl->_masterVolume );
     }
 
     float32 XAudio2System::getMasterVolume() const
@@ -536,7 +536,7 @@ namespace sw
         _impl->_musicVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
         if ( _impl->_pMusicVoice != nullptr )
-            _impl->_pMusicVoice->SetVolume( _impl->_bMuted != 0 ? 0.0f : _impl->_musicVolume );
+            _impl->_pMusicVoice->SetVolume( _impl->_bMuted != SW_FALSE ? 0.0f : _impl->_musicVolume );
     }
 
     float32 XAudio2System::getMusicVolume() const
@@ -550,7 +550,7 @@ namespace sw
             return;
         _impl->_sfxVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        const float32           effectiveVol = _impl->_bMuted != 0 ? 0.0f : _impl->_sfxVolume;
+        const float32           effectiveVol = _impl->_bMuted != SW_FALSE ? 0.0f : _impl->_sfxVolume;
         for ( XAudio2SystemInternal::VoiceBuffer& vb : _impl->_listActiveVoice )
         {
             if ( vb._pVoice != nullptr )
@@ -574,7 +574,7 @@ namespace sw
 
     bool XAudio2System::isMuted() const
     {
-        return _impl != nullptr && _impl->_bMuted != 0;
+        return _impl != nullptr && _impl->_bMuted != SW_FALSE;
     }
 
     bool XAudio2System::isInitialized() const

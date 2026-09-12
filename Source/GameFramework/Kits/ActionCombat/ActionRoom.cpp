@@ -199,7 +199,7 @@ namespace sw
     {
         if ( _attackCooldown > 0.0f )
             return;
-        if ( input._bAttackPressed == 0 )
+        if ( input._bAttackPressed == SW_FALSE )
             return;
 
         _attackCooldown = 0.28f;

@@ -1732,6 +1732,88 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
     return violations
 
 
+
+_kU8BoolDeclRe = re.compile(
+    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*uint8\s+(_b\w+)\s*(?::\s*\d+\s*)?"
+    r"(?:\{[^{}]*\}|=\s*[^;]+)?\s*;")
+_kBoolDeclRe = re.compile(
+    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*(?:std::)?(?:atomic\s*<\s*bool\s*>|bool)\s+(_b\w+)")
+_kAnyStringLiteralRe = re.compile(r'"(?:[^"\\]|\\.)*"')
+
+
+def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+    """
+    `uint8` 불리언 멤버(`_b*`)에 `SW_TRUE`/`SW_FALSE` 대신 생 `1`/`0` 이나 `true`/`false` 를 쓴 자리를 찾습니다.
+
+    `uint8 _bFlag : 1;` 에 `true` 를 대입하면 컴파일러 경고가 날 수 있고, 생 `1` 은 "이게 불리언인가 개수인가" 를
+    읽는 사람이 판단해야 한다. 값이 아니라 **의미**를 적는다: `_bFlag = SW_TRUE;` · `if ( _bFlag == SW_TRUE )`.
+
+    선언 타입을 알아야 하므로 **전체 스캔에서만** 돕니다. 같은 이름이 다른 곳에서 `bool` 로도 선언돼 있으면
+    어느 쪽인지 단정할 수 없으므로 건너뜁니다(오탐보다 누락이 낫다).
+    """
+    mapU8: set[str] = set()
+    mapBool: set[str] = set()
+    for filePath in filesToScan:
+        try:
+            lines = filePath.read_text(encoding="utf-8", errors="ignore").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*")):
+                continue
+            match = _kU8BoolDeclRe.match(line)
+            if match is not None:
+                mapU8.add(match.group(1))
+                continue
+            match = _kBoolDeclRe.match(line)
+            if match is not None:
+                mapBool.add(match.group(1))
+
+    names = sorted(mapU8 - mapBool, key=len, reverse=True)
+    if not names:
+        return []
+
+    alternation = "|".join(re.escape(n) for n in names)
+    patterns = (
+        re.compile(r"(?<![A-Za-z0-9_])(" + alternation + r")\s*=(?!=)\s*([01]|true|false)\s*;"),
+        re.compile(r"(?<![A-Za-z0-9_])(" + alternation + r")\s*(?:==|!=)\s*([01]|true|false)(?![A-Za-z0-9_.])"),
+        re.compile(r"(?<![A-Za-z0-9_])(" + alternation + r")\s*\{\s*([01]|true|false)\s*\}"),
+    )
+
+    violations: list[ConventionViolation] = []
+    for filePath in filesToScan:
+        try:
+            content = filePath.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        try:
+            relPath = normalizePath(filePath.relative_to(projectRoot))
+        except ValueError:
+            relPath = normalizePath(filePath)
+        for lineNum, line in enumerate(content.splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*")):
+                continue
+            literalSpans = [m.span() for m in _kAnyStringLiteralRe.finditer(line)]
+            for pattern in patterns:
+                for match in pattern.finditer(line):
+                    if any(start <= match.start() < end for start, end in literalSpans):
+                        continue  # 문자열 리터럴 안 — 코드가 아니다
+                    literal = match.group(2)
+                    wanted = "SW_FALSE" if literal in ("0", "false") else "SW_TRUE"
+                    violations.append(ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Style/BitfieldBoolean",
+                        message=(f"'{match.group(1)}' 는 uint8 불리언인데 '{literal}' 을(를) 씁니다. "
+                                 f"값이 아니라 의미를 적으세요."),
+                        snippet=stripped,
+                        suggested_fix=f"'{literal}' 대신 {wanted} 를 쓰세요.",
+                    ))
+    return violations
+
+
 def runConventionsCheck(rootDir: Path | None = None,
                         specificFiles: list[str] | None = None) -> list[ConventionViolation]:
     """
@@ -1775,6 +1857,7 @@ def runConventionsCheck(rootDir: Path | None = None,
     # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
     allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
     allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
+    allViolations.extend(checkBitfieldBooleanLiteralsInternal(filesToScan, projectRoot))
 
     return allViolations
 

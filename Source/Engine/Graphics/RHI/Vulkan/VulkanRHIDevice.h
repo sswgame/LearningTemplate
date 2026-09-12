@@ -50,8 +50,8 @@ namespace sw
     struct VulkanDescriptorPoolSet
     {
         vector<VkDescriptorPool> _listPool;
-        uint32                   _cursor{ 0 };           ///< 지금 할당 중인 풀
-        uint8                    _bExhaustedLogged{ 0 }; ///< 상한 도달 로그를 한 번만
+        uint32                   _cursor{ 0 };                  ///< 지금 할당 중인 풀
+        uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한 도달 로그를 한 번만
     };
 
     /**
@@ -89,7 +89,7 @@ namespace sw
         /// @brief _arrSlot 중 걸린 것의 비트 (binding 번호 = 비트).
         uint64 _slotSetMask{ 0 };
         /// @brief 마지막으로 굳힌 세트 이후 바뀌었는가.
-        uint8 _bDirty{ 1 };
+        uint8 _bDirty{ SW_TRUE };
     };
 
     /**
@@ -125,9 +125,9 @@ namespace sw
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
-            : _bRenderPassActive{ 0 }
-            , _bTextureSetBound{ 0 }
-            , _bActiveSwapchainRT{ 0 }
+            : _bRenderPassActive{ SW_FALSE }
+            , _bTextureSetBound{ SW_FALSE }
+            , _bActiveSwapchainRT{ SW_FALSE }
             , _reserved{ 0 }
             , _activeGraphicsPso{ 0 }
             , _boundMeshVb{ 0 }

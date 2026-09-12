@@ -177,7 +177,7 @@ namespace sw
 
     bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
     {
-        if ( record._imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
+        if ( record._imageView == VK_NULL_HANDLE || record._bRenderTarget == SW_FALSE )
             return false;
 
         const bool bUseSharedPass = ( record._format == static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) );
@@ -391,7 +391,7 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
-            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != 0 )
+            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE )
                 return false;
             arrColorView[colorIndex]   = pTex->_imageView;
             arrColorFormat[colorIndex] = pTex->_format;
@@ -404,7 +404,7 @@ namespace sw
         if ( key._depth != 0 )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._depth );
-            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == 0 )
+            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE )
                 return false;
             depthView   = pTex->_imageView;
             depthFormat = pTex->_format;

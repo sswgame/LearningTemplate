@@ -19,23 +19,23 @@ namespace sw
      */
     struct SW_API RHICapabilities
     {
-        uint8 _bBindless{ 0 };                 ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
-        uint8 _bNativeBindless{ 0 };           ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
-        uint8 _bCompute{ 1 };                  ///< 컴퓨트 셰이더
-        uint8 _bOffscreenRT{ 0 };              ///< createTexture2D + 오프스크린 경로
-        uint8 _bComputeRootConstants{ 0 };     ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
-        uint8 _bIndirectDraw{ 0 };             ///< drawIndirect / dispatchIndirect
-        uint8 _bGpuCulling{ 0 };               ///< 컴퓨트 컬 + 인디렉트 인자 경로
-        uint8 _bMultiDrawIndirect{ 0 };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
-        uint8 _bParallelCommandRecording{ 0 }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
-        uint8 _bRequiresWindowRecreate{ 0 };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
+        uint8 _bBindless{ SW_FALSE };                 ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
+        uint8 _bNativeBindless{ SW_FALSE };           ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
+        uint8 _bCompute{ SW_TRUE };                   ///< 컴퓨트 셰이더
+        uint8 _bOffscreenRT{ SW_FALSE };              ///< createTexture2D + 오프스크린 경로
+        uint8 _bComputeRootConstants{ SW_FALSE };     ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
+        uint8 _bIndirectDraw{ SW_FALSE };             ///< drawIndirect / dispatchIndirect
+        uint8 _bGpuCulling{ SW_FALSE };               ///< 컴퓨트 컬 + 인디렉트 인자 경로
+        uint8 _bMultiDrawIndirect{ SW_FALSE };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
+        uint8 _bParallelCommandRecording{ SW_FALSE }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
+        uint8 _bRequiresWindowRecreate{ SW_FALSE };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
         /**
          * @brief 워커 스레드에서 GPU 리소스를 **만들어도** 되는가 (그리기가 아니라 생성만).
          * @details DX12 · Vulkan 은 디바이스 레벨 생성이 스펙상 스레드 안전하고, DX11 도 ID3D11Device 는
          *          (컨텍스트와 달리) 안전하다. OpenGL 은 `glGen*` 이 **현재 컨텍스트**를 필요로 해 안 된다.
          *          `GpuUploadQueue` 가 이 값으로 워커 병렬과 인라인을 가른다.
          */
-        uint8 _bThreadSafeResourceCreation{ 0 };
+        uint8 _bThreadSafeResourceCreation{ SW_FALSE };
 
         /** @brief 기본값 (컴퓨트만 켠 보수적 기본). */
         RHICapabilities() noexcept = default;
@@ -76,62 +76,62 @@ namespace sw
             switch ( backend )
             {
                 case RHIBackend::DirectX12:
-                    caps._bBindless                   = 1;
-                    caps._bNativeBindless             = 1; // 후보. 런타임은 Device::getCapabilities()
-                    caps._bCompute                    = 1;
-                    caps._bOffscreenRT                = 1;
-                    caps._bComputeRootConstants       = 1;
-                    caps._bIndirectDraw               = 1;
-                    caps._bGpuCulling                 = 1;
-                    caps._bMultiDrawIndirect          = 1;
-                    caps._bParallelCommandRecording   = 1;
-                    caps._bThreadSafeResourceCreation = 1;
+                    caps._bBindless                   = SW_TRUE;
+                    caps._bNativeBindless             = SW_TRUE; // 후보. 런타임은 Device::getCapabilities()
+                    caps._bCompute                    = SW_TRUE;
+                    caps._bOffscreenRT                = SW_TRUE;
+                    caps._bComputeRootConstants       = SW_TRUE;
+                    caps._bIndirectDraw               = SW_TRUE;
+                    caps._bGpuCulling                 = SW_TRUE;
+                    caps._bMultiDrawIndirect          = SW_TRUE;
+                    caps._bParallelCommandRecording   = SW_TRUE;
+                    caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 case RHIBackend::DirectX11:
-                    caps._bBindless             = 1;
-                    caps._bNativeBindless       = 0;
-                    caps._bCompute              = 1;
-                    caps._bOffscreenRT          = 1;
-                    caps._bComputeRootConstants = 1;
-                    caps._bIndirectDraw         = 1;
+                    caps._bBindless             = SW_TRUE;
+                    caps._bNativeBindless       = SW_FALSE;
+                    caps._bCompute              = SW_TRUE;
+                    caps._bOffscreenRT          = SW_TRUE;
+                    caps._bComputeRootConstants = SW_TRUE;
+                    caps._bIndirectDraw         = SW_TRUE;
                     // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 걸 수 없다.
                     // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
                     // 쓰려면 둘 중 하나를 포기해야 한다 — 인다이렉트 드로우를 살리고 컬링을 끈다
                     // (간접 인자는 GpuScene 이 CPU 에서 이미 채운다).
-                    caps._bGpuCulling                 = 0;
-                    caps._bMultiDrawIndirect          = 1;
-                    caps._bParallelCommandRecording   = 0;
-                    caps._bThreadSafeResourceCreation = 1;
+                    caps._bGpuCulling                 = SW_FALSE;
+                    caps._bMultiDrawIndirect          = SW_TRUE;
+                    caps._bParallelCommandRecording   = SW_FALSE;
+                    caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 case RHIBackend::OpenGL:
-                    caps._bBindless                 = 1;
-                    caps._bNativeBindless           = 0;
-                    caps._bCompute                  = 1;
-                    caps._bOffscreenRT              = 1;
-                    caps._bComputeRootConstants     = 1;
-                    caps._bIndirectDraw             = 1;
-                    caps._bGpuCulling               = 1;
-                    caps._bMultiDrawIndirect        = 1;
-                    caps._bParallelCommandRecording = 0;
+                    caps._bBindless                 = SW_TRUE;
+                    caps._bNativeBindless           = SW_FALSE;
+                    caps._bCompute                  = SW_TRUE;
+                    caps._bOffscreenRT              = SW_TRUE;
+                    caps._bComputeRootConstants     = SW_TRUE;
+                    caps._bIndirectDraw             = SW_TRUE;
+                    caps._bGpuCulling               = SW_TRUE;
+                    caps._bMultiDrawIndirect        = SW_TRUE;
+                    caps._bParallelCommandRecording = SW_FALSE;
 #if defined( SW_PLATFORM_WINDOWS )
-                    caps._bRequiresWindowRecreate = 1;
+                    caps._bRequiresWindowRecreate = SW_TRUE;
 #endif
-                    caps._bThreadSafeResourceCreation = 0;
+                    caps._bThreadSafeResourceCreation = SW_FALSE;
                     break;
                 case RHIBackend::Vulkan:
-                    caps._bBindless             = 1;
-                    caps._bNativeBindless       = 1; // 후보. 런타임은 supportsNativeBindlessSampling()
-                    caps._bCompute              = 1;
-                    caps._bOffscreenRT          = 1;
-                    caps._bComputeRootConstants = 1;
-                    caps._bIndirectDraw         = 1;
-                    caps._bGpuCulling           = 1;
-                    caps._bMultiDrawIndirect    = 1;
+                    caps._bBindless             = SW_TRUE;
+                    caps._bNativeBindless       = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
+                    caps._bCompute              = SW_TRUE;
+                    caps._bOffscreenRT          = SW_TRUE;
+                    caps._bComputeRootConstants = SW_TRUE;
+                    caps._bIndirectDraw         = SW_TRUE;
+                    caps._bGpuCulling           = SW_TRUE;
+                    caps._bMultiDrawIndirect    = SW_TRUE;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기
                     // 때문이다 — DX12 의 커맨드 얼로케이터와 같은 제약이다.
-                    caps._bParallelCommandRecording   = 1;
-                    caps._bThreadSafeResourceCreation = 1;
+                    caps._bParallelCommandRecording   = SW_TRUE;
+                    caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 default:
                     break;

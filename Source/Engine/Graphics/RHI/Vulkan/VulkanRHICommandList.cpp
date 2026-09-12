@@ -11,7 +11,7 @@ namespace sw
     VulkanRHICommandList::VulkanRHICommandList( VulkanRHIDevice* pDevice )
         : _pDevice{ pDevice }
         , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : VulkanCommandListEntry{} }
-        , _bEntryDirty{ 0 }
+        , _bEntryDirty{ SW_FALSE }
         , _state{}
         , _context{ pDevice, _entry._buffer, &_state, _entry._pDescriptorPoolSet }
     {
@@ -34,12 +34,12 @@ namespace sw
         // 하면 직전 프레임 커맨드를 GPU 가 아직 읽는 중일 수 있으므로, 두 번째 기록부터는 쌍을 통째로
         // 갈아 낀다 — 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음) 새 쌍은 이미 통과한 것만 든 풀에서
         // 빌린다. DX12 의 커맨드 얼로케이터와 같은 계약이다.
-        if ( _bEntryDirty != 0 )
+        if ( _bEntryDirty != SW_FALSE )
         {
             _pDevice->recycleCommandListEntryDeferred( _entry );
             _entry = _pDevice->acquireCommandListEntry();
             _context.rebindCommandBuffer( _entry._buffer, _entry._pDescriptorPoolSet );
-            _bEntryDirty = 0;
+            _bEntryDirty = SW_FALSE;
         }
 
         if ( _entry._buffer == VK_NULL_HANDLE )
@@ -56,7 +56,7 @@ namespace sw
         if ( vkBeginCommandBuffer( _entry._buffer, &beginInfo ) != VK_SUCCESS )
             return;
 
-        _bEntryDirty = 1;
+        _bEntryDirty = SW_TRUE;
 
         // 새 버퍼라 동적 상태가 비어 있다 — 파이프라인이 뷰포트/시저를 동적으로 쓰므로 기본값을 깐다.
         VkViewport viewport{};

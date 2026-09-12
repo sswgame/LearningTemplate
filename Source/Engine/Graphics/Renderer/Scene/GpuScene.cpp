@@ -100,7 +100,7 @@ namespace sw
         _listBuiltCandidate.clear();
         _lastCameraPos              = float3{};
         _lastPrimitiveSetGeneration = 0;
-        _snapshot._bCpuDirty        = 1;
+        _snapshot._bCpuDirty        = SW_TRUE;
     }
 
     void GpuScene::clear()
@@ -165,7 +165,7 @@ namespace sw
 
     Material* GpuScene::batchKeyMaterial( Material* pMaterial, const MaterialInstance* pInstance )
     {
-        if ( _bMergeAcrossMaterials == 0 || pMaterial == nullptr )
+        if ( _bMergeAcrossMaterials == SW_FALSE || pMaterial == nullptr )
             return pMaterial;
         // 대표는 **퍼뮤테이션 단위**다. 예전엔 셰이더 경로만 봐서, 같은 .hlsl 을 쓰지만 정적 스위치가 다른
         // 머티리얼이 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 버려졌다.
@@ -209,7 +209,7 @@ namespace sw
                 continue;
             }
             // 합치기가 켜져 있으면 같은 셰이더 타입은 머티리얼·인스턴스가 달라도 한 키다 — 파라미터는 원소 인덱스로 읽는다.
-            SortKey key{ cand._mesh.get(), batchKeyMaterial( cand._material.get(), cand._instance.get() ), _bMergeAcrossMaterials != 0 ? nullptr : cand._instance.get() };
+            SortKey key{ cand._mesh.get(), batchKeyMaterial( cand._material.get(), cand._instance.get() ), _bMergeAcrossMaterials != SW_FALSE ? nullptr : cand._instance.get() };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -379,7 +379,7 @@ namespace sw
         _listBuiltCandidate.swap( _listScratchCandidate );
         _lastCameraPos              = cameraPos;
         _lastPrimitiveSetGeneration = setGeneration;
-        _snapshot._bCpuDirty        = 1;
+        _snapshot._bCpuDirty        = SW_TRUE;
     }
 
     void GpuScene::requestGpuUploads( GpuUploadQueue& queue ) const
@@ -425,9 +425,9 @@ namespace sw
         // 여기서 같이 건너뛰었더니 정적 씬에서 개수가 N, 2N, 3N ... 으로 끝없이 자랐다(드로우 비용이
         // 계속 늘고, 이번 프레임에 쓰지 않은 가시 목록 자리를 읽는다). 움직이는 벤치와 한 프레임만
         // 그리는 테스트가 둘 다 이걸 가리고 있었다.
-        if ( _snapshot._bCpuDirty == 0 && _instances._buffer != 0 && getIndirectArgsBuffer() != 0 )
+        if ( _snapshot._bCpuDirty == SW_FALSE && _instances._buffer != 0 && getIndirectArgsBuffer() != 0 )
         {
-            if ( _bGpuFillsIndirectCounts != 0 )
+            if ( _bGpuFillsIndirectCounts != SW_FALSE )
                 refreshIndirectCounts( pDevice );
             return true;
         }
@@ -480,7 +480,7 @@ namespace sw
         // 0 으로 올리면 안 된다 — 컬링이 못 도는데 개수가 0 이면 그 프레임은 아무것도 안 그려진다.
         // 그래서 "원한다"(_bWantGpuIndirectCounts)와 "실제로 된다"(_bGpuFillsIndirectCounts)를 나눠 둔다.
         _bGpuFillsIndirectCounts =
-            ( _bWantGpuIndirectCounts != 0 && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
+            ( _bWantGpuIndirectCounts != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
 
         _listScratchIndirectCmd.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
@@ -489,7 +489,7 @@ namespace sw
             // 컬링 컴퓨트가 개수를 만드는 배치는 **0 에서 시작**해야 한다 — InterlockedAdd 로 보이는 것만 센다.
             // 압축을 포기한 배치(Preserve)와 컬링이 아예 없을 때는 CPU 가 센 개수를 그대로 쓴다.
             const bool bPreserve                                   = static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve;
-            const bool bGpuCounts                                  = ( _bGpuFillsIndirectCounts != 0 ) && ( bPreserve == false );
+            const bool bGpuCounts                                  = ( _bGpuFillsIndirectCounts != SW_FALSE ) && ( bPreserve == false );
             _listScratchIndirectCmd[argIndex]._instanceCount       = bGpuCounts ? 0u : _snapshot._listAllBatch[argIndex]._instanceCount;
             _listScratchIndirectCmd[argIndex]._startVertexLocation = 0;
             // **0 이어야 한다.** 배치의 인스턴스 시작 오프셋은 셰이더가 루트 상수(g_InstanceBase)로 더한다.
@@ -515,14 +515,14 @@ namespace sw
 
         // 인자 버퍼를 하나라도 못 만들었으면 컴퓨트가 개수를 만들 수 없다 — 개수 0 짜리 인자로 그리면
         // 그 뷰는 빈 화면이 된다. 플래그를 내리고 CPU 개수로 되돌려 올린다.
-        if ( _bGpuFillsIndirectCounts != 0 && hasAllCullViewBuffers() == false )
+        if ( _bGpuFillsIndirectCounts != SW_FALSE && hasAllCullViewBuffers() == false )
         {
-            _bGpuFillsIndirectCounts = 0;
+            _bGpuFillsIndirectCounts = SW_FALSE;
             refreshIndirectCounts( pDevice );
         }
 
         _indirectCommandCount = argsCount;
-        _snapshot._bCpuDirty  = 0;
+        _snapshot._bCpuDirty  = SW_FALSE;
 
         return _instances._buffer != 0 && getIndirectArgsBuffer() != 0;
     }
@@ -576,7 +576,7 @@ namespace sw
             return;
         _bWantGpuIndirectCounts = value;
         // 간접 인자의 내용이 달라지므로 다음 upload 가 반드시 다시 올려야 한다.
-        _snapshot._bCpuDirty = 1;
+        _snapshot._bCpuDirty = SW_TRUE;
     }
 
     void GpuScene::releaseGpu( IRHIDevice* pDevice )
@@ -602,7 +602,7 @@ namespace sw
         }
         _indirectCommandCount        = 0;
         _snapshot._spinInstanceCount = 0;
-        _snapshot._bCpuDirty         = 1;
+        _snapshot._bCpuDirty         = SW_TRUE;
     }
 
     void GpuScene::exportCpuSnapshot( GpuSceneSnapshot& outSnapshot )
@@ -610,7 +610,7 @@ namespace sw
         // 옮겨지는 것은 GpuSceneSnapshot 이 든 것 **전부이고 그것뿐**이다. 복사다 — 퍼뮤테이션 표는 GT 가
         // 계속 늘려 가는 정본이라 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
         outSnapshot          = _snapshot;
-        _snapshot._bCpuDirty = 0;
+        _snapshot._bCpuDirty = SW_FALSE;
     }
 
     void GpuScene::adoptCpuSnapshot( GpuSceneSnapshot&& snapshot )
@@ -689,7 +689,7 @@ namespace sw
         // 지연 회수한다. 자리를 옮기지 않으므로 인덱스는 안정적이다.
         ++_buildCounter;
         for ( GpuMaterialGroup& group : _snapshot._listMaterialGroup )
-            group._bHasLast = 0;
+            group._bHasLast = SW_FALSE;
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {
@@ -765,7 +765,7 @@ namespace sw
                     const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange                   = ( pBatchHead->_mesh != current._mesh ) ||
                                  ( pBatchHeadKey != batchKeyMaterial( current._material.get(), current._instance.get() ) ) ||
-                                 ( _bMergeAcrossMaterials == 0 && pBatchHead->_instance != current._instance );
+                                 ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -838,7 +838,7 @@ namespace sw
                 // 이미 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
                 group._listEntry[index] = GpuMaterialElement{};
                 group._listFreeEntry.push_back( index );
-                group._bHasLast = 0;
+                group._bHasLast = SW_FALSE;
             }
         }
     }
@@ -877,7 +877,7 @@ namespace sw
         GpuMaterialGroup&           group = _snapshot._listMaterialGroup[groupIndex];
         const GpuMaterialElementKey key{ pMaterial, pInstance };
         // 배치 안의 인스턴스는 같은 원소를 연속으로 묻는다 — 포인터 비교 한 번으로 끝낸다.
-        if ( group._bHasLast != 0 && group._lastKey == key )
+        if ( group._bHasLast != SW_FALSE && group._lastKey == key )
             return group._lastIndex;
 
         const auto it = group._mapEntryToIndex.find( key );
@@ -904,7 +904,7 @@ namespace sw
         group._listEntryLastSeenBuild[elementIndex] = _buildCounter;
         group._lastKey                              = key;
         group._lastIndex                            = elementIndex;
-        group._bHasLast                             = 1;
+        group._bHasLast                             = SW_TRUE;
         return elementIndex;
     }
 

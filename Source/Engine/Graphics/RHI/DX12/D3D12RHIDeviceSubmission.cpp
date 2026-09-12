@@ -114,13 +114,13 @@ namespace sw
         _pActiveFrameList                       = pNextSegment;
         if ( pNextSegment == nullptr )
         {
-            _frameStreamState._bRecording = 0;
+            _frameStreamState._bRecording = SW_FALSE;
             return;
         }
 
         // 새 리스트라 바인딩 캐시가 무효다. 뷰포트/시저도 다시 깔아준다.
         _frameStreamState             = D3D12RecordingState{};
-        _frameStreamState._bRecording = 1;
+        _frameStreamState._bRecording = SW_TRUE;
         _frameStreamContext->rebindCommandList( pNextSegment );
 
         D3D12_VIEWPORT viewport{};
@@ -303,7 +303,7 @@ namespace sw
 
     void D3D12RHIDevice::beginFrame( const float4& clearColor )
     {
-        if ( _frameStreamState._bRecording == 0 )
+        if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
             // 링 슬롯이 정해졌다 — 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
@@ -319,7 +319,7 @@ namespace sw
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다 — 실패 시 이번 프레임을 스킵한다.
             if ( FAILED( pAllocator->Reset() ) || FAILED( _commandList->Reset( pAllocator, nullptr ) ) )
                 return;
-            _frameStreamState._bRecording      = 1;
+            _frameStreamState._bRecording      = SW_TRUE;
             _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트 — 슬롯 테이블은 첫 드로우가 다시 굳힌다
             _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
             _pActiveFrameList                  = _commandList.Get();
@@ -362,11 +362,11 @@ namespace sw
         if ( bPresent )
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
-        if ( _frameStreamState._bRecording != 0 && _pActiveFrameList != nullptr )
+        if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
         {
             _pActiveFrameList->Close();
             _listPendingSubmit.push_back( _pActiveFrameList );
-            _frameStreamState._bRecording = 0;
+            _frameStreamState._bRecording = SW_FALSE;
             releaseOnlineBlocksDeferred( _frameStreamState );
         }
 

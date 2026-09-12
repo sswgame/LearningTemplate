@@ -2021,7 +2021,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
     sw::PropertyInfo titleProp( sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
                                 SW_OFFSET_OF( DefaultActor, _title ) );
     titleProp._metadata._defaultValue  = "Apprentice";
-    titleProp._metadata._bXmlAttribute = 1;
+    titleProp._metadata._bXmlAttribute = SW_TRUE;
     info._listProperty                 = { manaProp, titleProp };
 
     DefaultActor actor;

@@ -554,7 +554,7 @@ namespace sw
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
-            _bDefinesDirty = 1;
+            _bDefinesDirty = SW_TRUE;
 
         return true;
     }
@@ -584,7 +584,7 @@ namespace sw
         if ( _desc._permutations._quality != level )
         {
             _desc._permutations._quality = level;
-            _bDefinesDirty               = 1;
+            _bDefinesDirty               = SW_TRUE;
         }
     }
 
@@ -593,7 +593,7 @@ namespace sw
         if ( _desc._permutations._usage != flags )
         {
             _desc._permutations._usage = flags;
-            _bDefinesDirty             = 1;
+            _bDefinesDirty             = SW_TRUE;
         }
     }
 
@@ -606,7 +606,7 @@ namespace sw
                 if ( ss._bEnabled != bEnabled )
                 {
                     ss._bEnabled   = bEnabled;
-                    _bDefinesDirty = 1;
+                    _bDefinesDirty = SW_TRUE;
                 }
                 return;
             }
@@ -616,7 +616,7 @@ namespace sw
         entry._keyword  = entry._name;
         entry._bEnabled = bEnabled;
         _desc._permutations._listStaticSwitch.push_back( std::move( entry ) );
-        _bDefinesDirty = 1;
+        _bDefinesDirty = SW_TRUE;
     }
 
     void Material::setMultiCompile( hashed_string name, string_view selectedOption )
@@ -628,7 +628,7 @@ namespace sw
                 if ( mc._selected != selectedOption )
                 {
                     mc._selected   = string( selectedOption );
-                    _bDefinesDirty = 1;
+                    _bDefinesDirty = SW_TRUE;
                 }
                 return;
             }
@@ -639,7 +639,7 @@ namespace sw
         if ( selectedOption.empty() == false )
             multiCompile._listOption.push_back( string( selectedOption ) );
         _desc._permutations._listMultiCompile.push_back( std::move( multiCompile ) );
-        _bDefinesDirty = 1;
+        _bDefinesDirty = SW_TRUE;
     }
 
     void Material::setBlendMode( RHIBlendMode mode )
@@ -696,7 +696,7 @@ namespace sw
 
     const vector<string>& Material::getCachedShaderDefines() const
     {
-        if ( _bDefinesDirty != 0 )
+        if ( _bDefinesDirty != SW_FALSE )
         {
             _listCachedDefine.clear();
             const MaterialPermutationDesc& perm = _desc._permutations;
@@ -739,7 +739,7 @@ namespace sw
 
             std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
             _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
-            _bDefinesDirty         = 0;
+            _bDefinesDirty         = SW_FALSE;
         }
         return _listCachedDefine;
     }
@@ -754,7 +754,7 @@ namespace sw
 
     uint64 Material::getShaderPathHash() const
     {
-        if ( _bShaderPathHashDirty != 0 )
+        if ( _bShaderPathHashDirty != SW_FALSE )
         {
             _cachedShaderPathHash = StringUtil::computeHash64( _desc._shaderPath, false, StringUtil::kOffset64 );
             _bShaderPathHashDirty = SW_FALSE;
@@ -764,7 +764,7 @@ namespace sw
 
     uint64 Material::getPermutationHash() const
     {
-        if ( _bDefinesDirty != 0 )
+        if ( _bDefinesDirty != SW_FALSE )
             getCachedShaderDefines();
         return _cachedPermutationHash;
     }

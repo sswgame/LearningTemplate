@@ -62,7 +62,7 @@ namespace sw
     GamepadDevice::GamepadDevice( uint32 deviceIndex )
         : _onConnectionChanged{}
         , _deviceIndex{ deviceIndex }
-        , _buttonMask{ 0 }
+        , _buttonMask{ SW_FALSE }
         , _prevButtonMask{ 0 }
         , _leftStickX{ 0.0f }
         , _leftStickY{ 0.0f }
@@ -101,7 +101,7 @@ namespace sw
 
     void GamepadDevice::resetState()
     {
-        _buttonMask       = 0;
+        _buttonMask       = SW_FALSE;
         _prevButtonMask   = 0;
         _leftStickX       = 0.0f;
         _leftStickY       = 0.0f;

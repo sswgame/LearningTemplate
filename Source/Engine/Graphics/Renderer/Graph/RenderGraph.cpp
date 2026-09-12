@@ -260,7 +260,7 @@ namespace sw
             return false;
 
         if ( pTaskManager == nullptr || pDevice == nullptr || _listCompiledExecutionOrder.size() <= 1 ||
-             pDevice->getCapabilities()._bParallelCommandRecording == 0 )
+             pDevice->getCapabilities()._bParallelCommandRecording == SW_FALSE )
             return execute( context );
 
         context.reset();

@@ -426,7 +426,7 @@ namespace sw
         const auto offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
         if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
         {
-            if ( offscreenIt->second._bHasDsv != 0 )
+            if ( offscreenIt->second._bHasDsv != SW_FALSE )
                 return RHIFormat::D24_UNORM_S8_UINT;
             return fromDxgiFormat( offscreenIt->second._format );
         }
@@ -611,7 +611,7 @@ namespace sw
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-        const bool        bDepth      = desc._bIsDepthStencil != 0;
+        const bool        bDepth      = desc._bIsDepthStencil != SW_FALSE;
         const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
         const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::kDepthStencilFormat );
         const DXGI_FORMAT colorFmt    = toDxgiFormat( desc._format );
@@ -669,8 +669,8 @@ namespace sw
         record._format   = bDepth ? dsvFmt : colorFmt;
         record._width    = desc._width;
         record._height   = desc._height;
-        record._bHasRtv  = 0;
-        record._bHasDsv  = 0;
+        record._bHasRtv  = SW_FALSE;
+        record._bHasDsv  = SW_FALSE;
         record._reserved = 0;
 
         _pDevice->checkRegistryMutableNow( "createTexture2D" );
@@ -709,7 +709,7 @@ namespace sw
                 rtvDesc.Texture2D.MipSlice   = 0;
                 rtvDesc.Texture2D.PlaneSlice = 0;
                 _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, record._rtvHandle );
-                record._bHasRtv = 1;
+                record._bHasRtv = SW_TRUE;
             }
         }
 
@@ -740,7 +740,7 @@ namespace sw
                 dsvDesc.Flags              = D3D12_DSV_FLAG_NONE;
                 dsvDesc.Texture2D.MipSlice = 0;
                 _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, record._dsvHandle );
-                record._bHasDsv = 1;
+                record._bHasDsv = SW_TRUE;
             }
         }
 
@@ -760,9 +760,9 @@ namespace sw
             if ( it != _pDevice->_mapOffscreenTexture.end() )
             {
                 const uint32 offscreenRtvBase = _pDevice->_swapChain.getBufferCount();
-                if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= offscreenRtvBase )
+                if ( it->second._bHasRtv != SW_FALSE && it->second._rtvIndex >= offscreenRtvBase )
                     _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
-                if ( it->second._bHasDsv != 0 )
+                if ( it->second._bHasDsv != SW_FALSE )
                     _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
                 _pDevice->_mapOffscreenTexture.erase( it );
             }

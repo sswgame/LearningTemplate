@@ -17,9 +17,9 @@ namespace sw
             text,
             [&]( string_view line )
         {
-            if ( opt._bSkipSemicolonComments != 0 && line.front() == ';' )
+            if ( opt._bSkipSemicolonComments != SW_FALSE && line.front() == ';' )
                 return;
-            if ( opt._bSkipBracketSections != 0 && line.front() == '[' )
+            if ( opt._bSkipBracketSections != SW_FALSE && line.front() == '[' )
                 return;
 
             const size_t equalPos = line.find( '=' );

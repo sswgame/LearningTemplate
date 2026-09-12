@@ -191,7 +191,13 @@ namespace sw
 - Arrange fields to minimize byte padding; use bit packing where appropriate.
 - Do not compare booleans through negation: write explicit comparisons such as
   `if (_bValid == false)`. Explicitly compare pointers to `nullptr` when needed.
-- Bitfield flags (e.g. `uint8 _bFlag : 1;`) must be compared and assigned using `SW_TRUE` (1) and `SW_FALSE` (0) instead of `true`/`false`: write `if (_bFlag == SW_TRUE)` / `if (_bFlag == SW_FALSE)` and `_bFlag = SW_TRUE;`.
+- `uint8` boolean members (`_b*`, whether or not they are bitfields like `uint8 _bFlag : 1;`) are assigned and
+  compared with `SW_TRUE` / `SW_FALSE` — never `true`/`false`, and never a bare `1`/`0`: write
+  `_bFlag = SW_TRUE;`, `if (_bFlag == SW_TRUE)`, `if (_bFlag == SW_FALSE)`. A bare `1` reads as a count;
+  the macro says it is a state. Assigning `true` to a bitfield can also warn. Enforced by
+  `CheckCodeConventions.py` (`Style/BitfieldBoolean`, full-scan only — it has to read the declaration to know
+  the type, and it skips any name that is declared `bool` somewhere else, preferring a miss over a false
+  positive). Real `bool` members keep `true`/`false`.
 - Omit braces for a single-line `if` body. If an `else`/`else if` is present,
   use braces for any multi-line blocks — when one branch of the chain needs
   braces, every branch keeps them. Loops (`for`/`while`/`do`) always keep their

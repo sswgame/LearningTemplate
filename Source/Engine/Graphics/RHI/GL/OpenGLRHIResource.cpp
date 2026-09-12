@@ -283,7 +283,7 @@ namespace sw
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
             return false;
-        if ( pRecord->_bDepthStencil != 0 )
+        if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
@@ -336,7 +336,7 @@ namespace sw
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
             return false;
-        if ( pRecord->_bDepthStencil != 0 || mip >= pRecord->_mipLevels )
+        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
             return false;
         if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;

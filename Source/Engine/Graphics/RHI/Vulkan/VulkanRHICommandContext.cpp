@@ -110,7 +110,7 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );
-        if ( pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != 0 )
+        if ( pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != SW_FALSE )
             return;
 
         VulkanRHIDevice::VulkanTextureRecord& srcRec = *pSrcResolved;
@@ -194,10 +194,10 @@ namespace sw
         }
 
         VulkanRHIDevice::VulkanTextureRecord& record       = *pResolved;
-        const uint32                          targetLayout = ( record._bDepthStencil != 0 )
+        const uint32                          targetLayout = ( record._bDepthStencil != SW_FALSE )
                                                                ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
                                                                : static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        const uint32                          aspect       = ( record._bDepthStencil != 0 )
+        const uint32                          aspect       = ( record._bDepthStencil != SW_FALSE )
                                                                ? _pDevice->depthAspectMask()
                                                                : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
         _pDevice->transitionTextureLayout( cmd, record, targetLayout, aspect );
@@ -209,7 +209,7 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
             return;
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != 0 )
+        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -238,7 +238,7 @@ namespace sw
             _pState->_bRenderPassActive = SW_FALSE;
         }
 
-        const bool   bDepth       = pResolved->_bDepthStencil != 0;
+        const bool   bDepth       = pResolved->_bDepthStencil != SW_FALSE;
         const uint32 targetLayout = bDepth ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
                                            : static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         const uint32 aspect       = bDepth ? _pDevice->depthAspectMask()
@@ -291,7 +291,7 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return;
 
-        const bool   bBindColor = beginInfo._bBindColor != 0;
+        const bool   bBindColor = beginInfo._bBindColor != SW_FALSE;
         const uint32 colorCount = bBindColor ? ( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u ) : 0u;
         const bool   bHasDepth  = beginInfo._depthTarget != 0;
 
@@ -357,7 +357,7 @@ namespace sw
             renderPass                   = composite._renderPass;
             framebuffer                  = composite._framebuffer;
             extent                       = { composite._width, composite._height };
-            _pState->_bActiveSwapchainRT = 0;
+            _pState->_bActiveSwapchainRT = SW_FALSE;
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
@@ -385,7 +385,7 @@ namespace sw
                 renderPass                   = pTex->_renderPass;
                 framebuffer                  = pTex->_framebuffer;
                 extent                       = { pTex->_width, pTex->_height };
-                _pState->_bActiveSwapchainRT = 0;
+                _pState->_bActiveSwapchainRT = SW_FALSE;
             }
             else
             {
@@ -393,7 +393,7 @@ namespace sw
                     return;
                 framebuffer                  = _pDevice->_swapChain.getCurrentFramebuffer();
                 extent                       = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
-                _pState->_bActiveSwapchainRT = 1;
+                _pState->_bActiveSwapchainRT = SW_TRUE;
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다 —
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.
@@ -586,7 +586,7 @@ namespace sw
 
         slot = candidate;
         state._slotSetMask |= slotBit;
-        state._bDirty = 1;
+        state._bDirty = SW_TRUE;
     }
 
     void VulkanRHICommandContext::flushSlotSet( bool bCompute )
@@ -599,15 +599,15 @@ namespace sw
         namespace bindless = shaderslot::bindless;
 
         // 텍스처 배열 세트(set 1) — 커맨드버퍼가 사는 동안 안 바뀐다. 두 바인드 포인트에 한 번씩.
-        if ( _pState->_bTextureSetBound == 0 && _pDevice->_textureSet != VK_NULL_HANDLE )
+        if ( _pState->_bTextureSetBound == SW_FALSE && _pDevice->_textureSet != VK_NULL_HANDLE )
         {
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
             vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
-            _pState->_bTextureSetBound = 1;
+            _pState->_bTextureSetBound = SW_TRUE;
         }
 
         VulkanSlotState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
-        if ( state._bDirty == 0 )
+        if ( state._bDirty == SW_FALSE )
             return;
 
         // 슬롯 상태가 바뀌었다 — 이 버퍼의 풀 묶음에서 세트를 하나 받아 걸린 슬롯만 쓴다(언리얼 Vulkan RHI 의 세트 캐시와 같은 자리).
@@ -654,7 +654,7 @@ namespace sw
             vkUpdateDescriptorSets( _pDevice->_device, writeCount, arrWrite, 0, nullptr );
 
         vkCmdBindDescriptorSets( cmd, bCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set, 0, nullptr );
-        state._bDirty = 0;
+        state._bDirty = SW_FALSE;
     }
 
     void VulkanRHICommandContext::bindMeshVertexBufferOrFallback()
@@ -694,7 +694,7 @@ namespace sw
             if ( pRecord->_pipeline != VK_NULL_HANDLE )
                 pipeline = pRecord->_pipeline;
         }
-        else if ( _pState->_bActiveSwapchainRT == 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
+        else if ( _pState->_bActiveSwapchainRT == SW_FALSE && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
         {
             // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가"여야 한다 —
             // 예전엔 _activeOffscreenTarget 으로 판단했는데, 깊이 전용 패스처럼 컬러 타깃을 갱신하지
@@ -902,7 +902,7 @@ namespace sw
         }
 
         // 한 번만 그리거나 멀티를 지원하면 호출 하나로 끝난다. 아니면 하나씩 나눠 부른다.
-        if ( drawCount == 1 || _pDevice->_bMultiDrawIndirect != 0 )
+        if ( drawCount == 1 || _pDevice->_bMultiDrawIndirect != SW_FALSE )
         {
             vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset, drawCount, stride );
             return;
