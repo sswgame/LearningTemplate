@@ -214,45 +214,50 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-4. 정점을 GPU 가 바꾼다 (GPU 메시 모프) — **설계는 섰고 구현이 남았다**
+### 1-4. 정점을 GPU 가 바꾼다 (GPU 메시 모프) — **상용 엔진 확인 완료, 설계 확정, 구현이 남았다**
 
-**왜 CPU 로 하면 안 되는지부터.** `Mesh::setVertices` 는 `releaseVertexBuffer()` 를 먼저 부른다 —
-즉 정점을 매 프레임 바꾸면 **메시마다 GPU 버퍼를 파괴하고 다시 만든다.** 게다가 그 호출은 게임
-스레드에서 나는데, 버퍼 생성·파괴를 아무 스레드에서나 해도 되는지는 백엔드가 정한다
-(`_bThreadSafeResourceCreation`, OpenGL 은 `false` — `glGen*` 이 현재 컨텍스트를 요구한다).
-그러니 "실시간 정점 변형" 을 CPU 로 붙이는 것은 GL 에서 바로 깨지는 길이다.
+**상용 엔진 둘을 확인했다 (2026-09-13).**
 
-옳은 방향은 **인스턴스 애니메이션(`instanceanim.hlsl`)이 이미 간 길**이다 — CPU 가 매 프레임
-트랜스폼을 다시 쓰던 것을 컴퓨트로 옮긴 그 자리. 정점도 같은 모양으로 옮긴다.
+| | 어떻게 하나 | 우리에게 주는 것 |
+|---|---|---|
+| **언리얼 — GPU Skin Cache** | 컴퓨트가 스키닝해 **결과를 정점 버퍼에 캐시**하고, `FGPUSkinPassthroughVertexFactory`(LocalVertexFactory 변형)가 그 버퍼를 정점 스트림으로 물린다. 캐시가 차면 그 메시는 **일반 `GPUSkinVertexFactory` 경로로 되돌아간다** | (1) 원본을 덮지 않고 **결과 버퍼를 따로** 둔다 (2) 드로우는 스트림만 바꿔 끼운다 (3) **예산이 차면 폴백**이 있다 |
+| **유니티 — Mesh.GetVertexBuffer** | `mesh.vertexBufferTarget \|= GraphicsBuffer.Target.Raw` 로 **미리 옵트인**해야 GPU 버퍼를 얻을 수 있고, 셰이더에서는 `RWByteAddressBuffer` 로 만진다. `GetVertexBufferStride`·`GetVertexAttributeOffset` 으로 **레이아웃을 질의**해 셰이더가 바이트 오프셋을 계산한다 | (4) 구조버퍼가 아니라 **RAW** 다 (5) stride·offset 을 **상수로 넘긴다**(셰이더에 하드코딩하지 않는다) (6) GPU 쪽 변경은 **CPU 사본에 반영되지 않는다**(문서가 명시) |
 
-**설계.**
-- 업로드된 정점 버퍼는 **레스트 포즈**로 두고(읽기), 메시마다 **변형 결과 버퍼**를 하나 더 둔다(쓰기).
-  드로우는 결과 버퍼를 바인딩한다 — `GpuMeshBatch::_vertexBuffer` 가 이미 배치가 들고 다니는 값이라
-  드로우 경로는 손대지 않아도 된다.
-- 컴퓨트 `meshmorph.hlsl` 이 레스트를 읽어 변형해 결과에 쓴다. 디스패치 자리는
-  `dispatchInstanceAnimation` 바로 옆이고, **컬링보다 먼저**여야 한다(바운드가 달라지므로 —
-  인스턴스 애니메이션이 컬링 앞에 있는 것과 같은 이유이고, 이쪽은 회전만이 아니라 실제로 바운드가 변한다).
-- 배리어는 그 자리의 규약을 따른다: 쓰기 전 `UnorderedAccess`, 드로우 전 `ShaderResource`.
+**DX11 제약도 확인했다.** `D3D11_RESOURCE_MISC_BUFFER_STRUCTURED` 는 `D3D11_BIND_VERTEX_BUFFER` 와
+같이 설 수 없다 — 구조버퍼이면서 정점 버퍼인 것은 만들 수 없다. 유니티가 구조버퍼가 아니라 **Raw** 를
+고른 이유가 이것이다.
 
-**막고 있는 것 두 가지 (확인함).**
-1. **버퍼 생성 경로가 조합 용도를 무시한다.** `IRHIResource::createBuffer` 의 기본 구현은
-   `Vertex` 플래그가 있으면 그냥 `createVertexBuffer` 로 보낸다 — `UnorderedAccess` 가 같이 와도
-   버린다. DX12 · Vulkan 은 `createBuffer` 를 **재정의하지 않으므로** 그 기본 구현을 탄다. 즉
-   지금은 "정점 버퍼이면서 UAV" 인 버퍼를 만들 수 없다. 네 백엔드의 생성 경로를 먼저 열어야 한다.
-2. **DX11 은 구조버퍼와 정점 버퍼를 겸할 수 없다.** `D3D11_RESOURCE_MISC_BUFFER_STRUCTURED` 와
-   `D3D11_BIND_VERTEX_BUFFER` 는 같이 설 수 없다. 그래서 모프 버퍼는 **RAW(ByteAddressBuffer) UAV**
-   여야 한다 — 셰이더가 `Load`/`Store` 로 바이트 오프셋을 직접 다룬다.
-   전례가 있다: 간접 인자 버퍼가 이미 `Raw | UnorderedAccess | IndirectArgs | ShaderResource` 로
-   네 백엔드에서 돌고 있다. 그 길을 그대로 따라간다.
+**그런데 우리 엔진에서는 "정점 스트림 바꿔 끼우기" 가 가장 비싼 길이다.** 코드에서 확인한 것:
+- `IRHIResource::createBuffer` 의 기본 구현이 `Vertex` 플래그를 보면 `createVertexBuffer` 로 보내고
+  `UnorderedAccess` 를 **버린다.** DX12 · Vulkan 은 이 함수를 재정의하지 않으므로 그 기본 구현을 탄다.
+- DX12 의 `createVertexBuffer` 는 **UPLOAD 힙**에 만들어 Map 으로 채운다. UPLOAD 힙에는
+  `ALLOW_UNORDERED_ACCESS` 를 붙일 수 없다 — 즉 지금 구조로는 UAV 가 될 수 없고, DEFAULT 힙 +
+  스테이징 업로드로 **생성 경로를 새로 내야 한다**(백엔드 넷 전부).
 
-**그래서 순서는** (1) 네 백엔드의 `createBuffer` 가 `Vertex | Raw | UnorderedAccess | ShaderResource`
-조합을 실제로 만들게 한다 → (2) `meshmorph.hlsl` + `RenderPassType::MeshMorph` + PSO →
-(3) 메시가 모프 대상을 갖고 배치가 그걸 바인딩 → (4) 벤치 스위치(`-gv_benchMeshMorph`) →
-(5) 4백엔드 검증(스크린샷까지 — 변형은 로그로는 안 보인다).
+**그래서 채택: 정점 풀링(programmable vertex pulling).** 결과를 정점 스트림이 아니라 **구조버퍼**로
+두고 정점 셰이더가 `SV_VertexID` 로 직접 읽는다. 상용에서도 표준 기법이고(Nanite 가 이 길이다),
+무엇보다 **이 엔진의 결이다** — 인스턴스·머티리얼 데이터·가시 목록·간접 인자가 전부 이미 bindless
+구조버퍼이고, `RHIStructuredBufferSlot::ensureCapacity` 가 SRV·UAV 등록과 **3단 폴백**(요청 usage →
+UAV 빼고 → 순수 구조버퍼)까지 이미 네 백엔드에서 돌고 있다. 위 표의 (1)(2)(3)(5)(6)은 그대로 얻고,
+(4)의 DX11 제약과 DX12 힙 문제는 **아예 발생하지 않는다.**
+
+**구현 순서.**
+1. `Mesh` 가 요청 시 **레스트 구조버퍼**(SRV)를 갖는다 — `_listVertex` 를 한 번 올린다.
+2. `meshmorph.hlsl` (컴퓨트): 레스트 SRV → 모프 UAV. stride·offset·정점 수·시간을 **상수로 받는다**
+   (유니티의 레이아웃 질의에 해당 — 셰이더에 숫자를 박지 않는다).
+3. `RenderPassType::MeshMorph` + 엔진 PSO 등록 (`InstanceAnim` 이 등록된 자리를 그대로 따른다).
+4. 디스패치는 **컬링보다 앞**. 모프는 회전과 달리 실제로 바운드를 바꾼다.
+5. 정점 셰이더에 풀링 퍼뮤테이션. 배치가 모프 SRV 와 base 정점 오프셋을 싣는다.
+6. 예산과 폴백(언리얼의 스킨 캐시 한도) — 넘으면 그 메시는 레스트 그대로 그린다.
+7. 벤치 스위치 `-gv_benchMeshMorph` + 4백엔드 검증.
+
+**5번이 이 작업의 무게중심이다.** 정점 셰이더의 입력을 바꾸는 것은 **셰이더 바인딩 계약**을 건드리는
+일이라 `bindingslots.hlsli` 정본 수정 → `--bake-shaders` 재베이크 → `ShaderBindingContractTest` 4백엔드
+대조가 따라온다. 앞의 1~4 만 넣으면 **아무도 결과를 소비하지 않으므로** 중간에 멈출 수 없는 구간이다.
 
 **검증 함정 미리 적어 둠.** 정점이 움직이면 `RenderPassGpuTest` 의 픽셀 비교가 흔들린다. 모프는
-**기본 꺼짐**이어야 하고, 켠 상태의 검증은 "무게중심이 시간에 따라 움직인다" 같은 지표로 따로 봐야 한다
-(`-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 비교 — [[screenshot-always-frame-10]] 의 교훈).
+**기본 꺼짐**이어야 하고, 켠 상태는 `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 "무게중심이
+시간에 따라 움직인다" 로 본다([[screenshot-always-frame-10]] 의 교훈).
 
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
