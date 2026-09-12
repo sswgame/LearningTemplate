@@ -247,8 +247,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 5. **핸들 값은 디바이스 안에서만 정체성이다.** 새 디바이스의 첫 PSO·버퍼·디스크립터는 옛 디바이스와 **같은 번호**를
    받는다(할당 순서가 결정적이다). 핸들 값으로 "그대로인가" 를 판단하는 캐시 — `FramePassContext` 의 마지막 바인딩,
    `RenderGraphExecutionContext` 의 리소스 상태 — 는 디바이스를 내릴 때 함께 잊는다(`resetBindingCache` · `reset`).
-   세대(`RHI::getDeviceGeneration`)가 그 정체성의 번호이고 `shutdown` 과 `recreateDevice` 둘 다 올린다 — Mesh ·
-   MaterialInstance 는 핸들이 0 이 아닌 것과 "이 디바이스 것" 을 세대로 구분한다.
+   세대(`RHI::getDeviceGeneration`)가 그 정체성의 번호이고 `shutdown` 과 `recreateDevice` 둘 다 올린다. GPU 버퍼를
+   드는 객체는 핸들을 맨몸으로 들지 말고 **`RHIResidentBuffer`**(핸들 · 디바이스 · 세대)로 든다 — `isResident()` 가
+   "올라가 있다" 와 "이 디바이스에 올라가 있다" 를 가르고, `getLiveDevice()` 가 해제해도 되는 디바이스만 돌려준다.
+   Mesh · MaterialInstance 가 각자 적던 같은 판단이 그 타입 하나로 모였다.
 6. **게임 모듈이 씬 오브젝트를 들 때는 핸들이다.** 상태 복원(모듈 리로드 · RHI 교체)은 씬을 통째로 지우고 다시
    만든다. 생포인터는 죽은 주소가 되고 `ComponentHandle` 은 nullptr 로 끝난다. 절차 생성물은 스냅샷에 싣지 말고
    `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(`BenchScene`).

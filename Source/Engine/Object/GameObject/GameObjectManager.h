@@ -235,6 +235,15 @@ namespace sw
         /** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
         void unregisterFactoriesByModule( string_view moduleName );
 
+        /**
+         * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 전부 지웁니다.
+         * @details 팩토리·타입·전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 산다. 인스턴스가 남으면
+         *          vtable 이 사라진 객체가 씬에 남아 다음 틱·소멸에서 없는 코드로 뛰어든다. 지연 파괴 목록에 남은 것도
+         *          그 소멸이 모듈 코드이므로 먼저 지금 처리한다. 틱 밖에서만 부른다(구조 변경이 얼려 있으면 미뤄질 뿐이다).
+         * @return 지운 컴포넌트 수.
+         */
+        uint32 destroyComponentsOfModule( string_view moduleName );
+
         /** @brief 전역 모듈 팩토리 헤드를 등록합니다. */
         static void registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
         /** @brief 전역 모듈 팩토리 헤드를 해제합니다. */
@@ -329,6 +338,13 @@ namespace sw
         uint64 generateNewId();
         /** @brief 잠금 없이 고유 이름을 만듭니다. */
         hashed_string makeUniqueNameUnlocked( hashed_string requested ) const;
+        /**
+         * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
+         * @details 지연 파괴 대기(pending kill) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없다 — 그 이름은 비어 있는
+         *          것으로 본다. 모듈 리로드 · RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들며
+         *          `Duplicate name` 경고를 내던 원인이다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지운다.
+         */
+        bool isNameTakenUnlocked( hashed_string name ) const;
 
         /**
          * @brief 타입별 컴포넌트 풀을 얻거나 만듭니다.

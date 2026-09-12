@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 
 namespace sw
 {
@@ -127,12 +128,10 @@ namespace sw
         vector<pair<hashed_string, string>>             _listMultiCompileOverride;
         MaterialQualityLevel                            _qualityOverride;
 
-        vector<uint8>      _listBuffer;
-        RHIBufferHandle    _constantBuffer;
+        vector<uint8> _listBuffer;
+        /** @brief 상수버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). 인덱스는 이 버퍼의 것이다. */
+        RHIResidentBuffer  _constant;
         RHIDescriptorIndex _descriptorIndex;
-        IRHIDevice*        _pRHIDevice;
-        /** @brief GPU 자원을 만든 시점의 RHI 디바이스 세대. 달라졌으면 그 디바이스는 이미 없습니다. */
-        uint64 _gpuDeviceGeneration{ 0 };
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

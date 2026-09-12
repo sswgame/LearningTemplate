@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -70,15 +71,13 @@ namespace sw
         void releaseGpu();
 
         /** @brief GPU 버텍스 버퍼 핸들을 반환합니다. */
-        RHIBufferHandle getVertexBuffer() const { return _vertexBuffer; }
+        RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
         /** @brief GPU에 올라갔는지 반환합니다. */
-        bool isUploaded() const { return _vertexBuffer != 0; }
+        bool isUploaded() const { return _vertex._buffer != 0; }
 
     private:
         vector<RHIVertex> _listVertex;
-        RHIBufferHandle   _vertexBuffer{ 0 };
-        IRHIDevice*       _pUploadDevice{ nullptr };
-        /** @brief 업로드 당시의 RHI 디바이스 세대. 달라졌으면 그 디바이스는 이미 없습니다. */
-        uint64 _uploadDeviceGeneration{ 0 };
+        /** @brief 정점 버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). */
+        RHIResidentBuffer _vertex;
     };
 } // namespace sw

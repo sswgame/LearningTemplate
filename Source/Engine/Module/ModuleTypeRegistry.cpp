@@ -119,10 +119,15 @@ namespace sw
         {
             getModuleHeadCache().erase( string{ moduleName } );
             GameObjectManager::unregisterModuleFactoryHead( moduleName );
+            // 씬은 엔진이 소유해 모듈보다 오래 산다 — 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
+            // 팩토리를 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             for ( const auto& scene : getSceneManager().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
+                {
+                    scene->getObjectManager()->destroyComponentsOfModule( moduleName );
                     scene->getObjectManager()->unregisterFactoriesByModule( moduleName );
+                }
             }
             getTypeRegistry().unregisterTypesByModule( moduleName );
             getGlobalVariableManager().unregisterVariablesByModule( moduleName );

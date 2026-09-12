@@ -115,46 +115,40 @@ namespace sw
 
         if ( pDevice == nullptr || _listVertex.empty() )
             return false;
-        // "이미 올라갔나" 는 **세대**로 판단한다. 포인터 비교는 백엔드 교체 뒤 새 디바이스가 옛 주소를 받으면
+        // "이미 올라갔나" 는 **세대**로 판단한다(RHIResidentBuffer). 포인터 비교는 백엔드 교체 뒤 새 디바이스가 옛 주소를 받으면
         // 속는다 — 옛 디바이스의 정점 버퍼 핸들을 새 디바이스에 그대로 넘기게 된다.
-        const bool bSameDevice = ( _vertexBuffer != 0 ) && ( _uploadDeviceGeneration == RHI::getDeviceGeneration() );
-        if ( bSameDevice )
+        if ( _vertex.isResident() )
             return true;
         // 세대가 다르면 옛 디바이스는 이미 죽었다 — 핸들은 잊기만 한다(destroy 하면 UAF).
         // GPU 버퍼는 디바이스 shutdownInternal 이 소유 해제한다.
-        _vertexBuffer  = 0;
-        _pUploadDevice = nullptr;
+        _vertex.forget();
 
         const uint32  bytes     = static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
         IRHIResource* pResource = pDevice->getResource();
         if ( pResource == nullptr )
             return false;
-        _vertexBuffer = pResource->createVertexBuffer( _listVertex.data(), bytes );
-        if ( _vertexBuffer == 0 )
+        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( _listVertex.data(), bytes );
+        if ( vertexBuffer == 0 )
         {
             SW_LOG_ERROR( "createVertexBuffer failed (%# verts)", _listVertex.size() );
             return false;
         }
-        _pUploadDevice          = pDevice;
-        _uploadDeviceGeneration = RHI::getDeviceGeneration();
+        _vertex.adopt( pDevice, vertexBuffer );
         return true;
     }
 
     void Mesh::releaseGpu()
     {
-        // 소멸자에서도 불린다. 그 시점엔 디바이스가 이미 죽어 있을 수 있고, `_pUploadDevice` 는
+        // 소멸자에서도 불린다. 그 시점엔 디바이스가 이미 죽어 있을 수 있고, 든 디바이스 포인터는
         // 생 포인터라 살아 있는지 스스로 알 수 없다 — 세대가 그걸 알려준다.
         // (upload() 는 예전부터 이 함정을 알고 피했지만 소멸자 경로는 그대로였다. 앱에 메시가
         //  올라간 적이 없어서 드러나지 않았을 뿐이다.)
-        const bool bDeviceAlive = ( _pUploadDevice != nullptr ) && ( _uploadDeviceGeneration == RHI::getDeviceGeneration() );
-        if ( _vertexBuffer != 0 && bDeviceAlive )
+        if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
         {
-            IRHIResource* pResource = _pUploadDevice->getResource();
+            IRHIResource* pResource = pLiveDevice->getResource();
             if ( pResource != nullptr )
-                pResource->destroyBuffer( _vertexBuffer );
+                pResource->destroyBuffer( _vertex._buffer );
         }
-        _vertexBuffer           = 0;
-        _pUploadDevice          = nullptr;
-        _uploadDeviceGeneration = 0;
+        _vertex.forget();
     }
 } // namespace sw

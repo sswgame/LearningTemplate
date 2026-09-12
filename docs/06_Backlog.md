@@ -305,6 +305,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 소비 측(GameView ImGui)뿐이다. 죽은 폴백이 아니라 **아직 안 쓰는 기능**이고, 그 기준은 이미 정해 두었다(Graphics README 의
 "남은 것" 절에 P1 으로 적혀 있다).
 
+### 2026-09-12 (소유 정리 셋 — 모듈보다 오래 사는 씬, GPU 상주, 이름 재사용)
+
+백엔드 교체 작업에서 나온 감사 결과를 실제로 닫았다. 셋 다 "무언가가 통째로 바뀌는데 그 안의 것을 가리키던 값이 살아남는다" 는
+같은 병이다.
+
+**1) 모듈이 내려가기 전에 그 모듈 타입의 인스턴스를 걷는다.** 언로드는 팩토리·타입·전역 변수만 등록 해제했다. 씬은 엔진이
+소유해 모듈보다 오래 살므로, 모듈이 정의한 컴포넌트의 인스턴스가 남으면 vtable 이 사라진 객체가 씬에 남는다(지금 씬은 엔진
+컴포넌트만 써서 드러나지 않았을 뿐, 게임 컴포넌트를 씬에 넣는 순간 터진다). `GameObjectManager::destroyComponentsOfModule`
+을 두고 `unregisterModuleTypes` 가 **팩토리를 걷기 전에**(소멸자가 아직 있는 동안) 부른다. 지연 파괴 목록도 먼저 비운다 —
+거기 남은 컴포넌트의 소멸자도 모듈 코드다.
+
+**2) GPU 상주를 타입 하나로.** `RHIResidentBuffer`(핸들 · 디바이스 · 세대)를 두고 `Mesh::_vertex` · `MaterialInstance::_constant`
+가 그것을 든다. `isResident()` 가 "올라가 있다" 와 "이 디바이스에 올라가 있다" 를 가르고 `getLiveDevice()` 가 해제해도 되는
+디바이스만 돌려준다 — 두 클래스가 각자 적던 세대 검사 네 군데(업로드·해제·소멸·재업로드)가 한 곳으로 모였다. 이것이 백로그
+1-0 의 "절충안: {핸들, 세대} 를 묶은 작은 타입" 이고, 그래서 그 항목은 닫았다.
+
+**3) 파괴 대기 이름은 비어 있다.** `makeUniqueNameUnlocked` 가 이름 맵만 보고 판단해서, 리로드·교체 때 새 인스턴스가
+`BenchMesh_0_2` 를 받고 `Duplicate name` 경고가 매번 둘씩 찍혔다. 이름은 **살아 있는** 오브젝트만 차지한다
+(`isNameTakenUnlocked`). 짝으로, 파괴 쪽은 이름 맵 항목이 **자기 것일 때만** 지운다 — 같은 이름을 새 오브젝트가 이미
+차지했을 수 있다.
+
+**검증.** 새 테스트 둘(`GameObjectManagerPoolTest.ModuleComponentsPurgedBeforeUnload` ·
+`PendingKillNameIsFreeForReuse`). 교체 4구성(DX12→Vulkan 에디터, DX12→DX11/GL, Vulkan→DX12) 종료 0 이고 **경고·에러 0**
+(전에는 구성마다 `Duplicate name` 둘), 교체 뒤 스크린샷 30.8k~31.7k / 에디터 4.5k 로 그대로. Debug GPU 16/16, nogpu 5/5,
+린트 7/7, 패널 덤프 창 15 · 빈 패널 0. ASAN GPU 16/16 · RenderPassTest 22/22 · 새 스위트 3/3.
+
 ### 2026-09-12 (백엔드 교체가 죽고, 살아도 빈 화면이던 것 — 뿌리 셋과 캐시 둘)
 
 **증상.** 에디터에서 백엔드를 바꾸면 세그폴트(DX12→Vulkan · DX12→GL · Vulkan→DX12), DX12→DX11 은 살아도 그 뒤로 화면이
@@ -342,7 +368,7 @@ PSO·레이아웃·뷰프로젝션·패스 CB, 컬링 게이트, 셰이더 캐�
 스크린샷 배경 아닌 픽셀 헤드리스 30.8k~31.8k(기준 34.5k — 큐브가 흔들리는 위상 차이), 에디터 4.5k(기준 4.5k). 나머지
 스위트는 커밋 메시지에.
 
-**여기서 남겨 뒀던 `TextureCache::reinitializeAll` 은 아래 "죽은 기계 둘" 에서 지웠다.**
+**여기서 남겨 뒀던 둘은 아래 두 항목에서 닫았다** (중복 이름 경고, 죽은 `TextureCache::reinitializeAll`).
 
 ### 2026-09-12 (소유를 타입에 적었다 — 검사가 아니라 컴파일러가 막는다)
 

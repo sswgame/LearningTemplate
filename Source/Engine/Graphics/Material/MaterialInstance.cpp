@@ -69,9 +69,8 @@ namespace sw
         , _listMultiCompileOverride{}
         , _qualityOverride{ MaterialQualityLevel::Count }
         , _listBuffer{}
-        , _constantBuffer{ 0 }
+        , _constant{}
         , _descriptorIndex{ kInvalidDescriptorIndex }
-        , _pRHIDevice{ nullptr }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
@@ -81,12 +80,11 @@ namespace sw
 
     MaterialInstance::~MaterialInstance()
     {
-        // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). `_pRHIDevice` 는 생 포인터라
+        // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). 든 디바이스 포인터는 생 포인터라
         // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다 — Mesh::releaseGpu 와 같은 함정이다.
-        if ( _pRHIDevice != nullptr && _gpuDeviceGeneration == RHI::getDeviceGeneration() )
-            shutdown( _pRHIDevice );
-        _pRHIDevice      = nullptr;
-        _constantBuffer  = 0;
+        if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
+            shutdown( pLiveDevice );
+        _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
@@ -96,12 +94,11 @@ namespace sw
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
                 pRhi->getResource()->unregisterBindlessResource( _descriptorIndex );
-            if ( _constantBuffer != 0 )
-                pRhi->getResource()->destroyBuffer( _constantBuffer );
+            if ( _constant._buffer != 0 )
+                pRhi->getResource()->destroyBuffer( _constant._buffer );
         }
-        _constantBuffer  = 0;
+        _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
-        _pRHIDevice      = nullptr;
         _listBuffer.clear();
         _bGpuDirty = 1;
     }
@@ -170,18 +167,16 @@ namespace sw
         if ( pRhi == nullptr || _pParentMaterial == nullptr )
             return false;
 
-        _pRHIDevice = pRhi;
-
         // 백엔드가 바뀌었으면 상수버퍼·인덱스는 옛 디바이스 것이다 — 잊고 새로 만든다(destroy 는 UAF).
-        // Mesh::upload 와 같은 판단이다: 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다.
-        if ( _constantBuffer != 0 && _gpuDeviceGeneration != RHI::getDeviceGeneration() )
+        // 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다 — RHIResidentBuffer 가 세대로 가른다.
+        if ( _constant._buffer != 0 && _constant.isResident() == false )
         {
-            _constantBuffer  = 0;
+            _constant.forget();
             _descriptorIndex = kInvalidDescriptorIndex;
             _bGpuDirty       = SW_TRUE;
         }
 
-        if ( _bGpuDirty == 0 && _constantBuffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
+        if ( _bGpuDirty == 0 && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
 
         _listBuffer = _pParentMaterial->getBuffer();
@@ -199,15 +194,15 @@ namespace sw
         }
 
         const uint32 size = static_cast<uint32>( _listBuffer.size() );
-        if ( _constantBuffer == 0 )
+        if ( _constant._buffer == 0 )
         {
-            _constantBuffer = pRhi->getResource()->createConstantBuffer( size );
-            if ( _constantBuffer == 0 )
+            const RHIBufferHandle constantBuffer = pRhi->getResource()->createConstantBuffer( size );
+            if ( constantBuffer == 0 )
                 return false;
-            _descriptorIndex     = pRhi->getResource()->registerBindlessResource( _constantBuffer );
-            _gpuDeviceGeneration = RHI::getDeviceGeneration();
+            _constant.adopt( pRhi, constantBuffer );
+            _descriptorIndex = pRhi->getResource()->registerBindlessResource( constantBuffer );
         }
-        pRhi->getResource()->updateConstantBuffer( _constantBuffer, _listBuffer.data(), size );
+        pRhi->getResource()->updateConstantBuffer( _constant._buffer, _listBuffer.data(), size );
         _bGpuDirty = 0;
         return _descriptorIndex != kInvalidDescriptorIndex;
     }

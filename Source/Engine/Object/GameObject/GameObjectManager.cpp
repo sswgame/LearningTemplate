@@ -780,7 +780,9 @@ namespace sw
                         pBackObj->_managerIndex = index;
                         _listGameObject.pop_back();
                     }
-                    _mapNameToObject.erase( pObj->getName() );
+                    const auto nameIt = _mapNameToObject.find( pObj->getName() );
+                    if ( nameIt != _mapNameToObject.end() && nameIt->second == pObj )
+                        _mapNameToObject.erase( nameIt );
                     _mapIdToObject.erase( pObj->getObjectId() );
                 }
             }
@@ -950,6 +952,35 @@ namespace sw
         }
     }
 
+    uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
+    {
+        SW_ASSERT( isStructuralMutationFrozen() == false );
+        // 지연 파괴 목록부터 — 거기 남은 컴포넌트의 소멸자도 모듈 코드다.
+        processDeferredDestruction();
+
+        const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+        vector<Component*>  listDoomed;
+        forEachComponent( [&]( Component* pComp )
+        {
+            const TypeInfo* pTypeInfo = ( pComp != nullptr ) ? pComp->getTypeInfo() : nullptr;
+            if ( pTypeInfo != nullptr && pTypeInfo->_moduleName == hashModule )
+                listDoomed.push_back( pComp );
+        } );
+        for ( Component* pComp : listDoomed )
+        {
+            GameObject* pOwner = pComp->getOwner();
+            if ( pOwner != nullptr )
+                pOwner->removeComponent( pComp );
+        }
+        // removeComponent 는 얼려 있으면 미룬다 — 위에서 단언했지만, 미뤄졌더라도 여기서 끝낸다.
+        processDeferredDestruction();
+
+        const uint32 count = static_cast<uint32>( listDoomed.size() );
+        if ( count > 0 )
+            SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName.data() );
+        return count;
+    }
+
     void GameObjectManager::registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
     {
         _s_engineHeadSealed = true;
@@ -1108,7 +1139,7 @@ namespace sw
         pObj->_objectId                                 = newObjectId;
         pObj->_pOwnerManager                            = this;
 
-        if ( _mapNameToObject.find( pObj->getName() ) != _mapNameToObject.end() )
+        if ( isNameTakenUnlocked( pObj->getName() ) )
             pObj->_name = makeUniqueNameUnlocked( pObj->getName() );
 
         _mapNameToObject.insert_or_assign( pObj->getName(), pObj );
@@ -1157,9 +1188,15 @@ namespace sw
         return _nextId.fetch_add( 1, std::memory_order_relaxed );
     }
 
+    bool GameObjectManager::isNameTakenUnlocked( hashed_string name ) const
+    {
+        const auto it = _mapNameToObject.find( name );
+        return it != _mapNameToObject.end() && it->second != nullptr && it->second->isPendingKill() == false;
+    }
+
     hashed_string GameObjectManager::makeUniqueNameUnlocked( hashed_string requested ) const
     {
-        if ( _mapNameToObject.find( requested ) == _mapNameToObject.end() )
+        if ( isNameTakenUnlocked( requested ) == false )
             return requested;
 
         const utf8* pBase = requested.c_str();
@@ -1176,7 +1213,7 @@ namespace sw
             sb.clear();
             sb.append( baseView ).append( '_' ).append( nameSuffix );
             const hashed_string candidate( sb.c_str(), sb.size() );
-            if ( _mapNameToObject.find( candidate ) == _mapNameToObject.end() )
+            if ( isNameTakenUnlocked( candidate ) == false )
             {
                 SW_LOG_WARNING( "Duplicate name '%#' — using '%#'", requested.c_str(), candidate.c_str() );
                 return candidate;
@@ -1189,7 +1226,7 @@ namespace sw
             sb.clear();
             sb.append( baseView ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
             const hashed_string fallback( sb.c_str(), sb.size() );
-            if ( _mapNameToObject.find( fallback ) == _mapNameToObject.end() )
+            if ( isNameTakenUnlocked( fallback ) == false )
             {
                 SW_LOG_ERROR( "Exhausted numeric suffixes for '%#' — using '%#'",
                               requested.c_str(), fallback.c_str() );

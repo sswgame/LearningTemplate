@@ -3300,3 +3300,64 @@ SW_TEST_CASE( GameObjectHierarchy, ActiveInHierarchyCompoundEvaluation )
     SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
     SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
 }
+
+/**
+ * @brief 모듈이 내려가기 전에 그 모듈 타입의 **살아 있는 컴포넌트**가 걷히는지.
+ * @details 씬은 엔진이 소유해 모듈(SWGame·EditorModule)보다 오래 산다. 예전에는 언로드가 팩토리·타입·전역 변수만
+ *          걷어서, 모듈이 정의한 컴포넌트의 인스턴스가 vtable 없는 객체로 씬에 남을 수 있었다(지금 씬은 엔진
+ *          컴포넌트만 써서 드러나지 않았을 뿐이다). 여기서는 엔진 타입을 모듈 이름으로 삼아 같은 기계를 검증한다 —
+ *          이름이 맞는 컴포넌트만 사라지고, 소유 오브젝트와 다른 컴포넌트는 남아야 한다.
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
+{
+    sw::GameObjectManager manager;
+
+    sw::GameObject* pObject = manager.createGameObject( sw::hashed_string( "ModulePurgeTarget" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+
+    const sw::TypeInfo* pTypeInfo = pMesh->getTypeInfo();
+    SW_ASSERT_NOT_NULL( pTypeInfo );
+    const sw::hashed_string moduleName = pTypeInfo->_moduleName;
+    SW_ASSERT_TRUE( moduleName.empty() == false );
+
+    // 1) 남의 모듈 이름으로는 아무것도 걷히지 않는다.
+    SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( "NotThisModule" ) );
+    SW_EXPECT_NOT_NULL( pObject->getComponent<sw::MeshComponent>() );
+
+    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다).
+    SW_EXPECT_EQUAL( 1u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
+    SW_EXPECT_NULL( pObject->getComponent<sw::MeshComponent>() );
+    SW_EXPECT_NOT_NULL( manager.findGameObjectByName( sw::hashed_string( "ModulePurgeTarget" ) ) );
+
+    // 3) 멱등이다 — 이미 걷힌 뒤 다시 불러도 0.
+    SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
+}
+
+/**
+ * @brief 파괴 대기(pending kill) 오브젝트의 이름은 비어 있는 것으로 본다.
+ * @details 모듈 리로드 · RHI 교체는 새 인스턴스를 만든 뒤 상태를 복원하는데, 그 사이 옛 오브젝트가 아직 지연 파괴
+ *          대기열에 있다. 이름 맵만 보고 판단하면 새 오브젝트가 `BenchMesh_0_2` 같은 이름을 받고 `Duplicate name`
+ *          경고가 뜬다 — 실제로 교체 로그에 매번 둘씩 찍혔다. 이름은 **살아 있는** 오브젝트만 차지한다.
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, PendingKillNameIsFreeForReuse )
+{
+    sw::GameObjectManager manager;
+
+    sw::GameObject* pFirst = manager.createGameObject( sw::hashed_string( "Recycled" ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_TRUE( pFirst->getName() == sw::hashed_string( "Recycled" ) );
+
+    manager.destroyObject( pFirst );
+
+    // 아직 실제 파괴 전이다(지연 파괴 대기). 그래도 이름은 비어 있어야 한다.
+    sw::GameObject* pSecond = manager.createGameObject( sw::hashed_string( "Recycled" ) );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_TRUE_MSG( pSecond->getName() == sw::hashed_string( "Recycled" ),
+                        ( sw::string( "파괴 대기 이름이 재사용되지 않았다 — 받은 이름: " ) + pSecond->getName().c_str() ).c_str() );
+
+    // 실제 파괴가 지나가도 살아 있는 쪽의 이름 항목을 지우지 않는다(같은 이름이므로 덮어쓰기 주의).
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( manager.findGameObjectByName( sw::hashed_string( "Recycled" ) ) == pSecond );
+}
