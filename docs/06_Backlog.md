@@ -292,6 +292,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (모듈 리로드를 Engine 에서 App 으로 — Shipping 이 안 쓰는 기계를 싣지 않는다)
+
+**문제.** `LiveReloadManager`(864 줄)가 `Source/Engine/Module/` 에 있고 `EngineLoop` 이 소유했다. 쓰는 쪽은 전부 App
+(ModuleHost · ModuleCompiler · 리로드 단축키 · BackendSwapController)이었고, Shipping 에서는 **만들지도 않으면서**
+코드가 바이너리에 그대로 실렸다. Engine 이 "모듈 리로드" 라는 개념을 알고 있는 것 자체가 레이어 위반이다 —
+Engine 은 Editor·GameFramework·Games 를 모르기로 한 것과 같은 이유다.
+
+**옮겼다.** `Source/App/Module/LiveReloadManager.*` 로 가고, Shipping 빌드에서는 `Source/App/CMakeLists.txt` 가 **파일째
+제외**한다. `EngineLoop` 에서 멤버·생성·업데이트·종료·접근자가 전부 사라졌다.
+
+**Engine 에 남긴 것은 창구 하나다.** 지연 로드 훅(`DelayLoadNotifyHook.cpp`)은 **모듈 DLL 안에** 컴파일되므로 App.exe
+심볼을 링크할 수 없다. 그래서 훅이 묻는 것만 `IModuleHandleProvider`(그래프가 깨졌나 · 이 이름의 핸들이 뭔가)로 잘라
+Engine.dll 에 두고, App 의 `LiveReloadManager` 가 그것을 구현해 스스로 꽂는다. Shipping 에서는 아무도 꽂지 않으므로
+조회가 늘 nullptr 이고 훅은 곧장 폴백(Bin 에서 직접 로드)으로 간다.
+
+**종료 순서는 훅으로 맞췄다 — 여기서 한 번 죽었다.** 모듈 DLL 은 "씬은 사라졌고 서비스는 아직 살아 있는" 좁은 구간에서
+내려야 한다. 더 일찍 내리면 씬의 `GameObjectManager` 가 든 **컴포넌트 팩토리 델리게이트**가 사라진 코드를 가리켜
+소멸자에서 죽고(실제로 그 스택으로 죽었다), 더 늦게 내리면 언로드가 쓰는 SceneManager·로거가 이미 없다(그렇게 하니
+exit 3 에 언로드 로그가 통째로 사라졌다). 예전에는 그 자리가 `EngineLoop::shutdown` 한가운데였다 — 지금은
+`EngineLoop::setOnScenesReleased( Delegate<void()> )` 훅으로 그 지점만 내주고, **Engine 은 거기서 무엇을 하는지 모른다.**
+
+**곁다리로 치운 것 둘.** `BackendSwapController` 가 `EngineLoop` 을 거쳐 리로드 내부에서 모듈 핸들을 꺼내던 것을
+`ModuleHost::getLoadedModuleHandle()` 로 바꿨다(모듈 수명을 아는 것은 ModuleHost 다). `Test/TestFramework/main.cpp` 는
+`LiveReloadManager` 를 만들어 두고 **쓰지 않았다** — 지웠다.
+
+**결과.**
+
+| | 전 | 후 |
+|---|---|---|
+| Shipping `App.exe` | 2,656,256 B | **2,631,680 B** (-24 KB) |
+| Engine 의 리로드 코드 | `LiveReloadManager` 864 줄 + EngineLoop 소유 | 없음 (창구 인터페이스 ~50 줄) |
+
+**검증.** SmokeTest 19/19(핫리로드 시나리오 전부 — 그림자 복사 · 의존 캐스케이드 · ModuleCompiler 연동), Debug GPU 17/17,
+nogpu 5/5, 린트 7/7. Dev 실기동(에디터) 종료 0 · 크래시 0 · `Unloading module` 로그 5줄로 예전과 같음 · 패널 덤프 창 15 ·
+빈 패널 0. Shipping 빌드·실행 종료 0.
+
 ### 2026-09-12 (재 보고 둘은 기각, 하나는 고쳤다 — 그리고 Debug 로 성능을 재면 안 된다)
 
 "머티리얼 상수버퍼와 PSO 도 워커로" 를 하려고 먼저 쟀고, **측정이 답을 바꿨다.** 세 가지를 기록해 둔다 — 특히 마지막은

@@ -15,6 +15,7 @@ sw_addTestExecutable(SmokeTest
 	RUN_SERIAL
 	SOURCES
 		TestSmoke.cpp
+		${CMAKE_SOURCE_DIR}/Source/App/Module/LiveReloadManager.cpp
 		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleCompiler.cpp
 	LIBS
 		${smokeLibs}

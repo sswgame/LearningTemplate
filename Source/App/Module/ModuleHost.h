@@ -96,6 +96,13 @@ namespace sw
          * @param pRenderThread 렌더 스레드 (drainWorkers 용)
          * @param bEnableEditor 에디터 모드 여부
          */
+        /**
+         * @brief 이미 로드된 모듈의 핸들입니다. 핫리로드가 없으면(Shipping) 늘 nullptr.
+         * @details 모듈 수명을 아는 것은 여기다 — 부르는 쪽이 LiveReloadManager 를 직접 알 필요가 없다.
+         *          RHI 백엔드 교체가 모듈을 다시 세울 때 이 핸들로 같은 DLL 을 다시 바인딩한다.
+         */
+        void* getLoadedModuleHandle( string_view moduleName ) const;
+
         bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
         void shutdown();
 

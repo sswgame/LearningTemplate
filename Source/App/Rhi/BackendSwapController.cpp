@@ -11,7 +11,6 @@
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Module/LiveReloadManager.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -126,12 +125,9 @@ namespace sw
         void* pEditorModule{ nullptr };
         void* pGameModule{ nullptr };
 #if !defined( SW_SHIPPING )
-        const LiveReloadManager* pLiveReloadManager = _pEngineLoop->getLiveReloadManager();
-        if ( pLiveReloadManager != nullptr )
-        {
-            pEditorModule = pLiveReloadManager->getModuleHandle( sw::config::kTargetEditorModule );
-            pGameModule   = pLiveReloadManager->getModuleHandle( sw::config::kTargetGameModule );
-        }
+        // 모듈 수명은 ModuleHost 가 안다 — 여기서 리로드 내부를 직접 뒤지지 않는다.
+        pEditorModule = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetEditorModule );
+        pGameModule   = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetGameModule );
 #endif
 
         // API 테이블은 놓지 않는다 — 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.

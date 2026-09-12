@@ -25,6 +25,7 @@ namespace sw
 
     class CommandLineManager;
     class IWindow;
+    class LiveReloadManager;
     class ModuleHost;
 
     /** @brief 윈도우 OS 메시지를 엔진에 전달하고 메인 루프를 구동하는 얇은 래퍼 */
@@ -45,6 +46,8 @@ namespace sw
         // 부팅 단계 — initialize() 가 순서대로 부른다.
         /** @brief 플랫폼 윈도우를 확보합니다. EngineLoop 이 이미 만들어 뒀으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
+        /** @brief 핫리로드 매니저입니다. Shipping 에서는 항상 nullptr 이고, 받는 쪽이 그것을 처리합니다. */
+        LiveReloadManager* getLiveReloadManager() const;
         /** @brief 에디터/게임 모듈을 로드하고 ModuleHost 를 세웁니다. */
         bool startModules();
         /**
@@ -75,7 +78,14 @@ namespace sw
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
 
     private:
-        EngineLoop             _engineLoop;
+        EngineLoop _engineLoop;
+        /**
+         * @brief 모듈 핫리로드. **Shipping 에는 없다** — 그 빌드에서는 이 멤버도 클래스도 컴파일되지 않는다.
+         * @details 모듈을 감시하고 갈아 끼우는 것은 런처의 일이라 여기 있다(예전에는 EngineLoop 이 들고 있었다).
+         */
+#if !defined( SW_SHIPPING )
+        unique_ptr<LiveReloadManager> _liveReloadManager;
+#endif
         unique_ptr<ModuleHost> _moduleHost;
         unique_ptr<IWindow>    _window;
 

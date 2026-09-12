@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Module/LiveReloadManager.h"
+#include "App/Module/LiveReloadManager.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
@@ -27,9 +27,7 @@ namespace sw
     {
         struct LiveReloadManagerInternal
         {
-            inline static LiveReloadManager* s_delayLoadManager{ nullptr };
-
-            inline static uint32 s_reloadCount{ 0 };
+            inline static inline static uint32 s_reloadCount{ 0 };
 
             static void tryDeleteFile( string_view path )
             {
@@ -107,8 +105,9 @@ namespace sw
     {
         LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
-        if ( LiveReloadManager::getDelayLoadManager() == nullptr )
-            LiveReloadManager::setDelayLoadManager( this );
+        // 지연 로드 훅은 모듈 DLL 안에 있어 App 심볼을 못 본다 — Engine.dll 의 창구에 자기를 꽂는다.
+        if ( engine::getModuleHandleProvider() == nullptr )
+            engine::setModuleHandleProvider( this );
     }
 
     LiveReloadManager::~LiveReloadManager()
@@ -128,8 +127,8 @@ namespace sw
         }
 
         LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
-        if ( LiveReloadManager::getDelayLoadManager() == this )
-            LiveReloadManager::setDelayLoadManager( nullptr );
+        if ( engine::getModuleHandleProvider() == this )
+            engine::setModuleHandleProvider( nullptr );
 
         if ( _fileWatcher != nullptr )
         {
@@ -852,13 +851,4 @@ namespace sw
         return *this;
     }
 
-    void LiveReloadManager::setDelayLoadManager( LiveReloadManager* pManager )
-    {
-        LiveReloadManagerInternal::s_delayLoadManager = pManager;
-    }
-
-    LiveReloadManager* LiveReloadManager::getDelayLoadManager()
-    {
-        return LiveReloadManagerInternal::s_delayLoadManager;
-    }
 } // namespace sw

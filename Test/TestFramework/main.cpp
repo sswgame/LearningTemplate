@@ -21,7 +21,6 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -55,7 +54,6 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::GlobalVariableManager>    globalVarManager         = sw::make_unique<sw::GlobalVariableManager>();
     sw::unique_ptr<sw::TypeRegistry>             typeRegistry             = sw::make_unique<sw::TypeRegistry>();
     sw::unique_ptr<sw::LocalizationManager>      localizationManager      = sw::make_unique<sw::LocalizationManager>();
-    sw::unique_ptr<sw::LiveReloadManager>        liveReloadManager        = sw::make_unique<sw::LiveReloadManager>();
     sw::unique_ptr<sw::SceneManager>             sceneManager             = sw::make_unique<sw::SceneManager>();
     sw::unique_ptr<sw::InputManager>             inputManager             = sw::make_unique<sw::InputManager>();
     sw::unique_ptr<sw::CommandStack>             commandStack             = sw::make_unique<sw::CommandStack>();
@@ -176,7 +174,6 @@ int main( int32 argc, utf8* argv[] )
     sceneManager->shutdown();
     inputManager->shutdown();
     audioSystem->shutdown();
-    liveReloadManager->shutdown();
     taskManager->shutdown();
     globalVarManager->shutdown();
     memoryProfiler->shutdown();
@@ -207,7 +204,6 @@ int main( int32 argc, utf8* argv[] )
     rhiRegistry.reset();
     inputManager.reset();
     sceneManager.reset();
-    liveReloadManager.reset();
     localizationManager.reset();
     commandStack.reset();
 

@@ -2,6 +2,7 @@
 
 #include "App/Module/ModuleHost.h"
 
+#include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleCompiler.h"
 
 #include "Core/File/FileUtil.h"
@@ -12,7 +13,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
-#include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
@@ -185,11 +185,14 @@ namespace sw
         // drainRenderWorkers 가 두 번 돌았다 — 종료 경로에서 태스크 펜싱 타임아웃을 두 번 기다린다.
         suspendModules( ModuleScope::Both, true );
 
+#if !defined( SW_SHIPPING )
+        // 콜백은 ModuleHost 의 메서드를 가리킨다 — 이 객체가 사라지기 전에 떼어 낸다.
         if ( _pLiveReloadManager != nullptr )
         {
             _pLiveReloadManager->setDrainWorkers( {} );
             _pLiveReloadManager->setOnBeforeCommitBatch( {} );
         }
+#endif
     }
 
     // ======================================================================
@@ -512,6 +515,18 @@ namespace sw
         if ( recreateGameInstance( pGameModule ) == false )
             bOk = false;
         return bOk;
+    }
+
+    void* ModuleHost::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
+    {
+#if defined( SW_SHIPPING )
+        // 정적 링크라 "로드된 모듈" 이라는 것이 없다 — 부르는 쪽이 nullptr 을 처리한다.
+        return nullptr;
+#else
+        if ( _pLiveReloadManager == nullptr )
+            return nullptr;
+        return _pLiveReloadManager->getModuleHandle( moduleName );
+#endif
     }
 
     void ModuleHost::captureGameState()

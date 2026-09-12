@@ -41,7 +41,6 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -115,7 +114,6 @@ namespace sw
         , _localizationManager{ nullptr }
         , _resourceManager{ nullptr }
         , _rhi{ nullptr }
-        , _liveReloadManager{ nullptr }
         , _sceneManager{ nullptr }
         , _inputManager{ nullptr }
         , _mapDebugAction{ nullptr }
@@ -206,9 +204,6 @@ namespace sw
             _configManager       = make_unique<ConfigManager>();
             _localizationManager = make_unique<LocalizationManager>();
             _resourceManager     = make_unique<ResourceManager>();
-#if !defined( SW_SHIPPING )
-            _liveReloadManager = make_unique<LiveReloadManager>();
-#endif
             _sceneManager        = make_unique<SceneManager>();
             _inputManager        = make_unique<InputManager>();
             _audioSystem         = IAudioSystem::create();
@@ -471,8 +466,11 @@ namespace sw
                 _inputManager->shutdown();
             if ( _audioSystem != nullptr )
                 _audioSystem->shutdown();
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->shutdown();
+
+            // 씬은 방금 사라졌고 서비스는 아직 살아 있다 — 모듈 DLL 을 내리기에 유일하게 맞는 자리다.
+            // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫리로드를 건다).
+            if ( _onScenesReleased.isBound() )
+                _onScenesReleased();
             if ( _taskManager != nullptr )
                 _taskManager->shutdown();
             if ( _globalVariableManager != nullptr )
@@ -492,7 +490,6 @@ namespace sw
             _inputManager.reset();
             _audioSystem.reset();
             _eventDispatcher.reset();
-            _liveReloadManager.reset();
             _engineData.reset();
             _assetStreamingQueue.reset();
             _commandStack.reset();
@@ -570,8 +567,6 @@ namespace sw
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->update();
     #if defined( SW_DEBUG )
             if ( _rhi != nullptr )
             {
@@ -756,6 +751,11 @@ namespace sw
         Scene* pScene = _sceneManager != nullptr ? _sceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
             pScene->ensureDefaultCameras();
+    }
+
+    void EngineLoop::setOnScenesReleased( Delegate<void()> onScenesReleased )
+    {
+        _onScenesReleased = std::move( onScenesReleased );
     }
 
     void EngineLoop::setPresentHook( PresentHookDelegate presentHook )

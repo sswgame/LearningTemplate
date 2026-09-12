@@ -2,11 +2,11 @@
 
 #include "App/Module/ModuleCompiler.h"
 
+#include "App/Module/LiveReloadManager.h"
+
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
-
-#include "Engine/Module/LiveReloadManager.h"
 
 namespace sw
 {
@@ -194,8 +194,10 @@ namespace sw
             _buildState.store( BuildState::Success, std::memory_order_relaxed );
             SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
 
+#if !defined( SW_SHIPPING )
             if ( _pLiveReloadManager != nullptr && targetName.empty() == false )
                 _pLiveReloadManager->triggerReload( targetName );
+#endif
         }
         else
         {

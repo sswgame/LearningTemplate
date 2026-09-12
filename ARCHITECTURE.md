@@ -104,6 +104,12 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
   로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다). 표와 규칙은
   `Source/Engine/Graphics/README.md` 의 "소유와 수명" 절, 검사는 `Scripts/lint/CheckRenderOwnership.py`.
 
+- **모듈 리로드는 App 의 것이다.** 모듈을 감시하고 그림자 복사하고 갈아 끼우는 기계(`LiveReloadManager`)는
+  `Source/App/Module/` 에 있고 **Shipping 빌드에서는 파일째 빠진다**. Engine 이 아는 것은 지연 로드 훅이 묻는
+  `IModuleHandleProvider`(그래프가 깨졌나 · 이 이름의 모듈 핸들이 뭔가) 하나뿐이다 — 훅은 모듈 DLL 안에 있어
+  App.exe 심볼을 링크할 수 없으므로 그 창구만 Engine.dll 에 둔다. 종료 순서는 `EngineLoop::setOnScenesReleased`
+  훅으로 맞춘다(씬은 사라졌고 서비스는 아직 있는 구간 — 모듈 DLL 을 내리기에 유일하게 맞는 자리다).
+
 ## 🧪 테스트 아키텍처
 
 CTest 타겟은 `CoreTest`, `EngineTest`(`EngineTest_NoGPU`), `ReflectionTest`, `SmokeTest`, `EditorTest` 입니다.

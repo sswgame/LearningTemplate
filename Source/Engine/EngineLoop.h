@@ -33,7 +33,6 @@ namespace sw
     class IAudioSystem;
     class InputManager;
     class IRHIDevice;
-    class LiveReloadManager;
     class LocalizationManager;
     class Logger;
     class MemoryProfiler;
@@ -94,6 +93,15 @@ namespace sw
         // ----------------------------------------------------------------------
         // 헬퍼
         // ----------------------------------------------------------------------
+        /**
+         * @brief 씬이 모두 정리됐고 엔진 서비스는 **아직 살아 있는** 지점에 불릴 훅을 겁니다.
+         * @details 종료 시퀀스에는 "씬은 사라졌지만 서비스(SceneManager · TaskManager · 로거)는 아직 있다" 는 좁은
+         *          구간이 있다. 모듈 DLL 을 내리는 일이 정확히 거기서 일어나야 한다 — 더 일찍이면 씬이 든 컴포넌트
+         *          팩토리 델리게이트가 사라진 코드를 가리키고, 더 늦으면 언로드가 쓰는 서비스와 로거가 이미 없다.
+         *          Engine 은 그것이 무엇인지 모른다. 자리만 내주고, 무엇을 할지는 건 쪽이 정한다.
+         */
+        void setOnScenesReleased( Delegate<void()> onScenesReleased );
+
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void updateShellActions( float32 deltaTime );
@@ -111,7 +119,6 @@ namespace sw
         // ----------------------------------------------------------------------
         // Getter (App이 ModuleHost 등과 연동하기 위해 필요)
         // ----------------------------------------------------------------------
-        LiveReloadManager*   getLiveReloadManager() const { return _liveReloadManager.get(); }
         ConfigManager*       getConfigManager() const { return _configManager.get(); }
         CommandLineManager*  getCommandLineManager() const { return _commandLineManager.get(); }
         LocalizationManager* getLocalizationManager() const { return _localizationManager.get(); }
@@ -137,7 +144,6 @@ namespace sw
         unique_ptr<LocalizationManager>   _localizationManager;
         unique_ptr<ResourceManager>       _resourceManager;
         unique_ptr<RHI>                   _rhi;
-        unique_ptr<LiveReloadManager>     _liveReloadManager;
         unique_ptr<SceneManager>          _sceneManager;
         unique_ptr<InputManager>          _inputManager;
         unique_ptr<ActionMap>             _mapDebugAction;
@@ -148,6 +154,7 @@ namespace sw
         /** @brief GT 쪽 영속 GpuScene — buildFromScene의 콘텐츠 해시 캐싱이 프레임 간 유지되도록 여기 소유.
          *         매 프레임 CPU 스냅샷만 exportCpuSnapshot으로 뽑아 RenderFramePacket에 담아 RT로 넘긴다. */
         GpuScene                        _gtGpuScene;
+        Delegate<void()>                _onScenesReleased;
         unique_ptr<EngineData>          _engineData;
         unique_ptr<AssetStreamingQueue> _assetStreamingQueue;
         unique_ptr<CommandStack>        _commandStack;

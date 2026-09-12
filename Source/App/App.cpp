@@ -3,6 +3,7 @@
 #include "App/App.h"
 
 #include "App/AppConfig.h"
+#include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -21,7 +22,6 @@
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -159,6 +159,15 @@ namespace sw
         return true;
     }
 
+    LiveReloadManager* App::getLiveReloadManager() const
+    {
+#if defined( SW_SHIPPING )
+        return nullptr;
+#else
+        return _liveReloadManager.get();
+#endif
+    }
+
     bool App::startModules()
     {
         vector<GameKitConfig> listGameKitModule{};
@@ -170,8 +179,19 @@ namespace sw
             listGameKitModule = pAppConfig->_listGameKitModule;
 #endif
 
+#if !defined( SW_SHIPPING )
+        // 모듈 감시자는 ModuleHost 보다 먼저 있어야 한다 — ModuleHost 가 이 포인터로 리로드 콜백을 건다.
+        _liveReloadManager = make_unique<LiveReloadManager>();
+        // 모듈 DLL 을 내리는 자리는 "씬은 사라졌고 서비스는 아직 있는" 그 좁은 구간이다 — 엔진이 내주는 훅에 건다.
+        _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        {
+            if ( _liveReloadManager != nullptr )
+                _liveReloadManager->shutdown();
+        } ) );
+#endif
+
         _moduleHost = make_unique<ModuleHost>();
-        if ( _moduleHost->initialize( _engineLoop.getLiveReloadManager(),
+        if ( _moduleHost->initialize( getLiveReloadManager(),
                                       _engineLoop.getRHI(),
                                       _window.get(),
                                       _engineLoop.getRenderThread(),
@@ -289,6 +309,13 @@ namespace sw
 
             // 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
             // 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
+            // 모듈 교체는 **틱 직전**에 한다. 예전에는 EngineLoop::tick 첫머리에서 돌았고, 그 순서(게임 업데이트
+            // 뒤 · 씬 틱 앞)를 그대로 지킨다 — 여기서 DLL 이 갈리고 인스턴스가 새로 만들어지기 때문이다.
+#if !defined( SW_SHIPPING )
+            if ( _liveReloadManager != nullptr )
+                _liveReloadManager->update();
+#endif
+
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
             _engineLoop.tick( frameTime._deltaTime,
                               frameState._gameViewportTarget,
@@ -359,7 +386,7 @@ namespace sw
 
     void App::onForceReload( const utf8* pModuleName )
     {
-        LiveReloadManager* const pLiveReloadManager = _engineLoop.getLiveReloadManager();
+        LiveReloadManager* const pLiveReloadManager = getLiveReloadManager();
         if ( pLiveReloadManager == nullptr )
             return;
 

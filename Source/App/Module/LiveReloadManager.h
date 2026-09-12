@@ -1,5 +1,11 @@
 /**
  * @file LiveReloadManager.h
+ *
+ * @note **여기는 App 이다 — Engine 이 아니다.** 모듈을 로드하고 교체하는 것은 런처(App)의 일이고, Engine 은 모듈이라는
+ *       개념 자체를 몰라야 한다(Engine 레이어 규칙: Engine 은 Editor·GameFramework·Games 를 모른다). 예전에는 이 클래스가
+ *       `Source/Engine/Module/` 에 있어 EngineLoop 이 소유했는데, 쓰는 쪽은 App(ModuleHost · ModuleCompiler · 단축키)뿐이었고
+ *       Shipping 에서는 만들지도 않으면서 864 줄이 바이너리에 그대로 실렸다. 지금은 Shipping 빌드에서 **파일째 빠진다**
+ *       (`Source/App/CMakeLists.txt` 의 제외 목록).
  * @brief 모듈 공유 라이브러리 섀도 복사 기반 핫 리로드 (+ 의존 캐스케이드)
  */
 #pragma once
@@ -11,6 +17,7 @@
 #include "Core/Time/CpuTimer.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Module/ModuleHandleProvider.h"
 
 namespace sw
 {
@@ -29,7 +36,7 @@ namespace sw
      *       commit 중 실패하거나 onAfter가 그래프를 poison하면 나머지 commit을 중단한다.
      *       이미 교체된 DLL은 되돌릴 수 없음.
      */
-    class SW_API LiveReloadManager
+    class LiveReloadManager final : public IModuleHandleProvider
     {
     public:
         using OnBeforeReloadDelegate      = Delegate<void()>;
@@ -103,10 +110,11 @@ namespace sw
         /** @brief 리로드 시 자동 해제를 위해 EventSubscription을 등록합니다. */
         void addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token );
 
-        /** @brief App이 delay-load 훅용 LiveReloadManager를 연결합니다. */
-        static void setDelayLoadManager( LiveReloadManager* pManager );
-        /** @brief delay-load 훅이 조회할 LiveReloadManager를 반환합니다. */
-        static LiveReloadManager* getDelayLoadManager();
+        // --- IModuleHandleProvider — 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
+        /** @brief 리로드 그래프가 깨져 있으면 true. */
+        bool isModuleGraphBroken() const override { return isGraphBroken(); }
+        /** @brief 이름으로 이미 로드된 모듈 핸들을 찾습니다. */
+        void* findLoadedModuleHandle( string_view moduleName ) const override { return getModuleHandle( moduleName ); }
 
     private:
         struct ModuleContext;

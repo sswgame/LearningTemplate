@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleCompiler.h"
 
 #include "Core/Common/StdHeaders.h"
@@ -9,7 +10,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
-#include "Engine/Module/LiveReloadManager.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( _MSC_VER )
-    #include "Engine/Module/LiveReloadManager.h"
+    #include "Engine/Module/ModuleHandleProvider.h"
 
     #include "Core/File/FileUtil.h"
     #include "Core/Common/PlatformOsHeaders.h"
@@ -17,20 +17,20 @@ namespace sw
 
             if ( dliNotify == dliNotePreLoadLibrary || dliNotify == dliFailLoadLib )
             {
-                const string_view  dllName{ pPdli->szDll };
-                LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
-                if ( pMgr != nullptr && pMgr->isGraphBroken() == false )
+                const string_view      dllName{ pPdli->szDll };
+                IModuleHandleProvider* pProvider = engine::getModuleHandleProvider();
+                if ( pProvider != nullptr && pProvider->isModuleGraphBroken() == false )
                 {
                     string_view fileName;
                     FileUtil::getFileNamePart( dllName, fileName );
                     string_view stem;
                     FileUtil::removeExtension( fileName, stem );
-                    void* pHandle = pMgr->getModuleHandle( stem );
+                    void* pHandle = pProvider->findLoadedModuleHandle( stem );
                     if ( pHandle != nullptr )
                         return reinterpret_cast<FARPROC>( pHandle );
                 }
 
-                // Fallback: LiveReloadManager가 비활성 상태인 경우 실행 파일 디렉터리(Bin)에서 DLL 직접 로드
+                // Fallback: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨진 경우 실행 파일 디렉터리(Bin)에서 DLL 직접 로드
                 const string binDir   = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 const string fullPath = FileUtil::joinPath( binDir, dllName );
                 if ( FileUtil::fileExists( fullPath ) )
