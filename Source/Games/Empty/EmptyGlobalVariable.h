@@ -47,4 +47,41 @@ namespace sw
      *          인스턴스가 여럿 들어간다 — 그래야 배치 안의 정렬이 실제로 검사된다.
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchTransparent );
+
+    /**
+     * @brief `-gv_benchMaterialChurn=N` — 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
+     * @details 색·러프니스를 흔든다. 정적인 벤치는 머티리얼 바이트가 한 번 올라간 뒤 영원히 그대로라
+     *          "바뀐 것만 올린다" 경로(`GpuMaterialGpu::_lastBytes` 비교, 인스턴스 CB 재작성,
+     *          구조버퍼 재업로드)를 **한 번도 지나지 않는다.** 이 스위치가 그 길을 매 프레임 태운다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMaterialChurn );
+
+    /**
+     * @brief `-gv_benchMaterialChurnAdd=N` — 매 프레임 인스턴스 N 개를 새로 붙이거나 떼어냅니다.
+     * @details 값이 아니라 **집합**을 흔든다. 붙이면 배치 키가 갈리고 머티리얼 원소 표에 자리가 하나
+     *          늘며, 떼면 참조가 사라져 `retireUnusedMaterialElements` 가 그 자리를 회수하고 다음 번에
+     *          재사용한다(자리를 **옮기지는 않는다** — 인스턴스에 적힌 materialIndex 가 그대로여야 한다).
+     *          떼어낸 인스턴스는 렌더 패킷이 아직 들고 있을 수 있으므로, 소유가 실제로 마지막 참조를
+     *          따라 사라지는지(상수버퍼 해제 포함)도 같이 검사된다.
+     * @note 인스턴스 수는 512 개에서 멈춘다 — 그 뒤로는 새로 붙이는 대신 떼는 쪽으로 기운다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnAdd );
+
+    /**
+     * @brief `-gv_benchMaterialChurnKeyword=N` — N 프레임마다 키워드·멀티컴파일을 하나 흔듭니다.
+     * @warning **셰이더가 다시 컴파일된다.** 퍼뮤테이션 해시가 바뀌면 배치 키가 갈리고 PSO 가 새로
+     *          만들어지므로 프레임이 크게 튄다. 성능 측정용이 아니라 **퍼뮤테이션 경로가 살아 있는지**
+     *          보는 스위치다. 값은 크게 준다(예: 60 = 1초에 한 번).
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnKeyword );
+
+    /**
+     * @brief `-gv_benchMeshShapes=N` — 벤치가 섞어 쓸 도형 수 (1=큐브만, 최대 5).
+     * @details 순서는 큐브 · 구 · 실린더 · 캡슐 · 원뿔이다. 큐브 하나만 쓰면 삼각형이 12개뿐이고 면이
+     *          축에 정렬돼 있어 래스터화·보간·컬링을 거의 흔들지 않는다 — 곡면을 섞으면 배치마다
+     *          **정점 수가 크게 달라져서** 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
+     * @note 기본이 1 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다. 도형을 섞으면 그림이
+     *       달라지므로 예전 수치와 직접 비교할 수 없다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMeshShapes );
 } // namespace sw

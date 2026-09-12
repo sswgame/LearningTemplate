@@ -19,6 +19,22 @@
 
 namespace sw
 {
+    namespace
+    {
+        /// @brief MaterialUtil::getPermutationGeneration 참고 — 정지한 씬이 퍼뮤테이션 변경을 알아채는 유일한 신호.
+        atomic<uint64> g_permutationGeneration{ 1 };
+    } // namespace
+
+    uint64 MaterialUtil::getPermutationGeneration()
+    {
+        return g_permutationGeneration.load( std::memory_order_relaxed );
+    }
+
+    void MaterialUtil::bumpPermutationGeneration()
+    {
+        g_permutationGeneration.fetch_add( 1, std::memory_order_relaxed );
+    }
+
     SW_LOG_CALLER( "Material" );
 
     MaterialProperty::MaterialProperty() noexcept
@@ -585,6 +601,7 @@ namespace sw
         {
             _desc._permutations._quality = level;
             _bDefinesDirty               = SW_TRUE;
+            MaterialUtil::bumpPermutationGeneration();
         }
     }
 
@@ -594,6 +611,7 @@ namespace sw
         {
             _desc._permutations._usage = flags;
             _bDefinesDirty             = SW_TRUE;
+            MaterialUtil::bumpPermutationGeneration();
         }
     }
 
@@ -607,6 +625,7 @@ namespace sw
                 {
                     ss._bEnabled   = bEnabled;
                     _bDefinesDirty = SW_TRUE;
+                    MaterialUtil::bumpPermutationGeneration();
                 }
                 return;
             }
@@ -629,6 +648,7 @@ namespace sw
                 {
                     mc._selected   = string( selectedOption );
                     _bDefinesDirty = SW_TRUE;
+                    MaterialUtil::bumpPermutationGeneration();
                 }
                 return;
             }

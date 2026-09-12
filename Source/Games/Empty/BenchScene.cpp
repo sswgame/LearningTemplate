@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -28,12 +29,29 @@ namespace sw
         constexpr float32 kBenchSpacing = 2.0f;
         /** @brief 격자가 화면에 들어오도록 카메라를 뒤로 뺄 때 쓰는 여유 배수. */
         constexpr float32 kBenchCameraMargin = 0.28f;
+        /** @brief 스트레스가 들고 있을 머티리얼 인스턴스 상한. 넘으면 붙이는 대신 뗀다. */
+        constexpr size_t kChurnInstanceCap = 512;
+        /** @brief 스트레스가 흔드는 정적 스위치 키워드 (defaultmaterial.material 의 useNormalMap). */
+        constexpr const utf8* kChurnNormalMapKeyword = "MATERIAL_NORMALMAP";
+        /** @brief 스트레스가 흔드는 멀티컴파일 이름. */
+        constexpr const utf8* kChurnFogMultiCompile = "FogMode";
+        /** @brief 그 멀티컴파일의 선택지 — 머티리얼 에셋의 _multiCompiles 와 같아야 한다. */
+        constexpr const utf8* kArrChurnFogOption[] = { "FOG_OFF", "FOG_LINEAR", "FOG_EXP" };
+        /**
+         * @brief 벤치가 섞어 쓸 도형 — `MeshUtil::createPrimitive` 가 아는 이름이다.
+         * @note 큐브가 **첫 번째**여야 한다. `-gv_benchMeshShapes=1`(기본)이 예전과 같은 그림을 내야
+         *       기존 측정·스크린샷이 그대로 유효하다.
+         */
+        constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
     } // namespace
 
     BenchScene::BenchScene()
         : _listBenchMesh{}
         , _keyLight{}
         , _glassMaterial{ nullptr }
+        , _listChurnInstance{}
+        , _churnRandom{ 0x9E3779B9u }
+        , _churnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
@@ -72,6 +90,7 @@ namespace sw
                 pObjects->destroyObject( pLight->getOwner() );
         }
         _listBenchMesh.clear();
+        _listChurnInstance.clear();
         _keyLight = {};
     }
 
@@ -107,15 +126,21 @@ namespace sw
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
-        // 같은 기하를 여러 객체로 만든다 — 화면은 그대로고 배치만 갈린다(가시성 변수를 안 넣는다).
+        // 도형을 몇 종 섞을지. 1 이면 예전 그대로 큐브만 쓴다(기존 측정·스크린샷 보존).
+        const uint32 shapeCount = static_cast<uint32>(
+            MathUtil::clamp( gv_benchMeshShapes, 1, static_cast<int32>( SW_COUNT_OF( kArrBenchShape ) ) ) );
+
+        // 같은 기하를 여러 객체로 만든다 — 배치만 갈린다. 도형을 섞으면 배치마다 정점 수가 달라져
+        // 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
         vector<shared_ptr<Mesh>> listMeshVariant;
         listMeshVariant.reserve( meshVariantCount );
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
-            shared_ptr<Mesh> variant = Mesh::createUnitCube();
+            const utf8*      pShapeId = kArrBenchShape[variantIndex % shapeCount];
+            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeId );
             if ( variant == nullptr )
             {
-                SW_LOG_ERROR( "[Bench] 단위 큐브를 만들지 못했습니다." );
+                SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeId );
                 return;
             }
             listMeshVariant.push_back( std::move( variant ) );
@@ -162,6 +187,7 @@ namespace sw
                 // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
                 const float32 alpha = 0.30f + 0.15f * static_cast<float32>( slot );
                 instance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+                _listChurnInstance.push_back( instance );
                 arrTransparentMaterial[slot] = std::move( instance );
             }
         }
@@ -199,6 +225,7 @@ namespace sw
                 {
                     shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
                     instance->setVectorParameter( hashed_string( "color" ), makeBenchColor( index ) );
+                    _listChurnInstance.push_back( instance );
                     pMesh->setMaterialInstance( std::move( instance ) );
                 }
             }
@@ -226,7 +253,8 @@ namespace sw
         _benchGridSide = side;
         frameCameras( pScene, side, kBenchSpacing );
 
-        SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수). -gv_benchMeshVariants 로 바꾼다.", meshVariantCount );
+        SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
+                     meshVariantCount, shapeCount );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#×%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
     }
@@ -355,6 +383,8 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
+        updateMaterialChurn( pObjects );
+
         const uint32 count = static_cast<uint32>( _listBenchMesh.size() );
         for ( uint32 index = 0; index < count; ++index )
         {
@@ -380,6 +410,126 @@ namespace sw
             // 스케일 경로(및 바운드 반지름을 쓰는 컬링)가 검증되지 않는다.
             const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
             pMesh->setLocalScale( float3{ scale, scale, scale } );
+        }
+    }
+
+    uint32 BenchScene::nextChurnRandom()
+    {
+        // xorshift32. 표준 난수를 쓰지 않는 이유는 **재현**이다 — 같은 프레임 수를 돌리면 같은 순서가
+        // 나와야 스크린샷과 로그를 실행 사이에 비교할 수 있다.
+        _churnRandom ^= _churnRandom << 13;
+        _churnRandom ^= _churnRandom >> 17;
+        _churnRandom ^= _churnRandom << 5;
+        return _churnRandom;
+    }
+
+    void BenchScene::releaseChurnInstance( const MaterialInstance* pInstance )
+    {
+        if ( pInstance == nullptr )
+            return;
+        for ( size_t slot = 0; slot < _listChurnInstance.size(); ++slot )
+        {
+            if ( _listChurnInstance[slot].get() != pInstance )
+                continue;
+            // swap-and-pop. 순서는 의미가 없다 — 무작위로 고르는 목록이다.
+            _listChurnInstance[slot] = _listChurnInstance.back();
+            _listChurnInstance.pop_back();
+            return;
+        }
+    }
+
+    void BenchScene::churnInstanceValue( MaterialInstance* pInstance )
+    {
+        if ( pInstance == nullptr )
+            return;
+
+        if ( ( nextChurnRandom() & 1u ) != 0u )
+        {
+            // 알파는 부모를 따라간다 — 유리 머티리얼의 알파를 1 로 올려 버리면 투명 경로가 그림에서
+            // 사라져, 흔들고 있다는 사실 자체가 검증을 망가뜨린다.
+            const float4  tint   = makeBenchColor( nextChurnRandom() );
+            const bool    bGlass = ( pInstance->getParent() != nullptr ) && ( pInstance->getParent() == _glassMaterial.get() );
+            const float32 alpha  = bGlass ? ( 0.25f + 0.35f * static_cast<float32>( nextChurnRandom() & 0xFFu ) / 255.0f ) : 1.0f;
+            pInstance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+        }
+        else
+        {
+            const float32 roughness = static_cast<float32>( nextChurnRandom() & 0xFFFFu ) / 65535.0f;
+            pInstance->setScalarParameter( hashed_string( "roughness" ), roughness );
+        }
+    }
+
+    void BenchScene::updateMaterialChurn( GameObjectManager* pObjects )
+    {
+        const uint32 valueChurn   = ( gv_benchMaterialChurn > 0 ) ? static_cast<uint32>( gv_benchMaterialChurn ) : 0u;
+        const uint32 addChurn     = ( gv_benchMaterialChurnAdd > 0 ) ? static_cast<uint32>( gv_benchMaterialChurnAdd ) : 0u;
+        const uint32 keywordEvery = ( gv_benchMaterialChurnKeyword > 0 ) ? static_cast<uint32>( gv_benchMaterialChurnKeyword ) : 0u;
+        if ( ( valueChurn | addChurn | keywordEvery ) == 0u )
+            return;
+
+        const uint32 cubeCount = static_cast<uint32>( _listBenchMesh.size() );
+        if ( pObjects == nullptr || cubeCount == 0 )
+            return;
+
+        ++_churnFrame;
+
+        // 1) 값만 흔든다 — 배치 구성은 그대로고 머티리얼 바이트만 바뀐다.
+        for ( uint32 step = 0; step < valueChurn && _listChurnInstance.empty() == false; ++step )
+            churnInstanceValue( _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get() );
+
+        // 2) 집합을 흔든다 — 붙이면 배치가 갈리고 원소가 늘고, 떼면 회수·재사용이 돈다.
+        for ( uint32 step = 0; step < addChurn; ++step )
+        {
+            MeshComponent* pMesh =
+                static_cast<MeshComponent*>( pObjects->resolveComponent( _listBenchMesh[nextChurnRandom() % cubeCount] ) );
+            if ( pMesh == nullptr )
+                continue;
+
+            // 목록이 상한에 닿으면 떼는 쪽으로 기운다. 상한이 없으면 큐브 수만큼 늘어나 이 스위치가
+            // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 재지 못한다.
+            const bool bDrop = ( _listChurnInstance.size() >= kChurnInstanceCap ) || ( ( nextChurnRandom() & 3u ) == 0u );
+            if ( bDrop )
+            {
+                const shared_ptr<MaterialInstance> dropped = pMesh->getMaterialInstance();
+                if ( dropped == nullptr )
+                    continue;
+                // 큐브에서 떼고 **우리 목록에서도 놓는다.** 목록에 남겨 두면 참조가 사라지지 않아
+                // 회수 경로가 영영 돌지 않는다. 렌더 패킷이 아직 들고 있으면 거기서 마지막으로 죽는다.
+                pMesh->setMaterialInstance( nullptr );
+                releaseChurnInstance( dropped.get() );
+                continue;
+            }
+
+            Material* pParent = pMesh->getMaterial();
+            if ( pParent == nullptr )
+                continue;
+            // 부모는 **그 큐브가 쓰는 머티리얼**이어야 한다 — 불투명 큐브에 유리 부모를 주면 블렌드
+            // 모드가 뒤집혀 그림이 달라지고, 스트레스가 아니라 버그가 된다.
+            shared_ptr<MaterialInstance> instance = MaterialInstance::create( pParent );
+            churnInstanceValue( instance.get() );
+            _listChurnInstance.push_back( instance );
+            pMesh->setMaterialInstance( std::move( instance ) );
+        }
+
+        // 3) 퍼뮤테이션을 흔든다 — 셰이더가 다시 컴파일되므로 주기를 길게 준다.
+        if ( keywordEvery > 0 && ( _churnFrame % keywordEvery ) == 0 && _listChurnInstance.empty() == false )
+        {
+            MaterialInstance* pInstance = _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get();
+            if ( pInstance != nullptr )
+            {
+                if ( ( nextChurnRandom() & 1u ) != 0u )
+                {
+                    if ( ( nextChurnRandom() & 1u ) != 0u )
+                        pInstance->enableKeyword( hashed_string( kChurnNormalMapKeyword ) );
+                    else
+                        pInstance->disableKeyword( hashed_string( kChurnNormalMapKeyword ) );
+                }
+                else
+                {
+                    pInstance->setMultiCompile( hashed_string( kChurnFogMultiCompile ),
+                                                kArrChurnFogOption[nextChurnRandom() % SW_COUNT_OF( kArrChurnFogOption )] );
+                }
+            }
         }
     }
 } // namespace sw

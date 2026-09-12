@@ -35,7 +35,7 @@ namespace sw
             CreateKey() = default;
             friend class Mesh;
         };
-        /** @brief create*() 전용 생성자 — 빈 메시. */
+        /** @brief create() 전용 생성자 — 빈 메시. */
         explicit Mesh( CreateKey ) noexcept {}
         /**
          * @brief 핸들만 비웁니다.
@@ -54,20 +54,18 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         Mesh& operator=( const Mesh& ) = delete;
 
-        /** @brief 원점 중심 단위 큐브(범위 [-0.5,0.5], 면별 색)를 공유 생성합니다. */
-        static shared_ptr<Mesh> createUnitCube();
-
-        /** @brief 원점 중심 단위 2D 쿼드(범위 [-0.5,0.5])를 공유 생성합니다. */
-        static shared_ptr<Mesh> createRectMesh();
         /**
-         * @brief 프리미티브 id로 내장 메시를 반환합니다.
-         * @details 비어 있거나 "Cube"면 단위 큐브, "Quad"/"Rect"면 쿼드. 모르면 nullptr.
+         * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
+         * @details 도형을 만드는 것은 이 클래스의 일이 아니다 — `MeshUtil` 이 이걸로 만들어 정점을 채운다.
+         *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐이다.
          */
-        static shared_ptr<Mesh> createPrimitive( string_view meshId );
+        static shared_ptr<Mesh> create();
 
         /** @brief CPU 정점 배열을 설정합니다. */
         void setVertices( const vector<RHIVertex>& listVertex );
         void setVertices( vector<RHIVertex>&& listVertex );
+        /** @brief CPU 정점 배열입니다. `setVertices` 의 짝 — GPU 업로드 뒤에도 원본은 여기 남습니다. */
+        const vector<RHIVertex>& getVertices() const { return _listVertex; }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
 

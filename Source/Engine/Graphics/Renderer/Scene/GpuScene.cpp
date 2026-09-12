@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -100,6 +101,7 @@ namespace sw
         _listBuiltCandidate.clear();
         _lastCameraPos              = float3{};
         _lastPrimitiveSetGeneration = 0;
+        _lastPermutationGeneration  = 0;
         _snapshot._bCpuDirty        = SW_TRUE;
     }
 
@@ -163,13 +165,13 @@ namespace sw
         return index;
     }
 
-    Material* GpuScene::batchKeyMaterial( Material* pMaterial, const MaterialInstance* pInstance )
+    Material* GpuScene::batchKeyMaterial( Material* pMaterial, uint64 permutationHash )
     {
         if ( _bMergeAcrossMaterials == SW_FALSE || pMaterial == nullptr )
             return pMaterial;
         // 대표는 **퍼뮤테이션 단위**다. 예전엔 셰이더 경로만 봐서, 같은 .hlsl 을 쓰지만 정적 스위치가 다른
         // 머티리얼이 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 버려졌다.
-        const uint64 hash = permutationHashFor( pMaterial, pInstance );
+        const uint64 hash = permutationHash;
         auto         it   = _mapShaderRepresentative.find( hash );
         if ( it != _mapShaderRepresentative.end() )
             return it->second;
@@ -209,7 +211,8 @@ namespace sw
                 continue;
             }
             // 합치기가 켜져 있으면 같은 셰이더 타입은 머티리얼·인스턴스가 달라도 한 키다 — 파라미터는 원소 인덱스로 읽는다.
-            SortKey key{ cand._mesh.get(), batchKeyMaterial( cand._material.get(), cand._instance.get() ), _bMergeAcrossMaterials != SW_FALSE ? nullptr : cand._instance.get() };
+            SortKey key{ cand._mesh.get(), batchKeyMaterial( cand._material.get(), cand._permutationHash ),
+                         _bMergeAcrossMaterials != SW_FALSE ? nullptr : cand._instance.get(), cand._permutationHash };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -221,7 +224,9 @@ namespace sw
                     return entryA._key._pMesh < entryB._key._pMesh;
                 if ( entryA._key._pMaterial != entryB._key._pMaterial )
                     return entryA._key._pMaterial < entryB._key._pMaterial;
-                return entryA._key._pInstance < entryB._key._pInstance;
+                if ( entryA._key._pInstance != entryB._key._pInstance )
+                    return entryA._key._pInstance < entryB._key._pInstance;
+                return entryA._key._permutationHash < entryB._key._permutationHash;
             } );
         }
     }
@@ -254,12 +259,16 @@ namespace sw
         const bool               bHasCache     = _listBuiltCandidate.empty() == false;
         const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
         const bool               bCamSame      = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
+        // 퍼뮤테이션은 프리미티브를 더럽히지 않는다 — 머티리얼/인스턴스의 정적 스위치·키워드·멀티컴파일을
+        // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
+        const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
+        const bool   bPermSame             = bHasCache && ( permutationGeneration == _lastPermutationGeneration );
 
         // 아무도 "바뀌었다"고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 예전엔 이 판단을 하려고 매 프레임 모든 GameObject 의 모든 Component 를 castTo 로 훑어
         // 후보를 다 만든 다음에야 "그대로였네" 하고 버렸다. 씬이 커질수록, 화면이 정지해 있어도
         // 비용이 늘었다. 이제는 바꾼 쪽이 알려주므로 정지한 씬의 비용이 0 에 수렴한다.
-        if ( bSetSame && bCamSame && primitives.hasDirty() == false )
+        if ( bSetSame && bCamSame && bPermSame && primitives.hasDirty() == false )
             return;
 
         pObjects->getPrimitiveRegistry().clearDirty();
@@ -308,6 +317,9 @@ namespace sw
                     pBlendSource = cand._instance->getParent();
                 cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
                                                               : static_cast<uint32>( pMeshComp->getBlendMode() );
+                // 어느 PSO 로 그릴지를 정하는 값이다 — 배치 키의 일부이고, 여기서 한 번 구해 두면
+                // 나누기·정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
+                cand._permutationHash = permutationHashFor( cand._material.get(), cand._instance.get() );
                 // 옮긴다 — `cand` 는 여기서 죽는다. 복사하면 shared_ptr 셋의 참조 카운트를 원소마다
                 // 올렸다 내리게 되고, 그게 프리미티브 수만큼 반복된다.
                 _listScratchCandidate.push_back( std::move( cand ) );
@@ -331,6 +343,7 @@ namespace sw
         if ( bContentSame && bCamSame )
         {
             _lastPrimitiveSetGeneration = setGeneration;
+            _lastPermutationGeneration  = permutationGeneration;
             return;
         }
 
@@ -381,6 +394,7 @@ namespace sw
         _listBuiltCandidate.swap( _listScratchCandidate );
         _lastCameraPos              = cameraPos;
         _lastPrimitiveSetGeneration = setGeneration;
+        _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
     }
 
@@ -709,19 +723,21 @@ namespace sw
                     batch._blendMode     = RHIBlendMode::Opaque;
                     // 키의 포인터는 정체성이고 소유는 배치 머리 후보의 것을 빌린다. 합치기가 켜지면 키의 인스턴스는
                     // nullptr 이라 배치에는 인스턴스를 싣지 않는다 — 원소 표(_listEntry)가 인스턴스마다 소유를 든다.
-                    {
-                        const DrawCandidate& headCand = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx];
-                        batch._material               = GpuSceneInternal::shareMaterial( key._pMaterial );
-                        batch._materialInstance       = ( key._pInstance != nullptr ) ? headCand._instance : nullptr;
-                    }
+                    const DrawCandidate& headCand = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx];
+                    batch._material               = GpuSceneInternal::shareMaterial( key._pMaterial );
+                    batch._materialInstance       = ( key._pInstance != nullptr ) ? headCand._instance : nullptr;
                     if ( key._pInstance != nullptr )
                         batch._materialCb = key._pInstance->getDescriptorIndex();
                     else
                         batch._materialCb = key._pMaterial ? key._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
                     // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
                     GpuSceneInternal::fillMaterialTextureSrvs( batch, key._pMaterial );
-                    batch._materialGroup     = materialGroupFor( key._pMaterial );
-                    batch._shaderPermutation = shaderPermutationFor( key._pMaterial, key._pInstance );
+                    batch._materialGroup = materialGroupFor( key._pMaterial );
+                    // 퍼뮤테이션은 **키가 아니라 배치에 실제로 든 후보**에서 뽑는다. 합치기가 켜지면
+                    // 키의 인스턴스는 nullptr 이라, 키로 물으면 대표 머티리얼의 define 만 나오고
+                    // 인스턴스가 켠 키워드가 통째로 빠진다 — 그 배치는 잘못된 셰이더로 그려진다.
+                    // 한 배치의 구성원은 전부 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.
+                    batch._shaderPermutation = shaderPermutationFor( headCand._material.get(), headCand._instance.get() );
                     batch._materialIndex     = 0;
 
                     // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다 — 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 산다.
@@ -758,7 +774,7 @@ namespace sw
             // 배치 헤드의 키는 배치가 닫힐 때만 바뀐다. 예전엔 반복마다 헤드와 현재 것을 **둘 다**
             // batchKeyMaterial 로 다시 구했다 — 배치 하나가 N 개면 헤드 키를 N 번 다시 만든 셈이다.
             const DrawCandidate* pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[0]];
-            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_instance.get() );
+            Material*            pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_permutationHash );
 
             for ( uint32 entryIndex = 1; entryIndex <= _listScratchTransparentIdx.size(); ++entryIndex )
             {
@@ -768,7 +784,8 @@ namespace sw
                 {
                     const DrawCandidate& current = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
                     bKeyChange                   = ( pBatchHead->_mesh != current._mesh ) ||
-                                 ( pBatchHeadKey != batchKeyMaterial( current._material.get(), current._instance.get() ) ) ||
+                                 ( pBatchHead->_permutationHash != current._permutationHash ) ||
+                                 ( pBatchHeadKey != batchKeyMaterial( current._material.get(), current._permutationHash ) ) ||
                                  ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
                 }
                 if ( bEnd || bKeyChange )
@@ -812,7 +829,7 @@ namespace sw
                     if ( bEnd == false )
                     {
                         pBatchHead    = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
-                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_instance.get() );
+                        pBatchHeadKey = batchKeyMaterial( pBatchHead->_material.get(), pBatchHead->_permutationHash );
                     }
                 }
             }

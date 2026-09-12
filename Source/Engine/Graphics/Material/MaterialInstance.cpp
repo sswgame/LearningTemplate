@@ -231,28 +231,32 @@ namespace sw
         _listMultiCompileOverride.clear();
         _qualityOverride = MaterialQualityLevel::Count;
         _bDefinesDirty   = SW_TRUE;
-        _bGpuDirty       = SW_TRUE;
+        MaterialUtil::bumpPermutationGeneration();
+        _bGpuDirty = SW_TRUE;
     }
 
     void MaterialInstance::enableKeyword( hashed_string keyword )
     {
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
         _bDefinesDirty = SW_TRUE;
-        _bGpuDirty     = SW_TRUE;
+        MaterialUtil::bumpPermutationGeneration();
+        _bGpuDirty = SW_TRUE;
     }
 
     void MaterialInstance::disableKeyword( hashed_string keyword )
     {
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
         _bDefinesDirty = SW_TRUE;
-        _bGpuDirty     = SW_TRUE;
+        MaterialUtil::bumpPermutationGeneration();
+        _bGpuDirty = SW_TRUE;
     }
 
     void MaterialInstance::setParent( Material* pParentMaterial )
     {
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
-        _bGpuDirty       = SW_TRUE;
+        MaterialUtil::bumpPermutationGeneration();
+        _bGpuDirty = SW_TRUE;
     }
 
     void MaterialInstance::setParameter( hashed_string name, string_view value )
@@ -291,7 +295,8 @@ namespace sw
         {
             _qualityOverride = level;
             _bDefinesDirty   = SW_TRUE;
-            _bGpuDirty       = SW_TRUE;
+            MaterialUtil::bumpPermutationGeneration();
+            _bGpuDirty = SW_TRUE;
         }
     }
 
@@ -299,7 +304,8 @@ namespace sw
     {
         MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
         _bDefinesDirty = SW_TRUE;
-        _bGpuDirty     = SW_TRUE;
+        MaterialUtil::bumpPermutationGeneration();
+        _bGpuDirty = SW_TRUE;
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const

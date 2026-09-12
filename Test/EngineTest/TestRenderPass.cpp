@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -68,7 +69,7 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
  */
 SW_TEST_CASE( RenderPassTest, UnitCubeMeshComponent )
 {
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_EXPECT_TRUE( cube != nullptr );
     SW_EXPECT_EQUAL( uint32( 36 ), cube->getVertexCount() );
 
@@ -350,7 +351,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
     auto addMeshAt = [&]( const utf8* pName, float32 x, float32 z, sw::RHIBlendMode blend )
@@ -414,7 +415,7 @@ SW_TEST_CASE( RenderPassTest, GpuScenePrimitiveRegistryTracksChanges )
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
     auto addMeshAt = [&]( const utf8* pName, float32 x ) -> sw::MeshComponent*
@@ -495,7 +496,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransformOnlyChangeKeepsBatches )
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
     auto addMeshAt = [&]( const utf8* pName, float32 x, float32 z, sw::RHIBlendMode blend ) -> sw::MeshComponent*
@@ -572,7 +573,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
     // 블렌드 모드는 **부모 머티리얼**이 정한다(GpuScene::buildFromScene). 예전에는 그 폴백이 순서 버그로 한 번도
@@ -665,7 +666,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 
     sw::Scene scene( "FrameRendererSmokeScene" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
     sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
@@ -736,7 +737,7 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
     // 재생성 뒤에도 여전히 그릴 수 있어야 한다 (레이아웃·폴백 버퍼·콜백이 같이 재구축됐는지).
     sw::Scene scene( "ShaderRecompileScene" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( pObj );
     sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
@@ -787,7 +788,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
 
     sw::Scene scene( "GpuSceneReuseScene" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
     sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
@@ -859,7 +860,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
 
     sw::Scene scene( "MaterialLifetimeScene" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
     sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
@@ -1107,7 +1108,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
 
     sw::Scene scene( "DeferredParallelScene" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     for ( uint32 objectIndex = 0; objectIndex < 4; ++objectIndex )
     {
         sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "DeferredCube" ) );
@@ -1157,7 +1158,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndRetire )
     sw::Scene scene( "MaterialElementIdScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
-    sw::shared_ptr<sw::Mesh>     mesh      = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh>     mesh      = sw::MeshUtil::createUnitCube();
     sw::shared_ptr<sw::Material> materialA = sw::Material::create();
     sw::shared_ptr<sw::Material> materialB = sw::Material::create();
     SW_ASSERT_TRUE( mesh != nullptr && materialA != nullptr && materialB != nullptr );
@@ -1279,8 +1280,8 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
     // 메시도 따로 만든다 — 배치 키에 메시가 들어가므로 배치가 갈린다.
-    sw::shared_ptr<sw::Mesh> meshA = sw::Mesh::createUnitCube();
-    sw::shared_ptr<sw::Mesh> meshB = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> meshA = sw::MeshUtil::createUnitCube();
+    sw::shared_ptr<sw::Mesh> meshB = sw::MeshUtil::createUnitCube();
     SW_ASSERT_TRUE( meshA != nullptr && meshB != nullptr );
 
     auto addObject = [&]( const utf8* pName, const sw::shared_ptr<sw::Mesh>& mesh, sw::Material* pMaterial, float32 offsetX )
@@ -1353,7 +1354,7 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
     // 메시는 **하나를 공유한다**. 메시가 다르면 어차피 배치가 갈려서 퍼뮤테이션 때문에 갈린 것인지 알 수 없다.
-    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_TRUE( mesh != nullptr );
 
     auto addObject = [&]( const utf8* pName, sw::Material* pMaterial, float32 offsetX )
@@ -1518,7 +1519,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         sw::shared_ptr<sw::Mesh> mesh;
         if ( bOk )
         {
-            mesh = sw::Mesh::createUnitCube();
+            mesh = sw::MeshUtil::createUnitCube();
             bOk  = mesh != nullptr;
         }
         if ( bOk )
@@ -1667,7 +1668,7 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         sw::shared_ptr<sw::Mesh> sharedMesh;
         if ( bOk )
         {
-            sharedMesh = sw::Mesh::createUnitCube();
+            sharedMesh = sw::MeshUtil::createUnitCube();
             bOk        = sharedMesh != nullptr;
         }
         if ( bOk )
@@ -1792,7 +1793,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         sw::shared_ptr<sw::Material> glassMaterial;
         if ( bOk )
         {
-            sharedMesh    = sw::Mesh::createUnitCube();
+            sharedMesh    = sw::MeshUtil::createUnitCube();
             glassMaterial = sw::Material::create();
             // 반투명 전용 에셋 — blendMode 와 퍼뮤테이션이 불투명과 다르다. 예전처럼 불투명 에셋에
             // 알파만 낮춰 쓰면 "머티리얼은 불투명인데 블렌딩으로 그린다"는 어긋난 상태를 검증하게 된다.
@@ -1963,7 +1964,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         sw::shared_ptr<sw::Mesh> sharedMesh;
         if ( bOk )
         {
-            sharedMesh = sw::Mesh::createUnitCube();
+            sharedMesh = sw::MeshUtil::createUnitCube();
             bOk        = sharedMesh != nullptr;
         }
 
@@ -2121,8 +2122,8 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         sw::shared_ptr<sw::Mesh> meshBlue;
         if ( bOk )
         {
-            meshRed  = sw::Mesh::createUnitCube();
-            meshBlue = sw::Mesh::createUnitCube();
+            meshRed  = sw::MeshUtil::createUnitCube();
+            meshBlue = sw::MeshUtil::createUnitCube();
             bOk      = meshRed != nullptr && meshBlue != nullptr;
         }
         if ( bOk )
@@ -2265,8 +2266,8 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         sw::shared_ptr<sw::Mesh> meshRight;
         if ( bOk )
         {
-            meshLeft  = sw::Mesh::createUnitCube();
-            meshRight = sw::Mesh::createUnitCube();
+            meshLeft  = sw::MeshUtil::createUnitCube();
+            meshRight = sw::MeshUtil::createUnitCube();
             bOk       = meshLeft != nullptr && meshRight != nullptr && meshLeft != meshRight;
         }
         if ( bOk )
@@ -2390,7 +2391,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
         sw::shared_ptr<sw::Mesh> arrMesh[kAnimMeshCount];
         for ( uint32 meshIndex = 0; meshIndex < kAnimMeshCount && bOk; ++meshIndex )
         {
-            arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+            arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
             bOk                = arrMesh[meshIndex] != nullptr;
             if ( bOk == false )
                 break;
@@ -2513,7 +2514,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         sw::shared_ptr<sw::Mesh> cube;
         for ( uint32 meshIndex = 0; meshIndex < kParityMeshCount && bOk; ++meshIndex )
         {
-            arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+            arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
             bOk                = arrMesh[meshIndex] != nullptr;
             if ( bOk == false )
                 break;
@@ -2863,7 +2864,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         sw::shared_ptr<sw::Mesh> mesh;
         if ( bOk )
         {
-            mesh = sw::Mesh::createUnitCube();
+            mesh = sw::MeshUtil::createUnitCube();
             bOk  = mesh != nullptr;
         }
         if ( bOk )
@@ -3011,7 +3012,7 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
     sw::Scene scene( "SnapshotPermutationScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
-    sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( mesh.get() );
 
     sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "GlassCube" ) );
@@ -3141,7 +3142,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     constexpr const utf8* kGlassMaterial = "engine/materials/glassmaterial.material";
     sw::Scene             scene( "DeviceRecreateScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
     sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
@@ -3226,7 +3227,7 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
     sw::shared_ptr<sw::Mesh> arrMesh[kMeshCount];
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
     {
-        arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+        arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
         SW_ASSERT_NOT_NULL( arrMesh[meshIndex].get() );
         SW_EXPECT_FALSE( arrMesh[meshIndex]->isRhiValid() );
         queue.requestMesh( arrMesh[meshIndex] );
@@ -3293,7 +3294,7 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
     if ( bOk == false )
         SW_TEST_SKIP( "No RHI backend for render resource registry test" );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
@@ -3348,7 +3349,7 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     if ( bOk == false )
         SW_TEST_SKIP( "No RHI backend for device generation test" );
 
-    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
@@ -3378,4 +3379,155 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     device.reset();
     window->destroy();
     window.reset();
+}
+
+/**
+ * @brief [MeshPrimitiveTest] 내장 도형이 닫혀 있고 바깥을 향하는지 (GPU 불필요).
+ * @details 감김이 뒤집힌 메시는 **화면에서 그냥 사라진다**(후면 컬링). 그림으로는 "안 그려진다" 로만
+ *          보여서 렌더러 버그로 오인하기 쉬우므로, 기하 자체를 CPU 에서 본다. 원점 중심 볼록 도형이면
+ *          각 삼각형의 면 법선이 그 삼각형 중심과 같은 쪽을 향해야 한다(dot > 0).
+ */
+SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
+{
+    struct PrimitiveCase
+    {
+        const utf8* _pId;
+        float32     _maxRadius; ///< 원점에서 가장 먼 정점까지의 허용 거리
+    };
+    // 큐브는 대각선이 가장 멀다(0.5 * sqrt(3)). 곡면은 반지름 0.5, 캡슐만 원통부 때문에 더 길다.
+    const PrimitiveCase arrCase[] = {
+        {    "Cube", 0.8661f},
+        {  "Sphere", 0.5001f},
+        {"Cylinder", 0.7072f},
+        { "Capsule", 1.0001f},
+        {    "Cone", 0.7072f},
+    };
+
+    for ( const PrimitiveCase& testCase : arrCase )
+    {
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( testCase._pId );
+        SW_EXPECT_TRUE_MSG( mesh != nullptr, testCase._pId );
+        SW_ASSERT_TRUE( mesh != nullptr );
+
+        const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
+        SW_EXPECT_TRUE_MSG( listVertex.empty() == false, testCase._pId );
+        SW_ASSERT_TRUE( listVertex.size() >= 3 );
+        SW_EXPECT_TRUE_MSG( ( listVertex.size() % 3 ) == 0, "삼각형 목록인데 정점 수가 3의 배수가 아니다" );
+
+        uint32 inwardCount{ 0 };
+        uint32 degenerateCount{ 0 };
+        for ( size_t base = 0; base + 2 < listVertex.size(); base += 3 )
+        {
+            auto toFloat3 = []( const sw::RHIVertex& vertex )
+            { return sw::float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }; };
+
+            const sw::float3 a = toFloat3( listVertex[base + 0] );
+            const sw::float3 b = toFloat3( listVertex[base + 1] );
+            const sw::float3 c = toFloat3( listVertex[base + 2] );
+
+            for ( const sw::float3& point : { a, b, c } )
+            {
+                SW_EXPECT_TRUE_MSG( point.getLength() <= testCase._maxRadius,
+                                    "정점이 도형의 단위 크기를 벗어났다" );
+            }
+
+            const sw::float3 normal = ( b - a ).cross( c - a );
+            if ( normal.getLengthSquared() <= sw::MathUtil::Epsilon )
+            {
+                ++degenerateCount;
+                continue;
+            }
+            const sw::float3 centroid = ( a + b + c ) * ( 1.0f / 3.0f );
+            if ( normal.dot( centroid ) <= 0.0f )
+                ++inwardCount;
+        }
+
+        SW_EXPECT_TRUE_MSG( degenerateCount == 0, testCase._pId );
+        SW_EXPECT_TRUE_MSG( inwardCount == 0, testCase._pId );
+        if ( inwardCount != 0 || degenerateCount != 0 )
+        {
+            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 정점 %#, 안쪽 향함 %#, 면적 0 %#",
+                          testCase._pId, static_cast<uint32>( listVertex.size() ), inwardCount, degenerateCount );
+        }
+    }
+}
+
+/**
+ * @brief [GpuSceneTest] **인스턴스**의 퍼뮤테이션을 런타임에 바꾸면 배치가 다시 갈리는지 (GPU 불필요).
+ * @details `PermutationSplitsBatchesAcrossMaterials` 는 서로 다른 **머티리얼**이 갈리는지를 본다.
+ *          이 테스트는 그보다 어려운 자리다 — 부모 머티리얼이 **같고** `MaterialInstance` 만 정적 스위치를
+ *          바꾼 경우, 그리고 그것을 **첫 빌드 뒤에** 바꾼 경우다. 실제로 셋이 겹쳐 죽어 있었다:
+ *            1. 배치 키가 퍼뮤테이션 해시 대신 "대표 머티리얼 포인터" 를 썼다 — 부모가 같으면 대표도
+ *               같아서 서로 다른 셰이더로 그려야 할 것이 한 배치로 접혔다.
+ *            2. 증분 경로(`hasSameBatchKey`)가 퍼뮤테이션을 보지 않아 다시 갈리지 않았다.
+ *            3. 정지한 씬은 프리미티브가 더러워지지 않아 수집 자체를 건너뛰었다.
+ *          그래서 런타임에 정적 스위치를 바꾸는 길이 통째로 조용히 죽어 있었다.
+ */
+SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
+{
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+
+    sw::Scene scene( "InstancePermutationScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    // 메시도 부모 머티리얼도 **같다**. 다른 것은 인스턴스뿐이다.
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_TRUE( mesh != nullptr );
+
+    auto addObject = [&]( const utf8* pName, float32 offsetX ) -> sw::MeshComponent*
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+        if ( pObj == nullptr )
+            return nullptr;
+        sw::MeshComponent* pMeshComp = pObj->addComponent<sw::MeshComponent>();
+        if ( pMeshComp == nullptr )
+            return nullptr;
+        pMeshComp->setMesh( mesh );
+        pMeshComp->setMaterial( material.get() );
+        pMeshComp->setLocalPosition( sw::float3{ offsetX, 0.0f, 0.0f } );
+        return pMeshComp;
+    };
+    sw::MeshComponent* pPlain    = addObject( "CubePlain", -1.1f );
+    sw::MeshComponent* pSwitched = addObject( "CubeSwitched", 1.1f );
+    SW_ASSERT_TRUE( pPlain != nullptr && pSwitched != nullptr );
+
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    SW_ASSERT_TRUE( instance != nullptr );
+    pSwitched->setMaterialInstance( instance );
+
+    sw::GpuScene gpuScene;
+    gpuScene.setMergeBatchesAcrossMaterials( true ); // 합치기가 켜진 쪽이 바로 접히던 자리다
+    const sw::float3 cameraPos{ 0.0f, 1.2f, 3.2f };
+    gpuScene.buildFromScene( &scene, cameraPos );
+    SW_ASSERT_TRUE( gpuScene.getOpaqueBatches().size() == 1 );
+
+    // **첫 빌드 뒤에** 인스턴스의 정적 스위치를 켠다. 씬에서는 아무것도 움직이지 않는다.
+    instance->enableKeyword( sw::hashed_string( "MATERIAL_NORMALMAP" ) );
+    gpuScene.buildFromScene( &scene, cameraPos );
+
+    const sw::vector<sw::GpuMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    SW_EXPECT_TRUE_MSG( batches.size() == 2,
+                        "인스턴스의 퍼뮤테이션이 달라졌는데 한 배치로 남았다 — 배치는 PSO 하나로 그린다" );
+    SW_ASSERT_TRUE( batches.size() == 2 );
+
+    SW_EXPECT_TRUE_MSG( batches[0]._shaderPermutation != batches[1]._shaderPermutation,
+                        "배치는 갈렸는데 같은 퍼뮤테이션을 가리킨다" );
+
+    // 합치기가 켜지면 배치의 `_materialInstance` 는 nullptr 이다(값은 원소 표가 든다) — 배치를
+    // 인스턴스로 식별할 수 없다. 그래서 **퍼뮤테이션 쪽에서** 센다: 켠 것 하나, 안 켠 것 하나여야 한다.
+    uint32 withNormalMap{ 0 };
+    for ( const sw::GpuMeshBatch& batch : batches )
+    {
+        const sw::GpuShaderPermutation* pPermutation = gpuScene.findShaderPermutation( batch._shaderPermutation );
+        SW_ASSERT_TRUE( pPermutation != nullptr );
+        SW_EXPECT_TRUE_MSG( pPermutation->_shaderPath.empty() == false, "퍼뮤테이션에 셰이더 경로가 없다" );
+        for ( const sw::string& defineStr : pPermutation->_listDefine )
+        {
+            if ( defineStr == "MATERIAL_NORMALMAP" )
+                ++withNormalMap;
+        }
+    }
+    SW_EXPECT_TRUE_MSG( withNormalMap == 1,
+                        "인스턴스가 켠 키워드를 든 배치가 정확히 하나여야 한다 — 0 이면 인스턴스 define 이 통째로 빠진 것이고, 2 면 남의 배치에까지 번진 것이다" );
 }

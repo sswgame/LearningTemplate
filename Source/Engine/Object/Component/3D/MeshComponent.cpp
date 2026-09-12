@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -35,7 +36,7 @@ namespace sw
     {
         if ( _mesh != nullptr )
             return;
-        _mesh = Mesh::createPrimitive( _meshId );
+        _mesh = MeshUtil::createPrimitive( _meshId );
         markRenderStateDirty();
     }
 

@@ -17,7 +17,9 @@
 namespace sw
 {
     class CameraComponent;
+    class GameObjectManager;
     class Material;
+    class MaterialInstance;
     class MeshComponent;
     class Scene;
 
@@ -74,6 +76,22 @@ namespace sw
         /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */
         void frameOneCamera( CameraComponent* pCamera, uint32 side, float32 spacing );
 
+        /**
+         * @brief 머티리얼 스트레스 — 값·집합·퍼뮤테이션을 무작위로 흔듭니다.
+         * @details `-gv_benchMaterialChurn*` 셋이 없으면 곧장 돌아온다. 자세한 사연은 그 스위치들의 주석.
+         */
+        void updateMaterialChurn( GameObjectManager* pObjects );
+        /** @brief 인스턴스 하나의 값(색·러프니스)을 무작위로 바꿉니다. */
+        void churnInstanceValue( MaterialInstance* pInstance );
+        /** @brief 목록에서 인스턴스를 놓습니다(마지막 참조면 여기서 죽는다). 없으면 아무것도 안 합니다. */
+        void releaseChurnInstance( const MaterialInstance* pInstance );
+        /**
+         * @brief 결정적 난수 한 걸음 (xorshift32).
+         * @details 표준 난수를 쓰지 않는 이유: **같은 프레임 수를 돌리면 같은 순서가 나와야** 스크린샷과
+         *          로그를 실행 간에 비교할 수 있다. 시드도 고정이다.
+         */
+        uint32 nextChurnRandom();
+
     private:
         /**
          * @brief 벤치 큐브의 핸들. 씬이 큐브를 소유하고, 여기에는 주소가 없다.
@@ -86,6 +104,16 @@ namespace sw
         ComponentHandle _keyLight;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
         shared_ptr<Material> _glassMaterial;
+        /**
+         * @brief 벤치가 만든 머티리얼 인스턴스 전부 — 스트레스가 흔들 대상.
+         * @details 소유를 여기서도 든다. 떼어낸 인스턴스를 이 목록에서도 놓아야 참조가 **실제로**
+         *          사라지고, 그래야 원소 회수와 상수버퍼 해제 경로가 돈다.
+         */
+        vector<shared_ptr<MaterialInstance>> _listChurnInstance;
+        /** @brief 스트레스용 난수 상태. 0 이 되면 xorshift 가 멈추므로 고정 시드로 시작한다. */
+        uint32 _churnRandom;
+        /** @brief 스트레스가 돈 프레임 수 — 키워드 흔들기 주기에 쓴다. */
+        uint64 _churnFrame;
         /** @brief 애니메이션 누적 시간. */
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */

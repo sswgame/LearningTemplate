@@ -423,7 +423,7 @@ namespace sw
          * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
          *          대표는 **퍼뮤테이션 단위**다 — 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
          */
-        Material* batchKeyMaterial( Material* pMaterial, const MaterialInstance* pInstance );
+        Material* batchKeyMaterial( Material* pMaterial, uint64 permutationHash );
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조버퍼에 올리고 배치에 버퍼/SRV 를 적습니다 (RT).
          * @details 바이트가 지난 업로드와 같으면 건너뛴다 — 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
@@ -448,6 +448,12 @@ namespace sw
         unordered_map<string, uint32> _mapShaderPathToGroup;
         /// @brief 빌드 번호. 원소가 마지막으로 쓰인 시점을 재는 데만 쓴다(회수 판정).
         uint64 _buildCounter{ 0 };
+        /**
+         * @brief 마지막 수집 때 본 퍼뮤테이션 세대(`MaterialUtil::getPermutationGeneration`).
+         * @details 정지한 씬에서 머티리얼의 정적 스위치·키워드를 바꾸면 프리미티브는 하나도 더러워지지
+         *          않는다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않는다.
+         */
+        uint64 _lastPermutationGeneration{ 0 };
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
         unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
         /**
@@ -472,6 +478,15 @@ namespace sw
             uint32                       _blendMode{ 0 };
             /// @brief GPU 회전 애니메이션 시드 (0 = 없음). MeshComponent 가 준다 → GpuInstance::_spinSeed.
             uint32 _spinSeed{ 0 };
+            /**
+             * @brief (셰이더 경로 + define) 해시 — **어느 PSO 로 그릴지**를 정하는 값.
+             * @details 배치 키에 들어가야 한다. 머티리얼·인스턴스 **포인터가 그대로여도** 인스턴스의
+             *          키워드·멀티컴파일·품질을 바꾸면 이 값이 바뀌고, 그러면 다른 셰이더로 그려야 한다.
+             *          예전에는 이 값이 키에 없어서 `hasSameBatchKey` 가 "그대로" 라고 답했고, 배치가
+             *          다시 나뉘지 않아 **바뀐 퍼뮤테이션이 화면에 반영되지 않았다**(런타임에 정적 스위치를
+             *          바꾸는 길이 조용히 죽어 있었다). 수집에서 한 번 구해 두면 나누기·정렬도 다시 구하지 않는다.
+             */
+            uint64 _permutationHash{ 0 };
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -490,6 +505,7 @@ namespace sw
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed &&
+                       _permutationHash == other._permutationHash &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -506,7 +522,7 @@ namespace sw
             bool hasSameBatchKey( const DrawCandidate& other ) const
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode;
+                       _blendMode == other._blendMode && _permutationHash == other._permutationHash;
             }
         };
 
@@ -520,8 +536,20 @@ namespace sw
             Mesh*             _pMesh{ nullptr };
             Material*         _pMaterial{ nullptr };
             MaterialInstance* _pInstance{ nullptr };
-            /** @brief 메시·머티리얼·인스턴스가 같은지 비교합니다. */
-            bool operator==( const SortKey& other ) const { return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance; }
+            /**
+             * @brief (셰이더 경로 + define) 해시 — 배치가 쓸 PSO 를 정한다.
+             * @details **대표 머티리얼 포인터로는 대신할 수 없다.** 합치기가 켜지면 대표는 "이 퍼뮤테이션을
+             *          처음 들고 온 머티리얼" 인데, 퍼뮤테이션이 **인스턴스**에서 오면 부모가 같아 대표도
+             *          같아진다 — 서로 다른 셰이더로 그려야 할 것들이 한 배치로 접힌다. 해시를 키에 직접
+             *          넣어야 갈린다(런타임에 인스턴스의 정적 스위치를 바꾸는 길이 여기서 죽어 있었다).
+             */
+            uint64 _permutationHash{ 0 };
+            /** @brief 메시·머티리얼·인스턴스·퍼뮤테이션이 같은지 비교합니다. */
+            bool operator==( const SortKey& other ) const
+            {
+                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
+                       _permutationHash == other._permutationHash;
+            }
         };
 
         struct SortEntry
