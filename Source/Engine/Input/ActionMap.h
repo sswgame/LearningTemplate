@@ -445,10 +445,6 @@ namespace sw
         ActionPhase getActionPhase( const hashed_string& action ) const;
         ActionPhase getActionPhase( ActionHandle handle ) const;
 
-        bool                 isPointerHovering() const;
-        bool                 wasPointerHoverEntered() const;
-        bool                 wasPointerHoverLeft() const;
-        bool                 isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
         static ActionTrigger actionTriggerFromName( string_view name );
         static const utf8*   actionTriggerToName( ActionTrigger trigger );
 

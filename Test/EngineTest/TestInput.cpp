@@ -519,6 +519,36 @@ SW_TEST_CASE( InputManagerTest, InputManager_AsyncPostAndBeginFrameDrain )
 /**
  * @brief [ActionMapTest] default.input.xml 리소스 로드 및 레이어/액션/코드 바인딩 무결성 검증
  */
+/**
+ * @brief [ActionMapTest] 같은 레이어에서 이미 쓰는 키를 찾아낸다.
+ * @details 이 함수는 오래 아무도 부르지 않아 죽은 것처럼 보였다. 실제로는 에디터의 Rebind 가
+ *          **불러야 했는데 안 부르던** 것이고(그래서 이미 쓰는 키로 바꿔도 아무 말이 없었다),
+ *          지금은 InputMapEditorPanel::rebindSelectedAction 이 부른다. 계약을 여기서 고정한다.
+ */
+SW_TEST_CASE( ActionMapTest, DetectsBindingConflictInSameLayer )
+{
+    sw::ActionMap actionMap;
+    actionMap.registerLayer( "Gameplay", 0, true, false, false );
+    actionMap.registerLayer( "Menu", 10, true, false, false );
+
+    actionMap.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed, "Gameplay" );
+    actionMap.bind( "Confirm", sw::Key::Enter, sw::ActionTrigger::Pressed, "Menu" );
+
+    sw::string conflicting;
+
+    // 같은 레이어에서 이미 쓰는 키다.
+    SW_EXPECT_TRUE( actionMap.hasBindingConflict( sw::InputSlot::fromKey( sw::Key::Space ), "Gameplay", conflicting ) );
+    SW_EXPECT_EQUAL( sw::string( "Jump" ), conflicting );
+
+    // 아무도 안 쓰는 키는 충돌이 아니다.
+    conflicting.clear();
+    SW_EXPECT_FALSE( actionMap.hasBindingConflict( sw::InputSlot::fromKey( sw::Key::F1 ), "Gameplay", conflicting ) );
+
+    // 레이어가 다르면 같은 키라도 충돌이 아니다 — 레이어가 있는 이유가 그것이다.
+    conflicting.clear();
+    SW_EXPECT_FALSE( actionMap.hasBindingConflict( sw::InputSlot::fromKey( sw::Key::Space ), "Menu", conflicting ) );
+}
+
 SW_TEST_CASE( ActionMapTest, LoadFromDefaultInputXmlResource )
 {
     sw::InputManager inputManager;

@@ -466,6 +466,16 @@ namespace sw
         }
     }
 
+    bool InputManager::isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const
+    {
+        if ( isPointerInside() == false )
+            return false;
+        int32 mouseX{ 0 };
+        int32 mouseY{ 0 };
+        getMousePosition( mouseX, mouseY );
+        return ( x <= mouseX && mouseX < ( x + width ) && y <= mouseY && mouseY < ( y + height ) );
+    }
+
     void InputManager::setMouseLockMode( MouseLockMode mode )
     {
         if ( _pMouse != nullptr )

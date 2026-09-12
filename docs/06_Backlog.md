@@ -36,7 +36,7 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenAllPanels=1 -gv_editorPanelDump=40
 ```
 
-현재 기준선 (2026-09-11, 시작 씬 = 테스트 씬): **기본 창 15개 · 내용 없는 패널 0개**, 전부 열면 **창 29개 ·
+현재 기준선 (2026-09-12 재측정, 시작 씬 = 테스트 씬): **기본 창 15개 · 내용 없는 패널 0개**, 전부 열면 **창 30개 ·
 내용 없는 패널 0개**. (시작 씬이 없던 때는 기본 창 14개였다.)
 
 > **2026-09-11 부터 기본 실기동도 씬을 본다.** `GameConfig._startupScene` 이 `game/empty/maps/editortest.scene.xml`
@@ -294,6 +294,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-12 (안 쓰이는 공개 API 를 "앞으로 필요한가" 로 가른다 — 지울 것과 이어야 할 것)
+
+Engine 공개 메서드 중 **선언 파일 밖에서 아무도 부르지 않는 것이 248개**였다. 지금 안 쓰인다는 것만으로는
+아무 판단도 못 한다 — 엔진 API 는 소비자보다 먼저 있는 것이 정상이다. 그래서 **앞으로 불릴 자리가 있는가**
+로 갈랐다. 가장 큰 덩어리인 `ActionMap`(37개)부터 봤다.
+
+**① 지웠다 — 앞으로도 여기서 불릴 일이 없다.** `ActionMap` 의 포인터 네 개
+(`isPointerHovering` · `wasPointerHoverEntered` · `wasPointerHoverLeft` · `isPointerOverRect`).
+포인터 상태가 **세 겹으로 전달**되고 있었다:
+
+```
+MouseDevice::isPointerInside()      ← 상태를 가진 곳
+  InputManager::isPointerInside()   ← 전달. X11 입력·테스트가 이것을 쓴다
+    ActionMap::isPointerHovering()  ← 전달 + 이름만 바꿈. 아무도 안 쓴다
+```
+
+`ActionMap` 은 **액션 매핑**이다. 포인터가 창 안에 있는지는 액션이 아니라 장치 상태이고, 기존 소비자는
+전부 `InputManager` 로 간다. 셋을 지웠다. 넷째 `isPointerOverRect` 만 실제 로직(사각형 히트 테스트)이라
+**`InputManager` 로 옮겼다** — 쓰는 값이 전부 거기 있다.
+
+**② 이었다 — 앞으로가 아니라 이미 필요했다.** `ActionMap::hasBindingConflict` 는 아무도 안 불러 죽은
+것처럼 보였다. 그런데 `InputMapEditorPanel` 에는 **"Key Conflict Matrix" 탭이 있다.** 즉 이 질문을 하는
+화면이 이미 있는데, 그 패널은 자기 루프로 따로 세고 있었고 — 더 나쁘게 — **Rebind 버튼은 충돌을 아예
+확인하지 않았다.** 이미 다른 액션이 쓰는 키로 바꿔도 아무 말이 없고, 사용자는 다른 탭에 가서야 안다.
+`rebindSelectedAction()` 을 두어 두 자리(키 감지·버튼 격자)가 그것을 지나가게 하고, 바꾸기 전에 어느
+액션과 겹치는지 로그로 남긴다. **되돌리지는 않는다** — 덮어쓰기를 원할 수 있고, 그 판단은 사람 몫이다.
+회귀 테스트 `ActionMapTest.DetectsBindingConflictInSameLayer` 로 계약을 고정했다(같은 레이어면 충돌,
+빈 키는 아님, 레이어가 다르면 아님 — 레이어가 있는 이유가 그것이다).
+
+**③ 남겼다 — 부를 자리가 분명하다.** `ActionMap` 의 조율 설정 17쌍(`setMouseSensitivity` ·
+`setDeadzoneShape` · `setNavRepeatDelay` · `setHoldThreshold` …)과 `setToggleMode`/`isActionToggled`,
+`enableOnlyLayer`. 전부 **게임 옵션 화면과 리바인딩 UI 가 부를 것들**이고 구현도 살아 있다. 같은 이유로
+`InputManager` 의 게임패드 트리거·진동·커서 표시·텍스트 입력 콜백도 남겼다(그 31개 중 대부분은 애초에
+`/Input/` 안의 플랫폼 배선이 부르고 있어서 "안 쓰임" 으로 보였을 뿐이다).
+
+**판단 기준 한 줄.** 참조 수 0 이 뜻하는 것은 셋 중 하나다 — (a) 같은 답을 주는 다른 길이 이미 있다
+→ 지운다, (b) 부를 자리가 있는데 안 부르고 있다 → **잇는다**, (c) 소비자가 아직 없다 → 남긴다.
+(a) 와 (b) 를 (c) 로 착각하면 중복과 구멍이 그대로 쌓인다.
+
+**덤.** 에디터 전부 열기 기준선이 문서에는 29 인데 실제로는 **30** 이었다. 내 변경 때문인지 확인하려고
+변경을 빼고 다시 재 봤고(30 그대로) 문서 쪽을 고쳤다.
+
+**검증.** Debug · Shipping 빌드 종료 0 · ActionMapTest 17/17 · GPU 19/19 · nogpu 5/5 · 린트 7/7.
+에디터 전부 열기 창 30 · 빈 패널 0 · 오류 0.
 
 ### 2026-09-12 (Graphics 에서 합칠 것을 찾다 — 나온 것은 중복이 아니라 죽은 타입이었다)
 

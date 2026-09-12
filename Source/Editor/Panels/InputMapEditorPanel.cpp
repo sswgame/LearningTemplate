@@ -415,8 +415,7 @@ namespace sw::editor
                     const Key k = static_cast<Key>( kIdx );
                     if ( pInput->wasKeyPressed( k ) )
                     {
-                        _actionMap.rebindKey( _selectedAction.c_str(), k, _capturingBindIndex );
-                        markDocumentDirty();
+                        rebindSelectedAction( k );
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -435,8 +434,7 @@ namespace sw::editor
                     if ( ImGui::Button( pKeyName, ImVec2( 80, 24 ) ) )
 
                     {
-                        _actionMap.rebindKey( _selectedAction.c_str(), k, _capturingBindIndex );
-                        markDocumentDirty();
+                        rebindSelectedAction( k );
                         _bCapturingKey = SW_FALSE;
                         ImGui::CloseCurrentPopup();
                         break;
@@ -454,6 +452,23 @@ namespace sw::editor
             }
             ImGui::EndPopup();
         }
+    }
+
+    void InputMapEditorPanel::rebindSelectedAction( sw::Key newKey )
+    {
+        // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩 자신이 안다.
+        const sw::ActionBinding* pBinding = _actionMap.getBinding( _selectedAction.c_str(), _capturingBindIndex );
+        const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
+
+        sw::string conflictingAction;
+        if ( _actionMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), layer, conflictingAction ) && conflictingAction != _selectedAction )
+        {
+            SW_LOG_WARNING( "'%#' 을(를) %# 에 바인딩합니다 — 같은 레이어의 '%#' 과(와) 겹칩니다.",
+                            _selectedAction.c_str(), sw::KeyCodes::toName( newKey ), conflictingAction.c_str() );
+        }
+
+        _actionMap.rebindKey( _selectedAction.c_str(), newKey, _capturingBindIndex );
+        markDocumentDirty();
     }
 
     void InputMapEditorPanel::drawDeviceMonitorTab()

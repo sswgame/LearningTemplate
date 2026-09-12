@@ -49,6 +49,14 @@ namespace sw::editor
         /** @brief 게임패드 실시간 상태를 그립니다. */
         void drawGamepadMonitor();
         void drawConflictMatrixTab();
+        /**
+         * @brief 선택한 액션의 바인딩을 새 키로 바꿉니다. **바꾸기 전에 충돌을 확인합니다.**
+         * @details 예전에는 두 자리(키 감지·버튼 격자)에서 곧장 rebindKey 를 불러, 이미 다른 액션이 쓰는
+         *          키로 바꿔도 아무 말이 없었다 — 같은 패널의 "Key Conflict Matrix" 탭이 그제서야 알려 준다.
+         *          엔진에는 그 질문에 답하는 `ActionMap::hasBindingConflict` 가 이미 있었는데 아무도 부르지
+         *          않았다. 되돌리지는 않는다(덮어쓰기를 원할 수 있다) — 대신 무엇과 부딪히는지 남긴다.
+         */
+        void rebindSelectedAction( sw::Key newKey );
         void drawOscilloscopeTab();
         void drawInputSimulatorTab();
         void drawInputReplayTab();

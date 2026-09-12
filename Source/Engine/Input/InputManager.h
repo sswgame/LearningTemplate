@@ -130,6 +130,12 @@ namespace sw
         bool isPointerInside() const { return _pMouse != nullptr ? _pMouse->isPointerInside() : false; }
         bool wasPointerEntered() const { return _pMouse != nullptr ? _pMouse->wasPointerEntered() : false; }
         bool wasPointerLeft() const { return _pMouse != nullptr ? _pMouse->wasPointerLeft() : false; }
+        /**
+         * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true.
+         * @details 예전에는 ActionMap 에 있었다. 하지만 이것은 **액션이 아니라 장치 상태**이고, 쓰는 값도
+         *          전부 여기 있다(isPointerInside · getMousePosition) — 물어볼 곳이 하나여야 한다.
+         */
+        bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
         MouseLockMode getMouseLockMode() const { return _pMouse != nullptr ? _pMouse->getLockMode() : MouseLockMode::None; }
         void          setMouseLockMode( MouseLockMode mode );
