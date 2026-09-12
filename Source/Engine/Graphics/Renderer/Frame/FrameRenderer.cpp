@@ -444,7 +444,7 @@ namespace sw
 
     // ---------------------------------------------------------------------------
 
-    bool FrameRenderer::execute( IRHIDevice* pDevice, Material* pMaterial, Scene* pScene )
+    bool FrameRenderer::execute( IRHIDevice* pDevice, Scene* pScene )
     {
         if ( isReady() == false || pDevice == nullptr )
             return false;

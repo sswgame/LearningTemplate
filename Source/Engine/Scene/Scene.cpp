@@ -274,7 +274,7 @@ namespace sw
         if ( _pFrameRenderer->isReady() == false )
             return; // initialize 실패 시 FrameRenderer가 ERROR 로깅
 
-        if ( _pFrameRenderer->execute( pRhiDevice, _pMaterial, this ) == false )
+        if ( _pFrameRenderer->execute( pRhiDevice, this ) == false )
             SW_LOG_ERROR( "FrameRenderer execute failed." );
     }
 

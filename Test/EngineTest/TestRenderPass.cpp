@@ -674,7 +674,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 
     sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
     device->beginFrame( clear );
-    SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
     device->endFrame( false, false );
     device->waitIdle();
 
@@ -745,7 +745,7 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
 
     const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     device->beginFrame( clear );
-    SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), nullptr, &scene ), "PSO 재생성 후 프레임 실행" );
+    SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), &scene ), "PSO 재생성 후 프레임 실행" );
     device->endFrame( false, false );
     device->waitIdle();
 
@@ -1124,7 +1124,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
     for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
     {
         device->beginFrame( clear );
-        SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
+        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
         device->endFrame( false, false );
     }
     device->waitIdle();
@@ -1542,7 +1542,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
             // 한 프레임을 돌려야 배치가 서고 ensureMaterialPsos 가 퍼뮤테이션 PSO 를 만든다.
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -1693,7 +1693,7 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -1831,7 +1831,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2001,7 +2001,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2153,7 +2153,7 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2294,7 +2294,7 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2417,7 +2417,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2541,7 +2541,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
             device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), nullptr, &scene );
+            bOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
         }
@@ -2885,7 +2885,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            const bool bFrameOk = renderer.execute( device.get(), nullptr, &scene );
+            const bool bFrameOk = renderer.execute( device.get(), &scene );
             device->endFrame( false, false );
             device->waitIdle();
             return bFrameOk;

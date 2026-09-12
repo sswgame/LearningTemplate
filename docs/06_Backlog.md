@@ -295,6 +295,14 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (FrameRenderer::execute 의 죽은 Material 인자를 뗀다)
+
+머티리얼은 렌더 패킷(`GpuSceneSnapshot`)을 타고 간다. 그 전 시절의 인자가 시그니처에 남아 있었다 — 함수 본문이
+한 번도 쓰지 않았고(`unused parameter 'pMaterial'` 경고로 드러났다), 테스트 열두 자리가 전부 `nullptr` 을
+넘겼으며, 유일한 실사용자인 `Scene::render` 만 `_pMaterial` 을 넘기고 무시당했다. 인자를 뗐다.
+`Scene::_pMaterial` 자체는 남는다 — 씬 기본 머티리얼의 참조를 쥐고 있고, `getMaterial()` 로 `GpuScene` 이
+"머티리얼 없는 메시" 의 폴백에 쓴다(언리얼의 기본 머티리얼과 같은 자리).
+
 ### 2026-09-12 (명칭 감사 — 헤더 선언 전수를 동사군으로 훑고, 진짜 불일치만 고친다)
 
 `Source` 와 `Tools/ReflectionParser` 의 **헤더 멤버 함수 선언 전수**를 선행 동사로 묶어 세었다(정의·호출은
