@@ -214,24 +214,6 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-3. 빌드 경고를 게이트로 막을 것인가 — **결정 대기**
-
-2026-09-13 에 세 구성의 빌드 경고를 전부 없애 지금은 **0건**이다. 그런데 그것이 쌓인 이유가 구조적이다 —
-지금까지의 검증 기준이 "빌드 종료 0" 이었고, **경고는 종료 코드를 바꾸지 않는다.** 커밋 메시지마다
-"Debug · Release · Shipping 빌드 종료 0" 이라고 적혀 있는 동안 다섯 종류가 누적됐고, 그중 하나
-(`inline static inline static`)는 명백한 오타였다.
-
-막는 방법은 둘이고, 둘 다 대가가 있다:
-
-- **`-Werror`(또는 CI 로그의 `warning:` grep).** 확실하지만 **컴파일러 버전이 다르면 경고 목록이 다르다.**
-  CI 는 윈도우(저장소가 고정한 `Tools/LLVM`)와 리눅스(배포판 clang)를 함께 돌리므로, 리눅스 쪽 버전이
-  올라가는 날 새 경고 하나로 CI 가 빨개진다. clang-tidy 가 "0건과 72건" 을 오간 것과 같은 문제다(1-1).
-- **그냥 규율로 둔다.** 지금처럼 세는 명령(`cmake --build --preset <preset> 2>&1 | grep -i "warning:"`)을
-  적어 두고 검증 절차에 넣는다. 도구가 강제하지 않으므로 또 쌓일 수 있다.
-
-**판단이 필요한 것은 "리눅스 CI 를 버전 드리프트에 노출시킬 것인가" 하나다.** 윈도우만 게이트하고
-리눅스는 경고를 보고만 하는 절충도 있다 — 윈도우 컴파일러는 저장소가 고정하고 있으니 드리프트가 없다.
-
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
@@ -397,10 +379,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 | `-Winconsistent-missing-destructor-override` | `~LiveReloadManager` — 붙이자 그 뒤에 `IModuleHandleProvider` 의 암시적 복사 deprecated 가 드러나 복사·이동을 명시적으로 막았다 |
 | `-Wunused-but-set-variable` / `-Wunused-private-field` (Shipping·Test) | `TestInput.cpp` 의 `smoothDy`, 그리고 **소비자가 로그뿐**이라 Shipping 에서 죽는 둘 — `ModuleCompiler::_pLiveReloadManager`, `ReloadFileManager` 의 `found` |
 
-**세는 법:** `cmake --build --preset <preset> 2>&1 | grep -i "warning:"` — **0 이 정답이다.** 게이트로
-막을지는 아래 1-3 에 결정 대기로 적어 둔다.
+**그런데 "종료 코드" 는 원인이 아니었다.** 빌드 로그를 한 줄도 빠짐없이 읽어도 그 경고들은 보이지
+않는다 — **경고는 그 TU 가 컴파일되는 순간에만 출력되고, ninja 는 바뀌지 않은 파일을 다시 컴파일하지
+않는다.** 오늘 들어온 경고는 한 번 지나가고 그 뒤로는 영원히 안 보인다. 실제로 확인했다: 일부러
+`unused variable` 하나를 넣고 빌드하면 한 번 나오고, **바로 다시 빌드하면 0건**이다.
 
-**검증.** Debug · Release · Shipping 빌드 종료 0 · **경고 0** · nogpu 5/5 · 전체 ctest 13/13 ·
+그래서 진짜 문제는 "경고를 흘려봤다" 가 아니라 **"지금 트리에 경고가 몇 개인지 물어볼 방법이
+없었다"** 였다. clean 빌드를 하면 답이 나오지만 아무도 매번 clean 빌드를 하지 않는다.
+
+**게이트 대신 질문할 창구를 만들었다 — `Scripts/lint/RunBuildWarnings.py`.** 컴파일 DB 의 **실제 빌드
+명령 그대로**, 코드 생성 없이(`-fsyntax-only`) 전 TU 를 훑는다. 무엇이 dirty 인지와 무관하게 늘 같은
+답이 나온다. 프리셋당 약 1분 30초(TU 470개, 병렬 16).
+
+```powershell
+py -3 Scripts/lint/RunBuildWarnings.py                       # Debug · Release · Shipping 전부 (기본)
+py -3 Scripts/lint/RunBuildWarnings.py --preset Ninja-Debug --filter Graphics
+```
+
+- **기본이 세 구성인 이유**: 경고 집합이 구성마다 다르다. `-Wunused-function` 은 Release 에만,
+  `-Wunused-private-field` 는 Shipping 에만 나온다 — 로그 매크로가 컴파일에서 빠지면서 소비자가
+  사라지는 자리들이다. 한 구성만 보면 그만큼을 놓친다.
+- **PCH 를 끄고 훑는다**(`/Y-`). `/Yu` 로 미리 파싱된 헤더를 불러오면 그 헤더들의 경고가 다시 나오지
+  않는다 — 경고가 숨는 것을 없애려는 도구가 같은 방식으로 숨으면 안 된다.
+- **`Run*` 은 보고하고 `Check*` 이 막는다**(`RunClangTidy.py` 와 같은 규칙). 경고가 있어도 0 을
+  돌려준다. `-Werror` 를 걸지 않은 이유는 **구성·컴파일러 버전마다 집합이 다르기** 때문이다 —
+  CI 는 윈도우(저장소가 고정한 `Tools/LLVM`)와 리눅스(배포판 clang)를 함께 돌리므로, 막아 두면
+  리눅스 clang 이 올라가는 날 새 경고 하나로 빨개진다. clang-tidy 가 "0건과 72건" 을 오간 것과
+  같은 문제다(1-1). **막는 대신 보이게 만든다.**
+
+**검증.** Debug · Release · Shipping 빌드 종료 0 · **`RunBuildWarnings` 세 구성 경고 0** ·
+nogpu 5/5 · 전체 ctest 13/13 ·
 린트 7/7 · `BackendSmoke` 4백엔드 × opaque/transparent 8/8 오류 0(평균 RGB 불변) ·
 VSync 켜고 끄기 4백엔드 8구성 오류 0 · 창 리사이즈 4백엔드 오류 0(스크린샷이 684×481 로 실제로 따라온다) ·
 교체 5구성 종료 0 · 오류 0 · 에디터 창 15 · 빈 패널 0.

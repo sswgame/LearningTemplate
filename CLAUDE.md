@@ -62,7 +62,8 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate c
 
 `Scripts/lint/*.py` enforce the conventions; the same scripts run as `lint`-labelled CTest tests and as
 the git pre-commit hook (`Scripts/setup/InstallGitHooks.py` installs it, `PreCommitLint.py` runs it over
-staged files only).
+staged files only). The naming splits the two jobs: **`Check*` gates** (fails the build/commit),
+**`Run*` reports** (always exits 0, you read the output and decide).
 
 ```powershell
 py -3 Scripts/lint/CheckCodeConventions.py                 # naming/style rules (CI gate)
@@ -72,7 +73,18 @@ py -3 Scripts/lint/CheckEngineLayers.py                    # Engine must not inc
 py -3 Scripts/lint/CheckResourceCasing.py                  # everything under Resource/ must be lowercase
 py -3 Scripts/lint/FormatBranchBraces.py --check            # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/FormatModified.py                       # clang-format the working-tree changes
+py -3 Scripts/lint/RunBuildWarnings.py                     # compiler warnings still in the tree (report, not a gate)
+py -3 Scripts/lint/RunClangTidy.py                         # static analysis (report, not a gate)
 ```
+
+- **Grepping a build for `warning:` does not work.** A warning is printed only when that TU is compiled,
+  and ninja never recompiles unchanged files — so an existing warning is invisible on every build after
+  the one that introduced it. `RunBuildWarnings.py` re-asks the question over the whole tree
+  (`-fsyntax-only`, real build flags from the compile DB) in ~1.5 min per preset, and defaults to
+  sweeping Debug · Release · Shipping because **the warning set differs per configuration**.
+  The build you just ran already reports warnings your own change introduced (it recompiled exactly the
+  affected TUs); this answers the other question — what is left in the tree. Run it when finishing a
+  chunk of work, not on every edit.
 
 ## Architecture
 

@@ -468,8 +468,10 @@ py -3 Scripts/dev/BackendSmoke.py                                               
   어긋나면 그 뒤의 Present 가 `INVALID_CALL` 이 되는데, 리사이즈를 안 하면 영원히 드러나지 않는다.
   확인은 스크린샷 크기로 한다 — 창을 700×520 으로 바꾸고 `-gv_screenshot` 을 찍으면 PPM 헤더가
   `684 481`(클라이언트 영역)로 따라와야 하고, 로그의 `[Error]` 는 0 이어야 한다.
-- **빌드 경고는 종료 코드를 바꾸지 않는다.** `cmake --build --preset <preset> 2>&1 | grep -i "warning:"` 가
-  0 이어야 한다 — Debug · Release · Shipping 각각.
+- **빌드 로그를 grep 해서는 경고를 셀 수 없다.** 경고는 그 TU 가 컴파일되는 순간에만 나오고, ninja 는
+  바뀌지 않은 파일을 다시 컴파일하지 않는다 — 경고를 들여온 그 빌드 이후로는 영원히 안 보인다.
+  `py -3 Scripts/lint/RunBuildWarnings.py` 가 트리 전체에 다시 물어본다(기본이 Debug · Release · Shipping
+  셋이다 — 구성마다 경고 집합이 다르다). **0 이 정답이다.**
 
 ---
 
