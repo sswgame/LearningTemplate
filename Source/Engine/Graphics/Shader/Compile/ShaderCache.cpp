@@ -51,8 +51,23 @@ namespace sw
 
     string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
     {
-        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
-        return FileUtil::joinPath( FileUtil::joinPath( "Saved/ShaderCache", rhiFolder ), ShaderCacheInternal::makeBinaryFileName( desc ) );
+        // **경로에 유효 소스 해시를 한 칸 끼운다.** 예전엔 경로가 소스와 무관하고 "캐시 파일이 소스보다
+        // 새것인가" 를 파일 시간으로 봤는데, 이 저장소는 산출물까지 커밋해서 `git pull` 이 시간 순서를
+        // 임의로 뒤집는다(ShaderBaker::computeEffectiveSourceHash 주석). 경로가 다르면 낡은 것은 애초에
+        // 찾히지 않으므로 시간 비교가 필요 없다 — 남는 폴더는 Saved/ 안이라 버려도 그만이다.
+        //
+        // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 베이커가 굽는 이름과 글자 단위로 같아야
+        // 하기 때문이다(규칙이 둘이면 그중 하나가 정본을 이긴다 — `ShaderBakerTest` 가 지키는 계약).
+        const string_view rhiFolder  = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
+        const string      absPath    = ResourceUtil::getResourcePath( desc._filePath );
+        const uint64      sourceHash = absPath.empty() ? 0u : ShaderBaker::computeEffectiveSourceHash( absPath );
+
+        StringBuilder<constant::kMaxBuffer64> sb;
+        sb.appendFormat( "%#", Fmt( sourceHash, Format( 16, Format::Padding::Zero ).hex() ) );
+
+        const string rhiDir    = FileUtil::joinPath( "Saved/ShaderCache", rhiFolder );
+        const string sourceDir = FileUtil::joinPath( rhiDir, string( sb.c_str(), sb.size() ) );
+        return FileUtil::joinPath( sourceDir, ShaderCacheInternal::makeBinaryFileName( desc ) );
     }
 
     ShaderCache::ShaderCache()
@@ -81,7 +96,7 @@ namespace sw
     {
         string absPath;
         string cacheKey;
-        uint64 currentTimestamp{ 0 };
+        uint64 currentSourceHash{ 0 };
 
         absPath = ResourceUtil::getResourcePath( desc._filePath );
 
@@ -94,7 +109,7 @@ namespace sw
         cacheKey.assign( sb.c_str(), sb.size() );
 
         if ( absPath.empty() == false )
-            currentTimestamp = ShaderBaker::computeEffectiveSourceTimestamp( absPath );
+            currentSourceHash = ShaderBaker::computeEffectiveSourceHash( absPath );
 
         // 0) 인메모리 캐시 조회
         {
@@ -102,7 +117,7 @@ namespace sw
             const auto              iter = _mapCache.find( cacheKey );
             if ( iter != _mapCache.end() )
             {
-                if ( iter->second._lastTimestamp == currentTimestamp && currentTimestamp != 0 )
+                if ( iter->second._lastTimestamp == currentSourceHash && currentSourceHash != 0 )
                     return iter->second._result;
             }
         }
@@ -111,8 +126,7 @@ namespace sw
         const string localCachePath = makeLocalCachePath( desc );
         if ( FileUtil::fileExists( localCachePath ) )
         {
-            const uint64 localMtime = FileUtil::getFileTimestamp( localCachePath );
-            if ( localMtime >= currentTimestamp || currentTimestamp == 0 )
+            // 경로에 이미 유효 소스 해시가 들어 있다 — 찾혔다는 것이 곧 "이 소스에서 나온 것" 이다.
             {
                 vector<uint8> cacheBytes;
                 if ( FileUtil::readFile( localCachePath, cacheBytes ) && cacheBytes.empty() == false )
@@ -124,7 +138,7 @@ namespace sw
 
                     std::scoped_lock<mutex> lock{ _mutexCache };
                     ShaderCacheEntry        entry{};
-                    entry._lastTimestamp = currentTimestamp;
+                    entry._lastTimestamp = currentSourceHash;
                     entry._desc          = desc;
                     entry._result        = result;
                     _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
@@ -141,22 +155,22 @@ namespace sw
         const string prebakedRelPath = makePrebakedRelativePath( desc );
         bool         bPrebakedUsable = true;
 #if !defined( SW_SHIPPING )
-        // **파일 시간 비교는 개발 빌드에서만 한다.** 배포 빌드에는 다시 컴파일할 길이 없어서,
-        // 시간 하나가 어긋나면 폴백이 아니라 그대로 실패(화면이 빈다)다. 그런데 파일 시간은
-        // 내용과 무관하게 흔들린다 — `git clone` 은 모든 파일을 체크아웃 시각으로 덮어쓰므로
-        // 소스가 바이너리보다 나중에 쓰이는 순간 멀쩡한 팩이 통째로 거부된다.
-        // 배포물의 신선도는 쿠킹 단계가 bake.stamp 의 **내용 해시**로 이미 보증한다
-        // (CookAssets.py --verify-shaders). ShaderReflectionLibrary::tryGet 도 같은 이유로
-        // 이 검사를 개발 빌드에만 걸고 있다.
-        if ( currentTimestamp != 0 )
+        // **신선도는 `bake.stamp` 의 내용 해시로 본다.** 예전엔 구운 파일의 mtime 과 소스의 mtime 을
+        // 비교했는데, 이 저장소는 구운 바이너리까지 커밋하므로 `git pull` 이 둘의 시간 순서를 임의로
+        // 뒤집는다 — 소스가 바뀌었는데도 "바이너리가 더 새것" 이라 낡은 것을 그대로 썼다. 실제로
+        // `forwardlit` 이 라이트 버퍼 이전 바이너리로 돌아, Vulkan 만 다른 그림을 내는 것을 백엔드
+        // 버그로 오인했다. 검사가 개발 빌드 전용인 것은 그대로다 — 배포엔 다시 컴파일할 길이 없어
+        // 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는 쿠킹이 같은 스탬프로 이미 막는다
+        // (CookAssets.py --verify-shaders).
+        if ( absPath.empty() == false )
         {
             const string prebakedAbsPath = ResourceUtil::getResourcePath( prebakedRelPath );
             if ( prebakedAbsPath.empty() == false && FileUtil::fileExists( prebakedAbsPath ) )
             {
-                const uint64 prebakedMtime = FileUtil::getFileTimestamp( prebakedAbsPath );
-                if ( prebakedMtime != 0 && prebakedMtime < currentTimestamp )
+                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( prebakedAbsPath ) );
+                if ( ShaderBaker::isBakedOutputCurrent( binDirAbs, absPath ) == false )
                 {
-                    SW_LOG_TRACE( "Pre-baked shader is older than source — recompiling: %#", prebakedRelPath.c_str() );
+                    SW_LOG_TRACE( "Pre-baked shader does not match the current source — recompiling: %#", prebakedRelPath.c_str() );
                     bPrebakedUsable = false;
                 }
             }
@@ -173,7 +187,7 @@ namespace sw
 
             std::scoped_lock<mutex> lock{ _mutexCache };
             ShaderCacheEntry        entry{};
-            entry._lastTimestamp = currentTimestamp;
+            entry._lastTimestamp = currentSourceHash;
             entry._desc          = desc;
             entry._result        = result;
             _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
@@ -193,7 +207,7 @@ namespace sw
 
             std::scoped_lock<mutex> lock{ _mutexCache };
             ShaderCacheEntry        entry{};
-            entry._lastTimestamp = currentTimestamp;
+            entry._lastTimestamp = currentSourceHash;
             entry._desc          = desc;
             entry._result        = compiledResult;
             _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );

@@ -56,7 +56,7 @@ namespace sw
         // 공유 헤더(.hlsli) 타임스탬프 캐시를 한 번 버린다. 이게 없으면 컴파일 캐시의 키가 그대로라
         // **바뀐 헤더가 반영되지 않는다.** 반대로 캐시를 통째로 우회하지는 않는다 — 그러면 이번
         // 편집과 무관한 셰이더까지 전부 다시 컴파일한다. 키를 정확하게 만들어 두고 캐시가 거르게 한다.
-        ShaderBaker::invalidateSharedHeaderTimestamp();
+        ShaderBaker::invalidateSharedHeaderCache();
 
         // 등록표를 따로 두지 않는다 — **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다.
         // 예전에는 `watchShader` 로 채우는 자기 표를 봤는데 그 함수의 호출부가 하나도 없어서,

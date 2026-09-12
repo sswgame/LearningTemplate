@@ -74,7 +74,8 @@ namespace sw
         // 모프 결과 풀 — **패스당 한 번** 건다. 배치는 시작 오프셋만 루트 상수로 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
-        const RHIStructuredBufferSlot& morphBuffer = _meshMorphPool.getMorphBuffer();
+        const RHIStructuredBufferSlot& morphBuffer = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getRestBuffer()
+                                                                                      : _meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             ctx._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );

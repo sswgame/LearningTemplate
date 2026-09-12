@@ -244,11 +244,12 @@ namespace sw
             const string manifestAbs = ResourceUtil::getResourcePath( binDirRel + getManifestFileName() );
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
-                const uint64 sourceMtime   = ShaderBaker::computeEffectiveSourceTimestamp( sourceAbs );
-                const uint64 manifestMtime = FileUtil::getFileTimestamp( manifestAbs );
-                if ( sourceMtime != 0 && manifestMtime != 0 && manifestMtime < sourceMtime )
+                // 판정 기준은 ShaderCache 와 **같은 것 하나**다 — bake.stamp 의 내용 해시. 파일 시간으로
+                // 보던 시절의 함정은 ShaderBaker::computeEffectiveSourceHash 주석에 적어 두었다.
+                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
+                if ( ShaderBaker::isBakedOutputCurrent( binDirAbs, sourceAbs ) == false )
                 {
-                    SW_LOG_TRACE( "리플렉션 매니페스트가 소스보다 오래됨 — 런타임 리플렉션으로 폴백: %#",
+                    SW_LOG_TRACE( "리플렉션 매니페스트가 지금 소스에서 나온 것이 아님 — 런타임 리플렉션으로 폴백: %#",
                                   string( desc._filePath ).c_str() );
                     return false;
                 }

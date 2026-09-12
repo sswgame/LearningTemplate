@@ -29,10 +29,133 @@ namespace sw
     {
         struct ShaderBakerInternal
         {
-            /** @brief 공유 헤더(.hlsli) 최신 타임스탬프 캐시. 트리 전체를 매번 훑을 수는 없다. */
+            /** @brief 공유 헤더(.hlsli) 내용 해시 캐시. 트리 전체를 매번 훑을 수는 없다. */
             inline static mutex  _s_sharedHeaderMutex{};
-            inline static uint64 _s_sharedHeaderTimestamp{ 0 };
-            inline static bool   _s_bSharedHeaderCached{ false };
+            inline static uint64 _s_sharedHeaderHash{ 0 };
+            inline static bool   _s_bSharedHeaderHashCached{ false };
+
+            /**
+             * @brief 베이크 스탬프 헤더. **버전을 올리면 스탬프가 전부 불일치가 되어 한 번 다 다시 굽는다.**
+             * @details 2 → 3 은 포맷이 아니라 **판정 기준**이 바뀐 것이다(파일 시간 → 내용 해시).
+             *          3 이전 스탬프는 "구운 것이 소스와 같다" 는 보장을 하지 못하므로 믿지 않는다.
+             */
+            inline static const string kBakeStampHeader{ "SWBAKE 3" };
+
+            /** @brief 스탬프의 16자리 hex 를 uint64 로. 형식이 아니면 0 (= 불일치 처리). */
+            static uint64 parseHex64( string_view hex )
+            {
+                uint64 value{ 0 };
+                for ( const utf8 c : hex )
+                {
+                    uint64 digit{ 0 };
+                    if ( c >= '0' && c <= '9' )
+                        digit = static_cast<uint64>( c - '0' );
+                    else if ( c >= 'a' && c <= 'f' )
+                        digit = static_cast<uint64>( c - 'a' ) + 10u;
+                    else
+                        return 0;
+                    value = ( value << 4 ) | digit;
+                }
+                return value;
+            }
+
+            /**
+             * @brief 소스 한 파일의 **내용 해시** — CR 을 뺀 바이트의 FNV-1a 64.
+             * @details 베이크 스탬프·베이크 판정·컴파일 캐시 키가 **같은 값**을 써야 한다. 예전에는
+             *          스탬프만 내용 해시였고 판정은 파일 시간이었는데, 이 저장소는 구운 바이너리까지
+             *          커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 **임의의 순서**로 덮어쓴다 —
+             *          그러면 소스가 바뀌었는데도 "산출물이 더 새것" 이라 판정돼 그대로 넘어간다.
+             *          실제로 그 일이 일어나 `forwardlit` 바이너리가 라이트 버퍼 이전 것으로 커밋됐고,
+             *          Vulkan 만 다른 그림을 내는 것을 **백엔드 버그로 오인**해 오래 쫓았다.
+             */
+            static uint64 computeContentHash( string_view absPath )
+            {
+                vector<uint8> bytes;
+                if ( FileUtil::readFile( absPath, bytes ) == false )
+                    return 0;
+
+                // 줄 끝 정규화는 writeBakeStamp · CookAssets.py 와 같아야 한다(스탬프 주석 참고).
+                vector<uint8> normalizedByte;
+                normalizedByte.reserve( bytes.size() );
+                for ( const uint8 byte : bytes )
+                {
+                    if ( byte != static_cast<uint8>( '\r' ) )
+                        normalizedByte.push_back( byte );
+                }
+                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ), normalizedByte.size(), false );
+            }
+
+            /** @brief `bake.stamp` 한 장을 읽은 결과. */
+            struct StampInfo
+            {
+                /// @brief 상대경로(소문자) → 그 소스의 내용 해시. 스탬프가 없거나 버전이 다르면 빈 맵이다.
+                unordered_map<string, uint64> _mapHash;
+                /// @brief 스탬프에 적힌 모든 `.hlsli` 해시가 지금 소스와 같은가.
+                bool _bHeadersCurrent{ false };
+            };
+
+            /// @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시 — 베이크 루프가 레시피마다 부른다.
+            inline static unordered_map<string, StampInfo> _s_mapStamp{};
+
+            /**
+             * @brief `bin/<rhi>/bake.stamp` 를 읽어 소스 해시 표를 돌려줍니다 (폴더당 한 번 읽고 캐시).
+             * @details 스탬프 버전이 다르면 **빈 표**를 돌려준다 — 그러면 모든 것이 낡은 것으로 판정돼
+             *          한 번 전부 다시 굽는다. 버전을 올리는 것이 곧 강제 재굽기다.
+             * @warning 참조를 돌려주므로 **`_s_sharedHeaderMutex` 를 쥔 채로만** 부를 것. 캐시에 삽입이
+             *          일어나면 앞서 돌려준 참조가 무효가 된다.
+             */
+            static const StampInfo& readBakeStamp( const string& binDirectory, const string& shadersDir )
+            {
+                const auto cached = _s_mapStamp.find( binDirectory );
+                if ( cached != _s_mapStamp.end() )
+                    return cached->second;
+
+                StampInfo    info{};
+                const string stampPath = FileUtil::joinPath( binDirectory, "bake.stamp" );
+                string       text;
+                if ( FileUtil::readTextFile( stampPath, text ) && text.compare( 0, kBakeStampHeader.size(), kBakeStampHeader ) == 0 )
+                {
+                    size_t pos = text.find( '\n' );
+                    while ( pos != string::npos )
+                    {
+                        const size_t lineBegin = pos + 1;
+                        const size_t lineEnd   = text.find( '\n', lineBegin );
+                        const string line      = text.substr( lineBegin, ( lineEnd == string::npos ) ? string::npos : lineEnd - lineBegin );
+                        pos                    = lineEnd;
+
+                        const size_t space = line.find( ' ' );
+                        if ( space == 16 )
+                            info._mapHash.emplace( line.substr( space + 1 ), parseHex64( line.substr( 0, space ) ) );
+                    }
+                }
+
+                // 공유 헤더는 어느 셰이더가 무엇을 include 하는지 파싱하지 않고 **전부** 본다 —
+                // 넉넉하게 굽는 쪽이 안전하다(과거 타임스탬프 판정과 같은 정책).
+                info._bHeadersCurrent = info._mapHash.empty() == false;
+                vector<string> listHeader;
+                FileUtil::collectFiles( shadersDir, ".hlsli", listHeader, true );
+                for ( const string& headerPath : listHeader )
+                {
+                    const string rel  = makeStampKey( headerPath, shadersDir );
+                    const auto   iter = info._mapHash.find( rel );
+                    if ( iter == info._mapHash.end() || iter->second != computeContentHash( headerPath ) )
+                    {
+                        info._bHeadersCurrent = false;
+                        break;
+                    }
+                }
+
+                return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
+            }
+
+            /** @brief 소스 절대경로를 스탬프 키(shaders/ 기준 소문자 상대경로)로 바꿉니다. */
+            static string makeStampKey( string_view absSourcePath, const string& shadersDir )
+            {
+                const string norm = FileUtil::normalizeSeparators( absSourcePath );
+                if ( norm.size() <= shadersDir.size() + 1 )
+                    return string{};
+                return StringUtil::toLower( norm.substr( shadersDir.size() + 1 ).c_str() );
+            }
 
             struct BakeRecipe
             {
@@ -156,7 +279,7 @@ namespace sw
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 전부 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다. 해시는 CR 을
-             *          뺀 바이트로 계산한다(버전 2) — 아래 정규화 주석 참고.
+             *          뺀 바이트로 계산한다(`computeContentHash`) — 판정 쪽과 같은 함수다.
              * @param binDirectory 매니페스트를 쓴 폴더 (`<domain>/shaders/bin/<rhi>`)
              */
             static void writeBakeStamp( string_view binDirectory )
@@ -182,26 +305,12 @@ namespace sw
                     if ( normSource.size() <= shadersDir.size() + 1 )
                         continue;
 
-                    vector<uint8> bytes;
-                    if ( FileUtil::readFile( normSource, bytes ) == false )
+                    // 해싱과 키 만들기는 **판정 쪽과 같은 함수**를 쓴다 — 스탬프와 판정이 다른 규칙을
+                    // 쓰던 것이 이 파일이 고치는 버그였다. 줄 끝 정규화 사연은 computeContentHash 주석에 있다.
+                    const uint64 hash    = computeContentHash( normSource );
+                    const string relPath = makeStampKey( normSource, shadersDir );
+                    if ( hash == 0 || relPath.empty() )
                         continue;
-
-                    // 줄바꿈을 LF 로 맞춘 뒤 해싱한다. 이 저장소에는 `.gitattributes` 가 없어 같은 커밋도
-                    // 체크아웃마다 줄 끝이 달라질 수 있고(실제로 `instancesort.hlsl` 하나만 LF 였다),
-                    // 바이트를 그대로 해싱하면 **같은 소스가 PC 마다 다른 값**을 낸다. 그러면 한쪽에서
-                    // Shipping 을 빌드할 때마다 스탬프가 다시 쓰여 작업 트리가 더러워지고, 두 PC 가
-                    // 서로의 스탬프를 번갈아 덮어쓴다.
-                    vector<uint8> normalizedByte;
-                    normalizedByte.reserve( bytes.size() );
-                    for ( const uint8 byte : bytes )
-                    {
-                        if ( byte != static_cast<uint8>( '\r' ) )
-                            normalizedByte.push_back( byte );
-                    }
-
-                    const uint64 hash    = StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ),
-                                                                      normalizedByte.size(), false );
-                    const string relPath = StringUtil::toLower( normSource.substr( shadersDir.size() + 1 ).c_str() );
 
                     StringBuilder<constant::kMaxBuffer256> sb;
                     sb.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
@@ -211,7 +320,7 @@ namespace sw
 
                 std::sort( listLine.begin(), listLine.end() );
 
-                string text = "SWBAKE 2\n";
+                string text = kBakeStampHeader + "\n";
                 for ( const string& line : listLine )
                 {
                     text += line;
@@ -542,43 +651,69 @@ namespace sw
         return "Main";
     }
 
-    uint64 ShaderBaker::getSharedHeaderTimestamp()
+    void ShaderBaker::invalidateSharedHeaderCache()
     {
-        // getOrCompile 이 PSO 마다 부르므로 값을 캐시한다 — 트리 전체를 매번 훑을 수는 없다.
-        // 다만 **프로세스당 한 번**으로 얼려 두면 안 된다. 실행 중 `.hlsli` 를 고치고 수동 리로드를
-        // 눌러도 키가 그대로라 컴파일 캐시가 옛 바이트코드를 돌려준다. 리로드가
-        // invalidateSharedHeaderTimestamp() 로 한 번 버려 준다.
         std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
-        if ( ShaderBakerInternal::_s_bSharedHeaderCached )
-            return ShaderBakerInternal::_s_sharedHeaderTimestamp;
+        ShaderBakerInternal::_s_bSharedHeaderHashCached = false;
+        ShaderBakerInternal::_s_mapStamp.clear();
+    }
 
-        uint64       newest  = 0;
-        const string rootDir = ResourceUtil::getRootFolderPath();
+    uint64 ShaderBaker::getSharedHeaderContentHash()
+    {
+        std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
+        if ( ShaderBakerInternal::_s_bSharedHeaderHashCached )
+            return ShaderBakerInternal::_s_sharedHeaderHash;
+
+        // 경로까지 섞는다 — 헤더를 **지우기만** 해도 값이 달라져야 한다(내용만 XOR 하면 같은 내용 둘이
+        // 서로를 지운다). 정렬은 collectFiles 순서에 기대지 않고 곱셈 누적으로 순서 무관하게 만든다.
+        uint64       combined = 0;
+        const string rootDir  = ResourceUtil::getRootFolderPath();
         if ( rootDir.empty() == false )
         {
             vector<string> listHeader;
             FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true );
             for ( const string& headerPath : listHeader )
-                newest = MathUtil::max( newest, FileUtil::getFileTimestamp( headerPath ) );
+            {
+                const string norm = StringUtil::toLower( FileUtil::normalizeSeparators( headerPath ).c_str() );
+                combined += StringUtil::computeHash64( norm, false, ShaderBakerInternal::computeContentHash( headerPath ) );
+            }
         }
 
-        ShaderBakerInternal::_s_sharedHeaderTimestamp = newest;
-        ShaderBakerInternal::_s_bSharedHeaderCached   = true;
-        return newest;
+        ShaderBakerInternal::_s_sharedHeaderHash        = combined;
+        ShaderBakerInternal::_s_bSharedHeaderHashCached = true;
+        return combined;
     }
 
-    void ShaderBaker::invalidateSharedHeaderTimestamp()
+    uint64 ShaderBaker::computeEffectiveSourceHash( string_view absShaderPath )
     {
-        std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
-        ShaderBakerInternal::_s_bSharedHeaderCached = false;
-    }
-
-    uint64 ShaderBaker::computeEffectiveSourceTimestamp( string_view absShaderPath )
-    {
-        const uint64 sourceMtime = FileUtil::getFileTimestamp( absShaderPath );
-        if ( sourceMtime == 0 )
+        const uint64 sourceHash = ShaderBakerInternal::computeContentHash( absShaderPath );
+        if ( sourceHash == 0 )
             return 0;
-        return MathUtil::max( sourceMtime, getSharedHeaderTimestamp() );
+        return StringUtil::computeHash64( to_string( getSharedHeaderContentHash() ), false, sourceHash );
+    }
+
+    bool ShaderBaker::isBakedOutputCurrent( string_view binDirectory, string_view absShaderPath )
+    {
+        // <domain>/shaders/bin/<rhi> → <domain>/shaders (writeBakeStamp 와 같은 되짚기)
+        const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
+        const string shadersDir = FileUtil::getDirectoryPart( FileUtil::getDirectoryPart( rhiDir ) );
+        if ( shadersDir.empty() )
+            return false;
+
+        const string normSource = FileUtil::normalizeSeparators( absShaderPath );
+        const uint64 sourceHash = ShaderBakerInternal::computeContentHash( normSource );
+        if ( sourceHash == 0 )
+            return false;
+
+        std::scoped_lock<mutex> lock{ ShaderBakerInternal::_s_sharedHeaderMutex };
+
+        const ShaderBakerInternal::StampInfo& stamp = ShaderBakerInternal::readBakeStamp( rhiDir, shadersDir );
+        if ( stamp._bHeadersCurrent == false )
+            return false;
+
+        const string stampKey = ShaderBakerInternal::makeStampKey( normSource, shadersDir );
+        const auto   iter     = stamp._mapHash.find( stampKey );
+        return iter != stamp._mapHash.end() && iter->second == sourceHash;
     }
 
     string_view ShaderBaker::getSubfolderForFormat( ShaderTargetFormat format )
@@ -797,9 +932,8 @@ namespace sw
             if ( shaderPos == string::npos )
                 continue;
 
-            const string shaderDir   = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
-            const string stemLower   = ShaderBakerInternal::getStemLower( normPath );
-            const uint64 sourceMtime = computeEffectiveSourceTimestamp( normPath );
+            const string shaderDir = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
+            const string stemLower = ShaderBakerInternal::getStemLower( normPath );
 
             for ( ShaderTargetFormat fmt : listTargetFormat )
             {
@@ -809,12 +943,12 @@ namespace sw
                 const string      fileName  = computeBinaryFileName( stemLower, recipe._stage, recipe._entryPoint, recipe._permHash, ext );
                 const string      outPath   = FileUtil::joinPath( outDir, fileName );
 
-                bool bUpToDate = false;
-                if ( bForceAll == false && FileUtil::fileExists( outPath ) )
-                {
-                    const uint64 outMtime = FileUtil::getFileTimestamp( outPath );
-                    bUpToDate             = ( outMtime >= sourceMtime );
-                }
+                // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 구운 바이너리까지 커밋하므로
+                // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다 — 소스가 바뀌었는데도
+                // "산출물이 더 새것" 이 되어 그대로 넘어간다. 실제로 `forwardlit` 이 라이트 버퍼 이전
+                // 바이너리로 커밋됐고, Vulkan 만 다른 그림을 내는 것을 백엔드 버그로 오인했다.
+                const bool bUpToDate = ( bForceAll == false ) && FileUtil::fileExists( outPath ) &&
+                                       isBakedOutputCurrent( outDir, normPath );
 
                 if ( bUpToDate == false )
                 {

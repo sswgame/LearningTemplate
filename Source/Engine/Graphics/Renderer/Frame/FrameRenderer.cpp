@@ -42,6 +42,19 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE_INT( gv_viewMode, 0, "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)" );
 
+    /**
+     * @brief `-gv_morphDiag=<0|1|2|3>` — GPU 메시 모프 경로를 백엔드 능력표와 **무관하게** 돌려 봅니다.
+     * @details 0 = 평소대로(`RHICapabilities::_bGpuMeshMorph` 를 따른다), 1 = 능력표를 무시하고 켠다,
+     *          2 = 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 물린다**,
+     *          3 = 2 에 더해 풀 원소의 노멀 자리에 **원소 번호**를 적는다.
+     *
+     *          2 의 정답은 **레스트 포즈와 같은 그림**이다 — 컴퓨트가 아예 안 돌기 때문이다. 그래서
+     *          2 만으로 "컴퓨트가 범인인가" 가 갈린다(백로그 1-4 는 이 모드로 컴퓨트를 무죄로 만들었다).
+     *          3 은 거기서 한 걸음 더 간다: 번호표를 읽으면 "제 원소를 짚었는가" 를 위치 값과 **따로**
+     *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 한 장으로 갈린다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
+
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
         , _pCmdOwnerDevice{ nullptr }
@@ -65,6 +78,7 @@ namespace sw
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
         , _meshMorphCb{ 0 }
         , _meshMorphCbIndex{ kInvalidDescriptorIndex }
+        , _bMorphBindsRest{ SW_FALSE }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ SW_FALSE }
@@ -324,7 +338,10 @@ namespace sw
     {
         // 백엔드가 못 하면 풀을 만들지도 않는다 — 배치의 base 가 kInvalidBase 로 남아 셰이더가
         // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같은 자리). 자세한 사연은 RHICapabilities.h.
-        if ( _pDevice == nullptr || _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+        _bMorphBindsRest = SW_FALSE;
+        if ( _pDevice == nullptr )
+            return;
+        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && gv_morphDiag == 0 )
             return;
 
         // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
@@ -356,6 +373,41 @@ namespace sw
 
         if ( _meshMorphPool.isDispatchable() == false )
             return;
+
+        // 진단 2 — 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 물린다(위 gv 주석 참고).
+        if ( gv_morphDiag == 2 )
+        {
+            _bMorphBindsRest = SW_TRUE;
+            return;
+        }
+
+        // 진단 3 — 레스트 버퍼에 **위치는 진짜 값, 노멀 자리에는 원소 번호**를 적어 올리고 컴퓨트를
+        //          건너뛴다. 그러면 한 장으로 "정점 셰이더가 제 원소를 짚었는가"(번호표)와 "그 원소의
+        //          위치가 정점 스트림과 같은가"를 **따로** 볼 수 있다 — 값만 비교해서는 둘을 못 가른다.
+        //          백로그 1-4 의 OpenGL 증상을 좁힌 것이 이 모드다.
+        if ( gv_morphDiag == 3 )
+        {
+            _listScratchMorphTag.clear();
+            _listScratchMorphTag.reserve( _meshMorphPool.getVertexCount() );
+            uint32 element = 0;
+            for ( const Mesh* pMesh : _listScratchMorphMesh )
+            {
+                if ( pMesh == nullptr )
+                    continue;
+                for ( const RHIVertex& vertex : pMesh->getVertices() )
+                {
+                    GpuMorphVertex tagged{};
+                    tagged._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
+                    tagged._normal   = float4{ static_cast<float32>( element ), 0.0f, 0.0f, 0.0f };
+                    _listScratchMorphTag.push_back( tagged );
+                    ++element;
+                }
+            }
+            _bMorphBindsRest = SW_TRUE;
+            _meshMorphPool.getRestBuffer().upload( _pDevice, _listScratchMorphTag.data(),
+                                                   static_cast<uint32>( _listScratchMorphTag.size() * sizeof( GpuMorphVertex ) ) );
+            return;
+        }
 
         const RHIPipelineStateHandle morphPso = getEnginePso( RenderPassType::MeshMorph );
         if ( morphPso == 0 || _meshMorphCb == 0 || _meshMorphCbIndex == kInvalidDescriptorIndex )

@@ -530,6 +530,10 @@ namespace sw
         RHIDescriptorIndex _meshMorphCbIndex;
         /// @brief GPU 가 변형한 정점 풀 — RT 소유(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
+        /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는가.
+        uint8 _bMorphBindsRest;
+        /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점. 스크래치 — 프레임 밖에서 의미 없다.
+        vector<GpuMorphVertex> _listScratchMorphTag;
         /// @brief 이번 프레임 모프 대상 메시 — 프레임마다 할당하지 않으려고 들고 있는다.
         vector<Mesh*> _listScratchMorphMesh;
         /// @brief 씬 라이트 구조버퍼 — RT 소유. 포워드·디퍼드가 같은 버퍼를 읽는다.

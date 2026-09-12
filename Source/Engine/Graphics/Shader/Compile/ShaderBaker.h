@@ -87,24 +87,35 @@ namespace sw
         static string_view getDefaultEntryPointForStage( ShaderStage stage );
 
         /**
-         * @brief 소스와 **공유 헤더(.hlsli)** 중 가장 새로운 타임스탬프.
-         * @details 베이크 산출물이 최신인지 판단하는 유일한 기준이다. `.hlsl` 하나만 보면
-         *          `binding.hlsli` 같은 공유 헤더를 고쳐도 아무것도 다시 굽지 않아, 바이너리와
-         *          리플렉션 매니페스트가 소스와 조용히 어긋난다(그 어긋남은 DX12 GPU 페이지 폴트로
-         *          나타난 적이 있다). 어느 셰이더가 어떤 헤더를 include 하는지는 파싱하지 않고
-         *          **모든 .hlsli 중 최신값**으로 넉넉하게 잡는다 — 과하게 굽는 쪽이 안전하다.
+         * @brief 소스와 **공유 헤더(.hlsli)** 를 합친 내용 해시 — 산출물이 최신인지 보는 **유일한 기준**.
+         * @details `.hlsl` 하나만 보면 `binding.hlsli` 같은 공유 헤더를 고쳐도 아무것도 다시 굽지 않아,
+         *          바이너리와 리플렉션 매니페스트가 소스와 조용히 어긋난다(그 어긋남은 DX12 GPU 페이지
+         *          폴트로 나타난 적이 있다). 어느 셰이더가 어떤 헤더를 include 하는지는 파싱하지 않고
+         *          **모든 .hlsli** 를 넣어 넉넉하게 잡는다 — 과하게 굽는 쪽이 안전하다.
+         *
+         *          **파일 시간이 아니라 내용이다.** 이 저장소는 구운 바이너리까지 커밋하므로 `git pull`
+         *          이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다 — 소스가 바뀌었는데도 "산출물이
+         *          더 새것" 으로 판정돼 그대로 넘어간다. 실제로 `forwardlit` 이 라이트 버퍼 이전
+         *          바이너리로 커밋됐고, Vulkan 만 다른 그림을 내는 것을 백엔드 버그로 오인했다.
          */
-        static uint64 computeEffectiveSourceTimestamp( string_view absShaderPath );
-        /** @brief Resource 아래 모든 .hlsli 중 가장 새로운 타임스탬프 (값을 캐시한다). */
-        static uint64 getSharedHeaderTimestamp();
+        static uint64 computeEffectiveSourceHash( string_view absShaderPath );
+        /** @brief Resource 아래 모든 .hlsli 의 경로+내용을 합친 해시 (값을 캐시한다). */
+        static uint64 getSharedHeaderContentHash();
 
         /**
-         * @brief 캐시된 공유 헤더 타임스탬프를 버려, 다음 조회가 다시 훑게 합니다.
+         * @brief 구운 산출물이 지금 소스에서 나온 것인가 — `bin/<rhi>/bake.stamp` 의 내용 해시로 봅니다.
+         * @param binDirectory `<domain>/shaders/bin/<rhi>` (스탬프가 있는 폴더)
+         * @param absShaderPath 원본 `.hlsl` 절대경로
+         */
+        static bool isBakedOutputCurrent( string_view binDirectory, string_view absShaderPath );
+
+        /**
+         * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 훑게 합니다.
          * @details 실행 중 `.hlsli` 를 고치고 수동 리로드를 누르는 경로에서만 부른다. 이걸 안 부르면
          *          컴파일 캐시의 키가 그대로라 **바뀐 헤더가 반영되지 않는다** — 로그는 성공을 찍는데
          *          화면은 그대로인, 가장 조용한 종류의 어긋남이다.
          */
-        static void invalidateSharedHeaderTimestamp();
+        static void invalidateSharedHeaderCache();
 
         /** @brief 타깃 포맷에 해당하는 서브폴더 이름("dx11", "dx12", "vulkan", "opengl")을 반환합니다. */
         static string_view getSubfolderForFormat( ShaderTargetFormat format );

@@ -123,17 +123,12 @@ namespace sw
                     caps._bComputeRootConstants = SW_TRUE;
                     caps._bIndirectDraw         = SW_TRUE;
                     caps._bGpuCulling           = SW_TRUE;
-                    // **GL 만 꺼져 있다.** 원인이 아직 안 닫혔다 — 배제한 것과 남은 것은 백로그 1-4 에 있다.
-                    // 요약: 정점 스테이지 SSBO 한도(실측 96)도, `gl_VertexID` 의미(세 백엔드 동일)도,
-                    // 인덱스 공간 추측(고쳤다)도, 컴퓨트 상수버퍼도 아니다. 컴퓨트가 쓰고 정점 셰이더가
-                    // 읽는 것 자체는 되는데(상수를 쓰면 도형이 그만큼 변한다) **일부 정점이 무너진다**.
-                    // 원인을 찾기 전에는 켜지 않는다 — 백엔드 하나만 조용히 다른 그림을 내는 것이
-                    // 이 저장소에서 가장 비싼 버그였다. 지금은 GL 이 레스트 포즈로 깨끗이 폴백한다.
-                    // **GL 만 꺼져 있다.** 원인이 아직 안 닫혔다 — 좁혀진 상태는 백로그 1-4 에 있다.
-                    // 요약: 컴퓨트의 **쓰기**는 GL 에서도 맞는데(상수를 쓰면 98% 가 그대로 읽힌다)
-                    // **레스트 버퍼 읽기**가 틀린다(항등 복사인데 정점 스트림과 다르다).
-                    // 원인을 찾기 전에는 켜지 않는다 — 백엔드 하나만 조용히 다른 그림을 내는 것이
-                    // 이 저장소에서 가장 비싼 버그였다. 지금은 GL 이 레스트 포즈로 깨끗이 폴백한다.
+                    // **GL 만 꺼져 있다.** 원인은 아직 안 닫혔다 — 배제한 것과 남은 한 문장은 백로그 1-4 다.
+                    // 요약: 컴퓨트도, 업로드도, 버퍼 내용도, 바인딩도, 인덱싱도, 루트 상수도, 간접 인자도
+                    // 아니다(전부 되읽어 확인했다). 남은 사실은 하나다 — 정점 셰이더가 계산한 원소 번호가
+                    // **정점 스트림이 준 정점보다 하나 앞선다**. 원인을 찾기 전에는 켜지 않는다:
+                    // 백엔드 하나만 조용히 다른 그림을 내는 것이 이 저장소에서 가장 비싼 버그였다.
+                    // 지금은 GL 이 레스트 포즈로 깨끗이 폴백한다(`-gv_morphDiag` 로 강제로 켜 볼 수 있다).
                     caps._bGpuMeshMorph             = SW_FALSE;
                     caps._bMultiDrawIndirect        = SW_TRUE;
                     caps._bParallelCommandRecording = SW_FALSE;
@@ -151,8 +146,12 @@ namespace sw
                     caps._bComputeRootConstants = SW_TRUE;
                     caps._bIndirectDraw         = SW_TRUE;
                     caps._bGpuCulling           = SW_TRUE;
-                    caps._bGpuMeshMorph         = SW_TRUE;
-                    caps._bMultiDrawIndirect    = SW_TRUE;
+                    // 한때 "Vulkan 도 GL 과 같이 깨졌다" 고 적었는데 **그건 구운 셰이더가 낡았던 것**이다
+                    // (`forwardlit` 바이너리가 라이트 버퍼 이전 것이었다). 베이크 신선도 판정을 파일
+                    // 시간에서 내용 해시로 바꾼 뒤 다시 재니 DX12·DX11 과 픽셀 수가 같다. 백엔드 하나가
+                    // 다른 그림을 낼 때 **셰이더 산출물부터 의심할 것** — 백로그 1-4 참고.
+                    caps._bGpuMeshMorph      = SW_TRUE;
+                    caps._bMultiDrawIndirect = SW_TRUE;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기
                     // 때문이다 — DX12 의 커맨드 얼로케이터와 같은 제약이다.

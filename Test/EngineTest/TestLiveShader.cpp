@@ -138,7 +138,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     // 수동 리로드가 하는 것과 같다 — 타임스탬프를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
     // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
     // 다시 컴파일된다.
-    sw::ShaderBaker::invalidateSharedHeaderTimestamp();
+    sw::ShaderBaker::invalidateSharedHeaderCache();
     const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHLSL( desc );
 
     SW_ASSERT_TRUE( reloaded._bSuccess );

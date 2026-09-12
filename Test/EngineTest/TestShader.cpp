@@ -849,3 +849,50 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
     SW_EXPECT_TRUE( noPs._bHasPixelShader == SW_FALSE );
     SW_EXPECT_EQUAL( 2u, noPs._numRenderTargets );
 }
+
+/**
+ * @brief 구운 산출물의 신선도를 **파일 시간이 아니라 내용 해시**로 판정하는지 봅니다.
+ * @details 이 저장소는 구운 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의
+ *          순서로 덮어쓴다. 예전 판정(`산출물 mtime >= 소스 mtime`)은 그때 "이미 최신" 이라 답했고,
+ *          그래서 `forwardlit` 바이너리가 라이트 버퍼 이전 것으로 커밋된 채 돌았다 — Vulkan 만 다른
+ *          그림을 내는 것을 백엔드 버그로 오인해 오래 쫓았다. 여기서 막는다.
+ */
+SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
+{
+    const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "engine/shaders/forwardlit.hlsl" );
+    const sw::string binDir     = sw::ResourceUtil::getResourcePath( "engine/shaders/bin/dx12" );
+    // 구운 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
+    if ( shaderPath.empty() || binDir.empty() )
+        return;
+
+    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
+
+    // 스탬프에 없는 소스는 최신일 수 없다 — "파일이 있으니 최신" 으로 새지 않는지 본다.
+    const sw::string shadersDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::normalizeSeparators( shaderPath ) );
+    SW_EXPECT_FALSE( sw::ShaderBaker::isBakedOutputCurrent( binDir, sw::FileUtil::joinPath( shadersDir, "nosuchshader.hlsl" ) ) );
+
+    // 유효 소스 해시는 셰이더마다 달라야 한다(같으면 캐시 키가 셰이더를 못 가른다).
+    const uint64 hashForward = sw::ShaderBaker::computeEffectiveSourceHash( shaderPath );
+    const uint64 hashTonemap = sw::ShaderBaker::computeEffectiveSourceHash( sw::FileUtil::joinPath( shadersDir, "tonemap.hlsl" ) );
+    SW_EXPECT_TRUE( hashForward != 0 );
+    SW_EXPECT_TRUE( hashTonemap != 0 );
+    SW_EXPECT_TRUE( hashForward != hashTonemap );
+
+    // **공유 헤더가 바뀌면 전부 낡은 것이 되어야 한다.** `.hlsl` 은 그대로인데 include 한 `.hlsli` 만
+    // 바뀌는 것이 실제로 일어난 경우다 — 파일 시간으로는 이 조합이 조용히 통과했다.
+    const sw::string tempHeader = sw::FileUtil::joinPath( shadersDir, "baketemp.hlsli" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// bake staleness test\n" ) );
+    sw::ShaderBaker::invalidateSharedHeaderCache();
+    const bool   bCurrentAfterHeaderAdded = sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath );
+    const uint64 hashAfterHeaderAdded     = sw::ShaderBaker::computeEffectiveSourceHash( shaderPath );
+
+    // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
+    sw::FileUtil::removeFile( tempHeader );
+    sw::ShaderBaker::invalidateSharedHeaderCache();
+
+    SW_EXPECT_FALSE( bCurrentAfterHeaderAdded );
+    SW_EXPECT_TRUE( hashAfterHeaderAdded != hashForward );
+    // 되돌리면 다시 최신이다.
+    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
+    SW_EXPECT_EQUAL( hashForward, sw::ShaderBaker::computeEffectiveSourceHash( shaderPath ) );
+}
