@@ -295,6 +295,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (DX11 만 한 덩어리였던 디바이스를 다른 셋과 같은 축으로 가른다)
+
+DX12 · Vulkan · GL 은 모두 `<Backend>RHIDevice` / `…DeviceInit` / `…DeviceSubmission` 으로 갈라져 있는데
+DX11 만 576줄 한 덩어리였다. "이 백엔드는 어떻게 초기화하나" 를 찾을 때 셋은 파일 이름이 답이고 하나만
+본문을 뒤져야 한다. 세 백엔드가 이미 쓰는 축을 그대로 적용했다:
+
+| 파일 | 담는 것 |
+| --- | --- |
+| `D3D11RHIDeviceInit.cpp` | `initializeInternal` · `shutdownInternal` · `resize` · `bind/unbindGraphicsContext` |
+| `D3D11RHIDeviceSubmission.cpp` | `beginFrame` · `endFrame` · `waitIdle` · `createCommandList` · `register/unregisterCommandList` · `executeCommandList` |
+| `D3D11RHIDevice.cpp` | 생성·소멸 · 접근자 · `resolve/store` · `flushDebugMessages` · `ensureComputeRootConstantCB` |
+
+GL 이 컨텍스트 바인딩을 Init 에 두므로 DX11 도 같은 자리에 뒀다. 익명 네임스페이스의 상수도 쓰는 쪽을
+따라갔다 — `kDefaultNumerator` · `kDefaultDenomiator` 는 `initializeInternal` 만 쓰므로 Init 으로,
+`arrHazardMessageId` · `isHazardMessage` 는 `flushDebugMessages` 가 쓰므로 그대로 남았다.
+
+**함정 하나.** 파일을 더해 놓고 빌드하니 `Engine.dll` 링크가 DX11 심볼을 통째로 못 찾았다. RHI 백엔드는
+GLOB 이 아니라 `cmake/Engine/RhiBackendSources.cmake` 의 **명시 목록**으로 타깃이 갈린다(모듈 ON 이면
+`RHI_DX11.dll`, OFF 면 Engine 정적 링크). 목록에 없는 새 파일은 Engine 의 GLOB 에 떨어져, 모듈 안에 있는
+심볼을 Engine 에서 찾게 된다. 목록에 넣어 해결했다. **RHI 백엔드에 파일을 더할 때는 그 목록도 같이 고칠 것.**
+
 ### 2026-09-12 (Core 시설이 있는데 STL 을 쓴 자리 — 전수로 훑으니 거의 없었다)
 
 AGENTS 의 "Core·Engine 시설을 STL 보다 먼저" 를 기준으로 `Source` 전체를 심볼별로 셌다. **대부분 이미
