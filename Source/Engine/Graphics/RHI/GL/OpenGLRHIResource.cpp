@@ -95,7 +95,12 @@ namespace sw
                 case RHIFormat::R8G8B8A8_UNORM:
                 case RHIFormat::B8G8R8A8_UNORM:
                     return GL_UNSIGNED_BYTE;
+                // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데
+                // 엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 정본) — 되읽기가
+                // 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를 CPU 로 읽는 경로(스크린샷·
+                // 렌더 타깃 패널)가 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다.
                 case RHIFormat::R16G16B16A16_FLOAT:
+                    return GL_HALF_FLOAT;
                 case RHIFormat::R32G32B32_FLOAT:
                 case RHIFormat::R32G32_FLOAT:
                 case RHIFormat::R32_FLOAT:

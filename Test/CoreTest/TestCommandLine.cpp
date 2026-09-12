@@ -181,3 +181,37 @@ SW_TEST_CASE( Engine_CommandLine, ComplexPrefixAndCustomArguments )
     SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "enable_profiler" ), enableProfiler ) );
     SW_EXPECT_TRUE( enableProfiler );
 }
+
+/**
+ * @brief [Engine_CommandLine] "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
+ * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
+ *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 실제로 `EngineConfig` 의
+ *          `_defaultRHI` 가 `-gv_rhiBackend` 를 조용히 덮고 있었다 — 커맨드라인이 아무 일도 안 하는
+ *          것처럼 보였고 로그도 남지 않아, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**였다.
+ */
+SW_TEST_CASE( Engine_CommandLine, ProvidedIsNotTheSameAsReadable )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    cmdManager.addArgument<int32>( { "given_value" }, true, 7, true );
+    cmdManager.addArgument<int32>( { "omitted_value" }, true, 7, true );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "given_value=3" ),
+    };
+    cmdManager.parse( 2, argv );
+
+    // 둘 다 읽히지만(기본값이 있으므로), 적힌 것은 하나뿐이다.
+    int32 given{ 0 };
+    int32 omitted{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "given_value" ), given ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
+    SW_EXPECT_EQUAL( 3, given );
+    SW_EXPECT_EQUAL( 7, omitted );
+
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "given_value" ), "적은 인자를 안 적었다고 한다" );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "omitted_value" ) == false,
+                        "안 적은 인자를 적었다고 한다 — 설정 기본값이 커맨드라인을 덮는 판단이 여기서 갈린다" );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "no_such_argument" ) == false, "없는 인자를 적었다고 한다" );
+}

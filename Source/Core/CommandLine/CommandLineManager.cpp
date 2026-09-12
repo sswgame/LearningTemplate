@@ -158,6 +158,14 @@ namespace sw
         argument._bParsed = SW_TRUE;
     }
 
+    bool CommandLineManager::isArgumentProvided( string_view key ) const
+    {
+        const auto iter = _mapArgument.find( key );
+        if ( iter == _mapArgument.end() )
+            return false;
+        return _listArgument[iter->second]._bParsed != SW_FALSE;
+    }
+
     bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
     {
         const auto iter = _mapPendingGlobal.find( name );

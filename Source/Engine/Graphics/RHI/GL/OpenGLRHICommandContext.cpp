@@ -233,6 +233,16 @@ namespace sw
             else
                 glDrawBuffer( GL_BACK );
 
+            // 첨부마다 **드로우 버퍼 상태를 건드리지 않고** 지운다.
+            //
+            // 예전엔 지울 첨부를 고르려고 `glDrawBuffers( 1, &drawBuf )` 로 목록을 하나로 좁혔고,
+            // **되돌리지 않았다.** 그래서 이 루프가 끝나면 드로우 버퍼가 "마지막으로 지운 첨부" 하나만
+            // 남고, 이어지는 지오메트리의 `SV_TARGET0` 이 그 첨부로 가고 `SV_TARGET1` 은 버려졌다.
+            // G버퍼 패스(둘 다 클리어)에서는 알베도가 노멀 첨부에 써지고 알베도 첨부는 클리어 값
+            // 그대로 남았다 — 디퍼드 조명이 알베도 0 을 읽어 **OpenGL 만 화면이 거의 검게** 나왔다.
+            // MRT 를 쓰는 파이프라인이 디퍼드뿐이라 오래 드러나지 않았다.
+            //
+            // `glClearBufferfv` 는 드로우 버퍼 **인덱스**로 직접 지우므로 목록을 바꿀 이유가 없다.
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
             {
                 const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
@@ -240,17 +250,8 @@ namespace sw
                 if ( loadOp != RHIRenderPassLoadOp::Clear )
                     continue;
 
-                if ( fbo != 0 )
-                {
-                    GLenum drawBuf = GL_COLOR_ATTACHMENT0 + attachmentIndex;
-                    glDrawBuffers( 1, &drawBuf );
-                }
-                else
-                {
-                    glDrawBuffer( GL_BACK );
-                }
-                glClearColor( clear._x, clear._y, clear._z, clear._w );
-                glClear( GL_COLOR_BUFFER_BIT );
+                const GLfloat arrClearValue[4] = { clear._x, clear._y, clear._z, clear._w };
+                glClearBufferfv( GL_COLOR, static_cast<GLint>( attachmentIndex ), arrClearValue );
             }
         }
         if ( ( bHasDepth || bDepthOnly ) && beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )

@@ -129,6 +129,14 @@ namespace sw
         bool getArgument( CommandLineArgument argument, T& outValue ) const;
 
         /**
+         * @brief 그 인자가 **커맨드라인에 실제로 적혔는지** 돌려줍니다.
+         * @details `getArgument` 로는 알 수 없다 — 기본값을 가진 인자는 안 적어도 true 를 돌려주기
+         *          때문이다. "설정 파일 기본값보다 커맨드라인이 우선" 같은 판단에는 이쪽이 필요하다.
+         *          실제로 `EngineConfig` 의 백엔드 기본값이 `-gv_rhiBackend` 를 조용히 덮고 있었다.
+         */
+        bool isArgumentProvided( string_view key ) const;
+
+        /**
          * @brief 인자를 추가합니다
          */
         template <typename T>

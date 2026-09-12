@@ -77,7 +77,10 @@ namespace sw
                     return true;
                 if ( cli.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
                     return true;
-                return false;
+                // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전엔 짧은 플래그만 봐서, 전역 변수로
+                // 백엔드를 고르면 바로 아래 줄이 EngineConfig 기본값으로 **조용히 덮어썼다** —
+                // 커맨드라인이 아무 일도 안 하는 것처럼 보이고, 로그도 남지 않았다.
+                return cli.isArgumentProvided( "gv_rhiBackend" );
             }
         };
     } // namespace

@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -76,6 +77,24 @@ namespace sw
             else
             {
                 SW_LOG_ERROR( "glClipControl 을 쓸 수 없습니다 (GL 4.5 / ARB_clip_control 필요) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다." );
+            }
+
+            // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다 —
+            // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
+            // 인스턴스(t4)·가시 목록(t10)·모프 정점(t11)을 읽으므로, 한도가 그보다 작으면 링크는
+            // 통과해도 읽기가 어긋난다. 화면으로는 "기하가 무너진다" 로만 보여서 원인을 짚기 어렵다.
+            GLint maxVertexSsbo{ 0 };
+            GLint maxComputeSsbo{ 0 };
+            GLint maxFragmentSsbo{ 0 };
+            glGetIntegerv( GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &maxVertexSsbo );
+            glGetIntegerv( GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &maxComputeSsbo );
+            glGetIntegerv( GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSsbo );
+            SW_LOG_INFO( "OpenGL SSBO 한도: 정점 %#, 프래그먼트 %#, 컴퓨트 %#", static_cast<int32>( maxVertexSsbo ),
+                         static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
+            if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSrvSlotCount ) )
+            {
+                SW_LOG_WARNING( "정점 스테이지 SSBO 한도(%#)가 SRV 슬롯 수(%#)보다 작습니다 — 큰 번호의 슬롯은 읽기가 어긋날 수 있습니다.",
+                                static_cast<int32>( maxVertexSsbo ), shaderslot::kSrvSlotCount );
             }
         }
         else

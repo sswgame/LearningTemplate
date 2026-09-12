@@ -332,7 +332,6 @@ namespace sw
         {
             if ( info._pData == nullptr )
                 continue;
-
             if ( info._type == GlobalVariableType::Int32 || info._type == GlobalVariableType::Enum )
             {
                 int32 val{ 0 };
