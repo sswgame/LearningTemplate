@@ -442,6 +442,12 @@ Graphics 감사 후 고친 것 (2026-09-08):
 | `RT.Frame` | 렌더 스레드 프레임 전체 |
 | `RT.Present` | 제출·표시 대기. `RT.Frame - RT.Present` 가 순수 기록 시간이다 |
 
+> **2026-09-13 이전의 렌더 스레드 수치는 실제보다 작다.** `FrameProfiler` 가 게임 스레드에서 창을 열고
+> 닫는데 렌더 스레드가 그 밖에서 더한 샘플을 버리고 있었다(`beginFrame` 이 지우고 `endFrame` 이 읽는
+> 구조라 두 호출 사이의 샘플이 사라졌다). 지금은 `endFrame` 이 `exchange` 로 읽으면서 비운다.
+> 고친 뒤 `RT.Pass.execute` 는 프레임당 4.0 이 아니라 **6.0** 회였다. 아래 드로우 경로 표(2026-09-08)의
+> 절대값도 그 영향을 받았다 — 전후 비교로는 유효하지만 절대값은 작게 잡혀 있다.
+
 ```powershell
 build/Ninja-Release/Bin/App.exe -gv_benchMeshes=2000 -gv_benchMeshVariants=200 -gv_profileFrames=200 -dx12
 ```

@@ -308,7 +308,9 @@ namespace sw
                     pBlendSource = cand._instance->getParent();
                 cand._blendMode = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() )
                                                               : static_cast<uint32>( pMeshComp->getBlendMode() );
-                _listScratchCandidate.push_back( cand );
+                // 옮긴다 — `cand` 는 여기서 죽는다. 복사하면 shared_ptr 셋의 참조 카운트를 원소마다
+                // 올렸다 내리게 되고, 그게 프리미티브 수만큼 반복된다.
+                _listScratchCandidate.push_back( std::move( cand ) );
             }
         }
 
@@ -738,8 +740,10 @@ namespace sw
                         _listInstanceSrcIndex.push_back( srcIdx );
                         _snapshot._listInstance.push_back( inst );
                     }
+                    // 두 목록이 같은 배치를 든다. 앞쪽은 복사해야 하지만 마지막 하나는 옮길 수 있다 —
+                    // 배치마다 shared_ptr 셋의 참조 카운트가 한 벌씩 줄어든다.
                     _snapshot._listOpaqueBatch.push_back( batch );
-                    _snapshot._listAllBatch.push_back( batch );
+                    _snapshot._listAllBatch.push_back( std::move( batch ) );
 
                     batchStart = entryIndex;
                 }
@@ -803,7 +807,7 @@ namespace sw
                         _snapshot._listInstance.push_back( inst );
                     }
                     _snapshot._listTransparentBatch.push_back( batch );
-                    _snapshot._listAllBatch.push_back( batch );
+                    _snapshot._listAllBatch.push_back( std::move( batch ) );
                     batchStart = entryIndex;
                     if ( bEnd == false )
                     {

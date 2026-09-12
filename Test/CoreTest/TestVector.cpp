@@ -160,3 +160,80 @@ SW_TEST_CASE( Core_Vector, VectorConstructorsAndRangeOperations )
     SW_EXPECT_EQUAL( 5u, listInit.size() );
     SW_EXPECT_EQUAL( 99, listInit[2] );
 }
+
+namespace
+{
+    /** @brief 패딩이 끼는 POD — 바이트 복사 빠른 경로가 값을 그대로 옮기는지 보기 위한 것. */
+    struct PaddedPod
+    {
+        uint8  _tag;
+        uint64 _wide;
+        uint8  _tail;
+
+        bool operator==( const PaddedPod& other ) const
+        {
+            return _tag == other._tag && _wide == other._wide && _tail == other._tail;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [Core_Vector] 바이트 복사 빠른 경로가 값을 그대로 옮긴다.
+ * @details `vector` 는 복사에도 소멸에도 사용자 코드가 없는 타입이면 원소 루프 대신 `Memory::copy`
+ *          한 번으로 옮긴다. 그 경로가 크기·용량·값을 바꾸지 않는지 고정한다 — 빈 대상과
+ *          **이미 원소가 든 대상**(clear 뒤 재사용) 양쪽을 본다. 후자가 매 프레임 렌더 패킷이 타는 길이다.
+ */
+SW_TEST_CASE( Core_Vector, BitwiseCopyKeepsValues )
+{
+    static_assert( sw::is_bitwise_copyable_v<PaddedPod>, "PaddedPod 는 바이트 복사 대상이어야 한다" );
+    static_assert( sw::is_bitwise_copyable_v<TrackedValue> == false, "TrackedValue 는 루프 경로여야 한다" );
+
+    sw::vector<PaddedPod> listSource{};
+    for ( uint32 index = 0; index < 64; ++index )
+        listSource.push_back( PaddedPod{ static_cast<uint8>( index ), index * 1000003ull, static_cast<uint8>( 255 - index ) } );
+
+    // 1) 복사 생성
+    sw::vector<PaddedPod> listCopy{ listSource };
+    SW_ASSERT_EQUAL( listSource.size(), listCopy.size() );
+    for ( size_t index = 0; index < listSource.size(); ++index )
+        SW_EXPECT_TRUE( listSource[index] == listCopy[index] );
+
+    // 2) 이미 내용이 있는 대상에 복사 대입 — 길이가 줄어드는 쪽도 본다.
+    sw::vector<PaddedPod> listTarget{};
+    for ( uint32 index = 0; index < 200; ++index )
+        listTarget.push_back( PaddedPod{ 7, 7, 7 } );
+    listTarget = listSource;
+    SW_ASSERT_EQUAL( listSource.size(), listTarget.size() );
+    for ( size_t index = 0; index < listSource.size(); ++index )
+        SW_EXPECT_TRUE( listSource[index] == listTarget[index] );
+
+    // 3) 빈 원본을 대입하면 비어야 한다.
+    const sw::vector<PaddedPod> listEmpty{};
+    listTarget = listEmpty;
+    SW_EXPECT_TRUE( listTarget.empty() );
+}
+
+/**
+ * @brief [Core_Vector] 루프 경로는 생성자·소멸자 짝을 그대로 지킨다.
+ * @details 빠른 경로를 넣으면서 **분기를 잘못 태우면** 여기서 살아 있는 개수가 어긋난다.
+ *          성장(재할당)과 복사 대입 둘 다 통과시킨다.
+ */
+SW_TEST_CASE( Core_Vector, NonTrivialCopyKeepsLifetimeBalance )
+{
+    TrackedValue::s_liveCount = 0;
+    {
+        sw::vector<TrackedValue> listSource{};
+        for ( int32 index = 0; index < 100; ++index ) // 여러 번 재할당된다
+            listSource.push_back( TrackedValue{ index } );
+        SW_EXPECT_EQUAL( 100, TrackedValue::s_liveCount );
+
+        sw::vector<TrackedValue> listTarget{};
+        listTarget.push_back( TrackedValue{ -1 } );
+        listTarget = listSource;
+        SW_ASSERT_EQUAL( size_t( 100 ), listTarget.size() );
+        SW_EXPECT_EQUAL( 200, TrackedValue::s_liveCount );
+        for ( int32 index = 0; index < 100; ++index )
+            SW_EXPECT_EQUAL( index, listTarget[static_cast<size_t>( index )]._value );
+    }
+    SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
+}

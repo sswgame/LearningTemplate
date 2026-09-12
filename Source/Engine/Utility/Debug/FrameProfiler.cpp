@@ -90,14 +90,14 @@ namespace sw
 
     void FrameProfiler::beginFrame()
     {
-        if ( isEnabled() == false )
-            return;
-        const uint32 count = _scopeCount.load( std::memory_order_acquire );
-        for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
-        {
-            _arrScope[index]._frameNanos.store( 0, std::memory_order_relaxed );
-            _arrScope[index]._frameCalls.store( 0, std::memory_order_relaxed );
-        }
+        // **여기서 누적을 지우지 않는다.** 예전에는 지웠는데, 그러면 `endFrame` 과 이 호출 사이에
+        // 렌더 스레드가 더한 샘플이 통째로 버려진다. 렌더 스레드는 게임 스레드와 다른 박자로 돌기
+        // 때문에 그 구간에 걸리는 스코프가 **매 프레임 같은 것들**이었고, 그 스코프만 골라 표에서
+        // 사라지거나(sampledFrames=0) 평균이 부풀었다 — 중첩된 구간의 합이 바깥 구간보다 커지는
+        // 표가 나왔다(upload 2628 + submitGraph 2703 > RT.Frame 4271).
+        //
+        // 지금은 `endFrame` 이 exchange 로 **읽으면서 0 으로 바꾼다**. 창이 닫힌 뒤 더해진 샘플은
+        // 버려지지 않고 다음 창으로 넘어간다. 그래서 이 함수는 창이 열렸다는 표시일 뿐이다.
     }
 
     void FrameProfiler::endFrame()
@@ -108,9 +108,10 @@ namespace sw
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
         {
-            Scope&       scope = _arrScope[index];
-            const uint64 nanos = scope._frameNanos.load( std::memory_order_relaxed );
-            const uint64 calls = scope._frameCalls.load( std::memory_order_relaxed );
+            Scope& scope = _arrScope[index];
+            // 읽기와 비우기가 한 연산이어야 한다 — 그 사이에 렌더 스레드가 더한 값이 사라지면 안 된다.
+            const uint64 calls = scope._frameCalls.exchange( 0, std::memory_order_relaxed );
+            const uint64 nanos = scope._frameNanos.exchange( 0, std::memory_order_relaxed );
             if ( calls == 0 )
                 continue;
 
