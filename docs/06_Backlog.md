@@ -295,6 +295,34 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (명칭 감사 — 헤더 선언 전수를 동사군으로 훑고, 진짜 불일치만 고친다)
+
+`Source` 와 `Tools/ReflectionParser` 의 **헤더 멤버 함수 선언 전수**를 선행 동사로 묶어 세었다(정의·호출은
+중복이라 세지 않는다). 어휘가 섞여 있으면 같은 일에 다른 이름을 쓰고 있다는 뜻이다.
+
+```
+해제/파괴   clear=94, destroy=65, shutdown=56, reset=28, release=22, forget=7, unload=5, free=4
+생성       create=118, make=21, build=12, construct=10, new=8, spawn=7, alloc=3
+초기화     initialize=61, ensure=36, prepare=21, init=11, setup=4, configure=3
+조회       get=915, find=86, resolve=26, acquire=14, query=11, peek=2
+상태질의    is=246, has=50, was=47, can=8, wants=5, should=3, needs=2
+적용/반영   update=61, apply=44, sync=11, flush=9, refresh=9, upload=8, rebuild=8, submit=5, commit=3, invalidate=3
+등록       register=83, bind=65, unregister=38, add=32, insert=27, remove=23, unbind=7, erase=5
+```
+
+**대부분은 불일치가 아니라 서로 다른 뜻이다 — 그래서 건드리지 않았다.** `create`(소유를 만들어 돌려준다) ·
+`make`(값을 조립한다) · `build`(여러 입력에서 짓는다)는 STL 도 구분한다. `free*` 는 전부 할당자와 짝이고
+(`freeMemory` · `freeSrvDescriptor` · `freeNode`), `unload*` 는 전부 `load*` 와 짝이다. `was*` 47 건은
+입력 엣지 질의(`wasPressed` 류)로 `is*` 와 다른 것을 묻는다.
+
+**진짜 불일치는 둘이었다.**
+1. GPU 자원 수명 동사 — 위 항목에서 닫힌 목록으로 고쳤다.
+2. `init` 이라는 **축약**. 이 저장소의 단어는 `initialize` 인데 같은 뜻을 줄여 쓴 자리가 넷 있었다:
+   `initPipelineCache` · `initPredefined` · `initXmlSerialization` · `initXmlDeserialization` →
+   전부 `initialize*` 로. `initRhi` 는 남긴다 — 축약이 아니라 언리얼 `InitRHI` 와 짝을 이루는 닫힌 어휘의
+   구성원이고, `releaseRhi` · `forgetRhi` · `isRhiValid` 와 함께여야 뜻이 선다.
+   `setup*`(4) · `configure*`(2) 도 남긴다 — "자원을 만든다" 가 아니라 "설정을 채운다" 라서 다른 단어가 맞다.
+
 ### 2026-09-12 (GPU 자원 수명의 어휘를 닫힌 목록으로 — 그리고 되살리는 절반도 통보로)
 
 **1) 어휘부터.** 같은 일을 하는 함수가 클래스마다 다른 이름이었다: `Mesh::upload` · `MaterialInstance::applyToGpu` ·

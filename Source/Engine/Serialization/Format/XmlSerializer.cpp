@@ -550,7 +550,7 @@ namespace sw
 
     XmlDocumentBackend::~XmlDocumentBackend() = default;
 
-    void XmlDocumentBackend::initXmlSerialization( const utf8* pRootTagName )
+    void XmlDocumentBackend::initializeXmlSerialization( const utf8* pRootTagName )
     {
         _impl->_doc.clear();
         string  tag           = Impl::sanitizeTag( pRootTagName );
@@ -639,7 +639,7 @@ namespace sw
         return _impl->_doc.saveToString();
     }
 
-    bool XmlDocumentBackend::initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName )
+    bool XmlDocumentBackend::initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName )
     {
         _impl->_doc.clear();
         if ( xmlStr.empty() )
@@ -825,7 +825,7 @@ namespace sw
     string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
                                      IXmlBackend& backend, const SerializeContext& ctx )
     {
-        backend.initXmlSerialization( typeInfo._name.c_str() );
+        backend.initializeXmlSerialization( typeInfo._name.c_str() );
         XmlSerializerInternal::writeXmlProperties( pInstance, typeInfo, backend, ctx );
         return backend.endSerialize();
     }
@@ -839,7 +839,7 @@ namespace sw
 
         backend.setIgnoreCaseKeys( ctx.ignoreCaseKeys() );
 
-        if ( backend.initXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
+        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
         if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
@@ -940,7 +940,7 @@ namespace sw
 
         XmlDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );
-        if ( backend.initXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
+        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
         if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
             return false;
@@ -955,7 +955,7 @@ namespace sw
                                               const SerializeContext& ctx )
     {
         XmlDocumentBackend backend;
-        backend.initXmlSerialization( typeInfo._name.c_str() );
+        backend.initializeXmlSerialization( typeInfo._name.c_str() );
         serializeVersionedInto( backend, version, pInstance, typeInfo, ctx );
         return backend.endSerialize();
     }

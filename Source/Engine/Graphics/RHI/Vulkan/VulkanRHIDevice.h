@@ -295,7 +295,7 @@ namespace sw
         void recreateSwapChain();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
-        bool initPipelineCache();
+        bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다. */
         void savePipelineCache();
 

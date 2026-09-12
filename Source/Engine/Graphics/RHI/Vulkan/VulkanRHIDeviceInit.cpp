@@ -516,7 +516,7 @@ namespace sw
         _currentFrame = 0;
     }
 
-    bool VulkanRHIDevice::initPipelineCache()
+    bool VulkanRHIDevice::initializePipelineCache()
     {
         if ( _device == VK_NULL_HANDLE )
             return false;

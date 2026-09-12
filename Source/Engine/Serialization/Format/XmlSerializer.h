@@ -37,7 +37,7 @@ namespace sw
         // 1) 쓰기 — 루트, 값/속성, 배열, 맵
         // ------------------------------------------------------------------------------
         /** @brief XML 직렬화를 시작합니다. */
-        virtual void initXmlSerialization( const utf8* pRootTagName ) = 0;
+        virtual void initializeXmlSerialization( const utf8* pRootTagName ) = 0;
         /** @brief 값을 XML 자식 요소로 씁니다. */
         virtual void writeValue( const utf8* pTagName, const utf8* pValueString ) = 0;
         /** @brief 값을 현재 부모 요소의 XML attribute로 씁니다. */
@@ -74,7 +74,7 @@ namespace sw
          *       `string_view` 를 받아 `load_buffer(data, size)` 로 안전하게 읽으므로,
          *       이 중간 계층이 길이를 버리던 것이 유일한 구멍이었다.
          */
-        virtual bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
+        virtual bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
         /** @brief 현재 부모 요소의 XML attribute를 읽습니다. */
@@ -152,7 +152,7 @@ namespace sw
         virtual ~XmlDocumentBackend() override;
 
         /** @brief XML 직렬화를 시작합니다. */
-        void initXmlSerialization( const utf8* pRootTagName ) override;
+        void initializeXmlSerialization( const utf8* pRootTagName ) override;
         /** @brief 값을 XML 자식 요소로 씁니다. */
         void writeValue( const utf8* pTagName, const utf8* pValueString ) override;
         /** @brief 값을 현재 부모 요소의 XML attribute로 씁니다. */
@@ -179,7 +179,7 @@ namespace sw
         string endSerialize() override;
 
         /** @brief XML 역직렬화를 시작합니다. */
-        bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
+        bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML attribute를 읽습니다. */

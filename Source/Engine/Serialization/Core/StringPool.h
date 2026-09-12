@@ -62,7 +62,7 @@ namespace sw
         bool loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset );
 
     private:
-        void initPredefined();
+        void initializePredefined();
 
         vector<string>                _listString;
         unordered_map<string, uint32> _mapStringToId;

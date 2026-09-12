@@ -1278,7 +1278,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         _listOpenTag.pop_back();
     }
 
-    void initXmlSerialization( const utf8* pRootTag ) override
+    void initializeXmlSerialization( const utf8* pRootTag ) override
     {
         _rootTagName     = pRootTag != nullptr ? pRootTag : "";
         _result          = "<" + _rootTagName;
@@ -1342,7 +1342,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         return _result;
     }
 
-    bool initXmlDeserialization( string_view xmlStr, const utf8* pRootTag ) override
+    bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTag ) override
     {
         (void)pRootTag;
         sw::string str( xmlStr );
@@ -1430,7 +1430,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 SW_TEST_CASE( Reflection_Serialization, XmlAttributeRoundtrip )
 {
     sw::XmlDocumentBackend backend;
-    backend.initXmlSerialization( "AttrRoot" );
+    backend.initializeXmlSerialization( "AttrRoot" );
     backend.writeAttribute( "_id", "42" );
     backend.writeAttribute( "_title", "AttrTitle" );
     backend.writeValue( "_note", "child-element" );
@@ -1440,7 +1440,7 @@ SW_TEST_CASE( Reflection_Serialization, XmlAttributeRoundtrip )
     SW_EXPECT_TRUE( xml.find( "<_note>" ) != sw::string::npos );
 
     sw::XmlDocumentBackend reader;
-    SW_EXPECT_TRUE( reader.initXmlDeserialization( xml.c_str(), "AttrRoot" ) );
+    SW_EXPECT_TRUE( reader.initializeXmlDeserialization( xml.c_str(), "AttrRoot" ) );
     sw::string id, title, note;
     SW_EXPECT_TRUE( reader.readAttribute( "_id", id ) );
     SW_EXPECT_TRUE( reader.readAttribute( "_title", title ) );

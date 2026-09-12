@@ -13,10 +13,10 @@ namespace sw
         : _listString{}
         , _mapStringToId{}
     {
-        initPredefined();
+        initializePredefined();
     }
 
-    void StringPool::initPredefined()
+    void StringPool::initializePredefined()
     {
         _listString.clear();
         _mapStringToId.clear();
@@ -61,7 +61,7 @@ namespace sw
 
     void StringPool::clear()
     {
-        initPredefined();
+        initializePredefined();
     }
 
     void StringPool::saveToArchive( Archive& outArchive ) const
@@ -76,7 +76,7 @@ namespace sw
 
     bool StringPool::loadFromArchive( Archive& inArchive )
     {
-        initPredefined();
+        initializePredefined();
         uint64 dynCount = 0;
         if ( inArchive.readVarUInt( dynCount ) == false || dynCount > kMaxDynamicStrings )
             return false;
@@ -109,7 +109,7 @@ namespace sw
 
     bool StringPool::loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset )
     {
-        initPredefined();
+        initializePredefined();
         uint64 dynCount = 0;
         if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > kMaxDynamicStrings )
             return false;

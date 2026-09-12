@@ -234,7 +234,7 @@ namespace sw
                 SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
         }
 
-        initPipelineCache();
+        initializePipelineCache();
         _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
         SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
