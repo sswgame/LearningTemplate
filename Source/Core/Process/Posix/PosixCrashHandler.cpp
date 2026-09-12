@@ -10,17 +10,34 @@
 #include <csignal>
 #include <cstdio>
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
     #include "Core/Common/PlatformOsHeaders.h"
 
     #include <pthread.h>
     #include <unistd.h>
 
-SW_LOG_CALLER( "LinuxCrashHandler" );
+SW_LOG_CALLER( "PosixCrashHandler" );
 namespace sw
 {
     namespace
     {
+        /**
+         * @brief 이 스레드의 64비트 ID. **이 파일에서 OS 마다 갈리는 곳은 여기뿐이다.**
+         * @details Linux 의 `pthread_t` 는 정수라 그대로 캐스팅되지만, macOS 의 것은 불투명 포인터라
+         *          전용 API 로 받아야 한다. 나머지(sigaction · SA_SIGINFO · 대체 시그널 스택)는 POSIX 라
+         *          두 플랫폼이 같은 코드를 쓴다.
+         */
+        uint64 currentThreadId64Internal()
+        {
+    #if defined( SW_PLATFORM_MACOS )
+            uint64_t threadId64{ 0 };
+            ::pthread_threadid_np( nullptr, &threadId64 );
+            return static_cast<uint64>( threadId64 );
+    #else
+            return static_cast<uint64>( ::pthread_self() );
+    #endif
+        }
+
         atomic<bool> s_bInstalled{ false };
         /** @brief 핸들러 안에서 또 크래시가 나도 무한 재진입하지 않게 막습니다. */
         atomic<bool> s_bReporting{ false };
@@ -55,7 +72,7 @@ namespace sw
             // 프로세스가 만들 수 있는 것이 아니다. 그래서 컨텍스트와 심볼화된 스택을 파일로 남기는 것이
             // 여기서 할 수 있는 전부이고, 코어가 켜져 있으면 그와 세션 ID 로 짝지을 수 있다.
             writeCrashContextFile( pReason, pFaultAddress, static_cast<uint64>( ::getpid() ),
-                                   static_cast<uint64>( ::pthread_self() ) );
+                                   currentThreadId64Internal() );
 
             DeepCallStack stack{};
             CallStackCapture::captureFromContext( stack, pPlatformContext );

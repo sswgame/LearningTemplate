@@ -52,6 +52,8 @@ _kIgnoreSubdirsAlways = ("Graphics/RHI/Modules/",)
 # "빠졌다"고 잡혔다. 반대로 리눅스에서 빌드하면서 /Linux/ 를 무시하면 진짜 누락도 놓친다 —
 # 그래서 호스트에 따라 반대편만 무시한다.
 _kIgnoreSubdirsNonWindows = ("/Windows/", "/DX11/", "/DX12/", "DelayLoadNotifyHook")
+# Linux 와 macOS 가 함께 쓰는 POSIX 소스 — Windows 에서만 빠져 있는 것이 정상이다.
+_kIgnoreSubdirsWindowsOnly = ("/Posix/",)
 _kIgnoreSubdirsNonLinux = ("/Linux/", "/X11")
 _kIgnoreSubdirsNonMac = ("/Mac/", "/Cocoa")
 
@@ -59,6 +61,8 @@ _kIgnoreSubdirsNonMac = ("/Mac/", "/Cocoa")
 def buildIgnoreSubdirsInternal() -> tuple[str, ...]:
     """호스트 플랫폼에서 빌드되지 않는 것이 정상인 경로 조각들을 모읍니다."""
     ignores = list(_kIgnoreSubdirsAlways)
+    if sys.platform.startswith("win"):
+        ignores.extend(_kIgnoreSubdirsWindowsOnly)
     if not sys.platform.startswith("win"):
         ignores.extend(_kIgnoreSubdirsNonWindows)
     if not sys.platform.startswith("linux"):

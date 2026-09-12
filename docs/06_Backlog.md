@@ -295,6 +295,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (Linux 와 macOS 가 같은 코드를 두 벌 들고 있었다 — POSIX 한 벌로)
+
+파일 간 유사도를 전수로 재 보니(6줄 묶음 겹침) `Core/Process` 의 Linux · Mac 쌍이 맨 위에 나왔다.
+
+| 쌍 | 겹침 | 실제 차이 |
+| --- | --- | --- |
+| `LinuxProcess.cpp` · `MacProcess.cpp` | **90%** | `#if` 가드와 `SW_LOG_CALLER` 이름 **둘뿐** |
+| `LinuxCallStackCapture.cpp` · `MacCallStackCapture.cpp` | 68% | 시그널 컨텍스트에서 폴트 PC 꺼내기 |
+| `LinuxCrashHandler.cpp` · `MacCrashHandler.cpp` | 43% | 스레드 ID API |
+
+셋을 `Core/Process/Posix/Posix*.cpp` 한 벌로 합쳤다(6파일 → 3). **진짜로 갈리는 곳만** 안쪽 `#if` 로 남겼고,
+각 파일에서 그 자리가 어디인지 주석이 가리킨다.
+
+**합치면서 드러난 것 — macOS 크래시 핸들러가 썩어 있었다.** Linux 쪽은 `sigaction` + `SA_SIGINFO` 로
+폴트 주소와 레지스터 컨텍스트를 받고, `sigaltstack` + `SA_ONSTACK` 으로 **스택 오버플로에서도** 핸들러가
+돌게 해 놓았다. macOS 쪽은 `std::signal` 그대로였다 — 폴트 주소가 늘 `nullptr` 이고, 스택이 폴트 지점이
+아니라 핸들러 안에서 시작하며, 스택 오버플로 크래시는 **아무 기록도 없이** 죽는다. Linux 코드는 전부 POSIX 라
+macOS 에서도 그대로 서므로, 합치는 것만으로 macOS 가 그 셋을 받는다. 아무도 안 보는 경로는 조용히 썩는다는
+같은 이야기다.
+
+`CallStackCapture` 의 폴트 PC 추출은 **일부러 Linux 만** 남겼다. Darwin 의 mcontext 는 모양이 다르고 여기서
+컴파일해 볼 수 없다 — macOS 는 `nullptr` 을 받아 트리밍만 건너뛰고 스택 자체는 그대로 남으므로, 합치기 전
+동작과 같다. 고치려면 macOS 에서 실제로 빌드·크래시를 내 봐야 한다.
+
+**빌드 배선 두 곳.** `Source/Core/CMakeLists.txt` 는 플랫폼 소스를 GLOB 이 아니라 `if(WIN32)/APPLE/UNIX`
+명시 목록으로 고른다 — APPLE 과 UNIX 가 이제 같은 세 파일을 가리킨다. 그리고 `CheckSourceGlob.py` 는
+호스트에 따라 반대편 OS 폴더를 무시하는데 `/Posix/` 라는 이름을 몰라 Windows 빌드에서 3개를 "빠졌다" 고
+잡았다 — Windows 에서만 빠지는 것이 정상인 자리로 넣었다.
+
+**검증.** Linux 쪽은 WSL 의 clang 으로 세 파일 모두 `-fsyntax-only -DSW_PLATFORM_LINUX` 통과
+(가드 때문에 조용히 넘어간 것이 아님을 일부러 깨뜨려 확인했다 — 에러가 난다).
+**macOS 쪽은 여기서 컴파일할 수 없다** — Darwin 시스템 헤더가 없어 전처리가 거기서 멈춘다. `#if` 중첩
+균형과 `pthread_threadid_np` 가 macOS 가드 안에 있다는 것만 확인했다. 실제 확인은 macOS 빌드가 필요하다.
+Windows 쪽은 Debug · Release · Shipping 빌드 종료 0 · 린트 7/7(`CheckSourceGlob` 포함).
+
 ### 2026-09-12 (DX11 만 한 덩어리였던 디바이스를 다른 셋과 같은 축으로 가른다)
 
 DX12 · Vulkan · GL 은 모두 `<Backend>RHIDevice` / `…DeviceInit` / `…DeviceSubmission` 으로 갈라져 있는데

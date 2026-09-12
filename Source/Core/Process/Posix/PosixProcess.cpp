@@ -4,12 +4,12 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
-#if defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
     #include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "MacProcess" );
+    SW_LOG_CALLER( "PosixProcess" );
 
     void Process::cleanup()
     {
