@@ -110,7 +110,11 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mouseX, mouseY );
+                    {
+                        const int2 vecMousePos1 = _pMouse->getPosition();
+                        mouseX                  = vecMousePos1._x;
+                        mouseY                  = vecMousePos1._y;
+                    }
                     if ( event._lParam != 0 )
                     {
                         mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
@@ -145,7 +149,11 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mouseX, mouseY );
+                    {
+                        const int2 vecMousePos2 = _pMouse->getPosition();
+                        mouseX                  = vecMousePos2._x;
+                        mouseY                  = vecMousePos2._y;
+                    }
                     if ( event._lParam != 0 )
                     {
                         mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );
@@ -171,7 +179,11 @@ namespace sw
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     if ( _pMouse != nullptr )
-                        _pMouse->getPosition( mouseX, mouseY );
+                    {
+                        const int2 vecMousePos3 = _pMouse->getPosition();
+                        mouseX                  = vecMousePos3._x;
+                        mouseY                  = vecMousePos3._y;
+                    }
                     if ( event._lParam != 0 )
                     {
                         mouseX = static_cast<int32>( static_cast<int16>( LOWORD( event._lParam ) ) );

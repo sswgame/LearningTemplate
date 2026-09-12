@@ -57,18 +57,10 @@ namespace sw
         bool wasButtonReleased( MouseButton button ) const;
         bool wasAnyButtonPressed() const { return _pressedMask != 0; }
 
-        void getPosition( int32& outX, int32& outY ) const
-        {
-            outX = _mouseX;
-            outY = _mouseY;
-        }
-        int32 getPositionX() const { return _mouseX; }
-        int32 getPositionY() const { return _mouseY; }
-        void  getDelta( int32& outDx, int32& outDy ) const
-        {
-            outDx = _deltaX;
-            outDy = _deltaY;
-        }
+        int2    getPosition() const { return _mouse; }
+        int32   getPositionX() const { return _mouse._x; }
+        int32   getPositionY() const { return _mouse._y; }
+        int2    getDelta() const { return _delta; }
         float2  getRawDelta() const { return _rawDelta; }
         float2  getSmoothDelta() const { return _smoothDelta; }
         float32 getSmoothing() const { return _smoothingFactor; }
@@ -129,12 +121,9 @@ namespace sw
 
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-        int32                  _mouseX;                    /**< 현재 프레임의 마우스 화면 좌표 X (윈도우 클라이언트 기준). */
-        int32                  _mouseY;                    /**< 현재 프레임의 마우스 화면 좌표 Y. */
-        int32                  _prevMouseX;                /**< 직전 프레임의 마우스 좌표 X. getDelta() 계산에 사용. */
-        int32                  _prevMouseY;                /**< 직전 프레임의 마우스 좌표 Y. */
-        int32                  _deltaX;                    /**< 이번 프레임의 좌표 이동량(_mouseX - _prevMouseX). 화면 경계에 막히면 실제 이동보다 작게 나올 수 있음. */
-        int32                  _deltaY;                    /**< 이번 프레임의 좌표 이동량 Y. */
+        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표 (윈도우 클라이언트 기준). */
+        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표. getDelta() 계산에 쓴다. */
+        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse). 화면 경계에 막히면 실제 이동보다 작다. */
         float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계 클램핑 없이 실제 이동량을 반영 (FPS 카메라 룩에 적합). */
         float2                 _smoothDelta;               /**< 감도/가속/스무딩(EMA)이 적용된 최종 델타. getSmoothDelta()가 반환하는 값. */
         float32                _smoothingFactor;           /**< EMA 스무딩 계수 [0.0, 0.99]. 0이면 스무딩 없이 원시 델타를 그대로 사용. */

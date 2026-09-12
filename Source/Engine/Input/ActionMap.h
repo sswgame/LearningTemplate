@@ -454,8 +454,7 @@ namespace sw
             float32                _holdDuration;
             float32                _timeSinceLastPress;
             float32                _pulseTimer;
-            int32                  _lastPressX;
-            int32                  _lastPressY;
+            int2                   _lastPress; ///< 더블클릭 판정용 직전 누름 위치
             uint8                  _bDown          : 1;
             uint8                  _bPressed       : 1;
             uint8                  _bReleased      : 1;
@@ -469,8 +468,7 @@ namespace sw
                 : _holdDuration{ 0.0f }
                 , _timeSinceLastPress{ ActionMapDefaults::kNeverPressedSentinel }
                 , _pulseTimer{ 0.0f }
-                , _lastPressX{ 0 }
-                , _lastPressY{ 0 }
+                , _lastPress{}
                 , _bDown{ SW_FALSE }
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }

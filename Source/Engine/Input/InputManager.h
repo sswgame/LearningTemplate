@@ -118,11 +118,11 @@ namespace sw
         bool wasMouseButtonPressed( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonPressed( button ) : false; }
         bool wasMouseButtonReleased( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonReleased( button ) : false; }
 
-        void    getMousePosition( int32& outX, int32& outY ) const;
+        int2    getMousePosition() const { return _pMouse != nullptr ? _pMouse->getPosition() : int2{}; }
         int32   getMousePositionX() const { return _pMouse != nullptr ? _pMouse->getPositionX() : 0; }
         int32   getMousePositionY() const { return _pMouse != nullptr ? _pMouse->getPositionY() : 0; }
         float2  getMousePositionNormalized() const;
-        void    getMouseDelta( int32& outDx, int32& outDy ) const;
+        int2    getMouseDelta() const;
         float2  getRawMouseDelta() const;
         float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
         float32 getMouseWheelHorizontal() const { return _pMouse != nullptr ? _pMouse->getMouseWheelHorizontal() : 0.0f; }

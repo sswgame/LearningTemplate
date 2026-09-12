@@ -89,10 +89,10 @@ namespace sw
         ZoneDef z{};
         z._id               = mapName.empty() ? mapPath : mapName;
         z._role             = ZoneRuntimeInternal::zoneRoleFromText( roleText, mapPath );
-        z._bounds._minX     = 0;
-        z._bounds._minY     = 0;
-        z._bounds._maxX     = width > 0 ? width - 1 : 0;
-        z._bounds._maxY     = height > 0 ? height - 1 : 0;
+        z._bounds._min._x   = 0;
+        z._bounds._min._y   = 0;
+        z._bounds._max._x   = width > 0 ? width - 1 : 0;
+        z._bounds._max._y   = height > 0 ? height - 1 : 0;
         z._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( z._role ) ? 1 : 0;
         // 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 합니다.
         switch ( z._role )

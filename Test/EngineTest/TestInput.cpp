@@ -37,8 +37,10 @@ SW_TEST_CASE( InputManagerTest, LifecycleAndDefaults )
     SW_EXPECT_FALSE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
     SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
 
-    int32 mx = -1, my = -1;
-    input.getMousePosition( mx, my );
+    int32          mx = -1, my = -1;
+    const sw::int2 vecMousePos1 = input.getMousePosition();
+    mx                          = vecMousePos1._x;
+    my                          = vecMousePos1._y;
     SW_EXPECT_EQUAL( 0, mx );
     SW_EXPECT_EQUAL( 0, my );
 
@@ -110,8 +112,10 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
     clickEvt._message = WM_LBUTTONDOWN;
     input.processNativeEvent( clickEvt );
 
-    int32 mx = 0, my = 0;
-    input.getMousePosition( mx, my );
+    int32          mx = 0, my = 0;
+    const sw::int2 vecMousePos2 = input.getMousePosition();
+    mx                          = vecMousePos2._x;
+    my                          = vecMousePos2._y;
     SW_EXPECT_EQUAL( 100, mx );
     SW_EXPECT_EQUAL( 200, my );
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
@@ -130,8 +134,10 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
     releaseEvt._message = WM_LBUTTONUP;
     input.processNativeEvent( releaseEvt );
 
-    int32 dx = 0, dy = 0;
-    input.getMouseDelta( dx, dy );
+    int32          dx = 0, dy = 0;
+    const sw::int2 vecMouseDelta3 = input.getMouseDelta();
+    dx                            = vecMouseDelta3._x;
+    dy                            = vecMouseDelta3._y;
     SW_EXPECT_EQUAL( 50, dx );
     SW_EXPECT_EQUAL( 30, dy );
 

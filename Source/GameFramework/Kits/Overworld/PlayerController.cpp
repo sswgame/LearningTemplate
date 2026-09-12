@@ -16,10 +16,8 @@ namespace sw
         , _pActionMap{ nullptr }
         , _pendingWarpMap{}
         , _loco{}
-        , _tileX{ 1 }
-        , _tileY{ 1 }
-        , _pendingWarpSpawnX{ 1 }
-        , _pendingWarpSpawnY{ 1 }
+        , _tile{ 1, 1 }
+        , _pendingWarpSpawn{ 1, 1 }
         , _encounterStepCounter{ 0 }
         , _stepCooldown{ 0.0f }
         , _encounterRate{ 0.33f }
@@ -34,8 +32,8 @@ namespace sw
 
     void PlayerController::setPosition( int32 x, int32 y )
     {
-        _tileX = x;
-        _tileY = y;
+        _tile._x = x;
+        _tile._y = y;
     }
 
     void PlayerController::update( float32 deltaTime, InputManager& input )
@@ -99,8 +97,8 @@ namespace sw
         if ( _bWarpPending == SW_FALSE )
             return false;
         outMapPath = _pendingWarpMap;
-        outSpawnX  = _pendingWarpSpawnX;
-        outSpawnY  = _pendingWarpSpawnY;
+        outSpawnX  = _pendingWarpSpawn._x;
+        outSpawnY  = _pendingWarpSpawn._y;
         _pendingWarpMap.clear();
         _bWarpPending = SW_FALSE;
         return true;
@@ -122,8 +120,8 @@ namespace sw
 
     void PlayerController::getFacingTile( int32& outX, int32& outY ) const
     {
-        outX = _tileX;
-        outY = _tileY;
+        outX = _tile._x;
+        outY = _tile._y;
         switch ( _loco.getFacing() )
         {
             case FacingDir::Up:
@@ -145,33 +143,33 @@ namespace sw
 
     bool PlayerController::tryStep( int32 deltaX, int32 deltaY )
     {
-        const int32 nextX = _tileX + deltaX;
-        const int32 nextY = _tileY + deltaY;
+        const int32 nextX = _tile._x + deltaX;
+        const int32 nextY = _tile._y + deltaY;
         if ( _pTileMap == nullptr || _pTileMap->isWalkable( nextX, nextY ) == false )
             return false;
 
         _loco.setFacingFromDelta( deltaX, deltaY );
         _loco.notifyStepStarted();
-        _tileX  = nextX;
-        _tileY  = nextY;
-        _bMoved = SW_TRUE;
+        _tile._x = nextX;
+        _tile._y = nextY;
+        _bMoved  = SW_TRUE;
 
-        const TileWarp* pWarp = _pTileMap->findWarp( _tileX, _tileY );
+        const TileWarp* pWarp = _pTileMap->findWarp( _tile._x, _tile._y );
         if ( pWarp != nullptr )
         {
-            _pendingWarpMap    = pWarp->_targetMap;
-            _pendingWarpSpawnX = pWarp->_targetTileX;
-            _pendingWarpSpawnY = pWarp->_targetTileY;
-            _bWarpPending      = SW_TRUE;
-            SW_LOG_TRACE( "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawnX, _pendingWarpSpawnY );
+            _pendingWarpMap      = pWarp->_targetMap;
+            _pendingWarpSpawn._x = pWarp->_targetTileX;
+            _pendingWarpSpawn._y = pWarp->_targetTileY;
+            _bWarpPending        = SW_TRUE;
+            SW_LOG_TRACE( "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawn._x, _pendingWarpSpawn._y );
         }
-        else if ( _pTileMap->isEncounterTile( _tileX, _tileY ) )
+        else if ( _pTileMap->isEncounterTile( _tile._x, _tile._y ) )
         {
             const uint32 period = _encounterRate > 0.01f ? static_cast<uint32>( 1.0f / _encounterRate ) : 3u;
             if ( ( ++_encounterStepCounter % ( period < 1 ? 3u : period ) ) == 0 )
             {
                 _bEncounterPending = SW_TRUE;
-                SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tileX, _tileY );
+                SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tile._x, _tile._y );
             }
         }
         return true;

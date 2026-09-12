@@ -160,6 +160,93 @@ namespace sw
     inline float2 operator*( float32 scale, const float2& v ) noexcept { return v * scale; }
 
     // ------------------------------------------------------------------------------
+    // 1-a) int2 — 2D 정수 좌표. 타일 · 픽셀 · 정수 경계
+    // ------------------------------------------------------------------------------
+    /**
+     * @struct int2
+     * @brief 2차원 정수 벡터. (타일 좌표, 화면 픽셀 좌표, 정수 경계에 사용)
+     *
+     * @details **왜 float2 로 대신하지 않나.** 타일과 픽셀은 세는 값이지 재는 값이 아니다. float2 에 담으면
+     *          더하고 빼는 것만으로 표현할 수 없는 값이 생기고, 비교가 오차에 걸린다. 언리얼도 같은 이유로
+     *          `FVector2D` 와 별개로 `FIntPoint` 를 둔다.
+     *
+     * @note **일부러 얇다.** 정규화 · 길이 · 보간 · 행렬 변환은 넣지 않았다 — 정수 좌표에서 뜻이 없거나
+     *       실수로 나가야 하는 연산이다. 필요해지면 그때 부르는 쪽을 보고 더한다.
+     *       3성분(`int3`)은 만들지 않았다: 지금 유일한 후보였던 `PhysicsWorld::CellCoord` 는 공간 해시의
+     *       **키**라서 벡터 연산을 하지 않고 전용 해시 함자를 단다 — 벡터 타입으로 바꿀 이유가 없다.
+     */
+    struct int2 final
+    {
+        int32 _x;
+        int32 _y;
+
+        /** @brief (0, 0) 으로 둡니다. */
+        constexpr int2() noexcept
+            : _x{ 0 }
+            , _y{ 0 } {}
+
+        /** @brief x=y=value 로 둡니다. */
+        constexpr explicit int2( const int32 value ) noexcept
+            : _x{ value }
+            , _y{ value } {}
+
+        /** @brief (x, y) 로 둡니다. */
+        constexpr int2( const int32 x, const int32 y ) noexcept
+            : _x{ x }
+            , _y{ y } {}
+
+        /** @brief 성분별 최솟값으로 구성된 벡터를 반환합니다. */
+        static constexpr int2 min( const int2& lhs, const int2& rhs ) noexcept
+        {
+            return int2{ lhs._x < rhs._x ? lhs._x : rhs._x, lhs._y < rhs._y ? lhs._y : rhs._y };
+        }
+
+        /** @brief 성분별 최댓값으로 구성된 벡터를 반환합니다. */
+        static constexpr int2 max( const int2& lhs, const int2& rhs ) noexcept
+        {
+            return int2{ lhs._x > rhs._x ? lhs._x : rhs._x, lhs._y > rhs._y ? lhs._y : rhs._y };
+        }
+
+        /** @brief 실수 벡터로 넓힙니다. 재는 값으로 넘어갈 때만 씁니다. */
+        constexpr float2 toFloat2() const noexcept { return float2{ static_cast<float32>( _x ), static_cast<float32>( _y ) }; }
+
+        /** @brief 같은지 비교합니다. 정수라 오차가 없습니다. */
+        constexpr bool operator==( const int2& other ) const noexcept { return _x == other._x && _y == other._y; }
+        /** @brief 다른지 비교합니다. */
+        constexpr bool operator!=( const int2& other ) const noexcept { return ( *this == other ) == false; }
+
+        /** @brief 더한 뒤 대입합니다. */
+        constexpr int2& operator+=( const int2& other ) noexcept
+        {
+            _x += other._x;
+            _y += other._y;
+            return *this;
+        }
+
+        /** @brief 뺀 뒤 대입합니다. */
+        constexpr int2& operator-=( const int2& other ) noexcept
+        {
+            _x -= other._x;
+            _y -= other._y;
+            return *this;
+        }
+
+        /** @brief 그대로 돌려줍니다. */
+        constexpr int2 operator+() const noexcept { return *this; }
+        /** @brief 부호를 뒤집습니다. */
+        constexpr int2 operator-() const noexcept { return int2{ -_x, -_y }; }
+    };
+
+    /** @brief 덧셈을 수행합니다. */
+    constexpr int2 operator+( const int2& lhs, const int2& rhs ) noexcept { return int2{ lhs._x + rhs._x, lhs._y + rhs._y }; }
+    /** @brief 뺄셈을 수행합니다. */
+    constexpr int2 operator-( const int2& lhs, const int2& rhs ) noexcept { return int2{ lhs._x - rhs._x, lhs._y - rhs._y }; }
+    /** @brief 정수배를 수행합니다. */
+    constexpr int2 operator*( const int2& v, int32 scale ) noexcept { return int2{ v._x * scale, v._y * scale }; }
+    /** @brief 정수배를 수행합니다. */
+    constexpr int2 operator*( int32 scale, const int2& v ) noexcept { return v * scale; }
+
+    // ------------------------------------------------------------------------------
     // 2) float3 — 3D. 내적/외적 · 거리 · 스플라인
     // ------------------------------------------------------------------------------
     /**

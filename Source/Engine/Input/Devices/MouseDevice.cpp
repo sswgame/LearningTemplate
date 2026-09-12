@@ -8,12 +8,9 @@
 namespace sw
 {
     MouseDevice::MouseDevice()
-        : _mouseX{ 0 }
-        , _mouseY{ 0 }
-        , _prevMouseX{ 0 }
-        , _prevMouseY{ 0 }
-        , _deltaX{ 0 }
-        , _deltaY{ 0 }
+        : _mouse{}
+        , _prevMouse{}
+        , _delta{}
         , _rawDelta{}
         , _smoothDelta{}
         , _smoothingFactor{ 0.0f }
@@ -45,8 +42,8 @@ namespace sw
         float32 curDy = _rawDelta._y;
         if ( curDx == 0.0f && curDy == 0.0f )
         {
-            curDx = static_cast<float32>( _deltaX );
-            curDy = static_cast<float32>( _deltaY );
+            curDx = static_cast<float32>( _delta._x );
+            curDy = static_cast<float32>( _delta._y );
         }
 
         if ( _accelerationPower > 1.0f )
@@ -79,10 +76,10 @@ namespace sw
         _releasedMask      = 0;
         _bAnyButtonPressed = SW_FALSE;
 
-        _deltaX                    = _mouseX - _prevMouseX;
-        _deltaY                    = _mouseY - _prevMouseY;
-        _prevMouseX                = _mouseX;
-        _prevMouseY                = _mouseY;
+        _delta._x                  = _mouse._x - _prevMouse._x;
+        _delta._y                  = _mouse._y - _prevMouse._y;
+        _prevMouse._x              = _mouse._x;
+        _prevMouse._y              = _mouse._y;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
         _mouseWheelDelta           = 0.0f;
@@ -94,8 +91,8 @@ namespace sw
 
     void MouseDevice::onFrameEnd()
     {
-        _prevMouseX                = _mouseX;
-        _prevMouseY                = _mouseY;
+        _prevMouse._x              = _mouse._x;
+        _prevMouse._y              = _mouse._y;
         _pressedMask               = 0;
         _releasedMask              = 0;
         _bAnyButtonPressed         = SW_FALSE;
@@ -111,8 +108,8 @@ namespace sw
         _pressedMask               = 0;
         _releasedMask              = 0;
         _bAnyButtonPressed         = SW_FALSE;
-        _deltaX                    = 0;
-        _deltaY                    = 0;
+        _delta._x                  = 0;
+        _delta._y                  = 0;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
         _smoothDelta._x            = 0.0f;
@@ -229,11 +226,11 @@ namespace sw
 
     void MouseDevice::setPosition( int32 x, int32 y )
     {
-        _deltaX = x - _prevMouseX;
-        _deltaY = y - _prevMouseY;
-        _mouseX = x;
-        _mouseY = y;
-        updateSmoothDelta( static_cast<float32>( _deltaX ), static_cast<float32>( _deltaY ) );
+        _delta._x = x - _prevMouse._x;
+        _delta._y = y - _prevMouse._y;
+        _mouse._x = x;
+        _mouse._y = y;
+        updateSmoothDelta( static_cast<float32>( _delta._x ), static_cast<float32>( _delta._y ) );
     }
 
     void MouseDevice::addRawDelta( float32 dx, float32 dy )

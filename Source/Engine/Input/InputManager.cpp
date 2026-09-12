@@ -233,10 +233,8 @@ namespace sw
 
         if ( _pMouse != nullptr )
         {
-            int32 mdx{ 0 };
-            int32 mdy{ 0 };
-            _pMouse->getDelta( mdx, mdy );
-            if ( _pMouse->wasAnyButtonPressed() || mdx != 0 || mdy != 0 || _pMouse->getMouseWheel() != 0.0f )
+            const int2 mouseDelta = _pMouse->getDelta();
+            if ( _pMouse->wasAnyButtonPressed() || mouseDelta != int2{} || _pMouse->getMouseWheel() != 0.0f )
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
         }
     }
@@ -418,12 +416,6 @@ namespace sw
             _onTextComposition( text );
     }
 
-    void InputManager::getMousePosition( int32& outX, int32& outY ) const
-    {
-        outX = _pMouse != nullptr ? _pMouse->getPositionX() : 0;
-        outY = _pMouse != nullptr ? _pMouse->getPositionY() : 0;
-    }
-
     float2 InputManager::getMousePositionNormalized() const
     {
         IWindow* pWindow = IWindow::getActiveWindow();
@@ -439,15 +431,9 @@ namespace sw
                        MathUtil::clamp( static_cast<float32>( _pMouse->getPositionY() ) / static_cast<float32>( height ), 0.0f, 1.0f ) };
     }
 
-    void InputManager::getMouseDelta( int32& outDx, int32& outDy ) const
+    int2 InputManager::getMouseDelta() const
     {
-        if ( _pMouse != nullptr )
-            _pMouse->getDelta( outDx, outDy );
-        else
-        {
-            outDx = 0;
-            outDy = 0;
-        }
+        return _pMouse != nullptr ? _pMouse->getDelta() : int2{};
     }
 
     float2 InputManager::getRawMouseDelta() const
@@ -459,10 +445,8 @@ namespace sw
     {
         if ( isPointerInside() == false )
             return false;
-        int32 mouseX{ 0 };
-        int32 mouseY{ 0 };
-        getMousePosition( mouseX, mouseY );
-        return ( x <= mouseX && mouseX < ( x + width ) && y <= mouseY && mouseY < ( y + height ) );
+        const int2 mousePos = getMousePosition();
+        return ( x <= mousePos._x && mousePos._x < ( x + width ) && y <= mousePos._y && mousePos._y < ( y + height ) );
     }
 
     void InputManager::setMouseLockMode( MouseLockMode mode )

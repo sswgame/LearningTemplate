@@ -46,9 +46,9 @@ namespace sw
         if ( _pInput == nullptr )
             return;
 
-        int32 curMouseX{ 0 };
-        int32 curMouseY{ 0 };
-        _pInput->getMousePosition( curMouseX, curMouseY );
+        const int2  curMousePos = _pInput->getMousePosition();
+        const int32 curMouseX   = curMousePos._x;
+        const int32 curMouseY   = curMousePos._y;
 
         // 3) 통합 액션 런타임 평가 및 ActionPhase 상태 머신
         for ( auto& [actionName, actIndex] : _mapAction )
@@ -105,8 +105,8 @@ namespace sw
                     {
                         if ( bIsMouseBinding )
                         {
-                            const float32 distSq = static_cast<float32>( ( curMouseX - state._lastPressX ) * ( curMouseX - state._lastPressX ) +
-                                                                         ( curMouseY - state._lastPressY ) * ( curMouseY - state._lastPressY ) );
+                            const int2    pressDelta = curMousePos - state._lastPress;
+                            const float32 distSq     = static_cast<float32>( pressDelta._x * pressDelta._x + pressDelta._y * pressDelta._y );
                             if ( distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
                                 bDoubleDetected = true;
                         }
@@ -125,8 +125,7 @@ namespace sw
                     {
                         state._timeSinceLastPress = 0.0f;
                     }
-                    state._lastPressX = curMouseX;
-                    state._lastPressY = curMouseY;
+                    state._lastPress = curMousePos;
                 }
 
                 const bool bTriggerFired = evaluateTrigger( binding._trigger, state, deltaSeconds );
@@ -413,11 +412,9 @@ namespace sw
                 float32      rdy      = rawDelta._y;
                 if ( rdx == 0.0f && rdy == 0.0f )
                 {
-                    int32 dx{ 0 };
-                    int32 dy{ 0 };
-                    _pInput->getMouseDelta( dx, dy );
-                    rdx = static_cast<float32>( dx );
-                    rdy = static_cast<float32>( dy );
+                    const int2 mouseDelta = _pInput->getMouseDelta();
+                    rdx                   = static_cast<float32>( mouseDelta._x );
+                    rdy                   = static_cast<float32>( mouseDelta._y );
                 }
                 outValue._x = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
                 outValue._y = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
@@ -434,10 +431,8 @@ namespace sw
                     return false;
                 }
 
-                int32 curX{ 0 };
-                int32 curY{ 0 };
-                _pInput->getMousePosition( curX, curY );
-                const float2 curPos{ static_cast<float32>( curX ), static_cast<float32>( curY ) };
+                const int2   curTilePos = _pInput->getMousePosition();
+                const float2 curPos     = curTilePos.toFloat2();
 
                 // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에서 플로팅됩니다 (모바일 온스크린 스틱 표준 UX).
                 if ( binding._bJoystickAnchored == false )

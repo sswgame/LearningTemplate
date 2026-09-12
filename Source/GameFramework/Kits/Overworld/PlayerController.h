@@ -41,9 +41,9 @@ namespace sw
         void update( float32 deltaTime, InputManager& input );
 
         /** @brief 현재 타일 X를 반환합니다. */
-        int32 getTileX() const { return _tileX; }
+        int32 getTileX() const { return _tile._x; }
         /** @brief 현재 타일 Y를 반환합니다. */
-        int32 getTileY() const { return _tileY; }
+        int32 getTileY() const { return _tile._y; }
         /** @brief 이동 FSM을 반환합니다. */
         const PlayerLocomotion& getLocomotion() const { return _loco; }
         /** @brief 이동 플래그를 소비하고 이전 값을 반환합니다. */
@@ -67,10 +67,8 @@ namespace sw
         ActionMap*             _pActionMap;
         string                 _pendingWarpMap;
         PlayerLocomotion       _loco;
-        int32                  _tileX;
-        int32                  _tileY;
-        int32                  _pendingWarpSpawnX;
-        int32                  _pendingWarpSpawnY;
+        int2                   _tile;             ///< 현재 타일 좌표
+        int2                   _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
         uint32                 _encounterStepCounter;
         float32                _stepCooldown;
         float32                _encounterRate;

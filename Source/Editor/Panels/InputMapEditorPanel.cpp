@@ -135,8 +135,10 @@ namespace sw::editor
                 rt                         = pGamepad->getRightTrigger();
             }
 
-            int32 mdx = 0, mdy = 0;
-            pInput->getMouseDelta( mdx, mdy );
+            int32      mdx = 0, mdy = 0;
+            const int2 vecMouseDelta1 = pInput->getMouseDelta();
+            mdx                       = vecMouseDelta1._x;
+            mdy                       = vecMouseDelta1._y;
 
             _arrPlotLeftStickX[_plotOffset]  = lx;
             _arrPlotLeftStickY[_plotOffset]  = ly;
@@ -536,10 +538,14 @@ namespace sw::editor
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            int32 mx = 0, my = 0;
-            pInput->getMousePosition( mx, my );
-            int32 dx = 0, dy = 0;
-            pInput->getMouseDelta( dx, dy );
+            int32      mx = 0, my = 0;
+            const int2 vecMousePos2 = pInput->getMousePosition();
+            mx                      = vecMousePos2._x;
+            my                      = vecMousePos2._y;
+            int32      dx = 0, dy = 0;
+            const int2 vecMouseDelta3 = pInput->getMouseDelta();
+            dx                        = vecMouseDelta3._x;
+            dy                        = vecMouseDelta3._y;
             float32      smoothDx = 0.0f, smoothDy = 0.0f;
             const float2 vecSmoothDelta2 = pInput->getSmoothMouseDelta();
             smoothDx                     = vecSmoothDelta2._x;

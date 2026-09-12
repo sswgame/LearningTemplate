@@ -33,10 +33,8 @@ namespace sw
     /** @brief 카메라가 머물 타일 경계 */
     struct ZoneBounds
     {
-        int32 _minX{ 0 };
-        int32 _minY{ 0 };
-        int32 _maxX{ 0 };
-        int32 _maxY{ 0 };
+        int2 _min{ 0, 0 }; ///< 정수판 AABB — float 판은 AABB2D 가 같은 모양이다
+        int2 _max{ 0, 0 };
     };
 
     /** @brief 한 존의 ID·역할·경계·태그 */

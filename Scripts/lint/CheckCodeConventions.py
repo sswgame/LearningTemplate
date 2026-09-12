@@ -1151,6 +1151,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             continue
 
         codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+        # 주석도 코드가 아니다. 이걸 안 지우면 "float 판은 …" 같은 산문이 타입 사용으로 잡힌다
+        # (실제로 ZoneRuntime.h 의 한국어 주석이 Style/BasicTypeAlias 로 신고됐다).
+        codeWithoutStrings = re.sub(r"//.*$|/\*.*?\*/", "", codeWithoutStrings)
 
         # 인클루드 경로 파일명 및 대소문자 일치 검사
         if includeMatch := _kIncludePathRe.match(trimmed):

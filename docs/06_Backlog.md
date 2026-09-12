@@ -295,6 +295,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-13 (int2 를 만든다 — 언리얼의 FIntPoint 자리, 그리고 산술이 있는 곳만 옮긴다)
+
+앞 항목에서 정수 쌍 20묶음을 "Math 에 `int2` 가 없어서" 남겨 뒀다. 그때 "소비자 없는 타입이 하나 는다" 고
+적었는데 **틀렸다** — 소비자가 이미 20군데 있었다.
+
+**언리얼은 어떻게 하나.** C++ 쪽에 `int2` 라는 이름은 없고 `FIntPoint`(2D int32) · `FIntVector`(3D) ·
+`FIntRect` 가 그 자리다. 해상도 · 타일 좌표 · 뷰포트 크기에 압도적으로 쓰인다. `int2`/`uint2` 라는 철자는
+HLSL 내장 타입이고 언리얼 **셰이더** 코드가 쓴다. 우리는 `FVector2D` 가 아니라 `float2` 로 이름 지었으니
+HLSL 철자를 따르고 있고, 그래서 `int2` 가 이름까지 일관된다.
+
+**`int2` 만 만들었다.** `uint2` 는 후보 20묶음이 전부 `int32` 라 소비자가 0 이고, `int3` 는 유일한 후보였던
+`PhysicsWorld::CellCoord` 가 **공간 해시의 키**라 벡터 연산을 하지 않고 전용 해시 함자를 단다 — 벡터 타입으로
+바꿀 이유가 없다. 타입 자체도 **일부러 얇다**: 정규화 · 길이 · 보간 · 행렬 변환은 정수 좌표에서 뜻이 없거나
+실수로 나가야 하는 연산이라 넣지 않았다. `min`/`max`/`toFloat2` 와 `+ - == !=` 만 있다.
+
+**옮긴 기준은 "산술이 있는가".**
+
+| 옮김 | 근거 |
+| --- | --- |
+| `MouseDevice::_mouse` · `_prevMouse` · `_delta` | `_delta = _mouse - _prevMouse` 가 한 줄이 된다 |
+| `ActionMap::_lastPress` | 더블클릭 거리 판정이 `curMousePos - _lastPress` 가 된다 |
+| `PlayerController::_tile` · `_pendingWarpSpawn` | `_tile._x + deltaX` 같은 타일 이동 |
+| `ZoneRuntime::ZoneBounds` | 산술은 없지만 **정수판 AABB** 다 — 실수판 `AABB2D` 를 방금 `float2 _min/_max` 로 바꿔 놔서 둘이 어긋나 있었다 |
+
+**안 옮긴 것 11묶음은 전부 그냥 나르기만 한다** — `TileMapXml` · `OverworldEvents` · `TileMapPanel` · `TileMap` 의
+`_spawnX/Y` · `_targetTileX/Y` 같은 것들로, 읽어서 담고 넘기는 레코드다. 바꿔도 얻는 것이 없다.
+`TileMap::isWalkable( x, y )` 류의 질의 API 도 그대로 뒀다 — 구현이 x · y 루프로 도는 자리라 `int2` 로 받으면
+오히려 풀어 쓰게 된다. `PlayerController` 가 `_tile._x, _tile._y` 로 넘기는 이음매가 남지만, 그쪽이 맞다.
+
+**API 도 같이 바꿨다** (float2 때와 같은 이유로 저장만 바꾸면 반쪽이다):
+`MouseDevice::getPosition` · `getDelta`, `InputManager::getMousePosition` · `getMouseDelta` 가 출력 인자 두 개
+대신 `int2` 를 돌려준다. 출력 인자 판은 지웠다.
+
+**덤 — 린트가 산문을 코드로 읽고 있었다.** `ZoneBounds` 에 "실수판 `AABB2D` 가 같은 모양이다" 라는 주석을
+달았더니 `Style/BasicTypeAlias` 가 **주석 안의 "float"** 를 타입 사용으로 신고했다. 문자열 리터럴은 지우면서
+주석은 안 지우고 있었다. 주석도 지우게 고쳤고, 진짜 `float` 멤버는 여전히 잡히는 것을 확인했다.
+
+**검증.** Debug · Release · Shipping 빌드 종료 0 · nogpu 5/5 · 린트 7/7 · GPU 19/19 ·
+입력 스위트(Mouse 1 · Gamepad 3 · InputManager 19 · ActionMap 17 · EdgeCase 2 · Stress 2).
+에디터 전부 열기 창 30 · 빈 패널 0 · 오류 0. 교체 5구성 종료 0 · 오류 0.
+
 ### 2026-09-13 (축을 나눠 들던 스칼라 쌍을 float2 로 — 저장만이 아니라 API 까지)
 
 `float32 _accumulatedRawDx; float32 _accumulatedRawDy;` 처럼 **축만 다른 스칼라 쌍**을 전수로 찾았다.
