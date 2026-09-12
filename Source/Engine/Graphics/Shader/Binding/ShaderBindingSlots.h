@@ -57,6 +57,7 @@ namespace sw
          *          읽는다 — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리.
          */
         inline constexpr uint32 kVisibleInstanceBuffer = SW_SLOT_VISIBLE_INSTANCE_SRV;
+        inline constexpr uint32 kMorphVertexBuffer     = SW_SLOT_MORPH_VERTEX_SRV;
         inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
@@ -158,6 +159,9 @@ namespace sw
             inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
             inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
             inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIds"; ///< t10 (그래픽스) — 컬링이 만든 가시 목록
+            inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11 (그래픽스) — GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0 — 레스트 포즈
+            inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph u0 — 변형 결과
             inline constexpr const utf8* kCullInstances      = "g_Instances";
             inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1 — 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
@@ -172,8 +176,9 @@ namespace sw
                            SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3,
                        "머티리얼 텍스처 슬롯은 연속이어야 한다 (셰이더가 서수로 고른다)" );
         static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount, "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이어야 한다" );
-        static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1 && kVisibleInstanceBuffer + 1 == kSrvSlotCount,
-                       "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1, "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이어야 한다" );
+        static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1 && kMorphVertexBuffer + 1 == kSrvSlotCount,
+                       "모프 정점 버퍼는 가시 목록 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,

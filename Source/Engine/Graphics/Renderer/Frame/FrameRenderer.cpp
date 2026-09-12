@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -55,6 +56,8 @@ namespace sw
         , _arrView{}
         , _instanceAnimCb{ 0 }
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
+        , _meshMorphCb{ 0 }
+        , _meshMorphCbIndex{ kInvalidDescriptorIndex }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ SW_FALSE }
@@ -304,6 +307,73 @@ namespace sw
         }
     }
 
+    void FrameRenderer::dispatchMeshMorph()
+    {
+        // 백엔드가 못 하면 풀을 만들지도 않는다 — 배치의 base 가 kInvalidBase 로 남아 셰이더가
+        // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같은 자리). 자세한 사연은 RHICapabilities.h.
+        if ( _pDevice == nullptr || _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            return;
+
+        // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
+        _listScratchMorphMesh.clear();
+        for ( const GpuMeshBatch& batch : _gpuScene.getAllBatches() )
+        {
+            Mesh* pMesh = batch._mesh.get();
+            if ( pMesh == nullptr || pMesh->isGpuMorphEnabled() == false )
+                continue;
+            // 같은 메시가 여러 배치에 나올 수 있다(불투명·투명·뷰) — 풀에는 한 번만 넣는다.
+            bool bAlready = false;
+            for ( const Mesh* pExisting : _listScratchMorphMesh )
+            {
+                if ( pExisting == pMesh )
+                {
+                    bAlready = true;
+                    break;
+                }
+            }
+            if ( bAlready == false )
+                _listScratchMorphMesh.push_back( pMesh );
+        }
+
+        _meshMorphPool.build( _pDevice, _listScratchMorphMesh );
+
+        // 배치에 구간을 적어 둔다 — 드로우가 루트 상수로 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
+        // 셰이더가 레스트 포즈로 그린다.
+        _gpuScene.assignMorphBases( _meshMorphPool );
+
+        if ( _meshMorphPool.isDispatchable() == false )
+            return;
+
+        const RHIPipelineStateHandle morphPso = getEnginePso( RenderPassType::MeshMorph );
+        if ( morphPso == 0 || _meshMorphCb == 0 || _meshMorphCbIndex == kInvalidDescriptorIndex )
+            return;
+
+        struct GpuMorphParams
+        {
+            float32 _time{ 0.0f };
+            float32 _amplitude{ 0.0f };
+            float32 _frequency{ 0.0f };
+            uint32  _vertexCount{ 0 };
+        } morphParams{};
+        morphParams._time        = _animTimer.getTotalTime();
+        morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
+        morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
+        morphParams._vertexCount = _meshMorphPool.getVertexCount();
+        _pDevice->getResource()->updateConstantBuffer( _meshMorphCb, &morphParams, sizeof( morphParams ) );
+
+        // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
+        // DX12/Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정).
+        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
+        _pCmd->setComputePipelineState( morphPso );
+        _pCmd->bindComputeConstantBuffer( _meshMorphCbIndex, 0 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
+        _pCmd->bindComputeUAV( _meshMorphPool.getMorphBuffer()._uav, 0 );
+        const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
+        if ( morphGroups > 0 )
+            _pCmd->dispatchCompute( morphGroups, 1, 1 );
+        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
+    }
+
     void FrameRenderer::dispatchCullAndSort( uint32 instanceCount )
     {
         // 컬링은 GpuScene 이 "개수를 컴퓨트에 맡겼다"고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
@@ -421,6 +491,7 @@ namespace sw
         // 이번 프레임에 회전하기 전의 바운드로 판정한다.
         const uint32 animInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animInstanceCount );
+        dispatchMeshMorph();
         dispatchCullAndSort( animInstanceCount );
 
         // 병렬 기록 가능(백엔드 capability + TaskManager + 웨이브가 나올 만큼 컴파일된 그래프)이면

@@ -46,6 +46,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, SW_INVALID_INDEX 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
 	uint     g_SwVisibleInstanceIdsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
+	uint     g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
+	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
 };
 
 // ------------------------------------------------------------------------------
@@ -60,13 +62,16 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 SW_ROOT_CONSTANTS_BEGIN
 	uint g_InstanceBase;    // GPUScene 인스턴스 버퍼에서 이 배치의 시작 오프셋
 	uint g_SwMaterialCount; // 이 배치의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다
+	uint g_MorphVertexBase; // 모프 정점 풀에서 이 배치 메시의 시작 오프셋. 0xFFFFFFFF = 모프 안 함
 SW_ROOT_CONSTANTS_END
 #define SW_DRAW_INSTANCE_BASE  SW_ROOT( g_InstanceBase )
 #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
+#define SW_DRAW_MORPH_BASE     SW_ROOT( g_MorphVertexBase )
 #else
 // 컴퓨트에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SwLoadInstance / SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
 #define SW_DRAW_INSTANCE_BASE  0u
 #define SW_DRAW_MATERIAL_COUNT 0u
+#define SW_DRAW_MORPH_BASE     0xFFFFFFFFu
 #endif
 
 // ------------------------------------------------------------------------------
@@ -85,6 +90,39 @@ struct SwInstanceData
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
+
+// ------------------------------------------------------------------------------
+// 1-2) GPU 가 변형한 정점 (메시 모프). C++ RHIVertex 와 레이아웃 일치 (float3 + float4 = 28 바이트).
+//      메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
+//      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
+// ------------------------------------------------------------------------------
+// **float4 두 개다.** float3 뒤에 float4 를 두면 원소가 28 바이트인데, std430 은 vec4 를 16 바이트
+// 경계에 맞춘다 — DX/Vulkan 은 DXC 가 명시 오프셋을 적어 그대로 읽지만 OpenGL(ARB_gl_spirv)에서는
+// 어긋나 기하가 무너진다(실제로 GL 만 그랬다). 풀 원소는 엔진 내부 형식이라 RHIVertex 와 같을 이유가
+// 없으므로 정렬이 안전한 모양으로 둔다. pos.w · col 은 지금 쓰지 않지만 자리를 비워 두지 않는다.
+struct SwVertexData
+{
+	float4 pos;
+	float4 col;
+};
+
+SW_DECLARE_STRUCTURED_BUFFER( SwVertexData, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
+
+/**
+ * @brief 이 정점의 위치 — 모프 대상이면 GPU 가 변형한 값을, 아니면 입력 스트림 값을 돌려준다.
+ * @details 폴백이 조건 셋인 이유: (1) 이 배치가 모프 대상이 아니거나, (2) 풀이 안 걸렸거나,
+ *          (3) 예산이 모자라 이 메시가 풀에 못 들어갔을 수 있다. 셋 다 "레스트 포즈로 그린다" 로
+ *          끝나야 한다 — 언리얼도 스킨 캐시가 차면 일반 경로로 되돌아간다.
+ */
+float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
+{
+	if ( SW_DRAW_MORPH_BASE == SW_INVALID_INDEX || g_SwMorphVerticesIndex == SW_INVALID_INDEX )
+		return restPosition;
+	const uint element = SW_DRAW_MORPH_BASE + vertexId;
+	if ( element >= g_SwMorphVertexCount )
+		return restPosition;
+	return g_SwMorphVertices[element].pos.xyz;
+}
 
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );

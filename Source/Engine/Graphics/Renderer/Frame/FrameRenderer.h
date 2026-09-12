@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/Mesh/GpuMeshMorphPool.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
@@ -193,6 +194,8 @@ namespace sw
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
             uint32 _drawInstanceBase{ 0 };
             uint32 _drawMaterialCount{ 0 };
+            /// @brief 이 드로우 메시의 모프 풀 시작 오프셋. 0xFFFFFFFF 면 정점 셰이더가 입력 스트림을 그대로 쓴다.
+            uint32 _drawMorphVertexBase{ 0xFFFFFFFFu };
             /// @brief bindForDraw 가 마지막으로 조회한 PSO→레이아웃. 같은 PSO 로 연속 드로우할 때
             ///        layoutForPso() 의 뮤텍스+해시맵 조회를 건너뛰는 패스-로컬 1-entry 캐시.
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
@@ -496,6 +499,12 @@ namespace sw
 
         RHIBufferHandle    _instanceAnimCb;
         RHIDescriptorIndex _instanceAnimCbIndex;
+        RHIBufferHandle    _meshMorphCb;
+        RHIDescriptorIndex _meshMorphCbIndex;
+        /// @brief GPU 가 변형한 정점 풀 — RT 소유(GpuMeshMorphPool 참고).
+        GpuMeshMorphPool _meshMorphPool;
+        /// @brief 이번 프레임 모프 대상 메시 — 프레임마다 할당하지 않으려고 들고 있는다.
+        vector<Mesh*>      _listScratchMorphMesh;
         RHIBufferHandle    _instanceSortCb;
         RHIDescriptorIndex _instanceSortCbIndex;
         /**
@@ -517,6 +526,12 @@ namespace sw
          *          바운드로 판정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
          */
         void dispatchInstanceAnimation( uint32 instanceCount );
+        /**
+         * @brief 모프를 요청한 메시들의 정점을 GPU 가 변형합니다(레스트 → 결과).
+         * @details **컬링보다 앞**이어야 한다. 모프는 회전과 달리 실제로 모양과 바운드를 바꾸므로,
+         *          뒤에 두면 컬링이 한 프레임 늦은 모양으로 판정한다.
+         */
+        void dispatchMeshMorph();
         /**
          * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 깊이순으로 되돌립니다 (gpucull/instancesort.hlsl).
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인/그림자)마다 자기 인자·목록을 따로 만든다.

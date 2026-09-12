@@ -143,6 +143,9 @@ namespace sw
                 SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeId );
                 return;
             }
+            // GPU 모프 옵트인 — 유니티의 vertexBufferTarget 옵트인과 같은 자리다. 켠 메시만 풀에 들어간다.
+            if ( gv_benchMeshMorph != 0 )
+                variant->setGpuMorphEnabled( true );
             listMeshVariant.push_back( std::move( variant ) );
         }
 

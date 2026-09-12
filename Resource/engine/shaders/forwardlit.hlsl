@@ -25,15 +25,17 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 {
 	PSInput output;
+	// GPU 가 변형한 정점이 있으면 그걸 쓴다(모프 안 하면 입력 스트림 그대로).
+	const float3 localPos = SwLoadMorphPosition(vid, input.pos);
 	SwInstanceData inst = SwLoadInstance(iid);
-	float4 worldPos = mul(float4(input.pos, 1.0f), inst.world);
+	float4 worldPos = mul(float4(localPos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.col = input.col;
-	output.uv  = input.pos.xy * float2(0.5f, -0.5f) + 0.5f;
-	float3 n = DemoCubeNormal(input.pos);
+	output.uv  = localPos.xy * float2(0.5f, -0.5f) + 0.5f;
+	float3 n = DemoCubeNormal(localPos);
 	output.nrm = normalize(mul(float4(n, 0.0f), inst.world).xyz);
 	output.materialIndex = inst.materialIndex;
 	return output;

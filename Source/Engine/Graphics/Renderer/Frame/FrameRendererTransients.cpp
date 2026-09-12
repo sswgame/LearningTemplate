@@ -65,6 +65,17 @@ namespace sw
         if ( _instanceAnimCb != 0 )
             _instanceAnimCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceAnimCb );
 
+        struct GpuMorphParams
+        {
+            float32 _time{ 0.0f };
+            float32 _amplitude{ 0.0f };
+            float32 _frequency{ 0.0f };
+            uint32  _vertexCount{ 0 };
+        };
+        _meshMorphCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuMorphParams ) );
+        if ( _meshMorphCb != 0 )
+            _meshMorphCbIndex = _pDevice->getResource()->registerBindlessResource( _meshMorphCb );
+
         struct GpuSortParams
         {
             float32 _cameraPos[4]{};
@@ -148,6 +159,12 @@ namespace sw
                 _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
             if ( psoAnim != 0 )
                 _mapEnginePso.insert_or_assign( RenderPassType::InstanceAnim, psoAnim );
+
+            // 메시 모프도 같은 조건이다 — 구조버퍼 SRV 하나와 UAV 하나뿐이라 컬링 능력과 무관하다.
+            const RHIPipelineStateHandle psoMorph =
+                _pDevice->getResource()->createComputePipelineState( engineData._shaderMeshMorph.c_str(), FrameRendererUtil::Entry::kCSMain );
+            if ( psoMorph != 0 )
+                _mapEnginePso.insert_or_assign( RenderPassType::MeshMorph, psoMorph );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다 — 예전엔 진단용 전역변수로 끌 수 있는 두 번째

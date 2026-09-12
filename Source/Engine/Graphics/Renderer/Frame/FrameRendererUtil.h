@@ -84,6 +84,15 @@ namespace sw
         static constexpr float32 kGpuSpinBaseSpeed  = 0.35f;
         static constexpr float32 kGpuSpinSpeedRange = 1.75f;
 
+        /**
+         * @brief GPU 메시 모프의 변형 크기(로컬 단위)와 공간 주파수.
+         * @details 도형이 전부 단위 크기(반지름 0.5)라 진폭이 0.5 에 가까우면 원점을 지나 뒤집힌다.
+         *          주파수는 정점마다 위상을 어긋나게 하는 값이다 — 0 이면 도형이 통째로 커졌다 작아질 뿐
+         *          모양이 변하지 않아, 모프가 실제로 걸렸는지 그림으로 구분할 수 없다.
+         */
+        static constexpr float32 kMeshMorphAmplitude = 0.12f;
+        static constexpr float32 kMeshMorphFrequency = 6.0f;
+
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
         /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM. */
@@ -291,6 +300,10 @@ namespace sw
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수 — 셰이더 SW_MATERIAL 이 클램프한다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };
+        /// @brief GPU 가 변형한 정점 풀 ↔ binding.hlsli 의 g_SwMorphVertices(t11) / PassCB g_SwMorphVerticesIndex.
+        hashed_string _swMorphVertices{ "SwMorphVertices" };
+        /// @brief 그 풀의 원소 수 ↔ PassCB g_SwMorphVertexCount.
+        hashed_string _swMorphVertexCount{ "g_SwMorphVertexCount" };
         /// @brief 컬링이 만든 가시 인스턴스 ID 목록 (binding.hlsli g_SwVisibleInstanceIds ↔ "SwVisibleInstanceIds").
         hashed_string _swVisibleInstanceIds{ "SwVisibleInstanceIds" };
         /// @brief 배치의 머티리얼 데이터 구조버퍼 (binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록한다.

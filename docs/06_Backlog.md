@@ -214,50 +214,13 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-4. 정점을 GPU 가 바꾼다 (GPU 메시 모프) — **상용 엔진 확인 완료, 설계 확정, 구현이 남았다**
+### 1-4. GPU 메시 모프의 **OpenGL** 경로 — 켜지 못하고 있다
 
-**상용 엔진 둘을 확인했다 (2026-09-13).**
-
-| | 어떻게 하나 | 우리에게 주는 것 |
-|---|---|---|
-| **언리얼 — GPU Skin Cache** | 컴퓨트가 스키닝해 **결과를 정점 버퍼에 캐시**하고, `FGPUSkinPassthroughVertexFactory`(LocalVertexFactory 변형)가 그 버퍼를 정점 스트림으로 물린다. 캐시가 차면 그 메시는 **일반 `GPUSkinVertexFactory` 경로로 되돌아간다** | (1) 원본을 덮지 않고 **결과 버퍼를 따로** 둔다 (2) 드로우는 스트림만 바꿔 끼운다 (3) **예산이 차면 폴백**이 있다 |
-| **유니티 — Mesh.GetVertexBuffer** | `mesh.vertexBufferTarget \|= GraphicsBuffer.Target.Raw` 로 **미리 옵트인**해야 GPU 버퍼를 얻을 수 있고, 셰이더에서는 `RWByteAddressBuffer` 로 만진다. `GetVertexBufferStride`·`GetVertexAttributeOffset` 으로 **레이아웃을 질의**해 셰이더가 바이트 오프셋을 계산한다 | (4) 구조버퍼가 아니라 **RAW** 다 (5) stride·offset 을 **상수로 넘긴다**(셰이더에 하드코딩하지 않는다) (6) GPU 쪽 변경은 **CPU 사본에 반영되지 않는다**(문서가 명시) |
-
-**DX11 제약도 확인했다.** `D3D11_RESOURCE_MISC_BUFFER_STRUCTURED` 는 `D3D11_BIND_VERTEX_BUFFER` 와
-같이 설 수 없다 — 구조버퍼이면서 정점 버퍼인 것은 만들 수 없다. 유니티가 구조버퍼가 아니라 **Raw** 를
-고른 이유가 이것이다.
-
-**그런데 우리 엔진에서는 "정점 스트림 바꿔 끼우기" 가 가장 비싼 길이다.** 코드에서 확인한 것:
-- `IRHIResource::createBuffer` 의 기본 구현이 `Vertex` 플래그를 보면 `createVertexBuffer` 로 보내고
-  `UnorderedAccess` 를 **버린다.** DX12 · Vulkan 은 이 함수를 재정의하지 않으므로 그 기본 구현을 탄다.
-- DX12 의 `createVertexBuffer` 는 **UPLOAD 힙**에 만들어 Map 으로 채운다. UPLOAD 힙에는
-  `ALLOW_UNORDERED_ACCESS` 를 붙일 수 없다 — 즉 지금 구조로는 UAV 가 될 수 없고, DEFAULT 힙 +
-  스테이징 업로드로 **생성 경로를 새로 내야 한다**(백엔드 넷 전부).
-
-**그래서 채택: 정점 풀링(programmable vertex pulling).** 결과를 정점 스트림이 아니라 **구조버퍼**로
-두고 정점 셰이더가 `SV_VertexID` 로 직접 읽는다. 상용에서도 표준 기법이고(Nanite 가 이 길이다),
-무엇보다 **이 엔진의 결이다** — 인스턴스·머티리얼 데이터·가시 목록·간접 인자가 전부 이미 bindless
-구조버퍼이고, `RHIStructuredBufferSlot::ensureCapacity` 가 SRV·UAV 등록과 **3단 폴백**(요청 usage →
-UAV 빼고 → 순수 구조버퍼)까지 이미 네 백엔드에서 돌고 있다. 위 표의 (1)(2)(3)(5)(6)은 그대로 얻고,
-(4)의 DX11 제약과 DX12 힙 문제는 **아예 발생하지 않는다.**
-
-**구현 순서.**
-1. `Mesh` 가 요청 시 **레스트 구조버퍼**(SRV)를 갖는다 — `_listVertex` 를 한 번 올린다.
-2. `meshmorph.hlsl` (컴퓨트): 레스트 SRV → 모프 UAV. stride·offset·정점 수·시간을 **상수로 받는다**
-   (유니티의 레이아웃 질의에 해당 — 셰이더에 숫자를 박지 않는다).
-3. `RenderPassType::MeshMorph` + 엔진 PSO 등록 (`InstanceAnim` 이 등록된 자리를 그대로 따른다).
-4. 디스패치는 **컬링보다 앞**. 모프는 회전과 달리 실제로 바운드를 바꾼다.
-5. 정점 셰이더에 풀링 퍼뮤테이션. 배치가 모프 SRV 와 base 정점 오프셋을 싣는다.
-6. 예산과 폴백(언리얼의 스킨 캐시 한도) — 넘으면 그 메시는 레스트 그대로 그린다.
-7. 벤치 스위치 `-gv_benchMeshMorph` + 4백엔드 검증.
-
-**5번이 이 작업의 무게중심이다.** 정점 셰이더의 입력을 바꾸는 것은 **셰이더 바인딩 계약**을 건드리는
-일이라 `bindingslots.hlsli` 정본 수정 → `--bake-shaders` 재베이크 → `ShaderBindingContractTest` 4백엔드
-대조가 따라온다. 앞의 1~4 만 넣으면 **아무도 결과를 소비하지 않으므로** 중간에 멈출 수 없는 구간이다.
-
-**검증 함정 미리 적어 둠.** 정점이 움직이면 `RenderPassGpuTest` 의 픽셀 비교가 흔들린다. 모프는
-**기본 꺼짐**이어야 하고, 켠 상태는 `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 "무게중심이
-시간에 따라 움직인다" 로 본다([[screenshot-always-frame-10]] 의 교훈).
+DX12·DX11·Vulkan 은 픽셀이 일치하는데 GL 만 기하가 어긋나  로 꺼 두었다.
+배제한 것 셋(모프 수식·std430 정렬·폴백 경로)과 남은 의심 둘(정점 스테이지 SSBO 바인딩, ARB_gl_spirv 의
+ 의미)은 3절의 구현 항목에 적어 두었다. 다음에 볼 것: GL 의
+ 를 실제로 질의해 t11 이 한도 안인지 보고, 컴퓨트가 쓴 버퍼를
+ 로 되읽어 **어느 쪽이 틀렸는지**(컴퓨트 쓰기냐 정점 읽기냐) 가른다.
 
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
@@ -339,6 +302,61 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (GPU 가 정점을 바꾼다 — 언리얼·유니티를 확인하고 이 엔진의 결로 옮겼다)
+
+`-gv_benchMeshMorph=1` 이면 컴퓨트(`meshmorph.hlsl`)가 레스트 포즈를 읽어 변형 결과를 쓰고, 정점
+셰이더가 `SV_VertexID` 로 그 결과를 읽는다. **CPU 는 정점을 한 번도 다시 올리지 않는다.**
+
+**CPU 로 하면 안 되는 이유.** `Mesh::setVertices` 는 `releaseVertexBuffer()` 를 먼저 부른다 — 정점을
+매 프레임 바꾸면 **메시마다 GPU 버퍼를 파괴하고 다시 만든다.** 게다가 그 호출은 게임 스레드인데,
+버퍼 생성·파괴를 아무 스레드에서나 해도 되는지는 백엔드가 정한다(OpenGL 은 `false`).
+
+**상용 엔진 둘에서 가져온 것.** 언리얼 GPU Skin Cache — 결과를 **원본과 다른 버퍼**에 쓰고, 캐시가
+차면 **일반 경로로 폴백**하고, 버퍼 하나를 할당해 섹션마다 나눠 쓴다. 유니티 `Mesh.GetVertexBuffer`
+— **옵트인**해야 GPU 가 만질 수 있고(`vertexBufferTarget |= Raw`), 레이아웃을 **질의해 상수로 넘기며**,
+GPU 쪽 변경은 **CPU 사본에 반영되지 않는다**. 넷 다 그대로 가져왔다(`Mesh::setGpuMorphEnabled`,
+`GpuMeshMorphPool` 의 예산과 폴백, 풀 구간 나누기, stride 를 상수로).
+
+**가져오지 않은 것은 "정점 스트림 교체" 다.** 둘 다 "정점 버퍼이면서 UAV" 를 요구하는데 이 엔진에서는
+그게 가장 비싼 길이다 — `createBuffer` 가 `Vertex` 를 보면 `UnorderedAccess` 를 버리고(DX12·Vulkan 은
+이 함수를 재정의하지 않는다), DX12 의 `createVertexBuffer` 는 UPLOAD 힙이라 UAV 가 될 수 없고, DX11 은
+구조버퍼와 정점 버퍼를 겸할 수 없다. 대신 **정점 풀링**으로 갔다 — 결과를 구조버퍼에 두고 정점
+셰이더가 인덱스로 읽는다. 이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 그 모양이고,
+`RHIStructuredBufferSlot` 이 SRV·UAV 등록과 3단 폴백까지 네 백엔드에서 이미 돌고 있다 —
+**백엔드 분기가 한 줄도 없다.**
+
+**계약에 더한 것**: SRV 슬롯 `t11`(`g_SwMorphVertices`), PassCB 둘(`g_SwMorphVerticesIndex` ·
+`g_SwMorphVertexCount`), 루트 상수 하나(`g_MorphVertexBase`). 풀 SRV 는 **패스당 한 번** 걸리고 배치는
+시작 오프셋만 싣는다 — "드로우 사이에 바인딩이 바뀌지 않는다" 는 규약을 깨지 않는다.
+`forwardlit` · `shadowdepth` · `gbuffer` 셋이 같은 헬퍼를 쓴다(그림자를 빼면 물체와 그림자 모양이 어긋난다).
+
+**정렬에서 한 번 물렸다.** 풀 원소를 `RHIVertex`(float3+float4 = 28바이트) 그대로 뒀더니 **GL 만**
+기하가 무너졌다 — std430 은 vec4 를 16 바이트 경계에 맞추는데 DX/Vulkan 은 DXC 가 명시 오프셋을 적어
+넘어간다. 원소를 float4 둘(32바이트)로 맞췄다. 풀 원소는 엔진 내부 형식이라 `RHIVertex` 와 같을 이유가 없다.
+
+**GL 은 아직 꺼 두었다(`_bGpuMeshMorph = SW_FALSE`).** 정렬을 고쳐도 GL 만 그림이 다르다. 확인한 것:
+(1) 모프 수식이 아니라 **데이터**다 — 컴퓨트가 레스트를 그대로 쓰게 해도(항등) GL 만 다르다.
+(2) 정렬도 아니다 — 고치니 비배경 픽셀 15,829 → 30,551 로 좋아졌지만 기대값 42,300 에 못 미친다.
+(3) 폴백을 타는 것도 아니다 — 폴백이면 모프 끈 그림과 같아야 하는데 다르다.
+남은 의심은 정점 스테이지의 SSBO 바인딩(t11 이 이 스테이지의 **네 번째** SSBO 다)과 `ARB_gl_spirv` 의
+`gl_VertexID` 의미다. **원인을 찾기 전에는 켜지 않는다** — 백엔드 하나만 조용히 다른 그림을 내는 것이
+이 저장소에서 가장 비싼 버그였다. 지금은 GL 이 레스트 포즈로 깨끗이 폴백한다(아래 표).
+
+**검증** (큐브·구·실린더·캡슐·원뿔 100개, 같은 프레임 25):
+
+| 백엔드 | 모프 끔 | 모프 켬 | 다른 픽셀 |
+|---|---|---|---|
+| DX12 | 50914 | 52808 | 16119 |
+| DX11 | 50662 | 52831 | 15014 |
+| Vulkan | 50889 | 52895 | 15531 |
+| OpenGL | 50682 | 50685 | **187** (폴백 — 스핀 타이밍 지터뿐) |
+
+그 밖에: 전체 ctest 13/13(`ShaderBindingContractTest` 6/6 포함 — 계약을 바꿨으므로 재베이크했다) ·
+린트 7/7 · `BackendSmoke` 8/8 오류 0(모프 기본 꺼짐이라 평균 RGB 불변) · 4백엔드 오류 0.
+
+**덤으로 잡은 것**: `EngineData::_shaderMeshMorph` 에 `PROPERTY()` 를 빼먹어 XML 의 그 속성이 "모르는
+필드" 가 되고 **매 실행 경고**가 났다. 리플렉션 매크로가 없으면 값은 기본값으로 조용히 돌아간다.
 
 ### 2026-09-13 (머티리얼 스트레스를 넣었더니 퍼뮤테이션 경로가 네 겹으로 죽어 있었다)
 

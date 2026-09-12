@@ -71,6 +71,16 @@ namespace sw
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
         ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
 
+        // 모프 결과 풀 — **패스당 한 번** 건다. 배치는 시작 오프셋만 루트 상수로 싣는다(드로우 사이에
+        // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
+        // 입력 스트림을 그대로 쓴다.
+        const RHIStructuredBufferSlot& morphBuffer = _meshMorphPool.getMorphBuffer();
+        if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
+        {
+            ctx._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
+            ctx._passValues.setUint( passConstantNames()._swMorphVertexCount, _meshMorphPool.getVertexCount() );
+        }
+
         // 컬링이 실제로 목록을 만들었을 때만 건다 — 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
         // 예전처럼 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 전부 0 번 인스턴스를 그린다 — 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
@@ -137,7 +147,7 @@ namespace sw
         // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다 — 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전엔 이 둘을 PassCB 에 넣어 드로우마다
         // 버퍼를 새로 잡아야 했다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
-        const uint32 arrDrawRootConstant[] = { ctx._drawInstanceBase, ctx._drawMaterialCount };
+        const uint32 arrDrawRootConstant[] = { ctx._drawInstanceBase, ctx._drawMaterialCount, ctx._drawMorphVertexBase };
         ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                              arrDrawRootConstant );
 
@@ -240,6 +250,7 @@ namespace sw
             // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
             if ( bInstanced )
                 ctx._drawInstanceBase = batch._instanceBase;
+            ctx._drawMorphVertexBase = batch._morphVertexBase;
             registerMaterialBuffer( ctx, batch, batchPso );
             bindForDraw( ctx, batchPso, batch._materialCb, batch._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서

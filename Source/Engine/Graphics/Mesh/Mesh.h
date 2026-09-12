@@ -66,6 +66,17 @@ namespace sw
         void setVertices( vector<RHIVertex>&& listVertex );
         /** @brief CPU 정점 배열입니다. `setVertices` 의 짝 — GPU 업로드 뒤에도 원본은 여기 남습니다. */
         const vector<RHIVertex>& getVertices() const { return _listVertex; }
+
+        /**
+         * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본 꺼짐).
+         * @details 유니티의 `Mesh.vertexBufferTarget |= Raw` 옵트인과 같은 자리다 — 켠 메시만 모프 풀에
+         *          들어간다. 전부 넣으면 풀이 쓸데없이 커지고, 예산을 넘긴 메시는 어차피 레스트로 그려진다.
+         * @note **GPU 쪽 변형은 CPU 사본(`getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다 —
+         *       CPU 는 레스트 포즈만 안다(피킹·바운드는 그 값을 본다).
+         */
+        void setGpuMorphEnabled( bool bEnabled ) { _bGpuMorph = bEnabled ? SW_TRUE : SW_FALSE; }
+        /** @brief GPU 모프를 요청했는가. */
+        bool isGpuMorphEnabled() const { return _bGpuMorph != SW_FALSE; }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
 
@@ -87,6 +98,8 @@ namespace sw
         void releaseVertexBuffer();
 
         vector<RHIVertex> _listVertex;
+        /// @brief setGpuMorphEnabled 참고 — 이 메시가 모프 풀에 들어갈지.
+        uint8 _bGpuMorph{ SW_FALSE };
         /** @brief 정점 버퍼 — 어느 디바이스의 것인지를 함께 든다 (RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };

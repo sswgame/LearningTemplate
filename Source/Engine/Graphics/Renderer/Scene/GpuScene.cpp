@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Mesh/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -396,6 +397,19 @@ namespace sw
         _lastPrimitiveSetGeneration = setGeneration;
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
+    }
+
+    void GpuScene::assignMorphBases( const GpuMeshMorphPool& pool )
+    {
+        // 세 목록이 같은 배치를 각자 복사해 들고 있다 — 하나만 채우면 그 목록으로 나가는 드로우만 모프된다.
+        auto assign = [&pool]( vector<GpuMeshBatch>& listBatch )
+        {
+            for ( GpuMeshBatch& batch : listBatch )
+                batch._morphVertexBase = pool.baseOf( batch._mesh.get() );
+        };
+        assign( _snapshot._listOpaqueBatch );
+        assign( _snapshot._listTransparentBatch );
+        assign( _snapshot._listAllBatch );
     }
 
     void GpuScene::requestGpuUploads( GpuUploadQueue& queue ) const

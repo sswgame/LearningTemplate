@@ -22,4 +22,5 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnAdd, 0, "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)" );
     SW_GLOBAL_VARIABLE_INT( gv_benchMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
     SW_GLOBAL_VARIABLE_INT( gv_benchMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
+    SW_GLOBAL_VARIABLE_INT( gv_benchMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
 } // namespace sw

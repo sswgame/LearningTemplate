@@ -11,10 +11,11 @@ struct PSInput
 	float4 pos : SV_POSITION;
 };
 
-PSInput VSMain(VSInput input, uint iid : SV_InstanceID)
+PSInput VSMain(VSInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
 {
 	PSInput output;
-	float4 worldPos = mul(float4(input.pos, 1.0f), SwLoadInstanceWorld(iid));
+	// 그림자도 같은 정점을 봐야 한다 — 모프를 여기서 빼면 물체와 그림자의 모양이 어긋난다.
+	float4 worldPos = mul(float4(SwLoadMorphPosition(vid, input.pos), 1.0f), SwLoadInstanceWorld(iid));
 	output.pos = mul(worldPos, g_LightViewProj);
 	return output;
 }

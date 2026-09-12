@@ -56,6 +56,8 @@ namespace sw
         InstanceAnim,
         /// @brief 배치 안의 가시 인스턴스를 깊이순으로 정렬하는 컴퓨트 (instancesort.hlsl) — 투명 블렌딩 순서.
         InstanceSort,
+        /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트 (meshmorph.hlsl) — 정점 셰이더가 그 결과를 풀링한다.
+        MeshMorph,
     };
 
     /**

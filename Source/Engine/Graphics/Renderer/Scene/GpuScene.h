@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class GpuMeshMorphPool;
     class IRHIDevice;
     class Material;
     class MaterialInstance;
@@ -91,12 +92,18 @@ namespace sw
     /// @brief 같은 메시/머티리얼의 인스턴스 배치
     struct GpuMeshBatch
     {
-        shared_ptr<Mesh>   _mesh; ///< **소유를 싣는다** — RT 가 upload() 에서 이 메시를 역참조한다
-        RHIBufferHandle    _vertexBuffer{ 0 };
-        uint32             _vertexCount{ 0 };
-        uint32             _instanceBase{ 0 };
-        uint32             _instanceCount{ 0 };
-        uint32             _materialIndex{ 0 };
+        shared_ptr<Mesh> _mesh; ///< **소유를 싣는다** — RT 가 upload() 에서 이 메시를 역참조한다
+        RHIBufferHandle  _vertexBuffer{ 0 };
+        uint32           _vertexCount{ 0 };
+        uint32           _instanceBase{ 0 };
+        uint32           _instanceCount{ 0 };
+        uint32           _materialIndex{ 0 };
+        /**
+         * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위). 0xFFFFFFFF = 모프 안 함.
+         * @details RT 가 `upload()` 에서 채운다 — GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). 드로우는 이 값을
+         *          루트 상수로 실어 정점 셰이더가 `g_SwMorphVertices[base + SV_VertexID]` 를 읽게 한다.
+         */
+        uint32             _morphVertexBase{ 0xFFFFFFFFu };
         RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
         /**
@@ -312,6 +319,15 @@ namespace sw
          *          인스턴스당 96 바이트를 읽고 아무 일도 하지 않는다.
          */
         uint32 getSpinInstanceCount() const { return _snapshot._spinInstanceCount; }
+        /** @brief 불투명 다음 투명 — 간접 슬롯 순서와 같다. 모프 풀 구성이 이 목록을 본다. */
+        const vector<GpuMeshBatch>& getAllBatches() const { return _snapshot._listAllBatch; }
+        /**
+         * @brief 배치마다 모프 풀 구간을 적습니다 (RT 전용).
+         * @details GT 는 GPU 풀을 모른다(스냅샷 소유 규칙) — 그래서 RT 가 프레임마다 채운다.
+         *          세 목록(불투명·투명·전체)이 같은 배치를 따로 들고 있으므로 전부 채워야 한다.
+         */
+        void assignMorphBases( const GpuMeshMorphPool& pool );
+
         /** @brief 불투명 배치를 반환합니다. */
         const vector<GpuMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */

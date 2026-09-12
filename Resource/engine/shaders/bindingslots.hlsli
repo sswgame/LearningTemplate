@@ -85,7 +85,15 @@
 // 예전처럼 g_InstanceBase + SV_InstanceID 를 그대로 쓴다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   10
 
-#define SW_SRV_SLOT_COUNT              11  // t0..t10 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// GPU 가 변형한 정점 (StructuredBuffer<SwVertexData> g_SwMorphVertices). 정점 셰이더가
+// g_SwMorphVertices[g_MorphVertexBase + SV_VertexID] 로 **입력 스트림 대신** 위치를 읽는다 —
+// 언리얼 GPU Skin Cache 가 컴퓨트 결과를 정점 스트림으로 물리는 자리와 같은 목적이고, 방법만
+// 정점 풀링이다(이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 구조버퍼라 그 결이 맞고,
+// DX11 의 "구조버퍼는 정점 버퍼가 될 수 없다" 제약과 DX12 의 UPLOAD 힙 제약을 아예 비켜 간다).
+// 안 걸려 있으면(SW_INVALID_INDEX) 입력 스트림을 그대로 쓴다.
+#define SW_SLOT_MORPH_VERTEX_SRV       11
+
+#define SW_SRV_SLOT_COUNT              12  // t0..t11 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)

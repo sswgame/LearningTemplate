@@ -84,4 +84,15 @@ namespace sw
      *       달라지므로 예전 수치와 직접 비교할 수 없다.
      */
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMeshShapes );
+
+    /**
+     * @brief `-gv_benchMeshMorph=1` — 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
+     * @details 컴퓨트(meshmorph.hlsl)가 레스트 포즈를 읽어 결과 버퍼에 쓰고, 정점 셰이더가 그 결과를
+     *          `SV_VertexID` 로 풀링한다. CPU 는 정점을 한 번도 다시 올리지 않는다 — `Mesh::setVertices` 로
+     *          매 프레임 바꾸면 메시마다 정점 버퍼를 파괴하고 다시 만들고, 게임 스레드에서 부르는 것이라
+     *          OpenGL 에서는 컨텍스트도 없다.
+     * @note 기본이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**다. 켠 상태의 검증은
+     *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 그림이 실제로 달라지는지로 본다.
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_INT( gv_benchMeshMorph );
 } // namespace sw

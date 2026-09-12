@@ -19,13 +19,19 @@ namespace sw
      */
     struct SW_API RHICapabilities
     {
-        uint8 _bBindless{ SW_FALSE };                 ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
-        uint8 _bNativeBindless{ SW_FALSE };           ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
-        uint8 _bCompute{ SW_TRUE };                   ///< 컴퓨트 셰이더
-        uint8 _bOffscreenRT{ SW_FALSE };              ///< createTexture2D + 오프스크린 경로
-        uint8 _bComputeRootConstants{ SW_FALSE };     ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
-        uint8 _bIndirectDraw{ SW_FALSE };             ///< drawIndirect / dispatchIndirect
-        uint8 _bGpuCulling{ SW_FALSE };               ///< 컴퓨트 컬 + 인디렉트 인자 경로
+        uint8 _bBindless{ SW_FALSE };             ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
+        uint8 _bNativeBindless{ SW_FALSE };       ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
+        uint8 _bCompute{ SW_TRUE };               ///< 컴퓨트 셰이더
+        uint8 _bOffscreenRT{ SW_FALSE };          ///< createTexture2D + 오프스크린 경로
+        uint8 _bComputeRootConstants{ SW_FALSE }; ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
+        uint8 _bIndirectDraw{ SW_FALSE };         ///< drawIndirect / dispatchIndirect
+        uint8 _bGpuCulling{ SW_FALSE };           ///< 컴퓨트 컬 + 인디렉트 인자 경로
+        /**
+         * @brief GPU 메시 모프 — 컴퓨트가 정점을 변형하고 정점 셰이더가 그 결과를 풀링한다.
+         * @details 끄면 모프를 요청한 메시도 **레스트 포즈로 그려진다**(셰이더의 폴백 경로 그대로).
+         *          언리얼도 스킨 캐시를 못 쓰면 일반 정점 팩토리로 되돌린다 — 그리기가 멈추지는 않는다.
+         */
+        uint8 _bGpuMeshMorph{ SW_FALSE };
         uint8 _bMultiDrawIndirect{ SW_FALSE };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
         uint8 _bParallelCommandRecording{ SW_FALSE }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
         uint8 _bRequiresWindowRecreate{ SW_FALSE };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
@@ -84,6 +90,7 @@ namespace sw
                     caps._bComputeRootConstants       = SW_TRUE;
                     caps._bIndirectDraw               = SW_TRUE;
                     caps._bGpuCulling                 = SW_TRUE;
+                    caps._bGpuMeshMorph               = SW_TRUE;
                     caps._bMultiDrawIndirect          = SW_TRUE;
                     caps._bParallelCommandRecording   = SW_TRUE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
@@ -102,19 +109,30 @@ namespace sw
                     // 쓰려면 둘 중 하나를 포기해야 한다 — 인다이렉트 드로우를 살리고 컬링을 끈다
                     // (간접 인자는 GpuScene 이 CPU 에서 이미 채운다).
                     caps._bGpuCulling                 = SW_FALSE;
+                    caps._bGpuMeshMorph               = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다 — 간접 인자 제약과 무관하다
                     caps._bMultiDrawIndirect          = SW_TRUE;
                     caps._bParallelCommandRecording   = SW_FALSE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 }
                 case RHIBackend::OpenGL:
-                    caps._bBindless                 = SW_TRUE;
-                    caps._bNativeBindless           = SW_FALSE;
-                    caps._bCompute                  = SW_TRUE;
-                    caps._bOffscreenRT              = SW_TRUE;
-                    caps._bComputeRootConstants     = SW_TRUE;
-                    caps._bIndirectDraw             = SW_TRUE;
-                    caps._bGpuCulling               = SW_TRUE;
+                    caps._bBindless             = SW_TRUE;
+                    caps._bNativeBindless       = SW_FALSE;
+                    caps._bCompute              = SW_TRUE;
+                    caps._bOffscreenRT          = SW_TRUE;
+                    caps._bComputeRootConstants = SW_TRUE;
+                    caps._bIndirectDraw         = SW_TRUE;
+                    caps._bGpuCulling           = SW_TRUE;
+                    // **GL 만 꺼져 있다.** 컴퓨트가 쓴 정점을 정점 셰이더가 읽으면 DX11/DX12/Vulkan 은
+                    // 픽셀이 일치하는데 GL 만 기하가 어긋난다. 확인한 것: (1) 모프 수식이 아니라 데이터다 —
+                    // 컴퓨트가 레스트를 **그대로** 쓰게 해도(항등) GL 만 다른 그림이 나온다. (2) 정렬도
+                    // 아니다 — 원소를 float4 둘(32바이트)로 맞춰 std430 경계를 지켜도 여전히 다르다
+                    // (그 수정으로 좋아지긴 했다: 비배경 픽셀 15,829 → 30,551, 기대값 42,300).
+                    // (3) 폴백을 타는 것도 아니다 — 폴백이면 모프 끈 그림과 같아야 하는데 다르다.
+                    // 남은 의심은 정점 스테이지의 SSBO 바인딩(t11 이 이 스테이지의 네 번째 SSBO 다)과
+                    // ARB_gl_spirv 의 gl_VertexID 의미다. 원인을 찾기 전에는 켜지 않는다 —
+                    // 백엔드 하나만 조용히 다른 그림을 내는 것이 이 저장소에서 가장 비싼 버그였다.
+                    caps._bGpuMeshMorph             = SW_FALSE;
                     caps._bMultiDrawIndirect        = SW_TRUE;
                     caps._bParallelCommandRecording = SW_FALSE;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -131,6 +149,7 @@ namespace sw
                     caps._bComputeRootConstants = SW_TRUE;
                     caps._bIndirectDraw         = SW_TRUE;
                     caps._bGpuCulling           = SW_TRUE;
+                    caps._bGpuMeshMorph         = SW_TRUE;
                     caps._bMultiDrawIndirect    = SW_TRUE;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기

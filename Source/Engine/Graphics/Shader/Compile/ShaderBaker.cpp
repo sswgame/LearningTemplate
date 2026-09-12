@@ -341,6 +341,7 @@ namespace sw
                     engineData._shaderGpuCull,
                     engineData._shaderInstanceAnim,
                     engineData._shaderInstanceSort,
+                    engineData._shaderMeshMorph,
                     "common/shaders/samplecompute.hlsl",
                     "common/shaders/sampleindirect.hlsl",
                     "common/shaders/computetexturewrite.hlsl" };
