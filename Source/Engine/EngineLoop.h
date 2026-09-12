@@ -37,6 +37,7 @@ namespace sw
     class LocalizationManager;
     class Logger;
     class MemoryProfiler;
+    class RenderTargetRegistry;
     class RenderThread;
     class ResourceManager;
     class RHI;
@@ -182,6 +183,8 @@ namespace sw
         unique_ptr<ShaderCache>         _shaderCache;
         unique_ptr<ComponentDefaults>   _componentDefaults;
         unique_ptr<FrameProfiler>       _frameProfiler;
+        /// @brief 렌더 타깃 목록 — 렌더러가 공개하고 에디터 패널이 읽는다.
+        unique_ptr<RenderTargetRegistry> _renderTargetRegistry;
         /** @brief 압축 코덱 레지스트리. Core 의 CompressionStream 이 보도록 setActive 로 슬롯에 꽂는다. */
         unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
 

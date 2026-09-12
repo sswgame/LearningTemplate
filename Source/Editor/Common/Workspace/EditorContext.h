@@ -69,10 +69,12 @@ namespace sw::editor
         void        setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
         IRHIDevice* getRhiDevice() const { return _pRhiDevice; }
         void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-        void        setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
-        void        setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
-        bool        isGameViewHovered() const { return _bGameViewHovered == SW_TRUE; }
-        bool        isGameViewFocused() const { return _bGameViewFocused == SW_TRUE; }
+        /** @brief ImGui 렌더러 백엔드입니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr. */
+        IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
+        void                   setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
+        void                   setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
+        bool                   isGameViewHovered() const { return _bGameViewHovered == SW_TRUE; }
+        bool                   isGameViewFocused() const { return _bGameViewFocused == SW_TRUE; }
 
         const EditorGameView& getGameView() const { return _gameView; }
         void                  ensureGameViewSize( uint32 width, uint32 height );

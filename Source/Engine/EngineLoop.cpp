@@ -30,6 +30,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
@@ -231,8 +232,9 @@ namespace sw
             _compressionCodecRegistry->registerCodec( make_unique<ZstdCompressionCodec>() );
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
-            _componentDefaults = make_unique<ComponentDefaults>();
-            _frameProfiler     = make_unique<FrameProfiler>();
+            _componentDefaults    = make_unique<ComponentDefaults>();
+            _frameProfiler        = make_unique<FrameProfiler>();
+            _renderTargetRegistry = make_unique<RenderTargetRegistry>();
 
             EngineServices services{};
             services._pCommandLineManager       = _commandLineManager.get();
@@ -256,6 +258,7 @@ namespace sw
             services._pShaderCache              = _shaderCache.get();
             services._pComponentDefaults        = _componentDefaults.get();
             services._pFrameProfiler            = _frameProfiler.get();
+            services._pRenderTargetRegistry     = _renderTargetRegistry.get();
 
             engine::bindEngineServices( services );
             engine::registerModuleTypes( "Engine" );
@@ -515,6 +518,7 @@ namespace sw
             _shaderCache.reset();
             _componentDefaults.reset();
             _frameProfiler.reset();
+            _renderTargetRegistry.reset();
             // 슬롯부터 끊는다 — 소유자가 죽은 뒤에도 슬롯이 가리키고 있으면 엔진을 내린 다음의
             // 압축 경로가 해제된 레지스트리를 읽는다. 끊고 나면 CompressionStream 은 내장 코덱으로 문다.
             CompressionCodecRegistry::setActive( nullptr );

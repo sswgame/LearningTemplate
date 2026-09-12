@@ -117,6 +117,12 @@ namespace sw
          */
         string_view getPresentedAttachmentName() const;
         /**
+         * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다 (에디터 패널이 읽는다).
+         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번 부르면 된다 —
+         *          매 프레임 부를 이유가 없다.
+         */
+        void publishRenderTargets() const;
+        /**
          * @brief 트랜지언트 첨부를 CPU 로 읽어 옵니다 (밉 0). 테스트가 백엔드 간 픽셀을 비교하는 데 쓴다 — GPU 를 기다린다.
          * @param outFormat 첨부의 RHIFormat (채널 순서 해석용).
          */

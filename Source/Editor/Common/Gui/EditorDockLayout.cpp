@@ -56,7 +56,9 @@ namespace sw::editor
         // 진단 스위치가 켜져 있으면 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹된 패널은 같은 노드에
         // 탭으로 쌓여 **앞의 하나만 그려지므로**, 전부 열어도 뒤의 것은 여전히 확인되지 않는다.
         // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
-        if ( _imguiIniPath.empty() == false && gv_editorOpenAllPanels == 0 )
+        // `-gv_editorOpenPanel` 도 같은 이유로 레이아웃을 비운다 — 저장된 도킹으로 복원되면 그 패널이
+        // 탭 뒤에 숨어 결국 안 보인다.
+        if ( _imguiIniPath.empty() == false && gv_editorOpenAllPanels == 0 && gv_editorOpenPanel.empty() )
             io.IniFilename = _imguiIniPath.c_str();
         else
             io.IniFilename = nullptr;
@@ -74,6 +76,25 @@ namespace sw::editor
                     entry._pInstance->setOpen( true );
             }
             SW_LOG_INFO( "gv_editorOpenAllPanels: 등록된 패널을 전부 열었습니다 (windows.ini 복원 건너뜀)." );
+            return;
+        }
+
+        // 하나만 연다 — 전부 열면 서로를 가려서 원하는 패널이 화면 캡처에 나오지 않는다.
+        if ( gv_editorOpenPanel.empty() == false )
+        {
+            bool bFound = false;
+            for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
+            {
+                if ( entry._pInstance == nullptr )
+                    continue;
+                const bool bMatch = ( entry._id == gv_editorOpenPanel );
+                entry._pInstance->setOpen( bMatch );
+                bFound = bFound || bMatch;
+            }
+            if ( bFound )
+                SW_LOG_INFO( "gv_editorOpenPanel: '%#' 패널만 열었습니다.", gv_editorOpenPanel.c_str() );
+            else
+                SW_LOG_WARNING( "gv_editorOpenPanel: '%#' 라는 패널이 없습니다 — 전부 닫힌 채로 뜹니다.", gv_editorOpenPanel.c_str() );
             return;
         }
 

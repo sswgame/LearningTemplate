@@ -147,6 +147,24 @@ namespace sw
             return RHIFormat::R8G8B8A8_UNORM;
         }
 
+        /**
+         * @brief `parseAttachmentFormat` 의 역 — 포맷을 파이프라인 XML 이 쓰는 이름으로 돌려줍니다.
+         * @details **파서 바로 옆에 둔다.** 이름과 값의 짝을 두 파일에 나눠 두면 한쪽만 늘어난다.
+         */
+        static const utf8* attachmentFormatName( RHIFormat format )
+        {
+            // 파서와 **같은 모양**의 if 체인이다 — 짝을 눈으로 맞출 수 있도록.
+            if ( format == RHIFormat::D24_UNORM_S8_UINT )
+                return "D24_UNORM_S8_UINT";
+            if ( format == RHIFormat::R16G16B16A16_FLOAT )
+                return "R16G16B16A16_FLOAT";
+            if ( format == RHIFormat::B8G8R8A8_UNORM )
+                return "B8G8R8A8_UNORM";
+            if ( format == RHIFormat::R8G8B8A8_UNORM )
+                return "R8G8B8A8_UNORM";
+            return "(unknown)";
+        }
+
         /** @brief 뎁스만 쓰는 패스 타입인가 — 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거다. */
         static bool isDepthOnlyPassType( RenderPassType passType )
         {

@@ -32,6 +32,15 @@ namespace sw
     SW_EXTERN_GLOBAL_VARIABLE_INT( gv_editorOpenAllPanels );
 
     /**
+     * @brief `-gv_editorOpenPanel=<id>` — 그 패널 **하나만** 열고 나머지는 닫습니다.
+     * @details `-gv_editorOpenAllPanels` 는 전부 띄워 서로를 가린다 — 마지막에 등록된 것이 위로 와서
+     *          **원하는 패널이 화면 캡처에 안 나온다**(실제로 새 패널을 확인하려다 막혔다). 하나만
+     *          띄우면 그 패널이 반드시 보인다. id 는 `registerDefaultPanels` 가 준 것이다
+     *          (예: `render_targets` · `profiler` · `material`).
+     */
+    SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel );
+
+    /**
      * @brief `-gv_editorStartupScene=<리소스 경로>` — 에디터가 시작할 때 이 씬을 엽니다.
      * @details 실기동 검증이 오래 **빈 씬만** 보고 있었다. 활성 게임이 `Empty` 라 맵이 없어서
      *          `SceneManager` 가 씬 없이 뜨고 내려간다 — 그래서 오브젝트를 도는 코드(뷰포트 피킹·

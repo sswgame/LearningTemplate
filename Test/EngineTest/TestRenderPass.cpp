@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
@@ -3630,6 +3631,85 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
         cube->releaseRhi( device.get() );
 
     renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
+ * @brief [RenderPassGpuTest] 렌더 타깃 목록이 **에디터가 읽을 수 있게** 공개된다
+ * @details 에디터는 `FrameRenderer` 인스턴스를 쥘 방법이 없다 — 트랜지언트는 private 맵이다.
+ *          그래서 "지금 G버퍼에 뭐가 들어 있나" 를 보려면 `-gv_screenshotAttachment` 로 프로세스를
+ *          다시 띄워 PPM 을 찍는 수밖에 없었다. 이제 렌더러가 `RenderTargetRegistry` 에 목록을
+ *          공개하고 `RenderTargetPanel` 이 그것을 읽는다.
+ * @note 패널 자체는 ImGui 라 테스트가 붙지 않는다. 대신 **패널이 먹는 데이터**를 여기서 고정한다 —
+ *       목록이 비거나 이름이 바뀌면 패널은 조용히 빈 창이 된다(그게 이 계약의 유일한 실패 모드다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+    bool bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for render target registry test" );
+
+    sw::RenderTargetRegistry* pRegistry = sw::engine::getRenderTargetRegistry();
+    SW_ASSERT_NOT_NULL( pRegistry );
+    sw::RenderTargetRegistry& registry = *pRegistry;
+
+    sw::FrameRenderer renderer;
+    SW_EXPECT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_TRUE( renderer.isReady() );
+
+    sw::vector<sw::RenderTargetInfo> listTarget;
+    registry.snapshot( listTarget );
+    SW_EXPECT_TRUE_MSG( listTarget.empty() == false, "렌더러가 트랜지언트를 만들고도 목록을 공개하지 않았다" );
+
+    // 패널이 보여 줄 것들 — 디퍼드의 핵심 단계가 이름으로 들어 있어야 한다.
+    auto hasTarget = [&listTarget]( const utf8* pName ) -> bool
+    {
+        for ( const sw::RenderTargetInfo& info : listTarget )
+        {
+            if ( info._name == pName )
+                return true;
+        }
+        return false;
+    };
+    SW_EXPECT_TRUE_MSG( hasTarget( "GBufferAlbedo" ), "G버퍼 알베도가 목록에 없다" );
+    SW_EXPECT_TRUE_MSG( hasTarget( "GBufferNormal" ), "G버퍼 노멀이 목록에 없다" );
+    SW_EXPECT_TRUE_MSG( hasTarget( "LitColor" ), "디퍼드 조명 결과가 목록에 없다" );
+
+    // 값이 채워져 있어야 패널이 크기·포맷을 보여 줄 수 있다.
+    for ( const sw::RenderTargetInfo& info : listTarget )
+    {
+        SW_EXPECT_TRUE_MSG( info._texture != 0, "목록에 텍스처 핸들이 0 인 항목이 있다" );
+        SW_EXPECT_TRUE_MSG( info._width > 0 && info._height > 0, "목록에 크기가 0 인 항목이 있다" );
+        // 깊이 첨부는 미리보기를 하지 않는다 — 그 판정이 여기서 이미 서 있어야 한다.
+        if ( info._name == "SceneDepth" || info._name == "ShadowMap" )
+            SW_EXPECT_TRUE_MSG( info._bDepth != SW_FALSE, "깊이 첨부가 깊이로 표시되지 않았다" );
+    }
+
+    // 목록은 **바뀔 때만** 세대가 오른다 — 패널이 매 프레임 복사하지 않는 근거다.
+    const uint64 generation = registry.getGeneration();
+    SW_EXPECT_EQUAL( generation, registry.getGeneration() );
+
+    // 렌더러가 내려가면 목록도 비워진다 — 죽은 핸들을 UI 가 집으면 백엔드가 죽는다.
+    renderer.shutdown();
+    registry.snapshot( listTarget );
+    SW_EXPECT_TRUE_MSG( listTarget.empty(), "렌더러가 내려갔는데 목록에 죽은 핸들이 남았다" );
+    SW_EXPECT_TRUE_MSG( registry.getGeneration() != generation, "목록이 바뀌었는데 세대가 그대로다" );
+
     device->shutdown();
     device.reset();
     window->destroy();

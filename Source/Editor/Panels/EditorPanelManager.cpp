@@ -16,6 +16,7 @@
 #include "Editor/Panels/MaterialPanel.h"
 #include "Editor/Panels/PrefabEditorPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
+#include "Editor/Panels/RenderTargetPanel.h"
 #include "Editor/Panels/SequencerPanel.h"
 #include "Editor/Panels/SpriteClipPanel.h"
 #include "Editor/Panels/TileMapPanel.h"
@@ -82,6 +83,7 @@ namespace sw::editor
 
         registerPanel( make_unique<HistoryPanel>(), "history", EditorPanelCategory::Tool );
         registerPanel( make_unique<GlobalVariablesPanel>(), "global_variables", EditorPanelCategory::Tool );
+        registerPanel( make_unique<RenderTargetPanel>(), "render_targets", EditorPanelCategory::Tool );
         registerPanel( make_unique<SequencerPanel>(), "sequencer", EditorPanelCategory::Tool );
         registerPanel( make_unique<AnimationGraphPanel>(), "animation_graph", EditorPanelCategory::Tool );
         registerPanel( make_unique<DialogueGraphPanel>(), "dialogue_graph", EditorPanelCategory::Tool );

@@ -17,6 +17,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
+#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -69,6 +70,7 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::ShaderCache>              shaderCache              = sw::make_unique<sw::ShaderCache>();
     sw::unique_ptr<sw::ComponentDefaults>        componentDefaults        = sw::make_unique<sw::ComponentDefaults>();
     sw::unique_ptr<sw::FrameProfiler>            frameProfiler            = sw::make_unique<sw::FrameProfiler>();
+    sw::unique_ptr<sw::RenderTargetRegistry>     renderTargetRegistry     = sw::make_unique<sw::RenderTargetRegistry>();
 
     logger->initialize();
     // 리소스 루트는 로거 다음에 찾는다(EngineLoop 과 같은 순서) — 실패했을 때의 진단이 남아야 하고,
@@ -118,6 +120,7 @@ int main( int32 argc, utf8* argv[] )
     services._pShaderCache              = shaderCache.get();
     services._pComponentDefaults        = componentDefaults.get();
     services._pFrameProfiler            = frameProfiler.get();
+    services._pRenderTargetRegistry     = renderTargetRegistry.get();
     sw::engine::bindEngineServices( services );
 
     // ------------------------------------------------------------------------------
@@ -191,6 +194,7 @@ int main( int32 argc, utf8* argv[] )
     sw::engine::unbindEngineServices();
 
     frameProfiler.reset();
+    renderTargetRegistry.reset();
     componentDefaults.reset();
     shaderCache.reset();
     sw::CompressionCodecRegistry::setActive( nullptr );

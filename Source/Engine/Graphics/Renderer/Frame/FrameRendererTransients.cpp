@@ -4,6 +4,7 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Window/IWindow.h"
@@ -475,6 +476,43 @@ namespace sw
         }
 
         ensureTaaHistory();
+        publishRenderTargets();
+    }
+
+    void FrameRenderer::publishRenderTargets() const
+    {
+        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
+        if ( pRegistry == nullptr )
+            return;
+
+        // 화면에 나가는 것이 무엇인지 함께 실어 준다 — 패널이 열리자마자 **지금 보이는 그림**을
+        // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
+        const string_view presented = getPresentedAttachmentName();
+
+        vector<RenderTargetInfo> listTarget;
+        listTarget.reserve( _mapTransient.size() );
+        for ( const auto& [name, attachment] : _mapTransient )
+        {
+            if ( attachment._texture == 0 )
+                continue;
+            RenderTargetInfo info{};
+            info._name       = name;
+            info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
+            info._texture    = attachment._texture;
+            info._width      = _transientWidth;
+            info._height     = _transientHeight;
+            info._format     = attachmentFormatOrDefault( name, RHIFormat::R8G8B8A8_UNORM );
+            info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
+            listTarget.push_back( std::move( info ) );
+        }
+
+        // 이름순으로 정렬해 둔다 — 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
+        // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
+        std::sort( listTarget.begin(), listTarget.end(),
+                   []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
+        { return lhs._name < rhs._name; } );
+
+        pRegistry->publish( std::move( listTarget ) );
     }
 
     void FrameRenderer::ensureTaaHistory()
@@ -615,6 +653,10 @@ namespace sw
 
     void FrameRenderer::releaseTransientResources()
     {
+        // 목록을 먼저 비운다 — 놓는 도중에 UI 가 죽은 핸들을 집어 가면 안 된다.
+        if ( RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry(); pRegistry != nullptr )
+            pRegistry->clear();
+
         if ( _pDevice == nullptr )
         {
             _mapTransient.clear();
