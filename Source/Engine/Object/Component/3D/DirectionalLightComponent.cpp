@@ -4,6 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/LightRegistry.h"
+
 namespace sw
 {
     namespace
@@ -92,5 +95,17 @@ namespace sw
         const float32 extent = _shadowExtent * 2.0f;
         return float4x4::createLookAt( eye, float3::Zero, up ) *
                float4x4::createOrthographic( extent, extent, -_shadowDistance, _shadowDistance );
+    }
+
+    void DirectionalLightComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        manager.getLightRegistry().addDirectional( this );
+    }
+
+    void DirectionalLightComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getLightRegistry().removeDirectional( this );
+        SceneComponent::onUnregister( manager );
     }
 } // namespace sw

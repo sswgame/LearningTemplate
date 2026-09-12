@@ -3,6 +3,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
@@ -221,4 +222,46 @@ SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
         SW_EXPECT_STREQ( "deb66c15-3534-4b79-b3de-a2080d7c5ffe", node._prefabGuid.c_str() );
     }
     SW_EXPECT_TRUE_MSG( bFound, "테스트 씬에 TestProp 이 없다 — 이 검증이 아무것도 보지 않았다" );
+}
+
+/**
+ * @brief [SceneTest] 주광 조회가 등록부를 보고, 활성/파괴를 따라간다
+ * @details 예전에는 매 프레임 **모든 GameObject** 를 훑어 주광을 찾았다(중단도 없었다). 등록부로
+ *          바꾸면서 조회 결과가 달라지지 않는지 고정한다 — 없음 · 있음 · 비활성 · 파괴 네 상태다.
+ */
+SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
+{
+    sw::Scene scene{ "LightLookup" };
+    SW_ASSERT_NOT_NULL( scene.getObjectManager() );
+
+    // 빛이 하나도 없으면 nullptr 이다.
+    SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+
+    // 빛과 무관한 오브젝트가 아무리 많아도 결과는 그대로다.
+    for ( uint32 index = 0; index < 16; ++index )
+        SW_ASSERT_NOT_NULL( scene.getObjectManager()->createGameObject( sw::hashed_string( "Filler" ) ) );
+    SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+
+    sw::GameObject* pSun = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sun" ) );
+    SW_ASSERT_NOT_NULL( pSun );
+    sw::DirectionalLightComponent* pLight = pSun->addComponent<sw::DirectionalLightComponent>();
+    SW_ASSERT_NOT_NULL( pLight );
+    SW_EXPECT_EQUAL( pLight, scene.findActiveDirectionalLight() );
+
+    // 컴포넌트를 끄면 안 보인다.
+    pLight->setActive( false );
+    SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+    pLight->setActive( true );
+    SW_EXPECT_EQUAL( pLight, scene.findActiveDirectionalLight() );
+
+    // 소유 오브젝트를 끄면 역시 안 보인다.
+    pSun->setActive( false );
+    SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
+    pSun->setActive( true );
+    SW_EXPECT_EQUAL( pLight, scene.findActiveDirectionalLight() );
+
+    // 파괴되면 등록이 풀린다 — 등록부에 죽은 포인터가 남으면 여기서 잡힌다.
+    scene.getObjectManager()->destroyObject( pSun, true );
+    scene.getObjectManager()->tick( 0.016f );
+    SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
 }

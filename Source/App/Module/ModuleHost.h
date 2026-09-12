@@ -89,20 +89,21 @@ namespace sw
         ModuleHost& operator=( const ModuleHost& ) = delete;
 
         /**
-         * @brief LiveReloadManager에 콜백을 등록하고 에디터/게임 모듈을 로드합니다.
-         * @param pLiveReloadManager Dev 모드 전용 모듈 매니저 (nullable for Shipping)
-         * @param pRHI 활성 RHI
-         * @param pWindow 플랫폼 윈도우
-         * @param pRenderThread 렌더 스레드 (drainWorkers 용)
-         * @param bEnableEditor 에디터 모드 여부
-         */
-        /**
          * @brief 이미 로드된 모듈의 핸들입니다. 핫리로드가 없으면(Shipping) 늘 nullptr.
          * @details 모듈 수명을 아는 것은 여기다 — 부르는 쪽이 LiveReloadManager 를 직접 알 필요가 없다.
          *          RHI 백엔드 교체가 모듈을 다시 세울 때 이 핸들로 같은 DLL 을 다시 바인딩한다.
          */
         void* getLoadedModuleHandle( string_view moduleName ) const;
 
+        /**
+         * @brief LiveReloadManager에 콜백을 등록하고 에디터/게임 모듈을 로드합니다.
+         * @param pLiveReloadManager Dev 모드 전용 모듈 매니저 (nullable for Shipping)
+         * @param pRHI 활성 RHI
+         * @param pWindow 플랫폼 윈도우
+         * @param pRenderThread 렌더 스레드 (drainWorkers 용)
+         * @param bEnableEditor 에디터 모드 여부
+         * @param listGameKitModule 함께 로드할 GameFramework 킷 모듈 목록
+         */
         bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
         void shutdown();
 

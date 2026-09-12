@@ -127,7 +127,7 @@ namespace sw
         _height         = desc._height;
 
         // 백버퍼 포맷/개수는 백엔드 간 계약값이다 — 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
-        _swapChain.setRequested( desc._format, desc._bufferCount );
+        _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
 
         BLOCK( "Validation Layer Setup" )
         {

@@ -420,6 +420,34 @@ Graphics 감사 후 고친 것 (2026-09-08):
 줄일 수 없다). 더 줄이려면 메시들이 정점 버퍼를 공유해 `multiDrawIndirect` 한 번으로 묶어야 한다
 (언리얼의 통합 정점 버퍼 풀) — 별개의 구조 변경이다.
 
+## 성능을 잴 때 — 먼저 VSync 를 확인한다 (2026-09-13)
+
+**프레임 시간이 주사율에 붙어 있으면 CPU 측정은 전부 무의미하다.** 2026-09-13 까지 이 저장소는
+`RenderThread` 가 `endFrame( true )` 를 못박고 있어서 `EngineConfig._window._bVSync` 도 CLI 도 효과가
+없었고, 모든 프레임이 165Hz(6061us)에 정확히 붙어 있었다. 지금은 설정·CLI 가 실제로 먹는다.
+
+- 기본은 **꺼짐**(`Config/Engine/EngineConfig.json` 의 `"_bVSync": false`). 켜서 재려면 `-vsync`.
+- DX11·DX12 는 `Present( 0, 0 )` 만으로는 안 꺼진다 — 스왑체인 `ALLOW_TEARING` 플래그와 Present 플래그가
+  **짝**이어야 하고, `ResizeBuffers` 도 같은 플래그를 다시 넘겨야 한다(`RHI/DX/RHIDxgiTearing.h`).
+- Vulkan 은 present 호출에 동기화 인자가 없다 — **스왑체인 present 모드**(FIFO/MAILBOX/IMMEDIATE)가 그 자리다.
+- **의심되면 숫자를 나눠 보라.** `1 / RT.Frame` 이 모니터 주사율과 같으면 vsync 에 붙어 있는 것이다.
+
+프로파일 구간은 게임 스레드와 렌더 스레드를 **각각 통째로** 잡는다 — 그래야 "이게 프레임의 몇 %인가" 에
+답할 수 있다. 읽는 법은 두 뺄셈이다:
+
+| 구간 | 뜻 |
+|------|-----|
+| `GT.Frame` | 게임 스레드 프레임 전체 (`EngineLoop::tick`) |
+| `GT.Packet.submit` | GT 가 **RT 를 기다린** 시간. 크면 렌더 스레드가 밀린 것이다(링이 차면 submit 이 막는다) |
+| `RT.Frame` | 렌더 스레드 프레임 전체 |
+| `RT.Present` | 제출·표시 대기. `RT.Frame - RT.Present` 가 순수 기록 시간이다 |
+
+```powershell
+build/Ninja-Release/Bin/App.exe -gv_benchMeshes=2000 -gv_benchMeshVariants=200 -gv_profileFrames=200 -dx12
+```
+
+**Debug 로 재지 말 것** — 컨테이너의 레이스 검출기가 결과를 바꾼다(`measure-in-release`).
+
 ## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
 
 ```powershell
@@ -436,6 +464,12 @@ py -3 Scripts/dev/BackendSmoke.py                                               
   로그의 `백버퍼 포맷: 요청 → 채택` 줄이 실제 채택값이다.
 - DX11/DX12 디버그 레이어 메시지는 프레임 끝에 `[Error]` 로 로그에 나온다(`flushDebugMessages`). 스모크 로그의 `[Error]` 수가 0 이 아니면 읽어라.
 - 셰이더 .hlsli 를 고쳤으면 반드시 `--bake-shaders` 를 다시 돌린다 — 런타임은 매니페스트가 소스보다 오래되면 런타임 리플렉션으로 폴백하지만 테스트는 구운 바이너리를 본다.
+- **스왑체인·프레젠트를 건드렸으면 창을 실제로 흔들어야 한다.** `ResizeBuffers` 의 플래그가 생성 때와
+  어긋나면 그 뒤의 Present 가 `INVALID_CALL` 이 되는데, 리사이즈를 안 하면 영원히 드러나지 않는다.
+  확인은 스크린샷 크기로 한다 — 창을 700×520 으로 바꾸고 `-gv_screenshot` 을 찍으면 PPM 헤더가
+  `684 481`(클라이언트 영역)로 따라와야 하고, 로그의 `[Error]` 는 0 이어야 한다.
+- **빌드 경고는 종료 코드를 바꾸지 않는다.** `cmake --build --preset <preset> 2>&1 | grep -i "warning:"` 가
+  0 이어야 한다 — Debug · Release · Shipping 각각.
 
 ---
 

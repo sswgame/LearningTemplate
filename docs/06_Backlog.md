@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-12 · 기준 커밋 `3b2d9920`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `93503ea9`
 
 ---
 
@@ -214,6 +214,24 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
+### 1-3. 빌드 경고를 게이트로 막을 것인가 — **결정 대기**
+
+2026-09-13 에 세 구성의 빌드 경고를 전부 없애 지금은 **0건**이다. 그런데 그것이 쌓인 이유가 구조적이다 —
+지금까지의 검증 기준이 "빌드 종료 0" 이었고, **경고는 종료 코드를 바꾸지 않는다.** 커밋 메시지마다
+"Debug · Release · Shipping 빌드 종료 0" 이라고 적혀 있는 동안 다섯 종류가 누적됐고, 그중 하나
+(`inline static inline static`)는 명백한 오타였다.
+
+막는 방법은 둘이고, 둘 다 대가가 있다:
+
+- **`-Werror`(또는 CI 로그의 `warning:` grep).** 확실하지만 **컴파일러 버전이 다르면 경고 목록이 다르다.**
+  CI 는 윈도우(저장소가 고정한 `Tools/LLVM`)와 리눅스(배포판 clang)를 함께 돌리므로, 리눅스 쪽 버전이
+  올라가는 날 새 경고 하나로 CI 가 빨개진다. clang-tidy 가 "0건과 72건" 을 오간 것과 같은 문제다(1-1).
+- **그냥 규율로 둔다.** 지금처럼 세는 명령(`cmake --build --preset <preset> 2>&1 | grep -i "warning:"`)을
+  적어 두고 검증 절차에 넣는다. 도구가 강제하지 않으므로 또 쌓일 수 있다.
+
+**판단이 필요한 것은 "리눅스 CI 를 버전 드리프트에 노출시킬 것인가" 하나다.** 윈도우만 게이트하고
+리눅스는 경고를 보고만 하는 절충도 있다 — 윈도우 컴파일러는 저장소가 고정하고 있으니 드리프트가 없다.
+
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
@@ -294,6 +312,98 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (VSync 가 한 번도 걸린 적이 없었다 — 그리고 그 벽 뒤에 게임 스레드의 38%가 숨어 있었다)
+
+**발단은 "프레임이 정확히 6061us 다" 였다.** 1/6061us = **165.0Hz**, 이 PC 모니터 주사율과 같다.
+`Config/Engine/EngineConfig.json` 은 `"_bVSync": false` 인데도 그랬다.
+
+**뿌리 셋.**
+
+1. **`RenderThread::executeFrameBody` 가 `endFrame( true )` 를 못박고 있었다.** 설정값은
+   `EngineLoop` → `RHI::setPreferredVSync` → `RHISwapChainDesc::_bVSync` 까지 성실히 흘러간 다음
+   **아무도 읽지 않았다.** `_bVSync` 는 채워지기만 하는 필드였다(전수 확인 — 소비자 0). CLI `--VSYNC`
+   도 같은 자리에서 죽었다. 이제 `IRHIDevice` 가 채택값을 들고(`isVSyncEnabled`), 프레젠트 경로가
+   그걸 읽는다.
+2. **`Present( 0, 0 )` 만으로는 VSync 가 안 꺼진다.** 플립 모델이어도 창이 DWM 합성을 거치는 동안에는
+   런타임이 vblank 에 맞춰 넘겨 준다. 1번만 고쳤을 때 **포그라운드 여부에 따라 붙었다 안 붙었다** 해서
+   같은 명령이 947us 와 6061us 를 오갔다(3회 재실행으로 확인). 실제로 끄려면 스왑체인을
+   `DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING` 으로 만들고(**ResizeBuffers 에도 같은 플래그**)
+   `Present( 0, DXGI_PRESENT_ALLOW_TEARING )` 이어야 한다 — 짝이 안 맞으면 DXGI 가 `INVALID_CALL` 이다.
+   지원 질의는 DX11·DX12 공유 헤더 `RHI/DX/RHIDxgiTearing.h` 하나가 갖는다.
+3. **Vulkan 은 `endFrame( vsync )` 인자를 `(void)` 로 버리고 스왑체인이 `FIFO` 를 못박고 있었다.**
+   Vulkan 에는 present 호출의 동기화 인자가 없고 **present 모드**가 그 자리다. 이제 끈 경우에만
+   서피스 목록에서 `MAILBOX` → `IMMEDIATE` 순으로 고르고, 둘 다 없으면 FIFO 로 남기고 로그를 남긴다.
+
+**`-vsync` 는 오타가 아니라 없는 이름이었다.** 다른 스위치는 전부 소문자 별칭이 있는데(`dx11`·`vk`·
+`EnableEditor`) `VSYNC` 만 없어서 `-vsync` 가 "해당 Argument는 없습니다" 로 무시됐다. 별칭을 넣었다.
+
+**결과 (DX12 Release, 큐브 2000 · 메시 종류 200):**
+
+| 구간 | 이전 | 이후 |
+|------|------|------|
+| `GT.Frame` | 5838us | 917us |
+| `GT.Packet.submit`(GT 가 RT 를 기다린 시간) | 4906us | 508us |
+| `RT.Frame` | 6061us | 1058us |
+| `RT.Present` | 4845us | 97us |
+
+---
+
+**계측이 렌더 경로만 보고 있었다.** 보고서에 `GT.GpuScene.build` 는 있는데 **프레임 전체가 없어서**
+"이게 프레임의 몇 %인가" 에 답할 수 없었다. 구간 6개를 넣었다 — `GT.Frame` · `GT.Scene.tick` ·
+`GT.Packet.export` · `GT.Packet.submit` · `RT.Frame` · `RT.Present`. 쓰는 법은 두 뺄셈이다:
+
+- `GT.Packet.submit` 이 크면 **게임 스레드가 렌더 스레드를 기다리고 있다**(링이 차면 submit 이 막는다).
+- `RT.Frame - RT.Present` 가 기록 시간, `RT.Present` 가 제출·표시 대기다. 위 표의 이전 열이 딱
+  "전부 Present 에서 기다리는 중" 이었다.
+
+**넣자마자 답이 나왔다.** 큐브 20,000 개에서 `GT.Frame` 7659us 중 **3016us 가 어느 구간에도 안 잡혔다.**
+쪼개 보니 한 줄이었다.
+
+---
+
+**`Scene::findActiveDirectionalLight` 가 매 프레임 씬 전체를 훑고 있었다.** `EngineLoop::tick` 이 프레임마다
+부르는데, 구현은 **모든 GameObject** 를 돌며 `getComponent<DirectionalLightComponent>()` 를 묻고,
+찾은 뒤에도 멈추지 않았다 — `forEachGameObject` 에는 중단이 없다. 큐브 20,000 개에서 이 한 줄이
+**2.9ms**(게임 스레드 프레임의 38%)였다. **빛은 하나였다.**
+
+고친 방식은 이 저장소가 이미 쓰던 것이다 — `PrimitiveRegistry` 의 "찾지 말고 등록받는다". 새
+`LightRegistry`(`Source/Engine/Object/GameObject/`)를 만들고 `DirectionalLightComponent` 가
+`onRegister`/`onUnregister` 에서 자기를 등록한다. 비용이 "오브젝트 수" 에서 "빛의 수" 가 됐다.
+
+- 등록부를 프리미티브 쪽에 합치지 않았다. 그 목록은 "그릴 수 있는 것만 들어 있다 — 타입 검사가 없다"
+  는 계약이라(`GpuScene::buildFromScene`) 빛을 섞으면 그 계약이 깨진다.
+- 더티 표시도 인덱스도 두지 않았다. 빛은 몇 개뿐이라 제거가 선형 탐색으로 충분하고, 렌더러는 매 프레임
+  값을 새로 읽는다. 점광·스포트가 생기는 날 프리미티브 쪽 구조를 따라가면 된다.
+- 원시 포인터가 안전한 근거: 컴포넌트는 `PoolAllocator` 에 placement-new 되고 등록 뒤 **주소가 움직이지
+  않는다**(`PrimitiveRegistry` 가 `MeshComponent*` 를 그대로 드는 근거와 같다).
+- `SceneTest.DirectionalLightLookupFollowsRegistry`(nogpu)가 없음·있음·컴포넌트 비활성·오브젝트 비활성·
+  파괴 다섯 상태를 고정한다. 등록부에 죽은 포인터가 남으면 마지막 단언에서 잡힌다.
+
+**결과 (DX12 Release, 큐브 20,000 · 메시 종류 400):** `GT.Frame` **7659us → 4688us**. 미계측 구간은
+3016us → 18us 로 사라졌다 — 이제 게임 스레드가 전부 설명된다.
+
+---
+
+**빌드 경고가 다섯 종류 쌓여 있었다.** 지금까지의 검증 기준이 "빌드 종료 0" 이었는데, 경고는 종료
+코드를 바꾸지 않는다. Debug · Release · Shipping 셋을 각각 훑어 전부 없앴고, 지금은 **셋 다 0건**이다.
+
+| 경고 | 정체 |
+|---|---|
+| `-Wunused-variable` ×2 | `ActionMapEvaluate.cpp` 의 `curMouseX`/`curMouseY` — `int2` 전환 때 남은 죽은 지역변수 |
+| `-Wduplicate-decl-specifier` ×2 | `LiveReloadManager.cpp` 의 `inline static inline static uint32` — 붙여넣기 오타 |
+| `-Wunused-function` (Release) | DX11 `isHazardMessage` 가 `SW_DEBUG` 밖에 있었다 — 쓰는 쪽은 안이다 |
+| `-Wdocumentation` ×6 | `ModuleHost.h` 의 `initialize` 문서 주석이 중간에 끼어든 함수 때문에 떨어져 나갔다 |
+| `-Winconsistent-missing-destructor-override` | `~LiveReloadManager` — 붙이자 그 뒤에 `IModuleHandleProvider` 의 암시적 복사 deprecated 가 드러나 복사·이동을 명시적으로 막았다 |
+| `-Wunused-but-set-variable` / `-Wunused-private-field` (Shipping·Test) | `TestInput.cpp` 의 `smoothDy`, 그리고 **소비자가 로그뿐**이라 Shipping 에서 죽는 둘 — `ModuleCompiler::_pLiveReloadManager`, `ReloadFileManager` 의 `found` |
+
+**세는 법:** `cmake --build --preset <preset> 2>&1 | grep -i "warning:"` — **0 이 정답이다.** 게이트로
+막을지는 아래 1-3 에 결정 대기로 적어 둔다.
+
+**검증.** Debug · Release · Shipping 빌드 종료 0 · **경고 0** · nogpu 5/5 · 전체 ctest 13/13 ·
+린트 7/7 · `BackendSmoke` 4백엔드 × opaque/transparent 8/8 오류 0(평균 RGB 불변) ·
+VSync 켜고 끄기 4백엔드 8구성 오류 0 · 창 리사이즈 4백엔드 오류 0(스크린샷이 684×481 로 실제로 따라온다) ·
+교체 5구성 종료 0 · 오류 0 · 에디터 창 15 · 빈 패널 0.
 
 ### 2026-09-13 (본문이 여러 문장인 case 에 중괄호를 강제한다 — 그리고 #if 가 끼면 손대지 않는다)
 

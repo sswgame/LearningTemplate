@@ -78,13 +78,15 @@ namespace sw
         string findBuildDirectory() const;
 
     private:
-        LiveReloadManager*  _pLiveReloadManager;
-        unique_ptr<Process> _pCurrentProcess;
-        std::thread         _workerThread;
-        CpuTimer            _buildTimer;
-        string              _targetName;
-        mutable mutex       _mutex;
-        atomic<BuildState>  _buildState;
+        /// @brief 빌드가 끝나면 리로드를 걸 대상. Shipping 에는 핫리로드가 없어 아무도 읽지 않는다
+        ///        — 소유자(ModuleHost)가 구성에 따라 달라지지 않게 필드 자체는 그대로 둔다.
+        [[maybe_unused]] LiveReloadManager* _pLiveReloadManager;
+        unique_ptr<Process>                 _pCurrentProcess;
+        std::thread                         _workerThread;
+        CpuTimer                            _buildTimer;
+        string                              _targetName;
+        mutable mutex                       _mutex;
+        atomic<BuildState>                  _buildState;
         /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는가 (핫리로드로는 해결 불가).
         atomic<uint8>   _bBlockedByLoadedBinary;
         atomic<int32>   _lastExitCode;

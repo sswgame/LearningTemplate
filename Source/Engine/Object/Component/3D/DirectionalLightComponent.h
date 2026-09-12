@@ -73,6 +73,11 @@ namespace sw
         /** @brief 이 라이트의 그림자 view-projection 행렬을 만듭니다. */
         float4x4 buildShadowViewProj() const;
 
+        /** @brief 씬에 붙을 때 빛 등록부에 자기를 등록합니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
+        void onUnregister( GameObjectManager& manager ) override;
+
     private:
         PROPERTY( Category = "Light", DisplayName = "Color", Color, Tooltip = "Key light color" )
         float3 _color;

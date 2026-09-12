@@ -311,21 +311,29 @@ namespace sw
         return true;
     }
 
+    /**
+     * @brief 지금 켜져 있는 방향광 하나를 돌려줍니다. 없으면 nullptr.
+     * @details 등록부만 본다 — 빛의 수에 비례하고 씬 크기와 무관하다. 예전에는 **모든 GameObject**
+     *          를 돌며 `getComponent<DirectionalLightComponent>()` 를 물었고, 찾은 뒤에도
+     *          `forEachGameObject` 에 중단이 없어 끝까지 돌았다. EngineLoop 이 매 프레임 부르므로
+     *          큐브 20,000 개 벤치에서 이 한 줄이 게임 스레드 프레임의 38%(7.6ms 중 2.9ms)였다.
+     */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const
     {
         if ( _objectManager == nullptr )
             return nullptr;
 
-        DirectionalLightComponent* pBest{ nullptr };
-        _objectManager->forEachGameObject( [&]( GameObject* pObj )
+        // 활성 판정은 여기가 한다 — 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약).
+        for ( DirectionalLightComponent* pLight : _objectManager->getLightRegistry().getAllDirectional() )
         {
-            if ( pObj == nullptr || pObj->isActiveInHierarchy() == false || pBest != nullptr )
-                return;
-            DirectionalLightComponent* pLight = pObj->getComponent<DirectionalLightComponent>();
-            if ( pLight != nullptr && pLight->isActive() )
-                pBest = pLight;
-        } );
-        return pBest;
+            if ( pLight == nullptr || pLight->isActive() == false )
+                continue;
+            const GameObject* pOwner = pLight->getOwner();
+            if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false )
+                continue;
+            return pLight;
+        }
+        return nullptr;
     }
 
     void Scene::refreshCameraCache()

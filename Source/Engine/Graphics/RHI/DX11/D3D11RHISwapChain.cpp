@@ -8,12 +8,13 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D11" );
 
-    void D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height )
+    void D3D11RHISwapChain::attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags )
     {
-        _swapChain = pSwapChain;
-        _pHWnd     = hWnd;
-        _width     = width;
-        _height    = height;
+        _swapChain      = pSwapChain;
+        _pHWnd          = hWnd;
+        _width          = width;
+        _height         = height;
+        _swapChainFlags = swapChainFlags;
     }
 
     void D3D11RHISwapChain::shutdown()
@@ -33,8 +34,9 @@ namespace sw
         _width  = width;
         _height = height;
 
-        // 0 = 기존 버퍼 개수 유지.
-        const HRESULT resizeHr = _swapChain->ResizeBuffers( 0, width, height, DXGI_FORMAT_UNKNOWN, 0 );
+        // 0 = 기존 버퍼 개수 유지. 플래그는 생성 때와 **같아야** 한다 — 티어링 스왑체인을 0 으로
+        // 리사이즈하면 그 뒤의 Present( 0, ALLOW_TEARING ) 이 INVALID_CALL 이 된다.
+        const HRESULT resizeHr = _swapChain->ResizeBuffers( 0, width, height, DXGI_FORMAT_UNKNOWN, _swapChainFlags );
         if ( FAILED( resizeHr ) )
         {
             SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
@@ -65,7 +67,9 @@ namespace sw
     {
         if ( _swapChain == nullptr )
             return S_OK;
-        return _swapChain->Present( vsync ? 1 : 0, 0 );
+        const bool bAllowTearing = ( _swapChainFlags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) != 0;
+        const UINT presentFlags  = ( vsync == false && bAllowTearing ) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+        return _swapChain->Present( vsync ? 1 : 0, presentFlags );
     }
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> D3D11RHISwapChain::getBackBufferTexture() const

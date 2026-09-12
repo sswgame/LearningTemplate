@@ -93,6 +93,8 @@ namespace sw
             if ( engine::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
                 swapChainDesc._bVSync = bCliVSync;
         }
+        // 채택값을 디바이스에 되돌려 적는다 — 프레젠트 경로(`RenderThread`)가 이걸 읽는다.
+        _bPreferredVSync = swapChainDesc._bVSync;
 
         if ( initializeInternal( swapChainDesc ) == false )
             return false;

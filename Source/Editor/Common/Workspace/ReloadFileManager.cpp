@@ -273,7 +273,9 @@ namespace sw
         for ( const FileChangeEvent& changeEvent : outListEvent )
             listSeen.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
 
-        uint32 found{ 0 };
+        // 되찾은 개수는 아래 로그가 유일한 소비자다 — SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
+        // 그 구성에서는 쓰이지 않는 변수가 된다.
+        [[maybe_unused]] uint32 found{ 0 };
         for ( const WatchEntry& entry : _listWatch )
         {
             if ( FileUtil::directoryExists( entry._pathPrefix ) == false )

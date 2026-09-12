@@ -53,7 +53,7 @@ namespace sw
         /** @brief 모듈 맵과 워처를 비운 채 시작합니다. */
         LiveReloadManager();
         /** @brief 로드된 모듈을 언로드합니다. */
-        ~LiveReloadManager();
+        ~LiveReloadManager() override;
 
         /** @brief 복사를 금지합니다. */
         LiveReloadManager( const LiveReloadManager& ) = delete;

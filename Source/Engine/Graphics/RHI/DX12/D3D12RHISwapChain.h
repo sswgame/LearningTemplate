@@ -62,7 +62,11 @@ namespace sw
         /** @brief 다음에 그릴 백버퍼를 고릅니다 (DXGI 가 정해 준 현재 인덱스를 읽어옵니다). */
         void acquireNextImage();
 
-        /** @brief 화면에 표시합니다. 네이티브 스왑체인이 없으면 S_OK 로 아무것도 하지 않습니다. */
+        /**
+         * @brief 화면에 표시합니다. 네이티브 스왑체인이 없으면 S_OK 로 아무것도 하지 않습니다.
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘긴다 — 스왑체인 생성 플래그와 **짝이어야**
+         *          한다(RHIDxgiTearing.h). 짝이 맞지 않으면 DXGI 가 INVALID_CALL 을 돌려준다.
+         */
         HRESULT present( bool vsync );
 
         /**
@@ -116,6 +120,10 @@ namespace sw
         uint32 _backBufferIndex{ 0 };
         /// @brief 백버퍼 포맷 (요청값 = 실제값).
         RHIFormat _format{ constant::kBackBufferFormat };
+        /// @brief 생성 시 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+        uint32 _swapChainFlags{ 0 };
+        /// @brief 티어링 허용으로 만들었는가 — Present 플래그와 짝이다.
+        bool _bAllowTearing{ false };
 
         /// @brief 현재 백버퍼의 실제 리소스 상태. `transitionTo` 만 이 값을 바꿉니다.
         /// @details `_stateMutex` 로 보호한다 — RenderGraph::executeParallel 이 같은 웨이브의 패스

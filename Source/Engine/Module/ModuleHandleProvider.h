@@ -24,7 +24,15 @@ namespace sw
     class SW_API IModuleHandleProvider
     {
     public:
+        /** @brief 기본 생성입니다. */
+        IModuleHandleProvider()          = default;
         virtual ~IModuleHandleProvider() = default;
+
+        /** @brief 창구는 값으로 복사·이동하지 않습니다 — 등록한 쪽이 수명을 쥡니다. */
+        IModuleHandleProvider( const IModuleHandleProvider& )            = delete;
+        IModuleHandleProvider& operator=( const IModuleHandleProvider& ) = delete;
+        IModuleHandleProvider( IModuleHandleProvider&& )                 = delete;
+        IModuleHandleProvider& operator=( IModuleHandleProvider&& )      = delete;
 
         /**
          * @brief 리로드 그래프가 깨져 있으면 true — 이때는 핸들을 믿으면 안 됩니다.

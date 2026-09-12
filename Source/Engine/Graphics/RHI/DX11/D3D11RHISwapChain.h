@@ -30,8 +30,11 @@ namespace sw
         D3D11RHISwapChain( const D3D11RHISwapChain& )            = delete;
         D3D11RHISwapChain& operator=( const D3D11RHISwapChain& ) = delete;
 
-        /** @brief 디바이스와 함께 만들어진 스왑체인을 넘겨받습니다. */
-        void attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height );
+        /**
+         * @brief 디바이스와 함께 만들어진 스왑체인을 넘겨받습니다.
+         * @param swapChainFlags 생성에 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+         */
+        void attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags );
 
         /** @brief 백버퍼 RTV 와 스왑체인을 모두 놓습니다. */
         void shutdown();
@@ -49,7 +52,11 @@ namespace sw
         /** @brief 백버퍼 RTV 를 놓습니다. */
         void releaseBackBufferRtv();
 
-        /** @brief 화면에 표시합니다. */
+        /**
+         * @brief 화면에 표시합니다.
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘긴다 — 스왑체인 생성 플래그와 **짝이어야**
+         *          한다(RHIDxgiTearing.h).
+         */
         HRESULT present( bool vsync );
 
         bool isValid() const { return _swapChain != nullptr; }
@@ -70,6 +77,8 @@ namespace sw
         HWND   _pHWnd{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
+        /// @brief 생성 시 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 한다.
+        uint32 _swapChainFlags{ 0 };
     };
 } // namespace sw
 #endif

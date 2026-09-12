@@ -1220,12 +1220,8 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
 
-    float32          smoothDx{ 0.0f };
-    float32          smoothDy{ 0.0f };
     const sw::float2 vecSmoothDelta3 = input.getSmoothMouseDelta();
-    smoothDx                         = vecSmoothDelta3._x;
-    smoothDy                         = vecSmoothDelta3._y;
-    SW_EXPECT_TRUE( smoothDx > 0.0f );
+    SW_EXPECT_TRUE( vecSmoothDelta3._x > 0.0f );
 
     input.shutdown();
 }

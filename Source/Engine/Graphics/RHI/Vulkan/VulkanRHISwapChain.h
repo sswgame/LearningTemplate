@@ -58,8 +58,13 @@ namespace sw
         /** @brief 서피스를 파괴합니다. 스왑체인을 먼저 파괴한 뒤에 불러야 합니다. */
         void destroySurface( VkInstance instance );
 
-        /** @brief 백버퍼 포맷·개수 요청값을 기억합니다. 서피스 능력으로 클램프될 수 있습니다. */
-        void setRequested( RHIFormat format, uint32 bufferCount );
+        /**
+         * @brief 백버퍼 포맷·개수·VSync 요청값을 기억합니다. 서피스 능력으로 클램프될 수 있습니다.
+         * @details VSync 가 여기 있는 이유: Vulkan 은 다른 셋과 달리 present 호출에 동기화 인자가 없고
+         *          **스왑체인의 present 모드**가 그 역할을 한다. 그래서 스왑체인을 다시 만들 때도 같은
+         *          요청을 다시 써야 한다 — 백버퍼 포맷·개수를 여기 두는 것과 같은 이유다.
+         */
+        void setRequested( RHIFormat format, uint32 bufferCount, bool bVSync );
 
         /**
          * @brief 스왑체인과 이미지 뷰를 만듭니다.
@@ -138,5 +143,7 @@ namespace sw
         RHIFormat _actualBackBufferFormat{ constant::kBackBufferFormat };
         /// @brief 요청한 백버퍼 개수. 0이면 서피스 최소값 + 1 을 쓴다.
         uint32 _requestedBufferCount{ 0 };
+        /// @brief 요청한 VSync. Vulkan 에서는 present 모드가 이 역할을 한다(FIFO = 켬).
+        bool _bRequestedVSync{ true };
     };
 } // namespace sw

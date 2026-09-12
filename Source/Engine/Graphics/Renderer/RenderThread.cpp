@@ -5,10 +5,12 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -262,6 +264,10 @@ namespace sw
         if ( packet._bValid == 0 )
             return false;
 
+        // 렌더 스레드 전체. GT.Packet.submit 이 크면 GT 가 여기를 기다린다는 뜻이고, 무엇을 기다리는지는
+        // 이 구간에서 RT.Present 를 뺀 값이 답한다 — 기록이 느린가, GPU 가 느린가.
+        SW_PROFILE_SCOPE( "RT.Frame" );
+
         ensureContextOnCurrentThread();
 
         const bool          bOffscreen   = packet._gameRenderTarget != 0;
@@ -326,7 +332,14 @@ namespace sw
         if ( _presentHook.isBound() )
             _presentHook( *_pDevice, packet );
 
-        _pDevice->endFrame( true );
+        {
+            // 제출과 Present. GPU 가 밀리면 여기서 기다린다.
+            SW_PROFILE_SCOPE( "RT.Present" );
+            // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 못박아 두면 EngineConfig 의
+            // `_window._bVSync` 와 CLI `--VSYNC` 가 둘 다 죽는다 — 실제로 죽어 있었고,
+            // `_bVSync: false` 설정으로도 프레임이 모니터 주사율에 정확히 붙어 있었다.
+            _pDevice->endFrame( _pDevice->isVSyncEnabled() );
+        }
 
         // -gv_screenshot=<path> : 한 장만 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 됐고 아직 큐에 나가지 않아,

@@ -27,7 +27,7 @@ namespace sw
     {
         struct LiveReloadManagerInternal
         {
-            inline static inline static uint32 s_reloadCount{ 0 };
+            inline static uint32 s_reloadCount{ 0 };
 
             static void tryDeleteFile( string_view path )
             {

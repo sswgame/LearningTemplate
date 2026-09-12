@@ -168,8 +168,16 @@ namespace sw
 
         /** @brief initializeInternal에 넘길 윈도우를 저장합니다. */
         void setInitWindow( IWindow* pWindow ) { _pInitWindow = pWindow; }
-        /** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. */
+        /** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. `initialize` 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
+        /**
+         * @brief 실제로 채택된 VSync 값입니다 (설정값 → CLI `--VSYNC` 순으로 정해집니다).
+         * @details **프레젠트 경로가 읽어야 하는 값이 이것이다.** 예전에는 `RenderThread` 가
+         *          `endFrame( true )` 를 못박고 있어서 설정도 CLI 도 아무 효과가 없었다 —
+         *          `RHISwapChainDesc::_bVSync` 는 채워지기만 하고 아무도 읽지 않는 필드였고,
+         *          그래서 `_bVSync: false` 설정으로도 프레임이 모니터 주사율에 묶여 있었다.
+         */
+        bool isVSyncEnabled() const { return _bPreferredVSync; }
         /** @brief 디바이스가 소유한 RenderPassManager를 반환합니다. */
         RenderPassManager& getRenderPassManager() const;
 

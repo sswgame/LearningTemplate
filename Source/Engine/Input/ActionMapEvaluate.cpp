@@ -46,9 +46,7 @@ namespace sw
         if ( _pInput == nullptr )
             return;
 
-        const int2  curMousePos = _pInput->getMousePosition();
-        const int32 curMouseX   = curMousePos._x;
-        const int32 curMouseY   = curMousePos._y;
+        const int2 curMousePos = _pInput->getMousePosition();
 
         // 3) 통합 액션 런타임 평가 및 ActionPhase 상태 머신
         for ( auto& [actionName, actIndex] : _mapAction )

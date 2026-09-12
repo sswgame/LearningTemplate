@@ -18,6 +18,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
@@ -192,6 +193,15 @@ namespace sw
         PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
         /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
         const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
+
+        /**
+         * @brief 빛 컴포넌트의 등록부입니다.
+         * @details 프리미티브와 같은 이유로 있다 — 매 프레임 씬을 뒤져 빛을 **찾지** 않고, 빛이 붙을
+         *          때 **등록받는다**. 자세한 사연은 LightRegistry.h.
+         */
+        LightRegistry& getLightRegistry() { return _lightRegistry; }
+        /** @brief 빛 컴포넌트의 등록부입니다. */
+        const LightRegistry& getLightRegistry() const { return _lightRegistry; }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. pending-kill이면 nullptr. */
         Component* resolveComponent( ComponentHandle handle );
@@ -416,5 +426,7 @@ namespace sw
 
         /** @brief 그릴 수 있는 컴포넌트의 등록부. PhysicsWorld 처럼 매니저가 소유만 합니다. */
         PrimitiveRegistry _primitiveRegistry;
+        /** @brief 빛 컴포넌트의 등록부. 같은 규칙으로 소유만 합니다. */
+        LightRegistry _lightRegistry;
     };
 } // namespace sw

@@ -578,6 +578,10 @@ namespace sw
         FrameProfiler& profiler = engine::getFrameProfiler();
         profiler.beginFrame();
 
+        // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 %를 쟀나"에
+        // 답할 수 없다 — 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
+        SW_PROFILE_SCOPE( "GT.Frame" );
+
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )
@@ -604,6 +608,7 @@ namespace sw
 
         BLOCK( "Scene update" )
         {
+            SW_PROFILE_SCOPE( "GT.Scene.tick" );
             if ( _sceneManager != nullptr && bTickScene )
                 _sceneManager->tick( deltaTime );
         }
@@ -659,11 +664,18 @@ namespace sw
                     _gpuUploadQueue->flush();
                 }
 
-                _gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+                {
+                    SW_PROFILE_SCOPE( "GT.Packet.export" );
+                    _gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+                }
             }
 
             if ( _renderThread != nullptr )
+            {
+                // GT 가 여기서 기다린다면 그것은 렌더 스레드가 밀린 것이다 — 링이 차면 submit 이 막는다.
+                SW_PROFILE_SCOPE( "GT.Packet.submit" );
                 _renderThread->submit( std::move( packet ) );
+            }
         }
     }
 

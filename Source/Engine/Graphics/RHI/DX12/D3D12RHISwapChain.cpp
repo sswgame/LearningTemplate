@@ -4,6 +4,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
 
 namespace sw
 {
@@ -25,6 +26,11 @@ namespace sw
         if ( pFactory == nullptr || pQueue == nullptr )
             return false;
 
+        // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다 — 동기화 간격 0 만으로는 DWM 합성이
+        // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h).
+        _bAllowTearing  = ( desc._bVSync == false ) && queryDxgiAllowTearing();
+        _swapChainFlags = _bAllowTearing ? static_cast<uint32>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
+
         DXGI_SWAP_CHAIN_DESC1 scDesc{};
         scDesc.BufferCount      = _bufferCount;
         scDesc.Width            = _width;
@@ -33,6 +39,7 @@ namespace sw
         scDesc.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         scDesc.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         scDesc.SampleDesc.Count = 1;
+        scDesc.Flags            = _swapChainFlags;
 
         Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain1;
         if ( FAILED( pFactory->CreateSwapChainForHwnd( pQueue, _pHWnd, &scDesc, nullptr, nullptr, swapChain1.GetAddressOf() ) ) )
@@ -96,7 +103,9 @@ namespace sw
         _width  = width;
         _height = height;
 
-        const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, 0 );
+        // 생성 때와 **같은 플래그**여야 한다 — 티어링 스왑체인을 0 으로 리사이즈하면 그 뒤의
+        // Present( 0, ALLOW_TEARING ) 이 INVALID_CALL 이 된다.
+        const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, _swapChainFlags );
         if ( FAILED( resizeHr ) )
         {
             SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
@@ -116,7 +125,8 @@ namespace sw
     {
         if ( _swapChain == nullptr )
             return S_OK;
-        return _swapChain->Present( vsync ? 1 : 0, 0 );
+        const UINT presentFlags = ( vsync == false && _bAllowTearing ) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+        return _swapChain->Present( vsync ? 1 : 0, presentFlags );
     }
 
     void D3D12RHISwapChain::transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter )

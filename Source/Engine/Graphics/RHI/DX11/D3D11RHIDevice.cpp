@@ -20,6 +20,11 @@ namespace sw
     namespace
     {
 
+    #if defined( SW_DEBUG )
+        // 아래 표와 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
+        // 본문 전체가 SW_DEBUG 안에 있다. 가드를 맞추지 않으면 Release 빌드에서 "정의했는데 아무도
+        // 쓰지 않는다"(-Wunused-function)가 남는다.
+
         /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록. */
         constexpr D3D11_MESSAGE_ID arrHazardMessageId[] = {
             D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD,
@@ -52,6 +57,7 @@ namespace sw
             }
             return false;
         }
+    #endif
     } // namespace
 
     D3D11RHIDevice::D3D11RHIDevice()

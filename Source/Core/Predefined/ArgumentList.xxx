@@ -7,7 +7,7 @@
 // VSYNC 가 처음부터 bUseDefaultValue=false 인 것과 같은 이유다.
 SW_REGISTER_ARGUMENT( WIDTH, true, 1280, false, "W" )
 SW_REGISTER_ARGUMENT( HEIGHT, true, 1280, false, "H" )
-SW_REGISTER_ARGUMENT( VSYNC, false, false, false, )
+SW_REGISTER_ARGUMENT( VSYNC, false, false, false, "vsync" )
 SW_REGISTER_ARGUMENT( DIRECTX_11, false, false, true, "dx11", "d3d11" )
 SW_REGISTER_ARGUMENT( DIRECTX_12, false, false, true, "dx12", "d3d12" )
 SW_REGISTER_ARGUMENT( VULKAN, false, false, true, "vk", "vulkan" )

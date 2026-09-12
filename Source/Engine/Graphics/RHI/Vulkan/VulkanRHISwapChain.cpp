@@ -133,11 +133,12 @@ namespace sw
         _surface = nullptr;
     }
 
-    void VulkanRHISwapChain::setRequested( RHIFormat format, uint32 bufferCount )
+    void VulkanRHISwapChain::setRequested( RHIFormat format, uint32 bufferCount, bool bVSync )
     {
         _requestedFormat        = format;
         _actualBackBufferFormat = format;
         _requestedBufferCount   = bufferCount;
+        _bRequestedVSync        = bVSync;
     }
 
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
@@ -179,7 +180,33 @@ namespace sw
                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
+        // present 모드가 Vulkan 의 VSync 스위치다 — DX/GL 처럼 present 호출에 넘길 인자가 없다.
+        // FIFO 는 스펙이 항상 지원을 보장하므로 켠 경우엔 그대로 쓰고, 끈 경우에만 서피스가 주는
+        // 목록에서 MAILBOX(삼중 버퍼, 티어링 없음) → IMMEDIATE 순으로 고른다. 둘 다 없으면 FIFO 로
+        // 남는다 — 실패가 아니라 "이 서피스는 끌 수 없다" 이므로 로그만 남긴다.
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        if ( _bRequestedVSync == false )
+        {
+            uint32 presentModeCount{ 0 };
+            vkGetPhysicalDeviceSurfacePresentModesKHR( physicalDevice, _surface, &presentModeCount, nullptr );
+            vector<VkPresentModeKHR> listPresentMode( presentModeCount );
+            if ( presentModeCount > 0 )
+                vkGetPhysicalDeviceSurfacePresentModesKHR( physicalDevice, _surface, &presentModeCount, listPresentMode.data() );
+
+            for ( const VkPresentModeKHR mode : listPresentMode )
+            {
+                if ( mode == VK_PRESENT_MODE_MAILBOX_KHR )
+                {
+                    presentMode = mode;
+                    break;
+                }
+                if ( mode == VK_PRESENT_MODE_IMMEDIATE_KHR )
+                    presentMode = mode;
+            }
+
+            if ( presentMode == VK_PRESENT_MODE_FIFO_KHR )
+                SW_LOG_INFO( "VSync 끄기를 요청했지만 서피스가 MAILBOX/IMMEDIATE 를 주지 않습니다 — FIFO 로 남습니다." );
+        }
 
         // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 합니다.
         VkExtent2D extent = capabilities.currentExtent;

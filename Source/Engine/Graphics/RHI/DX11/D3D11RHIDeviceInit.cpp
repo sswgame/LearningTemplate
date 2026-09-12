@@ -14,6 +14,7 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -48,6 +49,11 @@ namespace sw
         swapChainDesc.Windowed                           = TRUE;
         swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
+        // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다 — 동기화 간격 0 만으로는 DWM 합성이
+        // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h).
+        const bool bAllowTearing = ( desc._bVSync == false ) && queryDxgiAllowTearing();
+        swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
+
         UINT createDeviceFlags{ 0 };
     #if defined( SW_DEBUG )
         createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -80,7 +86,7 @@ namespace sw
         }
 
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다 — 만들어진 것을 넘겨 소유시킨다.
-        _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height );
+        _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
 
         // Deferred Context 기반 병렬 기록이 실익이 있는지는 드라이버가 커맨드 리스트를 네이티브로
         // 지원하는지에 달렸다 — 미지원이면 D3D11 런타임이 소프트웨어로 에뮬레이션하므로 병렬화
