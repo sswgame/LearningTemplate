@@ -231,21 +231,6 @@ namespace sw
         vector<uint8> _lastBytes;
     };
 
-    struct GpuSceneSortKey
-    {
-        Mesh*             _pMesh{ nullptr };
-        Material*         _pMaterial{ nullptr };
-        MaterialInstance* _pInstance{ nullptr };
-        /** @brief 메시·머티리얼·인스턴스가 같은지 비교합니다. */
-        bool operator==( const GpuSceneSortKey& other ) const { return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance; }
-    };
-
-    struct GpuSceneSortEntry
-    {
-        GpuSceneSortKey _key;
-        uint32          _srcIdx{ 0 };
-    };
-
     /**
      * @struct GpuSceneSnapshot
      * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**.

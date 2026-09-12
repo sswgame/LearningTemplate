@@ -157,7 +157,13 @@ namespace sw
          * @param countBufferOffset    그 버퍼 안의 바이트 오프셋.
          */
         virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                                   RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 )       = 0;
+                                   RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) = 0;
+        /**
+         * @brief 스레드 그룹 수를 GPU 가 적어 둔 버퍼로 컴퓨트를 디스패치합니다.
+         * @param argumentBuffer `RHIDispatchIndirectCommand` 하나. **그 구조체가 이 버퍼의 레이아웃 정본이다** —
+         *        값을 채우는 것은 C++ 이 아니라 컴퓨트 셰이더라, 여기 말고는 그 이름이 불릴 자리가 없다.
+         * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋.
+         */
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                 = 0;
         /**
@@ -169,7 +175,12 @@ namespace sw
          *          DX12 는 UAV 배리어, Vulkan 은 버퍼 메모리 배리어, GL 은 glMemoryBarrier,
          *          DX11 은 디스패치가 컨텍스트에서 직렬화되므로 할 일이 없다.
          */
-        virtual void uavBarrier( RHIBufferHandle buffer )                                                   = 0;
+        virtual void uavBarrier( RHIBufferHandle buffer ) = 0;
+        /**
+         * @brief 인덱스 버퍼를 쓰는 드로우를 GPU 가 적어 둔 인자로 한 번 발행합니다.
+         * @param argumentBuffer `RHIDrawIndexedIndirectCommand` 하나. 위와 같은 이유로 그 구조체가 레이아웃 정본이다.
+         * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋.
+         */
         virtual void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
         // ------------------------------------------------------------------------------
         // 7) GPU 디버그 마커

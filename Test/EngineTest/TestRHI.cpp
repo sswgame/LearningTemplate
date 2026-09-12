@@ -924,41 +924,6 @@ SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
     SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
 
-// ------------------------------------------------------------------------------
-// 3) RHITypesTest — 버텍스 레이아웃 오프셋
-// ------------------------------------------------------------------------------
-/**
- * @brief [RHITypesTest] 버텍스 레이아웃 자동 오프셋
- */
-SW_TEST_CASE( RHITypesTest, VertexLayoutBuilderAutoOffset )
-{
-    struct CustomVertex
-    {
-        float32 _arrPos[3];
-        float32 _arrUv[2];
-        uint32  _color;
-    };
-
-    sw::VertexLayoutBuilder builder;
-    builder.addElement( "POSITION", 0, sw::RHIFormat::R32G32B32_FLOAT, SW_OFFSET_OF( CustomVertex, _arrPos ) );
-    builder.addElement( "TEXCOORD", 0, sw::RHIFormat::R32G32_FLOAT, SW_OFFSET_OF( CustomVertex, _arrUv ) );
-    builder.addElement( "COLOR", 0, sw::RHIFormat::R8G8B8A8_UNORM, SW_OFFSET_OF( CustomVertex, _color ) );
-
-    sw::vector<sw::RHIInputElement> layout = builder.build();
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( layout.size() ) );
-    if ( layout.size() == 3 )
-    {
-        SW_EXPECT_EQUAL( sw::string( "POSITION" ), layout[0]._semanticName );
-        SW_EXPECT_EQUAL( 0u, layout[0]._alignedByteOffset );
-
-        SW_EXPECT_EQUAL( sw::string( "TEXCOORD" ), layout[1]._semanticName );
-        SW_EXPECT_EQUAL( static_cast<uint32>( SW_OFFSET_OF( CustomVertex, _arrUv ) ), layout[1]._alignedByteOffset );
-
-        SW_EXPECT_EQUAL( sw::string( "COLOR" ), layout[2]._semanticName );
-        SW_EXPECT_EQUAL( static_cast<uint32>( SW_OFFSET_OF( CustomVertex, _color ) ), layout[2]._alignedByteOffset );
-    }
-}
-
 /**
  * @brief [RHIHandleTable] generation이 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
  */

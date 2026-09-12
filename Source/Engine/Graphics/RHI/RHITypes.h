@@ -162,19 +162,6 @@ namespace sw
         uint32 _imageCount{ constant::kMaxFrameCountInFlight };
     };
 
-    /**
-     * @struct RHIInputElement
-     * @brief 정점 레이아웃(Input Layout) 엘리먼트
-     */
-    struct RHIInputElement
-    {
-        string    _semanticName;                        ///< 시맨틱 이름 (POSITION, COLOR 등)
-        uint32    _semanticIndex{ 0 };                  ///< 시맨틱 인덱스
-        RHIFormat _format = RHIFormat::R32G32B32_FLOAT; ///< 엘리먼트 데이터 포맷
-        uint32    _alignedByteOffset{ 0 };              ///< 버텍스 구조체 내 바이트 오프셋
-        uint32    _inputSlot{ 0 };                      ///< 버텍스 버퍼 입력 슬롯
-    };
-
     // ------------------------------------------------------------------------------
     // 3) 스왑체인 · 뷰포트 · 인디렉트 커맨드
     // ------------------------------------------------------------------------------
@@ -679,42 +666,4 @@ namespace sw
         void setColorTarget( RHITextureHandle target, const float4& clearColor = kDefaultClearColor, RHIRenderPassLoadOp loadOp = RHIRenderPassLoadOp::Clear );
     };
 
-    // ------------------------------------------------------------------------------
-    // 6) VertexLayoutBuilder — 시맨틱 엘리먼트를 모아 Input Layout 구성
-    // ------------------------------------------------------------------------------
-    class SW_API VertexLayoutBuilder
-    {
-    public:
-        /** @brief 빈 빌더. */
-        VertexLayoutBuilder() = default;
-        /** @brief 엘리먼트 목록을 복사합니다. */
-        VertexLayoutBuilder( const VertexLayoutBuilder& ) = default;
-        /** @brief 엘리먼트 목록을 이동합니다. */
-        VertexLayoutBuilder( VertexLayoutBuilder&& ) = default;
-        /** @brief 엘리먼트 목록을 복사 대입합니다. */
-        VertexLayoutBuilder& operator=( const VertexLayoutBuilder& ) = default;
-        /** @brief 엘리먼트 목록을 이동 대입합니다. */
-        VertexLayoutBuilder& operator=( VertexLayoutBuilder&& ) = default;
-        /** @brief 기본 소멸. */
-        ~VertexLayoutBuilder() = default;
-
-        /** @brief 시맨틱 엘리먼트를 추가하고 *this를 반환합니다. */
-        VertexLayoutBuilder& addElement( const utf8* pSemanticName, uint32 semanticIndex, RHIFormat format, uint32 offset, uint32 slot = 0 )
-        {
-            RHIInputElement elem{};
-            elem._semanticName      = pSemanticName ? pSemanticName : "";
-            elem._semanticIndex     = semanticIndex;
-            elem._format            = format;
-            elem._alignedByteOffset = offset;
-            elem._inputSlot         = slot;
-            _listElement.push_back( elem );
-            return *this;
-        }
-
-        /** @brief 모은 엘리먼트 목록을 반환합니다. */
-        const vector<RHIInputElement>& build() const { return _listElement; }
-
-    private:
-        vector<RHIInputElement> _listElement;
-    };
 } // namespace sw

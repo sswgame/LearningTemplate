@@ -232,7 +232,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 규칙 일곱:
 
 1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣는다.** 스냅샷·패킷의 멤버는 `shared_ptr` 이거나 값이다.
-   생포인터는 정렬 키(`GpuSceneSortKey` · `GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
+   생포인터는 키(`GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
 2. **한쪽만 만드는 값은 그쪽 타입에만 있다.** 옮겨지는 것은 `GpuSceneSnapshot` 하나로 묶고, `export`/`adopt` 는 그
    타입을 통째로 옮긴다. 필드를 손으로 골라 복사하는 함수를 다시 만들지 말 것 — 그것이 첫 번째 버그였다.
 3. **모듈 경계를 넘어 소유될 수 있는 객체는 Engine 의 `create()` 로만 태어난다 — 컴파일러가 지킨다.**

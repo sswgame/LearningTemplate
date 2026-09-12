@@ -295,6 +295,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (Graphics 에서 합칠 것을 찾다 — 나온 것은 중복이 아니라 죽은 타입이었다)
+
+Graphics 의 타입 209개를 전수로 재고 "합칠 수 있나" 를 봤다. **합칠 중복은 없었다.** 대신 아무도 안 쓰는
+타입 넷이 나왔다. 찾은 근거와 기각한 근거를 같이 남긴다 — 다음에 같은 질문을 다시 파지 않도록.
+
+**지웠다 (Source 어디에서도 안 쓰임).**
+- `RHIInputElement` · `VertexLayoutBuilder` — 정점 레이아웃을 조립하는 빌더인데, **네 백엔드가 전부**
+  `RHIVertex` 에서 직접 하드코딩한다(`D3D11_INPUT_ELEMENT_DESC` · `VkVertexInputAttributeDescription` ·
+  `glVertexAttribPointer`). 빌더를 살아 있게 하던 것은 빌더를 시험하는 테스트 하나뿐이었다. 셋 다 지웠다.
+- `GpuSceneSortKey` · `GpuSceneSortEntry` — 예전 CPU 정렬 설계의 잔재다. 지금 `sortTransparent` 는
+  `vector<uint32>` 를 카메라 거리로 정렬한다. 게다가 이 키는 `Mesh*` · `Material*` · `MaterialInstance*` 를
+  생포인터로 들고 있어, 되살아나면 최근에 걷어낸 "스냅샷 안의 생포인터" 가 그대로 돌아온다.
+
+**안 지웠다 — 죽어 보였지만 아니었다.** `RHIDispatchIndirectCommand` · `RHIDrawIndexedIndirectCommand` 는
+C++ 어디에서도 이름이 불리지 않는다. 그런데 `dispatchIndirect` · `drawIndexedIndirect` 는 **네 백엔드에 다
+구현돼 있고**, 그 인자 버퍼를 채우는 것은 C++ 이 아니라 컴퓨트 셰이더다 — 두 구조체가 그 버퍼의 레이아웃
+정본이다. 이름이 안 불리는 이유는 두 함수에 **주석이 아예 없어서**였다. 주석을 달아 구조체 이름을 부르게
+했다. 참조 수만 보고 지웠으면 GPU 가 쓰는 계약을 지울 뻔했다.
+
+**기각한 합치기 — 숫자와 함께.**
+- **네 백엔드의 `*RHIResource.h` · `*RHICommandContext.h` (겹침 45~63%).** 겹치는 것은 전부 인터페이스
+  override **선언**이다. 멤버 상태는 넷 다 `<Backend>Device* _pDevice` **하나뿐**이라 기반 클래스로 뽑아도
+  백엔드당 네 줄이 준다. 몸통이 같았던 `CommandList` 는 이미 `RHICommandListForwarder` 로 합쳐져 있다 —
+  거기서 멈춘 것이 맞다.
+- **`MaterialCache` · `TextureCache` (정규화 후 겹침 61%).** 나머지 39%가 소유 방식 자체다 — 머티리얼은
+  `shared_ptr`(렌더 패킷이 소유를 빌린다), 텍스처는 `unique_ptr`. 초기화 호출도 `release` 시그니처도 다르다.
+  둘뿐인 사용처를 위해 traits 를 끼운 `ResourceCache<T>` 를 만들면 70줄짜리 두 클래스보다 읽기 어려워진다.
+- **백엔드 이름을 지우면 같아지는 함수:** 전수로 세어 **0건**. 네 백엔드의 몸통은 진짜로 다르다.
+
+**검증.** Debug · Shipping 빌드 종료 0 · GPU 19/19 · RHITest 13/13 · GpuScene 5/5 · nogpu 5/5 · 린트 7/7.
+교체 5구성 종료 0 · 오류 0. 에디터 4백엔드 창 15 · 빈 패널 0 · 오류 0.
+
 ### 2026-09-12 (Linux 와 macOS 가 같은 코드를 두 벌 들고 있었다 — POSIX 한 벌로)
 
 파일 간 유사도를 전수로 재 보니(6줄 묶음 겹침) `Core/Process` 의 Linux · Mac 쌍이 맨 위에 나왔다.
