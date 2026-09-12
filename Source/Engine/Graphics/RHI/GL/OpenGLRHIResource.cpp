@@ -217,10 +217,17 @@ namespace sw
         const uint32 alignedSize = MathUtil::align( sizeBytes, constant::kConstantBufferAlignment );
 
         // SSBO allocation; same name can bind as GL_DRAW_INDIRECT_BUFFER / DISPATCH_INDIRECT_BUFFER.
+        //
+        // **할당은 정렬 크기로, 채우기는 실제 크기로 나눈다.** 예전엔 `glBufferData` 에 정렬 크기와
+        // 초기 데이터를 함께 넘겼는데, 호출자가 준 버퍼는 `_sizeBytes` 뿐이라 GL 이 그 뒤를 읽었다
+        // (정렬이 256 바이트라 최대 255 바이트를 넘겨 읽는다). 읽은 쓰레기가 버퍼 꼬리에 들어갈 뿐
+        // 아니라, 호출자 버퍼가 페이지 끝에 걸리면 그대로 죽는다.
         GLuint ssbo{ 0 };
         glGenBuffers( 1, &ssbo );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );
-        glBufferData( GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>( alignedSize ), desc._pInitialData, GL_DYNAMIC_DRAW );
+        glBufferData( GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>( alignedSize ), nullptr, GL_DYNAMIC_DRAW );
+        if ( desc._pInitialData != nullptr && sizeBytes > 0 )
+            glBufferSubData( GL_SHADER_STORAGE_BUFFER, 0, static_cast<GLsizeiptr>( sizeBytes ), desc._pInitialData );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
 
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) )

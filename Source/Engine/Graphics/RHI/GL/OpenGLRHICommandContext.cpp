@@ -319,43 +319,51 @@ namespace sw
 
     void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
+        // 인덱스는 **UAV 등록부의 것**이다. 그 등록부는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
+        // 레코드가 말해 준다 — 다른 등록부를 넘겨짚지 않는다.
+        //
+        // 예전엔 여기도 추측이 있었다: UAV 등록부에서 못 찾으면 **bindless(SRV) 등록부**로 흘러내려
+        // 거기 같은 번호의 버퍼를 `slot` 에 걸었다(`kUavBinding0 + slot` 이 아니라!). 세 등록부가 각자
+        // 0 부터 번호를 발급하므로 그 넘겨짚기는 언젠가 맞아떨어지고, 그때 **엉뚱한 버퍼가 엉뚱한
+        // binding 에** 걸린다. 조용히 틀리는 자리라 지운다.
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
-             _pDevice->_listRegisteredUAV[index]._texture != 0 )
+        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
         {
-            // RW 텍스처 — u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수) 이다 (common.hlsli SW_DECLARE_RW_TEXTURE2D 의 명시 binding).
-            if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
-                return;
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredUAV[index]._texture );
-            if ( pRec == nullptr || pRec->_texture == 0 )
-                return;
-            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRec->_texture, 0, GL_FALSE, 0, GL_READ_WRITE, pRec->_internalFormat );
+            SW_LOG_WARNING( "bindComputeUAV: 인덱스 %# 는 등록된 UAV 가 아닙니다.", index );
             return;
         }
 
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
-             _pDevice->_listRegisteredUAV[index]._buffer != 0 )
+        const OpenGLRHIDevice::BindlessResourceRecord& record = _pDevice->_listRegisteredUAV[index];
+
+        if ( record._texture != 0 )
         {
-            GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index]._buffer );
-            if ( ssbo != 0 )
+            // RW 텍스처 — u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
+            if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
             {
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUavBinding0 + slot, ssbo ); // u# → 계약 SSBO 번호
+                SW_LOG_WARNING( "bindComputeUAV: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
                 return;
             }
+            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( record._texture );
+            if ( pRec == nullptr || pRec->_texture == 0 )
+                return;
+            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRec->_texture, 0,
+                                GL_FALSE, 0, GL_READ_WRITE, pRec->_internalFormat );
+            return;
         }
 
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) &&
-             _pDevice->_listRegisteredBindless[index]._buffer != 0 )
+        if ( record._buffer == 0 )
         {
-            GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
-            if ( ssbo != 0 )
-            {
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo ); // t# → 계약 SSBO binding # (common.hlsli SW_GL_BINDING). 예전 48+slot 은 세트 3 시절의 잔재
-                return;
-            }
+            SW_LOG_WARNING( "bindComputeUAV: 인덱스 %# 의 UAV 레코드가 비어 있습니다.", index );
+            return;
         }
+
+        const GLuint ssbo = _pDevice->resolveGlBuffer( record._buffer );
+        if ( ssbo == 0 )
+            return;
+        // u# → 계약 SSBO 번호. `-fvk-u-shift`(= SW_GL_UAV_BINDING0) 와 반드시 같아야 한다.
+        glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUavBinding0 + slot, ssbo );
     }
 
     void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
