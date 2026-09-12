@@ -212,6 +212,43 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 ---
 
+## 소유와 수명 — 누가 만들고, 누가 놓고, 누가 빌리는가
+
+세 버그가 한 뿌리에서 나왔다(2026-09-12): 카메라를 움직일 때만 메시가 보이던 것(RT 가 만든 값을 GT 의 0 이
+매 프레임 덮음), 머티리얼 해제 후 사용(스냅샷이 생포인터), 벤치 종료 세그폴트(게임 모듈이 만든 객체를 엔진이
+모듈 사후에 놓음). 전부 "누가 소유하고 누가 빌리는지가 타입에 없어서" 다. 지금은 아래가 규칙이고 타입과 린트가
+지킨다 — 문서만 믿지 말 것.
+
+| 객체 | 만드는 곳 · 소유 | 렌더 스레드가 보는 방식 |
+|---|---|---|
+| `Mesh` | `Mesh::create*()` (Engine) · `MeshComponent` 의 `shared_ptr` | 스냅샷 배치가 `shared_ptr` 로 **함께 소유**, `upload()` 에서 역참조 |
+| `Material` | `Material::create()` (Engine) · `MaterialCache` 의 `shared_ptr` + 참조 수 | 스냅샷 배치·원소가 `shared_ptr` 로 함께 소유 |
+| `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `applyToGpu` 를 RT 가 부른다 |
+| `Texture2D` | `TextureCache` 의 `unique_ptr` + 참조 수 | 보지 않는다 — 머티리얼이 **SRV 인덱스(값)** 로 실어 준다 |
+| GPU 핸들(버퍼·텍스처) | `IRHIResource` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
+| `GpuSceneSnapshot` | GT 가 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
+| GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
+
+규칙 넷:
+
+1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣는다.** 스냅샷·패킷의 멤버는 `shared_ptr` 이거나 값이다.
+   생포인터는 정렬 키(`GpuSceneSortKey` · `GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
+2. **한쪽만 만드는 값은 그쪽 타입에만 있다.** 옮겨지는 것은 `GpuSceneSnapshot` 하나로 묶고, `export`/`adopt` 는 그
+   타입을 통째로 옮긴다. 필드를 손으로 골라 복사하는 함수를 다시 만들지 말 것 — 그것이 첫 번째 버그였다.
+3. **모듈 경계를 넘어 소유될 수 있는 객체는 Engine 의 `create()` 로만 태어난다 — 컴파일러가 지킨다.**
+   `shared_ptr` 의 제어 블록은 `make_shared` 를 부른 DLL 에 산다. 그래서 Material · MaterialInstance · Mesh 의
+   생성자는 `create()` 만 만들 수 있는 열쇠(`CreateKey`)를 요구한다: 모듈에서 `make_shared` 해도, 스택에 값으로
+   두어도 **컴파일되지 않는다.** 덤으로 "shared 로 소유되지 않은 머티리얼" 이 존재할 수 없어 스냅샷이 언제나
+   `shared_from_this` 로 소유를 빌릴 수 있다. (`Material*` 인자는 ADL 로 `std::make_shared` 를 끌어오므로
+   Engine 안에서도 `sw::make_shared` 로 한정한다.)
+4. **놓는 순서는 디바이스보다 먼저.** `FrameRenderer::shutdown` · `EngineLoop::shutdown` 이 스냅샷 소유를 놓은 뒤
+   디바이스를 내린다. 소멸자에 맡기면 디바이스 사후에 GPU 자원을 돌려주려 한다.
+
+무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
+컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만
+`Scripts/lint/CheckRenderOwnership.py` 가 본다(CTest `lint` 라벨 · pre-commit 6/6).
+재현·회귀 테스트: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` (ASAN 프리셋에서 수정 전 UAF 를 잡았다).
+
 ## 의존 · 레이어
 
 - Graphics → Reflection / Object 참조 **허용**

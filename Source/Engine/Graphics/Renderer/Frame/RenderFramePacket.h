@@ -12,23 +12,21 @@ namespace sw
     struct RenderFramePacket;
 
     class IRHIDevice;
-    class Material;
 
     SW_DECLARE_DELEGATE( void, PresentHookDelegate, IRHIDevice&, RenderFramePacket& );
 
     /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷
     struct RenderFramePacket
     {
-        GpuScene _gpuScene;
-        float4   _clearColor;
-        float3   _cameraPos;
-        float4x4 _viewProj;
-        float4x4 _lightViewProj;
+        GpuSceneSnapshot _gpuScene; ///< GT 가 만든 것 전부 — 소유를 함께 싣는다(GpuSceneSnapshot 참고)
+        float4           _clearColor;
+        float3           _cameraPos;
+        float4x4         _viewProj;
+        float4x4         _lightViewProj;
         /** @brief xyz = 빛이 나아가는 방향, w = 세기. */
         float4 _lightDirIntensity;
         /** @brief rgb = 빛 색, a = 환경광. */
         float4           _lightColorAmbient;
-        Material*        _pSceneMaterial;
         RHITextureHandle _gameRenderTarget; ///< 0 = backbuffer path
         uint32           _viewportWidth;
         uint32           _viewportHeight;
@@ -47,7 +45,6 @@ namespace sw
             , _lightViewProj{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
-            , _pSceneMaterial{ nullptr }
             , _gameRenderTarget{ 0 }
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }

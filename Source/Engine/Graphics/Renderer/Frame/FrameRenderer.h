@@ -165,7 +165,6 @@ namespace sw
             float4x4           _world{};
             RHIBufferHandle    _passCb{ 0 };
             RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
-            Material*          _pBoundMaterial{ nullptr };
             /** @brief 패스 스코프 이름→리소스 레지스트리. 패스 시작마다 새로 시작(reset) — 병렬 기록 시
              *         패스마다 독립이어야 하므로 FrameRenderer 공유 멤버가 아니라 여기 둔다. */
             FrameResourceRegistry _resourceRegistry{};

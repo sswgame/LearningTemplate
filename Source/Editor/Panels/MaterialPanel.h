@@ -25,7 +25,7 @@ namespace sw::editor
         void   applyLivePreview();
 
     private:
-        Material                              _material;
+        shared_ptr<Material>                  _material; ///< 편집 사본. Material 은 create() 로만 만들 수 있다
         fixed_string<constant::kMaxBuffer128> _name;
         fixed_string<constant::kMaxBuffer256> _shaderPath;
         string                                _status;

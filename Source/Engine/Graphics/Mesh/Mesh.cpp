@@ -21,7 +21,7 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createUnitCube()
     {
-        auto              mesh     = sw::make_shared<Mesh>();
+        auto              mesh     = sw::make_shared<Mesh>( CreateKey{} );
         vector<RHIVertex> listVert = {
             // +Z
             { { -0.5f, -0.5f, 0.5f }, { 0.92f, 0.35f, 0.28f, 1.0f }},
@@ -81,7 +81,7 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createRectMesh()
     {
-        auto              mesh     = sw::make_shared<Mesh>();
+        auto              mesh     = sw::make_shared<Mesh>( CreateKey{} );
         vector<RHIVertex> listVert = {
             {{ -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
             { { 0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},

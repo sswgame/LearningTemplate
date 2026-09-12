@@ -42,10 +42,10 @@ namespace sw
 
     shared_ptr<Material> Material::create()
     {
-        return make_shared<Material>();
+        return sw::make_shared<Material>( CreateKey{} );
     }
 
-    Material::Material()
+    Material::Material( CreateKey )
         : _desc{}
         , _data{}
         , _constantBuffer{ 0 }

@@ -200,7 +200,7 @@ namespace sw::editor
 
     MaterialPanel::MaterialPanel()
         : EditorDocumentPanel{ EditorAssetKind::Material, false }
-        , _material{}
+        , _material{ Material::create() }
         , _name{}
         , _shaderPath{}
         , _status{}
@@ -232,7 +232,7 @@ namespace sw::editor
         ImGui::InputText( "Name", _name.data(), _name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            _material.getDesc()._name = _name.c_str();
+            _material->getDesc()._name = _name.c_str();
             notifyDocumentEdited( "Edit Material Name", "material-name" );
             applyLivePreview();
         }
@@ -240,19 +240,19 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
             _shaderPath = shaderPath;
-            _material.setShaderPath( _shaderPath.c_str() );
+            _material->setShaderPath( _shaderPath.c_str() );
             notifyDocumentEdited( "Edit Material Shader", "material-shader" );
         }
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Properties" );
-        const vector<MaterialProperty>& listProp = _material.getProperties();
+        const vector<MaterialProperty>& listProp = _material->getProperties();
         for ( uint32 propIndex = 0; propIndex < static_cast<uint32>( listProp.size() ); ++propIndex )
         {
             const MaterialProperty& src = listProp[propIndex];
             if ( src._bHidden == SW_TRUE )
                 continue;
-            MaterialProperty* pProp = _material.findProperty( hashed_string( src._name.c_str() ) );
+            MaterialProperty* pProp = _material->findProperty( hashed_string( src._name.c_str() ) );
             if ( pProp == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( propIndex ) );
@@ -272,16 +272,16 @@ namespace sw::editor
 
     void MaterialPanel::applyLivePreview()
     {
-        EditorViewportPreview::applyMaterial( &_material, getLoadedAssetPath() );
+        EditorViewportPreview::applyMaterial( _material.get(), getLoadedAssetPath() );
     }
 
     bool MaterialPanel::saveDocument()
     {
         if ( getLoadedAssetPath().empty() )
             return false;
-        _material.getDesc()._name = _name.c_str();
-        _material.setShaderPath( _shaderPath.c_str() );
-        if ( _material.saveToFile( getLoadedAssetPath() ) == false )
+        _material->getDesc()._name = _name.c_str();
+        _material->setShaderPath( _shaderPath.c_str() );
+        if ( _material->saveToFile( getLoadedAssetPath() ) == false )
         {
             _status = "Save failed";
             return false;
@@ -305,7 +305,7 @@ namespace sw::editor
             return;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        if ( _material.loadFromFile( path ) == false )
+        if ( _material->loadFromFile( path ) == false )
         {
             _status = "Load failed";
             markDocumentLoaded();
@@ -318,20 +318,20 @@ namespace sw::editor
 
     void MaterialPanel::syncNameBuffers()
     {
-        _name       = _material.getName().c_str();
-        _shaderPath = _material.getShaderPath().c_str();
+        _name       = _material->getName().c_str();
+        _shaderPath = _material->getShaderPath().c_str();
     }
 
     string MaterialPanel::captureDocumentText() const
     {
-        return _material.saveToString();
+        return _material->saveToString();
     }
 
     void MaterialPanel::applyDocumentText( string_view text )
     {
         if ( text.empty() )
             return;
-        _material.loadFromXml( text );
+        _material->loadFromXml( text );
         syncNameBuffers();
         applyLivePreview();
     }

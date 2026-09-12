@@ -574,10 +574,10 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )
 
     // 블렌드 모드는 **부모 머티리얼**이 정한다(GpuScene::buildFromScene). 예전에는 그 폴백이 순서 버그로 한 번도
     // 걸리지 않아 컴포넌트의 Transparent 가 우연히 이겼다 — 이제는 투명 머티리얼을 부모로 줘야 투명 배치가 된다.
-    sw::Material master;
-    SW_EXPECT_TRUE( master.loadFromFile( "engine/materials/glassmaterial.material" ) );
-    sw::shared_ptr<sw::MaterialInstance> a = sw::MaterialInstance::create( &master );
-    sw::shared_ptr<sw::MaterialInstance> b = sw::MaterialInstance::create( &master );
+    sw::shared_ptr<sw::Material> master = sw::Material::create();
+    SW_EXPECT_TRUE( master->loadFromFile( "engine/materials/glassmaterial.material" ) );
+    sw::shared_ptr<sw::MaterialInstance> a = sw::MaterialInstance::create( master.get() );
+    sw::shared_ptr<sw::MaterialInstance> b = sw::MaterialInstance::create( master.get() );
 
     {
         sw::GameObject*    go = objects->createGameObject( sw::hashed_string( "T0" ) );
@@ -890,7 +890,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
     lateePacket._bValid = 1;
     gtGpuScene.buildFromScene( &scene, lateePacket._cameraPos, nullptr );
     gtGpuScene.exportCpuSnapshot( lateePacket._gpuScene );
-    SW_ASSERT_TRUE( lateePacket._gpuScene.getInstances().empty() == false );
+    SW_ASSERT_TRUE( lateePacket._gpuScene._listInstance.empty() == false );
 
     mesh->setMaterialInstance( nullptr );
     mesh->setMaterial( nullptr );
@@ -3036,7 +3036,7 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
     SW_ASSERT_NOT_NULL( pGtPermutation );
 
     // 패킷을 거쳐 렌더 스레드 쪽 GpuScene 으로 옮긴다 (EngineLoop 가 매 프레임 하는 그대로).
-    sw::GpuScene packetScene;
+    sw::GpuSceneSnapshot packetScene;
     gtScene.exportCpuSnapshot( packetScene );
     sw::GpuScene rtScene;
     rtScene.adoptCpuSnapshot( std::move( packetScene ) );

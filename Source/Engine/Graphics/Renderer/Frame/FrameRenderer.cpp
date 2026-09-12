@@ -153,13 +153,12 @@ namespace sw
         releasePassResources();
         _graph.clear();
         _frameCmd.reset();
-        _pCmdOwnerDevice          = nullptr;
-        _pCmd                     = nullptr;
-        _frameCtx._pCmd           = nullptr;
-        _pDevice                  = nullptr;
-        _frameCtx._pBoundMaterial = nullptr;
-        _pTaskManager             = nullptr;
-        _status                   = FrameRendererStatus::Uninitialized;
+        _pCmdOwnerDevice = nullptr;
+        _pCmd            = nullptr;
+        _frameCtx._pCmd  = nullptr;
+        _pDevice         = nullptr;
+        _pTaskManager    = nullptr;
+        _status          = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
         _bCallbacksBound = 0;
         _pipelinePath.clear();
@@ -447,10 +446,9 @@ namespace sw
         if ( isReady() == false || pDevice == nullptr )
             return false;
 
-        _pDevice                  = pDevice;
-        _pScene                   = pScene;
-        _frameCtx._pBoundMaterial = pMaterial;
-        _outputRenderTarget       = 0;
+        _pDevice            = pDevice;
+        _pScene             = pScene;
+        _outputRenderTarget = 0;
         ensurePassResources();
         ensureTransientResources();
         resetPassCbRing();
@@ -505,10 +503,9 @@ namespace sw
         if ( isReady() == false || pDevice == nullptr || packet._bValid == 0 )
             return false;
 
-        _pDevice                  = pDevice;
-        _pScene                   = nullptr;
-        _frameCtx._pBoundMaterial = packet._pSceneMaterial;
-        _outputRenderTarget       = packet._gameRenderTarget;
+        _pDevice            = pDevice;
+        _pScene             = nullptr;
+        _outputRenderTarget = packet._gameRenderTarget;
         // _gpuScene는 FrameRenderer가 프레임 간 영속 소유(GPU 버퍼/핸들/MaterialRetireQueue 보존) —
         // 패킷에서는 CPU 스냅샷(인스턴스/배치 목록)만 옮겨온다. 통째로 move하면 직전 프레임에 업로드한
         // GPU 버퍼/디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 생성하는 리크가 됐었다.

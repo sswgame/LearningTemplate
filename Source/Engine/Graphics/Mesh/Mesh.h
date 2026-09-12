@@ -21,8 +21,20 @@ namespace sw
     class SW_API Mesh
     {
     public:
-        /** @brief 빈 메시입니다. */
-        Mesh() = default;
+        /**
+         * @brief 생성 열쇠 — create() 만 만들 수 있다.
+         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<Mesh>()` 도 스택의 `Mesh x;` 도 **컴파일되지 않는다.**
+         *          모든 Mesh 이 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장한다 — 렌더 패킷이
+         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없다. 린트가 아니라 타입이 지킨다.
+         */
+        struct CreateKey
+        {
+        private:
+            CreateKey() = default;
+            friend class Mesh;
+        };
+        /** @brief create*() 전용 생성자 — 빈 메시. */
+        explicit Mesh( CreateKey ) noexcept {}
         /**
          * @brief 핸들만 비웁니다.
          * @note createUnitCube static 캐시는 RHI 디바이스보다 늦게 파괴될 수 있어

@@ -279,6 +279,32 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (소유를 타입에 적었다 — 검사가 아니라 컴파일러가 막는다)
+
+같은 뿌리의 세 사고 뒤에 나온 질문: "누가 누구를 소유하고 어떻게 참조하는지가 구조에 없다." 파이썬 검사는
+사후 트립와이어일 뿐이라, **그 코드가 컴파일되지 않게** 했다. 무엇이 무엇을 지키는지:
+
+| 사고 | 이제 막는 것 |
+|---|---|
+| RT 가 만든 값(`_indirectCommandCount`)을 GT 의 0 이 매 프레임 덮음 | **타입** — 옮겨지는 것은 `GpuSceneSnapshot` 하나뿐. RT 전용 상태는 그 타입에 없으니 옮겨질 수 없다. export/adopt 는 구조체 통째 복사/이동이라 손으로 고르는 목록이 사라졌다 |
+| 스냅샷의 생포인터를 RT 가 역참조(UAF) | **타입** — 스냅샷 필드는 `shared_ptr` (Mesh 도 포함, 이번에 잡았다). C++ 가 "필드 추가" 자체는 못 막으므로 그것 하나만 `CheckRenderOwnership.py` 가 본다 |
+| 모듈이 `make_shared` 한 객체를 엔진이 모듈 사후에 놓음 | **패스키 생성자** — `Material` · `MaterialInstance` · `Mesh` 의 생성자가 `create()` 만 만들 수 있는 `CreateKey` 를 요구한다. `make_shared<Material>()` 도 스택의 `Material m;` 도 **컴파일되지 않는다** (프로브 TU 로 확인: 넷 다 exit 1, `create()` 만 exit 0) |
+
+덤으로 정리된 것: 패킷의 `_pSceneMaterial` 과 렌더러의 `_pBoundMaterial` 은 쓰는 곳이 없어 지웠다(생포인터 하나 더 제거).
+`MaterialPanel` 의 값 멤버 `Material _material` · `ShaderBaker` 의 지역 `Material` · 테스트 여덟 곳이 `create()` 로
+바뀌었다 — 컴파일러가 전부 찾아 줬다. `shareMaterial` 의 "빌릴 수 없으면 그리지 않는다" 분기는 그런 머티리얼이
+존재할 수 없어 사라졌다.
+
+> **`Material*` 인자와 ADL.** `Material` 이 `std::enable_shared_from_this` 를 상속하자 `make_shared<X>( Material* )` 가
+> `std::make_shared` 와 `sw::make_shared` 사이에서 모호해진다. 팩토리 안에서는 `sw::make_shared` 로 한정한다.
+> 바깥에서는 이제 부를 수도 없다.
+
+> **정규식으로 `.` → `->` 를 바꿀 때 문자열 리터럴을 조심할 것.** `"defaultmaterial.material.meta"` 가
+> `material->meta` 가 되어 nogpu 하나가 깨졌다 — 회귀가 아니라 내 편집이었다.
+
+검증: nogpu 5/5 · Debug GPU 15/15 · ASAN(재현 1/1 · 렌더 15/15 · 22/22 · 머티리얼 15/15 · 리소스 21/21, sanitizer 0) ·
+린트 7/7(+음성 시험 2/2) · 벤치 3구성 종료 0 · 픽셀 변화 없음 · 패널 덤프 15/0.
+
 ### 2026-09-12 (렌더 패킷이 머티리얼의 소유를 쥔다 — 죽은 retire 큐를 지우고, ASAN 으로 전후를 쟀다)
 
 **증상(재현)**: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` — 패킷을 내보낸 **뒤에** GT 가 머티리얼·인스턴스의

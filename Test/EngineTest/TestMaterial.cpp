@@ -20,16 +20,16 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 {
     sw::ResourceUtil::initialize();
 
-    sw::Material material;
-    bool         loadOk = material.loadFromFile( "engine/materials/defaultmaterial.material" );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    bool                         loadOk   = material->loadFromFile( "engine/materials/defaultmaterial.material" );
     if ( loadOk == false )
-        loadOk = material.loadFromFile( "materials/defaultmaterial.material" );
+        loadOk = material->loadFromFile( "materials/defaultmaterial.material" );
     SW_EXPECT_TRUE( loadOk );
 
-    SW_EXPECT_EQUAL( sw::string( "DefaultMaterial" ), material.getName() );
-    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material.getShaderPath() );
+    SW_EXPECT_EQUAL( sw::string( "DefaultMaterial" ), material->getName() );
+    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
 
-    const float32* color = reinterpret_cast<const float32*>( material.getPropertyData( "color" ) );
+    const float32* color = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
     SW_EXPECT_TRUE( color != nullptr );
     if ( color )
     {
@@ -43,14 +43,14 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     }
 
     sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_saved_material.material" );
-    bool       saveOk   = material.saveToFile( tempPath );
+    bool       saveOk   = material->saveToFile( tempPath );
     SW_EXPECT_TRUE( saveOk );
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( tempPath ) );
 
-    sw::Material reloadedMaterial;
-    bool         reloadOk = reloadedMaterial.loadFromFile( tempPath );
+    sw::shared_ptr<sw::Material> reloadedMaterial = sw::Material::create();
+    bool                         reloadOk         = reloadedMaterial->loadFromFile( tempPath );
     SW_EXPECT_TRUE( reloadOk );
-    SW_EXPECT_EQUAL( material.getName(), reloadedMaterial.getName() );
+    SW_EXPECT_EQUAL( material->getName(), reloadedMaterial->getName() );
 
     sw::FileUtil::removeFile( tempPath );
 }
@@ -62,10 +62,10 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 {
     sw::ResourceUtil::initialize();
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    sw::vector<sw::string> listDef = material.collectShaderKeywords();
+    sw::vector<sw::string> listDef = material->collectShaderKeywords();
     auto                   has     = [&]( const utf8* pDefine )
     {
         return std::find( listDef.begin(), listDef.end(), pDefine ) != listDef.end();
@@ -78,25 +78,25 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP_OFF" ) ); // static switch 꺼짐 시 Off 디파인
     SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP" ) == false );
 
-    material.setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
-    listDef = material.collectShaderKeywords();
+    material->setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
+    listDef = material->collectShaderKeywords();
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "MATERIAL_NORMALMAP" ) != listDef.end() );
 
-    material.setMultiCompile( sw::hashed_string( "FogMode" ), "FOG_LINEAR" );
-    listDef = material.collectShaderKeywords();
+    material->setMultiCompile( sw::hashed_string( "FogMode" ), "FOG_LINEAR" );
+    listDef = material->collectShaderKeywords();
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_LINEAR" ) != listDef.end() );
     SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_OFF" ) == listDef.end() );
 
-    const uint64 hashA = material.getPermutationHash();
-    material.setQualityLevel( sw::MaterialQualityLevel::Low );
-    const uint64 hashB = material.getPermutationHash();
+    const uint64 hashA = material->getPermutationHash();
+    material->setQualityLevel( sw::MaterialQualityLevel::Low );
+    const uint64 hashB = material->getPermutationHash();
     SW_EXPECT_TRUE( hashA != hashB );
 
-    sw::MaterialInstance instance( &material );
-    instance.enableKeyword( sw::hashed_string( "CUSTOM_KEYWORD" ) );
-    sw::vector<sw::string> listInstDef = instance.collectShaderKeywords();
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    instance->enableKeyword( sw::hashed_string( "CUSTOM_KEYWORD" ) );
+    sw::vector<sw::string> listInstDef = instance->collectShaderKeywords();
     SW_EXPECT_TRUE( std::find( listInstDef.begin(), listInstDef.end(), "CUSTOM_KEYWORD" ) != listInstDef.end() );
-    SW_EXPECT_TRUE( instance.getPermutationHash() != material.getPermutationHash() );
+    SW_EXPECT_TRUE( instance->getPermutationHash() != material->getPermutationHash() );
 }
 
 /**
@@ -127,11 +127,11 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
     sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_enum_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( tempPath ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
 
-    const uint32* shade = reinterpret_cast<const uint32*>( material.getPropertyData( "shadeMode" ) );
-    const uint32* flags = reinterpret_cast<const uint32*>( material.getPropertyData( "flags" ) );
+    const uint32* shade = reinterpret_cast<const uint32*>( material->getPropertyData( "shadeMode" ) );
+    const uint32* flags = reinterpret_cast<const uint32*>( material->getPropertyData( "flags" ) );
     SW_EXPECT_TRUE( shade != nullptr && flags != nullptr );
     if ( shade && flags )
     {
@@ -149,20 +149,20 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
 {
     sw::ResourceUtil::initialize();
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    SW_EXPECT_TRUE( material.setPropertyValue( nullptr, sw::hashed_string( "color" ), "0.25 0.50 0.75 1.0" ) );
-    const float32* color = reinterpret_cast<const float32*>( material.getPropertyData( "color" ) );
+    SW_EXPECT_TRUE( material->setPropertyValue( nullptr, sw::hashed_string( "color" ), "0.25 0.50 0.75 1.0" ) );
+    const float32* color = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
     SW_ASSERT_NOT_NULL( color );
     SW_EXPECT_NEAR_EQUAL( 0.25f, color[0], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.50f, color[1], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, color[2], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, color[3], 1e-3f );
 
-    SW_EXPECT_TRUE( material.setParameterFloat( nullptr, sw::hashed_string( "roughness" ), 0.42f ) );
+    SW_EXPECT_TRUE( material->setParameterFloat( nullptr, sw::hashed_string( "roughness" ), 0.42f ) );
     float32 roughness = -1.0f;
-    SW_EXPECT_TRUE( material.getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
+    SW_EXPECT_TRUE( material->getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
     SW_EXPECT_NEAR_EQUAL( 0.42f, roughness, 1e-3f );
 }
 
@@ -171,8 +171,8 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
  */
 SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 {
-    sw::Material   mat;
-    sw::TaskHandle handle = mat.loadFromFileAsync( "engine/materials/defaultmaterial.material" );
+    sw::shared_ptr<sw::Material> mat    = sw::Material::create();
+    sw::TaskHandle               handle = mat->loadFromFileAsync( "engine/materials/defaultmaterial.material" );
     SW_EXPECT_TRUE( handle.isValid() );
 
     sw::engine::getTaskManager().waitAll();
@@ -186,40 +186,40 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 {
     sw::ResourceUtil::initialize();
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    const sw::MaterialProperty* colorProp = material.findProperty( sw::hashed_string( "color" ) );
+    const sw::MaterialProperty* colorProp = material->findProperty( sw::hashed_string( "color" ) );
     SW_EXPECT_TRUE( colorProp != nullptr );
     if ( colorProp )
         SW_EXPECT_TRUE( colorProp->_defaultValue.find( "1.0" ) != sw::string::npos || colorProp->_defaultValue.find( "1" ) != sw::string::npos );
 
-    SW_EXPECT_TRUE( material.setPropertyValue( nullptr, sw::hashed_string( "roughness" ), "0.9" ) );
-    SW_EXPECT_TRUE( material.resetPropertyToDefault( nullptr, sw::hashed_string( "roughness" ) ) );
+    SW_EXPECT_TRUE( material->setPropertyValue( nullptr, sw::hashed_string( "roughness" ), "0.9" ) );
+    SW_EXPECT_TRUE( material->resetPropertyToDefault( nullptr, sw::hashed_string( "roughness" ) ) );
     float32 roughness = -1.0f;
-    SW_EXPECT_TRUE( material.getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
+    SW_EXPECT_TRUE( material->getParameterFloat( sw::hashed_string( "roughness" ), roughness ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, roughness, 1e-3f );
 
-    sw::MaterialInstance instance( &material );
-    instance.setParameter( sw::hashed_string( "color" ), "0.2 0.75 1.0 0.35" );
-    SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    instance->setParameter( sw::hashed_string( "color" ), "0.2 0.75 1.0 0.35" );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "color" ) ) );
 
     sw::string colorOverride;
-    SW_EXPECT_TRUE( instance.getParameter( sw::hashed_string( "color" ), colorOverride ) );
+    SW_EXPECT_TRUE( instance->getParameter( sw::hashed_string( "color" ), colorOverride ) );
     SW_EXPECT_TRUE( colorOverride.find( "0.2" ) != sw::string::npos || colorOverride.find( "0.20" ) != sw::string::npos );
 
     // 인스턴스 오버라이드는 applyToGpu 전까지 마스터 기본 버퍼를 바꾸지 않는다.
-    const float32* masterColor = reinterpret_cast<const float32*>( material.getPropertyData( "color" ) );
+    const float32* masterColor = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
     SW_EXPECT_TRUE( masterColor != nullptr );
     if ( masterColor )
         SW_EXPECT_NEAR_EQUAL( 1.0f, masterColor[0], 1e-3f );
 
     sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_mic.materialinstance" );
-    instance.setName( "TestMic" );
-    SW_EXPECT_TRUE( instance.saveToFile( tempPath ) );
-    sw::MaterialInstance reloaded( &material );
-    SW_EXPECT_TRUE( reloaded.loadFromFile( tempPath ) );
-    SW_EXPECT_TRUE( reloaded.isParameterOverridden( sw::hashed_string( "color" ) ) );
+    instance->setName( "TestMic" );
+    SW_EXPECT_TRUE( instance->saveToFile( tempPath ) );
+    sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( material.get() );
+    SW_EXPECT_TRUE( reloaded->loadFromFile( tempPath ) );
+    SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "color" ) ) );
     sw::FileUtil::removeFile( tempPath );
 }
 
@@ -228,8 +228,8 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
  */
 SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 {
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -249,16 +249,16 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
     cb._listVariable.push_back( roughVar );
     reflection._listConstantBuffer.push_back( cb );
 
-    SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
 
-    sw::MaterialInstance instance( &material );
-    sw::float4           colorOverride{ 0.1f, 0.2f, 0.3f, 1.0f };
-    instance.setVectorParameter( sw::hashed_string( "color" ), colorOverride );
-    SW_EXPECT_TRUE( instance.validateParametersWithReflection( reflection ) );
-    SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    sw::float4                           colorOverride{ 0.1f, 0.2f, 0.3f, 1.0f };
+    instance->setVectorParameter( sw::hashed_string( "color" ), colorOverride );
+    SW_EXPECT_TRUE( instance->validateParametersWithReflection( reflection ) );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "color" ) ) );
 
-    material.setBlendMode( sw::RHIBlendMode::Transparent );
-    SW_EXPECT_TRUE( material.getBlendMode() == sw::RHIBlendMode::Transparent );
+    material->setBlendMode( sw::RHIBlendMode::Transparent );
+    SW_EXPECT_TRUE( material->getBlendMode() == sw::RHIBlendMode::Transparent );
 }
 
 /**
@@ -268,20 +268,20 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {
     sw::ResourceUtil::initialize();
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    sw::MaterialInstance instance( &material );
-    sw::float4           overrideColor{ 0.1f, 0.2f, 0.3f, 0.4f };
-    instance.setVectorParameter( sw::hashed_string( "color" ), overrideColor );
-    SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    sw::float4                           overrideColor{ 0.1f, 0.2f, 0.3f, 0.4f };
+    instance->setVectorParameter( sw::hashed_string( "color" ), overrideColor );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "color" ) ) );
 
     sw::string text;
-    SW_EXPECT_TRUE( instance.getParameter( sw::hashed_string( "color" ), text ) );
+    SW_EXPECT_TRUE( instance->getParameter( sw::hashed_string( "color" ), text ) );
     SW_EXPECT_TRUE( text.find( "0.1" ) != sw::string::npos );
 
-    instance.clearOverrides();
-    SW_EXPECT_FALSE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
+    instance->clearOverrides();
+    SW_EXPECT_FALSE( instance->isParameterOverridden( sw::hashed_string( "color" ) ) );
 }
 
 /**
@@ -289,8 +289,8 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
  */
 SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 {
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -304,13 +304,13 @@ SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
     cb._listVariable.push_back( colorVar );
     reflection._listConstantBuffer.push_back( cb );
 
-    sw::MaterialInstance instance( &material );
-    instance.setParameter( sw::hashed_string( "color" ), "1.0 0.0 0.0 1.0" );
-    SW_EXPECT_TRUE( instance.validateParametersWithReflection( reflection ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    instance->setParameter( sw::hashed_string( "color" ), "1.0 0.0 0.0 1.0" );
+    SW_EXPECT_TRUE( instance->validateParametersWithReflection( reflection ) );
 
     // 리플렉션에 없는 이름 오버라이드는 검증 실패해야 한다.
-    instance.setParameter( sw::hashed_string( "notInReflection" ), "1.0" );
-    SW_EXPECT_FALSE( instance.validateParametersWithReflection( reflection ) );
+    instance->setParameter( sw::hashed_string( "notInReflection" ), "1.0" );
+    SW_EXPECT_FALSE( instance->validateParametersWithReflection( reflection ) );
 }
 
 /**
@@ -318,15 +318,15 @@ SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
  */
 SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
 {
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-    sw::vector<uint8> buffer = material.getBuffer();
+    sw::vector<uint8> buffer = material->getBuffer();
     SW_EXPECT_TRUE( buffer.size() >= 16 );
 
     // 1) raw data packing test (e.g. float4 color)
     const float32 testColor[4] = { 0.125f, 0.25f, 0.5f, 1.0f };
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "color" ), testColor, sizeof( testColor ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "color" ), testColor, sizeof( testColor ), buffer ) );
 
     const float32* pPackedColor = reinterpret_cast<const float32*>( buffer.data() );
     SW_EXPECT_NEAR_EQUAL( 0.125f, pPackedColor[0], 1e-4f );
@@ -336,10 +336,10 @@ SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
 
     // 2) texture packing test
     const sw::RHIDescriptorIndex testTexIdx = 42;
-    if ( material.findProperty( sw::hashed_string( "mainTexture" ) ) != nullptr )
+    if ( material->findProperty( sw::hashed_string( "mainTexture" ) ) != nullptr )
     {
-        SW_EXPECT_TRUE( material.packTextureIntoBuffer( sw::hashed_string( "mainTexture" ), testTexIdx, buffer ) );
-        const sw::MaterialProperty* pTexProp = material.findProperty( sw::hashed_string( "mainTexture" ) );
+        SW_EXPECT_TRUE( material->packTextureIntoBuffer( sw::hashed_string( "mainTexture" ), testTexIdx, buffer ) );
+        const sw::MaterialProperty* pTexProp = material->findProperty( sw::hashed_string( "mainTexture" ) );
         SW_ASSERT_NOT_NULL( pTexProp );
         const uint32 packedTexIdx = *reinterpret_cast<const uint32*>( buffer.data() + pTexProp->_offset );
         SW_EXPECT_EQUAL( 42u, packedTexIdx );
@@ -351,7 +351,7 @@ SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
  */
 SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
 {
-    sw::Material material;
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
 
     // 1) 셰이더 리플렉션으로 CBuffer 변수 순서 및 오프셋 정의: roughness(0B), tint(16B), specular(32B), albedoIndex(48B)
     sw::ShaderReflectionData reflection{};
@@ -390,13 +390,13 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
     reflection._listConstantBuffer.push_back( cb );
 
     // 2) 리플렉션 데이터 동기화
-    SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
 
     // 3) 오프셋 및 타입 자동 갱신 검증
-    const sw::MaterialProperty* pPropRoughness = material.findProperty( sw::hashed_string( "roughness" ) );
-    const sw::MaterialProperty* pPropTint      = material.findProperty( sw::hashed_string( "tint" ) );
-    const sw::MaterialProperty* pPropSpecular  = material.findProperty( sw::hashed_string( "specular" ) );
-    const sw::MaterialProperty* pPropAlbedo    = material.findProperty( sw::hashed_string( "albedoTex" ) );
+    const sw::MaterialProperty* pPropRoughness = material->findProperty( sw::hashed_string( "roughness" ) );
+    const sw::MaterialProperty* pPropTint      = material->findProperty( sw::hashed_string( "tint" ) );
+    const sw::MaterialProperty* pPropSpecular  = material->findProperty( sw::hashed_string( "specular" ) );
+    const sw::MaterialProperty* pPropAlbedo    = material->findProperty( sw::hashed_string( "albedoTex" ) );
 
     SW_ASSERT_NOT_NULL( pPropRoughness );
     SW_ASSERT_NOT_NULL( pPropTint );
@@ -409,7 +409,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
     SW_EXPECT_EQUAL( 48u, pPropAlbedo->_offset );
 
     // 4) 새 오프셋에 맞춘 실제 바이트 버퍼 패킹 검증
-    sw::vector<uint8> buffer = material.getBuffer();
+    sw::vector<uint8> buffer = material->getBuffer();
     SW_EXPECT_TRUE( buffer.size() >= 64 );
 
     const float32 roughnessVal = 0.75f;
@@ -417,10 +417,10 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
     const float32 specularVal  = 0.5f;
     const uint32  bindlessIdx  = 123u;
 
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "roughness" ), &roughnessVal, sizeof( roughnessVal ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "tint" ), tintVal, sizeof( tintVal ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "specular" ), &specularVal, sizeof( specularVal ), buffer ) );
-    SW_EXPECT_TRUE( material.packTextureIntoBuffer( sw::hashed_string( "albedoTex" ), bindlessIdx, buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "roughness" ), &roughnessVal, sizeof( roughnessVal ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "tint" ), tintVal, sizeof( tintVal ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "specular" ), &specularVal, sizeof( specularVal ), buffer ) );
+    SW_EXPECT_TRUE( material->packTextureIntoBuffer( sw::hashed_string( "albedoTex" ), bindlessIdx, buffer ) );
 
     const float32  packedRoughness = *reinterpret_cast<const float32*>( buffer.data() + 0 );
     const float32* pPackedTint     = reinterpret_cast<const float32*>( buffer.data() + 16 );
@@ -441,8 +441,8 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
  */
 SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
 {
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
     // 1) 리플렉션에 슬롯 변경(t0 -> t2)이 발생했을 때의 리소스 바인딩 정보 구성
     sw::ShaderReflectionData reflection{};
@@ -465,9 +465,9 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
     reflection._listResource.push_back( texBinding );
 
     // 2) 인스턴스 파라미터 오버라이드 후 검증
-    sw::MaterialInstance instance( &material );
-    instance.setParameter( sw::hashed_string( "color" ), "0.5 0.5 0.5 1.0" );
-    SW_EXPECT_TRUE( instance.validateParametersWithReflection( reflection ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+    instance->setParameter( sw::hashed_string( "color" ), "0.5 0.5 0.5 1.0" );
+    SW_EXPECT_TRUE( instance->validateParametersWithReflection( reflection ) );
 
     // 리플렉션 리소스 바인딩 목록에 포함된 mainTexture 파라미터 슬롯 반영 확인
     SW_EXPECT_EQUAL( size_t( 1 ), reflection._listResource.size() );
@@ -479,7 +479,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
  */
 SW_TEST_CASE( MaterialTest, ShaderReflectionRapidHotReloadStressTest )
 {
-    sw::Material material;
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
 
     // 고정된 머티리얼 프로퍼티 세트 (실제 셰이더 편집 시 변수 순서 및 패딩 변경 시뮬레이션)
     const sw::string arrPropNames[] = {
@@ -547,23 +547,23 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionRapidHotReloadStressTest )
         reflection._listConstantBuffer.push_back( cb );
 
         // 런타임 동적 핫리로드 동기화
-        SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
+        SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
 
-        sw::vector<uint8> buffer = material.getBuffer();
+        sw::vector<uint8> buffer = material->getBuffer();
         SW_EXPECT_TRUE( buffer.size() >= cb._totalSize );
         SW_EXPECT_TRUE( buffer.size() % 256 == 0 ); // 256B 정렬 패딩 검증
 
         // 데이터 패킹 및 오프셋 무결성 검증
         for ( const ExpectedVar& expected : listExpected )
         {
-            const sw::MaterialProperty* pProp = material.findProperty( sw::hashed_string( expected._name.c_str() ) );
+            const sw::MaterialProperty* pProp = material->findProperty( sw::hashed_string( expected._name.c_str() ) );
             SW_ASSERT_NOT_NULL( pProp );
             SW_EXPECT_EQUAL( expected._offset, pProp->_offset );
             SW_EXPECT_EQUAL( expected._size, pProp->_size );
 
             if ( expected._size == 4 )
             {
-                SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( expected._name.c_str() ), &expected._testValue, sizeof( float32 ), buffer ) );
+                SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( expected._name.c_str() ), &expected._testValue, sizeof( float32 ), buffer ) );
                 const float32 val = *reinterpret_cast<const float32*>( buffer.data() + expected._offset );
                 SW_EXPECT_NEAR_EQUAL( expected._testValue, val, 1e-4f );
             }
@@ -576,7 +576,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionRapidHotReloadStressTest )
  */
 SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
 {
-    sw::Material material;
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
 
     // CBuffer에 다중 텍스처 인덱스 필드 구성
     sw::ShaderReflectionData reflection{};
@@ -594,7 +594,7 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
         cb._listVariable.push_back( var );
     }
     reflection._listConstantBuffer.push_back( cb );
-    SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
 
     constexpr uint32        kThreadCount        = 8;
     constexpr uint32        kInstancesPerThread = 64;
@@ -607,8 +607,8 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
         {
             for ( uint32 instIndex = 0; instIndex < kInstancesPerThread; ++instIndex )
             {
-                sw::MaterialInstance instance( &material );
-                sw::vector<uint8>    instBuffer = material.getBuffer();
+                sw::shared_ptr<sw::MaterialInstance> instance   = sw::MaterialInstance::create( material.get() );
+                sw::vector<uint8>                    instBuffer = material->getBuffer();
 
                 const uint32 baseDescriptor = ( threadIndex * 1000 ) + ( instIndex * 8 );
                 for ( uint32 slotIndex = 0; slotIndex < 8; ++slotIndex )
@@ -616,7 +616,7 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
                     const sw::string             propName      = ( "texSlot_" + std::to_string( slotIndex ) ).c_str();
                     const sw::RHIDescriptorIndex descriptorIdx = baseDescriptor + slotIndex;
 
-                    if ( material.packTextureIntoBuffer( sw::hashed_string( propName.c_str() ), descriptorIdx, instBuffer ) )
+                    if ( material->packTextureIntoBuffer( sw::hashed_string( propName.c_str() ), descriptorIdx, instBuffer ) )
                     {
                         const uint32 readBack = *reinterpret_cast<const uint32*>( instBuffer.data() + ( slotIndex * 4 ) );
                         if ( readBack == descriptorIdx )
@@ -642,7 +642,7 @@ SW_TEST_CASE( MaterialTest, BindlessDescriptorHeapMultiThreadedStressTest )
  */
 SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
 {
-    sw::Material material;
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -689,9 +689,9 @@ SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
     cb._listVariable.push_back( varTexIndices );
 
     reflection._listConstantBuffer.push_back( cb );
-    SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
 
-    sw::vector<uint8> buffer = material.getBuffer();
+    sw::vector<uint8> buffer = material->getBuffer();
     SW_EXPECT_TRUE( buffer.size() >= 160 );
 
     // 정밀 데이터 주입
@@ -712,11 +712,11 @@ SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
 
     const uint32 texIndices[4] = { 101, 102, 103, 104 };
 
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "lightDir" ), lightDir, sizeof( lightDir ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "intensity" ), &intensity, sizeof( intensity ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "worldMatrix" ), &testWorld, sizeof( testWorld ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "viewProjMatrix" ), &testVp, sizeof( testVp ), buffer ) );
-    SW_EXPECT_TRUE( material.packRawDataIntoBuffer( sw::hashed_string( "texIndices" ), texIndices, sizeof( texIndices ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "lightDir" ), lightDir, sizeof( lightDir ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "intensity" ), &intensity, sizeof( intensity ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "worldMatrix" ), &testWorld, sizeof( testWorld ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "viewProjMatrix" ), &testVp, sizeof( testVp ), buffer ) );
+    SW_EXPECT_TRUE( material->packRawDataIntoBuffer( sw::hashed_string( "texIndices" ), texIndices, sizeof( texIndices ), buffer ) );
 
     // 오프셋별 역직렬화 정밀 바이트 비교
     const float32* pReadLightDir = reinterpret_cast<const float32*>( buffer.data() + 0 );

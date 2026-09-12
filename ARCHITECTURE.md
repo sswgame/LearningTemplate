@@ -99,6 +99,11 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 
 ---
 
+- **렌더 패킷은 자기가 역참조하는 것을 소유한다.** 게임 스레드가 만든 메시·머티리얼·인스턴스는 `shared_ptr` 로
+  `GpuSceneSnapshot` 에 실려 렌더 스레드로 간다. 생포인터를 싣지 말고, 렌더에 실리는 객체는 Engine 의 `create()`
+  로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다). 표와 규칙은
+  `Source/Engine/Graphics/README.md` 의 "소유와 수명" 절, 검사는 `Scripts/lint/CheckRenderOwnership.py`.
+
 ## 🧪 테스트 아키텍처
 
 CTest 타겟은 `CoreTest`, `EngineTest`(`EngineTest_NoGPU`), `ReflectionTest`, `SmokeTest`, `EditorTest` 입니다.

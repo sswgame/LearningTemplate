@@ -361,15 +361,15 @@ namespace sw
                     // `_alwaysDefines` 만 손으로 긁었다 — 런타임은 거기에 품질·SHADER_LOD·usage·정적
                     // 스위치·멀티컴파일까지 얹으므로, 구운 변형은 런타임이 **한 번도 요청하지 않는**
                     // 해시였다. 같은 함수를 부르면 어긋날 자리가 없다.
-                    Material material;
-                    if ( material.loadFromFile( matPath ) == false )
+                    const shared_ptr<Material> material = Material::create();
+                    if ( material->loadFromFile( matPath ) == false )
                         continue;
-                    if ( material.getShaderPath().empty() )
+                    if ( material->getShaderPath().empty() )
                         continue;
 
                     MaterialVariantInfo variant;
-                    variant._shaderPath = material.getShaderPath();
-                    variant._listDefine = material.getCachedShaderDefines();
+                    variant._shaderPath = material->getShaderPath();
+                    variant._listDefine = material->getCachedShaderDefines();
                     listMaterialVariant.push_back( variant );
 
                     appendRecipeUnique( outListRecipe, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );

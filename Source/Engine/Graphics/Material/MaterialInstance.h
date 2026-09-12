@@ -16,10 +16,20 @@ namespace sw
     class SW_API MaterialInstance
     {
     public:
-        /** @brief 부모 없는 인스턴스. */
-        MaterialInstance();
-        /** @brief 마스터 머티리얼에 붙입니다. 렌더에 실을 것이면 create() 로 만든다. */
-        explicit MaterialInstance( Material* pParentMaterial );
+        /**
+         * @brief 생성 열쇠 — create() 만 만들 수 있다.
+         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<MaterialInstance>()` 도 스택의 `MaterialInstance x;` 도 **컴파일되지 않는다.**
+         *          모든 MaterialInstance 이 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장한다 — 렌더 패킷이
+         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없다. 린트가 아니라 타입이 지킨다.
+         */
+        struct CreateKey
+        {
+        private:
+            CreateKey() = default;
+            friend class MaterialInstance;
+        };
+        /** @brief create() 전용 생성자 — 마스터 머티리얼에 붙습니다. */
+        MaterialInstance( CreateKey, Material* pParentMaterial );
         /**
          * @brief Engine.dll 안에서 shared_ptr 로 만듭니다.
          * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 산다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께

@@ -52,34 +52,13 @@ namespace sw
 
 namespace sw
 {
-    MaterialInstance::MaterialInstance()
-        : _pParentMaterial{ nullptr }
-        , _desc{}
-        , _listValueOverride{}
-        , _listScalarOverride{}
-        , _listVectorOverride{}
-        , _listTextureOverride{}
-        , _listKeywordOverride{}
-        , _listMultiCompileOverride{}
-        , _qualityOverride{ MaterialQualityLevel::Count }
-        , _listBuffer{}
-        , _constantBuffer{ 0 }
-        , _descriptorIndex{ kInvalidDescriptorIndex }
-        , _pRHIDevice{ nullptr }
-        , _listCachedDefine{}
-        , _cachedPermutationHash{ 0 }
-        , _parentPermutationHash{ 0 }
-        , _bDefinesDirty{ SW_TRUE }
-        , _bGpuDirty{ SW_TRUE }
-        , _instReserved{ 0 } {}
-
     shared_ptr<MaterialInstance> MaterialInstance::create( Material* pParentMaterial )
     {
         // 인자가 Material* 이라 ADL 이 std::make_shared 를 끌어온다 — 한정해야 sw 것이 잡힌다.
-        return sw::make_shared<MaterialInstance>( pParentMaterial );
+        return sw::make_shared<MaterialInstance>( CreateKey{}, pParentMaterial );
     }
 
-    MaterialInstance::MaterialInstance( Material* pParentMaterial )
+    MaterialInstance::MaterialInstance( CreateKey, Material* pParentMaterial )
         : _pParentMaterial{ pParentMaterial }
         , _desc{}
         , _listValueOverride{}

@@ -101,6 +101,10 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking that every X-macro list file is actually included..."
 		ARGS --root "${CMAKE_SOURCE_DIR}"
 	)
+	sw_addRepoPythonTarget(CheckRenderOwnership "${SW_SCRIPT_LINT_CHECK_RENDER_OWNERSHIP}"
+		COMMENT "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -118,6 +122,14 @@ function(sw_registerLintTests)
 			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+	if(TARGET CheckRenderOwnership)
+		add_test(
+			NAME CheckRenderOwnership
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_RENDER_OWNERSHIP}"
+			--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckRenderOwnership PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 
 	if(TARGET CheckIncludeOrder)

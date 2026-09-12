@@ -146,10 +146,10 @@ SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),
                                              static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
-    sw::Material material;
-    SW_EXPECT_TRUE( material.loadFromFile( tempPath ) );
-    SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material.getName() );
-    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material.getShaderPath() );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
+    SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
+    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
     sw::FileUtil::removeFile( tempPath );
 }
 
@@ -171,8 +171,8 @@ SW_TEST_CASE( Engine_Resource, AssetFormatRejectsLegacyMaterialXml )
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kLegacy ),
                                              static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 
-    sw::Material material;
-    SW_EXPECT_FALSE( material.loadFromFile( tempPath ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_FALSE( material->loadFromFile( tempPath ) );
     sw::FileUtil::removeFile( tempPath );
 }
 
@@ -501,7 +501,7 @@ SW_TEST_CASE( Engine_Resource, AbsolutePathPreservation )
 /**
  * @brief [Engine_Resource] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
  * @details Shipping 은 .meta 를 팩에 넣지 않는다(PackConfig `*.meta` 제외). 예전엔 로드가 실패하면 GUID 를 새로 만들어
- *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material.meta 의 GUID 가 바뀌었다.
+ *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material->meta 의 GUID 가 바뀌었다.
  *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
  */
 SW_TEST_CASE( Engine_Resource, EnsureMetaNeverRewritesExistingMetaFile )

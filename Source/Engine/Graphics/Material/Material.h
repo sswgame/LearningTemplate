@@ -33,9 +33,21 @@ namespace sw
     class SW_API Material : public std::enable_shared_from_this<Material>
     {
     public:
-        /** @brief 빈 머티리얼 에셋. 렌더에 실을 것이면 create() 로 만든다 — 위 머리 주석. */
-        Material();
-        /** @brief Engine.dll 안에서 shared_ptr 로 만듭니다 — 모듈 경계를 넘어 소유돼도 안전한 유일한 방법. */
+        /**
+         * @brief 생성 열쇠 — create() 만 만들 수 있다.
+         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<Material>()` 도 스택의 `Material x;` 도 **컴파일되지 않는다.**
+         *          모든 Material 이 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장한다 — 렌더 패킷이
+         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없다. 린트가 아니라 타입이 지킨다.
+         */
+        struct CreateKey
+        {
+        private:
+            CreateKey() = default;
+            friend class Material;
+        };
+        /** @brief create() 전용 생성자 — 열쇠 없이는 만들 수 없다. */
+        explicit Material( CreateKey );
+        /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. 이것이 Material 을 얻는 유일한 길이다. */
         static shared_ptr<Material> create();
         /** @brief GPU 버퍼와 비동기 로드를 정리합니다. */
         ~Material();

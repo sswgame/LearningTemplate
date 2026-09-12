@@ -585,7 +585,6 @@ namespace sw
             RenderFramePacket packet{};
             packet._bValid           = 1;
             packet._gameRenderTarget = gameRenderTarget;
-            packet._pSceneMaterial   = pActiveScene != nullptr ? pActiveScene->getMaterial() : nullptr;
             packet._viewportWidth    = vpWidth;
             packet._viewportHeight   = vpHeight;
             packet._cameraPos        = float3{ 0.0f, 1.2f, 3.2f };
