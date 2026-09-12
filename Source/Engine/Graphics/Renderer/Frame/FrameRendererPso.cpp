@@ -122,19 +122,30 @@ namespace sw
         if ( desc._bEnableDepthTest == 0 )
             desc._bEnableDepthWrite = 0;
 
-        desc._cullMode = RHICullMode::Back;
+        // 컬 모드도 뎁스와 같은 구조다 — **패스가 무엇을 그리는가**가 먼저고 XML 은 그 안의 조정이다.
+        // 풀스크린 패스는 SV_VertexID 로 삼각형 하나를 만들어 화면을 덮는다. 그 삼각형의 와인딩은
+        // 셰이더가 정한 것이고 "앞/뒤" 라는 뜻이 없으므로, 컬링을 걸면 화면이 통째로 비거나 그대로
+        // 나오거나 둘 중 하나다 — 고를 값이 아니다.
+        //
+        // 예전엔 이 기본값이 `pPassDesc == nullptr` 일 때만 적용됐다. 그래서 **XML 에 패스를 적어 둔
+        // 파이프라인은 컬 모드를 반드시 `None` 이라고 써야** 했고, 디퍼드 XML 은 열 패스 전부
+        // `Back` 이라고 적고 있었다. 그 결과 Shading·SSAO·Bloom·Outline·TAA·Tonemap·Present 일곱
+        // 패스가 아무것도 그리지 않아 화면이 배경색뿐이었다 — 오류도 경고도 없이.
+        const bool bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
+        desc._cullMode             = bFullscreenPass ? RHICullMode::None : RHICullMode::Back;
         if ( pPassDesc != nullptr )
         {
-            const string& cull = pPassDesc->_cullMode;
-            if ( cull == "None" || cull == "none" )
-                desc._cullMode = RHICullMode::None;
-            else if ( cull == "Front" || cull == "front" )
-                desc._cullMode = RHICullMode::Front;
+            if ( bFullscreenPass == false )
+            {
+                const string& cull = pPassDesc->_cullMode;
+                if ( cull == "None" || cull == "none" )
+                    desc._cullMode = RHICullMode::None;
+                else if ( cull == "Front" || cull == "front" )
+                    desc._cullMode = RHICullMode::Front;
+            }
             if ( pPassDesc->_listPermutation.empty() == false )
                 desc._listShaderDefine = pPassDesc->_listPermutation;
         }
-        else if ( bDepthTest == false )
-            desc._cullMode = RHICullMode::None;
 
         if ( pExtraDefines != nullptr )
         {

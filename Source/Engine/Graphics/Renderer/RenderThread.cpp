@@ -356,10 +356,14 @@ namespace sw
                                                             : kScreenshotMinWarmupFrames;
             if ( ++_screenshotFrameCounter >= targetFrame )
             {
-                _bScreenshotTaken            = SW_TRUE;
-                const string_view attachment = gv_screenshotAttachment.empty()
-                                                 ? string_view{ FrameRendererUtil::Attachment::kSceneColor }
-                                                 : string_view{ gv_screenshotAttachment };
+                _bScreenshotTaken = SW_TRUE;
+                // 기본값은 **Present 패스가 받는 첨부**다 — 곧 화면에 나간 그림. 예전엔 `"SceneColor"`
+                // 리터럴이라 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍혔다.
+                string_view attachment = string_view{ gv_screenshotAttachment };
+                if ( attachment.empty() )
+                    attachment = _pFrameRenderer->getPresentedAttachmentName();
+                if ( attachment.empty() )
+                    attachment = string_view{ FrameRendererUtil::Attachment::kSceneColor };
                 _pFrameRenderer->dumpTransientToPpm( attachment, gv_screenshot );
             }
         }

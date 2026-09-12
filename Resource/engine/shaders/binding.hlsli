@@ -435,6 +435,50 @@ float4 SampleSourceDepth( float2 uv ) { return SW_SampleIndex( g_SourceDepthInde
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
 
+// ------------------------------------------------------------------------------
+// 4) 픽셀 출력 — **같은 머티리얼 셰이더가 포워드와 G버퍼 양쪽에 쓰인다.**
+//    머티리얼이 셰이더 경로를 정하므로(usesMaterialShader) G버퍼 패스도 머티리얼의 .hlsl 로 그린다.
+//    그 셰이더가 SV_TARGET 하나만 내면 **G버퍼의 노멀 타깃이 클리어 값 그대로 남는다** — 실제로
+//    그랬고, 디퍼드 조명은 모든 픽셀을 같은 노멀로 계산하고 있었다(오류도 경고도 없이).
+//    언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리다. 여기서는 패스가 define 을
+//    얹고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
+// ------------------------------------------------------------------------------
+// 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SW_SURFACE_OUTPUT PSMain(...)` 에 반환
+// 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
+// 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
+#if defined( SW_PASS_GBUFFER )
+struct SwSurfaceOutput
+{
+	float4 albedo : SV_TARGET0;
+	float4 normal : SV_TARGET1;
+};
+#else
+struct SwSurfaceOutput
+{
+	float4 color : SV_TARGET0;
+};
+#endif
+#define SW_SURFACE_OUTPUT SwSurfaceOutput
+
+/**
+ * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
+ * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
+ *          한다 — 굽는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
+ */
+SW_SURFACE_OUTPUT SwStoreSurface( float4 litColor, float4 albedo, float3 worldNormal )
+{
+#if defined( SW_PASS_GBUFFER )
+	SwSurfaceOutput output;
+	output.albedo = float4( albedo.rgb, 1.0f );
+	output.normal = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+	return output;
+#else
+	SwSurfaceOutput output;
+	output.color = litColor;
+	return output;
+#endif
+}
+
 // 축 정렬 데모 큐브 노멀 — createUnitCube 가 만드는 큐브에만 맞는다(정점에 노멀이 없어서 위치로 만든다).
 float3 DemoCubeNormal( float3 pos )
 {

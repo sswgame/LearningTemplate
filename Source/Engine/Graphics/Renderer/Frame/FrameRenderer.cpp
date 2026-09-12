@@ -21,6 +21,13 @@ namespace sw
     SW_LOG_CALLER( "FrameRenderer" );
 
     /**
+     * @brief `-gv_deferred=1` — 기본 파이프라인을 디퍼드로 고릅니다 (기본은 포워드).
+     * @details 예전에는 고를 길이 자체가 없었다 — `initialize` 의 인자를 주는 호출부가 없어 늘 포워드였다.
+     *          디퍼드는 웨이브가 갈려(웨이브0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
+     */
+    SW_GLOBAL_VARIABLE_BOOL( gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
+
+    /**
      * @brief `-gv_gpuCulling=0` — GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬.
@@ -125,8 +132,14 @@ namespace sw
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineData._defaultRenderPass );
 
-        const string_view resolvedPipeline =
-            pipelineXmlPath.empty() ? string_view( engineData._defaultForwardPipeline ) : pipelineXmlPath;
+        // 파이프라인을 실행 중에 고를 길이 없었다 — 인자를 주는 호출부가 하나도 없어서 **언제나 포워드**였다.
+        // 그래서 디퍼드 경로(그리고 그 위의 조명)는 돌려 보려면 EngineData 를 고쳐야 했고, 실제로 거의
+        // 돌지 않았다. 측정도 검증도 스위치 하나가 없어서 막혀 있던 자리다.
+        string_view resolvedPipeline = pipelineXmlPath;
+        if ( resolvedPipeline.empty() && gv_deferred )
+            resolvedPipeline = engineData._defaultDeferredPipeline;
+        if ( resolvedPipeline.empty() )
+            resolvedPipeline = engineData._defaultForwardPipeline;
 
         if ( loadPipeline( resolvedPipeline ) == false )
         {

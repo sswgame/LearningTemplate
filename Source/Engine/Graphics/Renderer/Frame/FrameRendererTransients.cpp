@@ -92,10 +92,11 @@ namespace sw
         // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
 
         auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
-                                   const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true ) -> RHIPipelineStateHandle
+                                   const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true,
+                                   const vector<string>* pExtraDefine = nullptr ) -> RHIPipelineStateHandle
         {
             const RHIPipelineStateHandle pso =
-                createPsoForPassType( passType, shaderPath, bDepthTest, numRt, pRtFormats, bBlend, bDepthWrite );
+                createPsoForPassType( passType, shaderPath, bDepthTest, numRt, pRtFormats, bBlend, bDepthWrite, pExtraDefine );
             if ( pso != 0 )
                 _mapEnginePso.insert_or_assign( passType, pso );
             return pso;
@@ -110,7 +111,11 @@ namespace sw
         // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전엔 이 define 을 여기에 박아 두어
         // "반투명 패스에 들어온 것은 무조건 반투명" 이었다 — 머티리얼이 뭘 선언했든 상관이 없었다.
         registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
-        registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
+        // G버퍼 패스의 PSO 에는 define 을 얹는다 — 이 desc 를 물려받는 **머티리얼 변형**까지 같이
+        // MRT 서명으로 컴파일된다(createMaterialPsoVariant 가 패스 desc 를 통째로 복사한다).
+        const vector<string> listGbufferDefine{ string{ kPassGBufferDefine } };
+        registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat, false, true,
+                     &listGbufferDefine );
         registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
         registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
         registerPso( RenderPassType::Lighting, engineData._shaderDeferredLighting.c_str(), false );
@@ -501,6 +506,16 @@ namespace sw
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
     }
 
+    string_view FrameRenderer::getPresentedAttachmentName() const
+    {
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
+        {
+            if ( pass._resolvedType == RenderPassType::Present && pass._listInput.empty() == false )
+                return string_view{ pass._listInput.front() };
+        }
+        return string_view{};
+    }
+
     bool FrameRenderer::readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat )
     {
         if ( _pDevice == nullptr )
@@ -545,7 +560,12 @@ namespace sw
             return false;
         }
 
-        // PPM(P6): 아스키 헤더 + RGB 8bit. 트랜지언트는 R8G8B8A8 / B8G8R8A8 이라 채널 순서만 맞춘다.
+        // PPM(P6): 아스키 헤더 + RGB 8bit.
+        // **half 첨부를 바이트로 읽으면 안 된다.** HDR 첨부(R16G16B16A16_FLOAT)를 8비트로 가정하고
+        // pPixel[0..2] 를 집어 오면 가수 하위 바이트가 색이 되어 **무의미한 그림**이 나온다 —
+        // 그런데 bytesPerPixel 은 8 이라 아래 검사도 통과한다. 디퍼드 파이프라인은 LitColor 부터
+        // TaaColor 까지 넷이 이 포맷이라, 중간 단계를 눈으로 확인할 길이 그동안 없었다.
+        const bool                            bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );
         const bool                            bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
         StringBuilder<constant::kMaxBuffer64> header;
         // PPM 헤더의 구분자는 임의의 공백이면 된다 — 공백만 써서 이스케이프 없이 적는다.
@@ -561,6 +581,15 @@ namespace sw
             for ( uint32 col = 0; col < layout._width; ++col )
             {
                 const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                if ( bHalf )
+                {
+                    // HDR 을 [0,1] 로 자르고 8비트로 옮긴다. 톤매핑은 하지 않는다 — 이 덤프는
+                    // 그림을 예쁘게 보려는 게 아니라 "무엇이 들어 있나" 를 보려는 것이다.
+                    const uint16* pHalf = reinterpret_cast<const uint16*>( pPixel );
+                    for ( uint32 channel = 0; channel < 3; ++channel )
+                        outBytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
+                    continue;
+                }
                 outBytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
                 outBytes.push_back( pPixel[1] );
                 outBytes.push_back( bBgra ? pPixel[0] : pPixel[2] );

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -39,6 +40,17 @@ namespace sw
      *          컴파일은 되고 화면만 안 바뀐다(조용한 실패). 셰이더를 더할 때 이 이름을 보라.
      */
     inline constexpr const utf8* kViewModeUnlitDefine = "SW_VIEWMODE_UNLIT=1";
+
+    /**
+     * @brief G버퍼 패스가 머티리얼 셰이더에 얹는 define — 픽셀 출력 서명을 MRT 로 바꾼다.
+     * @details 머티리얼이 셰이더 경로를 정하므로(`usesMaterialShader`) 디퍼드의 G버퍼 패스도 머티리얼의
+     *          `.hlsl` 로 그린다. 그 셰이더가 `SV_TARGET` 하나만 내면 **노멀 타깃이 클리어 값 그대로**
+     *          남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산한다 — 오류도 경고도 없이. 언리얼이
+     *          같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리를 이 엔진에서는 define 이 맡는다.
+     * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고
+     *       화면만 틀린다 — `kViewModeUnlitDefine` 과 같은 종류의 정본이다.
+     */
+    inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
     /** @brief FrameRenderer TU 공유 패스/어태치먼트 이름과 헬퍼 */
     struct FrameRendererUtil
@@ -94,6 +106,32 @@ namespace sw
         static constexpr float32 kMeshMorphFrequency = 6.0f;
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+
+        /**
+         * @brief IEEE half(16비트) 한 채널을 [0,1] 로 자른 8비트 값으로 바꿉니다.
+         * @details HDR 첨부를 PPM 으로 덤프할 때만 쓴다. 톤매핑하지 않고 그냥 자른다 — 이 덤프는
+         *          그림을 예쁘게 보려는 게 아니라 그 단계에 **무엇이 들어 있나** 를 보려는 것이다.
+         */
+        static uint8 halfToUnorm8( uint16 half )
+        {
+            const uint32 sign     = static_cast<uint32>( half >> 15 );
+            const int32  exponent = static_cast<int32>( ( half >> 10 ) & 0x1Fu );
+            const uint32 mantissa = static_cast<uint32>( half & 0x3FFu );
+            if ( sign != 0 )
+                return 0; // 음수는 0 으로 자른다
+            if ( exponent == 0x1F )
+                return 255; // Inf / NaN — 눈에 띄게 흰색
+            float32 value = 0.0f;
+            if ( exponent == 0 )
+                value = static_cast<float32>( mantissa ) * ( 1.0f / 16777216.0f ); // 서브노멀: 2^-24 단위
+            else
+                value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * MathUtil::pow( 2.0f, static_cast<float32>( exponent - 15 ) );
+            if ( value <= 0.0f )
+                return 0;
+            if ( value >= 1.0f )
+                return 255;
+            return static_cast<uint8>( value * 255.0f + 0.5f );
+        }
 
         /** @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 모르는 이름은 R8G8B8A8_UNORM. */
         static RHIFormat parseAttachmentFormat( string_view formatName )

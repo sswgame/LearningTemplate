@@ -307,6 +307,62 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-13 (디퍼드 파이프라인은 한 번도 안 그리고 있었다 — 고를 수가 없어서 세 겹으로 썩었다)
+
+`-gv_deferred=1` 로 기본 파이프라인을 디퍼드로 고를 수 있다. **예전에는 고를 방법이 아예 없었다** —
+`FrameRenderer::initialize` 의 파이프라인 인자를 주는 호출부가 하나도 없어서 `EngineLoop` 는 늘
+`_defaultForwardPipeline` 로 초기화했다. 그 사이 디퍼드 경로가 조용히 세 겹으로 썩어 있었다.
+셋 다 **오류도 경고도 없이** 화면만 틀렸다 — 그래서 그림을 봐야만 드러난다.
+
+**(1) 풀스크린 패스가 컬링되고 있었다.** `createPsoForPassType` 의 "컬 모드 기본값 None" 이
+`pPassDesc == nullptr` 일 때만 걸렸다. 즉 **XML 에 패스를 적어 둔 파이프라인은 컬 모드를 반드시
+`None` 이라고 써야** 했고, 디퍼드 XML 은 열 패스 전부 `Back` 이라고 적고 있었다. Shading·SSAO·
+Bloom·Outline·TAA·Tonemap·Present 일곱 패스가 삼각형을 통째로 잃어 화면이 배경색뿐이었다.
+뎁스 테스트에 이미 같은 판단이 적혀 있었다 — "호출부의 값은 *이 패스가 지오메트리인가 풀스크린인가*
+라는 구조적 사실이고 XML 은 그 안에서의 조정이다". 컬 모드도 같은 구조라 같은 모양으로 맞췄다
+(`drawsSceneMeshes` 가 아니면 `None` 고정, XML 은 지오메트리 패스 안에서만 고른다).
+
+**(2) G버퍼의 노멀 타깃이 클리어 값 그대로였다.** 머티리얼이 셰이더 경로를 정하므로
+(`usesMaterialShader`) G버퍼 패스도 머티리얼의 `.hlsl`(전부 `forwardlit.hlsl`)로 그린다. 그런데
+그 셰이더는 `SV_TARGET` **하나**만 냈다 — MRT 의 두 번째 타깃은 아무도 안 쓴 채 남았고, 디퍼드
+조명은 화면 전체를 같은 노멀 `(0,0,1)` 로 계산하고 있었다. 언리얼이 같은 머티리얼을 패스별 셰이더
+**타입**(`TBasePassPS` 대 G버퍼)으로 감싸는 자리다. 여기서는 패스가 define 을 얹고
+(`SW_PASS_GBUFFER`, 정본은 `FrameRendererUtil::kPassGBufferDefine`) 출력 서명이 그 define 을
+따라가게 했다 — `SW_SURFACE_OUTPUT` / `SwStoreSurface`(binding.hlsli 4절). 패스 PSO 의 define 은
+`createMaterialPsoVariant` 가 desc 를 통째로 복사하므로 **머티리얼 변형까지 같이** 따라온다.
+G버퍼 경로는 조명 계산이 통째로 컴파일 아웃된다(런타임 분기가 아니다).
+
+> 여기서 한 번 물렸다: 포워드 쪽 출력을 `#define SW_SURFACE_OUTPUT float4` 로 뒀더니 반환
+> 시맨틱이 사라져 DXC 가 `Semantic must be defined for all outputs` 로 거절했다. 머티리얼 셰이더가
+> 통째로 컴파일되지 않아 **포워드가 네 백엔드 모두 빈 화면**이 됐다. 양쪽 다 구조체로 둔다.
+
+**(3) 스크린샷이 디퍼드에서는 한 장도 안 찍혔다.** 기본 첨부가 `"SceneColor"` 리터럴인데 디퍼드
+첨부 목록에 그 이름이 없다 — 읽기 실패 로그만 남고 파일은 안 생겼다. 찍고 싶은 것은 늘 "지금
+화면에 보이는 것" 이므로 파이프라인에 물어본다(`getPresentedAttachmentName` = Present 패스의 입력).
+
+**덤으로: HDR 첨부를 PPM 으로 덤프하면 무의미한 그림이 나왔다.** `R16G16B16A16_FLOAT` 를 8비트로
+가정하고 `pPixel[0..2]` 를 집어 왔다 — 가수 하위 바이트가 색이 된다. `bytesPerPixel` 은 8 이라
+"덤프할 수 없는 포맷" 검사도 통과했다. 디퍼드는 LitColor·TransparentColor·BloomColor·TaaColor 넷이
+이 포맷이라 **중간 단계를 눈으로 확인할 길이 없었다**. half → unorm8 변환을 넣었다
+(`FrameRendererUtil::halfToUnorm8`, 톤매핑 없이 자르기만 한다 — 이 덤프는 "무엇이 들어 있나" 를
+보려는 것이다).
+
+**검증** (큐브 200개, 프레임 25):
+
+| 첨부 | 고치기 전 | 고친 뒤 |
+|---|---|---|
+| GBufferAlbedo | 38,223 (셰이딩된 색) | 38,419 (**알베도**) |
+| GBufferNormal | **0** (클리어 그대로) | 38,402 |
+| LitColor | **0** | 38,402 |
+| 화면(TonemapColor) | **0** | 40,541 |
+
+네 백엔드 모두 같은 그림이다 — DX12 40,547 / DX11 40,592 / Vulkan 40,572 / OpenGL 40,544
+(스핀 타이밍 지터 범위). 포워드도 회귀 없음(47,049). 전체 ctest 5/5(nogpu) · 린트 0건.
+
+**회귀 방지**: `RenderPassGpuTest.DeferredPipelineDrawsGeometry` 가 디퍼드로 초기화해 몇 프레임
+돌린 뒤 **화면에 나간 첨부를 되읽어 고유 색이 둘 이상인지** 본다. 화면이 통째로 한 색이면
+(= 아무것도 안 그렸다) 고유 색은 반드시 1 이다 — 비배경 픽셀 수와 달리 클리어 색·톤매핑에 안 무너진다.
+
 ### 2026-09-13 (GPU 가 정점을 바꾼다 — 언리얼·유니티를 확인하고 이 엔진의 결로 옮겼다)
 
 `-gv_benchMeshMorph=1` 이면 컴퓨트(`meshmorph.hlsl`)가 레스트 포즈를 읽어 변형 결과를 쓰고, 정점

@@ -3531,3 +3531,107 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
     SW_EXPECT_TRUE_MSG( withNormalMap == 1,
                         "인스턴스가 켠 키워드를 든 배치가 정확히 하나여야 한다 — 0 이면 인스턴스 define 이 통째로 빠진 것이고, 2 면 남의 배치에까지 번진 것이다" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] **디퍼드 파이프라인이 실제로 그리는지** 검증.
+ * @details 이 파이프라인은 오래 아무것도 안 그리고 있었다. 실행 중에 고를 방법이 없었기 때문이다 —
+ *          `FrameRenderer::initialize` 의 파이프라인 인자를 주는 호출부가 하나도 없었고, 그래서
+ *          앱은 늘 포워드로 돌았다. 그 사이 세 가지가 조용히 썩었다:
+ *          (1) 디퍼드 XML 이 풀스크린 패스에도 `_cullMode="Back"` 을 적어 두어 삼각형이 컬링됐고,
+ *          (2) 머티리얼 셰이더가 SV_TARGET 하나만 내어 G버퍼 노멀이 클리어 값 그대로였고,
+ *          (3) 스크린샷 기본 첨부가 `"SceneColor"` 리터럴이라 디퍼드는 한 장도 못 찍었다.
+ *          셋 다 오류도 경고도 없었다 — 그림을 봐야만 드러난다. 그래서 이 테스트는 **픽셀**을 본다.
+ * @note 고유 색 수로 본다. "비배경 픽셀 수" 는 클리어 색·톤매핑에 무너지지만, 화면이 통째로 한
+ *       색이면(= 아무것도 안 그렸다) 고유 색은 반드시 1 이다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+    bool bOk{ false };
+    for ( sw::RHIBackend backend : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for deferred pipeline test" );
+
+    sw::FrameRenderer renderer;
+    SW_EXPECT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_TRUE( renderer.isReady() );
+
+    // 화면에 나가는 첨부를 파이프라인에 물어본다 — 이름을 테스트에 박아 두면 XML 이 바뀔 때 조용히 어긋난다.
+    const sw::string presented( renderer.getPresentedAttachmentName() );
+    SW_EXPECT_TRUE_MSG( presented.empty() == false, "디퍼드 파이프라인에 Present 패스 입력이 없다" );
+
+    sw::Scene scene( "DeferredPipelineScene" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+    SW_ASSERT_NOT_NULL( go );
+    sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( mesh );
+    mesh->setMesh( cube );
+
+    // 첫 프레임엔 GpuScene 업로드가 아직이라 그릴 게 없다 — 몇 프레임 돌린 뒤에 읽는다.
+    constexpr uint32 kWarmupFrames = 4;
+    const sw::float4 clear         = { 0.02f, 0.02f, 0.05f, 1.0f };
+    for ( uint32 frame = 0; frame < kWarmupFrames; ++frame )
+    {
+        device->beginFrame( clear );
+        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+        device->endFrame( false, false );
+        device->waitIdle();
+    }
+
+    sw::vector<uint8>     bytes;
+    sw::RHITextureMipSpan layout{};
+    sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+    const bool            bRead  = renderer.readbackTransient( presented, bytes, layout, format );
+    SW_EXPECT_TRUE_MSG( bRead, "화면에 나간 첨부를 되읽지 못했다" );
+    if ( bRead )
+    {
+        const uint32 bytesPerPixel = sw::getRHIFormatBytesPerPixel( format );
+        uint32       distinct      = 0;
+        uint64       arrSeen[16]{};
+        for ( uint32 row = 0; row < layout._height && distinct < 2; ++row )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            for ( uint32 col = 0; col < layout._width && distinct < 2; ++col )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                uint64       key    = 0;
+                for ( uint32 b = 0; b < bytesPerPixel && b < 8; ++b )
+                    key |= static_cast<uint64>( pPixel[b] ) << ( b * 8 );
+                bool bFound = false;
+                for ( uint32 slot = 0; slot < distinct; ++slot )
+                {
+                    if ( arrSeen[slot] == key )
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                if ( bFound == false )
+                    arrSeen[distinct++] = key;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( distinct >= 2,
+                            "디퍼드 파이프라인이 화면을 한 색으로 채웠다 — 지오메트리가 하나도 안 그려졌다" );
+    }
+
+    if ( cube != nullptr )
+        cube->releaseRhi( device.get() );
+
+    renderer.shutdown();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}

@@ -107,6 +107,14 @@ namespace sw
          *          네 백엔드를 같은 기준으로 비교하려면 이쪽을 쓴다.
          */
         bool dumpTransientToPpm( string_view attachmentName, string_view outFilePath );
+
+        /**
+         * @brief 화면에 나간 첨부의 이름 — Present 패스가 입력으로 받는 것입니다. 없으면 빈 문자열.
+         * @details 스크린샷 기본값이 `"SceneColor"` 리터럴이라 **디퍼드에서는 한 장도 못 찍었다**
+         *          (디퍼드 첨부 목록에 그 이름이 없다 — 읽기 실패 로그만 남고 파일은 안 생긴다).
+         *          찍고 싶은 것은 늘 "지금 보이는 그림" 이므로 파이프라인에 물어본다.
+         */
+        string_view getPresentedAttachmentName() const;
         /**
          * @brief 트랜지언트 첨부를 CPU 로 읽어 옵니다 (밉 0). 테스트가 백엔드 간 픽셀을 비교하는 데 쓴다 — GPU 를 기다린다.
          * @param outFormat 첨부의 RHIFormat (채널 순서 해석용).
