@@ -236,7 +236,7 @@ namespace sw
                 // CB 쪽 bindPoint 를 못 채우는 경우가 있었다(DXIL, move 뒤 이름 비교).
                 for ( const ShaderResourceBinding& res : reflection._listResource )
                 {
-                    const ShaderBindingKind kind = ShaderBindingLayout::kindFromTypeLabel( static_cast<std::string_view>( res._type ) );
+                    const ShaderBindingKind kind = ShaderBindingLayout::kindFromTypeLabel( static_cast<string_view>( res._type ) );
                     push( res._name, kind, res._registerSpace, res._bindPoint, res._bindCount );
                 }
                 for ( const ShaderBufferInfo& cb : reflection._listConstantBuffer )

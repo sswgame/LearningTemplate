@@ -157,7 +157,7 @@ namespace sw
 
     ResourcePackManager::ResourcePackManager( ResourcePackManager&& other ) noexcept
     {
-        std::lock_guard<mutex> lock( other._vfsMutex );
+        std::scoped_lock<mutex> lock( other._vfsMutex );
         _listMountedPack  = std::move( other._listMountedPack );
         _dlcValidator     = std::move( other._dlcValidator );
         _bAllowLooseFiles = other._bAllowLooseFiles;
@@ -205,7 +205,7 @@ namespace sw
         }
 
         {
-            std::lock_guard<mutex> lock( _vfsMutex );
+            std::scoped_lock<mutex> lock( _vfsMutex );
 
             // 이미 마운트되어 있다면 이전 팩 제거
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
@@ -245,7 +245,7 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
         {
             if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
@@ -261,7 +261,7 @@ namespace sw
 
     void ResourcePackManager::unmountAll()
     {
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         for ( auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr )
@@ -277,7 +277,7 @@ namespace sw
 
         const uint64 pathHash = StringUtil::computeHash64( relativePath );
 
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         for ( const auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
@@ -311,7 +311,7 @@ namespace sw
 
         const uint64 pathHash = StringUtil::computeHash64( relativePath );
 
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         for ( const auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
@@ -351,7 +351,7 @@ namespace sw
 
         const uint64 pathHash = StringUtil::computeHash64( relativePath );
 
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         for ( const auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) )
@@ -394,7 +394,7 @@ namespace sw
 
     void ResourcePackManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )
     {
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         _dlcValidator = std::move( validator );
     }
 
@@ -410,7 +410,7 @@ namespace sw
 
     size_t ResourcePackManager::getMountedPackCount() const
     {
-        std::lock_guard<mutex> lock( _vfsMutex );
+        std::scoped_lock<mutex> lock( _vfsMutex );
         return _listMountedPack.size();
     }
 

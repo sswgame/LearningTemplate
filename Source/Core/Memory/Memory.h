@@ -94,9 +94,18 @@ void sw_delete_func( T* pPtr )
     }
 }
 
+/**
+ * @brief sw_new 로 만든 배열을 놓습니다. **원소 소멸자를 부르지 않습니다.**
+ * @warning 그래서 자명하게 소멸하는 타입(trivially destructible)에만 쓸 수 있습니다. 그렇지 않은 타입을
+ *          `sw_new T[n]` 으로 잡고 이걸로 놓으면 원소가 새고, 컴파일러가 배열 앞에 넣는 원소 개수 쿠키
+ *          때문에 해제 주소도 어긋납니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나 `new[]`/`delete[]` 를
+ *          짝으로 쓰세요(`PagedArray` 가 후자입니다 — 임의의 T 를 담기 때문입니다).
+ */
 template <typename T>
 void sw_delete_array_func( T* pPtr )
 {
+    static_assert( std::is_trivially_destructible_v<T>,
+                   "sw_delete_array 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 new[]/delete[] 짝을 쓰세요." );
     if ( pPtr != nullptr )
     {
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )

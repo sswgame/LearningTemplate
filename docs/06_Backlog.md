@@ -295,6 +295,52 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (Core 시설이 있는데 STL 을 쓴 자리 — 전수로 훑으니 거의 없었다)
+
+AGENTS 의 "Core·Engine 시설을 STL 보다 먼저" 를 기준으로 `Source` 전체를 심볼별로 셌다. **대부분 이미
+지켜지고 있었다** — 지키지 않은 자리를 찾는 것보다, 지켜지고 있다는 것을 숫자로 남기는 것이 이 항목의 값이다.
+
+| 심볼 | Core 대체 | Source 안 직접 사용 |
+| --- | --- | --- |
+| `std::vector` · `string` · `unordered_map` · `set` · `deque` · `list` · `pair` | `sw::` 동명 | **0** |
+| `std::unique_ptr` · `shared_ptr` · `make_unique` · `make_shared` | `Core/Memory/Memory.h` | **0** |
+| `std::max` · `min` · `clamp` · `abs` · `sqrt` | `MathUtil` | **0** |
+| `std::to_string` · `stoi` · `ifstream` · `printf` · `cout` | `StringUtil` · `FileUtil` · `SW_LOG` | **0** |
+| `std::atomic` | `Core/Concurrency/atomic.h` | 8 → **고쳤다** |
+| `std::string_view` | `Types.h` 의 `string_view` 별칭 | 8 → **고쳤다** |
+
+**고친 것 셋.**
+1. `std::atomic` 8개(`FrameRenderer.h` 7 · `D3D12RHIDevice.h` 1)를 `sw::atomic` 으로. 나머지 코드
+   (`Component` · `HandleTable` · `TaskManager` …)는 이미 `sw::atomic` 을 쓴다. 한 군데를 손으로 더 고쳤는데,
+   `compare_exchange_weak` 를 **성공 순서만** 주고 부르던 자리다: `std::atomic` 은 실패 순서를 성공 순서에서
+   약하게 유도하지만 `sw::atomic` 은 기본값이 `seq_cst` 라 조용히 더 센 순서가 된다. 뜻이 바뀌지 않도록
+   둘 다 명시했다.
+2. `std::string_view` 8개(`ShaderBindingLayout.cpp` · `ShaderBindingContract.cpp`)를 `string_view` 로.
+   `Types.h` 가 같은 타입에 별칭을 두고 있고, AGENTS 는 프로젝트 별칭을 쓰라고 한다.
+3. `std::lock_guard` 34개를 `std::scoped_lock` 으로. STL 대 Core 문제는 아니지만 같은 일에 이름이
+   둘이었다 — 227:34 로 `scoped_lock` 이 이미 정본이었다.
+
+**고치지 않기로 한 것과 그 이유.**
+- `std::shared_mutex` 169개. Core 에 대응물이 **없다**(`Core/Concurrency/mutex.h` 는 `mutex` 만 준다).
+  없는 시설을 쓰라고 할 수는 없다. `sw::mutex` 의 값인 데드락 탐지를 공유 잠금에서도 받으려면
+  `sw::shared_mutex` 를 새로 만들어야 하는데, 그건 "있는 걸 쓰라" 가 아니라 새 기능이다.
+- `std::array` 두 곳(`RenderThread.h` · `ConcurrentQueue.h` · `LockFreeQueue.h`). 셋 다 주석에
+  **왜 `sw::array` 가 아닌지**가 적혀 있다 — DataRaceDetector 오탐. 근거가 적힌 예외다.
+- `PlatformFileUtil` 이 `FILE*` 을 그대로 내주고 `fread`/`fclose` 는 직접 부르는 것. 플랫폼마다 갈리는
+  부분(UTF-8 경로 열기, 64비트 seek/tell)만 감싸는 **의도된 설계**다.
+- `std::move` · `forward` · `swap` · `sort` · `numeric_limits`: 대응물이 없고 있을 이유도 없다.
+
+**덤으로 함정 하나를 막았다.** `PagedArray` 의 `new T[]` 를 `sw_new` 로 바꾸려다 멈췄다 —
+`sw_delete_array` 는 **원소 소멸자를 부르지 않는다.** `PagedArray` 는 임의의 `T` 를 담으므로 바꿨다면
+원소가 새고, 컴파일러가 배열 앞에 넣는 개수 쿠키 때문에 해제 주소까지 어긋났을 것이다. 매크로에 그 계약이
+어디에도 적혀 있지 않았다 — 주석을 달고 `static_assert( is_trivially_destructible_v<T> )` 를 넣었다.
+유일한 사용처(`WorkStealingDeque<atomic<T*>>`)는 통과한다.
+
+**검증.** Debug GPU 19/19 · GpuScene 5/5 · nogpu 5/5 · 린트 7/7. ASAN GPU 19/19 · Core 통과 · 리포트 0.
+Release · Shipping 빌드 종료 0. 교체 5구성 종료 0 · 오류 0. `sw::atomic` 이 렌더 스레드 핫 패스에 들어가므로
+Release 로 다시 쟀다 — `GT.GpuScene.build` 29~31us, `RT.Graph.executeParallel` 294~308us 로 바꾸기 전(33 · 331)과
+같거나 낫다.
+
 ### 2026-09-12 (초기값의 정본을 한 곳으로 — 그리고 그 규칙을 린트가 지키게 한다)
 
 열어 두었던 결정을 닫았다: **규칙을 살린다.** 헤더와 생성자 양쪽에 초기값을 적으면 어느 쪽이 이기는지

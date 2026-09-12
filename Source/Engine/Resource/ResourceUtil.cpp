@@ -161,7 +161,7 @@ namespace sw
         std::call_once( ResourceUtilInternal::_s_initOnce, []()
         {
             {
-                std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+                std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
                 ResourceUtilInternal::_s_mapResolvedPath.clear();
             }
 
@@ -224,8 +224,8 @@ namespace sw
             cacheKeyHash = StringUtil::computeHash64( folderName, true, cacheKeyHash );
 
         {
-            std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-            auto                   it = ResourceUtilInternal::_s_mapResolvedPath.find( cacheKeyHash );
+            std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+            auto                    it = ResourceUtilInternal::_s_mapResolvedPath.find( cacheKeyHash );
             if ( it != ResourceUtilInternal::_s_mapResolvedPath.end() )
                 return it->second;
         }
@@ -263,7 +263,7 @@ namespace sw
 
         if ( found.empty() == false )
         {
-            std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+            std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
             ResourceUtilInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
         }
 
@@ -533,7 +533,7 @@ namespace sw
 
     void ResourceUtil::clearPathCache()
     {
-        std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+        std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
         ResourceUtilInternal::_s_mapResolvedPath.clear();
     }
 

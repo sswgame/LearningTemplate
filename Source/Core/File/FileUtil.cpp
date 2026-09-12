@@ -679,7 +679,7 @@ namespace sw
 
         uint32 openGeneration{ 0 };
         {
-            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            std::scoped_lock<mutex> lock( FileDialogQueueInternal::_s_mutex );
             openGeneration = FileDialogQueueInternal::_s_generation;
         }
 
@@ -704,7 +704,7 @@ namespace sw
                 return;
 
             // **여기서 델리게이트를 부르지 않는다.** 이 스레드는 메인 스레드와 아무 약속이 없다.
-            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            std::scoped_lock<mutex> lock( FileDialogQueueInternal::_s_mutex );
             if ( FileDialogQueueInternal::_s_generation != openGeneration )
                 return; // 여는 사이에 취소됐다 — 델리게이트가 가리키던 모듈이 이미 없을 수 있다.
             FileDialogResult result;
@@ -719,7 +719,7 @@ namespace sw
     {
         vector<FileDialogResult> listReady;
         {
-            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            std::scoped_lock<mutex> lock( FileDialogQueueInternal::_s_mutex );
             if ( FileDialogQueueInternal::_s_listResult.empty() )
                 return;
             listReady.swap( FileDialogQueueInternal::_s_listResult );
@@ -737,7 +737,7 @@ namespace sw
     {
         vector<FileDialogResult> listDropped;
         {
-            std::lock_guard<mutex> lock( FileDialogQueueInternal::_s_mutex );
+            std::scoped_lock<mutex> lock( FileDialogQueueInternal::_s_mutex );
             ++FileDialogQueueInternal::_s_generation;
             listDropped.swap( FileDialogQueueInternal::_s_listResult );
         }

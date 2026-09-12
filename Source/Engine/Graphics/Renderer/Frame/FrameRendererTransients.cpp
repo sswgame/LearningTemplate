@@ -206,7 +206,9 @@ namespace sw
         // 다음 프레임 용량 산정용 최댓값. 단조 증가라 한 번 커진 용량은 줄지 않는다.
         uint32 previousHigh = _passCbHighWater.load( std::memory_order_relaxed );
         while ( previousHigh < ticket + 1 &&
-                _passCbHighWater.compare_exchange_weak( previousHigh, ticket + 1, std::memory_order_relaxed ) == false )
+                _passCbHighWater.compare_exchange_weak( previousHigh, ticket + 1,
+                                                        std::memory_order_relaxed,
+                                                        std::memory_order_relaxed ) == false )
         {
         }
 

@@ -121,7 +121,7 @@ namespace sw
             // 1) 상수 버퍼 — 멤버 오프셋까지 채운다.
             for ( const ShaderBufferInfo& cb : pReflection->_listConstantBuffer )
             {
-                ShaderBindingSlot& slot = touchSlot( ShaderBindingKind::ConstantBuffer, hashed_string( static_cast<std::string_view>( cb._name ) ),
+                ShaderBindingSlot& slot = touchSlot( ShaderBindingKind::ConstantBuffer, hashed_string( static_cast<string_view>( cb._name ) ),
                                                      cb._registerSpace, cb._bindPoint, 1, visibility );
                 if ( slot._listCbMember.empty() )
                 {
@@ -137,17 +137,17 @@ namespace sw
             // 2) 텍스처 / 샘플러 / 버퍼 바인딩
             for ( const ShaderResourceBinding& res : pReflection->_listResource )
             {
-                const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<std::string_view>( res._type ) );
+                const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
                 if ( kind == ShaderBindingKind::Unknown )
                     continue;
                 // CB 는 위에서 이미 멤버 정보까지 등록했으므로 가시성만 갱신.
                 if ( kind == ShaderBindingKind::ConstantBuffer )
                 {
-                    touchSlot( kind, hashed_string( static_cast<std::string_view>( res._name ) ),
+                    touchSlot( kind, hashed_string( static_cast<string_view>( res._name ) ),
                                res._registerSpace, res._bindPoint, 1, visibility );
                     continue;
                 }
-                touchSlot( kind, hashed_string( static_cast<std::string_view>( res._name ) ),
+                touchSlot( kind, hashed_string( static_cast<string_view>( res._name ) ),
                            res._registerSpace, res._bindPoint, res._bindCount, visibility );
             }
         }
@@ -162,7 +162,7 @@ namespace sw
             {
                 if ( element._totalSize == 0 )
                     continue;
-                const hashed_string name{ static_cast<std::string_view>( element._name ) };
+                const hashed_string name{ static_cast<string_view>( element._name ) };
                 for ( ShaderBindingSlot& slot : layout._listSlot )
                 {
                     const bool bStructured = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
@@ -198,14 +198,14 @@ namespace sw
                     slotEnd = MathUtil::max( slotEnd, member._offset + member._size );
 
                     ShaderEngineCbMember planned{};
-                    planned._valueKey = hashed_string( static_cast<std::string_view>( member._name ) );
+                    planned._valueKey = hashed_string( static_cast<string_view>( member._name ) );
                     planned._offset   = member._offset;
                     planned._size     = member._size;
 
                     // `g_<Name>Index` 패턴은 명시 값이 없을 때 레지스트리의 bindless 인덱스로 채운다.
                     // 그 조회 키를 지금 만들어 둔다 — 드로우마다 문자열을 자를 이유가 없다.
                     if ( member._size == sizeof( uint32 ) && member._name.find( "Index" ) != string::npos )
-                        planned._autoIndexKey = hashed_string( canonicalResourceView( static_cast<std::string_view>( member._name ), true ) );
+                        planned._autoIndexKey = hashed_string( canonicalResourceView( static_cast<string_view>( member._name ), true ) );
 
                     _listEngineCbMember.push_back( planned );
                 }

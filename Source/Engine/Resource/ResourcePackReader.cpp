@@ -46,7 +46,7 @@ namespace sw
 
     ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
     {
-        std::lock_guard<mutex> lock( other._fileMutex );
+        std::scoped_lock<mutex> lock( other._fileMutex );
         _pFileHandle       = other._pFileHandle;
         _packFilePath      = std::move( other._packFilePath );
         _header            = other._header;
@@ -73,7 +73,7 @@ namespace sw
 
     bool ResourcePackReader::open( string_view packFilePath )
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         close();
 
         if ( packFilePath.empty() )
@@ -156,13 +156,13 @@ namespace sw
 
     bool ResourcePackReader::isOpen() const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _pFileHandle != nullptr;
     }
 
     bool ResourcePackReader::hasFile( uint64 pathHash ) const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _mapEntry.find( pathHash ) != _mapEntry.end();
     }
 
@@ -173,8 +173,8 @@ namespace sw
 
     bool ResourcePackReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
-        auto                   it = _mapEntry.find( pathHash );
+        std::scoped_lock<mutex> lock( _fileMutex );
+        auto                    it = _mapEntry.find( pathHash );
         if ( it == _mapEntry.end() )
             return false;
 
@@ -191,7 +191,7 @@ namespace sw
     {
         PackFileEntry entry{};
         {
-            std::lock_guard<mutex> lock( _fileMutex );
+            std::scoped_lock<mutex> lock( _fileMutex );
             if ( _pFileHandle == nullptr )
                 return false;
 
@@ -208,7 +208,7 @@ namespace sw
         // 1. 비압축(Raw) 에셋인 경우 outBytes 버퍼로 직접 I/O (중간 버퍼 할당 및 복사 방지)
         if ( compression == PackCompressionType::None )
         {
-            std::lock_guard<mutex> lock( _fileMutex );
+            std::scoped_lock<mutex> lock( _fileMutex );
             if ( _pFileHandle == nullptr )
                 return false;
 
@@ -230,7 +230,7 @@ namespace sw
             compressedBytes.resize( entry._compressedSize );
 
             {
-                std::lock_guard<mutex> lock( _fileMutex );
+                std::scoped_lock<mutex> lock( _fileMutex );
                 if ( _pFileHandle == nullptr )
                     return false;
 
@@ -292,25 +292,25 @@ namespace sw
 
     const PackHeader& ResourcePackReader::getHeader() const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _header;
     }
 
     uint32 ResourcePackReader::getDlcAppId() const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _header._dlcAppId;
     }
 
     uint32 ResourcePackReader::getFileCount() const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _header._fileCount;
     }
 
     const string& ResourcePackReader::getPackPath() const
     {
-        std::lock_guard<mutex> lock( _fileMutex );
+        std::scoped_lock<mutex> lock( _fileMutex );
         return _packFilePath;
     }
 
