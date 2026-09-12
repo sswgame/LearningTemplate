@@ -386,13 +386,17 @@ SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
         SW_EXPECT_FALSE( pad.wasButtonReleased( btn ) );
     }
 
-    float32 lx = 99.0f, ly = 99.0f;
-    pad.getLeftStick( lx, ly );
+    float32          lx = 99.0f, ly = 99.0f;
+    const sw::float2 vecLeftStick1 = pad.getLeftStick();
+    lx                             = vecLeftStick1._x;
+    ly                             = vecLeftStick1._y;
     SW_EXPECT_NEAR_EQUAL( 0.0f, lx, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, ly, 0.001f );
 
-    float32 rx = 99.0f, ry = 99.0f;
-    pad.getRightStick( rx, ry );
+    float32          rx = 99.0f, ry = 99.0f;
+    const sw::float2 vecRightStick2 = pad.getRightStick();
+    rx                              = vecRightStick2._x;
+    ry                              = vecRightStick2._y;
     SW_EXPECT_NEAR_EQUAL( 0.0f, rx, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, ry, 0.001f );
 }
@@ -1210,9 +1214,11 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
 
-    float32 smoothDx{ 0.0f };
-    float32 smoothDy{ 0.0f };
-    input.getSmoothMouseDelta( smoothDx, smoothDy );
+    float32          smoothDx{ 0.0f };
+    float32          smoothDy{ 0.0f };
+    const sw::float2 vecSmoothDelta3 = input.getSmoothMouseDelta();
+    smoothDx                         = vecSmoothDelta3._x;
+    smoothDy                         = vecSmoothDelta3._y;
     SW_EXPECT_TRUE( smoothDx > 0.0f );
 
     input.shutdown();
@@ -1507,9 +1513,11 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10000, 5000, 10000, 5000 ) );
     input.beginFrame( 0.016f );
 
-    float32 smoothDx{ 0.0f };
-    float32 smoothDy{ 0.0f };
-    input.getSmoothMouseDelta( smoothDx, smoothDy );
+    float32          smoothDx{ 0.0f };
+    float32          smoothDy{ 0.0f };
+    const sw::float2 vecSmoothDelta4 = input.getSmoothMouseDelta();
+    smoothDx                         = vecSmoothDelta4._x;
+    smoothDy                         = vecSmoothDelta4._y;
 
     SW_EXPECT_TRUE( smoothDx > 0.0f );
     SW_EXPECT_TRUE( smoothDy > 0.0f );

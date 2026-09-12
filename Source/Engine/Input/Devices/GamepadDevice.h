@@ -75,16 +75,8 @@ namespace sw
         bool wasButtonReleased( GamepadButton button ) const;
         bool wasAnyButtonPressed() const { return ( _buttonMask & ~_prevButtonMask ) != 0; }
 
-        void getLeftStick( float32& outX, float32& outY ) const
-        {
-            outX = _leftStickX;
-            outY = _leftStickY;
-        }
-        void getRightStick( float32& outX, float32& outY ) const
-        {
-            outX = _rightStickX;
-            outY = _rightStickY;
-        }
+        float2  getLeftStick() const { return _leftStick; }
+        float2  getRightStick() const { return _rightStick; }
         float32 getLeftTrigger() const { return _leftTrigger; }
         float32 getRightTrigger() const { return _rightTrigger; }
         float32 getLeftMotorVibration() const { return _leftMotorSpeed; }
@@ -133,10 +125,8 @@ namespace sw
         uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스 (로컬 멀티플레이어 0~3번 패드). */
         uint32                    _buttonMask;                /**< 이번 프레임의 디지털 버튼 눌림 비트마스크 (GamepadButton 인덱스로 비트 조회). */
         uint32                    _prevButtonMask;            /**< 직전 프레임의 버튼 비트마스크. wasButtonPressed/Released의 엣지 판정에 사용. */
-        float32                   _leftStickX;                /**< 왼쪽 스틱 X축 [-1.0, 1.0] (데드존 미적용 원시값). */
-        float32                   _leftStickY;                /**< 왼쪽 스틱 Y축 [-1.0, 1.0]. */
-        float32                   _rightStickX;               /**< 오른쪽 스틱 X축 [-1.0, 1.0]. */
-        float32                   _rightStickY;               /**< 오른쪽 스틱 Y축 [-1.0, 1.0]. */
+        float2                    _leftStick;                 /**< 왼쪽 스틱 [-1.0, 1.0] (데드존 미적용 원시값). */
+        float2                    _rightStick;                /**< 오른쪽 스틱 [-1.0, 1.0]. */
         float32                   _leftTrigger;               /**< 왼쪽 트리거 압력 [0.0, 1.0] (_triggerDeadzone 필터 적용됨). */
         float32                   _rightTrigger;              /**< 오른쪽 트리거 압력 [0.0, 1.0]. */
         float32                   _prevLeftTrigger;           /**< 직전 프레임의 왼쪽 트리거 값. wasControlPressed/Released 임계값(0.5) 판정에 사용. */

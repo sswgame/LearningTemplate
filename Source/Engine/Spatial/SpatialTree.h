@@ -19,51 +19,59 @@ namespace sw
      */
     struct AABB2D
     {
-        float32 _minX{ 0.0f };
-        float32 _minY{ 0.0f };
-        float32 _maxX{ 0.0f };
-        float32 _maxY{ 0.0f };
+        /** @note 3차원 `AABB` 와 같은 모양이다 — 그쪽도 `float3 _min/_max` 를 든다. */
+        float2 _min{ 0.0f, 0.0f };
+        float2 _max{ 0.0f, 0.0f };
 
         static constexpr AABB2D empty() noexcept
         {
-            return AABB2D{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+            return AABB2D{
+                float2{MathUtil::MaxFloat, MathUtil::MaxFloat},
+                float2{MathUtil::MinFloat, MathUtil::MinFloat}
+            };
         }
 
         static constexpr AABB2D infinite() noexcept
         {
-            return AABB2D{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
+            return AABB2D{
+                float2{MathUtil::MinFloat, MathUtil::MinFloat},
+                float2{MathUtil::MaxFloat, MathUtil::MaxFloat}
+            };
         }
 
         static constexpr AABB2D zero() noexcept
         {
-            return AABB2D{ 0.0f, 0.0f, 0.0f, 0.0f };
+            return AABB2D{
+                float2{0.0f, 0.0f},
+                float2{0.0f, 0.0f}
+            };
         }
 
         bool isValid() const noexcept
         {
-            return _minX <= _maxX && _minY <= _maxY;
+            return _min._x <= _max._x && _min._y <= _max._y;
         }
 
         bool contains( float32 pointX, float32 pointY ) const noexcept
         {
-            return _minX <= pointX && pointX <= _maxX && _minY <= pointY && pointY <= _maxY;
+            return _min._x <= pointX && pointX <= _max._x && _min._y <= pointY && pointY <= _max._y;
         }
 
         bool intersects( const AABB2D& other ) const noexcept
         {
-            return _minX <= other._maxX && other._minX <= _maxX &&
-                   _minY <= other._maxY && other._minY <= _maxY;
+            return _min._x <= other._max._x && other._min._x <= _max._x &&
+                   _min._y <= other._max._y && other._min._y <= _max._y;
         }
 
         bool contains( const AABB2D& other ) const noexcept
         {
-            return _minX <= other._minX && other._maxX <= _maxX && _minY <= other._minY && other._maxY <= _maxY;
+            return _min._x <= other._min._x && other._max._x <= _max._x && _min._y <= other._min._y && other._max._y <= _max._y;
         }
 
-        float32 getWidth() const noexcept { return _maxX - _minX; }
-        float32 getHeight() const noexcept { return _maxY - _minY; }
-        float32 getCenterX() const noexcept { return ( _minX + _maxX ) * 0.5f; }
-        float32 getCenterY() const noexcept { return ( _minY + _maxY ) * 0.5f; }
+        float32 getWidth() const noexcept { return _max._x - _min._x; }
+        float32 getHeight() const noexcept { return _max._y - _min._y; }
+        float32 getCenterX() const noexcept { return ( _min._x + _max._x ) * 0.5f; }
+        float32 getCenterY() const noexcept { return ( _min._y + _max._y ) * 0.5f; }
     };
 
     /**
@@ -107,13 +115,25 @@ namespace sw
             const float32 midY = parent.getCenterY();
 
             // 0: Top-Left (NW)
-            outArrChildren[0] = AABB2D{ parent._minX, midY, midX, parent._maxY };
+            outArrChildren[0] = AABB2D{
+                float2{parent._min._x,           midY},
+                float2{          midX, parent._max._y}
+            };
             // 1: Top-Right (NE)
-            outArrChildren[1] = AABB2D{ midX, midY, parent._maxX, parent._maxY };
+            outArrChildren[1] = AABB2D{
+                float2{          midX,           midY},
+                float2{parent._max._x, parent._max._y}
+            };
             // 2: Bottom-Left (SW)
-            outArrChildren[2] = AABB2D{ parent._minX, parent._minY, midX, midY };
+            outArrChildren[2] = AABB2D{
+                float2{parent._min._x, parent._min._y},
+                float2{          midX,           midY}
+            };
             // 3: Bottom-Right (SE)
-            outArrChildren[3] = AABB2D{ midX, parent._minY, parent._maxX, midY };
+            outArrChildren[3] = AABB2D{
+                float2{          midX, parent._min._y},
+                float2{parent._max._x,           midY}
+            };
         }
     };
 

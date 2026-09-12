@@ -295,6 +295,50 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-13 (축을 나눠 들던 스칼라 쌍을 float2 로 — 저장만이 아니라 API 까지)
+
+`float32 _accumulatedRawDx; float32 _accumulatedRawDy;` 처럼 **축만 다른 스칼라 쌍**을 전수로 찾았다.
+헤더의 연속 멤버 중 접미사(`X/Y/Z/W`, `Dx/Dy`)만 다른 묶음을 세니 **41개**였다.
+
+**바꾼 것 (float32 묶음은 Math 타입 자신을 빼면 전부 처리했다).**
+
+| 자리 | 전 | 후 |
+| --- | --- | --- |
+| `MouseDevice` | `_rawDeltaX/Y` · `_smoothDeltaX/Y` | `float2 _rawDelta` · `_smoothDelta` |
+| `GamepadDevice` | `_leftStickX/Y` · `_rightStickX/Y` | `float2 _leftStick` · `_rightStick` |
+| `RawInputEvent` | `_rawDeltaX/Y` | `float2 _rawDelta` |
+| `AABB2D` | `_minX/_minY/_maxX/_maxY` | `float2 _min` · `_max` |
+| `AnimationGraphNode` · `DialogueAssetNode` | `_x/_y` | `float2 _position` |
+| `EditorSpriteClipKey` | `_x/_y` | `float2 _position` |
+| `ActionRoom` | `_playerX/Y` · `_x/_y` · `_vx/_vy` | `float2 _playerPos` · `_position` · `_velocity` |
+| `InputMapEditorPanel` | `_simStickX/Y` | `float2 _simStick` |
+
+**저장만 바꾸면 반쪽이다 — API 도 바꿨다.** 축을 나눠 받던 출력 인자 일곱을 `float2` 반환으로 돌렸다:
+`MouseDevice::getRawDelta` · `getSmoothDelta`, `GamepadDevice::getLeftStick` · `getRightStick`,
+`InputManager::getRawMouseDelta` · `getSmoothMouseDelta` · `getMousePositionNormalized`.
+`ActionMap::getVector2D` 가 이미 `float2` 를 돌려주고 있었으니 그쪽이 집 스타일이었다. 그리고 결정적으로
+`InputManager` 안에 **`_pGamepad->getRightStick( snapshot._lookVector._x, snapshot._lookVector._y )`** 가 있었다 —
+이미 `float2` 인 대상을 축으로 쪼개 채우고 있었다는 뜻이고, 지금은 `snapshot._lookVector = getRightStick()` 이다.
+`InputManager::getLeftStick` 의 활성 판정도 `stickX*stickX + stickY*stickY` 에서 `stick.getLengthSquared()` 가 됐다.
+
+**`AABB2D` 가 자기 형제와 어긋나 있었다.** 3차원 `AABB` 는 이미 `float3 _min/_max` 인데 2차원만 스칼라 넷이었다.
+같은 모양으로 맞췄다.
+
+**덤 — 죽은 필드 넷.** `MouseDevice` 의 `_accumulatedRawDx/Dy` 는 주석이 "현재 미사용(항상 0으로 리셋만 됨)"
+이라고 스스로 말하고 있었고, `_mouseWheelAccum` · `_mouseWheelHorizontalAccum` 은 `+=` 로 쓰기만 하고
+**아무도 읽지 않았다.** float2 로 바꿀 것이 아니라 지울 것이었다.
+
+**안 바꾼 것과 이유.** 남은 **20묶음은 전부 `int32`** 다(`_mouseX/_mouseY`, `_tileX/_tileY`, `_spawnX/_spawnY` …).
+Math 에 `int2`/`uint2` 가 **없다.** 없는 타입을 쓸 수는 없으니 그대로 뒀다 — 픽셀 좌표와 타일 좌표가 계속
+스칼라 쌍으로 다녀야 하는 것이 불편하면 그때 `int2` 를 만드는 것이 순서다(지금 만들면 소비자 없는 타입이 하나 는다).
+`ZoneBounds`(`int32 _minX…`)는 같은 이름이지만 **타일 경계**라 위 `AABB2D` 와 무관하다 — 탐지기가 잠깐 같이
+바꿔 버려서 되돌렸다.
+
+**검증.** Debug · Release · Shipping 빌드 종료 0 · nogpu 5/5 · 린트 7/7 · GPU 19/19 · `Engine_Spatial` 8/8 ·
+입력 스위트 전부(MouseDevice 1 · Gamepad 3 · InputManager 19 · RawInputEvent 1 · ActionMap 17 · EdgeCase 2 ·
+Stress 2 · Replay 2). 에디터 전부 열기 창 30 · 빈 패널 0 · 오류 0(그래프·스프라이트클립 패널을 건드렸다).
+교체 5구성 종료 0 · 오류 0.
+
 ### 2026-09-13 (SW_TRUE/SW_FALSE 를 써야 할 자리 415곳 — 그리고 린트가 이 규칙을 아예 안 보고 있었다)
 
 `uint8` 불리언(`_b*`)에 `SW_TRUE`/`SW_FALSE` 를 쓰라는 규칙은 `AGENTS.md` · `.cursorrules` ·

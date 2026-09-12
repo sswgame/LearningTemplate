@@ -71,8 +71,7 @@ namespace sw
             {
                 int32       _x;
                 int32       _y;
-                float32     _rawDeltaX;
-                float32     _rawDeltaY;
+                float2      _rawDelta;
                 float32     _wheelDelta;
                 MouseButton _button;
             } _mouseData;
@@ -128,12 +127,12 @@ namespace sw
         static RawInputEvent makeMouseMove( int32 x, int32 y, float32 rawDx = 0.0f, float32 rawDy = 0.0f )
         {
             RawInputEvent evt{};
-            evt._type                          = RawInputEventType::MouseMove;
-            evt._deviceKind                    = InputDeviceKind::Mouse;
-            evt._payload._mouseData._x         = x;
-            evt._payload._mouseData._y         = y;
-            evt._payload._mouseData._rawDeltaX = rawDx;
-            evt._payload._mouseData._rawDeltaY = rawDy;
+            evt._type                            = RawInputEventType::MouseMove;
+            evt._deviceKind                      = InputDeviceKind::Mouse;
+            evt._payload._mouseData._x           = x;
+            evt._payload._mouseData._y           = y;
+            evt._payload._mouseData._rawDelta._x = rawDx;
+            evt._payload._mouseData._rawDelta._y = rawDy;
             return evt;
         }
 

@@ -121,9 +121,9 @@ namespace sw
         void    getMousePosition( int32& outX, int32& outY ) const;
         int32   getMousePositionX() const { return _pMouse != nullptr ? _pMouse->getPositionX() : 0; }
         int32   getMousePositionY() const { return _pMouse != nullptr ? _pMouse->getPositionY() : 0; }
-        void    getMousePositionNormalized( float32& outNormX, float32& outNormY ) const;
+        float2  getMousePositionNormalized() const;
         void    getMouseDelta( int32& outDx, int32& outDy ) const;
-        void    getRawMouseDelta( float32& outDx, float32& outDy ) const;
+        float2  getRawMouseDelta() const;
         float32 getMouseWheel() const { return _pMouse != nullptr ? _pMouse->getMouseWheel() : 0.0f; }
         float32 getMouseWheelHorizontal() const { return _pMouse != nullptr ? _pMouse->getMouseWheelHorizontal() : 0.0f; }
 
@@ -163,16 +163,7 @@ namespace sw
                 _pMouse->setAcceleration( power );
         }
         float32 getMouseAcceleration() const { return _pMouse != nullptr ? _pMouse->getAcceleration() : 1.0f; }
-        void    getSmoothMouseDelta( float32& outDx, float32& outDy ) const
-        {
-            if ( _pMouse != nullptr )
-                _pMouse->getSmoothDelta( outDx, outDy );
-            else
-            {
-                outDx = 0.0f;
-                outDy = 0.0f;
-            }
-        }
+        float2  getSmoothMouseDelta() const { return _pMouse != nullptr ? _pMouse->getSmoothDelta() : float2{}; }
 
         // ------------------------------------------------------------------------------
         // 6) 게임패드 편의성 위임 포워딩 API

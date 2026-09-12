@@ -91,8 +91,7 @@ namespace sw::editor
         , _arrPlotTriggerR{}
         , _testVibLeft{ 0.5f }
         , _testVibRight{ 0.5f }
-        , _simStickX{ 0.0f }
-        , _simStickY{ 0.0f }
+        , _simStick{}
         , _plotOffset{ 0 }
         , _capturingBindIndex{ 0 }
         , _newActionValueType{ 0 }
@@ -129,9 +128,11 @@ namespace sw::editor
             GamepadDevice* pGamepad = pInput->getGamepad( 0 );
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
-                pGamepad->getLeftStick( lx, ly );
-                lt = pGamepad->getLeftTrigger();
-                rt = pGamepad->getRightTrigger();
+                const float2 vecLeftStick1 = pGamepad->getLeftStick();
+                lx                         = vecLeftStick1._x;
+                ly                         = vecLeftStick1._y;
+                lt                         = pGamepad->getLeftTrigger();
+                rt                         = pGamepad->getRightTrigger();
             }
 
             int32 mdx = 0, mdy = 0;
@@ -539,8 +540,10 @@ namespace sw::editor
             pInput->getMousePosition( mx, my );
             int32 dx = 0, dy = 0;
             pInput->getMouseDelta( dx, dy );
-            float32 smoothDx = 0.0f, smoothDy = 0.0f;
-            pInput->getSmoothMouseDelta( smoothDx, smoothDy );
+            float32      smoothDx = 0.0f, smoothDy = 0.0f;
+            const float2 vecSmoothDelta2 = pInput->getSmoothMouseDelta();
+            smoothDx                     = vecSmoothDelta2._x;
+            smoothDy                     = vecSmoothDelta2._y;
 
             ImGui::Text( "Position: (%d, %d)", mx, my );
             ImGui::SameLine( 200.0f );
@@ -573,9 +576,13 @@ namespace sw::editor
                 const GamepadBatteryInfo batInfo = pGamepad->getBatteryInfo();
                 ImGui::Text( "Battery: %s", InputMapEditorPanelInternal::batteryLevelName( batInfo._level ) );
 
-                float32 lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
-                pGamepad->getLeftStick( lx, ly );
-                pGamepad->getRightStick( rx, ry );
+                float32      lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
+                const float2 vecLeftStick3  = pGamepad->getLeftStick();
+                lx                          = vecLeftStick3._x;
+                ly                          = vecLeftStick3._y;
+                const float2 vecRightStick4 = pGamepad->getRightStick();
+                rx                          = vecRightStick4._x;
+                ry                          = vecRightStick4._y;
 
                 drawGamepadStickVisualizer( "Left Stick", lx, ly, 0.15f );
                 ImGui::SameLine( 180.0f );
@@ -764,22 +771,22 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::Text( "2) Virtual Stick 2D Slider:" );
-        ImGui::SliderFloat( "Sim Stick X", &_simStickX, -1.0f, 1.0f );
-        ImGui::SliderFloat( "Sim Stick Y", &_simStickY, -1.0f, 1.0f );
+        ImGui::SliderFloat( "Sim Stick X", &_simStick._x, -1.0f, 1.0f );
+        ImGui::SliderFloat( "Sim Stick Y", &_simStick._y, -1.0f, 1.0f );
         if ( ImGui::Button( "Inject Stick Tilt" ) )
         {
             GamepadDevice* pGamepad = pInput->getGamepad( 0 );
             if ( pGamepad != nullptr )
             {
-                pGamepad->setAxis( 0, _simStickX );
-                pGamepad->setAxis( 1, _simStickY );
+                pGamepad->setAxis( 0, _simStick._x );
+                pGamepad->setAxis( 1, _simStick._y );
             }
         }
         ImGui::SameLine();
         if ( ImGui::Button( "Reset Stick to Center" ) )
         {
-            _simStickX              = 0.0f;
-            _simStickY              = 0.0f;
+            _simStick._x            = 0.0f;
+            _simStick._y            = 0.0f;
             GamepadDevice* pGamepad = pInput->getGamepad( 0 );
             if ( pGamepad != nullptr )
             {

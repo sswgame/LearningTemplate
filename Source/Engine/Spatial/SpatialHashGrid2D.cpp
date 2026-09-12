@@ -27,7 +27,10 @@ namespace sw
         const float32 normMinY = MathUtil::min( minY, maxY );
         const float32 normMaxY = MathUtil::max( minY, maxY );
 
-        const AABB2D bounds{ normMinX, normMinY, normMaxX, normMaxY };
+        const AABB2D bounds{
+            float2{normMinX, normMinY},
+            float2{normMaxX, normMaxY}
+        };
         _mapHandleBound[handle] = bounds;
 
         const int32 startCellX = static_cast<int32>( MathUtil::floor( normMinX / _cellSize ) );
@@ -59,10 +62,10 @@ namespace sw
         const AABB2D bounds = boundIt->second;
         _mapHandleBound.erase( boundIt );
 
-        const int32 startCellX = static_cast<int32>( MathUtil::floor( bounds._minX / _cellSize ) );
-        const int32 endCellX   = static_cast<int32>( MathUtil::floor( bounds._maxX / _cellSize ) );
-        const int32 startCellY = static_cast<int32>( MathUtil::floor( bounds._minY / _cellSize ) );
-        const int32 endCellY   = static_cast<int32>( MathUtil::floor( bounds._maxY / _cellSize ) );
+        const int32 startCellX = static_cast<int32>( MathUtil::floor( bounds._min._x / _cellSize ) );
+        const int32 endCellX   = static_cast<int32>( MathUtil::floor( bounds._max._x / _cellSize ) );
+        const int32 startCellY = static_cast<int32>( MathUtil::floor( bounds._min._y / _cellSize ) );
+        const int32 endCellY   = static_cast<int32>( MathUtil::floor( bounds._max._y / _cellSize ) );
 
         for ( int32 cellX = startCellX; cellX <= endCellX; ++cellX )
         {
@@ -104,11 +107,14 @@ namespace sw
         const float32 normMinY = MathUtil::min( minY, maxY );
         const float32 normMaxY = MathUtil::max( minY, maxY );
 
-        const AABB2D queryBounds{ normMinX, normMinY, normMaxX, normMaxY };
-        const int32  startCellX = static_cast<int32>( MathUtil::floor( normMinX / _cellSize ) );
-        const int32  endCellX   = static_cast<int32>( MathUtil::floor( normMaxX / _cellSize ) );
-        const int32  startCellY = static_cast<int32>( MathUtil::floor( normMinY / _cellSize ) );
-        const int32  endCellY   = static_cast<int32>( MathUtil::floor( normMaxY / _cellSize ) );
+        const AABB2D queryBounds{
+            float2{normMinX, normMinY},
+            float2{normMaxX, normMaxY}
+        };
+        const int32 startCellX = static_cast<int32>( MathUtil::floor( normMinX / _cellSize ) );
+        const int32 endCellX   = static_cast<int32>( MathUtil::floor( normMaxX / _cellSize ) );
+        const int32 startCellY = static_cast<int32>( MathUtil::floor( normMinY / _cellSize ) );
+        const int32 endCellY   = static_cast<int32>( MathUtil::floor( normMaxY / _cellSize ) );
 
         for ( int32 cellX = startCellX; cellX <= endCellX; ++cellX )
         {
@@ -165,7 +171,7 @@ namespace sw
                         {
                             const AABB2D& b = boundIt->second;
                             const float2  center{ centerX, centerY };
-                            const float2  closePoint = center.clamped( float2{ b._minX, b._minY }, float2{ b._maxX, b._maxY } );
+                            const float2  closePoint = center.clamped( float2{ b._min._x, b._min._y }, float2{ b._max._x, b._max._y } );
                             if ( float2::getDistanceSquared( center, closePoint ) <= radiusSq )
                                 outListHandle.push_back( handle );
                         }

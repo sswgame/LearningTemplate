@@ -33,8 +33,7 @@ namespace sw::editor
     struct EditorSpriteClipKey
     {
         float32 _time{ 0.0f };
-        float32 _x{ 0.0f };
-        float32 _y{ 0.0f };
+        float2  _position{ 0.0f, 0.0f };
         float32 _angleDeg{ 0.0f };
     };
 

@@ -13,10 +13,10 @@ namespace sw
     /** @brief 애니메이션 그래프 노드 */
     struct AnimationGraphNode
     {
-        string  _name;
-        int32   _id{ 0 };
-        float32 _x{ 40.0f };
-        float32 _y{ 40.0f };
+        string _name;
+        int32  _id{ 0 };
+        /** @brief 그래프 에디터에서의 노드 위치. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않는다. */
+        float2 _position{ 40.0f, 40.0f };
     };
 
     /** @brief 애니메이션 그래프 링크 */

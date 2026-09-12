@@ -69,16 +69,8 @@ namespace sw
             outDx = _deltaX;
             outDy = _deltaY;
         }
-        void getRawDelta( float32& outDx, float32& outDy ) const
-        {
-            outDx = _rawDeltaX;
-            outDy = _rawDeltaY;
-        }
-        void getSmoothDelta( float32& outDx, float32& outDy ) const
-        {
-            outDx = _smoothDeltaX;
-            outDy = _smoothDeltaY;
-        }
+        float2  getRawDelta() const { return _rawDelta; }
+        float2  getSmoothDelta() const { return _smoothDelta; }
         float32 getSmoothing() const { return _smoothingFactor; }
         void    setSmoothing( float32 factor ) { _smoothingFactor = factor < 0.0f ? 0.0f : ( factor > 0.99f ? 0.99f : factor ); }
         float32 getAcceleration() const { return _accelerationPower; }
@@ -143,18 +135,12 @@ namespace sw
         int32                  _prevMouseY;                /**< 직전 프레임의 마우스 좌표 Y. */
         int32                  _deltaX;                    /**< 이번 프레임의 좌표 이동량(_mouseX - _prevMouseX). 화면 경계에 막히면 실제 이동보다 작게 나올 수 있음. */
         int32                  _deltaY;                    /**< 이번 프레임의 좌표 이동량 Y. */
-        float32                _rawDeltaX;                 /**< OS 원시(Raw Input) 델타 누적값 X. 화면 경계 클램핑 없이 실제 이동량을 반영 (FPS 카메라 룩에 적합). */
-        float32                _rawDeltaY;                 /**< OS 원시 델타 누적값 Y. */
-        float32                _smoothDeltaX;              /**< 감도/가속/스무딩(EMA)이 적용된 최종 델타 X. getSmoothDelta()가 반환하는 값. */
-        float32                _smoothDeltaY;              /**< 스무딩 적용된 최종 델타 Y. */
+        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계 클램핑 없이 실제 이동량을 반영 (FPS 카메라 룩에 적합). */
+        float2                 _smoothDelta;               /**< 감도/가속/스무딩(EMA)이 적용된 최종 델타. getSmoothDelta()가 반환하는 값. */
         float32                _smoothingFactor;           /**< EMA 스무딩 계수 [0.0, 0.99]. 0이면 스무딩 없이 원시 델타를 그대로 사용. */
         float32                _accelerationPower;         /**< 마우스 가속 지수. 1.0이면 가속 없음, 클수록 빠르게 움직일 때 델타가 더 커짐. */
-        float32                _accumulatedRawDx;          /**< 현재 미사용(항상 0으로 리셋만 됨) — 프레임 간 원시 델타 누적용으로 남겨둔 예비 필드. */
-        float32                _accumulatedRawDy;          /**< 현재 미사용. _accumulatedRawDx와 동일. */
         float32                _mouseWheelDelta;           /**< 이번 프레임 수직 휠 회전량. getMouseWheel()이 반환하는 값. */
-        float32                _mouseWheelAccum;           /**< _mouseWheelDelta와 동일한 값을 갖는 중복 필드(현재 별도로 조회되지 않음). */
         float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 수평 휠(틸트) 회전량. */
-        float32                _mouseWheelHorizontalAccum; /**< _mouseWheelHorizontalDelta와 동일한 값을 갖는 중복 필드(현재 별도로 조회되지 않음). */
         int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역(클라이언트 좌표 기준, setClipSubRect로 설정). */
         int32                  _clipSubRectTop;
         int32                  _clipSubRectRight;

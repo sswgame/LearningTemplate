@@ -16,7 +16,11 @@ namespace sw
         /** @brief 2D 점 좌표를 포함하는 요소를 검색합니다. */
         void queryPoint( float32 pointX, float32 pointY, vector<SpatialElement>& outListElement ) const
         {
-            queryRange( AABB2D{ pointX, pointY, pointX, pointY }, outListElement );
+            queryRange( AABB2D{
+                            float2{pointX, pointY},
+                            float2{pointX, pointY}
+            },
+                        outListElement );
         }
     };
 } // namespace sw

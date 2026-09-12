@@ -222,10 +222,8 @@ namespace sw
         // 4) 활성 장치 자동 감지 (O(1) 플래그 쿼리)
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
         {
-            float32 stickX{ 0.0f };
-            float32 stickY{ 0.0f };
-            _pGamepad->getLeftStick( stickX, stickY );
-            const bool bStickActive = ( stickX * stickX + stickY * stickY ) > 0.04f;
+            const float2 stick        = _pGamepad->getLeftStick();
+            const bool   bStickActive = stick.getLengthSquared() > 0.04f;
             if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
                 setActiveDeviceType( InputDeviceType::GamepadXbox );
         }
@@ -262,7 +260,7 @@ namespace sw
                 if ( _pMouse != nullptr )
                 {
                     _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
-                    _pMouse->addRawDelta( rawEvt._payload._mouseData._rawDeltaX, rawEvt._payload._mouseData._rawDeltaY );
+                    _pMouse->addRawDelta( rawEvt._payload._mouseData._rawDelta._x, rawEvt._payload._mouseData._rawDelta._y );
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
@@ -426,22 +424,19 @@ namespace sw
         outY = _pMouse != nullptr ? _pMouse->getPositionY() : 0;
     }
 
-    void InputManager::getMousePositionNormalized( float32& outNormX, float32& outNormY ) const
+    float2 InputManager::getMousePositionNormalized() const
     {
-        outNormX = 0.0f;
-        outNormY = 0.0f;
-
         IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow != nullptr && _pMouse != nullptr )
-        {
-            const uint32 width  = pWindow->getWidth();
-            const uint32 height = pWindow->getHeight();
-            if ( width > 0 && height > 0 )
-            {
-                outNormX = MathUtil::clamp( static_cast<float32>( _pMouse->getPositionX() ) / static_cast<float32>( width ), 0.0f, 1.0f );
-                outNormY = MathUtil::clamp( static_cast<float32>( _pMouse->getPositionY() ) / static_cast<float32>( height ), 0.0f, 1.0f );
-            }
-        }
+        if ( pWindow == nullptr || _pMouse == nullptr )
+            return float2{};
+
+        const uint32 width  = pWindow->getWidth();
+        const uint32 height = pWindow->getHeight();
+        if ( width == 0 || height == 0 )
+            return float2{};
+
+        return float2{ MathUtil::clamp( static_cast<float32>( _pMouse->getPositionX() ) / static_cast<float32>( width ), 0.0f, 1.0f ),
+                       MathUtil::clamp( static_cast<float32>( _pMouse->getPositionY() ) / static_cast<float32>( height ), 0.0f, 1.0f ) };
     }
 
     void InputManager::getMouseDelta( int32& outDx, int32& outDy ) const
@@ -455,15 +450,9 @@ namespace sw
         }
     }
 
-    void InputManager::getRawMouseDelta( float32& outDx, float32& outDy ) const
+    float2 InputManager::getRawMouseDelta() const
     {
-        if ( _pMouse != nullptr )
-            _pMouse->getRawDelta( outDx, outDy );
-        else
-        {
-            outDx = 0.0f;
-            outDy = 0.0f;
-        }
+        return _pMouse != nullptr ? _pMouse->getRawDelta() : float2{};
     }
 
     bool InputManager::isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const
@@ -537,12 +526,12 @@ namespace sw
         if ( _pActionMap != nullptr && _pActionMap->hasAction( "Move" ) )
             snapshot._moveVector = _pActionMap->getVector2D( "Move" );
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            _pGamepad->getLeftStick( snapshot._moveVector._x, snapshot._moveVector._y );
+            snapshot._moveVector = _pGamepad->getLeftStick();
 
         if ( _pActionMap != nullptr && _pActionMap->hasAction( "Look" ) )
             snapshot._lookVector = _pActionMap->getVector2D( "Look" );
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            _pGamepad->getRightStick( snapshot._lookVector._x, snapshot._lookVector._y );
+            snapshot._lookVector = _pGamepad->getRightStick();
 
         // 2) 아날로그 트리거
         snapshot._leftTrigger  = getGamepadLeftTrigger();

@@ -81,8 +81,8 @@ namespace sw
                 node._text          = nodeJson.get( "text" ).asString();
                 node._condition     = nodeJson.get( "condition" ).asString();
                 node._actionCommand = nodeJson.get( "action" ).asString();
-                node._x             = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-                node._y             = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+                node._position._x   = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
+                node._position._y   = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
 
                 const JsonValue choicesVal = nodeJson.get( "choices" );
                 if ( choicesVal.isArray() )
@@ -142,8 +142,8 @@ namespace sw
             for ( const string& choice : node._listChoice )
                 choicesVal.pushBack().setString( choice );
 
-            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._x ) );
-            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._y ) );
+            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
+            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
         }
 
         const JsonValue linksVal = root.set( "links" );

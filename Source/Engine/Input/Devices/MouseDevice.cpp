@@ -14,18 +14,12 @@ namespace sw
         , _prevMouseY{ 0 }
         , _deltaX{ 0 }
         , _deltaY{ 0 }
-        , _rawDeltaX{ 0.0f }
-        , _rawDeltaY{ 0.0f }
-        , _smoothDeltaX{ 0.0f }
-        , _smoothDeltaY{ 0.0f }
+        , _rawDelta{}
+        , _smoothDelta{}
         , _smoothingFactor{ 0.0f }
         , _accelerationPower{ 1.0f }
-        , _accumulatedRawDx{ 0.0f }
-        , _accumulatedRawDy{ 0.0f }
         , _mouseWheelDelta{ 0.0f }
-        , _mouseWheelAccum{ 0.0f }
         , _mouseWheelHorizontalDelta{ 0.0f }
-        , _mouseWheelHorizontalAccum{ 0.0f }
         , _clipSubRectLeft{ 0 }
         , _clipSubRectTop{ 0 }
         , _clipSubRectRight{ 0 }
@@ -47,8 +41,8 @@ namespace sw
 
     void MouseDevice::poll( [[maybe_unused]] float32 deltaTime )
     {
-        float32 curDx = _rawDeltaX;
-        float32 curDy = _rawDeltaY;
+        float32 curDx = _rawDelta._x;
+        float32 curDy = _rawDelta._y;
         if ( curDx == 0.0f && curDy == 0.0f )
         {
             curDx = static_cast<float32>( _deltaX );
@@ -69,13 +63,13 @@ namespace sw
         if ( _smoothingFactor > 0.0f )
         {
             const float32 alpha = 1.0f - _smoothingFactor;
-            _smoothDeltaX       = _smoothDeltaX * _smoothingFactor + curDx * alpha;
-            _smoothDeltaY       = _smoothDeltaY * _smoothingFactor + curDy * alpha;
+            _smoothDelta._x     = _smoothDelta._x * _smoothingFactor + curDx * alpha;
+            _smoothDelta._y     = _smoothDelta._y * _smoothingFactor + curDy * alpha;
         }
         else
         {
-            _smoothDeltaX = curDx;
-            _smoothDeltaY = curDy;
+            _smoothDelta._x = curDx;
+            _smoothDelta._y = curDy;
         }
     }
 
@@ -89,12 +83,10 @@ namespace sw
         _deltaY                    = _mouseY - _prevMouseY;
         _prevMouseX                = _mouseX;
         _prevMouseY                = _mouseY;
-        _rawDeltaX                 = 0.0f;
-        _rawDeltaY                 = 0.0f;
+        _rawDelta._x               = 0.0f;
+        _rawDelta._y               = 0.0f;
         _mouseWheelDelta           = 0.0f;
-        _mouseWheelAccum           = 0.0f;
         _mouseWheelHorizontalDelta = 0.0f;
-        _mouseWheelHorizontalAccum = 0.0f;
 
         _bPointerEntered = SW_FALSE;
         _bPointerLeft    = SW_FALSE;
@@ -107,8 +99,8 @@ namespace sw
         _pressedMask               = 0;
         _releasedMask              = 0;
         _bAnyButtonPressed         = SW_FALSE;
-        _rawDeltaX                 = 0.0f;
-        _rawDeltaY                 = 0.0f;
+        _rawDelta._x               = 0.0f;
+        _rawDelta._y               = 0.0f;
         _mouseWheelDelta           = 0.0f;
         _mouseWheelHorizontalDelta = 0.0f;
     }
@@ -121,16 +113,12 @@ namespace sw
         _bAnyButtonPressed         = SW_FALSE;
         _deltaX                    = 0;
         _deltaY                    = 0;
-        _rawDeltaX                 = 0.0f;
-        _rawDeltaY                 = 0.0f;
-        _smoothDeltaX              = 0.0f;
-        _smoothDeltaY              = 0.0f;
-        _accumulatedRawDx          = 0.0f;
-        _accumulatedRawDy          = 0.0f;
+        _rawDelta._x               = 0.0f;
+        _rawDelta._y               = 0.0f;
+        _smoothDelta._x            = 0.0f;
+        _smoothDelta._y            = 0.0f;
         _mouseWheelDelta           = 0.0f;
-        _mouseWheelAccum           = 0.0f;
         _mouseWheelHorizontalDelta = 0.0f;
-        _mouseWheelHorizontalAccum = 0.0f;
     }
 
     bool MouseDevice::isControlDown( uint16 controlIndex ) const
@@ -161,9 +149,9 @@ namespace sw
         if ( controlIndex == 101 ) // Horizontal Wheel
             return _mouseWheelHorizontalDelta;
         if ( controlIndex == 102 ) // Smooth Delta X
-            return _smoothDeltaX;
+            return _smoothDelta._x;
         if ( controlIndex == 103 ) // Smooth Delta Y
-            return _smoothDeltaY;
+            return _smoothDelta._y;
         return isControlDown( controlIndex ) ? 1.0f : 0.0f;
     }
 
@@ -229,13 +217,13 @@ namespace sw
         if ( _smoothingFactor > 0.0f )
         {
             const float32 alpha = 1.0f - _smoothingFactor;
-            _smoothDeltaX       = _smoothDeltaX * _smoothingFactor + curDx * alpha;
-            _smoothDeltaY       = _smoothDeltaY * _smoothingFactor + curDy * alpha;
+            _smoothDelta._x     = _smoothDelta._x * _smoothingFactor + curDx * alpha;
+            _smoothDelta._y     = _smoothDelta._y * _smoothingFactor + curDy * alpha;
         }
         else
         {
-            _smoothDeltaX = curDx;
-            _smoothDeltaY = curDy;
+            _smoothDelta._x = curDx;
+            _smoothDelta._y = curDy;
         }
     }
 
@@ -250,21 +238,19 @@ namespace sw
 
     void MouseDevice::addRawDelta( float32 dx, float32 dy )
     {
-        _rawDeltaX += dx;
-        _rawDeltaY += dy;
+        _rawDelta._x += dx;
+        _rawDelta._y += dy;
         updateSmoothDelta( dx, dy );
     }
 
     void MouseDevice::addWheelDelta( float32 delta )
     {
         _mouseWheelDelta += delta;
-        _mouseWheelAccum += delta;
     }
 
     void MouseDevice::addHorizontalWheelDelta( float32 delta )
     {
         _mouseWheelHorizontalDelta += delta;
-        _mouseWheelHorizontalAccum += delta;
     }
 
     void MouseDevice::setPointerInsideState( bool bInside )

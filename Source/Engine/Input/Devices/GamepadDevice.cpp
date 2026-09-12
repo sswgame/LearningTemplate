@@ -64,10 +64,8 @@ namespace sw
         , _deviceIndex{ deviceIndex }
         , _buttonMask{ SW_FALSE }
         , _prevButtonMask{ 0 }
-        , _leftStickX{ 0.0f }
-        , _leftStickY{ 0.0f }
-        , _rightStickX{ 0.0f }
-        , _rightStickY{ 0.0f }
+        , _leftStick{}
+        , _rightStick{}
         , _leftTrigger{ 0.0f }
         , _rightTrigger{ 0.0f }
         , _prevLeftTrigger{ 0.0f }
@@ -103,10 +101,10 @@ namespace sw
     {
         _buttonMask       = SW_FALSE;
         _prevButtonMask   = 0;
-        _leftStickX       = 0.0f;
-        _leftStickY       = 0.0f;
-        _rightStickX      = 0.0f;
-        _rightStickY      = 0.0f;
+        _leftStick._x     = 0.0f;
+        _leftStick._y     = 0.0f;
+        _rightStick._x    = 0.0f;
+        _rightStick._y    = 0.0f;
         _leftTrigger      = 0.0f;
         _rightTrigger     = 0.0f;
         _prevLeftTrigger  = 0.0f;
@@ -154,13 +152,13 @@ namespace sw
         if ( controlIndex == 101 ) // Right Trigger
             return _rightTrigger;
         if ( controlIndex == 102 ) // Left Stick X
-            return _leftStickX;
+            return _leftStick._x;
         if ( controlIndex == 103 ) // Left Stick Y
-            return _leftStickY;
+            return _leftStick._y;
         if ( controlIndex == 104 ) // Right Stick X
-            return _rightStickX;
+            return _rightStick._x;
         if ( controlIndex == 105 ) // Right Stick Y
-            return _rightStickY;
+            return _rightStick._y;
         return isControlDown( controlIndex ) ? 1.0f : 0.0f;
     }
 
@@ -200,16 +198,16 @@ namespace sw
         switch ( axisIndex )
         {
             case 0:
-                _leftStickX = value;
+                _leftStick._x = value;
                 break;
             case 1:
-                _leftStickY = value;
+                _leftStick._y = value;
                 break;
             case 2:
-                _rightStickX = value;
+                _rightStick._x = value;
                 break;
             case 3:
-                _rightStickY = value;
+                _rightStick._y = value;
                 break;
             case 4:
                 _leftTrigger = value < _triggerDeadzone ? 0.0f : value;

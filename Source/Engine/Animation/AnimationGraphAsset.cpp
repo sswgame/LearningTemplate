@@ -53,10 +53,10 @@ namespace sw
                     continue;
 
                 AnimationGraphNode node{};
-                node._id   = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-                node._name = nodeJson.get( "name" ).asString();
-                node._x    = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-                node._y    = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+                node._id          = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
+                node._name        = nodeJson.get( "name" ).asString();
+                node._position._x = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
+                node._position._y = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
                 if ( node._id > 0 )
                     _listNode.push_back( std::move( node ) );
             }
@@ -96,8 +96,8 @@ namespace sw
             nodeJson.setObject();
             nodeJson.set( "id" ).setInt( node._id );
             nodeJson.set( "name" ).setString( node._name );
-            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._x ) );
-            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._y ) );
+            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
+            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
         }
 
         const JsonValue linksVal = root.set( "links" );

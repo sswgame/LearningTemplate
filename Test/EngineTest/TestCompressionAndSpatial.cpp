@@ -21,18 +21,34 @@
 
 SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
 {
-    sw::SpatialQuadTree tree( sw::AABB2D{ 0.0f, 0.0f, 1000.0f, 1000.0f } );
+    sw::SpatialQuadTree tree( sw::AABB2D{
+        sw::float2{   0.0f,    0.0f},
+        sw::float2{1000.0f, 1000.0f}
+    } );
     SW_EXPECT_EQUAL( size_t( 0 ), tree.getTotalElements() );
 
     // 요소 3개 삽입
-    SW_EXPECT_TRUE( tree.insert( 1, sw::AABB2D{ 10.0f, 10.0f, 50.0f, 50.0f } ) );
-    SW_EXPECT_TRUE( tree.insert( 2, sw::AABB2D{ 80.0f, 80.0f, 120.0f, 120.0f } ) );
-    SW_EXPECT_TRUE( tree.insert( 3, sw::AABB2D{ 800.0f, 800.0f, 900.0f, 900.0f } ) );
+    SW_EXPECT_TRUE( tree.insert( 1, sw::AABB2D{
+                                        sw::float2{10.0f, 10.0f},
+                                        sw::float2{50.0f, 50.0f}
+    } ) );
+    SW_EXPECT_TRUE( tree.insert( 2, sw::AABB2D{
+                                        sw::float2{ 80.0f,  80.0f},
+                                        sw::float2{120.0f, 120.0f}
+    } ) );
+    SW_EXPECT_TRUE( tree.insert( 3, sw::AABB2D{
+                                        sw::float2{800.0f, 800.0f},
+                                        sw::float2{900.0f, 900.0f}
+    } ) );
     SW_EXPECT_EQUAL( size_t( 3 ), tree.getTotalElements() );
 
     // 범위 쿼리 (좌하단 영역)
     sw::vector<sw::SpatialElement> listResults;
-    tree.queryRange( sw::AABB2D{ 0.0f, 0.0f, 200.0f, 200.0f }, listResults );
+    tree.queryRange( sw::AABB2D{
+                         sw::float2{  0.0f,   0.0f},
+                         sw::float2{200.0f, 200.0f}
+    },
+                     listResults );
     SW_EXPECT_EQUAL( size_t( 2 ), listResults.size() );
 
     // 점 쿼리
@@ -43,15 +59,25 @@ SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
 
     // 요소 업데이트 및 사용자 데이터 보존 검증
     uint32 customData = 42;
-    tree.insert( 4, sw::AABB2D{ 200.0f, 200.0f, 250.0f, 250.0f }, &customData );
-    SW_EXPECT_TRUE( tree.update( 4, sw::AABB2D{ 300.0f, 300.0f, 350.0f, 350.0f } ) );
+    tree.insert( 4, sw::AABB2D{
+                        sw::float2{200.0f, 200.0f},
+                        sw::float2{250.0f, 250.0f}
+    },
+                 &customData );
+    SW_EXPECT_TRUE( tree.update( 4, sw::AABB2D{
+                                        sw::float2{300.0f, 300.0f},
+                                        sw::float2{350.0f, 350.0f}
+    } ) );
     listResults.clear();
     tree.queryPoint( 320.0f, 320.0f, listResults );
     SW_EXPECT_EQUAL( size_t( 1 ), listResults.size() );
     SW_EXPECT_EQUAL( uint64( 4 ), listResults[0]._id );
     SW_EXPECT_EQUAL( reinterpret_cast<void*>( &customData ), listResults[0]._pUserData );
 
-    SW_EXPECT_TRUE( tree.update( 1, sw::AABB2D{ 750.0f, 750.0f, 850.0f, 850.0f } ) );
+    SW_EXPECT_TRUE( tree.update( 1, sw::AABB2D{
+                                        sw::float2{750.0f, 750.0f},
+                                        sw::float2{850.0f, 850.0f}
+    } ) );
     listResults.clear();
     tree.queryPoint( 25.0f, 25.0f, listResults );
     SW_EXPECT_EQUAL( size_t( 0 ), listResults.size() );
@@ -317,11 +343,18 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
     SW_EXPECT_EQUAL( uint64( 1 ), listOctreeResults[0]._id );
 
     // 2. QuadTree 분할 및 축소
-    sw::SpatialQuadTree quadTree( sw::AABB2D{ 0.0f, 0.0f, 1000.0f, 1000.0f }, 4, 3 );
+    sw::SpatialQuadTree quadTree( sw::AABB2D{
+                                      sw::float2{   0.0f,    0.0f},
+                                      sw::float2{1000.0f, 1000.0f}
+    },
+                                  4, 3 );
     for ( uint64 elementId = 1; elementId <= 8; ++elementId )
     {
         const float32 offset = static_cast<float32>( elementId * 20 );
-        quadTree.insert( elementId, sw::AABB2D{ offset, offset, offset + 10.0f, offset + 10.0f } );
+        quadTree.insert( elementId, sw::AABB2D{
+                                        sw::float2{        offset,         offset},
+                                        sw::float2{offset + 10.0f, offset + 10.0f}
+        } );
     }
     SW_EXPECT_EQUAL( size_t( 8 ), quadTree.getTotalElements() );
 
@@ -332,7 +365,11 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
     SW_EXPECT_EQUAL( size_t( 1 ), quadTree.getTotalElements() );
 
     sw::vector<sw::SpatialElement> listQuadResults;
-    quadTree.queryRange( sw::AABB2D{ 0.0f, 0.0f, 50.0f, 50.0f }, listQuadResults );
+    quadTree.queryRange( sw::AABB2D{
+                             sw::float2{ 0.0f,  0.0f},
+                             sw::float2{50.0f, 50.0f}
+    },
+                         listQuadResults );
     SW_EXPECT_EQUAL( size_t( 1 ), listQuadResults.size() );
     SW_EXPECT_EQUAL( uint64( 1 ), listQuadResults[0]._id );
 }

@@ -342,12 +342,9 @@ namespace sw
                 GamepadDevice* pPad = _pInput->getGamepad( binding._deviceIndex );
                 if ( pPad != nullptr && pPad->isConnected() )
                 {
-                    float32 stickX{ 0.0f };
-                    float32 stickY{ 0.0f };
-                    if ( binding._stick == GamepadStick::Left )
-                        pPad->getLeftStick( stickX, stickY );
-                    else
-                        pPad->getRightStick( stickX, stickY );
+                    const float2 stick  = ( binding._stick == GamepadStick::Left ) ? pPad->getLeftStick() : pPad->getRightStick();
+                    float32      stickX = stick._x;
+                    float32      stickY = stick._y;
 
                     const float32 inDeadzone  = binding._deadzone;
                     const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
@@ -411,9 +408,9 @@ namespace sw
             }
             case BindingKind::MouseDelta2D:
             {
-                float32 rdx{ 0.0f };
-                float32 rdy{ 0.0f };
-                _pInput->getRawMouseDelta( rdx, rdy );
+                const float2 rawDelta = _pInput->getRawMouseDelta();
+                float32      rdx      = rawDelta._x;
+                float32      rdy      = rawDelta._y;
                 if ( rdx == 0.0f && rdy == 0.0f )
                 {
                     int32 dx{ 0 };

@@ -92,8 +92,7 @@ namespace sw::editor
         float32                _arrPlotTriggerR[kPlotSampleCount];
         float32                _testVibLeft;
         float32                _testVibRight;
-        float32                _simStickX;
-        float32                _simStickY;
+        float2                 _simStick;
         uint32                 _plotOffset;
         uint32                 _capturingBindIndex;
         int32                  _newActionValueType;

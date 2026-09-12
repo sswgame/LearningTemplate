@@ -116,9 +116,9 @@ namespace sw
         }
 
         tryPlayerAttack( input );
-        updateActors( deltaTime, input._playerX, input._playerY );
+        updateActors( deltaTime, input._playerPos._x, input._playerPos._y );
         updateProjectiles( deltaTime );
-        resolvePlayerHits( input._playerX, input._playerY, result );
+        resolvePlayerHits( input._playerPos._x, input._playerPos._y, result );
         refreshCleared( result );
         return result;
     }
@@ -139,43 +139,43 @@ namespace sw
             const float4 color = ( actor._kind == ActorKind::Boss )
                                    ? float4( 1.0f, 0.25f, 0.2f, 1.0f )
                                    : float4( 1.0f, 0.55f, 0.2f, 1.0f );
-            pDbg->drawSphere( float3( actor._x, 0.5f, actor._y ), actor._radius, color );
+            pDbg->drawSphere( float3( actor._position._x, 0.5f, actor._position._y ), actor._radius, color );
         }
         for ( const Projectile& projectile : _listProjectile )
         {
             if ( projectile._bAlive == SW_FALSE )
                 continue;
-            pDbg->drawSphere( float3( projectile._x, 0.4f, projectile._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
+            pDbg->drawSphere( float3( projectile._position._x, 0.4f, projectile._position._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
         }
     }
 
     AABB ActionRoom::Actor::bounds() const
     {
         return AABB{
-            float3{_x - _radius, 0.0f, _y - _radius},
-            float3{_x + _radius, 1.0f, _y + _radius}
+            float3{_position._x - _radius, 0.0f, _position._y - _radius},
+            float3{_position._x + _radius, 1.0f, _position._y + _radius}
         };
     }
 
     AABB ActionRoom::Projectile::bounds() const
     {
         return AABB{
-            float3{_x - _radius, 0.0f, _y - _radius},
-            float3{_x + _radius, 1.0f, _y + _radius}
+            float3{_position._x - _radius, 0.0f, _position._y - _radius},
+            float3{_position._x + _radius, 1.0f, _position._y + _radius}
         };
     }
 
     void ActionRoom::spawnGrunt( float32 x, float32 y )
     {
         Actor a{};
-        a._kind   = ActorKind::Grunt;
-        a._x      = x;
-        a._y      = y;
-        a._hpMax  = 30.0f;
-        a._hp     = a._hpMax;
-        a._radius = 0.32f;
-        a._speed  = 1.8f;
-        a._bAlive = SW_TRUE;
+        a._kind        = ActorKind::Grunt;
+        a._position._x = x;
+        a._position._y = y;
+        a._hpMax       = 30.0f;
+        a._hp          = a._hpMax;
+        a._radius      = 0.32f;
+        a._speed       = 1.8f;
+        a._bAlive      = SW_TRUE;
         _listActor.push_back( a );
     }
 
@@ -183,8 +183,8 @@ namespace sw
     {
         Actor a{};
         a._kind        = ActorKind::Boss;
-        a._x           = x;
-        a._y           = y;
+        a._position._x = x;
+        a._position._y = y;
         a._hpMax       = 220.0f;
         a._hp          = a._hpMax;
         a._radius      = 0.7f;
@@ -203,7 +203,7 @@ namespace sw
             return;
 
         _attackCooldown = 0.28f;
-        const AABB atk  = playerAttackBox( input._playerX, input._playerY, input._facing );
+        const AABB atk  = playerAttackBox( input._playerPos._x, input._playerPos._y, input._facing );
         for ( Actor& actor : _listActor )
         {
             if ( actor._bAlive == SW_FALSE )
@@ -227,9 +227,9 @@ namespace sw
             if ( actor._bAlive == SW_FALSE )
                 continue;
 
-            const float2 toPlayer = float2{ playerX - actor._x, playerY - actor._y }.normalize();
-            actor._x += toPlayer._x * actor._speed * deltaTime;
-            actor._y += toPlayer._y * actor._speed * deltaTime;
+            const float2 toPlayer = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
+            actor._position._x += toPlayer._x * actor._speed * deltaTime;
+            actor._position._y += toPlayer._y * actor._speed * deltaTime;
 
             if ( actor._kind != ActorKind::Boss )
                 continue;
@@ -239,22 +239,22 @@ namespace sw
                 continue;
             actor._attackTimer = 1.6f;
 
-            const float2 projDir = float2{ playerX - actor._x, playerY - actor._y }.normalize();
+            const float2 projDir = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
 
             Projectile projectile{};
-            projectile._x      = actor._x;
-            projectile._y      = actor._y;
-            projectile._vx     = projDir._x * 4.5f;
-            projectile._vy     = projDir._y * 4.5f;
-            projectile._life   = 2.5f;
-            projectile._radius = 0.22f;
-            projectile._bAlive = SW_TRUE;
+            projectile._position._x = actor._position._x;
+            projectile._position._y = actor._position._y;
+            projectile._velocity._x = projDir._x * 4.5f;
+            projectile._velocity._y = projDir._y * 4.5f;
+            projectile._life        = 2.5f;
+            projectile._radius      = 0.22f;
+            projectile._bAlive      = SW_TRUE;
             _listProjectile.push_back( projectile );
 
-            Projectile projectile2 = projectile;
-            projectile2._vx        = -projDir._y * 3.2f;
-            projectile2._vy        = projDir._x * 3.2f;
-            projectile2._life      = 1.8f;
+            Projectile projectile2   = projectile;
+            projectile2._velocity._x = -projDir._y * 3.2f;
+            projectile2._velocity._y = projDir._x * 3.2f;
+            projectile2._life        = 1.8f;
             _listProjectile.push_back( projectile2 );
         }
     }
@@ -265,8 +265,8 @@ namespace sw
         {
             if ( projectile._bAlive == SW_FALSE )
                 continue;
-            projectile._x += projectile._vx * deltaTime;
-            projectile._y += projectile._vy * deltaTime;
+            projectile._position._x += projectile._velocity._x * deltaTime;
+            projectile._position._y += projectile._velocity._y * deltaTime;
             projectile._life -= deltaTime;
             if ( projectile._life <= 0.0f )
                 projectile._bAlive = SW_FALSE;

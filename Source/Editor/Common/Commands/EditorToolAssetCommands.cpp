@@ -274,8 +274,8 @@ namespace sw::editor
             const JsonValue keyJson = keysVal.pushBack();
             keyJson.setObject();
             keyJson.set( "time" ).setFloat( static_cast<float64>( key._time ) );
-            keyJson.set( "x" ).setFloat( static_cast<float64>( key._x ) );
-            keyJson.set( "y" ).setFloat( static_cast<float64>( key._y ) );
+            keyJson.set( "x" ).setFloat( static_cast<float64>( key._position._x ) );
+            keyJson.set( "y" ).setFloat( static_cast<float64>( key._position._y ) );
             keyJson.set( "angleDeg" ).setFloat( static_cast<float64>( key._angleDeg ) );
         }
 
@@ -323,10 +323,10 @@ namespace sw::editor
                 if ( keyJson.isObject() == false )
                     continue;
                 EditorSpriteClipKey key{};
-                key._time     = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
-                key._x        = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
-                key._y        = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
-                key._angleDeg = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
+                key._time        = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
+                key._position._x = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
+                key._position._y = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
+                key._angleDeg    = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
                 outData._listKey.push_back( key );
             }
         }

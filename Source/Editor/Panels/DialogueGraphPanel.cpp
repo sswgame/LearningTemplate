@@ -320,7 +320,7 @@ namespace sw::editor
             ed::EndNode();
 
             if ( _nodeGraph.needsContentFit() )
-                ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
+                ed::SetNodePosition( nodeId, ImVec2( node._position._x, node._position._y ) );
         }
     }
 
@@ -493,43 +493,43 @@ namespace sw::editor
         _listLink.clear();
 
         DialogueNode startNode{};
-        startNode._id   = 1;
-        startNode._type = DialogueAssetNodeType::Start;
-        startNode._x    = 50.0f;
-        startNode._y    = 100.0f;
+        startNode._id          = 1;
+        startNode._type        = DialogueAssetNodeType::Start;
+        startNode._position._x = 50.0f;
+        startNode._position._y = 100.0f;
         _listNode.push_back( startNode );
 
         DialogueNode diagNode{};
-        diagNode._id      = 2;
-        diagNode._type    = DialogueAssetNodeType::Dialogue;
-        diagNode._speaker = "Elder";
-        diagNode._text    = "Greetings adventurer! The ancient ruins ahead are full of peril.";
-        diagNode._x       = 250.0f;
-        diagNode._y       = 100.0f;
+        diagNode._id          = 2;
+        diagNode._type        = DialogueAssetNodeType::Dialogue;
+        diagNode._speaker     = "Elder";
+        diagNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
+        diagNode._position._x = 250.0f;
+        diagNode._position._y = 100.0f;
         _listNode.push_back( diagNode );
 
         DialogueNode choiceNode{};
-        choiceNode._id         = 3;
-        choiceNode._type       = DialogueAssetNodeType::Choice;
-        choiceNode._text       = "How do you respond?";
-        choiceNode._listChoice = { "I am ready for any challenge!", "Could you give me some supplies first?" };
-        choiceNode._x          = 650.0f;
-        choiceNode._y          = 100.0f;
+        choiceNode._id          = 3;
+        choiceNode._type        = DialogueAssetNodeType::Choice;
+        choiceNode._text        = "How do you respond?";
+        choiceNode._listChoice  = { "I am ready for any challenge!", "Could you give me some supplies first?" };
+        choiceNode._position._x = 650.0f;
+        choiceNode._position._y = 100.0f;
         _listNode.push_back( choiceNode );
 
         DialogueNode actionNode{};
         actionNode._id            = 4;
         actionNode._type          = DialogueAssetNodeType::Action;
         actionNode._actionCommand = "give_item:healing_potion:3";
-        actionNode._x             = 1050.0f;
-        actionNode._y             = 220.0f;
+        actionNode._position._x   = 1050.0f;
+        actionNode._position._y   = 220.0f;
         _listNode.push_back( actionNode );
 
         DialogueNode endNode{};
-        endNode._id   = 5;
-        endNode._type = DialogueAssetNodeType::End;
-        endNode._x    = 1350.0f;
-        endNode._y    = 120.0f;
+        endNode._id          = 5;
+        endNode._type        = DialogueAssetNodeType::End;
+        endNode._position._x = 1350.0f;
+        endNode._position._y = 120.0f;
         _listNode.push_back( endNode );
 
         // 기본 링크 연결
@@ -604,11 +604,11 @@ namespace sw::editor
         for ( DialogueNode& node : _listNode )
         {
             const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
-            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._x ) == false ) && ( MathUtil::nearEqual( pos.y, node._y ) == false );
+            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._position._x ) == false ) && ( MathUtil::nearEqual( pos.y, node._position._y ) == false );
             if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                 bMoved = true;
-            node._x = pos.x;
-            node._y = pos.y;
+            node._position._x = pos.x;
+            node._position._y = pos.y;
         }
         if ( bMoved )
             notifyDocumentEdited( "Move Dialogue Nodes", "dialogue-graph-layout" );
@@ -728,12 +728,12 @@ namespace sw::editor
     void DialogueGraphPanel::addNode( DialogueAssetNodeType type, const utf8* pSpeaker, const utf8* pText )
     {
         DialogueNode node{};
-        node._id      = nextNodeId();
-        node._type    = type;
-        node._speaker = pSpeaker;
-        node._text    = pText;
-        node._x       = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
-        node._y       = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
+        node._id          = nextNodeId();
+        node._type        = type;
+        node._speaker     = pSpeaker;
+        node._text        = pText;
+        node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
+        node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
 
         if ( type == DialogueAssetNodeType::Choice )
             node._listChoice = { "Option 1", "Option 2" };

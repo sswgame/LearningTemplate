@@ -38,8 +38,7 @@ namespace sw
     /** @brief 한 프레임 플레이어 입력 (위치·방향·공격/대시) */
     struct ActionRoomFrameInput
     {
-        float32                _playerX{ 0.0f };
-        float32                _playerY{ 0.0f };
+        float2                 _playerPos{ 0.0f, 0.0f };
         FacingDir              _facing = FacingDir::Right;
         uint8                  _bAttackPressed : 1;
         uint8                  _bDashPressed   : 1;
@@ -120,8 +119,7 @@ namespace sw
         struct Actor
         {
             ActorKind              _kind;
-            float32                _x;
-            float32                _y;
+            float2                 _position;
             float32                _hp;
             float32                _hpMax;
             float32                _radius;
@@ -133,8 +131,7 @@ namespace sw
             /** @brief 살아 있는 상태로 둡니다. */
             Actor()
                 : _kind{ ActorKind::Grunt }
-                , _x{ 0.0f }
-                , _y{ 0.0f }
+                , _position{}
                 , _hp{ 1.0f }
                 , _hpMax{ 1.0f }
                 , _radius{ 0.35f }
@@ -152,10 +149,8 @@ namespace sw
         /** @brief 적 투사체 */
         struct Projectile
         {
-            float32                _x;
-            float32                _y;
-            float32                _vx;
-            float32                _vy;
+            float2                 _position;
+            float2                 _velocity;
             float32                _life; ///< 남은 수명(초)
             float32                _radius;
             uint8                  _bAlive   : 1;
@@ -163,10 +158,8 @@ namespace sw
 
             /** @brief 살아 있는 상태로 둡니다. */
             Projectile()
-                : _x{ 0.0f }
-                , _y{ 0.0f }
-                , _vx{ 0.0f }
-                , _vy{ 0.0f }
+                : _position{}
+                , _velocity{}
                 , _life{ 0.0f }
                 , _radius{ 0.2f }
                 , _bAlive{ SW_TRUE }

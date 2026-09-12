@@ -70,10 +70,14 @@ namespace sw::editor
         float32        lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f, lt = 0.0f, rt = 0.0f;
         if ( pGamepad != nullptr && pGamepad->isConnected() )
         {
-            pGamepad->getLeftStick( lx, ly );
-            pGamepad->getRightStick( rx, ry );
-            lt = pGamepad->getLeftTrigger();
-            rt = pGamepad->getRightTrigger();
+            const float2 leftStick  = pGamepad->getLeftStick();
+            const float2 rightStick = pGamepad->getRightStick();
+            lx                      = leftStick._x;
+            ly                      = leftStick._y;
+            rx                      = rightStick._x;
+            ry                      = rightStick._y;
+            lt                      = pGamepad->getLeftTrigger();
+            rt                      = pGamepad->getRightTrigger();
         }
 
         // 3) 좌측/우측 스틱 2D 캔버스

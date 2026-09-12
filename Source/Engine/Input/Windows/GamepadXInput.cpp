@@ -116,14 +116,14 @@ namespace sw
         GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
         if ( pfnGetState == nullptr )
         {
-            _bConnected   = SW_FALSE;
-            _buttonMask   = SW_FALSE;
-            _leftStickX   = 0.0f;
-            _leftStickY   = 0.0f;
-            _rightStickX  = 0.0f;
-            _rightStickY  = 0.0f;
-            _leftTrigger  = 0.0f;
-            _rightTrigger = 0.0f;
+            _bConnected    = SW_FALSE;
+            _buttonMask    = SW_FALSE;
+            _leftStick._x  = 0.0f;
+            _leftStick._y  = 0.0f;
+            _rightStick._x = 0.0f;
+            _rightStick._y = 0.0f;
+            _leftTrigger   = 0.0f;
+            _rightTrigger  = 0.0f;
             if ( bWasConnected && _onConnectionChanged.isBound() )
                 _onConnectionChanged( userIndex, false );
             return;
@@ -133,14 +133,14 @@ namespace sw
         const DWORD  result = pfnGetState( userIndex, &state );
         if ( result != ERROR_SUCCESS )
         {
-            _bConnected   = SW_FALSE;
-            _buttonMask   = SW_FALSE;
-            _leftStickX   = 0.0f;
-            _leftStickY   = 0.0f;
-            _rightStickX  = 0.0f;
-            _rightStickY  = 0.0f;
-            _leftTrigger  = 0.0f;
-            _rightTrigger = 0.0f;
+            _bConnected    = SW_FALSE;
+            _buttonMask    = SW_FALSE;
+            _leftStick._x  = 0.0f;
+            _leftStick._y  = 0.0f;
+            _rightStick._x = 0.0f;
+            _rightStick._y = 0.0f;
+            _leftTrigger   = 0.0f;
+            _rightTrigger  = 0.0f;
             if ( bWasConnected && _onConnectionChanged.isBound() )
                 _onConnectionChanged( userIndex, false );
             return;
@@ -187,10 +187,10 @@ namespace sw
         const float32 leftY  = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbLY ) / 32767.0f, -1.0f, 1.0f );
         const float32 rightX = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbRX ) / 32767.0f, -1.0f, 1.0f );
         const float32 rightY = MathUtil::clamp( static_cast<float32>( state.Gamepad.sThumbRY ) / 32767.0f, -1.0f, 1.0f );
-        _leftStickX          = leftX;
-        _leftStickY          = leftY;
-        _rightStickX         = rightX;
-        _rightStickY         = rightY;
+        _leftStick._x        = leftX;
+        _leftStick._y        = leftY;
+        _rightStick._x       = rightX;
+        _rightStick._y       = rightY;
 
         _leftTrigger  = static_cast<float32>( state.Gamepad.bLeftTrigger ) / 255.0f;
         _rightTrigger = static_cast<float32>( state.Gamepad.bRightTrigger ) / 255.0f;
@@ -280,10 +280,10 @@ namespace sw
         _prevButtonMask = _buttonMask;
         _bConnected     = SW_FALSE;
         _buttonMask     = SW_FALSE;
-        _leftStickX     = 0.0f;
-        _leftStickY     = 0.0f;
-        _rightStickX    = 0.0f;
-        _rightStickY    = 0.0f;
+        _leftStick._x   = 0.0f;
+        _leftStick._y   = 0.0f;
+        _rightStick._x  = 0.0f;
+        _rightStick._y  = 0.0f;
         _leftTrigger    = 0.0f;
         _rightTrigger   = 0.0f;
     }

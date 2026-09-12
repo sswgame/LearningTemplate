@@ -172,7 +172,7 @@ namespace sw::editor
             ed::EndNode();
 
             if ( _nodeGraph.needsContentFit() )
-                ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
+                ed::SetNodePosition( nodeId, ImVec2( node._position._x, node._position._y ) );
         }
 
         for ( const GraphLink& link : _listLink )
@@ -255,8 +255,12 @@ namespace sw::editor
     {
         if ( _listNode.empty() == false )
             return;
-        _listNode.push_back( GraphNode{ "Idle", 1, 40.0f, 40.0f } );
-        _listNode.push_back( GraphNode{ "Walk", 2, 280.0f, 80.0f } );
+        _listNode.push_back( GraphNode{
+            "Idle", 1, float2{ 40.0f, 40.0f }
+        } );
+        _listNode.push_back( GraphNode{
+            "Walk", 2, float2{ 280.0f, 80.0f }
+        } );
         _listLink.push_back( GraphLink{ 100, 1, 2 } );
     }
 
@@ -284,9 +288,9 @@ namespace sw::editor
         {
             for ( GraphNode& node : data._listNode )
             {
-                const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
-                node._x          = pos.x;
-                node._y          = pos.y;
+                const ImVec2 pos  = ed::GetNodePosition( toNodeId( node._id ) );
+                node._position._x = pos.x;
+                node._position._y = pos.y;
             }
             _nodeGraph.unbind();
             _listNode = data._listNode;
@@ -347,11 +351,11 @@ namespace sw::editor
         for ( GraphNode& node : _listNode )
         {
             const ImVec2 pos      = ed::GetNodePosition( toNodeId( node._id ) );
-            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._x ) == false ) || ( MathUtil::nearEqual( pos.y, node._y ) == false );
+            const bool   bChanged = ( MathUtil::nearEqual( pos.x, node._position._x ) == false ) || ( MathUtil::nearEqual( pos.y, node._position._y ) == false );
             if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                 bMoved = true;
-            node._x = pos.x;
-            node._y = pos.y;
+            node._position._x = pos.x;
+            node._position._y = pos.y;
         }
         if ( bMoved )
             notifyDocumentEdited( "Move Animation Graph Nodes", "anim-graph-layout" );
@@ -385,10 +389,10 @@ namespace sw::editor
     void AnimationGraphPanel::addNamedNode( const utf8* pName )
     {
         GraphNode n{};
-        n._id   = nextNodeId();
-        n._name = ( pName != nullptr ) ? pName : "Node";
-        n._x    = 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
-        n._y    = 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
+        n._id          = nextNodeId();
+        n._name        = ( pName != nullptr ) ? pName : "Node";
+        n._position._x = 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
+        n._position._y = 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
         _listNode.push_back( std::move( n ) );
     }
 } // namespace sw::editor

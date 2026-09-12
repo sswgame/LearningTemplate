@@ -143,10 +143,10 @@ namespace sw::editor
             ImGui::DragFloat( "time", &k._time, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            ImGui::DragFloat( "x", &k._x, 0.1f );
+            ImGui::DragFloat( "x", &k._position._x, 0.1f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            ImGui::DragFloat( "y", &k._y, 0.1f );
+            ImGui::DragFloat( "y", &k._position._y, 0.1f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
             ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
