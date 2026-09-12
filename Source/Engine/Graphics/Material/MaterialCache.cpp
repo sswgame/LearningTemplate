@@ -21,7 +21,6 @@ namespace sw
             shared_ptr<Material> _material; ///< shared 인 이유는 Material.h 머리 주석 — 렌더 패킷이 소유를 빌린다
             string               _path;
             uint32               _refCount{ 0 };
-            bool                 _bGpuInit{ false };
         };
 
         unordered_map<string, Entry> _mapEntry;
@@ -63,7 +62,9 @@ namespace sw
         }
         ++entry._refCount;
 
-        if ( pDevice != nullptr && entry._bGpuInit == false )
+        // "올라갔나" 는 머티리얼에게 묻는다. 캐시가 따로 세면 디바이스가 죽었을 때 그 표식이 거짓말이 된다 —
+        // 실제로 그 거짓말을 지우려고 바깥에서 일괄 해제를 불러 주어야 했다.
+        if ( pDevice != nullptr && entry._material->isRhiValid() == false )
         {
             if ( entry._material->initialize( pDevice, key ) == false )
             {
@@ -73,7 +74,6 @@ namespace sw
                     _impl->_mapEntry.erase( key );
                 return nullptr;
             }
-            entry._bGpuInit = true;
         }
 
         return entry._material.get();
@@ -107,63 +107,19 @@ namespace sw
         auto                                it{ _impl->_mapEntry.find( key ) };
         if ( it != _impl->_mapEntry.end() )
         {
-            if ( it->second._bGpuInit && _impl->_pDevice != nullptr )
+            if ( it->second._material->isRhiValid() && _impl->_pDevice != nullptr )
             {
                 // 아직 이전 프레임(들)이 GPU에서 이 Material의 bindless 상수버퍼 인덱스를 참조하고
                 // 있을 수 있다 — shutdown()의 unregisterBindlessResource는 인덱스를 즉시 프리리스트로
                 // 반환해서, waitIdle 없이 바로 initialize()가 같은 인덱스를 재할당하면 아직 그 인덱스를
                 // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
                 _impl->_pDevice->waitIdle();
-                it->second._material->shutdown( _impl->_pDevice );
+                it->second._material->releaseRhi( _impl->_pDevice );
             }
-            it->second._bGpuInit = false;
 
-            if ( _impl->_pDevice != nullptr )
-            {
-                if ( it->second._material->initialize( _impl->_pDevice, key ) == false )
-                    SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
-                else
-                    it->second._bGpuInit = true;
-            }
+            if ( _impl->_pDevice != nullptr && it->second._material->initialize( _impl->_pDevice, key ) == false )
+                SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
         }
-    }
-
-    void MaterialCache::shutdownAllGpu( IRHIDevice* pDevice )
-    {
-        if ( _impl == nullptr )
-            return;
-
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        for ( auto& [path, entry] : _impl->_mapEntry )
-        {
-            (void)path;
-            if ( entry._material != nullptr && entry._bGpuInit )
-            {
-                entry._material->shutdown( pDevice );
-                entry._bGpuInit = false;
-            }
-        }
-    }
-
-    bool MaterialCache::reinitializeAll( IRHIDevice* pDevice )
-    {
-        if ( pDevice == nullptr || _impl == nullptr )
-            return false;
-        bool                                bAllReinitialized{ true };
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        for ( auto& [path, entry] : _impl->_mapEntry )
-        {
-            if ( entry._material == nullptr || path.empty() )
-                continue;
-            if ( entry._material->initialize( pDevice, path ) == false )
-            {
-                SW_LOG_ERROR( "reinitialize failed for %#", path.c_str() );
-                bAllReinitialized = false;
-                continue;
-            }
-            entry._bGpuInit = true;
-        }
-        return bAllReinitialized;
     }
 
     void MaterialCache::clear()

@@ -73,7 +73,7 @@ namespace sw
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
         if ( _handle != 0 )
-            shutdown( pDevice );
+            releaseRhi( pDevice );
 
         DdsImageData image;
         if ( DdsLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
@@ -122,6 +122,8 @@ namespace sw
         }
 
         _srv = pResource->registerBindlessTexture( _handle );
+
+        _pDevice = pDevice;
         if ( _srv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath.data() );
@@ -140,8 +142,32 @@ namespace sw
         return true;
     }
 
-    void Texture2D::shutdown( IRHIDevice* pDevice )
+    bool Texture2D::initRhi( IRHIDevice* pDevice )
     {
+        // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다 — 두 번 올리면 그대로 새는 것이다.
+        if ( isRhiValid() )
+            return true;
+        if ( pDevice == nullptr || _path.empty() )
+            return true;
+        return loadFromResource( pDevice, _path );
+    }
+
+    void Texture2D::forgetRhi( IRHIDevice* pDevice )
+    {
+        if ( _pDevice != pDevice )
+            return;
+        // 디바이스가 이미 없다 — 텍스처는 그와 함께 갔다.
+        _handle  = 0;
+        _srv     = kInvalidDescriptorIndex;
+        _pDevice = nullptr;
+    }
+
+    void Texture2D::releaseRhi( IRHIDevice* pDevice )
+    {
+        // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
+        if ( pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice )
+            return;
+
         if ( pDevice != nullptr )
         {
             IRHIResource* pResource = pDevice->getResource();
@@ -152,6 +178,7 @@ namespace sw
         }
         _handle   = 0;
         _srv      = kInvalidDescriptorIndex;
+        _pDevice  = nullptr;
         _width    = 0;
         _height   = 0;
         _mipCount = 0;

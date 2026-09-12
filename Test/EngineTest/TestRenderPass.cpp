@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
@@ -679,7 +680,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 
     // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 해제.
     if ( cube != nullptr )
-        cube->releaseGpu();
+        cube->releaseRhi( device.get() );
 
     renderer.shutdown();
     device->shutdown();
@@ -749,7 +750,7 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
     device->waitIdle();
 
     if ( cube != nullptr )
-        cube->releaseGpu();
+        cube->releaseRhi( device.get() );
     renderer.shutdown();
     device->shutdown();
     device.reset();
@@ -818,7 +819,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
 
     device->waitIdle();
     if ( cube != nullptr )
-        cube->releaseGpu();
+        cube->releaseRhi( device.get() );
 
     renderer.shutdown();
     device->shutdown();
@@ -831,7 +832,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
  * @brief [RenderPassGpuTest] 패킷에 실린 머티리얼·인스턴스는 GT 가 소유를 놓아도 RT 가 그 패킷을 다 쓸 때까지 산다.
  * @details 렌더 스레드는 씬을 못 보고 스냅샷만 받는다. 스냅샷이 생포인터만 들고 있으면 GT 가 오브젝트를
  *          지우거나 인스턴스를 바꾼 직후 ≤ 패킷 링 깊이 프레임 동안 RT 가 해제된 메모리를 읽는다
- *          (`applyInstanceCbsVal` 의 applyToGpu, `uploadMaterialGroups` 의 getBuffer). 여기서는 패킷을
+ *          (`applyInstanceCbsVal` 의 updateRhi, `uploadMaterialGroups` 의 getBuffer). 여기서는 패킷을
  *          내보낸 **뒤에** GT 쪽 소유를 전부 놓고 그 패킷을 실행한다 — ASAN 빌드에서 use-after-free 로
  *          잡히던 순서다. 스냅샷이 소유를 함께 실어야만 통과한다.
  */
@@ -906,7 +907,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
 
     device->waitIdle();
     if ( cube != nullptr )
-        cube->releaseGpu();
+        cube->releaseRhi( device.get() );
     renderer.shutdown();
     device->shutdown();
     device.reset();
@@ -1132,7 +1133,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
     SW_EXPECT_TRUE( renderer.getGpuScene().getInstances().empty() == false );
 
     if ( cube != nullptr )
-        cube->releaseGpu();
+        cube->releaseRhi( device.get() );
     renderer.shutdown();
     taskManager.shutdown();
     device->shutdown();
@@ -1314,9 +1315,6 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
         SW_EXPECT_TRUE_MSG( group._listEntry[batch._materialIndex]._material == batch._material,
                             "배치의 materialIndex 가 다른 머티리얼의 원소를 가리킨다" );
     }
-
-    meshA->releaseGpu();
-    meshB->releaseGpu();
 }
 
 /**
@@ -1409,8 +1407,6 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
         }
     }
     SW_EXPECT_TRUE_MSG( bFoundSwitched, "스위치를 켠 머티리얼의 배치를 찾지 못했다" );
-
-    mesh->releaseGpu();
 }
 
 /**
@@ -1621,7 +1617,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 
         renderer.shutdown();
         if ( mesh != nullptr )
-            mesh->releaseGpu();
+            mesh->releaseRhi( device.get() );
     }
 
     // 형제 여덟(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다. 예전엔 여기만 단언이라
@@ -1740,7 +1736,7 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
         if ( sharedMesh != nullptr )
-            sharedMesh->releaseGpu();
+            sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -1911,7 +1907,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
         if ( sharedMesh != nullptr )
-            sharedMesh->releaseGpu();
+            sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -2048,7 +2044,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
         if ( sharedMesh != nullptr )
-            sharedMesh->releaseGpu();
+            sharedMesh->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -2215,9 +2211,9 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
         if ( meshRed != nullptr )
-            meshRed->releaseGpu();
+            meshRed->releaseRhi( device.get() );
         if ( meshBlue != nullptr )
-            meshBlue->releaseGpu();
+            meshBlue->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -2341,9 +2337,9 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         }
 
         if ( meshLeft != nullptr )
-            meshLeft->releaseGpu();
+            meshLeft->releaseRhi( device.get() );
         if ( meshRight != nullptr )
-            meshRight->releaseGpu();
+            meshRight->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -2460,7 +2456,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
         for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
         {
             if ( mesh != nullptr )
-                mesh->releaseGpu();
+                mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
         device->shutdown();
@@ -2634,7 +2630,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
         {
             if ( mesh != nullptr )
-                mesh->releaseGpu();
+                mesh->releaseRhi( device.get() );
         }
         renderer.shutdown();
         device->shutdown();
@@ -2984,7 +2980,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         }
 
         if ( mesh != nullptr )
-            mesh->releaseGpu();
+            mesh->releaseRhi( device.get() );
         renderer.shutdown();
         device->shutdown();
         device.reset();
@@ -3064,9 +3060,6 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
 
     // 정본은 GT 에 남아 있어야 한다 — 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
     SW_EXPECT_NOT_NULL( gtScene.findShaderPermutation( permutationIndex ) );
-
-    if ( mesh != nullptr )
-        mesh->releaseGpu();
 }
 
 namespace
@@ -3166,8 +3159,8 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 
     // ---- 앱의 교체 경로와 같은 순서로 내린다 ----
     renderer.shutdown();
-    material->shutdown( device.get() );
-    cube->releaseGpu();
+    material->releaseRhi( device.get() );
+    cube->releaseRhi( device.get() );
     gtGpuScene.clear();
     device->waitIdle();
     device->shutdown();
@@ -3186,7 +3179,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 
     // 대조군: 새 렌더러 객체라면 그려지는가.
     renderer.shutdown();
-    cube->releaseGpu();
+    cube->releaseRhi( device.get() );
     gtGpuScene.clear();
     sw::FrameRenderer freshRenderer;
     SW_ASSERT_TRUE( freshRenderer.initialize( device.get() ) );
@@ -3194,8 +3187,8 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     SW_EXPECT_TRUE_MSG( drawnFresh > 0, ( "재생성 뒤 새 렌더러도 빈 화면이다 (drawn " + sw::to_string( drawnFresh ) + ")" ).c_str() );
 
     freshRenderer.shutdown();
-    material->shutdown( device.get() );
-    cube->releaseGpu();
+    material->releaseRhi( device.get() );
+    cube->releaseRhi( device.get() );
     device->waitIdle();
     device->shutdown();
     device.reset();
@@ -3205,7 +3198,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 
 /**
  * @brief 업로드 큐가 그리기 **전에** 정점 버퍼를 만들어 두는지 — 그리고 두 번 만들지 않는지.
- * @details 렌더 스레드는 그리기만 해야 한다. 큐가 먼저 만들어 두면 RT 의 `Mesh::upload` 는 핸들을 읽는 일이 된다.
+ * @details 렌더 스레드는 그리기만 해야 한다. 큐가 먼저 만들어 두면 RT 의 `Mesh::initRhi` 는 핸들을 읽는 일이 된다.
  *          여기서는 (1) flush 뒤에 상주하는지, (2) 같은 메시를 여러 배치가 써도 한 번만 만드는지(중복 요청이
  *          워커 둘을 돌려 버퍼 하나를 새게 하면 안 된다), (3) 이미 상주하면 요청 자체가 쌓이지 않는지를 본다.
  */
@@ -3235,7 +3228,7 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
     {
         arrMesh[meshIndex] = sw::Mesh::createUnitCube();
         SW_ASSERT_NOT_NULL( arrMesh[meshIndex].get() );
-        SW_EXPECT_FALSE( arrMesh[meshIndex]->isUploaded() );
+        SW_EXPECT_FALSE( arrMesh[meshIndex]->isRhiValid() );
         queue.requestMesh( arrMesh[meshIndex] );
         // 같은 메시를 한 번 더 요청해도 대기열은 늘지 않는다 — 워커 둘이 같은 메시를 만들면 버퍼 하나가 샌다.
         queue.requestMesh( arrMesh[meshIndex] );
@@ -3247,7 +3240,7 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
     {
-        SW_EXPECT_TRUE_MSG( arrMesh[meshIndex]->isUploaded(),
+        SW_EXPECT_TRUE_MSG( arrMesh[meshIndex]->isRhiValid(),
                             ( "flush 뒤에도 상주하지 않는다 (index " + sw::to_string( meshIndex ) + ")" ).c_str() );
         SW_EXPECT_TRUE( arrMesh[meshIndex]->getVertexBuffer() != 0 );
     }
@@ -3259,7 +3252,7 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
     SW_EXPECT_EQUAL( 0u, queue.flush() );
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
-        arrMesh[meshIndex]->releaseGpu();
+        arrMesh[meshIndex]->releaseRhi( device.get() );
     device->waitIdle();
     device->shutdown();
     device.reset();
@@ -3275,6 +3268,67 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
  *          "상주" 라고 답했다. 그러면 `upload()` 가 새 디바이스에 옛 핸들을 그대로 돌려주고, `releaseGpu()` 는 죽은
  *          디바이스에 destroy 를 부른다(세대를 도입한 바로 그 UAF).
  */
+/**
+ * @brief 새 디바이스가 서면 등록부가 **스스로** 리소스를 되살린다 — 아무도 각 리소스를 손으로 다시 올리지 않는다.
+ * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 예전에는
+ *          `MaterialCache::reinitializeAll` 처럼 되살릴 목록을 바깥이 들고 있었고, 목록에서 빠진 것
+ *          (텍스처가 그랬다)은 교체 뒤 조용히 비어 있었다. 아래 initAllFor 한 줄을 지우면 이 테스트가 빨개진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+    sw::RHIBackend                 backend    = sw::RHIBackend::DirectX12;
+    bool                           bOk{ false };
+    for ( sw::RHIBackend candidate : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
+        {
+            backend = candidate;
+            bOk     = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for render resource registry test" );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRhiValid() );
+
+    device->waitIdle();
+    device->shutdown();
+    device.reset();
+    SW_EXPECT_TRUE( cube->isRhiValid() == false );
+
+    device = sw::RHI::createDevice( backend );
+    SW_ASSERT_NOT_NULL( device.get() );
+    device->setInitWindow( window.get() );
+    SW_ASSERT_TRUE( device->initialize() );
+
+    // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
+    sw::RHIRenderResource::initAllFor( device.get() );
+    SW_EXPECT_TRUE_MSG( cube->isRhiValid(), "새 디바이스가 섰는데 등록부가 리소스를 되살리지 않았다" );
+
+    // 남의 디바이스가 죽었다는 통보는 내 핸들을 건드리면 안 된다. forgetRhi 는 이 주소를 **비교만** 한다
+    // (역참조하지 않는다) — 그래서 실재하지 않는 디바이스 주소로 계약을 그대로 확인할 수 있다.
+    sw::IRHIDevice* pStranger = reinterpret_cast<sw::IRHIDevice*>( static_cast<std::uintptr_t>( 0x1 ) );
+    sw::RHIRenderResource::forgetAllFor( pStranger );
+    SW_EXPECT_TRUE_MSG( cube->isRhiValid(), "남의 디바이스가 죽었다는 통보에 내 핸들까지 비웠다" );
+
+    // 내 디바이스의 통보에는 반응해야 한다.
+    sw::RHIRenderResource::releaseAllFor( device.get() );
+    SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "내 디바이스의 해제 통보를 받고도 상주라고 답한다" );
+
+    device->waitIdle();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
 SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
 {
     sw::unique_ptr<sw::IWindow>    window;
@@ -3296,8 +3350,8 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
 
     sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
-    SW_EXPECT_TRUE( cube->upload( device.get() ) );
-    SW_EXPECT_TRUE( cube->isUploaded() );
+    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRhiValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 
     // **releaseGpu 를 부르지 않고** 디바이스를 죽인다 — 실수로 잊은 경우가 바로 이 카운터가 막아야 할 상황이다.
@@ -3307,18 +3361,18 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
 
     // **동작으로 단언한다** — 세대 번호든 수명 토큰이든 구현은 바뀔 수 있다. 바뀌면 안 되는 것은
     // "디바이스가 죽으면 그 핸들은 더 이상 상주가 아니다" 뿐이다.
-    SW_EXPECT_TRUE_MSG( cube->isUploaded() == false, "죽은 디바이스의 핸들을 아직 상주 라고 답한다" );
+    SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "죽은 디바이스의 핸들을 아직 상주 라고 답한다" );
 
     // 새 디바이스에는 **새로** 올라가야 한다. 옛 핸들을 그대로 돌려주면 그 드로우는 남의 버퍼를 읽는다.
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
     device->setInitWindow( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
-    SW_EXPECT_TRUE( cube->upload( device.get() ) );
-    SW_EXPECT_TRUE( cube->isUploaded() );
+    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRhiValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 
-    cube->releaseGpu();
+    cube->releaseRhi( device.get() );
     device->waitIdle();
     device->shutdown();
     device.reset();

@@ -83,29 +83,27 @@ namespace sw
         // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). 든 디바이스 포인터는 생 포인터라
         // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다 — Mesh::releaseGpu 와 같은 함정이다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
-            shutdown( pLiveDevice );
+            releaseRhi( pLiveDevice );
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
-    void MaterialInstance::releaseRhi( IRHIDevice* pDevice )
+    void MaterialInstance::forgetRhi( IRHIDevice* pDevice )
     {
-        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다.
-        if ( pDevice == nullptr || _constant._pDevice != pDevice )
+        if ( _constant._pDevice != pDevice )
             return;
-        shutdown( pDevice );
-    }
-
-    void MaterialInstance::forgetRhi()
-    {
         // 디바이스가 이미 없다 — 상수버퍼는 그와 함께 갔다.
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
         _bGpuDirty       = SW_TRUE;
     }
 
-    void MaterialInstance::shutdown( IRHIDevice* pRhi )
+    void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
     {
+        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
+        if ( pRhi != nullptr && _constant._buffer != 0 && _constant._pDevice != pRhi )
+            return;
+
         if ( pRhi != nullptr )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
@@ -178,7 +176,7 @@ namespace sw
         return doc.saveFile( absPath );
     }
 
-    bool MaterialInstance::applyToGpu( IRHIDevice* pRhi )
+    bool MaterialInstance::updateRhi( IRHIDevice* pRhi )
     {
         if ( pRhi == nullptr || _pParentMaterial == nullptr )
             return false;

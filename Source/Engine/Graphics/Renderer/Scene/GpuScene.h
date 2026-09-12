@@ -130,7 +130,7 @@ namespace sw
          */
         RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-        /** @brief RT 가 draw 직전에 applyToGpu 한다. 수명은 이 shared_ptr 이 쥔다 — 패킷이 살아 있는 동안 산다. */
+        /** @brief RT 가 draw 직전에 updateRhi 한다. 수명은 이 shared_ptr 이 쥔다 — 패킷이 살아 있는 동안 산다. */
         shared_ptr<MaterialInstance> _materialInstance;
     };
 
@@ -390,7 +390,7 @@ namespace sw
         /**
          * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다 (게임 스레드).
          * @details 렌더 스레드가 처음 그릴 때 만들던 것을 **그리기 전에** 만들어 두기 위한 것이다. 큐가 만들어
-         *          두면 RT 의 `Mesh::upload` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가 예전처럼
+         *          두면 RT 의 `Mesh::initRhi` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가 예전처럼
          *          그 자리에서 만든다 — 앞당기는 장치이지 유일한 통로가 아니다.
          */
         void requestGpuUploads( class GpuUploadQueue& queue ) const;

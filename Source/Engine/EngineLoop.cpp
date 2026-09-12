@@ -29,6 +29,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
@@ -456,14 +457,9 @@ namespace sw
                 // 널 참조 역참조이므로 hasDevice() 로 먼저 막는다 — 이게 없어서 "요청한 백엔드가
                 // 이 빌드에 없다" 라는 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝났다.
                 if ( _rhi->hasDevice() )
-                {
-                    if ( _resourceManager != nullptr && _rhi->getDevice().getNativeDevice() != nullptr )
-                    {
-                        _resourceManager->getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
-                        _resourceManager->getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
-                    }
                     _rhi->getDevice().waitIdle();
-                }
+                // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다 — IRHIDevice::shutdown 이 죽기 직전에
+                // 등록부 전체에 releaseRhi 를 밀어 넣는다(RHIRenderResource).
                 _rhi->shutdown();
             }
         }
@@ -572,7 +568,7 @@ namespace sw
             SW_LOG_INFO( "[SwapProbe] frame %# — requesting backend %#", gv_rhiSwapAtFrame, RHI::getBackendTypeName( gv_rhiSwapTo ) );
             // C++ 대입은 변경 콜백을 부르지 않는다 — 메뉴·콘솔이 타는 setValueAsInt 로 가야 BackendSwapController 가 받는다.
             if ( GlobalVariableInfo* pVar = engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" ) )
-                pVar->setValueAsInt( static_cast<int64>( gv_rhiSwapTo ) );
+                pVar->setValueAsInt( static_cast<int32>( gv_rhiSwapTo ) );
             gv_rhiSwapAtFrame = 0; // 한 번만 — 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
         }
 
@@ -706,9 +702,7 @@ namespace sw
             if ( _frameRenderer != nullptr )
                 _frameRenderer->shutdown();
 
-            engine::getResourceManager().getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
-            engine::getResourceManager().getTextureManager().shutdownAllGpu( &_rhi->getDevice() );
-
+            // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 등록부에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
             if ( _shaderCache != nullptr )
                 _shaderCache->clearCache();
@@ -742,8 +736,9 @@ namespace sw
         if ( _rhi == nullptr || _rhi->hasDevice() == false )
             return;
 
-        if ( engine::getResourceManager().getMaterialManager().reinitializeAll( &_rhi->getDevice() ) == false )
-            SW_LOG_ERROR( "MaterialCache reinitializeAll failed after backend change." );
+        // 새 디바이스가 섰다 — 등록부 전체에 "다시 올려라" 를 밀어 넣는다. 어떤 캐시를 빠뜨렸는지
+        // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
+        RHIRenderResource::initAllFor( &_rhi->getDevice() );
 
         // 새 디바이스다 — 큐가 들고 있던 요청은 옛 디바이스의 것이므로 여기서 갈아 낀다.
         if ( _gpuUploadQueue != nullptr )

@@ -50,7 +50,7 @@ namespace sw
     {
         // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점엔 백엔드 자원이
         // 이미 없으므로 **돌려줄 수 없다** — 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
-        RHIRenderResource::forgetAll();
+        RHIRenderResource::forgetAllFor( this );
     }
 
     IRHIDevice::IRHIDevice()

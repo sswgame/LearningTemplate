@@ -208,7 +208,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     SW_EXPECT_TRUE( instance->getParameter( sw::hashed_string( "color" ), colorOverride ) );
     SW_EXPECT_TRUE( colorOverride.find( "0.2" ) != sw::string::npos || colorOverride.find( "0.20" ) != sw::string::npos );
 
-    // 인스턴스 오버라이드는 applyToGpu 전까지 마스터 기본 버퍼를 바꾸지 않는다.
+    // 인스턴스 오버라이드는 updateRhi 전까지 마스터 기본 버퍼를 바꾸지 않는다.
     const float32* masterColor = reinterpret_cast<const float32*>( material->getPropertyData( "color" ) );
     SW_EXPECT_TRUE( masterColor != nullptr );
     if ( masterColor )
@@ -262,7 +262,7 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 }
 
 /**
- * @brief [MaterialTest] 인스턴스 오버라이드 (CPU, applyToGpu/셰이더 컴파일 없음)
+ * @brief [MaterialTest] 인스턴스 오버라이드 (CPU, updateRhi/셰이더 컴파일 없음)
  */
 SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {

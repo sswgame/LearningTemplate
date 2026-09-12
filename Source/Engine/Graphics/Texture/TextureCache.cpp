@@ -41,7 +41,7 @@ namespace sw
         Impl::Entry&                        entry = _impl->_mapEntry[key];
         if ( entry._texture == nullptr )
             entry._texture = make_unique<Texture2D>();
-        if ( entry._texture->isReady() == false && entry._texture->loadFromResource( pDevice, key ) == false )
+        if ( entry._texture->isRhiValid() == false && entry._texture->loadFromResource( pDevice, key ) == false )
         {
             if ( entry._refCount == 0 )
                 _impl->_mapEntry.erase( key );
@@ -66,7 +66,7 @@ namespace sw
         // 인덱스를 곧바로 프리리스트로 돌려주므로, 기다리지 않고 다시 올리면 같은 인덱스를 받은
         // 다른 텍스처를 읽는 조용한 오염이 된다 (MaterialCache::reload 와 같은 이유).
         pDevice->waitIdle();
-        it->second._texture->shutdown( pDevice );
+        it->second._texture->releaseRhi( pDevice );
         if ( it->second._texture->loadFromResource( pDevice, key ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
     }
@@ -85,21 +85,8 @@ namespace sw
         if ( it->second._refCount == 0 )
         {
             if ( it->second._texture != nullptr )
-                it->second._texture->shutdown( pDevice );
+                it->second._texture->releaseRhi( pDevice );
             _impl->_mapEntry.erase( it );
-        }
-    }
-
-    void TextureCache::shutdownAllGpu( IRHIDevice* pDevice )
-    {
-        if ( _impl == nullptr )
-            return;
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        for ( auto& [path, entry] : _impl->_mapEntry )
-        {
-            (void)path;
-            if ( entry._texture != nullptr )
-                entry._texture->shutdown( pDevice );
         }
     }
 

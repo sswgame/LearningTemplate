@@ -11,6 +11,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 
 namespace sw
 {
@@ -30,7 +31,7 @@ namespace sw
      * 엔진(GpuScene 스냅샷)이 마지막까지 들고 있다가 모듈이 내려간 뒤 놓으면 이미 없는 코드로 뛰어든다 —
      * 실제로 벤치 종료에서 그렇게 죽었다. create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
      */
-    class SW_API Material : public std::enable_shared_from_this<Material>
+    class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
     {
     public:
         /**
@@ -50,7 +51,7 @@ namespace sw
         /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. 이것이 Material 을 얻는 유일한 길이다. */
         static shared_ptr<Material> create();
         /** @brief GPU 버퍼와 비동기 로드를 정리합니다. */
-        ~Material();
+        ~Material() override;
 
         /** @brief 복사를 금지합니다. */
         Material( const Material& ) = delete;
@@ -63,8 +64,14 @@ namespace sw
 
         /** @brief 머티리얼 에셋을 로드합니다. 경로는 호출측/GameData. */
         bool initialize( IRHIDevice* pRhi, string_view assetRelativePath );
-        /** @brief GPU 리소스를 해제합니다. */
-        void shutdown( IRHIDevice* pRhi );
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 GPU 자원을 돌려줍니다. */
+        void releaseRhi( IRHIDevice* pRhi ) override;
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
+        void forgetRhi( IRHIDevice* pDevice ) override;
+        /** @brief (RHIRenderResource) 새 디바이스에 상수버퍼·텍스처를 다시 올립니다. */
+        bool initRhi( IRHIDevice* pDevice ) override;
+        /** @brief GPU 자원이 올라가 있으면 true. 캐시가 따로 세지 않고 이것을 봅니다. */
+        bool isRhiValid() const { return _constantBuffer != 0; }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
         bool loadFromFile( string_view assetRelativePath );
@@ -210,6 +217,8 @@ namespace sw
         /** @brief TaskArgs: AsyncLoadState shared_ptr, path string. */
         static void loadFromFileAsyncJob( const TaskArgs& args );
 
+        /** @brief initialize 가 받은 에셋 경로. 디바이스가 바뀌면 이것만으로 스스로 되살아난다. */
+        string                     _assetPath;
         MaterialDesc               _desc;
         MaterialData               _data;
         RHIBufferHandle            _constantBuffer;

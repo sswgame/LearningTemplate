@@ -66,6 +66,23 @@ cmake --build --preset Ninja-Debug
 - Function parameters use `camelCase`. Output parameters (Out-parameters) must start with an `out` prefix (`out` + PascalCase, e.g. `outValue`, `outConfig`, `outX`) with containers following `out` in singular form (`outListItem`, `outMapData`, `outArrBuffer`; `outUniqueIds` allows plural). Exceptionally, raw pointer output parameters place the `p`/`pp` prefix before `out`: `pOut...` (pointer, e.g. `pOutBuffer`, `pOutApi`, `pOutResult`), `ppOut...` (double pointer), `pInOut...` (inout pointer, e.g. `pInOutSize`). In/Out parameters use `inout` / `pInOut` (e.g. `inoutSkeleton`, `pInOutSize`).
 - Use descriptive names; do not use opaque abbreviations or loop counters such
   as `i`, `j`, or `k` (use at least `index`).
+- **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
+  `RHIRenderResource` and names its device-lifecycle methods from this table only. Do not invent
+  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGpu` were all
+  renamed away for this reason):
+
+  | Verb | Meaning |
+  | --- | --- |
+  | `initRhi( pDevice )` | Create this object's GPU resources on `pDevice`. Idempotent: return `true` when already resident. |
+  | `updateRhi( pDevice )` | Push changed CPU data to resources that already exist. |
+  | `releaseRhi( pDevice )` | `pDevice` is **still alive** — hand the resources back and clear the handles. |
+  | `forgetRhi( pDevice )` | `pDevice` is **already gone** — clear the handles only; calling destroy here is use-after-free. |
+  | `isRhiValid()` | Are this object's GPU resources live right now? |
+
+  `releaseRhi` / `forgetRhi` / `initRhi` are never called in a loop from outside. `IRHIDevice` broadcasts
+  them to the whole registry (`RHIRenderResource::releaseAllFor` / `forgetAllFor` / `initAllFor`), so a
+  new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
+  (`GpuScene`) keep their own vocabulary — they are not registry members.
 
 ### Python
 

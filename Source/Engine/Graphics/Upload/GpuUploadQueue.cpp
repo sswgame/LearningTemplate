@@ -42,7 +42,7 @@ namespace sw
     void GpuUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
         // 이미 이 디바이스에 올라가 있으면 할 일이 없다 — 상주 판단은 Mesh 가 세대로 한다.
-        if ( mesh == nullptr || _pDevice == nullptr || mesh->isUploaded() )
+        if ( mesh == nullptr || _pDevice == nullptr || mesh->isRhiValid() )
             return;
         if ( mesh->getVertexCount() == 0 )
             return;
@@ -76,7 +76,7 @@ namespace sw
         {
             const shared_ptr<Mesh>& mesh = listMesh[index];
             if ( mesh != nullptr )
-                (void)mesh->upload( pDevice );
+                (void)mesh->initRhi( pDevice );
         };
 
         if ( _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr )

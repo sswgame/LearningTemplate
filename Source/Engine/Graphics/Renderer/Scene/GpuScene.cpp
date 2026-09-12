@@ -76,7 +76,7 @@ namespace sw
                 {
                     if ( batch._materialInstance == nullptr )
                         continue;
-                    if ( batch._materialInstance->applyToGpu( pDevice ) )
+                    if ( batch._materialInstance->updateRhi( pDevice ) )
                         batch._materialCb = batch._materialInstance->getDescriptorIndex();
                 }
             }
@@ -85,7 +85,7 @@ namespace sw
             {
                 for ( GpuMeshBatch& batch : listBatch )
                 {
-                    if ( batch._mesh != nullptr && batch._mesh->upload( pDevice ) )
+                    if ( batch._mesh != nullptr && batch._mesh->initRhi( pDevice ) )
                         batch._vertexBuffer = batch._mesh->getVertexBuffer();
                 }
             }

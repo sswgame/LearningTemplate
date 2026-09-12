@@ -40,14 +40,14 @@ namespace sw
         /**
          * @brief 핸들만 비웁니다.
          * @note createUnitCube static 캐시는 RHI 디바이스보다 늦게 파괴될 수 있어
-         *       여기서는 디바이스 경유 destroy를 하지 않습니다. 명시적 해제는 releaseGpu().
+         *       여기서는 디바이스 경유 destroy를 하지 않습니다. 해제는 디바이스 통보(releaseRhi)가 맡습니다.
          */
         ~Mesh() override;
 
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 돌려줍니다. */
         void releaseRhi( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
-        void forgetRhi() override;
+        void forgetRhi( IRHIDevice* pDevice ) override;
 
         /** @brief 복사를 금지합니다. */
         Mesh( const Mesh& ) = delete;
@@ -72,22 +72,24 @@ namespace sw
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
-        bool upload( IRHIDevice* pDevice );
-        /** @brief GPU 버텍스 버퍼를 해제합니다. 디바이스가 살아 있을 때 호출하세요. */
-        void releaseGpu();
+        bool initRhi( IRHIDevice* pDevice ) override;
 
         /** @brief GPU 버텍스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
         /**
-         * @brief **지금 이 디바이스에** 올라가 있는지 반환합니다.
-         * @details 핸들이 0 이 아닌 것만으로는 부족하다 — 백엔드 교체 뒤에는 옛 디바이스의 핸들이 그대로 남아 있어
-         *          "올라갔다" 고 답하게 된다(그래서 업로드 큐가 교체 뒤 아무것도 다시 올리지 않았다). 세대까지 본다.
+         * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
+         * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비운다 — 그래서 값이 남아
+         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장된다. 예전에는 그 통보가 없어서 교체 뒤에도
+         *          옛 핸들이 "올라갔다" 고 답했고, 업로드 큐가 아무것도 다시 올리지 않았다.
          */
-        bool isUploaded() const { return _vertex.isResident(); }
+        bool isRhiValid() const { return _vertex.isResident(); }
 
     private:
+        /** @brief 정점 버퍼를 실제로 놓습니다. 살아 있는 디바이스면 돌려주고, 아니면 잊습니다. */
+        void releaseVertexBuffer();
+
         vector<RHIVertex> _listVertex;
-        /** @brief 정점 버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). */
+        /** @brief 정점 버퍼 — 어느 디바이스의 것인지를 함께 든다 (RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };
 } // namespace sw

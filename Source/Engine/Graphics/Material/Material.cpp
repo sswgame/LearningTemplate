@@ -69,7 +69,7 @@ namespace sw
     Material::~Material()
     {
         if ( _pRHIDevice != nullptr )
-            shutdown( _pRHIDevice );
+            releaseRhi( _pRHIDevice );
         if ( _asyncLoadState != nullptr )
         {
             std::scoped_lock<mutex> lock{ _asyncLoadState->_mutex };
@@ -83,6 +83,7 @@ namespace sw
             return false;
 
         _pRHIDevice = pRhi;
+        _assetPath  = assetRelativePath;
 
         if ( loadFromFile( assetRelativePath ) == false )
             SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
@@ -177,8 +178,33 @@ namespace sw
         }
     }
 
-    void Material::shutdown( IRHIDevice* pRhi )
+    bool Material::initRhi( IRHIDevice* pDevice )
     {
+        // 통보 순서는 정해져 있지 않다 — 이미 올라가 있으면 그대로 둔다.
+        if ( isRhiValid() )
+            return true;
+        // 한 번도 initialize 되지 않은 머티리얼이다. 되살릴 내용 자체가 없다.
+        if ( pDevice == nullptr || _assetPath.empty() )
+            return true;
+        return initialize( pDevice, _assetPath );
+    }
+
+    void Material::forgetRhi( IRHIDevice* pDevice )
+    {
+        if ( _pRHIDevice != pDevice )
+            return;
+        // 디바이스가 이미 없다 — GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 는 해제 후 사용이다).
+        _constantBuffer  = 0;
+        _descriptorIndex = kInvalidDescriptorIndex;
+        _pRHIDevice      = nullptr;
+    }
+
+    void Material::releaseRhi( IRHIDevice* pRhi )
+    {
+        // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
+        if ( pRhi != nullptr && _pRHIDevice != nullptr && _pRHIDevice != pRhi )
+            return;
+
         releaseTextureAssets( pRhi );
         if ( pRhi != nullptr )
         {

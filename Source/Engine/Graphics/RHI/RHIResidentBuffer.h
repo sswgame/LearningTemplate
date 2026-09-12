@@ -26,10 +26,8 @@ namespace sw
         RHIBufferHandle _buffer{ 0 };        ///< 0 이면 올라간 적이 없거나 잊었다
         IRHIDevice*     _pDevice{ nullptr }; ///< 만들어 준 디바이스. 통보를 받기 때문에 죽은 뒤에 남아 있지 않다
 
-        /** @brief 핸들이 있고 그 디바이스가 아직 현재 디바이스면 true. */
         /** @brief 올라가 있으면 true. 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 여기를 비웁니다. */
         bool isResident() const { return _buffer != 0; }
-        /** @brief 살아 있는 디바이스면 그 포인터, 아니면 nullptr — 해제 요청은 이것으로만 한다. */
         /** @brief 이 버퍼를 만들어 준 디바이스입니다. 통보 덕에 여기 남아 있다면 아직 살아 있습니다. */
         IRHIDevice* getLiveDevice() const { return isResident() ? _pDevice : nullptr; }
         /** @brief 다른 디바이스의 것이면 true — 통보를 놓친 경로가 있는지 드러냅니다. */

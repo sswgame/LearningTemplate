@@ -40,20 +40,17 @@ namespace sw
          */
         static shared_ptr<MaterialInstance> create( Material* pParentMaterial );
         /** @brief 오버라이드 CB를 정리합니다. */
-        ~MaterialInstance();
+        ~MaterialInstance() override;
 
         /** @brief 복사를 금지합니다. */
         MaterialInstance( const MaterialInstance& ) = delete;
         /** @brief 대입을 금지합니다. */
         MaterialInstance& operator=( const MaterialInstance& ) = delete;
 
-        /** @brief 종료합니다. */
-        void shutdown( IRHIDevice* pRhi );
-
-        /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. */
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. 예전 이름은 shutdown 이었습니다. */
         void releaseRhi( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
-        void forgetRhi() override;
+        void forgetRhi( IRHIDevice* pDevice ) override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML을 로드합니다. 부모는 따로 설정. */
         bool loadFromFile( string_view assetRelativePath );
@@ -63,7 +60,7 @@ namespace sw
          * @brief CPU 버퍼 = 부모 기본값 + 오버라이드. 인스턴스 CB를 만들거나 갱신합니다.
          * @return 드로우용 bindless 인덱스. 실패/오버라이드 없으면 부모로 폴백.
          */
-        bool applyToGpu( IRHIDevice* pRhi );
+        bool updateRhi( IRHIDevice* pRhi );
         /** @brief 오버라이드를 모두 지웁니다. */
         void clearOverrides();
         /** @brief 키워드를 켭니다. */

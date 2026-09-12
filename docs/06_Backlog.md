@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-12 · 기준 커밋 `f30f228d`
+> 마지막 갱신: 2026-09-12 · 기준 커밋 `3b2d9920`
 
 ---
 
@@ -295,6 +295,66 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (GPU 자원 수명의 어휘를 닫힌 목록으로 — 그리고 되살리는 절반도 통보로)
+
+**1) 어휘부터.** 같은 일을 하는 함수가 클래스마다 다른 이름이었다: `Mesh::upload` · `MaterialInstance::applyToGpu` ·
+`Material::shutdown( device )` · `Texture2D::shutdown( device )` · `isUploaded` · `isReady` · `releaseGpu`. 상용 엔진은
+GPU 자원 수명 동사를 **닫힌 목록**으로 둔다(언리얼 `InitRHI` / `ReleaseRHI`). 우리도 닫았다 —
+`initRhi` · `updateRhi` · `releaseRhi` · `forgetRhi` · `isRhiValid` 다섯이고, `AGENTS.md` 의 표가 정본이다.
+이 어휘가 뜻을 갖는 이유는 그 이름들이 곧 **`RHIRenderResource` 의 가상 함수**이기 때문이다 — 이름을 맞추는 일과
+아래 등록부는 같은 작업의 두 면이다.
+`GpuScene` 은 **일부러 두었다**(`upload` · `isUploaded` · `releaseGpu`). 에셋이 아니라 프레임마다 도는 버퍼
+매니저이고 등록부 구성원이 아니다 — 같은 이름을 쓰면 오히려 거짓말이 된다.
+
+**2) 되살리는 절반도 통보로 — 기억해서 불러야 하던 다섯 줄을 지운다.**
+
+앞 항목에서 **죽을 때** 알리는 축은 세웠는데, 절반이 남아 있었다. `Material` 과 `Texture2D` 는 GPU 자원을 들면서도
+등록부 밖에 있어서, 디바이스가 바뀔 때마다 바깥이 **기억해서** 훑어 줘야 했다:
+
+```
+EngineLoop::shutdown          getMaterialManager().shutdownAllGpu( ... );  getTextureManager().shutdownAllGpu( ... );
+EngineLoop::recreate          getMaterialManager().shutdownAllGpu( ... );  getTextureManager().shutdownAllGpu( ... );
+EngineLoop::rebindScene       getMaterialManager().reinitializeAll( ... );
+```
+
+방금 없앤 "기억해야 하는 구조" 그대로다. 그리고 실제로 **한 칸이 이미 비어 있었다**: 텍스처를 되살리는 줄이 없어,
+교체 뒤 텍스처가 돌아오는 유일한 길이 "머티리얼을 다시 초기화하면 그 안에서 `acquire` 가 다시 올린다" 라는
+**부수 효과**였다. 어떤 머티리얼도 참조하지 않는 텍스처는 교체 뒤 빈 채로 남는다.
+
+**고친 방식 — 언리얼과 같게, 양쪽 다 통보로.** `FRenderResource` 는 `ReleaseRHI` 만이 아니라 `InitRHI` 도 등록부
+전체에 밀어 넣는다(`InitRHIForAllResources`). 우리도 그렇게 했다:
+
+- `RHIRenderResource::initRhi( pDevice )` 가상 함수 추가. 기본은 아무것도 하지 않는다 — 그릴 때 알아서 다시
+  올라가는 것은 낄 이유가 없다. `Mesh` 는 이미 시그니처가 같아 그대로 `override` 가 됐다.
+- `Material` 은 `_assetPath` 를 기억해 스스로 `initialize` 한다. `Texture2D` 는 이미 들고 있던 `_path` 로 다시 읽는다.
+  둘 다 **이미 올라가 있으면 그대로 true** — 통보 순서가 정해져 있지 않아서(머티리얼이 먼저 살아나며 자기 텍스처를
+  올려 놓는다) 이 가드가 없으면 두 번 올려 그대로 샌다.
+- `Material` · `Texture2D` 가 `RHIRenderResource` 가 됐다. 이제 등록부는 `Mesh` · `Material` · `MaterialInstance` ·
+  `Texture2D` 넷이다.
+- `MaterialCache::_bGpuInit` 삭제. 캐시가 따로 세던 표식이 **디바이스가 죽으면 거짓말이 됐고**, 그 거짓말을 지우려고
+  바깥에서 일괄 해제를 불러 주어야 했다. 이제 `Material::isRhiValid()` 에게 묻는다 — 표식은 자원을 든 쪽에 있어야 한다.
+- `MaterialCache::shutdownAllGpu` · `MaterialCache::reinitializeAll` · `TextureCache::shutdownAllGpu` 와 `EngineLoop`
+  의 호출 다섯 줄 삭제. 남은 것은 교체 뒤 `RHIRenderResource::initAllFor( device )` 한 줄이다.
+
+**덤으로 통보 자체의 구멍 둘.**
+1. `forgetAll()` 은 **누가 죽었는지 묻지 않고** 전부 잊게 했다. 디바이스가 하나뿐이라 드러나지 않았을 뿐,
+   테스트처럼 디바이스가 여럿인 자리에서는 남이 죽었다고 내 멀쩡한 핸들까지 비운다. `releaseRhi` 와 대칭이 되도록
+   `forgetRhi( pDevice )` · `forgetAllFor( pDevice )` 로 바꾸고 넷 모두 소유를 가린다.
+2. 통보 루프가 **사본을 떠서 돌기만** 했다. 머티리얼이 자기 자원을 놓으며 빌린 텍스처를 돌려주는데 그게 마지막
+   참조면 `Texture2D` 가 그 자리에서 파괴된다 — 사본에 남은 주소는 그 순간 댕글링이다. 부르기 직전에 "아직
+   등록부에 있나" 를 잠금 아래에서 다시 묻도록 고쳤다(파괴자가 같은 잠금으로 자기를 지우므로 정확하다).
+
+**회귀 테스트.** `RenderPassGpuTest.RegistryRestoresResourcesOnNewDevice` — 큐브를 **이름으로 부르지 않고**
+`initAllFor` 한 줄로 되살아나는지, 남의 디바이스 통보에 내 핸들이 살아남는지, 내 디바이스 통보에는 비는지를 본다.
+빨강 확인 둘: `initAllFor` 를 no-op 으로 만들면 "되살리지 않았다" 로, `Mesh::forgetRhi` 의 소유 가드를 지우면
+"내 핸들까지 비웠다" 로 각각 실패한다.
+
+**검증.** Debug GPU 19/19 · GpuScene 5/5 · nogpu 5/5 · 린트 7/7. ASAN GPU 19/19, ASAN 교체 실행 종료 0 · ASAN 리포트 0.
+교체 5구성(dx12→vk, vk→dx11, dx11→gl, gl→dx12, dx12→vk 에디터) 종료 0 · `[Error]` 0 · 교체 후 비배경 픽셀
+10,206~10,227(에디터 5,726). **텍스처 경로 따로** — `-gv_defaultMaterial=engine/materials/benchtextured.material` 로 4백엔드
+교체를 다시 돌려 평균 RGB 33.9~34.1 / 38.6~38.7 / 45.3~45.4 로 일치(머티리얼 재초기화 2회 = 시작 1 + 교체 1 로그 확인).
+패널 덤프 창 15 · 빈 패널 0. Shipping 빌드 종료 0, `App.exe` 2,625,024 → 2,627,072 B (+2,048).
+
 ### 2026-09-12 (언리얼의 FRenderResource 를 들여온다 — 죽은 뒤에 묻지 않고, 죽기 전에 알린다)
 
 `_s_deviceGeneration` 을 **지웠다.** 대신 언리얼이 같은 문제를 푸는 방식을 가져왔다.
@@ -314,7 +374,7 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 통보는 둘로 나뉜다 — 이것이 이 설계에서 가장 중요한 구분이다:
 - `releaseRhi( pDevice )` : 디바이스가 **아직 살아 있다** → 제대로 돌려주고 핸들을 비운다. 정상 경로.
-- `forgetRhi()` : 디바이스가 **이미 없다**(shutdown 없이 사라진 경우) → 핸들만 비운다. `~IRHIDevice` 의 안전망.
+- `forgetRhi( pDevice )` : 디바이스가 **이미 없다**(shutdown 없이 사라진 경우) → 핸들만 비운다. `~IRHIDevice` 의 안전망.
 
 **1번(참조 카운트)은 지금 하지 않는다 — 기각이 아니라 순서다.** 우리 RHI 핸들은 생 `uint64` 라 4백엔드의 create/destroy
 API 를 전부 바꿔야 하고, 지금은 **핸들마다 소유자가 하나뿐이다**(정점 버퍼는 Mesh, 상수버퍼는 MaterialInstance, 구조버퍼는
@@ -529,7 +589,8 @@ sanitizer 0.
 `FrameDoubleBuffer` **엔진 서비스**를 지웠다. 아레나를 프레임마다 스왑하는데 `getFrameDoubleBuffer()` 를 부르는 곳이
 저장소에 하나도 없었다 — 매 프레임 스왑만 돌던 배선이다. Core 의 `FrameDoubleBuffer` 클래스와 그 테스트는 남는다(쓸 수 있는
 도구다; 죽은 것은 배선뿐이다). `TextureCache::reinitializeAll` 도 호출자가 없어 지웠다 — 백엔드 교체 뒤 텍스처는 `acquire` 가
-`isReady()==false` 를 보고 다시 올리므로 동작에는 구멍이 없다.
+`isRhiValid()==false` 를 보고 다시 올리므로 동작에는 구멍이 없다. (그 뒤 되살리기도 등록부 통보가 됐다 — 아래 2026-09-12
+"되살리는 절반" 항목.)
 
 **`DebugDrawQueue` 는 남긴다.** 감사 때 "죽었다" 고 적었던 것은 틀렸다 — `ActionRoom` 이 실제로 채우고 있고, 없는 것은
 소비 측(GameView ImGui)뿐이다. 죽은 폴백이 아니라 **아직 안 쓰는 기능**이고, 그 기준은 이미 정해 두었다(Graphics README 의

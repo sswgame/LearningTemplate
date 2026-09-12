@@ -41,43 +41,76 @@ namespace sw
         registryInternal().erase( this );
     }
 
+    namespace
+    {
+        /**
+         * @brief 등록부 전체에 통보를 밀어 넣습니다. 통보 도중 목록이 바뀌어도 안전합니다.
+         * @details 사본을 떠서 도는 것만으로는 부족하다. 머티리얼이 자기 GPU 자원을 놓으면서 빌려 온 텍스처를
+         *          돌려주고, 그 참조가 마지막이면 `Texture2D` 가 **그 자리에서 파괴된다** — 사본에 남은 주소는
+         *          그 순간 댕글링이다. 그래서 부르기 직전에 "아직 등록부에 있나" 를 잠금 아래에서 다시 묻는다.
+         *          파괴자가 등록부에서 자기를 지우므로(같은 잠금), 이 질문은 정확하다.
+         */
+        template <typename FnNotify>
+        void broadcastInternal( FnNotify&& notify )
+        {
+            vector<RHIRenderResource*> listResource;
+            {
+                std::scoped_lock<mutex> lock{ registryMutexInternal() };
+                listResource.reserve( registryInternal().size() );
+                for ( RHIRenderResource* pResource : registryInternal() )
+                    listResource.push_back( pResource );
+            }
+
+            for ( RHIRenderResource* pResource : listResource )
+            {
+                if ( pResource == nullptr )
+                    continue;
+                {
+                    std::scoped_lock<mutex> lock{ registryMutexInternal() };
+                    // 앞선 통보를 처리하다 사라졌다 — 사본에 남은 주소는 이미 남의 것이거나 없는 것이다.
+                    if ( registryInternal().count( pResource ) == 0 )
+                        continue;
+                }
+                notify( pResource );
+            }
+        }
+    } // namespace
+
+    bool RHIRenderResource::initRhi( IRHIDevice* )
+    {
+        // 기본은 아무것도 하지 않는다 — 그릴 때 알아서 다시 올라가는 리소스는 여기 낄 이유가 없다.
+        return true;
+    }
+
     void RHIRenderResource::releaseAllFor( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
             return;
-
-        // 통보 중에 목록이 바뀔 수 있다(리소스를 놓다가 다른 리소스가 파괴되는 경우). 사본을 만들어 돌면
-        // 잠금을 든 채로 남의 코드를 부르지 않아도 되고, 재진입 교착도 생기지 않는다.
-        vector<RHIRenderResource*> listResource;
+        broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            std::scoped_lock<mutex> lock{ registryMutexInternal() };
-            listResource.reserve( registryInternal().size() );
-            for ( RHIRenderResource* pResource : registryInternal() )
-                listResource.push_back( pResource );
-        }
-
-        for ( RHIRenderResource* pResource : listResource )
-        {
-            if ( pResource != nullptr )
-                pResource->releaseRhi( pDevice );
-        }
+            pResource->releaseRhi( pDevice );
+        } );
     }
 
-    void RHIRenderResource::forgetAll()
+    void RHIRenderResource::forgetAllFor( IRHIDevice* pDevice )
     {
-        vector<RHIRenderResource*> listResource;
+        if ( pDevice == nullptr )
+            return;
+        broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            std::scoped_lock<mutex> lock{ registryMutexInternal() };
-            listResource.reserve( registryInternal().size() );
-            for ( RHIRenderResource* pResource : registryInternal() )
-                listResource.push_back( pResource );
-        }
+            pResource->forgetRhi( pDevice );
+        } );
+    }
 
-        for ( RHIRenderResource* pResource : listResource )
+    void RHIRenderResource::initAllFor( IRHIDevice* pDevice )
+    {
+        if ( pDevice == nullptr )
+            return;
+        // 실패는 각자가 자기 자리에서 로그로 남긴다 — 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 는다.
+        broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            if ( pResource != nullptr )
-                pResource->forgetRhi();
-        }
+            (void)pResource->initRhi( pDevice );
+        } );
     }
 
     uint32 RHIRenderResource::getRegisteredCount()

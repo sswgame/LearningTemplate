@@ -223,7 +223,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 |---|---|---|
 | `Mesh` | `Mesh::create*()` (Engine) · `MeshComponent` 의 `shared_ptr` | 스냅샷 배치가 `shared_ptr` 로 **함께 소유**, `upload()` 에서 역참조 |
 | `Material` | `Material::create()` (Engine) · `MaterialCache` 의 `shared_ptr` + 참조 수 | 스냅샷 배치·원소가 `shared_ptr` 로 함께 소유 |
-| `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `applyToGpu` 를 RT 가 부른다 |
+| `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `updateRhi` 를 RT 가 부른다 |
 | `Texture2D` | `TextureCache` 의 `unique_ptr` + 참조 수 | 보지 않는다 — 머티리얼이 **SRV 인덱스(값)** 로 실어 준다 |
 | GPU 핸들(버퍼·텍스처) | `IRHIResource` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
 | `GpuSceneSnapshot` | GT 가 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
@@ -247,10 +247,19 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 5. **핸들 값은 디바이스 안에서만 정체성이다.** 새 디바이스의 첫 PSO·버퍼·디스크립터는 옛 디바이스와 **같은 번호**를
    받는다(할당 순서가 결정적이다). 핸들 값으로 "그대로인가" 를 판단하는 캐시 — `FramePassContext` 의 마지막 바인딩,
    `RenderGraphExecutionContext` 의 리소스 상태 — 는 디바이스를 내릴 때 함께 잊는다(`resetBindingCache` · `reset`).
-   세대(`RHI::getDeviceGeneration`)가 그 정체성의 번호이고 `shutdown` 과 `recreateDevice` 둘 다 올린다. GPU 버퍼를
-   드는 객체는 핸들을 맨몸으로 들지 말고 **`RHIResidentBuffer`**(핸들 · 디바이스 · 세대)로 든다 — `isResident()` 가
-   "올라가 있다" 와 "이 디바이스에 올라가 있다" 를 가르고, `getLiveDevice()` 가 해제해도 되는 디바이스만 돌려준다.
-   Mesh · MaterialInstance 가 각자 적던 같은 판단이 그 타입 하나로 모였다.
+   GPU 버퍼를 드는 객체는 핸들을 맨몸으로 들지 말고 **`RHIResidentBuffer`**(핸들 · 디바이스)로 든다 — `isResident()` 가
+   "올라가 있다" 를, `getLiveDevice()` 가 해제해도 되는 디바이스만 돌려준다. 값이 남아 있다는 것만으로 "살아 있는
+   디바이스의 것" 임이 보장되는 이유는 아래 5-1 이다.
+
+5-1. **GPU 자원을 드는 객체는 `RHIRenderResource` 를 상속한다 — 예외 없이.** 언리얼 `FRenderResource` 와 같은 자리다.
+   태어날 때 전역 등록부에 자기를 넣고, 디바이스 수명 이벤트가 목록 전체에 밀어 넣는다:
+   `IRHIDevice::shutdown()` 이 **자원을 내리기 전에** `releaseAllFor( this )`, `~IRHIDevice` 가 안전망으로
+   `forgetAllFor( this )`, 새 디바이스가 선 직후 `EngineLoop` 이 `initAllFor( device )`.
+   지금 상속하는 것은 `Mesh` · `Material` · `MaterialInstance` · `Texture2D` 넷이다.
+   **바깥에서 캐시를 훑어 일괄 해제·일괄 재생성하는 함수를 다시 만들지 말 것** — 그것이 `MaterialCache::shutdownAllGpu`
+   · `reinitializeAll` · `TextureCache::shutdownAllGpu` 였고, 목록에서 빠진 것은 조용히 틀렸다.
+   통보 중에 남이 파괴될 수 있으므로(머티리얼이 텍스처 참조를 놓으면 그 자리에서 `Texture2D` 가 죽는다) 등록부는
+   부르기 직전에 "아직 있나" 를 잠금 아래에서 다시 묻는다.
 6. **게임 모듈이 씬 오브젝트를 들 때는 핸들이다.** 상태 복원(모듈 리로드 · RHI 교체)은 씬을 통째로 지우고 다시
    만든다. 생포인터는 죽은 주소가 되고 `ComponentHandle` 은 nullptr 로 끝난다. 절차 생성물은 스냅샷에 싣지 말고
    `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(`BenchScene`).
@@ -259,7 +268,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
    알고 있으므로 스냅샷을 내보내기 전에 `GpuUploadQueue` 로 넘겨 워커가 병렬로 만든다(`-gv_gpuUploadQueue=0` 으로
    끌 수 있다). 워커 생성 가능 여부는 백엔드가 답한다(`_bThreadSafeResourceCreation`) — OpenGL 은 컨텍스트가
    스레드에 묶여 인라인으로 돈다. 큐는 **앞당기는 장치**이지 유일한 통로가 아니다: 큐가 못 다룬 것은 렌더
-   스레드가 예전처럼 그 자리에서 만든다(`Mesh::upload` 는 멱등이다). **Release** 실측으로 400개 메시를 다시 올리는
+   스레드가 예전처럼 그 자리에서 만든다(`Mesh::initRhi` 는 멱등이다). **Release** 실측으로 400개 메시를 다시 올리는
    프레임의 `RT.GpuScene.uploadMeshes` 가 80.8ms → 0.03ms 였다(3회 반복, 79.9~82.7ms → 26~41us).
 
 무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가

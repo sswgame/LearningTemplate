@@ -226,7 +226,7 @@ namespace sw
 
         if ( _device )
         {
-            // 세대는 디바이스가 죽으면서 스스로 올린다(IRHIDevice::shutdown · 소멸자) — 여기서 손으로 올리지 않는다.
+            // 죽기 직전의 통보(RHIRenderResource::releaseAllFor)는 shutdown 이 스스로 낸다 — 여기서 손으로 훑지 않는다.
             _device->waitIdle();
             _device->shutdown();
             _device.reset();
