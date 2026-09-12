@@ -16,7 +16,6 @@
  * 정의하지 않은 변형은 includer가 빈 매크로로 채워야 합니다.
  */
 
-SW_ENGINE_SERVICE( _pFrameDoubleBuffer, class, FrameDoubleBuffer, getFrameDoubleBuffer, 1, 1 )
 SW_ENGINE_SERVICE( _pCommandLineManager, class, CommandLineManager, getCommandLineManager, 1, 0 )
 SW_ENGINE_SERVICE( _pGlobalVariableManager, class, GlobalVariableManager, getGlobalVariableManager, 1, 1 )
 SW_ENGINE_SERVICE( _pLocalizationManager, class, LocalizationManager, getLocalizationManager, 1, 1 )

@@ -134,11 +134,9 @@ cd build/Ninja-Debug/Bin
   "핸들이 죽었다" 는 것을 아는 것과 "이 프레임이 끝날 때까지 살아 있어야 한다" 는 것은 다른 문제다 — 후자를 핸들로 풀면
   방금 지운 retire 큐가 다시 생긴다. `shared_ptr` 은 그 둘을 한 번에 준다. 핸들이 맞는 자리는 해석기가 이미 있고 nullptr 로
   끝나도 되는 씬 오브젝트(`ComponentHandle` · `GameObjectPtr`)다. Mesh/Material 레지스트리를 따로 세우는 날 다시 본다.
-- **`MaterialInstance::applyToGpu` 의 세대 검사가 Engine 에 있어도 되나.** "GPU 핸들은 디바이스 하나에 속한다" 는 교체만의
-  개념이 아니다 — 종료 순서(`~MaterialInstance`), 디바이스 유실(DX12 DEVICE_REMOVED) 복구도 같은 판단이 필요하다. 다만 지금은
-  Mesh 와 MaterialInstance 가 같은 검사를 각자 적고 있다. 교체 경로가 GPU 를 든 객체를 **전부 열거해서 놓게** 만들면(레지스트리)
-  객체 쪽 세대 필드를 지울 수 있는데, 소유자를 모르는 객체(BenchScene 의 유리 머티리얼처럼 캐시 밖의 것)가 있는 한 지연 검사가
-  더 튼튼하다. 절충안: `{핸들, 세대}` 를 묶은 작은 타입 하나(`GpuResident` 같은 것)로 두 곳의 검사를 한 곳으로.
+- ~~`MaterialInstance::applyToGpu` 의 세대 검사가 Engine 에 있어도 되나~~ → **닫았다.** 결론은 "있어야 한다" 였다. 그 판단은
+  교체만의 것이 아니라 종료 순서와 디바이스 유실 복구도 쓰고, 소유자를 모르는 객체(캐시 밖 머티리얼)가 있는 한 열거 방식보다
+  지연 검사가 튼튼하다. 다만 두 클래스가 같은 검사를 각자 적던 것은 `RHIResidentBuffer` 하나로 모았다(아래 "소유 정리 셋").
 - **GPU 리소스 생성·삭제를 워커로.** 방향은 맞다 — DX12 · Vulkan · DX11 은 디바이스 수준 생성이 스레드 안전하고, GL 만 공유
   컨텍스트가 필요하다. 지금은 `Mesh::upload` 가 "RHI 컨텍스트 스레드에서만" 이라 단언하고 있어 RT 가 첫 프레임에 올린다.
   업로드 큐(워커가 스테이징을 채우고 전용 큐가 복사, 완료 펜스 뒤 "상주" 표시, RT 는 상주한 것만 그린다)로 옮기면 생성이 한
@@ -296,6 +294,17 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (죽은 기계 둘을 지운다 — 그리고 하나는 죽지 않았다)
+
+`FrameDoubleBuffer` **엔진 서비스**를 지웠다. 아레나를 프레임마다 스왑하는데 `getFrameDoubleBuffer()` 를 부르는 곳이
+저장소에 하나도 없었다 — 매 프레임 스왑만 돌던 배선이다. Core 의 `FrameDoubleBuffer` 클래스와 그 테스트는 남는다(쓸 수 있는
+도구다; 죽은 것은 배선뿐이다). `TextureCache::reinitializeAll` 도 호출자가 없어 지웠다 — 백엔드 교체 뒤 텍스처는 `acquire` 가
+`isReady()==false` 를 보고 다시 올리므로 동작에는 구멍이 없다.
+
+**`DebugDrawQueue` 는 남긴다.** 감사 때 "죽었다" 고 적었던 것은 틀렸다 — `ActionRoom` 이 실제로 채우고 있고, 없는 것은
+소비 측(GameView ImGui)뿐이다. 죽은 폴백이 아니라 **아직 안 쓰는 기능**이고, 그 기준은 이미 정해 두었다(Graphics README 의
+"남은 것" 절에 P1 으로 적혀 있다).
+
 ### 2026-09-12 (백엔드 교체가 죽고, 살아도 빈 화면이던 것 — 뿌리 셋과 캐시 둘)
 
 **증상.** 에디터에서 백엔드를 바꾸면 세그폴트(DX12→Vulkan · DX12→GL · Vulkan→DX12), DX12→DX11 은 살아도 그 뒤로 화면이
@@ -333,10 +342,7 @@ PSO·레이아웃·뷰프로젝션·패스 CB, 컬링 게이트, 셰이더 캐�
 스크린샷 배경 아닌 픽셀 헤드리스 30.8k~31.8k(기준 34.5k — 큐브가 흔들리는 위상 차이), 에디터 4.5k(기준 4.5k). 나머지
 스위트는 커밋 메시지에.
 
-**남은 것(작음).** (1) 리로드·교체 때 `Duplicate name 'BenchMesh_0'` 경고 둘 — 새 인스턴스의 `onInitialize` 스폰이 복원으로
-지워지기 전에 이름 맵의 pending-kill 오브젝트와 부딪친다. 이름 유일성이 pending-kill 을 무시하게 하려면 `unregister` 가
-남의 항목을 지우지 않게 손봐야 해서 미뤘다. (2) `TextureCache::reinitializeAll` 은 아무도 안 부른다 — 텍스처는 `acquire` 가
-`isReady()==false` 면 다시 올리므로 동작엔 문제 없지만 죽은 함수다. 지우거나 교체 경로에서 부를 것.
+**여기서 남겨 뒀던 `TextureCache::reinitializeAll` 은 아래 "죽은 기계 둘" 에서 지웠다.**
 
 ### 2026-09-12 (소유를 타입에 적었다 — 검사가 아니라 컴파일러가 막는다)
 

@@ -9,7 +9,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/hashed_string.h"
@@ -128,7 +127,6 @@ namespace sw
         , _commandStack{ nullptr }
         , _debugOverlayState{ nullptr }
         , _debugDrawQueue{ nullptr }
-        , _frameDoubleBuffer{ nullptr }
         , _rhiBackendRegistry{ nullptr }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
@@ -221,7 +219,6 @@ namespace sw
 #endif
             _debugOverlayState  = make_unique<DebugOverlayState>();
             _debugDrawQueue     = make_unique<DebugDrawQueue>();
-            _frameDoubleBuffer  = make_unique<FrameDoubleBuffer>();
             _rhiBackendRegistry = make_unique<RHIBackendRegistry>();
             // 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 보도록 슬롯에 꽂는다 —
             // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
@@ -254,7 +251,6 @@ namespace sw
             services._pCommandStack             = _commandStack.get();
             services._pDebugOverlayState        = _debugOverlayState.get();
             services._pDebugDrawQueue           = _debugDrawQueue.get();
-            services._pFrameDoubleBuffer        = _frameDoubleBuffer.get();
             services._pRHIBackendRegistry       = _rhiBackendRegistry.get();
             services._pCompressionCodecRegistry = _compressionCodecRegistry.get();
             services._pShaderCache              = _shaderCache.get();
@@ -497,7 +493,6 @@ namespace sw
             _commandStack.reset();
             _debugOverlayState.reset();
             _debugDrawQueue.reset();
-            _frameDoubleBuffer.reset();
             _rhiBackendRegistry.reset();
             _shaderCache.reset();
             _componentDefaults.reset();
@@ -655,8 +650,6 @@ namespace sw
         if ( _inputManager != nullptr )
             _inputManager->endFrame();
         engine::getDebugDrawQueue().clear();
-        if ( _frameDoubleBuffer != nullptr )
-            _frameDoubleBuffer->swapAndResetPrevious();
     }
 
     bool EngineLoop::applyPendingBackendChange()

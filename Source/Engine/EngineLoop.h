@@ -26,7 +26,6 @@ namespace sw
     class DeadlockDetector;
     class DebugDrawQueue;
     class EventDispatcher;
-    class FrameDoubleBuffer;
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
@@ -153,7 +152,6 @@ namespace sw
         unique_ptr<CommandStack>        _commandStack;
         unique_ptr<DebugOverlayState>   _debugOverlayState;
         unique_ptr<DebugDrawQueue>      _debugDrawQueue;
-        unique_ptr<FrameDoubleBuffer>   _frameDoubleBuffer;
         unique_ptr<RHIBackendRegistry>  _rhiBackendRegistry;
         unique_ptr<ShaderCache>         _shaderCache;
         unique_ptr<ComponentDefaults>   _componentDefaults;

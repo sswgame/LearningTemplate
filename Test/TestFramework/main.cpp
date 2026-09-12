@@ -5,7 +5,6 @@
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -68,7 +67,6 @@ int main( int32 argc, utf8* argv[] )
     sw::unique_ptr<sw::AssetStreamingQueue>      assetStreamingQueue      = sw::make_unique<sw::AssetStreamingQueue>();
     sw::unique_ptr<sw::DebugOverlayState>        debugOverlayState        = sw::make_unique<sw::DebugOverlayState>();
     sw::unique_ptr<sw::DebugDrawQueue>           debugDrawQueue           = sw::make_unique<sw::DebugDrawQueue>();
-    sw::unique_ptr<sw::FrameDoubleBuffer>        frameDoubleBuffer        = sw::make_unique<sw::FrameDoubleBuffer>();
     sw::unique_ptr<sw::CompressionCodecRegistry> compressionCodecRegistry = sw::make_unique<sw::CompressionCodecRegistry>();
     sw::unique_ptr<sw::ShaderCache>              shaderCache              = sw::make_unique<sw::ShaderCache>();
     sw::unique_ptr<sw::ComponentDefaults>        componentDefaults        = sw::make_unique<sw::ComponentDefaults>();
@@ -118,7 +116,6 @@ int main( int32 argc, utf8* argv[] )
     services._pAssetStreamingQueue      = assetStreamingQueue.get();
     services._pDebugOverlayState        = debugOverlayState.get();
     services._pDebugDrawQueue           = debugDrawQueue.get();
-    services._pFrameDoubleBuffer        = frameDoubleBuffer.get();
     services._pCompressionCodecRegistry = compressionCodecRegistry.get();
     services._pShaderCache              = shaderCache.get();
     services._pComponentDefaults        = componentDefaults.get();
@@ -201,7 +198,6 @@ int main( int32 argc, utf8* argv[] )
     shaderCache.reset();
     sw::CompressionCodecRegistry::setActive( nullptr );
     compressionCodecRegistry.reset();
-    frameDoubleBuffer.reset();
     debugDrawQueue.reset();
     debugOverlayState.reset();
     assetStreamingQueue.reset();

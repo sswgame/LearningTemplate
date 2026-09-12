@@ -103,23 +103,6 @@ namespace sw
         }
     }
 
-    bool TextureCache::reinitializeAll( IRHIDevice* pDevice )
-    {
-        if ( _impl == nullptr || pDevice == nullptr )
-            return false;
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        bool                                bOk = true;
-        for ( auto& [path, entry] : _impl->_mapEntry )
-        {
-            if ( entry._texture != nullptr && entry._texture->loadFromResource( pDevice, path ) == false )
-            {
-                SW_LOG_ERROR( "TextureCache: failed to re-upload '%#'", path.c_str() );
-                bOk = false;
-            }
-        }
-        return bOk;
-    }
-
     void TextureCache::clear()
     {
         if ( _impl == nullptr )

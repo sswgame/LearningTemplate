@@ -38,8 +38,6 @@ namespace sw
         void release( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 모든 텍스처의 GPU 자원을 해제합니다(디바이스 교체 전). */
         void shutdownAllGpu( IRHIDevice* pDevice );
-        /** @brief 모든 텍스처를 새 디바이스에 다시 올립니다. */
-        bool reinitializeAll( IRHIDevice* pDevice );
         /** @brief 캐시를 비웁니다(GPU 자원은 이미 내려가 있어야 한다). */
         void clear();
 
