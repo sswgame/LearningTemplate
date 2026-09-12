@@ -244,17 +244,22 @@ namespace sw
         switch ( rawEvt._type )
         {
             case RawInputEventType::KeyDown:
+            {
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( rawEvt._payload._keyData._key, true );
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
+            }
 
             case RawInputEventType::KeyUp:
+            {
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( rawEvt._payload._keyData._key, false );
                 break;
+            }
 
             case RawInputEventType::MouseMove:
+            {
                 if ( _pMouse != nullptr )
                 {
                     _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
@@ -262,8 +267,10 @@ namespace sw
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
+            }
 
             case RawInputEventType::MouseButtonDown:
+            {
                 if ( _pMouse != nullptr )
                 {
                     _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
@@ -271,16 +278,20 @@ namespace sw
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
+            }
 
             case RawInputEventType::MouseButtonUp:
+            {
                 if ( _pMouse != nullptr )
                 {
                     _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
                     _pMouse->setButtonDown( rawEvt._payload._mouseData._button, false );
                 }
                 break;
+            }
 
             case RawInputEventType::MouseDoubleClick:
+            {
                 if ( _pMouse != nullptr )
                 {
                     _pMouse->setPosition( rawEvt._payload._mouseData._x, rawEvt._payload._mouseData._y );
@@ -288,16 +299,21 @@ namespace sw
                 }
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
                 break;
+            }
 
             case RawInputEventType::MouseWheel:
+            {
                 if ( _pMouse != nullptr )
                     _pMouse->addWheelDelta( rawEvt._payload._mouseData._wheelDelta );
                 break;
+            }
 
             case RawInputEventType::MouseWheelHorizontal:
+            {
                 if ( _pMouse != nullptr )
                     _pMouse->addHorizontalWheelDelta( rawEvt._payload._mouseData._wheelDelta );
                 break;
+            }
 
             case RawInputEventType::GamepadButtonDown:
             {
@@ -325,25 +341,35 @@ namespace sw
             }
 
             case RawInputEventType::GamepadConnectionChanged:
+            {
                 if ( _onGamepadConnectionChanged.isBound() )
                     _onGamepadConnectionChanged( rawEvt._deviceIndex, rawEvt._payload._gamepadData._bConnected == SW_TRUE );
                 break;
+            }
 
             case RawInputEventType::TextInput:
+            {
                 onTextInput( rawEvt._payload._textData._arrUtf8 );
                 break;
+            }
 
             case RawInputEventType::TextComposition:
+            {
                 onTextComposition( rawEvt._payload._textData._arrUtf8 );
                 break;
+            }
 
             case RawInputEventType::FocusGained:
+            {
                 onWindowFocusGained();
                 break;
+            }
 
             case RawInputEventType::FocusLost:
+            {
                 onWindowFocusLost();
                 break;
+            }
 
             case RawInputEventType::None:
             default:

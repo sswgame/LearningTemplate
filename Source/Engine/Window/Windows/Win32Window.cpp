@@ -186,6 +186,7 @@ namespace sw
             switch ( msg )
             {
                 case WM_SIZE:
+                {
                     pThis->_width  = LOWORD( lParam );
                     pThis->_height = HIWORD( lParam );
                     // DPI 변경 등으로 ShowWindow/SetForegroundWindow 처리 중 OS가 GetSystemMetricsForDpi
@@ -200,19 +201,24 @@ namespace sw
                         pThis->_bResizing = SW_FALSE;
                     }
                     return 0;
+                }
 
                 case WM_CLOSE:
+                {
                     if ( pThis->_bRecreating == SW_FALSE )
                         pThis->tryBeginClose();
                     return 0;
+                }
 
                 case WM_DESTROY:
+                {
                     if ( pThis->_bRecreating == SW_FALSE )
                     {
                         pThis->_bShouldClose = SW_TRUE;
                         pThis->_hWnd         = nullptr;
                     }
                     return 0;
+                }
 
                 default:
                     break;

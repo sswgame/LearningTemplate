@@ -398,17 +398,25 @@ namespace sw
         switch ( type )
         {
             case PackCompressionType::RLE:
+            {
                 pCodec = &rleCodec;
                 break;
+            }
             case PackCompressionType::Zlib:
+            {
                 pCodec = &zlibCodec;
                 break;
+            }
             case PackCompressionType::LZ4:
+            {
                 pCodec = &lz4Codec;
                 break;
+            }
             case PackCompressionType::Zstd:
+            {
                 pCodec = &zstdCodec;
                 break;
+            }
             case PackCompressionType::None:   // 위에서 이미 돌려보냈다
             case PackCompressionType::Custom: // 팩을 구운 쪽이 정의하는 것 — 엔진은 모른다
             default:

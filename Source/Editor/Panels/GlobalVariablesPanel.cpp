@@ -129,8 +129,10 @@ namespace sw::editor
                         break;
                     }
                     default:
+                    {
                         ImGui::TextDisabled( "(unsupported)" );
                         break;
+                    }
                 }
                 return bChanged;
             }

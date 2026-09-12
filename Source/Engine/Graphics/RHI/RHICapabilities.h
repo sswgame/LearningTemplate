@@ -76,6 +76,7 @@ namespace sw
             switch ( backend )
             {
                 case RHIBackend::DirectX12:
+                {
                     caps._bBindless                   = SW_TRUE;
                     caps._bNativeBindless             = SW_TRUE; // 후보. 런타임은 Device::getCapabilities()
                     caps._bCompute                    = SW_TRUE;
@@ -87,7 +88,9 @@ namespace sw
                     caps._bParallelCommandRecording   = SW_TRUE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
+                }
                 case RHIBackend::DirectX11:
+                {
                     caps._bBindless             = SW_TRUE;
                     caps._bNativeBindless       = SW_FALSE;
                     caps._bCompute              = SW_TRUE;
@@ -103,6 +106,7 @@ namespace sw
                     caps._bParallelCommandRecording   = SW_FALSE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
+                }
                 case RHIBackend::OpenGL:
                     caps._bBindless                 = SW_TRUE;
                     caps._bNativeBindless           = SW_FALSE;
@@ -119,6 +123,7 @@ namespace sw
                     caps._bThreadSafeResourceCreation = SW_FALSE;
                     break;
                 case RHIBackend::Vulkan:
+                {
                     caps._bBindless             = SW_TRUE;
                     caps._bNativeBindless       = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
                     caps._bCompute              = SW_TRUE;
@@ -133,6 +138,7 @@ namespace sw
                     caps._bParallelCommandRecording   = SW_TRUE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
+                }
                 default:
                     break;
             }

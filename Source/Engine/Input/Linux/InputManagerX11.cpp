@@ -219,21 +219,28 @@ namespace sw
                 switch ( pXev->xbutton.button )
                 {
                     case Button1:
+                    {
                         if ( _pMouse != nullptr )
                             _pMouse->setButtonDown( MouseButton::Left, bDown );
                         postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Left ) : RawInputEvent::makeMouseButtonUp( MouseButton::Left ) );
                         break;
+                    }
                     case Button2:
+                    {
                         if ( _pMouse != nullptr )
                             _pMouse->setButtonDown( MouseButton::Middle, bDown );
                         postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Middle ) : RawInputEvent::makeMouseButtonUp( MouseButton::Middle ) );
                         break;
+                    }
                     case Button3:
+                    {
                         if ( _pMouse != nullptr )
                             _pMouse->setButtonDown( MouseButton::Right, bDown );
                         postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::Right ) : RawInputEvent::makeMouseButtonUp( MouseButton::Right ) );
                         break;
+                    }
                     case Button4:
+                    {
                         if ( bDown )
                         {
                             if ( _pMouse != nullptr )
@@ -241,7 +248,9 @@ namespace sw
                             postRawEvent( RawInputEvent::makeMouseWheel( 1.0f ) );
                         }
                         break;
+                    }
                     case Button5:
+                    {
                         if ( bDown )
                         {
                             if ( _pMouse != nullptr )
@@ -249,7 +258,9 @@ namespace sw
                             postRawEvent( RawInputEvent::makeMouseWheel( -1.0f ) );
                         }
                         break;
+                    }
                     case 6:
+                    {
                         if ( bDown )
                         {
                             if ( _pMouse != nullptr )
@@ -257,7 +268,9 @@ namespace sw
                             postRawEvent( RawInputEvent::makeMouseHorizontalWheel( -1.0f ) );
                         }
                         break;
+                    }
                     case 7:
+                    {
                         if ( bDown )
                         {
                             if ( _pMouse != nullptr )
@@ -265,16 +278,21 @@ namespace sw
                             postRawEvent( RawInputEvent::makeMouseHorizontalWheel( 1.0f ) );
                         }
                         break;
+                    }
                     case 8:
+                    {
                         if ( _pMouse != nullptr )
                             _pMouse->setButtonDown( MouseButton::X1, bDown );
                         postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::X1 ) : RawInputEvent::makeMouseButtonUp( MouseButton::X1 ) );
                         break;
+                    }
                     case 9:
+                    {
                         if ( _pMouse != nullptr )
                             _pMouse->setButtonDown( MouseButton::X2, bDown );
                         postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( MouseButton::X2 ) : RawInputEvent::makeMouseButtonUp( MouseButton::X2 ) );
                         break;
+                    }
                     default:
                         break;
                 }
@@ -290,24 +308,34 @@ namespace sw
                 break;
             }
             case EnterNotify:
+            {
                 if ( _pMouse != nullptr )
                     _pMouse->setPointerInsideState( true );
                 break;
+            }
             case LeaveNotify:
+            {
                 if ( _pMouse != nullptr )
                     _pMouse->setPointerInsideState( false );
                 break;
+            }
             case FocusIn:
+            {
                 X11InputInternal::s_bWindowFocused = true;
                 onWindowFocusGained();
                 break;
+            }
             case FocusOut:
+            {
                 X11InputInternal::s_bWindowFocused = false;
                 onWindowFocusLost();
                 break;
+            }
             case ConfigureNotify:
+            {
                 applyMouseLockMode();
                 break;
+            }
             default:
                 break;
         }

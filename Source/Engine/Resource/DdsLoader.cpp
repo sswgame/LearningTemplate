@@ -159,29 +159,41 @@ namespace sw
             switch ( pHeader->_pixelFormat._fourCC )
             {
                 case kFourCC_DXT1:
+                {
                     outImage._dxgiFormat = kDxgiFormatBC1Unorm;
                     break;
+                }
                 case kFourCC_DXT2:
                 case kFourCC_DXT3:
+                {
                     outImage._dxgiFormat = kDxgiFormatBC2Unorm;
                     break;
+                }
                 case kFourCC_DXT4:
                 case kFourCC_DXT5:
+                {
                     outImage._dxgiFormat = kDxgiFormatBC3Unorm;
                     break;
+                }
                 case kFourCC_ATI1:
                 case kFourCC_BC4U:
+                {
                     outImage._dxgiFormat = kDxgiFormatBC4Unorm;
                     break;
+                }
                 case kFourCC_ATI2:
                 case kFourCC_BC5U:
+                {
                     outImage._dxgiFormat = kDxgiFormatBC5Unorm;
                     break;
+                }
                 default:
+                {
                     SW_LOG_WARNING(
                         "Unrecognized DDS FourCC: 0x%#",
                         Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ) );
                     break;
+                }
             }
         }
         else if ( ( pHeader->_pixelFormat._flags & kDdpfRgb ) != 0 )

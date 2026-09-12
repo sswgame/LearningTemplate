@@ -3,16 +3,27 @@
 """
 Scripts/lint/FormatBranchBraces.py
 
-본문이 한 줄인 if / else if / else 분기의 중괄호를 제거합니다 (AGENTS.md '분기문 규칙').
+중괄호의 모양을 정리합니다 (AGENTS.md '분기문 규칙'). 두 가지를 본다.
+
+**1) 본문이 한 줄인 if / else if / else 의 중괄호를 제거한다.**
 
   - if 계열만 대상이다. for / while / do 는 본문이 한 줄이어도 중괄호를 유지한다.
   - else / else if 가 붙은 사슬은 **모든 갈래가 한 줄일 때만** 중괄호를 벗긴다.
     한 갈래라도 여러 줄이면 그 사슬은 전부 중괄호를 유지한다.
   - 블록 안에 주석 줄·전처리기 지시문이 있으면 한 줄이 아니므로 건드리지 않는다.
 
-clang-format 의 RemoveBracesLLVM 은 for/while 까지 같이 벗겨내 이 규칙을 표현하지 못한다.
-그래서 clang-format 앞단에서 이 스크립트가 if 계열만 정리하고, 뒤이어 도는 clang-format 은
-중괄호를 되돌리지 않는다 (InsertBraces 를 켜지 않았으므로).
+**2) 본문이 두 문장 이상인 switch 의 case / default 에 중괄호를 씌운다.**
+
+  - 한 문장짜리 본문은 그대로 둔다 — `case A: return X;` 도, 라벨 다음 줄에 문장 하나가
+    오는 형태도 대상이 아니다. 폴스루 라벨(본문이 없는 라벨)도 마찬가지다.
+  - `break;` 는 본문의 한 문장으로 센다. 그래서 `문장 하나 + break;` 에는 중괄호가 붙는다.
+    이미 중괄호가 있던 자리들이 예외 없이 `break;` 를 중괄호 **안**에 두고 있었다 —
+    이 저장소에서 break 는 본문의 일부지 라벨의 종결자가 아니다.
+  - 인자를 줄바꿈한 호출처럼 한 문장이 여러 줄에 걸친 것은 한 문장으로 센다.
+
+clang-format 은 둘 다 표현하지 못한다. RemoveBracesLLVM 은 for/while 까지 같이 벗겨내고,
+InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 그래서 clang-format
+앞단에서 이 스크립트가 돌고, 뒤이어 도는 clang-format 이 들여쓰기를 맞춘다.
 
 사용법:
   py -3 Scripts/lint/FormatBranchBraces.py                    # Git 변경 파일 포맷팅
@@ -45,6 +56,9 @@ from common import (
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")
 _kIfHeadRe = re.compile(r"^if(\s+constexpr)?\s*\(")
 _kElseIfHeadRe = re.compile(r"^else\s+if(\s+constexpr)?\s*\(")
+
+# switch 의 라벨. 본문이 라벨과 같은 줄에 있으면(`case A: return X;`) 끝이 ':' 가 아니라 걸리지 않는다.
+_kCaseLabelRe = re.compile(r"^(?:case\b.*|default\s*):$")
 
 
 def _maskLiteralsAndCommentsInternal(text: str) -> str:
@@ -258,6 +272,111 @@ def formatBranchBraces(text: str) -> tuple[str, bool]:
     return "\n".join(listKept), True
 
 
+def _computeBraceDepthsInternal(listMasked: list[str]) -> list[int]:
+    """각 줄이 **시작될 때**의 중괄호 깊이를 돌려준다. 여는 줄은 깊이가 아직 오르기 전 값을 갖는다."""
+    listDepth: list[int] = []
+    depth = 0
+    for line in listMasked:
+        listDepth.append(depth)
+        depth += line.count("{") - line.count("}")
+    return listDepth
+
+
+def _collectCaseBodyInternal(listMasked: list[str], listDepth: list[int], labelIndex: int) -> tuple[list[int], bool]:
+    """
+    case / default 라벨 하나의 본문을 이루는 줄 번호를 모은다.
+
+    본문은 **같은 깊이의** 다음 라벨이나 switch 를 닫는 '}' 앞에서 끝난다. 중첩 switch 의
+    라벨과 중괄호는 깊이가 더 깊으므로 바깥 본문을 끊지 않는다. 주석만 있는 줄은 마스킹되어
+    비어 있으므로 문장 수에 들어가지 않는다.
+
+    Returns:
+        (본문 줄 번호 목록, 이미 중괄호로 열려 있으면 True)
+    """
+    labelDepth = listDepth[labelIndex]
+    listBodyIndex: list[int] = []
+    lineIndex = labelIndex + 1
+    while lineIndex < len(listMasked):
+        stripped = listMasked[lineIndex].strip()
+        if not stripped:
+            lineIndex += 1
+            continue
+        if listDepth[lineIndex] == labelDepth:
+            if stripped.startswith("}") or _kCaseLabelRe.match(stripped):
+                break
+            if not listBodyIndex and stripped.startswith("{"):
+                return [], True
+        listBodyIndex.append(lineIndex)
+        lineIndex += 1
+    return listBodyIndex, False
+
+
+def _countCaseStatementsInternal(listMasked: list[str], listBodyIndex: list[int]) -> int:
+    """
+    본문의 문장 수를 센다. 앞 줄이 ';' / '{' / '}' 로 끝나지 않았으면 이어지는 줄로 보므로,
+    인자를 줄바꿈한 호출 한 개는 한 문장으로 센다.
+    """
+    count = 0
+    bContinuing = False
+    for index in listBodyIndex:
+        if not bContinuing:
+            count += 1
+        bContinuing = not listMasked[index].strip().endswith((";", "{", "}"))
+    return count
+
+
+def insertCaseBraces(text: str) -> tuple[str, bool]:
+    """
+    본문이 두 문장 이상인 switch case / default 에 중괄호를 씌운 텍스트와 수정 여부를 돌려준다.
+    """
+    masked = _maskLiteralsAndCommentsInternal(text)
+    listMasked = masked.split("\n")
+    listRaw = text.split("\n")
+    if len(listMasked) != len(listRaw):
+        return text, False
+
+    # 파일은 newline="" 로 읽혀 줄 끝의 '\r' 이 줄 문자열에 남아 있다. 끼워 넣는 줄에도
+    # 같은 줄 끝을 붙여야 한 파일 안에서 CRLF 와 LF 가 섞이지 않는다.
+    lineSuffix = "\r" if text.count("\r\n") * 2 > text.count("\n") else ""
+
+    listDepth = _computeBraceDepthsInternal(listMasked)
+    mapOpenAfter: dict[int, list[str]] = {}
+    mapCloseAfter: dict[int, list[str]] = {}
+
+    for labelIndex, maskedLine in enumerate(listMasked):
+        if not _kCaseLabelRe.match(maskedLine.strip()):
+            continue
+
+        listBodyIndex, bAlreadyBraced = _collectCaseBodyInternal(listMasked, listDepth, labelIndex)
+        if bAlreadyBraced or _countCaseStatementsInternal(listMasked, listBodyIndex) < 2:
+            continue
+        if any(listMasked[index].strip().startswith("#") for index in listBodyIndex):
+            # 전처리기 지시문이 끼어 있으면 본문의 끝이 글자만으로 정해지지 않는다. 여는 중괄호와
+            # 닫는 중괄호가 #if 의 반대편에 놓여 한쪽 빌드에서만 짝이 맞는 일이 실제로 있었다.
+            continue
+        if any(listRaw[index].rstrip().endswith("\\") for index in listBodyIndex):
+            continue  # 매크로 줄바꿈 — 중괄호를 끼우면 이어붙던 줄이 끊긴다.
+        if any("[[fallthrough]]" in listRaw[index] for index in listBodyIndex):
+            continue  # 블록 안으로 들어가면 다음 라벨 바로 앞이 아니게 되어 경고가 난다.
+
+        # IndentCaseLabels 가 켜져 있어 중괄호 없는 본문이 이미 라벨 + 한 단계에 놓여 있다.
+        # 중괄호를 씌워도 본문이 있을 자리는 같으므로 들여쓰기는 건드리지 않는다.
+        labelLine = listRaw[labelIndex]
+        indent = labelLine[: len(labelLine) - len(labelLine.lstrip())]
+        mapOpenAfter.setdefault(labelIndex, []).append(indent + "{" + lineSuffix)
+        mapCloseAfter.setdefault(listBodyIndex[-1], []).insert(0, indent + "}" + lineSuffix)  # 중첩이면 안쪽이 먼저 닫힌다.
+
+    if not mapOpenAfter:
+        return text, False
+
+    listOut: list[str] = []
+    for index, line in enumerate(listRaw):
+        listOut.append(line)
+        listOut.extend(mapOpenAfter.get(index, ()))
+        listOut.extend(mapCloseAfter.get(index, ()))
+    return "\n".join(listOut), True
+
+
 def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
     """
     단일 파일의 분기 중괄호를 검사하거나 정리합니다.
@@ -269,19 +388,32 @@ def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
     except Exception as exception:
         return [f"[BranchBraces] {filePath} 읽기 실패: {exception}"]
 
-    formattedContent, bModified = formatBranchBraces(content)
-    if not bModified:
+    # if 계열을 먼저 벗긴 뒤에 case 를 센다. 순서가 반대면 벗겨질 중괄호가 문장 수를 부풀린다.
+    formattedContent, bBranchModified = formatBranchBraces(content)
+    formattedContent, bCaseModified = insertCaseBraces(formattedContent)
+    if not bBranchModified and not bCaseModified:
         return []
 
     if checkOnly:
-        return [f"[BranchBraces] {filePath}: 한 줄짜리 if 본문에 불필요한 중괄호가 있습니다."]
+        listMessage: list[str] = []
+        if bBranchModified:
+            listMessage.append(f"[BranchBraces] {filePath}: 한 줄짜리 if 본문에 불필요한 중괄호가 있습니다.")
+        if bCaseModified:
+            listMessage.append(f"[BranchBraces] {filePath}: 본문이 여러 문장인 case 에 중괄호가 없습니다.")
+        return listMessage
 
     try:
         with filePath.open("w", encoding="utf-8", newline="") as file:
             file.write(formattedContent)
-        return [f"[BranchBraces] {filePath}: 한 줄짜리 if 본문의 중괄호 제거 완료"]
     except Exception as exception:
         return [f"[BranchBraces] {filePath} 쓰기 실패: {exception}"]
+
+    listDone: list[str] = []
+    if bBranchModified:
+        listDone.append(f"[BranchBraces] {filePath}: 한 줄짜리 if 본문의 중괄호 제거 완료")
+    if bCaseModified:
+        listDone.append(f"[BranchBraces] {filePath}: 여러 문장인 case 본문에 중괄호 추가 완료")
+    return listDone
 
 
 def formatBranchBracesBatch(files: Sequence[Path], checkOnly: bool = False, maxWorkers: int = 8) -> list[str]:
@@ -307,7 +439,7 @@ def formatBranchBracesBatch(files: Sequence[Path], checkOnly: bool = False, maxW
 def main(argv: Sequence[str] | None = None) -> int:
     useUtf8Stdout()
 
-    parser = argparse.ArgumentParser(description="한 줄짜리 if / else if / else 본문의 중괄호 제거")
+    parser = argparse.ArgumentParser(description="한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가")
     parser.add_argument(
         "files",
         nargs="*",

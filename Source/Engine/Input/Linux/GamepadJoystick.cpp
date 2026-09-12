@@ -281,31 +281,47 @@ namespace sw
                 switch ( evt.number )
                 {
                     case Internal::kAxisLeftX:
+                    {
                         setAxis( 0, Internal::normalizeStickAxis( evt.value, false ) );
                         break;
+                    }
                     case Internal::kAxisLeftY:
+                    {
                         setAxis( 1, Internal::normalizeStickAxis( evt.value, true ) );
                         break;
+                    }
                     case Internal::kAxisRightX:
+                    {
                         setAxis( 2, Internal::normalizeStickAxis( evt.value, false ) );
                         break;
+                    }
                     case Internal::kAxisRightY:
+                    {
                         setAxis( 3, Internal::normalizeStickAxis( evt.value, true ) );
                         break;
+                    }
                     case Internal::kAxisLeftTrigger:
+                    {
                         setAxis( 4, Internal::normalizeTriggerAxis( evt.value ) );
                         break;
+                    }
                     case Internal::kAxisRightTrigger:
+                    {
                         setAxis( 5, Internal::normalizeTriggerAxis( evt.value ) );
                         break;
+                    }
                     case Internal::kAxisDPadX:
+                    {
                         setButtonDown( GamepadButton::DPadLeft, evt.value < 0 );
                         setButtonDown( GamepadButton::DPadRight, evt.value > 0 );
                         break;
+                    }
                     case Internal::kAxisDPadY:
+                    {
                         setButtonDown( GamepadButton::DPadUp, evt.value < 0 );
                         setButtonDown( GamepadButton::DPadDown, evt.value > 0 );
                         break;
+                    }
                     default:
                         break;
                 }

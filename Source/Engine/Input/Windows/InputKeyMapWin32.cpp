@@ -222,9 +222,11 @@ namespace sw
             case VK_CAPITAL:
                 return Key::CapsLock;
             case VK_RETURN:
+            {
                 if ( ( static_cast<uint32>( lParam ) & 0x01000000 ) != 0 )
                     return Key::NumpadEnter;
                 return Key::Enter;
+            }
             case VK_SPACE:
                 return Key::Space;
             case VK_BACK:

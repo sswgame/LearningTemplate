@@ -98,32 +98,50 @@ namespace sw
         switch ( z._role )
         {
             case ZoneRole::Town:
+            {
                 z.addTag( "town" );
                 break;
+            }
             case ZoneRole::Route:
+            {
                 z.addTag( "route" );
                 break;
+            }
             case ZoneRole::Dungeon:
+            {
                 z.addTag( "dungeon" );
                 break;
+            }
             case ZoneRole::Boss:
+            {
                 z.addTag( "boss" );
                 break;
+            }
             case ZoneRole::Battle:
+            {
                 z.addTag( "battle" );
                 break;
+            }
             case ZoneRole::Center:
+            {
                 z.addTag( "center" );
                 break;
+            }
             case ZoneRole::Mart:
+            {
                 z.addTag( "mart" );
                 break;
+            }
             case ZoneRole::Gym:
+            {
                 z.addTag( "gym" );
                 break;
+            }
             case ZoneRole::Wild:
+            {
                 z.addTag( "wild" );
                 break;
+            }
             default:
                 break;
         }

@@ -300,10 +300,13 @@ namespace sw
             switch ( _mode )
             {
                 case Mode::Char:
+                {
                     pos         = _str.find( _charDelim, _start );
                     delimLength = 1;
                     break;
+                }
                 case Mode::String:
+                {
                     if ( _strDelim.empty() == true )
                     {
                         _tokenOffset = _start;
@@ -314,10 +317,13 @@ namespace sw
                     pos         = _str.find( _strDelim, _start );
                     delimLength = _strDelim.length();
                     break;
+                }
                 case Mode::MultiChar:
+                {
                     pos         = _str.find_first_of( _multiChars, _start );
                     delimLength = 1;
                     break;
+                }
                 case Mode::List:
                 {
                     size_t minPos = value_type::npos;
@@ -338,8 +344,10 @@ namespace sw
                 case Mode::FinishedOnce:
                 case Mode::End:
                 default:
+                {
                     _mode = Mode::End;
                     return;
+                }
             }
 
             if ( pos == value_type::npos )

@@ -293,21 +293,29 @@ namespace sw
                 break;
             }
             case WM_SETFOCUS:
+            {
                 onWindowFocusGained();
                 break;
+            }
             case WM_KILLFOCUS:
+            {
                 onWindowFocusLost();
                 break;
+            }
             case WM_SIZE:
             case WM_MOVE:
+            {
                 applyMouseLockMode();
                 break;
+            }
             case WM_ACTIVATE:
+            {
                 if ( LOWORD( event._wParam ) == WA_INACTIVE )
                     onWindowFocusLost();
                 else
                     onWindowFocusGained();
                 break;
+            }
             default:
                 break;
         }

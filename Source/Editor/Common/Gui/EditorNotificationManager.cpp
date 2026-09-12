@@ -73,22 +73,30 @@ namespace sw::editor
             switch ( item._type )
             {
                 case NotificationType::Success:
+                {
                     borderCol = ImVec4{ 0.2f, 0.7f, 0.3f, alpha };
                     titleCol  = ImVec4{ 0.4f, 0.9f, 0.5f, alpha };
                     break;
+                }
                 case NotificationType::Warning:
+                {
                     borderCol = ImVec4{ 0.9f, 0.6f, 0.1f, alpha };
                     titleCol  = ImVec4{ 1.0f, 0.8f, 0.3f, alpha };
                     break;
+                }
                 case NotificationType::Error:
+                {
                     borderCol = ImVec4{ 0.9f, 0.2f, 0.2f, alpha };
                     titleCol  = ImVec4{ 1.0f, 0.4f, 0.4f, alpha };
                     break;
+                }
                 case NotificationType::Info:
                 default:
+                {
                     borderCol = ImVec4{ 0.2f, 0.5f, 0.9f, alpha };
                     titleCol  = ImVec4{ 0.4f, 0.7f, 1.0f, alpha };
                     break;
+                }
             }
 
             float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;

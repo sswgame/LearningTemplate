@@ -128,23 +128,35 @@ namespace sw
                 switch ( c )
                 {
                     case '\\':
+                    {
                         escaped += "\\\\";
                         break;
+                    }
                     case '"':
+                    {
                         escaped += "\\\"";
                         break;
+                    }
                     case '\n':
+                    {
                         escaped += "\\n";
                         break;
+                    }
                     case '\r':
+                    {
                         escaped += "\\r";
                         break;
+                    }
                     case '\t':
+                    {
                         escaped += "\\t";
                         break;
+                    }
                     default:
+                    {
                         escaped += c;
                         break;
+                    }
                 }
             }
             return escaped;

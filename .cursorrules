@@ -184,6 +184,10 @@
    - **반복문(for/while/do)은 본문이 1줄이어도 괄호를 유지한다.** if 계열만 생략 대상이다.
    - `Scripts/lint/FormatBranchBraces.py` 가 자동 정리 및 검사한다. clang-format 의
      `RemoveBracesLLVM` 은 반복문 괄호까지 벗겨내므로 쓰지 않는다.
+   - `switch` 의 `case` / `default` 는 본문이 **두 문장 이상이면 괄호를 씌우고**, 한 문장이면 씌우지 않는다.
+     `break;` 도 한 문장으로 세므로 문장 하나 + `break;` 에는 괄호가 붙고, `case A: return X;` 는 그대로 둔다.
+     `break;` 는 괄호 **안**에 둔다. 본문에 전처리기 지시문이 끼어 있으면 건드리지 않는다 — 여는 괄호와
+     닫는 괄호가 `#if` 의 반대편에 놓여 한쪽 플랫폼에서만 짝이 맞는 일이 생긴다.
     ```cpp
     //BAD
     if (pOwner == nullptr)

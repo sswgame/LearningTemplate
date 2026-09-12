@@ -82,17 +82,25 @@ namespace sw
                 switch ( spirvType._kind )
                 {
                     case SpirvType::Kind::Bool:
+                    {
                         outSize = 4;
                         return "Bool";
+                    }
                     case SpirvType::Kind::Int:
+                    {
                         outSize = spirvType._width / 8;
                         return ( spirvType._width == 64 ) ? "Int64" : ( spirvType._width == 16 ? "Int16" : "Int" );
+                    }
                     case SpirvType::Kind::Uint:
+                    {
                         outSize = spirvType._width / 8;
                         return ( spirvType._width == 64 ) ? "Uint64" : ( spirvType._width == 16 ? "Uint16" : "Uint" );
+                    }
                     case SpirvType::Kind::Float:
+                    {
                         outSize = spirvType._width / 8;
                         return ( spirvType._width == 64 ) ? "Double" : "Float";
+                    }
                     case SpirvType::Kind::Vector:
                     {
                         uint32 subSize = 4;
@@ -126,8 +134,10 @@ namespace sw
                     case SpirvType::Kind::SampledImage:
                     case SpirvType::Kind::RuntimeArray:
                     default:
+                    {
                         outSize = 4;
                         return "Float";
+                    }
                 }
             }
         };

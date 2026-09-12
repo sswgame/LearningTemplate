@@ -693,23 +693,35 @@ namespace sw
             switch ( ch )
             {
                 case '&':
+                {
                     out.append( "&amp;" );
                     break;
+                }
                 case '<':
+                {
                     out.append( "&lt;" );
                     break;
+                }
                 case '>':
+                {
                     out.append( "&gt;" );
                     break;
+                }
                 case '"':
+                {
                     out.append( "&quot;" );
                     break;
+                }
                 case '\'':
+                {
                     out.append( "&apos;" );
                     break;
+                }
                 default:
+                {
                     out.append( ch );
                     break;
+                }
             }
         }
         return string{ out.view() };

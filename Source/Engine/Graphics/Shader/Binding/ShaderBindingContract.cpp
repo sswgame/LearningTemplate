@@ -470,17 +470,25 @@ namespace sw
                     switch ( registerClass )
                     {
                         case Internal::RegisterClass::ConstantBuffer:
+                        {
                             limit = shaderslot::kConstantBufferSlotCount;
                             break;
+                        }
                         case Internal::RegisterClass::ShaderResource:
+                        {
                             limit = shaderslot::kSrvSlotCount;
                             break;
+                        }
                         case Internal::RegisterClass::UnorderedAccess:
+                        {
                             limit = shaderslot::kComputeUavSlotCount;
                             break;
+                        }
                         case Internal::RegisterClass::Sampler:
+                        {
                             limit = shaderslot::kStaticSamplerCount;
                             break;
+                        }
                         case Internal::RegisterClass::Other:
                         default:
                             break;

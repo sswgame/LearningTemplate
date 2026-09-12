@@ -203,6 +203,14 @@ namespace sw
   braces, every branch keeps them. Loops (`for`/`while`/`do`) always keep their
   braces, even for a single-statement body. Enforced by `FormatBranchBraces.py`
   (clang-format's `RemoveBracesLLVM` is not used: it strips loop braces too).
+- A `switch` `case`/`default` whose body is more than one statement takes braces;
+  a one-statement body does not. `break;` counts as a statement, so
+  `case A: doIt(); break;` across two lines gets braces and `case A: return X;`
+  does not. The `break;` goes **inside** the braces. A body holding a preprocessor
+  directive is left alone — its extent is not decidable from the text, and an
+  opening and closing brace on opposite sides of an `#if` compiles on one platform
+  only. Enforced by `FormatBranchBraces.py`; clang-format's `InsertBraces` cannot
+  express this (it never looks at case labels).
 - Do not use `if` initializers. For unclear conditions or conditions with three
   or more parts, name the condition in a local variable first.
 - Use `auto` only for iterators, structured bindings, or similarly complex

@@ -102,17 +102,25 @@ namespace sw::editor
                 switch ( _layer )
                 {
                     case PaintLayer::Visual:
+                    {
                         color = IM_COL32( _listVisual[tileIndex]._tintR, _listVisual[tileIndex]._tintG, _listVisual[tileIndex]._tintB, 255 );
                         break;
+                    }
                     case PaintLayer::Walkable:
+                    {
                         color = _listWalkable[tileIndex] ? IM_COL32( 80, 160, 90, 255 ) : IM_COL32( 70, 70, 80, 255 );
                         break;
+                    }
                     case PaintLayer::Encounter:
+                    {
                         color = _listEncounter[tileIndex] ? IM_COL32( 120, 190, 90, 255 ) : IM_COL32( 50, 50, 55, 255 );
                         break;
+                    }
                     case PaintLayer::PassThrough:
+                    {
                         color = _listPassThrough[tileIndex] ? IM_COL32( 80, 120, 200, 255 ) : IM_COL32( 70, 70, 80, 255 );
                         break;
+                    }
                     case PaintLayer::Warp:
                     {
                         const uint64 key = ( static_cast<uint64>( static_cast<uint32>( tileY ) ) << 32 ) | static_cast<uint32>( tileX );
@@ -343,6 +351,7 @@ namespace sw::editor
         switch ( _layer )
         {
             case PaintLayer::Visual:
+            {
                 if ( _bErase == false )
                 {
                     _listVisual[tileIndex]._height  = static_cast<uint8>( _paintHeight );
@@ -352,15 +361,22 @@ namespace sw::editor
                     _listVisual[tileIndex]._tintB   = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
                 }
                 break;
+            }
             case PaintLayer::Walkable:
+            {
                 _listWalkable[tileIndex] = _bErase ? 0 : 1;
                 break;
+            }
             case PaintLayer::Encounter:
+            {
                 _listEncounter[tileIndex] = _bErase ? 0 : 1;
                 break;
+            }
             case PaintLayer::PassThrough:
+            {
                 _listPassThrough[tileIndex] = _bErase ? 0 : 1;
                 break;
+            }
             case PaintLayer::Warp:
             {
                 _listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
@@ -411,29 +427,37 @@ namespace sw::editor
         switch ( edge )
         {
             case 0:
+            {
                 for ( int32 tileX = 0; tileX < _width; ++tileX )
                 {
                     stamp( tileX, 0 );
                 }
                 break;
+            }
             case 1:
+            {
                 for ( int32 tileY = 0; tileY < _height; ++tileY )
                 {
                     stamp( _width - 1, tileY );
                 }
                 break;
+            }
             case 2:
+            {
                 for ( int32 tileX = 0; tileX < _width; ++tileX )
                 {
                     stamp( tileX, _height - 1 );
                 }
                 break;
+            }
             case 3:
+            {
                 for ( int32 tileY = 0; tileY < _height; ++tileY )
                 {
                     stamp( 0, tileY );
                 }
                 break;
+            }
             default:
                 break;
         }

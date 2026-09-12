@@ -698,21 +698,29 @@ namespace sw
                     case BindingKind::SingleSlot:
                     case BindingKind::Shortcut:
                     case BindingKind::VirtualJoystick2D:
+                    {
                         slotCount = 1;
                         break;
+                    }
                     case BindingKind::Axis1DComposite:
                     case BindingKind::Chord:
+                    {
                         slotCount = 2;
                         break;
+                    }
                     case BindingKind::Vector2DComposite:
+                    {
                         slotCount = 4;
                         break;
+                    }
                     case BindingKind::GamepadStick2D:
                     case BindingKind::MouseDelta2D:
                     case BindingKind::AnyKey:
                     default:
+                    {
                         slotCount = 0;
                         break;
+                    }
                 }
 
                 for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )

@@ -198,23 +198,35 @@ namespace sw
         switch ( axisIndex )
         {
             case 0:
+            {
                 _leftStick._x = value;
                 break;
+            }
             case 1:
+            {
                 _leftStick._y = value;
                 break;
+            }
             case 2:
+            {
                 _rightStick._x = value;
                 break;
+            }
             case 3:
+            {
                 _rightStick._y = value;
                 break;
+            }
             case 4:
+            {
                 _leftTrigger = value < _triggerDeadzone ? 0.0f : value;
                 break;
+            }
             case 5:
+            {
                 _rightTrigger = value < _triggerDeadzone ? 0.0f : value;
                 break;
+            }
             default:
                 break;
         }

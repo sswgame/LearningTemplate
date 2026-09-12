@@ -71,11 +71,15 @@ namespace sw
         switch ( params._type )
         {
             case FileDialogParams::Type::Open:
+            {
                 result = GetOpenFileNameW( &ofn );
                 break;
+            }
             case FileDialogParams::Type::Save:
+            {
                 result = GetSaveFileNameW( &ofn );
                 break;
+            }
             default:
                 break;
         }

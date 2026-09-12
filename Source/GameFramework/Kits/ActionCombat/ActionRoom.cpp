@@ -336,17 +336,25 @@ namespace sw
         switch ( facing )
         {
             case FacingDir::Up:
+            {
                 oy = -0.85f;
                 break;
+            }
             case FacingDir::Down:
+            {
                 oy = 0.85f;
                 break;
+            }
             case FacingDir::Left:
+            {
                 ox = -0.85f;
                 break;
+            }
             case FacingDir::Right:
+            {
                 ox = 0.85f;
                 break;
+            }
             default:
                 break;
         }

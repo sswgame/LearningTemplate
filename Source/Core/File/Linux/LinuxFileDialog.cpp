@@ -360,14 +360,20 @@ namespace sw
             switch ( backend )
             {
                 case LinuxFileDialogInternal::DialogBackend::Zenity:
+                {
                     ok = LinuxFileDialogInternal::openWithZenity( toolPath, params, outListPath );
                     break;
+                }
                 case LinuxFileDialogInternal::DialogBackend::KDialog:
+                {
                     ok = LinuxFileDialogInternal::openWithKDialog( toolPath, params, outListPath );
                     break;
+                }
                 case LinuxFileDialogInternal::DialogBackend::Yad:
+                {
                     ok = LinuxFileDialogInternal::openWithYad( toolPath, params, outListPath );
                     break;
+                }
                 default:
                     break;
             }

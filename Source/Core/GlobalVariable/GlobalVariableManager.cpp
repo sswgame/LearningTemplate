@@ -248,11 +248,14 @@ namespace sw
         switch ( _type )
         {
             case GlobalVariableType::Boolean:
+            {
                 if ( std::holds_alternative<bool>( _defaultValue ) )
                     *static_cast<bool*>( _pData ) = std::get<bool>( _defaultValue );
                 break;
+            }
             case GlobalVariableType::Int32:
             case GlobalVariableType::Enum:
+            {
                 if ( std::holds_alternative<int32>( _defaultValue ) )
                 {
                     const int32 val = std::get<int32>( _defaultValue );
@@ -262,14 +265,19 @@ namespace sw
                         *static_cast<int32*>( _pData ) = val;
                 }
                 break;
+            }
             case GlobalVariableType::Float:
+            {
                 if ( std::holds_alternative<float32>( _defaultValue ) )
                     *static_cast<float32*>( _pData ) = std::get<float32>( _defaultValue );
                 break;
+            }
             case GlobalVariableType::String:
+            {
                 if ( std::holds_alternative<string>( _defaultValue ) )
                     *static_cast<string*>( _pData ) = std::get<string>( _defaultValue );
                 break;
+            }
             default:
                 break;
         }
@@ -503,11 +511,14 @@ namespace sw
                 switch ( info._type )
                 {
                     case GlobalVariableType::Boolean:
+                    {
                         if ( std::holds_alternative<bool>( info._defaultValue ) )
                             *static_cast<bool*>( info._pData ) = std::get<bool>( info._defaultValue );
                         break;
+                    }
                     case GlobalVariableType::Int32:
                     case GlobalVariableType::Enum:
+                    {
                         if ( std::holds_alternative<int32>( info._defaultValue ) )
                         {
                             const int32 val = std::get<int32>( info._defaultValue );
@@ -517,14 +528,19 @@ namespace sw
                                 *static_cast<int32*>( info._pData ) = val;
                         }
                         break;
+                    }
                     case GlobalVariableType::Float:
+                    {
                         if ( std::holds_alternative<float32>( info._defaultValue ) )
                             *static_cast<float32*>( info._pData ) = std::get<float32>( info._defaultValue );
                         break;
+                    }
                     case GlobalVariableType::String:
+                    {
                         if ( std::holds_alternative<string>( info._defaultValue ) )
                             *static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
                         break;
+                    }
                     default:
                         break;
                 }

@@ -259,6 +259,7 @@ namespace sw
             switch ( managerOp )
             {
                 case DelegateManagerOp::Copy:
+                {
                     if constexpr ( bIsSBO )
                     {
                         new ( pDest ) Lambda( *static_cast<const Lambda*>( pSrc ) );
@@ -270,7 +271,9 @@ namespace sw
                         *static_cast<Lambda**>( pDest ) = pNewHeap;
                         return pNewHeap;
                     }
+                }
                 case DelegateManagerOp::Move:
+                {
                     if constexpr ( bIsSBO )
                     {
                         new ( pDest ) Lambda( std::move( *static_cast<Lambda*>( const_cast<void*>( pSrc ) ) ) );
@@ -282,12 +285,15 @@ namespace sw
                         *static_cast<Lambda**>( pDest ) = pHeap;
                         return pHeap;
                     }
+                }
                 case DelegateManagerOp::Destroy:
+                {
                     if constexpr ( bIsSBO )
                         static_cast<Lambda*>( pDest )->~Lambda();
                     else
                         sw_delete( *static_cast<Lambda**>( pDest ) );
                     return nullptr;
+                }
                 default:
                     break;
             }

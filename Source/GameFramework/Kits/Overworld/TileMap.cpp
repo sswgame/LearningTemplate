@@ -339,29 +339,37 @@ namespace sw
         switch ( edge )
         {
             case 0: // N
+            {
                 for ( int32 tileX = 0; tileX < _width; ++tileX )
                 {
                     stamp( tileX, 0 );
                 }
                 break;
+            }
             case 1: // E
+            {
                 for ( int32 tileY = 0; tileY < _height; ++tileY )
                 {
                     stamp( _width - 1, tileY );
                 }
                 break;
+            }
             case 2: // S
+            {
                 for ( int32 tileX = 0; tileX < _width; ++tileX )
                 {
                     stamp( tileX, _height - 1 );
                 }
                 break;
+            }
             case 3: // W
+            {
                 for ( int32 tileY = 0; tileY < _height; ++tileY )
                 {
                     stamp( 0, tileY );
                 }
                 break;
+            }
             default:
                 break;
         }

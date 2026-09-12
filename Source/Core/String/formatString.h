@@ -387,25 +387,33 @@ namespace sw
                 switch ( format[cursor] )
                 {
                     case '-':
+                    {
                         outFormat.leftAlign();
                         outHasSpec = true;
                         ++cursor;
                         break;
+                    }
                     case '+':
+                    {
                         outFormat.showSign();
                         outHasSpec = true;
                         ++cursor;
                         break;
+                    }
                     case '0':
+                    {
                         outFormat.zeroPad();
                         outHasSpec = true;
                         ++cursor;
                         break;
+                    }
                     // `#` 은 플래그가 아니다 — `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 여기 오지 않는다.
                     // 공백도 플래그로 받지 않는다 — 받으면 `%# Failed` 의 'F' 가 변환 문자로 읽힌다. 서식이 아니면 return 0.
                     default:
+                    {
                         bDone = true;
                         break;
+                    }
                 }
             }
 
@@ -454,21 +462,29 @@ namespace sw
             {
                 // 진수 지시자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버린다.
                 case 'x':
+                {
                     outFormat.hex();
                     outHasSpec = true;
                     break;
+                }
                 case 'X':
+                {
                     outFormat.hexUpper();
                     outHasSpec = true;
                     break;
+                }
                 case 'p':
+                {
                     outFormat.hex();
                     outHasSpec = true;
                     break;
+                }
                 case 'o':
+                {
                     outFormat.octal();
                     outHasSpec = true;
                     break;
+                }
                 case 'd':
                 case 'i':
                 case 'u':

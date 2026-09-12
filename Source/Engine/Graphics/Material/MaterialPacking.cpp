@@ -140,17 +140,25 @@ namespace sw
                     switch ( StringUtil::toUpperChar( charByte ) )
                     {
                         case 'R':
+                        {
                             mask |= 1u;
                             break;
+                        }
                         case 'G':
+                        {
                             mask |= 2u;
                             break;
+                        }
                         case 'B':
+                        {
                             mask |= 4u;
                             break;
+                        }
                         case 'A':
+                        {
                             mask |= 8u;
                             break;
+                        }
                         default:
                             break;
                     }

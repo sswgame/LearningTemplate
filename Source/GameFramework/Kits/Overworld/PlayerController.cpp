@@ -125,17 +125,25 @@ namespace sw
         switch ( _loco.getFacing() )
         {
             case FacingDir::Up:
+            {
                 --outY;
                 break;
+            }
             case FacingDir::Down:
+            {
                 ++outY;
                 break;
+            }
             case FacingDir::Left:
+            {
                 --outX;
                 break;
+            }
             case FacingDir::Right:
+            {
                 ++outX;
                 break;
+            }
             default:
                 break;
         }

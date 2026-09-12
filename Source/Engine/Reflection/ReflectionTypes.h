@@ -419,20 +419,30 @@ namespace sw
             switch ( _size )
             {
                 case 1:
+                {
                     *static_cast<uint8*>( pPtr ) = static_cast<uint8>( val );
                     break;
+                }
                 case 2:
+                {
                     *static_cast<uint16*>( pPtr ) = static_cast<uint16>( val );
                     break;
+                }
                 case 4:
+                {
                     *static_cast<int32*>( pPtr ) = static_cast<int32>( val );
                     break;
+                }
                 case 8:
+                {
                     *static_cast<int64*>( pPtr ) = val;
                     break;
+                }
                 default:
+                {
                     *static_cast<int32*>( pPtr ) = static_cast<int32>( val );
                     break;
+                }
             }
         }
 

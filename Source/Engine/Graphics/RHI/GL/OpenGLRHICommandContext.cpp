@@ -289,19 +289,27 @@ namespace sw
         switch ( newState )
         {
             case RHIBufferState::IndirectArgument:
+            {
                 glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT );
                 break;
+            }
             case RHIBufferState::ShaderResource:
             case RHIBufferState::VertexOrConstant:
             case RHIBufferState::Index:
+            {
                 glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
                 break;
+            }
             case RHIBufferState::UnorderedAccess:
+            {
                 glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
                 break;
+            }
             case RHIBufferState::CopyDest:
+            {
                 glMemoryBarrier( GL_BUFFER_UPDATE_BARRIER_BIT );
                 break;
+            }
             case RHIBufferState::Common:
             default:
                 break;

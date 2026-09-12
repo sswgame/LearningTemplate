@@ -213,20 +213,30 @@ namespace sw
                 switch ( changeEvent._action )
                 {
                     case FileWatcherAction::Added:
+                    {
                         pActionStr = "Added";
                         break;
+                    }
                     case FileWatcherAction::Removed:
+                    {
                         pActionStr = "Removed";
                         break;
+                    }
                     case FileWatcherAction::Modified:
+                    {
                         pActionStr = "Modified";
                         break;
+                    }
                     case FileWatcherAction::RenamedOldName:
+                    {
                         pActionStr = "RenamedOld";
                         break;
+                    }
                     case FileWatcherAction::RenamedNewName:
+                    {
                         pActionStr = "RenamedNew";
                         break;
+                    }
                     default:
                         break;
                 }

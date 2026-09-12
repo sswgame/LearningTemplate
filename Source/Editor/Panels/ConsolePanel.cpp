@@ -146,17 +146,25 @@ namespace sw::editor
             switch ( entry._level )
             {
                 case LogLevel::Error:
+                {
                     ++errorCount;
                     break;
+                }
                 case LogLevel::Warning:
+                {
                     ++warnCount;
                     break;
+                }
                 case LogLevel::Info:
+                {
                     ++infoCount;
                     break;
+                }
                 case LogLevel::Trace:
+                {
                     ++traceCount;
                     break;
+                }
                 case LogLevel::Count:
                 default:
                     break;

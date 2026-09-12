@@ -44,15 +44,21 @@ namespace sw
                 switch ( static_cast<uint32>( varType ) )
                 {
                     case static_cast<uint32>( D3D_SVT_FLOAT ):
+                    {
                         pBase = "Float";
                         break;
+                    }
                     case static_cast<uint32>( D3D_SVT_INT ):
+                    {
                         pBase = "Int";
                         break;
+                    }
                     case static_cast<uint32>( D3D_SVT_UINT ):
                     case static_cast<uint32>( D3D_SVT_UINT8 ):
+                    {
                         pBase = "Uint";
                         break;
+                    }
                     case static_cast<uint32>( D3D_SVT_BOOL ):
                         return "Bool";
                     default:

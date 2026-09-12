@@ -237,39 +237,59 @@ namespace sw
             switch ( bat.BatteryType )
             {
                 case BATTERY_TYPE_WIRED:
+                {
                     info._type = GamepadBatteryType::Wired;
                     break;
+                }
                 case BATTERY_TYPE_ALKALINE:
+                {
                     info._type = GamepadBatteryType::Alkaline;
                     break;
+                }
                 case BATTERY_TYPE_NIMH:
+                {
                     info._type = GamepadBatteryType::Nimh;
                     break;
+                }
                 case BATTERY_TYPE_DISCONNECTED:
+                {
                     info._type = GamepadBatteryType::Disconnected;
                     break;
+                }
                 default:
+                {
                     info._type = GamepadBatteryType::Unknown;
                     break;
+                }
             }
 
             switch ( bat.BatteryLevel )
             {
                 case BATTERY_LEVEL_EMPTY:
+                {
                     info._level = GamepadBatteryLevel::Empty;
                     break;
+                }
                 case BATTERY_LEVEL_LOW:
+                {
                     info._level = GamepadBatteryLevel::Low;
                     break;
+                }
                 case BATTERY_LEVEL_MEDIUM:
+                {
                     info._level = GamepadBatteryLevel::Medium;
                     break;
+                }
                 case BATTERY_LEVEL_FULL:
+                {
                     info._level = GamepadBatteryLevel::Full;
                     break;
+                }
                 default:
+                {
                     info._level = GamepadBatteryLevel::Empty;
                     break;
+                }
             }
         }
         return info;

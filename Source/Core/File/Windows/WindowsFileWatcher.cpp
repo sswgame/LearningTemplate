@@ -205,23 +205,35 @@ namespace sw
                     switch ( pNotify->Action )
                     {
                         case FILE_ACTION_ADDED:
+                        {
                             eventObj._action = FileWatcherAction::Added;
                             break;
+                        }
                         case FILE_ACTION_REMOVED:
+                        {
                             eventObj._action = FileWatcherAction::Removed;
                             break;
+                        }
                         case FILE_ACTION_MODIFIED:
+                        {
                             eventObj._action = FileWatcherAction::Modified;
                             break;
+                        }
                         case FILE_ACTION_RENAMED_OLD_NAME:
+                        {
                             eventObj._action = FileWatcherAction::RenamedOldName;
                             break;
+                        }
                         case FILE_ACTION_RENAMED_NEW_NAME:
+                        {
                             eventObj._action = FileWatcherAction::RenamedNewName;
                             break;
+                        }
                         default:
+                        {
                             eventObj._action = FileWatcherAction::Modified;
                             break;
+                        }
                     }
 
                     // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 온다 — 둘 다 Modified 로 접히므로 같은 파일에
