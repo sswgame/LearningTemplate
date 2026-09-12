@@ -419,8 +419,14 @@ namespace sw
             return false;
 
         // RT-owned context: pack MaterialInstance overrides and upload meshes in a single pass.
-        GpuSceneInternal::applyInstanceCbsVal( pDevice, _snapshot._listAllBatch );
-        GpuSceneInternal::uploadMeshesVal( pDevice, _snapshot._listAllBatch );
+        {
+            SW_PROFILE_SCOPE( "RT.GpuScene.applyInstanceCbs" );
+            GpuSceneInternal::applyInstanceCbsVal( pDevice, _snapshot._listAllBatch );
+        }
+        {
+            SW_PROFILE_SCOPE( "RT.GpuScene.uploadMeshes" );
+            GpuSceneInternal::uploadMeshesVal( pDevice, _snapshot._listAllBatch );
+        }
         // 머티리얼 데이터 구조버퍼(셰이더 타입별) — 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 올린다.
         uploadMaterialGroups( pDevice );
 
@@ -455,9 +461,12 @@ namespace sw
         // 백엔드/드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
         constexpr RHIBufferUsage kInstanceUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-        if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuInstance ) ), instanceCount, kInstanceUsage, true, true,
-                                        _snapshot._listInstance.data() ) )
-            _instances.upload( pDevice, _snapshot._listInstance.data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
+        {
+            SW_PROFILE_SCOPE( "RT.GpuScene.instanceBuffer" );
+            if ( _instances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GpuInstance ) ), instanceCount, kInstanceUsage, true, true,
+                                            _snapshot._listInstance.data() ) )
+                _instances.upload( pDevice, _snapshot._listInstance.data(), instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
+        }
 
         // 가시 인스턴스 ID 버퍼 — 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
         // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
@@ -989,21 +998,42 @@ namespace sw
             }
         }
 
-        auto applyToBatches = [this]( vector<GpuMeshBatch>& listBatch )
+        // **그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.**
+        // 예전에는 배치마다 셰이더 **경로 문자열**로 해시 조회를 했다 — 그룹은 한둘인데 배치는 수백이라
+        // 같은 답을 배치 수만큼 다시 구한 셈이다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
+        // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다.
+        struct ResolvedGroup
+        {
+            RHIBufferHandle    _buffer{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+            uint32             _elementCount{ 0 };
+        };
+        const uint32          groupCount = static_cast<uint32>( _snapshot._listMaterialGroup.size() );
+        vector<ResolvedGroup> listResolved( groupCount );
+        for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            const GpuMaterialGroup& group = _snapshot._listMaterialGroup[groupIndex];
+            const auto              it    = _mapMaterialGpu.find( group._shaderPath );
+            if ( it == _mapMaterialGpu.end() )
+                continue;
+            listResolved[groupIndex]._buffer       = it->second._slot._buffer;
+            listResolved[groupIndex]._srv          = it->second._slot._srv;
+            listResolved[groupIndex]._elementCount = static_cast<uint32>( group._listEntry.size() );
+        }
+
+        auto applyToBatches = [&listResolved, groupCount]( vector<GpuMeshBatch>& listBatch )
         {
             for ( GpuMeshBatch& batch : listBatch )
             {
                 batch._materialBuffer = 0;
                 batch._materialSrv    = kInvalidDescriptorIndex;
                 batch._materialCount  = 0;
-                if ( batch._materialGroup == kInvalidMaterialGroup || batch._materialGroup >= _snapshot._listMaterialGroup.size() )
+                if ( batch._materialGroup == kInvalidMaterialGroup || batch._materialGroup >= groupCount )
                     continue;
-                auto it = _mapMaterialGpu.find( _snapshot._listMaterialGroup[batch._materialGroup]._shaderPath );
-                if ( it == _mapMaterialGpu.end() )
-                    continue;
-                batch._materialBuffer = it->second._slot._buffer;
-                batch._materialSrv    = it->second._slot._srv;
-                batch._materialCount  = static_cast<uint32>( _snapshot._listMaterialGroup[batch._materialGroup]._listEntry.size() );
+                const ResolvedGroup& resolved = listResolved[batch._materialGroup];
+                batch._materialBuffer         = resolved._buffer;
+                batch._materialSrv            = resolved._srv;
+                batch._materialCount          = resolved._elementCount;
             }
         };
         applyToBatches( _snapshot._listAllBatch );

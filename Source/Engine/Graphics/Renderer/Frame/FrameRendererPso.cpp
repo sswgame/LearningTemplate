@@ -3,12 +3,14 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -260,6 +262,7 @@ namespace sw
 
     void FrameRenderer::ensureMaterialPsos()
     {
+        SW_PROFILE_SCOPE( "RT.Pso.ensureMaterial" );
         if ( _pDevice == nullptr )
             return;
 

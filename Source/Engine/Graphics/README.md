@@ -259,8 +259,8 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
    알고 있으므로 스냅샷을 내보내기 전에 `GpuUploadQueue` 로 넘겨 워커가 병렬로 만든다(`-gv_gpuUploadQueue=0` 으로
    끌 수 있다). 워커 생성 가능 여부는 백엔드가 답한다(`_bThreadSafeResourceCreation`) — OpenGL 은 컨텍스트가
    스레드에 묶여 인라인으로 돈다. 큐는 **앞당기는 장치**이지 유일한 통로가 아니다: 큐가 못 다룬 것은 렌더
-   스레드가 예전처럼 그 자리에서 만든다(`Mesh::upload` 는 멱등이다). 쟀을 때 400개 메시를 다시 올리는 프레임의
-   RT 비용이 103ms → 8.3ms 였다.
+   스레드가 예전처럼 그 자리에서 만든다(`Mesh::upload` 는 멱등이다). **Release** 실측으로 400개 메시를 다시 올리는
+   프레임의 `RT.GpuScene.uploadMeshes` 가 80.8ms → 0.03ms 였다(3회 반복, 79.9~82.7ms → 26~41us).
 
 무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
 컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만
