@@ -360,33 +360,35 @@ namespace sw
 
     void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
+        // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
+        //
+        // 예전엔 여기서 텍스처 등록부를 먼저 찍어 보고, 없으면 버퍼 등록부로 흘러내렸다. 그런데
+        // 텍스처·버퍼·UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**다 — 같은 번호가 셋 다 유효할
+        // 수 있다. 그래서 버퍼 인덱스를 넘겨도 그 번호에 살아 있는 **텍스처**가 있으면 그쪽이 걸리고
+        // 함수가 끝났다. 호출부는 종류를 이미 알고 그에 맞는 함수를 부르는데, 여기서 다시 추측한 것이다.
+        //
+        // 실제 피해: 모프 정점 버퍼(t11)가 텍스처로 걸려 정점 셰이더가 SSBO 11 에서 0 을 읽었고,
+        // 삼각형이 퇴화해 **OpenGL 에서만** 기하가 사라졌다. 인스턴스(t4)·가시 목록(t10)은 일찍
+        // 등록돼 번호가 안 겹쳤기에 멀쩡했다 — 그래서 "정점 스테이지 SSBO 가 GL 에서 안 된다" 로
+        // 오래 오해했다. 다른 세 백엔드는 이 추측을 하지 않는다(DX11 은 텍스처 등록부만 본다).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
-             _pDevice->_listRegisteredTexture[index]._texture != 0 )
+        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) ||
+             _pDevice->_listRegisteredTexture[index]._texture == 0 )
         {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
-            const GLuint                                tex  = pRec != nullptr ? pRec->_texture : 0;
-            if ( tex != 0 )
-            {
-                glBindTextureUnit( slot, tex );
-                if ( slot < 32 )
-                    _pDevice->_boundTextureUnitMask |= ( 1u << slot );
-                return;
-            }
+            SW_LOG_WARNING( "bindShaderResource: 인덱스 %# 는 등록된 텍스처가 아닙니다 — 버퍼라면 bindStructuredBuffer 를 쓰십시오.", index );
+            return;
         }
 
-        if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) &&
-             _pDevice->_listRegisteredBindless[index]._buffer != 0 )
-        {
-            GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
-            if ( ssbo != 0 )
-            {
-                glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
-                return;
-            }
-        }
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
+        const GLuint                                tex  = pRec != nullptr ? pRec->_texture : 0;
+        if ( tex == 0 )
+            return;
+
+        glBindTextureUnit( slot, tex );
+        if ( slot < 32 )
+            _pDevice->_boundTextureUnitMask |= ( 1u << slot );
     }
 
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -544,8 +546,21 @@ namespace sw
 
     void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // GL 은 t# SRV 버퍼도 bindShaderResource 와 동일 경로(SSBO/텍스처)로 처리한다.
-        bindShaderResource( index, slot );
+        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다 — 위 주석의 사연 참고.
+        // t# 는 시프트 없이 그대로 GL SSBO binding # 이다(common.hlsli SW_GL_BINDING).
+        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
+            return;
+
+        if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) ||
+             _pDevice->_listRegisteredBindless[index]._buffer == 0 )
+        {
+            SW_LOG_WARNING( "bindStructuredBuffer: 인덱스 %# 는 등록된 버퍼가 아닙니다 — 텍스처라면 bindShaderResource 를 쓰십시오.", index );
+            return;
+        }
+
+        const GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
+        if ( ssbo != 0 )
+            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
     }
 
     void OpenGLRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
