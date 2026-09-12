@@ -11,7 +11,8 @@ namespace sw
     SW_LOG_CALLER( "Texture2D" );
 
     Texture2D::Texture2D()
-        : _path{}
+        : _pDevice{ nullptr }
+        , _path{}
         , _handle{ 0 }
         , _srv{ kInvalidDescriptorIndex }
         , _width{ 0 }
@@ -24,7 +25,7 @@ namespace sw
     Texture2D::~Texture2D()
     {
         if ( _handle != 0 )
-            SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call shutdown first.", _path.c_str() );
+            SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRhi first.", _path.c_str() );
     }
 
     RHIFormat Texture2D::toRHIFormatFromDxgi( uint32 dxgiFormat )

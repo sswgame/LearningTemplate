@@ -46,7 +46,8 @@ namespace sw
     }
 
     Material::Material( CreateKey )
-        : _desc{}
+        : _assetPath{}
+        , _desc{}
         , _data{}
         , _constantBuffer{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }

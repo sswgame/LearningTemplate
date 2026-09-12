@@ -27,22 +27,7 @@ namespace sw
             static mutex s_mutex;
             return s_mutex;
         }
-    } // namespace
 
-    RHIRenderResource::RHIRenderResource()
-    {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        registryInternal().insert( this );
-    }
-
-    RHIRenderResource::~RHIRenderResource()
-    {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        registryInternal().erase( this );
-    }
-
-    namespace
-    {
         /**
          * @brief 등록부 전체에 통보를 밀어 넣습니다. 통보 도중 목록이 바뀌어도 안전합니다.
          * @details 사본을 떠서 도는 것만으로는 부족하다. 머티리얼이 자기 GPU 자원을 놓으면서 빌려 온 텍스처를
@@ -75,6 +60,18 @@ namespace sw
             }
         }
     } // namespace
+
+    RHIRenderResource::RHIRenderResource()
+    {
+        std::scoped_lock<mutex> lock{ registryMutexInternal() };
+        registryInternal().insert( this );
+    }
+
+    RHIRenderResource::~RHIRenderResource()
+    {
+        std::scoped_lock<mutex> lock{ registryMutexInternal() };
+        registryInternal().erase( this );
+    }
 
     bool RHIRenderResource::initRhi( IRHIDevice* )
     {

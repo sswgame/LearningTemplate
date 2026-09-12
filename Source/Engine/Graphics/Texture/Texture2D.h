@@ -51,7 +51,7 @@ namespace sw
 
     private:
         /** @brief 이 텍스처를 올린 디바이스. 통보가 내 것인지 가릴 때 씁니다. */
-        IRHIDevice*        _pDevice{ nullptr };
+        IRHIDevice*        _pDevice;
         string             _path;
         RHITextureHandle   _handle;
         RHIDescriptorIndex _srv;
