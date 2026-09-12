@@ -88,6 +88,22 @@ namespace sw
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
+    void MaterialInstance::releaseRhi( IRHIDevice* pDevice )
+    {
+        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다.
+        if ( pDevice == nullptr || _constant._pDevice != pDevice )
+            return;
+        shutdown( pDevice );
+    }
+
+    void MaterialInstance::forgetRhi()
+    {
+        // 디바이스가 이미 없다 — 상수버퍼는 그와 함께 갔다.
+        _constant.forget();
+        _descriptorIndex = kInvalidDescriptorIndex;
+        _bGpuDirty       = SW_TRUE;
+    }
+
     void MaterialInstance::shutdown( IRHIDevice* pRhi )
     {
         if ( pRhi != nullptr )

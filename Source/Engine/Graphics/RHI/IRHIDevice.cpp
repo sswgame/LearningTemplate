@@ -6,7 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Window/IWindow.h"
 
@@ -48,9 +48,9 @@ namespace sw
 
     IRHIDevice::~IRHIDevice()
     {
-        // shutdown 을 거치지 않고 사라지는 디바이스(테스트가 만든 것, 초기화 실패 경로)도 세대를 올려야 한다.
-        // 두 번 올라가도 상관없다 — 단조 증가하는 번호이고, 쓰는 쪽은 "같은가" 만 본다.
-        RHI::advanceDeviceGeneration();
+        // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점엔 백엔드 자원이
+        // 이미 없으므로 **돌려줄 수 없다** — 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
+        RHIRenderResource::forgetAll();
     }
 
     IRHIDevice::IRHIDevice()
@@ -107,10 +107,11 @@ namespace sw
             _renderPassManager->shutdown();
             _renderPassManager.reset();
         }
-        shutdownInternal();
+        // **자원을 내리기 전에** 알린다. 아직 디바이스가 살아 있으므로 든 쪽이 제대로 돌려줄 수 있다 —
+        // 언리얼의 FRenderResource::ReleaseRHI 와 같은 자리다. 죽은 뒤에 "살아 있었나" 를 되묻지 않아도 되는 이유가 이것이다.
+        RHIRenderResource::releaseAllFor( this );
 
-        // 여기서 이 디바이스의 GPU 리소스가 전부 사라졌다 — 그 핸들을 기억하던 객체들이 더는 만지지 않게 한다.
-        RHI::advanceDeviceGeneration();
+        shutdownInternal();
     }
 
     RenderPassManager& IRHIDevice::getRenderPassManager() const

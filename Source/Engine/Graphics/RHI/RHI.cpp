@@ -15,7 +15,6 @@
 
 namespace sw
 {
-    uint64 RHI::_s_deviceGeneration = 1;
 
     SW_LOG_CALLER( "RHI" );
 

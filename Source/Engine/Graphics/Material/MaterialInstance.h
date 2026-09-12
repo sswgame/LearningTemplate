@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 
 namespace sw
@@ -14,7 +15,7 @@ namespace sw
      * @class MaterialInstance
      * @brief 마스터 Material 위의 드로우/액터 오버라이드 (UE MaterialInstanceDynamic).
      */
-    class SW_API MaterialInstance
+    class SW_API MaterialInstance final : public RHIRenderResource
     {
     public:
         /**
@@ -48,6 +49,11 @@ namespace sw
 
         /** @brief 종료합니다. */
         void shutdown( IRHIDevice* pRhi );
+
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. */
+        void releaseRhi( IRHIDevice* pDevice ) override;
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
+        void forgetRhi() override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML을 로드합니다. 부모는 따로 설정. */
         bool loadFromFile( string_view assetRelativePath );

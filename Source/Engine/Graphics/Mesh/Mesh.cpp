@@ -138,6 +138,20 @@ namespace sw
         return true;
     }
 
+    void Mesh::releaseRhi( IRHIDevice* pDevice )
+    {
+        // 디바이스가 죽기 **전에** 오는 통보다 — 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
+        if ( pDevice == nullptr || _vertex._pDevice != pDevice )
+            return;
+        releaseGpu();
+    }
+
+    void Mesh::forgetRhi()
+    {
+        // 디바이스가 이미 없다 — 버퍼는 그와 함께 갔다. destroy 하면 해제 후 사용이다.
+        _vertex.forget();
+    }
+
     void Mesh::releaseGpu()
     {
         // 소멸자에서도 불린다. 그 시점엔 디바이스가 이미 죽어 있을 수 있고, 든 디바이스 포인터는

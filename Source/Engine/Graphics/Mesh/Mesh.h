@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -19,7 +20,7 @@ namespace sw
      * @class Mesh
      * @brief 삼각형 리스트 메시 (POSITION+COLOR). upload() 후 선택적 GPU VB를 소유합니다.
      */
-    class SW_API Mesh
+    class SW_API Mesh final : public RHIRenderResource
     {
     public:
         /**
@@ -41,7 +42,12 @@ namespace sw
          * @note createUnitCube static 캐시는 RHI 디바이스보다 늦게 파괴될 수 있어
          *       여기서는 디바이스 경유 destroy를 하지 않습니다. 명시적 해제는 releaseGpu().
          */
-        ~Mesh();
+        ~Mesh() override;
+
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 돌려줍니다. */
+        void releaseRhi( IRHIDevice* pDevice ) override;
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 — 핸들만 잊습니다. */
+        void forgetRhi() override;
 
         /** @brief 복사를 금지합니다. */
         Mesh( const Mesh& ) = delete;
