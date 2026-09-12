@@ -229,7 +229,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `GpuSceneSnapshot` | GT 가 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
 | GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
 
-규칙 여섯:
+규칙 일곱:
 
 1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣는다.** 스냅샷·패킷의 멤버는 `shared_ptr` 이거나 값이다.
    생포인터는 정렬 키(`GpuSceneSortKey` · `GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
@@ -254,6 +254,13 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 6. **게임 모듈이 씬 오브젝트를 들 때는 핸들이다.** 상태 복원(모듈 리로드 · RHI 교체)은 씬을 통째로 지우고 다시
    만든다. 생포인터는 죽은 주소가 되고 `ComponentHandle` 은 nullptr 로 끝난다. 절차 생성물은 스냅샷에 싣지 말고
    `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(`BenchScene`).
+
+7. **GPU 리소스는 그리기 전에 만든다.** 렌더 스레드는 그리기만 한다. 게임 스레드가 "이번 프레임에 그릴 것" 을
+   알고 있으므로 스냅샷을 내보내기 전에 `GpuUploadQueue` 로 넘겨 워커가 병렬로 만든다(`-gv_gpuUploadQueue=0` 으로
+   끌 수 있다). 워커 생성 가능 여부는 백엔드가 답한다(`_bThreadSafeResourceCreation`) — OpenGL 은 컨텍스트가
+   스레드에 묶여 인라인으로 돈다. 큐는 **앞당기는 장치**이지 유일한 통로가 아니다: 큐가 못 다룬 것은 렌더
+   스레드가 예전처럼 그 자리에서 만든다(`Mesh::upload` 는 멱등이다). 쟀을 때 400개 메시를 다시 올리는 프레임의
+   RT 비용이 103ms → 8.3ms 였다.
 
 무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
 컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만

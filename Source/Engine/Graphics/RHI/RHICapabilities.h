@@ -25,6 +25,13 @@ namespace sw
         uint8 _bMultiDrawIndirect{ 0 };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
         uint8 _bParallelCommandRecording{ 0 }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
         uint8 _bRequiresWindowRecreate{ 0 };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
+        /**
+         * @brief 워커 스레드에서 GPU 리소스를 **만들어도** 되는가 (그리기가 아니라 생성만).
+         * @details DX12 · Vulkan 은 디바이스 레벨 생성이 스펙상 스레드 안전하고, DX11 도 ID3D11Device 는
+         *          (컨텍스트와 달리) 안전하다. OpenGL 은 `glGen*` 이 **현재 컨텍스트**를 필요로 해 안 된다.
+         *          `GpuUploadQueue` 가 이 값으로 워커 병렬과 인라인을 가른다.
+         */
+        uint8 _bThreadSafeResourceCreation{ 0 };
 
         /** @brief 기본값 (컴퓨트만 켠 보수적 기본). */
         RHICapabilities() noexcept = default;
@@ -65,17 +72,18 @@ namespace sw
             switch ( backend )
             {
                 case RHIBackend::DirectX12:
-                    caps._bBindless                 = 1;
-                    caps._bNativeBindless           = 1; // 후보. 런타임은 Device::getCapabilities()
-                    caps._bCompute                  = 1;
-                    caps._bOffscreenRT              = 1;
-                    caps._bImGuiHooks               = 1;
-                    caps._bEditorSupported          = 1;
-                    caps._bComputeRootConstants     = 1;
-                    caps._bIndirectDraw             = 1;
-                    caps._bGpuCulling               = 1;
-                    caps._bMultiDrawIndirect        = 1;
-                    caps._bParallelCommandRecording = 1;
+                    caps._bBindless                   = 1;
+                    caps._bNativeBindless             = 1; // 후보. 런타임은 Device::getCapabilities()
+                    caps._bCompute                    = 1;
+                    caps._bOffscreenRT                = 1;
+                    caps._bImGuiHooks                 = 1;
+                    caps._bEditorSupported            = 1;
+                    caps._bComputeRootConstants       = 1;
+                    caps._bIndirectDraw               = 1;
+                    caps._bGpuCulling                 = 1;
+                    caps._bMultiDrawIndirect          = 1;
+                    caps._bParallelCommandRecording   = 1;
+                    caps._bThreadSafeResourceCreation = 1;
                     break;
                 case RHIBackend::DirectX11:
                     caps._bBindless             = 1;
@@ -90,9 +98,10 @@ namespace sw
                     // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
                     // 쓰려면 둘 중 하나를 포기해야 한다 — 인다이렉트 드로우를 살리고 컬링을 끈다
                     // (간접 인자는 GpuScene 이 CPU 에서 이미 채운다).
-                    caps._bGpuCulling               = 0;
-                    caps._bMultiDrawIndirect        = 1;
-                    caps._bParallelCommandRecording = 0;
+                    caps._bGpuCulling                 = 0;
+                    caps._bMultiDrawIndirect          = 1;
+                    caps._bParallelCommandRecording   = 0;
+                    caps._bThreadSafeResourceCreation = 1;
                     break;
                 case RHIBackend::OpenGL:
                     caps._bBindless                 = 1;
@@ -109,6 +118,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
                     caps._bRequiresWindowRecreate = 1;
 #endif
+                    caps._bThreadSafeResourceCreation = 0;
                     break;
                 case RHIBackend::Vulkan:
                     caps._bBindless             = 1;
@@ -124,7 +134,8 @@ namespace sw
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기
                     // 때문이다 — DX12 의 커맨드 얼로케이터와 같은 제약이다.
-                    caps._bParallelCommandRecording = 1;
+                    caps._bParallelCommandRecording   = 1;
+                    caps._bThreadSafeResourceCreation = 1;
                     break;
                 default:
                     break;

@@ -36,6 +36,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -127,6 +128,7 @@ namespace sw
         , _commandStack{ nullptr }
         , _debugOverlayState{ nullptr }
         , _debugDrawQueue{ nullptr }
+        , _gpuUploadQueue{ nullptr }
         , _rhiBackendRegistry{ nullptr }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
@@ -219,6 +221,7 @@ namespace sw
 #endif
             _debugOverlayState  = make_unique<DebugOverlayState>();
             _debugDrawQueue     = make_unique<DebugDrawQueue>();
+            _gpuUploadQueue     = make_unique<GpuUploadQueue>();
             _rhiBackendRegistry = make_unique<RHIBackendRegistry>();
             // 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 보도록 슬롯에 꽂는다 —
             // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
@@ -364,6 +367,8 @@ namespace sw
             }
 
             _gtGpuScene.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
+            if ( _gpuUploadQueue != nullptr )
+                _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _taskManager.get() );
 
             if ( _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() ) == false )
             {
@@ -493,6 +498,7 @@ namespace sw
             _commandStack.reset();
             _debugOverlayState.reset();
             _debugDrawQueue.reset();
+            _gpuUploadQueue.reset();
             _rhiBackendRegistry.reset();
             _shaderCache.reset();
             _componentDefaults.reset();
@@ -634,6 +640,15 @@ namespace sw
                     packet._bHasViewProj = 1;
                 }
                 _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos, _taskManager.get() );
+
+                // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
+                // 하면 된다 — 예전에는 새 메시가 등장한 프레임의 RT 가 정점 버퍼 생성을 통째로 뒤집어썼다.
+                if ( _gpuUploadQueue != nullptr )
+                {
+                    _gtGpuScene.requestGpuUploads( *_gpuUploadQueue );
+                    _gpuUploadQueue->flush();
+                }
+
                 _gtGpuScene.exportCpuSnapshot( packet._gpuScene );
             }
 
@@ -716,6 +731,10 @@ namespace sw
 
         if ( engine::getResourceManager().getMaterialManager().reinitializeAll( &_rhi->getDevice() ) == false )
             SW_LOG_ERROR( "MaterialCache reinitializeAll failed after backend change." );
+
+        // 새 디바이스다 — 큐가 들고 있던 요청은 옛 디바이스의 것이므로 여기서 갈아 낀다.
+        if ( _gpuUploadQueue != nullptr )
+            _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _taskManager.get() );
 
         if ( _frameRenderer != nullptr )
             _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() );

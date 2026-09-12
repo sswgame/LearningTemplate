@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -401,6 +402,13 @@ namespace sw
         _lastCameraPos              = cameraPos;
         _lastPrimitiveSetGeneration = setGeneration;
         _snapshot._bCpuDirty        = 1;
+    }
+
+    void GpuScene::requestGpuUploads( GpuUploadQueue& queue ) const
+    {
+        // 배치가 메시의 소유를 들고 있으므로(스냅샷 소유 규칙) 큐에 넘겨도 워커가 도는 동안 사라지지 않는다.
+        for ( const GpuMeshBatch& batch : _snapshot._listAllBatch )
+            queue.requestMesh( batch._mesh );
     }
 
     bool GpuScene::upload( IRHIDevice* pDevice )

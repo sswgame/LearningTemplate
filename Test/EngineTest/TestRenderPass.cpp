@@ -6,6 +6,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -19,6 +20,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
+#include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -3194,6 +3196,70 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     freshRenderer.shutdown();
     material->shutdown( device.get() );
     cube->releaseGpu();
+    device->waitIdle();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}
+
+/**
+ * @brief 업로드 큐가 그리기 **전에** 정점 버퍼를 만들어 두는지 — 그리고 두 번 만들지 않는지.
+ * @details 렌더 스레드는 그리기만 해야 한다. 큐가 먼저 만들어 두면 RT 의 `Mesh::upload` 는 핸들을 읽는 일이 된다.
+ *          여기서는 (1) flush 뒤에 상주하는지, (2) 같은 메시를 여러 배치가 써도 한 번만 만드는지(중복 요청이
+ *          워커 둘을 돌려 버퍼 하나를 새게 하면 안 된다), (3) 이미 상주하면 요청 자체가 쌓이지 않는지를 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+    bool                           bOk{ false };
+    for ( sw::RHIBackend candidate : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
+        {
+            bOk = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for upload queue test" );
+
+    sw::GpuUploadQueue queue;
+    queue.bindDevice( device.get(), &sw::engine::getTaskManager() );
+
+    constexpr uint32         kMeshCount = 8;
+    sw::shared_ptr<sw::Mesh> arrMesh[kMeshCount];
+    for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+    {
+        arrMesh[meshIndex] = sw::Mesh::createUnitCube();
+        SW_ASSERT_NOT_NULL( arrMesh[meshIndex].get() );
+        SW_EXPECT_FALSE( arrMesh[meshIndex]->isUploaded() );
+        queue.requestMesh( arrMesh[meshIndex] );
+        // 같은 메시를 한 번 더 요청해도 대기열은 늘지 않는다 — 워커 둘이 같은 메시를 만들면 버퍼 하나가 샌다.
+        queue.requestMesh( arrMesh[meshIndex] );
+    }
+    SW_EXPECT_EQUAL( kMeshCount, queue.getPendingCount() );
+
+    SW_EXPECT_EQUAL( kMeshCount, queue.flush() );
+    SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
+
+    for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+    {
+        SW_EXPECT_TRUE_MSG( arrMesh[meshIndex]->isUploaded(),
+                            ( "flush 뒤에도 상주하지 않는다 (index " + sw::to_string( meshIndex ) + ")" ).c_str() );
+        SW_EXPECT_TRUE( arrMesh[meshIndex]->getVertexBuffer() != 0 );
+    }
+
+    // 이미 상주하면 요청이 쌓이지 않는다 — 매 프레임 GT 가 전부 요청해도 값이 싸야 한다.
+    for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+        queue.requestMesh( arrMesh[meshIndex] );
+    SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
+    SW_EXPECT_EQUAL( 0u, queue.flush() );
+
+    for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+        arrMesh[meshIndex]->releaseGpu();
     device->waitIdle();
     device->shutdown();
     device.reset();

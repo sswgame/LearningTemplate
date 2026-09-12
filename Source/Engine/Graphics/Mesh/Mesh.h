@@ -72,8 +72,12 @@ namespace sw
 
         /** @brief GPU 버텍스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
-        /** @brief GPU에 올라갔는지 반환합니다. */
-        bool isUploaded() const { return _vertex._buffer != 0; }
+        /**
+         * @brief **지금 이 디바이스에** 올라가 있는지 반환합니다.
+         * @details 핸들이 0 이 아닌 것만으로는 부족하다 — 백엔드 교체 뒤에는 옛 디바이스의 핸들이 그대로 남아 있어
+         *          "올라갔다" 고 답하게 된다(그래서 업로드 큐가 교체 뒤 아무것도 다시 올리지 않았다). 세대까지 본다.
+         */
+        bool isUploaded() const { return _vertex.isResident(); }
 
     private:
         vector<RHIVertex> _listVertex;

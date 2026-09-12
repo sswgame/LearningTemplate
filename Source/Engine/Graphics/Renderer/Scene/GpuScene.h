@@ -386,6 +386,14 @@ namespace sw
         bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != 0; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
         const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
+
+        /**
+         * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다 (게임 스레드).
+         * @details 렌더 스레드가 처음 그릴 때 만들던 것을 **그리기 전에** 만들어 두기 위한 것이다. 큐가 만들어
+         *          두면 RT 의 `Mesh::upload` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가 예전처럼
+         *          그 자리에서 만든다 — 앞당기는 장치이지 유일한 통로가 아니다.
+         */
+        void requestGpuUploads( class GpuUploadQueue& queue ) const;
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
         const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
         {

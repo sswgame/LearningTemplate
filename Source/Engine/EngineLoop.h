@@ -29,6 +29,7 @@ namespace sw
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
+    class GpuUploadQueue;
     class IAudioSystem;
     class InputManager;
     class IRHIDevice;
@@ -152,6 +153,7 @@ namespace sw
         unique_ptr<CommandStack>        _commandStack;
         unique_ptr<DebugOverlayState>   _debugOverlayState;
         unique_ptr<DebugDrawQueue>      _debugDrawQueue;
+        unique_ptr<GpuUploadQueue>      _gpuUploadQueue;
         unique_ptr<RHIBackendRegistry>  _rhiBackendRegistry;
         unique_ptr<ShaderCache>         _shaderCache;
         unique_ptr<ComponentDefaults>   _componentDefaults;
