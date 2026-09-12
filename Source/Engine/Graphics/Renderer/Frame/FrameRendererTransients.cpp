@@ -262,6 +262,10 @@ namespace sw
 
     void FrameRenderer::releasePassResources()
     {
+        // PSO·레이아웃·패스 CB 가 여기서 사라진다 — 그것을 가리키던 드로우 캐시도 같이 잊는다.
+        // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다 — 백엔드 교체 뒤 빈 화면의 원인.)
+        _frameCtx.resetBindingCache();
+
         if ( _pDevice == nullptr )
         {
             _listPassCbSlot.clear();

@@ -196,6 +196,23 @@ namespace sw
             ///        layoutForPso() 의 뮤텍스+해시맵 조회를 건너뛰는 패스-로컬 1-entry 캐시.
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
             const ShaderBindingLayout* _pLastLayout{ nullptr };
+
+            /**
+             * @brief "마지막으로 건 것" 캐시를 전부 잊습니다. PSO·버퍼 핸들이 무효가 되는 자리(디바이스 교체)에서 부릅니다.
+             * @details 핸들 값은 **디바이스 안에서만** 정체성이다. 새 디바이스의 PSO 는 옛 디바이스의 PSO 와 같은 값을
+             *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPso == pso` 가 참이 되어 이미 파괴된
+             *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩을 건너뛴다 — 백엔드 교체 뒤 아무것도 안 그려지던
+             *          원인이다. 파괴와 함께 캐시도 지워야 "같은 값 = 같은 것" 이 성립한다.
+             */
+            void resetBindingCache()
+            {
+                _lastCbBuffer          = 0;
+                _lastCbValuesVersion   = 0;
+                _lastCbRegistryVersion = 0;
+                _lastBindPso           = 0;
+                _lastLayoutPso         = 0;
+                _pLastLayout           = nullptr;
+            }
         };
 
         // ------------------------------------------------------------------------------

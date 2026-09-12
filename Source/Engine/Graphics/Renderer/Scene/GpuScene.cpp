@@ -108,7 +108,10 @@ namespace sw
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
         _snapshot._listAllBatch.clear();
-        _snapshot._listMaterialGroup.clear();
+        // 머티리얼 등록부는 "그룹 목록(스냅샷)" 과 "셰이더 경로→인덱스 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
+        // 돌려주고 materialGroupFor 가 범위 밖이라 조용히 건너뛴다 — 배치에 머티리얼 버퍼가 안 실려 폴백(0)으로
+        // 그려지고, 투명 머티리얼은 알파 0 이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인).
+        resetMaterialRegistry();
         _indirectCommandCount = 0;
         _listScratchCandidate.clear();
         _listScratchRaw.clear();

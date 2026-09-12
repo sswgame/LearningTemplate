@@ -247,6 +247,11 @@ namespace sw
             _device->waitIdle();
             _device->shutdown();
             _device.reset();
+            // 세대는 디바이스의 **정체성**이다. Mesh · MaterialInstance 가 "내 GPU 핸들이 아직 이 디바이스 것인가" 를
+            // 이 값으로 판단한다. 예전에는 shutdown() 만 올려서, 교체 뒤에도 같은 세대로 보여 옛 디바이스의
+            // 핸들로 새 디바이스를 부르고(Mesh::upload) 옛 디바이스에 해제를 요청했다(~MaterialInstance) —
+            // 백엔드 교체가 Vulkan·OpenGL·DX12 방향에서 세그폴트하던 원인이다.
+            ++_s_deviceGeneration;
         }
 
         const RHICapabilities currentCaps  = RHIAvailability::query( backend );

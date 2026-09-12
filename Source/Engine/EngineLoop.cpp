@@ -86,6 +86,14 @@ namespace sw
      *          죽여 보는 것 말고는 확인할 방법이 없다 — 배포하고 나서 안 된다는 걸 알면 늦다.
      */
     SW_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=크래시)" );
+    /**
+     * @brief `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>` — N 번째 프레임에 백엔드 교체를 요청합니다.
+     * @details 교체는 에디터 메뉴에서만 일으킬 수 있어 헤드리스로 재현·검증할 길이 없었다. 요청 방식은 에디터 패널과 같다
+     *          (`GlobalVariableInfo::setValueAsInt` → 변경 콜백 → BackendSwapController 가 다음 프레임에 적용).
+     *          C++ 대입(`gv_rhiBackend = x`)은 콜백을 부르지 않아 아무 일도 일어나지 않는다. 0 이면 꺼져 있다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
+    SW_GLOBAL_VARIABLE_ENUM( gv_rhiSwapTo, RHIBackend, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
 
 } // namespace sw
 
@@ -541,6 +549,17 @@ namespace sw
                            const ViewCameraProviderDelegate& viewCameraProvider,
                            bool                              bTickScene )
     {
+        // 진단: 지정 프레임에 백엔드 교체를 요청한다 (에디터 패널과 같은 길 — setValueAsInt 가 변경 콜백을 부른다).
+        if ( gv_rhiSwapAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_rhiSwapAtFrame ) &&
+             gv_rhiBackend != gv_rhiSwapTo )
+        {
+            SW_LOG_INFO( "[SwapProbe] frame %# — requesting backend %#", gv_rhiSwapAtFrame, RHI::getBackendTypeName( gv_rhiSwapTo ) );
+            // C++ 대입은 변경 콜백을 부르지 않는다 — 메뉴·콘솔이 타는 setValueAsInt 로 가야 BackendSwapController 가 받는다.
+            if ( GlobalVariableInfo* pVar = engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" ) )
+                pVar->setValueAsInt( static_cast<int64>( gv_rhiSwapTo ) );
+            gv_rhiSwapAtFrame = 0; // 한 번만 — 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
+        }
+
         if ( _bHeadless )
             return;
 
@@ -672,6 +691,10 @@ namespace sw
             _rhi->getDevice().waitIdle();
             if ( _shaderCache != nullptr )
                 _shaderCache->clearCache();
+            // GT 쪽 GpuScene 의 캐시(후보·배치)가 옛 디바이스에 올라간 머티리얼·인스턴스의 소유를 들고 있다.
+            // 여기서 놓지 않으면 교체 뒤 첫 buildFromScene 의 clear() 가 그것들을 옛 디바이스와 함께 파괴한다
+            // — 실제로 그 자리에서 죽었다(~MaterialInstance → shutdown(옛 디바이스)).
+            _gtGpuScene.clear();
         }
 
         if ( _rhi->recreateDevice( requested ) == false )

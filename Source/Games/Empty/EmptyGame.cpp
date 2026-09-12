@@ -67,6 +67,23 @@ namespace sw
         if ( _benchScene != nullptr )
             _benchScene->update( deltaTime );
     }
+
+    void EmptyGame::onBeforeStateSerialize()
+    {
+        // 벤치는 절차 생성물이다 — 스냅샷에 실으면 복원된 것은 핸들과 다른 오브젝트고 메시도 없다.
+        // 걷어 두면(pending kill 은 스냅샷이 건너뛴다) 복원 뒤 onAfterStateDeserialize 가 다시 만든다.
+        if ( _benchScene != nullptr )
+            _benchScene->despawn();
+    }
+
+    void EmptyGame::onAfterStateDeserialize()
+    {
+        // 모듈 리로드 · RHI 교체는 새 인스턴스를 만들어(onInitialize 가 벤치를 한 번 만든다) 곧바로 상태를
+        // 복원하는데, 복원은 씬을 지우고 스냅샷대로 다시 만든다. 벤치는 스냅샷에 없고 방금 만든 것은
+        // 지워졌다 — 그래서 여기서 다시 만든다. 핸들 목록은 spawn 이 새로 채운다.
+        if ( _benchScene != nullptr && _benchScene->spawnFromGlobals() == false )
+            _benchScene.reset();
+    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::EmptyGame );

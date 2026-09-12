@@ -172,6 +172,15 @@ namespace sw
 
         _pRHIDevice = pRhi;
 
+        // 백엔드가 바뀌었으면 상수버퍼·인덱스는 옛 디바이스 것이다 — 잊고 새로 만든다(destroy 는 UAF).
+        // Mesh::upload 와 같은 판단이다: 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다.
+        if ( _constantBuffer != 0 && _gpuDeviceGeneration != RHI::getDeviceGeneration() )
+        {
+            _constantBuffer  = 0;
+            _descriptorIndex = kInvalidDescriptorIndex;
+            _bGpuDirty       = SW_TRUE;
+        }
+
         if ( _bGpuDirty == 0 && _constantBuffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
 

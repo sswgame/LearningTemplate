@@ -127,6 +127,23 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
+### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
+
+- **Mesh · Material 을 `ObjectHandle`(index|generation) 로 들 수 있나.** 가능하지만 지금은 권하지 않는다. 핸들은 **해석해 줄 표**가
+  필요하고(MaterialCache 는 있지만 Mesh 는 없다), 렌더 스레드가 그 표를 프레임이 도는 동안 읽어야 하므로 표가 RT 안전해야 하며,
+  "핸들이 죽었다" 는 것을 아는 것과 "이 프레임이 끝날 때까지 살아 있어야 한다" 는 것은 다른 문제다 — 후자를 핸들로 풀면
+  방금 지운 retire 큐가 다시 생긴다. `shared_ptr` 은 그 둘을 한 번에 준다. 핸들이 맞는 자리는 해석기가 이미 있고 nullptr 로
+  끝나도 되는 씬 오브젝트(`ComponentHandle` · `GameObjectPtr`)다. Mesh/Material 레지스트리를 따로 세우는 날 다시 본다.
+- **`MaterialInstance::applyToGpu` 의 세대 검사가 Engine 에 있어도 되나.** "GPU 핸들은 디바이스 하나에 속한다" 는 교체만의
+  개념이 아니다 — 종료 순서(`~MaterialInstance`), 디바이스 유실(DX12 DEVICE_REMOVED) 복구도 같은 판단이 필요하다. 다만 지금은
+  Mesh 와 MaterialInstance 가 같은 검사를 각자 적고 있다. 교체 경로가 GPU 를 든 객체를 **전부 열거해서 놓게** 만들면(레지스트리)
+  객체 쪽 세대 필드를 지울 수 있는데, 소유자를 모르는 객체(BenchScene 의 유리 머티리얼처럼 캐시 밖의 것)가 있는 한 지연 검사가
+  더 튼튼하다. 절충안: `{핸들, 세대}` 를 묶은 작은 타입 하나(`GpuResident` 같은 것)로 두 곳의 검사를 한 곳으로.
+- **GPU 리소스 생성·삭제를 워커로.** 방향은 맞다 — DX12 · Vulkan · DX11 은 디바이스 수준 생성이 스레드 안전하고, GL 만 공유
+  컨텍스트가 필요하다. 지금은 `Mesh::upload` 가 "RHI 컨텍스트 스레드에서만" 이라 단언하고 있어 RT 가 첫 프레임에 올린다.
+  업로드 큐(워커가 스테이징을 채우고 전용 큐가 복사, 완료 펜스 뒤 "상주" 표시, RT 는 상주한 것만 그린다)로 옮기면 생성이 한
+  곳으로 모여 위의 세대 검사도 그 큐 하나에만 남는다. 크기가 커서 별도 항목으로.
+
 ### 1-1. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
 `py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
@@ -279,6 +296,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (백엔드 교체가 죽고, 살아도 빈 화면이던 것 — 뿌리 셋과 캐시 둘)
+
+**증상.** 에디터에서 백엔드를 바꾸면 세그폴트(DX12→Vulkan · DX12→GL · Vulkan→DX12), DX12→DX11 은 살아도 그 뒤로 화면이
+비었다. 재현은 메뉴에서만 가능했다 — `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<0..3>` 을 두어 헤드리스로 돌린다(요청은 에디터
+패널과 같은 `GlobalVariableInfo::setValueAsInt` 경로다. **C++ 대입은 변경 콜백을 부르지 않는다** — BackendSwapController 의
+"되돌림 대입이 콜백을 다시 부른다" 주석이 틀려 있어 고쳤다). 한 번만 요청한다 — 프로파일러가 워밍업 뒤 프레임 수를 되돌려
+같은 번호가 다시 오기 때문이다.
+
+**뿌리 1 — 세대가 안 올랐다.** `RHI::recreateDevice` 가 `_s_deviceGeneration` 을 올리지 않았다(`shutdown` 만 올렸다).
+`Mesh::upload` 는 디바이스 **포인터** 비교라 새 디바이스가 옛 주소를 받으면 옛 정점 버퍼를 그대로 넘겼고, `~MaterialInstance`
+는 옛 디바이스에 해제를 요청했다. 세대를 올리고, `Mesh::upload` · `MaterialInstance::applyToGpu` 가 "핸들이 0 이 아니다" 와
+"이 디바이스 것이다" 를 세대로 가른다.
+
+**뿌리 2 — 게임 모듈의 생포인터.** `BenchScene::_listBenchMesh` 가 `MeshComponent*` 였다. 새 게임 인스턴스가 `onInitialize`
+에서 큐브를 만든 직후 상태 복원이 씬을 통째로 지웠고(`deserializeSceneObjects` 의 `clear()`), 다음 `update` 가 죽은 주소에
+`setLocalPosition` 했다(`GameObjectManager::isParallelTransformReadOnly` 에서 세그폴트). `ComponentHandle` 로 바꾸고, 벤치
+오브젝트는 `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다 — 절차 생성물은 스냅샷에 실을 이유가
+없다(실리면 메시 없는 유령이 된다). 엔진 API 는 건드리지 않았다(`GameObject::setTransient` 를 넣었다가 뺐다 — 리로드는
+Shipping 에 없는 개념이라 API 를 더럽히지 않는다).
+
+**뿌리 3 — 빈 화면은 `GpuScene::clear()` 였다.** 그룹 목록(`_snapshot._listMaterialGroup`)만 지우고 셰이더 경로→인덱스 맵
+(`_mapShaderPathToGroup`)을 남겨, `materialGroupFor` 가 범위 밖 인덱스를 돌려주고 배치에 머티리얼 버퍼가 안 실렸다. 불투명은
+폴백(0)으로도 보이지만 **투명은 알파 0 이라 사라진다** — 벤치의 큐브 하나는 25% 규칙으로 유리다. `clear()` 가
+`resetMaterialRegistry()` 를 부른다. 이걸 찾기까지 확인한 것들(전부 정상이었다): GT 후보·월드 행렬, RT 인스턴스·배치·VB·
+PSO·레이아웃·뷰프로젝션·패스 CB, 컬링 게이트, 셰이더 캐시 비우기 유무, 모듈 재생성 유무, 병렬/직렬 기록, 인스턴스 애니메이션.
+결정타는 **불투명 큐브만으로 돌리니 그려졌다** 는 것 — 그 다음 인프로세스 테스트가 유리에서만 `matBuf=0` 을 보여줬다.
+
+**덤으로 닫은 캐시 둘.** 새 디바이스의 첫 PSO·버퍼는 옛 것과 **같은 번호**를 받는다(할당이 결정적). `FramePassContext` 의
+마지막 바인딩 캐시(`_lastLayoutPso` + 파괴된 레이아웃 포인터, `_lastBindPso`, `_lastCbBuffer`)와
+`RenderGraphExecutionContext` 의 리소스 상태 추적이 디바이스를 넘어 살아남고 있었다 — `releasePassResources` 와 `shutdown`
+에서 잊는다. 이번 증상의 원인은 아니었지만(같은 번호가 나온 것을 확인했다) 언제든 같은 병이 될 자리다.
+
+**검증.** `RenderPassGpuTest.RendererSurvivesDeviceRecreate`(유리 큐브 · 프레젠트 3프레임 · 같은 렌더러/새 렌더러) — 수정 전
+빈 화면, 수정 후 통과. 실기동 7구성(DX12→Vulkan/DX11/GL 에디터 유무, Vulkan→DX12) 전부 종료 0, 교체 뒤 100프레임
+스크린샷 배경 아닌 픽셀 헤드리스 30.8k~31.8k(기준 34.5k — 큐브가 흔들리는 위상 차이), 에디터 4.5k(기준 4.5k). 나머지
+스위트는 커밋 메시지에.
+
+**남은 것(작음).** (1) 리로드·교체 때 `Duplicate name 'BenchMesh_0'` 경고 둘 — 새 인스턴스의 `onInitialize` 스폰이 복원으로
+지워지기 전에 이름 맵의 pending-kill 오브젝트와 부딪친다. 이름 유일성이 pending-kill 을 무시하게 하려면 `unregister` 가
+남의 항목을 지우지 않게 손봐야 해서 미뤘다. (2) `TextureCache::reinitializeAll` 은 아무도 안 부른다 — 텍스처는 `acquire` 가
+`isReady()==false` 면 다시 올리므로 동작엔 문제 없지만 죽은 함수다. 지우거나 교체 경로에서 부를 것.
+
 ### 2026-09-12 (소유를 타입에 적었다 — 검사가 아니라 컴파일러가 막는다)
 
 같은 뿌리의 세 사고 뒤에 나온 질문: "누가 누구를 소유하고 어떻게 참조하는지가 구조에 없다." 파이썬 검사는
@@ -324,8 +383,9 @@ BenchScene · 테스트)는 전부 `shared_ptr` 다. shared 로 소유되지 않
    에 살아남는데, `FrameRenderer::shutdown()` 이 그 스냅샷을 놓지 않아 렌더러 소멸(디바이스 사후)까지 들고 있었다.
    `shutdown()` 이 `releaseGpu` + `clear()` 로 디바이스가 살아 있을 때 놓는다. `EngineLoop::shutdown` 도 `_gtGpuScene`
    을 같은 시점에 비운다.
-   > 소멸자의 `_gpuDeviceGeneration == RHI::getDeviceGeneration()` 가드는 **한 번도 막지 못한다** — 세대를 올리는
-   > 코드가 저장소에 없다. 순서를 맞춘 것이지 가드를 고친 것이 아니다.
+   > 소멸자의 `_gpuDeviceGeneration == RHI::getDeviceGeneration()` 가드는 종료 순서에서는 막지 못한다 — 세대는
+   > `RHI::shutdown` 에서만 올랐고(정정: "올리는 코드가 없다" 고 적었던 것은 틀렸다) 그 시점엔 이미 늦다. 순서를
+   > 맞춘 것이지 가드를 고친 것이 아니다. `recreateDevice` 가 세대를 안 올리던 것은 아래 백엔드 교체 항목에서 고쳤다.
 2. **벤치가 종료에서 세그폴트했다** — 로그의 "Shutdown cleanly" 뒤, 즉 `SWGame.dll` 이 내려간 뒤다. BenchScene 이
    `make_shared` 로 만든 인스턴스의 **제어 블록(소멸 코드)이 게임 모듈 안에** 있고, 이제 엔진(GpuScene)이 마지막
    참조를 들고 있다가 모듈이 사라진 뒤 놓는다 → 없는 코드로 뛰어든다. "모듈의 정적은 핫리로드에서 죽는다" 의

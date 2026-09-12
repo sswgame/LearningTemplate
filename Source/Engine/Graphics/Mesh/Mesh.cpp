@@ -115,18 +115,15 @@ namespace sw
 
         if ( pDevice == nullptr || _listVertex.empty() )
             return false;
-        if ( _vertexBuffer != 0 && _pUploadDevice == pDevice )
+        // "이미 올라갔나" 는 **세대**로 판단한다. 포인터 비교는 백엔드 교체 뒤 새 디바이스가 옛 주소를 받으면
+        // 속는다 — 옛 디바이스의 정점 버퍼 핸들을 새 디바이스에 그대로 넘기게 된다.
+        const bool bSameDevice = ( _vertexBuffer != 0 ) && ( _uploadDeviceGeneration == RHI::getDeviceGeneration() );
+        if ( bSameDevice )
             return true;
-
-        // 이전 디바이스가 이미 shutdown된 경우 raw 포인터로 destroy하면 UAF.
+        // 세대가 다르면 옛 디바이스는 이미 죽었다 — 핸들은 잊기만 한다(destroy 하면 UAF).
         // GPU 버퍼는 디바이스 shutdownInternal 이 소유 해제한다.
-        if ( _pUploadDevice == pDevice )
-            releaseGpu();
-        else
-        {
-            _vertexBuffer  = 0;
-            _pUploadDevice = nullptr;
-        }
+        _vertexBuffer  = 0;
+        _pUploadDevice = nullptr;
 
         const uint32  bytes     = static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
         IRHIResource* pResource = pDevice->getResource();

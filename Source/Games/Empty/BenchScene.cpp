@@ -32,6 +32,7 @@ namespace sw
 
     BenchScene::BenchScene()
         : _listBenchMesh{}
+        , _keyLight{}
         , _glassMaterial{ nullptr }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
@@ -52,6 +53,26 @@ namespace sw
 
         spawn( static_cast<uint32>( gv_benchMeshes ) );
         return isActive();
+    }
+
+    void BenchScene::despawn()
+    {
+        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        if ( pObjects != nullptr )
+        {
+            // 핸들이 해석되면 그 소유 오브젝트를 지운다. 이미 없으면(씬이 바뀌었으면) 할 일이 없다.
+            for ( const ComponentHandle& handle : _listBenchMesh )
+            {
+                if ( Component* pComp = pObjects->resolveComponent( handle ) )
+                    pObjects->destroyObject( pComp->getOwner() );
+            }
+            if ( Component* pLight = pObjects->resolveComponent( _keyLight ) )
+                pObjects->destroyObject( pLight->getOwner() );
+        }
+        _listBenchMesh.clear();
+        _keyLight = {};
     }
 
     void BenchScene::spawn( uint32 meshCount )
@@ -198,7 +219,7 @@ namespace sw
             // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
             pMesh->setGpuSpinSeed( index + 1u );
             pMesh->setVisible( true );
-            _listBenchMesh.push_back( pMesh );
+            _listBenchMesh.push_back( pMesh->getHandle() );
         }
 
         spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
@@ -253,6 +274,7 @@ namespace sw
         DirectionalLightComponent* pLight = pLightObject->addComponent<DirectionalLightComponent>();
         if ( pLight == nullptr )
             return;
+        _keyLight = pLight->getHandle();
 
         // 그림자 볼륨은 씬을 덮어야 한다. 엔진 기본값은 2 유닛이라 142 유닛 격자에서는
         // 그림자가 원점 근처 몇 개에만 걸린다.
@@ -325,10 +347,19 @@ namespace sw
             }
         }
 
+        // 큐브는 씬이 소유한다. 여기 있는 것은 핸들뿐이라 씬이 통째로 바뀌어도(상태 복원) 죽은 주소를
+        // 건드릴 수 없다 — 해석이 nullptr 이면 그 큐브는 이미 없는 것이다.
+        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        if ( pObjects == nullptr )
+            return;
+
         const uint32 count = static_cast<uint32>( _listBenchMesh.size() );
         for ( uint32 index = 0; index < count; ++index )
         {
-            MeshComponent* pMesh = _listBenchMesh[index];
+            // 핸들은 MeshComponent 에서 만들었으므로 해석 결과도 MeshComponent 다.
+            MeshComponent* pMesh = static_cast<MeshComponent*>( pObjects->resolveComponent( _listBenchMesh[index] ) );
             if ( pMesh == nullptr )
                 continue;
 

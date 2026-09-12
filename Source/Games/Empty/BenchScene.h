@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -35,9 +36,19 @@ namespace sw
 
         /**
          * @brief `-gv_benchMeshes=N` 이 주어졌으면 벤치 씬을 만듭니다.
+         * @details 다시 불러도 된다 — 상태 복원(모듈 리로드 · RHI 교체)이 씬을 갈아 끼운 뒤 EmptyGame 이
+         *          다시 부른다. 벤치 오브젝트는 스냅샷 직전에 despawn 으로 걷히므로 복원 뒤 씬에 없다.
          * @return 실제로 만들었으면 true. 플래그가 없거나 0 이면 false.
          */
         bool spawnFromGlobals();
+
+        /**
+         * @brief 벤치가 만든 오브젝트(큐브 · 주광)를 씬에서 걷습니다. 멱등입니다.
+         * @details 상태 스냅샷 직전에 부른다. 절차 생성물은 스냅샷에 실을 이유가 없고, 실리면 복원된 것은
+         *          핸들과 다른 오브젝트인 데다 메시가 없는 유령이다. 스냅샷 규칙은 게임의 것이라
+         *          (GameInstanceBase 훅) 엔진 API 를 건드리지 않는다.
+         */
+        void despawn();
 
         /** @brief 벤치 큐브를 움직입니다. 비어 있으면 아무것도 하지 않습니다. */
         void update( float32 deltaTime );
@@ -64,8 +75,15 @@ namespace sw
         void frameOneCamera( CameraComponent* pCamera, uint32 side, float32 spacing );
 
     private:
-        /** @brief 벤치 큐브. 씬이 이들을 소유하며, 벤치 실행 중에는 파괴되지 않습니다. */
-        vector<MeshComponent*> _listBenchMesh;
+        /**
+         * @brief 벤치 큐브의 핸들. 씬이 큐브를 소유하고, 여기에는 주소가 없다.
+         * @details 생포인터를 들었을 때 RHI 교체가 여기서 죽었다 — 새 게임 인스턴스가 onInitialize 에서 큐브를
+         *          만든 직후 상태 복원이 씬을 통째로 지웠고, 다음 update 가 죽은 주소에 setLocalPosition 을 했다.
+         *          핸들은 해석이 nullptr 로 끝날 뿐 죽은 주소가 될 수 없다.
+         */
+        vector<ComponentHandle> _listBenchMesh;
+        /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */
+        ComponentHandle _keyLight;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
         shared_ptr<Material> _glassMaterial;
         /** @brief 애니메이션 누적 시간. */

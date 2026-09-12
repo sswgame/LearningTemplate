@@ -3066,3 +3066,137 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
     if ( mesh != nullptr )
         mesh->releaseGpu();
 }
+
+namespace
+{
+    /**
+     * @brief 패킷 경로로 몇 프레임 그리고(프레젠트 포함) SceneColor 에서 배경이 아닌 픽셀 수를 셉니다. 실패면 -1.
+     * @details 패킷은 프레임마다 새로 만든다 — `executePacket` 이 스냅샷을 **옮겨 가므로** 같은 패킷을 두 번 내면 두 번째는
+     *          빈 스냅샷이다(GT 도 프레임마다 export 한다).
+     */
+    int64 renderPacketFramesAndCountDrawn( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, sw::GpuScene& gtGpuScene )
+    {
+        constexpr uint32 kFrameCount = 3;
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+        {
+            sw::RenderFramePacket packet{};
+            packet._bValid = 1;
+            gtGpuScene.buildFromScene( &scene, packet._cameraPos, nullptr );
+            gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+            if ( packet._gpuScene._listInstance.empty() )
+                return -1;
+            pDevice->beginFrame( clear );
+            const bool bOk = renderer.executePacket( pDevice, packet );
+            pDevice->endFrame( true, false );
+            if ( bOk == false )
+                return -1;
+        }
+        pDevice->waitIdle();
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+            return -1;
+        int64 drawnCount{ 0 };
+        for ( uint32 y = 0; y < layout._height; ++y )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+            for ( uint32 x = 0; x < layout._width; ++x )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                    ++drawnCount;
+            }
+        }
+        return drawnCount;
+    }
+} // namespace
+
+/**
+ * @brief 디바이스를 다시 만든 뒤에도 **같은 FrameRenderer** 가 다시 그리는지 — 백엔드 교체의 재현.
+ * @details 앱의 교체 경로는 GT GpuScene 을 비우고, FrameRenderer 를 shutdown → 새 디바이스로 initialize 한다.
+ *          **투명(유리) 머티리얼**로 잰다 — 불투명은 머티리얼 버퍼가 빠져도(폴백 0) 보이지만, 투명은 알파 0 이라
+ *          사라진다. 실제로 그렇게 빈 화면이었다: `GpuScene::clear()` 가 그룹 목록만 지우고 경로→인덱스 맵을 남겨
+ *          `materialGroupFor` 가 범위 밖 인덱스를 돌려줬다. 세 번 잰다: 첫 디바이스, 재생성 뒤 같은 렌더러, 재생성 뒤
+ *          새 렌더러(대조군 — 렌더러에 남은 상태인지 디바이스 쪽인지 가른다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
+{
+    sw::unique_ptr<sw::IWindow>    window;
+    sw::shared_ptr<sw::IRHIDevice> device;
+    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+    sw::RHIBackend                 backend    = sw::RHIBackend::DirectX12;
+    bool                           bOk{ false };
+    for ( sw::RHIBackend candidate : backends )
+    {
+        if ( tryInitDeviceForFrameRenderer( candidate, window, device ) )
+        {
+            backend = candidate;
+            bOk     = true;
+            break;
+        }
+    }
+    if ( bOk == false )
+        SW_TEST_SKIP( "No RHI backend for device recreate test" );
+
+    constexpr const utf8* kGlassMaterial = "engine/materials/glassmaterial.material";
+    sw::Scene             scene( "DeviceRecreateScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
+    sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+    SW_ASSERT_NOT_NULL( go );
+    sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( mesh );
+    mesh->setMesh( cube );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromFile( kGlassMaterial ) );
+    mesh->setMaterial( material.get() );
+
+    sw::GpuScene      gtGpuScene;
+    sw::FrameRenderer renderer;
+    SW_ASSERT_TRUE( renderer.initialize( device.get() ) );
+    const int64 drawnFirst = renderPacketFramesAndCountDrawn( renderer, device.get(), scene, gtGpuScene );
+    SW_EXPECT_TRUE_MSG( drawnFirst > 0, ( "첫 디바이스에서 유리 큐브가 안 그려진다 (drawn " + sw::to_string( drawnFirst ) + ")" ).c_str() );
+
+    // ---- 앱의 교체 경로와 같은 순서로 내린다 ----
+    renderer.shutdown();
+    material->shutdown( device.get() );
+    cube->releaseGpu();
+    gtGpuScene.clear();
+    device->waitIdle();
+    device->shutdown();
+    device.reset();
+
+    device = sw::RHI::createDevice( backend );
+    SW_ASSERT_NOT_NULL( device.get() );
+    device->setInitWindow( window.get() );
+    SW_ASSERT_TRUE( device->initialize() );
+    SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
+
+    // 같은 렌더러 객체를 새 디바이스로 다시 세운다 — 앱이 하는 그대로.
+    SW_ASSERT_TRUE( renderer.initialize( device.get() ) );
+    const int64 drawnReused = renderPacketFramesAndCountDrawn( renderer, device.get(), scene, gtGpuScene );
+    SW_EXPECT_TRUE_MSG( drawnReused > 0, ( "재생성 뒤 같은 렌더러가 빈 화면을 낸다 (drawn " + sw::to_string( drawnReused ) + ")" ).c_str() );
+
+    // 대조군: 새 렌더러 객체라면 그려지는가.
+    renderer.shutdown();
+    cube->releaseGpu();
+    gtGpuScene.clear();
+    sw::FrameRenderer freshRenderer;
+    SW_ASSERT_TRUE( freshRenderer.initialize( device.get() ) );
+    const int64 drawnFresh = renderPacketFramesAndCountDrawn( freshRenderer, device.get(), scene, gtGpuScene );
+    SW_EXPECT_TRUE_MSG( drawnFresh > 0, ( "재생성 뒤 새 렌더러도 빈 화면이다 (drawn " + sw::to_string( drawnFresh ) + ")" ).c_str() );
+
+    freshRenderer.shutdown();
+    material->shutdown( device.get() );
+    cube->releaseGpu();
+    device->waitIdle();
+    device->shutdown();
+    device.reset();
+    window->destroy();
+    window.reset();
+}

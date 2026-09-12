@@ -28,6 +28,10 @@ namespace sw
         bool onInitialize() override;
         void onShutdown() override;
         void onUpdate( float32 deltaTime ) override;
+        /** @brief 상태 스냅샷 직전 — 벤치는 절차 생성물이라 걷어서 스냅샷에 싣지 않는다. */
+        void onBeforeStateSerialize() override;
+        /** @brief 상태 복원이 씬을 갈아 끼운 뒤 — 벤치는 스냅샷에 없으므로 다시 만든다. */
+        void onAfterStateDeserialize() override;
 
     private:
         /** @brief `-gv_benchMeshes=N` 이 주어졌을 때만 생긴다. 없으면 nullptr. */

@@ -229,7 +229,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `GpuSceneSnapshot` | GT 가 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
 | GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
 
-규칙 넷:
+규칙 여섯:
 
 1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣는다.** 스냅샷·패킷의 멤버는 `shared_ptr` 이거나 값이다.
    생포인터는 정렬 키(`GpuSceneSortKey` · `GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
@@ -244,10 +244,21 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 4. **놓는 순서는 디바이스보다 먼저.** `FrameRenderer::shutdown` · `EngineLoop::shutdown` 이 스냅샷 소유를 놓은 뒤
    디바이스를 내린다. 소멸자에 맡기면 디바이스 사후에 GPU 자원을 돌려주려 한다.
 
+5. **핸들 값은 디바이스 안에서만 정체성이다.** 새 디바이스의 첫 PSO·버퍼·디스크립터는 옛 디바이스와 **같은 번호**를
+   받는다(할당 순서가 결정적이다). 핸들 값으로 "그대로인가" 를 판단하는 캐시 — `FramePassContext` 의 마지막 바인딩,
+   `RenderGraphExecutionContext` 의 리소스 상태 — 는 디바이스를 내릴 때 함께 잊는다(`resetBindingCache` · `reset`).
+   세대(`RHI::getDeviceGeneration`)가 그 정체성의 번호이고 `shutdown` 과 `recreateDevice` 둘 다 올린다 — Mesh ·
+   MaterialInstance 는 핸들이 0 이 아닌 것과 "이 디바이스 것" 을 세대로 구분한다.
+6. **게임 모듈이 씬 오브젝트를 들 때는 핸들이다.** 상태 복원(모듈 리로드 · RHI 교체)은 씬을 통째로 지우고 다시
+   만든다. 생포인터는 죽은 주소가 되고 `ComponentHandle` 은 nullptr 로 끝난다. 절차 생성물은 스냅샷에 싣지 말고
+   `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(`BenchScene`).
+
 무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
 컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만
 `Scripts/lint/CheckRenderOwnership.py` 가 본다(CTest `lint` 라벨 · pre-commit 6/6).
-재현·회귀 테스트: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` (ASAN 프리셋에서 수정 전 UAF 를 잡았다).
+재현·회귀 테스트: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` (ASAN 프리셋에서 수정 전 UAF 를 잡았다),
+`RenderPassGpuTest.RendererSurvivesDeviceRecreate` (디바이스 재생성 뒤 유리 큐브 — 수정 전 빈 화면).
+헤드리스 재현: `-gv_rhiSwapAtFrame=30 -gv_rhiSwapTo=<0..3>` (DX11=0 · DX12=1 · Vulkan=2 · GL=3) 과 `-gv_screenshotFrame=100`.
 
 ## 의존 · 레이어
 

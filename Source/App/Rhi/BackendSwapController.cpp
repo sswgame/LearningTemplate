@@ -82,8 +82,9 @@ namespace sw
         if ( applyPendingChange() == false )
         {
             SW_LOG_ERROR( "Backend soft-recreate failed." );
-            // 되돌림 대입은 onBackendVariableChanged 를 다시 부르지만, 커밋된 백엔드와 같은 값이면
-            // RHI::schedulePendingBackendChange 가 no-op 이라 재시도 루프가 되지 않는다.
+            // C++ 대입은 값만 바꾼다 — 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의
+            // setValueAsInt/setValueFromString(콘솔·에디터 패널) 경로에서만 불린다. 되돌림이 재시도 루프가
+            // 될 일은 없다.
             gv_rhiBackend = pRHI->getCommittedBackend();
         }
     }
@@ -94,8 +95,8 @@ namespace sw
         if ( pInfo == nullptr || pRHI == nullptr )
             return;
 
-        // 아래에서 gv_rhiBackend 로 되돌림 대입을 하면 이 콜백이 다시 불린다.
-        // 되돌림 대상 자체가 사용 불가/에디터 미지원이면 무한 재귀가 되므로 재진입을 막는다.
+        // 아래의 되돌림은 C++ 대입이라 이 콜백을 다시 부르지 않는다(콜백은 GlobalVariableInfo 의 set* 경로만
+        // 부른다). 재진입 가드는 되돌림을 언젠가 set* 로 바꾸더라도 무한 재귀가 되지 않도록 남겨 둔다.
         if ( _bHandlingChange == SW_TRUE )
             return;
         _bHandlingChange = SW_TRUE;
