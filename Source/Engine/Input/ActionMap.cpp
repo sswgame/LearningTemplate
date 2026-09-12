@@ -87,9 +87,11 @@ namespace sw
         registerLayer( ActionMapDefaults::kDefaultLayerName, 0, true, false, false );
 
         // 디버그 핫키 격리: Ctrl + F6, Ctrl + F7, Ctrl + F8 (게임플레이 F1~F12 스킬과 충돌 원천 차단)
+#if !defined( SW_SHIPPING )
         bindChord( ActionMapDefaults::kReloadEditorAction, Key::LeftControl, Key::F6, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
         bindChord( ActionMapDefaults::kReloadGameAction, Key::LeftControl, Key::F7, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
         bindChord( ActionMapDefaults::kReloadShadersAction, Key::LeftControl, Key::F8, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
+#endif
 
         bind( ActionMapDefaults::kQuickSaveAction, Key::F5, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
         bind( ActionMapDefaults::kQuickLoadAction, Key::F9, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );

@@ -588,6 +588,7 @@ namespace sw
                     pLiveShaderManager->update();
             }
     #endif
+            pollShaderReloadHotkey();
 #endif
             // 파일 다이얼로그 결과를 **여기서** 메인 스레드로 넘긴다 — 다이얼로그는 분리 스레드가 띄운다.
             FileUtil::pumpFileDialogResults();
@@ -814,26 +815,19 @@ namespace sw
         _mapDebugAction->update( deltaTime );
     }
 
-    void EngineLoop::pollDebugHotkeys( [[maybe_unused]] const Delegate<void( const utf8* )>& forceReloadCallback )
+    void EngineLoop::pollShaderReloadHotkey()
     {
-#if !defined( SW_SHIPPING )
-        if ( _mapDebugAction == nullptr )
+#if defined( SW_DEBUG )
+        // 셰이더 리로드는 **Engine 자신의** 개발 도구다(LiveShaderManager 를 여기서 소유한다). 그래서
+        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
+        if ( _mapDebugAction == nullptr || _rhi == nullptr )
             return;
-
-        if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadShadersAction ) && _rhi != nullptr )
+        if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadShadersAction ) == false )
+            return;
+        if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
         {
-    #if defined( SW_DEBUG )
-            if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
-            {
-                pLiveShaderManager->triggerReloadAll();
-                SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
-            }
-    #endif
-        }
-        if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadGameAction ) && forceReloadCallback.isBound() )
-        {
-            forceReloadCallback( config::kTargetGameModule );
-            SW_LOG_INFO( "%#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
+            pLiveShaderManager->triggerReloadAll();
+            SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
         }
 #endif
     }

@@ -17,7 +17,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Input/ActionMap.h"
@@ -42,7 +41,6 @@ namespace sw
         , _frameTimeline{}
         , _backendSwap{}
         , _viewCameraProvider{}
-        , _forceReloadHandler{}
         , _bEnableEditor{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -148,12 +146,8 @@ namespace sw
         bool bEnableEditor = false;
         commandLineManager.getArgument( CommandLineArgument::ENABLE_EDITOR, bEnableEditor );
 
-        const RHICapabilities capabilities = RHIAvailability::query( gv_rhiBackend );
-        if ( bEnableEditor && capabilities._bEditorSupported == false )
-        {
-            SW_LOG_WARNING( "Editor requested but backend %# does not set _bEditorSupported — disabling editor.", RHI::getBackendTypeName( gv_rhiBackend ) );
-            bEnableEditor = false;
-        }
+        // 백엔드가 에디터를 감당하는지는 여기서 미리 묻지 않는다 — 답을 아는 것은 에디터다. 감당하지 못하면
+        // ImGuiEditor::initialize 가 렌더러 백엔드를 못 만들어 실패하고, 에디터만 뜨지 않는다.
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
         return true;
@@ -230,7 +224,6 @@ namespace sw
         // 루프 안에서 매 프레임 다시 만들던 것들이다. 바인딩 대상이 프레임마다 바뀌지 않으므로
         // 여기서 한 번 묶고, 에디터 뷰 카메라는 에디터 모드에서만 묶는다 — 비어 있다는 사실이
         // "씬 카메라를 쓴다" 는 뜻이라 루프에서 모드 분기를 할 필요가 없다.
-        _forceReloadHandler = SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this );
         if ( _bEnableEditor == SW_TRUE )
             _viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
 
@@ -335,10 +328,14 @@ namespace sw
     {
 #if !defined( SW_SHIPPING )
         _engineLoop.updateShellActions( deltaTime );
-        _engineLoop.pollDebugHotkeys( _forceReloadHandler );
 
-        const bool bReloadEditorRequested = _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction );
-        if ( bReloadEditorRequested )
+        // 모듈을 다시 올리는 기계는 여기(App)에 있다 — Engine 에는 "이 액션이 눌렸나" 만 묻는다.
+        if ( _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadGameAction ) )
+        {
+            onForceReload( config::kTargetGameModule );
+            SW_LOG_INFO( "%#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
+        }
+        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
         {
             onForceReload( config::kTargetEditorModule );
             SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );

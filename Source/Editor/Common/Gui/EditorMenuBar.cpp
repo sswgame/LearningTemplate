@@ -20,7 +20,6 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -249,10 +248,6 @@ namespace sw::editor
             ImGui::Text( "현재 그래픽스 RHI 백엔드: %s (%.0f FPS)", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
             ImGui::Separator();
             ImGui::TextUnformatted( "실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl" );
-            const bool bVk = RHIAvailability::query( RHIBackend::Vulkan )._bEditorSupported;
-            const bool bGl = RHIAvailability::query( RHIBackend::OpenGL )._bEditorSupported;
-            ImGui::Text( "Vulkan 에디터 지원: %s", bVk ? "사용 가능" : "미지원" );
-            ImGui::Text( "OpenGL 에디터 지원: %s", bGl ? "사용 가능" : "미지원" );
             ImGui::EndTooltip();
         }
     }

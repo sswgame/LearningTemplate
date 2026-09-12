@@ -94,8 +94,7 @@ namespace sw
 
         // 매 프레임 다시 만들 이유가 없는 델리게이트 — bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 바인딩된다. 비어 있으면 EngineLoop 이 씬 카메라를 쓴다. */
-        ViewCameraProviderDelegate    _viewCameraProvider;
-        Delegate<void( const utf8* )> _forceReloadHandler;
+        ViewCameraProviderDelegate _viewCameraProvider;
 
         uint8                  _bEnableEditor : 1;
         [[maybe_unused]] uint8 _reserved      : 7;

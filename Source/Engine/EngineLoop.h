@@ -103,9 +103,6 @@ namespace sw
          */
         void setOnScenesReleased( Delegate<void()> onScenesReleased );
 
-        /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
-        LiveShaderManager* getLiveShaderManager() const;
-
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void updateShellActions( float32 deltaTime );
@@ -116,8 +113,12 @@ namespace sw
          */
         bool wantsQuit() const { return _profileSession.wantsQuit(); }
 
-        void pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
-        /** @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다. */
+        /**
+         * @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다.
+         * @details Engine 이 내주는 것은 **입력 사실**뿐이다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
+         *          에디터를 다시 올린다)는 그 기계를 가진 쪽이 정한다 — 예전에는 리로드 콜백을 받아 Engine 이
+         *          직접 부르는 함수가 있었고, 그래서 Shipping 헤더에도 리로드 델리게이트가 남아 있었다.
+         */
         bool wasDebugActionTriggered( string_view actionName ) const;
 
         // ----------------------------------------------------------------------
@@ -135,6 +136,10 @@ namespace sw
     private:
         /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
         void rebindSceneAfterDeviceRecreate();
+        /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
+        LiveShaderManager* getLiveShaderManager() const;
+        /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
+        void pollShaderReloadHotkey();
 
     private:
         unique_ptr<Logger>                _logger;

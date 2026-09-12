@@ -31,7 +31,6 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -135,10 +134,9 @@ namespace sw::editor
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
             io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-            // 백엔드가 ImGui 훅을 보고하면 멀티 뷰포트 (DX11/12/GL/Vulkan + 플랫폼 뷰포트).
-            const RHICapabilities caps = RHIAvailability::query( pRhiDevice->getBackendType() );
-            if ( caps._bImGuiHooks )
-                io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있어 늘 켠다 — 없는 백엔드라면 아래
+            // createRendererBackend 가 nullptr 을 돌려주고 초기화가 거기서 멈춘다.
+            io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
             _dockLayout.setupPersistencePaths();
             _dockLayout.applyIniFilename();

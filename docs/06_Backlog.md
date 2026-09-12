@@ -295,6 +295,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (Engine 이 리로드 콜백을 받지 않고, 에디터를 알지도 않게 한다)
+
+`Source` 를 다시 훑어 Engine 에 남은 리로드·에디터 자국을 셋 찾아 없앴다.
+
+**1) 리로드 콜백을 받는 공개 API.** `EngineLoop::pollDebugHotkeys( const Delegate<void(const utf8*)>& forceReloadCallback )`
+가 Engine 헤더에 있었다. 본문은 Shipping 에서 통째로 비지만 **선언과 델리게이트 타입은 배포 헤더에 그대로 남는다.**
+둘로 갈랐다:
+- 셰이더 강제 리로드는 Engine **자신의** 개발 도구다(`LiveShaderManager` 를 `EngineLoop` 이 소유한다). 콜백을
+  달라고 하지 않고 `pollShaderReloadHotkey()` 로 내부에서 끝낸다 — private 이고 `SW_DEBUG` 안이다.
+- 모듈을 다시 올리는 일은 App 것이다. App 이 `wasDebugActionTriggered( kReloadGameAction )` 을 직접 묻고 자기
+  핸들러를 부른다(에디터 모듈은 이미 그렇게 하고 있었다 — 이제 둘이 같은 모양이다).
+덤으로 App 의 `_forceReloadHandler` 멤버가 사라졌다(Engine 에 넘기려고만 있던 델리게이트다).
+`EngineLoop::getLiveShaderManager()` 도 공개에서 내렸다 — **바깥 호출자가 하나도 없었다.**
+
+**2) Engine 의 RHI 가 에디터를 알고 있었다.** `RHICapabilities::_bEditorSupported` · `_bImGuiHooks`.
+둘 다 **네 백엔드에서 전부 1** 이라, 이것을 보는 세 자리(App 의 에디터 비활성화, `BackendSwapController` 의 교체
+되돌리기, `EditorMenuBar` 의 "Vulkan 에디터 지원" 툴팁)가 모두 도달 불가한 죽은 분기였다. 그리고 애초에
+"이 백엔드로 에디터가 도는가" 는 디바이스가 아니라 **에디터가 아는 사실**이다. 두 필드와 죽은 분기 셋을 지웠다.
+
+정본은 `IImGuiRendererBackend::createRendererBackend` 하나로 모았다. 그 팩토리의 `default:` 가
+**DX11 백엔드를 대신 만들어 돌려주고 있었다** — 새 백엔드가 붙으면 엉뚱한 API 로 그리다 조용히 무너진다.
+`nullptr` 을 돌려주게 고쳤고, `ImGuiEditor::initialize` 는 원래 그 경우를 이미 다루고 있었다(에디터만 안 뜬다).
+
+**3) Shipping 이 리로드 핫키를 바인딩하고 있었다.** `ActionMap::bindDefaultFallback` 의 Ctrl+F6/F7/F8 세 줄.
+배포 빌드에는 다시 올릴 모듈이 없으므로 아무도 읽지 않는 바인딩이었다 — `SW_SHIPPING` 으로 감쌌다.
+액션 **이름** 상수(`kReloadEditorAction` 등)는 남긴다: `constexpr string_view` 라 비용이 없고, 이름이 있어야
+App 과 Engine 이 같은 액션을 가리킬 수 있다.
+
+**결과.** Shipping `App.exe` 2,627,072 → 2,622,976 B. Engine 공개 헤더에서 리로드 델리게이트와 에디터 능력
+필드가 사라졌다.
+
+**검증.** Debug GPU 19/19 · nogpu 5/5 · 린트 7/7. 에디터 4백엔드 기동 전부 종료 0 · 창 15 · 빈 패널 0 · 오류 0.
+교체 5구성 종료 0 · 오류 0. Shipping 빌드 종료 0.
+
 ### 2026-09-12 (인스턴스 채우기를 워커로 나눈 것이 **모든 크기에서 지고 있었다**)
 
 Release 로 재 보니 게임 스레드 비용을 `GT.GpuScene.build.fill` 이 혼자 먹고 있었다 — 400개 메시에서

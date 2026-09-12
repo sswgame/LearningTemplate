@@ -8,17 +8,21 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) RHICapabilities — bindless / 컴퓨트 / 에디터 / 인디렉트
+    // 1) RHICapabilities — bindless / 컴퓨트 / 인디렉트
     // ------------------------------------------------------------------------------
-    /** @note 비트필드 대신 uint8 — DLL/컴파일러 간 패킹·true 대입 이슈를 피합니다. 0/1만 사용. */
+    /**
+     * @note 비트필드 대신 uint8 — DLL/컴파일러 간 패킹·true 대입 이슈를 피합니다. 0/1만 사용.
+     * @note **여기에 에디터 능력을 다시 넣지 말 것.** 예전에 `_bEditorSupported` · `_bImGuiHooks` 가 있었는데
+     *       네 백엔드가 전부 1 이라 검사하는 쪽이 모두 죽은 분기였고, 무엇보다 "이 백엔드로 에디터가 도는가" 는
+     *       디바이스가 아니라 **에디터가 아는 사실**이다(ImGui 렌더러 백엔드가 있느냐). 그 답의 정본은
+     *       `IImGuiRendererBackend::createRendererBackend` 하나이고, 없으면 nullptr 을 돌려준다.
+     */
     struct SW_API RHICapabilities
     {
         uint8 _bBindless{ 0 };                 ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
         uint8 _bNativeBindless{ 0 };           ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
         uint8 _bCompute{ 1 };                  ///< 컴퓨트 셰이더
         uint8 _bOffscreenRT{ 0 };              ///< createTexture2D + 오프스크린 경로
-        uint8 _bImGuiHooks{ 0 };               ///< ImGui 렌더러 훅 (멀티 뷰포트 등)
-        uint8 _bEditorSupported{ 0 };          ///< 이 백엔드에서 EditorModule 실행 가능
         uint8 _bComputeRootConstants{ 0 };     ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
         uint8 _bIndirectDraw{ 0 };             ///< drawIndirect / dispatchIndirect
         uint8 _bGpuCulling{ 0 };               ///< 컴퓨트 컬 + 인디렉트 인자 경로
@@ -76,8 +80,6 @@ namespace sw
                     caps._bNativeBindless             = 1; // 후보. 런타임은 Device::getCapabilities()
                     caps._bCompute                    = 1;
                     caps._bOffscreenRT                = 1;
-                    caps._bImGuiHooks                 = 1;
-                    caps._bEditorSupported            = 1;
                     caps._bComputeRootConstants       = 1;
                     caps._bIndirectDraw               = 1;
                     caps._bGpuCulling                 = 1;
@@ -90,8 +92,6 @@ namespace sw
                     caps._bNativeBindless       = 0;
                     caps._bCompute              = 1;
                     caps._bOffscreenRT          = 1;
-                    caps._bImGuiHooks           = 1;
-                    caps._bEditorSupported      = 1;
                     caps._bComputeRootConstants = 1;
                     caps._bIndirectDraw         = 1;
                     // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 걸 수 없다.
@@ -108,8 +108,6 @@ namespace sw
                     caps._bNativeBindless           = 0;
                     caps._bCompute                  = 1;
                     caps._bOffscreenRT              = 1;
-                    caps._bImGuiHooks               = 1;
-                    caps._bEditorSupported          = 1;
                     caps._bComputeRootConstants     = 1;
                     caps._bIndirectDraw             = 1;
                     caps._bGpuCulling               = 1;
@@ -125,8 +123,6 @@ namespace sw
                     caps._bNativeBindless       = 1; // 후보. 런타임은 supportsNativeBindlessSampling()
                     caps._bCompute              = 1;
                     caps._bOffscreenRT          = 1;
-                    caps._bImGuiHooks           = 1;
-                    caps._bEditorSupported      = 1;
                     caps._bComputeRootConstants = 1;
                     caps._bIndirectDraw         = 1;
                     caps._bGpuCulling           = 1;

@@ -10,7 +10,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -100,17 +99,8 @@ namespace sw
             return;
         _bHandlingChange = SW_TRUE;
 
-        const RHIBackend requestedBackend   = static_cast<RHIBackend>( pInfo->getValueAsInt() );
-        const bool       bEditorUnsupported = _bEnableEditor == SW_TRUE && RHIAvailability::query( requestedBackend )._bEditorSupported == false;
-        if ( bEditorUnsupported )
-        {
-            SW_LOG_WARNING( "Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
-            gv_rhiBackend = pRHI->getCommittedBackend();
-        }
-        else
-        {
-            pRHI->schedulePendingBackendChange( requestedBackend );
-        }
+        const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
+        pRHI->schedulePendingBackendChange( requestedBackend );
 
         _bHandlingChange = SW_FALSE;
     }
