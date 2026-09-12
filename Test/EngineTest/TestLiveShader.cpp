@@ -1,14 +1,19 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+// 셰이더 라이브 리로드는 개발 도구라 Shipping 빌드에는 **코드 자체가 없다**(Engine CMake 제외 목록).
+// 없는 기능의 테스트도 그 빌드에는 없다 — 여기서 끊지 않으면 Shipping 링크가 심볼을 못 찾는다.
 
-#include "TestFramework/TestFramework.h"
+#if !defined( SW_SHIPPING )
 
-#include <chrono>
-#include <filesystem>
+    #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+
+    #include "TestFramework/TestFramework.h"
+
+    #include <chrono>
+    #include <filesystem>
 
 // ------------------------------------------------------------------------------
 // 1) LiveShaderTest — 수동 리로드 대상 수집
@@ -139,3 +144,5 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     SW_ASSERT_TRUE( reloaded._bSuccess );
     SW_EXPECT_TRUE( reloaded._bytecode != first._bytecode );
 }
+
+#endif // !SW_SHIPPING

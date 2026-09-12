@@ -192,48 +192,10 @@ namespace sw
         _pRHIDevice      = nullptr;
     }
 
-    void Material::reloadShader( IRHIDevice* pRhi, const ShaderCompileResult& result )
-    {
-        if ( pRhi == nullptr || result._bSuccess == false )
-            return;
-
-        if ( result._bytecode.empty() == false )
-        {
-            // 바이트코드 포맷은 디바이스가 정한다 — DXBC(DX11) 와 DXIL(DX12) 은 둘 다 "DXBC" 매직이라 매직으로는 못 가른다.
-            // 예전엔 DX11 바이트코드를 DXIL 로 리플렉션해 g_SwMaterials 원소 stride 가 0 이 됐고, 머티리얼 버퍼가
-            // CB 크기(256) stride 로 만들어져 DX11 디버그 레이어가 "stride 256 vs 24" 를 냈다.
-            ShaderTargetFormat fmt = ShaderTargetFormat::DXIL_D3D12;
-            switch ( pRhi->getBackendType() )
-            {
-                case RHIBackend::DirectX11:
-                    fmt = ShaderTargetFormat::DXBC_D3D11;
-                    break;
-                case RHIBackend::Vulkan:
-                    fmt = ShaderTargetFormat::SPIRV_Vulkan;
-                    break;
-                case RHIBackend::OpenGL:
-                    fmt = ShaderTargetFormat::SPIRV_OpenGL;
-                    break;
-                case RHIBackend::DirectX12:
-                default:
-                    break;
-            }
-            const ShaderReflectionData reflection = ShaderReflection::reflect( result._bytecode, fmt );
-            syncPropertiesFromReflection( reflection );
-        }
-
-        if ( _constantBuffer != 0 )
-        {
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
-            SW_LOG_INFO( "HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)",
-                         _desc._name.c_str(), result._bytecode.size() );
-        }
-    }
-
     bool Material::ensureShaderLayout( IRHIDevice* pDevice )
     {
         // 머티리얼 바이트의 정본은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData_t 원소 레이아웃**이다(언리얼도
-        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전엔 핫리로드(reloadShader) 때만 맞췄고 로드 경로에서는 XML
+        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전엔 셰이더 핫리로드 경로에서만 맞췄고 로드 경로에서는 XML
         // 순서로 패킹해 stride 가 0 이었다 — 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         if ( pDevice == nullptr || _desc._shaderPath.empty() )
             return false;

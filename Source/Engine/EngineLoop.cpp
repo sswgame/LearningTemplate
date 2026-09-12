@@ -352,6 +352,16 @@ namespace sw
             // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
             CrashHandler::setContextValue( "RHI", _rhi->getDevice().getBackendName() );
 
+#if defined( SW_DEBUG )
+            // 셰이더 라이브 리로드는 개발 도구다 — Debug 에서만 만든다(Shipping 에는 코드 자체가 없다).
+            _liveShaderManager = make_unique<LiveShaderManager>();
+            if ( _liveShaderManager->initialize( "Shaders" ) == false )
+            {
+                SW_LOG_ERROR( "Failed to initialize LiveShaderManager!" );
+                _liveShaderManager.reset();
+            }
+#endif
+
             // `-gv_crashTest=1` — 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다. 리포트는
             // 크래시가 나야만 만들어지므로, 일부러 한 번 죽여 보지 않으면 배포 뒤에야 안 되는 걸 안다.
             if ( gv_crashTest != 0 )
@@ -371,7 +381,7 @@ namespace sw
                 return false;
             }
             // LiveShaderManager 는 SW_DEBUG 에서만 만들어진다 — 없으면 건너뛴다.
-            if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+            if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
             {
                 // 렌더 스레드를 먼저 세운 뒤에 재컴파일을 반영한다.
                 //
@@ -471,6 +481,11 @@ namespace sw
             // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫리로드를 건다).
             if ( _onScenesReleased.isBound() )
                 _onScenesReleased();
+#if !defined( SW_SHIPPING )
+            if ( _liveShaderManager != nullptr )
+                _liveShaderManager->shutdown();
+#endif
+
             if ( _taskManager != nullptr )
                 _taskManager->shutdown();
             if ( _globalVariableManager != nullptr )
@@ -484,6 +499,9 @@ namespace sw
             if ( _logger != nullptr )
                 _logger->shutdown();
 
+#if !defined( SW_SHIPPING )
+            _liveShaderManager.reset();
+#endif
             _renderThread.reset();
             _frameRenderer.reset();
             _sceneManager.reset();
@@ -570,7 +588,7 @@ namespace sw
     #if defined( SW_DEBUG )
             if ( _rhi != nullptr )
             {
-                if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+                if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
                     pLiveShaderManager->update();
             }
     #endif
@@ -753,6 +771,15 @@ namespace sw
             pScene->ensureDefaultCameras();
     }
 
+    LiveShaderManager* EngineLoop::getLiveShaderManager() const
+    {
+#if defined( SW_SHIPPING )
+        return nullptr;
+#else
+        return _liveShaderManager.get();
+#endif
+    }
+
     void EngineLoop::setOnScenesReleased( Delegate<void()> onScenesReleased )
     {
         _onScenesReleased = std::move( onScenesReleased );
@@ -801,7 +828,7 @@ namespace sw
         if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadShadersAction ) && _rhi != nullptr )
         {
     #if defined( SW_DEBUG )
-            if ( LiveShaderManager* pLiveShaderManager = _rhi->getLiveShaderManager() )
+            if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
             {
                 pLiveShaderManager->triggerReloadAll();
                 SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );

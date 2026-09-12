@@ -292,6 +292,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (그래픽스의 Dev 전용 리로드도 같은 기준으로 — RHI 는 파일 감시자의 집이 아니다)
+
+모듈 리로드를 App 으로 옮긴 뒤, 그래픽스 쪽 "리로드" 코드도 같은 기준(Shipping 이 안 쓰면 싣지 않는다)으로 훑었다.
+**먼저 가려야 할 것이 있다: 그래픽스 쪽은 모듈 리로드가 아니라 셰이더·에셋 리로드다.** 성격이 다르므로 처리도 다르다.
+
+**1) `LiveShaderManager` — RHI 에서 EngineLoop 으로, 그리고 Shipping 에서 제외.** 셰이더 파일을 지켜보다 다시 컴파일하는
+개발 도구(211줄)인데 `RHI` 가 소유했다. RHI 는 **디바이스 추상**이지 파일 감시자의 집이 아니고, 정작 돌리는 쪽은
+`EngineLoop`(등록 · update · triggerReloadAll)이었다. 소유를 EngineLoop 으로 옮기고 `RHI` 에서 멤버·접근자·include 를
+지웠다. Shipping 빌드는 파일째 제외한다(Engine CMake). 생성은 예전처럼 `SW_DEBUG` 에서만 한다.
+> **테스트도 함께 빠진다.** `TestLiveShader.cpp` 를 `#if !defined( SW_SHIPPING )` 으로 감쌌다 — 없는 기능의 테스트는
+> 그 빌드에 있을 수 없다. (Shipping 에서 테스트가 빌드되지 않는 줄 알았는데 `TestBin/` 에 빌드된다. `Bin/` 만 보고
+> 판단해서 링크 에러로 배웠다.)
+
+**2) `Material::reloadShader` — 죽어 있었다.** 선언과 정의만 있고 **호출자가 0** 이었다(38줄). 지웠다. 머티리얼의 셰이더
+레이아웃을 맞추는 일은 지금 `ensureShaderLayout` 이 로드 경로에서 한다 — 그 주석이 아직 `reloadShader` 를 가리키고
+있어 사실대로 고쳤다.
+
+**3) 남긴 것과 그 이유.** `MaterialCache::reload` · `TextureCache::reload` 는 **에셋 핫리로드**이고 호출자는 에디터
+(`AssetHotReload` · `MaterialPanel`)다. Shipping 에는 EditorModule 이 없어 도달할 수 없지만, 이들은 "디스크에서 다시
+읽는다" 는 평범한 리소스 캐시 API 라 지우면 에디터가 깨진다. `Mesh` 쪽에는 리로드 전용 코드가 남아 있지 않다
+(디바이스 세대 판단은 `RHIResidentBuffer` 로 이미 정리됐다).
+
+**결과.** Shipping `App.exe` 2,631,680 B → **2,627,584 B**. `RHI` 의 공개 표면에서 셰이더 도구가 사라졌다.
+
+**검증.** Debug 에서 LiveShaderTest 3/3(기능이 그대로 동작한다), GPU 17/17, SmokeTest 19/19, nogpu 5/5, 린트 7/7.
+Dev 실기동(에디터) 종료 0 · 크래시 0 · 패널 덤프 창 15 · 빈 패널 0. Shipping 빌드·실행 종료 0 · 스크린샷 배경 아닌 픽셀 48.6k.
+
 ### 2026-09-12 (모듈 리로드를 Engine 에서 App 으로 — Shipping 이 안 쓰는 기계를 싣지 않는다)
 
 **문제.** `LiveReloadManager`(864 줄)가 `Source/Engine/Module/` 에 있고 `EngineLoop` 이 소유했다. 쓰는 쪽은 전부 App

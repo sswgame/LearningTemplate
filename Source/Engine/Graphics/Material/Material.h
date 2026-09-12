@@ -76,8 +76,6 @@ namespace sw
         string saveToString() const;
         /** @brief XML 텍스트에서 머티리얼을 로드합니다. */
         bool loadFromXml( string_view xmlText );
-        /** @brief 컴파일 결과로 셰이더/리플렉션을 다시 붙입니다. */
-        void reloadShader( IRHIDevice* pRhi, const ShaderCompileResult& result );
         /** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
         /**

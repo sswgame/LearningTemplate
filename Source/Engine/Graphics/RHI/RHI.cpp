@@ -9,7 +9,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Window/IWindow.h"
@@ -122,8 +121,7 @@ namespace sw
     }
 
     RHI::RHI()
-        : _liveShaderManager{ nullptr }
-        , _device{ nullptr }
+        : _device{ nullptr }
         , _pendingRHIBackend{ RHIBackend::DirectX12 }
         , _committedRHIBackend{ RHIBackend::DirectX12 }
         , _bPreferredVSync{ SW_FALSE }
@@ -197,16 +195,6 @@ namespace sw
             return false;
         }
 
-#if defined( SW_DEBUG )
-        _liveShaderManager = make_unique<LiveShaderManager>();
-        if ( _liveShaderManager->initialize( "Shaders" ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize LiveShaderManager!" );
-            _device.reset();
-            return false;
-        }
-#endif
-
         SW_LOG_INFO( "RHI initialized successfully." );
         _committedRHIBackend = currentBackend;
         _pendingRHIBackend   = currentBackend;
@@ -216,9 +204,6 @@ namespace sw
     void RHI::shutdown()
     {
 #if defined( SW_DEBUG )
-        if ( _liveShaderManager != nullptr )
-            _liveShaderManager->shutdown();
-        _liveShaderManager.reset();
 #endif
         if ( _device != nullptr )
         {

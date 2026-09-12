@@ -14,7 +14,6 @@ namespace sw
     enum class ShaderTargetFormat : uint8;
 
     class IRHIDevice;
-    class LiveShaderManager;
 } // namespace sw
 
 namespace sw
@@ -33,7 +32,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 빈 RHI (디바이스 없음). */
         RHI();
-        /** @brief 디바이스와 LiveShaderManager를 정리합니다. */
+        /** @brief 디바이스를 정리합니다. */
         ~RHI();
 
         /** @brief 복사를 금지합니다. */
@@ -99,17 +98,9 @@ namespace sw
         static uint64 getDeviceGeneration() { return _s_deviceGeneration; }
         /** @brief 활성 IRHIDevice를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
-        /**
-         * @brief 활성 LiveShaderManager 를 반환합니다. **널일 수 있습니다.**
-         * @details 셰이더 라이브 리로드는 개발 편의 기능이라 SW_DEBUG 에서만 생성된다(RHI.cpp).
-         *          예전엔 이 함수가 참조를 돌려줘서, Release/Shipping 에서 널 unique_ptr 을
-         *          역참조하는 UB 였다 — EngineLoop 이 무조건 호출해 기동 직후 죽었다.
-         */
-        LiveShaderManager* getLiveShaderManager() const { return _liveShaderManager.get(); }
 
     private:
-        unique_ptr<LiveShaderManager> _liveShaderManager;
-        unique_ptr<IRHIDevice>        _device;
+        unique_ptr<IRHIDevice> _device;
 
         /** @brief 디바이스 파괴마다 증가. 0 은 "업로드된 적 없음" 을 뜻합니다. */
         static uint64          _s_deviceGeneration;

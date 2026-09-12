@@ -26,6 +26,12 @@ set(coreExclude
     "Module/DelayLoadNotifyHook.cpp"
 )
 
+# 셰이더 라이브 리로드는 개발 도구다 — Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
+# 실행되지 않는 것으로는 부족하다: 바이너리에서 빠져야 한다.
+if(SW_SHIPPING_BUILD)
+    list(APPEND coreExclude "Graphics/Shader/Compile/LiveShaderManager\.(cpp|h)$")
+endif()
+
 if(SW_RHI_AS_MODULES OR SW_SHIPPING_BUILD)
     foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
         file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")

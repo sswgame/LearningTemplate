@@ -33,6 +33,7 @@ namespace sw
     class IAudioSystem;
     class InputManager;
     class IRHIDevice;
+    class LiveShaderManager;
     class LocalizationManager;
     class Logger;
     class MemoryProfiler;
@@ -102,6 +103,9 @@ namespace sw
          */
         void setOnScenesReleased( Delegate<void()> onScenesReleased );
 
+        /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
+        LiveShaderManager* getLiveShaderManager() const;
+
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void updateShellActions( float32 deltaTime );
@@ -153,8 +157,16 @@ namespace sw
         unique_ptr<RenderThread>          _renderThread;
         /** @brief GT 쪽 영속 GpuScene — buildFromScene의 콘텐츠 해시 캐싱이 프레임 간 유지되도록 여기 소유.
          *         매 프레임 CPU 스냅샷만 exportCpuSnapshot으로 뽑아 RenderFramePacket에 담아 RT로 넘긴다. */
-        GpuScene                        _gtGpuScene;
-        Delegate<void()>                _onScenesReleased;
+        GpuScene         _gtGpuScene;
+        Delegate<void()> _onScenesReleased;
+        /**
+         * @brief 셰이더 라이브 리로드. **Shipping 에는 없고**(파일째 빌드에서 빠진다) Debug 에서만 실제로 만들어집니다.
+         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**다. 예전에는 RHI 가 들고 있었는데, RHI 는
+         *          디바이스 추상이지 파일 감시자의 집이 아니다 — 돌리는 쪽(EngineLoop)이 갖는 것이 맞다.
+         */
+#if !defined( SW_SHIPPING )
+        unique_ptr<LiveShaderManager> _liveShaderManager;
+#endif
         unique_ptr<EngineData>          _engineData;
         unique_ptr<AssetStreamingQueue> _assetStreamingQueue;
         unique_ptr<CommandStack>        _commandStack;
