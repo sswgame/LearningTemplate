@@ -214,6 +214,46 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
+### 1-4. 정점을 GPU 가 바꾼다 (GPU 메시 모프) — **설계는 섰고 구현이 남았다**
+
+**왜 CPU 로 하면 안 되는지부터.** `Mesh::setVertices` 는 `releaseVertexBuffer()` 를 먼저 부른다 —
+즉 정점을 매 프레임 바꾸면 **메시마다 GPU 버퍼를 파괴하고 다시 만든다.** 게다가 그 호출은 게임
+스레드에서 나는데, 버퍼 생성·파괴를 아무 스레드에서나 해도 되는지는 백엔드가 정한다
+(`_bThreadSafeResourceCreation`, OpenGL 은 `false` — `glGen*` 이 현재 컨텍스트를 요구한다).
+그러니 "실시간 정점 변형" 을 CPU 로 붙이는 것은 GL 에서 바로 깨지는 길이다.
+
+옳은 방향은 **인스턴스 애니메이션(`instanceanim.hlsl`)이 이미 간 길**이다 — CPU 가 매 프레임
+트랜스폼을 다시 쓰던 것을 컴퓨트로 옮긴 그 자리. 정점도 같은 모양으로 옮긴다.
+
+**설계.**
+- 업로드된 정점 버퍼는 **레스트 포즈**로 두고(읽기), 메시마다 **변형 결과 버퍼**를 하나 더 둔다(쓰기).
+  드로우는 결과 버퍼를 바인딩한다 — `GpuMeshBatch::_vertexBuffer` 가 이미 배치가 들고 다니는 값이라
+  드로우 경로는 손대지 않아도 된다.
+- 컴퓨트 `meshmorph.hlsl` 이 레스트를 읽어 변형해 결과에 쓴다. 디스패치 자리는
+  `dispatchInstanceAnimation` 바로 옆이고, **컬링보다 먼저**여야 한다(바운드가 달라지므로 —
+  인스턴스 애니메이션이 컬링 앞에 있는 것과 같은 이유이고, 이쪽은 회전만이 아니라 실제로 바운드가 변한다).
+- 배리어는 그 자리의 규약을 따른다: 쓰기 전 `UnorderedAccess`, 드로우 전 `ShaderResource`.
+
+**막고 있는 것 두 가지 (확인함).**
+1. **버퍼 생성 경로가 조합 용도를 무시한다.** `IRHIResource::createBuffer` 의 기본 구현은
+   `Vertex` 플래그가 있으면 그냥 `createVertexBuffer` 로 보낸다 — `UnorderedAccess` 가 같이 와도
+   버린다. DX12 · Vulkan 은 `createBuffer` 를 **재정의하지 않으므로** 그 기본 구현을 탄다. 즉
+   지금은 "정점 버퍼이면서 UAV" 인 버퍼를 만들 수 없다. 네 백엔드의 생성 경로를 먼저 열어야 한다.
+2. **DX11 은 구조버퍼와 정점 버퍼를 겸할 수 없다.** `D3D11_RESOURCE_MISC_BUFFER_STRUCTURED` 와
+   `D3D11_BIND_VERTEX_BUFFER` 는 같이 설 수 없다. 그래서 모프 버퍼는 **RAW(ByteAddressBuffer) UAV**
+   여야 한다 — 셰이더가 `Load`/`Store` 로 바이트 오프셋을 직접 다룬다.
+   전례가 있다: 간접 인자 버퍼가 이미 `Raw | UnorderedAccess | IndirectArgs | ShaderResource` 로
+   네 백엔드에서 돌고 있다. 그 길을 그대로 따라간다.
+
+**그래서 순서는** (1) 네 백엔드의 `createBuffer` 가 `Vertex | Raw | UnorderedAccess | ShaderResource`
+조합을 실제로 만들게 한다 → (2) `meshmorph.hlsl` + `RenderPassType::MeshMorph` + PSO →
+(3) 메시가 모프 대상을 갖고 배치가 그걸 바인딩 → (4) 벤치 스위치(`-gv_benchMeshMorph`) →
+(5) 4백엔드 검증(스크린샷까지 — 변형은 로그로는 안 보인다).
+
+**검증 함정 미리 적어 둠.** 정점이 움직이면 `RenderPassGpuTest` 의 픽셀 비교가 흔들린다. 모프는
+**기본 꺼짐**이어야 하고, 켠 상태의 검증은 "무게중심이 시간에 따라 움직인다" 같은 지표로 따로 봐야 한다
+(`-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 비교 — [[screenshot-always-frame-10]] 의 교훈).
+
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
