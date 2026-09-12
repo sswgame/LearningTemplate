@@ -232,9 +232,12 @@ namespace sw
         /** @brief 모듈 컴포넌트 팩토리를 이 매니저에 등록합니다. */
         void registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
 
+#if !defined( SW_SHIPPING )
         /** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
         void unregisterFactoriesByModule( string_view moduleName );
+#endif
 
+#if !defined( SW_SHIPPING )
         /**
          * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 전부 지웁니다.
          * @details 팩토리·타입·전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 산다. 인스턴스가 남으면
@@ -243,6 +246,7 @@ namespace sw
          * @return 지운 컴포넌트 수.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
+#endif
 
         /** @brief 전역 모듈 팩토리 헤드를 등록합니다. */
         static void registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );

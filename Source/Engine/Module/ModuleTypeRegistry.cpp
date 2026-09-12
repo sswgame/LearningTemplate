@@ -115,6 +115,7 @@ namespace sw
             }
         }
 
+#if !defined( SW_SHIPPING )
         void unregisterModuleTypes( string_view moduleName )
         {
             getModuleHeadCache().erase( string{ moduleName } );
@@ -132,5 +133,6 @@ namespace sw
             getTypeRegistry().unregisterTypesByModule( moduleName );
             getGlobalVariableManager().unregisterVariablesByModule( moduleName );
         }
+#endif
     } // namespace engine
 } // namespace sw

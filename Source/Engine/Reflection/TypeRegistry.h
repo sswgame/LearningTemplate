@@ -101,8 +101,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 모듈의 pending Type/Enum registrar 체인을 등록합니다. */
         void registerPendingTypes( string_view moduleName, struct TypeRegistrar* pClassHead, struct EnumRegistrar* pEnumHead );
+#if !defined( SW_SHIPPING )
         /** @brief 해당 모듈이 등록한 타입을 모두 해제합니다. */
         void unregisterTypesByModule( string_view moduleName );
+#endif
 
         // ------------------------------------------------------------------------------
         // 3) 단건 등록 · 별칭 — REFLECT(Alias=…) / ReflectBuiltins codegen

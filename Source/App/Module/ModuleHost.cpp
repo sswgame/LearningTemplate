@@ -633,7 +633,10 @@ namespace sw
         if ( bReleaseApiTable )
         {
             _editorApi = {};
+            // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 코드가 없다).
+#if !defined( SW_SHIPPING )
             engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+#endif
         }
     }
 
@@ -644,8 +647,10 @@ namespace sw
         if ( _game != nullptr && _gameApi.destroy != nullptr )
             _gameApi.destroy( _game );
 
+#if !defined( SW_SHIPPING )
         if ( bReleaseApiTable )
             engine::unregisterModuleTypes( sw::config::kTargetGameModule );
+#endif
 
         if ( _gameApi.bindService != nullptr )
             _gameApi.bindService( nullptr );

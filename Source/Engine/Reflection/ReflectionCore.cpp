@@ -496,6 +496,7 @@ namespace sw
         _activeModuleName = hashed_string();
     }
 
+#if !defined( SW_SHIPPING )
     void TypeRegistry::unregisterTypesByModule( string_view moduleName )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -542,6 +543,7 @@ namespace sw
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
     }
+#endif
 
     void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
     {

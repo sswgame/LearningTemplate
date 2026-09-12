@@ -3301,6 +3301,9 @@ SW_TEST_CASE( GameObjectHierarchy, ActiveInHierarchyCompoundEvaluation )
     SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
 }
 
+// 모듈 언로드는 Dev 에만 있다 — Shipping 은 모듈을 정적 링크해 내리지 않으므로
+// destroyComponentsOfModule 자체가 그 빌드에 없다. 없는 기능의 테스트도 없다.
+#if !defined( SW_SHIPPING )
 /**
  * @brief 모듈이 내려가기 전에 그 모듈 타입의 **살아 있는 컴포넌트**가 걷히는지.
  * @details 씬은 엔진이 소유해 모듈(SWGame·EditorModule)보다 오래 산다. 예전에는 언로드가 팩토리·타입·전역 변수만
@@ -3334,6 +3337,7 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     // 3) 멱등이다 — 이미 걷힌 뒤 다시 불러도 0.
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
 }
+#endif // !SW_SHIPPING
 
 /**
  * @brief 파괴 대기(pending kill) 오브젝트의 이름은 비어 있는 것으로 본다.

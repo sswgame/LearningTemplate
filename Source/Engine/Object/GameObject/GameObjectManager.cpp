@@ -937,6 +937,7 @@ namespace sw
         _activeModuleName = hashed_string();
     }
 
+#if !defined( SW_SHIPPING )
     void GameObjectManager::unregisterFactoriesByModule( string_view moduleName )
     {
         const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
@@ -951,7 +952,9 @@ namespace sw
                 ++it;
         }
     }
+#endif
 
+#if !defined( SW_SHIPPING )
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         SW_ASSERT( isStructuralMutationFrozen() == false );
@@ -980,6 +983,7 @@ namespace sw
             SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName.data() );
         return count;
     }
+#endif
 
     void GameObjectManager::registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
     {

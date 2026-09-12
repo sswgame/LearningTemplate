@@ -292,6 +292,40 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-12 (Engine 전수 감사 — 리로드 · 에디터 · 테스트 축 셋, 하나만 남아 있었다)
+
+"Engine 에서 리로드 · 에디터 · 테스트 관련을 최대한 없앤다" 로 **포함 그래프를 기계로 전수 조사**했다. 결론부터:
+세 축 중 둘은 이미 깨끗했고, 남은 하나(모듈 등록 해제)를 Shipping 에서 걷어냈다.
+
+**에디터 축 — 이미 깨끗하다.** Engine 헤더 중 "Engine 밖 사용자가 Editor 뿐인" 것은 15개였지만, **전부 Engine 내부에서도
+쓰는 실제 기능**이었다(AssetDatabase · Sequencer · 입력 장치 · 2D 컴포넌트 등). 즉 **에디터만을 위해 존재하는 Engine 파일은
+하나도 없다.** 코드에 남은 "Editor" 어휘는 리플렉션 속성(`CallInEditor` — 인스펙터가 읽는 메타데이터)과
+`RHICapabilities::_bEditorSupported`(그 백엔드에서 에디터가 뜨는지) 정도이고, 둘 다 Engine 이 **선언**하고 에디터가
+**소비**하는 형태라 레이어 위반이 아니다. include 방향은 `CheckEngineLayers` 린트가 이미 강제한다.
+
+**테스트 축 — 이미 깨끗하다.** "Engine 밖 사용자가 Test 뿐인" 헤더가 56개였지만 역시 전부 Engine 내부에서 쓰는 기능이다.
+테스트 전용 API 는 남아 있지 않다(2026-09-11 에 다섯 개를 걷어낸 뒤로 늘지 않았다).
+
+**리로드 축 — 등록 해제 경로를 Shipping 에서 걷어냈다.** Shipping 은 모듈을 정적 링크해 프로세스가 끝날 때까지 내리지
+않는다. 그런데 `ModuleHost` 가 종료 때 `engine::unregisterModuleTypes` 를 불렀고, 그것이 `destroyComponentsOfModule` ·
+`unregisterFactoriesByModule` · `unregisterTypesByModule` 까지 끌고 있었다 — **끝나는 프로세스에서 등록부를 비우는 일**이다.
+전부 `#if !defined( SW_SHIPPING )` 로 갈랐다. 등록(`registerModuleTypes`)은 Shipping 도 쓰므로 그대로 둔다.
+> **`rebindAllCachedTypeInfo` 는 리로드 전용이 아니었다.** 가드를 걸었다가 빌드가 깨져 알았다 — `registerModuleTypes` 가
+> 매 등록마다 부른다(Shipping 의 최초 등록 포함). 되돌렸다.
+> **테스트도 같은 기준으로 갈랐다.** `ModuleComponentsPurgedBeforeUnload`(EngineTest)와 SmokeTest 의 Dev 소스 목록
+> (`LiveReloadManager.cpp` · `ModuleCompiler.cpp`)을 Shipping 에서 뺐다. SmokeTest 의 `TestSmoke.cpp` 는 예전부터
+> Dev/Shipping 으로 갈라져 있었고 CMake 목록만 무조건이었다.
+
+**결과.** Shipping `App.exe` 2,627,584 B → **2,618,368 B**. 오늘 하루 누적으로는 2,656,256 → 2,618,368 (**-37 KB**).
+
+**검증.** Debug: SmokeTest 19/19, GameObjectManagerPoolTest 3/3, GPU 17/17, nogpu 5/5, 린트 7/7. Dev 실기동(에디터)
+종료 0 · 크래시 0 · `Unloading module` 5줄 · 패널 덤프 창 15 · 빈 패널 0. Shipping: 빌드 · 앱 실행 종료 0 · SmokeTest
+(정적 fillGameAPI 경로) 1/1.
+
+**남겨 둔 것과 이유.** `GameObjectPtr` · `ComponentPtr` · `ObjectStateSerializer` 는 핫리로드가 만든 타입이지만
+선택(SelectionManager) · 세이브게임 · 직렬화가 함께 쓰므로 리로드 전용이 아니다. `MaterialCache::reload` ·
+`TextureCache::reload` 는 에디터가 쓰는 **에셋** 리로드다. RHI 백엔드 핫스왑은 런타임 기능이지 모듈 리로드가 아니다.
+
 ### 2026-09-12 (그래픽스의 Dev 전용 리로드도 같은 기준으로 — RHI 는 파일 감시자의 집이 아니다)
 
 모듈 리로드를 App 으로 옮긴 뒤, 그래픽스 쪽 "리로드" 코드도 같은 기준(Shipping 이 안 쓰면 싣지 않는다)으로 훑었다.
