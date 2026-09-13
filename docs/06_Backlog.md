@@ -336,7 +336,7 @@ Present 변종. Material 에서 고친 것과 **같은 결함을 여기 남겨 �
 
 ---
 
-**고친 것 하나 — 이번 작업과 무관한 선행 실패다. 되돌려서 확인했다.**
+**고친 것 둘 — 이번 작업과 무관한 선행 실패다. 둘 다 되돌려서 확인했다.**
 
 **(가) 유니티 빌드(= CI 가 쓰는 프리셋)가 깨져 있었다.** `PointLightComponent` · `SpotLightComponent` ·
 `DirectionalLightComponent` 가 **익명 네임스페이스에 벌거벗은 상수**(`kDefaultColor` 등)를 두고 있었다. 유니티 빌드는
@@ -346,8 +346,15 @@ Present 변종. Material 에서 고친 것과 **같은 결함을 여기 남겨 �
 > **린트가 못 잡는다.** `CheckCodeConventions` 의 `Naming/DuplicateInternalHelper` 는 Internal **구조체 이름**만 본다.
 > 익명 네임스페이스의 벌거벗은 상수는 검사 밖이다 — 다음에 같은 것이 들어와도 유니티 빌드를 돌려야만 드러난다.
 
+**(나) `LiveShaderTest` 가 자기가 더럽힌 캐시를 안 비웠다.** 프로브 `.hlsli` 를 셰이더 폴더에 쓰고 지우는데,
+공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 **캐시**하므로 프로브가 있던 동안의 값이 다음 테스트로 샜다.
+그래서 `ShaderBakeStampTest` 가 그 오염된 값을 기준으로 잡고, 스스로 무효화한 뒤 비교해 떨어졌다.
+정리 델리게이트에 `invalidateSharedHeaderCache()` 를 넣었다(`ShaderBakeStampTest` 가 자기 임시 헤더에 이미 하던 것과 같다).
+> **CI 는 이걸 못 본다** — `EngineTest_NoGPU` 필터가 `LiveShaderTest` 를 뺀다. 필터 없이 `EngineTest.exe` 를 통째로
+> 돌리는 개발자만 만난다. 그래서 이번에 **필터 없는 전체 실행**을 기준선에 넣었다: **461 통과 · 0 실패**.
+
 **확인**: Debug·Release·Shipping 경고 0 · **유니티(CI-Debug) 빌드 통과** · 린트 7/7 · ctest nogpu 5/5 양쪽 ·
-에디터 ON 네 백엔드 오류 0 · 창 15 · 빈 패널 0 · BackendSmoke 8회 오류 0.
+`EngineTest.exe` 필터 없이 461/461 · 에디터 ON 네 백엔드 오류 0 · 창 15 · 빈 패널 0 · BackendSmoke 8회 오류 0.
 
 > **함정(이번에 두 번 겪었다):** 빌드·스모크·벤치를 **동시에 돌리면 가짜 실패가 난다.** BackendSmoke 의 Vulkan
 > `[Error]` 8건은 전부 `copyFile ... used by another process` 였고(내가 App 을 따로 돌리고 있었다), Shipping·Release 의

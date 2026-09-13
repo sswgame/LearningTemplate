@@ -107,6 +107,10 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     {
         sw::FileUtil::removeFile( includeAbs );
         sw::FileUtil::removeFile( shaderAbs );
+        // **파일만 지우면 부족하다.** 공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 캐시하므로, 프로브가 있던
+        // 동안의 값이 다음 테스트로 샌다 — `ShaderBakeStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
+        // 비교해서 떨어졌다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
+        sw::ShaderBaker::invalidateSharedHeaderCache();
     } ) );
 
     sw::ShaderCompileDesc desc{};
