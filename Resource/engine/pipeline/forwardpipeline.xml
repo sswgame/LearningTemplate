@@ -93,6 +93,7 @@
 		                     _bEnableBlend="false">
 			<_listInput>
 				<item>BloomColor</item>
+				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>
 				<item>OutlineColor</item>

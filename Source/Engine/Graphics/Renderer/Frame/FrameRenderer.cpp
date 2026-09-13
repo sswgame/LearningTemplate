@@ -80,6 +80,7 @@ namespace sw
         , _meshMorphCbIndex{ kInvalidDescriptorIndex }
         , _bMorphBindsRest{ SW_FALSE }
         , _meshMorphDiagOverride{ -1 }
+        , _disabledInputRoleMask{ 0 }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ SW_FALSE }

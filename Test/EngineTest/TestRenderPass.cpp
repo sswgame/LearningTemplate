@@ -1049,7 +1049,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             pass._name = "Retired";
             pass._type = pRetired;
             desc._listPass.push_back( pass );
-            return res.validate( "unit-test" ) > 0u;
+            res.validate( "unit-test" );
+            // 여기서 보는 것은 **이름 해석**뿐이다 — 입력 계약 위반(입력 없는 Tonemap)은 다른 케이스가 본다.
+            return desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid;
         };
         SW_EXPECT_TRUE( retiredIsRejected( "Shading" ) );
         SW_EXPECT_TRUE( retiredIsRejected( "PostBloom" ) );
@@ -1067,6 +1069,72 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._type = "GpuCull";
         desc._listPass.push_back( pass );
         SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+
+    // 7) 풀스크린 패스의 입력은 그 타입의 계약과 맞아야 한다 — "선언만 있고 아무도 안 읽는 입력" 이 오류다.
+    //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두고도 Bloom 이 그것을 걸지 않던 것(백로그 1-6)이 이 검사가 잡는 병이다.
+    {
+        auto makeDesc = []( sw::RenderPipelineResource& res )
+        {
+            sw::RenderPipelineDesc& desc          = res.getDesc();
+            auto                    addAttachment = [&desc]( const utf8* pName, const utf8* pFormat )
+            {
+                sw::RenderPassAttachment att{};
+                att._name   = pName;
+                att._format = pFormat;
+                desc._listAttachment.push_back( att );
+            };
+            addAttachment( "LitColor", "R16G16B16A16_FLOAT" );
+            addAttachment( "AOColor", "R8G8B8A8_UNORM" );
+            addAttachment( "BloomColor", "R16G16B16A16_FLOAT" );
+            addAttachment( "GBufferNormal", "R16G16B16A16_FLOAT" );
+            addAttachment( "SceneDepth", "D24_UNORM_S8_UINT" );
+        };
+        auto addPass = []( sw::RenderPipelineResource& res, const utf8* pType, std::initializer_list<const utf8*> listInput, const utf8* pOutput )
+        {
+            sw::RenderGraphPassDesc pass{};
+            pass._name = pType;
+            pass._type = pType;
+            for ( const utf8* pInput : listInput )
+                pass._listInput.push_back( pInput );
+            pass._listOutput.push_back( pOutput );
+            res.getDesc()._listPass.push_back( pass );
+        };
+
+        // 계약대로: Bloom 이 컬러 하나 + AO 를 읽는다. 역할은 로드 시점에 해석돼 있어야 한다.
+        {
+            sw::RenderPipelineResource res;
+            makeDesc( res );
+            addPass( res, "Bloom", { "LitColor", "AOColor" }, "BloomColor" );
+            SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+            const sw::RenderGraphPassDesc& pass = res.getGraphPass()[0];
+            SW_ASSERT_TRUE( pass._listResolvedInput.size() == 2 );
+            SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( pass._listResolvedInput[0]._role ) == sw::RenderPassInputRole::SourceColor );
+            SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( pass._listResolvedInput[1]._role ) == sw::RenderPassInputRole::AmbientOcclusion );
+            SW_ASSERT_TRUE( pass._listResolvedOutput.size() == 1 );
+            SW_EXPECT_TRUE( pass._listResolvedOutput[0].view() == "BloomColor" );
+        }
+        // Tonemap 은 G버퍼 노멀을 읽지 않는다 — 선언만 있고 바인딩되지 않는 입력.
+        {
+            sw::RenderPipelineResource res;
+            makeDesc( res );
+            addPass( res, "Tonemap", { "LitColor", "GBufferNormal" }, "BloomColor" );
+            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        }
+        // SSAO 는 깊이가 필수다.
+        {
+            sw::RenderPipelineResource res;
+            makeDesc( res );
+            addPass( res, "SSAO", { "GBufferNormal" }, "AOColor" );
+            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        }
+        // 가공할 컬러가 둘이면 셰이더가 어느 것을 읽을지 정할 수 없다.
+        {
+            sw::RenderPipelineResource res;
+            makeDesc( res );
+            addPass( res, "Bloom", { "LitColor", "BloomColor" }, "AOColor" );
+            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        }
     }
 }
 
@@ -3635,6 +3703,163 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
     device.reset();
     window->destroy();
     window.reset();
+}
+
+/**
+ * @brief [RenderPassGpuTest] SSAO 결과가 실제로 그림에 닿는다 — 끄면 밝아진다
+ * @details 디퍼드 XML 은 처음부터 Bloom 의 입력으로 AOColor 를 선언했지만, 엔진은 그 패스에 SourceColor 하나만 걸었고
+ *          postbloom.hlsl 도 그것만 읽었다 — SSAO 는 매 프레임 풀스크린 패스를 돌고 결과는 버려졌다(백로그 1-6).
+ *          "패스가 돈다" 와 "결과가 쓰인다" 는 다른 말이라, AO 역할을 끈 프레임과 켠 프레임의 Bloom 출력을 비교한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    /// @brief 첨부 하나의 평균 밝기와 "가림이 있는(255 미만)" 픽셀 수.
+    struct Stat
+    {
+        float64 _mean{ 0.0 };
+        uint32  _darkCount{ 0 };
+        bool    _bOk{ false };
+    };
+    auto readStat = []( sw::FrameRenderer& renderer, const utf8* pAttachment ) -> Stat
+    {
+        Stat                  stat{};
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( renderer.readbackTransient( pAttachment, bytes, layout, format ) == false )
+            return stat;
+        const uint32 bytesPerPixel = sw::getRHIFormatBytesPerPixel( format );
+        const bool   bHalf         = ( format == sw::RHIFormat::R16G16B16A16_FLOAT );
+        uint64       sum{ 0 };
+        uint32       count{ 0 };
+        for ( uint32 row = 0; row < layout._height; ++row )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            for ( uint32 col = 0; col < layout._width; ++col )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                uint32       r{ 0 };
+                if ( bHalf )
+                {
+                    // IEEE 반정밀도 → float. 정규 수만 풀면 된다(색은 [0, 몇] 범위) — 비정규·무한은 0 으로 본다.
+                    const uint16 half     = static_cast<uint16>( pPixel[0] | ( pPixel[1] << 8 ) );
+                    const uint32 exponent = ( half >> 10 ) & 0x1Fu;
+                    const uint32 mantissa = half & 0x3FFu;
+                    float32      value    = 0.0f;
+                    if ( exponent != 0 && exponent != 0x1Fu )
+                        value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * std::ldexp( 1.0f, static_cast<int32>( exponent ) - 15 );
+                    if ( ( half & 0x8000u ) != 0 )
+                        value = 0.0f;
+                    r = static_cast<uint32>( sw::MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f );
+                }
+                else
+                    r = pPixel[0];
+                sum += r;
+                ++count;
+                if ( r < 250 )
+                    ++stat._darkCount;
+            }
+        }
+        stat._mean = count > 0 ? static_cast<float64>( sum ) / static_cast<float64>( count ) : 0.0;
+        stat._bOk  = count > 0;
+        return stat;
+    };
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+
+        sw::Scene scene( "AmbientOcclusionScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+        // 바닥 위의 큐브 — 맞닿는 자리와 실루엣에서 깊이·노멀이 꺾여 SSAO 가 값을 낸다.
+        sw::shared_ptr<sw::Mesh> cube  = sw::MeshUtil::createUnitCube();
+        sw::shared_ptr<sw::Mesh> floor = sw::MeshUtil::createPlane();
+        if ( bOk )
+        {
+            sw::GameObject* pCubeGo  = scene.getObjectManager()->createGameObject( sw::hashed_string( "AoCube" ) );
+            sw::GameObject* pFloorGo = scene.getObjectManager()->createGameObject( sw::hashed_string( "AoFloor" ) );
+            bOk                      = pCubeGo != nullptr && pFloorGo != nullptr && cube != nullptr && floor != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* pCubeMesh  = pCubeGo->addComponent<sw::MeshComponent>();
+                sw::MeshComponent* pFloorMesh = pFloorGo->addComponent<sw::MeshComponent>();
+                bOk                           = pCubeMesh != nullptr && pFloorMesh != nullptr;
+                if ( bOk )
+                {
+                    pCubeMesh->setMesh( cube );
+                    pCubeMesh->setLocalPosition( sw::float3{ 0.0f, 0.5f, 0.0f } );
+                    pFloorMesh->setMesh( floor );
+                    pFloorMesh->setLocalScale( sw::float3{ 6.0f, 1.0f, 6.0f } );
+                }
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+
+        auto renderFrames = [&]( uint32 frameCount )
+        {
+            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+            for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
+                device->beginFrame( clear );
+                if ( renderer.execute( device.get(), &scene ) == false )
+                    return false;
+                device->endFrame( false, false );
+                device->waitIdle();
+            }
+            return true;
+        };
+
+        if ( bOk )
+        {
+            // 켬: AO 첨부에 가림이 있고, Bloom 출력은 그것을 곱한 값이다.
+            renderer.setInputRoleEnabled( sw::RenderPassInputRole::AmbientOcclusion, true );
+            SW_EXPECT_TRUE( renderFrames( 4 ) );
+            const Stat ao      = readStat( renderer, "AOColor" );
+            const Stat bloomOn = readStat( renderer, "BloomColor" );
+            SW_EXPECT_TRUE_MSG( ao._bOk && ao._darkCount > 0, ( label + ": SSAO 가 가림을 하나도 내지 않았다 (AOColor 가 전부 흰색)" ).c_str() );
+
+            // 끔: 같은 씬에서 AO 만 빠지면 Bloom 출력이 밝아져야 한다. 같으면 AO 가 그림에 닿지 않는 것이다.
+            renderer.setInputRoleEnabled( sw::RenderPassInputRole::AmbientOcclusion, false );
+            SW_EXPECT_TRUE( renderFrames( 4 ) );
+            const Stat bloomOff = readStat( renderer, "BloomColor" );
+            renderer.setInputRoleEnabled( sw::RenderPassInputRole::AmbientOcclusion, true );
+
+            SW_EXPECT_TRUE_MSG( bloomOn._bOk && bloomOff._bOk, ( label + ": BloomColor 를 되읽지 못했다" ).c_str() );
+            if ( bloomOn._bOk && bloomOff._bOk )
+            {
+                SW_EXPECT_TRUE_MSG( bloomOn._mean < bloomOff._mean,
+                                    ( label + ": AO 를 꺼도 Bloom 출력이 같다 (켬 " + sw::to_string( static_cast<float32>( bloomOn._mean ) ) + " vs 끔 " +
+                                      sw::to_string( static_cast<float32>( bloomOff._mean ) ) + ") — SSAO 결과를 아무도 읽지 않는다" )
+                                        .c_str() );
+            }
+        }
+
+        if ( cube != nullptr )
+            cube->releaseRhi( device.get() );
+        if ( floor != nullptr )
+            floor->releaseRhi( device.get() );
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the ambient occlusion test" );
 }
 
 /**

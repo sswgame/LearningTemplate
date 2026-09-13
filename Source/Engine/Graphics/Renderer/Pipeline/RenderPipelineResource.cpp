@@ -6,6 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -77,12 +78,28 @@ namespace sw
             }
         }
 
+        auto isDepthAttachment = [&]( const RenderPassAttachment* pAtt ) -> bool
+        {
+            return pAtt != nullptr && engine::getTypeRegistry().enumFromString<RHIFormat>( pAtt->_format ) == constant::kDepthStencilFormat;
+        };
+
         // 2) 패스: 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
         for ( RenderGraphPassDesc& pass : _desc._listPass )
         {
             pass._resolvedType = engine::getTypeRegistry().enumFromString<RenderPassType>( pass._type );
             pass._resolvedDepthAttachment =
                 pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
+            pass._listResolvedInput.clear();
+            pass._listResolvedOutput.clear();
+            for ( const string& inputName : pass._listInput )
+            {
+                RenderGraphPassDesc::ResolvedInput resolved{};
+                resolved._attachment = hashed_string( inputName.c_str() );
+                resolved._role       = static_cast<uint8>( resolveRenderPassInputRole( inputName, isDepthAttachment( findAttachment( inputName ) ) ) );
+                pass._listResolvedInput.push_back( resolved );
+            }
+            for ( const string& outputName : pass._listOutput )
+                pass._listResolvedOutput.emplace_back( outputName.c_str() );
             if ( isPipelinePassType( pass._resolvedType ) == false )
             {
                 SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
@@ -162,6 +179,53 @@ namespace sw
             {
                 SW_LOG_ERROR( "[%#] pass '%#': 컬러 출력이 %#개로 한계(%#)를 넘습니다",
                               sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
+                ++issueCount;
+            }
+        }
+
+        // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가 — "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
+        //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두었지만 Bloom 코드가 그것을 걸지 않아 SSAO 가 매 프레임
+        //    돌고 버려졌던 것(백로그 1-6)이 이 검사가 없어서였다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            const RenderPassInputContract* pContract = findRenderPassInputContract( pass._resolvedType );
+            if ( pContract == nullptr )
+                continue;
+
+            uint32 sourceColorCount{ 0 };
+            for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+            {
+                const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
+                if ( role == RenderPassInputRole::SourceColor )
+                    ++sourceColorCount;
+                if ( pContract->reads( role ) )
+                    continue;
+                SW_LOG_ERROR( "[%#] pass '%#'(%#): 입력 '%#'(역할 %#) 은 이 패스 타입이 읽지 않습니다 — 선언만 있고 바인딩되지 않는 입력입니다",
+                              sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
+                ++issueCount;
+            }
+            if ( sourceColorCount > 1 )
+            {
+                SW_LOG_ERROR( "[%#] pass '%#'(%#): 가공할 컬러 입력(SourceColor 역할)이 %#개입니다 — 셰이더는 하나만 읽습니다",
+                              sourcePath, pass._name, pass._type, sourceColorCount );
+                ++issueCount;
+            }
+            for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
+            {
+                const RenderPassInputRole required = pContract->_arrRequired[requiredIndex];
+                bool                      bFound{ false };
+                for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+                {
+                    if ( static_cast<RenderPassInputRole>( input._role ) == required )
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                if ( bFound )
+                    continue;
+                SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 SW_INVALID_INDEX 를 읽습니다",
+                              sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
                 ++issueCount;
             }
         }

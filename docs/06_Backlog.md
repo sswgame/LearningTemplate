@@ -214,21 +214,6 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-6. SSAO 패스의 결과를 **아무도 읽지 않는다**
-
-디퍼드 XML 은 `PostBloom` 의 입력으로 `AOColor` 를 적어 두었는데, 엔진은 그 패스에 `_sourceColor`
-하나만 등록한다(`FrameRendererPassExecute.cpp` 의 Bloom 분기). `postbloom.hlsl` 도 `SampleSource` 만
-쓴다 — **SSAO 는 매 프레임 풀스크린 패스를 돌고 그 결과는 버려진다.** 디퍼드가 채움률에 묶여 있으니
-공짜가 아니다.
-
-고치는 방향은 둘인데 판단이 필요하다:
-1. 선언을 지킨다 — Bloom 이 AO 를 곱하게 한다. PassCB 에 이름을 하나 더하고(`g_AmbientOcclusionIndex`),
-   **에뮬 백엔드(DX11/GL)의 t0..t3 멀티플렉싱 표**에도 자리를 만들어야 한다(지금 넷이 다 찼다).
-2. 파이프라인에서 뺀다 — AO 를 안 쓸 거라면 패스와 첨부를 지운다.
-
-더 근본적으로는 **"XML 이 선언한 입력을 패스가 실제로 바인딩했는가" 를 로드 시점에 검사**할 자리다.
-패스 타입 불일치는 이미 그렇게 잡고 있다(2절 "파이프라인 검증").
-
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
@@ -309,6 +294,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (SSAO 결과를 아무도 읽지 않았다 — 선언이 곧 바인딩이 되도록 입력 계약을 한 표로)
+
+**백로그 1-6.** 디퍼드 XML 은 처음부터 Bloom 의 입력으로 `AOColor` 를 적어 두었는데, 엔진은 그 패스에
+`SourceColor` 하나만 걸었고 `postbloom.hlsl` 도 그것만 읽었다. SSAO 는 매 프레임 풀스크린 패스를 돌고 결과는
+버려졌다. XML 의 `_listInput` 은 **그래프 정렬에만** 쓰였고, 어떤 첨부를 걸지는 패스마다 코드가 후보 목록으로
+짐작했다(`pickFirstExisting( { "TransparentColor", "LitColor", … } )`). "선언했는데 안 걸리는 입력" 이 생길 수
+있는 구조였고, 그것을 잡는 검사도 없었다.
+
+**고친 것 — 표 하나를 검증과 실행이 같이 본다.**
+- `RenderPassInputContract`(Pipeline/): 풀스크린 패스 타입이 읽는 **입력 역할**(SourceColor · SceneDepth ·
+  GBufferAlbedo · GBufferNormal · ShadowMap · AmbientOcclusion)의 필수/선택 목록. 첨부 이름·포맷 → 역할은
+  `resolveRenderPassInputRole` 하나가 정한다(고정 역할 이름 넷, 그 밖의 깊이는 SceneDepth, 나머지 컬러는 SourceColor).
+- **로드 시점 검증 4번**(`RenderPipelineResource::validate`): 선언한 입력의 역할이 계약에 없으면 오류("선언만 있고
+  바인딩되지 않는 입력"), 필수 역할이 빠지면 오류, SourceColor 가 둘이면 오류. 역할과 출력 이름은 그때 intern 해
+  `RenderGraphPassDesc::_listResolvedInput / _listResolvedOutput` 에 둔다 — 프레임마다 다시 해석하지 않는다.
+- **실행**: Lighting · SSAO · Bloom · Outline · Tonemap 다섯 분기가 **하나**가 됐다. 선언 입력을 역할 이름으로
+  전부 걸고(`registerDeclaredInputs`), 타깃은 선언한 출력 중 첫 번째로 존재하는 것. TAA·Present 도 선언 입력을
+  우선한다(Present 는 선언이 없을 때만 후보 사슬 폴백). 후보 목록은 `resolvePresentSource` 폴백 하나만 남았다.
+- **Bloom 이 AO 를 곱한다.** PassCB 의 `g_SourceDepthIndex` 를 `g_AmbientOcclusionIndex` 로 바꿨다(SourceDepth 는
+  Outline 만 썼고 그것은 SceneDepth 역할이다). `SampleAmbientOcclusion` 은 인덱스가 무효면 1 — 포워드에는 SSAO 가
+  없으니 0 으로 폴백하면 화면이 검게 된다. 에뮬 슬롯 표(t1 = albedo | ao)를 C++ 와 HLSL 양쪽에 같이 고쳤다.
+- **쇼 플래그** `FrameRenderer::setInputRoleEnabled( role, bool )` — 그 역할의 입력을 걸지 않는다(언리얼의
+  `r.AmbientOcclusion.Levels=0` 자리). 테스트가 "켬/끔의 차이" 를 같은 프레임 안에서 본다.
+
+**검증이 바로 잡아낸 것.** 포워드 XML 의 Outline 이 `SceneDepth` 를 읽으면서 선언하지 않고 있었다 — 코드가
+몰래 걸어 주고 그래프는 그 의존성을 몰랐다. 선언을 추가했다. 합성 테스트 둘(입력 없는 Present · 이름 해석용
+Tonemap)도 새 규칙에 걸려, 이름 해석 람다는 `_resolvedType` 을 보게 고쳤고 Present 는 SourceColor 를 선택으로 뒀다.
+
+**함정 하나(내가 밟았다).** 다섯 분기를 하나로 접으면서 그 사이에 있던 **Transparent 메시 패스 분기를 같이
+잘라냈다.** 스모크의 투명 픽셀 수가 9,150 → 6,350 으로 떨어졌고 `TransparentOrderMatchesAcrossBackends` 가 네
+백엔드 모두 "투명 큐브 0 px" 로 떨어졌다. 투명 큐브가 카나리아라는 기록(backend-swap-blank-screen)이 이번에도
+맞았다. 큰 if-체인을 접을 땐 잘라낸 구간에 다른 타입이 끼어 있지 않은지 grep 으로 셀 것.
+
+**확인**: `RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 네 백엔드에서 AOColor 에 가림이 있고, AO 를 끄면
+Bloom 출력 평균이 오르는 것을 단언한다. RenderPassTest 22/22 · RenderPassGpuTest 23/23 · RHITest 14/14 ·
+BackendSmoke 8회 `[Error]` 0 · 투명 9,150~9,300.
 
 ### 2026-09-13 (풀스크린 셰이더가 Vulkan·GL 에서 노멀을 색으로 읽고 있었다 — 그리고 계약 검사가 그 VS 를 건너뛰고 있었다)
 

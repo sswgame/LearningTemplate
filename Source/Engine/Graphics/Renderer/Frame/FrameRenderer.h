@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
@@ -100,6 +101,12 @@ namespace sw
          *          원소를 읽던 버그가 정확히 이 단언에 걸린다(binding.hlsli 주석 참고).
          */
         void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
+        /**
+         * @brief 풀스크린 패스가 이 역할의 입력을 **걸지 않게** 합니다 (쇼 플래그 — 언리얼의 r.AmbientOcclusion.Levels=0 자리).
+         * @details 셰이더는 그 인덱스를 SW_INVALID_INDEX 로 읽어 폴백한다(AO 는 1). "이 입력이 실제로 그림을 바꾸는가" 를
+         *          같은 프레임 안에서 비교할 수 있다 — SSAO 가 매 프레임 돌고 버려지던 것을 픽셀로 잡는 데 썼다.
+         */
+        void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /** @brief 초기화/파이프라인 상태를 반환합니다. */
         FrameRendererStatus getStatus() const { return _status; }
         /** @brief Failed일 때 원인 메시지 (그 외 empty). */
@@ -303,7 +310,16 @@ namespace sw
          */
         void onGraphWavePrologue( const RenderGraphWaveContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 수행합니다. */
-        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment );
+        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
+                          const RenderGraphPassDesc* pPassDesc );
+        /**
+         * @brief XML 이 선언한 입력을 **역할 이름으로** 전부 겁니다 — 풀스크린 패스 공통.
+         * @details 역할은 로드 시점에 해석돼 있다(`_listResolvedInput`). 여기서 거는 것과 검증이 대조한 것이 같은 목록이라
+         *          "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없다. 쇼 플래그로 끈 역할은 건너뛴다.
+         */
+        void registerDeclaredInputs( FramePassContext& ctx, const RenderGraphPassDesc& passDesc );
+        /** @brief 역할의 셰이더 이름(intern 된 hashed_string). */
+        const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드/바인딩은 ShaderBindingBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
 
@@ -543,6 +559,8 @@ namespace sw
         uint8 _bMorphBindsRest;
         /// @brief `setMeshMorphDiag` 가 준 값. 음수면 전역 변수 `gv_morphDiag` 를 따른다.
         int32 _meshMorphDiagOverride;
+        /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트 — 그 역할의 입력은 걸지 않는다.
+        uint32 _disabledInputRoleMask;
         /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점. 스크래치 — 프레임 밖에서 의미 없다.
         vector<GpuMorphVertex> _listScratchMorphTag;
         /// @brief 이번 프레임 모프 대상 메시 — 프레임마다 할당하지 않으려고 들고 있는다.

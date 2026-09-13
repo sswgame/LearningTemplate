@@ -141,6 +141,23 @@ namespace sw
          */
         hashed_string _resolvedDepthAttachment;
 
+        /**
+         * @brief `_listInput` 하나하나의 (첨부 이름, 역할). XML 로드 시 RenderPipelineResource 가 채운다.
+         * @details 직렬화 대상이 아니다. 실행은 이 목록을 그대로 걸고(역할 이름 = 셰이더의 `g_<Role>Index`),
+         *          검증은 패스 타입의 계약(RenderPassInputContract)과 대조한다 — 둘이 같은 해석을 본다.
+         *          역할 값은 `RenderPassInputRole` 인데 이 헤더가 그 enum 을 모르므로(계약 헤더가 이 헤더를
+         *          포함한다) 정수로 둔다.
+         */
+        struct ResolvedInput
+        {
+            hashed_string _attachment;
+            uint8         _role{ 0 };
+        };
+        vector<ResolvedInput> _listResolvedInput;
+
+        /** @brief `_listOutput` 을 intern 해 둔 값. 풀스크린 패스가 "첫 번째로 존재하는 출력" 을 타깃으로 고른다. */
+        vector<hashed_string> _listResolvedOutput;
+
         /** @brief HLSL path (engine/... or common/...). Empty → FrameRenderer type default. */
         PROPERTY( SkipIfEmpty )
         string _shaderPath;

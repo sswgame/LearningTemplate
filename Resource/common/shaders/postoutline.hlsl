@@ -19,11 +19,11 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 float4 PSMain(PSInput input) : SV_TARGET
 {
 	float2 texel = g_OutlineParams.yz;
-	float  d0 = SampleSourceDepth(input.uv).r;
-	float  d1 = SampleSourceDepth(input.uv + float2(texel.x, 0)).r;
-	float  d2 = SampleSourceDepth(input.uv + float2(0, texel.y)).r;
-	float  d3 = SampleSourceDepth(input.uv + float2(-texel.x, 0)).r;
-	float  d4 = SampleSourceDepth(input.uv + float2(0, -texel.y)).r;
+	float  d0 = SampleDepth(input.uv).r;
+	float  d1 = SampleDepth(input.uv + float2(texel.x, 0)).r;
+	float  d2 = SampleDepth(input.uv + float2(0, texel.y)).r;
+	float  d3 = SampleDepth(input.uv + float2(-texel.x, 0)).r;
+	float  d4 = SampleDepth(input.uv + float2(0, -texel.y)).r;
 	float  edge = saturate((abs(d0 - d1) + abs(d0 - d2) + abs(d0 - d3) + abs(d0 - d4)) * 4.0f - g_OutlineParams.x);
 	edge *= g_OutlineColor.a;
 

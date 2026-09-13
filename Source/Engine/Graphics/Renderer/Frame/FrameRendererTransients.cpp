@@ -752,6 +752,18 @@ namespace sw
 
     string FrameRenderer::resolvePresentSource() const
     {
+        // 파이프라인이 Present 의 입력을 선언했으면 그것이 정본이다 — 다른 풀스크린 패스와 같은 규칙.
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( pass._resolvedType != RenderPassType::Present )
+                continue;
+            for ( const RenderGraphPassDesc::ResolvedInput& input : pass._listResolvedInput )
+            {
+                if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment.view() ) != 0 )
+                    return string( input._attachment.view() );
+            }
+        }
+        // 선언이 없을 때의 폴백 — 가장 나중에 만들어지는 컬러부터.
         const utf8* pName = FrameRendererUtil::pickFirstExisting(
             _mapTransient,
             { "TonemapColor", "OutlineColor", "BloomColor", "TaaColor",

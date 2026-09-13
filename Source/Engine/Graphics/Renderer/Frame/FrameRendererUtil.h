@@ -317,8 +317,9 @@ namespace sw
         hashed_string _tonemapColor{ "TonemapColor" };
 
         /// 셰이더가 보는 이름(어태치먼트 이름과 다를 수 있다 — registerPassTexture 의 canonical 인자).
+        /// 값은 RenderPassInputRole 의 이름과 같다 — 역할로 걸고 셰이더가 `g_<Role>Index` 로 읽는다.
         hashed_string _sourceColor{ "SourceColor" };
-        hashed_string _sourceDepth{ "SourceDepth" };
+        hashed_string _ambientOcclusion{ "AmbientOcclusion" };
     };
 
     /**

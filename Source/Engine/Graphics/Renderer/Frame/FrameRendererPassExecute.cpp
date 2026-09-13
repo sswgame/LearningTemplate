@@ -102,21 +102,68 @@ namespace sw
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다 — 여기서 문자열을 다시 비교하면 디스패치와
         // PSO 생성이 서로 다른 표기를 받아줄 여지가 생긴다(그게 `ae7fb078` 의 원인이었다).
-        RenderPassType passType  = RenderPassType::Invalid;
-        const utf8*    pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
-        hashed_string  depthAttachment;
-        const auto     iter = _mapPassNameToIndex.find( graphCtx._passName );
+        RenderPassType             passType  = RenderPassType::Invalid;
+        const utf8*                pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
+        hashed_string              depthAttachment;
+        const RenderGraphPassDesc* pPassDesc{ nullptr };
+        const auto                 iter = _mapPassNameToIndex.find( graphCtx._passName );
         if ( iter != _mapPassNameToIndex.end() && iter->second < listPass.size() )
         {
             const RenderGraphPassDesc& pass = listPass[iter->second];
             passType                        = pass._resolvedType;
             pPassName                       = pass._name.c_str();
             depthAttachment                 = pass._resolvedDepthAttachment;
+            pPassDesc                       = &pass;
         }
-        executePass( passCtx, passType, pPassName, depthAttachment );
+        executePass( passCtx, passType, pPassName, depthAttachment, pPassDesc );
     }
 
-    void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment )
+    void FrameRenderer::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )
+    {
+        const uint32 bit = 1u << static_cast<uint32>( role );
+        if ( bEnabled )
+            _disabledInputRoleMask &= ~bit;
+        else
+            _disabledInputRoleMask |= bit;
+    }
+
+    const hashed_string& FrameRenderer::inputRoleName( RenderPassInputRole role ) const
+    {
+        const AttachmentNames& names = attachmentNames();
+        switch ( role )
+        {
+            case RenderPassInputRole::SourceColor:
+                return names._sourceColor;
+            case RenderPassInputRole::SceneDepth:
+                return names._sceneDepth;
+            case RenderPassInputRole::GBufferAlbedo:
+                return names._gbufferAlbedo;
+            case RenderPassInputRole::GBufferNormal:
+                return names._gbufferNormal;
+            case RenderPassInputRole::ShadowMap:
+                return names._shadowMap;
+            case RenderPassInputRole::AmbientOcclusion:
+                return names._ambientOcclusion;
+            case RenderPassInputRole::Invalid:
+            case RenderPassInputRole::Count:
+            default:
+                return names._sourceColor;
+        }
+    }
+
+    void FrameRenderer::registerDeclaredInputs( FramePassContext& ctx, const RenderGraphPassDesc& passDesc )
+    {
+        for ( const RenderGraphPassDesc::ResolvedInput& input : passDesc._listResolvedInput )
+        {
+            const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
+            if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
+                continue;
+            registerPassTexture( ctx, inputRoleName( role ), input._attachment.view() );
+        }
+    }
+
+    void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
+                                     const RenderGraphPassDesc* pPassDesc )
     {
         SW_PROFILE_SCOPE( "RT.Pass.execute" );
 
@@ -240,17 +287,6 @@ namespace sw
                 }
             }
         }
-        else if ( passType == RenderPassType::Lighting )
-        {
-            registerPassTexture( ctx, attachmentNames()._gbufferAlbedo, FrameRendererUtil::Attachment::kGBufferAlbedo );
-            registerPassTexture( ctx, attachmentNames()._gbufferNormal, FrameRendererUtil::Attachment::kGBufferNormal );
-            registerPassTexture( ctx, attachmentNames()._sceneDepth, FrameRendererUtil::Attachment::kSceneDepth );
-            registerPassTexture( ctx, attachmentNames()._shadowMap, FrameRendererUtil::Attachment::kShadowMap );
-            const AttachmentNames& names     = attachmentNames();
-            const hashed_string&   litTarget = findTransient( names._litColor.view() ) != 0 ? names._litColor : names._sceneColor;
-            executeFullscreenPass( getEnginePso( RenderPassType::Lighting ), litTarget,
-                                   getAttachmentClearColorOrDefault( litTarget.view(), _clearColor ) );
-        }
         else if ( passType == RenderPassType::Transparent )
         {
             const AttachmentNames& names = attachmentNames();
@@ -276,50 +312,50 @@ namespace sw
             drawSceneMeshes( ctx, transparentPso, passCb, true );
             ctx._pCmd->endRenderPass();
         }
-        else if ( passType == RenderPassType::SSAO )
+        else if ( pPassDesc != nullptr && passType != RenderPassType::TAA && passType != RenderPassType::Present &&
+                  findRenderPassInputContract( passType ) != nullptr )
         {
-            const AttachmentNames& names    = attachmentNames();
-            const hashed_string&   aoTarget = findTransient( names._aoColor.view() ) != 0 ? names._aoColor : names._sceneColor;
-            registerPassTexture( ctx, attachmentNames()._sceneDepth, FrameRendererUtil::Attachment::kSceneDepth );
-            registerPassTexture( ctx, attachmentNames()._gbufferNormal, FrameRendererUtil::Attachment::kGBufferNormal );
-            // 여기 `getEnginePso(SSAO) != 0 ? getEnginePso(SSAO) : getEnginePso(SSAO)` 가 있었다 —
-            // 참·거짓이 같아 아무 효과가 없고 함수만 세 번 불렀다. 형제 패스들은 폴백이 **다른**
-            // PSO 다(DepthPrepass→Shadow, GBufferAlbedo→GBuffer, Tonemap→Present). 즉 복사할 때
-            // 대체 대상을 바꾸지 않은 자리다.
-            //
-            // 폴백을 **짐작해서 넣지 않는다.** SSAO 가 없을 때 무엇을 대신 그릴지는 설계 판단이고,
-            // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다 — Lighting·Bloom·Outline 도
-            // 폴백 없이 그대로 넘긴다. 그 형태로 맞춘다. 대체 패스가 필요하다고 판단되면 그때
-            // 형제들처럼 명시적으로 적는다.
-            executeFullscreenPass( getEnginePso( RenderPassType::SSAO ), aoTarget, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
-        }
-        else if ( passType == RenderPassType::Bloom )
-        {
-            const AttachmentNames& names       = attachmentNames();
-            const hashed_string&   bloomTarget = findTransient( names._bloomColor.view() ) != 0 ? names._bloomColor : names._sceneColor;
-            const utf8*            pSrcName    = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
-            if ( pSrcName != nullptr )
-                registerPassTexture( ctx, attachmentNames()._sourceColor, pSrcName );
-            executeFullscreenPass( getEnginePso( RenderPassType::Bloom ), bloomTarget,
-                                   getAttachmentClearColorOrDefault( bloomTarget.view(), _clearColor ) );
-        }
-        else if ( passType == RenderPassType::Outline )
-        {
-            const AttachmentNames& names         = attachmentNames();
-            const hashed_string&   outlineTarget = findTransient( names._outlineColor.view() ) != 0 ? names._outlineColor : names._sceneColor;
-            const utf8*            pSrcName      = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
-            if ( pSrcName != nullptr )
-                registerPassTexture( ctx, attachmentNames()._sourceColor, pSrcName );
-            registerPassTexture( ctx, attachmentNames()._sourceDepth, FrameRendererUtil::Attachment::kSceneDepth );
-            executeFullscreenPass( getEnginePso( RenderPassType::Outline ), outlineTarget, _clearColor );
+            // 풀스크린 패스 공통 — Lighting · SSAO · Bloom · Outline · Tonemap. 예전엔 다섯 분기가 각자
+            // "어느 첨부를 걸고 어디에 그릴지" 를 후보 목록으로 짐작했고 XML 선언은 그래프 순서에만 쓰였다.
+            // 지금은 **선언이 곧 바인딩**이다: 입력은 역할 이름으로 전부 걸고, 타깃은 선언한 출력 중 첫
+            // 번째로 존재하는 것이다. 계약(RenderPassInputContract)이 로드 시점에 같은 목록을 검사했다.
+            registerDeclaredInputs( ctx, *pPassDesc );
+
+            const AttachmentNames& names   = attachmentNames();
+            const hashed_string*   pTarget = &names._sceneColor;
+            for ( const hashed_string& output : pPassDesc->_listResolvedOutput )
+            {
+                if ( findTransient( output.view() ) != 0 )
+                {
+                    pTarget = &output;
+                    break;
+                }
+            }
+
+            // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다 — 폴백을 짐작해서 넣지 않는다.
+            // Tonemap 만 Present(단순 블릿)로 대신한다: 톤매핑이 없어도 그림은 나가야 한다.
+            RHIPipelineStateHandle pso = getEnginePso( passType );
+            if ( pso == 0 && passType == RenderPassType::Tonemap )
+                pso = getEnginePso( RenderPassType::Present );
+
+            // SSAO 의 기본 클리어는 흰색(가림 없음) — 첨부가 클리어 색을 선언했으면 그것이 우선이다.
+            const float4 defaultClear = ( passType == RenderPassType::SSAO ) ? float4{ 1.0f, 1.0f, 1.0f, 1.0f } : _clearColor;
+            executeFullscreenPass( pso, *pTarget, getAttachmentClearColorOrDefault( pTarget->view(), defaultClear ) );
         }
         else if ( passType == RenderPassType::TAA )
         {
             const AttachmentNames& names     = attachmentNames();
             const hashed_string&   taaTarget = findTransient( names._taaColor.view() ) != 0 ? names._taaColor : names._sceneColor;
-            const utf8*            pSrcName  = FrameRendererUtil::pickFirstExisting( _mapTransient, { "BloomColor", "OutlineColor", "TransparentColor", "LitColor", "SceneColor" } );
-            if ( pSrcName != nullptr )
-                registerPassTexture( ctx, attachmentNames()._sourceColor, pSrcName );
+            const utf8*            pSrcName{ nullptr };
+            if ( pPassDesc != nullptr )
+            {
+                registerDeclaredInputs( ctx, *pPassDesc );
+                for ( const RenderGraphPassDesc::ResolvedInput& input : pPassDesc->_listResolvedInput )
+                {
+                    if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
+                        pSrcName = input._attachment.c_str();
+                }
+            }
             // 히스토리 생성·bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다 — 이 콜백은
             // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다.
             if ( _taaHistory != 0 )
@@ -335,18 +371,6 @@ namespace sw
             const RHITextureHandle taaOut = findTransient( taaTarget.view() );
             if ( taaOut != 0 && _taaHistory != 0 )
                 ctx._pCmd->blitTexture( taaOut, _taaHistory );
-        }
-        else if ( passType == RenderPassType::Tonemap )
-        {
-            const AttachmentNames& names = attachmentNames();
-            const hashed_string&   tonemapTarget =
-                findTransient( names._tonemapColor.view() ) != 0 ? names._tonemapColor : names._sceneColor;
-            const utf8* pSrcName = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TaaColor", "OutlineColor", "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
-            if ( pSrcName != nullptr )
-                registerPassTexture( ctx, attachmentNames()._sourceColor, pSrcName );
-            const RHIPipelineStateHandle tonemapPso =
-                getEnginePso( RenderPassType::Tonemap ) != 0 ? getEnginePso( RenderPassType::Tonemap ) : getEnginePso( RenderPassType::Present );
-            executeFullscreenPass( tonemapPso, tonemapTarget, _clearColor );
         }
         else if ( passType == RenderPassType::Present )
         {
@@ -471,22 +495,24 @@ namespace sw
             return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
         };
 
-        const AttachmentNames&   names       = attachmentNames();
-        const RHIDescriptorIndex shadow      = srvOf( names._shadowMap );
-        const RHIDescriptorIndex albedo      = srvOf( names._gbufferAlbedo );
-        const RHIDescriptorIndex normal      = srvOf( names._gbufferNormal );
-        const RHIDescriptorIndex depth       = srvOf( names._sceneDepth );
-        const RHIDescriptorIndex source      = srvOf( names._sourceColor );
-        const RHIDescriptorIndex sourceDepth = srvOf( names._sourceDepth );
+        const AttachmentNames&   names  = attachmentNames();
+        const RHIDescriptorIndex shadow = srvOf( names._shadowMap );
+        const RHIDescriptorIndex albedo = srvOf( names._gbufferAlbedo );
+        const RHIDescriptorIndex normal = srvOf( names._gbufferNormal );
+        const RHIDescriptorIndex depth  = srvOf( names._sceneDepth );
+        const RHIDescriptorIndex source = srvOf( names._sourceColor );
+        const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
 
+        // 슬롯 표는 binding.hlsli 의 SW_SampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal, depth|shadow].
+        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 걸리지 않는다(알베도는 Lighting, AO 는 Bloom).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
-        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : sourceDepth;
+        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ao;
         const RHIDescriptorIndex slot2 = normal;
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot0, 0 );
-        if ( albedo != kInvalidDescriptorIndex || sourceDepth != kInvalidDescriptorIndex )
+        if ( albedo != kInvalidDescriptorIndex || ao != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot1, 1 );
         if ( normal != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot2, 2 );

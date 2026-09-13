@@ -28,14 +28,14 @@ namespace sw
     /// @brief 엔진이 예약한 프레임 리소스 이름 (registerPassTexture 호출용 상수).
     namespace framres
     {
-        inline constexpr const utf8* kSceneColor    = "SceneColor";
-        inline constexpr const utf8* kSceneDepth    = "SceneDepth";
-        inline constexpr const utf8* kShadowMap     = "ShadowMap";
-        inline constexpr const utf8* kGBufferAlbedo = "GBufferAlbedo";
-        inline constexpr const utf8* kGBufferNormal = "GBufferNormal";
-        inline constexpr const utf8* kHistoryColor  = "HistoryColor";
-        inline constexpr const utf8* kSourceColor   = "SourceColor";
-        inline constexpr const utf8* kSourceDepth   = "SourceDepth";
+        inline constexpr const utf8* kSceneColor       = "SceneColor";
+        inline constexpr const utf8* kSceneDepth       = "SceneDepth";
+        inline constexpr const utf8* kShadowMap        = "ShadowMap";
+        inline constexpr const utf8* kGBufferAlbedo    = "GBufferAlbedo";
+        inline constexpr const utf8* kGBufferNormal    = "GBufferNormal";
+        inline constexpr const utf8* kHistoryColor     = "HistoryColor";
+        inline constexpr const utf8* kSourceColor      = "SourceColor";
+        inline constexpr const utf8* kAmbientOcclusion = "AmbientOcclusion";
     } // namespace framres
 
     /**

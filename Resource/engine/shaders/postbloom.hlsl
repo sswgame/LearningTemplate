@@ -30,5 +30,8 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float lum = max(max(blur.r, blur.g), blur.b);
 	float soft = saturate((lum - g_BloomParams.x + g_BloomParams.z) / max(g_BloomParams.z, 1e-4));
 	float3 bright = blur * soft * soft * g_BloomParams.y;
-	return float4(c + bright, 1.0f);
+	// SSAO 가 있으면 조명 결과를 가린다(파이프라인 XML 이 이 패스의 입력으로 AOColor 를 선언한다). 없으면 1.
+	// 디퍼드에서 SSAO 가 매 프레임 돌고도 아무도 읽지 않던 자리다 — 이제 선언과 셰이더가 같은 말을 한다.
+	float ao = SampleAmbientOcclusion(input.uv);
+	return float4(c * ao + bright, 1.0f);
 }

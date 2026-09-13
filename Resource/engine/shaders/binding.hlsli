@@ -45,7 +45,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_GBufferNormalIndex;
 	uint     g_SceneDepthIndex;
 	uint     g_SourceColorIndex;
-	uint     g_SourceDepthIndex;
+	uint     g_AmbientOcclusionIndex; // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 SW_INVALID_INDEX (AO = 1 로 폴백)
 	uint     g_Flags;
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, SW_INVALID_INDEX 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
@@ -363,10 +363,10 @@ float4 SW_SampleIndex( uint index, float2 uv )
 {
 	if ( index == SW_INVALID_INDEX )
 		return float4( 0, 0, 0, 1 );
-	// FrameRenderer 가 [shadow/source, albedo/srcDepth, normal, depth] 순으로 t0..t3 에 바인딩.
+	// FrameRenderer 가 [shadow/source, albedo/ao, normal, depth] 순으로 t0..t3 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_SourceDepthIndex )
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
 		return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
 	if ( index == g_GBufferNormalIndex )
 		return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
@@ -382,7 +382,7 @@ float4 SW_SampleIndexWith( uint index, uint samplerId, float2 uv )
 		return float4( 0, 0, 0, 1 );
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return SwSampleSlotWith( g_SwSlot0, samplerId, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_SourceDepthIndex )
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
 		return SwSampleSlotWith( g_SwSlot1, samplerId, uv );
 	if ( index == g_GBufferNormalIndex )
 		return SwSampleSlotWith( g_SwSlot2, samplerId, uv );
@@ -467,7 +467,13 @@ float4 SampleAlbedo( float2 uv )      { return SW_SampleIndex( g_GBufferAlbedoIn
 float4 SampleNormal( float2 uv )      { return SW_SampleIndex( g_GBufferNormalIndex, uv ); }
 float4 SampleDepth( float2 uv )       { return SW_SampleIndex( g_SceneDepthIndex, uv ); }
 float4 SampleSource( float2 uv )      { return SW_SampleIndex( g_SourceColorIndex, uv ); }
-float4 SampleSourceDepth( float2 uv ) { return SW_SampleIndex( g_SourceDepthIndex, uv ); }
+/** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
+float SampleAmbientOcclusion( float2 uv )
+{
+	if ( g_AmbientOcclusionIndex == SW_INVALID_INDEX )
+		return 1.0f;
+	return SW_SampleIndex( g_AmbientOcclusionIndex, uv ).r;
+}
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
 
