@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `7568c02c`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `dece0f4e`
 
 ---
 
@@ -294,6 +294,52 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (CMake 정리 — 아카이버 판단을 한 자리로, 그리고 읽는 사람이 없던 파일 하나)
+
+LTO 를 고치며 내가 늘려 놓은 중복을 걷어내고, 그 김에 구조를 훑었다.
+
+**아카이버를 고르는 판단이 세 곳에 있었다.** `FindWindowsTools.cmake` 와 (하루 살았던)
+`FindPosixTools.cmake` 가 각자 `toolchain_config.json` 을 직접 읽어 `llvm_path` 를 뒤졌다 — 정작 그 일을
+하는 `sw_findLlvmBin` 이 이미 있었는데. `cmake/Environment/ToolchainBinaries.cmake` 하나로 모았고
+`FindPosixTools.cmake` 와 `Config/IpoSupport.cmake` 는 사라졌다(후자는 툴체인 코드가 `Config/` 에 있던 것도
+같이 바로잡혔다).
+
+**그 과정에서 설계 오류를 하나 찾았다.** `sw_findLlvmBin` 은 "컴파일러를 어디서 찾을까" 에 답하는 함수라
+**시스템 설치를 프로젝트 Tools 보다 먼저** 본다(최초 clone 때 Tools 가 없어도 되도록). 그 우선순위를
+아카이버에 그대로 쓰면 어긋난다 — 리눅스에서 실제로 그랬다: 시스템 clang 이 잡혀 `/usr/bin` 을 돌려주고
+거기엔 llvm-ar 이 없어 LTO 가 조용히 꺼졌다. **아카이버는 "지금 쓰는 컴파일러 옆" 을 먼저 본다** —
+컴파일러가 낸 비트코드를 읽어야 하므로 둘은 같은 LLVM 에서 와야 한다. WSL 에서 통과를 확인했다.
+
+**IPO 를 켜는 곳이 둘이었다.** Shipping 은 `BuildType/Release.cmake` 와 `Engine/BuildLayout.cmake` 가
+각자 `check_ipo_supported` 를 부르고 각자 메시지를 찍었다(Shipping 도 빌드 타입이 Release 라 둘 다 걸린다).
+판정과 활성화는 BuildLayout 이 소유한다.
+
+**`cmake/Engine/GeneratedConstants.cmake` 는 아무도 include 하지 않았다.** 진짜 상수는 configure 때
+`build/<preset>/generated/sw/config/ConfigVars.cmake` 로 나온다. 이 문서가 "생성물을 직접 고치면 다음
+configure 가 지운다" 고 적어 둔 것도 **사실이 아니었다** — 지우지도, 다시 만들지도 않았다. 커밋된 채
+방치된 사본이라 지웠다(오늘 나도 그것을 쓸데없이 재생성했다).
+
+**`FindLlvmBin.cmake` 만 `Modules/Toolchain/` 에 있었다.** 툴체인 탐색의 나머지(DetectToolchain ·
+ToolchainBinaries · FindWindowsTools)는 전부 `Environment/` 다. 옮겼다. `Modules/Toolchain/Vcpkg/*` 는
+**vcpkg 에게 건네는 파일**이라 성격이 달라 그대로 뒀다.
+
+> **안 하기로 한 것: RHI 백엔드 넷과 GF 키트 셋의 leaf CMakeLists 를 부모 루프로 접는 것.**
+> 겉보기엔 복사본이다(각각 6~7줄, 이름만 다르다). 그런데 그 파일들이 있는 이유는
+> `file(GLOB_RECURSE ...)` · `target_include_directories(... CMAKE_CURRENT_SOURCE_DIR)` ·
+> `sw_addReflectionStep` 이 **디렉터리 스코프**로 동작하기 때문이다. 접으려면 그 셋 모두에 디렉터리를
+> 인자로 꿰어야 하고, 그중 하나가 리플렉션 코드젠이다. 7개 파일을 없애자고 건드릴 자리가 아니다.
+> (백엔드 디렉터리엔 `ModuleEntry.cpp` 라는 실제 소스도 산다 — 순수 보일러플레이트가 아니다.)
+
+**툴체인을 바꾼 쪽이 PCH 를 치운다.** 오늘 두 번 걸렸다: LLVM 을 다시 깔면
+`lib/clang/<major>/include` 헤더가 바뀌어 기존 빌드 트리의 PCH 가 전부 낡는데, 컴파일러가 내는 말은
+`file '...intrin.h' has been modified since the precompiled header was built` 뿐이라 무엇을 해야
+하는지 안 알려 준다. 게다가 **`.pch` 만 지우면 ninja 가 다시 만들지 않는다** — 짝인 `cmake_pch.cxx.obj`
+까지 지워야 한다(이것도 따로 한 번 걸렸다). `SetupLlvm.py` 가 설치 직후 `build/**` 의 그 둘을 지운다.
+
+**확인**: `Ninja-Debug` ctest **14/14** · `Ninja-Release` nogpu 5/5 · 린트 게이트 8종 0건 ·
+세 프리셋 모두 `CMAKE_AR=Tools/LLVM/bin/llvm-lib.exe`, Release·Shipping 은 IPO 켜진 채로
+(`-flto` Release 368/591 · Shipping 322/452 TU)
 
 ### 2026-09-14 (LTO 를 리눅스에서도 — 증상은 다르고 뿌리는 같았다)
 
@@ -4976,9 +5022,11 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
   음성 테스트로 확인했다 — 죽은 사본을 되살리면 실패한다.
   (그 과정에서 검사 스크립트의 **독스트링에 적은 예시 경로**가 참조로 집계되어 한 번 통과해
   버렸다. 자기 자신은 세지 않게 고쳤다.)
-- `cmake/Engine/GeneratedConstants.cmake` 는 **자동 생성물**이다. lint 경로 상수는
-  `Scripts/common/Constants.py` 와 `Scripts/setup/GenerateCMakeConstants.py` 에 넣어야 한다 —
-  생성물을 직접 고치면 다음 configure 가 지운다(이것도 한 번 겪었다).
+- lint 경로 상수는 `Scripts/common/Constants.py` 와 `Scripts/setup/GenerateCMakeConstants.py` 에
+  넣어야 한다. **생성물은 `build/<preset>/generated/sw/config/ConfigVars.cmake` 로 나온다** —
+  저장소 안이 아니다. (2026-09-14 정정: 여기 `cmake/Engine/GeneratedConstants.cmake` 라고 적혀
+  있었는데, 그 파일은 아무도 include 하지 않는 **커밋된 사본**이었다. configure 가 지우지도,
+  다시 만들지도 않았다. 지웠다.)
 - ReflectionParser README 의 파일 트리가 죽은 사본을 싣고 실제 파일
   (`PredefinedAnnotationField.xxx`)은 빠뜨리고 있었다 — 고쳤다.
 

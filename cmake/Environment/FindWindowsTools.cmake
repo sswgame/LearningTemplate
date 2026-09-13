@@ -15,13 +15,10 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	set(swReDetect FALSE)
 
 	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND NOT "$CACHE{SW_CACHED_WIN_AR}" MATCHES "llvm-lib")
-		if(EXISTS "${CMAKE_SOURCE_DIR}/Config/Environment/toolchain_config.json")
-			file(READ "${CMAKE_SOURCE_DIR}/Config/Environment/toolchain_config.json" swProbeCfg)
-			string(JSON swProbeLlvm ERROR_VARIABLE swProbeErr GET "${swProbeCfg}" "llvm_path")
+		sw_pinnedArchiverPath(swProbeAr)
 
-			if(swProbeLlvm AND EXISTS "${swProbeLlvm}/bin/llvm-lib.exe")
-				set(swReDetect TRUE)
-			endif()
+		if(swProbeAr)
+			set(swReDetect TRUE)
 		endif()
 	endif()
 
@@ -49,21 +46,16 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 			string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "windows_sdk_dir")
 			string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "windows_sdk_version")
 			string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "msvc_tools_dir")
-			string(JSON swPinnedLlvm ERROR_VARIABLE e4 GET "${cfgContent}" "llvm_path")
 			break()
 		endif()
 	endforeach()
 
-	# **저장소가 고정한 LLVM 을 가장 먼저 본다.** 예전엔 환경변수 둘만 보고 없으면 MSVC lib.exe 로
-	# 떨어졌는데, 정작 컴파일러는 Tools/LLVM 것을 쓴다. 그 짝이 어긋나면 -flto 의 비트코드 .obj 를
-	# lib.exe 가 못 읽어 LNK1107 이 나고, CMake 는 그걸 "이 컴파일러는 IPO 를 지원하지 않는다" 로
-	# 읽어 LTO 를 통째로 꺼 버린다 — 옵션은 ON 인 채로. (2026-09-14 에 그 상태를 실측으로 확인했다.)
-	if(swPinnedLlvm AND EXISTS "${swPinnedLlvm}/bin/llvm-lib.exe")
-		set(swAr "${swPinnedLlvm}/bin/llvm-lib.exe")
-	elseif(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
-		set(swAr "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
-	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
-		set(swAr "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
+	# **고정 LLVM 의 llvm-lib 을 가장 먼저 본다** (왜 그래야 하는지는 ToolchainBinaries.cmake 머리 주석).
+	# 예전엔 환경변수 둘만 보고 없으면 MSVC lib.exe 로 떨어졌는데, 정작 컴파일러는 Tools/LLVM 것을 쓴다.
+	sw_pinnedArchiverPath(swPinnedAr)
+
+	if(swPinnedAr)
+		set(swAr "${swPinnedAr}")
 	elseif(swMsvcTools AND NOT swMsvcTools STREQUAL "")
 		foreach(hostArch IN ITEMS Hostx64 Hostx86)
 			foreach(targetArch IN ITEMS x64 x86)

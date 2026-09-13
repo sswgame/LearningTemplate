@@ -10,9 +10,6 @@
 # ------------------------------------------------------------------------------
 set(swModulesRoot "${CMAKE_CURRENT_LIST_DIR}")
 
-# BuildType/Release.cmake 와 Engine/BuildLayout.cmake 가 **둘 다** 쓰므로 그 앞에서 정의한다.
-include("${CMAKE_SOURCE_DIR}/cmake/Config/IpoSupport.cmake")
-
 include("${swModulesRoot}/Architecture/ARM64.cmake")
 include("${swModulesRoot}/Architecture/X64.cmake")
 

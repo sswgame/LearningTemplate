@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # 1) clang-cl / lld-link / llvm-rc — 포트 빌드 컴파일러
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/../FindLlvmBin.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/FindLlvmBin.cmake")
 sw_findLlvmBin(llvmBin)
 
 if(NOT llvmBin)

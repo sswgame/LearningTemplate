@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Modules/Toolchain/FindLlvmBin.cmake
+# @file cmake/Environment/FindLlvmBin.cmake
 # @brief LLVM/clang-cl bin 디렉터리 탐색
 # ==============================================================================
 
@@ -10,7 +10,7 @@ if(NOT COMMAND sw_findLlvmBin)
     # 시스템/기존 설치를 프로젝트 Tools보다 먼저 (최초 clone 시 Tools 없어도 OK)
     # ------------------------------------------------------------------------------
     function(sw_findLlvmBin OUT_VAR)
-        include("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../Config/GenerateConfigConstants.cmake" OPTIONAL)
+        include("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../Config/GenerateConfigConstants.cmake" OPTIONAL)
         set(llvmBin "")
 
         foreach(envName LLVM_ROOT LLVM_PATH LLVM_DIR LLVM_HOME)

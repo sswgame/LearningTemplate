@@ -33,6 +33,7 @@ from common import (
     findFirstExistingFileRecursive,
     ToolSpec,
     findToolRoot,
+    getProjectRoot,
     kEnvSwLlvmAutoBootstrap,
     kKeyLibclangDllPath,
     kKeyLlvmAutoBootstrap,
@@ -427,6 +428,32 @@ def replaceDirInternal(src: Path, dest: Path) -> None:
             "(파일이 아직 점유 중입니다. IDE나 clangd 종료 후 수동 삭제 가능합니다)."
         )
 
+def invalidatePrecompiledHeadersInternal(projectRoot: Path) -> int:
+    """
+    빌드 트리들의 PCH 를 지웁니다 (툴체인 교체 직후에만 부릅니다).
+
+    LLVM 을 새로 깔면 `lib/clang/<major>/include` 의 헤더가 바뀌고, 그 순간 기존 PCH 는 전부
+    쓸 수 없게 된다. 그런데 컴파일러 메시지는 "has been modified since the precompiled header
+    was built" 뿐이라 원인도 조치도 안 알려 준다. 그래서 **툴체인을 바꾼 쪽이 치운다.**
+
+    `.pch` 만 지우면 안 된다 — ninja 는 짝이 되는 `cmake_pch.cxx.obj` 가 최신이면 PCH 를 다시
+    만들지 않고, 그것을 필요로 하는 TU 만 컴파일하다 "PCH file not found" 로 진다. 둘 다 지운다.
+    """
+    buildRoot = projectRoot / "build"
+    if buildRoot.is_dir() is False:
+        return 0
+
+    removed = 0
+    for pattern in ("cmake_pch*.pch", "cmake_pch*.obj", "cmake_pch*.gch"):
+        for stale in buildRoot.rglob(pattern):
+            try:
+                stale.unlink()
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
 def extractTarMinimalInternal(archive: Path, destRootDir: Path) -> None:
     """
     LLVM 아카이브에서 빌드에 필요한 최소 구성 파일들만 임시 스테이징 폴더에 압축 해제한 뒤 destRootDir로 교체합니다.
@@ -588,6 +615,12 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
             sys.stderr.write(f"[SetupLlvm] Minimal kit check failed under {tools}.\n")
             return ""
         print(f"[SetupLlvm] Minimal kit ready: {tools}")
+
+        # 헤더가 바뀌었으니 이 툴체인으로 구운 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
+        staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
+        if staleCount > 0:
+            print(f"[SetupLlvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")
+
         return recordInternal(tools)
     except Exception as exc:
         sys.stderr.write(f"[SetupLlvm Error] {exc}\n")

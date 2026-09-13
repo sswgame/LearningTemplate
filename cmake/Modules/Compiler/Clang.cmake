@@ -113,7 +113,7 @@ endif()
 # ------------------------------------------------------------------------------
 # 링크 — LLD가 있으면 사용, clang-cl은 MSVC 스타일 링크 옵션
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/../Toolchain/FindLlvmBin.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../Environment/FindLlvmBin.cmake")
 sw_findLlvmBin(llvmBin)
 find_program(SW_LLD_LINK_EXE NAMES lld-link lld HINTS "${llvmBin}")
 

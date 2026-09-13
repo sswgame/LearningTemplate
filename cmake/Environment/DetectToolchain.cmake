@@ -113,6 +113,7 @@ if(EXISTS "${swEngineCfg}")
             endif()
 
             # 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
+            include("${CMAKE_CURRENT_LIST_DIR}/ToolchainBinaries.cmake")
             include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
             sw_findWindowsArchiveAndMt(swAr swMt)
 
