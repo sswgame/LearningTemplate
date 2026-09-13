@@ -22,7 +22,8 @@ Scripts/
   │     ├── ToolLocator.py            # 선언적 ToolSpec 기반 5단계 도구 탐색 프레임워크
   │     ├── AssetPipeline.py          # 멀티스레드 에셋 쿠킹 & 원자적 바이너리 변경 감지(writeBinaryIfChanged)
   │     ├── Archive.py                # 다운로드 캐시, 해시 검증, 안전한 압축 해제
-  │     └── Host.py                   # Git 연동 및 clang-format 배치 실행
+  │     ├── Host.py                   # Git 연동 및 clang-format 배치 실행
+  │     └── Parallel.py               # 동시 처리 한 자리 — 워커 수 정책과 map/flatMap (스레드인 이유가 적혀 있다)
   │
   ├── generate/                       # [빌드/에셋 생성 계층]
   │     ├── CookAssets.py             # ★ Prefab, Scene, Resource Pack을 일괄/선택 쿠킹하는 단일 통합 쿠커

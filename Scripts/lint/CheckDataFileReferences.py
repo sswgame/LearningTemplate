@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, useUtf8Stdout
+from common import getProjectRoot, mapConcurrent, useUtf8Stdout
 
 # 검사 대상 확장자 — X-macro 목록 파일.
 _kDataSuffix = ".xxx"
@@ -81,24 +81,33 @@ def main() -> int:
         print("[CheckDataFileReferences] 검사할 .xxx 파일이 없습니다.")
         return 0
 
-    # 각 대상 파일이 참조되었는지 표시.
-    referenced: dict[Path, str] = {}
+    # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다.
+    # 예전에는 참조 파일마다 안쪽 루프에서 다시 구했다 — 참조 파일 × 대상 파일만큼의 파일시스템
+    # 질의가 되어, 파일이 늘수록 제곱으로 느려지는 자리였다.
+    dataEntries = [(dataFile.resolve(), dataFile.relative_to(repositoryRoot).as_posix()) for dataFile in dataFiles]
 
     # 이 스크립트 자신은 참조로 세지 않는다. 아래 독스트링이 죽은 사본의 경로를 **예시로** 적고
     # 있어서, 그것을 참조로 인정하면 그 파일이 되살아나도 검사가 통과한다(실제로 한 번 그랬다).
     selfPath = Path(__file__).resolve()
 
-    referenceFiles = collectFilesInternal(repositoryRoot, _kReferenceRoots, _kReferenceSuffix)
-    for referenceFile in referenceFiles:
+    def scanReferenceFileInternal(referenceFile: Path) -> list[Path] | None:
+        """
+        참조 파일 하나가 가리키는 대상 파일들을 돌려줍니다. 읽지 못하면 None (호출부가 실패로 본다).
+
+        @note 어느 참조 파일이 가리켰는지는 돌려주지 않는다 — 쓰이는 것은 "참조되었는가" 뿐이고,
+              동시에 훑으므로 "누가 먼저 가리켰나" 는 실행마다 달라진다. 값을 남기면 그 비결정성이
+              메시지로 새어 나간다.
+        """
         if referenceFile.resolve() == selfPath:
-            continue
+            return []
         try:
             text = referenceFile.read_text(encoding="utf-8", errors="replace")
         except OSError as exception:
             print(f"[CheckDataFileReferences] 읽기 실패: {referenceFile}: {exception}", file=sys.stderr)
-            return 2
+            return None
 
         referenceRelative = referenceFile.relative_to(repositoryRoot).as_posix()
+        found: list[Path] = []
 
         # 1) / 2) include 해석
         for includePath in _kIncludeRe.findall(text):
@@ -108,30 +117,30 @@ def main() -> int:
 
             # Source/ 를 루트로 본 경로
             candidate = repositoryRoot / _kIncludeRootDir / normalizedInclude
-            if candidate.is_file() and candidate not in referenced:
-                referenced[candidate.resolve()] = referenceRelative
+            if candidate.is_file():
+                found.append(candidate.resolve())
 
             # 포함하는 파일과 같은 디렉터리 기준 경로
             sibling = (referenceFile.parent / normalizedInclude).resolve()
-            if sibling.is_file() and sibling not in referenced:
-                referenced[sibling] = referenceRelative
+            if sibling.is_file():
+                found.append(sibling)
 
         # 3) 저장소 기준 경로가 텍스트에 그대로 있는 경우 (cmake/py/json 이 경로로 읽는다)
-        for dataFile in dataFiles:
-            resolved = dataFile.resolve()
-            if resolved in referenced:
-                continue
-            dataRelative = dataFile.relative_to(repositoryRoot).as_posix()
-            if dataRelative == referenceRelative:
-                continue
-            if dataRelative in text:
-                referenced[resolved] = referenceRelative
+        for resolved, dataRelative in dataEntries:
+            if dataRelative != referenceRelative and dataRelative in text:
+                found.append(resolved)
+        return found
 
-    violations: list[str] = []
-    for dataFile in sorted(dataFiles):
-        if dataFile.resolve() in referenced:
-            continue
-        violations.append(dataFile.relative_to(repositoryRoot).as_posix())
+    referenceFiles = collectFilesInternal(repositoryRoot, _kReferenceRoots, _kReferenceSuffix)
+    referenced: set[Path] = set()
+    for found in mapConcurrent(scanReferenceFileInternal, referenceFiles):
+        if found is None:
+            return 2
+        referenced.update(found)
+
+    violations = sorted(
+        dataRelative for resolved, dataRelative in dataEntries if resolved not in referenced
+    )
 
     if violations:
         print("[CheckDataFileReferences] 아무도 include 하지 않는 목록 파일:")

@@ -6,7 +6,6 @@ Scripts/common/Host.py
 
 from __future__ import annotations
 
-import concurrent.futures
 import os
 import shutil
 import subprocess
@@ -16,6 +15,7 @@ from typing import Sequence
 
 from .Config import loadToolchainConfig
 from .Constants import kCppAllExtensions, kKeyLlvmPath
+from .Parallel import runUntilNonZero
 from .Paths import getProjectRoot, normalizePath
 
 
@@ -218,13 +218,5 @@ def runClangFormatBatch(files: Sequence[Path | str],
         result = subprocess.run(command, cwd=str(projectRoot), check=False)
         return result.returncode
 
-    if len(batches) == 1:
-        return runSingleBatchInternal(batches[0])
-
-    maxWorkers = min(16, (os.cpu_count() or 4))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(runSingleBatchInternal, batch) for batch in batches]
-        for future in concurrent.futures.as_completed(futures):
-            if (resultCode := future.result()) != 0:
-                return resultCode
-    return 0
+    # clang-format 은 자식 프로세스라 코어 수를 넘겨 띄우면 서로 경합한다 (Parallel 의 프로세스 정책).
+    return runUntilNonZero(runSingleBatchInternal, batches)

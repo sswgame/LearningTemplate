@@ -18,8 +18,6 @@ enum (및 enum class) -> struct -> class 순서로 정렬하고,
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import os
 import re
 import sys
 from pathlib import Path
@@ -29,12 +27,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
     collectSourceFiles,
+    flatMapConcurrent,
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
     useUtf8Stdout,
 )
-
 _kSingleFwdRe = re.compile(
     r"^(\s*)(?:template\s*<[^;{}>]+>\s*)?"
     r"(enum(?:\s+class|\s+struct)?|struct|class)\s+"
@@ -202,27 +200,12 @@ def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
 
 
 def formatForwardDeclarationsBatch(
-    files: Sequence[Path], checkOnly: bool = False, maxWorkers: int = 8
+    files: Sequence[Path], checkOnly: bool = False, maxWorkers: int | None = None
 ) -> list[str]:
     """
-    여러 파일을 스레드 풀을 이용하여 병렬로 처리합니다.
+    여러 파일을 동시에 처리합니다 (워커 수 정책은 `common.Parallel`).
     """
-    if not files:
-        return []
-
-    allResults: list[str] = []
-    workerCount = min(maxWorkers, len(files), os.cpu_count() or 4)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workerCount) as executor:
-        futures = {
-            executor.submit(processFile, path, checkOnly): path for path in files
-        }
-        for future in concurrent.futures.as_completed(futures):
-            results = future.result()
-            if results:
-                allResults.extend(results)
-
-    return allResults
+    return flatMapConcurrent(lambda path: processFile(path, checkOnly), list(files), workerCount=maxWorkers)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

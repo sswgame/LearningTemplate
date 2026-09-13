@@ -8,6 +8,7 @@ Scripts/common package
   - Search: 파일/디렉터리 탐색, C++ 소스 파일 수집 및 vcpkg 판별
   - Archive: 네트워크 다운로드, SHA256 검증, 안전한 압축 해제
   - Host: Git 탐색/실행/파일 쿼리 및 clang-format 배치 실행
+  - Parallel: 동시 처리 한 자리 — 워커 수 정책과 map/flatMap 패턴 (스레드인 이유도 여기 적혀 있다)
 """
 
 from __future__ import annotations
@@ -35,12 +36,13 @@ for _stream in (_sys.stdout, _sys.stderr):
         except (ValueError, OSError):
             pass  # 리다이렉트된 파이프 등 — 그대로 둔다
 
-from . import Archive, AssetPipeline, Config, Constants, Host, Paths, Search, ToolLocator
+from . import Archive, AssetPipeline, Config, Constants, Host, Parallel, Paths, Search, ToolLocator
 from .Archive import *
 from .AssetPipeline import *
 from .Config import *
 from .Constants import *
 from .Host import *
+from .Parallel import *
 from .Paths import *
 from .Search import *
 from .ToolLocator import *

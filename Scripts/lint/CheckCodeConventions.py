@@ -33,7 +33,6 @@ Scripts/lint/CheckCodeConventions.py
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import functools
 import json
 import os
@@ -45,6 +44,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import (
     collectSourceFiles,
+    flatMapConcurrent,
     getLintSearchDirs,
     getProjectRoot,
     kCppAllExtensions,
@@ -53,7 +53,6 @@ from common import (
     normalizePath,
     useUtf8Stdout,
 )
-
 # --- 1. 자료구조 정의 --------------------------------------------------------
 
 @dataclass
@@ -1851,13 +1850,13 @@ def runConventionsCheck(rootDir: Path | None = None,
     filesToScan = collectSourceFiles(
         searchDirs, excludeSubdirs=["ThirdParty", "build", ".vcpkg"]
     )
-    maxWorkers = min(32, (os.cpu_count() or 4) * 2)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(checkFileConventionsInternal, filePath, projectRoot) for filePath in filesToScan]
-        for future in concurrent.futures.as_completed(futures):
-            allViolations.extend(future.result())
+    allViolations.extend(
+        flatMapConcurrent(lambda filePath: checkFileConventionsInternal(filePath, projectRoot), filesToScan)
+    )
 
     # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
+    # **셋을 동시에 돌려 봤지만 재고 되돌렸다**(6.66s → 6.72s, 3회). 셋 다 정규식이라 GIL 을 놓지 않아
+    # 스레드로 겹치지 않는다 — 파일마다 나누는 위쪽 루프와 성질이 다르다. 다시 제안하기 전에 그 숫자를 볼 것.
     allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
     allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
     allViolations.extend(checkBitfieldBooleanLiteralsInternal(filesToScan, projectRoot))

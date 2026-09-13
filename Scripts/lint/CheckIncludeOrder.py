@@ -12,14 +12,12 @@ Include 순서 및 스타일 검사 린터.
 """
 
 import argparse
-import concurrent.futures
-import os
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppSourceExtensions, useUtf8Stdout
+from common import collectSourceFiles, flatMapConcurrent, getLintSearchDirs, getProjectRoot, kCppSourceExtensions, useUtf8Stdout
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -257,12 +255,9 @@ def main() -> int:
     allFiles = collectSourceFiles(sourceDirs)
     sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repo)
 
-    violations: list[str] = []
-    maxWorkers = min(32, (os.cpu_count() or 4) * 2)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(processFile, path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap) for path in allFiles]
-        for future in concurrent.futures.as_completed(futures):
-            violations.extend(future.result())
+    violations = flatMapConcurrent(
+        lambda path: processFile(path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap), allFiles
+    )
 
     if violations:
         print("[CheckIncludeOrder] Include 순서 규칙 위반:")

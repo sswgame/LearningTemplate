@@ -21,8 +21,6 @@ Engine 레이어 금지 include 검사.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import os
 import re
 import sys
 from pathlib import Path
@@ -35,11 +33,11 @@ from common import (
     kDirSourceGameFramework,
     kDirSourceGames,
     kFileEngineServices,
+    mapConcurrent,
     normalizePath,
     startsWithPathComponent,
     useUtf8Stdout,
 )
-
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
@@ -234,16 +232,14 @@ def main() -> int:
     violations: list[str] = []
     strictWarns: list[str] = []
 
-    maxWorkers = min(32, (os.cpu_count() or 4) * 2)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(processFile, path, repo, args.strict) for path in allFiles]
-        for future in concurrent.futures.as_completed(futures):
-            fileViolations, fileStrictWarns, errorMessage = future.result()
-            if errorMessage:
-                print(errorMessage, file=sys.stderr)
-                return 2
-            violations.extend(fileViolations)
-            strictWarns.extend(fileStrictWarns)
+    for fileViolations, fileStrictWarns, errorMessage in mapConcurrent(
+        lambda path: processFile(path, repo, args.strict), allFiles
+    ):
+        if errorMessage:
+            print(errorMessage, file=sys.stderr)
+            return 2
+        violations.extend(fileViolations)
+        strictWarns.extend(fileStrictWarns)
 
     if strictWarns and not args.strict:
         print(f"[CheckEngineLayers] 내부 레이어 경고 {len(strictWarns)}건 (--strict 시 실패):")

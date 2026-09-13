@@ -10,13 +10,13 @@ SW Engine 에셋 쿠킹 및 바이너리 직렬화 공통 파이프라인 모듈
 
 from __future__ import annotations
 
-import concurrent.futures
-import os
 import struct
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
+
+from .Parallel import mapConcurrent
 
 
 def writeBinaryIfChanged(path: Path, data: bytes) -> bool:
@@ -72,18 +72,18 @@ def batchCookAssets(
     if totalCount == 0:
         return 0, 0
 
-    workers = maxWorkers or min(32, (os.cpu_count() or 4) * 2)
     updatedCount = 0
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(cookFunc, task) for task in tasks]
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                result = future.result()
-                if result:
-                    updatedCount += int(result)
-            except Exception as exception:
-                print(f"[{label} Error] {exception}", file=sys.stderr)
+    def cookOneInternal(task) -> int:
+        # 한 에셋이 터져도 나머지는 굽는다 — 쿠킹은 전부-아니면-전무가 아니다.
+        try:
+            return int(bool(cookFunc(task)))
+        except Exception as exception:
+            print(f"[{label} Error] {exception}", file=sys.stderr)
+            return 0
+
+    for result in mapConcurrent(cookOneInternal, list(tasks), workerCount=maxWorkers):
+        updatedCount += result
 
     print(f"[{label}] Done - {totalCount} item(s) checked, {updatedCount} updated.")
     return totalCount, updatedCount

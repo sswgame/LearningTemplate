@@ -35,8 +35,6 @@ InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import os
 import re
 import sys
 from pathlib import Path
@@ -46,12 +44,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
     collectSourceFiles,
+    flatMapConcurrent,
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
     useUtf8Stdout,
 )
-
 # 중괄호를 벗기면 안 되는 본문: 스스로 분기/반복을 여는 문장(달랑거리는 else 위험) 및 레이블.
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")
 _kIfHeadRe = re.compile(r"^if(\s+constexpr)?\s*\(")
@@ -416,24 +414,11 @@ def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
     return listDone
 
 
-def formatBranchBracesBatch(files: Sequence[Path], checkOnly: bool = False, maxWorkers: int = 8) -> list[str]:
+def formatBranchBracesBatch(files: Sequence[Path], checkOnly: bool = False, maxWorkers: int | None = None) -> list[str]:
     """
-    여러 파일을 스레드 풀을 이용하여 병렬로 처리합니다.
+    여러 파일을 동시에 처리합니다 (워커 수 정책은 `common.Parallel`).
     """
-    if not files:
-        return []
-
-    allResults: list[str] = []
-    workerCount = min(maxWorkers, len(files), os.cpu_count() or 4)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workerCount) as executor:
-        futures = {executor.submit(processFile, path, checkOnly): path for path in files}
-        for future in concurrent.futures.as_completed(futures):
-            results = future.result()
-            if results:
-                allResults.extend(results)
-
-    return allResults
+    return flatMapConcurrent(lambda path: processFile(path, checkOnly), list(files), workerCount=maxWorkers)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
