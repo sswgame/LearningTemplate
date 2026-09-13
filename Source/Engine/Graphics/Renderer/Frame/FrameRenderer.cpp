@@ -35,6 +35,18 @@ namespace sw
     SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
+     * @brief `-gv_drawMerge=0` — 같은 PSO·머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
+     * @details 묶은 그림과 안 묶은 그림이 같아야 한다 — 다르면 배치 표(g_SwBatches)나 드로우 ID 가 틀린 것이다. 기본은 묶음.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_drawMerge, 1, "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)" );
+
+    /**
+     * @brief `-gv_vertexPool=0` — 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
+     * @details 풀을 켠 그림과 끈 그림은 같아야 한다 — 다르면 간접 인자의 startVertex 나 SV_VertexID 의 API 차이가 잘못 다뤄진 것이다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
+
+    /**
      * @brief `-gv_viewMode=<0|1|2>` — 씬 지오메트리 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe).
      * @details 에디터 뷰포트 콤보와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다 —
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
@@ -80,6 +92,10 @@ namespace sw
         , _meshMorphCbIndex{ kInvalidDescriptorIndex }
         , _bMorphBindsRest{ SW_FALSE }
         , _meshMorphDiagOverride{ -1 }
+        , _drawMergeOverride{ -1 }
+        , _vertexPoolOverride{ -1 }
+        , _indirectDrawCallCount{ 0 }
+        , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _instanceSortCb{ 0 }
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
@@ -336,12 +352,17 @@ namespace sw
         }
     }
 
+    bool FrameRenderer::isDrawMergeEnabled() const
+    {
+        return ( ( _drawMergeOverride >= 0 ) ? _drawMergeOverride : gv_drawMerge ) != 0;
+    }
+
     int32 FrameRenderer::getEffectiveMeshMorphDiag() const
     {
         return ( _meshMorphDiagOverride >= 0 ) ? _meshMorphDiagOverride : gv_morphDiag;
     }
 
-    void FrameRenderer::dispatchMeshMorph()
+    void FrameRenderer::prepareMeshMorphPool()
     {
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다 — 배치의 base 가 kInvalidBase 로 남아 셰이더가
@@ -375,10 +396,18 @@ namespace sw
 
         _meshMorphPool.build( _pDevice, _listScratchMorphMesh );
 
-        // 배치에 구간을 적어 둔다 — 드로우가 루트 상수로 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
+        // 배치에 구간을 적어 둔다 — upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
         _gpuScene.assignMorphBases( _meshMorphPool );
+    }
 
+    void FrameRenderer::dispatchMeshMorph()
+    {
+        const int32 morphDiag = getEffectiveMeshMorphDiag();
+        if ( _pDevice == nullptr || _pCmd == nullptr )
+            return;
+        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 )
+            return;
         if ( _meshMorphPool.isDispatchable() == false )
             return;
 
@@ -558,6 +587,7 @@ namespace sw
     {
         _pCmd->beginCommandList();
         _bGpuCullingActive = SW_FALSE;
+        _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
         _animTimer.updateTimer();
 
         // GPU 드리븐 프리패스 — **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
@@ -630,6 +660,9 @@ namespace sw
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
+        // 모프 풀 오프셋은 배치 표에 실려 업로드 시점에 완성돼야 한다.
+        prepareMeshMorphPool();
+        _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
         _gpuScene.upload( pDevice );
 
         if ( _bCallbacksBound == SW_FALSE )
@@ -652,8 +685,9 @@ namespace sw
             return false;
         }
 
-        const bool bOk = submitGraph( pDevice );
-        _pScene        = nullptr;
+        const bool bOk             = submitGraph( pDevice );
+        _pScene                    = nullptr;
+        _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
         return bOk;
     }
 
@@ -704,6 +738,9 @@ namespace sw
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
+        // 모프 풀 오프셋은 배치 표에 실려 업로드 시점에 완성돼야 한다.
+        prepareMeshMorphPool();
+        _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
         _gpuScene.upload( pDevice );
 
         if ( _bCallbacksBound == SW_FALSE )
@@ -723,7 +760,8 @@ namespace sw
         if ( prepareCommandList( pDevice, "executePacket" ) == false )
             return false;
 
-        const bool bOk = submitGraph( pDevice );
+        const bool bOk             = submitGraph( pDevice );
+        _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
         return bOk;
     }
 } // namespace sw

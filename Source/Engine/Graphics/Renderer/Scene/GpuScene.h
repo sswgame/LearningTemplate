@@ -9,6 +9,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Mesh/GpuMeshVertexPool.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
@@ -86,8 +87,19 @@ namespace sw
          * @brief 이 배치의 가시 목록을 어떻게 다룰지 (GpuBatchSortMode). instancesort.hlsl 과 값이 같아야 한다.
          */
         uint32 _sortMode{ 0 };
-        uint32 _pad{ 0 };
+        /**
+         * @brief 모프 정점 풀에서 이 배치 메시의 시작(정점 단위). 0xFFFFFFFF = 모프 안 함.
+         * @details 예전엔 드로우마다 루트 상수로 실었다. 배치마다 다른 값이 표에 있어야 같은 PSO 의 배치들을 멀티 드로우
+         *          하나로 낼 수 있다 — 정점 셰이더는 자기 배치 번호로 이 표(g_SwBatches, t13)를 읽는다.
+         */
+        uint32 _morphVertexBase{ 0xFFFFFFFFu };
+        /// @brief 정점 풀(GpuMeshVertexPool)에서 이 배치 메시의 시작(정점 단위). 풀 밖 메시는 0.
+        uint32 _firstVertex{ 0 };
+        uint32 _pad0{ 0 };
+        uint32 _pad1{ 0 };
+        uint32 _pad2{ 0 };
     };
+    static_assert( sizeof( GpuBatchInfo ) == 8 * sizeof( uint32 ), "GpuBatchInfo 는 uint 여덟(32바이트) — binding.hlsli SwBatchData · gpucull.hlsl GpuBatchInfo 와 같아야 한다" );
 
     /// @brief 같은 메시/머티리얼의 인스턴스 배치
     struct GpuMeshBatch
@@ -95,9 +107,14 @@ namespace sw
         shared_ptr<Mesh> _mesh; ///< **소유를 싣는다** — RT 가 upload() 에서 이 메시를 역참조한다
         RHIBufferHandle  _vertexBuffer{ 0 };
         uint32           _vertexCount{ 0 };
-        uint32           _instanceBase{ 0 };
-        uint32           _instanceCount{ 0 };
-        uint32           _materialIndex{ 0 };
+        /**
+         * @brief 정점 풀 안에서 이 메시의 시작(정점 단위) — 간접 인자의 startVertex. 풀 밖 메시는 0 (자기 정점 버퍼).
+         * @details RT 가 upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 버퍼를 다시 걸지 않고 멀티 드로우로 묶인다.
+         */
+        uint32 _firstVertex{ 0 };
+        uint32 _instanceBase{ 0 };
+        uint32 _instanceCount{ 0 };
+        uint32 _materialIndex{ 0 };
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위). 0xFFFFFFFF = 모프 안 함.
          * @details RT 가 `upload()` 에서 채운다 — GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). 드로우는 이 값을
@@ -344,8 +361,20 @@ namespace sw
         RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물 (간접 인자 + 가시 목록). */
         const GpuCullViewResources& getCullView( RenderViewType view ) const { return _arrCullView[static_cast<uint32>( view )]; }
-        /** @brief 배치 구간 버퍼의 SRV (컬링 컴퓨트 t1). */
+        /** @brief 배치 표 버퍼의 SRV (컬링 컴퓨트 t1 · 그래픽스 t13 g_SwBatches). */
         RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
+        /** @brief 배치 표 버퍼 핸들. */
+        RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
+        /** @brief 씬 메시 정점 풀 (RT 소유). */
+        const GpuMeshVertexPool& getVertexPool() const { return _vertexPool; }
+        /** @brief 인스턴스 슬롯 스트림 정점 버퍼 (슬롯 1). 0 이면 아직 없다. */
+        RHIBufferHandle getInstanceSlotStream() const { return _instanceSlotStream; }
+        /**
+         * @brief 정점 풀을 쓸지 (기본 켬). 끄면 배치가 자기 정점 버퍼로 그린다(startVertex 0) — 진단·A/B 용.
+         * @details 풀을 켠 그림과 끈 그림은 같아야 한다. 다르면 백엔드가 간접 인자의 startVertex 나 SV_VertexID 를 다르게
+         *          다루는 것이다(binding.hlsli SwMorphElementOf 의 API 차이 참고).
+         */
+        void setVertexPoolEnabled( bool bEnabled );
         /**
          * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
          * @details true 면 업로드 시점에 개수를 **0 으로** 올린다 — 컬링 컴퓨트가 InterlockedAdd 로 채우기
@@ -601,6 +630,28 @@ namespace sw
          */
         GpuCullViewResources    _arrCullView[static_cast<uint32>( RenderViewType::Count )];
         RHIStructuredBufferSlot _batchInfo;
+        /**
+         * @brief 씬 메시 정점을 모은 풀 — RT 소유. 배치는 이 버퍼와 자기 시작 오프셋으로 그린다.
+         * @details 메시 집합이 바뀔 때만 다시 만든다. 풀에 못 든 메시는 자기 정점 버퍼로 그린다(멀티 드로우에는 못 묶인다).
+         */
+        GpuMeshVertexPool _vertexPool;
+        /// @brief 풀에 넣을 메시 목록 스크래치 — 프레임마다 할당하지 않는다.
+        vector<Mesh*> _listScratchPoolMesh;
+        /// @brief setVertexPoolEnabled — 0 이면 풀을 비우고 배치가 자기 정점 버퍼로 그린다.
+        uint8 _bVertexPoolEnabled{ SW_TRUE };
+        /**
+         * @brief 인스턴스 슬롯 스트림 — `0,1,2,…` 를 담은 정점 버퍼(슬롯 1, 인스턴스 스텝). RT 소유.
+         * @details 간접 인자의 startInstance 가 배치 시작이므로 입력 어셈블러가 인스턴스마다 `startInstance + i` 를 준다 — 그것이
+         *          곧 가시 목록 슬롯이다. 인스턴스 수만큼 커지면 다시 만든다(내용은 항등이라 그대로 늘리기만 한다).
+         */
+        RHIBufferHandle _instanceSlotStream{ 0 };
+        uint32          _instanceSlotStreamCapacity{ 0 };
+        /**
+         * @brief 배치 표·간접 인자를 다시 올려야 하는가 — 스냅샷은 그대로인데 풀 오프셋(정점·모프)이 바뀌었을 때.
+         * @details 스냅샷 dirty 와 별개다. 모프 풀은 메시가 모프를 켜고 끌 때, 정점 풀은 메시 집합이 바뀔 때 다시 만들어지는데
+         *          둘 다 씬(스냅샷)이 그대로인 채로 일어날 수 있다.
+         */
+        uint8 _bBatchTablesDirty{ SW_TRUE };
         /// @brief 호출자가 원한 값 (setIndirectCountsFilledByGpu).
         uint8 _bWantGpuIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).

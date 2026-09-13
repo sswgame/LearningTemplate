@@ -102,6 +102,15 @@ namespace sw
          */
         void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
         /**
+         * @brief 같은 PSO·머티리얼의 연속 배치를 멀티 드로우 하나로 묶을지 (기본 켬, 전역 `gv_drawMerge` 를 덮어쓴다).
+         * @details 끄면 배치마다 한 번씩 부른다 — 백엔드가 멀티 드로우를 못 하면(DX11) 어차피 그렇다. 테스트가 켬/끔의 그림을 비교한다.
+         */
+        void setDrawMergeEnabled( bool bEnabled ) { _drawMergeOverride = bEnabled ? 1 : 0; }
+        /** @brief 정점 풀을 쓸지 (기본 켬, 전역 `gv_vertexPool` 을 덮어쓴다). 끄면 메시마다 자기 정점 버퍼 — 진단·A/B 용. */
+        void setVertexPoolEnabled( bool bEnabled ) { _vertexPoolOverride = bEnabled ? 1 : 0; }
+        /** @brief 마지막 프레임이 낸 씬 간접 드로우 호출 수(모든 패스 합). 배치 수보다 작으면 묶인 것이다. */
+        uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
+        /**
          * @brief 풀스크린 패스가 이 역할의 입력을 **걸지 않게** 합니다 (쇼 플래그 — 언리얼의 r.AmbientOcclusion.Levels=0 자리).
          * @details 셰이더는 그 인덱스를 SW_INVALID_INDEX 로 읽어 폴백한다(AO 는 1). "이 입력이 실제로 그림을 바꾸는가" 를
          *          같은 프레임 안에서 비교할 수 있다 — SSAO 가 매 프레임 돌고 버려지던 것을 픽셀로 잡는 데 썼다.
@@ -221,12 +230,10 @@ namespace sw
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그린다.
              */
             RenderViewType _cullView{ RenderViewType::Main };
-            /// @brief 이 드로우의 루트 상수 값 — 배치마다 바뀐다(인스턴스 시작 오프셋, 머티리얼 원소 수).
+            /// @brief 이 드로우 그룹의 루트 상수 값 — 머티리얼 원소 수. 배치마다 다른 값(인스턴스 시작·모프 풀·정점 풀)은
+            ///        배치 표(g_SwBatches)와 인스턴스 슬롯 스트림이 주므로 그룹 안에서 루트 상수를 다시 걸지 않는다.
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어쓴다(binding.hlsli 1-0 참고).
-            uint32 _drawInstanceBase{ 0 };
             uint32 _drawMaterialCount{ 0 };
-            /// @brief 이 드로우 메시의 모프 풀 시작 오프셋. 0xFFFFFFFF 면 정점 셰이더가 입력 스트림을 그대로 쓴다.
-            uint32 _drawMorphVertexBase{ 0xFFFFFFFFu };
             /// @brief bindForDraw 가 마지막으로 조회한 PSO→레이아웃. 같은 PSO 로 연속 드로우할 때
             ///        layoutForPso() 의 뮤텍스+해시맵 조회를 건너뛰는 패스-로컬 1-entry 캐시.
             RHIPipelineStateHandle     _lastLayoutPso{ 0 };
@@ -559,6 +566,14 @@ namespace sw
         uint8 _bMorphBindsRest;
         /// @brief `setMeshMorphDiag` 가 준 값. 음수면 전역 변수 `gv_morphDiag` 를 따른다.
         int32 _meshMorphDiagOverride;
+        /// @brief `setDrawMergeEnabled` 가 준 값. 음수면 전역 변수 `gv_drawMerge` 를 따른다.
+        int32 _drawMergeOverride;
+        /// @brief `setVertexPoolEnabled` 가 준 값. 음수면 전역 변수 `gv_vertexPool` 을 따른다.
+        int32 _vertexPoolOverride;
+        /// @brief 이번 프레임의 씬 간접 드로우 호출 수 — 패스가 병렬로 기록하므로 원자.
+        atomic<uint32> _indirectDrawCallCount;
+        /// @brief 마지막 프레임의 값 (getLastIndirectDrawCallCount).
+        uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트 — 그 역할의 입력은 걸지 않는다.
         uint32 _disabledInputRoleMask;
         /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점. 스크래치 — 프레임 밖에서 의미 없다.
@@ -596,8 +611,16 @@ namespace sw
          *          뒤에 두면 컬링이 한 프레임 늦은 모양으로 판정한다.
          */
         void dispatchMeshMorph();
+        /**
+         * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 적습니다 — **업로드 전에**.
+         * @details 오프셋은 배치 표(g_SwBatches)에 실려 upload() 가 올린다. 예전엔 드로우 루트 상수라 업로드 뒤에 정해도 됐지만,
+         *          표는 업로드 시점에 완성돼야 한다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돈다.
+         */
+        void prepareMeshMorphPool();
         /** @brief 지금 적용되는 모프 진단 모드 — 오버라이드가 있으면 그것, 없으면 `gv_morphDiag`. */
         int32 getEffectiveMeshMorphDiag() const;
+        /** @brief 씬 배치를 멀티 드로우로 묶을지 — `setDrawMergeEnabled` 가 준 값, 없으면 전역 `gv_drawMerge`. */
+        bool isDrawMergeEnabled() const;
         /**
          * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 깊이순으로 되돌립니다 (gpucull/instancesort.hlsl).
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인/그림자)마다 자기 인자·목록을 따로 만든다.

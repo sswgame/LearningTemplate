@@ -71,7 +71,15 @@ namespace sw
                                               _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
         ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
 
-        // 모프 결과 풀 — **패스당 한 번** 건다. 배치는 시작 오프셋만 루트 상수로 싣는다(드로우 사이에
+        // 배치 표 — **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)이 전부 여기 있어
+        // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
+        if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
+        {
+            ctx._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSrv() );
+            ctx._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
+        }
+
+        // 모프 결과 풀 — **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
         const RHIStructuredBufferSlot& morphBuffer = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getRestBuffer()
@@ -158,7 +166,7 @@ namespace sw
         // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다 — 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전엔 이 둘을 PassCB 에 넣어 드로우마다
         // 버퍼를 새로 잡아야 했다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
-        const uint32 arrDrawRootConstant[] = { ctx._drawInstanceBase, ctx._drawMaterialCount, ctx._drawMorphVertexBase };
+        const uint32 arrDrawRootConstant[] = { ctx._drawMaterialCount };
         ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                              arrDrawRootConstant );
 
@@ -240,35 +248,81 @@ namespace sw
         if ( bTransparentPass )
             batchOffset = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() );
 
-        for ( uint32 batchIndex = 0; batchIndex < batches.size(); ++batchIndex )
+        // **같은 PSO·정점 버퍼·머티리얼(버퍼·CB·텍스처·원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
+        // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다 — 간접 인자의 startInstance 가 배치 시작이라 입력
+        // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
+        // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려졌다 — 실측). 멀티 드로우가 없는
+        // 백엔드(DX11)는 하나씩 부른다. 2026-09-13 벤치: 871 배치의 드로우 루프가 RT 프레임의 41% 였고 비용은 호출 수였다.
+        const bool bMerge        = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
+        auto       sameDrawGroup = [this, pso]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
         {
-            const GpuMeshBatch& batch = batches[batchIndex];
-            if ( batch._vertexBuffer == 0 || batch._instanceCount == 0 )
+            if ( other._vertexBuffer == 0 || other._instanceCount == 0 )
+                return false;
+            if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
+                return false;
+            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCb != head._materialCb ||
+                 other._materialCount != head._materialCount )
+                return false;
+            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
+            {
+                if ( other._arrMaterialTexSrv[texIndex] != head._arrMaterialTexSrv[texIndex] )
+                    return false;
+            }
+            return true;
+        };
+
+        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer;
+        // 인스턴스 슬롯 스트림(슬롯 1) — 패스당 한 번. 씬 드로우는 전부 이 스트림에서 자기 자리를 읽는다.
+        if ( _gpuScene.getInstanceSlotStream() != 0 )
+            ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, _gpuScene.getInstanceSlotStream(), constant::kInstanceSlotStreamStride, 0 );
+        RHIBufferHandle boundVertexBuffer{ 0 };
+        uint32          drawCallCount{ 0 };
+        uint32          batchIndex{ 0 };
+        const uint32    batchCount = static_cast<uint32>( batches.size() );
+        while ( batchIndex < batchCount )
+        {
+            const GpuMeshBatch& head = batches[batchIndex];
+            if ( head._vertexBuffer == 0 || head._instanceCount == 0 )
+            {
+                ++batchIndex;
                 continue;
-            ctx._pCmd->setVertexBuffer( 0, batch._vertexBuffer, sizeof( RHIVertex ), 0 );
+            }
+            uint32 groupEnd = batchIndex + 1;
+            if ( bMerge )
+            {
+                while ( groupEnd < batchCount && sameDrawGroup( head, batches[groupEnd] ) )
+                    ++groupEnd;
+            }
+
+            // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
+            if ( head._vertexBuffer != boundVertexBuffer )
+            {
+                ctx._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
+                boundVertexBuffer = head._vertexBuffer;
+            }
 
             // **이 머티리얼의 퍼뮤테이션**으로 그린다. 예전엔 패스 PSO 하나로 전부 그려서, 머티리얼이 선언한
             // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않았다.
             // 캐시는 ensureMaterialPsos 가 기록 전에 채운다 — 여기서는 조회만 한다.
-            const RHIPipelineStateHandle batchPso = psoForBatch( pso, batch );
+            const RHIPipelineStateHandle batchPso = psoForBatch( pso, head );
             if ( batchPso != boundPso && batchPso != 0 )
             {
                 ctx._pCmd->setPipelineState( batchPso );
                 boundPso = batchPso;
             }
 
-            // b0 = 패스 상수(뷰/월드), b1 = 머티리얼 상수. 예전엔 둘을 한 인자에 겹쳐 실어서
-            // 지오메트리가 머티리얼 버퍼를 PassCB 로 읽었다.
-            if ( bInstanced )
-                ctx._drawInstanceBase = batch._instanceBase;
-            ctx._drawMorphVertexBase = batch._morphVertexBase;
-            registerMaterialBuffer( ctx, batch, batchPso );
-            bindForDraw( ctx, batchPso, batch._materialCb, batch._arrMaterialTexSrv );
+            // 루트 상수 = { 머티리얼 원소 수 } — 그룹 안에서 같다.
+            registerMaterialBuffer( ctx, head, batchPso );
+            bindForDraw( ctx, batchPso, head._materialCb, head._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다 — 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            ctx._pCmd->drawIndirect( _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer,
-                                     ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+            ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ),
+                                     groupEnd - batchIndex );
+            ++drawCallCount;
+            batchIndex = groupEnd;
         }
+        SW_PROFILE_COUNT( "RT.Draw.indirectCalls", drawCallCount );
+        _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
     }
 
     void FrameRenderer::drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
@@ -279,6 +333,7 @@ namespace sw
         setIdentityWorld( ctx );
         commitBindlessTextureBindings( ctx );
         ctx._pCmd->setVertexBuffer( 0, 0, 0, 0 );
+        ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
         bindForDraw( ctx, pso, kInvalidDescriptorIndex );

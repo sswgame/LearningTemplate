@@ -16,11 +16,11 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID)
+PSInput VSMain(SwVertexInput input)
 {
 	PSInput output;
 
-	SwInstanceData inst = SwLoadInstance(iid);
+	SwInstanceData inst = SwLoadInstance(input.instanceSlot);
 	float4 worldPos = mul(float4(input.pos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
 

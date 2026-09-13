@@ -13,13 +13,14 @@ struct PSOutput
 	float4 normal : SV_TARGET1;
 };
 
-PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 {
 	PSInput output;
+	SwInstanceData inst = SwLoadInstance(input.instanceSlot);
 	float3 localPos;
 	float3 localNormal;
-	SwLoadMorphedVertex(vid, input.pos, input.nrm, localPos, localNormal);
-	float4x4 world = SwLoadInstanceWorld(iid);
+	SwLoadMorphedVertex(inst.meshBatchIndex, vid, input.pos, input.nrm, localPos, localNormal);
+	float4x4 world = inst.world;
 	float4 worldPos = mul(float4(localPos, 1.0f), world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.col = input.col;

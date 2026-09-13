@@ -42,6 +42,8 @@ namespace sw
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
+        /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 겁니다 — 걸려 있을 때만. */
+        void bindInstanceSlotStream();
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
                            RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
         void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;

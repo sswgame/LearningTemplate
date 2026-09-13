@@ -62,6 +62,8 @@ namespace sw
         RHIBufferHandle        _boundMeshVb;
         uint32                 _boundMeshStride;
         uint32                 _boundMeshOffset;
+        RHIBufferHandle        _boundInstanceSlotVb; ///< 슬롯 1 — 인스턴스 슬롯 스트림 (0 = 안 걸림)
+        uint32                 _boundInstanceSlotOffset;
         RHIBufferHandle        _boundIndexBuffer;
         uint32                 _boundIndexStride;
         uint32                 _boundIndexOffset;
@@ -86,6 +88,8 @@ namespace sw
             , _boundMeshVb{ 0 }
             , _boundMeshStride{ 0 }
             , _boundMeshOffset{ 0 }
+            , _boundInstanceSlotVb{ 0 }
+            , _boundInstanceSlotOffset{ 0 }
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
             , _boundIndexOffset{ 0 }

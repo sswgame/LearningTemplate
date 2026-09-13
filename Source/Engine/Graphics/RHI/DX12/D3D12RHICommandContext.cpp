@@ -196,6 +196,22 @@ namespace sw
             bindMeshVertexBuffer();
         else
             bindFullscreenVertexBuffer();
+
+        // 슬롯 1 — 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린·픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
+        if ( _pState->_boundInstanceSlotVb != 0 )
+        {
+            ID3D12Resource* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
+            if ( pStream != nullptr )
+            {
+                D3D12_VERTEX_BUFFER_VIEW vbv{};
+                vbv.BufferLocation = pStream->GetGPUVirtualAddress() + _pState->_boundInstanceSlotOffset;
+                vbv.SizeInBytes    = static_cast<UINT>( pStream->GetDesc().Width > _pState->_boundInstanceSlotOffset
+                                                            ? pStream->GetDesc().Width - _pState->_boundInstanceSlotOffset
+                                                            : 0 );
+                vbv.StrideInBytes  = constant::kInstanceSlotStreamStride;
+                _pCmdList->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &vbv );
+            }
+        }
     }
 
     void D3D12RHICommandContext::bindFullscreenVertexBuffer()
@@ -456,7 +472,13 @@ namespace sw
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        (void)slot;
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::kInstanceSlotStreamSlot )
+        {
+            _pState->_boundInstanceSlotVb     = buffer;
+            _pState->_boundInstanceSlotOffset = offset;
+            return;
+        }
         _pState->_boundMeshVb     = buffer;
         _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
         _pState->_boundMeshOffset = offset;

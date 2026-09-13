@@ -64,7 +64,13 @@ namespace sw
          *          인스턴스·머티리얼과 같다 — 개수가 씬마다 다르고, 패스당 한 번 걸면 드로우 사이에
          *          바인딩이 바뀌지 않는다.
          */
-        inline constexpr uint32 kLightBuffer  = SW_SLOT_LIGHT_SRV;
+        inline constexpr uint32 kLightBuffer = SW_SLOT_LIGHT_SRV;
+        /**
+         * @brief 씬 배치 표(g_SwBatches) — 배치마다 인스턴스 시작·모프 풀 시작·정점 풀 시작.
+         * @details 정점 셰이더가 자기 배치 번호로 읽는다. 배치마다 바뀌는 값이 전부 여기 있어 루트 상수를 배치마다
+         *          다시 걸 필요가 없고, 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로 나간다. 컬링 컴퓨트의 t1 과 같은 버퍼다.
+         */
+        inline constexpr uint32 kBatchBuffer  = SW_SLOT_BATCH_SRV;
         inline constexpr uint32 kSrvSlotCount = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
@@ -177,6 +183,7 @@ namespace sw
             inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
             inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIds"; ///< t10 (그래픽스) — 컬링이 만든 가시 목록
             inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11 (그래픽스) — GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13 (그래픽스) — 씬 배치 표
             inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0 — 레스트 포즈
             inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph u0 — 변형 결과
             inline constexpr const utf8* kCullInstances      = "g_Instances";
@@ -195,8 +202,8 @@ namespace sw
         static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount, "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이어야 한다" );
         static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1, "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이어야 한다" );
         static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1, "모프 정점 버퍼는 가시 목록 다음이어야 한다" );
-        static_assert( kLightBuffer == kMorphVertexBuffer + 1 && kLightBuffer + 1 == kSrvSlotCount,
-                       "라이트 버퍼는 모프 정점 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );
+        static_assert( kBatchBuffer == kLightBuffer + 1 && kBatchBuffer + 1 == kSrvSlotCount, "배치 표는 라이트 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );

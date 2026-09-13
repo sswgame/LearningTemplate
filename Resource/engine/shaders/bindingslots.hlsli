@@ -80,13 +80,13 @@
 #define SW_SLOT_MATERIAL_BUFFER        9
 
 // GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIds).
-// 정점 셰이더가 g_SwVisibleInstanceIds[g_InstanceBase + SV_InstanceID] 로 자기 인스턴스 번호를 찾는다 —
+// 정점 셰이더가 g_SwVisibleInstanceIds[배치.instanceBase + SV_InstanceID] 로 자기 인스턴스 번호를 찾는다 —
 // 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(SW_INVALID_INDEX)
-// 예전처럼 g_InstanceBase + SV_InstanceID 를 그대로 쓴다(컬링 없음 경로).
+// 예전처럼 배치.instanceBase + SV_InstanceID 를 그대로 쓴다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   10
 
 // GPU 가 변형한 정점 (StructuredBuffer<float4> g_SwMorphVertices — 정점당 float4 둘). 정점 셰이더가
-// g_SwMorphVertices[(g_MorphVertexBase + SV_VertexID) * 2] 로 **입력 스트림 대신** 위치를 읽는다 —
+// g_SwMorphVertices[(배치.morphVertexBase + 로컬 정점 번호) * 2] 로 **입력 스트림 대신** 위치를 읽는다 —
 // 언리얼 GPU Skin Cache 가 컴퓨트 결과를 정점 스트림으로 물리는 자리와 같은 목적이고, 방법만
 // 정점 풀링이다(이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 구조버퍼라 그 결이 맞고,
 // DX11 의 "구조버퍼는 정점 버퍼가 될 수 없다" 제약과 DX12 의 UPLOAD 힙 제약을 아예 비켜 간다).
@@ -99,7 +99,14 @@
 // 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약). 언리얼의 라이트 데이터 버퍼와 같은 자리.
 #define SW_SLOT_LIGHT_SRV              12
 
-#define SW_SRV_SLOT_COUNT              13  // t0..t12 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// 씬 배치 표 (StructuredBuffer<SwBatchData> g_SwBatches). 배치마다 인스턴스 시작·모프 풀 시작·정점 풀 시작.
+// 정점 셰이더가 **자기 배치 번호**로 읽는다 — DX12 는 커맨드 시그니처가 루트 상수로 주입, Vulkan·GL 은 DrawIndex 내장
+// 변수 + 그룹 첫 번호, DX11 은 배치마다 루트 상수. 배치마다 바뀌는 값이 전부 이 표에 있으므로 같은 PSO·머티리얼의
+// 배치들을 멀티 드로우 하나로 낼 수 있다(언리얼 GPUScene 의 프리미티브/인스턴스 데이터 버퍼와 같은 자리).
+// 컬링 컴퓨트도 같은 버퍼를 t1 로 읽는다 — gpucull.hlsl 의 GpuBatchInfo 와 레이아웃이 같다.
+#define SW_SLOT_BATCH_SRV              13
+
+#define SW_SRV_SLOT_COUNT              14  // t0..t13 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)

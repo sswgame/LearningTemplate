@@ -179,6 +179,8 @@ namespace sw
             for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
             {
                 const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+                if ( attribute._inputSlot != 0 )
+                    continue; // 인스턴스 슬롯 스트림은 씬 드로우 전용 — 풀스크린 VAO 는 슬롯 0 뿐이다
                 glEnableVertexAttribArray( attribute._location );
                 glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE,
                                        static_cast<GLsizei>( sizeof( RHIVertex ) ),
@@ -190,7 +192,10 @@ namespace sw
             glGenVertexArrays( 1, &_meshVao );
             glBindVertexArray( _meshVao );
             for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
-                glEnableVertexAttribArray( constant::arrVertexAttribute[attributeIndex]._location );
+            {
+                if ( constant::arrVertexAttribute[attributeIndex]._inputSlot == 0 )
+                    glEnableVertexAttribArray( constant::arrVertexAttribute[attributeIndex]._location );
+            }
             glBindVertexArray( 0 );
 
             GLuint defaultTex{ 0 };

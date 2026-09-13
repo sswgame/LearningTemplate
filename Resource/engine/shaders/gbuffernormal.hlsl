@@ -6,10 +6,10 @@ struct PSInput
 	float3 nrm : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID)
+PSInput VSMain(SwVertexInput input)
 {
 	PSInput output;
-	float4x4 world = SwLoadInstanceWorld(iid);
+	float4x4 world = SwLoadInstanceWorld(input.instanceSlot);
 	float4 worldPos = mul(float4(input.pos, 1.0f), world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.nrm = normalize(mul(float4(input.nrm, 0.0f), world).xyz);

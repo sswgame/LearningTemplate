@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `b1fbf5cf`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `51fb29c0`
 
 ---
 
@@ -214,22 +214,6 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-7. 드로우 루프의 남은 비용은 배치당 고정 호출이다 — 통합 정점 버퍼 + `multiDrawIndirect` 가 다음 구조 변경
-
-**측정(2026-09-13, Release · 큐브 2000 · 변형 200 · 200프레임)**: 배치 871개, `RT.Draw.gpuBatches` DX12 458us ·
-Vulkan 448us · GL 660us(배치당 ~0.5us) — RT 프레임 1114us 의 41%, GT 는 `Packet.submit` 571us 로 RT 를 기다린다.
-**정렬 순서 가설은 기각됐다**: (PSO → 머티리얼 → 메시) 로 묶고 정점 버퍼를 바뀔 때만 걸어도 세 백엔드 모두
-잡음 범위(DX12 454~460 · VK 434~451 · GL 667~679). 상태 변경이 아니라 배치당 고정 호출(루트 상수 · 바인더 ·
-`drawIndirect`)이 비용이다. 되돌렸다 — 숫자만 남긴다.
-
-**방향**: 메시 정점을 **한 풀 버퍼**에 두고(GpuMeshMorphPool 이 이미 같은 모양이다 — 정점 셰이더가
-`g_MorphVertexBase + vid` 로 풀을 읽는다) 배치의 `firstVertex` 를 풀 오프셋으로 실으면, 같은 PSO 의 배치들을
-`multiDrawIndirect` 한 번으로 낼 수 있다. 배치마다 다른 루트 상수(`g_InstanceBase` · `g_SwMaterialCount`)는 드로우 ID 로
-읽는 배치 표(SSBO)로 옮긴다 — Vulkan `gl_DrawIndex`(`[[vk::builtin("DrawIndex")]]`) · GL `gl_DrawID` 는 되고, DX12 는
-`ExecuteIndirect` 커맨드 시그니처에 루트 상수를 넣어 같은 효과, DX11 은 루프(원래 멀티드로우가 없다).
-`multiDrawIndirect` 는 네 백엔드에 이미 구현돼 있으나 **쓰는 곳이 없다**(4c7b8d65 "안 쓰이는 경로는 조용히 썩는다") —
-이 작업이 그 첫 사용처다. 검증은 스모크 픽셀 + RenderPassGpuTest + 위 벤치 전후 숫자.
-
 ### 1-2. 100줄 넘는 함수 20개 — 우선순위 낮음
 
 분해 자체는 코드 총량을 줄이지 않는다(2절 "쪼개기보다 공통부 추출"). 중복이 남아 있는 자리를
@@ -310,6 +294,53 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (배치 871개를 드로우 325번으로 — 정점 풀 · 배치 표 · 인스턴스 슬롯 스트림, 그리고 버린 설계 하나)
+
+**백로그 1-7.** 씬 드로우 루프가 배치마다 `drawIndirect` 를 한 번씩 불러 871 호출이었고, 그 비용이 RT 프레임의 41% 였다.
+같은 PSO·머티리얼의 연속 배치를 멀티 드로우 하나로 내려면 셋이 필요했다:
+- **정점 풀(`GpuMeshVertexPool`)** — 씬 메시 정점을 한 정점 버퍼에 이어 붙이고 간접 인자의 `startVertex` 를 풀 오프셋으로.
+  메시 집합이 같으면 다시 만들지 않는다(순서가 아니라 집합 비교). 풀에 못 든 메시는 자기 버퍼로 그린다.
+- **배치 표(`g_SwBatches`, t13)** — 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)을 `GpuBatchInfo` 에 넣어
+  패스당 한 번 건다. 컬링 컴퓨트의 t1 과 같은 버퍼(32바이트). 루트 상수에는 이제 머티리얼 원소 수 하나뿐이다.
+- **인스턴스 슬롯 스트림(정점 슬롯 1)** — `0,1,2,…` 를 담은 정점 버퍼를 인스턴스 스텝으로 걸고 간접 인자의 `startInstance` 를
+  배치 시작으로 둔다. 입력 어셈블러가 네 API 모두 `startInstance + i` 번째 원소를 주므로 정점 셰이더는 자기 전역 자리를
+  `SwVertexInput.instanceSlot` 으로 받고, 인스턴스의 `meshBatchIndex` 로 배치 표를 읽는다. **SV_InstanceID 를 더 이상 쓰지 않는다.**
+
+**버린 설계 — 드로우 ID.** 처음엔 DX12 커맨드 시그니처가 레코드의 배치 번호를 루트 상수로 주입하고 Vulkan·GL 은 `DrawIndex`
+내장 변수를 더하는 설계였고 네 백엔드에서 그림이 맞았다. 그런데 DX12 의 ExecuteIndirect 가 루트 상수를 바꾸는 시그니처에서
+**호출당 두 배 느려져**(871 호출 335→661us) 묶어도 본전이었다 — 런타임이 인자를 패치한다. 스트림 방식은 시그니처가 평범한 DRAW
+그대로라 그 비용이 없고, 백엔드별 드로우 ID 기능(shaderDrawParameters · gl_DrawID)에도 기대지 않는다. RHI 에 새 API 도 ABI 변경도
+없다 — `drawIndirect( …, drawCount )` 그대로다.
+
+**실측한 API 차이 — SV_VertexID 와 startVertex.** Vulkan(VertexIndex)·GL(gl_VertexID)은 간접 인자의 startVertex 를 **포함**하고
+D3D11·D3D12 는 드로우 안의 0 기반 번호다. 처음엔 넷 다 포함한다고 믿고 빼기만 했더니 DX 에서 정점 풀 첫 메시만 모프됐다.
+`RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 provokingvertex.hlsl 을 startVertex 36 으로 그려 네 백엔드의 기대를 고정하고,
+`binding.hlsli` 의 `SwMorphElementOf` 가 그 차이를 흡수한다(셰이더 파일엔 분기 없음).
+
+**같이 고친 테스트 약점.** `MorphPoolIdentityMatchesRest` 가 "실루엣 픽셀 수의 차" 를 봤는데 변위가 sin(시간) 이라 실루엣 차가
+0 근처를 지나가 흔들렸다(드로우가 빨라지자 DX 에서 떨어졌다). 달라진 픽셀 수(어느 채널이든 8 이상)로 바꿨다.
+
+**수치 (Release · 큐브 2000 · 변형 200 · 200프레임, 조용한 머신)**
+
+| | 호출/프레임 | RT.Draw.gpuBatches | RT.Frame |
+|---|---|---|---|
+| DX12 | 871 → 325 | 458 → 200us | 1114 → 1140us (동등) |
+| Vulkan | 871 → 325 | 448 → 235us | ~1007 → ~1025us (동등) |
+| OpenGL | 871 → 325 | 660 → 395us | 2250 → 1340us (**−40%**) |
+
+DX12·Vulkan 은 드로우 루프 절약이 프레임 전체에선 상쇄됐다 — `RT.GpuScene.upload` 가 +25us(정점 풀 집합 비교) 이고 나머지는
+GPU 쪽(멀티 드로우가 배치 순서를 바꾸지 않으므로 그림은 같다). 벤치와 경고 스윕을 **같이 돌리면 수치가 오염된다**(최대 프레임
+22ms) — 재는 동안 다른 빌드를 돌리지 말 것.
+
+**남은 것(다음 사람에게).** 그룹당 배치가 2.7 개뿐이다 — 그룹 키가 머티리얼 CB(`_materialCb`)와 텍스처 슬롯까지 포함해서다. 씬
+셰이더는 b1 을 읽지 않으므로(머티리얼 데이터는 구조버퍼) 키에서 빼면 그룹이 훨씬 길어진다. 다만 그 키가 정말 안 쓰이는지는
+레이아웃(리플렉션)으로 확인해야 한다 — 짐작으로 빼지 말 것.
+
+**확인**: `RenderPassGpuTest.MergedSceneDrawsMatchPerBatch` (풀 끔 · 풀 켬 배치마다 · 묶음 셋을 픽셀로 비교 + 호출 수 감소) ·
+`RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` · RenderPassGpuTest 24/24 · RHITest 15/15 · ShaderBindingContractTest 6/6 ·
+nogpu 5/5 · BackendSmoke 8회 `[Error]` 0 · 에디터 ON 네 백엔드 오류 0 · 경고 세 구성 0. 진단 스위치 `-gv_drawMerge=0`,
+`-gv_vertexPool=0`.
 
 ### 2026-09-13 (Graphics 구조 점검 — 합칠 것은 Vulkan 렌더패스 여섯 벌이었고, GL 은 오류를 낼 곳이 없었다)
 

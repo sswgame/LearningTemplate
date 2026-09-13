@@ -551,7 +551,13 @@ namespace sw
 
     void VulkanRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        (void)slot;
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::kInstanceSlotStreamSlot )
+        {
+            _pState->_boundInstanceSlotVb     = buffer;
+            _pState->_boundInstanceSlotOffset = offset;
+            return;
+        }
         _pState->_boundMeshVb     = buffer;
         _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
         _pState->_boundMeshOffset = offset;
@@ -677,22 +683,38 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE )
             return;
 
+        VkBuffer     slot0Buffer = VK_NULL_HANDLE;
+        VkDeviceSize slot0Offset = 0;
         if ( _pState->_boundMeshVb != 0 )
         {
             const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
             if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
             {
-                VkBuffer     arrVertexBuffer[] = { pVb->_buffer };
-                VkDeviceSize arrOffset[]       = { static_cast<VkDeviceSize>( _pState->_boundMeshOffset ) };
-                vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+                slot0Buffer = pVb->_buffer;
+                slot0Offset = static_cast<VkDeviceSize>( _pState->_boundMeshOffset );
             }
         }
         else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
+            slot0Buffer = _pDevice->_vertexBuffer;
+        if ( slot0Buffer == VK_NULL_HANDLE )
+            return;
+
+        // 바인딩 1(인스턴스 슬롯 스트림)은 파이프라인이 선언하므로 **늘 유효한 버퍼**가 있어야 한다. 스트림이 안 걸린
+        // 드로우(풀스크린·픽스처)는 그 속성을 읽지 않으므로 슬롯 0 버퍼를 자리만 채우게 건다.
+        VkBuffer     slot1Buffer = slot0Buffer;
+        VkDeviceSize slot1Offset = 0;
+        if ( _pState->_boundInstanceSlotVb != 0 )
         {
-            VkBuffer     arrVertexBuffer[] = { _pDevice->_vertexBuffer };
-            VkDeviceSize arrOffset[]       = { 0 };
-            vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
+            const VulkanRHIDevice::VulkanBufferRecord* pStream = _pDevice->resolveAllocatedBuffer( _pState->_boundInstanceSlotVb );
+            if ( pStream != nullptr && pStream->_buffer != VK_NULL_HANDLE )
+            {
+                slot1Buffer = pStream->_buffer;
+                slot1Offset = static_cast<VkDeviceSize>( _pState->_boundInstanceSlotOffset );
+            }
         }
+        VkBuffer     arrVertexBuffer[] = { slot0Buffer, slot1Buffer };
+        VkDeviceSize arrOffset[]       = { slot0Offset, slot1Offset };
+        vkCmdBindVertexBuffers( cmd, 0, 2, arrVertexBuffer, arrOffset );
     }
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()

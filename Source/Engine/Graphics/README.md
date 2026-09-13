@@ -228,7 +228,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 슬롯)` |
 | Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`)에서 세트를 할당해 쓴다(`flushSlotSet`) — 락 없음, 버퍼가 펜스를 지나 재사용될 때 통째로 리셋. 텍스처 배열·immutable sampler 는 set 1 |
 
-- GPU 컬(gpucull)은 `instanceCount` 만 줄이고 인스턴스 리스트를 compact 하지 않는다 (배치 앞 N개만 그림).
+- 드로우가 인스턴스를 찾는 길은 위 "씬 드로우 경로" 절(인스턴스 슬롯 스트림 → 가시 목록 → 인스턴스 버퍼)이다.
 - **RHI ABI**: `bindConstantBuffer`/`bindStructuredBuffer`/`drawInstanced` 추가 (`RHIModuleAbi` stamp `rhi-cl-v4-2026-09`).
 
 ---
@@ -439,10 +439,25 @@ Graphics 감사 후 고친 것 (2026-09-08):
 
 남은 것은 대부분 API 호출 자체다. 2026-09-13 재측정(Release · 큐브 2000 · 변형 200 · 200프레임): 배치 **871개**,
 `RT.Draw.gpuBatches` DX12 458us · Vulkan 448us · GL 660us — 배치당 0.5us 안팎이고 그것이 RT 프레임(1114us)의 41%다.
-**정렬 순서는 답이 아니었다.** 배치를 (PSO → 머티리얼 → 메시) 로 묶고 정점 버퍼를 바뀔 때만 걸어 봤지만 세 백엔드
-모두 잡음 범위(DX12 454~460 · VK 434~451 · GL 667~679)였다 — 상태 변경이 아니라 배치당 고정 호출(루트 상수 + 바인더
-+ `drawIndirect`)이 비용이다. 더 줄이려면 메시들이 **정점 버퍼를 공유**해 PSO 그룹 하나를 `multiDrawIndirect` 한 번으로
-묶어야 한다(언리얼의 통합 정점 버퍼 풀 + 드로우 ID). 백로그 1-7.
+**정렬 순서는 답이 아니었다** — 상태 변경이 아니라 호출 수가 비용이다. 그래서 같은 날 **호출 수를 줄였다**(871 → 325):
+
+### 씬 드로우 경로 — 정점 풀 · 배치 표 · 인스턴스 슬롯 스트림 (2026-09-13)
+
+같은 PSO·머티리얼(버퍼·CB·텍스처·원소 수)의 연속 배치는 `drawIndirect( args, offset, count )` 한 번(멀티 드로우)이다.
+배치마다 다른 값은 드로우 호출이 아니라 **데이터**가 준다:
+- `GpuMeshVertexPool` — 씬 메시 정점을 한 정점 버퍼에 이어 붙인다. 간접 인자의 `startVertex` 가 풀 오프셋. 메시 집합이 같으면
+  다시 만들지 않는다. 못 든 메시는 자기 버퍼(멀티 드로우엔 못 묶인다).
+- `g_SwBatches`(t13, `GpuBatchInfo` 32바이트) — 배치의 인스턴스 시작·모프 풀 시작·정점 풀 시작. 패스당 한 번 건다. 컬링 t1 과 같은 버퍼.
+- 인스턴스 슬롯 스트림(정점 슬롯 1, `SW_INSTANCESLOT`, uint, 인스턴스 스텝) — `0,1,2,…`. 간접 인자의 `startInstance` 가 배치 시작이라
+  입력 어셈블러가 네 API 모두 `startInstance + i` 를 준다. 정점 셰이더는 `SwLoadInstance( input.instanceSlot )` 로 자기 인스턴스를,
+  `inst.meshBatchIndex` 로 배치 표를 읽는다. **SV_InstanceID 는 쓰지 않는다**(startInstance 포함 여부가 API 마다 달라서).
+- 루트 상수는 그룹당 하나(`g_SwMaterialCount`).
+
+**API 차이 하나는 남는다 — SV_VertexID.** Vulkan·GL 은 startVertex 를 포함하고 D3D 는 드로우 안의 0 기반 번호다.
+`binding.hlsli` 의 `SwMorphElementOf` 가 흡수하고 `RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대를 고정한다.
+**버린 설계**: DX12 커맨드 시그니처의 루트 상수 주입 + Vulkan/GL DrawIndex — 그림은 맞았지만 DX12 ExecuteIndirect 가 호출당 두 배
+느려졌다(런타임 패치). 진단: `-gv_drawMerge=0`(배치마다 호출) · `-gv_vertexPool=0`(메시마다 정점 버퍼). 수치는 백로그 참고 —
+드로우 루프 DX12 458→200us · Vulkan 448→235us · GL 660→395us, 프레임 전체는 GL −40%, 나머지는 동등(GPU 쪽에서 상쇄).
 
 ## 성능을 잴 때 — 먼저 VSync 를 확인한다 (2026-09-13)
 

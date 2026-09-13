@@ -38,6 +38,8 @@ namespace sw
         RHIBufferHandle        _boundMeshVb{ 0 };
         uint32                 _boundMeshStride{ 0 };
         uint32                 _boundMeshOffset{ 0 };
+        RHIBufferHandle        _boundInstanceSlotVb{ 0 }; ///< 슬롯 1 — 인스턴스 슬롯 스트림 (0 = 안 걸림)
+        uint32                 _boundInstanceSlotOffset{ 0 };
         RHIPipelineStateHandle _activeGraphicsPso{ 0 };
         /**
          * @brief CS UAV 슬롯마다 지금 걸려 있는 버퍼 (0 = 없음).

@@ -65,10 +65,13 @@ namespace sw
      */
     struct RHIVertexAttribute
     {
-        const utf8* _pSemanticName;  ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
-        uint32      _location;       ///< Vulkan location / GL 정점 속성 번호.
-        uint32      _componentCount; ///< float 개수 (2·3·4). 백엔드가 자기 포맷 enum 으로 옮긴다.
-        uint32      _byteOffset;     ///< `RHIVertex` 안의 바이트 오프셋.
+        const utf8* _pSemanticName;            ///< DX 시맨틱 이름. HLSL 의 `: POSITION` 등과 같아야 한다.
+        uint32      _location;                 ///< Vulkan location / GL 정점 속성 번호.
+        uint32      _componentCount;           ///< 원소 개수 (1·2·3·4). 백엔드가 자기 포맷 enum 으로 옮긴다.
+        uint32      _byteOffset;               ///< 그 슬롯 원소 안의 바이트 오프셋 (슬롯 0 은 `RHIVertex`).
+        uint32      _inputSlot{ 0 };           ///< 정점 버퍼 슬롯. 0 = 메시 정점, 1 = 인스턴스 슬롯 스트림 (`constant::kInstanceSlotStreamSlot`).
+        uint8       _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
+        uint8       _bUint{ SW_FALSE };        ///< 32비트 부호 없는 정수(R32_UINT). 아니면 float.
     };
 
     // ------------------------------------------------------------------------------
@@ -144,6 +147,18 @@ namespace sw
         inline constexpr uint32 kConstantBufferAlignment = 256;
 
         /**
+         * @brief 인스턴스 슬롯 스트림이 걸리는 정점 버퍼 슬롯. 원소는 uint 하나 — 그 드로우 인스턴스의 **전역 인스턴스 자리**.
+         * @details 씬 드로우는 인스턴스마다 자기 자리(가시 목록 슬롯)를 알아야 인스턴스 버퍼를 읽는다. 예전엔 배치마다 루트 상수로
+         *          시작 오프셋을 싣고 SV_InstanceID 를 더했는데, 그러면 배치마다 루트 상수를 바꿔야 해서 같은 PSO 의 배치들을
+         *          멀티 드로우 하나로 낼 수 없었다. 대신 슬롯 1 에 `0,1,2,…` 스트림을 인스턴스 스텝으로 걸고 간접 인자의
+         *          startInstance 를 배치 시작으로 두면, 입력 어셈블러가 네 API 모두에서 `startInstance + i` 번째 원소를 준다 —
+         *          SV_InstanceID 가 startInstance 를 포함하는지(API 마다 다르다)에 기대지 않는다. 언리얼 D3D11 경로의
+         *          인스턴스 ID 스트림과 같은 자리다.
+         */
+        inline constexpr uint32 kInstanceSlotStreamSlot   = 1;
+        inline constexpr uint32 kInstanceSlotStreamStride = static_cast<uint32>( sizeof( uint32 ) );
+
+        /**
          * @brief 정점 입력 레이아웃의 **정본** — 네 백엔드가 이 표만 읽는다.
          * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 이다. 속성을 더하려면 여기 한 줄과
          *          `RHIVertex` 멤버 하나만 고치면 되고, 백엔드는 손대지 않는다.
@@ -151,10 +166,11 @@ namespace sw
          *       예전에 네 백엔드가 각자 `0` 과 `12` 를 적어 두고 있었다.
          */
         inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
-            {"POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition )},
-            {  "NORMAL", 1, 3, SW_OFFSET_OF( RHIVertex,   _arrNormal )},
-            {"TEXCOORD", 2, 2, SW_OFFSET_OF( RHIVertex,       _arrUv )},
-            {   "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex,    _arrColor )},
+            { "POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition ), 0, SW_FALSE, SW_FALSE },
+            { "NORMAL", 1, 3, SW_OFFSET_OF( RHIVertex, _arrNormal ), 0, SW_FALSE, SW_FALSE },
+            { "TEXCOORD", 2, 2, SW_OFFSET_OF( RHIVertex, _arrUv ), 0, SW_FALSE, SW_FALSE },
+            { "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex, _arrColor ), 0, SW_FALSE, SW_FALSE },
+            { "SW_INSTANCESLOT", 4, 1, 0, kInstanceSlotStreamSlot, SW_TRUE, SW_TRUE },
         };
         /// @brief 정점 속성 수. 백엔드가 배열 크기를 직접 세지 않도록 함께 둔다.
         inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );

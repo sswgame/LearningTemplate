@@ -30,6 +30,8 @@ struct GpuInstance
 	uint	 spinSeed;
 };
 
+// C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertex 는 정점 풀 시작,
+// startInstance 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
 struct DrawIndirectCommand
 {
 	uint vertexCount;
@@ -47,8 +49,12 @@ struct GpuBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
-	uint sortMode; // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 GPU 깊이 정렬
-	uint pad;
+	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 GPU 깊이 정렬
+	uint morphVertexBase; // 정점 셰이더용 — 여기서는 안 읽는다 (binding.hlsli SwBatchData 와 같은 표)
+	uint firstVertex;     // 정점 셰이더용 — 여기서는 안 읽는다
+	uint pad0;
+	uint pad1;
+	uint pad2;
 };
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )

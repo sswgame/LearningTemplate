@@ -22,14 +22,15 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(SwVertexInput input, uint iid : SV_InstanceID, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 {
 	PSInput output;
+	// 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작·정점 풀 시작이 배치 표에 있다.
+	SwInstanceData inst = SwLoadInstance(input.instanceSlot);
 	// GPU 가 변형한 정점이 있으면 그걸 쓴다(모프 안 하면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
 	float3 localPos;
 	float3 localNormal;
-	SwLoadMorphedVertex(vid, input.pos, input.nrm, localPos, localNormal);
-	SwInstanceData inst = SwLoadInstance(iid);
+	SwLoadMorphedVertex(inst.meshBatchIndex, vid, input.pos, input.nrm, localPos, localNormal);
 	float4 worldPos = mul(float4(localPos, 1.0f), inst.world);
 	output.pos = mul(worldPos, g_ViewProj);
 	output.wpos = worldPos.xyz;

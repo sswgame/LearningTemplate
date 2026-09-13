@@ -242,10 +242,29 @@ namespace sw
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        (void)slot;
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::kInstanceSlotStreamSlot )
+        {
+            _pState->_boundInstanceSlotVb     = buffer;
+            _pState->_boundInstanceSlotOffset = offset;
+            return;
+        }
         _pState->_boundMeshVb     = buffer;
         _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
         _pState->_boundMeshOffset = offset;
+    }
+
+    void D3D11RHICommandContext::bindInstanceSlotStream()
+    {
+        // 슬롯 1 — 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린·픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
+        if ( _pState->_boundInstanceSlotVb == 0 )
+            return;
+        ID3D11Buffer* pStream = _pDevice->resolveBuffer( _pState->_boundInstanceSlotVb );
+        if ( pStream == nullptr )
+            return;
+        UINT stride = constant::kInstanceSlotStreamStride;
+        UINT offset = _pState->_boundInstanceSlotOffset;
+        _pContext->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &pStream, &stride, &offset );
     }
 
     void D3D11RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
@@ -274,6 +293,7 @@ namespace sw
         UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+        bindInstanceSlotStream();
 
         _pContext->IASetInputLayout( pIl );
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -308,6 +328,7 @@ namespace sw
         UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+        bindInstanceSlotStream();
 
         _pContext->IASetInputLayout( pIl );
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -488,6 +509,7 @@ namespace sw
         UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
+        bindInstanceSlotStream();
 
         _pContext->IASetInputLayout( pIl );
         _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );

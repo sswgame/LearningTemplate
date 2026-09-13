@@ -3706,6 +3706,186 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 씬 배치를 멀티 드로우로 묶어도 그림이 같고, 호출 수는 배치 수보다 적다
+ * @details 배치마다 다른 값(인스턴스 시작·모프 풀·정점 풀 시작)을 배치 표(g_SwBatches)로 옮기고, 같은 PSO·머티리얼의 연속
+ *          배치를 drawIndirect 한 번(멀티 드로우)으로 낸다. 인스턴스는 슬롯 1 의 인스턴스 슬롯 스트림(간접 인자의 startInstance 부터)
+ *          으로 자기 자리를 얻고, 배치는 인스턴스에서 — 어느 통로가 틀려도 그림이 달라진다(엉뚱한 인스턴스·정점 구간). 그래서
+ *          묶은 그림과 배치마다 부른 그림, 그리고 정점 풀 없이 그린 그림을 픽셀로 비교한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
+{
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    struct Snapshot
+    {
+        uint32  _drawnCount{ 0 };
+        float32 _arrMean[3]{};
+        uint32  _drawCallCount{ 0 };
+        bool    _bOk{ false };
+    };
+    auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
+    {
+        Snapshot         result{};
+        constexpr uint32 kFrames = 4;
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < kFrames; ++frame )
+        {
+            device.beginFrame( clear );
+            if ( renderer.execute( &device, &scene ) == false )
+                return result;
+            device.endFrame( false, false );
+            device.waitIdle();
+        }
+        result._drawCallCount = renderer.getLastIndirectDrawCallCount();
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( renderer.readbackTransient( "SceneColor", bytes, layout, format ) == false )
+            return result;
+        uint64 arrSum[3]{};
+        for ( uint32 y = 0; y < layout._height; ++y )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes;
+            for ( uint32 x = 0; x < layout._width; ++x )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( x ) * 4;
+                const uint8  r      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[2] : pPixel[0];
+                const uint8  b      = format == sw::RHIFormat::B8G8R8A8_UNORM ? pPixel[0] : pPixel[2];
+                arrSum[0] += r;
+                arrSum[1] += pPixel[1];
+                arrSum[2] += b;
+                if ( r > 40 || pPixel[1] > 48 || b > 56 || r < 22 || pPixel[1] < 28 || b < 36 )
+                    ++result._drawnCount;
+            }
+        }
+        const uint32 pixelCount = layout._width * layout._height;
+        for ( uint32 channel = 0; channel < 3; ++channel )
+            result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+        result._bOk = pixelCount > 0;
+        return result;
+    };
+
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        ++attemptedCount;
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene scene( "MergedDrawScene" );
+        if ( bOk )
+            bOk = scene.ensureDefaultCameras();
+
+        // 메시 종류가 곧 배치 수다 — 여섯 도형 × 둘 = 배치 여섯(같은 메시는 한 배치). 정점 풀 시작이 배치마다 다르다.
+        sw::shared_ptr<sw::Mesh> arrMesh[]  = { sw::MeshUtil::createUnitCube(), sw::MeshUtil::createSphere(), sw::MeshUtil::createCone(),
+                                                sw::MeshUtil::createCylinder(), sw::MeshUtil::createCapsule(), sw::MeshUtil::createPlane() };
+        constexpr uint32         kMeshCount = static_cast<uint32>( sizeof( arrMesh ) / sizeof( arrMesh[0] ) );
+        for ( uint32 objectIndex = 0; objectIndex < kMeshCount * 2 && bOk; ++objectIndex )
+        {
+            sw::shared_ptr<sw::Mesh>& mesh = arrMesh[objectIndex % kMeshCount];
+            bOk                            = mesh != nullptr;
+            if ( bOk == false )
+                break;
+            sw::string      objectName = sw::string( "Merged" ) + sw::to_string( objectIndex );
+            sw::GameObject* go         = scene.getObjectManager()->createGameObject( sw::hashed_string( objectName.c_str(), static_cast<uint32>( objectName.size() ) ) );
+            bOk                        = go != nullptr;
+            if ( bOk )
+            {
+                sw::MeshComponent* meshComp = go->addComponent<sw::MeshComponent>();
+                bOk                         = meshComp != nullptr;
+                if ( bOk )
+                {
+                    meshComp->setMesh( mesh );
+                    meshComp->setLocalPosition( sw::float3{ ( static_cast<float32>( objectIndex % 4 ) - 1.5f ) * 1.4f, 0.5f + static_cast<float32>( objectIndex / 4 ) * 1.2f, 0.0f } );
+                }
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+
+        if ( bOk )
+        {
+            // 기준: 정점 풀 없이(메시마다 자기 정점 버퍼, startVertex 0) 배치마다 그린 그림. 도형이 여섯 가지라 풀의 startVertex 나
+            // SV_VertexID 를 백엔드가 다르게 다루면 엉뚱한 도형이 나와 여기서 갈린다(같은 큐브만 쓰면 못 잡는다).
+            renderer.setVertexPoolEnabled( false );
+            renderer.setDrawMergeEnabled( false );
+            const Snapshot noPool = snapshot( renderer, *device, scene );
+            renderer.setVertexPoolEnabled( true );
+            const Snapshot perBatch = snapshot( renderer, *device, scene );
+            renderer.setDrawMergeEnabled( true );
+            const Snapshot merged = snapshot( renderer, *device, scene );
+            SW_EXPECT_TRUE_MSG( noPool._bOk && noPool._drawnCount > 0, ( label + ": 풀 없이 그린 그림을 못 읽었다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( perBatch._bOk && perBatch._drawnCount > 0, ( label + ": 배치마다 그린 그림을 못 읽었다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( merged._bOk, ( label + ": 묶어 그린 그림을 못 읽었다" ).c_str() );
+            if ( noPool._bOk && perBatch._bOk )
+            {
+                const uint32 tolerance = noPool._drawnCount / 100 + 8;
+                const uint32 low       = noPool._drawnCount > tolerance ? noPool._drawnCount - tolerance : 0;
+                SW_EXPECT_TRUE_MSG( low <= perBatch._drawnCount && perBatch._drawnCount <= noPool._drawnCount + tolerance,
+                                    ( label + ": 정점 풀로 그린 그림의 픽셀 수가 다르다 (pool " + sw::to_string( perBatch._drawnCount ) + " vs no-pool " +
+                                      sw::to_string( noPool._drawnCount ) + ") — startVertex 가 엉뚱한 도형을 가리킨다" )
+                                        .c_str() );
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const float32 diff = perBatch._arrMean[channel] > noPool._arrMean[channel] ? perBatch._arrMean[channel] - noPool._arrMean[channel]
+                                                                                               : noPool._arrMean[channel] - perBatch._arrMean[channel];
+                    SW_EXPECT_TRUE_MSG( diff <= 1.5f, ( label + ": 정점 풀로 그린 그림의 평균이 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
+                }
+            }
+            if ( perBatch._bOk && merged._bOk )
+            {
+                const uint32 tolerance = perBatch._drawnCount / 100 + 8;
+                const uint32 low       = perBatch._drawnCount > tolerance ? perBatch._drawnCount - tolerance : 0;
+                SW_EXPECT_TRUE_MSG( low <= merged._drawnCount && merged._drawnCount <= perBatch._drawnCount + tolerance,
+                                    ( label + ": 묶은 그림의 픽셀 수가 다르다 (merged " + sw::to_string( merged._drawnCount ) + " vs per-batch " +
+                                      sw::to_string( perBatch._drawnCount ) + ") — 배치 번호가 엉뚱한 배치를 가리킨다" )
+                                        .c_str() );
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const float32 diff = merged._arrMean[channel] > perBatch._arrMean[channel] ? merged._arrMean[channel] - perBatch._arrMean[channel]
+                                                                                               : perBatch._arrMean[channel] - merged._arrMean[channel];
+                    SW_EXPECT_TRUE_MSG( diff <= 1.5f, ( label + ": 묶은 그림의 평균이 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
+                }
+                // 멀티 드로우가 되는 백엔드는 호출 수가 줄어야 한다 — 같으면 묶지 않은 것이다. DX11 은 늘 배치마다 하나다.
+                if ( device->getCapabilities()._bMultiDrawIndirect != SW_FALSE )
+                {
+                    SW_EXPECT_TRUE_MSG( merged._drawCallCount * 2 <= perBatch._drawCallCount && merged._drawCallCount > 0,
+                                        ( label + ": 멀티 드로우로 묶이지 않았다 (merged " + sw::to_string( merged._drawCallCount ) + " vs per-batch " +
+                                          sw::to_string( perBatch._drawCallCount ) + " 호출)" )
+                                            .c_str() );
+                }
+                else
+                {
+                    SW_EXPECT_TRUE_MSG( merged._drawCallCount == perBatch._drawCallCount,
+                                        ( label + ": 멀티 드로우가 없는 백엔드인데 호출 수가 다르다" ).c_str() );
+                }
+            }
+        }
+
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseRhi( device.get() );
+        }
+        renderer.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the merged draw test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] SSAO 결과가 실제로 그림에 닿는다 — 끄면 밝아진다
  * @details 디퍼드 XML 은 처음부터 Bloom 의 입력으로 AOColor 를 선언했지만, 엔진은 그 패스에 SourceColor 하나만 걸었고
  *          postbloom.hlsl 도 그것만 읽었다 — SSAO 는 매 프레임 풀스크린 패스를 돌고 결과는 버려졌다(백로그 1-6).
@@ -4037,12 +4217,43 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
 
-    /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균.
+    /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균, 그리고 픽셀 비교용 원본.
     struct Snapshot
     {
-        uint32  _drawnCount{ 0 };
-        float32 _arrMean[3]{};
-        bool    _bOk{ false };
+        uint32            _drawnCount{ 0 };
+        float32           _arrMean[3]{};
+        bool              _bOk{ false };
+        sw::vector<uint8> _bytes;
+        uint32            _width{ 0 };
+        uint32            _height{ 0 };
+        uint32            _rowBytes{ 0 };
+    };
+    /// @brief 두 그림에서 어느 채널이든 8 이상 다른 픽셀 수 — 실루엣 수보다 튼튼한 지표(변형은 음영도 바꾼다).
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._width != b._width || a._height != b._height )
+            return 0;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._height; ++y )
+        {
+            const uint8* pRowA = a._bytes.data() + static_cast<size_t>( y ) * a._rowBytes;
+            const uint8* pRowB = b._bytes.data() + static_cast<size_t>( y ) * b._rowBytes;
+            for ( uint32 x = 0; x < a._width; ++x )
+            {
+                const uint8* pA = pRowA + static_cast<size_t>( x ) * 4;
+                const uint8* pB = pRowB + static_cast<size_t>( x ) * 4;
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const int32 diff = static_cast<int32>( pA[channel] ) - static_cast<int32>( pB[channel] );
+                    if ( diff > 8 || diff < -8 )
+                    {
+                        ++count;
+                        break;
+                    }
+                }
+            }
+        }
+        return count;
     };
 
     auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
@@ -4086,7 +4297,11 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         const uint32 pixelCount = layout._width * layout._height;
         for ( uint32 channel = 0; channel < 3; ++channel )
             result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
-        result._bOk = pixelCount > 0;
+        result._bOk      = pixelCount > 0;
+        result._bytes    = std::move( bytes );
+        result._width    = layout._width;
+        result._height   = layout._height;
+        result._rowBytes = layout._rowBytes;
         return result;
     };
 
@@ -4167,9 +4382,12 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
             SW_EXPECT_TRUE_MSG( morphed._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
             if ( rest._bOk && morphed._bOk )
             {
-                const uint32 diffCount = morphed._drawnCount > rest._drawnCount ? morphed._drawnCount - rest._drawnCount : rest._drawnCount - morphed._drawnCount;
-                SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 50,
-                                    ( label + ": 모프를 켰는데 그림이 레스트와 같다 (drawn " + sw::to_string( morphed._drawnCount ) + " vs " +
+                // 지표는 **달라진 픽셀 수**다. 예전엔 실루엣(그려진 픽셀 수)의 차를 봤는데 변위가 sin(시간) 이라 시간에 따라
+                // 실루엣 차가 0 근처를 지나가 흔들렸다(드로우 루프가 빨라지자 DX 에서 떨어졌다). 변형은 위치와 노멀을 같이
+                // 바꾸므로 음영이 바뀐 픽셀까지 세면 어느 시점에도 그려진 픽셀의 수 % 이상이 다르다.
+                const uint32 diffCount = countDifferentPixels( rest, morphed );
+                SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 20,
+                                    ( label + ": 모프를 켰는데 그림이 레스트와 같다 (달라진 픽셀 " + sw::to_string( diffCount ) + " / 그려진 " +
                                       sw::to_string( rest._drawnCount ) + ") — 컴퓨트 결과가 정점 셰이더에 닿지 않는다" )
                                         .c_str() );
             }

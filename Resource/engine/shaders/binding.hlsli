@@ -54,6 +54,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
 	uint     g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 SW_INVALID_INDEX
 	uint     g_SwLightCount;              // 그 버퍼의 원소 수 (0 이면 PassCB 키라이트 폴백)
+	uint     g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 SW_INVALID_INDEX (풀스크린·픽스처)
+	uint     g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
 };
 
 // ------------------------------------------------------------------------------
@@ -66,18 +68,16 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 //      한 셰이더에 블록이 둘이면 재정의다.
 #if !defined( SW_STAGE_COMPUTE )
 SW_ROOT_CONSTANTS_BEGIN
-	uint g_InstanceBase;    // GPUScene 인스턴스 버퍼에서 이 배치의 시작 오프셋
-	uint g_SwMaterialCount; // 이 배치의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다
-	uint g_MorphVertexBase; // 모프 정점 풀에서 이 배치 메시의 시작 오프셋. 0xFFFFFFFF = 모프 안 함
+	// 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
+	// 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
+	// 인스턴스 슬롯 스트림(SwVertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
+	// 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
+	uint g_SwMaterialCount;
 SW_ROOT_CONSTANTS_END
-#define SW_DRAW_INSTANCE_BASE  SW_ROOT( g_InstanceBase )
 #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
-#define SW_DRAW_MORPH_BASE     SW_ROOT( g_MorphVertexBase )
 #else
-// 컴퓨트에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SwLoadInstance / SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
-#define SW_DRAW_INSTANCE_BASE  0u
+// 컴퓨트에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
 #define SW_DRAW_MATERIAL_COUNT 0u
-#define SW_DRAW_MORPH_BASE     0xFFFFFFFFu
 #endif
 
 // ------------------------------------------------------------------------------
@@ -96,6 +96,45 @@ struct SwInstanceData
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
+
+// ------------------------------------------------------------------------------
+// 1-1a) 씬 배치 표 — C++ GpuBatchInfo · gpucull.hlsl GpuBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
+//       배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(SwLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
+// ------------------------------------------------------------------------------
+struct SwBatchData
+{
+	uint instanceBase;    // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
+	uint instanceCount;   // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
+	uint sortMode;        // 컬링 전용 (GpuBatchSortMode)
+	uint morphVertexBase; // 모프 정점 풀에서 이 메시의 시작. SW_INVALID_INDEX = 모프 안 함
+	uint firstVertex;     // 정점 풀에서 이 메시의 시작 (간접 인자의 startVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — SwMorphElementOf 참고
+	uint pad0;
+	uint pad1;
+	uint pad2;
+};
+
+SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
+
+/**
+ * @brief 배치 표의 원소. 표가 안 걸렸거나(풀스크린·픽스처) 범위 밖이면 "인스턴스 0 부터 · 모프 없음 · 정점 풀 없음" 이다.
+ * @note 분기는 있지만 early-return 은 없다 — GL 드라이버가 early-return 을 잘못 컴파일한 사연은 SwMorphElementOf 참고.
+ */
+SwBatchData SwLoadBatch( uint batchIndex )
+{
+	SwBatchData batch;
+	batch.instanceBase    = 0u;
+	batch.instanceCount   = 0u;
+	batch.sortMode        = 0u;
+	batch.morphVertexBase = SW_INVALID_INDEX;
+	batch.firstVertex     = 0u;
+	batch.pad0            = 0u;
+	batch.pad1            = 0u;
+	batch.pad2            = 0u;
+	const bool bValid = ( g_SwBatchesIndex != SW_INVALID_INDEX ) && ( batchIndex < g_SwBatchCount );
+	if ( bValid )
+		batch = g_SwBatches[batchIndex];
+	return batch;
+}
 
 // ------------------------------------------------------------------------------
 // 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GpuMorphVertex` 와 바이트 배치 일치(float4 둘).
@@ -124,11 +163,23 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 // 결과는 정점마다 한 칸 앞 원소를 읽는 것. DX12·DX11·Vulkan 은 같은 소스로 멀쩡했다.
 // 여기서 분기를 없애자 GL 도 같아졌다. 이 함수를 고칠 일이 있으면 분기 없이 유지할 것 —
 // 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
-uint SwMorphElementOf( uint vertexId )
+uint SwMorphElementOf( uint batchIndex, uint vertexId )
 {
-	const uint base    = SW_DRAW_MORPH_BASE;
-	const uint element = base + vertexId;
-	const bool bValid  = ( base != SW_INVALID_INDEX ) && ( g_SwMorphVerticesIndex != SW_INVALID_INDEX ) && ( element < g_SwMorphVertexCount );
+	const SwBatchData batch = SwLoadBatch( batchIndex );
+	// **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
+	// Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
+	// RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 처음엔 넷 다 포함한다고 믿고
+	// 빼기만 했고, DX 에서 정점 풀 첫 메시만 모프됐다(RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 DX 에서만 떨어졌다).
+	// 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
+#if defined( DX11 ) || defined( DX12 )
+	const uint local = vertexId;
+#else
+	const uint local = vertexId - batch.firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
+#endif
+	const uint base    = batch.morphVertexBase;
+	const uint element = base + local;
+	// 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
+	const bool bValid = ( base != SW_INVALID_INDEX ) && ( g_SwMorphVerticesIndex != SW_INVALID_INDEX ) && ( element < g_SwMorphVertexCount );
 	return bValid ? element : SW_INVALID_INDEX;
 }
 
@@ -139,11 +190,11 @@ uint SwMorphElementOf( uint vertexId )
  *          모프된 위치에서 다시 지어내면 얼추 맞아떨어졌다. 이제 노멀이 정점 속성이므로 그냥 두면
  *          **레스트 포즈의 노멀**이 남아 변형된 표면이 원래 모양대로 칠해진다.
  */
-void SwLoadMorphedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+void SwLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
 	outPosition        = restPosition;
 	outNormal          = restNormal;
-	const uint element = SwMorphElementOf( vertexId );
+	const uint element = SwMorphElementOf( batchIndex, vertexId );
 	if ( element == SW_INVALID_INDEX )
 		return;
 	outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
@@ -154,9 +205,9 @@ void SwLoadMorphedVertex( uint vertexId, float3 restPosition, float3 restNormal,
  * @brief 위치만 필요한 패스(그림자·뎁스 프리패스)를 위한 짧은 형태.
  * @note 노멀을 읽지 않으므로 그 로드가 통째로 빠진다 — 뎁스 전용 패스는 그게 비용의 전부다.
  */
-float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
+float3 SwLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition )
 {
-	const uint element = SwMorphElementOf( vertexId );
+	const uint element = SwMorphElementOf( batchIndex, vertexId );
 	return ( element == SW_INVALID_INDEX ) ? restPosition : g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
 }
 
@@ -164,14 +215,15 @@ float3 SwLoadMorphPosition( uint vertexId, float3 restPosition )
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );
 
 /**
- * @brief 드로우의 인스턴스 서수를 **실제 인스턴스 번호**로 바꾼다.
+ * @brief 인스턴스 슬롯(전역 자리)을 **실제 인스턴스 번호**로 바꾼다.
  * @details GPU 컬링이 켜져 있으면 드로우가 그리는 것은 "배치의 n 번째 인스턴스"가 아니라 "배치에서
  *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIds 에 들어 있다.
- *          목록이 없으면(컬링 없음) 예전과 같이 배치 시작 + 서수를 쓴다.
+ *          목록이 없으면(컬링 없음) 슬롯이 곧 인스턴스 번호다.
  */
-uint SwResolveInstanceId( uint drawInstanceId )
+uint SwResolveInstanceId( uint instanceSlot )
 {
-	const uint slot = SW_DRAW_INSTANCE_BASE + drawInstanceId;
+	// 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
+	const uint slot = instanceSlot;
 	if ( g_SwVisibleInstanceIdsIndex != SW_INVALID_INDEX && slot < g_SwInstanceCount )
 		return g_SwVisibleInstanceIds[slot];
 	return slot;
@@ -183,9 +235,9 @@ uint SwResolveInstanceId( uint drawInstanceId )
  *          범위 검사는 백엔드마다 다른 OOB 결과(DX11/GL 0, Vulkan robustBufferAccess 0, DX12 루트 SRV 는 정의되지 않음)를
  *          하나로 맞추기 위한 것이다.
  */
-SwInstanceData SwLoadInstance( uint instanceId )
+SwInstanceData SwLoadInstance( uint instanceSlot )
 {
-	const uint element = SwResolveInstanceId( instanceId );
+	const uint element = SwResolveInstanceId( instanceSlot );
 	if ( g_SwInstancesIndex != SW_INVALID_INDEX && element < g_SwInstanceCount )
 		return g_SwInstances[element];
 	SwInstanceData inst;
@@ -199,9 +251,9 @@ SwInstanceData SwLoadInstance( uint instanceId )
 	return inst;
 }
 
-float4x4 SwLoadInstanceWorld( uint instanceId )
+float4x4 SwLoadInstanceWorld( uint instanceSlot )
 {
-	return SwLoadInstance( instanceId ).world;
+	return SwLoadInstance( instanceSlot ).world;
 }
 
 // ------------------------------------------------------------------------------

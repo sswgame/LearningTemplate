@@ -806,6 +806,150 @@ SW_TEST_CASE( RHITest, ProvokingVertexIsFirstOnAllBackends )
 }
 
 /**
+ * @brief [RHITest] 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는가 — 백엔드마다 다르고, 엔진은 그 차이에 기댄다
+ * @details 정점 풀(GpuMeshVertexPool)은 배치의 간접 인자에 `startVertex = 풀 오프셋` 을 싣고, 정점 셰이더는 SV_VertexID 로
+ *          모프 풀의 로컬 정점 번호를 구한다. Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 그 오프셋을 **포함**하고
+ *          D3D11·D3D12 는 드로우 안의 0 기반 번호다 — binding.hlsli 의 SwMorphElementOf 가 그 차이를 흡수한다.
+ *          여기서는 provokingvertex.hlsl(SV_VertexID 로 풀스크린 삼각형을 만든다)을 startVertex = 36 으로 그린다:
+ *          번호가 0·1·2 면 화면이 빨강이고(D3D), 36·37·38 이면 삼각형이 퇴화해 클리어 색만 남는다(Vulkan·GL).
+ *          이 기대가 깨지면 셰이더의 분기도 같이 틀린 것이다.
+ */
+SW_TEST_CASE( RHITest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
+{
+    struct Expectation
+    {
+        sw::RHIBackend _backend;
+        bool           _bVertexIdStartsAtZero;
+    };
+    const Expectation arrExpectation[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        {sw::RHIBackend::DirectX11,  true},
+        {sw::RHIBackend::DirectX12,  true},
+#endif
+        {   sw::RHIBackend::Vulkan, false},
+        {   sw::RHIBackend::OpenGL, false},
+    };
+
+    uint32 okCount{ 0 };
+    for ( const Expectation& expectation : arrExpectation )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( expectation._backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "common/shaders/provokingvertex.hlsl";
+        psoDesc._pixelShaderPath             = "common/shaders/provokingvertex.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
+
+        // 간접 레코드 하나 — startVertex 36. 정점 버퍼는 풀스크린 폴백(정점 3개)이라 위치는 SV_VertexID 로만 만든다.
+        sw::RHIDrawIndirectCommand record{};
+        record._vertexCount           = 3;
+        record._instanceCount         = 1;
+        record._startVertexLocation   = 36;
+        record._startInstanceLocation = 0;
+        sw::RHIBufferDesc argDesc{};
+        argDesc._sizeBytes               = sizeof( record );
+        argDesc._elementSize             = sizeof( record );
+        argDesc._elementCount            = 1;
+        argDesc._usage                   = sw::RHIBufferUsage::IndirectArgs | sw::RHIBufferUsage::UnorderedAccess | sw::RHIBufferUsage::Raw | sw::RHIBufferUsage::ShaderResource;
+        argDesc._pInitialData            = &record;
+        const sw::RHIBufferHandle argBuf = pResource->createBuffer( argDesc );
+        SW_EXPECT_TRUE_MSG( argBuf != 0, device->getBackendName() );
+
+        if ( pso != 0 && argBuf != 0 )
+        {
+            sw::RHITextureDesc desc{};
+            desc._width                   = 64;
+            desc._height                  = 64;
+            desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
+            desc._bIsRenderTarget         = SW_TRUE;
+            desc._bIsShaderResource       = SW_TRUE;
+            desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+            const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+            SW_EXPECT_TRUE( rt != 0 );
+
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            if ( rt != 0 && cmd != nullptr )
+            {
+                sw::RHIRenderPassBeginInfo beginInfo{};
+                beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+                beginInfo._bBindColor = SW_TRUE;
+                beginInfo._width      = desc._width;
+                beginInfo._height     = desc._height;
+                sw::RHIViewport viewport{};
+                viewport._width  = static_cast<float32>( desc._width );
+                viewport._height = static_cast<float32>( desc._height );
+
+                cmd->beginCommandList();
+                cmd->setViewport( viewport );
+                cmd->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
+                cmd->beginRenderPass( beginInfo );
+                cmd->setPipelineState( pso );
+                cmd->drawIndirect( argBuf, 0, 1 );
+                cmd->endRenderPass();
+                cmd->endCommandList();
+                device->executeCommandListImmediate( cmd.get() );
+                device->waitIdle();
+
+                sw::vector<uint8>     pixels;
+                sw::RHITextureMipSpan layout{};
+                if ( pResource->readbackTexture2D( rt, 0, pixels, layout ) )
+                {
+                    uint32 redCount{ 0 };
+                    for ( uint32 row = 0; row < layout._height; ++row )
+                    {
+                        const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                        for ( uint32 col = 0; col < layout._width; ++col )
+                        {
+                            const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
+                            if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
+                                ++redCount;
+                        }
+                    }
+                    const uint32 total = layout._width * layout._height;
+                    if ( expectation._bVertexIdStartsAtZero )
+                    {
+                        SW_EXPECT_TRUE_MSG( redCount == total,
+                                            ( sw::string( device->getBackendName() ) + ": SV_VertexID 가 startVertex 를 포함한다 (red " + sw::to_string( redCount ) +
+                                              " / " + sw::to_string( total ) + ") — binding.hlsli 의 D3D 분기가 틀렸다" )
+                                                .c_str() );
+                    }
+                    else
+                    {
+                        SW_EXPECT_TRUE_MSG( redCount == 0,
+                                            ( sw::string( device->getBackendName() ) + ": SV_VertexID 가 드로우 안의 0 기반 번호다 (red " + sw::to_string( redCount ) +
+                                              ") — binding.hlsli 의 Vulkan·GL 경로가 틀렸다" )
+                                                .c_str() );
+                    }
+                }
+                else
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+            }
+            if ( rt != 0 )
+                pResource->destroyTexture( rt );
+        }
+
+        if ( argBuf != 0 )
+            pResource->destroyBuffer( argBuf );
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the vertex id semantics test" );
+}
+
+/**
  * @brief [RHITest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.

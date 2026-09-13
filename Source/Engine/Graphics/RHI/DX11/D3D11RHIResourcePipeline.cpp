@@ -44,13 +44,16 @@ namespace sw
                 D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
                 for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
                 {
-                    const RHIVertexAttribute& attribute               = constant::arrVertexAttribute[attributeIndex];
-                    arrInputElement[attributeIndex].SemanticName      = attribute._pSemanticName;
-                    arrInputElement[attributeIndex].Format            = ( attribute._componentCount == 4 ) ? DXGI_FORMAT_R32G32B32A32_FLOAT
-                                                                      : ( attribute._componentCount == 2 ) ? DXGI_FORMAT_R32G32_FLOAT
-                                                                                                           : DXGI_FORMAT_R32G32B32_FLOAT;
-                    arrInputElement[attributeIndex].AlignedByteOffset = attribute._byteOffset;
-                    arrInputElement[attributeIndex].InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA;
+                    const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
+                    arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
+                    arrInputElement[attributeIndex].Format               = ( attribute._bUint != SW_FALSE )   ? DXGI_FORMAT_R32_UINT
+                                                                         : ( attribute._componentCount == 4 ) ? DXGI_FORMAT_R32G32B32A32_FLOAT
+                                                                         : ( attribute._componentCount == 2 ) ? DXGI_FORMAT_R32G32_FLOAT
+                                                                                                              : DXGI_FORMAT_R32G32B32_FLOAT;
+                    arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
+                    arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
+                    arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
+                    arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
                 }
                 _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
             }

@@ -424,7 +424,13 @@ namespace sw
 
     void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
     {
-        (void)slot;
+        // 슬롯 1 은 인스턴스 슬롯 스트림(uint, 인스턴스 스텝) — constant::arrVertexAttribute 의 SW_INSTANCESLOT.
+        if ( slot == constant::kInstanceSlotStreamSlot )
+        {
+            _pState->_boundInstanceSlotVb     = buffer;
+            _pState->_boundInstanceSlotOffset = offset;
+            return;
+        }
         _pState->_boundMeshVb     = buffer;
         _pState->_boundMeshStride = stride > 0 ? stride : static_cast<uint32>( sizeof( RHIVertex ) );
         _pState->_boundMeshOffset = offset;
@@ -446,10 +452,34 @@ namespace sw
         for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
         {
             const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+            if ( attribute._inputSlot != 0 )
+                continue; // 슬롯 1 은 아래에서 스트림 VBO 로
             glEnableVertexAttribArray( attribute._location );
             glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE, stride,
                                    reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundMeshOffset + attribute._byteOffset ) ) );
         }
+
+        // 슬롯 1 — 인스턴스 슬롯 스트림(uint, 인스턴스마다 하나). 안 걸린 드로우는 배열을 꺼 둔다 — 켜 둔 채 버퍼가 없으면
+        // 코어 프로파일에서 드로우가 거부된다.
+        const GLuint streamVbo = _pDevice->resolveGlBuffer( _pState->_boundInstanceSlotVb );
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+            if ( attribute._inputSlot != constant::kInstanceSlotStreamSlot )
+                continue;
+            if ( streamVbo == 0 )
+            {
+                glDisableVertexAttribArray( attribute._location );
+                continue;
+            }
+            glBindBuffer( GL_ARRAY_BUFFER, streamVbo );
+            glEnableVertexAttribArray( attribute._location );
+            glVertexAttribIPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_UNSIGNED_INT,
+                                    static_cast<GLsizei>( constant::kInstanceSlotStreamStride ),
+                                    reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_boundInstanceSlotOffset + attribute._byteOffset ) ) );
+            glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );
+        }
+        glBindBuffer( GL_ARRAY_BUFFER, vbo );
     }
 
     void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex )

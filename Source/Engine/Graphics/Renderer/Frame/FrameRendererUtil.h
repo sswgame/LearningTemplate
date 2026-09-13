@@ -369,6 +369,10 @@ namespace sw
         hashed_string _swMaterials{ "SwMaterials" };
         /// @brief 씬 라이트 구조버퍼 (lighting.hlsli g_SwLights ↔ "SwLights"). 패스당 한 번 건다.
         hashed_string _swLights{ "SwLights" };
+        /// @brief 씬 배치 표 (binding.hlsli g_SwBatches ↔ "SwBatches"). 패스당 한 번 건다 — 드로우는 배치 번호만 나른다.
+        hashed_string _swBatches{ "SwBatches" };
+        /// @brief 그 표의 원소 수 ↔ PassCB g_SwBatchCount.
+        hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 그 버퍼의 원소 수 ↔ PassCB g_SwLightCount. 0 이면 셰이더가 키라이트로 폴백한다.
         hashed_string _swLightCount{ "g_SwLightCount" };
     };
