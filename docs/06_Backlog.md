@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `bc81d8d0`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `ef15146b`
 
 ---
 
@@ -331,6 +331,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (Vulkan 이 `discard` 를 켜지 않은 기능으로 돌리고 있었다 — 그림은 맞았고 검증 레이어만 알았다)
+
+**네 백엔드 스모크에서 Vulkan 만 `[Error]` 1건이 있었다.** `vkCreateShaderModule(): SPIR-V Capability
+DemoteToHelperInvocation was declared, but … shaderDemoteToHelperInvocation is required`
+(VUID-VkShaderModuleCreateInfo-pCode-08740). 셰이더는 `-fspv-target-env=vulkan1.3` 으로 굽고, 그 타깃에서 DXC 는
+HLSL `discard` 를 `OpKill` 이 아니라 `OpDemoteToHelperInvocation` 으로 낸다 — `deferredlighting.hlsl` 과
+`sprite2d.hlsl` 이 이 경로다. 디바이스 생성은 1.2 기능 체인까지만 걸고 있었다(`VulkanRHIDeviceInit.cpp`).
+드라이버가 우연히 돌려 줘서 픽셀은 DX12 와 같았고, 그래서 그림 비교로는 보이지 않았다.
+
+**직전 커밋의 재베이크가 드러냈다.** 그전까지 구운 바이너리는 `-Od` 였고(`ef15146b` 에서 고쳤다), 최적화가
+켜지며 `discard` 의 코드젠이 바뀌었다. "구운 셰이더가 바뀌면 검증 레이어 로그를 다시 읽어라" 가 교훈이다 —
+`[Error]` 수는 스모크 표에 있고, 픽셀 수만 보면 놓친다.
+
+**고친 것**: `VkPhysicalDeviceVulkan13Features` 를 조회·생성 양쪽 체인에 붙여 `shaderDemoteToHelperInvocation`
+을 켠다. 1.3 구조체는 1.3 디바이스에서만 유효하므로 `properties.apiVersion` 으로 가드하고, 기능이 없으면
+경고를 남긴다(그 디바이스에선 `discard` 가 미정의다 — 1.1 타깃으로 되굽는 길이 남아 있다).
+
+**확인**: `BackendSmoke.py` 네 백엔드 × 불투명/반투명 8회 모두 종료 0 · `[Error]` 0 · 평균 RGB 0.3 이내.
+`RenderPassGpuTest` 22/22 · `RHITest` 는 **1-4c(`OffscreenDrawIsReadable`, 기존 결함)만** 실패 — 이 변경과 무관하다.
 
 ### 2026-09-13 (GL 모프가 산다 — 드라이버가 early-return 을 잘못 컴파일하고 있었다)
 
