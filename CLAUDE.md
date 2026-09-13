@@ -76,6 +76,7 @@ staged files only). The naming splits the two jobs: **`Check*` gates** (fails th
 ```powershell
 py -3 Scripts/lint/CheckCodeConventions.py                 # naming/style rules (CI gate)
 py -3 Scripts/lint/CheckCodeConventions.py --files <path>  # single file
+py -3 Scripts/lint/CheckCodeConventionsSelfTest.py         # are those rules still alive? (CI gate)
 py -3 Scripts/lint/CheckIncludeOrder.py
 py -3 Scripts/lint/CheckEngineLayers.py                    # Engine must not include Editor/GameFramework/Games
 py -3 Scripts/lint/CheckResourceCasing.py                  # everything under Resource/ must be lowercase

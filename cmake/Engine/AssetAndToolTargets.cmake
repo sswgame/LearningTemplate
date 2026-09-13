@@ -109,6 +109,10 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
 		ARGS --root "${CMAKE_SOURCE_DIR}"
 	)
+	sw_addRepoPythonTarget(CheckCodeConventionsSelfTest "${SW_SCRIPT_LINT_CHECK_CONVENTIONS_SELF_TEST}"
+		COMMENT "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -142,6 +146,14 @@ function(sw_registerLintTests)
 			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckTestSuites PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+	if(TARGET CheckCodeConventionsSelfTest)
+		add_test(
+			NAME CheckCodeConventionsSelfTest
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_CONVENTIONS_SELF_TEST}"
+			--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckCodeConventionsSelfTest PROPERTIES LABELS "lint" TIMEOUT 60)
 	endif()
 
 	if(TARGET CheckIncludeOrder)

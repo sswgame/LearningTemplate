@@ -44,8 +44,9 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 ### 특정 테스트만 골라서 실행 (Label 활용)
 라벨은 `core`, `editor`, `engine`, `reflection`, `module`, `unit`, `nogpu`, `lint` 입니다.
 `lint` 는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가 등록하는 Python 검사
-여덟입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
-`CheckSourceGlob` · `CheckDataFileReferences` · `CheckRenderOwnership` · `CheckTestSuites`.
+아홉입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
+`CheckCodeConventionsSelfTest` · `CheckSourceGlob` · `CheckDataFileReferences` · `CheckRenderOwnership` ·
+`CheckTestSuites`.
 
 > 이 수는 세어서 적지 말고 `ctest --preset Ninja-Debug-lint -N` 로 확인한다. 예전에 "여섯" 이라고
 > 적힌 채 일곱이 돌고 있었다.

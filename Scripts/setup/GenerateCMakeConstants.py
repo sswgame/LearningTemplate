@@ -64,6 +64,7 @@ set(SW_SCRIPT_LINT_CHECK_SOURCE_GLOB "{ConfigConstants.kScriptLintCheckSourceGlo
 set(SW_SCRIPT_LINT_CHECK_DATA_FILE_REFERENCES "{ConfigConstants.kScriptLintCheckDataFileReferences}")
 set(SW_SCRIPT_LINT_CHECK_RENDER_OWNERSHIP "{ConfigConstants.kScriptLintCheckRenderOwnership}")
 set(SW_SCRIPT_LINT_CHECK_TEST_SUITES "{ConfigConstants.kScriptLintCheckTestSuites}")
+set(SW_SCRIPT_LINT_CHECK_CONVENTIONS_SELF_TEST "{ConfigConstants.kScriptLintCheckCodeConventionsSelfTest}")
 set(SW_SCRIPT_LINT_RUN_CLANG_FORMAT "{ConfigConstants.kScriptLintRunClangFormat}")
 set(SW_SCRIPT_GENERATE_BAKE_SHIPPING_HOST_DEFAULTS "{ConfigConstants.kScriptGenerateBakeShippingHostDefaults}")
 set(SW_SCRIPT_COOK_ASSETS "{ConfigConstants.kScriptCookAssets}")
