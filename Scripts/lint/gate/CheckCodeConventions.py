@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/CheckCodeConventions.py
+Scripts/lint/gate/CheckCodeConventions.py
 
 # SW Engine C++ 코딩 컨벤션 및 정적 규칙 자동 검사 스크립트.
 
@@ -27,7 +27,7 @@ Scripts/lint/CheckCodeConventions.py
   7) Include 규칙: .cpp 파일 첫 줄 #include "pch.h" 여부
 
 사용법:
-  py -3 Scripts/lint/CheckCodeConventions.py [--root <repo>] [--json] [--files <files...>]
+  py -3 Scripts/lint/gate/CheckCodeConventions.py [--root <repo>] [--json] [--files <files...>]
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import (
     collectSourceFiles,
     flatMapConcurrent,
@@ -2086,6 +2086,10 @@ def runConventionsCheck(rootDir: Path | None = None,
 
     return allViolations
 
+
+# 이 린트는 규칙이 서른 종이라 조각 하나로 "살아 있다" 를 증명할 수 없다.
+# 규칙마다 `ConventionRule.badSample` 을 들고, `CheckCodeConventionsSelfTest.py` 가 전수로 본다.
+kSelfTestSkipReason = "규칙별 음성 테스트는 CheckCodeConventionsSelfTest.py 가 담당한다"
 
 def main() -> int:
     useUtf8Stdout()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/FormatModified.py
+Scripts/lint/fixer/FormatModified.py
 
 Git 작업 트리에서 수정되거나 새로 추가된(Untracked 포함) C++ 파일들에 대해서만
 인클루드 순서 정리, 분기 중괄호 정리, clang-format 자동 포맷팅을 적용합니다.
@@ -14,12 +14,12 @@ from pathlib import Path
 
 # 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
 scriptDir = Path(__file__).resolve().parent
-sys.path.insert(0, str(scriptDir))
-sys.path.insert(0, str(scriptDir.parent))
+sys.path.insert(0, str(scriptDir.parent))       # Scripts/lint — 사촌 린트 패키지
+sys.path.insert(0, str(scriptDir.parents[1]))   # Scripts — common
 
-import CheckIncludeOrder
-import FormatBranchBraces
-import FormatForwardDeclarations
+from gate import CheckIncludeOrder
+from fixer import FormatBranchBraces
+from fixer import FormatForwardDeclarations
 from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch, useUtf8Stdout
 
 

@@ -69,8 +69,8 @@ cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 �
 ctest --preset Ninja-Debug-lint               # 컨벤션·include 순서
 
 # 정적 분석 (게이트 아님 — 판단이 필요한 자료다). 검사 목록은 루트 .clang-tidy 가 정한다.
-py -3 Scripts/lint/RunClangTidy.py
-py -3 Scripts/lint/RunClangTidy.py --filter Core
+py -3 Scripts/lint/report/RunClangTidy.py
+py -3 Scripts/lint/report/RunClangTidy.py --filter Core
 
 # ASan (Windows) — 2026-09-09 부터 실제로 빌드된다
 cmake --preset Ninja-Debug-ASAN
@@ -145,7 +145,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
-`py -3 Scripts/lint/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
+`py -3 Scripts/lint/report/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
 이라는 다른 답을 받았다. 둘 다 맞다 — clang-tidy 버전이 다르면 검사 목록이 다르다.
 
 **2026-09-10: 그 혼란을 도구가 스스로 막게 했다.** 이제 스크립트가 실행 파일 경로와 버전을 보고
@@ -294,6 +294,56 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (게이트가 하나 있었는데 실패할 수가 없었다 — 그리고 린트 폴더를 성격으로 갈랐다)
+
+앞 커밋들이 `CheckCodeConventions` 의 규칙 30종에 음성 테스트를 붙였다. 그런데 **린트 자체는
+여덟이고, 음성 테스트를 가진 건 하나뿐**이었다. 나머지 일곱은 죽어도 아무도 모르는 상태였다.
+
+**`CheckLintsAreAlive.py` — 게이트마다 위반을 넣어 보고 실패하는지 본다.**
+
+- 각 게이트가 `kSelfTestCases` 에 "이건 반드시 잡아야 한다" 는 조각을 들고 있다. 장치가 임시 트리에
+  그 조각을 써서 **실제 진입점을 프로세스로** 돌리고(import 가 아니다 — 전역 캐시가 오염된다),
+  0 이 아닌 종료 코드가 나와야 통과다. 조각 표를 장치에 모으지 않았다: **표가 둘이면 어긋난다.**
+- 조각을 만들 수 없는 린트는 `kSelfTestSkipReason` 에 이유를 적는다. `CheckCodeConventions` 는 이미
+  자기 음성 테스트가 있고, `CheckSourceGlob` 은 본 검사가 실제 빌드 트리의 `compile_commands.json`
+  을 필요로 해 임시 트리로는 성립하지 않는다. **이유 없는 예외는 없다.**
+
+**그리고 이 장치가 만들자마자 하나를 잡았다 — `CheckIncludeOrder` 는 실패할 수 없는 게이트였다.**
+인자가 `--root` 뿐이라 `main()` 이 늘 **고치는 모드**로 돌았고, 위반을 찍은 뒤에도 무조건 `0` 을
+돌려줬다. CI 에 게이트로 등록돼 있는데 **한 번도 아무것도 막은 적이 없고**, 대신 소스를 조용히
+고쳐 놓고 있었다. `--fix` 를 옵트인으로 돌리고 위반이 있으면 `1` 을 반환하게 고쳤다
+(고치는 일은 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다 — 그 경로는 그대로다).
+
+**린트 폴더를 성격별로 갈랐다.** 열일곱 개가 한 폴더에 평평하게 있었고, 이름 앞머리(`Check`/`Run`)
+가 유일한 단서였는데 그건 **틀린 단서**였다: `CheckCodeConventionsSelfTest` 는 코드가 아니라 린트를
+보고, `FormatBranchBraces` 는 `Check` 로 시작하지 않지만 `--check` 로 게이트가 된다.
+
+```
+Scripts/lint/
+  PreCommitLint.py   넷을 조율하므로 여기 남는다
+  gate/              위반이 있으면 실패한다 — 빌드와 커밋을 막는 건 이 폴더뿐이다 (8)
+  fixer/             파일을 실제로 고쳐 쓴다 (3)
+  report/            찍어 줄 뿐, 언제나 0 으로 끝난다 (3)
+  selftest/          코드가 아니라 린트를 본다 (2)
+```
+
+각 폴더가 패키지(`__init__.py`)라서 사촌 참조는 `from gate import CheckIncludeOrder` 처럼 **어느
+폴더의 것인지 말하게** 된다. 경로 상수는 `Scripts/common/Constants.py` 한 곳이라 CMake·CTest 는
+따라온다.
+
+**폴더가 목록을 없앴다.** `CheckLintsAreAlive` 가 들고 있던 게이트 이름 여덟 줄을 지우고
+`gate/` 를 훑게 했다. 새 게이트는 파일을 거기 놓는 것으로 끝이고, 놓는 순간 증거를 요구받는다 —
+**목록이 아니라 자리가 규칙이다.** 같은 이유로 `CheckCodeConventionsSelfTest` 가 손으로 짓던
+`Scripts/lint/CheckCodeConventions.py` 경로도 `CheckCodeConventions.__file__` 로 바꿨다.
+
+**확인한 것** (장치가 진짜 무는지 양쪽으로 확인했다):
+
+- `gate/` 에 빈 `CheckNothingAtAll.py` 를 놓았더니 즉시 "`kSelfTestCases` 가 없습니다" 로 실패.
+- `CheckEngineLayers.main()` 이 늘 `0` 을 돌려주게 만들었더니 "위반을 넣었는데 통과했습니다 —
+  이 검사는 죽었습니다" 로 실패. 되돌리니 통과.
+- lint CTest 8 → **10** (`CheckLintsAreAlive` 추가, 8 게이트 · 조각 7). `Ninja-Debug` ctest
+  **16/16**. `PreCommitLint` 7단계 전부 통과. `py -3 -m Scripts format` / `lint` 도 확인.
 
 ### 2026-09-14 (규칙 하나 = 클래스 하나 — 상속만 하면 등록되고, 규칙이 자기 증거를 든다)
 
@@ -1685,13 +1735,13 @@ ASAN nogpu 5/5 · 린트 7/7 · `BackendSmoke` 8/8 오류 0(평균 RGB 불변).
 그래서 진짜 문제는 "경고를 흘려봤다" 가 아니라 **"지금 트리에 경고가 몇 개인지 물어볼 방법이
 없었다"** 였다. clean 빌드를 하면 답이 나오지만 아무도 매번 clean 빌드를 하지 않는다.
 
-**게이트 대신 질문할 창구를 만들었다 — `Scripts/lint/RunBuildWarnings.py`.** 컴파일 DB 의 **실제 빌드
+**게이트 대신 질문할 창구를 만들었다 — `Scripts/lint/report/RunBuildWarnings.py`.** 컴파일 DB 의 **실제 빌드
 명령 그대로**, 코드 생성 없이(`-fsyntax-only`) 전 TU 를 훑는다. 무엇이 dirty 인지와 무관하게 늘 같은
 답이 나온다. 프리셋당 약 1분 30초(TU 470개, 병렬 16).
 
 ```powershell
-py -3 Scripts/lint/RunBuildWarnings.py                       # Debug · Release · Shipping 전부 (기본)
-py -3 Scripts/lint/RunBuildWarnings.py --preset Ninja-Debug --filter Graphics
+py -3 Scripts/lint/report/RunBuildWarnings.py                       # Debug · Release · Shipping 전부 (기본)
+py -3 Scripts/lint/report/RunBuildWarnings.py --preset Ninja-Debug --filter Graphics
 ```
 
 - **기본이 세 구성인 이유**: 경고 집합이 구성마다 다르다. `-Wunused-function` 은 Release 에만,
@@ -3079,7 +3129,7 @@ EditorAPI C-ABI 한 항목, `drainRenderWorkers()` 가 재운 직후 호출. 재
 144곳 중 89곳이 반복문이었고, `while (...)` 바로 아래에 중괄호 없는 `if/else` 가 오는 형태가 33곳
 생겼다. 이 저장소의 규칙은 **반복문은 한 줄이어도 중괄호를 유지**하는 쪽이므로 폐기했다.
 
-**대신 `Scripts/lint/FormatBranchBraces.py` 를 만들었다** (`FormatForwardDeclarations.py` 와 같은
+**대신 `Scripts/lint/fixer/FormatBranchBraces.py` 를 만들었다** (`FormatForwardDeclarations.py` 와 같은
 자리 — clang-format 앞단에서 돌고, clang-format 은 `InsertBraces` 를 안 켜 두었으므로 되돌리지
 않는다). 규칙:
 
@@ -4957,7 +5007,7 @@ ASan 과 clang-tidy 를 돌렸더니 **둘 다 쓸 수 없는 상태**였다. �
 - `.clang-tidy` — 이 코드베이스에서 **쓸 수 없다고 실측한** 두 검사만 끈다.
   `bugprone-easily-swappable-parameters` 158건, `clang-analyzer-optin.core.EnumCastOutOfRange`
   39건(비트 플래그 조합). 끈 이유를 파일에 적었다.
-- `Scripts/lint/RunClangTidy.py` — 한 명령으로 같은 설정. 가장 큰 것은 **`/Y-` 로 MSVC PCH 옵션을
+- `Scripts/lint/report/RunClangTidy.py` — 한 명령으로 같은 설정. 가장 큰 것은 **`/Y-` 로 MSVC PCH 옵션을
   무효화**한 것이다. clang-tidy 는 그 PCH 를 쓸 수 없는데 `/Yu`·`/FI` 가 남아 헤더를 두 경로 표기로
   두 번 파싱한다. `#pragma once` 가 같은 파일로 보지 못해 **"redefinition of ..." 오류가 쏟아졌다**
   — 정의는 하나뿐인데도. Core/Memory 기준 지적 3건 → 진짜 1건으로 줄었다.
@@ -5114,7 +5164,7 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
   `Tools/ReflectionParser/PredefinedAnnotationKind.xxx`(전부 `Core/Predefined/` 쪽을 include 한다),
   `Config/Reflection/AnnotationMeta.txt`(CMake·Constants.py 둘 다 `Source/Core/Predefined/` 를 쓴다
   — 이 폴더는 비어서 사라졌다).
-- `Scripts/lint/CheckDataFileReferences.py` 신설 + CTest `lint` 등록(이제 lint 6개). 규칙:
+- `Scripts/lint/gate/CheckDataFileReferences.py` 신설 + CTest `lint` 등록(이제 lint 6개). 규칙:
   `Source/**`·`Tools/**` 의 모든 `.xxx` 는 include 또는 경로 참조가 하나는 있어야 한다.
   음성 테스트로 확인했다 — 죽은 사본을 되살리면 실패한다.
   (그 과정에서 검사 스크립트의 **독스트링에 적은 예시 경로**가 참조로 집계되어 한 번 통과해

@@ -27,7 +27,7 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 - **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. `SW_RHI_AS_MODULES`는 CACHE FORCE로 OFF.
 
 ### Engine 내부 레이어
-순환(Reflection ↔ Graphics 등) 때문에 단일 라이브러리로 링크하되, include 방향은 아래로만 허용합니다. 상세·린트는 [Source/Engine/README.md](Source/Engine/README.md)와 `Scripts/lint/CheckEngineLayers.py`를 참고하세요.
+순환(Reflection ↔ Graphics 등) 때문에 단일 라이브러리로 링크하되, include 방향은 아래로만 허용합니다. 상세·린트는 [Source/Engine/README.md](Source/Engine/README.md)와 `Scripts/lint/gate/CheckEngineLayers.py`를 참고하세요.
 
 ### 리소스 도메인
 - `Resource/engine/` — 엔진 기본 셰이더, 기본 텍스처, 파이프라인 에셋
@@ -102,7 +102,7 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 - **렌더 패킷은 자기가 역참조하는 것을 소유한다.** 게임 스레드가 만든 메시·머티리얼·인스턴스는 `shared_ptr` 로
   `GpuSceneSnapshot` 에 실려 렌더 스레드로 간다. 생포인터를 싣지 말고, 렌더에 실리는 객체는 Engine 의 `create()`
   로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다). 표와 규칙은
-  `Source/Engine/Graphics/README.md` 의 "소유와 수명" 절, 검사는 `Scripts/lint/CheckRenderOwnership.py`.
+  `Source/Engine/Graphics/README.md` 의 "소유와 수명" 절, 검사는 `Scripts/lint/gate/CheckRenderOwnership.py`.
 
 - **모듈 리로드는 App 의 것이다.** 모듈을 감시하고 그림자 복사하고 갈아 끼우는 기계(`LiveReloadManager`)는
   `Source/App/Module/` 에 있고 **Shipping 빌드에서는 파일째 빠진다**. Engine 이 아는 것은 지연 로드 훅이 묻는

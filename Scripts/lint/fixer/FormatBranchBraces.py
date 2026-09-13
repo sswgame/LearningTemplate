@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/FormatBranchBraces.py
+Scripts/lint/fixer/FormatBranchBraces.py
 
 중괄호의 모양을 정리합니다 (AGENTS.md '분기문 규칙'). 두 가지를 본다.
 
@@ -26,10 +26,10 @@ InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 
 앞단에서 이 스크립트가 돌고, 뒤이어 도는 clang-format 이 들여쓰기를 맞춘다.
 
 사용법:
-  py -3 Scripts/lint/FormatBranchBraces.py                    # Git 변경 파일 포맷팅
-  py -3 Scripts/lint/FormatBranchBraces.py [파일들...]        # 지정한 파일들만 포맷팅
-  py -3 Scripts/lint/FormatBranchBraces.py --all              # 전체 파일 포맷팅
-  py -3 Scripts/lint/FormatBranchBraces.py --check            # 수정 없이 위반 여부만 검사
+  py -3 Scripts/lint/fixer/FormatBranchBraces.py                    # Git 변경 파일 포맷팅
+  py -3 Scripts/lint/fixer/FormatBranchBraces.py [파일들...]        # 지정한 파일들만 포맷팅
+  py -3 Scripts/lint/fixer/FormatBranchBraces.py --all              # 전체 파일 포맷팅
+  py -3 Scripts/lint/fixer/FormatBranchBraces.py --check            # 수정 없이 위반 여부만 검사
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from common import (
     collectSourceFiles,

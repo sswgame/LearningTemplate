@@ -113,6 +113,10 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
 		ARGS --root "${CMAKE_SOURCE_DIR}"
 	)
+	sw_addRepoPythonTarget(CheckLintsAreAlive "${SW_SCRIPT_LINT_CHECK_LINTS_ARE_ALIVE}"
+		COMMENT "Checking that every gate lint still fails on a deliberately broken fixture..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -155,7 +159,16 @@ function(sw_registerLintTests)
 		)
 		set_tests_properties(CheckCodeConventionsSelfTest PROPERTIES LABELS "lint" TIMEOUT 60)
 	endif()
+	if(TARGET CheckLintsAreAlive)
+		add_test(
+			NAME CheckLintsAreAlive
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_LINTS_ARE_ALIVE}"
+			--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckLintsAreAlive PROPERTIES LABELS "lint" TIMEOUT 120)
+	endif()
 
+	# `--fix` 를 주지 않는다 — 게이트는 고치지 않고 보고만 한다 (기본값이 검사 모드다).
 	if(TARGET CheckIncludeOrder)
 		add_test(
 			NAME CheckIncludeOrder

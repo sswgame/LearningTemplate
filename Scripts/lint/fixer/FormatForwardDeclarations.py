@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/FormatForwardDeclarations.py
+Scripts/lint/fixer/FormatForwardDeclarations.py
 
 C++ 소스코드 내 전방 선언(Forward Declaration)을
 enum (및 enum class) -> struct -> class 순서로 정렬하고,
@@ -9,10 +9,10 @@ enum (및 enum class) -> struct -> class 순서로 정렬하고,
 각 그룹 내에서는 타입 이름 기준 알파벳 순으로 정렬합니다.
 
 사용법:
-  py -3 Scripts/lint/FormatForwardDeclarations.py                    # Git 변경 파일 포맷팅
-  py -3 Scripts/lint/FormatForwardDeclarations.py [파일들...]        # 지정한 파일들만 포맷팅
-  py -3 Scripts/lint/FormatForwardDeclarations.py --all              # 전체 파일 포맷팅
-  py -3 Scripts/lint/FormatForwardDeclarations.py --check            # 수정 없이 위반 여부만 검사
+  py -3 Scripts/lint/fixer/FormatForwardDeclarations.py                    # Git 변경 파일 포맷팅
+  py -3 Scripts/lint/fixer/FormatForwardDeclarations.py [파일들...]        # 지정한 파일들만 포맷팅
+  py -3 Scripts/lint/fixer/FormatForwardDeclarations.py --all              # 전체 파일 포맷팅
+  py -3 Scripts/lint/fixer/FormatForwardDeclarations.py --check            # 수정 없이 위반 여부만 검사
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from common import (
     collectSourceFiles,

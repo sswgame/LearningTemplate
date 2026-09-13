@@ -13,7 +13,7 @@ Engine 레이어 금지 include 검사.
 경고로 찍고 실패시키지 않았다 — 근거 없는 목록이라 늘릴 기준도 없고, 실패하지 않으니 쌓여도
 아무도 몰랐다. 지금은 전체 그래프를 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓴다.
 
-  python Scripts/lint/CheckEngineLayers.py [--root <repo>] [--strict]
+  python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>] [--strict]
 
 (--strict 는 남겨 두었지만 이제 기본 동작과 같다. 티어 위반은 항상 실패다.)
 """
@@ -25,7 +25,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import (
     collectSourceFiles,
     getProjectRoot,
@@ -212,6 +212,18 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
 
     return fileViolations, fileStrictWarns, None
 
+
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "Engine 이 Editor 를 include",
+        "files": {
+            "Source/Engine/Scene/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Common/Workspace/EditorContext.h"\n',
+        },
+    },
+]
 
 def main() -> int:
     useUtf8Stdout()

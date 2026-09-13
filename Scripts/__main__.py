@@ -53,7 +53,7 @@ def cmdLint(args: list[str]) -> int:
 
 
 def cmdFormat(args: list[str]) -> int:
-    from lint.RunClangFormat import main
+    from lint.report.RunClangFormat import main
     return main(args)
 
 

@@ -3,7 +3,7 @@
  * @brief 게임 스레드가 만들고 렌더 스레드가 받는 씬 스냅샷 — 두 스레드가 공유하는 **유일한** 타입.
  * @details 만드는 쪽은 `GpuSceneBuilder`(GT), 받아서 GPU 에 올리는 쪽은 `GpuScene`(RT) 이다. 두 클래스는 서로를 모르고
  *          이 구조체만 안다. 그래서 "GT 가 RT 의 값을 덮어쓴다" · "RT 가 씬을 읽는다" 같은 실수는 컴파일되지 않는다.
- *          소유 규칙(shared_ptr 로 소유를 함께 싣는다)은 `GpuSceneSnapshot` 주석과 Scripts/lint/CheckRenderOwnership.py 참고.
+ *          소유 규칙(shared_ptr 로 소유를 함께 싣는다)은 `GpuSceneSnapshot` 주석과 Scripts/lint/gate/CheckRenderOwnership.py 참고.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -202,7 +202,7 @@ namespace sw
      *            "한쪽만 만드는 값을 스냅샷이 매 프레임 덮어쓴다" 는 버그가 타입으로 막힌다.
      *          - 모듈(게임 DLL)이 만든 객체를 엔진이 마지막까지 들 수 있으므로, 실리는 객체는 Engine 의
      *            create() 팩토리로 만든다(제어 블록이 Engine.dll 에 산다).
-     *          검사는 Scripts/lint/CheckRenderOwnership.py 가 한다.
+     *          검사는 Scripts/lint/gate/CheckRenderOwnership.py 가 한다.
      */
     struct GpuSceneSnapshot
     {

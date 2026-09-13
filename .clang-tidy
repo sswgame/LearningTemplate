@@ -2,7 +2,7 @@
 # @file .clang-tidy
 # @brief 버그를 찾는 검사만 켠다. 스타일은 CheckCodeConventions.py 와 clang-format 이 본다.
 #
-# 실행: py -3 Scripts/lint/RunClangTidy.py
+# 실행: py -3 Scripts/lint/report/RunClangTidy.py
 #
 # 끈 검사는 **이 코드베이스에서 쓸 수 없다고 실측한 것만** 적는다. 끈 이유를 같이 남긴다 —
 # 이유가 없으면 다음 사람이 다시 켜고 같은 오탐을 다시 분류한다. 개별 자리의 예외는 여기가

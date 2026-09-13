@@ -17,7 +17,7 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
  CI 파이프라인이나 CONFIGURE_DEPENDS=OFF 환경, pre-commit 단계에서
  전체 빌드 없이 빠른 소스 누락 방지 검증을 위해 사용됩니다.)
 
-  python Scripts/lint/CheckSourceGlob.py [--root <repo>] [--build <dir>]
+  python Scripts/lint/gate/CheckSourceGlob.py [--root <repo>] [--build <dir>]
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import (
     collectSourceFiles,
     getProjectRoot,
@@ -150,6 +150,11 @@ def checkRhiBackendSourceListInternal(repo: Path) -> list[str]:
         errors.append(f"{_kRhiBackendListFile}: `{relPath}` 가 디스크에 없습니다 — 파일이 옮겨졌으면 경로를 고치세요")
     return errors
 
+
+# 이 린트의 본 검사는 **빌드 트리의 compile_commands.json** 과 대조하는 것이라 임시 트리로는
+# 성립하지 않는다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
+# RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
+kSelfTestSkipReason = "compile_commands.json 이 있는 실제 빌드 트리가 필요하다"
 
 def main() -> int:
     useUtf8Stdout()

@@ -14,10 +14,10 @@ clang-tidy 정적 분석 실행기.
 실행 방법이 같이 저장소에 있어야 한다.
 
 사용법:
-  py -3 Scripts/lint/RunClangTidy.py                      # Source 전체
-  py -3 Scripts/lint/RunClangTidy.py --filter Core        # 경로에 Core 가 들어간 TU 만
-  py -3 Scripts/lint/RunClangTidy.py --preset Ninja-Debug-ASAN
-  py -3 Scripts/lint/RunClangTidy.py --jobs 4 --out tidy.txt
+  py -3 Scripts/lint/report/RunClangTidy.py                      # Source 전체
+  py -3 Scripts/lint/report/RunClangTidy.py --filter Core        # 경로에 Core 가 들어간 TU 만
+  py -3 Scripts/lint/report/RunClangTidy.py --preset Ninja-Debug-ASAN
+  py -3 Scripts/lint/report/RunClangTidy.py --jobs 4 --out tidy.txt
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from collections import Counter
 import pathlib
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import getProjectRoot, useUtf8Stdout
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")

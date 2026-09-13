@@ -21,7 +21,7 @@ X-macro 목록 파일(`*.xxx`)이 실제로 참조되는지 검사한다.
     3) cmake/Scripts/Config 의 텍스트에 저장소 기준 경로가 그대로 등장
   어느 것도 없으면 죽은 파일이다.
 
-  python Scripts/lint/CheckDataFileReferences.py [--root <repo>]
+  python Scripts/lint/gate/CheckDataFileReferences.py [--root <repo>]
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import getProjectRoot, mapConcurrent, useUtf8Stdout
 
 # 검사 대상 확장자 — X-macro 목록 파일.
@@ -67,6 +67,19 @@ def collectFilesInternal(repositoryRoot: Path, roots: tuple[str, ...], suffixes:
                     collected.append(Path(dirPath) / fileName)
     return collected
 
+
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "아무도 참조하지 않는 .xxx",
+        "files": {
+            "Source/Engine/Probe/Orphan.xxx": "PROBE_ENTRY(Alpha)\n",
+            "Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n',
+        },
+    },
+]
 
 def main() -> int:
     useUtf8Stdout()

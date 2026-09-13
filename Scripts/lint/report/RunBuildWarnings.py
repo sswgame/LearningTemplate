@@ -32,10 +32,10 @@
 작업을 마칠 때, 오래 안 본 구성을 볼 때, 남의 커밋을 받은 뒤에 돌린다.
 
 사용법:
-  py -3 Scripts/lint/RunBuildWarnings.py                       # Debug · Release · Shipping 전부
-  py -3 Scripts/lint/RunBuildWarnings.py --preset Ninja-Debug  # 한 구성만
-  py -3 Scripts/lint/RunBuildWarnings.py --filter Graphics     # 경로에 Graphics 가 든 TU 만
-  py -3 Scripts/lint/RunBuildWarnings.py --jobs 8 --out warnings.txt
+  py -3 Scripts/lint/report/RunBuildWarnings.py                       # Debug · Release · Shipping 전부
+  py -3 Scripts/lint/report/RunBuildWarnings.py --preset Ninja-Debug  # 한 구성만
+  py -3 Scripts/lint/report/RunBuildWarnings.py --filter Graphics     # 경로에 Graphics 가 든 TU 만
+  py -3 Scripts/lint/report/RunBuildWarnings.py --jobs 8 --out warnings.txt
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import getProjectRoot, useUtf8Stdout
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.

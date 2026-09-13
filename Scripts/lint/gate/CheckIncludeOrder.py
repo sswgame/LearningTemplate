@@ -8,7 +8,7 @@ Include 순서 및 스타일 검사 린터.
 2. 프로젝트 헤더 ("...") 인클루드가 시스템/외부 헤더 (<...>) 인클루드보다 먼저 와야 합니다.
 
 사용법:
-  python Scripts/lint/CheckIncludeOrder.py [--root <repo>]
+  python Scripts/lint/gate/CheckIncludeOrder.py [--root <repo>]
 """
 
 import argparse
@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import collectSourceFiles, flatMapConcurrent, getLintSearchDirs, getProjectRoot, kCppSourceExtensions, useUtf8Stdout
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
@@ -242,12 +242,37 @@ def processFile(filePath: Path, repositoryRoot: Path,
     return violationsList
 
 
-def main() -> int:
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "Engine 이 Core 보다 앞",
+        "files": {
+            "Source/Engine/Probe/Probe.cpp": (
+                '#include "pch.h"\n\n'
+                '#include "Engine/Common/EngineServices.h"\n'
+                '#include "Core/File/FileUtil.h"\n'
+            ),
+        },
+    },
+]
+
+def main(argv: list[str] | None = None) -> int:
+    """
+    기본은 **검사만** 한다. 고치려면 `--fix` 를 준다.
+
+    예전에는 정반대였다: 인자가 `--root` 뿐이라 `main()` 이 늘 **고치는 모드**로 돌았고, 위반을
+    찍은 뒤에도 무조건 `0` 을 돌려줬다. 그래서 CTest 에 "게이트" 로 등록돼 있는데도
+    **실패할 수가 없었고**, 대신 소스를 조용히 고쳐 놓았다(2026-09-14 에 음성 테스트가 잡았다).
+    고치는 일은 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다 — 그쪽은 그대로다.
+    """
     useUtf8Stdout()
 
     parser = argparse.ArgumentParser(description="Include 순서 검사")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    args = parser.parse_args()
+    parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
+    args = parser.parse_args(argv)
     repo = (args.root or getProjectRoot()).resolve()
 
     sourceDirs = getLintSearchDirs(repo)
@@ -256,13 +281,16 @@ def main() -> int:
     sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repo)
 
     violations = flatMapConcurrent(
-        lambda path: processFile(path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap), allFiles
+        lambda path: processFile(path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap,
+                                 checkOnly=not args.fix),
+        allFiles,
     )
 
     if violations:
-        print("[CheckIncludeOrder] Include 순서 규칙 위반:")
+        print("[CheckIncludeOrder] Include 순서 규칙 위반:", file=sys.stderr)
         for violation in violations:
             print(f"  - {violation}")
+        return 1
 
     print(f"[CheckIncludeOrder] OK ({len(allFiles)} files scanned)")
     return 0

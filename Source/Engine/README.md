@@ -46,7 +46,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **배선 파일**: `Common/EngineServices.cpp`, `Reflection/ReflectGenerated.h`,
   `Resource/ResourceManager.cpp`. 노출하는 모든 서브시스템을 알아야 하는 자리입니다.
 
-금지 include 자동화: `py -3 Scripts/lint/CheckEngineLayers.py`
+금지 include 자동화: `py -3 Scripts/lint/gate/CheckEngineLayers.py`
 (Engine → `Editor/` / `GameFramework/` / `Games/` 금지 + 위 티어 방향. **위반은 실패입니다** —
 예전에는 손으로 고른 네 쌍만 경고로 찍고 실패시키지 않아서, 쌓여도 아무도 몰랐습니다.)
 

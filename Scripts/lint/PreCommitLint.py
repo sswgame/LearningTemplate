@@ -25,13 +25,13 @@ scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
-import CheckCodeConventions
-import CheckIncludeOrder
-import CheckRenderOwnership
-import CheckResourceCasing
-import CheckTestSuites
-import FormatBranchBraces
-import FormatForwardDeclarations
+from gate import CheckCodeConventions
+from gate import CheckIncludeOrder
+from gate import CheckRenderOwnership
+from gate import CheckResourceCasing
+from gate import CheckTestSuites
+from fixer import FormatBranchBraces
+from fixer import FormatForwardDeclarations
 from common import (
     getAllStagedFiles,
     getProjectRoot,
@@ -204,7 +204,7 @@ def main() -> int:
             hasErrors = True
             print(
                 "  [Error] 포맷팅 규칙에 어긋나는 파일이 있습니다. "
-                "'python Scripts/lint/FormatModified.py'를 실행하여 자동 수정한 뒤 다시 git add 하세요."
+                "'python Scripts/lint/fixer/FormatModified.py'를 실행하여 자동 수정한 뒤 다시 git add 하세요."
             )
         else:
             print("  - 포맷팅 OK")

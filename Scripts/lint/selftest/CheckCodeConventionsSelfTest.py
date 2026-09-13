@@ -7,7 +7,7 @@
 이라 통과처럼 보인다. 이 저장소는 실제로 그런 일을 겪었다 — 그래서 규칙마다 **일부러 어긴 조각**을 두고
 그것이 잡히는지 본다. 잡히지 않으면 그 규칙은 죽은 것이다.
 
-  python Scripts/lint/CheckCodeConventionsSelfTest.py [--root <repo>] [--verbose]
+  python Scripts/lint/selftest/CheckCodeConventionsSelfTest.py [--root <repo>] [--verbose]
 
 **조각은 되도록 규칙이 직접 든다.** `ConventionRule` 을 상속한 규칙은 `badSample` 에 자기 위반 조각을
 적어 두고, 이 검사가 그것을 읽어 온다 — 규칙과 증거가 붙어 있으면 둘이 어긋날 수가 없다.
@@ -25,10 +25,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-import CheckCodeConventions  # noqa: E402
+from gate import CheckCodeConventions  # noqa: E402
 from common import useUtf8Stdout  # noqa: E402
 
 # ------------------------------------------------------------------------------
@@ -160,15 +160,15 @@ def categoriesForTreeInternal(root: Path) -> set[str]:
     return {v.rule_category for v in CheckCodeConventions.runConventionsCheck(root)}
 
 
-def knownCategoriesInternal(lintPath: Path) -> set[str]:
+def knownCategoriesInternal() -> set[str]:
     """`CheckCodeConventions.py` 가 실제로 만들 수 있는 카테고리 전부."""
-    text = lintPath.read_text(encoding="utf-8", errors="ignore")
+    text = Path(CheckCodeConventions.__file__).read_text(encoding="utf-8", errors="ignore")
     return set(re.findall(r'rule_category="([^"]+)"', text))
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="CheckCodeConventions 음성 테스트")
-    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]))
+    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[3]))
     parser.add_argument("--verbose", action="store_true", help="조각마다 잡힌 카테고리를 모두 출력")
     args = parser.parse_args(argv)
     useUtf8Stdout()
@@ -243,7 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         shutil.rmtree(tempRoot, ignore_errors=True)
 
     # --- 덮이지 않은 카테고리 ---
-    known = knownCategoriesInternal(repoRoot / "Scripts" / "lint" / "CheckCodeConventions.py")
+    known = knownCategoriesInternal()
     uncovered = sorted(known - covered)
 
     if uncovered:

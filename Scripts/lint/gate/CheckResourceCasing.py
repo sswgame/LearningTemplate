@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/CheckResourceCasing.py
+Scripts/lint/gate/CheckResourceCasing.py
 
 Resource/ 디렉터리 하위의 모든 파일 및 폴더명이 완전한 소문자(Lowercase)인지 검사합니다.
 Linux ext4 등 대소문자 구분 파일시스템 호환성 및 엔진 에셋 명명 표준을 강제합니다.
@@ -27,7 +27,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import getProjectRoot, useUtf8Stdout
 
 _kAllowedUppercaseBasenames = {"README.md"}
@@ -74,6 +74,18 @@ def checkResourceCasing(projectRoot: Path, targetFiles: Sequence[str] | None = N
 
     return violations
 
+
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "대문자 리소스 경로",
+        "files": {
+            "Resource/engine/Textures/Splash.png": "probe",
+        },
+    },
+]
 
 def main() -> int:
     useUtf8Stdout()

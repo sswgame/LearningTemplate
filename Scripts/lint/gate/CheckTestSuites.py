@@ -34,7 +34,7 @@
      파일이 옮겨져 경로가 죽는 것(실제로 있었다)과, ImGui 를 타는 파일이 섞여 들어오는 것
      (EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 
-  python Scripts/lint/CheckTestSuites.py [--root <repo>]
+  python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import useUtf8Stdout  # noqa: E402
 
 _kTestRoot = "Test"
@@ -209,6 +209,35 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
 
     return errors, len(homes), len(cases)
 
+
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "스위트 이름이 XxxTest 가 아님",
+        "files": {
+            "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n",
+            "Test/EngineTest/CMakeLists.txt": (
+                "add_test(\n\tNAME EngineTest_NoGPU\n"
+                "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
+            ),
+            "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+        },
+    },
+    {
+        "name": "한 스위트가 두 파일에",
+        "files": {
+            "Test/EngineTest/TestProbeA.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
+            "Test/EngineTest/TestProbeB.cpp": "SW_TEST_CASE( ProbeTest, Two )\n{\n}\n",
+            "Test/EngineTest/CMakeLists.txt": (
+                "add_test(\n\tNAME EngineTest_NoGPU\n"
+                "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
+            ),
+            "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+        },
+    },
+]
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="테스트 스위트 규칙 검사")

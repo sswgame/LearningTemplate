@@ -26,7 +26,7 @@ MaterialInstance 로 실제로 그랬다(ASAN heap-use-after-free). 그리고 �
   정체성 키(비교만 하고 역참조하지 않는다)는 생포인터가 맞다. 그런 구조체는 선언 바로 위에
   `// SW_OWNERSHIP_RAW_OK: <이유>` 를 적는다. 이유 없는 예외는 다음 사람이 같은 판단을 다시 하게 만든다.
 
-  python Scripts/lint/CheckRenderOwnership.py [--root <repo>]
+  python Scripts/lint/gate/CheckRenderOwnership.py [--root <repo>]
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from common import useUtf8Stdout  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
@@ -152,6 +152,27 @@ def checkTransportedHeaders(rootDir: Path) -> tuple[list[str], int]:
                 )
     return errors, checkedCount
 
+
+
+# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
+# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
+kSelfTestCases = [
+    {
+        "name": "스냅샷 구조체에 생포인터",
+        "files": {
+            "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
+                "#pragma once\n\n"
+                "struct GpuProbe\n"
+                "{\n"
+                "    Material* _pMaterial{ nullptr };\n"
+                "};\n"
+            ),
+            "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
+                "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
+            ),
+        },
+    },
+]
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="렌더 패킷 소유 규칙 검사")

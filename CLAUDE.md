@@ -68,22 +68,35 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate c
 
 ## Linting
 
-`Scripts/lint/*.py` enforce the conventions; the same scripts run as `lint`-labelled CTest tests and as
-the git pre-commit hook (`Scripts/setup/InstallGitHooks.py` installs it, `PreCommitLint.py` runs it over
-staged files only). The naming splits the two jobs: **`Check*` gates** (fails the build/commit),
-**`Run*` reports** (always exits 0, you read the output and decide).
+`Scripts/lint/**/*.py` enforce the conventions; the same scripts run as `lint`-labelled CTest tests and
+as the git pre-commit hook (`Scripts/setup/InstallGitHooks.py` installs it, `PreCommitLint.py` runs it
+over staged files only). **The folder says what a script does to you** — that is the whole taxonomy:
+
+| folder | does | exit code |
+|--------|------|-----------|
+| `lint/gate/` | fails the build and blocks the commit | non-zero on any violation |
+| `lint/fixer/` | rewrites your files | 0 (or non-zero under `--check`) |
+| `lint/report/` | prints, you decide | always 0 |
+| `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
+
+`PreCommitLint.py` stays at `lint/` because it orchestrates all four.
+
+**Adding a gate is dropping a file into `lint/gate/`.** `CheckLintsAreAlive.py` enumerates that folder,
+so a new gate is picked up with no list to edit — and it must carry a `kSelfTestCases` snippet proving it
+still catches something (or a `kSelfTestSkipReason` saying why it cannot), or the self-test fails.
 
 ```powershell
-py -3 Scripts/lint/CheckCodeConventions.py                 # naming/style rules (CI gate)
-py -3 Scripts/lint/CheckCodeConventions.py --files <path>  # single file
-py -3 Scripts/lint/CheckCodeConventionsSelfTest.py         # are those rules still alive? (CI gate)
-py -3 Scripts/lint/CheckIncludeOrder.py
-py -3 Scripts/lint/CheckEngineLayers.py                    # Engine must not include Editor/GameFramework/Games
-py -3 Scripts/lint/CheckResourceCasing.py                  # everything under Resource/ must be lowercase
-py -3 Scripts/lint/FormatBranchBraces.py --check            # if/case 중괄호 규칙 검사
-py -3 Scripts/lint/FormatModified.py                       # clang-format the working-tree changes
-py -3 Scripts/lint/RunBuildWarnings.py                     # compiler warnings still in the tree (report, not a gate)
-py -3 Scripts/lint/RunClangTidy.py                         # static analysis (report, not a gate)
+py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
+py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
+py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--fix` to rewrite
+py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games
+py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
+py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
+py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
+py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
+py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
+py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
+py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 30 rules still bite? (CI gate)
 ```
 
 - **Grepping a build for `warning:` does not work.** A warning is printed only when that TU is compiled,

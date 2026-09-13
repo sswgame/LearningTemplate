@@ -39,14 +39,28 @@ Scripts/
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
   │     └── AddDefenderExclusions.py  # Windows Defender 빌드 폴더 예외 등록
   │
-  ├── lint/                           # [정적 검사 및 코드 스타일 계층]
-  │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사
-  │     ├── RunClangFormat.py         # clang-format 자동 포맷팅
-  │     ├── CheckCodeConventions.py   # C++ 엔진 코딩 컨벤션 정적 검사
-  │     ├── CheckEngineLayers.py      # 아키텍처 레이어 침범 검사
-  │     ├── CheckIncludeOrder.py      # 인클루드 순서 및 중복 검사
-  │     ├── CheckResourceCasing.py    # 리소스 소문자 명명 강제 검사
-  │     └── CheckSourceGlob.py        # CMake GLOB 소스 누락 검사
+  ├── lint/                           # [정적 검사 및 코드 스타일 계층] — 폴더가 곧 성격이다
+  │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
+  │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
+  │     │     ├── CheckCodeConventions.py   # C++ 엔진 코딩 컨벤션 (규칙 하나 = 클래스 하나)
+  │     │     ├── CheckEngineLayers.py      # 아키텍처 레이어 침범
+  │     │     ├── CheckIncludeOrder.py      # 인클루드 순서·중복 (기본 검사, `--fix` 로 수정)
+  │     │     ├── CheckResourceCasing.py    # 리소스 소문자 명명
+  │     │     ├── CheckSourceGlob.py        # CMake GLOB 소스 누락 + RHI 백엔드 목록
+  │     │     ├── CheckDataFileReferences.py # 아무도 include 하지 않는 죽은 데이터 파일
+  │     │     ├── CheckRenderOwnership.py   # 렌더 스냅샷 소유 규칙
+  │     │     └── CheckTestSuites.py        # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식
+  │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
+  │     │     ├── FormatBranchBraces.py     # if 계열 중괄호 (`--check` 면 검사만)
+  │     │     ├── FormatForwardDeclarations.py
+  │     │     └── FormatModified.py         # 작업 트리 변경분에 clang-format
+  │     ├── report/                   # 찍어 줄 뿐, 언제나 0 으로 끝난다
+  │     │     ├── RunBuildWarnings.py       # 트리에 남아 있는 컴파일러 경고
+  │     │     ├── RunClangFormat.py
+  │     │     └── RunClangTidy.py
+  │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
+  │           ├── CheckLintsAreAlive.py     # gate/ 를 훑어 각 게이트가 아직 무는지 확인
+  │           └── CheckCodeConventionsSelfTest.py # 규칙 30종이 아직 무는지 확인
   │
   └── __main__.py                     # ★ 통합 CLI 오케스트레이터 (`py -3 -m Scripts <cmd>`)
 ```
@@ -71,8 +85,8 @@ py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (
 ```bash
 py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/generate/CookAssets.py --all
-py -3 Scripts/lint/CheckEngineLayers.py
-py -3 Scripts/lint/RunClangFormat.py
+py -3 Scripts/lint/gate/CheckEngineLayers.py
+py -3 Scripts/lint/report/RunClangFormat.py
 py -3 Scripts/generate/BakeShippingHostDefaults.py build/generated/sw/config/ShippingHostDefaults.h
 ```
 

@@ -307,7 +307,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
 컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만
-`Scripts/lint/CheckRenderOwnership.py` 가 본다(CTest `lint` 라벨 · pre-commit 6/6).
+`Scripts/lint/gate/CheckRenderOwnership.py` 가 본다(CTest `lint` 라벨 · pre-commit 6/6).
 재현·회귀 테스트: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` (ASAN 프리셋에서 수정 전 UAF 를 잡았다),
 `RenderPassGpuTest.RendererSurvivesDeviceRecreate` (디바이스 재생성 뒤 유리 큐브 — 수정 전 빈 화면).
 헤드리스 재현: `-gv_rhiSwapAtFrame=30 -gv_rhiSwapTo=<0..3>` (DX11=0 · DX12=1 · Vulkan=2 · GL=3) 과 `-gv_screenshotFrame=100`.
@@ -532,7 +532,7 @@ py -3 Scripts/dev/BackendSmoke.py                                               
   `684 481`(클라이언트 영역)로 따라와야 하고, 로그의 `[Error]` 는 0 이어야 한다.
 - **빌드 로그를 grep 해서는 경고를 셀 수 없다.** 경고는 그 TU 가 컴파일되는 순간에만 나오고, ninja 는
   바뀌지 않은 파일을 다시 컴파일하지 않는다 — 경고를 들여온 그 빌드 이후로는 영원히 안 보인다.
-  `py -3 Scripts/lint/RunBuildWarnings.py` 가 트리 전체에 다시 물어본다(기본이 Debug · Release · Shipping
+  `py -3 Scripts/lint/report/RunBuildWarnings.py` 가 트리 전체에 다시 물어본다(기본이 Debug · Release · Shipping
   셋이다 — 구성마다 경고 집합이 다르다). **0 이 정답이다.**
 
 ---

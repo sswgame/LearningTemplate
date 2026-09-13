@@ -38,7 +38,7 @@ jobs:
 
     - name: Run Code Conventions Check
       run: |
-        python3 Scripts/lint/CheckCodeConventions.py
+        python3 Scripts/lint/gate/CheckCodeConventions.py
 
   build:
     name: ${{ matrix.name }}
