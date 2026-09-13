@@ -103,12 +103,34 @@ namespace test
 
     void TestRegistry::listTests() const
     {
-        std::fprintf( stdout, "Registered tests (%u):\n", static_cast<uint32>( _listTest.size() ) );
-        SW_LOG_INFO( "Registered tests (%#):", static_cast<uint32>( _listTest.size() ) );
+        // **필터를 적용해서 센다.** 예전에는 `_listTest` 를 통째로 찍어서, `--test_list` 와
+        // `--test_filter` 를 같이 주면 필터가 조용히 무시됐다. 하필 "내 필터가 무엇을 고르나" 를
+        // 확인할 때 쓰는 기능이라, 틀린 답을 주면 그걸 믿고 필터를 잘못 적는다.
+        sw::vector<sw::string> listSelected;
+        listSelected.reserve( _listTest.size() );
         for ( const TestCaseInfo& testInfo : _listTest )
         {
-            std::fprintf( stdout, "  %s\n", testInfo.fullName().c_str() );
-            SW_LOG_INFO( "  %#", testInfo.fullName().c_str() );
+            if ( _filter.matches( testInfo.fullName() ) )
+                listSelected.push_back( testInfo.fullName() );
+        }
+
+        const uint32 selectedCount = static_cast<uint32>( listSelected.size() );
+        const uint32 totalCount    = static_cast<uint32>( _listTest.size() );
+        if ( selectedCount == totalCount )
+        {
+            std::fprintf( stdout, "Registered tests (%u):\n", totalCount );
+            SW_LOG_INFO( "Registered tests (%#):", totalCount );
+        }
+        else
+        {
+            std::fprintf( stdout, "Registered tests (%u selected / %u total):\n", selectedCount, totalCount );
+            SW_LOG_INFO( "Registered tests (%# selected / %# total):", selectedCount, totalCount );
+        }
+
+        for ( const sw::string& fullName : listSelected )
+        {
+            std::fprintf( stdout, "  %s\n", fullName.c_str() );
+            SW_LOG_INFO( "  %#", fullName.c_str() );
         }
         std::fflush( stdout );
     }

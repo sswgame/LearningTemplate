@@ -57,14 +57,16 @@ if(SW_ENABLE_STL_CONTAINER)
 	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Using std::allocator for containers")
 endif()
 
+
 # ------------------------------------------------------------------------------
 # IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Release)
 # ------------------------------------------------------------------------------
 set(sw_ipo_supported FALSE)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-	include(CheckIPOSupported)
-	check_ipo_supported(RESULT sw_ipo_supported OUTPUT sw_ipo_error)
+# `SW_ENABLE_LTO` 가 여기도 걸린다. 예전엔 이 전역 IPO 에 스위치가 없어서, 옵션을 OFF 로 줘도
+# Release 는 여전히 LTO 로 갔다 — 옵션 설명("Shipping 배포 빌드 시")과도 어긋났다. 이제 한 스위치다.
+if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
+	sw_checkIpoSupport(sw_ipo_supported sw_ipo_error)
 
 	if(sw_ipo_supported)
 		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)

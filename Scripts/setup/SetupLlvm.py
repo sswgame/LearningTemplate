@@ -50,6 +50,9 @@ from common import (
     toolsCacheDir,
 )
 
+# llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
+# MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로
+# 꺼진다 — `SW_ENABLE_LTO=ON` 인데도 -flto 가 한 TU 에도 안 걸리는 상태로 오래 있었다(2026-09-14).
 _kWinKeepBinExes: set[str] = {
     "clang-cl.exe",
     "clang.exe",
@@ -57,6 +60,7 @@ _kWinKeepBinExes: set[str] = {
     "clang-format.exe",
     "lld-link.exe",
     "lld.exe",
+    "llvm-lib.exe",
     "llvm-rc.exe",
 }
 _kPosixKeepBinNames: set[str] = {
@@ -66,6 +70,7 @@ _kPosixKeepBinNames: set[str] = {
     "clang-format",
     "lld",
     "ld.lld",
+    "llvm-ar",
     "llvm-rc",
 }
 _kTarKeepPrefixes = (
@@ -160,6 +165,10 @@ def isMinimalLlvmRoot(path: str) -> bool:
     binDir = root / "bin"
     if platform.system() == "Windows":
         if not (binDir / "clang-cl.exe").is_file():
+            return False
+        # llvm-lib 도 "최소 유효" 의 일부다. 없으면 LTO 가 통째로 꺼진다 — 그것도 조용히
+        # (자세한 이유는 _kWinKeepBinExes 주석). 이 검사에 넣어야 **이미 설치된 트리도 복구된다**.
+        if not (binDir / "llvm-lib.exe").is_file():
             return False
         if not findLibClangDllPath(str(root)):
             return False

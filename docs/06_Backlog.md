@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `7c7a066f`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `71969e11`
 
 ---
 
@@ -295,6 +295,66 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (LTO 가 켜져 있다고 되어 있는데 한 TU 에도 안 걸리고 있었다 — 원인 넷)
+
+`foo.lib LNK1107` 을 두 번 미루다 끝까지 따라갔더니 그게 표면이었다. 밑에 있던 것은
+**`SW_ENABLE_LTO=ON` 인데 `-flto` 가 어디에도 안 걸리는 상태** 였다(Shipping 452 TU 중 **0 개**, 실측).
+
+**원인이 넷이고, 넷 다 막아야 풀렸다.**
+
+1. **`SetupLlvm.py` 가 `llvm-lib.exe` 를 안 받았다.** 설치본을 파일 일곱 개 허용 목록으로 잘라내는데
+   거기 없었다. clang 이 `-flto` 로 내는 .obj 는 LLVM 비트코드라 **MSVC `lib.exe` 는 못 읽는다**(LNK1107).
+2. **아카이버 탐색이 저장소가 고정한 LLVM 을 아예 안 봤다.** `$ENV{LLVM_DIR}` · `$ENV{LLVM_ROOT}` 만
+   보고 없으면 MSVC `lib.exe` 로 떨어졌다. 정작 컴파일러는 `Tools/LLVM` 것을 쓴다 — 짝이 어긋나 있었다.
+3. **캐시를 고쳐도 일반 변수가 그것을 가렸다.** `project()` 의 컴파일러 탐지가 같은 이름의 **일반
+   변수** `CMAKE_AR` 을 최상위 스코프에 만들고, 일반 변수는 캐시를 가린다. 그래서 캐시엔 llvm-lib 이
+   적혀 있는데 읽는 쪽은 lib.exe 를 보고 있었다. `sw_bindClangClWindowsTools` 가 "project() 뒤에 다시
+   묶는다" 는 자기 존재 이유대로 동작하지 못하고 있었던 것이다.
+4. **CMake 의 `check_ipo_supported` 는 이 툴체인에서 구조적으로 거짓을 말한다.** 그것은
+   `try_compile(... PROJECT ...)` 로 별도 프로젝트를 구성해 재는데, 그 형식은 `CMAKE_AR` 을 하위
+   프로젝트로 **넘기지 않는다**. 하위 프로젝트는 아카이버를 스스로 찾아 MSVC lib.exe 를 집고 LNK1107 로
+   죽는다 — 그리고 CMake 는 그것을 "이 컴파일러는 IPO 를 지원하지 않는다" 로 보고한다. 컴파일러는
+   멀쩡한데. 그래서 clang + llvm-lib 조합은 `cmake/Config/IpoSupport.cmake` 에서 직접 판정한다.
+
+**`SW_ENABLE_LTO` 가 이제 진짜 스위치다.** 예전엔 Shipping 경로만 그 옵션을 봤고 Release 의 전역 IPO 는
+스위치가 아예 없었다(옵션 설명과도 어긋났다). 이제 한 스위치가 둘 다 끈다 — 그래서 아래 측정이 가능했다.
+
+**측정 (Release, 각 3회, 중앙값)**
+
+| | LTO OFF | LTO ON |
+| --- | ---: | ---: |
+| 클린 빌드 | 45초 | **47초** |
+| `GT.GpuScene.build` | 127us | **115us** |
+| `GT.Frame` | 1121us | 1109us |
+| `RT.Frame` | 1308us | 1262us |
+
+결정은 **켠다** 이다. 근거는 프레임 총합이 아니라 `GpuScene.build` 다 — OFF 표본 셋(122·127·138)이
+전부 ON 표본 셋(108·115·120)보다 크다. 구간이 겹치지 않는 유일한 항목이고, 하필 게임 스레드의 지배적
+CPU 비용이다(이 문서 위쪽 "주광 조회" · "프로파일러가 RT 샘플을 버렸다" 참고). 프레임 총합은 구간이
+겹쳐서 주장하지 않는다. 빌드 비용은 +2초(+5%)다.
+
+바이너리 크기도 같이 봤다: `Engine.dll` 3.89MB → 4.47MB(+15%, 인라이닝), `SWGame.dll` -3%,
+`GF_TurnBattle.dll` -2%, `App.exe` 변화 없음.
+
+> **덤으로 `foo.lib LNK1107` 이 사라졌다.** 그 소음의 정체가 바로 4번의 탐지였다. 잡음이 아니라
+> **빌드를 중간에 끊고 있었다** — 어제 그것 때문에 갱신 안 된 Shipping 바이너리로 테스트를 돌려 한 번
+> 속았다. 이제 Release·Shipping 구성 출력에 그 문자열이 0 건이다.
+
+**같이 고친 것 셋**
+
+- **`--test_list` 가 `--test_filter` 를 조용히 무시했다.** 하필 "내 필터가 무엇을 고르나" 를 확인할 때
+  쓰는 기능이다. 이제 필터를 적용하고 `(410 selected / 460 total)` 처럼 둘 다 보여준다 — 그 410 은
+  실제 CI 실행 수와 같다.
+- **`Test/TestFramework/CMakeLists.txt` 가 저장소에서 마지막으로 남은 손으로 적는 소스 목록이었다.**
+  GLOB 으로 바꿨다. `main.cpp` 만 빼는데, 테스트 실행 파일마다 자기 main 이 필요해서
+  `sw_addTestExecutable` 이 타겟마다 따로 붙이기 때문이다 — 그 이유를 목록 자리에 적었다.
+- 전체 `ctest` 가 EngineTest 를 두 번 도는 것(460 + 410)은 **의도된 것** 이라고 CMake 에 적었다.
+  CI 는 `-L nogpu` 로 부분집합을, 개발자는 전체를 돈다. 48초 중 3초라 없앨 이유가 없다.
+
+**확인**: `Ninja-Debug` ctest **14/14** · `CI-Debug`(유니티) · `Ninja-Release` · `Ninja-Shipping`
+nogpu 각 5/5 (**LTO 켠 채로**) · `RunBuildWarnings` 세 구성 0건 · Release·Shipping 구성 출력에
+`foo.lib`/`LNK1107` 0건
+
 ### 2026-09-14 (어제 넣은 린트가 케이스 둘을 놓치고 있었다 — 그리고 그걸 쫓다 배포본 세그폴트를 찾았다)
 
 어제 만든 `CheckTestSuites.py` 가 **자기 구멍을 못 보고** 있었다. 바이너리 등록 수(809)와 소스에서 센
@@ -350,9 +410,8 @@ SmokeTest 19 → 1 은 의도된 것이다(핫 리로드가 배포본에 없다)
 `SW_ASSERT_NULL` 은 부를 자리가 **하나도 없어서** 만들지 않았다 — 짝을 맞추려고 만들면 어제 걷어낸
 `TestFixture` 와 같은 것이 하나 더 생긴다. 왜 없는지는 매크로 자리에 적어 두었다.
 
-> **여전히 열린 것**: `Ninja-Release` · `Ninja-Shipping` 빌드 끝의 `foo.lib LNK1107`. CMake 의
-> `/showIncludes` 탐지 잔재이고 실제 타겟은 전부 빌드된다. 다만 **빌드를 중간에 끊어서** 그 실행의
-> 산출물이 갱신되지 않은 채로 테스트를 돌리게 만든다 — 이번에 실제로 한 번 속았다(한 번 더 빌드하면 된다).
+> **`foo.lib LNK1107` 는 2026-09-14 에 원인까지 닫혔다** — 아래 "LTO 가 켜져 있다고..." 항목 참고.
+> CMake 의 `/showIncludes` 잔재가 아니라 **IPO 지원 탐지**였다.
 
 **확인**: 케이스 이름 전수 비교 **810 → 810 차이 0** · `CheckTestSuites` 122 스위트 810 케이스 ·
 `Ninja-Debug` ctest **14/14** · `CI-Debug`(유니티) · `Ninja-Release` · `Ninja-Shipping` nogpu 각 5/5 ·
