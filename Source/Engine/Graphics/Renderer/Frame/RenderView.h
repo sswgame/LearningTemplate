@@ -7,6 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -50,11 +51,10 @@ namespace sw
          * @details **뷰마다 하나여야 한다.** 하나를 나눠 쓰면 두 번째 업로드가 첫 번째 디스패치가 읽을
          *          내용을 덮어쓴다 — CPU 는 디스패치 사이에 쓰지만 GPU 는 제출 뒤에 읽기 때문이다.
          */
-        RHIBufferHandle    _cullCb{ 0 };
-        RHIDescriptorIndex _cullCbIndex{ kInvalidDescriptorIndex };
+        RHIConstantBufferSlot _cullCb;
 
         /** @brief 컬링을 돌릴 준비가 됐는가 (상수버퍼가 있는가). */
-        bool isReadyForCulling() const { return _cullCb != 0 && _cullCbIndex != kInvalidDescriptorIndex; }
+        bool isReadyForCulling() const { return _cullCb.isValid(); }
 
         /**
          * @brief 뷰 행렬을 정하고 절두체를 **함께** 갱신합니다.

@@ -67,9 +67,11 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 명령 기록 — 모든 백엔드가 소프트웨어 replay 없이 즉시 `*RHICommandContext`를 호출 |
 | `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/Support/ | 핸들·프레임링·지연 해제 |
-| `RHIRenderResource` · `RHIResidentBuffer` · `RHIStructuredBufferSlot` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 · 구조버퍼 슬롯 한 벌 |
+| `RHIRenderResource` · `RHIResidentBuffer` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 |
+| `RHIStructuredBufferSlot` · `RHIConstantBufferSlot` | RHI/ | 버퍼 + 뷰/인덱스 한 벌 — 만들기·갱신·해제 순서를 타입이 안다. 구조버퍼는 용량이 변하고(`ensureCapacity`) 상수버퍼는 안 변한다(`create`) |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
-| `ShaderCompiler` · `ShaderCache` · `ShaderBaker` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 오프라인 베이크, 수동 리로드 |
+| `ShaderCompiler` · `ShaderCache` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
+| `ShaderBakeRecipe` · `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크 — 무엇을 구울지 · 이미 최신인지(내용 해시) · 굽고 이름 짓기 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
@@ -77,6 +79,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
 | `PassConstantRing` · `RenderPsoCache` · `TransientAttachmentPool` | Renderer/Frame/ | FrameRenderer 가 소유하는 셋 — 드로우별 상수버퍼 슬롯 링 · PSO 저장소(해제 순서) · 이름으로 찾는 첨부 풀 |
+| `FrameRendererCompute` | Renderer/Frame/ | 컴퓨트 프리패스 넷 — 인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬. 그래프 패스가 아니라 그리기 전에 직접 걸린다 |
 | `RenderGraph` | Renderer/Graph/ | 패스 의존성 정렬·배리어 추론 |
 | `RenderThread` | Renderer/ | 렌더 스레드 루프 |
 | `GpuSceneBuilder` → `GpuSceneSnapshot` → `GpuScene` | Renderer/Scene/ | GT 가 씬을 훑어 스냅샷을 만들고 RT 가 받아 GPU 버퍼로 올린다 — 두 클래스는 스냅샷 타입으로만 만난다 |

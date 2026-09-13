@@ -227,6 +227,9 @@ if(COMMAND sw_setUnityBuild)
         sw_skipUnitySources(Engine
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRenderer.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererTransients.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererResources.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererReadback.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererDraw.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererConstants.cpp"

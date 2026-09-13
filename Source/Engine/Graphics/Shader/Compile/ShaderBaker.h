@@ -41,6 +41,23 @@ namespace sw
     };
 
     /**
+     * @struct ShaderBakeRecipe
+     * @brief 구울 것 하나 — (셰이더 · 진입점 · 스테이지 · define).
+     * @details "무엇을 구울지" 는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderBakeRecipe.cpp`), "어떻게 굽는지" 는
+     *          그것을 받아 컴파일한다(`ShaderBaker.cpp`). 그 둘 사이를 넘는 값이라 여기 있다 — 예전엔 TU 로컬이라
+     *          "이 빌드가 무엇을 구웠나" 를 밖에서 볼 길이 없었다.
+     */
+    struct ShaderBakeRecipe
+    {
+        string         _shaderPath;
+        string         _entryPoint;
+        ShaderStage    _stage{ ShaderStage::Vertex };
+        vector<string> _listPermutation;
+        /// @brief `_listPermutation` 의 해시 — 구운 파일 이름에 들어간다(순서 무관).
+        uint64 _permHash{ 0 };
+    };
+
+    /**
      * @struct ShaderBaker
      * @brief HLSL 소스 코드를 타깃 백엔드(DXIL, SPIR-V, DXBC) 바이너리로 사전 컴파일(베이킹)하는 엔진 유틸리티
      */
@@ -72,6 +89,19 @@ namespace sw
         static uint32 bakeAllShaders( string_view        resourceRoot = {},
                                       ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
                                       bool               bForceAll    = false );
+
+        /**
+         * @brief 이 리소스 트리가 구워야 할 레시피를 전부 모읍니다 (파이프라인 XML + 머티리얼).
+         * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 레시피가 어긋나면 Shipping 이 매니페스트 미스로 떨어진다 —
+         *          그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 자리를 봐야 한다.
+         */
+        static void collectAllRecipes( string_view rootDir, vector<ShaderBakeRecipe>& outListRecipe );
+
+        /** @brief `bin/<rhi>/bake.stamp` 를 지금 소스의 내용 해시로 다시 씁니다 (베이크가 끝난 뒤). */
+        static void writeBakeStamp( string_view binDirectory );
+
+        /** @brief 셰이더 파일의 스템을 소문자로 — 구운 파일 이름의 앞부분이다(`computeBinaryFileName` 의 짝). */
+        static string getStemLower( string_view filePath );
 
         /** @brief 매크로 순열(문자열 목록)로부터 64비트 고유 해시값을 계산합니다. (순열 없으면 0 반환) */
         static uint64 computePermutationHash( const vector<string>& listPermutation );

@@ -509,10 +509,8 @@ namespace sw
          */
         RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
 
-        RHIBufferHandle    _instanceAnimCb;
-        RHIDescriptorIndex _instanceAnimCbIndex;
-        RHIBufferHandle    _meshMorphCb;
-        RHIDescriptorIndex _meshMorphCbIndex;
+        RHIConstantBufferSlot _instanceAnimCb;
+        RHIConstantBufferSlot _meshMorphCb;
         /// @brief GPU 가 변형한 정점 풀 — RT 소유(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
         /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는가.
@@ -536,9 +534,8 @@ namespace sw
         /// @brief 씬 라이트 구조버퍼 — RT 소유. 포워드·디퍼드가 같은 버퍼를 읽는다.
         GpuLightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼 — 프레임마다 할당하지 않으려고 들고 있는다.
-        vector<GpuLight>   _listScratchLight;
-        RHIBufferHandle    _instanceSortCb;
-        RHIDescriptorIndex _instanceSortCbIndex;
+        vector<GpuLight>      _listScratchLight;
+        RHIConstantBufferSlot _instanceSortCb;
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는가 (가시 목록이 유효한가).
          * @details 드로우가 가시 목록을 걸지 말지 정하는 값이다. 목록을 걸었는데 컬링이 안 돌면 셰이더가

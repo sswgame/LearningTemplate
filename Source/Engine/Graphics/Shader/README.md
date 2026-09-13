@@ -19,6 +19,14 @@ Shader/
   이름과 달리 `ResourceManager` 가 아닙니다 — 셰이더 바이트코드는 RHI/컴파일러 수명입니다.
 - `ShaderBaker` — 오프라인 베이크. `App.exe --bake-shaders` 가 여기를 부릅니다.
   바이너리와 함께 **리플렉션 매니페스트**(`Reflection/ShaderReflectionLibrary`)도 굽습니다.
+  세 파일로 나뉘고 각자 입력이 다릅니다:
+  - `ShaderBakeRecipe` — **무엇을 구울지**. 파이프라인 XML 과 머티리얼을 훑어 `ShaderBakeRecipe` 목록을 만든다.
+    런타임이 만드는 퍼뮤테이션과 어긋나면 Shipping 이 매니페스트 미스로 떨어지므로, define 합치기와 패스 기본 셰이더를
+    고르는 규칙이 런타임과 같은 자리를 봐야 한다.
+  - `ShaderBakeStamp` — **이미 최신인가**. 판정은 파일 시간이 아니라 **내용 해시**다(`bake.stamp`).
+    구운 바이너리를 커밋하는 저장소라 mtime 은 `git pull` 이 임의 순서로 덮어쓴다 — 그래서 낡은 바이너리가 최신으로
+    판정돼 Vulkan 만 다른 그림을 내던 적이 있다.
+  - `ShaderBaker` — **굽고 이름 짓기**. 레시피 하나를 받아 컴파일하고, 구운 파일 이름(스템·스테이지·퍼뮤테이션 해시)을 정한다.
 - `LiveShaderManager` — 등록된 셰이더를 **요청 시** 다시 컴파일합니다. `ReloadShaders`(Ctrl+F8) 가
   `triggerReloadAll` → `update` 를 돌립니다. 파일 감시로 자동 재컴파일하던 경로는 없앴습니다.
 

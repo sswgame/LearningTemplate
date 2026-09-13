@@ -55,8 +55,12 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 
 ### Frame/ — 실제로 그린다
 
-- `FrameRenderer` — 프레임 실행의 중심. 파일이 여럿으로 나뉩니다.
-  - `FrameRendererTransients` — 패스 자원 셋업·해제(엔진 PSO 등록 · 첨부 풀 채우기 · 리드백/PPM 덤프)
+- `FrameRenderer` — 프레임 실행의 중심. **파일 이름이 곧 주제**가 되도록 나뉩니다.
+  - `FrameRenderer` — 수명(initialize·shutdown·loadPipeline)과 프레임 진입(execute·executePacket)
+  - `FrameRendererResources` — 패스 자원의 수명. 기록 **전에** 만들어야 하는 것들(엔진 PSO 등록 · 상수버퍼 링 · 머티리얼 폴백 · Present 변종)
+  - `FrameRendererTransients` — 첨부(렌더타깃)의 수명과 조회. 창 크기·파이프라인이 바뀔 때만 다시 만든다
+  - `FrameRendererReadback` — 첨부를 CPU 로 읽는 길(테스트 픽셀 비교 · `-gv_screenshot` PPM). **프레임 경로가 아니다** — GPU 를 기다린다
+  - `FrameRendererCompute` — 컴퓨트 프리패스 넷(인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬). 그래프 패스가 아니라 그리기 전에 직접 걸린다
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기
   - `FrameRendererDraw` — 드로우 루프

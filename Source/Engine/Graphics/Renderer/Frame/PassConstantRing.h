@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -70,19 +71,12 @@ namespace sw
         uint32 getHighWater() const { return _highWater.load( std::memory_order_relaxed ); }
 
     private:
-        /** @brief 슬롯 하나 — 상수버퍼와 그 bindless 인덱스. */
-        struct Slot
-        {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
-        };
-
         /** @brief 슬롯을 하나 더 만듭니다. 못 만들면 false. */
         bool appendSlot( IRHIDevice* pDevice );
 
-        vector<Slot>   _listSlot;
-        atomic<uint32> _cursor;
-        atomic<uint32> _highWater;
+        vector<RHIConstantBufferSlot> _listSlot;
+        atomic<uint32>                _cursor;
+        atomic<uint32>                _highWater;
         /// @brief 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
         atomic<uint8> _bExhaustedLogged;
     };

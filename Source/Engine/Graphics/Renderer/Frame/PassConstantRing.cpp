@@ -21,11 +21,9 @@ namespace sw
 
     bool PassConstantRing::appendSlot( IRHIDevice* pDevice )
     {
-        Slot slot{};
-        slot._buffer = pDevice->getResource()->createConstantBuffer( kSlotBytes );
-        if ( slot._buffer == 0 )
+        RHIConstantBufferSlot slot{};
+        if ( slot.create( pDevice, kSlotBytes ) == false )
             return false;
-        slot._index = pDevice->getResource()->registerBindlessResource( slot._buffer );
         _listSlot.push_back( slot );
         return true;
     }
@@ -49,16 +47,8 @@ namespace sw
 
     void PassConstantRing::release( IRHIDevice* pDevice )
     {
-        if ( pDevice != nullptr && pDevice->getResource() != nullptr )
-        {
-            for ( Slot& slot : _listSlot )
-            {
-                if ( slot._index != kInvalidDescriptorIndex )
-                    pDevice->getResource()->unregisterBindlessResource( slot._index );
-                if ( slot._buffer != 0 )
-                    pDevice->getResource()->destroyBuffer( slot._buffer );
-            }
-        }
+        for ( RHIConstantBufferSlot& slot : _listSlot )
+            slot.release( pDevice );
         forget();
     }
 
@@ -104,9 +94,9 @@ namespace sw
 
         // 분배는 위의 atomic 커서가 하므로 락이 필요 없다 — 다만 **const 로 읽어야** 한다. 비-const 접근은
         // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 드로우 둘도 레이스로 잡힌다.
-        const vector<Slot>& listSlot = _listSlot;
-        outBuffer                    = listSlot[ticket]._buffer;
-        outIndex                     = listSlot[ticket]._index;
+        const vector<RHIConstantBufferSlot>& listSlot = _listSlot;
+        outBuffer                                     = listSlot[ticket]._buffer;
+        outIndex                                      = listSlot[ticket]._index;
         return true;
     }
 

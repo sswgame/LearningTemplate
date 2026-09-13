@@ -11,25 +11,33 @@ namespace sw
 {
     namespace
     {
-        /// @brief 기본 스포트 — 점광(차가운 색)·주광(따뜻한 색)과 구분되도록 중간 색에서 출발한다.
-        constexpr float3  kDefaultColor{ 1.0f, 0.95f, 0.7f };
-        constexpr float32 kDefaultIntensity{ 3.0f };
-        constexpr float32 kDefaultRadius{ 8.0f };
-        /// @brief 기본 원뿔 — 안쪽 15도, 바깥 30도 (라디안).
-        constexpr float32 kDefaultInnerCone{ 0.262f };
-        constexpr float32 kDefaultOuterCone{ 0.524f };
-        /// @brief 회전이 없을 때의 기본 방향 — 아래를 비춘다.
-        constexpr float3 kDefaultDirection{ 0.0f, -1.0f, 0.0f };
-        /// @brief 원뿔 반각 상한. 90도를 넘으면 원뿔이 뒤집혀 "빛이 뒤로도 나간다".
-        constexpr float32 kMaxConeAngle{ 1.5533f }; // 89도
+        /**
+         * @brief 이 TU 의 기본값들. **익명 네임스페이스에 벌거벗은 상수로 두면 안 된다** —
+         *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
+         *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의된다(AGENTS.md 의 Internal 규칙).
+         */
+        struct SpotLightComponentInternal
+        {
+            /// @brief 기본 스포트 — 점광(차가운 색)·주광(따뜻한 색)과 구분되도록 중간 색에서 출발한다.
+            static constexpr float3  kDefaultColor{ 1.0f, 0.95f, 0.7f };
+            static constexpr float32 kDefaultIntensity{ 3.0f };
+            static constexpr float32 kDefaultRadius{ 8.0f };
+            /// @brief 기본 원뿔 — 안쪽 15도, 바깥 30도 (라디안).
+            static constexpr float32 kDefaultInnerCone{ 0.262f };
+            static constexpr float32 kDefaultOuterCone{ 0.524f };
+            /// @brief 회전이 없을 때의 기본 방향 — 아래를 비춘다.
+            static constexpr float3 kDefaultDirection{ 0.0f, -1.0f, 0.0f };
+            /// @brief 원뿔 반각 상한. 90도를 넘으면 원뿔이 뒤집혀 "빛이 뒤로도 나간다".
+            static constexpr float32 kMaxConeAngle{ 1.5533f }; // 89도
+        };
     } // namespace
 
     SpotLightComponent::SpotLightComponent()
-        : _color{ kDefaultColor }
-        , _intensity{ kDefaultIntensity }
-        , _radius{ kDefaultRadius }
-        , _innerConeAngle{ kDefaultInnerCone }
-        , _outerConeAngle{ kDefaultOuterCone }
+        : _color{ SpotLightComponentInternal::kDefaultColor }
+        , _intensity{ SpotLightComponentInternal::kDefaultIntensity }
+        , _radius{ SpotLightComponentInternal::kDefaultRadius }
+        , _innerConeAngle{ SpotLightComponentInternal::kDefaultInnerCone }
+        , _outerConeAngle{ SpotLightComponentInternal::kDefaultOuterCone }
     {
     }
 
@@ -61,7 +69,7 @@ namespace sw
 
     void SpotLightComponent::setOuterConeAngle( float32 radians )
     {
-        _outerConeAngle = MathUtil::clamp( radians, 0.0f, kMaxConeAngle );
+        _outerConeAngle = MathUtil::clamp( radians, 0.0f, SpotLightComponentInternal::kMaxConeAngle );
         if ( _innerConeAngle > _outerConeAngle )
             _innerConeAngle = _outerConeAngle;
         onPropertyChanged( hashed_string( "_outerConeAngle" ) );
@@ -79,12 +87,12 @@ namespace sw
         // 규약은 DirectionalLightComponent 와 같다(전방 벡터가 곧 빛이 나아가는 방향).
         const float3 localRotation = getLocalRotation();
         if ( localRotation.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ kDefaultDirection }.normalize();
+            return float3{ SpotLightComponentInternal::kDefaultDirection }.normalize();
 
         const float4x4 world   = getWorldMatrix();
         float3         forward = float3{ world._31, world._32, world._33 };
         if ( forward.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ kDefaultDirection }.normalize();
+            return float3{ SpotLightComponentInternal::kDefaultDirection }.normalize();
         return forward.normalize();
     }
 

@@ -11,22 +11,30 @@ namespace sw
 {
     namespace
     {
-        /// @brief 기본 주광 — 예전 FrameRendererConstants 의 상수와 같은 값에서 출발한다.
-        constexpr float3  kDefaultColor{ 1.0f, 0.82f, 0.62f };
-        constexpr float32 kDefaultIntensity{ 1.35f };
-        constexpr float32 kDefaultAmbient{ 0.28f };
-        constexpr float32 kDefaultShadowExtent{ 2.0f / 0.9f };
-        constexpr float32 kDefaultShadowDistance{ 2.0f };
-        /// @brief 회전이 없을 때의 기본 빛 방향(위에서 비스듬히).
-        constexpr float3 kDefaultDirection{ -0.35f, -0.85f, -0.25f };
+        /**
+         * @brief 이 TU 의 기본값들. **익명 네임스페이스에 벌거벗은 상수로 두면 안 된다** —
+         *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
+         *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의된다(AGENTS.md 의 Internal 규칙).
+         */
+        struct DirectionalLightComponentInternal
+        {
+            /// @brief 기본 주광 — 예전 FrameRendererConstants 의 상수와 같은 값에서 출발한다.
+            static constexpr float3  kDefaultColor{ 1.0f, 0.82f, 0.62f };
+            static constexpr float32 kDefaultIntensity{ 1.35f };
+            static constexpr float32 kDefaultAmbient{ 0.28f };
+            static constexpr float32 kDefaultShadowExtent{ 2.0f / 0.9f };
+            static constexpr float32 kDefaultShadowDistance{ 2.0f };
+            /// @brief 회전이 없을 때의 기본 빛 방향(위에서 비스듬히).
+            static constexpr float3 kDefaultDirection{ -0.35f, -0.85f, -0.25f };
+        };
     } // namespace
 
     DirectionalLightComponent::DirectionalLightComponent()
-        : _color{ kDefaultColor }
-        , _intensity{ kDefaultIntensity }
-        , _ambient{ kDefaultAmbient }
-        , _shadowExtent{ kDefaultShadowExtent }
-        , _shadowDistance{ kDefaultShadowDistance }
+        : _color{ DirectionalLightComponentInternal::kDefaultColor }
+        , _intensity{ DirectionalLightComponentInternal::kDefaultIntensity }
+        , _ambient{ DirectionalLightComponentInternal::kDefaultAmbient }
+        , _shadowExtent{ DirectionalLightComponentInternal::kDefaultShadowExtent }
+        , _shadowDistance{ DirectionalLightComponentInternal::kDefaultShadowDistance }
         , _bCastShadow{ SW_TRUE }
         , _reservedLight{ 0 }
     {
@@ -38,12 +46,12 @@ namespace sw
         // 기본 방향을 쓰고, 회전이 있으면 그 회전을 적용한다.
         const float3 localRotation = getLocalRotation();
         if ( localRotation.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ kDefaultDirection }.normalize();
+            return float3{ DirectionalLightComponentInternal::kDefaultDirection }.normalize();
 
         const float4x4 world   = getWorldMatrix();
         float3         forward = float3{ world._31, world._32, world._33 };
         if ( forward.getLengthSquared() <= MathUtil::Epsilon )
-            return float3{ kDefaultDirection }.normalize();
+            return float3{ DirectionalLightComponentInternal::kDefaultDirection }.normalize();
         return forward.normalize();
     }
 

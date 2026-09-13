@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `a71bb835`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `e11e58b8`
 
 ---
 
@@ -294,6 +294,64 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (Graphics 구조 2차 — 파일 이름이 곧 주제가 되게, 그리고 없던 타입 하나)
+
+1차(스레드 경계·상태 뭉치)가 끝난 자리에서 다시 재고 네 가지를 더 했다. 기능 변경은 여전히 0 이다.
+
+**1. `FrameRendererTransients.cpp` 가 새 잡동사니 서랍이 돼 있었다.** 1차에서 상태를 떼어냈더니 함수 23 개가
+남았는데 네 가지 다른 일이었다 — 엔진 PSO 를 전부 등록하는 `ensurePassResources`(164줄) · 첨부 · PPM 덤프 ·
+Present 변종. Material 에서 고친 것과 **같은 결함을 여기 남겨 둔 셈**이라 같은 규칙으로 갈랐다:
+
+| 파일 | 주제 |
+| --- | --- |
+| `FrameRendererResources.cpp` | 기록 **전에** 만들어야 하는 것 — 엔진 PSO 등록 · 상수버퍼 링 · 머티리얼 폴백 · Present 변종 |
+| `FrameRendererTransients.cpp` | 첨부(렌더타깃)의 수명과 조회 — 창 크기·파이프라인이 바뀔 때만 다시 만든다 |
+| `FrameRendererReadback.cpp` | 첨부를 CPU 로 읽는 길(테스트 픽셀 비교 · `-gv_screenshot`). **프레임 경로가 아니다** — GPU 를 기다린다 |
+
+**2. 없던 타입 하나 — `RHIConstantBufferSlot`.** 컴퓨트 디스패치 넷이 `{RHIBufferHandle, RHIDescriptorIndex}` 쌍을
+각자 멤버로 들고 있었고(인스턴스 애니메이션 · 메시 모프 · 인스턴스 정렬 + `RenderView` 의 컬링), 타입이 없어서
+**해제 순서를 아는 람다가 `releasePassResources` 안에 있었고 다섯 번 불렸다.** 구조버퍼용 `RHIStructuredBufferSlot` 의
+형제를 만들어 넷 + `PassConstantRing::Slot` 을 그것으로 바꿨다. 람다는 사라졌다(남은 것은 텍스처인 TAA 히스토리 하나라
+그 자리에 풀어 적었다). **에셋(Material·MaterialInstance)은 이 타입이 아니다** — 그쪽은 "어느 디바이스의 것인가" 를
+알아야 해서 `RHIResidentBuffer` 가 맞다.
+
+**3. `FrameRenderer.cpp` 의 3분의 1이 컴퓨트 디스패치였다.** 나머지는 수명과 프레임 진입인데 세 번째 주제가 섞여 있었다.
+`FrameRendererCompute.cpp` 로 넷을 옮기고(`gv_gpuCulling`·`gv_morphDiag` 도 읽는 코드를 따라갔다) 759 → 459줄.
+**래퍼 클래스를 다시 만든 것이 아니다** — 안 쓰이던 `ComputePass` 를 지운 결정은 그대로다(Renderer/README). TU 만 갈랐다.
+
+**4. `ShaderBaker.cpp` 990줄 — 세 주제였다.** 익명 네임스페이스 514줄이 "무엇을 구울지" 였고 나머지가 "굽고 이름 짓기"
+였는데, 그 안에 "이미 최신인가" 판정이 또 섞여 있었다. 셋으로 갈랐다: `ShaderBakeRecipe.cpp`(파이프라인·머티리얼 →
+레시피) · `ShaderBakeStamp.cpp`(내용 해시 신선도) · `ShaderBaker.cpp`(굽기·이름). `BakeRecipe` 는 두 TU 를 넘으므로
+`ShaderBakeRecipe` 로 헤더에 올렸다 — 덤으로 "이 빌드가 무엇을 구웠나" 를 밖에서 볼 수 있게 됐다.
+각 TU 의 내부 헬퍼는 **TU 이름을 딴다**(`ShaderBakeStampInternal` 등) — 유니티 빌드에서 익명 네임스페이스가 합쳐지기 때문이다.
+
+**결과 (Graphics 최대 파일 목록에서 셋이 빠졌다)**
+
+| 파일 | 전 | 후 |
+| --- | --- | --- |
+| `ShaderBaker.cpp` | 990 | 427 + 348(Recipe) + 291(Stamp) |
+| `FrameRendererTransients.cpp` | 710 | 269 + 349(Resources) + 108(Readback) |
+| `FrameRenderer.cpp` | 759 | 459 + 320(Compute) |
+
+---
+
+**고친 것 하나 — 이번 작업과 무관한 선행 실패다. 되돌려서 확인했다.**
+
+**(가) 유니티 빌드(= CI 가 쓰는 프리셋)가 깨져 있었다.** `PointLightComponent` · `SpotLightComponent` ·
+`DirectionalLightComponent` 가 **익명 네임스페이스에 벌거벗은 상수**(`kDefaultColor` 등)를 두고 있었다. 유니티 빌드는
+여러 `.cpp` 를 한 TU 로 합치고 익명 네임스페이스는 TU 단위로만 숨기므로 셋이 서로 재정의였다 — AGENTS.md 가
+`Internal` 헬퍼에 대해 적어 둔 바로 그 규칙인데 상수에는 적용돼 있지 않았다. 오늘 `6eccecec`("라이트를 여러 개로")가
+들여왔고 `Ninja-*` 프리셋은 유니티가 꺼져 있어 로컬에서 안 보였다. TU 이름을 딴 구조체로 감쌌다.
+> **린트가 못 잡는다.** `CheckCodeConventions` 의 `Naming/DuplicateInternalHelper` 는 Internal **구조체 이름**만 본다.
+> 익명 네임스페이스의 벌거벗은 상수는 검사 밖이다 — 다음에 같은 것이 들어와도 유니티 빌드를 돌려야만 드러난다.
+
+**확인**: Debug·Release·Shipping 경고 0 · **유니티(CI-Debug) 빌드 통과** · 린트 7/7 · ctest nogpu 5/5 양쪽 ·
+에디터 ON 네 백엔드 오류 0 · 창 15 · 빈 패널 0 · BackendSmoke 8회 오류 0.
+
+> **함정(이번에 두 번 겪었다):** 빌드·스모크·벤치를 **동시에 돌리면 가짜 실패가 난다.** BackendSmoke 의 Vulkan
+> `[Error]` 8건은 전부 `copyFile ... used by another process` 였고(내가 App 을 따로 돌리고 있었다), Shipping·Release 의
+> `foo.lib LNK1107` 은 동시 빌드 중 CMake 프로브 레이스다. 둘 다 단독 실행하면 0 건이다.
 
 ### 2026-09-13 (Graphics 구조 — 스레드 경계·상태 뭉치·파일 이름을 타입으로 옮긴다)
 

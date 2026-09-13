@@ -1,7 +1,13 @@
+/**
+ * @file FrameRendererTransients.cpp
+ * @brief 프레임 첨부(트랜지언트 렌더타깃)의 수명과 조회 — 파이프라인이 선언한 것을 창 크기로 만든다.
+ * @details 첨부는 **구성이 바뀔 때만** 다시 만들어진다(창 크기 · 파이프라인). 소유는 `TransientAttachmentPool` 이 하고
+ *          여기서는 "무엇을 얼마나 만들지" 를 파이프라인 선언에서 읽어 채운다. 읽어 가는 쪽(리드백 · PPM 덤프)은
+ *          프레임 경로가 아니라 GPU 를 기다리는 진단이라 `FrameRendererReadback.cpp` 로 갈라 두었다.
+ */
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
@@ -11,278 +17,7 @@
 
 namespace sw
 {
-
     SW_LOG_CALLER( "FrameRenderer" );
-
-    void FrameRenderer::ensurePassResources()
-    {
-        if ( _pDevice == nullptr || _bPassResourcesReady != SW_FALSE )
-            return;
-
-        // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
-        _passCbRing.initialize( _pDevice );
-        // 직렬 경로 시드는 0번 슬롯을 쓴다. (패스별 경로는 acquirePassCb 로 덮어쓴다)
-        _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
-
-        struct GpuCullParams
-        {
-            float32 _planes[6][4]{};
-            uint32  _instanceCount{ 0 };
-            uint32  _batchCount{ 0 };
-            uint32  _pad[2]{};
-        };
-        // 뷰마다 하나씩 — 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-        {
-            RenderView& renderView = _arrView[viewIndex];
-            renderView._cullCb     = _pDevice->getResource()->createConstantBuffer( sizeof( GpuCullParams ) );
-            if ( renderView._cullCb != 0 )
-                renderView._cullCbIndex = _pDevice->getResource()->registerBindlessResource( renderView._cullCb );
-        }
-
-        struct GpuAnimParams
-        {
-            float32 _time{ 0.0f };
-            float32 _baseSpeed{ 0.0f };
-            float32 _speedRange{ 0.0f };
-            uint32  _instanceCount{ 0 };
-        };
-        _instanceAnimCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuAnimParams ) );
-        if ( _instanceAnimCb != 0 )
-            _instanceAnimCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceAnimCb );
-
-        struct GpuMorphParams
-        {
-            float32 _time{ 0.0f };
-            float32 _amplitude{ 0.0f };
-            float32 _frequency{ 0.0f };
-            uint32  _vertexCount{ 0 };
-        };
-        _meshMorphCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuMorphParams ) );
-        if ( _meshMorphCb != 0 )
-            _meshMorphCbIndex = _pDevice->getResource()->registerBindlessResource( _meshMorphCb );
-
-        struct GpuSortParams
-        {
-            float32 _cameraPos[4]{};
-            uint32  _instanceCount{ 0 };
-            uint32  _batchCount{ 0 };
-            uint32  _pad[2]{};
-        };
-        _instanceSortCb = _pDevice->getResource()->createConstantBuffer( sizeof( GpuSortParams ) );
-        if ( _instanceSortCb != 0 )
-            _instanceSortCbIndex = _pDevice->getResource()->registerBindlessResource( _instanceSortCb );
-
-        constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
-        const EngineData&   engineData         = engine::getEngineData();
-        // Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
-
-        auto registerPso = [this]( RenderPassType passType, string_view shaderPath, bool bDepthTest = true, uint32 numRt = 1,
-                                   const RHIFormat* pRtFormats = nullptr, bool bBlend = false, bool bDepthWrite = true,
-                                   const vector<string>* pExtraDefine = nullptr ) -> RHIPipelineStateHandle
-        {
-            const RHIPipelineStateHandle pso =
-                createPsoForPassType( passType, shaderPath, bDepthTest, numRt, pRtFormats, bBlend, bDepthWrite, pExtraDefine );
-            if ( pso != 0 )
-                _psoCache.setEnginePso( passType, pso );
-            return pso;
-        };
-
-        registerPso( RenderPassType::Shadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
-        registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
-        // 반투명 패스는 블렌드를 켜고 뎁스 쓰기를 끄는 것까지가 **패스의 몫**이다. 어떤 셰이더 퍼뮤테이션으로
-        // 그릴지는 머티리얼이 정한다 — glassmaterial 이 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로 들고
-        // 있고, ensureMaterialPsos 가 그 변형을 만들어 배치에 걸어 준다. 예전엔 이 define 을 여기에 박아 두어
-        // "반투명 패스에 들어온 것은 무조건 반투명" 이었다 — 머티리얼이 뭘 선언했든 상관이 없었다.
-        registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
-        // G버퍼 패스의 PSO 에는 define 을 얹는다 — 이 desc 를 물려받는 **머티리얼 변형**까지 같이
-        // MRT 서명으로 컴파일된다(createMaterialPsoVariant 가 패스 desc 를 통째로 복사한다).
-        const vector<string> listGbufferDefine{ string{ kPassGBufferDefine } };
-        registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat, false, true,
-                     &listGbufferDefine );
-        registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
-        registerPso( RenderPassType::GBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
-        registerPso( RenderPassType::Lighting, engineData._shaderDeferredLighting.c_str(), false );
-        registerPso( RenderPassType::Bloom, engineData._shaderPostBloom.c_str(), false );
-
-        {
-            RHIPipelineStateHandle psoOutline = createPsoForPassType( RenderPassType::Outline, engineData._shaderPostOutlineCommon.c_str(), false );
-            if ( psoOutline == 0 )
-                psoOutline = createEnginePso( engineData._shaderPostOutlineEngine.c_str(), false );
-            if ( psoOutline != 0 )
-                _psoCache.setEnginePso( RenderPassType::Outline, psoOutline );
-        }
-
-        registerPso( RenderPassType::Present, engineData._shaderFullscreenBlit.c_str(), false );
-
-        const RHIPipelineStateHandle psoSsao = registerPso( RenderPassType::SSAO, engineData._shaderSsao.c_str(), false );
-        if ( psoSsao != 0 )
-            _psoCache.setEnginePso( RenderPassType::SSAO, psoSsao );
-
-        registerPso( RenderPassType::TAA, engineData._shaderTaa.c_str(), false );
-        registerPso( RenderPassType::Tonemap, engineData._shaderTonemap.c_str(), false );
-
-        // Compute PSO: GpuCull — capabilities + 실제 PSO 생성 성공 시에만 GPU-driven.
-        const RHICapabilities caps = _pDevice->getCapabilities();
-        if ( caps._bGpuCulling != SW_FALSE )
-        {
-            const RHIPipelineStateHandle psoGpuCull =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoGpuCull != 0 )
-                _psoCache.setEnginePso( RenderPassType::GpuCull, psoGpuCull );
-
-            // 압축한 가시 목록을 깊이순으로 되돌리는 패스 — 컬링과 같은 바인딩 자리를 쓴다.
-            const RHIPipelineStateHandle psoSort =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceSort.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoSort != 0 )
-                _psoCache.setEnginePso( RenderPassType::InstanceSort, psoSort );
-        }
-
-        // 인스턴스 애니메이션은 **컬링 능력과 무관하다** — 구조버퍼 UAV 하나만 있으면 된다.
-        // 예전엔 위 GpuCull 블록 안에 있었는데, DX11 은 "한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를
-        // 같이 못 건다"는 **간접 인자 쪽 제약** 때문에 _bGpuCulling 이 0 이다. 애니메이션은 인스턴스
-        // 버퍼만 쓰므로 그 제약과 상관이 없는데 같이 꺼져서, DX11 에서만 큐브가 아예 돌지 않았다.
-        if ( caps._bCompute != SW_FALSE )
-        {
-            const RHIPipelineStateHandle psoAnim =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderInstanceAnim.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoAnim != 0 )
-                _psoCache.setEnginePso( RenderPassType::InstanceAnim, psoAnim );
-
-            // 메시 모프도 같은 조건이다 — 구조버퍼 SRV 하나와 UAV 하나뿐이라 컬링 능력과 무관하다.
-            const RHIPipelineStateHandle psoMorph =
-                _pDevice->getResource()->createComputePipelineState( engineData._shaderMeshMorph.c_str(), FrameRendererUtil::Entry::kCSMain );
-            if ( psoMorph != 0 )
-                _psoCache.setEnginePso( RenderPassType::MeshMorph, psoMorph );
-        }
-
-        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다 — 예전엔 진단용 전역변수로 끌 수 있는 두 번째
-        // 드로우 루프가 있었지만, 컬링·정렬·인스턴스 애니메이션이 전부 인다이렉트 경로에만 붙어 있어
-        // 그걸 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
-        // 여기서 크게 알린다.
-        if ( caps._bIndirectDraw == SW_FALSE )
-            SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
-
-        // Present 변종도 PSO 등록 단계에서 만든다 — 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
-        buildPresentPsoVariants();
-
-        // 폴백 원소는 PSO 를 다 등록한 뒤에 만든다 — 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
-        ensureMaterialFallbackBuffers();
-
-        _bPassResourcesReady = SW_TRUE;
-        SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
-                     getEnginePso( RenderPassType::Shadow ), getEnginePso( RenderPassType::ForwardOpaque ),
-                     getEnginePso( RenderPassType::Transparent ), getEnginePso( RenderPassType::Lighting ),
-                     getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
-    }
-
-    bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
-    {
-        return _transientPool.markCleared( key );
-    }
-
-    void FrameRenderer::resetClearedAttachments()
-    {
-        _transientPool.resetCleared();
-    }
-
-    void FrameRenderer::resetPassCbRing()
-    {
-        _passCbRing.beginFrame();
-        _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
-    }
-
-    void FrameRenderer::acquirePassCb( FramePassContext& ctx )
-    {
-        // 패스 진입 시의 기본 슬롯. 실제 드로우는 bindForDraw 가 드로우마다 새 슬롯을 잡는다.
-        _passCbRing.acquire( ctx._passCb, ctx._passCbIndex );
-        // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
-        // (ctx._passValues 에 이미 프레임 시드가 들어있으므로 별도 선-업로드가 필요 없다).
-    }
-
-    void FrameRenderer::ensurePassCbCapacityForFrame()
-    {
-        const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
-        const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + PassConstantRing::kInitialSlotCount;
-        _passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
-    }
-
-    void FrameRenderer::releasePassResources()
-    {
-        // PSO·레이아웃·패스 CB 가 여기서 사라진다 — 그것을 가리키던 드로우 캐시도 같이 잊는다.
-        // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다 — 백엔드 교체 뒤 빈 화면의 원인.)
-        _frameCtx.resetBindingCache();
-
-        if ( _pDevice == nullptr )
-        {
-            _passCbRing.forget();
-            _frameCtx._passCb      = 0;
-            _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-            for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-            {
-                _arrView[viewIndex]._cullCb      = 0;
-                _arrView[viewIndex]._cullCbIndex = kInvalidDescriptorIndex;
-            }
-            _instanceAnimCb      = 0;
-            _instanceAnimCbIndex = kInvalidDescriptorIndex;
-            _instanceSortCb      = 0;
-            _instanceSortCbIndex = kInvalidDescriptorIndex;
-            _meshMorphCb         = 0;
-            _meshMorphCbIndex    = kInvalidDescriptorIndex;
-            _mapMaterialFallback.clear();
-            _taaHistory    = 0;
-            _taaHistorySrv = kInvalidDescriptorIndex;
-            _psoCache.forgetAll();
-            _bPassResourcesReady = SW_FALSE;
-            return;
-        }
-
-        // PSO 는 캐시가 순서대로 놓는다 — 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
-        _psoCache.releaseAll( _pDevice );
-
-        _gpuScene.releaseGpu( _pDevice );
-
-        auto releaseResource = [this]( RHIBufferHandle& handle, RHIDescriptorIndex& srvIndex, bool bIsTexture = false )
-        {
-            if ( srvIndex != kInvalidDescriptorIndex )
-            {
-                // 텍스처와 버퍼는 인덱스 공간이 다르다 — 종류에 맞는 해제를 불러야 한다.
-                if ( bIsTexture )
-                    _pDevice->getResource()->unregisterBindlessTexture( srvIndex );
-                else
-                    _pDevice->getResource()->unregisterBindlessResource( srvIndex );
-                srvIndex = kInvalidDescriptorIndex;
-            }
-            if ( handle != 0 )
-            {
-                if ( bIsTexture )
-                    _pDevice->getResource()->destroyTexture( handle );
-                else
-                    _pDevice->getResource()->destroyBuffer( handle );
-                handle = 0;
-            }
-        };
-
-        _passCbRing.release( _pDevice );
-        _frameCtx._passCb      = 0;
-        _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-            releaseResource( _arrView[viewIndex]._cullCb, _arrView[viewIndex]._cullCbIndex );
-        releaseResource( _instanceAnimCb, _instanceAnimCbIndex );
-        releaseResource( _instanceSortCb, _instanceSortCbIndex );
-        // 모프 상수버퍼와 모프 풀은 여태 **한 번도 놓지 않고 있었다** — 형제(anim·sort)만 적혀 있었다.
-        // 디바이스가 바뀌면 옛 디바이스의 버퍼와 bindless 항목이 그대로 남는다.
-        releaseResource( _meshMorphCb, _meshMorphCbIndex );
-        _meshMorphPool.release( _pDevice );
-        _lightBuffer.release( _pDevice );
-        for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
-            fallbackSlot.release( _pDevice );
-        _mapMaterialFallback.clear();
-        releaseResource( _taaHistory, _taaHistorySrv, true );
-        _bPassResourcesReady = SW_FALSE;
-    }
 
     void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
     {
@@ -354,42 +89,6 @@ namespace sw
         publishRenderTargets();
     }
 
-    void FrameRenderer::publishRenderTargets() const
-    {
-        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
-        if ( pRegistry == nullptr )
-            return;
-
-        // 화면에 나가는 것이 무엇인지 함께 실어 준다 — 패널이 열리자마자 **지금 보이는 그림**을
-        // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
-        const string_view presented = getPresentedAttachmentName();
-
-        vector<RenderTargetInfo> listTarget;
-        listTarget.reserve( _transientPool.getAll().size() );
-        for ( const auto& [name, attachment] : _transientPool.getAll() )
-        {
-            if ( attachment._texture == 0 )
-                continue;
-            RenderTargetInfo info{};
-            info._name       = name;
-            info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
-            info._texture    = attachment._texture;
-            info._width      = _transientPool.getWidth();
-            info._height     = _transientPool.getHeight();
-            info._format     = attachmentFormatOrDefault( name, RHIFormat::R8G8B8A8_UNORM );
-            info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
-            listTarget.push_back( std::move( info ) );
-        }
-
-        // 이름순으로 정렬해 둔다 — 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
-        // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
-        std::sort( listTarget.begin(), listTarget.end(),
-                   []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
-        { return lhs._name < rhs._name; } );
-
-        pRegistry->publish( std::move( listTarget ) );
-    }
-
     void FrameRenderer::ensureTaaHistory()
     {
         if ( _pDevice == nullptr || _taaHistory != 0 )
@@ -424,106 +123,6 @@ namespace sw
         _taaHistory = _pDevice->getResource()->createTexture2D( histDesc );
         if ( _taaHistory != 0 )
             _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
-    }
-
-    string_view FrameRenderer::getPresentedAttachmentName() const
-    {
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
-        {
-            if ( pass._resolvedType == RenderPassType::Present && pass._listInput.empty() == false )
-                return string_view{ pass._listInput.front() };
-        }
-        return string_view{};
-    }
-
-    bool FrameRenderer::readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat )
-    {
-        if ( _pDevice == nullptr )
-            return false;
-        const RHITextureHandle texture = findTransient( attachmentName );
-        if ( texture == 0 )
-        {
-            SW_LOG_ERROR( "readbackTransient: 트랜지언트 '%#' 를 찾지 못했습니다.", string( attachmentName ).c_str() );
-            return false;
-        }
-        outFormat = RHIFormat::R8G8B8A8_UNORM;
-        for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
-        {
-            if ( att._name == attachmentName )
-            {
-                outFormat = FrameRendererUtil::parseAttachmentFormat( att._format );
-                break;
-            }
-        }
-        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, outBytes, outLayout ) == false )
-        {
-            SW_LOG_ERROR( "readbackTransient: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
-            return false;
-        }
-        return outLayout._width != 0 && outLayout._height != 0;
-    }
-
-    bool FrameRenderer::dumpTransientToPpm( string_view attachmentName, string_view outFilePath )
-    {
-        if ( _pDevice == nullptr || outFilePath.empty() )
-            return false;
-
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        RHIFormat         format = RHIFormat::R8G8B8A8_UNORM;
-        if ( readbackTransient( attachmentName, bytes, layout, format ) == false )
-            return false;
-        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
-        if ( bytesPerPixel < 3 )
-        {
-            SW_LOG_ERROR( "dumpTransientToPpm: PPM 으로 덤프할 수 없는 포맷입니다 ('%#').", string( attachmentName ).c_str() );
-            return false;
-        }
-
-        // PPM(P6): 아스키 헤더 + RGB 8bit.
-        // **half 첨부를 바이트로 읽으면 안 된다.** HDR 첨부(R16G16B16A16_FLOAT)를 8비트로 가정하고
-        // pPixel[0..2] 를 집어 오면 가수 하위 바이트가 색이 되어 **무의미한 그림**이 나온다 —
-        // 그런데 bytesPerPixel 은 8 이라 아래 검사도 통과한다. 디퍼드 파이프라인은 LitColor 부터
-        // TaaColor 까지 넷이 이 포맷이라, 중간 단계를 눈으로 확인할 길이 그동안 없었다.
-        const bool                            bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );
-        const bool                            bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
-        StringBuilder<constant::kMaxBuffer64> header;
-        // PPM 헤더의 구분자는 임의의 공백이면 된다 — 공백만 써서 이스케이프 없이 적는다.
-        header.appendFormat( "P6 %# %# 255 ", layout._width, layout._height );
-
-        vector<uint8> outBytes;
-        outBytes.reserve( header.size() + static_cast<size_t>( layout._width ) * layout._height * 3 );
-        outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( header.c_str() ),
-                         reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
-        for ( uint32 row = 0; row < layout._height; ++row )
-        {
-            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 col = 0; col < layout._width; ++col )
-            {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
-                if ( bHalf )
-                {
-                    // HDR 을 [0,1] 로 자르고 8비트로 옮긴다. 톤매핑은 하지 않는다 — 이 덤프는
-                    // 그림을 예쁘게 보려는 게 아니라 "무엇이 들어 있나" 를 보려는 것이다.
-                    const uint16* pHalf = reinterpret_cast<const uint16*>( pPixel );
-                    for ( uint32 channel = 0; channel < 3; ++channel )
-                        outBytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
-                    continue;
-                }
-                outBytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
-                outBytes.push_back( pPixel[1] );
-                outBytes.push_back( bBgra ? pPixel[0] : pPixel[2] );
-            }
-        }
-
-        if ( FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() ) == false )
-        {
-            SW_LOG_ERROR( "dumpTransientToPpm: 파일 쓰기 실패 (%#).", string( outFilePath ).c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Screenshot: '%#' %#×%# -> %#", string( attachmentName ).c_str(), layout._width, layout._height,
-                     string( outFilePath ).c_str() );
-        return true;
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -561,6 +160,16 @@ namespace sw
         _transientPool.alloc( _pDevice, name, format, bDepth, clearColor );
     }
 
+    bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
+    {
+        return _transientPool.markCleared( key );
+    }
+
+    void FrameRenderer::resetClearedAttachments()
+    {
+        _transientPool.resetCleared();
+    }
+
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
     {
         for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
@@ -591,6 +200,52 @@ namespace sw
         return _transientPool.findTexture( name );
     }
 
+    void FrameRenderer::publishRenderTargets() const
+    {
+        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
+        if ( pRegistry == nullptr )
+            return;
+
+        // 화면에 나가는 것이 무엇인지 함께 실어 준다 — 패널이 열리자마자 **지금 보이는 그림**을
+        // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
+        const string_view presented = getPresentedAttachmentName();
+
+        vector<RenderTargetInfo> listTarget;
+        listTarget.reserve( _transientPool.getAll().size() );
+        for ( const auto& [name, attachment] : _transientPool.getAll() )
+        {
+            if ( attachment._texture == 0 )
+                continue;
+            RenderTargetInfo info{};
+            info._name       = name;
+            info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
+            info._texture    = attachment._texture;
+            info._width      = _transientPool.getWidth();
+            info._height     = _transientPool.getHeight();
+            info._format     = attachmentFormatOrDefault( name, RHIFormat::R8G8B8A8_UNORM );
+            info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
+            listTarget.push_back( std::move( info ) );
+        }
+
+        // 이름순으로 정렬해 둔다 — 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
+        // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
+        std::sort( listTarget.begin(), listTarget.end(),
+                   []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
+        { return lhs._name < rhs._name; } );
+
+        pRegistry->publish( std::move( listTarget ) );
+    }
+
+    string_view FrameRenderer::getPresentedAttachmentName() const
+    {
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
+        {
+            if ( pass._resolvedType == RenderPassType::Present && pass._listInput.empty() == false )
+                return string_view{ pass._listInput.front() };
+        }
+        return string_view{};
+    }
+
     string FrameRenderer::resolvePresentSource() const
     {
         // 파이프라인이 Present 의 입력을 선언했으면 그것이 정본이다 — 다른 풀스크린 패스와 같은 규칙.
@@ -610,101 +265,5 @@ namespace sw
             { "TonemapColor", "OutlineColor", "BloomColor", "TaaColor",
               "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
         return pName != nullptr ? string( pName ) : string{};
-    }
-
-    RHIPipelineStateHandle FrameRenderer::getEnginePso( RenderPassType passType ) const
-    {
-        return _psoCache.findEnginePso( passType );
-    }
-
-    void FrameRenderer::ensureMaterialFallbackBuffers()
-    {
-        if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
-            return;
-
-        // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 같은 셰이더라도
-        // 백엔드마다 다르다(DX 자연 패킹 / SPIR-V std430) — 레이아웃은 이 디바이스의 백엔드로 빌드된 것이다.
-        vector<uint32>                           listStride;
-        vector<RenderPsoCache::RegisteredLayout> listLayout;
-        _psoCache.collectLayouts( listLayout );
-        {
-            for ( const RenderPsoCache::RegisteredLayout& registered : listLayout )
-            {
-                const RHIPipelineStateHandle     pso     = registered._pso;
-                const ShaderBindingLayout* const pLayout = registered._pLayout;
-                if ( pLayout == nullptr )
-                    continue;
-                const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
-                if ( pSlot == nullptr )
-                    continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등) — 걸 것이 없다.
-                if ( pSlot->_elementStride == 0 )
-                {
-                    // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
-                    // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
-                    SW_LOG_ERROR( "PSO %# 의 머티리얼 버퍼 원소 stride 가 0 입니다 — 리플렉션이 g_SwMaterials 원소 레이아웃을 주지 않았습니다.", pso );
-                    continue;
-                }
-                if ( std::find( listStride.begin(), listStride.end(), pSlot->_elementStride ) == listStride.end() )
-                    listStride.push_back( pSlot->_elementStride );
-            }
-        }
-
-        for ( const uint32 stride : listStride )
-        {
-            if ( _mapMaterialFallback.find( stride ) != _mapMaterialFallback.end() )
-                continue;
-
-            const vector<uint8>     zeroBytes( stride, 0 );
-            RHIStructuredBufferSlot fallback{};
-            if ( fallback.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false,
-                                          zeroBytes.data() ) == false )
-            {
-                SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
-                continue;
-            }
-            fallback.upload( _pDevice, zeroBytes.data(), stride );
-            _mapMaterialFallback.insert_or_assign( stride, fallback );
-        }
-    }
-
-    void FrameRenderer::buildPresentPsoVariants()
-    {
-        if ( _pDevice == nullptr )
-            return;
-
-        // Present 가 그릴 수 있는 대상은 둘뿐이다 — 백버퍼(디바이스가 실제 채택한 포맷)와 오프스크린
-        // 렌더타깃(에디터 GameView 등, 계약값 kOffscreenColorFormat). 둘 다 **셋업에서** 만들어 둔다.
-        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
-        for ( const RHIFormat format : arrTargetFormat )
-        {
-            RHIPipelineStateHandle existing{ 0 };
-            if ( format == RHIFormat::Unknown || _psoCache.findPresentPso( format, existing ) )
-                continue;
-            const RHIFormat              arrRtvFormat[] = { format };
-            const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, engine::getEngineData()._shaderFullscreenBlit.c_str(),
-                                                                                false, 1, arrRtvFormat );
-            // 실패해도 기록한다 — 0 이면 호출부가 blit 폴백으로 간다.
-            _psoCache.setPresentPso( format, pso );
-        }
-    }
-
-    RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
-    {
-        // **조회만 한다.** 예전엔 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
-        // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더패스 캐시(락 없음)를 건드리므로, 같은
-        // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. checkRegistryMutableNow 는 bindless
-        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
-        if ( targetFormat == RHIFormat::Unknown )
-            return getEnginePso( RenderPassType::Present );
-        RHIPipelineStateHandle pso{ 0 };
-        if ( _psoCache.findPresentPso( targetFormat, pso ) )
-            return pso;
-
-        if ( _bPresentPsoMissingLogged.exchange( 1 ) == 0 )
-        {
-            SW_LOG_ERROR( "Present 대상 포맷 %# 의 PSO 가 셋업에 없습니다 — buildPresentPsoVariants 에 그 포맷을 추가해야 합니다.",
-                          static_cast<uint32>( targetFormat ) );
-        }
-        return getEnginePso( RenderPassType::Present );
     }
 } // namespace sw

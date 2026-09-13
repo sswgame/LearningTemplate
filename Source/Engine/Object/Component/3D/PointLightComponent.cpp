@@ -11,16 +11,24 @@ namespace sw
 {
     namespace
     {
-        /// @brief 기본 점광 — 주광(따뜻한 색)과 구분되도록 차가운 색에서 출발한다.
-        constexpr float3  kDefaultColor{ 0.55f, 0.75f, 1.0f };
-        constexpr float32 kDefaultIntensity{ 2.0f };
-        constexpr float32 kDefaultRadius{ 6.0f };
+        /**
+         * @brief 이 TU 의 기본값들. **익명 네임스페이스에 벌거벗은 상수로 두면 안 된다** —
+         *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
+         *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의된다(AGENTS.md 의 Internal 규칙).
+         */
+        struct PointLightComponentInternal
+        {
+            /// @brief 기본 점광 — 주광(따뜻한 색)과 구분되도록 차가운 색에서 출발한다.
+            static constexpr float3  kDefaultColor{ 0.55f, 0.75f, 1.0f };
+            static constexpr float32 kDefaultIntensity{ 2.0f };
+            static constexpr float32 kDefaultRadius{ 6.0f };
+        };
     } // namespace
 
     PointLightComponent::PointLightComponent()
-        : _color{ kDefaultColor }
-        , _intensity{ kDefaultIntensity }
-        , _radius{ kDefaultRadius }
+        : _color{ PointLightComponentInternal::kDefaultColor }
+        , _intensity{ PointLightComponentInternal::kDefaultIntensity }
+        , _radius{ PointLightComponentInternal::kDefaultRadius }
     {
     }
 
