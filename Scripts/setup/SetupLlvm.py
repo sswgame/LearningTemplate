@@ -71,6 +71,7 @@ _kPosixKeepBinNames: set[str] = {
     "lld",
     "ld.lld",
     "llvm-ar",
+    "llvm-ranlib",
     "llvm-rc",
 }
 _kTarKeepPrefixes = (
@@ -178,6 +179,10 @@ def isMinimalLlvmRoot(path: str) -> bool:
             return False
     else:
         if not (binDir / "clang").is_file() and not (binDir / "clang-cl").is_file():
+            return False
+        # Windows 쪽 llvm-lib 과 같은 이유다 (위 주석). 리눅스는 증상만 다르다 —
+        # CMake 가 IPO 정적 라이브러리를 CMAKE_<LANG>_COMPILER_AR 로 묶는데 그게 -NOTFOUND 가 된다.
+        if not (binDir / "llvm-ar").is_file():
             return False
         if not findLibClangDllPath(str(root)):
             return False

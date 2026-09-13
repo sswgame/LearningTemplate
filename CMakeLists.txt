@@ -26,7 +26,9 @@ project(
 # 2) project() 직후 — Windows 빌드 도구 사후 바인딩, vcpkg 스탬프
 # ------------------------------------------------------------------------------
 include(cmake/Environment/FindWindowsTools.cmake)
+include(cmake/Environment/FindPosixTools.cmake)
 sw_bindClangClWindowsTools()
+sw_bindPosixLlvmArchiver()
 sw_vcpkgWriteManifestStamp()
 
 # ------------------------------------------------------------------------------

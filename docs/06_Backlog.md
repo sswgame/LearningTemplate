@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `71969e11`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `7568c02c`
 
 ---
 
@@ -294,6 +294,69 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (LTO 를 리눅스에서도 — 증상은 다르고 뿌리는 같았다)
+
+앞 항목(Windows LTO)을 하고 나니 리눅스가 반쪽이었다. 설치 스크립트 허용 목록에 `llvm-ar` 을 넣은 것이
+전부였고, **그것을 CMake 에 물리는 코드가 없었다** — 아카이버를 찾아 묶는 로직이 전부
+`FindWindowsTools.cmake` 안에 있었기 때문이다.
+
+**리눅스도 같은 병을 앓고 있었다 (WSL Ubuntu 26.04 · clang 21.1.8 실측).**
+`check_ipo_supported` 가 `NO` 를 낸다. 다만 오류 문구가 다르다 — Windows 는 `LNK1107`,
+리눅스는 `"CMAKE_CXX_COMPILER_AR-NOTFOUND" qc libfoo.a` 로 죽는다. 배포판 clang 패키지가 `clang++`
+옆에 `llvm-ar` 을 두지 않아서다(그 시스템엔 `/usr/bin/llvm-ar` 도 `/usr/lib/llvm-*/bin/llvm-ar` 도 없었다).
+
+> **틀린 가설 하나**: "GNU ar 이 비트코드를 못 읽어서" 일 거라고 봤는데 아니었다. binutils 2.46 의
+> `ar` 은 `clang -flto=thin` 이 낸 비트코드 .o 를 **문제없이** 묶는다(실측). 리눅스에서 막히는 것은
+> 아카이버의 능력이 아니라 **CMake 가 IPO 에 쓰는 변수가 비어 있는 것** 이다.
+
+**고친 것**
+
+- `cmake/Environment/FindPosixTools.cmake` 신설. `sw_bindPosixLlvmArchiver()` 가 고정 LLVM 의
+  `llvm-ar` · `llvm-ranlib` 을 `CMAKE_AR` · `CMAKE_<LANG>_COMPILER_AR` · `CMAKE_<LANG>_COMPILER_RANLIB`
+  에 묶는다. 고정 툴체인이 없으면 컴파일러 옆을 보고, 그것도 없으면 **아무것도 안 한다** — 시스템 ar 로
+  정적 라이브러리는 계속 묶이고 LTO 만 안 켜진다(메시지로 알린다).
+- **변수만 고쳐선 안 된다는 것을 여기서도 다시 만났다.** CMake 는 IPO 아카이브 명령을 `project()` 시점의
+  `CMAKE_<LANG>_COMPILER_AR` 로 **문자열에 구워 둔다**(`Modules/Compiler/Clang.cmake`). 변수를 나중에
+  고쳐도 생성된 규칙은 `"CMAKE_CXX_COMPILER_AR-NOTFOUND" qc ...` 그대로였다. `ARCHIVE_CREATE_IPO` ·
+  `ARCHIVE_APPEND_IPO` · `ARCHIVE_FINISH_IPO` 를 다시 쓰고서야 규칙에 실제 경로가 들어갔다.
+  (Windows 매크로가 명령 문자열을 다시 쓰는 이유가 이것이었다 — 그 코드의 뜻을 이제 알겠다.)
+- `SetupLlvm.py` 의 POSIX 허용 목록에 `llvm-ranlib` 추가, `isMinimalLlvmRoot` 의 POSIX 분기에
+  `llvm-ar` 검증 추가 — **이미 설치된 리눅스 트리도 복구되게**.
+
+**검증한 것과 못 한 것 (솔직히)**
+
+- 검증함: 매크로가 `llvm_path` 를 읽어 셋을 묶는 것 · `sw_checkIpoSupport` 가 `TRUE` 를 내는 것 ·
+  아카이버가 없을 때 조용히 물러나 시스템 ar 로 계속 가는 것 · **생성된 규칙에 실제 경로가 박히는 것**
+  (`"/tmp/.../llvm-ar" qc libmylib.a ...`).
+- **검증 못 함: 진짜 `llvm-ar` 로 끝까지 링크하는 것.** 이 PC 의 WSL 에는 `llvm-ar` 이 없고, 저장소가
+  캐시해 둔 리눅스 LLVM 아카이브가 **12.8MB 로 잘려 있다**(정상은 수백 MB, `.sha256` 사이드카도 없다).
+  GNU ar 을 `llvm-ar` 이름으로 놓고 대신 돌려 배선까지는 확인했지만, 그 스텁은 `qc` 로 만든 비트코드
+  아카이브에 색인을 제대로 안 넣어 최종 링크가 `archive has no index` 로 진다. 진짜 llvm-ar 은 `qc`
+  에서 심볼 테이블을 함께 쓰므로 이 증상이 안 나야 하지만 **확인한 것이 아니라 추정이다.**
+  리눅스에서 실제로 돌리려면 `SetupLlvm.py --install` 로 고정 LLVM 을 받은 뒤 확인해야 한다.
+
+> 잘린 캐시는 손댈 필요가 없다. `ensureCachedDownload` 가 `minSize=50_000_000` 으로 거르므로 다음
+> 설치 때 다시 받는다.
+
+> **이 작업 중에 개발 환경을 한 번 망가뜨렸다. 복구 방법을 적어 둔다.**
+> WSL 로 검증하다 `wsl.exe ... bash -c "cd /tmp/xxx && cmake -S . -B b ..."` 에서 **`cd` 가 실패했고**,
+> `&&` 가 아니라 그대로 이어진 `cmake` 가 **저장소 루트에서 리눅스 설정으로** 돌았다. 그 결과 셋:
+> ① 루트에 `b/` 가 생기고, ② `Config/Environment/toolchain_config.json` 의 `msvc_tools_dir` 이 비고
+> DXC 경로가 arm64 것으로 덮이고, ③ **`build/vcpkg_installed` 의 `x64-windows` 가 `x64-linux` 로 바뀌었다**
+> (Windows 빌드 트리 넷이 이 디렉터리 하나를 공유한다).
+>
+> 게다가 그 실행을 중단시키자 **stale 락이 세 개** 남아 이후 모든 configure 가 무한 대기했다:
+> `build/vcpkg_installed/vcpkg/` · `Tools/vcpkg/buildtrees/` · `Tools/vcpkg/packages/` 의
+> `vcpkg-running.lock`. 증상은 `note: waiting to take filesystem lock...` 이 끝없이 찍히는 것이다.
+>
+> 복구 순서: (1) `vcpkg`·`cmake`·`ninja` 프로세스가 정말 없는지 확인하고 남아 있으면 죽인다,
+> (2) `vcpkg-running.lock` 셋을 지운다, (3) `toolchain_config.json` 을 되돌린다
+> (`SetupEnvironment.py` 는 MSVC 를 다시 못 찾았다 — 값을 직접 써야 했다), (4) Windows 프리셋을
+> configure 해서 vcpkg 가 `x64-windows` 를 다시 깔게 한다(바이너리 캐시 436MB 가 있어 대부분 캐시에서 온다).
+>
+> **교훈**: `wsl.exe -- bash -c "cd X && ..."` 에서 `cd` 실패는 조용하다. 뒤에 `cmake -B` 같은
+> **현재 디렉터리에 쓰는 명령**을 붙이지 말 것. 붙일 거면 `set -e` 를 앞에 두거나 절대 경로로 `-S`/`-B` 를 준다.
 
 ### 2026-09-14 (LTO 가 켜져 있다고 되어 있는데 한 TU 에도 안 걸리고 있었다 — 원인 넷)
 
