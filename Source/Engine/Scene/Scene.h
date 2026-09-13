@@ -10,7 +10,6 @@ namespace sw
     struct SceneDocument;
 
     class CameraComponent;
-    class FrameRenderer;
     class GameObject;
     class GameObjectManager;
     class IRHIDevice;
@@ -38,10 +37,13 @@ namespace sw
         /** @brief 현재 씬의 루트 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화 추출합니다. */
         bool serializeToDocument( SceneDocument& outDoc ) const;
 
-        /** @brief 활성 씬의 GameObject를 병렬 tick합니다. */
+        /**
+         * @brief 활성 씬의 GameObject를 병렬 tick합니다.
+         * @note 짝이 되는 `render()` 는 **없다.** 씬은 그리는 쪽을 모른다 — 게임 스레드가 씬에서 스냅샷을 뽑아
+         *       (`GpuSceneBuilder`) 패킷으로 넘기고, 렌더 스레드가 그것만 보고 그린다. 예전엔 씬이
+         *       `FrameRenderer` 포인터를 들고 `execute( this )` 를 부르는 길이 있었지만 아무도 부르지 않았다.
+         */
         virtual void tick( float32 deltaTime );
-        /** @brief FrameRenderer로 GameObject를 렌더링합니다. */
-        virtual void render( IRHIDevice* pRhiDevice );
         /**
          * @brief 없으면 GameCamera GameObject를 생성합니다.
          * @details CameraComponent(역할 Game)를 가집니다. init마다 호출해도 안전합니다.
@@ -50,8 +52,6 @@ namespace sw
         /** @brief 씬에서 Game 역할 최고 우선순위 카메라를 다시 찾습니다. */
         void refreshCameraCache();
 
-        /** @brief App이 소유한 FrameRenderer를 연결합니다 (비소유). */
-        void setFrameRenderer( FrameRenderer* pFrameRenderer ) { _pFrameRenderer = pFrameRenderer; }
         /** @brief 씬 이름을 설정합니다. */
         void setName( string_view name ) { _name = name; }
         /** @brief 마지막 로드/저장 경로를 설정합니다. */
@@ -61,8 +61,6 @@ namespace sw
         /** @brief 엔티티가 스폰된 프리팹 애셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
         void setEntityPrefabPath( uint64 objectId, string_view prefabPath );
 
-        /** @brief 연결된 FrameRenderer를 반환합니다. */
-        FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
         /** @brief 마지막 로드/저장 경로(리소스 상대 또는 절대)를 반환합니다. */
@@ -99,7 +97,6 @@ namespace sw
         string                        _defaultMaterialPath;
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
-        FrameRenderer*                _pFrameRenderer;
         unordered_map<uint64, string> _mapPrefabSource;
         sw::ComponentHandle           _activeGameCamera;
         bool                          _bCamerasEnsured;

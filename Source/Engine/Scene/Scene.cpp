@@ -7,10 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
-#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -106,7 +103,6 @@ namespace sw
         , _defaultMaterialPath{}
         , _objectManager{ make_unique<GameObjectManager>() }
         , _pMaterial{ nullptr }
-        , _pFrameRenderer{ nullptr }
         , _activeGameCamera{}
         , _bCamerasEnsured{ false }
     {
@@ -255,27 +251,6 @@ namespace sw
     {
         if ( _objectManager != nullptr )
             _objectManager->tick( deltaTime );
-    }
-
-    /**
-     * @brief FrameRenderer로 씬의 GameObject를 그립니다.
-     */
-    void Scene::render( IRHIDevice* pRhiDevice )
-    {
-        if ( pRhiDevice == nullptr )
-            return;
-
-        if ( _pFrameRenderer == nullptr )
-        {
-            SW_LOG_WARNING( "render: FrameRenderer not set" );
-            return;
-        }
-
-        if ( _pFrameRenderer->isReady() == false )
-            return; // initialize 실패 시 FrameRenderer가 ERROR 로깅
-
-        if ( _pFrameRenderer->execute( pRhiDevice, this ) == false )
-            SW_LOG_ERROR( "FrameRenderer execute failed." );
     }
 
     /**

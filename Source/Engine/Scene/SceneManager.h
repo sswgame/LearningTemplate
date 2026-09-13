@@ -55,7 +55,12 @@ namespace sw
 
         /** @brief 비동기 로드로 만든 씬 초기화에 쓸 디바이스를 설정합니다. */
         void setRhiDevice( IRHIDevice* pRhiDevice ) { _pRHIDevice = pRhiDevice; }
-        /** @brief 새로 활성화된 씬에 전달할 FrameRenderer를 설정합니다. */
+        /**
+         * @brief App 이 소유한 FrameRenderer 를 연결합니다 (비소유).
+         * @details **씬에는 내려보내지 않는다** — 씬은 그리는 쪽을 모른다(Scene::tick 주석). 여기 두는 이유는
+         *          에디터 뷰포트 툴바가 뷰 모드를 바꾸려고 `getFrameRenderer()` 로 찾아오기 때문이고,
+         *          그 하나뿐이다.
+         */
         void setFrameRenderer( FrameRenderer* pFrameRenderer ) { _pFrameRenderer = pFrameRenderer; }
         /**
          * @brief 현재 붙어 있는 FrameRenderer 입니다 (없으면 nullptr).

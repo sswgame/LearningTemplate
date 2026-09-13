@@ -134,8 +134,6 @@ namespace sw
 
         if ( _pRHIDevice != nullptr )
             pScene->initialize( _pRHIDevice );
-        if ( _pFrameRenderer != nullptr )
-            pScene->setFrameRenderer( _pFrameRenderer );
 
 #if !defined( SW_SHIPPING )
         if ( engine::areEngineServicesBound() )
@@ -343,8 +341,6 @@ namespace sw
             _pRHIDevice->waitIdle();
             pendingScene->initialize( _pRHIDevice );
         }
-        if ( _pFrameRenderer != nullptr )
-            pendingScene->setFrameRenderer( _pFrameRenderer );
 
         Scene* const pPreviousActive = _pActiveScene;
         _pActiveScene                = pendingScene.get();
