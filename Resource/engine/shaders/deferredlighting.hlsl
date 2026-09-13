@@ -10,19 +10,13 @@
  * 첨부 하나를 통째로 아끼기 때문이고, 언리얼도 같은 선택을 한다.
  */
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float2 uv  : TEXCOORD0;
 };
 
-PSInput VSMain(VSInput input, uint vid : SV_VertexID)
+PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 {
 	PSInput output;
 	input.pos = input.pos;

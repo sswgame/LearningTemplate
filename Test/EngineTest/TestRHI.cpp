@@ -723,6 +723,89 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
 }
 
 /**
+ * @brief [RHITest] 프로보킹 정점 규약이 네 백엔드에서 같다 — flat 값은 삼각형의 **첫** 정점에서 온다
+ * @details `nointerpolation` 값은 삼각형의 정점 하나에서 오는데 어느 정점인지는 API 규약이다. DX·Vulkan 은
+ *          FIRST, OpenGL 기본은 LAST 라 엔진이 GL 디바이스 초기화에서 `glProvokingVertex( FIRST )` 를 건다.
+ *          엔진 셰이더의 flat 값(materialIndex)은 배치 안에서 전부 같아 그 한 줄이 실제로 그림을 바꾸는지
+ *          볼 수 없었다. provokingvertex.hlsl 은 정점마다 다른 값을 실어 FIRST 면 빨강, LAST 면 파랑이 된다.
+ */
+SW_TEST_CASE( RHITest, ProvokingVertexIsFirstOnAllBackends )
+{
+    const sw::RHIBackend backends[] = {
+#if defined( SW_PLATFORM_WINDOWS )
+        sw::RHIBackend::DirectX11,
+        sw::RHIBackend::DirectX12,
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#else
+        sw::RHIBackend::Vulkan,
+        sw::RHIBackend::OpenGL,
+#endif
+    };
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
+    {
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceWithWindow( backend, window, device ) == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "common/shaders/provokingvertex.hlsl";
+        psoDesc._pixelShaderPath             = "common/shaders/provokingvertex.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
+
+        if ( pso != 0 )
+        {
+            sw::vector<uint8>     pixels;
+            sw::RHITextureMipSpan layout{};
+            const bool            bSmoke = executeOffscreenPipelineSmoke( *device, pso, sw::kInvalidDescriptorIndex, 64, 64, &pixels, &layout );
+            SW_EXPECT_TRUE_MSG( bSmoke, "executeOffscreenPipelineSmoke(readback) 실패" );
+            if ( bSmoke )
+            {
+                uint32 redCount{ 0 };
+                uint32 greenCount{ 0 };
+                uint32 blueCount{ 0 };
+                for ( uint32 row = 0; row < layout._height; ++row )
+                {
+                    const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                    for ( uint32 col = 0; col < layout._width; ++col )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
+                        if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
+                            ++redCount;
+                        else if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
+                            ++greenCount;
+                        else if ( pPixel[2] > 200 && pPixel[0] < 80 && pPixel[1] < 80 )
+                            ++blueCount;
+                    }
+                }
+                const uint32 total = layout._width * layout._height;
+                // FIRST 규약: 삼각형 전체가 정점 0 의 값(빨강). 파랑이면 LAST(정점 2), 초록이면 정점 1 이다.
+                SW_EXPECT_TRUE_MSG( redCount == total,
+                                    ( sw::string( device->getBackendName() ) + ": 프로보킹 정점이 FIRST 가 아닙니다 (red " + sw::to_string( redCount ) +
+                                      " green " + sw::to_string( greenCount ) + " blue " + sw::to_string( blueCount ) + " / " + sw::to_string( total ) + ")" )
+                                        .c_str() );
+            }
+            pResource->destroyPipelineState( pso );
+        }
+
+        ++okCount;
+        shutdownDeviceWithWindow( device, window );
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the provoking vertex test" );
+}
+
+/**
  * @brief [RHITest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.

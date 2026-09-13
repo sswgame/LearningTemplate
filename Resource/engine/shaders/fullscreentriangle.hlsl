@@ -1,11 +1,5 @@
 #include "common.hlsli"
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -20,7 +14,7 @@ SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
 	float4 g_MaterialColor;
 };
 
-PSInput VSMain(VSInput input)
+PSInput VSMain(SwVertexInput input)
 {
 	PSInput output;
 	output.pos = float4(input.pos, 1.0f);

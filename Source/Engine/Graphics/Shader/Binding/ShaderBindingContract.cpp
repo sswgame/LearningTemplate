@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -586,6 +587,37 @@ namespace sw
                     Internal::report( pOutIssue, shaderLabel, seenA._name,
                                       string( "'" ) + seenB._name + "' 와 같은 자리를 차지합니다 (" + where + ")", issueCount );
                 }
+            }
+        }
+
+        // 5) 정점 입력 — 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan·GL 은 location 까지 같은가.
+        //    DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
+        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 예전엔 픽셀로만 드러났다.
+        for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
+        {
+            const RHIVertexAttribute* pAttribute{ nullptr };
+            for ( const RHIVertexAttribute& attribute : constant::arrVertexAttribute )
+            {
+                if ( input._semantic == attribute._pSemanticName )
+                {
+                    pAttribute = &attribute;
+                    break;
+                }
+            }
+            const string label = input._semantic + to_string( input._semanticIndex );
+            if ( pAttribute == nullptr || input._semanticIndex != 0 )
+            {
+                Internal::report( pOutIssue, shaderLabel, label,
+                                  "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 SwVertexInput 을 쓸 것",
+                                  issueCount );
+                continue;
+            }
+            if ( ( bVulkan || bOpenGl ) && input._location != pAttribute->_location )
+            {
+                Internal::report( pOutIssue, shaderLabel, label,
+                                  string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
+                                      to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — SwVertexInput 을 쓸 것)",
+                                  issueCount );
             }
         }
 

@@ -41,6 +41,15 @@ namespace
         return res;
     }
 
+    sw::ShaderVertexInputInfo makeVertexInput( const utf8* pSemantic, uint32 location, uint32 semanticIndex = 0 )
+    {
+        sw::ShaderVertexInputInfo input{};
+        input._semantic      = pSemantic;
+        input._semanticIndex = semanticIndex;
+        input._location      = location;
+        return input;
+    }
+
     bool hasIssueContaining( const sw::vector<sw::ShaderBindingContractIssue>& listIssue, const utf8* pText )
     {
         for ( const sw::ShaderBindingContractIssue& issue : listIssue )
@@ -176,6 +185,36 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         SW_EXPECT_TRUE( hasIssueContaining( listIssue, "슬롯 수" ) );
         SW_EXPECT_TRUE( hasIssueContaining( listIssue, "없는 register space" ) );
     }
+
+    // 10) 정점 입력 — `struct VSInput { pos; col }` 처럼 중간 속성을 뺀 선언은 Vulkan·GL 에서 col 이 location 1(노멀) 을
+    //     읽는다 (fullscreentriangle 이 실제로 검게 그려졌다). DX 는 시맨틱으로 묶어 같은 선언이 위반이 아니다.
+    {
+        sw::ShaderReflectionData skipped{};
+        skipped._listVertexInput.push_back( makeVertexInput( "POSITION", 0 ) );
+        skipped._listVertexInput.push_back( makeVertexInput( "COLOR", 1 ) );
+        listIssue.clear();
+        SW_EXPECT_EQUAL( 1u, sw::ShaderBindingContract::validate( skipped, sw::ShaderTargetFormat::SPIRV_Vulkan, "skipped.vk", &listIssue ) );
+        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "location 이 정점 레이아웃 표와" ) );
+        listIssue.clear();
+        SW_EXPECT_EQUAL( 1u, sw::ShaderBindingContract::validate( skipped, sw::ShaderTargetFormat::SPIRV_OpenGL, "skipped.gl", &listIssue ) );
+        listIssue.clear();
+        SW_EXPECT_EQUAL( 0u, sw::ShaderBindingContract::validate( skipped, sw::ShaderTargetFormat::DXIL_D3D12, "skipped.dx12", &listIssue ) );
+
+        sw::ShaderReflectionData full{};
+        full._listVertexInput.push_back( makeVertexInput( "POSITION", 0 ) );
+        full._listVertexInput.push_back( makeVertexInput( "NORMAL", 1 ) );
+        full._listVertexInput.push_back( makeVertexInput( "TEXCOORD", 2 ) );
+        full._listVertexInput.push_back( makeVertexInput( "COLOR", 3 ) );
+        listIssue.clear();
+        SW_EXPECT_EQUAL( 0u, sw::ShaderBindingContract::validate( full, sw::ShaderTargetFormat::SPIRV_Vulkan, "full.vk", &listIssue ) );
+
+        sw::ShaderReflectionData unknown{};
+        unknown._listVertexInput.push_back( makeVertexInput( "TANGENT", 0 ) );
+        unknown._listVertexInput.push_back( makeVertexInput( "TEXCOORD", 1, 1 ) );
+        listIssue.clear();
+        SW_EXPECT_EQUAL( 2u, sw::ShaderBindingContract::validate( unknown, sw::ShaderTargetFormat::DXBC_D3D11, "unknown.dx11", &listIssue ) );
+        SW_EXPECT_TRUE( hasIssueContaining( listIssue, "정점 레이아웃 표(constant::arrVertexAttribute)에 없는" ) );
+    }
 }
 
 /**
@@ -219,8 +258,10 @@ SW_TEST_CASE( ShaderBindingContractTest, AllBakedShadersMatchContract )
                 if ( sw::FileUtil::readFile( path, bytecode ) == false || bytecode.empty() )
                     continue;
                 const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, target._format );
-                if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() )
-                    continue; // 리플렉션 불가(예: 이 플랫폼에 컴파일러 DLL 없음) — 검사 대상이 아니다
+                // 리플렉션 불가(예: 이 플랫폼에 컴파일러 DLL 없음) — 검사 대상이 아니다. 정점 입력만 있는 VS(fullscreentriangle 처럼
+                // 상수버퍼가 PS 에만 있는 것)는 예전에 여기서 빠져 location 어긋남이 통과했다 — 세 목록이 다 비어야 건너뛴다.
+                if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() && reflection._listVertexInput.empty() )
+                    continue;
                 sw::vector<sw::ShaderBindingContractIssue> listIssue;
                 const uint32                               issueCount = sw::ShaderBindingContract::validate( reflection, target._format, path, &listIssue );
                 for ( const sw::ShaderBindingContractIssue& issue : listIssue )

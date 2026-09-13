@@ -9,13 +9,7 @@ struct PSInput
 	float4 col : COLOR;
 };
 
-struct VSInput
-{
-	float3 pos : POSITION;
-	float4 col : COLOR;
-};
-
-PSInput VSMain(VSInput dummy, uint vertexID : SV_VertexID)
+PSInput VSMain(SwVertexInput dummy, uint vertexID : SV_VertexID)
 {
 	PSInput output;
 

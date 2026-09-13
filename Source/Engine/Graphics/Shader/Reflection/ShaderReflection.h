@@ -39,11 +39,26 @@ namespace sw
         uint32 _bindCount{ 0 };
     };
 
+    /**
+     * @brief 정점 셰이더 입력 하나 — 시맨틱과 location.
+     * @details DX 는 시맨틱 이름으로 정점 버퍼에 묶고, Vulkan·OpenGL 은 **선언 순서로 매긴 location** 으로 묶는다.
+     *          그래서 같은 HLSL 이 DX 에서는 맞고 두 백엔드에서만 다른 속성을 읽을 수 있다 — 계약 검사가
+     *          이 목록을 `constant::arrVertexAttribute` 와 대조한다. 시스템 값(SV_VertexID 등)은 들어오지 않는다.
+     */
+    struct ShaderVertexInputInfo
+    {
+        string _semantic;           ///< 시맨틱 이름 (인덱스 제외, 예: "TEXCOORD")
+        uint32 _semanticIndex{ 0 }; ///< 시맨틱 인덱스 (TEXCOORD0 → 0)
+        uint32 _location{ 0 };      ///< SPIR-V Location / DX 입력 시그니처 레지스터(선언 순서)
+    };
+
     /// @brief 한 셰이더의 리플렉션 결과 (버퍼+바인딩)
     struct ShaderReflectionData
     {
         vector<ShaderBufferInfo>      _listConstantBuffer;
         vector<ShaderResourceBinding> _listResource;
+        /// @brief 정점 스테이지의 사용자 입력(시맨틱·location). 다른 스테이지는 비어 있다.
+        vector<ShaderVertexInputInfo> _listVertexInput;
         /**
          * @brief StructuredBuffer<T> 의 **원소 레이아웃** — 이름은 버퍼 변수 이름, 멤버는 T 의 필드, _totalSize 는 원소 stride.
          * @details GPUScene 머티리얼 데이터(g_SwMaterials)는 cbuffer 가 아니라 구조버퍼 원소라, 머티리얼 패커가 여기서

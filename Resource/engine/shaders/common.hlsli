@@ -130,4 +130,24 @@ static const float kTwoPi  = 6.28318530717958647692f;
 static const float kHalfPi = 1.57079632679489661923f;
 static const float kInvPi  = 0.31830988618379067154f;
 
+// ------------------------------------------------------------------------------
+// 6) 정점 입력 — **정본은 C++ 의 `constant::arrVertexAttribute` 다.** 이 구조체는 그 표와
+//       순서·개수가 같아야 한다.
+// ------------------------------------------------------------------------------
+// **쓰지 않는 속성도 반드시 선언한다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·OpenGL 은 **선언 순서로
+// location 을 매긴다** — 중간 속성을 빼면 그 뒤가 통째로 한 칸씩 당겨져, 색을 읽으려던 셰이더가
+// 노멀을 읽는다. DX 에서는 멀쩡하고 그 둘에서만 조용히 틀리는, 이 저장소에서 가장 비싼 종류의 버그다.
+// 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
+struct SwVertexInput
+{
+	float3 pos : POSITION;
+	float3 nrm : NORMAL;
+	float2 uv  : TEXCOORD0;
+	float4 col : COLOR;
+};
+// 풀스크린 셰이더도 이 구조체를 쓴다 — 예전 `struct VSInput { float3 pos; float4 col; }` 은 Vulkan·GL 에서
+// col 이 location 1(노멀) 을 읽었다. fullscreentriangle 이 그래서 검은 삼각형을 그렸고, 오프스크린 readback
+// 테스트(RHITest.OffscreenDrawIsReadable)가 두 백엔드에서 "클리어조차 안 보인다" 로 떨어졌다. 리플렉션 계약
+// 검사(ShaderBindingContract 5번 규칙)가 이제 이 어긋남을 바이너리에서 잡는다.
+
 #endif // SW_ENGINE_COMMON_HLSLI

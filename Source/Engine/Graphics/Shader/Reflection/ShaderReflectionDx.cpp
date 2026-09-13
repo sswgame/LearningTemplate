@@ -201,11 +201,37 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 정점 셰이더의 입력 시그니처를 정점 입력 목록으로 옮깁니다 (DX11/DX12 공통).
+             * @details 시스템 값(SV_*)은 정점 버퍼에서 오지 않으므로 뺀다. `Register` 는 시그니처 순서 = HLSL 선언 순서라
+             *          Vulkan·GL 이 매길 location 과 같다 — DX 는 이름으로 묶어 이 값이 틀려도 화면은 맞지만, 계약 검사가
+             *          같은 규칙으로 네 바이너리를 대조할 수 있게 같은 자리에 둔다.
+             */
+            template <typename TReflection, typename TParamDesc>
+            static void fillVertexInputs( TReflection* pReflection, uint32 inputParameterCount, ShaderReflectionData& outData )
+            {
+                for ( uint32 paramIndex = 0; paramIndex < inputParameterCount; ++paramIndex )
+                {
+                    TParamDesc paramDesc{};
+                    if ( FAILED( pReflection->GetInputParameterDesc( paramIndex, &paramDesc ) ) )
+                        continue;
+                    if ( paramDesc.SystemValueType != D3D_NAME_UNDEFINED || paramDesc.SemanticName == nullptr )
+                        continue;
+                    ShaderVertexInputInfo input{};
+                    input._semantic      = paramDesc.SemanticName;
+                    input._semanticIndex = paramDesc.SemanticIndex;
+                    input._location      = paramDesc.Register;
+                    outData._listVertexInput.push_back( std::move( input ) );
+                }
+            }
+
             static ShaderReflectionData fillFromId3d11Reflection( ID3D11ShaderReflection* pReflection )
             {
                 ShaderReflectionData data{};
                 D3D11_SHADER_DESC    shaderDesc{};
                 pReflection->GetDesc( &shaderDesc );
+                if ( D3D11_SHVER_GET_TYPE( shaderDesc.Version ) == D3D11_SHVER_VERTEX_SHADER )
+                    fillVertexInputs<ID3D11ShaderReflection, D3D11_SIGNATURE_PARAMETER_DESC>( pReflection, shaderDesc.InputParameters, data );
 
                 for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
                 {
@@ -275,6 +301,8 @@ namespace sw
                 ShaderReflectionData data{};
                 D3D12_SHADER_DESC    shaderDesc{};
                 pReflection->GetDesc( &shaderDesc );
+                if ( D3D12_SHVER_GET_TYPE( shaderDesc.Version ) == D3D12_SHVER_VERTEX_SHADER )
+                    fillVertexInputs<ID3D12ShaderReflection, D3D12_SIGNATURE_PARAMETER_DESC>( pReflection, shaderDesc.InputParameters, data );
 
                 for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
                 {

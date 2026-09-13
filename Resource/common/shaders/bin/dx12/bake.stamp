@@ -1,6 +1,7 @@
 SWBAKE 3
 0ffdaf48fc69fe16 samplecompute.hlsl
 1d0f2a698ee705f7 sampleindirect.hlsl
-2e0d8f7b60df9680 computetestgeometry.hlsl
 326dc306361a03d3 computetexturewrite.hlsl
-6e7b06e0de522d69 postoutline.hlsl
+98c1bc4362a81bc3 provokingvertex.hlsl
+cd5173768a92c5f3 computetestgeometry.hlsl
+e3e7d6703465eff4 postoutline.hlsl

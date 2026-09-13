@@ -12,6 +12,7 @@ namespace sw
         {
             static constexpr uint32 kSpirvMagic         = 0x07230203u;
             static constexpr uint32 kOpName             = 5u;
+            static constexpr uint32 kOpEntryPoint       = 15u;
             static constexpr uint32 kOpMemberName       = 6u;
             static constexpr uint32 kOpDecorate         = 71u;
             static constexpr uint32 kOpMemberDecorate   = 72u;
@@ -31,6 +32,9 @@ namespace sw
             static constexpr uint32 kOpVariable         = 59u;
 
             static constexpr uint32 kDecorationBufferBlock   = 3u; ///< SPIR-V 1.3 이하: Uniform 클래스 + BufferBlock = SSBO
+            static constexpr uint32 kDecorationLocation      = 30u;
+            static constexpr uint32 kExecutionModelVertex    = 0u;
+            static constexpr uint32 kStorageClassInput       = 1u;
             static constexpr uint32 kDecorationArrayStride   = 6u;
             static constexpr uint32 kDecorationBinding       = 33u;
             static constexpr uint32 kDecorationDescriptorSet = 34u;
@@ -170,6 +174,8 @@ namespace sw
         unordered_map<uint32, unordered_map<uint32, string>>            mapMemberName;
         unordered_map<uint32, uint32>                                   mapBinding;
         unordered_map<uint32, uint32>                                   mapDescriptorSet;
+        unordered_map<uint32, uint32>                                   mapLocation; ///< OpDecorate Location — 정점 입력 변수
+        uint32                                                          executionModel{ invalid_index::kUint32 };
         unordered_map<uint32, uint32>                                   mapArrayStride;
         unordered_map<uint32, uint32>                                   mapConstantValue;      ///< OpConstant (32비트 정수) — 배열 길이 해석용
         unordered_set<uint32>                                           uniqueBufferBlockType; ///< BufferBlock 데코레이션이 붙은 구조체 타입 id
@@ -193,7 +199,11 @@ namespace sw
             if ( instrWords == 0 || offset + instrWords > wordCount )
                 break;
 
-            if ( opcode == ShaderReflectionSpirvInternal::kOpName && instrWords >= 3 )
+            if ( opcode == ShaderReflectionSpirvInternal::kOpEntryPoint && instrWords >= 3 )
+            {
+                executionModel = pWords[offset + 1];
+            }
+            else if ( opcode == ShaderReflectionSpirvInternal::kOpName && instrWords >= 3 )
             {
                 const uint32 target = pWords[offset + 1];
                 const utf8*  pStr   = reinterpret_cast<const utf8*>( &pWords[offset + 2] );
@@ -220,6 +230,8 @@ namespace sw
                     mapArrayStride[target] = pWords[offset + 3];
                 else if ( decoration == ShaderReflectionSpirvInternal::kDecorationBufferBlock )
                     uniqueBufferBlockType.insert( target );
+                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationLocation && instrWords >= 4 )
+                    mapLocation[target] = pWords[offset + 3];
             }
             else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instrWords >= 5 )
             {
@@ -512,8 +524,42 @@ namespace sw
             data._listResource.push_back( std::move( res ) );
         }
 
-        SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
-                      data._listConstantBuffer.size(), data._listResource.size() );
+        // 정점 입력 — Input 저장 클래스에 Location 이 붙은 변수. DXC 는 `in.var.<SEMANTIC>` 로 이름을 남기고
+        // 시스템 값(SV_VertexID 등)은 BuiltIn 이라 Location 이 없다.
+        if ( executionModel == ShaderReflectionSpirvInternal::kExecutionModelVertex )
+        {
+            for ( const auto& [id, var] : mapVariable )
+            {
+                if ( var._storageClass != ShaderReflectionSpirvInternal::kStorageClassInput )
+                    continue;
+                auto locIt = mapLocation.find( id );
+                if ( locIt == mapLocation.end() )
+                    continue;
+                string name;
+                auto   nameIt = mapName.find( id );
+                if ( nameIt != mapName.end() )
+                    name = nameIt->second;
+                constexpr string_view kPrefix = "in.var.";
+                if ( name.size() >= kPrefix.size() && string_view( name ).substr( 0, kPrefix.size() ) == kPrefix )
+                    name = name.substr( kPrefix.size() );
+
+                ShaderVertexInputInfo input{};
+                input._location   = locIt->second;
+                size_t digitBegin = name.size();
+                while ( digitBegin > 0 && name[digitBegin - 1] >= '0' && name[digitBegin - 1] <= '9' )
+                    --digitBegin;
+                input._semantic = name.substr( 0, digitBegin );
+                for ( size_t digitIndex = digitBegin; digitIndex < name.size(); ++digitIndex )
+                    input._semanticIndex = input._semanticIndex * 10 + static_cast<uint32>( name[digitIndex] - '0' );
+                data._listVertexInput.push_back( std::move( input ) );
+            }
+            std::sort( data._listVertexInput.begin(), data._listVertexInput.end(),
+                       []( const ShaderVertexInputInfo& lhs, const ShaderVertexInputInfo& rhs )
+            { return lhs._location < rhs._location; } );
+        }
+
+        SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %# VertexInputs: %#",
+                      data._listConstantBuffer.size(), data._listResource.size(), data._listVertexInput.size() );
         return data;
     }
 

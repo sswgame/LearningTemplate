@@ -214,28 +214,6 @@ LLVM(`VC/Tools/Llvm/x64/bin`)까지 찾는다.
   있었다(가드 + 테스트 추가). 같은 파일의 다른 자리는 NOLINT 가 `template` 줄에 가려 적용되지 않고
   있었다 — **NOLINTNEXTLINE 은 진단이 붙는 줄 바로 위여야 한다.**
 
-### 1-4b. `glProvokingVertex( FIRST )` 는 걸었다 — **검증 테스트가 남았다**
-
-GL 기본은 LAST, DirectX·Vulkan 은 FIRST 라 `nointerpolation` 값이 삼각형의 다른 정점에서 온다. 디바이스
-초기화에서 FIRST 로 맞췄다(`OpenGLRHIDeviceInit.cpp`). 그런데 지금 flat 으로 넘기는 값(`materialIndex`)은
-배치 안에서 전부 같아서 **이 한 줄이 실제로 그림을 바꾸는지 확인할 방법이 없다** — 눈으로도, 기존
-테스트로도. 정점마다 다른 `nointerpolation` 값을 넘기는 셰이더로 네 백엔드가 같은 그림을 내는지 보는
-`RenderPassGpuTest` 케이스를 만들어야 닫힌다. 그때까지는 "설정은 했지만 검증되지 않은 한 줄" 이다.
-
-
-### 1-4c. `RHITest.OffscreenDrawIsReadable` 이 Vulkan·OpenGL 에서 실패한다 (기존 결함)
-
-DX12·DX11 은 통과하고 **Vulkan·OpenGL 만** 읽어 온 픽셀이 전부 `0 0 0` 이다 — 그린 빨강도,
-심지어 **클리어 색(13 13 20)도 안 보인다**. 되읽기가 렌더타깃이 아니라 빈 메모리를 보고 있다는 뜻이다.
-
-**이번 세션에서 생긴 것이 아니다.** 내 변경을 `git stash` 하고 기준 소스로 다시 빌드해도 같게
-실패한다. `RHITest` 는 `nogpu` 세트에 없어서 CI 게이트를 통과해 왔다.
-
-먼저 볼 곳은 `executeOffscreenPipelineSmoke` 의 되읽기 경로다 — 이 증상은 예전에도 있었고
-(2절 "오프스크린 렌더타깃 readback"), 그때 원인은 **공유 코드의 인자 순서**와 **Vulkan 이 b1 을
-안 걸던 것**이었다. 같은 자리가 다시 무너졌는지부터 본다. 픽셀이 전부 0 이라는 것은
-"드로우가 안 보인다" 가 아니라 "그 텍스처를 안 읽고 있다" 에 가깝다.
-
 ### 1-6. SSAO 패스의 결과를 **아무도 읽지 않는다**
 
 디퍼드 XML 은 `PostBloom` 의 입력으로 `AOColor` 를 적어 두었는데, 엔진은 그 패스에 `_sourceColor`
@@ -331,6 +309,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (풀스크린 셰이더가 Vulkan·GL 에서 노멀을 색으로 읽고 있었다 — 그리고 계약 검사가 그 VS 를 건너뛰고 있었다)
+
+**1-4c 의 원인은 readback 이 아니라 셰이더의 정점 입력 순서였다.** 두 백엔드 모두 픽셀이 (0,0,0,255) 였다 —
+"클리어조차 안 보임" 이 아니라 **검은 삼각형이 클리어를 덮은 것**(2026-09-07 과 같은 증상, 다른 원인).
+`fullscreentriangle.hlsl` 이 `struct VSInput { float3 pos : POSITION; float4 col : COLOR; }` 로 선언돼 있어서
+Vulkan·GL 은 `col` 을 **location 1 = NORMAL(0,0,1)** 로 읽었고, `(0,0,1) × 빨강 = 검정` 이 됐다. DX 는 시맨틱으로
+묶어 맞았다. `ccf87eec` 가 정점에 노멀·UV 를 넣을 때 `sprite2d` 는 고쳤지만 풀스크린 셰이더 열 개는 남아 있었다.
+
+**고친 것.**
+- `SwVertexInput` 을 `binding.hlsli` 에서 `common.hlsli` 로 옮기고, 정점을 받는 셰이더 **전부**가 그것을 쓴다
+  (deferredlighting · fullscreenblit · fullscreentriangle · postbloom · postoutline ×2 · ssao · taa · tonemap ·
+  computetestgeometry). 안 쓰는 속성은 DXC 가 최적화로 떼어 내되 location 은 표대로 남는다(COLOR = 3).
+- **리플렉션이 정점 입력을 본다.** `ShaderReflectionData::_listVertexInput` (시맨틱 · 인덱스 · location) — SPIR-V 는
+  `OpEntryPoint(Vertex)` + `Input` 저장 클래스 + `Location` 데코레이션 + `in.var.<SEMANTIC>` 이름, DX 는 입력 시그니처.
+- **계약 5번 규칙**: 시맨틱이 `constant::arrVertexAttribute` 에 있어야 하고, Vulkan·GL 은 location 까지 같아야 한다.
+  합성 테스트(SyntheticViolationsAreDetected 10) + 실제 바이너리로 확인 — 옛 선언으로 되굽자 vulkan·opengl
+  `fullscreentriangle_vs` 가 "기대 3, 리플렉션 1" 로 잡히고 DX 둘은 통과한다(맞는 판정).
+- **AllBakedShadersMatchContract 가 CB 도 리소스도 없는 VS 를 건너뛰고 있었다.** fullscreentriangle VS 가 정확히
+  그 경우라 규칙을 넣어도 통과해 버렸다 — 정점 입력까지 비어야 건너뛴다. "검사가 있다" 와 "검사가 그 파일을
+  본다" 는 다른 말이다.
+
+**1-4b 도 닫았다.** `common/shaders/provokingvertex.hlsl` 이 정점마다 다른 `nointerpolation` 값을 실어
+FIRST 면 빨강, LAST 면 파랑이 된다. `RHITest.ProvokingVertexIsFirstOnAllBackends` 가 네 백엔드에서 64×64 전부
+빨강임을 단언한다 — GL 의 `glProvokingVertex( FIRST )` 한 줄이 이제 검증된다.
+
+**확인**: RHITest 14/14 · RenderPassGpuTest 22/22 · ShaderBindingContractTest 6/6 · nogpu 5/5 · BackendSmoke 8회
+종료 0 · `[Error]` 0 · 평균 RGB 0.3 이내. 남은 잡음: Vulkan 검증 레이어의 "Vertex attribute at location 2/3 not
+consumed" **경고**(풀스크린 셰이더가 노멀·UV 를 안 쓰므로 DXC 가 떼어 냄) — 오류가 아니고 그림에 영향 없다.
 
 ### 2026-09-13 (Vulkan 이 `discard` 를 켜지 않은 기능으로 돌리고 있었다 — 그림은 맞았고 검증 레이어만 알았다)
 
