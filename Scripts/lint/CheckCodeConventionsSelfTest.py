@@ -9,8 +9,12 @@
 
   python Scripts/lint/CheckCodeConventionsSelfTest.py [--root <repo>] [--verbose]
 
-새 규칙을 `CheckCodeConventions.py` 에 넣었다면 여기에도 조각을 하나 넣는다. 넣지 않으면 이 검사가
-"덮이지 않은 카테고리" 로 실패한다 — 규칙을 늘리는 일과 그것이 살아 있음을 증명하는 일을 같이 묶는다.
+**조각은 되도록 규칙이 직접 든다.** `ConventionRule` 을 상속한 규칙은 `badSample` 에 자기 위반 조각을
+적어 두고, 이 검사가 그것을 읽어 온다 — 규칙과 증거가 붙어 있으면 둘이 어긋날 수가 없다.
+`badSample` 이 비어 있으면 그 자체로 실패한다.
+
+아래 `_kPerFileCases` · `_kWholeScanCases` 는 **아직 클래스가 아닌** 검사들(매개변수·지역변수 규칙,
+생성자 상태 기계, 파일 짝이 필요한 교차 검사)을 위한 나머지다. 그쪽도 클래스가 되면 표는 비어야 한다.
 """
 from __future__ import annotations
 
@@ -40,36 +44,6 @@ _kPerFileCases: list[tuple[str, str, str]] = [
         '#include "Engine/EngineMinimal.h"\n\nvoid probe() {}\n',
     ),
     (
-        "Naming/Constant",
-        "Source/Probe/Constant.cpp",
-        '#include "pch.h"\n\nstatic constexpr int32 MAX_COUNT = 4;\n',
-    ),
-    (
-        "Naming/RawPointer",
-        "Source/Probe/RawPointer.h",
-        "#pragma once\n\nclass Probe\n{\nprivate:\n    int32* _value;\n};\n",
-    ),
-    (
-        "Naming/DynamicContainer",
-        "Source/Probe/DynamicContainer.h",
-        "#pragma once\n\nclass Probe\n{\nprivate:\n    vector<int32> _items;\n};\n",
-    ),
-    (
-        "Naming/FixedArray",
-        "Source/Probe/FixedArray.h",
-        "#pragma once\n\nclass Probe\n{\nprivate:\n    float32 _matrix[16];\n};\n",
-    ),
-    (
-        "Naming/MapContainer",
-        "Source/Probe/MapContainer.h",
-        "#pragma once\n\nclass Probe\n{\nprivate:\n    map<int32, int32> _items;\n};\n",
-    ),
-    (
-        "Naming/SetContainer",
-        "Source/Probe/SetContainer.h",
-        "#pragma once\n\nclass Probe\n{\nprivate:\n    set<int32> _items;\n};\n",
-    ),
-    (
         "Naming/LocalNoUnderscore",
         "Source/Probe/LocalUnderscore.cpp",
         '#include "pch.h"\n\nvoid probe()\n{\n    int32 _count = 0;\n    (void)_count;\n}\n',
@@ -83,16 +57,6 @@ _kPerFileCases: list[tuple[str, str, str]] = [
         "Naming/LocalContainer",
         "Source/Probe/LocalContainer.cpp",
         '#include "pch.h"\n\nvoid probe()\n{\n    vector<int32> items;\n    (void)items;\n}\n',
-    ),
-    (
-        "Naming/LoopVariable",
-        "Source/Probe/LoopVariable.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    for ( int32 i = 0; i < 4; ++i )\n    {\n    }\n}\n',
-    ),
-    (
-        "Naming/TriplePointer",
-        "Source/Probe/TriplePointer.cpp",
-        '#include "pch.h"\n\nvoid probe( int32*** pppValue )\n{\n    (void)pppValue;\n}\n',
     ),
     (
         "Naming/ParameterNoUnderscore",
@@ -110,49 +74,9 @@ _kPerFileCases: list[tuple[str, str, str]] = [
         '#include "pch.h"\n\nvoid probe( const vector<int32>& items )\n{\n    (void)items;\n}\n',
     ),
     (
-        "Naming/ContainerSingular",
-        "Source/Probe/ContainerPlural.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    vector<int32> listItems;\n    (void)listItems;\n}\n',
-    ),
-    (
-        "Naming/OutParameter",
-        "Source/Probe/OutParameter.cpp",
-        '#include "pch.h"\n\nvoid probe( int32* outPValue )\n{\n    *outPValue = 1;\n}\n',
-    ),
-    (
-        "Style/BasicTypeAlias",
-        "Source/Probe/BasicType.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    unsigned int count = 0u;\n    (void)count;\n}\n',
-    ),
-    (
-        "Style/AutoUsage",
-        "Source/Probe/AutoUsage.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    auto name = "Probe";\n    (void)name;\n}\n',
-    ),
-    (
-        "Style/ExplicitTrueCheck",
-        "Source/Probe/ExplicitTrue.cpp",
-        '#include "pch.h"\n\nvoid probe( bool bValid )\n{\n    if ( bValid == true )\n    {\n    }\n}\n',
-    ),
-    (
-        "Style/ImplicitPointerNullCheck",
-        "Source/Probe/ImplicitNull.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    if ( getOwner() )\n    {\n    }\n}\n',
-    ),
-    (
-        "Style/NegatedComparison",
-        "Source/Probe/Negated.cpp",
-        '#include "pch.h"\n\nvoid probe( int32* pActor )\n{\n    if ( !pActor )\n    {\n    }\n}\n',
-    ),
-    (
         "Style/ConstructorBraces",
         "Source/Probe/CtorBraces.cpp",
         '#include "pch.h"\n\nProbe::Probe()\n    : _count( 0 )\n{\n}\n',
-    ),
-    (
-        "Style/LogFormatSpec",
-        "Source/Probe/LogFormat.cpp",
-        '#include "pch.h"\n\nvoid probe( int32 width, int32 count )\n{\n    SW_LOG_INFO( "count=%*d", width, count );\n}\n',
     ),
     (
         "Style/ConstructorOnePerLine",
@@ -255,9 +179,24 @@ def main(argv: list[str] | None = None) -> int:
 
     tempRoot = Path(tempfile.mkdtemp(prefix="swConventionsSelfTest"))
     try:
+        # --- 규칙이 스스로 드는 조각 (표가 아니라 규칙에서 온다) ---
+        ruleOwnedCases: list[tuple[str, str, str]] = []
+        for scopeRules in CheckCodeConventions._kRulesByScope.values():
+            for rule in scopeRules:
+                # 조각이 없으면 아래 "조각이 없는 카테고리" 검사가 잡는다 (파일 짝이 필요한 규칙은
+                # `_kWholeScanCases` 가 대신 덮는다 — 그쪽도 같은 검사에 걸린다).
+                # 규칙이 카테고리를 여럿 내면 조각 하나가 그중 하나만 증명한다 — 전부를 요구하지 않는다.
+                # (나머지는 `extraSamples` 가 덮고, 끝의 "조각이 없는 카테고리" 검사가 빠진 것을 잡는다.)
+                if rule.badSample:
+                    ruleOwnedCases.append((rule.allCategories(), rule.badSampleFile, rule.badSample))
+                for extraFile, extraBody in rule.extraSamples:
+                    ruleOwnedCases.append((None, extraFile, extraBody))
+
         # --- 파일 단위 규칙 ---
-        for category, relPath, content in _kPerFileCases:
-            caseRoot = tempRoot / category.replace("/", "_")
+        for category, relPath, content in ruleOwnedCases + _kPerFileCases:
+            expected = (category,) if isinstance(category, str) else category
+            caseName = Path(relPath).stem if expected is None else expected[0].replace("/", "_")
+            caseRoot = tempRoot / caseName
             path = writeFixtureInternal(caseRoot, relPath, content)
             resetPathMapCacheInternal()
             found = categoriesForFileInternal(caseRoot, path)
@@ -265,11 +204,16 @@ def main(argv: list[str] | None = None) -> int:
             if args.verbose:
                 print(f"  [{category}] -> {sorted(found) if found else '(없음)'}")
 
-            if category in found:
-                covered.add(category)
+            if expected is None:
+                # 카테고리를 여럿 내는 규칙의 보조 조각 — 무엇이 잡히든 덮인 것으로 친다.
+                covered.update(found)
+                continue
+
+            if found & set(expected):
+                covered.update(found)
             else:
-                errors.append(f"{category}: 조각이 잡히지 않았습니다 — 규칙이 죽었거나 조각이 낡았습니다 "
-                              f"(잡힌 것: {sorted(found) if found else '없음'})")
+                errors.append(f"{' / '.join(expected)}: 조각이 잡히지 않았습니다 — 규칙이 죽었거나 "
+                              f"조각이 낡았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
 
         # --- 트리 전체를 봐야 아는 규칙 ---
         for category, files in _kWholeScanCases:

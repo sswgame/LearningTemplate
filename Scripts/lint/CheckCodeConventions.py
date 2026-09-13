@@ -86,26 +86,49 @@ class LineScanContext:
     isSource: bool
 
 
-# 줄 단위 **순수** 규칙들. 파일 전체 상태(클래스 스택·생성자 추적)가 필요한 검사는 여기 없다 —
-# 그것들은 스캔 함수가 직접 들고 있다(상태 기계라 함수로 떼면 오히려 흩어진다).
-# 새 규칙은 정규식 바로 아래에 함수를 두고 이 목록에 이름을 더한다.
-_kLineRules: list = []
+# 규칙 하나 = 클래스 하나. **상속만 하면 등록된다** — 목록에 이름을 더할 필요가 없다.
+#
+# 규칙이 자기 **위반 조각**(`badSample`)도 같이 든다. 그래서 음성 테스트
+# (`CheckCodeConventionsSelfTest.py`)가 조각 표를 따로 들지 않는다 — 규칙과 그 증거가 붙어 있으면
+# 둘이 어긋날 수가 없다. 이 저장소가 반복해서 배운 것이다: **목록이 아니라 자리가 규칙이다.**
+_kRulesByScope: dict[str, list] = {"line": [], "classMember": []}
 
 
-def lineRule(func):
-    """줄 단위 규칙으로 등록하는 데코레이터."""
-    _kLineRules.append(func)
-    return func
+class ConventionRule:
+    """
+    줄 하나를 보고 위반을 돌려주는 규칙.
 
+    새 규칙을 넣으려면 이 클래스를 상속해 `category` · `badSample` 을 적고 `onLine` 만 쓰면 된다.
+    등록·자가 테스트 편입은 자동이다.
 
-# 클래스 본문 **직속** 에서만 도는 규칙 (멤버 변수 명명). 스코프 판정이 끝난 뒤 불린다.
-_kClassMemberRules: list = []
+    - `category`     : 위반에 붙는 카테고리. 여러 개를 내는 규칙은 `categories` 를 쓴다.
+    - `scope`        : "line" 은 모든 줄, "classMember" 는 클래스 본문 직속에서만.
+    - `badSample`    : 이 규칙이 **반드시 잡아야 하는** 조각. 없으면 "덮이지 않은 카테고리" 로 잡힌다.
+    - `badSampleFile`: 그 조각을 쓸 파일 이름. 헤더 전용 규칙은 `.h` 로 준다.
+    - `extraSamples` : 카테고리를 여럿 내는 규칙이 나머지를 증명하는 조각들 `(파일 이름, 내용)`.
 
+    파일 **짝**이 있어야 성립하는 검사(헤더+소스, 같은 이름의 다른 파일)는 여기 조각으로 못 적는다.
+    그런 것은 자가 테스트의 `_kWholeScanCases` 에 남는다.
+    """
+    category: str = ""
+    categories: tuple[str, ...] = ()
+    scope: str = "line"
+    badSample: str = ""
+    badSampleFile: str = "Source/Probe/Sample.cpp"
+    extraSamples: tuple[tuple[str, str], ...] = ()
 
-def classMemberRule(func):
-    """클래스 멤버 규칙으로 등록하는 데코레이터."""
-    _kClassMemberRules.append(func)
-    return func
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.scope not in _kRulesByScope:
+            raise ValueError(f"{cls.__name__}: 알 수 없는 scope '{cls.scope}'")
+        _kRulesByScope[cls.scope].append(cls())
+
+    @classmethod
+    def allCategories(cls) -> tuple[str, ...]:
+        return cls.categories if cls.categories else ((cls.category,) if cls.category else ())
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        raise NotImplementedError
 
 
 # --- 3. 정규표현식 패턴 ------------------------------------------------------
@@ -1207,8 +1230,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             isHeader=isHeader,
             isSource=isSource,
         )
-        for lineRuleFunc in _kLineRules:
-            violations.extend(lineRuleFunc(scanContext))
+        for rule in _kRulesByScope["line"]:
+            violations.extend(rule.onLine(scanContext))
 
         # class / struct 선언 감지
         if classMatch := _kClassDeclRe.search(trimmed):
@@ -1334,8 +1357,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         # 2) 클래스 본문 직속 -> 멤버 변수 검사
         if isInsideClass:
-            for classMemberRuleFunc in _kClassMemberRules:
-                violations.extend(classMemberRuleFunc(scanContext))
+            for rule in _kRulesByScope["classMember"]:
+                violations.extend(rule.onLine(scanContext))
 
         # 중괄호 증감 및 스택 정리
         openBraces = trimmed.count("{")
@@ -1605,349 +1628,416 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
 
 # --- 줄 단위 규칙 구현 ---------------------------------------------------------
 
-@lineRule
-def ruleIncludePathCasing( ctx: LineScanContext ) -> list[ConventionViolation]:
+class IncludePathCasingRule( ConventionRule ):
     """Include/PathCasing"""
-    violations: list[ConventionViolation] = []
-    # 인클루드 경로 파일명 및 대소문자 일치 검사
-    if includeMatch := _kIncludePathRe.match(ctx.trimmed):
-        includeType = includeMatch.group(1)
-        includePath = includeMatch.group(2).replace("\\", "/")
-        if includeType == '"' and includePath != "pch.h":
-            exactMap = getExactPathMapInternal(ctx.rootDir)
-            includeLower = includePath.lower()
-            if includeLower in exactMap:
-                exactPath = exactMap[includeLower]
-                if includePath != exactPath:
+    category = "Include/PathCasing"
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 인클루드 경로 파일명 및 대소문자 일치 검사
+        if includeMatch := _kIncludePathRe.match(ctx.trimmed):
+            includeType = includeMatch.group(1)
+            includePath = includeMatch.group(2).replace("\\", "/")
+            if includeType == '"' and includePath != "pch.h":
+                exactMap = getExactPathMapInternal(ctx.rootDir)
+                includeLower = includePath.lower()
+                if includeLower in exactMap:
+                    exactPath = exactMap[includeLower]
+                    if includePath != exactPath:
+                        violations.append(
+                            ConventionViolation(
+                                file_path=ctx.relPath,
+                                line_number=ctx.lineNum,
+                                rule_category="Include/PathCasing",
+                                message=f"인클루드 경로 '{includePath}'의 대소문자가 실제 파일 시스템 경로 '{exactPath}'와 일치하지 않습니다.",
+                                snippet=ctx.trimmed,
+                                suggested_fix=f'#include "{exactPath}"',
+                            )
+                        )
+        return violations
+
+
+class LoopVariableNameRule( ConventionRule ):
+    """Naming/LoopVariable"""
+    category = "Naming/LoopVariable"
+    badSampleFile = "Source/Probe/LoopVariable.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    for ( int32 i = 0; i < 4; ++i )\n    {\n    }\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 단일 문자 루프 카운터(i, j, k) 검사
+        if loopMatch := _kLoopIndexRe.search(ctx.line):
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Naming/LoopVariable",
+                    message=f"단일 문자 루프 변수 '{loopMatch.group(1)}' 사용이 검출되었습니다. 의미 있는 이름(예: index, childIndex)을 사용하세요.",
+                    snippet=ctx.trimmed,
+                )
+            )
+        return violations
+
+
+class AutoOnLiteralRule( ConventionRule ):
+    """Style/AutoUsage"""
+    category = "Style/AutoUsage"
+    badSampleFile = "Source/Probe/AutoUsage.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    auto name = "Probe";\n    (void)name;\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 리터럴/원시 타입 직접 대입 시 auto 사용 검사
+        if autoMatch := _kLiteralAutoRe.search(ctx.line):
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/AutoUsage",
+                    message=f"명시적 리터럴/원시 타입 대입 변수 '{autoMatch.group(1)}'에 auto를 사용하지 마세요.",
+                    snippet=ctx.trimmed,
+                )
+            )
+        return violations
+
+
+class LogFormatSpecRule( ConventionRule ):
+    """Style/LogFormatSpec"""
+    category = "Style/LogFormatSpec"
+    badSampleFile = "Source/Probe/LogFormat.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( int32 width, int32 count )\n{\n    SW_LOG_INFO( "count=%*d", width, count );\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 타입세이프 포매터가 못 읽는 스펙 검사 (동적 폭 `%*d`, 16진 부동소수 `%a`, `%n`)
+        if _kFormatterCallRe.search(ctx.line):
+            for strMatch in _kStringLiteralRe.finditer(ctx.line):
+                badSpec = _kBadPrintfSpecRe.search(strMatch.group(1))
+                if badSpec:
                     violations.append(
                         ConventionViolation(
                             file_path=ctx.relPath,
                             line_number=ctx.lineNum,
-                            rule_category="Include/PathCasing",
-                            message=f"인클루드 경로 '{includePath}'의 대소문자가 실제 파일 시스템 경로 '{exactPath}'와 일치하지 않습니다.",
+                            rule_category="Style/LogFormatSpec",
+                            message=(
+                                f"타입세이프 포매터가 파싱하지 못하는 printf 스펙 '{badSpec.group(0)}'이(가) 있습니다. "
+                                "동적 폭/정밀도(*)와 %a/%n 은 지원하지 않습니다 — "
+                                "`%#` 플레이스홀더 + Fmt(값, Format()...) 로 쓰세요. "
+                                "폭·정밀도·플래그(%.3f, %05d, %-8s)는 이제 그대로 쓸 수 있습니다."
+                            ),
                             snippet=ctx.trimmed,
-                            suggested_fix=f'#include "{exactPath}"',
                         )
                     )
-    return violations
+                    break
+        return violations
 
 
-@lineRule
-def ruleLoopVariableName( ctx: LineScanContext ) -> list[ConventionViolation]:
-    """Naming/LoopVariable"""
-    violations: list[ConventionViolation] = []
-    # 단일 문자 루프 카운터(i, j, k) 검사
-    if loopMatch := _kLoopIndexRe.search(ctx.line):
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Naming/LoopVariable",
-                message=f"단일 문자 루프 변수 '{loopMatch.group(1)}' 사용이 검출되었습니다. 의미 있는 이름(예: index, childIndex)을 사용하세요.",
-                snippet=ctx.trimmed,
-            )
-        )
-    return violations
-
-
-@lineRule
-def ruleAutoOnLiteral( ctx: LineScanContext ) -> list[ConventionViolation]:
-    """Style/AutoUsage"""
-    violations: list[ConventionViolation] = []
-    # 리터럴/원시 타입 직접 대입 시 auto 사용 검사
-    if autoMatch := _kLiteralAutoRe.search(ctx.line):
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Style/AutoUsage",
-                message=f"명시적 리터럴/원시 타입 대입 변수 '{autoMatch.group(1)}'에 auto를 사용하지 마세요.",
-                snippet=ctx.trimmed,
-            )
-        )
-    return violations
-
-
-@lineRule
-def ruleLogFormatSpec( ctx: LineScanContext ) -> list[ConventionViolation]:
-    """Style/LogFormatSpec"""
-    violations: list[ConventionViolation] = []
-    # 타입세이프 포매터가 못 읽는 스펙 검사 (동적 폭 `%*d`, 16진 부동소수 `%a`, `%n`)
-    if _kFormatterCallRe.search(ctx.line):
-        for strMatch in _kStringLiteralRe.finditer(ctx.line):
-            badSpec = _kBadPrintfSpecRe.search(strMatch.group(1))
-            if badSpec:
-                violations.append(
-                    ConventionViolation(
-                        file_path=ctx.relPath,
-                        line_number=ctx.lineNum,
-                        rule_category="Style/LogFormatSpec",
-                        message=(
-                            f"타입세이프 포매터가 파싱하지 못하는 printf 스펙 '{badSpec.group(0)}'이(가) 있습니다. "
-                            "동적 폭/정밀도(*)와 %a/%n 은 지원하지 않습니다 — "
-                            "`%#` 플레이스홀더 + Fmt(값, Format()...) 로 쓰세요. "
-                            "폭·정밀도·플래그(%.3f, %05d, %-8s)는 이제 그대로 쓸 수 있습니다."
-                        ),
-                        snippet=ctx.trimmed,
-                    )
-                )
-                break
-    return violations
-
-
-@lineRule
-def ruleExplicitTrueCompare( ctx: LineScanContext ) -> list[ConventionViolation]:
+class ExplicitTrueCompareRule( ConventionRule ):
     """Style/ExplicitTrueCheck"""
-    violations: list[ConventionViolation] = []
-    # 불필요한 '== true' 명시 검사
-    if _kExplicitTrueRe.search(ctx.line):
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Style/ExplicitTrueCheck",
-                message="불리언을 '== true'와 명시적으로 비교하지 마세요. 'if (bValid)' 형태를 사용하세요.",
-                snippet=ctx.trimmed,
+    category = "Style/ExplicitTrueCheck"
+    badSampleFile = "Source/Probe/ExplicitTrue.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( bool bValid )\n{\n    if ( bValid == true )\n    {\n    }\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 불필요한 '== true' 명시 검사
+        if _kExplicitTrueRe.search(ctx.line):
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/ExplicitTrueCheck",
+                    message="불리언을 '== true'와 명시적으로 비교하지 마세요. 'if (bValid)' 형태를 사용하세요.",
+                    snippet=ctx.trimmed,
+                )
             )
-        )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleNegatedCondition( ctx: LineScanContext ) -> list[ConventionViolation]:
+class NegatedConditionRule( ConventionRule ):
     """Style/NegatedComparison"""
-    violations: list[ConventionViolation] = []
-    # 부정(!expr) 조건문 검사
-    if negatedMatch := _kNegatedConditionRe.search(ctx.line):
-        expr = negatedMatch.group(1).strip()
-        if re.match(r'^_?p[A-Z]', expr) or "->" in expr:
-            msg = f"포인터 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == nullptr )' 비교를 사용하세요."
-        elif expr.endswith(".empty()") or expr.endswith(".contains()"):
-            msg = f"상태 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
-        elif re.match(r'^_?b[A-Z]', expr) or expr.startswith(("is", "has", "can")):
-            msg = f"불리언 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
-        else:
-            msg = f"부정 연산자 'if ( !{expr} )' 대신 명시적 비교('== false' 또는 '== nullptr')를 사용하세요."
+    category = "Style/NegatedComparison"
+    badSampleFile = "Source/Probe/Negated.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( int32* pActor )\n{\n    if ( !pActor )\n    {\n    }\n}\n'
 
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Style/NegatedComparison",
-                message=msg,
-                snippet=ctx.trimmed,
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 부정(!expr) 조건문 검사
+        if negatedMatch := _kNegatedConditionRe.search(ctx.line):
+            expr = negatedMatch.group(1).strip()
+            if re.match(r'^_?p[A-Z]', expr) or "->" in expr:
+                msg = f"포인터 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == nullptr )' 비교를 사용하세요."
+            elif expr.endswith(".empty()") or expr.endswith(".contains()"):
+                msg = f"상태 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
+            elif re.match(r'^_?b[A-Z]', expr) or expr.startswith(("is", "has", "can")):
+                msg = f"불리언 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
+            else:
+                msg = f"부정 연산자 'if ( !{expr} )' 대신 명시적 비교('== false' 또는 '== nullptr')를 사용하세요."
+
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/NegatedComparison",
+                    message=msg,
+                    snippet=ctx.trimmed,
+                )
             )
-        )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleImplicitPointerNull( ctx: LineScanContext ) -> list[ConventionViolation]:
+class ImplicitPointerNullRule( ConventionRule ):
     """Style/ImplicitPointerNullCheck"""
-    violations: list[ConventionViolation] = []
-    # 암시적 포인터 널 검사
-    if ptrMatch := _kImplicitPointerNullRe.search(ctx.line):
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Style/ImplicitPointerNullCheck",
-                message=f"암시적 포인터 검사 '{ptrMatch.group(1)}'가 검출되었습니다. 명시적 '!= nullptr' 비교를 사용하세요.",
-                snippet=ctx.trimmed,
+    category = "Style/ImplicitPointerNullCheck"
+    badSampleFile = "Source/Probe/ImplicitNull.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    if ( getOwner() )\n    {\n    }\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 암시적 포인터 널 검사
+        if ptrMatch := _kImplicitPointerNullRe.search(ctx.line):
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/ImplicitPointerNullCheck",
+                    message=f"암시적 포인터 검사 '{ptrMatch.group(1)}'가 검출되었습니다. 명시적 '!= nullptr' 비교를 사용하세요.",
+                    snippet=ctx.trimmed,
+                )
             )
-        )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleConstantName( ctx: LineScanContext ) -> list[ConventionViolation]:
+class ConstantNameRule( ConventionRule ):
     """Naming/Constant"""
-    violations: list[ConventionViolation] = []
-    # 상수 네이밍 검사
-    if constMatch := _kConstantNamingRe.search(ctx.line):
-        varName = constMatch.group(1)
-        if "Math" not in ctx.relPath:
-            if not varName.startswith("k") or (len(varName) > 1 and not varName[1].isupper()):
-                violations.append(
-                    ConventionViolation(
-                        file_path=ctx.relPath,
-                        line_number=ctx.lineNum,
-                        rule_category="Naming/Constant",
-                        message=f"상수 '{varName}'는 kPascalCase 명명 규칙을 따라야 합니다.",
-                        snippet=ctx.trimmed,
+    category = "Naming/Constant"
+    badSampleFile = "Source/Probe/Constant.cpp"
+    badSample = '#include "pch.h"\n\nstatic constexpr int32 MAX_COUNT = 4;\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 상수 네이밍 검사
+        if constMatch := _kConstantNamingRe.search(ctx.line):
+            varName = constMatch.group(1)
+            if "Math" not in ctx.relPath:
+                if not varName.startswith("k") or (len(varName) > 1 and not varName[1].isupper()):
+                    violations.append(
+                        ConventionViolation(
+                            file_path=ctx.relPath,
+                            line_number=ctx.lineNum,
+                            rule_category="Naming/Constant",
+                            message=f"상수 '{varName}'는 kPascalCase 명명 규칙을 따라야 합니다.",
+                            snippet=ctx.trimmed,
+                        )
                     )
-                )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleBasicTypeAlias( ctx: LineScanContext ) -> list[ConventionViolation]:
+class BasicTypeAliasRule( ConventionRule ):
     """Style/BasicTypeAlias"""
-    violations: list[ConventionViolation] = []
-    # 원시 기본 자료형 사용 검사
-    if not ctx.trimmed.startswith("#") and "int main" not in ctx.trimmed and "Types.h" not in ctx.relPath:
-        if basicTypeMatch := _kBasicTypesRe.search(ctx.codeWithoutStrings):
-            typeName = basicTypeMatch.group(0)
-            violations.append(
-                ConventionViolation(
-                    file_path=ctx.relPath,
-                    line_number=ctx.lineNum,
-                    rule_category="Style/BasicTypeAlias",
-                    message=f"기본 자료형 '{typeName}' 대신 Types.h의 별칭(int32, float32 등)을 사용하세요.",
-                    snippet=ctx.trimmed,
+    category = "Style/BasicTypeAlias"
+    badSampleFile = "Source/Probe/BasicType.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    unsigned int count = 0u;\n    (void)count;\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 원시 기본 자료형 사용 검사
+        if not ctx.trimmed.startswith("#") and "int main" not in ctx.trimmed and "Types.h" not in ctx.relPath:
+            if basicTypeMatch := _kBasicTypesRe.search(ctx.codeWithoutStrings):
+                typeName = basicTypeMatch.group(0)
+                violations.append(
+                    ConventionViolation(
+                        file_path=ctx.relPath,
+                        line_number=ctx.lineNum,
+                        rule_category="Style/BasicTypeAlias",
+                        message=f"기본 자료형 '{typeName}' 대신 Types.h의 별칭(int32, float32 등)을 사용하세요.",
+                        snippet=ctx.trimmed,
+                    )
                 )
-            )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleTriplePointer( ctx: LineScanContext ) -> list[ConventionViolation]:
+class TriplePointerRule( ConventionRule ):
     """Naming/TriplePointer"""
-    violations: list[ConventionViolation] = []
-    # 삼중 포인터 이상(ppp, ***) 검사
-    if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
-        if tripleMatch := _kTriplePointerRe.search(ctx.codeWithoutStrings):
-            matchedStr = tripleMatch.group(0)
-            violations.append(
-                ConventionViolation(
-                    file_path=ctx.relPath,
-                    line_number=ctx.lineNum,
-                    rule_category="Naming/TriplePointer",
-                    message=f"삼중 포인터 이상('{matchedStr}') 사용이 검출되었습니다. 구조적 결함이므로 데이터 구조를 재설계하세요.",
-                    snippet=ctx.trimmed,
+    category = "Naming/TriplePointer"
+    badSampleFile = "Source/Probe/TriplePointer.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( int32*** pppValue )\n{\n    (void)pppValue;\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 삼중 포인터 이상(ppp, ***) 검사
+        if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
+            if tripleMatch := _kTriplePointerRe.search(ctx.codeWithoutStrings):
+                matchedStr = tripleMatch.group(0)
+                violations.append(
+                    ConventionViolation(
+                        file_path=ctx.relPath,
+                        line_number=ctx.lineNum,
+                        rule_category="Naming/TriplePointer",
+                        message=f"삼중 포인터 이상('{matchedStr}') 사용이 검출되었습니다. 구조적 결함이므로 데이터 구조를 재설계하세요.",
+                        snippet=ctx.trimmed,
+                    )
                 )
-            )
-    return violations
+        return violations
 
 
-@lineRule
-def ruleOutParameterName( ctx: LineScanContext ) -> list[ConventionViolation]:
+class OutParameterNameRule( ConventionRule ):
     """Naming/OutParameter"""
-    violations: list[ConventionViolation] = []
-    # 출력 매개변수 명명 규칙 검사
-    if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
-        for outMatch in _kOutParamNamingRe.finditer(ctx.codeWithoutStrings):
-            paramCandidate = outMatch.group(1)
-            fixResult = getSuggestedOutParamFixInternal(paramCandidate)
-            if fixResult is not None:
-                suggestedFix, fixMsg = fixResult
-                violations.append(
-                    ConventionViolation(
-                        file_path=ctx.relPath,
-                        line_number=ctx.lineNum,
-                        rule_category="Naming/OutParameter",
-                        message=f"{fixMsg} ('{suggestedFix}' 권장)",
-                        snippet=ctx.trimmed,
-                        suggested_fix=suggestedFix,
-                    )
-                )
-    return violations
+    category = "Naming/OutParameter"
+    badSampleFile = "Source/Probe/OutParameter.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( int32* outPValue )\n{\n    *outPValue = 1;\n}\n'
 
-@classMemberRule
-def ruleClassMemberNaming( ctx: LineScanContext ) -> list[ConventionViolation]:
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 출력 매개변수 명명 규칙 검사
+        if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
+            for outMatch in _kOutParamNamingRe.finditer(ctx.codeWithoutStrings):
+                paramCandidate = outMatch.group(1)
+                fixResult = getSuggestedOutParamFixInternal(paramCandidate)
+                if fixResult is not None:
+                    suggestedFix, fixMsg = fixResult
+                    violations.append(
+                        ConventionViolation(
+                            file_path=ctx.relPath,
+                            line_number=ctx.lineNum,
+                            rule_category="Naming/OutParameter",
+                            message=f"{fixMsg} ('{suggestedFix}' 권장)",
+                            snippet=ctx.trimmed,
+                            suggested_fix=suggestedFix,
+                        )
+                    )
+        return violations
+
+class ClassMemberNamingRule( ConventionRule ):
     """Naming/ContainerSingular · Naming/DynamicContainer · Naming/FixedArray · Naming/MapContainer · Naming/RawPointer · Naming/SetContainer"""
-    violations: list[ConventionViolation] = []
-    if ptrMemberMatch := _kMemberRawPointerRe.match(ctx.line):
-        varName = ptrMemberMatch.group(1)
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Naming/RawPointer",
-                message=f"원시 포인터 멤버 변수 '{varName}'는 '_p' 접두어로 시작해야 합니다.",
-                snippet=ctx.trimmed,
-            )
-        )
+    categories = (
+        "Naming/ContainerSingular",
+        "Naming/DynamicContainer",
+        "Naming/FixedArray",
+        "Naming/MapContainer",
+        "Naming/RawPointer",
+        "Naming/SetContainer",
+    )
+    scope = "classMember"
+    # 이 규칙은 카테고리를 여섯 개 낸다 — 하나씩 증명한다.
+    badSampleFile = "Source/Probe/DynamicContainer.h"
+    badSample = "#pragma once\n\nclass Probe\n{\nprivate:\n    vector<int32> _items;\n};\n"
+    extraSamples = (
+        ("Source/Probe/RawPointer.h",
+         "#pragma once\n\nclass Probe\n{\nprivate:\n    int32* _value;\n};\n"),
+        ("Source/Probe/FixedArray.h",
+         "#pragma once\n\nclass Probe\n{\nprivate:\n    float32 _matrix[16];\n};\n"),
+        ("Source/Probe/MapContainer.h",
+         "#pragma once\n\nclass Probe\n{\nprivate:\n    map<int32, int32> _items;\n};\n"),
+        ("Source/Probe/SetContainer.h",
+         "#pragma once\n\nclass Probe\n{\nprivate:\n    set<int32> _items;\n};\n"),
+        ("Source/Probe/MemberPlural.h",
+         "#pragma once\n\nclass Probe\n{\nprivate:\n    vector<int32> _listItems;\n};\n"),
+    )
 
-    if arrMatch := _kMemberFixedArrayRe.match(ctx.line):
-        varName = arrMatch.group(1)
-        violations.append(
-            ConventionViolation(
-                file_path=ctx.relPath,
-                line_number=ctx.lineNum,
-                rule_category="Naming/FixedArray",
-                message=f"고정 배열 멤버 변수 '{varName}'는 '_arr' 접두어로 시작해야 합니다.",
-                snippet=ctx.trimmed,
-            )
-        )
-
-    if vecMatch := _kMemberVectorRe.match(ctx.line):
-        innerType = vecMatch.group(1).strip()
-        varName = vecMatch.group(2)
-        isByteVec = bool(re.search(r'\b(?:uint8|int8|utf8|char|byte)\b', innerType, re.IGNORECASE))
-        hasByteWord = "byte" in varName.lower()
-
-        if isByteVec and hasByteWord:
-            if varName.startswith("_list"):
-                suggested = "_" + varName[5].lower() + varName[6:]
-                violations.append(
-                    ConventionViolation(
-                        file_path=ctx.relPath,
-                        line_number=ctx.lineNum,
-                        rule_category="Naming/DynamicContainer",
-                        message=f"바이트 벡터({innerType}) 멤버 변수 '{varName}'는 'byte' 단어가 포함된 경우 '_list' 접두어를 생략해야 합니다 ('{suggested}' 권장).",
-                        snippet=ctx.trimmed,
-                        suggested_fix=suggested,
-                    )
-                )
-        else:
-            if not varName.startswith("_list") and not varName.startswith("_s_list"):
-                violations.append(
-                    ConventionViolation(
-                        file_path=ctx.relPath,
-                        line_number=ctx.lineNum,
-                        rule_category="Naming/DynamicContainer",
-                        message=f"동적 배열/벡터 멤버 변수 '{varName}'는 '_list' 접두어로 시작해야 합니다 ('List' 접미어 사용 불가).",
-                        snippet=ctx.trimmed,
-                    )
-                )
-
-    if mapMatch := _kMemberMapRe.match(ctx.line):
-        varName = mapMatch.group(1)
-        if not varName.startswith("_map") and not varName.startswith("_s_map"):
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        if ptrMemberMatch := _kMemberRawPointerRe.match(ctx.line):
+            varName = ptrMemberMatch.group(1)
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
                     line_number=ctx.lineNum,
-                    rule_category="Naming/MapContainer",
-                    message=f"연관 컨테이너 멤버 변수 '{varName}'는 '_map' 접두어로 시작해야 합니다.",
+                    rule_category="Naming/RawPointer",
+                    message=f"원시 포인터 멤버 변수 '{varName}'는 '_p' 접두어로 시작해야 합니다.",
                     snippet=ctx.trimmed,
                 )
             )
 
-    if setMatch := _kMemberSetRe.match(ctx.line):
-        varName = setMatch.group(1)
-        if not varName.startswith("_unique") and not varName.startswith("_s_unique"):
+        if arrMatch := _kMemberFixedArrayRe.match(ctx.line):
+            varName = arrMatch.group(1)
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
                     line_number=ctx.lineNum,
-                    rule_category="Naming/SetContainer",
-                    message=f"고유 집합 컨테이너 멤버 변수 '{varName}'는 '_unique' 접두어로 시작해야 합니다.",
+                    rule_category="Naming/FixedArray",
+                    message=f"고정 배열 멤버 변수 '{varName}'는 '_arr' 접두어로 시작해야 합니다.",
                     snippet=ctx.trimmed,
                 )
             )
 
-    for prefix in ("_list", "_map", "_arr"):
-        match = re.match(
-            rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;',
-            ctx.line,
-        )
-        if match:
-            vName = match.group(1)
-            if isPluralWordInternal(vName):
-                singularFix = makeSingularInternal(vName)
+        if vecMatch := _kMemberVectorRe.match(ctx.line):
+            innerType = vecMatch.group(1).strip()
+            varName = vecMatch.group(2)
+            isByteVec = bool(re.search(r'\b(?:uint8|int8|utf8|char|byte)\b', innerType, re.IGNORECASE))
+            hasByteWord = "byte" in varName.lower()
+
+            if isByteVec and hasByteWord:
+                if varName.startswith("_list"):
+                    suggested = "_" + varName[5].lower() + varName[6:]
+                    violations.append(
+                        ConventionViolation(
+                            file_path=ctx.relPath,
+                            line_number=ctx.lineNum,
+                            rule_category="Naming/DynamicContainer",
+                            message=f"바이트 벡터({innerType}) 멤버 변수 '{varName}'는 'byte' 단어가 포함된 경우 '_list' 접두어를 생략해야 합니다 ('{suggested}' 권장).",
+                            snippet=ctx.trimmed,
+                            suggested_fix=suggested,
+                        )
+                    )
+            else:
+                if not varName.startswith("_list") and not varName.startswith("_s_list"):
+                    violations.append(
+                        ConventionViolation(
+                            file_path=ctx.relPath,
+                            line_number=ctx.lineNum,
+                            rule_category="Naming/DynamicContainer",
+                            message=f"동적 배열/벡터 멤버 변수 '{varName}'는 '_list' 접두어로 시작해야 합니다 ('List' 접미어 사용 불가).",
+                            snippet=ctx.trimmed,
+                        )
+                    )
+
+        if mapMatch := _kMemberMapRe.match(ctx.line):
+            varName = mapMatch.group(1)
+            if not varName.startswith("_map") and not varName.startswith("_s_map"):
                 violations.append(
                     ConventionViolation(
                         file_path=ctx.relPath,
                         line_number=ctx.lineNum,
-                        rule_category="Naming/ContainerSingular",
-                        message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                        rule_category="Naming/MapContainer",
+                        message=f"연관 컨테이너 멤버 변수 '{varName}'는 '_map' 접두어로 시작해야 합니다.",
                         snippet=ctx.trimmed,
-                        suggested_fix=singularFix,
                     )
                 )
-    return violations
+
+        if setMatch := _kMemberSetRe.match(ctx.line):
+            varName = setMatch.group(1)
+            if not varName.startswith("_unique") and not varName.startswith("_s_unique"):
+                violations.append(
+                    ConventionViolation(
+                        file_path=ctx.relPath,
+                        line_number=ctx.lineNum,
+                        rule_category="Naming/SetContainer",
+                        message=f"고유 집합 컨테이너 멤버 변수 '{varName}'는 '_unique' 접두어로 시작해야 합니다.",
+                        snippet=ctx.trimmed,
+                    )
+                )
+
+        for prefix in ("_list", "_map", "_arr"):
+            match = re.match(
+                rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;',
+                ctx.line,
+            )
+            if match:
+                vName = match.group(1)
+                if isPluralWordInternal(vName):
+                    singularFix = makeSingularInternal(vName)
+                    violations.append(
+                        ConventionViolation(
+                            file_path=ctx.relPath,
+                            line_number=ctx.lineNum,
+                            rule_category="Naming/ContainerSingular",
+                            message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                            snippet=ctx.trimmed,
+                            suggested_fix=singularFix,
+                        )
+                    )
+        return violations
 
 def runConventionsCheck(rootDir: Path | None = None,
                         specificFiles: list[str] | None = None) -> list[ConventionViolation]:
