@@ -216,36 +216,22 @@ else()
 endif()
 
 # ------------------------------------------------------------------------------
-# 5) Unity — FrameRenderer/Material 분할 TU는 공유 내부 헤더 병합을 피함
+# 5) Unity — 제외 목록이 **없다.** 그게 정상이고, 다시 만들지 말 것
+#
+# 예전에는 한 클래스를 여러 .cpp 로 나눈 TU 19 개를 `sw_skipUnitySources` 로 손수 빼 두었다.
+# 그 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**였고(하루에 셋이 늘기도 했다) 빠뜨려도
+# Ninja-* 프리셋은 유니티가 꺼져 있어 조용히 지나갔다 — CI 에서만 터진다.
+#
+# 목록이 있던 이유는 "익명 네임스페이스가 합쳐져 이름이 부딪친다" 였는데, 그건 **이름 규칙으로
+# 이미 막혀 있다**: 익명 네임스페이스의 헬퍼는 클래스가 아니라 **TU 이름**을 딴다
+# (`ShaderBakeStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
+# `Naming/DuplicateInternalHelper` 가 그것을 검사한다 — 목록이 아니라 린트가 지킨다.
+#
+# 목록 없이 유니티(CI-Debug) 빌드와 테스트 5/5 를 확인하고 지웠다(2026-09-13). 다시 넣고 싶어지면
+# 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 # ------------------------------------------------------------------------------
 if(COMMAND sw_setUnityBuild)
     sw_setUnityBuild(Engine BATCH_SIZE 12)
-
-    if(COMMAND sw_skipUnitySources)
-        # DelayLoadNotifyHook은 이미 EXCLUDE에 포함됨.
-        # FrameRenderer/Material 분할 TU: 공유 내부 헤더의 Unity 병합을 피함.
-        sw_skipUnitySources(Engine
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRenderer.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererTransients.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererResources.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererReadback.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererDraw.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererConstants.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Renderer/Frame/FrameRendererPso.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/Material.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialPacking.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialXml.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialPermutation.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialInstance.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Material/MaterialCache.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/IRHIDevice.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflection.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflectionSpirv.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/Graphics/Shader/Reflection/ShaderReflectionDx.cpp"
-        )
-    endif()
 endif()
 
 # ------------------------------------------------------------------------------
