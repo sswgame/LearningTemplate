@@ -5,14 +5,17 @@
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"
+
+// 실제 RHI 디바이스를 만드는 케이스만 모은다 — 네 백엔드의 생성·바인드리스·업로드·리드백·드로우.
+//
+// SW_TEST_REQUIRES_HOST( RHIDeviceTest ): 실제 GPU 디바이스를 만든다. CI 러너엔 GPU 가 없고,
+// Windows 는 WARP 로 **초기화에 성공해** 픽셀 검증이 실제로 돌고 진다.
+//
+// 디바이스가 필요 없는 RHI 자료구조(핸들 표·해제 큐·셰이더 요청)는 TestRHISupport.cpp 에 있다.
 
 namespace
 {
@@ -158,13 +161,10 @@ namespace
     }
 } // namespace
 
-// ------------------------------------------------------------------------------
-// 1) RHITest — 백엔드·커맨드·바인들리스
-// ------------------------------------------------------------------------------
 /**
- * @brief [RHITest] 백엔드 타입 이름 조회
+ * @brief [RHIDeviceTest] 백엔드 타입 이름 조회
  */
-SW_TEST_CASE( RHITest, BackendTypeNameQuery )
+SW_TEST_CASE( RHIDeviceTest, BackendTypeNameQuery )
 {
     const utf8* dx11Name = sw::RHI::getBackendTypeName( sw::RHIBackend::DirectX11 );
     SW_EXPECT_TRUE( dx11Name != nullptr );
@@ -186,7 +186,7 @@ SW_TEST_CASE( RHITest, BackendTypeNameQuery )
 /**
  * @brief bindless vs 네이티브 bindless, indexed draw 광고가 올바른지 검증
  */
-SW_TEST_CASE( RHITest, CapabilityMatrixNativeVsEmulated )
+SW_TEST_CASE( RHIDeviceTest, CapabilityMatrixNativeVsEmulated )
 {
     using sw::RHIAvailability;
     using sw::RHIBackend;
@@ -213,9 +213,9 @@ SW_TEST_CASE( RHITest, CapabilityMatrixNativeVsEmulated )
 }
 
 /**
- * @brief [RHITest] 모든 백엔드 디바이스 생성
+ * @brief [RHIDeviceTest] 모든 백엔드 디바이스 생성
  */
-SW_TEST_CASE( RHITest, DeviceCreationAllBackends )
+SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 {
     sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11,
@@ -235,9 +235,9 @@ SW_TEST_CASE( RHITest, DeviceCreationAllBackends )
 }
 
 /**
- * @brief [RHITest] 가용 백엔드에서 RenderPass 생성 + 간단 드로우 커맨드 경로
+ * @brief [RHIDeviceTest] 가용 백엔드에서 RenderPass 생성 + 간단 드로우 커맨드 경로
  */
-SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
+SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
 {
     const sw::RHIBackend backends[] = {
         sw::RHIBackend::DirectX11,
@@ -303,9 +303,9 @@ SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
 }
 
 /**
- * @brief [RHITest] 바인들리스 리소스 수명
+ * @brief [RHIDeviceTest] 바인들리스 리소스 수명
  */
-SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
+SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> rhiDevice;
@@ -368,13 +368,13 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 }
 
 /**
- * @brief [RHITest] 텍스처 SRV 인덱스와 버퍼 인덱스는 다른 공간 — 텍스처 해제가 버퍼 프리리스트를 오염시키면 안 된다
+ * @brief [RHIDeviceTest] 텍스처 SRV 인덱스와 버퍼 인덱스는 다른 공간 — 텍스처 해제가 버퍼 프리리스트를 오염시키면 안 된다
  * @details 실제 사고: 트랜지언트 텍스처 SRV 0·1·2 가 unregisterBindlessResource 로 넘어가 살아 있는
  *          패스 CB 슬롯을 비운 것으로 만들었고, 다음 registerBindlessResource(인스턴스 구조버퍼)가
  *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸렸다. DX11/OpenGL 도 같은 구조(텍스처 표
  *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 원래 무해하다.
  */
-SW_TEST_CASE( RHITest, BindlessTextureReleaseKeepsBufferIndices )
+SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -450,10 +450,10 @@ SW_TEST_CASE( RHITest, BindlessTextureReleaseKeepsBufferIndices )
 }
 
 /**
- * @brief [RHITest] 텍스처 픽셀 업로드 — 밉 체인 전체, 밉 0 만, 데이터 부족 거부 (4백엔드)
+ * @brief [RHIDeviceTest] 텍스처 픽셀 업로드 — 밉 체인 전체, 밉 0 만, 데이터 부족 거부 (4백엔드)
  * @details 읽어 오는 API 가 아직 없어 내용은 검증하지 못한다 — 성공/거부 계약과 디버그 레이어 무오류만 본다.
  */
-SW_TEST_CASE( RHITest, UploadTexture2DAllBackends )
+SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -529,10 +529,10 @@ SW_TEST_CASE( RHITest, UploadTexture2DAllBackends )
 }
 
 /**
- * @brief [RHITest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단, 4백엔드
+ * @brief [RHIDeviceTest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단, 4백엔드
  * @details 비압축은 픽셀, BC1 은 블록을 GPU 가 해석하지 않고 그대로 저장하므로 바이트 단위 일치를 요구할 수 있다.
  */
-SW_TEST_CASE( RHITest, TextureReadbackMatchesUpload )
+SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -630,13 +630,13 @@ SW_TEST_CASE( RHITest, TextureReadbackMatchesUpload )
 }
 
 /**
- * @brief [RHITest] 오프스크린 렌더타깃에 그린 결과가 읽기로 보이는가 — 4백엔드
+ * @brief [RHIDeviceTest] 오프스크린 렌더타깃에 그린 결과가 읽기로 보이는가 — 4백엔드
  * @details `executeOffscreenPipelineSmoke` 는 오래 "크래시 안 났다"만 봤다. 그 사이 DX11/GL/Vulkan 은
  *          프레임 그래프의 트랜지언트를 읽으면 클리어 색만 나오는데 화면에는 그려지는 상태였고,
  *          "렌더타깃에 그린 게 읽히는가" 를 백엔드별로 가르는 검사가 없어서 원인을 좁힐 수 없었다.
  *          fullscreentriangle 은 정점색 x MaterialCB 라, 빨강 CB 를 주면 화면 가득 빨강이 나와야 한다.
  */
-SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
+SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -725,13 +725,13 @@ SW_TEST_CASE( RHITest, OffscreenDrawIsReadable )
 }
 
 /**
- * @brief [RHITest] 프로보킹 정점 규약이 네 백엔드에서 같다 — flat 값은 삼각형의 **첫** 정점에서 온다
+ * @brief [RHIDeviceTest] 프로보킹 정점 규약이 네 백엔드에서 같다 — flat 값은 삼각형의 **첫** 정점에서 온다
  * @details `nointerpolation` 값은 삼각형의 정점 하나에서 오는데 어느 정점인지는 API 규약이다. DX·Vulkan 은
  *          FIRST, OpenGL 기본은 LAST 라 엔진이 GL 디바이스 초기화에서 `glProvokingVertex( FIRST )` 를 건다.
  *          엔진 셰이더의 flat 값(materialIndex)은 배치 안에서 전부 같아 그 한 줄이 실제로 그림을 바꾸는지
  *          볼 수 없었다. provokingvertex.hlsl 은 정점마다 다른 값을 실어 FIRST 면 빨강, LAST 면 파랑이 된다.
  */
-SW_TEST_CASE( RHITest, ProvokingVertexIsFirstOnAllBackends )
+SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -808,7 +808,7 @@ SW_TEST_CASE( RHITest, ProvokingVertexIsFirstOnAllBackends )
 }
 
 /**
- * @brief [RHITest] 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는가 — 백엔드마다 다르고, 엔진은 그 차이에 기댄다
+ * @brief [RHIDeviceTest] 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는가 — 백엔드마다 다르고, 엔진은 그 차이에 기댄다
  * @details 정점 풀(GpuMeshVertexPool)은 배치의 간접 인자에 `startVertex = 풀 오프셋` 을 싣고, 정점 셰이더는 SV_VertexID 로
  *          모프 풀의 로컬 정점 번호를 구한다. Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 그 오프셋을 **포함**하고
  *          D3D11·D3D12 는 드로우 안의 0 기반 번호다 — binding.hlsli 의 SwMorphElementOf 가 그 차이를 흡수한다.
@@ -816,7 +816,7 @@ SW_TEST_CASE( RHITest, ProvokingVertexIsFirstOnAllBackends )
  *          번호가 0·1·2 면 화면이 빨강이고(D3D), 36·37·38 이면 삼각형이 퇴화해 클리어 색만 남는다(Vulkan·GL).
  *          이 기대가 깨지면 셰이더의 분기도 같이 틀린 것이다.
  */
-SW_TEST_CASE( RHITest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
+SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 {
     struct Expectation
     {
@@ -952,11 +952,11 @@ SW_TEST_CASE( RHITest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 }
 
 /**
- * @brief [RHITest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
+ * @brief [RHIDeviceTest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.
  */
-SW_TEST_CASE( RHITest, TextureFormatQueryAndBackBufferFormat )
+SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
 {
     const sw::RHIBackend backends[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -1012,9 +1012,9 @@ SW_TEST_CASE( RHITest, TextureFormatQueryAndBackBufferFormat )
 }
 
 /**
- * @brief [RHITest] 커맨드 리스트 생성과 실행
+ * @brief [RHIDeviceTest] 커맨드 리스트 생성과 실행
  */
-SW_TEST_CASE( RHITest, CommandListCreationAndExecution )
+SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> rhiDevice;
@@ -1046,9 +1046,9 @@ SW_TEST_CASE( RHITest, CommandListCreationAndExecution )
 }
 
 /**
- * @brief [RHITest] 컴퓨트 셰이더 디스패치와 간접 커맨드
+ * @brief [RHIDeviceTest] 컴퓨트 셰이더 디스패치와 간접 커맨드
  */
-SW_TEST_CASE( RHITest, ComputeShaderDispatchAndIndirectCommands )
+SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
 {
     sw::unique_ptr<sw::IWindow>    window;
     sw::shared_ptr<sw::IRHIDevice> rhiDevice;
@@ -1100,114 +1100,12 @@ SW_TEST_CASE( RHITest, ComputeShaderDispatchAndIndirectCommands )
     shutdownDeviceWithWindow( rhiDevice, window );
 }
 
-// ------------------------------------------------------------------------------
-// 2) RHIReleaseQueueTest — 지연 해제·flush
-// ------------------------------------------------------------------------------
 /**
- * @brief [RHIReleaseQueueTest] 지연 해제
- */
-SW_TEST_CASE( RHIReleaseQueueTest, LatencyRelease )
-{
-    sw::RHIReleaseQueue queue( 3 );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-
-    bool                           bDestroyed{ false };
-    sw::RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [&bDestroyed]()
-    {
-        bDestroyed = true;
-    } );
-
-    queue.enqueueRelease( releaseDel );
-    SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
-    SW_EXPECT_FALSE( bDestroyed );
-
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-
-    queue.tickFrame();
-    SW_EXPECT_TRUE( bDestroyed );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-}
-
-/**
- * @brief [RHIReleaseQueueTest] 전체 flush
- */
-SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
-{
-    sw::RHIReleaseQueue            queue( 5 );
-    int32                          releaseCount{ 0 };
-    sw::RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [&releaseCount]()
-    {
-        ++releaseCount;
-    } );
-
-    queue.enqueueRelease( releaseDel );
-    queue.enqueueRelease( releaseDel );
-    SW_EXPECT_EQUAL( 2u, queue.getPendingReleaseCount() );
-
-    queue.flushAll();
-    SW_EXPECT_EQUAL( 2, releaseCount );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-}
-
-/**
- * @brief [RHIHandleTable] generation이 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
- */
-SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
-{
-    sw::RHIHandleTable<uint32> table;
-    const uint64               first = table.insert( 42u );
-    SW_EXPECT_TRUE( first != 0 );
-    uint32* slot = table.get( first );
-    SW_ASSERT_NOT_NULL( slot );
-    SW_EXPECT_EQUAL( 42u, *slot );
-
-    uint32 taken{ 0 };
-    SW_EXPECT_TRUE( table.take( first, taken ) );
-    SW_EXPECT_EQUAL( 42u, taken );
-    SW_EXPECT_TRUE( table.get( first ) == nullptr );
-
-    const uint64 second = table.insert( 99u );
-    SW_EXPECT_TRUE( second != 0 );
-    SW_EXPECT_TRUE( second != first );
-    SW_EXPECT_TRUE( table.get( first ) == nullptr );
-    uint32* reused = table.get( second );
-    SW_ASSERT_NOT_NULL( reused );
-    SW_EXPECT_EQUAL( 99u, *reused );
-}
-
-/**
- * @brief [RHIReleaseQueueTest] GPU 펜스가 완료되기 전에는 해제하지 않는다
- */
-SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
-{
-    sw::RHIReleaseQueue            queue( 3 );
-    bool                           bDestroyed{ false };
-    sw::RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [&bDestroyed]()
-    {
-        bDestroyed = true;
-    } );
-
-    queue.enqueueGpuRelease( releaseDel, 4 );
-    SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
-    queue.tickCompleted( 3 );
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickFrame();
-    SW_EXPECT_FALSE( bDestroyed );
-    queue.tickCompleted( 4 );
-    SW_EXPECT_TRUE( bDestroyed );
-    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
-}
-
-/**
- * @brief [RHITest] 컴퓨트가 RW 텍스처(UAV)에 쓴 픽셀을 네 백엔드에서 읽어 확인한다.
+ * @brief [RHIDeviceTest] 컴퓨트가 RW 텍스처(UAV)에 쓴 픽셀을 네 백엔드에서 읽어 확인한다.
  * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D) 의 등록 인덱스를, DX11/GL 은 u4 슬롯 서수 0 을 루트 상수로 넘긴다
  *          (computetexturewrite.hlsl 의 SW_StoreTex2D). prepareTextureForUnorderedAccess → dispatch → readback.
  */
-SW_TEST_CASE( RHITest, ComputeTextureUavWriteIsReadable )
+SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 {
     const sw::RHIBackend backends[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
     constexpr uint32     kSize      = 8;
@@ -1290,68 +1188,4 @@ SW_TEST_CASE( RHITest, ComputeTextureUavWriteIsReadable )
     }
     if ( okCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the compute RW texture test" );
-}
-
-// ------------------------------------------------------------------------------
-// 5) RHITest — dual context parity
-// ------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------
-// RHIShaderRequestTest — 서술체 해석은 한 곳이다
-// ------------------------------------------------------------------------------
-/**
- * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 백엔드 넷이 각자 갖던 것.
- * @details 진입점 기본값, define 은 두 스테이지에, RT 0 개 + 뎁스 테스트면 픽셀 스테이지 없음(경로가 있어도),
- *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 네 곳에 복사돼 있을 때 Vulkan 은 define 을, DX12 는 뎁스 전용 판정을
- *          빠뜨렸다 — 규칙이 한 곳이면 빠질 자리가 없다. GPU 가 필요 없다(nogpu).
- */
-SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
-{
-    sw::RHIPipelineStateDesc desc{};
-    desc._vertexShaderPath = "engine/shaders/forwardlit.hlsl";
-    desc._pixelShaderPath  = "engine/shaders/forwardlit.hlsl";
-    desc._listShaderDefine = { "SW_FORWARD=1", "FOO" };
-
-    // 1) 기본: 진입점 기본값, define 은 두 스테이지에, RT 1.
-    const sw::RHIGraphicsShaderRequest plain = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( plain._bHasPixelShader != SW_FALSE );
-    SW_EXPECT_TRUE( plain._bDepthOnly == SW_FALSE );
-    SW_EXPECT_EQUAL( 1u, plain._numRenderTargets );
-    SW_EXPECT_STREQ( "VSMain", plain._vertex._entryPoint.c_str() );
-    SW_EXPECT_STREQ( "PSMain", plain._pixel._entryPoint.c_str() );
-    SW_EXPECT_TRUE( plain._vertex._stage == sw::ShaderStage::Vertex && plain._pixel._stage == sw::ShaderStage::Pixel );
-    SW_EXPECT_TRUE( plain._vertex._targetFormat == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_EQUAL( 2u, plain._vertex._listDefine.size() );
-    SW_EXPECT_EQUAL( 2u, plain._pixel._listDefine.size() );
-    SW_EXPECT_STREQ( "FOO", plain._pixel._listDefine[1]._name.c_str() );
-    SW_EXPECT_STREQ( "1", plain._pixel._listDefine[1]._value.c_str() ); // 값 없는 define 은 1
-
-    // 2) 명시한 진입점은 그대로.
-    desc._vertexEntryPoint                   = "MyVS";
-    desc._pixelEntryPoint                    = "MyPS";
-    const sw::RHIGraphicsShaderRequest named = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_STREQ( "MyVS", named._vertex._entryPoint.c_str() );
-    SW_EXPECT_STREQ( "MyPS", named._pixel._entryPoint.c_str() );
-
-    // 3) 뎁스 전용(RT 0 + 뎁스 테스트): 경로가 있어도 PS 없음, RT 0.
-    desc._numRenderTargets                       = 0;
-    desc._bEnableDepthTest                       = SW_TRUE;
-    const sw::RHIGraphicsShaderRequest depthOnly = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( depthOnly._bDepthOnly != SW_FALSE );
-    SW_EXPECT_TRUE( depthOnly._bHasPixelShader == SW_FALSE );
-    SW_EXPECT_EQUAL( 0u, depthOnly._numRenderTargets );
-
-    // 4) RT 0 인데 뎁스 테스트가 없으면 뎁스 전용이 아니다 — RT 는 1 로 올리고 PS 는 붙는다.
-    desc._bEnableDepthTest                     = SW_FALSE;
-    const sw::RHIGraphicsShaderRequest noDepth = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::SPIRV_OpenGL );
-    SW_EXPECT_TRUE( noDepth._bDepthOnly == SW_FALSE );
-    SW_EXPECT_TRUE( noDepth._bHasPixelShader != SW_FALSE );
-    SW_EXPECT_EQUAL( 1u, noDepth._numRenderTargets );
-
-    // 5) PS 경로가 비면 PS 없음 (RT 는 그대로).
-    desc._numRenderTargets = 2;
-    desc._pixelShaderPath.clear();
-    const sw::RHIGraphicsShaderRequest noPs = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( noPs._bHasPixelShader == SW_FALSE );
-    SW_EXPECT_EQUAL( 2u, noPs._numRenderTargets );
 }

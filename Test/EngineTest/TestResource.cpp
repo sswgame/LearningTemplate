@@ -17,10 +17,10 @@
 // 1) Engine_Resource — 팩 키·도메인 루트·레거시 XML
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_Resource] 없는 리소스 경로는 빈 문자열
+ * @brief [ResourceTest] 없는 리소스 경로는 빈 문자열
  */
 
-SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyForNonexistent )
+SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
 {
     sw::ResourceUtil::initialize();
     sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat" );
@@ -28,9 +28,9 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyForNonexistent )
 }
 
 /**
- * @brief [Engine_Resource] 폴더명을 지정해도 없으면 빈 경로
+ * @brief [ResourceTest] 폴더명을 지정해도 없으면 빈 경로
  */
-SW_TEST_CASE( Engine_Resource, GetResourcePathWithFolderNameEmptyForNonexistent )
+SW_TEST_CASE( ResourceTest, GetResourcePathWithFolderNameEmptyForNonexistent )
 {
     sw::ResourceUtil::initialize();
     sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat", "textures" );
@@ -38,9 +38,9 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathWithFolderNameEmptyForNonexistent 
 }
 
 /**
- * @brief [Engine_Resource] 폴더 루트와 알려진 셰이더 경로
+ * @brief [ResourceTest] 폴더 루트와 알려진 셰이더 경로
  */
-SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
+SW_TEST_CASE( ResourceTest, FolderRootsAndKnownShaderPath )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -81,9 +81,9 @@ SW_TEST_CASE( Engine_Resource, FolderRootsAndKnownShaderPath )
 }
 
 /**
- * @brief [Engine_Resource] 도메인 아래에 없으면 빈 경로
+ * @brief [ResourceTest] 도메인 아래에 없으면 빈 경로
  */
-SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyWhenMissingUnderDomains )
+SW_TEST_CASE( ResourceTest, GetResourcePathEmptyWhenMissingUnderDomains )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     // Resource/ 자체가 검색 루트일 때만 "동작"한다.
@@ -91,9 +91,9 @@ SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyWhenMissingUnderDomains )
 }
 
 /**
- * @brief [Engine_Resource] 저장 경로가 상대 폴더를 소문자화
+ * @brief [ResourceTest] 저장 경로가 상대 폴더를 소문자화
  */
-SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
+SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -116,9 +116,9 @@ SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
 }
 
 /**
- * @brief [Engine_Resource] formatVersion=0 passthrough; legacy unmigrated XML은 거부
+ * @brief [ResourceTest] formatVersion=0 passthrough; legacy unmigrated XML은 거부
  */
-SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
+SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 {
     sw::ResourceUtil::initialize();
 
@@ -154,9 +154,9 @@ SW_TEST_CASE( Engine_Resource, AssetFormatAcceptsCurrentMaterialXml )
 }
 
 /**
- * @brief [Engine_Resource] formatVersion 없는 옛 Material 루트는 더 이상 자동 변환하지 않음
+ * @brief [ResourceTest] formatVersion 없는 옛 Material 루트는 더 이상 자동 변환하지 않음
  */
-SW_TEST_CASE( Engine_Resource, AssetFormatRejectsLegacyMaterialXml )
+SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 {
     sw::ResourceUtil::initialize();
 
@@ -177,9 +177,9 @@ SW_TEST_CASE( Engine_Resource, AssetFormatRejectsLegacyMaterialXml )
 }
 
 /**
- * @brief [Engine_Resource] AssetStreamingQueue 비동기 요청 등록, 취소, 프레임 쓰로틀링 콜백 검증
+ * @brief [ResourceTest] AssetStreamingQueue 비동기 요청 등록, 취소, 프레임 쓰로틀링 콜백 검증
  */
-SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
+SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
 {
     sw::AssetStreamingQueue queue;
     queue.initialize();
@@ -229,9 +229,9 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 }
 
 /**
- * @brief [Engine_Resource] 리소스 경로 조회 시 소문자 자동 정규화 및 대소문자 무관 탐색 검증
+ * @brief [ResourceTest] 리소스 경로 조회 시 소문자 자동 정규화 및 대소문자 무관 탐색 검증
  */
-SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNormalization )
+SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormalization )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -278,9 +278,9 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
 }
 
 /**
- * @brief [Engine_Resource] EngineConfig 기반 검색 우선순위 동적 변경 및 DLC/모드 경로 지원 검증
+ * @brief [ResourceTest] EngineConfig 기반 검색 우선순위 동적 변경 및 DLC/모드 경로 지원 검증
  */
-SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
+SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -342,9 +342,9 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 }
 
 /**
- * @brief [Engine_Resource] DdsLoader를 통한 DDS 헤더 파싱 및 픽셀 버퍼 로드 검증
+ * @brief [ResourceTest] DdsLoader를 통한 DDS 헤더 파싱 및 픽셀 버퍼 로드 검증
  */
-SW_TEST_CASE( Engine_Resource, DdsLoaderValidHeaderAndPixelLoading )
+SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
 {
     sw::ResourceUtil::initialize();
     const sw::string splashDdsPath = sw::ResourceUtil::getResourcePath( "textures/splash.dds" );
@@ -363,9 +363,9 @@ SW_TEST_CASE( Engine_Resource, DdsLoaderValidHeaderAndPixelLoading )
 }
 
 /**
- * @brief [Engine_Resource] DdsLoader::loadFromResource를 통한 VFS 상대 경로 DDS 로드 검증
+ * @brief [ResourceTest] DdsLoader::loadFromResource를 통한 VFS 상대 경로 DDS 로드 검증
  */
-SW_TEST_CASE( Engine_Resource, DdsLoaderLoadFromResource )
+SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
 {
     sw::ResourceUtil::initialize();
     sw::DdsImageData image;
@@ -379,9 +379,9 @@ SW_TEST_CASE( Engine_Resource, DdsLoaderLoadFromResource )
 }
 
 /**
- * @brief [Engine_Resource] AssetDatabase 캡슐화, tryGetGuid/Path, registerMapping 검증
+ * @brief [ResourceTest] AssetDatabase 캡슐화, tryGetGuid/Path, registerMapping 검증
  */
-SW_TEST_CASE( Engine_Resource, AssetDatabaseThreadSafeLookupAndMapping )
+SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
 {
     sw::AssetDatabase db;
     SW_EXPECT_EQUAL( 0u, db.getAssetCount() );
@@ -406,9 +406,9 @@ SW_TEST_CASE( Engine_Resource, AssetDatabaseThreadSafeLookupAndMapping )
 }
 
 /**
- * @brief [Engine_Resource] AssetStreamingQueue::requestAssetData 비동기 버퍼 프리로드 검증
+ * @brief [ResourceTest] AssetStreamingQueue::requestAssetData 비동기 버퍼 프리로드 검증
  */
-SW_TEST_CASE( Engine_Resource, AssetStreamingQueueDataRequest )
+SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 {
     sw::ResourceUtil::initialize();
     sw::AssetStreamingQueue queue;
@@ -445,9 +445,9 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueDataRequest )
 }
 
 /**
- * @brief [Engine_Resource] ResourceManager의 ResourcePackManager 소유권 및 라이프사이클 검증
+ * @brief [ResourceTest] ResourceManager의 ResourcePackManager 소유권 및 라이프사이클 검증
  */
-SW_TEST_CASE( Engine_Resource, ResourceManagerPackManagerOwnership )
+SW_TEST_CASE( ResourceTest, ResourceManagerPackManagerOwnership )
 {
     sw::ResourceManager resManager;
     SW_ASSERT_TRUE( resManager.initialize() );
@@ -459,9 +459,9 @@ SW_TEST_CASE( Engine_Resource, ResourceManagerPackManagerOwnership )
 }
 
 /**
- * @brief [Engine_Resource] ResourceUtil::getDomainFolderPath 동적 도메인 및 서브폴더 해석 검증
+ * @brief [ResourceTest] ResourceUtil::getDomainFolderPath 동적 도메인 및 서브폴더 해석 검증
  */
-SW_TEST_CASE( Engine_Resource, DynamicDomainFolderPathResolution )
+SW_TEST_CASE( ResourceTest, DynamicDomainFolderPathResolution )
 {
     sw::ResourceUtil::initialize();
 
@@ -483,9 +483,9 @@ SW_TEST_CASE( Engine_Resource, DynamicDomainFolderPathResolution )
 }
 
 /**
- * @brief [Engine_Resource] ResourceUtil::makeAbsolutePath 절대 경로 전달 시 그대로 반환 및 도메인 오인 방지 검증
+ * @brief [ResourceTest] ResourceUtil::makeAbsolutePath 절대 경로 전달 시 그대로 반환 및 도메인 오인 방지 검증
  */
-SW_TEST_CASE( Engine_Resource, AbsolutePathPreservation )
+SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
 {
     sw::ResourceUtil::initialize();
 
@@ -499,12 +499,12 @@ SW_TEST_CASE( Engine_Resource, AbsolutePathPreservation )
 }
 
 /**
- * @brief [Engine_Resource] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
+ * @brief [ResourceTest] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
  * @details Shipping 은 .meta 를 팩에 넣지 않는다(PackConfig `*.meta` 제외). 예전엔 로드가 실패하면 GUID 를 새로 만들어
  *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material->meta 의 GUID 가 바뀌었다.
  *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
  */
-SW_TEST_CASE( Engine_Resource, EnsureMetaNeverRewritesExistingMetaFile )
+SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
     sw::ResourceUtil::initialize();
     const utf8*      pAsset      = "engine/materials/defaultmaterial.material";
@@ -525,10 +525,10 @@ SW_TEST_CASE( Engine_Resource, EnsureMetaNeverRewritesExistingMetaFile )
 }
 
 /**
- * @brief [Engine_Resource] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
+ * @brief [ResourceTest] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
  * @details 이 형식은 `CookAssets.py buildAssetRegistryInternal` 이 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
  */
-SW_TEST_CASE( Engine_Resource, AssetRegistryTextRegistersMappings )
+SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
 {
     sw::AssetDatabase db;
     const sw::Uuid    guidA = sw::Uuid::generate();
@@ -550,11 +550,11 @@ SW_TEST_CASE( Engine_Resource, AssetRegistryTextRegistersMappings )
 }
 
 /**
- * @brief [Engine_Resource] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
+ * @brief [ResourceTest] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
  * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. 예전엔 ensureMeta 를 거친 에셋만 표에 있어서 이름을 바꾼
  *          프리팹의 GUID 복구가 우연히만 동작했다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.
  */
-SW_TEST_CASE( Engine_Resource, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
+SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 {
     sw::ResourceUtil::initialize();
     const utf8*      pAsset  = "game/empty/readme.md";

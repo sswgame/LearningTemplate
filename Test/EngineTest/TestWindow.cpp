@@ -4,6 +4,10 @@
 
 #include "TestFramework/TestFramework.h"
 
+// 플랫폼 창 — 실제 OS 창을 띄우고 리사이즈 콜백과 메시지 훅을 본다.
+//
+// SW_TEST_REQUIRES_HOST( WindowTest ): 진짜 창을 만든다. 헤드리스 CI 러너엔 디스플레이가 없다.
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Window/Windows/Win32Window.h"
 #elif defined( SW_PLATFORM_MACOS )

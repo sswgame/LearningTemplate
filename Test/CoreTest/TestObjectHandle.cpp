@@ -7,7 +7,7 @@
 
 using namespace sw;
 
-SW_TEST_CASE( ObjectHandle, PackedRoundTripAndInvalid )
+SW_TEST_CASE( ObjectHandleTest, PackedRoundTripAndInvalid )
 {
     ObjectHandle invalid;
     SW_EXPECT_FALSE( invalid.isValid() );
@@ -21,7 +21,7 @@ SW_TEST_CASE( ObjectHandle, PackedRoundTripAndInvalid )
     SW_EXPECT_NOT_EQUAL( handle, ObjectHandle::make( 7u, 4u ) );
 }
 
-SW_TEST_CASE( HandleTable, GenerationInvalidatesStaleHandles )
+SW_TEST_CASE( HandleTableTest, GenerationInvalidatesStaleHandles )
 {
     HandleTable<uint32> table;
     const ObjectHandle  first = table.insert( 42u );
@@ -44,7 +44,7 @@ SW_TEST_CASE( HandleTable, GenerationInvalidatesStaleHandles )
     SW_EXPECT_EQUAL( 99u, *reused );
 }
 
-SW_TEST_CASE( HandleTable, MultiSlotAndFreeListRecycling )
+SW_TEST_CASE( HandleTableTest, MultiSlotAndFreeListRecycling )
 {
     HandleTable<int32> table;
     ObjectHandle       h0 = table.insert( 100 );
@@ -79,7 +79,7 @@ SW_TEST_CASE( HandleTable, MultiSlotAndFreeListRecycling )
     SW_EXPECT_EQUAL( 600, *table.get( hRecycle2 ) );
 }
 
-SW_TEST_CASE( HandleTable, ForEachAndIteration )
+SW_TEST_CASE( HandleTableTest, ForEachAndIteration )
 {
     HandleTable<int32> table;
     ObjectHandle       h0 = table.insert( 10 );
@@ -118,7 +118,7 @@ SW_TEST_CASE( HandleTable, ForEachAndIteration )
     SW_EXPECT_EQUAL( 42, constSum );
 }
 
-SW_TEST_CASE( HandleTable, ClearAndInvalidHandleSafety )
+SW_TEST_CASE( HandleTableTest, ClearAndInvalidHandleSafety )
 {
     HandleTable<int32> table;
     ObjectHandle       h0 = table.insert( 10 );
@@ -140,7 +140,7 @@ SW_TEST_CASE( HandleTable, ClearAndInvalidHandleSafety )
     SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
 }
 
-SW_TEST_CASE( HandleTable, StressGenerationRolloverAndRandomChurn )
+SW_TEST_CASE( HandleTableTest, StressGenerationRolloverAndRandomChurn )
 {
     HandleTable<int32>   table;
     constexpr size_t     kCount = 500;

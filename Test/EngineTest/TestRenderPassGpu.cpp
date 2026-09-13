@@ -34,6 +34,11 @@
 
 #include "TestFramework/TestFramework.h"
 
+// 프레임 렌더러를 실제 디바이스 위에서 돌린다 — 패스 · 파이프라인 · 백엔드 패리티를 픽셀로 본다.
+//
+// SW_TEST_REQUIRES_HOST( RenderPassGpuTest ): 실제 GPU 디바이스를 만든다. **디바이스가 필요한
+// 케이스는 전부 이 스위트에 넣는다** — 2026-09-08 에 새 케이스 여섯이 이 규칙을 비켜 CI 로 들어갔고,
+// Windows 러너의 WARP 가 초기화에 성공해서 픽셀 검증이 실제로 돌고 졌다.
 // RenderPassGpuTest — 실제 RHI 디바이스로 FrameRenderer 를 돌려 픽셀을 읽는다.
 // 스위트 이름이 곧 CTest 의 NoGPU 필터다(EngineTest/CMakeLists.txt) — 디바이스가 필요한 케이스는 여기에 둔다.
 

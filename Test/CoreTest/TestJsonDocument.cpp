@@ -8,10 +8,10 @@
 // 1) Core_Json — 파싱·탐색과 대소문자 무시 키
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Json] 파싱·탐색과 대소문자 무시 키
+ * @brief [JsonDocumentTest] 파싱·탐색과 대소문자 무시 키
  */
 
-SW_TEST_CASE( Core_Json, ParseAndNavigateIgnoreCaseKeys )
+SW_TEST_CASE( JsonDocumentTest, ParseAndNavigateIgnoreCaseKeys )
 {
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Name":"Demo","_score":12,"Items":[{"id":1},{"id":2}]})" ) );
@@ -30,9 +30,9 @@ SW_TEST_CASE( Core_Json, ParseAndNavigateIgnoreCaseKeys )
 }
 
 /**
- * @brief [Core_Json] 대소문자 구분 키 옵트아웃
+ * @brief [JsonDocumentTest] 대소문자 구분 키 옵트아웃
  */
-SW_TEST_CASE( Core_Json, CaseSensitiveKeyOptOut )
+SW_TEST_CASE( JsonDocumentTest, CaseSensitiveKeyOptOut )
 {
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Child":"ok"})" ) );
@@ -44,9 +44,9 @@ SW_TEST_CASE( Core_Json, CaseSensitiveKeyOptOut )
 }
 
 /**
- * @brief [Core_Json] 유니코드 이스케이프와 잘못된 JSON 거부
+ * @brief [JsonDocumentTest] 유니코드 이스케이프와 잘못된 JSON 거부
  */
-SW_TEST_CASE( Core_Json, UnicodeEscapeAndRejectMalformed )
+SW_TEST_CASE( JsonDocumentTest, UnicodeEscapeAndRejectMalformed )
 {
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Title":"A\u0020B","Nested":{"k":1}})" ) );
@@ -67,9 +67,9 @@ SW_TEST_CASE( Core_Json, UnicodeEscapeAndRejectMalformed )
 }
 
 /**
- * @brief [Core_Json] 쓰기 후 dump 라운드트립
+ * @brief [JsonDocumentTest] 쓰기 후 dump 라운드트립
  */
-SW_TEST_CASE( Core_Json, WriteAndDumpRoundtrip )
+SW_TEST_CASE( JsonDocumentTest, WriteAndDumpRoundtrip )
 {
     sw::JsonDocument doc;
     sw::JsonValue    root = doc.makeObject();
@@ -88,9 +88,9 @@ SW_TEST_CASE( Core_Json, WriteAndDumpRoundtrip )
 }
 
 /**
- * @brief [Core_Json] 불리언, 부동소수점 및 깊은 중첩 구조 파싱 검증
+ * @brief [JsonDocumentTest] 불리언, 부동소수점 및 깊은 중첩 구조 파싱 검증
  */
-SW_TEST_CASE( Core_Json, BooleanFloatAndDeepNestedObject )
+SW_TEST_CASE( JsonDocumentTest, BooleanFloatAndDeepNestedObject )
 {
     const utf8* jsonStr = R"({
 		"bEnabled": true,
@@ -120,9 +120,9 @@ SW_TEST_CASE( Core_Json, BooleanFloatAndDeepNestedObject )
 }
 
 /**
- * @brief [Core_Json] 부동소수점 JSON 토큰의 asInt, asUint 변환 안전성 엣지 케이스 검증
+ * @brief [JsonDocumentTest] 부동소수점 JSON 토큰의 asInt, asUint 변환 안전성 엣지 케이스 검증
  */
-SW_TEST_CASE( Core_Json, FloatToIntTypeSafetyAndCoercion )
+SW_TEST_CASE( JsonDocumentTest, FloatToIntTypeSafetyAndCoercion )
 {
     const utf8* jsonStr = R"({
 		"floatVal": 3.75,

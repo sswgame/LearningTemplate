@@ -21,9 +21,9 @@ SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_testString );
 // 1) Engine_GlobalVariable — 등록·수정·커맨드라인
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_GlobalVariable] 등록
+ * @brief [GlobalVariableTest] 등록
  */
-SW_TEST_CASE( Engine_GlobalVariable, Registration )
+SW_TEST_CASE( GlobalVariableTest, Registration )
 {
     sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
     SW_EXPECT_TRUE( pBoolInfo != nullptr );
@@ -57,9 +57,9 @@ SW_TEST_CASE( Engine_GlobalVariable, Registration )
 }
 
 /**
- * @brief [Engine_GlobalVariable] 수정과 리셋
+ * @brief [GlobalVariableTest] 수정과 리셋
  */
-SW_TEST_CASE( Engine_GlobalVariable, ModificationAndReset )
+SW_TEST_CASE( GlobalVariableTest, ModificationAndReset )
 {
 
     SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", "144" ) );
@@ -76,9 +76,9 @@ SW_TEST_CASE( Engine_GlobalVariable, ModificationAndReset )
 }
 
 /**
- * @brief [Engine_GlobalVariable] 직접 타입별 값 수정 및 리셋
+ * @brief [GlobalVariableTest] 직접 타입별 값 수정 및 리셋
  */
-SW_TEST_CASE( Engine_GlobalVariable, DirectValueModificationAndReset )
+SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )
 {
     sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
     SW_ASSERT_NOT_NULL( pBoolInfo );
@@ -110,9 +110,9 @@ SW_TEST_CASE( Engine_GlobalVariable, DirectValueModificationAndReset )
 }
 
 /**
- * @brief [Engine_GlobalVariable] 커맨드라인 연동
+ * @brief [GlobalVariableTest] 커맨드라인 연동
  */
-SW_TEST_CASE( Engine_GlobalVariable, CommandLineIntegration )
+SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 {
     // 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
     // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다(과거 flake/abort).
@@ -149,9 +149,9 @@ SW_TEST_CASE( Engine_GlobalVariable, CommandLineIntegration )
 }
 
 /**
- * @brief [Engine_GlobalVariable] 미등록 변수 조회 및 안전성 검증
+ * @brief [GlobalVariableTest] 미등록 변수 조회 및 안전성 검증
  */
-SW_TEST_CASE( Engine_GlobalVariable, NonExistentVariableHandling )
+SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )
 {
     sw::GlobalVariableInfo* pMissing = sw::engine::getGlobalVariableManager().findVariable( "gv_nonExistentVariable" );
     SW_EXPECT_NULL( pMissing );
@@ -161,9 +161,9 @@ SW_TEST_CASE( Engine_GlobalVariable, NonExistentVariableHandling )
 }
 
 /**
- * @brief [Engine_GlobalVariable] 멀티스레드 환경에서 문자열 전역 변수 동시 읽기/쓰기 스레드 안전성 검증
+ * @brief [GlobalVariableTest] 멀티스레드 환경에서 문자열 전역 변수 동시 읽기/쓰기 스레드 안전성 검증
  */
-SW_TEST_CASE( Engine_GlobalVariable, MultithreadedStringReadWriteThreadSafety )
+SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
 {
     sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
     SW_ASSERT_NOT_NULL( pStrInfo );

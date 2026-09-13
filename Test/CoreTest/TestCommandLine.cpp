@@ -8,10 +8,10 @@
 // 1) Engine_CommandLine — 기본값·동의어·RHI 플래그
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_CommandLine] Width 기본값 존재
+ * @brief [CommandLineTest] Width 기본값 존재
  */
 
-SW_TEST_CASE( Engine_CommandLine, WindowSizeHasNoCommandLineDefault )
+SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -29,9 +29,9 @@ SW_TEST_CASE( Engine_CommandLine, WindowSizeHasNoCommandLineDefault )
 }
 
 /**
- * @brief [Engine_CommandLine] Width 인자 파싱
+ * @brief [CommandLineTest] Width 인자 파싱
  */
-SW_TEST_CASE( Engine_CommandLine, ParseWidthArgument )
+SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -49,9 +49,9 @@ SW_TEST_CASE( Engine_CommandLine, ParseWidthArgument )
 }
 
 /**
- * @brief [Engine_CommandLine] 동의어 인자 파싱
+ * @brief [CommandLineTest] 동의어 인자 파싱
  */
-SW_TEST_CASE( Engine_CommandLine, ParseSynonymArgument )
+SW_TEST_CASE( CommandLineTest, ParseSynonymArgument )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -69,9 +69,9 @@ SW_TEST_CASE( Engine_CommandLine, ParseSynonymArgument )
 }
 
 /**
- * @brief [Engine_CommandLine] 없는 인자는 false
+ * @brief [CommandLineTest] 없는 인자는 false
  */
-SW_TEST_CASE( Engine_CommandLine, GetArgumentNotFoundReturnsFalse )
+SW_TEST_CASE( CommandLineTest, GetArgumentNotFoundReturnsFalse )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -82,9 +82,9 @@ SW_TEST_CASE( Engine_CommandLine, GetArgumentNotFoundReturnsFalse )
 }
 
 /**
- * @brief [Engine_CommandLine] 문자열 키와 UTF-16 파싱
+ * @brief [CommandLineTest] 문자열 키와 UTF-16 파싱
  */
-SW_TEST_CASE( Engine_CommandLine, StringKeyAndUtf16Parse )
+SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -102,9 +102,9 @@ SW_TEST_CASE( Engine_CommandLine, StringKeyAndUtf16Parse )
 }
 
 /**
- * @brief [Engine_CommandLine] RHI 백엔드 CLI 플래그와 동의어
+ * @brief [CommandLineTest] RHI 백엔드 CLI 플래그와 동의어
  */
-SW_TEST_CASE( Engine_CommandLine, RHIBackendCommandLineFlagsAndSynonyms )
+SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndSynonyms )
 {
     {
         sw::CommandLineManager cmdManager;
@@ -150,9 +150,9 @@ SW_TEST_CASE( Engine_CommandLine, RHIBackendCommandLineFlagsAndSynonyms )
 }
 
 /**
- * @brief [Engine_CommandLine] 커스텀 인자 등록 및 복합 파싱 검증
+ * @brief [CommandLineTest] 커스텀 인자 등록 및 복합 파싱 검증
  */
-SW_TEST_CASE( Engine_CommandLine, ComplexPrefixAndCustomArguments )
+SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
@@ -183,13 +183,13 @@ SW_TEST_CASE( Engine_CommandLine, ComplexPrefixAndCustomArguments )
 }
 
 /**
- * @brief [Engine_CommandLine] "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
+ * @brief [CommandLineTest] "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
  * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
  *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 실제로 `EngineConfig` 의
  *          `_defaultRHI` 가 `-gv_rhiBackend` 를 조용히 덮고 있었다 — 커맨드라인이 아무 일도 안 하는
  *          것처럼 보였고 로그도 남지 않아, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**였다.
  */
-SW_TEST_CASE( Engine_CommandLine, ProvidedIsNotTheSameAsReadable )
+SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();

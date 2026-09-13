@@ -8,10 +8,10 @@
 // 1) Core_File — 경로·읽기쓰기·바이너리블롭
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_File] FileUtil 경로 동작
+ * @brief [FileTest] FileUtil 경로 동작
  */
 
-SW_TEST_CASE( Core_File, FileUtilPathOperations )
+SW_TEST_CASE( FileTest, FileUtilPathOperations )
 {
     sw::string fullPath = "Projects/Sample/TestFile.txt";
     sw::string fileName = sw::FileUtil::getFileNamePart( fullPath );
@@ -41,9 +41,9 @@ SW_TEST_CASE( Core_File, FileUtilPathOperations )
 }
 
 /**
- * @brief [Core_File] 읽기/쓰기가 경로 대소문자 유지
+ * @brief [FileTest] 읽기/쓰기가 경로 대소문자 유지
  */
-SW_TEST_CASE( Core_File, ReadWritePreservesPathCase )
+SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 {
     const sw::string dir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "SwPathCaseTestDir" );
     sw::FileUtil::ensureDirectoryExists( dir );
@@ -61,14 +61,14 @@ SW_TEST_CASE( Core_File, ReadWritePreservesPathCase )
 }
 
 /**
- * @brief [Core_File] 디렉터리 수집이 경로 대소문자 유지
+ * @brief [FileTest] 디렉터리 수집이 경로 대소문자 유지
  * @details collectFiles/collectFolders 는 **실제 파일시스템을 훑어** 경로를 만든다. 그래서 돌려준 경로는
  *          그대로 열 수 있어야 한다. 예전엔 결과를 normalizePath 로 통째 소문자화해서, 대소문자를 가리는
  *          파일시스템(리눅스 CI)에서는 상위 디렉터리 이름(`/home/runner/work/LearningTemplate/.../Resource`)
  *          까지 소문자가 되어 열거한 파일을 곧바로 "File not found" 로 되돌려줬다. 윈도우에서는 파일이
  *          그냥 열려서 드러나지 않았으므로, 여기서는 **문자열이 만든 그대로인지**를 본다.
  */
-SW_TEST_CASE( Core_File, CollectPreservesPathCase )
+SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
     const sw::string rootDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "SwCollectCaseRoot" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "MixedCaseSub" );
@@ -102,9 +102,9 @@ SW_TEST_CASE( Core_File, CollectPreservesPathCase )
 }
 
 /**
- * @brief [Core_File] 파일 쓰기와 읽기
+ * @brief [FileTest] 파일 쓰기와 읽기
  */
-SW_TEST_CASE( Core_File, WriteAndReadFile )
+SW_TEST_CASE( FileTest, WriteAndReadFile )
 {
     sw::string testPath    = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_output_temp.bin" );
     sw::string testContent = "Hello C++ Workspace!";

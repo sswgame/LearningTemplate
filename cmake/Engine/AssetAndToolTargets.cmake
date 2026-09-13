@@ -105,6 +105,10 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
 		ARGS --root "${CMAKE_SOURCE_DIR}"
 	)
+	sw_addRepoPythonTarget(CheckTestSuites "${SW_SCRIPT_LINT_CHECK_TEST_SUITES}"
+		COMMENT "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -130,6 +134,14 @@ function(sw_registerLintTests)
 			--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckRenderOwnership PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+	if(TARGET CheckTestSuites)
+		add_test(
+			NAME CheckTestSuites
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_TEST_SUITES}"
+			--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckTestSuites PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 
 	if(TARGET CheckIncludeOrder)

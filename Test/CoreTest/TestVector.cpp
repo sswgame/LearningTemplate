@@ -49,12 +49,24 @@ namespace
     };
 
     int32 TrackedValue::s_liveCount{ 0 };
-} // namespace
 
+    /** @brief 패딩이 끼는 POD — 바이트 복사 빠른 경로가 값을 그대로 옮기는지 보기 위한 것. */
+    struct PaddedPod
+    {
+        uint8  _tag;
+        uint64 _wide;
+        uint8  _tail;
+
+        bool operator==( const PaddedPod& other ) const
+        {
+            return _tag == other._tag && _wide == other._wide && _tail == other._tail;
+        }
+    };
+} // namespace
 /**
- * @brief [Core_Vector] small_vector가 인라인 저장소와 힙 저장소 사이를 안전하게 이동한다.
+ * @brief [VectorTest] small_vector가 인라인 저장소와 힙 저장소 사이를 안전하게 이동한다.
  */
-SW_TEST_CASE( Core_Vector, SmallVectorStorageTransition )
+SW_TEST_CASE( VectorTest, SmallVectorStorageTransition )
 {
     sw::small_vector<int32, 2> listValues{};
     const int32* const         pInlineData = listValues.data();
@@ -76,9 +88,9 @@ SW_TEST_CASE( Core_Vector, SmallVectorStorageTransition )
 }
 
 /**
- * @brief [Core_Vector] 복사·이동·삽입·삭제가 비트리비얼 타입의 수명을 보존한다.
+ * @brief [VectorTest] 복사·이동·삽입·삭제가 비트리비얼 타입의 수명을 보존한다.
  */
-SW_TEST_CASE( Core_Vector, ValueLifetimeAndMutation )
+SW_TEST_CASE( VectorTest, ValueLifetimeAndMutation )
 {
     {
         sw::vector<TrackedValue> listValues{};
@@ -98,9 +110,9 @@ SW_TEST_CASE( Core_Vector, ValueLifetimeAndMutation )
 }
 
 /**
- * @brief [Core_Vector] small_vector 인라인 용량 내 기본 조작 검증
+ * @brief [VectorTest] small_vector 인라인 용량 내 기본 조작 검증
  */
-SW_TEST_CASE( Core_Vector, SmallVectorOperations )
+SW_TEST_CASE( VectorTest, SmallVectorOperations )
 {
     sw::small_vector<int32, 4> listSmall;
     SW_EXPECT_TRUE( listSmall.empty() );
@@ -128,9 +140,9 @@ SW_TEST_CASE( Core_Vector, SmallVectorOperations )
 }
 
 /**
- * @brief [Core_Vector] vector 초기화 리스트, fill 생성자, reserve, 범위 조작 검증
+ * @brief [VectorTest] vector 초기화 리스트, fill 생성자, reserve, 범위 조작 검증
  */
-SW_TEST_CASE( Core_Vector, VectorConstructorsAndRangeOperations )
+SW_TEST_CASE( VectorTest, VectorConstructorsAndRangeOperations )
 {
     // 1) 초기화 리스트 생성자
     sw::vector<int32> listInit{ 1, 2, 3, 4, 5 };
@@ -160,30 +172,13 @@ SW_TEST_CASE( Core_Vector, VectorConstructorsAndRangeOperations )
     SW_EXPECT_EQUAL( 5u, listInit.size() );
     SW_EXPECT_EQUAL( 99, listInit[2] );
 }
-
-namespace
-{
-    /** @brief 패딩이 끼는 POD — 바이트 복사 빠른 경로가 값을 그대로 옮기는지 보기 위한 것. */
-    struct PaddedPod
-    {
-        uint8  _tag;
-        uint64 _wide;
-        uint8  _tail;
-
-        bool operator==( const PaddedPod& other ) const
-        {
-            return _tag == other._tag && _wide == other._wide && _tail == other._tail;
-        }
-    };
-} // namespace
-
 /**
- * @brief [Core_Vector] 바이트 복사 빠른 경로가 값을 그대로 옮긴다.
+ * @brief [VectorTest] 바이트 복사 빠른 경로가 값을 그대로 옮긴다.
  * @details `vector` 는 복사에도 소멸에도 사용자 코드가 없는 타입이면 원소 루프 대신 `Memory::copy`
  *          한 번으로 옮긴다. 그 경로가 크기·용량·값을 바꾸지 않는지 고정한다 — 빈 대상과
  *          **이미 원소가 든 대상**(clear 뒤 재사용) 양쪽을 본다. 후자가 매 프레임 렌더 패킷이 타는 길이다.
  */
-SW_TEST_CASE( Core_Vector, BitwiseCopyKeepsValues )
+SW_TEST_CASE( VectorTest, BitwiseCopyKeepsValues )
 {
     static_assert( sw::is_bitwise_copyable_v<PaddedPod>, "PaddedPod 는 바이트 복사 대상이어야 한다" );
     static_assert( sw::is_bitwise_copyable_v<TrackedValue> == false, "TrackedValue 는 루프 경로여야 한다" );
@@ -214,11 +209,11 @@ SW_TEST_CASE( Core_Vector, BitwiseCopyKeepsValues )
 }
 
 /**
- * @brief [Core_Vector] 루프 경로는 생성자·소멸자 짝을 그대로 지킨다.
+ * @brief [VectorTest] 루프 경로는 생성자·소멸자 짝을 그대로 지킨다.
  * @details 빠른 경로를 넣으면서 **분기를 잘못 태우면** 여기서 살아 있는 개수가 어긋난다.
  *          성장(재할당)과 복사 대입 둘 다 통과시킨다.
  */
-SW_TEST_CASE( Core_Vector, NonTrivialCopyKeepsLifetimeBalance )
+SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
 {
     TrackedValue::s_liveCount = 0;
     {

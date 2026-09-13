@@ -8,10 +8,10 @@
 // 1) Core_Time — CPUTimer·스코프 타이머
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Time] CPUTimer 기본
+ * @brief [TimeTest] CPUTimer 기본
  */
 
-SW_TEST_CASE( Core_Time, CPUTimerBasic )
+SW_TEST_CASE( TimeTest, CPUTimerBasic )
 {
     CpuTimer timer;
     SW_EXPECT_FALSE( timer.isStopped() );
@@ -29,9 +29,9 @@ SW_TEST_CASE( Core_Time, CPUTimerBasic )
 }
 
 /**
- * @brief [Core_Time] ScopeCpuTimer 기본
+ * @brief [TimeTest] ScopeCpuTimer 기본
  */
-SW_TEST_CASE( Core_Time, ScopeCpuTimerBasic )
+SW_TEST_CASE( TimeTest, ScopeCpuTimerBasic )
 {
     float32 elapsedSec{ 0.0f };
     {
@@ -43,9 +43,9 @@ SW_TEST_CASE( Core_Time, ScopeCpuTimerBasic )
 }
 
 /**
- * @brief [Core_Time] CPUTimer 리셋과 일시정지
+ * @brief [TimeTest] CPUTimer 리셋과 일시정지
  */
-SW_TEST_CASE( Core_Time, CPUTimerResetAndPause )
+SW_TEST_CASE( TimeTest, CPUTimerResetAndPause )
 {
     CpuTimer timer;
     timer.resetTimer();
@@ -63,9 +63,9 @@ SW_TEST_CASE( Core_Time, CPUTimerResetAndPause )
 }
 
 /**
- * @brief [Core_Time] 연속 프레임 틱 및 누적 시간 무결성 검증
+ * @brief [TimeTest] 연속 프레임 틱 및 누적 시간 무결성 검증
  */
-SW_TEST_CASE( Core_Time, ContinuousFrameTicksAndTotalTime )
+SW_TEST_CASE( TimeTest, ContinuousFrameTicksAndTotalTime )
 {
     CpuTimer timer;
     timer.resetTimer();

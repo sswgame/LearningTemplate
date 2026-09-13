@@ -12,10 +12,10 @@
 // 1) Core_Math — float2/3/4·행렬·쿼터니언·MathUtil
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Math] float2 전체
+ * @brief [MathTest] float2 전체
  */
 
-SW_TEST_CASE( Core_Math, Float2FullTest )
+SW_TEST_CASE( MathTest, Float2FullTest )
 {
 
     sw::float2 v0;
@@ -113,9 +113,9 @@ SW_TEST_CASE( Core_Math, Float2FullTest )
 }
 
 /**
- * @brief [Core_Math] float3 전체
+ * @brief [MathTest] float3 전체
  */
-SW_TEST_CASE( Core_Math, Float3FullTest )
+SW_TEST_CASE( MathTest, Float3FullTest )
 {
 
     SW_EXPECT_NEAR_EQUAL( 0.0f, sw::float3::Zero._x, 1e-4f );
@@ -180,9 +180,9 @@ SW_TEST_CASE( Core_Math, Float3FullTest )
 }
 
 /**
- * @brief [Core_Math] float4 전체
+ * @brief [MathTest] float4 전체
  */
-SW_TEST_CASE( Core_Math, Float4FullTest )
+SW_TEST_CASE( MathTest, Float4FullTest )
 {
     sw::float4 v0;
     SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 1e-4f );
@@ -219,9 +219,9 @@ SW_TEST_CASE( Core_Math, Float4FullTest )
 }
 
 /**
- * @brief [Core_Math] float4x4 전체
+ * @brief [MathTest] float4x4 전체
  */
-SW_TEST_CASE( Core_Math, Float4x4FullTest )
+SW_TEST_CASE( MathTest, Float4x4FullTest )
 {
 
     sw::float4x4 identity = sw::float4x4::Identity;
@@ -259,9 +259,9 @@ SW_TEST_CASE( Core_Math, Float4x4FullTest )
 }
 
 /**
- * @brief [Core_Math] Quaternion 전체
+ * @brief [MathTest] Quaternion 전체
  */
-SW_TEST_CASE( Core_Math, QuaternionFullTest )
+SW_TEST_CASE( MathTest, QuaternionFullTest )
 {
 
     sw::quaternion identity = sw::quaternion::Identity;
@@ -294,9 +294,9 @@ SW_TEST_CASE( Core_Math, QuaternionFullTest )
 }
 
 /**
- * @brief [Core_Math] MathUtil 함수 전체
+ * @brief [MathTest] MathUtil 함수 전체
  */
-SW_TEST_CASE( Core_Math, MathUtilFunctionsFull )
+SW_TEST_CASE( MathTest, MathUtilFunctionsFull )
 {
     float32 clamped = sw::MathUtil::clamp( 15.0f, 0.0f, 10.0f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, clamped, 1e-4f );
@@ -333,9 +333,9 @@ SW_TEST_CASE( Core_Math, MathUtilFunctionsFull )
 }
 
 /**
- * @brief [Core_Math] float4x4 TRS 합성, 전치, 역행렬 및 벡터 변환 검증
+ * @brief [MathTest] float4x4 TRS 합성, 전치, 역행렬 및 벡터 변환 검증
  */
-SW_TEST_CASE( Core_Math, Matrix4x4TRSAndInversion )
+SW_TEST_CASE( MathTest, Matrix4x4TRSAndInversion )
 {
     // 1) 이동 행렬과 벡터 변환 (Row-Major)
     const sw::float4x4 trans = sw::float4x4::createTranslation( sw::float3( 10.0f, 20.0f, 30.0f ) );
@@ -374,9 +374,9 @@ SW_TEST_CASE( Core_Math, Matrix4x4TRSAndInversion )
 }
 
 /**
- * @brief [Core_Math] MathUtil::align 0 정렬 및 getRandomRange 역경계/8비트 정수 엣지 케이스 검증
+ * @brief [MathTest] MathUtil::align 0 정렬 및 getRandomRange 역경계/8비트 정수 엣지 케이스 검증
  */
-SW_TEST_CASE( Core_Math, MathUtilAlignZeroAndRandomRangeEdgeCases )
+SW_TEST_CASE( MathTest, MathUtilAlignZeroAndRandomRangeEdgeCases )
 {
     // 1) align 0 전달 시 Divide-by-Zero 없이 원본 반환
     SW_EXPECT_EQUAL( 13u, sw::MathUtil::align( 13u, 0u ) );
@@ -401,9 +401,9 @@ SW_TEST_CASE( Core_Math, MathUtilAlignZeroAndRandomRangeEdgeCases )
 }
 
 /**
- * @brief [Core_Math] float4x4::createPerspectiveFieldOfView Near >= Far 입력 시 안전 클램핑 검증
+ * @brief [MathTest] float4x4::createPerspectiveFieldOfView Near >= Far 입력 시 안전 클램핑 검증
  */
-SW_TEST_CASE( Core_Math, PerspectiveFieldOfViewNearFarEdgeCase )
+SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 {
     // Near >= Far 시 near/far 역전 크래시 방지 및 유효한 투영 행렬 생성
     sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::Pi / 4.0f, 1.777f, 100.0f, 10.0f );
@@ -412,9 +412,9 @@ SW_TEST_CASE( Core_Math, PerspectiveFieldOfViewNearFarEdgeCase )
 }
 
 /**
- * @brief [Core_Math] float3::transformNormal 비균등 스케일 변환 시 법선 직교성 검증
+ * @brief [MathTest] float3::transformNormal 비균등 스케일 변환 시 법선 직교성 검증
  */
-SW_TEST_CASE( Core_Math, VectorTransformNormalNonUniformScale )
+SW_TEST_CASE( MathTest, VectorTransformNormalNonUniformScale )
 {
     // (0, 1, 0) 법선 벡터에 (2, 5, 2) 비균등 스케일 적용
     sw::float4x4 nonUniformScale = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
@@ -428,9 +428,9 @@ SW_TEST_CASE( Core_Math, VectorTransformNormalNonUniformScale )
 }
 
 /**
- * @brief [Core_Math] AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우 방어 검증
+ * @brief [MathTest] AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우 방어 검증
  */
-SW_TEST_CASE( Core_Math, AABBEmptyExtentsSafety )
+SW_TEST_CASE( MathTest, AABBEmptyExtentsSafety )
 {
     sw::AABB emptyBox = sw::AABB::empty();
     SW_EXPECT_FALSE( emptyBox.isValid() );
@@ -445,9 +445,9 @@ SW_TEST_CASE( Core_Math, AABBEmptyExtentsSafety )
 // 5) MathTest — Double3 벡터
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Math] double3 벡터 연산
+ * @brief [MathTest] double3 벡터 연산
  */
-SW_TEST_CASE( Core_Math, Double3VectorOperations )
+SW_TEST_CASE( MathTest, Double3VectorOperations )
 {
     sw::double3 v1( 3.0, 4.0, 0.0 );
     SW_EXPECT_NEAR_EQUAL( 5.0, v1.getLength(), 1e-6 );

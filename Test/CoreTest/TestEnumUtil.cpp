@@ -22,9 +22,9 @@ namespace
 } // namespace
 
 /**
- * @brief [Core_EnumUtil] hasFlag/hasAnyFlag — 비트 존재 여부 검사
+ * @brief [EnumUtilTest] hasFlag/hasAnyFlag — 비트 존재 여부 검사
  */
-SW_TEST_CASE( Core_EnumUtil, HasFlagAndHasAnyFlag )
+SW_TEST_CASE( EnumUtilTest, HasFlagAndHasAnyFlag )
 {
     const PlainFlag flag = sw::EnumUtil::setFlag( PlainFlag::Read, PlainFlag::Write );
 
@@ -39,9 +39,9 @@ SW_TEST_CASE( Core_EnumUtil, HasFlagAndHasAnyFlag )
 }
 
 /**
- * @brief [Core_EnumUtil] setFlag/clearFlag — 값을 반환하는 비-변경(순수) 함수
+ * @brief [EnumUtilTest] setFlag/clearFlag — 값을 반환하는 비-변경(순수) 함수
  */
-SW_TEST_CASE( Core_EnumUtil, SetFlagAndClearFlag )
+SW_TEST_CASE( EnumUtilTest, SetFlagAndClearFlag )
 {
     const PlainFlag flag = sw::EnumUtil::setFlag( PlainFlag::Read, PlainFlag::Write );
 
@@ -56,9 +56,9 @@ SW_TEST_CASE( Core_EnumUtil, SetFlagAndClearFlag )
 }
 
 /**
- * @brief [Core_EnumUtil] constexpr 컴파일 타임 완전 평가 — 런타임 비용 0을 증명합니다.
+ * @brief [EnumUtilTest] constexpr 컴파일 타임 완전 평가 — 런타임 비용 0을 증명합니다.
  */
-SW_TEST_CASE( Core_EnumUtil, CompileTimeEvaluation )
+SW_TEST_CASE( EnumUtilTest, CompileTimeEvaluation )
 {
     constexpr PlainFlag kCombined = sw::EnumUtil::setFlag( PlainFlag::Read, PlainFlag::Write );
     static_assert( sw::EnumUtil::hasFlag( kCombined, PlainFlag::Read ) );

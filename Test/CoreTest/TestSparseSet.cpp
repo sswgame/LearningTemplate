@@ -11,9 +11,9 @@ using namespace sw;
 // 1) SparseSet — 기본 연산
 // ------------------------------------------------------------------------------
 /**
- * @brief [SparseSet] 삽입·포함 여부·삭제
+ * @brief [SparseSetTest] 삽입·포함 여부·삭제
  */
-SW_TEST_CASE( SparseSet, BasicOperations )
+SW_TEST_CASE( SparseSetTest, BasicOperations )
 {
     sparse_set<int32> set;
 
@@ -39,9 +39,9 @@ SW_TEST_CASE( SparseSet, BasicOperations )
 }
 
 /**
- * @brief [SparseSet] 중간 키를 swap-remove 해도 남은 값은 키로 조회된다
+ * @brief [SparseSetTest] 중간 키를 swap-remove 해도 남은 값은 키로 조회된다
  */
-SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
+SW_TEST_CASE( SparseSetTest, SwapRemoveKeepsRemainingValues )
 {
     struct Item
     {
@@ -66,9 +66,9 @@ SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
 }
 
 /**
- * @brief [SparseSet] 같은 키 emplace는 값을 교체하고, 삭제한 키는 다시 쓸 수 있다
+ * @brief [SparseSetTest] 같은 키 emplace는 값을 교체하고, 삭제한 키는 다시 쓸 수 있다
  */
-SW_TEST_CASE( SparseSet, OverwriteAndReuseKey )
+SW_TEST_CASE( SparseSetTest, OverwriteAndReuseKey )
 {
     sparse_set<int32> set;
     set.emplace( 7, 1 );
@@ -95,9 +95,9 @@ SW_TEST_CASE( SparseSet, OverwriteAndReuseKey )
 }
 
 /**
- * @brief [SparseSet] 대량 데이터 삭제 후 shrink_to_fit 호출 시 정상 동작 및 용량 축소
+ * @brief [SparseSetTest] 대량 데이터 삭제 후 shrink_to_fit 호출 시 정상 동작 및 용량 축소
  */
-SW_TEST_CASE( SparseSet, ShrinkToFitReclaimsCapacity )
+SW_TEST_CASE( SparseSetTest, ShrinkToFitReclaimsCapacity )
 {
     sparse_set<int32> set;
     for ( uint32 index = 0; index < 1000; ++index )
@@ -128,9 +128,9 @@ SW_TEST_CASE( SparseSet, ShrinkToFitReclaimsCapacity )
 }
 
 /**
- * @brief [SparseSet] find 및 get 메서드 검증 (const 및 non-const)
+ * @brief [SparseSetTest] find 및 get 메서드 검증 (const 및 non-const)
  */
-SW_TEST_CASE( SparseSet, FindAndGetMethods )
+SW_TEST_CASE( SparseSetTest, FindAndGetMethods )
 {
     sparse_set<int32> set;
     set.emplace( 10, 100 );
@@ -161,9 +161,9 @@ SW_TEST_CASE( SparseSet, FindAndGetMethods )
 }
 
 /**
- * @brief [SparseSet] getDenseKeys 및 clear 검증
+ * @brief [SparseSetTest] getDenseKeys 및 clear 검증
  */
-SW_TEST_CASE( SparseSet, DenseKeysAndClear )
+SW_TEST_CASE( SparseSetTest, DenseKeysAndClear )
 {
     sparse_set<int32> set;
     set.emplace( 100, 1 );

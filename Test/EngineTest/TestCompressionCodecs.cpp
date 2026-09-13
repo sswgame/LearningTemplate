@@ -93,9 +93,9 @@ namespace
 } // namespace
 
 /**
- * @brief [Engine_Compression] LZ4 · Zstd 왕복이 원본과 **바이트까지** 같은가.
+ * @brief [CompressionCodecTest] LZ4 · Zstd 왕복이 원본과 **바이트까지** 같은가.
  */
-SW_TEST_CASE( Engine_Compression, ExternalCodecRoundTrip )
+SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 {
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 256 * 1024 );
 
@@ -114,11 +114,11 @@ SW_TEST_CASE( Engine_Compression, ExternalCodecRoundTrip )
 }
 
 /**
- * @brief [Engine_Compression] 손상된 입력에 코덱이 버퍼 밖으로 쓰지 않는가.
+ * @brief [CompressionCodecTest] 손상된 입력에 코덱이 버퍼 밖으로 쓰지 않는가.
  * @details 팩·세이브는 **외부에서 오는 바이트**다. 해제기가 입력 크기를 믿으면 대상 버퍼를 넘겨 쓴다 —
  *          그래서 LZ4 는 `_safe` 변형을, zstd 는 프레임 헤더 검사를 쓴다. 여기서 그것을 확인한다.
  */
-SW_TEST_CASE( Engine_Compression, ExternalCodecRejectsCorruptInput )
+SW_TEST_CASE( CompressionCodecTest, ExternalCodecRejectsCorruptInput )
 {
     test::ScopedLogSuppressor suppressor;
 
@@ -149,11 +149,11 @@ SW_TEST_CASE( Engine_Compression, ExternalCodecRejectsCorruptInput )
 }
 
 /**
- * @brief [Engine_Compression] 코덱 넷을 같은 데이터로 재서 로그에 남긴다 (선택 근거 자료).
+ * @brief [CompressionCodecTest] 코덱 넷을 같은 데이터로 재서 로그에 남긴다 (선택 근거 자료).
  * @details 단언은 느슨하다 — 기계마다 시간이 다르므로 **숫자를 고정하지 않는다.** 이 케이스의 목적은
  *          "어떤 자리에 무엇을 쓸지" 를 고를 때 볼 실측을 남기는 것이다. 압축률만 순서를 단언한다.
  */
-SW_TEST_CASE( Engine_Compression, CodecComparisonMeasurement )
+SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
 {
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 1024 * 1024 );
 
@@ -197,10 +197,10 @@ SW_TEST_CASE( Engine_Compression, CodecComparisonMeasurement )
 }
 
 /**
- * @brief [Engine_Compression] 엔진이 올린 LZ4 · Zstd 를 `CompressionStream` 이 실제로 집어 쓴다.
+ * @brief [CompressionCodecTest] 엔진이 올린 LZ4 · Zstd 를 `CompressionStream` 이 실제로 집어 쓴다.
  * @details `EngineLoop` 이 기본 레지스트리에 등록하므로, 레지스트리를 넘기지 않아도 타입만 고르면 된다.
  */
-SW_TEST_CASE( Engine_Compression, RegisteredExternalCodecsAreReachableFromStream )
+SW_TEST_CASE( CompressionCodecTest, RegisteredExternalCodecsAreReachableFromStream )
 {
     // **테스트 호스트는 EngineLoop 을 돌리지 않는다** — 앱에서는 거기서 등록하지만 여기서는 없다.
     // 스킵하면 아무것도 증명하지 못하므로 직접 등록해서 "등록하면 스트림이 집어 쓴다" 를 확인한다.

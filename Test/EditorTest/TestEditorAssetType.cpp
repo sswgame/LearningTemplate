@@ -97,12 +97,12 @@ SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
 }
 
 /**
- * @brief [Editor] 계층 뱃지는 리플렉션 Category 에서 나온다
+ * @brief [EditorAssetTypeTest] 계층 뱃지는 리플렉션 Category 에서 나온다
  * @details 예전에는 Hierarchy 패널이 타입 이름 7개를 if/else 로 비교했다 — 게임이 자기
  *          컴포넌트를 넣으면 뱃지가 없고, 엔진이 컴포넌트를 늘리면 패널을 같이 고쳐야 했다.
  *          Category 를 쓰면 등록된 어떤 컴포넌트든 뱃지가 붙는다. 그 규약을 여기서 고정한다.
  */
-SW_TEST_CASE( Editor, HierarchyBadgeComesFromReflectionCategory )
+SW_TEST_CASE( EditorAssetTypeTest, HierarchyBadgeComesFromReflectionCategory )
 {
     sw::string badge;
 

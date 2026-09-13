@@ -8,7 +8,6 @@
 #include "TestFramework/TestContext.h"
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFilter.h"
-#include "TestFramework/TestFixture.h"
 
 namespace test
 {
@@ -229,10 +228,6 @@ namespace test
 
 /** @brief 현재 테스트 종료 후 역순으로 실행할 정리 함수를 등록합니다. */
 #define SW_TEST_DEFER_CLEANUP( cleanup ) test::TestRegistry::getInstance().getCurrentContext()->deferCleanup( cleanup )
-
-/** @brief 현재 테스트 컨텍스트에 연결된 엔진 fixture를 생성합니다. */
-#define SW_TEST_FIXTURE( name ) \
-    test::TestFixture name { *test::TestRegistry::getInstance().getCurrentContext() }
 
 /** @brief 약한 기대 — 실패를 기록하고 계속합니다. */
 #define SW_EXPECT_TRUE( cond )                                                         \

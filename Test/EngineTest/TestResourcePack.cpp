@@ -208,7 +208,7 @@ namespace sw
 // ------------------------------------------------------------------------------
 // Test 1: 기본 포맷 및 단일 팩 O(1) 해시 읽기 & 무결성 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
+SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
 {
     const sw::string testPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_01.pack" );
 
@@ -249,12 +249,12 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 // Test 2: VFS 우선순위 오버라이드 스택 검증 (patch > patch_dlc > dlc > game > common > engine)
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_ResourcePack] 팩이 코덱마다 왕복되는가 — RLE · Zlib · LZ4.
+ * @brief [ResourcePackTest] 팩이 코덱마다 왕복되는가 — RLE · Zlib · LZ4.
  * @details 팩은 **자기 포맷 enum(`PackCompressionType`)으로** 코덱을 고른다. 스트림 쪽
  *          `CompressionCodecType` 과 값이 다르고 엮지 않는다 — 구현만 공유한다.
  *          예전에는 리더가 RLE·Zlib 만 알았고 선언돼 있던 `LZ4` 는 "Unsupported" 로 거부했다.
  */
-SW_TEST_CASE( Engine_ResourcePack, EveryPackCodecRoundTrips )
+SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
 {
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "maps/title.scene.xml", "<Scene name=\"Title\" version=\"1.0\"/>" },
@@ -300,7 +300,7 @@ SW_TEST_CASE( Engine_ResourcePack, EveryPackCodecRoundTrips )
     }
 }
 
-SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
+SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -360,7 +360,7 @@ SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
 // ------------------------------------------------------------------------------
 // Test 3: 유료 DLC 소유권 검증 (Entitlement Check) 보안 테스트
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, DlcEntitlementProtection )
+SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
 {
     const sw::string dlcPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_secure_dlc.pack" );
     constexpr uint32 kDlcAppId   = 5001;
@@ -402,7 +402,7 @@ SW_TEST_CASE( Engine_ResourcePack, DlcEntitlementProtection )
 // ------------------------------------------------------------------------------
 // Test 4: 낱개 파일(Loose File) 우선 로드 옵션 (bAllowLooseFiles) 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
+SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -439,7 +439,7 @@ SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
 // ------------------------------------------------------------------------------
 // Test 5: 동적 우선순위 자동 산출 (Dynamic Priority Auto-Calculation) 고도화 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
+SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -519,7 +519,7 @@ SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
 // ------------------------------------------------------------------------------
 // Test 6: 무복사 비압축 I/O 및 CRC32 데이터 변조 탐지 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, ZeroCopyAndCrc32CorruptionDetection )
+SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
 {
     const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_crc_tamper.pack" );
 
@@ -575,7 +575,7 @@ SW_TEST_CASE( Engine_ResourcePack, ZeroCopyAndCrc32CorruptionDetection )
 // ------------------------------------------------------------------------------
 // Test 7: 멀티스레드 동시 VFS I/O 안전성 (Concurrent Multi-Threaded Read)
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
+SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
 {
     const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_concurrent_vfs.pack" );
 
@@ -630,7 +630,7 @@ SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
 // ------------------------------------------------------------------------------
 // Test 8: 경로 캐시 64비트 정수 해시 룩업 및 무효화 (Path Cache Integrity)
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
+SW_TEST_CASE( ResourcePackTest, PathCacheZeroAllocationAndInvalidation )
 {
     sw::ResourceUtil::initialize();
     sw::ResourceUtil::clearPathCache();
@@ -657,9 +657,9 @@ SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
 }
 
 /**
- * @brief [Engine_ResourcePack] 도메인 한정 경로 VFS 쿼리 검증 ("test_domain_pack/file.dat")
+ * @brief [ResourcePackTest] 도메인 한정 경로 VFS 쿼리 검증 ("test_domain_pack/file.dat")
  */
-SW_TEST_CASE( Engine_ResourcePack, DomainQualifiedQueryInVfs )
+SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 {
     const sw::string                                   packPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_domain_query_pack.pack" );
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {

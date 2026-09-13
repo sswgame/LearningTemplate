@@ -9,7 +9,7 @@
 
 using namespace sw;
 
-SW_TEST_CASE( Physics, AabbIntersectsAndContains )
+SW_TEST_CASE( PhysicsTest, AabbIntersectsAndContains )
 {
     AABB box;
     box._min = float3( 0.0f, 0.0f, 0.0f );
@@ -29,7 +29,7 @@ SW_TEST_CASE( Physics, AabbIntersectsAndContains )
     SW_EXPECT_FALSE( box.intersects( farBox ) );
 }
 
-SW_TEST_CASE( Physics, CollisionLayersFilter )
+SW_TEST_CASE( PhysicsTest, CollisionLayersFilter )
 {
     CollisionLayers layers;
     SW_EXPECT_TRUE( layers.shouldCollide( 0, 1 ) );
@@ -48,7 +48,7 @@ SW_TEST_CASE( Physics, CollisionLayersFilter )
     SW_EXPECT_TRUE( queryOverlaps( a, 0, b, 1, layers ) );
 }
 
-SW_TEST_CASE( Physics, PhysicsWorldOverlapAndGeneration )
+SW_TEST_CASE( PhysicsTest, PhysicsWorldOverlapAndGeneration )
 {
     PhysicsWorld world;
     AABB         boxA;
@@ -78,7 +78,7 @@ SW_TEST_CASE( Physics, PhysicsWorldOverlapAndGeneration )
     SW_EXPECT_TRUE( hits.size() >= 1u );
 }
 
-SW_TEST_CASE( Physics, SpatialGridMultiCellQuery )
+SW_TEST_CASE( PhysicsTest, SpatialGridMultiCellQuery )
 {
     PhysicsWorld world;
     AABB         nearBox;
@@ -104,7 +104,7 @@ SW_TEST_CASE( Physics, SpatialGridMultiCellQuery )
         SW_EXPECT_EQUAL( hNear, hits[0] );
 }
 
-SW_TEST_CASE( Physics, BodyAabbDynamicRelocation )
+SW_TEST_CASE( PhysicsTest, BodyAabbDynamicRelocation )
 {
     PhysicsWorld world;
     AABB         initialBox;
@@ -137,7 +137,7 @@ SW_TEST_CASE( Physics, BodyAabbDynamicRelocation )
         SW_EXPECT_EQUAL( handle, hits[0] );
 }
 
-SW_TEST_CASE( Physics, SpatialGridMassiveBodiesStressTest )
+SW_TEST_CASE( PhysicsTest, SpatialGridMassiveBodiesStressTest )
 {
     PhysicsWorld                         world;
     constexpr int32                      kGridDim = 10; // 10x10x10 = 1000개 바디
@@ -172,9 +172,9 @@ SW_TEST_CASE( Physics, SpatialGridMassiveBodiesStressTest )
 }
 
 /**
- * @brief [Physics] CCD Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
+ * @brief [PhysicsTest] CCD Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
  */
-SW_TEST_CASE( Physics, CCD_SweptAABBTunnelingPrevention )
+SW_TEST_CASE( PhysicsTest, CCD_SweptAABBTunnelingPrevention )
 {
     // 얇은 벽 (Z in [49.5, 50.5])
     AABB wallBox{
@@ -200,9 +200,9 @@ SW_TEST_CASE( Physics, CCD_SweptAABBTunnelingPrevention )
 }
 
 /**
- * @brief [Physics] CCD Swept Sphere 검증
+ * @brief [PhysicsTest] CCD Swept Sphere 검증
  */
-SW_TEST_CASE( Physics, CCD_SweptSphere )
+SW_TEST_CASE( PhysicsTest, CCD_SweptSphere )
 {
     AABB targetBox{
         float3{20.0f,  0.0f,  0.0f},
@@ -223,9 +223,9 @@ SW_TEST_CASE( Physics, CCD_SweptSphere )
 }
 
 /**
- * @brief [Physics] PhysicsWorld sweepTest 브로드페이즈 & 최단 충돌체 선별 검증
+ * @brief [PhysicsTest] PhysicsWorld sweepTest 브로드페이즈 & 최단 충돌체 선별 검증
  */
-SW_TEST_CASE( Physics, CCD_PhysicsWorldSweepTest )
+SW_TEST_CASE( PhysicsTest, CCD_PhysicsWorldSweepTest )
 {
     PhysicsWorld world;
 
@@ -259,9 +259,9 @@ SW_TEST_CASE( Physics, CCD_PhysicsWorldSweepTest )
 }
 
 /**
- * @brief [Physics] CCD 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
+ * @brief [PhysicsTest] CCD 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
  */
-SW_TEST_CASE( Physics, CCD_CornerGrazingAndParallelMiss )
+SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
 {
     AABB targetBox{
         float3{10.0f, 10.0f, 10.0f},

@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `f586e6b2`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `9a1a7b58`
 
 ---
 
@@ -294,6 +294,69 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (테스트 스위트 이름이 CI 필터의 손잡이였다 — 이름을 하나로 통일하고 린트가 지키게 한다)
+
+파일을 가르고 났더니 **남은 문제는 줄 수가 아니라 이름과 목록** 이었다. 넷을 고쳤고, 전부 `CheckTestSuites.py`
+하나가 지킨다(린트 CTest 7 → 8).
+
+**1) CI 가 GPU 테스트를 도로 삼킬 자리가 둘 있었다.**
+`EngineTest_NoGPU` 는 스위트 이름으로 거른다. 그런데 제외 스위트와 CI 스위트가 **한 파일에** 있었다 —
+`TestRHI.cpp` 가 `RHITest`(디바이스를 만든다) 옆에 Support 세 스위트를, `TestShader.cpp` 가
+`ShaderCompilerTest` 옆에 굽기·스테이지·캐시 넷을 들고 있었다. TestRHI 는 줄 단위로도 섞여 있어서
+비-GPU 케이스 넷이 GPU 케이스 사이에 끼어 있었다. 이러면 새 케이스를 옆 스위트에 붙이기가 너무 쉽고,
+그 순간 디바이스가 필요한 케이스가 CI 로 들어간다 — **2026-09-08 에 정확히 그 방향으로 나흘간 빨갰다.**
+
+| 전 | 후 (CI 제외) | 후 (CI 실행) |
+| --- | --- | --- |
+| `TestRHI.cpp` 1357줄 | `TestRHIDevice.cpp` — `RHIDeviceTest`(15) | `TestRHISupport.cpp` — 핸들 표·해제 큐·셰이더 요청(5) |
+| `TestShader.cpp` 837줄 | `TestShaderCompiler.cpp` — `ShaderCompilerTest`(6) | `TestShader.cpp` — 굽기·스테이지·캐시(14) |
+
+**2) 필터 다섯 줄을 손으로 맞추던 것을 마커로 닫았다.**
+각 스위트가 자기 파일에 `// SW_TEST_REQUIRES_HOST( 스위트 ): <이유>` 를 적고, 린트가 그 집합과 CMake 필터를
+**양방향** 으로 대조한다. 마커가 있는데 필터에 없으면 "CI 가 이것을 돌리고 있습니다", 필터에 있는데 마커가
+없으면 죽은 항목이다. `SW_OWNERSHIP_RAW_OK` 와 같은 모양이다 — **목록이 아니라 코드 옆의 이유가 정본이다.**
+제외 사유가 셋으로 갈린다는 것도 이때 드러났다: GPU(`RHIDeviceTest`·`RenderPassGpuTest`) ·
+디스플레이(`WindowTest`) · DXC(`ShaderCompilerTest`·`LiveShaderTest`). 그래서 `*GpuTest` 같은 이름 규칙으로는
+못 묶는다 — 마커가 맞다.
+
+**3) 스위트 이름이 세 관례로 갈려 있었다.** 123 개 중 접두어형 45 · 접미어형 66 · 맨이름 12.
+`XxxTest` 하나로 통일했다(121 개). 이름이 CTest 필터의 유일한 손잡이라 이건 미관 문제가 아니었다 —
+`Core` 라는 스위트가 있어서 `--test_filter=Core*` 가 `Core_String` 까지 끌어왔다.
+
+- **계층 접두어를 버린 이유**: 실행 파일 이름이 이미 그 말을 한다. `CoreTest.exe` 안의 `Core_String` 은
+  같은 말을 두 번 한다. 게다가 **그 접두어는 믿을 수도 없었다** — `Engine_CommandLine` · `Engine_Event` ·
+  `Engine_GlobalVariable` 셋은 CoreTest 에 있었다.
+- 사실상 같은 스위트가 이름만 갈린 쌍 둘을 합쳤다: `GameObjectHierarchy`(1) → `GameObjectHierarchyTest`,
+  `Editor`(1) → `EditorAssetTypeTest`.
+- **한 스위트가 두 파일에 걸친 것 둘**도 닫았다. `SceneTest` 는 `TestSceneAsync.cpp` 쪽을 `SceneAsyncTest`
+  로(그 파일의 주제가 그거다), 스트리밍은 세 이름(`Engine_Resource`·`Engine_Streaming`·`AssetStreamingTest`)이
+  두 파일에 흩어져 있던 것을 `AssetStreamingTest` 하나로 모았다(케이스 둘을 파일째 옮겼다).
+
+**4) 문서가 없는 기능을 가리키고 있었다.**
+`TestFixture` / `SW_TEST_FIXTURE` 는 **쓰는 테스트가 하나도 없었다.** 그런데 `Test/README.md` 의 유일한
+예제 코드가 그것을 썼다. 지우고 예제를 실제로 쓰이는 `SW_TEST_DEFER_CLEANUP` 으로 바꿨다(`TestCompression.cpp`
+에서 그대로 가져왔다). 같은 README 가 린트를 "여섯" 이라 적고 있었는데 그때 이미 일곱이었다 — 여덟으로
+고치면서 **"세지 말고 `ctest -L lint -N` 로 확인하라"** 를 같이 적었다.
+
+**곁가지**: `EditorTest` 가 Editor 소스 20 개를 손으로 나열한다(폴더엔 55 개). 그 목록은 "전부" 도
+"ImGui 안 쓰는 것 전부" 도 아니라 **테스트가 실제로 링크해야 하는 것** 이라 기계가 못 고른다 — 확인해 보니
+ImGui 를 안 쓰는 파일이 제외 목록에도 12 개 있었다. 목록은 손으로 두되 썩는 두 방향(죽은 경로 · ImGui 를
+타는 파일 유입)만 린트가 막는다. 그리고 파일 중간에서 열리던 헬퍼 네임스페이스 다섯을 맨 위로 모았다
+(`TestVector.cpp` 는 익명 네임스페이스가 둘이었다). **깨질 수는 없었다** — 테스트 타겟은 유니티 빌드를
+타지 않는다(확인함). 순수 일관성이다.
+
+> **손대지 않은 것**: `TestRenderPassGpu.cpp` 2869줄 · `TestArchive.cpp` 1582줄 · `TestGameFramework.cpp`
+> 1462줄. 전부 **한 스위트 한 주제** 라 더 가를 이유가 없다. 줄 수는 증상이 아니다.
+>
+> **`foo.lib LNK1107`**: `Ninja-Release` · `Ninja-Shipping` 빌드 끝에 CMake 의 `/showIncludes` 탐지
+> 잔재(`CMakeFiles/ShowIncludes/foo`)가 실패한다. 실제 타겟은 전부 빌드되고 테스트도 돈다. 이번 작업 전부터
+> 있었고 Test 와 무관해 건드리지 않았다.
+
+**확인**: 케이스 이름 전수 비교 **808 → 808 차이 0**(스위트 이름만 바뀌었다) · `Ninja-Debug` ctest **14/14**
+(린트 8 포함) · `CI-Debug`(유니티) nogpu 5/5 · `Ninja-Release` · `Ninja-Shipping` nogpu 각 5/5 ·
+`RunBuildWarnings` 세 구성 모두 0건 · **린트 규칙 다섯을 탐침으로 각각 확인했다**(이름 위반 · 두 파일에 걸친
+스위트 · 마커↔필터 양방향 둘 · 마커 파일에 다른 스위트 · 죽은 Editor 경로 · ImGui 를 타는 Editor 소스)
 
 ### 2026-09-13 (테스트 파일 하나가 스위트 스무 개를 들고 있었다 — 주제별로 가르고, 공유 픽스처를 헤더로)
 

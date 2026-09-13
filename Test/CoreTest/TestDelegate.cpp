@@ -26,9 +26,9 @@ struct DummyListener
 // 1) Core_Delegate — 단일·멀티캐스트
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Delegate] 단일 델리게이트 자유 함수
+ * @brief [DelegateTest] 단일 델리게이트 자유 함수
  */
-SW_TEST_CASE( Core_Delegate, SingleDelegateFreeFunction )
+SW_TEST_CASE( DelegateTest, SingleDelegateFreeFunction )
 {
     s_TestValue                     = 0;
     sw::Delegate<void( int32 )> del = SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest );
@@ -39,9 +39,9 @@ SW_TEST_CASE( Core_Delegate, SingleDelegateFreeFunction )
 }
 
 /**
- * @brief [Core_Delegate] 단일 델리게이트 멤버 함수
+ * @brief [DelegateTest] 단일 델리게이트 멤버 함수
  */
-SW_TEST_CASE( Core_Delegate, SingleDelegateMemberFunction )
+SW_TEST_CASE( DelegateTest, SingleDelegateMemberFunction )
 {
     DummyListener               listener;
     sw::Delegate<void( int32 )> del = SW_DELEGATE_METHOD( sw::Delegate<void( int32 )>, &DummyListener::memberFunc, &listener );
@@ -55,9 +55,9 @@ SW_TEST_CASE( Core_Delegate, SingleDelegateMemberFunction )
 // 2) 멀티캐스트 — 브로드캐스트·제거·핸들
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 브로드캐스트
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 브로드캐스트
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateBroadcast )
+SW_TEST_CASE( DelegateTest, MulticastDelegateBroadcast )
 {
     s_TestValue = 0;
     DummyListener listener;
@@ -75,9 +75,9 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateBroadcast )
 }
 
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 단일 제거
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 단일 제거
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateRemoveSingle )
+SW_TEST_CASE( DelegateTest, MulticastDelegateRemoveSingle )
 {
     s_TestValue = 0;
 
@@ -95,9 +95,9 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateRemoveSingle )
 }
 
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 전체 제거
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 전체 제거
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateRemoveAll )
+SW_TEST_CASE( DelegateTest, MulticastDelegateRemoveAll )
 {
     s_TestValue = 0;
     DummyListener listener;
@@ -116,9 +116,9 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateRemoveAll )
 }
 
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 람다
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 람다
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateLambda )
+SW_TEST_CASE( DelegateTest, MulticastDelegateLambda )
 {
     int32 capturedA{ 0 };
     int32 capturedB{ 0 };
@@ -136,9 +136,9 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateLambda )
 }
 
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 다중 브로드캐스트
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 다중 브로드캐스트
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateMultipleBroadcasts )
+SW_TEST_CASE( DelegateTest, MulticastDelegateMultipleBroadcasts )
 {
     s_TestValue = 0;
 
@@ -153,9 +153,9 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateMultipleBroadcasts )
 }
 
 /**
- * @brief [Core_Delegate] 멀티캐스트 델리게이트 핸들
+ * @brief [DelegateTest] 멀티캐스트 델리게이트 핸들
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateHandle )
+SW_TEST_CASE( DelegateTest, MulticastDelegateHandle )
 {
     int32                                val{ 0 };
     sw::MulticastDelegate<void( int32 )> multiDel;
@@ -181,9 +181,9 @@ struct ConstListener
 };
 
 /**
- * @brief [Core_Delegate] 델리게이트 전체 커버리지
+ * @brief [DelegateTest] 델리게이트 전체 커버리지
  */
-SW_TEST_CASE( Core_Delegate, DelegateFullCoverage )
+SW_TEST_CASE( DelegateTest, DelegateFullCoverage )
 {
     sw::Delegate<int32( int32, int32 )> nullDel;
     SW_EXPECT_FALSE( nullDel.isBound() );
@@ -214,9 +214,9 @@ SW_TEST_CASE( Core_Delegate, DelegateFullCoverage )
 }
 
 /**
- * @brief [Core_Delegate] MulticastDelegate 브로드캐스트 도중 자기 자신 또는 후속 리스너 remove 시 안전성 검증
+ * @brief [DelegateTest] MulticastDelegate 브로드캐스트 도중 자기 자신 또는 후속 리스너 remove 시 안전성 검증
  */
-SW_TEST_CASE( Core_Delegate, MulticastDelegateDeferredRemoveDuringBroadcast )
+SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
 {
     sw::MulticastDelegate<void()> multiDel;
     int32                         countA = 0;

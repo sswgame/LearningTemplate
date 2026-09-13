@@ -14,9 +14,9 @@ using namespace std::chrono_literals;
 // 1) Core — 데이터 레이스 감지
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core] 단일 스레드 접근은 레이스가 없다
+ * @brief [DataRaceDetectorTest] 단일 스레드 접근은 레이스가 없다
  */
-SW_TEST_CASE( Core, DataRaceDetector_SingleThreadSafe )
+SW_TEST_CASE( DataRaceDetectorTest, DataRaceDetector_SingleThreadSafe )
 {
     sw::vector<int32> vec;
 
@@ -29,9 +29,9 @@ SW_TEST_CASE( Core, DataRaceDetector_SingleThreadSafe )
 }
 
 /**
- * @brief [Core] 다중 스레드 읽기-읽기는 레이스가 없다
+ * @brief [DataRaceDetectorTest] 다중 스레드 읽기-읽기는 레이스가 없다
  */
-SW_TEST_CASE( Core, DataRaceDetector_ReadReadSafe )
+SW_TEST_CASE( DataRaceDetectorTest, DataRaceDetector_ReadReadSafe )
 {
     sw::string str = "Hello, Data Race Detector!";
 
@@ -61,9 +61,9 @@ SW_TEST_CASE( Core, DataRaceDetector_ReadReadSafe )
 }
 
 /**
- * @brief [Core] RaceDetectContext 와 ScopedRaceRead / ScopedRaceWrite RAII 생명주기 검증
+ * @brief [DataRaceDetectorTest] RaceDetectContext 와 ScopedRaceRead / ScopedRaceWrite RAII 생명주기 검증
  */
-SW_TEST_CASE( Core, DataRaceDetector_ScopedRAIILifecycle )
+SW_TEST_CASE( DataRaceDetectorTest, DataRaceDetector_ScopedRAIILifecycle )
 {
     sw::RaceDetectContext ctx;
 

@@ -9,7 +9,7 @@
 // 9-1) RenderGraph 배리어 추론 — 실제로 바뀌는 전이만 나오는지
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_Renderer] 그래프가 상태를 들고 있다가 **바뀌는 전이만** 내는지 (GPU 불필요).
+ * @brief [RenderGraphTest] 그래프가 상태를 들고 있다가 **바뀌는 전이만** 내는지 (GPU 불필요).
  * @details 예전엔 웨이브가 읽고 쓰는 자원 **이름을 전부** 넘겼다. 그래서 같은 자원을 세 패스가 읽으면
  *          읽기 전이를 세 번 걸었고, 이미 그 상태인 것도 다시 걸었다. 전이 자체는 백엔드가 걸러 주지만
  *          (DX12 는 상태가 같으면 배리어를 안 쏜다) 그건 백엔드마다 사정이 다른 이야기고, 무엇보다
@@ -18,7 +18,7 @@
  *          그래서 그래프가 정본이 된다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
  */
 
-SW_TEST_CASE( Engine_Renderer, RenderGraphInfersOnlyChangedBarriers )
+SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
 {
     sw::RenderGraph         graph;
     const sw::hashed_string colorBuffer( "ColorBuffer" );
@@ -94,7 +94,7 @@ SW_TEST_CASE( Engine_Renderer, RenderGraphInfersOnlyChangedBarriers )
 // ------------------------------------------------------------------------------
 // 9) RenderGraph Read-Modify-Write 및 Resource Lifetime 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Renderer, RenderGraphReadModifyWriteAndLifetimes )
+SW_TEST_CASE( RenderGraphTest, RenderGraphReadModifyWriteAndLifetimes )
 {
     sw::RenderGraph graph;
     graph.addPass( sw::hashed_string( "PassA_Geometry" ), {}, { sw::hashed_string( "ColorBuffer" ) } );

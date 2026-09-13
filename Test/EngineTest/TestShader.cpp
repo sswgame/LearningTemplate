@@ -7,272 +7,18 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
 
-namespace sw
-{
-    namespace
-    {
-        /** @brief DXC/D3DCompiler 미설치 등 컴파일러 불가 오류인지 판별합니다. */
-        bool isShaderCompilerUnavailable( const sw::ShaderCompileResult& result )
-        {
-            if ( result._bSuccess )
-                return false;
-
-            const sw::string& msg = result._errorMessage;
-            return msg.find( "DXC and D3DCompiler" ) != sw::string::npos ||
-                   msg.find( "dxcompiler" ) != sw::string::npos ||
-                   msg.find( "SPIR-V CodeGen not available" ) != sw::string::npos ||
-                   // 그 타깃 자체가 이 OS 에 없는 경우 (예: 비 Windows 의 DXBC/D3D11).
-                   msg.find( "unavailable on this platform" ) != sw::string::npos ||
-                   msg.find( "Failed to compile shader" ) != sw::string::npos;
-        }
-
-    } // namespace
-} // namespace sw
-
-// ------------------------------------------------------------------------------
-// 1) ShaderCompilerTest — 컴파일·크로스·배리언트
-// ------------------------------------------------------------------------------
-/**
- * @brief [ShaderCompilerTest] 기본 컴파일과 리플렉션
- */
-SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
-{
-    sw::ResourceUtil::initialize();
-
-    sw::ShaderCompileDesc desc{};
-    desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-    desc._entryPoint   = "VSMain";
-    desc._stage        = sw::ShaderStage::Vertex;
-    desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-
-    sw::ShaderCache         shaderCache;
-    sw::ShaderCompileResult cacheResult = shaderCache.getOrCompile( desc );
-    if ( sw::isShaderCompilerUnavailable( cacheResult ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-
-    SW_EXPECT_TRUE( cacheResult._bSuccess );
-    SW_EXPECT_FALSE( cacheResult._bytecode.empty() );
-
-    sw::ShaderReflectionData reflectionData = sw::ShaderReflection::reflect( cacheResult._bytecode, desc._targetFormat );
-    SW_EXPECT_TRUE( reflectionData._listConstantBuffer.empty() == false || reflectionData._listResource.empty() == false || true );
-}
-
-/**
- * @brief [ShaderCompilerTest] 다중 타깃 크로스 컴파일
- */
-SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
-{
-    sw::ShaderTargetFormat targets[] = {
-        sw::ShaderTargetFormat::DXBC_D3D11,
-        sw::ShaderTargetFormat::DXIL_D3D12,
-        sw::ShaderTargetFormat::SPIRV_Vulkan };
-
-    bool attemptedAny{ false };
-    for ( sw::ShaderTargetFormat targetFormat : targets )
-    {
-        sw::ShaderCompileDesc vsDesc{};
-        vsDesc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-        vsDesc._entryPoint   = "VSMain";
-        vsDesc._stage        = sw::ShaderStage::Vertex;
-        vsDesc._targetFormat = targetFormat;
-
-        sw::ShaderCompileResult vsResult = sw::ShaderCompiler::compileHLSL( vsDesc );
-        if ( vsResult._errorMessage.find( "SPIR-V CodeGen not available" ) != sw::string::npos )
-        {
-            SW_LOG_WARNING( "DXC dxcompiler.dll on this host does not support SPIR-V CodeGen. Skipping SPIR-V assertion." );
-            continue;
-        }
-        if ( vsResult._errorMessage.find( "unavailable on this platform" ) != sw::string::npos )
-        {
-            // 이 타깃만 이 OS 에 없다 — 나머지 타깃 검증은 그대로 이어간다.
-            SW_LOG_WARNING( "Target unavailable on this platform, skipping: %#", vsResult._errorMessage.c_str() );
-            continue;
-        }
-        if ( sw::isShaderCompilerUnavailable( vsResult ) )
-            SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-
-        attemptedAny = true;
-        SW_EXPECT_TRUE( vsResult._bSuccess );
-        SW_EXPECT_FALSE( vsResult._bytecode.empty() );
-
-        sw::ShaderCompileDesc psDesc{};
-        psDesc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-        psDesc._entryPoint   = "PSMain";
-        psDesc._stage        = sw::ShaderStage::Pixel;
-        psDesc._targetFormat = targetFormat;
-
-        sw::ShaderCompileResult psResult = sw::ShaderCompiler::compileHLSL( psDesc );
-        SW_EXPECT_TRUE( psResult._bSuccess );
-        SW_EXPECT_FALSE( psResult._bytecode.empty() );
-    }
-
-    if ( attemptedAny == false )
-        SW_TEST_SKIP( "No shader targets compilable in this environment" );
-}
-
-/**
- * @brief [ShaderCompilerTest] 캐시 비우기와 없는 셰이더 컴파일
- */
-SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
-{
-    sw::ShaderCache shaderCache;
-    shaderCache.clearCache();
-
-    sw::ShaderCompileDesc desc{};
-    desc._filePath     = "NonExistentShaderFile.hlsl";
-    desc._entryPoint   = "Main";
-    desc._stage        = sw::ShaderStage::Pixel;
-    desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
-
-    const sw::string absPath = sw::ResourceUtil::getResourcePath( desc._filePath );
-    SW_EXPECT_TRUE( absPath.empty() || sw::FileUtil::fileExists( absPath ) == false );
-
-    sw::ShaderCompileResult result = sw::ShaderCompiler::compileHLSL( desc );
-    SW_EXPECT_FALSE( result._bSuccess );
-    SW_EXPECT_FALSE( result._errorMessage.empty() );
-}
-
-/**
- * @brief [ShaderCompilerTest] 디스크 캐시 활성화, 캐시 히트 검증 및 디스크 캐시 삭제
- */
-SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
-{
-    sw::ResourceUtil::initialize();
-    sw::ShaderCompiler::enableDiskCache( true );
-    sw::ShaderCompiler::clearDiskCache();
-
-    sw::ShaderCompileDesc desc{};
-    desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-    desc._entryPoint   = "VSMain";
-    desc._stage        = sw::ShaderStage::Vertex;
-    desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-
-    // 1차 컴파일 (캐시 미스 -> 디스크 저장)
-    sw::ShaderCompileResult result1 = sw::ShaderCompiler::compileHLSL( desc );
-    if ( sw::isShaderCompilerUnavailable( result1 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-
-    SW_EXPECT_TRUE( result1._bSuccess );
-    SW_EXPECT_FALSE( result1._bytecode.empty() );
-
-    // 2차 컴파일 (디스크 캐시 히트)
-    sw::ShaderCompileResult result2 = sw::ShaderCompiler::compileHLSL( desc );
-    SW_EXPECT_TRUE( result2._bSuccess );
-    SW_EXPECT_EQUAL( result1._bytecode.size(), result2._bytecode.size() );
-    SW_EXPECT_TRUE( result1._bytecode == result2._bytecode );
-
-    // 디스크 캐시 클리어 후 컴파일 정상 동작 확인
-    sw::ShaderCompiler::clearDiskCache();
-    sw::ShaderCompileResult result3 = sw::ShaderCompiler::compileHLSL( desc );
-    SW_EXPECT_TRUE( result3._bSuccess );
-    SW_EXPECT_FALSE( result3._bytecode.empty() );
-    SW_EXPECT_EQUAL( result1._bytecode.size(), result3._bytecode.size() );
-}
-
-/**
- * @brief [ShaderCompilerTest] RHI 백엔드 변경 시 ShaderCache의 In-Memory 캐시 격리 검증
- */
-SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
-{
-    sw::ResourceUtil::initialize();
-    sw::ShaderCache shaderCache;
-    shaderCache.clearCache();
-
-    sw::ShaderCompileDesc dx11Desc{};
-    dx11Desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-    dx11Desc._entryPoint   = "VSMain";
-    dx11Desc._stage        = sw::ShaderStage::Vertex;
-    dx11Desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-
-    sw::ShaderCompileDesc dx12Desc = dx11Desc;
-    dx12Desc._targetFormat         = sw::ShaderTargetFormat::DXIL_D3D12;
-
-    sw::ShaderCompileDesc vkDesc = dx11Desc;
-    vkDesc._targetFormat         = sw::ShaderTargetFormat::SPIRV_Vulkan;
-
-    // 1) DX11 컴파일 및 캐시 등록
-    sw::ShaderCompileResult dx11Res1 = shaderCache.getOrCompile( dx11Desc );
-    if ( sw::isShaderCompilerUnavailable( dx11Res1 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    SW_EXPECT_TRUE( dx11Res1._bSuccess );
-
-    // 2) DX12 컴파일 및 캐시 등록 (DX11 캐시와 독립적으로 보관되어야 함)
-    sw::ShaderCompileResult dx12Res1 = shaderCache.getOrCompile( dx12Desc );
-    SW_EXPECT_TRUE( dx12Res1._bSuccess );
-
-    // DXBC와 DXIL은 바이트코드 헤더 및 크기 구성이 다름
-    SW_EXPECT_FALSE( dx11Res1._bytecode == dx12Res1._bytecode );
-
-    // 3) 다시 DX11 및 DX12 요청 시 각 백엔드 전용 캐시 히트 검증
-    sw::ShaderCompileResult dx11Res2 = shaderCache.getOrCompile( dx11Desc );
-    sw::ShaderCompileResult dx12Res2 = shaderCache.getOrCompile( dx12Desc );
-    SW_EXPECT_TRUE( dx11Res1._bytecode == dx11Res2._bytecode );
-    SW_EXPECT_TRUE( dx12Res1._bytecode == dx12Res2._bytecode );
-
-    // 4) Vulkan SPIR-V 컴파일 및 캐시 격리 검증 (DXC SPIR-V 지원 시)
-    sw::ShaderCompileResult vkRes1 = shaderCache.getOrCompile( vkDesc );
-    if ( vkRes1._bSuccess )
-    {
-        SW_EXPECT_FALSE( vkRes1._bytecode == dx11Res1._bytecode );
-        SW_EXPECT_FALSE( vkRes1._bytecode == dx12Res1._bytecode );
-
-        sw::ShaderCompileResult vkRes2 = shaderCache.getOrCompile( vkDesc );
-        SW_EXPECT_TRUE( vkRes1._bytecode == vkRes2._bytecode );
-    }
-}
-
-/**
- * @brief [ShaderCompilerTest] 백엔드별 디스크 캐시 파일 독립 생성 및 격리 검증
- */
-SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
-{
-    sw::ResourceUtil::initialize();
-    sw::ShaderCompiler::enableDiskCache( true );
-    sw::ShaderCompiler::clearDiskCache();
-
-    sw::ShaderCompileDesc dx11Desc{};
-    dx11Desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
-    dx11Desc._entryPoint   = "VSMain";
-    dx11Desc._stage        = sw::ShaderStage::Vertex;
-    dx11Desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-
-    sw::ShaderCompileDesc dx12Desc = dx11Desc;
-    dx12Desc._targetFormat         = sw::ShaderTargetFormat::DXIL_D3D12;
-
-    sw::ShaderCompileResult res11 = sw::ShaderCompiler::compileHLSL( dx11Desc );
-    if ( sw::isShaderCompilerUnavailable( res11 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
-    SW_EXPECT_TRUE( res11._bSuccess );
-
-    sw::ShaderCompileResult res12 = sw::ShaderCompiler::compileHLSL( dx12Desc );
-    SW_EXPECT_TRUE( res12._bSuccess );
-
-    // 디스크 캐시 디렉터리에 최소 2개 이상의 독립된 바이너리 캐시 파일이 생성되었는지 검증
-    const sw::string cacheDir = sw::ResourceUtil::getRootFolderPath() + "/cache/shaders";
-    if ( sw::FileUtil::directoryExists( cacheDir ) )
-    {
-        sw::vector<sw::string> listFiles;
-        sw::FileUtil::collectFiles( cacheDir, "", listFiles, false );
-        SW_EXPECT_TRUE( listFiles.size() >= 2u );
-    }
-
-    sw::ShaderCompiler::clearDiskCache();
-}
-
-// ------------------------------------------------------------------------------
-// 2) ShaderStageTest — 8대 스테이지, 플래그 변환, 비트 연산 대수 법칙 & 스트레스
-// ------------------------------------------------------------------------------
+// 셰이더 주변 — 스테이지 비트 연산 · 굽기(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 굽기 도장.
+// 전부 디스크와 순수 계산만 본다. 실제 컴파일은 TestShaderCompiler.cpp (CI 가 못 돌린다).
 /**
  * @brief [ShaderStageTest] 8대 스테이지 플래그 변환 및 경계값/오버플로 엣지 케이스 검증
  */
+
 SW_TEST_CASE( ShaderStageTest, StageFlagConversionAndBoundary )
 {
     // 1) 8대 정상 스테이지가 각각 올바른 1 << N 비트플래그로 1:1 변환되는지 검증
@@ -386,9 +132,6 @@ SW_TEST_CASE( ShaderStageTest, BitwiseStressEvaluation )
     }
 }
 
-// ------------------------------------------------------------------------------
-// 3) ShaderBakerTest — 순열 해시 불변성, 파일명 생성, RHI 매핑, 충돌 스트레스
-// ------------------------------------------------------------------------------
 /**
  * @brief [ShaderBakerTest] 순열 해시 순서 불변성, 빈 원소 무시, 구조체 오버로드 일관성 검증
  */
@@ -553,9 +296,6 @@ SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
     SW_EXPECT_EQUAL( 0u, bakedCount );
 }
 
-// ------------------------------------------------------------------------------
-// 4) ShaderCacheStressTest — 멀티스레드 동시 캐시 조회/클리어 스트레스 테스트
-// ------------------------------------------------------------------------------
 /**
  * @brief [ShaderCacheStressTest] 8스레드 동시 캐시 쿼리 동기화 무결성 스트레스
  */
@@ -659,9 +399,6 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
     SW_EXPECT_TRUE( clearsDone.load() > 0 );
 }
 
-// ------------------------------------------------------------------------------
-// ShaderBakerTest — 베이커와 PSO 생성이 같은 규칙을 보는가
-// ------------------------------------------------------------------------------
 /**
  * @brief [ShaderBakerTest] 컬러 출력이 없는 패스(그림자·뎁스 프리패스)에는 픽셀 스테이지가 없다.
  * @details Shipping 실기동의 `리플렉션 매니페스트에 'engine/shaders/shadowdepth.hlsl' 가 없습니다` 가 이 자리였다.

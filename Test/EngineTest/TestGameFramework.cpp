@@ -22,6 +22,15 @@
 
 using namespace sw;
 
+namespace
+{
+    struct TestCustomState
+    {
+        int32  _score{ 1000 };
+        string _stageName{ "Stage_01" };
+    };
+} // namespace
+
 // ------------------------------------------------------------------------------
 // 1) FadeServiceTest — 화면 페이드 아웃/인 수명주기 및 알파 보간 검증
 // ------------------------------------------------------------------------------
@@ -418,16 +427,6 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
 // ------------------------------------------------------------------------------
 // 6) GameInstanceBaseStateTest — 런타임 스냅샷/세이브 파일 직렬화 검증
 // ------------------------------------------------------------------------------
-
-namespace
-{
-    struct TestCustomState
-    {
-        int32  _score{ 1000 };
-        string _stageName{ "Stage_01" };
-    };
-} // namespace
-
 /**
  * @brief [GameFrameworkTest] GameInstanceBase 스냅샷 캡처 및 인메모리 복원 / 파일 입출력 검증
  */

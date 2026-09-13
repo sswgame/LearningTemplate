@@ -30,8 +30,11 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 ### 특정 테스트만 골라서 실행 (Label 활용)
 라벨은 `core`, `editor`, `engine`, `reflection`, `module`, `unit`, `nogpu`, `lint` 입니다.
 `lint` 는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가 등록하는 Python 검사
-여섯입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
-`CheckSourceGlob` · `CheckDataFileReferences`.
+여덟입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
+`CheckSourceGlob` · `CheckDataFileReferences` · `CheckRenderOwnership` · `CheckTestSuites`.
+
+> 이 수는 세어서 적지 말고 `ctest --preset Ninja-Debug-lint -N` 로 확인한다. 예전에 "여섯" 이라고
+> 적힌 채 일곱이 돌고 있었다.
 
 ```powershell
 # GPU 없이 도는 것만 (CI 와 같은 집합)
@@ -42,31 +45,49 @@ ctest --test-dir build/Ninja-Debug -L core
 ctest --preset Ninja-Debug-lint
 ```
 
-> **`nogpu` 는 "GPU 없이 돌아간다"는 계약이다.** 실제 RHI 디바이스를 만드는 `RenderPassTest` 케이스들은
-> `RenderPassGpuTest` 스위트로 갈라 두었고 `EngineTest_NoGPU` 필터가 그 스위트를 통째로 뺀다. 디바이스가
-> 필요한 테스트를 새로 쓰면 **그 스위트에 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가
-> 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
+> **`nogpu` 는 "CI 러너가 돌릴 수 있다"는 계약이다.** 실제 GPU·디스플레이·DXC 가 필요한 다섯 스위트
+> (`RHIDeviceTest` · `RenderPassGpuTest` · `WindowTest` · `ShaderCompilerTest` · `LiveShaderTest`)를
+> `EngineTest_NoGPU` 필터가 통째로 뺀다. 디바이스가 필요한 테스트를 새로 쓰면 **`RenderPassGpuTest` 에
+> 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
+
+### 스위트 이름 규칙 — `CheckTestSuites.py` 가 강제합니다
+
+스위트 이름은 장식이 아닙니다. `EngineTest_NoGPU` 가 **스위트 이름으로** CI 가 못 돌리는 것을 걸러내고
+`--test_filter` 도 스위트 단위로 고르므로, 이름이 흔들리면 필터가 흔들립니다. 규칙은 넷입니다.
+
+1. 스위트 이름은 **`XxxTest`** — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없습니다.
+   계층 접두어(`Core_` · `Engine_`)는 붙이지 않습니다. **실행 파일 이름이 이미 그 말을 합니다.**
+2. 한 스위트는 **한 파일에만** 삽니다.
+3. CI 가 못 돌리는 스위트는 자기 파일에 이유와 함께 마커를 답니다. 린트가 이 마커와 CMake 의
+   `EngineTest_NoGPU` 필터를 **양방향으로** 대조하므로, 한쪽만 고치면 커밋이 막힙니다.
+
+   ```cpp
+   // SW_TEST_REQUIRES_HOST( WindowTest ): 진짜 창을 만든다. 헤드리스 CI 러너엔 디스플레이가 없다.
+   ```
+4. 그런 스위트가 있는 파일에는 **다른 스위트를 두지 않습니다.** 섞여 있으면 새 케이스를 옆 스위트에
+   붙이기 쉽고, 그 순간 GPU 가 필요한 케이스가 CI 로 들어갑니다.
 
 ### 테스트 상태 정리
 
-각 테스트가 종료되면 프레임워크가 비동기 씬 로드와 TaskManager를 정리합니다. 테스트가 전역
-오브젝트나 이벤트 구독을 만들었다면 `TestFixture`와 cleanup 등록을 함께 사용합니다.
+각 테스트가 종료되면 프레임워크가 비동기 씬 로드와 TaskManager를 정리합니다. 그 밖에 테스트가
+직접 만든 것(코덱 등록·임시 파일·전역 설정)은 `SW_TEST_DEFER_CLEANUP` 으로 되돌립니다.
 
 ```cpp
-SW_TEST_CASE(MySuite, CreatesTemporaryObject)
-{
-	SW_TEST_FIXTURE(fixture);
-	sw::GameObjectManager* pObjectManager = fixture.getObjectManager();
+// Test/CoreTest/TestCompression.cpp 에서 실제로 쓰는 모양.
+sw::CompressionCodecRegistry& registry  = *sw::CompressionCodecRegistry::getActive();
+const bool                    bHadCodec = registry.isCodecRegistered( sw::CompressionCodecType::Custom );
 
-	// 테스트 오브젝트를 생성합니다.
-	SW_TEST_DEFER_CLEANUP(
-		SW_DELEGATE_LAMBDA(sw::Delegate<void()>, [pObjectManager]()
-		{
-			if ( pObjectManager != nullptr )
-				pObjectManager->clear();
-		}));
-}
+registry.registerCodec( sw::make_unique<XorTestCodec>() );
+SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadCodec]()
+{
+    if ( bHadCodec == false )
+        sw::CompressionCodecRegistry::getActive()->unregisterCodec( sw::CompressionCodecType::Custom );
+} ) );
 ```
 
 Cleanup은 등록한 역순으로 실행됩니다. ResourceManager 전체 shutdown이나 전역 Scene 초기화처럼
 다른 테스트와 엔진 서비스에 영향을 주는 작업은 자동으로 수행하지 않습니다.
+
+**오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌리면 테스트끼리 상태가 샙니다.
+예전엔 그 용도의 `TestFixture` 가 프레임워크에 있었지만 **쓰는 테스트가 하나도 없어서** 지웠습니다
+(이 예제만 그것을 가리키고 있었습니다).

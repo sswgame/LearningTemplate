@@ -44,17 +44,20 @@ Tests are a hand-rolled framework (`Test/TestFramework`), not gtest, but accept 
 ```powershell
 ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure   # CI-equivalent, no GPU needed
 ctest --preset Ninja-Debug-lint                                   # lint tests only
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*     # one suite
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHITest.*      # leading '-' excludes
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*      # one suite
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
 build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
 ```
 
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`. Run them from
   `build/<preset>/Bin` (working directory matters — they resolve `Resource/` relative to it).
-- CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites that
-  need a real GPU or window filtered out (`RHITest`, `WindowTest`, `ShaderCompilerTest`, `LiveShaderTest`,
-  `RenderPassGpuTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`** — the filter
-  is by suite name, not a hand-kept list of cases.
+- CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites CI
+  cannot run filtered out (`RHIDeviceTest`, `RenderPassGpuTest`, `WindowTest`, `ShaderCompilerTest`,
+  `LiveShaderTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+- **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
+  (no underscore), lives in exactly one file, and a suite CI cannot run declares
+  `// SW_TEST_REQUIRES_HOST( SuiteName ): <reason>` in its file — the lint cross-checks those markers
+  against the `EngineTest_NoGPU` filter in both directions, and keeps such suites in a file of their own.
 - Labels: `nogpu` (CI-safe), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
 

@@ -10,10 +10,10 @@
 // 1) Core_Memory — FrameArena·LockFree 풀
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Memory] FrameArenaAllocator 동작
+ * @brief [MemoryTest] FrameArenaAllocator 동작
  */
 
-SW_TEST_CASE( Core_Memory, FrameArenaAllocatorOperations )
+SW_TEST_CASE( MemoryTest, FrameArenaAllocatorOperations )
 {
     sw::FrameArenaAllocator arena( 1024 );
 
@@ -38,9 +38,9 @@ SW_TEST_CASE( Core_Memory, FrameArenaAllocatorOperations )
 }
 
 /**
- * @brief [Core_Memory] 정렬과 재할당
+ * @brief [MemoryTest] 정렬과 재할당
  */
-SW_TEST_CASE( Core_Memory, AlignmentAndReallocation )
+SW_TEST_CASE( MemoryTest, AlignmentAndReallocation )
 {
     sw::FrameArenaAllocator arena( 128 );
 
@@ -59,9 +59,9 @@ SW_TEST_CASE( Core_Memory, AlignmentAndReallocation )
 }
 
 /**
- * @brief [Core_Memory] FrameArena 마커와 롤백
+ * @brief [MemoryTest] FrameArena 마커와 롤백
  */
-SW_TEST_CASE( Core_Memory, FrameArenaMarkerAndRollback )
+SW_TEST_CASE( MemoryTest, FrameArenaMarkerAndRollback )
 {
     sw::FrameArenaAllocator arena( 256 );
 
@@ -86,9 +86,9 @@ SW_TEST_CASE( Core_Memory, FrameArenaMarkerAndRollback )
 }
 
 /**
- * @brief [Core_Memory] Frame 더블버퍼 안전성
+ * @brief [MemoryTest] Frame 더블버퍼 안전성
  */
-SW_TEST_CASE( Core_Memory, FrameDoubleBufferSafety )
+SW_TEST_CASE( MemoryTest, FrameDoubleBufferSafety )
 {
     sw::FrameDoubleBuffer doubleBuffer( 1024 );
 
@@ -114,9 +114,9 @@ SW_TEST_CASE( Core_Memory, FrameDoubleBufferSafety )
 // 2) LockFreeObjectPool — 획득·반납
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Memory] LockFreeObjectPool 동작
+ * @brief [MemoryTest] LockFreeObjectPool 동작
  */
-SW_TEST_CASE( Core_Memory, LockFreeObjectPoolOperations )
+SW_TEST_CASE( MemoryTest, LockFreeObjectPoolOperations )
 {
     struct PooledItem
     {
@@ -148,9 +148,9 @@ SW_TEST_CASE( Core_Memory, LockFreeObjectPoolOperations )
 }
 
 /**
- * @brief [Core_Memory] Memory 기본 할당/해제, SIMD 정렬 할당(alignedAlloc) 및 메모리 유틸 검증
+ * @brief [MemoryTest] Memory 기본 할당/해제, SIMD 정렬 할당(alignedAlloc) 및 메모리 유틸 검증
  */
-SW_TEST_CASE( Core_Memory, LowLevelMemoryAllocAndAlignment )
+SW_TEST_CASE( MemoryTest, LowLevelMemoryAllocAndAlignment )
 {
     // 1) 기본 할당 / 해제
     void* rawPtr = sw::Memory::allocMemory( 512 );
@@ -179,9 +179,9 @@ SW_TEST_CASE( Core_Memory, LowLevelMemoryAllocAndAlignment )
 }
 
 /**
- * @brief [Core_Memory] PoolAllocator 및 TypedPoolAllocator 할당, 해제, 재활용 및 클리어 검증
+ * @brief [MemoryTest] PoolAllocator 및 TypedPoolAllocator 할당, 해제, 재활용 및 클리어 검증
  */
-SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
+SW_TEST_CASE( MemoryTest, PoolAllocatorAndTypedPool )
 {
     // 1) PoolAllocator 기본 할당 & 해제 & 프리리스트 재활용
     sw::PoolAllocator pool( 64, 4, true );
@@ -235,9 +235,9 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
 }
 
 /**
- * @brief [Core_Memory] PoolAllocator 다중 청크 확장, 징검다리 해제, 재할당 및 클리어 스트레스 검증
+ * @brief [MemoryTest] PoolAllocator 다중 청크 확장, 징검다리 해제, 재할당 및 클리어 스트레스 검증
  */
-SW_TEST_CASE( Core_Memory, PoolAllocatorMultiChunkStress )
+SW_TEST_CASE( MemoryTest, PoolAllocatorMultiChunkStress )
 {
     constexpr size_t kBlockSize      = 32;
     constexpr uint32 kBlocksPerChunk = 8;
@@ -286,9 +286,9 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorMultiChunkStress )
 }
 
 /**
- * @brief [Core_Memory] FrameArenaAllocator 3단계 중첩 Marker 및 순차/역순 롤백 검증
+ * @brief [MemoryTest] FrameArenaAllocator 3단계 중첩 Marker 및 순차/역순 롤백 검증
  */
-SW_TEST_CASE( Core_Memory, FrameArenaNestedMarkers )
+SW_TEST_CASE( MemoryTest, FrameArenaNestedMarkers )
 {
     sw::FrameArenaAllocator arena( 1024 );
 

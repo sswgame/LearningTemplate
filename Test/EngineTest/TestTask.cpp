@@ -72,9 +72,9 @@ namespace sw
 // 1) Engine_Task — DAG·병렬·체이닝·combinator
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_Task] 일반 태스크 DAG
+ * @brief [TaskTest] 일반 태스크 DAG
  */
-SW_TEST_CASE( Engine_Task, GeneralTaskDAG )
+SW_TEST_CASE( TaskTest, GeneralTaskDAG )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -109,9 +109,9 @@ SW_TEST_CASE( Engine_Task, GeneralTaskDAG )
 }
 
 /**
- * @brief [Engine_Task] 임의 인자 태스크
+ * @brief [TaskTest] 임의 인자 태스크
  */
-SW_TEST_CASE( Engine_Task, ArbitraryArgsTask )
+SW_TEST_CASE( TaskTest, ArbitraryArgsTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -154,9 +154,9 @@ SW_TEST_CASE( Engine_Task, ArbitraryArgsTask )
 }
 
 /**
- * @brief [Engine_Task] 병렬 태스크
+ * @brief [TaskTest] 병렬 태스크
  */
-SW_TEST_CASE( Engine_Task, ParallelTask )
+SW_TEST_CASE( TaskTest, ParallelTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -192,9 +192,9 @@ SW_TEST_CASE( Engine_Task, ParallelTask )
 }
 
 /**
- * @brief [Engine_Task] 스테이지 태스크
+ * @brief [TaskTest] 스테이지 태스크
  */
-SW_TEST_CASE( Engine_Task, StagedTask )
+SW_TEST_CASE( TaskTest, StagedTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -235,9 +235,9 @@ SW_TEST_CASE( Engine_Task, StagedTask )
 }
 
 /**
- * @brief [Engine_Task] then 체이닝
+ * @brief [TaskTest] then 체이닝
  */
-SW_TEST_CASE( Engine_Task, TaskChainingThen )
+SW_TEST_CASE( TaskTest, TaskChainingThen )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -293,9 +293,9 @@ SW_TEST_CASE( Engine_Task, TaskChainingThen )
 }
 
 /**
- * @brief [Engine_Task] 워크 스틸링 병렬 태스크
+ * @brief [TaskTest] 워크 스틸링 병렬 태스크
  */
-SW_TEST_CASE( Engine_Task, WorkStealingParallelTask )
+SW_TEST_CASE( TaskTest, WorkStealingParallelTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -321,9 +321,9 @@ SW_TEST_CASE( Engine_Task, WorkStealingParallelTask )
 }
 
 /**
- * @brief [Engine_Task] whenAll 콤비네이터
+ * @brief [TaskTest] whenAll 콤비네이터
  */
-SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAll )
+SW_TEST_CASE( TaskTest, TaskCombinatorWhenAll )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -358,9 +358,9 @@ SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAll )
 }
 
 /**
- * @brief [Engine_Task] whenAny 콤비네이터
+ * @brief [TaskTest] whenAny 콤비네이터
  */
-SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAny )
+SW_TEST_CASE( TaskTest, TaskCombinatorWhenAny )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -387,9 +387,9 @@ SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAny )
 }
 
 /**
- * @brief [Engine_Task] 태스크 취소(cancel) 및 CancellationToken 검증
+ * @brief [TaskTest] 태스크 취소(cancel) 및 CancellationToken 검증
  */
-SW_TEST_CASE( Engine_Task, CancellationTokenAndCancellation )
+SW_TEST_CASE( TaskTest, CancellationTokenAndCancellation )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -430,9 +430,9 @@ SW_TEST_CASE( Engine_Task, CancellationTokenAndCancellation )
 }
 
 /**
- * @brief [Engine_Task] TaskManager::waitAll(timeoutMs) 정상 완료 및 타임아웃 지원 검증
+ * @brief [TaskTest] TaskManager::waitAll(timeoutMs) 정상 완료 및 타임아웃 지원 검증
  */
-SW_TEST_CASE( Engine_Task, WaitAllWithTimeout )
+SW_TEST_CASE( TaskTest, WaitAllWithTimeout )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -456,9 +456,9 @@ SW_TEST_CASE( Engine_Task, WaitAllWithTimeout )
 }
 
 /**
- * @brief [Engine_Task] C++17 호환 TaskFuture / TaskPromise Fluent 체이닝 및 비동기 파이프라인 검증
+ * @brief [TaskTest] C++17 호환 TaskFuture / TaskPromise Fluent 체이닝 및 비동기 파이프라인 검증
  */
-SW_TEST_CASE( Engine_Task, TaskFutureMonadicPipeline )
+SW_TEST_CASE( TaskTest, TaskFutureMonadicPipeline )
 {
     sw::TaskPromise<int32> promise;
     sw::TaskFuture<int32>  future = promise.getFuture();
@@ -490,9 +490,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureMonadicPipeline )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture fallback(기본값 복구) 기능 검증
+ * @brief [TaskTest] TaskFuture fallback(기본값 복구) 기능 검증
  */
-SW_TEST_CASE( Engine_Task, TaskFutureFallback )
+SW_TEST_CASE( TaskTest, TaskFutureFallback )
 {
     // 1) 유효한 Future + 값 설정 시 원본 값 유지
     sw::TaskPromise<int32> promiseValid;
@@ -512,9 +512,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureFallback )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture whenAllFutures 콤비네이터 검증
+ * @brief [TaskTest] TaskFuture whenAllFutures 콤비네이터 검증
  */
-SW_TEST_CASE( Engine_Task, TaskFutureWhenAllCombinator )
+SW_TEST_CASE( TaskTest, TaskFutureWhenAllCombinator )
 {
     sw::TaskPromise<int32> promise1;
     sw::TaskPromise<int32> promise2;
@@ -546,9 +546,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureWhenAllCombinator )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture whenAnyFuture 콤비네이터 검증
+ * @brief [TaskTest] TaskFuture whenAnyFuture 콤비네이터 검증
  */
-SW_TEST_CASE( Engine_Task, TaskFutureWhenAnyCombinator )
+SW_TEST_CASE( TaskTest, TaskFutureWhenAnyCombinator )
 {
     sw::TaskPromise<sw::string> promise1;
     sw::TaskPromise<sw::string> promise2;
@@ -572,9 +572,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureWhenAnyCombinator )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture 30단계 Deep Continuation 체이닝 스트레스 테스트
+ * @brief [TaskTest] TaskFuture 30단계 Deep Continuation 체이닝 스트레스 테스트
  */
-SW_TEST_CASE( Engine_Task, TaskFutureDeepContinuationChainStress )
+SW_TEST_CASE( TaskTest, TaskFutureDeepContinuationChainStress )
 {
     sw::TaskPromise<int32> initialPromise;
     sw::TaskFuture<int32>  currentFuture = initialPromise.getFuture();
@@ -598,9 +598,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureDeepContinuationChainStress )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture whenAll 대규모 동시성(64개 워커) 스트레스 테스트
+ * @brief [TaskTest] TaskFuture whenAll 대규모 동시성(64개 워커) 스트레스 테스트
  */
-SW_TEST_CASE( Engine_Task, TaskFutureWhenAllMassiveConcurrencyStress )
+SW_TEST_CASE( TaskTest, TaskFutureWhenAllMassiveConcurrencyStress )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();
@@ -662,9 +662,9 @@ SW_TEST_CASE( Engine_Task, TaskFutureWhenAllMassiveConcurrencyStress )
 }
 
 /**
- * @brief [Engine_Task] TaskFuture whenAny 다중 스레드 레이스 스트레스 테스트
+ * @brief [TaskTest] TaskFuture whenAny 다중 스레드 레이스 스트레스 테스트
  */
-SW_TEST_CASE( Engine_Task, TaskFutureWhenAnyRaceStress )
+SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
     taskMgr.initialize();

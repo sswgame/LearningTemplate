@@ -705,7 +705,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
  * @brief [GameObjectHierarchy] refreshActiveInHierarchy 부모-자식-손자 다계층 합성 활성 상태 엣지 케이스 검증
  */
 /**
- * @brief [ComponentDefaults] gamedata 의 기본값은 **기반 타입 노드부터** 적용된다
+ * @brief [ComponentDefaultsTest] gamedata 의 기본값은 **기반 타입 노드부터** 적용된다
  * @details 예전에는 기반 기본값 적용이 `Component` 생성자에 있었는데, 기반 생성자 시점에는 가상
  *          `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나왔다
  *          — 중간 기반(`SceneComponent`)의 기본값은 한 번도 적용된 적이 없고, 파생 기본값은
@@ -714,7 +714,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
  *          이 테스트는 그 순서를 고정한다: 기반 노드의 값이 들어가고, 같은 프로퍼티를 파생이
  *          다시 적으면 파생이 이긴다.
  */
-SW_TEST_CASE( ComponentDefaults, BaseTypeDefaultsApplyBeforeDerived )
+SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 {
     const sw::string defaultsPath =
         sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_component_defaults_chain.xml" );

@@ -8,10 +8,10 @@
 // 1) Core_Process — 프로세스 생성, 라인 읽기, 실행 헬퍼, 강제 종료
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Process] 프로세스 생성 및 표준 출력 라인 읽기
+ * @brief [ProcessTest] 프로세스 생성 및 표준 출력 라인 읽기
  */
 
-SW_TEST_CASE( Core_Process, LaunchAndReadOutput )
+SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
 {
     sw::Process proc;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -37,9 +37,9 @@ SW_TEST_CASE( Core_Process, LaunchAndReadOutput )
 }
 
 /**
- * @brief [Core_Process] 정적 execute 헬퍼를 통한 출력 콜백 수신
+ * @brief [ProcessTest] 정적 execute 헬퍼를 통한 출력 콜백 수신
  */
-SW_TEST_CASE( Core_Process, ExecuteHelper )
+SW_TEST_CASE( ProcessTest, ExecuteHelper )
 {
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::string cmd = "cmd.exe /c echo LINE1 && echo LINE2";
@@ -62,9 +62,9 @@ SW_TEST_CASE( Core_Process, ExecuteHelper )
 }
 
 /**
- * @brief [Core_Process] 실행 중인 프로세스 강제 종료
+ * @brief [ProcessTest] 실행 중인 프로세스 강제 종료
  */
-SW_TEST_CASE( Core_Process, TerminateProcess )
+SW_TEST_CASE( ProcessTest, TerminateProcess )
 {
     sw::Process proc;
 #if defined( SW_PLATFORM_WINDOWS )

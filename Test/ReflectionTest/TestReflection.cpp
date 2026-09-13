@@ -21,9 +21,9 @@ struct TestBindingActor
 };
 
 /**
- * @brief [Reflection_Binding] 양방향 프로퍼티 바인딩
+ * @brief [ReflectionBindingTest] 양방향 프로퍼티 바인딩
  */
-SW_TEST_CASE( Reflection_Binding, BiDirectionalPropertyBinding )
+SW_TEST_CASE( ReflectionBindingTest, BiDirectionalPropertyBinding )
 {
     sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( TestBindingActor, _score ) );
 
@@ -42,9 +42,9 @@ SW_TEST_CASE( Reflection_Binding, BiDirectionalPropertyBinding )
 }
 
 /**
- * @brief [Reflection_FunctionMacro] 어노테이션 메서드 호출
+ * @brief [ReflectionFunctionMacroTest] 어노테이션 메서드 호출
  */
-SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
+SW_TEST_CASE( ReflectionFunctionMacroTest, AnnotatedMethodInvoke )
 {
     // 수동 연결 invoker (레거시 경로도 여전히 지원).
     REFLECT()
@@ -87,9 +87,9 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 }
 
 /**
- * @brief [Reflection_FunctionMacro] 코드젠 메서드 호출
+ * @brief [ReflectionFunctionMacroTest] 코드젠 메서드 호출
  */
-SW_TEST_CASE( Reflection_FunctionMacro, CodegenMethodInvoke )
+SW_TEST_CASE( ReflectionFunctionMacroTest, CodegenMethodInvoke )
 {
     // SampleTestActor::takeDamage / getHp 는 ReflectionParser 코드젠이 출력한다.
     sw::SampleTestActor actor;
@@ -120,9 +120,9 @@ SW_TEST_CASE( Reflection_FunctionMacro, CodegenMethodInvoke )
 }
 
 /**
- * @brief [Reflection_Component] Component beginPlay / tick / endPlay 동작 검증
+ * @brief [ReflectionComponentTest] Component beginPlay / tick / endPlay 동작 검증
  */
-SW_TEST_CASE( Reflection_Component, ComponentLifecycle )
+SW_TEST_CASE( ReflectionComponentTest, ComponentLifecycle )
 {
     sw::GameObjectManager manager;
 
@@ -154,9 +154,9 @@ SW_TEST_CASE( Reflection_Component, ComponentLifecycle )
 }
 
 /**
- * @brief [Reflection_Component] Component 다중 상속 라이프사이클 및 틱 정상 동작 검증
+ * @brief [ReflectionComponentTest] Component 다중 상속 라이프사이클 및 틱 정상 동작 검증
  */
-SW_TEST_CASE( Reflection_Component, ComponentInheritanceMultiLevel )
+SW_TEST_CASE( ReflectionComponentTest, ComponentInheritanceMultiLevel )
 {
     sw::GameObjectManager manager;
 
@@ -214,9 +214,9 @@ SW_TEST_CASE( Reflection_Component, ComponentInheritanceMultiLevel )
 }
 
 /**
- * @brief [Reflection_Component] Component에 선언된 PROPERTY가 TypeInfo에 반영되고 직렬화/역직렬화되는지 검증
+ * @brief [ReflectionComponentTest] Component에 선언된 PROPERTY가 TypeInfo에 반영되고 직렬화/역직렬화되는지 검증
  */
-SW_TEST_CASE( Reflection_Component, ComponentPropertySerialization )
+SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
     SW_ASSERT_NOT_NULL( pType );
@@ -235,9 +235,9 @@ SW_TEST_CASE( Reflection_Component, ComponentPropertySerialization )
 }
 
 /**
- * @brief [Reflection_GenericQuery] TypeRegistry 템플릿 조회 및 isA 헬퍼 검증
+ * @brief [ReflectionGenericQueryTest] TypeRegistry 템플릿 조회 및 isA 헬퍼 검증
  */
-SW_TEST_CASE( Reflection_GenericQuery, FindTypeAndIsA )
+SW_TEST_CASE( ReflectionGenericQueryTest, FindTypeAndIsA )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::TestDerivedScriptComponent>();
     SW_ASSERT_NOT_NULL( pType );
@@ -251,7 +251,7 @@ SW_TEST_CASE( Reflection_GenericQuery, FindTypeAndIsA )
 }
 
 /**
- * @brief [Reflection_GenericQuery] REFLECT() 베이스가 첫 번째로 선언된 다중 상속 액터의 부모 채택을
+ * @brief [ReflectionGenericQueryTest] REFLECT() 베이스가 첫 번째로 선언된 다중 상속 액터의 부모 채택을
  *        검증합니다. IPlainMixinTestActor(REFLECT() 없는 순수 인터페이스)는 두 번째 베이스로 조용히
  *        무시되고, EmptyReflectedBaseTestActor(REFLECT() 있음, 첫 번째 베이스)가 부모로 채택되어야
  *        합니다. GameFramework::TurnBattleSaveGame : public SaveGame, public IFlagStore 실사례의
@@ -263,7 +263,7 @@ SW_TEST_CASE( Reflection_GenericQuery, FindTypeAndIsA )
  *       ABI상 안전하지 않을 수 있으므로, 리플렉션 프로퍼티 병합은 여전히 단일 상속에서만 신뢰할 수
  *       있습니다(getPropertiesWithBase() 문서 참고).
  */
-SW_TEST_CASE( Reflection_GenericQuery, MultiInheritanceSafeOrderParentAndProperties )
+SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProperties )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MultiBaseOrderTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -282,9 +282,9 @@ SW_TEST_CASE( Reflection_GenericQuery, MultiInheritanceSafeOrderParentAndPropert
 }
 
 /**
- * @brief [Reflection_GenericQuery] TypeRegistry forEachType 및 getDerivedTypes 검증
+ * @brief [ReflectionGenericQueryTest] TypeRegistry forEachType 및 getDerivedTypes 검증
  */
-SW_TEST_CASE( Reflection_GenericQuery, ForEachTypeAndDerivedTypes )
+SW_TEST_CASE( ReflectionGenericQueryTest, ForEachTypeAndDerivedTypes )
 {
     uint32 typeCount{ 0 };
     sw::engine::getTypeRegistry().forEachType(
@@ -299,9 +299,9 @@ SW_TEST_CASE( Reflection_GenericQuery, ForEachTypeAndDerivedTypes )
 }
 
 /**
- * @brief [Reflection_GenericQuery] PropertyInfo getRawPtr 및 findPropertyInHierarchy 검증
+ * @brief [ReflectionGenericQueryTest] PropertyInfo getRawPtr 및 findPropertyInHierarchy 검증
  */
-SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
+SW_TEST_CASE( ReflectionGenericQueryTest, HierarchyPropertyLookupAndRawPtr )
 {
     const sw::TypeInfo* pGrandChildType = sw::engine::getTypeRegistry().findType<sw::TestGrandChildScriptComponent>();
     SW_ASSERT_NOT_NULL( pGrandChildType );
@@ -324,9 +324,9 @@ SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
 }
 
 /**
- * @brief [Reflection_Cast] ReflectionCast 헬퍼 (HasStaticType, castTo, isA) 다형 상속 계층 검증
+ * @brief [ReflectionCastTest] ReflectionCast 헬퍼 (HasStaticType, castTo, isA) 다형 상속 계층 검증
  */
-SW_TEST_CASE( Reflection_Cast, TypeTraitsAndPolymorphicCast )
+SW_TEST_CASE( ReflectionCastTest, TypeTraitsAndPolymorphicCast )
 {
     // 1) 타입 트레이트 정적 검증
     SW_EXPECT_TRUE( sw::HasGetTypeInfo_v<sw::TestScriptComponent> );
@@ -371,9 +371,9 @@ SW_TEST_CASE( Reflection_Cast, TypeTraitsAndPolymorphicCast )
 }
 
 /**
- * @brief [Reflection_ReflectAny] ReflectAny 직접 생성, 비어있음 검사, 값 추출 및 타입 불일치 실패 검증
+ * @brief [ReflectAnyTest] ReflectAny 직접 생성, 비어있음 검사, 값 추출 및 타입 불일치 실패 검증
  */
-SW_TEST_CASE( Reflection_ReflectAny, ReflectAnyDirectMakeAndExtract )
+SW_TEST_CASE( ReflectAnyTest, ReflectAnyDirectMakeAndExtract )
 {
     // 1) 빈 ReflectAny
     sw::ReflectAny emptyAny;

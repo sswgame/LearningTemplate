@@ -13,10 +13,10 @@
 
 // 리플렉션 열거형 — EnumInfo 등록·조회 · 플래그 연산 · 비트플래그 문자열 · 이름 테이블.
 /**
- * @brief [Reflection_EnumBitFlag] 비트플래그 감지와 ToString
+ * @brief [ReflectionEnumBitFlagTest] 비트플래그 감지와 ToString
  */
 
-SW_TEST_CASE( Reflection_EnumBitFlag, BitFlagDetectionAndToString )
+SW_TEST_CASE( ReflectionEnumBitFlagTest, BitFlagDetectionAndToString )
 {
     const sw::EnumInfo* info =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
@@ -34,9 +34,9 @@ SW_TEST_CASE( Reflection_EnumBitFlag, BitFlagDetectionAndToString )
 }
 
 /**
- * @brief [Reflection_EnumBitFlag] 문자열 플래그 → 값
+ * @brief [ReflectionEnumBitFlagTest] 문자열 플래그 → 값
  */
-SW_TEST_CASE( Reflection_EnumBitFlag, StringFlagsToValue )
+SW_TEST_CASE( ReflectionEnumBitFlagTest, StringFlagsToValue )
 {
     const sw::EnumInfo* info =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
@@ -52,9 +52,9 @@ SW_TEST_CASE( Reflection_EnumBitFlag, StringFlagsToValue )
 }
 
 /**
- * @brief [Reflection_EnumInfo] 등록된 enum 조회
+ * @brief [ReflectionEnumInfoTest] 등록된 enum 조회
  */
-SW_TEST_CASE( Reflection_EnumInfo, FindRegisteredEnum )
+SW_TEST_CASE( ReflectionEnumInfoTest, FindRegisteredEnum )
 {
     const sw::EnumInfo* info =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
@@ -67,9 +67,9 @@ SW_TEST_CASE( Reflection_EnumInfo, FindRegisteredEnum )
 }
 
 /**
- * @brief [Reflection_EnumInfo] 값 → 문자열
+ * @brief [ReflectionEnumInfoTest] 값 → 문자열
  */
-SW_TEST_CASE( Reflection_EnumInfo, ValueToString )
+SW_TEST_CASE( ReflectionEnumInfoTest, ValueToString )
 {
     const sw::EnumInfo* info =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
@@ -83,9 +83,9 @@ SW_TEST_CASE( Reflection_EnumInfo, ValueToString )
 }
 
 /**
- * @brief [Reflection_EnumInfo] 잘못된 값은 기본값
+ * @brief [ReflectionEnumInfoTest] 잘못된 값은 기본값
  */
-SW_TEST_CASE( Reflection_EnumInfo, InvalidValueReturnsDefault )
+SW_TEST_CASE( ReflectionEnumInfoTest, InvalidValueReturnsDefault )
 {
     const sw::EnumInfo* info =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
@@ -98,9 +98,9 @@ SW_TEST_CASE( Reflection_EnumInfo, InvalidValueReturnsDefault )
 }
 
 /**
- * @brief [Reflection_EnumInfo] EnumInfo 플래그 문자열 변환
+ * @brief [ReflectionEnumInfoTest] EnumInfo 플래그 문자열 변환
  */
-SW_TEST_CASE( Reflection_EnumInfo, EnumInfoFlagsStringConversion )
+SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoFlagsStringConversion )
 {
     sw::EnumInfo info;
     info._name           = sw::hashed_string( "ESampleFlags" );
@@ -126,9 +126,9 @@ SW_TEST_CASE( Reflection_EnumInfo, EnumInfoFlagsStringConversion )
 }
 
 /**
- * @brief [Reflection_EnumFlag] enum 플래그 연산자
+ * @brief [ReflectionEnumFlagTest] enum 플래그 연산자
  */
-SW_TEST_CASE( Reflection_EnumFlag, EnumFlagOperators )
+SW_TEST_CASE( ReflectionEnumFlagTest, EnumFlagOperators )
 {
     TestFlag flag = TestFlag::Read | TestFlag::Write;
     SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Read ) );
@@ -140,12 +140,12 @@ SW_TEST_CASE( Reflection_EnumFlag, EnumFlagOperators )
 }
 
 /**
- * @brief [Reflection_EnumFlag] ENUM(Flags) 코드젠 연산자(|, &, ^, ~, |=, &=, ^=)가 sw::EnumUtil의
+ * @brief [ReflectionEnumFlagTest] ENUM(Flags) 코드젠 연산자(|, &, ^, ~, |=, &=, ^=)가 sw::EnumUtil의
  *        제네릭 hasFlag/hasAnyFlag/setFlag/clearFlag(Core/Common/EnumUtil.h)와 함께 정상 동작하는지
  *        검증합니다. EnumUtil 자체의 단위 테스트는 Test/CoreTest/TestEnumUtil.cpp에 있습니다
  *        (리플렉션과 무관하게 동작함을 증명하기 위해 일부러 CoreTest에 둡니다).
  */
-SW_TEST_CASE( Reflection_EnumFlag, GeneratedOperatorsWithEnumUtil )
+SW_TEST_CASE( ReflectionEnumFlagTest, GeneratedOperatorsWithEnumUtil )
 {
     TestFlag flag = TestFlag::Read | TestFlag::Write;
 
@@ -162,9 +162,9 @@ SW_TEST_CASE( Reflection_EnumFlag, GeneratedOperatorsWithEnumUtil )
 }
 
 /**
- * @brief [Reflection_EnumNames] ContainerKind 및 FunctionNetRole 이름 변환 및 파싱 검증
+ * @brief [ReflectionEnumNamesTest] ContainerKind 및 FunctionNetRole 이름 변환 및 파싱 검증
  */
-SW_TEST_CASE( Reflection_EnumNames, ContainerKindAndNetRoleNames )
+SW_TEST_CASE( ReflectionEnumNamesTest, ContainerKindAndNetRoleNames )
 {
     // 1) ContainerKind 변환 및 파싱
     sw::ContainerKind parsedKind = sw::ContainerKind::None;

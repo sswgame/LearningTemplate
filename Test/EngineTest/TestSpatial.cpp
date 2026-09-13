@@ -12,7 +12,7 @@
 
 // Engine_Spatial — 쿼드트리 · 옥트리 · 해시 그리드 · BVH 의 삽입/갱신/질의.
 
-SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
+SW_TEST_CASE( SpatialTest, SpatialQuadTreeInsertAndRangeQuery )
 {
     sw::SpatialQuadTree tree( sw::AABB2D{
         sw::float2{   0.0f,    0.0f},
@@ -86,7 +86,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
 // ------------------------------------------------------------------------------
 // 2) SpatialOctree 3D 공간 분할 및 구체/AABB 쿼리 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, SpatialOctreeInsertAndQuery )
+SW_TEST_CASE( SpatialTest, SpatialOctreeInsertAndQuery )
 {
     sw::SpatialOctree octree( sw::AABB{
         sw::float3{   0.0f,    0.0f,    0.0f},
@@ -134,7 +134,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeInsertAndQuery )
 // ------------------------------------------------------------------------------
 // 10) SpatialOctree 및 SpatialQuadTree Node Collapse (트리 축소) 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
+SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
 {
     // 1. Octree 분할 및 축소
     sw::SpatialOctree octree( sw::AABB{
@@ -205,7 +205,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
 // ------------------------------------------------------------------------------
 // 14) SpatialHashGrid2D 엔티티 등록, 이동, 삭제 및 카운트 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DInsertUpdateRemoveAndCount )
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInsertUpdateRemoveAndCount )
 {
     const sw::ObjectHandle e1 = sw::ObjectHandle::make( 1, 1 );
     const sw::ObjectHandle e2 = sw::ObjectHandle::make( 2, 1 );
@@ -237,7 +237,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DInsertUpdateRemoveAndCount )
 // ------------------------------------------------------------------------------
 // 15) SpatialHashGrid2D AABB, Circle 및 Ray 쿼리 필터링 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DAABBCircleAndRayQueries )
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
 {
     const sw::ObjectHandle eTarget1 = sw::ObjectHandle::make( 1, 1 );
     const sw::ObjectHandle eTarget2 = sw::ObjectHandle::make( 2, 1 );
@@ -266,7 +266,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DAABBCircleAndRayQueries )
 // ------------------------------------------------------------------------------
 // 16) BVHTree3D 3D 동적 트리 엔티티 등록, 이동, 삭제 및 트리 균형/높이 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, BVHTree3DInsertUpdateRemoveAndCount )
+SW_TEST_CASE( SpatialTest, BVHTree3DInsertUpdateRemoveAndCount )
 {
     sw::BVHTree3D bvh;
 
@@ -315,7 +315,7 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DInsertUpdateRemoveAndCount )
 // ------------------------------------------------------------------------------
 // 17) BVHTree3D 3D AABB, Ray, Sphere 쿼리 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
+SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
 {
     sw::BVHTree3D bvh;
 
@@ -364,7 +364,7 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 /**
  * @brief [SpatialHashGrid2D] 복수 셀에 걸친 대형 오브젝트 쿼리 시 중복 없는 반환 및 정렬 최적화 검증
  */
-SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2D_SpanningMultiCellsDuplicateFiltering )
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFiltering )
 {
     sw::SpatialHashGrid2D  grid( 10.0f );
     const sw::ObjectHandle h1 = sw::ObjectHandle::make( 1, 1 );

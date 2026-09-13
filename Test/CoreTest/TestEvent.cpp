@@ -36,9 +36,9 @@ namespace
 // 1) Engine_Event — 디스패치·채널 필터
 // ------------------------------------------------------------------------------
 /**
- * @brief [Engine_Event] 디스패처 push 와 dispatch
+ * @brief [EventTest] 디스패처 push 와 dispatch
  */
-SW_TEST_CASE( Engine_Event, DispatcherPushAndDispatch )
+SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
 {
     s_LastResizeWidth  = 0;
     s_LastResizeHeight = 0;
@@ -64,9 +64,9 @@ SW_TEST_CASE( Engine_Event, DispatcherPushAndDispatch )
 }
 
 /**
- * @brief [Engine_Event] 닫기·활성화 이벤트
+ * @brief [EventTest] 닫기·활성화 이벤트
  */
-SW_TEST_CASE( Engine_Event, DispatcherCloseAndActivateEvents )
+SW_TEST_CASE( EventTest, DispatcherCloseAndActivateEvents )
 {
     s_bWindowClosed    = false;
     s_bWindowActivated = false;
@@ -95,9 +95,9 @@ SW_TEST_CASE( Engine_Event, DispatcherCloseAndActivateEvents )
 }
 
 /**
- * @brief [Engine_Event] 지연 이벤트 큐
+ * @brief [EventTest] 지연 이벤트 큐
  */
-SW_TEST_CASE( Engine_Event, DeferredEventQueueTest )
+SW_TEST_CASE( EventTest, DeferredEventQueueTest )
 {
     s_LastResizeWidth  = 0;
     s_LastResizeHeight = 0;
@@ -119,9 +119,9 @@ SW_TEST_CASE( Engine_Event, DeferredEventQueueTest )
 }
 
 /**
- * @brief [Engine_Event] 채널 필터링
+ * @brief [EventTest] 채널 필터링
  */
-SW_TEST_CASE( Engine_Event, EventDispatcherChannelFiltering )
+SW_TEST_CASE( EventTest, EventDispatcherChannelFiltering )
 {
     sw::EventDispatcher dispatcher;
 
@@ -155,9 +155,9 @@ SW_TEST_CASE( Engine_Event, EventDispatcherChannelFiltering )
 }
 
 /**
- * @brief [Engine_Event] 64KB 프레임 할당자를 초과하는 대량 이벤트 큐잉 시 오버플로우 메모리 처리 및 0-유실 검증
+ * @brief [EventTest] 64KB 프레임 할당자를 초과하는 대량 이벤트 큐잉 시 오버플로우 메모리 처리 및 0-유실 검증
  */
-SW_TEST_CASE( Engine_Event, FrameAllocatorOverflowFallback )
+SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 {
     sw::EventDispatcher dispatcher;
 

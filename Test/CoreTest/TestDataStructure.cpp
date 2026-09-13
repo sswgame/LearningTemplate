@@ -20,14 +20,44 @@
 
 #include "TestFramework/TestFramework.h"
 
+namespace
+{
+    struct PooledTestStruct
+    {
+        int32      _id{ 0 };
+        sw::string _message{};
+
+        PooledTestStruct( int32 id, sw::string message )
+            : _id{ id }
+            , _message{ std::move( message ) }
+        {
+        }
+
+        ~PooledTestStruct()
+        {
+            _id = -1;
+        }
+    };
+
+    struct EmptyTestHasher
+    {
+        size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
+    };
+
+    struct EmptyTestEqual
+    {
+        bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
+    };
+} // namespace
+
 // ------------------------------------------------------------------------------
 // 1) Core_DataStructure — 비트셋·락프리/동시 큐
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_DataStructure] DynamicBitset 기본
+ * @brief [DataStructureTest] DynamicBitset 기본
  */
 
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetBasic )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetBasic )
 {
     sw::DynamicBitset bitset( 100 );
     SW_EXPECT_EQUAL( 100u, bitset.size() );
@@ -53,9 +83,9 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetBasic )
 }
 
 /**
- * @brief [Core_DataStructure] DynamicBitset 연산
+ * @brief [DataStructureTest] DynamicBitset 연산
  */
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetOperations )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetOperations )
 {
     sw::DynamicBitset bs1( "1010" );
     sw::DynamicBitset bs2( "0110" );
@@ -74,9 +104,9 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetOperations )
 }
 
 /**
- * @brief [Core_DataStructure] DynamicBitset 리사이즈와 변환
+ * @brief [DataStructureTest] DynamicBitset 리사이즈와 변환
  */
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetResizeAndConversions )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetResizeAndConversions )
 {
     sw::DynamicBitset bs( 8, 0b10101010u );
     SW_EXPECT_EQUAL( 8u, bs.size() );
@@ -103,9 +133,9 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetResizeAndConversions )
 }
 
 /**
- * @brief [Core_DataStructure] DynamicBitset 64비트 이상 멀티 블록 시프트(<<=, >>=) 검증
+ * @brief [DataStructureTest] DynamicBitset 64비트 이상 멀티 블록 시프트(<<=, >>=) 검증
  */
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetMultiBlockShift )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetMultiBlockShift )
 {
     // 192비트 (3개 64비트 블록) 비트셋 생성
     sw::DynamicBitset bitset( 192 );
@@ -145,9 +175,9 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetMultiBlockShift )
 }
 
 /**
- * @brief [Core_DataStructure] DynamicBitset 전체 커버리지
+ * @brief [DataStructureTest] DynamicBitset 전체 커버리지
  */
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetFullCoverage )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetFullCoverage )
 {
     sw::DynamicBitset emptySet;
     SW_EXPECT_TRUE( emptySet.empty() );
@@ -183,9 +213,9 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetFullCoverage )
 // 2) 큐 — LockFreeQueue·ConcurrentQueue
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_DataStructure] LockFreeQueue 기본과 동시성
+ * @brief [DataStructureTest] LockFreeQueue 기본과 동시성
  */
-SW_TEST_CASE( Core_DataStructure, LockFreeQueueBasicAndConcurrent )
+SW_TEST_CASE( DataStructureTest, LockFreeQueueBasicAndConcurrent )
 {
     sw::LockFreeQueue<int32, 64> queue;
     SW_EXPECT_TRUE( queue.empty() );
@@ -238,9 +268,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeQueueBasicAndConcurrent )
 }
 
 /**
- * @brief [Core_DataStructure] ConcurrentQueue 멀티스레드
+ * @brief [DataStructureTest] ConcurrentQueue 멀티스레드
  */
-SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMultiThread )
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
 {
     sw::ConcurrentQueue<int32, 128> queue;
     SW_EXPECT_TRUE( queue.empty() );
@@ -301,31 +331,10 @@ SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMultiThread )
     SW_EXPECT_TRUE( queue.empty() );
     SW_EXPECT_EQUAL( kNumProducers * kItemsPerThread, totalSumReceived.load() );
 }
-
-namespace
-{
-    struct PooledTestStruct
-    {
-        int32      _id{ 0 };
-        sw::string _message{};
-
-        PooledTestStruct( int32 id, sw::string message )
-            : _id{ id }
-            , _message{ std::move( message ) }
-        {
-        }
-
-        ~PooledTestStruct()
-        {
-            _id = -1;
-        }
-    };
-} // namespace
-
 /**
- * @brief [Core_DataStructure] LockFreeObjectPool 기본 수명주기 및 인자 전달 검증
+ * @brief [DataStructureTest] LockFreeObjectPool 기본 수명주기 및 인자 전달 검증
  */
-SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolLifecycle )
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolLifecycle )
 {
     sw::LockFreeObjectPool<PooledTestStruct, 16> pool;
     SW_EXPECT_EQUAL( 16u, pool.capacity() );
@@ -356,9 +365,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolLifecycle )
 }
 
 /**
- * @brief [Core_DataStructure] LockFreeObjectPool 용량 초과 및 반납 후 재획득 검증
+ * @brief [DataStructureTest] LockFreeObjectPool 용량 초과 및 반납 후 재획득 검증
  */
-SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolExhaustionAndReacquire )
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolExhaustionAndReacquire )
 {
     constexpr uint32                        kPoolCap = 4;
     sw::LockFreeObjectPool<int32, kPoolCap> pool;
@@ -401,9 +410,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolExhaustionAndReacquire )
 }
 
 /**
- * @brief [Core_DataStructure] LockFreeObjectPool 멀티스레드 동시 acquire/release 검증
+ * @brief [DataStructureTest] LockFreeObjectPool 멀티스레드 동시 acquire/release 검증
  */
-SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolConcurrent )
+SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolConcurrent )
 {
     constexpr uint32 kCapacity   = 256;
     constexpr int32  kIterations = 1000;
@@ -447,9 +456,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolConcurrent )
 }
 
 /**
- * @brief [Core_DataStructure] sw::array 생성, 접근, 채우기 및 이터레이터 검증
+ * @brief [DataStructureTest] sw::array 생성, 접근, 채우기 및 이터레이터 검증
  */
-SW_TEST_CASE( Core_DataStructure, ArrayOperations )
+SW_TEST_CASE( DataStructureTest, ArrayOperations )
 {
     // 1) 초기화 리스트 생성
     sw::array<int32, 4> arr{ 10, 20, 30, 40 };
@@ -484,9 +493,9 @@ SW_TEST_CASE( Core_DataStructure, ArrayOperations )
 }
 
 /**
- * @brief [Core_DataStructure] sw::map 및 sw::set 정렬 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::map 및 sw::set 정렬 컨테이너 연산 검증
  */
-SW_TEST_CASE( Core_DataStructure, MapAndSetOperations )
+SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
 {
     // 1) sw::map
     sw::map<sw::string, int32> mapA;
@@ -538,9 +547,9 @@ SW_TEST_CASE( Core_DataStructure, MapAndSetOperations )
 }
 
 /**
- * @brief [Core_DataStructure] sw::unordered_map 및 sw::unordered_set 해시 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::unordered_map 및 sw::unordered_set 해시 컨테이너 연산 검증
  */
-SW_TEST_CASE( Core_DataStructure, UnorderedMapAndSetOperations )
+SW_TEST_CASE( DataStructureTest, UnorderedMapAndSetOperations )
 {
     // 1) sw::unordered_map
     sw::unordered_map<int32, sw::string> uMap;
@@ -581,9 +590,9 @@ SW_TEST_CASE( Core_DataStructure, UnorderedMapAndSetOperations )
 }
 
 /**
- * @brief [Core_DataStructure] sw::deque 및 sw::list 양방향 컨테이너 연산 검증
+ * @brief [DataStructureTest] sw::deque 및 sw::list 양방향 컨테이너 연산 검증
  */
-SW_TEST_CASE( Core_DataStructure, DequeAndListOperations )
+SW_TEST_CASE( DataStructureTest, DequeAndListOperations )
 {
     // 1) sw::deque
     sw::deque<int32> dq;
@@ -631,9 +640,9 @@ SW_TEST_CASE( Core_DataStructure, DequeAndListOperations )
 }
 
 /**
- * @brief [Core_DataStructure] SpinLock 기본 lock/unlock, try_lock, isLocked 및 멀티스레드 상호 배제 검증
+ * @brief [DataStructureTest] SpinLock 기본 lock/unlock, try_lock, isLocked 및 멀티스레드 상호 배제 검증
  */
-SW_TEST_CASE( Core_DataStructure, SpinLockMutualExclusion )
+SW_TEST_CASE( DataStructureTest, SpinLockMutualExclusion )
 {
     sw::SpinLock spinLock;
     SW_EXPECT_FALSE( spinLock.isLocked() );
@@ -683,9 +692,9 @@ SW_TEST_CASE( Core_DataStructure, SpinLockMutualExclusion )
 }
 
 /**
- * @brief [Core_DataStructure] WorkStealingDeque LIFO push/pop 및 FIFO steal 동작 검증
+ * @brief [DataStructureTest] WorkStealingDeque LIFO push/pop 및 FIFO steal 동작 검증
  */
-SW_TEST_CASE( Core_DataStructure, WorkStealingDequePushPopSteal )
+SW_TEST_CASE( DataStructureTest, WorkStealingDequePushPopSteal )
 {
     sw::WorkStealingDeque<int32> deque( 16 );
 
@@ -717,9 +726,9 @@ SW_TEST_CASE( Core_DataStructure, WorkStealingDequePushPopSteal )
 }
 
 /**
- * @brief [Core_DataStructure] WorkStealingDeque 멀티스레드 동시 Push/Pop 및 다중 Steal 무결성 스트레스 검증
+ * @brief [DataStructureTest] WorkStealingDeque 멀티스레드 동시 Push/Pop 및 다중 Steal 무결성 스트레스 검증
  */
-SW_TEST_CASE( Core_DataStructure, WorkStealingDequeMultiThreadStress )
+SW_TEST_CASE( DataStructureTest, WorkStealingDequeMultiThreadStress )
 {
     constexpr int32              kTotalItems = 1000;
     constexpr int32              kStealCount = 3;
@@ -796,9 +805,9 @@ SW_TEST_CASE( Core_DataStructure, WorkStealingDequeMultiThreadStress )
 }
 
 /**
- * @brief [Core_DataStructure] pair 기본 및 구조화 바인딩
+ * @brief [DataStructureTest] pair 기본 및 구조화 바인딩
  */
-SW_TEST_CASE( Core_DataStructure, PairBasicAndStructuredBinding )
+SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
 {
     sw::pair<int32, sw::string> p1{ 42, "hello" };
     SW_EXPECT_EQUAL( 42, p1.first );
@@ -813,20 +822,10 @@ SW_TEST_CASE( Core_DataStructure, PairBasicAndStructuredBinding )
     SW_EXPECT_EQUAL( 200, p2.second );
 }
 
-struct EmptyTestHasher
-{
-    size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
-};
-
-struct EmptyTestEqual
-{
-    bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
-};
-
 /**
- * @brief [Core_DataStructure] pair EBO (Empty Base Optimization) 압축 검증
+ * @brief [DataStructureTest] pair EBO (Empty Base Optimization) 압축 검증
  */
-SW_TEST_CASE( Core_DataStructure, PairEmptyBaseOptimization )
+SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 {
 #if !defined( SW_ENABLE_STL_CONTAINER )
     // 1) 일반 타입 쌍: 8 바이트
@@ -851,9 +850,9 @@ SW_TEST_CASE( Core_DataStructure, PairEmptyBaseOptimization )
 }
 
 /**
- * @brief [Core_DataStructure] LockFreeQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
+ * @brief [DataStructureTest] LockFreeQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
  */
-SW_TEST_CASE( Core_DataStructure, LockFreeQueueSPSCStress )
+SW_TEST_CASE( DataStructureTest, LockFreeQueueSPSCStress )
 {
     constexpr int32                kTotalItems = 100000;
     sw::LockFreeQueue<int32, 2048> queue;
@@ -905,9 +904,9 @@ SW_TEST_CASE( Core_DataStructure, LockFreeQueueSPSCStress )
 }
 
 /**
- * @brief [Core_DataStructure] ConcurrentQueue 다중 생산자·다중 소비자(MPMC) 동시성 스트레스 테스트 (10만 건)
+ * @brief [DataStructureTest] ConcurrentQueue 다중 생산자·다중 소비자(MPMC) 동시성 스트레스 테스트 (10만 건)
  */
-SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMPMCStress )
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
 {
     constexpr int32 kProducers        = 4;
     constexpr int32 kConsumers        = 4;
@@ -975,9 +974,9 @@ SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMPMCStress )
 }
 
 /**
- * @brief [Core_DataStructure] HandleTable insert, erase, generation 증가 및 재사용 검증
+ * @brief [DataStructureTest] HandleTable insert, erase, generation 증가 및 재사용 검증
  */
-SW_TEST_CASE( Core_DataStructure, HandleTableInsertEraseAndGenerationIncrement )
+SW_TEST_CASE( DataStructureTest, HandleTableInsertEraseAndGenerationIncrement )
 {
     sw::HandleTable<sw::string> table;
     sw::ObjectHandle            h1 = table.insert( "Entity_1" );
@@ -1002,9 +1001,9 @@ SW_TEST_CASE( Core_DataStructure, HandleTableInsertEraseAndGenerationIncrement )
 }
 
 /**
- * @brief [Core_DataStructure] DynamicBitset 잘못된 입력 문자 파싱 안전성 검증
+ * @brief [DataStructureTest] DynamicBitset 잘못된 입력 문자 파싱 안전성 검증
  */
-SW_TEST_CASE( Core_DataStructure, DynamicBitsetInvalidStringParsingSafety )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetInvalidStringParsingSafety )
 {
     sw::DynamicBitset bitset( "10A1B0" );
     SW_EXPECT_EQUAL( 6u, bitset.size() );

@@ -29,6 +29,7 @@ import CheckCodeConventions
 import CheckIncludeOrder
 import CheckRenderOwnership
 import CheckResourceCasing
+import CheckTestSuites
 import FormatBranchBraces
 import FormatForwardDeclarations
 from common import (
@@ -126,7 +127,7 @@ def main() -> int:
     hasErrors = False
 
     # 1. Resource 소문자 명명 규칙 검사 (모든 Staged 파일 대상)
-    print("\n[1/6] Resource 소문자 명명 규칙 검사...")
+    print("\n[1/7] Resource 소문자 명명 규칙 검사...")
     allStagedPathStrings = [str(f) for f in allStagedFiles]
     resourceViolations = CheckResourceCasing.checkResourceCasing(projectRoot, allStagedPathStrings)
     if resourceViolations:
@@ -138,14 +139,14 @@ def main() -> int:
         print("  - Resource 소문자 규칙 OK")
 
     # 2. Staged HLSL 셰이더 전 RHI 백엔드 컴파일 검증 및 바이너리 자동 스테이징
-    print("\n[2/6] Staged 셰이더 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증...")
+    print("\n[2/7] Staged 셰이더 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증...")
     if not checkStagedShadersInternal(projectRoot, allStagedFiles):
         hasErrors = True
 
     stagedCppFiles = getStagedCppFiles(projectRoot)
     if stagedCppFiles:
         # 3. Include 순서 및 중복 검사
-        print("\n[3/6] Include 순서 및 중복 검사...")
+        print("\n[3/7] Include 순서 및 중복 검사...")
         sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
         for filePath in stagedCppFiles:
             try:
@@ -180,7 +181,7 @@ def main() -> int:
                 print(f"  [Warning] {filePath.relative_to(projectRoot)} 분기 중괄호 검사 중 오류: {exception}")
 
         # 4. 코딩 컨벤션 검사
-        print("\n[4/6] 코딩 컨벤션 검사...")
+        print("\n[4/7] 코딩 컨벤션 검사...")
         stagedPathStrings = [str(f) for f in stagedCppFiles]
         violations = CheckCodeConventions.runConventionsCheck(projectRoot, stagedPathStrings)
         if violations:
@@ -197,7 +198,7 @@ def main() -> int:
             print("  - 코딩 컨벤션 OK")
 
         # 5. clang-format 검사 (Dry-run with Werror)
-        print("\n[5/6] clang-format 포맷팅 검사...")
+        print("\n[5/7] clang-format 포맷팅 검사...")
         formatResult = runClangFormatBatch(stagedCppFiles, checkOnly=True, cwd=projectRoot)
         if formatResult != 0:
             hasErrors = True
@@ -209,11 +210,25 @@ def main() -> int:
             print("  - 포맷팅 OK")
 
         # 6. 렌더 패킷 소유 규칙 (저장소 전체 — 파일 다섯을 읽는 정도라 싸다)
-        print("\n[6/6] 렌더 패킷 소유 규칙 검사...")
+        print("\n[6/7] 렌더 패킷 소유 규칙 검사...")
         if CheckRenderOwnership.main(["--root", str(projectRoot)]) != 0:
             hasErrors = True
         else:
             print("  - 소유 규칙 OK")
+
+        # 7. 테스트 스위트 규칙 — Test/ 나 EngineTest 의 CMake 를 건드렸을 때만.
+        #    스위트 이름이 CI 필터의 손잡이라, 이름이 흔들리면 CI 가 조용히 다른 집합을 돌린다.
+        touchesTests = any(
+            "Test/" in str(f).replace("\\", "/") for f in getAllStagedFiles(projectRoot)
+        )
+        if touchesTests:
+            print("\n[7/7] 테스트 스위트 규칙 검사...")
+            if CheckTestSuites.main(["--root", str(projectRoot)]) != 0:
+                hasErrors = True
+            else:
+                print("  - 스위트 규칙 OK")
+        else:
+            print("\n[7/7] 테스트 스위트 규칙 검사... 건너뜀 (Test/ 변경 없음)")
     else:
         print("\n  - 검사 대상 C++ 파일 없음 (Resource/데이터 파일만 변경됨)")
 

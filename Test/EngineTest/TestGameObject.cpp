@@ -1146,7 +1146,7 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
     SW_EXPECT_NEAR_EQUAL( 30.0f, worldPos._z, 1e-4f );
 }
 
-SW_TEST_CASE( GameObjectHierarchy, ActiveInHierarchyCompoundEvaluation )
+SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );

@@ -9,7 +9,7 @@
 // 7) PropertyMetaHint UI 위젯 판별
 // ------------------------------------------------------------------------------
 
-SW_TEST_CASE( Engine_Reflection, PropertyMetaHintWidgetDeduction )
+SW_TEST_CASE( PropertyMetaHintTest, PropertyMetaHintWidgetDeduction )
 {
     sw::PropertyMetadata rangeMeta{};
     rangeMeta._bHasRange = SW_TRUE;

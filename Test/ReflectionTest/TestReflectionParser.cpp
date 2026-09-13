@@ -18,10 +18,10 @@
 
 // ReflectionParser — 런타임이 아니라 **도구** 를 본다. 애노테이션·주석 파싱과 경로 판별.
 /**
- * @brief [ReflectionParser] 주석 내에 있는 매크로 문자열은 파싱되지 않아야 함
+ * @brief [ReflectionParserTest] 주석 내에 있는 매크로 문자열은 파싱되지 않아야 함
  */
 
-SW_TEST_CASE( ReflectionParser, FallbackCommentTest )
+SW_TEST_CASE( ReflectionParserTest, FallbackCommentTest )
 {
     const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
     SW_ASSERT_NOT_NULL( info );
@@ -32,9 +32,9 @@ SW_TEST_CASE( ReflectionParser, FallbackCommentTest )
 }
 
 /**
- * @brief [ReflectionParser] ParserUtil 경로 조합 및 Include 경로 추출 검증
+ * @brief [ReflectionParserTest] ParserUtil 경로 조합 및 Include 경로 추출 검증
  */
-SW_TEST_CASE( ReflectionParser, ParserUtilPathAndIncludeGeneration )
+SW_TEST_CASE( ReflectionParserTest, ParserUtilPathAndIncludeGeneration )
 {
     // 1) makeGeneratedPath 검증
     const sw::string genCpp = sw::ParserUtil::makeGeneratedPath( "build/Ninja-Debug/Bin", "Source/Engine/Input/KeyCodes.h", ".gen.cpp" );
@@ -55,9 +55,9 @@ SW_TEST_CASE( ReflectionParser, ParserUtilPathAndIncludeGeneration )
 }
 
 /**
- * @brief [ReflectionParser] ParserUtil splitCommaRespectingAngles 템플릿 중첩 쉼표 분할 검증
+ * @brief [ReflectionParserTest] ParserUtil splitCommaRespectingAngles 템플릿 중첩 쉼표 분할 검증
  */
-SW_TEST_CASE( ReflectionParser, ParserUtilSplitCommaRespectingAngles )
+SW_TEST_CASE( ReflectionParserTest, ParserUtilSplitCommaRespectingAngles )
 {
     // 1) 단일 토큰
     const auto listSingle = sw::ParserUtil::splitCommaRespectingAngles( "int32" );
@@ -88,9 +88,9 @@ SW_TEST_CASE( ReflectionParser, ParserUtilSplitCommaRespectingAngles )
 }
 
 /**
- * @brief [ReflectionParser] AnnotationMeta tryParseAnnotationKind 파싱 검증
+ * @brief [ReflectionParserTest] AnnotationMeta tryParseAnnotationKind 파싱 검증
  */
-SW_TEST_CASE( ReflectionParser, AnnotationKindParsing )
+SW_TEST_CASE( ReflectionParserTest, AnnotationKindParsing )
 {
     sw::AnnotationBinding::Kind kind = sw::AnnotationBinding::Kind::Flag;
 
@@ -113,9 +113,9 @@ SW_TEST_CASE( ReflectionParser, AnnotationKindParsing )
 }
 
 /**
- * @brief [ReflectionParser] ReflectionParser 코드젠 출력 메타데이터 및 Static/Ctor 심볼 검증
+ * @brief [ReflectionParserTest] ReflectionParser 코드젠 출력 메타데이터 및 Static/Ctor 심볼 검증
  */
-SW_TEST_CASE( ReflectionParser, CodegenStaticLibraryAndCtorMetadata )
+SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 {
     // 1) Static 라이브러리 함수 심볼 코드젠 검증 (StaticDemoLibrary::doubleInt)
     const sw::TypeInfo* pStaticType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
@@ -157,9 +157,9 @@ SW_TEST_CASE( ReflectionParser, CodegenStaticLibraryAndCtorMetadata )
 }
 
 /**
- * @brief [ReflectionParser] 프로퍼티 다중 별칭, 타입 개명 호환 및 저작 기본값 코드젠 검증
+ * @brief [ReflectionParserTest] 프로퍼티 다중 별칭, 타입 개명 호환 및 저작 기본값 코드젠 검증
  */
-SW_TEST_CASE( ReflectionParser, MultiplePropertyAliasesAndRenameCompat )
+SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
 {
     // 1) 프로퍼티 다중 별칭 (Alias = "hp, HitPoints")
     const sw::TypeInfo* pAliasType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
@@ -194,9 +194,9 @@ SW_TEST_CASE( ReflectionParser, MultiplePropertyAliasesAndRenameCompat )
 }
 
 /**
- * @brief [ReflectionParser] ParserUtil 극단적 템플릿 중첩 및 경로 불일치 경계조건 검증
+ * @brief [ReflectionParserTest] ParserUtil 극단적 템플릿 중첩 및 경로 불일치 경계조건 검증
  */
-SW_TEST_CASE( ReflectionParser, ParserUtilExtremeEdgeCases )
+SW_TEST_CASE( ReflectionParserTest, ParserUtilExtremeEdgeCases )
 {
     // 1) 4단계 이상 깊은 중첩 템플릿 분할
     const auto listTokens = sw::ParserUtil::splitCommaRespectingAngles(
@@ -223,9 +223,9 @@ SW_TEST_CASE( ReflectionParser, ParserUtilExtremeEdgeCases )
 }
 
 /**
- * @brief [ReflectionParser] RpcDemoActor 메타데이터 및 Invoker 실행 검증
+ * @brief [ReflectionParserTest] RpcDemoActor 메타데이터 및 Invoker 실행 검증
  */
-SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
+SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
 {
     const sw::TypeInfo* pRpcType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
     SW_ASSERT_NOT_NULL( pRpcType );
@@ -251,9 +251,9 @@ SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
 }
 
 /**
- * @brief [ReflectionParser] :2 이상 다중 비트 비트필드에 PROPERTY() 선언 시 빌드타임 컴파일 에러 진단 검증
+ * @brief [ReflectionParserTest] :2 이상 다중 비트 비트필드에 PROPERTY() 선언 시 빌드타임 컴파일 에러 진단 검증
  */
-SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
+SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 {
 #if defined( SW_DEBUG )
     const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );

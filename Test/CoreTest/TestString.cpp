@@ -6,10 +6,10 @@
 // 1) Core_String — Util·해시·스플리터·빌더
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_String] StringUtil 기본
+ * @brief [StringTest] StringUtil 기본
  */
 
-SW_TEST_CASE( Core_String, StringUtilBasic )
+SW_TEST_CASE( StringTest, StringUtilBasic )
 {
     SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( static_cast<const utf8*>( nullptr ) ) );
     SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( "" ) );
@@ -47,9 +47,9 @@ SW_TEST_CASE( Core_String, StringUtilBasic )
 }
 
 /**
- * @brief [Core_String] 공통 접두·접미를 뺀 변경 구간
+ * @brief [StringTest] 공통 접두·접미를 뺀 변경 구간
  */
-SW_TEST_CASE( Core_String, StringChangeSpanStoresOnlyChangedMiddle )
+SW_TEST_CASE( StringTest, StringChangeSpanStoresOnlyChangedMiddle )
 {
     const sw::string           before = R"({"albedo":"white","roughness":0.5,"name":"Mat"})";
     const sw::string           after  = R"({"albedo":"white","roughness":0.8,"name":"Mat"})";
@@ -62,9 +62,9 @@ SW_TEST_CASE( Core_String, StringChangeSpanStoresOnlyChangedMiddle )
 }
 
 /**
- * @brief [Core_String] 첫 편집 스팬이 이후 after에서도 역변환된다
+ * @brief [StringTest] 첫 편집 스팬이 이후 after에서도 역변환된다
  */
-SW_TEST_CASE( Core_String, StringChangeSpanFirstEditReversesLaterAfter )
+SW_TEST_CASE( StringTest, StringChangeSpanFirstEditReversesLaterAfter )
 {
     const sw::string           before0   = R"({"field":"x"})";
     const sw::string           after1    = R"({"field":"xy"})";
@@ -74,9 +74,9 @@ SW_TEST_CASE( Core_String, StringChangeSpanFirstEditReversesLaterAfter )
 }
 
 /**
- * @brief [Core_String] hashed_string
+ * @brief [StringTest] hashed_string
  */
-SW_TEST_CASE( Core_String, HashedString )
+SW_TEST_CASE( StringTest, HashedString )
 {
     sw::hashed_string defaultStr;
     sw::hashed_string str1( "TestKey" );
@@ -94,9 +94,9 @@ SW_TEST_CASE( Core_String, HashedString )
 }
 
 /**
- * @brief [Core_String] string_splitter
+ * @brief [StringTest] string_splitter
  */
-SW_TEST_CASE( Core_String, StringSplitter )
+SW_TEST_CASE( StringTest, StringSplitter )
 {
     // 1) 기존 initializer_list 호환성
     {
@@ -199,9 +199,9 @@ SW_TEST_CASE( Core_String, StringSplitter )
 }
 
 /**
- * @brief [Core_String] FixedString 동작
+ * @brief [StringTest] FixedString 동작
  */
-SW_TEST_CASE( Core_String, FixedStringOperations )
+SW_TEST_CASE( StringTest, FixedStringOperations )
 {
     sw::fixed_string<64> fs( "Hello" );
     SW_EXPECT_EQUAL( 5u, fs.size() );
@@ -225,9 +225,9 @@ SW_TEST_CASE( Core_String, FixedStringOperations )
 }
 
 /**
- * @brief [Core_String] FixedString 전체 커버리지
+ * @brief [StringTest] FixedString 전체 커버리지
  */
-SW_TEST_CASE( Core_String, FixedStringFullCoverage )
+SW_TEST_CASE( StringTest, FixedStringFullCoverage )
 {
     sw::fixed_string<32> fs( "Engine" );
     SW_EXPECT_EQUAL( 'E', fs.front() );
@@ -256,12 +256,12 @@ SW_TEST_CASE( Core_String, FixedStringFullCoverage )
 }
 
 /**
- * @brief [Core_String] 용량을 넘는 입력은 잘리고 버퍼 밖은 건드리지 않는다
+ * @brief [StringTest] 용량을 넘는 입력은 잘리고 버퍼 밖은 건드리지 않는다
  * @details 예전에는 단정으로 알리기만 하고 **원래 길이 그대로 복사**해서 `_arrData` 뒤(여기서는
  *          `_canary`)를 덮어썼다. 단정은 실행을 멈추지 않고 Shipping 에서는 사라지므로 그대로
  *          스택 오버플로였다. 이 테스트는 잘리는지(size)와 이웃을 안 건드리는지(canary)를 함께 본다.
  */
-SW_TEST_CASE( Core_String, FixedStringTruncatesInsteadOfOverflowing )
+SW_TEST_CASE( StringTest, FixedStringTruncatesInsteadOfOverflowing )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing fixed_string capacity overflow truncation" );
 
@@ -362,9 +362,9 @@ SW_TEST_CASE( Core_String, FixedStringTruncatesInsteadOfOverflowing )
 }
 
 /**
- * @brief [Core_String] 포맷 문자열 유틸
+ * @brief [StringTest] 포맷 문자열 유틸
  */
-SW_TEST_CASE( Core_String, FormatStringUtility )
+SW_TEST_CASE( StringTest, FormatStringUtility )
 {
     utf8 buffer[sw::constant::kMaxBuffer256] = {};
 
@@ -385,9 +385,9 @@ SW_TEST_CASE( Core_String, FormatStringUtility )
 // 2) StringBuilder — append/format·용량 성장
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_String] StringBuilder append/format
+ * @brief [StringTest] StringBuilder append/format
  */
-SW_TEST_CASE( Core_String, StringBuilderAppendAndFormat )
+SW_TEST_CASE( StringTest, StringBuilderAppendAndFormat )
 {
     sw::StringBuilder<64> sb;
     sb.append( "Hello" );
@@ -406,9 +406,9 @@ SW_TEST_CASE( Core_String, StringBuilderAppendAndFormat )
 }
 
 /**
- * @brief [Core_String] StringBuilder 정적 용량 초과 성장
+ * @brief [StringTest] StringBuilder 정적 용량 초과 성장
  */
-SW_TEST_CASE( Core_String, StringBuilderGrowsBeyondStaticCapacity )
+SW_TEST_CASE( StringTest, StringBuilderGrowsBeyondStaticCapacity )
 {
     sw::StringBuilder<8> sb;
     const uint32         initialCapacity = sb.capacity();
@@ -426,9 +426,9 @@ SW_TEST_CASE( Core_String, StringBuilderGrowsBeyondStaticCapacity )
 }
 
 /**
- * @brief [Core_String] fixed_string string_view 및 hash 지원 검증
+ * @brief [StringTest] fixed_string string_view 및 hash 지원 검증
  */
-SW_TEST_CASE( Core_String, FixedStringModernFeatures )
+SW_TEST_CASE( StringTest, FixedStringModernFeatures )
 {
     std::string_view     sv = "ModernCpp";
     sw::fixed_string<32> fs{ sv };
@@ -448,9 +448,9 @@ SW_TEST_CASE( Core_String, FixedStringModernFeatures )
 }
 
 /**
- * @brief [Core_String] UTF-8 및 UTF-16 유니코드 상호 인코딩/디코딩 라운드트립 검증
+ * @brief [StringTest] UTF-8 및 UTF-16 유니코드 상호 인코딩/디코딩 라운드트립 검증
  */
-SW_TEST_CASE( Core_String, UnicodeConversionRoundTrip )
+SW_TEST_CASE( StringTest, UnicodeConversionRoundTrip )
 {
     // 한글, 이모지, 특수문자
     const utf8*       kOriginalUtf8 = "안녕하세요 Engine 🚀 (SW_Engine)";
@@ -462,9 +462,9 @@ SW_TEST_CASE( Core_String, UnicodeConversionRoundTrip )
 }
 
 /**
- * @brief [Core_String] StringBuilder 복합 다중 appendFormat 및 무할당 성능 검증
+ * @brief [StringTest] StringBuilder 복합 다중 appendFormat 및 무할당 성능 검증
  */
-SW_TEST_CASE( Core_String, StringBuilderComplexFormatting )
+SW_TEST_CASE( StringTest, StringBuilderComplexFormatting )
 {
     sw::StringBuilder<256> sb;
     sb.append( "Entity[" ).append( 42 ).append( "]: pos=(" );
@@ -475,9 +475,9 @@ SW_TEST_CASE( Core_String, StringBuilderComplexFormatting )
 }
 
 /**
- * @brief [Core_String] StringUtil::isValidUTF8 종합 유효성 및 경계/오류 시퀀스 검증
+ * @brief [StringTest] StringUtil::isValidUTF8 종합 유효성 및 경계/오류 시퀀스 검증
  */
-SW_TEST_CASE( Core_String, StringUtilUtf8Validation )
+SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
 {
     // 1) Null 및 빈 문자열
     SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( nullptr ) );
@@ -523,9 +523,9 @@ SW_TEST_CASE( Core_String, StringUtilUtf8Validation )
 }
 
 /**
- * @brief [Core_String] StringUtil 해시 일관성, CRC32 및 공백 트림 유틸리티 검증
+ * @brief [StringTest] StringUtil 해시 일관성, CRC32 및 공백 트림 유틸리티 검증
  */
-SW_TEST_CASE( Core_String, StringUtilHashingAndTransform )
+SW_TEST_CASE( StringTest, StringUtilHashingAndTransform )
 {
     // 64비트 / 32비트 FNV1a 해시 일관성
     const uint64 h64_1 = sw::StringUtil::computeHash64( std::string_view( "EngineResourcePath" ) );
@@ -551,9 +551,9 @@ SW_TEST_CASE( Core_String, StringUtilHashingAndTransform )
 }
 
 /**
- * @brief [Core_String] FixedString 추가 고급 연산 (반복자, 비우기, 검색)
+ * @brief [StringTest] FixedString 추가 고급 연산 (반복자, 비우기, 검색)
  */
-SW_TEST_CASE( Core_String, FixedStringExtendedOperations )
+SW_TEST_CASE( StringTest, FixedStringExtendedOperations )
 {
     sw::fixed_string<32> str( "Antigravity" );
 
@@ -581,9 +581,9 @@ SW_TEST_CASE( Core_String, FixedStringExtendedOperations )
 }
 
 /**
- * @brief [Core_String] fixed_string formatstring 및 data() 수정 후 자동 sync_size 검증
+ * @brief [StringTest] fixed_string formatstring 및 data() 수정 후 자동 sync_size 검증
  */
-SW_TEST_CASE( Core_String, FixedStringFormatAndAutoSync )
+SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
 {
     // 1) formatstring 동작 및 자동 길이 동기화
     sw::fixed_string<sw::constant::kMaxBuffer64> strFmt;
@@ -625,9 +625,9 @@ SW_TEST_CASE( Core_String, FixedStringFormatAndAutoSync )
 }
 
 /**
- * @brief [Core_String] FileUtil::skipUtf8Bom 및 BOM 포함 텍스트 파일 읽기 검증
+ * @brief [StringTest] FileUtil::skipUtf8Bom 및 BOM 포함 텍스트 파일 읽기 검증
  */
-SW_TEST_CASE( Core_String, Utf8BomHandling )
+SW_TEST_CASE( StringTest, Utf8BomHandling )
 {
     // 1) string_view 기반 BOM 스킵 검증
     const utf8* pWithBom    = "\xEF\xBB\xBFHello UTF-8 BOM!";
@@ -656,9 +656,9 @@ SW_TEST_CASE( Core_String, Utf8BomHandling )
 }
 
 /**
- * @brief [Core_String] FixedString 다양한 생성자, 대입 및 assign 동작 검증
+ * @brief [StringTest] FixedString 다양한 생성자, 대입 및 assign 동작 검증
  */
-SW_TEST_CASE( Core_String, FixedStringConstructorsAndAssignments )
+SW_TEST_CASE( StringTest, FixedStringConstructorsAndAssignments )
 {
     // 1) 기본 생성자
     sw::fixed_string<32> defaultStr;
@@ -720,9 +720,9 @@ SW_TEST_CASE( Core_String, FixedStringConstructorsAndAssignments )
 }
 
 /**
- * @brief [Core_String] FixedString 비교 및 연산자 (==, !=, <, <=, >, >=, +, +=, <<, >>)
+ * @brief [StringTest] FixedString 비교 및 연산자 (==, !=, <, <=, >, >=, +, +=, <<, >>)
  */
-SW_TEST_CASE( Core_String, FixedStringComparisonAndOperators )
+SW_TEST_CASE( StringTest, FixedStringComparisonAndOperators )
 {
     sw::fixed_string<32> strA( "Alpha" );
     sw::fixed_string<32> strA2( "Alpha" );
@@ -773,9 +773,9 @@ SW_TEST_CASE( Core_String, FixedStringComparisonAndOperators )
 }
 
 /**
- * @brief [Core_String] FixedString 최대 용량(N) 경계 조건 및 널 종단 무결성
+ * @brief [StringTest] FixedString 최대 용량(N) 경계 조건 및 널 종단 무결성
  */
-SW_TEST_CASE( Core_String, FixedStringBoundaryAndMaxCapacity )
+SW_TEST_CASE( StringTest, FixedStringBoundaryAndMaxCapacity )
 {
     // 정확히 용량 16 문자를 채웠을 때 검증
     sw::fixed_string<16> maxStr( "0123456789ABCDEF" );
@@ -794,9 +794,9 @@ SW_TEST_CASE( Core_String, FixedStringBoundaryAndMaxCapacity )
 }
 
 /**
- * @brief [Core_String] FixedString data() 버퍼 직접 변경 후 컨테이너 연산(insert, erase, append 등) 통합 검증
+ * @brief [StringTest] FixedString data() 버퍼 직접 변경 후 컨테이너 연산(insert, erase, append 등) 통합 검증
  */
-SW_TEST_CASE( Core_String, FixedStringDirectMutationAndContainerOps )
+SW_TEST_CASE( StringTest, FixedStringDirectMutationAndContainerOps )
 {
     sw::fixed_string<64> str;
     // 1) data()로 직접 기록
@@ -836,9 +836,9 @@ SW_TEST_CASE( Core_String, FixedStringDirectMutationAndContainerOps )
 }
 
 /**
- * @brief [Core_String] fixed_wstring (UTF-16) 광범위 동작 검증
+ * @brief [StringTest] fixed_wstring (UTF-16) 광범위 동작 검증
  */
-SW_TEST_CASE( Core_String, FixedWStringOperations )
+SW_TEST_CASE( StringTest, FixedWStringOperations )
 {
     sw::fixed_wstring<32> wstr( L"UnicodeString" );
     SW_EXPECT_FALSE( wstr.empty() );
@@ -875,9 +875,9 @@ SW_TEST_CASE( Core_String, FixedWStringOperations )
 }
 
 /**
- * @brief [Core_String] FixedString의 std::unordered_map 및 std::unordered_set 연동 검증
+ * @brief [StringTest] FixedString의 std::unordered_map 및 std::unordered_set 연동 검증
  */
-SW_TEST_CASE( Core_String, FixedStringUnorderedContainers )
+SW_TEST_CASE( StringTest, FixedStringUnorderedContainers )
 {
     // 1) std::unordered_set
     std::unordered_set<sw::fixed_string<32>> uniqueSet;
@@ -900,9 +900,9 @@ SW_TEST_CASE( Core_String, FixedStringUnorderedContainers )
 }
 
 /**
- * @brief [Core_String] FormatString floatToString 및 폴백 널 종단 문자 보장 검증
+ * @brief [StringTest] FormatString floatToString 및 폴백 널 종단 문자 보장 검증
  */
-SW_TEST_CASE( Core_String, FormatStringFloatFallbackNullTerminator )
+SW_TEST_CASE( StringTest, FormatStringFloatFallbackNullTerminator )
 {
     utf8 buf[sw::constant::kMaxBuffer64]{ 0 };
     sw::formatstring( buf, sizeof( buf ), "Value: %#", 123.456f );
@@ -913,9 +913,9 @@ SW_TEST_CASE( Core_String, FormatStringFloatFallbackNullTerminator )
 }
 
 /**
- * @brief [Core_String] StringBuilder 경계 크기 appendFormat 포맷팅 및 재할당 안전성 검증
+ * @brief [StringTest] StringBuilder 경계 크기 appendFormat 포맷팅 및 재할당 안전성 검증
  */
-SW_TEST_CASE( Core_String, StringBuilderBoundaryAvailableMinusOne )
+SW_TEST_CASE( StringTest, StringBuilderBoundaryAvailableMinusOne )
 {
     sw::StringBuilder<256> builder;
     builder.append( "1234567890" );
@@ -924,9 +924,9 @@ SW_TEST_CASE( Core_String, StringBuilderBoundaryAvailableMinusOne )
 }
 
 /**
- * @brief [Core_String] basic_fixed_string C 문자열 좌측 덧셈 연산자 및 O(1) size() 일관성 검증
+ * @brief [StringTest] basic_fixed_string C 문자열 좌측 덧셈 연산자 및 O(1) size() 일관성 검증
  */
-SW_TEST_CASE( Core_String, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
+SW_TEST_CASE( StringTest, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
 {
     sw::fixed_string<32> rhs( "World" );
     SW_EXPECT_EQUAL( 5u, rhs.size() );
@@ -938,12 +938,12 @@ SW_TEST_CASE( Core_String, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
 }
 
 /**
- * @brief [Core_String] 표준 서식 지정자(정밀도·너비·플래그)를 formatstring 이 이해하는지
+ * @brief [StringTest] 표준 서식 지정자(정밀도·너비·플래그)를 formatstring 이 이해하는지
  * @details 예전에는 `%#` 과 맨 변환 문자(`%d`, `%f`)만 알아봤다. 그래서 `%.3f` 를 쓰면 `%.` 까지만
  *          플레이스홀더로 먹고 `3f` 가 글자로 남아 **조용히 틀린 출력**이 나왔다. 로그에서 소수점
  *          자릿수를 맞추려면 Fmt(v, Format().precision(3)) 를 써야 했는데, 그게 불편해서 서식을 넓혔다.
  */
-SW_TEST_CASE( Core_String, FormatStringSupportsPrintfSpecifiers )
+SW_TEST_CASE( StringTest, FormatStringSupportsPrintfSpecifiers )
 {
     utf8 buffer[128]{};
 
@@ -992,13 +992,13 @@ SW_TEST_CASE( Core_String, FormatStringSupportsPrintfSpecifiers )
 }
 
 /**
- * @brief [Core_String] 서식이 붙은 긴 문자열이 임시 버퍼 크기에서 잘리지 않는지
+ * @brief [StringTest] 서식이 붙은 긴 문자열이 임시 버퍼 크기에서 잘리지 않는지
  * @details 값은 256바이트 스택 버퍼(kTempBufferSize)를 거쳐 문자열이 된다. 문자열 인자는 그 버퍼를
  *          건너뛰는 지름길이 있었는데 **서식 없는 경로에만** 있었다. 그래서 `%s` 는 멀쩡한데
  *          `%-20s` 처럼 폭을 주는 순간 256자에서 잘렸다 — 로그에서 긴 메시지의 꼬리가 사라지는,
  *          예전에 Vulkan 검증 메시지로 한 번 겪은 것과 같은 종류의 조용한 손실이다.
  */
-SW_TEST_CASE( Core_String, FormatStringLongTextSurvivesWidthSpec )
+SW_TEST_CASE( StringTest, FormatStringLongTextSurvivesWidthSpec )
 {
     // 임시 버퍼(256)보다 확실히 긴 문자열.
     sw::string longText;
@@ -1025,12 +1025,12 @@ SW_TEST_CASE( Core_String, FormatStringLongTextSurvivesWidthSpec )
 }
 
 /**
- * @brief [Core_String] `%#` 은 옵션이 붙지 않는 순수 자리표다 — 뒤 글자는 무조건 리터럴, 서식은 printf 형으로.
+ * @brief [StringTest] `%#` 은 옵션이 붙지 않는 순수 자리표다 — 뒤 글자는 무조건 리터럴, 서식은 printf 형으로.
  * @details `#` 뒤를 서식으로 읽던 시절엔 `%#x%#`(가로x세로)가 가로를 16진수로 찍고(1280 → 500, 16곳),
  *          `%#s`(초) 가 단위 `s` 를 삼키고(5곳), `%#.txt` 가 `.tx` 를 잃어 로그 파일이 `.txt` 없이 남았다.
  *          세 번 다 사고였고 그 문법을 쓰려던 사람은 없었다. 여기서 새 규약을 고정한다.
  */
-SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
+SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
 {
     utf8 buffer[128]{};
 
@@ -1091,7 +1091,7 @@ SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
 }
 
 /**
- * @brief [Core_String] stristr 은 널 종단자를 지나 읽지 않는다
+ * @brief [StringTest] stristr 은 널 종단자를 지나 읽지 않는다
  * @details `stristr` 은 `string_view( pStr, subLen )` 를 만들어 비교한다 — 남은 문자열이 검색어보다
  *          짧아도 길이를 `subLen` 으로 잡으므로, 읽어 보면 종단자 뒤로 넘어갈 것처럼 생겼다.
  *          **실제로는 넘어가지 않는다.** `equals` 의 비교 루프가 첫 불일치에서 끊기고, 널 종단자는
@@ -1103,7 +1103,7 @@ SW_TEST_CASE( Core_String, PlaceholderNeverTakesSpecifiers )
  *          마지막 바이트에 붙여 놓고 다음 페이지를 접근 불가로 만들면, 한 바이트라도 넘어가는
  *          순간 죽는다. 에디터 검색 필드가 이 경로를 매 프레임 탄다(필드보다 긴 검색어).
  */
-SW_TEST_CASE( Core_String, StristrStopsAtTerminator )
+SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
 {
 #if defined( SW_PLATFORM_WINDOWS )
     SYSTEM_INFO sysInfo{};
@@ -1136,7 +1136,7 @@ SW_TEST_CASE( Core_String, StristrStopsAtTerminator )
 }
 
 /**
- * @brief [Core_String] 비-ASCII 바이트를 부호 없이 다룬다
+ * @brief [StringTest] 비-ASCII 바이트를 부호 없이 다룬다
  * @details `char` 의 부호성은 구현 정의이고, UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다.
  *          그대로 int 로 넓히면 두 가지가 깨졌다:
  *
@@ -1147,7 +1147,7 @@ SW_TEST_CASE( Core_String, StristrStopsAtTerminator )
  *             경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는 해시 자체가
  *             달라진다.
  */
-SW_TEST_CASE( Core_String, NonAsciiBytesAreUnsigned )
+SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
 {
     // "가" = EA B0 80 — 모든 바이트가 signed char 에서 음수다.
     const sw::string korean{ "\xEA\xB0\x80" };
@@ -1177,11 +1177,11 @@ SW_TEST_CASE( Core_String, NonAsciiBytesAreUnsigned )
 }
 
 /**
- * @brief [Core_String] `%#` 바로 뒤의 `.확장자` 는 리터럴이다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
+ * @brief [StringTest] `%#` 바로 뒤의 `.확장자` 는 리터럴이다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
  * @details `%#.txt` 를 "정밀도 0 + 길이 수식어 t + 16진수 x" 로 읽어 `.tx` 가 사라지고 `t` 만 남았다.
  *          이제 `%#` 은 두 글자만 소비한다. printf 형 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
  */
-SW_TEST_CASE( Core_String, FormatPlaceholderFollowedByExtensionIsLiteral )
+SW_TEST_CASE( StringTest, FormatPlaceholderFollowedByExtensionIsLiteral )
 {
     utf8 buffer[128]{};
 
@@ -1199,11 +1199,11 @@ SW_TEST_CASE( Core_String, FormatPlaceholderFollowedByExtensionIsLiteral )
 }
 
 /**
- * @brief [Core_String] 큰 실수는 고정소수점 자릿수를 전부 담는다 — 예전엔 |x| ≥ 1e121 에서 uint64 캐스트 UB 폴백으로 떨어졌다.
+ * @brief [StringTest] 큰 실수는 고정소수점 자릿수를 전부 담는다 — 예전엔 |x| ≥ 1e121 에서 uint64 캐스트 UB 폴백으로 떨어졌다.
  * @details 1e300 의 double 값은 정수부 301자리(1000000000000000052504760255…)다. 그리고 값 변환은 목적지에 자리가 있으면
  *          바로 쓰고, 작은 버퍼에서는 임시를 거쳐 앞부분만 남긴다 — 두 경로의 결과가 같아야 한다.
  */
-SW_TEST_CASE( Core_String, FormatStringHugeFloatAndDirectWrite )
+SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
 {
     utf8 wide[1024]{};
     sw::formatstring( wide, static_cast<uint32>( sizeof( wide ) ), "%#", 1e300 );

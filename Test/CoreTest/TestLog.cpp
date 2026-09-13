@@ -125,18 +125,18 @@ namespace
 // 1) Core_Log — 초기화·폴더·매크로
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Log] 로거 초기화
+ * @brief [LogTest] 로거 초기화
  */
-SW_TEST_CASE( Core_Log, LoggerInitialized )
+SW_TEST_CASE( LogTest, LoggerInitialized )
 {
     const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     SW_EXPECT_FALSE( folderPath.empty() );
 }
 
 /**
- * @brief [Core_Log] 로그 폴더 존재
+ * @brief [LogTest] 로그 폴더 존재
  */
-SW_TEST_CASE( Core_Log, LogFolderExists )
+SW_TEST_CASE( LogTest, LogFolderExists )
 {
     const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     if ( folderPath.empty() == false )
@@ -144,9 +144,9 @@ SW_TEST_CASE( Core_Log, LogFolderExists )
 }
 
 /**
- * @brief [Core_Log] 각 레벨의 로그가 싱크까지 전달됨
+ * @brief [LogTest] 각 레벨의 로그가 싱크까지 전달됨
  */
-SW_TEST_CASE( Core_Log, WriteLogDeliversEveryLevel )
+SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
 {
 #if defined( SW_DEBUG )
     LogCapture capture;
@@ -198,11 +198,11 @@ SW_TEST_CASE( Core_Log, WriteLogDeliversEveryLevel )
 }
 
 /**
- * @brief [Core_Log] 런타임 상세도가 그보다 덜 심각한 줄을 버리는지
+ * @brief [LogTest] 런타임 상세도가 그보다 덜 심각한 줄을 버리는지
  * @details 배포본에서 고객에게 상세도를 올려 재현을 받는 것이 이 값의 용도다. 컴파일 상한과는 다른
  *          축이다 — 상한은 "무엇을 남길 수 있나", 이 값은 "지금 무엇을 남길까" 를 정한다.
  */
-SW_TEST_CASE( Core_Log, RuntimeVerbosityDropsLessSevere )
+SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
 {
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -231,11 +231,11 @@ SW_TEST_CASE( Core_Log, RuntimeVerbosityDropsLessSevere )
 }
 
 /**
- * @brief [Core_Log] Error/Warning 은 **모든 빌드**에 컴파일되는지
+ * @brief [LogTest] Error/Warning 은 **모든 빌드**에 컴파일되는지
  * @details 예전에는 SW_DEBUG 가 아니면 매크로가 통째로 사라져 배포본에 로그가 하나도 없었다.
  *          이 단언이 그 회귀를 막는다 — 상한이 Warning 밑으로 내려가면 여기서 걸린다.
  */
-SW_TEST_CASE( Core_Log, ErrorAndWarningSurviveEveryBuild )
+SW_TEST_CASE( LogTest, ErrorAndWarningSurviveEveryBuild )
 {
     static_assert( SW_LOG_COMPILED_VERBOSITY >= 1, "Error/Warning 은 어떤 빌드에서도 컴파일되어야 한다" );
     SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( 0 ) );
@@ -243,18 +243,18 @@ SW_TEST_CASE( Core_Log, ErrorAndWarningSurviveEveryBuild )
 }
 
 /**
- * @brief [Core_Log] 로그 레벨 개수
+ * @brief [LogTest] 로그 레벨 개수
  */
-SW_TEST_CASE( Core_Log, LogLevelCount )
+SW_TEST_CASE( LogTest, LogLevelCount )
 {
     constexpr uint32 expected = 4u;
     SW_EXPECT_EQUAL( expected, static_cast<uint32>( sw::LogLevel::Count ) );
 }
 
 /**
- * @brief [Core_Log] 로그 매크로가 %# 인자를 치환해 기록함
+ * @brief [LogTest] 로그 매크로가 %# 인자를 치환해 기록함
  */
-SW_TEST_CASE( Core_Log, LogMacrosFormatArguments )
+SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 {
 #if defined( SW_DEBUG )
     LogCapture capture;
@@ -289,9 +289,9 @@ SW_TEST_CASE( Core_Log, LogMacrosFormatArguments )
 }
 
 /**
- * @brief [Core_Log] 비-UTF8(ANSI/CP949) 문자열 전달 시에도 안전하게 처리됨
+ * @brief [LogTest] 비-UTF8(ANSI/CP949) 문자열 전달 시에도 안전하게 처리됨
  */
-SW_TEST_CASE( Core_Log, NonUtf8FallbackSafety )
+SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 {
 #if defined( SW_DEBUG )
     LogCapture capture;
@@ -309,9 +309,9 @@ SW_TEST_CASE( Core_Log, NonUtf8FallbackSafety )
 }
 
 /**
- * @brief [Core_Log] Caller 지정 및 수신 검증
+ * @brief [LogTest] Caller 지정 및 수신 검증
  */
-SW_TEST_CASE( Core_Log, LogCallerHandling )
+SW_TEST_CASE( LogTest, LogCallerHandling )
 {
 #if defined( SW_DEBUG )
     LogCapture capture;
@@ -331,9 +331,9 @@ SW_TEST_CASE( Core_Log, LogCallerHandling )
 }
 
 /**
- * @brief [Core_Log] 8개 스레드 동시 대량 로깅 스트레스 테스트 (데이터 레이스/크래시 검증)
+ * @brief [LogTest] 8개 스레드 동시 대량 로깅 스트레스 테스트 (데이터 레이스/크래시 검증)
  */
-SW_TEST_CASE( Core_Log, ConcurrentMultiThreadedLogging )
+SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
 {
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
@@ -368,9 +368,9 @@ SW_TEST_CASE( Core_Log, ConcurrentMultiThreadedLogging )
 }
 
 /**
- * @brief [Core_Log] 큐 용량(4096) 초과 시 동기 폴백 안전성 검증
+ * @brief [LogTest] 큐 용량(4096) 초과 시 동기 폴백 안전성 검증
  */
-SW_TEST_CASE( Core_Log, QueueOverflowFallbackStress )
+SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
 {
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
@@ -389,9 +389,9 @@ SW_TEST_CASE( Core_Log, QueueOverflowFallbackStress )
 }
 
 /**
- * @brief [Core_Log] 로거 shutdown 시 큐 잔여 로그 플러시(Drain) 일관성 검증
+ * @brief [LogTest] 로거 shutdown 시 큐 잔여 로그 플러시(Drain) 일관성 검증
  */
-SW_TEST_CASE( Core_Log, ShutdownQueueDrainConsistency )
+SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
 {
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
@@ -410,9 +410,9 @@ SW_TEST_CASE( Core_Log, ShutdownQueueDrainConsistency )
 }
 
 /**
- * @brief [Core_Log] 로깅 진행 중 동시 리스너 등록/해제 동시성 검증
+ * @brief [LogTest] 로깅 진행 중 동시 리스너 등록/해제 동시성 검증
  */
-SW_TEST_CASE( Core_Log, ConcurrentListenerAttachDetach )
+SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 {
 #if defined( SW_DEBUG )
     std::thread emitter( []

@@ -12,10 +12,10 @@
 
 // 리플렉션이 보는 메모리 배치 — 컨테이너 래퍼 · 중첩 타입 · 비트필드.
 /**
- * @brief [Reflection_Containers] Vector 래퍼
+ * @brief [ReflectionContainersTest] Vector 래퍼
  */
 
-SW_TEST_CASE( Reflection_Containers, VectorWrapper )
+SW_TEST_CASE( ReflectionContainersTest, VectorWrapper )
 {
     sw::vector<int32>                    vec = { 10, 20, 30 };
     sw::VectorWrapper<sw::vector<int32>> wrapper;
@@ -33,9 +33,9 @@ SW_TEST_CASE( Reflection_Containers, VectorWrapper )
 }
 
 /**
- * @brief [Reflection_Containers] List 래퍼
+ * @brief [ReflectionContainersTest] List 래퍼
  */
-SW_TEST_CASE( Reflection_Containers, ListWrapper )
+SW_TEST_CASE( ReflectionContainersTest, ListWrapper )
 {
     sw::list<sw::string>                  lst = { "alpha", "beta" };
     sw::ListWrapper<sw::list<sw::string>> wrapper;
@@ -48,9 +48,9 @@ SW_TEST_CASE( Reflection_Containers, ListWrapper )
 }
 
 /**
- * @brief [Reflection_Containers] Deque 래퍼
+ * @brief [ReflectionContainersTest] Deque 래퍼
  */
-SW_TEST_CASE( Reflection_Containers, DequeWrapper )
+SW_TEST_CASE( ReflectionContainersTest, DequeWrapper )
 {
     sw::deque<float32>                   dq = { 1.5f, 2.5f, 3.5f };
     sw::DequeWrapper<sw::deque<float32>> wrapper;
@@ -60,9 +60,9 @@ SW_TEST_CASE( Reflection_Containers, DequeWrapper )
 }
 
 /**
- * @brief [Reflection_Containers] Set 래퍼
+ * @brief [ReflectionContainersTest] Set 래퍼
  */
-SW_TEST_CASE( Reflection_Containers, SetWrapper )
+SW_TEST_CASE( ReflectionContainersTest, SetWrapper )
 {
     sw::set<int32>                 st = { 100, 200, 300 };
     sw::SetWrapper<sw::set<int32>> wrapper;
@@ -72,9 +72,9 @@ SW_TEST_CASE( Reflection_Containers, SetWrapper )
 }
 
 /**
- * @brief [Reflection_Containers] Map 래퍼
+ * @brief [ReflectionContainersTest] Map 래퍼
  */
-SW_TEST_CASE( Reflection_Containers, MapWrapper )
+SW_TEST_CASE( ReflectionContainersTest, MapWrapper )
 {
     sw::map<sw::string, int32> mp = {
         {"Atk", 50},
@@ -106,9 +106,9 @@ SW_TEST_CASE( Reflection_Containers, MapWrapper )
 }
 
 /**
- * @brief [Reflection_Containers] 추가 컨테이너 래퍼
+ * @brief [ReflectionContainersTest] 추가 컨테이너 래퍼
  */
-SW_TEST_CASE( Reflection_Containers, AdditionalContainerWrappers )
+SW_TEST_CASE( ReflectionContainersTest, AdditionalContainerWrappers )
 {
 
     std::array<int32, 4>                   arr = { 1, 2, 3, 4 };
@@ -130,9 +130,9 @@ SW_TEST_CASE( Reflection_Containers, AdditionalContainerWrappers )
 }
 
 /**
- * @brief [Reflection_InnerTypes] 외부 구조체 조회
+ * @brief [ReflectionInnerTypesTest] 외부 구조체 조회
  */
-SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
+SW_TEST_CASE( ReflectionInnerTypesTest, FindOuterStruct )
 {
     const sw::TypeInfo* typeInfoFqn =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct" ) );
@@ -155,9 +155,9 @@ SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
 }
 
 /**
- * @brief [Reflection_InnerTypes] 내부 구조체 조회
+ * @brief [ReflectionInnerTypesTest] 내부 구조체 조회
  */
-SW_TEST_CASE( Reflection_InnerTypes, FindInnerStruct )
+SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerStruct )
 {
     const sw::TypeInfo* typeInfoFqn =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
@@ -187,9 +187,9 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerStruct )
 }
 
 /**
- * @brief [Reflection_InnerTypes] 내부 클래스 조회
+ * @brief [ReflectionInnerTypesTest] 내부 클래스 조회
  */
-SW_TEST_CASE( Reflection_InnerTypes, FindInnerClass )
+SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerClass )
 {
     const sw::TypeInfo* typeInfoFqn =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerClass" ) );
@@ -214,9 +214,9 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerClass )
 }
 
 /**
- * @brief [Reflection_InnerTypes] 내부 enum 조회
+ * @brief [ReflectionInnerTypesTest] 내부 enum 조회
  */
-SW_TEST_CASE( Reflection_InnerTypes, FindInnerEnum )
+SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerEnum )
 {
     const sw::EnumInfo* enumInfoFqn =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerEnum" ) );
@@ -237,9 +237,9 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerEnum )
 }
 
 /**
- * @brief [Reflection_InnerTypes] 내부 구조체 직렬화 라운드트립
+ * @brief [ReflectionInnerTypesTest] 내부 구조체 직렬화 라운드트립
  */
-SW_TEST_CASE( Reflection_InnerTypes, InnerStructSerializationRoundtrip )
+SW_TEST_CASE( ReflectionInnerTypesTest, InnerStructSerializationRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
@@ -271,9 +271,9 @@ SW_TEST_CASE( Reflection_InnerTypes, InnerStructSerializationRoundtrip )
 }
 
 /**
- * @brief [Reflection_Bitfield] 비트필드 프로퍼티 메타데이터 및 오프셋/마스크 검증
+ * @brief [ReflectionBitfieldTest] 비트필드 프로퍼티 메타데이터 및 오프셋/마스크 검증
  */
-SW_TEST_CASE( Reflection_Bitfield, BitfieldPropertyMetadata )
+SW_TEST_CASE( ReflectionBitfieldTest, BitfieldPropertyMetadata )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -300,9 +300,9 @@ SW_TEST_CASE( Reflection_Bitfield, BitfieldPropertyMetadata )
 }
 
 /**
- * @brief [Reflection_Bitfield] 비트필드 getValue/setValue 독립성 검증
+ * @brief [ReflectionBitfieldTest] 비트필드 getValue/setValue 독립성 검증
  */
-SW_TEST_CASE( Reflection_Bitfield, BitfieldGetSetValue )
+SW_TEST_CASE( ReflectionBitfieldTest, BitfieldGetSetValue )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -344,9 +344,9 @@ SW_TEST_CASE( Reflection_Bitfield, BitfieldGetSetValue )
 }
 
 /**
- * @brief [Reflection_Bitfield] 비트필드 JSON, XML, Binary 직렬화 라운드트립 검증
+ * @brief [ReflectionBitfieldTest] 비트필드 JSON, XML, Binary 직렬화 라운드트립 검증
  */
-SW_TEST_CASE( Reflection_Bitfield, BitfieldSerializationRoundtrip )
+SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -390,9 +390,9 @@ SW_TEST_CASE( Reflection_Bitfield, BitfieldSerializationRoundtrip )
 }
 
 /**
- * @brief [Reflection_Bitfield] uint16, uint32, uint64 비트필드 플래그 getValue/setValue 독립성 검증
+ * @brief [ReflectionBitfieldTest] uint16, uint32, uint64 비트필드 플래그 getValue/setValue 독립성 검증
  */
-SW_TEST_CASE( Reflection_Bitfield, WideBitfieldGetSetValue )
+SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldGetSetValue )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -455,9 +455,9 @@ SW_TEST_CASE( Reflection_Bitfield, WideBitfieldGetSetValue )
 }
 
 /**
- * @brief [Reflection_Bitfield] uint16, uint32, uint64 비트필드 플래그 JSON, XML, Binary 직렬화 라운드트립 검증
+ * @brief [ReflectionBitfieldTest] uint16, uint32, uint64 비트필드 플래그 JSON, XML, Binary 직렬화 라운드트립 검증
  */
-SW_TEST_CASE( Reflection_Bitfield, WideBitfieldSerializationRoundtrip )
+SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );

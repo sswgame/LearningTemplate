@@ -55,9 +55,9 @@ namespace sw
 // 1) Architecture — RHI ABI·핫리로드 keep-old
 // ------------------------------------------------------------------------------
 /**
- * @brief [Architecture] 모든 RHI 백엔드 모듈 (DX11, DX12, Vulkan, GL) ABI 스탬프 및 팩토리 export 검증
+ * @brief [ArchitectureTest] 모든 RHI 백엔드 모듈 (DX11, DX12, Vulkan, GL) ABI 스탬프 및 팩토리 export 검증
  */
-SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
+SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
 {
     const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
@@ -93,9 +93,9 @@ SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
 }
 
 /**
- * @brief [Architecture] 원본 없으면 LiveReload 가 이전 모듈을 유지
+ * @brief [ArchitectureTest] 원본 없으면 LiveReload 가 이전 모듈을 유지
  */
-SW_TEST_CASE( Architecture, LiveReloadKeepOldOnMissingOriginal )
+SW_TEST_CASE( ArchitectureTest, LiveReloadKeepOldOnMissingOriginal )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing missing DLL module handling" );
     sw::LiveReloadManager manager;
@@ -116,7 +116,7 @@ SW_TEST_CASE( Architecture, LiveReloadKeepOldOnMissingOriginal )
 /**
  * @brief poison 된 LiveReload 그래프는 이후 triggerReload 를 무시한다
  */
-SW_TEST_CASE( Architecture, LiveReloadPoisonIgnoresTrigger )
+SW_TEST_CASE( ArchitectureTest, LiveReloadPoisonIgnoresTrigger )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing broken/poisoned reload graph handling" );
     sw::LiveReloadManager manager;
@@ -130,7 +130,7 @@ SW_TEST_CASE( Architecture, LiveReloadPoisonIgnoresTrigger )
 /**
  * @brief onAfter poison 시 registerModule 은 실패해야 한다
  */
-SW_TEST_CASE( Architecture, LiveReloadOnAfterPoisonFailsRegister )
+SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterPoisonFailsRegister )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing onAfter poison registration failure" );
     sw::LiveReloadManager manager;
@@ -148,7 +148,7 @@ SW_TEST_CASE( Architecture, LiveReloadOnAfterPoisonFailsRegister )
 /**
  * @brief 캐스케이드 중 앞 모듈 onAfter poison 이면 이후 모듈은 commit 하지 않는다
  */
-SW_TEST_CASE( Architecture, LiveReloadCascadeAbortsAfterOnAfterPoison )
+SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterPoison )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort on poisoned dependent module" );
     const sw::string gfPath = sw::modulePath( "GameFramework" );
@@ -187,9 +187,9 @@ SW_TEST_CASE( Architecture, LiveReloadCascadeAbortsAfterOnAfterPoison )
 }
 
 /**
- * @brief [Architecture] 단일 모듈 LiveReload 정상 성공 및 섀도 핸들 갱신 검증 (Happy Path)
+ * @brief [ArchitectureTest] 단일 모듈 LiveReload 정상 성공 및 섀도 핸들 갱신 검증 (Happy Path)
  */
-SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
+SW_TEST_CASE( ArchitectureTest, LiveReloadSuccessfulShadowReload )
 {
     sw::LiveReloadManager manager;
     if ( manager.registerModule( "SWGame" ) == false )
@@ -241,12 +241,12 @@ SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
 }
 
 /**
- * @brief [Architecture] 모듈 리플렉션 registrar 생명주기 — 등록/리로드/언로드 시 TypeRegistry
+ * @brief [ArchitectureTest] 모듈 리플렉션 registrar 생명주기 — 등록/리로드/언로드 시 TypeRegistry
  *        내용과 전역 registrar 헤드 상태를 고정한다(#4 안전망).
  * @details registerModuleTypes 는 매 로드 후 전역 TypeRegistrar::getHead() 를 nullptr 로 drain 한다.
  *          그 불변식과 "리로드해도 타입 수 불변 / 언로드하면 원복" 을 명시 검증한다.
  */
-SW_TEST_CASE( Architecture, LiveReloadRegistrarContentLifecycle )
+SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
     if ( sw::FileUtil::fileExists( gfPath ) == false )
@@ -320,9 +320,9 @@ SW_TEST_CASE( Architecture, LiveReloadRegistrarContentLifecycle )
 }
 
 /**
- * @brief [Architecture] 종속 모듈 간 캐스케이드 LiveReload 순차 성공 검증 (GameFramework -> SWGame)
+ * @brief [ArchitectureTest] 종속 모듈 간 캐스케이드 LiveReload 순차 성공 검증 (GameFramework -> SWGame)
  */
-SW_TEST_CASE( Architecture, LiveReloadCascadeSuccessPath )
+SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
     if ( sw::FileUtil::fileExists( gfPath ) == false )
@@ -385,9 +385,9 @@ SW_TEST_CASE( Architecture, LiveReloadCascadeSuccessPath )
 }
 
 /**
- * @brief [Architecture] EditorModule DLL 독립 LiveReload 및 C-ABI 테이블 재바인딩 검증
+ * @brief [ArchitectureTest] EditorModule DLL 독립 LiveReload 및 C-ABI 테이블 재바인딩 검증
  */
-SW_TEST_CASE( Architecture, LiveReloadEditorModule )
+SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 {
     const sw::string editorPath = sw::modulePath( "EditorModule" );
     if ( sw::FileUtil::fileExists( editorPath ) == false )
@@ -448,9 +448,9 @@ SW_TEST_CASE( Architecture, LiveReloadEditorModule )
 }
 
 /**
- * @brief [Architecture] 장르 키트 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 개별 LiveReload 검증
+ * @brief [ArchitectureTest] 장르 키트 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 개별 LiveReload 검증
  */
-SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
+SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
 {
     const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
 
@@ -494,9 +494,9 @@ SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
 }
 
 /**
- * @brief [Architecture] 풀스택 복합 의존 그래프 (GameFramework + GF_Overworld + SWGame + EditorModule) 동시 및 캐스케이드 LiveReload
+ * @brief [ArchitectureTest] 풀스택 복합 의존 그래프 (GameFramework + GF_Overworld + SWGame + EditorModule) 동시 및 캐스케이드 LiveReload
  */
-SW_TEST_CASE( Architecture, MultiModuleFullStackLiveReload )
+SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 {
     sw::LiveReloadManager manager;
 
@@ -569,9 +569,9 @@ SW_TEST_CASE( Architecture, MultiModuleFullStackLiveReload )
 }
 
 /**
- * @brief [Architecture] ModuleCompiler (CMake 백그라운드 컴파일) -> LiveReloadManager (DLL 핫스왑) End-to-End 전체 파이프라인 검증
+ * @brief [ArchitectureTest] ModuleCompiler (CMake 백그라운드 컴파일) -> LiveReloadManager (DLL 핫스왑) End-to-End 전체 파이프라인 검증
  */
-SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
+SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 {
     #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
@@ -671,9 +671,9 @@ SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
 }
 
 /**
- * @brief [Architecture] GPU 없이 MaterialCache acquire/release
+ * @brief [ArchitectureTest] GPU 없이 MaterialCache acquire/release
  */
-SW_TEST_CASE( Architecture, MaterialCacheAcquireReleaseNoGpu )
+SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
 {
     sw::MaterialCache& cache = sw::engine::getResourceManager().getMaterialManager();
     cache.clear();
@@ -692,9 +692,9 @@ SW_TEST_CASE( Architecture, MaterialCacheAcquireReleaseNoGpu )
 }
 
 /**
- * @brief [Architecture] 4대 RHI 그래픽스 백엔드 (DX11, DX12, Vulkan, GL) 런타임 동적 스왑 및 연속 리로드 검증
+ * @brief [ArchitectureTest] 4대 RHI 그래픽스 백엔드 (DX11, DX12, Vulkan, GL) 런타임 동적 스왑 및 연속 리로드 검증
  */
-SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
+SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 {
     const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
@@ -737,9 +737,9 @@ SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
 // 2) ModuleAPI — exportGameAPI / exportEditorAPI
 // ------------------------------------------------------------------------------
 /**
- * @brief [ModuleAPI] Shipping 정적 exportGameAPI
+ * @brief [ModuleApiTest] Shipping 정적 exportGameAPI
  */
-SW_TEST_CASE( ModuleAPI, ExportGameAPI_ShippingStatic )
+SW_TEST_CASE( ModuleApiTest, ExportGameAPI_ShippingStatic )
 {
     sw::GameAPI api{};
     SW_EXPECT_TRUE( exportGameAPI( &api ) );
@@ -758,9 +758,9 @@ SW_TEST_CASE( ModuleAPI, ExportGameAPI_ShippingStatic )
 #else
 
 /**
- * @brief [ModuleAPI] SWGame DLL exportGameAPI
+ * @brief [ModuleApiTest] SWGame DLL exportGameAPI
  */
-SW_TEST_CASE( ModuleAPI, ExportGameAPI )
+SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
 {
     void* handle = sw::loadModule( "SWGame" );
     SW_EXPECT_TRUE( handle != nullptr );
@@ -792,9 +792,9 @@ SW_TEST_CASE( ModuleAPI, ExportGameAPI )
 }
 
 /**
- * @brief [ModuleAPI] Full Game Scene, Component Lifecycle & Tick Verification
+ * @brief [ModuleApiTest] Full Game Scene, Component Lifecycle & Tick Verification
  */
-SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
+SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 {
     void* hOverworld = sw::loadModule( "GF_Overworld" );
     if ( hOverworld != nullptr )
@@ -889,9 +889,9 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 }
 
 /**
- * @brief [ModuleAPI] EditorModule DLL exportEditorAPI
+ * @brief [ModuleApiTest] EditorModule DLL exportEditorAPI
  */
-SW_TEST_CASE( ModuleAPI, ExportEditorAPI )
+SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 {
     void* handle = sw::loadModule( "EditorModule" );
     SW_ASSERT_NOT_NULL( handle );
@@ -911,9 +911,9 @@ SW_TEST_CASE( ModuleAPI, ExportEditorAPI )
 }
 
 /**
- * @brief [ModuleAPI] 장르별 독립 Kit 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 타입 등록 검증
+ * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 타입 등록 검증
  */
-SW_TEST_CASE( ModuleAPI, GameFrameworkKitsModuleTypeRegistration )
+SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
 {
     for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
     {
@@ -928,9 +928,9 @@ SW_TEST_CASE( ModuleAPI, GameFrameworkKitsModuleTypeRegistration )
 }
 
 /**
- * @brief [ModuleAPI] SWGame 모듈 반복 로드/언로드 사이클 안정성
+ * @brief [ModuleApiTest] SWGame 모듈 반복 로드/언로드 사이클 안정성
  */
-SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
+SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
 {
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {

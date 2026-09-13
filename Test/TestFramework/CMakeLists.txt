@@ -7,12 +7,10 @@ set(TF_SOURCES
     TestContext.cpp
     TestEnvironment.cpp
     TestFilter.cpp
-    TestFixture.cpp
     TestFramework.cpp
     TestContext.h
     TestEnvironment.h
     TestFilter.h
-    TestFixture.h
     TestFramework.h
 )
 

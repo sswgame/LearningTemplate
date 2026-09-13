@@ -8,10 +8,10 @@
 // 1) Core_Xml — 대소문자 무시 키·옵트아웃
 // ------------------------------------------------------------------------------
 /**
- * @brief [Core_Xml] 파싱·탐색과 대소문자 무시 키
+ * @brief [XmlDocumentTest] 파싱·탐색과 대소문자 무시 키
  */
 
-SW_TEST_CASE( Core_Xml, ParseAndNavigateIgnoreCaseKeys )
+SW_TEST_CASE( XmlDocumentTest, ParseAndNavigateIgnoreCaseKeys )
 {
     sw::XmlDocument doc;
     const bool      bParsed = doc.parse(
@@ -50,9 +50,9 @@ SW_TEST_CASE( Core_Xml, ParseAndNavigateIgnoreCaseKeys )
 }
 
 /**
- * @brief [Core_Xml] 대소문자 구분 키 옵트아웃
+ * @brief [XmlDocumentTest] 대소문자 구분 키 옵트아웃
  */
-SW_TEST_CASE( Core_Xml, CaseSensitiveKeyOptOut )
+SW_TEST_CASE( XmlDocumentTest, CaseSensitiveKeyOptOut )
 {
     sw::XmlDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"(<Root><Child>ok</Child></Root>)" ) );

@@ -14,10 +14,10 @@
 
 // 리플렉션 데이터 모델 — TypeInfo · TypeRegistry · PropertyInfo · 메타데이터.
 /**
- * @brief [Reflection_TypeRegistry] 등록된 클래스 조회
+ * @brief [ReflectionTypeRegistryTest] 등록된 클래스 조회
  */
 
-SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
+SW_TEST_CASE( ReflectionTypeRegistryTest, FindRegisteredClass )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -31,9 +31,9 @@ SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
 }
 
 /**
- * @brief [Reflection_TypeRegistry] 없는 클래스는 null
+ * @brief [ReflectionTypeRegistryTest] 없는 클래스는 null
  */
-SW_TEST_CASE( Reflection_TypeRegistry, FindNonExistentClass )
+SW_TEST_CASE( ReflectionTypeRegistryTest, FindNonExistentClass )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NotExist" ) );
@@ -44,7 +44,7 @@ SW_TEST_CASE( Reflection_TypeRegistry, FindNonExistentClass )
 /**
  * @brief ReflectBuiltins.gen.cpp 의 primitive TypeInfo (canonical 이름)
  */
-SW_TEST_CASE( Reflection_TypeRegistry, PrimitiveBuiltins )
+SW_TEST_CASE( ReflectionTypeRegistryTest, PrimitiveBuiltins )
 {
     const sw::TypeInfo* i32 = sw::engine::getTypeRegistry().findType( sw::hashed_string( "int32" ) );
     SW_ASSERT_NOT_NULL( i32 );
@@ -69,9 +69,9 @@ SW_TEST_CASE( Reflection_TypeRegistry, PrimitiveBuiltins )
 }
 
 /**
- * @brief [Reflection_TypeInfo] 프로퍼티 개수
+ * @brief [ReflectionTypeInfoTest] 프로퍼티 개수
  */
-SW_TEST_CASE( Reflection_TypeInfo, PropertyCount )
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyCount )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -83,9 +83,9 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyCount )
 }
 
 /**
- * @brief [Reflection_TypeInfo] 존재하는 프로퍼티 조회
+ * @brief [ReflectionTypeInfoTest] 존재하는 프로퍼티 조회
  */
-SW_TEST_CASE( Reflection_TypeInfo, FindExistingProperty )
+SW_TEST_CASE( ReflectionTypeInfoTest, FindExistingProperty )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -104,9 +104,9 @@ SW_TEST_CASE( Reflection_TypeInfo, FindExistingProperty )
 }
 
 /**
- * @brief [Reflection_TypeInfo] 프로퍼티 메타데이터
+ * @brief [ReflectionTypeInfoTest] 프로퍼티 메타데이터
  */
-SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 {
     sw::PropertyInfo prop;
 #if !defined( SW_SHIPPING )
@@ -131,9 +131,9 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
 }
 
 /**
- * @brief [Reflection_TypeInfo] 없는 프로퍼티는 null
+ * @brief [ReflectionTypeInfoTest] 없는 프로퍼티는 null
  */
-SW_TEST_CASE( Reflection_TypeInfo, FindNonExistentProperty )
+SW_TEST_CASE( ReflectionTypeInfoTest, FindNonExistentProperty )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -146,9 +146,9 @@ SW_TEST_CASE( Reflection_TypeInfo, FindNonExistentProperty )
 }
 
 /**
- * @brief [Reflection_TypeInfo] isA 동일 타입
+ * @brief [ReflectionTypeInfoTest] isA 동일 타입
  */
-SW_TEST_CASE( Reflection_TypeInfo, IsA_SameType )
+SW_TEST_CASE( ReflectionTypeInfoTest, IsA_SameType )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -160,9 +160,9 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_SameType )
 }
 
 /**
- * @brief [Reflection_TypeInfo] isA 부모 타입
+ * @brief [ReflectionTypeInfoTest] isA 부모 타입
  */
-SW_TEST_CASE( Reflection_TypeInfo, IsA_ParentType )
+SW_TEST_CASE( ReflectionTypeInfoTest, IsA_ParentType )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -174,9 +174,9 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_ParentType )
 }
 
 /**
- * @brief [Reflection_TypeInfo] isA 무관 타입
+ * @brief [ReflectionTypeInfoTest] isA 무관 타입
  */
-SW_TEST_CASE( Reflection_TypeInfo, IsA_UnrelatedType )
+SW_TEST_CASE( ReflectionTypeInfoTest, IsA_UnrelatedType )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -188,9 +188,9 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_UnrelatedType )
 }
 
 /**
- * @brief [Reflection_PropertyInfo] 오프셋 정확성
+ * @brief [ReflectionPropertyInfoTest] 오프셋 정확성
  */
-SW_TEST_CASE( Reflection_PropertyInfo, OffsetCorrectness )
+SW_TEST_CASE( ReflectionPropertyInfoTest, OffsetCorrectness )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -217,9 +217,9 @@ SW_TEST_CASE( Reflection_PropertyInfo, OffsetCorrectness )
 }
 
 /**
- * @brief [Reflection_PropertyInfo] getValuePtr
+ * @brief [ReflectionPropertyInfoTest] getValuePtr
  */
-SW_TEST_CASE( Reflection_PropertyInfo, GetValuePtr )
+SW_TEST_CASE( ReflectionPropertyInfoTest, GetValuePtr )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -241,9 +241,9 @@ SW_TEST_CASE( Reflection_PropertyInfo, GetValuePtr )
 }
 
 /**
- * @brief [Reflection_PropertyInfo] setValue
+ * @brief [ReflectionPropertyInfoTest] setValue
  */
-SW_TEST_CASE( Reflection_PropertyInfo, SetValue )
+SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -264,9 +264,9 @@ SW_TEST_CASE( Reflection_PropertyInfo, SetValue )
 }
 
 /**
- * @brief [Reflection_PropertyInfo] setValue 중복 쓰기 없음
+ * @brief [ReflectionPropertyInfoTest] setValue 중복 쓰기 없음
  */
-SW_TEST_CASE( Reflection_PropertyInfo, SetValue_NoDuplicateWrite )
+SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue_NoDuplicateWrite )
 {
     const sw::TypeInfo* info =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
@@ -287,9 +287,9 @@ SW_TEST_CASE( Reflection_PropertyInfo, SetValue_NoDuplicateWrite )
 }
 
 /**
- * @brief [Reflection_TypeRegistry] REFLECT(Alias) / ENUM(Alias) codegen 등록
+ * @brief [ReflectionTypeRegistryTest] REFLECT(Alias) / ENUM(Alias) codegen 등록
  */
-SW_TEST_CASE( Reflection_TypeRegistry, TypeAndEnumAliasLookup )
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAndEnumAliasLookup )
 {
     const sw::TypeInfo* canonical =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
@@ -316,9 +316,9 @@ SW_TEST_CASE( Reflection_TypeRegistry, TypeAndEnumAliasLookup )
 }
 
 /**
- * @brief [Reflection_TypeInfo] PropertyInfo 이름 매칭
+ * @brief [ReflectionTypeInfoTest] PropertyInfo 이름 매칭
  */
-SW_TEST_CASE( Reflection_TypeInfo, PropertyInfoMatchesName )
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyInfoMatchesName )
 {
     sw::PropertyInfo prop;
     prop._name      = sw::hashed_string( "_currentHp" );
@@ -331,9 +331,9 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyInfoMatchesName )
 }
 
 /**
- * @brief [Reflection_TypeInfo] 동적 메서드 호출
+ * @brief [ReflectionTypeInfoTest] 동적 메서드 호출
  */
-SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
+SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
 {
     struct InvokableTestActor
     {
@@ -369,9 +369,9 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
 }
 
 /**
- * @brief [Reflection_TypeInfo] REFLECT 생성자 placement new
+ * @brief [ReflectionTypeInfoTest] REFLECT 생성자 placement new
  */
-SW_TEST_CASE( Reflection_TypeInfo, ReflectCtorPlacementNew )
+SW_TEST_CASE( ReflectionTypeInfoTest, ReflectCtorPlacementNew )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
@@ -401,9 +401,9 @@ SW_TEST_CASE( Reflection_TypeInfo, ReflectCtorPlacementNew )
 }
 
 /**
- * @brief [Reflection_TypeInfo] PROPERTY 어노테이션 메타 코드젠
+ * @brief [ReflectionTypeInfoTest] PROPERTY 어노테이션 메타 코드젠
  */
-SW_TEST_CASE( Reflection_TypeInfo, PropertyAnnotationMetadataCodegen )
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::MetadataDemoActor" ) );
@@ -419,9 +419,9 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyAnnotationMetadataCodegen )
 }
 
 /**
- * @brief [Reflection_Metadata] TypeMetadata (Category, DisplayName, Tooltip, HideInMenu, CustomMeta) 검증
+ * @brief [ReflectionMetadataTest] TypeMetadata (Category, DisplayName, Tooltip, HideInMenu, CustomMeta) 검증
  */
-SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
+SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
@@ -445,9 +445,9 @@ SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
 }
 
 /**
- * @brief [Reflection_Metadata] PropertyMetadata (DisplayName, Category, Tooltip, Transient, HideInInspector, CustomMeta) 검증
+ * @brief [ReflectionMetadataTest] PropertyMetadata (DisplayName, Category, Tooltip, Transient, HideInInspector, CustomMeta) 검증
  */
-SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
+SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
@@ -480,9 +480,9 @@ SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
 }
 
 /**
- * @brief [Reflection_Metadata] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, CustomMeta) 검증
+ * @brief [ReflectionMetadataTest] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, CustomMeta) 검증
  */
-SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
+SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
@@ -505,9 +505,9 @@ SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
 }
 
 /**
- * @brief [Reflection_Metadata] EnumInfo CustomMeta 검증
+ * @brief [ReflectionMetadataTest] EnumInfo CustomMeta 검증
  */
-SW_TEST_CASE( Reflection_Metadata, EnumMetadataQuery )
+SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
     const sw::EnumInfo* pEnumInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "TestMetaEnum" ) );
@@ -526,9 +526,9 @@ SW_TEST_CASE( Reflection_Metadata, EnumMetadataQuery )
 }
 
 /**
- * @brief [Reflection_Metadata] Transient 프로퍼티의 JSON 및 Binary 직렬화 제외 검증
+ * @brief [ReflectionMetadataTest] Transient 프로퍼티의 JSON 및 Binary 직렬화 제외 검증
  */
-SW_TEST_CASE( Reflection_Metadata, TransientPropertySerialization )
+SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
 {
     const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );

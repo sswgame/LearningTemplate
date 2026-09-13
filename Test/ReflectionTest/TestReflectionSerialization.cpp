@@ -80,9 +80,9 @@ namespace
 } // namespace
 
 /**
- * @brief [Reflection_Serialization] 오브젝트 diff 직렬화 델타
+ * @brief [ReflectionSerializationTest] 오브젝트 diff 직렬화 델타
  */
-SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
+SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
 {
     const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
@@ -144,9 +144,9 @@ SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
 }
 
 /**
- * @brief [Reflection_Serialization] 바이너리 라운드트립
+ * @brief [ReflectionSerializationTest] 바이너리 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, BinaryRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -180,9 +180,9 @@ SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] 압축 바이너리(CompressedBinarySerializer) 라운드트립
+ * @brief [ReflectionSerializationTest] 압축 바이너리(CompressedBinarySerializer) 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, CompressedBinaryRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, CompressedBinaryRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -218,9 +218,9 @@ SW_TEST_CASE( Reflection_Serialization, CompressedBinaryRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] JSON 라운드트립
+ * @brief [ReflectionSerializationTest] JSON 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, JsonRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -246,9 +246,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] XML 라운드트립
+ * @brief [ReflectionSerializationTest] XML 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, XmlRapidXmlRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, XmlRapidXmlRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -454,9 +454,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 };
 
 /**
- * @brief [Reflection_Serialization] XML 어트리뷰트 라운드트립
+ * @brief [ReflectionSerializationTest] XML 어트리뷰트 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, XmlAttributeRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, XmlAttributeRoundtrip )
 {
     sw::XmlDocumentBackend backend;
     backend.initializeXmlSerialization( "AttrRoot" );
@@ -481,9 +481,9 @@ SW_TEST_CASE( Reflection_Serialization, XmlAttributeRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] XML/JSON 키 대소문자 무시, 값은 유지
+ * @brief [ReflectionSerializationTest] XML/JSON 키 대소문자 무시, 값은 유지
  */
-SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase )
+SW_TEST_CASE( ReflectionSerializationTest, XmlJsonKeysIgnoreCaseValuesPreserveCase )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -535,11 +535,11 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 }
 
 /**
- * @brief [Reflection_Serialization] 폭이 좁은(uint8) enum 을 역직렬화해도 인접 필드를 덮어쓰지 않는다.
+ * @brief [ReflectionSerializationTest] 폭이 좁은(uint8) enum 을 역직렬화해도 인접 필드를 덮어쓰지 않는다.
  * @details EnumInfo::_size 가 실제 크기로 채워져야 writeValueToMemory 가 딱 그만큼만 쓴다.
  *          codegen 이 _size 를 안 넣으면 4바이트를 써서 뒤따르는 1바이트 필드들이 깨진다.
  */
-SW_TEST_CASE( Reflection_Serialization, NarrowEnumDeserializeKeepsAdjacentBytes )
+SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentBytes )
 {
     const sw::EnumInfo* pEnumInfo =
         sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::NarrowEnum" ) );
@@ -575,9 +575,9 @@ SW_TEST_CASE( Reflection_Serialization, NarrowEnumDeserializeKeepsAdjacentBytes 
 }
 
 /**
- * @brief [Reflection_Serialization] JSON 맵 컨테이너를 평범한 오브젝트 표현으로도 읽고 쓴다.
+ * @brief [ReflectionSerializationTest] JSON 맵 컨테이너를 평범한 오브젝트 표현으로도 읽고 쓴다.
  */
-SW_TEST_CASE( Reflection_Serialization, JsonMapUsesPlainObject )
+SW_TEST_CASE( ReflectionSerializationTest, JsonMapUsesPlainObject )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -604,11 +604,11 @@ SW_TEST_CASE( Reflection_Serialization, JsonMapUsesPlainObject )
 }
 
 /**
- * @brief [Reflection_Serialization] 임의로 중첩된 컨테이너가 세 포맷 모두에서 왕복한다.
+ * @brief [ReflectionSerializationTest] 임의로 중첩된 컨테이너가 세 포맷 모두에서 왕복한다.
  * @details vector<vector<T>>, map<K,vector<T>>, map<K,map<K,V>>, vector<Struct>, map<K,Struct>.
  *          표현 형태에 의존하지 않는 안전망이라 직렬화 shape 을 바꿔도 그대로 유효하다.
  */
-SW_TEST_CASE( Reflection_Serialization, NestedContainerRoundtripAllFormats )
+SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
@@ -669,9 +669,9 @@ SW_TEST_CASE( Reflection_Serialization, NestedContainerRoundtripAllFormats )
 }
 
 /**
- * @brief [Reflection_Serialization] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
+ * @brief [ReflectionSerializationTest] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
  */
-SW_TEST_CASE( Reflection_Serialization, JsonSequenceAcceptsPlainArray )
+SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -696,9 +696,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonSequenceAcceptsPlainArray )
 }
 
 /**
- * @brief [Reflection_Serialization] JSON/XML 엄격 역직렬화가 잘못된 컨테이너·필드 coerce 에서 실패
+ * @brief [ReflectionSerializationTest] JSON/XML 엄격 역직렬화가 잘못된 컨테이너·필드 coerce 에서 실패
  */
-SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndField )
+SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerAndField )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing strict deserialization failure on bad containers and fields" );
     const sw::TypeInfo* typeInfo =
@@ -769,9 +769,9 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 }
 
 /**
- * @brief [Reflection_Serialization] 커스텀 XML 백엔드
+ * @brief [ReflectionSerializationTest] 커스텀 XML 백엔드
  */
-SW_TEST_CASE( Reflection_Serialization, CustomXmlBackend )
+SW_TEST_CASE( ReflectionSerializationTest, CustomXmlBackend )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -796,9 +796,9 @@ SW_TEST_CASE( Reflection_Serialization, CustomXmlBackend )
 }
 
 /**
- * @brief [Reflection_Serialization] 커스텀 SerializeContext
+ * @brief [ReflectionSerializationTest] 커스텀 SerializeContext
  */
-SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
+SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
 {
     sw::SerializeContext customCtx = sw::SerializeContext::getDefault();
 
@@ -833,9 +833,9 @@ SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
 }
 
 /**
- * @brief [Reflection_Serialization] 누락 필드의 PROPERTY Default
+ * @brief [ReflectionSerializationTest] 누락 필드의 PROPERTY Default
  */
-SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
+SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
 {
     struct DefaultActor
     {
@@ -880,9 +880,9 @@ SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
 }
 
 /**
- * @brief [Reflection_Serialization] 프로퍼티 Alias 와 재정렬
+ * @brief [ReflectionSerializationTest] 프로퍼티 Alias 와 재정렬
  */
-SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
+SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 {
     struct AliasTestActor
     {
@@ -959,9 +959,9 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 }
 
 /**
- * @brief [Reflection_Serialization] 타입 Alias + 옛 XML 루트 태그로 로드
+ * @brief [ReflectionSerializationTest] 타입 Alias + 옛 XML 루트 태그로 로드
  */
-SW_TEST_CASE( Reflection_Serialization, TypeAliasXmlLoad )
+SW_TEST_CASE( ReflectionSerializationTest, TypeAliasXmlLoad )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
@@ -975,9 +975,9 @@ SW_TEST_CASE( Reflection_Serialization, TypeAliasXmlLoad )
 }
 
 /**
- * @brief [Reflection_Serialization] 필드 추가/삭제/개명 레이아웃 진화
+ * @brief [ReflectionSerializationTest] 필드 추가/삭제/개명 레이아웃 진화
  */
-SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
+SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
 {
     struct LayoutV1
     {
@@ -1068,9 +1068,9 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 }
 
 /**
- * @brief [Reflection_Serialization] 바이너리 버전 헤더
+ * @brief [ReflectionSerializationTest] 바이너리 버전 헤더
  */
-SW_TEST_CASE( Reflection_Serialization, BinaryVersionHeaderTest )
+SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
 {
     struct VersionedActor
     {
@@ -1128,9 +1128,9 @@ SW_TEST_CASE( Reflection_Serialization, BinaryVersionHeaderTest )
 }
 
 /**
- * @brief [Reflection_Serialization] 필드 타입 변경 (int32→string) binary coerce + Json/Xml versioned
+ * @brief [ReflectionSerializationTest] 필드 타입 변경 (int32→string) binary coerce + Json/Xml versioned
  */
-SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
+SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 {
     struct IntHp
     {
@@ -1189,9 +1189,9 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 }
 
 /**
- * @brief [Reflection_Serialization] migrate 없이 스키마 버전이 다르면 실패
+ * @brief [ReflectionSerializationTest] migrate 없이 스키마 버전이 다르면 실패
  */
-SW_TEST_CASE( Reflection_Serialization, VersionedDeserializeFailsWithoutMigrate )
+SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigrate )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing schema version mismatch without migration callback" );
     struct VersionedActor
@@ -1225,9 +1225,9 @@ SW_TEST_CASE( Reflection_Serialization, VersionedDeserializeFailsWithoutMigrate 
 }
 
 /**
- * @brief [Reflection_Serialization] orphan 구조 이동 + PROPERTY Alias 개명
+ * @brief [ReflectionSerializationTest] orphan 구조 이동 + PROPERTY Alias 개명
  */
-SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
+SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
 {
     struct NestedStats
     {
@@ -1288,9 +1288,9 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 }
 
 /**
- * @brief [Reflection_Serialization] JSON pretty print
+ * @brief [ReflectionSerializationTest] JSON pretty print
  */
-SW_TEST_CASE( Reflection_Serialization, JsonPrettyPrint )
+SW_TEST_CASE( ReflectionSerializationTest, JsonPrettyPrint )
 {
     struct SimpleJsonActor
     {
@@ -1312,9 +1312,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonPrettyPrint )
 }
 
 /**
- * @brief [Reflection_Cloning] 오브젝트 딥카피
+ * @brief [ReflectionCloningTest] 오브젝트 딥카피
  */
-SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
+SW_TEST_CASE( ReflectionCloningTest, ObjectDeepCopyClone )
 {
     struct CloneableActor
     {
@@ -1341,9 +1341,9 @@ SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
 }
 
 /**
- * @brief [Reflection_Serialization] 중첩 구조체·컨테이너 라운드트립
+ * @brief [ReflectionSerializationTest] 중첩 구조체·컨테이너 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, NestedStructAndContainersRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
@@ -1375,13 +1375,13 @@ SW_TEST_CASE( Reflection_Serialization, NestedStructAndContainersRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] 직렬화 3포맷의 정확한 출력을 골든으로 고정합니다.
+ * @brief [ReflectionSerializationTest] 직렬화 3포맷의 정확한 출력을 골든으로 고정합니다.
  * @details 라운드트립 테스트는 디스크 포맷이 바뀌어도 통과하므로, 리팩터 시 바이트 호환을
  *          지키는 안전망으로 정확한 출력 문자열/헥스를 비교합니다.
  *          바이너리 헥스에는 타입/프로퍼티 이름의 FNV-1a 해시가 포함되어 있어(결정적),
  *          레이아웃·해시·부동소수 포맷이 바뀌면 이 테스트가 먼저 잡습니다.
  */
-SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
+SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
@@ -1514,10 +1514,10 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 }
 
 /**
- * @brief [Reflection_Serialization] 스칼라 이스케이프·비트필드·XmlAttribute·versioned 헤더 골든.
+ * @brief [ReflectionSerializationTest] 스칼라 이스케이프·비트필드·XmlAttribute·versioned 헤더 골든.
  * @details GoldenOutputFormatsStable(중첩 컨테이너)를 보완하는 두 번째 안전망.
  */
-SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
+SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
 {
     sw::TypeRegistry& reg = sw::engine::getTypeRegistry();
 
@@ -1566,9 +1566,9 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
 }
 
 /**
- * @brief [Reflection_Serialization] Reflection RPC 팩·호출
+ * @brief [ReflectionSerializationTest] Reflection RPC 팩·호출
  */
-SW_TEST_CASE( Reflection_Serialization, ReflectionRpcPackInvoke )
+SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
@@ -1598,9 +1598,9 @@ SW_TEST_CASE( Reflection_Serialization, ReflectionRpcPackInvoke )
 }
 
 /**
- * @brief [Reflection_Serialization] REFLECT Abstract/Static
+ * @brief [ReflectionSerializationTest] REFLECT Abstract/Static
  */
-SW_TEST_CASE( Reflection_Serialization, ReflectAbstractAndStatic )
+SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
 {
     const sw::TypeInfo* abstractInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
@@ -1631,9 +1631,9 @@ SW_TEST_CASE( Reflection_Serialization, ReflectAbstractAndStatic )
 }
 
 /**
- * @brief [Reflection_Serialization] JSON 이스케이프 라운드트립
+ * @brief [ReflectionSerializationTest] JSON 이스케이프 라운드트립
  */
-SW_TEST_CASE( Reflection_Serialization, JsonEscapeUnescapeRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, JsonEscapeUnescapeRoundtrip )
 {
     const sw::string raw     = "line\n\t\"quote\"\\slash";
     const sw::string escaped = sw::JsonSerializer::escapeString( raw );
@@ -1652,9 +1652,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonEscapeUnescapeRoundtrip )
 }
 
 /**
- * @brief [Reflection_Serialization] ReflectAny 다형성
+ * @brief [ReflectionSerializationTest] ReflectAny 다형성
  */
-SW_TEST_CASE( Reflection_Serialization, ReflectAnyPolymorphic )
+SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
 {
     const sw::TypeInfo* payloadType =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::PolyPayloadA" ) );

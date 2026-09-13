@@ -12,7 +12,7 @@
 
 using namespace sw;
 
-SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
+SW_TEST_CASE( EditorCommandStackTest, PushUndoRedoAndBranch )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -65,9 +65,9 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 }
 
 /**
- * @brief [CommandStack] 전역 싱글톤 CommandStack 및 다단계 Undo/Redo 체인 검증
+ * @brief [EditorCommandStackTest] 전역 싱글톤 CommandStack 및 다단계 Undo/Redo 체인 검증
  */
-SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
+SW_TEST_CASE( EditorCommandStackTest, GlobalSingletonAndMultiStepChain )
 {
     sw::CommandStack& globalStack = sw::engine::getCommandStack();
     globalStack.clear();
@@ -111,14 +111,14 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
 }
 
 /**
- * @brief [CommandStack] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
+ * @brief [EditorCommandStackTest] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
  */
 /**
- * @brief [CommandStack] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
+ * @brief [EditorCommandStackTest] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
  * @details 예전에는 1비트 플래그라 안쪽 begin 이 바깥이 쌓아둔 목록을 clear 하고,
  *          안쪽 end 가 플래그를 풀어 바깥 Undo 기록이 통째로 유실됐다.
  */
-SW_TEST_CASE( CommandStack, NestedTransactionCommitsOnceAtOutermost )
+SW_TEST_CASE( EditorCommandStackTest, NestedTransactionCommitsOnceAtOutermost )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -165,7 +165,7 @@ SW_TEST_CASE( CommandStack, NestedTransactionCommitsOnceAtOutermost )
     SW_EXPECT_EQUAL( 7, value );
 };
 
-SW_TEST_CASE( CommandStack, CompoundTransaction )
+SW_TEST_CASE( EditorCommandStackTest, CompoundTransaction )
 {
     CommandStack stack;
     int32        valA{ 0 };
@@ -243,9 +243,9 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 }
 
 /**
- * @brief [CommandStack] 슬라이더/드래그 연속 액션 병합 (pushCoalesce) 검증
+ * @brief [EditorCommandStackTest] 슬라이더/드래그 연속 액션 병합 (pushCoalesce) 검증
  */
-SW_TEST_CASE( CommandStack, PushCoalesce )
+SW_TEST_CASE( EditorCommandStackTest, PushCoalesce )
 {
     CommandStack stack;
     float32      sliderValue{ 0.0f };
@@ -286,9 +286,9 @@ SW_TEST_CASE( CommandStack, PushCoalesce )
 }
 
 /**
- * @brief [CommandStack] 히스토리 검사 및 특정 시점 다단계 점프 (jumpTo) 검증
+ * @brief [EditorCommandStackTest] 히스토리 검사 및 특정 시점 다단계 점프 (jumpTo) 검증
  */
-SW_TEST_CASE( CommandStack, JumpToAndHistoryInspection )
+SW_TEST_CASE( EditorCommandStackTest, JumpToAndHistoryInspection )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -334,9 +334,9 @@ SW_TEST_CASE( CommandStack, JumpToAndHistoryInspection )
 }
 
 /**
- * @brief [CommandStack] GameObject 바이너리 스냅샷 기반 다단계 Undo/Redo 트랜잭션 스트레스 검증
+ * @brief [EditorCommandStackTest] GameObject 바이너리 스냅샷 기반 다단계 Undo/Redo 트랜잭션 스트레스 검증
  */
-SW_TEST_CASE( CommandStack, GameObjectBinarySnapshotUndoRedoTransactions )
+SW_TEST_CASE( EditorCommandStackTest, GameObjectBinarySnapshotUndoRedoTransactions )
 {
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "TransactionHero" ) );
@@ -418,9 +418,9 @@ SW_TEST_CASE( CommandStack, GameObjectBinarySnapshotUndoRedoTransactions )
 }
 
 /**
- * @brief [CommandStack] PIE 스냅샷 및 계층 구조 대규모 변이 복원 스트레스 검증
+ * @brief [EditorCommandStackTest] PIE 스냅샷 및 계층 구조 대규모 변이 복원 스트레스 검증
  */
-SW_TEST_CASE( CommandStack, EditorPlaySessionBinaryHierarchySnapshotStress )
+SW_TEST_CASE( EditorCommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
 {
     GameObjectManager manager;
 
@@ -508,9 +508,9 @@ SW_TEST_CASE( CommandStack, EditorPlaySessionBinaryHierarchySnapshotStress )
 }
 
 /**
- * @brief [CommandStack] 컴포넌트 클립보드 바이너리 복사/붙여넣기 정밀도 검증
+ * @brief [EditorCommandStackTest] 컴포넌트 클립보드 바이너리 복사/붙여넣기 정밀도 검증
  */
-SW_TEST_CASE( CommandStack, ComponentBinaryClipboardValuePasting )
+SW_TEST_CASE( EditorCommandStackTest, ComponentBinaryClipboardValuePasting )
 {
     GameObjectManager manager;
     GameObject*       pSourceObj = manager.createGameObject( hashed_string( "ClipboardSource" ) );
@@ -549,9 +549,9 @@ SW_TEST_CASE( CommandStack, ComponentBinaryClipboardValuePasting )
 }
 
 /**
- * @brief [CommandStack] Undo/Redo 도중 push 재진입 가드 엣지 케이스 검증
+ * @brief [EditorCommandStackTest] Undo/Redo 도중 push 재진입 가드 엣지 케이스 검증
  */
-SW_TEST_CASE( CommandStack, ReentrancyPushGuardDuringUndoRedo )
+SW_TEST_CASE( EditorCommandStackTest, ReentrancyPushGuardDuringUndoRedo )
 {
     CommandStack stack;
     int32        val = 0;
