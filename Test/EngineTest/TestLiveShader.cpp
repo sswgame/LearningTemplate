@@ -94,7 +94,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     const sw::string shaderRel  = "engine/shaders/livereloadprobe.hlsl";
 
     const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
-    SW_ASSERT_TRUE( engineFolder.empty() == false );
+    SW_ASSERT_FALSE( engineFolder.empty() );
     const sw::string includeAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsli" );
     const sw::string shaderAbs  = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsl" );
 
@@ -125,7 +125,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 
     const sw::ShaderCompileResult first = sw::ShaderCompiler::compileHLSL( desc );
     SW_ASSERT_TRUE( first._bSuccess );
-    SW_ASSERT_TRUE( first._bytecode.empty() == false );
+    SW_ASSERT_FALSE( first._bytecode.empty() );
 
     // `.hlsli` 만 고친다 — `.hlsl` 의 mtime 은 그대로다.
     sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 7.0\n" );

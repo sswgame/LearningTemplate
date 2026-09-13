@@ -196,7 +196,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     sw::SceneDocument loadedDoc{};
     SW_ASSERT_TRUE( loadedDoc.loadXml( tempSceneXml ) );
-    SW_ASSERT_TRUE( loadedDoc._listEntityNode.empty() == false );
+    SW_ASSERT_FALSE( loadedDoc._listEntityNode.empty() );
     SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listEntityNode[0]._name.c_str() );
     SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listEntityNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
@@ -213,7 +213,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
  */
 SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::SceneDocument doc{};
     SW_ASSERT_TRUE( doc.load( "game/empty/maps/editortest.scene.xml" ) );
 

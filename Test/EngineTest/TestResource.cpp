@@ -22,7 +22,7 @@
 
 SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat" );
     SW_EXPECT_TRUE( nonExistent.empty() );
 }
@@ -32,7 +32,7 @@ SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
  */
 SW_TEST_CASE( ResourceTest, GetResourcePathWithFolderNameEmptyForNonexistent )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::string nonExistent = sw::ResourceUtil::getResourcePath( "non_existent_file_xyz_12345.dat", "textures" );
     SW_EXPECT_TRUE( nonExistent.empty() );
 }
@@ -120,7 +120,7 @@ SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
  */
 SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     const utf8* kCurrent = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDesc formatVersion="0" name="CurrentMat" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
@@ -158,7 +158,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
  */
 SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     const utf8* kLegacy = R"(<?xml version="1.0" encoding="utf-8"?>
 <Material>
@@ -346,9 +346,9 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
  */
 SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string splashDdsPath = sw::ResourceUtil::getResourcePath( "textures/splash.dds" );
-    SW_ASSERT_TRUE( splashDdsPath.empty() == false );
+    SW_ASSERT_FALSE( splashDdsPath.empty() );
 
     sw::DdsImageData image;
     SW_ASSERT_TRUE( sw::DdsLoader::loadFromFile( splashDdsPath, image ) );
@@ -367,7 +367,7 @@ SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
  */
 SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::DdsImageData image;
     // **도메인까지 적은 engine 리소스**를 쓴다. 예전엔 도메인 없는 "textures/splash.dds" 였는데,
     // 그건 editor 도메인 에셋이라 Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐).
@@ -410,7 +410,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
  */
 SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::AssetStreamingQueue queue;
     queue.initialize();
 
@@ -463,7 +463,7 @@ SW_TEST_CASE( ResourceTest, ResourceManagerPackManagerOwnership )
  */
 SW_TEST_CASE( ResourceTest, DynamicDomainFolderPathResolution )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     const sw::string engineRoot = sw::ResourceUtil::getDomainFolderPath( "engine" );
     SW_EXPECT_TRUE( engineRoot.empty() == false );
@@ -487,7 +487,7 @@ SW_TEST_CASE( ResourceTest, DynamicDomainFolderPathResolution )
  */
 SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     const sw::string posixAbs = "/home/runner/work/scene.xml";
     SW_EXPECT_STREQ( posixAbs.c_str(), sw::ResourceUtil::makeAbsolutePath( posixAbs ).c_str() );
@@ -506,7 +506,7 @@ SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
  */
 SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const utf8*      pAsset      = "engine/materials/defaultmaterial.material";
     const sw::string metaAbsPath = sw::ResourceUtil::getResourcePath( "engine/materials/defaultmaterial.material.meta" );
     const uint64     mtimeBefore = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
@@ -556,7 +556,7 @@ SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
  */
 SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const utf8*      pAsset  = "game/empty/readme.md";
     const sw::string metaAbs = sw::ResourceUtil::getResourcePath( "game/empty/readme.md.meta" );
     SW_EXPECT_TRUE_MSG( metaAbs.empty() == false, "readme.md.meta 를 찾지 못했다 — 검증이 비었다" );

@@ -663,7 +663,7 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
     gtScene.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, 0.0f } );
 
     const sw::vector<sw::GpuMeshBatch>& gtBatches = gtScene.getTransparentBatches();
-    SW_ASSERT_TRUE( gtBatches.empty() == false ); // 반투명 머티리얼인데 반투명 배치가 없으면 전제가 깨진 것이다
+    SW_ASSERT_FALSE( gtBatches.empty() ); // 반투명 머티리얼인데 반투명 배치가 없으면 전제가 깨진 것이다
     const uint32 permutationIndex = gtBatches[0]._shaderPermutation;
     SW_ASSERT_TRUE( permutationIndex != sw::kInvalidShaderPermutation ); // 배치에 퍼뮤테이션이 붙어야 한다
 

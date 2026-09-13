@@ -70,6 +70,12 @@ namespace test
                 continue;
             }
 
+            if ( arg == "--allow_empty_suite" )
+            {
+                _bAllowEmptySuite = true;
+                continue;
+            }
+
             listApplicationArg.push_back( argv[argIndex] );
         }
 
@@ -137,10 +143,20 @@ namespace test
 
         sw::vector<sw::string> listFailedTestName;
 
+        // 스위트별 실행/스킵 — "고르긴 했는데 하나도 안 돌아간" 스위트를 끝에서 잡는다(아래 참고).
+        sw::vector<sw::string>                      listSuiteOrder;
+        sw::map<sw::string, sw::pair<int32, int32>> mapSuiteRanSkipped;
+
         for ( const TestCaseInfo& testInfo : _listTest )
         {
             if ( _filter.matches( testInfo.fullName() ) == false )
                 continue;
+
+            if ( mapSuiteRanSkipped.find( testInfo._groupName ) == mapSuiteRanSkipped.end() )
+            {
+                mapSuiteRanSkipped[testInfo._groupName] = { 0, 0 };
+                listSuiteOrder.push_back( testInfo._groupName );
+            }
 
             _currentContext.begin( testInfo.fullName() );
             std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
@@ -184,12 +200,14 @@ namespace test
             if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
             {
                 ++skippedCount;
+                ++mapSuiteRanSkipped[testInfo._groupName].second;
                 std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
                 std::fflush( stdout );
                 SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
             }
             else if ( _currentContext.hasFailed() )
             {
+                ++mapSuiteRanSkipped[testInfo._groupName].first;
                 ++failedCount;
                 listFailedTestName.push_back( testInfo.fullName() );
                 std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
@@ -199,11 +217,48 @@ namespace test
             }
             else
             {
+                ++mapSuiteRanSkipped[testInfo._groupName].first;
                 ++passedCount;
                 std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
                 std::fflush( stdout );
                 SW_LOG_INFO( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
             }
+        }
+
+        // 스위트를 골라 놓고 **하나도 실행되지 않았다면** 그 스위트는 아무것도 검증하지 않았다.
+        //
+        // 스킵은 실패가 아니라서 예전에는 이런 실행이 그냥 초록이었다. DXC 가 사라지거나 구운 셰이더가
+        // 없어지면 케이스가 스스로 SW_TEST_SKIP 하고, CI 는 "통과" 를 보고한다 — 무엇이 사라졌는지
+        // 아무도 모른 채로. 검증 공백은 통과가 아니므로 여기서 실패로 만든다.
+        // (2026-09-13 기준 Debug·Release·Shipping 어디에도 통째로 스킵되는 스위트는 없다. 그래서
+        //  예외 목록이 없다 — 정말 필요해지면 `--allow_empty_suite` 로 그 실행만 열어 준다.)
+        sw::vector<sw::string> listEmptySuite;
+        for ( const sw::string& suiteName : listSuiteOrder )
+        {
+            const sw::pair<int32, int32>& ranSkipped = mapSuiteRanSkipped[suiteName];
+            if ( ranSkipped.first == 0 && ranSkipped.second > 0 )
+                listEmptySuite.push_back( suiteName );
+        }
+
+        const bool bEmptySuiteIsFailure = listEmptySuite.empty() == false && _bAllowEmptySuite == false;
+        if ( listEmptySuite.empty() == false )
+        {
+            std::fprintf( stdout, "====================================================\n" );
+            std::fprintf( stdout, " %s (%d):\n",
+                          bEmptySuiteIsFailure ? "Suites that verified nothing - every case skipped"
+                                               : "Suites that verified nothing (allowed)",
+                          static_cast<int32>( listEmptySuite.size() ) );
+            for ( const sw::string& suiteName : listEmptySuite )
+            {
+                std::fprintf( stdout, "   - %s (%d skipped)\n", suiteName.c_str(), mapSuiteRanSkipped[suiteName].second );
+                if ( bEmptySuiteIsFailure )
+                    SW_LOG_ERROR( "Suite verified nothing - every case skipped: %#", suiteName.c_str() );
+                else
+                    SW_LOG_INFO( "Suite verified nothing - every case skipped (allowed): %#", suiteName.c_str() );
+            }
+            if ( bEmptySuiteIsFailure )
+                std::fprintf( stdout, " Pass --allow_empty_suite if this is expected here.\n" );
+            std::fflush( stdout );
         }
 
         SW_LOG_INFO( "====================================================" );
@@ -227,6 +282,6 @@ namespace test
         std::fprintf( stdout, "====================================================\n" );
         std::fflush( stdout );
 
-        return ( failedCount == 0 ) ? 0 : 1;
+        return ( failedCount == 0 && bEmptySuiteIsFailure == false ) ? 0 : 1;
     }
 } // namespace test

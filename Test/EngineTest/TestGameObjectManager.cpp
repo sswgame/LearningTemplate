@@ -501,7 +501,7 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     const sw::TypeInfo* pTypeInfo = pMesh->getTypeInfo();
     SW_ASSERT_NOT_NULL( pTypeInfo );
     const sw::hashed_string moduleName = pTypeInfo->_moduleName;
-    SW_ASSERT_TRUE( moduleName.empty() == false );
+    SW_ASSERT_FALSE( moduleName.empty() );
 
     // 1) 남의 모듈 이름으로는 아무것도 걷히지 않는다.
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( "NotThisModule" ) );

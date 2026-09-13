@@ -223,7 +223,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
  */
 SW_TEST_CASE( ShaderBindingContractTest, AllBakedShadersMatchContract )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     struct Target
     {
@@ -287,7 +287,7 @@ SW_TEST_CASE( ShaderBindingContractTest, AllBakedShadersMatchContract )
  */
 SW_TEST_CASE( ShaderBindingContractTest, ReflectionNamesAreUniformAcrossBackends )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
     if ( shaderDir.empty() )
         SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );
@@ -459,7 +459,7 @@ SW_TEST_CASE( ShaderBindingContractTest, Dx12RootSignatureFitsBudget )
  */
 SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
     if ( shaderDir.empty() )
         SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );

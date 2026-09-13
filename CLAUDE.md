@@ -49,8 +49,13 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-
 build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
 ```
 
-- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`. Run them from
-  `build/<preset>/Bin` (working directory matters — they resolve `Resource/` relative to it).
+- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`.
+  **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current
+  directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does.
+  In Shipping the binaries themselves live in `build/Ninja-Shipping/TestBin` (so the shipped `Bin` stays
+  free of test binaries and DXC), but the working directory is still `Bin`:
+  `cd build/Ninja-Shipping/Bin && ../TestBin/EngineTest.exe`. Running them from `TestBin` used to
+  segfault mid-run; the resource asserts now fail the affected cases loudly instead.
 - CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites CI
   cannot run filtered out (`RHIDeviceTest`, `RenderPassGpuTest`, `WindowTest`, `ShaderCompilerTest`,
   `LiveShaderTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**

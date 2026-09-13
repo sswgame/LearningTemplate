@@ -52,7 +52,11 @@ _kNoGpuFilterFile = "Test/EngineTest/CMakeLists.txt"
 _kNoGpuTestName = "EngineTest_NoGPU"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
 
-_kCaseRe = re.compile(r"^SW_TEST_CASE\(\s*(\w+)\s*,\s*(\w+)\s*\)", re.M)
+# 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 실제로 있었고,
+# 그 파일이 검사에서 통째로 빠져 밑줄 든 스위트 이름이 그대로 살아 있었다(2026-09-13).
+_kCaseRe = re.compile(r"^[ 	]*SW_TEST_CASE\(\s*(\w+)\s*,\s*(\w+)\s*\)", re.M)
+# 위 정규식이 놓치는 표기가 생기면 조용히 줄어들 뿐이라, 토큰을 따로 세어 대조한다.
+_kCaseTokenRe = re.compile(r"\bSW_TEST_CASE\s*\(")
 _kSuiteNameRe = re.compile(r"^[A-Z][A-Za-z0-9]*Test$")
 _kMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:\s*(\S.*)")
 _kFilterRe = re.compile(r"--test_filter=(\S+)")
@@ -60,15 +64,20 @@ _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cp
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
 
 
-def collectCases(rootDir: Path) -> list[tuple[str, str, str]]:
-    """(스위트, 케이스, 저장소 상대 경로) 전부."""
+def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
+    """(스위트, 케이스, 저장소 상대 경로) 전부와, 파싱이 놓친 자리."""
     out: list[tuple[str, str, str]] = []
+    missed: list[str] = []
     for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
-        for match in _kCaseRe.finditer(text):
-            out.append((match.group(1), match.group(2), relPath))
-    return out
+        parsed = list(_kCaseRe.finditer(text))
+        out += [(m.group(1), m.group(2), relPath) for m in parsed]
+        tokenCount = len(_kCaseTokenRe.findall(text))
+        if tokenCount != len(parsed):
+            missed.append(f"{relPath}: SW_TEST_CASE 를 {tokenCount}개 썼는데 {len(parsed)}개만 읽혔습니다 "
+                          f"— 이 검사가 그 파일의 스위트를 놓치고 있습니다 (표기를 맞추거나 파서를 고치세요)")
+    return out, missed
 
 
 def collectMarkers(rootDir: Path) -> dict[str, tuple[str, str]]:
@@ -131,8 +140,8 @@ def checkEditorTestSources(rootDir: Path) -> list[str]:
 
 
 def check(rootDir: Path) -> tuple[list[str], int, int]:
-    errors: list[str] = []
-    cases = collectCases(rootDir)
+    cases, missed = collectCases(rootDir)
+    errors: list[str] = list(missed)
     if not cases:
         return [f"{_kTestRoot}: SW_TEST_CASE 를 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)"], 0, 0
 

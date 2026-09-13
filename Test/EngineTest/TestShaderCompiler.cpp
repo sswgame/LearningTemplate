@@ -46,7 +46,7 @@ namespace sw
  */
 SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::ShaderCompileDesc desc{};
     desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
@@ -146,7 +146,7 @@ SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
  */
 SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ShaderCompiler::enableDiskCache( true );
     sw::ShaderCompiler::clearDiskCache();
 
@@ -183,7 +183,7 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
  */
 SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ShaderCache shaderCache;
     shaderCache.clearCache();
 
@@ -235,7 +235,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
  */
 SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ShaderCompiler::enableDiskCache( true );
     sw::ShaderCompiler::clearDiskCache();
 

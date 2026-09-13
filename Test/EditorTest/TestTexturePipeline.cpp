@@ -14,9 +14,9 @@
 namespace sw::editor
 {
     /**
-     * @brief [Editor_TexturePipeline] TextureImportConfig 파싱, 프리셋 상속 및 규칙 매칭 검증
+     * @brief [EditorTexturePipelineTest] TextureImportConfig 파싱, 프리셋 상속 및 규칙 매칭 검증
      */
-    SW_TEST_CASE( Editor_TexturePipeline, ImportConfigParsingAndInheritance )
+    SW_TEST_CASE( EditorTexturePipelineTest, ImportConfigParsingAndInheritance )
     {
         const string_view kJson = R"({
             "presets": {
@@ -106,11 +106,11 @@ namespace sw::editor
     }
 
     /**
-     * @brief [Editor_TexturePipeline] ImageUtil 디코딩, TextureBaker 변환 및 DdsLoader 로딩 E2E 검증
+     * @brief [EditorTexturePipelineTest] ImageUtil 디코딩, TextureBaker 변환 및 DdsLoader 로딩 E2E 검증
      */
-    SW_TEST_CASE( Editor_TexturePipeline, ImageUtilAndTextureBakerEndToEnd )
+    SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureBakerEndToEnd )
     {
-        sw::ResourceUtil::initialize();
+        SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
         const string rawSplashPath = sw::ResourceUtil::getResourcePath( "textures_raw/splash.jpg" );
         if ( rawSplashPath.empty() )
         {

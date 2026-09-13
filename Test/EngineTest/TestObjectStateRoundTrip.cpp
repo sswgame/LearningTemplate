@@ -93,7 +93,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     source.setActive( false );
 
     const sw::string xml = ObjectStateSerializer::saveToXmlString( &source );
-    SW_ASSERT_TRUE( xml.empty() == false );
+    SW_ASSERT_FALSE( xml.empty() );
     SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
     SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
     // 컨테이너는 프로퍼티 이름 요소로 직접 나간다(<vector _name=..> 래핑 없음).
@@ -105,7 +105,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
 
     const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
-    SW_ASSERT_TRUE( json.empty() == false );
+    SW_ASSERT_FALSE( json.empty() );
     // 컨테이너는 프로퍼티 이름 아래 배열로 직접 나간다("vector"/"_name" 래핑 없음).
     SW_EXPECT_TRUE( json.find( "\"_listComponent\":[" ) != sw::string::npos );
     SW_EXPECT_TRUE( json.find( "\"vector\"" ) == sw::string::npos );
@@ -160,9 +160,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     const sw::string parentXml = ObjectStateSerializer::saveToXmlString( parent );
     const sw::string childXml  = ObjectStateSerializer::saveToXmlString( child );
     const sw::string grandXml  = ObjectStateSerializer::saveToXmlString( grand );
-    SW_ASSERT_TRUE( parentXml.empty() == false );
-    SW_ASSERT_TRUE( childXml.empty() == false );
-    SW_ASSERT_TRUE( grandXml.empty() == false );
+    SW_ASSERT_FALSE( parentXml.empty() );
+    SW_ASSERT_FALSE( childXml.empty() );
+    SW_ASSERT_FALSE( grandXml.empty() );
 
     SW_EXPECT_TRUE( childXml.find( "ParentGO" ) != sw::string::npos );
     SW_EXPECT_TRUE( grandXml.find( "ChildGO" ) != sw::string::npos );

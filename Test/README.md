@@ -27,6 +27,20 @@ CMake를 통해 구성(Configure)한 후, 다음과 같이 테스트를 실행�
 ctest --test-dir build/Ninja-Debug --output-on-failure
 ```
 
+> **직접 실행할 때는 작업 폴더가 `build/<preset>/Bin` 이어야 한다.** 테스트는 현재 폴더에서 위로 올라가며
+> `Resource/` 를 찾는데, 그 탐색이 성공하는 자리가 `Bin` 이다(ctest 도 거기서 돌린다). **Shipping 은
+> 바이너리가 `TestBin` 에 있지만 작업 폴더는 여전히 `Bin` 이다** — 배포용 `Bin` 에 테스트 바이너리와
+> DXC 가 섞이지 않게 하려고 출력만 가른 것이다.
+>
+> ```powershell
+> cd build/Ninja-Shipping/Bin
+> ../TestBin/EngineTest.exe --test_filter=MaterialTest.*
+> ```
+>
+> `TestBin` 에서 그냥 돌리면 리소스 루트를 못 찾는다. 예전엔 그 상태로 계속 달리다 세그폴트했다 —
+> `SW_LOG_ASSERT` 는 배포본에서 사라지지 않지만 **브레이크 없이 로그만 남기고 진행** 하기 때문이다.
+> 지금은 `ResourceUtil::initialize()` 를 쓰는 케이스가 전부 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패한다.
+
 ### 특정 테스트만 골라서 실행 (Label 활용)
 라벨은 `core`, `editor`, `engine`, `reflection`, `module`, `unit`, `nogpu`, `lint` 입니다.
 `lint` 는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가 등록하는 Python 검사
@@ -49,6 +63,29 @@ ctest --preset Ninja-Debug-lint
 > (`RHIDeviceTest` · `RenderPassGpuTest` · `WindowTest` · `ShaderCompilerTest` · `LiveShaderTest`)를
 > `EngineTest_NoGPU` 필터가 통째로 뺀다. 디바이스가 필요한 테스트를 새로 쓰면 **`RenderPassGpuTest` 에
 > 넣는다** — 이름을 하나씩 필터에 적던 시절에는 새 테스트가 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.
+
+### 구성마다 도는 케이스 수가 다르다
+
+`ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
+(2026-09-14 실측, 소스의 케이스는 810개):
+
+| 실행 파일 | Debug · Release | Shipping |
+| --- | ---: | ---: |
+| CoreTest | 177 | 177 |
+| EngineTest | 460 | 456 |
+| ReflectionTest | 101 | 101 |
+| **SmokeTest** | **19** | **1** |
+| EditorTest | 52 | 52 |
+
+SmokeTest 가 19 → 1 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+Shipping 스모크는 정적 `fillGameAPI` 경로 하나만 본다(`Test/SmokeTest/CMakeLists.txt` 참고).
+스킵도 구성을 탄다 — Release·Shipping 의 CoreTest 는 8개가 스킵되고(`SW_LOG_*` 가 컴파일에서 빠진다),
+Shipping 의 ReflectionTest 는 5개가 스킵된다(메타데이터가 배포본에 없다).
+
+**의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**
+필터로 고른 스위트의 케이스가 **전부 스킵되면** 그 실행은 아무것도 검증하지 않은 것이므로 프레임워크가
+실패로 돌린다. DXC 가 사라지거나 구운 셰이더가 없어지면 예전에는 조용히 초록이었다. 정말 그래도 되는
+실행이면 `--allow_empty_suite` 를 준다.
 
 ### 스위트 이름 규칙 — `CheckTestSuites.py` 가 강제합니다
 

@@ -67,6 +67,7 @@ namespace test
         TestContext              _currentContext;
         TestEnvironment          _environment;
         bool                     _listOnly{ false };
+        bool                     _bAllowEmptySuite{ false };
     };
 
     /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
@@ -358,6 +359,17 @@ namespace test
         }                                                                              \
     } while ( 0 )
 
+/** @brief 조건이 거짓이어야 하며, 아니면 테스트를 중단합니다. */
+#define SW_ASSERT_FALSE( cond )                                                                 \
+    do                                                                                          \
+    {                                                                                           \
+        if ( ( cond ) )                                                                         \
+        {                                                                                       \
+            test::TestRegistry::getInstance().addFailure( "!(" #cond ")", __FILE__, __LINE__ ); \
+            return;                                                                             \
+        }                                                                                       \
+    } while ( 0 )
+
 /** @brief 두 값이 같아야 하며, 아니면 테스트를 중단합니다. */
 #define SW_ASSERT_EQUAL( expected, actual )                                                                                  \
     do                                                                                                                       \
@@ -383,3 +395,7 @@ namespace test
             return;                                                                                 \
         }                                                                                           \
     } while ( 0 )
+
+// `SW_ASSERT_NULL` 은 **일부러 없다.** 짝을 맞추려고 만들 수는 있지만 부를 자리가 하나도 없었다
+// (`SW_EXPECT_NULL` 은 50곳이 쓴다 — 그쪽은 실패해도 계속 가는 게 맞는 자리들이다).
+// 쓰는 곳이 생기면 그때 `SW_ASSERT_FALSE` 옆에 같은 모양으로 넣는다.

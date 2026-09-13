@@ -124,7 +124,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstan
 
     SW_EXPECT_EQUAL( 2u, stats._objectCount );
     SW_EXPECT_EQUAL( 3u, stats._componentCount );
-    SW_ASSERT_TRUE( stats._listDistribution.empty() == false );
+    SW_ASSERT_FALSE( stats._listDistribution.empty() );
 
     // 분포는 타입 이름으로 묶이고, 인스턴스 수(3)가 오브젝트 수(2)가 아니어야 한다.
     uint32 sceneComponentCount = 0;

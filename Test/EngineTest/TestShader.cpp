@@ -408,7 +408,7 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
  */
 SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     // 1) 실제 파이프라인 — 그림자 패스는 PS 없음, 씬 메시를 그리는 나머지는 PS 있음.
     const utf8* arrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };

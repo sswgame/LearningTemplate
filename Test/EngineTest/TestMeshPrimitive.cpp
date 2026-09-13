@@ -176,7 +176,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
     SW_ASSERT_TRUE( plane != nullptr );
     const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getVertices();
-    SW_ASSERT_TRUE( listPlaneVertex.empty() == false );
+    SW_ASSERT_FALSE( listPlaneVertex.empty() );
     uint32 notUpCount = 0;
     for ( const sw::RHIVertex& vertex : listPlaneVertex )
     {

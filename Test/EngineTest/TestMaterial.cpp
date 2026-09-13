@@ -18,7 +18,7 @@
 
 SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     bool                         loadOk   = material->loadFromFile( "engine/materials/defaultmaterial.material" );
@@ -60,7 +60,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
  */
 SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -147,7 +147,7 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
  */
 SW_TEST_CASE( MaterialTest, MaterialColorModification )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -184,7 +184,7 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
  */
 SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -266,7 +266,7 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
  */
 SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -319,10 +319,12 @@ SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    // 아래 전부가 이 둘에 달려 있다 — 약한 기대로 넘기면 빈 버퍼를 reinterpret_cast 해서 읽는다.
+    // 실제로 그래서 세그폴트했다(리소스 루트를 못 찾는 작업 폴더에서 돌렸을 때).
+    SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
     sw::vector<uint8> buffer = material->getBuffer();
-    SW_EXPECT_TRUE( buffer.size() >= 16 );
+    SW_ASSERT_TRUE( buffer.size() >= 16 );
 
     // 1) raw data packing test (e.g. float4 color)
     const float32 testColor[4] = { 0.125f, 0.25f, 0.5f, 1.0f };

@@ -6,6 +6,13 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 현재 빌드 트리(compile_commands.json)와 디스크의 C++ 소스 파일 목록을 대조하여,
 새로 추가된 .cpp/.c 파일이 빌드 타겟 및 LSP 인덱서에 정상 등록되었는지 검사합니다.
 
+**RHI 백엔드 목록도 함께 본다** (`cmake/Engine/RhiBackendSources.cmake`).
+그 파일은 백엔드 .cpp 를 손으로 나열하고, `SW_RHI_AS_MODULES=ON` 일 때 어느 .cpp 가 `RHI_*` MODULE 로
+가는지를 정한다. 목록에서 빠진 파일은 **컴파일이 안 되는 게 아니라 Engine 타겟의 glob 이 주워간다** —
+즉 모듈이 아니라 Engine.dll 로 들어간다. 그래서 compile_commands 대조로는 절대 안 잡히고(실험으로 확인),
+증상은 모듈의 미정의 심볼로 나온다(실제로 `VulkanRHIRenderPassCache.cpp` 가 빠져 `vkCreateRenderPass`
+미정의가 났다). 목록과 디스크를 양방향으로 맞춘다.
+
 (Ninja 빌드는 SW_GLOB_CONFIGURE_DEPENDS로 자동 감지하지만,
  CI 파이프라인이나 CONFIGURE_DEPENDS=OFF 환경, pre-commit 단계에서
  전체 빌드 없이 빠른 소스 누락 방지 검증을 위해 사용됩니다.)
@@ -17,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -110,6 +118,39 @@ def readClangdBuildDirInternal(repo: Path) -> Path | None:
     return None
 
 
+_kRhiBackendListFile = "cmake/Engine/RhiBackendSources.cmake"
+_kRhiBackendRoot = "Source/Engine/Graphics/RHI"
+_kRhiBackendDirs = ("DX11", "DX12", "GL", "Vulkan")
+_kRhiListedRe = re.compile(r"\$\{swRhiRoot\}/([\w/]+\.cpp)")
+
+
+def checkRhiBackendSourceListInternal(repo: Path) -> list[str]:
+    """백엔드 .cpp 목록과 디스크를 양방향으로 맞춥니다 (파일 머리 주석 참고)."""
+    listPath = repo / _kRhiBackendListFile
+    if listPath.is_file() is False:
+        return [f"{_kRhiBackendListFile}: 파일이 없습니다"]
+
+    listed = set(_kRhiListedRe.findall(listPath.read_text(encoding="utf-8", errors="ignore")))
+    if not listed:
+        return [f"{_kRhiBackendListFile}: 백엔드 소스를 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)"]
+
+    onDisk: set[str] = set()
+    for backend in _kRhiBackendDirs:
+        backendDir = repo / _kRhiBackendRoot / backend
+        if backendDir.is_dir() is False:
+            continue
+        for path in backendDir.rglob("*.cpp"):
+            onDisk.add(path.relative_to(repo / _kRhiBackendRoot).as_posix())
+
+    errors: list[str] = []
+    for relPath in sorted(onDisk - listed):
+        errors.append(f"{_kRhiBackendRoot}/{relPath}: {_kRhiBackendListFile} 에 없습니다 — "
+                      f"모듈이 아니라 Engine 타겟으로 들어갑니다(링크 시점에 미정의 심볼로 터집니다)")
+    for relPath in sorted(listed - onDisk):
+        errors.append(f"{_kRhiBackendListFile}: `{relPath}` 가 디스크에 없습니다 — 파일이 옮겨졌으면 경로를 고치세요")
+    return errors
+
+
 def main() -> int:
     useUtf8Stdout()
 
@@ -119,6 +160,14 @@ def main() -> int:
     parser.add_argument("--active-game", default="Empty", help="SW_ACTIVE_GAME 팩 이름")
     args = parser.parse_args()
     repo = (args.root or getProjectRoot()).resolve()
+
+    # 백엔드 목록 검사는 빌드 트리가 없어도 성립한다 — 아래 조기 반환들보다 먼저 본다.
+    rhiErrors = checkRhiBackendSourceListInternal(repo)
+    if rhiErrors:
+        print(f"[CheckSourceGlob] RHI 백엔드 목록 위반 {len(rhiErrors)}건", file=sys.stderr)
+        for error in rhiErrors:
+            print(f"  {error}")
+    rhiExit = 1 if rhiErrors else 0
 
     scanDirs = [repo / rel for rel in _kScanRoots]
     sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
@@ -133,7 +182,7 @@ def main() -> int:
     if buildDir is None or not (buildDir / "compile_commands.json").is_file():
         print("[CheckSourceGlob] compile_commands.json 없음 — 소스 목록만 보고합니다.")
         print(f"[CheckSourceGlob] scanned {len(sources)} translation units under Source/")
-        return 0
+        return rhiExit
 
     compiledFiles: set[str] = set()
     data = json.loads((buildDir / "compile_commands.json").read_text(encoding="utf-8"))
@@ -143,7 +192,7 @@ def main() -> int:
     if any("unity_" in entry.get("file", "") for entry in data):
         print(f"[CheckSourceGlob] {buildDir.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다.")
         print(f"[CheckSourceGlob] scanned {len(sources)} translation units under Source/")
-        return 0
+        return rhiExit
 
     for entry in data:
         filePath = Path(entry.get("file", "")).resolve()
@@ -174,7 +223,11 @@ def main() -> int:
             print(f"  ... +{len(missingSources) - 40} more")
         return 1
 
-    print(f"[CheckSourceGlob] OK ({len(sources)} sources referenced in {buildDir})")
+    if rhiExit != 0:
+        return rhiExit
+
+    print(f"[CheckSourceGlob] OK ({len(sources)} sources referenced in {buildDir}, "
+          f"RHI backend list matches disk)")
     return 0
 
 

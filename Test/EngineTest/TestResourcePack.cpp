@@ -323,7 +323,7 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
                                                                              { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
     } );
 
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
     packManager.unmountAll();
 
@@ -414,7 +414,7 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
     } );
     sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" );
 
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
@@ -465,7 +465,7 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
                                                                               { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
     } );
 
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
     packManager.unmountAll();
     // 우선순위 토큰 목록 설정: game > common > engine (3개 항목)
@@ -632,7 +632,7 @@ SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePackTest, PathCacheZeroAllocationAndInvalidation )
 {
-    sw::ResourceUtil::initialize();
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourceUtil::clearPathCache();
 
     // 1. 존재하지 않는 경로 룩업

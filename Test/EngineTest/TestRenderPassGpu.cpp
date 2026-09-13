@@ -376,7 +376,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
     lateePacket._bValid = 1;
     gtGpuScene.buildFromScene( &scene, lateePacket._cameraPos );
     gtGpuScene.exportCpuSnapshot( lateePacket._gpuScene );
-    SW_ASSERT_TRUE( lateePacket._gpuScene._listInstance.empty() == false );
+    SW_ASSERT_FALSE( lateePacket._gpuScene._listInstance.empty() );
 
     mesh->setMaterialInstance( nullptr );
     mesh->setMaterial( nullptr );
