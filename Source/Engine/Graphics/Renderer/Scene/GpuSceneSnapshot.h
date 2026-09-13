@@ -104,6 +104,8 @@ namespace sw
      * @brief 머티리얼 데이터 원소 하나를 가리키는 키 — (머티리얼, 인스턴스) 쌍.
      * @details 인스턴스가 없으면 머티리얼 자신이 원소다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 한다.
      */
+    // SW_OWNERSHIP_RAW_OK: 정체성 키다 — 비교만 하고 **역참조하지 않는다**. 소유를 실으면 키가 수명을 붙들어,
+    //                      회수돼야 할 머티리얼이 스냅샷이 사는 동안 살아남는다(그것이 원소 표가 따로 있는 이유다).
     struct GpuMaterialElementKey
     {
         Material*         _pMaterial{ nullptr };
