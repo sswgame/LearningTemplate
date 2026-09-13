@@ -56,8 +56,8 @@ namespace sw
         }
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
-        const float32 outlineY = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-        const float32 outlineZ = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+        const float32 outlineY = _transientPool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( _transientPool.getWidth() ) ) : 0.001f;
+        const float32 outlineZ = _transientPool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( _transientPool.getHeight() ) ) : 0.001f;
 
         ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
@@ -73,8 +73,8 @@ namespace sw
     {
         if ( pCamera == nullptr )
             return;
-        const float32  aspect   = ( _transientHeight > 0 )
-                                    ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+        const float32  aspect   = ( _transientPool.getHeight() > 0 )
+                                    ? ( static_cast<float32>( _transientPool.getWidth() ) / static_cast<float32>( _transientPool.getHeight() ) )
                                     : ( 16.0f / 9.0f );
         const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
         applyViewProjection( ctx, viewProj );
@@ -127,8 +127,8 @@ namespace sw
         // 맞춘다.
         constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
 
-        const float32 aspect = ( _transientHeight > 0 )
-                                 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+        const float32 aspect = ( _transientPool.getHeight() > 0 )
+                                 ? ( static_cast<float32>( _transientPool.getWidth() ) / static_cast<float32>( _transientPool.getHeight() ) )
                                  : ( 16.0f / 9.0f );
 
         outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( kFallbackFovY, aspect, kFallbackNearZ, kFallbackFarZ );

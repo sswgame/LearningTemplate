@@ -49,13 +49,13 @@ namespace sw
         // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷/개수/
         // 샘플수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
         // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
-        VulkanRenderPassSpec clearSpec{};
+        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
         clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
         _renderPass = createRenderPassFromSpec( clearSpec );
         if ( _renderPass == VK_NULL_HANDLE )
             return false;
 
-        VulkanRenderPassSpec loadSpec{};
+        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
         loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
         _renderPassLoad = createRenderPassFromSpec( loadSpec );
         return _renderPassLoad != VK_NULL_HANDLE;

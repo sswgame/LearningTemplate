@@ -30,10 +30,10 @@ from common import useUtf8Stdout  # noqa: E402
 
 # 옮겨지는 구조체: (파일, 구조체 이름)
 _kTransportedStructs: list[tuple[str, str]] = [
-    ("Source/Engine/Graphics/Renderer/Scene/GpuScene.h", "GpuSceneSnapshot"),
-    ("Source/Engine/Graphics/Renderer/Scene/GpuScene.h", "GpuMeshBatch"),
-    ("Source/Engine/Graphics/Renderer/Scene/GpuScene.h", "GpuMaterialElement"),
-    ("Source/Engine/Graphics/Renderer/Scene/GpuScene.h", "GpuMaterialGroup"),
+    ("Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h", "GpuSceneSnapshot"),
+    ("Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h", "GpuMeshBatch"),
+    ("Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h", "GpuMaterialElement"),
+    ("Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h", "GpuMaterialGroup"),
     ("Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h", "RenderFramePacket"),
 ]
 

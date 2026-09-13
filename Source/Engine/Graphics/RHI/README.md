@@ -13,11 +13,16 @@ RHI/
   RHICapabilities.h  백엔드가 무엇을 할 수 있는지 (bindless, 병렬 기록, indirect draw ...)
   RHIBackendRegistry 백엔드 팩토리 등록·조회. DLL 로딩은 그중 한 방식이다
   RHI.cpp/.h         디바이스 생성·핫스왑 등 상위 진입점
+  RHIRenderResource  GPU 자원을 든 객체의 등록부 — 디바이스 수명 이벤트(release/forget/init)를 목록 전체에 통보
+  RHIResidentBuffer  핸들 + 그것을 만든 디바이스. "값이 남아 있다" 와 "살아 있는 디바이스의 것" 을 가른다
+  RHIStructuredBufferSlot  구조버퍼 + SRV/UAV 인덱스 한 벌 — 용량 확보·업로드·해제를 순서까지 맞춰 처리
+  RHICommandListForwarder  백엔드 CommandList 가 자기 Context 로 즉시 전달하는 공통 몸통(템플릿 — 매크로가 아니다)
 
   Support/           백엔드들이 공유하는 자료구조
                      RHIHandleTable(핸들→객체), RHIIndexFreeList(인덱스 재사용),
-                     RHIReleaseQueue(GPU 가 다 쓴 뒤 해제), FrameResourceRing(프레임 슬롯)
-  DX/                D3D 전용. RHIDxgiFormat (DX11·DX12 만 쓴다)
+                     RHIReleaseQueue(GPU 가 다 쓴 뒤 해제), FrameResourceRing(프레임 슬롯),
+                     RHIShaderRequest(파이프라인 서술체 → 컴파일 요청 해석 — 넷이 각자 갖던 규칙 하나)
+  DX/                D3D 전용. RHIDxgiFormat(포맷 변환) · RHIDxgiTearing(VSync 끄기 — ALLOW_TEARING 과 Present 플래그는 짝)
   Modules/           백엔드를 DLL 로 분리해 싣는 장치
                      RHIModuleAbi(호스트↔모듈 계약), RHIModuleEntry(모듈 측 매크로),
                      <백엔드>/ModuleEntry.cpp
@@ -35,10 +40,11 @@ RHI/
 | 파일 | 무엇을 하는가 | DX11 | DX12 | GL | Vulkan |
 |---|---|:--:|:--:|:--:|:--:|
 | `<B>RHIDevice` | 디바이스 상태·조회 | O | O | O | O |
-| `<B>RHIDeviceInit` | 한 번 만들고 리사이즈 때 다시 만드는 것 | – | O | O | O |
-| `<B>RHIDeviceSubmission` | 프레임 제출·펜스·커맨드 리스트 풀 | – | O | O | O |
+| `<B>RHIDeviceInit` | 한 번 만들고 리사이즈 때 다시 만드는 것 | O | O | O | O |
+| `<B>RHIDeviceSubmission` | 프레임 제출·펜스·커맨드 리스트 풀 | O | O | O | O |
 | `<B>RHIDeviceDescriptor` | 셰이더 슬롯 배치 (루트 시그니처 / 디스크립터 세트) | – | O | – | O |
-| `<B>RHIDeviceRenderPass` | 렌더패스·프레임버퍼 캐시 | – | – | – | O |
+| `<B>RHIDeviceRenderPass` | 이미지 레이아웃 전이 · 캐시에 넘길 키/서술 조립 | – | – | – | O |
+| `<B>RHIRenderPassCache` | PSO 호환 렌더패스 · 합성 프레임버퍼 · desc 렌더패스의 **소유자** (별도 클래스) | – | – | – | O |
 | `<B>RHIResource` | 버퍼·텍스처 | O | O | O | O |
 | `<B>RHIResourcePipeline` | PSO·셰이더 스테이지·렌더패스 객체 | O | O | O | O |
 | `<B>RHIResourceBindless` | 리소스를 인덱스로 접근 가능하게 등록 | O | O | O | O |
@@ -48,13 +54,14 @@ RHI/
 
 **빈 칸은 빠뜨린 것이 아니라 그 API 에 개념이 없다는 뜻입니다.**
 
-- DX11 에 `DeviceInit`/`Submission` 이 없는 이유: 디바이스가 작아(400여 줄) 나눌 만큼 크지 않습니다.
-  D3D11 은 명시적 제출이 없어 `Submission` 에 담을 내용 자체가 거의 없습니다.
+- DX11 도 2026-09-12 에 같은 축으로 갈랐습니다 — 셋은 파일 이름이 답인데 하나만 본문을 뒤져야 했기 때문입니다.
+  D3D11 은 명시적 제출이 없어 `Submission` 이 짧을 뿐, 자리는 같습니다.
 - `Descriptor` 가 DX12·Vulkan 에만 있는 이유: DX11/GL 은 리소스를 **슬롯 번호**로 바인딩합니다.
   DX12 의 디스크립터 힙 + 루트 시그니처, Vulkan 의 디스크립터 세트 + 파이프라인 레이아웃은
   "바인딩할 자리를 미리 선언해 두는" 모델이고, 이게 두 세대의 가장 큰 차이입니다.
 - `RenderPass` 가 Vulkan 에만 있는 이유: Vulkan 만 렌더패스/프레임버퍼를 **미리 만들어 캐시**해야
-  합니다. 다른 API 는 렌더타깃을 그때그때 바인딩합니다.
+  합니다. 다른 API 는 렌더타깃을 그때그때 바인딩합니다. 캐시 자체(맵·뮤텍스·파괴 순서)는
+  `VulkanRHIRenderPassCache` 가 소유하고, 디바이스는 텍스처 레코드를 풀어 키와 서술만 만들어 넘깁니다.
 - `SwapChain` 이 GL 에만 없는 이유: OpenGL 에는 **스왑체인 객체가 없습니다.** 드라이버가 창의
   백버퍼를 숨기고 `SwapBuffers(HDC)` 한 줄이 present 의 전부입니다. 게다가 그 `HDC` 는 스레드에
   컨텍스트를 붙이는 `MakeCurrent` 에도 쓰이므로 스왑체인이 아니라 **컨텍스트**입니다 — 이름만

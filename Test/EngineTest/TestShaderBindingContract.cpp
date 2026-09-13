@@ -9,7 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Renderer/Scene/GpuScene.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"

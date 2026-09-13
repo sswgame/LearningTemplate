@@ -1185,9 +1185,17 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DebugChordsAndDefaultFallback )
     ActionMap map;
     map.bindDefaultFallback();
 
+    // 리로드 조합 키 셋은 **Dev 전용**이다 — `ActionMap::bindDefaultFallback` 이 같은 가드로 감싸고 있다.
+    // 배포본에는 리로드할 모듈이 없으므로 없는 것이 정답이고, 여기서도 그렇게 단언한다.
+#if !defined( SW_SHIPPING )
     SW_EXPECT_TRUE( map.hasAction( "ReloadEditor" ) );
     SW_EXPECT_TRUE( map.hasAction( "ReloadGame" ) );
     SW_EXPECT_TRUE( map.hasAction( "ReloadShaders" ) );
+#else
+    SW_EXPECT_FALSE( map.hasAction( "ReloadEditor" ) );
+    SW_EXPECT_FALSE( map.hasAction( "ReloadGame" ) );
+    SW_EXPECT_FALSE( map.hasAction( "ReloadShaders" ) );
+#endif
     SW_EXPECT_TRUE( map.hasAction( "Move" ) );
     SW_EXPECT_TRUE( map.hasAction( "Jump" ) );
     SW_EXPECT_TRUE( map.hasAction( "Interact" ) );

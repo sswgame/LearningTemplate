@@ -8,6 +8,7 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 
 namespace sw
@@ -161,9 +162,9 @@ namespace sw
         unique_ptr<EventDispatcher>       _eventDispatcher;
         unique_ptr<FrameRenderer>         _frameRenderer;
         unique_ptr<RenderThread>          _renderThread;
-        /** @brief GT 쪽 영속 GpuScene — buildFromScene의 콘텐츠 해시 캐싱이 프레임 간 유지되도록 여기 소유.
-         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot으로 뽑아 RenderFramePacket에 담아 RT로 넘긴다. */
-        GpuScene         _gtGpuScene;
+        /** @brief GT 쪽 씬 스냅샷 빌더 — buildFromScene 의 재구축 판단 캐시가 프레임 간 유지되도록 여기 소유.
+         *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다. */
+        GpuSceneBuilder  _gpuSceneBuilder;
         Delegate<void()> _onScenesReleased;
         /**
          * @brief 셰이더 라이브 리로드. **Shipping 에는 없고**(파일째 빌드에서 빠진다) Debug 에서만 실제로 만들어집니다.

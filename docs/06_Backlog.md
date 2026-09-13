@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `51fb29c0`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `a71bb835`
 
 ---
 
@@ -294,6 +294,73 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (Graphics 구조 — 스레드 경계·상태 뭉치·파일 이름을 타입으로 옮긴다)
+
+지난 두 점검(09-12 죽은 타입, 09-13 중복)이 "합칠 것" 을 찾았다면 이번엔 **"경계가 타입에 없는 것"** 을 찾았다.
+여섯 항목이고, 기능은 하나도 바뀌지 않았다 — 전부 같은 코드가 다른 자리에 산다.
+
+**1. GpuScene 이 한 클래스로 두 스레드를 섬기고 있었다 → 셋으로 갈랐다.**
+게임 스레드 인스턴스(`EngineLoop`)는 다섯 메서드만 썼고 렌더 스레드 인스턴스(`FrameRenderer`)는 스무 개를 썼는데,
+클래스는 양쪽 절반을 다 열어 두어서 **RT 가 `buildFromScene` 을 부르는 것을 컴파일러가 막지 못했다**(테스트 경로가 실제로 그랬다).
+
+| 새 파일 | 사는 곳 | 든 것 |
+| --- | --- | --- |
+| `GpuSceneBuilder.h/cpp` | 게임 스레드 | 씬 수집 · 배치 나누기 · 머티리얼 원소 영속 ID · 재구축 판단 캐시. **GPU 핸들이 하나도 없다** |
+| `GpuSceneSnapshot.h` | 둘 사이 | 옮겨지는 전부. 두 클래스가 서로를 모르고 이 타입만 안다 |
+| `GpuScene.h/cpp` | 렌더 스레드 | 인스턴스 버퍼 · 배치 표 · 간접 인자 · 머티리얼 버퍼 · 정점/모프 풀. **씬을 볼 수 없다** |
+
+`FrameRenderer::execute( pScene )`(에디터·테스트의 직접 경로)도 이제 자기 빌더로 스냅샷을 만들어 **패킷 경로와 같은 길**을 탄다 —
+테스트가 런타임과 다른 길을 타던 것이 없어졌다. Graphics 최대 파일이던 1140줄이 481(RT) + 690(GT) 으로 갈리고, 헤더는 668 → 259(RT) + 263(GT) + 219(스냅샷) 이 됐다.
+`CheckRenderOwnership.py` 가 보는 파일도 `GpuSceneSnapshot.h` 로 옮겼다.
+
+**2. FrameRenderer 는 TU 만 나뉘고 상태는 안 나뉘어 있었다 → 상태 뭉치 셋을 클래스로.**
+헤더 698줄 · 메서드 70 · 멤버 63 · 뮤텍스 넷이었고, 여섯 TU 가 같은 멤버 풀을 공유했다. 각자 자기 뮤텍스와 수명을 가진 셋을 뗐다:
+
+- `PassConstantRing` — 드로우마다 하나씩 나눠 주는 상수버퍼 슬롯 링(원자 커서 · 하이워터 · 고갈 경고 래치). 0번은 프레임 시드 전용이라는 규칙이 이제 한 클래스 안에 있다.
+- `RenderPsoCache` — 엔진 패스 PSO · Present 포맷별 PSO · 머티리얼 변형 · 바인딩 레이아웃/desc 표. **해제 순서(변형 → 패스 → Present → 레이아웃)가 주석이 아니라 `releaseAll` 한 함수**가 됐다. 만드는 일은 그대로 `FrameRendererPso.cpp` 가 한다.
+- `TransientAttachmentPool` — 이름으로 찾는 첨부 풀 + "이번 프레임에 이미 클리어했는가". 조회와 표시가 한 임계구역이라는 규칙이 타입 안으로 들어갔다.
+
+헤더 698 → 632줄 · 멤버 63 → 51 · 중첩 구조체 7 → 4 · **뮤텍스 3 → 0**(전부 떼어낸 셋이 들고 갔다).
+`_mapTransient`·`_listPassCbSlot`·`_mapEnginePso` 같은 이름은 FrameRenderer 에 더 이상 없다.
+
+**3. Vulkan 디바이스 헤더의 절반이 렌더패스 캐시였다 → `VulkanRHIRenderPassCache`.**
+멤버 92 · 중첩 구조체 19 로 DX12(28)의 세 배였는데, 그 중 키·해시·레코드·서술 일곱과 맵 셋·뮤텍스 하나가 렌더패스/프레임버퍼 캐시였다.
+09-13 에 만든 `VulkanRenderPassSpec` 을 그 클래스로 옮기고 조회·생성·파괴를 통째로 넘겼다. 파괴가 `shutdown` 두 자리에 나뉘어 있던 것이
+`destroyAll` 하나가 됐다. **스왑체인 렌더패스(CLEAR/LOAD)와 공용 오프스크린 RP 는 캐시가 아니라 디바이스 상태**라 그대로 뒀다 —
+그것들은 스왑체인·텍스처 레코드의 수명을 따른다. 디바이스는 텍스처 레코드를 풀어 키와 서술만 만들어 넘긴다.
+헤더 721 → 600줄 · 중첩 구조체 19 → 12 · 멤버 92 → 84.
+
+**4. Material/ 파일 이름이 내용과 달랐다 → 이름이 곧 주제가 되게.**
+`MaterialPacking.cpp`(810줄)는 실제로 `MaterialUtil` 구현체였고 타입 표·패킹 뒤에 XML 파싱·직렬화·define 조립이 붙어 있었다.
+`MaterialIO.cpp` 는 `Material::load/save` 였다. "XML 을 읽는 코드가 어디 있나" 에 파일 이름이 답하지 못했다:
+
+| 파일 | 담는 것 |
+| --- | --- |
+| `MaterialPacking.cpp` | 프로퍼티 타입 표 · 값 → CB 바이트 패킹 |
+| `MaterialXml.cpp` | XML 읽기/쓰기 전부 (`MaterialIO.cpp` 를 흡수 — 로드/세이브도 XML 이다) |
+| `MaterialPermutation.cpp` | define 조립 · 퍼뮤테이션 세대(`Material.cpp` 의 전역 원자도 여기로) |
+
+**5. 테스트 파일이 소스 구조를 안 따랐다.** `TestRenderPass.cpp` 4411줄에 스위트 넷이 섞여 있었다. 스위트 이름이 곧 CTest 필터라 갈라도
+동작이 바뀌지 않는다: `TestRenderPass.cpp`(678) · `TestRenderPassGpu.cpp`(2868) · `TestGpuScene.cpp`(779) · `TestMeshPrimitive.cpp`(187).
+`RenderPassTest.GpuScene*` 넷은 이름이 자리를 배신하고 있어서 `GpuSceneTest.*` 로 옮겼다(케이스 수는 그대로).
+`RHIShaderRequestTest` 도 `TestShader.cpp` → `TestRHI.cpp` 로 (RHI/Support 타입이다).
+
+**6. 자리 문제.** RT 소유 GPU 풀 둘(`GpuMeshVertexPool`·`GpuMeshMorphPool`)이 CPU 에셋 `Mesh` 옆에 있었다 → `Renderer/Scene/`.
+`Graphics/Debug/` 와 `Renderer/Debug/` 가 한 단계 차이로 둘 있었다 → `Renderer/Debug/` 하나로.
+
+**README 가 코드보다 늦어 있었다 (이 저장소는 README 가 읽기 순서라 틀린 표가 곧 함정이다).**
+`RHI/README.md` 는 DX11 에 `DeviceInit`/`Submission` 이 "없다" 고 표와 이유까지 적고 있었는데 09-12 에 둘 다 만들었다.
+폴더 트리에 `RHIRenderResource`·`RHIResidentBuffer`·`RHIStructuredBufferSlot`·`RHICommandListForwarder`·`RHIShaderRequest`·`RHIDxgiTearing` 이 없었고,
+`Graphics/README.md` 폴더 표에 `Texture/`·`Upload/` 가, `Renderer/README.md` 트리에 `Light/`·`Debug/` 가 없었다. 셋 다 채웠다.
+
+**고친 것 하나 — 이번 작업과 무관한 Shipping 게이트.** `GameFrameworkTest.EnhancedInput_DebugChordsAndDefaultFallback` 이
+Shipping 에서 떨어지고 있었다. `ActionMap::bindDefaultFallback` 이 리로드 조합 키 셋을 `#if !defined( SW_SHIPPING )` 으로 감싼 것은
+**2026-09-12 `237335a7`** 인데 테스트(2026-09-02)는 무조건 단언하고 있었다. 배포본에 없는 것이 정답이므로 테스트에 같은 가드를 넣었다.
+
+**확인**: Debug·Shipping 빌드 경고 0 · 린트 7/7(`CheckRenderOwnership` 포함) · ctest nogpu 5/5 ·
+`RenderPassGpuTest`+`RHITest`+`ShaderBindingContractTest`+`LiveShaderTest`+`ShaderCompilerTest` 54/54 ·
+에디터 ON 네 백엔드 종료 0 · `[Error]` 0 · 창 15개 · 빈 패널 0개(문서된 기준선 그대로).
 
 ### 2026-09-13 (배치 871개를 드로우 325번으로 — 정점 풀 · 배치 표 · 인스턴스 슬롯 스트림, 그리고 버린 설계 하나)
 

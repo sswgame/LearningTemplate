@@ -331,7 +331,7 @@ namespace sw
 
         if ( bUseComposite )
         {
-            VulkanRHIDevice::CompositeFbKey key{};
+            VulkanRHIRenderPassCache::CompositeKey key{};
             key._colorCount = ( colorCount > kMaxColorAttachments ) ? kMaxColorAttachments : colorCount;
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
@@ -364,7 +364,7 @@ namespace sw
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
             }
 
-            VulkanRHIDevice::CompositeFbRecord composite{};
+            VulkanRHIRenderPassCache::CompositeRecord composite{};
             if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
                 return;
 

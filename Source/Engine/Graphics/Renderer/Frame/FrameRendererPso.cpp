@@ -17,19 +17,6 @@ namespace sw
     namespace
     {
         /**
-         * @brief (패스 PSO, 퍼뮤테이션, 뷰 모드) 캐시 키.
-         * @details 뷰 모드가 키의 한 축이다 — 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
-         *          모드를 되돌리면 이미 만들어 둔 것이 다시 나온다(다시 컴파일하지 않는다).
-         */
-        uint64 materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode )
-        {
-            uint64 key = static_cast<uint64>( passPso ) * 0x9e3779b97f4a7c15ull;
-            key ^= permutationHash + 0x9e3779b97f4a7c15ull + ( key << 6 ) + ( key >> 2 );
-            key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
-            return key;
-        }
-
-        /**
          * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true.
          * @details Lit 는 아무것도 하지 않는다 — 그것이 패스가 이미 만들어 둔 상태다.
          */
@@ -205,23 +192,18 @@ namespace sw
         return handle;
     }
 
-    FrameRenderer::MaterialPsoEntry FrameRenderer::createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                                             const GpuShaderPermutation* pPermutation,
-                                                                             RenderViewMode              viewMode )
+    RenderPsoCache::MaterialPsoEntry FrameRenderer::createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
+                                                                              const GpuShaderPermutation* pPermutation,
+                                                                              RenderViewMode              viewMode )
     {
-        MaterialPsoEntry entry{ passPso, 0 };
+        RenderPsoCache::MaterialPsoEntry entry{ passPso, 0 };
         if ( passPso == 0 || _pDevice == nullptr )
             return entry;
 
+        // 패스가 정한 렌더 상태를 통째로 물려받는다 — 블렌드·뎁스·RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
         RHIPipelineStateDesc desc{};
-        {
-            // 패스가 정한 렌더 상태를 통째로 물려받는다 — 블렌드·뎁스·RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
-            std::scoped_lock<mutex> lock{ _psoLayoutMutex };
-            const auto              it = _mapPsoDesc.find( passPso );
-            if ( it == _mapPsoDesc.end() )
-                return entry; // desc 를 모르는 PSO — 변형을 만들 근거가 없다.
-            desc = it->second;
-        }
+        if ( _psoCache.findDesc( passPso, desc ) == false )
+            return entry; // desc 를 모르는 PSO — 변형을 만들 근거가 없다.
 
         bool bChanged{ false };
         if ( pPermutation != nullptr )
@@ -289,7 +271,7 @@ namespace sw
         {
             for ( const GpuMeshBatch& batch : listBatch )
             {
-                if ( batch._shaderPermutation == GpuScene::kInvalidShaderPermutation )
+                if ( batch._shaderPermutation == kInvalidShaderPermutation )
                 {
                     outHasPlain = true;
                     continue;
@@ -324,21 +306,15 @@ namespace sw
         auto ensureVariant = [this, viewMode, &bCreatedVariant]( RHIPipelineStateHandle passPso, RenderPassType passType,
                                                                  const GpuShaderPermutation* pPermutation, uint64 permutationHash )
         {
-            const uint64 key = materialPsoKey( passPso, permutationHash, viewMode );
-            {
-                std::scoped_lock<mutex> lock{ _materialPsoMutex };
-                if ( _mapMaterialPso.find( key ) != _mapMaterialPso.end() )
-                    return;
-            }
-            const MaterialPsoEntry entry = createMaterialPsoVariant( passPso, passType, pPermutation, viewMode );
-            {
-                std::scoped_lock<mutex> lock{ _materialPsoMutex };
-                _mapMaterialPso.insert_or_assign( key, entry );
-            }
+            const uint64 key = RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode );
+            if ( _psoCache.hasMaterialPso( key ) )
+                return;
+            const RenderPsoCache::MaterialPsoEntry entry = createMaterialPsoVariant( passPso, passType, pPermutation, viewMode );
+            _psoCache.setMaterialPso( key, entry );
             bCreatedVariant = true;
         };
 
-        for ( const auto& [passType, passPso] : _mapEnginePso )
+        for ( const auto& [passType, passPso] : _psoCache.getEnginePsos() )
         {
             if ( passPso == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
@@ -371,12 +347,7 @@ namespace sw
 
     bool FrameRenderer::findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
-        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
-        const auto              it = _mapPsoDesc.find( pso );
-        if ( it == _mapPsoDesc.end() )
-            return false;
-        outDesc = it->second;
-        return true;
+        return _psoCache.findDesc( pso, outDesc );
     }
 
     RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const
@@ -387,7 +358,7 @@ namespace sw
         const RenderViewMode viewMode = getViewMode();
 
         uint64 permutationHash{ 0 };
-        if ( batch._shaderPermutation != GpuScene::kInvalidShaderPermutation )
+        if ( batch._shaderPermutation != kInvalidShaderPermutation )
         {
             const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
             if ( pPermutation != nullptr )
@@ -400,10 +371,9 @@ namespace sw
         if ( permutationHash == 0 && viewMode == RenderViewMode::Lit )
             return passPso;
 
-        std::scoped_lock<mutex> lock{ _materialPsoMutex };
-        const auto              it = _mapMaterialPso.find( materialPsoKey( passPso, permutationHash, viewMode ) );
         // 못 찾으면 패스 PSO 로 그린다 — ensureMaterialPsos 가 기록 전에 채우므로 정상 경로에선 늘 있다.
-        return ( it != _mapMaterialPso.end() && it->second._pso != 0 ) ? it->second._pso : passPso;
+        const RHIPipelineStateHandle variant = _psoCache.findMaterialPso( RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode ) );
+        return ( variant != 0 ) ? variant : passPso;
     }
 
     void FrameRenderer::setViewMode( RenderViewMode viewMode )

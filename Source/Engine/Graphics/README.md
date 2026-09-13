@@ -23,11 +23,12 @@ DX11 · DX12 · OpenGL · Vulkan
 | 폴더 | 역할 |
 |------|------|
 | **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈 |
-| **Material/** | XML 머티리얼, 인스턴스, 패킹, 캐시 |
+| **Material/** | 머티리얼 정의·인스턴스·캐시. 파일이 곧 주제다 — `MaterialXml`(XML 읽기/쓰기) · `MaterialPacking`(타입 표·CB 패킹) · `MaterialPermutation`(define 조립·세대) |
 | **Shader/** | `Compile/` 컴파일·캐시·베이크·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약 |
-| **Mesh/** | 메시 버퍼 |
-| **Renderer/** | `Frame/` FrameRenderer · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스 · `Scene/` GpuScene · RenderThread |
-| **Debug/** | DebugDrawQueue (라인/스피어 큐 → Editor GameView ImGui 소비) |
+| **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`). GPU 풀은 여기 없다 — Renderer/Scene/ |
+| **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
+| **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
+| **Renderer/** | `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · RenderThread |
 
 ---
 
@@ -51,7 +52,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | RenderGraph | 패스·리소스 의존성 그래프로 프레임 순서 결정 |
 | FrameRenderer | 한 프레임: 패킷 → 그래프 → CL 기록/실행 |
 | RenderThread | 렌더 스레드 루프 (offscreen/present 등) |
-| GpuScene | 씬 → GPU 업로드용 데이터 |
+| GpuSceneBuilder / GpuSceneSnapshot / GpuScene | 씬을 훑어 스냅샷을 만드는 쪽(GT) / 두 스레드가 공유하는 **유일한** 타입 / 스냅샷을 GPU 에 올리는 쪽(RT) |
 | Frame packet | 프레임에 넘기는 CPU 측 렌더 입력 묶음 |
 | Bindless / Descriptor | 리소스 인덱스로 셰이더 접근; 디스크립터 테이블/힙 |
 | DebugDrawQueue | 디버그 라인/스피어 **큐** (즉시 GPU 드로우 아님) |
@@ -65,18 +66,24 @@ DX11 · DX12 · OpenGL · Vulkan
 | `IRHICommandContext` (+ `*RHICommandContext`) | RHI/ | draw/dispatch/barrier/blit 실행면 |
 | `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 명령 기록 — 모든 백엔드가 소프트웨어 replay 없이 즉시 `*RHICommandContext`를 호출 |
 | `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 추상 |
-| `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
+| `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/Support/ | 핸들·프레임링·지연 해제 |
+| `RHIRenderResource` · `RHIResidentBuffer` · `RHIStructuredBufferSlot` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 · 구조버퍼 슬롯 한 벌 |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
 | `ShaderCompiler` · `ShaderCache` · `ShaderBaker` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 오프라인 베이크, 수동 리로드 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
-| `Mesh` | Mesh/ | 메시 버퍼 |
+| `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
+| `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
+| `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
+| `PassConstantRing` · `RenderPsoCache` · `TransientAttachmentPool` | Renderer/Frame/ | FrameRenderer 가 소유하는 셋 — 드로우별 상수버퍼 슬롯 링 · PSO 저장소(해제 순서) · 이름으로 찾는 첨부 풀 |
 | `RenderGraph` | Renderer/Graph/ | 패스 의존성 정렬·배리어 추론 |
-| `RenderThread` · `GpuScene` | Renderer/ · Renderer/Scene/ | 렌더 스레드 루프 · 씬 GPU 스냅샷 |
+| `RenderThread` | Renderer/ | 렌더 스레드 루프 |
+| `GpuSceneBuilder` → `GpuSceneSnapshot` → `GpuScene` | Renderer/Scene/ | GT 가 씬을 훑어 스냅샷을 만들고 RT 가 받아 GPU 버퍼로 올린다 — 두 클래스는 스냅샷 타입으로만 만난다 |
+| `GpuMeshVertexPool` · `GpuMeshMorphPool` | Renderer/Scene/ | RT 소유 GPU 풀 — 씬 정점을 한 버퍼에(멀티 드로우) · 모프 결과 |
 | `RenderPassManager` · `RenderPassResource` · `RenderPipelineResource` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
 | `RenderFramePacket` | Renderer/Frame/ | 프레임 입력 패킷 |
-| `DebugDrawQueue` | Debug/ | 디버그 드로우 큐 |
+| `DebugDrawQueue` · `RenderTargetRegistry` | Renderer/Debug/ | 에디터가 읽는 디버그 통로 — 라인/스피어 큐 · 프레임 렌더타깃 목록 |
 
 ---
 
@@ -116,7 +123,8 @@ DX11 · DX12 · OpenGL · Vulkan
 | GPU API 호출 | `RHI/IRHI*.h` → 활성 백엔드 `RHI/<Backend>/` |
 | 셰이더 컴파일 | `Shader/Compile/ShaderCompiler.*` · `Shader/Reflection/ShaderReflection.*` |
 
-`FrameRenderer` 는 **한 클래스·여러 .cpp** 로 이미 나뉘어 있습니다. 클래스를 더 쪼개기보다 파일 역할만 익히면 됩니다.
+`FrameRenderer` 는 **한 클래스·여러 .cpp** 이고, 자기 뮤텍스와 수명을 따로 가진 상태 셋은 클래스로 떼어 소유합니다
+(`PassConstantRing` · `RenderPsoCache` · `TransientAttachmentPool`). 파일 역할부터 익히고, 상태가 어디 사는지는 그 셋을 보면 됩니다.
 
 ---
 
@@ -247,7 +255,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `updateRhi` 를 RT 가 부른다 |
 | `Texture2D` | `TextureCache` 의 `unique_ptr` + 참조 수 | 보지 않는다 — 머티리얼이 **SRV 인덱스(값)** 로 실어 준다 |
 | GPU 핸들(버퍼·텍스처) | `IRHIResource` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
-| `GpuSceneSnapshot` | GT 가 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
+| `GpuSceneSnapshot` | GT `GpuSceneBuilder::exportCpuSnapshot` 이 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
 | GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
 
 규칙 일곱:
@@ -256,6 +264,8 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
    생포인터는 키(`GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
 2. **한쪽만 만드는 값은 그쪽 타입에만 있다.** 옮겨지는 것은 `GpuSceneSnapshot` 하나로 묶고, `export`/`adopt` 는 그
    타입을 통째로 옮긴다. 필드를 손으로 골라 복사하는 함수를 다시 만들지 말 것 — 그것이 첫 번째 버그였다.
+   만드는 쪽(`GpuSceneBuilder`)과 받는 쪽(`GpuScene`)은 **다른 클래스**다(2026-09-13) — RT 가 씬을 읽거나 GT 가 GPU 핸들을
+   만지는 코드는 컴파일되지 않는다. 씬 직접 경로(`FrameRenderer::execute( pScene )`)도 자기 빌더로 같은 길을 탄다.
 3. **모듈 경계를 넘어 소유될 수 있는 객체는 Engine 의 `create()` 로만 태어난다 — 컴파일러가 지킨다.**
    `shared_ptr` 의 제어 블록은 `make_shared` 를 부른 DLL 에 산다. 그래서 Material · MaterialInstance · Mesh 의
    생성자는 `create()` 만 만들 수 있는 열쇠(`CreateKey`)를 요구한다: 모듈에서 `make_shared` 해도, 스택에 값으로
@@ -500,7 +510,7 @@ cmake --build --preset Ninja-Debug
 build/Ninja-Debug/Bin/App.exe --bake-shaders                                   # 구운 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingContractTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHITest.*                     # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RenderPassTest.*,RenderPassGpuTest.*   # FrameRendererParityAllBackends 가 SceneColor 픽셀을 비교
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*   # 스냅샷 규칙 · 그래프 · 픽셀 패리티(FrameRendererParityAllBackends)
 py -3 Scripts/dev/BackendSmoke.py                                                # 실제 앱 경로: 네 백엔드 PPM 평균·큐브 픽셀 수
 ```
 

@@ -88,8 +88,7 @@ namespace sw
         , _listUavFree{}
         , _gpuTextures{}
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
-        , _mapCompositeFramebuffer{}
-        , _mapPipelineRenderPass{}
+        , _renderPassCache{}
         , _listTextureUsed{}
         , _listTextureFree{}
         , _slotSetLayout{ nullptr }
@@ -103,7 +102,6 @@ namespace sw
         , _dummyUBO{ nullptr }
         , _dummyUBOMemory{ nullptr }
         , _pipelineStates{}
-        , _listRenderPass{}
         , _pipelineCache{ nullptr }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -303,20 +301,8 @@ namespace sw
             _gpuTextures.clear();
             _listBindlessSourceBuffer.clear();
             _listUavSourceBuffer.clear();
-            for ( auto& pair : _mapCompositeFramebuffer )
-            {
-                if ( pair.second._framebuffer != VK_NULL_HANDLE )
-                    vkDestroyFramebuffer( _device, pair.second._framebuffer, nullptr );
-                if ( pair.second._renderPass != VK_NULL_HANDLE )
-                    vkDestroyRenderPass( _device, pair.second._renderPass, nullptr );
-            }
-            _mapCompositeFramebuffer.clear();
-            for ( auto& pair : _mapPipelineRenderPass )
-            {
-                if ( pair.second != VK_NULL_HANDLE )
-                    vkDestroyRenderPass( _device, pair.second, nullptr );
-            }
-            _mapPipelineRenderPass.clear();
+            // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
+            _renderPassCache.destroyAll( _device, _renderPass );
             _listTextureUsed.clear();
             _listTextureFree.clear();
 
@@ -410,14 +396,6 @@ namespace sw
             _swapChain.destroy( _device );
             _swapChain.destroySemaphores( _device );
             destroyFrameFences();
-
-            for ( VulkanRenderPassRecord& rpRecord : _listRenderPass )
-            {
-                if ( rpRecord._bOwned != 0 && rpRecord._renderPass != VK_NULL_HANDLE &&
-                     rpRecord._renderPass != _renderPass )
-                    vkDestroyRenderPass( _device, rpRecord._renderPass, nullptr );
-            }
-            _listRenderPass.clear();
 
             if ( _renderPassLoad )
                 vkDestroyRenderPass( _device, _renderPassLoad, nullptr );

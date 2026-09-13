@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -384,131 +385,14 @@ namespace sw
             RHIDescriptorIndex _bindlessIndex{ kInvalidDescriptorIndex };
         };
 
-        /// @brief MRT 프레임버퍼 캐시 키 (컬러+깊이 핸들)
-        struct CompositeFbKey
-        {
-            RHITextureHandle _arrColor[kMaxColorAttachments]{};
-            uint32           _colorCount{ 0 };
-            RHITextureHandle _depth{ 0 };
-            uint8            _arrColorLoadOp[kMaxColorAttachments]{};
-            uint8            _depthLoadOp{ 0 };
-            /** @brief 같으면 true를 반환합니다. */
-            bool operator==( const CompositeFbKey& other ) const
-            {
-                if ( _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp )
-                    return false;
-                for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
-                {
-                    if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorLoadOp[colorIndex] != other._arrColorLoadOp[colorIndex] )
-                        return false;
-                }
-                return true;
-            }
-        };
-
-        /// @brief CompositeFbKey 해시
-        struct CompositeFbKeyHash
-        {
-            /** @brief 호출 연산자입니다. */
-            size_t operator()( const CompositeFbKey& key ) const
-            {
-                size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
-                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
-                hash ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
-                for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
-                {
-                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-                    hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
-                }
-                return hash;
-            }
-        };
-
-        /// @brief 캐시된 합성 프레임버퍼
-        struct CompositeFbRecord
-        {
-            VkRenderPass  _renderPass{ nullptr };
-            VkFramebuffer _framebuffer{ nullptr };
-            uint32        _width{ 0 };
-            uint32        _height{ 0 };
-        };
-
-        /// @brief PSO에 묶인 렌더 패스 포맷 키
-        struct PipelineRpKey
-        {
-            uint32 _colorCount{ 1 };
-            uint32 _arrColorFormat[kMaxColorAttachments]{}; ///< VkFormat
-            uint32 _depthFormat{ 0 };                       ///< VkFormat; 0 = no depth
-            /** @brief 같으면 true를 반환합니다. */
-            bool operator==( const PipelineRpKey& other ) const
-            {
-                if ( _colorCount != other._colorCount || _depthFormat != other._depthFormat )
-                    return false;
-                for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
-                {
-                    if ( _arrColorFormat[colorIndex] != other._arrColorFormat[colorIndex] )
-                        return false;
-                }
-                return true;
-            }
-        };
-
-        /// @brief PipelineRpKey 해시
-        struct PipelineRpKeyHash
-        {
-            /** @brief 호출 연산자입니다. */
-            size_t operator()( const PipelineRpKey& key ) const
-            {
-                size_t hash = static_cast<size_t>( key._depthFormat ) * 1315423911u;
-                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
-                for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
-                {
-                    hash ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-                }
-                return hash;
-            }
-        };
-
         /// @brief VkPipeline + 레이아웃
         struct VulkanPipelineStateRecord
         {
             VkPipeline _pipeline{ nullptr };
         };
 
-        /// @brief VkRenderPass + 소유권 (desc로 만든 RP만 destroy)
-        struct VulkanRenderPassRecord
-        {
-            VkRenderPass _renderPass{ nullptr };
-            uint8        _bOwned{ 0 }; ///< 1 = createRenderPass(desc)가 소유, 0 = swapchain RP alias
-        };
-
-        /**
-         * @brief VkRenderPass 하나의 서술 — 렌더패스를 만드는 여섯 자리가 전부 이것을 채워 `createRenderPassFromSpec` 에 넘긴다.
-         * @details 예전엔 스왑체인(CLEAR/LOAD) · 공용 오프스크린 · 포맷별 오프스크린 · PSO 호환용 · 합성 프레임버퍼 ·
-         *          desc 기반 생성이 각자 `VkAttachmentDescription` 과 서브패스 의존성을 손으로 적었다(같은 40줄이 6벌).
-         *          의존성 마스크가 자리마다 조금씩 달랐고 한 곳을 고치면 나머지를 빠뜨렸다. 단일 서브패스 · 샘플 1 ·
-         *          스텐실 DONT_CARE 는 여기서 고정이고, 자리마다 다른 것(포맷 · loadOp · storeOp · 레이아웃)만 필드다.
-         */
-        struct VulkanRenderPassSpec
-        {
-            uint32 _colorCount{ 0 };
-            uint32 _arrColorFormat[kMaxColorAttachments]{};        ///< VkFormat
-            uint32 _arrColorLoadOp[kMaxColorAttachments]{};        ///< VkAttachmentLoadOp
-            uint32 _arrColorStoreOp[kMaxColorAttachments]{};       ///< VkAttachmentStoreOp
-            uint32 _arrColorInitialLayout[kMaxColorAttachments]{}; ///< VkImageLayout
-            uint32 _arrColorFinalLayout[kMaxColorAttachments]{};   ///< VkImageLayout
-            uint32 _depthFormat{ 0 };                              ///< VkFormat; 0 = 깊이 없음
-            uint32 _depthLoadOp{ 0 };                              ///< VkAttachmentLoadOp
-            uint32 _depthInitialLayout{ 0 };                       ///< VkImageLayout
-            uint32 _depthFinalLayout{ 0 };                         ///< VkImageLayout
-
-            /** @brief 컬러 첨부 하나를 덧붙입니다 (storeOp 은 STORE — 다르게 쓰려면 `_arrColorStoreOp` 을 뒤에 고친다). */
-            void addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout );
-            /** @brief 깊이 첨부를 둡니다. */
-            void setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout );
-        };
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE. */
-        VkRenderPass createRenderPassFromSpec( const VulkanRenderPassSpec& spec ) const;
+        VkRenderPass createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const;
 
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열 + immutable sampler)를 확보합니다. */
         bool ensureTextureSet();
@@ -568,7 +452,7 @@ namespace sw
         /** @brief 파이프라인용 VkRenderPass를 확보합니다. */
         VkRenderPass ensurePipelineRenderPass( const RHIPipelineStateDesc& desc );
         /** @brief 합성 프레임버퍼를 확보합니다. */
-        bool ensureCompositeFramebuffer( const CompositeFbKey& key, CompositeFbRecord& outRecord );
+        bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
         /** @brief 해당 뷰를 쓰는 합성 프레임버퍼를 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /** @brief usageFlags로 VkBuffer를 만들고 초기 데이터를 올립니다. */
@@ -590,9 +474,6 @@ namespace sw
         VkRenderPass  _offscreenRenderPass; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
         VkCommandPool _commandPool;
 
-        /// @brief 컴포지트 프레임버퍼 캐시 보호용. RenderGraph::executeParallel 이 여러 스레드에서
-        ///        동시에 beginRenderPass 를 부르면 이 맵에 동시 삽입이 일어난다.
-        mutable mutex _compositeFbMutex;
         /// @brief 텍스처 레이아웃 확인+전이 보호용 — transitionTextureLayout 참고.
         mutable mutex _imageLayoutMutex;
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀. 펜스를 통과한 것만 들어 있다.
@@ -691,9 +572,8 @@ namespace sw
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;
-
-        unordered_map<CompositeFbKey, CompositeFbRecord, CompositeFbKeyHash> _mapCompositeFramebuffer;
-        unordered_map<PipelineRpKey, VkRenderPass, PipelineRpKeyHash>        _mapPipelineRenderPass;
+        /// @brief PSO 호환 렌더패스 · 합성 프레임버퍼 · desc 렌더패스 캐시 — Vulkan 만 갖는다 (스왑체인 RP 는 위 `_renderPass`).
+        VulkanRHIRenderPassCache _renderPassCache;
 
         vector<uint8>  _listTextureUsed; ///< 텍스처 인덱스 공간 (1 = 사용 중) — 프리리스트의 짝
         vector<uint32> _listTextureFree;
@@ -712,7 +592,6 @@ namespace sw
         VkDeviceMemory                              _dummyUBOMemory;
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
-        vector<VulkanRenderPassRecord>            _listRenderPass;
         VkPipelineCache                           _pipelineCache;
 
         sw::unique_ptr<VulkanRHICommandContext> _frameStreamContext;

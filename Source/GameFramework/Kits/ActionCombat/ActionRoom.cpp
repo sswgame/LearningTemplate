@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 
 #include "GameFramework/Base/GameService.h"
 

@@ -11,18 +11,21 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/Mesh/GpuMeshMorphPool.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/Frame/PassConstantRing.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
+#include "Engine/Graphics/Renderer/Frame/RenderPsoCache.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
+#include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 
 namespace sw
 {
@@ -82,7 +85,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML에서 그래프를 다시 만듭니다 (동기 로드). 패스 콜백은 한 번 바인딩합니다. */
         bool loadPipeline( string_view pipelineXmlPath );
-        /** @brief 컴파일된 그래프를 실행합니다. scene이 있으면 GpuScene을 구축합니다. */
+        /** @brief 컴파일된 그래프를 실행합니다. scene이 있으면 자기 빌더로 스냅샷을 만들어 패킷 경로와 같은 길로 올립니다. */
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
         /** @brief 렌더 스레드 경로: 미리 만든 packet.GpuScene을 씁니다 (Scene 미접근). */
         bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
@@ -178,18 +181,6 @@ namespace sw
         bool findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
 
     private:
-        /**
-         * @brief 일시(트랜지언트) 첨부 하나 — 텍스처와 그 bindless SRV.
-         * @details 예전엔 이름이 같은 두 맵(`_mapTransient` / `_mapTransientSrv`)에 나뉘어 있었다.
-         *          이름 하나로 둘 다 필요한 자리가 패스마다 여러 번 도는데 그때마다 같은 문자열을
-         *          두 번 해시했고, 한쪽에만 넣고 다른 쪽을 빠뜨리면 조용히 어긋났다.
-         */
-        struct TransientAttachment
-        {
-            RHITextureHandle   _texture{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-        };
-
         /**
          * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
          * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 예전에는 이 값들이 전부
@@ -428,7 +419,7 @@ namespace sw
          * @details 이름 하나로 둘 다 필요한 자리(registerPassTexture)가 패스마다 여러 번 돈다 —
          *          맵이 둘이던 시절엔 같은 문자열을 두 번 해시했다.
          */
-        TransientAttachment findTransientAttachment( string_view name ) const;
+        TransientAttachmentPool::Attachment findTransientAttachment( string_view name ) const;
         /** @brief 일시 텍스처 핸들을 찾습니다. 없으면 0. */
         RHITextureHandle findTransient( string_view name ) const;
         /** @brief Present 소스 어태치먼트 이름을 결정합니다. */
@@ -446,17 +437,6 @@ namespace sw
                                                      const RHIFormat* pRtvFormats = nullptr, bool bDefaultBlend = false,
                                                      bool                  bDefaultDepthWrite = true,
                                                      const vector<string>* pExtraDefines      = nullptr );
-        /**
-         * @struct MaterialPsoEntry
-         * @brief (패스, 머티리얼 퍼뮤테이션) 하나에 대응하는 PSO.
-         * @details `_bOwned` 가 0 이면 값은 패스 PSO 그대로다 — 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
-         *          새로 만들지 않는다. 그래서 파괴할 때 **이 PSO 는 건드리면 안 된다**(패스가 소유한다).
-         */
-        struct MaterialPsoEntry
-        {
-            RHIPipelineStateHandle _pso{ 0 };
-            uint8                  _bOwned{ 0 };
-        };
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 다 만들어 둡니다.
@@ -469,23 +449,13 @@ namespace sw
          * @details 렌더 상태(블렌드·뎁스·RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 갈아 끼운다 —
          *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 게 아니다.
          */
-        MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode );
+        RenderPsoCache::MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
+                                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode );
         /**
-         * @brief 상수버퍼 슬롯을 하나 빌립니다 — **드로우마다** 하나씩. 없으면 false.
-         * @details 슬롯을 드로우 단위로 나누는 이유: `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰는데
-         *          GPU 는 제출 뒤에 읽는다. 그래서 여러 드로우가 같은 버퍼를 쓰면 전부 마지막에 쓴 값을 본다.
-         *          배치마다 `g_InstanceBase`·`g_SwMaterialCount` 가 다르므로, 한 패스에 드로우가 둘 이상이면
-         *          앞 배치가 뒤 배치의 인스턴스를 읽어 엉뚱한 자리에 그려진다(RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants).
-         *          언리얼도 드로우별 느슨한 파라미터는 드로우마다 유니폼 버퍼를 따로 잡는다.
+         * @brief 이번 프레임 배치 수에 맞춰 상수버퍼 슬롯을 **기록 시작 전에** 늘려 둡니다 (드로우마다 하나씩 나가므로).
+         * @details 기록 중에는 버퍼 생성·bindless 등록을 할 수 없다. 지난 프레임의 최대 사용량(하이워터)도 바닥값으로 본다.
          */
-        bool acquireCbSlot( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );
-        /**
-         * @brief 상수버퍼 슬롯 수를 `needed` 이상으로 늘립니다 — **기록 시작 전에만** 부릅니다.
-         * @details 버퍼 생성과 bindless 등록은 레지스트리를 바꾸므로 병렬 기록 중에는 할 수 없다
-         *          (IRHIDevice::setParallelRecording). 그래서 배치 수를 아는 프레임 시작 지점에서 미리 키운다.
-         */
-        void ensurePassCbCapacity( uint32 needed );
+        void ensurePassCbCapacityForFrame();
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다 (셋업 전용).
          * @details 기록 중에는 만들 수 없다 — 버퍼 생성과 `registerBindlessResource` 는 bindless 레지스트리를 바꾸고,
@@ -506,47 +476,30 @@ namespace sw
         void buildPresentPsoVariants();
 
     private:
-        /** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
-
-    private:
-        IRHIDevice*                                _pDevice;
-        IRHIDevice*                                _pCmdOwnerDevice;
-        unique_ptr<IRHICommandList>                _frameCmd;
-        IRHICommandList*                           _pCmd;
-        Scene*                                     _pScene;
-        TaskManager*                               _pTaskManager;
-        GpuScene                                   _gpuScene;
-        RenderPipelineResource                     _pipelineResource;
-        RenderGraph                                _graph;
-        string                                     _pipelinePath;
-        float4                                     _clearColor;
-        unordered_map<string, TransientAttachment> _mapTransient;
-        /// @brief 이번 프레임에 이미 클리어한 첨부들. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호한다.
-        vector<hashed_string> _listClearedThisFrame;
-        mutable mutex         _clearedMutex;
+        IRHIDevice*                 _pDevice;
+        IRHIDevice*                 _pCmdOwnerDevice;
+        unique_ptr<IRHICommandList> _frameCmd;
+        IRHICommandList*            _pCmd;
+        Scene*                      _pScene;
+        TaskManager*                _pTaskManager;
+        GpuScene                    _gpuScene;
+        /// @brief 씬 직접 경로(`execute( pScene )`, 에디터·테스트)가 쓰는 빌더 — 패킷 경로에서는 EngineLoop 의 것이 대신한다.
+        GpuSceneBuilder        _sceneBuilder;
+        RenderPipelineResource _pipelineResource;
+        RenderGraph            _graph;
+        string                 _pipelinePath;
+        float4                 _clearColor;
+        /// @brief 파이프라인이 선언한 첨부들 — 창 크기로 만들고 구성이 바뀔 때만 다시 만든다.
+        TransientAttachmentPool _transientPool;
         /**
          * @brief 프레임 단위 패스 상태(직렬 경로에서 사용 + 병렬 패스의 시드).
          * @details 병렬 기록에서는 패스마다 이걸 복사해 각자의 커맨드 리스트/상수 버퍼를 붙입니다.
          */
         FramePassContext _frameCtx;
-        /// @brief 상수버퍼 슬롯 최소 개수. 드로우마다 하나씩 나눠 주므로 배치 수에 따라 아래에서 더 키운다.
-        static constexpr uint32 _s_kPassCbSlotCount = 64;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지 어림값 (그림자·프리패스·불투명·반투명).
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
-        /// @brief 슬롯 상한. 넘으면 에러를 남기고 마지막 슬롯을 공유한다(그 프레임은 배치 상수가 섞인다).
-        static constexpr uint32 _s_kMaxPassCbSlotCount = 4096;
-        /** @brief 패스별 상수 버퍼 슬롯. 병렬 기록에서 패스마다 하나씩 집어간다. */
-        struct PassCbSlot
-        {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
-        };
-        vector<PassCbSlot> _listPassCbSlot;
-        /// @brief 지금까지 한 프레임에서 쓴 슬롯 수의 최댓값 — 다음 프레임 용량 산정의 바닥값(단조 증가).
-        atomic<uint32> _passCbHighWater;
-        atomic<uint32> _passCbCursor;
-        /// @brief PassCB 슬롯 고갈 경고를 프레임당 한 번만 남기기 위한 래치.
-        atomic<uint8> _bPassCbExhaustedLogged;
+        /// @brief 패스·드로우별 상수버퍼 슬롯 링 — 병렬 기록에서 드로우마다 하나씩 집어간다.
+        PassConstantRing _passCbRing;
         /**
          * @brief 이번 프레임의 뷰들 — 행렬·절두체·상수버퍼를 각자 소유합니다.
          * @details 예전엔 이 셋이 `_cullMainViewProj` / `_cullShadowViewProj` / `_arrGpuCullCb` 로
@@ -646,23 +599,8 @@ namespace sw
          *          키는 stride 다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
          */
         unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
-        /** @brief (셰이더 경로+define+백엔드) → ShaderBindingLayout 캐시. 리플렉션 구동 바인딩의 핵심. */
-        ShaderBindingLayoutCache                                          _bindingLayoutCache;
-        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;
-        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPsoDesc;
-        mutable mutex                                                     _psoLayoutMutex;
-        /** @brief 엔진(PassCB) 상수 버퍼 슬롯 크기. 리플렉션이 실제 쓰는 만큼만 채우므로 여유있게 잡는다. */
-        static constexpr uint32 _s_kEnginePassCbSize = 512;
-        /// @brief 엔진이 만들어 둔 패스별 PSO. 예전엔 string 키라 조회마다 string 을 만들었다.
-        unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
-
-        /**
-         * @brief (패스 PSO, 퍼뮤테이션 해시) → PSO. 언리얼의 머티리얼별 PSO 캐시가 있는 자리.
-         * @details **기록 전에** 채운다(`ensureMaterialPsos`). PSO 생성은 기록 중에 할 수 없고, 패스들은
-         *          병렬로 기록되므로 드로우 시점에는 읽기만 한다.
-         */
-        unordered_map<uint64, MaterialPsoEntry> _mapMaterialPso;
-        mutable mutex                           _materialPsoMutex;
+        /// @brief 엔진 패스 PSO · Present PSO · 머티리얼 변형과 그 바인딩 레이아웃 — 소유와 해제 순서는 캐시가 안다.
+        RenderPsoCache _psoCache;
         /**
          * @brief 현재 보기 방식 (`RenderViewMode`).
          * @details 드로우 경로가 배치마다 읽고 UI 스레드가 쓴다. 값 하나뿐이라 atomic 으로 충분하다 —
@@ -670,15 +608,11 @@ namespace sw
          *          `ensureMaterialPsos` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있다.
          */
         atomic<uint8> _viewMode;
-        /// @brief Present PSO 를 대상 렌더타깃 포맷별로 — 백버퍼와 GameView RT 는 포맷이 다를 수 있다 (ensurePresentPso).
-        unordered_map<RHIFormat, RHIPipelineStateHandle> _mapPresentPso;
         /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치.
         atomic<uint8> _bPresentPsoMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치 (드로우 경로라 프레임마다 찍으면 안 된다).
         atomic<uint8>                        _bMaterialFallbackMissingLogged;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
-        uint32                               _transientWidth;
-        uint32                               _transientHeight;
         RHITextureHandle                     _outputRenderTarget;
         RHITextureHandle                     _taaHistory;    ///< TAA resolve history (ping copy of last TaaColor)
         RHIDescriptorIndex                   _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)

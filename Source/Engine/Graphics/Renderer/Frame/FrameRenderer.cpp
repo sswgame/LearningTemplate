@@ -75,16 +75,14 @@ namespace sw
         , _pScene{ nullptr }
         , _pTaskManager{ nullptr }
         , _gpuScene{}
+        , _sceneBuilder{}
         , _pipelineResource{}
         , _graph{}
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-        , _mapTransient{}
-        , _listClearedThisFrame{}
+        , _transientPool{}
         , _frameCtx{}
-        , _passCbHighWater{ 0 }
-        , _passCbCursor{ 0 }
-        , _bPassCbExhaustedLogged{ 0 }
+        , _passCbRing{}
         , _arrView{}
         , _instanceAnimCb{ 0 }
         , _instanceAnimCbIndex{ kInvalidDescriptorIndex }
@@ -101,13 +99,10 @@ namespace sw
         , _instanceSortCbIndex{ kInvalidDescriptorIndex }
         , _bGpuCullingActive{ SW_FALSE }
         , _mapMaterialFallback{}
-        , _mapEnginePso{}
+        , _psoCache{}
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _mapPresentPso{}
         , _bPresentPsoMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
-        , _transientWidth{ 0 }
-        , _transientHeight{ 0 }
         , _outputRenderTarget{ 0 }
         , _taaHistory{ 0 }
         , _taaHistorySrv{ kInvalidDescriptorIndex }
@@ -156,8 +151,8 @@ namespace sw
         if ( gv_viewMode > 0 )
             setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );
 
-        // 동기 경로(execute)는 이 GpuScene 이 직접 배치를 만든다 — 패킷 경로의 GT GpuScene 은 EngineLoop 가 같은 값을 준다.
-        _gpuScene.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
+        // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다 — 패킷 경로의 빌더(EngineLoop)에는 EngineLoop 가 같은 값을 준다.
+        _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
         const EngineData&  engineData = engine::getEngineData();
         RenderPassManager& rpm        = pDevice->getRenderPassManager();
@@ -204,6 +199,7 @@ namespace sw
         if ( _pDevice != nullptr )
             _gpuScene.releaseGpu( _pDevice );
         _gpuScene.clear();
+        _sceneBuilder.clear();
 
         releaseTransientResources();
         releasePassResources();
@@ -656,7 +652,13 @@ namespace sw
                 cameraPos = pCam->getCameraPosition();
         }
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
-        _gpuScene.buildFromScene( pScene, cameraPos );
+        // 패킷 경로와 **같은 길**이다 — 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GpuScene 에는 씬을 읽는 메서드가 없다.
+        _sceneBuilder.buildFromScene( pScene, cameraPos );
+        {
+            GpuSceneSnapshot snapshot{};
+            _sceneBuilder.exportCpuSnapshot( snapshot );
+            _gpuScene.adoptCpuSnapshot( std::move( snapshot ) );
+        }
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다 — 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
         _gpuScene.setIndirectCountsFilledByGpu( wantsGpuGeneratedCommands() );
@@ -668,13 +670,8 @@ namespace sw
         if ( _bCallbacksBound == SW_FALSE )
             bindPassCallbacks();
 
-        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다
-        // (기록 중에는 버퍼 생성·bindless 등록을 할 수 없다).
-        {
-            const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
-            const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + _s_kPassCbSlotCount;
-            ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
-        }
+        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
+        ensurePassCbCapacityForFrame();
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPsos();
@@ -746,13 +743,8 @@ namespace sw
         if ( _bCallbacksBound == SW_FALSE )
             bindPassCallbacks();
 
-        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다
-        // (기록 중에는 버퍼 생성·bindless 등록을 할 수 없다).
-        {
-            const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
-            const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + _s_kPassCbSlotCount;
-            ensurePassCbCapacity( MathUtil::max( estimate, _passCbHighWater.load( std::memory_order_relaxed ) + _s_kPassCbSlotCount ) );
-        }
+        // 상수버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
+        ensurePassCbCapacityForFrame();
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다 — 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPsos();

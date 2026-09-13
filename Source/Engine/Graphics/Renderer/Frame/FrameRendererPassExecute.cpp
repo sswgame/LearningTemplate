@@ -390,8 +390,8 @@ namespace sw
                 beginInfo._arrColorTarget[0] = dstTarget;
                 beginInfo._colorTargetCount  = 1;
                 beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-                beginInfo._width             = _transientWidth;
-                beginInfo._height            = _transientHeight;
+                beginInfo._width             = _transientPool.getWidth();
+                beginInfo._height            = _transientPool.getHeight();
                 ctx._pCmd->beginRenderPass( beginInfo );
                 drawFullscreen( ctx, psoBlit, passCb );
                 ctx._pCmd->endRenderPass();
@@ -434,8 +434,8 @@ namespace sw
         beginInfo._depthLoadOp      = depthLoad;
         beginInfo._clearDepth       = 1.0f;
         beginInfo._depthTarget      = depthName.empty() ? 0 : findTransient( depthName );
-        beginInfo._width            = _transientWidth;
-        beginInfo._height           = _transientHeight;
+        beginInfo._width            = _transientPool.getWidth();
+        beginInfo._height           = _transientPool.getHeight();
         beginInfo._colorTargetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
@@ -457,14 +457,14 @@ namespace sw
         beginInfo._depthTarget      = findTransient( depthName );
         beginInfo._depthLoadOp      = depthLoad;
         beginInfo._clearDepth       = clearDepth;
-        beginInfo._width            = _transientWidth;
-        beginInfo._height           = _transientHeight;
+        beginInfo._width            = _transientPool.getWidth();
+        beginInfo._height           = _transientPool.getHeight();
         ctx._pCmd->beginRenderPass( beginInfo );
     }
 
     void FrameRenderer::registerPassTexture( FramePassContext& ctx, const hashed_string& canonicalName, string_view attachmentName )
     {
-        const TransientAttachment attachment = findTransientAttachment( attachmentName );
+        const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
         if ( attachment._texture != 0 && ctx._pCmd != nullptr )
             ctx._pCmd->prepareTextureForShaderRead( attachment._texture );
         ctx._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );

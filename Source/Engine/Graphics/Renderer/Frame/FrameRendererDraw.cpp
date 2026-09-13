@@ -28,10 +28,7 @@ namespace sw
             return;
         // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다 —
         // 한 프로세스에 여러 IRHIDevice 가 동시에 존재하면 전역값이 어긋날 수 있다.
-        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, _pDevice->getBackendType() );
-        std::scoped_lock<mutex>    lock{ _psoLayoutMutex };
-        _mapPsoLayout[pso] = &layout;
-        _mapPsoDesc[pso]   = desc;
+        _psoCache.registerLayout( pso, desc, _pDevice->getBackendType() );
     }
 
     void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
@@ -39,7 +36,7 @@ namespace sw
         if ( result._bSuccess == false || _pDevice == nullptr )
             return;
 
-        _bindingLayoutCache.invalidateByShaderPath( shaderPath );
+        _psoCache.invalidateLayoutsByShaderPath( shaderPath );
 
         // **PSO 를 실제로 다시 만든다.** 예전엔 여기서 바인딩 레이아웃만 새로 만들었는데, PSO 는
         // 바이트코드를 구워 넣은 객체라 그것만으로는 화면이 시작 시 컴파일된 셰이더 그대로였다.
@@ -57,9 +54,7 @@ namespace sw
 
     const ShaderBindingLayout* FrameRenderer::layoutForPso( RHIPipelineStateHandle pso ) const
     {
-        std::scoped_lock<mutex> lock{ _psoLayoutMutex };
-        auto                    it = _mapPsoLayout.find( pso );
-        return it != _mapPsoLayout.end() ? it->second : nullptr;
+        return _psoCache.findLayout( pso );
     }
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& ctx )

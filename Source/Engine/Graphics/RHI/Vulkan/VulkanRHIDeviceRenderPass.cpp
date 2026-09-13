@@ -123,100 +123,9 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::VulkanRenderPassSpec::addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
+    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const
     {
-        if ( _colorCount >= kMaxColorAttachments )
-            return;
-        _arrColorFormat[_colorCount]        = vkFormat;
-        _arrColorLoadOp[_colorCount]        = loadOp;
-        _arrColorStoreOp[_colorCount]       = VK_ATTACHMENT_STORE_OP_STORE;
-        _arrColorInitialLayout[_colorCount] = initialLayout;
-        _arrColorFinalLayout[_colorCount]   = finalLayout;
-        ++_colorCount;
-    }
-
-    void VulkanRHIDevice::VulkanRenderPassSpec::setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
-    {
-        _depthFormat        = vkFormat;
-        _depthLoadOp        = loadOp;
-        _depthInitialLayout = initialLayout;
-        _depthFinalLayout   = finalLayout;
-    }
-
-    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRenderPassSpec& spec ) const
-    {
-        const bool bHasDepth = spec._depthFormat != 0;
-        if ( _device == nullptr || ( spec._colorCount == 0 && bHasDepth == false ) )
-            return VK_NULL_HANDLE;
-
-        VkAttachmentDescription arrAttachment[kMaxColorAttachments + 1]{};
-        VkAttachmentReference   arrColorRef[kMaxColorAttachments]{};
-        for ( uint32 colorIndex = 0; colorIndex < spec._colorCount; ++colorIndex )
-        {
-            arrAttachment[colorIndex].format         = static_cast<VkFormat>( spec._arrColorFormat[colorIndex] );
-            arrAttachment[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
-            arrAttachment[colorIndex].loadOp         = static_cast<VkAttachmentLoadOp>( spec._arrColorLoadOp[colorIndex] );
-            arrAttachment[colorIndex].storeOp        = static_cast<VkAttachmentStoreOp>( spec._arrColorStoreOp[colorIndex] );
-            arrAttachment[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            arrAttachment[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            arrAttachment[colorIndex].initialLayout  = static_cast<VkImageLayout>( spec._arrColorInitialLayout[colorIndex] );
-            arrAttachment[colorIndex].finalLayout    = static_cast<VkImageLayout>( spec._arrColorFinalLayout[colorIndex] );
-            arrColorRef[colorIndex].attachment       = colorIndex;
-            arrColorRef[colorIndex].layout           = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
-
-        VkAttachmentReference depthRef{};
-        uint32                attachCount = spec._colorCount;
-        if ( bHasDepth )
-        {
-            arrAttachment[attachCount].format         = static_cast<VkFormat>( spec._depthFormat );
-            arrAttachment[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
-            arrAttachment[attachCount].loadOp         = static_cast<VkAttachmentLoadOp>( spec._depthLoadOp );
-            arrAttachment[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            arrAttachment[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            arrAttachment[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            arrAttachment[attachCount].initialLayout  = static_cast<VkImageLayout>( spec._depthInitialLayout );
-            arrAttachment[attachCount].finalLayout    = static_cast<VkImageLayout>( spec._depthFinalLayout );
-            depthRef.attachment                       = attachCount;
-            depthRef.layout                           = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            ++attachCount;
-        }
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = spec._colorCount;
-        subpass.pColorAttachments       = spec._colorCount > 0 ? arrColorRef : nullptr;
-        subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
-
-        // 바깥(앞선 제출)의 컬러 쓰기 → 이 패스의 컬러 쓰기. 깊이가 있으면 초기 프래그먼트 테스트 단계도 같이 건다.
-        // 예전엔 자리마다 이 마스크가 달랐다(깊이 없는 패스에도 깊이 단계를 걸거나, 깊이 패스에 빼먹거나).
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        if ( bHasDepth )
-        {
-            dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        }
-
-        VkRenderPassCreateInfo rpInfo{};
-        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        rpInfo.attachmentCount = attachCount;
-        rpInfo.pAttachments    = arrAttachment;
-        rpInfo.subpassCount    = 1;
-        rpInfo.pSubpasses      = &subpass;
-        rpInfo.dependencyCount = 1;
-        rpInfo.pDependencies   = &dependency;
-
-        VkRenderPass renderPass = VK_NULL_HANDLE;
-        if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &renderPass ) != VK_SUCCESS )
-            return VK_NULL_HANDLE;
-        return renderPass;
+        return VulkanRHIRenderPassCache::createFromSpec( _device, spec );
     }
 
     bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
@@ -231,7 +140,7 @@ namespace sw
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 
-        VulkanRenderPassSpec spec{};
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
         spec.addColor( sharedFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         _offscreenRenderPass = createRenderPassFromSpec( spec );
         return _offscreenRenderPass != VK_NULL_HANDLE;
@@ -252,7 +161,7 @@ namespace sw
         else
         {
             // 포맷별 전용 RP. beginRenderPass 가 전이를 먼저 걸어 두므로 COLOR_ATTACHMENT_OPTIMAL 에서 시작한다.
-            VulkanRenderPassSpec spec{};
+            VulkanRHIRenderPassCache::RenderPassSpec spec{};
             spec.addColor( record._format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
             record._renderPass = createRenderPassFromSpec( spec );
             if ( record._renderPass == VK_NULL_HANDLE )
@@ -307,9 +216,9 @@ namespace sw
 
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
     {
-        PipelineRpKey key{};
-        const bool    bDepthOnly = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-        key._colorCount          = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
+        VulkanRHIRenderPassCache::PipelineKey key{};
+        const bool                            bDepthOnly = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+        key._colorCount                                  = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
         if ( key._colorCount > kMaxColorAttachments )
             key._colorCount = kMaxColorAttachments;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
@@ -329,40 +238,25 @@ namespace sw
             key._depthFormat = static_cast<uint32>( depthFmt );
         }
 
-        auto existing = _mapPipelineRenderPass.find( key );
-        if ( existing != _mapPipelineRenderPass.end() )
-            return existing->second;
-
         // PSO 호환용 — 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷·개수·샘플수만 같으면 된다).
-        VulkanRenderPassSpec spec{};
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         if ( key._depthFormat != 0 )
             spec.setDepth( key._depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
-        VkRenderPass renderPass = createRenderPassFromSpec( spec );
-        if ( renderPass == VK_NULL_HANDLE )
-            return VK_NULL_HANDLE;
-
-        _mapPipelineRenderPass.emplace( key, renderPass );
-        return renderPass;
+        return _renderPassCache.ensurePipelineRenderPass( _device, key, spec );
     }
 
-    bool VulkanRHIDevice::ensureCompositeFramebuffer( const CompositeFbKey& key, CompositeFbRecord& outRecord )
+    bool VulkanRHIDevice::ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key,
+                                                      VulkanRHIRenderPassCache::CompositeRecord&    outRecord )
     {
-        std::scoped_lock<mutex> lock{ _compositeFbMutex };
-        auto                    existing = _mapCompositeFramebuffer.find( key );
-        if ( existing != _mapCompositeFramebuffer.end() )
-        {
-            outRecord = existing->second;
-            return outRecord._framebuffer != VK_NULL_HANDLE && outRecord._renderPass != VK_NULL_HANDLE;
-        }
-
+        // 첨부 뷰와 서술은 여기서 풀고, 조회·생성은 캐시가 한 임계구역에서 한다.
         VkImageView arrFbAttachment[kMaxColorAttachments + 1]{};
         uint32      width{ 0 };
         uint32      height{ 0 };
         // beginRenderPass 가 첨부를 미리 COLOR_ATTACHMENT / DEPTH_STENCIL_ATTACHMENT 로 전이해 두므로 그 레이아웃에서 시작·종료한다.
-        VulkanRenderPassSpec spec{};
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
@@ -394,52 +288,19 @@ namespace sw
         if ( attachCount == 0 )
             return false;
 
-        CompositeFbRecord record{};
-        record._renderPass = createRenderPassFromSpec( spec );
-        if ( record._renderPass == VK_NULL_HANDLE )
-            return false;
-
-        VkFramebufferCreateInfo fbInfo{};
-        fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        fbInfo.renderPass      = record._renderPass;
-        fbInfo.attachmentCount = attachCount;
-        fbInfo.pAttachments    = arrFbAttachment;
-        fbInfo.width           = width;
-        fbInfo.height          = height;
-        fbInfo.layers          = 1;
-
-        if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record._framebuffer ) != VK_SUCCESS )
-        {
-            vkDestroyRenderPass( _device, record._renderPass, nullptr );
-            return false;
-        }
-        record._width  = width;
-        record._height = height;
-        _mapCompositeFramebuffer.emplace( key, record );
-        outRecord = record;
-        return true;
+        return _renderPassCache.ensureComposite( _device, key, spec, arrFbAttachment, attachCount, width, height, outRecord );
     }
 
     void VulkanRHIDevice::destroyCompositeFramebuffersUsing( RHITextureHandle texture )
     {
         if ( texture == 0 || _device == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ _compositeFbMutex };
-        for ( auto it = _mapCompositeFramebuffer.begin(); it != _mapCompositeFramebuffer.end(); )
+        vector<VulkanRHIRenderPassCache::CompositeRecord> listDetached;
+        _renderPassCache.detachCompositesUsing( texture, listDetached );
+        for ( const VulkanRHIRenderPassCache::CompositeRecord& record : listDetached )
         {
-            bool bUses = ( it->first._depth == texture );
-            for ( uint32 colorIndex = 0; colorIndex < it->first._colorCount && bUses == false; ++colorIndex )
-            {
-                bUses = ( it->first._arrColor[colorIndex] == texture );
-            }
-            if ( bUses )
-            {
-                // 실행 중인 커맨드버퍼가 아직 참조할 수 있으므로 펜스 통과 후에 파괴한다.
-                enqueueFramebufferRelease( it->second._framebuffer, it->second._renderPass );
-                it = _mapCompositeFramebuffer.erase( it );
-            }
-            else
-                ++it;
+            // 실행 중인 커맨드버퍼가 아직 참조할 수 있으므로 펜스 통과 후에 파괴한다.
+            enqueueFramebufferRelease( record._framebuffer, record._renderPass );
         }
     }
 

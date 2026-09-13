@@ -19,22 +19,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        /// @brief MaterialUtil::getPermutationGeneration 참고 — 정지한 씬이 퍼뮤테이션 변경을 알아채는 유일한 신호.
-        atomic<uint64> g_permutationGeneration{ 1 };
-    } // namespace
-
-    uint64 MaterialUtil::getPermutationGeneration()
-    {
-        return g_permutationGeneration.load( std::memory_order_relaxed );
-    }
-
-    void MaterialUtil::bumpPermutationGeneration()
-    {
-        g_permutationGeneration.fetch_add( 1, std::memory_order_relaxed );
-    }
-
     SW_LOG_CALLER( "Material" );
 
     MaterialProperty::MaterialProperty() noexcept

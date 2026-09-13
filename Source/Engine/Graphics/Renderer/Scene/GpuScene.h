@@ -1,48 +1,26 @@
 /**
  * @file GpuScene.h
- * @brief GPU 컬·간접 드로우용 MeshComponent CPU 스냅샷.
+ * @brief 렌더 스레드의 씬 GPU 데이터 — 스냅샷을 받아 인스턴스 · 배치 표 · 간접 인자 · 머티리얼 버퍼로 올린다.
+ * @details 씬(MeshComponent)을 보지 않는다. 입력은 `GpuSceneSnapshot` 하나이고(`adoptCpuSnapshot`), 여기서 만드는
+ *          값(GPU 핸들 · 컬 뷰 · 간접 개수)은 스냅샷 타입에 없어 게임 스레드로 되돌아갈 수 없다. 스냅샷을 만드는
+ *          쪽은 `GpuSceneBuilder` 다.
  */
 #pragma once
-#include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Mesh/GpuMeshVertexPool.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Renderer/Scene/GpuMeshVertexPool.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 
 namespace sw
 {
     class GpuMeshMorphPool;
     class IRHIDevice;
-    class Material;
-    class MaterialInstance;
     class Mesh;
-    class MeshComponent;
-    class Scene;
-    class TaskManager;
-
-    /// @brief GPU 인스턴스 (월드 행렬 + 메시/머티리얼 인덱스)
-    struct GpuInstance
-    {
-        float4x4 _world{};
-        float3   _boundsCenter{};
-        float32  _boundsRadius{ 1.0f };
-        uint32   _meshBatchIndex{ 0 };
-        uint32   _materialIndex{ 0 };
-        uint32   _blendMode{ 0 }; ///< RHIBlendMode
-        /**
-         * @brief GPU 인스턴스 애니메이션 시드 — 0 이면 애니메이션 없음.
-         * @details instanceanim.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 예전엔 여기가
-         *          정렬용 `_pad` 였다 — 자리를 새로 만들지 않고 그 빈칸을 쓴다(셰이더 구조체 레이아웃 불변).
-         *          CPU 가 매 프레임 회전을 계산해 올리던 것을 GPU 로 옮기는 통로다.
-         */
-        uint32 _spinSeed{ 0 };
-    };
 
     /**
      * @brief 뷰 하나가 갖는 컬링 산출물 (간접 인자 + 가시 인스턴스 목록).
@@ -101,152 +79,6 @@ namespace sw
     };
     static_assert( sizeof( GpuBatchInfo ) == 8 * sizeof( uint32 ), "GpuBatchInfo 는 uint 여덟(32바이트) — binding.hlsli SwBatchData · gpucull.hlsl GpuBatchInfo 와 같아야 한다" );
 
-    /// @brief 같은 메시/머티리얼의 인스턴스 배치
-    struct GpuMeshBatch
-    {
-        shared_ptr<Mesh> _mesh; ///< **소유를 싣는다** — RT 가 upload() 에서 이 메시를 역참조한다
-        RHIBufferHandle  _vertexBuffer{ 0 };
-        uint32           _vertexCount{ 0 };
-        /**
-         * @brief 정점 풀 안에서 이 메시의 시작(정점 단위) — 간접 인자의 startVertex. 풀 밖 메시는 0 (자기 정점 버퍼).
-         * @details RT 가 upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 버퍼를 다시 걸지 않고 멀티 드로우로 묶인다.
-         */
-        uint32 _firstVertex{ 0 };
-        uint32 _instanceBase{ 0 };
-        uint32 _instanceCount{ 0 };
-        uint32 _materialIndex{ 0 };
-        /**
-         * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위). 0xFFFFFFFF = 모프 안 함.
-         * @details RT 가 `upload()` 에서 채운다 — GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). 드로우는 이 값을
-         *          루트 상수로 실어 정점 셰이더가 `g_SwMorphVertices[base + SV_VertexID]` 를 읽게 한다.
-         */
-        uint32             _morphVertexBase{ 0xFFFFFFFFu };
-        RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
-        RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
-        /**
-         * @brief 배치가 쓰는 부모 머티리얼 — 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자.
-         * @details **소유를 함께 싣는다.** 렌더 스레드는 이 배치가 든 패킷을 다 쓸 때까지 이 머티리얼을 역참조하므로,
-         *          게임 스레드가 먼저 놓아도 살아 있어야 한다. 예전에는 생포인터였고 그 사이를 pin/retire 큐가
-         *          지킨다고 돼 있었지만 그 큐의 답을 읽는 곳이 없었다 — 소유가 패킷을 따라가면 큐가 필요 없다.
-         */
-        shared_ptr<Material> _material;
-        /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스 — _snapshot._listMaterialGroup. 없으면 kInvalidMaterialGroup. */
-        uint32 _materialGroup{ 0xFFFFFFFFu };
-        /**
-         * @brief 이 배치를 그릴 셰이더 퍼뮤테이션 — `GpuScene::getShaderPermutations()` 인덱스.
-         * @details 없으면 kInvalidShaderPermutation 이고, 그때는 패스가 자기 PSO 로 그린다. 배치 키에 이 퍼뮤테이션
-         *          해시가 들어가므로, 한 배치의 인스턴스는 반드시 모두 같은 셰이더다.
-         */
-        uint32 _shaderPermutation{ 0xFFFFFFFFu };
-        /**
-         * @brief 그룹의 GPU 구조버퍼(g_SwMaterials, t9)와 SRV 인덱스 — upload 가 채운다.
-         * @details 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다 (언리얼 GPUScene 방식). 드로우마다 CB 를 갈아
-         *          끼우지 않고, 배치마다 이 버퍼를 리플렉션 슬롯에 한 번 건다.
-         */
-        RHIBufferHandle    _materialBuffer{ 0 };
-        RHIDescriptorIndex _materialSrv = kInvalidDescriptorIndex;
-        /** @brief 그룹 버퍼의 원소 수 — PassCB g_SwMaterialCount 로 넘겨 셰이더가 인덱스를 클램프한다. */
-        uint32 _materialCount{ 0 };
-        /**
-         * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순). 비네이티브 bindless 백엔드에서만 쓴다.
-         * @details DX11/GL 은 셰이더가 전역 인덱스를 못 풀어서 엔진이 t5..t8 에 직접 바인딩해야 한다.
-         *          렌더 스레드는 씬을 못 보므로(Material* 를 따라갈 수 없다) 값으로 실어 나른다.
-         */
-        RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
-            kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-        /** @brief RT 가 draw 직전에 updateRhi 한다. 수명은 이 shared_ptr 이 쥔다 — 패킷이 살아 있는 동안 산다. */
-        shared_ptr<MaterialInstance> _materialInstance;
-    };
-
-    /**
-     * @struct GpuMaterialElementKey
-     * @brief 머티리얼 데이터 원소 하나를 가리키는 키 — (머티리얼, 인스턴스) 쌍.
-     * @details 인스턴스가 없으면 머티리얼 자신이 원소다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 한다.
-     */
-    struct GpuMaterialElementKey
-    {
-        Material*         _pMaterial{ nullptr };
-        MaterialInstance* _pInstance{ nullptr };
-        /** @brief 같으면 true를 반환합니다. */
-        bool operator==( const GpuMaterialElementKey& other ) const
-        {
-            return _pMaterial == other._pMaterial && _pInstance == other._pInstance;
-        }
-    };
-
-    /**
-     * @struct GpuMaterialElement
-     * @brief 머티리얼 데이터 원소 하나 — (머티리얼, 인스턴스) 쌍의 **소유**.
-     * @details 키(`GpuMaterialElementKey`)는 정체성이라 생포인터고, 원소는 렌더 스레드가 `getBuffer()` 로 읽으므로
-     *          소유를 든다. 인스턴스가 없으면 머티리얼 자신이 원소다.
-     */
-    struct GpuMaterialElement
-    {
-        shared_ptr<Material>         _material;
-        shared_ptr<MaterialInstance> _instance;
-    };
-
-    /// @brief GpuMaterialElementKey 해시 — 포인터 둘을 섞는다.
-    struct GpuMaterialElementKeyHash
-    {
-        /** @brief 호출 연산자입니다. */
-        size_t operator()( const GpuMaterialElementKey& key ) const
-        {
-            size_t hash = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
-            hash ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-            return hash;
-        }
-    };
-
-    /**
-     * @struct GpuShaderPermutation
-     * @brief 머티리얼이 요구하는 셰이더 변형 하나 — 경로 + 정적 define.
-     * @details 언리얼의 `FMaterialShaderMap` 이 있는 자리다. 같은 .hlsl 이라도 정적 스위치가 다르면 **다른 셰이더**라서
-     *          다른 PSO 로 그려야 한다. 예전엔 셰이더 **경로**만 봐서, 유리 머티리얼처럼 always-define 을 가진 것이
-     *          불투명 머티리얼과 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 그 정보가 그냥 버려졌다.
-     *
-     *          렌더 스레드는 씬을 못 보므로(Material* 을 따라갈 수 없다) 값으로 실어 나른다.
-     */
-    struct GpuShaderPermutation
-    {
-        /// @brief 머티리얼이 선언한 셰이더. 패스가 자기 셰이더를 쓰는 경우(그림자·뎁스)엔 무시된다.
-        string _shaderPath;
-        /// @brief always-define + 정적 스위치 + 멀티컴파일 선택. 그대로 PSO 의 셰이더 define 이 된다.
-        vector<string> _listDefine;
-        /// @brief (경로, define) 해시 — PSO 캐시 키이자 **배치 병합 키**다.
-        uint64 _hash{ 0 };
-    };
-
-    /**
-     * @struct GpuMaterialGroup
-     * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록 — CPU 스냅샷의 일부.
-     * @details 원소 순서가 곧 materialIndex 다. 같은 셰이더를 쓰는 머티리얼/인스턴스는 구조체 레이아웃이 같아 한 버퍼에 쌓인다.
-     */
-    struct GpuMaterialGroup
-    {
-        string                     _shaderPath;
-        vector<GpuMaterialElement> _listEntry;
-        /**
-         * @brief 원소 키 → `_listEntry` 인덱스.
-         * @details 예전엔 인스턴스마다 `_listEntry` 를 처음부터 훑어 같은 쌍을 찾았다 — 인스턴스 N 개와 머티리얼 M 종에
-         *          O(N·M) 이라 머티리얼이 늘수록 빌드가 제곱으로 느려졌다(벤치는 머티리얼이 하나라 안 보였다).
-         *          언리얼은 등록 시점에 영속 ID 를 주고 더티만 갱신한다 — 여기서는 최소한 조회를 상수 시간으로 만든다.
-         */
-        unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
-        /// @brief 원소별 마지막으로 쓰인 빌드 번호 — 오래 안 쓰인 원소를 회수하는 기준.
-        vector<uint64> _listEntryLastSeenBuild;
-        /// @brief 회수된 원소 자리. **인덱스를 옮기지 않고** 재사용한다 — 옮기면 영속 ID 가 아니게 된다.
-        vector<uint32> _listFreeEntry;
-        /**
-         * @brief 직전 조회 결과 — 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻는다.
-         * @details 맵만 두면 머티리얼이 하나뿐인 흔한 경우가 오히려 느려진다(포인터 비교 한 번 → 해시+탐색).
-         *          실측으로 확인했다: 큐브 2000 개·머티리얼 1 종에서 배치 구성이 665us → 901us 로 늘었다.
-         */
-        GpuMaterialElementKey _lastKey{};
-        uint32                _lastIndex{ 0 };
-        uint8                 _bHasLast{ SW_FALSE };
-    };
-
     /// @brief 그룹의 GPU 버퍼 — RT 소유, 셰이더 경로로 스냅샷을 넘어 재사용한다.
     struct GpuMaterialGpu
     {
@@ -256,37 +88,10 @@ namespace sw
     };
 
     /**
-     * @struct GpuSceneSnapshot
-     * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**.
-     *
-     * @details 소유 규칙이 이 타입에 적혀 있다:
-     *          - 렌더 스레드가 역참조하는 CPU 객체(메시·머티리얼·인스턴스)는 **shared_ptr 로 소유를 함께 싣는다.**
-     *            패킷이 살아 있는 동안(렌더 큐 깊이만큼) 게임 스레드가 놓아도 산다. 생포인터는 정렬 키 같은
-     *            **정체성**에만 쓰고 스레드를 넘어 역참조하지 않는다.
-     *          - RT 가 upload() 에서 만드는 값(GPU 핸들·간접 개수·컬 뷰)은 여기 없다 — 그래서 옮겨질 수 없다.
-     *            "한쪽만 만드는 값을 스냅샷이 매 프레임 덮어쓴다" 는 버그가 타입으로 막힌다.
-     *          - 모듈(게임 DLL)이 만든 객체를 엔진이 마지막까지 들 수 있으므로, 실리는 객체는 Engine 의
-     *            create() 팩토리로 만든다(제어 블록이 Engine.dll 에 산다).
-     *          검사는 Scripts/lint/CheckRenderOwnership.py 가 한다.
-     */
-    struct GpuSceneSnapshot
-    {
-        vector<GpuInstance>      _listInstance;
-        vector<GpuMeshBatch>     _listOpaqueBatch;
-        vector<GpuMeshBatch>     _listTransparentBatch;
-        vector<GpuMeshBatch>     _listAllBatch;      ///< 불투명 다음 투명. 간접 슬롯과 일치
-        vector<GpuMaterialGroup> _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
-        /// @brief 퍼뮤테이션 목록 — 배치의 `_shaderPermutation` 이 가리킨다. 빌드마다 비우지 않는다(RT 가 지난 스냅샷을 읽는다).
-        vector<GpuShaderPermutation> _listShaderPermutation;
-        /// @brief GPU 회전을 요청한 인스턴스 수 (0 이면 애니메이션 디스패치를 건너뛴다).
-        uint32 _spinInstanceCount{ 0 };
-        /// @brief 마지막 buildFromScene 이 내용을 바꿨는가. RT 는 0 이면 인스턴스 재업로드를 생략한다.
-        uint8 _bCpuDirty{ SW_TRUE };
-    };
-
-    /**
      * @class GpuScene
-     * @brief 게임 스레드에서 구축(선택적 TaskManager)하고 렌더 스레드에서 소비합니다.
+     * @brief 렌더 스레드가 영속 소유하는 씬 GPU 상태. 매 프레임 패킷의 스냅샷을 받아(`adoptCpuSnapshot`) 올린다(`upload`).
+     * @details GPU 버퍼 · 핸들은 프레임을 넘어 재사용한다 — 스냅샷을 통째로 바꿔 끼우면 직전 프레임에 올린 버퍼를
+     *          `releaseGpu` 없이 잃어 매 프레임 새로 만드는 리크가 된다(실제로 그랬다). 스냅샷만 갈아 끼우고 GPU 쪽은 여기 남는다.
      */
     class SW_API GpuScene
     {
@@ -300,33 +105,17 @@ namespace sw
         GpuScene( const GpuScene& )            = delete;
         GpuScene& operator=( const GpuScene& ) = delete;
 
-        /** @brief CPU/GPU 스냅샷을 비웁니다. */
+        /** @brief 스냅샷(과 그것이 든 소유)을 놓고 개수를 0 으로 되돌립니다. GPU 버퍼는 `releaseGpu` 가 놓는다. */
         void clear();
-        /**
-         * @brief MeshComponent를 수집해 CPU 스냅샷을 만듭니다 (게임 스레드).
-         * @details 내용·카메라가 이전과 같으면 재구축을 건너뜁니다. 카메라만 바뀌면
-         *          transparent 재정렬 + 배치 재구성만 합니다.
-         * @note 전부 이 스레드에서 합니다. 인스턴스 채우기를 워커로 나눠 봤지만 **모든 크기에서 졌다** —
-         *       원소당 일이 필드 몇 개 복사라 디스패치·대기 비용이 일 자체보다 훨씬 크다
-         *       (400개 358us → 1us, 20,000개 219us → 99us). 다시 나누자고 제안하기 전에 그 숫자를 볼 것.
-         */
-        void buildFromScene( Scene* pScene, const float3& cameraPos );
-        /** @brief 인스턴스 SRV와 배치별 간접 인자를 업로드합니다 (RT/디바이스 스레드). */
-        bool upload( IRHIDevice* pDevice );
-        /** @brief GPU 버퍼를 해제합니다. */
-        void releaseGpu( IRHIDevice* pDevice );
-
-        /**
-         * @brief 스냅샷(GT → RT 로 옮겨지는 전부)을 outSnapshot 으로 복사합니다. GPU 쪽은 타입상 실릴 수 없습니다.
-         * @details GT 가 프레임마다 RenderFramePacket 에 담을 때 쓴다. 호출 후 dirty 플래그는 소비된 것으로 보고
-         *          0 으로 되돌린다(upload() 의 재업로드 생략과 대칭되는 GT 쪽 소비 시점).
-         */
-        void exportCpuSnapshot( GpuSceneSnapshot& outSnapshot );
         /**
          * @brief 스냅샷을 *this 로 옮깁니다. GPU 핸들·용량·간접 개수 같은 RT 소유 상태는 타입이 달라 건드릴 수 없습니다.
          * @details RT(FrameRenderer)가 영속 소유한 GpuScene 에 매 프레임 패킷의 스냅샷을 반영할 때 쓴다.
          */
         void adoptCpuSnapshot( GpuSceneSnapshot&& snapshot );
+        /** @brief 인스턴스 SRV와 배치별 간접 인자를 업로드합니다 (RT/디바이스 스레드). */
+        bool upload( IRHIDevice* pDevice );
+        /** @brief GPU 버퍼를 해제합니다. */
+        void releaseGpu( IRHIDevice* pDevice );
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GpuInstance>& getInstances() const { return _snapshot._listInstance; }
@@ -338,6 +127,17 @@ namespace sw
         uint32 getSpinInstanceCount() const { return _snapshot._spinInstanceCount; }
         /** @brief 불투명 다음 투명 — 간접 슬롯 순서와 같다. 모프 풀 구성이 이 목록을 본다. */
         const vector<GpuMeshBatch>& getAllBatches() const { return _snapshot._listAllBatch; }
+        /** @brief 불투명 배치를 반환합니다. */
+        const vector<GpuMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
+        /** @brief 투명 배치를 반환합니다. */
+        const vector<GpuMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
+        const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
+        /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
+        const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
+        {
+            return ( index < _snapshot._listShaderPermutation.size() ) ? &_snapshot._listShaderPermutation[index] : nullptr;
+        }
         /**
          * @brief 배치마다 모프 풀 구간을 적습니다 (RT 전용).
          * @details GT 는 GPU 풀을 모른다(스냅샷 소유 규칙) — 그래서 RT 가 프레임마다 채운다.
@@ -345,10 +145,6 @@ namespace sw
          */
         void assignMorphBases( const GpuMeshMorphPool& pool );
 
-        /** @brief 불투명 배치를 반환합니다. */
-        const vector<GpuMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
-        /** @brief 투명 배치를 반환합니다. */
-        const vector<GpuMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
@@ -393,14 +189,6 @@ namespace sw
         /** @brief 모든 컬링 뷰가 가시 목록 버퍼를 갖췄는가 (간접 인자는 이 검사 뒤에 만들어진다). */
         bool hasAllVisibleBuffers() const;
         /**
-         * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
-         * @details 배치 키가 그대로고 투명 정렬 순서도 그대로일 때만 쓸 수 있다. 그 두 조건이 맞으면
-         *          `_snapshot._listInstance` 의 자리 배치와 각 원소의 `_meshBatchIndex`/`_materialIndex` 가 그대로라,
-         *          바뀐 것은 트랜스폼과 바운드뿐이다.
-         * @return 갱신했으면 true, 조건이 안 맞아 전체 재구축이 필요하면 false.
-         */
-        bool refreshInstancesInPlace();
-        /**
          * @brief 마지막 upload 가 실제로 개수를 컴퓨트에 맡겼는가.
          * @details "원한다"와 "실제로 된다"는 다르다 — 가시 목록이나 배치 구간 버퍼를 못 만들었으면
          *          개수를 0 으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 **이 값**을 따라야
@@ -413,214 +201,23 @@ namespace sw
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief GPU에 올라갔는지 반환합니다. */
         bool isUploaded() const { return _instances._buffer != 0; }
-        /** @brief 마지막 buildFromScene이 CPU 스냅샷을 바꿨으면 true. */
-        bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != SW_FALSE; }
-        /** @brief 셰이더 타입별 머티리얼 데이터 그룹 (CPU 스냅샷). */
-        const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
-
-        /**
-         * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다 (게임 스레드).
-         * @details 렌더 스레드가 처음 그릴 때 만들던 것을 **그리기 전에** 만들어 두기 위한 것이다. 큐가 만들어
-         *          두면 RT 의 `Mesh::initRhi` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가 예전처럼
-         *          그 자리에서 만든다 — 앞당기는 장치이지 유일한 통로가 아니다.
-         */
-        void requestGpuUploads( class GpuUploadQueue& queue ) const;
-        /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
-        const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
-        {
-            return ( index < _snapshot._listShaderPermutation.size() ) ? &_snapshot._listShaderPermutation[index] : nullptr;
-        }
-        /**
-         * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 타입**(머티리얼 셰이더 경로)으로 묶을지 정합니다 (언리얼 GPUScene).
-         * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽으므로, 텍스처를 인덱스로 고를 수 있는 백엔드
-         *          (DX12/Vulkan 텍스처 배열)에서는 같은 메시·같은 셰이더면 머티리얼이 달라도 한 드로우다. DX11/GL 은 머티리얼
-         *          텍스처를 t5..t8 슬롯에 걸어야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer/EngineLoop 가 디바이스
-         *          caps(supportsNativeBindlessSampling)로 정한다. 바꾸면 다음 buildFromScene 이 다시 묶는다.
-         */
-        void setMergeBatchesAcrossMaterials( bool bMerge );
-
-        static constexpr uint32 kInvalidMaterialGroup     = 0xFFFFFFFFu;
-        static constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
 
     private:
-        /** @brief 수집된 인스턴스를 배치로 묶습니다. */
-        void buildBatches();
-        /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다 (인덱스는 옮기지 않는다). */
-        void retireUnusedMaterialElements();
-        /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다 (그룹 기준이 바뀌었을 때). */
-        void resetMaterialRegistry();
-        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup. */
-        uint32 materialGroupFor( const Material* pMaterial );
-        /**
-         * @brief (머티리얼, 인스턴스) 의 퍼뮤테이션 해시 — 셰이더 경로와 정적 define 을 함께 봅니다.
-         * @details 인스턴스는 키워드를 덮어쓸 수 있으므로 인스턴스가 있으면 그 해시를 쓴다(부모 것을 이미 포함한다).
-         */
-        static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance );
-        /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다 (GT, buildBatches 안). 머티리얼이 없으면 kInvalidShaderPermutation. */
-        uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance );
-        /**
-         * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 돌려줍니다 (GT, buildBatches 안).
-         * @details 같은 쌍은 같은 원소를 공유한다. 인스턴스마다 부른다 — 배치를 셰이더 타입으로 합치면 한 배치 안에 여러 원소가 산다.
-         */
-        uint32 assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex );
-        /**
-         * @brief 배치 키에 쓸 머티리얼 — 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼, 아니면 그 머티리얼 자신.
-         * @details 대표는 재구축마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부 판단은 후보 자체를 비교하므로 대표가 바뀌어도 무관하다.
-         *          대표는 **퍼뮤테이션 단위**다 — 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더이므로 합칠 수 없다.
-         */
-        Material* batchKeyMaterial( Material* pMaterial, uint64 permutationHash );
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조버퍼에 올리고 배치에 버퍼/SRV 를 적습니다 (RT).
          * @details 바이트가 지난 업로드와 같으면 건너뛴다 — 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
-        /** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */
-        void sortTransparent( const float3& cameraPos );
-        /** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
-        void rebuildPartitionTables();
-        /** @brief 직전 후보와 배치 키가 모두 같은지(= 트랜스폼만 달라졌는지) 확인합니다. */
-        bool hasSameBatchKeysAsBuilt() const;
-        /** @brief 캐시 무효화. */
-        void invalidateBuildCache();
 
-        /**
-         * @brief GT → RT 로 **옮겨지는 전부**. 옮겨지는 것과 RT 만 아는 것을 타입으로 가른다.
-         * @details 여기 없는 멤버(GPU 슬롯·컬 뷰·간접 개수·업로드 플래그)는 옮겨질 수 없다 — 예전에는
-         *          export/adopt 가 필드를 손으로 골라 복사해서 RT 가 만든 값이 GT 의 빈 값으로 덮인 적이 있다.
-         */
+        /** @brief 패킷에서 받은 스냅샷 — 이 안의 것만 GT 가 만든 값이다. */
         GpuSceneSnapshot _snapshot;
-        /// @brief 셰이더 경로 → `_snapshot._listMaterialGroup` 인덱스. 예전엔 배치마다 그룹 목록을 string 비교로 훑었다.
-        unordered_map<string, uint32> _mapShaderPathToGroup;
-        /// @brief 빌드 번호. 원소가 마지막으로 쓰인 시점을 재는 데만 쓴다(회수 판정).
-        uint64 _buildCounter{ 0 };
-        /**
-         * @brief 마지막 수집 때 본 퍼뮤테이션 세대(`MaterialUtil::getPermutationGeneration`).
-         * @details 정지한 씬에서 머티리얼의 정적 스위치·키워드를 바꾸면 프리미티브는 하나도 더러워지지
-         *          않는다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않는다.
-         */
-        uint64 _lastPermutationGeneration{ 0 };
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼 (RT 영속, 스냅샷 교체와 무관)
         unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
-        /**
-         * @brief 재구축 중 **퍼뮤테이션 해시** → 대표 머티리얼 (배치 키 합치기용, GT).
-         * @details 예전엔 셰이더 **경로**가 키였다. 그러면 forwardlit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이
-         *          한 대표로 접혀 같은 배치가 되고, 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 사라졌다.
-         */
-        unordered_map<uint64, Material*> _mapShaderRepresentative;
-        /// @brief 퍼뮤테이션 해시 → `_snapshot._listShaderPermutation` 인덱스.
-        unordered_map<uint64, uint32> _mapPermutationToIndex;
-        vector<uint8>                 _listMaterialScratch;
-
-        /// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
-        struct DrawCandidate
-        {
-            float4x4                     _world{};
-            float3                       _boundsCenter{};
-            float32                      _boundsRadius{ 1.0f };
-            shared_ptr<Mesh>             _mesh;
-            shared_ptr<Material>         _material;
-            shared_ptr<MaterialInstance> _instance;
-            uint32                       _blendMode{ 0 };
-            /// @brief GPU 회전 애니메이션 시드 (0 = 없음). MeshComponent 가 준다 → GpuInstance::_spinSeed.
-            uint32 _spinSeed{ 0 };
-            /**
-             * @brief (셰이더 경로 + define) 해시 — **어느 PSO 로 그릴지**를 정하는 값.
-             * @details 배치 키에 들어가야 한다. 머티리얼·인스턴스 **포인터가 그대로여도** 인스턴스의
-             *          키워드·멀티컴파일·품질을 바꾸면 이 값이 바뀌고, 그러면 다른 셰이더로 그려야 한다.
-             *          예전에는 이 값이 키에 없어서 `hasSameBatchKey` 가 "그대로" 라고 답했고, 배치가
-             *          다시 나뉘지 않아 **바뀐 퍼뮤테이션이 화면에 반영되지 않았다**(런타임에 정적 스위치를
-             *          바꾸는 길이 조용히 죽어 있었다). 수집에서 한 번 구해 두면 나누기·정렬도 다시 구하지 않는다.
-             */
-            uint64 _permutationHash{ 0 };
-
-            /**
-             * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
-             * @details 예전엔 후보마다 100여 바이트를 FNV 로 섞어 64비트 지문을 만들어 비교했다.
-             *          그건 (1) 바이트마다 곱셈이 들어가 이 비교 자체가 수집 비용에 맞먹었고,
-             *          (2) 해시가 충돌하면 바뀐 씬을 "그대로"로 보고 화면이 멈추는, 재현이 사실상
-             *          불가능한 버그를 남겼다. 어차피 같은 바이트를 다 읽어야 한다면 지문을 만들지 말고
-             *          **그냥 비교**하는 게 더 싸고 정확하다 — 다르면 즉시 빠져나올 수도 있다.
-             * @note 부동소수는 float3/float4x4 의 `operator==` (nearEqual, 엡실론 비교)가 아니라
-             *       **비트 그대로** 비교한다. 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를
-             *       영원히 "안 바뀜"으로 보고 화면에 오차를 누적시킨다. 반대로 비트 비교가 틀리는
-             *       방향(-0.0 과 0.0 을 다르게 봄)은 불필요한 재구축일 뿐이라 안전하다.
-             *       비교 대상 블록은 모두 float 연속이라 패딩이 끼지 않는다.
-             */
-            bool operator==( const DrawCandidate& other ) const
-            {
-                return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _spinSeed == other._spinSeed &&
-                       _permutationHash == other._permutationHash &&
-                       Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
-                       Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
-                       Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
-            }
-            /** @brief operator== 의 부정입니다. */
-            bool operator!=( const DrawCandidate& other ) const { return ( *this == other ) == false; }
-
-            /**
-             * @brief 배치가 묶이는 기준(메시·머티리얼·인스턴스·블렌드)이 같은지. 트랜스폼은 보지 않습니다.
-             * @details 불투명 배치는 이 네 가지로만 나뉘고 정렬된다. 물체가 **움직이기만** 했다면
-             *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없다.
-             *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬이다.
-             */
-            bool hasSameBatchKey( const DrawCandidate& other ) const
-            {
-                return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _permutationHash == other._permutationHash;
-            }
-        };
-
-        vector<DrawCandidate> _listScratchCandidate;
-        /** @brief 마지막으로 반영된 후보 집합. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
-        vector<DrawCandidate> _listBuiltCandidate;
-        vector<GpuInstance>   _listScratchRaw;
-
-        struct SortKey
-        {
-            Mesh*             _pMesh{ nullptr };
-            Material*         _pMaterial{ nullptr };
-            MaterialInstance* _pInstance{ nullptr };
-            /**
-             * @brief (셰이더 경로 + define) 해시 — 배치가 쓸 PSO 를 정한다.
-             * @details **대표 머티리얼 포인터로는 대신할 수 없다.** 합치기가 켜지면 대표는 "이 퍼뮤테이션을
-             *          처음 들고 온 머티리얼" 인데, 퍼뮤테이션이 **인스턴스**에서 오면 부모가 같아 대표도
-             *          같아진다 — 서로 다른 셰이더로 그려야 할 것들이 한 배치로 접힌다. 해시를 키에 직접
-             *          넣어야 갈린다(런타임에 인스턴스의 정적 스위치를 바꾸는 길이 여기서 죽어 있었다).
-             */
-            uint64 _permutationHash{ 0 };
-            /** @brief 메시·머티리얼·인스턴스·퍼뮤테이션이 같은지 비교합니다. */
-            bool operator==( const SortKey& other ) const
-            {
-                return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
-                       _permutationHash == other._permutationHash;
-            }
-        };
-
-        struct SortEntry
-        {
-            SortKey _key;
-            uint32  _srcIdx{ 0 };
-        };
-
-        vector<SortEntry>              _listScratchOpaqueEntry;
-        vector<uint32>                 _listScratchTransparentIdx;
-        vector<RHIDrawIndirectCommand> _listScratchIndirectCmd;
-        vector<GpuBatchInfo>           _listScratchBatchInfo;
-        /**
-         * @brief `_snapshot._listInstance[i]` 가 어느 후보에서 왔는지 (buildBatches 가 채운다).
-         * @details 배치 구성이 그대로면 이 매핑도 그대로다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
-         *          값만 **제자리에서** 갱신하면 된다 — 언리얼 GPUScene 이 프리미티브가 움직였을 때
-         *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 자리다.
-         */
-        vector<uint32> _listInstanceSrcIndex;
-        /// @brief 마지막 전체 빌드가 쓴 투명 정렬 순서. 이게 바뀌면 제자리 갱신을 쓸 수 없다.
-        vector<uint32> _listBuiltTransparentIdx;
+        vector<uint8>                         _listMaterialScratch;
+        vector<RHIDrawIndirectCommand>        _listScratchIndirectCmd;
+        vector<GpuBatchInfo>                  _listScratchBatchInfo;
 
         RHIStructuredBufferSlot _instances;
-        float3                  _lastCameraPos{};
-        /** @brief 마지막으로 반영한 프리미티브 집합 세대. 달라졌으면 등록부가 바뀐 것. */
-        uint64 _lastPrimitiveSetGeneration{ 0 };
         /**
          * @brief 뷰별 컬링 산출물 — 언리얼 FInstanceCullingContext 가 뷰마다 있는 것과 같은 자리.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
@@ -656,13 +253,7 @@ namespace sw
         uint8 _bWantGpuIndirectCounts{ SW_FALSE };
         /// @brief 마지막 upload 가 실제로 그렇게 했는가 (버퍼가 다 있어야 1).
         uint8 _bGpuFillsIndirectCounts{ SW_FALSE };
-        /**
-         * @brief 마지막 upload() 가 올린 간접 인자 개수 — **렌더 스레드 소유**다.
-         * @details GT 쪽 GpuScene 은 업로드를 하지 않으므로 이 값을 만들 수 없다. 그래서 exportCpuSnapshot /
-         *          adoptCpuSnapshot 은 이 필드를 **옮기지 않는다** — 옮기면 GT 의 0 이 RT 값을 매 프레임 덮어써,
-         *          업로드를 건너뛰는 조용한 프레임에 컬링이 배치 0개로 돌고 아무것도 그려지지 않는다.
-         */
+        /// @brief 마지막 upload() 가 올린 간접 인자 개수 — 스냅샷에 없으므로 GT 가 덮어쓸 수 없다.
         uint32 _indirectCommandCount{ 0 };
-        uint8  _bMergeAcrossMaterials{ SW_FALSE };
     };
 } // namespace sw

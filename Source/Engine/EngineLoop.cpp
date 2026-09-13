@@ -22,7 +22,6 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -30,6 +29,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
@@ -379,7 +379,7 @@ namespace sw
                 *pNull                = 1;
             }
 
-            _gtGpuScene.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
+            _gpuSceneBuilder.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
             if ( _gpuUploadQueue != nullptr )
                 _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _taskManager.get() );
 
@@ -455,7 +455,7 @@ namespace sw
             }
             // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼·인스턴스)를 들고 있다 — 렌더러와 같은 시점에 놓는다.
             // 소멸자에 맡기면 디바이스가 사라진 뒤에 놓게 된다.
-            _gtGpuScene.clear();
+            _gpuSceneBuilder.clear();
             if ( _frameRenderer != nullptr )
                 _frameRenderer->shutdown();
             if ( _rhi != nullptr )
@@ -666,19 +666,19 @@ namespace sw
                     packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
                     packet._bHasViewProj = SW_TRUE;
                 }
-                _gtGpuScene.buildFromScene( pActiveScene, packet._cameraPos );
+                _gpuSceneBuilder.buildFromScene( pActiveScene, packet._cameraPos );
 
                 // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
                 // 하면 된다 — 예전에는 새 메시가 등장한 프레임의 RT 가 정점 버퍼 생성을 통째로 뒤집어썼다.
                 if ( _gpuUploadQueue != nullptr )
                 {
-                    _gtGpuScene.requestGpuUploads( *_gpuUploadQueue );
+                    _gpuSceneBuilder.requestGpuUploads( *_gpuUploadQueue );
                     _gpuUploadQueue->flush();
                 }
 
                 {
                     SW_PROFILE_SCOPE( "GT.Packet.export" );
-                    _gtGpuScene.exportCpuSnapshot( packet._gpuScene );
+                    _gpuSceneBuilder.exportCpuSnapshot( packet._gpuScene );
                 }
             }
 
@@ -734,7 +734,7 @@ namespace sw
             // GT 쪽 GpuScene 의 캐시(후보·배치)가 옛 디바이스에 올라간 머티리얼·인스턴스의 소유를 들고 있다.
             // 여기서 놓지 않으면 교체 뒤 첫 buildFromScene 의 clear() 가 그것들을 옛 디바이스와 함께 파괴한다
             // — 실제로 그 자리에서 죽었다(~MaterialInstance → shutdown(옛 디바이스)).
-            _gtGpuScene.clear();
+            _gpuSceneBuilder.clear();
         }
 
         if ( _rhi->recreateDevice( requested ) == false )

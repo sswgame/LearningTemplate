@@ -52,6 +52,7 @@ set(SW_RHI_VULKAN_DEVICE_SOURCES
     "${swRhiRoot}/Vulkan/VulkanRHIDeviceInit.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIDeviceRenderPass.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIDeviceSubmission.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIRenderPassCache.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIResource.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIResourceBindless.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIResourcePipeline.cpp"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Mesh/GpuMeshVertexPool.h"
+#include "Engine/Graphics/Renderer/Scene/GpuMeshVertexPool.h"
 
 #include "Core/Log/Logger.h"
 

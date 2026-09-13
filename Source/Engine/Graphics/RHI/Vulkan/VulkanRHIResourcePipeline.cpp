@@ -287,7 +287,6 @@ namespace sw
 
     RHIRenderPassHandle VulkanRHIResource::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        VulkanRHIDevice::VulkanRenderPassRecord record{};
 
         if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == SW_FALSE )
         {
@@ -324,11 +323,11 @@ namespace sw
             return VK_ATTACHMENT_STORE_OP_STORE;
         };
 
-        VulkanRHIDevice::VulkanRenderPassSpec spec{};
-        const uint32                          colorCount =
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        const uint32                             colorCount =
             desc._listColorAttachment.size() > kMaxColorAttachments
-                                         ? kMaxColorAttachments
-                                         : static_cast<uint32>( desc._listColorAttachment.size() );
+                                            ? kMaxColorAttachments
+                                            : static_cast<uint32>( desc._listColorAttachment.size() );
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
             const RHIRenderPassAttachment& att = desc._listColorAttachment[colorIndex];
@@ -341,12 +340,7 @@ namespace sw
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
         if ( spec._colorCount == 0 && spec._depthFormat == 0 )
-        {
-            record._renderPass = _pDevice->_renderPass;
-            record._bOwned     = 0;
-            _pDevice->_listRenderPass.push_back( record );
-            return _pDevice->_listRenderPass.size();
-        }
+            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭 — 소유하지 않는다
 
         VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
         if ( created == VK_NULL_HANDLE )
@@ -355,20 +349,11 @@ namespace sw
             return 0;
         }
 
-        record._renderPass = created;
-        record._bOwned     = 1;
-        _pDevice->_listRenderPass.push_back( record );
-        return _pDevice->_listRenderPass.size();
+        return _pDevice->_renderPassCache.addRenderPassRecord( created, true );
     }
 
     void VulkanRHIResource::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
-            return;
-        VulkanRHIDevice::VulkanRenderPassRecord& record = _pDevice->_listRenderPass[pass - 1];
-        if ( record._bOwned != 0 && record._renderPass != VK_NULL_HANDLE &&
-             record._renderPass != _pDevice->_renderPass )
-            vkDestroyRenderPass( _pDevice->_device, record._renderPass, nullptr );
-        record = {};
+        _pDevice->_renderPassCache.destroyRenderPassRecord( _pDevice->_device, pass, _pDevice->_renderPass );
     }
 } // namespace sw

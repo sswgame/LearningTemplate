@@ -6,7 +6,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
-#include "Engine/Graphics/Renderer/Scene/GpuScene.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 
 namespace sw
 {
