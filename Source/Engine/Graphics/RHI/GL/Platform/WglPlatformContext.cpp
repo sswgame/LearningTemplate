@@ -89,10 +89,15 @@ namespace sw
             };
             for ( const int32( &ver )[2] : kArrVersions )
             {
+                // 디버그 컨텍스트는 비-Shipping 에서만 — KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
+                // (OpenGLRHIDeviceInit 이 콜백을 건다). Shipping 은 검증 비용을 지지 않는다.
                 int32 arrAttrib[] = {
                     WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
                     WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
                     WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+    #if !defined( SW_SHIPPING )
+                    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
+    #endif
                     0 };
                 hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttrib );
                 if ( hRC != nullptr )

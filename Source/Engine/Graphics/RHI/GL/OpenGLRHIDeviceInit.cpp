@@ -12,11 +12,34 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "OpenGL" );
+
+#if !defined( SW_SHIPPING )
+    namespace
+    {
+        /**
+         * @brief KHR_debug 메시지를 엔진 로그로 보냅니다 — DX11/DX12 디버그 레이어(flushDebugMessages) · Vulkan 검증 레이어와 같은 자리.
+         * @details 예전엔 GL 오류가 어디에도 나오지 않았다(glGetError 호출 0곳, 디버그 콜백 없음). 드로우가 정상으로 나가고
+         *          화면만 비는 종류의 결함이 GL 에서 유독 오래 살아남은 이유다. 이제 스모크의 `[Error]` 수가 GL 에서도 뜻을 가진다.
+         *          알림(NOTIFICATION)은 드라이버 잡담("Buffer detailed info")이라 glDebugMessageControl 로 아예 끈다.
+         */
+        void APIENTRY onOpenGLDebugMessage( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* pMessage,
+                                            const void* pUserParam )
+        {
+            (void)source;
+            (void)length;
+            (void)pUserParam;
+            if ( pMessage == nullptr || severity == GL_DEBUG_SEVERITY_NOTIFICATION )
+                return;
+            if ( type == GL_DEBUG_TYPE_ERROR || severity == GL_DEBUG_SEVERITY_HIGH )
+                SW_LOG_ERROR( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+            else if ( severity == GL_DEBUG_SEVERITY_MEDIUM )
+                SW_LOG_WARNING( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+            else
+                SW_LOG_TRACE( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+        }
+    } // namespace
+#endif
 
     bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
@@ -78,6 +101,21 @@ namespace sw
             {
                 SW_LOG_ERROR( "glClipControl 을 쓸 수 없습니다 (GL 4.5 / ARB_clip_control 필요) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다." );
             }
+
+#if !defined( SW_SHIPPING )
+            // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다 —
+            // 플랫폼 컨텍스트가 비-Shipping 빌드에서 그 비트를 켠다. SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
+            if ( glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr )
+            {
+                glEnable( GL_DEBUG_OUTPUT );
+                glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
+                glDebugMessageCallback( &onOpenGLDebugMessage, nullptr );
+                glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE );
+                SW_LOG_INFO( "OpenGL KHR_debug 출력을 켰습니다 — GL 오류가 오류 로그로 나옵니다 (스모크의 오류 수에 잡힌다)." );
+            }
+            else
+                SW_LOG_WARNING( "glDebugMessageCallback 을 쓸 수 없습니다 (GL 4.3 / KHR_debug 필요) — GL 오류가 로그에 나오지 않습니다." );
+#endif
 
             // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX·Vulkan 은 FIRST 라, `nointerpolation`
             // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 전부

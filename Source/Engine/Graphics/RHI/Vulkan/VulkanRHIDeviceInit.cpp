@@ -45,54 +45,20 @@ namespace sw
 
     bool VulkanRHIDevice::createRenderPass()
     {
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format         = static_cast<VkFormat>( _swapChain.getImageFormat() );
-        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments    = &colorAttachmentRef;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments    = &colorAttachment;
-        renderPassInfo.subpassCount    = 1;
-        renderPassInfo.pSubpasses      = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies   = &dependency;
-
-        if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPass ) != VK_SUCCESS )
-            return false;
-
-        // LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가 백버퍼에 그린
-        // 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷/개수/
+        // 스왑체인 렌더패스 — CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
+        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷/개수/
         // 샘플수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
-        // 이 시점의 스왑체인 이미지는 앞선 패스의 finalLayout 인 PRESENT_SRC 상태다.
-        colorAttachment.loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        if ( vkCreateRenderPass( _device, &renderPassInfo, nullptr, &_renderPassLoad ) != VK_SUCCESS )
+        // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
+        VulkanRenderPassSpec clearSpec{};
+        clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPass = createRenderPassFromSpec( clearSpec );
+        if ( _renderPass == VK_NULL_HANDLE )
             return false;
-        return true;
+
+        VulkanRenderPassSpec loadSpec{};
+        loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPassLoad = createRenderPassFromSpec( loadSpec );
+        return _renderPassLoad != VK_NULL_HANDLE;
     }
 
     bool VulkanRHIDevice::checkValidationLayerSupport()

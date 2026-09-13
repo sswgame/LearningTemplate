@@ -478,6 +478,34 @@ namespace sw
             uint8        _bOwned{ 0 }; ///< 1 = createRenderPass(desc)가 소유, 0 = swapchain RP alias
         };
 
+        /**
+         * @brief VkRenderPass 하나의 서술 — 렌더패스를 만드는 여섯 자리가 전부 이것을 채워 `createRenderPassFromSpec` 에 넘긴다.
+         * @details 예전엔 스왑체인(CLEAR/LOAD) · 공용 오프스크린 · 포맷별 오프스크린 · PSO 호환용 · 합성 프레임버퍼 ·
+         *          desc 기반 생성이 각자 `VkAttachmentDescription` 과 서브패스 의존성을 손으로 적었다(같은 40줄이 6벌).
+         *          의존성 마스크가 자리마다 조금씩 달랐고 한 곳을 고치면 나머지를 빠뜨렸다. 단일 서브패스 · 샘플 1 ·
+         *          스텐실 DONT_CARE 는 여기서 고정이고, 자리마다 다른 것(포맷 · loadOp · storeOp · 레이아웃)만 필드다.
+         */
+        struct VulkanRenderPassSpec
+        {
+            uint32 _colorCount{ 0 };
+            uint32 _arrColorFormat[kMaxColorAttachments]{};        ///< VkFormat
+            uint32 _arrColorLoadOp[kMaxColorAttachments]{};        ///< VkAttachmentLoadOp
+            uint32 _arrColorStoreOp[kMaxColorAttachments]{};       ///< VkAttachmentStoreOp
+            uint32 _arrColorInitialLayout[kMaxColorAttachments]{}; ///< VkImageLayout
+            uint32 _arrColorFinalLayout[kMaxColorAttachments]{};   ///< VkImageLayout
+            uint32 _depthFormat{ 0 };                              ///< VkFormat; 0 = 깊이 없음
+            uint32 _depthLoadOp{ 0 };                              ///< VkAttachmentLoadOp
+            uint32 _depthInitialLayout{ 0 };                       ///< VkImageLayout
+            uint32 _depthFinalLayout{ 0 };                         ///< VkImageLayout
+
+            /** @brief 컬러 첨부 하나를 덧붙입니다 (storeOp 은 STORE — 다르게 쓰려면 `_arrColorStoreOp` 을 뒤에 고친다). */
+            void addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout );
+            /** @brief 깊이 첨부를 둡니다. */
+            void setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout );
+        };
+        /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE. */
+        VkRenderPass createRenderPassFromSpec( const VulkanRenderPassSpec& spec ) const;
+
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열 + immutable sampler)를 확보합니다. */
         bool ensureTextureSet();
         /** @brief 정적 샘플러·세트 레이아웃 둘·파이프라인 레이아웃·풀(텍스처용 1 + 프레임별 슬롯용)·더미 UBO 를 생성합니다. */

@@ -319,46 +319,23 @@ namespace sw
             return VK_ATTACHMENT_STORE_OP_STORE;
         };
 
-        VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
-        VkAttachmentReference   colorRefs[kMaxColorAttachments]{};
-        const uint32            colorCount =
+        VulkanRHIDevice::VulkanRenderPassSpec spec{};
+        const uint32                          colorCount =
             desc._listColorAttachment.size() > kMaxColorAttachments
-                           ? kMaxColorAttachments
-                           : static_cast<uint32>( desc._listColorAttachment.size() );
-
+                                         ? kMaxColorAttachments
+                                         : static_cast<uint32>( desc._listColorAttachment.size() );
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
-            const RHIRenderPassAttachment& att     = desc._listColorAttachment[colorIndex];
-            attachments[colorIndex].format         = VulkanRHIDeviceInternal::toVulkanTextureFormat( att._format );
-            attachments[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
-            attachments[colorIndex].loadOp         = toLoadOp( att._loadOp );
-            attachments[colorIndex].storeOp        = toStoreOp( att._storeOp );
-            attachments[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[colorIndex].initialLayout  = ( att._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachments[colorIndex].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            colorRefs[colorIndex].attachment       = colorIndex;
-            colorRefs[colorIndex].layout           = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            const RHIRenderPassAttachment& att = desc._listColorAttachment[colorIndex];
+            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( att._format ) ), toLoadOp( att._loadOp ),
+                           ( att._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+            spec._arrColorStoreOp[colorIndex] = toStoreOp( att._storeOp );
         }
-
-        VkAttachmentReference depthRef{};
-        uint32                attachCount = colorCount;
         if ( desc._bHasDepthStencil != SW_FALSE )
-        {
-            attachments[attachCount].format         = static_cast<VkFormat>( _pDevice->_depthFormat );
-            attachments[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
-            attachments[attachCount].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[attachCount].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[attachCount].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            depthRef.attachment                     = attachCount;
-            depthRef.layout                         = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            ++attachCount;
-        }
+            spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
-        if ( attachCount == 0 )
+        if ( spec._colorCount == 0 && spec._depthFormat == 0 )
         {
             record._renderPass = _pDevice->_renderPass;
             record._bOwned     = 0;
@@ -366,31 +343,8 @@ namespace sw
             return _pDevice->_listRenderPass.size();
         }
 
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = colorCount;
-        subpass.pColorAttachments       = colorCount > 0 ? colorRefs : nullptr;
-        subpass.pDepthStencilAttachment = desc._bHasDepthStencil ? &depthRef : nullptr;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo rpInfo{};
-        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        rpInfo.attachmentCount = attachCount;
-        rpInfo.pAttachments    = attachments;
-        rpInfo.subpassCount    = 1;
-        rpInfo.pSubpasses      = &subpass;
-        rpInfo.dependencyCount = 1;
-        rpInfo.pDependencies   = &dependency;
-
-        VkRenderPass created = VK_NULL_HANDLE;
-        if ( vkCreateRenderPass( _pDevice->_device, &rpInfo, nullptr, &created ) != VK_SUCCESS )
+        VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
+        if ( created == VK_NULL_HANDLE )
         {
             SW_LOG_ERROR( "createRenderPass(desc) failed" );
             return 0;

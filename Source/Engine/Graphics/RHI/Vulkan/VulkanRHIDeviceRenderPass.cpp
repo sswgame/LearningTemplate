@@ -123,6 +123,102 @@ namespace sw
         return true;
     }
 
+    void VulkanRHIDevice::VulkanRenderPassSpec::addColor( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
+    {
+        if ( _colorCount >= kMaxColorAttachments )
+            return;
+        _arrColorFormat[_colorCount]        = vkFormat;
+        _arrColorLoadOp[_colorCount]        = loadOp;
+        _arrColorStoreOp[_colorCount]       = VK_ATTACHMENT_STORE_OP_STORE;
+        _arrColorInitialLayout[_colorCount] = initialLayout;
+        _arrColorFinalLayout[_colorCount]   = finalLayout;
+        ++_colorCount;
+    }
+
+    void VulkanRHIDevice::VulkanRenderPassSpec::setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout )
+    {
+        _depthFormat        = vkFormat;
+        _depthLoadOp        = loadOp;
+        _depthInitialLayout = initialLayout;
+        _depthFinalLayout   = finalLayout;
+    }
+
+    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRenderPassSpec& spec ) const
+    {
+        const bool bHasDepth = spec._depthFormat != 0;
+        if ( _device == nullptr || ( spec._colorCount == 0 && bHasDepth == false ) )
+            return VK_NULL_HANDLE;
+
+        VkAttachmentDescription arrAttachment[kMaxColorAttachments + 1]{};
+        VkAttachmentReference   arrColorRef[kMaxColorAttachments]{};
+        for ( uint32 colorIndex = 0; colorIndex < spec._colorCount; ++colorIndex )
+        {
+            arrAttachment[colorIndex].format         = static_cast<VkFormat>( spec._arrColorFormat[colorIndex] );
+            arrAttachment[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
+            arrAttachment[colorIndex].loadOp         = static_cast<VkAttachmentLoadOp>( spec._arrColorLoadOp[colorIndex] );
+            arrAttachment[colorIndex].storeOp        = static_cast<VkAttachmentStoreOp>( spec._arrColorStoreOp[colorIndex] );
+            arrAttachment[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            arrAttachment[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            arrAttachment[colorIndex].initialLayout  = static_cast<VkImageLayout>( spec._arrColorInitialLayout[colorIndex] );
+            arrAttachment[colorIndex].finalLayout    = static_cast<VkImageLayout>( spec._arrColorFinalLayout[colorIndex] );
+            arrColorRef[colorIndex].attachment       = colorIndex;
+            arrColorRef[colorIndex].layout           = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
+
+        VkAttachmentReference depthRef{};
+        uint32                attachCount = spec._colorCount;
+        if ( bHasDepth )
+        {
+            arrAttachment[attachCount].format         = static_cast<VkFormat>( spec._depthFormat );
+            arrAttachment[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
+            arrAttachment[attachCount].loadOp         = static_cast<VkAttachmentLoadOp>( spec._depthLoadOp );
+            arrAttachment[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+            arrAttachment[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            arrAttachment[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            arrAttachment[attachCount].initialLayout  = static_cast<VkImageLayout>( spec._depthInitialLayout );
+            arrAttachment[attachCount].finalLayout    = static_cast<VkImageLayout>( spec._depthFinalLayout );
+            depthRef.attachment                       = attachCount;
+            depthRef.layout                           = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            ++attachCount;
+        }
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount    = spec._colorCount;
+        subpass.pColorAttachments       = spec._colorCount > 0 ? arrColorRef : nullptr;
+        subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
+
+        // 바깥(앞선 제출)의 컬러 쓰기 → 이 패스의 컬러 쓰기. 깊이가 있으면 초기 프래그먼트 테스트 단계도 같이 건다.
+        // 예전엔 자리마다 이 마스크가 달랐다(깊이 없는 패스에도 깊이 단계를 걸거나, 깊이 패스에 빼먹거나).
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass    = 0;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        if ( bHasDepth )
+        {
+            dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        }
+
+        VkRenderPassCreateInfo rpInfo{};
+        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        rpInfo.attachmentCount = attachCount;
+        rpInfo.pAttachments    = arrAttachment;
+        rpInfo.subpassCount    = 1;
+        rpInfo.pSubpasses      = &subpass;
+        rpInfo.dependencyCount = 1;
+        rpInfo.pDependencies   = &dependency;
+
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+        if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &renderPass ) != VK_SUCCESS )
+            return VK_NULL_HANDLE;
+        return renderPass;
+    }
+
     bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
     {
         if ( _offscreenRenderPass != VK_NULL_HANDLE )
@@ -135,44 +231,10 @@ namespace sw
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format         = static_cast<VkFormat>( sharedFormat );
-        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference colorRef{};
-        colorRef.attachment = 0;
-        colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments    = &colorRef;
-
-        // Match swapchain-compatible dependency style so PSO / active RP stay consistent.
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo rpInfo{};
-        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        rpInfo.attachmentCount = 1;
-        rpInfo.pAttachments    = &colorAttachment;
-        rpInfo.subpassCount    = 1;
-        rpInfo.pSubpasses      = &subpass;
-        rpInfo.dependencyCount = 1;
-        rpInfo.pDependencies   = &dependency;
-
-        return vkCreateRenderPass( _device, &rpInfo, nullptr, &_offscreenRenderPass ) == VK_SUCCESS;
+        VulkanRenderPassSpec spec{};
+        spec.addColor( sharedFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        _offscreenRenderPass = createRenderPassFromSpec( spec );
+        return _offscreenRenderPass != VK_NULL_HANDLE;
     }
 
     bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
@@ -189,43 +251,11 @@ namespace sw
         }
         else
         {
-            VkAttachmentDescription colorAttachment{};
-            colorAttachment.format         = static_cast<VkFormat>( record._format );
-            colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-            colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            VkAttachmentReference colorRef{};
-            colorRef.attachment = 0;
-            colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            VkSubpassDescription subpass{};
-            subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-            subpass.colorAttachmentCount = 1;
-            subpass.pColorAttachments    = &colorRef;
-
-            VkSubpassDependency dependency{};
-            dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-            dependency.dstSubpass    = 0;
-            dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.srcAccessMask = 0;
-            dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-            VkRenderPassCreateInfo rpInfo{};
-            rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-            rpInfo.attachmentCount = 1;
-            rpInfo.pAttachments    = &colorAttachment;
-            rpInfo.subpassCount    = 1;
-            rpInfo.pSubpasses      = &subpass;
-            rpInfo.dependencyCount = 1;
-            rpInfo.pDependencies   = &dependency;
-
-            if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record._renderPass ) != VK_SUCCESS )
+            // 포맷별 전용 RP. beginRenderPass 가 전이를 먼저 걸어 두므로 COLOR_ATTACHMENT_OPTIMAL 에서 시작한다.
+            VulkanRenderPassSpec spec{};
+            spec.addColor( record._format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+            record._renderPass = createRenderPassFromSpec( spec );
+            if ( record._renderPass == VK_NULL_HANDLE )
                 return false;
         }
 
@@ -303,71 +333,15 @@ namespace sw
         if ( existing != _mapPipelineRenderPass.end() )
             return existing->second;
 
-        VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
-        VkAttachmentReference   colorRefs[kMaxColorAttachments]{};
+        // PSO 호환용 — 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷·개수·샘플수만 같으면 된다).
+        VulkanRenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
-        {
-            attachments[colorIndex].format         = static_cast<VkFormat>( key._arrColorFormat[colorIndex] );
-            attachments[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
-            attachments[colorIndex].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[colorIndex].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[colorIndex].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[colorIndex].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            colorRefs[colorIndex].attachment       = colorIndex;
-            colorRefs[colorIndex].layout           = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
+            spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        if ( key._depthFormat != 0 )
+            spec.setDepth( key._depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
-        VkAttachmentReference depthRef{};
-        const bool            bHasDepth   = key._depthFormat != 0;
-        uint32                attachCount = key._colorCount;
-        if ( bHasDepth )
-        {
-            attachments[attachCount].format         = static_cast<VkFormat>( key._depthFormat );
-            attachments[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
-            attachments[attachCount].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[attachCount].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-            attachments[attachCount].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            depthRef.attachment                     = attachCount;
-            depthRef.layout                         = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            ++attachCount;
-        }
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = key._colorCount;
-        subpass.pColorAttachments       = key._colorCount > 0 ? colorRefs : nullptr;
-        subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        if ( bHasDepth )
-        {
-            dependency.srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        }
-
-        VkRenderPassCreateInfo rpInfo{};
-        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        rpInfo.attachmentCount = attachCount;
-        rpInfo.pAttachments    = attachments;
-        rpInfo.subpassCount    = 1;
-        rpInfo.pSubpasses      = &subpass;
-        rpInfo.dependencyCount = 1;
-        rpInfo.pDependencies   = &dependency;
-
-        VkRenderPass renderPass = VK_NULL_HANDLE;
-        if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &renderPass ) != VK_SUCCESS )
+        VkRenderPass renderPass = createRenderPassFromSpec( spec );
+        if ( renderPass == VK_NULL_HANDLE )
             return VK_NULL_HANDLE;
 
         _mapPipelineRenderPass.emplace( key, renderPass );
@@ -384,102 +358,45 @@ namespace sw
             return outRecord._framebuffer != VK_NULL_HANDLE && outRecord._renderPass != VK_NULL_HANDLE;
         }
 
-        VkImageView arrColorView[kMaxColorAttachments]{};
-        uint32      arrColorFormat[kMaxColorAttachments]{};
+        VkImageView arrFbAttachment[kMaxColorAttachments + 1]{};
         uint32      width{ 0 };
         uint32      height{ 0 };
+        // beginRenderPass 가 첨부를 미리 COLOR_ATTACHMENT / DEPTH_STENCIL_ATTACHMENT 로 전이해 두므로 그 레이아웃에서 시작·종료한다.
+        VulkanRenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
             if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE )
                 return false;
-            arrColorView[colorIndex]   = pTex->_imageView;
-            arrColorFormat[colorIndex] = pTex->_format;
-            width                      = pTex->_width;
-            height                     = pTex->_height;
+            arrFbAttachment[colorIndex] = pTex->_imageView;
+            width                       = pTex->_width;
+            height                      = pTex->_height;
+            spec.addColor( pTex->_format, toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         }
 
-        VkImageView depthView = VK_NULL_HANDLE;
-        uint32      depthFormat{ 0 };
+        uint32 attachCount = key._colorCount;
         if ( key._depth != 0 )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._depth );
             if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE )
                 return false;
-            depthView   = pTex->_imageView;
-            depthFormat = pTex->_format;
+            arrFbAttachment[attachCount] = pTex->_imageView;
+            ++attachCount;
             if ( width == 0 )
             {
                 width  = pTex->_width;
                 height = pTex->_height;
             }
+            spec.setDepth( pTex->_format, toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
+                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
         }
-        if ( key._colorCount == 0 && depthView == VK_NULL_HANDLE )
+        if ( attachCount == 0 )
             return false;
 
-        VkAttachmentDescription arrAttachment[kMaxColorAttachments + 1]{};
-        VkAttachmentReference   arrColorRef[kMaxColorAttachments]{};
-        VkImageView             arrFbAttachment[kMaxColorAttachments + 1]{};
-        for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
-        {
-            arrAttachment[colorIndex].format         = static_cast<VkFormat>( arrColorFormat[colorIndex] );
-            arrAttachment[colorIndex].samples        = VK_SAMPLE_COUNT_1_BIT;
-            arrAttachment[colorIndex].loadOp         = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) );
-            arrAttachment[colorIndex].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            arrAttachment[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            arrAttachment[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            // Match pre-begin transitionImageLayout to COLOR_ATTACHMENT_OPTIMAL.
-            arrAttachment[colorIndex].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            arrAttachment[colorIndex].finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            arrColorRef[colorIndex].attachment      = colorIndex;
-            arrColorRef[colorIndex].layout          = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            arrFbAttachment[colorIndex]             = arrColorView[colorIndex];
-        }
-
-        VkAttachmentReference depthRef{};
-        uint32                attachCount = key._colorCount;
-        const bool            bHasDepth   = depthView != VK_NULL_HANDLE;
-        if ( bHasDepth )
-        {
-            arrAttachment[attachCount].format         = static_cast<VkFormat>( depthFormat );
-            arrAttachment[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
-            arrAttachment[attachCount].loadOp         = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) );
-            arrAttachment[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            arrAttachment[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            arrAttachment[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            arrAttachment[attachCount].initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            arrAttachment[attachCount].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            depthRef.attachment                       = attachCount;
-            depthRef.layout                           = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            arrFbAttachment[attachCount]              = depthView;
-            ++attachCount;
-        }
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = key._colorCount;
-        subpass.pColorAttachments       = key._colorCount > 0 ? arrColorRef : nullptr;
-        subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo rpInfo{};
-        rpInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        rpInfo.attachmentCount = attachCount;
-        rpInfo.pAttachments    = arrAttachment;
-        rpInfo.subpassCount    = 1;
-        rpInfo.pSubpasses      = &subpass;
-        rpInfo.dependencyCount = 1;
-        rpInfo.pDependencies   = &dependency;
-
         CompositeFbRecord record{};
-        if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record._renderPass ) != VK_SUCCESS )
+        record._renderPass = createRenderPassFromSpec( spec );
+        if ( record._renderPass == VK_NULL_HANDLE )
             return false;
 
         VkFramebufferCreateInfo fbInfo{};

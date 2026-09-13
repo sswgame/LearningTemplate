@@ -18,6 +18,8 @@
     #define WGL_CONTEXT_MINOR_VERSION_ARB    0x2092
     #define WGL_CONTEXT_PROFILE_MASK_ARB     0x9126
     #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
+    #define WGL_CONTEXT_FLAGS_ARB            0x2094
+    #define WGL_CONTEXT_DEBUG_BIT_ARB        0x00000001 // KHR_debug 메시지를 드라이버가 만들 의무가 생기는 비트 (비-Shipping 전용)
 using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShareContext, const int32* pAttribList );
 #elif defined( SW_PLATFORM_LINUX )
     #define GLX_GLXEXT_LEGACY

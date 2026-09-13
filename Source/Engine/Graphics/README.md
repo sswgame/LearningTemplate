@@ -187,6 +187,27 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
 `FrameResourceRegistry` 에 `"<Name>"` 등록. `#if VULKAN/OPENGL` 분기 금지 — `binding.hlsli` 가 처리한다.
 
+**정점을 받는 셰이더는 `SwVertexInput`(common.hlsli) 하나만 쓴다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·GL 은
+**선언 순서로 location** 을 매긴다 — `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col 이 노멀을 읽는다
+(fullscreentriangle 이 실제로 검게 그려졌다, 2026-09-13). 리플렉션이 정점 입력(시맨틱·location)을 읽고
+`ShaderBindingContract` 5번 규칙이 `constant::arrVertexAttribute` 와 대조하므로, 어긋난 바이너리는 nogpu 테스트에서
+이름과 숫자로 떨어진다.
+
+### 패스 입력 역할 계약 — 파이프라인 XML 의 선언이 곧 바인딩이다 (2026-09-13)
+
+풀스크린 패스(Lighting · SSAO · Bloom · Outline · TAA · Tonemap · Present)는 XML 의 `_listInput` 을 **역할 이름으로
+전부 건다**(`FrameRenderer::registerDeclaredInputs`). 첨부 이름·포맷 → 역할은 `resolveRenderPassInputRole` 하나가
+정한다: 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor)은 그 역할, 그 밖의 깊이는 SceneDepth,
+나머지 컬러는 SourceColor. 셰이더는 역할 이름으로 읽는다(`g_SourceColorIndex` · `g_AmbientOcclusionIndex` …).
+타깃은 선언한 출력 중 첫 번째로 존재하는 것이다.
+
+`RenderPassInputContract`(Pipeline/) 가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineResource::validate` 4번
+검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
+"셰이더가 SW_INVALID_INDEX 를 읽습니다", SourceColor 가 둘이면 오류. 디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어
+두고도 아무도 걸지 않아 SSAO 가 매 프레임 버려지던 것이 이 검사가 없어서였다. 새 역할이 필요하면 (1) enum 과
+이름표, (2) 계약 표, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`SW_SampleIndex` · `commitBindlessTextureBindings`)
+네 곳이다. `FrameRenderer::setInputRoleEnabled( role, false )` 는 그 역할을 걸지 않는 쇼 플래그다(테스트가 켬/끔을 비교한다).
+
 **`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
 사용 금지) — 한 프로세스에 여러 `IRHIDevice` 가 공존하면(멀티 백엔드 파리티 테스트 등) 전역값이 실제
 디바이스와 어긋나 엉뚱한 셰이더 변형을 리플렉션한다.
@@ -416,9 +437,12 @@ Graphics 감사 후 고친 것 (2026-09-08):
   디스크립터를 복사하거나 세트를 새로 할당했다(언리얼 `FD3D12DescriptorCache` 는 내용이 같으면 그대로 쓴다).
 - **CBV 갱신은 프레임당 한 번.** DX12 `updateConstantBuffer` 가 드로우마다 레지스트리 전체를 훑고 있었다.
 
-남은 것은 대부분 API 호출 자체다 — `ExecuteIndirect` 867us, 정점버퍼 바인딩 407us(배치마다 메시가 달라
-줄일 수 없다). 더 줄이려면 메시들이 정점 버퍼를 공유해 `multiDrawIndirect` 한 번으로 묶어야 한다
-(언리얼의 통합 정점 버퍼 풀) — 별개의 구조 변경이다.
+남은 것은 대부분 API 호출 자체다. 2026-09-13 재측정(Release · 큐브 2000 · 변형 200 · 200프레임): 배치 **871개**,
+`RT.Draw.gpuBatches` DX12 458us · Vulkan 448us · GL 660us — 배치당 0.5us 안팎이고 그것이 RT 프레임(1114us)의 41%다.
+**정렬 순서는 답이 아니었다.** 배치를 (PSO → 머티리얼 → 메시) 로 묶고 정점 버퍼를 바뀔 때만 걸어 봤지만 세 백엔드
+모두 잡음 범위(DX12 454~460 · VK 434~451 · GL 667~679)였다 — 상태 변경이 아니라 배치당 고정 호출(루트 상수 + 바인더
++ `drawIndirect`)이 비용이다. 더 줄이려면 메시들이 **정점 버퍼를 공유**해 PSO 그룹 하나를 `multiDrawIndirect` 한 번으로
+묶어야 한다(언리얼의 통합 정점 버퍼 풀 + 드로우 ID). 백로그 1-7.
 
 ## 성능을 잴 때 — 먼저 VSync 를 확인한다 (2026-09-13)
 
@@ -469,6 +493,10 @@ py -3 Scripts/dev/BackendSmoke.py                                               
 - `-gv_rhiBackBufferFormat=1` 은 B8G8R8A8 백버퍼를 요청한다 — 백버퍼 PSO 가 `getBackBufferFormat()` 을 따르는지(Vulkan 렌더패스 호환) 이걸로 본다.
   로그의 `백버퍼 포맷: 요청 → 채택` 줄이 실제 채택값이다.
 - DX11/DX12 디버그 레이어 메시지는 프레임 끝에 `[Error]` 로 로그에 나온다(`flushDebugMessages`). 스모크 로그의 `[Error]` 수가 0 이 아니면 읽어라.
+- **OpenGL 도 같다(2026-09-13).** 비-Shipping 은 디버그 컨텍스트(`WGL_CONTEXT_DEBUG_BIT_ARB`) + KHR_debug 콜백이라 GL 오류가
+  `[Error]`, 중간 심각도가 `[Warning]` 으로 나온다(알림은 끈다). 그 전엔 GL 오류가 어디에도 나오지 않았다(glGetError 0곳).
+- Vulkan 렌더패스는 `VulkanRenderPassSpec` + `createRenderPassFromSpec` 한 자리에서만 만든다(스왑체인 CLEAR/LOAD · 오프스크린 ·
+  PSO 호환 · 합성 · desc 여섯 자리가 그것을 채운다). 첨부/의존성을 손으로 적는 자리를 다시 만들지 말 것.
 - 셰이더 .hlsli 를 고쳤으면 반드시 `--bake-shaders` 를 다시 돌린다 — 런타임은 매니페스트가 소스보다 오래되면 런타임 리플렉션으로 폴백하지만 테스트는 구운 바이너리를 본다.
 - **스왑체인·프레젠트를 건드렸으면 창을 실제로 흔들어야 한다.** `ResizeBuffers` 의 플래그가 생성 때와
   어긋나면 그 뒤의 Present 가 `INVALID_CALL` 이 되는데, 리사이즈를 안 하면 영원히 드러나지 않는다.
