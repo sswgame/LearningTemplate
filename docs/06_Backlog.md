@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-13 · 기준 커밋 `253eb0d8`
+> 마지막 갱신: 2026-09-13 · 기준 커밋 `f586e6b2`
 
 ---
 
@@ -294,6 +294,77 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-13 (테스트 파일 하나가 스위트 스무 개를 들고 있었다 — 주제별로 가르고, 공유 픽스처를 헤더로)
+
+네 파일이 전체 케이스의 **29%**(808 중 234)를 들고 있었다. 커진 이유는 케이스가 많아서가 아니다 —
+**공유 픽스처가 그 파일 안에 있어서**다. 목 컴포넌트든 손으로 지은 `TypeInfo` 든, 쓰려면 케이스를 같은
+파일에 써야 했다. 그래서 주제가 전혀 다른 스위트가 계속 붙었다. 픽스처를 헤더로 올리자 가르는 일이 그냥
+따라왔다.
+
+| 전 | 줄 | 스위트 | 후 (케이스) |
+| --- | ---: | ---: | --- |
+| `TestCompressionAndSpatial.cpp` | 623 | 5 | `TestSpatial`(8) · `TestRenderGraph`(2) · `TestAssetStreaming`(2) · `TestPropertyMetaHint`(1) |
+| `TestInput.cpp` | 1828 | 11 | `TestInput`(29) · `TestActionMap`(17) · `TestInputRobustness`(6) |
+| `TestGameObject.cpp` | 3367 | 18 | `TestGameObject`(32) · `TestGameObjectManager`(15) · `TestComponentTick`(12) · `TestSceneComponent`(5) + 이사 4 |
+| `TestReflection.cpp` | 3891 | 20 | `TestReflection`(12) · `TestReflectionSerialization`(31) · `TestReflectionTypeInfo`(24) · `TestReflectionLayout`(16) · `TestReflectionParser`(9) · `TestReflectionEnum`(9) |
+
+`TestCompressionAndSpatial.cpp` 는 **이름이 이미 둘을 이어 붙이고 있었다** — 그런 이름이 보이면 가를 때다.
+압축 테스트는 그 파일에 없었다(진작에 옮겨졌고 이름만 남아 있었다).
+
+**픽스처를 헤더로 올릴 때 지킨 것: 캐시와 등록은 TU 하나에만 둔다.**
+`TestGameObjectMocks.h` 의 `makeMockComponentTypeInfo` 와 `TestReflectionFixtures.h` 의 `RegisterTypes` ·
+`RegisterEnums` 는 **정의를 짝 `.cpp` 에 두었다.** 익명 네임스페이스째 헤더에 두면 include 한 TU 마다 캐시가
+갈려 같은 이름의 `TypeInfo` 가 레지스트리에 여러 번 들어간다. 두 헤더 머리에 그 이유를 적었다.
+정적 멤버 정의(`MockPoolLifecycleComponent::s_ctorCount`)에는 `inline` 이 필요하다 — 빼먹고 중복 심볼로
+링크를 깨뜨렸다.
+
+**스위트 셋(케이스 넷)은 파일이 아니라 주제를 따라 옮겼다.** `TagSystemTest` → `TestTagSystem.cpp`,
+`ObjectStateXmlSerializerTest`(2) → `TestObjectStateRoundTrip.cpp`, `MathTest` → `Test/CoreTest/TestMath.cpp`
+(그 파일 관례에 맞춰 `Core_Math` 로 개명, `sw::` 한정). 옮긴 케이스는 include 를 다시 맞춰야 했다.
+
+**가르는 도중에 드러난 것 셋.**
+
+- `TestReflection.cpp` 의 `JsonSequenceAcceptsPlainArray` 문서 주석이 **엉뚱한 케이스 위에** 얹혀 있었다.
+  사이에 케이스를 끼워 넣으면서 벌어진 것이고, 3891 줄 안에서는 아무도 못 본다. 제자리로 옮겼다.
+- 케이스 본문 끝에 군더더기 세미콜론(`};`)이 붙은 자리 여섯 개. 가르면서 `}` 로 통일했다.
+- 번호 붙은 구역 배너(`// 16) Reflection_Binding — ...`)는 지웠다. 같은 스위트가 1·3·4·8·11·13 번으로
+  여섯 번 등장했고 번호는 이미 어긋나 있었다(`6)` 과 `22)` 가 두 번씩). **파일 이름이 주제를 말하게 한다.**
+
+> **가르는 도구의 함정 넷** (다음에 또 가른다면 그대로 겪는다).
+> ① 케이스를 감싼 `#if` 는 산출 파일마다 다시 감싸야 한다(`TestInput.cpp` 에 아홉 개가 있었다).
+> ② 파일 **중간에** 있는 `using namespace sw;` 를 흘리면 수백 개의 미선언 오류가 난다 — 케이스 본문에서
+> 빼고 산출 파일 머리에 한 번 넣는다.
+> ③ 케이스 끝을 `}` 로만 찾으면 위의 `};` 여섯 개에서 다음 케이스까지 삼킨다.
+> ④ include 가지치기를 어간 단어 경계로 하면 `Serializer.h` 가 `XmlSerializer` 를 못 알아본다 — 부분
+> 문자열로 재고, 모자라면 빌드가 알려 준다(실제로 `ReflectionEnumNames.h` 하나가 걸렸다).
+
+**확인**: 케이스 총수 **808 → 808**(스위트·케이스 이름 전수 비교, 차이는 의도한 `MathTest` → `Core_Math`
+하나뿐) · `Ninja-Debug` ctest **13/13** · `CI-Debug`(유니티) nogpu 5/5 · `Ninja-Release` · `Ninja-Shipping`
+nogpu 각 5/5 · 린트 게이트 7종 0건 · `RunBuildWarnings` 세 구성 **모두 0건**
+
+### 2026-09-13 (씬이 그리는 쪽을 알 필요가 없었다 — 그리고 소유 검사가 이름 다섯 개만 보고 있었다)
+
+**`Scene::render( IRHIDevice* )` 는 호출자도 오버라이드도 없었다.** 실제 렌더링은 게임 스레드가 씬에서
+스냅샷을 뽑아(`GpuSceneBuilder`) 패킷으로 넘기고 렌더 스레드가 그것만 보고 그린다. 그런데 이 죽은 함수가
+**`Scene -> Graphics` 의존의 유일한 이유**였다 — 씬이 `FrameRenderer*` 를 멤버로 들고 `execute( this )` 를
+부르는 모양이라, 패킷 구조와 정반대로 씬이 그리는 쪽을 알아야 했다. 함수·세터·게터·멤버와 `SceneManager`
+전파 두 곳을 걷어냈다. `SceneManager` 는 포인터를 그대로 든다 — 에디터 뷰포트 툴바가 뷰 모드를 바꾸려고
+찾아오는 경로 하나가 있고, 왜 남는지를 선언 옆에 적었다.
+
+> **여기서 한 번 헛짚었다.** `MaterialCache.h` 와 `IRHIDevice.h` 도 죽은 include 로 봤는데 둘 다 살아 있었다 —
+> `getMaterialManager()` 가 `MaterialCache` 를 돌려주고, `_pRHIDevice->waitIdle()` 이 역참조한다. **타입 이름이
+> 본문에 안 보인다고 죽은 include 가 아니다.** 되돌렸다.
+
+**`CheckRenderOwnership` 은 (파일, 구조체 이름) 다섯 쌍만 보고 있었다.** 그래서 그 헤더에 구조체를 **새로
+더하면 검사를 그냥 빠져나간다** — 생포인터를 넣은 탐침 구조체가 통과하는 것을 확인했다. 같은 실험에서 두
+번째 버그가 나왔다: 본문을 찾는 정규식 `\bstruct\s+Name` 이 문서 주석의 `@struct Name` **언급**에도 걸려
+**엉뚱한 구조체의 본문**을 재고 있었다.
+
+고친 방식은 목록을 없애는 것이다. **헤더를 정하고 그 안의 모든 구조체를 본다 — 목록이 아니라 자리가
+규칙이다.** 주석은 길이를 유지한 채 공백으로 지운 뒤 파싱하고(오프셋이 밀리면 다른 구조체를 집는다),
+예외는 `// SW_OWNERSHIP_RAW_OK: <이유>` 로 **코드 옆에 이유와 함께** 적는다. 검사 대상 5 → 9 개,
+예외가 실제로 필요한 구조체는 정체성 키(`GpuMaterialElementKey`) 하나뿐이었다.
 
 ### 2026-09-13 (빌드 주변 정리 — 동시 처리를 한 자리로, 손으로 관리하던 목록 하나를 없앤다)
 
@@ -4751,7 +4822,7 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
 > | 엣지 | 수 | 내용 |
 > |---|---|---|
 > | `Object -> Graphics` | 3 | `MeshComponent` 가 Material·Mesh·RHITypes 를 든다 |
-> | `Scene -> Graphics` | 5 | `Scene.cpp` 가 FrameRenderer·MaterialCache·IRHIDevice 를 부른다 |
+> | ~~`Scene -> Graphics`~~ | ~~5~~ | **2026-09-13 해소** — 아무도 안 부르던 `Scene::render` 를 걷어내니 남은 것은 `MaterialCache` 하나다 |
 > | `Reflection -> Serialization` | 4 | `ReflectAny.cpp` 가 직렬화기를 부른다 |
 > | `Serialization -> Object` | 3 | `SerializeContext`·`SchemaMigrate` 가 TagSystem·ComponentHandle 을 안다 |
 > | `Object -> Scene` | 6 | `ComponentPtr.cpp` 가 SceneManager 로 핸들을 푼다 |

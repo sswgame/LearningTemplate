@@ -440,3 +440,28 @@ SW_TEST_CASE( Core_Math, AABBEmptyExtentsSafety )
     SW_EXPECT_NEAR_EQUAL( 0.0f, extents._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, extents._z, 1e-4f );
 }
+
+// ------------------------------------------------------------------------------
+// 5) MathTest — Double3 벡터
+// ------------------------------------------------------------------------------
+/**
+ * @brief [Core_Math] double3 벡터 연산
+ */
+SW_TEST_CASE( Core_Math, Double3VectorOperations )
+{
+    sw::double3 v1( 3.0, 4.0, 0.0 );
+    SW_EXPECT_NEAR_EQUAL( 5.0, v1.getLength(), 1e-6 );
+
+    v1.normalize();
+    SW_EXPECT_NEAR_EQUAL( 0.6, v1._x, 1e-6 );
+    SW_EXPECT_NEAR_EQUAL( 0.8, v1._y, 1e-6 );
+
+    sw::float3  f3( 10.0f, 20.0f, 30.0f );
+    sw::double3 d3FromF3( f3 );
+    SW_EXPECT_NEAR_EQUAL( 10.0, d3FromF3._x, 1e-6 );
+    SW_EXPECT_NEAR_EQUAL( 20.0, d3FromF3._y, 1e-6 );
+    SW_EXPECT_NEAR_EQUAL( 30.0, d3FromF3._z, 1e-6 );
+
+    sw::float3 convertedF3 = d3FromF3.toFloat3();
+    SW_EXPECT_NEAR_EQUAL( 10.0f, convertedF3._x, 1e-4f );
+}

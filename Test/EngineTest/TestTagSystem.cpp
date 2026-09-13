@@ -278,3 +278,33 @@ SW_TEST_CASE( TagSystemTest, DeserializedTagIDStringRecoveryAndHierarchyMatching
     SW_EXPECT_TRUE( restoredTag.isSubtagOf( TagID::request( "Skill.Spell" ) ) );
     SW_EXPECT_FALSE( restoredTag.isSubtagOf( TagID::request( "Skill.Melee" ) ) );
 }
+
+// ------------------------------------------------------------------------------
+// 2) TagSystemTest — 계층 리터럴·매칭
+// ------------------------------------------------------------------------------
+/**
+ * @brief [TagSystemTest] 정수 리터럴과 계층 포함
+ */
+SW_TEST_CASE( TagSystemTest, IntegerLiteralAndHierarchicalSubsumption )
+{
+    sw::GameObjectManager manager;
+    constexpr TagID       tagAttacking = "State.Combat.Attacking"_tag;
+    constexpr TagID       tagCombat    = "State.Combat"_tag;
+    constexpr TagID       tagState     = "State"_tag;
+
+    SW_EXPECT_TRUE( tagAttacking.isValid() );
+    SW_EXPECT_TRUE( tagCombat.isValid() );
+
+    SW_EXPECT_TRUE( tagAttacking.isSubtagOf( tagCombat ) );
+    SW_EXPECT_TRUE( tagAttacking.isSubtagOf( tagState ) ); // 전체 부모 체인
+    SW_EXPECT_TRUE( tagCombat.isSubtagOf( tagState ) );
+    SW_EXPECT_FALSE( tagState.isSubtagOf( tagAttacking ) );
+
+    TagContainer container{ tagAttacking };
+    SW_EXPECT_TRUE( container.hasTag( tagAttacking, true ) );
+    SW_EXPECT_TRUE( container.hasTag( tagState, false ) );
+
+    TagContainer required{ tagAttacking };
+    TagContainer forbidden{ "State.Dead"_tag };
+    SW_EXPECT_TRUE( container.matchTags( required, forbidden ) );
+}

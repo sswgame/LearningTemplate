@@ -1,0 +1,321 @@
+#include "pch.h"
+
+#include "Core/File/FileUtil.h"
+#include "Core/Process/Process.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
+
+#include "ReflectionParser/AnnotationMeta.h"
+#include "ReflectionParser/ParserUtil.h"
+
+#include "ReflectionTest/TestReflectionFixtures.h"
+#include "ReflectionTest/TestSampleActor.h"
+
+#include "TestFramework/TestFramework.h"
+
+// ReflectionParser — 런타임이 아니라 **도구** 를 본다. 애노테이션·주석 파싱과 경로 판별.
+/**
+ * @brief [ReflectionParser] 주석 내에 있는 매크로 문자열은 파싱되지 않아야 함
+ */
+
+SW_TEST_CASE( ReflectionParser, FallbackCommentTest )
+{
+    const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
+    SW_ASSERT_NOT_NULL( info );
+
+    // _shouldNotBeParsed 프로퍼티는 등록되지 않아야 함 (주석 안에 PROPERTY()가 있으므로 무시되어야 함)
+    const sw::PropertyInfo* badProp = info->findProperty( sw::hashed_string( "_shouldNotBeParsed" ) );
+    SW_EXPECT_TRUE( badProp == nullptr );
+}
+
+/**
+ * @brief [ReflectionParser] ParserUtil 경로 조합 및 Include 경로 추출 검증
+ */
+SW_TEST_CASE( ReflectionParser, ParserUtilPathAndIncludeGeneration )
+{
+    // 1) makeGeneratedPath 검증
+    const sw::string genCpp = sw::ParserUtil::makeGeneratedPath( "build/Ninja-Debug/Bin", "Source/Engine/Input/KeyCodes.h", ".gen.cpp" );
+    SW_EXPECT_EQUAL( sw::string( "build/Ninja-Debug/Bin/KeyCodes.gen.cpp" ), genCpp );
+
+    const sw::string genH = sw::ParserUtil::makeGeneratedPath( "output/dir", "Foo/Bar/MyActor.hpp", ".gen.h" );
+    SW_EXPECT_EQUAL( sw::string( "output/dir/MyActor.gen.h" ), genH );
+
+    // 2) makeHeaderIncludePath 검증
+    sw::vector<sw::string> listIncludeRoots;
+    listIncludeRoots.push_back( "Source" );
+    listIncludeRoots.push_back( "Test" );
+
+    const sw::string includePath = sw::ParserUtil::makeHeaderIncludePath(
+        "Source/Engine/Object/GameObject.h",
+        listIncludeRoots );
+    SW_EXPECT_EQUAL( sw::string( "Engine/Object/GameObject.h" ), includePath );
+}
+
+/**
+ * @brief [ReflectionParser] ParserUtil splitCommaRespectingAngles 템플릿 중첩 쉼표 분할 검증
+ */
+SW_TEST_CASE( ReflectionParser, ParserUtilSplitCommaRespectingAngles )
+{
+    // 1) 단일 토큰
+    const auto listSingle = sw::ParserUtil::splitCommaRespectingAngles( "int32" );
+    SW_EXPECT_EQUAL( 1u, listSingle.size() );
+    if ( listSingle.empty() == false )
+        SW_EXPECT_EQUAL( sw::string( "int32" ), listSingle[0] );
+
+    // 2) 복합 중첩 템플릿 (map<string, vector<int32>>, float32, pair<int32, int32>)
+    const auto listComplex = sw::ParserUtil::splitCommaRespectingAngles(
+        "int32, vector<string>, map<string, vector<int32>>, float32" );
+    SW_EXPECT_EQUAL( 4u, listComplex.size() );
+    if ( listComplex.size() == 4 )
+    {
+        SW_EXPECT_EQUAL( sw::string( "int32" ), listComplex[0] );
+        SW_EXPECT_EQUAL( sw::string( "vector<string>" ), listComplex[1] );
+        SW_EXPECT_EQUAL( sw::string( "map<string, vector<int32>>" ), listComplex[2] );
+        SW_EXPECT_EQUAL( sw::string( "float32" ), listComplex[3] );
+    }
+
+    // 3) 깊은 중첩 < < < > > >
+    const auto listDeep = sw::ParserUtil::splitCommaRespectingAngles( "A<B<C<D>>>, E<F>" );
+    SW_EXPECT_EQUAL( 2u, listDeep.size() );
+    if ( listDeep.size() == 2 )
+    {
+        SW_EXPECT_EQUAL( sw::string( "A<B<C<D>>>" ), listDeep[0] );
+        SW_EXPECT_EQUAL( sw::string( "E<F>" ), listDeep[1] );
+    }
+}
+
+/**
+ * @brief [ReflectionParser] AnnotationMeta tryParseAnnotationKind 파싱 검증
+ */
+SW_TEST_CASE( ReflectionParser, AnnotationKindParsing )
+{
+    sw::AnnotationBinding::Kind kind = sw::AnnotationBinding::Kind::Flag;
+
+    SW_EXPECT_TRUE( sw::tryParseAnnotationKind( "flag", kind ) );
+    SW_EXPECT_TRUE( kind == sw::AnnotationBinding::Kind::Flag );
+
+    SW_EXPECT_TRUE( sw::tryParseAnnotationKind( "bool", kind ) );
+    SW_EXPECT_TRUE( kind == sw::AnnotationBinding::Kind::Bool );
+
+    SW_EXPECT_TRUE( sw::tryParseAnnotationKind( "string", kind ) );
+    SW_EXPECT_TRUE( kind == sw::AnnotationBinding::Kind::String );
+
+    SW_EXPECT_TRUE( sw::tryParseAnnotationKind( "float", kind ) );
+    SW_EXPECT_TRUE( kind == sw::AnnotationBinding::Kind::Float );
+
+    SW_EXPECT_TRUE( sw::tryParseAnnotationKind( "netrole", kind ) );
+    SW_EXPECT_TRUE( kind == sw::AnnotationBinding::Kind::NetRole );
+
+    SW_EXPECT_FALSE( sw::tryParseAnnotationKind( "nonexistent", kind ) );
+}
+
+/**
+ * @brief [ReflectionParser] ReflectionParser 코드젠 출력 메타데이터 및 Static/Ctor 심볼 검증
+ */
+SW_TEST_CASE( ReflectionParser, CodegenStaticLibraryAndCtorMetadata )
+{
+    // 1) Static 라이브러리 함수 심볼 코드젠 검증 (StaticDemoLibrary::doubleInt)
+    const sw::TypeInfo* pStaticType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
+    SW_ASSERT_NOT_NULL( pStaticType );
+    SW_EXPECT_TRUE( pStaticType->_bStatic == SW_TRUE );
+
+    const sw::FunctionInfo* pFunc = pStaticType->findMethod( sw::hashed_string( "doubleInt" ) );
+    SW_ASSERT_NOT_NULL( pFunc );
+    SW_EXPECT_TRUE( pFunc->_metadata._bStatic == SW_TRUE );
+#if !defined( SW_SHIPPING )
+    SW_EXPECT_EQUAL( sw::string( "Math" ), pFunc->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Double Int" ), pFunc->_metadata._displayName );
+#endif
+
+    // 2) 명시적 생성자 코드젠 ($ctor, $ctor(int32)) 검증
+    const sw::TypeInfo* pCtorType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
+    SW_ASSERT_NOT_NULL( pCtorType );
+
+    const sw::FunctionInfo* pDefaultCtor = pCtorType->findMethod( sw::hashed_string( "$ctor" ) );
+    SW_ASSERT_NOT_NULL( pDefaultCtor );
+    SW_EXPECT_TRUE( pDefaultCtor->_metadata._bConstructor == SW_TRUE );
+
+    const sw::FunctionInfo* pParamCtor = pCtorType->findMethod( sw::hashed_string( "$ctor(int32)" ) );
+    SW_ASSERT_NOT_NULL( pParamCtor );
+    SW_EXPECT_TRUE( pParamCtor->_metadata._bConstructor == SW_TRUE );
+
+    // 3) AbstractDemoBase _bAbstract 검증
+    const sw::TypeInfo* pAbstractType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
+    SW_ASSERT_NOT_NULL( pAbstractType );
+    SW_EXPECT_TRUE( pAbstractType->_bAbstract == SW_TRUE );
+
+    // 4) AssetPathActor 메타데이터 검증
+    const sw::TypeInfo* pAssetPathType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssetPathActor" ) );
+    SW_ASSERT_NOT_NULL( pAssetPathType );
+    const sw::PropertyInfo* pAlbedoProp = pAssetPathType->findProperty( sw::hashed_string( "_albedo" ) );
+    SW_ASSERT_NOT_NULL( pAlbedoProp );
+    SW_EXPECT_TRUE( pAlbedoProp->_metadata._bAssetPath == SW_TRUE );
+    SW_EXPECT_EQUAL( sw::string( "Texture" ), pAlbedoProp->_metadata._assetType );
+}
+
+/**
+ * @brief [ReflectionParser] 프로퍼티 다중 별칭, 타입 개명 호환 및 저작 기본값 코드젠 검증
+ */
+SW_TEST_CASE( ReflectionParser, MultiplePropertyAliasesAndRenameCompat )
+{
+    // 1) 프로퍼티 다중 별칭 (Alias = "hp, HitPoints")
+    const sw::TypeInfo* pAliasType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
+    SW_ASSERT_NOT_NULL( pAliasType );
+
+    const sw::PropertyInfo* pMainProp = pAliasType->findProperty( sw::hashed_string( "_currentHp" ) );
+    const sw::PropertyInfo* pAlias1   = pAliasType->findProperty( sw::hashed_string( "hp" ) );
+    const sw::PropertyInfo* pAlias2   = pAliasType->findProperty( sw::hashed_string( "HitPoints" ) );
+
+    SW_ASSERT_NOT_NULL( pMainProp );
+    SW_EXPECT_EQUAL( pMainProp, pAlias1 );
+    SW_EXPECT_EQUAL( pMainProp, pAlias2 );
+
+    // 2) 타입 개명 호환 (Alias = LegacyRenameActor)
+    const sw::TypeInfo* pTypeCurrent = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
+    const sw::TypeInfo* pTypeLegacy  = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
+    SW_ASSERT_NOT_NULL( pTypeCurrent );
+    SW_ASSERT_NOT_NULL( pTypeLegacy );
+    SW_EXPECT_EQUAL( pTypeCurrent->_typeId, pTypeLegacy->_typeId );
+    SW_EXPECT_TRUE( pTypeCurrent->_fullyQualifiedName == pTypeLegacy->_fullyQualifiedName );
+
+    // 3) 저작 기본값 (PROPERTY(Default = "75"))
+    const sw::TypeInfo* pDefaultType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DefaultValueTestActor" ) );
+    SW_ASSERT_NOT_NULL( pDefaultType );
+    const sw::PropertyInfo* pManaProp  = pDefaultType->findProperty( sw::hashed_string( "_mana" ) );
+    const sw::PropertyInfo* pTitleProp = pDefaultType->findProperty( sw::hashed_string( "_title" ) );
+    SW_ASSERT_NOT_NULL( pManaProp );
+    SW_ASSERT_NOT_NULL( pTitleProp );
+    SW_EXPECT_EQUAL( sw::string( "75" ), pManaProp->_metadata._defaultValue );
+    SW_EXPECT_EQUAL( sw::string( "Apprentice" ), pTitleProp->_metadata._defaultValue );
+    SW_EXPECT_TRUE( pTitleProp->_metadata._bXmlAttribute == SW_TRUE );
+}
+
+/**
+ * @brief [ReflectionParser] ParserUtil 극단적 템플릿 중첩 및 경로 불일치 경계조건 검증
+ */
+SW_TEST_CASE( ReflectionParser, ParserUtilExtremeEdgeCases )
+{
+    // 1) 4단계 이상 깊은 중첩 템플릿 분할
+    const auto listTokens = sw::ParserUtil::splitCommaRespectingAngles(
+        "  tuple<int32, map<string, vector<pair<int32, int32>>>, float64> ,   bool  " );
+    SW_EXPECT_EQUAL( 2u, listTokens.size() );
+    if ( listTokens.size() == 2 )
+    {
+        SW_EXPECT_EQUAL( sw::string( "tuple<int32, map<string, vector<pair<int32, int32>>>, float64>" ), listTokens[0] );
+        SW_EXPECT_EQUAL( sw::string( "bool" ), listTokens[1] );
+    }
+
+    // 2) 쉼표 없는 단일 표현식 및 빈 문자열
+    const auto listEmpty = sw::ParserUtil::splitCommaRespectingAngles( "" );
+    SW_EXPECT_EQUAL( 0u, listEmpty.size() );
+
+    const auto listSpaces = sw::ParserUtil::splitCommaRespectingAngles( "   " );
+    SW_EXPECT_EQUAL( 0u, listSpaces.size() );
+
+    // 3) makeHeaderIncludePath 루트 불일치 시 파일명 fallback
+    sw::vector<sw::string> listRoots;
+    listRoots.push_back( "OtherProject/Source" );
+    const sw::string fallback = sw::ParserUtil::makeHeaderIncludePath( "Projects/Source/Engine/Foo.h", listRoots );
+    SW_EXPECT_EQUAL( sw::string( "Foo.h" ), fallback );
+}
+
+/**
+ * @brief [ReflectionParser] RpcDemoActor 메타데이터 및 Invoker 실행 검증
+ */
+SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
+{
+    const sw::TypeInfo* pRpcType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
+    SW_ASSERT_NOT_NULL( pRpcType );
+
+    const sw::FunctionInfo* pMethod = pRpcType->findMethod( sw::hashed_string( "applyDamage" ) );
+    SW_ASSERT_NOT_NULL( pMethod );
+
+    SW_EXPECT_TRUE( pMethod->_metadata._netRole == sw::FunctionNetRole::Server );
+    SW_EXPECT_TRUE( pMethod->_metadata._bReliable == SW_TRUE );
+#if !defined( SW_SHIPPING )
+    SW_EXPECT_EQUAL( sw::string( "Combat" ), pMethod->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), pMethod->_metadata._displayName );
+    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), pMethod->_metadata._tooltip );
+#endif
+
+    // Invoker 실행 검증
+    sw::RpcDemoActor actor;
+    actor._hp = 100;
+    sw::TaskArgs args;
+    args.add( int32{ 35 } );
+    pMethod->_invoker( &actor, args );
+    SW_EXPECT_EQUAL( 65, actor._hp );
+}
+
+/**
+ * @brief [ReflectionParser] :2 이상 다중 비트 비트필드에 PROPERTY() 선언 시 빌드타임 컴파일 에러 진단 검증
+ */
+SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
+{
+#if defined( SW_DEBUG )
+    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    const sw::string parserExe = sw::FileUtil::joinPath( binDir, "ReflectionParser" );
+
+    if ( sw::FileUtil::fileExists( parserExe ) == false &&
+         sw::FileUtil::fileExists( parserExe + ".exe" ) == false )
+        SW_TEST_SKIP( "ReflectionParser executable not found in binary directory" );
+
+    sw::ResourceUtil::initialize();
+    const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string tempHeaderPath = sw::FileUtil::joinPath( binDir, "InvalidBitfieldSample.h" );
+    const sw::string outGenDir      = sw::FileUtil::joinPath( binDir, "temp_gen" );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    const sw::string headerContent = "#pragma once\n"
+                                     "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                     "namespace sw\n"
+                                     "{\n"
+                                     "\tREFLECT()\n"
+                                     "\tstruct InvalidBitfieldSampleActor\n"
+                                     "\t{\n"
+                                     "\t\tPROPERTY()\n"
+                                     "\t\tuint8 _invalidMultiBit : 2;\n"
+                                     "\t};\n"
+                                     "}\n";
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeaderPath, headerContent ) );
+
+    sw::string                capturedLog;
+    sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
+        sw::ProcessOutputDelegate,
+        [&capturedLog]( string_view line, bool /*bIsStdErr*/ )
+    {
+        capturedLog.append( line.data(), line.size() );
+        capturedLog.push_back( '\n' );
+    } );
+
+    const sw::string cmd = "\"" + parserExe + "\" " +
+                           "--input \"" + tempHeaderPath + "\" " +
+                           "--output \"" + outGenDir + "\" " +
+                           "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
+                           "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
+                           "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
+                           "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+
+    sw::ProcessOptions options;
+    options._workingDirectory = projectRoot;
+
+    const int32 exitCode = sw::Process::execute( cmd, options, outputCb );
+
+    // 에러 코드로 종료되어야 함 (exitCode != 0)
+    SW_EXPECT_TRUE( exitCode != 0 );
+
+    // 1비트 불리언 플래그만 지원한다는 정확한 진단 메시지 출력 확인
+    const bool bFoundErrorDiagnosis = ( capturedLog.find( "bit width 2" ) != sw::string::npos ||
+                                        capturedLog.find( "Only 1-bit bitfield boolean flags" ) != sw::string::npos );
+    SW_EXPECT_TRUE( bFoundErrorDiagnosis );
+
+    // 임시 파일 정리
+    sw::FileUtil::removeFile( tempHeaderPath );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
