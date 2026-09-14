@@ -34,22 +34,14 @@ InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
 
-from common import (
-    collectSourceFiles,
-    flatMapConcurrent,
-    getLintSearchDirs,
-    getModifiedCppFiles,
-    getProjectRoot,
-    useUtf8Stdout,
-)
+from LintFixer import FixPass, LintFixer  # noqa: E402
 # 중괄호를 벗기면 안 되는 본문: 스스로 분기/반복을 여는 문장(달랑거리는 else 위험) 및 레이블.
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")
 _kIfHeadRe = re.compile(r"^if(\s+constexpr)?\s*\(")
@@ -375,102 +367,35 @@ def insertCaseBraces(text: str) -> tuple[str, bool]:
     return "\n".join(listOut), True
 
 
-def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
+class FormatBranchBracesFixer(LintFixer):
     """
-    단일 파일의 분기 중괄호를 검사하거나 정리합니다.
-    위반/수정 사항이 있으면 메시지 목록을 반환합니다.
+    if 를 먼저 벗기고 **그 다음에** case 를 센다 — 순서가 반대면 벗겨질 중괄호가 문장 수를 부풀린다.
+    `listPass` 의 선언 순서가 그 계약이다.
     """
-    try:
-        with filePath.open("r", encoding="utf-8", errors="ignore", newline="") as file:
-            content = file.read()
-    except Exception as exception:
-        return [f"[BranchBraces] {filePath} 읽기 실패: {exception}"]
 
-    # if 계열을 먼저 벗긴 뒤에 case 를 센다. 순서가 반대면 벗겨질 중괄호가 문장 수를 부풀린다.
-    formattedContent, bBranchModified = formatBranchBraces(content)
-    formattedContent, bCaseModified = insertCaseBraces(formattedContent)
-    if not bBranchModified and not bCaseModified:
-        return []
-
-    if checkOnly:
-        listMessage: list[str] = []
-        if bBranchModified:
-            listMessage.append(f"[BranchBraces] {filePath}: 한 줄짜리 if 본문에 불필요한 중괄호가 있습니다.")
-        if bCaseModified:
-            listMessage.append(f"[BranchBraces] {filePath}: 본문이 여러 문장인 case 에 중괄호가 없습니다.")
-        return listMessage
-
-    try:
-        with filePath.open("w", encoding="utf-8", newline="") as file:
-            file.write(formattedContent)
-    except Exception as exception:
-        return [f"[BranchBraces] {filePath} 쓰기 실패: {exception}"]
-
-    listDone: list[str] = []
-    if bBranchModified:
-        listDone.append(f"[BranchBraces] {filePath}: 한 줄짜리 if 본문의 중괄호 제거 완료")
-    if bCaseModified:
-        listDone.append(f"[BranchBraces] {filePath}: 여러 문장인 case 본문에 중괄호 추가 완료")
-    return listDone
-
-
-def formatBranchBracesBatch(files: Sequence[Path], checkOnly: bool = False, maxWorkers: int | None = None) -> list[str]:
-    """
-    여러 파일을 동시에 처리합니다 (워커 수 정책은 `common.Parallel`).
-    """
-    return flatMapConcurrent(lambda path: processFile(path, checkOnly), list(files), workerCount=maxWorkers)
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
-
-    parser = argparse.ArgumentParser(description="한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가")
-    parser.add_argument(
-        "files",
-        nargs="*",
-        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상)",
+    tag = "BranchBraces"
+    description = "한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가"
+    listPass = (
+        FixPass(
+            transform=formatBranchBraces,
+            problem="한 줄짜리 if 본문에 불필요한 중괄호가 있습니다.",
+            done="한 줄짜리 if 본문의 중괄호 제거 완료",
+        ),
+        FixPass(
+            transform=insertCaseBraces,
+            problem="본문이 여러 문장인 case 에 중괄호가 없습니다.",
+            done="여러 문장인 case 본문에 중괄호 추가 완료",
+        ),
     )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="프로젝트 전체 C++ 파일에 대해 실행",
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="파일을 수정하지 않고 규칙 위반 여부만 검사",
-    )
-    args = parser.parse_args(argv)
 
-    root = getProjectRoot()
 
-    if args.files:
-        fileList = [Path(f).resolve() for f in args.files if Path(f).is_file()]
-    elif args.all:
-        roots = getLintSearchDirs(root)
-        fileList = collectSourceFiles(roots)
-    else:
-        modifiedFiles = getModifiedCppFiles(root)
-        if modifiedFiles:
-            fileList = modifiedFiles
-            print(f"[FormatBranchBraces] Git 변경 파일 {len(fileList)}개 감지.", file=sys.stderr)
-        else:
-            roots = getLintSearchDirs(root)
-            fileList = collectSourceFiles(roots)
-            print(f"[FormatBranchBraces] 변경된 파일이 없어 전체 {len(fileList)}개 파일 대상 실행.", file=sys.stderr)
+_gFixer = FormatBranchBracesFixer()
 
-    if not fileList:
-        print("[FormatBranchBraces] 대상 C++ 파일이 없습니다.", file=sys.stderr)
-        return 0
+#: 옛 이름 — `PreCommitLint` · `FormatModified` · `RunClangFormat` 이 이 철자로 부른다.
+processFile = _gFixer.processFile
+formatBranchBracesBatch = _gFixer.processFiles
 
-    results = formatBranchBracesBatch(fileList, checkOnly=args.check)
-    if results:
-        for message in results:
-            print(message)
-
-    if args.check and results:
-        return 1
-    return 0
+main = FormatBranchBracesFixer.run
 
 
 if __name__ == "__main__":

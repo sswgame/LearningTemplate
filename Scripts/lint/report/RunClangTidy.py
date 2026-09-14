@@ -23,8 +23,6 @@ clang-tidy 정적 분석 실행기.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import json
 import re
 import subprocess
 import sys
@@ -33,7 +31,7 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import getProjectRoot, useUtf8Stdout
+from common import TranslationUnitSweep, getProjectRoot, useUtf8Stdout
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
@@ -83,29 +81,6 @@ def findClangTidy() -> str:
     for candidate in candidates:
         print(f"  - {candidate}")
     sys.exit(2)
-
-
-def collectTranslationUnits(buildDir: Path, pathFilter: str) -> list[str]:
-    """컴파일 DB 에서 우리 Source 의 TU 만 고른다. 생성 코드와 서드파티는 뺀다."""
-    databasePath = buildDir / "compile_commands.json"
-    if databasePath.exists() is False:
-        print(f"[RunClangTidy] {databasePath} 가 없습니다. 먼저 configure 하세요.")
-        sys.exit(2)
-
-    entries = json.loads(databasePath.read_text(encoding="utf-8"))
-    listUnit: list[str] = []
-    for entry in entries:
-        filePath = entry["file"].replace("\\", "/")
-        if "/Source/" not in filePath:
-            continue
-        # 생성 코드는 우리가 고칠 대상이 아니다(리플렉션 코드젠 산출물).
-        if "/generated/" in filePath or filePath.endswith(".gen.cpp"):
-            continue
-        if pathFilter and pathFilter.lower() not in filePath.lower():
-            continue
-        listUnit.append(entry["file"])
-
-    return sorted(set(listUnit))
 
 
 def runOne(tidyExe: str, buildDir: Path, sourceFile: str) -> str:
@@ -182,22 +157,26 @@ def main() -> int:
     # "0건" 과 "72건" 이라는 다른 답을 받아 서로를 의심했다. 숫자만으로는 비교할 수 없다.
     print(f"[RunClangTidy] {tidyExe}")
     print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
-    listUnit = collectTranslationUnits(buildDir, args.filter)
 
+    sweep = TranslationUnitSweep(buildDir, tag="RunClangTidy")
+    if not sweep.bHasDatabase:
+        sweep.reportMissingDatabase()
+        return 2
+
+    # 같은 .cpp 가 여러 타깃의 DB 항목으로 들어오므로 **파일 단위로 유일화**해서 넘긴다 —
+    # clang-tidy 에게 필요한 것은 파일 경로뿐이고, 같은 파일을 두 번 보면 지적도 두 번 나온다.
+    listUnit = sorted({entry["file"] for entry in sweep.selectUnits(args.filter, requirePathPart="/Source/")})
     if not listUnit:
         print("[RunClangTidy] 검사할 TU 가 없습니다.")
         return 0
 
     print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {args.jobs} ({args.preset})")
-    listOutput: list[str] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        futures = [pool.submit(runOne, tidyExe, buildDir, unit) for unit in listUnit]
-        for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
-            listOutput.append(future.result())
-            if index % 25 == 0:
-                print(f"  ... {index}/{len(listUnit)}")
-
-    diagnosticText = "".join(listOutput)
+    diagnosticText = sweep.run(
+        listUnit,
+        lambda unit: runOne(tidyExe, buildDir, unit),
+        workerCount=args.jobs,
+        progressEvery=25,
+    )
     if args.out:
         Path(args.out).write_text(diagnosticText, encoding="utf-8")
         print(f"[RunClangTidy] 원본 출력 → {args.out}")

@@ -295,6 +295,69 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (픽서 셋이 같은 스무 줄을 글자 그대로 복사하고 있었고, 훑는 둘은 풀을 각자 열고 있었다)
+
+게이트를 정리한 바로 다음 자리다. `Scripts/` 를 한 번 더 훑어 **같은 종류의 복사본** 둘을 걷었다.
+
+**1) 픽서 = `LintFixer` 상속 클래스 (`Scripts/lint/LintFixer.py`).**
+
+`fixer/` 는 게이트보다 노골적이었다 — **대상 파일을 고르는 스무 줄이 세 스크립트에 글자 그대로**
+있었다(`FormatBranchBraces` · `FormatForwardDeclarations` · `RunClangFormat`):
+
+```python
+    if args.files:   ... elif args.all:   ... else: getModifiedCppFiles(root) → 없으면 전체
+```
+
+거기에 `--all`/`--check` argparse 블록, `flatMapConcurrent` 배치 함수, "위반이 있고 `--check` 면 1"
+종료 규칙까지 같았다. **다른 것은 설명 문자열과 로그 태그뿐이었다.**
+
+픽서가 쓰는 것은 `listPass` 하나다 — `(텍스트) -> (새 텍스트, 바뀌었는가)` 변환과, 그 변환이 잡은 것을
+`--check` 모드와 수정 모드에서 각각 뭐라고 부를지. 파일 읽기·쓰기는 기반이 맡는다. 파일 고르기는
+`addFileArguments`/`selectTargetFiles` 로 따로 내놓았다 — 픽서가 아닌 `RunClangFormat` 도 같은 규칙을
+쓰기 때문이다. `PreCommitLint`·`FormatModified` 가 부르는 `processFile`·`formatXxxBatch` 철자는 그대로
+남는다(싱글턴 인스턴스의 메서드 별칭).
+
+> **줄끝 정책이 둘이었다.** `FormatBranchBraces` 는 `newline=""` 로 읽고 쓰고(원본 보존),
+> `FormatForwardDeclarations` 는 `read_text`/`write_text` 로 변환해 쓰고 있었다. 보존하는 쪽으로 통일했다 —
+> 포맷터가 CRLF 를 LF 로 바꾸면 그 파일 전체가 바뀐 것으로 보이고 진짜 변경이 묻힌다. 헤더 400개로
+> `\r` 이 붙은 텍스트에서도 정렬 결과가 같다는 것을 먼저 확인하고 바꿨다.
+
+**2) `RunClangTidy` · `RunBuildWarnings` → `TranslationUnitSweep` (`Scripts/common/TranslationUnits.py`).**
+
+둘 다 컴파일 DB 를 읽고 · TU 를 거르고(`/generated/`·`*.gen.cpp`·`--filter`) · 풀을 열어 TU 마다 자식
+프로세스를 돌리고 · 진행률을 찍고 · 출력을 이어 붙였다. 도구만 다를 뿐 앞뒤가 같았다.
+
+**`common.Parallel` 이 "동시 처리 한 자리" 인데 이 둘만 빠져 있던 이유가 진행률이었다** — `mapConcurrent`
+에 진행률 콜백이 없어서 각자 `ThreadPoolExecutor` 를 열고 있었다. 콜백을 더하고(워커 수 정책은 그대로),
+DB 읽기와 TU 거르기는 `TranslationUnitSweep` 이 맡는다. 두 스크립트에 남는 것은 **자기 도구를 어떻게
+부르는가**와 **결과를 어떻게 묶어 읽히는가** 뿐이다.
+
+> **거르는 규칙이 둘이어서 `RunClangTidy` 가 CMake PCH 더미 13개를 분석하고 있었다.**
+> `RunBuildWarnings` 는 `cmake_pch.cxx` 를 명시적으로 뺐는데 `RunClangTidy` 는 `/Source/` 만 요구했고,
+> 빌드 트리의 `build/*/Source/**/CMakeFiles/*.dir/cmake_pch.cxx` 가 그 조건을 통과한다. 고유 TU 397 →
+> **384**. 생성된 스텁에서 나오는 지적은 전부 잡음이다.
+
+**하지 않기로 한 것 — `CheckCodeConventions` 의 매개변수·지역변수 규칙.** 백로그가 "다음 단계" 로 적어 둔
+자리지만, 그 둘은 **파싱 한 번 + `if/elif` 사슬**이라 카테고리별로 쪼개면 독립 `if` 가 되어 동작이 바뀐다
+(`vector<int>* p` 는 지금 포인터 규칙만 걸리는데, 쪼개면 컨테이너 규칙도 같이 걸린다). 쪼개는 방식을
+따로 설계해야 하는 자리이지 옮겨 담는 자리가 아니다. `setup/` 의 부트스트랩들도 봤지만 LLVM(타르볼 +
+가지치기)과 vcpkg(git clone + 커밋 고정)는 공통부가 이미 `ToolSpec`/`findToolRoot` 로 빠져 있어 남은 절반은
+억지로 묶어야 한다.
+
+**다음 자리(하나 열어 둔다)**: **픽서에는 음성 테스트가 없다.** `CheckLintsAreAlive` 는 `gate/` 만 본다.
+이제 픽서도 모양이 하나이고 `--check` 에서 0 이 아닌 값을 주므로, 같은 장치가 `fixer/` 까지 덮을 수 있다.
+
+**확인** (동작이 바뀌지 않았다는 것을 바이트로 확인했다):
+
+- 픽서 둘에 **일부러 어긴 조각 일곱**(한 줄 if · else 사슬 · 여러 줄이 섞인 사슬 · 두 문장 case ·
+  for 루프 · 뒤섞인 전방 선언 · 이미 정렬된 전방 선언)을 주고, 리팩터 전/후의 **`--check` 메시지와 고친
+  파일 바이트**를 JSON 으로 떠서 비교 — 완전히 동일. 바뀌면 안 되는 조각이 안 바뀌는 것도 같이 고정된다.
+- `RunBuildWarnings --preset Ninja-Debug --filter Renderer` 출력이 옛 구현과 한 글자도 다르지 않음.
+  TU 선택도 510/510, `--filter Graphics` 107/107 로 동일.
+- `RunClangTidy --filter EngineLoop` 정상 동작(지적 3건).
+- 린트 ctest **11/11** · `Ninja-Debug` ctest **17/17** · `py -3 -m Scripts format`(969 파일) 후
+  작업 트리 변화 없음 · `py -3 -m Scripts lint` 통과.
+
 ### 2026-09-14 (게이트 아홉이 같은 껍데기를 각자 적고 있었다 — 그리고 팩 계약을 두 번 파싱하고 있었다)
 
 `Scripts/` 에서 **클래스가 구조를 줄이는 자리**만 골라 옮겼다. 셋을 했고, 넷째는 하지 않기로 했다.

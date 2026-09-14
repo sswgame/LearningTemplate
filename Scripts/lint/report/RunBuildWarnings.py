@@ -41,8 +41,6 @@
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import json
 import os
 import re
 import subprocess
@@ -51,7 +49,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import getProjectRoot, useUtf8Stdout
+from common import TranslationUnitSweep, getProjectRoot, useUtf8Stdout
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
 _kDiagnosticRe = re.compile(r"^(?P<where>.+?):\s*(?P<kind>warning|error):\s*(?P<text>.*)$")
@@ -141,27 +139,6 @@ def buildSyntaxOnlyCommandInternal(entry: dict) -> tuple[list[str] | str, bool]:
     return " ".join(listOut), False
 
 
-def collectTranslationUnits(buildDir: Path, pathFilter: str) -> list[dict]:
-    """컴파일 DB 에서 우리 소스의 TU 만 고른다. PCH 더미와 생성 코드는 뺀다."""
-    databasePath = buildDir / "compile_commands.json"
-    if databasePath.exists() is False:
-        return []
-
-    entries = json.loads(databasePath.read_text(encoding="utf-8"))
-    listEntry: list[dict] = []
-    for entry in entries:
-        filePath = entry["file"].replace("\\", "/")
-        if filePath.endswith("cmake_pch.cxx") or filePath.endswith("cmake_pch.c"):
-            continue
-        # 생성 코드는 우리가 고칠 대상이 아니다(리플렉션 코드젠 산출물).
-        if "/generated/" in filePath or filePath.endswith(".gen.cpp"):
-            continue
-        if pathFilter and pathFilter.lower() not in filePath.lower():
-            continue
-        listEntry.append(entry)
-    return listEntry
-
-
 def runOne(entry: dict) -> str:
     """TU 하나를 문법 검사한다. 진단은 stderr 로 나온다."""
     command, bNeedShell = buildSyntaxOnlyCommandInternal(entry)
@@ -242,23 +219,15 @@ def main() -> int:
     listRawChunk: list[str] = []
 
     for presetName in listPreset:
-        buildDir = projectRoot / "build" / presetName
-        listEntry = collectTranslationUnits(buildDir, args.filter)
+        sweep = TranslationUnitSweep(projectRoot / "build" / presetName, tag="RunBuildWarnings")
+        listEntry = sweep.selectUnits(args.filter)
         if not listEntry:
             print(f"[RunBuildWarnings] {presetName}: compile_commands.json 이 없거나 대상 TU 가 없습니다 "
                   f"— `cmake --preset {presetName}` 으로 configure 하세요. 건너뜁니다.")
             continue
 
         print(f"[RunBuildWarnings] {presetName}: TU {len(listEntry)}개, 병렬 {args.jobs}")
-        listOutput: list[str] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
-            futures = [pool.submit(runOne, entry) for entry in listEntry]
-            for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
-                listOutput.append(future.result())
-                if index % 100 == 0:
-                    print(f"  ... {index}/{len(listEntry)}")
-
-        rawText = "".join(listOutput)
+        rawText = sweep.run(listEntry, runOne, workerCount=args.jobs, progressEvery=100)
         mapPresetToText[presetName] = rawText
         listRawChunk.append(f"==== {presetName}\n{rawText}\n")
 

@@ -80,8 +80,8 @@ over staged files only). **The folder says what a script does to you** — that 
 | `lint/report/` | prints, you decide | always 0 |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
-`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` stays there because
-every gate inherits from it.
+`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` and `LintFixer.py`
+stay there because every gate and every fixer inherits from them.
 
 **Adding a gate is dropping a file into `lint/gate/`.** A gate is one `LintGate` subclass that implements
 `scan(repositoryRoot, args) -> GateResult`; the base owns `--root`, UTF-8 output, violation printing and
@@ -89,6 +89,13 @@ the exit code (`0` clean, `1` violations, `2` raise `GateError` — the check co
 exports it as `main = XxxGate.run`. `CheckLintsAreAlive.py` enumerates the folder, so a new gate is picked
 up with no list to edit — and it must carry a `selfTestCases` snippet proving it still catches something
 (or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
+
+**Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
+`listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
+`--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >
+everything), concurrency, byte-faithful IO, and the exit code (`--check` + findings = `1`). Scripts that
+are not fixers but pick files the same way (`RunClangFormat.py`) use `addFileArguments` /
+`selectTargetFiles` from the same module.
 
 ```powershell
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)

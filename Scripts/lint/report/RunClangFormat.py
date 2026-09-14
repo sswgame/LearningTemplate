@@ -22,48 +22,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
-from common import (
-    collectSourceFiles,
-    getLintSearchDirs,
-    getModifiedCppFiles,
-    getProjectRoot,
-    runClangFormatBatch,
-    useUtf8Stdout,
-)
+from LintFixer import addFileArguments, selectTargetFiles
+from common import getProjectRoot, runClangFormatBatch, useUtf8Stdout
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     useUtf8Stdout()
 
     parser = argparse.ArgumentParser(description="C++ 소스코드에 clang-format을 적용합니다.")
-    parser.add_argument(
-        "files",
-        nargs="*",
-        help="포맷팅할 특정 파일 경로 목록 (생략 시 Git 변경 파일, 변경 파일이 없으면 전체 대상)",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="수정 여부와 관계없이 프로젝트 전체 소스코드에 적용",
-    )
+    addFileArguments(parser)
     args = parser.parse_args(argv)
 
     root = getProjectRoot()
-
-    if args.files:
-        fileList = [Path(f).resolve() for f in args.files if Path(f).is_file()]
-    elif args.all:
-        roots = getLintSearchDirs(root)
-        fileList = collectSourceFiles(roots)
-    else:
-        modifiedFiles = getModifiedCppFiles(root)
-        if modifiedFiles:
-            fileList = modifiedFiles
-            print(f"[RunClangFormat] Git 변경 파일 {len(fileList)}개 감지.", file=sys.stderr)
-        else:
-            roots = getLintSearchDirs(root)
-            fileList = collectSourceFiles(roots)
-            print(f"[RunClangFormat] 변경된 파일이 없어 전체 {len(fileList)}개 파일 대상 실행.", file=sys.stderr)
+    fileList = selectTargetFiles(args, root, "RunClangFormat")
 
     if not fileList:
         sys.stderr.write("[RunClangFormat] 포맷팅 대상 C++ 파일이 없습니다.\n")

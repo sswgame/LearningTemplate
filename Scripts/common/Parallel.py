@@ -60,24 +60,33 @@ def mapConcurrent(
     items: Sequence[TItem],
     *,
     workerCount: int | None = None,
+    onProgress: Callable[[int, int], None] | None = None,
 ) -> Iterator[TResult]:
     """
     `items` 를 동시에 처리하고 **끝나는 순서대로** 결과를 흘려 줍니다.
 
     항목이 하나뿐이면 풀을 만들지 않고 그냥 부른다 — 풀 생성 비용이 일보다 큰 흔한 경우다.
     예외는 그대로 올라온다(호출부가 처리한다).
+
+    `onProgress(끝난 수, 전체 수)` 는 몇 분씩 걸리는 훑기가 살아 있음을 보이려고 있다. 이것이
+    없어서 `RunClangTidy` 와 `RunBuildWarnings` 가 **각자 풀을 열고 있었다** — 동시 처리를 한
+    자리에 모은 뒤에도 둘만 남아 있던 이유가 그것이다.
     """
     if not items:
         return
     if len(items) == 1:
         yield worker(items[0])
+        if onProgress is not None:
+            onProgress(1, 1)
         return
 
     workers = workerCount if workerCount is not None else getScanWorkerCount(len(items))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [executor.submit(worker, item) for item in items]
-        for future in concurrent.futures.as_completed(futures):
+        for doneCount, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             yield future.result()
+            if onProgress is not None:
+                onProgress(doneCount, len(items))
 
 
 def flatMapConcurrent(

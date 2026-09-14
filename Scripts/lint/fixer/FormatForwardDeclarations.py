@@ -17,22 +17,14 @@ enum (및 enum class) -> struct -> class 순서로 정렬하고,
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
 
-from common import (
-    collectSourceFiles,
-    flatMapConcurrent,
-    getLintSearchDirs,
-    getModifiedCppFiles,
-    getProjectRoot,
-    useUtf8Stdout,
-)
+from LintFixer import FixPass, LintFixer  # noqa: E402
 _kSingleFwdRe = re.compile(
     r"^(\s*)(?:template\s*<[^;{}>]+>\s*)?"
     r"(enum(?:\s+class|\s+struct)?|struct|class)\s+"
@@ -173,99 +165,27 @@ def formatForwardDeclarations(text: str) -> tuple[str, bool]:
     return newline.join(newLines), bModified
 
 
-def processFile(filePath: Path, checkOnly: bool = False) -> list[str]:
-    """
-    단일 파일을 읽어 전방 선언을 검사하거나 포맷팅합니다.
-    위반/수정 사항이 있으면 메시지 목록을 반환합니다.
-    """
-    try:
-        content = filePath.read_text(encoding="utf-8", errors="ignore")
-    except Exception as exception:
-        return [f"[ForwardDeclaration] {filePath} 읽기 실패: {exception}"]
+class FormatForwardDeclarationsFixer(LintFixer):
+    """전방 선언을 enum -> struct -> class 로 정렬하고 그룹 사이에 빈 줄을 넣는다."""
 
-    formattedContent, bModified = formatForwardDeclarations(content)
-    if not bModified:
-        return []
-
-    if checkOnly:
-        return [
-            f"[ForwardDeclaration] {filePath}: 전방 선언 정렬(enum -> struct -> class 및 빈 줄)이 어긋났습니다."
-        ]
-
-    try:
-        filePath.write_text(formattedContent, encoding="utf-8")
-        return [f"[ForwardDeclaration] {filePath}: 전방 선언 정렬 완료"]
-    except Exception as exception:
-        return [f"[ForwardDeclaration] {filePath} 쓰기 실패: {exception}"]
-
-
-def formatForwardDeclarationsBatch(
-    files: Sequence[Path], checkOnly: bool = False, maxWorkers: int | None = None
-) -> list[str]:
-    """
-    여러 파일을 동시에 처리합니다 (워커 수 정책은 `common.Parallel`).
-    """
-    return flatMapConcurrent(lambda path: processFile(path, checkOnly), list(files), workerCount=maxWorkers)
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
-
-    parser = argparse.ArgumentParser(
-        description="전방 선언(Forward Declaration) 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)"
+    tag = "ForwardDeclaration"
+    description = "전방 선언(Forward Declaration) 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)"
+    listPass = (
+        FixPass(
+            transform=formatForwardDeclarations,
+            problem="전방 선언 정렬(enum -> struct -> class 및 빈 줄)이 어긋났습니다.",
+            done="전방 선언 정렬 완료",
+        ),
     )
-    parser.add_argument(
-        "files",
-        nargs="*",
-        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상)",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="프로젝트 전체 C++ 파일에 대해 실행",
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="파일을 수정하지 않고 규칙 위반 여부만 검사",
-    )
-    args = parser.parse_args(argv)
 
-    root = getProjectRoot()
 
-    if args.files:
-        fileList = [Path(f).resolve() for f in args.files if Path(f).is_file()]
-    elif args.all:
-        roots = getLintSearchDirs(root)
-        fileList = collectSourceFiles(roots)
-    else:
-        modifiedFiles = getModifiedCppFiles(root)
-        if modifiedFiles:
-            fileList = modifiedFiles
-            print(
-                f"[FormatForwardDeclarations] Git 변경 파일 {len(fileList)}개 감지.",
-                file=sys.stderr,
-            )
-        else:
-            roots = getLintSearchDirs(root)
-            fileList = collectSourceFiles(roots)
-            print(
-                f"[FormatForwardDeclarations] 변경된 파일이 없어 전체 {len(fileList)}개 파일 대상 실행.",
-                file=sys.stderr,
-            )
+_gFixer = FormatForwardDeclarationsFixer()
 
-    if not fileList:
-        print("[FormatForwardDeclarations] 대상 C++ 파일이 없습니다.", file=sys.stderr)
-        return 0
+#: 옛 이름 — `PreCommitLint` · `FormatModified` · `RunClangFormat` 이 이 철자로 부른다.
+processFile = _gFixer.processFile
+formatForwardDeclarationsBatch = _gFixer.processFiles
 
-    results = formatForwardDeclarationsBatch(fileList, checkOnly=args.check)
-    if results:
-        for message in results:
-            print(message)
-
-    if args.check and results:
-        return 1
-    return 0
+main = FormatForwardDeclarationsFixer.run
 
 
 if __name__ == "__main__":
