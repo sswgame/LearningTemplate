@@ -31,24 +31,12 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	set(swAr "")
 	set(swMt "")
 
-	set(swCfgJson "")
-	set(swSdkDir "")
-	set(swSdkVer "")
-	set(swMsvcTools "")
-
-	foreach(candidateRoot IN ITEMS "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
-		get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
-		set(cfgCandidate "${absRoot}/Config/Environment/toolchain_config.json")
-
-		if(EXISTS "${cfgCandidate}")
-			set(swCfgJson "${cfgCandidate}")
-			file(READ "${swCfgJson}" cfgContent)
-			string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "windows_sdk_dir")
-			string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "windows_sdk_version")
-			string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "msvc_tools_dir")
-			break()
-		endif()
-	endforeach()
+	# SDK/MSVC 경로는 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이 준다.
+	# 예전에는 여기서 toolchain_config.json 을 **다시** 읽었고, 키 이름을 리터럴로 적어서
+	# DetectToolchain 의 `SW_KEY_*` 상수와 철자가 갈라져 있었다.
+	set(swSdkDir "${SW_TOOLCHAIN_WINDOWS_SDK_DIR}")
+	set(swSdkVer "${SW_TOOLCHAIN_WINDOWS_SDK_VERSION}")
+	set(swMsvcTools "${SW_TOOLCHAIN_MSVC_TOOLS_DIR}")
 
 	# **고정 LLVM 의 llvm-lib 을 가장 먼저 본다** (왜 그래야 하는지는 ToolchainBinaries.cmake 머리 주석).
 	# 예전엔 환경변수 둘만 보고 없으면 MSVC lib.exe 로 떨어졌는데, 정작 컴파일러는 Tools/LLVM 것을 쓴다.

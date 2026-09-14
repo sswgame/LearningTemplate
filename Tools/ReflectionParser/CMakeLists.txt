@@ -12,21 +12,11 @@ if(NOT DETECTED_LLVM_DIR)
     set(DETECTED_LLVM_DIR "$ENV{LLVM_HOME}")
 endif()
 
-set(swEngineCfg "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-
-if(NOT DETECTED_LLVM_DIR AND EXISTS "${swEngineCfg}")
-    file(READ "${swEngineCfg}" configJsonContent)
-    string(JSON DETECTED_LLVM_DIR ERROR_VARIABLE jsonErr GET "${configJsonContent}" "${SW_KEY_LLVM_PATH}")
-
-    if(jsonErr)
-        set(DETECTED_LLVM_DIR "")
-    endif()
-
-    string(JSON DETECTED_LIBCLANG_DLL ERROR_VARIABLE jsonErr2 GET "${configJsonContent}" "libclang_dll_path")
-
-    if(jsonErr2)
-        set(DETECTED_LIBCLANG_DLL "")
-    endif()
+# toolchain_config.json 은 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이
+# 이미 변수로 풀어 두었다 — 여기서 다시 파싱하지 않는다.
+if(NOT DETECTED_LLVM_DIR)
+    set(DETECTED_LLVM_DIR "${SW_TOOLCHAIN_LLVM_PATH}")
+    set(DETECTED_LIBCLANG_DLL "${SW_TOOLCHAIN_LIBCLANG_DLL_PATH}")
 endif()
 
 # env/toolchain 에 없으면 distro 패키지 경로를 찾습니다 (Ubuntu 의 /usr/lib/llvm-N). 버전 목록을 손으로 들고 있으면

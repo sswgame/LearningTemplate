@@ -32,84 +32,51 @@ sw_executePythonScript(
 # ------------------------------------------------------------------------------
 # 2) toolchain_config.json 파싱 및 project() 호출 전 빌드 환경 주입
 # ------------------------------------------------------------------------------
-set(swEngineCfg "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
+# toolchain_config.json 을 CMake 가 다시 파싱하지 않는다. 그 파일을 쓰는 쪽이 파이썬이니
+# 읽는 모양도 파이썬이 준다 — 키 하나당 `string(JSON ... GET)` + `if(jsonErr)` 블록이 일곱 벌
+# 있었고, 같은 키를 FindWindowsTools 는 리터럴 문자열로 적고 있었다.
+# 값이 없으면 변수도 없다(= 빈 값). 아래 `if(X AND EXISTS ...)` 가 그대로 동작한다.
+set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
+sw_executePythonScript("Scripts/setup/GenerateToolchainCMake.py"
+    ARGS "${SW_GENERATED_TOOLCHAIN_VARS}"
+    WARN
+)
 
-if(EXISTS "${swEngineCfg}")
-    file(READ "${swEngineCfg}" swEngineCfgJson)
+if(EXISTS "${SW_GENERATED_TOOLCHAIN_VARS}")
+    include("${SW_GENERATED_TOOLCHAIN_VARS}")
+endif()
 
-    # JSON 키별 경로 추출
-    string(JSON swLlvmPath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_LLVM_PATH}")
-
-    if(swJsonErr)
-        set(swLlvmPath "")
-    endif()
-
-    string(JSON swNinjaPath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_NINJA_PATH}")
-
-    if(swJsonErr)
-        set(swNinjaPath "")
-    endif()
-
-    string(JSON swVcpkgRoot ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_VCPKG_ROOT}")
-
-    if(swJsonErr)
-        set(swVcpkgRoot "")
-    endif()
-
-    string(JSON swSdkDir ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_WINDOWS_SDK_DIR}")
-
-    if(swJsonErr)
-        set(swSdkDir "")
-    endif()
-
-    string(JSON swSdkVer ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_WINDOWS_SDK_VERSION}")
-
-    if(swJsonErr)
-        set(swSdkVer "")
-    endif()
-
-    string(JSON swMsvcTools ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_MSVC_TOOLS_DIR}")
-
-    if(swJsonErr)
-        set(swMsvcTools "")
-    endif()
-
-    string(JSON swSccachePath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_SCCACHE_PATH}")
-
-    if(swJsonErr)
-        set(swSccachePath "")
-    endif()
-
+if(SW_TOOLCHAIN_CONFIG_FOUND)
     # 1) vcpkg 툴체인 및 루트 주입
-    if(swVcpkgRoot AND EXISTS "${swVcpkgRoot}/scripts/buildsystems/vcpkg.cmake")
-        set(sw_vcpkg_root "${swVcpkgRoot}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
-        set(CMAKE_TOOLCHAIN_FILE "${swVcpkgRoot}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg 툴체인" FORCE)
-        set(ENV{VCPKG_ROOT} "${swVcpkgRoot}")
-        message(STATUS "[DetectToolchain] Using vcpkg: ${swVcpkgRoot}")
+    if(SW_TOOLCHAIN_VCPKG_ROOT AND EXISTS "${SW_TOOLCHAIN_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+        set(sw_vcpkg_root "${SW_TOOLCHAIN_VCPKG_ROOT}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
+        set(CMAKE_TOOLCHAIN_FILE "${SW_TOOLCHAIN_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg 툴체인" FORCE)
+        set(ENV{VCPKG_ROOT} "${SW_TOOLCHAIN_VCPKG_ROOT}")
+        message(STATUS "[DetectToolchain] Using vcpkg: ${SW_TOOLCHAIN_VCPKG_ROOT}")
     endif()
 
     # 2) LLVM / Clang 컴파일러 및 링커 설정
-    if(swLlvmPath AND EXISTS "${swLlvmPath}/bin")
-        set(ENV{LLVM_DIR} "${swLlvmPath}")
-        set(ENV{LLVM_ROOT} "${swLlvmPath}")
-        set(ENV{LLVM_HOME} "${swLlvmPath}")
+    if(SW_TOOLCHAIN_LLVM_PATH AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin")
+        set(ENV{LLVM_DIR} "${SW_TOOLCHAIN_LLVM_PATH}")
+        set(ENV{LLVM_ROOT} "${SW_TOOLCHAIN_LLVM_PATH}")
+        set(ENV{LLVM_HOME} "${SW_TOOLCHAIN_LLVM_PATH}")
 
         if(WIN32)
-            set(ENV{PATH} "${swLlvmPath}/bin;$ENV{PATH}")
+            set(ENV{PATH} "${SW_TOOLCHAIN_LLVM_PATH}/bin;$ENV{PATH}")
         else()
-            set(ENV{PATH} "${swLlvmPath}/bin:$ENV{PATH}")
+            set(ENV{PATH} "${SW_TOOLCHAIN_LLVM_PATH}/bin:$ENV{PATH}")
         endif()
 
-        if(WIN32 AND EXISTS "${swLlvmPath}/bin/clang-cl.exe")
-            set(CMAKE_C_COMPILER "${swLlvmPath}/bin/clang-cl.exe" CACHE FILEPATH "C 컴파일러" FORCE)
-            set(CMAKE_CXX_COMPILER "${swLlvmPath}/bin/clang-cl.exe" CACHE FILEPATH "CXX 컴파일러" FORCE)
+        if(WIN32 AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe")
+            set(CMAKE_C_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "C 컴파일러" FORCE)
+            set(CMAKE_CXX_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "CXX 컴파일러" FORCE)
 
-            if(EXISTS "${swLlvmPath}/bin/lld-link.exe")
-                set(CMAKE_LINKER "${swLlvmPath}/bin/lld-link.exe" CACHE FILEPATH "링커" FORCE)
+            if(EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/lld-link.exe")
+                set(CMAKE_LINKER "${SW_TOOLCHAIN_LLVM_PATH}/bin/lld-link.exe" CACHE FILEPATH "링커" FORCE)
             endif()
 
-            if(EXISTS "${swLlvmPath}/bin/llvm-rc.exe")
-                set(CMAKE_RC_COMPILER "${swLlvmPath}/bin/llvm-rc.exe" CACHE FILEPATH "RC 컴파일러" FORCE)
+            if(EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/llvm-rc.exe")
+                set(CMAKE_RC_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/llvm-rc.exe" CACHE FILEPATH "RC 컴파일러" FORCE)
             endif()
 
             # 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
@@ -133,17 +100,17 @@ if(EXISTS "${swEngineCfg}")
                 message(WARNING "[DetectToolchain] mt.exe / llvm-mt not found — clang-cl link test may fail")
             endif()
 
-            message(STATUS "[DetectToolchain] Using clang-cl from ${swLlvmPath}/bin")
-        elseif(EXISTS "${swLlvmPath}/bin/clang")
-            set(CMAKE_C_COMPILER "${swLlvmPath}/bin/clang" CACHE FILEPATH "C 컴파일러" FORCE)
-            set(CMAKE_CXX_COMPILER "${swLlvmPath}/bin/clang++" CACHE FILEPATH "CXX 컴파일러" FORCE)
-            message(STATUS "[DetectToolchain] Using clang from ${swLlvmPath}/bin")
+            message(STATUS "[DetectToolchain] Using clang-cl from ${SW_TOOLCHAIN_LLVM_PATH}/bin")
+        elseif(EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang")
+            set(CMAKE_C_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang" CACHE FILEPATH "C 컴파일러" FORCE)
+            set(CMAKE_CXX_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang++" CACHE FILEPATH "CXX 컴파일러" FORCE)
+            message(STATUS "[DetectToolchain] Using clang from ${SW_TOOLCHAIN_LLVM_PATH}/bin")
         endif()
     endif()
 
-    if(swNinjaPath AND EXISTS "${swNinjaPath}")
-        set(CMAKE_MAKE_PROGRAM "${swNinjaPath}" CACHE FILEPATH "Ninja" FORCE)
-        get_filename_component(swNinjaDir "${swNinjaPath}" DIRECTORY)
+    if(SW_TOOLCHAIN_NINJA_PATH AND EXISTS "${SW_TOOLCHAIN_NINJA_PATH}")
+        set(CMAKE_MAKE_PROGRAM "${SW_TOOLCHAIN_NINJA_PATH}" CACHE FILEPATH "Ninja" FORCE)
+        get_filename_component(swNinjaDir "${SW_TOOLCHAIN_NINJA_PATH}" DIRECTORY)
 
         if(WIN32)
             set(ENV{PATH} "${swNinjaDir};$ENV{PATH}")
@@ -151,7 +118,7 @@ if(EXISTS "${swEngineCfg}")
             set(ENV{PATH} "${swNinjaDir}:$ENV{PATH}")
         endif()
 
-        message(STATUS "[DetectToolchain] Using Ninja: ${swNinjaPath}")
+        message(STATUS "[DetectToolchain] Using Ninja: ${SW_TOOLCHAIN_NINJA_PATH}")
     endif()
 endif()
 
@@ -159,8 +126,8 @@ endif()
 # 3) sccache — SW_USE_SCCACHE일 때만 컴파일러 런처
 # ------------------------------------------------------------------------------
 if(SW_USE_SCCACHE)
-    if(swSccachePath AND EXISTS "${swSccachePath}")
-        set(SW_SCCACHE_EXE "${swSccachePath}")
+    if(SW_TOOLCHAIN_SCCACHE_PATH AND EXISTS "${SW_TOOLCHAIN_SCCACHE_PATH}")
+        set(SW_SCCACHE_EXE "${SW_TOOLCHAIN_SCCACHE_PATH}")
     else()
         find_program(SW_SCCACHE_EXE sccache)
     endif()

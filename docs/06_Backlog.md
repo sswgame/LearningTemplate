@@ -295,6 +295,58 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (파이썬이 쓴 JSON 을 CMake 가 다시 파싱하고 있었다 — 그것도 키 철자를 둘로 나눠서)
+
+바로 앞 커밋이 린트 목록을 옮겼고, 같은 질문을 툴체인 설정에 던졌다. `toolchain_config.json` 은
+**`SetupEnvironment.py` 가 쓰는 파일**인데, CMake 가 그걸 **다시 읽고 있었다** — 그것도 여러 곳에서:
+
+| 읽는 곳 | 키를 적는 방식 |
+| --- | --- |
+| `DetectToolchain.cmake` | `SW_KEY_*` 상수 일곱 + `if(jsonErr) set("")` 블록 일곱 (44줄) |
+| `FindWindowsTools.cmake` | **리터럴** `"windows_sdk_dir"` · `"windows_sdk_version"` · `"msvc_tools_dir"` |
+| `Tools/ReflectionParser/CMakeLists.txt` | `SW_KEY_LLVM_PATH` 와 **리터럴** `"libclang_dll_path"` 를 섞어서 |
+
+**같은 키를 두 가지 철자로 적고 있으면 한쪽만 바뀌는 날이 온다.**
+
+`Scripts/setup/GenerateToolchainCMake.py` 가 그 JSON 을 `set(SW_TOOLCHAIN_<키 대문자> "...")` 로
+찍고, CMake 는 configure 때 `include()` 만 한다. **키 목록은 파이썬에도 없다** — JSON 에 있는 키를
+그대로 찍으므로 `SetupEnvironment.py` 가 키를 하나 더하면 CMake 에서 바로 쓸 수 있다. 값이 없으면
+변수도 없고, CMake 에서 정의되지 않은 변수는 빈 값이라 `if(X AND EXISTS ...)` 폴백이 그대로 돈다.
+
+| | 전 | 후 |
+| --- | ---: | ---: |
+| `DetectToolchain.cmake` | 175줄 | **142줄** |
+| `toolchain_config.json` 을 파싱하는 CMake 자리 | 5 | **2** (둘 다 vcpkg 전용, 아래) |
+| 키 철자 | `SW_KEY_*` 상수 · 리터럴 두 벌 | **한 벌** |
+
+**둘은 일부러 남겼다.** `FindLlvmBin.cmake` 와 `VcpkgPortsToolchain.cmake` 는 **vcpkg 가 별도 CMake
+프로세스로 부른다**(`detect_compiler` 는 PATH·ENV 를 비운 채 툴체인 파일만 로드한다). 우리 빌드
+디렉터리가 없는 상태에서도 성립해야 하므로, 후보 루트를 거슬러 올라가며 JSON 을 직접 찾는 그 코드가
+거기 있어야 한다.
+
+> **상수를 지우다 C++ 쪽을 한 번 깼다 — 확인하고 되돌렸다.** CMake 에서 안 쓰이게 된
+> `SW_KEY_*` 일곱을 `GenerateCMakeConstants.py` 에서 통째로 뺐는데, 그중 셋
+> (`MSVC_TOOLS_DIR` · `WINDOWS_SDK_DIR` · `WINDOWS_SDK_VERSION`)은 `ConfigConstants.h.in` 을 거쳐
+> **C++ 의 `sw::config::kKey*`** 가 되는 값이었다. `configure_file` 은 빈 값을 조용히 채워 넣으므로
+> configure 도 빌드도 통과했고, 생성 헤더의 문자열만 `""` 가 되어 있었다. 생성물을 직접 열어 보고
+> 되돌렸다. **상수의 소비자는 하나가 아니다** — 지우기 전에 `.h.in` 도 본다.
+
+**남은 자리**: `VcpkgPortsToolchain.cmake` 의 리터럴 키 셋. 별도 프로세스라 위 방식이 안 통하지만,
+`FindLlvmBin.cmake` 처럼 `SW_KEY_*` 상수를 쓰게는 할 수 있다(그 파일도 GenerateConfigConstants 를
+OPTIONAL 로 include 한다).
+
+**확인**:
+
+- 세 프리셋(Debug·Release·Shipping)의 `CMakeCache.txt` 에서 툴체인 관련 값 14종
+  (`CMAKE_AR` · `CMAKE_MT` · 컴파일러 · 링커 · RC · ninja · vcpkg 툴체인 · sccache 런처 ·
+  `SW_CACHED_WIN_*`)을 **전부 비교 — 동일**.
+- **캐시를 지우고 처음부터** configure 한 결과를, 같은 조건에서 옛 코드(`git stash`)로 돌린 결과와
+  비교 — 동일. (증분 configure 와 최초 configure 는 컴파일러 캐시 항목의 **타입**이 STRING/FILEPATH
+  로 갈리는데, 그건 옛 코드도 똑같아서 이 변경과 무관하다는 것을 이 비교로 못박았다.)
+- `ReflectionParser.exe` 를 지우고 다시 링크 — 정상, `libclang.dll` 복사 단계도 그대로.
+- 생성된 `ConfigConstants.h` 의 `kKey*` 문자열 직접 확인.
+- `Ninja-Debug` 전체 빌드 · ctest **17/17** · 린트 **11/11**.
+
 ### 2026-09-14 (CMake 가 린트 목록을 세 벌 더 들고 있었다 — 폴더가 목록이라고 해 놓고)
 
 **"`gate/` 에 놓으면 그것이 게이트다" 라고 해 놓고, 게이트를 하나 더하려면 네 곳을 고쳐야 했다.**

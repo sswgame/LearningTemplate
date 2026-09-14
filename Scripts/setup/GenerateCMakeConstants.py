@@ -62,13 +62,16 @@ set(SW_SCRIPT_GENERATE_BAKE_SHIPPING_HOST_DEFAULTS "{ConfigConstants.kScriptGene
 set(SW_SCRIPT_COOK_ASSETS "{ConfigConstants.kScriptCookAssets}")
 set(SW_SCRIPT_GENERATE_DOCS "{ConfigConstants.kScriptGenerateDocs}")
 
+# 여기 남은 키 이름들은 **두 소비자**가 있다:
+#   1) `cmake/Config/ConfigConstants.h.in` -> C++ 의 `sw::config::kKey*` (런타임이 JSON 을 읽는다)
+#   2) `FindLlvmBin.cmake` -> vcpkg 가 **별도 CMake 프로세스**로 부르는 파일이라 우리 빌드
+#      디렉터리 없이 JSON 을 직접 찾아야 한다
+# 우리 configure 안에서 toolchain_config.json 을 읽던 자리들은 이제 GenerateToolchainCMake.py 가
+# 풀어 주는 `SW_TOOLCHAIN_*` 을 쓰므로, 거기서만 쓰이던 키 셋(ninja/vcpkg/sccache)은 뺐다.
 set(SW_KEY_LLVM_PATH "{ConfigConstants.kKeyLlvmPath}")
-set(SW_KEY_NINJA_PATH "{ConfigConstants.kKeyNinjaPath}")
-set(SW_KEY_VCPKG_ROOT "{ConfigConstants.kKeyVcpkgRoot}")
 set(SW_KEY_WINDOWS_SDK_DIR "{ConfigConstants.kKeyWindowsSdkDir}")
 set(SW_KEY_WINDOWS_SDK_VERSION "{ConfigConstants.kKeyWindowsSdkVersion}")
 set(SW_KEY_MSVC_TOOLS_DIR "{ConfigConstants.kKeyMsvcToolsDir}")
-set(SW_KEY_SCCACHE_PATH "{ConfigConstants.kKeySccachePath}")
 
 set(SW_KEY_LLVM_TOOLS_SUBDIR "{ConfigConstants.kKeyLlvmToolsSubdir}")
 
