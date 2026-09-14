@@ -76,6 +76,10 @@ if(SW_BUILD_GAME)
 	add_subdirectory(Source/Games)
 endif()
 
+# 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
+# (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
+sw_verifyDynamicModuleRegistry()
+
 # App 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성
 sw_configureAppDependencies(App)
 

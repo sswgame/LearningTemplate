@@ -42,6 +42,7 @@ if(NOT SW_SHIPPING_BUILD)
 		INTERPROCEDURAL_OPTIMIZATION FALSE
 		FOLDER "Source/Editor"
 	)
+	sw_registerDynamicModule(EditorModule editor)
 
 	if(COMMAND sw_setUnityBuild)
 		sw_setUnityBuild(EditorModule BATCH_SIZE 8)

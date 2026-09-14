@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `0dc396dc`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `46dbadb3`
 
 ---
 
@@ -294,6 +294,71 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (레지스트리가 규칙이었는데 강제가 아니었다 — 그래서 EditorModule 이 조용히 빠져 있었다)
+
+앞 커밋이 RHI 만 고친 자리를 끝까지 닫았다.
+
+**1) 레지스트리가 둘이었다 — 하나로 합쳤다.**
+
+앞 커밋에서 `SW_RHI_MODULES` 를 새로 만들었는데, `SW_DYNAMIC_MODULES` 가 이미 있었다.
+같은 질문("App 보다 먼저 빌드되어야 하는 것")에 레지스트리 둘을 두는 것이 바로 고치려던 문제다.
+`sw_registerDynamicModule(<타겟> <종류>)` / `sw_getDynamicModules(OUT [KINDS ...])` 하나로 합쳤다.
+종류는 `rhi | kit | game | gameframework | editor` 이고, 소비자가 필요한 것만 고른다.
+
+**2) 등록 자리가 세 가지였다 — 만드는 자리로 모았다.**
+
+| 모듈 | 예전 |
+| --- | --- |
+| `GF_*` 키트 | `sw_addGameFrameworkKit` 안에서 append |
+| `GameFramework` · `SWGame` | **호출부**에서 직접 append |
+| `RHI_*` · `EditorModule` | **등록 안 됨** |
+
+`EditorModule` 은 아무 데도 등록되지 않은 채로 있었고 아무 에러도 나지 않았다 — 소비하는 자리가
+이름을 리터럴로 들고 있었으니까. 이제 등록은 **타겟을 만드는 자리에서만** 한다
+(`sw_addGameModule` 이 `SWGame` 을 등록한다 — `Source/Games/CMakeLists.txt` 가 아니라).
+
+**3) 그리고 잊을 수 없게 만들었다 — `sw_verifyDynamicModuleRegistry`.**
+
+레지스트리는 규칙이지 강제가 아니다. 구성 마지막에 디렉터리 트리를 훑어 **MODULE 타겟이 전부
+등록되어 있는지** 대조하고, 빠지면 `FATAL_ERROR` 로 선다. MODULE 은 정의상 "이름으로 찾아 올리는
+플러그인" 이라 App 이 반드시 먼저 빌드해야 하는 것들이다.
+
+> 처음엔 `Source/` 부터 훑게 짰는데 `EditorModule` 을 못 잡았다 — `Source/Editor` 는
+> `Source/CMakeLists.txt` 가 아니라 **루트가** 직접 `add_subdirectory` 하므로 `Source/` 의
+> `SUBDIRECTORIES` 에 없다. 루트부터 훑는다. (등록을 일부러 빼서 실제로 서는 것을 확인했다.)
+
+부수 효과로 `sw_configureAppDependencies` 가 세 단계에서 두 단계로 줄었다 — RHI·에디터를 따로 걸던
+1)·2) 가 "등록된 것 전부" 하나로 합쳐졌고, Dev 분기의 중복 루프가 사라졌다.
+
+**4) 게이트 둘의 범위가 좁았다.**
+
+- `CheckCmakeConventions` 가 `ThirdParty/` 를 통째로 빼고 있었다. 그 아래 `CMakeLists.txt` 는
+  **우리가 쓴 얇은 래퍼**이고 `sw_copyDxcDlls` 같은 우리 함수가 거기 있다. vcpkg 포트 파일만 뺀다
+  (62 → 74 파일).
+- `CheckPythonConventions` 가 `Scripts/` 와 `Tools/` 만 훑었다. 저장소 전체를 본다 — 다른 데 놓인
+  파이썬이 조용히 규칙 밖에 있는 것이 바로 이 게이트를 만든 이유다.
+
+**5) `cmake/README.md` 가 또 낡았고, 이번엔 게이트가 잡았다.**
+
+레지스트리를 합치면서 `sw_registerRhiBackend` / `sw_getRhiBackends` 가 사라졌는데 문서는 그대로였다.
+**어제 넣은 `CheckCmakeReadme` 가 그 자리에서 잡았다.** DXC 복사가 `RuntimeDependencies.cmake` 에
+있다는 설명도 틀렸다(`ThirdParty/dxc/CMakeLists.txt` 다) — 같이 고쳤다.
+
+**손대지 않기로 한 것.**
+
+- **모듈 팩토리 셋의 나머지 골격.** 등록을 모으고 나니 남은 공통은 include 경로·pch·FOLDER 네 줄
+  뿐이고, 링크 집합·export 매크로·리플렉션 유무는 셋이 진짜로 다르다. 공통 함수로 묶으면 차이가
+  숨는다. 값어치 없는 추상화다.
+- **`EngineTest` 의 `GF_*` 링크 목록.** RHI 와 모양은 같지만 이쪽은 **링크**다 — 무엇을 링크할지는
+  테스트가 정하는 것이 맞다. 키트를 전부 자동 링크하면 충돌을 만들 수 있다.
+- **`EngineTest_NoGPU` 필터 문자열.** `CheckTestSuites.py` 가 소스의 `SW_TEST_REQUIRES_HOST` 마커와
+  양방향으로 대조하고 있다. 생성으로 바꿀 만한 이득이 없다.
+
+**검증.** 게이트 12/12 · 자가 테스트 3/3 · 린트 CTest 15/15 · nogpu 5/5 · Debug 경고 0 ·
+Shipping 빌드 통과(`/WHOLEARCHIVE` 여섯 개 그대로) · Shipping 테스트 CoreTest 169/177 ·
+EngineTest 407/409 · ReflectionTest 96/101 · SmokeTest 1/1 · EditorTest 52/52 ·
+`BackendSmoke.py` 네 백엔드 × 두 경로 전부 exit 0 · 에러 0.
 
 ### 2026-09-14 (같은 명명 어휘가 세 벌로 적혀 있었고, 이미 정반대 판정을 내고 있었다)
 

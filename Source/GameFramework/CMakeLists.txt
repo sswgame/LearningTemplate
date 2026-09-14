@@ -41,7 +41,7 @@ if(gfLibType STREQUAL "SHARED")
 	sw_setModuleBinOutput(GameFramework)
 endif()
 
-set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES GameFramework)
+sw_registerDynamicModule(GameFramework gameframework)
 
 if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(GameFramework BATCH_SIZE 8)

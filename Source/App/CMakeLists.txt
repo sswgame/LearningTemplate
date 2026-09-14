@@ -63,11 +63,9 @@ sw_emitRuntimeCopies(App)
 # (→ 리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
 # 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다.
 if(SW_SHIPPING_BUILD AND WIN32)
-	set(swReflectionStaticLibs Engine GameFramework SWGame)
-	get_property(swKitModules GLOBAL PROPERTY SW_DYNAMIC_MODULES)
-	if(swKitModules)
-		list(APPEND swReflectionStaticLibs ${swKitModules})
-	endif()
+	set(swReflectionStaticLibs Engine)
+	sw_getDynamicModules(swDynamicModules)
+	list(APPEND swReflectionStaticLibs ${swDynamicModules})
 	list(REMOVE_DUPLICATES swReflectionStaticLibs)
 
 	foreach(reflLib IN LISTS swReflectionStaticLibs)

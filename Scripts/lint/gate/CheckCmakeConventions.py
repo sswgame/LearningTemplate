@@ -52,7 +52,11 @@ _kOptionNameRe = re.compile(r'^SW_[A-Z0-9_]+$')
 _kCommentRe = re.compile(r'^\s*#')
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
-_kExcludedPart = ("ThirdParty", "vcpkg", "build", "generated")
+#:
+#: `ThirdParty/` 를 통째로 빼지 않는다. 그 아래 `CMakeLists.txt` 는 **우리가 쓴 얇은 래퍼**이고
+#: (`sw_copyDxcDlls` 같은 우리 함수가 거기 있다) 우리 규칙을 따라야 한다. 남의 코드는 vcpkg 가
+#: 가져오는 포트 파일뿐이라 그것만 뺀다.
+_kExcludedPart = ("vcpkg", "vcpkg-port", "build", "generated")
 
 #: CMake 자신이 정한 이름들 — 우리 규칙을 들이댈 수 없다.
 _kReservedVariablePrefix = ("CMAKE_", "CTEST_", "CPACK_", "ENV", "SW_", "VCPKG_", "Python3_", "_CMAKE_")

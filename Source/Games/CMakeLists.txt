@@ -28,4 +28,7 @@ endif()
 
 message(STATUS "[Games] SW_ACTIVE_GAME=${SW_ACTIVE_GAME} -> target SWGame")
 add_subdirectory(${SW_ACTIVE_GAME})
-set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES SWGame)
+
+# 등록은 여기서 하지 않는다 — 타겟을 **만드는** `sw_addGameModule` 이 한다
+# (`cmake/Engine/TargetRules.cmake` 의 "동적 모듈 레지스트리"). 호출부가 등록하면
+# 새 모듈이 조용히 빠진다.

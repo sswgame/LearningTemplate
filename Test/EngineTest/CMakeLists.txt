@@ -39,7 +39,7 @@ sw_emitRuntimeCopies(EngineTest)
 # (`cmake/Engine/TargetRules.cmake` 의 RHI 백엔드 레지스트리) — 예전에는 이 넷이 세 곳에 글자
 # 그대로 있었고, 백엔드가 늘면 조용히 빠졌다.
 if(SW_RHI_AS_MODULES)
-	sw_getRhiBackends(listRhiBackend)
+	sw_getDynamicModules(listRhiBackend KINDS rhi)
 	foreach(rhiMod IN LISTS listRhiBackend)
 		add_dependencies(EngineTest ${rhiMod})
 	endforeach()

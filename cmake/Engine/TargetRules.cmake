@@ -35,33 +35,104 @@ function(sw_setModuleBinOutput TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# RHI 백엔드 레지스트리 — **정의하는 쪽이 등록한다**
+# 동적 모듈 레지스트리 — **만드는 자리가 등록하고, 쓰는 자리는 묻는다**
 #
-# 예전에는 백엔드 이름 넷이 세 곳에 글자 그대로 적혀 있었다:
-# `sw_configureAppDependencies` · `Test/EngineTest/CMakeLists.txt` · `Test/SmokeTest/CMakeLists.txt`.
-# 그런데 이름을 확실히 아는 곳은 따로 있었다 — `sw_addRhiBackendModule` 은 타겟을 **만들면서**
-# 이름을 받는다. 백엔드를 하나 더하면 정의는 한 줄인데 소비하는 세 곳을 같이 고쳐야 했고,
-# 빠뜨려도 조용했다(그 테스트가 그 백엔드를 빌드하지 않을 뿐이라 아무 에러도 나지 않는다).
+# 예전에는 이 목록이 세 가지 방식으로 관리되고 있었다:
 #
-# 그래서 만드는 자리가 등록하고, 쓰는 자리는 묻는다. 키트가 `SW_DYNAMIC_MODULES` 로 이미 하고
-# 있던 것과 같은 방식이다 — 이 저장소의 `Scripts/lint/gate/` 와 같은 규칙이다: **목록이 아니라 자리.**
+# | 모듈 | 등록 방식 |
+# | --- | --- |
+# | `GF_*` 키트 | `sw_addGameFrameworkKit` **안에서** `SW_DYNAMIC_MODULES` 에 append |
+# | `GameFramework` · `SWGame` | **호출부**에서 직접 append (`Source/GameFramework/CMakeLists.txt` 등) |
+# | `RHI_*` · `EditorModule` | **등록 안 됨** — 이름 넷을 소비하는 세 곳이 각자 리터럴로 들고 있었다 |
+#
+# 등록을 호출부에 맡기면 새 모듈이 조용히 빠진다(실제로 `EditorModule` 이 그랬다). 그래서 등록은
+# **타겟을 만드는 함수 안에서만** 한다. 종류(`KIND`)를 같이 받아 두면 소비자가 필요한 것만 고를 수
+# 있다 — App 은 전부, EngineTest 는 `rhi` 만.
+#
+# 이 저장소의 `Scripts/lint/gate/` 와 같은 규칙이다: **목록이 아니라 자리가 규칙이다.**
+#
+#   KIND: rhi | kit | game | gameframework | editor
 # ------------------------------------------------------------------------------
-function(sw_registerRhiBackend TARGET_NAME)
-	set_property(GLOBAL APPEND PROPERTY SW_RHI_MODULES ${TARGET_NAME})
+function(sw_registerDynamicModule TARGET_NAME KIND)
+	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
+	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
 endfunction()
 
-# 등록된 RHI 백엔드 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
-function(sw_getRhiBackends OUT_VAR)
-	get_property(listRegistered GLOBAL PROPERTY SW_RHI_MODULES)
+# 등록된 동적 모듈 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
+#
+# `KINDS` 를 주면 그 종류만, 생략하면 전부. 타겟이 없는 이름은 거른다 — 배포 빌드는 RHI 를
+# Engine 에 정적 링크하므로(`SW_RHI_AS_MODULES=OFF`) 등록만 되고 타겟은 없는 상태가 정상이다.
+function(sw_getDynamicModules OUT_VAR)
+	cmake_parse_arguments(ARG "" "" "KINDS" ${ARGN})
 
-	set(listBackend "")
-	foreach(backend IN LISTS listRegistered)
-		if(TARGET ${backend})
-			list(APPEND listBackend ${backend})
+	if(ARG_KINDS)
+		set(listRegistered "")
+		foreach(kind IN LISTS ARG_KINDS)
+			get_property(listOfKind GLOBAL PROPERTY SW_DYNAMIC_MODULES_${kind})
+			list(APPEND listRegistered ${listOfKind})
+		endforeach()
+	else()
+		get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+	endif()
+
+	set(listModule "")
+	foreach(mod IN LISTS listRegistered)
+		if(TARGET ${mod})
+			list(APPEND listModule ${mod})
 		endif()
 	endforeach()
 
-	set(${OUT_VAR} "${listBackend}" PARENT_SCOPE)
+	if(listModule)
+		list(REMOVE_DUPLICATES listModule)
+	endif()
+
+	set(${OUT_VAR} "${listModule}" PARENT_SCOPE)
+endfunction()
+
+# 등록을 **잊을 수 없게** 한다 — 구성 마지막에 한 번 대조합니다.
+#
+# 레지스트리는 규칙이지 강제가 아니다. `EditorModule` 은 실제로 아무 데도 등록되지 않은 채
+# 오래 있었고, 아무 에러도 나지 않았다(소비하는 자리가 이름을 리터럴로 들고 있었으니까).
+# 그래서 여기서 **런타임에 로드되는 타겟(MODULE)** 을 전부 훑어 레지스트리와 맞춰 본다.
+# MODULE 은 정의상 "이름으로 찾아 올리는 플러그인" 이라 App 이 반드시 먼저 빌드해야 하는 것들이다.
+#
+# 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
+function(sw_verifyDynamicModuleRegistry)
+	get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+
+	# 루트부터 훑는다. `Source/` 에서 시작하면 안 된다 — `Source/Editor` · `Source/Engine` 등은
+	# `Source/CMakeLists.txt` 가 아니라 **루트가** 직접 add_subdirectory 하므로 `Source/` 의
+	# SUBDIRECTORIES 에 없다. (처음에 그렇게 짰다가 EditorModule 을 못 잡는 것을 확인했다.)
+	set(listDirectory "${CMAKE_SOURCE_DIR}")
+	set(listMissing "")
+
+	while(listDirectory)
+		list(POP_FRONT listDirectory currentDir)
+
+		get_property(listSubDir DIRECTORY "${currentDir}" PROPERTY SUBDIRECTORIES)
+		list(APPEND listDirectory ${listSubDir})
+
+		get_property(listTarget DIRECTORY "${currentDir}" PROPERTY BUILDSYSTEM_TARGETS)
+		foreach(targetName IN LISTS listTarget)
+			get_target_property(targetType ${targetName} TYPE)
+			if(NOT targetType STREQUAL "MODULE_LIBRARY")
+				continue()
+			endif()
+
+			if(NOT targetName IN_LIST listRegistered)
+				list(APPEND listMissing ${targetName})
+			endif()
+		endforeach()
+	endwhile()
+
+	if(listMissing)
+		message(FATAL_ERROR
+			"동적 모듈이 레지스트리에 없습니다: ${listMissing}
+"
+			"  타겟을 만드는 자리에서 sw_registerDynamicModule(<타겟> <종류>) 를 부르세요.
+"
+			"  (종류: rhi | kit | game | gameframework | editor — cmake/Engine/TargetRules.cmake)")
+	endif()
 endfunction()
 
 # App의 런타임/플러그인/모듈 의존성을 구성합니다.
@@ -70,20 +141,15 @@ function(sw_configureAppDependencies TARGET_NAME)
 		return()
 	endif()
 
-	# 1) RHI 플러그인 빌드 순서 종속성 연결 (App이 런타임에 동적 로드)
-	sw_getRhiBackends(listRhiBackend)
-	foreach(rhiMod IN LISTS listRhiBackend)
-		add_dependencies(${TARGET_NAME} ${rhiMod})
+	# 1) 동적 모듈은 App 보다 먼저 빌드되어야 한다 — App 이 런타임에 로드하기 때문이다.
+	#    이름을 적지 않는다: 레지스트리가 답한다(위 "동적 모듈 레지스트리").
+	sw_getDynamicModules(listDynamicModule)
+	foreach(mod IN LISTS listDynamicModule)
+		add_dependencies(${TARGET_NAME} ${mod})
 	endforeach()
 
-	# 2) Dev 에디터 모듈 빌드 순서 종속성 연결
-	if(NOT SW_SHIPPING_BUILD AND TARGET EditorModule)
-		add_dependencies(${TARGET_NAME} EditorModule)
-	endif()
-
-	# 3) Shipping / Dev 모듈 연결
-	# Shipping: SWGame 정적 링크 및 CookAssets 자동 선행 실행
-	# Dev: delay-load이므로 링크하지 않고 DLL이 App보다 먼저 빌드되도록 종속성만 연결
+	# 2) Shipping 은 게임을 정적으로 링크하고 에셋을 먼저 굽는다.
+	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
 	if(SW_SHIPPING_BUILD)
 		if(TARGET SWGame)
 			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
@@ -91,16 +157,6 @@ function(sw_configureAppDependencies TARGET_NAME)
 
 		if(TARGET CookAssets)
 			add_dependencies(${TARGET_NAME} CookAssets)
-		endif()
-	else()
-		if(TARGET SWGame)
-			get_property(dynMods GLOBAL PROPERTY SW_DYNAMIC_MODULES)
-
-			foreach(mod IN LISTS dynMods)
-				if(TARGET ${mod})
-					add_dependencies(${TARGET_NAME} ${mod})
-				endif()
-			endforeach()
 		endif()
 	endif()
 endfunction()
@@ -128,7 +184,7 @@ function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 	sw_configurePch(${BACKEND_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setModuleBinOutput(${BACKEND_NAME})
 	set_target_properties(${BACKEND_NAME} PROPERTIES FOLDER "Source/Engine/Graphics/RHI/Modules")
-	sw_registerRhiBackend(${BACKEND_NAME})
+	sw_registerDynamicModule(${BACKEND_NAME} rhi)
 endfunction()
 
 # GameFramework 장르 키트 라이브러리 타겟을 정의하고 빌드 모드에 맞게 구성합니다.
@@ -165,7 +221,7 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		endif()
 	endif()
 
-	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${KIT_NAME})
+	sw_registerDynamicModule(${KIT_NAME} kit)
 	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
 
 	# 헤더 목록을 넘기지 않는다. sw_addReflectionStep 이 REFLECT/ENUM 매크로를 가진 헤더를
@@ -195,6 +251,7 @@ function(sw_addGameModule TARGET_NAME)
 
 	add_library(${TARGET_NAME} ${gameLibType} ${gameSources})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Source/Games")
+	sw_registerDynamicModule(${TARGET_NAME} game)
 
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${TARGET_NAME}
