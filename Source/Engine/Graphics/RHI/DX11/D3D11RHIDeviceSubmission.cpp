@@ -102,7 +102,7 @@ namespace sw
             _recordingState._boundInstanceSlotVb = 0;
 
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmdList )
+        for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList == nullptr )
                 continue;
@@ -120,7 +120,7 @@ namespace sw
             _recordingState._activeGraphicsPso = 0;
 
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmdList )
+        for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPso == pso )
                 pList->getRecordingState()._activeGraphicsPso = 0;
@@ -130,18 +130,18 @@ namespace sw
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        _listLiveCmdList.push_back( pCmdList );
+        _listLiveCmd.push_back( pCmdList );
     }
 
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( size_t index = 0; index < _listLiveCmdList.size(); ++index )
+        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
         {
-            if ( _listLiveCmdList[index] != pCmdList )
+            if ( _listLiveCmd[index] != pCmdList )
                 continue;
-            _listLiveCmdList[index] = _listLiveCmdList.back();
-            _listLiveCmdList.pop_back();
+            _listLiveCmd[index] = _listLiveCmd.back();
+            _listLiveCmd.pop_back();
             return;
         }
     }

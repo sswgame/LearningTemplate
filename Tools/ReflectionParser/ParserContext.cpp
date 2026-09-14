@@ -111,7 +111,7 @@ namespace sw
             struct StringBinding
             {
                 string ParserClangConfig::* _member;
-                const utf8*                 _key;
+                const utf8*                 _pKey;
             };
 
             static void applyBindings( ParserClangConfig& config, const nlohmann::json& obj,

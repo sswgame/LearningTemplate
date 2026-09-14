@@ -196,6 +196,6 @@ namespace sw
     struct MaterialData
     {
         vector<MaterialProperty> _listProperty;
-        vector<uint8>            _listBuffer;
+        vector<uint8>            _bytes;
     };
 } // namespace sw

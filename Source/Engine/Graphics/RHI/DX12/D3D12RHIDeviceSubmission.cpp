@@ -36,18 +36,18 @@ namespace sw
     void D3D12RHIDevice::registerCommandList( D3D12RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        _listLiveCmdList.push_back( pCmdList );
+        _listLiveCmd.push_back( pCmdList );
     }
 
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-        for ( size_t index = 0; index < _listLiveCmdList.size(); ++index )
+        for ( size_t index = 0; index < _listLiveCmd.size(); ++index )
         {
-            if ( _listLiveCmdList[index] != pCmdList )
+            if ( _listLiveCmd[index] != pCmdList )
                 continue;
-            _listLiveCmdList[index] = _listLiveCmdList.back();
-            _listLiveCmdList.pop_back();
+            _listLiveCmd[index] = _listLiveCmd.back();
+            _listLiveCmd.pop_back();
             return;
         }
     }

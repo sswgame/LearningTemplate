@@ -725,7 +725,7 @@ namespace sw::editor
         {
             float3      _dir;
             ImU32       _col;
-            const utf8* _label;
+            const utf8* _pLabel;
             float32     _depth;
             float2      _screenOffset;
             float3      _targetRot;
@@ -779,8 +779,8 @@ namespace sw::editor
 
             pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
 
-            if ( ax._depth > -0.2f && ax._label[0] != '-' )
-                pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._label );
+            if ( ax._depth > -0.2f && ax._pLabel[0] != '-' )
+                pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._pLabel );
 
             if ( bHovered && ImGui::IsMouseClicked( 0 ) )
             {

@@ -90,16 +90,16 @@ namespace sw
         if ( loadFromFile( assetRelativePath ) == false )
             SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
 
-        uint32 bufferSize = static_cast<uint32>( _data._listBuffer.size() );
+        uint32 bufferSize = static_cast<uint32>( _data._bytes.size() );
         if ( bufferSize == 0 )
         {
             bufferSize = 256;
-            _data._listBuffer.resize( bufferSize, 0 );
+            _data._bytes.resize( bufferSize, 0 );
         }
         else
         {
             const uint32 alignedSize = MathUtil::align( bufferSize, 256u );
-            _data._listBuffer.resize( alignedSize, 0 );
+            _data._bytes.resize( alignedSize, 0 );
             bufferSize = alignedSize;
         }
 
@@ -110,7 +110,7 @@ namespace sw
             return false;
         }
 
-        pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), bufferSize );
+        pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
         _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
 
         // 텍스처는 CB 가 생긴 뒤에 — setTextureProperty 가 인덱스를 CB 에 바로 올린다.
@@ -312,19 +312,19 @@ namespace sw
                     }
                 }
             }
-            _data._listBuffer.clear();
+            _data._bytes.clear();
             uint32 maxEnd = pSchemaCb->_totalSize;
             for ( const MaterialProperty& prop : _data._listProperty )
             {
                 maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
             }
-            _data._listBuffer.assign( maxEnd, 0 );
+            _data._bytes.assign( maxEnd, 0 );
             for ( MaterialProperty& prop : _data._listProperty )
             {
-                MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
+                MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
             }
-            const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
-            _data._listBuffer.resize( alignedTotal, 0 );
+            const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
+            _data._bytes.resize( alignedTotal, 0 );
             _desc._listProperty = _data._listProperty;
             SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
             return true;
@@ -380,20 +380,20 @@ namespace sw
             if ( MaterialUtil::isNonBufferType( prop._type ) == false )
                 maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
         }
-        _data._listBuffer.assign( maxEnd, 0 );
+        _data._bytes.assign( maxEnd, 0 );
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
+            MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
         }
-        const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
-        _data._listBuffer.resize( alignedTotal, 0 );
+        const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
+        _data._bytes.resize( alignedTotal, 0 );
         _desc._listProperty = _data._listProperty;
         return bAllPacked;
     }
 
     bool Material::rebuildPackedBuffer()
     {
-        _data._listBuffer.clear();
+        _data._bytes.clear();
 
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -453,17 +453,17 @@ namespace sw
             maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
         }
 
-        _data._listBuffer.assign( maxEnd, 0 );
+        _data._bytes.assign( maxEnd, 0 );
         bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 bAllPacked = false;
         }
 
-        const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
-        if ( alignedTotal > _data._listBuffer.size() )
-            _data._listBuffer.resize( alignedTotal, 0 );
+        const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
+        if ( alignedTotal > _data._bytes.size() )
+            _data._bytes.resize( alignedTotal, 0 );
 
         _desc._listProperty = _data._listProperty;
         return bAllPacked;
@@ -485,7 +485,7 @@ namespace sw
         }
         rebuildPackedBuffer();
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
+            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
     bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
@@ -532,13 +532,13 @@ namespace sw
 
     void Material::setPropertyData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData )
     {
-        if ( pData == nullptr || offset + size > _data._listBuffer.size() )
+        if ( pData == nullptr || offset + size > _data._bytes.size() )
             return;
 
-        Memory::copy( _data._listBuffer.data() + offset, pData, size );
+        Memory::copy( _data._bytes.data() + offset, pData, size );
 
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
+            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
     bool Material::setPropertyValue( IRHIDevice* pRhi, hashed_string name, string_view value )
@@ -547,10 +547,10 @@ namespace sw
         if ( prop == nullptr )
             return false;
         prop->_value = value;
-        if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._listBuffer ) == false )
+        if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._bytes ) == false )
             return false;
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
+            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
@@ -569,10 +569,10 @@ namespace sw
                 return false;
             prop._textureIndex = descIdx;
             prop._value        = to_string( descIdx );
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             if ( pRhi != nullptr && _constantBuffer != 0 )
-                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
+                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             _desc._listProperty = _data._listProperty;
             return true;
         }
@@ -659,10 +659,10 @@ namespace sw
             if ( hashed_string( prop._name.c_str() ) != name )
                 continue;
             prop._value = to_string( value );
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             if ( pRhi != nullptr && _constantBuffer != 0 )
-                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
+                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             return true;
         }
         return false;
@@ -693,7 +693,7 @@ namespace sw
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( prop._name == name && MaterialUtil::isNonBufferType( prop._type ) == false )
-                return _data._listBuffer.data() + prop._offset;
+                return _data._bytes.data() + prop._offset;
         }
         return nullptr;
     }
@@ -779,9 +779,9 @@ namespace sw
         {
             if ( hashed_string( prop._name.c_str() ) != name )
                 continue;
-            if ( prop._offset + 4 > _data._listBuffer.size() )
+            if ( prop._offset + 4 > _data._bytes.size() )
                 return false;
-            Memory::copy( &outValue, _data._listBuffer.data() + prop._offset, 4 );
+            Memory::copy( &outValue, _data._bytes.data() + prop._offset, 4 );
             return true;
         }
         return false;

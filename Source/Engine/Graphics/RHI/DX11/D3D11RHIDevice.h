@@ -333,7 +333,7 @@ namespace sw
         /// @brief 살아 있는 `D3D11RHICommandList` 들 — **소유하지 않는다.** 리사이즈 직전에
         ///        기록물을 버리게 하려고 들고 있다 (백버퍼 참조를 붙들고 있기 때문).
         mutex                        _liveCmdListMutex;
-        vector<D3D11RHICommandList*> _listLiveCmdList;
+        vector<D3D11RHICommandList*> _listLiveCmd;
 
         RHIReleaseQueue _releaseQueue;
 

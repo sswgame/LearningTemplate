@@ -14,8 +14,8 @@ namespace sw::config
     // -------------------------------------------------------------------------
     inline constexpr const utf8* kFileAnnotationMeta     = "@SW_FILE_ANNOTATION_META@";
     inline constexpr const utf8* kFileEnvToolchainConfig = "@SW_DIR_CONFIG_ENV@/@SW_FILE_TOOLCHAIN_CONFIG@";
-    inline constexpr const utf8* kFileParserConfig       = "@SW_FILE_PARSER_CONFIG@";
-    inline constexpr const utf8* kFileParserDefaults     = "@SW_FILE_PARSER_DEFAULTS@";
+    inline constexpr const utf8* kFileParserConfig       = "@SW_DIR_CONFIG_ENV@/@SW_FILE_PARSER_CONFIG@";
+    inline constexpr const utf8* kFileParserDefaults     = "@SW_DIR_CONFIG_ENV@/@SW_FILE_PARSER_DEFAULTS@";
     inline constexpr const utf8* kFileReflectBuiltins    = "@SW_FILE_REFLECT_BUILTINS@";
 
     // -------------------------------------------------------------------------

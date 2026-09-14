@@ -23,11 +23,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import getProjectRoot
 
-BACKENDS = [("DirectX12", "dx12"), ("Vulkan", "vk"), ("DirectX11", "dx11"), ("OpenGL", "gl")]
-BACKGROUND = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
+kListBackend = [("DirectX12", "dx12"), ("Vulkan", "vk"), ("DirectX11", "dx11"), ("OpenGL", "gl")]
+kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
 
 
-def ppm_stats(path):
+def readPpmStatsInternal(path):
     """PPM(P6) 평균 RGB 와 배경이 아닌 픽셀 수(7 픽셀 간격 샘플)를 돌려준다."""
     with open(path, "rb") as f:
         data = f.read()
@@ -40,7 +40,7 @@ def ppm_stats(path):
     mean = tuple(round(sum(pixels[c::3]) / count, 1) for c in range(3))
     non_bg = 0
     for i in range(0, len(pixels), 3 * 7):
-        if any(abs(pixels[i + c] - BACKGROUND[c]) > 3 for c in range(3)):
+        if any(abs(pixels[i + c] - kArrBackgroundColor[c]) > 3 for c in range(3)):
             non_bg += 1
     return mean, non_bg
 
@@ -66,7 +66,7 @@ def main():
     failed = False
     results = []
     for kind, extra, frames in (("opaque", ["-gv_benchTransparent=0"], 30), ("transparent", ["-gv_benchTransparent=25"], 30)):
-        for name, flag in BACKENDS:
+        for name, flag in kListBackend:
             ppm = os.path.join(out_dir, "%s_%s.ppm" % (kind, name))
             log = os.path.join(out_dir, "%s_%s.log" % (kind, name))
             if os.path.exists(ppm):
@@ -76,7 +76,7 @@ def main():
                 proc = subprocess.run(cmd, cwd=bin_dir, stdout=log_file, stderr=subprocess.STDOUT, timeout=180)
             with open(log, "rb") as log_file:
                 errors = log_file.read().count(b"[Error]")
-            stats = ppm_stats(ppm) if os.path.exists(ppm) else None
+            stats = readPpmStatsInternal(ppm) if os.path.exists(ppm) else None
             ok = proc.returncode == 0 and stats is not None and stats[1] > 0
             failed |= ok is False
             results.append((kind, name, proc.returncode, errors, stats))

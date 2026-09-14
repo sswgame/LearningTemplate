@@ -45,7 +45,7 @@ namespace sw::editor
          *          지금 표가 전부 리터럴이라 우연히 맞을 뿐, 누가 부분 문자열을 넣으면 조용히
          *          범위를 넘어 읽는다. 타입으로 계약을 적어 둔다.
          */
-        const utf8*     _label;
+        const utf8*     _pLabel;
         EditorAssetKind _kind;
         bool            _bOther;
     };

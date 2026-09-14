@@ -387,7 +387,7 @@ namespace sw
 
     private:
         StringPool             _stringPool;
-        vector<uint8>          _listBuffer;
+        vector<uint8>          _bytes;
         const uint8*           _pData;
         uint64                 _dataSize;
         uint64                 _offset;

@@ -34,11 +34,14 @@ endif()
 sw_emitRuntimeCopies(EngineTest)
 
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드
+#
+# 백엔드 이름을 여기 적지 않는다. `sw_addRhiBackendModule` 이 타겟을 만들면서 등록한 것을 묻는다
+# (`cmake/Engine/TargetRules.cmake` 의 RHI 백엔드 레지스트리) — 예전에는 이 넷이 세 곳에 글자
+# 그대로 있었고, 백엔드가 늘면 조용히 빠졌다.
 if(SW_RHI_AS_MODULES)
-	foreach(rhiMod IN ITEMS RHI_DX11 RHI_DX12 RHI_GL RHI_Vulkan)
-		if(TARGET ${rhiMod})
-			add_dependencies(EngineTest ${rhiMod})
-		endif()
+	sw_getRhiBackends(listRhiBackend)
+	foreach(rhiMod IN LISTS listRhiBackend)
+		add_dependencies(EngineTest ${rhiMod})
 	endforeach()
 endif()
 

@@ -50,7 +50,7 @@ namespace sw::editor
                         continue;
                     if ( EditorAssetTypeRegistry::matches( pFilter[index]._kind, path ) == false )
                         continue;
-                    return pFilter[index]._label;
+                    return pFilter[index]._pLabel;
                 }
                 return "File";
             }
@@ -439,14 +439,14 @@ namespace sw::editor
             const EditorAssetBrowserFilter* pFilter  = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
             const utf8*                     pPreview = "All";
             if ( _filterIndex < filterCount )
-                pPreview = pFilter[_filterIndex]._label;
+                pPreview = pFilter[_filterIndex]._pLabel;
             ImGui::SetNextItemWidth( 110.0f );
             if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
             {
                 for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
                 {
                     const bool bSelected = ( _filterIndex == filterIdx );
-                    if ( ImGui::Selectable( pFilter[filterIdx]._label, bSelected ) )
+                    if ( ImGui::Selectable( pFilter[filterIdx]._pLabel, bSelected ) )
                         _filterIndex = filterIdx;
                     if ( bSelected )
                         ImGui::SetItemDefaultFocus();
@@ -515,8 +515,8 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Favorites" );
         struct FavFolder
         {
-            const utf8* _label;
-            const utf8* _relPath;
+            const utf8* _pLabel;
+            const utf8* _pRelPath;
             bool        _bEngine;
         };
         static const FavFolder kArrFavorites[] = {
@@ -531,13 +531,13 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? ResourceUtil::getDomainFolderPath( "engine", kArrFavorites[favIdx]._relPath )
-                                         : ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._relPath );
+                                         ? ResourceUtil::getDomainFolderPath( "engine", kArrFavorites[favIdx]._pRelPath )
+                                         : ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
-            if ( ImGui::Selectable( kArrFavorites[favIdx]._label, bSelected ) )
+            if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
-                selectFolder( fullFavPath, string{ "Favorites / " } + kArrFavorites[favIdx]._label );
+                selectFolder( fullFavPath, string{ "Favorites / " } + kArrFavorites[favIdx]._pLabel );
             }
         }
 

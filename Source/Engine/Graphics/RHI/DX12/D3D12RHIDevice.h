@@ -421,7 +421,7 @@ namespace sw
 
         /** @brief 살아 있는 커맨드 리스트 (소유하지 않는다). 종료할 때 연결을 끊어 준다. */
         mutex                        _liveCmdListMutex;
-        vector<D3D12RHICommandList*> _listLiveCmdList;
+        vector<D3D12RHICommandList*> _listLiveCmd;
         /// @brief 온라인 힙 블록 프리리스트 — 컨텍스트가 빌려 슬롯 테이블을 굳히고, 리스트가 닫히면 펜스 뒤 돌아온다.
         mutex                _onlineBlockMutex;
         vector<uint32>       _listFreeOnlineBlock;

@@ -254,9 +254,9 @@ namespace sw
                 const utf8* pMacroOpen = nullptr;
                 for ( const ReflectAnnotationDesc& desc : kReflectAnnotations )
                 {
-                    if ( prefix == desc._prefix )
+                    if ( prefix == desc._pPrefix )
                     {
-                        pMacroOpen = desc._macroOpen;
+                        pMacroOpen = desc._pMacroOpen;
                         break;
                     }
                 }

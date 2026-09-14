@@ -62,7 +62,10 @@ if(NOT SW_SHIPPING_BUILD)
 	if(TARGET EditorModule)
 		add_dependencies(SmokeTest EditorModule)
 	endif()
-	if(TARGET RHI_DX11)
-		add_dependencies(SmokeTest RHI_DX11)
-	endif()
+	# 이 테스트는 모듈 DLL 을 실제로 올렸다 내린다 — 백엔드가 옆에 있어야 한다.
+	# 이름을 적지 않고 레지스트리에 묻는다(`cmake/Engine/TargetRules.cmake`).
+	sw_getRhiBackends(listRhiBackend)
+	foreach(rhiMod IN LISTS listRhiBackend)
+		add_dependencies(SmokeTest ${rhiMod})
+	endforeach()
 endif()

@@ -195,11 +195,11 @@ namespace sw
         // 이미 파괴된 이 디바이스의 등록 목록을 잠그려 든다.
         {
             std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D11RHICommandList* pLiveList : _listLiveCmdList )
+            for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
             {
                 pLiveList->detachFromDevice();
             }
-            _listLiveCmdList.clear();
+            _listLiveCmd.clear();
         }
 
         _swapChain.shutdown();
@@ -233,7 +233,7 @@ namespace sw
         _swapChain.releaseBackBufferRtv();
         {
             std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D11RHICommandList* pLiveList : _listLiveCmdList )
+            for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
             {
                 pLiveList->releaseRecordedState();
             }

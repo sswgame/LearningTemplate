@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `d58c0c00`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `0dc396dc`
 
 ---
 
@@ -294,6 +294,99 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (같은 명명 어휘가 세 벌로 적혀 있었고, 이미 정반대 판정을 내고 있었다)
+
+"Script 와 CMake 에 구조적으로 더 개선할 것이 없나" 를 훑어서 나온 다섯 건을 전부 닫았다.
+
+**1) `CheckCodeConventions.py` — 판정을 한 곳으로.**
+
+`AGENTS.md` 의 접두어 표(`p`/`pp` · `list` · `map` · `unique` · `arr` · 단수형)는 **하나**인데
+코드는 **세 벌**을 들고 있었다: `checkParameterItemInternal` 252줄 · `checkLocalVariableItemInternal`
+376줄 · `ClassMemberNamingRule` 130줄이 각자 정규식과 접두어 목록과 메시지 문구를 적었다.
+그리고 **실제로 어긋나 있었다**:
+
+| 이름 | 매개변수 | 지역변수 | 멤버 |
+|---|---|---|---|
+| `inoutListActors` | 잡힘 | **통과** (`inoutList` 를 빠뜨림) | — |
+| `vector<uint8> listBuffer` | "`list` 를 빼라" | "`list` 를 빼라" | **통과** (`buffer` 를 바이트 단어로 안 침) |
+
+같은 이름에 주체에 따라 **정반대 답**이 나왔다.
+
+이제 `kMapContainerVocabulary` (어휘 넷) × `kMapNamingSubject` (주체 셋) 표 하나를
+`checkContainerNamingInternal` · `checkPointerNamingInternal` 이 읽는다. **주체마다 다른 것은
+선언을 찾는 방법(파싱)뿐이고, 찾은 이름을 어떻게 볼지는 셋이 같은 표를 본다.**
+
+**2) 그 과정에서 멤버 정규식 둘이 눈을 감고 있던 것이 드러났다.**
+
+`_kMemberRawPointerRe` 는 `_[^pP\s]` 였다 — `p`/`P` 로 시작하는 이름을 아예 제외해서
+`_pointer` 같은 잘못된 이름을 **볼 수가 없었다**. 게다가 `const` 수식자를 허용하지 않아
+`const utf8* _label;` 형태를 통째로 놓쳤다. 긍정 매칭으로 바꾸니 **숨어 있던 위반 14건**이 나왔고
+전부 고쳤다(`_label`→`_pLabel` 9건, `_listBuffer`→`_bytes` 3건, `_listLiveCmdList`→`_listLiveCmd` 2건).
+
+**3) 자가 테스트가 그 드리프트를 못 보던 이유도 고쳤다.**
+
+`CheckCodeConventionsSelfTest` 는 "이 **카테고리**가 한 번은 잡히는가" 만 봤다. 그래서 같은 규칙이
+주체마다 다르게 적혀 있어도 **하나만 살아 있으면 통과**했다. 주체 × 어휘 **교차표**(12칸)를 더했다 —
+표는 손으로 들지 않고 두 목록의 곱이다. 한 칸을 일부러 죽여 실패하는 것까지 확인했다.
+
+**4) Python 과 CMake 는 아무도 보고 있지 않았다 — 게이트 둘을 더했다.**
+
+`AGENTS.md` 는 세 언어의 규칙을 적어 두었는데 게이트는 `kCppAllExtensions` 만 훑었다. **린트를
+만드는 코드가 린트를 안 받는 상태**로 Python 11,927줄 · CMake 4,952줄이 쌓여 있었다.
+
+- `gate/CheckPythonConventions.py` — AST 로 본다. 함수 `camelCase`, 모듈 상수 `kPascalCase`,
+  파일 `PascalCase.py`. `TypeVar`·타입 별칭은 상수가 아니므로 제외한다(`PathLike` 는 `PathLike` 다).
+  잡힌 것: `BackendSmoke.py` 의 `ppm_stats` · `BACKENDS` · `BACKGROUND` → 전부 개명.
+- `gate/CheckCmakeConventions.py` — `sw_camelCase` 함수, `SW_UPPER_SNAKE_CASE` option,
+  `_` 없는 함수 내부 변수. `set()` 만 보면 `file(GLOB _x ...)` 를 놓치므로 **역참조(`${_x}`)도**
+  본다. 잡힌 것: `ReflectionCodeGen.cmake` 의 지역 변수 15개 → 전부 개명.
+
+> 두 게이트를 넣으면서 **CMake 를 한 줄도 고치지 않았다.** 린트 CTest 12 → **15**
+> (뒤의 README 게이트 포함). 폴더가 목록이라는 것이 또 한 번 증명됐다.
+
+**5) RHI 백엔드 이름 넷이 세 곳에 글자 그대로 있었다.**
+
+`sw_configureAppDependencies` · `Test/EngineTest` · `Test/SmokeTest` 가 각자
+`RHI_DX11 RHI_DX12 RHI_GL RHI_Vulkan` 을 적었다. 그런데 이름을 확실히 아는 곳은 따로 있었다 —
+`sw_addRhiBackendModule` 은 타겟을 **만들면서** 이름을 받는다. `sw_registerRhiBackend` /
+`sw_getRhiBackends` 를 만들어 **정의하는 자리가 등록하고 쓰는 자리는 묻게** 했다
+(키트가 `SW_DYNAMIC_MODULES` 로 이미 하던 방식이다). 덤으로 SmokeTest 는 DX11 하나만 의존하던
+것이 넷 전부가 됐다. `ninja -t query` 로 네 백엔드가 실제로 걸린 것을 확인했다.
+
+**6) `GenerateCMakeConstants.py` 가 아직 목록을 들고 있었고, 그 때문에 코드젠이 안 돌고 있었다.**
+
+바로 옆 `GenerateToolchainCMake.py` 는 "키 목록을 여기서도 들지 않는다" 고 적어 놓고 JSON 키를
+그대로 변환해 찍는다. 이쪽은 `set(SW_...)` 36줄을 손으로 들고 있었다(상수 86개 중 36개).
+이제 `k*` 를 **전부** 기계적으로 변환해 찍는다 (`kDirSourceEngine` → `SW_DIR_SOURCE_ENGINE`).
+
+그런데 손으로 들던 목록에는 **`SW_FILE_PARSER_CONFIG` 만 디렉터리를 앞에 붙이는** 예외가 있었다.
+그래서 같은 이름이 파이썬에서는 `parser_config.json`, CMake 에서는
+`Config/Environment/parser_config.json` 을 뜻했고, 그걸 모르는 자리가 디렉터리를 **두 번** 붙였다:
+
+```cmake
+"${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}"   # Config/Environment/Config/Environment/...
+```
+
+그 경로는 존재하지 않으니 바로 아래 `if(EXISTS)` 가 **조용히 걸러 냈다**. 결과:
+**`parser_config.json` 이 바뀌어도 리플렉션 코드젠이 다시 돌지 않았다.** (예전에 겪은
+"FlagOps.gen.h 가 낡아서 Engine 빌드가 깨진" 증상의 뿌리가 이것이다.)
+
+합치는 일은 합칠 줄 아는 쪽이 한다 — `ConfigConstants.h.in` 이 `@SW_DIR_CONFIG_ENV@/@SW_FILE_PARSER_CONFIG@`
+로 조립한다(`kFileEnvToolchainConfig` 가 이미 그렇게 하고 있었다). C++ 쪽 값은 그대로다.
+`parser_config.json` 을 건드리면 이제 파서가 다시 도는 것을 확인했다.
+
+**7) `cmake/README.md` 는 정본이라면서 아무도 안 보고 있었다.**
+
+`sw_registerLintTests` 를 "`CheckEngineLayers` · `CheckIncludeOrder` · `CheckSourceGlob` 일괄 등록"
+이라고 적어 두었는데 그 목록은 두 커밋 전에 사라졌다. 문서를 고치고, `lint/` 의
+`CheckLintsAreAlive` 에 해당하는 것을 `cmake/` 에도 놓았다 — `gate/CheckCmakeReadme.py` 가
+**문서가 없는 파일·함수를 가리키고 있지 않은지** 본다(트리의 `*.cmake`, 백틱에 싸인 `sw_*`).
+반대 방향은 보지 않는다: 표는 "주요" 헬퍼라고 말하지 전부라고 말하지 않는다.
+
+**검증.** `ctest --preset Ninja-Debug-lint` 15/15 · `-L nogpu` 5/5 · Debug 경고 0 ·
+Shipping 빌드 통과 · Shipping 테스트(`TestBin/` 을 `Bin/` 에서) CoreTest 169/177 ·
+EngineTest 407/409 · ReflectionTest 96/101 · SmokeTest 1/1 (나머지는 skip).
 
 ### 2026-09-14 (픽서는 죽어도 아무도 몰랐다 — 그리고 자리가 규칙이라면서 자리를 안 보고 있었다)
 

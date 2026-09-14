@@ -18,10 +18,10 @@ namespace sw
     /** @brief clang annotate 매크로 (PredefinedReflectAnnotation.xxx) */
     struct ReflectAnnotationDesc
     {
-        const utf8* _macroName;
-        const utf8* _prefix;
-        const utf8* _macroOpen;
-        const utf8* _scope;
+        const utf8* _pMacroName;
+        const utf8* _pPrefix;
+        const utf8* _pMacroOpen;
+        const utf8* _pScope;
     };
 
     inline static constexpr ReflectAnnotationDesc kReflectAnnotations[] = {

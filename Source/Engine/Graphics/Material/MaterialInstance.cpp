@@ -68,7 +68,7 @@ namespace sw
         , _listKeywordOverride{}
         , _listMultiCompileOverride{}
         , _qualityOverride{ MaterialQualityLevel::Count }
-        , _listBuffer{}
+        , _bytes{}
         , _constant{}
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _listCachedDefine{}
@@ -113,7 +113,7 @@ namespace sw
         }
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
-        _listBuffer.clear();
+        _bytes.clear();
         _bGpuDirty = SW_TRUE;
     }
 
@@ -193,21 +193,21 @@ namespace sw
         if ( _bGpuDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
 
-        _listBuffer = _pParentMaterial->getBuffer();
-        if ( _listBuffer.empty() )
+        _bytes = _pParentMaterial->getBuffer();
+        if ( _bytes.empty() )
             return false;
 
         for ( const auto& [name, value] : _listValueOverride )
         {
-            _pParentMaterial->packNamedValueIntoBuffer( name, value, _listBuffer );
+            _pParentMaterial->packNamedValueIntoBuffer( name, value, _bytes );
         }
 
         for ( const auto& [name, idx] : _listTextureOverride )
         {
-            _pParentMaterial->packTextureIntoBuffer( name, idx, _listBuffer );
+            _pParentMaterial->packTextureIntoBuffer( name, idx, _bytes );
         }
 
-        const uint32 size = static_cast<uint32>( _listBuffer.size() );
+        const uint32 size = static_cast<uint32>( _bytes.size() );
         if ( _constant._buffer == 0 )
         {
             const RHIBufferHandle constantBuffer = pRhi->getResource()->createConstantBuffer( size );
@@ -216,7 +216,7 @@ namespace sw
             _constant.adopt( pRhi, constantBuffer );
             _descriptorIndex = pRhi->getResource()->registerBindlessResource( constantBuffer );
         }
-        pRhi->getResource()->updateConstantBuffer( _constant._buffer, _listBuffer.data(), size );
+        pRhi->getResource()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
         _bGpuDirty = SW_FALSE;
         return _descriptorIndex != kInvalidDescriptorIndex;
     }

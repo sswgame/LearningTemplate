@@ -201,12 +201,12 @@ namespace sw
         // 있었는데 DX12 에는 없었다.
         {
             std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D12RHICommandList* pLiveList : _listLiveCmdList )
+            for ( D3D12RHICommandList* pLiveList : _listLiveCmd )
             {
                 if ( pLiveList != nullptr )
                     pLiveList->detachFromDevice();
             }
-            _listLiveCmdList.clear();
+            _listLiveCmd.clear();
         }
 
         _mapOffscreenTexture.clear();

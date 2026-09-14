@@ -34,6 +34,36 @@ function(sw_setModuleBinOutput TARGET_NAME)
 	)
 endfunction()
 
+# ------------------------------------------------------------------------------
+# RHI 백엔드 레지스트리 — **정의하는 쪽이 등록한다**
+#
+# 예전에는 백엔드 이름 넷이 세 곳에 글자 그대로 적혀 있었다:
+# `sw_configureAppDependencies` · `Test/EngineTest/CMakeLists.txt` · `Test/SmokeTest/CMakeLists.txt`.
+# 그런데 이름을 확실히 아는 곳은 따로 있었다 — `sw_addRhiBackendModule` 은 타겟을 **만들면서**
+# 이름을 받는다. 백엔드를 하나 더하면 정의는 한 줄인데 소비하는 세 곳을 같이 고쳐야 했고,
+# 빠뜨려도 조용했다(그 테스트가 그 백엔드를 빌드하지 않을 뿐이라 아무 에러도 나지 않는다).
+#
+# 그래서 만드는 자리가 등록하고, 쓰는 자리는 묻는다. 키트가 `SW_DYNAMIC_MODULES` 로 이미 하고
+# 있던 것과 같은 방식이다 — 이 저장소의 `Scripts/lint/gate/` 와 같은 규칙이다: **목록이 아니라 자리.**
+# ------------------------------------------------------------------------------
+function(sw_registerRhiBackend TARGET_NAME)
+	set_property(GLOBAL APPEND PROPERTY SW_RHI_MODULES ${TARGET_NAME})
+endfunction()
+
+# 등록된 RHI 백엔드 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
+function(sw_getRhiBackends OUT_VAR)
+	get_property(listRegistered GLOBAL PROPERTY SW_RHI_MODULES)
+
+	set(listBackend "")
+	foreach(backend IN LISTS listRegistered)
+		if(TARGET ${backend})
+			list(APPEND listBackend ${backend})
+		endif()
+	endforeach()
+
+	set(${OUT_VAR} "${listBackend}" PARENT_SCOPE)
+endfunction()
+
 # App의 런타임/플러그인/모듈 의존성을 구성합니다.
 function(sw_configureAppDependencies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
@@ -41,10 +71,9 @@ function(sw_configureAppDependencies TARGET_NAME)
 	endif()
 
 	# 1) RHI 플러그인 빌드 순서 종속성 연결 (App이 런타임에 동적 로드)
-	foreach(rhiMod IN ITEMS RHI_DX11 RHI_DX12 RHI_GL RHI_Vulkan)
-		if(TARGET ${rhiMod})
-			add_dependencies(${TARGET_NAME} ${rhiMod})
-		endif()
+	sw_getRhiBackends(listRhiBackend)
+	foreach(rhiMod IN LISTS listRhiBackend)
+		add_dependencies(${TARGET_NAME} ${rhiMod})
 	endforeach()
 
 	# 2) Dev 에디터 모듈 빌드 순서 종속성 연결
@@ -99,6 +128,7 @@ function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 	sw_configurePch(${BACKEND_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setModuleBinOutput(${BACKEND_NAME})
 	set_target_properties(${BACKEND_NAME} PROPERTIES FOLDER "Source/Engine/Graphics/RHI/Modules")
+	sw_registerRhiBackend(${BACKEND_NAME})
 endfunction()
 
 # GameFramework 장르 키트 라이브러리 타겟을 정의하고 빌드 모드에 맞게 구성합니다.

@@ -21,7 +21,7 @@ namespace sw
 {
     Archive::Archive()
         : _stringPool{}
-        , _listBuffer{}
+        , _bytes{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -33,7 +33,7 @@ namespace sw
 
     Archive::Archive( string_view fileName, bool bReadMode )
         : _stringPool{}
-        , _listBuffer{}
+        , _bytes{}
         , _pData{ nullptr }
         , _dataSize{ 0 }
         , _offset{ 0 }
@@ -49,15 +49,15 @@ namespace sw
             // 같은 규칙으로 먼저 찾고, 없을 때 리소스 id 로 해석한다(engine/... 같은 경로).
             bool bLoaded = false;
             if ( fileName.empty() == false && FileUtil::fileExists( fileName ) )
-                bLoaded = FileUtil::readFile( fileName, _listBuffer );
+                bLoaded = FileUtil::readFile( fileName, _bytes );
 
             if ( bLoaded == false )
-                bLoaded = ResourceUtil::readBinaryResource( fileName, _listBuffer );
+                bLoaded = ResourceUtil::readBinaryResource( fileName, _bytes );
 
             if ( bLoaded )
             {
-                _pData    = _listBuffer.data();
-                _dataSize = _listBuffer.size();
+                _pData    = _bytes.data();
+                _dataSize = _bytes.size();
             }
             else
             {
@@ -68,7 +68,7 @@ namespace sw
 
     Archive::Archive( const uint8* pData, uint64 size )
         : _stringPool{}
-        , _listBuffer{}
+        , _bytes{}
         , _pData{ pData }
         , _dataSize{ size }
         , _offset{ 0 }
@@ -82,7 +82,7 @@ namespace sw
 
     void Archive::writeData( vector<uint8>& outListDestination ) const
     {
-        outListDestination.assign( _listBuffer.begin(), _listBuffer.end() );
+        outListDestination.assign( _bytes.begin(), _bytes.end() );
     }
 
     void Archive::setOffset( uint64 offset )
@@ -99,8 +99,8 @@ namespace sw
 
     bool Archive::saveFile( string_view fileName ) const
     {
-        if ( _listBuffer.empty() == false )
-            return FileUtil::writeFile( fileName, _listBuffer.data(), _listBuffer.size() );
+        if ( _bytes.empty() == false )
+            return FileUtil::writeFile( fileName, _bytes.data(), _bytes.size() );
         return false;
     }
 
@@ -110,9 +110,9 @@ namespace sw
             return;
 
         const uint8* pBytes = static_cast<const uint8*>( pBuffer );
-        _listBuffer.insert( _listBuffer.end(), pBytes, pBytes + byteSize );
-        _pData    = _listBuffer.data();
-        _dataSize = _listBuffer.size();
+        _bytes.insert( _bytes.end(), pBytes, pBytes + byteSize );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
     }
 
     bool Archive::readBytes( void* pOutBuffer, uint64 byteSize )
@@ -518,9 +518,9 @@ namespace sw
             return false;
         }
 
-        BinarySerializer::serialize( pInstance, *pTypeInfo, _listBuffer );
-        _pData    = _listBuffer.data();
-        _dataSize = _listBuffer.size();
+        BinarySerializer::serialize( pInstance, *pTypeInfo, _bytes );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
         return true;
     }
 
@@ -767,17 +767,17 @@ namespace sw
 
     void Archive::writeVarUint( uint64 value )
     {
-        VarIntUtil::encodeVarUint64( value, _listBuffer );
-        _pData    = _listBuffer.data();
-        _dataSize = _listBuffer.size();
+        VarIntUtil::encodeVarUint64( value, _bytes );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
         _offset   = _dataSize;
     }
 
     void Archive::writeVarInt( int64 value )
     {
-        VarIntUtil::encodeVarInt64( value, _listBuffer );
-        _pData    = _listBuffer.data();
-        _dataSize = _listBuffer.size();
+        VarIntUtil::encodeVarInt64( value, _bytes );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
         _offset   = _dataSize;
     }
 

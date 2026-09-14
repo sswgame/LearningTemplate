@@ -108,7 +108,7 @@ namespace sw
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */
         RHIDescriptorIndex getDescriptorIndex() const;
         /** @brief 인스턴스 패킹 버퍼를 반환합니다. */
-        const vector<uint8>& getBuffer() const { return _listBuffer; }
+        const vector<uint8>& getBuffer() const { return _bytes; }
         /** @brief 파라미터가 오버라이드됐으면 true. */
         bool isParameterOverridden( hashed_string name ) const;
         /** @brief 리플렉션과 파라미터를 대조합니다. */
@@ -131,7 +131,7 @@ namespace sw
         vector<pair<hashed_string, string>>             _listMultiCompileOverride;
         MaterialQualityLevel                            _qualityOverride;
 
-        vector<uint8> _listBuffer;
+        vector<uint8> _bytes;
         /** @brief 상수버퍼 — 어느 디바이스의 것인지를 세대로 안다 (RHIResidentBuffer). 인덱스는 이 버퍼의 것이다. */
         RHIResidentBuffer  _constant;
         RHIDescriptorIndex _descriptorIndex;

@@ -156,7 +156,7 @@ namespace sw
         /** @brief 프로퍼티 목록을 반환합니다. */
         const vector<MaterialProperty>& getProperties() const { return _data._listProperty; }
         /** @brief 패킹된 상수 버퍼를 반환합니다. */
-        const vector<uint8>& getBuffer() const { return _data._listBuffer; }
+        const vector<uint8>& getBuffer() const { return _data._bytes; }
         /** @brief 이름 프로퍼티를 찾습니다. */
         const MaterialProperty* findProperty( hashed_string name ) const;
         /** @brief 이름 프로퍼티를 찾습니다. */

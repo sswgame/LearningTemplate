@@ -131,6 +131,83 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
     ),
 ]
 
+# ------------------------------------------------------------------------------
+# 3) 주체 × 어휘 교차표 — **드리프트를 막는 자리다**
+#
+# 위의 카테고리 검사는 "이 카테고리가 한 번은 잡히는가"만 본다. 그래서 같은 규칙이 주체마다
+# 다르게 적혀 있어도 **하나만 살아 있으면 통과했다**. 실제로 그 상태로 오래 있었다:
+#
+#   * `inoutListActors` 는 매개변수면 잡히고 지역변수면 통과했다
+#   * `vector<uint8> listBuffer` 는 매개변수에선 "`list` 를 빼라", 멤버 `_listBuffer` 는 통과 —
+#     같은 이름에 **정반대 판정**이 나왔다
+#
+# 지금은 판정이 `kMapContainerVocabulary` 한 곳에 있으니 그런 일이 나올 수 없다. 이 표는 그게
+# **계속** 그런지 본다: 어휘 넷을 주체 셋에 각각 물어, 하나라도 조용하면 실패한다.
+# 표는 손으로 들지 않는다 — 두 목록의 곱이라 어휘나 주체가 늘면 칸도 같이 는다.
+# ------------------------------------------------------------------------------
+
+#: 어휘별로 (선언을 쓰는 법, 일부러 어긴 이름). 주체 셋에 같은 위반을 넣어 본다.
+_kMapVocabularyProbe: dict[str, tuple[str, str]] = {
+    "list": ("vector<int32> {name};", "item"),
+    "map": ("unordered_map<int32, int32> {name};", "table"),
+    "unique": ("set<int32> {name};", "id"),
+    "arr": ("int32 {name}[8];", "slot"),
+}
+
+
+def buildSubjectProbeInternal(subjectKey: str, declaration: str, badName: str) -> tuple[str, str]:
+    """주체 하나에 위반 하나를 심은 파일 (경로, 내용) 을 만듭니다."""
+    if subjectKey == "member":
+        body = declaration.format(name=f"_{badName}")
+        return (
+            f"Source/Probe/Member{badName.capitalize()}.h",
+            f"#pragma once\n\nclass Probe\n{{\nprivate:\n    {body}\n}};\n",
+        )
+
+    if subjectKey == "local":
+        body = declaration.format(name=badName)
+        return (
+            f"Source/Probe/Local{badName.capitalize()}.cpp",
+            f'#include "pch.h"\n\nvoid probe()\n{{\n    {body}\n}}\n',
+        )
+
+    # 매개변수 — 선언에서 `;` 를 떼고 시그니처에 넣는다. 고정 배열은 매개변수 문법이 다르다.
+    paramDecl = declaration.format(name=badName).rstrip(";")
+    return (
+        f"Source/Probe/Param{badName.capitalize()}.cpp",
+        f'#include "pch.h"\n\nvoid probe( {paramDecl} )\n{{\n}}\n',
+    )
+
+
+def checkSubjectMatrixInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
+    """
+    주체 셋 × 어휘 넷 — 열두 칸이 전부 무언가를 잡아야 합니다.
+
+    어느 칸이 조용하면 그 주체가 그 어휘를 안 보고 있다는 뜻이다. 예전의 드리프트가 정확히
+    그 모양이었다.
+    """
+    listError: list[str] = []
+
+    for subjectKey in CheckCodeConventions.kMapNamingSubject:
+        for vocabularyKey, (declaration, badName) in _kMapVocabularyProbe.items():
+            relPath, content = buildSubjectProbeInternal(subjectKey, declaration, badName)
+            caseRoot = tempRoot / f"matrix_{subjectKey}_{vocabularyKey}"
+            path = writeFixtureInternal(caseRoot, relPath, content)
+            resetPathMapCacheInternal()
+            found = categoriesForFileInternal(caseRoot, path)
+
+            if bVerbose:
+                print(f"  [{subjectKey} × {vocabularyKey}] -> {sorted(found) if found else '(없음)'}")
+
+            if not found:
+                listError.append(
+                    f"{subjectKey} × {vocabularyKey}: '{badName}' 를 아무도 잡지 않았습니다 — "
+                    f"이 주체가 그 어휘를 보고 있지 않습니다 ({relPath})"
+                )
+
+    return listError
+
+
 # 아무 규칙도 건드리면 안 되는 조각. 오탐이 생기면 여기서 잡힌다.
 _kCleanCase: tuple[str, str] = (
     "Source/Probe/Clean.cpp",
@@ -235,6 +312,9 @@ def main(argv: list[str] | None = None) -> int:
                 covered.add(category)
             else:
                 errors.append(f"{category}: 조각이 잡히지 않았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
+
+        # --- 주체 × 어휘 교차표 ---
+        errors.extend(checkSubjectMatrixInternal(tempRoot, args.verbose))
 
         # --- 오탐 확인 ---
         cleanRoot = tempRoot / "clean"
