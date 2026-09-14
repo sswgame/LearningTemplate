@@ -25,7 +25,7 @@ struct RHIDispatchIndirectCommand
 #include "common.hlsli"
 
 // 바인딩 계약(bindingslots.hlsli): 컴퓨트 UAV 는 u0/u1. 백엔드별 자리(DX12 루트 UAV, Vulkan set 0 binding 32+#,
-// GL SSBO SW_GL_UAV_BINDING0+#)는 백엔드가 정한다. 엔진은 bindComputeUAV( index, 0/1 ) 로 건다.
+// GL SSBO SW_GL_UAV_BINDING0+#)는 백엔드가 정한다. 엔진은 bindComputeUav( index, 0/1 ) 로 건다.
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDrawBuffer, 0 );
 SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_IndirectDispatchBuffer, 1 );
 

@@ -39,7 +39,7 @@ namespace sw::editor
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
-        void updateUI() override;
+        void updateUi() override;
         /** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
         void preRender( IRHIDevice* pRhiDevice ) override;
         /** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
@@ -67,7 +67,7 @@ namespace sw::editor
         void onHostFrameEnd() override;
 
     private:
-        void cleanupPartialInitialization();
+        void shutdownPartialInitialization();
         bool onWindowCloseQuery();
         // ------------------------------------------------------------------------------
         // 3) ImGui 프레임 · 백엔드 렌더

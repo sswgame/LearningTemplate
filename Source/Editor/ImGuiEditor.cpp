@@ -138,7 +138,7 @@ namespace sw::editor
             // createRendererBackend 가 nullptr 을 돌려주고 초기화가 거기서 멈춘다.
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-            _dockLayout.setupPersistencePaths();
+            _dockLayout.initializePersistencePaths();
             _dockLayout.applyIniFilename();
         }
 
@@ -151,7 +151,7 @@ namespace sw::editor
             if ( _platformBackend == nullptr )
             {
                 SW_LOG_ERROR( "Failed to create platform backend" );
-                cleanupPartialInitialization();
+                shutdownPartialInitialization();
                 return false;
             }
 
@@ -159,7 +159,7 @@ namespace sw::editor
             if ( _platformBackend->initialize( pWindow, pRhiDevice->getBackendType() ) == false )
             {
                 SW_LOG_ERROR( "Platform backend initialization failed" );
-                cleanupPartialInitialization();
+                shutdownPartialInitialization();
                 return false;
             }
         }
@@ -171,7 +171,7 @@ namespace sw::editor
             if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRhiDevice ) == false )
             {
                 SW_LOG_ERROR( "Renderer backend initialization failed" );
-                cleanupPartialInitialization();
+                shutdownPartialInitialization();
                 return false;
             }
         }
@@ -234,7 +234,7 @@ namespace sw::editor
         return true;
     }
 
-    void ImGuiEditor::cleanupPartialInitialization()
+    void ImGuiEditor::shutdownPartialInitialization()
     {
         if ( _editorContext != nullptr )
         {
@@ -314,7 +314,7 @@ namespace sw::editor
             _editorContext->getPanelManager().clear();
         }
 
-        cleanupPartialInitialization();
+        shutdownPartialInitialization();
 
         _bInitialized = SW_FALSE;
     }
@@ -327,7 +327,7 @@ namespace sw::editor
         _editorContext->getPanelManager().preRenderOpenPanels( pRhiDevice );
     }
 
-    void ImGuiEditor::updateUI()
+    void ImGuiEditor::updateUi()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -405,7 +405,7 @@ namespace sw::editor
             _arrDrawSnapshot[writeSlot].capture();
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
 
-            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단 waitForDrawSnapshotIdle
+            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUi 는 상단 waitForDrawSnapshotIdle
             // 에서 postPresent 까지 막히므로, 렌더 스레드가 present 훅에서 ImGui 공유 상태
             // (텍스처 리스트·뷰포트)를 만지는 GL 경로에서도 UI 스레드와 겹치지 않는다.
             // (렌더 스레드 render() 도 같은 값을 다시 저장하지만 값이 같아 무해하다)
@@ -437,7 +437,7 @@ namespace sw::editor
         }
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
-        // (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
+        // (UI 스레드는 updateUi 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
         if ( bRenderThreadCtx )
         {
             const ImGuiIO& io = ImGui::GetIO();
@@ -450,7 +450,7 @@ namespace sw::editor
     {
         std::ignore = pRhiDevice;
         // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
-        // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
+        // 보조 뷰포트는 updateUi 에서 UI 스레드가 이미 렌더·present 했다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 

@@ -445,7 +445,7 @@ namespace sw
         const D3D12_RESOURCE_DESC resDesc = pTexture->GetDesc();
         if ( mip >= resDesc.MipLevels )
             return false;
-        if ( computeRHITextureMipLayout( fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ), resDesc.Height, mip, outLayout ) == false )
+        if ( computeRhiTextureMipLayout( fromDxgiFormat( resDesc.Format ), static_cast<uint32>( resDesc.Width ), resDesc.Height, mip, outLayout ) == false )
             return false;
 
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
@@ -673,7 +673,7 @@ namespace sw
         record._bHasDsv  = SW_FALSE;
         record._reserved = 0;
 
-        _pDevice->checkRegistryMutableNow( "createTexture2D" );
+        _pDevice->assertRegistryMutableNow( "createTexture2D" );
 
         // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
         // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다 — 예전엔 읽는 쪽만 잠가서
@@ -752,7 +752,7 @@ namespace sw
     {
         if ( texture == 0 )
             return;
-        _pDevice->checkRegistryMutableNow( "destroyTexture" );
+        _pDevice->assertRegistryMutableNow( "destroyTexture" );
         {
             std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 

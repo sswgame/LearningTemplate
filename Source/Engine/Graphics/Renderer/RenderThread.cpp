@@ -248,7 +248,7 @@ namespace sw
 
         // 프레임 본문이 중간에 중단되더라도 postPresent 통지는 반드시 보낸다.
         // 에디터는 이 신호로 draw 스냅샷 in-flight 상태를 해제하므로, 빠뜨리면
-        // 다음 updateUI 가 waitForDrawSnapshotIdle 에서 영구 대기한다.
+        // 다음 updateUi 가 waitForDrawSnapshotIdle 에서 영구 대기한다.
         if ( _postPresentHook.isBound() )
             _postPresentHook( *_pDevice, packet );
 

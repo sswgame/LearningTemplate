@@ -15,7 +15,7 @@ namespace sw
     struct VarIntUtil
     {
         // **인코딩에는 32비트 오버로드가 없다 (의도된 비대칭이다).**
-        // 32비트 값을 `encodeVarUInt64` 에 넘기면 승격되어 같은 바이트가 나온다 — 오버로드는
+        // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다 — 오버로드는
         // `static_cast` 한 줄을 감싸는 것 말고 하는 일이 없었고, 실제로 아무도 쓰지 않았다
         // (`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
         // 반대로 **디코딩에는 있다** — 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을
@@ -27,7 +27,7 @@ namespace sw
          * @param outBytes 대상 바이트 벡터
          * @return 기록된 바이트 수 (1~10)
          */
-        static size_t encodeVarUInt64( uint64 value, vector<uint8>& outBytes )
+        static size_t encodeVarUint64( uint64 value, vector<uint8>& outBytes )
         {
             size_t written = 0;
             do
@@ -48,7 +48,7 @@ namespace sw
         static size_t encodeVarInt64( int64 value, vector<uint8>& outBytes )
         {
             const uint64 zigZag = static_cast<uint64>( ( value << 1 ) ^ ( value >> 63 ) );
-            return encodeVarUInt64( zigZag, outBytes );
+            return encodeVarUint64( zigZag, outBytes );
         }
 
         /**
@@ -59,7 +59,7 @@ namespace sw
          * @param outValue 디코딩된 값 출력
          * @return 성공 여부
          */
-        static bool decodeVarUInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint64& outValue )
+        static bool decodeVarUint64( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint64& outValue )
         {
             if ( pData == nullptr || inoutOffset >= dataSize )
                 return false;
@@ -86,10 +86,10 @@ namespace sw
         /**
          * @brief 버퍼에서 LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다.
          */
-        static bool decodeVarUInt32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
+        static bool decodeVarUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
         {
             uint64 val64 = 0;
-            if ( decodeVarUInt64( pData, dataSize, inoutOffset, val64 ) == false )
+            if ( decodeVarUint64( pData, dataSize, inoutOffset, val64 ) == false )
                 return false;
             outValue = static_cast<uint32>( val64 );
             return true;
@@ -101,7 +101,7 @@ namespace sw
         static bool decodeVarInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
         {
             uint64 zigZag = 0;
-            if ( decodeVarUInt64( pData, dataSize, inoutOffset, zigZag ) == false )
+            if ( decodeVarUint64( pData, dataSize, inoutOffset, zigZag ) == false )
                 return false;
             const uint64 mask = static_cast<uint64>( -( static_cast<int64>( zigZag & 1ULL ) ) );
             outValue          = static_cast<int64>( ( zigZag >> 1 ) ^ mask );

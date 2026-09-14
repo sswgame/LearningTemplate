@@ -86,13 +86,13 @@ namespace sw
         bool supportsInstancedSceneDraw() const override { return true; }
 
         /** @brief RHI 텍스처 핸들에 대응하는 GL texture name (없으면 0) */
-        uint32 getGLTextureName( RHITextureHandle texture ) const;
+        uint32 getGlTextureName( RHITextureHandle texture ) const;
 
         /** @brief 네이티브 GL 텍스처 이름을 반환합니다. */
-        uint32 getNativeTextureName( RHITextureHandle texture ) const override { return getGLTextureName( texture ); }
+        uint32 getNativeTextureName( RHITextureHandle texture ) const override { return getGlTextureName( texture ); }
 
         /** @brief 네이티브 GL 텍스처 핸들을 포인터 형태로 반환합니다. */
-        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGLTextureName( texture ) ) ); }
+        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
 
         /** @brief 백엔드 이름 문자열 반환 */
         const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
@@ -142,7 +142,7 @@ namespace sw
         /** @brief 컴퓨트 루트 상수 UBO를 확보합니다. */
         bool ensureComputeRootConstantUbo();
         /** @brief MRT 합성 FBO를 확보합니다. */
-        uint32 ensureCompositeFboMRT( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth );
+        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth );
         /** @brief 불투명 핸들을 GLuint 이름으로 풉니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
         /** @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. */

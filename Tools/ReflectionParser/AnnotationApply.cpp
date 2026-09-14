@@ -318,7 +318,7 @@ namespace sw
 
 namespace sw
 {
-    string_view AnnotationApply::annotationArgText( string_view spelling, string_view prefix )
+    string_view AnnotationApply::annotationArgumentText( string_view spelling, string_view prefix )
     {
         const size_t pos = spelling.find( prefix );
         if ( pos == string_view::npos )
@@ -417,7 +417,7 @@ namespace sw
     /** @brief ENUM(...) 토큰을 ParsedEnumInfo 에 적용합니다. */
     void AnnotationApply::parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo, const AnnotationMeta& meta )
     {
-        const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kEnumPrefix );
+        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kEnumPrefix );
         if ( annotationSpelling.find( annotationConstants::kEnumPrefix ) == string_view::npos )
             return;
 
@@ -454,7 +454,7 @@ namespace sw
     /** @brief PROPERTY(...) 토큰을 ParsedPropertyInfo 에 적용합니다. */
     void AnnotationApply::parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop, const AnnotationMeta& meta )
     {
-        const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kPropertyPrefix );
+        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kPropertyPrefix );
         if ( annotationSpelling.find( annotationConstants::kPropertyPrefix ) == string_view::npos )
             return;
 
@@ -481,7 +481,7 @@ namespace sw
     /** @brief FUNCTION(...) 토큰을 ParsedFunctionInfo 에 적용합니다. */
     void AnnotationApply::parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method, const AnnotationMeta& meta )
     {
-        const string_view args = AnnotationApply::annotationArgText( annotationSpelling, annotationConstants::kFunctionPrefix );
+        const string_view args = AnnotationApply::annotationArgumentText( annotationSpelling, annotationConstants::kFunctionPrefix );
         if ( annotationSpelling.find( annotationConstants::kFunctionPrefix ) == string_view::npos )
             return;
 

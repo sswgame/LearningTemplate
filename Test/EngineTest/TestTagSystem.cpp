@@ -59,13 +59,13 @@ SW_TEST_CASE( TagSystemTest, HasAllHasAnyAndMatch )
 
     SW_EXPECT_TRUE( owned.hasAllTags( needAll ) );
     SW_EXPECT_TRUE( owned.hasAnyTag( needAny ) );
-    SW_EXPECT_TRUE( owned.matchTags( needAll, forbidden ) );
+    SW_EXPECT_TRUE( owned.matchesTags( needAll, forbidden ) );
 
     TagContainer missing{ "Status.Buff"_tag, "Status.Haste"_tag };
     SW_EXPECT_FALSE( owned.hasAllTags( missing ) );
 
     TagContainer blocked{ "Status.Invincible"_tag };
-    SW_EXPECT_FALSE( owned.matchTags( needAll, blocked ) );
+    SW_EXPECT_FALSE( owned.matchesTags( needAll, blocked ) );
 }
 
 /**
@@ -306,5 +306,5 @@ SW_TEST_CASE( TagSystemTest, IntegerLiteralAndHierarchicalSubsumption )
 
     TagContainer required{ tagAttacking };
     TagContainer forbidden{ "State.Dead"_tag };
-    SW_EXPECT_TRUE( container.matchTags( required, forbidden ) );
+    SW_EXPECT_TRUE( container.matchesTags( required, forbidden ) );
 }

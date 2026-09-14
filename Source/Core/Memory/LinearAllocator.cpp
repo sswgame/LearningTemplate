@@ -107,7 +107,7 @@ namespace sw
                 continue;
 
             if ( pBlock->_pData != nullptr )
-                Memory::alignedFree( pBlock->_pData );
+                Memory::freeAligned( pBlock->_pData );
 
             sw_delete( pBlock );
             _arrBlock[blockIndex].store( nullptr, std::memory_order_relaxed );
@@ -137,7 +137,7 @@ namespace sw
         Block* pBlock     = sw_new Block();
         pBlock->_capacity = capacity;
         pBlock->_offset.store( 0, std::memory_order_relaxed );
-        pBlock->_pData = static_cast<uint8*>( Memory::alignedAlloc( capacity, alignof( std::max_align_t ) ) );
+        pBlock->_pData = static_cast<uint8*>( Memory::allocateAligned( capacity, alignof( std::max_align_t ) ) );
         if ( pBlock->_pData == nullptr )
         {
             sw_delete( pBlock );

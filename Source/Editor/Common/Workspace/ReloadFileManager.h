@@ -79,7 +79,7 @@ namespace sw
         /** @brief mtime 폴백으로 변경을 모읍니다. */
         void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
         /** @brief 파일 확장자가 watch 허용 목록에 있으면 true. */
-        bool extensionAllowed( const WatchEntry& entry, string_view filename ) const;
+        bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
         unique_ptr<IFileWatcher>      _fileWatcher;
         vector<WatchEntry>            _listWatch;

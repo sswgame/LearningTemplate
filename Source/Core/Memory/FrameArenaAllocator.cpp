@@ -22,7 +22,7 @@ namespace sw
         {
             if ( chunk._pBuffer != nullptr )
             {
-                Memory::freeMemory( chunk._pBuffer );
+                Memory::free( chunk._pBuffer );
                 chunk._pBuffer = nullptr;
             }
         }
@@ -91,7 +91,7 @@ namespace sw
     void FrameArenaAllocator::allocateNewChunk( size_t minSize )
     {
         size_t chunkSize = MathUtil::max( _defaultCapacity, minSize );
-        uint8* pBuf      = static_cast<uint8*>( Memory::allocMemory( chunkSize ) );
+        uint8* pBuf      = static_cast<uint8*>( Memory::allocate( chunkSize ) );
         _listChunk.push_back( Chunk{ pBuf, chunkSize, 0 } );
         _totalAllocatedBytes += chunkSize;
     }

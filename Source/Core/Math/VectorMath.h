@@ -94,7 +94,7 @@ namespace sw
         static float2 transformNormal( const float2& v, const float4x4& matrix ) noexcept;
 
         /** @brief 지정된 경계 영역(bound) 내에 있는지 확인합니다. */
-        bool inBounds( const float2& bound ) const noexcept;
+        bool isInBounds( const float2& bound ) const noexcept;
 
         /** @brief 벡터의 성분 중 하나라도 무한대(Infinity)인지 확인합니다. */
         bool isInfinite() const noexcept;
@@ -373,7 +373,7 @@ namespace sw
         float3 normalize() const noexcept;
 
         /** @brief 주어진 AABB 바운딩 영역 내에 포함되는지 검사합니다. */
-        bool inBounds( const float3& bound ) const noexcept;
+        bool isInBounds( const float3& bound ) const noexcept;
 
         /** @brief 벡터의 성분 중 무한대(Infinity) 값이 있는지 검사합니다. */
         bool isInfinite() const noexcept;
@@ -571,7 +571,7 @@ namespace sw
         /**
          * @brief 범위 안에 있는지 반환합니다
          */
-        bool inBounds( const float4& bound ) const noexcept;
+        bool isInBounds( const float4& bound ) const noexcept;
 
         /**
          * @brief 범위를 제한합니다
@@ -701,7 +701,7 @@ namespace sw
         /**
          * @brief 범위 안에 있는지 반환합니다
          */
-        bool inBounds( const double3& bound ) const noexcept;
+        bool isInBounds( const double3& bound ) const noexcept;
         /**
          * @brief Infinite 여부를 반환합니다
          */

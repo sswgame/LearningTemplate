@@ -372,12 +372,12 @@ namespace sw
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
         /** @brief 일시 텍스처를 할당합니다. */
-        void allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
+        void allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
         /** @brief 컬러(+깊이) 패스를 시작합니다. */
         void beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
         /** @brief MRT 컬러 패스를 시작합니다. */
-        void beginColorPassMRT( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
+        void beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
@@ -459,7 +459,7 @@ namespace sw
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다 (셋업 전용).
          * @details 기록 중에는 만들 수 없다 — 버퍼 생성과 `registerBindlessResource` 는 bindless 레지스트리를 바꾸고,
-         *          패스 콜백은 태스크 워커에서 병렬로 돈다(`checkRegistryMutableNow` 가 감시하는 규칙).
+         *          패스 콜백은 태스크 워커에서 병렬로 돈다(`assertRegistryMutableNow` 가 감시하는 규칙).
          *          그래서 PSO 를 다 등록한 뒤 여기서 한 번에 만든다.
          */
         void ensureMaterialFallbackBuffers();

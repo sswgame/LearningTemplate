@@ -91,7 +91,7 @@ namespace sw
         return float2{ res._x, res._y };
     }
 
-    bool float2::inBounds( const float2& bound ) const noexcept
+    bool float2::isInBounds( const float2& bound ) const noexcept
     {
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y );
     }
@@ -323,7 +323,7 @@ namespace sw
         return Zero;
     }
 
-    bool float3::inBounds( const float3& bound ) const noexcept
+    bool float3::isInBounds( const float3& bound ) const noexcept
     {
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z );
     }
@@ -526,7 +526,7 @@ namespace sw
         return Zero;
     }
 
-    bool float4::inBounds( const float4& bound ) const noexcept
+    bool float4::isInBounds( const float4& bound ) const noexcept
     {
         return ( _x <= bound._x && _x >= -bound._x ) && ( _y <= bound._y && _y >= -bound._y ) && ( _z <= bound._z && _z >= -bound._z ) && ( _w <= bound._w && _w >= -bound._w );
     }
@@ -634,7 +634,7 @@ namespace sw
         return double3{ MathUtil::lerp( from._x, to._x, t ), MathUtil::lerp( from._y, to._y, t ), MathUtil::lerp( from._z, to._z, t ) };
     }
 
-    bool double3::inBounds( const double3& bound ) const noexcept
+    bool double3::isInBounds( const double3& bound ) const noexcept
     {
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z );
     }

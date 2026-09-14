@@ -190,7 +190,7 @@ SW_TEST_CASE( PhysicsTest, CCD_SweptAABBTunnelingPrevention )
     float3 bulletDisplacement{ 0.0f, 0.0f, 100.0f };
 
     SweepHit hit{};
-    bool     bCollided = CCD::sweepAABB( bulletBox, bulletDisplacement, wallBox, hit );
+    bool     bCollided = CCD::sweepAabb( bulletBox, bulletDisplacement, wallBox, hit );
 
     SW_EXPECT_TRUE( bCollided );
     SW_EXPECT_TRUE( hit._bHit );
@@ -275,7 +275,7 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
     };
     float3   missDisp{ 0.0f, 0.0f, 50.0f };
     SweepHit missHit{};
-    bool     bMiss = CCD::sweepAABB( missBox, missDisp, targetBox, missHit );
+    bool     bMiss = CCD::sweepAabb( missBox, missDisp, targetBox, missHit );
     SW_EXPECT_FALSE( bMiss );
     SW_EXPECT_FALSE( missHit._bHit );
 
@@ -286,7 +286,7 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
     };
     float3   diagDisp{ 30.0f, 30.0f, 30.0f };
     SweepHit diagHit{};
-    bool     bDiagHit = CCD::sweepAABB( diagBox, diagDisp, targetBox, diagHit );
+    bool     bDiagHit = CCD::sweepAabb( diagBox, diagDisp, targetBox, diagHit );
     SW_EXPECT_TRUE( bDiagHit );
     SW_EXPECT_TRUE( diagHit._bHit );
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3

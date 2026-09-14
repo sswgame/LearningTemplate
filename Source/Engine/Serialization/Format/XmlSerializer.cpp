@@ -469,7 +469,7 @@ namespace sw
                         continue;
                     if ( isNameKnown( uniqueKnownNames, pChildName ) )
                         continue;
-                    const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
+                    const utf8* pNameAttr = child.attribute( kXmlPropertyNameAttr, bIgnore );
                     if ( pNameAttr != nullptr && isNameKnown( uniqueKnownNames, pNameAttr ) )
                         continue;
 
@@ -481,7 +481,7 @@ namespace sw
                     pOutListOrphan->push_back( std::move( orphan ) );
                 }
 
-                for ( XmlAttribute attr = root.firstAttr(); attr.isValid(); attr = attr.next() )
+                for ( XmlAttribute attr = root.firstAttribute(); attr.isValid(); attr = attr.next() )
                 {
                     const utf8* pAttrName = attr.name();
                     if ( pAttrName == nullptr )
@@ -510,7 +510,7 @@ namespace sw
                 if ( doc.parse( xmlStr ) == false )
                     return false;
 
-                const bool bIgnore = ctx.ignoreCaseKeys();
+                const bool bIgnore = ctx.ignoresCaseKeys();
                 XmlNode    root    = doc.root( typeInfo._name.c_str(), bIgnore );
                 if ( root.isValid() == false )
                     root = doc.root( nullptr, bIgnore );
@@ -576,7 +576,7 @@ namespace sw
             return;
 
         string sName = Impl::sanitizeTag( pAttrName );
-        _impl->_currentParent.appendAttr( sName.c_str(), pValueString != nullptr ? pValueString : "" );
+        _impl->_currentParent.appendAttribute( sName.c_str(), pValueString != nullptr ? pValueString : "" );
     }
 
     void XmlDocumentBackend::beginArray( const utf8* pTagName )
@@ -649,9 +649,9 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pRootTagName );
-        XmlNode root = _impl->_doc.root( sTag.c_str(), ignoreCaseKeys() );
+        XmlNode root = _impl->_doc.root( sTag.c_str(), ignoresCaseKeys() );
         if ( root.isValid() == false )
-            root = _impl->_doc.root( nullptr, ignoreCaseKeys() );
+            root = _impl->_doc.root( nullptr, ignoresCaseKeys() );
 
         if ( root.isValid() == false )
             return false;
@@ -668,7 +668,7 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XmlNode node = _impl->_currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+        XmlNode node = _impl->_currentParent.child( sTag.c_str(), ignoresCaseKeys() );
         if ( node.isValid() == false )
             return false;
 
@@ -682,7 +682,7 @@ namespace sw
             return false;
 
         string      sName = Impl::sanitizeTag( pAttrName );
-        const utf8* pVal  = _impl->_currentParent.attr( sName.c_str(), ignoreCaseKeys() );
+        const utf8* pVal  = _impl->_currentParent.attribute( sName.c_str(), ignoresCaseKeys() );
         if ( pVal == nullptr )
             return false;
 
@@ -695,7 +695,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
-        const bool bIgnore = ignoreCaseKeys();
+        const bool bIgnore = ignoresCaseKeys();
         XmlNode    arrNode = _impl->_currentParent;
         if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
@@ -718,7 +718,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
-        const bool bIgnore = ignoreCaseKeys();
+        const bool bIgnore = ignoresCaseKeys();
         XmlNode    mapNode = _impl->_currentParent;
         if ( StringUtil::isNullOrEmpty( pTagName ) == false )
         {
@@ -755,7 +755,7 @@ namespace sw
             return false;
 
         string  sTag  = Impl::sanitizeTag( pTagName );
-        XmlNode child = _impl->_currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+        XmlNode child = _impl->_currentParent.child( sTag.c_str(), ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
 
@@ -768,7 +768,7 @@ namespace sw
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        XmlNode child = _impl->_currentParent.child( nullptr, ignoreCaseKeys() );
+        XmlNode child = _impl->_currentParent.child( nullptr, ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
         _impl->_listNodeStack.push_back( child );
@@ -798,7 +798,7 @@ namespace sw
 
         const XmlNode parent = _impl->_currentParent;
         bool          bAny{ false };
-        for ( XmlNode child = parent.child( nullptr, ignoreCaseKeys() ); child.isValid(); child = child.next( nullptr, ignoreCaseKeys() ) )
+        for ( XmlNode child = parent.child( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.next( nullptr, ignoresCaseKeys() ) )
         {
             // 콜백이 도는 동안 그 자식이 현재 노드가 되어야 재귀 순회가 가능하다.
             _impl->_listNodeStack.push_back( child );
@@ -837,7 +837,7 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
 
-        backend.setIgnoreCaseKeys( ctx.ignoreCaseKeys() );
+        backend.setIgnoreCaseKeys( ctx.ignoresCaseKeys() );
 
         if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
@@ -919,7 +919,7 @@ namespace sw
         if ( doc.parse( xmlStr ) == false )
             return false;
 
-        const bool bIgnore = ctx.ignoreCaseKeys();
+        const bool bIgnore = ctx.ignoresCaseKeys();
         XmlNode    root    = doc.root( typeInfo._name.c_str(), bIgnore );
         if ( root.isValid() == false )
             root = doc.root( nullptr, bIgnore );
@@ -929,11 +929,11 @@ namespace sw
         if ( pOutVersion != nullptr )
         {
             *pOutVersion     = 0;
-            const utf8* pVer = root.attr( kSchemaVersionKey, bIgnore );
+            const utf8* pVer = root.attribute( kSchemaVersionKey, bIgnore );
             if ( pVer != nullptr )
             {
                 uint64 ver{ 0 };
-                StringUtil::parseUInt64( pVer, ver, 10 );
+                StringUtil::parseUint64( pVer, ver, 10 );
                 *pOutVersion = static_cast<uint32>( ver );
             }
         }

@@ -1,5 +1,5 @@
 // 컴퓨트 RW 텍스처 쓰기 — RHITest.ComputeTextureUavWriteIsReadable 이 네 백엔드에서 결과를 읽어 비교한다.
-// 바인딩 계약(bindingslots.hlsli): 대상 텍스처는 registerBindlessTextureUAV 인덱스(DX12/Vulkan) 또는
+// 바인딩 계약(bindingslots.hlsli): 대상 텍스처는 registerBindlessTextureUav 인덱스(DX12/Vulkan) 또는
 // SW_SLOT_COMPUTE_TEXUAV0 슬롯 서수(DX11/GL)로 고르고, 그 값은 루트 상수 g_TargetIndex 로 온다.
 #include "binding.hlsli"
 

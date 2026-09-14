@@ -42,7 +42,7 @@ namespace sw
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있다. 고정 스텝마다
      *          다시 묻던 것을 한 번 래치해 프레임 안의 모든 단계가 같은 답을 본다.
      *          필드는 생산되는 자리에서 채운다 — 게임플레이 활성 여부는 beginFrame(게임
-     *          업데이트 이전), 게임 뷰포트와 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임
+     *          업데이트 이전), 게임 뷰포트와 씬 틱 여부는 updateEditorUi(에디터가 이번 프레임
      *          입력을 처리한 이후)다. 순서를 바꾸면 에디터의 Step 한 칸이 틱 없이 소비된다.
      */
     struct ModuleFrameState
@@ -122,7 +122,7 @@ namespace sw
          *        확정합니다(게임 뷰포트 RT·씬 틱 여부).
          * @details 에디터가 없으면 즉시 반환하며, 그때 프레임 상태는 "백버퍼 + 씬 틱" 기본값입니다.
          */
-        void updateEditorUI( float32 deltaTime );
+        void updateEditorUi( float32 deltaTime );
         /** @brief 월드 틱 이후 에디터 Step을 소비합니다. */
         void endEditorFrame();
         /** @brief 네이티브 윈도우 이벤트를 에디터에 전달합니다. */
@@ -138,7 +138,7 @@ namespace sw
         /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 프레젠트 훅이 씁니다. */
         EditorHandle getEditor() const { return _editor; }
         /** @brief EditorAPI 테이블을 반환합니다. App 의 프레젠트 훅이 씁니다. */
-        const EditorAPI& getEditorAPI() const { return _editorApi; }
+        const EditorAPI& getEditorApi() const { return _editorApi; }
         /** @brief ModuleCompiler 인스턴스를 반환합니다. HostServiceList.xxx 가 모듈에 넘깁니다. */
         ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
@@ -164,8 +164,8 @@ namespace sw
         void poisonLiveReload( const utf8* pReason );
 
         // 5) 모듈 바인딩
-        bool bindEditorAPI( void* pLibraryModule );
-        bool bindGameAPI( void* pLibraryModule );
+        bool bindEditorApi( void* pLibraryModule );
+        bool bindGameApi( void* pLibraryModule );
 
         /** @brief RHI 핫스왑 후 에디터/게임을 재초기화합니다. 실패하면 false. */
         bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );

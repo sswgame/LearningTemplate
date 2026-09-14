@@ -53,7 +53,7 @@ namespace sw::editor
         // 3) SRV 힙 풀
         // ------------------------------------------------------------------------------
         /** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. */
-        bool allocSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu );
+        bool allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu );
         /** @brief 할당했던 SRV 디스크립터를 풀에 반환합니다. */
         void freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu );
 #endif

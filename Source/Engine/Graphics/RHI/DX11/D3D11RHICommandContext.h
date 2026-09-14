@@ -32,7 +32,7 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         /** @brief D3D11 은 UAV 해저드를 런타임이 푼다 — 의도적 no-op. */
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { (void)texture; }
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;

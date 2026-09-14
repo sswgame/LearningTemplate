@@ -82,9 +82,9 @@ namespace sw
          * @details XmlSerializer::deserialize가 이 값을 IXmlBackend에 전달합니다.
          *          끄려면: `SerializeContext ctx = SerializeContext::getDefault(); ctx.setIgnoreCaseKeys(false);`
          */
-        bool ignoreCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
+        bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
         /** @brief 알 수 없는 프로퍼티 허용(스킵) 여부. */
-        bool allowUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
+        bool allowsUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
 
         /** @brief 소유 포인터 팩토리의 outer 인스턴스를 설정합니다. */
         SerializeContext& setOuterInstance( void* pOuter )

@@ -434,9 +434,9 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
     SW_EXPECT_TRUE( onAfterCalled );
     SW_ASSERT_NOT_NULL( newHandle );
 
-    // 새로 로드된 모듈에서 C-ABI exportEditorAPI 정상 동작 검증
+    // 새로 로드된 모듈에서 C-ABI exportEditorApi 정상 동작 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -655,9 +655,9 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     SW_EXPECT_TRUE( onAfterCalled );
     SW_ASSERT_NOT_NULL( newHandle );
 
-    // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorAPI 심볼 및 함수 테이블 유효성 검증
+    // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorApi 심볼 및 함수 테이블 유효성 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -734,15 +734,15 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 #if defined( SW_SHIPPING )
 
 // ------------------------------------------------------------------------------
-// 2) ModuleAPI — exportGameAPI / exportEditorAPI
+// 2) ModuleAPI — exportGameApi / exportEditorApi
 // ------------------------------------------------------------------------------
 /**
- * @brief [ModuleApiTest] Shipping 정적 exportGameAPI
+ * @brief [ModuleApiTest] Shipping 정적 exportGameApi
  */
 SW_TEST_CASE( ModuleApiTest, ExportGameAPI_ShippingStatic )
 {
     sw::GameAPI api{};
-    SW_EXPECT_TRUE( exportGameAPI( &api ) );
+    SW_EXPECT_TRUE( exportGameApi( &api ) );
     SW_EXPECT_TRUE( api.create != nullptr );
     SW_EXPECT_TRUE( api.destroy != nullptr );
     SW_EXPECT_TRUE( api.initialize != nullptr );
@@ -758,7 +758,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI_ShippingStatic )
 #else
 
 /**
- * @brief [ModuleApiTest] SWGame DLL exportGameAPI
+ * @brief [ModuleApiTest] SWGame DLL exportGameApi
  */
 SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
 {
@@ -768,7 +768,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
         return;
 
     const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+        sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -814,7 +814,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 
     sw::engine::registerModuleTypes( "SWGame" );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -889,7 +889,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 }
 
 /**
- * @brief [ModuleApiTest] EditorModule DLL exportEditorAPI
+ * @brief [ModuleApiTest] EditorModule DLL exportEditorApi
  */
 SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 {
@@ -897,7 +897,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     SW_ASSERT_NOT_NULL( handle );
 
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportEditorAPI" ) );
+        sw::FileUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -944,7 +944,7 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::registerModuleTypes( "SWGame" );
 
         const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-            sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+            sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
         SW_ASSERT_NOT_NULL( pfnExport );
 
         sw::GameAPI api{};

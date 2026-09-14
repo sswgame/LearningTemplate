@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    bool CCD::sweepAABB( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
+    bool CCD::sweepAabb( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
         const float3 movingHalfExtents{
             ( movingBox._max._x - movingBox._min._x ) * 0.5f,

@@ -156,9 +156,9 @@ namespace sw
 
         GLuint fbo{ 0 };
         if ( bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0 )
-            fbo = _pDevice->ensureCompositeFboMRT( colorHandles, colorCount, beginInfo._depthTarget );
+            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, colorCount, beginInfo._depthTarget );
         else if ( bBindColor == false && bHasDepth )
-            fbo = _pDevice->ensureCompositeFboMRT( nullptr, 0, beginInfo._depthTarget );
+            fbo = _pDevice->ensureCompositeFboMrt( nullptr, 0, beginInfo._depthTarget );
 
         if ( fbo == 0 && colorCount == 1 && colorHandles[0] != 0 )
         {
@@ -317,7 +317,7 @@ namespace sw
         }
     }
 
-    void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 등록부의 것**이다. 그 등록부는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
         // 레코드가 말해 준다 — 다른 등록부를 넘겨짚지 않는다.
@@ -331,7 +331,7 @@ namespace sw
 
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
         {
-            SW_LOG_WARNING( "bindComputeUAV: 인덱스 %# 는 등록된 UAV 가 아닙니다.", index );
+            SW_LOG_WARNING( "bindComputeUav: 인덱스 %# 는 등록된 UAV 가 아닙니다.", index );
             return;
         }
 
@@ -342,7 +342,7 @@ namespace sw
             // RW 텍스처 — u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
             if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
             {
-                SW_LOG_WARNING( "bindComputeUAV: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
+                SW_LOG_WARNING( "bindComputeUav: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
                 return;
             }
             const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( record._texture );
@@ -355,7 +355,7 @@ namespace sw
 
         if ( record._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindComputeUAV: 인덱스 %# 의 UAV 레코드가 비어 있습니다.", index );
+            SW_LOG_WARNING( "bindComputeUav: 인덱스 %# 의 UAV 레코드가 비어 있습니다.", index );
             return;
         }
 

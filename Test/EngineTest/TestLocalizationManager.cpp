@@ -392,7 +392,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
     sw::string notifiedNewLang;
     uint32     callbackCount{ 0 };
 
-    uint32 cbId = sw::GameStrings::onLanguageChanged(
+    uint32 cbId = sw::GameStrings::registerLanguageChangedCallback(
         [&]( string_view oldLang, string_view newLang )
     {
         notifiedOldLang = oldLang;
@@ -435,7 +435,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
     SW_EXPECT_STREQ( "Mystery Island", sw::GameStrings::getFromLanguage( "en_US", "UI_TITLE" ) );
 
     // 콜백 해제
-    sw::GameStrings::removeLanguageChangedCallback( cbId );
+    sw::GameStrings::unregisterLanguageChangedCallback( cbId );
     sw::GameStrings::clear();
 
     sw::FileUtil::removeFile( pathKo );
@@ -444,7 +444,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 }
 
 /**
- * @brief [LocalizationManager] setupLocalization을 통한 디렉터리 다국어 팩 일괄 스캔, 로드 및 자동 활성화 세팅 검증
+ * @brief [LocalizationManager] initialize을 통한 디렉터리 다국어 팩 일괄 스캔, 로드 및 자동 활성화 세팅 검증
  */
 SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory )
 {
@@ -471,8 +471,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     sw::FileUtil::writeTextFile( pathJa, xmlJa );
     sw::FileUtil::writeTextFile( pathZh, kvZh );
 
-    // setupLocalization 실행 (기본: ko_KR, 폴백: en_US)
-    const bool bSetup = sw::GameStrings::setupLocalization( packDir, "ko_KR", "en_US" );
+    // initialize 실행 (기본: ko_KR, 폴백: en_US)
+    const bool bSetup = sw::GameStrings::initialize( packDir, "ko_KR", "en_US" );
     SW_EXPECT_TRUE( bSetup );
 
     // 언어 세팅 상태 확인

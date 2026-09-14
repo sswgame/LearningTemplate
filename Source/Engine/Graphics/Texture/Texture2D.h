@@ -47,7 +47,7 @@ namespace sw
         const string&      getPath() const { return _path; }
 
         /** @brief DDS 가 알려 주는 DXGI 포맷 번호를 RHIFormat 으로. 대응이 없으면 Unknown. */
-        static RHIFormat toRHIFormatFromDxgi( uint32 dxgiFormat );
+        static RHIFormat toRhiFormatFromDxgi( uint32 dxgiFormat );
 
     private:
         /** @brief 이 텍스처를 올린 디바이스. 통보가 내 것인지 가릴 때 씁니다. */

@@ -314,7 +314,7 @@ namespace sw
                 if ( _layers.shouldCollide( layer, body._layer ) )
                 {
                     SweepHit hit{};
-                    if ( CCD::sweepAABB( movingBox, displacement, body._aabb, hit ) )
+                    if ( CCD::sweepAabb( movingBox, displacement, body._aabb, hit ) )
                     {
                         if ( hit._time < nearestHit._time || bFoundHit == false )
                         {
@@ -359,7 +359,7 @@ namespace sw
             if ( pBody != nullptr && _layers.shouldCollide( layer, pBody->_layer ) )
             {
                 SweepHit hit{};
-                if ( CCD::sweepAABB( movingBox, displacement, pBody->_aabb, hit ) )
+                if ( CCD::sweepAabb( movingBox, displacement, pBody->_aabb, hit ) )
                 {
                     if ( hit._time < nearestHit._time || bFoundHit == false )
                     {

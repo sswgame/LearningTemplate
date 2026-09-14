@@ -197,7 +197,7 @@ namespace sw
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
 
         /** @brief 컴퓨트 루트 상수 CB를 확보합니다. */
-        bool ensureComputeRootConstantCB();
+        bool ensureComputeRootConstantCb();
         /** @brief 불투명 버퍼 핸들을 ID3D11Buffer로 풉니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief ComPtr을 테이블에 넣고 핸들을 반환합니다. */

@@ -53,8 +53,8 @@ namespace sw
         XmlNode spawn = root.child( "spawn" );
         if ( spawn.isValid() )
         {
-            _spawnX = spawn.attrInt( "x", _spawnX );
-            _spawnY = spawn.attrInt( "y", _spawnY );
+            _spawnX = spawn.attributeInt( "x", _spawnX );
+            _spawnY = spawn.attributeInt( "y", _spawnY );
         }
 
         if ( _width <= 0 || _height <= 0 )
@@ -79,24 +79,24 @@ namespace sw
                 const utf8*  pText             = tileNode.text();
                 const size_t elementIndex      = static_cast<size_t>( index );
                 _listWalkable[elementIndex]    = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
-                _listEncounter[elementIndex]   = tileNode.attrInt( "enc", 0 ) != 0 ? 1 : 0;
-                _listPassThrough[elementIndex] = tileNode.attrInt( "pt", 0 ) != 0 ? 1 : 0;
+                _listEncounter[elementIndex]   = tileNode.attributeInt( "enc", 0 ) != 0 ? 1 : 0;
+                _listPassThrough[elementIndex] = tileNode.attributeInt( "pt", 0 ) != 0 ? 1 : 0;
 
                 Visual tileVisual{};
-                if ( tileNode.attr( "h" ) != nullptr )
-                    tileVisual._height = static_cast<uint8>( tileNode.attrInt( "h", 0 ) );
+                if ( tileNode.attribute( "h" ) != nullptr )
+                    tileVisual._height = static_cast<uint8>( tileNode.attributeInt( "h", 0 ) );
                 else
                     tileVisual._height = _listEncounter[elementIndex] != 0 ? 2 : ( _listWalkable[elementIndex] != 0 ? 1 : 0 );
 
-                if ( tileNode.attr( "atlas" ) != nullptr )
-                    tileVisual._atlasId = static_cast<uint8>( tileNode.attrInt( "atlas", 0 ) );
+                if ( tileNode.attribute( "atlas" ) != nullptr )
+                    tileVisual._atlasId = static_cast<uint8>( tileNode.attributeInt( "atlas", 0 ) );
 
-                const bool bHasTint = tileNode.attr( "tr" ) != nullptr || tileNode.attr( "tg" ) != nullptr || tileNode.attr( "tb" ) != nullptr;
+                const bool bHasTint = tileNode.attribute( "tr" ) != nullptr || tileNode.attribute( "tg" ) != nullptr || tileNode.attribute( "tb" ) != nullptr;
                 if ( bHasTint )
                 {
-                    tileVisual._tintR = static_cast<uint8>( tileNode.attrInt( "tr", 255 ) );
-                    tileVisual._tintG = static_cast<uint8>( tileNode.attrInt( "tg", 255 ) );
-                    tileVisual._tintB = static_cast<uint8>( tileNode.attrInt( "tb", 255 ) );
+                    tileVisual._tintR = static_cast<uint8>( tileNode.attributeInt( "tr", 255 ) );
+                    tileVisual._tintG = static_cast<uint8>( tileNode.attributeInt( "tg", 255 ) );
+                    tileVisual._tintB = static_cast<uint8>( tileNode.attributeInt( "tb", 255 ) );
                 }
                 else if ( _listEncounter[elementIndex] != 0 )
                 {
@@ -126,14 +126,14 @@ namespace sw
             for ( XmlNode warpNode = warps.child( "warp" ); warpNode; warpNode = warpNode.next( "warp" ) )
             {
                 Warp warp{};
-                warp._tileX      = warpNode.attrInt( "x", 0 );
-                warp._tileY      = warpNode.attrInt( "y", 0 );
-                const utf8* pMap = warpNode.attr( "map" );
+                warp._tileX      = warpNode.attributeInt( "x", 0 );
+                warp._tileY      = warpNode.attributeInt( "y", 0 );
+                const utf8* pMap = warpNode.attribute( "map" );
                 if ( pMap != nullptr )
                     warp._targetMap = pMap;
-                warp._targetTileX = warpNode.attrInt( "tx", 0 );
-                warp._targetTileY = warpNode.attrInt( "ty", 0 );
-                const utf8* pPair = warpNode.attr( "pair" );
+                warp._targetTileX = warpNode.attributeInt( "tx", 0 );
+                warp._targetTileY = warpNode.attributeInt( "ty", 0 );
+                const utf8* pPair = warpNode.attribute( "pair" );
                 if ( pPair != nullptr )
                     warp._pairId = pPair;
                 _listWarp.push_back( std::move( warp ) );
@@ -146,10 +146,10 @@ namespace sw
             for ( XmlNode encNode = encounters.child( "e" ); encNode; encNode = encNode.next( "e" ) )
             {
                 Encounter   entry{};
-                const utf8* pId = encNode.attr( "id" );
+                const utf8* pId = encNode.attribute( "id" );
                 if ( pId != nullptr )
                     entry._speciesId = pId;
-                entry._weight = encNode.attrFloat( "weight", 0.f );
+                entry._weight = encNode.attributeFloat( "weight", 0.f );
                 if ( entry._speciesId.empty() == false )
                     _listEncounterEntry.push_back( std::move( entry ) );
             }
@@ -189,8 +189,8 @@ namespace sw
             root.appendChild( "role", _role );
 
         XmlNode spawn = root.appendChild( "spawn" );
-        spawn.appendAttr( "x", _spawnX );
-        spawn.appendAttr( "y", _spawnY );
+        spawn.appendAttribute( "x", _spawnX );
+        spawn.appendAttribute( "y", _spawnY );
 
         XmlNode      tiles = root.appendChild( "tiles" );
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
@@ -198,16 +198,16 @@ namespace sw
         {
             XmlNode       tileNode   = tiles.appendChild( "t" );
             const Visual& tileVisual = _listVisual[tileIndex];
-            tileNode.appendAttr( "h", static_cast<int32>( tileVisual._height ) );
+            tileNode.appendAttribute( "h", static_cast<int32>( tileVisual._height ) );
             if ( _listEncounter[tileIndex] != 0 )
-                tileNode.appendAttr( "enc", 1 );
+                tileNode.appendAttribute( "enc", 1 );
             if ( _listPassThrough[tileIndex] != 0 )
-                tileNode.appendAttr( "pt", 1 );
+                tileNode.appendAttribute( "pt", 1 );
             if ( tileVisual._atlasId != 0 )
-                tileNode.appendAttr( "atlas", static_cast<int32>( tileVisual._atlasId ) );
-            tileNode.appendAttr( "tr", static_cast<int32>( tileVisual._tintR ) );
-            tileNode.appendAttr( "tg", static_cast<int32>( tileVisual._tintG ) );
-            tileNode.appendAttr( "tb", static_cast<int32>( tileVisual._tintB ) );
+                tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasId ) );
+            tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
+            tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
+            tileNode.appendAttribute( "tb", static_cast<int32>( tileVisual._tintB ) );
             tileNode.setValue( _listWalkable[tileIndex] != 0 ? "1" : "0" );
         }
 
@@ -215,13 +215,13 @@ namespace sw
         for ( const Warp& warp : _listWarp )
         {
             XmlNode warpNode = warps.appendChild( "warp" );
-            warpNode.appendAttr( "x", warp._tileX );
-            warpNode.appendAttr( "y", warp._tileY );
-            warpNode.appendAttr( "map", warp._targetMap );
-            warpNode.appendAttr( "tx", warp._targetTileX );
-            warpNode.appendAttr( "ty", warp._targetTileY );
+            warpNode.appendAttribute( "x", warp._tileX );
+            warpNode.appendAttribute( "y", warp._tileY );
+            warpNode.appendAttribute( "map", warp._targetMap );
+            warpNode.appendAttribute( "tx", warp._targetTileX );
+            warpNode.appendAttribute( "ty", warp._targetTileY );
             if ( warp._pairId.empty() == false )
-                warpNode.appendAttr( "pair", warp._pairId );
+                warpNode.appendAttribute( "pair", warp._pairId );
         }
 
         if ( _listEncounterEntry.empty() == false )
@@ -230,8 +230,8 @@ namespace sw
             for ( const Encounter& entry : _listEncounterEntry )
             {
                 XmlNode encNode = encounters.appendChild( "e" );
-                encNode.appendAttr( "id", entry._speciesId );
-                encNode.appendAttr( "weight", entry._weight );
+                encNode.appendAttribute( "id", entry._speciesId );
+                encNode.appendAttribute( "weight", entry._weight );
             }
         }
 

@@ -52,7 +52,7 @@ namespace sw
         for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
         {
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( att._format );
-            allocTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._clearColor );
+            allocateTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._clearColor );
         }
 
         auto ensureNamed = [&]( string_view name )
@@ -64,13 +64,13 @@ namespace sw
             const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
             if ( name == FrameRendererUtil::Attachment::kShadowMap || name == FrameRendererUtil::Attachment::kSceneDepth )
-                allocTransient( name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
+                allocateTransient( name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
             else if ( name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright )
-                allocTransient( name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
+                allocateTransient( name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
             else if ( name == FrameRendererUtil::Attachment::kSceneColor )
-                allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
+                allocateTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
             else
-                allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
+                allocateTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
         };
 
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
@@ -155,9 +155,9 @@ namespace sw
         _transientPool.release( _pDevice );
     }
 
-    void FrameRenderer::allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
+    void FrameRenderer::allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
     {
-        _transientPool.alloc( _pDevice, name, format, bDepth, clearColor );
+        _transientPool.allocate( _pDevice, name, format, bDepth, clearColor );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )

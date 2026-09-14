@@ -60,7 +60,7 @@ namespace sw
         {
             _pContext->setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
+        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindComputeUav( index, slot ); }
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }

@@ -144,7 +144,7 @@ namespace sw
         return pRec != nullptr ? pRec->_texture.Get() : nullptr;
     }
 
-    bool D3D11RHIDevice::ensureComputeRootConstantCB()
+    bool D3D11RHIDevice::ensureComputeRootConstantCb()
     {
         if ( _computeRootConstantCB != nullptr )
             return true;

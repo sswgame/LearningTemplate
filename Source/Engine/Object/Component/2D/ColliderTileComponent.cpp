@@ -72,7 +72,7 @@ namespace sw
         return ( ( cSide & ( 1 << side ) ) == 0 );
     }
 
-    bool ColliderTileComponent::checkCollision( const float2& point, const float2& size ) const
+    bool ColliderTileComponent::overlapsBox( const float2& point, const float2& size ) const
     {
         if ( isSolid() == false )
             return false;

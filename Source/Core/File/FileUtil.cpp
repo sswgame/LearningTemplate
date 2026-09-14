@@ -267,7 +267,7 @@ namespace sw
         return string{ stemView };
     }
 
-    bool FileUtil::makePathRelative( string_view rootDir, string_view path, string& outResult )
+    bool FileUtil::makeRelativePath( string_view rootDir, string_view path, string& outResult )
     {
         if ( rootDir.empty() || path.empty() )
             return false;
@@ -288,7 +288,7 @@ namespace sw
         return false;
     }
 
-    bool FileUtil::makePathAbsolute( string_view path, string& outResult )
+    bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
     {
         std::error_code             ec;
         const std::filesystem::path absolute = std::filesystem::absolute( path, ec );
@@ -869,7 +869,7 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         string absPath;
-        if ( makePathAbsolute( libraryName, absPath ) && fileExists( absPath ) )
+        if ( makeAbsolutePath( libraryName, absPath ) && fileExists( absPath ) )
         {
             // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 분리하여
             // DLL 검색 경로 1순위로 추가합니다. '/' 슬래시 경로 전달 시 디렉터리 파싱 실패로 종속 DLL(Engine.dll 등)을
@@ -900,7 +900,7 @@ namespace sw
         return LoadLibraryA( nativeName.c_str() );
 #else
         string absPath;
-        if ( makePathAbsolute( libraryName, absPath ) && fileExists( absPath ) )
+        if ( makeAbsolutePath( libraryName, absPath ) && fileExists( absPath ) )
         {
             void* pHandle = dlopen( absPath.c_str(), RTLD_NOW | RTLD_LOCAL );
             if ( pHandle != nullptr )

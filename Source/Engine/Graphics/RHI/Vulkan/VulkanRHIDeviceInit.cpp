@@ -61,7 +61,7 @@ namespace sw
         return _renderPassLoad != VK_NULL_HANDLE;
     }
 
-    bool VulkanRHIDevice::checkValidationLayerSupport()
+    bool VulkanRHIDevice::supportsValidationLayer()
     {
         uint32 layerCount{ 0 };
         vkEnumerateInstanceLayerProperties( &layerCount, nullptr );
@@ -109,7 +109,7 @@ namespace sw
             vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, listAvailableExt.data() );
 
 #if defined( SW_PLATFORM_WINDOWS )
-        if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
+        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
         {
             SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
             return false;
@@ -118,13 +118,13 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         // WSLg/gfxstream often exposes xcb but not xlib.
         _linuxWsi = 0;
-        if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
             _linuxWsi = 1;
             SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
         }
-        else if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
+        else if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
             _linuxWsi = 2;
@@ -143,14 +143,14 @@ namespace sw
             return false;
         }
 #elif defined( SW_PLATFORM_MACOS )
-        if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
+        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
         {
             SW_LOG_ERROR( "VK_EXT_metal_surface is not available." );
             return false;
         }
         listExtension.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
-        if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
+        if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
         else if ( _bEnableValidationLayers == SW_TRUE )
             _bEnableValidationLayers = SW_FALSE;
@@ -175,7 +175,7 @@ namespace sw
         return true;
     }
 
-    void VulkanRHIDevice::setupDebugMessenger()
+    void VulkanRHIDevice::createDebugMessenger()
     {
         if ( _bEnableValidationLayers == SW_FALSE )
             return;

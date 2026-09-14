@@ -34,7 +34,7 @@ namespace sw
 
         bool isSolid() const;
         bool canPassFrom( int32 side ) const;
-        bool checkCollision( const float2& point, const float2& size ) const;
+        bool overlapsBox( const float2& point, const float2& size ) const;
 
     private:
         PROPERTY()

@@ -26,20 +26,20 @@ namespace sw
                 if ( FileUtil::fileExists( filePath ) == false )
                     return;
 
-                const string filename         = FileUtil::getFileNamePart( filePath );
-                bool         extensionAllowed = listExtension.empty();
-                if ( extensionAllowed == false )
+                const string filename           = FileUtil::getFileNamePart( filePath );
+                bool         isExtensionAllowed = listExtension.empty();
+                if ( isExtensionAllowed == false )
                 {
                     for ( const string& allowed : listExtension )
                     {
                         if ( FileUtil::hasExtension( filename, allowed ) )
                         {
-                            extensionAllowed = true;
+                            isExtensionAllowed = true;
                             break;
                         }
                     }
                 }
-                if ( extensionAllowed == false )
+                if ( isExtensionAllowed == false )
                     return;
 
                 const uint64 mtime = FileUtil::getFileTimestamp( filePath );
@@ -183,7 +183,7 @@ namespace sw
         if ( FileUtil::startsWithPathComponent( fullPath, prefix ) == false )
             return false;
 
-        return extensionAllowed( entry, changeEvent._filename );
+        return isExtensionAllowed( entry, changeEvent._filename );
     }
 
     void ReloadFileManager::dispatchEvents( const vector<FileChangeEvent>& listEvent )
@@ -285,7 +285,7 @@ namespace sw
             FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
             for ( const string& filePath : listFile )
             {
-                if ( extensionAllowed( entry, filePath ) == false )
+                if ( isExtensionAllowed( entry, filePath ) == false )
                     continue;
                 if ( FileUtil::getFileTimestamp( filePath ) < sinceTimestamp )
                     continue;
@@ -296,7 +296,7 @@ namespace sw
                 listSeen.push_back( normalized );
 
                 string relative{};
-                if ( FileUtil::makePathRelative( entry._pathPrefix, filePath, relative ) == false || relative.empty() )
+                if ( FileUtil::makeRelativePath( entry._pathPrefix, filePath, relative ) == false || relative.empty() )
                     continue;
 
                 FileChangeEvent changeEvent{};
@@ -330,7 +330,7 @@ namespace sw
         }
     }
 
-    bool ReloadFileManager::extensionAllowed( const WatchEntry& entry, string_view filename ) const
+    bool ReloadFileManager::isExtensionAllowed( const WatchEntry& entry, string_view filename ) const
     {
         if ( entry._listExtension.empty() )
             return true;

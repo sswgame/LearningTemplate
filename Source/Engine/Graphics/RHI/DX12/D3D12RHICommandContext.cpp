@@ -68,7 +68,7 @@ namespace sw
             return 0;
 
         // 락이 없다. 레지스트리는 기록 중에 **바뀌지 않는다** — 등록/해제는 전부 그래프 셋업에서
-        // 끝내고, 그 규칙은 checkRegistryMutableNow 가 디버그에서 감시한다
+        // 끝내고, 그 규칙은 assertRegistryMutableNow 가 디버그에서 감시한다
         // (IRHIDevice::setParallelRecording 참고). 드로우마다 도는 경로라 락을 거는 대신 애초에
         // 공유하지 않는 쪽을 택했다. const 참조로 받는 것도 중요하다 — 비-const 접근은 "쓰기" 로 취급된다.
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
@@ -431,9 +431,9 @@ namespace sw
         transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
     }
 
-    void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessUAV)의 것. 디스패치 직전 굳힌다.
+        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessUav)의 것. 디스패치 직전 굳힌다.
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );

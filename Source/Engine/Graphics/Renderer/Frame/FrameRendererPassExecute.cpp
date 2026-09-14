@@ -262,7 +262,7 @@ namespace sw
                 const float4              arrClears[2] = { clearColor, normalClear };
                 const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( attachmentNames()._gbufferAlbedo, false ),
                                                            colorLoadFor( attachmentNames()._gbufferNormal, false ) };
-                beginColorPassMRT( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) );
+                beginColorPassMrt( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) );
                 drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBuffer ), passCb, false );
                 ctx._pCmd->endRenderPass();
             }
@@ -420,10 +420,10 @@ namespace sw
         const string_view         arrName[]  = { colorName };
         const float4              arrClear[] = { clearColor };
         const RHIRenderPassLoadOp arrLoad[]  = { colorLoad };
-        beginColorPassMRT( ctx, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
+        beginColorPassMrt( ctx, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
     }
 
-    void FrameRenderer::beginColorPassMRT( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
+    void FrameRenderer::beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
                                            uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
     {
         if ( _pDevice == nullptr || ctx._pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )

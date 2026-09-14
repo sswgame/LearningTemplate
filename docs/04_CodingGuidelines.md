@@ -38,6 +38,40 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
   - 고정 배열 출력: `outArr` (`outArrBuffer`) — `arrOut` 사용 금지
   - 입출력 겸용(In/Out): `inout` / `pInOut` / `ppInOut` 접두어 사용 (`inoutSkeleton`, `pInOutSize`)
 
+### 함수 이름 어휘 — 한 개념에 이름 하나
+
+같은 일을 하는 함수가 두 이름을 갖는 것은 규칙이 없어서가 아니라 **아무도 세지 않아서**다. 이 저장소는
+실제로 `queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`, `setup*` 과 `initialize*` 를 동시에 갖고 있었다.
+읽는 사람은 어느 쪽이 맞는지 알 수 없고, 다음 사람은 방금 본 쪽을 따라 쓴다. 그렇게 갈라진다.
+아래 네 규칙 중 앞의 셋은 `Scripts/lint/gate/CheckFunctionVocabulary.py` 가 강제한다.
+
+**1) 두문자어는 camelCase 낱말 하나다.** `initRhi`, `queryAabb`, `bindComputeUav`, `exportGameApi`,
+`updateUi`, `isValidUtf8`, `parseUint64`. 대문자가 연달아 붙으면 낱말 경계가 사라진다 — `getRHIFormatBlockInfo`
+는 `RHIF` 에서 눈이 멈춘다. **타입 이름은 대상이 아니다**(`IRHIDevice` · `AABB` · `TagID` 는 그대로다).
+규칙이 보는 것은 camelCase 식별자뿐이다.
+
+**2) 한 개념에 동사 하나.**
+
+| 개념 | 쓰는 동사 | 쓰지 않는 것 |
+| :--- | :--- | :--- |
+| 객체를 살리고 내린다 | `initialize` / `shutdown` | `setup`, `startup`, `cleanup`, `teardown` |
+| 메모리·슬롯을 내주고 돌려받는다 | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
+| 새 값을 만들어 돌려준다 | `create`(소유) · `make`(값) | `build`, `construct`, `generate` |
+| 찾는다 | `get`(반드시 있다) · `find`(없을 수 있다) | `fetch`, `retrieve`, `lookup`, `obtain` |
+| GPU 리소스 수명 | `initRhi` / `updateRhi` / `releaseRhi` / `forgetRhi` / `isRhiValid` | 그 밖의 모든 것 |
+
+**3) 술어는 질문처럼 읽힌다.** `is` / `has` / `was` / `can` / `should` 로 시작하거나 3인칭 동사를 쓴다
+(`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`). **`check*` 는 술어가 아니다** —
+bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. `setX()` 와 짝인 게터는 `getX()` /
+`isX()` 이지 맨이름 `x()` 가 아니다.
+
+**4) `on*` 은 "일어났다" 는 알림이다.** 핸들러를 **등록**하는 함수가 아니다. 등록은 `register*` /
+`unregister*` 다 — `GameStrings::onLanguageChanged` 가 핸들 값을 돌려주고 있던 것이 이 규칙이 생긴 이유다.
+
+**축약어는 이 저장소의 타입 이름이 줄여 쓸 때만 쓴다.** `XmlNode::attr()` 은 옆에 있는 타입이
+`XmlAttribute` 라서 틀렸고(`attribute()` 로 고쳤다), `TagQueryExpr::…Expr` 과 `ShaderEngineCbMember` 의
+`…Cb…` 는 타입이 같은 약어를 들고 있으므로 맞다.
+
 ### DLL Export / Import (API) 매크로 규칙
 - `SW_API`: **Engine.dll**의 심볼 노출 및 참조 (`SW_EXPORTS` 정의에 반응)
 - `SW_MODULE_API`: **동적 모듈 플러그인(EditorModule.dll, SWGame.dll, RHI 백엔드 등)**의 진입점 C-ABI 노출 (`SW_MODULE_EXPORTS`에 반응)

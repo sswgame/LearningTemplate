@@ -49,7 +49,7 @@ namespace sw
         if ( bNeedsSrv )
             _srv = pDevice->getResource()->registerBindlessResource( _buffer );
         if ( bNeedsUav )
-            _uav = pDevice->getResource()->registerBindlessUAV( _buffer );
+            _uav = pDevice->getResource()->registerBindlessUav( _buffer );
         _capacityElements = elementCount;
         _elementSize      = elementSize;
         return true;
@@ -74,7 +74,7 @@ namespace sw
         if ( _srv != kInvalidDescriptorIndex )
             pDevice->getResource()->unregisterBindlessResource( _srv );
         if ( _uav != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessUAV( _uav );
+            pDevice->getResource()->unregisterBindlessUav( _uav );
         pDevice->getResource()->destroyBuffer( _buffer );
         *this = RHIStructuredBufferSlot{};
     }

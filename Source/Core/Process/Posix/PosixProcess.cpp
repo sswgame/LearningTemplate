@@ -11,7 +11,7 @@ namespace sw
 {
     SW_LOG_CALLER( "PosixProcess" );
 
-    void Process::cleanup()
+    void Process::shutdown()
     {
         if ( _pStdOutRead != nullptr )
         {
@@ -26,7 +26,7 @@ namespace sw
 
     bool Process::launch( string_view command, const ProcessOptions& options )
     {
-        cleanup();
+        shutdown();
 
         string cmd = string( command );
         if ( options._workingDirectory.empty() == false )

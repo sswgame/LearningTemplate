@@ -225,7 +225,7 @@ namespace sw
                 {
                     pSlab[index].~TaskNode();
                 }
-                Memory::freeMemory( pSlab );
+                Memory::free( pSlab );
             }
             _listSlab.clear();
         }
@@ -245,7 +245,7 @@ namespace sw
                 }
                 if ( pMem == nullptr )
                 {
-                    TaskNode* pSlab = static_cast<TaskNode*>( Memory::allocMemory( sizeof( TaskNode ) * kSlabSize ) );
+                    TaskNode* pSlab = static_cast<TaskNode*>( Memory::allocate( sizeof( TaskNode ) * kSlabSize ) );
                     for ( uint32 index = 0; index < kSlabSize; ++index )
                     {
                         new ( &pSlab[index] ) TaskNode();

@@ -220,7 +220,7 @@ namespace sw
         return loadedCount > 0;
     }
 
-    bool LocalizationManager::setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
+    bool LocalizationManager::initialize( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
     {
         if ( directoryOrResourcePath.empty() )
             return false;

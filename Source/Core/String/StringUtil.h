@@ -71,7 +71,7 @@ namespace sw
         static bool isNullOrEmpty( const utf16* pStr );
 
         /** @brief 입력된 바이트 시퀀스가 유효한 UTF-8 형식인지 검사합니다. */
-        static bool isValidUTF8( const utf8* pInput );
+        static bool isValidUtf8( const utf8* pInput );
 
         /** @brief UTF-8 문자열을 UTF-16(sw::wstring) 형식으로 변환합니다. */
         static wstring utf8ToUtf16( const utf8* pInput );
@@ -232,7 +232,7 @@ namespace sw
          * @brief string_view 토큰을 64비트 부호 없는 정수로 파싱합니다 (0-Alloc).
          * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
          */
-        static bool parseUInt64( string_view token, uint64& outValue, int32 base = 10 );
+        static bool parseUint64( string_view token, uint64& outValue, int32 base = 10 );
 
         /**
          * @brief 정수/부동소수점 숫자를 0-Alloc으로 버퍼에 고속 포맷팅하고 쓰여진 길이를 반환합니다.

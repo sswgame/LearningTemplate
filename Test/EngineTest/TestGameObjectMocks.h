@@ -454,8 +454,9 @@ namespace sw
         }
     };
 
-    inline atomic<int32> MockPoolLifecycleComponent::s_ctorCount{ 0 };
-    inline atomic<int32> MockPoolLifecycleComponent::s_dtorCount{ 0 };
+    // 정의는 TestGameObjectMocks.cpp 에 **한 번만** 둔다. 헤더에서 `inline` 으로 정의하면 이 헤더를
+    // 포함하는 TU 마다 사본이 생길 수 있고(EngineTest 는 Engine.dll 과 링크한다), 그러면 생성자가
+    // 올린 수를 소멸자가 다른 사본에서 내리게 된다 — clang 이 `-Wunique-object-duplication` 으로 짚는다.
 
     inline const TypeInfo* MockPoolLifecycleComponent::StaticType()
     {

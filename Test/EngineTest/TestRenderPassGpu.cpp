@@ -62,7 +62,7 @@ namespace
             outWindow.reset();
             return false;
         }
-        outDevice->setInitWindow( outWindow.get() );
+        outDevice->setInitialWindow( outWindow.get() );
         if ( outDevice->initialize() == false )
         {
             outDevice.reset();
@@ -1932,7 +1932,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
 
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitWindow( window.get() );
+    device->setInitialWindow( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
     SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
 
@@ -2069,7 +2069,7 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
 
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitWindow( window.get() );
+    device->setInitialWindow( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
 
     // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
@@ -2130,7 +2130,7 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     // 새 디바이스에는 **새로** 올라가야 한다. 옛 핸들을 그대로 돌려주면 그 드로우는 남의 버퍼를 읽는다.
     device = sw::RHI::createDevice( backend );
     SW_ASSERT_NOT_NULL( device.get() );
-    device->setInitWindow( window.get() );
+    device->setInitialWindow( window.get() );
     SW_ASSERT_TRUE( device->initialize() );
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
@@ -2209,7 +2209,7 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
     SW_EXPECT_TRUE_MSG( bRead, "화면에 나간 첨부를 되읽지 못했다" );
     if ( bRead )
     {
-        const uint32 bytesPerPixel = sw::getRHIFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
         uint32       distinct      = 0;
         uint64       arrSeen[16]{};
         for ( uint32 row = 0; row < layout._height && distinct < 2; ++row )
@@ -2454,7 +2454,7 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
         sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
         if ( renderer.readbackTransient( pAttachment, bytes, layout, format ) == false )
             return stat;
-        const uint32 bytesPerPixel = sw::getRHIFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
         const bool   bHalf         = ( format == sw::RHIFormat::R16G16B16A16_FLOAT );
         uint64       sum{ 0 };
         uint32       count{ 0 };

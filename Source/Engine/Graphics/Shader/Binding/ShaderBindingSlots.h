@@ -88,7 +88,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         inline constexpr uint32 kComputeSrvSlotCount = SW_COMPUTE_SRV_SLOT_COUNT;
         inline constexpr uint32 kComputeUavSlotCount = SW_COMPUTE_UAV_SLOT_COUNT;
-        /// @brief 컴퓨트 RW 텍스처 슬롯 u4..u7 — DX11/GL 만 실제 슬롯이고 DX12/Vulkan 은 배열 인덱스라 bindComputeUAV 가 무시한다.
+        /// @brief 컴퓨트 RW 텍스처 슬롯 u4..u7 — DX11/GL 만 실제 슬롯이고 DX12/Vulkan 은 배열 인덱스라 bindComputeUav 가 무시한다.
         inline constexpr uint32 kComputeTextureUav0         = SW_SLOT_COMPUTE_TEXUAV0;
         inline constexpr uint32 kComputeTextureUavSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
         inline constexpr uint32 kStaticSamplerCount         = SW_STATIC_SAMPLER_COUNT;

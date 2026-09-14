@@ -46,7 +46,7 @@ namespace sw
         };
 
         template <typename T>
-        static const VTable* getInlineVTable()
+        static const VTable* getInlineVtable()
         {
             static constexpr VTable s_pVtable{
                 []( void* pStorage )
@@ -68,7 +68,7 @@ namespace sw
         }
 
         template <typename T>
-        static const VTable* getHeapVTable()
+        static const VTable* getHeapVtable()
         {
             static constexpr VTable s_pVtable{
                 []( void* pStorage )
@@ -155,12 +155,12 @@ namespace sw
         {
             if constexpr ( kIsInline<Decayed> )
             {
-                _pVtable = getInlineVTable<Decayed>();
+                _pVtable = getInlineVtable<Decayed>();
                 new ( _arrStorage ) Decayed( std::forward<T>( value ) );
             }
             else
             {
-                _pVtable                                    = getHeapVTable<Decayed>();
+                _pVtable                                    = getHeapVtable<Decayed>();
                 *reinterpret_cast<Decayed**>( _arrStorage ) = sw_new Decayed( std::forward<T>( value ) );
             }
         }

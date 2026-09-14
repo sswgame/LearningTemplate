@@ -28,20 +28,20 @@ SW_TEST_CASE( XmlDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     sw::XmlNode root = doc.root( "root" ); // 기본은 대소문자 무시
     SW_EXPECT_TRUE( root.isValid() );
     SW_EXPECT_STREQ( "Root", root.name() );
-    SW_EXPECT_STREQ( "Demo", root.attr( "name" ) );
-    SW_EXPECT_EQUAL( 12, root.attrInt( "missing", 12 ) );
+    SW_EXPECT_STREQ( "Demo", root.attribute( "name" ) );
+    SW_EXPECT_EQUAL( 12, root.attributeInt( "missing", 12 ) );
 
     SW_EXPECT_STREQ( "12", root.childText( "_score" ) );
     SW_EXPECT_STREQ( "12", root.childText( "_SCORE" ) );
 
     sw::XmlNode firstItem = root.child( "ITEM" );
     SW_EXPECT_TRUE( firstItem.isValid() );
-    SW_EXPECT_STREQ( "1", firstItem.attr( "ID" ) );
+    SW_EXPECT_STREQ( "1", firstItem.attribute( "ID" ) );
     SW_EXPECT_STREQ( "A", firstItem.text() );
 
     sw::XmlNode secondItem = firstItem.next( "item" );
     SW_EXPECT_TRUE( secondItem.isValid() );
-    SW_EXPECT_STREQ( "2", secondItem.attr( "id" ) );
+    SW_EXPECT_STREQ( "2", secondItem.attribute( "id" ) );
     SW_EXPECT_STREQ( "B", secondItem.text() );
 
     sw::string scoreText;

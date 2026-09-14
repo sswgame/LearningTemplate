@@ -105,7 +105,7 @@ namespace sw
             {
                 for ( XmlNode prop = child.child( "prop" ); prop.isValid() == true; prop = prop.next( "prop" ) )
                 {
-                    const utf8* pKey = prop.attr( "key" );
+                    const utf8* pKey = prop.attribute( "key" );
                     const utf8* pVal = prop.text();
                     if ( StringUtil::isNullOrEmpty( pKey ) == false && pVal != nullptr )
                         _mapCustomProperty[pKey] = pVal;

@@ -131,7 +131,7 @@ SW_TEST_CASE( ArchiveTest, MemoryArchiveBinarySerialization )
     float32 floatVal = 3.14159f;
 
     arch << intVal << floatVal;
-    arch.setReadModeAndResetPos( true );
+    arch.setReadModeAndResetPosition( true );
 
     int32   readInt{ 0 };
     float32 readFloat{ 0.0f };
@@ -335,7 +335,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveChecksumAndCorruptionDetection )
 SW_TEST_CASE( ArchiveTest, ArchiveBoundaryAndErrorHandling )
 {
     sw::Archive emptyArch;
-    emptyArch.setReadModeAndResetPos( true );
+    emptyArch.setReadModeAndResetPosition( true );
 
     int32      val{ 0 };
     const bool bReadOk = emptyArch.readBytes( &val, sizeof( int32 ) );
@@ -343,7 +343,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveBoundaryAndErrorHandling )
 
     sw::Archive smallArch;
     smallArch << static_cast<uint8>( 7 );
-    smallArch.setReadModeAndResetPos( true );
+    smallArch.setReadModeAndResetPosition( true );
 
     uint32     largeVal{ 0 };
     const bool bLargeReadOk = smallArch.readBytes( &largeVal, sizeof( uint32 ) );
@@ -381,7 +381,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveObjectTLVSerialization )
     archWrite.writeData( data );
 
     sw::Archive archRead( data.data(), data.size() );
-    archRead.setReadModeAndResetPos( true );
+    archRead.setReadModeAndResetPosition( true );
 
     sw::TypeInfo infoReordered = info;
     std::swap( infoReordered._listProperty[0], infoReordered._listProperty[1] );
@@ -839,15 +839,15 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     const uint64 u64Large = 0x123456789ABCDEFull;
     const uint64 u64Max   = 0xFFFFFFFFFFFFFFFFull;
 
-    writeArch.writeVarUInt( u0 );
-    writeArch.writeVarUInt( u1 );
-    writeArch.writeVarUInt( u127 );
-    writeArch.writeVarUInt( u128 );
-    writeArch.writeVarUInt( u16383 );
-    writeArch.writeVarUInt( u16384 );
-    writeArch.writeVarUInt( u32Max );
-    writeArch.writeVarUInt( u64Large );
-    writeArch.writeVarUInt( u64Max );
+    writeArch.writeVarUint( u0 );
+    writeArch.writeVarUint( u1 );
+    writeArch.writeVarUint( u127 );
+    writeArch.writeVarUint( u128 );
+    writeArch.writeVarUint( u16383 );
+    writeArch.writeVarUint( u16384 );
+    writeArch.writeVarUint( u32Max );
+    writeArch.writeVarUint( u64Large );
+    writeArch.writeVarUint( u64Max );
 
     // 2) VarInt (ZigZag) 경계값 (음수 포함)
     const int64 i0           = 0;
@@ -873,15 +873,15 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     // 3) 개별 바이트 수 검증
     sw::vector<uint8> testBuffer;
     testBuffer.clear();
-    SW_EXPECT_EQUAL( 1ULL, sw::VarIntUtil::encodeVarUInt64( 0, testBuffer ) );
+    SW_EXPECT_EQUAL( 1ULL, sw::VarIntUtil::encodeVarUint64( 0, testBuffer ) );
     testBuffer.clear();
-    SW_EXPECT_EQUAL( 1ULL, sw::VarIntUtil::encodeVarUInt64( 127, testBuffer ) );
+    SW_EXPECT_EQUAL( 1ULL, sw::VarIntUtil::encodeVarUint64( 127, testBuffer ) );
     testBuffer.clear();
-    SW_EXPECT_EQUAL( 2ULL, sw::VarIntUtil::encodeVarUInt64( 128, testBuffer ) );
+    SW_EXPECT_EQUAL( 2ULL, sw::VarIntUtil::encodeVarUint64( 128, testBuffer ) );
     testBuffer.clear();
-    SW_EXPECT_EQUAL( 2ULL, sw::VarIntUtil::encodeVarUInt64( 16383, testBuffer ) );
+    SW_EXPECT_EQUAL( 2ULL, sw::VarIntUtil::encodeVarUint64( 16383, testBuffer ) );
     testBuffer.clear();
-    SW_EXPECT_EQUAL( 3ULL, sw::VarIntUtil::encodeVarUInt64( 16384, testBuffer ) );
+    SW_EXPECT_EQUAL( 3ULL, sw::VarIntUtil::encodeVarUint64( 16384, testBuffer ) );
     testBuffer.clear();
     SW_EXPECT_EQUAL( 1ULL, sw::VarIntUtil::encodeVarInt64( -1, testBuffer ) ); // ZigZag(-1) = 1 (1 byte!)
 
@@ -889,15 +889,15 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
 
     uint64 outU0 = 99, outU1 = 99, outU127 = 99, outU128 = 99, outU16383 = 99, outU16384 = 99, outU32Max = 99, outU64Large = 99, outU64Max = 99;
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU0 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU1 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU127 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU128 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU16383 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU16384 ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU32Max ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU64Large ) );
-    SW_EXPECT_TRUE( readArch.readVarUInt( outU64Max ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU0 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU1 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU127 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU128 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU16383 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU16384 ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU32Max ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU64Large ) );
+    SW_EXPECT_TRUE( readArch.readVarUint( outU64Max ) );
 
     SW_EXPECT_EQUAL( u0, outU0 );
     SW_EXPECT_EQUAL( u1, outU1 );
@@ -1157,7 +1157,7 @@ SW_TEST_CASE( ArchiveTest, SimulatedNetworkPacketDeltaReplication )
 
     // 1) 서버 틱: 50개 액터 상태를 단일 네트워크 패킷 버퍼에 직렬화
     sw::Archive networkPacketArch;
-    networkPacketArch.writeVarUInt( static_cast<uint64>( numActors ) );
+    networkPacketArch.writeVarUint( static_cast<uint64>( numActors ) );
 
     for ( const auto& actor : listServerActor )
     {
@@ -1174,7 +1174,7 @@ SW_TEST_CASE( ArchiveTest, SimulatedNetworkPacketDeltaReplication )
     SW_EXPECT_TRUE( clientPacketArch.validateChecksum() );
 
     uint64 receivedActorCount = 0;
-    SW_EXPECT_TRUE( clientPacketArch.readVarUInt( receivedActorCount ) );
+    SW_EXPECT_TRUE( clientPacketArch.readVarUint( receivedActorCount ) );
     SW_EXPECT_EQUAL( static_cast<uint64>( numActors ), receivedActorCount );
 
     for ( size_t actorIndex = 0; actorIndex < numActors; ++actorIndex )
@@ -1209,7 +1209,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedBufferFaultInjectionAndGracefulHandling )
     const sw::vector<uint8> truncatedVarInt = { 0x80, 0x80, 0x80 };
     sw::Archive             corruptArch( truncatedVarInt.data(), truncatedVarInt.size() );
     uint64                  outVal = 0;
-    SW_EXPECT_FALSE( corruptArch.readVarUInt( outVal ) );
+    SW_EXPECT_FALSE( corruptArch.readVarUint( outVal ) );
     SW_EXPECT_TRUE( corruptArch.isError() );
 
     // 4) 빈 버퍼 역직렬화 안전성 검증
@@ -1421,7 +1421,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
     // 1. StringPool::loadFromArchive with oversized dynCount (exceeding 1,000,000 limit)
     {
         sw::Archive writeArch;
-        writeArch.writeVarUInt( 2000000ULL ); // 2 million dynamic strings
+        writeArch.writeVarUint( 2000000ULL ); // 2 million dynamic strings
         sw::Archive    readArch( writeArch.getData(), writeArch.getSize() );
         sw::StringPool pool;
         SW_EXPECT_FALSE( pool.loadFromArchive( readArch ) );
@@ -1430,7 +1430,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
     // 2. StringPool::loadFromBinaryBuffer with oversized dynCount
     {
         sw::vector<uint8> rawBytes;
-        sw::VarIntUtil::encodeVarUInt64( 5000000ULL, rawBytes );
+        sw::VarIntUtil::encodeVarUint64( 5000000ULL, rawBytes );
         size_t         offset = 0;
         sw::StringPool pool;
         SW_EXPECT_FALSE( pool.loadFromBinaryBuffer( rawBytes.data(), rawBytes.size(), offset ) );
@@ -1439,7 +1439,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
     // 3. Archive::readPooledString with out-of-bounds poolId
     {
         sw::Archive writeArch;
-        writeArch.writeVarUInt( 99999ULL ); // poolId not in string pool
+        writeArch.writeVarUint( 99999ULL ); // poolId not in string pool
         sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
         sw::string  outStr;
         SW_EXPECT_FALSE( readArch.readPooledString( outStr ) );

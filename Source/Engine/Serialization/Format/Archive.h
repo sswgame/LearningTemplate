@@ -78,7 +78,7 @@ namespace sw
         /** @brief 오프셋을 직접 설정합니다. */
         void setOffset( uint64 offset );
         /** @brief 읽기/쓰기 모드를 변경하고 오프셋을 초기화합니다. */
-        void setReadModeAndResetPos( bool bReadMode );
+        void setReadModeAndResetPosition( bool bReadMode );
 
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
         bool saveFile( string_view fileName ) const;
@@ -334,15 +334,15 @@ namespace sw
         // 6) 가변 길이 정수 (VarInt / ZigZag) 스트리밍
         // ------------------------------------------------------------------------------
         /** @brief 64비트 부호 없는 정수를 LEB128 가변 길이 정수로 기록합니다. */
-        void writeVarUInt( uint64 value );
+        void writeVarUint( uint64 value );
         /** @brief 64비트 부호 있는 정수를 ZigZag + LEB128 가변 길이 정수로 기록합니다. */
         void writeVarInt( int64 value );
 
         /** @brief LEB128 인코딩된 64비트 부호 없는 정수를 읽습니다. */
 
-        bool readVarUInt( uint64& outValue );
+        bool readVarUint( uint64& outValue );
         /** @brief LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다. */
-        bool readVarUInt( uint32& outValue );
+        bool readVarUint( uint32& outValue );
         /** @brief ZigZag + LEB128 인코딩된 64비트 부호 있는 정수를 읽습니다. */
         bool readVarInt( int64& outValue );
         /** @brief ZigZag + LEB128 인코딩된 32비트 부호 있는 정수를 읽습니다. */

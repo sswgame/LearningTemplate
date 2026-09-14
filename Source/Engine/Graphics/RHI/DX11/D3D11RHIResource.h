@@ -34,9 +34,9 @@ namespace sw
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
         D3D11RHIDevice* _pDevice;

@@ -10,7 +10,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) Memory — alignedAlloc / alignedFree 와 바이트 유틸 (전부 static)
+    // 1) Memory — allocateAligned / freeAligned 와 바이트 유틸 (전부 static)
     // ------------------------------------------------------------------------------
     /** @brief 플랫폼 정렬 할당과 바이트 복사·채움·비교입니다. */
     struct SW_API Memory
@@ -21,13 +21,13 @@ namespace sw
          * @param alignment 메모리 정렬 기준 (2의 거듭제곱)
          * @return 정렬된 메모리 포인터. 실패 시 nullptr.
          */
-        static void* alignedAlloc( size_t size, size_t alignment );
+        static void* allocateAligned( size_t size, size_t alignment );
 
         /**
-         * @brief alignedAlloc으로 할당된 메모리 블록을 해제합니다.
+         * @brief allocateAligned으로 할당된 메모리 블록을 해제합니다.
          * @param pPtr 해제할 메모리 포인터
          */
-        static void alignedFree( void* pPtr );
+        static void freeAligned( void* pPtr );
 
         /** @brief pSrc 에서 pDest 로 size 바이트를 복사합니다. */
         static void* copy( void* pDest, const void* pSrc, size_t size );
@@ -39,8 +39,8 @@ namespace sw
         static int32 compare( const void* pLhs, const void* pRhs, size_t size );
 
         // Custom Allocator Functions
-        static void* allocMemory( size_t size );
-        static void  freeMemory( void* pPtr );
+        static void* allocate( size_t size );
+        static void  free( void* pPtr );
     };
 
     struct MemoryAllocTag
@@ -59,13 +59,13 @@ namespace sw
 
         [[nodiscard]] T* allocate( size_t n )
         {
-            T* p = static_cast<T*>( Memory::allocMemory( n * sizeof( T ) ) );
+            T* p = static_cast<T*>( Memory::allocate( n * sizeof( T ) ) );
             if ( p != nullptr )
                 return p;
             throw std::bad_alloc();
         }
 
-        void deallocate( T* p, size_t ) noexcept { Memory::freeMemory( static_cast<void*>( p ) ); }
+        void deallocate( T* p, size_t ) noexcept { Memory::free( static_cast<void*>( p ) ); }
     };
 
     template <typename T, typename U>
@@ -76,10 +76,10 @@ namespace sw
 } // namespace sw
 
 // Global placement new/delete overloads for sw_new
-inline void* operator new( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocMemory( size ); }
-inline void* operator new[]( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocMemory( size ); }
-inline void  operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::freeMemory( pPtr ); }
-inline void  operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::freeMemory( pPtr ); }
+inline void* operator new( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
+inline void* operator new[]( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
+inline void  operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
+inline void  operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
 
 template <typename T>
 void sw_delete_func( T* pPtr )
@@ -88,9 +88,9 @@ void sw_delete_func( T* pPtr )
     {
         pPtr->~T();
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
-            sw::Memory::alignedFree( pPtr );
+            sw::Memory::freeAligned( pPtr );
         else
-            sw::Memory::freeMemory( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
+            sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
     }
 }
 
@@ -109,14 +109,14 @@ void sw_delete_array_func( T* pPtr )
     if ( pPtr != nullptr )
     {
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
-            sw::Memory::alignedFree( pPtr );
+            sw::Memory::freeAligned( pPtr );
         else
-            sw::Memory::freeMemory( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
+            sw::Memory::free( const_cast<void*>( static_cast<const void*>( pPtr ) ) );
     }
 }
 
-#define sw_malloc( size ) sw::Memory::allocMemory( size )
-#define sw_free( pPtr )   sw::Memory::freeMemory( pPtr )
+#define sw_malloc( size ) sw::Memory::allocate( size )
+#define sw_free( pPtr )   sw::Memory::free( pPtr )
 #define sw_new            new ( sw::MemoryAllocTag{} )
 // `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가
 // 암시적 다단 포인터 변환이 되어, 의도한 것인지 읽는 사람이 알 수 없다.
@@ -152,7 +152,7 @@ namespace sw
     {
         if constexpr ( alignof( T ) > alignof( std::max_align_t ) )
         {
-            void* pMem = Memory::alignedAlloc( sizeof( T ), alignof( T ) );
+            void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )
                 throw std::bad_alloc();
             return unique_ptr<T>( new ( pMem ) T( std::forward<Args>( args )... ) );

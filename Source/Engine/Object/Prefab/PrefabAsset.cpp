@@ -62,7 +62,7 @@ namespace sw
                 if ( node.isValid() == false )
                     return;
                 collectPrefabRefsFromText( node.text(), outListPath );
-                for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
+                for ( XmlAttribute attr = node.firstAttribute(); attr; attr = attr.next() )
                     collectPrefabRefsFromText( attr.value(), outListPath );
                 for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
                     collectPrefabRefsFromXml( childNode, outListPath );
@@ -158,7 +158,7 @@ namespace sw
                 return false;
             }
 
-            const utf8* pNameAttr = root.attr( PrefabAssetInternal::kName );
+            const utf8* pNameAttr = root.attribute( PrefabAssetInternal::kName );
             if ( pNameAttr != nullptr )
                 _name = pNameAttr;
             else
@@ -180,7 +180,7 @@ namespace sw
             XmlNode goNode = doc.root( PrefabAssetInternal::kGameObject );
             if ( goNode.isValid() )
             {
-                const utf8* pNameAttr = goNode.attr( "_name" );
+                const utf8* pNameAttr = goNode.attribute( "_name" );
                 if ( pNameAttr != nullptr )
                     _name = pNameAttr;
                 _stateData = doc.saveToString();
@@ -300,8 +300,8 @@ namespace sw
 
         XmlDocument xmlDoc;
         XmlNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
-        root.appendAttr( "formatVersion", 0u );
-        root.appendAttr( PrefabAssetInternal::kName, _name );
+        root.appendAttribute( "formatVersion", 0u );
+        root.appendAttribute( PrefabAssetInternal::kName, _name );
         if ( xmlBody.empty() == false )
         {
             XmlDocument bodyDoc;

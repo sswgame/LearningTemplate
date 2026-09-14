@@ -100,10 +100,10 @@ namespace sw
             return false;
         }
 
-        const float32 dblClick  = root.attrFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
-        const float32 dblDist   = root.attrFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
-        const float32 holdThr   = root.attrFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
-        const utf8*   pDefLayer = root.attr( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
+        const float32 dblClick  = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
+        const float32 dblDist   = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
+        const float32 holdThr   = root.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
+        const utf8*   pDefLayer = root.attribute( ActionMapSerializationInternal::InputMapXml::kAttrDefaultLayer );
 
         clear();
         setDoubleClickTime( dblClick );
@@ -118,13 +118,13 @@ namespace sw
             for ( XmlNode layerNode = layersNode.child( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid();
                   layerNode         = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
             {
-                const utf8* pLayerName = layerNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
+                const utf8* pLayerName = layerNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
                 if ( StringUtil::isNullOrEmpty( pLayerName ) )
                     continue;
-                const int32 priority   = layerNode.attrInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
-                const bool  enabled    = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
-                const bool  blockLower = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
-                const bool  alwaysOn   = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
+                const int32 priority   = layerNode.attributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
+                const bool  enabled    = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
+                const bool  blockLower = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
+                const bool  alwaysOn   = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
                 registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
             }
         }
@@ -133,18 +133,18 @@ namespace sw
 
         auto loadAction = [this]( XmlNode actionNode, string_view inheritedLayer )
         {
-            const utf8* pActionName = actionNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
+            const utf8* pActionName = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
             if ( StringUtil::isNullOrEmpty( pActionName ) )
                 return;
 
             hashed_string layer      = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
-            const utf8*   pLayerAttr = actionNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
+            const utf8*   pLayerAttr = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
             if ( StringUtil::isNullOrEmpty( pLayerAttr ) == false )
                 layer = hashed_string( pLayerAttr );
             ensureLayer( layer );
 
             auto        defaultTrigger = ActionTrigger::Pressed;
-            const utf8* pTriggerAttr   = actionNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
+            const utf8* pTriggerAttr   = actionNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
             if ( pTriggerAttr != nullptr )
             {
                 const ActionTrigger parsed = actionTriggerFromName( pTriggerAttr );
@@ -156,13 +156,13 @@ namespace sw
             for ( XmlNode bindNode = actionNode.child( ActionMapSerializationInternal::InputMapXml::kBind ); bindNode.isValid();
                   bindNode         = bindNode.next( ActionMapSerializationInternal::InputMapXml::kBind ) )
             {
-                const utf8* pSource = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrSource );
-                const utf8* pCode   = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrCode );
+                const utf8* pSource = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrSource );
+                const utf8* pCode   = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrCode );
                 if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
                     continue;
 
                 ActionTrigger trigger          = defaultTrigger;
-                const utf8*   pBindTriggerAttr = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
+                const utf8*   pBindTriggerAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrTrigger );
                 if ( pBindTriggerAttr != nullptr )
                 {
                     const ActionTrigger parsed = actionTriggerFromName( pBindTriggerAttr );
@@ -171,14 +171,14 @@ namespace sw
                 }
 
                 hashed_string bindLayer      = layer;
-                const utf8*   pBindLayerAttr = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
+                const utf8*   pBindLayerAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrLayer );
                 if ( StringUtil::isNullOrEmpty( pBindLayerAttr ) == false )
                 {
                     bindLayer = hashed_string( pBindLayerAttr );
                     ensureLayer( bindLayer );
                 }
 
-                const utf8* pModifierAttr = bindNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
+                const utf8* pModifierAttr = bindNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrModifier );
                 if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
                 {
                     Key modKey = KeyCodes::fromName( pModifierAttr );
@@ -209,12 +209,12 @@ namespace sw
                 {
                     if ( StringUtil::equals( pCode, "LeftStick", true ) )
                     {
-                        const float32 deadzone = bindNode.attrFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
+                        const float32 deadzone = bindNode.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
                         bindGamepadStick2D( pActionName, GamepadStick::Left, deadzone, bindLayer.view() );
                     }
                     else if ( StringUtil::equals( pCode, "RightStick", true ) )
                     {
-                        const float32 deadzone = bindNode.attrFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
+                        const float32 deadzone = bindNode.attributeFloat( ActionMapSerializationInternal::InputMapXml::kAttrDeadzone, 0.15f );
                         bindGamepadStick2D( pActionName, GamepadStick::Right, deadzone, bindLayer.view() );
                     }
                     else
@@ -235,13 +235,13 @@ namespace sw
             // 2) <vector2d> 태그 파싱
             for ( XmlNode compNode = actionNode.child( "vector2d" ); compNode.isValid(); compNode = compNode.next( "vector2d" ) )
             {
-                const Key     upKey          = KeyCodes::fromName( compNode.attr( "up" ) );
-                const Key     downKey        = KeyCodes::fromName( compNode.attr( "down" ) );
-                const Key     leftKey        = KeyCodes::fromName( compNode.attr( "left" ) );
-                const Key     rightKey       = KeyCodes::fromName( compNode.attr( "right" ) );
-                const float32 deadzone       = compNode.attrFloat( "deadzone", 0.0f );
+                const Key     upKey          = KeyCodes::fromName( compNode.attribute( "up" ) );
+                const Key     downKey        = KeyCodes::fromName( compNode.attribute( "down" ) );
+                const Key     leftKey        = KeyCodes::fromName( compNode.attribute( "left" ) );
+                const Key     rightKey       = KeyCodes::fromName( compNode.attribute( "right" ) );
+                const float32 deadzone       = compNode.attributeFloat( "deadzone", 0.0f );
                 hashed_string compLayer      = layer;
-                const utf8*   pCompLayerAttr = compNode.attr( "layer" );
+                const utf8*   pCompLayerAttr = compNode.attribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pCompLayerAttr ) == false )
                 {
                     compLayer = hashed_string( pCompLayerAttr );
@@ -254,10 +254,10 @@ namespace sw
             // 3) <axis1d> 태그 파싱
             for ( XmlNode axisNode = actionNode.child( "axis1d" ); axisNode.isValid(); axisNode = axisNode.next( "axis1d" ) )
             {
-                const Key     posKey         = KeyCodes::fromName( axisNode.attr( "positive" ) );
-                const Key     negKey         = KeyCodes::fromName( axisNode.attr( "negative" ) );
+                const Key     posKey         = KeyCodes::fromName( axisNode.attribute( "positive" ) );
+                const Key     negKey         = KeyCodes::fromName( axisNode.attribute( "negative" ) );
                 hashed_string axisLayer      = layer;
-                const utf8*   pAxisLayerAttr = axisNode.attr( "layer" );
+                const utf8*   pAxisLayerAttr = axisNode.attribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
                 {
                     axisLayer = hashed_string( pAxisLayerAttr );
@@ -270,29 +270,29 @@ namespace sw
             // 4) <stick> 태그 파싱
             for ( XmlNode stickNode = actionNode.child( "stick" ); stickNode.isValid(); stickNode = stickNode.next( "stick" ) )
             {
-                const utf8*        pStickName      = stickNode.attr( "stick" );
+                const utf8*        pStickName      = stickNode.attribute( "stick" );
                 const GamepadStick stick           = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
-                const float32      deadzone        = stickNode.attrFloat( "deadzone", 0.15f );
+                const float32      deadzone        = stickNode.attributeFloat( "deadzone", 0.15f );
                 hashed_string      stickLayer      = layer;
-                const utf8*        pStickLayerAttr = stickNode.attr( "layer" );
+                const utf8*        pStickLayerAttr = stickNode.attribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pStickLayerAttr ) == false )
                 {
                     stickLayer = hashed_string( pStickLayerAttr );
                     ensureLayer( stickLayer );
                 }
-                const uint8   padIndex         = static_cast<uint8>( stickNode.attrInt( "pad", 0 ) );
-                const float32 outerDeadzone    = stickNode.attrFloat( "outerDeadzone", 1.0f );
-                const float32 responseExponent = stickNode.attrFloat( "responseExponent", 1.0f );
+                const uint8   padIndex         = static_cast<uint8>( stickNode.attributeInt( "pad", 0 ) );
+                const float32 outerDeadzone    = stickNode.attributeFloat( "outerDeadzone", 1.0f );
+                const float32 responseExponent = stickNode.attributeFloat( "responseExponent", 1.0f );
                 bindGamepadStick2D( pActionName, stick, deadzone, stickLayer.view(), padIndex, outerDeadzone, responseExponent );
             }
 
             // 5) <chord> 태그 파싱
             for ( XmlNode chordNode = actionNode.child( "chord" ); chordNode.isValid(); chordNode = chordNode.next( "chord" ) )
             {
-                const Key     modKey    = KeyCodes::fromName( chordNode.attr( "modifier" ) );
-                const Key     trigKey   = KeyCodes::fromName( chordNode.attr( "trigger" ) );
+                const Key     modKey    = KeyCodes::fromName( chordNode.attribute( "modifier" ) );
+                const Key     trigKey   = KeyCodes::fromName( chordNode.attribute( "trigger" ) );
                 ActionTrigger trig      = defaultTrigger;
-                const utf8*   pTrigAttr = chordNode.attr( "triggerMode" );
+                const utf8*   pTrigAttr = chordNode.attribute( "triggerMode" );
                 if ( StringUtil::isNullOrEmpty( pTrigAttr ) == false )
                 {
                     const ActionTrigger parsed = actionTriggerFromName( pTrigAttr );
@@ -300,7 +300,7 @@ namespace sw
                         trig = parsed;
                 }
                 hashed_string chordLayer      = layer;
-                const utf8*   pChordLayerAttr = chordNode.attr( "layer" );
+                const utf8*   pChordLayerAttr = chordNode.attribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pChordLayerAttr ) == false )
                 {
                     chordLayer = hashed_string( pChordLayerAttr );
@@ -313,15 +313,15 @@ namespace sw
 
         for ( XmlNode layerNode = root.child( ActionMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.next( ActionMapSerializationInternal::InputMapXml::kLayer ) )
         {
-            const utf8* pLayerName = layerNode.attr( ActionMapSerializationInternal::InputMapXml::kAttrName );
+            const utf8* pLayerName = layerNode.attribute( ActionMapSerializationInternal::InputMapXml::kAttrName );
             if ( StringUtil::isNullOrEmpty( pLayerName ) )
                 continue;
             if ( hasLayer( pLayerName ) == false )
             {
-                const int32 priority   = layerNode.attrInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
-                const bool  enabled    = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
-                const bool  blockLower = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
-                const bool  alwaysOn   = layerNode.attrBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
+                const int32 priority   = layerNode.attributeInt( ActionMapSerializationInternal::InputMapXml::kAttrPriority, 0 );
+                const bool  enabled    = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrEnabled, true );
+                const bool  blockLower = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrBlockLower, false );
+                const bool  alwaysOn   = layerNode.attributeBool( ActionMapSerializationInternal::InputMapXml::kAttrAlwaysOn, false );
                 registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
             }
             for ( XmlNode actionNode = layerNode.child( ActionMapSerializationInternal::InputMapXml::kAction ); actionNode.isValid();
@@ -353,104 +353,104 @@ namespace sw
             for ( const ActionBinding& b : entry._listBinding )
             {
                 XmlNode bindNode = root.appendChild( "bind" );
-                bindNode.appendAttr( "action", actionName.c_str() );
-                bindNode.appendAttr( "layer", b._layer.c_str() );
+                bindNode.appendAttribute( "action", actionName.c_str() );
+                bindNode.appendAttribute( "layer", b._layer.c_str() );
 
                 switch ( b._kind )
                 {
                     case BindingKind::SingleSlot:
                     {
-                        bindNode.appendAttr( "kind", "single" );
+                        bindNode.appendAttribute( "kind", "single" );
                         if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
                         {
                             const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                            bindNode.appendAttr( "source", "key" );
-                            bindNode.appendAttr( "key", KeyCodes::toName( key ) );
+                            bindNode.appendAttribute( "source", "key" );
+                            bindNode.appendAttribute( "key", KeyCodes::toName( key ) );
                         }
                         else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
                         {
                             const MouseButton btn = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
-                            bindNode.appendAttr( "source", "mouse" );
-                            bindNode.appendAttr( "button", MouseButtons::toName( btn ) );
+                            bindNode.appendAttribute( "source", "mouse" );
+                            bindNode.appendAttribute( "button", MouseButtons::toName( btn ) );
                         }
                         else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
                         {
                             const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
-                            bindNode.appendAttr( "source", "gamepad" );
-                            bindNode.appendAttr( "code", GamepadButtons::toName( btn ) );
-                            bindNode.appendAttr( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
+                            bindNode.appendAttribute( "source", "gamepad" );
+                            bindNode.appendAttribute( "code", GamepadButtons::toName( btn ) );
+                            bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
                         }
                         break;
                     }
                     case BindingKind::Axis1DComposite:
                     {
-                        bindNode.appendAttr( "kind", "axis1d" );
+                        bindNode.appendAttribute( "kind", "axis1d" );
                         const Key negKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key posKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttr( "negKey", KeyCodes::toName( negKey ) );
-                        bindNode.appendAttr( "posKey", KeyCodes::toName( posKey ) );
+                        bindNode.appendAttribute( "negKey", KeyCodes::toName( negKey ) );
+                        bindNode.appendAttribute( "posKey", KeyCodes::toName( posKey ) );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
                     {
-                        bindNode.appendAttr( "kind", "vector2d" );
+                        bindNode.appendAttribute( "kind", "vector2d" );
                         const Key upKey    = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
                         const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
                         const Key rightKey = static_cast<Key>( b._arrSlot[3]._controlIndex );
-                        bindNode.appendAttr( "up", KeyCodes::toName( upKey ) );
-                        bindNode.appendAttr( "down", KeyCodes::toName( downKey ) );
-                        bindNode.appendAttr( "left", KeyCodes::toName( leftKey ) );
-                        bindNode.appendAttr( "right", KeyCodes::toName( rightKey ) );
-                        bindNode.appendAttr( "deadzone", b._deadzone );
+                        bindNode.appendAttribute( "up", KeyCodes::toName( upKey ) );
+                        bindNode.appendAttribute( "down", KeyCodes::toName( downKey ) );
+                        bindNode.appendAttribute( "left", KeyCodes::toName( leftKey ) );
+                        bindNode.appendAttribute( "right", KeyCodes::toName( rightKey ) );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
                         break;
                     }
                     case BindingKind::GamepadStick2D:
                     {
-                        bindNode.appendAttr( "kind", "stick" );
-                        bindNode.appendAttr( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
-                        bindNode.appendAttr( "pad", static_cast<int32>( b._deviceIndex ) );
-                        bindNode.appendAttr( "deadzone", b._deadzone );
-                        bindNode.appendAttr( "outerDeadzone", b._outerDeadzone );
-                        bindNode.appendAttr( "exponent", b._responseExponent );
+                        bindNode.appendAttribute( "kind", "stick" );
+                        bindNode.appendAttribute( "stick", b._stick == GamepadStick::Left ? "Left" : "Right" );
+                        bindNode.appendAttribute( "pad", static_cast<int32>( b._deviceIndex ) );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
+                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
+                        bindNode.appendAttribute( "exponent", b._responseExponent );
                         break;
                     }
                     case BindingKind::MouseDelta2D:
                     {
-                        bindNode.appendAttr( "kind", "mouseDelta" );
-                        bindNode.appendAttr( "scale", b._scale );
+                        bindNode.appendAttribute( "kind", "mouseDelta" );
+                        bindNode.appendAttribute( "scale", b._scale );
                         break;
                     }
                     case BindingKind::VirtualJoystick2D:
                     {
-                        bindNode.appendAttr( "kind", "virtualJoystick" );
+                        bindNode.appendAttribute( "kind", "virtualJoystick" );
                         const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttr( "button", MouseButtons::toName( activationButton ) );
-                        bindNode.appendAttr( "radius", b._scale );
-                        bindNode.appendAttr( "deadzone", b._deadzone );
-                        bindNode.appendAttr( "outerDeadzone", b._outerDeadzone );
+                        bindNode.appendAttribute( "button", MouseButtons::toName( activationButton ) );
+                        bindNode.appendAttribute( "radius", b._scale );
+                        bindNode.appendAttribute( "deadzone", b._deadzone );
+                        bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
                         break;
                     }
                     case BindingKind::Chord:
                     {
-                        bindNode.appendAttr( "kind", "chord" );
+                        bindNode.appendAttribute( "kind", "chord" );
                         const Key modKey  = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key trigKey = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttr( "modKey", KeyCodes::toName( modKey ) );
-                        bindNode.appendAttr( "trigKey", KeyCodes::toName( trigKey ) );
+                        bindNode.appendAttribute( "modKey", KeyCodes::toName( modKey ) );
+                        bindNode.appendAttribute( "trigKey", KeyCodes::toName( trigKey ) );
                         break;
                     }
                     case BindingKind::Shortcut:
                     {
-                        bindNode.appendAttr( "kind", "shortcut" );
+                        bindNode.appendAttribute( "kind", "shortcut" );
                         const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttr( "key", KeyCodes::toName( key ) );
-                        bindNode.appendAttr( "modifierMask", static_cast<int32>( b._modifierMask ) );
+                        bindNode.appendAttribute( "key", KeyCodes::toName( key ) );
+                        bindNode.appendAttribute( "modifierMask", static_cast<int32>( b._modifierMask ) );
                         break;
                     }
                     case BindingKind::AnyKey:
                     {
-                        bindNode.appendAttr( "kind", "anyKey" );
+                        bindNode.appendAttribute( "kind", "anyKey" );
                         break;
                     }
                     default:
@@ -476,9 +476,9 @@ namespace sw
 
         for ( XmlNode bindNode = root.child( "bind" ); bindNode.isValid(); bindNode = bindNode.next( "bind" ) )
         {
-            const utf8*       pAction   = bindNode.attr( "action" );
-            const utf8*       pKindStr  = bindNode.attr( "kind" );
-            const utf8*       pLayerStr = bindNode.attr( "layer" );
+            const utf8*       pAction   = bindNode.attribute( "action" );
+            const utf8*       pKindStr  = bindNode.attribute( "kind" );
+            const utf8*       pLayerStr = bindNode.attribute( "layer" );
             const string_view layer     = ( StringUtil::isNullOrEmpty( pLayerStr ) == false ) ? string_view( pLayerStr ) : string_view{};
 
             if ( StringUtil::isNullOrEmpty( pAction ) )
@@ -488,62 +488,62 @@ namespace sw
             {
                 if ( StringUtil::equals( pKindStr, "axis1d", true ) )
                 {
-                    const Key negKey = KeyCodes::fromName( bindNode.attr( "negKey" ) );
-                    const Key posKey = KeyCodes::fromName( bindNode.attr( "posKey" ) );
+                    const Key negKey = KeyCodes::fromName( bindNode.attribute( "negKey" ) );
+                    const Key posKey = KeyCodes::fromName( bindNode.attribute( "posKey" ) );
                     if ( negKey != Key::Unknown && posKey != Key::Unknown )
                         bindAxis1DComposite( pAction, negKey, posKey, layer );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "vector2d", true ) )
                 {
-                    const Key     upKey    = KeyCodes::fromName( bindNode.attr( "up" ) );
-                    const Key     downKey  = KeyCodes::fromName( bindNode.attr( "down" ) );
-                    const Key     leftKey  = KeyCodes::fromName( bindNode.attr( "left" ) );
-                    const Key     rightKey = KeyCodes::fromName( bindNode.attr( "right" ) );
-                    const float32 deadzone = bindNode.attrFloat( "deadzone", 0.0f );
+                    const Key     upKey    = KeyCodes::fromName( bindNode.attribute( "up" ) );
+                    const Key     downKey  = KeyCodes::fromName( bindNode.attribute( "down" ) );
+                    const Key     leftKey  = KeyCodes::fromName( bindNode.attribute( "left" ) );
+                    const Key     rightKey = KeyCodes::fromName( bindNode.attribute( "right" ) );
+                    const float32 deadzone = bindNode.attributeFloat( "deadzone", 0.0f );
                     if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
                         bindVector2D( pAction, upKey, downKey, leftKey, rightKey, deadzone, layer );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "stick", true ) )
                 {
-                    const utf8*        pStickStr     = bindNode.attr( "stick" );
+                    const utf8*        pStickStr     = bindNode.attribute( "stick" );
                     const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                    const uint8        pad           = static_cast<uint8>( bindNode.attrInt( "pad", 0 ) );
-                    const float32      deadzone      = bindNode.attrFloat( "deadzone", 0.15f );
-                    const float32      outerDeadzone = bindNode.attrFloat( "outerDeadzone", 1.0f );
-                    const float32      exp           = bindNode.attrFloat( "exponent", 1.0f );
+                    const uint8        pad           = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
+                    const float32      deadzone      = bindNode.attributeFloat( "deadzone", 0.15f );
+                    const float32      outerDeadzone = bindNode.attributeFloat( "outerDeadzone", 1.0f );
+                    const float32      exp           = bindNode.attributeFloat( "exponent", 1.0f );
                     bindGamepadStick2D( pAction, stick, deadzone, layer, pad, outerDeadzone, exp );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "mouseDelta", true ) )
                 {
-                    const float32 scale = bindNode.attrFloat( "scale", 1.0f );
+                    const float32 scale = bindNode.attributeFloat( "scale", 1.0f );
                     bindMouseDelta( pAction, scale, layer );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "virtualJoystick", true ) )
                 {
-                    const MouseButton activationButton = MouseButtons::fromName( bindNode.attr( "button" ) );
-                    const float32     radius           = bindNode.attrFloat( "radius", 64.0f );
-                    const float32     deadzone         = bindNode.attrFloat( "deadzone", 0.1f );
-                    const float32     outerDeadzone    = bindNode.attrFloat( "outerDeadzone", 1.0f );
+                    const MouseButton activationButton = MouseButtons::fromName( bindNode.attribute( "button" ) );
+                    const float32     radius           = bindNode.attributeFloat( "radius", 64.0f );
+                    const float32     deadzone         = bindNode.attributeFloat( "deadzone", 0.1f );
+                    const float32     outerDeadzone    = bindNode.attributeFloat( "outerDeadzone", 1.0f );
                     if ( activationButton != MouseButton::Count )
                         bindVirtualJoystick2D( pAction, activationButton, radius, deadzone, layer, outerDeadzone );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "chord", true ) )
                 {
-                    const Key modKey  = KeyCodes::fromName( bindNode.attr( "modKey" ) );
-                    const Key trigKey = KeyCodes::fromName( bindNode.attr( "trigKey" ) );
+                    const Key modKey  = KeyCodes::fromName( bindNode.attribute( "modKey" ) );
+                    const Key trigKey = KeyCodes::fromName( bindNode.attribute( "trigKey" ) );
                     if ( modKey != Key::Unknown && trigKey != Key::Unknown )
                         bindChord( pAction, modKey, trigKey, ActionTrigger::Pressed, layer );
                     continue;
                 }
                 else if ( StringUtil::equals( pKindStr, "shortcut", true ) )
                 {
-                    const Key   key     = KeyCodes::fromName( bindNode.attr( "key" ) );
-                    const uint8 modMask = static_cast<uint8>( bindNode.attrInt( "modifierMask", 0 ) );
+                    const Key   key     = KeyCodes::fromName( bindNode.attribute( "key" ) );
+                    const uint8 modMask = static_cast<uint8>( bindNode.attributeInt( "modifierMask", 0 ) );
                     if ( key != Key::Unknown )
                         bindShortcut( pAction, key, modMask, ActionTrigger::Pressed, layer );
                     continue;
@@ -556,11 +556,11 @@ namespace sw
             }
 
             // Single slot fallback / legacy format
-            const utf8* pKeyStr    = bindNode.attr( "key" );
-            const utf8* pCodeStr   = bindNode.attr( "code" );
-            const utf8* pButtonStr = bindNode.attr( "button" );
-            const utf8* pSourceStr = bindNode.attr( "source" );
-            const uint8 padIndex   = static_cast<uint8>( bindNode.attrInt( "pad", 0 ) );
+            const utf8* pKeyStr    = bindNode.attribute( "key" );
+            const utf8* pCodeStr   = bindNode.attribute( "code" );
+            const utf8* pButtonStr = bindNode.attribute( "button" );
+            const utf8* pSourceStr = bindNode.attribute( "source" );
+            const uint8 padIndex   = static_cast<uint8>( bindNode.attributeInt( "pad", 0 ) );
 
             if ( pKeyStr != nullptr )
             {

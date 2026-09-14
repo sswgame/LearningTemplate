@@ -67,7 +67,7 @@ namespace sw
     void StringPool::saveToArchive( Archive& outArchive ) const
     {
         const size_t dynCount = getDynamicCount();
-        outArchive.writeVarUInt( static_cast<uint64>( dynCount ) );
+        outArchive.writeVarUint( static_cast<uint64>( dynCount ) );
         for ( size_t index = kPredefinedCount; index < _listString.size(); ++index )
         {
             outArchive.writeString( _listString[index] );
@@ -78,7 +78,7 @@ namespace sw
     {
         initializePredefined();
         uint64 dynCount = 0;
-        if ( inArchive.readVarUInt( dynCount ) == false || dynCount > kMaxDynamicStrings )
+        if ( inArchive.readVarUint( dynCount ) == false || dynCount > kMaxDynamicStrings )
             return false;
 
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
@@ -100,7 +100,7 @@ namespace sw
     {
         BinaryStreamWriter writer( outBytes );
         const size_t       dynCount = getDynamicCount();
-        writer.writeVarUInt( static_cast<uint64>( dynCount ) );
+        writer.writeVarUint( static_cast<uint64>( dynCount ) );
         for ( size_t index = kPredefinedCount; index < _listString.size(); ++index )
         {
             writer.writeString( _listString[index] );
@@ -111,7 +111,7 @@ namespace sw
     {
         initializePredefined();
         uint64 dynCount = 0;
-        if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > kMaxDynamicStrings )
+        if ( VarIntUtil::decodeVarUint64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > kMaxDynamicStrings )
             return false;
 
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );

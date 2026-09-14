@@ -208,21 +208,21 @@ namespace sw
 
     bool TileMap::isWalkable( int32 x, int32 y ) const
     {
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return false;
         return _listWalkable[indexOf( x, y )] != 0;
     }
 
     bool TileMap::isEncounterTile( int32 x, int32 y ) const
     {
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return false;
         return _listEncounter[indexOf( x, y )] != 0;
     }
 
     bool TileMap::isPassThrough( int32 x, int32 y ) const
     {
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return false;
         return _listPassThrough[indexOf( x, y )] != 0;
     }
@@ -235,7 +235,7 @@ namespace sw
     TileFlags TileMap::getFlags( int32 x, int32 y ) const
     {
         TileFlags f = TileFlags::None;
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return TileFlags::Solid;
         if ( _listWalkable[indexOf( x, y )] != 0 )
             f = f | TileFlags::Walkable;
@@ -269,32 +269,32 @@ namespace sw
 
     TileVisual TileMap::getTileVisual( int32 x, int32 y ) const
     {
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return {};
         return _listVisual[indexOf( x, y )];
     }
 
     void TileMap::setWalkable( int32 x, int32 y, bool bWalkable )
     {
-        if ( inBounds( x, y ) )
+        if ( isInBounds( x, y ) )
             _listWalkable[indexOf( x, y )] = bWalkable ? 1 : 0;
     }
 
     void TileMap::setEncounter( int32 x, int32 y, bool bEncounter )
     {
-        if ( inBounds( x, y ) )
+        if ( isInBounds( x, y ) )
             _listEncounter[indexOf( x, y )] = bEncounter ? 1 : 0;
     }
 
     void TileMap::setPassThrough( int32 x, int32 y, bool bPassThrough )
     {
-        if ( inBounds( x, y ) )
+        if ( isInBounds( x, y ) )
             _listPassThrough[indexOf( x, y )] = bPassThrough ? 1 : 0;
     }
 
     void TileMap::setTileVisual( int32 x, int32 y, const TileVisual& visual )
     {
-        if ( inBounds( x, y ) )
+        if ( isInBounds( x, y ) )
             _listVisual[indexOf( x, y )] = visual;
     }
 
@@ -383,7 +383,7 @@ namespace sw
                       isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
     }
 
-    bool TileMap::inBounds( int32 x, int32 y ) const
+    bool TileMap::isInBounds( int32 x, int32 y ) const
     {
         return 0 <= x && x < _width && 0 <= y && y < _height;
     }

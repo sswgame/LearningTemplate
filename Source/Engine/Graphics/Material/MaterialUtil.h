@@ -43,7 +43,7 @@ namespace sw
         static bool             parseBoolField( XmlNode node, const utf8* pName, bool defaultValue );
         static MaterialProperty parsePropertyNode( XmlNode item );
 
-        static void appendAttr( XmlNode parent, const utf8* pName, string_view value );
+        static void appendAttribute( XmlNode parent, const utf8* pName, string_view value );
         static void appendBoolAttr( XmlNode parent, const utf8* pName, bool value );
 
         static RHIBlendMode         parseBlendMode( string_view modeName );

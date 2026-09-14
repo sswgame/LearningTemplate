@@ -49,7 +49,7 @@ namespace sw
         bool hasAnyTag( const TagContainer& other ) const;
 
         /** @brief required는 모두 포함하고 forbidden은 하나도 없는지 검사합니다. */
-        bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
+        bool matchesTags( const TagContainer& required, const TagContainer& forbidden ) const;
 
         /** @brief 태그 개수를 반환합니다. */
         uint32 getTagCount() const { return static_cast<uint32>( _listTag.size() ); }
@@ -85,7 +85,7 @@ namespace sw
         TagContainer         _tags{};
         vector<TagQueryExpr> _listSubExpr{};
 
-        static TagQueryExpr anyTagsMatch( const TagContainer& tags )
+        static TagQueryExpr createAnyTagsMatch( const TagContainer& tags )
         {
             TagQueryExpr expr;
             expr._type = TagQueryExprType::AnyTagsMatch;
@@ -93,7 +93,7 @@ namespace sw
             return expr;
         }
 
-        static TagQueryExpr allTagsMatch( const TagContainer& tags )
+        static TagQueryExpr createAllTagsMatch( const TagContainer& tags )
         {
             TagQueryExpr expr;
             expr._type = TagQueryExprType::AllTagsMatch;
@@ -101,7 +101,7 @@ namespace sw
             return expr;
         }
 
-        static TagQueryExpr noTagsMatch( const TagContainer& tags )
+        static TagQueryExpr createNoTagsMatch( const TagContainer& tags )
         {
             TagQueryExpr expr;
             expr._type = TagQueryExprType::NoTagsMatch;
@@ -109,7 +109,7 @@ namespace sw
             return expr;
         }
 
-        static TagQueryExpr allExprMatch( vector<TagQueryExpr> listSubExpr )
+        static TagQueryExpr createAllExprMatch( vector<TagQueryExpr> listSubExpr )
         {
             TagQueryExpr expr;
             expr._type        = TagQueryExprType::AllExprMatch;
@@ -117,7 +117,7 @@ namespace sw
             return expr;
         }
 
-        static TagQueryExpr anyExprMatch( vector<TagQueryExpr> listSubExpr )
+        static TagQueryExpr createAnyExprMatch( vector<TagQueryExpr> listSubExpr )
         {
             TagQueryExpr expr;
             expr._type        = TagQueryExprType::AnyExprMatch;
@@ -125,7 +125,7 @@ namespace sw
             return expr;
         }
 
-        static TagQueryExpr notExprMatch( TagQueryExpr subExpr )
+        static TagQueryExpr createNotExprMatch( TagQueryExpr subExpr )
         {
             TagQueryExpr expr;
             expr._type = TagQueryExprType::NotExprMatch;
@@ -151,7 +151,7 @@ namespace sw
         const TagQueryExpr& getRootExpr() const { return _rootExpr; }
 
     private:
-        static bool evalExpr( const TagQueryExpr& expr, const TagContainer& container );
+        static bool evaluateExpr( const TagQueryExpr& expr, const TagContainer& container );
 
     private:
         TagQueryExpr _rootExpr{};

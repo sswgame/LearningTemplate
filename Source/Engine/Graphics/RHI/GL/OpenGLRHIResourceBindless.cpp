@@ -30,7 +30,7 @@ namespace sw
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
 
-        const uint32 glName = _pDevice->getGLTextureName( texture );
+        const uint32 glName = _pDevice->getGlTextureName( texture );
         if ( glName == 0 )
             return kInvalidDescriptorIndex;
 
@@ -73,7 +73,7 @@ namespace sw
                               OpenGLRHIDevice::BindlessTextureRecord{} );
     }
 
-    RHIDescriptorIndex OpenGLRHIResource::registerBindlessUAV( RHIBufferHandle buffer )
+    RHIDescriptorIndex OpenGLRHIResource::registerBindlessUav( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -85,16 +85,16 @@ namespace sw
                                       OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
-    RHIDescriptorIndex OpenGLRHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIDescriptorIndex OpenGLRHIResource::registerBindlessTextureUav( RHITextureHandle texture )
     {
-        if ( texture == 0 || _pDevice->getGLTextureName( texture ) == 0 )
+        if ( texture == 0 || _pDevice->getGlTextureName( texture ) == 0 )
             return kInvalidDescriptorIndex;
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._texture = texture;
         return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, record );
     }
 
-    void OpenGLRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void OpenGLRHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
         releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
                               OpenGLRHIDevice::BindlessResourceRecord{} );

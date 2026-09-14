@@ -331,7 +331,7 @@ namespace sw
     {
         // **조회만 한다.** 예전엔 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더패스 캐시(락 없음)를 건드리므로, 같은
-        // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. checkRegistryMutableNow 는 bindless
+        // 웨이브의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
             return getEnginePso( RenderPassType::Present );

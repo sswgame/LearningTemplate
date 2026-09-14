@@ -353,7 +353,7 @@ namespace sw
         if ( isNullOrEmpty( pInput ) )
             return {};
 
-        SW_LOG_ASSERT( isValidUTF8( pInput ), "UTF8 문자열이 아닙니다" );
+        SW_LOG_ASSERT( isValidUtf8( pInput ), "UTF8 문자열이 아닙니다" );
 
         const size_t length = strlen( pInput );
         wstring      result{};
@@ -425,7 +425,7 @@ namespace sw
             ++pos;
         }
 
-        SW_LOG_ASSERT( isValidUTF8( result.c_str() ), "UTF8 문자열이 아닙니다" );
+        SW_LOG_ASSERT( isValidUtf8( result.c_str() ), "UTF8 문자열이 아닙니다" );
         return result;
     }
 
@@ -438,7 +438,7 @@ namespace sw
     {
         if ( isNullOrEmpty( pInput ) )
             return {};
-        if ( isValidUTF8( pInput ) )
+        if ( isValidUtf8( pInput ) )
             return utf8ToUtf16( pInput );
 
         return StringUtilInternal::localeToUtf16Internal( pInput );
@@ -448,7 +448,7 @@ namespace sw
     {
         if ( isNullOrEmpty( pInput ) )
             return {};
-        if ( isValidUTF8( pInput ) )
+        if ( isValidUtf8( pInput ) )
             return string{ pInput };
 
         const wstring wideStr = StringUtilInternal::localeToUtf16Internal( pInput );
@@ -1209,7 +1209,7 @@ namespace sw
         return false;
     }
 
-    bool StringUtil::parseUInt64( string_view token, uint64& outValue, int32 base )
+    bool StringUtil::parseUint64( string_view token, uint64& outValue, int32 base )
     {
         string_view trimmed = trim( token );
         if ( trimmed.empty() )
@@ -1252,7 +1252,7 @@ namespace sw
         return false;
     }
 
-    bool StringUtil::isValidUTF8( const utf8* pInput )
+    bool StringUtil::isValidUtf8( const utf8* pInput )
     {
         if ( pInput == nullptr )
             return false;

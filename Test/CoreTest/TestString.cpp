@@ -475,51 +475,51 @@ SW_TEST_CASE( StringTest, StringBuilderComplexFormatting )
 }
 
 /**
- * @brief [StringTest] StringUtil::isValidUTF8 종합 유효성 및 경계/오류 시퀀스 검증
+ * @brief [StringTest] StringUtil::isValidUtf8 종합 유효성 및 경계/오류 시퀀스 검증
  */
 SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
 {
     // 1) Null 및 빈 문자열
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( nullptr ) );
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( nullptr ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "" ) );
 
     // 2) 순수 ASCII (8바이트 미만 및 8바이트 이상 SWAR 경로)
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "A" ) );
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "Short" ) );
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "Exactly8" ) );
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "This is a int32 ASCII sentence for SWAR fast path testing." ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "A" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "Short" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "Exactly8" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "This is a int32 ASCII sentence for SWAR fast path testing." ) );
 
     // 3) 유효한 2바이트, 3바이트, 4바이트 UTF-8
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC2\xA9" ) );               // © (U+00A9)
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC3\xA9" ) );               // é (U+00E9)
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xE2\x82\xAC" ) );           // € (U+20AC)
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "안녕하세요 엔진 테스트" ) ); // 한글 3바이트
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x9A\x80" ) );       // 🚀 (U+1F680)
-    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x98\x80" ) );       // 😀 (U+1F600)
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "\xC2\xA9" ) );               // © (U+00A9)
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "\xC3\xA9" ) );               // é (U+00E9)
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "\xE2\x82\xAC" ) );           // € (U+20AC)
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "안녕하세요 엔진 테스트" ) ); // 한글 3바이트
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "\xF0\x9F\x9A\x80" ) );       // 🚀 (U+1F680)
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUtf8( "\xF0\x9F\x98\x80" ) );       // 😀 (U+1F600)
 
     // 4) 불완전/잘린 시퀀스 (Truncated sequences)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xC2" ) );         // 2바이트 리드 바이트만 존재
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xE2\x82" ) );     // 3바이트 중 2바이트만 존재
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x9A" ) ); // 4바이트 중 3바이트만 존재
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xC2" ) );         // 2바이트 리드 바이트만 존재
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xE2\x82" ) );     // 3바이트 중 2바이트만 존재
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xF0\x9F\x9A" ) ); // 4바이트 중 3바이트만 존재
 
     // 5) 비정상 후속 바이트 (Invalid continuation bytes)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xC2\x20" ) );         // 후속 바이트가 공백 (0x20 != 0x80..0xBF)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xE2\x82\x20" ) );     // 3번째 바이트 비정상
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x9A\xC0" ) ); // 4번째 바이트 비정상
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xC2\x20" ) );         // 후속 바이트가 공백 (0x20 != 0x80..0xBF)
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xE2\x82\x20" ) );     // 3번째 바이트 비정상
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xF0\x9F\x9A\xC0" ) ); // 4번째 바이트 비정상
 
     // 6) Overlong 인코딩 (보안 취약점 방지 검증)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xC0\xAF" ) );         // Overlong 2바이트 '/'
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xC1\xBF" ) );         // Overlong 2바이트
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xE0\x80\xAF" ) );     // Overlong 3바이트
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xF0\x80\x80\xAF" ) ); // Overlong 4바이트
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xC0\xAF" ) );         // Overlong 2바이트 '/'
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xC1\xBF" ) );         // Overlong 2바이트
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xE0\x80\xAF" ) );     // Overlong 3바이트
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xF0\x80\x80\xAF" ) ); // Overlong 4바이트
 
     // 7) UTF-16 Surrogate 영역 (U+D800 ~ U+DFFF 금지)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xED\xA0\x80" ) ); // U+D800
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xED\xBF\xBF" ) ); // U+DFFF
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xED\xA0\x80" ) ); // U+D800
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xED\xBF\xBF" ) ); // U+DFFF
 
     // 8) 최대 유니코드 초과 (> U+10FFFF)
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xF4\x90\x80\x80" ) ); // U+110000
-    SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xF7\xBF\xBF\xBF" ) ); // 유효 범위 초과
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xF4\x90\x80\x80" ) ); // U+110000
+    SW_EXPECT_FALSE( sw::StringUtil::isValidUtf8( "\xF7\xBF\xBF\xBF" ) ); // 유효 범위 초과
 }
 
 /**

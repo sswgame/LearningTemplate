@@ -31,7 +31,7 @@ namespace sw
     /**
      * @brief 지정한 바이트 경계(Alignment)로 정렬된 메모리 블록을 할당합니다.
      */
-    void* Memory::alignedAlloc( size_t size, size_t alignment )
+    void* Memory::allocateAligned( size_t size, size_t alignment )
     {
         const size_t align = MathUtil::max( alignment, sizeof( void* ) );
 
@@ -80,7 +80,7 @@ namespace sw
     /**
      * @brief 정렬 할당된 메모리 블록을 해제합니다.
      */
-    void Memory::alignedFree( void* pPtr )
+    void Memory::freeAligned( void* pPtr )
     {
         if ( pPtr == nullptr )
             return;
@@ -89,7 +89,7 @@ namespace sw
     #if defined( SW_PLATFORM_WINDOWS )
         _aligned_free( pPtr );
     #else
-        free( pPtr );
+        ::free( pPtr );
     #endif
 #else // SW_SHIPPING
         AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
@@ -108,7 +108,7 @@ namespace sw
     #if defined( SW_PLATFORM_WINDOWS )
         _aligned_free( pRawPtr );
     #else
-        free( pRawPtr );
+        ::free( pRawPtr );
     #endif
 #endif // SW_SHIPPING
     }
@@ -116,13 +116,13 @@ namespace sw
     /**
      * @brief 일반 동적 메모리를 할당합니다.
      */
-    void* Memory::allocMemory( size_t size )
+    void* Memory::allocate( size_t size )
     {
 #if defined( SW_SHIPPING )
-        return malloc( size );
+        return ::malloc( size );
 #else  // SW_SHIPPING
         size_t totalSize = size + sizeof( AllocHeader );
-        void*  pRawPtr   = malloc( totalSize );
+        void*  pRawPtr   = ::malloc( totalSize );
         if ( pRawPtr == nullptr )
             return nullptr;
 
@@ -146,13 +146,13 @@ namespace sw
     /**
      * @brief 동적 메모리를 해제합니다.
      */
-    void Memory::freeMemory( void* pPtr )
+    void Memory::free( void* pPtr )
     {
         if ( pPtr == nullptr )
             return;
 
 #if defined( SW_SHIPPING )
-        free( pPtr );
+        ::free( pPtr );
 #else  // SW_SHIPPING
         AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pPtr ) - sizeof( AllocHeader ) );
         if ( pHeader->_magic != kAllocMagic )
@@ -166,7 +166,7 @@ namespace sw
             pProfiler->recordFree( pPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
 
         pHeader->_magic = 0;
-        free( pHeader->_pRawPtr );
+        ::free( pHeader->_pRawPtr );
 #endif // SW_SHIPPING
     }
 

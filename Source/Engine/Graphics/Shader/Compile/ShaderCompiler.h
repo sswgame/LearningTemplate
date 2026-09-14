@@ -145,7 +145,7 @@ namespace sw
          * @param desc 컴파일 서술체
          * @return 컴파일 결과 (성공 여부 및 바이트코드 배열)
          */
-        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
+        static ShaderCompileResult compileHlsl( const ShaderCompileDesc& desc );
 
         /** @brief 셰이더 바이트코드 디스크 캐시 활성화 여부를 설정합니다. */
         static void enableDiskCache( bool bEnable );

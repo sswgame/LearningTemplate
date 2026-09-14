@@ -67,7 +67,7 @@ namespace sw
                         if ( FileUtil::readFile( candidate, bytes ) == false || bytes.empty() )
                             continue;
 
-                        uint8* pHeap = static_cast<uint8*>( Memory::allocMemory( bytes.size() ) );
+                        uint8* pHeap = static_cast<uint8*>( Memory::allocate( bytes.size() ) );
                         if ( pHeap == nullptr )
                             return E_OUTOFMEMORY;
                         Memory::copy( pHeap, bytes.data(), bytes.size() );
@@ -82,7 +82,7 @@ namespace sw
                 ( LPCVOID pData ) override
                 {
                     if ( pData != nullptr )
-                        Memory::freeMemory( const_cast<void*>( pData ) );
+                        Memory::free( const_cast<void*>( pData ) );
                     return S_OK;
                 }
 
@@ -304,7 +304,7 @@ namespace sw
         }
     }
 
-    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& desc )
+    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& desc )
     {
         ShaderCompileResult result{};
         result._bSuccess = false;

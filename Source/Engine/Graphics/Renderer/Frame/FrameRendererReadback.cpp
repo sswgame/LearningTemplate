@@ -53,7 +53,7 @@ namespace sw
         RHIFormat         format = RHIFormat::R8G8B8A8_UNORM;
         if ( readbackTransient( attachmentName, bytes, layout, format ) == false )
             return false;
-        const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        const uint32 bytesPerPixel = getRhiFormatBytesPerPixel( format );
         if ( bytesPerPixel < 3 )
         {
             SW_LOG_ERROR( "dumpTransientToPpm: PPM 으로 덤프할 수 없는 포맷입니다 ('%#').", string( attachmentName ).c_str() );

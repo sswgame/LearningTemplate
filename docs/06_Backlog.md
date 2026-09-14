@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `7cee4466`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `83aaac14`
 
 ---
 
@@ -294,6 +294,80 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (한 개념에 이름 둘이었다 — 함수 이름 어휘를 정하고 게이트로 못박았다)
+
+`queryAABB` 와 `queryAabb` 가 **같은 트리에** 있었다. `alloc*` 과 `allocate*`, `setup*` 과 `initialize*`,
+`check*` 인 술어와 `is*` 인 술어도 그랬다. 규칙이 없어서가 아니라 **아무도 세지 않아서**다 — 다음 사람은
+방금 본 쪽을 따라 쓰고, 그렇게 갈라진다.
+
+**먼저 셌다.** 헤더에서 함수 선언 6,554건(고유 이름 3,659)을 뽑아 선두 동사로 묶고, 두문자어 표기·동사
+동의어·술어 형태·약어를 교차 대조했다. 눈으로 고른 목록이 아니다 — 그래서 `getHeapVTable` 이나
+`hasExtensionVal` 처럼 아무도 기억하지 못하던 것까지 걸렸다.
+
+**이름 84개를 고쳤다(933곳).** 규칙은 넷이고 AGENTS.md · `docs/04_CodingGuidelines.md` 에 적혀 있다.
+
+| 규칙 | 예 |
+| --- | --- |
+| 두문자어는 camelCase 낱말 하나 | `queryAABB`→`queryAabb` · `getRHI`→`getRhi` · `bindComputeUAV`→`bindComputeUav` · `exportGameAPI`→`exportGameApi` · `updateUI`→`updateUi` · `isValidUTF8`→`isValidUtf8` · `parseUInt64`→`parseUint64` |
+| 한 개념에 동사 하나 | `alloc*`→`allocate*` · `setupLocalization`→`initialize` · `cleanup`→`shutdown` · `Memory::allocMemory/freeMemory`→`allocate/free` |
+| 술어는 질문처럼 | `checkForCycle`→`hasCycle` · `checkCollision`→`overlapsBox` · `checkCommandPattern`→`wasCommandPatternTriggered` · `inBounds`→`isInBounds` · `ignoreCaseKeys`→`ignoresCaseKeys` · void 로 단언하던 `checkRegistryMutableNow`→`assertRegistryMutableNow` |
+| `on*` 은 알림, 등록은 `register*` | `GameStrings::onLanguageChanged`(핸들을 돌려주고 있었다)→`registerLanguageChangedCallback` |
+
+약어는 **이 저장소의 타입 이름이 줄여 쓸 때만** 남겼다. `XmlNode::attr()` 은 옆이 `XmlAttribute` 라서
+틀렸고(`attribute()`), `TagQueryExpr::…Expr` 과 `ShaderEngineCbMember` 의 `…Cb…` 는 타입이 같은 약어를
+들고 있으므로 그대로 둔다. `Cb`·`Fbo` 를 풀어 쓰자는 제안은 이 기준에서 기각이다.
+
+**곁가지로 죽은 코드 하나.** `CommandLineManager::startup()` 은 선언만 있고 정의도 호출도 없는
+`initialize()` 의 별칭이었다 — 지웠다.
+
+**그리고 목록 대신 자리로 못박았다 — `Scripts/lint/gate/CheckFunctionVocabulary.py`.**
+헤더 479개를 훑어 (1) 대문자 달리기, (2) 금지 동사, (3) `check*` 술어를 잡는다. **호출부는 보지 않는다** —
+보면 우리 것이 아닌 이름(`vkGetPhysicalDeviceSurfaceCapabilitiesKHR`)을 잡는다. 대문자 규칙은 "셋 이상은
+어디서든, 둘은 이름 끝에서" 다: `bindVector2DCallback`(`D`+`Callback`)과 `isVSyncEnabled`(`V`+`Sync`)를
+오탐하지 않으면서 `queryAABB`·`updateUI`·`getGLTextureName` 을 전부 잡는 경계다.
+
+> **게이트가 만들자마자 셋을 더 잡았다** — 내가 손으로 훑어 놓친 `Process::cleanup` ·
+> `ImGuiEditor::cleanupPartialInitialization` · `TransientAttachmentPool::alloc`. 세는 것은 사람이 아니라
+> 기계가 해야 한다는 증거가 그 자리에서 나왔다.
+
+**덤으로 찾은 진짜 버그 하나 — `bake.stamp` 가 CRLF 면 트리 전체가 "낡음" 이었다.**
+`ShaderBakeStampTest.FreshnessIsJudgedByContentNotFileTime` 이 실패해서 파고들었더니 내 변경과 무관했다.
+베이커는 `'\n'` 으로 쓰지만 이 파일은 저장소가 추적하므로 `core.autocrlf` 가 켜진 윈도우에서 **CRLF 로
+체크아웃된다.** `readBakeStamp` 가 `'\n'` 으로만 쪼개서 경로 키 끝에 `'\r'` 이 붙었고, 그러면 모든 조회가
+빗나가 `_bHeadersCurrent=false` 가 된다 — **갓 클론한 트리가 통째로 재베이크 대상**이었다. 키에서 `'\r'`
+을 떼는 것으로 고쳤다. (`Resource/engine/shaders/bin/*/bake.stamp` 넷 모두 CRLF 다.)
+
+**셰이더 주석에 남은 옛 이름도 같이 고쳤다.** `.hlsl`/`.hlsli` 여섯 파일이 C++ 쪽 `bindComputeUAV` ·
+`registerBindlessTextureUAV` 를 바인딩 계약으로 적어 두고 있었다 — 이름이 바뀌면 그 주석은 **없는 함수를
+가리킨다.** 고치고 `App.exe --bake-shaders` 로 다시 구웠다. 주석은 코드 생성에 영향이 없어 **바이너리
+344개는 전부 바이트가 같고, 바뀐 것은 `bake.stamp` 여덟 개뿐**이다(도메인 둘 × 백엔드 넷).
+
+**트리에 남아 있던 경고 셋도 없앴다 — 둘 다 "복사본이 생긴다" 는 같은 이야기였다.**
+`RunBuildWarnings.py` 로 전수 조사했더니(빌드 로그 grep 은 이미 컴파일된 TU 를 못 본다) 딱 셋이었다.
+
+- `AssetHotReload.cpp` 의 `-Wnrvo` — `resolveWatchExtensions` 가 **이름이 다른 지역 변수 둘을 각각
+  return** 했다. 그러면 NRVO 가 죽어 한쪽이 반드시 복사된다. `const` 를 떼는 것으로는 안 없어진다
+  (실측했다 — 이 경고는 move 가 아니라 **elision** 을 본다). 두 갈래 모두 같은 객체를 채워 돌려주게
+  고쳤고, 덤으로 원래 있던 복사 한 번이 move 가 됐다.
+- `TestGameObjectMocks.h` 의 `-Wunique-object-duplication` 둘 — 풀 재사용 검증용 카운터
+  `s_ctorCount`/`s_dtorCount` 를 헤더에서 `inline` 으로 **정의**하고 있었다. EngineTest 는 Engine.dll 과
+  링크하므로 사본이 생길 수 있고, 그러면 생성자가 올린 수를 소멸자가 **다른 사본에서** 내린다 —
+  테스트가 조용히 거짓말을 하게 된다. 정의를 `TestGameObjectMocks.cpp` 한 곳으로 옮겼다
+  (`ComponentPoolTest` 셋 그대로 통과).
+
+**확인**: `RunBuildWarnings.py` 전수 **경고 0건** — Debug 510 TU · Release 510 TU · Shipping 379 TU.
+`Ninja-Debug` 린트 ctest **11/11**(`CheckFunctionVocabulary` 추가) · nogpu **5/5** ·
+`CheckLintsAreAlive` 조각 7 → **11**(새 게이트가 넷을 든다) · `Ninja-Release`·`Ninja-Shipping` 빌드
+오류·경고 0 과 Shipping nogpu 5/5.
+
+> **경고를 재려면 `Ninja-Release` 를 먼저 빌드해야 한다.** configure 만 해 두면 리플렉션 생성 헤더
+> (`FlagOps.gen.h` 등)가 없어서 `-fsyntax-only` 가 **경고가 아니라 오류**를 32건 쏟는다
+> (`invalid operands to binary expression ('sw::RHIBufferUsage' and …)`). 코드 문제가 아니다.
+
+> **`RenderPassGpuTest.AmbientOcclusionReachesBloom` 은 이 PC 에서 멈춘다 — 이 작업과 무관하다.**
+> `git stash` 로 HEAD 를 그대로 다시 빌드해 같은 자리에서 같은 식으로 멈추는 것을 확인했다.
+> GPU 포함 전체 `EngineTest` 를 돌릴 때만 걸리므로 `-L nogpu` 는 영향이 없다. 원인은 따로 봐야 한다.
 
 ### 2026-09-14 (게이트가 하나 있었는데 실패할 수가 없었다 — 그리고 린트 폴더를 성격으로 갈랐다)
 
@@ -1244,7 +1318,7 @@ bUpToDate             = ( outMtime >= sourceMtime );   // ← 이 저장소에�
 `glClearBufferfv( GL_COLOR, 인덱스, … )` 로 바꿨다 — 드로우 버퍼 목록을 건드리지 않고 지운다.
 
 **(2) `R16G16B16A16_FLOAT` 를 `GL_FLOAT` 로 매핑하고 있었다.** GL 이 픽셀당 16 바이트를 읽고 쓰는데
-엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 정본) — 되읽기가 버퍼를 두 배로
+엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 정본) — 되읽기가 버퍼를 두 배로
 넘겨 써서 **그냥 죽었다**(세그폴트). HDR 첨부를 CPU 로 읽는 경로(스크린샷 · 렌더 타깃 패널)가
 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다. `GL_HALF_FLOAT` 로 고쳤다.
 
@@ -2098,7 +2172,7 @@ DX11 만 576줄 한 덩어리였다. "이 백엔드는 어떻게 초기화하나
 | --- | --- |
 | `D3D11RHIDeviceInit.cpp` | `initializeInternal` · `shutdownInternal` · `resize` · `bind/unbindGraphicsContext` |
 | `D3D11RHIDeviceSubmission.cpp` | `beginFrame` · `endFrame` · `waitIdle` · `createCommandList` · `register/unregisterCommandList` · `executeCommandList` |
-| `D3D11RHIDevice.cpp` | 생성·소멸 · 접근자 · `resolve/store` · `flushDebugMessages` · `ensureComputeRootConstantCB` |
+| `D3D11RHIDevice.cpp` | 생성·소멸 · 접근자 · `resolve/store` · `flushDebugMessages` · `ensureComputeRootConstantCb` |
 
 GL 이 컨텍스트 바인딩을 Init 에 두므로 DX11 도 같은 자리에 뒀다. 익명 네임스페이스의 상수도 쓰는 쪽을
 따라갔다 — `kDefaultNumerator` · `kDefaultDenomiator` 는 `initializeInternal` 만 쓰므로 Init 으로,
@@ -2301,7 +2375,7 @@ A/B (Release, 각 3회, `-gv_benchMeshVariants=8`, `fill` 평균 us):
 
 **대부분은 불일치가 아니라 서로 다른 뜻이다 — 그래서 건드리지 않았다.** `create`(소유를 만들어 돌려준다) ·
 `make`(값을 조립한다) · `build`(여러 입력에서 짓는다)는 STL 도 구분한다. `free*` 는 전부 할당자와 짝이고
-(`freeMemory` · `freeSrvDescriptor` · `freeNode`), `unload*` 는 전부 `load*` 와 짝이다. `was*` 47 건은
+(`free` · `freeSrvDescriptor` · `freeNode`), `unload*` 는 전부 `load*` 와 짝이다. `was*` 47 건은
 입력 엣지 질의(`wasPressed` 류)로 `is*` 와 다른 것을 묻는다.
 
 **진짜 불일치는 둘이었다.**
@@ -2893,7 +2967,7 @@ X 빨강 · Y 초록 · Z 파랑이다. 축 색을 `EditorViewportClientInternal
 **`TextureWatcher` 를 지웠다.** 프로덕션 호출부가 0인 두 번째 감시자였고, 그 베이크 로직이
 이제 `AssetHotReload` 안에 있다. 감시자는 하나다.
 
-**복합 접미사가 한 번도 안 걸리고 있었다.** `ReloadFileManager::extensionAllowed` 가
+**복합 접미사가 한 번도 안 걸리고 있었다.** `ReloadFileManager::isExtensionAllowed` 가
 `FileUtil::hasExtension`(마지막 점 뒤만 본다)을 써서 `.prefab.xml` 이 영영 매칭되지 않았다.
 접미사 비교로 바꿨다 — 프리팹 리로드가 등록은 되는데 이벤트를 못 받던 원인이다.
 
@@ -3046,7 +3120,7 @@ App 0건, 테스트의 17건은 전부 `ScopedLogSuppressor` 가 일부러 끈 �
 SWGame 은 실행 중 소스 수정 → 컴파일 → 스왑 → 새 코드 실행 → 씬 상태 복원까지 전부 확인했다.
 에디터 모듈은 컴파일과 스왑은 성공하는데 **3회 중 2회 영구 정지**했다.
 
-원인은 draw 스냅샷 프로토콜의 빠진 전이다. `_inFlightDrawSlot` 은 `updateUI`(UI 스레드)가
+원인은 draw 스냅샷 프로토콜의 빠진 전이다. `_inFlightDrawSlot` 은 `updateUi`(UI 스레드)가
 publish 하면서 **세우고** `postPresent`(렌더 스레드)만 **푼다**. 리로드 경로는
 `drainRenderWorkers()` 로 렌더 워커를 먼저 재우므로 풀 주체가 사라지는데,
 `waitForDrawSnapshotIdle()` 은 타임아웃도 탈출 조건도 없는 spin 이다. 게임 모듈 리로드가 멀쩡했던
@@ -3510,7 +3584,7 @@ ILogSink  ← 전역 파사드 (그대로)
   버퍼에 담고 `IRHICommandList::drawIndexedIndirect` 가 읽는다. 인자 구조체는
   `RHIDrawIndexedIndirectCommand`(`RHITypes.h`)다.
 - `sw::BindlessTable` — **없다.** 인덱스 발급은 `IRHIResource` 가 직접 한다
-  (`registerBindlessTexture` / `registerBindlessResource` / `registerBindlessUAV`, 해제는 짝을 맞춰야 한다).
+  (`registerBindlessTexture` / `registerBindlessResource` / `registerBindlessUav`, 해제는 짝을 맞춰야 한다).
 - `sw::ComputePass` 는 있지만 **API 가 달랐다.** 문서는 `initialize(device, pso)` + `dispatch(ctx,64,1,1)`
   였는데 실제는 `setComputePipelineState` · `bindUav` · `bindSrv` · `dispatch(pCmdList, ComputeDispatchParams)` 다.
   → **2026-09-12 에 클래스 자체를 지웠다.** 문서를 헤더에 맞춰 고쳤지만 그 헤더를 만드는 곳이 저장소에 하나도
@@ -3673,7 +3747,7 @@ ILogSink  ← 전역 파사드 (그대로)
 - `onTick` 16 개 전부 공유 상태·정적·매니저 접근 없음 — CLAUDE.md 함정 #1 은 지켜지고 있다.
 - `attachToParent` 호출부 어디도 tick 경로가 아니다.
 - `ResourceUtil` 경로 캐시는 `setSearchPriority` 끝에서 무효화된다.
-- `XmlNode::attrInt/attrFloat` 의 반환값 무시는 fallback 선주입 관용구라 정상. `Archive::readBytes` 는
+- `XmlNode::attributeInt/attributeFloat` 의 반환값 무시는 fallback 선주입 관용구라 정상. `Archive::readBytes` 는
   sticky `isError()` 가 받는다.
 - 로그의 `%s` 는 지원되는 printf 형이다(`%#` 관례와의 편차일 뿐, 버그 아님).
 
@@ -5302,7 +5376,7 @@ current 로 가질 수 있고, 렌더 워커가 프레임마다 쥐고 놓는다
 - **프레임당 에디터 상태 래치 — `ModuleFrameState`.** `isPlaying`/`isPaused`/`getGameViewport` 를
   프레임 안에서 8~10회 따로 묻던 것을(고정 스텝마다 DLL 경계를 다시 넘었다) 두 지점 래치로 바꿨다.
   **래치 지점이 두 개인 것은 의도다**: 게임플레이 활성 여부는 `beginFrame`(게임 업데이트 이전),
-  게임 뷰포트와 씬 틱 여부는 `updateEditorUI`(에디터가 입력을 처리한 이후)다. 후자를 프레임 앞으로
+  게임 뷰포트와 씬 틱 여부는 `updateEditorUi`(에디터가 입력을 처리한 이후)다. 후자를 프레임 앞으로
   옮기면 **에디터 Step 한 칸이 틱 없이 소비**되어 아무 일도 일어나지 않는다 — `ImGuiEditor::isPaused`
   가 `paused && !pendingStep` 이기 때문이다. 옮기려면 이 사실부터 확인할 것.
 - **`ModuleHost::suspendModules( ModuleScope, bReleaseApiTable )` 로 4경로 통합.**

@@ -45,9 +45,9 @@ namespace sw
         return _tags.hasTag( tag, bExactMatch );
     }
 
-    bool TagComponent::matchTags( const TagContainer& required, const TagContainer& forbidden ) const
+    bool TagComponent::matchesTags( const TagContainer& required, const TagContainer& forbidden ) const
     {
-        return _tags.matchTags( required, forbidden );
+        return _tags.matchesTags( required, forbidden );
     }
 
     bool TagComponent::matchesQuery( const TagQuery& query ) const

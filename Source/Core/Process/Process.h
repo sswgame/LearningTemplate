@@ -87,7 +87,7 @@ namespace sw
         static int32 execute( string_view command, const ProcessOptions& options = {}, ProcessOutputDelegate onOutput = {} );
 
     private:
-        void cleanup();
+        void shutdown();
 
     private:
         void*  _pNativeHandle;

@@ -40,7 +40,7 @@ namespace sw
                     return;
 
                 out.append( '<' ).append( pNodeName );
-                for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
+                for ( XmlAttribute attr = node.firstAttribute(); attr; attr = attr.next() )
                 {
                     out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( XmlDocument::escapeString( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
                 }
@@ -111,7 +111,7 @@ namespace sw
             return false;
         }
 
-        const utf8* pSceneName = root.attr( "name" );
+        const utf8* pSceneName = root.attribute( "name" );
         if ( pSceneName == nullptr )
             pSceneName = root.childText( SceneDocumentInternal::kName );
 
@@ -128,19 +128,19 @@ namespace sw
                   entityNode         = entityNode.next( SceneDocumentInternal::kEntity ) )
             {
                 EntityNode  node{};
-                const utf8* pName = entityNode.attr( SceneDocumentInternal::kName );
+                const utf8* pName = entityNode.attribute( SceneDocumentInternal::kName );
                 if ( pName == nullptr )
                     pName = entityNode.childText( SceneDocumentInternal::kName );
                 if ( pName != nullptr )
                     node._name = pName;
 
-                const utf8* pPrefabGuid = entityNode.attr( "prefabGuid" );
+                const utf8* pPrefabGuid = entityNode.attribute( "prefabGuid" );
                 if ( pPrefabGuid == nullptr )
                     pPrefabGuid = entityNode.childText( "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
 
-                const utf8* pPrefab = entityNode.attr( SceneDocumentInternal::kPrefab );
+                const utf8* pPrefab = entityNode.attribute( SceneDocumentInternal::kPrefab );
                 if ( pPrefab == nullptr )
                     pPrefab = entityNode.childText( SceneDocumentInternal::kPrefab );
                 if ( pPrefab != nullptr )
@@ -182,25 +182,25 @@ namespace sw
     {
         XmlDocument xmlDoc;
         XmlNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
-        root.appendAttr( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
-        root.appendAttr( "name", _name );
+        root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
+        root.appendAttribute( "name", _name );
         XmlNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
         for ( const EntityNode& entity : _listEntityNode )
         {
             XmlNode entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            entityNode.appendAttr( SceneDocumentInternal::kName, entity._name );
+            entityNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
-                entityNode.appendAttr( SceneDocumentInternal::kPrefab, entity._prefab );
+                entityNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
             if ( entity._prefabGuid.empty() == false )
             {
-                entityNode.appendAttr( "prefabGuid", entity._prefabGuid );
+                entityNode.appendAttribute( "prefabGuid", entity._prefabGuid );
             }
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
                 const Uuid* pGuid = engine::getResourceManager().getAssetDatabase().getGuid( entity._prefab );
                 if ( pGuid != nullptr && pGuid->isNull() == false )
-                    entityNode.appendAttr( "prefabGuid", pGuid->toString() );
+                    entityNode.appendAttribute( "prefabGuid", pGuid->toString() );
             }
             if ( entity._embeddedXml.empty() == false )
             {

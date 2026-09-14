@@ -378,7 +378,7 @@ namespace sw
         // 3단계: 64비트 SWAR 기반 고속 UTF-8 검증 및 Non-UTF8(ANSI/CP949) 한글 안전 자동 변환
         string      fallbackUtf8;
         const utf8* pFormattedBuffer = formattedBuffer.c_str();
-        if ( StringUtil::isValidUTF8( pFormattedBuffer ) == false )
+        if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
         {
             fallbackUtf8     = StringUtil::localeToUtf8( pFormattedBuffer );
             pFormattedBuffer = fallbackUtf8.c_str();

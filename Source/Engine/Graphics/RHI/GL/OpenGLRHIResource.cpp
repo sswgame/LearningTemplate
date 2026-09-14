@@ -96,7 +96,7 @@ namespace sw
                 case RHIFormat::B8G8R8A8_UNORM:
                     return GL_UNSIGNED_BYTE;
                 // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데
-                // 엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 정본) — 되읽기가
+                // 엔진이 잡아 둔 버퍼는 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 정본) — 되읽기가
                 // 버퍼를 두 배로 넘겨 써서 **그냥 죽었다**. HDR 첨부를 CPU 로 읽는 경로(스크린샷·
                 // 렌더 타깃 패널)가 생기기 전에는 이 포맷을 되읽을 일이 없어 드러나지 않았다.
                 case RHIFormat::R16G16B16A16_FLOAT:
@@ -120,7 +120,7 @@ namespace sw
         }
     } // namespace
 
-    uint32 OpenGLRHIDevice::getGLTextureName( RHITextureHandle texture ) const
+    uint32 OpenGLRHIDevice::getGlTextureName( RHITextureHandle texture ) const
     {
         if ( texture == 0 )
             return 0;
@@ -309,7 +309,7 @@ namespace sw
         }
 
         ScopedOpenGLContext ctxScope( _pDevice );
-        const bool          bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
+        const bool          bCompressed = isRhiFormatBlockCompressed( pRecord->_format );
         const GLenum        glInternal  = toGlInternalFormat( pRecord->_format );
         const GLenum        glFormat    = toGlFormat( pRecord->_format );
         const GLenum        glType      = toGlType( pRecord->_format );
@@ -350,14 +350,14 @@ namespace sw
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
             return false;
-        if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        if ( computeRhiTextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
         ScopedOpenGLContext ctxScope( _pDevice );
         outBytes.assign( outLayout._sizeBytes, 0 );
         glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
         glPixelStorei( GL_PACK_ALIGNMENT, 1 );
-        if ( isRHIFormatBlockCompressed( pRecord->_format ) )
+        if ( isRhiFormatBlockCompressed( pRecord->_format ) )
             glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
         else
             glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );

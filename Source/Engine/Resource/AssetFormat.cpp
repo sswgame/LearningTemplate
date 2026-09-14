@@ -28,11 +28,11 @@ namespace sw
     {
         if ( root.isValid() == false )
             return AssetFormatVersions::kUnversioned;
-        const utf8* pAttr = root.attr( kXmlAttrName );
+        const utf8* pAttr = root.attribute( kXmlAttrName );
         if ( StringUtil::isNullOrEmpty( pAttr ) == false )
         {
             uint64 ver{ AssetFormatVersions::kUnversioned };
-            StringUtil::parseUInt64( pAttr, ver, 10 );
+            StringUtil::parseUint64( pAttr, ver, 10 );
             return static_cast<AssetFormatVersion>( ver );
         }
         return AssetFormatVersions::kUnversioned;
@@ -45,12 +45,12 @@ namespace sw
 
         const string versionStr = sw::to_string( static_cast<uint32>( version ) );
 
-        if ( root.attr( kXmlAttrName ) != nullptr )
+        if ( root.attribute( kXmlAttrName ) != nullptr )
         {
-            root.setAttr( kXmlAttrName, versionStr.c_str() );
+            root.setAttribute( kXmlAttrName, versionStr.c_str() );
             return;
         }
-        root.appendAttr( kXmlAttrName, versionStr.c_str() );
+        root.appendAttribute( kXmlAttrName, versionStr.c_str() );
     }
 
     AssetFormatVersion AssetFormatRegistry::inferXmlVersion( AssetKind kind, XmlNode root ) const

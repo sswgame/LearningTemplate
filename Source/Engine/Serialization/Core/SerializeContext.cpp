@@ -80,7 +80,7 @@ namespace sw
                 else if constexpr ( std::is_unsigned_v<T> )
                 {
                     uint64 val{ 0 };
-                    if ( StringUtil::parseUInt64( trimmed, val, 10 ) == false )
+                    if ( StringUtil::parseUint64( trimmed, val, 10 ) == false )
                         return false;
                     outValue = static_cast<T>( val );
                 }
@@ -375,7 +375,7 @@ namespace sw
             auto packedRead = []( void* pPtr, string_view strView ) -> bool
             {
                 uint64 packed{ 0 };
-                if ( StringUtil::parseUInt64( StringUtil::trim( strView ), packed, 10 ) == false )
+                if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
                     return false;
                 *static_cast<ObjectHandle*>( pPtr ) = ObjectHandle::fromPacked( packed );
                 return true;
@@ -399,8 +399,8 @@ namespace sw
                     return false;
                 uint64 objectId{ 0 };
                 uint64 componentId{ 0 };
-                if ( StringUtil::parseUInt64( trimmed.substr( 0, sep ), objectId, 10 ) == false ||
-                     StringUtil::parseUInt64( trimmed.substr( sep + 1 ), componentId, 10 ) == false )
+                if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectId, 10 ) == false ||
+                     StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentId, 10 ) == false )
                     return false;
                 *static_cast<ComponentHandle*>( pPtr ) =
                     ComponentHandle::makeOwned( objectId, componentId );

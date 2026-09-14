@@ -4,7 +4,7 @@
 문자열, 로그, 파일, 델리게이트, 컨테이너 래퍼, 동시성, 메모리 진단이 여기 있습니다. `Handle/`은 없습니다.
 
 ## 디렉터리
-- **Memory/**: `alignedAlloc`, `LinearAllocator`, `FrameArenaAllocator`(+ `FrameDoubleBuffer`), `MemoryProfiler`(누수 검사 포함), `CallStackCapture`
+- **Memory/**: `allocateAligned`, `LinearAllocator`, `FrameArenaAllocator`(+ `FrameDoubleBuffer`), `MemoryProfiler`(누수 검사 포함), `CallStackCapture`
 - **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `DeadlockDetector`, `DataRaceDetector`
 - **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러)
 - **Container/**: `DynamicBitset` · **String/** · **File/** · **Event/** · **Delegate/**

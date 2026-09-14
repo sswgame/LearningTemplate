@@ -139,8 +139,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
     SW_EXPECT_TRUE( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
                                                                                           sw::AssetFormatVersions::kMaterial, &source ) );
     SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
-    SW_EXPECT_TRUE( root.attr( "formatVersion" ) != nullptr );
-    SW_EXPECT_STREQ( "0", root.attr( "formatVersion" ) );
+    SW_EXPECT_TRUE( root.attribute( "formatVersion" ) != nullptr );
+    SW_EXPECT_STREQ( "0", root.attribute( "formatVersion" ) );
 
     const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_current_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),

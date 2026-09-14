@@ -586,7 +586,7 @@ namespace sw
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
             return false;
-        if ( computeRHITextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        if ( computeRhiTextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
         const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( outLayout._sizeBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );

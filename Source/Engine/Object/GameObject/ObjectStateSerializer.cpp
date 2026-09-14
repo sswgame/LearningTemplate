@@ -71,7 +71,7 @@ namespace sw
                 }
 
                 uint64 tagId{ 0 };
-                if ( StringUtil::parseUInt64( text, tagId, 10 ) == false )
+                if ( StringUtil::parseUint64( text, tagId, 10 ) == false )
                     return false;
                 outTag._id = tagId;
                 return outTag.isValid();

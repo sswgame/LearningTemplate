@@ -44,7 +44,7 @@ namespace sw
         string rootNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
 
         string rel;
-        if ( FileUtil::makePathRelative( rootNorm, absNorm, rel ) == false )
+        if ( FileUtil::makeRelativePath( rootNorm, absNorm, rel ) == false )
         {
             rel.clear();
             return rel;

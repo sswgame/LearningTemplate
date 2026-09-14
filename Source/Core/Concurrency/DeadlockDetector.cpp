@@ -81,9 +81,9 @@ namespace sw
         state._waitingCallStack = currentStack;
 
         // 순환 대기 체인 발생 여부 실시간 검사
-        if ( checkForCycle( tid, pLock ) )
+        if ( hasCycle( tid, pLock ) )
         {
-            // checkForCycle 내부에서 dumpDeadlock()이 호출되고 중단됩니다.
+            // hasCycle 내부에서 dumpDeadlock()이 호출되고 중단됩니다.
         }
     }
 
@@ -130,7 +130,7 @@ namespace sw
     /**
      * @brief Wait-For Graph에서 시작 스레드부터 대기 체인을 따라가며 순환(Cycle) 여부를 판정합니다.
      */
-    bool DeadlockDetector::checkForCycle( std::thread::id startThreadId, void* pLockRequested )
+    bool DeadlockDetector::hasCycle( std::thread::id startThreadId, void* pLockRequested )
     {
         vector<std::thread::id> listPath;
         std::thread::id         currentThread = startThreadId;

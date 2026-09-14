@@ -20,7 +20,7 @@ namespace sw::editor
             static void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
             {
                 ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
-                if ( pSelf == nullptr || pSelf->allocSrvDescriptor( pOutCpu, pOutGpu ) == false )
+                if ( pSelf == nullptr || pSelf->allocateSrvDescriptor( pOutCpu, pOutGpu ) == false )
                 {
                     pOutCpu->ptr = 0;
                     pOutGpu->ptr = 0;
@@ -150,7 +150,7 @@ namespace sw::editor
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( allocSrvDescriptor( &cpuHandle, &gpuHandle ) == false )
+        if ( allocateSrvDescriptor( &cpuHandle, &gpuHandle ) == false )
             return nullptr;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -188,7 +188,7 @@ namespace sw::editor
         freeSrvDescriptor( cpuHandle, gpuHandle );
     }
 
-    bool ImGuiDX12RendererBackend::allocSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
+    bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
     {
         if ( _d3d12SrvHeap == nullptr || pOutCpu == nullptr || pOutGpu == nullptr )
             return false;

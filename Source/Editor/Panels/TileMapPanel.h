@@ -68,7 +68,7 @@ namespace sw::editor
         /** @brief 가장자리 워프를 페인트합니다. */
         void paintEdgeWarp( int32 edge );
         /** @brief 좌표가 맵 범위 안인지 여부를 반환합니다. */
-        bool inBounds( int32 x, int32 y ) const;
+        bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
         size_t indexOf( int32 x, int32 y ) const;
 

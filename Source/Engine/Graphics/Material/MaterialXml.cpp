@@ -44,7 +44,7 @@ namespace sw
                     if ( valueText.empty() == false )
                     {
                         uint64 val{ 0 };
-                        StringUtil::parseUInt64( valueText, val, 0 );
+                        StringUtil::parseUint64( valueText, val, 0 );
                         entry._value = static_cast<uint32>( val );
                     }
                     if ( entry._name.empty() == false )
@@ -92,7 +92,7 @@ namespace sw
         if ( node.isValid() == false || pName == nullptr )
             return {};
 
-        const utf8* pAttr = node.attr( pName, false );
+        const utf8* pAttr = node.attribute( pName, false );
         if ( pAttr != nullptr )
             return StringUtil::trim( pAttr );
         const utf8* pText = node.childText( pName, false );
@@ -148,16 +148,16 @@ namespace sw
         return prop;
     }
 
-    void MaterialUtil::appendAttr( XmlNode parent, const utf8* pName, string_view value )
+    void MaterialUtil::appendAttribute( XmlNode parent, const utf8* pName, string_view value )
     {
         if ( parent.isValid() == false || pName == nullptr || value.empty() )
             return;
-        parent.appendAttr( pName, value );
+        parent.appendAttribute( pName, value );
     }
 
     void MaterialUtil::appendBoolAttr( XmlNode parent, const utf8* pName, bool value )
     {
-        parent.appendAttr( pName, value );
+        parent.appendAttribute( pName, value );
     }
 
     RHIBlendMode MaterialUtil::parseBlendMode( string_view modeName )
@@ -206,7 +206,7 @@ namespace sw
         if ( lod.empty() == false )
         {
             uint64 lodVal{ 0 };
-            StringUtil::parseUInt64( lod, lodVal, 10 );
+            StringUtil::parseUint64( lod, lodVal, 10 );
             out._shaderLOD = static_cast<uint32>( lodVal );
         }
         const string usage = MaterialUtil::fieldText( perm, "usage" );
@@ -257,12 +257,12 @@ namespace sw
     void MaterialUtil::appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm )
     {
         XmlNode node = root.appendChild( "_permutations" );
-        MaterialUtil::appendAttr( node, "quality", MaterialUtil::qualityToString( perm._quality ) );
-        node.appendAttr( "shaderLOD", perm._shaderLOD );
+        MaterialUtil::appendAttribute( node, "quality", MaterialUtil::qualityToString( perm._quality ) );
+        node.appendAttribute( "shaderLOD", perm._shaderLOD );
         {
             const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
             const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( perm._usage ) ) : nullptr;
-            MaterialUtil::appendAttr( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
+            MaterialUtil::appendAttribute( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
         }
         MaterialXmlInternal::appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
 
@@ -272,10 +272,10 @@ namespace sw
             for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
             {
                 XmlNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttr( item, "name", entry._name );
-                MaterialUtil::appendAttr( item, "keyword", entry._keyword );
+                MaterialUtil::appendAttribute( item, "name", entry._name );
+                MaterialUtil::appendAttribute( item, "keyword", entry._keyword );
                 if ( entry._keywordOff.empty() == false )
-                    MaterialUtil::appendAttr( item, "keywordOff", entry._keywordOff );
+                    MaterialUtil::appendAttribute( item, "keywordOff", entry._keywordOff );
                 MaterialUtil::appendBoolAttr( item, "bEnabled", entry._bEnabled );
                 MaterialUtil::appendBoolAttr( item, "bShaderFeature", entry._bShaderFeature );
             }
@@ -287,8 +287,8 @@ namespace sw
             for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
             {
                 XmlNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttr( item, "name", mc._name );
-                MaterialUtil::appendAttr( item, "selected", mc._selected );
+                MaterialUtil::appendAttribute( item, "name", mc._name );
+                MaterialUtil::appendAttribute( item, "selected", mc._selected );
                 MaterialXmlInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }
@@ -344,9 +344,9 @@ namespace sw
         XmlNode     root = doc.appendRoot( "MaterialDesc" );
 
         engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kMaterial );
-        MaterialUtil::appendAttr( root, "name", _desc._name );
-        MaterialUtil::appendAttr( root, "shaderPath", _desc._shaderPath );
-        MaterialUtil::appendAttr( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
+        MaterialUtil::appendAttribute( root, "name", _desc._name );
+        MaterialUtil::appendAttribute( root, "shaderPath", _desc._shaderPath );
+        MaterialUtil::appendAttribute( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
 
         XmlNode props = root.appendChild( "_properties" );
 
@@ -354,30 +354,30 @@ namespace sw
         {
             XmlNode item = props.appendChild( "item" );
 
-            MaterialUtil::appendAttr( item, "name", prop._name );
-            MaterialUtil::appendAttr( item, "type", MaterialUtil::typeToString( prop._type ) );
+            MaterialUtil::appendAttribute( item, "name", prop._name );
+            MaterialUtil::appendAttribute( item, "type", MaterialUtil::typeToString( prop._type ) );
             if ( prop._shaderType != MaterialPropertyType::Unknown )
-                MaterialUtil::appendAttr( item, "shaderType", MaterialUtil::typeToString( prop._shaderType ) );
+                MaterialUtil::appendAttribute( item, "shaderType", MaterialUtil::typeToString( prop._shaderType ) );
             if ( prop._defaultValue.empty() == false )
-                MaterialUtil::appendAttr( item, "defaultValue", prop._defaultValue );
+                MaterialUtil::appendAttribute( item, "defaultValue", prop._defaultValue );
             if ( prop._value.empty() == false && prop._value != prop._defaultValue )
-                MaterialUtil::appendAttr( item, "value", prop._value );
+                MaterialUtil::appendAttribute( item, "value", prop._value );
             if ( prop._assetPath.empty() == false )
-                MaterialUtil::appendAttr( item, "assetPath", prop._assetPath );
+                MaterialUtil::appendAttribute( item, "assetPath", prop._assetPath );
             if ( prop._enumType.empty() == false )
-                MaterialUtil::appendAttr( item, "enumType", prop._enumType );
+                MaterialUtil::appendAttribute( item, "enumType", prop._enumType );
             if ( prop._displayName.empty() == false )
-                MaterialUtil::appendAttr( item, "displayName", prop._displayName );
+                MaterialUtil::appendAttribute( item, "displayName", prop._displayName );
             if ( prop._group.empty() == false )
-                MaterialUtil::appendAttr( item, "group", prop._group );
+                MaterialUtil::appendAttribute( item, "group", prop._group );
             if ( prop._tooltip.empty() == false )
-                MaterialUtil::appendAttr( item, "tooltip", prop._tooltip );
+                MaterialUtil::appendAttribute( item, "tooltip", prop._tooltip );
             if ( prop._shaderKeyword.empty() == false )
-                MaterialUtil::appendAttr( item, "shaderKeyword", prop._shaderKeyword );
+                MaterialUtil::appendAttribute( item, "shaderKeyword", prop._shaderKeyword );
             if ( prop._type == MaterialPropertyType::Range )
             {
-                item.appendAttr( "min", prop._min );
-                item.appendAttr( "max", prop._max );
+                item.appendAttribute( "min", prop._min );
+                item.appendAttribute( "max", prop._max );
             }
             if ( prop._type == MaterialPropertyType::Color )
             {
@@ -397,8 +397,8 @@ namespace sw
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
                 {
                     XmlNode eItem = list.appendChild( "item" );
-                    MaterialUtil::appendAttr( eItem, "name", enumEntry._name );
-                    eItem.appendAttr( "value", enumEntry._value );
+                    MaterialUtil::appendAttribute( eItem, "name", enumEntry._name );
+                    eItem.appendAttribute( "value", enumEntry._value );
                 }
             }
         }

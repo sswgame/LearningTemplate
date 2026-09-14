@@ -30,7 +30,7 @@ namespace sw::editor
     {
     }
 
-    void EditorDockLayout::setupPersistencePaths()
+    void EditorDockLayout::initializePersistencePaths()
     {
         _imguiIniPath.clear();
         _windowsIniPath.clear();

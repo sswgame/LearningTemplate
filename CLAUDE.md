@@ -13,9 +13,10 @@ same commit as the work it describes.
 
 **Read [AGENTS.md](AGENTS.md) before writing any C++, CMake, or Python in this repo.** It is the
 authoritative rule set for naming (`_camelCase` members, `p`/`pp` pointer prefixes, `list`/`map`/`arr`/`unique`
-container prefixes with **singular** names, `out`/`pOut` parameter prefixes), include ordering, header
-declaration order, constructor initialization, and branch style. `.cursorrules` / `GEMINI.md` are Korean
-translations of the same rules with extra examples; `docs/04_CodingGuidelines.md` expands on them.
+container prefixes with **singular** names, `out`/`pOut` parameter prefixes), function-name vocabulary
+(acronyms are camelCase words; one verb per concept; predicates read as questions), include ordering,
+header declaration order, constructor initialization, and branch style.
+`docs/04_CodingGuidelines.md` is the Korean expansion of the same rules with extra examples.
 The rules are machine-enforced — see Linting below.
 
 Documentation and code comments in this repo are written in Korean (`/** @brief */` above declarations,
@@ -91,6 +92,7 @@ py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
 py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--fix` to rewrite
 py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
+py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree

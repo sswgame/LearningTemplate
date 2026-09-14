@@ -10,7 +10,7 @@
  * 백엔드마다 다른 각도가 나오고, 정지·재개가 불가능해진다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 인스턴스 읽기·쓰기 버퍼는 u0(RW).
- * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUAV( instanceUav, 0 ).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUav( instanceUav, 0 ).
  */
 
 struct GpuInstance

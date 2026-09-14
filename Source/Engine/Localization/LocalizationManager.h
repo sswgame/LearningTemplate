@@ -72,7 +72,7 @@ namespace sw
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
          * @return 하나 이상의 언어 파일이 성공적으로 로드되고 설정되었는지 여부
          */
-        bool setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
+        bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         /** @brief 등록된 모든 언어 테이블을 단일 바이너리 로컬라이제이션 팩(LOC1) 파일로 저장합니다. */
         bool saveToBinaryPack( string_view filePath ) const;

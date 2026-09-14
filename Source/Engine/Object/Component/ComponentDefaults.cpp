@@ -185,7 +185,7 @@ namespace sw
             const utf8* pPropName = prop._name.c_str();
             if ( pPropName == nullptr )
                 return;
-            const utf8* pAttrVal = compNode.attr( pPropName );
+            const utf8* pAttrVal = compNode.attribute( pPropName );
             if ( pAttrVal == nullptr )
             {
                 for ( const hashed_string& alias : prop._listAlias )
@@ -193,7 +193,7 @@ namespace sw
                     const utf8* pAliasName = alias.c_str();
                     if ( pAliasName == nullptr )
                         continue;
-                    pAttrVal = compNode.attr( pAliasName );
+                    pAttrVal = compNode.attribute( pAliasName );
                     if ( pAttrVal != nullptr )
                         break;
                 }

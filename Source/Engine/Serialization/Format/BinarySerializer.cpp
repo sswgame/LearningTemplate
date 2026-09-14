@@ -60,7 +60,7 @@ namespace sw
 
                     if ( pTargetProp == nullptr )
                     {
-                        if ( ctx.allowUnknownProperties() )
+                        if ( ctx.allowsUnknownProperties() )
                         {
                             reader.skip( payloadSize );
                             continue;
@@ -563,7 +563,7 @@ namespace sw
         if ( bUseDense )
         {
             writer.write( PresenceMaskUtil::kModeDense );
-            writer.writeVarUInt( static_cast<uint64>( totalProps ) );
+            writer.writeVarUint( static_cast<uint64>( totalProps ) );
 
             const size_t               bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
             thread_local vector<uint8> t_bitmask;
@@ -579,7 +579,7 @@ namespace sw
             }
             for ( const auto& rec : t_listRecord )
             {
-                writer.writeVarUInt( static_cast<uint64>( rec._size ) );
+                writer.writeVarUint( static_cast<uint64>( rec._size ) );
                 if ( rec._size > 0 )
                     writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
             }
@@ -587,12 +587,12 @@ namespace sw
         else
         {
             writer.write( PresenceMaskUtil::kModeSparse );
-            writer.writeVarUInt( static_cast<uint64>( modCount ) );
+            writer.writeVarUint( static_cast<uint64>( modCount ) );
 
             for ( const auto& rec : t_listRecord )
             {
-                writer.writeVarUInt( static_cast<uint64>( rec._index ) );
-                writer.writeVarUInt( static_cast<uint64>( rec._size ) );
+                writer.writeVarUint( static_cast<uint64>( rec._index ) );
+                writer.writeVarUint( static_cast<uint64>( rec._size ) );
                 if ( rec._size > 0 )
                     writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
             }
@@ -630,7 +630,7 @@ namespace sw
         if ( modeByte == PresenceMaskUtil::kModeDense )
         {
             uint64 totalProps = 0;
-            if ( reader.readVarUInt( totalProps ) == false )
+            if ( reader.readVarUint( totalProps ) == false )
                 return false;
 
             const size_t  bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
@@ -648,7 +648,7 @@ namespace sw
                     continue;
 
                 uint64 payloadSize = 0;
-                if ( reader.readVarUInt( payloadSize ) == false )
+                if ( reader.readVarUint( payloadSize ) == false )
                     return false;
 
                 const size_t payloadStart = reader.getOffset();
@@ -688,17 +688,17 @@ namespace sw
         else if ( modeByte == PresenceMaskUtil::kModeSparse )
         {
             uint64 modCount = 0;
-            if ( reader.readVarUInt( modCount ) == false )
+            if ( reader.readVarUint( modCount ) == false )
                 return false;
 
             for ( uint64 modIndex = 0; modIndex < modCount; ++modIndex )
             {
                 uint64 propIndex = 0;
-                if ( reader.readVarUInt( propIndex ) == false )
+                if ( reader.readVarUint( propIndex ) == false )
                     return false;
 
                 uint64 payloadSize = 0;
-                if ( reader.readVarUInt( payloadSize ) == false )
+                if ( reader.readVarUint( payloadSize ) == false )
                     return false;
 
                 const size_t payloadStart = reader.getOffset();

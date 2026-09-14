@@ -119,8 +119,16 @@ namespace sw
                         pos                    = lineEnd;
 
                         const size_t space = line.find( ' ' );
-                        if ( space == 16 )
-                            info._mapHash.emplace( line.substr( space + 1 ), parseHex64( line.substr( 0, space ) ) );
+                        if ( space != 16 )
+                            continue;
+
+                        // 베이커는 '\n' 으로 쓰지만 이 파일은 저장소가 추적한다 — autocrlf 가 켜진 윈도우에서
+                        // 체크아웃하면 CRLF 로 내려오고, 그 '\r' 이 경로 키 끝에 붙으면 모든 조회가 빗나가
+                        // **갓 체크아웃한 트리가 통째로 "낡음"** 으로 판정된다(전부 다시 굽는다).
+                        string key = line.substr( space + 1 );
+                        if ( key.empty() == false && key.back() == '\r' )
+                            key.pop_back();
+                        info._mapHash.emplace( std::move( key ), parseHex64( line.substr( 0, space ) ) );
                     }
                 }
 

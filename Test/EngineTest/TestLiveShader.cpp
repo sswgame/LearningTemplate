@@ -123,7 +123,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     desc._stage        = sw::ShaderStage::Vertex;
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
 
-    const sw::ShaderCompileResult first = sw::ShaderCompiler::compileHLSL( desc );
+    const sw::ShaderCompileResult first = sw::ShaderCompiler::compileHlsl( desc );
     SW_ASSERT_TRUE( first._bSuccess );
     SW_ASSERT_FALSE( first._bytecode.empty() );
 
@@ -139,7 +139,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     }
 
     // 공유 헤더 타임스탬프가 얼어붙어 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
-    const sw::ShaderCompileResult stale = sw::ShaderCompiler::compileHLSL( desc );
+    const sw::ShaderCompileResult stale = sw::ShaderCompiler::compileHlsl( desc );
     SW_ASSERT_TRUE( stale._bSuccess );
     SW_EXPECT_TRUE( stale._bytecode == first._bytecode );
 
@@ -147,7 +147,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
     // 다시 컴파일된다.
     sw::ShaderBaker::invalidateSharedHeaderCache();
-    const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHLSL( desc );
+    const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHlsl( desc );
 
     SW_ASSERT_TRUE( reloaded._bSuccess );
     SW_EXPECT_TRUE( reloaded._bytecode != first._bytecode );

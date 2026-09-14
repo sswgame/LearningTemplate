@@ -23,7 +23,7 @@ namespace sw
     struct AnnotationApply
     {
         /** @brief `PREFIX;args` 에서 접두사 이후 인자 텍스트만 반환합니다. */
-        static string_view annotationArgText( string_view spelling, string_view prefix );
+        static string_view annotationArgumentText( string_view spelling, string_view prefix );
 
         /** @brief 따옴표를 존중하며 쉼표로 인자 토큰을 나눕니다. */
         static vector<string> splitAnnotationArgs( string_view args );

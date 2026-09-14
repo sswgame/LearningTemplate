@@ -362,7 +362,7 @@ namespace sw
         return _cachedWorldPosition;
     }
 
-    double3 SceneComponent::getWorldPositionLWC() const
+    double3 SceneComponent::getWorldPositionLwc() const
     {
         if ( _pManager == nullptr || _pManager->isParallelTransformReadOnly() == false )
             getWorldMatrix();
@@ -392,7 +392,7 @@ namespace sw
     float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const
     {
         const float4x4 worldMat      = getWorldMatrix();
-        const double3  relativePos64 = getWorldPositionLWC() - cameraWorldPos;
+        const double3  relativePos64 = getWorldPositionLwc() - cameraWorldPos;
         const float3   relativePos32( static_cast<float32>( relativePos64._x ),
                                       static_cast<float32>( relativePos64._y ),
                                       static_cast<float32>( relativePos64._z ) );

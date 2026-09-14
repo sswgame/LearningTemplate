@@ -32,7 +32,7 @@ namespace sw
 #endif
     }
 
-    void IRHIDevice::checkRegistryMutableNow( [[maybe_unused]] const utf8* pWhat ) const
+    void IRHIDevice::assertRegistryMutableNow( [[maybe_unused]] const utf8* pWhat ) const
     {
         // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를
         // 읽는다" 는 뜻이라 개발자가 그 자리에서 알아채야 하므로 디버거를 세운다.

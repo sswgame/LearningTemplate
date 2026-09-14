@@ -61,7 +61,7 @@ namespace sw
             for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
             {
                 if ( pOverflowMem != nullptr )
-                    Memory::freeMemory( pOverflowMem );
+                    Memory::free( pOverflowMem );
             }
             _arrListOverflowAllocation[currentAllocIdx].clear();
             _arrFrameAllocator[currentAllocIdx].reset();
@@ -109,7 +109,7 @@ namespace sw
             for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
             {
                 if ( pOverflowMem != nullptr )
-                    Memory::freeMemory( pOverflowMem );
+                    Memory::free( pOverflowMem );
             }
             _arrListOverflowAllocation[currentAllocIdx].clear();
             _arrFrameAllocator[currentAllocIdx].reset();
@@ -136,7 +136,7 @@ namespace sw
                 for ( void* pOverflowMem : _arrListOverflowAllocation[allocIndex] )
                 {
                     if ( pOverflowMem != nullptr )
-                        Memory::freeMemory( pOverflowMem );
+                        Memory::free( pOverflowMem );
                 }
                 _arrListOverflowAllocation[allocIndex].clear();
             }

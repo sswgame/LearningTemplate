@@ -150,7 +150,7 @@ namespace sw
             }
 #endif
 
-            if ( _bEnableValidationLayers == SW_TRUE && checkValidationLayerSupport() == false )
+            if ( _bEnableValidationLayers == SW_TRUE && supportsValidationLayer() == false )
             {
                 SW_LOG_INFO( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found (Validation Layers: DISABLED)" );
                 _bEnableValidationLayers = SW_FALSE;
@@ -162,7 +162,7 @@ namespace sw
             if ( createInstance() == false )
                 return false;
 
-            setupDebugMessenger();
+            createDebugMessenger();
 
             if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
                 return false;

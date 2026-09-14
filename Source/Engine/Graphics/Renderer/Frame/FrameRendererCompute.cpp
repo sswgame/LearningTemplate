@@ -82,7 +82,7 @@ namespace sw
                 _pCmd->setComputePipelineState( animPso );
                 // AnimParams(b0) / g_InstancesRW(u0) — instanceanim.hlsl 레지스터와 1:1 대응.
                 _pCmd->bindComputeConstantBuffer( _instanceAnimCb._index, 0 );
-                _pCmd->bindComputeUAV( _gpuScene.getInstanceUav(), 0 );
+                _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
                 const uint32 animGroups = ( instanceCount + 63u ) / 64u;
                 if ( animGroups > 0 )
                     _pCmd->dispatchCompute( animGroups, 1, 1 );
@@ -204,7 +204,7 @@ namespace sw
         _pCmd->setComputePipelineState( morphPso );
         _pCmd->bindComputeConstantBuffer( _meshMorphCb._index, 0 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
-        _pCmd->bindComputeUAV( _meshMorphPool.getMorphBuffer()._uav, 0 );
+        _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
             _pCmd->dispatchCompute( morphGroups, 1, 1 );
@@ -263,8 +263,8 @@ namespace sw
                     _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
                     _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
                     _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
-                    _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
-                    _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
+                    _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
+                    _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
                     // **인스턴스마다** 스레드 하나다(예전엔 배치마다 하나였다) — 그래야 보이는 것을 골라 압축할 수 있다.
                     const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
                     if ( groups > 0 )
@@ -304,8 +304,8 @@ namespace sw
                         _pCmd->bindComputeConstantBuffer( _instanceSortCb._index, 0 );
                         _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
                         _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
-                        _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
-                        _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
+                        _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
+                        _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
                         // 배치마다 워크그룹 하나 — 그 배치의 목록을 그룹공유 안에서 정렬한다.
                         _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
                     }

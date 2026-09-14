@@ -59,7 +59,7 @@ namespace sw::editor
 
         XmlDocument doc;
         XmlNode     root = doc.appendRoot( "GlobalVariablesPreset" );
-        root.appendAttr( "name", presetName );
+        root.appendAttribute( "name", presetName );
 
         const vector<string> listAllName = pGvm->collectVariableNames();
         for ( const string& varName : listAllName )
@@ -69,9 +69,9 @@ namespace sw::editor
                 continue;
 
             XmlNode varNode = root.appendChild( "Var" );
-            varNode.appendAttr( "name", pInfo->_name );
-            varNode.appendAttr( "type", getTypeString( *pInfo ) );
-            varNode.appendAttr( "value", pInfo->getValueAsString() );
+            varNode.appendAttribute( "name", pInfo->_name );
+            varNode.appendAttribute( "type", getTypeString( *pInfo ) );
+            varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 
         const string dir = FileUtil::getDirectoryPart( filePath );
@@ -95,8 +95,8 @@ namespace sw::editor
 
         for ( XmlNode varNode = rootNode.child( "Var" ); varNode.isValid(); varNode = varNode.next( "Var" ) )
         {
-            const utf8* pName = varNode.attr( "name" );
-            const utf8* pVal  = varNode.attr( "value" );
+            const utf8* pName = varNode.attribute( "name" );
+            const utf8* pVal  = varNode.attribute( "value" );
             if ( pName == nullptr || pVal == nullptr )
                 continue;
 

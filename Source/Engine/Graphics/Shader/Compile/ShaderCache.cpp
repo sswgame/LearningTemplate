@@ -205,7 +205,7 @@ namespace sw
     #if defined( SW_DEBUG )
         liveDesc._bDebugCodegen = SW_TRUE;
     #endif
-        ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( liveDesc );
+        ShaderCompileResult compiledResult = ShaderCompiler::compileHlsl( liveDesc );
         if ( compiledResult._bSuccess )
         {
             const string localDir = FileUtil::getDirectoryPart( localCachePath );

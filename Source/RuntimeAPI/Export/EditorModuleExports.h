@@ -31,7 +31,7 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                                                                                  \
-    extern "C" SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutApi )                                                                                                                                        \
+    extern "C" SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi )                                                                                                                                        \
     {                                                                                                                                                                                                              \
         if ( pOutApi == nullptr )                                                                                                                                                                                  \
             return false;                                                                                                                                                                                          \
@@ -40,7 +40,7 @@ namespace sw
         pOutApi->initialize = []( sw::EditorHandle editorHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                      \
         { return sw::ModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::initialize, static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); }; \
         pOutApi->shutdown  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::shutdown ); };                                                        \
-        pOutApi->updateUI  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::updateUI ); };                                                        \
+        pOutApi->updateUi  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::updateUi ); };                                                        \
         pOutApi->preRender = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle )                                                                                                              \
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::preRender, static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                                               \
         pOutApi->render = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle )                                                                                                                 \

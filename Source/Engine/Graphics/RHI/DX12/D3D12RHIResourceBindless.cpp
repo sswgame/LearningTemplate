@@ -29,7 +29,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessTexture" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -89,7 +89,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResource::registerBindlessResource( RHIBufferHandle buffer )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -180,14 +180,14 @@ namespace sw
 
     void D3D12RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         releaseBindlessSlot( index );
     }
 
     void D3D12RHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessTexture" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
         releaseBindlessSlot( index );
     }
 
@@ -222,9 +222,9 @@ namespace sw
                                                    _pDevice->_fenceValue );
     }
 
-    RHIDescriptorIndex D3D12RHIResource::registerBindlessUAV( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D12RHIResource::registerBindlessUav( RHIBufferHandle buffer )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessUAV" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -289,9 +289,9 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex D3D12RHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIDescriptorIndex D3D12RHIResource::registerBindlessTextureUav( RHITextureHandle texture )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessTextureUAV" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
         ID3D12Resource* pRes = _pDevice->resolveTexture( texture );
@@ -338,9 +338,9 @@ namespace sw
         return index;
     }
 
-    void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void D3D12RHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessUAV" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() )
             return;

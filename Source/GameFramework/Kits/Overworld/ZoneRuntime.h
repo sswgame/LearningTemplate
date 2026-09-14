@@ -84,7 +84,7 @@ namespace sw
         /** @brief 활성 존의 클리어 게이트가 잠겨 있는지 반환합니다. */
         bool isClearGateLocked() const;
         /** @brief 활성 존이 태그를 갖는지 반환합니다. */
-        bool activeHasTag( string_view tag ) const;
+        bool hasActiveZoneTag( string_view tag ) const;
 
         /** @brief 활성 존 정의를 반환합니다. */
         const ZoneDef* getActiveZone() const;

@@ -75,7 +75,7 @@ namespace sw
         releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
     }
 
-    RHIDescriptorIndex D3D11RHIResource::registerBindlessUAV( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D11RHIResource::registerBindlessUav( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -125,7 +125,7 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex D3D11RHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIDescriptorIndex D3D11RHIResource::registerBindlessTextureUav( RHITextureHandle texture )
     {
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
@@ -133,7 +133,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_texture == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 텍스처 UAV — bindComputeUAV( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
+        // 텍스처 UAV — bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;
@@ -156,7 +156,7 @@ namespace sw
         return index;
     }
 
-    void D3D11RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void D3D11RHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )

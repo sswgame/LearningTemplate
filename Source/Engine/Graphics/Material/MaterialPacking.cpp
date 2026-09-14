@@ -131,7 +131,7 @@ namespace sw
 
                 // Numeric
                 uint64 numericValue{ 0 };
-                if ( StringUtil::parseUInt64( trimmedValue, numericValue, 0 ) )
+                if ( StringUtil::parseUint64( trimmedValue, numericValue, 0 ) )
                     return static_cast<uint32>( numericValue );
 
                 uint32 mask{ 0 };
@@ -197,7 +197,7 @@ namespace sw
                     {
                         uint64 component{ 0 };
                         if ( propIndex < tokens.size() )
-                            StringUtil::parseUInt64( tokens[propIndex], component, 10 );
+                            StringUtil::parseUint64( tokens[propIndex], component, 10 );
                         pPtr[propIndex] = static_cast<uint32>( component );
                     }
                     return true;
@@ -441,7 +441,7 @@ namespace sw
                 {
                     // Allow numeric override in _value
                     uint64 numericVal{ 0 };
-                    if ( StringUtil::parseUInt64( prop._value, numericVal, 0 ) )
+                    if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) )
                         textureIndex = static_cast<uint32>( numericVal );
                 }
                 // 붙은 텍스처가 없으면 0 이 아니라 SW_INVALID_INDEX 를 넣는다. 0 은 "첫 번째 슬롯"

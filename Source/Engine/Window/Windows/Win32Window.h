@@ -53,7 +53,7 @@ namespace sw
         void* getNativeHandle() const override { return _hWnd; }
 
         /** @brief Win32 전용 HWND 핸들을 반환합니다. */
-        HWND getHWND() const { return _hWnd; }
+        HWND getHwnd() const { return _hWnd; }
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );

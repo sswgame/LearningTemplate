@@ -103,7 +103,7 @@ namespace sw
             void* pMem = _arrFrameAllocator[allocIdx].allocate( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )
             {
-                pMem = Memory::allocMemory( sizeof( T ) );
+                pMem = Memory::allocate( sizeof( T ) );
                 if ( pMem == nullptr )
                     return;
                 _arrListOverflowAllocation[allocIdx].push_back( pMem );

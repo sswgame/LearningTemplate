@@ -11,7 +11,7 @@ namespace sw
 {
     SW_LOG_CALLER( "WindowsProcess" );
 
-    void Process::cleanup()
+    void Process::shutdown()
     {
         if ( _pStdOutRead != nullptr )
         {
@@ -38,7 +38,7 @@ namespace sw
 
     bool Process::launch( string_view command, const ProcessOptions& options )
     {
-        cleanup();
+        shutdown();
 
         SECURITY_ATTRIBUTES saAttr{};
         saAttr.nLength              = sizeof( SECURITY_ATTRIBUTES );

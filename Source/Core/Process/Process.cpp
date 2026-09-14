@@ -21,7 +21,7 @@ namespace sw
 
     Process::~Process()
     {
-        cleanup();
+        shutdown();
     }
 
     Process::Process( Process&& other ) noexcept
@@ -43,7 +43,7 @@ namespace sw
     {
         if ( this != &other )
         {
-            cleanup();
+            shutdown();
 
             _pNativeHandle  = other._pNativeHandle;
             _pStdOutRead    = other._pStdOutRead;

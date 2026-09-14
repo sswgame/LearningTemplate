@@ -540,7 +540,7 @@ namespace sw
         if ( pInstance == nullptr || src.isObject() == false )
             return false;
 
-        const bool                  bIgnoreCaseKeys = ctx.ignoreCaseKeys();
+        const bool                  bIgnoreCaseKeys = ctx.ignoresCaseKeys();
         const vector<PropertyInfo>& listProp        = typeInfo.getPropertiesWithBase();
         unordered_set<uint32>       uniqueSeen;
         bool                        bFieldError{ false };

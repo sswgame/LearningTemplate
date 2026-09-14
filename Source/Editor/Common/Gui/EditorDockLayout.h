@@ -15,7 +15,7 @@ namespace sw::editor
         EditorDockLayout();
 
         /** @brief Config/Editor 아래 imgui.ini / windows.ini 경로를 해석합니다. */
-        void setupPersistencePaths();
+        void initializePersistencePaths();
         /** @brief 해석된 imgui.ini 경로를 ImGui IO에 연결합니다. */
         void applyIniFilename() const;
         /** @brief windows.ini에서 패널 열림 상태를 복원합니다. */

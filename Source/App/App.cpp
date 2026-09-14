@@ -186,7 +186,7 @@ namespace sw
 
         _moduleHost = make_unique<ModuleHost>();
         if ( _moduleHost->initialize( getLiveReloadManager(),
-                                      _engineLoop.getRHI(),
+                                      _engineLoop.getRhi(),
                                       _window.get(),
                                       _engineLoop.getRenderThread(),
                                       _bEnableEditor == SW_TRUE,
@@ -298,7 +298,7 @@ namespace sw
 
             _moduleHost->updateGame( frameTime._deltaTime );
             // 에디터가 없으면 즉시 반환한다. 이 호출이 게임 뷰포트 RT 와 씬 틱 여부를 확정한다.
-            _moduleHost->updateEditorUI( frameTime._deltaTime );
+            _moduleHost->updateEditorUi( frameTime._deltaTime );
 
             // 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
             // 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
@@ -348,7 +348,7 @@ namespace sw
 
     void App::onResize( const uint32 width, const uint32 height )
     {
-        RHI* pRHI = _engineLoop.getRHI();
+        RHI* pRHI = _engineLoop.getRhi();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
@@ -405,7 +405,7 @@ namespace sw
         if ( pEditor == nullptr )
             return;
 
-        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
+        const EditorAPI& editorAPI = _moduleHost->getEditorApi();
         if ( editorAPI.preRender != nullptr )
             editorAPI.preRender( pEditor, &renderDevice );
 
@@ -422,7 +422,7 @@ namespace sw
         if ( pEditor == nullptr )
             return;
 
-        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
+        const EditorAPI& editorAPI = _moduleHost->getEditorApi();
         if ( editorAPI.postPresent != nullptr )
             editorAPI.postPresent( pEditor, &renderDevice );
     }

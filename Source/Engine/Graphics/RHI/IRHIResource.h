@@ -103,7 +103,7 @@ namespace sw
          * @details 로드 시점용 동기 경로다. 반환했을 때 DX12/Vulkan 은 복사가 GPU 큐에서 뒤이은 드로우보다
          *          앞서도록 제출돼 있고(Vulkan 은 대기까지 함), DX11/GL 은 즉시 컨텍스트에 들어가 있다.
          *          매 프레임 갱신 용도가 아니다. createTexture2D 가 _bIsShaderResource 로 만든 비압축 컬러
-         *          포맷만 받는다 — 압축(BC) 포맷은 RHIFormat 에 아직 없다(getRHIFormatBytesPerPixel 참고).
+         *          포맷만 받는다 — 압축(BC) 포맷은 RHIFormat 에 아직 없다(getRhiFormatBytesPerPixel 참고).
          *          밉 크기·오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
          * @return 포맷이 업로드 불가이거나 데이터가 모자라면 false.
          */
@@ -149,17 +149,17 @@ namespace sw
         virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
 
         /** @brief Bindless UAV를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) = 0;
+        virtual RHIDescriptorIndex registerBindlessUav( RHIBufferHandle buffer ) = 0;
 
         /**
          * @brief 텍스처(생성 시 _bIsUnorderedAccess)를 컴퓨트 RW 텍스처로 등록하고 인덱스를 발급합니다.
          * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D)의 원소 인덱스라 셰이더가 그 값으로 고른다(루트 상수 등으로 넘긴다).
-         *          DX11/GL 은 bindComputeUAV( index, shaderslot::kComputeTextureUav0 + 서수 ) 로 슬롯에 걸고 셰이더는 서수를 쓴다.
-         *          해제는 unregisterBindlessUAV — 버퍼 UAV 와 같은 인덱스 공간이다.
+         *          DX11/GL 은 bindComputeUav( index, shaderslot::kComputeTextureUav0 + 서수 ) 로 슬롯에 걸고 셰이더는 서수를 쓴다.
+         *          해제는 unregisterBindlessUav — 버퍼 UAV 와 같은 인덱스 공간이다.
          */
-        virtual RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle texture ) = 0;
+        virtual RHIDescriptorIndex registerBindlessTextureUav( RHITextureHandle texture ) = 0;
 
         /** @brief Bindless UAV 등록을 해제합니다. */
-        virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
+        virtual void unregisterBindlessUav( RHIDescriptorIndex index ) = 0;
     };
 } // namespace sw

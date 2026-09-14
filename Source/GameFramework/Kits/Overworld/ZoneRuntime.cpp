@@ -174,7 +174,7 @@ namespace sw
         return pZone != nullptr && pZone->_bClearGateLocked != SW_FALSE;
     }
 
-    bool ZoneRuntime::activeHasTag( string_view tag ) const
+    bool ZoneRuntime::hasActiveZoneTag( string_view tag ) const
     {
         const ZoneDef* pZone = getActiveZone();
         return pZone != nullptr && pZone->hasTag( tag );

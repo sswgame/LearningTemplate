@@ -149,12 +149,18 @@ namespace sw::editor
              */
             static vector<string> resolveWatchExtensions()
             {
-                const vector<string>  listHandled    = collectHandledExtensions();
+                // **돌려주는 객체는 하나다.** 이름이 다른 지역 변수 둘을 각각 return 하면 NRVO 가 죽어
+                // 한쪽이 반드시 복사된다(clang 이 `-Wnrvo` 로 짚는다). 두 갈래 모두 listExtension 을
+                // 채워서 돌려준다.
+                vector<string>        listExtension{};
                 const vector<string>& listConfigured = getEditorData()._listHotReloadExtension;
                 if ( listConfigured.empty() )
-                    return listHandled;
+                {
+                    listExtension = collectHandledExtensions();
+                    return listExtension;
+                }
 
-                vector<string> listExtension{};
+                const vector<string> listHandled = collectHandledExtensions();
                 listExtension.reserve( listConfigured.size() );
                 for ( const string& extension : listConfigured )
                 {
@@ -235,7 +241,7 @@ namespace sw::editor
             return;
 
         string relPath{};
-        if ( FileUtil::makePathRelative( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
+        if ( FileUtil::makeRelativePath( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
             return;
 
         if ( relPath.empty() )

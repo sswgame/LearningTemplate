@@ -331,11 +331,11 @@ namespace sw
         bool consumeBufferedAction( const hashed_string& action );
 
         /** @brief 지정된 시간 윈도우 내에 연속된 커맨드 시퀀스(예: ["Down", "DownRight", "Right", "Attack"])가 성공했는지 검사합니다. */
-        bool checkCommandSequence( const vector<hashed_string>& listSequence, float32 maxWindowSeconds = 0.35f ) const;
-        bool checkCommandSequence( const vector<string>& listSequence, float32 maxWindowSeconds = 0.35f ) const;
+        bool wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds = 0.35f ) const;
+        bool wasCommandSequenceTriggered( const vector<string>& listSequence, float32 maxWindowSeconds = 0.35f ) const;
         /** @brief 넘패드 표기법(예: "236P", "623P", "214K") 기반 퍼지 커맨드 콤보 패턴 매칭. */
-        bool checkCommandPattern( string_view pattern, float32 maxWindowSeconds = 0.8f ) const;
-        bool checkCommandPattern( const hashed_string& pattern, float32 maxWindowSeconds = 0.8f ) const;
+        bool wasCommandPatternTriggered( string_view pattern, float32 maxWindowSeconds = 0.8f ) const;
+        bool wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds = 0.8f ) const;
 
         // ------------------------------------------------------------------------------
         // 7) UI 글리프 조회 & 인게임 키 리매핑 직렬화

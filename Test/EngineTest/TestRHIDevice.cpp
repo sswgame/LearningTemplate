@@ -42,7 +42,7 @@ namespace
             return false;
         }
 
-        outDevice->setInitWindow( outWindow.get() );
+        outDevice->setInitialWindow( outWindow.get() );
         if ( outDevice->initialize() == false )
         {
             outDevice.reset();
@@ -1131,7 +1131,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
         texDesc._bIsUnorderedAccess        = SW_TRUE;
         const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
         SW_EXPECT_TRUE_MSG( texture != 0, pName );
-        const sw::RHIDescriptorIndex uav = texture != 0 ? pResource->registerBindlessTextureUAV( texture ) : sw::kInvalidDescriptorIndex;
+        const sw::RHIDescriptorIndex uav = texture != 0 ? pResource->registerBindlessTextureUav( texture ) : sw::kInvalidDescriptorIndex;
         SW_EXPECT_TRUE_MSG( uav != sw::kInvalidDescriptorIndex, pName );
         const sw::RHIPipelineStateHandle pso = pResource->createComputePipelineState( "common/shaders/computetexturewrite.hlsl" );
         SW_EXPECT_TRUE_MSG( pso != 0, pName );
@@ -1147,7 +1147,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
                 cmdList->beginCommandList();
                 cmdList->prepareTextureForUnorderedAccess( texture );
                 cmdList->setComputePipelineState( pso );
-                cmdList->bindComputeUAV( uav, sw::shaderslot::kComputeTextureUav0 );
+                cmdList->bindComputeUav( uav, sw::shaderslot::kComputeTextureUav0 );
                 cmdList->setComputeRootConstants( 0, 4, arrRoot, 0 );
                 cmdList->dispatchCompute( 1, 1, 1 );
                 cmdList->endCommandList();
@@ -1181,7 +1181,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
         }
 
         if ( uav != sw::kInvalidDescriptorIndex )
-            pResource->unregisterBindlessUAV( uav );
+            pResource->unregisterBindlessUav( uav );
         if ( texture != 0 )
             pResource->destroyTexture( texture );
         shutdownDeviceWithWindow( device, window );

@@ -206,7 +206,7 @@ namespace sw
         }
     }
 
-    void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUavAt( index );
         if ( _pContext != nullptr && uav != nullptr )
@@ -426,7 +426,7 @@ namespace sw
 
         const uint32 maxCount = D3D11RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
-        if ( _pDevice->ensureComputeRootConstantCB() == false )
+        if ( _pDevice->ensureComputeRootConstantCb() == false )
             return;
 
         Memory::copy( _pDevice->_arrComputeRootConstantShadow + destOffsetIn32BitValues, pData, static_cast<size_t>( count ) * sizeof( uint32 ) );
@@ -453,7 +453,7 @@ namespace sw
 
         const uint32 maxCount = D3D11RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
-        if ( _pDevice->ensureComputeRootConstantCB() == false )
+        if ( _pDevice->ensureComputeRootConstantCb() == false )
             return;
 
         Memory::copy( _pDevice->_arrComputeRootConstantShadow + destOffsetIn32BitValues, pData, static_cast<size_t>( count ) * sizeof( uint32 ) );

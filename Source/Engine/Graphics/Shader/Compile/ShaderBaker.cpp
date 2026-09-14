@@ -277,7 +277,7 @@ namespace sw
             }
         }
 
-        ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( desc );
+        ShaderCompileResult compileResult = ShaderCompiler::compileHlsl( desc );
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
             SW_LOG_WARNING( "Failed to compile shader '%#' [%#] for %#: %#",

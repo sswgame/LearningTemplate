@@ -5,7 +5,7 @@
 ## 동작 흐름
 1. `App`이 실행되면서 창(Window)을 만들고 렌더러(RHI)를 초기화합니다.
 2. 개발 모드(Dev)라면 백그라운드에서 핫리로드를 관장하는 `LiveReloadManager`를 가동합니다.
-3. 이후 `EditorModule` DLL과 `SWGame` DLL을 불러와 함수 포인터(`exportGameAPI`)를 연결하고 게임 루프를 시작합니다.
+3. 이후 `EditorModule` DLL과 `SWGame` DLL을 불러와 함수 포인터(`exportGameApi`)를 연결하고 게임 루프를 시작합니다.
 
 윈도우 메시지는 `NativeWindowEvent`로만 받고, 키/마우스 해석은 `InputManager`가 합니다.
 App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_mapDebugAction`)을 둡니다. Debug 레이어(`alwaysOn`)로 ReloadShaders=Ctrl+F8, ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F7 조합 키를 조회하여 게임플레이 단독 스킬 단축키와의 충돌을 차단합니다.
@@ -28,7 +28,7 @@ App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_mapDe
 | `FrameTimeline::advance` | 가변 델타를 잘라내고 이번 프레임의 고정 스텝 수를 확정한다. |
 | `ModuleHost::beginFrame` | 에디터 Play 상태를 한 번 래치한다. 고정 스텝이 6번 돌아도 DLL 경계를 다시 넘지 않는다. |
 | `fixedUpdateGame` × N → `updateGame` | 래치된 상태를 읽으므로 모든 스텝이 같은 답을 본다. |
-| `ModuleHost::updateEditorUI` | 에디터가 이번 프레임 입력을 처리한 **뒤** 게임 뷰포트 RT 와 씬 틱 여부를 확정한다. 이 질의를 앞으로 옮기면 **Step 한 칸이 틱 없이 소비**된다. |
+| `ModuleHost::updateEditorUi` | 에디터가 이번 프레임 입력을 처리한 **뒤** 게임 뷰포트 RT 와 씬 틱 여부를 확정한다. 이 질의를 앞으로 옮기면 **Step 한 칸이 틱 없이 소비**된다. |
 | `EngineLoop::tick` | 래치된 프레임 상태(`ModuleFrameState`)를 그대로 넘긴다. 뷰 카메라는 tick 내부에서 지연 조회한다 — 미리 잡으면 씬 전환/핫리로드가 파괴한 객체를 역참조한다. |
 | `BackendSwapController::applyIfPending` | 교체는 프레임 경계에서만 한다. |
 

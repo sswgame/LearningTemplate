@@ -89,7 +89,7 @@ namespace sw
             // 컴파일 캐시는 켜 둔 채로 돈다 — 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
             // 타지 않는다. 키에 `.hlsl` mtime 과 공유 헤더 타임스탬프가 들어 있으므로, 방금 무효화한
             // 덕분에 바뀐 것만 실제로 다시 컴파일된다.
-            const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( desc );
+            const ShaderCompileResult newResult = ShaderCompiler::compileHlsl( desc );
             if ( newResult._bSuccess == false )
             {
                 ++failed;

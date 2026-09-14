@@ -250,13 +250,13 @@ namespace sw
             _gameApi.fixedUpdate( _game, fixedDeltaTime );
     }
 
-    void ModuleHost::updateEditorUI( float32 /*deltaTime*/ )
+    void ModuleHost::updateEditorUi( float32 /*deltaTime*/ )
     {
         if ( hasEditor() == false )
             return;
 
-        if ( _editorApi.updateUI != nullptr )
-            _editorApi.updateUI( _editor );
+        if ( _editorApi.updateUi != nullptr )
+            _editorApi.updateUi( _editor );
 
         // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고,
         // 씬을 한 칸 틱한 다음 endEditorFrame 에서 소비된다 — 이 질의를 프레임 앞으로 옮기면
@@ -299,7 +299,7 @@ namespace sw
 
     void ModuleHost::onAfterEditorReload( void* pLibraryModule )
     {
-        if ( bindEditorAPI( pLibraryModule ) == false )
+        if ( bindEditorApi( pLibraryModule ) == false )
         {
             poisonLiveReload( "EditorAPI bind failed after reload" );
             return;
@@ -328,14 +328,14 @@ namespace sw
     {
 #if defined( SW_SHIPPING )
         (void)pLibraryModule;
-        if ( _gameApi.create == nullptr && bindGameAPI( nullptr ) == false )
+        if ( _gameApi.create == nullptr && bindGameApi( nullptr ) == false )
             return;
 #else
         void* pModuleHandle = pLibraryModule;
         if ( pModuleHandle == nullptr && _pLiveReloadManager != nullptr )
             pModuleHandle = _pLiveReloadManager->getModuleHandle( sw::config::kTargetGameModule );
 
-        if ( bindGameAPI( pModuleHandle ) == false )
+        if ( bindGameApi( pModuleHandle ) == false )
         {
             poisonLiveReload( "GameAPI bind failed after reload" );
             return;
@@ -403,7 +403,7 @@ namespace sw
 
         // 렌더 워커를 재웠으면 에디터의 "렌더 대기" 표시도 같이 버려야 한다.
         // 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 방금 그 스레드를 재웠다.
-        // 알려 주지 않으면 다음 updateUI 나 shutdown 이 waitForDrawSnapshotIdle 에서
+        // 알려 주지 않으면 다음 updateUi 나 shutdown 이 waitForDrawSnapshotIdle 에서
         // 영원히 돌아오지 않는다 — 에디터 모듈 핫리로드가 실제로 여기서 멈췄다.
         if ( _editor != nullptr && _editorApi.abandonPendingDraw != nullptr )
             _editorApi.abandonPendingDraw( _editor );
@@ -433,13 +433,13 @@ namespace sw
     // API 바인딩
     // ======================================================================
 
-    bool ModuleHost::bindEditorAPI( void* pLibraryModule )
+    bool ModuleHost::bindEditorApi( void* pLibraryModule )
     {
         _editorApi = {};
         if ( pLibraryModule == nullptr )
             return false;
 
-        PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorAPI" ) );
+        PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorApi" ) );
         if ( pfnExport == nullptr || pfnExport( &_editorApi ) == false )
         {
             SW_LOG_ERROR( "Failed to bind EditorAPI from module" );
@@ -452,12 +452,12 @@ namespace sw
         return _editorApi.create != nullptr && _editorApi.destroy != nullptr;
     }
 
-    bool ModuleHost::bindGameAPI( void* pLibraryModule )
+    bool ModuleHost::bindGameApi( void* pLibraryModule )
     {
         _gameApi = {};
 #if defined( SW_SHIPPING )
         (void)pLibraryModule;
-        if ( exportGameAPI( &_gameApi ) == false )
+        if ( exportGameApi( &_gameApi ) == false )
         {
             SW_LOG_ERROR( "Failed to bind GameAPI (shipping)" );
             return false;
@@ -465,7 +465,7 @@ namespace sw
 #else
         if ( pLibraryModule == nullptr )
             return false;
-        PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameAPI" ) );
+        PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
         if ( pfnExport == nullptr || pfnExport( &_gameApi ) == false )
         {
             SW_LOG_ERROR( "Failed to bind GameAPI from module" );

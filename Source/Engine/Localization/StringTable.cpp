@@ -243,13 +243,13 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock( _mutex );
         for ( XmlNode strNode = root.child(); strNode; strNode = strNode.next() )
         {
-            const utf8* pKey = strNode.attr( "key" );
+            const utf8* pKey = strNode.attribute( "key" );
             if ( StringUtil::isNullOrEmpty( pKey ) )
-                pKey = strNode.attr( "id" );
+                pKey = strNode.attribute( "id" );
             if ( StringUtil::isNullOrEmpty( pKey ) )
                 continue;
 
-            const utf8* pValue = strNode.attr( "value" );
+            const utf8* pValue = strNode.attribute( "value" );
             if ( StringUtil::isNullOrEmpty( pValue ) == false )
                 _mapTable[hashed_string( pKey ).getHash()] = pValue;
             else

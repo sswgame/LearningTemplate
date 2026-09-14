@@ -43,7 +43,7 @@ namespace sw
         void  remove( ObjectHandle handle );
         void  clear();
 
-        void queryAABB( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const;
+        void queryAabb( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const;
         void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const;
         void querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const;
         void queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const;
@@ -59,7 +59,7 @@ namespace sw
         void  removeLeaf( int32 leafIndex );
         int32 balance( int32 nodeIndex );
 
-        static AABB    combineAABB( const AABB& a, const AABB& b );
+        static AABB    combineAabb( const AABB& a, const AABB& b );
         static float32 getSurfaceArea( const AABB& box );
 
         vector<BVHNode3D>                  _listNode;

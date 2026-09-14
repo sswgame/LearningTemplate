@@ -64,39 +64,39 @@ namespace sw
 
         for ( XmlNode node = root.child( "Monster" ); node; node = node.next( "Monster" ) )
         {
-            const utf8* pIdStr = node.attr( "id" );
+            const utf8* pIdStr = node.attribute( "id" );
             if ( StringUtil::isNullOrEmpty( pIdStr ) )
                 continue;
 
             MonsterDef monsterDef;
             monsterDef._id       = pIdStr;
-            const utf8* pNameStr = node.attr( "name" );
+            const utf8* pNameStr = node.attribute( "name" );
             if ( pNameStr != nullptr )
                 monsterDef._name = pNameStr;
             else
                 monsterDef._name = monsterDef._id;
 
-            monsterDef._archetype = parseArchetype( node.attr( "archetype" ) );
+            monsterDef._archetype = parseArchetype( node.attribute( "archetype" ) );
 
             XmlNode statsNode = node.child( "Stats" );
             if ( statsNode.isValid() )
             {
-                monsterDef._hp            = statsNode.attrInt( "hp", monsterDef._hp );
-                monsterDef._maxHp         = statsNode.attrInt( "maxHp", monsterDef._maxHp );
-                monsterDef._atk           = statsNode.attrInt( "atk", monsterDef._atk );
-                monsterDef._def           = statsNode.attrInt( "def", monsterDef._def );
-                monsterDef._speed         = statsNode.attrFloat( "speed", monsterDef._speed );
-                monsterDef._invincibility = statsNode.attrFloat( "invincibility", monsterDef._invincibility );
+                monsterDef._hp            = statsNode.attributeInt( "hp", monsterDef._hp );
+                monsterDef._maxHp         = statsNode.attributeInt( "maxHp", monsterDef._maxHp );
+                monsterDef._atk           = statsNode.attributeInt( "atk", monsterDef._atk );
+                monsterDef._def           = statsNode.attributeInt( "def", monsterDef._def );
+                monsterDef._speed         = statsNode.attributeFloat( "speed", monsterDef._speed );
+                monsterDef._invincibility = statsNode.attributeFloat( "invincibility", monsterDef._invincibility );
             }
 
             XmlNode aiNode = node.child( "AI" );
             if ( aiNode.isValid() )
             {
-                monsterDef._patrolRange    = aiNode.attrFloat( "patrolRange", monsterDef._patrolRange );
-                monsterDef._detectRange    = aiNode.attrFloat( "detectRange", monsterDef._detectRange );
-                monsterDef._attackRange    = aiNode.attrFloat( "attackRange", monsterDef._attackRange );
-                monsterDef._attackCoolTime = aiNode.attrFloat( "coolTime", monsterDef._attackCoolTime );
-                const utf8* pProj          = aiNode.attr( "projectilePrefab" );
+                monsterDef._patrolRange    = aiNode.attributeFloat( "patrolRange", monsterDef._patrolRange );
+                monsterDef._detectRange    = aiNode.attributeFloat( "detectRange", monsterDef._detectRange );
+                monsterDef._attackRange    = aiNode.attributeFloat( "attackRange", monsterDef._attackRange );
+                monsterDef._attackCoolTime = aiNode.attributeFloat( "coolTime", monsterDef._attackCoolTime );
+                const utf8* pProj          = aiNode.attribute( "projectilePrefab" );
                 if ( pProj != nullptr )
                     monsterDef._projectilePrefab = pProj;
             }
@@ -104,7 +104,7 @@ namespace sw
             XmlNode prefabNode = node.child( "Prefab" );
             if ( prefabNode.isValid() )
             {
-                const utf8* pPath = prefabNode.attr( "path" );
+                const utf8* pPath = prefabNode.attribute( "path" );
                 if ( pPath != nullptr )
                     monsterDef._prefabPath = pPath;
             }
@@ -113,13 +113,13 @@ namespace sw
             if ( dropNode.isValid() )
             {
                 // 속성 이름이 곧 보상 이름이다 — 코드가 보상 종류를 알 필요가 없다.
-                for ( XmlAttribute attr = dropNode.firstAttr(); attr.isValid(); attr = attr.next() )
+                for ( XmlAttribute attr = dropNode.firstAttribute(); attr.isValid(); attr = attr.next() )
                 {
                     const utf8* pRewardId = attr.name();
                     if ( StringUtil::isNullOrEmpty( pRewardId ) )
                         continue;
                     monsterDef._mapDrop.insert_or_assign( hashed_string( pRewardId ),
-                                                          dropNode.attrInt( pRewardId, 0 ) );
+                                                          dropNode.attributeInt( pRewardId, 0 ) );
                 }
             }
 

@@ -34,7 +34,7 @@ namespace sw
         return bLoaded;
     }
 
-    bool GameStrings::setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
+    bool GameStrings::initialize( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
     {
         clear();
 
@@ -45,7 +45,7 @@ namespace sw
             return false;
         }
 
-        return pLoc->setupLocalization( directoryOrResourcePath, defaultLanguage, fallbackLanguage );
+        return pLoc->initialize( directoryOrResourcePath, defaultLanguage, fallbackLanguage );
     }
 
     bool GameStrings::loadLanguage( string_view languageCode, string_view assetRelativePath )
@@ -160,7 +160,7 @@ namespace sw
         return pLoc->getStringFromLanguage( languageCode, hashed_string( pKey ), pFallback );
     }
 
-    uint32 GameStrings::onLanguageChanged( LanguageChangedCallback callback )
+    uint32 GameStrings::registerLanguageChangedCallback( LanguageChangedCallback callback )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )
@@ -169,7 +169,7 @@ namespace sw
         return pLoc->registerLanguageChangedCallback( std::move( callback ) );
     }
 
-    void GameStrings::removeLanguageChangedCallback( uint32 callbackId )
+    void GameStrings::unregisterLanguageChangedCallback( uint32 callbackId )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc != nullptr )

@@ -42,9 +42,9 @@ namespace sw
             }
         }
 
-        void writeVarUInt( uint64 value )
+        void writeVarUint( uint64 value )
         {
-            VarIntUtil::encodeVarUInt64( value, _buffer );
+            VarIntUtil::encodeVarUint64( value, _buffer );
         }
 
         void writeVarInt( int64 value )
@@ -142,14 +142,14 @@ namespace sw
             return true;
         }
 
-        bool readVarUInt( uint64& outValue )
+        bool readVarUint( uint64& outValue )
         {
-            return VarIntUtil::decodeVarUInt64( _pData, _size, _offset, outValue );
+            return VarIntUtil::decodeVarUint64( _pData, _size, _offset, outValue );
         }
 
-        bool readVarUInt( uint32& outValue )
+        bool readVarUint( uint32& outValue )
         {
-            return VarIntUtil::decodeVarUInt32( _pData, _size, _offset, outValue );
+            return VarIntUtil::decodeVarUint32( _pData, _size, _offset, outValue );
         }
 
         bool readVarInt( int64& outValue )

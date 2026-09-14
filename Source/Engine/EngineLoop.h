@@ -129,7 +129,7 @@ namespace sw
         ConfigManager*       getConfigManager() const { return _configManager.get(); }
         CommandLineManager*  getCommandLineManager() const { return _commandLineManager.get(); }
         LocalizationManager* getLocalizationManager() const { return _localizationManager.get(); }
-        RHI*                 getRHI() const { return _rhi.get(); }
+        RHI*                 getRhi() const { return _rhi.get(); }
         RenderThread*        getRenderThread() const { return _renderThread.get(); }
         ShaderCache*         getShaderCache() const { return _shaderCache.get(); }
         ComponentDefaults*   getComponentDefaults() const { return _componentDefaults.get(); }

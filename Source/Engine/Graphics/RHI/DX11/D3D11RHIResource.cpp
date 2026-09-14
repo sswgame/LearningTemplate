@@ -278,7 +278,7 @@ namespace sw
         pRecord->_texture->GetDesc( &texDesc );
         if ( mip >= texDesc.MipLevels )
             return false;
-        if ( computeRHITextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
+        if ( computeRhiTextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
             return false;
 
         // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map — Map 이 GPU 를 기다린다.

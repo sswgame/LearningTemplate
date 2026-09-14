@@ -85,7 +85,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
         vsDesc._stage        = sw::ShaderStage::Vertex;
         vsDesc._targetFormat = targetFormat;
 
-        sw::ShaderCompileResult vsResult = sw::ShaderCompiler::compileHLSL( vsDesc );
+        sw::ShaderCompileResult vsResult = sw::ShaderCompiler::compileHlsl( vsDesc );
         if ( vsResult._errorMessage.find( "SPIR-V CodeGen not available" ) != sw::string::npos )
         {
             SW_LOG_WARNING( "DXC dxcompiler.dll on this host does not support SPIR-V CodeGen. Skipping SPIR-V assertion." );
@@ -110,7 +110,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
         psDesc._stage        = sw::ShaderStage::Pixel;
         psDesc._targetFormat = targetFormat;
 
-        sw::ShaderCompileResult psResult = sw::ShaderCompiler::compileHLSL( psDesc );
+        sw::ShaderCompileResult psResult = sw::ShaderCompiler::compileHlsl( psDesc );
         SW_EXPECT_TRUE( psResult._bSuccess );
         SW_EXPECT_FALSE( psResult._bytecode.empty() );
     }
@@ -136,7 +136,7 @@ SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
     const sw::string absPath = sw::ResourceUtil::getResourcePath( desc._filePath );
     SW_EXPECT_TRUE( absPath.empty() || sw::FileUtil::fileExists( absPath ) == false );
 
-    sw::ShaderCompileResult result = sw::ShaderCompiler::compileHLSL( desc );
+    sw::ShaderCompileResult result = sw::ShaderCompiler::compileHlsl( desc );
     SW_EXPECT_FALSE( result._bSuccess );
     SW_EXPECT_FALSE( result._errorMessage.empty() );
 }
@@ -157,7 +157,7 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
 
     // 1차 컴파일 (캐시 미스 -> 디스크 저장)
-    sw::ShaderCompileResult result1 = sw::ShaderCompiler::compileHLSL( desc );
+    sw::ShaderCompileResult result1 = sw::ShaderCompiler::compileHlsl( desc );
     if ( sw::isShaderCompilerUnavailable( result1 ) )
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
 
@@ -165,14 +165,14 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
     SW_EXPECT_FALSE( result1._bytecode.empty() );
 
     // 2차 컴파일 (디스크 캐시 히트)
-    sw::ShaderCompileResult result2 = sw::ShaderCompiler::compileHLSL( desc );
+    sw::ShaderCompileResult result2 = sw::ShaderCompiler::compileHlsl( desc );
     SW_EXPECT_TRUE( result2._bSuccess );
     SW_EXPECT_EQUAL( result1._bytecode.size(), result2._bytecode.size() );
     SW_EXPECT_TRUE( result1._bytecode == result2._bytecode );
 
     // 디스크 캐시 클리어 후 컴파일 정상 동작 확인
     sw::ShaderCompiler::clearDiskCache();
-    sw::ShaderCompileResult result3 = sw::ShaderCompiler::compileHLSL( desc );
+    sw::ShaderCompileResult result3 = sw::ShaderCompiler::compileHlsl( desc );
     SW_EXPECT_TRUE( result3._bSuccess );
     SW_EXPECT_FALSE( result3._bytecode.empty() );
     SW_EXPECT_EQUAL( result1._bytecode.size(), result3._bytecode.size() );
@@ -248,12 +248,12 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
     sw::ShaderCompileDesc dx12Desc = dx11Desc;
     dx12Desc._targetFormat         = sw::ShaderTargetFormat::DXIL_D3D12;
 
-    sw::ShaderCompileResult res11 = sw::ShaderCompiler::compileHLSL( dx11Desc );
+    sw::ShaderCompileResult res11 = sw::ShaderCompiler::compileHlsl( dx11Desc );
     if ( sw::isShaderCompilerUnavailable( res11 ) )
         SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
     SW_EXPECT_TRUE( res11._bSuccess );
 
-    sw::ShaderCompileResult res12 = sw::ShaderCompiler::compileHLSL( dx12Desc );
+    sw::ShaderCompileResult res12 = sw::ShaderCompiler::compileHlsl( dx12Desc );
     SW_EXPECT_TRUE( res12._bSuccess );
 
     // 디스크 캐시 디렉터리에 최소 2개 이상의 독립된 바이너리 캐시 파일이 생성되었는지 검증

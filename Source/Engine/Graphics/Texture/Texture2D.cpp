@@ -28,7 +28,7 @@ namespace sw
             SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRhi first.", _path.c_str() );
     }
 
-    RHIFormat Texture2D::toRHIFormatFromDxgi( uint32 dxgiFormat )
+    RHIFormat Texture2D::toRhiFormatFromDxgi( uint32 dxgiFormat )
     {
         // DdsLoader 가 쓰는 DXGI 번호(DirectX 헤더 없이 상수로 둔다). 여기 없는 번호는 Unknown.
         switch ( dxgiFormat )
@@ -83,7 +83,7 @@ namespace sw
             return false;
         }
 
-        const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
+        const RHIFormat format = toRhiFormatFromDxgi( image._dxgiFormat );
         if ( format == RHIFormat::Unknown )
         {
             SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath.data(), image._dxgiFormat );

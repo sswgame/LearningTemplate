@@ -145,7 +145,7 @@ namespace sw
                 return pugi::xml_node{ static_cast<pugi::xml_node_struct*>( pPtr ) };
             }
 
-            static pugi::xml_attribute asAttr( void* pPtr )
+            static pugi::xml_attribute asAttribute( void* pPtr )
             {
                 return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
             }
@@ -216,19 +216,19 @@ namespace sw
 
     const utf8* XmlAttribute::name() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
         return attr.name();
     }
 
     const utf8* XmlAttribute::value() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
         return attr.value();
     }
 
     XmlAttribute XmlAttribute::next() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
         if ( attr.empty() )
             return {};
         return XmlAttribute{ attr.next_attribute().internal_object() };
@@ -246,7 +246,7 @@ namespace sw
         return pNode.child_value();
     }
 
-    const utf8* XmlNode::attr( const utf8* pName, bool bIgnoreCaseKeys ) const
+    const utf8* XmlNode::attribute( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
         const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
@@ -257,9 +257,9 @@ namespace sw
         return nullptr;
     }
 
-    int32 XmlNode::attrInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
+    int32 XmlNode::attributeInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
     {
-        const utf8* pValue = attr( pName, bIgnoreCaseKeys );
+        const utf8* pValue = attribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
             return fallback;
         int32 val{ fallback };
@@ -267,9 +267,9 @@ namespace sw
         return val;
     }
 
-    float32 XmlNode::attrFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
+    float32 XmlNode::attributeFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
     {
-        const utf8* pValue = attr( pName, bIgnoreCaseKeys );
+        const utf8* pValue = attribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
             return fallback;
         float32 val{ fallback };
@@ -277,9 +277,9 @@ namespace sw
         return val;
     }
 
-    bool XmlNode::attrBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
+    bool XmlNode::attributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
-        return XmlDocumentInternal::parseNodeBool( attr( pName, bIgnoreCaseKeys ), fallback );
+        return XmlDocumentInternal::parseNodeBool( attribute( pName, bIgnoreCaseKeys ), fallback );
     }
 
     XmlNode XmlNode::child( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -345,7 +345,7 @@ namespace sw
         return true;
     }
 
-    XmlAttribute XmlNode::firstAttr() const
+    XmlAttribute XmlNode::firstAttribute() const
     {
         const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
@@ -397,7 +397,7 @@ namespace sw
         return childNode;
     }
 
-    void XmlNode::appendAttr( const utf8* pName, const utf8* pValue ) const
+    void XmlNode::appendAttribute( const utf8* pName, const utf8* pValue ) const
     {
         pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
@@ -406,7 +406,7 @@ namespace sw
         pAttr.set_value( pValue != nullptr ? pValue : "" );
     }
 
-    void XmlNode::appendAttr( const utf8* pName, string_view value ) const
+    void XmlNode::appendAttribute( const utf8* pName, string_view value ) const
     {
         pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
@@ -423,33 +423,33 @@ namespace sw
         }
     }
 
-    void XmlNode::appendAttr( const utf8* pName, int32 value ) const
+    void XmlNode::appendAttribute( const utf8* pName, int32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        appendAttr( pName, sb.c_str() );
+        appendAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::appendAttr( const utf8* pName, uint32 value ) const
+    void XmlNode::appendAttribute( const utf8* pName, uint32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        appendAttr( pName, sb.c_str() );
+        appendAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::appendAttr( const utf8* pName, float32 value ) const
+    void XmlNode::appendAttribute( const utf8* pName, float32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        appendAttr( pName, sb.c_str() );
+        appendAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::appendAttr( const utf8* pName, bool value ) const
+    void XmlNode::appendAttribute( const utf8* pName, bool value ) const
     {
-        appendAttr( pName, value ? "1" : "0" );
+        appendAttribute( pName, value ? "1" : "0" );
     }
 
-    void XmlNode::setAttr( const utf8* pName, const utf8* pValue ) const
+    void XmlNode::setAttribute( const utf8* pName, const utf8* pValue ) const
     {
         pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
@@ -458,10 +458,10 @@ namespace sw
         if ( pAttr.empty() == false )
             pAttr.set_value( pValue != nullptr ? pValue : "" );
         else
-            appendAttr( pName, pValue );
+            appendAttribute( pName, pValue );
     }
 
-    void XmlNode::setAttr( const utf8* pName, string_view value ) const
+    void XmlNode::setAttribute( const utf8* pName, string_view value ) const
     {
         pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
@@ -474,34 +474,34 @@ namespace sw
         }
         else
         {
-            appendAttr( pName, value );
+            appendAttribute( pName, value );
         }
     }
 
-    void XmlNode::setAttr( const utf8* pName, int32 value ) const
+    void XmlNode::setAttribute( const utf8* pName, int32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        setAttr( pName, sb.c_str() );
+        setAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::setAttr( const utf8* pName, uint32 value ) const
+    void XmlNode::setAttribute( const utf8* pName, uint32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        setAttr( pName, sb.c_str() );
+        setAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::setAttr( const utf8* pName, float32 value ) const
+    void XmlNode::setAttribute( const utf8* pName, float32 value ) const
     {
         StringBuilder<constant::kMaxBuffer32> sb;
         sb.append( value );
-        setAttr( pName, sb.c_str() );
+        setAttribute( pName, sb.c_str() );
     }
 
-    void XmlNode::setAttr( const utf8* pName, bool value ) const
+    void XmlNode::setAttribute( const utf8* pName, bool value ) const
     {
-        setAttr( pName, value ? "1" : "0" );
+        setAttribute( pName, value ? "1" : "0" );
     }
 
     void XmlNode::setName( const utf8* pName ) const

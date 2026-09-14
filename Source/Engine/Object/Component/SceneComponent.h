@@ -78,7 +78,7 @@ namespace sw
          * @brief 계층 위치 합을 double로 누적한 월드 좌표(LWC)
          * @details 로컬 포즈는 float3이며, 부모 LWC에 로컬 오프셋을 double로 더합니다.
          */
-        double3 getWorldPositionLWC() const;
+        double3 getWorldPositionLwc() const;
 
         /**
          * @brief 계층 TRS를 합성한 4x4 월드 행렬(캐시)

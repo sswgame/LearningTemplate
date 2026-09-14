@@ -98,7 +98,7 @@ namespace sw
         _mapHandleBound.clear();
     }
 
-    void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const
+    void SpatialHashGrid2D::queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const
     {
         outListHandle.clear();
 

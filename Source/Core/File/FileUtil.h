@@ -83,9 +83,9 @@ namespace sw
         static void removeExtension( string_view fileName, string& outFileName );
 
         /** @brief rootDir 기준 상대 경로로 만듭니다. */
-        static bool makePathRelative( string_view rootDir, string_view path, string& outResult );
+        static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
         /** @brief 절대 경로로 만듭니다. */
-        static bool makePathAbsolute( string_view path, string& outResult );
+        static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 경로가 절대 경로인지 확인합니다. */
         static bool isAbsolutePath( string_view path );
         /**

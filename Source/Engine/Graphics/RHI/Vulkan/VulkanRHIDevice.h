@@ -278,7 +278,7 @@ namespace sw
         /**
          * @brief Vulkan validation layer 지원을 확인합니다
          */
-        bool checkValidationLayerSupport();
+        bool supportsValidationLayer();
         /**
          * @brief VkInstance를 만듭니다.
          */
@@ -286,7 +286,7 @@ namespace sw
         /**
          * @brief 디버그 메신저를 설정합니다
          */
-        void setupDebugMessenger();
+        void createDebugMessenger();
         /**
          * @brief 물리 디바이스를 선택합니다
          */

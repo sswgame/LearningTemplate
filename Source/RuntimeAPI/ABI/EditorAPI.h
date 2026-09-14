@@ -26,7 +26,7 @@ namespace sw
         void ( *destroy )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 에디터 인스턴스를 파괴합니다. */
         bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr };              /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
         void ( *shutdown )( EditorHandle editor ){ nullptr };                                                                /**< @brief 에디터를 종료합니다. */
-        void ( *updateUI )( EditorHandle editor ){ nullptr };                                                                /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
+        void ( *updateUi )( EditorHandle editor ){ nullptr };                                                                /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
         void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                    /**< @brief 렌더링 직전에 호출됩니다. */
         void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                       /**< @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
         void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                                  /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
@@ -43,7 +43,7 @@ namespace sw
         void ( *endFrame )( EditorHandle editor ){ nullptr };                                                                /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
     };
 
-    /** @brief EditorModule이 export하는 API 테이블 심볼 이름: exportEditorAPI */
+    /** @brief EditorModule이 export하는 API 테이블 심볼 이름: exportEditorApi */
     using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
 } // namespace sw
 
@@ -53,5 +53,5 @@ extern "C"
     // 3) export — EditorModule이 채우는 진입점
     // ------------------------------------------------------------------------------
     /** @brief EditorModule API 테이블을 내보냅니다. */
-    SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutApi );
+    SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi );
 }

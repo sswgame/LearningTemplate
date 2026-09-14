@@ -293,7 +293,7 @@ namespace sw
         {
             // 0번 청크를 미리 할당하여 사전 정의 이름 적재
             constexpr size_t chunkSize   = sizeof( Entry ) * kChunkSize;
-            Entry*           pFirstChunk = static_cast<Entry*>( Memory::allocMemory( chunkSize ) );
+            Entry*           pFirstChunk = static_cast<Entry*>( Memory::allocate( chunkSize ) );
             Memory::set( pFirstChunk, 0, chunkSize );
             _arrChunk[0].store( pFirstChunk, std::memory_order_release );
 
@@ -316,12 +316,12 @@ namespace sw
             {
                 Entry* pChunk = _arrChunk[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
                 if ( pChunk != nullptr )
-                    Memory::freeMemory( pChunk );
+                    Memory::free( pChunk );
             }
 
             for ( value_type* pBlock : _listArenaBlock )
             {
-                Memory::freeMemory( pBlock );
+                Memory::free( pBlock );
             }
             _listArenaBlock.clear();
             _pCurrentArenaBlock = nullptr;
@@ -329,7 +329,7 @@ namespace sw
 
             for ( value_type* largeBlock : _listLargeAllocation )
             {
-                Memory::freeMemory( largeBlock );
+                Memory::free( largeBlock );
             }
             _listLargeAllocation.clear();
 
@@ -345,7 +345,7 @@ namespace sw
             // 64KB를 초과하는 대형 문자열은 개별 할당
             if ( requiredBytes > kArenaBlockSize )
             {
-                value_type* pLargeBuf = static_cast<value_type*>( Memory::allocMemory( requiredBytes ) );
+                value_type* pLargeBuf = static_cast<value_type*>( Memory::allocate( requiredBytes ) );
                 std::char_traits<value_type>::copy( pLargeBuf, pStr, length );
                 pLargeBuf[length] = static_cast<value_type>( 0 );
                 _listLargeAllocation.push_back( pLargeBuf );
@@ -355,7 +355,7 @@ namespace sw
             // 현재 블록 공간이 부족하면 새 64KB 블록 할당
             if ( _pCurrentArenaBlock == nullptr || ( _arenaOffset + requiredChars ) * sizeof( value_type ) > kArenaBlockSize )
             {
-                _pCurrentArenaBlock = static_cast<value_type*>( Memory::allocMemory( kArenaBlockSize ) );
+                _pCurrentArenaBlock = static_cast<value_type*>( Memory::allocate( kArenaBlockSize ) );
                 _listArenaBlock.push_back( _pCurrentArenaBlock );
                 _arenaOffset = 0;
             }
@@ -496,7 +496,7 @@ namespace sw
         if ( chunk == nullptr )
         {
             constexpr size_t chunkSize = sizeof( typename AllocationInfo::Entry ) * kChunkSize;
-            chunk                      = static_cast<typename AllocationInfo::Entry*>( Memory::allocMemory( chunkSize ) );
+            chunk                      = static_cast<typename AllocationInfo::Entry*>( Memory::allocate( chunkSize ) );
             Memory::set( chunk, 0, chunkSize );
             info._arrChunk[chunkIndex].store( chunk, std::memory_order_release );
         }

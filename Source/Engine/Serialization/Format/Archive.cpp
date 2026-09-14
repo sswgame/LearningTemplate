@@ -90,7 +90,7 @@ namespace sw
         _offset = offset;
     }
 
-    void Archive::setReadModeAndResetPos( const bool bSetReadMode )
+    void Archive::setReadModeAndResetPosition( const bool bSetReadMode )
     {
         _bReadMode = bSetReadMode ? SW_TRUE : SW_FALSE;
         _bError    = SW_FALSE;
@@ -765,9 +765,9 @@ namespace sw
         return SerializerUtil::transcodeBinaryToXml( _pData + _offset, _dataSize - _offset, typeInfo );
     }
 
-    void Archive::writeVarUInt( uint64 value )
+    void Archive::writeVarUint( uint64 value )
     {
-        VarIntUtil::encodeVarUInt64( value, _listBuffer );
+        VarIntUtil::encodeVarUint64( value, _listBuffer );
         _pData    = _listBuffer.data();
         _dataSize = _listBuffer.size();
         _offset   = _dataSize;
@@ -781,7 +781,7 @@ namespace sw
         _offset   = _dataSize;
     }
 
-    bool Archive::readVarUInt( uint64& outValue )
+    bool Archive::readVarUint( uint64& outValue )
     {
         if ( _pData == nullptr || _offset >= _dataSize )
         {
@@ -789,7 +789,7 @@ namespace sw
             return false;
         }
         size_t inoutOffset = static_cast<size_t>( _offset );
-        if ( VarIntUtil::decodeVarUInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
+        if ( VarIntUtil::decodeVarUint64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
         {
             _bError = SW_TRUE;
             return false;
@@ -798,10 +798,10 @@ namespace sw
         return true;
     }
 
-    bool Archive::readVarUInt( uint32& outValue )
+    bool Archive::readVarUint( uint32& outValue )
     {
         uint64 val64 = 0;
-        if ( readVarUInt( val64 ) == false )
+        if ( readVarUint( val64 ) == false )
             return false;
         outValue = static_cast<uint32>( val64 );
         return true;
@@ -836,13 +836,13 @@ namespace sw
     void Archive::writePooledString( string_view str )
     {
         const uint32 poolId = _stringPool.internString( str );
-        writeVarUInt( static_cast<uint64>( poolId ) );
+        writeVarUint( static_cast<uint64>( poolId ) );
     }
 
     bool Archive::readPooledString( string& outStr )
     {
         uint64 poolId = 0;
-        if ( readVarUInt( poolId ) == false || poolId >= _stringPool.getCount() )
+        if ( readVarUint( poolId ) == false || poolId >= _stringPool.getCount() )
         {
             _bError = SW_TRUE;
             return false;

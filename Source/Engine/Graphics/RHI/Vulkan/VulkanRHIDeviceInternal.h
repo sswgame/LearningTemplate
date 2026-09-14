@@ -74,7 +74,7 @@ namespace sw
             return VK_FORMAT_UNDEFINED;
         }
 
-        static bool hasExtensionVal( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
+        static bool hasExtension( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
         {
             for ( const VkExtensionProperties& ext : listAvailableExt )
             {

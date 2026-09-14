@@ -30,7 +30,7 @@ namespace sw
     {
         const size_t chunkHeaderSize = ( sizeof( Chunk ) + 15u ) & ~size_t{ 15 };
         const size_t allocSize       = chunkHeaderSize + ( _blockSize * _blocksPerChunk );
-        void*        pRaw            = sw::Memory::alignedAlloc( allocSize, 16 );
+        void*        pRaw            = sw::Memory::allocateAligned( allocSize, 16 );
         if ( pRaw == nullptr )
         {
             // OOM
@@ -123,7 +123,7 @@ namespace sw
         while ( pCurr != nullptr )
         {
             Chunk* pNext = pCurr->_pNext;
-            sw::Memory::alignedFree( pCurr );
+            sw::Memory::freeAligned( pCurr );
             pCurr = pNext;
         }
 

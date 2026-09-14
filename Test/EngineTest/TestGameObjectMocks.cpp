@@ -4,6 +4,10 @@
 
 namespace sw
 {
+    /** @brief 풀 재사용 검증용 생성·소멸 카운터. 헤더가 아니라 여기 한 번만 정의한다(헤더 주석 참고). */
+    atomic<int32> MockPoolLifecycleComponent::s_ctorCount{ 0 };
+    atomic<int32> MockPoolLifecycleComponent::s_dtorCount{ 0 };
+
     /** @brief 테스트 전용 TypeInfo 를 만들거나 캐시에서 반환합니다. */
     const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size, hashed_string parentFqn )
     {

@@ -175,7 +175,7 @@ namespace sw::editor
             entry._fileName           = FileUtil::getFileNamePart( file );
             entry._absolutePath       = FileUtil::normalizeSeparators( file );
             const string& projectRoot = ResourceUtil::getProjectFolderPath();
-            FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, entry._relativePath );
+            FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, entry._relativePath );
             outList.push_back( std::move( entry ) );
         }
         return true;

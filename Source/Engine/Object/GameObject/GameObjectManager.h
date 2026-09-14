@@ -311,7 +311,7 @@ namespace sw
 
             if ( pMem == nullptr )
             {
-                pMem = Memory::allocMemory( sizeof( T ) );
+                pMem = Memory::allocate( sizeof( T ) );
                 if ( pMem == nullptr )
                     return nullptr;
             }

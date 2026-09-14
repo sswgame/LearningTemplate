@@ -414,8 +414,8 @@ SW_TEST_CASE( ActionMapTest, CommandPatternFuzzyCombo )
     actionMap.update( 0.05f );
     input.endFrame();
 
-    SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236Punch", 0.5f ) );
-    SW_EXPECT_FALSE( actionMap.checkCommandPattern( "623Punch", 0.5f ) );
+    SW_EXPECT_TRUE( actionMap.wasCommandPatternTriggered( "236Punch", 0.5f ) );
+    SW_EXPECT_FALSE( actionMap.wasCommandPatternTriggered( "623Punch", 0.5f ) );
 
     input.shutdown();
 }
@@ -638,7 +638,7 @@ SW_TEST_CASE( ActionMapTest, ComboParserRingBufferOverflowStress )
     input.endFrame();
 
     // 콤보 패턴 매칭 검증 (236P)
-    SW_EXPECT_TRUE( actionMap.checkCommandPattern( "236P", 0.5f ) );
+    SW_EXPECT_TRUE( actionMap.wasCommandPatternTriggered( "236P", 0.5f ) );
 
     input.shutdown();
 }

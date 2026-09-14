@@ -469,7 +469,7 @@ namespace sw
                     return false;
 
                 const vector<string> tokens =
-                    sw::AnnotationApply::splitAnnotationArgs( sw::AnnotationApply::annotationArgText( search._spelling, annotationConstants::kReflectContainerPrefix ) );
+                    sw::AnnotationApply::splitAnnotationArgs( sw::AnnotationApply::annotationArgumentText( search._spelling, annotationConstants::kReflectContainerPrefix ) );
                 if ( tokens.empty() )
                     return SW_FALSE;
 

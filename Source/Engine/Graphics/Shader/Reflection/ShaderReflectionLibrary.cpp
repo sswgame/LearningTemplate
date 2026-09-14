@@ -337,7 +337,7 @@ namespace sw
         // 베이킹하지 않았거나, 매니페스트가 소스보다 오래된 상태를 위한 폴백이다.
         const ShaderCompileResult result = engine::areEngineServicesBound()
                                              ? engine::getShaderCache().getOrCompile( desc )
-                                             : ShaderCompiler::compileHLSL( desc );
+                                             : ShaderCompiler::compileHlsl( desc );
         if ( result._bSuccess == false || result._bytecode.empty() )
         {
             SW_LOG_WARNING( "런타임 리플렉션 폴백 실패: '%#' (%#)", string( desc._filePath ).c_str(),

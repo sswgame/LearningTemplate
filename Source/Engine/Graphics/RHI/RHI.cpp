@@ -184,7 +184,7 @@ namespace sw
 
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow != nullptr )
-            _device->setInitWindow( pWindow );
+            _device->setInitialWindow( pWindow );
         _device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
         if ( _device->initialize() == false )
@@ -243,7 +243,7 @@ namespace sw
             return false;
 
         if ( pWindow != nullptr )
-            _device->setInitWindow( pWindow );
+            _device->setInitialWindow( pWindow );
         _device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
         if ( _device->initialize() == false )

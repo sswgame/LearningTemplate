@@ -60,6 +60,6 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() )
             return engine::getShaderCache().getOrCompile( desc );
-        return ShaderCompiler::compileHLSL( desc );
+        return ShaderCompiler::compileHlsl( desc );
     }
 } // namespace sw

@@ -19,7 +19,7 @@ namespace sw
      *          두 병렬 벡터에 나눠 쓰기)에 allocateFreeListIndex 대신 이걸 씁니다.
      */
     template <typename T>
-    uint32 resolveFreeListIndex( const vector<T>& listRegistered, vector<uint32>& listFree )
+    uint32 reserveFreeListIndex( const vector<T>& listRegistered, vector<uint32>& listFree )
     {
         if ( listFree.empty() == false )
         {
@@ -36,7 +36,7 @@ namespace sw
     template <typename T>
     uint32 allocateFreeListIndex( vector<T>& listRegistered, vector<uint32>& listFree, T value )
     {
-        const uint32 index = resolveFreeListIndex( listRegistered, listFree );
+        const uint32 index = reserveFreeListIndex( listRegistered, listFree );
         if ( index >= listRegistered.size() )
             listRegistered.resize( index + 1 );
         listRegistered[index] = std::move( value );

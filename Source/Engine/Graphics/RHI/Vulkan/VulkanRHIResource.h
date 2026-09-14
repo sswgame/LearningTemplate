@@ -33,9 +33,9 @@ namespace sw
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처 레코드가 쥔 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture/unregisterBindlessTexture 공용). */

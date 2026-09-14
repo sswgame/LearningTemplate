@@ -8,8 +8,8 @@
  *
  * 초심자 가이드:
  *  - bufferAction/consumeBufferedAction : 공격 버튼을 살짝 일찍 눌러도 인정해주는 선입력 유예 링버퍼입니다.
- *  - checkCommandSequence : 최근 트리거된 액션 이력(_arrCommandHistory)에서 주어진 순서가 시간 윈도우 안에 나왔는지 검사합니다.
- *  - checkCommandPattern : "236P"(하-우하-우+펀치) 같은 넘패드 표기법 문자열을 액션 이름 시퀀스로 바꾼 뒤 checkCommandSequence에 위임합니다.
+ *  - wasCommandSequenceTriggered : 최근 트리거된 액션 이력(_arrCommandHistory)에서 주어진 순서가 시간 윈도우 안에 나왔는지 검사합니다.
+ *  - wasCommandPatternTriggered : "236P"(하-우하-우+펀치) 같은 넘패드 표기법 문자열을 액션 이름 시퀀스로 바꾼 뒤 wasCommandSequenceTriggered에 위임합니다.
  */
 
 namespace sw
@@ -52,7 +52,7 @@ namespace sw
         return false;
     }
 
-    bool ActionMap::checkCommandSequence( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
+    bool ActionMap::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
     {
         if ( listSequence.empty() || _commandHistoryCount < listSequence.size() )
             return false;
@@ -92,7 +92,7 @@ namespace sw
         return matchIdx == 0;
     }
 
-    bool ActionMap::checkCommandSequence( const vector<string>& listSequence, float32 maxWindowSeconds ) const
+    bool ActionMap::wasCommandSequenceTriggered( const vector<string>& listSequence, float32 maxWindowSeconds ) const
     {
         if ( listSequence.empty() )
             return false;
@@ -100,15 +100,15 @@ namespace sw
         listHashed.reserve( listSequence.size() );
         for ( const string& s : listSequence )
             listHashed.push_back( hashed_string( s ) );
-        return checkCommandSequence( listHashed, maxWindowSeconds );
+        return wasCommandSequenceTriggered( listHashed, maxWindowSeconds );
     }
 
-    bool ActionMap::checkCommandPattern( string_view pattern, float32 maxWindowSeconds ) const
+    bool ActionMap::wasCommandPatternTriggered( string_view pattern, float32 maxWindowSeconds ) const
     {
-        return checkCommandPattern( hashed_string( pattern ), maxWindowSeconds );
+        return wasCommandPatternTriggered( hashed_string( pattern ), maxWindowSeconds );
     }
 
-    bool ActionMap::checkCommandPattern( const hashed_string& pattern, float32 maxWindowSeconds ) const
+    bool ActionMap::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
     {
         string_view patternText = pattern.view();
         if ( patternText.empty() || _commandHistoryCount == 0 )
@@ -146,6 +146,6 @@ namespace sw
         if ( listExpected.empty() )
             return false;
 
-        return checkCommandSequence( listExpected, maxWindowSeconds );
+        return wasCommandSequenceTriggered( listExpected, maxWindowSeconds );
     }
 } // namespace sw

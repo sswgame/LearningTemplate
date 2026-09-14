@@ -31,7 +31,7 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                                \
-    extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                                                                                      \
+    extern "C" SW_MODULE_API bool exportGameApi( sw::GameAPI* pOutApi )                                                                                                                                      \
     {                                                                                                                                                                                                        \
         if ( pOutApi == nullptr )                                                                                                                                                                            \
             return false;                                                                                                                                                                                    \

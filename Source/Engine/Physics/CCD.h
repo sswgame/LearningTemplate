@@ -35,7 +35,7 @@ namespace sw
          * @param outHit 충돌 시각 t in [0, 1], 접촉 법선 및 접촉점 결과
          * @return 충돌 발생 시 true
          */
-        static bool sweepAABB( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit );
+        static bool sweepAabb( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit );
 
         /**
          * @brief 이동하는 구(Sphere)와 정적 대상 AABB 간의 연속 충돌 검사

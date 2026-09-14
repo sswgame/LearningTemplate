@@ -113,7 +113,7 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesAndCameraRelativeRenderin
 
     comp->setLocalPosition( float3( 1000000.5f, 500000.25f, 0.0f ) );
 
-    double3 lwcPos = comp->getWorldPositionLWC();
+    double3 lwcPos = comp->getWorldPositionLwc();
     SW_EXPECT_NEAR_EQUAL( 1000000.5, lwcPos._x, 1e-6 );
     SW_EXPECT_NEAR_EQUAL( 500000.25, lwcPos._y, 1e-6 );
 
@@ -158,17 +158,17 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesHierarchy )
 
     manager.tick( 0.016f );
 
-    const double3 rootLWC = rootSc->getWorldPositionLWC();
+    const double3 rootLWC = rootSc->getWorldPositionLwc();
     SW_EXPECT_NEAR_EQUAL( 100.0, rootLWC._x, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 200.0, rootLWC._y, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 300.0, rootLWC._z, 0.0001 );
 
-    const double3 childLWC = childSc->getWorldPositionLWC();
+    const double3 childLWC = childSc->getWorldPositionLwc();
     SW_EXPECT_NEAR_EQUAL( 110.0, childLWC._x, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 220.0, childLWC._y, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 330.0, childLWC._z, 0.0001 );
 
-    const double3 grandChildLWC = grandChildSc->getWorldPositionLWC();
+    const double3 grandChildLWC = grandChildSc->getWorldPositionLwc();
     SW_EXPECT_NEAR_EQUAL( 111.0, grandChildLWC._x, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 222.0, grandChildLWC._y, 0.0001 );
     SW_EXPECT_NEAR_EQUAL( 333.0, grandChildLWC._z, 0.0001 );

@@ -32,7 +32,7 @@ namespace sw
         bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };       /**< @brief 버퍼에서 게임 상태를 복원합니다. */
     };
 
-    /** @brief SWGame export 심볼: exportGameAPI */
+    /** @brief SWGame export 심볼: exportGameApi */
     using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutApi );
 } // namespace sw
 
@@ -42,5 +42,5 @@ extern "C"
     // 3) export — SWGame이 채우는 진입점
     // ------------------------------------------------------------------------------
     /** @brief SWGame API 테이블을 내보냅니다. */
-    SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi );
+    SW_MODULE_API bool exportGameApi( sw::GameAPI* pOutApi );
 }

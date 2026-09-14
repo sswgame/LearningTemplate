@@ -136,20 +136,20 @@ namespace sw
         XmlDocument doc;
         XmlNode     root = doc.appendRoot( "MaterialInstanceDesc" );
         engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kMaterialInstance );
-        MaterialUtil::appendAttr( root, "name", _desc._name );
+        MaterialUtil::appendAttribute( root, "name", _desc._name );
         if ( _desc._parentPath.empty() == false )
-            MaterialUtil::appendAttr( root, "parentPath", _desc._parentPath );
+            MaterialUtil::appendAttribute( root, "parentPath", _desc._parentPath );
         if ( _desc._quality.empty() == false )
-            MaterialUtil::appendAttr( root, "quality", _desc._quality );
+            MaterialUtil::appendAttribute( root, "quality", _desc._quality );
 
         XmlNode overrides = root.appendChild( "_overrides" );
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
         {
             XmlNode item = overrides.appendChild( "item" );
-            MaterialUtil::appendAttr( item, "name", overrideItem._name );
-            MaterialUtil::appendAttr( item, "value", overrideItem._value );
+            MaterialUtil::appendAttribute( item, "name", overrideItem._name );
+            MaterialUtil::appendAttribute( item, "value", overrideItem._value );
             if ( overrideItem._assetPath.empty() == false )
-                MaterialUtil::appendAttr( item, "assetPath", overrideItem._assetPath );
+                MaterialUtil::appendAttribute( item, "assetPath", overrideItem._assetPath );
         }
 
         if ( _desc._listKeyword.empty() == false )
@@ -158,7 +158,7 @@ namespace sw
             for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
             {
                 XmlNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttr( item, "name", keywordItem._name );
+                MaterialUtil::appendAttribute( item, "name", keywordItem._name );
                 MaterialUtil::appendBoolAttr( item, "bEnabled", keywordItem._bEnabled );
             }
         }
@@ -168,8 +168,8 @@ namespace sw
             for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
             {
                 XmlNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttr( item, "name", multiCompileItem._name );
-                MaterialUtil::appendAttr( item, "selected", multiCompileItem._selected );
+                MaterialUtil::appendAttribute( item, "name", multiCompileItem._name );
+                MaterialUtil::appendAttribute( item, "selected", multiCompileItem._selected );
             }
         }
 

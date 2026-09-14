@@ -24,7 +24,7 @@ namespace sw
         _height = height;
     }
 
-    bool TransientAttachmentPool::alloc( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
+    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
     {
         if ( pDevice == nullptr || pDevice->getResource() == nullptr )
             return false;

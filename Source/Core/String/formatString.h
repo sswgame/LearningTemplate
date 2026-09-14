@@ -698,7 +698,7 @@ namespace sw
                 if constexpr ( std::is_same_v<std::decay_t<std::remove_pointer_t<DecayT>>, utf8> ||
                                std::is_same_v<std::decay_t<std::remove_pointer_t<DecayT>>, utf16> )
                 {
-                    const string utf8Str = toUTF8String( value );
+                    const string utf8Str = toUtf8String( value );
                     const uint32 len     = MathUtil::min( static_cast<uint32>( utf8Str.size() ), static_cast<uint32>( kTempBufferSize - 1 ) );
                     Memory::copy( pBuf, utf8Str.data(), len );
                     pBuf[len] = '\0';
@@ -725,7 +725,7 @@ namespace sw
             }
             else
             {
-                const string utf8Str = toUTF8String( value );
+                const string utf8Str = toUtf8String( value );
                 const uint32 len     = MathUtil::min( static_cast<uint32>( utf8Str.size() ), static_cast<uint32>( kTempBufferSize - 1 ) );
                 Memory::copy( pBuf, utf8Str.data(), len );
                 pBuf[len] = '\0';
@@ -735,7 +735,7 @@ namespace sw
 
         /** @brief UTF-8 문자열로 변환합니다. */
         template <typename StringType>
-        static string toUTF8String( const StringType& str )
+        static string toUtf8String( const StringType& str )
         {
             using T = std::decay_t<StringType>;
             if constexpr ( std::is_pointer_v<T> )

@@ -81,7 +81,7 @@ namespace sw::editor
          * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.jpg")에 대해 가장 먼저 일치하는 규칙을 찾아 반환합니다.
          * @return 매칭되는 규칙이 발견되면 true
          */
-        bool matchRule( string_view relativePath, TextureImportRule& outRule ) const;
+        bool findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const;
 
         /** @brief 등록된 프리셋 맵을 반환합니다. */
         const map<string, TextureImportRule>& getPresets() const { return _mapPreset; }

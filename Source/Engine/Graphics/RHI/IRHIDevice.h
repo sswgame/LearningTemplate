@@ -33,7 +33,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 가상 소멸. */
         virtual ~IRHIDevice();
-        /** @brief 빈 디바이스. initialize 전에 setInitWindow. */
+        /** @brief 빈 디바이스. initialize 전에 setInitialWindow. */
         IRHIDevice();
         /** @brief 복사를 금지합니다. */
         IRHIDevice( const IRHIDevice& ) = delete;
@@ -167,7 +167,7 @@ namespace sw
         }
 
         /** @brief initializeInternal에 넘길 윈도우를 저장합니다. */
-        void setInitWindow( IWindow* pWindow ) { _pInitWindow = pWindow; }
+        void setInitialWindow( IWindow* pWindow ) { _pInitWindow = pWindow; }
         /** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. `initialize` 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
         /**
@@ -247,7 +247,7 @@ namespace sw
          *          Release 에서는 제거된다.
          * @param pWhat 로그에 남길 호출 지점 이름.
          */
-        void checkRegistryMutableNow( const utf8* pWhat ) const;
+        void assertRegistryMutableNow( const utf8* pWhat ) const;
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다 (디버그 전용, 8회까지).
@@ -256,7 +256,7 @@ namespace sw
          *          선언이 빠진 자원(뎁스 첨부가 대표적)은 놓친다 — 그래서 이건 assert 가 아니다.
          *          실제 전이는 락이 보호하므로 남아 있어도 안전하고, 여기 찍히는 이름이 곧
          *          "파이프라인 선언을 채우면 사라질 자리" 다.
-         * @note bindless 레지스트리 쪽(`checkRegistryMutableNow`)은 불변식이 확실해서 assert 다.
+         * @note bindless 레지스트리 쪽(`assertRegistryMutableNow`)은 불변식이 확실해서 assert 다.
          *       두 감시의 격이 다른 이유가 이것이다.
          */
         void noteBarrierDuringRecording( const utf8* pWhat ) const;

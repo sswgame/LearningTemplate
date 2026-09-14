@@ -76,7 +76,7 @@ namespace sw::editor
 
         // 1. Splash matching
         TextureImportRule splashRule;
-        SW_ASSERT_TRUE( config.matchRule( "editor/textures_raw/splash.jpg", splashRule ) );
+        SW_ASSERT_TRUE( config.findMatchingRule( "editor/textures_raw/splash.jpg", splashRule ) );
         SW_EXPECT_EQUAL( string( "Editor_Splash" ), splashRule._name );
         SW_EXPECT_EQUAL( string( "B8G8R8A8_UNORM" ), splashRule._format );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( splashRule._swizzle ) );
@@ -84,7 +84,7 @@ namespace sw::editor
 
         // 2. Normal map matching
         TextureImportRule normalRule;
-        SW_ASSERT_TRUE( config.matchRule( "characters/hero_n.png", normalRule ) );
+        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_n.png", normalRule ) );
         SW_EXPECT_EQUAL( string( "Normal_Maps" ), normalRule._name );
         SW_EXPECT_EQUAL( string( "BC5_UNORM" ), normalRule._format );
         SW_EXPECT_EQUAL( SW_TRUE, normalRule._bInvertGreen );
@@ -92,14 +92,14 @@ namespace sw::editor
 
         // 3. Normal map preview exclusion (falls back to Fallback_Default)
         TextureImportRule previewRule;
-        SW_ASSERT_TRUE( config.matchRule( "characters/hero_preview_n.png", previewRule ) );
+        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_preview_n.png", previewRule ) );
         SW_EXPECT_EQUAL( string( "Fallback_Default" ), previewRule._name );
         SW_EXPECT_EQUAL( string( "BC7_UNORM" ), previewRule._format );
         SW_EXPECT_EQUAL( SW_TRUE, previewRule._bSrgb );
 
         // 4. UI path matching
         TextureImportRule uiRule;
-        SW_ASSERT_TRUE( config.matchRule( "ui/hud/crosshair.png", uiRule ) );
+        SW_ASSERT_TRUE( config.findMatchingRule( "ui/hud/crosshair.png", uiRule ) );
         SW_EXPECT_EQUAL( string( "UI_Textures" ), uiRule._name );
         SW_EXPECT_EQUAL( string( "B8G8R8A8_UNORM" ), uiRule._format );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( uiRule._swizzle ) );

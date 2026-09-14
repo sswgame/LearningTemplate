@@ -39,7 +39,7 @@ Frame 1 위치                             Frame 2 위치
 ```
 
 ### 2.2 민코프스키 합(Minkowski Sum)과 슬랩 레이캐스트
-`CCD::sweepAABB`는 이동하는 AABB의 크기(반경)만큼 정적 대상 AABB를 3차원으로 확장(Minkowski Sum)한 뒤, 확장된 박스에 대해 이동 중심점으로부터 이동 변위 벡터($\mathbf{d}$)로 3D 슬랩(Slab) 광선을 투사합니다.
+`CCD::sweepAabb`는 이동하는 AABB의 크기(반경)만큼 정적 대상 AABB를 3차원으로 확장(Minkowski Sum)한 뒤, 확장된 박스에 대해 이동 중심점으로부터 이동 변위 벡터($\mathbf{d}$)로 3D 슬랩(Slab) 광선을 투사합니다.
 
 1. **대상 박스 확장**:
    $$\text{Expanded}.\min = \text{Target}.\min - \text{MovingHalfExtents}$$
@@ -52,7 +52,7 @@ Frame 1 위치                             Frame 2 위치
 
 ## 3. C++ 사용 예제
 
-### 3.1 `CCD::sweepAABB` 단독 사용
+### 3.1 `CCD::sweepAabb` 단독 사용
 ```cpp
 #include "Engine/Physics/CCD.h"
 
@@ -63,7 +63,7 @@ sw::float3 displacement{ 0.0f, 0.0f, 100.0f }; // 1프레임 동안 100m 전진
 
 // 2) CCD 스윕 검사 수행
 sw::SweepHit hitResult{};
-if ( sw::CCD::sweepAABB( bullet, displacement, wall, hitResult ) )
+if ( sw::CCD::sweepAabb( bullet, displacement, wall, hitResult ) )
 {
     // hitResult._time: 약 0.498 (궤적의 49.8% 지점에서 충돌)
     // hitResult._hitNormal: (0, 0, -1) (벽 앞면 법선)

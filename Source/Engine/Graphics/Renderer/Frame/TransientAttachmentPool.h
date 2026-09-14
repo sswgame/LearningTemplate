@@ -53,7 +53,7 @@ namespace sw
         bool isEmpty() const { return _mapAttachment.empty(); }
 
         /** @brief 이름으로 첨부를 만듭니다 (현재 크기). 이미 있으면 그대로 true. 못 만들면 경고를 남기고 false. */
-        bool alloc( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
+        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
         /** @brief 이름의 첨부 (텍스처+SRV). 없으면 빈 값. */
         Attachment find( string_view name ) const;
         /** @brief 이름의 텍스처 핸들. 없으면 0. */

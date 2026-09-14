@@ -78,7 +78,7 @@ namespace sw
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수, DX11/GL 은 계약 슬롯 b2 의 상수버퍼로 흉내 낸다.
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
+        virtual void bindComputeUav( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
         virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                         = 0;
 
         // ------------------------------------------------------------------------------

@@ -148,12 +148,12 @@ SW_TEST_CASE( MemoryTest, LockFreeObjectPoolOperations )
 }
 
 /**
- * @brief [MemoryTest] Memory 기본 할당/해제, SIMD 정렬 할당(alignedAlloc) 및 메모리 유틸 검증
+ * @brief [MemoryTest] Memory 기본 할당/해제, SIMD 정렬 할당(allocateAligned) 및 메모리 유틸 검증
  */
 SW_TEST_CASE( MemoryTest, LowLevelMemoryAllocAndAlignment )
 {
     // 1) 기본 할당 / 해제
-    void* rawPtr = sw::Memory::allocMemory( 512 );
+    void* rawPtr = sw::Memory::allocate( 512 );
     SW_ASSERT_NOT_NULL( rawPtr );
 
     sw::Memory::set( rawPtr, 0, 512 );
@@ -163,10 +163,10 @@ SW_TEST_CASE( MemoryTest, LowLevelMemoryAllocAndAlignment )
         SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bytePtr[slotIndex] ) );
     }
 
-    sw::Memory::freeMemory( rawPtr );
+    sw::Memory::free( rawPtr );
 
     // 2) SIMD 정렬 할당 (64바이트 캐시라인 정렬)
-    void* aligned64 = sw::Memory::alignedAlloc( 256, 64 );
+    void* aligned64 = sw::Memory::allocateAligned( 256, 64 );
     SW_ASSERT_NOT_NULL( aligned64 );
     SW_EXPECT_EQUAL( 0u, reinterpret_cast<uintptr_t>( aligned64 ) % 64 );
 
@@ -175,7 +175,7 @@ SW_TEST_CASE( MemoryTest, LowLevelMemoryAllocAndAlignment )
     sw::Memory::copy( aligned64, kSamplePattern, 32 );
     SW_EXPECT_EQUAL( 0, sw::Memory::compare( aligned64, kSamplePattern, 32 ) );
 
-    sw::Memory::alignedFree( aligned64 );
+    sw::Memory::freeAligned( aligned64 );
 }
 
 /**

@@ -214,7 +214,7 @@ namespace sw::editor
             parseStringListInternal( jsonValue.get( "exclude_paths" ), inoutRule._listExcludePath );
     }
 
-    bool TextureImportConfig::matchRule( string_view relativePath, TextureImportRule& outRule ) const
+    bool TextureImportConfig::findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const
     {
         const string normalized = FileUtil::normalizeSeparators( relativePath );
         const string fileName   = FileUtil::getFileNamePart( normalized );

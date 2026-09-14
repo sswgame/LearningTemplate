@@ -67,7 +67,7 @@ namespace sw
         return false;
     }
 
-    bool TagContainer::matchTags( const TagContainer& required, const TagContainer& forbidden ) const
+    bool TagContainer::matchesTags( const TagContainer& required, const TagContainer& forbidden ) const
     {
         if ( hasAllTags( required ) == false )
             return false;
@@ -81,21 +81,21 @@ namespace sw
     TagQuery TagQuery::createAnyMatch( const TagContainer& tags )
     {
         TagQuery query;
-        query._rootExpr = TagQueryExpr::anyTagsMatch( tags );
+        query._rootExpr = TagQueryExpr::createAnyTagsMatch( tags );
         return query;
     }
 
     TagQuery TagQuery::createAllMatch( const TagContainer& tags )
     {
         TagQuery query;
-        query._rootExpr = TagQueryExpr::allTagsMatch( tags );
+        query._rootExpr = TagQueryExpr::createAllTagsMatch( tags );
         return query;
     }
 
     TagQuery TagQuery::createNoMatch( const TagContainer& tags )
     {
         TagQuery query;
-        query._rootExpr = TagQueryExpr::noTagsMatch( tags );
+        query._rootExpr = TagQueryExpr::createNoTagsMatch( tags );
         return query;
     }
 
@@ -110,10 +110,10 @@ namespace sw
     {
         if ( _rootExpr._type == TagQueryExprType::Undefined )
             return true;
-        return evalExpr( _rootExpr, container );
+        return evaluateExpr( _rootExpr, container );
     }
 
-    bool TagQuery::evalExpr( const TagQueryExpr& expr, const TagContainer& container )
+    bool TagQuery::evaluateExpr( const TagQueryExpr& expr, const TagContainer& container )
     {
         switch ( expr._type )
         {
@@ -131,7 +131,7 @@ namespace sw
                     return true;
                 for ( const TagQueryExpr& subExpr : expr._listSubExpr )
                 {
-                    if ( evalExpr( subExpr, container ) )
+                    if ( evaluateExpr( subExpr, container ) )
                         return true;
                 }
                 return false;
@@ -142,7 +142,7 @@ namespace sw
                     return true;
                 for ( const TagQueryExpr& subExpr : expr._listSubExpr )
                 {
-                    if ( evalExpr( subExpr, container ) == false )
+                    if ( evaluateExpr( subExpr, container ) == false )
                         return false;
                 }
                 return true;
@@ -151,7 +151,7 @@ namespace sw
             {
                 if ( expr._listSubExpr.empty() )
                     return true;
-                return evalExpr( expr._listSubExpr[0], container ) == false;
+                return evaluateExpr( expr._listSubExpr[0], container ) == false;
             }
             default:
                 return false;

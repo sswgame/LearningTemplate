@@ -73,7 +73,7 @@ namespace sw
         if ( _pEngineLoop == nullptr )
             return;
 
-        const RHI* pRHI = _pEngineLoop->getRHI();
+        const RHI* pRHI = _pEngineLoop->getRhi();
         if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
             return;
 
@@ -89,7 +89,7 @@ namespace sw
 
     void BackendSwapController::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {
-        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRhi() : nullptr;
         if ( pInfo == nullptr || pRHI == nullptr )
             return;
 
@@ -124,7 +124,7 @@ namespace sw
         _pModuleHost->suspendModules( ModuleScope::Both, false );
 
         const bool bSwapOk = _pEngineLoop->applyPendingBackendChange();
-        RHI*       pRHI    = _pEngineLoop->getRHI();
+        RHI*       pRHI    = _pEngineLoop->getRhi();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );

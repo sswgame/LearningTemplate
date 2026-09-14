@@ -140,7 +140,7 @@ SW_TEST_CASE( MathTest, Float3FullTest )
     SW_EXPECT_NEAR_EQUAL( 0.0f, crossV._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, crossV._z, 1e-4f );
 
-    SW_EXPECT_TRUE( v1.inBounds( sw::float3( 2.0f ) ) );
+    SW_EXPECT_TRUE( v1.isInBounds( sw::float3( 2.0f ) ) );
 
     sw::float3 lerpV = sw::float3::lerp( sw::float3::Zero, sw::float3( 10.0f, 20.0f, 30.0f ), 0.5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, lerpV._x, 1e-4f );

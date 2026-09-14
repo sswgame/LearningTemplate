@@ -103,7 +103,7 @@ namespace sw::editor
                 const string  filename = FileUtil::getFileNamePart( file );
                 string        relPath;
                 const string& projectRoot = ResourceUtil::getProjectFolderPath();
-                FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, relPath );
+                FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, relPath );
                 relPath = FileUtil::normalizeSeparators( relPath );
 
                 outEntry._path   = relPath;
@@ -513,7 +513,7 @@ namespace sw::editor
         {
             string        relPath;
             const string& projectRoot = ResourceUtil::getProjectFolderPath();
-            FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, pPath, relPath );
+            FileUtil::makeRelativePath( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, pPath, relPath );
             relPath = FileUtil::normalizeSeparators( relPath );
             pSprite->setTextureName( relPath );
         }

@@ -33,9 +33,9 @@ namespace sw
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessUAV( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex     registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */

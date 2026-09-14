@@ -85,14 +85,12 @@ namespace sw
         /** @brief 이동 대입을 금지합니다. */
         CommandLineManager& operator=( CommandLineManager&& ) = delete;
 
-        /** @brief initialize 를 호출합니다. 실패하면 false 입니다. */
-        bool startup();
-        /** @brief 파싱 결과는 프로세스 수명과 같으므로 할 일이 없습니다. */
-        void shutdown() {}
         /**
          * @brief CommandList.xxx 파일을 참조하여 허용 가능한 커맨드라인 인자 목록을 동적 등록
          */
         void initialize();
+        /** @brief 파싱 결과는 프로세스 수명과 같으므로 할 일이 없습니다. */
+        void shutdown() {}
 
         /**
          * @brief 메인 함수로부터 전달받은 UTF-8 인자 목록을 파싱 (Linux/Mac 또는 표준 C++)

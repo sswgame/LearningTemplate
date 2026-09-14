@@ -84,6 +84,36 @@ cmake --build --preset Ninja-Debug
   new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
   (`GpuScene`) keep their own vocabulary — they are not registry members.
 
+### Function names
+
+Four rules, all enforced by `CheckFunctionVocabulary.py`. A reader who knows one of these names must be
+able to guess the rest; that is the whole point.
+
+- **An acronym inside a function name is one camelCase word**, not a run of capitals: `initRhi`,
+  `queryAabb`, `bindComputeUav`, `exportGameApi`, `updateUi`, `isValidUtf8`, `parseUint64`.
+  **Type names keep their established spelling** (`IRHIDevice`, `AABB`, `TagID`) — the rule is about
+  `camelCase` identifiers, where a capital run hides the word boundary. `queryAABB` sitting next to
+  `queryAabb` was the state this rule ended.
+- **One verb per concept.** Picking a synonym is how two names for one thing get born:
+
+  | Concept | Verb | Never |
+  | --- | --- | --- |
+  | bring an object to life / take it down | `initialize` / `shutdown` | `setup`, `startup`, `cleanup`, `teardown` |
+  | hand out and take back memory or a slot | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
+  | build and return a new value | `create` (owning) · `make` (plain value) | `build`, `construct`, `generate` |
+  | look something up | `get` (always there) · `find` (may miss) | `fetch`, `retrieve`, `lookup`, `obtain` |
+
+- **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
+  third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).
+  `check*` is not a predicate — a `check*` that returns `bool` is an `is*`/`has*`, and one that returns
+  `void` and asserts is an `assert*`. A getter paired with `setX()` is `getX()` / `isX()`, never bare `x()`.
+- **`on*` means "this happened"** — a notification handler, never the call that registers one. Registering
+  is `register*` / `unregister*` (`GameStrings::onLanguageChanged` returning a handle was the bug this
+  rule names).
+- **Spell the word out** unless one of this repo's own type names abbreviates it. `XmlNode::attr()` was
+  wrong because the type beside it is `XmlAttribute`; `TagQueryExpr::…Expr` and `ShaderEngineCbMember`'s
+  `…Cb…` are fine because the type carries the same short form.
+
 ### Python
 
 - Public functions use `camelCase`; private helpers use `camelCaseInternal`.

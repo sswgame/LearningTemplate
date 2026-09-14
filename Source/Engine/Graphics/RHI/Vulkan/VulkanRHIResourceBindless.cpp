@@ -26,7 +26,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessTexture" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
 
@@ -51,7 +51,7 @@ namespace sw
             return record._bindlessIndex;
 
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex            descriptorIndex = resolveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
+        const RHIDescriptorIndex            descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
             SW_LOG_ERROR( "Bindless texture table full." );
@@ -68,7 +68,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResource::registerBindlessResource( RHIBufferHandle buffer )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -80,7 +80,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
         // 넣으면 다음 registerBindlessResource 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다 — 실제로
@@ -109,7 +109,7 @@ namespace sw
 
     void VulkanRHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessTexture" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
         if ( index == kInvalidDescriptorIndex )
             return;
         // 텍스처 레코드가 자기 인덱스를 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽도
@@ -150,9 +150,9 @@ namespace sw
         record._bindlessIndex = kInvalidDescriptorIndex;
     }
 
-    RHIDescriptorIndex VulkanRHIResource::registerBindlessUAV( RHIBufferHandle buffer )
+    RHIDescriptorIndex VulkanRHIResource::registerBindlessUav( RHIBufferHandle buffer )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessUAV" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -163,9 +163,9 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex VulkanRHIResource::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIDescriptorIndex VulkanRHIResource::registerBindlessTextureUav( RHITextureHandle texture )
     {
-        _pDevice->checkRegistryMutableNow( "registerBindlessTextureUAV" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
@@ -188,9 +188,9 @@ namespace sw
         return index;
     }
 
-    void VulkanRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
+    void VulkanRHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
-        _pDevice->checkRegistryMutableNow( "unregisterBindlessUAV" );
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const bool                          bBuffer  = index < _pDevice->_listUavSourceBuffer.size() && _pDevice->_listUavSourceBuffer[index] != 0;
         const bool                          bTexture = index < _pDevice->_listUavSourceTexture.size() && _pDevice->_listUavSourceTexture[index] != 0;

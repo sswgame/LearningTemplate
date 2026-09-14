@@ -1000,7 +1000,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Combo Pattern (Numpad Notation)", _testComboPattern, 150.0f );
 
         ImGui::SameLine();
-        const bool bPatternMatched = _actionMap.checkCommandPattern( _testComboPattern.c_str(), 0.8f );
+        const bool bPatternMatched = _actionMap.wasCommandPatternTriggered( _testComboPattern.c_str(), 0.8f );
         if ( bPatternMatched )
             EditorThemeUtil::textSuccess( "MATCHED! (Success)" );
         else

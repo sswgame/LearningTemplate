@@ -13,7 +13,7 @@
  * 메시마다, 프레임마다. 게다가 그 호출은 게임 스레드라 OpenGL 에서는 컨텍스트가 없다. 그래서 GPU 다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 레스트 읽기는 t0, 결과 쓰기는 u0.
- * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSrv, 0 ) / bindComputeUAV( morphUav, 0 ).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSrv, 0 ) / bindComputeUav( morphUav, 0 ).
  */
 
 // binding.hlsli 의 g_SwMorphVertices 와 **같은 배치여야 한다** — 정점 하나 = float4 둘([2i] 위치,

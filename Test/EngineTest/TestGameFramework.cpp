@@ -1132,7 +1132,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
     listHadouken.push_back( "Right" );
     listHadouken.push_back( "Attack" );
 
-    SW_EXPECT_FALSE( map.checkCommandSequence( listHadouken, 0.35f ) );
+    SW_EXPECT_FALSE( map.wasCommandSequenceTriggered( listHadouken, 0.35f ) );
 }
 
 /**

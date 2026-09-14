@@ -589,7 +589,7 @@ namespace sw
     };
 
     /** @brief 포맷의 블록 정보. 4개 백엔드가 밉 크기·행 바이트를 같은 규칙으로 계산하는 유일한 출처다. */
-    inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
+    inline constexpr RHIFormatBlockInfo getRhiFormatBlockInfo( RHIFormat format )
     {
         switch ( format )
         {
@@ -618,15 +618,15 @@ namespace sw
     }
 
     /** @brief 블록 압축 포맷인가. */
-    inline constexpr bool isRHIFormatBlockCompressed( RHIFormat format )
+    inline constexpr bool isRhiFormatBlockCompressed( RHIFormat format )
     {
-        return getRHIFormatBlockInfo( format )._blockWidth > 1;
+        return getRhiFormatBlockInfo( format )._blockWidth > 1;
     }
 
     /** @brief 비압축 컬러 포맷의 픽셀당 바이트. 압축/깊이/Unknown 은 0. */
-    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
+    inline constexpr uint32 getRhiFormatBytesPerPixel( RHIFormat format )
     {
-        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
         return info._blockWidth == 1 ? info._blockBytes : 0;
     }
 
@@ -635,9 +635,9 @@ namespace sw
      * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지한다.
      * @return 포맷이 대상이 아니거나 크기가 0 이면 false.
      */
-    inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
+    inline bool computeRhiTextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
     {
-        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
         if ( info._blockBytes == 0 || width == 0 || height == 0 )
             return false;
         const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
@@ -673,7 +673,7 @@ namespace sw
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             RHITextureMipSpan& span = pOutSpan[mip];
-            if ( computeRHITextureMipLayout( format, width, height, mip, span ) == false )
+            if ( computeRhiTextureMipLayout( format, width, height, mip, span ) == false )
                 return 0;
             if ( offset + span._sizeBytes > desc._sizeBytes )
                 return 0;

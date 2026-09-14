@@ -249,7 +249,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
     grid.insert( eFarAway, 500.0f, 500.0f, 520.0f, 520.0f );
 
     sw::vector<sw::ObjectHandle> listAabb;
-    grid.queryAABB( 0.0f, 0.0f, 70.0f, 70.0f, listAabb );
+    grid.queryAabb( 0.0f, 0.0f, 70.0f, 70.0f, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 
     sw::vector<sw::ObjectHandle> listCircle;
@@ -345,7 +345,7 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
                       {-1.0f, -1.0f,  0.0f},
                       { 6.0f,  5.0f, 15.0f}
     };
-    bvh.queryAABB( testBox, listAabb );
+    bvh.queryAabb( testBox, listAabb );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 
     sw::vector<sw::ObjectHandle> listRay;
@@ -376,7 +376,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFilterin
     grid.insert( h2, 5.0f, 5.0f, 8.0f, 8.0f );
 
     sw::vector<sw::ObjectHandle> listResults;
-    grid.queryAABB( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
+    grid.queryAabb( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
 
     // 중복 없이 h1, h2 총 2개만 반환되어야 함
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );

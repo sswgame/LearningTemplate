@@ -32,7 +32,7 @@ namespace sw
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
          */
-        static bool setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
+        static bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         /** @brief Resource 상대 경로에서 특정 언어 코드(예: "ko_KR", "en_US")의 언어 파일을 로드합니다. */
         static bool loadLanguage( string_view languageCode, string_view assetRelativePath );
@@ -68,10 +68,10 @@ namespace sw
         static const utf8* getFromLanguage( string_view languageCode, const utf8* pKey, const utf8* pFallback = "" );
 
         /** @brief 언어 변경 시 호출될 콜백을 등록합니다. */
-        static uint32 onLanguageChanged( LanguageChangedCallback callback );
+        static uint32 registerLanguageChangedCallback( LanguageChangedCallback callback );
 
         /** @brief 등록된 언어 변경 콜백을 해제합니다. */
-        static void removeLanguageChangedCallback( uint32 callbackId );
+        static void unregisterLanguageChangedCallback( uint32 callbackId );
 
         /** @brief 로드된 문자열 테이블을 비웁니다. */
         static void clear();

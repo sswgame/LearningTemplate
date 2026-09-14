@@ -64,13 +64,13 @@ namespace sw
         /** @brief 엘리먼트 텍스트. 유효하면 빈 문자열이어도 nullptr이 아님. */
         const utf8* text() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
-        const utf8* attr( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        const utf8* attribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 정수로 반환합니다. */
-        int32 attrInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
+        int32 attributeInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 실수로 반환합니다. */
-        float32 attrFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
+        float32 attributeFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on). */
-        bool attrBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
+        bool attributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 자식 노드를 찾습니다. pName==nullptr이면 첫 자식. */
         XmlNode child( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
@@ -89,7 +89,7 @@ namespace sw
         bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 첫 속성을 반환합니다. */
-        XmlAttribute firstAttr() const;
+        XmlAttribute firstAttribute() const;
 
         // ------------------------------------------------------------------------------
         // 2) 쓰기 — 메모리는 문서 풀에서 할당
@@ -108,30 +108,30 @@ namespace sw
         XmlNode appendChild( const utf8* pName, bool value ) const;
 
         /** @brief 새 속성을 추가합니다. */
-        void appendAttr( const utf8* pName, const utf8* pValue ) const;
+        void appendAttribute( const utf8* pName, const utf8* pValue ) const;
         /** @brief 새 속성을 추가합니다. */
-        void appendAttr( const utf8* pName, string_view value ) const;
+        void appendAttribute( const utf8* pName, string_view value ) const;
         /** @brief 정수 속성을 추가합니다. */
-        void appendAttr( const utf8* pName, int32 value ) const;
+        void appendAttribute( const utf8* pName, int32 value ) const;
         /** @brief 부호 없는 정수 속성을 추가합니다. */
-        void appendAttr( const utf8* pName, uint32 value ) const;
+        void appendAttribute( const utf8* pName, uint32 value ) const;
         /** @brief 실수 속성을 추가합니다. */
-        void appendAttr( const utf8* pName, float32 value ) const;
+        void appendAttribute( const utf8* pName, float32 value ) const;
         /** @brief bool 속성(1/0)을 추가합니다. */
-        void appendAttr( const utf8* pName, bool value ) const;
+        void appendAttribute( const utf8* pName, bool value ) const;
 
         /** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
-        void setAttr( const utf8* pName, const utf8* pValue ) const;
+        void setAttribute( const utf8* pName, const utf8* pValue ) const;
         /** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
-        void setAttr( const utf8* pName, string_view value ) const;
+        void setAttribute( const utf8* pName, string_view value ) const;
         /** @brief 정수 속성을 설정합니다. */
-        void setAttr( const utf8* pName, int32 value ) const;
+        void setAttribute( const utf8* pName, int32 value ) const;
         /** @brief 부호 없는 정수 속성을 설정합니다. */
-        void setAttr( const utf8* pName, uint32 value ) const;
+        void setAttribute( const utf8* pName, uint32 value ) const;
         /** @brief 실수 속성을 설정합니다. */
-        void setAttr( const utf8* pName, float32 value ) const;
+        void setAttribute( const utf8* pName, float32 value ) const;
         /** @brief bool 속성(1/0)을 설정합니다. */
-        void setAttr( const utf8* pName, bool value ) const;
+        void setAttribute( const utf8* pName, bool value ) const;
 
         /** @brief 노드 이름을 설정합니다. */
         void setName( const utf8* pName ) const;

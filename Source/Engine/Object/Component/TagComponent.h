@@ -35,7 +35,7 @@ namespace sw
         void removeTag( TagID tag );
         void clearTags();
         bool hasTag( TagID tag, bool bExactMatch = false ) const;
-        bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
+        bool matchesTags( const TagContainer& required, const TagContainer& forbidden ) const;
         bool matchesQuery( const TagQuery& query ) const;
 
     private:

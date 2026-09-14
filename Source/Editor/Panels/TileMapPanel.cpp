@@ -344,7 +344,7 @@ namespace sw::editor
 
     void TileMapPanel::paintCell( int32 x, int32 y )
     {
-        if ( inBounds( x, y ) == false )
+        if ( isInBounds( x, y ) == false )
             return;
 
         const size_t tileIndex = indexOf( x, y );
@@ -464,7 +464,7 @@ namespace sw::editor
         notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
     }
 
-    bool TileMapPanel::inBounds( int32 x, int32 y ) const
+    bool TileMapPanel::isInBounds( int32 x, int32 y ) const
     {
         return 0 <= x && x < _width && 0 <= y && y < _height;
     }
