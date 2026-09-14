@@ -60,10 +60,24 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return;
-        // **이 경로는 드로우마다, 그리고 웨이브를 병렬로 기록하면 워커 여럿에서 동시에 불린다.**
-        // 즉시 컨텍스트는 스레드 안전하지 않으므로(`_immediateContextMutex` 주석) 여기서 직렬화한다.
-        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
+        // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다 —
+        // D3D11 런타임이 커맨드 리스트 단위로 이 버퍼를 버저닝하므로 그 리스트의 드로우가 기록
+        // 시점의 값을 보고, 컨텍스트가 스레드마다 따로라 락도 필요 없다. 그것이 D3D11 이 문서화한
+        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::bindRecordingContext` 주석).
+        ID3D11DeviceContext*     pRecording = D3D11RHIDevice::getRecordingContext();
         D3D11_MAPPED_SUBRESOURCE mapped{};
+        if ( pRecording != nullptr )
+        {
+            if ( SUCCEEDED( pRecording->Map( pRes, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+            {
+                Memory::copy( mapped.pData, pData, size );
+                pRecording->Unmap( pRes, 0 );
+            }
+            return;
+        }
+
+        // 기록 중이 아니다(프레임 시드·셋업). 즉시 컨텍스트는 스레드 안전하지 않으므로 잠근다.
+        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
         if ( SUCCEEDED( _pDevice->_deviceContext->Map( pRes, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
             Memory::copy( mapped.pData, pData, size );

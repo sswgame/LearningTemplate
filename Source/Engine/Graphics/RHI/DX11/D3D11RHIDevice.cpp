@@ -19,6 +19,9 @@ namespace sw
 
     namespace
     {
+        /// @brief 이 스레드가 지금 기록 중인 Deferred Context (기록 중이 아니면 nullptr).
+        ///        `D3D11RHIDevice::bindRecordingContext` 주석이 왜 스레드별인지 설명한다.
+        thread_local ID3D11DeviceContext* s_pRecordingContext = nullptr;
 
     #if defined( SW_DEBUG )
         // 아래 표와 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
@@ -98,6 +101,12 @@ namespace sw
 
     IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+
+    void D3D11RHIDevice::bindRecordingContext( ID3D11DeviceContext* pContext ) { s_pRecordingContext = pContext; }
+
+    void D3D11RHIDevice::unbindRecordingContext() { s_pRecordingContext = nullptr; }
+
+    ID3D11DeviceContext* D3D11RHIDevice::getRecordingContext() { return s_pRecordingContext; }
 
     void D3D11RHIDevice::bindStaticSamplers( ID3D11DeviceContext* pContext ) const
     {

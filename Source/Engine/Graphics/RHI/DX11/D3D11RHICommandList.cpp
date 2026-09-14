@@ -67,10 +67,13 @@ namespace sw
         _pFinishedList.Reset();
         if ( _pDevice != nullptr )
             _pDevice->bindStaticSamplers( _pNativeContext.Get() );
+        // 이 스레드의 리소스 갱신이 즉시 컨텍스트가 아니라 **이 Deferred Context** 로 가게 한다.
+        D3D11RHIDevice::bindRecordingContext( _pNativeContext.Get() );
     }
 
     void D3D11RHICommandList::endCommandList()
     {
+        D3D11RHIDevice::unbindRecordingContext();
         if ( _pNativeContext == nullptr )
             return;
         _pNativeContext->FinishCommandList( FALSE, _pFinishedList.ReleaseAndGetAddressOf() );

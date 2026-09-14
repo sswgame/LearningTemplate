@@ -167,6 +167,23 @@ namespace sw
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D11RHICommandList* pCmdList );
 
+        /**
+         * @brief 이 스레드가 지금 기록 중인 Deferred Context 를 알립니다 (`beginCommandList` 마다).
+         * @details **리소스 갱신이 어느 스트림으로 나갈지 정하는 손잡이다.** `IRHIResource` 는 커맨드
+         *          스트림을 모르는 디바이스 레벨 인터페이스라, `updateConstantBuffer` 가 쓸 수 있는
+         *          컨텍스트는 원래 디바이스의 **즉시 컨텍스트** 하나뿐이었다. 그런데 그 함수는 드로우마다
+         *          불리므로 웨이브를 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다
+         *          (`ID3D11DeviceContext` 는 스레드 안전하지 않다). 인터페이스에 커맨드 리스트를 끼워
+         *          넣으면 RHI 모듈 ABI 가 바뀌므로, **스레드가 자기 컨텍스트를 들고 있게** 해서 백엔드
+         *          안에서 푼다. `Map(WRITE_DISCARD)` 를 Deferred Context 에 하면 D3D11 런타임이 커맨드
+         *          리스트 단위로 버퍼를 버저닝하므로, 그 리스트의 드로우가 **기록 시점의 값**을 본다.
+         */
+        static void bindRecordingContext( ID3D11DeviceContext* pContext );
+        /** @brief 기록이 끝났음을 알립니다 (`endCommandList` 마다). 이후 갱신은 즉시 컨텍스트로 간다. */
+        static void unbindRecordingContext();
+        /** @brief 이 스레드가 기록 중인 Deferred Context. 기록 중이 아니면 nullptr. */
+        static ID3D11DeviceContext* getRecordingContext();
+
     private:
         /**
          * @brief 풀스크린 삼각형 버텍스 버퍼를 만듭니다.

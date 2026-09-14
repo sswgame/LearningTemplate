@@ -308,13 +308,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 봤다. `c * ao + bright` 는 `ao ≤ 1` 이면 **수학적으로** AO 를 켠 쪽이 더 어두워야 한다. 그 모순이
 "입력이 흔들린다" 는 신호였다.
 
-**레이스 1 — 즉시 컨텍스트를 워커 여럿이 동시에 Map 했다.**
+**레이스 1 — 상수버퍼 갱신이 애초에 틀린 스트림으로 나가고 있었다.**
 `D3D11RHIResource::updateConstantBuffer` 는 `_deviceContext`(**즉시** 컨텍스트)에 `Map(WRITE_DISCARD)`
 한다. 그런데 이 함수는 `ShaderBindingBinder` 가 **드로우마다** 부르므로, 웨이브를 병렬로 기록하면
 태스크 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다. `ID3D11DeviceContext` 는 스레드 안전하지
-않다(안전한 것은 `ID3D11Device` 뿐이다). → 디바이스에 `_immediateContextMutex` 를 두고 즉시 컨텍스트를
-만지는 모든 자리(상수/구조버퍼 갱신, 텍스처 업로드, 되읽기, `ExecuteCommandList`, `Flush`,
-`RSSetViewports`)를 그 뒤로 모았다. **크래시가 사라졌다.**
+않다 — 안전한 것은 `ID3D11Device` 뿐이다.
+
+**왜 즉시 컨텍스트였나.** 갱신 API 가 `IRHIResource` 에 있기 때문이다 — 커맨드 스트림을 모르는
+디바이스 레벨 인터페이스이고, `IRHICommandList`/`IRHICommandContext` 에는 버퍼 갱신 명령이 아예 없다.
+나머지 셋은 그래도 된다: DX12 는 영구 매핑된 업로드 힙에 memcpy, Vulkan 은 host-visible 메모리에
+map/memcpy, GL 은 `glBufferSubData` 다 — **컨텍스트가 필요 없다.** D3D11 만 영구 매핑이 없어 어떤
+컨텍스트로든 `Map` 을 해야 하는데, `IRHIResource` 가 닿을 수 있는 것이 즉시 컨텍스트뿐이었다.
+
+**고친 방식 — 스레드가 자기 Deferred Context 를 든다.** 인터페이스에 커맨드 리스트를 끼우면 RHI 모듈
+ABI(`RHIModuleAbi.h`)가 바뀌어 백엔드 넷을 함께 리빌드해야 한다. 그럴 필요가 없다:
+`D3D11RHICommandList::beginCommandList`/`endCommandList` 가 **기록 워커 스레드에서** 패스 전체를 감싸므로
+(`RenderGraphInternal::recordRenderPassTask`), 그 구간에 스레드별 기록 컨텍스트를 걸어 두면
+`updateConstantBuffer` 가 자기 스트림을 찾아간다(`D3D11RHIDevice::bindRecordingContext`). Deferred Context
+에 `Map(WRITE_DISCARD)` 하는 것이 **D3D11 이 문서화한 동적 버퍼 갱신 방식**이고, 런타임이 커맨드 리스트
+단위로 버퍼를 버저닝하므로 그 리스트의 드로우가 기록 시점의 값을 본다. 컨텍스트가 스레드마다 따로라
+**락이 필요 없다.** 실측으로 드로우 경로는 전부 deferred 로 가고 즉시 폴백은 한 번도 타지 않는다.
+
+**즉시 컨텍스트를 정말 쓰는 자리에는 자물쇠를 남겼다** — `_immediateContextMutex`. 구조버퍼 갱신(프레임
+셋업) · 텍스처 업로드 · 되읽기 · `ExecuteCommandList` · `Flush` · `RSSetViewports` 가 그 뒤에 있다.
+드로우 경로가 빠졌으므로 이 자물쇠는 이제 경합하지 않는다.
 
 **레이스 2 — 그리고 이것이 그림을 바꾸던 진짜 원인이다.**
 `D3D11RecordingState` 의 주석은 이미 정답을 적어 두고 있었다: *"리스트마다 자기 Deferred Context 를
@@ -334,8 +351,9 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 > 리스트를 전부 훑게 했다(`_listLiveCmdList` 는 이미 있었다).
 
 **확인**: `LitColor` 가 **183.984192 로 고정**(12연속 실행, 전부 통과) · `RenderPassGpuTest` 24/24 를
-5연속 · **`EngineTest` 460/460 을 3연속** · `Ninja-Debug` ctest **17/17**(GPU 포함 전체가 처음으로
-통과한다) · 네 백엔드 에디터 실기동 종료 코드 0 · `[Error]` 0건 · Shipping 빌드와 nogpu 5/5.
+**10연속** · **`EngineTest` 460/460 을 3연속** · `Ninja-Debug` ctest **17/17**(GPU 포함 전체가 처음으로
+통과한다) · 네 백엔드 에디터 실기동 종료 코드 0 · `[Error]` 0건 · Shipping 빌드와 nogpu 5/5 ·
+`RunBuildWarnings.py` 전수(Debug · Release · Shipping) 경고 0건.
 
 > **`-gv_gpuCulling=0` · `-gv_drawMerge=0` 로는 안 사라진다** — 실제로 먼저 그걸 의심해 껐다가 그대로
 > 재현되는 것을 보고 방향을 돌렸다. 병렬 기록 자체를 끄면(`_bParallelCommandRecording = 0`) 사라졌고,
