@@ -31,6 +31,7 @@ import zlib
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
+    PackFormatSpec,
     batchCookAssets,
     getProjectRoot,
     kFilePackConfig,
@@ -60,63 +61,12 @@ _kScn1Version = 0
 
 # ------------------------------------------------------------------------------
 # .pack 바이너리 포맷 계약 — Config/Engine/PackFormat.json 이 단일 출처다.
-# 같은 파일에서 C++ 헤더(sw/config/PackFormat.gen.h)도 생성되므로, 여기서 레이아웃을
-# 손으로 들고 있지 않는다. 예전에는 양쪽이 각자 레이아웃을 갖고 있다가 헤더가 offset 8
-# 부터 어긋나, 리더가 fileCount 를 0 으로 읽는 "빈 팩"이 만들어지고 있었다.
+# 레이아웃을 여기서 손으로 들고 있지 않는다. 예전에는 쿠커와 C++ 헤더 생성기가 각자 레이아웃을
+# 갖고 있다가 헤더가 offset 8 부터 어긋나, 리더가 fileCount 를 0 으로 읽는 "빈 팩"이 만들어지고
+# 있었다. 계약을 읽는 일은 이제 `Scripts/common/PackFormat.py` 한 곳이고, 같은 객체를 헤더
+# 생성기(GeneratePackFormat.py)도 쓴다.
 # ------------------------------------------------------------------------------
-_kPackFormatConfigRelative = "Config/Engine/PackFormat.json"
-
-_kStructTypeCodes = {"uint8": "B", "uint16": "H", "uint32": "I", "uint64": "Q"}
-_kStructTypeSizes = {"uint8": 1, "uint16": 2, "uint32": 4, "uint64": 8}
-
-
-def _loadPackFormatSpecInternal() -> dict:
-    """팩 포맷 계약 파일을 읽어 struct 포맷 문자열까지 계산해 돌려줍니다."""
-    specPath = getProjectRoot() / _kPackFormatConfigRelative
-    if not specPath.is_file():
-        raise FileNotFoundError(f"Pack format contract not found: {specPath}")
-    spec = json.loads(specPath.read_text(encoding="utf-8"))
-
-    def buildLayout(part: dict) -> tuple[str, int, list[str]]:
-        formatText = "<"
-        totalSize = 0
-        fieldNames: list[str] = []
-        for field in part["fields"]:
-            typeName = field["type"]
-            if typeName.endswith("]"):
-                baseName, countText = typeName[:-1].split("[")
-                count = int(countText)
-                formatText += f"{count * _kStructTypeSizes[baseName]}s"
-                totalSize += count * _kStructTypeSizes[baseName]
-            else:
-                formatText += _kStructTypeCodes[typeName]
-                totalSize += _kStructTypeSizes[typeName]
-            fieldNames.append(field["name"])
-        if totalSize != int(part["size"]):
-            raise ValueError(f"{part['name']}: 필드 합계 {totalSize}B != 선언 크기 {part['size']}B")
-        return formatText, totalSize, fieldNames
-
-    spec["_headerLayout"] = buildLayout(spec["header"])
-    spec["_entryLayout"] = buildLayout(spec["entry"])
-    return spec
-
-
-_gPackFormatSpec = _loadPackFormatSpecInternal()
-
-_kPackMagic = int.from_bytes(_gPackFormatSpec["magic"].encode("ascii"), "little")
-_kPackFormatVersion = int(_gPackFormatSpec["formatVersion"])
-_kPackSectorAlignment = int(_gPackFormatSpec["sectorAlignment"])
-
-_kFlagNone = _gPackFormatSpec["flags"]["None"]
-_kFlagHasStringPool = _gPackFormatSpec["flags"]["HasStringPool"]
-_kFlagHasCrc32 = _gPackFormatSpec["flags"]["HasCrc32"]
-_kFlagEncrypted = _gPackFormatSpec["flags"]["Encrypted"]
-
-_kCompressionCodecs = _gPackFormatSpec["compression"]["codecs"]
-_kCompressionNone = _kCompressionCodecs["None"]
-_kCompressionZlib = _kCompressionCodecs["Zlib"]
-_kEncryptionNone = _gPackFormatSpec["encryption"]["None"]
-_kDeflateStrategy = _gPackFormatSpec["compression"].get("deflateStrategy", "default")
+_gPackFormat = PackFormatSpec.load()
 
 
 # ==============================================================================
@@ -296,7 +246,7 @@ def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None) 
 
 def _deflateForReaderInternal(rawBytes: bytes) -> bytes:
     """리더가 해석할 수 있는 전략으로 zlib 압축합니다(계약 파일 compression.deflateStrategy)."""
-    if _kDeflateStrategy == "fixed":
+    if _gPackFormat.deflateStrategy == "fixed":
         # 리더의 인플레이터가 동적 허프만을 거부하므로 Z_FIXED 로 고정한다.
         compressor = zlib.compressobj(9, zlib.DEFLATED, 15, 9, zlib.Z_FIXED)
         return compressor.compress(rawBytes) + compressor.flush()
@@ -309,12 +259,12 @@ def resolveCompressionCodecInternal(packConfig: dict | None) -> tuple[int, int]:
     name = str(section.get("codec", "Zlib"))
     level = int(section.get("level", 0))
 
-    if name not in _kCompressionCodecs:
-        known = ", ".join(sorted(_kCompressionCodecs))
+    if name not in _gPackFormat.mapCodec:
+        known = ", ".join(sorted(_gPackFormat.mapCodec))
         raise SystemExit(
             f"[Pack] PackConfig.compression.codec='{name}' 은 팩 포맷에 없는 코덱입니다. 가능한 값: {known}"
         )
-    return int(_kCompressionCodecs[name]), level
+    return int(_gPackFormat.mapCodec[name]), level
 
 
 def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> bytes:
@@ -323,10 +273,10 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
     **모듈이 없으면 조용히 물러나지 않고 그 자리에서 멈춥니다.** 설정이 LZ4 인데 zlib 으로 구우면
     설정과 산출물이 달라지고, 그 사실은 한참 뒤 배포본에서야 드러납니다.
     """
-    if compression == _kCompressionZlib:
+    if compression == _gPackFormat.codecZlib:
         return _deflateForReaderInternal(rawBytes)
 
-    if compression == _kCompressionCodecs.get("LZ4"):
+    if compression == _gPackFormat.mapCodec.get("LZ4"):
         try:
             import lz4.block  # type: ignore
         except ImportError as exc:
@@ -339,7 +289,7 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
             return lz4.block.compress(rawBytes, mode=mode, compression=level, store_size=False)
         return lz4.block.compress(rawBytes, mode=mode, store_size=False)
 
-    if compression == _kCompressionCodecs.get("Zstd"):
+    if compression == _gPackFormat.mapCodec.get("Zstd"):
         try:
             import zstandard  # type: ignore
         except ImportError as exc:
@@ -349,28 +299,10 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
         compressor = zstandard.ZstdCompressor(level=level if level > 0 else 3)
         return compressor.compress(rawBytes)
 
-    if compression == _kCompressionNone:
+    if compression == _gPackFormat.codecNone:
         return rawBytes
 
     raise SystemExit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
-
-
-def fnv1a64Internal(path: str) -> int:
-    """FNV-1a 64비트 해시를 계산합니다."""
-    fnv_prime = int(_gPackFormatSpec["pathHash"]["prime"])
-    fnv_offset = int(_gPackFormatSpec["pathHash"]["offsetBasis"])
-    normalized = normalizePath(path).lower()
-    h = fnv_offset
-    for ch in normalized.encode("utf-8"):
-        h ^= ch
-        h = (h * fnv_prime) & 0xFFFFFFFFFFFFFFFF
-    return h
-
-
-def alignOffsetInternal(offset: int, alignment: int = _kPackSectorAlignment) -> int:
-    """오프셋을 섹터 정렬 경계로 올림합니다."""
-    mask = alignment - 1
-    return (offset + mask) & ~mask
 
 
 def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path | None = None) -> str:
@@ -628,11 +560,139 @@ def buildAssetRegistryInternal(domainDir: Path) -> bytes:
     return ("# <guid> <sourcePath> - CookAssets.py buildAssetRegistryInternal\n" + "\n".join(lines) + "\n").encode("utf-8")
 
 
+class PackWriter:
+    """
+    팩 하나를 쌓아 올리는 동안의 상태 — 담긴 항목 · 데이터 커서 · TOC · 스트링 풀.
+
+    예전에는 `cookPack` 이 150줄 한 함수 안에서 그 넷을 동시에 굴렸다. 오프셋 커서(`dataOffset`)가
+    한 루프 안에서 정렬·패딩·증가를 다 겪고, 같은 루프가 TOC 레코드와 페이로드 블롭을 각각 모으고,
+    스트링 풀은 **그보다 앞선 별도의 루프**에서 쌓인 뒤 인덱스로 다시 맞춰졌다 — 두 루프가 같은
+    순서로 돈다는 전제가 코드 어디에도 적혀 있지 않았다.
+
+    여기서는 순서가 메서드 이름이다: `add*` 로 담고 `writeTo` 로 굽는다. 스트링 풀도 TOC 와 같은
+    루프에서 같은 순서로 쌓이므로 인덱스를 맞출 일이 없다.
+    """
+
+    def __init__(
+        self,
+        spec: PackFormatSpec,
+        *,
+        compression: int,
+        compressionLevel: int = 0,
+        dlcAppId: int = 0,
+        bStripDebugStrings: bool = True,
+    ) -> None:
+        self._spec = spec
+        self._compression = compression
+        self._compressionLevel = compressionLevel
+        self._dlcAppId = dlcAppId
+        self._bStripDebugStrings = bStripDebugStrings
+        self._listEntry: list[tuple[int, str, Path | bytes]] = []
+
+    def addFile(self, relPath: str, sourcePath: Path) -> None:
+        """디스크의 파일 하나를 담습니다 (읽기는 `writeTo` 에서 한 번만 한다)."""
+        self._listEntry.append((self._spec.hashPath(relPath), relPath, sourcePath))
+
+    def addBytes(self, relPath: str, data: bytes) -> None:
+        """디스크에 없는 항목을 담습니다 (에셋 레지스트리처럼 쿠커가 만든 바이트)."""
+        self._listEntry.append((self._spec.hashPath(relPath), relPath, data))
+
+    @property
+    def entryCount(self) -> int:
+        return len(self._listEntry)
+
+    def writeTo(self, outPackPath: Path) -> int:
+        """담긴 항목으로 팩을 굽고 만들어진 파일 크기를 돌려줍니다."""
+        spec = self._spec
+
+        # 리더는 경로 해시로 TOC 를 이진 탐색한다 — 반드시 해시 오름차순이다.
+        self._listEntry.sort(key=lambda entry: entry[0])
+
+        tocStartOffset = spec.alignOffset(spec.header.size)
+        tocTotalSize = len(self._listEntry) * spec.entry.size
+        dataStartOffset = spec.alignOffset(tocStartOffset + tocTotalSize)
+
+        stringPool = bytearray()
+        listTocRecord: list[bytes] = []
+        listDataBlob: list[bytes] = []
+        dataOffset = dataStartOffset
+
+        for pathHash, relPath, source in self._listEntry:
+            stringOffset = 0
+            if not self._bStripDebugStrings:
+                stringOffset = len(stringPool)
+                stringPool.extend(relPath.encode("utf-8") + b"\x00")
+
+            rawBytes = source if isinstance(source, bytes) else source.read_bytes()
+
+            # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
+            # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
+            payload = compressPayloadInternal(rawBytes, self._compression, self._compressionLevel)
+
+            alignedOffset = spec.alignOffset(dataOffset)
+            if alignedOffset > dataOffset:
+                listDataBlob.append(b"\x00" * (alignedOffset - dataOffset))
+            dataOffset = alignedOffset
+
+            listTocRecord.append(
+                spec.entry.pack(
+                    _pathHash=pathHash,
+                    _dataOffset=dataOffset,
+                    _compressedSize=len(payload),
+                    _uncompressedSize=len(rawBytes),
+                    _crc32=binascii.crc32(rawBytes) & 0xFFFFFFFF,
+                    _stringPoolOffset=stringOffset,
+                )
+            )
+            listDataBlob.append(payload)
+            dataOffset += len(payload)
+
+        flags = spec.mapFlag["HasCrc32"]
+        stringPoolOffset = 0
+        stringPoolSize = 0
+        if not self._bStripDebugStrings:
+            flags |= spec.mapFlag["HasStringPool"]
+            if stringPool:
+                stringPoolOffset = spec.alignOffset(dataOffset)
+                stringPoolSize = len(stringPool)
+
+        header = spec.header.pack(
+            _magic=spec.magic,
+            _formatVersion=spec.formatVersion,
+            _dlcAppId=self._dlcAppId,
+            _compressionType=self._compression,
+            _encryptionType=spec.encryptionNone,
+            _sectorAlignment=spec.sectorAlignment,
+            _flags=flags,
+            _fileCount=len(self._listEntry),
+            _indexOffset=tocStartOffset,
+            _indexSize=tocTotalSize,
+            _stringPoolOffset=stringPoolOffset,
+            _stringPoolSize=stringPoolSize,
+            _totalDataSize=dataOffset - dataStartOffset,
+        )
+
+        outPackPath.parent.mkdir(parents=True, exist_ok=True)
+        with open(outPackPath, "wb") as packFile:
+            packFile.write(header)
+            packFile.write(b"\x00" * (tocStartOffset - len(header)))
+            for record in listTocRecord:
+                packFile.write(record)
+            packFile.write(b"\x00" * (dataStartOffset - (tocStartOffset + tocTotalSize)))
+            for blob in listDataBlob:
+                packFile.write(blob)
+            if stringPoolSize:
+                packFile.write(b"\x00" * (stringPoolOffset - dataOffset))
+                packFile.write(stringPool)
+
+        return outPackPath.stat().st_size
+
+
 def cookPack(
     sourceDir: Path,
     outPackPath: Path,
     dlcAppId: int = 0,
-    compression: int = _kCompressionZlib,
+    compression: int | None = None,
     compressionLevel: int = 0,
     stripDebugStrings: bool = True,
     packConfig: dict | None = None,
@@ -640,143 +700,53 @@ def cookPack(
     extraEntries: list[tuple[str, bytes]] | None = None,
     stagedDir: Path | None = None,
 ) -> bool:
-    """단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다.
+    """
+    단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다 — **무엇을 담을지** 고르는 것이 이 함수의 일이고,
+    어떤 바이트가 되는지는 `PackWriter` 가 안다.
 
     extraEntries 는 디스크에 없는 (상대경로, 바이트) 항목, stagedDir 은 쿠커가 산출물을 쓴 스테이징 폴더다 —
-    그 안의 파일은 sourceDir 기준과 **같은 상대 경로** 로 들어간다(팩 안 경로는 지금까지와 바이트 단위로 같다).
+    그 안의 파일은 sourceDir 기준과 **같은 상대 경로** 로 들어간다.
     """
     if not sourceDir.is_dir():
         print(f"[CookAssets Error] Source directory does not exist: {sourceDir}", file=sys.stderr)
         return False
 
-    fileEntries: list[tuple[str, Path | bytes, int]] = []
+    writer = PackWriter(
+        _gPackFormat,
+        compression=_gPackFormat.codecZlib if compression is None else compression,
+        compressionLevel=compressionLevel,
+        dlcAppId=dlcAppId,
+        bStripDebugStrings=stripDebugStrings,
+    )
+
     staleCooked: list[str] = []
-    for p in sorted(sourceDir.rglob("*")):
-        if p.is_file():
-            rel = p.relative_to(sourceDir).as_posix()
-            if packConfig and not shouldIncludeFileInternal(rel, packConfig, targetRhi=targetRhi):
-                continue
-            if isCookedArtifactInternal(rel):
-                # 산출물은 이제 스테이징에만 있다. 소스 트리에 남은 것은 옛 쿠킹의 잔재이고, Dev 런타임이 소스가
-                # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
-                staleCooked.append(rel)
-                continue
-            pathHash = fnv1a64Internal(rel)
-            fileEntries.append((rel, p, pathHash))
+    for filePath in sorted(sourceDir.rglob("*")):
+        if not filePath.is_file():
+            continue
+        rel = filePath.relative_to(sourceDir).as_posix()
+        if packConfig and not shouldIncludeFileInternal(rel, packConfig, targetRhi=targetRhi):
+            continue
+        if isCookedArtifactInternal(rel):
+            # 산출물은 이제 스테이징에만 있다. 소스 트리에 남은 것은 옛 쿠킹의 잔재이고, Dev 런타임이 소스가
+            # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
+            staleCooked.append(rel)
+            continue
+        writer.addFile(rel, filePath)
+
     if staleCooked:
         sample = ", ".join(staleCooked[:3]) + (" ..." if len(staleCooked) > 3 else "")
         print(f"[CookAssets Warning] {sourceDir.name}: 소스 트리에 낡은 쿠킹 산출물 {len(staleCooked)}개 ({sample}) - 지우십시오. 팩에는 넣지 않습니다.", file=sys.stderr)
+
     if stagedDir is not None and stagedDir.is_dir():
-        for p in sorted(stagedDir.rglob("*")):
-            if p.is_file():
-                rel = p.relative_to(stagedDir).as_posix()
-                fileEntries.append((rel, p, fnv1a64Internal(rel)))
+        for filePath in sorted(stagedDir.rglob("*")):
+            if filePath.is_file():
+                writer.addFile(filePath.relative_to(stagedDir).as_posix(), filePath)
+
     for rel, data in extraEntries or []:
-        fileEntries.append((rel, data, fnv1a64Internal(rel)))
+        writer.addBytes(rel, data)
 
-    fileEntries.sort(key=lambda item: item[2])
-    fileCount = len(fileEntries)
-
-    flags = _kFlagHasCrc32
-    if not stripDebugStrings:
-        flags |= _kFlagHasStringPool
-
-    stringPoolBytes = bytearray()
-    stringPoolOffsets: list[int] = []
-    if not stripDebugStrings:
-        for rel, _, _ in fileEntries:
-            stringPoolOffsets.append(len(stringPoolBytes))
-            stringPoolBytes.extend(rel.encode("utf-8") + b"\x00")
-
-    headerSize = int(_gPackFormatSpec["header"]["size"])
-    tocEntrySize = int(_gPackFormatSpec["entry"]["size"])
-    tocTotalSize = fileCount * tocEntrySize
-    tocStartOffset = alignOffsetInternal(headerSize)
-    dataStartOffset = alignOffsetInternal(tocStartOffset + tocTotalSize)
-
-    dataOffset = dataStartOffset
-    tocRecords: list[bytes] = []
-    dataBlobs: list[bytes] = []
-
-    entryFormat, entrySize, _ = _gPackFormatSpec["_entryLayout"]
-
-    for index, (rel, filePath, pathHash) in enumerate(fileEntries):
-        rawBytes = filePath if isinstance(filePath, bytes) else filePath.read_bytes()
-        rawSize = len(rawBytes)
-        crc = binascii.crc32(rawBytes) & 0xFFFFFFFF
-
-        # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
-        # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
-        payload = compressPayloadInternal(rawBytes, compression, compressionLevel)
-
-        compressedSize = len(payload)
-        dataOffsetAligned = alignOffsetInternal(dataOffset)
-        padding = dataOffsetAligned - dataOffset
-        if padding > 0:
-            dataBlobs.append(b"\x00" * padding)
-        dataOffset = dataOffsetAligned
-
-        strOffset = stringPoolOffsets[index] if not stripDebugStrings else 0
-        tocEntry = struct.pack(
-            entryFormat,
-            pathHash,
-            dataOffset,
-            compressedSize,
-            rawSize,
-            crc,
-            strOffset,
-        )
-        assert len(tocEntry) == entrySize
-        tocRecords.append(tocEntry)
-        dataBlobs.append(payload)
-        dataOffset += compressedSize
-
-    stringPoolOffset = 0
-    stringPoolSize = 0
-    if not stripDebugStrings and stringPoolBytes:
-        stringPoolOffset = alignOffsetInternal(dataOffset)
-        stringPoolSize = len(stringPoolBytes)
-
-    headerFormat, headerSizeFromSpec, _ = _gPackFormatSpec["_headerLayout"]
-    header = struct.pack(
-        headerFormat,
-        _kPackMagic,
-        _kPackFormatVersion,
-        dlcAppId,
-        compression,
-        _kEncryptionNone,
-        _kPackSectorAlignment,
-        flags,
-        fileCount,
-        tocStartOffset,
-        tocTotalSize,
-        stringPoolOffset,
-        stringPoolSize,
-        dataOffset - dataStartOffset,
-        b"\x00" * 2,
-    )
-    assert len(header) == headerSizeFromSpec
-
-    outPackPath.parent.mkdir(parents=True, exist_ok=True)
-    with open(outPackPath, "wb") as f:
-        f.write(header)
-        padding = tocStartOffset - len(header)
-        if padding > 0:
-            f.write(b"\x00" * padding)
-        for entry in tocRecords:
-            f.write(entry)
-        padding = dataStartOffset - (tocStartOffset + tocTotalSize)
-        if padding > 0:
-            f.write(b"\x00" * padding)
-        for blob in dataBlobs:
-            f.write(blob)
-        if not stripDebugStrings and stringPoolBytes:
-            padding = stringPoolOffset - dataOffset
-            if padding > 0:
-                f.write(b"\x00" * padding)
-            f.write(stringPoolBytes)
-
-    packSize = outPackPath.stat().st_size
+    fileCount = writer.entryCount
+    packSize = writer.writeTo(outPackPath)
     print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {packSize:,} bytes, DLC: {dlcAppId})")
     return True
 
@@ -797,7 +767,7 @@ def cookAllPacks(
 
     # 압축 코덱은 PackConfig 가 정한다(설치가 필요한 코덱은 모듈이 없으면 여기서 멈춘다).
     packCompression, packCompressionLevel = resolveCompressionCodecInternal(packConfig)
-    codecName = next((n for n, v in _kCompressionCodecs.items() if v == packCompression), str(packCompression))
+    codecName = _gPackFormat.codecNameOf(packCompression)
     print(f"[PackCooker] 압축 코덱: {codecName} (level {packCompressionLevel})")
 
     targets: list[tuple[Path, Path, int]] = []

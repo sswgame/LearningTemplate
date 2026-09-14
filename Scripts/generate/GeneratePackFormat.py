@@ -5,8 +5,9 @@ Config/Engine/PackFormat.json(.pack 바이너리 포맷의 단일 출처)을 읽
 (sw/config/PackFormat.gen.h)를 생성합니다.
 
 생성물은 #pragma pack(1) 구조체와 함께 sizeof / offsetof static_assert 를 함께 내보내므로,
-계약 파일과 C++ 이 어긋나면 **컴파일이 깨진다**. Python 쿠커(CookAssets.py)는 같은 JSON 을
-직접 읽어 struct.pack 포맷을 만들기 때문에 양쪽이 손으로 동기화될 일이 없다.
+계약 파일과 C++ 이 어긋나면 **컴파일이 깨진다**. Python 쿠커(CookAssets.py)는 같은 계약을
+`PackFormatSpec` 으로 읽어 struct.pack 포맷을 만들기 때문에 양쪽이 손으로 동기화될 일이 없다 —
+타입 표도, 배열 표기 해석도, "필드 합계 = 선언 크기" 검증도 `Scripts/common/PackFormat.py` 한 곳이다.
 
 Usage:
   python Scripts/generate/GeneratePackFormat.py <output_header_path>
@@ -14,111 +15,52 @@ Usage:
 
 from __future__ import annotations
 
-import json
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
-
-kPackFormatConfigRelative = "Config/Engine/PackFormat.json"
-
-# JSON 타입 이름 → (C++ 타입, 바이트 크기)
-kScalarTypes: dict[str, tuple[str, int]] = {
-    "uint8": ("uint8", 1),
-    "uint16": ("uint16", 2),
-    "uint32": ("uint32", 4),
-    "uint64": ("uint64", 8),
-}
+from common import PackFormatSpec, PackStruct, getProjectRoot, kPackFormatConfigRelative
 
 
-def parseFieldTypeInternal(typeName: str) -> tuple[str, int, str]:
-    """'uint8[2]' 같은 배열 표기를 (C++ 타입, 총 바이트, 배열 접미사)로 분해합니다."""
-    match = re.fullmatch(r"(\w+)\[(\d+)\]", typeName)
-    if match:
-        baseName, countText = match.group(1), match.group(2)
-        if baseName not in kScalarTypes:
-            raise ValueError(f"알 수 없는 타입: {typeName}")
-        cppType, unitSize = kScalarTypes[baseName]
-        count = int(countText)
-        return cppType, unitSize * count, f"[{count}]"
-
-    if typeName not in kScalarTypes:
-        raise ValueError(f"알 수 없는 타입: {typeName}")
-    cppType, unitSize = kScalarTypes[typeName]
-    return cppType, unitSize, ""
-
-
-def emitStructInternal(spec: dict) -> tuple[str, int]:
+def emitStructInternal(packStruct: PackStruct) -> str:
     """구조체 정의 + sizeof/offsetof static_assert 텍스트를 만듭니다."""
-    structName = spec["name"]
-    declaredSize = int(spec["size"])
-
     lines: list[str] = []
     lines.append("    /**")
-    lines.append(f"     * @struct {structName}")
-    lines.append(f"     * @brief {spec['doc']} ({declaredSize}바이트 고정)")
+    lines.append(f"     * @struct {packStruct.name}")
+    lines.append(f"     * @brief {packStruct.doc} ({packStruct.size}바이트 고정)")
     lines.append(f"     * @details {kPackFormatConfigRelative} 에서 생성됨 — 이 파일을 직접 고치지 말 것.")
     lines.append("     */")
-    lines.append(f"    struct {structName}")
+    lines.append(f"    struct {packStruct.name}")
     lines.append("    {")
 
-    offset = 0
     asserts: list[str] = []
-    for field in spec["fields"]:
-        cppType, byteSize, arraySuffix = parseFieldTypeInternal(field["type"])
-        initializer = "{}" if arraySuffix else "{ 0 }"
-        decl = f"        {cppType} {field['name']}{arraySuffix}{initializer};"
-        lines.append(f"{decl} ///< {field['doc']} ({byteSize}B, offset {offset})")
+    for field in packStruct.listField:
+        initializer = "{}" if field.arrayCount else "{ 0 }"
+        decl = f"        {field.scalarType} {field.name}{field.arraySuffix}{initializer};"
+        lines.append(f"{decl} ///< {field.doc} ({field.byteSize}B, offset {field.offset})")
         asserts.append(
-            f"    static_assert( offsetof( {structName}, {field['name']} ) == {offset},\n"
-            f"                   \"{structName}::{field['name']} offset이 {kPackFormatConfigRelative} 와 다릅니다\" );"
+            f"    static_assert( offsetof( {packStruct.name}, {field.name} ) == {field.offset},\n"
+            f"                   \"{packStruct.name}::{field.name} offset이 {kPackFormatConfigRelative} 와 다릅니다\" );"
         )
-        offset += byteSize
 
     lines.append("    };")
-
-    if offset != declaredSize:
-        raise ValueError(f"{structName}: 필드 합계 {offset}B 가 선언된 size {declaredSize}B 와 다릅니다")
-
     lines.append(
-        f"    static_assert( sizeof( {structName} ) == {declaredSize},\n"
-        f"                   \"{structName} 는 정확히 {declaredSize}바이트여야 합니다\" );"
+        f"    static_assert( sizeof( {packStruct.name} ) == {packStruct.size},\n"
+        f"                   \"{packStruct.name} 는 정확히 {packStruct.size}바이트여야 합니다\" );"
     )
     lines.extend(asserts)
-    return "\n".join(lines), declaredSize
+    return "\n".join(lines)
 
 
 def generatePackFormatHeader(outputPath: Path) -> int:
-    projectRoot = getProjectRoot()
-    configPath = projectRoot / kPackFormatConfigRelative
-    if not configPath.is_file():
-        sys.stderr.write(f"[Error] Pack format contract not found: {configPath}\n")
-        return 1
-
     try:
-        spec = json.loads(configPath.read_text(encoding="utf-8"))
-    except Exception as exception:
-        sys.stderr.write(f"[Error] Failed to parse {configPath}: {exception}\n")
+        spec = PackFormatSpec.load(getProjectRoot())
+    except (FileNotFoundError, ValueError) as exception:
+        sys.stderr.write(f"[Error] {kPackFormatConfigRelative}: {exception}\n")
         return 1
 
-    try:
-        headerText, _ = emitStructInternal(spec["header"])
-        entryText, _ = emitStructInternal(spec["entry"])
-    except Exception as exception:
-        sys.stderr.write(f"[Error] {configPath}: {exception}\n")
-        return 1
-
-    magicText = spec["magic"]
-    if len(magicText) != 4:
-        sys.stderr.write(f"[Error] magic 은 4글자여야 합니다: {magicText}\n")
-        return 1
-    magicValue = int.from_bytes(magicText.encode("ascii"), "little")
-
-    codecs = spec["compression"]["codecs"]
-    encryptions = spec["encryption"]
-    flags = spec["flags"]
+    headerText = emitStructInternal(spec.header)
+    entryText = emitStructInternal(spec.entry)
 
     def emitConstantsInternal(prefix: str, mapping: dict) -> str:
         return "\n".join(
@@ -137,14 +79,14 @@ def generatePackFormatHeader(outputPath: Path) -> int:
 
 namespace sw
 {{
-    /** @brief '{magicText}' 매직 넘버 (리틀엔디언) */
-    inline constexpr uint32 kPackMagic = 0x{magicValue:08X};
+    /** @brief '{spec.magicText}' 매직 넘버 (리틀엔디언) */
+    inline constexpr uint32 kPackMagic = 0x{spec.magic:08X};
 
     /** @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전 */
-    inline constexpr uint32 kPackFormatVersion = {int(spec["formatVersion"])};
+    inline constexpr uint32 kPackFormatVersion = {spec.formatVersion};
 
     /** @brief DirectStorage 및 NVMe DMA 친화적 섹터 정렬 경계 */
-    inline constexpr uint16 kPackSectorAlignment = {int(spec["sectorAlignment"])};
+    inline constexpr uint16 kPackSectorAlignment = {spec.sectorAlignment};
 
 #pragma pack( push, 1 )
 {headerText}
@@ -156,11 +98,11 @@ namespace sw
     {{
         // 계약 파일의 코덱/암호화/플래그 값. ResourcePackTypes.h 의 enum 이 이 값들과
         // 일치하는지 static_assert 로 검사한다.
-{emitConstantsInternal("Compression", codecs)}
+{emitConstantsInternal("Compression", spec.mapCodec)}
 
-{emitConstantsInternal("Encryption", encryptions)}
+{emitConstantsInternal("Encryption", spec.mapEncryption)}
 
-{emitConstantsInternal("Flag", flags)}
+{emitConstantsInternal("Flag", spec.mapFlag)}
     }} // namespace packformat
 }} // namespace sw
 """

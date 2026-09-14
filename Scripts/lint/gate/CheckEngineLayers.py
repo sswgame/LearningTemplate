@@ -25,10 +25,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from common import (  # noqa: E402
     collectSourceFiles,
-    getProjectRoot,
     kDirSourceEngine,
     kDirSourceGameFramework,
     kDirSourceGames,
@@ -36,8 +37,8 @@ from common import (
     mapConcurrent,
     normalizePath,
     startsWithPathComponent,
-    useUtf8Stdout,
 )
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
@@ -155,17 +156,17 @@ def engineTierOfInternal(folderName: str) -> int | None:
     return _kEngineTier.get(folderName)
 
 
-def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[list[str], list[str], str | None]:
+def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
+    """파일 하나의 금지 include 와 티어 위반을 돌려줍니다. 읽지 못하면 `GateError` 입니다."""
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
         text = filePath.read_text(encoding="utf-8", errors="strict")
     except UnicodeDecodeError as exception:
-        return [], [], f"[CheckEngineLayers] UTF-8 인코딩 오류: {relativeFilePath}: {exception}"
+        raise GateError(f"UTF-8 인코딩 오류: {relativeFilePath}: {exception}") from exception
     except OSError as exception:
-        return [], [], f"[CheckEngineLayers] 읽기 실패: {relativeFilePath}: {exception}"
+        raise GateError(f"읽기 실패: {relativeFilePath}: {exception}") from exception
 
     fileViolations: list[str] = []
-    fileStrictWarns: list[str] = []
 
     for rulePrefix, bannedList in _kForbiddenRules:
         if not startsWithPathComponent(relativeFilePath, rulePrefix):
@@ -176,12 +177,10 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
                 if includeHitsBanInternal(normalizedInclude, bannedPattern):
                     fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
-    del strict  # 티어 위반은 항상 실패다 — 옛 --strict 는 기본 동작이 되었다.
-
     if startsWithPathComponent(relativeFilePath, kDirSourceEngine) is False:
-        return fileViolations, fileStrictWarns, None
+        return fileViolations
     if relativeFilePath in _kWiringFiles:
-        return fileViolations, fileStrictWarns, None
+        return fileViolations
 
     enginePrefixLen = len(kDirSourceEngine) + 1
     engineRelativePath = relativeFilePath[enginePrefixLen:]
@@ -189,7 +188,7 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
     sourceTier = engineTierOfInternal(sourceLayer)
     if sourceTier is None:
         fileViolations.append(f"{relativeFilePath}: Engine 최상위 폴더 '{sourceLayer}' 가 티어 표(_kEngineTier)에 없습니다.")
-        return fileViolations, fileStrictWarns, None
+        return fileViolations
 
     for includePath in _kIncludeRe.findall(text):
         normalizedInclude = normalizePath(includePath)
@@ -210,64 +209,41 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
                 f'{relativeFilePath}: #include "{includePath}"  (티어 {sourceLayer}(T{sourceTier}) -> {destLayer}(T{destTier}))'
             )
 
-    return fileViolations, fileStrictWarns, None
+    return fileViolations
 
 
+class CheckEngineLayersGate(LintGate):
+    """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
-# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
-kSelfTestCases = [
-    {
-        "name": "Engine 이 Editor 를 include",
-        "files": {
-            "Source/Engine/Scene/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Common/Workspace/EditorContext.h"\n',
+    description = "Engine 레이어 금지 include 검사"
+    violationHeader = "레이어 위반"
+    selfTestCases = [
+        {
+            "name": "Engine 이 Editor 를 include",
+            "files": {
+                "Source/Engine/Scene/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Common/Workspace/EditorContext.h"\n',
+            },
         },
-    },
-]
+    ]
 
-def main() -> int:
-    useUtf8Stdout()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--strict", action="store_true", help="(옛 옵션) 티어 위반은 이제 항상 실패한다")
 
-    parser = argparse.ArgumentParser(description="Engine 레이어 금지 include 검사")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--strict", action="store_true", help="(옛 옵션) 티어 위반은 이제 항상 실패한다")
-    args = parser.parse_args()
-    repo = (args.root or getProjectRoot()).resolve()
-    engineDir = repo / kDirSourceEngine
-    if not engineDir.is_dir():
-        print(f"[CheckEngineLayers] Engine 경로 없음: {engineDir}", file=sys.stderr)
-        return 2
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        engineDir = repositoryRoot / kDirSourceEngine
+        if not engineDir.is_dir():
+            raise GateError(f"Engine 경로 없음: {engineDir}")
 
-    scanRoots = [engineDir, repo / kDirSourceGames, repo / kDirSourceGameFramework]
-    allFiles = collectSourceFiles(scanRoots)
+        scanRoots = [engineDir, repositoryRoot / kDirSourceGames, repositoryRoot / kDirSourceGameFramework]
+        allFiles = collectSourceFiles(scanRoots)
 
-    violations: list[str] = []
-    strictWarns: list[str] = []
+        violations: list[str] = []
+        for fileViolations in mapConcurrent(lambda path: processFile(path, repositoryRoot), allFiles):
+            violations.extend(fileViolations)
+        return GateResult(listViolation=violations, summary=f"{len(allFiles)} files scanned in parallel")
 
-    for fileViolations, fileStrictWarns, errorMessage in mapConcurrent(
-        lambda path: processFile(path, repo, args.strict), allFiles
-    ):
-        if errorMessage:
-            print(errorMessage, file=sys.stderr)
-            return 2
-        violations.extend(fileViolations)
-        strictWarns.extend(fileStrictWarns)
 
-    if strictWarns and not args.strict:
-        print(f"[CheckEngineLayers] 내부 레이어 경고 {len(strictWarns)}건 (--strict 시 실패):")
-        for line in strictWarns[:20]:
-            print(f"  - {line}")
-        if len(strictWarns) > 20:
-            print(f"  ... +{len(strictWarns) - 20} more")
-
-    if violations:
-        print("[CheckEngineLayers] 레이어 위반:")
-        for line in violations:
-            print(f"  - {line}")
-        return 1
-
-    print(f"[CheckEngineLayers] OK ({len(allFiles)} files scanned in parallel)")
-    return 0
+main = CheckEngineLayersGate.run
 
 
 if __name__ == "__main__":

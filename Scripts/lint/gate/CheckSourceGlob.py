@@ -28,10 +28,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from common import (  # noqa: E402
     collectSourceFiles,
-    getProjectRoot,
     kCppSourceExtensions,
     kDirSourceApp,
     kDirSourceCore,
@@ -40,8 +41,8 @@ from common import (
     kDirSourceGameFramework,
     kDirSourceGames,
     startsWithPathComponent,
-    useUtf8Stdout,
 )
+from LintGate import GateResult, LintGate  # noqa: E402
 
 _kScanRoots = (
     kDirSourceEngine,
@@ -151,89 +152,79 @@ def checkRhiBackendSourceListInternal(repo: Path) -> list[str]:
     return errors
 
 
-# 이 린트의 본 검사는 **빌드 트리의 compile_commands.json** 과 대조하는 것이라 임시 트리로는
-# 성립하지 않는다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
-# RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
-kSelfTestSkipReason = "compile_commands.json 이 있는 실제 빌드 트리가 필요하다"
+class CheckSourceGlobGate(LintGate):
+    """
+    빌드가 실제로 컴파일하는 목록과 디스크의 소스를 대조한다.
 
-def main() -> int:
-    useUtf8Stdout()
+    본 검사는 **빌드 트리의 compile_commands.json** 과 대조하는 것이라 임시 트리로는 성립하지
+    않는다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
+    RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
+    """
 
-    parser = argparse.ArgumentParser(description="소스 GLOB 누락 검사")
-    parser.add_argument("--root", type=Path, default=None)
-    parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
-    parser.add_argument("--active-game", default="Empty", help="SW_ACTIVE_GAME 팩 이름")
-    args = parser.parse_args()
-    repo = (args.root or getProjectRoot()).resolve()
+    description = "소스 GLOB 누락 검사"
+    maxViolationShown = 40
+    hint = "  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다."
+    selfTestSkipReason = "compile_commands.json 이 있는 실제 빌드 트리가 필요하다"
 
-    # 백엔드 목록 검사는 빌드 트리가 없어도 성립한다 — 아래 조기 반환들보다 먼저 본다.
-    rhiErrors = checkRhiBackendSourceListInternal(repo)
-    if rhiErrors:
-        print(f"[CheckSourceGlob] RHI 백엔드 목록 위반 {len(rhiErrors)}건", file=sys.stderr)
-        for error in rhiErrors:
-            print(f"  {error}")
-    rhiExit = 1 if rhiErrors else 0
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
+        parser.add_argument("--active-game", default="Empty", help="SW_ACTIVE_GAME 팩 이름")
 
-    scanDirs = [repo / rel for rel in _kScanRoots]
-    sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        # 백엔드 목록 검사는 빌드 트리가 없어도 성립한다 — 아래 조기 반환들보다 먼저 본다.
+        violations = checkRhiBackendSourceListInternal(repositoryRoot)
 
-    # 지연 로딩 훅 및 모듈 엔트리는 의도된 특수 케이스이므로 검사 대상에 포함합니다.
-    buildDir = args.build
-    if buildDir is None:
-        buildDir = pickBuildDirInternal(repo)
-    else:
-        buildDir = buildDir.resolve()
+        scanDirs = [repositoryRoot / rel for rel in _kScanRoots]
+        sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
+        summary = f"{len(sources)} sources scanned under Source/"
 
-    if buildDir is None or not (buildDir / "compile_commands.json").is_file():
-        print("[CheckSourceGlob] compile_commands.json 없음 — 소스 목록만 보고합니다.")
-        print(f"[CheckSourceGlob] scanned {len(sources)} translation units under Source/")
-        return rhiExit
+        buildDir = args.build.resolve() if args.build else pickBuildDirInternal(repositoryRoot)
+        if buildDir is None or not (buildDir / "compile_commands.json").is_file():
+            return GateResult(
+                listViolation=violations,
+                listNote=["compile_commands.json 없음 — 소스 목록만 보고합니다"],
+                summary=summary,
+            )
 
-    compiledFiles: set[str] = set()
-    data = json.loads((buildDir / "compile_commands.json").read_text(encoding="utf-8"))
+        data = json.loads((buildDir / "compile_commands.json").read_text(encoding="utf-8"))
 
-    # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
-    # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
-    if any("unity_" in entry.get("file", "") for entry in data):
-        print(f"[CheckSourceGlob] {buildDir.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다.")
-        print(f"[CheckSourceGlob] scanned {len(sources)} translation units under Source/")
-        return rhiExit
+        # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
+        # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
+        if any("unity_" in entry.get("file", "") for entry in data):
+            return GateResult(
+                listViolation=violations,
+                listNote=[f"{buildDir.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다"],
+                summary=summary,
+            )
 
-    for entry in data:
-        filePath = Path(entry.get("file", "")).resolve()
-        try:
-            compiledFiles.add(filePath.relative_to(repo).as_posix().lower())
-        except ValueError:
-            compiledFiles.add(filePath.as_posix().lower())
+        compiledFiles: set[str] = set()
+        for entry in data:
+            filePath = Path(entry.get("file", "")).resolve()
+            try:
+                compiledFiles.add(filePath.relative_to(repositoryRoot).as_posix().lower())
+            except ValueError:
+                compiledFiles.add(filePath.as_posix().lower())
 
-    missingSources: list[str] = []
-    ignoreSubdirs = buildIgnoreSubdirsInternal()
-    for sourcePath in sources:
-        relativeSourcePath = sourcePath.resolve().relative_to(repo).as_posix()
-        # MODULE entries / inactive packs / other-OS sources are expected absences.
-        if any(ignore in relativeSourcePath for ignore in ignoreSubdirs):
-            continue
-        if startsWithPathComponent(relativeSourcePath, kDirSourceGames):
-            active = f"/{args.active_game}/"
-            if active not in relativeSourcePath:
+        # 지연 로딩 훅 및 모듈 엔트리는 의도된 특수 케이스이므로 검사 대상에 포함합니다.
+        ignoreSubdirs = buildIgnoreSubdirsInternal()
+        for sourcePath in sources:
+            relativeSourcePath = sourcePath.resolve().relative_to(repositoryRoot).as_posix()
+            # MODULE entries / inactive packs / other-OS sources are expected absences.
+            if any(ignore in relativeSourcePath for ignore in ignoreSubdirs):
                 continue
-        if relativeSourcePath.lower() not in compiledFiles:
-            missingSources.append(relativeSourcePath)
+            if startsWithPathComponent(relativeSourcePath, kDirSourceGames):
+                if f"/{args.active_game}/" not in relativeSourcePath:
+                    continue
+            if relativeSourcePath.lower() not in compiledFiles:
+                violations.append(f"compile_commands 에 없음: {relativeSourcePath}")
 
-    if missingSources:
-        print(f"[CheckSourceGlob] compile_commands에 없는 소스 {len(missingSources)}개 (reconfigure 필요할 수 있음):")
-        for line in missingSources[:40]:
-            print(f"  - {line}")
-        if len(missingSources) > 40:
-            print(f"  ... +{len(missingSources) - 40} more")
-        return 1
+        return GateResult(
+            listViolation=violations,
+            summary=f"{len(sources)} sources referenced in {buildDir}, RHI backend list matches disk",
+        )
 
-    if rhiExit != 0:
-        return rhiExit
 
-    print(f"[CheckSourceGlob] OK ({len(sources)} sources referenced in {buildDir}, "
-          f"RHI backend list matches disk)")
-    return 0
+main = CheckSourceGlobGate.run
 
 
 if __name__ == "__main__":

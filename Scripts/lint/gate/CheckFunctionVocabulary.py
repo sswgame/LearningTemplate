@@ -30,8 +30,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import getProjectRoot, mapConcurrent, useUtf8Stdout
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from common import mapConcurrent  # noqa: E402
+from LintGate import GateResult, LintGate  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
 _kScanRoots = ("Source", "Test", "Tools/ReflectionParser")
@@ -134,54 +137,46 @@ def collectHeadersInternal(repositoryRoot: Path, explicitFiles: list[str] | None
     return sorted(found)
 
 
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 본다.
-kSelfTestCases = [
-    {
-        "name": "두문자어가 대문자로 달린다",
-        "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void queryAABB( int32 a );\n    };\n}\n"},
-    },
-    {
-        "name": "initialize 대신 setup",
-        "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool setupLocalization( int32 a );\n    };\n}\n"},
-    },
-    {
-        "name": "allocate 대신 alloc",
-        "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void* allocSrvDescriptor( int32 a );\n    };\n}\n"},
-    },
-    {
-        "name": "술어가 check 로 시작한다",
-        "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool checkCollision( int32 a ) const;\n    };\n}\n"},
-    },
-]
+class CheckFunctionVocabularyGate(LintGate):
+    """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
+
+    description = "함수 이름 어휘 검사"
+    violationHeader = "이름 규칙 위반"
+    hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
+    selfTestCases = [
+        {
+            "name": "두문자어가 대문자로 달린다",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void queryAABB( int32 a );\n    };\n}\n"},
+        },
+        {
+            "name": "initialize 대신 setup",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool setupLocalization( int32 a );\n    };\n}\n"},
+        },
+        {
+            "name": "allocate 대신 alloc",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void* allocSrvDescriptor( int32 a );\n    };\n}\n"},
+        },
+        {
+            "name": "술어가 check 로 시작한다",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool checkCollision( int32 a ) const;\n    };\n}\n"},
+        },
+    ]
+
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--files", nargs="*", default=None, help="이 파일들만 검사 (pre-commit 용)")
+
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        headers = collectHeadersInternal(repositoryRoot, args.files)
+        if not headers:
+            return GateResult(summary="검사할 헤더가 없습니다")
+
+        violations: list[str] = []
+        for fileViolations in mapConcurrent(lambda path: scanFileInternal(path, repositoryRoot), headers):
+            violations.extend(fileViolations)
+        return GateResult(listViolation=violations, summary=f"{len(headers)} headers scanned")
 
 
-def main(argv: list[str] | None = None) -> int:
-    useUtf8Stdout()
-
-    parser = argparse.ArgumentParser(description="함수 이름 어휘 검사")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--files", nargs="*", default=None, help="이 파일들만 검사 (pre-commit 용)")
-    args = parser.parse_args(argv)
-    repositoryRoot = (args.root or getProjectRoot()).resolve()
-
-    headers = collectHeadersInternal(repositoryRoot, args.files)
-    if not headers:
-        print("[CheckFunctionVocabulary] 검사할 헤더가 없습니다.")
-        return 0
-
-    violations: list[str] = []
-    for fileViolations in mapConcurrent(lambda path: scanFileInternal(path, repositoryRoot), headers):
-        violations.extend(fileViolations)
-
-    if violations:
-        print("[CheckFunctionVocabulary] 이름 규칙 위반:")
-        for line in violations:
-            print(f"  - {line}")
-        print("\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다.")
-        return 1
-
-    print(f"[CheckFunctionVocabulary] OK ({len(headers)} headers scanned)")
-    return 0
+main = CheckFunctionVocabularyGate.run
 
 
 if __name__ == "__main__":

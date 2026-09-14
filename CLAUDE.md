@@ -80,11 +80,15 @@ over staged files only). **The folder says what a script does to you** — that 
 | `lint/report/` | prints, you decide | always 0 |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
-`PreCommitLint.py` stays at `lint/` because it orchestrates all four.
+`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` stays there because
+every gate inherits from it.
 
-**Adding a gate is dropping a file into `lint/gate/`.** `CheckLintsAreAlive.py` enumerates that folder,
-so a new gate is picked up with no list to edit — and it must carry a `kSelfTestCases` snippet proving it
-still catches something (or a `kSelfTestSkipReason` saying why it cannot), or the self-test fails.
+**Adding a gate is dropping a file into `lint/gate/`.** A gate is one `LintGate` subclass that implements
+`scan(repositoryRoot, args) -> GateResult`; the base owns `--root`, UTF-8 output, violation printing and
+the exit code (`0` clean, `1` violations, `2` raise `GateError` — the check could not run), and the module
+exports it as `main = XxxGate.run`. `CheckLintsAreAlive.py` enumerates the folder, so a new gate is picked
+up with no list to edit — and it must carry a `selfTestCases` snippet proving it still catches something
+(or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
 
 ```powershell
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)

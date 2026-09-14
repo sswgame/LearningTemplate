@@ -44,8 +44,10 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import useUtf8Stdout  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
 _kNoGpuFilterFile = "Test/EngineTest/CMakeLists.txt"
@@ -210,50 +212,42 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     return errors, len(homes), len(cases)
 
 
+class CheckTestSuitesGate(LintGate):
+    """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
-# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
-kSelfTestCases = [
-    {
-        "name": "스위트 이름이 XxxTest 가 아님",
-        "files": {
-            "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n",
-            "Test/EngineTest/CMakeLists.txt": (
-                "add_test(\n\tNAME EngineTest_NoGPU\n"
-                "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
-            ),
-            "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+    description = "테스트 스위트 규칙 검사"
+    selfTestCases = [
+        {
+            "name": "스위트 이름이 XxxTest 가 아님",
+            "files": {
+                "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n",
+                "Test/EngineTest/CMakeLists.txt": (
+                    "add_test(\n\tNAME EngineTest_NoGPU\n"
+                    "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
+                ),
+                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+            },
         },
-    },
-    {
-        "name": "한 스위트가 두 파일에",
-        "files": {
-            "Test/EngineTest/TestProbeA.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
-            "Test/EngineTest/TestProbeB.cpp": "SW_TEST_CASE( ProbeTest, Two )\n{\n}\n",
-            "Test/EngineTest/CMakeLists.txt": (
-                "add_test(\n\tNAME EngineTest_NoGPU\n"
-                "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
-            ),
-            "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+        {
+            "name": "한 스위트가 두 파일에",
+            "files": {
+                "Test/EngineTest/TestProbeA.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
+                "Test/EngineTest/TestProbeB.cpp": "SW_TEST_CASE( ProbeTest, Two )\n{\n}\n",
+                "Test/EngineTest/CMakeLists.txt": (
+                    "add_test(\n\tNAME EngineTest_NoGPU\n"
+                    "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
+                ),
+                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+            },
         },
-    },
-]
+    ]
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="테스트 스위트 규칙 검사")
-    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]))
-    args = parser.parse_args(argv)
-    useUtf8Stdout()
-    rootDir = Path(args.root).resolve()
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        errors, suiteCount, caseCount = check(repositoryRoot)
+        return GateResult(listViolation=errors, summary=f"{suiteCount} suites, {caseCount} cases")
 
-    errors, suiteCount, caseCount = check(rootDir)
-    if errors:
-        print(f"[CheckTestSuites] 위반 {len(errors)}건", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}")
-        return 1
-    print(f"[CheckTestSuites] OK ({suiteCount} suites, {caseCount} cases)")
-    return 0
+
+main = CheckTestSuitesGate.run
 
 
 if __name__ == "__main__":

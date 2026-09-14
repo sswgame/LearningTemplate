@@ -16,8 +16,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import collectSourceFiles, flatMapConcurrent, getLintSearchDirs, getProjectRoot, kCppSourceExtensions, useUtf8Stdout
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from common import collectSourceFiles, flatMapConcurrent, getLintSearchDirs, kCppSourceExtensions  # noqa: E402
+from LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -242,23 +245,7 @@ def processFile(filePath: Path, repositoryRoot: Path,
     return violationsList
 
 
-
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
-# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
-kSelfTestCases = [
-    {
-        "name": "Engine 이 Core 보다 앞",
-        "files": {
-            "Source/Engine/Probe/Probe.cpp": (
-                '#include "pch.h"\n\n'
-                '#include "Engine/Common/EngineServices.h"\n'
-                '#include "Core/File/FileUtil.h"\n'
-            ),
-        },
-    },
-]
-
-def main(argv: list[str] | None = None) -> int:
+class CheckIncludeOrderGate(LintGate):
     """
     기본은 **검사만** 한다. 고치려면 `--fix` 를 준다.
 
@@ -267,33 +254,38 @@ def main(argv: list[str] | None = None) -> int:
     **실패할 수가 없었고**, 대신 소스를 조용히 고쳐 놓았다(2026-09-14 에 음성 테스트가 잡았다).
     고치는 일은 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다 — 그쪽은 그대로다.
     """
-    useUtf8Stdout()
 
-    parser = argparse.ArgumentParser(description="Include 순서 검사")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
-    args = parser.parse_args(argv)
-    repo = (args.root or getProjectRoot()).resolve()
+    description = "Include 순서 검사"
+    violationHeader = "Include 순서 규칙 위반"
+    selfTestCases = [
+        {
+            "name": "Engine 이 Core 보다 앞",
+            "files": {
+                "Source/Engine/Probe/Probe.cpp": (
+                    '#include "pch.h"\n\n'
+                    '#include "Engine/Common/EngineServices.h"\n'
+                    '#include "Core/File/FileUtil.h"\n'
+                ),
+            },
+        },
+    ]
 
-    sourceDirs = getLintSearchDirs(repo)
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
 
-    allFiles = collectSourceFiles(sourceDirs)
-    sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repo)
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        allFiles = collectSourceFiles(getLintSearchDirs(repositoryRoot))
+        sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repositoryRoot)
 
-    violations = flatMapConcurrent(
-        lambda path: processFile(path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap,
-                                 checkOnly=not args.fix),
-        allFiles,
-    )
+        violations = flatMapConcurrent(
+            lambda path: processFile(path, repositoryRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap,
+                                     checkOnly=not args.fix),
+            allFiles,
+        )
+        return GateResult(listViolation=violations, summary=f"{len(allFiles)} files scanned")
 
-    if violations:
-        print("[CheckIncludeOrder] Include 순서 규칙 위반:", file=sys.stderr)
-        for violation in violations:
-            print(f"  - {violation}")
-        return 1
 
-    print(f"[CheckIncludeOrder] OK ({len(allFiles)} files scanned)")
-    return 0
+main = CheckIncludeOrderGate.run
 
 
 if __name__ == "__main__":

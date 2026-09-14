@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `83aaac14`
+> 마지막 갱신: 2026-09-14 · 기준 커밋 `d58c0c00`
 
 ---
 
@@ -294,6 +294,70 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-14 (게이트 아홉이 같은 껍데기를 각자 적고 있었다 — 그리고 팩 계약을 두 번 파싱하고 있었다)
+
+`Scripts/` 에서 **클래스가 구조를 줄이는 자리**만 골라 옮겼다. 셋을 했고, 넷째는 하지 않기로 했다.
+
+**1) 게이트 아홉 = `LintGate` 상속 클래스 아홉 (`Scripts/lint/LintGate.py`).**
+
+게이트가 하는 일은 제각각이지만 껍데기는 늘 같았다: UTF-8 을 켜고 · `--root` 를 받고 · 루트를 정하고 ·
+위반을 찍고 · 있으면 1 을 준다. 아홉 파일이 그 열댓 줄을 각자 적고 있었고 **그래서 각자 달랐다**:
+
+- `--root` 기본값이 두 종류였다. `CheckRenderOwnership` · `CheckTestSuites` 는 `parents[2]` — 그건
+  저장소 루트가 아니라 **`Scripts/`** 다. 문서에 적힌 대로 `py -3 Scripts/lint/gate/CheckRenderOwnership.py`
+  를 치면 `Scripts/` 를 훑고 "헤더가 없습니다" 로 실패했다. CMake·PreCommitLint 가 늘 `--root` 를 줘서
+  아무도 몰랐다. 이제 둘 다 인자 없이 돈다.
+- 넷은 `main()` 이 `parse_args()` 를 인자 없이 불러 **프로그램에서 부를 수 없었다**
+  (`CheckEngineLayers` · `CheckDataFileReferences` · `CheckResourceCasing` · `CheckSourceGlob`).
+- 위반 줄이 어디는 stdout · 어디는 stderr, 머리말은 `  - ` 와 `  ` 가 섞여 있었다.
+
+게이트가 쓰는 것은 **`scan()` 하나**이고 `GateResult(listViolation, listNote, summary)` 를 돌려준다.
+"검사할 수 없었다" 는 `GateError` 로 던져 **2** 로 끝난다 — "위반 0건"(0)과 섞이지 않는다.
+`CheckCodeConventions` 만 보고서 모양이 달라 `report()` 를 재정의한다(카테고리 묶음 · `--json`).
+
+**증거도 클래스가 든다.** `kSelfTestCases` 모듈 변수가 `selfTestCases` 클래스 속성이 됐고,
+`CheckLintsAreAlive` 는 `findGateClass(module)` 로 그것을 읽는다. `gate/` 에 게이트가 아닌 파일을
+놓으면 그 자리에서 실패한다 — **자리가 규칙이고, 이제 자리에 들어갈 모양도 하나다.**
+
+> **덤으로 죽은 배선 하나.** `CheckEngineLayers.processFile` 은 `del strict` 을 하고 빈 목록을
+> 돌려주고 있었다 — 세 번째 반환값도, `main` 의 경고 블록도 **한 번도 채워진 적이 없다.**
+> 반환 타입을 `list[str]` 하나로 줄였다(`--strict` 는 옛 호출부를 위해 계속 받는다).
+
+**2) 팩 바이너리 계약을 읽는 일은 한 곳 — `Scripts/common/PackFormat.py` 의 `PackFormatSpec`.**
+
+`Config/Engine/PackFormat.json` 이 SSOT 라는 것은 그대로였는데, **소비자 둘이 그 파일을 각자
+파싱하고 있었다**: 타입 표가 둘(`_kStructTypeCodes`+`_kStructTypeSizes` / `kScalarTypes`), 배열
+표기(`uint8[2]`) 해석이 둘, "필드 합계 = 선언 크기" 검증도 둘. 한쪽만 고치면 조용히 어긋나는 모양이고,
+이 저장소는 이미 그 사고로 **offset 8 부터 어긋난 헤더**와 "마운트는 되는데 파일이 0개" 인 팩을
+만든 적이 있다. 쿠커 쪽은 읽은 결과를 딕셔너리에 되쑤셔 넣고(`spec["_headerLayout"]`) 거기서 뽑은
+모듈 상수 **열둘**을 파일 앞머리에 늘어놓고 있었다.
+
+이제 계약은 객체다. `PackStruct.pack()` 은 **필드 이름으로만** 값을 받는다 — 헤더는 필드가 열넷이고
+그중 다섯이 같은 `uint64` 라, 자리로 넘기면 두 값을 맞바꿔도 조용히 통과한다. 빠뜨리거나 계약에 없는
+이름을 주면 거기서 멈춘다.
+
+**3) `cookPack` 150줄의 상태 뭉치 → `PackWriter`.**
+
+한 함수가 오프셋 커서 · TOC 레코드 · 페이로드 블롭 · 스트링 풀 넷을 동시에 굴렸다. 특히 스트링 풀은
+**앞선 별도 루프**에서 쌓은 뒤 인덱스로 다시 맞췄는데, 두 루프가 같은 순서로 돈다는 전제가 코드 어디에도
+없었다. 이제 순서가 메서드 이름이다 — `addFile`/`addBytes` 로 담고 `writeTo` 로 굽는다. 풀도 TOC 와
+같은 루프에서 쌓이므로 맞출 인덱스가 없다. `cookPack` 은 **무엇을 담을지** 고르는 일만 한다.
+
+**4) 하지 않기로 한 것 — `FormatBranchBraces`.** `listMasked` 를 헬퍼 다섯에 넘기고 있어 후보로 보였지만,
+두 패스가 **서로 다른 텍스트**(앞 패스의 결과)를 훑으므로 스캐너 객체를 공유해도 마스킹을 다시 해야 한다.
+줄어드는 것이 인자 몇 개뿐이라 멀쩡한 픽서를 흔들 값이 아니다.
+
+**확인** (동작이 바뀌지 않았다는 것을 바이트로 확인했다):
+
+- `GeneratePackFormat.py` 가 만드는 `PackFormat.gen.h` — 이전 산출물과 **바이트 단위로 동일**.
+  CMake reconfigure 로 다시 생성해서도 확인.
+- 팩 세 개(engine · common · game_empty)를 **옛 쿠커와 새 쿠커로 각각 구워 md5 비교** — 동일.
+  스트링 풀이 들어가는 `--include-debug-names` 경로도 따로 구워 동일(이쪽이 인덱스 맞추기를 바꾼 자리다).
+- `CheckLintsAreAlive` 양방향 확인: `gate/` 에 빈 파일을 놓으면 "게이트 클래스가 없습니다" 로 실패,
+  `CheckEngineLayers` 가 늘 빈 목록을 돌려주게 만들면 "이 검사는 죽었습니다" 로 실패. 되돌리면 통과.
+- 린트 ctest **11/11** · `Ninja-Debug` ctest **17/17** · nogpu **5/5** · `py -3 -m Scripts lint` 통과 ·
+  `--prefabs-only/--scenes-only` 쿠킹 정상.
 
 ### 2026-09-14 (레이스를 잡으려고 만든 테스트가 레이스가 있던 백엔드를 건너뛰고 있었다)
 

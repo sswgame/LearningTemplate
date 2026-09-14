@@ -20,15 +20,10 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import getProjectRoot, useUtf8Stdout
+from LintGate import GateResult, LintGate  # noqa: E402
 
 _kAllowedUppercaseBasenames = {"README.md"}
 
@@ -75,42 +70,30 @@ def checkResourceCasing(projectRoot: Path, targetFiles: Sequence[str] | None = N
     return violations
 
 
+class CheckResourceCasingGate(LintGate):
+    """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
-# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
-kSelfTestCases = [
-    {
-        "name": "대문자 리소스 경로",
-        "files": {
-            "Resource/engine/Textures/Splash.png": "probe",
+    description = "Resource 하위 소문자 명명 규칙 검사"
+    violationHeader = "Resource 소문자 규칙 위반"
+    hint = "  Resource/ 하위의 모든 파일/폴더는 반드시 소문자여야 합니다 (README.md 만 예외)."
+    selfTestCases = [
+        {
+            "name": "대문자 리소스 경로",
+            "files": {
+                "Resource/engine/Textures/Splash.png": "probe",
+            },
         },
-    },
-]
+    ]
 
-def main() -> int:
-    useUtf8Stdout()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("files", nargs="*", help="검사할 특정 파일 경로 목록 (생략 시 전체 Resource/ 검사)")
 
-    parser = argparse.ArgumentParser(description="Resource 하위 소문자 명명 규칙 검사")
-    parser.add_argument("--root", type=Path, default=None, help="프로젝트 루트 디렉터리")
-    parser.add_argument("files", nargs="*", help="검사할 특정 파일 경로 목록 (생략 시 전체 Resource/ 검사)")
-    args = parser.parse_args()
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        violations = checkResourceCasing(repositoryRoot, args.files or None)
+        return GateResult(listViolation=violations, summary="Resource 하위 모든 파일/폴더 소문자")
 
-    projectRoot = (args.root or getProjectRoot()).resolve()
-    targetFiles = args.files if args.files else None
 
-    violations = checkResourceCasing(projectRoot, targetFiles)
-    if violations:
-        print("=" * 60)
-        print("  [CheckResourceCasing] Resource 소문자 규칙 위반 발견!")
-        print("  Resource/ 하위의 모든 파일/폴더는 반드시 소문자여야 합니다.")
-        print("=" * 60)
-        for v in violations:
-            print(f"  - {v}")
-        print(f"\n총 {len(violations)}건의 위반 사항이 발견되어 중단합니다.")
-        return 1
-
-    print("[CheckResourceCasing] OK (Resource 하위 모든 파일/폴더 소문자 검증 완료)")
-    return 0
+main = CheckResourceCasingGate.run
 
 
 if __name__ == "__main__":

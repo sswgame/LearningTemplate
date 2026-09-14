@@ -35,8 +35,10 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import useUtf8Stdout  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from LintGate import GateResult, LintGate  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
 _kTransportedHeaders: list[str] = [
@@ -153,42 +155,37 @@ def checkTransportedHeaders(rootDir: Path) -> tuple[list[str], int]:
     return errors, checkedCount
 
 
+class CheckRenderOwnershipGate(LintGate):
+    """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
-# 이 린트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive.py` 가 임시 트리에 써서 돌려 보고,
-# 통과해 버리면 검사가 죽은 것으로 본다. 조각을 여기 두는 이유는 하나다 — 표를 따로 만들면 어긋난다.
-kSelfTestCases = [
-    {
-        "name": "스냅샷 구조체에 생포인터",
-        "files": {
-            "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
-                "#pragma once\n\n"
-                "struct GpuProbe\n"
-                "{\n"
-                "    Material* _pMaterial{ nullptr };\n"
-                "};\n"
-            ),
-            "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
-                "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
-            ),
+    description = "렌더 패킷 소유 규칙 검사"
+    selfTestCases = [
+        {
+            "name": "스냅샷 구조체에 생포인터",
+            "files": {
+                "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
+                    "#pragma once\n\n"
+                    "struct GpuProbe\n"
+                    "{\n"
+                    "    Material* _pMaterial{ nullptr };\n"
+                    "};\n"
+                ),
+                "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
+                    "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
+                ),
+            },
         },
-    },
-]
+    ]
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="렌더 패킷 소유 규칙 검사")
-    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]))
-    args = parser.parse_args(argv)
-    useUtf8Stdout()
-    rootDir = Path(args.root).resolve()
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        errors, checkedCount = checkTransportedHeaders(repositoryRoot)
+        return GateResult(
+            listViolation=errors,
+            summary=f"{checkedCount} structs in {len(_kTransportedHeaders)} headers",
+        )
 
-    errors, checkedCount = checkTransportedHeaders(rootDir)
-    if errors:
-        print(f"[CheckRenderOwnership] 위반 {len(errors)}건", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}")
-        return 1
-    print(f"[CheckRenderOwnership] OK ({checkedCount} structs in {len(_kTransportedHeaders)} headers)")
-    return 0
+
+main = CheckRenderOwnershipGate.run
 
 
 if __name__ == "__main__":

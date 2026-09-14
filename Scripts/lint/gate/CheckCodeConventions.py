@@ -38,11 +38,13 @@ import json
 import os
 import re
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+
+from common import (  # noqa: E402
     collectSourceFiles,
     flatMapConcurrent,
     getLintSearchDirs,
@@ -51,8 +53,8 @@ from common import (
     kCppHeaderExtensions,
     kCppSourceExtensions,
     normalizePath,
-    useUtf8Stdout,
 )
+from LintGate import GateResult, LintGate  # noqa: E402
 # --- 1. 자료구조 정의 --------------------------------------------------------
 
 @dataclass
@@ -2087,41 +2089,62 @@ def runConventionsCheck(rootDir: Path | None = None,
     return allViolations
 
 
-# 이 린트는 규칙이 서른 종이라 조각 하나로 "살아 있다" 를 증명할 수 없다.
-# 규칙마다 `ConventionRule.badSample` 을 들고, `CheckCodeConventionsSelfTest.py` 가 전수로 본다.
-kSelfTestSkipReason = "규칙별 음성 테스트는 CheckCodeConventionsSelfTest.py 가 담당한다"
+@dataclass
+class ConventionResult(GateResult):
+    """
+    카테고리별 보고서를 내려면 **원본 위반 객체**가 필요하다 — 문자열로 눌러 두면 다시 못 만든다.
 
-def main() -> int:
-    useUtf8Stdout()
+    기반의 `report()` 대신 아래 `CheckCodeConventionsGate.report()` 가 이것을 읽는다.
+    """
 
-    parser = argparse.ArgumentParser(description="SW Engine C++ 코딩 컨벤션 검사기")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트 디렉터리 경로")
-    parser.add_argument("--category", type=str, default=None, help="특정 규칙 카테고리 필터링")
-    parser.add_argument("--exclude-category", type=str, default=None, help="제외할 규칙 카테고리")
-    parser.add_argument("--json", action="store_true", help="결과를 JSON 형식으로 출력")
-    parser.add_argument("--files", nargs="*", help="전체 스캔 대신 검사할 개별 파일 목록")
-    args = parser.parse_args()
+    listRaw: list[ConventionViolation] = field(default_factory=list)
+    bJson: bool = False
+    repositoryRoot: Path | None = None
 
-    rootDir = args.root or Path(getProjectRoot())
-    violations = runConventionsCheck(rootDir, args.files)
 
-    if args.category:
-        violations = [v for v in violations if args.category.lower() in v.rule_category.lower()]
-    if args.exclude_category:
-        violations = [v for v in violations if args.exclude_category.lower() not in v.rule_category.lower()]
+class CheckCodeConventionsGate(LintGate):
+    """
+    규칙이 서른 종이라 조각 하나로 "살아 있다" 를 증명할 수 없다.
+    규칙마다 `ConventionRule.badSample` 을 들고, `CheckCodeConventionsSelfTest.py` 가 전수로 본다.
+    """
 
-    if args.json:
-        outputJsonData = [asdict(v) for v in violations]
-        print(json.dumps(outputJsonData, indent=2, ensure_ascii=False))
-    else:
+    description = "SW Engine C++ 코딩 컨벤션 검사기"
+    selfTestSkipReason = "규칙별 음성 테스트는 CheckCodeConventionsSelfTest.py 가 담당한다"
+
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--category", type=str, default=None, help="특정 규칙 카테고리 필터링")
+        parser.add_argument("--exclude-category", type=str, default=None, help="제외할 규칙 카테고리")
+        parser.add_argument("--json", action="store_true", help="결과를 JSON 형식으로 출력")
+        parser.add_argument("--files", nargs="*", help="전체 스캔 대신 검사할 개별 파일 목록")
+
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> ConventionResult:
+        violations = runConventionsCheck(repositoryRoot, args.files)
+        if args.category:
+            violations = [v for v in violations if args.category.lower() in v.rule_category.lower()]
+        if args.exclude_category:
+            violations = [v for v in violations if args.exclude_category.lower() not in v.rule_category.lower()]
+
+        return ConventionResult(
+            listViolation=[f"{v.file_path}:{v.line_number} -> {v.message}" for v in violations],
+            listRaw=violations,
+            bJson=args.json,
+            repositoryRoot=repositoryRoot,
+        )
+
+    def report(self, result: ConventionResult) -> int:
+        """카테고리별로 묶어 찍는다 — 규칙이 서른 종이라 평평한 목록으로는 읽히지 않는다."""
+        if result.bJson:
+            print(json.dumps([asdict(v) for v in result.listRaw], indent=2, ensure_ascii=False))
+            return 0 if not result.listRaw else 1
+
         print("\n========================================================")
         print("  SW Engine C++ 코딩 컨벤션 검사 보고서")
-        print(f"  저장소: {rootDir}")
-        print(f"  발견된 위반 항목: {len(violations)}건")
+        print(f"  저장소: {result.repositoryRoot}")
+        print(f"  발견된 위반 항목: {len(result.listRaw)}건")
         print("========================================================\n")
 
         categoryGroups: dict[str, list[ConventionViolation]] = {}
-        for violation in violations:
+        for violation in result.listRaw:
             categoryGroups.setdefault(violation.rule_category, []).append(violation)
 
         for category, items in sorted(categoryGroups.items()):
@@ -2137,7 +2160,10 @@ def main() -> int:
             print(f"  - {category:<25}: {len(items):>3}건")
         print("========================================================\n")
 
-    return 0 if len(violations) == 0 else 1
+        return 0 if not result.listRaw else 1
+
+
+main = CheckCodeConventionsGate.run
 
 
 if __name__ == "__main__":
