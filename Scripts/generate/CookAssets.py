@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import (
     PackFormatSpec,
     batchCookAssets,
+    findAppExecutable,
     getProjectRoot,
     kFilePackConfig,
     kFileRuntimeEngineConfig,
@@ -46,6 +47,7 @@ from common import (
     packLengthPrefixedString,
     readJsonDictInternal,
     resolveDefaultOutputDir,
+    runShaderBake,
     writeBinaryIfChanged,
 )
 
@@ -331,26 +333,13 @@ def resolveTargetRhiInternal(config: dict, cliRhi: str = "", projectRoot: Path |
 
 def bakeShadersInternal(projectRoot: Path) -> bool:
     """App.exe --bake-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
-    import subprocess
-    candidates = [
-        projectRoot / "build/Ninja-Debug/Bin/App.exe",
-        projectRoot / "build/Ninja-Release/Bin/App.exe",
-        # Shipping App 도 베이커를 링크한다(로그만 안 남는다). 두 번째 Shipping 빌드부터는
-        # 이 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시 굽는다.
-        projectRoot / "build/Ninja-Shipping/Bin/App.exe",
-        projectRoot / "Bin/App.exe",
-    ]
-    appExe = None
-    for c in candidates:
-        if c.is_file():
-            appExe = c
-            break
-    if not appExe:
+    appExe = findAppExecutable(projectRoot)
+    if appExe is None:
         print("[CookAssets Warning] App.exe not found to run --bake-shaders", file=sys.stderr)
         return False
+
     print(f"[CookAssets] Running headless shader bake: {appExe} --bake-shaders")
-    res = subprocess.run([str(appExe), "--bake-shaders"])
-    return res.returncode == 0
+    return runShaderBake(appExe).returncode == 0
 
 
 _kBakeStampFileName = "bake.stamp"

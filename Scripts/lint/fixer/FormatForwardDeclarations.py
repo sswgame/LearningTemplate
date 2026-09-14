@@ -175,6 +175,16 @@ class FormatForwardDeclarationsFixer(LintFixer):
             transform=formatForwardDeclarations,
             problem="전방 선언 정렬(enum -> struct -> class 및 빈 줄)이 어긋났습니다.",
             done="전방 선언 정렬 완료",
+            # class 가 enum 보다 앞에 있고 그룹 사이 빈 줄도 없다.
+            badSample=(
+                "#pragma once\n\nnamespace sw\n{\n"
+                "    class Alpha;\n    enum class Beta;\n    struct Gamma;\n\n    void probe();\n}\n"
+            ),
+            # 이미 정렬된 것은 건드리지 않는다 (건드리면 포맷이 매번 흔들린다).
+            goodSample=(
+                "#pragma once\n\nnamespace sw\n{\n"
+                "    enum class Beta;\n\n    struct Gamma;\n\n    class Alpha;\n\n    void probe();\n}\n"
+            ),
         ),
     )
 

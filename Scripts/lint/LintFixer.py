@@ -34,6 +34,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import Callable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -90,18 +91,27 @@ class FixPass:
     """
     텍스트 변환 한 가지.
 
-    - `transform`: `(텍스트) -> (새 텍스트, 바뀌었는가)`
-    - `problem`  : `--check` 에서 이 변환이 걸렸을 때 할 말 (무엇이 어긋났는가)
-    - `done`     : 실제로 고쳤을 때 할 말
+    - `transform` : `(텍스트) -> (새 텍스트, 바뀌었는가)`
+    - `problem`   : `--check` 에서 이 변환이 걸렸을 때 할 말 (무엇이 어긋났는가)
+    - `done`      : 실제로 고쳤을 때 할 말
+    - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
+    - `goodSample`: 이 변환이 **건드리면 안 되는** 조각
 
     픽서가 변환을 여럿 들면 **선언 순서대로** 이어 돌린다. 순서가 의미를 갖는 경우가 있어
     (`FormatBranchBraces` 는 if 를 먼저 벗겨야 case 의 문장 수가 부풀지 않는다) 목록 순서가
     곧 계약이다.
+
+    **조각 둘은 변환과 같은 자리에 있다.** 게이트가 `selfTestCases` 를 들고 다니는 것과 같은 이유다 —
+    규칙과 그 증거가 떨어져 있으면 언제든 어긋난다. `CheckFixersAreAlive` 가 읽어 간다.
+    `goodSample` 이 특히 중요하다: 픽서는 **파일을 고쳐 쓰므로**, 잡아선 안 될 것을 잡으면
+    게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
     """
 
     transform: Callable[[str], tuple[str, bool]]
     problem: str
     done: str
+    badSample: str = ""
+    goodSample: str = ""
 
 
 class LintFixer:
@@ -183,6 +193,7 @@ class LintFixer:
     def main(self, argv: Sequence[str] | None = None) -> int:
         useUtf8Stdout()
 
+
         parser = argparse.ArgumentParser(description=self.description)
         addFileArguments(parser)
         parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
@@ -198,3 +209,12 @@ class LintFixer:
             print(message)
 
         return 1 if (args.check and listMessage) else 0
+
+
+def findFixerClass(module: ModuleType) -> type[LintFixer] | None:
+    """모듈 안에 정의된 픽서 클래스를 찾습니다 (한 파일에 픽서 하나). `findGateClass` 의 짝입니다."""
+    for value in vars(module).values():
+        if isinstance(value, type) and issubclass(value, LintFixer) and value is not LintFixer:
+            if value.__module__ == module.__name__:
+                return value
+    return None

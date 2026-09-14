@@ -34,10 +34,13 @@ from gate import CheckTestSuites
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import (
+    findAppExecutable,
+    findShaderCompileFailures,
     getAllStagedFiles,
     getProjectRoot,
     getStagedCppFiles,
     runClangFormatBatch,
+    runShaderBake,
     useUtf8Stdout,
 )
 
@@ -57,30 +60,14 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
             rel = s
         print(f"    * {rel}")
 
-    candidates = [
-        projectRoot / "build/Ninja-Debug/Bin/App.exe",
-        projectRoot / "build/Ninja-Release/Bin/App.exe",
-        projectRoot / "Bin/App.exe",
-    ]
-    appExe = None
-    for c in candidates:
-        if c.is_file():
-            appExe = c
-            break
-
-    if not appExe:
+    # 후보 목록은 `common.AppBinary` 한 곳이다 — 예전에는 여기와 쿠커가 각자 들고 있었고,
+    # 이쪽만 Ninja-Shipping 을 빼먹어서 Shipping 만 빌드해 둔 사람은 이 검증을 통째로 건너뛰었다.
+    appExe = findAppExecutable(projectRoot)
+    if appExe is None:
         print("  [Warning] App.exe를 찾을 수 없어 셰이더 베이킹 검증을 건너뜁니다. (빌드 후 다시 시도하세요)")
         return True
 
-    import subprocess
-    res = subprocess.run(
-        [str(appExe), "--bake-shaders"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        cwd=str(projectRoot),
-    )
+    res = runShaderBake(appExe, cwd=projectRoot, bCapture=True)
 
     if res.returncode != 0:
         print(f"  [Error] App.exe --bake-shaders 실행 실패 (종료 코드: {res.returncode})")
@@ -90,18 +77,17 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
             print(res.stderr)
         return False
 
-    hasCompileError = False
-    for line in res.stdout.splitlines():
-        if "Failed to compile shader" in line:
-            hasCompileError = True
-            print(f"  [Error] {line}")
+    listCompileError = findShaderCompileFailures(res.stdout or "")
+    for line in listCompileError:
+        print(f"  [Error] {line}")
 
-    if hasCompileError:
+    if listCompileError:
         print("  [Error] 하나 이상의 RHI 백엔드에서 셰이더 컴파일 실패가 발생했습니다. HLSL 문법을 수정하세요.")
         return False
 
     print("  - 모든 RHI 백엔드(DirectX 12, Vulkan, DirectX 11) 컴파일 검증 통과.")
 
+    import subprocess
     gitCmd = subprocess.run(
         ["git", "status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"],
         capture_output=True,

@@ -81,6 +81,15 @@ if(Python3_Interpreter_FOUND)
 	# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
 	# 각 린트가 직접 든다. 예전에는 이 파일이 열한 덩이를 손으로 들고 있었고, 스크립트 경로
 	# 상수 열셋이 Constants.py -> ConfigVars.cmake 를 타고 따라다녔다.
+	#
+	# **폴더가 목록이므로 폴더를 감시해야 한다.** 이 GLOB 의 결과는 쓰지 않는다 — `CONFIGURE_DEPENDS`
+	# 가 그 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다. 없으면 `gate/` 에 파일을 놓아도
+	# 아무 일이 없다: 예전에는 CMakeLists 를 같이 고쳐야 했고 그게 곧 reconfigure 트리거였다.
+	file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
+		"${CMAKE_SOURCE_DIR}/Scripts/lint/gate/*.py"
+		"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"
+	)
+
 	set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
 	sw_executePythonScript("Scripts/setup/GenerateLintTargets.py"
 		ARGS "${SW_GENERATED_LINT_TARGETS}"

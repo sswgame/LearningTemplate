@@ -380,11 +380,31 @@ class FormatBranchBracesFixer(LintFixer):
             transform=formatBranchBraces,
             problem="한 줄짜리 if 본문에 불필요한 중괄호가 있습니다.",
             done="한 줄짜리 if 본문의 중괄호 제거 완료",
+            # 한 줄짜리 if 는 벗긴다.
+            badSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    if ( count > 0 )\n    {\n        return;\n    }\n}\n"
+            ),
+            # for 는 본문이 한 줄이어도 유지한다 — 이 조각이 바뀌면 규칙이 너무 넓어진 것이다.
+            goodSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    for ( int32 index = 0; index < count; ++index )\n    {\n        doThing();\n    }\n}\n"
+            ),
         ),
         FixPass(
             transform=insertCaseBraces,
             problem="본문이 여러 문장인 case 에 중괄호가 없습니다.",
             done="여러 문장인 case 본문에 중괄호 추가 완료",
+            # 두 문장(호출 + break)이면 씌운다.
+            badSample=(
+                '#include "pch.h"\n\nvoid probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n        doThing();\n        break;\n    }\n}\n"
+            ),
+            # 한 문장짜리 본문은 그대로 둔다.
+            goodSample=(
+                '#include "pch.h"\n\nvoid probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n        return;\n    }\n}\n"
+            ),
         ),
     )
 

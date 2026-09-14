@@ -94,15 +94,21 @@ up with no list to edit — and it must carry a `selfTestCases` snippet proving 
 `Scripts/setup/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
 `include()`s at configure time. What differs per lint travels with the lint: a gate declares
 `buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class;
-the two `selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants.
-So a new gate is one file — no CMake edit, no path constant.
+`selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants. A
+`CONFIGURE_DEPENDS` glob watches both folders, so dropping a file in there re-runs configure by itself.
+**A new gate is one file** — no CMake edit, no path constant.
 
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
 `--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >
 everything), concurrency, byte-faithful IO, and the exit code (`--check` + findings = `1`). Scripts that
 are not fixers but pick files the same way (`RunClangFormat.py`) use `addFileArguments` /
-`selectTargetFiles` from the same module.
+`selectTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
+`kFixerSkipReason` (`FormatModified.py` is an orchestrator, not a fixer).
+
+**Every `FixPass` carries two snippets**, and `CheckFixersAreAlive.py` runs both: `badSample` it MUST
+rewrite (otherwise the transform is dead) and `goodSample` it must NOT touch. The second one matters more
+than for a gate — a gate that over-fires prints a red line, a fixer that over-fires **rewrites 969 files**.
 
 ```powershell
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
@@ -116,6 +122,7 @@ py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format th
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
+py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
 py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 30 rules still bite? (CI gate)
 ```
 

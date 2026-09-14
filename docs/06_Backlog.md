@@ -295,6 +295,73 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (픽서는 죽어도 아무도 몰랐다 — 그리고 자리가 규칙이라면서 자리를 안 보고 있었다)
+
+앞 커밋들이 열어 둔 자리 둘을 닫고, 훑다가 나온 것 둘을 더 고쳤다.
+
+**1) 픽서 음성 테스트 — `CheckFixersAreAlive.py`.**
+
+`CheckLintsAreAlive` 는 `gate/` 만 봤다. 그런데 픽서는 게이트보다 **더 조용히** 망가진다:
+
+- 게이트가 죽으면 "위반 0건" 이라 통과처럼 보인다. 나쁘다.
+- 픽서가 **너무 많이 잡으면** 빨간 줄이 뜨는 게 아니라 **소스가 바뀐다.**
+  `py -3 -m Scripts format` 은 969개 파일을 한 번에 고쳐 쓴다.
+
+그래서 `FixPass` 가 조각을 **둘** 든다 — 반드시 고쳐야 하는 `badSample`, 건드리면 안 되는
+`goodSample`. 변환 바로 옆에 있다(게이트의 `selfTestCases` 와 같은 이유). 게이트와 달리 프로세스를
+띄우지 않는다: 픽서의 변환은 `(텍스트) -> (새 텍스트, 바뀌었는가)` 순수 함수라 그냥 부르면 된다.
+`fixer/` 에 있는데 픽서가 아닌 `FormatModified` 는 `kFixerSkipReason` 에 이유를 적는다.
+
+> **이 린트를 넣으면서 CMake 를 한 줄도 고치지 않았다.** `selftest/` 에 파일을 놓은 것이 전부다 —
+> 바로 앞 커밋이 만든 폴더-기반 등록이 실제로 그렇게 동작한다는 증거다. 린트 CTest 11 → **12**.
+
+**2) 그런데 그 등록이 "파일을 놓는 것"만으로는 안 돌고 있었다.**
+
+목록을 CMake 에서 걷어내면서 **reconfigure 트리거도 같이 걷어냈다.** 예전에는 게이트를 더할 때
+`AssetAndToolTargets.cmake` 를 같이 고쳤고, CMake 는 자기 listfile 을 감시하므로 그게 곧 트리거였다.
+이제는 폴더에 파일만 놓으므로 아무 일도 일어나지 않는다 — 실제로 `gate/` 에 파일을 넣고 빌드해
+확인했다(`ninja: no work to do`). `file(GLOB ... CONFIGURE_DEPENDS)` 로 두 폴더를 감시하게 고쳤다.
+GLOB 결과는 쓰지 않는다 — 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다.
+(확인: `selftest/` 에 파일을 놓고 `cmake --build` → "GLOB mismatch! ... +CheckProbeAlive.py" 로
+configure 가 다시 돌고 CTest 에 등록됨.)
+
+**3) `App.exe` 를 찾는 목록이 둘이었고, 이미 갈라져 있었다 — `Scripts/common/AppBinary.py`.**
+
+| | `CookAssets.bakeShadersInternal` | `PreCommitLint.checkStagedShadersInternal` |
+| --- | --- | --- |
+| Ninja-Debug / Ninja-Release / Bin | 본다 | 본다 |
+| **Ninja-Shipping/Bin** | **본다** | **안 본다** |
+
+쿠커 쪽 주석에 Shipping 을 보는 이유가 적혀 있다 — *"Shipping App 도 베이커를 링크한다. 두 번째
+Shipping 빌드부터는 Dev 빌드 없이도 스스로 다시 굽는다."* 커밋 훅은 그 줄을 못 봤으므로
+**Shipping 만 빌드해 둔 사람은** 셰이더를 고쳐 커밋할 때 "App.exe를 찾을 수 없어 건너뜁니다" 를
+받고 지나갔다. 후보 목록·실행·실패 줄 파싱이 이제 한 자리다.
+
+**4) `py -3 -m Scripts` 의 명령 목록이 세 곳에 있었다.** 모듈 독스트링 · `--help` 설명 문자열 ·
+`cmdXxx` 함수 여덟과 딕셔너리. `Subcommand` 표 하나로 모았고 `--help` 는 거기서 나온다.
+
+**하지 않기로 한 것 — vcpkg 쪽 CMake 섬.** `FindLlvmBin.cmake` 와 `VcpkgPortsToolchain.cmake` 가
+"후보 루트를 거슬러 올라가며 toolchain_config.json 을 찾는" 같은 루프를 각자 들고 있다. 공통 헬퍼로
+빼려다 보니 **두 목록의 루트가 다르고**, `FindLlvmBin` 쪽은 `cmake/Environment/../../..` = 저장소의
+**부모**부터 본다(저장소 루트 자체는 `CMAKE_SOURCE_DIR` 로만 닿는다). 의도인지 off-by-one 인지
+판단하려면 실제 포트 빌드로 확인해야 하는데 그건 이 자리에서 못 한다. `cmake -P` 로 둘 다 로드되는
+것까지는 확인해 두었다(`cmake -P cmake/Modules/Toolchain/Vcpkg/VcpkgPortsToolchain.cmake` → 정상).
+**다음에 vcpkg 포트를 다시 빌드할 일이 있을 때 같이 본다.**
+
+> **CMake 쪽은 이제 대체로 제자리다.** 남은 것(`TargetRules` · `BuildLayout` · `ThirdPartyLibs` ·
+> 컴파일러 모듈)은 타깃 정의와 툴체인 바인딩이라 CMake 가 할 일 그 자체다. 파이썬으로 옮길 수 있는
+> 것은 "목록"과 "이미 파이썬이 아는 값" 둘이었고, 그 둘은 앞 두 커밋에서 옮겼다.
+
+**확인**:
+
+- `CheckFixersAreAlive` **양방향**: 변환이 `text, False` 를 돌려주게 만들면 "이 변환은 죽었습니다",
+  `_kIfHeadRe` 를 `^(if|for)` 로 넓히면 "건드리면 안 되는 조각을 고쳤습니다" 로 실패. 되돌리면 통과.
+- `CookAssets --bake-shaders` 실제 실행(스트리밍 경로)과 `runShaderBake(..., bCapture=True)`
+  (커밋 훅 경로) 둘 다 실행 — 종료 0, 컴파일 실패 줄 0, 작업 트리 변화 없음.
+- `py -3 -m Scripts` 의 인자 없음(1) · `lint`(0) · `format`(0, 969파일 후 트리 변화 없음) ·
+  잘못된 명령(2) 전부 확인.
+- 린트 ctest **12/12**(하나 늘었다) · `Ninja-Debug` ctest **18/18**.
+
 ### 2026-09-14 (파이썬이 쓴 JSON 을 CMake 가 다시 파싱하고 있었다 — 그것도 키 철자를 둘로 나눠서)
 
 바로 앞 커밋이 린트 목록을 옮겼고, 같은 질문을 툴체인 설정에 던졌다. `toolchain_config.json` 은
