@@ -63,12 +63,19 @@ def collectDefinedFunctionInternal(cmakeRoot: Path, repositoryRoot: Path) -> set
     """`cmake/` 와 프로젝트 `CMakeLists.txt` 들이 만드는 `sw_*` 이름 전부 — 함수·매크로·타겟·변수."""
     setDefined: set[str] = set()
 
+    # `rglob` 을 저장소 루트에 그대로 쓰면 `Tools/vcpkg` 를 통째로 걷는다 — 그것만으로 3초다.
+    # 가지를 미리 쳐 낸다.
     listPath = list(cmakeRoot.rglob("*.cmake"))
-    listPath += [
-        path for path in repositoryRoot.rglob("CMakeLists.txt")
-        if "vcpkg" not in path.parts and "build" not in path.parts
-    ]
-    listPath += [path for path in repositoryRoot.rglob("*.cmake") if "ThirdParty" in path.parts]
+    for searchRoot in (repositoryRoot / "Source", repositoryRoot / "Test",
+                       repositoryRoot / "ThirdParty", repositoryRoot / "Tools" / "ReflectionParser"):
+        if not searchRoot.is_dir():
+            continue
+        listPath += [path for path in searchRoot.rglob("CMakeLists.txt") if "vcpkg" not in path.parts]
+        listPath += [path for path in searchRoot.rglob("*.cmake") if "vcpkg" not in path.parts]
+
+    rootListFile = repositoryRoot / "CMakeLists.txt"
+    if rootListFile.is_file():
+        listPath.append(rootListFile)
 
     for path in listPath:
         content = path.read_text(encoding="utf-8", errors="ignore")
@@ -102,6 +109,7 @@ class CheckCmakeReadmeGate(LintGate):
     description = "cmake/README.md 가 가리키는 파일·함수가 실재하는지 검사"
     buildComment = "Checking that cmake/README.md still describes reality..."
     timeoutSeconds = 20
+    preCommitPattern = ("*.cmake", "*CMakeLists.txt", "cmake/README.md")
     violationHeader = "cmake/README.md 가 낡았습니다"
     hint = "  문서가 없는 파일·함수를 가리키고 있습니다. cmake/README.md 를 코드에 맞추세요."
     selfTestCases = [

@@ -108,6 +108,25 @@ class LintGate:
     selfTestCases: list[dict] = []
     selfTestSkipReason: str = ""
 
+    # --- 커밋 훅이 묻는 것 ---------------------------------------------------
+    #
+    # `PreCommitLint` 는 게이트 여섯을 **이름으로 import** 하고 있었다. 게이트가 열둘인데 여섯만
+    # 돌았고(`CheckEngineLayers` · `CheckDataFileReferences` · `CheckSourceGlob` 은 처음부터
+    # 빠져 있었다), 게다가 그 여섯조차 `if stagedCppFiles:` 안에 있어서 **`.cmake` 나 `.py` 만
+    # 커밋하면 아무 게이트도 돌지 않았다.** 실제로 그 상태로 커밋이 통과했다.
+    #
+    # 그래서 훅도 폴더를 훑는다. 훅이 알아야 하는 것은 게이트마다 다르므로 게이트가 든다 —
+    # `LintCatalog` 가 CMake 등록 정보를 게이트에서 가져가는 것과 같은 방식이다.
+    #
+    # - `preCommitPattern`     : 이 패턴에 맞는 파일이 staged 되었을 때만 돈다 (`fnmatch`,
+    #                            저장소 기준 POSIX 경로). **비우면 항상 돈다.**
+    # - `preCommitFileArgument`: staged 부분집합을 넘기는 방법. `"--files"` · `"positional"` ·
+    #                            `""`(전체를 훑는 게이트).
+    # - `preCommitSkipReason`  : 훅에서 돌 수 없는 이유. 이유 없는 예외는 없다.
+    preCommitPattern: tuple[str, ...] = ()
+    preCommitFileArgument: str = ""
+    preCommitSkipReason: str = ""
+
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
         if not cls.name:

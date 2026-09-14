@@ -164,6 +164,7 @@ class CheckSourceGlobGate(LintGate):
     description = "소스 GLOB 누락 검사"
     buildComment = "Checking source GLOB coverage vs compile_commands..."
     timeoutSeconds = 15
+    preCommitSkipReason = "빌드 디렉터리(--build)가 있어야 글롭과 대조할 수 있다 — 커밋 훅은 그것을 모른다"
     listCtestArgument = ("--build", "${CMAKE_BINARY_DIR}", "--active-game", "${SW_ACTIVE_GAME}")
     maxViolationShown = 40
     hint = "  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다."

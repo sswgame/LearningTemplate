@@ -202,6 +202,8 @@ class CheckPythonConventionsGate(LintGate):
     description = "Scripts/ 및 Tools/ 파이썬 명명 규칙 검사 (AGENTS.md '### Python')"
     buildComment = "Checking Python naming conventions (AGENTS.md)..."
     timeoutSeconds = 30
+    preCommitPattern = ("*.py",)
+    preCommitFileArgument = "--files"
     violationHeader = "Python 명명 규칙 위반"
     hint = "  AGENTS.md '### Python': 함수는 camelCase(내부는 camelCaseInternal), 모듈 상수는 kPascalCase, 파일은 PascalCase.py."
     selfTestCases = [

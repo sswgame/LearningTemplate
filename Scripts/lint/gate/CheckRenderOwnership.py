@@ -161,6 +161,7 @@ class CheckRenderOwnershipGate(LintGate):
     description = "렌더 패킷 소유 규칙 검사"
     buildComment = "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
     timeoutSeconds = 15
+    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
     selfTestCases = [
         {
             "name": "스냅샷 구조체에 생포인터",

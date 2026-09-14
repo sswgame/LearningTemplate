@@ -258,6 +258,8 @@ class CheckIncludeOrderGate(LintGate):
     description = "Include 순서 검사"
     buildComment = "Checking Include Order rules..."
     timeoutSeconds = 15
+    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
+    preCommitFileArgument = "--files"
     violationHeader = "Include 순서 규칙 위반"
     selfTestCases = [
         {
@@ -274,9 +276,16 @@ class CheckIncludeOrderGate(LintGate):
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
+        parser.add_argument("--files", nargs="*", default=None,
+                            help="검사할 파일 (생략 시 전체). 헤더 조회표는 어차피 전체를 봐야 만들어진다")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        allFiles = collectSourceFiles(getLintSearchDirs(repositoryRoot))
+        if args.files:
+            allFiles = [Path(item).resolve() for item in args.files]
+            allFiles = [path for path in allFiles if path.is_file()]
+        else:
+            allFiles = collectSourceFiles(getLintSearchDirs(repositoryRoot))
+
         sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repositoryRoot)
 
         violations = flatMapConcurrent(

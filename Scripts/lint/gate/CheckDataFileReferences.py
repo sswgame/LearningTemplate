@@ -77,6 +77,7 @@ class CheckDataFileReferencesGate(LintGate):
     description = "X-macro 목록 파일 참조 검사"
     buildComment = "Checking that every X-macro list file is actually included..."
     timeoutSeconds = 30
+    preCommitPattern = ()
     violationHeader = "아무도 include 하지 않는 목록 파일"
     hint = "  고쳐도 빌드 결과가 바뀌지 않는 파일입니다. 사본이면 지우고, 쓰려던 것이면 include 하세요."
     selfTestCases = [

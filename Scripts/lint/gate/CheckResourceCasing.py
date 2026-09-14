@@ -76,6 +76,8 @@ class CheckResourceCasingGate(LintGate):
     description = "Resource 하위 소문자 명명 규칙 검사"
     buildComment = "Checking Resource lowercase casing rules..."
     timeoutSeconds = 15
+    preCommitPattern = ()
+    preCommitFileArgument = "positional"
     violationHeader = "Resource 소문자 규칙 위반"
     hint = "  Resource/ 하위의 모든 파일/폴더는 반드시 소문자여야 합니다 (README.md 만 예외)."
     selfTestCases = [

@@ -2078,6 +2078,8 @@ class CheckCodeConventionsGate(LintGate):
     description = "SW Engine C++ 코딩 컨벤션 검사기"
     buildComment = "Checking C++ code conventions..."
     timeoutSeconds = 60
+    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
+    preCommitFileArgument = "--files"
     selfTestSkipReason = "규칙별 음성 테스트는 CheckCodeConventionsSelfTest.py 가 담당한다"
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:

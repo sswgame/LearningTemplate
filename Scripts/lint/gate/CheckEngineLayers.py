@@ -218,6 +218,7 @@ class CheckEngineLayersGate(LintGate):
     description = "Engine 레이어 금지 include 검사"
     buildComment = "Checking Engine layer include rules..."
     timeoutSeconds = 15
+    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
     violationHeader = "레이어 위반"
     selfTestCases = [
         {

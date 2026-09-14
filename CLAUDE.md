@@ -98,6 +98,13 @@ up with no list to edit — and it must carry a `selfTestCases` snippet proving 
 `CONFIGURE_DEPENDS` glob watches both folders, so dropping a file in there re-runs configure by itself.
 **A new gate is one file** — no CMake edit, no path constant.
 
+**The commit hook has no lint list either.** `PreCommitLint.py` walks `gate/` the same way, and each gate
+says when it should run: `preCommitPattern` (fnmatch globs against staged repo-relative paths — empty
+means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
+`preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). Before
+this, the hook imported six gates by name out of twelve, and those six sat inside `if stagedCppFiles:` —
+so a commit touching only `.cmake` or `.py` ran no gate at all.
+
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
 `--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >

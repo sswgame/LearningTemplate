@@ -130,6 +130,8 @@ class CheckCmakeConventionsGate(LintGate):
     description = "CMake 명명 규칙 검사 (AGENTS.md '### CMake')"
     buildComment = "Checking CMake naming conventions (AGENTS.md)..."
     timeoutSeconds = 20
+    preCommitPattern = ("*.cmake", "*CMakeLists.txt")
+    preCommitFileArgument = "--files"
     violationHeader = "CMake 명명 규칙 위반"
     hint = "  AGENTS.md '### CMake': function/macro 는 sw_camelCase, option 은 SW_UPPER_SNAKE_CASE, 함수 내부 변수는 '_' 없는 camelCase."
     selfTestCases = [

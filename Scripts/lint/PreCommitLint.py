@@ -3,14 +3,19 @@
 """
 Scripts/lint/PreCommitLint.py
 
-Git pre-commit 훅에서 호출되어, 
-Git Staged 상태인 C++ 파일들에 대해서만 인클루드 순서, 코딩 컨벤션 및 clang-format 포맷팅을 검사합니다.
+Git pre-commit 훅에서 호출되어 staged 파일에 게이트·픽서·포맷 검사를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다.
+
+**게이트 목록을 들지 않는다.** `gate/` 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가
+`LintGate.preCommitPattern` 으로 스스로 답한다. 예전에는 여기서 게이트 여섯을 이름으로 import
+했고, 그래서 (1) 게이트 열둘 중 여섯만 돌았으며 (2) 그 여섯조차 `if stagedCppFiles:` 안에 있어
+**`.cmake` 나 `.py` 만 커밋하면 아무 게이트도 돌지 않았다.**
 """
 
 from __future__ import annotations
 
 import sys
+from fnmatch import fnmatch
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -25,12 +30,7 @@ scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
-from gate import CheckCodeConventions
-from gate import CheckFunctionVocabulary
-from gate import CheckIncludeOrder
-from gate import CheckRenderOwnership
-from gate import CheckResourceCasing
-from gate import CheckTestSuites
+from LintCatalog import discoverLintScripts
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import (
@@ -43,6 +43,64 @@ from common import (
     runShaderBake,
     useUtf8Stdout,
 )
+
+
+def listMatchingStagedInternal(listStaged: list[Path], projectRoot: Path,
+                               listPattern: tuple[str, ...]) -> list[Path]:
+    """패턴에 맞는 staged 파일만 고릅니다. 패턴이 비어 있으면 전부 (= 항상 도는 게이트)."""
+    if not listPattern:
+        return list(listStaged)
+
+    listMatched: list[Path] = []
+    for path in listStaged:
+        try:
+            relPath = path.relative_to(projectRoot).as_posix()
+        except ValueError:
+            relPath = path.as_posix()
+
+        if any(fnmatch(relPath, pattern) for pattern in listPattern):
+            listMatched.append(path)
+
+    return listMatched
+
+
+def runGatesInternal(projectRoot: Path, listStaged: list[Path]) -> bool:
+    """
+    `gate/` 에 있는 게이트를 **전부** 돌립니다 — 목록이 아니라 자리가 규칙이다.
+
+    무엇이 staged 되었을 때 도는지, staged 부분집합을 어떻게 받는지는 게이트가 스스로 선언한다
+    (`LintGate.preCommitPattern` · `preCommitFileArgument`). 여기에는 게이트 이름이 없다.
+    """
+    listScript = discoverLintScripts("gate")
+    bFailed = False
+
+    for index, script in enumerate(listScript, start=1):
+        gateClass = script.gateClass
+        if gateClass is None:
+            continue
+
+        head = f"[{index}/{len(listScript)}] {script.name}"
+
+        if gateClass.preCommitSkipReason:
+            print(f"\n{head} ... 건너뜀 ({gateClass.preCommitSkipReason})")
+            continue
+
+        listMatched = listMatchingStagedInternal(listStaged, projectRoot, gateClass.preCommitPattern)
+        if gateClass.preCommitPattern and not listMatched:
+            print(f"\n{head} ... 건너뜀 (해당 파일 변경 없음)")
+            continue
+
+        print(f"\n{head} ...")
+        listArgument = ["--root", str(projectRoot)]
+        if gateClass.preCommitFileArgument == "--files":
+            listArgument += ["--files", *(str(path) for path in listMatched)]
+        elif gateClass.preCommitFileArgument == "positional":
+            listArgument += [str(path) for path in listMatched]
+
+        if gateClass.run(listArgument) != 0:
+            bFailed = True
+
+    return bFailed
 
 
 def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bool:
@@ -113,81 +171,42 @@ def main() -> int:
     print(f"[PreCommitLint] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
     hasErrors = False
 
-    # 1. Resource 소문자 명명 규칙 검사 (모든 Staged 파일 대상)
-    print("\n[1/8] Resource 소문자 명명 규칙 검사...")
-    allStagedPathStrings = [str(f) for f in allStagedFiles]
-    resourceViolations = CheckResourceCasing.checkResourceCasing(projectRoot, allStagedPathStrings)
-    if resourceViolations:
+    # --- 게이트 — `gate/` 폴더가 목록이다 --------------------------------------
+    #
+    # 예전에는 여기서 게이트 여섯을 **이름으로 import** 했다. 게이트는 열둘이었고, 그중 셋은
+    # 처음부터 빠져 있었으며(`CheckEngineLayers` · `CheckDataFileReferences` · `CheckSourceGlob`),
+    # 나머지도 `if stagedCppFiles:` 안에 있어서 **`.cmake` 나 `.py` 만 커밋하면 아무 게이트도
+    # 돌지 않았다.** 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가 스스로 답한다.
+    if runGatesInternal(projectRoot, allStagedFiles):
         hasErrors = True
-        print(f"  [Error] Resource 하위 소문자 규칙 위반 {len(resourceViolations)}건 발견:")
-        for rv in resourceViolations:
-            print(f"    - {rv}")
-    else:
-        print("  - Resource 소문자 규칙 OK")
 
-    # 2. Staged HLSL 셰이더 전 RHI 백엔드 컴파일 검증 및 바이너리 자동 스테이징
-    print("\n[2/8] Staged 셰이더 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증...")
+    # --- staged HLSL 이 있으면 전 백엔드 컴파일 검증 ----------------------------
+    print("\n[셰이더] Staged 셰이더 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증...")
     if not checkStagedShadersInternal(projectRoot, allStagedFiles):
         hasErrors = True
 
+    # --- 픽서 — 게이트가 아니라 고쳐 주는 쪽이라 `--check` 로만 부른다 -----------
     stagedCppFiles = getStagedCppFiles(projectRoot)
     if stagedCppFiles:
-        # 3. Include 순서 및 중복 검사
-        print("\n[3/8] Include 순서 및 중복 검사...")
-        sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
+        print("\n[픽서] 전방 선언 순서 · 분기 중괄호 검사...")
         for filePath in stagedCppFiles:
-            try:
-                violations = CheckIncludeOrder.processFile(filePath, projectRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap, checkOnly=True)
-                if violations:
+            for processFile, label in (
+                (FormatForwardDeclarations.processFile, "전방 선언"),
+                (FormatBranchBraces.processFile, "분기 중괄호"),
+            ):
+                try:
+                    listViolation = processFile(filePath, checkOnly=True)
+                except Exception as exception:
+                    print(f"  [Warning] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
+                    continue
+
+                if listViolation:
                     hasErrors = True
-                    for violation in violations:
+                    for violation in listViolation:
                         print(f"    - {violation}")
-            except Exception as exception:
-                print(f"  [Warning] {filePath.relative_to(projectRoot)} 처리 중 오류: {exception}")
 
-        # Forward Declaration 순서 및 그룹 간 빈 줄 검사
-        for filePath in stagedCppFiles:
-            try:
-                fwdViolations = FormatForwardDeclarations.processFile(filePath, checkOnly=True)
-                if fwdViolations:
-                    hasErrors = True
-                    for violation in fwdViolations:
-                        print(f"    - {violation}")
-            except Exception as exception:
-                print(f"  [Warning] {filePath.relative_to(projectRoot)} Forward Declaration 검사 중 오류: {exception}")
-
-        # 한 줄짜리 if 본문의 중괄호 검사
-        for filePath in stagedCppFiles:
-            try:
-                braceViolations = FormatBranchBraces.processFile(filePath, checkOnly=True)
-                if braceViolations:
-                    hasErrors = True
-                    for violation in braceViolations:
-                        print(f"    - {violation}")
-            except Exception as exception:
-                print(f"  [Warning] {filePath.relative_to(projectRoot)} 분기 중괄호 검사 중 오류: {exception}")
-
-        # 4. 코딩 컨벤션 검사
-        print("\n[4/8] 코딩 컨벤션 검사...")
-        stagedPathStrings = [str(f) for f in stagedCppFiles]
-        violations = CheckCodeConventions.runConventionsCheck(projectRoot, stagedPathStrings)
-        if violations:
-            hasErrors = True
-            print(f"  [Error] 코딩 컨벤션 위반 {len(violations)}건이 발견되었습니다:")
-            categoryGroups = {}
-            for violation in violations:
-                categoryGroups.setdefault(violation.rule_category, []).append(violation)
-            for category, items in sorted(categoryGroups.items()):
-                print(f"    [{category}]")
-                for item in items:
-                    print(f"      {item.file_path}:{item.line_number} -> {item.message}")
-        else:
-            print("  - 코딩 컨벤션 OK")
-
-        # 5. clang-format 검사 (Dry-run with Werror)
-        print("\n[5/8] clang-format 포맷팅 검사...")
-        formatResult = runClangFormatBatch(stagedCppFiles, checkOnly=True, cwd=projectRoot)
-        if formatResult != 0:
+        print("\n[포맷] clang-format 포맷팅 검사...")
+        if runClangFormatBatch(stagedCppFiles, checkOnly=True, cwd=projectRoot) != 0:
             hasErrors = True
             print(
                 "  [Error] 포맷팅 규칙에 어긋나는 파일이 있습니다. "
@@ -195,34 +214,6 @@ def main() -> int:
             )
         else:
             print("  - 포맷팅 OK")
-
-        # 6. 렌더 패킷 소유 규칙 (저장소 전체 — 파일 다섯을 읽는 정도라 싸다)
-        print("\n[6/8] 렌더 패킷 소유 규칙 검사...")
-        if CheckRenderOwnership.main(["--root", str(projectRoot)]) != 0:
-            hasErrors = True
-        else:
-            print("  - 소유 규칙 OK")
-
-        # 7. 테스트 스위트 규칙 — Test/ 나 EngineTest 의 CMake 를 건드렸을 때만.
-        #    스위트 이름이 CI 필터의 손잡이라, 이름이 흔들리면 CI 가 조용히 다른 집합을 돌린다.
-        touchesTests = any(
-            "Test/" in str(f).replace("\\", "/") for f in getAllStagedFiles(projectRoot)
-        )
-        if touchesTests:
-            print("\n[7/8] 테스트 스위트 규칙 검사...")
-            if CheckTestSuites.main(["--root", str(projectRoot)]) != 0:
-                hasErrors = True
-            else:
-                print("  - 스위트 규칙 OK")
-        else:
-            print("\n[7/8] 테스트 스위트 규칙 검사... 건너뜀 (Test/ 변경 없음)")
-
-        # 8. 함수 이름 어휘 — staged 헤더만 본다. 이름은 선언한 자리에서 막는 것이 가장 싸다.
-        print("\n[8/8] 함수 이름 어휘 검사...")
-        if CheckFunctionVocabulary.main(["--root", str(projectRoot), "--files", *stagedPathStrings]) != 0:
-            hasErrors = True
-        else:
-            print("  - 이름 어휘 OK")
     else:
         print("\n  - 검사 대상 C++ 파일 없음 (Resource/데이터 파일만 변경됨)")
 

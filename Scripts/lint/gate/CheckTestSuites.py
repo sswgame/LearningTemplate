@@ -218,6 +218,7 @@ class CheckTestSuitesGate(LintGate):
     description = "테스트 스위트 규칙 검사"
     buildComment = "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
     timeoutSeconds = 15
+    preCommitPattern = ("Test/*",)
     selfTestCases = [
         {
             "name": "스위트 이름이 XxxTest 가 아님",

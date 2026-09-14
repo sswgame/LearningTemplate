@@ -143,6 +143,8 @@ class CheckFunctionVocabularyGate(LintGate):
     description = "함수 이름 어휘 검사"
     buildComment = "Checking function-name vocabulary (acronym casing, one verb per concept, predicate form)..."
     timeoutSeconds = 30
+    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
+    preCommitFileArgument = "--files"
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
     selfTestCases = [
