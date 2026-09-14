@@ -295,6 +295,61 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (CMake 가 린트 목록을 세 벌 더 들고 있었다 — 폴더가 목록이라고 해 놓고)
+
+**"`gate/` 에 놓으면 그것이 게이트다" 라고 해 놓고, 게이트를 하나 더하려면 네 곳을 고쳐야 했다.**
+
+1. `lint/gate/` 에 파일을 놓는다                                    ← 여기까지가 "자리가 규칙"
+2. `Scripts/common/Constants.py` 에 `kScriptLintCheckXxx` 경로 상수
+3. `GenerateCMakeConstants.py` 에 `set(SW_SCRIPT_LINT_CHECK_XXX ...)`
+4. `cmake/Engine/AssetAndToolTargets.cmake` 에 `sw_addRepoPythonTarget` 한 덩이 +
+   `add_test` + `set_tests_properties` 한 덩이
+
+2~4 는 1 에서 **기계적으로 유도되는 것**이다. 그래서 유도하게 했다 — 이 저장소가 이미
+`Constants.py` → `ConfigVars.cmake` 로 하고 있는 방식 그대로, **파이썬이 알고 CMake 는 결과를 읽는다.**
+
+- `Scripts/lint/LintCatalog.py` — `gate/` · `selftest/` 를 훑어 "무엇이 있고 어떻게 돌리는가" 를 만든다.
+- `Scripts/setup/GenerateLintTargets.py` — 그것을 `generated/sw/config/LintTargets.cmake` 로 찍는다.
+  CMake 는 configure 때 그 파일을 `include()` 하고 함수 둘을 부를 뿐이다.
+- 린트마다 다른 값은 **린트 자신이 든다**: 게이트는 클래스 속성(`buildComment` · `timeoutSeconds` ·
+  `listCtestArgument`), 셀프테스트 둘은 모듈 상수(`kLintBuildComment` · `kLintTimeoutSeconds`).
+  `CheckSourceGlob` 만 쓰는 `--build ${CMAKE_BINARY_DIR} --active-game ${SW_ACTIVE_GAME}` 도
+  그 게이트의 클래스에 적혀 있다 — 생성물이 CMake 파일이라 참조가 거기서 풀린다.
+- `CheckLintsAreAlive` 도 자기 폴더 훑기를 버리고 같은 카탈로그를 쓴다. **훑기가 하나다.**
+
+| | 전 | 후 |
+| --- | ---: | ---: |
+| `AssetAndToolTargets.cmake` | 228줄 | **104줄** |
+| `SW_SCRIPT_LINT_*` 상수 | 12 | **0** |
+| 새 게이트를 넣을 때 고치는 파일 | 4 | **1** |
+
+> **덤으로 타임아웃 하나를 고쳤다.** `CheckCodeConventions` 는 이 PC 에서 **11.6초**가 걸리는데
+> TIMEOUT 이 **15초**였다. 조금만 느린 PC 나 CI 에서 그냥 터지는 값이다. 값을 린트 옆으로 옮기면서
+> 60 으로 올렸다 — CTest 등록 차이는 이것 하나뿐이고, 나머지 열은 이름·명령·라벨·타임아웃이
+> `--show-only=json-v1` 비교로 **완전히 동일**하다.
+
+**하지 않기로 한 것 — `FindWindowsTools.cmake` 의 lib.exe/mt.exe 탐색.** 디스크를 뒤지는 일이라
+파이썬 쪽(`HostTools.py`)과 겹쳐 보였지만, 우선순위 1번이 **"지금 CMake 가 고른 컴파일러 옆"**
+(`CMAKE_CXX_COMPILER`)이다. 그건 `project()` 가 정하는 값이라 파이썬이 알 수 없다. 나머지 폴백만
+옮기면 탐색 하나가 두 언어에 걸쳐 찢어진다 — 지금보다 나쁘다.
+
+**다음 자리(하나 열어 둔다)**: `toolchain_config.json` 을 **CMake 가 다섯 군데서 각자 파싱한다**
+(`DetectToolchain` 7키 · `FindLlvmBin` · `FindWindowsTools` · `VcpkgPortsToolchain` ·
+`Tools/ReflectionParser/CMakeLists.txt`). 게다가 키 이름을 앞의 셋은 `SW_KEY_*` 상수로, 뒤의 둘은
+**리터럴 문자열**로 적는다. 파이썬이 그 JSON 을 쓰는 쪽이니, `set()` 줄로 한 번 찍어 주고 CMake 는
+`include()` 만 하면 `string(JSON ... GET)` + 오류 처리 블록 일곱 벌이 사라진다.
+
+**확인**:
+
+- `ctest --show-only=json-v1` 로 **등록된 테스트 17개의 이름·명령줄·라벨·타임아웃을 전부 비교** —
+  의도한 `CheckCodeConventions` 타임아웃 하나만 다르고 나머지는 동일.
+- `gate/` 에 빈 파일을 놓으면 **양쪽이 다 문다**: `CheckLintsAreAlive` 는 "게이트 클래스가 없습니다",
+  `GenerateLintTargets` 는 "`kLintBuildComment` 가 없습니다" 로 configure 를 세운다(트레이스백이
+  아니라 한 줄로 말한다 — 여기서 죽으면 빌드가 통째로 서기 때문이다).
+- `cmake --build --target CheckRenderOwnership` · `CheckSourceGlob` 정상 (후자는 `--build`·
+  `--active-game` 이 제대로 흘러가는지까지 본다).
+- 린트 ctest **11/11** · `Ninja-Debug` ctest **17/17** · Release·Shipping configure 정상.
+
 ### 2026-09-14 (픽서 셋이 같은 스무 줄을 글자 그대로 복사하고 있었고, 훑는 둘은 풀을 각자 열고 있었다)
 
 게이트를 정리한 바로 다음 자리다. `Scripts/` 를 한 번 더 훑어 **같은 종류의 복사본** 둘을 걷었다.

@@ -84,10 +84,22 @@ class LintGate:
     - `maxNoteShown`     : 참고를 몇 개까지 찍을지.
     - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
+
+    CMake 가 이 게이트를 타깃·CTest 로 등록할 때 묻는 것 셋도 여기 있다. 예전에는 그 셋이
+    `cmake/Engine/AssetAndToolTargets.cmake` 에 손으로 적혀 있었다 — 게이트를 하나 더하면
+    파이썬과 CMake 두 곳을 고쳐야 했고, 둘은 언제든 어긋날 수 있었다(`Scripts/lint/LintCatalog.py`).
+
+    - `buildComment`     : ninja 가 이 타깃을 만들 때 찍는 줄. **영어다** — 이 저장소의 빌드 출력은
+                           전부 영어이고, Windows 콘솔 코드페이지에서 한글이 깨진 전례가 있다.
+    - `timeoutSeconds`   : CTest TIMEOUT.
+    - `listCtestArgument`: `--root` 말고 더 줄 인자. CMake 변수 참조를 그대로 적는다.
     """
 
     name: str = ""
     description: str = ""
+    buildComment: str = ""
+    timeoutSeconds: int = 30
+    listCtestArgument: tuple[str, ...] = ()
     violationHeader: str = "위반"
     noteHeader: str = "참고"
     hint: str = ""

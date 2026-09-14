@@ -159,6 +159,8 @@ class CheckRenderOwnershipGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "렌더 패킷 소유 규칙 검사"
+    buildComment = "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
+    timeoutSeconds = 15
     selfTestCases = [
         {
             "name": "스냅샷 구조체에 생포인터",

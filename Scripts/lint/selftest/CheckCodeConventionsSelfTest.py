@@ -31,6 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 from gate import CheckCodeConventions  # noqa: E402
 from common import useUtf8Stdout  # noqa: E402
 
+#: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
+#: (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
+kLintBuildComment = "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
+kLintTimeoutSeconds = 60
+
 # ------------------------------------------------------------------------------
 # 1) 파일 하나로 잡히는 규칙 — (카테고리, 파일 이름, 내용)
 #

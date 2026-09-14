@@ -216,6 +216,8 @@ class CheckEngineLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "Engine 레이어 금지 include 검사"
+    buildComment = "Checking Engine layer include rules..."
+    timeoutSeconds = 15
     violationHeader = "레이어 위반"
     selfTestCases = [
         {

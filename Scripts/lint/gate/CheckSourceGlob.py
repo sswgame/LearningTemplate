@@ -162,6 +162,9 @@ class CheckSourceGlobGate(LintGate):
     """
 
     description = "소스 GLOB 누락 검사"
+    buildComment = "Checking source GLOB coverage vs compile_commands..."
+    timeoutSeconds = 15
+    listCtestArgument = ("--build", "${CMAKE_BINARY_DIR}", "--active-game", "${SW_ACTIVE_GAME}")
     maxViolationShown = 40
     hint = "  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다."
     selfTestSkipReason = "compile_commands.json 이 있는 실제 빌드 트리가 필요하다"

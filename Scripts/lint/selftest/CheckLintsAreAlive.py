@@ -16,13 +16,13 @@
 
 **대상 목록도 두지 않는다** — `Scripts/lint/gate/` 에 있는 것이 게이트다. 목록을 적어 두면 새 게이트를
 거기 넣는 걸 잊는 순간 그 게이트는 아무에게도 검사받지 않는다. 자리가 규칙이다.
+폴더를 훑는 일은 `Scripts/lint/LintCatalog.py` 가 한다 — CMake 등록 파일을 만드는 쪽과 **같은 훑기**다.
 
   python Scripts/lint/selftest/CheckLintsAreAlive.py [--root <repo>] [--verbose]
 """
 from __future__ import annotations
 
 import argparse
-import importlib
 import shutil
 import subprocess
 import sys
@@ -33,21 +33,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from common import useUtf8Stdout  # noqa: E402
-from LintGate import findGateClass  # noqa: E402
+from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 
-_kGateDir = Path(__file__).resolve().parents[1] / "gate"
+#: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
+#: (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
+kLintBuildComment = "Checking that every gate lint still fails on a deliberately broken fixture..."
+kLintTimeoutSeconds = 120
 
-
-def discoverGateLintsInternal() -> tuple[str, ...]:
-    """게이트 목록은 `Scripts/lint/gate/` 그 자체입니다 (파일 머리 주석 참고)."""
-    return tuple(sorted(path.stem for path in _kGateDir.glob("*.py") if path.stem != "__init__"))
-
-
-def runLintInternal(moduleName: str, root: Path, extraArgs: list[str]) -> tuple[int, str]:
+def runLintInternal(script: LintScript, root: Path, extraArgs: list[str]) -> tuple[int, str]:
     """린트를 **실제 진입점으로** 돌립니다 (import 가 아니라 프로세스로 — 전역 캐시 오염을 피한다)."""
-    scriptPath = _kGateDir / f"{moduleName}.py"
     result = subprocess.run(
-        [sys.executable, str(scriptPath), "--root", str(root), *extraArgs],
+        [sys.executable, str(script.scriptPath), "--root", str(root), *extraArgs],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     return result.returncode, (result.stdout or "") + (result.stderr or "")
@@ -63,15 +59,15 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     checkedCases = 0
 
-    gateLints = discoverGateLintsInternal()
-    if not gateLints:
-        print(f"[CheckLintsAreAlive] {_kGateDir} 에 게이트가 하나도 없습니다 — 이 검사가 헛돌고 있습니다",
+    listGateScript = discoverLintScripts("gate")
+    if not listGateScript:
+        print("[CheckLintsAreAlive] Scripts/lint/gate/ 에 게이트가 하나도 없습니다 — 이 검사가 헛돌고 있습니다",
               file=sys.stderr)
         return 1
 
-    for moduleName in gateLints:
-        module = importlib.import_module(f"gate.{moduleName}")
-        gateClass = findGateClass(module)
+    for script in listGateScript:
+        moduleName = script.name
+        gateClass = script.gateClass
         if gateClass is None:
             errors.append(f"{moduleName}: `LintGate` 를 상속한 게이트 클래스가 없습니다 — "
                           f"`gate/` 에 있는 것은 게이트여야 합니다 (Scripts/lint/LintGate.py 참고)")
@@ -97,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text(content, encoding="utf-8")
 
-                code, output = runLintInternal(moduleName, tempRoot, list(case.get("args", [])))
+                code, output = runLintInternal(script, tempRoot, list(case.get("args", [])))
 
                 if args.verbose:
                     print(f"  [{moduleName}/{caseName}] exit={code}")
@@ -114,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {error}")
         return 1
 
-    print(f"[CheckLintsAreAlive] OK ({checkedCases} cases across {len(gateLints)} gates)")
+    print(f"[CheckLintsAreAlive] OK ({checkedCases} cases across {len(listGateScript)} gates)")
     return 0
 
 

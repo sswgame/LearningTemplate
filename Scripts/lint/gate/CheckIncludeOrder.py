@@ -256,6 +256,8 @@ class CheckIncludeOrderGate(LintGate):
     """
 
     description = "Include 순서 검사"
+    buildComment = "Checking Include Order rules..."
+    timeoutSeconds = 15
     violationHeader = "Include 순서 규칙 위반"
     selfTestCases = [
         {

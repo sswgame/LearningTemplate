@@ -141,6 +141,8 @@ class CheckFunctionVocabularyGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "함수 이름 어휘 검사"
+    buildComment = "Checking function-name vocabulary (acronym casing, one verb per concept, predicate form)..."
+    timeoutSeconds = 30
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
     selfTestCases = [

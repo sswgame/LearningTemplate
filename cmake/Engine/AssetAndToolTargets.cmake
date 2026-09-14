@@ -77,50 +77,17 @@ if(Python3_Interpreter_FOUND)
 	)
 	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
-	sw_addRepoPythonTarget(CheckEngineLayers "${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
-		COMMENT "Checking Engine layer include rules..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
+	# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
+	# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
+	# 각 린트가 직접 든다. 예전에는 이 파일이 열한 덩이를 손으로 들고 있었고, 스크립트 경로
+	# 상수 열셋이 Constants.py -> ConfigVars.cmake 를 타고 따라다녔다.
+	set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
+	sw_executePythonScript("Scripts/setup/GenerateLintTargets.py"
+		ARGS "${SW_GENERATED_LINT_TARGETS}"
+		REQUIRED
 	)
-	sw_addRepoPythonTarget(CheckIncludeOrder "${SW_SCRIPT_LINT_CHECK_INCLUDE_ORDER}"
-		COMMENT "Checking Include Order rules..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckResourceCasing "${SW_SCRIPT_LINT_CHECK_RESOURCE_CASING}"
-		COMMENT "Checking Resource lowercase casing rules..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckCodeConventions "${SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS}"
-		COMMENT "Checking C++ code conventions..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckSourceGlob "${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
-		COMMENT "Checking source GLOB coverage vs compile_commands..."
-		ARGS --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
-	)
-	sw_addRepoPythonTarget(CheckDataFileReferences "${SW_SCRIPT_LINT_CHECK_DATA_FILE_REFERENCES}"
-		COMMENT "Checking that every X-macro list file is actually included..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckRenderOwnership "${SW_SCRIPT_LINT_CHECK_RENDER_OWNERSHIP}"
-		COMMENT "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckTestSuites "${SW_SCRIPT_LINT_CHECK_TEST_SUITES}"
-		COMMENT "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckFunctionVocabulary "${SW_SCRIPT_LINT_CHECK_FUNCTION_VOCABULARY}"
-		COMMENT "Checking function-name vocabulary (acronym casing, one verb per concept, predicate form)..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckCodeConventionsSelfTest "${SW_SCRIPT_LINT_CHECK_CONVENTIONS_SELF_TEST}"
-		COMMENT "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
-	sw_addRepoPythonTarget(CheckLintsAreAlive "${SW_SCRIPT_LINT_CHECK_LINTS_ARE_ALIVE}"
-		COMMENT "Checking that every gate lint still fails on a deliberately broken fixture..."
-		ARGS --root "${CMAKE_SOURCE_DIR}"
-	)
+	include("${SW_GENERATED_LINT_TARGETS}")
+	sw_addGeneratedLintTargets()
 endif()
 
 # ------------------------------------------------------------------------------
@@ -131,98 +98,7 @@ function(sw_registerLintTests)
 		return()
 	endif()
 
-	if(TARGET CheckEngineLayers)
-		add_test(
-			NAME CheckEngineLayers
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-	if(TARGET CheckRenderOwnership)
-		add_test(
-			NAME CheckRenderOwnership
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_RENDER_OWNERSHIP}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckRenderOwnership PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-	if(TARGET CheckTestSuites)
-		add_test(
-			NAME CheckTestSuites
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_TEST_SUITES}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckTestSuites PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-	if(TARGET CheckFunctionVocabulary)
-		add_test(
-			NAME CheckFunctionVocabulary
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_FUNCTION_VOCABULARY}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckFunctionVocabulary PROPERTIES LABELS "lint" TIMEOUT 30)
-	endif()
-	if(TARGET CheckCodeConventionsSelfTest)
-		add_test(
-			NAME CheckCodeConventionsSelfTest
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_CONVENTIONS_SELF_TEST}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckCodeConventionsSelfTest PROPERTIES LABELS "lint" TIMEOUT 60)
-	endif()
-	if(TARGET CheckLintsAreAlive)
-		add_test(
-			NAME CheckLintsAreAlive
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_LINTS_ARE_ALIVE}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckLintsAreAlive PROPERTIES LABELS "lint" TIMEOUT 120)
-	endif()
-
-	# `--fix` 를 주지 않는다 — 게이트는 고치지 않고 보고만 한다 (기본값이 검사 모드다).
-	if(TARGET CheckIncludeOrder)
-		add_test(
-			NAME CheckIncludeOrder
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_INCLUDE_ORDER}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-
-	if(TARGET CheckResourceCasing)
-		add_test(
-			NAME CheckResourceCasing
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_RESOURCE_CASING}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckResourceCasing PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-
-	if(TARGET CheckCodeConventions)
-		add_test(
-			NAME CheckCodeConventions
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckCodeConventions PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-
-	if(TARGET CheckSourceGlob)
-		add_test(
-			NAME CheckSourceGlob
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
-			--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
-		)
-		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
-	endif()
-
-	if(TARGET CheckDataFileReferences)
-		add_test(
-			NAME CheckDataFileReferences
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_DATA_FILE_REFERENCES}"
-			--root "${CMAKE_SOURCE_DIR}"
-		)
-		set_tests_properties(CheckDataFileReferences PROPERTIES LABELS "lint" TIMEOUT 30)
-	endif()
+	# 등록 목록은 `generated/sw/config/LintTargets.cmake` 가 든다 (바로 위에서 include 했다).
+	# 새 린트는 `Scripts/lint/gate/` 에 파일을 놓는 것으로 끝이다 — 여기 고칠 것이 없다.
+	sw_registerGeneratedLintTests()
 endfunction()

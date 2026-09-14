@@ -75,6 +75,8 @@ class CheckDataFileReferencesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "X-macro 목록 파일 참조 검사"
+    buildComment = "Checking that every X-macro list file is actually included..."
+    timeoutSeconds = 30
     violationHeader = "아무도 include 하지 않는 목록 파일"
     hint = "  고쳐도 빌드 결과가 바뀌지 않는 파일입니다. 사본이면 지우고, 쓰려던 것이면 include 하세요."
     selfTestCases = [

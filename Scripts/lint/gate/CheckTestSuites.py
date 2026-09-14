@@ -216,6 +216,8 @@ class CheckTestSuitesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "테스트 스위트 규칙 검사"
+    buildComment = "Checking test suite naming, one-file-per-suite, and the NoGPU filter vs REQUIRES_HOST markers..."
+    timeoutSeconds = 15
     selfTestCases = [
         {
             "name": "스위트 이름이 XxxTest 가 아님",

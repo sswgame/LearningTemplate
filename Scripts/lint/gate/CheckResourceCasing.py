@@ -74,6 +74,8 @@ class CheckResourceCasingGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "Resource 하위 소문자 명명 규칙 검사"
+    buildComment = "Checking Resource lowercase casing rules..."
+    timeoutSeconds = 15
     violationHeader = "Resource 소문자 규칙 위반"
     hint = "  Resource/ 하위의 모든 파일/폴더는 반드시 소문자여야 합니다 (README.md 만 예외)."
     selfTestCases = [

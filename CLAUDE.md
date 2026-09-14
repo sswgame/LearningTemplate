@@ -90,6 +90,13 @@ exports it as `main = XxxGate.run`. `CheckLintsAreAlive.py` enumerates the folde
 up with no list to edit — and it must carry a `selfTestCases` snippet proving it still catches something
 (or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
 
+**CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
+`Scripts/setup/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
+`include()`s at configure time. What differs per lint travels with the lint: a gate declares
+`buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class;
+the two `selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants.
+So a new gate is one file — no CMake edit, no path constant.
+
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
 `--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >
