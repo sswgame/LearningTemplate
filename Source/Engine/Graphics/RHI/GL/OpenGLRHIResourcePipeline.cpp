@@ -194,10 +194,10 @@ namespace sw
         const GLuint                                vao     = record._vao;
         _pDevice->_pipelineStates.erase( pso );
 
-        if ( _pDevice->_boundGraphicsPso == pso )
-            _pDevice->_boundGraphicsPso = 0;
-        if ( _pDevice->_boundComputePso == pso )
-            _pDevice->_boundComputePso = 0;
+        if ( _pDevice->_recordingState._boundGraphicsPso == pso )
+            _pDevice->_recordingState._boundGraphicsPso = 0;
+        if ( _pDevice->_recordingState._boundComputePso == pso )
+            _pDevice->_recordingState._boundComputePso = 0;
 
         if ( program == 0 && vao == 0 )
             return;

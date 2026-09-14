@@ -34,7 +34,13 @@ namespace sw
      * @struct D3D11RecordingState
      * @brief "지금 이 Deferred Context 에 무엇이 걸려 있나" — 기록 스트림마다 있어야 하는 상태.
      * @details D3D12 의 `D3D12RecordingState` 와 같은 역할. 리스트마다 자기 Deferred Context 를
-     *          소유하는데 이 캐시는 디바이스 전역이면 서로의 바인딩 캐시를 덮어쓴다.
+     *          소유하는데 이 캐시가 디바이스 전역이면 서로의 바인딩 캐시를 덮어쓴다. **한동안 정확히
+     *          그 상태였다** — 이 주석은 있었지만 `D3D11RHICommandList` 가 인자 둘짜리 컨텍스트
+     *          생성자를 써서 모든 리스트가 디바이스의 것 하나를 가리켰고, 병렬 기록에서 한 패스의
+     *          드로우가 다른 패스의 PSO·정점 버퍼로 나갔다.
+     * @note `OpenGLRecordingState` 는 **반대로 디바이스가 소유하는 것이 맞다** — GL 은 커맨드 버퍼가
+     *       없는 상태 머신이라 실제 상태가 하나뿐이다. 기준은 "리스트마다 하나" 가 아니라
+     *       **"기록 스트림마다 하나"** 다.
      */
     struct D3D11RecordingState
     {

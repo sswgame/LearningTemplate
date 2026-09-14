@@ -22,10 +22,14 @@ namespace sw
 
     /**
      * @struct OpenGLRecordingState
-     * @brief "지금 이 기록 스트림에 무엇이 걸려 있나" — 리스트마다 있어야 하는 상태.
-     * @details OpenGL 은 스레드 종속 상태 머신이라 병렬 기록 자체가 불가능하지만(capability 0),
-     *          "기록 상태는 리스트가 소유한다"는 불변식을 4개 백엔드에서 동일하게 유지하려고
-     *          다른 백엔드와 같은 형태로 분리해 둔다.
+     * @brief "지금 GL 컨텍스트에 무엇이 걸려 있나" — 바인딩 캐시 한 자리.
+     * @details **다른 백엔드와 달리 이것은 디바이스가 소유한다. 그게 맞다.** DX12 · Vulkan · DX11 은
+     *          리스트마다 독립된 기록 스트림(커맨드 리스트 / Deferred Context)을 갖고 기록을 나중에
+     *          재생하므로 캐시도 리스트마다 있어야 한다 — 전역이면 서로의 캐시를 덮는다(DX11 에서
+     *          실제로 그 일이 일어났다). OpenGL 은 커맨드 버퍼가 없는 **스레드 종속 상태 머신**이고
+     *          `OpenGLRHICommandList` 는 호출을 즉시 GL API 로 흘려보낸다. 실제 상태가 하나뿐이므로
+     *          그것을 비추는 캐시도 하나여야 한다 — 리스트마다 두면 캐시가 진짜 GL 상태와 어긋난다.
+     *          (그래서 GL 은 `_bParallelCommandRecording = 0` 이다.)
      */
     struct OpenGLRecordingState
     {
@@ -37,6 +41,11 @@ namespace sw
         RHIBufferHandle _boundIndexBuffer{ 0 };
         uint32          _boundIndexStride{ 4 };
         uint32          _boundIndexOffset{ 0 };
+
+        RHIPipelineStateHandle _boundGraphicsPso{ 0 };
+        RHIPipelineStateHandle _boundComputePso{ 0 }; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO — dispatchCompute 는 이 프로그램을 쓴다
+        /// @brief 지금 텍스처가 걸려 있는 유닛 비트마스크 — 다음 패스가 쓰지 않는 유닛을 떼는 데 쓴다.
+        uint32 _boundTextureUnitMask{ 0 };
     };
 
     /**
@@ -284,15 +293,12 @@ namespace sw
         sw::unique_ptr<OpenGLRHICommandContext> _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
 
-        RHIPipelineStateHandle _boundGraphicsPso;
-        RHIPipelineStateHandle _boundComputePso; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO — dispatchCompute 는 이 프로그램을 쓴다
-        int8                   _lastVsync;       ///< -1 unset, 0/1 last applied
+        int8                   _lastVsync; ///< -1 unset, 0/1 last applied
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;
         /// @brief bindShaderResource가 실제로 바인딩한 텍스처 유닛 비트마스크(비트 i = 유닛 i).
         /// beginRenderPass가 패스 시작마다 방어적으로 0..15 유닛을 전부 언바인드하던 것을, 실제로
         /// 바인딩된 유닛만 언바인드하도록 줄이는 데 쓴다.
-        uint32 _boundTextureUnitMask;
     };
 
     /**

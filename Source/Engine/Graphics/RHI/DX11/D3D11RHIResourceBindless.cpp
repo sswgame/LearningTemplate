@@ -29,6 +29,7 @@ namespace sw
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessTexture( RHITextureHandle texture )
     {
+        _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
 
@@ -42,6 +43,7 @@ namespace sw
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessResource( RHIBufferHandle buffer )
     {
+        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
 
@@ -54,6 +56,7 @@ namespace sw
 
     void D3D11RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
     {
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         // 빈 슬롯(텍스처 인덱스가 잘못 넘어왔거나 이중 해제)을 다시 넣으면 같은 인덱스가 두 버퍼에 발급된다.
         if ( index < _pDevice->_listRegisteredBindless.size() && _pDevice->_listRegisteredBindless[index] == 0 )
@@ -66,6 +69,7 @@ namespace sw
 
     void D3D11RHIResource::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] == 0 )
         {
@@ -77,6 +81,7 @@ namespace sw
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessUav( RHIBufferHandle buffer )
     {
+        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
@@ -127,6 +132,7 @@ namespace sw
 
     RHIDescriptorIndex D3D11RHIResource::registerBindlessTextureUav( RHITextureHandle texture )
     {
+        _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
@@ -158,6 +164,7 @@ namespace sw
 
     void D3D11RHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
+        _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )
             return;

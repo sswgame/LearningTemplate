@@ -45,12 +45,9 @@ namespace sw
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
-        , _boundGraphicsPso{ 0 }
-        , _boundComputePso{ 0 }
         , _lastVsync{ -1 }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
-        , _boundTextureUnitMask{ 0 }
     {
         _resourceImpl = sw::make_unique<OpenGLRHIResource>( this );
     }

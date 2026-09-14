@@ -295,6 +295,58 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (레이스를 잡으려고 만든 테스트가 레이스가 있던 백엔드를 건너뛰고 있었다)
+
+앞 커밋 둘이 DX11 병렬 기록의 레이스를 고쳤다. 그러면 남는 질문은 하나다 — **왜 못 잡았나.**
+
+**전제가 틀린 채로 표 두 곳에 박혀 있었다.** 같은 사실의 출처가 둘이다:
+
+| 어디 | 값 |
+| --- | --- |
+| `RHICapabilities.h` 정적 표 | DX11 `_bParallelCommandRecording = SW_FALSE` |
+| `D3D11RHIDevice::getCapabilities` | `D3D11_FEATURE_THREADING` 조회 결과로 덮어씀 → 이 PC 에서 **TRUE** |
+
+정적 표의 `FALSE` 는 "드라이버를 모를 때의 보수적 기본값" 인데 **"DX11 은 병렬로 기록하지 않는다"** 로 읽혔다.
+`RenderGraphExecuteParallelRunsOnRealDevice` 는 그 오독을 주석에 적고("DX12만 …=1") DX12 를 하드코딩했고,
+레이스를 잡으려고 만든 `FrameRendererDeferredPipelineParallelWaves` 는 목록이 `{DX12, Vulkan}` 인 데다
+**첫 성공에서 break** 였다. 그래서 DX11 병렬 경로에는 테스트가 **한 번도 닿은 적이 없었다.**
+
+- 두 테스트 모두 **네 백엔드를 돌면서 `device->getCapabilities()` 가 런타임에 참이라고 답하는 곳마다**
+  실행한다. 백엔드 이름으로 고르지 않는다. 정적 표에도 "디바이스가 있으면 이 값을 믿지 말 것" 을 적었다.
+
+**그런데 그것만으로는 여전히 못 잡았다 — 절반이 더 있었다.**
+되돌려 놓고 재 보니 두 테스트가 **5/5 통과**했다. "돌았다"(`execute()` 가 true, GpuScene 이 비지 않음)만
+보고 **결과를 보지 않았기** 때문이다. 기록 레이스는 예외도 실패 코드도 내지 않고 **픽셀만** 바꾼다.
+
+- `FrameRendererDeferredPipelineParallelWaves` 가 이제 **직렬 한 판 · 병렬 세 판**을 돌려 `LitColor` 평균을
+  대조한다. 허용 오차 1% — 실제 레이스는 38% 를 흔들었다. 되돌린 코드에서 **8번에 7번** 잡고, 고친
+  코드에서는 **10/10 통과**(오탐 0)다.
+- 반복이 기대만큼 이롭진 않다: 레이스가 **프로세스마다 굳는** 경향이라 한 판이 5번에 4번, 세 판이 8번에
+  7번이었다. 재도입을 확실히 잡아 주는 것은 CI 가 커밋마다 돌린다는 사실이다. 그래도 **코드가 옳으면
+  언제나 통과한다** — 직렬 == 병렬은 결정적이다.
+
+**같이 정리한 것**
+
+- **DX11 만 `assertRegistryMutableNow` 가 0건이었다** (DX12 10 · Vulkan 7 · DX11 0 · GL 0). GL 은 직렬이라
+  무의미하지만 DX11 은 병렬로 기록한다. 지금은 `_bindlessMutex` 덕에 **살아 있는 버그는 아니지만**,
+  계약이 가장 필요한 백엔드에서만 검사되지 않고 있었다 — 등록/해제 7곳에 가드를 넣었다.
+- **`_bComputeRootConstants` 는 죽은 capability** 였다. 선언 + 네 백엔드가 전부 `SW_TRUE` 로 설정,
+  읽는 곳 **0건**. 지웠다.
+- **GL 의 바인딩 캐시가 두 곳에 흩어져 있었다** — `OpenGLRecordingState` 와 디바이스 멤버 셋
+  (`_boundGraphicsPso` · `_boundComputePso` · `_boundTextureUnitMask`). 구조체로 모았다(동작 변화 없음).
+
+> **처음에 "GL 도 불변식을 위반한다" 고 적었는데 틀렸다.** GL 은 커맨드 버퍼가 없는 상태 머신이고
+> `OpenGLRHICommandList` 는 호출을 **즉시** GL API 로 흘린다 — 실제 상태가 하나뿐이므로 캐시도 하나여야
+> 맞다. 리스트마다 두면 오히려 진짜 GL 상태와 어긋난다. 기준은 **"리스트마다 하나" 가 아니라 "기록
+> 스트림마다 하나"** 다. 두 구조체 주석이 이제 서로를 가리키며 그 대비를 적어 둔다.
+>
+> 같은 이유로 **"CommandList 는 RecordingState 를 소유해야 한다" 는 린트 게이트는 만들지 않았다** —
+> GL 에는 거짓이라 "넷 중 셋은 반드시, 하나는 반드시 아님" 을 인코딩하게 된다. 구조를 흉내 내는 린트보다
+> **동작을 재는 테스트**(직렬 == 병렬)가 이 계약의 정본이다.
+
+**확인**: `EngineTest` 460/460 을 3연속 · `Ninja-Debug` ctest **17/17** · 린트 11/11 · 네 백엔드 에디터
+실기동 종료 코드 0 · `[Error]` 0건 · Shipping 빌드와 nogpu 5/5 · `RunBuildWarnings.py` 전수 경고 0건.
+
 ### 2026-09-14 (리스트마다 Deferred Context 를 줬는데 상태 캐시는 하나였다 — DX11 병렬 기록의 레이스 둘)
 
 `RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 **세 번에 두 번꼴로** 깨졌다. 증상이 세 가지라

@@ -74,6 +74,50 @@ namespace
     }
 
     /**
+     * @brief 첨부 하나의 R 채널 평균(0~255)을 되읽습니다. 실패하면 0.
+     * @details 반정밀도(R16G16B16A16_FLOAT) 첨부는 [0,1] 로 클램프해 환산한다 — 두 판을 비교하는 데만
+     *          쓰므로 정확한 휘도가 아니라 **같은 규칙으로 잰 같은 수**이면 된다.
+     */
+    float64 readMeanChannel( sw::FrameRenderer& renderer, const utf8* pAttachment )
+    {
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( renderer.readbackTransient( pAttachment, bytes, layout, format ) == false )
+            return 0.0;
+        const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( format );
+        const bool   bHalf         = ( format == sw::RHIFormat::R16G16B16A16_FLOAT );
+        uint64       sum{ 0 };
+        uint64       count{ 0 };
+        for ( uint32 row = 0; row < layout._height; ++row )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            for ( uint32 col = 0; col < layout._width; ++col )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( col ) * bytesPerPixel;
+                uint32       red{ 0 };
+                if ( bHalf )
+                {
+                    const uint16 half     = static_cast<uint16>( pPixel[0] | ( pPixel[1] << 8 ) );
+                    const uint32 exponent = ( half >> 10 ) & 0x1Fu;
+                    const uint32 mantissa = half & 0x3FFu;
+                    float32      value    = 0.0f;
+                    if ( exponent != 0 && exponent != 0x1Fu )
+                        value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * std::ldexp( 1.0f, static_cast<int32>( exponent ) - 15 );
+                    if ( ( half & 0x8000u ) != 0 )
+                        value = 0.0f;
+                    red = static_cast<uint32>( sw::MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f );
+                }
+                else
+                    red = pPixel[0];
+                sum += red;
+                ++count;
+            }
+        }
+        return count > 0 ? static_cast<float64>( sum ) / static_cast<float64>( count ) : 0.0;
+    }
+
+    /**
      * @brief 패킷 경로로 몇 프레임 그리고(프레젠트 포함) SceneColor 에서 배경이 아닌 픽셀 수를 셉니다. 실패면 -1.
      * @details 패킷은 프레임마다 새로 만든다 — `executePacket` 이 스냅샷을 **옮겨 가므로** 같은 패킷을 두 번 내면 두 번째는
      *          빈 스냅샷이다(GT 도 프레임마다 export 한다).
@@ -400,49 +444,73 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
 
 /**
  * @brief 실제 RHI 디바이스로 RenderGraph::executeParallel을 웨이브 단위로 끝까지 실행해 본다.
- * @details DX12만 _bParallelCommandRecording=1이라 실제로 병렬 경로(패스별 독립 Deferred
- *          커맨드리스트 + TaskManager 스테이지)를 타고, 다른 백엔드는 이 테스트 대상이 아니다.
- *          독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 웨이브 경계를 넘나드는
+ * @details 독립 브랜치(DepthPass/ShadowPass) + 합류 패스(ForwardPass) 구조로 웨이브 경계를 넘나드는
  *          제출 순서(웨이브마다 먼저 제출 후 다음 웨이브)까지 실제로 동작하는지 확인한다.
+ * @note **병렬 기록 여부는 디바이스에 묻는다 — 백엔드 이름으로 고르지 않는다.** 예전엔 이 테스트가
+ *       "DX12만 _bParallelCommandRecording=1"이라고 적고 DX12 를 하드코딩했는데, 그 전제는 틀렸다:
+ *       `D3D11RHIDevice::getCapabilities` 가 드라이버 조회 결과(`D3D11_FEATURE_THREADING`)로 이 항목을
+ *       런타임에 덮으므로 DX11 도 병렬로 기록한다. 그래서 DX11 의 병렬 경로는 **테스트가 한 번도 닿은
+ *       적이 없었고**, 거기 살던 레이스 둘(즉시 컨텍스트 동시 Map, 리스트가 공유하던 기록 상태
+ *       캐시)이 `AmbientOcclusionReachesBloom` 을 플래키하게 만든 뒤에야 드러났다.
  */
 SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    if ( tryInitDeviceForFrameRenderer( sw::RHIBackend::DirectX12, window, device ) == false )
-        SW_TEST_SKIP( "No DX12 backend for RenderGraph::executeParallel test" );
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
 
-    sw::TaskManager taskManager;
-    SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
-
-    sw::RenderGraph    graph;
-    sw::atomic<uint32> executeCount{ 0 };
-
-    auto makeCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : backends )
     {
-        return sw::RenderGraphPassExecuteFn(
-            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
         {
-            SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
-            SW_EXPECT_TRUE( ctx._pCmdList != nullptr );
-            executeCount.fetch_add( 1, std::memory_order_relaxed );
-        } ) );
-    };
+            device->shutdown();
+            device.reset();
+            window->destroy();
+            window.reset();
+            continue;
+        }
+        ++attemptedCount;
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
 
-    graph.addPass( sw::hashed_string( "DepthPass" ), {}, { sw::hashed_string( "DepthBuffer" ) }, makeCb( "DepthPass" ) );
-    graph.addPass( sw::hashed_string( "ShadowPass" ), {}, { sw::hashed_string( "ShadowMap" ) }, makeCb( "ShadowPass" ) );
-    graph.addPass( sw::hashed_string( "ForwardPass" ), { sw::hashed_string( "DepthBuffer" ), sw::hashed_string( "ShadowMap" ) }, { sw::hashed_string( "SceneColor" ) }, makeCb( "ForwardPass" ) );
+        sw::TaskManager taskManager;
+        SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
 
-    sw::RenderGraphExecutionContext context;
-    SW_ASSERT_TRUE( graph.executeParallel( context, &taskManager, device.get() ) );
-    SW_EXPECT_EQUAL( 3u, executeCount.load() );
+        sw::RenderGraph    graph;
+        sw::atomic<uint32> executeCount{ 0 };
 
-    device->waitIdle();
-    taskManager.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
+        auto makeCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
+        {
+            return sw::RenderGraphPassExecuteFn(
+                SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
+            {
+                SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
+                SW_EXPECT_TRUE( ctx._pCmdList != nullptr );
+                executeCount.fetch_add( 1, std::memory_order_relaxed );
+            } ) );
+        };
+
+        graph.addPass( sw::hashed_string( "DepthPass" ), {}, { sw::hashed_string( "DepthBuffer" ) }, makeCb( "DepthPass" ) );
+        graph.addPass( sw::hashed_string( "ShadowPass" ), {}, { sw::hashed_string( "ShadowMap" ) }, makeCb( "ShadowPass" ) );
+        graph.addPass( sw::hashed_string( "ForwardPass" ), { sw::hashed_string( "DepthBuffer" ), sw::hashed_string( "ShadowMap" ) }, { sw::hashed_string( "SceneColor" ) }, makeCb( "ForwardPass" ) );
+
+        sw::RenderGraphExecutionContext context;
+        SW_EXPECT_TRUE_MSG( graph.executeParallel( context, &taskManager, device.get() ), ( label + ": executeParallel 실패" ).c_str() );
+        SW_EXPECT_EQUAL( 3u, executeCount.load() );
+
+        device->waitIdle();
+        taskManager.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
+    }
+
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No backend reports parallel command recording" );
 }
 
 /**
@@ -460,63 +528,108 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
  */
 SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelWaves )
 {
-    sw::unique_ptr<sw::IWindow>    window;
-    sw::shared_ptr<sw::IRHIDevice> device;
-    const sw::RHIBackend           backends[] = { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan };
-    bool                           bOk{ false };
+    const sw::RHIBackend backends[] = {
+        sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL };
+
+    uint32 attemptedCount{ 0 };
     for ( sw::RHIBackend backend : backends )
     {
-        if ( tryInitDeviceForFrameRenderer( backend, window, device ) )
+        sw::unique_ptr<sw::IWindow>    window;
+        sw::shared_ptr<sw::IRHIDevice> device;
+        if ( tryInitDeviceForFrameRenderer( backend, window, device ) == false )
+            continue;
+        // **병렬로 기록하는 백엔드는 전부 돈다 — 하나 찾고 멈추지 않는다.** 예전엔 목록이 {DX12, Vulkan}
+        // 이고 첫 성공에서 break 였다. 레이스를 잡으려고 만든 테스트가 정작 레이스가 있던 DX11 을
+        // 건너뛰고 있었다.
+        if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
         {
-            bOk = true;
-            break;
+            device->shutdown();
+            device.reset();
+            window->destroy();
+            window.reset();
+            continue;
         }
+        ++attemptedCount;
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+
+        sw::TaskManager taskManager;
+        SW_ASSERT_TRUE( taskManager.initialize( 4 ) );
+
+        sw::FrameRenderer renderer;
+        SW_EXPECT_TRUE_MSG( renderer.initialize( device.get(), &taskManager, "engine/pipeline/deferredpipeline.xml" ),
+                            ( label + ": FrameRenderer 초기화 실패" ).c_str() );
+        SW_EXPECT_TRUE( renderer.isReady() );
+
+        sw::Scene scene( "DeferredParallelScene" );
+        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+        for ( uint32 objectIndex = 0; objectIndex < 4; ++objectIndex )
+        {
+            sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "DeferredCube" ) );
+            SW_ASSERT_NOT_NULL( pObj );
+            sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( cube );
+            // 인스턴스를 서로 다른 월드 행렬로 흩어 놓아야 드로우 루프의 월드 갱신 분기까지 탄다.
+            pMesh->setLocalPosition( sw::float3{ static_cast<float32>( objectIndex ) * 1.5f, 0.0f, 0.0f } );
+        }
+
+        // **직렬로 한 판, 병렬로 한 판 — 그림이 같아야 한다.** 여러 프레임을 도는 것만으로는
+        // 부족하다: 기록 레이스는 예외도 실패 코드도 내지 않고 **픽셀만** 바꾼다. 실제로 이 테스트는
+        // "돌았다" 만 보던 시절 DX11 의 레이스 둘을 그대로 통과시켰다(되돌려 놓고 5/5 통과를 확인했다).
+        // 직렬 경로가 기준이고, 병렬이 같은 값을 내야 한다는 것이 이 기능의 유일한 계약이다.
+        const sw::float4 clear               = { 0.02f, 0.02f, 0.05f, 1.0f };
+        auto             renderAndMeasureLit = [&]( sw::TaskManager* pTaskManager ) -> float64
+        {
+            renderer.bindServices( pTaskManager );
+            for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
+            {
+                device->beginFrame( clear );
+                SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), &scene ), ( label + ": execute 실패" ).c_str() );
+                device->endFrame( false, false );
+            }
+            device->waitIdle();
+            return readMeanChannel( renderer, "LitColor" );
+        };
+
+        const float64 serialMean = renderAndMeasureLit( nullptr );
+
+        // 드로우 경로까지 실제로 들어갔는지 — GpuScene 이 비어 있으면 이 테스트는 클리어만 검증한 셈이다.
+        SW_EXPECT_TRUE_MSG( renderer.getGpuScene().getInstances().empty() == false, ( label + ": GpuScene 이 비었다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( serialMean > 0.0, ( label + ": 직렬 판의 LitColor 를 되읽지 못했다" ).c_str() );
+
+        // **병렬 판은 세 번 재서 각각 기준과 대조한다.** 다만 기대만큼 이롭지는 않다 — 실측으로
+        // 레이스는 **프로세스마다 굳는** 경향이 있어(한 번 어긋나면 그 프로세스의 세 판이 모두 어긋났다)
+        // 한 판이 다섯 번에 네 번, 세 판이 여덟 번에 일곱 번을 잡았다. 반복은 굳지 않는 경우를 위한
+        // 보험이고, **코드가 옳으면 언제나 통과한다**(직렬 == 병렬은 결정적이다). 재도입을 확실히
+        // 잡아 주는 것은 CI 가 이 테스트를 커밋마다 돌린다는 사실이다.
+        constexpr uint32 kParallelRunCount = 3;
+        for ( uint32 runIndex = 0; runIndex < kParallelRunCount; ++runIndex )
+        {
+            const float64 parallelMean = renderAndMeasureLit( &taskManager );
+            // 허용 오차는 1% 다. 실제 레이스는 LitColor 를 38% 넘게 흔들었으므로 한참 아래고,
+            // 백엔드의 사소한 비결정성은 이 안에 들어온다.
+            const float64 drift    = ( parallelMean - serialMean ) / serialMean;
+            const float64 absDrift = drift < 0.0 ? -drift : drift;
+            SW_EXPECT_TRUE_MSG( absDrift < 0.01,
+                                ( label + ": 병렬 기록이 그림을 바꿨다 (직렬 " + sw::to_string( static_cast<float32>( serialMean ) ) +
+                                  " vs 병렬 " + sw::to_string( static_cast<float32>( parallelMean ) ) + ", " +
+                                  sw::to_string( runIndex ) + "번째 판)" )
+                                    .c_str() );
+        }
+
+        if ( cube != nullptr )
+            cube->releaseRhi( device.get() );
+        renderer.shutdown();
+        taskManager.shutdown();
+        device->shutdown();
+        device.reset();
+        window->destroy();
+        window.reset();
     }
-    if ( bOk == false )
-        SW_TEST_SKIP( "No parallel-recording backend for deferred pipeline test" );
 
-    sw::TaskManager taskManager;
-    SW_ASSERT_TRUE( taskManager.initialize( 4 ) );
-
-    sw::FrameRenderer renderer;
-    SW_ASSERT_TRUE( renderer.initialize( device.get(), &taskManager, "engine/pipeline/deferredpipeline.xml" ) );
-    SW_EXPECT_TRUE( renderer.isReady() );
-
-    sw::Scene scene( "DeferredParallelScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
-    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
-    for ( uint32 objectIndex = 0; objectIndex < 4; ++objectIndex )
-    {
-        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "DeferredCube" ) );
-        SW_ASSERT_NOT_NULL( pObj );
-        sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
-        SW_ASSERT_NOT_NULL( pMesh );
-        pMesh->setMesh( cube );
-        // 인스턴스를 서로 다른 월드 행렬로 흩어 놓아야 드로우 루프의 월드 갱신 분기까지 탄다.
-        pMesh->setLocalPosition( sw::float3{ static_cast<float32>( objectIndex ) * 1.5f, 0.0f, 0.0f } );
-    }
-
-    // 여러 프레임 돌린다 — 레이스는 한 프레임만으로는 잘 드러나지 않는다.
-    const sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
-    for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
-    {
-        device->beginFrame( clear );
-        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
-        device->endFrame( false, false );
-    }
-    device->waitIdle();
-
-    // 드로우 경로까지 실제로 들어갔는지 — GpuScene 이 비어 있으면 이 테스트는 클리어만 검증한 셈이다.
-    SW_EXPECT_TRUE( renderer.getGpuScene().getInstances().empty() == false );
-
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-    renderer.shutdown();
-    taskManager.shutdown();
-    device->shutdown();
-    device.reset();
-    window->destroy();
-    window.reset();
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No backend reports parallel command recording" );
 }
 
 /**

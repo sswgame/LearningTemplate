@@ -19,13 +19,12 @@ namespace sw
      */
     struct SW_API RHICapabilities
     {
-        uint8 _bBindless{ SW_FALSE };             ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
-        uint8 _bNativeBindless{ SW_FALSE };       ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
-        uint8 _bCompute{ SW_TRUE };               ///< 컴퓨트 셰이더
-        uint8 _bOffscreenRT{ SW_FALSE };          ///< createTexture2D + 오프스크린 경로
-        uint8 _bComputeRootConstants{ SW_FALSE }; ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
-        uint8 _bIndirectDraw{ SW_FALSE };         ///< drawIndirect / dispatchIndirect
-        uint8 _bGpuCulling{ SW_FALSE };           ///< 컴퓨트 컬 + 인디렉트 인자 경로
+        uint8 _bBindless{ SW_FALSE };       ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
+        uint8 _bNativeBindless{ SW_FALSE }; ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
+        uint8 _bCompute{ SW_TRUE };         ///< 컴퓨트 셰이더
+        uint8 _bOffscreenRT{ SW_FALSE };    ///< createTexture2D + 오프스크린 경로
+        uint8 _bIndirectDraw{ SW_FALSE };   ///< drawIndirect / dispatchIndirect
+        uint8 _bGpuCulling{ SW_FALSE };     ///< 컴퓨트 컬 + 인디렉트 인자 경로
         /**
          * @brief GPU 메시 모프 — 컴퓨트가 정점을 변형하고 정점 셰이더가 그 결과를 풀링한다.
          * @details 끄면 모프를 요청한 메시도 **레스트 포즈로 그려진다**(셰이더의 폴백 경로 그대로).
@@ -87,7 +86,6 @@ namespace sw
                     caps._bNativeBindless             = SW_TRUE; // 후보. 런타임은 Device::getCapabilities()
                     caps._bCompute                    = SW_TRUE;
                     caps._bOffscreenRT                = SW_TRUE;
-                    caps._bComputeRootConstants       = SW_TRUE;
                     caps._bIndirectDraw               = SW_TRUE;
                     caps._bGpuCulling                 = SW_TRUE;
                     caps._bGpuMeshMorph               = SW_TRUE;
@@ -98,31 +96,33 @@ namespace sw
                 }
                 case RHIBackend::DirectX11:
                 {
-                    caps._bBindless             = SW_TRUE;
-                    caps._bNativeBindless       = SW_FALSE;
-                    caps._bCompute              = SW_TRUE;
-                    caps._bOffscreenRT          = SW_TRUE;
-                    caps._bComputeRootConstants = SW_TRUE;
-                    caps._bIndirectDraw         = SW_TRUE;
+                    caps._bBindless       = SW_TRUE;
+                    caps._bNativeBindless = SW_FALSE;
+                    caps._bCompute        = SW_TRUE;
+                    caps._bOffscreenRT    = SW_TRUE;
+                    caps._bIndirectDraw   = SW_TRUE;
                     // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 걸 수 없다.
                     // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
                     // 쓰려면 둘 중 하나를 포기해야 한다 — 인다이렉트 드로우를 살리고 컬링을 끈다
                     // (간접 인자는 GpuScene 이 CPU 에서 이미 채운다).
-                    caps._bGpuCulling                 = SW_FALSE;
-                    caps._bGpuMeshMorph               = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다 — 간접 인자 제약과 무관하다
-                    caps._bMultiDrawIndirect          = SW_TRUE;
+                    caps._bGpuCulling        = SW_FALSE;
+                    caps._bGpuMeshMorph      = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다 — 간접 인자 제약과 무관하다
+                    caps._bMultiDrawIndirect = SW_TRUE;
+                    // **디바이스가 있으면 이 값을 믿지 말 것.** `D3D11RHIDevice::getCapabilities` 가
+                    // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 **참이 될 수 있다**. 여기 FALSE 는
+                    // "드라이버를 모를 때의 보수적 기본값" 이지 "DX11 은 병렬로 기록하지 않는다" 가 아니다.
+                    // 그 둘을 혼동해 병렬 테스트가 DX12 만 돌았고, DX11 병렬 경로의 레이스 둘이 오래 살았다.
                     caps._bParallelCommandRecording   = SW_FALSE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 }
                 case RHIBackend::OpenGL:
-                    caps._bBindless             = SW_TRUE;
-                    caps._bNativeBindless       = SW_FALSE;
-                    caps._bCompute              = SW_TRUE;
-                    caps._bOffscreenRT          = SW_TRUE;
-                    caps._bComputeRootConstants = SW_TRUE;
-                    caps._bIndirectDraw         = SW_TRUE;
-                    caps._bGpuCulling           = SW_TRUE;
+                    caps._bBindless       = SW_TRUE;
+                    caps._bNativeBindless = SW_FALSE;
+                    caps._bCompute        = SW_TRUE;
+                    caps._bOffscreenRT    = SW_TRUE;
+                    caps._bIndirectDraw   = SW_TRUE;
+                    caps._bGpuCulling     = SW_TRUE;
                     // 오래 꺼져 있었다 — GL 만 정점 셰이더가 풀에서 **한 칸 앞 원소**를 읽었다. 엔진이 준 바이트는
                     // 전부 되읽어 맞았고, 원인은 드라이버가 early-return 모양의 `SwMorphElementOf` (DXC 가
                     // OpSwitch(0) 구조로 내는 코드) 를 잘못 컴파일한 것이었다. 분기 없는 한 식으로 바꾸자 네
@@ -137,13 +137,12 @@ namespace sw
                     break;
                 case RHIBackend::Vulkan:
                 {
-                    caps._bBindless             = SW_TRUE;
-                    caps._bNativeBindless       = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
-                    caps._bCompute              = SW_TRUE;
-                    caps._bOffscreenRT          = SW_TRUE;
-                    caps._bComputeRootConstants = SW_TRUE;
-                    caps._bIndirectDraw         = SW_TRUE;
-                    caps._bGpuCulling           = SW_TRUE;
+                    caps._bBindless       = SW_TRUE;
+                    caps._bNativeBindless = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
+                    caps._bCompute        = SW_TRUE;
+                    caps._bOffscreenRT    = SW_TRUE;
+                    caps._bIndirectDraw   = SW_TRUE;
+                    caps._bGpuCulling     = SW_TRUE;
                     // 한때 "Vulkan 도 GL 과 같이 깨졌다" 고 적었는데 **그건 구운 셰이더가 낡았던 것**이다
                     // (`forwardlit` 바이너리가 라이트 버퍼 이전 것이었다). 베이크 신선도 판정을 파일
                     // 시간에서 내용 해시로 바꾼 뒤 다시 재니 DX12·DX11 과 픽셀 수가 같다. 백엔드 하나가

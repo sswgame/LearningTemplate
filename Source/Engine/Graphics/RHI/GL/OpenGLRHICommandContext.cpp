@@ -78,7 +78,7 @@ namespace sw
         if ( pRecord->_program == 0 )
             return;
 
-        _pDevice->_boundGraphicsPso = pso;
+        _pDevice->_recordingState._boundGraphicsPso = pso;
         glUseProgram( pRecord->_program );
 
         if ( pRecord->_vao != 0 )
@@ -124,7 +124,7 @@ namespace sw
         if ( pRecord == nullptr )
             return;
 
-        _pDevice->_boundComputePso = pso;
+        _pDevice->_recordingState._boundComputePso = pso;
         if ( pRecord->_program != 0 )
             glUseProgram( pRecord->_program );
     }
@@ -186,7 +186,7 @@ namespace sw
         if ( glad_glClipControl != nullptr )
             glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
         // bindShaderResource가 실제로 바인딩한 유닛만 언바인드한다(예전엔 0..15 전부 방어적으로 언바인드).
-        const uint32 unbindMask = _pDevice->_boundTextureUnitMask;
+        const uint32 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
         for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
         {
             if ( ( unbindMask & ( 1u << unit ) ) == 0 )
@@ -199,7 +199,7 @@ namespace sw
                 glBindTexture( GL_TEXTURE_2D, 0 );
             }
         }
-        _pDevice->_boundTextureUnitMask = 0;
+        _pDevice->_recordingState._boundTextureUnitMask = 0;
         glViewport( 0, 0, static_cast<GLsizei>( targetWidth ), static_cast<GLsizei>( targetHeight ) );
 
         if ( bHasDepth || bDepthOnly )
@@ -396,7 +396,7 @@ namespace sw
 
         glBindTextureUnit( slot, tex );
         if ( slot < 32 )
-            _pDevice->_boundTextureUnitMask |= ( 1u << slot );
+            _pDevice->_recordingState._boundTextureUnitMask |= ( 1u << slot );
     }
 
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -490,7 +490,7 @@ namespace sw
         GLuint program = _pDevice->_shaderProgram;
         GLenum mode    = GL_TRIANGLES;
 
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
         if ( pPso != nullptr )
         {
             if ( pPso->_program != 0 )
@@ -534,7 +534,7 @@ namespace sw
         GLuint program = _pDevice->_shaderProgram;
         GLenum mode    = GL_TRIANGLES;
 
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
         if ( pPso != nullptr && pPso->_program != 0 )
         {
             program = pPso->_program;
@@ -609,7 +609,7 @@ namespace sw
         // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 예전엔 그래픽스 PSO(또는 디바이스
         // 기본 프로그램)를 다시 걸고 디스패치해서 gpucull 이 매 프레임 GL_INVALID_OPERATION
         // ("no active compute program") 을 냈다 — 컬링 결과는 CPU 가 채운 인자 그대로라 화면은 멀쩡했다.
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundComputePso );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePso );
         if ( pPso == nullptr || pPso->_program == 0 )
             return;
 
@@ -673,7 +673,7 @@ namespace sw
         // 아무도 안 부르는 경로라 드러나지 않았다.
         GLuint program = _pDevice->_shaderProgram;
         GLenum mode    = GL_TRIANGLES;
-        if ( const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso ) )
+        if ( const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso ) )
         {
             if ( pPso->_program != 0 )
             {
@@ -731,7 +731,7 @@ namespace sw
         GLuint program = _pDevice->_shaderProgram;
         GLenum mode    = GL_TRIANGLES;
 
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
         if ( pPso != nullptr )
         {
             if ( pPso->_program != 0 )
