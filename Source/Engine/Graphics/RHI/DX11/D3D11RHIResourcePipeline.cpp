@@ -133,8 +133,7 @@ namespace sw
         if ( pso == 0 )
             return;
         _pDevice->_pipelineStates.erase( pso );
-        if ( _pDevice->_recordingState._activeGraphicsPso == pso )
-            _pDevice->_recordingState._activeGraphicsPso = 0;
+        _pDevice->forgetPipelineStateInRecordingStates( pso );
     }
 
     RHIRenderPassHandle D3D11RHIResource::createRenderPass( const RHIRenderPassDesc& desc )

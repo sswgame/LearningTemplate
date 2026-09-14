@@ -76,8 +76,6 @@ namespace sw
         , _listRegisteredUAV{}
         , _listUavSourceBuffer{}
         , _listUavFree{}
-        , _computeRootConstantCB{ nullptr }
-        , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _listRenderPass{}
         , _depthEnabledState{ nullptr }
@@ -144,9 +142,9 @@ namespace sw
         return pRec != nullptr ? pRec->_texture.Get() : nullptr;
     }
 
-    bool D3D11RHIDevice::ensureComputeRootConstantCb()
+    bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )
     {
-        if ( _computeRootConstantCB != nullptr )
+        if ( state._rootConstantCb != nullptr )
             return true;
         if ( _device == nullptr )
             return false;
@@ -156,9 +154,11 @@ namespace sw
         desc.Usage          = D3D11_USAGE_DYNAMIC;
         desc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        if ( FAILED( _device->CreateBuffer( &desc, nullptr, _computeRootConstantCB.GetAddressOf() ) ) )
+        // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다 —
+        // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 표를 건드리지 않는다.
+        if ( FAILED( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ) ) )
         {
-            SW_LOG_ERROR( "Failed to create compute root-constant cbuffer." );
+            SW_LOG_ERROR( "Failed to create root-constant cbuffer." );
             return false;
         }
         return true;

@@ -33,7 +33,8 @@ namespace sw
         : _pDevice{ pDevice }
         , _pNativeContext{ createNativeContext( pDevice ) }
         , _pFinishedList{ nullptr }
-        , _context{ pDevice, _pNativeContext.Get() }
+        , _recordingState{}
+        , _context{ pDevice, _pNativeContext.Get(), &_recordingState }
     {
         _pContext = &_context;
         if ( _pDevice != nullptr )

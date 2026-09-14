@@ -27,6 +27,9 @@ namespace sw
     class D3D11RHICommandList;
     class D3D11RHIResource;
 
+    /** @brief 루트 상수 에뮬레이션 버퍼의 dword 수 — `D3D11RHIDevice::kMaxComputeRootConstantDwords` 의 정본. */
+    inline constexpr uint32 kRootConstantDwordCount = 64;
+
     /**
      * @struct D3D11RecordingState
      * @brief "지금 이 Deferred Context 에 무엇이 걸려 있나" — 기록 스트림마다 있어야 하는 상태.
@@ -35,6 +38,15 @@ namespace sw
      */
     struct D3D11RecordingState
     {
+        /**
+         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼와 CPU 그림자 — **기록 스트림마다** 따로다.
+         * @details D3D11 에는 루트 상수가 없어 작은 상수버퍼로 흉내 낸다. 이것이 디바이스 전역이면
+         *          병렬로 기록하는 두 패스가 같은 그림자 배열과 같은 버퍼를 번갈아 덮어써, 한쪽 패스의
+         *          드로우가 **다른 패스의 월드 행렬**로 그려진다.
+         */
+        Microsoft::WRL::ComPtr<ID3D11Buffer> _rootConstantCb;
+        uint32                               _arrRootConstantShadow[kRootConstantDwordCount]{};
+
         RHIBufferHandle        _boundMeshVb{ 0 };
         uint32                 _boundMeshStride{ 0 };
         uint32                 _boundMeshOffset{ 0 };
@@ -196,8 +208,15 @@ namespace sw
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들 (없으면 0). SRV/UAV 해저드를 풀 때 쓴다. */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
 
-        /** @brief 컴퓨트 루트 상수 CB를 확보합니다. */
-        bool ensureComputeRootConstantCb();
+        /** @brief 이 기록 스트림의 루트 상수 CB를 확보합니다 (없으면 만든다). */
+        bool ensureRootConstantCb( D3D11RecordingState& state );
+        /**
+         * @brief 살아 있는 모든 기록 상태에서 이 버퍼/PSO 캐시를 지웁니다.
+         * @details 캐시가 리스트마다 있으므로 자원이 사라질 때 **전부** 훑어야 한다 — 한 곳만 지우면
+         *          다른 리스트가 죽은 핸들을 드로우 시점에 다시 푼다.
+         */
+        void forgetBufferInRecordingStates( RHIBufferHandle buffer );
+        void forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso );
         /** @brief 불투명 버퍼 핸들을 ID3D11Buffer로 풉니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief ComPtr을 테이블에 넣고 핸들을 반환합니다. */
@@ -210,7 +229,7 @@ namespace sw
 
         /** @brief setComputeRootConstants 실제 용량(dword). RHITypes.h의
          *         constant::kMinComputeRootConstantDwords(=DX12 기준, 4개 백엔드 공통 안전값) 참고. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = 64;
+        static constexpr uint32 kMaxComputeRootConstantDwords = kRootConstantDwordCount;
 
         /// @brief VS/PS + 래스터/블렌드/깊이 상태 묶음
         struct D3D11PipelineStateRecord
@@ -257,6 +276,16 @@ namespace sw
         /// 기록 스레드가 쓰레기를 읽는다. 읽기는 공유 락이라 병렬 기록을 직렬화하지 않는다.
         mutable std::shared_mutex _bindlessMutex;
 
+        /// @brief **즉시 컨텍스트(`_deviceContext`)를 만지는 모든 코드가 잡아야 하는 자물쇠.**
+        /// @details `ID3D11DeviceContext` 는 스레드 안전하지 않다 — 안전한 것은 `ID3D11Device` 뿐이다.
+        ///          기록은 리스트마다 Deferred Context 라 안전하지만, **리소스 갱신은 즉시 컨텍스트로
+        ///          나간다**(`updateConstantBuffer` 의 `Map(WRITE_DISCARD)` 등). 그 경로는 드로우마다
+        ///          불리므로 웨이브를 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다.
+        ///          실제로 그 레이스가 `RenderPassGpuTest.AmbientOcclusionReachesBloom` 을 세 번에 두 번
+        ///          꼴로 깨뜨렸다 — 크래시이거나, 패스 CB 가 옆 패스 값으로 덮여 Bloom 이 AO 대신 HDR
+        ///          컬러를 샘플링해 화면이 하얗게 탔다. 둘 다 같은 원인이다.
+        mutable mutex _immediateContextMutex;
+
         vector<RHIBufferHandle> _listRegisteredBindless;
         vector<uint32>          _listBindlessFree;
 
@@ -266,9 +295,6 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
         vector<RHIBufferHandle>                                   _listUavSourceBuffer;
         vector<uint32>                                            _listUavFree;
-
-        Microsoft::WRL::ComPtr<ID3D11Buffer> _computeRootConstantCB;
-        uint32                               _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         vector<D3D11RenderPassRecord>            _listRenderPass;

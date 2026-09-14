@@ -216,8 +216,7 @@ namespace sw
         _listRegisteredUAV.clear();
         _listUavSourceBuffer.clear();
         _listUavFree.clear();
-        _computeRootConstantCB.Reset();
-        Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
+        _recordingState = D3D11RecordingState{};
         _deviceContext.Reset();
         _device.Reset();
     }

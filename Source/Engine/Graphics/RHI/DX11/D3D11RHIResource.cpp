@@ -60,6 +60,9 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return;
+        // **이 경로는 드로우마다, 그리고 웨이브를 병렬로 기록하면 워커 여럿에서 동시에 불린다.**
+        // 즉시 컨텍스트는 스레드 안전하지 않으므로(`_immediateContextMutex` 주석) 여기서 직렬화한다.
+        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if ( SUCCEEDED( _pDevice->_deviceContext->Map( pRes, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
@@ -164,6 +167,7 @@ namespace sw
         ID3D11Buffer* pRes = _pDevice->resolveBuffer( buffer );
         if ( pRes == nullptr )
             return;
+        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
         _pDevice->_deviceContext->UpdateSubresource( pRes, 0, nullptr, pData, size, 0 );
     }
 
@@ -192,8 +196,7 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
-        if ( buffer == _pDevice->_recordingState._boundMeshVb )
-            _pDevice->_recordingState._boundMeshVb = 0;
+        _pDevice->forgetBufferInRecordingStates( buffer );
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
@@ -245,6 +248,7 @@ namespace sw
         }
 
         // UpdateSubresource 는 즉시 컨텍스트 큐에 순서대로 들어가므로 뒤이은 드로우보다 먼저 실행된다.
+        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& span = arrMip[mip];
@@ -295,6 +299,7 @@ namespace sw
         if ( FAILED( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, staging.GetAddressOf() ) ) )
             return false;
 
+        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
         _pDevice->_deviceContext->CopySubresourceRegion( staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), mip, nullptr );
 
         D3D11_MAPPED_SUBRESOURCE mapped{};

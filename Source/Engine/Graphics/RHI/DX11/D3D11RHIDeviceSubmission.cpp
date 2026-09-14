@@ -49,6 +49,7 @@ namespace sw
         viewport.MaxDepth = kDefaultViewportMaxDepth;
         viewport.TopLeftX = kDefaultViewportX;
         viewport.TopLeftY = kDefaultViewportY;
+        std::scoped_lock<mutex> lock{ _immediateContextMutex };
         _deviceContext->RSSetViewports( 1, &viewport );
     }
 
@@ -75,7 +76,10 @@ namespace sw
     void D3D11RHIDevice::waitIdle()
     {
         if ( _deviceContext != nullptr )
+        {
+            std::scoped_lock<mutex> lock{ _immediateContextMutex };
             _deviceContext->Flush();
+        }
         _releaseQueue.flushAll();
     }
 
@@ -88,6 +92,39 @@ namespace sw
             return nullptr;
         }
         return list;
+    }
+
+    void D3D11RHIDevice::forgetBufferInRecordingStates( RHIBufferHandle buffer )
+    {
+        if ( _recordingState._boundMeshVb == buffer )
+            _recordingState._boundMeshVb = 0;
+        if ( _recordingState._boundInstanceSlotVb == buffer )
+            _recordingState._boundInstanceSlotVb = 0;
+
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        for ( D3D11RHICommandList* pList : _listLiveCmdList )
+        {
+            if ( pList == nullptr )
+                continue;
+            D3D11RecordingState& state = pList->getRecordingState();
+            if ( state._boundMeshVb == buffer )
+                state._boundMeshVb = 0;
+            if ( state._boundInstanceSlotVb == buffer )
+                state._boundInstanceSlotVb = 0;
+        }
+    }
+
+    void D3D11RHIDevice::forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso )
+    {
+        if ( _recordingState._activeGraphicsPso == pso )
+            _recordingState._activeGraphicsPso = 0;
+
+        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        for ( D3D11RHICommandList* pList : _listLiveCmdList )
+        {
+            if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPso == pso )
+                pList->getRecordingState()._activeGraphicsPso = 0;
+        }
     }
 
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
@@ -120,6 +157,7 @@ namespace sw
         // DX11 은 스트림을 자를 필요가 없다. 기록 대상(Deferred Context)과 제출 대상(Immediate
         // Context)이 처음부터 분리돼 있어서, 이 호출은 Immediate Context 스트림의 '지금 이 지점'에
         // 그대로 끼워진다 — DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
+        std::scoped_lock<mutex> lock{ _immediateContextMutex };
         _deviceContext->ExecuteCommandList( pList, FALSE );
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한

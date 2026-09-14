@@ -44,6 +44,8 @@ namespace sw
         bool isValid() const { return _pNativeContext != nullptr; }
         /** @brief `IRHIDevice::executeCommandList` 가 실제 제출에 쓰는 네이티브 커맨드 리스트. */
         ID3D11CommandList* getNativeCommandList() const { return _pFinishedList.Get(); }
+        /** @brief 이 리스트의 기록 상태 — 자원이 사라질 때 디바이스가 캐시를 지우려고 읽는다. */
+        D3D11RecordingState& getRecordingState() { return _recordingState; }
 
         void beginCommandList() override;
         void endCommandList() override;
@@ -71,7 +73,17 @@ namespace sw
         D3D11RHIDevice*                             _pDevice;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _pNativeContext;
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
-        D3D11RHICommandContext                      _context;
+        /**
+         * @brief **이 리스트만의** 기록 상태. `_context` 보다 먼저 선언해야 한다(생성자가 주소를 넘긴다).
+         * @details 예전엔 컨텍스트가 디바이스의 `_recordingState` 를 가리켰다. 리스트는 각자 Deferred
+         *          Context 를 갖는데 캐시가 하나뿐이라, 웨이브를 병렬로 기록하면 한 패스의 드로우가
+         *          **다른 패스의 PSO·정점 버퍼**로 나갔다. Shadow 와 GBuffer 가 같은 웨이브에 있는
+         *          디퍼드 파이프라인에서 그림자 맵이 세 번에 한 번꼴로 엉뚱하게 그려졌고, 디퍼드
+         *          조명 결과(LitColor)가 두 값 사이를 오갔다
+         *          (`RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 그것을 잡는다).
+         */
+        D3D11RecordingState    _recordingState;
+        D3D11RHICommandContext _context;
     };
 } // namespace sw
 

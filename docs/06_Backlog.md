@@ -295,6 +295,57 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-14 (리스트마다 Deferred Context 를 줬는데 상태 캐시는 하나였다 — DX11 병렬 기록의 레이스 둘)
+
+`RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 **세 번에 두 번꼴로** 깨졌다. 증상이 세 가지라
+한동안 다른 문제로 보였다: 크래시(exit 2173)이거나, `Bloom` 이 하얗게 타서 "AO 를 꺼도 결과가 같다"
+는 실패이거나, 그냥 통과였다. **셋 다 DX11 병렬 패스 기록의 같은 뿌리**였다.
+
+**먼저 셌다 — 그리고 AO 는 범인이 아니었다.** 테스트에 계측을 넣어 첨부별 평균을 재 보니
+`GBufferAlbedo`(151.485748) · `GBufferNormal`(127.0) · `AOColor`(254.619278, dark 14328)는 **실행마다
+완벽히 같았고**, 오직 `LitColor` 만 **183.984192 와 253.789917 두 값 사이를 오갔다.** Bloom 은 그것을
+그대로 물려받았을 뿐이다. AO 가 꺼진 쪽이 더 밝게 나온 것도 그래서다 — 두 단계가 서로 다른 LitColor 를
+봤다. `c * ao + bright` 는 `ao ≤ 1` 이면 **수학적으로** AO 를 켠 쪽이 더 어두워야 한다. 그 모순이
+"입력이 흔들린다" 는 신호였다.
+
+**레이스 1 — 즉시 컨텍스트를 워커 여럿이 동시에 Map 했다.**
+`D3D11RHIResource::updateConstantBuffer` 는 `_deviceContext`(**즉시** 컨텍스트)에 `Map(WRITE_DISCARD)`
+한다. 그런데 이 함수는 `ShaderBindingBinder` 가 **드로우마다** 부르므로, 웨이브를 병렬로 기록하면
+태스크 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 한다. `ID3D11DeviceContext` 는 스레드 안전하지
+않다(안전한 것은 `ID3D11Device` 뿐이다). → 디바이스에 `_immediateContextMutex` 를 두고 즉시 컨텍스트를
+만지는 모든 자리(상수/구조버퍼 갱신, 텍스처 업로드, 되읽기, `ExecuteCommandList`, `Flush`,
+`RSSetViewports`)를 그 뒤로 모았다. **크래시가 사라졌다.**
+
+**레이스 2 — 그리고 이것이 그림을 바꾸던 진짜 원인이다.**
+`D3D11RecordingState` 의 주석은 이미 정답을 적어 두고 있었다: *"리스트마다 자기 Deferred Context 를
+소유하는데 이 캐시는 디바이스 전역이면 서로의 바인딩 캐시를 덮어쓴다."* 그런데 **배선이 없었다** —
+`D3D11RHICommandList` 가 인자 둘짜리 컨텍스트 생성자를 써서 `_pState` 가 전부 `device._recordingState`
+하나를 가리켰다. 드로우 시점에 읽는 것이 `_activeGraphicsPso`(입력 레이아웃)와
+`_boundMeshVb/Stride/Offset`(정점 버퍼)이라, **한 패스의 드로우가 다른 패스의 PSO·정점 버퍼로 나갔다.**
+디퍼드 파이프라인은 `Shadow` 와 `GBuffer` 가 같은 웨이브라, 진 쪽이 그림자 맵을 엉뚱하게 그리고 →
+디퍼드 조명이 그림자 없는 값(253.79)을 냈다. 상태를 **리스트 멤버**로 옮기고 인자 셋짜리 생성자를 썼다.
+
+**루트 상수 에뮬레이션도 같은 병이었다.** DX11 에는 루트 상수가 없어 작은 CB(b2)로 흉내 내는데,
+그 버퍼와 CPU 그림자 배열이 **디바이스 전역**이었다. `setIdentityWorld` 가 월드 행렬을 그리로 싣는다 —
+즉 병렬 기록에서 월드 행렬이 서로 덮였다. 둘 다 `D3D11RecordingState` 로 옮겼다.
+
+> **캐시가 여럿이 되면 무효화도 여럿을 돌아야 한다.** 버퍼·PSO 가 사라질 때 전역 캐시 한 곳만 지우던
+> 코드를 `forgetBufferInRecordingStates` / `forgetPipelineStateInRecordingStates` 로 바꿔 살아 있는
+> 리스트를 전부 훑게 했다(`_listLiveCmdList` 는 이미 있었다).
+
+**확인**: `LitColor` 가 **183.984192 로 고정**(12연속 실행, 전부 통과) · `RenderPassGpuTest` 24/24 를
+5연속 · **`EngineTest` 460/460 을 3연속** · `Ninja-Debug` ctest **17/17**(GPU 포함 전체가 처음으로
+통과한다) · 네 백엔드 에디터 실기동 종료 코드 0 · `[Error]` 0건 · Shipping 빌드와 nogpu 5/5.
+
+> **`-gv_gpuCulling=0` · `-gv_drawMerge=0` 로는 안 사라진다** — 실제로 먼저 그걸 의심해 껐다가 그대로
+> 재현되는 것을 보고 방향을 돌렸다. 병렬 기록 자체를 끄면(`_bParallelCommandRecording = 0`) 사라졌고,
+> 그것이 범위를 DX11 기록 경로로 좁혀 준 실험이다.
+>
+> **Bash 로 돌리면 이 테스트가 "멈춘" 것처럼 보인다.** 창을 만드는 테스트라 그 환경에서는 타임아웃으로
+> 끝나 로그가 `[ RUN ]` 에서 잘린다. PowerShell `Start-Process` 로 돌리면 2.7초에 정상적으로 실패/통과가
+> 찍힌다 — 진단은 그쪽으로 해야 한다. 표준출력이 버퍼링돼 크래시 때 **마지막 로그가 통째로 날아가는**
+> 것도 같이 기억해 둘 것(로그 끝 줄이 크래시 지점이 아니다).
+
 ### 2026-09-14 (한 개념에 이름 둘이었다 — 함수 이름 어휘를 정하고 게이트로 못박았다)
 
 `queryAABB` 와 `queryAabb` 가 **같은 트리에** 있었다. `alloc*` 과 `allocate*`, `setup*` 과 `initialize*`,
@@ -367,7 +418,10 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 > **`RenderPassGpuTest.AmbientOcclusionReachesBloom` 은 이 PC 에서 멈춘다 — 이 작업과 무관하다.**
 > `git stash` 로 HEAD 를 그대로 다시 빌드해 같은 자리에서 같은 식으로 멈추는 것을 확인했다.
-> GPU 포함 전체 `EngineTest` 를 돌릴 때만 걸리므로 `-L nogpu` 는 영향이 없다. 원인은 따로 봐야 한다.
+> GPU 포함 전체 `EngineTest` 를 돌릴 때만 걸리므로 `-L nogpu` 는 영향이 없다.
+> → **바로 다음 커밋에서 원인을 찾아 고쳤다** (위 "리스트마다 Deferred Context 를 줬는데 상태 캐시는
+> 하나였다"). 멈춘 것처럼 보인 것은 Bash 환경에서 창을 만드는 테스트가 타임아웃으로 끝났기 때문이고,
+> 진짜 결함은 DX11 병렬 기록의 레이스 둘이었다.
 
 ### 2026-09-14 (게이트가 하나 있었는데 실패할 수가 없었다 — 그리고 린트 폴더를 성격으로 갈랐다)
 
