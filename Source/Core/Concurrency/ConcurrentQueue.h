@@ -10,6 +10,10 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/vector.h"
+
+// `drain( vector<T>& )` 가 쓴다. 본문의 `sw::array` 언급은 주석뿐이라 array.h 만 뺐다 —
+// 토큰만 세고 지웠다가 이 헤더가 자립하지 못하게 만든 적이 있다(단독 컴파일로 확인할 것).
 
 namespace sw
 {

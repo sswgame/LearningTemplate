@@ -111,8 +111,13 @@ namespace sw
         /**
          * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 즉시 `open` 합니다.
          * @param output 소유권을 가져갑니다. 널이면 무시합니다.
+         * @return 실제로 달렸으면 true. **상한(`_s_kMaxOutput`)을 넘으면 false** 이고 `output` 은 그대로
+         *         파괴된다.
+         * @warning 예전에는 반환값이 없었고, 상한을 넘겨도 받아서 `open` 까지 해 놓은 뒤 디스패치에서
+         *          **말없이 빠뜨렸다**(고정 배열이 8개에서 잘렸다). 붙인 자리에서는 보이지 않는 실패다.
+         *          거절하되 **거절했다고 말한다** — 조용히 무시하나 조용히 파괴하나 호출자에게는 같다.
          */
-        void addOutput( unique_ptr<ILogOutput> output );
+        bool addOutput( unique_ptr<ILogOutput> output );
 
         /** @brief 로그 파일이 있는 폴더 경로입니다 — 파일 출력에 물어 답합니다. */
         const string& getLogFolderPath() override;
@@ -148,6 +153,14 @@ namespace sw
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 제 락을 갖습니다. */
         void dispatchToOutputs( const LogRecord& record );
+
+        /**
+         * @brief 달 수 있는 출력 장치의 최대 개수.
+         * @details `dispatchToOutputs` 가 잠금 안에서 포인터만 고정 배열로 떠 와 **락 밖에서** 쓴다
+         *          (느린 파일 I/O 가 콘솔을 막지 않게). 그 배열 크기가 곧 이 상한이다 — 예전에는
+         *          배열 리터럴 `8` 만 있고 `addOutput` 은 그 사실을 몰랐다.
+         */
+        static constexpr uint32 _s_kMaxOutput = 8;
 
         LogWrittenMulticast              _onLogWritten;
         vector<unique_ptr<ILogOutput>>   _listOutput;

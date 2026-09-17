@@ -188,10 +188,21 @@ namespace sw
         return nullptr;
     }
 
-    void Logger::addOutput( unique_ptr<ILogOutput> output )
+    bool Logger::addOutput( unique_ptr<ILogOutput> output )
     {
         if ( output == nullptr )
-            return;
+            return false;
+
+        {
+            // 상한을 **여기서** 본다. 디스패치는 고정 배열로 떠 가므로, 넘겨받아 두면 열어 놓고도
+            // 한 줄도 못 받는 장치가 생긴다 — 그 실패는 붙인 자리에서 보이지 않는다.
+            std::scoped_lock<mutex> lock{ _mutex };
+            if ( _listOutput.size() >= _s_kMaxOutput )
+            {
+                SW_LOG_WARNING( "로그 출력 장치는 최대 %#개입니다. 더 붙일 수 없어 거절합니다.", _s_kMaxOutput );
+                return false;
+            }
+        }
 
         const bool bNeedsOpen = _bInitialized;
         if ( bNeedsOpen )
@@ -199,6 +210,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _mutex };
         _listOutput.push_back( std::move( output ) );
+        return true;
     }
 
     const string& Logger::getLogFolderPath()
@@ -290,7 +302,7 @@ namespace sw
     {
         // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다 — 장치가 저마다 제 락을 갖고 있고,
         // 느린 파일 I/O 가 콘솔을 막지 않게 하는 것이 이 분리의 목적이다.
-        ILogOutput* arrDevice[8]{};
+        ILogOutput* arrDevice[_s_kMaxOutput]{};
         uint32      deviceCount{ 0 };
         {
             std::scoped_lock<mutex> lock{ _mutex };

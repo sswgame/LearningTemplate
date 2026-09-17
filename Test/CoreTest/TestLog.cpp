@@ -439,3 +439,60 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
     SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
+
+namespace
+{
+    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 시험용 출력 장치. */
+    class CountingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        bool open() override { return true; }
+        void close() override {}
+        void write( const sw::LogRecord& ) override { ++_writeCount; }
+
+        uint32 _writeCount{ 0 };
+    };
+} // namespace
+
+/**
+ * @brief [LogTest] 출력 장치 상한을 넘기면 **거절하고 경고한다** (조용히 삼키지 않는다)
+ * @details 디스패치는 잠금 안에서 포인터만 고정 배열로 떠 와 락 밖에서 쓴다 — 느린 파일 I/O 가
+ *          콘솔을 막지 않게 하는 분리다. 그 배열이 8개에서 잘리는데 `addOutput` 은 그 사실을 몰라서,
+ *          9번째부터는 **받아서 `open` 까지 해 놓고 한 줄도 주지 않았다.** 붙인 자리에서는 보이지 않는
+ *          실패다. 이제 상한에서 거절한다 — 그래서 "달린 장치는 반드시 받는다" 가 참이 된다.
+ */
+SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
+{
+    sw::Logger logger;
+    logger.initialize();
+
+    // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 시험용 장치로 채우고, 한 개 더 시도한다.
+    sw::vector<CountingLogOutput*> listAttached;
+    for ( uint32 attempt = 0; attempt < 16; ++attempt )
+    {
+        sw::unique_ptr<CountingLogOutput> output = sw::make_unique<CountingLogOutput>();
+        CountingLogOutput*                pRaw   = output.get();
+        // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 **받아들여진 것만** 들고 있는다.
+        // 반환값이 없던 시절에는 이것을 알 방법이 없어, 죽은 포인터를 들고 있게 된다.
+        if ( logger.addOutput( std::move( output ) ) )
+            listAttached.push_back( pRaw );
+    }
+
+    logger.writeLog( sw::LogLevel::Error, "Test", "Cap", "한 줄", __FILE__, __LINE__ );
+    logger.shutdown();
+
+    // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다. 예전에는 8번째 뒤로 0 이었다.
+    uint32 attachedCount = 0;
+    uint32 silentCount   = 0;
+    for ( CountingLogOutput* pOutput : listAttached )
+    {
+        if ( pOutput->_writeCount > 0 )
+            ++attachedCount;
+        else
+            ++silentCount;
+    }
+
+    SW_EXPECT_TRUE_MSG( attachedCount > 0, "달린 장치가 한 줄도 받지 못했다" );
+    SW_EXPECT_TRUE_MSG( silentCount == 0,
+                        "받아 놓고 한 줄도 주지 않은 출력 장치가 있다 — 상한을 넘겼으면 거절했어야 한다" );
+}
