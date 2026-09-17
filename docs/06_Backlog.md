@@ -143,6 +143,35 @@ cd build/Ninja-Debug/Bin
 - ~~GPU 리소스 생성·삭제를 워커로~~ → **전부 닫았다.** 메시는 옮겼고(큰 이득), 머티리얼 상수버퍼와 PSO 는 **재 보고
   기각했다** — 아래 "재 보고 둘은 기각, 하나는 고쳤다" 참고. 다시 제안하기 전에 그 숫자를 먼저 볼 것.
 
+### 1-0b. `Process` 의 POSIX 구현을 fork/exec 으로 바꾼다 (2026-09-17)
+
+`Source/Core/Process/Posix/PosixProcess.cpp` 는 `popen` 위에 서 있다. `popen` 은 **자식 pid 를 주지
+않으므로** 그 위에서는 할 수 없는 일이 생긴다 — 그래서 한 헤더가 약속하는 것을 두 구현이 절반만
+지키고 있다. 지금은 못 하는 것을 헤더와 코드에 적어 두었고(조용히 다른 답을 내는 것보다 낫다),
+실제로 고치려면 `fork` + `execl("/bin/sh", "sh", "-c", …)` + `pipe` 로 바꿔야 한다.
+
+바꾸면 한 번에 풀리는 것들:
+
+| 함수 | 지금 POSIX | fork/exec 이후 |
+|------|-----------|----------------|
+| `getProcessId` | 언제나 0 | 진짜 pid |
+| `getNativeHandle` | 언제나 nullptr | pid |
+| `terminate` | **불가** (false 를 돌려주고 경고만 남긴다) | `kill(SIGKILL)` + reap |
+| `isRunning` | 자기 깃발만 본다 (자식이 죽어도 true) | `waitpid(WNOHANG)` |
+| `~Process` | `pclose` 라 **자식이 끝날 때까지 막힌다** | 분리 (Windows 와 같아진다) |
+
+**왜 이번에 안 했는가.** 이 PC 에 WSL 이 없어서(`wsl.exe --install` 이 필요하다) 리눅스 빌드를
+돌릴 수 없다. 컴파일도 못 해 본 플랫폼 코드 80줄을 넣는 것은 이 저장소에서 반복해 고쳐 온
+"아무도 빌드하지 않는 플랫폼의 코드" 를 새로 만드는 일이라 하지 않았다. CI 는 리눅스를
+Debug·ASan·Shipping 으로 빌드하고 `-L nogpu` 까지 돌리므로, 바꾸면 검증은 CI 가 해 준다.
+
+**같이 걷을 것**: `Test/CoreTest/TestProcess.cpp` 의 `TerminateProcess` 가 지금 POSIX 에서
+`SW_TEST_SKIP` 이다. pid 가 생기면 건너뛰기를 지우고 양쪽에서 돌린다.
+
+**호출부**: 유일한 실제 사용자는 `ModuleCompiler::cancel()`(`Source/App/Module/ModuleCompiler.cpp:84`)
+이고, 취소는 **전적으로** `terminate` 가 자식을 죽여 파이프가 닫히는 것에 기댄다 — 읽기 루프는
+`_bCancelRequested` 를 보지 않는다. 즉 리눅스에서는 지금 빌드 취소가 동작하지 않는다.
+
 ### 1-1. clang-tidy 지적 — **버전마다 다른 숫자가 나온다**
 
 `py -3 Scripts/lint/report/RunClangTidy.py` 를 쓴다. 두 PC 가 같은 날 같은 코드를 훑고 **"0건" 과 "72건"**
@@ -298,6 +327,58 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-17 (한 헤더가 약속한 것을 두 구현이 절반만 지키고 있었다 — Core/Process)
+
+이 폴더는 **한 인터페이스에 Windows/POSIX 두 구현**이 달린 모양이다. 파일워처 때와 같은 자리에서
+같은 종류가 나왔다 — 두 벌이 갈렸고, 갈린 쪽이 기능을 잃었다.
+
+**1) 종료 코드 259 로 끝난 프로세스가 영원히 "실행 중" 이었다.** `isRunning` 이
+`GetExitCodeProcess` 의 값을 `STILL_ACTIVE` 와 비교하는데 그 상수는 **259** 다. 그러니 259 로 끝난
+자식은 끝나지 않은 것으로 보인다(`cmd /c exit 259` 로 바로 재현된다). 끝났는지는 종료 코드가 아니라
+핸들이 신호 상태인지로 물어야 한다 — `WaitForSingleObject( h, 0 )` 로 바꿨다.
+
+그 과정에서 **테스트가 틀린 계약을 적고 있었다는 것**도 드러났다. `TerminateProcess` 는
+`terminate()` 직후에 `isRunning() == false` 를 기대했는데, `TerminateProcess` 는 **요청**이라
+돌아온 시점에 아직 죽지 않았을 수 있다. 예전 구현에서는 그 사이 `GetExitCodeProcess` 가 이미 종료
+코드를 주어 우연히 맞았다. 이제 테스트가 `waitForExit` 로 기다린 뒤 **종료 코드가 99 인지**까지 본다 —
+그래야 "우리가 죽였다" 와 "ping 이 스스로 끝났다(0)" 가 구별된다. 헤더에도 요청이라고 적었다.
+
+**2) `bIsStdErr` 인자는 언제나 false 였다.** 두 구현 모두 표준 에러를 표준 출력에 **일부러** 합친다
+(Windows 는 `si.hStdError = hStdOutWrite`, POSIX 는 `2>&1`). 빌드 로그처럼 두 스트림이 원래 순서대로
+섞여야 읽히는 것이 이 클래스의 용도이기 때문이고, 그래서 어느 쪽에서 왔는지 가려낼 방법 자체가 없다.
+호출부 둘 다 `(void)bIsStdErr` 로 버리고 있었다. 인자를 지우고 왜 합치는지를 적었다.
+
+**3) POSIX `terminate()` 는 종료가 아니라 UB 였다.** `pclose` 를 부르고 true 를 돌려줬는데, `pclose`
+는 **자식이 스스로 끝날 때까지 기다린다**. 게다가 유일한 실제 호출부인 `ModuleCompiler::cancel()` 은
+UI 스레드에서 `_mutex` 를 쥔 채 이것을 부르고, 그 시각 빌드 스레드는 **같은 `FILE*`** 위에서 `fgets`
+를 돌고 있다 — `pclose` 가 그 스트림을 해제하므로 미정의 동작이고, 그 전에 컴파일이 끝날 때까지 UI 가
+멈춘다. 못 하는 일은 못 한다고 말하게 했다(경고를 남기고 false). 진짜 해결은 fork/exec 이고 "남은 일
+1-0b" 에 조건까지 적어 두었다. 테스트도 POSIX 에서는 `SW_TEST_SKIP` 이다 — 예전에는 **통과했는데**,
+종료해서가 아니라 `sleep 10` 이 스스로 끝나기를 10초 기다려 줬기 때문이다.
+
+**4) 크래시 리포트 본문이 두 벌이었고 이미 갈려 있었다.** `WindowsCrashHandler.cpp` 와
+`PosixCrashHandler.cpp` 의 `reportCrash` 는 90% 가 같은 코드인데, **"어느 파일을 보내면 되는지" 적는
+블록이 Windows 에만 있었다.** 리눅스 사용자는 리포트가 어디 났는지 알 수 없었다. 그 Windows 쪽
+목록마저 미니덤프를 **쓰지 못했을 때도** 적었고(`CreateFileA` 가 실패해도 그냥 돌아왔다), 정작 스택이
+든 `*.stack.txt` 는 빠뜨렸다. 본문을 `CrashContext.cpp` 의 `writeCrashReport` 하나로 모았다 —
+`CrashContext.h` 가 컨텍스트 파일에 대해 이미 "세 플랫폼이 같은 형식을 쓰도록 여기 한 번만 둔다" 고
+적어 둔 그 자리다. `writeMiniDump` 는 이제 성공 여부를 돌려주고, 그 답이 목록에 반영된다.
+
+**살펴보고 손대지 않은 것.** `CallStackCapture` 두 구현은 같은 여섯 함수를 같은 계약으로 채우고
+있고(심볼 핸들 참조 카운트 · 교착 회피 · 컨텍스트에서 걷기), 어긋난 곳이 없었다.
+
+**테스트.** 크래시 경로에는 **테스트가 하나도 없었다** — 다른 모든 것이 실패한 뒤에 도는 코드인데.
+진짜 크래시를 낼 수는 없으므로 리포트를 만드는 조각을 직접 부르는 `CrashReportTest` 넷을 새로 썼다:
+컨텍스트가 파일에 닿는지 · 같은 키 덮어쓰기와 정원 초과 시 안전한 버림 · **보낼 파일 목록** ·
+세션 ID 안정성. 세 번째는 변이 테스트로 확인했다(옛 모양으로 되돌리면 "스택 파일이 목록에 없다" 와
+"쓰지도 않은 미니덤프를 보내라고 적었다" 둘이 깨진다). `ProcessTest` 에는
+`ExitCodeStillActiveIsNotMistakenForRunning` 을 더했다 — 고치기 전 코드에서 실제로 실패한다.
+
+**검증.** Debug·Shipping 빌드 (이번 변경이 다시 컴파일한 TU 는 경고 0) · `ctest -L nogpu` 양쪽 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `ProcessTest` 3 → 4건 · `CrashReportTest` 0 → 4건.
+**전 트리 경고 스윕(`RunBuildWarnings.py`)은 Core 폴더를 다 끝낸 뒤 한 번에 돈다** — 폴더마다 돌리면
+빌드와 겹쳐 엉뚱한 숫자가 나오고(그렇게 한 번 속았다) 폴더당 4분 넘게 든다.
 
 ### 2026-09-17 (플래그를 `X = true` 로 적으면 조용히 버려졌다 — Core/Predefined)
 

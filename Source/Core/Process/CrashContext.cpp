@@ -3,10 +3,14 @@
 #include "Core/Process/CrashContext.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Log/Logger.h"
+#include "Core/Process/CallStackCapture.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
 #include <chrono>
+#include <cstdio>
 #include <random>
 
 #if !defined( SW_PLATFORM_WINDOWS )
@@ -14,6 +18,7 @@
     #include <unistd.h>
 #endif
 
+SW_LOG_CALLER( "CrashHandler" );
 namespace sw
 {
     namespace
@@ -188,6 +193,52 @@ namespace sw
         utf8 arrPath[constant::kMaxBuffer1024]{};
         buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
         writeWholeFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) );
+    }
+
+    void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten )
+    {
+        // 예외 컨텍스트에서 걸어야 디스패치 프레임(KiUserExceptionDispatcher 등)이 앞을 차지하지 않고
+        // 실제 폴트 지점이 [0] 에 온다.
+        DeepCallStack stack{};
+        CallStackCapture::captureFromContext( stack, pPlatformContext );
+
+        StringBuilder<constant::kMaxBuffer8192> builder;
+        builder.append( "\n==================== CRASH ====================\n" );
+        builder.append( ( pReason != nullptr ) ? pReason : "unknown fault" );
+        if ( pFaultAddress != nullptr )
+        {
+            builder.append( "\n  at address: " );
+            builder.append( reinterpret_cast<uint64>( pFaultAddress ) );
+        }
+        builder.append( "\n----------------- call stack ------------------\n" );
+        builder.append( CallStackCapture::symbolize( stack ).c_str() );
+
+        // 무엇을 보내면 되는지 리포트 안에 적는다. 이 목록이 없으면 파일이 어디 났는지 알 수 없고,
+        // 세션 ID 가 이름에 들어 있어 로그와 짝지을 수도 있다.
+        builder.append( "-------------- crash report files -------------\n" );
+        {
+            utf8 arrReportPath[constant::kMaxBuffer1024]{};
+            if ( bMiniDumpWritten )
+            {
+                buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "dmp" );
+                builder.append( arrReportPath );
+                builder.append( "\n" );
+            }
+            buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "txt" );
+            builder.append( arrReportPath );
+            builder.append( "\n" );
+            buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "stack.txt" );
+            builder.append( arrReportPath );
+            builder.append( "\n" );
+        }
+        builder.append( "===============================================\n" );
+
+        // 로거가 비동기일 수 있으므로 stderr 로도 직접 흘려 크래시 직전 기록을 보장한다.
+        std::fputs( builder.c_str(), stderr );
+        std::fflush( stderr );
+        // stderr 는 배포 환경에서 아무도 보지 않는다 — 파일로도 남겨야 고객이 보낼 수 있다.
+        writeCrashStackFile( builder.c_str() );
+        SW_LOG_ERROR( "%#", builder.c_str() );
     }
 
     void CrashHandler::setContextValue( string_view key, string_view value )

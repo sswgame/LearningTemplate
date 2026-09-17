@@ -69,4 +69,19 @@ namespace sw
      * @details stderr 는 배포 환경에서 아무도 보지 않는다 — 파일로 남겨야 고객이 보낼 수 있다.
      */
     SW_API void writeCrashStackFile( const utf8* pStackText );
+
+    /**
+     * @brief 크래시 리포트 본문을 만들어 stderr · 파일 · 로그에 남깁니다.
+     * @details 세 플랫폼이 **같은 리포트**를 내도록 여기 한 번만 둔다. 예전에는 Windows 와 POSIX 가 이
+     *          본문을 각자 적고 있었고 이미 갈려 있었다 — 어느 파일을 보내면 되는지 적는 줄이 Windows
+     *          에만 있어서, 리눅스 사용자는 리포트가 어디 났는지 알 수 없었다.
+     * @param pReason          폴트 이름 (예외 코드명 · 시그널명).
+     * @param pFaultAddress    폴트 주소. 없으면 nullptr.
+     * @param pPlatformContext 스택을 걸어갈 시작점 (Windows 는 `CONTEXT*`). nullptr 이면 현재 스택.
+     * @param bMiniDumpWritten 미니덤프를 **실제로** 남겼는가. 남긴 쪽만 그 경로를 목록에 넣는다.
+     * @note 여기서부터는 **할당이 생긴다** — `symbolize` 가 `sw::string` 을 값으로 돌려주고
+     *       `StringBuilder` 도 8KB 를 넘기면 힙으로 확장한다. 할당 없는 것(미니덤프 · 컨텍스트 파일)은
+     *       호출자가 이 함수보다 **먼저** 써 두어야 한다.
+     */
+    SW_API void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten );
 } // namespace sw

@@ -5,10 +5,8 @@
 #include "Core/Process/CallStackCapture.h"
 #include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
-#include "Core/String/StringBuilder.h"
 
 #include <csignal>
-#include <cstdio>
 
 #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -74,27 +72,9 @@ namespace sw
             writeCrashContextFile( pReason, pFaultAddress, static_cast<uint64>( ::getpid() ),
                                    currentThreadId64Internal() );
 
-            DeepCallStack stack{};
-            CallStackCapture::captureFromContext( stack, pPlatformContext );
-
-            StringBuilder<constant::kMaxBuffer8192> builder;
-            builder.append( "\n==================== CRASH ====================\n" );
-            builder.append( pReason != nullptr ? pReason : "unknown fault" );
-            if ( pFaultAddress != nullptr )
-            {
-                builder.append( "\n  at address: " );
-                builder.append( reinterpret_cast<uint64>( pFaultAddress ) );
-            }
-            builder.append( "\n----------------- call stack ------------------\n" );
-            builder.append( CallStackCapture::symbolize( stack ).c_str() );
-            builder.append( "===============================================\n" );
-
-            // 로거가 비동기일 수 있으므로 stderr 로도 직접 흘려 크래시 직전 기록을 보장한다.
-            std::fputs( builder.c_str(), stderr );
-            std::fflush( stderr );
-            // stderr 는 배포 환경에서 아무도 보지 않는다 — 파일로도 남겨야 고객이 보낼 수 있다.
-            writeCrashStackFile( builder.c_str() );
-            SW_LOG_ERROR( "%#", builder.c_str() );
+            // 본문은 세 플랫폼이 함께 쓴다 (CrashContext.cpp). 미니덤프는 여기서 만들 수 없으므로
+            // 목록에도 넣지 않는다.
+            writeCrashReport( pReason, pFaultAddress, pPlatformContext, false );
 
             s_bReporting.store( false );
         }

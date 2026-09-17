@@ -5,9 +5,6 @@
 #include "Core/Process/CallStackCapture.h"
 #include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
-#include "Core/String/StringBuilder.h"
-
-#include <cstdio>
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -32,14 +29,14 @@ namespace sw
          *          타입은 언리얼의 기본과 같은 정도로 고른다: 스택 + 간접 참조 메모리 + 스레드 정보.
          *          Full 덤프는 수백 MB 가 되어 고객이 보내주지 못한다.
          */
-        void writeMiniDump( EXCEPTION_POINTERS* pInfo )
+        bool writeMiniDump( EXCEPTION_POINTERS* pInfo )
         {
             utf8 arrPath[constant::kMaxBuffer1024]{};
             buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
 
             const HANDLE hFile = CreateFileA( arrPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
             if ( hFile == INVALID_HANDLE_VALUE )
-                return;
+                return false;
 
             MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
             exceptionInfo.ThreadId          = GetCurrentThreadId();
@@ -48,9 +45,10 @@ namespace sw
 
             const MINIDUMP_TYPE dumpType = static_cast<MINIDUMP_TYPE>(
                 MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs | MiniDumpWithThreadInfo | MiniDumpWithHandleData );
-            MiniDumpWriteDump( GetCurrentProcess(), GetCurrentProcessId(), hFile, dumpType,
-                               ( pInfo != nullptr ) ? &exceptionInfo : nullptr, nullptr, nullptr );
+            const BOOL bWritten = MiniDumpWriteDump( GetCurrentProcess(), GetCurrentProcessId(), hFile, dumpType,
+                                                     ( pInfo != nullptr ) ? &exceptionInfo : nullptr, nullptr, nullptr );
             CloseHandle( hFile );
+            return bWritten != FALSE;
         }
 
         /**
@@ -74,42 +72,11 @@ namespace sw
             // 힙이 이미 깨져서 죽은 경우 아래 심볼화가 다시 죽을 수 있다. 그래서 할당이 없는 덤프·컨텍스트를
             // 먼저 확보한다 — 심볼화가 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
             // **이 두 줄을 아래로 옮기지 말 것.**
-            writeMiniDump( pExceptionInfo );
+            const bool bMiniDumpWritten = writeMiniDump( pExceptionInfo );
             writeCrashContextFile( pReason, pFaultAddress, GetCurrentProcessId(), GetCurrentThreadId() );
 
-            // 예외 컨텍스트에서 걸어야 KiUserExceptionDispatcher 등 디스패치 프레임이 앞을
-            // 차지하지 않고 실제 폴트 지점이 [0] 에 온다.
-            DeepCallStack stack{};
-            CallStackCapture::captureFromContext( stack, pPlatformContext );
-
-            StringBuilder<constant::kMaxBuffer8192> builder;
-            builder.append( "\n==================== CRASH ====================\n" );
-            builder.append( pReason != nullptr ? pReason : "unknown fault" );
-            if ( pFaultAddress != nullptr )
-            {
-                builder.append( "\n  at address: " );
-                builder.append( reinterpret_cast<uint64>( pFaultAddress ) );
-            }
-            builder.append( "\n----------------- call stack ------------------\n" );
-            builder.append( CallStackCapture::symbolize( stack ).c_str() );
-            builder.append( "-------------- crash report files -------------\n" );
-            {
-                utf8 arrReportPath[constant::kMaxBuffer1024]{};
-                buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "dmp" );
-                builder.append( arrReportPath );
-                builder.append( "\n" );
-                buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "txt" );
-                builder.append( arrReportPath );
-                builder.append( "\n" );
-            }
-            builder.append( "===============================================\n" );
-
-            // 로거가 비동기일 수 있으므로 stderr 로도 직접 흘려 크래시 직전 기록을 보장한다.
-            std::fputs( builder.c_str(), stderr );
-            std::fflush( stderr );
-            // stderr 는 배포 환경에서 아무도 보지 않는다 — 파일로도 남겨야 고객이 보낼 수 있다.
-            writeCrashStackFile( builder.c_str() );
-            SW_LOG_ERROR( "%#", builder.c_str() );
+            // 본문은 세 플랫폼이 함께 쓴다 (CrashContext.cpp).
+            writeCrashReport( pReason, pFaultAddress, pPlatformContext, bMiniDumpWritten );
 
             s_bReporting.store( false );
         }

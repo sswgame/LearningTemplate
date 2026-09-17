@@ -76,16 +76,16 @@ namespace sw
         return WIFEXITED( status ) ? WEXITSTATUS( status ) : -1;
     }
 
+    // 이 구현은 자식을 죽이지 못한다 — `popen` 이 pid 를 주지 않기 때문이다. 예전에는 `pclose` 를
+    // 불러 놓고 true 를 돌려줬는데, 그것은 종료가 아니라 **자식이 스스로 끝날 때까지 기다리는 것**이고
+    // 게다가 위험하다: 유일한 실제 호출부(`ModuleCompiler::cancel`)는 UI 스레드에서 이것을 부르는데,
+    // 그 시각 빌드 스레드는 같은 `FILE*` 위에서 `fgets` 를 돌고 있다 — `pclose` 가 그 스트림을
+    // 해제하므로 미정의 동작이고, 그 전에 컴파일이 끝날 때까지 `_mutex` 를 쥔 채 UI 가 멈춘다.
+    // 못 하는 일은 못 한다고 말한다. fork/exec 로 바꿔 pid 를 들면 진짜로 죽일 수 있다(백로그).
     bool Process::terminate( int32 exitCode )
     {
         (void)exitCode;
-        if ( _pStdOutRead != nullptr )
-        {
-            pclose( static_cast<FILE*>( _pStdOutRead ) );
-            _pStdOutRead = nullptr;
-            _bRunning    = false;
-            return true;
-        }
+        SW_LOG_WARNING( "terminate() is not supported on this platform (popen gives no child pid)" );
         return false;
     }
 

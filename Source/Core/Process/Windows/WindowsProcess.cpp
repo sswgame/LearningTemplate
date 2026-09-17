@@ -182,10 +182,9 @@ namespace sw
         if ( _pNativeHandle == nullptr )
             return false;
 
-        DWORD exitCode = 0;
-        if ( GetExitCodeProcess( static_cast<HANDLE>( _pNativeHandle ), &exitCode ) != FALSE )
-            return exitCode == STILL_ACTIVE;
-        return false;
+        // 종료 코드로 묻지 않는다. `STILL_ACTIVE` 는 값이 **259** 라, 259 로 끝난 자식은 영원히 실행
+        // 중으로 보인다(`cmd /c exit 259` 로 재현된다). 핸들 자체가 신호 상태인지 묻는 것이 정본이다.
+        return WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT;
     }
 } // namespace sw
 
