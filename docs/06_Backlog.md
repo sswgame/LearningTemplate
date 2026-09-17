@@ -295,6 +295,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (findVariable 이 내주는 포인터가 언제 죽는지 아무도 말하지 않았다 — Core/GlobalVariable)
+
+**`findVariable` 은 맵 내부 주소를 그대로 돌려줬다.** 헤더는 그 사용법을 **권하기까지** 했다 —
+"패널 등에서 반복 후 findVariable 로 편집 가능한 포인터를 얻으려는 용도". 실제로 에디터 패널이
+그렇게 쓴다(`GlobalVariablesPanel.cpp:202`, 이름을 훑어 `vector<GlobalVariableInfo*>` 를 모은 뒤 정렬해
+그린다).
+
+그런데 `sw::unordered_map` 은 **밀집 배열**이다:
+
+- 삽입하면 `_listDenseData` 재할당으로 **모든** 원소가 옮겨 간다.
+- 삭제하면 swap-and-pop 으로 **마지막 원소가** 지운 자리로 옮겨 간다
+  (`unordered_map.h:599-603`, "마지막 원소를 currentIndex 자리로 옮깁니다").
+
+즉 그 포인터가 언제 죽는지 API 어디에도 적혀 있지 않았고, 실제로는 **다른 변수를 하나 등록하기만
+해도** 죽는다. 지금 터지지 않는 이유는 순전히 타이밍이다 — 패널은 한 프레임 안에서만 쓰고,
+모듈 등록·해제(`unregisterVariablesByModule`)는 다른 시점에 메인 스레드에서 돈다.
+
+**값을 `unique_ptr<GlobalVariableInfo>` 로 든다.** 맵이 흔들려도 가리키는 객체는 제자리다. 이제
+"그 변수가 등록 해제될 때까지 유효" 라는 계약을 실제로 지킬 수 있고, 헤더에 그렇게 적었다.
+
+**회귀 테스트로 못박고 변이 테스트로 확인했다** — `FoundPointerSurvivesOtherRegistrations` 는 변수
+하나를 찾아 두고 256개를 더 등록한 뒤 주소가 같은지 본다. 고치기 전 코드로 되돌리면
+"등록을 반복했더니 같은 변수의 주소가 바뀌었다" 로 **실제로 실패한다**.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 · 린트 15/15 ·
+`GlobalVariableTest` 6 → 7건 · 실기동 `-dx12` exit 0 · `[Error]` 0건.
+
 ### 2026-09-17 (Core/Concurrency — 락프리 큐를 "뮤텍스 기반" 이라고 적어 두고 있었다)
 
 **동작 결함은 없었다.** Chase-Lev 덱의 `pop`/`steal` 경합 경로와 SPSC 링의 메모리 순서를 따라가 봤고

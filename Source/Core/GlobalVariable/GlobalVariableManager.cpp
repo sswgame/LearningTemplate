@@ -305,14 +305,14 @@ namespace sw
 
         for ( const auto& [name, info] : _mapVariable )
         {
-            if ( std::holds_alternative<int32>( info._defaultValue ) )
-                pCmdLineManager->addArgument<int32>( { info._name }, false, std::get<int32>( info._defaultValue ), true );
-            else if ( std::holds_alternative<float32>( info._defaultValue ) )
-                pCmdLineManager->addArgument<float32>( { info._name }, false, std::get<float32>( info._defaultValue ), true );
-            else if ( std::holds_alternative<bool>( info._defaultValue ) )
-                pCmdLineManager->addArgument<bool>( { info._name }, false, std::get<bool>( info._defaultValue ), true );
-            else if ( std::holds_alternative<string>( info._defaultValue ) )
-                pCmdLineManager->addArgument<string>( { info._name }, false, string( std::get<string>( info._defaultValue ) ), true );
+            if ( std::holds_alternative<int32>( info->_defaultValue ) )
+                pCmdLineManager->addArgument<int32>( { info->_name }, false, std::get<int32>( info->_defaultValue ), true );
+            else if ( std::holds_alternative<float32>( info->_defaultValue ) )
+                pCmdLineManager->addArgument<float32>( { info->_name }, false, std::get<float32>( info->_defaultValue ), true );
+            else if ( std::holds_alternative<bool>( info->_defaultValue ) )
+                pCmdLineManager->addArgument<bool>( { info->_name }, false, std::get<bool>( info->_defaultValue ), true );
+            else if ( std::holds_alternative<string>( info->_defaultValue ) )
+                pCmdLineManager->addArgument<string>( { info->_name }, false, string( std::get<string>( info->_defaultValue ) ), true );
         }
     }
 
@@ -330,50 +330,50 @@ namespace sw
 
         for ( auto& [name, info] : _mapVariable )
         {
-            if ( info._pData == nullptr )
+            if ( info->_pData == nullptr )
                 continue;
-            if ( info._type == GlobalVariableType::Int32 || info._type == GlobalVariableType::Enum )
+            if ( info->_type == GlobalVariableType::Int32 || info->_type == GlobalVariableType::Enum )
             {
                 int32 val{ 0 };
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    if ( info._type == GlobalVariableType::Enum )
-                        GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, val );
+                    if ( info->_type == GlobalVariableType::Enum )
+                        GlobalVariableInternal::writeEnumValue( info->_pData, info->_typeSize, val );
                     else
-                        *static_cast<int32*>( info._pData ) = val;
+                        *static_cast<int32*>( info->_pData ) = val;
 
-                    if ( info._onValueChanged.isBound() )
-                        info._onValueChanged( &info );
+                    if ( info->_onValueChanged.isBound() )
+                        info->_onValueChanged( info.get() );
                 }
             }
-            else if ( info._type == GlobalVariableType::Float )
+            else if ( info->_type == GlobalVariableType::Float )
             {
                 float32 val{ 0.0f };
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    *static_cast<float32*>( info._pData ) = val;
-                    if ( info._onValueChanged.isBound() )
-                        info._onValueChanged( &info );
+                    *static_cast<float32*>( info->_pData ) = val;
+                    if ( info->_onValueChanged.isBound() )
+                        info->_onValueChanged( info.get() );
                 }
             }
-            else if ( info._type == GlobalVariableType::Boolean )
+            else if ( info->_type == GlobalVariableType::Boolean )
             {
                 bool val{ false };
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    *static_cast<bool*>( info._pData ) = val;
-                    if ( info._onValueChanged.isBound() )
-                        info._onValueChanged( &info );
+                    *static_cast<bool*>( info->_pData ) = val;
+                    if ( info->_onValueChanged.isBound() )
+                        info->_onValueChanged( info.get() );
                 }
             }
-            else if ( info._type == GlobalVariableType::String )
+            else if ( info->_type == GlobalVariableType::String )
             {
                 string val;
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    *static_cast<string*>( info._pData ) = std::move( val );
-                    if ( info._onValueChanged.isBound() )
-                        info._onValueChanged( &info );
+                    *static_cast<string*>( info->_pData ) = std::move( val );
+                    if ( info->_onValueChanged.isBound() )
+                        info->_onValueChanged( info.get() );
                 }
             }
         }
@@ -399,17 +399,19 @@ namespace sw
 
         string strName{ name };
 
-        GlobalVariableInfo info;
-        info._name         = strName;
-        info._type         = type;
-        info._pData        = pData;
-        info._defaultValue = defaultValue;
-        info._description  = string{ description };
-        info._enumType     = string{ enumType };
-        info._moduleName   = string{ moduleName };
-        info._typeSize     = typeSize;
+        // 맵이 아니라 **이 객체**가 주소의 주인이다 — 맵이 재할당돼도 findVariable 이 내준 포인터가
+        // 그대로 유효하려면 값이 밀집 배열 안에 있으면 안 된다.
+        unique_ptr<GlobalVariableInfo> pInfo = make_unique<GlobalVariableInfo>();
+        pInfo->_name                         = strName;
+        pInfo->_type                         = type;
+        pInfo->_pData                        = pData;
+        pInfo->_defaultValue                 = defaultValue;
+        pInfo->_description                  = string{ description };
+        pInfo->_enumType                     = string{ enumType };
+        pInfo->_moduleName                   = string{ moduleName };
+        pInfo->_typeSize                     = typeSize;
 
-        const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( info ) );
+        const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
 
         // 모듈(EditorModule·SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기 온다.
         // 그 값은 CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다 — 이것이
@@ -421,9 +423,9 @@ namespace sw
             string pendingValue;
             if ( _pCmdLineManager->findPendingGlobalValue( strName, pendingValue ) )
             {
-                iter->second.setValueFromString( pendingValue );
-                if ( iter->second._onValueChanged.isBound() )
-                    iter->second._onValueChanged( &iter->second );
+                iter->second->setValueFromString( pendingValue );
+                if ( iter->second->_onValueChanged.isBound() )
+                    iter->second->_onValueChanged( iter->second.get() );
             }
         }
 
@@ -461,7 +463,7 @@ namespace sw
         string                              strModule{ moduleName };
         for ( auto it = _mapVariable.begin(); it != _mapVariable.end(); )
         {
-            if ( it->second._moduleName == strModule )
+            if ( it->second->_moduleName == strModule )
                 it = _mapVariable.erase( it );
             else
                 ++it;
@@ -504,48 +506,48 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             for ( auto& [name, info] : _mapVariable )
             {
-                if ( info._pData == nullptr )
+                if ( info->_pData == nullptr )
                     continue;
 
-                switch ( info._type )
+                switch ( info->_type )
                 {
                     case GlobalVariableType::Boolean:
                     {
-                        if ( std::holds_alternative<bool>( info._defaultValue ) )
-                            *static_cast<bool*>( info._pData ) = std::get<bool>( info._defaultValue );
+                        if ( std::holds_alternative<bool>( info->_defaultValue ) )
+                            *static_cast<bool*>( info->_pData ) = std::get<bool>( info->_defaultValue );
                         break;
                     }
                     case GlobalVariableType::Int32:
                     case GlobalVariableType::Enum:
                     {
-                        if ( std::holds_alternative<int32>( info._defaultValue ) )
+                        if ( std::holds_alternative<int32>( info->_defaultValue ) )
                         {
-                            const int32 val = std::get<int32>( info._defaultValue );
-                            if ( info._type == GlobalVariableType::Enum )
-                                GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, val );
+                            const int32 val = std::get<int32>( info->_defaultValue );
+                            if ( info->_type == GlobalVariableType::Enum )
+                                GlobalVariableInternal::writeEnumValue( info->_pData, info->_typeSize, val );
                             else
-                                *static_cast<int32*>( info._pData ) = val;
+                                *static_cast<int32*>( info->_pData ) = val;
                         }
                         break;
                     }
                     case GlobalVariableType::Float:
                     {
-                        if ( std::holds_alternative<float32>( info._defaultValue ) )
-                            *static_cast<float32*>( info._pData ) = std::get<float32>( info._defaultValue );
+                        if ( std::holds_alternative<float32>( info->_defaultValue ) )
+                            *static_cast<float32*>( info->_pData ) = std::get<float32>( info->_defaultValue );
                         break;
                     }
                     case GlobalVariableType::String:
                     {
-                        if ( std::holds_alternative<string>( info._defaultValue ) )
-                            *static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
+                        if ( std::holds_alternative<string>( info->_defaultValue ) )
+                            *static_cast<string*>( info->_pData ) = std::get<string>( info->_defaultValue );
                         break;
                     }
                     default:
                         break;
                 }
 
-                if ( info._onValueChanged.isBound() )
-                    listPendingCallback.push_back( { info._onValueChanged, &info } );
+                if ( info->_onValueChanged.isBound() )
+                    listPendingCallback.push_back( { info->_onValueChanged, info.get() } );
             }
         } // unique_lock 해제
 
@@ -566,7 +568,7 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         const auto                          iter = _mapVariable.find( name );
         if ( iter != _mapVariable.end() )
-            return const_cast<GlobalVariableInfo*>( &iter->second );
+            return iter->second.get();
         return nullptr;
     }
 

@@ -117,7 +117,16 @@ namespace sw
         /** @brief 모든 변수를 기본값으로 초기화합니다. */
         void resetAllToDefault();
 
-        /** @brief 이름으로 전역 변수 정보를 찾습니다. */
+        /**
+         * @brief 이름으로 전역 변수 정보를 찾습니다.
+         * @details **돌려준 포인터는 그 변수가 등록 해제될 때까지 살아 있다.** 다른 변수를 등록하거나
+         *          해제해도 옮겨 다니지 않는다 — 그래서 패널처럼 "이름을 훑고 포인터를 모아 두었다가
+         *          한 번에 그리는" 방식이 안전하다.
+         * @note 그 보장이 맵에서 오지 않는다는 점이 중요하다. `sw::unordered_map` 은 밀집 배열이라
+         *       삽입하면 재할당으로 **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨
+         *       간다. 그래서 값을 `unique_ptr` 로 든다 — 맵이 흔들려도 가리키는 객체는 제자리다.
+         *       예전에는 `GlobalVariableInfo` 를 맵에 값으로 담고 그 주소를 그대로 내줬다.
+         */
         GlobalVariableInfo* findVariable( string_view name );
 
         /** @brief 등록된 변수 이름 목록을 스냅샷으로 반환합니다. (thread-safe) */
@@ -127,8 +136,11 @@ namespace sw
         uint32 getVariableCount() const;
 
     private:
-        mutable std::shared_mutex                 _mutex;
-        unordered_map<string, GlobalVariableInfo> _mapVariable;
+        mutable std::shared_mutex _mutex;
+        /**
+         * @brief 이름 → 변수. **값이 `unique_ptr` 인 이유는 주소 안정성**이다(`findVariable` 참고).
+         */
+        unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable;
         /**
          * @brief `registerToCommandLine` 이 물려 준 파서. 늦게 등록되는 변수의 보류값을 여기서 꺼낸다.
          * @details 소유하지 않는다 — 둘 다 `EngineLoop` 이 들고 있고, 선언 순서상 이 매니저가 먼저

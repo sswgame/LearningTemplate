@@ -192,3 +192,42 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
 
     sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 }
+
+/**
+ * @brief [GlobalVariableTest] `findVariable` 이 준 포인터는 **다른 변수를 등록·해제해도 살아 있다**
+ * @details 패널은 이름을 훑어 포인터를 모아 두었다가 한 번에 그린다 — 헤더가 권하는 사용법이다.
+ *          그런데 `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로 **모든** 원소가, 삭제하면
+ *          swap-and-pop 으로 **마지막 원소가** 옮겨 간다. 값을 그대로 담고 그 주소를 내주면 그 포인터가
+ *          조용히 다른 변수를 가리키거나 죽은 자리를 가리킨다. 값을 `unique_ptr` 로 들어 막았다.
+ */
+SW_TEST_CASE( GlobalVariableTest, FoundPointerSurvivesOtherRegistrations )
+{
+    sw::GlobalVariableManager gvm;
+
+    int32 watched{ 11 };
+    SW_ASSERT_TRUE( gvm.registerVariable( "gv_watched", sw::GlobalVariableType::Int32, &watched, int32{ 11 }, "" ) );
+
+    sw::GlobalVariableInfo* pWatched = gvm.findVariable( "gv_watched" );
+    SW_ASSERT_NOT_NULL( pWatched );
+
+    // 맵을 여러 번 재할당시킨다 — 값이 밀집 배열 안에 있었다면 pWatched 는 여기서 죽는다.
+    constexpr size_t  kFillCount = 256;
+    sw::vector<int32> listStorage( kFillCount, 0 );
+    for ( size_t fillIndex = 0; fillIndex < kFillCount; ++fillIndex )
+    {
+        const sw::string name = sw::string{ "gv_filler" } + sw::to_string( fillIndex );
+        SW_ASSERT_TRUE( gvm.registerVariable( name, sw::GlobalVariableType::Int32, &listStorage[fillIndex], int32{ 0 }, "" ) );
+    }
+
+    SW_EXPECT_TRUE_MSG( pWatched == gvm.findVariable( "gv_watched" ),
+                        "등록을 반복했더니 같은 변수의 주소가 바뀌었다 — 먼저 받아 둔 포인터가 죽는다" );
+    SW_EXPECT_STREQ( "gv_watched", pWatched->_name.c_str() );
+    SW_EXPECT_EQUAL( 11, pWatched->getValueAsInt() );
+
+    // 모듈 언로드가 하는 일 — 다른 변수들을 걷어낸다. swap-and-pop 이 도는 자리다.
+    gvm.unregisterVariablesByModule( "" );
+
+    // 위 등록들은 모듈 이름이 비어 있어 전부 걷힌다. 걷힌 뒤에는 없어야 한다.
+    SW_EXPECT_TRUE( gvm.findVariable( "gv_watched" ) == nullptr );
+    SW_EXPECT_EQUAL( 0u, gvm.getVariableCount() );
+}
