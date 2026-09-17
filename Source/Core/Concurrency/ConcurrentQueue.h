@@ -1,14 +1,15 @@
 /**
  * @file ConcurrentQueue.h
- * @brief 뮤텍스 기반 스레드 안전 큐
+ * @brief 고정 용량 MPMC 락프리 큐 (Vyukov 시퀀스 넘버 링).
+ * @note 파일 주석이 오래 **"뮤텍스 기반"** 이라고 되어 있었는데 이 파일에는 뮤텍스가 한 줄도 없다.
+ *       둘 중 무엇을 쓸지 고르는 사람이 정반대로 읽는다 — 이 큐는 막히지 않고, 대신 **가득 차면
+ *       `enqueue` 가 false 를 돌려준다**(그 처리는 호출부 몫이다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/array.h"
-#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -21,8 +22,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) ConcurrentQueue — MPMC 시퀀스 넘버 링. enqueue/dequeue 가 가득/빈 면 false
     // ------------------------------------------------------------------------------
-    template <typename T, uint32 Capacity = 1024>
     /** @brief 고정 용량 다중 생산자/다중 소비자 큐입니다. */
+    template <typename T, uint32 Capacity = 1024>
     class ConcurrentQueue
     {
         static_assert( ( Capacity & ( Capacity - 1 ) ) == 0, "Capacity must be a power of 2!" );

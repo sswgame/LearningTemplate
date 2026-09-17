@@ -23,18 +23,13 @@ namespace sw
     // 1) LockFreeQueue — SPSC 링 버퍼. push 한 스레드, pop 한 스레드
     //    MPMC 는 ConcurrentQueue
     // ------------------------------------------------------------------------------
-    template <typename T, uint32 Capacity = 1024>
     /** @brief 고정 용량 SPSC lock-free 링 버퍼입니다. */
+    template <typename T, uint32 Capacity = 1024>
     class LockFreeQueue
     {
         static_assert( ( Capacity & ( Capacity - 1 ) ) == 0, "Capacity must be a power of 2!" );
 
     public:
-        /** @brief head/tail 을 0으로 둡니다. */
-        LockFreeQueue()
-            : _head{ 0 }
-            , _tail{ 0 } {}
-
         /** @brief 버퍼만 버리며 락은 없습니다. */
         ~LockFreeQueue() = default;
 
@@ -101,6 +96,9 @@ namespace sw
         // SPSC 환경에서 push(생산자)와 pop(소비자)이 서로 다른 스레드에서 _buffer에 동시 접근할 때
         // sw::array의 DataRaceDetector 오탐(Data Race Error)을 방지하기 위해 std::array를 사용합니다.
         std::array<T, Capacity> _buffer{};
+        // 값은 여기 한 곳에만 둔다 — 예전에는 생성자에도 같은 0 이 적혀 있었다(AGENTS 의
+        // "초기값의 집은 하나" 규칙). 생성자가 이기므로 헤더만 고치면 조용히 안 먹는다.
+        // 소유 스레드와 소비 스레드가 서로의 캐시라인을 무효화하지 않도록 따로 앉힌다.
         alignas( 64 ) atomic<uint32> _head{ 0 };
         alignas( 64 ) atomic<uint32> _tail{ 0 };
     };
