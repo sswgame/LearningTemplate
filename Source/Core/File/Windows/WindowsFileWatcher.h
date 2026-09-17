@@ -34,8 +34,6 @@ namespace sw
 
         /** @brief 디렉터리 핸들·IOCP를 열고 워커를 띄웁니다. */
         bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-        /** @brief 워커 큐에서 이벤트를 꺼내 outListEvent 에 담습니다. */
-        uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) override;
         /** @brief IOCP를 깨우고 워커를 멈춘 뒤 핸들을 닫습니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true입니다. */
@@ -45,19 +43,10 @@ namespace sw
         /** @brief ReadDirectoryChangesW 완료를 이벤트 큐에 넣습니다. */
         void workerThreadMain();
 
-        HANDLE                  _hDirectory;
-        HANDLE                  _hCompletionPort;
-        std::thread             _workerThread;
-        mutex                   _eventMutex;
-        string                  _directoryPath;
-        vector<FileChangeEvent> _listEventQueue;
-        /**
-         * @brief 큐가 상한에 걸려 개별 이벤트를 버렸다는 표시입니다.
-         * @details 상한에 걸리면 개별 이벤트 대신 합성 리스캔(파일 이름이 빈 Modified) 하나로 접는다 —
-         *          `ReadDirectoryChangesW` 버퍼 오버플로 때 이미 쓰던 방식과 같고, Linux 워처와도 같다.
-         *          예전에는 Windows 만 상한이 없어 폴링이 밀리면 큐가 끝없이 자랐다.
-         */
-        bool         _bEventQueueOverflowed;
+        // 큐·뮤텍스·감시 경로·오버플로 표시는 IFileWatcher 가 든다 — 셋이 같아야 하는 것들이다.
+        HANDLE       _hDirectory;
+        HANDLE       _hCompletionPort;
+        std::thread  _workerThread;
         atomic<bool> _bIsWatching;
         bool         _bRecursive;
     };

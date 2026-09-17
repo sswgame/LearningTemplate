@@ -18,6 +18,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/PlatformFileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/GlobalVariable/GlobalVariableManager.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Log/ConsoleLogOutput.cpp"

@@ -19,10 +19,6 @@ namespace sw
         : _hDirectory{ nullptr }
         , _hCompletionPort{ nullptr }
         , _workerThread{}
-        , _eventMutex{}
-        , _directoryPath{}
-        , _listEventQueue{}
-        , _bEventQueueOverflowed{ false }
         , _bIsWatching{ false }
         , _bRecursive{ true }
     {
@@ -72,30 +68,6 @@ namespace sw
 
         SW_LOG_INFO( "Started watching directory: %#", directoryPath );
         return true;
-    }
-
-    uint32 WindowsFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
-    {
-        std::scoped_lock<mutex> lock{ _eventMutex };
-        uint32                  count = static_cast<uint32>( _listEventQueue.size() );
-        if ( count > 0 )
-        {
-            outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
-            _listEventQueue.clear();
-        }
-
-        if ( _bEventQueueOverflowed )
-        {
-            // 버린 것이 있었다 — 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
-            // 파일 이름이 빈 Modified 가 그 약속이다(버퍼 오버플로 때와 같은 모양).
-            FileChangeEvent rescanEvent{};
-            rescanEvent._action    = FileWatcherAction::Modified;
-            rescanEvent._directory = _directoryPath;
-            outListEvent.push_back( std::move( rescanEvent ) );
-            _bEventQueueOverflowed = false;
-            return count + 1;
-        }
-        return count;
     }
 
     void WindowsFileWatcher::stopWatching()
@@ -176,78 +148,54 @@ namespace sw
             {
                 if ( bytesTransferred == 0 )
                 {
-                    // 버퍼 오버플로우 발생 시: 누락 방지를 위해 감시 디렉터리에 대한 Modified 이벤트를 발생시켜 리스캔 유도
-                    std::scoped_lock<mutex> lock{ _eventMutex };
-                    FileChangeEvent         eventObj;
-                    eventObj._directory = _directoryPath;
-                    eventObj._filename  = "";
-                    eventObj._action    = FileWatcherAction::Modified;
-                    if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
-                        _bEventQueueOverflowed = true;
-                    else
-                        _listEventQueue.push_back( std::move( eventObj ) );
+                    // 버퍼 오버플로우 발생 시: 누락 방지를 위해 감시 디렉터리에 대한 Modified 이벤트를
+                    // 발생시켜 리스캔 유도. 파일 이름이 비면 "전부 다시 봐라" 라는 약속이다.
+                    pushChange( FileWatcherAction::Modified, _directoryPath, {} );
                     continue;
                 }
 
                 FILE_NOTIFY_INFORMATION* pNotify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>( buffer.data() );
-
-                std::scoped_lock<mutex> lock{ _eventMutex };
 
                 while ( pNotify )
                 {
                     wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
                     string  fileName = StringUtil::utf16ToUtf8( wFileName.c_str() );
 
-                    FileChangeEvent eventObj;
-                    eventObj._directory = _directoryPath;
-                    eventObj._filename  = fileName;
-
+                    FileWatcherAction action = FileWatcherAction::Modified;
                     switch ( pNotify->Action )
                     {
                         case FILE_ACTION_ADDED:
                         {
-                            eventObj._action = FileWatcherAction::Added;
+                            action = FileWatcherAction::Added;
                             break;
                         }
                         case FILE_ACTION_REMOVED:
                         {
-                            eventObj._action = FileWatcherAction::Removed;
-                            break;
-                        }
-                        case FILE_ACTION_MODIFIED:
-                        {
-                            eventObj._action = FileWatcherAction::Modified;
+                            action = FileWatcherAction::Removed;
                             break;
                         }
                         case FILE_ACTION_RENAMED_OLD_NAME:
                         {
-                            eventObj._action = FileWatcherAction::RenamedOldName;
+                            action = FileWatcherAction::RenamedOldName;
                             break;
                         }
                         case FILE_ACTION_RENAMED_NEW_NAME:
                         {
-                            eventObj._action = FileWatcherAction::RenamedNewName;
+                            action = FileWatcherAction::RenamedNewName;
                             break;
                         }
+                        case FILE_ACTION_MODIFIED:
                         default:
                         {
-                            eventObj._action = FileWatcherAction::Modified;
+                            action = FileWatcherAction::Modified;
                             break;
                         }
                     }
 
-                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 온다 — 둘 다 Modified 로 접히므로 같은 파일에
-                    // 같은 동작이 연달아 들어오면 하나로 합친다(Linux 워처와 같다). 큐 압력이 그만큼 준다.
-                    const bool bDuplicate = _listEventQueue.empty() == false &&
-                                            _listEventQueue.back()._action == eventObj._action &&
-                                            _listEventQueue.back()._filename == eventObj._filename;
-                    if ( bDuplicate == false )
-                    {
-                        if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
-                            _bEventQueueOverflowed = true;
-                        else
-                            _listEventQueue.push_back( eventObj );
-                    }
+                    // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다.
+                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 접히므로,
+                    // 그 중복을 걸러 주는 것도 거기다(세 플랫폼이 같은 규칙을 쓴다).
+                    pushChange( action, _directoryPath, fileName );
 
                     if ( pNotify->NextEntryOffset == 0 )
                         break;

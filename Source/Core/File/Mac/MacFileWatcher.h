@@ -28,8 +28,6 @@ namespace sw
 
         /** @brief FSEventStream을 열고 런루프 워커를 띄웁니다. */
         bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-        /** @brief 워커 큐에서 이벤트를 꺼내 outListEvent 에 담습니다. */
-        uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) override;
         /** @brief 런루프를 멈추고 스트림을 해제합니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true입니다. */
@@ -38,22 +36,16 @@ namespace sw
     private:
         /** @brief CFRunLoop에서 FSEvents를 돌립니다. */
         void workerThreadMain();
-        /** @brief 뮤텍스 아래에서 변경 이벤트를 큐에 넣습니다. */
-        void pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name );
         /** @brief FSEvents 콜백에서 경로를 큐에 넣습니다. */
         void        handlePaths( size_t numEvents, void* pEventPaths, const uint32* pFlags );
         static void streamCallback( const void* pStreamRef, void* pClientCallBackInfo, size_t numEvents, void* pEventPaths,
                                     const uint32* pEventFlags, const uint64* pEventIds );
 
     private:
-        void*                   _pStream;  ///< FSEventStreamRef
-        void*                   _pRunLoop; ///< CFRunLoopRef
-        std::thread             _workerThread;
-        mutex                   _eventMutex;
-        string                  _directoryPath;
-        vector<FileChangeEvent> _listEventQueue;
-        /** @brief 큐 상한에 걸려 개별 이벤트를 버렸다는 표시입니다(Windows·Linux 와 같은 약속). */
-        bool         _bEventQueueOverflowed;
+        // 큐·뮤텍스·감시 경로·오버플로 표시는 IFileWatcher 가 든다 — 셋이 같아야 하는 것들이다.
+        void*        _pStream;  ///< FSEventStreamRef
+        void*        _pRunLoop; ///< CFRunLoopRef
+        std::thread  _workerThread;
         atomic<bool> _bIsWatching;
         bool         _bRecursive;
     };

@@ -295,6 +295,36 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (파일워처 큐가 세 벌이었고, 아무도 빌드하지 않는 macOS 쪽만 규칙이 빠져 있었다)
+
+`Core/File` 은 3,022줄 17파일인데 대부분 플랫폼 3분할이다. **Windows 는 로컬에서, Linux 는 CI 에서
+빌드되지만 macOS 는 어디서도 컴파일되지 않는다** — 그러니 썩는다면 거기다. 실제로 거기였다.
+
+**1) `pollEvents` 가 세 구현에 글자까지 똑같이 있었다.** 큐를 비우고, 넘쳤으면 합성 리스캔 하나를
+덧붙이고, 표시를 내린다 — Windows·Linux·macOS 가 같은 함수를 각자 들고 있었다.
+
+**2) 큐에 넣는 쪽은 이미 어긋나 있었다.** Windows 와 Linux 는 "직전과 같은 (동작, 파일)이면 접는다" 를
+하는데(저장 한 번에 OS 가 알림을 둘씩 준다 — 리눅스의 IN_MODIFY+IN_CLOSE_WRITE, 윈도우의
+LAST_WRITE+SIZE) **macOS 의 `pushEvent` 에는 그 규칙이 없었다.** Windows 주석이 "(Linux 워처와 같다)"
+라고 의도를 밝히고 있는데도 그렇다. 같은 부하에서 macOS 만 큐가 먼저 차고 리스캔이 잦아진다.
+
+**3) 그래서 큐를 `IFileWatcher` 로 올렸다.** `_directoryPath` · `_eventMutex` · `_listEventQueue` ·
+`_bEventQueueOverflowed` 는 세 구현이 **똑같이** 선언하던 것이고, `pollEvents` 와 새 `pushChange`
+(상한 · 오버플로 표시 · 연속 중복 접기)는 이제 한 번만 구현된다. 플랫폼 파일에는 그 OS 만 아는 것
+(디렉터리 핸들 · IOCP · inotify · FSEvents 런루프)만 남는다. **컴파일되지 않는 플랫폼일수록 코드가
+적어야 한다** 는 것이 이 정리의 근거다.
+
+**4) 테스트가 아예 없었다.** 이제 로직이 한 곳이라 **플랫폼과 무관하게** 검사할 수 있다 —
+`FileWatcherTest` 는 OS 를 전혀 건드리지 않고 `IFileWatcher` 를 상속한 스텁으로 규칙만 본다:
+연속 중복 접기 · 연속이 아니면 유지 · 상한에서 합성 리스캔 하나로 접기 · 리스캔은 한 번만.
+
+**검증 범위를 분명히 해 둔다.** Windows 는 로컬에서 빌드·테스트했고, **Linux 는 CI 가 빌드한다**
+(`CI-Debug` ubuntu). **macOS 는 이번에도 아무도 컴파일하지 않는다** — Mac 파일의 변경은 정독으로만
+확인했다. 다만 이 정리로 Mac 전용 코드가 줄었으므로 확인되지 않는 표면 자체가 작아졌다.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5(연속 4회 안정) · Shipping 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · 헤더 9개 자립 · `FileWatcherTest` 3건 신규(0 → 3).
+
 ### 2026-09-17 (큐에 남은 이벤트를 파괴하지 않고 버렸다 — Core/Event)
 
 **1) 실제 결함: `clear()` 와 소멸자가 큐에 남은 이벤트의 소멸자를 부르지 않았다.**

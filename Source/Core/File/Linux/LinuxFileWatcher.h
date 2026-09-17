@@ -33,8 +33,6 @@ namespace sw
 
         /** @brief inotify/eventfd 를 열고 워커를 띄웁니다. */
         bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-        /** @brief 워커 큐에서 이벤트를 꺼내 outListEvent 에 담습니다. */
-        uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) override;
         /** @brief eventfd 로 워커를 깨운 뒤 watch 를 모두 뗍니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true입니다. */
@@ -49,22 +47,18 @@ namespace sw
         bool addWatchDirectory( string_view directoryPath );
         /** @brief wd 를 해제하고 맵에서 지웁니다. */
         void removeWatch( int32 watchDescriptor );
-        /** @brief 뮤텍스 아래에서 변경 이벤트를 큐에 넣습니다. */
-        void pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name );
+        /** @brief 절대 경로를 감시 루트 기준 상대 경로로 바꿔 큐에 넣습니다. */
+        void pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name );
 
     private:
-        std::thread             _workerThread;
-        mutex                   _eventMutex;
-        mutex                   _watchMutex;
-        string                  _directoryPath;
-        vector<FileChangeEvent> _listEventQueue;
-        map<int32, string>      _mapWatchDescriptorToPath;
-        int32                   _inotifyFd;
-        int32                   _wakeFd;
-        atomic<bool>            _bIsWatching;
-        bool                    _bRecursive;
-        /** @brief 큐가 상한에 걸려 이벤트를 버렸는가. 다음 pollEvents 가 합성 rescan 하나로 알린다. */
-        bool _bEventQueueOverflowed;
+        // 큐·뮤텍스·감시 경로·오버플로 표시는 IFileWatcher 가 든다 — 셋이 같아야 하는 것들이다.
+        std::thread        _workerThread;
+        mutex              _watchMutex;
+        map<int32, string> _mapWatchDescriptorToPath;
+        int32              _inotifyFd;
+        int32              _wakeFd;
+        atomic<bool>       _bIsWatching;
+        bool               _bRecursive;
     };
 } // namespace sw
 

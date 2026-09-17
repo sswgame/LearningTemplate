@@ -18,10 +18,6 @@ namespace sw
         : _pStream{ nullptr }
         , _pRunLoop{ nullptr }
         , _workerThread{}
-        , _eventMutex{}
-        , _directoryPath{}
-        , _listEventQueue{}
-        , _bEventQueueOverflowed{ false }
         , _bIsWatching{ false }
         , _bRecursive{ true }
     {
@@ -64,7 +60,9 @@ namespace sw
             else if ( flag & kFSEventStreamEventFlagItemRenamed )
                 action = FileWatcherAction::RenamedNewName;
 
-            pushEvent( action, dir, name );
+            // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다 —
+            // 예전에는 macOS 만 중복 접기가 빠져 있었다.
+            pushChange( action, dir, name );
         }
     }
 
@@ -134,29 +132,6 @@ namespace sw
         FSEventStreamInvalidate( stream );
     }
 
-    uint32 MacFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
-    {
-        std::scoped_lock<mutex> lock{ _eventMutex };
-        const uint32            count = static_cast<uint32>( _listEventQueue.size() );
-        if ( count > 0 )
-        {
-            outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
-            _listEventQueue.clear();
-        }
-
-        if ( _bEventQueueOverflowed )
-        {
-            // 개별 변경은 이미 잃었다 — 파일 이름이 빈 Modified 하나로 "전부 다시 훑어라" 를 알린다.
-            FileChangeEvent rescanEvent{};
-            rescanEvent._action    = FileWatcherAction::Modified;
-            rescanEvent._directory = _directoryPath;
-            outListEvent.push_back( std::move( rescanEvent ) );
-            _bEventQueueOverflowed = false;
-            return count + 1;
-        }
-        return count;
-    }
-
     void MacFileWatcher::stopWatching()
     {
         if ( _bIsWatching == false && _workerThread.joinable() == false )
@@ -180,20 +155,6 @@ namespace sw
         _listEventQueue.clear();
     }
 
-    void MacFileWatcher::pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name )
-    {
-        FileChangeEvent ev;
-        ev._action    = action;
-        ev._directory = string{ absoluteDirectory };
-        ev._filename  = string{ name };
-        std::scoped_lock<mutex> lock{ _eventMutex };
-        if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
-        {
-            _bEventQueueOverflowed = true;
-            return;
-        }
-        _listEventQueue.push_back( std::move( ev ) );
-    }
 } // namespace sw
 
 #endif

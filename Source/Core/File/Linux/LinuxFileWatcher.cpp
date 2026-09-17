@@ -40,16 +40,12 @@ namespace sw
 
     LinuxFileWatcher::LinuxFileWatcher()
         : _workerThread{}
-        , _eventMutex{}
         , _watchMutex{}
-        , _directoryPath{}
-        , _listEventQueue{}
         , _mapWatchDescriptorToPath{}
         , _inotifyFd{ -1 }
         , _wakeFd{ -1 }
         , _bIsWatching{ false }
         , _bRecursive{ true }
-        , _bEventQueueOverflowed{ false }
     {
     }
 
@@ -103,29 +99,6 @@ namespace sw
 
         SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
         return true;
-    }
-
-    uint32 LinuxFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
-    {
-        std::scoped_lock<mutex> lock{ _eventMutex };
-        const uint32            count = static_cast<uint32>( _listEventQueue.size() );
-        if ( count > 0 )
-        {
-            outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
-            _listEventQueue.clear();
-        }
-
-        if ( _bEventQueueOverflowed )
-        {
-            // 버린 것이 있었다 — 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
-            FileChangeEvent rescanEvent{};
-            rescanEvent._action    = FileWatcherAction::Modified;
-            rescanEvent._directory = _directoryPath;
-            outListEvent.push_back( std::move( rescanEvent ) );
-            _bEventQueueOverflowed = false;
-            return count + 1;
-        }
-        return count;
     }
 
     void LinuxFileWatcher::stopWatching()
@@ -220,7 +193,7 @@ namespace sw
                     if ( pEvent->mask & IN_Q_OVERFLOW )
                     {
                         SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
-                        pushEvent( FileWatcherAction::Modified, _directoryPath, {} );
+                        pushRelativeChange( FileWatcherAction::Modified, _directoryPath, {} );
                         continue;
                     }
 
@@ -250,20 +223,20 @@ namespace sw
                         const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
                         if ( addWatchDirectory( childDir ) == false )
                             SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
-                        pushEvent( FileWatcherAction::Added, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
                         continue;
                     }
 
                     if ( pEvent->mask & IN_CREATE )
-                        pushEvent( FileWatcherAction::Added, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
                     else if ( pEvent->mask & IN_DELETE )
-                        pushEvent( FileWatcherAction::Removed, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::Removed, watchedDir, name );
                     else if ( pEvent->mask & IN_MOVED_FROM )
-                        pushEvent( FileWatcherAction::RenamedOldName, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::RenamedOldName, watchedDir, name );
                     else if ( pEvent->mask & IN_MOVED_TO )
-                        pushEvent( FileWatcherAction::RenamedNewName, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::RenamedNewName, watchedDir, name );
                     else if ( pEvent->mask & ( IN_MODIFY | IN_CLOSE_WRITE ) )
-                        pushEvent( FileWatcherAction::Modified, watchedDir, name );
+                        pushRelativeChange( FileWatcherAction::Modified, watchedDir, name );
                 }
             }
         }
@@ -322,34 +295,15 @@ namespace sw
         _mapWatchDescriptorToPath.erase( it );
     }
 
-    void LinuxFileWatcher::pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name )
+    void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name )
     {
-        const string absoluteFile = FileUtil::normalizeSeparators( FileUtil::joinPath( absoluteDirectory, name ) );
+        // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을
+        // 이어 붙여 쓰므로(감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
+        const string absoluteFile = FileUtil::joinPath( absoluteDirectory, name );
         const string relative     = LinuxFileWatcherInternal::makeRelativePath( _directoryPath, absoluteFile );
 
-        FileChangeEvent eventObj{};
-        eventObj._action    = action;
-        eventObj._directory = _directoryPath;
-        eventObj._filename  = relative.empty() ? name : relative;
-
-        std::scoped_lock<mutex> lock{ _eventMutex };
-
-        if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
-        {
-            _bEventQueueOverflowed = true;
-            return;
-        }
-
-        // 한 번 저장하면 커널이 IN_MODIFY 와 IN_CLOSE_WRITE 를 잇달아 준다 — 둘 다 Modified 로 접히므로
-        // 같은 파일에 같은 동작이 연달아 들어오면 하나로 합친다. 중복 리로드를 그만큼 줄인다.
-        if ( _listEventQueue.empty() == false )
-        {
-            const FileChangeEvent& last = _listEventQueue.back();
-            if ( last._action == eventObj._action && last._filename == eventObj._filename )
-                return;
-        }
-
-        _listEventQueue.push_back( std::move( eventObj ) );
+        // 상한·오버플로 표시·연속 중복 접기는 IFileWatcher::pushChange 가 한다.
+        pushChange( action, _directoryPath, relative.empty() ? name : string_view{ relative } );
     }
 } // namespace sw
 
