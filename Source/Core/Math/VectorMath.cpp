@@ -528,7 +528,8 @@ namespace sw
 
     bool float4::isInBounds( const float4& bound ) const noexcept
     {
-        return ( _x <= bound._x && _x >= -bound._x ) && ( _y <= bound._y && _y >= -bound._y ) && ( _z <= bound._z && _z >= -bound._z ) && ( _w <= bound._w && _w >= -bound._w );
+        // 범위 비교는 값을 가운데 둔다 — float2 · float3 · double3 이 그렇고 AGENTS 도 그 규칙이다.
+        return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z ) && ( -bound._w <= _w && _w <= bound._w );
     }
 
     void float4::clamp( const float4& minValue, const float4& maxValue ) noexcept

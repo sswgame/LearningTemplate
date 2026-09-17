@@ -465,3 +465,58 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
     sw::float3 convertedF3 = d3FromF3.toFloat3();
     SW_EXPECT_NEAR_EQUAL( 10.0f, convertedF3._x, 1e-4f );
 }
+
+/**
+ * @brief [MathTest] 네 벡터 타입의 `isInBounds` 가 **같은 답**을 낸다
+ * @details 경계는 포함이고 범위는 `[-bound, +bound]` 다. `float4` 만 비교를 뒤집어 적고 있었는데
+ *          (AGENTS 의 "값을 가운데 두는" 범위 비교 규칙과도 어긋난다) 결과는 같아야 한다 —
+ *          같은 이름의 함수가 타입마다 다르게 읽히면 그 자체가 다음 실수의 씨앗이다.
+ */
+SW_TEST_CASE( MathTest, IsInBoundsAgreesAcrossVectorTypes )
+{
+    const sw::float2 bound2{ 2.0f, 2.0f };
+    const sw::float3 bound3{ 2.0f, 2.0f, 2.0f };
+    const sw::float4 bound4{ 2.0f, 2.0f, 2.0f, 2.0f };
+
+    // 안쪽
+    SW_EXPECT_TRUE( sw::float2( 1.0f, -1.0f ).isInBounds( bound2 ) );
+    SW_EXPECT_TRUE( sw::float3( 1.0f, -1.0f, 0.0f ).isInBounds( bound3 ) );
+    SW_EXPECT_TRUE( sw::float4( 1.0f, -1.0f, 0.0f, -2.0f ).isInBounds( bound4 ) );
+
+    // 경계는 포함
+    SW_EXPECT_TRUE( sw::float2( 2.0f, -2.0f ).isInBounds( bound2 ) );
+    SW_EXPECT_TRUE( sw::float3( 2.0f, -2.0f, 2.0f ).isInBounds( bound3 ) );
+    SW_EXPECT_TRUE( sw::float4( 2.0f, -2.0f, 2.0f, -2.0f ).isInBounds( bound4 ) );
+
+    // 어느 성분이든 넘으면 false — w 성분도 마찬가지다.
+    SW_EXPECT_FALSE( sw::float2( 2.5f, 0.0f ).isInBounds( bound2 ) );
+    SW_EXPECT_FALSE( sw::float3( 0.0f, 0.0f, -2.5f ).isInBounds( bound3 ) );
+    SW_EXPECT_FALSE( sw::float4( 0.0f, 0.0f, 0.0f, 2.5f ).isInBounds( bound4 ) );
+    SW_EXPECT_FALSE( sw::float4( 0.0f, 0.0f, 0.0f, -2.5f ).isInBounds( bound4 ) );
+}
+
+/**
+ * @brief [MathTest] 뒤집을 수 없는 행렬은 **Identity 로 돌아온다** (조용히 쓰레기를 내지 않는다)
+ * @details 실패를 알리는 통로가 없어서 그렇게 정해 두었다. 그 계약을 여기서 못박는다 — 스케일 0 인
+ *          트랜스폼을 뒤집으면 렌더러가 엉뚱한 자리에 그리는데, 적어도 값은 예측 가능해야 한다.
+ */
+SW_TEST_CASE( MathTest, SingularMatrixInvertsToIdentity )
+{
+    sw::float4x4 singular = sw::float4x4::Identity;
+    singular._11          = 0.0f; // X 스케일 0 — 되돌릴 수 없다
+    singular._22          = 0.0f;
+
+    SW_EXPECT_TRUE( sw::MathUtil::abs( singular.determinant() ) < 1e-7f );
+
+    const sw::float4x4 inverted = singular.invert();
+    SW_EXPECT_TRUE_MSG( inverted == sw::float4x4::Identity,
+                        "특이행렬의 역행렬이 Identity 가 아니다 — 문서가 약속한 값과 다르다" );
+
+    // 정상 행렬은 실제로 뒤집힌다(위 계약이 정상 경로를 망가뜨리지 않았는지).
+    sw::float4x4 scale              = sw::float4x4::Identity;
+    scale._11                       = 2.0f;
+    scale._22                       = 4.0f;
+    const sw::float4x4 scaleInverse = scale.invert();
+    SW_EXPECT_TRUE( sw::MathUtil::abs( scaleInverse._11 - 0.5f ) < 1e-5f );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( scaleInverse._22 - 0.25f ) < 1e-5f );
+}

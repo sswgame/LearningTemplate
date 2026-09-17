@@ -4,6 +4,7 @@
  * @details Direct3D 12의 HLSL 구조 메모리 레이아웃과 일치하도록 정렬(Alignment)을 유지합니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
 namespace sw

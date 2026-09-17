@@ -3,6 +3,7 @@
  * @brief 쿼터니언(quaternion)과 4x4 행렬(float4x4) 및 관련 변환 연산.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -439,7 +440,12 @@ namespace sw
          */
         float4x4 transpose() const noexcept;
         /**
-         * @brief 역행렬을 구합니다
+         * @brief 역행렬을 구합니다.
+         * @return **특이(singular)행렬이면 `Identity`** 를 돌려줍니다 — 실패를 알리는 다른 통로가 없다.
+         * @warning 그래서 **결과가 Identity 인지 호출부가 봐야 하는 경우가 있다.** 스케일 0 인 트랜스폼처럼
+         *          뒤집을 수 없는 행렬을 넘기면 오류 없이 Identity 로 계속 간다 — 렌더러에서는 물체가
+         *          엉뚱한 자리에 조용히 그려지는 모양으로 나타난다. 판정 기준은 `|determinant()| < 1e-7` 이고,
+         *          미리 알고 싶으면 `determinant()` 를 직접 보십시오.
          */
         float4x4 invert() const noexcept;
 

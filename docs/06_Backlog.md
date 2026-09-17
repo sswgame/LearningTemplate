@@ -295,6 +295,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (Math 헤더 둘이 단독으로 서지 못했고, 특이행렬이 조용히 Identity 로 돌아왔다 — Core/Math)
+
+**1) `VectorMath.h` · `MatrixMath.h` 가 자립하지 못했다** (각 20건). `SW_API` 를 쓰면서
+`Core/Common/Macros.h` 를 include 하지 않는다. `Math.h` 우산이 `MathUtil.h` 를 먼저 넣어 주는 덕에
+가려져 있었다 — 그 둘만 직접 include 하면 컴파일이 안 된다. 직접 가져오게 했다.
+(이 건은 Container 작업 때 발견해 백로그에 적어 두었던 것이다.)
+
+**2) `invert()` 가 특이행렬에 `Identity` 를 돌려주는데 문서에 그 말이 없었다.** 선언 주석은
+"역행렬을 구합니다" 한 줄이었다. 실패를 알리는 통로가 없어 그렇게 정한 것 자체는 합리적이지만,
+**호출부는 그것을 모른다** — 스케일 0 인 트랜스폼을 뒤집으면 오류 없이 Identity 로 계속 가고,
+렌더러에서는 물체가 엉뚱한 자리에 조용히 그려지는 모양으로 나타난다. 판정 기준(`|det| < 1e-7`)까지
+적었다.
+
+**3) `float4::isInBounds` 만 비교 방향이 반대였다.** `float2` · `float3` · `double3` 은
+`-bound <= v && v <= bound` 로 쓰는데 `float4` 만 `v <= bound && v >= -bound` 였다 — AGENTS 의
+"범위 비교는 값을 가운데 둔다" 규칙과도 어긋난다. 결과는 같지만 같은 이름의 함수가 타입마다 다르게
+읽히는 것이 다음 실수의 씨앗이다.
+
+**살펴보고 손대지 않은 것**(멀쩡하다): `normalize()` 여덟 개(제자리·복사 × float2/3/4·double3)가
+전부 일관되고 0 벡터에서 안전하다 — `MathUtil::invSqrt` 가 `x <= 0` 에서 0 을 돌려주므로
+`0 * inf = NaN` 이 나오지 않는다. `double3` 은 배정밀도 경로를 따로 쓴다.
+
+**회귀 테스트 둘.** `IsInBoundsAgreesAcrossVectorTypes`(네 타입이 경계 포함까지 같은 답을 내는지,
+w 성분 포함) · `SingularMatrixInvertsToIdentity`(문서가 약속한 값인지, 그리고 정상 행렬은 여전히
+제대로 뒤집히는지).
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 1/1 · 린트 15/15 ·
+`MathTest` 12 → 14건 · 헤더 4개 전부 자립.
+
 ### 2026-09-17 (로그 출력 장치를 받아 놓고 한 줄도 주지 않았다 — Core/Log)
 
 **1) 먼저, 앞 커밋(`0d3f00c7`)에서 내가 넣은 회귀를 고쳤다.** `ConcurrentQueue.h` 에서
