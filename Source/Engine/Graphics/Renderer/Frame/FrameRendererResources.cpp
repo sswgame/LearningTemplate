@@ -95,7 +95,7 @@ namespace sw
         registerPso( RenderPassType::Transparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
         // G버퍼 패스의 PSO 에는 define 을 얹는다 — 이 desc 를 물려받는 **머티리얼 변형**까지 같이
         // MRT 서명으로 컴파일된다(createMaterialPsoVariant 가 패스 desc 를 통째로 복사한다).
-        const vector<string> listGbufferDefine{ string{ kPassGBufferDefine } };
+        const vector<string> listGbufferDefine = FrameRendererUtil::getPassDefine( RenderPassType::GBuffer );
         registerPso( RenderPassType::GBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat, false, true,
                      &listGbufferDefine );
         registerPso( RenderPassType::GBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );

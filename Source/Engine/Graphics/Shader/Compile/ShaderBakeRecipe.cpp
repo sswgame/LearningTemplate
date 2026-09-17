@@ -156,6 +156,13 @@ namespace sw
                         if ( shaderPath.empty() )
                             continue;
 
+                        // 패스가 더하는 define 은 XML 에만 있지 않다 — G버퍼는 `SW_PASS_GBUFFER=1` 을 C++ 에서
+                        // 얹는다. 런타임과 **같은 함수**에 물어 합친다. 예전엔 여기서 XML 의 `_listPermutation`
+                        // 만 봐서, 런타임이 찾는 해시를 하나도 굽지 않았다(Shipping 에서 G버퍼 드로우가 통째로
+                        // 사라졌고 디퍼드 화면이 한 색으로 남았다).
+                        const vector<string> listPassDefine =
+                            mergeDefines( pass._listPermutation, FrameRendererUtil::getPassDefine( pass._resolvedType ) );
+
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다 (아래 4단계).
                         if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
                         {
@@ -163,7 +170,7 @@ namespace sw
                             passInfo._shaderPath          = shaderPath;
                             passInfo._vertexEntryPoint    = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
                             passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
-                            passInfo._listPermutation     = pass._listPermutation;
+                            passInfo._listPermutation     = listPassDefine;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment );
                             listMeshPass.push_back( std::move( passInfo ) );
@@ -173,41 +180,41 @@ namespace sw
                         if ( pass._computeEntryPoint.empty() == false || pass._type == "Compute" )
                         {
                             const string csEntry = pass._computeEntryPoint.empty() ? "CSMain" : pass._computeEntryPoint;
-                            appendRecipeUnique( outListRecipe, shaderPath, csEntry, ShaderStage::Compute, pass._listPermutation );
+                            appendRecipeUnique( outListRecipe, shaderPath, csEntry, ShaderStage::Compute, listPassDefine );
                         }
                         else
                         {
                             // Vertex Shader
                             const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
-                            appendRecipeUnique( outListRecipe, shaderPath, vsEntry, ShaderStage::Vertex, pass._listPermutation );
+                            appendRecipeUnique( outListRecipe, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
                             // 픽셀 셰이더 — 컬러 출력이 없는 패스(그림자·뎁스 프리패스)엔 없다. 예전엔 여기서 타입
                             // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
                             if ( FrameRendererUtil::hasPixelStage( pass, pipelineRes.getDesc()._listAttachment ) )
                             {
                                 const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
-                                appendRecipeUnique( outListRecipe, shaderPath, psEntry, ShaderStage::Pixel, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                             }
 
                             // Geometry Shader
                             if ( pass._geometryEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
 
                             // Hull Shader
                             if ( pass._hullEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
 
                             // Domain Shader
                             if ( pass._domainEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
 
                             // Mesh Shader
                             if ( pass._meshEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._meshEntryPoint, ShaderStage::Mesh, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, pass._meshEntryPoint, ShaderStage::Mesh, listPassDefine );
 
                             // Amplification Shader
                             if ( pass._amplificationEntryPoint.empty() == false )
-                                appendRecipeUnique( outListRecipe, shaderPath, pass._amplificationEntryPoint, ShaderStage::Amplification, pass._listPermutation );
+                                appendRecipeUnique( outListRecipe, shaderPath, pass._amplificationEntryPoint, ShaderStage::Amplification, listPassDefine );
                         }
                     }
                 }

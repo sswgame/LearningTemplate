@@ -127,37 +127,6 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
-### 1-A. RenderPassGpuTest 두 건이 **Shipping 에서만** 진다 (2026-09-17 발견, 원인 미상)
-
-```
-RenderPassGpuTest.DeferredPipelineDrawsGeometry   TestRenderPassGpu.cpp:2351
-RenderPassGpuTest.AmbientOcclusionReachesBloom    TestRenderPassGpu.cpp:2668, 2682
-```
-
-**Debug 는 24/24 통과하고 Shipping 만 0/1 씩 진다.** 내 커밋이 아니다 — 손대지 않은
-`97095c4c` 를 그대로 빌드해서 같은 두 건이 지는 것을 확인했다(RHI 정리 전 `51a973e6` 도 동일).
-즉 **적어도 `97095c4c` 이전부터 있었고 아무도 몰랐다.**
-
-몰랐던 이유가 구조에 있다: `RenderPassGpuTest` 는 `EngineTest_NoGPU` 필터에서 빠져 있어
-**CI 가 한 번도 돌린 적이 없고**, 로컬 검증은 대개 Debug 로만 한다. 이 저장소에 이미
-"Debug 는 힙 손상·미초기화를 조용히 삼킨다" 는 규칙이 있는데, 그 규칙이 닿지 않는 자리가
-바로 GPU 스위트다.
-
-재현:
-
-```powershell
-cd build/Ninja-Shipping/Bin
-../TestBin/EngineTest.exe --test_filter=RenderPassGpuTest.DeferredPipelineDrawsGeometry
-../TestBin/EngineTest.exe --test_filter=RenderPassGpuTest.AmbientOcclusionReachesBloom
-```
-
-두 건 모두 **그린 픽셀/기하가 나와야 할 자리에 안 나오는** 종류의 단언이다(디퍼드 파이프라인
-기하, SSAO→블룸 전달). Debug 에서만 맞는다는 것은 초기화되지 않은 값이나 최적화에 따라
-달라지는 UB 를 의심할 자리다.
-
-**손대기 전에**: 먼저 Release 에서도 지는지 본다(Shipping 만인지, 최적화 빌드 전반인지가
-범위를 가른다). 그다음 `-gv_rhiImmediateSubmit=1` 로 어느 제출에서 갈리는지 좁힌다.
-
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -325,6 +294,58 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-17 (베이커는 XML 만 보고 런타임은 C++ 에서 define 을 얹었다 — Shipping 에서 G버퍼가 통째로 사라졌다)
+
+앞 작업 중에 찾은 "1-A" 를 팠고, 끝냈다. **UB 도 미초기화도 아니었다** — 셰이더 베이킹 구멍이다.
+
+증상은 `RenderPassGpuTest` 두 건이 Shipping 에서만 지는 것이었다(Debug 는 24/24). 로그가 원인을
+그대로 말하고 있었다:
+
+```
+[ShaderCache] Precompiled shader binary not found in shipping pack:
+              'engine/shaders/gbuffer.hlsl' [VSMain] — .../gbuffer_vs_9820570b.dxil
+[ShaderReflectionLibrary] 리플렉션 매니페스트에 ... (define: SW_PASS_GBUFFER=1) 가 없습니다
+```
+
+`gbuffer` 는 구워져 있었다 — **다른 해시로.** 원인은 "이 패스가 얹는 define 은 무엇인가" 에
+답하는 자리가 **둘**이었다는 것이다:
+
+| | 어디를 보나 | G버퍼 패스의 답 |
+| --- | --- | --- |
+| 베이커 (`ShaderBakeRecipe.cpp`) | 파이프라인 XML 의 `_listPermutation` | `{}` (XML 에 `<_listPermutation />`) |
+| 런타임 (`FrameRendererResources.cpp`) | XML + **C++ 의 `kPassGBufferDefine`** | `{SW_PASS_GBUFFER=1}` |
+
+그래서 런타임이 요청하는 해시를 **아무도 굽지 않았다.** Shipping 은 런타임 컴파일이 없으므로
+G버퍼 드로우가 통째로 사라지고, 디퍼드 화면은 한 색으로 남고 SSAO 는 가림을 하나도 내지 않는다.
+Debug 는 런타임에 컴파일해 버리므로 아무 일도 없었다.
+
+이 파일의 헤더 주석이 이미 그 위험을 적어 두고 있었다("define 을 합치는 규칙이 런타임과 같은
+자리를 봐야 한다"). 뷰 모드 축(`kViewModeUnlitDefine`)은 그렇게 되어 있었는데, 나중에 들어온
+G버퍼 패스 define 만 베이커 쪽에 반영되지 않았다.
+
+**고친 방식은 이 저장소가 이미 여러 번 쓴 것과 같다: 정본을 하나 두고 둘 다 그것을 본다.**
+`FrameRendererUtil::getPassDefine( RenderPassType )` — `hasPixelStage` · `usesMaterialShader` 와
+같은 자리다. 런타임은 PSO 를 만들 때, 베이커는 레시피를 모을 때 **같은 이 함수**를 부른다.
+패스에 define 을 더할 자리는 앞으로도 여기 하나다.
+
+베이크를 다시 돌리니 28개가 새로 구워졌다. `gbuffer` 뿐 아니라 `forwardlit` · `sprite2d` 변형도
+들어 있는데 맞는 동작이다 — `usesMaterialShader(GBuffer)` 가 true 라 G버퍼 드로우는 **머티리얼의**
+셰이더로 그리므로, (G버퍼 패스 define × 머티리얼) 조합이 전부 빠져 있었다.
+
+그리고 `gbuffer_*_ea908ddb.*` 8개(4 RHI × VS/PS)는 이제 어느 레시피도 만들지 않는 **고아**가
+되었다 — 베이커는 낡은 산출물을 지우지 않는다. `CookAssets.py --verify-shaders` 가 "매니페스트에
+없는 바이너리" 로 정확히 잡아 패킹을 막았다(그 게이트는 제 일을 했다). 지웠다.
+
+**회귀 테스트를 넣었다** — `ShaderBakeRecipeTest` (`Test/EngineTest/TestShaderBakeRecipe.cpp`).
+그림을 그리지 않고 레시피 목록만 대조하므로 **GPU 도 DXC 도 필요 없고, 그래서 CI 가 돌린다.**
+이것이 중요한 이유: 원래 증상은 `RenderPassGpuTest` 에서만 보였는데 그 스위트는
+`EngineTest_NoGPU` 에서 빠져 있어 **CI 가 한 번도 돌린 적이 없다.** 고치기 전 커밋으로 되돌려
+이 테스트가 그 두 줄로 실패하는 것을 확인했다.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `RunBuildWarnings` 전체 훑기 0건 · `ctest -L nogpu` 5/5 ·
+린트 15/15 · Shipping EngineTest **456/458 (실패 0)** — 고치기 전에는 452/456 (실패 2) ·
+Debug `RenderPassGpuTest` 24/24 · `BackendSmoke.py` 네 백엔드 × 2회 전부 exit 0 · `[Error]` 0건.
 
 ### 2026-09-17 (백엔드를 고르는 같은 사슬이 두 벌이었고, 이미 답이 갈려 있었다)
 

@@ -260,6 +260,26 @@ namespace sw
         }
 
         /**
+         * @brief 이 패스 타입이 셰이더에 **얹는 define** — 파이프라인 XML 의 `_listPermutation` 위에 더해진다.
+         * @details 패스가 더하는 define 은 XML 에만 있는 것이 아니다. G버퍼 패스는 픽셀 출력 서명을 MRT 로
+         *          바꾸려고 `SW_PASS_GBUFFER=1` 을 **C++ 에서** 얹는다. 그래서 "이 패스의 define 집합" 을
+         *          XML 만 보고 답하면 런타임과 어긋난다 — 실제로 어긋나 있었다: 베이커는 XML 의 빈
+         *          `<_listPermutation />` 만 보고 G버퍼를 define 없이 구웠고, 런타임은
+         *          `SW_PASS_GBUFFER=1` 이 든 해시를 찾았다. Shipping 은 런타임 컴파일이 없으므로 G버퍼
+         *          드로우가 통째로 사라졌고, 디퍼드 화면이 한 색으로 남았다
+         *          (`RenderPassGpuTest.DeferredPipelineDrawsGeometry` · `AmbientOcclusionReachesBloom`).
+         * @note `hasPixelStage` · `usesMaterialShader` 와 같은 종류의 정본이다 — 런타임과 베이커가 **같은
+         *       이 함수**를 보므로, 패스에 define 을 더할 자리는 앞으로도 여기 하나다.
+         */
+        static vector<string> getPassDefine( RenderPassType passType )
+        {
+            vector<string> listDefine;
+            if ( passType == RenderPassType::GBuffer )
+                listDefine.push_back( string{ kPassGBufferDefine } );
+            return listDefine;
+        }
+
+        /**
          * @brief 이 패스에 뷰 모드(Unlit/Wireframe)를 적용하는가.
          * @details 화면 색을 만드는 지오메트리 패스만이다. 그림자·뎁스 프리패스는 **제외한다** —
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
