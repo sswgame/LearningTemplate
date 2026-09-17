@@ -20,23 +20,31 @@ namespace sw
     public:
         /**
          * @brief 생성자
-         * @param blockSize 단일 블록의 크기 (최소 sizeof(void*), 포인터 크기 단위로 정렬됨)
+         * @param blockSize 단일 블록의 크기. **16바이트 배수로 올림**되며 최소 `sizeof(void*)` 입니다.
+         *                  (문서가 오래 "포인터 크기 단위로 정렬" 이라고 했는데 구현은 처음부터 16 이었다 —
+         *                  청크 헤더와 기반 할당도 16 으로 맞춘다. SSE 타입을 담아도 안전하다는 뜻이다.)
          * @param blocksPerChunk 한 번에 OS로부터 할당받을 청크 내의 블록 개수
          * @param bThreadSafe true이면 내부적으로 Mutex를 사용하여 스레드 안전하게 동작
          */
         PoolAllocator( size_t blockSize, uint32 blocksPerChunk = 1024, bool bThreadSafe = true );
+        /** @brief 소유한 청크를 모두 해제합니다. */
         ~PoolAllocator();
 
-        PoolAllocator( const PoolAllocator& )            = delete;
+        /** @brief 복사를 금지합니다. */
+        PoolAllocator( const PoolAllocator& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
         PoolAllocator& operator=( const PoolAllocator& ) = delete;
 
-        /** @brief 풀에서 블록 하나를 할당받습니다. */
+        /** @brief 풀에서 블록 하나를 할당받습니다. 고갈·OOM 이면 nullptr. */
         void* allocate();
 
-        /** @brief 풀에 블록을 반환합니다. */
+        /** @brief 풀에 블록을 반환합니다. 널이면 무시합니다. */
         void free( void* pBlock );
 
-        /** @brief 모든 메모리를 해제합니다. */
+        /**
+         * @brief 모든 메모리를 해제합니다.
+         * @warning 내준 블록이 남아 있으면 그 포인터는 전부 죽습니다 — 호출자가 책임집니다.
+         */
         void clear();
 
     private:
@@ -57,6 +65,7 @@ namespace sw
         uint32    _blocksPerChunk;
         bool      _bThreadSafe;
 
+        /** @brief 청크를 하나 더 잡아 프리 리스트에 붙입니다. **잠금을 잡은 채** 호출합니다. */
         void allocateChunk();
     };
 

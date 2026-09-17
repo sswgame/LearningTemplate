@@ -52,25 +52,20 @@ namespace sw
 
     void* PoolAllocator::allocate()
     {
+        // 해제를 잊을 자리를 없앤다 — 예전에는 이른 반환마다 unlock 을 손으로 적었고(7곳),
+        // 하나만 빠져도 데드락이다. 잠글지 말지는 그대로 `_bThreadSafe` 가 정한다.
+        std::unique_lock<mutex> lock{ _mutex, std::defer_lock };
         if ( _bThreadSafe )
-            _mutex.lock();
+            lock.lock();
 
         if ( _pFreeList == nullptr )
             allocateChunk();
 
         if ( _pFreeList == nullptr )
-        {
-            if ( _bThreadSafe )
-                _mutex.unlock();
             return nullptr;
-        }
 
         FreeNode* pNode = _pFreeList;
         _pFreeList      = pNode->_pNext;
-
-        if ( _bThreadSafe )
-            _mutex.unlock();
-
         return pNode;
     }
 
@@ -79,8 +74,11 @@ namespace sw
         if ( pBlock == nullptr )
             return;
 
+        // 해제를 잊을 자리를 없앤다 — 예전에는 이른 반환마다 unlock 을 손으로 적었고(7곳),
+        // 하나만 빠져도 데드락이다. 잠글지 말지는 그대로 `_bThreadSafe` 가 정한다.
+        std::unique_lock<mutex> lock{ _mutex, std::defer_lock };
         if ( _bThreadSafe )
-            _mutex.lock();
+            lock.lock();
 
 #if defined( SW_DEBUG )
         bool         bValidChunk     = false;
@@ -99,25 +97,21 @@ namespace sw
         }
         SW_ASSERT( bValidChunk && "PoolAllocator::free: Pointer does not belong to any allocated chunk!" );
         if ( bValidChunk == false )
-        {
-            if ( _bThreadSafe )
-                _mutex.unlock();
             return;
-        }
 #endif
 
         FreeNode* pNode = static_cast<FreeNode*>( pBlock );
         pNode->_pNext   = _pFreeList;
         _pFreeList      = pNode;
-
-        if ( _bThreadSafe )
-            _mutex.unlock();
     }
 
     void PoolAllocator::clear()
     {
+        // 해제를 잊을 자리를 없앤다 — 예전에는 이른 반환마다 unlock 을 손으로 적었고(7곳),
+        // 하나만 빠져도 데드락이다. 잠글지 말지는 그대로 `_bThreadSafe` 가 정한다.
+        std::unique_lock<mutex> lock{ _mutex, std::defer_lock };
         if ( _bThreadSafe )
-            _mutex.lock();
+            lock.lock();
 
         Chunk* pCurr = _pChunkList;
         while ( pCurr != nullptr )
@@ -129,8 +123,5 @@ namespace sw
 
         _pChunkList = nullptr;
         _pFreeList  = nullptr;
-
-        if ( _bThreadSafe )
-            _mutex.unlock();
     }
 } // namespace sw

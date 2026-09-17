@@ -295,6 +295,33 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (풀 할당기 문서가 정렬을 절반으로 적어 두었다 — Core/Memory)
+
+**동작 결함은 없었다.** `LinearAllocator::allocate` 의 락프리 경로(블록 내 CAS 범프 → 가득 차면
+뮤텍스를 잡고 `_currentBlockIndex` 를 **다시 확인**한 뒤에만 새 블록 추가)는 이중 추가까지 막고 있고,
+`PoolAllocator` 의 수동 잠금도 **모든 이른 반환에서 실제로 해제하고 있었다**(전 경로를 확인했다).
+
+**1) `PoolAllocator` 문서가 정렬을 틀리게 적었다.** 생성자 주석은 "최소 sizeof(void*), 포인터 크기
+단위로 정렬됨" 인데 구현은 처음부터 **16바이트**다 — 블록 크기를 16 배수로 올리고, 청크 헤더도
+16 으로 맞추고, 기반 할당도 `allocateAligned( …, 16 )` 이다. 그 차이는 **SSE 타입을 담아도 되는가**를
+가른다. 읽는 사람이 직접 패딩을 붙이거나 아예 못 쓴다고 판단하게 만드는 종류의 오문서다.
+
+**2) 수동 lock/unlock 을 RAII 로 바꿨다.** 해제 지점이 7곳이었고 **하나만 빠져도 데드락**이다. 지금은
+맞지만 다음에 이른 반환을 하나 더 넣는 사람이 지켜야 하는 규칙이었다.
+`std::unique_lock{ _mutex, std::defer_lock }` + `if ( _bThreadSafe ) lock.lock()` 으로, 잠글지 말지는
+그대로 플래그가 정하되 해제는 스코프가 맡는다.
+
+**3) 같은 폴더인데 문서 밀도가 달랐다.** `LinearAllocator` 는 삭제된 복사 연산·소멸자·스레드 계약까지
+적는데 `PoolAllocator` 는 그 자리가 비어 있었다. 채웠고, `allocateChunk` 가 **잠금을 잡은 채** 불러야
+한다는 것도 적었다(코드에는 그 전제가 있는데 말은 없었다).
+
+**회귀 테스트 둘.** `PoolAllocatorHandsOutSixteenByteAlignedBlocks`(16 배수가 아닌 블록 크기를 주고,
+프리 리스트로 되돌아온 블록까지 정렬을 확인) · `ThreadSafePoolNeverHandsOutTheSameBlockTwice`
+(네 스레드가 800블록을 받아 중복이 없는지 — 잠금 교체가 상호 배제를 망가뜨리지 않았는지).
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 1/1 · 린트 15/15 ·
+`MemoryTest` 9 → 11건 · 헤더 5개 전부 자립.
+
 ### 2026-09-17 (Math 헤더 둘이 단독으로 서지 못했고, 특이행렬이 조용히 Identity 로 돌아왔다 — Core/Math)
 
 **1) `VectorMath.h` · `MatrixMath.h` 가 자립하지 못했다** (각 20건). `SW_API` 를 쓰면서
