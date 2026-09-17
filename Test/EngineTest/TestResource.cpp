@@ -423,7 +423,7 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
         sw::StreamingPriority::Normal,
         SW_DELEGATE_LAMBDA(
             sw::OnStreamingDataCompleteDelegate,
-            [&]( string_view /*path*/, bool bSuccess, const sw::vector<uint8>& bytes )
+            [&]( sw::string_view /*path*/, bool bSuccess, const sw::vector<uint8>& bytes )
     {
         bCallbackInvoked = true;
         bSuccessResult   = bSuccess;

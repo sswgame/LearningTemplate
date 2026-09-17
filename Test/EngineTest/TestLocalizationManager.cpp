@@ -227,7 +227,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     uint32     callCount{ 0 };
 
     const uint32 callbackId = loc.registerLanguageChangedCallback(
-        [&]( string_view oldLang, string_view newLang )
+        [&]( sw::string_view oldLang, sw::string_view newLang )
     {
         recordedOldLang = oldLang;
         recordedNewLang = newLang;
@@ -393,7 +393,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
     uint32     callbackCount{ 0 };
 
     uint32 cbId = sw::GameStrings::registerLanguageChangedCallback(
-        [&]( string_view oldLang, string_view newLang )
+        [&]( sw::string_view oldLang, sw::string_view newLang )
     {
         notifiedOldLang = oldLang;
         notifiedNewLang = newLang;

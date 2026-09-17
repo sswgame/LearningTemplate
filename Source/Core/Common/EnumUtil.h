@@ -1,10 +1,16 @@
 /**
  * @file EnumUtil.h
  * @brief 비트플래그 enum 검사/조합 유틸 (전부 static, constexpr — 리플렉션/TypeRegistry 조회 없음)
+ *
+ * @note 예전엔 `StdHeaders.h`(표준 헤더 48개, `<regex>`·`<random>`·`<iostream>` 포함)를 끌어왔는데
+ *       이 파일이 쓰는 것은 `<type_traits>` 넷(`is_enum_v` · `underlying_type_t` · `enable_if_t` ·
+ *       `false_type`)뿐이다. 비트플래그 연산자를 보려고 이 헤더를 include 한 쪽이 파싱 테이블까지
+ *       같이 물었다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
+
+#include <type_traits>
 
 namespace sw
 {

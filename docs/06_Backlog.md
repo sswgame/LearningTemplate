@@ -295,6 +295,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (Core/Common 정리 — 문자열 뷰만 전역에 있어 `sw::string_view` 가 컴파일이 안 됐다)
+
+**1) 전역 `string_view` 를 없애고 `sw` 안으로 옮겼다.**
+
+`Types.h` 가 `string_view` · `wstring_view` 를 **전역**에 두고 있었다. 그런데 이 저장소의 컨테이너는
+전부 `sw` 안이다 (`sw::string` · `sw::vector` · `sw::unordered_map`). 그래서 `namespace sw` 안에서
+`string` 은 `sw::string` 으로, `string_view` 는 `::string_view` 로 풀렸고 — **`sw::string_view` 라고
+쓰면 컴파일이 안 됐다.** 이번 세션에 실제로 걸렸다(`TestShaderBakeRecipe.cpp` 를 쓰다 막혀서 맨이름으로
+우회했다).
+
+나누는 기준은 "누구의 이름인가" 다. `int32` · `utf8` 은 고정폭 기본형에 붙인 이름이라 `int` 와 같은
+층, 즉 전역이다. 문자열 뷰는 **컨테이너 이름**이므로 `sw` 안이다.
+
+옮기고 나서 깨진 곳은 **전역 스코프에서 맨이름을 쓰던 자리뿐**이었다 — 소스는 거의 전부 이미
+`namespace sw` 안이라 한 줄도 안 바뀐다. 테스트 13개 파일 29곳을 `sw::` 로 한정했다(테스트 본문은
+`SW_TEST_CASE` 라 전역 스코프다).
+
+**빠뜨린 곳이 없는지는 컴파일러만으로 확인하지 않았다.** Windows 빌드는 Linux/Mac 전용 파일을
+컴파일하지 않기 때문이다. 중괄호 깊이로 `namespace sw` 안/밖을 판정하는 스크립트로 저장소 전체
+(Source · Test · Tools/ReflectionParser)를 훑어 **밖에 남은 맨이름 0건**을 확인했다
+(유일한 히트는 `StdHeaders.h` 의 `#include <string_view>` 로 오탐).
+
+**2) `EnumUtil.h` 가 표준 헤더 48개를 끌어오고 있었다.**
+
+`StdHeaders.h`(`<regex>` · `<random>` · `<iostream>` 포함)를 include 했는데 실제로 쓰는 것은
+`<type_traits>` 넷뿐이다. 비트플래그 연산자를 보려고 이 헤더를 include 한 쪽이 파싱 테이블까지
+같이 물었다. `<type_traits>` 로 좁혔다.
+
+**3) `Macros.h` — 절 번호가 어긋나 있었고, 어서션 안내가 사실과 달랐다.**
+
+- 절 번호가 `1,2,2,3,4,5,6,…,10-a,7,8,9` 였다. 236줄짜리 기반 헤더에서 목차가 흔들리면 찾기가 어렵다.
+  `1..11` 로 다시 매겼다.
+- **"두 매크로 모두 Release 에서 no-op 입니다" 가 거짓이었다.** `SW_LOG_ASSERT` 는 비-Debug 에서
+  **Error 로 로그를 남긴다**(Logger.h 가 그렇게 바뀐 지 오래다 — "예전엔 통째로 no-op 이었고 그것이
+  배포본에서 계약이 깨진 순간을 놓치는 가장 큰 구멍이었다"). 어느 어서션을 쓸지 가르치는 자리가
+  반대로 적혀 있었다. 둘의 배포본 동작을 나눠 적었다.
+- `arrayCountHelper` 가 **전역 스코프의 템플릿 함수**였다. 모든 TU 가 이 헤더를 타므로 전역 이름
+  하나가 곧 저장소 전체의 이름 하나다. `sw` 안으로 넣고 `SW_COUNT_OF` 가 한정해 부른다 — 사용처
+  7곳은 그대로다.
+- `SW_COUNT_OF` 절의 "Macros.h 단독 include 가능 / Types.h 없이도 컴파일" 주석은 사실이 아니었다
+  (이 파일은 7번째 줄에서 Types.h 를 include 하고, 헬퍼가 그쪽 `utf8` 을 쓴다). 지웠다.
+
+**검증.** Debug·Release·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5 · **Shipping 5/5** ·
+`-L hostgpu` Debug 1/1 · **Shipping 1/1** · 린트 15/15.
+
 ### 2026-09-17 (CI 가 못 도는 집합을 아무도 안 돌고 있었다 — 그리고 Shipping CI 는 CoreTest 하나만 돌았다)
 
 앞 건을 고치고 남은 질문이 "그럼 `RenderPassGpuTest` 는 앞으로 누가 도나" 였다. 파 보니 구멍이

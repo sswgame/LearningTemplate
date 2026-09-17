@@ -30,7 +30,7 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 2) 함수 시그니처 — 컴파일러별 pretty name
+// 3) 함수 시그니처 — 컴파일러별 pretty name
 // ------------------------------------------------------------------------------
 #ifdef _MSC_VER
     /** @brief MSVC 함수 시그니처 문자열입니다. */
@@ -41,7 +41,7 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 3) 디버그 / 릴리즈 — 미지정 시 _DEBUG 로 판별
+// 4) 디버그 / 릴리즈 — 미지정 시 _DEBUG 로 판별
 // ------------------------------------------------------------------------------
 #if !defined( SW_DEBUG ) && !defined( SW_RELEASE )
 
@@ -55,15 +55,22 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 4) SW_ASSERT — 논리 불변식 (메시지 없음, 고빈도 경로)
-//    SW_LOG_ASSERT 는 Logger.h. Release 에서는 둘 다 no-op
+// 5) SW_ASSERT — 논리 불변식 (메시지 없음, 고빈도 경로)
+//    SW_LOG_ASSERT 는 Logger.h — 배포본에서도 **로그는 남긴다**
 // ------------------------------------------------------------------------------
 /**
  * 사용 가이드:
  *   SW_ASSERT(expr)        — 논리 불변식 검증 (메시지 없음, 고빈도 경로)
  *   SW_LOG_ASSERT(expr, …) — 실패 원인 추적이 필요한 곳 (Logger + break, 저빈도)
- * 두 매크로 모두 Release(SW_RELEASE)에서 no-op 입니다.
- * 프로덕션 환경에서도 반드시 확인해야 하는 조건은 직접 if-return 처리하세요.
+ *
+ * **둘의 배포본 동작이 다르다** (여기 "둘 다 no-op" 이라고 적혀 있었는데 사실이 아니다):
+ *   - `SW_ASSERT`     : Debug 밖에서는 **통째로 사라진다.** 식조차 평가되지 않으므로
+ *                       부수 효과가 있는 식을 넣으면 배포본에서 그 효과가 없어진다.
+ *   - `SW_LOG_ASSERT` : Debug 에서만 브레이크하고, **그 밖의 빌드에서는 Error 로 로그를 남긴다.**
+ *                       예전엔 이쪽도 no-op 이었고, 그것이 배포본에서 계약이 깨진 순간을 놓치는
+ *                       가장 큰 구멍이었다 (Logger.h 의 비-Debug 분기 참고).
+ *
+ * 프로덕션 환경에서도 반드시 **막아야** 하는 조건은 둘 중 어느 것도 아니다 — 직접 if-return 하세요.
  */
 #if defined( SW_DEBUG )
     /** @brief 식이 거짓이면 디버거 브레이크입니다. Release 에서는 제거됩니다. */
@@ -81,7 +88,7 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 5) 플랫폼 — Windows / Linux / macOS 중 하나
+// 6) 플랫폼 — Windows / Linux / macOS 중 하나
 // ------------------------------------------------------------------------------
 #if !defined( SW_PLATFORM_WINDOWS ) && !defined( SW_PLATFORM_LINUX ) && !defined( SW_PLATFORM_MACOS )
     #if defined( _WIN32 ) || defined( _WIN64 )
@@ -99,7 +106,7 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 6) DLL export / import — Engine.dll 은 SW_API, 게임/에디터 모듈은 SW_MODULE_API
+// 7) DLL export / import — Engine.dll 은 SW_API, 게임/에디터 모듈은 SW_MODULE_API
 // ------------------------------------------------------------------------------
 #if defined( SW_PLATFORM_WINDOWS )
     #if defined( SW_EXPORTS )
@@ -137,7 +144,7 @@
 #define SW_BIT( x ) ( 1u << ( x ) )
 
 // ------------------------------------------------------------------------------
-// 10-a) 비트 필드 Boolean 값 — 대입 시 의미를 명확히 합니다
+// 8) 비트 필드 Boolean 값 — 대입 시 의미를 명확히 합니다
 //        비트 필드는 true/false 직접 대입 시 컴파일러 경고가 발생할 수 있으므로
 //        SW_TRUE(1) / SW_FALSE(0) 을 사용합니다.
 // ------------------------------------------------------------------------------
@@ -150,24 +157,28 @@
 #define SW_REQUIRES( ... ) , std::enable_if_t<( __VA_ARGS__ ), int32> = 0
 
 // ------------------------------------------------------------------------------
-// 7) SW_COUNT_OF — 정적 배열 원소 수 (Macros.h 단독 include 가능)
-//    arrayCountHelper: uint32 대신 std::size_t — Types.h 없이도 컴파일
+// 9) SW_COUNT_OF — 정적 배열 원소 수
 // ------------------------------------------------------------------------------
+// 이 헬퍼는 `sw` 안에 둔다 — 전역에 템플릿 함수를 내놓을 이유가 없다. 모든 TU 가 이 헤더를 타므로
+// 전역 이름 하나가 곧 저장소 전체의 이름 하나다. 매크로가 한정해 부르므로 사용처는 그대로다.
+namespace sw
+{
 #ifdef __clang__
-/** @brief 배열 참조에서 원소 수+1 짜리 배열 타입을 추론합니다 (Clang). */
-template <typename T SW_REQUIRES( __is_array( T ) )>
-auto arrayCountHelper( T& t ) -> utf8 ( & )[sizeof( t ) / sizeof( t[0] ) + 1];
+    /** @brief 배열 참조에서 원소 수+1 짜리 배열 타입을 추론합니다 (Clang). */
+    template <typename T SW_REQUIRES( __is_array( T ) )>
+    auto arrayCountHelper( T& t ) -> utf8 ( & )[sizeof( t ) / sizeof( t[0] ) + 1];
 #else
-/** @brief 배열 참조에서 원소 수+1 짜리 배열 타입을 추론합니다. */
-template <typename T, size_t N>
-utf8 ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
+    /** @brief 배열 참조에서 원소 수+1 짜리 배열 타입을 추론합니다. */
+    template <typename T, size_t N>
+    utf8 ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
 #endif
+} // namespace sw
 
 /** @brief 정적 배열의 원소 개수를 컴파일 타임에 구합니다. */
-#define SW_COUNT_OF( array ) ( sizeof( arrayCountHelper( array ) ) - 1 )
+#define SW_COUNT_OF( array ) ( sizeof( sw::arrayCountHelper( array ) ) - 1 )
 
 // ------------------------------------------------------------------------------
-// 8) 인라인 · 노인라인 · restrict — 핫패스 최적화 힌트
+// 10) 인라인 · 노인라인 · restrict — 핫패스 최적화 힌트
 // ------------------------------------------------------------------------------
 #if defined( _MSC_VER )
     /** @brief 강제 인라인 힌트입니다. */
@@ -193,7 +204,7 @@ utf8 ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
 #endif
 
 // ------------------------------------------------------------------------------
-// 9) CPU Pause / Yield — x86/x64, ARM/ARM64, 이기종 플랫폼 호환 스핀 대기 힌트
+// 11) CPU Pause / Yield — x86/x64, ARM/ARM64, 이기종 플랫폼 호환 스핀 대기 힌트
 // ------------------------------------------------------------------------------
 #if defined( _MSC_VER )
     #if defined( _M_IX86 ) || defined( _M_X64 )

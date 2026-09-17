@@ -940,8 +940,8 @@ SW_TEST_CASE( GameFrameworkTest, GameData_CustomPropertyParsingAndQuery )
     gameData._mapCustomProperty["enableShadows"] = "true";
 
     // 문자열 조회
-    SW_EXPECT_EQUAL( string_view( "audio/bgm_dungeon.mp3" ), gameData.getCustomProperty( "dungeonBgm" ) );
-    SW_EXPECT_EQUAL( string_view( "fallback_value" ), gameData.getCustomProperty( "non_existent_key", "fallback_value" ) );
+    SW_EXPECT_EQUAL( sw::string_view( "audio/bgm_dungeon.mp3" ), gameData.getCustomProperty( "dungeonBgm" ) );
+    SW_EXPECT_EQUAL( sw::string_view( "fallback_value" ), gameData.getCustomProperty( "non_existent_key", "fallback_value" ) );
 
     // 정수 조회
     SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "maxPartySize", 6 ) );
@@ -1046,7 +1046,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
     map.pushLayer( "Inventory", false );
     SW_EXPECT_TRUE( map.isLayerEnabled( "Inventory" ) );
     SW_EXPECT_TRUE( map.isLayerEnabled( "Gameplay" ) );
-    SW_EXPECT_EQUAL( string_view( "Inventory" ), map.getCurrentTopLayer() );
+    SW_EXPECT_EQUAL( sw::string_view( "Inventory" ), map.getCurrentTopLayer() );
 
     // 3) 모달 UI (PauseMenu, blockLower=true) 푸시 -> 하위 Inventory 및 Gameplay 차단
     map.pushLayer( "PauseMenu", true );
@@ -1058,10 +1058,10 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
     map.popLayer( "PauseMenu" );
     SW_EXPECT_TRUE( map.isLayerEnabled( "Inventory" ) );
     SW_EXPECT_TRUE( map.isLayerEnabled( "Gameplay" ) );
-    SW_EXPECT_EQUAL( string_view( "Inventory" ), map.getCurrentTopLayer() );
+    SW_EXPECT_EQUAL( sw::string_view( "Inventory" ), map.getCurrentTopLayer() );
 
     map.popLayer();
-    SW_EXPECT_EQUAL( string_view( "Gameplay" ), map.getCurrentTopLayer() );
+    SW_EXPECT_EQUAL( sw::string_view( "Gameplay" ), map.getCurrentTopLayer() );
 }
 
 /**
@@ -1266,7 +1266,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
         virtual ~CustomVirtualStick() override = default;
 
         InputDeviceKind getDeviceKind() const override { return InputDeviceKind::Custom; }
-        string_view     getDeviceName() const override { return "VirtualStick"; }
+        sw::string_view getDeviceName() const override { return "VirtualStick"; }
         bool            isConnected() const override { return true; }
 
         void poll( [[maybe_unused]] float32 deltaTime ) override {}
@@ -1304,7 +1304,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
 
     IInputDevice* pFoundDevice = inputManager.getDevice( InputDeviceKind::Custom );
     SW_ASSERT_NOT_NULL( pFoundDevice );
-    SW_EXPECT_EQUAL( string_view( "VirtualStick" ), pFoundDevice->getDeviceName() );
+    SW_EXPECT_EQUAL( sw::string_view( "VirtualStick" ), pFoundDevice->getDeviceName() );
 
     // 3) 범용 InputSlot을 통한 ActionMap 바인딩 검증 (무분기 평가)
     ActionMap& actionMap = inputManager.getActionMap();

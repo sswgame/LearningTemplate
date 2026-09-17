@@ -1208,8 +1208,8 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
     utf8 wide[1024]{};
     sw::formatstring( wide, static_cast<uint32>( sizeof( wide ) ), "%#", 1e300 );
     SW_EXPECT_EQUAL( 301u + 7u, static_cast<uint32>( sw::StringUtil::strlen( wide ) ) ); // 301자리 + ".000000"
-    SW_EXPECT_TRUE( string_view( wide ).substr( 0, 29 ) == "10000000000000000525047602552" );
-    SW_EXPECT_TRUE( string_view( wide ).substr( 301 ) == ".000000" );
+    SW_EXPECT_TRUE( sw::string_view( wide ).substr( 0, 29 ) == "10000000000000000525047602552" );
+    SW_EXPECT_TRUE( sw::string_view( wide ).substr( 301 ) == ".000000" );
 
     // 목적지가 넉넉한 경우(직접 쓰기)와 빠듯한 경우(임시 경유)가 같은 글자를 낸다. 빠듯한 쪽은 앞부분만 남는다.
     utf8 direct[1024]{};

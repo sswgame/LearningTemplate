@@ -166,7 +166,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveAllPrimitiveTypesStreaming )
     writeArch << inBool << inU8 << inU16 << inU32 << inU64;
     writeArch << inI8 << inI16 << inI32 << inI64;
     writeArch << inF32 << inF64;
-    writeArch << string_view( inStrEmpty ) << string_view( inStrText );
+    writeArch << sw::string_view( inStrEmpty ) << sw::string_view( inStrText );
 
     sw::vector<uint8> rawBytes;
     writeArch.writeData( rawBytes );

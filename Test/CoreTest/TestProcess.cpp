@@ -51,7 +51,7 @@ SW_TEST_CASE( ProcessTest, ExecuteHelper )
     const int32            exitCode = sw::Process::execute(
         cmd,
         {},
-        sw::ProcessOutputDelegate::create( [&listLines]( string_view line, bool bIsStdErr )
+        sw::ProcessOutputDelegate::create( [&listLines]( sw::string_view line, bool bIsStdErr )
     {
         (void)bIsStdErr;
         listLines.push_back( sw::string( line ) );

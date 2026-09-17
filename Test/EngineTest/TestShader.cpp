@@ -217,15 +217,15 @@ SW_TEST_CASE( ShaderBakerTest, BinaryFileNameGenerationAndStageTags )
 SW_TEST_CASE( ShaderBakerTest, SubfolderAndFormatMappingAliases )
 {
     // 서브폴더 및 확장자
-    SW_EXPECT_EQUAL( string_view( "dx11" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
-    SW_EXPECT_EQUAL( string_view( "dx12" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( string_view( "vulkan" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
-    SW_EXPECT_EQUAL( string_view( "opengl" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
+    SW_EXPECT_EQUAL( sw::string_view( "dx11" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
+    SW_EXPECT_EQUAL( sw::string_view( "dx12" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
+    SW_EXPECT_EQUAL( sw::string_view( "vulkan" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
+    SW_EXPECT_EQUAL( sw::string_view( "opengl" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
 
-    SW_EXPECT_EQUAL( string_view( ".dxbc" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
-    SW_EXPECT_EQUAL( string_view( ".dxil" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
-    SW_EXPECT_EQUAL( string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".dxbc" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".dxil" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
 
     // 별칭 역산출
     SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "dx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );

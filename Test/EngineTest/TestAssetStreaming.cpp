@@ -43,7 +43,7 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
     const utf8* pTestAsset = "Resource/test_dummy_asset.png";
 
     queue.requestAsset( pTestAsset, sw::StreamingPriority::Normal,
-                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback1Count]( string_view path, bool bSuccess )
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback1Count]( sw::string_view path, bool bSuccess )
     {
         (void)path;
         (void)bSuccess;
@@ -51,7 +51,7 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
     } ) );
 
     queue.requestAsset( pTestAsset, sw::StreamingPriority::Normal,
-                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback2Count]( string_view path, bool bSuccess )
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback2Count]( sw::string_view path, bool bSuccess )
     {
         (void)path;
         (void)bSuccess;
@@ -59,7 +59,7 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
     } ) );
 
     queue.requestAsset( pTestAsset, sw::StreamingPriority::Normal,
-                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback3Count]( string_view path, bool bSuccess )
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback3Count]( sw::string_view path, bool bSuccess )
     {
         (void)path;
         (void)bSuccess;

@@ -77,8 +77,8 @@ SW_TEST_CASE( EditorListFilterTest, MatchesAnyAcrossFields )
  */
 SW_TEST_CASE( EditorListFilterTest, HandlesNonTerminatedViews )
 {
-    const sw::string  backing{ "MeshComponentAndMore" };
-    const string_view slice{ backing.data(), 4 }; // "Mesh" — 뒤에 종단자가 없다
+    const sw::string      backing{ "MeshComponentAndMore" };
+    const sw::string_view slice{ backing.data(), 4 }; // "Mesh" — 뒤에 종단자가 없다
 
     SW_EXPECT_TRUE( EditorListFilter{ "mesh" }.matches( slice ) );
     SW_EXPECT_FALSE( EditorListFilter{ "meshcomponent" }.matches( slice ) );

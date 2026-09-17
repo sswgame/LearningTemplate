@@ -26,7 +26,7 @@ namespace
 {
     /** @brief 이 스템(예: "gbuffer")·스테이지·해시를 가진 레시피가 목록에 있는가. */
     bool hasRecipeInternal( const sw::vector<sw::ShaderBakeRecipe>& listRecipe,
-                            string_view                             stemLower,
+                            sw::string_view                         stemLower,
                             sw::ShaderStage                         stage,
                             uint64                                  permHash )
     {

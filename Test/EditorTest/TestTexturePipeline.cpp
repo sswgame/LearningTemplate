@@ -18,7 +18,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, ImportConfigParsingAndInheritance )
     {
-        const string_view kJson = R"({
+        const sw::string_view kJson = R"({
             "presets": {
                 "Base_Default": {
                     "format": "BC7_UNORM",

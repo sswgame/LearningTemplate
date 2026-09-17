@@ -286,7 +286,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
     sw::string                capturedLog;
     sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
         sw::ProcessOutputDelegate,
-        [&capturedLog]( string_view line, bool /*bIsStdErr*/ )
+        [&capturedLog]( sw::string_view line, bool /*bIsStdErr*/ )
     {
         capturedLog.append( line.data(), line.size() );
         capturedLog.push_back( '\n' );

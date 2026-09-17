@@ -371,7 +371,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         return _result;
     }
 
-    bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTag ) override
+    bool initializeXmlDeserialization( sw::string_view xmlStr, const utf8* pRootTag ) override
     {
         (void)pRootTag;
         sw::string str( xmlStr );
