@@ -2,6 +2,10 @@
 
 #include "Core/Event/EventDispatcher.h"
 
+#include "Core/Log/Logger.h"
+
+#include <thread>
+
 namespace sw
 {
     IEvent::IEvent()
@@ -24,7 +28,6 @@ namespace sw
     EventDispatcher::EventDispatcher()
         : _busSpinLock{}
         , _queueSpinLock{}
-        , _mapChannelDelegate{}
         , _mapChannelDispatchTable{}
         , _mapChannelQueue{}
         , _arrFrameAllocator{ LinearAllocator{ constant::kDefaultLinearCapacity }, LinearAllocator{ constant::kDefaultLinearCapacity } }
@@ -35,10 +38,56 @@ namespace sw
 
     EventDispatcher::~EventDispatcher()
     {
+        // 큐에 남은 이벤트도 파괴해야 한다 — 아레나를 그냥 놓으면 멤버가 든 힙이 샌다.
+        // 죽는 객체라 잠글 상대가 없다 — 여기가 `_queueSpinLock` 없이 부르는 유일한 자리다.
+        destroyQueuedEvents();
+    }
+
+#if defined( SW_DEBUG )
+    void EventDispatcher::claimBusThread()
+    {
+        if ( _busThreadId == std::thread::id{} )
+            _busThreadId = std::this_thread::get_id();
+    }
+
+    void EventDispatcher::assertBusThread() const
+    {
+        // 아직 아무도 퍼내지 않았으면 주인이 없다 — 시작할 때 구독부터 하는 것은 정상이다.
+        if ( _busThreadId == std::thread::id{} )
+            return;
+
+        SW_LOG_ASSERT( std::this_thread::get_id() == _busThreadId,
+                       "EventDispatcher 의 버스(subscribe/unsubscribe/publish/processEvents/clear)는 "
+                       "processEvents 를 부르는 스레드에서만 쓸 수 있습니다. "
+                       "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
+    }
+#else
+    void EventDispatcher::claimBusThread() {}
+    void EventDispatcher::assertBusThread() const {}
+#endif
+
+    void EventDispatcher::destroyQueuedEvents()
+    {
+        // 이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감는 것은 **메모리만**
+        // 돌려줄 뿐 소멸자를 부르지 않으므로, `sw::string` 같은 멤버가 든 힙은 그대로 남는다
+        // (게임플레이 이벤트는 대부분 문자열을 든다). `processEvents` 는 방송 뒤에 이 일을 하는데
+        // `clear()` 와 소멸자에는 빠져 있었다.
+        for ( auto& [channel, list] : _mapChannelQueue )
+        {
+            IEvent* pCurrent = list->_pHead.exchange( nullptr, std::memory_order_relaxed );
+            while ( pCurrent != nullptr )
+            {
+                IEvent* pNext = pCurrent->_next.load( std::memory_order_relaxed );
+                pCurrent->~IEvent();
+                pCurrent = pNext;
+            }
+        }
     }
 
     void EventDispatcher::processEvents()
     {
+        claimBusThread();
+        assertBusThread();
         int32                                currentAllocIdx{ 0 };
         vector<pair<hashed_string, IEvent*>> activeChannels;
         BLOCK( "Swap Event Queues" )
@@ -118,18 +167,18 @@ namespace sw
 
     void EventDispatcher::clear()
     {
+        assertBusThread();
         BLOCK( "Clear Bus Handlers" )
         {
             std::scoped_lock<SpinLock> lock{ _busSpinLock };
-            _mapChannelDelegate.clear();
             _mapChannelDispatchTable.clear();
-            _mapChannelDelegate.reserve( 16 );
             _mapChannelDispatchTable.reserve( 16 );
         }
 
         BLOCK( "Clear Event Queues" )
         {
             std::scoped_lock<SpinLock> lock{ _queueSpinLock };
+            destroyQueuedEvents();
             _mapChannelQueue.clear();
             for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )
             {

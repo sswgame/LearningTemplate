@@ -9,6 +9,10 @@
 
 namespace sw
 {
+    // `SW_REGISTER_EVENT_ID` 가 `friend class sw::EventDispatcher` 를 적는다 — 한정된 friend 선언은
+    // 첫 선언이 될 수 없으므로 여기서 미리 알려 둔다.
+    class EventDispatcher;
+
     // ------------------------------------------------------------------------------
     // 1) EventTypeId — 엔진 예약 1..255, 게임플레이는 문자열 해시(256+)
     // ------------------------------------------------------------------------------
@@ -38,14 +42,21 @@ namespace sw
         return hash;
     }
 
-/** @brief 고정 EventTypeId로 IEvent를 등록합니다. */
-#define SW_REGISTER_EVENT_ID( eventTypeId )                     \
-    EventTypeId getEventType() const override { return kType; } \
-                                                                \
-private:                                                        \
-    static constexpr EventTypeId kType = ( eventTypeId );       \
-    friend class EventDispatcher;                               \
-    friend class EventBus
+/**
+ * @brief 고정 EventTypeId로 IEvent를 등록합니다.
+ * @warning **이 매크로 뒤는 `private:` 이다.** 멤버를 더하려면 매크로 **위**에 적으십시오 —
+ *          아래에 적으면 조용히 private 이 됩니다(`struct` 라 기본이 public 인 것과 어긋난다).
+ * @details 이름을 전부 `sw::` 로 한정한다. 예전에는 ID 식만 한정하고 반환 타입과 friend 는 맨이름이라
+ *          **`namespace sw` 밖에서는 쓸 수 없었다** — `EventTypeId` 를 못 찾고, `friend class
+ *          EventDispatcher` 는 전역에 새 클래스를 선언해 진짜 디스패처가 `kType` 에 닿지 못했다.
+ *          ID 식이 이미 `sw::` 로 적혀 있던 것이 밖에서도 쓰려던 의도를 말해 준다.
+ */
+#define SW_REGISTER_EVENT_ID( eventTypeId )                         \
+    sw::EventTypeId getEventType() const override { return kType; } \
+                                                                    \
+private:                                                            \
+    static constexpr sw::EventTypeId kType = ( eventTypeId );       \
+    friend class sw::EventDispatcher
 
 /** @brief 엔진 이벤트 등록 (kEvent##Name 상수 사용) */
 #define SW_REGISTER_ENGINE_EVENT( Name ) SW_REGISTER_EVENT_ID( sw::kEvent##Name )

@@ -13,6 +13,8 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/String/hashed_string.h"
 
+#include <thread>
+
 namespace sw
 {
     // ------------------------------------------------------------------------------
@@ -22,6 +24,28 @@ namespace sw
     /**
      * @class EventDispatcher
      * @brief 채널 기반의 멀티캐스트 이벤트 전달자
+     *
+     * @details **스레드 계약이 두 쪽으로 갈린다. 섞어 쓰면 안 된다.**
+     *
+     *          | 쪽 | 함수 | 어느 스레드에서 |
+     *          | --- | --- | --- |
+     *          | 큐 | `push` · `enqueueEvent` · `getPendingEventCount` | **아무 스레드나** |
+     *          | 버스 | `subscribe` · `unsubscribe` · `publish` · `processEvents` · `clear` | **소유 스레드만** |
+     *
+     *          큐 쪽은 `_queueSpinLock` 과 프레임 아레나가 온전히 지킨다 — 워커 스레드가 이벤트를
+     *          밀어 넣고, 소유 스레드가 프레임마다 `processEvents` 로 빼서 방송한다. 이것이 이
+     *          클래스가 실제로 쓰이는 방식이다(`EngineLoop::tick` 이 프레임당 한 번 뺀다).
+     *
+     *          버스 쪽이 소유 스레드 전용인 이유는 **`broadcast` 가 잠금 밖에서 돌기 때문**이다.
+     *          콜백은 다시 구독·해제·발행을 부를 수 있어야 하는데 `SpinLock` 은 재귀가 아니므로
+     *          잠금을 쥔 채 콜백을 부를 수 없다(`processEvents` 도 같은 이유로 엔트리만 잠금 안에서
+     *          복사해 온다). 같은 스레드 재진입은 `MulticastDelegate` 가 지킨다 — 방송 중 `remove` 는
+     *          그 자리에서 무효화하고 삭제는 방송이 끝난 뒤로 미룬다. **다른 스레드가 끼어드는 것만**
+     *          막을 수 없어서, 막는 대신 **계약으로 못박고 디버그에서 확인한다.**
+     *
+     * @note 스냅샷을 방송하는 방법도 있지만 그러면 콜백이 자기를 해제해도 사본이 계속 호출돼
+     *       같은 스레드 안전성이 깨진다. 잠금을 재귀로 만들어 방송을 감싸는 방법은 임의의 콜백이 도는
+     *       내내 다른 스레드가 스핀하게 만든다. 진짜로 열려면 reader-writer 재설계가 필요하다.
      */
     class SW_API EventDispatcher
     {
@@ -43,22 +67,31 @@ namespace sw
         template <typename T>
         EventSubscription subscribe( const Delegate<void( const T& )>& delegate ) { return subscribe<T>( getDefaultChannel(), delegate ); }
 
-        /** @brief 이벤트를 구독합니다. */
+        /**
+         * @brief 이벤트를 구독합니다.
+         * @details `add` 를 **잠금 안에서** 한다. 예전에는 잠금이 맵 조회까지만 걸려 있고 `add` 는
+         *          밖에서 돌았다 — 같은 이벤트를 두 스레드가 동시에 구독하면 멀티캐스트의 벡터가
+         *          경쟁했다. 해제(`unsubscribe`)는 이미 잠금 안에서 `remove` 를 하고 있었으므로,
+         *          둘 중 한쪽만 보호되던 비대칭이었다.
+         */
         template <typename T>
         EventSubscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
         {
-            DelegateHandle handle = getOrCreateChannelDelegate<T>( channel )->add( delegate );
+            assertBusThread();
+            std::scoped_lock<SpinLock> lock{ _busSpinLock };
+            DelegateHandle             handle = findOrCreateChannelDelegateUnlocked<T>( channel )->add( delegate );
             return EventSubscription{ channel, T::kType, handle };
         }
 
         /** @brief 이벤트 구독을 해제합니다. */
         void unsubscribe( const EventSubscription& token )
         {
+            assertBusThread();
             std::scoped_lock<SpinLock>       lock{ _busSpinLock };
             pair<hashed_string, EventTypeId> key( token._channel, token._eventType );
-            auto                             iter = _mapChannelDelegate.find( key );
-            if ( iter != _mapChannelDelegate.end() )
-                std::static_pointer_cast<IMulticastDelegateBase>( iter->second )->remove( token._handle );
+            auto                             iter = _mapChannelDispatchTable.find( key );
+            if ( iter != _mapChannelDispatchTable.end() )
+                std::static_pointer_cast<IMulticastDelegateBase>( iter->second._pMulticast )->remove( token._handle );
         }
 
         /** @brief 이벤트 구독을 해제합니다. */
@@ -67,17 +100,33 @@ namespace sw
 
         /** @brief 이벤트 구독을 해제합니다. */
         template <typename T>
-        void unsubscribe( hashed_string channel, const Delegate<void( const T& )>& delegate ) { getOrCreateChannelDelegate<T>( channel )->remove( delegate ); }
+        void unsubscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
+        {
+            assertBusThread();
+            std::scoped_lock<SpinLock> lock{ _busSpinLock };
+            findOrCreateChannelDelegateUnlocked<T>( channel )->remove( delegate );
+        }
 
         /** @brief 이벤트를 즉시 발행합니다. */
         template <typename T>
         void publish( const T& event ) { publish<T>( getDefaultChannel(), event ); }
 
-        /** @brief 이벤트를 즉시 발행합니다. */
+        /**
+         * @brief 이벤트를 즉시 발행합니다.
+         * @warning **`broadcast` 는 잠금 밖에서 돈다.** 콜백이 다시 구독·해제·발행을 부를 수 있어야
+         *          하는데 `SpinLock` 은 재귀가 아니기 때문이다(`processEvents` 도 같은 이유로 엔트리만
+         *          잠금 안에서 복사해 온다). 그래서 **발행 중에 다른 스레드가 구독을 바꾸는 것은
+         *          안전하지 않다** — 구독 변경은 발행하는 스레드에서 하거나 프레임 경계로 미루십시오.
+         */
         template <typename T>
         void publish( hashed_string channel, const T& event )
         {
-            shared_ptr<MulticastDelegate<void( const T& )>> mcast = getOrCreateChannelDelegate<T>( channel );
+            assertBusThread();
+            shared_ptr<MulticastDelegate<void( const T& )>> mcast;
+            {
+                std::scoped_lock<SpinLock> lock{ _busSpinLock };
+                mcast = findOrCreateChannelDelegateUnlocked<T>( channel );
+            }
             mcast->broadcast( event );
         }
 
@@ -155,6 +204,28 @@ namespace sw
         }
 
     private:
+        /**
+         * @brief 버스를 퍼내는 스레드를 이 스레드로 못박습니다 — `processEvents` 가 부릅니다.
+         * @details 주인을 **생성한 스레드**가 아니라 **퍼내는 스레드**로 잡는 이유: 이 객체를 어디서
+         *          만들었는지는 우연이지만, 프레임마다 큐를 빼서 방송하는 쪽은 설계상 하나로 정해져
+         *          있다(`EngineLoop::tick`). 언리얼의 게임 스레드와 같은 자리다.
+         */
+        void claimBusThread();
+
+        /**
+         * @brief 버스 함수가 그 스레드에서 불렸는지 확인합니다.
+         * @details **Debug 전용이다** — 배포본에서는 호출이 통째로 사라진다. `SW_LOG_ASSERT` 는
+         *          비-Debug 에서도 Error 를 남기므로, `publish` 마다 도는 검사를 그대로 두면 위반 시
+         *          배포본 로그가 도배된다. 아직 아무도 퍼내지 않았으면(주인 미정) 아무 말도 하지 않는다.
+         */
+        void assertBusThread() const;
+
+        /**
+         * @brief 큐에 남은 이벤트의 소멸자를 부릅니다. `_queueSpinLock` 을 **잡은 채로** 부르십시오.
+         * @details 아레나를 되감는 것은 메모리만 돌려줄 뿐이다 — 소멸자는 여기서만 돈다.
+         */
+        void destroyQueuedEvents();
+
         /** @brief (채널, 이벤트 타입) 쌍을 해시합니다. */
         struct HashPair
         {
@@ -198,29 +269,41 @@ namespace sw
             static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->broadcast( static_cast<const T&>( eventRef ) );
         }
 
-        /** @brief 채널+타입 멀티캐스트를 찾거나 만듭니다. */
+        /**
+         * @brief 채널+타입 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오.
+         * @details 예전에는 이 함수가 잠금을 스스로 잡고 곧바로 놓아, 호출부의 `add`/`remove`/`broadcast`
+         *          가 전부 잠금 밖에서 돌았다. 이제 잠금 범위는 호출부가 정한다.
+         */
         template <typename T>
-        shared_ptr<MulticastDelegate<void( const T& )>> getOrCreateChannelDelegate( hashed_string channel )
+        shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel )
         {
             pair<hashed_string, EventTypeId> key( channel, T::kType );
 
-            std::scoped_lock<SpinLock>                                                                  lock{ _busSpinLock };
-            unordered_map<pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>::const_iterator iter = _mapChannelDelegate.find( key );
-            if ( iter != _mapChannelDelegate.end() )
-                return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second );
+            const auto iter = _mapChannelDispatchTable.find( key );
+            if ( iter != _mapChannelDispatchTable.end() )
+                return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second._pMulticast );
 
             shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-            _mapChannelDelegate[key]                              = mcast;
             _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, mcast };
             return mcast;
         }
 
     private:
-        mutable SpinLock                                                                _busSpinLock;
-        mutable SpinLock                                                                _queueSpinLock;
-        unordered_map<pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>     _mapChannelDelegate;
+        mutable SpinLock _busSpinLock;
+        mutable SpinLock _queueSpinLock;
+        /**
+         * @brief (채널, 이벤트 타입) → 방송 함수 + 멀티캐스트. **이것 하나가 정본이다.**
+         * @details 예전에는 `_mapChannelDelegate`(같은 키 → `shared_ptr<void>`)가 따로 있었는데,
+         *          그 값은 여기 `_pMulticast` 와 **같은 포인터**였다. 늘 함께 쓰이고 함께 비워지는
+         *          같은 표를 두 벌 두면 한쪽만 고치는 날 디스패치가 죽은 멀티캐스트를 부른다.
+         */
         unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
         unordered_map<hashed_string, unique_ptr<ChannelEventList>>                      _mapChannelQueue;
+
+#if defined( SW_DEBUG )
+        /** @brief 버스를 퍼내는 스레드. 첫 `processEvents` 가 정한다. 기본값이면 아직 주인이 없다. */
+        std::thread::id _busThreadId;
+#endif
 
         LinearAllocator _arrFrameAllocator[2];
         vector<void*>   _arrListOverflowAllocation[2];

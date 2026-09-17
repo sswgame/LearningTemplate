@@ -295,6 +295,67 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (큐에 남은 이벤트를 파괴하지 않고 버렸다 — Core/Event)
+
+**1) 실제 결함: `clear()` 와 소멸자가 큐에 남은 이벤트의 소멸자를 부르지 않았다.**
+
+이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감는 것은 **메모리만** 돌려줄 뿐
+소멸자를 부르지 않으므로, 멤버가 든 힙은 그대로 남는다. `processEvents` 는 방송 뒤에
+`pEvent->~IEvent()` 를 부르는데 **`clear()` 와 `~EventDispatcher()` 에는 그 한 줄이 빠져 있었다.**
+
+게임플레이 이벤트는 대부분 `sw::string` 을 든다(`SaveRequestedEvent::_savePath` 등). 종료 시점에
+큐가 비어 있지 않으면 그 문자열들이 샌다. 소멸자 호출 횟수를 세는 시험용 이벤트로 재현해
+두 경로 모두 새는 것을 확인하고 `destroyQueuedEvents()` 로 모았다.
+
+**2) `SW_REGISTER_EVENT_ID` 가 `namespace sw` 밖에서는 쓸 수 없었다.**
+
+ID 식은 `sw::eventTypeIdFromString` · `sw::kEvent##Name` 으로 **한정해 두고**(= 밖에서도 쓰라는
+뜻인데) 반환 타입 `EventTypeId` 와 `friend class EventDispatcher` 는 맨이름이었다. 밖에서 쓰면
+타입을 못 찾고, friend 는 **전역에 새 클래스를 선언**해 진짜 디스패처가 `kType` 에 닿지 못한다.
+기존 사용처가 전부 `namespace sw` 안이라 드러나지 않았다 — 테스트를 전역에 쓰다 컴파일 에러로 나왔다.
+전부 `sw::` 로 한정하고(한정 friend 는 첫 선언이 될 수 없어 `EventDispatcher` 전방 선언을 더했다),
+매크로 뒤가 `private:` 이라는 것도 `@warning` 으로 적었다.
+
+**3) `friend class EventBus` — `EventBus` 는 이 저장소에 없다.** 죽은 friend 선언이라 지웠다.
+
+**4) 같은 키의 맵이 두 벌이었다.** `_mapChannelDelegate`(키 → `shared_ptr<void>`)의 값은
+`_mapChannelDispatchTable`(키 → `{방송 함수, shared_ptr<void>}`)의 `_pMulticast` 와 **같은
+포인터**였다. 늘 함께 쓰이고 함께 비워지는 표를 두 벌 두면 한쪽만 고치는 날 디스패치가 죽은
+멀티캐스트를 부른다. 디스패치 표 하나로 합쳤다.
+
+**5) 구독은 잠금 밖, 해제는 잠금 안이었다.** `getOrCreateChannelDelegate` 가 잠금을 스스로 잡고
+곧바로 놓아서, 호출부의 `add` 는 **잠금 밖**에서 돌았다. 반면 `unsubscribe` 는 잠금을 쥔 채
+`remove` 를 했다 — 같은 자료구조의 두 변경이 한쪽만 보호됐다. 잠금 범위를 호출부가 정하게 바꿔
+둘을 대칭으로 만들었다(`findOrCreateChannelDelegateUnlocked`).
+
+**6) 그 남은 구멍(방송 중 교차 스레드 구독 변경)을 계약으로 닫았다.**
+
+세 방안을 재 봤다.
+
+| 방안 | 결과 |
+| --- | --- |
+| `broadcast` 를 **스냅샷**으로 | ✗ 같은 스레드 안전성이 깨진다 — 콜백이 자기를 해제해도 사본이 계속 호출된다(UAF). `MulticastDelegate` 가 방송 중 `remove` 를 그 자리에서 무효화하는 것이 바로 그 보호다 |
+| `_busSpinLock` 을 **재귀**로 만들어 방송을 감쌈 | ✗ 임의의 콜백이 도는 내내 다른 스레드가 **스핀**한다 — 데드락·CPU 낭비 |
+| **계약을 명시하고 강제** | ✓ 실제 설계와 일치하고, 조용히 어길 수 없다 |
+
+진짜로 여는 것은 reader-writer 재설계인데, **`subscribe` 호출부가 프로덕션에 0개**인 기능에 그 비용은
+과하다(실제 교차 스레드 경로는 `push`→`processEvents` 이고 그쪽은 이미 온전히 잠겨 있다).
+
+그래서 스레드 계약을 표로 적고(큐 = 아무 스레드나 · 버스 = 퍼내는 스레드만) **Debug 에서 확인한다.**
+기준점은 **생성한 스레드가 아니라 `processEvents` 를 부르는 스레드**다 — 어디서 만들었는지는 우연이지만
+프레임마다 큐를 빼는 쪽은 설계상 하나로 정해져 있다(언리얼의 게임 스레드와 같은 자리). 첫 `processEvents`
+가 주인을 못박고, 그전까지는(시작할 때 구독부터 하는 정상 흐름) 아무 말도 하지 않는다.
+
+검사는 **Debug 전용**이다. `SW_LOG_ASSERT` 는 비-Debug 에서도 Error 를 남기므로(이번 세션에 Macros.h 에
+적어 둔 그것이다) `publish` 마다 도는 검사를 그대로 두면 위반 시 배포본 로그가 도배된다.
+
+지원되는 교차 스레드 경로는 테스트로 못박았다 — 워커 4개가 100건을 `push` 하고 퍼내는 스레드가
+`processEvents` 로 전부 받는다.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5 · Shipping 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `EventTest` 5 → 8건(누수 둘은 수정 전에 실패하는 것을 확인) ·
+실기동 `-dx12` exit 0 · `[Error]` 0건 · 스레드 어설트 미발생.
+
 ### 2026-09-17 (MulticastDelegate 는 이동이 복사로 떨어지고 있었다 — Core/Delegate)
 
 **1) 이동이 없었다.** `MulticastDelegate` 가 복사 생성자·복사 대입을 `= default` 로 **선언** 하고

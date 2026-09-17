@@ -4,6 +4,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <thread>
+
 namespace
 {
     int32 s_LastResizeWidth{ 0 };
@@ -189,6 +191,133 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 
     SW_EXPECT_EQUAL( kTotalEvents, receivedCount );
     SW_EXPECT_EQUAL( kTotalEvents - 1, lastReceivedIndex );
+
+    dispatcher.clear();
+}
+
+namespace
+{
+    /** @brief 소멸 횟수를 세는 시험용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
+    struct DestructorCountingEvent final : sw::IEvent
+    {
+        static int32 s_liveCount;
+
+        sw::string _payload; ///< 실제 게임플레이 이벤트처럼 힙을 드는 멤버
+
+        DestructorCountingEvent() { ++s_liveCount; }
+        DestructorCountingEvent( const DestructorCountingEvent& other )
+            : sw::IEvent( other )
+            , _payload{ other._payload }
+        {
+            ++s_liveCount;
+        }
+        ~DestructorCountingEvent() override { --s_liveCount; }
+
+        SW_DECLARE_GAMEPLAY_EVENT( DestructorCountingEvent );
+    };
+
+    int32 DestructorCountingEvent::s_liveCount = 0;
+} // namespace
+
+/**
+ * @brief [EventTest] `clear()` 는 큐에 남은 이벤트를 **파괴하고** 버린다
+ * @details `processEvents` 는 방송한 뒤 `pEvent->~IEvent()` 를 부르는데, `clear()` 는 큐 맵만
+ *          비우고 아레나를 되감았다. 이벤트는 아레나에 placement new 로 올라가므로, 소멸자를
+ *          부르지 않으면 **멤버가 든 힙이 그대로 샌다**(게임플레이 이벤트는 `sw::string` 을 든다).
+ *          소멸자가 도는지를 살아 있는 개수로 본다.
+ */
+SW_TEST_CASE( EventTest, ClearDestroysQueuedEvents )
+{
+    sw::EventDispatcher dispatcher;
+
+    DestructorCountingEvent::s_liveCount = 0;
+    {
+        DestructorCountingEvent queued;
+        queued._payload = "게임 세이브 경로처럼 힙을 드는 문자열";
+        dispatcher.push( queued ); // 큐에 복사본이 하나 더 생긴다
+        SW_EXPECT_EQUAL( 2, DestructorCountingEvent::s_liveCount );
+    }
+    // 지역 변수는 죽고 큐에 든 복사본만 남는다.
+    SW_EXPECT_EQUAL( 1, DestructorCountingEvent::s_liveCount );
+    SW_EXPECT_EQUAL( size_t{ 1 }, dispatcher.getPendingEventCount() );
+
+    dispatcher.clear();
+
+    SW_EXPECT_TRUE_MSG( DestructorCountingEvent::s_liveCount == 0,
+                        "clear() 가 큐에 남은 이벤트의 소멸자를 부르지 않았다 — 멤버가 든 힙이 샌다" );
+    SW_EXPECT_EQUAL( size_t{ 0 }, dispatcher.getPendingEventCount() );
+}
+
+/**
+ * @brief [EventTest] 디스패처가 죽을 때도 큐에 남은 이벤트를 파괴한다
+ * @details `clear()` 와 같은 구멍이 소멸자에도 있었다. 종료 시점에 큐가 비어 있지 않으면 그대로 샌다.
+ */
+SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
+{
+    DestructorCountingEvent::s_liveCount = 0;
+    {
+        sw::EventDispatcher dispatcher;
+        {
+            DestructorCountingEvent queued;
+            queued._payload = "종료 직전에 밀어 넣은 이벤트";
+            dispatcher.push( queued );
+        }
+        SW_EXPECT_EQUAL( 1, DestructorCountingEvent::s_liveCount );
+    }
+
+    SW_EXPECT_TRUE_MSG( DestructorCountingEvent::s_liveCount == 0,
+                        "디스패처가 죽을 때 큐에 남은 이벤트의 소멸자를 부르지 않았다" );
+}
+
+/**
+ * @brief [EventTest] 다른 스레드에서 `push` 한 이벤트가 퍼내는 스레드에 도착한다
+ * @details 이것이 이 클래스가 실제로 쓰이는 방식이자, **교차 스레드로 지원되는 유일한 입구**다.
+ *          워커가 큐에 밀어 넣고(`_queueSpinLock` + 프레임 아레나가 지킨다), 버스를 퍼내는
+ *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`EngineLoop::tick`).
+ *          버스 쪽(subscribe/publish)은 퍼내는 스레드 전용이며 Debug 에서 확인한다.
+ */
+SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
+{
+    sw::EventDispatcher dispatcher;
+
+    int32 receivedCount = 0;
+    int32 widthSum      = 0;
+    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_LAMBDA(
+        sw::Delegate<void( const sw::WindowResizeEvent& )>, [&]( const sw::WindowResizeEvent& e )
+    {
+        ++receivedCount;
+        widthSum += e._width;
+    } ) );
+
+    constexpr int32 kThreadCount     = 4;
+    constexpr int32 kEventsPerThread = 25;
+
+    sw::vector<std::thread> listWorker;
+    for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listWorker.emplace_back( [&dispatcher]()
+        {
+            for ( int32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
+            {
+                sw::WindowResizeEvent resizeEvent;
+                resizeEvent._width  = 1;
+                resizeEvent._height = 1;
+                dispatcher.push( resizeEvent );
+            }
+        } );
+    }
+    for ( std::thread& worker : listWorker )
+    {
+        worker.join();
+    }
+
+    SW_EXPECT_EQUAL( static_cast<size_t>( kThreadCount * kEventsPerThread ), dispatcher.getPendingEventCount() );
+
+    dispatcher.processEvents();
+
+    SW_EXPECT_EQUAL( kThreadCount * kEventsPerThread, receivedCount );
+    SW_EXPECT_EQUAL( kThreadCount * kEventsPerThread, widthSum );
+    SW_EXPECT_EQUAL( size_t{ 0 }, dispatcher.getPendingEventCount() );
 
     dispatcher.clear();
 }
