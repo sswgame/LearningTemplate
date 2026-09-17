@@ -1,3 +1,7 @@
+/**
+ * @file ICompressionCodec.h
+ * @brief 압축 코덱 인터페이스와 코덱 식별자.
+ */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
@@ -7,6 +11,13 @@ namespace sw
     /**
      * @enum CompressionCodecType
      * @brief 지원되는 압축 코덱 식별자
+     * @details **이 값은 디스크에 기록된다** (`CompressionStream` 컨테이너 헤더의 `_codecType`).
+     *          기존 값을 옮기면 예전에 쓴 스트림을 못 읽는다 — **새 코덱은 뒤에 덧붙이기만 한다.**
+     *
+     *          리소스 팩의 `PackCompressionType` 과는 **일부러 값이 다르다.** 둘은 서로 다른 파일의
+     *          독립된 포맷이라, 숫자를 맞춰 두면 `static_cast` 로 건너다니고 싶어지고 그 순간 한쪽
+     *          포맷 변경이 다른 쪽을 끌고 간다. 코덱 **구현**은 공유하되(같은 `ICompressionCodec`
+     *          클래스들), 어떤 코덱을 쓸지는 각 포맷이 자기 enum 으로 스스로 고른다.
      */
     enum class CompressionCodecType : uint8
     {
@@ -17,14 +28,6 @@ namespace sw
         Zlib   = 4,   ///< Deflate — 굽는 쪽이 파이썬이라 리소스 팩이 쓴다
         Custom = 255, ///< 사용자 정의 코덱
     };
-
-    // **이 값은 디스크에 기록된다** (`CompressionStream` 컨테이너 헤더의 `_codecType`). 기존 값을 옮기면
-    // 예전에 쓴 스트림을 못 읽는다 — **새 코덱은 뒤에 덧붙이기만 한다.**
-    //
-    // 리소스 팩의 `PackCompressionType` 과는 **일부러 값이 다르다.** 둘은 서로 다른 파일의 독립된
-    // 포맷이라, 숫자를 맞춰 두면 `static_cast` 로 건너다니고 싶어지고 그 순간 한쪽 포맷 변경이 다른
-    // 쪽을 끌고 간다. 코덱 **구현**은 공유하되(같은 `ICompressionCodec` 클래스들), 어떤 코덱을 쓸지는
-    // 각 포맷이 자기 enum 으로 스스로 고른다.
 
     /**
      * @class ICompressionCodec

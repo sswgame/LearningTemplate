@@ -295,6 +295,50 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (없는 코덱을 요구하면 조용히 무압축으로 바꿔치고 헤더엔 그 코덱이라고 적었다 — Core/Compression)
+
+**1) 실제 결함: `resolveCodec` 이 못 찾으면 무조건 Null 코덱을 돌려줬다.**
+
+그 마지막 한 줄이 호출부의 오류 처리를 **전부 죽은 코드**로 만들었다. `compressBuffer` 의
+"코덱 없음 → 경고 후 폴백" 도, `decompressBuffer` 의 `"Unsupported codec type in stream"` 에러도
+**한 번도 실행된 적이 없다.** 결과가 둘이다:
+
+- **쓰기**: `compressBuffer( …, Zstd )` 를 Zstd 없이 부르면 헤더에는 `_codecType = Zstd` 라고 적고
+  페이로드는 **무압축**으로 썼다. 그 스트림을 Zstd 가 등록된 기계가 읽으면 쓰레기가 나온다.
+  `Archive` · `BinarySerializer` 가 코덱을 골라 넘기므로 닿는 경로다.
+- **읽기**: 모르는 `_codecType` 이 든 스트림을 Null 코덱으로 "해제" 했다. 체크섬 플래그가 꺼진
+  스트림이면 그 쓰레기가 **성공으로** 돌아갔다.
+
+내장 코덱은 자기가 실제로 구현하는 둘(`None` · `RLE`)에만 물러나고, 나머지는 `nullptr` 이다.
+이제 쓰기는 경고를 남기고 헤더에 **`None` 이라고 정직하게** 적으며(어디서든 복원된다), 읽기는 선다.
+
+**회귀 테스트 둘을 넣고 둘 다 변이 테스트로 확인했다** — 고치기 전 동작으로 되돌리면 둘 다 실패한다.
+읽기 쪽 테스트는 처음에 `vector` 오버로드로 썼다가 **고쳐도 안 고쳐도 통과**하는 것을 보고 다시 썼다:
+그 오버로드는 "푼 크기 != 헤더의 원본 크기" 를 한 번 더 보기 때문에 이 결함을 우연히 걸러낸다.
+고정 용량 오버로드로 묻고 체크섬 플래그도 꺼야 이 수정이 한 일을 실제로 검사한다.
+
+**2) `CompressionStream.h` 가 자립하지 않았다.** `vector<uint8>` 을 쓰면서
+`Core/Container/vector.h` 를 include 하지 않았다 — 소비자가 전부 `pch.h` 를 먼저 타서 우연히
+컴파일됐다. 폴더의 헤더 다섯을 전부 단독 컴파일로 확인했고(이것 하나만 깨졌다) include 를 더했다.
+
+**3) 디스크 포맷 상수가 흩어져 있었다.** 매직 `0x53574353` 이 `CompressionHeader::_magic` 기본값과
+`CompressionStream::kMagicNumber` 에 **두 벌**, 판 번호 `1` 이 세 곳, 체크섬 플래그 `0x01` 이 주석과
+리터럴 두 곳에 있었다. `CompressionHeader::kMagic` · `kVersion` · `kFlagChecksum` 하나씩으로 모았다.
+그리고 **28바이트 `static_assert`** 를 걸었다 — 이 구조체는 그대로 디스크에 나가므로 크기가 바뀌면
+예전 스트림이 조용히 어긋난다. 주석이 아니라 컴파일러가 지킨다.
+
+**4) `_codecType` 이 `uint8` 에 주석으로 `// CompressionCodecType` 이었다.** enum 의 언더라잉 타입이
+`uint8` 이라 레이아웃은 그대로면서 타입만 얻는다 — 읽고 쓰는 쪽의 `static_cast` 두 개가 사라졌다.
+
+**5) 레지스트리 맵 키가 `uint8` 이라 `static_cast` 가 다섯 곳이었다.** enum 으로 키를 바꿔 전부 없앴다.
+
+**6) `_defaultCodecType` 만 동기화 없이 읽고 쓰였다.** 맵은 `_mutex` 로 지키면서 이 필드는 맨몸이었다
+(렌더·잡 스레드가 같이 타는 경로다). `_mutex` 로는 못 지킨다 — `getDefaultCodec()` 이 이 값을 읽고
+곧바로 `getCodec()` 을 부르는데 그쪽이 같은 뮤텍스를 잡아 재귀 잠금으로 죽는다. `atomic` 으로 바꿨다.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5 · Shipping 5/5 ·
+`-L hostgpu` Debug 1/1 · Shipping 1/1 · 린트 15/15 · `CompressionTest` 5 → 7건.
+
 ### 2026-09-17 (Core/Common 정리 — 문자열 뷰만 전역에 있어 `sw::string_view` 가 컴파일이 안 됐다)
 
 **1) 전역 `string_view` 를 없애고 `sw` 안으로 옮겼다.**

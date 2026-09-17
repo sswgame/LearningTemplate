@@ -1,7 +1,12 @@
+/**
+ * @file CompressionCodecRegistry.h
+ * @brief 압축 코덱 레지스트리 — 등록 · 조회 · 기본 코덱.
+ */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 
@@ -61,7 +66,7 @@ namespace sw
          *          살아 모듈보다 오래 갑니다. 모듈이 내려가면 여기 남은 코덱의 vtable 과 소멸자가
          *          언맵된 주소를 가리킵니다 — Undo 스택·전역 변수와 같은 종류의 함정입니다.
          */
-        void registerCodec( sw::unique_ptr<ICompressionCodec> codec );
+        void registerCodec( unique_ptr<ICompressionCodec> codec );
         void unregisterCodec( CompressionCodecType type );
 
         ICompressionCodec* getCodec( CompressionCodecType type ) const;
@@ -77,8 +82,15 @@ namespace sw
         void registerBuiltinCodecs();
 
     private:
-        mutable mutex                                           _mutex;
-        unordered_map<uint8, sw::unique_ptr<ICompressionCodec>> _mapCodec;
-        CompressionCodecType                                    _defaultCodecType;
+        mutable mutex                                                      _mutex;
+        unordered_map<CompressionCodecType, unique_ptr<ICompressionCodec>> _mapCodec;
+        /**
+         * @brief 기본 코덱 종류. **원자다** — `_mutex` 로는 못 지킨다.
+         * @details `getDefaultCodec()` 이 이 값을 읽고 곧바로 `getCodec()` 을 부르는데 그쪽이 `_mutex` 를
+         *          잡는다. 그래서 여기서 같은 뮤텍스를 잡으면 재귀 잠금으로 죽는다(`sw::mutex` 는 재귀가
+         *          아니다). 예전에는 아예 아무 동기화도 없어서, 잠금으로 보호되는 맵 옆에서 이 필드만
+         *          맨몸으로 읽히고 쓰였다 — 렌더·잡 스레드가 같이 타는 경로다.
+         */
+        atomic<CompressionCodecType> _defaultCodecType;
     };
 } // namespace sw

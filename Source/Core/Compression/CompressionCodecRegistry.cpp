@@ -1,3 +1,7 @@
+/**
+ * @file CompressionCodecRegistry.cpp
+ * @brief 압축 코덱 레지스트리 구현.
+ */
 #include "pch.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
@@ -51,31 +55,30 @@ namespace sw
         _mapCodec.clear();
     }
 
-    void CompressionCodecRegistry::registerCodec( sw::unique_ptr<ICompressionCodec> codec )
+    void CompressionCodecRegistry::registerCodec( unique_ptr<ICompressionCodec> codec )
     {
         if ( codec == nullptr )
             return;
 
+        const CompressionCodecType type = codec->getCodecType();
+        SW_LOG_INFO( "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
+
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint8             key = static_cast<uint8>( codec->getCodecType() );
-        SW_LOG_INFO( "Registered codec: %# (type=%#)", codec->getCodecName(), key );
-        _mapCodec[key] = std::move( codec );
+        _mapCodec[type] = std::move( codec );
     }
 
     void CompressionCodecRegistry::unregisterCodec( CompressionCodecType type )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint8             key = static_cast<uint8>( type );
-        _mapCodec.erase( key );
+        _mapCodec.erase( type );
     }
 
     ICompressionCodec* CompressionCodecRegistry::getCodec( CompressionCodecType type ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint8             key = static_cast<uint8>( type );
-        const auto              it  = _mapCodec.find( key );
-        if ( it != _mapCodec.end() )
-            return it->second.get();
+        const auto              iter = _mapCodec.find( type );
+        if ( iter != _mapCodec.end() )
+            return iter->second.get();
 
         return nullptr;
     }
@@ -93,7 +96,7 @@ namespace sw
 
     ICompressionCodec* CompressionCodecRegistry::getDefaultCodec() const
     {
-        ICompressionCodec* pCodec = getCodec( _defaultCodecType );
+        ICompressionCodec* pCodec = getCodec( _defaultCodecType.load() );
         if ( pCodec == nullptr )
             pCodec = getCodec( CompressionCodecType::None );
         return pCodec;
@@ -101,24 +104,23 @@ namespace sw
 
     CompressionCodecType CompressionCodecRegistry::getDefaultCodecType() const
     {
-        return _defaultCodecType;
+        return _defaultCodecType.load();
     }
 
     void CompressionCodecRegistry::setDefaultCodecType( CompressionCodecType type )
     {
-        _defaultCodecType = type;
+        _defaultCodecType.store( type );
     }
 
     bool CompressionCodecRegistry::isCodecRegistered( CompressionCodecType type ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint8             key = static_cast<uint8>( type );
-        return _mapCodec.find( key ) != _mapCodec.end();
+        return _mapCodec.find( type ) != _mapCodec.end();
     }
 
     void CompressionCodecRegistry::registerBuiltinCodecs()
     {
-        _mapCodec[static_cast<uint8>( CompressionCodecType::None )] = sw::make_unique<NullCompressionCodec>();
-        _mapCodec[static_cast<uint8>( CompressionCodecType::RLE )]  = sw::make_unique<RleCompressionCodec>();
+        _mapCodec[CompressionCodecType::None] = make_unique<NullCompressionCodec>();
+        _mapCodec[CompressionCodecType::RLE]  = make_unique<RleCompressionCodec>();
     }
 } // namespace sw

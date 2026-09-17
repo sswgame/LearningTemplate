@@ -12,30 +12,46 @@ namespace sw
 {
     namespace
     {
-        /**
-         * @brief 코덱을 고릅니다 — 넘겨받은 레지스트리, 없으면 **바인딩된 활성 레지스트리**.
-         * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩 코덱으로 갔다. 그런데 넘기는 호출부가
-         *          하나도 없어서(레지스트리를 엔진이 들고 있었고 Core 는 거기 닿지 못한다) **항상**
-         *          하드코딩으로 갔고, 등록한 코덱은 쓰이지 않았다. 이제 활성 레지스트리를 본다.
-         *          슬롯이 비었거나(Core 만 링크하는 도구) 코덱이 없을 때만 내장 코덱으로 물러난다.
-         */
-        ICompressionCodec* resolveCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
+        /** @brief 레지스트리가 없을 때 쓰는 내장 코덱 — Core 만 링크하는 도구 경로용. */
+        NullCompressionCodec s_nullCodec;
+        RleCompressionCodec  s_rleCodec;
+
+        struct CompressionStreamInternal
         {
-            if ( pRegistry == nullptr )
-                pRegistry = CompressionCodecRegistry::getActive();
-
-            if ( pRegistry != nullptr )
+            /**
+             * @brief 코덱을 고릅니다 — 넘겨받은 레지스트리, 없으면 **바인딩된 활성 레지스트리**.
+             * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩 코덱으로 갔다. 그런데 넘기는 호출부가
+             *          하나도 없어서(레지스트리를 엔진이 들고 있었고 Core 는 거기 닿지 못한다) **항상**
+             *          하드코딩으로 갔고, 등록한 코덱은 쓰이지 않았다. 이제 활성 레지스트리를 본다.
+             *
+             *          **못 찾으면 nullptr 이다.** 예전에는 마지막에 무조건 Null 코덱을 돌려줬는데, 그
+             *          한 줄이 호출부의 오류 처리를 전부 죽은 코드로 만들었다. 결과가 둘이었다:
+             *          (1) `compressBuffer( …, Zstd )` 를 Zstd 없이 부르면 헤더에는 `Zstd` 라고 적고
+             *              페이로드는 **무압축**으로 썼다 — Zstd 가 등록된 다른 기계가 그 스트림을 읽으면
+             *              쓰레기가 나온다.
+             *          (2) 모르는 `_codecType` 이 든 스트림을 "해제" 해 버렸다. 체크섬 플래그가 꺼진
+             *              스트림이면 그 쓰레기가 **성공으로** 돌아갔다.
+             *          내장 코덱은 자기가 실제로 구현하는 둘(None · RLE)에만 물러난다.
+             */
+            static ICompressionCodec* findCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
             {
-                if ( ICompressionCodec* pCodec = pRegistry->getCodec( type ) )
-                    return pCodec;
-            }
+                if ( pRegistry == nullptr )
+                    pRegistry = CompressionCodecRegistry::getActive();
 
-            static NullCompressionCodec s_nullCodec;
-            static RleCompressionCodec  s_rleCodec;
-            if ( type == CompressionCodecType::RLE )
-                return &s_rleCodec;
-            return &s_nullCodec;
-        }
+                if ( pRegistry != nullptr )
+                {
+                    if ( ICompressionCodec* pCodec = pRegistry->getCodec( type ) )
+                        return pCodec;
+                }
+
+                if ( type == CompressionCodecType::None )
+                    return &s_nullCodec;
+                if ( type == CompressionCodecType::RLE )
+                    return &s_rleCodec;
+
+                return nullptr;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -64,10 +80,10 @@ namespace sw
             return false;
 
         Memory::copy( &outHeader, pData, sizeof( CompressionHeader ) );
-        if ( outHeader._magic != kMagicNumber )
+        if ( outHeader._magic != CompressionHeader::kMagic )
             return false;
 
-        if ( outHeader._version != 1 )
+        if ( outHeader._version != CompressionHeader::kVersion )
             return false;
 
         if ( outHeader._compressedSize + sizeof( CompressionHeader ) > dataSize )
@@ -87,11 +103,11 @@ namespace sw
         if ( pSrc == nullptr || srcSize == 0 )
             return true;
 
-        ICompressionCodec* pCodec = resolveCodec( codecType, pRegistry );
+        ICompressionCodec* pCodec = CompressionStreamInternal::findCodec( codecType, pRegistry );
         if ( pCodec == nullptr )
         {
             SW_LOG_WARNING( "Requested codec %# not found, falling back to Null codec", static_cast<uint8>( codecType ) );
-            pCodec = resolveCodec( CompressionCodecType::None, pRegistry );
+            pCodec = CompressionStreamInternal::findCodec( CompressionCodecType::None, pRegistry );
             if ( pCodec == nullptr )
                 return false;
             codecType = CompressionCodecType::None;
@@ -101,10 +117,10 @@ namespace sw
         outBytes.resize( sizeof( CompressionHeader ) + bound );
 
         auto* const pHeader        = reinterpret_cast<CompressionHeader*>( outBytes.data() );
-        pHeader->_magic            = kMagicNumber;
-        pHeader->_version          = 1;
-        pHeader->_codecType        = static_cast<uint8>( codecType );
-        pHeader->_flags            = 0x01; // With Checksum
+        pHeader->_magic            = CompressionHeader::kMagic;
+        pHeader->_version          = CompressionHeader::kVersion;
+        pHeader->_codecType        = codecType;
+        pHeader->_flags            = CompressionHeader::kFlagChecksum;
         pHeader->_uncompressedSize = static_cast<uint64>( srcSize );
         pHeader->_checksum         = calculateChecksum( pSrc, srcSize );
 
@@ -176,11 +192,10 @@ namespace sw
         if ( dstCapacity < static_cast<size_t>( header._uncompressedSize ) )
             return false;
 
-        const auto         codecType = static_cast<CompressionCodecType>( header._codecType );
-        ICompressionCodec* pCodec    = resolveCodec( codecType, pRegistry );
+        ICompressionCodec* pCodec = CompressionStreamInternal::findCodec( header._codecType, pRegistry );
         if ( pCodec == nullptr )
         {
-            SW_LOG_ERROR( "Unsupported codec type in stream: %#", header._codecType );
+            SW_LOG_ERROR( "Unsupported codec type in stream: %#", static_cast<uint32>( header._codecType ) );
             return false;
         }
 
@@ -194,7 +209,7 @@ namespace sw
             return false;
         }
 
-        if ( ( header._flags & 0x01 ) != 0 )
+        if ( ( header._flags & CompressionHeader::kFlagChecksum ) != 0 )
         {
             const uint32 calculatedChecksum = calculateChecksum( pDst, outUncompressedSize );
             if ( calculatedChecksum != header._checksum )
