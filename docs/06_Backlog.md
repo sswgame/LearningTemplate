@@ -288,12 +288,70 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 - 한 함수에서 **여러 구간을 빼낼 때는 뒤쪽 구간부터** 한다. 앞쪽을 먼저 빼면 뒤쪽 줄 번호가
   밀려 `switch` 중간을 자르는 식으로 깨진다.
 - 파일을 스크립트로 고칠 때 CRLF 를 보존한다. 이 저장소는 CRLF 다.
+- **`Tools/ReflectionParser` 만 고치면 `.gen.cpp` 가 다시 만들어지지 않는다.** 의존은 걸려 있는데
+  (`ninja -t query` 로 `BuildTools/ReflectionParser.exe` 가 입력에 보인다) 실제로는 파서만 다시 빌드되고
+  코드젠은 건너뛰는 것을 봤다. 즉 **파서를 고치고 리플렉션 테스트를 돌리면 옛 `.gen.cpp` 를 보고 있을 수
+  있다** — 변이 테스트가 "고치기 전에도 통과" 로 보이는 원인이다. 입력 헤더를 `touch` 해서 강제한다.
 
 ---
 
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-17 (플래그를 `X = true` 로 적으면 조용히 버려졌다 — Core/Predefined)
+
+`Source/Core/Predefined` 는 코드가 아니라 **목록 여섯 개**다. 나온 것은 두 종류다 — 같은 질문에 두
+곳이 다른 답을 하고 있었고, 번호가 계약인 목록에 그 사실이 적혀 있지 않았다.
+
+**1) 단독 토큰과 `X = true` 가 가리키는 필드 집합이 달랐다.** `AnnotationMeta.txt` 는 그 두 형태를
+`flag.X` 와 `bool.X` 로 **따로** 적는다(앞은 `_mapBare`, 뒤는 `_mapKey` 로 간다). 그 둘이 어긋나
+있었다 — 플래그 열셋 중 여섯(`Abstract` · `Static` · `AssetPath` · `Polymorphic` · `Reliable` ·
+`Validate`)에 `bool` 줄이 없어서 `PROPERTY( Polymorphic = true )` 는 `findKey` 가 nullptr 로 돌아오고
+`continue` 로 버려졌다. **경고 한 줄 없다.** 별칭 목록도 한쪽만 늘어나 `bool.XmlAttribute` 에는
+`xmlAttribute` 가 빠져 있었다 — `PROPERTY( xmlAttribute )` 는 먹고 `PROPERTY( xmlAttribute = true )`
+는 안 먹었다. 어느 쪽이 빠졌는지는 애노테이션을 적는 자리에서 보이지 않는다.
+
+줄을 합쳤다. `AnnotationMeta::addAlias` 가 `flag.` 한 줄을 `_mapBare`(Flag)와 `_mapKey`(Bool)에
+**함께** 넣는다. 중복이던 `bool.` 일곱 줄은 지웠고, 이제 어긋날 자리가 없다. `netrole.` 은 그대로
+단독 토큰뿐이다 — 역할을 고르는 것이라 참/거짓이 없다. `bool.` 은 "단독 토큰은 받지 않는 필드" 용으로
+남겨 두고 그렇게 적었다.
+
+**2) ENUM 스코프만 `=` 쪽에서 Bool 을 거부했다.** REFLECT · PROPERTY · FUNCTION 은 `Kind::Bool` 이면
+값을 파싱해 적용하는데 `parseEnumAnnotation` 만 `!= String` 이면 버렸다. 넷이 같게 했다.
+
+**3) 주지 않은 단독 플래그를 "주었다" 로 읽고 있었다.** `ArgumentList.xxx` 의 네 번째 열
+(`bUseDefaultValue`)이 RHI 백엔드 넷과 `ENABLE_EDITOR` 에만 켜져 있었다. 기본값이 `false` 라 값은
+맞았지만, 그 열을 켜면 `getArgument` 가 **주지 않은 인자에도 true** 를 돌려준다 — 반환값이 "이 인자가
+주어졌다" 를 뜻하지 않게 된다. `RHI.cpp` 가 `getArgument(...) && bFlag` 로 한 번 더 묻는 것이 그
+흔적이고, 같은 파일의 `VSYNC` 는 처음부터 꺼져 있었으며 주석이 그 이유(1280×720 설정이 무시되고 창이
+1280×1280 으로 뜬 사건)를 이미 적어 두고 있었다. 다섯 줄을 껐다 — 호출부는 둘 다 이미 값을 보고
+판단하므로 동작은 그대로다. 이제 목록의 단독 플래그는 전부 같은 답을 한다.
+
+**4) 번호가 곧 intern 인덱스인데 아무 데도 적혀 있지 않았다.** `.xxx` 넷 중 `PredefinedNameType.xxx`
+만 `@file` 머리말이 없는데, 하필 번호를 손으로 적는 유일한 목록이다. 이 목록은 **빈 intern 테이블에
+줄 순서대로** 적재되므로 번호 = intern 인덱스이고, `basic_hashed_string` 은 `PredefinedNameType` 을
+그대로 인덱스로 캐스팅한다(`getPredefinedType` 이 그 역이다). 중간에 한 줄 끼워 넣고 번호를 다시 매기지
+않으면 그 뒤 이름이 전부 다른 문자열을 가리킨다. 게다가 intern 의 비교와 해시는 **대소문자를
+무시하므로**(`StringUtil::equals( …, true )`) 이름을 대소문자만 다르게 지으면 두 항목이 하나로 합쳐져
+뒤가 한 칸씩 밀린다. 머리말에 적고 **둘 다 기계가 보게 했다** — 번호 연속성은 `hashed_string.h` 의
+`static_assert`, 합쳐짐은 `AllocationInfo` 생성자의 개수 단정(`SW_ASSERT` — 이 생성자는 Logger 보다
+먼저 돌기 때문에 로그를 태우는 단정을 쓸 수 없다).
+
+**5) `ArgumentList.xxx` 에도 머리말이 없었다.** 다섯 인자가 무엇을 뜻하는지 어디에도 없었다. 적었다.
+
+**살펴보고 손대지 않은 것.** `AnnotationMeta.txt` 의 필드는 `PredefinedAnnotationField.xxx` 의 네
+스코프 37개와 정확히 맞는다 — 바인딩 없는 필드도, 필드 없는 바인딩도 없다. `netrole.` 셋도
+`PredefinedFunctionNetRole.xxx` 와 맞는다(`Local` 은 기본값이라 애노테이션이 없는 것이 맞다).
+
+**회귀 테스트 둘.** `ReflectionParserTest.AssignedFlagFormMatchesBareToken` — 표본 타입 셋에 여섯
+플래그를 전부 `X = true` 로 적고 `TypeInfo` · `PropertyInfo` · `FunctionInfo` 에 실제로 붙는지 본다.
+변이 테스트로 확인했다(고치기 전 코드로 되돌리면 단정 여섯이 깨진다 — **단 `.gen.cpp` 를 강제로 다시
+만들어야 보인다**, 위 "편집 함정" 참조). `CommandLineTest.UnprovidedFlagIsNotReadable` — `-dx12` 만
+주고 나머지 플래그가 "주지 않았다" 로 읽히는지.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 · 린트 15/15 ·
+`CommandLineTest` 9 → 10건 · `ReflectionParserTest` 9 → 10건 · 헤더 5개 자립.
 
 ### 2026-09-17 (풀 할당기 문서가 정렬을 절반으로 적어 두었다 — Core/Memory)
 

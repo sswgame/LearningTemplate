@@ -113,6 +113,47 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationKindParsing )
 }
 
 /**
+ * @brief [ReflectionParserTest] 플래그를 `X = true` 로 적어도 단독 토큰과 같게 붙는다
+ * @details AnnotationMeta.txt 는 단독 토큰(flag)과 `key=value`(bool)를 **따로** 적었고 그 둘이
+ *          어긋나 있었다 — 플래그 열셋 중 여섯(Abstract·Static·AssetPath·Polymorphic·Reliable·
+ *          Validate)에 bool 줄이 없어 `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌다.
+ *          어느 쪽이 빠졌는지는 애노테이션을 적는 자리에서 보이지 않는다. 이제 flag 한 줄이 두
+ *          형태를 함께 등록한다.
+ */
+SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
+{
+    const sw::TypeInfo* pAbstract = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedAbstractBase" ) );
+    SW_ASSERT_NOT_NULL( pAbstract );
+    SW_EXPECT_TRUE( pAbstract->_bAbstract == SW_TRUE );
+
+    const sw::TypeInfo* pStatic = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedStaticLibrary" ) );
+    SW_ASSERT_NOT_NULL( pStatic );
+    SW_EXPECT_TRUE( pStatic->_bStatic == SW_TRUE );
+
+    const sw::TypeInfo* pActor = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedFlagActor" ) );
+    SW_ASSERT_NOT_NULL( pActor );
+
+    const sw::PropertyInfo* pAlbedo = pActor->findProperty( sw::hashed_string( "_albedo" ) );
+    SW_ASSERT_NOT_NULL( pAlbedo );
+    SW_EXPECT_TRUE( pAlbedo->_metadata._bAssetPath == SW_TRUE );
+
+    const sw::PropertyInfo* pPayload = pActor->findProperty( sw::hashed_string( "_payload" ) );
+    SW_ASSERT_NOT_NULL( pPayload );
+    SW_EXPECT_TRUE( pPayload->_metadata._bPolymorphic == SW_TRUE );
+
+    // 별칭 목록이 한쪽만 늘어나 있던 자리 — 단독 토큰으로는 `xmlAttribute` 가 먹혔다.
+    const sw::PropertyInfo* pTag = pActor->findProperty( sw::hashed_string( "_tag" ) );
+    SW_ASSERT_NOT_NULL( pTag );
+    SW_EXPECT_TRUE( pTag->_metadata._bXmlAttribute == SW_TRUE );
+
+    const sw::FunctionInfo* pPing = pActor->findMethod( sw::hashed_string( "ping" ) );
+    SW_ASSERT_NOT_NULL( pPing );
+    SW_EXPECT_TRUE( pPing->_metadata._bReliable == SW_TRUE );
+    SW_EXPECT_TRUE( pPing->_metadata._bValidate == SW_TRUE );
+    SW_EXPECT_TRUE( pPing->_metadata._netRole == sw::FunctionNetRole::Server );
+}
+
+/**
  * @brief [ReflectionParserTest] ReflectionParser 코드젠 출력 메타데이터 및 Static/Ctor 심볼 검증
  */
 SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )

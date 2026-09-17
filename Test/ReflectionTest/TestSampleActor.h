@@ -214,6 +214,61 @@ namespace sw
         ReflectAny _payload;
     };
 
+    /**
+     * @brief `Abstract = true` — 단독 토큰이 아니라 대입 형태로 적은 표본입니다.
+     * @details AnnotationMeta.txt 가 단독 토큰(flag)과 `key=value`(bool)를 따로 적던 시절에는 이
+     *          형태가 경고 한 줄 없이 버려졌습니다.
+     */
+    REFLECT( Abstract = true )
+    struct AssignedAbstractBase
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int32 _baseValue{ 1 };
+
+        /** @brief 가상 소멸자. */
+        virtual ~AssignedAbstractBase() = default;
+        /** @brief 추상 훅. */
+        virtual void tickAssigned() = 0;
+    };
+
+    /** @brief `Static = true` 대입 형태 표본입니다. */
+    REFLECT( Static = true )
+    struct AssignedStaticLibrary
+    {
+        REFLECT_BODY();
+        FUNCTION()
+        /** @brief value + 1 을 반환합니다. */
+        static int32 increment( int32 value )
+        {
+            return value + 1;
+        }
+    };
+
+    /** @brief 프로퍼티·함수 플래그를 전부 `X = true` 로 적은 표본입니다. */
+    REFLECT()
+    struct AssignedFlagActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath = true, AssetType = "Texture" )
+        string _albedo;
+
+        PROPERTY( Polymorphic = true )
+        ReflectAny _payload;
+
+        /** @brief 별칭도 한쪽만 늘어나 있었다 — `xmlAttribute` 는 단독 토큰으로만 먹혔습니다. */
+        PROPERTY( xmlAttribute = true )
+        int32 _tag{ 0 };
+
+        FUNCTION( Server, Reliable = true, Validate = true )
+        /** @brief 플래그만 보는 RPC 표본입니다. */
+        void ping( int32 value )
+        {
+            _tag = value;
+        }
+    };
+
     /** @brief 명시적 생성자로 ReflectionParser 가 `$ctor` / `$ctor(int32)` 를 출력하게 합니다. */
     REFLECT()
     struct CtorDemoActor

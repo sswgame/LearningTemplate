@@ -443,8 +443,20 @@ namespace sw
             const string_view        key     = StringUtil::trim( string_view( token.data(), eqPos ) );
             const string_view        val     = AnnotationApplyInternal::parseAnnotationStringValue( token, eqPos );
             const AnnotationBinding* binding = meta.findKey( annotationConstants::kEnumScope, key );
-            if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
+            if ( binding == nullptr )
                 continue;
+
+            // `Flags = true` 도 단독 토큰 `Flags` 와 같게 받는다 — 나머지 세 스코프가 이미 그렇게 한다.
+            if ( binding->_kind == AnnotationBinding::Kind::Bool )
+            {
+                if ( AnnotationApplyInternal::parseAnnotationBool( val ) == false )
+                    continue;
+            }
+            else if ( binding->_kind != AnnotationBinding::Kind::String )
+            {
+                continue;
+            }
+
             if ( const AnnotationApplyInternal::EnumEntry* entry =
                      AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumEntries, binding->_field ) )
                 entry->_pApply( enumInfo, val );

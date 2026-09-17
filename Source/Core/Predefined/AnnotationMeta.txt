@@ -5,14 +5,20 @@
 #   kind.필드이름 = 별칭, 별칭2
 #
 # kinds (토큰 철자는 PredefinedAnnotationKind.xxx 와 동일):
-#   flag     단독 토큰 → bool 필드
-#   bool     key=value → bool (true/1/True)
+#   flag     단독 토큰 `X` 와 `X=true` 를 **함께** 등록 → bool 필드
+#   bool     `X=value` 만 등록 → bool (true/1/True). 단독 토큰을 받지 않을 때만 쓴다.
 #   string   key=value → 문자열 필드
 #   float    key=value → float (Min/Max 범위)
 #   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
 #
+# flag 한 줄이 두 형태를 함께 책임진다. 예전에는 `flag.X` 와 `bool.X` 를 따로 적었고, 그 둘이
+# 어긋나 있었다 — 플래그 열셋 중 여섯(Abstract·Static·AssetPath·Polymorphic·Reliable·Validate)에
+# bool 줄이 없어 `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌고, 별칭도 한쪽만
+# 늘어나 `xmlAttribute` 는 단독 토큰으로만 먹혔다. 어느 쪽이 빠졌는지 보이지 않는 종류의 구멍이라
+# 줄을 합쳤다.
+#
 # 별칭만 추가할 때는 여기만 수정.
-# 새 *필드*를 만들면 AstVisitor apply에 한 줄도 필요하다.
+# 새 *필드*를 만들면 PredefinedAnnotationField.xxx 에도 한 줄이 필요하다.
 # =============================================================================
 
 [REFLECT]
@@ -25,7 +31,6 @@ string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
-bool.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
 
 [ENUM]
 string.Alias = Alias, PreviousName, PreviousNames
@@ -57,11 +62,6 @@ string.AssetType = AssetType
 string.Meta = Meta, meta, CustomMeta
 float.MinRange = Min
 float.MaxRange = Max
-bool.ReadOnly = ReadOnly
-bool.XmlAttribute = XmlAttribute
-bool.Transient = Transient, transient, NonSerialized, nonSerialized
-bool.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
-bool.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 
 [FUNCTION]
 netrole.Server = Server
@@ -74,4 +74,3 @@ string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
-bool.CallInEditor = CallInEditor, callInEditor, ExecInEditor

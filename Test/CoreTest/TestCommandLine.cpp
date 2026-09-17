@@ -183,6 +183,41 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 }
 
 /**
+ * @brief [CommandLineTest] 주지 않은 단독 플래그를 "주었다" 로 읽지 않는다
+ * @details 백엔드 플래그 넷과 ENABLE_EDITOR 만 `bUseDefaultValue` 가 켜져 있었다. 기본값이 `false`
+ *          라 값 자체는 맞았지만 `getArgument` 가 **주지 않은 인자에도 true** 를 돌려줘, 반환값만으로는
+ *          어느 백엔드를 고르라는 것인지 알 수 없었다 — `RHI.cpp` 가 `getArgument(...) && bFlag` 로
+ *          한 번 더 묻는 것이 그 흔적이다. 같은 파일의 VSYNC 는 처음부터 꺼져 있었다.
+ */
+SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "dx12" ),
+    };
+    cmdManager.parse( 2, argv );
+
+    bool bFlag{ true };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_11, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::OPENGL, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::ENABLE_EDITOR, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::VSYNC, bFlag ) );
+
+    // 준 것만 읽힌다.
+    bool bDx12{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
+    SW_EXPECT_TRUE( bDx12 );
+
+    // 단독 플래그에 한해 두 질문의 답이 같아졌다.
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_12 ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_11 ) );
+}
+
+/**
  * @brief [CommandLineTest] "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
  * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
  *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 실제로 `EngineConfig` 의

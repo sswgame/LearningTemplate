@@ -31,6 +31,31 @@ namespace sw
 #undef REGISTER_NAME
         Count
     };
+
+    /** @brief REGISTER_NAME 번호를 줄 순서대로 늘어놓은 표입니다 (아래 static_assert 전용). */
+    inline constexpr uint32 kArrPredefinedNameIndex[] = {
+#define REGISTER_NAME( index, name ) static_cast<uint32>( PredefinedNameType::NameType_##name ),
+#include "Core/Predefined/PredefinedNameType.xxx"
+
+#undef REGISTER_NAME
+    };
+
+    /** @brief 사전 정의 이름 번호가 0부터 빈틈없이 이어지는지 확인합니다. */
+    constexpr bool arePredefinedNameIndicesContiguous() noexcept
+    {
+        for ( uint32 nameIndex = 0; nameIndex < static_cast<uint32>( SW_COUNT_OF( kArrPredefinedNameIndex ) ); ++nameIndex )
+        {
+            if ( kArrPredefinedNameIndex[nameIndex] != nameIndex )
+                return false;
+        }
+        return true;
+    }
+
+    // 번호가 곧 intern 인덱스다 — 사전 정의 이름은 빈 테이블에 줄 순서대로 적재되고,
+    // basic_hashed_string 은 PredefinedNameType 을 그대로 인덱스로 캐스팅한다. 줄 하나를 중간에
+    // 끼워 넣고 번호를 다시 매기지 않으면 그 뒤 이름이 전부 다른 문자열을 가리킨다.
+    static_assert( arePredefinedNameIndicesContiguous(),
+                   "PredefinedNameType.xxx: REGISTER_NAME 번호는 줄 순서(0부터)와 같아야 합니다." );
 } // namespace sw
 
 namespace sw
@@ -298,6 +323,11 @@ namespace sw
             _arrChunk[0].store( pFirstChunk, std::memory_order_release );
 
             createPredefinedNameTypes();
+
+            // 두 이름이 대소문자만 다르면 intern 테이블이 그 둘을 하나로 합치고(비교와 해시가
+            // 대소문자를 무시한다) 그 뒤 이름의 인덱스가 한 칸씩 밀려 열거값과 어긋난다. 번호가
+            // 줄 순서와 맞는지는 static_assert 가 보지만, 합쳐진 것은 여기서만 보인다.
+            SW_ASSERT( _entryCount.load( std::memory_order_relaxed ) == static_cast<uint32>( PredefinedNameType::Count ) );
         }
 
         /** @brief 모든 메모리 블록, 청크, 맵을 일괄 해제합니다. */
