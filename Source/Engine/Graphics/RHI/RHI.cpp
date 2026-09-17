@@ -119,6 +119,43 @@ namespace sw
         _colorTargetCount  = 1;
     }
 
+    bool RHIBackendUtil::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )
+    {
+        bool bFlag{ false };
+        if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
+        {
+            outBackend = RHIBackend::DirectX11;
+            return true;
+        }
+        if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
+        {
+            outBackend = RHIBackend::DirectX12;
+            return true;
+        }
+        if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
+        {
+            outBackend = RHIBackend::Vulkan;
+            return true;
+        }
+        if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
+        {
+            outBackend = RHIBackend::OpenGL;
+            return true;
+        }
+
+        // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전엔 짧은 플래그만 봐서, 전역 변수로
+        // 백엔드를 고르면 EngineConfig 기본값이 **조용히 덮어썼다** — 커맨드라인이 아무 일도 안
+        // 하는 것처럼 보이고, 로그도 남지 않았다. 값 자체는 updateFromCommandLine 이 이미 전역
+        // 변수에 넣어 두었으므로 여기서는 그것을 읽는다.
+        if ( commandLineManager.isArgumentProvided( "gv_rhiBackend" ) )
+        {
+            outBackend = gv_rhiBackend;
+            return true;
+        }
+
+        return false;
+    }
+
     RHI::RHI()
         : _device{ nullptr }
         , _pendingRHIBackend{ RHIBackend::DirectX12 }
@@ -135,36 +172,15 @@ namespace sw
     {
         // Priority: explicit CLI > current GVM value > OS default > first available
         RHIBackend currentBackend = gv_rhiBackend;
-        bool       bCommandLineOverride{ false };
 
-        const CommandLineManager& commandLineManager = engine::getCommandLineManager();
-        bool                      bFlag{ false };
-        if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
-        {
-            currentBackend       = RHIBackend::DirectX11;
-            bCommandLineOverride = true;
-        }
-        else if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
-        {
-            currentBackend       = RHIBackend::DirectX12;
-            bCommandLineOverride = true;
-        }
-        else if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
-        {
-            currentBackend       = RHIBackend::Vulkan;
-            bCommandLineOverride = true;
-        }
-        else if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
-        {
-            currentBackend       = RHIBackend::OpenGL;
-            bCommandLineOverride = true;
-        }
-
-        if ( bCommandLineOverride == false )
-        {
-            if ( RHIAvailability::isAvailable( currentBackend ) == false )
-                currentBackend = getDefaultPlatformBackend();
-        }
+        // 커맨드라인이 고른 것은 **폴백하지 않는다** — 쓸 수 없으면 아래에서 에러로 선다.
+        // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다(실제로 그런 적이 있다).
+        RHIBackend commandLineBackend{};
+        const bool bCommandLineOverride = RHIBackendUtil::findCommandLineBackend( engine::getCommandLineManager(), commandLineBackend );
+        if ( bCommandLineOverride )
+            currentBackend = commandLineBackend;
+        else if ( RHIAvailability::isAvailable( currentBackend ) == false )
+            currentBackend = getDefaultPlatformBackend();
 
         if ( RHIAvailability::isAvailable( currentBackend ) == false )
         {

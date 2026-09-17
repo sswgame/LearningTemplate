@@ -127,6 +127,37 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
+### 1-A. RenderPassGpuTest 두 건이 **Shipping 에서만** 진다 (2026-09-17 발견, 원인 미상)
+
+```
+RenderPassGpuTest.DeferredPipelineDrawsGeometry   TestRenderPassGpu.cpp:2351
+RenderPassGpuTest.AmbientOcclusionReachesBloom    TestRenderPassGpu.cpp:2668, 2682
+```
+
+**Debug 는 24/24 통과하고 Shipping 만 0/1 씩 진다.** 내 커밋이 아니다 — 손대지 않은
+`97095c4c` 를 그대로 빌드해서 같은 두 건이 지는 것을 확인했다(RHI 정리 전 `51a973e6` 도 동일).
+즉 **적어도 `97095c4c` 이전부터 있었고 아무도 몰랐다.**
+
+몰랐던 이유가 구조에 있다: `RenderPassGpuTest` 는 `EngineTest_NoGPU` 필터에서 빠져 있어
+**CI 가 한 번도 돌린 적이 없고**, 로컬 검증은 대개 Debug 로만 한다. 이 저장소에 이미
+"Debug 는 힙 손상·미초기화를 조용히 삼킨다" 는 규칙이 있는데, 그 규칙이 닿지 않는 자리가
+바로 GPU 스위트다.
+
+재현:
+
+```powershell
+cd build/Ninja-Shipping/Bin
+../TestBin/EngineTest.exe --test_filter=RenderPassGpuTest.DeferredPipelineDrawsGeometry
+../TestBin/EngineTest.exe --test_filter=RenderPassGpuTest.AmbientOcclusionReachesBloom
+```
+
+두 건 모두 **그린 픽셀/기하가 나와야 할 자리에 안 나오는** 종류의 단언이다(디퍼드 파이프라인
+기하, SSAO→블룸 전달). Debug 에서만 맞는다는 것은 초기화되지 않은 값이나 최적화에 따라
+달라지는 UB 를 의심할 자리다.
+
+**손대기 전에**: 먼저 Release 에서도 지는지 본다(Shipping 만인지, 최적화 빌드 전반인지가
+범위를 가른다). 그다음 `-gv_rhiImmediateSubmit=1` 로 어느 제출에서 갈리는지 좁힌다.
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -294,6 +325,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-17 (백엔드를 고르는 같은 사슬이 두 벌이었고, 이미 답이 갈려 있었다)
+
+"커맨드라인이 백엔드를 명시했는가" 를 두 곳이 각자 물었다. `EngineLoop` 은 "명시했는가"(안 했으면
+`EngineConfig::_defaultRHI` 로 덮는다), `RHI::initialize` 는 "무엇인가"(와, 쓸 수 없을 때 조용히
+폴백해도 되는가). 네 플래그(`-dx11`/`-dx12`/`-vk`/`-gl`)를 훑는 사슬이 글자 그대로 두 벌이었다.
+
+**두 벌은 이미 다른 답을 내고 있었다.** `EngineLoop` 쪽만 `-gv_rhiBackend` 를 명시로 쳤고 `RHI` 쪽은
+아니었다. 그래서 쓸 수 없는 백엔드를 `-gv_rhiBackend` 로 고르면 **에러 없이 다른 백엔드로 떴고**,
+같은 것을 `-vk` 로 고르면 에러였다. 로그에도 "요청과 다른 것으로 떴다" 는 말이 없다 — 이 저장소가
+한 번 겪은 "네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드" 와 같은 모양이다.
+
+`RHIBackendUtil::findCommandLineBackend( cli, outBackend )` 하나로 모았다(`RHI.h`, `gv_rhiBackend`
+바로 옆). 두 질문 모두 이것으로 답한다 — 반환값이 "명시했는가", `outBackend` 가 "무엇인가".
+`EngineLoop.cpp` 의 익명 네임스페이스(`EngineLoopInternal`)는 이 함수 하나뿐이었으므로 통째로 사라졌다.
+
+**의도한 동작 변경 하나**: 이제 `-gv_rhiBackend` 로 고른 백엔드도 쓸 수 없으면 **조용히 폴백하지 않고
+에러로 선다.** 짧은 플래그와 같아진다.
+
+부수로 `Scripts/dev/BackendSmoke.py` 의 낡은 경고를 고쳤다 — "`-gv_rhiBackend` 는 무시된다" 고
+적혀 있었는데 그건 그 문장을 쓴 뒤에 고쳐진 일이다. 지금은 먹는다(실기동으로 0·2 둘 다 확인).
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` 5/5 · 린트 15/15 ·
+`BackendSmoke.py` 네 백엔드 × 불투명/반투명 8회 전부 exit 0 · `[Error]` 0건 · 평균 RGB 서로 1.0 이내 ·
+`RenderPassGpuTest` Debug 24/24 · 실기동 `-gv_rhiBackend=2`→Vulkan, `-gv_rhiBackend=0`→DirectX11,
+`-gl`→OpenGL.
+
+**이 작업 중에 찾은 별건**: `RenderPassGpuTest` 두 건이 Shipping 에서만 진다 — 내 커밋이 아니고
+`97095c4c` 부터 그랬다. 위 "1-A" 참고.
 
 ### 2026-09-17 (동의어 등록이 중간에 멈추면 없는 인자를 가리키는 이름이 남았다 — CommandLineManager 정리)
 

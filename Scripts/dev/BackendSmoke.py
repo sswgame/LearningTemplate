@@ -10,8 +10,9 @@
 판정: 각 실행이 exit 0 이고, 로그의 [Error] 수와 PPM 의 평균 RGB·"배경이 아닌 픽셀 수" 를 표로 낸다.
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
 
-주의: 백엔드는 반드시 -dx11 / -dx12 / -vk / -gl 플래그로 고른다. `-gv_rhiBackend=X` 는 App 이 EngineConfig 의
-_defaultRHI 로 덮어써 무시된다 — 예전 스모크가 이 실수로 네 번 다 DX12 를 돌렸다.
+백엔드는 -dx11 / -dx12 / -vk / -gl 플래그로 고른다. `-gv_rhiBackend=<n>` 도 지금은 먹지만(둘 다
+같은 RHIBackendUtil::findCommandLineBackend 를 지난다) 숫자라 읽기 나쁘다. 예전에는 정말로 무시되어
+EngineConfig 의 _defaultRHI 가 덮어썼고, 그래서 스모크가 네 번 다 DX12 를 돌린 적이 있다.
 """
 import argparse
 import os

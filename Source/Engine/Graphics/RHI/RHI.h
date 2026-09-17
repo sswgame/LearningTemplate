@@ -13,12 +13,34 @@ namespace sw
 {
     enum class ShaderTargetFormat : uint8;
 
+    class CommandLineManager;
     class IRHIDevice;
 } // namespace sw
 
 namespace sw
 {
     extern SW_API RHIBackend gv_rhiBackend;
+
+    /**
+     * @struct RHIBackendUtil
+     * @brief 백엔드 선택에 관한 질문 중 **한 자리에 있어야 하는 것**을 든다.
+     */
+    struct SW_API RHIBackendUtil
+    {
+        /**
+         * @brief 커맨드라인이 백엔드를 **명시했는지**, 명시했다면 무엇인지 돌려줍니다.
+         * @details 이 질문은 두 곳에서 필요하다 — `EngineLoop` 은 "명시했는가"(안 했으면 설정
+         *          기본값으로 덮는다), `RHI::initialize` 는 "무엇인가"(와, 쓸 수 없을 때 조용히
+         *          폴백해도 되는가). 예전에는 네 플래그를 훑는 같은 사슬이 **두 벌로** 적혀 있었고,
+         *          그래서 이미 답이 갈려 있었다: `EngineLoop` 쪽만 `-gv_rhiBackend` 를 명시로 쳤고
+         *          `RHI` 쪽은 아니어서, 쓸 수 없는 백엔드를 `-gv_rhiBackend` 로 고르면 에러 없이
+         *          다른 백엔드로 떴다. `-vk` 로 같은 것을 고르면 에러였다.
+         * @param commandLineManager 파싱이 끝난 커맨드라인
+         * @param outBackend 명시했을 때만 채워집니다
+         * @return 커맨드라인이 백엔드를 명시했으면 true
+         */
+        static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
+    };
 
     /**
      * @class RHI

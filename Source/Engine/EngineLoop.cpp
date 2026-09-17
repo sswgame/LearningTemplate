@@ -62,29 +62,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct EngineLoopInternal
-        {
-            static bool cliRequestsBackend( const CommandLineManager& cli )
-            {
-                bool bFlag{ false };
-                if ( cli.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
-                    return true;
-                if ( cli.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
-                    return true;
-                if ( cli.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
-                    return true;
-                if ( cli.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
-                    return true;
-                // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 예전엔 짧은 플래그만 봐서, 전역 변수로
-                // 백엔드를 고르면 바로 아래 줄이 EngineConfig 기본값으로 **조용히 덮어썼다** —
-                // 커맨드라인이 아무 일도 안 하는 것처럼 보이고, 로그도 남지 않았다.
-                return cli.isArgumentProvided( "gv_rhiBackend" );
-            }
-        };
-    } // namespace
-
     /**
      * @brief `-gv_crashTest=1` — RHI 초기화 직후 일부러 크래시를 냅니다 (리포트 경로 검증용).
      * @details 크래시 리포트는 크래시가 나야만 만들어진다. 그래서 "덤프가 제대로 써지는가" 는 일부러
@@ -331,7 +308,9 @@ namespace sw
                 return true;
             }
 
-            if ( EngineLoopInternal::cliRequestsBackend( *_commandLineManager ) == false )
+            // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
+            RHIBackend commandLineBackend{};
+            if ( RHIBackendUtil::findCommandLineBackend( *_commandLineManager, commandLineBackend ) == false )
                 gv_rhiBackend = pEngineConfig->_window._defaultRHI;
 
             if ( IWindow::getActiveWindow() == nullptr )
