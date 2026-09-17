@@ -13,7 +13,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) 핸들 ID — Engine.dll(Core OBJECT) 이 유일 발급. 멀티캐스트 remove 키
+    // 1) 전방 선언 — 아래 두 템플릿의 시그니처별 특수화가 본체다
     // ------------------------------------------------------------------------------
     /** @brief 단일 바인딩 콜백 (함수·멤버·람다). */
     template <typename T>
@@ -25,8 +25,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) Delegate — create / operator() / isBound. 람다는 SBO 또는 힙
     // ------------------------------------------------------------------------------
-    template <typename R, typename... Args>
     /** @brief 호출 가능한 대상을 하나 붙입니다. */
+    template <typename R, typename... Args>
     class Delegate<R( Args... )>
     {
     public:
@@ -116,16 +116,16 @@ namespace sw
         /** @brief 델리게이트가 호출 가능한 상태(바인딩됨)인지 확인합니다. */
         bool isBound() const { return _stubFunc != nullptr; }
 
-        template <typename... UArgs, typename = std::enable_if_t<std::is_invocable_v<R( Args... ), UArgs...>>>
         /** @brief 바인딩된 대상을 호출합니다. 비어 있으면 assert. */
+        template <typename... UArgs, typename = std::enable_if_t<std::is_invocable_v<R( Args... ), UArgs...>>>
         R operator()( UArgs&&... args ) const
         {
             SW_ASSERT( isBound() );
             return std::invoke( _stubFunc, _pInstance, std::forward<UArgs>( args )... );
         }
 
-        template <auto Function, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( Function ), Args...>>>
         /** @brief 컴파일타임 함수 포인터로 바인딩합니다. */
+        template <auto Function, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( Function ), Args...>>>
         static Delegate create()
         {
             Delegate newDelegate{};
@@ -150,8 +150,8 @@ namespace sw
             return newDelegate;
         }
 
-        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), const Class*, Args...>>>
         /** @brief const 인스턴스의 멤버 함수를 바인딩합니다. */
+        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), const Class*, Args...>>>
         static Delegate create( const Class* pClassInstance )
         {
             Delegate newDelegate{};
@@ -165,8 +165,8 @@ namespace sw
             return newDelegate;
         }
 
-        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), Class*, Args...>>>
         /** @brief 인스턴스의 멤버 함수를 바인딩합니다. */
+        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), Class*, Args...>>>
         static Delegate create( Class* pClassInstance )
         {
             Delegate newDelegate{};
@@ -311,7 +311,9 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 3) DelegateHandle — add() 가 발급, remove(handle) 로 해제
+    // 3) DelegateHandle — add() 가 발급, remove(handle) 로 해제.
+    //    발급기(`allocate`)의 실체는 Engine.dll(Core OBJECT) 에 하나뿐이다 — 로드되는 모듈들도
+    //    같은 카운터를 보므로 모듈이 건 구독의 핸들이 엔진 쪽 것과 겹치지 않는다.
     // ------------------------------------------------------------------------------
     /** @brief 멀티캐스트 항목을 가리키는 발급 ID입니다. 0 은 무효. */
     struct DelegateHandle
@@ -377,10 +379,69 @@ namespace sw
         {
         }
 
-        /** @brief 구독 리스트를 복제합니다. */
-        MulticastDelegate( const MulticastDelegate& other ) = default;
-        /** @brief 복사 대입합니다. */
-        MulticastDelegate& operator=( const MulticastDelegate& other ) = default;
+        // ------------------------------------------------------------------------------
+        // 복사·이동 — **방송 상태는 값의 일부가 아니다**
+        //
+        // 이 넷을 직접 적는 이유가 둘이다.
+        //
+        // 1) **이동이 복사로 떨어지고 있었다.** 복사 생성자를 `= default` 로 *선언* 하는 순간 암시적
+        //    이동 생성자·이동 대입이 생기지 않는다(C++ 규칙). 그래서 `MulticastDelegate` 를 옮길 때마다
+        //    구독자 벡터가 통째로 깊은 복사됐다 — `is_nothrow_move_constructible` 이 false 였고,
+        //    `std::move` 뒤에도 원본이 그대로 남아 있었다.
+        // 2) **`_broadcastDepth` 와 지연 제거 큐까지 같이 복사됐다.** 이 둘은 값이 아니라 *그 인스턴스의
+        //    호출 스택 상태*다. broadcast 중에 복사하면 사본의 깊이가 0 이 아닌 채로 태어나, 그 사본은
+        //    지연된 제거를 **영영 반영하지 않는다**(자기 broadcast 는 1→2→1 로만 오가므로 0 이 안 된다).
+        //
+        // 그래서 생성은 깊이 0 · 빈 큐로 시작하고, 대입은 받는 쪽의 깊이를 건드리지 않는다(그 깊이는
+        // 지금 이 객체를 방송 중인 호출 스택의 것이다). 큐는 비운다 — 교체돼 사라질 리스트의 핸들이다.
+        // ------------------------------------------------------------------------------
+        /** @brief 구독 리스트만 복제합니다. 방송 상태는 가져오지 않습니다. */
+        MulticastDelegate( const MulticastDelegate& other )
+            : IMulticastDelegateBase( other )
+            , _listDelegate{ other._listDelegate }
+            , _listPendingRemove{}
+            , _broadcastDepth{ 0 }
+        {
+        }
+
+        /** @brief 구독 리스트를 가져옵니다. 원본은 비어 있는 상태로 남습니다. */
+        MulticastDelegate( MulticastDelegate&& other ) noexcept
+            : IMulticastDelegateBase( std::move( other ) )
+            , _listDelegate{ std::move( other._listDelegate ) }
+            , _listPendingRemove{ std::move( other._listPendingRemove ) }
+            , _broadcastDepth{ 0 }
+        {
+            other._listDelegate.clear();
+            other._listPendingRemove.clear();
+            other._broadcastDepth = 0;
+        }
+
+        /** @brief 구독 리스트만 대입합니다. 이 객체의 방송 깊이는 그대로 둡니다. */
+        MulticastDelegate& operator=( const MulticastDelegate& other )
+        {
+            if ( this != &other )
+            {
+                IMulticastDelegateBase::operator=( other );
+                _listDelegate = other._listDelegate;
+                _listPendingRemove.clear();
+            }
+            return *this;
+        }
+
+        /** @brief 구독 리스트를 가져옵니다. 이 객체의 방송 깊이는 그대로 둡니다. */
+        MulticastDelegate& operator=( MulticastDelegate&& other ) noexcept
+        {
+            if ( this != &other )
+            {
+                IMulticastDelegateBase::operator=( std::move( other ) );
+                _listDelegate = std::move( other._listDelegate );
+                _listPendingRemove.clear();
+                other._listDelegate.clear();
+                other._listPendingRemove.clear();
+                other._broadcastDepth = 0;
+            }
+            return *this;
+        }
 
         /** @brief 두 멀티캐스트 델리게이트가 동일한 대상 리스트를 가지고 있는지 비교합니다. */
         bool operator==( const MulticastDelegate& other ) const

@@ -295,6 +295,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (MulticastDelegate 는 이동이 복사로 떨어지고 있었다 — Core/Delegate)
+
+**1) 이동이 없었다.** `MulticastDelegate` 가 복사 생성자·복사 대입을 `= default` 로 **선언** 하고
+있었는데, 그 순간 암시적 이동 생성자·이동 대입이 생기지 않는다(C++ 규칙). 그래서 `std::move` 를
+써도 구독자 벡터가 통째로 깊은 복사됐다. 프로브로 확인한 값:
+
+```
+nothrow_move_constructible = 0
+after move: source.isBound() = 1      <- 원본이 그대로 남아 있다 = 복사로 떨어졌다
+```
+
+넷을 직접 적어 고쳤다. 고친 뒤 같은 프로브가 `1` / `0` 을 낸다(진짜 이동).
+
+**2) 방송 상태까지 복사되고 있었다.** `_broadcastDepth` 와 지연 제거 큐는 값이 아니라 *그 인스턴스의
+호출 스택 상태*다. `= default` 복사는 그 둘도 가져갔다 — **broadcast 중에 복사하면 사본이 깊이 0 이
+아닌 채로 태어나, 그 사본에서 한 `remove` 가 영영 반영되지 않는다**(자기 broadcast 는 1→2→1 로만
+오가므로 0 이 안 된다). 생성은 깊이 0 · 빈 큐로 시작하고, 대입은 받는 쪽의 깊이를 건드리지 않는다
+(그 깊이는 지금 그 객체를 방송 중인 호출 스택의 것이다).
+
+**3) 회귀 테스트 둘, 둘 다 변이 테스트로 확인했다.**
+
+- `MulticastDelegateMovesInsteadOfCopying` — `static_assert` 로 이동 연산 존재를, 옮긴 뒤 원본이
+  비는지로 진짜 이동을 본다. `= default` 로 되돌리면 **컴파일이 선다**(의도한 것이다).
+- `CopyMadeDuringBroadcastStartsWithCleanBroadcastState` — 방송 중에 뜬 사본이 지연 제거에 갇히지
+  않는지 본다. **처음엔 복사 대입으로 짰다가 변이 테스트에서 통과해 버려 다시 썼다** — 대입은 받는
+  쪽의 깊이를 건드리지 않으므로 이 결함을 드러내지 못한다. 복사 **생성자**를 타야 한다.
+
+**4) 곁다리.** `Delegate.cpp`(17줄)가 `Core/CoreMinimal.h` 를 끌어오고 있었다 — 필요한 것은 `atomic`
+뿐이다. 함수 지역 static 이던 발급 카운터는 익명 네임스페이스로 올렸다(AGENTS 의 TU 로컬 상태 규칙).
+`/** @brief */` 다섯 개가 `template <...>` 줄 **아래**에 있어 위로 올렸고(저장소의 다른 헤더는 전부
+위에 둔다), 절 제목 "1) 핸들 ID" 가 전방 선언 위에 붙어 있던 것을 내용에 맞게 고쳤다.
+
+**검증.** Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5 · Shipping 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `DelegateTest` 10 → 12건.
+
 ### 2026-09-17 (SW_ENABLE_STL_CONTAINER 를 켜면 컴파일이 안 됐다 — 그리고 집합만 0-Alloc 계약이 깨져 있었다)
 
 Container 는 6,946줄 18파일이라 정독 대신 **구조가 반복되는 자리**를 기계로 물었다. 헤더 자립성

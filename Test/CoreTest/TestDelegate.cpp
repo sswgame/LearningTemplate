@@ -245,3 +245,81 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
     SW_EXPECT_EQUAL( 2, countA );
     SW_EXPECT_EQUAL( 0, countB );
 }
+
+/**
+ * @brief [DelegateTest] MulticastDelegate 는 **진짜로 이동한다** (복사로 떨어지지 않는다)
+ * @details 복사 생성자를 `= default` 로 *선언* 하면 암시적 이동 생성자·이동 대입이 생기지 않는다.
+ *          그 상태였기 때문에 `std::move` 를 써도 구독자 벡터가 통째로 깊은 복사됐고,
+ *          `is_nothrow_move_constructible` 이 false 였다. 옮긴 뒤 원본이 비는지로 확인한다 —
+ *          복사로 떨어지면 원본이 그대로 남는다.
+ */
+SW_TEST_CASE( DelegateTest, MulticastDelegateMovesInsteadOfCopying )
+{
+    using Multi = sw::MulticastDelegate<void()>;
+
+    static_assert( std::is_nothrow_move_constructible_v<Multi>,
+                   "이동 생성자가 없다 — 복사 생성자를 직접 선언하면 암시적 이동이 사라진다" );
+    static_assert( std::is_nothrow_move_assignable_v<Multi>, "이동 대입이 없다" );
+
+    int32 callCount = 0;
+
+    Multi source;
+    source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&callCount]()
+    { ++callCount; } ) );
+    SW_ASSERT_TRUE( source.isBound() );
+
+    Multi moved{ std::move( source ) };
+    SW_EXPECT_TRUE_MSG( source.isBound() == false, "이동한 원본이 그대로 남아 있다 — 복사로 떨어졌다" );
+    SW_EXPECT_TRUE( moved.isBound() );
+
+    moved.broadcast();
+    SW_EXPECT_EQUAL( 1, callCount );
+
+    Multi movedAssign;
+    movedAssign = std::move( moved );
+    SW_EXPECT_TRUE_MSG( moved.isBound() == false, "이동 대입한 원본이 그대로 남아 있다" );
+    movedAssign.broadcast();
+    SW_EXPECT_EQUAL( 2, callCount );
+}
+
+/**
+ * @brief [DelegateTest] 방송 중에 복사해도 **사본은 지연 제거에 갇히지 않는다**
+ * @details `_broadcastDepth` 와 지연 제거 큐는 값이 아니라 *그 인스턴스의 호출 스택 상태*다.
+ *          예전에는 복사 생성자가 `= default` 라 그 둘까지 같이 복사됐다 — broadcast 중에 복사하면
+ *          사본이 깊이 0 이 아닌 채로 태어나, 그 사본에서 `remove` 한 것이 **영영 반영되지 않는다**
+ *          (자기 broadcast 는 1→2→1 로만 오가므로 0 이 안 된다).
+ *
+ * @note **복사 생성자를 타야 한다.** 복사 대입은 받는 쪽의 깊이를 건드리지 않으므로(그 깊이는 지금
+ *       그 객체를 방송 중인 호출 스택의 것이다) 이 결함을 드러내지 못한다 — 처음에 대입으로 썼다가
+ *       변이 테스트에서 통과해 버려 다시 썼다.
+ */
+SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState )
+{
+    using Multi = sw::MulticastDelegate<void()>;
+
+    int32 sourceCount = 0;
+
+    Multi                 source;
+    sw::unique_ptr<Multi> pCopy;
+
+    // 방송 도중에 **복사 생성자**로 사본을 만든다 — 그 순간 원본의 _broadcastDepth 는 1 이다.
+    source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+    {
+        ++sourceCount;
+        pCopy = sw::make_unique<Multi>( source );
+    } ) );
+
+    source.broadcast();
+    SW_ASSERT_TRUE( pCopy != nullptr );
+    SW_EXPECT_EQUAL( 1, sourceCount );
+    SW_EXPECT_TRUE( pCopy->isBound() );
+
+    // 사본에서 전부 제거한다. 사본의 방송 깊이가 0 이라면 **즉시** 반영돼야 한다.
+    pCopy->removeAll();
+    SW_EXPECT_TRUE_MSG( pCopy->isBound() == false,
+                        "방송 중에 뜬 사본이 방송 깊이를 물려받아 제거가 지연되고 있다" );
+
+    const int32 beforeBroadcast = sourceCount;
+    pCopy->broadcast();
+    SW_EXPECT_EQUAL( beforeBroadcast, sourceCount );
+}
