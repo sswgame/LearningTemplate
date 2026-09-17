@@ -1,6 +1,59 @@
 #include "pch.h"
 
+#include "Core/String/hashed_string.h"
+
 #include "TestFramework/TestFramework.h"
+
+/**
+ * @brief [StringTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
+ * @details 부호 확장을 막는다며 `uint8` 로 **고정**해 둔 것이 문제였다. 이 해시 템플릿은 `utf16`
+ *          으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가 하위 한 바이트만 남는다 —
+ *          한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로 한 버킷에 뭉친다. 부호 없는 타입은
+ *          맞되 **폭은 CharT 를 따라야** 한다.
+ * @note 부호 확장 쪽 주장은 `NonAsciiBytesAreUnsigned` 가 든다.
+ */
+
+SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
+{
+    // 상위 바이트만 다르고 하위 바이트는 둘 다 0 이다.
+    const utf16 arrWideA[] = { static_cast<utf16>( 0xAC00 ), static_cast<utf16>( 0 ) };
+    const utf16 arrWideB[] = { static_cast<utf16>( 0xAD00 ), static_cast<utf16>( 0 ) };
+
+    SW_EXPECT_TRUE( sw::StringUtil::computeHash64( arrWideA, 1 ) != sw::StringUtil::computeHash64( arrWideB, 1 ) );
+    SW_EXPECT_TRUE( sw::StringUtil::computeHash32( arrWideA, 1 ) != sw::StringUtil::computeHash32( arrWideB, 1 ) );
+
+    // ASCII utf8 값은 예전 그대로여야 한다 — 셰이더 베이크 스탬프 같은 것이 이 값으로 디스크에 남는다.
+    SW_EXPECT_EQUAL( sw::StringUtil::kOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
+    SW_EXPECT_EQUAL( ( sw::StringUtil::kOffset64 ^ uint64{ 'a' } ) * sw::StringUtil::kPrime64,
+                     sw::StringUtil::computeHash64( "a", 1, false ) );
+}
+
+/**
+ * @brief [StringTest] 비워진 intern 테이블은 다시 세워진다 — 빈 채로 남지 않는다
+ * @details 테이블 인스턴스는 `HashedStringPool::initialize` 안의 **함수 지역 static** 이라 두 번째
+ *          initialize 에서는 생성자가 돌지 않는다. `shutdown` 이 `clear()` 로 0번 청크와 사전 정의
+ *          이름까지 돌려준 뒤라, 그대로 두면 `hashed_string( NameType_float3 )` 의 `c_str()` 이
+ *          nullptr 이고 새로 intern 되는 첫 문자열이 0번(`NameType_None`)을 받는다.
+ *          전역 풀을 건드리면 다른 테스트가 들고 있는 인덱스가 어긋나므로 저장소만 따로 세워 본다.
+ */
+SW_TEST_CASE( StringTest, ClearedInternTableIsRebuiltNotLeftEmpty )
+{
+    const uint32 predefinedCount = static_cast<uint32>( sw::PredefinedNameType::Count );
+
+    sw::hashed_string::AllocationInfo info;
+    SW_EXPECT_EQUAL( predefinedCount, info._entryCount.load() );
+    SW_ASSERT_TRUE( info._arrChunk[0].load() != nullptr );
+
+    info.clear();
+    SW_EXPECT_EQUAL( uint32{ 0 }, info._entryCount.load() );
+    SW_EXPECT_TRUE( info._arrChunk[0].load() == nullptr );
+
+    info.initializeStorage();
+    SW_EXPECT_EQUAL( predefinedCount, info._entryCount.load() );
+    SW_EXPECT_TRUE( info._arrChunk[0].load() != nullptr );
+
+    info.clear();
+}
 
 // ------------------------------------------------------------------------------
 // 1) Core_String — Util·해시·스플리터·빌더
@@ -1170,6 +1223,13 @@ SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
     const uint64 hashIgnore = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), true );
     const uint64 hashExact  = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), false );
     SW_EXPECT_EQUAL( hashExact, hashIgnore );
+
+    // **32비트 쌍둥이도 같아야 한다.** 예전 고침도, 그것을 지키는 이 테스트도 64비트에서 멈춰 있었다 —
+    // 그래서 `computeHash32` 의 bIgnoreCase 경로만 부호 확장된 채 남았다. 그 경로가 기본값이고,
+    // `hashed_string` 의 intern 이 바로 그것을 쓴다.
+    const uint32 hash32Ignore = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), true );
+    const uint32 hash32Exact  = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), false );
+    SW_EXPECT_EQUAL( hash32Exact, hash32Ignore );
 
     // ASCII 는 예전 동작 그대로여야 한다(대문자만 접힌다).
     SW_EXPECT_EQUAL( sw::StringUtil::computeHash64( "ABC", 3, true ), sw::StringUtil::computeHash64( "abc", 3, true ) );

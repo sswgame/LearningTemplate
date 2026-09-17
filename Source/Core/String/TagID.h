@@ -44,6 +44,25 @@ namespace sw
         /** @brief 유효한 태그인지 반환합니다. */
         constexpr bool isValid() const { return _id != 0; }
 
+        /**
+         * @brief 태그 문자열에서 ID 를 구합니다 — **리터럴·런타임·조회가 모두 이것을 씁니다.**
+         * @details 예전에는 이 해시를 세 곳이 각자 적었고 규칙이 갈려 있었다. `""_tag` 와 `request`
+         *          는 손으로 편 FNV-1a 였고(대소문자 구별 + `char` 부호 확장), 에디터 Hierarchy 의
+         *          `tag:` 필터는 `computeHash64` 를 기본 인자로 불러 **대소문자를 무시**했다. 저장소의
+         *          태그는 전부 대문자로 시작하므로(`Collider` · `Sprite` · `UI` · `Faction.Player` …)
+         *          그 필터는 **하나도 찾지 못했다** — 소문자 태그만 우연히 맞았을 것이다.
+         *
+         *          대소문자를 무시하는 쪽으로 맞춘다. `request` 는 문자열을 `hashed_string` 으로
+         *          intern 하는데 그 intern 이 이미 대소문자를 무시하므로(`Player` 와 `player` 는 한
+         *          항목이다), ID 만 구별하면 **같은 문자열을 가리키는 두 태그가 서로 다른 ID** 를 갖는
+         *          모순이 남는다. 태그는 ID 가 아니라 **문자열로 직렬화**되므로(SerializeContext 가
+         *          `TagID::request( text )` 로 되읽는다) 규칙을 바꿔도 저장된 씬은 그대로다.
+         */
+        static constexpr uint64 computeId( const utf8* pStr, size_t length )
+        {
+            return StringUtil::computeHash64( pStr, length, true );
+        }
+
         /** @brief 태그의 문자열을 반환합니다 (레지스트리 역조회 포함). */
         const utf8* getString() const;
 
@@ -58,9 +77,11 @@ namespace sw
             if ( pSource == nullptr || pParent == nullptr )
                 return false;
 
+            // ID 가 대소문자를 무시하므로 문자열 비교도 무시해야 한다 — 한쪽만 구별하면 "같은
+            // 태그인데 조상이 아니다" 가 나온다.
             while ( *pParent != '\0' )
             {
-                if ( *pSource != *pParent )
+                if ( StringUtil::toLowerChar( *pSource ) != StringUtil::toLowerChar( *pParent ) )
                     return false;
                 ++pSource;
                 ++pParent;
@@ -78,13 +99,6 @@ namespace sw
     /** @brief 리터럴에서 컴파일 타임 태그를 만듭니다. */
     constexpr TagID operator""_tag( const utf8* pStr, size_t len )
     {
-        uint64 hash = StringUtil::kOffset64;
-
-        for ( size_t charIndex = 0; charIndex < len; ++charIndex )
-        {
-            hash = ( hash ^ static_cast<uint64>( pStr[charIndex] ) ) * StringUtil::kPrime64;
-        }
-
-        return TagID( hash, pStr );
+        return TagID( TagID::computeId( pStr, len ), pStr );
     }
 } // namespace sw

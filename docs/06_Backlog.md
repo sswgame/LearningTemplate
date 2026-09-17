@@ -328,6 +328,64 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (에디터의 `tag:` 필터는 한 번도 맞은 적이 없었다 — Core/String)
+
+**1) 태그 ID 를 구하는 코드가 세 곳에 있었고 규칙이 셋 다 달랐다.** `""_tag` 와 `TagID::request` 는
+FNV-1a 를 손으로 폈고(대소문자 **구별**, `char` 부호 확장까지), 에디터 Hierarchy 의 `tag:` 필터는
+`StringUtil::computeHash64( s, len )` 를 **기본 인자로** 불러 대소문자를 **무시**했다. 저장소의 태그는
+전부 대문자로 시작한다(`Collider` · `Sprite` · `UI` · `Physics` · `Faction.Player` …). 두 식을 떼어
+돌려 봤더니 **그 전부가 어긋났고**, 소문자 태그 하나만 우연히 맞았다 — 그런 태그는 저장소에 없다.
+즉 그 필터는 **한 번도 아무것도 찾지 못했다.**
+
+`TagID::computeId` 하나로 모았다. **대소문자를 무시하는 쪽**으로 맞췄는데, `request` 가 문자열을
+`hashed_string` 으로 intern 하고 그 intern 이 이미 대소문자를 무시하기 때문이다 — ID 만 구별하면
+`request("Player")` 와 `request("player")` 가 **같은 문자열을 가리키면서 다른 ID** 를 갖는 모순이
+남는다. 태그는 ID 가 아니라 문자열로 직렬화되므로(`SerializeContext` 가 `TagID::request( text )` 로
+되읽는다) 규칙을 바꿔도 저장된 씬은 그대로다. `isSubtagOf` 의 문자열 비교도 같이 대소문자를 무시하게
+했다 — 한쪽만 구별하면 "같은 태그인데 조상이 아니다" 가 나온다.
+
+패널은 ID 와 **문자열을 함께** 넘기도록 고쳤다. 그래야 `tag:Faction` 이 `Faction.Player` 까지 잡는다 —
+리터럴 태그는 역조회 표에 등록되지 않으므로(`""_tag` 는 constexpr 이라 런타임 표를 만질 수 없다)
+ID 만 든 `TagID` 로는 계층 비교를 할 수가 없었다.
+
+**2) 예전 고침이 64비트 쌍둥이에서 멈춰 있었다.** `computeHash64` 에는 "두 경로 모두 uint8 을
+거친다 … `char` 의 부호성은 구현 정의라 플랫폼이 바뀌면 해시가 달라졌다" 는 주석이 붙어 있는데,
+**`computeHash32` 의 `bIgnoreCase` 경로는 그대로 부호 확장된 채 남아 있었다.** 그 경로가 기본값이고
+`hashed_string` 의 intern 이 바로 그것을 쓴다. 그 고침을 지키던 테스트(`NonAsciiBytesAreUnsigned`)도
+64비트만 보고 있어서 보이지 않았다 — 테스트가 쌍둥이의 절반만 든 자리다.
+
+**3) 그리고 그 고침 자체가 `uint8` 로 고정돼 있었다.** 이 해시 템플릿은 `utf16` 으로도 불린다
+(`std::hash<basic_fixed_string<utf16, N>>`). `uint8` 로 자르면 **넓은 문자가 하위 한 바이트만 남아**
+`0xAC00`(가)과 `0xAD00` 이 같은 해시로 떨어진다 — 한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로
+한 버킷에 뭉친다. 부호 없는 타입은 맞되 **폭은 `CharT` 를 따라야** 한다: `std::make_unsigned_t<CharT>`.
+ASCII·utf8 값은 그대로라 디스크에 남는 셰이더 베이크 스탬프 같은 것은 영향이 없다(테스트로 못박았다).
+
+**4) 비워진 intern 테이블을 다시 세우지 않았다.** `HashedStringPool::initialize` 의 인스턴스는
+**함수 지역 static** 이라 두 번째 호출에서는 생성자가 돌지 않는다. 그런데 `shutdown` 은 `clear()` 로
+0번 청크와 사전 정의 이름까지 돌려준다 — 그 뒤 다시 initialize 하면 **빈 테이블**을 가리키게 되고,
+`hashed_string( NameType_float3 )` 의 `c_str()` 이 nullptr 이며 새로 intern 되는 첫 문자열이
+0번(`NameType_None`)을 받아 기본 생성자와 같아진다. 둘 다 조용한 오답이다. 앞의 단정은 Debug 전용이라
+Shipping 에서는 막아 주지도 못한다. 지금은 프로세스당 한 번만 불려서 안 터지는데, `shutdown` 쪽은
+이미 여러 번 불려도 안전하게 짜여 있었다 — 그 비대칭이 결함이다. 저장소 세우기를 `initializeStorage`
+로 빼고 재초기화 때 다시 부른다.
+
+**살펴보고 손대지 않은 것.** `StringBuilder` 의 이동 생성/대입은 힙·스택 두 경우를 모두 맞게 처리하고
+(`_pDynamicBuffer` 이전 순서까지), `appendFormat` 의 재시도 루프는 매번 용량이 최소 두 배가 되므로
+끝난다. `fixed_string` · `string_splitter` · `formatString` 은 `StringTest` 가 이미 두껍게 덮고 있다.
+
+**테스트.** `TagSystemTest` 둘 — `IdBuiltFromStringFindsLiteralTag`(필터가 하는 그대로 문자열에서 ID 를
+만들어 리터럴 태그를 찾는다 · 대소문자 · 계층 · 없는 태그) · `LiteralAndRuntimeRequestAgree`.
+`StringTest` 둘 — `WideCharHashIsNotTruncatedToOneByte`, `ClearedInternTableIsRebuiltNotLeftEmpty`.
+32비트 부호 확장 주장은 이미 집이 있는 `NonAsciiBytesAreUnsigned` 에 더했다. 변이 테스트로 확인했다:
+`""_tag` 을 옛 손수 해시로 되돌리면 태그 테스트 둘이 깨지고, 해시 캐스트를 되돌리면
+`NonAsciiBytesAreUnsigned` 와 `WideCharHashIsNotTruncatedToOneByte` 가 깨진다.
+
+**확인하지 않은 것.** 에디터를 띄워 실제로 `tag:` 를 쳐 보지는 않았다 — 테스트가 패널과 같은 경로
+(`hasTag` 에 문자열로 만든 `TagID`)를 태운다.
+
+**검증.** Debug·Shipping 빌드 (이번 변경이 다시 컴파일한 TU 는 경고 0) · `ctest -L nogpu` 양쪽 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `StringTest` 35 → 37건 · `TagSystemTest` 11 → 13건.
+
 ### 2026-09-17 (한 헤더가 약속한 것을 두 구현이 절반만 지키고 있었다 — Core/Process)
 
 이 폴더는 **한 인터페이스에 Windows/POSIX 두 구현**이 달린 모양이다. 파일워처 때와 같은 자리에서

@@ -32,6 +32,56 @@ SW_TEST_CASE( TagSystemTest, ParentHashOnHierarchicalLiteral )
 }
 
 /**
+ * @brief [TagSystemTest] 문자열에서 만든 ID 로도 리터럴 태그를 찾는다
+ * @details 태그 ID 를 구하는 코드가 **세 곳**에 각자 있었고 규칙이 갈려 있었다 — `""_tag` 와
+ *          `TagID::request` 는 대소문자를 구별했고, 에디터 Hierarchy 의 `tag:` 필터는
+ *          `computeHash64` 를 기본 인자로 불러 무시했다. 저장소의 태그는 전부 대문자로 시작하므로
+ *          (`Collider` · `Sprite` · `UI` · `Faction.Player` …) **그 필터는 하나도 찾지 못했다.**
+ *          이제 셋 다 `TagID::computeId` 를 쓴다.
+ */
+SW_TEST_CASE( TagSystemTest, IdBuiltFromStringFindsLiteralTag )
+{
+    TagContainer owned{ "Collider"_tag, "Faction.Player"_tag };
+
+    // 필터가 하는 일 그대로 — 문자열만 들고 ID 를 만들어 묻는다.
+    const string_view exact{ "Collider" };
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( exact.data(), exact.size() ), exact.data() } ) );
+
+    // 대소문자는 무시한다. intern 이 이미 무시하므로 ID 도 같아야 앞뒤가 맞는다.
+    const string_view lowered{ "collider" };
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( lowered.data(), lowered.size() ), lowered.data() } ) );
+
+    // 계층도 잡힌다 — 문자열을 함께 넘기므로 isSubtagOf 가 돈다.
+    const string_view parent{ "Faction" };
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( parent.data(), parent.size() ), parent.data() } ) );
+
+    // 없는 태그를 찾아내면 안 된다.
+    const string_view absent{ "Sprite" };
+    SW_EXPECT_FALSE( owned.hasTag( TagID{ TagID::computeId( absent.data(), absent.size() ), absent.data() } ) );
+}
+
+/**
+ * @brief [TagSystemTest] 리터럴과 런타임 요청이 같은 태그를 만든다
+ * @details `TagID::request` 는 문자열을 `hashed_string` 으로 intern 하는데 그 intern 이 대소문자를
+ *          무시한다. ID 만 구별하면 **같은 문자열을 가리키는 두 태그가 서로 다른 ID** 를 갖는다.
+ */
+SW_TEST_CASE( TagSystemTest, LiteralAndRuntimeRequestAgree )
+{
+    constexpr TagID literal = "Collider"_tag;
+
+    SW_EXPECT_TRUE( TagID::request( "Collider" ) == literal );
+    SW_EXPECT_TRUE( TagID::request( "collider" ) == literal );
+    SW_EXPECT_TRUE( TagID::request( "COLLIDER" ) == literal );
+
+    // 다른 태그까지 같아지면 안 된다.
+    SW_EXPECT_TRUE( TagID::request( "Collider2" ) != literal );
+
+    // 계층 비교도 같은 규칙이어야 한다.
+    SW_EXPECT_TRUE( TagID::request( "faction.player" ).isSubtagOf( "Faction"_tag ) );
+    SW_EXPECT_FALSE( TagID::request( "factionary" ).isSubtagOf( "Faction"_tag ) );
+}
+
+/**
  * @brief [TagSystemTest] 정확 매칭 vs 포함 매칭
  */
 SW_TEST_CASE( TagSystemTest, ExactVsSubsumptionMatch )

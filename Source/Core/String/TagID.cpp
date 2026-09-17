@@ -46,15 +46,12 @@ namespace sw
 
     TagID TagID::request( string_view str )
     {
-        hashed_string hashedName{ str };
+        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다.
+        // ID 도 같은 규칙이라(`computeId`) 둘이 같은 태그가 된다.
+        const hashed_string hashedName{ str };
+        const uint64        tagId = computeId( str.data(), str.size() );
 
-        uint64 hashValue = StringUtil::kOffset64;
-        for ( size_t charIndex = 0; charIndex < str.length(); ++charIndex )
-        {
-            hashValue = ( hashValue ^ static_cast<uint64>( str[charIndex] ) ) * StringUtil::kPrime64;
-        }
-
-        TagRegistryInternal::registerTag( hashValue, hashedName.c_str() );
-        return TagID{ hashValue, hashedName.c_str() };
+        TagRegistryInternal::registerTag( tagId, hashedName.c_str() );
+        return TagID{ tagId, hashedName.c_str() };
     }
 } // namespace sw

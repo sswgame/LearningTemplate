@@ -316,6 +316,18 @@ namespace sw
         /** @brief 인턴 테이블 생성자 (0번 청크 및 사전 정의 이름 사전 로드) */
         AllocationInfo()
         {
+            initializeStorage();
+        }
+
+        /**
+         * @brief 0번 청크를 잡고 사전 정의 이름을 적재합니다 — **빈 테이블에서만 부릅니다.**
+         * @details 생성자와 `HashedStringPool::initialize` 가 함께 쓴다. 후자가 필요한 이유는
+         *          그 인스턴스가 **함수 지역 static** 이라 두 번째 initialize 에서는 생성자가 돌지
+         *          않기 때문이다 — `clear()` 가 0번 청크까지 돌려준 뒤라 그대로 두면 빈 테이블을
+         *          가리키게 된다.
+         */
+        void initializeStorage()
+        {
             // 0번 청크를 미리 할당하여 사전 정의 이름 적재
             constexpr size_t chunkSize   = sizeof( Entry ) * kChunkSize;
             Entry*           pFirstChunk = static_cast<Entry*>( Memory::allocate( chunkSize ) );

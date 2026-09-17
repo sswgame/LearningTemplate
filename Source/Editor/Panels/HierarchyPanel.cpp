@@ -68,8 +68,15 @@ namespace sw::editor
                 // 2) Tag syntax "tag:TagName"
                 if ( StringUtil::startsWith( pFilter, "tag:", true ) )
                 {
+                    // ID 는 `TagID::computeId` 가 정본이다 — 예전에는 여기서 `computeHash64` 를
+                    // 기본 인자로 불러 대소문자를 무시했고, 태그 쪽은 구별했다. 저장소의 태그는 전부
+                    // 대문자로 시작하므로 이 필터는 **하나도 찾지 못했다**.
+                    //
+                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 그것을 보므로 `tag:Faction` 이
+                    // `Faction.Player` 까지 잡는다 — 리터럴 태그는 역조회 표에 등록되지 않아
+                    // ID 만 든 TagID 로는 계층 비교를 할 수 없었다. 필터 버퍼는 이 호출 동안 살아 있다.
                     const string_view tagFilter{ pFilter + 4 };
-                    return pObj->hasTag( TagID{ StringUtil::computeHash64( tagFilter.data(), tagFilter.size() ), nullptr } );
+                    return pObj->hasTag( TagID{ TagID::computeId( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
                 }
 
                 // 3) General name matching

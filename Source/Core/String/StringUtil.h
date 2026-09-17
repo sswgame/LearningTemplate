@@ -294,14 +294,17 @@ namespace sw
             uint64 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                // **두 경로 모두 uint8 을 거친다.** 예전에는 bIgnoreCase 쪽만 부호 확장됐다 —
+                // **두 경로 모두 CharT 의 부호 없는 짝을 거친다.** 부호 확장을 막으려는 것이다 —
                 // `char` 가 음수면(UTF-8 의 0x80 이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여
-                // 들어가, 같은 바이트가 경로에 따라 다른 값으로 해싱됐다. 게다가 `char` 의 부호성은
-                // 구현 정의라서 **플랫폼이 바뀌면 해시가 달라졌다**(ARM 은 unsigned char).
-                const uint8  byteValue = static_cast<uint8>( pStr[charIndex] );
-                const uint64 c         = bIgnoreCase ? static_cast<uint64>( static_cast<uint8>( toLowerChar( pStr[charIndex] ) ) )
-                                                     : static_cast<uint64>( byteValue );
-                hash                   = ( hash ^ c ) * kPrime64;
+                // 들어가고, `char` 의 부호성은 구현 정의라서 **플랫폼이 바뀌면 해시가 달라졌다**
+                // (ARM 은 unsigned char).
+                //
+                // 다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데
+                // (`std::hash<fixed_wstring>`), 그러면 넓은 문자가 **하위 한 바이트로 잘려**
+                // 한글처럼 상위 바이트만 다른 문자들이 전부 같은 값으로 해싱된다. 실제로 그랬다.
+                const uint64 c = static_cast<uint64>(
+                    static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
+                hash = ( hash ^ c ) * kPrime64;
             }
             return hash;
         }
@@ -320,8 +323,11 @@ namespace sw
             uint32 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                const uint32 c = bIgnoreCase ? static_cast<uint32>( toLowerChar( pStr[charIndex] ) ) : static_cast<uint32>( static_cast<uint8>( pStr[charIndex] ) );
-                hash           = ( hash ^ c ) * kPrime32;
+                // 64비트 쪽과 **같은 규칙**이다. 그쪽은 부호 확장을 고쳤는데 여기는 bIgnoreCase
+                // 경로만 고쳐지지 않은 채 남아 있었다 — 같은 문자열이 두 경로에서 다르게 해싱됐다.
+                const uint32 c = static_cast<uint32>(
+                    static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
+                hash = ( hash ^ c ) * kPrime32;
             }
             return hash;
         }
