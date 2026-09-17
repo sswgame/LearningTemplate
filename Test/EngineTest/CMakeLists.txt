@@ -79,4 +79,29 @@ if(BUILD_TESTING)
 
 	# 이 테스트는 손으로 등록하므로 sw_addTestExecutable 의 ASan 보정을 받지 못한다. 직접 부른다.
 	sw_applySanitizerTestProperties(EngineTest_NoGPU)
+
+	# --------------------------------------------------------------------------
+	# 3) ctest — HostOnly: 위 필터가 빼는 **바로 그 집합**
+	#
+	# CI 가 못 도는 것을 **이름으로 돌 수 있게** 한다. 예전엔 이 집합을 고르는 방법이 "전체
+	# EngineTest 를 돌린다" 뿐이었고, 그래서 아무도 따로 돌지 않았다 — 특히 배포 구성에서.
+	# `RenderPassGpuTest` 두 건이 Shipping 에서만 지는 채로 오래 숨어 있던 것이 그 결과다
+	# (docs/06_Backlog.md 2026-09-17). 이제 GPU 가 있는 개발자는 이렇게 돈다:
+	#
+	#   ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
+	#
+	# 이름을 여기 한 번 더 적는 것은 맞다 — 위는 빼는 목록이고 여기는 고르는 목록이라 형태가
+	# 다르다. 대신 **갈라지지 못하게 막는다**: `CheckTestSuites.py` 가 두 필터와
+	# `SW_TEST_REQUIRES_HOST` 마커 셋이 모두 같은 집합인지 본다.
+	add_test(
+		NAME EngineTest_HostOnly
+		COMMAND EngineTest --test_filter=RHIDeviceTest.*,WindowTest.*,ShaderCompilerTest.*,LiveShaderTest.*,RenderPassGpuTest.*
+	)
+	set_tests_properties(EngineTest_HostOnly PROPERTIES
+		WORKING_DIRECTORY "${sw_output_directory}/Bin"
+		LABELS "unit;engine;hostgpu"
+		RUN_SERIAL TRUE
+		TIMEOUT 180
+	)
+	sw_applySanitizerTestProperties(EngineTest_HostOnly)
 endif()

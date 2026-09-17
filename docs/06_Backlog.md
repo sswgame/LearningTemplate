@@ -295,6 +295,52 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (CI 가 못 도는 집합을 아무도 안 돌고 있었다 — 그리고 Shipping CI 는 CoreTest 하나만 돌았다)
+
+앞 건을 고치고 남은 질문이 "그럼 `RenderPassGpuTest` 는 앞으로 누가 도나" 였다. 파 보니 구멍이
+하나가 아니었다.
+
+**1) Shipping CI 가 CoreTest 하나만 돌고 있었다.**
+
+```yaml
+cmake --build --preset ${{ matrix.preset }} ${{ ... && '--target App CoreTest' || '' }}
+ctest  --test-dir build/${{ matrix.preset }} ${{ ... && '-R CoreTest' || '-L nogpu' }}
+```
+
+즉 `EngineTest` · `ReflectionTest` · `SmokeTest` · `EditorTest` 가 **배포 구성에서 한 번도 돌지
+않았다.** 그런데 Debug 가 숨기는 결함이 드러나는 곳이 바로 그 구성이다. 로컬에서 재 보니
+Shipping `-L nogpu` 는 **2.91초**에 전부 통과한다 — 아낄 것이 없었다. 좁히는 조건을 지웠다.
+
+**2) CI 가 못 도는 집합을 고르는 방법이 "전체를 돌린다" 뿐이었다.**
+
+`EngineTest_NoGPU` 는 다섯 스위트를 **뺀다**. 그 다섯을 고르는 이름은 없었고, CMake 주석은
+"GPU 가 있는 개발자가 돌리는 `EngineTest` 전체에는 그대로 있다" 고 적어 두었지만 **배포 구성에서
+그것을 돌리라는 말은 어디에도 없었다.** 그래서 아무도 안 돌았다.
+
+`EngineTest_HostOnly` (라벨 `hostgpu`) 를 만들었다 — `NoGPU` 가 빼는 바로 그 집합을 고른다.
+
+```powershell
+ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
+```
+
+빼는 목록과 고르는 목록은 형태가 달라 한 문자열로 못 쓴다. 대신 **갈라지지 못하게 막았다**:
+`CheckTestSuites.py` 가 두 필터와 `SW_TEST_REQUIRES_HOST` 마커 셋이 모두 같은 집합인지 본다.
+한쪽이 빼는데 다른 쪽이 안 고르면 "그 스위트는 아무 데서도 안 돕니다" 로 선다. 자가 테스트
+케이스도 같이 넣었다(`CheckLintsAreAlive` 19 → 20건).
+
+**3) 그 명령을 만들자마자 두 건이 더 나왔다.**
+
+`ShaderCompilerTest.BasicCompileAndReflection` · `MultiBackendShaderCacheIsolation` 이 Shipping 에서
+졌다. 이건 **결함이 아니라 테스트가 환경을 안 본 것**이다 — 배포 팩은 `CookAssets` 가 고른 타깃
+RHI **하나만** 담는데(`Target RHI for shader packaging: dx12`), 두 케이스는 DXBC(dx11)를 요구한다.
+디스크에는 있지만 팩에 없다. 배포본은 백엔드를 하나만 쓰므로 넷을 다 담는 것이 답은 아니다.
+테스트의 스킵 조건(`isShaderCompilerUnavailable`)이 "컴파일러 없음" 만 보고 "이 팩에 없는 백엔드"
+를 안 봤다. 조건을 넓히고 이름을 `isShaderUnavailableInThisBuild` 로 바꿨다 — 이제 두 가지를
+뜻하므로.
+
+**검증.** Debug `-L nogpu` 5/5 · Debug `-L hostgpu` 1/1 · **Shipping `-L nogpu` 5/5** ·
+**Shipping `-L hostgpu` 1/1** · 린트 15/15 · `CheckLintsAreAlive` 20건 · 두 프리셋 빌드 경고 0.
+
 ### 2026-09-17 (베이커는 XML 만 보고 런타임은 C++ 에서 define 을 얹었다 — Shipping 에서 G버퍼가 통째로 사라졌다)
 
 앞 작업 중에 찾은 "1-A" 를 팠고, 끝냈다. **UB 도 미초기화도 아니었다** — 셰이더 베이킹 구멍이다.

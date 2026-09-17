@@ -23,8 +23,18 @@ namespace sw
 {
     namespace
     {
-        /** @brief DXC/D3DCompiler 미설치 등 컴파일러 불가 오류인지 판별합니다. */
-        bool isShaderCompilerUnavailable( const sw::ShaderCompileResult& result )
+        /**
+         * @brief 이 빌드가 그 셰이더를 **내줄 수 없는** 경우인지 판별합니다 (결함이 아니라 환경).
+         * @details 두 가지다. (1) 컴파일러가 없다 — DXC/D3DCompiler 미설치, 그 타깃이 이 OS 에 없음.
+         *          (2) **배포 빌드의 팩에 그 백엔드가 없다.** 배포 팩은 `CookAssets` 가 고른 타깃
+         *          RHI 하나만 담는다(`Target RHI for shader packaging: dx12`) — 배포본은 백엔드를
+         *          하나만 쓰므로 넷을 다 담을 이유가 없다. 그래서 다른 백엔드를 요구하는 케이스는
+         *          배포 구성에서 **구조적으로** 통과할 수 없다. 디스크에는 있지만 팩에 없다.
+         * @note 이 조건이 없어서 `ShaderCompilerTest` 두 건이 Shipping 에서 실패로 남아 있었다.
+         *       아무도 몰랐던 이유는 이 스위트가 CI 에서 빠져 있고 배포 구성으로 돌린 적이 없어서다
+         *       (그래서 `EngineTest_HostOnly` 를 만들었다 — docs/06_Backlog.md 2026-09-17).
+         */
+        bool isShaderUnavailableInThisBuild( const sw::ShaderCompileResult& result )
         {
             if ( result._bSuccess )
                 return false;
@@ -35,6 +45,8 @@ namespace sw
                    msg.find( "SPIR-V CodeGen not available" ) != sw::string::npos ||
                    // 그 타깃 자체가 이 OS 에 없는 경우 (예: 비 Windows 의 DXBC/D3D11).
                    msg.find( "unavailable on this platform" ) != sw::string::npos ||
+                   // 배포 팩이 담은 백엔드가 아닌 것을 물었다.
+                   msg.find( "missing in shipping pack" ) != sw::string::npos ||
                    msg.find( "Failed to compile shader" ) != sw::string::npos;
         }
 
@@ -56,8 +68,8 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
 
     sw::ShaderCache         shaderCache;
     sw::ShaderCompileResult cacheResult = shaderCache.getOrCompile( desc );
-    if ( sw::isShaderCompilerUnavailable( cacheResult ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
+    if ( sw::isShaderUnavailableInThisBuild( cacheResult ) )
+        SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
 
     SW_EXPECT_TRUE( cacheResult._bSuccess );
     SW_EXPECT_FALSE( cacheResult._bytecode.empty() );
@@ -97,8 +109,8 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
             SW_LOG_WARNING( "Target unavailable on this platform, skipping: %#", vsResult._errorMessage.c_str() );
             continue;
         }
-        if ( sw::isShaderCompilerUnavailable( vsResult ) )
-            SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
+        if ( sw::isShaderUnavailableInThisBuild( vsResult ) )
+            SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
 
         attemptedAny = true;
         SW_EXPECT_TRUE( vsResult._bSuccess );
@@ -158,8 +170,8 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
 
     // 1차 컴파일 (캐시 미스 -> 디스크 저장)
     sw::ShaderCompileResult result1 = sw::ShaderCompiler::compileHlsl( desc );
-    if ( sw::isShaderCompilerUnavailable( result1 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
+    if ( sw::isShaderUnavailableInThisBuild( result1 ) )
+        SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
 
     SW_EXPECT_TRUE( result1._bSuccess );
     SW_EXPECT_FALSE( result1._bytecode.empty() );
@@ -201,8 +213,8 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 
     // 1) DX11 컴파일 및 캐시 등록
     sw::ShaderCompileResult dx11Res1 = shaderCache.getOrCompile( dx11Desc );
-    if ( sw::isShaderCompilerUnavailable( dx11Res1 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
+    if ( sw::isShaderUnavailableInThisBuild( dx11Res1 ) )
+        SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
     SW_EXPECT_TRUE( dx11Res1._bSuccess );
 
     // 2) DX12 컴파일 및 캐시 등록 (DX11 캐시와 독립적으로 보관되어야 함)
@@ -249,8 +261,8 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
     dx12Desc._targetFormat         = sw::ShaderTargetFormat::DXIL_D3D12;
 
     sw::ShaderCompileResult res11 = sw::ShaderCompiler::compileHlsl( dx11Desc );
-    if ( sw::isShaderCompilerUnavailable( res11 ) )
-        SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
+    if ( sw::isShaderUnavailableInThisBuild( res11 ) )
+        SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
     SW_EXPECT_TRUE( res11._bSuccess );
 
     sw::ShaderCompileResult res12 = sw::ShaderCompiler::compileHlsl( dx12Desc );

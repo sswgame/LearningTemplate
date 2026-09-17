@@ -137,11 +137,17 @@ jobs:
 
     - name: Build
       run: |
-        cmake --build --preset ${{ matrix.preset }} ${{ matrix.preset == 'CI-Shipping' && '--target App CoreTest' || '' }}
+        cmake --build --preset ${{ matrix.preset }}
 
+    # Shipping 도 Debug 와 **같은 집합**을 돈다. 예전엔 Shipping 만 `-R CoreTest` 였고 빌드도
+    # `--target App CoreTest` 로 좁혀, EngineTest · ReflectionTest · SmokeTest · EditorTest 가
+    # 배포 구성에서 **한 번도 돌지 않았다.** 그런데 Debug 가 숨기는 결함이 드러나는 곳이 바로
+    # 그 구성이다 — 실제로 Shipping 에서만 지는 렌더 테스트 둘이 오래 숨어 있었다
+    # (docs/06_Backlog.md 2026-09-17 참고). GPU·디스플레이가 필요한 스위트는 `-L nogpu` 가
+    # 계속 걸러내므로 러너에서 돌릴 수 있는 것만 는다.
     - name: Test
       run: |
-        ctest --test-dir build/${{ matrix.preset }} ${{ matrix.preset == 'CI-Shipping' && '-R CoreTest' || '-L nogpu' }} -j 4 --output-on-failure
+        ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
     # Diagnostics & Artifact Upload
     - name: Upload test logs on failure

@@ -52,6 +52,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kTestRoot = "Test"
 _kNoGpuFilterFile = "Test/EngineTest/CMakeLists.txt"
 _kNoGpuTestName = "EngineTest_NoGPU"
+_kHostOnlyTestName = "EngineTest_HostOnly"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
 
 # 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 실제로 있었고,
@@ -62,6 +63,7 @@ _kCaseTokenRe = re.compile(r"\bSW_TEST_CASE\s*\(")
 _kSuiteNameRe = re.compile(r"^[A-Z][A-Za-z0-9]*Test$")
 _kMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:\s*(\S.*)")
 _kFilterRe = re.compile(r"--test_filter=(\S+)")
+_kNamedTestRe = re.compile(r"NAME\s+(\w+)\s+COMMAND\s+\S+\s+--test_filter=(\S+)")
 _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cpp)")
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
 
@@ -111,6 +113,26 @@ def readNoGpuFilter(rootDir: Path) -> tuple[set[str], str | None]:
         if token.startswith("-") and token.endswith(".*"):
             excluded.add(token[1:-2])
     return excluded, None
+
+
+def readHostOnlyFilter(rootDir: Path) -> tuple[set[str], str | None]:
+    """`EngineTest_HostOnly` 가 **고르는** 스위트 집합 (NoGPU 가 빼는 것과 같아야 한다)."""
+    path = rootDir / _kNoGpuFilterFile
+    if path.exists() is False:
+        return set(), f"{_kNoGpuFilterFile}: 파일이 없습니다"
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    if _kHostOnlyTestName not in text:
+        return set(), (f"{_kNoGpuFilterFile}: `{_kHostOnlyTestName}` 등록을 찾지 못했습니다 — "
+                       f"CI 가 못 도는 집합을 이름으로 돌 수 있어야 합니다")
+    included: set[str] = set()
+    for name, rawFilter in _kNamedTestRe.findall(" ".join(text.split())):
+        if name != _kHostOnlyTestName:
+            continue
+        for token in rawFilter.split(","):
+            token = token.strip()
+            if token.endswith(".*") and token.startswith("-") is False:
+                included.add(token[:-2])
+    return included, None
 
 
 def checkEditorTestSources(rootDir: Path) -> list[str]:
@@ -195,6 +217,20 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             errors.append(f"{_kNoGpuFilterFile}: 필터가 `{suite}` 를 빼는데 그 스위트에 "
                           f"`SW_TEST_REQUIRES_HOST` 마커가 없습니다{where} — 마커를 달거나 필터에서 지우세요")
 
+        # 3-b) HostOnly 필터 — NoGPU 가 빼는 집합과 **글자 그대로 같아야** 한다.
+        # 빼는 목록과 고르는 목록은 형태가 달라 한 문자열로 못 쓴다. 대신 갈라지면 여기서 선다 —
+        # 갈라진 채로 두면 "CI 가 안 도는 것을 돌려 보는" 명령이 조용히 일부를 빠뜨린다.
+        hostOnly, hostOnlyError = readHostOnlyFilter(rootDir)
+        if hostOnlyError is not None:
+            errors.append(hostOnlyError)
+        else:
+            for suite in sorted(excluded - hostOnly):
+                errors.append(f"{_kNoGpuFilterFile}: `{suite}` 는 `{_kNoGpuTestName}` 이 빼는데 "
+                              f"`{_kHostOnlyTestName}` 이 고르지 않습니다 — 그 스위트는 **아무 데서도 안 돕니다**")
+            for suite in sorted(hostOnly - excluded):
+                errors.append(f"{_kNoGpuFilterFile}: `{suite}` 는 `{_kHostOnlyTestName}` 이 고르는데 "
+                              f"`{_kNoGpuTestName}` 이 빼지 않습니다 — 두 번 돕니다 (CI 에서도 돕니다)")
+
     # 4) 마커가 붙은 스위트는 자기 파일을 독차지한다
     suitesByFile: dict[str, set[str]] = defaultdict(set)
     for suite, _, relPath in cases:
@@ -239,6 +275,24 @@ class CheckTestSuitesGate(LintGate):
                 "Test/EngineTest/CMakeLists.txt": (
                     "add_test(\n\tNAME EngineTest_NoGPU\n"
                     "\tCOMMAND EngineTest --test_filter=-RHIDeviceTest.*\n)\n"
+                ),
+                "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
+            },
+        },
+        {
+            # NoGPU 가 빼는데 HostOnly 가 안 고르면 그 스위트는 **아무 데서도 안 돈다** —
+            # 이 저장소가 실제로 그 상태였고, Shipping 전용 렌더 결함 둘이 거기 숨어 있었다.
+            "name": "CI 가 빼는 스위트를 HostOnly 도 안 고름",
+            "files": {
+                "Test/EngineTest/TestProbe.cpp": (
+                    "// SW_TEST_REQUIRES_HOST( ProbeTest ): GPU 가 필요합니다\n"
+                    "SW_TEST_CASE( ProbeTest, One )\n{\n}\n"
+                ),
+                "Test/EngineTest/CMakeLists.txt": (
+                    "add_test(\n\tNAME EngineTest_NoGPU\n"
+                    "\tCOMMAND EngineTest --test_filter=-ProbeTest.*\n)\n"
+                    "add_test(\n\tNAME EngineTest_HostOnly\n"
+                    "\tCOMMAND EngineTest --test_filter=RHIDeviceTest.*\n)\n"
                 ),
                 "Test/EditorTest/CMakeLists.txt": 'sw_addTestExecutable(EditorTest)\n',
             },

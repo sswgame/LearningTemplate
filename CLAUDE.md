@@ -44,6 +44,7 @@ Tests are a hand-rolled framework (`Test/TestFramework`), not gtest, but accept 
 
 ```powershell
 ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure   # CI-equivalent, no GPU needed
+ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure  # what CI CANNOT run — run this before you finish
 ctest --preset Ninja-Debug-lint                                   # lint tests only
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*      # one suite
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
@@ -60,11 +61,17 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate c
 - CTest names are the target names plus `EngineTest_NoGPU`, which is `EngineTest` with the suites CI
   cannot run filtered out (`RHIDeviceTest`, `RenderPassGpuTest`, `WindowTest`, `ShaderCompilerTest`,
   `LiveShaderTest`). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+- **`EngineTest_HostOnly` (label `hostgpu`) is exactly that excluded set** — the part CI can never run.
+  **Run it in Shipping before you call work done**, on the machine with the GPU. Nothing else covers it:
+  CI skips those suites and local habit is Debug-only, which is how two `RenderPassGpuTest` failures and
+  two `ShaderCompilerTest` failures sat in the tree unnoticed (see `docs/06_Backlog.md`, 2026-09-17).
+  `CheckTestSuites.py` keeps the two filters and the `SW_TEST_REQUIRES_HOST` markers in agreement, so a
+  suite can never be dropped from both.
 - **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
   (no underscore), lives in exactly one file, and a suite CI cannot run declares
   `// SW_TEST_REQUIRES_HOST( SuiteName ): <reason>` in its file — the lint cross-checks those markers
   against the `EngineTest_NoGPU` filter in both directions, and keeps such suites in a file of their own.
-- Labels: `nogpu` (CI-safe), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
+- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
 
 ## Linting
