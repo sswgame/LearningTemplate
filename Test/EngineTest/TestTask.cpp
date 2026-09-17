@@ -512,6 +512,68 @@ SW_TEST_CASE( TaskTest, TaskFutureFallback )
 }
 
 /**
+ * @brief [TaskTest] 유효하지 않거나 빈 입력에도 콤비네이터가 멈추지 않는다
+ * @details `then` 은 상태가 없는 future 에 콜백을 걸어 주지 않고 그냥 돌아간다. 그런 자리를
+ *          카운트다운에 넣으면 `whenAllFutures` 의 결과가 **영원히 끝나지 않았다** — 기본 생성된
+ *          future 하나가 섞이는 것으로 충분했다. `whenAnyFuture` 는 빈 목록에서 **유효한** future 를
+ *          돌려줬는데 아무도 값을 넣어 주지 않아 `wait()` 가 영원히 멈췄다. 형제인 `whenAllFutures`
+ *          는 빈 목록을 제대로 끝냈다 — 같은 질문에 둘이 다르게 답하고 있었다.
+ */
+SW_TEST_CASE( TaskTest, CombinatorsDoNotHangOnInvalidOrEmptyInput )
+{
+    // 1) whenAll — 기다릴 수 있는 것 하나 + 유효하지 않은 것 하나.
+    {
+        sw::TaskPromise<int32> promise;
+        promise.setValue( 7 );
+
+        sw::vector<sw::TaskFuture<int32>> listFuture;
+        listFuture.push_back( promise.getFuture() );
+        listFuture.push_back( sw::TaskFuture<int32>{} );
+
+        sw::TaskFuture<sw::vector<int32>> allFuture = sw::whenAllFutures( listFuture );
+        SW_ASSERT_TRUE( allFuture.waitFor( 2000 ) );
+
+        const sw::vector<int32> results = allFuture.get();
+        SW_ASSERT_EQUAL( size_t( 2 ), results.size() );
+        SW_EXPECT_EQUAL( 7, results[0] );
+        SW_EXPECT_EQUAL( 0, results[1] ); // 기다릴 수 없는 자리는 기본값으로 남는다
+    }
+
+    // 2) whenAll — 빈 목록은 곧바로 끝난 빈 결과다.
+    {
+        const sw::vector<sw::TaskFuture<int32>> listEmpty;
+        sw::TaskFuture<sw::vector<int32>>       allFuture = sw::whenAllFutures( listEmpty );
+        SW_ASSERT_TRUE( allFuture.waitFor( 2000 ) );
+        SW_EXPECT_TRUE( allFuture.get().empty() );
+    }
+
+    // 3) whenAny — 후보가 없으면 **유효하지 않은** future 여야 한다. 기다릴 수 있으면 안 된다.
+    {
+        const sw::vector<sw::TaskFuture<int32>> listEmpty;
+        SW_EXPECT_FALSE( sw::whenAnyFuture( listEmpty ).isValid() );
+
+        sw::vector<sw::TaskFuture<int32>> listAllInvalid;
+        listAllInvalid.push_back( sw::TaskFuture<int32>{} );
+        SW_EXPECT_FALSE( sw::whenAnyFuture( listAllInvalid ).isValid() );
+    }
+
+    // 4) whenAny — 유효하지 않은 것이 섞여도 유효한 쪽이 이긴다.
+    {
+        sw::TaskPromise<int32>            promise;
+        sw::vector<sw::TaskFuture<int32>> listFuture;
+        listFuture.push_back( sw::TaskFuture<int32>{} );
+        listFuture.push_back( promise.getFuture() );
+
+        sw::TaskFuture<int32> anyFuture = sw::whenAnyFuture( listFuture );
+        SW_ASSERT_TRUE( anyFuture.isValid() );
+
+        promise.setValue( 42 );
+        SW_ASSERT_TRUE( anyFuture.waitFor( 2000 ) );
+        SW_EXPECT_EQUAL( 42, anyFuture.get() );
+    }
+}
+
+/**
  * @brief [TaskTest] TaskFuture whenAllFutures 콤비네이터 검증
  */
 SW_TEST_CASE( TaskTest, TaskFutureWhenAllCombinator )

@@ -328,6 +328,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (형제 콤비네이터 둘이 빈 입력에 다르게 답했고, 한쪽은 영원히 멈췄다 — Core/Task)
+
+**1) `whenAllFutures` 는 유효하지 않은 future 하나에 영원히 멈췄다.** `TaskFuture::then` 은 상태가 없는
+future(기본 생성된 것)에 콜백을 **걸지 않고 그냥 돌아간다**. 그런데 카운트다운은 목록 길이로 잡혀
+있었다 — 그래서 `_remaining` 이 0 에 닿지 못하고 결과 future 가 끝나지 않는다. 유효한 것 하나와 기본
+생성된 것 하나를 넣으면 그대로 재현된다. 이제 **유효한 것만 세고**, 기다릴 수 없는 자리는 결과 벡터에
+기본값으로 남긴다(길이와 순서는 입력 그대로다).
+
+**2) 형제인 `whenAnyFuture` 는 빈 목록에 다르게 답했다.** `whenAllFutures` 는 빈 목록을 곧바로 끝냈는데,
+`whenAnyFuture` 는 **유효한** future 를 만들어 돌려주고 아무도 값을 넣어 주지 않았다 — `wait()` 가
+영원히 멈춘다. 값을 만들 길이 없으므로 이제 `isValid() == false` 인 future 를 돌려준다. `wait()` 는
+곧장 돌아오고 호출부가 물어볼 수 있다. 유효하지 않은 후보는 경주에서도 뺀다.
+
+**3) `setContinuation` 도 쌍둥이 중 하나만 고쳐져 있었다.** `SharedFutureState<void>` 쪽에는 "옮긴 값을
+조건으로 되살려 쓰지 않도록 갈 곳을 하나씩만 정한다(예전에는 bool 플래그와 `std::move` 가 서로를
+배제한다는 사실에 기대고 있었다)" 는 주석과 함께 고친 모양이 들어 있는데, **본체 템플릿은 그 옛 모양
+그대로였고** `NOLINTNEXTLINE(bugprone-use-after-move)` 억제 주석까지 달고 있었다. 동작은 맞지만 읽는
+사람도 분석기도 확신할 수 없는 모양이다. `void` 쪽과 같게 맞추고 억제를 걷었다.
+
+**4) 폴더 README 가 `TaskFuture.h` 를 아예 언급하지 않았다.** 524줄짜리 공개 헤더이고 씬 비동기
+로드(`SceneManager`)와 에셋 스트리밍(`AssetStreamingQueue`)이 그 위에 서 있는데, 파일 표에도 "더 볼 곳"
+에도 없었다. `whenAll` / `whenAny` 는 본문에 한 줄 나오지만 실제 이름(`whenAllFutures` /
+`whenAnyFuture`)도 어느 파일에 있는지도 적혀 있지 않았다. 절을 하나 더하고, 위 1·2 에서 정한 계약을
+표로 적었다.
+
+**살펴보고 손대지 않은 것.** `TaskManager::clear()` 는 README 가 적은 그대로 `steal()` 로 원자적으로
+꺼내 `release()` 한다(`std::erase_if` 를 쓰지 않는다). Affinity 표·스레드 헬퍼 목록도 코드와 맞는다.
+`SharedFutureState<T>::get()` 이 `_bHasValue` 를 보지 않고 저장소를 읽지만, `_bReady` 를 세우는 경로가
+`setValue` 뿐이라 값 없이 ready 가 되는 상태는 만들어지지 않는다.
+
+**회귀 테스트.** `TaskTest.CombinatorsDoNotHangOnInvalidOrEmptyInput` — whenAll(유효+무효 혼합 · 빈
+목록) · whenAny(빈 목록 · 전부 무효 · 무효 혼합). 변이 테스트로 둘을 따로 확인했다: whenAll 을 되돌리면
+`waitFor( 2000 )` 이 2006ms 만에 시간 초과로 깨지고, whenAny 를 되돌리면 유효성 단정 둘이 깨진다.
+
+**검증.** Debug·Shipping 빌드 (이번 변경이 다시 컴파일한 TU 는 경고 0) · `ctest -L nogpu` 양쪽 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `TaskTest` 17 → 18건.
+
 ### 2026-09-17 (에디터의 `tag:` 필터는 한 번도 맞은 적이 없었다 — Core/String)
 
 **1) 태그 ID 를 구하는 코드가 세 곳에 있었고 규칙이 셋 다 달랐다.** `""_tag` 와 `TagID::request` 는

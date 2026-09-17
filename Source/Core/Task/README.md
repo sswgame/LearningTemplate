@@ -39,6 +39,7 @@ waitAll / waitStage   ◄────►  Work Helping 으로 같이 진행
 |------|------|
 | `TaskManager.h` / `.cpp` | 스레드 풀, 스케줄, wait, 메인 큐 |
 | `TaskTypes.h` | `TaskHandle`, `TaskArgs`, 델리게이트, Affinity |
+| `TaskFuture.h` | `TaskFuture<T>` / `TaskPromise<T>` — **결과를 돌려받는** 쪽. `.then` 체이닝, `whenAll` / `whenAny` |
 
 ---
 
@@ -162,7 +163,7 @@ flowchart LR
   L[Load] --> B[Bake] --> U[Upload<br/>MainThread]
 ```
 
-`whenAll` / `whenAny` 로 “여러 개 다 끝나면” / “하나라도 끝나면” 후속을 만들 수도 있습니다.
+“여러 개 다 끝나면” / “하나라도 끝나면” 은 `TaskFuture.h` 의 `whenAllFutures` / `whenAnyFuture` 입니다 (아래 7번).
 
 ### 5) 스테이지로 묶어서 기다리기
 
@@ -201,6 +202,40 @@ tm.dispatchMainThreadTasks();
 ```
 
 `GameObjectManager::tick` 시작 시에도 이를 호출합니다.
+
+### 7) 결과를 돌려받기 — `TaskFuture<T>`
+
+`TaskHandle` 은 “언제 끝났는가”만 다룹니다. **값**을 돌려받아 이어서 쓰려면 `TaskFuture.h` 를 씁니다.
+씬 비동기 로드(`SceneManager`)와 에셋 스트리밍(`AssetStreamingQueue`)이 이 위에 서 있습니다.
+
+```cpp
+TaskPromise<int32> promise;
+TaskFuture<int32>  future = promise.getFuture();
+
+tm.emplaceTask( "Compute", [promise]() mutable { promise.setValue( 42 ); } ).submit();
+
+future.wait();                       // 또는 future.waitFor( 100 )
+const int32 value = future.get();
+
+// 체이닝 — 끝나는 즉시(또는 이미 끝났으면 그 자리에서) 이어 돈다
+future.then( []( const int32& v ) { return v * 2; } )
+      .then( []( const int32& v ) { SW_LOG_INFO( "%#", v ); } );
+
+future.fallback( -1 );               // 원본이 유효하지 않으면 이 값으로
+```
+
+여러 개 모으기:
+
+```cpp
+TaskFuture<vector<int32>> all = whenAllFutures( listFuture ); // 전부 끝나면, 입력과 같은 순서
+TaskFuture<int32>         any = whenAnyFuture( listFuture );  // 가장 먼저 끝난 하나
+```
+
+| 주의 | 이유 |
+|------|------|
+| **기본 생성된 `TaskFuture` 는 유효하지 않다** (`isValid() == false`) | 상태가 없어 `then` 이 콜백을 걸지 않는다. `get()` 은 Debug 에서만 단정이 잡아 준다. |
+| `whenAllFutures` 의 결과는 **입력과 같은 길이** | 유효하지 않은 자리는 기본값으로 남는다 — 기다릴 대상이 없기 때문이다. |
+| `whenAnyFuture` 는 후보가 없으면 **유효하지 않은 future** 를 준다 | 값을 만들 길이 없다. `isValid()` 로 물어볼 것. |
 
 ---
 
@@ -293,6 +328,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 ## 더 볼 곳
 
 - `TaskManager.h` — API 주석  
-- `TaskTypes.h` — `TaskHandle::precede` / `then` / `submit`  
+- `TaskTypes.h` — `TaskHandle::precede` / `then` / `submit`
+- `TaskFuture.h` — `TaskFuture<T>` / `TaskPromise<T>` / `whenAllFutures` / `whenAnyFuture`  
 - [Object/README.md](../../Engine/Object/README.md) — 병렬 tick과 `waitAll` 타이밍  
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 병렬 tick Gotcha
