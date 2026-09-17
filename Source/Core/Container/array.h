@@ -266,7 +266,12 @@ namespace sw
 
 // ------------------------------------------------------------------------------
 // std::tuple_size and std::tuple_element specialization for structured binding
+//
+// **커스텀 array 일 때만 필요하다.** `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::array` 는 `std::array`
+// 의 별칭이라, 아래 특수화는 표준 라이브러리가 이미 준 것을 다시 정의하는 꼴이 된다.
+// `pair.h` 가 같은 이유로 같은 모양이다 — 둘 다 그 옵션에서 컴파일을 막고 있었다.
 // ------------------------------------------------------------------------------
+#if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {
     template <typename T, size_t N>
@@ -280,3 +285,4 @@ namespace std
         using type = T;
     };
 } // namespace std
+#endif

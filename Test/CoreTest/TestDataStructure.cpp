@@ -1014,3 +1014,46 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetInvalidStringParsingSafety )
     SW_EXPECT_FALSE( bitset.test( 4 ) );
     SW_EXPECT_FALSE( bitset.test( 0 ) );
 }
+
+/**
+ * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
+ * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것인데, 넷 중 하나가 빠져 있었다:
+ *          `unordered_set` 에는 이종 `find` 가 없어서 `string_view` 로 찾으면 **키를 하나 만들어서**
+ *          찾았다(비교자 기본값은 이미 `std::equal_to<>` 였다 — 의도는 있었고 구현만 없었다).
+ *
+ *          그리고 이 계약은 **빌드 옵션과 무관해야 한다.** `SW_ENABLE_STL_CONTAINER` 를 켜면
+ *          `map`/`set` 은 `std::less<Key>`(비-transparent)로 별칭돼서, 같은 코드가 기본 빌드에서는
+ *          컴파일되고 그 옵션에서는 안 됐다 — `unordered_map.h` 가 피하려고 적어 둔 바로 그 상황이다.
+ *          지금은 두 경로 모두 `std::less<>` 다.
+ *
+ * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
+ */
+SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
+{
+    const sw::string      stored{ "engine/shaders/gbuffer.hlsl" };
+    const sw::string_view probe{ stored.data(), stored.size() };
+    const sw::string_view missing{ "engine/shaders/none.hlsl" };
+
+    sw::map<sw::string, int32> orderedMap;
+    orderedMap[stored] = 7;
+    SW_EXPECT_TRUE( orderedMap.find( probe ) != orderedMap.end() );
+    SW_EXPECT_TRUE( orderedMap.find( missing ) == orderedMap.end() );
+
+    sw::set<sw::string> orderedSet;
+    orderedSet.insert( stored );
+    SW_EXPECT_TRUE( orderedSet.find( probe ) != orderedSet.end() );
+    SW_EXPECT_TRUE( orderedSet.find( missing ) == orderedSet.end() );
+
+    sw::unordered_map<sw::string, int32> hashMap;
+    hashMap[stored] = 7;
+    SW_EXPECT_TRUE( hashMap.find( probe ) != hashMap.end() );
+    SW_EXPECT_TRUE( hashMap.find( missing ) == hashMap.end() );
+
+    sw::unordered_set<sw::string> hashSet;
+    hashSet.insert( stored );
+    SW_EXPECT_TRUE( hashSet.find( probe ) != hashSet.end() );
+    SW_EXPECT_TRUE( hashSet.find( missing ) == hashSet.end() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, hashSet.count( probe ) );
+    SW_EXPECT_TRUE( hashSet.contains( probe ) );
+    SW_EXPECT_TRUE( hashSet.contains( missing ) == false );
+}

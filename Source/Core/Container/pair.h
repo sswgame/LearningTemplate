@@ -436,6 +436,12 @@ namespace sw
 } // namespace sw
 
 // Structured Binding & Tuple interface
+//
+// **커스텀 pair 일 때만 필요하다.** `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::pair` 는 `std::pair` 의
+// 별칭이므로, 아래 특수화는 표준 라이브러리가 이미 준 `tuple_size<std::pair<…>>` 를 다시 정의하는 꼴이
+// 된다. 예전에는 이 블록이 `#if` 밖에 있어서 그 옵션을 켜면 **컴파일 자체가 안 됐다**
+// (`pair.h:442: redefinition of 'tuple_size<sw::pair<T1, T2>>'`).
+#if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {
     template <typename T1, typename T2>
@@ -455,3 +461,4 @@ namespace std
         using type = T2;
     };
 } // namespace std
+#endif

@@ -243,8 +243,54 @@ namespace sw
             return end();
         }
 
+        /**
+         * @brief 이종 키(Heterogeneous Key, 예: string_view)로 키를 찾습니다.
+         * @details `unordered_map` 에는 있고 여기엔 없었다. 그래서 `unordered_set<string>` 을
+         *          `string_view` 로 찾으면 **키를 하나 만들어서** 찾았다 — 0-Alloc 이라고 적어 둔
+         *          계약이 집합에서만 깨져 있었다. 비교자 기본값이 이미 `std::equal_to<>` 인 것이
+         *          원래 의도를 말해 준다.
+         */
+        template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
+        iterator find( const K& key ) const
+        {
+            SW_SCOPED_RACE_READ();
+            if ( _listBucket.empty() )
+                return end();
+            size_t        hash         = get_hasher()( key );
+            const size_t  bucketIndex  = hash % _listBucket.size();
+            const size_t* pBucketData  = std::as_const( _listBucket ).data();
+            const Node*   pDenseData   = std::as_const( _listDenseData ).data();
+            size_t        currentIndex = pBucketData[bucketIndex];
+            while ( currentIndex != kEmptySlot )
+            {
+                if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
+                {
+                    if ( get_equal()( pDenseData[currentIndex]._key, key ) )
+                        return iterator( this, currentIndex );
+                }
+                else
+                {
+                    if ( pDenseData[currentIndex]._key == key )
+                        return iterator( this, currentIndex );
+                }
+                currentIndex = pDenseData[currentIndex]._next;
+            }
+            return end();
+        }
+
         /** @brief 키와 일치하는 원소 개수를 반환합니다. */
         size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
+
+        /** @brief 이종 키로 원소 개수를 반환합니다. */
+        template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
+        size_type count( const K& key ) const { return find( key ) != end() ? 1 : 0; }
+
+        /** @brief 키가 있는지 확인합니다. */
+        bool contains( const Key& key ) const { return find( key ) != end(); }
+
+        /** @brief 이종 키로 키가 있는지 확인합니다. */
+        template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
+        bool contains( const K& key ) const { return find( key ) != end(); }
 
         /** @brief 원소를 삽입합니다. */
         pair<iterator, bool> insert( const value_type& value )

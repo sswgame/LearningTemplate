@@ -14,7 +14,11 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename Key, typename T, typename Compare = std::less<Key>, typename Allocator = std::allocator<pair<const Key, T>>>
+    // 기본 비교자를 `std::less<>`(transparent) 로 둔다 — **커스텀 구현과 같은 값이어야 한다.**
+    // 예전엔 이쪽만 `std::less<Key>` 라서, `find( string_view )` 같은 이종 검색이 기본 빌드에서는
+    // 되고 `SW_ENABLE_STL_CONTAINER` 를 켜면 컴파일이 안 됐다 — 같은 코드가 빌드 옵션에 따라
+    // 갈리는 것이 바로 `unordered_map.h` 가 피하려고 적어 둔 상황이다.
+    template <typename Key, typename T, typename Compare = std::less<>, typename Allocator = std::allocator<pair<const Key, T>>>
     using map = std::map<Key, T, Compare, Allocator>;
 #else
     /** @brief 정렬된 벡터 맵. 조회는 이진 검색, 삽입은 정렬 유지. */

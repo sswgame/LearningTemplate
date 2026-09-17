@@ -295,6 +295,56 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (SW_ENABLE_STL_CONTAINER 를 켜면 컴파일이 안 됐다 — 그리고 집합만 0-Alloc 계약이 깨져 있었다)
+
+Container 는 6,946줄 18파일이라 정독 대신 **구조가 반복되는 자리**를 기계로 물었다. 헤더 자립성
+검사(Compression 에서 통했던 것)는 18개 전부 통과했고, 대신 다른 축에서 넷이 나왔다.
+
+**1) `SW_ENABLE_STL_CONTAINER` 를 켜면 아예 컴파일이 안 됐다.**
+
+`pair.h` 와 `array.h` 가 `std::tuple_size` · `std::tuple_element` 특수화를 `#if` **밖에** 두고 있었다.
+그 옵션을 켜면 `sw::pair` 는 `std::pair` 의 별칭이므로, 그 특수화는 표준 라이브러리가 이미 준 것을
+다시 정의하는 꼴이 된다:
+
+```
+pair.h:442:  error: redefinition of 'tuple_size<sw::pair<T1, T2>>'
+array.h:273: error: redefinition of 'tuple_size<sw::array<T, N>>'
+```
+
+`cmake/Config/BuildOptions.cmake:69` 에 살아 있는 옵션인데(기본 OFF) **켜면 서지도 않았다.**
+특수화를 `#if !defined( SW_ENABLE_STL_CONTAINER )` 안으로 넣었다.
+
+**2) `map` · `set` 의 기본 비교자가 두 경로에서 달랐다.**
+
+| | STL 경로 | 커스텀 경로 |
+| --- | --- | --- |
+| `unordered_map` · `unordered_set` | `std::equal_to<>` | `std::equal_to<>` |
+| **`map` · `set`** | **`std::less<Key>`** | **`std::less<void>`** |
+
+그래서 `swMap.find( string_view )` 가 기본 빌드에서는 되고 그 옵션에서는 **컴파일이 안 됐다.**
+이것은 `unordered_map.h` 가 헤더 주석에 "피하려고 이렇게 뒀다" 고 적어 둔 바로 그 상황이다
+("같은 코드가 빌드 옵션에 따라 갈렸을 것이다"). 해시맵 쪽은 그 교훈을 지켰는데 정렬 맵/집합은
+빠져 있었다. 둘 다 `std::less<>` 로 맞췄다.
+
+**3) `unordered_set` 에만 이종 검색이 없었다.**
+
+비교자 기본값은 이미 `std::equal_to<>` 였다 — 의도는 있었고 구현만 없었다. `find( const Key& )`
+하나뿐이라 `unordered_set<string>` 을 `string_view` 로 찾으면 **키를 하나 만들어서** 찾았다.
+`unordered_map` 과 같은 모양으로 이종 `find` · `count` · `contains` 를 붙였다.
+
+**4) 회귀 테스트.** `DataStructureTest.AssociativeContainersFindWithoutBuildingAKey` — 네 연관
+컨테이너 모두 키를 만들지 않고 찾는지 본다. **컴파일되는 것 자체가 검사다**(이종 오버로드가 사라지면
+빌드가 선다). 수정 전에는 이 코드가 `no viable conversion from const sw::string_view` 로 섰다.
+
+**검증.** 헤더 18개 × 두 경로 전부 컴파일 · Core 헤더 85개를 옵션 켜고 훑어 실패 0 ·
+Debug·Shipping 빌드 경고 0 · `ctest -L nogpu` Debug 5/5 · Shipping 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15.
+
+**남은 것 (이번 범위 밖).** `Core/Math/VectorMath.h` · `MatrixMath.h` 는 **양쪽 경로 모두에서**
+단독 컴파일이 안 된다(각 20건, `SW_API` 를 쓰면서 `Macros.h` 를 include 하지 않는다). 옵션과 무관한
+자립성 문제이고 Container 밖이라 손대지 않았다. 그리고 **옵션을 켠 전체 빌드는 아직 확인하지
+않았다** — 헤더 층까지만 확인했다. CI 가 이 옵션을 돌리지 않으므로 또 썩을 자리다.
+
 ### 2026-09-17 (없는 코덱을 요구하면 조용히 무압축으로 바꿔치고 헤더엔 그 코덱이라고 적었다 — Core/Compression)
 
 **1) 실제 결함: `resolveCodec` 이 못 찾으면 무조건 Null 코덱을 돌려줬다.**
