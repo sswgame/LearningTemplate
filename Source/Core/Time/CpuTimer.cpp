@@ -74,7 +74,15 @@ namespace sw
         , _stopTime{ 0 }
         , _prevTime{ 0 }
         , _currentTime{ 0 }
-        , _bStopped{ false }
+        // **중지 상태로 둔다.** 헤더도, `FrameRenderer::initialize` 의 주석도 그렇게 적고 있었는데
+        // 실제로는 돌고 있었다. 그래서 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지
+        // 않았고, `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후 전체
+        // 시간**(부팅 이후 몇 시간)이 됐다. 호출부 다섯 곳이 전부 `resetTimer()` 를 먼저 불러서
+        // 가려져 있었을 뿐이다 — 그 의식을 잊는 순간 터진다.
+        //
+        // 중지로 두면 `startTimer()` 가 제 일을 한다: `_pausedTime += ( 시작시각 - _stopTime(0) )`
+        // 이 기준을 시작 시각으로 옮겨 주므로, reset 없이 만들어 바로 start 해도 누적과 델타가 맞는다.
+        , _bStopped{ true }
     {
     }
 

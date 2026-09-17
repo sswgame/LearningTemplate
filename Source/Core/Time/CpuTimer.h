@@ -86,15 +86,18 @@ namespace sw
         }
 
         /**
-         * @brief 생성 이후 경과 초입니다. 호출 시 타이머를 한 번 갱신합니다.
+         * @brief 생성 이후 경과 초입니다. **호출하면 타이머가 한 번 갱신됩니다** — const 가 아닙니다.
          * @details `updateTimer()` 는 **직전 갱신 이후**의 델타를 재고 기준점을 지금으로 옮긴다.
          *          그래서 두 번 연달아 부르면 두 번째는 그 사이 시간(≈0)만 돌려준다.
          *          예전 소멸자는 `updateTimer()` 를 부른 뒤 이 함수를 불러서 또 갱신했고,
          *          결과적으로 **스코프 길이와 무관하게 0 ms 를 찍었다.** 갱신은 한 번만 한다.
+         *
+         *          그 사연이 있는 함수인데 `const` 라고 적고 `const_cast` 로 타이머를 돌리고 있었다 —
+         *          "읽기만 한다" 고 말하면서 상태를 옮기면 두 번 부르면 안 된다는 것이 보이지 않는다.
          */
-        float32 getElapsedTimeInSeconds() const noexcept
+        float32 getElapsedTimeInSeconds() noexcept
         {
-            const_cast<CpuTimer&>( _timer ).updateTimer();
+            _timer.updateTimer();
             return _timer.getDeltaTime();
         }
 
@@ -108,6 +111,3 @@ namespace sw
         CpuTimer    _timer;
     };
 } // namespace sw
-
-using CpuTimer      = sw::CpuTimer;
-using ScopeCpuTimer = sw::ScopeCpuTimer;

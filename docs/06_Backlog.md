@@ -328,6 +328,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-17 (타이머를 만들자마자 쓰면 첫 델타가 "부팅 이후 시간" 이었다 — Core/Time)
+
+**1) 생성자가 문서와 반대로 돌고 있었다.** 헤더는 "초당 카운트를 읽고 **중지 상태로** 둡니다" 라고
+적고, `FrameRenderer::initialize` 의 주석도 "CpuTimer 는 만들면 중지 상태다" 라고 적는데, 구현은
+`_bStopped{ false }` 였다. 그래서 `startTimer()` 가 `if ( _bStopped )` 에 걸려 **아무 일도 하지 않고**,
+`_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돈다 — 델타가 `현재 QPC - 0`, 즉 **부팅 이후 전체 시간**
+이 된다. `getTotalTime()` 도 같다.
+
+지금 아무 데도 안 터지는 이유는 호출부 **다섯 곳이 전부** `resetTimer()` 를 먼저 부르기 때문이다
+(`FrameTimeline` · `ModuleCompiler` · `LiveReloadManager` · `FrameRenderer` · X11 백엔드). 그 다섯 곳이
+바로 뒤에 `startTimer()` 도 부르는데, `resetTimer()` 가 이미 `_bStopped` 를 내려 놓으므로 그 호출은
+**전부 아무 일도 하지 않는다** — 다들 "만들면 멈춰 있다" 고 믿고 의식을 치르고 있었던 셈이다.
+
+문서 쪽이 옳다고 보고 구현을 맞췄다(`_bStopped{ true }`). 그러면 `startTimer()` 가 제 일을 한다 —
+`_pausedTime += ( 시작시각 - _stopTime(0) )` 이 기준을 시작 시각으로 옮겨 주므로 reset 없이 만들어 바로
+start 해도 누적과 델타가 맞는다. 의식을 잊어도 안전해졌고, 잊은 채 `updateTimer()` 만 부르면 델타는
+0 이다(쓰레기 값이 아니라).
+
+**2) `CpuTimer` · `ScopeCpuTimer` 를 전역 이름으로도 내놓고 있었다.** `using CpuTimer = sw::CpuTimer;`
+— **저장소에서 `sw::` 클래스를 전역에 별칭으로 내놓는 헤더는 이것 하나뿐이다.** 그리고 이 헤더는
+`Engine/Common/Common.h` 를 타고 사실상 모든 TU 에 들어간다. `Types.h` 가 적어 둔 기준(컨테이너·클래스
+이름은 `sw` 안, 고정폭 기본형만 전역)과도 어긋난다.
+
+쓰는 곳을 세어 보니 `Source/` 의 다섯 선언은 **전부 `namespace sw` 안**이라 별칭이 없어도 그대로
+풀린다. 실제로 이 별칭에 기대고 있던 것은 `TestTime.cpp` 의 세 줄뿐이었고, 그 파일조차 다른 자리에서는
+`sw::ScopeCpuTimer` 라고 쓰고 있었다. 지웠고 그 세 줄을 한정했다.
+
+**3) `ScopeCpuTimer::getElapsedTimeInSeconds()` 가 `const` 라고 적고 `const_cast` 로 타이머를 돌렸다.**
+이 함수는 부를 때마다 기준점을 옮기므로 **두 번 부르면 두 번째는 ≈0** 이다 — 실제로 예전 소멸자가 그
+함정에 빠져 스코프 길이와 무관하게 0 ms 를 찍었고 그 사연이 주석에 남아 있다. 그런 함수가 "읽기만
+한다" 고 서명하면 그 위험이 보이지 않는다. `const` 를 뗐다.
+
+**회귀 테스트.** `TimeTest.FreshTimerDoesNotReportTimeSinceBoot` — 만들고 `startTimer()` 만 한 뒤
+10ms 자고 재면 델타가 1초 미만이어야 한다. 변이 테스트로 확인했다(생성자를 되돌리면 "델타가 부팅 이후
+시간이다" · "누적이 부팅 이후 시간이다" 둘이 깨진다). 기존 `CPUTimerBasic` 의
+`SW_EXPECT_FALSE( isStopped() )` 는 구현의 옛 동작을 못박고 있었으므로 문서 쪽으로 뒤집었다.
+
+**검증.** Debug·Shipping 빌드 (이번 변경이 다시 컴파일한 TU 는 경고 0) · `ctest -L nogpu` 양쪽 5/5 ·
+`-L hostgpu` 양쪽 1/1 · 린트 15/15 · `TimeTest` 4 → 5건 · 헤더 5개 자립.
+
 ### 2026-09-17 (형제 콤비네이터 둘이 빈 입력에 다르게 답했고, 한쪽은 영원히 멈췄다 — Core/Task)
 
 **1) `whenAllFutures` 는 유효하지 않은 future 하나에 영원히 멈췄다.** `TaskFuture::then` 은 상태가 없는
