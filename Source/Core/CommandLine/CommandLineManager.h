@@ -30,22 +30,6 @@ namespace sw
         Count /**< 등록된 인자의 총 개수 */
     };
 
-    /** @brief sw::string 및 string_view 키용 이종 해시 함수입니다. */
-    struct StringHash
-    {
-        using is_transparent = void;
-        /** @brief string_view 내용을 해시합니다. */
-        size_t operator()( string_view txt ) const noexcept { return std::hash<string_view>{}( txt ); }
-        size_t operator()( const string& txt ) const noexcept { return std::hash<string_view>{}( string_view{ txt } ); }
-    };
-
-    /** @brief sw::string 및 string_view 키용 이종 동등 비교자입니다. */
-    struct StringEqual
-    {
-        using is_transparent = void;
-        bool operator()( string_view lhs, string_view rhs ) const noexcept { return lhs == rhs; }
-    };
-
     // ------------------------------------------------------------------------------
     // 2) CommandLineManager — initialize(등록) → parse → getArgument
     // ------------------------------------------------------------------------------
@@ -56,7 +40,7 @@ namespace sw
     class SW_API CommandLineManager final
     {
         /** @brief 한 인자의 현재값·기본값·필수 여부입니다. */
-        struct SW_API ArgumentInfo
+        struct ArgumentInfo
         {
             using Value = std::variant<int32, bool, float32, string>;
 
@@ -67,13 +51,23 @@ namespace sw
             uint8                  _bParsed          : 1;
             [[maybe_unused]] uint8 _reserved         : 5;
 
-            /** @brief 값을 비우고 플래그를 끕니다. */
-            ArgumentInfo();
+            /**
+             * @brief 값을 비우고 플래그를 끕니다.
+             * @details 헤더에 둔다 — `addArgument` 가 템플릿이라 호출한 쪽 TU 에서 이 생성자를
+             *          찾는다. .cpp 에 두면 Engine.dll 에서 내보내야만 링크된다.
+             */
+            ArgumentInfo()
+                : _value{}
+                , _defaultValue{}
+                , _bMustHaveValue{ SW_FALSE }
+                , _bUseDefaultValue{ SW_FALSE }
+                , _bParsed{ SW_FALSE }
+                , _reserved{ 0 } {}
         };
 
     public:
         /** @brief 빈 인자 맵으로 둡니다. */
-        explicit CommandLineManager() = default;
+        CommandLineManager() = default;
         /** @brief 인자 맵만 버립니다. */
         ~CommandLineManager() = default;
         /** @brief 복사를 금지합니다. */
@@ -86,7 +80,10 @@ namespace sw
         CommandLineManager& operator=( CommandLineManager&& ) = delete;
 
         /**
-         * @brief CommandList.xxx 파일을 참조하여 허용 가능한 커맨드라인 인자 목록을 동적 등록
+         * @brief ArgumentList.xxx 파일을 참조하여 허용 가능한 커맨드라인 인자 목록을 동적 등록
+         * @details 등록 순서는 그 파일의 줄 순서이고 `CommandLineArgument` 열거 멤버도 같은 파일에서
+         *          같은 순서로 나온다 — 그래서 열거값이 곧 `_listArgument` 인덱스다. 그 일치를 여기서
+         *          한 줄마다 assert 하므로, 열거형으로 하는 조회는 이름을 만들지도 해시하지도 않는다.
          */
         void initialize();
         /** @brief 파싱 결과는 프로세스 수명과 같으므로 할 일이 없습니다. */
@@ -108,8 +105,9 @@ namespace sw
 
         /**
          * @brief 문자열 키(Key)를 이용해 파싱된 인자 값을 조회합니다.
-         * @tparam T 가져올 값의 타입 (bool, int32, float32, sw::string 등)
-         * @param key 조회할 커맨드라인 키 (예: "--width")
+         * @tparam T 가져올 값의 타입 (bool, 정수, 부동소수, sw::string, string_view)
+         * @param key 등록된 이름이나 동의어 (예: "WIDTH", "W"). 선행 하이픈은 파싱할 때 떼어내므로
+         *            **조회 키에는 붙이지 않는다** — `"--WIDTH"` 로는 찾지 못한다.
          * @param outValue 조회된 값이 저장될 출력 변수
          * @return 해당 키가 존재하고 타입 캐스팅이 성공하면 true 반환
          */
@@ -134,6 +132,9 @@ namespace sw
          */
         bool isArgumentProvided( string_view key ) const;
 
+        /** @brief 표준 인자가 커맨드라인에 실제로 적혔는지 돌려줍니다. */
+        bool isArgumentProvided( CommandLineArgument argument ) const;
+
         /**
          * @brief 인자를 추가합니다
          */
@@ -155,38 +156,38 @@ namespace sw
         /** @brief 단일 인자 라인(예: "--width=1280" 또는 "-fullscreen")을 파싱하여 사전에 적용 */
         void parseArgumentLine( string_view argumentLine );
 
-        /** @brief 단일 문자열로 연결된 커맨드라인 원시 텍스트를 내부 사전에 매핑하여 파싱 처리 */
-        void parseInternal( string_view cmdLine );
+        /** @brief 등록된 이름·동의어로 인자를 찾습니다. 없으면 nullptr 입니다. */
+        const ArgumentInfo* findArgument( string_view key ) const;
 
-        /** @brief 인자 값을 설정합니다. */
-        void setValue( ArgumentInfo& argument, string_view newValue ) const;
+        /** @brief 열거값을 `_listArgument` 인덱스로 바로 씁니다 (initialize 가 그 일치를 보장한다). */
+        const ArgumentInfo* findArgument( CommandLineArgument argument ) const;
+
+        /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. */
+        static void setValue( ArgumentInfo& argument, string_view key, string_view newValue );
 
         /**
-         * @brief 인자 enum을 문자열로 변환합니다
+         * @brief 파싱값(없으면 기본값)을 요청한 타입으로 꺼냅니다.
+         * @details 저장 타입은 넷(bool·int32·float32·string)뿐이므로, 요청 타입 T 를 그중 하나로
+         *          접어 두고 variant 에서 한 번만 꺼낸다.
          */
-        static string_view argumentEnumToString( CommandLineArgument argument );
+        template <typename T>
+        static bool readValue( const ArgumentInfo& argument, T& outValue );
 
-        static constexpr auto kLineDelim = ";";
         /** @brief 보류표에 담을 키의 접두어. 이것으로 시작하는 미등록 키만 남긴다. */
         static constexpr auto kGlobalVariablePrefix = "gv_";
 
-        vector<ArgumentInfo>                                   _listArgument;
-        unordered_map<string, uint32, StringHash, StringEqual> _mapArgument;
+        vector<ArgumentInfo> _listArgument;
+        /** @brief 이름·동의어 → `_listArgument` 인덱스. 기본 해시가 transparent 라 string_view 로 0-Alloc 조회된다. */
+        unordered_map<string, uint32> _mapArgument;
         /** @brief 등록된 인자가 없어 보류해 둔 `gv_` 키 → 값. 모듈이 늦게 선언할 때 꺼내 쓴다. */
-        unordered_map<string, string, StringHash, StringEqual> _mapPendingGlobal;
+        unordered_map<string, string> _mapPendingGlobal;
     };
 
     template <typename T>
-    bool CommandLineManager::getArgument( string_view key, T& outValue ) const
+    bool CommandLineManager::readValue( const ArgumentInfo& argument, T& outValue )
     {
-        SW_LOG_ASSERT( key.empty() == false, "들어온 값이 비어있으면 안됩니다" );
-
-        const auto iter = _mapArgument.find( key );
-        if ( iter == _mapArgument.end() )
-            return false;
-
-        const uint32        argumentIndex = iter->second;
-        const ArgumentInfo& argument      = _listArgument[argumentIndex];
+        static_assert( std::is_same_v<T, bool> || std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, string> || std::is_same_v<T, string_view>,
+                       "커맨드라인 값은 bool·정수·부동소수·string·string_view 로만 꺼낼 수 있습니다" );
 
         const ArgumentInfo::Value* pTargetValue{ nullptr };
         if ( argument._bParsed != SW_FALSE )
@@ -196,81 +197,68 @@ namespace sw
         else
             return false;
 
-        if constexpr ( std::is_same_v<T, bool> )
-        {
-            const bool* pResult = std::get_if<bool>( pTargetValue );
-            if ( pResult != nullptr )
-            {
-                outValue = *pResult;
-                return true;
-            }
-        }
-        else if constexpr ( std::is_integral_v<T> )
-        {
-            const int32* pResult = std::get_if<int32>( pTargetValue );
-            if ( pResult != nullptr )
-            {
-                outValue = static_cast<T>( *pResult );
-                return true;
-            }
-        }
-        else if constexpr ( std::is_floating_point_v<T> )
-        {
-            const float32* pResult = std::get_if<float32>( pTargetValue );
-            if ( pResult != nullptr )
-            {
-                outValue = static_cast<T>( *pResult );
-                return true;
-            }
-        }
-        else if constexpr ( std::is_same_v<T, string> )
-        {
-            const string* pResult = std::get_if<string>( pTargetValue );
-            if ( pResult != nullptr )
-            {
-                outValue = *pResult;
-                return true;
-            }
-        }
-        else if constexpr ( std::is_same_v<T, string_view> )
-        {
-            const string* pResult = std::get_if<string>( pTargetValue );
-            if ( pResult != nullptr )
-            {
-                outValue = string_view{ *pResult };
-                return true;
-            }
-        }
+        // 요청 타입 → 저장 타입. bool 을 먼저 걸러야 한다 (bool 도 정수 타입이다).
+        using StoredType = std::conditional_t<std::is_same_v<T, bool>, bool,
+                                              std::conditional_t<std::is_integral_v<T>, int32,
+                                                                 std::conditional_t<std::is_floating_point_v<T>, float32, string>>>;
 
-        return false;
+        const StoredType* pStoredValue = std::get_if<StoredType>( pTargetValue );
+        if ( pStoredValue == nullptr )
+            return false;
+
+        if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, string_view> )
+            outValue = T{ *pStoredValue };
+        else
+            outValue = static_cast<T>( *pStoredValue );
+
+        return true;
+    }
+
+    template <typename T>
+    bool CommandLineManager::getArgument( string_view key, T& outValue ) const
+    {
+        const ArgumentInfo* pArgument = findArgument( key );
+        if ( pArgument == nullptr )
+            return false;
+
+        return readValue( *pArgument, outValue );
     }
 
     template <typename T>
     bool CommandLineManager::getArgument( const CommandLineArgument argument, T& outValue ) const
     {
-        const string_view argumentName = argumentEnumToString( argument );
-        return getArgument( argumentName, outValue );
+        const ArgumentInfo* pArgument = findArgument( argument );
+        if ( pArgument == nullptr )
+            return false;
+
+        return readValue( *pArgument, outValue );
     }
 
     template <typename T>
     void CommandLineManager::addArgument( const std::initializer_list<string_view>& listSynonym, const bool bMustHaveValue, T defaultValue, const bool bUseDefaultValue )
     {
-        const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
+        // 먼저 전부 검사한다 — 예전엔 겹치는 이름을 만난 자리에서 되돌아갔고, 그 앞에서 이미 넣은
+        // 동의어들이 **끝내 만들어지지 않는 인덱스**를 가리킨 채 남았다. 그 동의어로 조회하면
+        // _listArgument 범위 밖을 읽는다.
         for ( string_view synonym : listSynonym )
         {
-            const auto iter = _mapArgument.find( synonym );
-            if ( iter != _mapArgument.end() )
+            if ( _mapArgument.find( synonym ) != _mapArgument.end() )
             {
                 SW_LOG_ASSERT( false, "%#은 이미 사용 중입니다", synonym );
                 return;
             }
-            _mapArgument.emplace( string{ synonym }, newArgumentIndex );
         }
 
         ArgumentInfo argument{};
-        argument._bMustHaveValue   = bMustHaveValue;
-        argument._bUseDefaultValue = bUseDefaultValue;
+        argument._bMustHaveValue   = bMustHaveValue ? SW_TRUE : SW_FALSE;
+        argument._bUseDefaultValue = bUseDefaultValue ? SW_TRUE : SW_FALSE;
         argument._defaultValue     = std::move( defaultValue );
-        _listArgument.push_back( argument );
+
+        const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
+        _listArgument.push_back( std::move( argument ) );
+        for ( string_view synonym : listSynonym )
+        {
+            _mapArgument.emplace( string{ synonym }, newArgumentIndex );
+        }
     }
 } // namespace sw

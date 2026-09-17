@@ -3,34 +3,28 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Core/Common/Defines.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/string_splitter.h"
 
 SW_LOG_CALLER( "CommandLineManager" );
 
 namespace sw
 {
-    /**
-     * @brief 기본 인자 정보 생성자 (기본 상태 초기화)
-     */
-    CommandLineManager::ArgumentInfo::ArgumentInfo()
-        : _value{}
-        , _defaultValue{}
-        , _bMustHaveValue{ SW_FALSE }
-        , _bUseDefaultValue{ SW_FALSE }
-        , _bParsed{ SW_FALSE }
-        , _reserved{ 0 } {}
-
     // ============================================================================
     // @function initialize
     // @brief 미리 정의된 커맨드라인 식별자 매크로 테이블(ArgumentList.xxx)을 읽어들여
     //        모든 가능한 인자들의 초기화 정보 및 별칭(Synonym)들을 _mapArgument 사전에 등록합니다.
+    //
+    // 한 줄마다 "지금 넣는 자리 == 그 줄의 열거값" 을 확인한다. 이 일치가 findArgument(enum) 을
+    // 이름 없는 O(1) 인덱싱으로 만들어 주는 근거이고, 깨지는 경우는 하나뿐이다 —
+    // initialize 를 두 번 부르거나, 그 전에 addArgument 를 먼저 부르는 것.
     // ============================================================================
     void CommandLineManager::initialize()
     {
-#define SW_REGISTER_ARGUMENT( name, mustHaveValue, defaultValue, useDefaultValue, ... ) \
+        _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
+
+#define SW_REGISTER_ARGUMENT( name, mustHaveValue, defaultValue, useDefaultValue, ... )       \
+    SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),  \
+                   "인자 등록 순서가 CommandLineArgument 열거값과 어긋났습니다: %#", #name ); \
     addArgument( { #name, __VA_ARGS__ }, mustHaveValue, defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
@@ -72,8 +66,8 @@ namespace sw
         {
             if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != L'\0' )
             {
-                const string utf8 = StringUtil::utf16ToUtf8( pPpArgv[argIndex] );
-                parseArgumentLine( string_view{ utf8 } );
+                const string utf8Line = StringUtil::utf16ToUtf8( pPpArgv[argIndex] );
+                parseArgumentLine( string_view{ utf8Line } );
             }
         }
     }
@@ -84,20 +78,15 @@ namespace sw
     //
     // [파싱 알고리즘 단계]:
     // 1. 문자열 앞뒤의 불필요한 공백을 트리밍
-    // 2. '=' 문자가 있는지 확인하여 Key와 Value로 분리 (없으면 boolean 플래그로 간주하여 value="true")
+    // 2. '=' 문자가 있는지 확인하여 Key와 Value로 분리 (없으면 boolean 플래그로 간주)
     // 3. Key 앞부분의 하이픈('-', '--') 접두사를 제거(remove_prefix)하여 순수 키 이름 도출
     // 4. 이종 검색(Heterogeneous Lookup)을 통해 _mapArgument에서 인자 인덱스를 O(1)로 조회
     // 5. 해당 ArgumentInfo에 타입에 맞게 값을 설정
     // ============================================================================
     void CommandLineManager::parseArgumentLine( string_view argumentLine )
     {
-        string_view line = argumentLine;
         // 1단계: 앞뒤 공백 트리밍
-        while ( line.empty() == false && ( line.front() == ' ' || line.front() == '\t' || line.front() == '\r' || line.front() == '\n' ) )
-            line.remove_prefix( 1 );
-        while ( line.empty() == false && ( line.back() == ' ' || line.back() == '\t' || line.back() == '\r' || line.back() == '\n' ) )
-            line.remove_suffix( 1 );
-
+        const string_view line = StringUtil::trim( argumentLine );
         if ( line.empty() )
             return;
 
@@ -105,8 +94,8 @@ namespace sw
         const size_t eqPos     = line.find( '=' );
         const bool   bHasValue = ( eqPos != string_view::npos );
 
-        string_view rawKey   = bHasValue ? line.substr( 0, eqPos ) : line;
-        string_view valueStr = bHasValue ? line.substr( eqPos + 1 ) : string_view{ "true" };
+        const string_view rawKey   = bHasValue ? line.substr( 0, eqPos ) : line;
+        const string_view valueStr = bHasValue ? line.substr( eqPos + 1 ) : string_view{};
 
         // 3단계: 선행 하이픈('-') 제거
         string_view cleanKey = rawKey;
@@ -130,7 +119,8 @@ namespace sw
             // 키를 App 이 한 번 경고한다(collectPendingGlobalNames).
             if ( cleanKey.rfind( kGlobalVariablePrefix, 0 ) == 0 )
             {
-                _mapPendingGlobal[string{ cleanKey }] = string{ valueStr };
+                // 값 없이 적은 `-gv_flag` 는 플래그다 — setValue 와 같은 뜻으로 "true" 를 남긴다.
+                _mapPendingGlobal[string{ cleanKey }] = bHasValue ? string{ valueStr } : string{ "true" };
                 return;
             }
 
@@ -138,8 +128,7 @@ namespace sw
             return;
         }
 
-        const uint32  argumentIndex = iter->second;
-        ArgumentInfo& argument      = _listArgument[argumentIndex];
+        ArgumentInfo& argument = _listArgument[iter->second];
 
         // 필수 값 누락 검사
         const bool bHasNoValue = ( argument._bMustHaveValue != SW_FALSE && bHasValue == false );
@@ -149,21 +138,48 @@ namespace sw
             return;
         }
 
-        // 5단계: 타입별 값 대입
+        // 5단계: 타입별 값 대입. 값 없이 적은 것은 플래그이므로 true 로 켠다.
         if ( bHasValue )
-            setValue( argument, valueStr );
+            setValue( argument, cleanKey, valueStr );
         else
             argument._value = true;
 
         argument._bParsed = SW_TRUE;
     }
 
-    bool CommandLineManager::isArgumentProvided( string_view key ) const
+    const CommandLineManager::ArgumentInfo* CommandLineManager::findArgument( string_view key ) const
     {
+        SW_LOG_ASSERT( key.empty() == false, "들어온 값이 비어있으면 안됩니다" );
+
         const auto iter = _mapArgument.find( key );
         if ( iter == _mapArgument.end() )
-            return false;
-        return _listArgument[iter->second]._bParsed != SW_FALSE;
+            return nullptr;
+
+        return &_listArgument[iter->second];
+    }
+
+    const CommandLineManager::ArgumentInfo* CommandLineManager::findArgument( const CommandLineArgument argument ) const
+    {
+        // ArgumentList.xxx 한 줄이 열거 멤버 하나와 _listArgument 원소 하나를 같은 순서로 만든다
+        // (initialize 가 줄마다 그 일치를 assert 한다). 그래서 이름을 만들어 해시할 일이 없다.
+        // Count 나 initialize 이전의 조회는 여기서 nullptr 로 걸린다.
+        const size_t argumentIndex = static_cast<size_t>( argument );
+        if ( _listArgument.size() <= argumentIndex )
+            return nullptr;
+
+        return &_listArgument[argumentIndex];
+    }
+
+    bool CommandLineManager::isArgumentProvided( string_view key ) const
+    {
+        const ArgumentInfo* pArgument = findArgument( key );
+        return pArgument != nullptr && pArgument->_bParsed != SW_FALSE;
+    }
+
+    bool CommandLineManager::isArgumentProvided( const CommandLineArgument argument ) const
+    {
+        const ArgumentInfo* pArgument = findArgument( argument );
+        return pArgument != nullptr && pArgument->_bParsed != SW_FALSE;
     }
 
     bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
@@ -185,26 +201,15 @@ namespace sw
         return listName;
     }
 
-    // ============================================================================
-    // @function parseInternal
-    // @brief 세미콜론(';') 등으로 구분된 배치 명령줄 텍스트를 분할하여 순차 처리합니다.
-    // ============================================================================
-    void CommandLineManager::parseInternal( string_view cmdLine )
-    {
-        const string_splitter lineSplitter{ cmdLine, { kLineDelim } };
-        for ( string_view argumentLine : lineSplitter.getSplitList() )
-        {
-            parseArgumentLine( argumentLine );
-        }
-    }
-
     /**
      * @brief 문자열 값을 대상 인자의 기본값 타입에 맞추어 변환하고 저장합니다.
      *
      * [초심자 가이드]:
      * StringUtil::parse*를 사용하여 임시 문자열 힙 할당 없이(0-Allocation) 즉시 타입 변환을 수행합니다.
+     * 변환에 실패하면 0 이 조용히 들어가지 않도록 경고를 남긴다 — `-WIDTH=abc` 가 아무 말 없이
+     * 폭 0 이 되면 창이 왜 안 뜨는지 알 길이 없다.
      */
-    void CommandLineManager::setValue( ArgumentInfo& argument, string_view newValue ) const
+    void CommandLineManager::setValue( ArgumentInfo& argument, string_view key, string_view newValue )
     {
         if ( std::holds_alternative<bool>( argument._defaultValue ) )
         {
@@ -212,38 +217,19 @@ namespace sw
         }
         else if ( std::holds_alternative<int32>( argument._defaultValue ) )
         {
-            int32 val{ 0 };
-            StringUtil::parseInt( newValue, val );
-            argument._value = val;
+            int32 parsedValue{ 0 };
+            if ( StringUtil::parseInt( newValue, parsedValue ) == false )
+                SW_LOG_WARNING( "%#: 정수가 아닙니다 (%#). 0 으로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+            argument._value = parsedValue;
         }
         else if ( std::holds_alternative<float32>( argument._defaultValue ) )
         {
-            float32 val{ 0.0f };
-            StringUtil::parseFloat( newValue, val );
-            argument._value = val;
+            float32 parsedValue{ 0.0f };
+            if ( StringUtil::parseFloat( newValue, parsedValue ) == false )
+                SW_LOG_WARNING( "%#: 실수가 아닙니다 (%#). 0 으로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+            argument._value = parsedValue;
         }
         else
             argument._value = string( newValue );
-    }
-
-    /**
-     * @brief CommandLineArgument 열거형 값을 문자열 이름으로 변환합니다.
-     */
-    string_view CommandLineManager::argumentEnumToString( const CommandLineArgument argument )
-    {
-        switch ( argument )
-        {
-#define SW_REGISTER_ARGUMENT( name, mustHaveValue, defaultValue, ... ) \
-    case CommandLineArgument::name:                                    \
-        return #name;
-#include "Core/Predefined/ArgumentList.xxx"
-#undef SW_REGISTER_ARGUMENT
-
-            case CommandLineArgument::Count:
-            default:
-                break;
-        }
-        SW_LOG_ASSERT( false, "도달하면 안됩니다" );
-        return {};
     }
 } // namespace sw

@@ -215,3 +215,44 @@ SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
                         "안 적은 인자를 적었다고 한다 — 설정 기본값이 커맨드라인을 덮는 판단이 여기서 갈린다" );
     SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "no_such_argument" ) == false, "없는 인자를 적었다고 한다" );
 }
+
+/**
+ * @brief [CommandLineTest] 열거형 조회와 문자열 조회가 같은 인자를 가리킨다
+ * @details 열거형 조회는 이름을 만들지 않고 `_listArgument` 를 열거값으로 바로 인덱싱한다.
+ *          그 근거는 ArgumentList.xxx 한 줄이 열거 멤버와 원소를 같은 순서로 만든다는 것뿐이므로,
+ *          두 경로가 같은 답을 내는지 여기서 못박는다. `Count` 는 어느 인자도 아니다.
+ */
+SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-HEIGHT=1440" ),
+        const_cast<utf8*>( "-lang=ko" ),
+    };
+    cmdManager.parse( 3, argv );
+
+    int32 heightByEnum{ 0 };
+    int32 heightByName{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, heightByEnum ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "HEIGHT" ), heightByName ) );
+    SW_EXPECT_EQUAL( 1440, heightByEnum );
+    SW_EXPECT_EQUAL( heightByName, heightByEnum );
+
+    sw::string langByEnum;
+    sw::string langByName;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::LANGUAGE, langByEnum ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "lang" ), langByName ) );
+    SW_EXPECT_STREQ( "ko", langByEnum.c_str() );
+    SW_EXPECT_STREQ( langByName.c_str(), langByEnum.c_str() );
+
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::HEIGHT ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::WIDTH ) == false );
+
+    // Count 는 인자가 아니다 — 인덱싱이 범위를 넘지 않고 false 로 돌아와야 한다.
+    int32 none{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::Count, none ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::Count ) == false );
+}

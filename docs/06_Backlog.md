@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-14 · 기준 커밋 `1b4fb6f0`
+> 마지막 갱신: 2026-09-17 · 기준 커밋 `97095c4c`
 
 ---
 
@@ -294,6 +294,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-17 (동의어 등록이 중간에 멈추면 없는 인자를 가리키는 이름이 남았다 — CommandLineManager 정리)
+
+**1) 실제 결함: `addArgument` 가 반쯤 등록된 상태를 남겼다.**
+
+동의어를 하나씩 `_mapArgument` 에 넣다가 이미 쓰는 이름을 만나면 그 자리에서 되돌아갔다.
+그런데 `_listArgument.push_back` 은 **맨 끝에** 있었다 — 그 앞에서 이미 넣은 동의어들은
+끝내 만들어지지 않는 인덱스를 가리킨 채 표에 남는다. 그 이름으로 조회하면
+`_listArgument[없는 인덱스]` 를 읽는다. 지금 등록 목록에서는 첫 이름이 먼저 걸려 터지지 않았을
+뿐이고, `{ "새이름", "이미쓰는이름" }` 순서면 그대로 범위 밖 읽기다.
+→ **전부 검사한 다음에 넣는다.** 하나라도 겹치면 아무것도 남기지 않는다.
+
+**2) 열거형 조회가 먼 길로 가고 있었다.** `CommandLineArgument` → `switch` 로 이름 문자열 →
+해시 → 맵 → 인덱스. 그런데 `ArgumentList.xxx` **한 줄이 열거 멤버 하나와 `_listArgument` 원소
+하나를 같은 순서로** 만든다 — 열거값이 곧 인덱스다. 그 일치를 `initialize` 가 줄마다 assert 하고,
+조회는 바로 인덱싱한다. 매크로 세 번째 펼침(`argumentEnumToString`)이 통째로 사라졌다.
+`Count` 와 `initialize` 이전 조회는 범위 검사로 걸린다.
+
+**3) 값 변환 실패가 조용했다.** `StringUtil::parseInt` 의 반환값을 버리고 있어서 `-WIDTH=abc` 가
+아무 말 없이 0 이 됐다. 창이 왜 안 뜨는지 알 길이 없다 — 이제 경고를 남긴다.
+
+**4) 죽은 코드와 중복.**
+
+- `parseInternal` + `kLineDelim`: 선언·정의만 있고 **부르는 곳이 없었다.** 지웠다.
+- `StringHash` / `StringEqual`: `sw::` 에 그 이름으로 놓인 구조체 둘인데, `sw::unordered_map` 의
+  기본값(`std::hash<sw::string>` 는 transparent, `KeyEqual` 은 `std::equal_to<>`)이 이미 같은 것을
+  보장한다 — 컨테이너 헤더가 그렇게 쓰라고 적어 둔 계약이다. 지우고 기본값을 쓴다.
+- `getArgument` 의 `if constexpr` 다섯 갈래(48줄)를 `readValue` 하나로 접었다. 저장 타입은 넷뿐이니
+  요청 타입 T 를 그중 하나로 접어 variant 에서 한 번만 꺼낸다. 지원하지 않는 T 는
+  `static_assert` 로 컴파일 때 선다(예전엔 조용히 false 였다).
+- 직접 적은 앞뒤 공백 트리밍 → `StringUtil::trim`.
+- 안 쓰는 include 셋(`GlobalVariableManager.h` · `StringBuilder.h` · `string_splitter.h`).
+- `isArgumentProvided` 에 열거형 오버로드를 붙였다 — `getArgument` 와 짝이 맞는다.
+
+**함정 하나.** `ArgumentInfo` 의 생성자에서 `SW_API` 를 떼면 **링크가 깨진다.** `addArgument` 가
+템플릿이라 호출한 쪽 TU 에서 그 생성자를 찾기 때문이다. 내보내는 대신 **생성자를 헤더에 인라인으로**
+두어 DLL 경계 심볼 자체를 없앴다.
+
+**테스트.** `EnumLookupMatchesStringLookup` — 열거형 경로와 문자열 경로가 같은 인자를 가리키는지,
+`Count` 가 범위를 넘지 않는지. 동의어 충돌 경로는 **테스트로 만들 수 없다** — `SW_LOG_ASSERT` 가
+Debug 에서 `__debugbreak()` 라 테스트 실행이 죽는다(단언을 잠시 끄는 장치가 이 저장소에 없다).
+
+**검증.** Debug·Shipping 빌드 경고 0 · `RunBuildWarnings` 전체 훑기 0건 · `ctest -L nogpu` 5/5 ·
+린트 15/15 · CoreTest 178/178(Shipping 170/178, 8 건너뜀) · 실기동 dx12 1000×700 과 vk 각각
+종료 코드 0 · `[Error]` 0건, `-PORT=abc` 경고와 `-gv_nosuchvariable` 경고 확인.
 
 ### 2026-09-14 (커밋 훅이 게이트 열둘 중 여섯만 돌고 있었고, 그 여섯도 C++ 이 있을 때만 돌았다)
 
