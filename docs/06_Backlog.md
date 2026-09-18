@@ -162,6 +162,42 @@ cd build/Ninja-Debug/Bin
 2026-09-18 에 우산이 전방 선언만 모으도록 바꿔 닫았다(3절 참고). 폴더를 끝낼 때마다
 `py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/<폴더>` 를 돌리면 된다.
 
+### 1-0b. Editor 폴더 훑기 — 알파벳 순, 다음은 `Common/Asset` (2026-09-18 시작)
+
+`Source/Core`(2026-09-17) · `Source/Engine`(2026-09-18) 과 **같은 방식**. 폴더 하나 = 커밋 하나.
+`Common` 은 16,868줄이라 통째로는 커밋 하나에 담기지 않으므로 **하위 폴더를 단위로 삼는다.**
+
+| 폴더 | 줄 수 | 상태 |
+|------|------:|------|
+| `Common/Asset` | 819 | ✅ 2026-09-18 (3절 참고 — 같은 결정이 두 자리에 있었다) |
+| `Common/Backend` | 2,236 | ← 다음 |
+| `Common/Commands` | 4,478 | |
+| `Common/Config` | 299 | |
+| `Common/Gui` | 3,740 | |
+| `Common/Widgets` | 1,277 | |
+| `Common/Workspace` | 3,764 | |
+| `Panels` | 11,011 | |
+| `Popups` | 1,008 | |
+| `Viewport` | 1,945 | |
+| 루트(`ImGuiEditor` · `IEditor`) | 780 | |
+
+**엔진과 다른 점 — 여기는 이미 한 번 훑었다(2026-09-10, 커밋 7개).** 그때 훑고 **깨끗하다고
+확인한 것은 다시 파지 않는다**: `formatstring` 의 `%s`/`%d` 혼용(정상) · 멤버 인덱스 경계 7곳
+(전부 검사함) · `EditorBackgroundJob` 수명(shared_ptr+세대로 안전) · 엔진에 남는 콜백
+(Logger 구독 · 창 닫기 핸들러 해제됨, 파일 감시자 등록 없음) · `EditorConfig` 16필드.
+그 라운드의 방향도 그대로다 — **"쪼개는 것보다 공통된 부분을 빼는 게 낫다"**, 긴 함수를 기계적으로
+분해하는 것은 우선순위가 낮다. "하나 더하려면 N 곳을 고쳐야 하는" 구조를 찾는다.
+
+**검증의 사각지대를 먼저 알 것.** 기본 실기동(`SW_ACTIVE_GAME=Empty`)은 **빈 씬**을 본다 — 오브젝트를
+도는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 · 씬 세대 훅)는 하나도 태우지 않는다.
+오브젝트 경로는 `EditorTest` 단위 테스트로만 덮인다. 실기동으로 보려면 테스트 씬을 지정한다
+(PowerShell 은 점이 든 인자를 쪼개므로 **따옴표 필수**):
+
+```powershell
+./App.exe -gv_profileFrames=60 -dx12 -EnableEditor `
+  "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml" -gv_editorPanelDump=40
+```
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -362,6 +398,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (같은 결정이 두 자리에 있으면 반드시 어긋난다 — Editor/Common/Asset)
+
+**1) 스위즐이 바이트를 놓는 방식과 그 결과를 부르는 이름이 따로 살았다.** 텍스처 베이커에서
+섞기는 `applyChannelManipulations` 의 if 사슬이 정하고, 결과 포맷 이름은 `bakeTexture` 의
+`_swizzle == BGRA ? B8G8R8A8 : R8G8B8A8` 삼항이 정했다. **삼항은 `ARGB` 를 몰랐다.**
+그래서 `"swizzle": "ARGB"` 로 구우면 바이트는 옮겨졌는데 결과물에는 "RGBA 다" 라고 적혀
+나갔다 — 색이 깨진다.
+
+게다가 그 섞기 자체가 틀렸다. 코드는 왼쪽으로 한 칸 돌려 RGBA 를 **GBAR** 로 만들었는데,
+ARGB 는 어떤 읽기로도 그게 아니다. **BGRA 와 ARGB 는 사실 같은 것이다** — D3D9 의
+`D3DFMT_A8R8G8B8` 은 메모리에서 B,G,R,A 이고 DXGI 가 그것을 `B8G8R8A8` 이라 부른다
+(열거형 주석의 "레거시 ARGB" 가 그 뜻이다).
+
+**표 하나로 모았다**(`SwizzleLayoutInternal`): 한 줄이 "원본의 몇 번째에서 가져오는가 ·
+알파를 덮는가 · 그 배열을 무슨 이름으로 부르는가" 를 함께 갖는다. 스위즐을 하나 더하는 것이
+이제 **줄 하나**다. 그린 반전은 섞기 **앞**으로 옮겼다 — 입력이 언제나 RGBA 라 초록 자리가
+1 로 확정인 시점이다(지금 스위즐들에서는 순서를 바꿔도 결과가 같아서 **테스트가 순서를
+구별하지는 못한다**. 새 스위즐이 초록을 옮기는 순간 조용히 틀리는 자리를 미리 막은 것이다).
+테스트 `EditorTexturePipelineTest.SwizzleLayoutAndFormatAgree` · `InvertGreenHitsGreenUnderEverySwizzle`.
+
+**2) 찾지 못한 `inherits` 가 조용히 사라졌다.** 프리셋 쪽과 규칙 쪽이 상속 해석을 **각자
+복사해** 갖고 있었고, 둘 다 부모를 못 찾으면 그냥 넘어갔다. 그래서 이름 오타나 **부모를
+아래쪽에 적는 것**(찾기는 그 시점까지 파싱된 프리셋만 본다)이 상속을 통째로 지웠고, 그
+텍스처는 아무 말 없이 기본값(`BC7_UNORM`)으로 구워졌다. JSON 을 고친 사람이 알 방법이 없었다.
+한 자리(`applyInheritance`)로 모으고 경고를 남기게 했다 — 설정 전체를 버리지는 않는다(하나
+틀렸다고 나머지 규칙까지 죽일 이유가 없다). `_inherits` 는 **요청한 이름**을 그대로 남기므로
+(무엇을 원했는지가 진단에 필요하다) 상속이 실제로 일어났는지는 **값**으로 확인한다.
+테스트 `EditorTexturePipelineTest.UnresolvedInheritsIsReported`(로그 리스너로 경고를 센다 —
+`SW_LOG_WARNING` 은 Shipping 에도 남으므로 양쪽 구성에서 돈다).
+
+**곁들여 — `ImageUtil` 을 `DdsLoader` 와 같은 약속으로 맞췄다.** 실패가 출력에 반쯤 찬 상태를
+남기지 않게 하고(`outImage = RawImageData{}`), stb 가 길이를 `int` 로 받는다는 사실을 캐스트로
+덮지 않고 **넘기기 전에 거절**하게 했다. 둘 다 지금 호출부에서는 도달하지 않는다 — 두 이미지
+로더가 같은 약속을 갖게 하려는 것이다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EditorTexturePipelineTest` 2 → 5건.
 
 ### 2026-09-18 (활성 창이 죽어도 전역은 그 자리를 가리켰다 — Engine/Window · **Engine 전체 완료**)
 

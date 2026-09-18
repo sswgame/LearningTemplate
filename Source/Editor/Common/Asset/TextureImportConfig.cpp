@@ -131,17 +131,8 @@ namespace sw::editor
                 TextureImportRule rule;
                 rule._name = name;
 
-                if ( presetObj.has( "inherits" ) )
-                {
-                    const string inheritName = presetObj.get( "inherits" ).asString();
-                    auto         itParent    = _mapPreset.find( inheritName );
-                    if ( itParent != _mapPreset.end() )
-                    {
-                        rule           = itParent->second;
-                        rule._name     = name;
-                        rule._inherits = inheritName;
-                    }
-                }
+                applyInheritance( presetObj, rule );
+                rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다 — 이 프리셋의 이름이 정본이다.
 
                 parseRuleObject( presetObj, rule );
                 _mapPreset[name] = rule;
@@ -158,16 +149,7 @@ namespace sw::editor
                 const JsonValue   ruleObj = rulesVal.at( index );
                 TextureImportRule rule;
 
-                if ( ruleObj.has( "inherits" ) )
-                {
-                    const string inheritName = ruleObj.get( "inherits" ).asString();
-                    auto         itParent    = _mapPreset.find( inheritName );
-                    if ( itParent != _mapPreset.end() )
-                    {
-                        rule           = itParent->second;
-                        rule._inherits = inheritName;
-                    }
-                }
+                applyInheritance( ruleObj, rule );
 
                 parseRuleObject( ruleObj, rule );
                 _listRule.push_back( rule );
@@ -176,6 +158,28 @@ namespace sw::editor
 
         SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
         return true;
+    }
+
+    void TextureImportConfig::applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const
+    {
+        if ( jsonValue.has( "inherits" ) == false )
+            return;
+
+        const string inheritName = jsonValue.get( "inherits" ).asString();
+        const auto   itParent    = _mapPreset.find( inheritName );
+        if ( itParent == _mapPreset.end() )
+        {
+            // **조용히 넘어가지 않는다.** 여기서 아무 말도 하지 않으면 상속이 통째로 사라진 채
+            // 기본값으로 구워지고, JSON 을 고친 사람은 그것을 알 방법이 없다. 부모를 아래쪽에
+            // 적어도 여기로 온다 — 찾기는 **그 시점까지 파싱된 프리셋만** 본다.
+            SW_LOG_WARNING( "TextureImportConfig: inherits '%#' 를 찾지 못했습니다 — 기본값으로 갑니다. "
+                            "(이름 오타이거나, 부모 프리셋을 아래쪽에 적었을 수 있습니다)",
+                            inheritName.c_str() );
+            return;
+        }
+
+        inoutRule           = itParent->second;
+        inoutRule._inherits = inheritName;
     }
 
     void TextureImportConfig::parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule )

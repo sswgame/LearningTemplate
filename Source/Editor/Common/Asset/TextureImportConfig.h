@@ -91,6 +91,14 @@ namespace sw::editor
 
     private:
         void parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule );
+        /**
+         * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 깔아 줍니다.
+         * @details **못 찾으면 경고를 남긴다.** 예전에는 프리셋 쪽과 규칙 쪽이 이 일을 각자
+         *          복사해 갖고 있었고 둘 다 **조용히 넘어갔다** — `inherits` 에 오타가 있거나
+         *          부모를 아래쪽에 적으면(찾기는 그 시점까지 파싱된 것만 본다) 상속이 통째로
+         *          사라진 채 기본값으로 구워졌고, 아무도 그것을 알 수 없었다.
+         */
+        void applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const;
 
     private:
         map<string, TextureImportRule> _mapPreset;
