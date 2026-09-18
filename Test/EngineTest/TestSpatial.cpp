@@ -393,3 +393,52 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFilterin
     grid.queryRay( -10.0f, 6.0f, 1.0f, 0.0f, 40.0f, listResults );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
 }
+
+/**
+ * @brief [SpatialTest] update 가 실패하면 원소는 있던 자리에 그대로 남는다
+ * @details `SpatialTree::update` 는 지우고 다시 넣는다. 그런데 새 경계가 월드 밖이면
+ *          `insert` 가 실패하는데, 그때 원소는 **이미 지워진 뒤**였다 — 호출부는 false 를
+ *          받고 "그대로겠지" 로 읽지만 실제로는 사라진다. 월드를 벗어나는 오브젝트에서
+ *          바로 일어나는 일이다. 형제 둘(`SpatialHashGrid2D` · `BVHTree3D`)의 update 는
+ *          그냥 insert 에 맡겨서 이런 구멍이 없다 — 셋 중 하나만 원소를 잃었다.
+ */
+SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
+{
+    sw::SpatialQuadTree tree( sw::AABB2D{
+        sw::float2{   0.0f,    0.0f},
+        sw::float2{1000.0f, 1000.0f}
+    } );
+
+    const sw::AABB2D originalBounds{
+        sw::float2{100.0f, 100.0f},
+        sw::float2{140.0f, 140.0f}
+    };
+    int32 userData = 7;
+    SW_ASSERT_TRUE( tree.insert( 42, originalBounds, &userData ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), tree.getTotalElements() );
+
+    // 월드 밖으로 옮기려 한다 — 삽입이 실패해야 하고, 실패했으면 원래 자리에 남아야 한다.
+    const sw::AABB2D outsideWorld{
+        sw::float2{9000.0f, 9000.0f},
+        sw::float2{9100.0f, 9100.0f}
+    };
+    SW_EXPECT_FALSE( tree.update( 42, outsideWorld ) );
+
+    SW_EXPECT_EQUAL( size_t( 1 ), tree.getTotalElements() );
+    sw::vector<sw::SpatialElement> listFound;
+    tree.queryRange( originalBounds, listFound );
+    SW_ASSERT_EQUAL( size_t( 1 ), listFound.size() );
+    SW_EXPECT_EQUAL( uint64( 42 ), listFound[0]._id );
+    SW_EXPECT_EQUAL( &userData, listFound[0]._pUserData );
+
+    // 월드 안으로 옮기는 것은 여전히 된다 — 위 거부가 과잉이 아님을 못 박는다.
+    const sw::AABB2D movedBounds{
+        sw::float2{700.0f, 700.0f},
+        sw::float2{740.0f, 740.0f}
+    };
+    SW_EXPECT_TRUE( tree.update( 42, movedBounds ) );
+    listFound.clear();
+    tree.queryRange( movedBounds, listFound );
+    SW_ASSERT_EQUAL( size_t( 1 ), listFound.size() );
+    SW_EXPECT_EQUAL( &userData, listFound[0]._pUserData );
+}

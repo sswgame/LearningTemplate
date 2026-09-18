@@ -268,17 +268,32 @@ namespace sw
             return false;
         }
 
+        /**
+         * @brief 원소를 새 경계로 옮깁니다. 실패하면 **있던 자리에 그대로** 남습니다.
+         * @details 옮기기는 지우고 다시 넣는 것으로 한다. 그런데 새 경계가 월드 밖이면
+         *          `insert` 가 실패하는데, 예전에는 그때 원소가 **이미 지워진 뒤**였다 —
+         *          호출부는 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라졌다.
+         *          월드를 벗어나는 오브젝트에서 바로 일어나는 일이다. 형제 둘
+         *          (`SpatialHashGrid2D` · `BVHTree3D`)의 update 는 그냥 insert 에 맡겨서
+         *          이 구멍이 없었다 — 셋 중 이것만 원소를 잃었다.
+         * @return 새 경계로 옮겼으면 true. false 면 아무것도 바뀌지 않았다.
+         */
         bool update( uint64 id, const BoundsType& newBounds )
         {
             auto iter = _mapElement.find( id );
             if ( iter == _mapElement.end() )
                 return false;
 
-            void* pSavedUserData = iter->second._pUserData;
+            const ElementType savedElement = iter->second;
             if ( remove( id ) == false )
                 return false;
 
-            return insert( id, newBounds, pSavedUserData );
+            if ( insert( id, newBounds, savedElement._pUserData ) )
+                return true;
+
+            // 되돌린다. 같은 경계로 한 번 들어갔던 원소이고 월드 경계는 그대로이므로 이 삽입은 된다.
+            insert( id, savedElement._bounds, savedElement._pUserData );
+            return false;
         }
 
         void queryRange( const BoundsType& range, vector<ElementType>& outListElement ) const

@@ -153,8 +153,8 @@ cd build/Ninja-Debug/Bin
 | `Scene` | 1,438 | ✅ 2026-09-18 (3절 참고 — 대기열 요청의 future 가 거짓말을 했다) |
 | `Sequencer` | 546 | ✅ 2026-09-18 (3절 참고 — 이벤트 트랙이 배포본에서 아무 일도 하지 않았다) |
 | `Serialization` | 7,120 | ✅ 2026-09-18 (3절 참고 — 손상된 스트림 하나로 프로세스가 멈췄다) |
-| `Spatial` | 1,541 | ← 다음 |
-| `Utility` | 3,077 | |
+| `Spatial` | 1,541 | ✅ 2026-09-18 (3절 참고 — 실패한 update 가 원소를 삼켰다) |
+| `Utility` | 3,077 | ← 다음 |
 | `Window` | 2,124 | |
 
 **Core 와 다른 점 하나 — 이제는 해결됐다.** Engine 은 생성 헤더가 전 TU 에 `/FI` 로 들어가는데,
@@ -362,6 +362,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (실패한 update 가 원소를 삼켰다 — Engine/Spatial)
+
+**형제 셋을 나란히 놓고 보니 하나만 달랐다.** 이 폴더에는 "옮기기" 가 세 벌 있다 —
+`SpatialTree::update`(쿼드트리·옥트리 공용) · `SpatialHashGrid2D::update` · `BVHTree3D::update`.
+뒤의 둘은 그냥 `insert` 에 맡긴다(insert 가 알아서 기존 것을 지우고 다시 넣는다). 그런데
+`SpatialTree::update` 만 **지우고 → 넣는** 두 단계였고, 두 번째가 실패할 수 있었다:
+
+```
+remove( id );                       // 지웠다
+return insert( id, newBounds, … );  // 월드 밖이면 false — 원소는 사라진 채로 끝난다
+```
+
+`Node::insert` 는 `_bounds.intersects( elem._bounds ) == false` 면 false 를 돌려준다. 즉
+**새 경계가 월드 밖이면** 삽입이 실패하는데, 그 시점에 원소는 이미 지워진 뒤다. 호출부는
+`false` 를 받고 "그대로겠지" 로 읽지만 원소는 트리에서 없어졌고 `getTotalElements()` 도 줄었다.
+**월드를 벗어나는 오브젝트에서 바로 일어나는 일이다.** 실패하면 되돌려 놓도록 고쳤다 — 같은
+경계로 한 번 들어갔던 원소이고 월드 경계는 그대로이므로 그 되돌리기는 반드시 성공한다.
+테스트 `SpatialTest.FailedUpdateKeepsElement`.
+
+**따라갔지만 결함이 아니었던 것.** `QuadTreeTraits::subdivide` 는 네 사분면을 **각각 손으로**
+적고 `OctreeTraits::subdivide` 는 비트 인덱스 한 루프로 적는다 — Physics 에서 이런 손 전개가
+결함을 숨겼던 자리라 네 블록을 하나씩 맞춰 봤는데, 빈틈도 겹침도 없이 부모를 정확히 덮는다.
+BVH 의 `removeLeaf`/`freeNode` 도 Box2D 식 동적 트리 그대로이고 한 번의 제거가 노드를 정확히
+하나만(부모) 반납한다 — 이중 반납은 없다.
+
+**적어 두는 것 하나 — `SpatialHashGrid2D` 는 셀 범위를 제한하지 않는다.** `insert` 와
+`queryAabb` 는 AABB 를 셀 좌표로 바꿔 `for (cellX = start; cellX <= end; ++cellX)` 두 겹을 돈다.
+경계가 거대하거나 `inf` 면 그 범위가 `int32` 전체가 되어 **끝나지 않는다**(게다가 `INT_MAX` 에서
+`++` 는 부호 있는 오버플로다). 지금 이 클래스를 쓰는 **제품 코드가 없어서**(테스트뿐이다) 어떤
+상한이 맞는지 정할 근거가 없어 손대지 않았다. **물리나 컬링에 실제로 물릴 때 이 대목을 먼저
+볼 것** — 셀 범위 상한과 비유한(非有限) 좌표 거부가 그 자리에 필요하다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `SpatialTest` 8 → 9건.
 
 ### 2026-09-18 (손상된 스트림 하나로 프로세스가 멈췄다 — Engine/Serialization)
 
