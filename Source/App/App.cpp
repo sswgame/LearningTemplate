@@ -78,7 +78,7 @@ namespace sw
             return false;
         }
 
-        const EngineConfig* pEngineConfig = pConfigManager->getConfig<EngineConfig>( hashed_string( "EngineConfig" ) );
+        const EngineConfig* pEngineConfig = pConfigManager->getConfig<EngineConfig>();
         if ( pEngineConfig == nullptr )
         {
             splash.dismiss();
@@ -166,9 +166,8 @@ namespace sw
     {
         vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
-        const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
-        const AppConfig*    pAppConfig     = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
-            kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
+        const AppConfig* pAppConfig = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
+            config::kFileRuntimeAppConfig, nullptr );
         if ( pAppConfig != nullptr )
             listGameKitModule = pAppConfig->_listGameKitModule;
 #endif

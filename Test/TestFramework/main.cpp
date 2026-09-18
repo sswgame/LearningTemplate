@@ -146,10 +146,10 @@ int main( int32 argc, utf8* argv[] )
     configManager->setRootDirectory( sw::ResourceUtil::getProjectFolderPath() );
 
     const sw::EngineConfig* pEngineConfig = configManager->ensureConfig<sw::EngineConfig>(
-        sw::hashed_string{ "EngineConfig" }, sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
+        sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
 
     const sw::GameConfig* pGameConfig = configManager->ensureConfig<sw::GameConfig>(
-        sw::hashed_string{ "GameConfig" }, sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
+        sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
     if ( pGameConfig != nullptr )
         sw::GameConfig::setActive( *pGameConfig );
 

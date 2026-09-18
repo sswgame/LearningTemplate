@@ -140,8 +140,8 @@ cd build/Ninja-Debug/Bin
 | `Audio` | 935 | ✅ 2026-09-18 (3절 참고) |
 | `Common` | 274 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Compression` | 370 | ✅ 2026-09-18 (3절 참고) |
-| `Config` | 480 | ← 다음 |
-| `Dialogue` | 375 | 헤더 자립 실패 1건이 걸려 있다(3절) |
+| `Config` | 480 | ✅ 2026-09-18 (3절 참고) |
+| `Dialogue` | 375 | ← 다음. 헤더 자립 실패 1건이 걸려 있다(3절) |
 | `Graphics` | 42,770 | 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다. 자립 실패 3건(3절) |
 | `Input` | 9,056 | |
 | `Localization` | 1,184 | |
@@ -360,6 +360,48 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (설정의 정체성이 호출부마다 손으로 적는 문자열이었다 — Engine/Config)
+
+**동작 결함은 찾지 못했다** — 따라간 것들은 맞았다. `resolveConfigPath` 의 네 단계(절대 → 작업
+디렉터리 → 프로젝트 루트 → 실행 파일 옆)는 올바르고, `FrameTimeline::configure` 가 0 이하의
+`_fixedDeltaTime` · `_maxFrameDeltaTime` · `_maxFixedStepPerFrame` 을 내장 기본값으로 바꾸므로
+**설정 파일 하나가 프레임 루프를 세우지 못한다**(그 사실을 헤더에 적어 뒀다). `SW_SHIPPING` 매크로도
+실제로 정의된다(`cmake/Engine/BuildLayout.cmake`) — Shipping 이 디스크 `Config/` 를 보지 않는 것은
+의도대로다. 대신 **구조 하나와 테스트 없음 하나**가 있었다.
+
+**1) 설정의 열쇠가 호출부마다 손으로 적는 문자열이었다.** `ensureConfig<EngineConfig>(
+hashed_string( "EngineConfig" ), ... )` 처럼 타입과 이름을 **둘 다** 넘겼고, 그 글자가
+`EngineLoop.cpp` · `App.cpp` · `Test/TestFramework/main.cpp` 세 곳에 따로 있었다. 한 곳만 철자가
+어긋나면 `getConfig` 가 조용히 nullptr 을 돌려주고, App 은 이유를 말하지 못한 채 기동을 멈춘다.
+
+게다가 표의 열쇠가 그 이름의 **해시**였다(`name.getHash()`). `hashed_string` 자신은 intern
+인덱스로 비교하므로 충돌이 없는데, 표만 해시를 쓰고 있었다 — 서로 다른 이름이 같은 칸을 가리킬 수
+있었고, 그때 `getConfig<T>` 의 무검사 `static_cast<T*>` 는 **다른 타입의 객체를 T 로 읽는다.**
+
+열쇠를 타입에서 뽑게 했다: `T::StaticType()->_fullyQualifiedName.getIndex()`. 이름 인자는 없앴다.
+그래서 (a) 철자가 어긋날 자리가 없고, (b) 열쇠가 intern 인덱스라 충돌이 없으며, (c) 표에 담긴 것이
+T 가 아닐 수 없으므로 `static_cast` 가 안전하다. 호출부 셋이 전부 짧아졌다.
+
+**2) `ConfigManager` 에 단위 테스트가 하나도 없었다.** 186줄짜리 헤더가 경로 해석 · Shipping/Dev
+분기 · 폴백 사슬을 다 들고 있는데, 잘못되면 증상이 "창 크기·VSync·리소스 우선순위가 조용히
+기본값이 된다" 라서 실행해 보고도 원인을 짚기 어렵다. 실제로 **바로 그 버그가 예전에 있었다**
+(`setRootDirectory` 가 생긴 이유 — 헤더의 긴 주석 참고). 그 수정을 지키는 테스트가 없었다.
+
+`ConfigManagerTest` 3건 신규 (`Test/EngineTest/TestConfigManager.cpp`):
+- `ConfigTableIsKeyedByType` — 타입이 열쇠다. 다른 설정 타입은 같은 표에 섞이지 않는다.
+- `RelativePathResolvesAgainstRootDirectory` — 루트를 안 주면 못 찾고, 주면 찾고, 절대 경로는
+  루트와 무관하다. **Shipping 에서는 스킵**한다(디스크 Config/ 를 보지 않으므로).
+- `MissingFileFallsBackToBakedThenCppDefaults` — 베이크 → C++ 기본값 순. 깨진 JSON 은 로드 실패지
+  절반만 채워 넣지 않는다.
+
+변이 테스트로 확인했다 — `resolveConfigPath` 의 루트 디렉터리 분기를 지우면 둘째가 깨진다.
+
+**3) 문서.** `IConfig` 에 파일·타입 `@brief` 가 없었고(파생 타입이 왜 `REFLECT()` 여야 하는지도),
+`WindowConfig`·`EngineConfig` 의 PROPERTY 필드 대부분에 설명이 없었다. 채웠다.
+
+**검증.** Debug·Shipping·Unity 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `ConfigManagerTest` Debug 3건 / Shipping 2건+1스킵 · 헤더 6개 자립.
 
 ### 2026-09-18 (코덱 하나는 이름만 있고 아무도 등록하지 않았다 — Engine/Compression)
 

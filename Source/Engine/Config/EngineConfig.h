@@ -10,42 +10,54 @@
 namespace sw
 {
 
+    /**
+     * @struct WindowConfig
+     * @brief 주 창과 기본 렌더링 백엔드 설정입니다.
+     */
     REFLECT()
     struct SW_API WindowConfig
     {
         REFLECT_BODY();
 
         PROPERTY()
-        string _title{ "SWEngine" };
+        string _title{ "SWEngine" }; ///< 창 제목
 
         PROPERTY()
-        string _clearColor{ "0.12 0.15 0.18 1.0" };
+        string _clearColor{ "0.12 0.15 0.18 1.0" }; ///< 백버퍼 클리어 색(공백 또는 쉼표로 구분한 RGBA)
 
         PROPERTY()
-        uint32 _width{ 1280 };
+        uint32 _width{ 1280 }; ///< 클라이언트 영역 너비(픽셀)
 
         PROPERTY()
-        uint32 _height{ 720 };
+        uint32 _height{ 720 }; ///< 클라이언트 영역 높이(픽셀)
 
         PROPERTY()
-        RHIBackend _defaultRHI{ RHIBackend::DirectX12 };
+        RHIBackend _defaultRHI{ RHIBackend::DirectX12 }; ///< 명령줄이 고르지 않았을 때 쓸 백엔드
 
         PROPERTY()
-        bool _bVSync{ false };
+        bool _bVSync{ false }; ///< 수직 동기화 여부
     };
 
+    /**
+     * @struct EngineConfig
+     * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
+     */
     REFLECT()
     struct SW_API EngineConfig : IConfig
     {
         REFLECT_BODY();
 
         PROPERTY()
-        string _engineData{ "engine/data/enginedata.xml" };
+        string _engineData{ "engine/data/enginedata.xml" }; ///< 엔진 셸 부트스트랩 XML(리소스 경로)
 
         PROPERTY()
-        WindowConfig _window;
+        WindowConfig _window; ///< 창·백엔드 설정
 
-        /** @brief 한 프레임이 인정하는 최대 가변 델타(초). 디버거 정지 같은 긴 멈춤을 잘라낸다. */
+        /**
+         * @brief 한 프레임이 인정하는 최대 가변 델타(초). 디버거 정지 같은 긴 멈춤을 잘라낸다.
+         * @note 아래 셋은 0 이하여도 기동을 막지 않는다 — `FrameTimeline::configure` 가 그 자리에서
+         *       내장 기본값으로 바꾼다. 설정 파일 하나가 프레임 루프를 세우지 못하게 하려는 것이다.
+         */
         PROPERTY()
         float32 _maxFrameDeltaTime{ 0.1f };
 
@@ -62,6 +74,6 @@ namespace sw
         uint32 _maxFixedStepPerFrame{ 6 };
 
         PROPERTY()
-        vector<string> _listResourcePriority{ "game", "common", "engine", "editor" };
+        vector<string> _listResourcePriority{ "game", "common", "engine", "editor" }; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
     };
 } // namespace sw

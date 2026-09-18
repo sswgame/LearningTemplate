@@ -259,15 +259,13 @@ namespace sw
             // 이미 알아낸 프로젝트 루트를 기준으로 넘겨준다.
             _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
 
-            const hashed_string kEngineConfigHash = hashed_string{ "EngineConfig" };
-            pEngineConfig                         = _configManager->ensureConfig<EngineConfig>(
-                kEngineConfigHash, config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
+            pEngineConfig = _configManager->ensureConfig<EngineConfig>(
+                config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
             if ( pEngineConfig == nullptr )
                 return false;
 
-            const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
-            const GameConfig*   pGameConfig     = _configManager->ensureConfig<GameConfig>(
-                kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+            const GameConfig* pGameConfig = _configManager->ensureConfig<GameConfig>(
+                config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
         }
