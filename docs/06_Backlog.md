@@ -239,7 +239,7 @@ cd build/Ninja-Debug/Bin
 |--------|------|------------------|---------|
 | 에셋 종류 | ✅ `IAssetCache` + `ResourceManager` 등록부 (2026-09-19) | Godot `ResourceFormatLoader` · UE `FStreamableManager` | **읽는 쪽**(무엇을 어떻게 로드하는가)은 아직 구체 캐시의 몫이다. 종류가 대여섯이 되면 로더도 등록제로 |
 | 엔진 서비스 | X-macro 목록 하나 + 호스트 대조 게이트 (2026-09-19) | — | 채우는 코드 자체의 생성은 하지 않았다 — 호스트마다 소유 멤버 이름이 다르다. 게이트가 그 값을 대신한다 |
-| **서브시스템 수명** | `EngineLoop`(841줄)이 25개를 손으로 생성·바인딩·초기화하고 역순으로 종료한다 | UE `USubsystem` 컬렉션(자동 수집 · 의존 순서) | **가장 큰 "N곳"이고 가장 위험하다.** `EngineTest` 도 `SmokeTest` 도 `EngineLoop` 을 돌리지 않으므로 그물은 실기동(4백엔드 × 에디터 유무)뿐이다. 손대려면 그 게이트를 먼저 자동화할 것 |
+| 서브시스템 수명 | ✅ 부분 완료 (2026-09-19) — 생성·소유·바인딩은 목록의 `owned` 열에서 생성된다(`EngineOwnedServices`). **초기화 순서와 종료 순서는 일부러 손으로 남겼다** | UE `USubsystem` 컬렉션(자동 수집 · 의존 순서) | 순서를 자동화하려면 의존 관계를 선언으로 다시 적어야 하는데, 그 지식은 지금 종료 절차의 주석에 있다(디바이스보다 먼저 놓아야 하는 것 등). 옮길 값이 있는지는 다음 사람이 판단 |
 | 렌더 패스 | 풀스크린 포스트는 **선언이 곧 바인딩**(파이프라인 XML + `RenderPassInputContract`)이라 이미 표 기반이다. 지오메트리 7종만 `executePass` 분기 | UE RDG · Unity SRP `ScriptableRenderPass` | 새 포스트 패스 = enum 한 줄 + contract 한 줄 + PSO 한 줄. **분기를 표로 바꾸는 이득은 작다** — 지오메트리 패스는 상용 엔진도 특수 취급한다 |
 | 모듈이 확장할 수 있는 것 | 게임/에디터 모듈은 **타입(리플렉션)** 과 서비스만 등록한다 | UE 모듈이 렌더 패스·에셋 타입·서브시스템을 등록 | 다음 단계는 모듈이 `IAssetCache` 를 올릴 수 있게 하는 것(등록 API 는 이미 공개다 — RuntimeAPI 로 내보낼지가 남았다) |
 | 에디터 패널·커맨드·인스펙터 | 이미 등록표 하나씩(`registerDefault*`) | — | 없음 |
@@ -444,6 +444,49 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (서비스를 만들고 꽂는 코드를 목록에서 생성한다 — 호스트 둘이 같은 스무 줄을 적고 있었다)
+
+`EngineServiceList.xxx` 한 줄이 구조체 멤버 · getter · `areEngineServicesBound()` · `ModuleServiceId` 를
+만들고 있었는데, **정작 그것을 만들고 표에 꽂는 코드는 호스트마다 한 벌**이었다 —
+`EngineLoop::initialize` 에 `make_unique` 20줄 + 대입 22줄, `Test/TestFramework/main.cpp` 에 또 한 벌.
+목록에 줄을 더하고 한쪽을 잊으면 `areEngineServicesBound()` 가 영영 false 가 되고, 그것으로 게이팅되는
+스무 곳이 조용히 폴백으로 간다.
+
+**목록에 `owned` 열을 더했다.** 1이면 `EngineOwnedServices`(생성 저장소)가 `make_unique` 로 만들고
+`bindInto()` 로 꽂는다. 0은 만드는 방법이 특별한 셋뿐이다 — 오디오(팩토리) · 커맨드 스택(배포본에는
+아예 없다) · 메모리 프로파일러(Debug 전용). 결과:
+- `EngineLoop.h` 의 멤버가 32 → 13개.
+- 두 호스트의 생성·대입 40여 줄이 `createAll()` · `bindInto()` 두 줄로.
+- 서비스를 늘리는 일 = **목록 한 줄**(초기화·종료 순서가 필요하면 그 두 자리만 더).
+
+**일부러 생성하지 않은 것: 초기화 순서와 종료 순서.** 그 순서는 저장소가 알 수 없는 사실로 정해지고
+(디바이스가 죽기 전에 무엇을 놓아야 하는지, 씬이 사라진 뒤에 모듈을 내려야 한다는 것), 줄마다 과거에
+한 번씩 무너진 이유가 주석으로 붙어 있다. 자동으로 정하려면 그 지식을 의존성으로 **다시** 적어야 한다.
+대신 종료 끝에 `destroyAll()` 을 둬서, 순서 목록에 한 줄을 잊어도 객체가 새지는 않게 했다.
+
+**함정 둘을 만났고 둘 다 코드에 적어 두었다.**
+1. `createAll()` 은 **이미 있는 것을 덮지 않는다.** `EngineLoop` 은 명령줄을 파싱하려고
+   `CommandLineManager` 와 `GlobalVariableManager` 를 그보다 앞에서 만든다 — 덮었다면 파싱 결과가
+   통째로 사라졌을 것이다(테스트 `CreateAllKeepsWhatTheHostMadeFirst` 가 그 자리를 지킨다).
+2. `createAll`/`destroyAll` 의 **정의는 `.cpp` 에 있다.** 헤더에 두면 `EngineLoop.h` 를 include 하는
+   모든 TU 가 서비스 스무 개의 완전한 타입을 알아야 한다(`unique_ptr` 소멸자). 실제로 그렇게 두었다가
+   엔진 곳곳이 컴파일되지 않았다.
+
+**게이트도 같이 바뀌었다.** `CheckEngineServiceBinding.py` 는 이제 "owned=0 인 필수 행을 호스트가
+직접 꽂는가"와 "owned=1 을 쓰려면 `bindInto()` 를 부르는가"를 본다.
+
+**저장소가 사는 자리는 `Engine/Common` 이 아니다.** 처음에 거기 뒀다가 `CheckEngineLayers` 가 12건으로
+잡았다 — `Common` 은 티어 0(엔진의 아무것도 참조하지 않는 토대)인데 이 저장소는 서비스 스무 개의
+완전한 타입을 안다. **예외 목록에 이름을 적는 대신 맞는 자리로 옮겼다**: `Source/Engine/EngineOwnedServices.*`
+(티어 6, "전부를 엮는 자리" — `EngineLoop` 이 사는 곳).
+
+**새 테스트 2건**(목록에서 생성한 검사 — `owned=1` 은 전부 채워지고 `owned=0` 자리는 건드리지 않는가,
+그리고 위 함정 1). 변이로 확인했다 — `createAll` 의 널 검사를 지우면 둘째가 깨진다.
+
+**검증.** 이 변경의 그물이 바로 앞 항목에서 만든 실기동 게이트다.
+Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 양쪽 2/2(네 백엔드 × 에디터
+기동) · 린트 17/17 · 누수 보고 `no CRT leaks` · 에디터 실기동 `[Error]` 0건.
 
 ### 2026-09-19 (실기동 게이트를 자동화했다 — 엔진 기동이 처음으로 그물 안에 들어왔다)
 

@@ -88,28 +88,14 @@ namespace sw
         : _logger{ nullptr }
         , _deadlockDetector{ nullptr }
         , _memoryProfiler{ nullptr }
-        , _commandLineManager{ nullptr }
-        , _taskManager{ nullptr }
-        , _globalVariableManager{ nullptr }
-        , _typeRegistry{ nullptr }
         , _configManager{ nullptr }
-        , _localizationManager{ nullptr }
-        , _resourceManager{ nullptr }
         , _rhi{ nullptr }
-        , _sceneManager{ nullptr }
-        , _inputManager{ nullptr }
         , _mapDebugAction{ nullptr }
         , _audioSystem{ nullptr }
-        , _eventDispatcher{ nullptr }
         , _frameRenderer{ nullptr }
         , _renderThread{ nullptr }
-        , _engineData{ nullptr }
-        , _assetStreamingQueue{ nullptr }
         , _commandStack{ nullptr }
-        , _debugOverlayState{ nullptr }
-        , _debugDrawQueue{ nullptr }
         , _gpuUploadQueue{ nullptr }
-        , _rhiBackendRegistry{ nullptr }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
     {
@@ -168,76 +154,52 @@ namespace sw
             _memoryProfiler->initialize();
 #endif
 
-            _commandLineManager = make_unique<CommandLineManager>();
-            _commandLineManager->initialize();
+            _owned._pCommandLineManager = make_unique<CommandLineManager>();
+            _owned._pCommandLineManager->initialize();
 
-            _globalVariableManager = make_unique<GlobalVariableManager>();
-            _globalVariableManager->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
+            _owned._pGlobalVariableManager = make_unique<GlobalVariableManager>();
+            _owned._pGlobalVariableManager->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
             GlobalVariableRegistrar::getHead() = nullptr;
-            _globalVariableManager->registerToCommandLine( _commandLineManager.get() );
-            _commandLineManager->parse( argc, pArgv );
-            _globalVariableManager->updateFromCommandLine( _commandLineManager.get() );
+            _owned._pGlobalVariableManager->registerToCommandLine( _owned._pCommandLineManager.get() );
+            _owned._pCommandLineManager->parse( argc, pArgv );
+            _owned._pGlobalVariableManager->updateFromCommandLine( _owned._pCommandLineManager.get() );
         }
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
-            _taskManager         = make_unique<TaskManager>();
-            _typeRegistry        = make_unique<TypeRegistry>();
-            _configManager       = make_unique<ConfigManager>();
-            _localizationManager = make_unique<LocalizationManager>();
-            _resourceManager     = make_unique<ResourceManager>();
-            _sceneManager        = make_unique<SceneManager>();
-            _inputManager        = make_unique<InputManager>();
-            _audioSystem         = IAudioSystem::create();
-            _eventDispatcher     = make_unique<EventDispatcher>();
-            _frameRenderer       = make_unique<FrameRenderer>();
-            _engineData          = make_unique<EngineData>();
-            _assetStreamingQueue = make_unique<AssetStreamingQueue>();
+            // 목록(`EngineServiceList.xxx`)의 `owned=1` 은 여기서 **한 줄로** 만들어진다. 예전에는
+            // 이 자리에 make_unique 스무 줄과 대입 스무 줄이 있었고, 같은 두 벌이 테스트 하네스에도
+            // 있었다 — 목록에 줄을 더하고 한쪽을 잊으면 `areEngineServicesBound()` 가 조용히 false 가 됐다.
+            _owned.createAll();
+
+            // 만드는 방법이 특별한 것만 손으로 남는다(목록의 owned=0 셋).
+            _audioSystem = IAudioSystem::create();
 #if !defined( SW_SHIPPING )
             _commandStack = make_unique<CommandStack>();
 #endif
-            _debugOverlayState  = make_unique<DebugOverlayState>();
-            _debugDrawQueue     = make_unique<DebugDrawQueue>();
-            _gpuUploadQueue     = make_unique<GpuUploadQueue>();
-            _rhiBackendRegistry = make_unique<RHIBackendRegistry>();
-            // 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 보도록 슬롯에 꽂는다 —
+            // 서비스가 아닌 것들 — 표에 실리지 않으므로 여기서 만든다.
+            _configManager  = make_unique<ConfigManager>();
+            _frameRenderer  = make_unique<FrameRenderer>();
+            _gpuUploadQueue = make_unique<GpuUploadQueue>();
+
+            // 만든 **뒤에** 해야 하는 일들. 순서는 생성기가 모른다 — 여기가 정본이다.
+            //
+            // 압축 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 보도록 슬롯에 꽂는다 —
             // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
-            _compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
-            _compressionCodecRegistry->initialize();
-            CompressionCodecRegistry::setActive( _compressionCodecRegistry.get() );
+            _owned._pCompressionCodecRegistry->initialize();
+            CompressionCodecRegistry::setActive( _owned._pCompressionCodecRegistry.get() );
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
             // 여기에 손으로 적고 있었을 때 Zlib 이 빠져 있었다 — 클래스도 열거값도 있는데 아무도
             // 등록하지 않아 스트림에서 쓸 수 없었다.
-            EngineCompressionCodecUtil::registerAll( *_compressionCodecRegistry );
-            _shaderCache = make_unique<ShaderCache>();
-            _shaderCache->initialize();
-            _componentDefaults    = make_unique<ComponentDefaults>();
-            _frameProfiler        = make_unique<FrameProfiler>();
-            _renderTargetRegistry = make_unique<RenderTargetRegistry>();
+            EngineCompressionCodecUtil::registerAll( *_owned._pCompressionCodecRegistry );
+            _owned._pShaderCache->initialize();
 
             EngineServices services{};
-            services._pCommandLineManager       = _commandLineManager.get();
-            services._pGlobalVariableManager    = _globalVariableManager.get();
-            services._pLocalizationManager      = _localizationManager.get();
-            services._pTaskManager              = _taskManager.get();
-            services._pTypeRegistry             = _typeRegistry.get();
-            services._pSceneManager             = _sceneManager.get();
-            services._pInputManager             = _inputManager.get();
-            services._pAudioSystem              = _audioSystem.get();
-            services._pEventDispatcher          = _eventDispatcher.get();
-            services._pResourceManager          = _resourceManager.get();
-            services._pMemoryProfiler           = _memoryProfiler.get();
-            services._pEngineData               = _engineData.get();
-            services._pAssetStreamingQueue      = _assetStreamingQueue.get();
-            services._pCommandStack             = _commandStack.get();
-            services._pDebugOverlayState        = _debugOverlayState.get();
-            services._pDebugDrawQueue           = _debugDrawQueue.get();
-            services._pRHIBackendRegistry       = _rhiBackendRegistry.get();
-            services._pCompressionCodecRegistry = _compressionCodecRegistry.get();
-            services._pShaderCache              = _shaderCache.get();
-            services._pComponentDefaults        = _componentDefaults.get();
-            services._pFrameProfiler            = _frameProfiler.get();
-            services._pRenderTargetRegistry     = _renderTargetRegistry.get();
+            _owned.bindInto( services );
+            // owned=0 인 자리만 손으로 꽂는다.
+            services._pAudioSystem    = _audioSystem.get();
+            services._pMemoryProfiler = _memoryProfiler.get();
+            services._pCommandStack   = _commandStack.get();
 
             engine::bindEngineServices( services );
             engine::registerModuleTypes( "Engine" );
@@ -272,18 +234,18 @@ namespace sw
 
         BLOCK( "Task / Resource / Scene 초기화" )
         {
-            if ( _resourceManager->initialize() == false )
+            if ( _owned._pResourceManager->initialize() == false )
                 return false;
 
             // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 이제
             // `mountContent` 의 인자에 드러나 있다. 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다.
-            _resourceManager->mountContent( pEngineConfig->_listResourcePriority );
+            _owned._pResourceManager->mountContent( pEngineConfig->_listResourcePriority );
 
-            if ( _taskManager->initialize() == false )
+            if ( _owned._pTaskManager->initialize() == false )
                 return false;
-            if ( _sceneManager->initialize() == false )
+            if ( _owned._pSceneManager->initialize() == false )
                 return false;
-            if ( _inputManager->initialize() == false )
+            if ( _owned._pInputManager->initialize() == false )
                 return false;
             if ( _audioSystem->initialize() == false )
                 return false;
@@ -292,12 +254,12 @@ namespace sw
         BLOCK( "EngineData 로드 및 RHI 백엔드 선정 & 초기화" )
         {
             if ( pEngineConfig->_engineData.empty() == false )
-                _engineData->loadFromResource( pEngineConfig->_engineData );
+                _owned._pEngineData->loadFromResource( pEngineConfig->_engineData );
             else
-                _engineData->loadFromResource();
+                _owned._pEngineData->loadFromResource();
 
             bool bBakeShaders = false;
-            if ( _commandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
+            if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
             {
                 _bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
@@ -307,7 +269,7 @@ namespace sw
 
             // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
             RHIBackend commandLineBackend{};
-            if ( RHIBackendUtil::findCommandLineBackend( *_commandLineManager, commandLineBackend ) == false )
+            if ( RHIBackendUtil::findCommandLineBackend( *_owned._pCommandLineManager, commandLineBackend ) == false )
                 gv_rhiBackend = pEngineConfig->_window._defaultRHI;
 
             if ( IWindow::getActiveWindow() == nullptr )
@@ -315,8 +277,8 @@ namespace sw
                 uint32 windowWidth  = pEngineConfig->_window._width;
                 uint32 windowHeight = pEngineConfig->_window._height;
                 // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
-                _commandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
-                _commandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
+                _owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
+                _owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
                 unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
                 if ( defaultWindow != nullptr && defaultWindow->initializeWindow( pEngineConfig->_window._title.c_str(), windowWidth, windowHeight ) )
@@ -357,9 +319,9 @@ namespace sw
 
             _gpuSceneBuilder.setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
             if ( _gpuUploadQueue != nullptr )
-                _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _taskManager.get() );
+                _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _owned._pTaskManager.get() );
 
-            if ( _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() ) == false )
+            if ( _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() ) == false )
             {
                 SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
                 return false;
@@ -401,10 +363,10 @@ namespace sw
                 }
             }
 
-            if ( _sceneManager != nullptr )
+            if ( _owned._pSceneManager != nullptr )
             {
-                _sceneManager->setRhiDevice( &_rhi->getDevice() );
-                _sceneManager->setFrameRenderer( _frameRenderer.get() );
+                _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
+                _owned._pSceneManager->setFrameRenderer( _frameRenderer.get() );
             }
         }
 
@@ -419,10 +381,10 @@ namespace sw
     {
         BLOCK( "RHI / Window 정리" )
         {
-            if ( _sceneManager != nullptr )
+            if ( _owned._pSceneManager != nullptr )
             {
-                _sceneManager->setFrameRenderer( nullptr );
-                _sceneManager->setRhiDevice( nullptr );
+                _owned._pSceneManager->setFrameRenderer( nullptr );
+                _owned._pSceneManager->setRhiDevice( nullptr );
             }
             if ( _renderThread != nullptr )
             {
@@ -449,10 +411,10 @@ namespace sw
 
         BLOCK( "매니저 종료 및 언바인드" )
         {
-            if ( _sceneManager != nullptr )
-                _sceneManager->shutdown();
-            if ( _inputManager != nullptr )
-                _inputManager->shutdown();
+            if ( _owned._pSceneManager != nullptr )
+                _owned._pSceneManager->shutdown();
+            if ( _owned._pInputManager != nullptr )
+                _owned._pInputManager->shutdown();
             if ( _audioSystem != nullptr )
                 _audioSystem->shutdown();
 
@@ -465,14 +427,14 @@ namespace sw
                 _liveShaderManager->shutdown();
 #endif
 
-            if ( _taskManager != nullptr )
-                _taskManager->shutdown();
-            if ( _globalVariableManager != nullptr )
-                _globalVariableManager->shutdown();
+            if ( _owned._pTaskManager != nullptr )
+                _owned._pTaskManager->shutdown();
+            if ( _owned._pGlobalVariableManager != nullptr )
+                _owned._pGlobalVariableManager->shutdown();
             if ( _memoryProfiler != nullptr )
                 _memoryProfiler->shutdown();
-            if ( _shaderCache != nullptr )
-                _shaderCache->shutdown();
+            if ( _owned._pShaderCache != nullptr )
+                _owned._pShaderCache->shutdown();
             // 코덱 레지스트리는 여기서 shutdown 하지 않는다 — 아래 reset 블록에서 슬롯을 끊고 통째로
             // 없앤다. 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
             if ( _logger != nullptr )
@@ -483,43 +445,47 @@ namespace sw
 #endif
             _renderThread.reset();
             _frameRenderer.reset();
-            _sceneManager.reset();
-            _inputManager.reset();
+            _owned._pSceneManager.reset();
+            _owned._pInputManager.reset();
             _audioSystem.reset();
-            _eventDispatcher.reset();
-            _engineData.reset();
-            _assetStreamingQueue.reset();
+            _owned._pEventDispatcher.reset();
+            _owned._pEngineData.reset();
+            _owned._pAssetStreamingQueue.reset();
             _commandStack.reset();
-            _debugOverlayState.reset();
-            _debugDrawQueue.reset();
+            _owned._pDebugOverlayState.reset();
+            _owned._pDebugDrawQueue.reset();
             _gpuUploadQueue.reset();
-            _rhiBackendRegistry.reset();
-            _shaderCache.reset();
-            _componentDefaults.reset();
-            _frameProfiler.reset();
-            _renderTargetRegistry.reset();
+            _owned._pRHIBackendRegistry.reset();
+            _owned._pShaderCache.reset();
+            _owned._pComponentDefaults.reset();
+            _owned._pFrameProfiler.reset();
+            _owned._pRenderTargetRegistry.reset();
             // 슬롯부터 끊는다 — 소유자가 죽은 뒤에도 슬롯이 가리키고 있으면 엔진을 내린 다음의
             // 압축 경로가 해제된 레지스트리를 읽는다. 끊고 나면 CompressionStream 은 내장 코덱으로 문다.
             CompressionCodecRegistry::setActive( nullptr );
-            _compressionCodecRegistry.reset();
+            _owned._pCompressionCodecRegistry.reset();
 
             // [Note] ResourceManager는 가장 밑바탕이 되는 시스템입니다.
             // 다른 매니저들의 reset() 시 소멸자가 호출되며 들고 있던 리소스들을 해제하는데,
             // 이때 ResourceManager가 살아있어야 안전하게 해제됩니다.
             // 따라서 모든 매니저들의 소멸자가 불린 직후인 이곳에서 마지막으로 shutdown()을 호출합니다.
-            if ( _resourceManager != nullptr )
-                _resourceManager->shutdown();
-            _resourceManager.reset();
-            _typeRegistry.reset();
-            _localizationManager.reset();
-            _globalVariableManager.reset();
+            if ( _owned._pResourceManager != nullptr )
+                _owned._pResourceManager->shutdown();
+            _owned._pResourceManager.reset();
+            _owned._pTypeRegistry.reset();
+            _owned._pLocalizationManager.reset();
+            _owned._pGlobalVariableManager.reset();
             _configManager.reset();
-            _taskManager.reset();
+            _owned._pTaskManager.reset();
             _rhi.reset();
-            _commandLineManager.reset();
+            _owned._pCommandLineManager.reset();
             _mapDebugAction.reset();
             _memoryProfiler.reset();
             _deadlockDetector.reset();
+
+            // 위에서 순서대로 놓은 것 말고 **남은 것**을 쓸어 담는다. 목록에 줄을 더한 사람이 여기
+            // 한 줄을 잊어도 객체가 새지 않는다 — 순서가 중요한 것만 위에 손으로 적혀 있으면 된다.
+            _owned.destroyAll();
 
             engine::unbindEngineServices();
 
@@ -534,8 +500,8 @@ namespace sw
 
     void EngineLoop::beginFrame()
     {
-        if ( _inputManager != nullptr )
-            _inputManager->beginFrame();
+        if ( _owned._pInputManager != nullptr )
+            _owned._pInputManager->beginFrame();
     }
 
     void EngineLoop::tick( float32                           deltaTime,
@@ -582,10 +548,10 @@ namespace sw
             FileUtil::pumpFileDialogResults();
             engine::getAssetStreamingQueue().update();
 
-            if ( _sceneManager != nullptr )
-                _sceneManager->tickTransitions();
-            if ( _eventDispatcher != nullptr )
-                _eventDispatcher->processEvents();
+            if ( _owned._pSceneManager != nullptr )
+                _owned._pSceneManager->tickTransitions();
+            if ( _owned._pEventDispatcher != nullptr )
+                _owned._pEventDispatcher->processEvents();
             if ( _audioSystem != nullptr )
                 _audioSystem->update( deltaTime );
         }
@@ -593,11 +559,11 @@ namespace sw
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
-            if ( _sceneManager != nullptr && bTickScene )
-                _sceneManager->tick( deltaTime );
+            if ( _owned._pSceneManager != nullptr && bTickScene )
+                _owned._pSceneManager->tick( deltaTime );
         }
 
-        Scene* pActiveScene = _sceneManager != nullptr ? _sceneManager->getActiveScene() : nullptr;
+        Scene* pActiveScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
 
         BLOCK( "RenderFramePacket 제출" )
         {
@@ -672,8 +638,8 @@ namespace sw
         engine::getFrameProfiler().endFrame();
         _profileSession.onFrameEnd();
 
-        if ( _inputManager != nullptr )
-            _inputManager->endFrame();
+        if ( _owned._pInputManager != nullptr )
+            _owned._pInputManager->endFrame();
         engine::getDebugDrawQueue().clear();
     }
 
@@ -693,10 +659,10 @@ namespace sw
 
         BLOCK( "기존 RHI / Scene 리소스 정리" )
         {
-            if ( _sceneManager != nullptr )
+            if ( _owned._pSceneManager != nullptr )
             {
-                _sceneManager->setFrameRenderer( nullptr );
-                _sceneManager->setRhiDevice( nullptr );
+                _owned._pSceneManager->setFrameRenderer( nullptr );
+                _owned._pSceneManager->setRhiDevice( nullptr );
             }
             if ( _renderThread != nullptr )
                 _renderThread->stop();
@@ -705,8 +671,8 @@ namespace sw
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 등록부에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
-            if ( _shaderCache != nullptr )
-                _shaderCache->clearCache();
+            if ( _owned._pShaderCache != nullptr )
+                _owned._pShaderCache->clearCache();
             // GT 쪽 GpuScene 의 캐시(후보·배치)가 옛 디바이스에 올라간 머티리얼·인스턴스의 소유를 들고 있다.
             // 여기서 놓지 않으면 교체 뒤 첫 buildFromScene 의 clear() 가 그것들을 옛 디바이스와 함께 파괴한다
             // — 실제로 그 자리에서 죽었다(~MaterialInstance → shutdown(옛 디바이스)).
@@ -743,10 +709,10 @@ namespace sw
 
         // 새 디바이스다 — 큐가 들고 있던 요청은 옛 디바이스의 것이므로 여기서 갈아 낀다.
         if ( _gpuUploadQueue != nullptr )
-            _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _taskManager.get() );
+            _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _owned._pTaskManager.get() );
 
         if ( _frameRenderer != nullptr )
-            _frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() );
+            _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() );
 
         if ( _renderThread != nullptr )
         {
@@ -756,13 +722,13 @@ namespace sw
                 _renderThread->bind( &_rhi->getDevice(), _frameRenderer.get() );
         }
 
-        if ( _sceneManager != nullptr )
+        if ( _owned._pSceneManager != nullptr )
         {
-            _sceneManager->setRhiDevice( &_rhi->getDevice() );
-            _sceneManager->setFrameRenderer( _frameRenderer.get() );
+            _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
+            _owned._pSceneManager->setFrameRenderer( _frameRenderer.get() );
         }
 
-        Scene* pScene = _sceneManager != nullptr ? _sceneManager->getActiveScene() : nullptr;
+        Scene* pScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
             pScene->ensureDefaultCameras();
     }
@@ -795,7 +761,7 @@ namespace sw
 
     void EngineLoop::updateShellActions( float32 deltaTime )
     {
-        if ( _inputManager == nullptr )
+        if ( _owned._pInputManager == nullptr )
             return;
 
         if ( _bShellActionsBound == false )
@@ -811,7 +777,7 @@ namespace sw
 
         if ( _mapDebugAction->hasLayer( ActionMapDefaults::kTitleLayerName ) )
             _mapDebugAction->setLayerEnabled( ActionMapDefaults::kTitleLayerName, false );
-        _mapDebugAction->setInputManager( _inputManager.get() );
+        _mapDebugAction->setInputManager( _owned._pInputManager.get() );
         _mapDebugAction->update( deltaTime );
     }
 

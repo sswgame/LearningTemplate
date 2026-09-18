@@ -2,9 +2,11 @@
  * @file EngineServices.h
  * @brief App이 소유한 코어 매니저 포인터를 Engine.dll에 바인딩하는 서비스 테이블
  *
- * @details 서비스를 추가하려면 EngineServiceList.xxx 에 한 줄 추가하고, 바인딩 지점
- *          (EngineLoop::initialize, TestFramework/main.cpp)에서 포인터를 채우면 됩니다.
- *          구조체 멤버 · getter 선언/정의 · areEngineServicesBound() 는 그 목록에서 생성됩니다.
+ * @details **서비스를 추가하는 것은 `EngineServiceList.xxx` 에 한 줄을 더하는 것이다.** 구조체 멤버 ·
+ *          getter 선언/정의 · areEngineServicesBound() · ModuleServiceId 가 그 목록에서 생성되고,
+ *          `owned=1` 이면 소유·생성·바인딩까지 `EngineOwnedServices` 가 맡는다(호스트는 손댈 것이 없다).
+ *          `owned=0` 은 만드는 방법이 특별한 것뿐이고(팩토리·구성별 조건부) 그때만 호스트가 직접 꽂는다 —
+ *          `CheckEngineServiceBinding.py` 가 그 자리를 대조한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,9 +18,9 @@
 
 namespace sw
 {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       Tag Type;
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Tag Type;
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             Tag Type;
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       Tag Type;
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) Tag Type;
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             Tag Type;
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -32,9 +34,9 @@ namespace sw
     {
 // 인자가 **타입 이름과 선언자 이름**이라 괄호를 씌울 수 없다 — `(Type)* (member)` 는 문법이 아니다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             Type* member{ nullptr };
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             Type* member{ nullptr };
 // NOLINTEND(bugprone-macro-parentheses)
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
@@ -88,9 +90,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 코어 매니저 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)
         // ------------------------------------------------------------------------------
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       SW_API Type& getter();
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) SW_API const Type& getter();
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             SW_API Type* getter();
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_API Type& getter();
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_API const Type& getter();
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_API Type* getter();
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST

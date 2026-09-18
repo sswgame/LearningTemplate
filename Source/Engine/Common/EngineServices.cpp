@@ -45,14 +45,14 @@ namespace sw
         const utf8* findUnboundRequiredServiceName( const EngineServices& services )
         {
             // 행 순서가 곧 보고 순서다 — 같은 표를 두 번 물으면 같은 이름이 나온다.
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) \
-    if constexpr ( ( required ) != 0 )                                        \
-    {                                                                         \
-        if ( services.member == nullptr )                                     \
-            return #Type;                                                     \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned ) \
+    if constexpr ( ( required ) != 0 )                                               \
+    {                                                                                \
+        if ( services.member == nullptr )                                            \
+            return #Type;                                                            \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -80,37 +80,37 @@ namespace sw
             using namespace sw::internal;
             outService = {};
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )                \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )         \
     if ( bGameModuleOnly == false || ( ( gameAllowed ) == 1 ) )                              \
     {                                                                                        \
         outService.arrServices[toRawServiceId( ModuleServiceId::Type )] = s_services.member; \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, 0, gameAllowed )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) \
+    SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned ) \
+    SW_ENGINE_SERVICE( member, Tag, Type, getter, 0, gameAllowed, owned )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
         }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) \
-    Type& getter()                                                            \
-    {                                                                         \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" ); \
-        return *s_services.member;                                            \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned ) \
+    Type& getter()                                                                   \
+    {                                                                                \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );        \
+        return *s_services.member;                                                   \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
-    const Type& getter()                                                            \
-    {                                                                               \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );       \
-        return *s_services.member;                                                  \
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) \
+    const Type& getter()                                                                   \
+    {                                                                                      \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );              \
+        return *s_services.member;                                                         \
     }
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed ) \
-    Type* getter()                                                      \
-    {                                                                   \
-        return s_services.member;                                       \
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned ) \
+    Type* getter()                                                             \
+    {                                                                          \
+        return s_services.member;                                              \
     }
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE

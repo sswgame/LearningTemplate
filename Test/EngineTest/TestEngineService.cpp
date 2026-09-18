@@ -1,6 +1,9 @@
 #include "pch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+
 #include "Engine/Common/EngineServices.h"
+#include "Engine/EngineOwnedServices.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
 
@@ -35,9 +38,9 @@ SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
             SW_EXPECT_EQUAL( editorTable.arrServices[rawId], gameTable.arrServices[rawId] ); \
     }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )       SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )             SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -103,4 +106,64 @@ SW_TEST_CASE( EngineServiceTest, MissingRequiredServiceIsReportedByName )
     missingOptional._pMemoryProfiler       = nullptr;
     missingOptional._pCommandStack         = nullptr;
     SW_EXPECT_NULL( engine::findUnboundRequiredServiceName( missingOptional ) );
+}
+
+/**
+ * @brief [EngineServiceTest] 저장소는 목록의 `owned=1` 을 전부 만들고 표에 꽂는다
+ * @details 검사도 **같은 목록에서 생성한다** — 여기에 이름을 다시 적으면 그 목록이 세 번째가 된다.
+ *          `owned=0` 자리를 건드리지 않는 것도 같이 본다. 건드리면 호스트가 팩토리로 만든 것을
+ *          덮어쓰고(오디오), 배포본에 없어야 할 것을 만들어 낸다(커맨드 스택).
+ */
+SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
+{
+    EngineOwnedServices owned;
+    owned.createAll();
+
+    EngineServices table{};
+    owned.bindInto( table );
+
+#define SW_CHECK_OWNED_ROW( member, Type, owned )                                                        \
+    if constexpr ( ( owned ) == 1 )                                                                      \
+    {                                                                                                    \
+        SW_EXPECT_TRUE_MSG( table.member != nullptr, #Type " (owned=1) 을 저장소가 채우지 않았습니다" ); \
+    }                                                                                                    \
+    else                                                                                                 \
+    {                                                                                                    \
+        SW_EXPECT_TRUE_MSG( table.member == nullptr, #Type " (owned=0) 을 저장소가 건드렸습니다" );      \
+    }
+
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CHECK_OWNED_ROW( member, Type, owned )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CHECK_OWNED_ROW( member, Type, owned )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CHECK_OWNED_ROW( member, Type, owned )
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+#undef SW_CHECK_OWNED_ROW
+
+    // 표를 꽂기만 하고 비우는 것까지 본다 — 종료 경로가 이것을 쓴다.
+    owned.destroyAll();
+    EngineServices afterDestroy{};
+    owned.bindInto( afterDestroy );
+    SW_EXPECT_NULL( afterDestroy._pTaskManager );
+}
+
+/**
+ * @brief [EngineServiceTest] 호스트가 먼저 만든 것을 `createAll` 이 덮지 않는다
+ * @details `EngineLoop` 은 명령줄을 파싱하려고 `CommandLineManager` 와 `GlobalVariableManager` 를
+ *          저장소보다 **먼저** 만든다. 덮어썼다면 파싱 결과가 통째로 사라진다 — 이 저장소를 처음
+ *          붙였을 때 실제로 그렇게 될 뻔했다.
+ */
+SW_TEST_CASE( EngineServiceTest, CreateAllKeepsWhatTheHostMadeFirst )
+{
+    EngineOwnedServices owned;
+
+    unique_ptr<CommandLineManager> preMade   = make_unique<CommandLineManager>();
+    const CommandLineManager*      pExpected = preMade.get();
+    owned._pCommandLineManager               = std::move( preMade );
+
+    owned.createAll();
+    SW_EXPECT_TRUE_MSG( owned._pCommandLineManager.get() == pExpected,
+                        "createAll 이 호스트가 먼저 만든 것을 덮어썼습니다 — 명령줄 파싱 결과가 사라집니다" );
+    SW_EXPECT_NOT_NULL( owned._pTaskManager );
 }

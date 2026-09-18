@@ -14,9 +14,11 @@
 있다(`EngineServiceList.xxx` 의 CommandStack 주석). 증상이 "빌드가 아니라 실행에서, 그것도 엉뚱한
 자리에서" 나타나므로 컴파일러는 도와주지 않는다.
 
-강제 규칙 — 둘이다:
-  1) `bindEngineServices(` 를 부르는 파일은 `required=1` 인 멤버를 **전부** 대입해야 한다.
-  2) 표에 없는 멤버를 대입하면 안 된다 (이름이 바뀐 뒤 남은 죽은 줄).
+강제 규칙 — 셋이다:
+  1) `owned=1` 인 행은 `EngineOwnedServices` 가 채운다. 그러니 호스트는 **그 저장소의 `bindInto(`** 를
+     부르거나, 부르지 않겠다면 그 멤버들을 직접 대입해야 한다.
+  2) `owned=0` 이면서 `required=1` 인 행(팩토리·구성별 조건부)은 호스트가 **직접** 대입해야 한다.
+  3) 표에 없는 멤버를 대입하면 안 된다 (이름이 바뀐 뒤 남은 죽은 줄).
 
 **호스트 목록을 적지 않는다** — `bindEngineServices(` 를 부르는 파일이 곧 호스트다. 새 호스트(도구·하네스)가
 생겨도 자동으로 검사 대상이 된다.
@@ -43,34 +45,42 @@ _kServiceListPath = "Source/Engine/Common/EngineServiceList.xxx"
 _kHostSearchRoot = ("Source", "Test", "Tools")
 
 _kRequiredRow = re.compile(
-    r"^\s*SW_ENGINE_SERVICE(?P<const>_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,[^,]+,[^,]+,[^,]+,\s*(?P<required>[01])\s*,",
+    r"^\s*SW_ENGINE_SERVICE(?P<const>_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,[^,]+,[^,]+,[^,]+,"
+    r"\s*(?P<required>[01])\s*,[^,]+,\s*(?P<owned>[01])\s*\)",
     re.M,
 )
 _kOptionalRow = re.compile(r"^\s*SW_ENGINE_SERVICE_OPT\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kBindCall = re.compile(r"\bbindEngineServices\s*\(")
+# 생성된 저장소가 owned=1 을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`).
+_kGeneratedBindCall = re.compile(r"\bbindInto\s*\(")
 _kAssignment = re.compile(r"\.(?P<member>_p\w+)\s*=")
 
 
-def readServiceRows(rootDir: Path) -> tuple[list[str], set[str]]:
-    """(required=1 인 멤버 순서 목록, 표에 있는 모든 멤버)."""
+def readServiceRows(rootDir: Path) -> tuple[list[str], list[str], set[str]]:
+    """(호스트가 직접 채워야 하는 필수 멤버, 저장소가 채우는 필수 멤버, 표에 있는 모든 멤버)."""
     path = rootDir / _kServiceListPath
     if path.exists() is False:
         raise GateError(f"{_kServiceListPath} 가 없습니다 — 서비스 표가 옮겨졌다면 이 검사도 같이 옮기세요.")
 
     text = path.read_text(encoding="utf-8", errors="ignore")
-    listRequired: list[str] = []
+    listHandFilled: list[str] = []
+    listStorageFilled: list[str] = []
     setKnown: set[str] = set()
     for match in _kRequiredRow.finditer(text):
         member = match.group("member")
         setKnown.add(member)
-        if match.group("required") == "1":
-            listRequired.append(member)
+        if match.group("required") != "1":
+            continue
+        if match.group("owned") == "1":
+            listStorageFilled.append(member)
+        else:
+            listHandFilled.append(member)
     for match in _kOptionalRow.finditer(text):
         setKnown.add(match.group("member"))
 
-    if not listRequired:
+    if not listHandFilled and not listStorageFilled:
         raise GateError(f"{_kServiceListPath} 에서 required=1 인 줄을 하나도 읽지 못했습니다 — 검사가 헛돌고 있습니다.")
-    return listRequired, setKnown
+    return listHandFilled, listStorageFilled, setKnown
 
 
 def findBindingHosts(rootDir: Path) -> list[Path]:
@@ -92,7 +102,7 @@ def findBindingHosts(rootDir: Path) -> list[Path]:
 
 
 def checkHosts(rootDir: Path) -> tuple[list[str], int]:
-    listRequired, setKnown = readServiceRows(rootDir)
+    listHandFilled, listStorageFilled, setKnown = readServiceRows(rootDir)
     listHost = findBindingHosts(rootDir)
     if not listHost:
         raise GateError("bindEngineServices 를 부르는 파일을 하나도 찾지 못했습니다 — 검사가 헛돌고 있습니다.")
@@ -101,15 +111,27 @@ def checkHosts(rootDir: Path) -> tuple[list[str], int]:
     for host in listHost:
         text = host.read_text(encoding="utf-8", errors="ignore")
         setAssigned = {match.group("member") for match in _kAssignment.finditer(text)}
+        bUsesStorage = _kGeneratedBindCall.search(text) is not None
         relPath = host.relative_to(rootDir).as_posix()
 
-        for member in listRequired:
+        for member in listHandFilled:
             if member in setAssigned:
                 continue
             errors.append(
-                f"{relPath}: 필수 서비스 `{member}` 를 채우지 않습니다 — "
-                f"areEngineServicesBound() 가 영영 false 가 되고 그 함수로 게이팅되는 경로가 통째로 죽습니다 "
-                f"({_kServiceListPath} 의 required=1 행)"
+                f"{relPath}: 필수 서비스 `{member}` 를 채우지 않습니다 — 목록에 owned=0 으로 적혀 있어 "
+                f"**호스트가 직접** 꽂아야 합니다(팩토리·구성별 조건부). 빠지면 areEngineServicesBound() 가 "
+                f"영영 false 가 되고 그 함수로 게이팅되는 경로가 통째로 죽습니다"
+            )
+
+        if bUsesStorage:
+            continue
+
+        for member in listStorageFilled:
+            if member in setAssigned:
+                continue
+            errors.append(
+                f"{relPath}: `EngineOwnedServices::bindInto()` 도 부르지 않고 필수 서비스 `{member}` 도 "
+                f"채우지 않습니다 — 저장소를 쓰거나(권장) 목록의 owned=1 행을 전부 직접 꽂아야 합니다"
             )
         for member in sorted(setAssigned - setKnown):
             errors.append(
@@ -131,8 +153,8 @@ class CheckEngineServiceBindingGate(LintGate):
             "name": "호스트가 필수 서비스를 빠뜨림",
             "files": {
                 _kServiceListPath: (
-                    "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0 )\n"
-                    "SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, 1, 1 )\n"
+                    "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0, 0 )\n"
+                    "SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, 1, 1, 0 )\n"
                 ),
                 "Source/App/Probe.cpp": (
                     "void probe()\n"
@@ -147,7 +169,7 @@ class CheckEngineServiceBindingGate(LintGate):
         {
             "name": "표에서 사라진 멤버에 대입",
             "files": {
-                _kServiceListPath: "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0 )\n",
+                _kServiceListPath: "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0, 0 )\n",
                 "Source/App/Probe.cpp": (
                     "void probe()\n"
                     "{\n"

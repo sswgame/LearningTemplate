@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/EngineOwnedServices.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
@@ -127,12 +128,12 @@ namespace sw
         // Getter (App이 ModuleHost 등과 연동하기 위해 필요)
         // ----------------------------------------------------------------------
         ConfigManager*       getConfigManager() const { return _configManager.get(); }
-        CommandLineManager*  getCommandLineManager() const { return _commandLineManager.get(); }
-        LocalizationManager* getLocalizationManager() const { return _localizationManager.get(); }
+        CommandLineManager*  getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
+        LocalizationManager* getLocalizationManager() const { return _owned._pLocalizationManager.get(); }
         RHI*                 getRhi() const { return _rhi.get(); }
         RenderThread*        getRenderThread() const { return _renderThread.get(); }
-        ShaderCache*         getShaderCache() const { return _shaderCache.get(); }
-        ComponentDefaults*   getComponentDefaults() const { return _componentDefaults.get(); }
+        ShaderCache*         getShaderCache() const { return _owned._pShaderCache.get(); }
+        ComponentDefaults*   getComponentDefaults() const { return _owned._pComponentDefaults.get(); }
         bool                 isHeadless() const { return _bHeadless; }
 
     private:
@@ -144,24 +145,22 @@ namespace sw
         void pollShaderReloadHotkey();
 
     private:
-        unique_ptr<Logger>                _logger;
-        unique_ptr<DeadlockDetector>      _deadlockDetector;
-        unique_ptr<MemoryProfiler>        _memoryProfiler;
-        unique_ptr<CommandLineManager>    _commandLineManager;
-        unique_ptr<TaskManager>           _taskManager;
-        unique_ptr<GlobalVariableManager> _globalVariableManager;
-        unique_ptr<TypeRegistry>          _typeRegistry;
-        unique_ptr<ConfigManager>         _configManager;
-        unique_ptr<LocalizationManager>   _localizationManager;
-        unique_ptr<ResourceManager>       _resourceManager;
-        unique_ptr<RHI>                   _rhi;
-        unique_ptr<SceneManager>          _sceneManager;
-        unique_ptr<InputManager>          _inputManager;
-        unique_ptr<ActionMap>             _mapDebugAction;
-        unique_ptr<IAudioSystem>          _audioSystem;
-        unique_ptr<EventDispatcher>       _eventDispatcher;
-        unique_ptr<FrameRenderer>         _frameRenderer;
-        unique_ptr<RenderThread>          _renderThread;
+        /**
+         * @brief 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스 저장소 — 생성·바인딩이 여기서 나온다.
+         * @details 목록에 줄을 더하면 이 저장소가 같이 자란다. 만드는 방법이 특별한 셋
+         *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있다.
+         */
+        EngineOwnedServices _owned;
+
+        unique_ptr<Logger>           _logger;
+        unique_ptr<DeadlockDetector> _deadlockDetector;
+        unique_ptr<MemoryProfiler>   _memoryProfiler;
+        unique_ptr<ConfigManager>    _configManager;
+        unique_ptr<RHI>              _rhi;
+        unique_ptr<ActionMap>        _mapDebugAction;
+        unique_ptr<IAudioSystem>     _audioSystem;
+        unique_ptr<FrameRenderer>    _frameRenderer;
+        unique_ptr<RenderThread>     _renderThread;
         /** @brief GT 쪽 씬 스냅샷 빌더 — buildFromScene 의 재구축 판단 캐시가 프레임 간 유지되도록 여기 소유.
          *         매 프레임 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘긴다. */
         GpuSceneBuilder  _gpuSceneBuilder;
@@ -174,20 +173,9 @@ namespace sw
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveShaderManager> _liveShaderManager;
 #endif
-        unique_ptr<EngineData>          _engineData;
-        unique_ptr<AssetStreamingQueue> _assetStreamingQueue;
-        unique_ptr<CommandStack>        _commandStack;
-        unique_ptr<DebugOverlayState>   _debugOverlayState;
-        unique_ptr<DebugDrawQueue>      _debugDrawQueue;
-        unique_ptr<GpuUploadQueue>      _gpuUploadQueue;
-        unique_ptr<RHIBackendRegistry>  _rhiBackendRegistry;
-        unique_ptr<ShaderCache>         _shaderCache;
-        unique_ptr<ComponentDefaults>   _componentDefaults;
-        unique_ptr<FrameProfiler>       _frameProfiler;
-        /// @brief 렌더 타깃 목록 — 렌더러가 공개하고 에디터 패널이 읽는다.
-        unique_ptr<RenderTargetRegistry> _renderTargetRegistry;
-        /** @brief 압축 코덱 레지스트리. Core 의 CompressionStream 이 보도록 setActive 로 슬롯에 꽂는다. */
-        unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
+        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 owned=0). */
+        unique_ptr<CommandStack>   _commandStack;
+        unique_ptr<GpuUploadQueue> _gpuUploadQueue;
 
         bool _bShellActionsBound;
         bool _bHeadless;

@@ -15,6 +15,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/EngineOwnedServices.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
@@ -46,36 +47,21 @@ int main( int32 argc, utf8* argv[] )
     // ------------------------------------------------------------------------------
     // 0) 코어 매니저 — 로거·프로파일러·커맨드라인·엔진 서비스
     // ------------------------------------------------------------------------------
-    sw::unique_ptr<sw::Logger>                   logger                   = sw::make_unique<sw::Logger>();
-    sw::unique_ptr<sw::DeadlockDetector>         deadlockDetector         = sw::make_unique<sw::DeadlockDetector>();
-    sw::unique_ptr<sw::MemoryProfiler>           memoryProfiler           = sw::make_unique<sw::MemoryProfiler>();
-    sw::unique_ptr<sw::CommandLineManager>       commandLineManager       = sw::make_unique<sw::CommandLineManager>();
-    sw::unique_ptr<sw::ConfigManager>            configManager            = sw::make_unique<sw::ConfigManager>();
-    sw::unique_ptr<sw::TaskManager>              taskManager              = sw::make_unique<sw::TaskManager>();
-    sw::unique_ptr<sw::GlobalVariableManager>    globalVarManager         = sw::make_unique<sw::GlobalVariableManager>();
-    sw::unique_ptr<sw::TypeRegistry>             typeRegistry             = sw::make_unique<sw::TypeRegistry>();
-    sw::unique_ptr<sw::LocalizationManager>      localizationManager      = sw::make_unique<sw::LocalizationManager>();
-    sw::unique_ptr<sw::SceneManager>             sceneManager             = sw::make_unique<sw::SceneManager>();
-    sw::unique_ptr<sw::InputManager>             inputManager             = sw::make_unique<sw::InputManager>();
-    sw::unique_ptr<sw::CommandStack>             commandStack             = sw::make_unique<sw::CommandStack>();
-    sw::unique_ptr<sw::RHIBackendRegistry>       rhiRegistry              = sw::make_unique<sw::RHIBackendRegistry>();
-    sw::unique_ptr<sw::IAudioSystem>             audioSystem              = sw::IAudioSystem::create();
-    sw::unique_ptr<sw::EventDispatcher>          eventDispatcher          = sw::make_unique<sw::EventDispatcher>();
-    sw::unique_ptr<sw::ResourceManager>          resourceManager          = sw::make_unique<sw::ResourceManager>();
-    sw::unique_ptr<sw::EngineData>               engineData               = sw::make_unique<sw::EngineData>();
-    sw::unique_ptr<sw::AssetStreamingQueue>      assetStreamingQueue      = sw::make_unique<sw::AssetStreamingQueue>();
-    sw::unique_ptr<sw::DebugOverlayState>        debugOverlayState        = sw::make_unique<sw::DebugOverlayState>();
-    sw::unique_ptr<sw::DebugDrawQueue>           debugDrawQueue           = sw::make_unique<sw::DebugDrawQueue>();
-    sw::unique_ptr<sw::CompressionCodecRegistry> compressionCodecRegistry = sw::make_unique<sw::CompressionCodecRegistry>();
-    sw::unique_ptr<sw::ShaderCache>              shaderCache              = sw::make_unique<sw::ShaderCache>();
-    sw::unique_ptr<sw::ComponentDefaults>        componentDefaults        = sw::make_unique<sw::ComponentDefaults>();
-    sw::unique_ptr<sw::FrameProfiler>            frameProfiler            = sw::make_unique<sw::FrameProfiler>();
-    sw::unique_ptr<sw::RenderTargetRegistry>     renderTargetRegistry     = sw::make_unique<sw::RenderTargetRegistry>();
+    // 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스는 이 저장소가 만든다 — 하네스가 스무 줄을
+    // 따로 적던 자리다. 목록에 줄을 더하면 여기도 같이 자란다(엔진 호스트와 같은 기계).
+    sw::EngineOwnedServices owned;
+    owned.createAll();
 
+    sw::unique_ptr<sw::Logger>           logger           = sw::make_unique<sw::Logger>();
+    sw::unique_ptr<sw::DeadlockDetector> deadlockDetector = sw::make_unique<sw::DeadlockDetector>();
+    sw::unique_ptr<sw::MemoryProfiler>   memoryProfiler   = sw::make_unique<sw::MemoryProfiler>();
+    sw::unique_ptr<sw::ConfigManager>    configManager    = sw::make_unique<sw::ConfigManager>();
+    sw::unique_ptr<sw::CommandStack>     commandStack     = sw::make_unique<sw::CommandStack>();
+    sw::unique_ptr<sw::IAudioSystem>     audioSystem      = sw::IAudioSystem::create();
     logger->initialize();
     // 리소스 루트는 로거 다음에 찾는다(EngineLoop 과 같은 순서) — 실패했을 때의 진단이 남아야 하고,
     // 아래 `configManager->setRootDirectory` 가 여기서 정해지는 프로젝트 루트를 바로 쓴다.
-    // 예전에는 `resourceManager->initialize()` 가 대신 불러 줬는데, 그건 설정보다 뒤였다.
+    // 예전에는 `owned._pResourceManager->initialize()` 가 대신 불러 줬는데, 그건 설정보다 뒤였다.
     if ( sw::ResourceUtil::initialize() == false )
     {
         SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
@@ -83,44 +69,27 @@ int main( int32 argc, utf8* argv[] )
     }
     deadlockDetector->initialize();
     memoryProfiler->initialize();
-    compressionCodecRegistry->initialize();
+    owned._pCompressionCodecRegistry->initialize();
     // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
     // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
-    sw::CompressionCodecRegistry::setActive( compressionCodecRegistry.get() );
-    shaderCache->initialize();
-    commandLineManager->initialize();
-    globalVarManager->registerPendingVariables( "Engine", sw::GlobalVariableRegistrar::getHead() );
+    sw::CompressionCodecRegistry::setActive( owned._pCompressionCodecRegistry.get() );
+    owned._pShaderCache->initialize();
+    owned._pCommandLineManager->initialize();
+    owned._pGlobalVariableManager->registerPendingVariables( "Engine", sw::GlobalVariableRegistrar::getHead() );
     sw::GlobalVariableRegistrar::getHead() = nullptr;
-    globalVarManager->registerToCommandLine( commandLineManager.get() );
+    owned._pGlobalVariableManager->registerToCommandLine( owned._pCommandLineManager.get() );
 
     // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
     sw::vector<utf8*> listApplicationArg = test::TestRegistry::getInstance().configureFromArgs( argc, argv );
-    commandLineManager->parse( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
-    globalVarManager->updateFromCommandLine( commandLineManager.get() );
+    owned._pCommandLineManager->parse( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
+    owned._pGlobalVariableManager->updateFromCommandLine( owned._pCommandLineManager.get() );
 
     sw::EngineServices services{};
-    services._pCommandLineManager       = commandLineManager.get();
-    services._pGlobalVariableManager    = globalVarManager.get();
-    services._pLocalizationManager      = localizationManager.get();
-    services._pTaskManager              = taskManager.get();
-    services._pTypeRegistry             = typeRegistry.get();
-    services._pCommandStack             = commandStack.get();
-    services._pSceneManager             = sceneManager.get();
-    services._pInputManager             = inputManager.get();
-    services._pRHIBackendRegistry       = rhiRegistry.get();
-    services._pAudioSystem              = audioSystem.get();
-    services._pEventDispatcher          = eventDispatcher.get();
-    services._pResourceManager          = resourceManager.get();
-    services._pMemoryProfiler           = memoryProfiler.get();
-    services._pEngineData               = engineData.get();
-    services._pAssetStreamingQueue      = assetStreamingQueue.get();
-    services._pDebugOverlayState        = debugOverlayState.get();
-    services._pDebugDrawQueue           = debugDrawQueue.get();
-    services._pCompressionCodecRegistry = compressionCodecRegistry.get();
-    services._pShaderCache              = shaderCache.get();
-    services._pComponentDefaults        = componentDefaults.get();
-    services._pFrameProfiler            = frameProfiler.get();
-    services._pRenderTargetRegistry     = renderTargetRegistry.get();
+    owned.bindInto( services );
+    // owned=0 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
+    services._pAudioSystem    = audioSystem.get();
+    services._pMemoryProfiler = memoryProfiler.get();
+    services._pCommandStack   = commandStack.get();
     sw::engine::bindEngineServices( services );
 
     // ------------------------------------------------------------------------------
@@ -129,7 +98,7 @@ int main( int32 argc, utf8* argv[] )
     // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
     sw::engine::registerModuleTypes( "Engine" );
     sw::engine::registerModuleTypes( "GameFramework" );
-    typeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+    owned._pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 
     // 설정은 리소스 초기화보다 **먼저** 읽는다 — EngineLoop 과 같은 순서다.
     //
@@ -153,75 +122,78 @@ int main( int32 argc, utf8* argv[] )
     if ( pGameConfig != nullptr )
         sw::GameConfig::setActive( *pGameConfig );
 
-    if ( resourceManager->initialize() == false )
+    if ( owned._pResourceManager->initialize() == false )
         return -1;
 
     // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의
     // 인자에 드러나 있다. 우선순위 적용 · 팩 마운트 · 레지스트리 적재가 한 호출로 묶여 있다.
     if ( pEngineConfig != nullptr )
-        resourceManager->mountContent( pEngineConfig->_listResourcePriority );
+        owned._pResourceManager->mountContent( pEngineConfig->_listResourcePriority );
     else
-        resourceManager->mountContent( {} );
+        owned._pResourceManager->mountContent( {} );
 
-    if ( taskManager->initialize() == false )
+    if ( owned._pTaskManager->initialize() == false )
         return -1;
-    if ( sceneManager->initialize() == false )
+    if ( owned._pSceneManager->initialize() == false )
         return -1;
-    if ( inputManager->initialize() == false )
+    if ( owned._pInputManager->initialize() == false )
         return -1;
 
     SW_LOG_INFO( "Core services initialized. Running tests..." );
     SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );
     int32 result = test::TestRegistry::getInstance().runAllTests();
 
-    sceneManager->shutdown();
-    inputManager->shutdown();
+    owned._pSceneManager->shutdown();
+    owned._pInputManager->shutdown();
     audioSystem->shutdown();
-    taskManager->shutdown();
-    globalVarManager->shutdown();
+    owned._pTaskManager->shutdown();
+    owned._pGlobalVariableManager->shutdown();
     memoryProfiler->shutdown();
     deadlockDetector->shutdown();
-    if ( compressionCodecRegistry != nullptr )
-        compressionCodecRegistry->shutdown();
+    if ( owned._pCompressionCodecRegistry != nullptr )
+        owned._pCompressionCodecRegistry->shutdown();
 
     // ------------------------------------------------------------------------------
     // 2) 종료 — 서비스 해제 (생성 역순)
-    if ( shaderCache != nullptr )
-        shaderCache->shutdown();
-    if ( compressionCodecRegistry != nullptr )
-        compressionCodecRegistry->shutdown();
+    if ( owned._pShaderCache != nullptr )
+        owned._pShaderCache->shutdown();
+    if ( owned._pCompressionCodecRegistry != nullptr )
+        owned._pCompressionCodecRegistry->shutdown();
 
     sw::engine::unbindEngineServices();
 
-    frameProfiler.reset();
-    renderTargetRegistry.reset();
-    componentDefaults.reset();
-    shaderCache.reset();
+    owned._pFrameProfiler.reset();
+    owned._pRenderTargetRegistry.reset();
+    owned._pComponentDefaults.reset();
+    owned._pShaderCache.reset();
     sw::CompressionCodecRegistry::setActive( nullptr );
-    compressionCodecRegistry.reset();
-    debugDrawQueue.reset();
-    debugOverlayState.reset();
-    assetStreamingQueue.reset();
-    engineData.reset();
-    eventDispatcher.reset();
+    owned._pCompressionCodecRegistry.reset();
+    owned._pDebugDrawQueue.reset();
+    owned._pDebugOverlayState.reset();
+    owned._pAssetStreamingQueue.reset();
+    owned._pEngineData.reset();
+    owned._pEventDispatcher.reset();
     audioSystem.reset();
-    rhiRegistry.reset();
-    inputManager.reset();
-    sceneManager.reset();
-    localizationManager.reset();
+    owned._pRHIBackendRegistry.reset();
+    owned._pInputManager.reset();
+    owned._pSceneManager.reset();
+    owned._pLocalizationManager.reset();
     commandStack.reset();
 
     // [Note] ResourceManager는 가장 밑바탕이 되는 시스템입니다.
     // 다른 매니저들의 reset() 시 소멸자가 호출되며 들고 있던 리소스들을 해제하는데,
     // 이때 ResourceManager가 살아있어야 안전하게 해제됩니다.
-    if ( resourceManager != nullptr )
-        resourceManager->shutdown();
-    resourceManager.reset();
+    if ( owned._pResourceManager != nullptr )
+        owned._pResourceManager->shutdown();
+    owned._pResourceManager.reset();
 
-    typeRegistry.reset();
-    globalVarManager.reset();
-    taskManager.reset();
-    commandLineManager.reset();
+    owned._pTypeRegistry.reset();
+    owned._pGlobalVariableManager.reset();
+    owned._pTaskManager.reset();
+    owned._pCommandLineManager.reset();
+    // 위에서 순서대로 놓은 것 말고 남은 것을 쓸어 담는다(EngineLoop 과 같은 자리).
+    owned.destroyAll();
+
     memoryProfiler.reset();
     deadlockDetector.reset();
 
