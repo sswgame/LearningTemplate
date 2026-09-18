@@ -157,13 +157,18 @@ namespace sw
     private:
         bool loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text );
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
+        /**
+         * @brief 미리 구한 해시로 활성 언어 → 폴백 언어 순으로 한 번만 훑습니다.
+         * @details 두 `getString` 오버로드의 공통 경로다. **해시를 인자로 받는 이유**는
+         *          `hashed_string` 이 이미 해시를 들고 있기 때문이다 — 문자열을 넘기면 그
+         *          경로에서 해시를 다시 계산하게 된다.
+         */
+        const utf8* findByHash( uint64 keyHash, const utf8* pDefaultText ) const;
 
     private:
         mutable std::shared_mutex _mutex;
         string                    _currentLanguage;
         string                    _fallbackLanguage;
-        /** @brief 활성 언어 → 폴백 언어 순으로 한 번만 훑습니다. 두 getString 오버로드의 공통 경로입니다. */
-        const utf8* findInActiveThenFallback( string_view key, const utf8* pDefaultText ) const;
 
         unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
         unordered_map<uint32, LanguageChangedCallback> _mapCallback;

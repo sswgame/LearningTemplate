@@ -316,9 +316,18 @@ namespace sw
         appendBytes( &version, sizeof( version ) );
         appendBytes( &languageCount, sizeof( languageCount ) );
 
+        // **언어 코드 순으로 적는다.** `_mapLanguageTable` 은 `unordered_map` 이라 순회 순서가
+        // 정해져 있지 않다 — 같은 내용을 두 번 구워도 파일 바이트가 달라진다(`StringTable` 쪽도 같다).
+        vector<string> listLanguageCode;
+        listLanguageCode.reserve( _mapLanguageTable.size() );
         for ( const auto& [langCode, pTable] : _mapLanguageTable )
+            listLanguageCode.push_back( langCode );
+        std::sort( listLanguageCode.begin(), listLanguageCode.end() );
+
+        for ( const string& langCode : listLanguageCode )
         {
-            const uint32 codeLen = static_cast<uint32>( langCode.size() );
+            const unique_ptr<StringTable>& pTable  = _mapLanguageTable.find( langCode )->second;
+            const uint32                   codeLen = static_cast<uint32>( langCode.size() );
             appendBytes( &codeLen, sizeof( codeLen ) );
             if ( codeLen > 0 )
                 appendBytes( langCode.data(), codeLen );
@@ -487,15 +496,18 @@ namespace sw
 
     const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
     {
-        return findInActiveThenFallback( key.view(), pDefaultText );
+        // intern 된 키는 해시를 이미 들고 있다 — 다시 계산하지 않는다.
+        return findByHash( key.getHash(), pDefaultText );
     }
 
     const utf8* LocalizationManager::getString( string_view key, const utf8* pDefaultText ) const
     {
-        return findInActiveThenFallback( key, pDefaultText );
+        if ( key.empty() )
+            return pDefaultText;
+        return findByHash( hashed_string::computeHash( key ), pDefaultText );
     }
 
-    const utf8* LocalizationManager::findInActiveThenFallback( string_view key, const utf8* pDefaultText ) const
+    const utf8* LocalizationManager::findByHash( uint64 keyHash, const utf8* pDefaultText ) const
     {
         std::shared_lock<std::shared_mutex> lock( _mutex );
 
@@ -503,7 +515,7 @@ namespace sw
         const auto currentIter = _mapLanguageTable.find( _currentLanguage );
         if ( currentIter != _mapLanguageTable.end() && currentIter->second != nullptr )
         {
-            const utf8* pFound = currentIter->second->getString( key );
+            const utf8* pFound = currentIter->second->findByHash( keyHash );
             if ( StringUtil::isNullOrEmpty( pFound ) == false )
                 return pFound;
         }
@@ -514,7 +526,7 @@ namespace sw
             const auto fallbackIter = _mapLanguageTable.find( _fallbackLanguage );
             if ( fallbackIter != _mapLanguageTable.end() && fallbackIter->second != nullptr )
             {
-                const utf8* pFound = fallbackIter->second->getString( key );
+                const utf8* pFound = fallbackIter->second->findByHash( keyHash );
                 if ( StringUtil::isNullOrEmpty( pFound ) == false )
                     return pFound;
             }

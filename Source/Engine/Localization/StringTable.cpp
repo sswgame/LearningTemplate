@@ -97,10 +97,19 @@ namespace sw
         appendBytes( &version, sizeof( version ) );
         appendBytes( &count, sizeof( count ) );
 
+        // **해시 순으로 적는다.** `_mapTable` 은 `unordered_map` 이라 순회 순서가 삽입 순서와
+        // 할당 상황에 따라 달라진다 — 그대로 적으면 **같은 내용을 두 번 구워도 파일 바이트가
+        // 달라진다.** 미리 구워 두는 산출물에 그것은 diff·캐시·검증을 전부 무의미하게 만든다.
+        vector<uint64> listKeyHash;
+        listKeyHash.reserve( _mapTable.size() );
         for ( const auto& [hash, str] : _mapTable )
+            listKeyHash.push_back( hash );
+        std::sort( listKeyHash.begin(), listKeyHash.end() );
+
+        for ( const uint64 keyHash : listKeyHash )
         {
-            const uint64 keyHash = hash;
-            const uint32 strLen  = static_cast<uint32>( str.size() );
+            const string& str    = _mapTable.find( keyHash )->second;
+            const uint32  strLen = static_cast<uint32>( str.size() );
             appendBytes( &keyHash, sizeof( keyHash ) );
             appendBytes( &strLen, sizeof( strLen ) );
             if ( strLen > 0 )

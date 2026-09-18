@@ -652,3 +652,64 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
     SW_EXPECT_TRUE( fsm.getCurrentMode().empty() );
     SW_EXPECT_EQUAL( uint32( 1 ), gameplayHandler->_exitCount );
 }
+
+/**
+ * @brief [LocalizationManagerTest] 같은 내용은 언제나 같은 바이트로 구워지는지 검증
+ * @details `StringTable` 과 `LocalizationManager` 는 둘 다 `unordered_map` 을 훑어 팩을 썼다.
+ *          순회 순서는 삽입 순서와 할당 상황에 따라 달라지므로, **같은 내용을 두 번 구워도 파일
+ *          바이트가 달라졌다** — 미리 구워 두는 산출물에 그것은 diff·캐시·검증을 전부 무의미하게
+ *          만든다. 여기서는 넣는 순서만 뒤집어 구워 보고 바이트가 같은지 본다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, BinaryPackIsDeterministic )
+{
+    const sw::string kArrKey[]   = { "menu.start", "menu.quit", "hud.hp", "zzz.last", "aaa.first" };
+    const sw::string kArrValue[] = { "시작", "종료", "체력", "마지막", "처음" };
+    constexpr size_t kKeyCount   = sizeof( kArrKey ) / sizeof( kArrKey[0] );
+
+    // 1) StringTable — 넣는 순서만 뒤집는다.
+    sw::StringTable forwardTable;
+    sw::StringTable reverseTable;
+    for ( size_t index = 0; index < kKeyCount; ++index )
+    {
+        forwardTable.setString( sw::hashed_string( kArrKey[index].c_str() ), kArrValue[index] );
+        const size_t reverseIndex = kKeyCount - 1 - index;
+        reverseTable.setString( sw::hashed_string( kArrKey[reverseIndex].c_str() ), kArrValue[reverseIndex] );
+    }
+
+    sw::vector<uint8> forwardBytes;
+    sw::vector<uint8> reverseBytes;
+    SW_EXPECT_TRUE( forwardTable.saveToBinaryBuffer( forwardBytes ) );
+    SW_EXPECT_TRUE( reverseTable.saveToBinaryBuffer( reverseBytes ) );
+    SW_EXPECT_EQUAL( forwardBytes.size(), reverseBytes.size() );
+    SW_EXPECT_TRUE( forwardBytes.size() > 0 );
+    SW_EXPECT_TRUE( sw::Memory::compare( forwardBytes.data(), reverseBytes.data(), forwardBytes.size() ) == 0 );
+
+    // 2) LocalizationManager — 언어를 넣는 순서만 뒤집는다.
+    const sw::string kArrLanguage[] = { "ko_KR", "en_US", "ja_JP", "zh_CN" };
+    constexpr size_t kLanguageCount = sizeof( kArrLanguage ) / sizeof( kArrLanguage[0] );
+
+    sw::LocalizationManager forwardManager;
+    sw::LocalizationManager reverseManager;
+    for ( size_t index = 0; index < kLanguageCount; ++index )
+    {
+        const size_t reverseIndex = kLanguageCount - 1 - index;
+        forwardManager.setString( kArrLanguage[index], sw::hashed_string( "menu.start" ), "시작" );
+        reverseManager.setString( kArrLanguage[reverseIndex], sw::hashed_string( "menu.start" ), "시작" );
+    }
+
+    const sw::string forwardPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_loc_forward.loc.bin" );
+    const sw::string reversePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_loc_reverse.loc.bin" );
+    SW_EXPECT_TRUE( forwardManager.saveToBinaryPack( forwardPath ) );
+    SW_EXPECT_TRUE( reverseManager.saveToBinaryPack( reversePath ) );
+
+    sw::vector<uint8> forwardPackBytes;
+    sw::vector<uint8> reversePackBytes;
+    SW_EXPECT_TRUE( sw::FileUtil::readFile( forwardPath, forwardPackBytes ) );
+    SW_EXPECT_TRUE( sw::FileUtil::readFile( reversePath, reversePackBytes ) );
+    SW_EXPECT_EQUAL( forwardPackBytes.size(), reversePackBytes.size() );
+    SW_EXPECT_TRUE( forwardPackBytes.size() > 0 );
+    SW_EXPECT_TRUE( sw::Memory::compare( forwardPackBytes.data(), reversePackBytes.data(), forwardPackBytes.size() ) == 0 );
+
+    sw::FileUtil::removeFile( forwardPath );
+    sw::FileUtil::removeFile( reversePath );
+}

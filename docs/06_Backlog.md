@@ -144,8 +144,8 @@ cd build/Ninja-Debug/Bin
 | `Dialogue` | 375 | ✅ 2026-09-18 (3절 참고) |
 | `Graphics` | 42,770 | ✅ 2026-09-18 (3절 참고 — 훑은 깊이도 적어 두었다) |
 | `Input` | 9,056 | ✅ 2026-09-18 (3절 참고) |
-| `Localization` | 1,184 | ← 다음 |
-| `Module` | 318 | |
+| `Localization` | 1,184 | ✅ 2026-09-18 (3절 참고) |
+| `Module` | 318 | ← 다음 |
 | `Object` | 8,428 | |
 | `Physics` | 1,016 | |
 | `Reflection` | 3,081 | |
@@ -362,6 +362,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (같은 내용을 두 번 구우면 다른 파일이 나왔다 — Engine/Localization)
+
+**1) 바이너리 로컬라이제이션 팩이 결정적이지 않았다.** `StringTable::saveToBinaryBuffer` 는
+`unordered_map<uint64, string>` 을, `LocalizationManager::saveToBinaryPack` 은
+`unordered_map<string, ...>` 을 **순회 순서 그대로** 적었다. 그 순서는 삽입 순서와 할당 상황에
+따라 달라지므로, **같은 내용을 두 번 구워도 파일 바이트가 달라진다.** 미리 구워 두는 산출물
+(`localization.loc.bin` — 디렉터리에 있으면 텍스트보다 먼저 읽는다)에서 그것은 diff·캐시·검증을
+전부 무의미하게 만든다. 키 해시 순 · 언어 코드 순으로 정렬해 적는다.
+
+**회귀 테스트** `LocalizationManagerTest.BinaryPackIsDeterministic` — 넣는 순서만 뒤집어 구워 보고
+바이트가 같은지 본다(테이블과 팩 양쪽). 정렬을 빼면 깨지는 것을 변이 테스트로 확인했다.
+
+**2) 앞선 Dialogue 작업에서 들어간 것 둘을 바로잡았다.**
+- `LocalizationManager::getString( hashed_string )` 이 문자열 뷰로 내려가면서 **이미 들고 있는
+  해시를 버리고 다시 계산**하게 돼 있었다. 공통 경로를 `findByHash( uint64 )` 로 바꿔 두
+  오버로드가 각자 방식으로 해시를 구해 넘긴다 — intern 된 키는 O(1) 그대로다.
+  활성 언어와 폴백 언어 두 테이블을 훑을 때도 해시를 한 번만 구한다.
+- `findInActiveThenFallback` 선언이 **멤버 변수들 사이에** 들어가 있었다(AGENTS: 비공개 함수는
+  별도 구역, 멤버 변수가 마지막). 위로 옮겼다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `LocalizationManagerTest` 신규 1건 · 헤더 2개 자립.
 
 ### 2026-09-18 (같은 입력을 두 번 저장하면 파일 바이트가 달라졌다 — Engine/Input, 그리고 린트 오탐 하나)
 

@@ -46,6 +46,12 @@ namespace sw
          *          그 텍스트가 intern 아레나에 **영구히** 남는다.
          */
         const utf8* getString( string_view key ) const;
+        /**
+         * @brief 미리 구한 해시로 곧바로 조회합니다. 없으면 nullptr 입니다.
+         * @details `LocalizationManager` 가 활성 언어와 폴백 언어를 훑을 때 **해시를 한 번만**
+         *          구하려고 이것을 쓴다. 두 테이블에 같은 문자열을 두 번 해싱할 이유가 없다.
+         */
+        const utf8* findByHash( uint64 keyHash ) const;
         bool        contains( const hashed_string& key ) const;
         void        setString( const hashed_string& key, const string& value );
         void        clear();
@@ -53,9 +59,6 @@ namespace sw
         bool        empty() const;
 
     private:
-        /** @brief 해시 하나로 표를 엽니다. 두 getString 오버로드가 공유하는 유일한 조회 경로입니다. */
-        const utf8* findByHash( uint64 keyHash ) const;
-
         mutable std::shared_mutex     _mutex;
         unordered_map<uint64, string> _mapTable;
     };
