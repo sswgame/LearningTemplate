@@ -10,6 +10,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Resource/IAssetCache.h"
+
 namespace sw
 {
     class GameObject;
@@ -58,13 +60,13 @@ namespace sw
     };
 
     /// @brief 프리팹 로드/스폰 캐시
-    class SW_API PrefabManager
+    class SW_API PrefabManager final : public IAssetCache
     {
     public:
         /** @brief 빈 프리팹 캐시. */
         PrefabManager() = default;
         /** @brief 캐시된 프리팹을 정리합니다. */
-        ~PrefabManager() = default;
+        ~PrefabManager() override = default;
 
         /** @brief 복사를 금지합니다. */
         PrefabManager( const PrefabManager& ) = delete;
@@ -84,9 +86,18 @@ namespace sw
          * @details **이미 스폰된 오브젝트는 바뀌지 않는다.** 프리팹은 스폰 시점에 복사되는 틀이라,
          *          살아 있는 인스턴스를 거슬러 고치려면 그것은 다른 기능이다(프리팹 오버라이드 전파).
          *          여기서 보장하는 것은 "다음에 스폰하면 고친 내용이 나온다" 하나다.
-         * @return 캐시에 있어서 버렸으면 true.
+         * @param pDevice 쓰지 않는다 — 프리팹은 GPU 자원을 들지 않는다(`IAssetCache` 계약).
          */
-        bool reload( string_view assetRelativePath );
+        void reload( string_view assetRelativePath, IRHIDevice* pDevice = nullptr ) override;
+
+        /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
+        const utf8* getAssetKindName() const override { return "Prefab"; }
+        /** @brief 그 프리팹을 지금 캐시가 들고 있는지 반환합니다. */
+        bool isCached( string_view assetRelativePath ) const override;
+        /** @brief 지금 들고 있는 항목 수입니다. */
+        size_t getCachedCount() const override;
+        /** @brief 캐시를 통째로 비웁니다 — 다음 `loadPrefab` 이 디스크를 다시 읽는다. */
+        void clear() override;
 
         /** @brief 저작본을 PFB2 binary로 쿠킹합니다. */
         bool cookPrefabToBinary( string_view sourceRelativePath, string_view binRelativePath );

@@ -25,7 +25,13 @@ namespace sw
         , _textureCache{ make_unique<TextureCache>() }
         , _prefabManager{ make_unique<PrefabManager>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
+        , _listAssetCache{}
     {
+        // 내장 캐시도 **등록부를 통해서만** 훑는다 - 이름을 따로 적는 경로를 남기면 그 경로가
+        // 다시 어긋난다(종료가 프리팹을 잊고 있었다).
+        registerAssetCache( _materialCache.get() );
+        registerAssetCache( _textureCache.get() );
+        registerAssetCache( _prefabManager.get() );
     }
 
     ResourceManager::~ResourceManager() = default;
@@ -112,17 +118,48 @@ namespace sw
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 
-        if ( _materialCache != nullptr )
-            _materialCache->clear();
-        if ( _textureCache != nullptr )
-            _textureCache->clear();
+        clearAssetCaches();
         _assetDatabase.clear();
     }
 
     void ResourceManager::garbageCollectUnusedAssets()
     {
         engine::getAssetStreamingQueue().clearCompletionRecord();
-        // Note: MaterialCache automatically cleans up materials with 0 refcount in release().
+        // 캐시 자체는 참조가 0 이 되는 자리에서 스스로 지운다(`MaterialCache::release`).
+        // 여기서는 아직 할 일이 없다 - 있게 되면 등록부를 훑는다.
+    }
+
+    void ResourceManager::registerAssetCache( IAssetCache* pCache )
+    {
+        if ( pCache == nullptr )
+            return;
+        for ( const IAssetCache* pExisting : _listAssetCache )
+        {
+            if ( pExisting == pCache )
+                return;
+        }
+        _listAssetCache.push_back( pCache );
+    }
+
+    IAssetCache* ResourceManager::findAssetCache( string_view assetKindName ) const
+    {
+        if ( assetKindName.empty() )
+            return nullptr;
+        for ( IAssetCache* pCache : _listAssetCache )
+        {
+            if ( pCache != nullptr && assetKindName == pCache->getAssetKindName() )
+                return pCache;
+        }
+        return nullptr;
+    }
+
+    void ResourceManager::clearAssetCaches()
+    {
+        for ( IAssetCache* pCache : _listAssetCache )
+        {
+            if ( pCache != nullptr )
+                pCache->clear();
+        }
     }
 
     MaterialCache& ResourceManager::getMaterialManager()

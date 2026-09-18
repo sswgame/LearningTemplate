@@ -40,8 +40,12 @@ namespace sw::editor
             {
                 // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 꽂아 준 서비스로 간다.
                 ResourceManager* pResources = getService<ResourceManager>();
-                if ( pResources != nullptr )
-                    pResources->getMaterialManager().reload( relativePath );
+                EditorContext*   pContext   = EditorContext::get();
+                if ( pResources == nullptr || pContext == nullptr )
+                    return;
+                // 디바이스는 **지금 것을** 넘긴다 - 캐시가 마지막으로 본 것을 들고 있으면 백엔드를
+                // 바꾼 뒤 죽은 디바이스를 가리킨다(그래서 `IAssetCache::reload` 가 인자로 받는다).
+                pResources->getMaterialManager().reload( relativePath, pContext->getRhiDevice() );
             }
 
             static void reloadPrefab( string_view relativePath )
@@ -51,7 +55,7 @@ namespace sw::editor
                     return;
 
                 // 캐시만 버린다 — 이미 스폰된 오브젝트는 그대로다(그건 오버라이드 전파라는 다른 기능이다).
-                pResources->getPrefabManager().reload( relativePath );
+                pResources->getPrefabManager().reload( relativePath, nullptr );
             }
 
             /** @brief `textures_raw/` 아래 소스 이미지를 옆 `textures/` 의 DDS 로 굽습니다. */

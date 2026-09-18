@@ -7,6 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/IAssetCache.h"
+
 namespace sw
 
 {
@@ -25,36 +27,41 @@ namespace sw
      *       1. 소유가 `shared_ptr` 다 — 렌더 패킷이 소유를 빌려 간다(`Material.h` 머리 주석).
      *          그래서 `release` 는 GPU 자원을 내리지 않는다. 마지막 `shared_ptr` 이 놓일 때 내려간다.
      *          `TextureCache` 는 `unique_ptr` 이라 참조가 0 이면 그 자리에서 내린다.
-     *       2. 디바이스를 캐시가 기억한다(`_pDevice`) — 핫리로드가 디바이스를 인자로 받지 않기 때문이다.
-     *       3. `acquire` 가 먼저 세고 실패하면 되돌린다. `TextureCache` 는 성공한 뒤에 센다.
+     *       2. `acquire` 가 먼저 세고 실패하면 되돌린다. `TextureCache` 는 성공한 뒤에 센다.
+     *       (예전에는 셋이었다 — 이 캐시만 디바이스를 `_pDevice` 로 기억했다. 그 포인터는 백엔드를
+     *        바꾸면 죽은 디바이스를 가리키므로, `IAssetCache` 의 계약대로 인자로 받게 바꿨다.)
      */
-    class SW_API MaterialCache
+    class SW_API MaterialCache final : public IAssetCache
     {
     public:
         /** @brief 빈 캐시. */
         MaterialCache();
         /** @brief 캐시를 해제합니다. */
-        ~MaterialCache();
+        ~MaterialCache() override;
 
         /** @brief 복사를 금지합니다. */
         MaterialCache( const MaterialCache& ) = delete;
         /** @brief 대입을 금지합니다. */
         MaterialCache& operator=( const MaterialCache& ) = delete;
 
+        /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
+        const utf8* getAssetKindName() const override { return "Material"; }
         /** @brief 경로의 Material을 확보하고 GPU에 올립니다. */
         Material* acquire( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 경로의 Material을 다시 로드하고 GPU 캐시를 갱신합니다. */
-        void reload( string_view relativePath );
+        void reload( string_view relativePath, IRHIDevice* pDevice ) override;
         /** @brief 경로의 Material 참조를 해제합니다. */
         void release( string_view relativePath );
+        /** @brief 지금 들고 있는 항목 수입니다. */
+        size_t getCachedCount() const override;
         /**
          * @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다.
          * @details 참조가 0 이 되면 항목이 지워지므로, 이것이 곧 "아직 참조가 남아 있는가" 다.
          *          참조 계수 규율을 **밖에서 확인할 수 있는 유일한 손잡이**라 테스트가 이것을 본다.
          */
-        bool isCached( string_view relativePath ) const;
+        bool isCached( string_view relativePath ) const override;
         /** @brief 캐시를 비웁니다. */
-        void clear();
+        void clear() override;
 
     private:
         struct Impl;

@@ -24,6 +24,17 @@ namespace sw
         void bindEngineServices( const EngineServices& services )
         {
             s_services = services;
+
+            // 빠뜨린 것을 **여기서 한 번** 크게 말한다. 이것이 없으면 증상은 바인딩이 아니라 한참 뒤
+            // 엉뚱한 자리에서 나타난다 — `areEngineServicesBound()` 로 게이팅되는 스무 곳이 전부
+            // 조용히 폴백으로 가기 때문이다(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽었다).
+            const utf8* pMissing = findUnboundRequiredServiceName( s_services );
+            if ( pMissing != nullptr )
+            {
+                SW_LOG_WARNING( "필수 엔진 서비스 '%#' 가 비어 있습니다 — areEngineServicesBound() 가 false 가 되어 "
+                                "그것으로 게이팅되는 경로가 전부 폴백으로 갑니다.",
+                                pMissing );
+            }
         }
 
         void unbindEngineServices()
@@ -31,13 +42,14 @@ namespace sw
             s_services = {};
         }
 
-        bool areEngineServicesBound()
+        const utf8* findUnboundRequiredServiceName( const EngineServices& services )
         {
+            // 행 순서가 곧 보고 순서다 — 같은 표를 두 번 물으면 같은 이름이 나온다.
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) \
     if constexpr ( ( required ) != 0 )                                        \
     {                                                                         \
-        if ( s_services.member == nullptr )                                   \
-            return false;                                                     \
+        if ( services.member == nullptr )                                     \
+            return #Type;                                                     \
     }
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )
@@ -45,7 +57,22 @@ namespace sw
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
-            return true;
+            return nullptr;
+        }
+
+        const utf8* findUnboundRequiredServiceName()
+        {
+            return findUnboundRequiredServiceName( s_services );
+        }
+
+        const EngineServices& getBoundEngineServices()
+        {
+            return s_services;
+        }
+
+        bool areEngineServicesBound()
+        {
+            return findUnboundRequiredServiceName( s_services ) == nullptr;
         }
 
         void fillModuleServices( ModuleService& outService, bool bGameModuleOnly )

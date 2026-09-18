@@ -7,6 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/IAssetCache.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -19,16 +21,18 @@ namespace sw
      * @note `MaterialCache` 와 같은 모양이다. **갈라지는 지점은 그쪽 헤더에 적어 두었다** — 두 벌이
      *       어긋나 있던 자리라, 다음에 한쪽을 고칠 때 다른 쪽도 같이 볼 것.
      */
-    class SW_API TextureCache
+    class SW_API TextureCache final : public IAssetCache
     {
     public:
         /** @brief 빈 캐시. */
         TextureCache();
         /** @brief 캐시를 해제합니다. */
-        ~TextureCache();
+        ~TextureCache() override;
         TextureCache( const TextureCache& )            = delete;
         TextureCache& operator=( const TextureCache& ) = delete;
 
+        /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
+        const utf8* getAssetKindName() const override { return "Texture"; }
         /** @brief 경로의 텍스처를 확보하고 GPU 에 올립니다. 실패하면 nullptr. */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /**
@@ -37,13 +41,15 @@ namespace sw
          *          `Texture2D` 객체는 **그대로 두고** 내용만 갈아 끼운다. 머티리얼이 포인터를
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킨다.
          */
-        void reload( string_view relativePath, IRHIDevice* pDevice );
+        void reload( string_view relativePath, IRHIDevice* pDevice ) override;
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
         void release( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다 (`MaterialCache::isCached` 와 같은 뜻). */
-        bool isCached( string_view relativePath ) const;
+        bool isCached( string_view relativePath ) const override;
+        /** @brief 지금 들고 있는 항목 수입니다. */
+        size_t getCachedCount() const override;
         /** @brief 캐시를 비웁니다(GPU 자원은 이미 내려가 있어야 한다). */
-        void clear();
+        void clear() override;
 
     private:
         struct Impl;

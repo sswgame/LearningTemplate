@@ -100,6 +100,14 @@ namespace sw
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
+    size_t TextureCache::getCachedCount() const
+    {
+        if ( _impl == nullptr )
+            return 0;
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        return _impl->_mapEntry.size();
+    }
+
     void TextureCache::clear()
     {
         if ( _impl == nullptr )

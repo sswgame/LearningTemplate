@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -287,8 +288,9 @@ namespace sw::editor
             return false;
         }
         ResourceManager* pResources = editor::getService<ResourceManager>();
-        if ( pResources != nullptr )
-            pResources->getMaterialManager().reload( getLoadedAssetPath() );
+        EditorContext*   pContext   = EditorContext::get();
+        if ( pResources != nullptr && pContext != nullptr )
+            pResources->getMaterialManager().reload( getLoadedAssetPath(), pContext->getRhiDevice() );
         applyLivePreview();
         _status = "Saved";
         clearDocumentDirty();

@@ -24,12 +24,10 @@ namespace sw
         };
 
         unordered_map<string, Entry> _mapEntry;
-        IRHIDevice*                  _pDevice;
         std::shared_mutex            _mutex;
 
         Impl()
             : _mapEntry{}
-            , _pDevice{ nullptr }
             , _mutex{}
         {
         }
@@ -51,10 +49,7 @@ namespace sw
         engine::getResourceManager().getAssetDatabase().ensureMeta( key );
 
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        if ( pDevice != nullptr )
-            _impl->_pDevice = pDevice;
-
-        Impl::Entry& entry = _impl->_mapEntry[key];
+        Impl::Entry&                        entry = _impl->_mapEntry[key];
         if ( entry._material == nullptr )
         {
             entry._material = Material::create();
@@ -106,6 +101,14 @@ namespace sw
             _impl->_mapEntry.erase( it );
     }
 
+    size_t MaterialCache::getCachedCount() const
+    {
+        if ( _impl == nullptr )
+            return 0;
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        return _impl->_mapEntry.size();
+    }
+
     bool MaterialCache::isCached( string_view relativePath ) const
     {
         if ( relativePath.empty() || _impl == nullptr )
@@ -116,7 +119,7 @@ namespace sw
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
-    void MaterialCache::reload( string_view relativePath )
+    void MaterialCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         if ( relativePath.empty() || _impl == nullptr )
             return;
@@ -127,17 +130,17 @@ namespace sw
         auto                                it{ _impl->_mapEntry.find( key ) };
         if ( it != _impl->_mapEntry.end() )
         {
-            if ( it->second._material->isRhiValid() && _impl->_pDevice != nullptr )
+            if ( it->second._material->isRhiValid() && pDevice != nullptr )
             {
                 // 아직 이전 프레임(들)이 GPU에서 이 Material의 bindless 상수버퍼 인덱스를 참조하고
                 // 있을 수 있다 — shutdown()의 unregisterBindlessResource는 인덱스를 즉시 프리리스트로
                 // 반환해서, waitIdle 없이 바로 initialize()가 같은 인덱스를 재할당하면 아직 그 인덱스를
                 // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
-                _impl->_pDevice->waitIdle();
-                it->second._material->releaseRhi( _impl->_pDevice );
+                pDevice->waitIdle();
+                it->second._material->releaseRhi( pDevice );
             }
 
-            if ( _impl->_pDevice != nullptr && it->second._material->initialize( _impl->_pDevice, key ) == false )
+            if ( pDevice != nullptr && it->second._material->initialize( pDevice, key ) == false )
                 SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
         }
     }

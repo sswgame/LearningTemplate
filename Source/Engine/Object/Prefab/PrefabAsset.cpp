@@ -425,15 +425,37 @@ namespace sw
         PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outListPath );
     }
 
-    bool PrefabManager::reload( string_view assetRelativePath )
+    void PrefabManager::reload( string_view assetRelativePath, IRHIDevice* )
     {
         if ( assetRelativePath.empty() )
-            return false;
+            return;
 
         const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
 
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
-        return _mapCache.erase( cacheKey ) > 0;
+        _mapCache.erase( cacheKey );
+    }
+
+    bool PrefabManager::isCached( string_view assetRelativePath ) const
+    {
+        if ( assetRelativePath.empty() )
+            return false;
+
+        const string                        cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
+        std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
+        return _mapCache.find( cacheKey ) != _mapCache.end();
+    }
+
+    size_t PrefabManager::getCachedCount() const
+    {
+        std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
+        return _mapCache.size();
+    }
+
+    void PrefabManager::clear()
+    {
+        std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
+        _mapCache.clear();
     }
     PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
     {

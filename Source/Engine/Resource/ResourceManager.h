@@ -14,10 +14,12 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/IAssetCache.h"
 
 namespace sw
 {
@@ -84,6 +86,31 @@ namespace sw
         /** @brief 불필요한 캐시 및 스트리밍 큐 대기 내역을 정리하여 메모리를 반환합니다. */
         void garbageCollectUnusedAssets();
 
+        // ----------------------------------------------------------------------
+        // 에셋 캐시 등록부 - 종류를 늘리는 자리
+        // ----------------------------------------------------------------------
+        /**
+         * @brief 경로 키 에셋 캐시를 등록부에 올립니다. 소유하지 않습니다.
+         * @details 내장 셋(Material · Texture · Prefab)은 생성자가 등록한다. 모듈이 자기 에셋
+         *          종류를 더할 때 이것을 부른다 - 그러면 종료 · 진단 · 재초기화가 **자동으로**
+         *          그 캐시까지 훑는다. 같은 포인터를 두 번 올리면 무시한다.
+         * @param pCache 매니저보다 오래 사는 캐시. nullptr 은 무시한다.
+         */
+        void registerAssetCache( IAssetCache* pCache );
+        /** @brief 등록된 캐시 목록입니다. 소유하지 않습니다. */
+        const vector<IAssetCache*>& getAllAssetCache() const { return _listAssetCache; }
+        /**
+         * @brief 종류 이름으로 캐시를 찾습니다 ("Material" · "Texture" · "Prefab"). 없으면 nullptr.
+         * @details 이름으로 도는 코드(진단 · 도구)가 캐시 셋을 다시 적지 않게 하는 손잡이다.
+         */
+        IAssetCache* findAssetCache( string_view assetKindName ) const;
+        /**
+         * @brief 등록된 캐시를 전부 비웁니다.
+         * @details `shutdown` 이 이것을 쓴다. 예전에는 종료 경로가 캐시 이름을 손으로 적고 있었고,
+         *          그래서 **프리팹 캐시만 빠져 있었다** - 재초기화 뒤에도 옛 프리팹이 남았다.
+         */
+        void clearAssetCaches();
+
         /** @brief VFS 마운트된 리소스 팩 매니저 반환. */
         ResourcePackManager&       getPackManager();
         const ResourcePackManager& getPackManager() const;
@@ -114,5 +141,7 @@ namespace sw
         unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabManager>       _prefabManager;
         unique_ptr<ResourcePackManager> _pPackManager;
+        /** @brief 소유하지 않습니다 - 내장 셋은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다. */
+        vector<IAssetCache*> _listAssetCache;
     };
 } // namespace sw

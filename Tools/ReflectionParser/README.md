@@ -45,13 +45,19 @@ ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
 |-----------|---------|
 | CLI / 병렬 / up-to-date | `ReflectionParser.cpp` |
 | 수집 구조체 멤버 | `ParsedReflection.h` |
-| `Alias=` 토큰이 어디에 붙나 | `AnnotationApply.cpp` + `AnnotationMeta.txt` |
+| `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx` + `AnnotationMeta.txt`(별칭) |
 | AST에서 클래스·필드를 어떻게 찾나 | `AstVisitor.cpp` (A~D) |
 | 생성 코드 모양 | `CodeGenerator.cpp` + `Templates/` |
 | clang `-DREFLECT...` 인자 | `Config/Environment/parser_config.defaults.json` |
 
-**새 PROPERTY 필드 추가:**  
-`Source/Core/Predefined/AnnotationMeta.txt` 별칭 + `AnnotationApply.cpp` apply 테이블을 **함께** 수정.
+**새 PROPERTY 필드 추가 — 목록은 `PredefinedAnnotationField.xxx` **한 곳**이다.**
+`REGISTER_ANNOTATION_FIELD( Property, <Kind>, <Id>, <Member> )` 한 줄을 더하고, DTO 멤버를
+`ParsedReflection.h` 에 만든다. `AnnotationApply.cpp` 의 적용 표와 `CodeGenerator` 의 emit 순서는
+그 줄에서 전개된다 — **손으로 표를 고치지 않는다.**
+- `Kind` 가 `Flag`·`Bool`·`String` 이면 대입 코드까지 생성된다(추가 코드 없음).
+- `*Fn`(`FlagFn`·`StringFn`·`FloatFn`)이면 같은 이름의 적용 함수를 `AnnotationApply.cpp` 에 쓴다 —
+  그 접미사가 "손으로 쓴 함수를 부른다"는 표시다.
+- 철자를 더 받아 주기만 할 때는 `Source/Core/Predefined/AnnotationMeta.txt` 의 별칭만 고친다.
 
 ---
 

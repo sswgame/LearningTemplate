@@ -62,6 +62,23 @@ namespace sw
          */
         SW_API bool areEngineServicesBound();
         /**
+         * @brief 표에서 비어 있는 **첫 필수 서비스의 타입 이름**. 전부 채워져 있으면 nullptr.
+         * @details `areEngineServicesBound()` 가 false 라는 사실만으로는 아무도 원인을 모른다 —
+         *          그 함수로 게이팅되는 자리가 스무 곳이 넘고, 하나가 비면 그 스무 곳이 전부
+         *          조용히 폴백으로 간다(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽은 적이
+         *          있다). 그래서 **무엇이 비었는지**를 이름으로 돌려주고, `bindEngineServices` 가
+         *          바인딩 직후 한 번 크게 경고한다.
+         * @param services 검사할 표. 호스트가 아직 바인딩하기 전에도 물어볼 수 있다.
+         */
+        SW_API const utf8* findUnboundRequiredServiceName( const EngineServices& services );
+        /** @brief 지금 바인딩된 표 기준으로 위와 같습니다. */
+        SW_API const utf8* findUnboundRequiredServiceName();
+        /**
+         * @brief 지금 바인딩된 표입니다. 진단과 테스트가 쓰며, 채우는 것은 호스트의 일입니다.
+         * @note 개별 서비스는 생성된 `getXxx()` 로 가져오십시오 — 이것은 표 자체를 봐야 할 때만.
+         */
+        SW_API const EngineServices& getBoundEngineServices();
+        /**
          * @brief ModuleService 테이블에 현재 바인딩된 Engine 서비스를 채웁니다.
          * @param bGameModuleOnly true 면 `gameAllowed=1` 인 것만 채웁니다. 나머지 자리는 nullptr 입니다.
          * @note 표를 먼저 통째로 비우므로, 호스트 전용 서비스는 **이 호출 뒤에** 채워야 합니다.

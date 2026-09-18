@@ -72,3 +72,35 @@ SW_TEST_CASE( EngineServiceTest, TestHarnessBindsEveryRequiredService )
 {
     SW_EXPECT_TRUE( engine::areEngineServicesBound() );
 }
+
+/**
+ * @brief [EngineServiceTest] 비어 있는 필수 서비스는 **이름으로** 보고된다
+ * @details `areEngineServicesBound()` 가 false 라는 사실만으로는 아무도 원인을 못 짚는다 — 그 함수로
+ *          게이팅되는 자리가 스무 곳이 넘고, 하나가 비면 그 스무 곳이 전부 조용히 폴백으로 간다.
+ *          표를 인자로 받는 형태라 전역 바인딩을 흔들지 않고 물어볼 수 있다(흔들면 뒤따르는 테스트가
+ *          전부 그 폴백을 탄다).
+ */
+SW_TEST_CASE( EngineServiceTest, MissingRequiredServiceIsReportedByName )
+{
+    // 1) 빈 표에는 반드시 빠진 것이 있다.
+    const EngineServices emptyTable{};
+    SW_EXPECT_NOT_NULL( engine::findUnboundRequiredServiceName( emptyTable ) );
+
+    // 2) 지금 바인딩된 표는 완전하다 — 하네스가 다 채웠다.
+    const EngineServices boundTable = engine::getBoundEngineServices();
+    SW_EXPECT_NULL( engine::findUnboundRequiredServiceName( boundTable ) );
+
+    // 3) 필수 하나를 비우면 **그 이름**이 나온다.
+    EngineServices missingTask = boundTable;
+    missingTask._pTaskManager  = nullptr;
+    const utf8* pMissing       = engine::findUnboundRequiredServiceName( missingTask );
+    SW_ASSERT_NOT_NULL( pMissing );
+    SW_EXPECT_STREQ( "TaskManager", pMissing );
+
+    // 4) 선택 서비스는 비어도 보고하지 않는다 — 그것이 선택인 이유다(툴·배포본에는 없을 수 있다).
+    EngineServices missingOptional         = boundTable;
+    missingOptional._pRenderTargetRegistry = nullptr;
+    missingOptional._pMemoryProfiler       = nullptr;
+    missingOptional._pCommandStack         = nullptr;
+    SW_EXPECT_NULL( engine::findUnboundRequiredServiceName( missingOptional ) );
+}
