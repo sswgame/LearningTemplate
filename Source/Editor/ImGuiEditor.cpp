@@ -118,6 +118,7 @@ namespace sw::editor
         if ( pWindow == nullptr || pRhiDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
+            shutdownPartialInitialization();
             return false;
         }
 
@@ -244,6 +245,13 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownPartialInitialization()
     {
+        // **전역 변수부터 걷어낸다.** `initialize()` 는 맨 앞에서 `registerGlobalVariables()` 를
+        // 부르고(커맨드라인 보류값을 그때 적용해야 한다), 실패로 나가는 길은 **전부 그 뒤**다.
+        // 매니저가 들고 있는 것은 이 DLL 안의 주소이므로, 초기화가 실패한 뒤 모듈이 내려가면
+        // 그 포인터가 언맵된 이미지를 가리킨다 — `shutdown()` 이 같은 이유로 맨 앞에서 부르는
+        // 것이고(그 주석 참고), 실패 경로만 빠져 있었다. 두 번 불러도 안전하다.
+        unregisterGlobalVariables();
+
         if ( _editorContext != nullptr )
         {
             _editorContext->destroyGameView();

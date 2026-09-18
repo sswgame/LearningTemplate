@@ -63,8 +63,12 @@ namespace sw::editor
                 close();
         }
 
-        /** @brief ImGui에서 사용할 열림 상태 포인터를 반환합니다. */
-        bool* getOpenPtr() { return &_bOpen; }
+        // `getOpenPtr()` 은 두지 않는다. ImGui 의 `p_open` 에 `&_bOpen` 을 그대로 넘기면 창의 X
+        // 버튼이 그 값을 **직접** false 로 쓰므로 `close()` 를 지나가지 않고, 그래서 `onClose()` 가
+        // 불리지 않는다 — 열 때는 훅이 돌고 닫을 때는 안 도는 반쪽 수명이 된다. 팝업은
+        // `open()`/`close()`/`toggle()`/`setOpen()` 으로만 상태를 바꾼다.
+        // (패널 쪽 `IEditorPanel::getOpenPtr()` 은 그대로 둔다 — 거기엔 닫힘 훅이 없고 열림 상태가
+        //  플래그 하나뿐이라 ImGui 가 직접 써도 잃는 계약이 없다.)
 
         /** @brief 팝업 렌더링 진입점입니다. (열려 있는 경우 drawContent 호출) */
         void draw()
