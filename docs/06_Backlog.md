@@ -162,7 +162,7 @@ cd build/Ninja-Debug/Bin
 2026-09-18 에 우산이 전방 선언만 모으도록 바꿔 닫았다(3절 참고). 폴더를 끝낼 때마다
 `py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/<폴더>` 를 돌리면 된다.
 
-### 1-0b. Editor 폴더 훑기 — 알파벳 순, 다음은 `Common/Asset` (2026-09-18 시작)
+### 1-0b. Editor 폴더 훑기 — ✅ **전부 끝났다** (2026-09-18, 11개 단위 · 11커밋)
 
 `Source/Core`(2026-09-17) · `Source/Engine`(2026-09-18) 과 **같은 방식**. 폴더 하나 = 커밋 하나.
 `Common` 은 16,868줄이라 통째로는 커밋 하나에 담기지 않으므로 **하위 폴더를 단위로 삼는다.**
