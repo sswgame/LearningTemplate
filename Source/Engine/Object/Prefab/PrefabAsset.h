@@ -42,13 +42,17 @@ namespace sw
         /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON)를 반환합니다. */
         const string& getStateData() const { return _stateData; }
         /** @brief 로드에 성공했으면 true. */
-        bool isValid() const { return _bValid != 0; }
+        bool isValid() const { return _bValid == SW_TRUE; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
         void collectReferencedPrefabPaths( vector<string>& outListPath ) const;
 
     private:
-        string                 _name;
-        string                 _stateData;
+        string _name;
+        string _stateData;
+        // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다 — 여기와 `RenderFramePacket` 은
+        // `uint8 : 1` 비트필드이고, `EditorWorkspace` 와 `SceneDocument` 는 진짜 `bool` 이다.
+        // `Style/BitfieldBoolean` 린트는 이름으로만 판정하므로 그런 이름은 **일부러 건너뛴다**
+        // (오탐보다 누락이 낫다는 판단). 그래서 여기서는 `SW_TRUE`/`SW_FALSE` 를 손으로 지킨다.
         uint8                  _bValid   : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };

@@ -390,7 +390,7 @@ namespace sw
 
     bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
-        if ( isReady() == false || pDevice == nullptr || packet._bValid == 0 )
+        if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
             return false;
 
         _pDevice            = pDevice;

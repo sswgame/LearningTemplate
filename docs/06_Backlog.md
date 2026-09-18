@@ -146,8 +146,8 @@ cd build/Ninja-Debug/Bin
 | `Input` | 9,056 | ✅ 2026-09-18 (3절 참고) |
 | `Localization` | 1,184 | ✅ 2026-09-18 (3절 참고) |
 | `Module` | 318 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
-| `Object` | 8,428 | ← 다음 |
-| `Physics` | 1,016 | |
+| `Object` | 8,428 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
+| `Physics` | 1,016 | ← 다음 |
 | `Reflection` | 3,081 | |
 | `Resource` | 3,604 | |
 | `Scene` | 1,438 | |
@@ -362,6 +362,39 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (한 이름이 두 가지 뜻이라 린트가 일부러 눈을 감는 자리 — Engine/Object)
+
+**동작 결함을 찾지 못했다.** 이 폴더는 이 저장소에서 **가장 촘촘히 테스트된 곳**이다
+(`GameObjectManagerTest` 8 · `GameObjectPoolTest` · `ComponentPoolTest` 3 ·
+`GameObjectManagerPoolTest` 3 · `ComponentTickGroupTest` · `ComponentSubTickHybridTest` 등).
+따라간 것과 그 근거:
+
+- **지연 큐의 순서가 맞다.** `finishTick` 은 ① 병렬 읽기 해제 → ② `_bTicking=false` →
+  ③ 지연 트랜스폼 → ④ 지연 포스트틱 → ⑤ `mergePendingAdds` → ⑥ dirty 면 다시 flush →
+  ⑦ 지연 파괴 순이다. 인스턴스가 살아 있는 동안 트랜스폼을 적용하고, 그 다음에 파괴한다.
+- **지연 큐는 swap 으로 비운다.** 콜백이 큐에 또 넣어도 이번 순회를 건드리지 않는다.
+- **`isStructuralMutationFrozen()` 은 포스트틱 실행 시점에 이미 false 다.** 그래서
+  `executeOrDeferPostTick` 을 포스트틱 안에서 부르면 즉시 실행이라 굶지 않는다.
+- `addComponent` 가 틱 중 `nullptr` 을 돌려주는 계약(CLAUDE.md 의 함정)은 호출부 전부가
+  실제로 검사하고 있었다(`Scene` · `BenchScene` 등 — 확인했다).
+
+**고친 것 하나 — 그리고 왜 기계가 못 잡는지.** `PrefabAsset::isValid()` 가 `_bValid != 0` 을,
+`FrameRenderer` 가 `packet._bValid == 0` 을 쓰고 있었다. 규칙은 `SW_TRUE`/`SW_FALSE` 다
+(AGENTS: "값이 아니라 의미를 적는다"). `Style/BitfieldBoolean` 린트는 이것을 **일부러 건너뛴다** —
+`_bValid` 라는 이름이 이 저장소에서 두 가지이기 때문이다:
+
+| 이름 | 타입 | 자리 |
+|------|------|------|
+| `_bValid` | `uint8 : 1` | `PrefabAsset` · `RenderFramePacket` |
+| `_bValid` | `bool` | `EditorWorkspace` · `SceneDocument` |
+
+린트는 이름으로만 판정하므로, 같은 이름이 진짜 `bool` 로도 선언돼 있으면 어느 쪽인지 단정할 수
+없어 건너뛴다(오탐보다 누락이 낫다는 설계다 — 그 판단 자체는 맞다). **그래서 이 두 자리는 사람이
+지켜야 한다.** 고쳤고, 선언 옆에 왜 손으로 지켜야 하는지 적었다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · 헤더 23개 자립.
 
 ### 2026-09-18 (같은 병합을 두 번 했고, 한 파일은 include 게이트가 보지 못한다 — Engine/Module)
 
