@@ -57,9 +57,9 @@ namespace sw
 
     void BackendSwapController::shutdown()
     {
-        if ( _pEngineLoop == nullptr )
-            return;
-
+        // **훅부터 뗀다.** 예전에는 `_pEngineLoop == nullptr` 이면 그대로 돌아갔는데, 훅은 그 포인터와
+        // 상관없이 `initialize` 가 걸어 둔다 — 루프를 못 받은 채 초기화된 경우(도구·부분 초기화)에는
+        // 죽은 `this` 를 가리키는 콜백이 전역 변수에 그대로 남았다. 떼는 일은 조건 없이 해야 한다.
         GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};

@@ -119,12 +119,7 @@ namespace sw
     {
         _drainWorkers        = {};
         _onBeforeCommitBatch = {};
-
-        for ( auto& [name, ctx] : _mapModule )
-        {
-            ctx._onBeforeReload = {};
-            ctx._onAfterReload  = {};
-        }
+        clearReloadCallbacks();
 
         LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
         if ( engine::getModuleHandleProvider() == this )
@@ -325,6 +320,15 @@ namespace sw
     void LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
     {
         _drainWorkers = delegate;
+    }
+
+    void LiveReloadManager::clearReloadCallbacks()
+    {
+        for ( auto& [name, ctx] : _mapModule )
+        {
+            ctx._onBeforeReload = {};
+            ctx._onAfterReload  = {};
+        }
     }
 
     void LiveReloadManager::markGraphBroken( string_view reason )

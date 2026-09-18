@@ -221,7 +221,7 @@ cd build/Ninja-Debug/Bin
 
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
-| `App` | 2,512 | 부분. `FrameTimeline` 만 테스트가 생겼다(`AppTest`, 2026-09-19). `App.cpp`(428) · `ModuleHost`(745) · `LiveReloadManager`(854) · `BackendSwapController`(141) 은 안 훑었다. |
+| `App` | 2,512 | ✅ 2026-09-19 (3절 참고 — 디바이스 없는 RHI 에 `getDevice()` 를 묻던 세 자리) |
 | `Tools/ReflectionParser` | — | `ReflectionTest` 가 산출물을 보지만 폴더 훑기는 안 했다. |
 
 **손대기 전에 알 것.** `App` 은 실행 파일이라 **링크할 라이브러리가 없다** — 테스트는 소스를 파일
@@ -444,6 +444,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (디바이스가 없는 RHI 에 세 자리가 그대로 물었다 — Source/App 훑기)
+
+훑기 표에서 빠져 있던 `Source/App`(2,512줄)을 다른 폴더와 같은 방식으로 훑었다. 결함 넷.
+
+**1) 디바이스가 없는 RHI 에 `getDevice()` 를 묻는 자리가 셋.** `RHI::getDevice()` 는
+`return *_device;` 라 디바이스가 없으면 **널 참조**다 — `EngineLoop::shutdown` 은 이미 그 이유로
+`hasDevice()` 를 먼저 묻고 있었고, 그 주석에 "이게 없어서 '요청한 백엔드가 이 빌드에 없다' 라는
+정상적인 실패가 종료 경로에서 SEGFAULT 로 끝났다" 고 적혀 있다. 그런데 `ModuleHost` 의 세 자리가
+그 검사 없이 묻고 있었다:
+- `drainRenderWorkers()` — **종료 경로가 반드시 지나간다.** 백엔드 교체가 실패해 디바이스만
+  사라진 상태(`BackendSwapController::applyPendingChange` 의 실패 경로)로 앱을 닫으면 그 자리에서 죽는다.
+- `createEditorInstance()` · `createGameInstance()` — 초기화 인자로 디바이스를 넘기는 자리라
+  **만들기 전에** 없다는 것을 알 수 있다. 이제 로그를 남기고 false 를 돌려준다.
+
+**2) "콜백을 뗀다" 고 적어 두고 둘만 뗐다.** `ModuleHost::shutdown` 은 배수·배치 델리게이트만
+떼고 `setOnBeforeReload`/`setOnAfterReload` 로 **모듈마다 건 것**은 그대로 두었다. 그것도 이
+객체의 메서드를 가리키고, `App` 은 ModuleHost 를 먼저 지우고 등록부를 나중에 내린다. 지금 순서로는
+그 사이에 리로드가 돌지 않아 터지지 않지만, 절반만 떼면 다음 사람은 뗐다고 읽는다.
+이름을 두 곳에 적지 않으려고 등록부에 창구를 뒀다 — `LiveReloadManager::clearReloadCallbacks()`
+(키트 모듈 이름은 설정에서 오므로 거는 쪽이 다 알지도 못한다). 등록부 자신의 종료도 그 창구를 쓴다.
+
+**3) 훅을 떼는 일이 엉뚱한 조건에 걸려 있었다.** `BackendSwapController::shutdown` 은
+`_pEngineLoop == nullptr` 이면 그대로 돌아갔는데, 전역 변수 훅은 그 포인터와 무관하게
+`initialize` 가 건다 — 루프 없이 초기화된 경우 죽은 `this` 를 가리키는 콜백이 전역에 남는다.
+떼는 일을 조건 밖으로 옮겼다.
+
+**4) 문서.** `ModuleHost.h` 의 리로드 콜백 일곱·바인딩 둘·인스턴스 수명 여섯에 `@brief` 가 없었다.
+채웠다. 헤더 7개는 전부 단독으로 선다(`RunHeaderSelfContained.py --filter App`).
+
+**테스트 2건 신규** — `Test/SmokeTest/TestModuleHost.cpp` 의 `ModuleHostTest`(SmokeTest 가 이미 App
+모듈 소스를 파일 단위로 가져오는 타깃이라 거기 얹었다. `ModuleCompiler` 는 배포 구성에도 들어간다 —
+`App` 의 소스 규칙과 같게 맞췄다):
+- `SurvivesAnRhiThatHasNoDevice` — 디바이스 없는 `RHI` 하나로 초기화·재생성 거절·종료를 지나간다.
+  **고치기 전 코드로는 프로세스가 죽는다**(변이로 확인).
+- `ShutdownDetachesEveryCallbackItRegistered` — 콜백을 떼고 **실제로 리로드를 돌려**(핸들이 바뀌는
+  것이 증거다) 불리지 않는지 본다. `clearReloadCallbacks` 를 비우면 깨진다(변이로 확인).
+  배포 구성에는 `LiveReloadManager` 자체가 없어 Dev 전용이다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `-L nogpu` 양쪽 7/7 · `-L hostgpu` 양쪽 2/2 · 린트 17/17.
 
 ### 2026-09-19 (서비스를 만들고 꽂는 코드를 목록에서 생성한다 — 호스트 둘이 같은 스무 줄을 적고 있었다)
 

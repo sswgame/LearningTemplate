@@ -17,14 +17,20 @@ set(swSmokeDevSources "")
 if(NOT SW_SHIPPING_BUILD)
 	set(swSmokeDevSources
 		${CMAKE_SOURCE_DIR}/Source/App/Module/LiveReloadManager.cpp
-		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleCompiler.cpp
 	)
 endif()
 
+# `ModuleHost` 는 구성과 무관하게 가져온다 — 검사하는 것이 "디바이스가 없을 때의 호스트" 라
+# 배포 구성에서도 같은 자리를 지나가야 한다(그쪽은 게임이 정적 링크라 경로가 오히려 더 깊다).
 sw_addTestExecutable(SmokeTest
 	RUN_SERIAL
 	SOURCES
 		TestSmoke.cpp
+		TestModuleHost.cpp
+		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleHost.cpp
+		# `ModuleCompiler` 는 배포 구성에도 들어간다 — `App` 의 소스 규칙과 같다(App 은 배포에서
+		# `LiveReloadManager` 만 뺀다). `ModuleHost::shutdown` 이 구성과 무관하게 이 심볼을 부른다.
+		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleCompiler.cpp
 		${swSmokeDevSources}
 	LIBS
 		${smokeLibs}

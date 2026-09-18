@@ -96,6 +96,16 @@ namespace sw
          */
         void setDrainWorkers( DrainWorkersDelegate delegate );
 
+        /**
+         * @brief 모듈마다 걸어 둔 리로드 델리게이트를 **전부** 뗍니다.
+         * @details 콜백은 보통 `ModuleHost` 의 메서드를 가리킨다. 그 객체가 이 등록부보다 먼저
+         *          사라지므로, 사라지기 전에 자기 것을 떼어야 한다 — 그런데 **어떤 모듈에 걸었는지는
+         *          거는 쪽이 다 알지 못한다**(게임플레이 키트는 설정 파일에서 온다). 이름을 두 곳에
+         *          적는 대신, 아는 쪽(등록부)이 한 번에 떼어 준다.
+         * @note 배치·배수 델리게이트는 각자의 setter 로 떼십시오 — 여기서 건드리지 않는다.
+         */
+        void clearReloadCallbacks();
+
         /** @brief 혼합 DLL 그래프로 간주하고 이후 리로드를 막습니다. 프로세스 재시작이 필요합니다. */
         void markGraphBroken( string_view reason );
         /** @brief commit 실패·사이클·바인딩 실패로 그래프가 깨졌으면 true. */

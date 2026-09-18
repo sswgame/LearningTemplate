@@ -222,10 +222,18 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
         // 콜백은 ModuleHost 의 메서드를 가리킨다 — 이 객체가 사라지기 전에 떼어 낸다.
+        //
+        // **모듈마다 건 것까지 뗀다.** 예전에는 이 둘만 떼고 `setOnBeforeReload`/`setOnAfterReload` 로
+        // 모듈마다 건 델리게이트는 그대로 두었다 — 그것도 이 객체의 메서드를 가리킨다. `App` 은
+        // ModuleHost 를 먼저 지우고 나중에 LiveReloadManager 를 내리므로, 그 사이에 리로드가 한 번
+        // 돌면 죽은 객체로 뛰어든다. 지금은 안 도는 순서지만, "뗀다" 고 적어 두고 절반만 떼면
+        // 다음 사람은 뗀 줄 안다. 이름을 여기 다시 적지 않으려고 등록부 쪽에 창구를 뒀다
+        // (키트 모듈은 설정에서 오므로 이 자리에서는 이름을 알 수도 없다).
         if ( _pLiveReloadManager != nullptr )
         {
             _pLiveReloadManager->setDrainWorkers( {} );
             _pLiveReloadManager->setOnBeforeCommitBatch( {} );
+            _pLiveReloadManager->clearReloadCallbacks();
         }
 #endif
     }
@@ -433,7 +441,10 @@ namespace sw
     {
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle();
-        if ( _pRHI != nullptr )
+        // **디바이스가 없는 RHI 가 있다.** 백엔드 교체가 실패하면 RHI 객체는 남고 디바이스만 사라지는데,
+        // `getDevice()` 는 널 참조를 돌려주므로 그 상태로 물으면 죽는다 — 종료 경로가 그 자리를 반드시
+        // 지나간다(`EngineLoop::shutdown` 이 같은 이유로 `hasDevice()` 를 먼저 묻는다).
+        if ( _pRHI != nullptr && _pRHI->hasDevice() )
             _pRHI->getDevice().waitIdle();
 
         // 렌더 워커를 재웠으면 에디터의 "렌더 대기" 표시도 같이 버려야 한다.
@@ -703,6 +714,14 @@ namespace sw
 
     bool ModuleHost::createEditorInstance()
     {
+        // 디바이스를 인자로 넘기는 자리다 — 없으면 만들지 않는다. `getDevice()` 가 널 참조라
+        // 물어보는 것 자체가 죽는 길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있다.
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+        {
+            SW_LOG_ERROR( "RHI 디바이스가 없어 Editor 인스턴스를 만들지 않습니다." );
+            return false;
+        }
+
         _editor = _editorApi.create();
         if ( _editor == nullptr )
         {
@@ -724,6 +743,13 @@ namespace sw
 
     bool ModuleHost::createGameInstance()
     {
+        // 위 `createEditorInstance` 와 같은 이유 — 디바이스 없이 부르면 널 참조다.
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+        {
+            SW_LOG_ERROR( "RHI 디바이스가 없어 Game 인스턴스를 만들지 않습니다." );
+            return false;
+        }
+
         _game = _gameApi.create();
         if ( _game == nullptr )
         {
