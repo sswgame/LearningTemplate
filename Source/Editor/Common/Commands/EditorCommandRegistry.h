@@ -63,6 +63,18 @@ namespace sw::editor
         Count
     };
 
+    // **이 열거형의 번호는 계약이다.** 두 곳이 값의 순서 위에 서 있다:
+    //   · `EditorCommandRegistry.cpp` 의 이름 표 — 열거형 값을 그대로 첨자로 쓴다.
+    //   · `EditorCommandGui.cpp` 의 `toImGuiKey` — A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
+    // 둘 다 가운데에 값을 하나 끼우면 **조용히 엉뚱한 키**가 된다(단축키가 다른 명령을 실행한다).
+    // 개수 단정만으로는 그 경우를 잡지 못하므로 — 이름을 하나 더하면 개수는 다시 맞는다 —
+    // 자리를 직접 못 박는다. 키를 더하려면 **Space 앞이 아니라 Space 뒤에** 붙이고 여기를 고칠 것.
+    static_assert( static_cast<uint8>( EditorCommandKey::A ) == 1, "EditorCommandKey::A 의 자리가 바뀌었습니다" );
+    static_assert( static_cast<uint8>( EditorCommandKey::Z ) == 26, "EditorCommandKey 의 A..Z 가 연속이 아닙니다" );
+    static_assert( static_cast<uint8>( EditorCommandKey::F1 ) == 27, "EditorCommandKey::F1 의 자리가 바뀌었습니다" );
+    static_assert( static_cast<uint8>( EditorCommandKey::F12 ) == 38, "EditorCommandKey 의 F1..F12 가 연속이 아닙니다" );
+    static_assert( static_cast<uint8>( EditorCommandKey::Space ) == 39, "EditorCommandKey::Space 의 자리가 바뀌었습니다" );
+
     /** @brief 단축키 수정자 비트 */
     namespace commandmod
     {

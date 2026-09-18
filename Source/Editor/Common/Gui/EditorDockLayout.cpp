@@ -3,6 +3,7 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorData.h"
@@ -17,6 +18,39 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorDockLayoutInternal
+        {
+            /**
+             * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록돼 있는지 확인합니다.
+             * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받는다** — 패널 제목이
+             *          바뀌면 기본 배치만 말없이 깨진다. `EditorCommandRegistry::validate` 가
+             *          커맨드 표에 대해 하는 일을 여기서도 한다.
+             */
+            static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockId )
+            {
+                ImGui::DockBuilderDockWindow( pTitle, dockId );
+
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return;
+
+                for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+                {
+                    if ( entry._title == pTitle )
+                        return;
+                }
+                SW_LOG_WARNING( "기본 도킹 배치가 '%#' 를 찾지 못했습니다 — 패널 제목이 바뀌었습니까? "
+                                "그 패널은 도킹되지 않고 떠 있게 됩니다.",
+                                pTitle );
+            }
+        };
+    } // namespace
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -198,18 +232,22 @@ namespace sw::editor
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
         (void)dockTop;
 
-        ImGui::DockBuilderDockWindow( "Hierarchy", dockLeft );
-        ImGui::DockBuilderDockWindow( "Inspector", dockRight );
+        // 기본 배치는 패널 **제목 문자열**로 붙인다(ImGui 의 API 가 그렇다). 그래서 제목이
+        // 패널 쪽에서 바뀌면 여기 적힌 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다
+        // — `DockBuilderDockWindow` 는 모르는 이름도 조용히 받는다. 등록된 패널 제목과 대조해
+        // 어긋나면 알리게 했다(도구 패널은 이미 레지스트리에서 이름을 받아 오고 있었다).
+        EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
+        EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 
-        ImGui::DockBuilderDockWindow( "Game View", dockMain );
-        ImGui::DockBuilderDockWindow( "Profiler", dockMain );
+        EditorDockLayoutInternal::dockCheckedWindow( "Game View", dockMain );
+        EditorDockLayoutInternal::dockCheckedWindow( "Profiler", dockMain );
         EditorAssetTypeRegistry::forEachToolPanelTitle( [dockMain]( const utf8* pTitle )
         {
             ImGui::DockBuilderDockWindow( pTitle, dockMain );
         } );
 
-        ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
-        ImGui::DockBuilderDockWindow( "Output Log", dockBottom );
+        EditorDockLayoutInternal::dockCheckedWindow( "Content Browser", dockBottom );
+        EditorDockLayoutInternal::dockCheckedWindow( "Output Log", dockBottom );
 
         ImGui::DockBuilderFinish( id );
     }

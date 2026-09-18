@@ -28,6 +28,9 @@ namespace sw::editor
             static_assert( sizeof( _s_arrKeyName ) / sizeof( _s_arrKeyName[0] ) == static_cast<size_t>( EditorCommandKey::Count ),
                            "EditorCommandKey 와 표시 이름 표의 개수가 다릅니다" );
 
+            // 개수만 보는 단정은 **가운데 삽입**을 잡지 못한다(이름을 하나 더하면 개수가 다시 맞는다).
+            // 그 경우는 열거형 자리를 못 박은 헤더의 단정이 잡는다 — `EditorCommandKey` 선언 바로 아래.
+
             /** @brief 수정자와 키 이름을 outLabel 뒤에 붙입니다. 키가 없으면 아무것도 하지 않습니다. */
             static void appendShortcut( const EditorCommandShortcut& shortcut, fixed_string<constant::kMaxBuffer64>& outLabel )
             {

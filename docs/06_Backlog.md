@@ -173,8 +173,8 @@ cd build/Ninja-Debug/Bin
 | `Common/Backend` | 2,236 | ✅ 2026-09-18 (3절 참고 — 실패를 수습하는 경로가 실패했다. **테스트 없음**) |
 | `Common/Commands` | 4,478 | ✅ 2026-09-18 (3절 참고 — 저장이 실패해도 "저장됨" 이 됐다) |
 | `Common/Config` | 299 | ✅ 2026-09-18 (3절 참고 — 같은 판정을 네 곳이 손으로 적고 있었다) |
-| `Common/Gui` | 3,740 | ← 다음 |
-| `Common/Widgets` | 1,277 | |
+| `Common/Gui` | 3,740 | ✅ 2026-09-18 (3절 참고 — 조용히 어긋날 수 있던 자리 둘을 소리 나게) |
+| `Common/Widgets` | 1,277 | ← 다음 |
 | `Common/Workspace` | 3,764 | |
 | `Panels` | 11,011 | |
 | `Popups` | 1,008 | |
@@ -398,6 +398,46 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (조용히 어긋날 수 있던 자리 둘을 소리 나게 — Editor/Common/Gui)
+
+**동작 결함은 찾지 못했다.** 대신 **지금은 맞지만 다음에 손대면 조용히 틀어지는** 자리 둘을
+컴파일 에러와 경고로 바꿨다.
+
+**1) `EditorCommandKey` 의 번호가 계약인데 아무도 지키지 않았다.** 이 열거형 위에 두 곳이 서
+있다 — 이름 표(`_s_arrKeyName`)는 열거형 값을 **그대로 첨자**로 쓰고, `toImGuiKey` 는 A..Z 와
+F1..F12 를 **뺄셈**으로 옮긴다. 있던 단정은 **개수**뿐이었다.
+
+개수 단정은 **가운데 삽입을 잡지 못한다** — 키를 하나 끼우면 이름도 하나 늘어나 개수가 다시
+맞고, 그 뒤의 이름이 전부 한 칸씩 밀리며 ImGui 키도 어긋난다. 결과는 **단축키가 다른 명령을
+실행하는 것**이고, 빌드는 통과한다. 열거형 선언 바로 아래에 자리를 못 박았다(`A==1` · `Z==26` ·
+`F1==27` · `F12==38` · `Space==39`). 실증: `M` 과 `N` 사이에 `Escape` 를 끼워 보면 **예전에는
+그대로 빌드되고** 지금은 네 줄짜리 컴파일 에러가 이유를 말한다. ImGui 쪽 연속성 단정은 이미
+있었다 — 우리 쪽만 없었다.
+
+**2) 기본 도킹 배치가 패널 제목 문자열에 묶여 있었다.** `applyDefaultDockLayout` 이
+`"Hierarchy"` · `"Inspector"` · `"Game View"` · `"Profiler"` · `"Content Browser"` ·
+`"Output Log"` 여섯을 리터럴로 적는데, 그 제목의 정본은 각 패널의 `getPanelTitle()` 이다.
+`ImGui::DockBuilderDockWindow` 는 **모르는 이름도 조용히 받으므로**, 제목을 바꾸면 그 패널은
+아무 말 없이 도킹되지 않고 떠 있게 된다. 지금은 여섯 다 맞다(확인함) — 그래서 이것은 결함이
+아니라 **깨질 준비가 된 자리**다. 등록된 패널 제목과 대조해 어긋나면 경고하게 했다
+(`EditorCommandRegistry::validate` 가 커맨드 표에 하는 일과 같다). 바로 옆 **도구 패널은 이미
+레지스트리에서 이름을 받아 오고 있었다** — 고정 여섯만 남아 있었던 것이다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** `EditorThemeUtil` 의 push/pop 세 쌍은 개수가 맞다
+(1/1 · 3/3 · 3/3). 단축키 판정(`isShortcutPressed`)은 수정자를 **정확히** 비교하므로
+Ctrl+Shift+S 를 누를 때 Ctrl+S 가 같이 뜨지 않는다. `IEditorPopup::onClose` 는 `close()` 가
+부른다(죽은 훅이 아니다). Gui 멤버 55개에 "쓰기만 하고 읽지 않는" 것은 없다.
+
+**손대지 않은 것.** `EditorThemeUtil` 의 아홉(`getBorderColor` · `getPanelBgColor` ·
+`getWindowBgColor` · `textAccent` · `textMuted` · accent push/pop 두 쌍)은 **에디터 어디에서도
+불리지 않는다.** 그러나 이것은 팔레트를 채우는 API 라서, 지운다고 무엇이 나아지지 않고 오히려
+다음에 테두리를 그리는 사람이 색을 인라인으로 다시 적게 만든다(이 클래스가 막으려는 것이 바로
+그것이다). 팔레트 **필드**는 죽어 있지 않다 — `_textMuted` 는 `ImGuiCol_TextDisabled` 로 들어간다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EditorTest` 57건 유지. **새 런타임 테스트는 없다** — 하나는 컴파일 타임 보장이고
+(변이로 확인) 다른 하나는 ImGui 를 링크해야 한다.
 
 ### 2026-09-18 (같은 판정을 네 곳이 손으로 적고 있었다 — Editor/Common/Config)
 

@@ -398,7 +398,12 @@ namespace sw::editor
             static_assert( ImGuiKey_Z - ImGuiKey_A == 25, "ImGuiKey 의 문자 키가 연속이 아닙니다" );
             static_assert( ImGuiKey_F12 - ImGuiKey_F1 == 11, "ImGuiKey 의 F 키가 연속이 아닙니다" );
 
-            /** @brief 자체 키 열거형을 ImGuiKey 로 옮깁니다. 모르는 키는 ImGuiKey_None 입니다. */
+            /**
+             * @brief 자체 키 열거형을 ImGuiKey 로 옮깁니다. 모르는 키는 ImGuiKey_None 입니다.
+             * @details 표가 아니라 **뺄셈**으로 옮긴다 — 그래서 양쪽 열거형이 A..Z · F1..F12 구간에서
+             *          연속이라는 가정 위에 서 있다. ImGui 쪽은 바로 위 단정이, 우리 쪽은
+             *          `EditorCommandKey` 선언 아래의 자리 단정이 지킨다.
+             */
             static ImGuiKey toImGuiKey( EditorCommandKey key )
             {
                 const int32 keyValue = static_cast<int32>( key );
