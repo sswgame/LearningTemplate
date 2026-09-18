@@ -174,8 +174,8 @@ cd build/Ninja-Debug/Bin
 | `Common/Commands` | 4,478 | ✅ 2026-09-18 (3절 참고 — 저장이 실패해도 "저장됨" 이 됐다) |
 | `Common/Config` | 299 | ✅ 2026-09-18 (3절 참고 — 같은 판정을 네 곳이 손으로 적고 있었다) |
 | `Common/Gui` | 3,740 | ✅ 2026-09-18 (3절 참고 — 조용히 어긋날 수 있던 자리 둘을 소리 나게) |
-| `Common/Widgets` | 1,277 | ← 다음 |
-| `Common/Workspace` | 3,764 | |
+| `Common/Widgets` | 1,277 | ✅ 2026-09-18 (3절 참고 — 죽어 있으면서 함정인 API 하나) |
+| `Common/Workspace` | 3,764 | ← 다음 |
 | `Panels` | 11,011 | |
 | `Popups` | 1,008 | |
 | `Viewport` | 1,945 | |
@@ -398,6 +398,34 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (죽어 있으면서 함정이던 API 하나 — Editor/Common/Widgets)
+
+**`EditorWidgets::drawSearchFilter` 를 지웠다.** `string&` 을 받는 검색창인데, 안에서는
+**256바이트 스택 버퍼에 베껴** 편집하고 되쓰는 방식이라 **그보다 긴 필터를 조용히 잘랐다**
+(길면 첫 그리기에서 잘린 값이 버퍼에 들어가고, 사용자가 한 글자라도 치는 순간 그 잘린 값이
+원본에 되쓰인다).
+
+바로 아래 형제 `drawTextField` 는 같은 문제를 **제대로** 풀어 두었다 — `string` 을 그대로
+넘기고 `ImGuiInputTextFlags_CallbackResize` 로 필요한 만큼 늘린다(주석에 "길이 상한이 없다"고
+적혀 있다). 즉 `string&` 을 받는 입력 둘 중 하나만 옳았다.
+
+**그런데 부르는 곳이 하나도 없었다**(`Source` · `Test` 전체 검색). 그래서 고치는 대신 지웠다 —
+죽은 데다 함정인 API 를 남겨 두면 "문자열 검색 위젯" 을 찾는 다음 사람이 정확히 그리로 간다.
+왜 지웠는지는 `drawTextField` 문서에 남겼다(`string&` 입력은 이제 이것 하나다). 버퍼를 호출부가
+소유하는 `drawSearchField` 는 그대로다 — 거기서는 크기를 고르는 것이 호출부의 결정이다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** ImGui 스택 짝은 모두 맞다:
+`pushInspectorStyle`/`popInspectorStyle`(3/3) · `drawChip`(3/3) · `drawToggleButton`(1/1) ·
+`drawVec3Control`(축마다 3/3, ID·StyleVar 짝) · `beginComponentCard`/`endComponentCard`
+(닫힌 카드는 begin 이 직접 `PopID` 하고, 유일한 호출부 `InspectorPanel` 이 열린 경우에만 end 를
+부른다). 접힌 카드에서 "Remove component" 를 눌러도 동작한다 — `bRemove` 처리가 분기 **밖**에
+있다. `updateListSelection` 은 경계를 앞뒤로 다 검사한다. `drawNoSearchResultHint` 는 검색어를
+서식 **인자**로 넘긴다(`%` 가 든 검색어에 안전). `EditorListFilter` 는 종단자 없는 조각까지
+테스트 5건이 덮고 있다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15. **새 테스트는 없다** — 지운 것이고, 남은 위젯은 ImGui 를 링크해야 한다.
 
 ### 2026-09-18 (조용히 어긋날 수 있던 자리 둘을 소리 나게 — Editor/Common/Gui)
 

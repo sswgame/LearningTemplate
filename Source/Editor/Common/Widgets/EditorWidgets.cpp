@@ -280,16 +280,6 @@ namespace sw::editor
     {
     }
 
-    bool EditorWidgets::drawSearchFilter( const utf8* pId, string& filterText, float32 width )
-    {
-        utf8 arrBuffer[constant::kMaxBuffer256]{};
-        StringUtil::strncpy( arrBuffer, filterText.c_str(), sizeof( arrBuffer ) - 1 );
-        const bool bChanged = drawSearchField( pId, arrBuffer, sizeof( arrBuffer ), "Search...", width, true );
-        if ( bChanged )
-            filterText = arrBuffer;
-        return bChanged;
-    }
-
     bool EditorWidgets::drawTextField( const utf8* pLabel, string& text, float32 width )
     {
         if ( width < 0.0f )

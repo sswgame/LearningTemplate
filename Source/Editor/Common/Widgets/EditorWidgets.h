@@ -133,12 +133,12 @@ namespace sw::editor
         static void drawPropertyRowEnd();
 
         /**
-         * @brief 검색 텍스트 필터 및 클리어(X) 버튼을 포함하는 일체형 검색 위젯을 그립니다.
-         */
-        static bool drawSearchFilter( const utf8* pId, string& filterText, float32 width = 0.0f );
-
-        /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력. 값이 바뀌면 true.
+         * @note **`string&` 을 받는 입력은 이것 하나다.** 예전에 `drawSearchFilter` 가 하나 더
+         *       있었는데, 그쪽은 `string` 을 256바이트 스택 버퍼에 베껴 편집하고 되쓰는 방식이라
+         *       **그보다 긴 필터를 조용히 잘랐다.** 부르는 곳이 하나도 없었고(죽은 API), 남겨 두면
+         *       "문자열 검색 위젯" 을 찾는 사람이 그 함정으로 간다 — 그래서 지웠다. 검색창이
+         *       필요하면 `drawSearchField`(호출부가 버퍼를 소유한다)나 이 함수를 쓴다.
          * @details 패널들이 `fixed_string<N> buf{ text.c_str() }` 로 임시 버퍼를 만들어 넣었다 빼는 일을
          *          16곳에서 각자 하고 있었다. 버퍼 크기(64·128·256·512)를 자리마다 골랐고, **그 크기를
          *          넘는 문자열은 잘려서 되돌아갔다** — 긴 대사 한 줄을 편집하면 꼬리가 사라진다.
