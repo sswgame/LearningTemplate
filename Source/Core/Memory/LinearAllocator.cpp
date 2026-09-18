@@ -74,12 +74,18 @@ namespace sw
                     return reinterpret_cast<void*>( alignedPtr );
             }
 
-            // 블록이 가득 찼으므로 새 블록을 할당합니다.
+            // 블록이 가득 찼다. **이미 들고 있는 다음 블록부터 본다** — reset() 은 오프셋만 되돌리므로
+            // 그 뒤의 블록들은 비어 있는 채로 남아 있다. 여기서 곧장 새 블록을 잡으면 그 빈 블록들은
+            // 다음 clear() 까지 놀고, reset 마다 표가 한 칸씩 늘면서 블록 용량은 배로 커진다
+            // (EventDispatcher 는 프레임마다 reset 한다 — 그 자리에서 프레임당 메모리가 자란다).
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _currentBlockIndex.load( std::memory_order_acquire ) == blockIndex )
             {
-                if ( allocateNewBlock( size + alignment ) == false )
-                    return nullptr;
+                if ( advanceToHeldBlock( blockIndex, size + alignment ) == false )
+                {
+                    if ( allocateNewBlock( size + alignment ) == false )
+                        return nullptr;
+                }
             }
         }
     }
@@ -115,6 +121,27 @@ namespace sw
 
         _blockCount.store( 0, std::memory_order_release );
         _currentBlockIndex.store( 0, std::memory_order_release );
+    }
+
+    bool LinearAllocator::advanceToHeldBlock( size_t fromBlockIndex, size_t requiredCapacity )
+    {
+        const size_t blockCount = _blockCount.load( std::memory_order_acquire );
+        for ( size_t blockIndex = fromBlockIndex + 1; blockIndex < blockCount; ++blockIndex )
+        {
+            const Block* pBlock = _arrBlock[blockIndex].load( std::memory_order_acquire );
+            if ( pBlock == nullptr || pBlock->_capacity < requiredCapacity )
+                continue;
+
+            // 현재 블록보다 뒤에 있는 블록은 아직 아무도 쓰지 않았다(오프셋은 한 방향으로만 자라고
+            // reset 이 전부 0 으로 되돌린다). 그래도 확인하고 넘어간다 — 틀렸다면 이미 내준 메모리를
+            // 다시 내주는 것이라 조용히 깨진다.
+            if ( pBlock->_offset.load( std::memory_order_acquire ) != 0 )
+                continue;
+
+            _currentBlockIndex.store( blockIndex, std::memory_order_release );
+            return true;
+        }
+        return false;
     }
 
     bool LinearAllocator::allocateNewBlock( size_t minCapacity )

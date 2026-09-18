@@ -194,21 +194,39 @@ namespace sw
 
         XmlNode      tiles = root.appendChild( "tiles" );
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
+
+        // **네 배열이 `_width × _height` 와 같다는 보장은 이 구조체에 없다.** 필드가 전부 공개라
+        // 크기만 바꾸고 칸을 안 늘린 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
+        // 적는다(Debug 는 vector 단언에서 죽고, 배포본은 조용히 쓰레기를 쓴다). 모자란 칸은
+        // **읽기 쪽 기본값**으로 적는다 — `loadFromXml` 이 `<t>` 가 없을 때 넣는 값과 같아서
+        // 왕복이 어긋나지 않는다(통행 가능 · 조우 없음 · 기본 틴트).
+        size_t tileCount = MathUtil::min( count, _listWalkable.size() );
+        tileCount        = MathUtil::min( tileCount, _listEncounter.size() );
+        tileCount        = MathUtil::min( tileCount, _listPassThrough.size() );
+        tileCount        = MathUtil::min( tileCount, _listVisual.size() );
+        if ( tileCount < count )
+        {
+            SW_LOG_WARNING( "타일 배열이 %#×%# 보다 짧습니다(%# 칸) — 모자란 칸은 기본값으로 적습니다.",
+                            _width, _height, static_cast<uint32>( tileCount ) );
+        }
+
+        const Visual defaultVisual{};
         for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
         {
+            const bool    bHasTile   = tileIndex < tileCount;
             XmlNode       tileNode   = tiles.appendChild( "t" );
-            const Visual& tileVisual = _listVisual[tileIndex];
+            const Visual& tileVisual = bHasTile ? _listVisual[tileIndex] : defaultVisual;
             tileNode.appendAttribute( "h", static_cast<int32>( tileVisual._height ) );
-            if ( _listEncounter[tileIndex] != 0 )
+            if ( bHasTile && _listEncounter[tileIndex] != 0 )
                 tileNode.appendAttribute( "enc", 1 );
-            if ( _listPassThrough[tileIndex] != 0 )
+            if ( bHasTile && _listPassThrough[tileIndex] != 0 )
                 tileNode.appendAttribute( "pt", 1 );
             if ( tileVisual._atlasId != 0 )
                 tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasId ) );
             tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
             tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
             tileNode.appendAttribute( "tb", static_cast<int32>( tileVisual._tintB ) );
-            tileNode.setValue( _listWalkable[tileIndex] != 0 ? "1" : "0" );
+            tileNode.setValue( ( bHasTile == false || _listWalkable[tileIndex] != 0 ) ? "1" : "0" );
         }
 
         XmlNode warps = root.appendChild( "warps" );

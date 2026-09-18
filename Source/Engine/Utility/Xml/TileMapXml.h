@@ -62,7 +62,12 @@ namespace sw
         SW_API bool loadFromXml( string_view xml );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         SW_API bool save( string_view path ) const;
-        /** @brief 타일맵 XML 본문을 만듭니다. */
+        /**
+         * @brief 타일맵 XML 본문을 만듭니다.
+         * @details `<t>` 는 언제나 `_width × _height` 개를 적는다. 네 타일 배열이 그보다 짧으면
+         *          (크기만 바꾸고 칸을 안 늘린 상태) 모자란 칸은 **읽기 쪽 기본값**으로 적고
+         *          경고를 남긴다 — 배열 밖을 읽지 않으면서 왕복이 어긋나지도 않는 쪽이다.
+         */
         SW_API string toXml() const;
     };
 } // namespace sw

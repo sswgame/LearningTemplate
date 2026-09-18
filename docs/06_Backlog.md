@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-18 · 기준 커밋 `a14ab1df`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `f0acf633`
 
 ---
 
@@ -78,11 +78,11 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 171 / EngineTest 435 / ReflectionTest 100(+1 skip) / EditorTest 51 / SmokeTest 19
-#   Shipping : 163(+8 skip) / 396(+2 skip) / 96(+5 skip) / 51 / 1   ← 스킵은 전부 Dev 전용 케이스
-#   (2026-09-11 실측. Debug EngineTest 는 GPU 포함 전체 수이고 ctest 의 EngineTest_NoGPU 는 398,
-#    Shipping 의 396(+2 skip)도 그 NoGPU 수다 — Shipping 은 GPU 스위트를 애초에 돌리지 않는다.
-#    409 → 398 은 실제 디바이스를 만드는 14 개를 `RenderPassGpuTest` 스위트로 갈라 뺀 결과다.)
+#   Debug    : CoreTest 209 / EngineTest 525 / ReflectionTest 102(+1 skip) / EditorTest 63 /
+#              EditorUiTest 2 / AppTest 4 / SmokeTest 19   ← ctest -L nogpu 는 7/7
+#   Shipping : 201(+8 skip) / 518(+3 skip) / 98(+5 skip) / 63 / 2 / 4 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   (2026-09-19 실측. Debug EngineTest 는 GPU 포함 전체 수다.
+#    ctest 항목이 7개가 된 것은 `EditorUiTest`(2026-09-18)와 `AppTest`(2026-09-19)가 늘어서다.)
 #   WSL-Debug: ctest 12/12 (린트 6 포함). EngineTest 는 418 통과 + 8 skip = 426 이고,
 #              스킵은 DX11/DX12 처럼 리눅스에 아예 없는 타깃들이다. (2026-09-11 실측)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
@@ -207,6 +207,21 @@ cd build/Ninja-Debug/Bin
 | `RuntimeAPI` | 465 | ✅ 2026-09-18 (3절 참고 — 모듈 경계에 ABI 스탬프가 없었다) |
 | `GameFramework` (전체) | 6,777 | ✅ 2026-09-18 (3절 참고 — 널 가능 서비스 사용 린트 확대 · 죽은 등록 경로 제거) |
 | `Games/Empty` | 1,054 | ✅ 2026-09-18 (같은 훑기에 포함. 결함 없음) |
+
+### 1-0d. `Source/App` · `Tools` 훑기 — 아직 안 했다 (2026-09-19)
+
+훑기 표 셋(`Core` · `Engine` · `Editor` · `GameFramework`/`Games`/`RuntimeAPI`)에 **`App` 과 `Tools` 가
+없다.** 빠뜨린 것이지 끝난 것이 아니다.
+
+| 폴더 | 줄 수 | 상태 |
+|------|------:|------|
+| `App` | 2,512 | 부분. `FrameTimeline` 만 테스트가 생겼다(`AppTest`, 2026-09-19). `App.cpp`(428) · `ModuleHost`(745) · `LiveReloadManager`(854) · `BackendSwapController`(141) 은 안 훑었다. |
+| `Tools/ReflectionParser` | — | `ReflectionTest` 가 산출물을 보지만 폴더 훑기는 안 했다. |
+
+**손대기 전에 알 것.** `App` 은 실행 파일이라 **링크할 라이브러리가 없다** — 테스트는 소스를 파일
+단위로 가져와야 한다(`SmokeTest` 가 `LiveReloadManager`·`ModuleCompiler` 를, `AppTest` 가
+`FrameTimeline` 을 그렇게 쓴다). 창·RHI·모듈이 필요한 것은 단위 테스트로 끌고 오지 말고 실기동으로
+본다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -408,6 +423,66 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (테스트가 없던 자리를 훑었다 — 그 중 둘은 실제로 깨져 있었다)
+
+폴더 훑기가 코드는 다 지났지만 **테스트가 한 줄도 없는 단위**가 남아 있었다. "이름이 테스트에
+한 번도 나오지 않는 헤더" 를 기계적으로 뽑고(대소문자 무시, 플랫폼 폴더 제외), 위험도(틀렸을 때
+증상이 얼마나 엉뚱한 곳을 가리키나) × 테스트 가능성으로 넷을 골랐다. **고른 넷 중 둘에서 실제
+결함이 나왔다** — 테스트가 없다는 것은 "괜찮다" 가 아니라 "아무도 안 봤다" 였다.
+
+**1) `LinearAllocator::reset` 이 첫 블록만 다시 썼다 (결함).** 헤더는 "오프셋만 되돌리고 메모리는
+유지한다" 고 적어 두었는데, 현재 블록이 가득 차면 `allocate` 가 **언제나 새 블록을 잡았다.** 그래서
+reset 뒤에는 앞서 잡아 둔 빈 블록들이 그대로 놀고, 표(64칸)는 reset 마다 한 칸씩 줄며, 블록 용량은
+직전의 두 배로 커진다 — **reset 을 반복할수록 메모리가 배로 자란다.** 쓰는 곳이 `EventDispatcher` 의
+프레임 할당기 둘(`_arrFrameAllocator[2]`, 64KB)이라, 이벤트가 한 프레임에 64KB 를 넘기는 순간부터
+그 프레임마다 128KB → 256KB → … 가 붙는다. 형제인 `FrameArenaAllocator` 는 같은 자리에서 이미
+**다음 청크로 넘어간 뒤 새로 잡는다**(`allocateSlow` 의 `_currentChunkIndex++`) — 한쪽만 그 걸음이
+빠져 있었다. `advanceToHeldBlock` 을 추가해 맞췄다(가득 찬 블록 **다음**부터, 요청을 담을 수 있는
+빈 블록으로 먼저 옮긴다).
+
+**2) `TileMapXmlData::toXml` 이 배열 밖을 읽었다 (결함).** 타일 루프가 `_width × _height` 만 믿고
+네 배열(`_listWalkable`·`_listEncounter`·`_listPassThrough`·`_listVisual`)을 **검사 없이** 인덱싱했다.
+이 구조체는 필드가 전부 공개라 크기만 바꾸고 칸을 안 늘린 채 저장할 수 있고, 그러면 Debug 는
+vector 단언에서 죽고 **배포본은 조용히 남의 메모리를 파일에 적는다.** `Engine/Utility` 훑기에서 고친
+"넷 중 하나만 표 크기를 보지 않았다" 와 같은 모양이다. 모자란 칸은 **읽기 쪽 기본값**으로 적게 했다
+— `loadFromXml` 이 `<t>` 가 없을 때 넣는 값과 같아서 왕복이 어긋나지 않는다(경고는 남긴다).
+
+**3) 씬 라이트의 CPU 절반에 테스트가 없었다.** `LightRegistry` 와 `collectSceneLights` 는 매 프레임
+두 곳(`EngineLoop` · `FrameRenderer`)이 부르는데 한 줄도 덮여 있지 않았다. 결함은 없었고, 대신
+**깨지면 셰이더를 먼저 의심하게 되는 계약**들을 못박았다: 등록/해제 대칭(지연 파괴는 플러시 전까지
+남는다는 것까지) · 등록의 멱등성 · 활성 판정은 수집하는 쪽의 몫(컴포넌트·소유자·**부모 계층** 셋 다)
+· 그림자 슬롯은 그림자를 드리우는 **첫 방향광** 하나 · 원뿔은 코사인으로 실린다 · 안쪽 원뿔이 바깥을
+넘지 않는다 · `findActiveDirectionalLight` 는 켜진 것만 돌려준다.
+
+**4) `Source/App` 에는 단위 테스트가 하나도 없었다.** 훑기 표에도 `App` 은 없다(Core · Engine ·
+Editor · GameFramework · Games · RuntimeAPI 만 있다). `App` 은 실행 파일이라 링크할 라이브러리가
+없어서, `SmokeTest` 가 하듯 **소스를 파일 단위로 가져오는** 작은 타깃을 하나 더 뒀다 — `Test/AppTest`
+(`EditorUiTest` 와 같은 방식이다). 첫 손님은 `FrameTimeline`: 가변 델타 클램프 · 고정 스텝 상한 ·
+**상한을 넘긴 잔액을 버린다**(남기면 다음 프레임이 더 많은 스텝을 부르는 되먹임이 된다) · 0 이하
+설정의 기본값 폴백 · `start` 가 타이머를 되감는다. 시간을 진짜로 재므로 단언은 **한 방향으로만**
+건다(충분히 자고 상한에서 잘렸는지). 창·RHI·모듈이 필요한 것은 넣지 않는다 — 그 경계가 무너지면
+이 타깃이 "App 을 통째로 세우는 두 번째 자리" 가 된다.
+
+**새 테스트 22건, 전부 변이로 확인했다.** 라이트 7건은 7개의 변이(활성 필터 제거 · 그림자 독점 제거 ·
+코사인 제거 · 해제 누락 · 중복 방지 제거 · 원뿔 클램프 제거 · 활성 판정 제거)에 전부 걸리고, 타일맵
+6건은 초기화·폴백·경계·틴트·`h` 유도 변이에 걸리며(둘은 변이 시 프로세스가 죽는다), 할당기 5건은
+정렬·크기0·CAS·`_blockCount` 변이에 걸린다. 프레임 타임라인 4건은 클램프·잔액·되감기 변이에 걸린다.
+
+**남은 구멍(다음 사람을 위해).** 같은 방식으로 뽑았지만 이번에 손대지 않은 것들이다.
+
+| 대상 | 왜 남겼나 |
+|------|-----------|
+| `BoxCollider2DComponent::intersects` | **두 경로가 갈린다.** 물리 바디가 등록되기 전(에디터·테스트)에는 CPU AABB 로 답하고, 등록된 뒤(플레이)에는 `PhysicsWorld::overlaps` 가 **레이어 행렬까지** 본다. 기하는 양쪽 다 `<=` 라 같지만 레이어를 끄면 답이 달라진다 — 어느 쪽이 맞는지부터 정해야 테스트를 쓸 수 있다. |
+| `FileLogOutput` · `ConsoleLogOutput` | `LogTest` 는 출력 장치를 흉내 낸 것만 본다. 실제 파일 출력(열기 실패·플러시·회전)은 안 덮인다. |
+| `CallStackCapture` | `CrashReportTest` 가 있지만 이 헤더를 직접 부르는 테스트는 없다. 심볼 해석이라 플랫폼을 탄다. |
+| `PagedArray` · `InlineAllocator` | 컨테이너인데 테스트가 없다. 쓰는 곳이 각각 둘·하나라 위험도는 낮다. |
+| `SerializeReflectAny` | `ReflectAnyTest` 1건이 있지만 직렬화 왕복은 안 본다. |
+| `App/ModuleHost` · `BackendSwapController` | `EngineLoop` 과 창이 필요하다. 실기동(`-gv_rhiSwapAtFrame`)이 더 싸다 — 3절의 "백엔드 교체" 항목에 절차가 있다. |
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 **7/7**(`AppTest` 추가) ·
+`-L hostgpu` 양쪽 1/1 · 린트 16/16 · 새 테스트 22건 · ASan(Debug-ASAN)에서도 22건 전부 통과
+(할당기와 XML 쓰기를 건드렸으므로 여기가 본 검사다 — 경계 밖 접근·겹친 할당은 ASan 이 본다).
 
 ### 2026-09-18 ("테스트할 수 없다" 고 적은 것 중 셋은 틀린 말이었다 — 테스트 보강)
 

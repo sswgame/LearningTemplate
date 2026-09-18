@@ -64,6 +64,16 @@ namespace sw
         void clear();
 
     private:
+        /**
+         * @brief 이미 확보해 둔 블록 중 requiredCapacity 를 담을 빈 블록으로 전환합니다.
+         * @details reset() 이 오프셋만 되돌리므로 그 뒤에는 앞서 잡아 둔 블록들이 비어 있다.
+         *          새 블록을 잡기 전에 그것부터 쓴다. `_mutex` 를 잡은 채 호출해야 합니다.
+         * @param fromBlockIndex 방금 가득 찬 블록의 인덱스. 그 **다음**부터 찾습니다.
+         * @param requiredCapacity 정렬 여유를 포함해 담아야 하는 바이트.
+         * @return 전환했으면 true, 쓸 수 있는 블록이 없으면 false.
+         */
+        bool advanceToHeldBlock( size_t fromBlockIndex, size_t requiredCapacity );
+
         /** @brief minCapacity 이상인 새 블록을 할당하고 현재 블록으로 전환합니다. _mutex 를 잡은 채 호출해야 합니다. */
         bool allocateNewBlock( size_t minCapacity );
 

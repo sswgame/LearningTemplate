@@ -4,7 +4,9 @@
 > ---
 
 엔진과 코어 프레임워크의 안정성을 보장하기 위한 자동화된 테스트 코드들이 모여있는 디렉터리입니다.
-테스트는 각 역할과 종속성에 따라 5개의 메인 프로젝트와 1개의 프레임워크로 명확하게 분리되어 있습니다.
+테스트는 각 역할과 종속성에 따라 7개의 메인 프로젝트와 1개의 프레임워크로 명확하게 분리되어 있습니다.
+**타깃이 곧 경계다** — 어떤 의존성을 링크하느냐로 갈라 두었으므로, 새 테스트는 그 의존성이
+이미 있는 타깃에 넣는다(없으면 작은 타깃을 하나 더 둔다. `EditorUiTest`·`AppTest` 가 그렇게 생겼다).
 
 ## 📁 테스트 프로젝트 구조
 
@@ -15,6 +17,8 @@
 | **`ReflectionTest`** | 빌드 파이프라인(툴체인) 테스트 | 런타임 코드가 아닌, C++ 헤더를 분석하여 `*.gen.cpp`를 올바르게 자동 생성해 내는지 `ReflectionParser` 툴의 기능을 검증합니다. |
 | **`SmokeTest`** | 런타임 모듈 통합 스모크 테스트 | 게임 DLL 핫 리로드(`LiveReloadManager`)나 RHI 모듈 동적 로드 등 시스템 전체가 런타임에 제대로 맞물려 돌아가는지를 검증합니다. |
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |
+| **`EditorUiTest`** | ImGui 컨텍스트가 필요한 에디터 테스트 | `EditorTest` 는 **일부러 ImGui 를 링크하지 않는다** — 그 경계를 지키면서 컨텍스트만 있으면 도는 것(플랫폼 백엔드의 부분 초기화 수습 등)을 여기 담습니다. GPU·창이 필요한 것은 넣지 않습니다. |
+| **`AppTest`** | App(런처) 로직 유닛 테스트 | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 창·RHI 없이 혼자 도는 정책만 검증합니다(프레임 시간 정책 등). 모듈 로딩·핫리로드는 `SmokeTest` 의 몫입니다. |
 | **`TestFramework`** | 테스트 공통 프레임워크 | 테스트 등록/실행을 조정하고, `TestContext`(결과 수집)와 `TestFilter`(CLI/glob 선택)를 재사용 가능한 구성요소로 제공합니다. |
 
 
@@ -42,7 +46,7 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 > 지금은 `ResourceUtil::initialize()` 를 쓰는 케이스가 전부 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패한다.
 
 ### 특정 테스트만 골라서 실행 (Label 활용)
-라벨은 `core`, `editor`, `engine`, `reflection`, `module`, `unit`, `nogpu`, `lint` 입니다.
+라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `unit`, `nogpu`, `hostgpu`, `lint` 입니다.
 `lint` 는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가 등록하는 Python 검사
 아홉입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
 `CheckCodeConventionsSelfTest` · `CheckSourceGlob` · `CheckDataFileReferences` · `CheckRenderOwnership` ·
@@ -68,20 +72,22 @@ ctest --preset Ninja-Debug-lint
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(2026-09-14 실측, 소스의 케이스는 810개):
+(2026-09-19 실측, 소스의 케이스는 926개):
 
 | 실행 파일 | Debug · Release | Shipping |
 | --- | ---: | ---: |
-| CoreTest | 177 | 177 |
-| EngineTest | 460 | 456 |
-| ReflectionTest | 101 | 101 |
+| CoreTest | 209 | 209 |
+| EngineTest | 525 | 521 |
+| ReflectionTest | 103 | 103 |
 | **SmokeTest** | **19** | **1** |
-| EditorTest | 52 | 52 |
+| EditorTest | 63 | 63 |
+| EditorUiTest | 2 | 2 |
+| AppTest | 4 | 4 |
 
 SmokeTest 가 19 → 1 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
 Shipping 스모크는 정적 `fillGameAPI` 경로 하나만 본다(`Test/SmokeTest/CMakeLists.txt` 참고).
 스킵도 구성을 탄다 — Release·Shipping 의 CoreTest 는 8개가 스킵되고(`SW_LOG_*` 가 컴파일에서 빠진다),
-Shipping 의 ReflectionTest 는 5개가 스킵된다(메타데이터가 배포본에 없다).
+Shipping 의 EngineTest 는 3개, ReflectionTest 는 5개가 스킵된다(Dev 전용 경로와 배포본에 없는 메타데이터).
 
 **의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**
 필터로 고른 스위트의 케이스가 **전부 스킵되면** 그 실행은 아무것도 검증하지 않은 것이므로 프레임워크가
