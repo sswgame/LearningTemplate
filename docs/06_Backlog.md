@@ -149,8 +149,8 @@ cd build/Ninja-Debug/Bin
 | `Object` | 8,428 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Physics` | 1,016 | ✅ 2026-09-18 (3절 참고) |
 | `Reflection` | 3,081 | ✅ 2026-09-18 (3절 참고 — 타입 표가 밀집 배열이라는 함정도 적었다) |
-| `Resource` | 3,604 | ← 다음 |
-| `Scene` | 1,438 | |
+| `Resource` | 3,604 | ✅ 2026-09-18 (3절 참고 — 파일에서 온 수를 믿던 자리 넷) |
+| `Scene` | 1,438 | ← 다음 |
 | `Sequencer` | 546 | |
 | `Serialization` | 7,120 | |
 | `Spatial` | 1,541 | |
@@ -362,6 +362,71 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (실패를 성공으로 적어 두는 자리가 다섯 — Engine/Resource)
+
+이 폴더의 결함은 전부 한 모양이었다. **"끝났다" 와 "됐다" 를 구별하지 않거나, 파일에서 읽은
+수를 그대로 믿는다.** 다섯 건 전부 회귀 테스트와 변이 테스트로 확인했다.
+
+**1) 한 번 실패한 에셋은 영원히 "로드됨" 이었다.** `AssetStreamingQueue` 의 결과 표는
+`경로 → 성공 여부` 인데 이름이 `_mapLoadedAsset` 이었고, 읽는 곳 셋 중 **둘이 이름을 믿고 키만**
+보고 있었다. `isLoaded()` 는 실패한 경로에 true 를 돌려줬고, 더 나쁜 것은 `requestAsset()` 이
+키가 있으면 곧장 `onComplete( path, true )` 를 부르고 끝냈다는 것이다 — 아직 굽지 않은 셰이더,
+늦게 마운트되는 팩을 한 번 헛읽으면 **다시는 디스크를 보지 않았다.** 표 이름을 `_mapAssetResult`
+로 바꾸고, 성공한 것만 즉답하고 실패는 재요청으로 흘려보낸다.
+`sweepUnusedCache()` → `clearCompletionRecord()`: 이 큐는 에셋 바이트를 들고 있지 않아서 버릴
+"쓰지 않는 캐시" 자체가 없었다(전부 지우면서 고른다고 말하고 있었다).
+테스트 `AssetStreamingTest.FailedRequestIsNotLoadedAndRetries`.
+
+**2) DDS 로더가 못 알아본 포맷을 성공으로 돌려줬다.** 스위치의 `default:` 가 경고 한 줄만 남기고
+빠졌고, 함수는 `_dxgiFormat == 0`(DXGI_FORMAT_UNKNOWN) 인 채로 true 를 돌려줬다. `isValid()` 도
+포맷을 보지 않아(바이트·가로·세로만) 호출부에서도 걸러지지 않았다.
+**이것이 실제로 이 저장소의 DDS 다섯 개에 걸려 있었다** — `engine/textures/perlin.dds` 와
+`skybox/env*.dds` 의 `dwFourCC` 는 네 글자 코드가 아니라 **D3DFMT 열거값(113 · 116)** 이다.
+D3D9 시절 라이터가 부동소수점 포맷에 이름 대신 정수를 밀어 넣던 관행이라 값이 0x71 같은 작은
+수로 보인다. `ResourceTest.DdsLoaderLoadFromResource` 는 perlin 을 성공으로 확인하고 있었지만
+포맷은 보지 않아서 **틀린 이유로 통과**하고 있었다. 레거시 부동소수점 여섯(111–116)을 매핑했고,
+포맷을 못 정하면 실패로 끝낸다. 실패 경로가 여섯 군데라 "빠져나갈 때마다 비우기" 를 사람이
+지키는 대신, 지역 변수에 파싱하고 **성공했을 때만** 출력에 옮긴다.
+테스트 `ResourceTest.DdsLoaderRejectsUnknownPixelFormat` + perlin 테스트에 포맷 단언 추가.
+
+**3) 그 연장선 — 스플래시 창은 32bpp 를 전제하는데 아무도 확인하지 않았다.** Win32 경로는
+`StretchDIBits` 에 `biBitCount=32` 로 넘기기 전에 폭×높이 개의 픽셀을 **4바이트씩 제자리에서
+뒤집는다.** 압축 텍스처가 들어오면(BC1 은 같은 크기의 1/8) 그 루프가 버퍼 밖을 **쓴다.**
+지금 들어 있는 `editor/textures/splash.dds` 는 B8G8R8A8(DXGI 87) 이라 맞지만, 아트를 갈아
+끼우며 압축으로 저장하는 것은 흔한 일이다. `ISplashWindow::loadSplashImage()` 에서 막는다.
+(파일은 `Engine/Window` 소속이지만 같은 결함 사슬이라 여기서 같이 고쳤다.)
+
+**4) 팩 리더가 헤더의 수를 그대로 믿었다.** `_fileCount` · `_indexOffset` · `_stringPoolSize` 는
+**파일에서 온 값**인데 검사 없이 `resize` 로 들어갔다 — 잘린 팩 하나가 수십 기가짜리 할당
+요청이 된다(변이 테스트에서 그 한 케이스가 6초를 먹었다). 그리고 헤더는 인덱스 크기를
+`_indexSize` 로도 말하는데 **리더는 그 값을 읽지도 않았다** — 쿠커와 리더가 레이아웃을 다르게
+봐도 아무도 몰랐다. `validateHeaderGeometry()` 로 파일 크기와 대조하고 둘을 맞춰 본다.
+같은 함수에서 스트링 풀도 고쳤다: 엔트리의 디버그 경로를 `const utf8*` 로 넘기면 `string` 이
+NUL 을 찾아 **풀 밖까지** 훑는다 — 시작 오프셋만 검사해서는 끝을 보장하지 못한다.
+테스트 `ResourcePackTest.CorruptHeaderGeometryIsRejected` · `StringPoolReadStopsAtPoolEnd`.
+
+**5) `AssetDatabase` 가 표 안의 원소를 가리키는 포인터를 잠금 밖으로 내보냈다.**
+`getGuid()`/`getPath()` 는 `shared_lock` 을 놓은 **뒤에** `&it->second` 를 돌려줬다.
+`_mapPathToGuid` 는 `sw::map` — 기본 빌드에서 **정렬된 벡터**이고, `_mapGuidToPath` 는
+`sw::unordered_map` — **밀집 배열**이다. 그러니 다른 스레드의 등록 하나가 원소를 통째로 옮긴다
+(앞 키 자리에 하나만 끼어들어도 그 뒤가 전부 밀린다). 잠금을 건다는 것은 동시 변경을 예상한다는
+뜻인데, 그 잠금이 지키지 못하는 것을 내주고 있었다. **호출부 다섯 곳은 전부 받자마자 값을
+복사하고 있었으므로**(SceneDocument 넷 · PrefabAsset 둘) 빌려 주는 쪽을 없애고 이미 있던
+복사 쌍둥이 `tryGetGuid`/`tryGetPath` 로 옮겼다 — 동작은 그대로고 함정만 사라진다.
+바로 아래 Reflection 항목의 "타입 표는 밀집 배열이다" 와 같은 뿌리다(`findType()` 이 내준 `const TypeInfo*` 도 같은 이유로 무효가 된다).
+
+같은 함수에서 **정규화 비대칭**도 고쳤다: 넣는 쪽 셋(`ensureMeta` · `registerMapping` ·
+`registerExisting`)은 전부 `normalizePath` 를 거친 키를 넣는데 `tryGetGuid` 만 받은 문자열을
+그대로 찾고 있었다. 씬 XML 의 `prefab` 속성처럼 사람이 적은 값에 대문자가 섞이면 등록돼
+있는데도 못 찾고 GUID 가 조용히 비었다. 테스트 `ResourceTest.AssetDatabaseLookupNormalizesPath`.
+
+**고치지 않고 적어 두는 것 하나.** `Resource/engine/textures/random/blend.dds` 는 **DDS 가 아니라
+64KB 짜리 GitHub HTML 페이지**다(`<!DOCTYPE html>` 로 시작한다 — 받다 만 파일이 그대로 커밋됐다).
+코드에서 이름으로 참조하는 곳은 없다. 지우는 것은 아트 자산 판단이라 손대지 않았다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EngineTest` 회귀 5건 추가.
 
 ### 2026-09-18 (TypeInfo 의 지연 캐시를 워커 둘이 동시에 만들 수 있었다 — Engine/Reflection)
 

@@ -443,9 +443,9 @@ namespace sw
             Uuid guid{};
             if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
             {
-                const string* pPath = engine::getResourceManager().getAssetDatabase().getPath( guid );
-                if ( pPath != nullptr && pPath->empty() == false )
-                    resolvedPath = *pPath;
+                string mappedPath;
+                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
+                    resolvedPath = std::move( mappedPath );
             }
         }
 
@@ -508,9 +508,9 @@ namespace sw
             Uuid guid{};
             if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
             {
-                const string* pPath = engine::getResourceManager().getAssetDatabase().getPath( guid );
-                if ( pPath != nullptr && pPath->empty() == false )
-                    resolvedPath = *pPath;
+                string mappedPath;
+                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
+                    resolvedPath = std::move( mappedPath );
             }
         }
 

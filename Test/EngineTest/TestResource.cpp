@@ -223,7 +223,7 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
     std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
 
     queue.update( 10 );
-    queue.sweepUnusedCache();
+    queue.clearCompletionRecord();
 
     queue.shutdown();
 }
@@ -376,6 +376,54 @@ SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 64u, image._width );
     SW_EXPECT_EQUAL( 64u, image._height );
+    // 이 파일의 dwFourCC 는 0x71 — 네 글자 코드가 아니라 **D3DFMT_A16B16G16R16F(113) 정수**다.
+    // 예전에는 스위치가 못 알아보고 경고 한 줄 남긴 뒤 `_dxgiFormat == 0` 인 채로 성공을
+    // 돌려줬고, 이 테스트는 포맷을 보지 않아 통과하고 있었다. 이제 여기서 값을 못 박는다.
+    SW_EXPECT_EQUAL( 10u, image._dxgiFormat ); // DXGI_FORMAT_R16G16B16A16_FLOAT
+}
+
+/**
+ * @brief [ResourceTest] 알아보지 못한 픽셀 포맷의 DDS 는 실패로 끝난다
+ * @details 로더가 포맷을 정하지 못했는데 true 를 돌려주면, 호출부는 `_dxgiFormat == 0` 인
+ *          이미지를 "로드 성공" 으로 받는다. `isValid()` 도 예전엔 포맷을 보지 않아 통과했다.
+ *          스플래시 창처럼 32bpp 를 전제하고 폭×높이×4 바이트를 훑는 소비자에게는 이것이
+ *          버퍼 밖 접근으로 이어진다.
+ */
+SW_TEST_CASE( ResourceTest, DdsLoaderRejectsUnknownPixelFormat )
+{
+    // 헤더는 온전하되 픽셀 포맷만 아무도 모르는 FourCC('ZZZZ')로 둔 최소 DDS.
+    constexpr size_t  kHeaderBytes = 4 + 124;
+    sw::vector<uint8> bytes;
+    bytes.resize( kHeaderBytes + 64, 0 );
+
+    uint8* p           = bytes.data();
+    auto   writeUint32 = []( uint8* pDst, uint32 value )
+    {
+        pDst[0] = static_cast<uint8>( value & 0xFF );
+        pDst[1] = static_cast<uint8>( ( value >> 8 ) & 0xFF );
+        pDst[2] = static_cast<uint8>( ( value >> 16 ) & 0xFF );
+        pDst[3] = static_cast<uint8>( ( value >> 24 ) & 0xFF );
+    };
+
+    writeUint32( p + 0, 0x20534444 );  // "DDS "
+    writeUint32( p + 4, 124 );         // dwSize
+    writeUint32( p + 12, 4 );          // dwHeight
+    writeUint32( p + 16, 4 );          // dwWidth
+    writeUint32( p + 76, 32 );         // ddspf.dwSize
+    writeUint32( p + 80, 0x00000004 ); // ddspf.dwFlags = DDPF_FOURCC
+    writeUint32( p + 84, 0x5A5A5A5A ); // ddspf.dwFourCC = 'ZZZZ'
+
+    sw::DdsImageData image;
+    {
+        // 알아보지 못한 포맷은 에러 로그를 남긴다 — 테스트 출력에서만 지운다.
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( sw::DdsLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
+    }
+    SW_EXPECT_FALSE( image.isValid() );
+
+    // 같은 구조체를 다시 쓸 때 앞 시도의 크기가 남아 있으면 안 된다.
+    SW_EXPECT_EQUAL( 0u, image._width );
+    SW_EXPECT_EQUAL( 0u, image._dxgiFormat );
 }
 
 /**
@@ -403,6 +451,34 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
 
     db.clear();
     SW_EXPECT_EQUAL( 0u, db.getAssetCount() );
+}
+
+/**
+ * @brief [ResourceTest] 넣을 때 정규화했으면 찾을 때도 정규화한다
+ * @details 등록하는 쪽(`ensureMeta` · `registerMapping` · `registerExisting`)은 전부
+ *          `normalizePath` 를 거친 키를 넣는다 — 소문자에 `/` 구분자다. 그런데 `tryGetGuid`
+ *          만 받은 문자열을 그대로 찾고 있었다. 씬 XML 의 `prefab` 속성처럼 사람이 적은 값에
+ *          대문자나 역슬래시가 섞이면, 등록돼 있는데도 못 찾고 GUID 가 조용히 비었다.
+ */
+SW_TEST_CASE( ResourceTest, AssetDatabaseLookupNormalizesPath )
+{
+    sw::AssetDatabase db;
+
+    const sw::Uuid guid = sw::Uuid::generate();
+    db.registerMapping( "Prefabs/Player.Prefab.XML", guid );
+
+    // 등록은 정규화된 키로 들어간다.
+    sw::string storedPath;
+    SW_ASSERT_TRUE( db.tryGetPath( guid, storedPath ) );
+    SW_EXPECT_STREQ( "prefabs/player.prefab.xml", storedPath.c_str() );
+
+    // 그러므로 어떤 표기로 물어도 같은 것을 찾아야 한다.
+    for ( const utf8* pQuery : { "prefabs/player.prefab.xml", "Prefabs/Player.Prefab.XML", "PREFABS\\PLAYER.PREFAB.XML" } )
+    {
+        sw::Uuid found{};
+        SW_EXPECT_TRUE_MSG( db.tryGetGuid( pQuery, found ), pQuery );
+        SW_EXPECT_TRUE( guid == found );
+    }
 }
 
 /**
@@ -574,8 +650,9 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
     while ( expected.empty() == false && ( expected.back() == '\r' || expected.back() == ' ' ) )
         expected.pop_back();
 
-    const sw::Uuid* pGuid = sw::engine::getResourceManager().getAssetDatabase().getGuid( pAsset );
-    SW_EXPECT_TRUE_MSG( pGuid != nullptr, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
-    if ( pGuid != nullptr )
-        SW_EXPECT_STREQ( expected.c_str(), pGuid->toString().c_str() );
+    sw::Uuid   guid{};
+    const bool bFound = sw::engine::getResourceManager().getAssetDatabase().tryGetGuid( pAsset, guid );
+    SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
+    if ( bFound )
+        SW_EXPECT_STREQ( expected.c_str(), guid.toString().c_str() );
 }

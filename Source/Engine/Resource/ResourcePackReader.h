@@ -77,6 +77,13 @@ namespace sw
         const string& getPackPath() const;
 
     private:
+        /**
+         * @brief 헤더가 말하는 인덱스·스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
+         * @details 헤더의 수는 파일에서 온 값이다 — 그것을 그대로 믿고 `resize` 하면 손상된 팩
+         *          하나가 거대한 할당 요청이 된다. `_indexSize` 와 `_fileCount` 가 같은 것을
+         *          두 번 말하는 것도 여기서 맞춰 본다.
+         */
+        bool validateHeaderGeometry() const;
         bool loadIndexTable();
         bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;
 

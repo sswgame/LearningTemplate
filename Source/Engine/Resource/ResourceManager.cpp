@@ -121,7 +121,7 @@ namespace sw
 
     void ResourceManager::garbageCollectUnusedAssets()
     {
-        engine::getAssetStreamingQueue().sweepUnusedCache();
+        engine::getAssetStreamingQueue().clearCompletionRecord();
         // Note: MaterialCache automatically cleans up materials with 0 refcount in release().
     }
 

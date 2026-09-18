@@ -50,17 +50,20 @@ namespace sw
         /** @brief .meta가 있으면 로드하고 등록합니다. 없거나 무효면 false. */
         bool registerExisting( string_view relativePath );
 
-        /** @brief 상대 경로의 GUID를 스레드 안전하게 복사 조회합니다. */
+        /**
+         * @brief 상대 경로의 GUID를 스레드 안전하게 복사 조회합니다. 경로는 안에서 정규화한다.
+         * @warning **이 표에서 값을 빌려 나가는 방법은 없다 — 복사만 있다.** 예전에는 원소를
+         *          가리키는 `getGuid`/`getPath` 가 함께 있었는데, 둘 다 잠금을 놓은 뒤에
+         *          포인터를 돌려줬다. `_mapPathToGuid` 는 **정렬된 벡터**이고
+         *          `_mapGuidToPath` 는 **밀집 배열**이라, 다른 스레드의 등록 하나가 원소를
+         *          통째로 옮긴다 — 앞 키 자리에 하나만 끼어들어도 그 뒤가 전부 밀린다.
+         *          호출부 다섯 곳은 모두 받자마자 값을 복사하고 있었으므로, 빌려 주는 쪽을
+         *          없앴다.
+         */
         bool tryGetGuid( string_view relativePath, Uuid& outGuid ) const;
 
         /** @brief GUID의 상대 경로를 스레드 안전하게 복사 조회합니다. */
         bool tryGetPath( const Uuid& guid, string& outPath ) const;
-
-        /** @brief 상대 경로의 GUID를 찾습니다. 없으면 nullptr. */
-        const Uuid* getGuid( string_view relativePath ) const;
-
-        /** @brief GUID의 상대 경로를 찾습니다. 없으면 nullptr. */
-        const string* getPath( const Uuid& guid ) const;
 
         /** @brief 등록된 에셋 총 개수를 반환합니다. */
         size_t getAssetCount() const;

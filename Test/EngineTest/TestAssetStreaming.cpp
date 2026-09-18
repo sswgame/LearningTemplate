@@ -23,7 +23,83 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueAsyncOperations )
         bCompleteCalled = true;
     } ) );
 
-    SW_EXPECT_TRUE( queue.isStreaming( "Resource/common/shaders/forward_lit.hlsl" ) || queue.isLoaded( "Resource/common/shaders/forward_lit.hlsl" ) );
+    // 이 경로는 **일부러 없는 것**이다(도메인 접두사가 `Resource/` 라 해석되지 않는다). 여기서
+    // 보는 것은 "요청이 등록됐는가" 뿐이므로 성패를 묻지 않는다 — 아직 돌고 있거나(`isStreaming`)
+    // 이미 결과가 적혔거나(`getCompletedCount`) 둘 중 하나다. 예전에는 뒷항이 `isLoaded` 였는데,
+    // 그때의 `isLoaded` 는 실패한 경로에도 true 를 돌려줘서 **틀린 이유로 통과**하고 있었다.
+    SW_EXPECT_TRUE( queue.isStreaming( "Resource/common/shaders/forward_lit.hlsl" ) || queue.getCompletedCount() > 0 );
+    queue.shutdown();
+}
+
+/**
+ * @brief [AssetStreamingTest] 실패한 요청은 "로드됨" 이 아니며, 다시 요청하면 재시도된다
+ * @details 결과 표에는 성공도 실패도 들어간다. 키의 존재만 보면 둘을 구별하지 못한다 —
+ *          그러면 아직 굽지 않은 셰이더나 늦게 마운트되는 팩을 한 번 헛읽은 뒤로 영원히
+ *          "이미 로드됨, 성공" 이라고 답하고 다시는 디스크를 보지 않는다.
+ */
+SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    // 존재하지 않는 경로. 파일을 만들지 않으므로 워커는 반드시 실패한다.
+    const sw::string missingPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_missing_asset.dat" );
+    sw::FileUtil::removeFile( missingPath );
+
+    bool bFirstCompleted{ false };
+    bool bFirstSuccess{ true };
+    queue.requestAsset( missingPath, sw::StreamingPriority::Normal,
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( sw::string_view, bool bSuccess )
+    {
+        bFirstCompleted = true;
+        bFirstSuccess   = bSuccess;
+    } ) );
+
+    for ( int32 attempt = 0; attempt < 100 && bFirstCompleted == false; ++attempt )
+    {
+        queue.update();
+        if ( bFirstCompleted )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 2 ) );
+    }
+
+    SW_ASSERT_TRUE( bFirstCompleted );
+    SW_EXPECT_FALSE( bFirstSuccess );
+    // 끝나기는 했다 — 그러나 로드된 것은 아니다. 이 둘이 갈리는 자리가 이 테스트의 전부다.
+    SW_EXPECT_EQUAL( size_t( 1 ), queue.getCompletedCount() );
+    SW_EXPECT_FALSE( queue.isLoaded( missingPath ) );
+
+    // 이제 파일이 생겼다. 다시 요청하면 기록된 실패를 넘어 **다시 읽어야** 한다.
+    const sw::string payload = "RETRY_PAYLOAD";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( missingPath,
+                                             reinterpret_cast<const uint8*>( payload.data() ),
+                                             static_cast<uint64>( payload.size() ) ) );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [missingPath]()
+    {
+        sw::FileUtil::removeFile( missingPath );
+    } ) );
+
+    bool bSecondCompleted{ false };
+    bool bSecondSuccess{ false };
+    queue.requestAsset( missingPath, sw::StreamingPriority::Normal,
+                        SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( sw::string_view, bool bSuccess )
+    {
+        bSecondCompleted = true;
+        bSecondSuccess   = bSuccess;
+    } ) );
+
+    for ( int32 attempt = 0; attempt < 100 && bSecondCompleted == false; ++attempt )
+    {
+        queue.update();
+        if ( bSecondCompleted )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 2 ) );
+    }
+
+    SW_ASSERT_TRUE( bSecondCompleted );
+    SW_EXPECT_TRUE( bSecondSuccess );
+    SW_EXPECT_TRUE( queue.isLoaded( missingPath ) );
+
     queue.shutdown();
 }
 

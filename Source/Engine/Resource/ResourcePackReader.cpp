@@ -321,6 +321,9 @@ namespace sw
 
         auto* pFile = static_cast<FILE*>( _pFileHandle );
 
+        if ( validateHeaderGeometry() == false )
+            return false;
+
         // 스트링 풀 로드 (포함된 경우)
         const bool bHasStringPool = engine::areEngineServicesBound()
                                       ? engine::getTypeRegistry().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
@@ -364,9 +367,58 @@ namespace sw
             memEntry._stringPoolOffset = diskEntry._stringPoolOffset;
 
             if ( _stringPoolBytes.empty() == false && diskEntry._stringPoolOffset < _stringPoolBytes.size() )
-                memEntry._debugRelativePath = reinterpret_cast<const utf8*>( _stringPoolBytes.data() + diskEntry._stringPoolOffset );
+            {
+                // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아
+                // 풀 **밖까지** 훑는다 — 마지막 문자열이 잘린 팩(끊긴 다운로드·손상)이면
+                // 버퍼 밖 읽기다. 시작 오프셋만 검사해서는 끝을 보장하지 못한다.
+                const utf8*       pPool = reinterpret_cast<const utf8*>( _stringPoolBytes.data() );
+                const string_view raw{ pPool + diskEntry._stringPoolOffset, _stringPoolBytes.size() - diskEntry._stringPoolOffset };
+                const size_t      terminator = raw.find( '\0' );
+                memEntry._debugRelativePath.assign( raw.data(), terminator == string_view::npos ? raw.size() : terminator );
+            }
 
             _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );
+        }
+
+        return true;
+    }
+
+    bool ResourcePackReader::validateHeaderGeometry() const
+    {
+        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( static_cast<FILE*>( _pFileHandle ) );
+        if ( fileSize <= 0 )
+        {
+            SW_LOG_ERROR( "Cannot determine size of pack: %#", _packFilePath );
+            return false;
+        }
+        const uint64 sizeBytes = static_cast<uint64>( fileSize );
+
+        // 헤더가 인덱스 크기를 **두 번** 말한다 — `_indexSize` 로 한 번, `_fileCount` 로 한 번.
+        // 리더는 예전에 뒤엣것만 쓰고 앞엣것은 읽지도 않았다. 둘이 어긋난 팩은 리더와 쿠커가
+        // 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
+        const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
+        if ( _header._indexSize != derivedIndexSize )
+        {
+            SW_LOG_ERROR( "Pack index size disagrees with file count in %# (header says %#, %# entries need %#)",
+                          _packFilePath, _header._indexSize, _header._fileCount, derivedIndexSize );
+            return false;
+        }
+
+        // 그리고 그 구역들이 실제 파일 안에 있어야 한다. 예전에는 헤더의 수를 그대로 믿고
+        // `resize` 했다 — 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있었다.
+        if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
+        {
+            SW_LOG_ERROR( "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
+                          _packFilePath, _header._indexOffset, derivedIndexSize, sizeBytes );
+            return false;
+        }
+
+        if ( _header._stringPoolSize > 0 &&
+             ( _header._stringPoolOffset > sizeBytes || _header._stringPoolSize > sizeBytes - _header._stringPoolOffset ) )
+        {
+            SW_LOG_ERROR( "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
+                          _packFilePath, _header._stringPoolOffset, _header._stringPoolSize, sizeBytes );
+            return false;
         }
 
         return true;

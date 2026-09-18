@@ -37,7 +37,12 @@ namespace sw
         {
         }
 
-        bool         isValid() const { return _bytes.empty() == false && _width > 0 && _height > 0; }
+        /**
+         * @brief 쓸 수 있는 이미지인지 — 픽셀 · 크기 · **포맷**이 모두 있어야 한다.
+         * @details `_dxgiFormat` 0 은 DXGI_FORMAT_UNKNOWN 이다. 예전에는 이 검사가 포맷을 보지
+         *          않아서, 로더가 알아보지 못한 이미지를 호출부가 유효하다고 판정했다.
+         */
+        bool         isValid() const { return _bytes.empty() == false && _width > 0 && _height > 0 && _dxgiFormat != 0; }
         const uint8* getPixels() const { return _bytes.data(); }
         uint8*       getPixels() { return _bytes.data(); }
     };

@@ -152,9 +152,9 @@ namespace sw
                     Uuid guid{};
                     if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
                     {
-                        const string* pResolved = engine::getResourceManager().getAssetDatabase().getPath( guid );
-                        if ( pResolved != nullptr && pResolved->empty() == false )
-                            node._prefab = *pResolved;
+                        string resolved;
+                        if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
+                            node._prefab = std::move( resolved );
                     }
                 }
 
@@ -198,9 +198,9 @@ namespace sw
             }
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                const Uuid* pGuid = engine::getResourceManager().getAssetDatabase().getGuid( entity._prefab );
-                if ( pGuid != nullptr && pGuid->isNull() == false )
-                    entityNode.appendAttribute( "prefabGuid", pGuid->toString() );
+                Uuid prefabGuid{};
+                if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
+                    entityNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
             if ( entity._embeddedXml.empty() == false )
             {
@@ -295,9 +295,9 @@ namespace sw
                 Uuid guid{};
                 if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
                 {
-                    const string* pResolved = engine::getResourceManager().getAssetDatabase().getPath( guid );
-                    if ( pResolved != nullptr && pResolved->empty() == false )
-                        node._prefab = *pResolved;
+                    string resolved;
+                    if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
+                        node._prefab = std::move( resolved );
                 }
             }
 
@@ -330,9 +330,9 @@ namespace sw
             string prefabGuid = entity._prefabGuid;
             if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                const Uuid* pGuid = engine::getResourceManager().getAssetDatabase().getGuid( entity._prefab );
-                if ( pGuid != nullptr && pGuid->isNull() == false )
-                    prefabGuid = pGuid->toString();
+                Uuid resolvedGuid{};
+                if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
+                    prefabGuid = resolvedGuid.toString();
             }
 
             arch << entity._name;

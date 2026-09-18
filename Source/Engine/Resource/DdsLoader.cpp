@@ -31,6 +31,18 @@ namespace sw
         constexpr uint32 kFourCC_ATI2 = 0x32495441;
         constexpr uint32 kFourCC_BC5U = 0x55354342;
 
+        // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
+        // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
+        // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 DDS 다섯 개
+        // (`engine/textures/perlin.dds` · `skybox/env*.dds`)가 전부 이 모양이고, 예전에는 전부
+        // "Unrecognized DDS FourCC" 경고 한 줄만 남기고 **성공으로 처리**되고 있었다.
+        constexpr uint32 kD3dFmt_R16F          = 111;
+        constexpr uint32 kD3dFmt_G16R16F       = 112;
+        constexpr uint32 kD3dFmt_A16B16G16R16F = 113;
+        constexpr uint32 kD3dFmt_R32F          = 114;
+        constexpr uint32 kD3dFmt_G32R32F       = 115;
+        constexpr uint32 kD3dFmt_A32B32G32R32F = 116;
+
         // DXGI formats mapped
         constexpr uint32 kDxgiFormatBC1Unorm          = 71;
         constexpr uint32 kDxgiFormatBC2Unorm          = 74;
@@ -41,6 +53,15 @@ namespace sw
         constexpr uint32 kDxgiFormatB8G8R8A8Unorm     = 87;
         constexpr uint32 kDxgiFormatB8G8R8A8UnormSrgb = 91;
         constexpr uint32 kDxgiFormatB8G8R8X8Unorm     = 88;
+        constexpr uint32 kDxgiFormatR32G32B32A32Float = 2;
+        constexpr uint32 kDxgiFormatR16G16B16A16Float = 10;
+        constexpr uint32 kDxgiFormatR32G32Float       = 16;
+        constexpr uint32 kDxgiFormatR16G16Float       = 34;
+        constexpr uint32 kDxgiFormatR32Float          = 41;
+        constexpr uint32 kDxgiFormatR16Float          = 54;
+
+        // DXGI_FORMAT_UNKNOWN. 어떤 이미지도 이 포맷일 수 없으므로 "못 알아봤다" 의 표시로 쓴다.
+        constexpr uint32 kDxgiFormatUnknown = 0;
 
 #pragma pack( push, 1 )
         struct DdsPixelFormatHeader
@@ -112,6 +133,13 @@ namespace sw
 
     bool DdsLoader::loadFromMemory( const uint8* pBuffer, size_t bufferSize, DdsImageData& outImage )
     {
+        // **실패는 출력에 아무것도 남기지 않는다.** 나가는 길이 여섯 군데인데 그중 넷은 크기를
+        // 이미 채운 뒤에 있다. 그래서 여기서 비우고, 파싱은 지역 변수에 한 뒤 **성공했을 때만**
+        // 옮긴다 — "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
+        outImage = DdsImageData{};
+
+        DdsImageData image;
+
         if ( pBuffer == nullptr || bufferSize < sizeof( uint32 ) + sizeof( DdsFileHeader ) )
         {
             SW_LOG_ERROR( "DDS buffer is null or smaller than minimum header size." );
@@ -135,10 +163,10 @@ namespace sw
             return false;
         }
 
-        outImage._width    = pHeader->_width;
-        outImage._height   = pHeader->_height;
-        outImage._depth    = ( pHeader->_depth > 0 ) ? pHeader->_depth : 1;
-        outImage._mipCount = ( pHeader->_mipMapCount > 0 ) ? pHeader->_mipMapCount : 1;
+        image._width    = pHeader->_width;
+        image._height   = pHeader->_height;
+        image._depth    = ( pHeader->_depth > 0 ) ? pHeader->_depth : 1;
+        image._mipCount = ( pHeader->_mipMapCount > 0 ) ? pHeader->_mipMapCount : 1;
 
         size_t dataOffset = sizeof( uint32 ) + sizeof( DdsFileHeader );
 
@@ -151,7 +179,7 @@ namespace sw
             }
 
             const DdsHeaderDxt10* pDxt10 = reinterpret_cast<const DdsHeaderDxt10*>( pBuffer + dataOffset );
-            outImage._dxgiFormat         = pDxt10->_dxgiFormat;
+            image._dxgiFormat            = pDxt10->_dxgiFormat;
             dataOffset += sizeof( DdsHeaderDxt10 );
         }
         else if ( ( pHeader->_pixelFormat._flags & kDdpfFourCC ) != 0 )
@@ -160,69 +188,110 @@ namespace sw
             {
                 case kFourCC_DXT1:
                 {
-                    outImage._dxgiFormat = kDxgiFormatBC1Unorm;
+                    image._dxgiFormat = kDxgiFormatBC1Unorm;
                     break;
                 }
                 case kFourCC_DXT2:
                 case kFourCC_DXT3:
                 {
-                    outImage._dxgiFormat = kDxgiFormatBC2Unorm;
+                    image._dxgiFormat = kDxgiFormatBC2Unorm;
                     break;
                 }
                 case kFourCC_DXT4:
                 case kFourCC_DXT5:
                 {
-                    outImage._dxgiFormat = kDxgiFormatBC3Unorm;
+                    image._dxgiFormat = kDxgiFormatBC3Unorm;
                     break;
                 }
                 case kFourCC_ATI1:
                 case kFourCC_BC4U:
                 {
-                    outImage._dxgiFormat = kDxgiFormatBC4Unorm;
+                    image._dxgiFormat = kDxgiFormatBC4Unorm;
                     break;
                 }
                 case kFourCC_ATI2:
                 case kFourCC_BC5U:
                 {
-                    outImage._dxgiFormat = kDxgiFormatBC5Unorm;
+                    image._dxgiFormat = kDxgiFormatBC5Unorm;
+                    break;
+                }
+                case kD3dFmt_R16F:
+                {
+                    image._dxgiFormat = kDxgiFormatR16Float;
+                    break;
+                }
+                case kD3dFmt_G16R16F:
+                {
+                    image._dxgiFormat = kDxgiFormatR16G16Float;
+                    break;
+                }
+                case kD3dFmt_A16B16G16R16F:
+                {
+                    image._dxgiFormat = kDxgiFormatR16G16B16A16Float;
+                    break;
+                }
+                case kD3dFmt_R32F:
+                {
+                    image._dxgiFormat = kDxgiFormatR32Float;
+                    break;
+                }
+                case kD3dFmt_G32R32F:
+                {
+                    image._dxgiFormat = kDxgiFormatR32G32Float;
+                    break;
+                }
+                case kD3dFmt_A32B32G32R32F:
+                {
+                    image._dxgiFormat = kDxgiFormatR32G32B32A32Float;
                     break;
                 }
                 default:
                 {
-                    SW_LOG_WARNING(
-                        "Unrecognized DDS FourCC: 0x%#",
-                        Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ) );
+                    // 포맷을 정하지 않고 빠진다 — 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
                     break;
                 }
             }
         }
         else if ( ( pHeader->_pixelFormat._flags & kDdpfRgb ) != 0 )
         {
-            outImage._bitsPerPixel = pHeader->_pixelFormat._rgbBitCount;
+            image._bitsPerPixel = pHeader->_pixelFormat._rgbBitCount;
             if ( pHeader->_pixelFormat._rgbBitCount == 32 )
             {
                 if ( pHeader->_pixelFormat._rBitMask == 0x00FF0000 && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
                      pHeader->_pixelFormat._bBitMask == 0x000000FF )
                 {
-                    outImage._dxgiFormat = ( pHeader->_pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
-                    outImage._bIsBgra    = SW_TRUE;
+                    image._dxgiFormat = ( pHeader->_pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
+                    image._bIsBgra    = SW_TRUE;
                 }
                 else if ( pHeader->_pixelFormat._rBitMask == 0x000000FF && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
                           pHeader->_pixelFormat._bBitMask == 0x00FF0000 )
                 {
-                    outImage._dxgiFormat = kDxgiFormatR8G8B8A8Unorm;
-                    outImage._bIsBgra    = SW_FALSE;
+                    image._dxgiFormat = kDxgiFormatR8G8B8A8Unorm;
+                    image._bIsBgra    = SW_FALSE;
                 }
             }
         }
 
-        const bool bIsBc1To5  = ( 70 <= outImage._dxgiFormat && outImage._dxgiFormat <= 84 );
-        const bool bIsBc6Or7  = ( 94 <= outImage._dxgiFormat && outImage._dxgiFormat <= 99 );
-        outImage._bCompressed = ( bIsBc1To5 || bIsBc6Or7 ) ? SW_TRUE : SW_FALSE;
+        const bool bIsBc1To5 = ( 70 <= image._dxgiFormat && image._dxgiFormat <= 84 );
+        const bool bIsBc6Or7 = ( 94 <= image._dxgiFormat && image._dxgiFormat <= 99 );
+        image._bCompressed   = ( bIsBc1To5 || bIsBc6Or7 ) ? SW_TRUE : SW_FALSE;
 
-        if ( outImage._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || outImage._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
-             outImage._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb )
-            outImage._bIsBgra = SW_TRUE;
+        if ( image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
+             image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb )
+            image._bIsBgra = SW_TRUE;
+
+        // **못 알아본 포맷은 실패다.** 예전에는 여기까지 흘러와 `_dxgiFormat == 0` 인 채로 true 를
+        // 돌려줬다. `isValid()` 는 포맷을 보지 않으므로(바이트·가로·세로만 본다) 호출부에서도
+        // 걸러지지 않아, 알아보지 못한 이미지가 "성공적으로 로드된 이미지" 로 흘러 나갔다.
+        if ( image._dxgiFormat == kDxgiFormatUnknown )
+        {
+            SW_LOG_ERROR(
+                "Unsupported DDS pixel format (pfFlags=0x%#, fourCC=0x%#, rgbBits=%#) — cannot determine a DXGI format.",
+                Fmt( pHeader->_pixelFormat._flags, Format( 8, Format::Padding::Zero ).hex() ),
+                Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ),
+                pHeader->_pixelFormat._rgbBitCount );
+            return false;
+        }
 
         if ( bufferSize < dataOffset )
         {
@@ -231,9 +300,10 @@ namespace sw
         }
 
         const size_t payloadSize = bufferSize - dataOffset;
-        outImage._bytes.resize( payloadSize );
-        Memory::copy( outImage._bytes.data(), pBuffer + dataOffset, payloadSize );
+        image._bytes.resize( payloadSize );
+        Memory::copy( image._bytes.data(), pBuffer + dataOffset, payloadSize );
 
+        outImage = std::move( image );
         return true;
     }
 } // namespace sw

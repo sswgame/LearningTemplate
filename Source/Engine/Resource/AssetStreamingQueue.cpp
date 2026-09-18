@@ -13,7 +13,7 @@ namespace sw
 {
     AssetStreamingQueue::AssetStreamingQueue()
         : _mutex{}
-        , _mapLoadedAsset{}
+        , _mapAssetResult{}
         , _uniqueActiveRequest{}
         , _mapInFlightCallback{}
         , _mapRequestGeneration{}
@@ -62,7 +62,12 @@ namespace sw
         const string pathStr = string( assetPath );
 
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _mapLoadedAsset.find( pathStr ) != _mapLoadedAsset.end() )
+
+        // **성공한 것만** 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다 —
+        // 예전에는 키가 있기만 하면 `true` 를 돌려줬고, 그래서 한 번 실패한 경로는 영영 실패였다.
+        // (아직 굽지 않은 셰이더, 늦게 마운트되는 팩 — 한 번 빗나가면 다시는 보지 않았다.)
+        const auto itResult = _mapAssetResult.find( pathStr );
+        if ( itResult != _mapAssetResult.end() && itResult->second )
         {
             if ( onComplete.isBound() )
                 onComplete( pathStr, true );
@@ -94,7 +99,7 @@ namespace sw
         else
         {
             const bool bExists       = ResourceUtil::hasResource( pathStr );
-            _mapLoadedAsset[pathStr] = bExists;
+            _mapAssetResult[pathStr] = bExists;
             _uniqueActiveRequest.erase( pathStr );
 
             auto itCallbacks = _mapInFlightCallback.find( pathStr );
@@ -151,7 +156,7 @@ namespace sw
         {
             vector<uint8> bytes;
             const bool    bSuccess   = ResourceUtil::readBinaryResource( pathStr, bytes );
-            _mapLoadedAsset[pathStr] = bSuccess;
+            _mapAssetResult[pathStr] = bSuccess;
             _uniqueActiveRequest.erase( pathStr );
 
             auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
@@ -210,7 +215,7 @@ namespace sw
         if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
             return;
 
-        _mapLoadedAsset[pathStr] = bSuccess;
+        _mapAssetResult[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
 
         auto itCallbacks = _mapInFlightCallback.find( pathStr );
@@ -280,10 +285,10 @@ namespace sw
         ++_mapRequestGeneration[pathStr];
     }
 
-    void AssetStreamingQueue::sweepUnusedCache()
+    void AssetStreamingQueue::clearCompletionRecord()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapLoadedAsset.clear();
+        _mapAssetResult.clear();
     }
 
     bool AssetStreamingQueue::isStreaming( string_view assetPath ) const
@@ -297,7 +302,8 @@ namespace sw
     {
         const string            pathStr = string( assetPath );
         std::scoped_lock<mutex> lock{ _mutex };
-        return _mapLoadedAsset.find( pathStr ) != _mapLoadedAsset.end();
+        const auto              itResult = _mapAssetResult.find( pathStr );
+        return itResult != _mapAssetResult.end() && itResult->second;
     }
 
     size_t AssetStreamingQueue::getPendingCount() const
@@ -309,7 +315,7 @@ namespace sw
     size_t AssetStreamingQueue::getCompletedCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _mapLoadedAsset.size();
+        return _mapAssetResult.size();
     }
 
     void AssetStreamingQueue::update( size_t maxCompletionsPerFrame )

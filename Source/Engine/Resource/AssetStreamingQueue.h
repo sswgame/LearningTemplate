@@ -51,12 +51,29 @@ namespace sw
         TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );
         void             cancelRequest( string_view assetPath );
 
-        void sweepUnusedCache();
+        /**
+         * @brief 끝난 요청의 결과 기록을 통째로 버립니다 — 다음 요청은 디스크를 다시 본다.
+         * @details 이 큐는 에셋 바이트를 들고 있지 않다(데이터 요청의 바이트는 콜백으로 나가고 버려진다).
+         *          그래서 버릴 "쓰지 않는 캐시" 같은 것은 없고, 여기서 사라지는 것은 **무엇이 끝났고
+         *          성공했는지에 대한 기억**뿐이다. 예전 이름은 `sweepUnusedCache` 였는데, 쓰이지 않는
+         *          것을 골라내는 일은 하지 않으면서(전부 지운다) 이름은 고른다고 말하고 있었다.
+         */
+        void clearCompletionRecord();
 
+        /** @brief 아직 워커에서 돌고 있는 요청인지 */
         bool isStreaming( string_view assetPath ) const;
+
+        /**
+         * @brief **성공적으로** 끝난 요청인지 — 실패한 적이 있는 경로는 false 다.
+         * @details 결과 기록에 경로가 있다는 것과 그 에셋을 읽었다는 것은 다른 말이다. 실패도
+         *          기록되기 때문이다. 예전에는 이 함수가 키의 존재만 보아서, 없는 파일을 한 번
+         *          요청하고 나면 그 뒤로 영원히 "로드됨" 이라고 답했다.
+         */
         bool isLoaded( string_view assetPath ) const;
 
         size_t getPendingCount() const;
+
+        /** @brief 끝난 요청의 수 — **실패한 것도 센다**(끝나기는 했다). */
         size_t getCompletedCount() const;
 
     private:
@@ -73,8 +90,14 @@ namespace sw
         void processAssetTask( const TaskArgs& args );
 
     private:
-        mutable mutex                                                  _mutex;
-        unordered_map<string, bool>                                    _mapLoadedAsset;
+        mutable mutex _mutex;
+        /**
+         * @brief 끝난 요청의 결과 — 경로에서 성공 여부로.
+         * @warning **키가 있다는 것은 "끝났다" 이지 "읽었다" 가 아니다.** 실패도 여기 들어온다.
+         *          그래서 이 표를 읽는 쪽은 **값까지** 보아야 한다. 예전 이름은 `_mapLoadedAsset`
+         *          이었고, 읽는 곳 셋 중 둘이 이름을 믿고 키만 보다가 틀렸다.
+         */
+        unordered_map<string, bool>                                    _mapAssetResult;
         unordered_set<string>                                          _uniqueActiveRequest;
         unordered_map<string, vector<OnStreamingCompleteDelegate>>     _mapInFlightCallback;
         unordered_map<string, vector<OnStreamingDataCompleteDelegate>> _mapInFlightDataCallback;

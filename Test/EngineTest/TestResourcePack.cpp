@@ -696,3 +696,140 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
     packManager.unmountAll();
     sw::FileUtil::removeFile( packPath );
 }
+
+// ------------------------------------------------------------------------------
+// 손상된 팩: 헤더가 말하는 구역이 파일 밖일 때
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    namespace
+    {
+        /** @brief 이미 만들어진 팩 파일의 헤더를 읽고(있는 그대로) 다시 쓰는 테스트 헬퍼. */
+        bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
+        {
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
+                return false;
+            Memory::copy( &outHeader, bytes.data(), sizeof( PackHeader ) );
+            return true;
+        }
+
+        bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
+        {
+            vector<uint8> bytes;
+            if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
+                return false;
+            Memory::copy( bytes.data(), &header, sizeof( PackHeader ) );
+            return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
+        }
+    } // namespace
+} // namespace sw
+
+/**
+ * @brief [ResourcePackTest] 헤더의 수를 그대로 믿지 않는다 — 인덱스가 파일 밖이면 거부한다
+ * @details 헤더의 `_fileCount` · `_indexOffset` · `_stringPoolSize` 는 **파일에서 온 값**이다.
+ *          예전에는 그대로 `resize` 했으므로, 잘리거나 손상된 팩 하나가 수 기가짜리 할당
+ *          요청이 될 수 있었다. 그리고 헤더는 인덱스 크기를 `_indexSize` 로도 말하는데
+ *          리더는 그 값을 **읽지도 않았다** — 쿠커와 리더가 레이아웃을 다르게 봐도 몰랐다.
+ */
+SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_corrupt_geometry.pack" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
+    {
+        sw::FileUtil::removeFile( packPath );
+    } ) );
+
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
+        {"data/items.json", "{\"sword\": 1}"},
+        { "maps/title.xml",       "<Scene/>"},
+    };
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+
+    // 멀쩡한 상태에서는 열린다 — 아래 거부가 손상 때문임을 못 박는다.
+    {
+        sw::ResourcePackReader reader;
+        SW_ASSERT_TRUE( reader.open( packPath ) );
+        SW_EXPECT_EQUAL( 2u, reader.getFileCount() );
+    }
+
+    sw::PackHeader original{};
+    SW_ASSERT_TRUE( sw::readPackHeaderFromDisk( packPath, original ) );
+
+    // 1) 파일 수가 터무니없이 크다 — 인덱스 크기도 맞춰 두었으므로 걸러 내는 것은 파일 크기다.
+    {
+        sw::PackHeader corrupted = original;
+        corrupted._fileCount     = 0x0FFFFFFFu;
+        corrupted._indexSize     = static_cast<uint64>( corrupted._fileCount ) * sizeof( sw::PackFileEntryOnDisk );
+        SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
+
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePackReader    reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+        SW_EXPECT_FALSE( reader.isOpen() );
+    }
+
+    // 2) `_indexSize` 와 `_fileCount` 가 서로 다른 말을 한다.
+    {
+        sw::PackHeader corrupted = original;
+        corrupted._indexSize     = original._indexSize + sizeof( sw::PackFileEntryOnDisk );
+        SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
+
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePackReader    reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
+
+    // 3) 스트링 풀이 파일 끝을 넘어선다.
+    {
+        sw::PackHeader corrupted  = original;
+        corrupted._flags          = original._flags | static_cast<uint16>( sw::PackFlag::HasStringPool );
+        corrupted._stringPoolSize = 1ull << 40;
+        SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
+
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePackReader    reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
+
+    // 원래대로 돌려 두면 다시 열린다.
+    SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, original ) );
+    sw::ResourcePackReader reader;
+    SW_EXPECT_TRUE( reader.open( packPath ) );
+}
+
+/**
+ * @brief [ResourcePackTest] 스트링 풀의 마지막 문자열이 잘려 있어도 풀 밖을 읽지 않는다
+ * @details 엔트리의 디버그 경로는 풀 안의 **NUL 종료 문자열**로 저장된다. 예전 코드는 시작
+ *          오프셋이 풀 안인지만 보고 `const utf8*` 를 그대로 `string` 에 넘겼다 — 그러면
+ *          string 이 NUL 을 찾아 **풀 밖까지** 훑는다. 종결자를 지워 그 경계를 확인한다.
+ */
+SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_unterminated_pool.pack" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [packPath]()
+    {
+        sw::FileUtil::removeFile( packPath );
+    } ) );
+
+    const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
+        { "data/items.json", "{\"sword\": 1}" },
+    };
+    SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, listFile, true ) );
+
+    // 스트링 풀은 파일 맨 끝에 온다 — 마지막 바이트(종결자)를 글자로 바꿔 종료를 없앤다.
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( packPath, bytes ) );
+    SW_ASSERT_TRUE( bytes.empty() == false );
+    SW_ASSERT_EQUAL( uint8( 0 ), bytes.back() );
+    bytes.back() = static_cast<uint8>( 'X' );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+
+    sw::ResourcePackReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+
+    sw::PackFileEntry entry{};
+    SW_ASSERT_TRUE( reader.getFileEntry( "data/items.json", entry ) );
+    // 풀 전체가 이 한 문자열이고 종결자가 없다 — 풀 길이만큼만 읽고 멈춰야 한다.
+    SW_EXPECT_EQUAL( sw::string( "data/items.jsonX" ), entry._debugRelativePath );
+}

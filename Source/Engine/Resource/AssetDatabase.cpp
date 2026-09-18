@@ -146,8 +146,14 @@ namespace sw
 
     bool AssetDatabase::tryGetGuid( string_view relativePath, Uuid& outGuid ) const
     {
+        // **넣을 때 정규화했으면 찾을 때도 정규화해야 한다.** `ensureMeta` · `registerMapping` ·
+        // `registerExisting` 은 모두 `normalizePath` 를 거친 키를 넣는데(소문자 · `/` 구분자)
+        // 이쪽만 받은 문자열을 그대로 찾고 있었다. 씬 XML 의 `prefab` 경로처럼 대문자가 섞인
+        // 값으로 물어보면 등록돼 있어도 못 찾았다.
+        const string path = FileUtil::normalizePath( relativePath );
+
         std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          it = _mapPathToGuid.find( string( relativePath ) );
+        const auto                          it = _mapPathToGuid.find( path );
         if ( it == _mapPathToGuid.end() )
             return false;
         outGuid = it->second;
@@ -162,24 +168,6 @@ namespace sw
             return false;
         outPath = it->second;
         return true;
-    }
-
-    const Uuid* AssetDatabase::getGuid( string_view relativePath ) const
-    {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          it = _mapPathToGuid.find( string( relativePath ) );
-        if ( it == _mapPathToGuid.end() )
-            return nullptr;
-        return &it->second;
-    }
-
-    const string* AssetDatabase::getPath( const Uuid& guid ) const
-    {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          it = _mapGuidToPath.find( guid );
-        if ( it == _mapGuidToPath.end() )
-            return nullptr;
-        return &it->second;
     }
 
     size_t AssetDatabase::getAssetCount() const
