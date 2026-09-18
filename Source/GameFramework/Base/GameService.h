@@ -51,7 +51,14 @@ namespace sw
 
         SW_GAMESERVICE_API void bindGameService( const ModuleService& service );
         SW_GAMESERVICE_API void unbindGameService();
-        /** @brief 서비스 콜백이 바인딩되었는지 확인합니다. */
+        /**
+         * @brief 게임 서비스가 쓸 수 있는 상태인지 — **SceneManager 슬롯 하나를 봅니다.**
+         * @details 이름은 "서비스들이 붙었는가" 로 읽히지만 실제로 검사하는 것은
+         *          `ModuleServiceId::SceneManager` **하나**다. 그래서 이 함수가 true 면
+         *          `getService<SceneManager>()` 는 널일 수 없고, 반대로 다른 서비스에 대해서는
+         *          **아무것도 보장하지 않는다.** 2026-09-18 에 이것을 "필수 서비스 전체를 본다" 로
+         *          잘못 읽어 도달할 수 없는 가드를 넣은 적이 있다 — 이름만 보고 판단하지 말 것.
+         */
         SW_GAMESERVICE_API bool areGameServicesBound();
 
         template <typename T>

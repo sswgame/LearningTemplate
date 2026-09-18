@@ -17,5 +17,6 @@ add_subdirectory(EngineTest)
 add_subdirectory(ReflectionTest)
 add_subdirectory(SmokeTest)
 add_subdirectory(EditorTest)
+add_subdirectory(EditorUiTest)
 
 target_compile_definitions(TestFramework PUBLIC SW_TEST_INTERNAL)

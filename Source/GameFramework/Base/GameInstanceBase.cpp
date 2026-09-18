@@ -66,9 +66,11 @@ namespace sw
         if ( game::areGameServicesBound() == false )
             return false;
 
-        // `areGameServicesBound()` 는 **필수 엔진 서비스가 붙었는가**를 볼 뿐 이 하나를 보장하지
-        // 않는다. `game::getService<T>()` 는 못 찾으면 `SW_ASSERT( false )` 뒤 nullptr 을 돌려주는데,
-        // **그 단정은 Shipping 에서 사라진다** — 즉 배포본에서만 조용히 널 역참조가 된다.
+        // 위 `areGameServicesBound()` 가 **바로 이 서비스**를 본다(그 함수는 SceneManager 슬롯
+        // 하나를 검사한다) — 그래서 여기서 다시 널일 수 없다. 그래도 포인터로 받는 이유는
+        // `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수이고, 그것을 그대로 `->` 로
+        // 따라가는 모양을 `CheckNullableServiceUse` 린트가 막기 때문이다 — 규칙을 예외 없이
+        // 같은 모양으로 지킨다.
         SceneManager* pSceneManager = game::getService<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
@@ -113,9 +115,11 @@ namespace sw
         if ( game::areGameServicesBound() == false )
             return false;
 
-        // `areGameServicesBound()` 는 **필수 엔진 서비스가 붙었는가**를 볼 뿐 이 하나를 보장하지
-        // 않는다. `game::getService<T>()` 는 못 찾으면 `SW_ASSERT( false )` 뒤 nullptr 을 돌려주는데,
-        // **그 단정은 Shipping 에서 사라진다** — 즉 배포본에서만 조용히 널 역참조가 된다.
+        // 위 `areGameServicesBound()` 가 **바로 이 서비스**를 본다(그 함수는 SceneManager 슬롯
+        // 하나를 검사한다) — 그래서 여기서 다시 널일 수 없다. 그래도 포인터로 받는 이유는
+        // `game::getService<T>()` 가 nullptr 을 돌려줄 수 있는 함수이고, 그것을 그대로 `->` 로
+        // 따라가는 모양을 `CheckNullableServiceUse` 린트가 막기 때문이다 — 규칙을 예외 없이
+        // 같은 모양으로 지킨다.
         SceneManager* pSceneManager = game::getService<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;

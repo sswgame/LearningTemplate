@@ -205,7 +205,7 @@ cd build/Ninja-Debug/Bin
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
 | `RuntimeAPI` | 465 | ✅ 2026-09-18 (3절 참고 — 모듈 경계에 ABI 스탬프가 없었다) |
-| `GameFramework` (전체) | 6,777 | ✅ 2026-09-18 (3절 참고 — 배포본에서만 죽는 널 역참조 둘) |
+| `GameFramework` (전체) | 6,777 | ✅ 2026-09-18 (3절 참고 — 널 가능 서비스 사용 린트 확대 · 죽은 등록 경로 제거) |
 | `Games/Empty` | 1,054 | ✅ 2026-09-18 (같은 훑기에 포함. 결함 없음) |
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
@@ -409,14 +409,72 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-18 ("테스트할 수 없다" 고 적은 것 중 셋은 틀린 말이었다 — 테스트 보강)
+
+이번 훑기에서 몇 건을 **"테스트가 없다"** 로 남겼다. 다시 따져 보니 그 이유 중 **셋이 틀렸다.**
+틀린 이유를 그대로 두면 다음 사람이 같은 자리를 또 포기하므로, 무엇이 왜 틀렸는지 적어 둔다.
+
+**정정 1 — "서비스 결합이 프로세스 단위라 테스트가 서로 휩쓸린다"(틀림).**
+`editor::getService<T>()` 가 보는 모듈 서비스 표(`s_editorService`)는 **모듈 export 매크로의
+`bindService` 콜백**이 채운다. 테스트는 그것을 부르지 않는다 — 즉 **EditorTest 안에서는 커맨드
+스택 서비스가 처음부터 nullptr 이다.** 상태를 만들 필요가 없었고, 그냥 부르면 됐다.
+(내가 엔진 로케이터(`engine::bindEngineServices`, `TestFramework/main.cpp` 가 부른다)와
+모듈 로케이터를 같은 것으로 착각했다.) 새 스위트 `EditorTransactionTest` 3건 —
+없을 때 안 터지는가 · 있을 때(지역 서비스로 걸어) 실제로 닿는가 · dirty 표시가 남는가.
+**고치기 전 코드로 되돌리면 프로세스가 죽는다**(변이로 확인).
+
+**정정 2 — "EditorTest 가 ImGui 를 링크하지 않아 불가능"(절반만 맞음).**
+그 제약은 **그 타깃**의 것이지 테스트 전체의 것이 아니다. ImGui 를 링크하는 작은 타깃을
+따로 두면 된다 — `Test/EditorUiTest`. ImGui **컨텍스트만** 있으면 도는 것을 넣고(GPU·창이
+필요한 것은 넣지 않는다 — 그건 `hostgpu` 라벨이 필요하다), 기존 `EditorTest` 의 경계는 그대로
+둔다(`CheckTestSuites` 의 검사도 그 타깃 이름으로 되어 있어 영향 없다).
+새 스위트 `EditorUiPlatformBackendTest` 2건 — **초기화 없이 `shutdown()` 해도 살아남는가.**
+이것이 실패 수습 경로(`shutdownPartialInitialization`)가 밟는 바로 그 길이다.
+**고치기 전 코드로 되돌리면 프로세스가 죽는다**(변이로 확인).
+
+**정정 3 — "저장 커맨드는 패널을 통해야 해서 테스트 불가"(틀림).**
+`EditorToolAssetCommands` 는 ImGui 를 include 하지 않는다. `EditorTest` 소스 목록에 넣으니
+그대로 링크됐다(`EditorInspectorCommands.cpp` · `EditorData.cpp` 와 `EditorData.h` 코드젠을
+같이 넣어야 했다). 새 스위트 `EditorToolAssetCommandsTest` 3건 — 실패는 에러 로그를 남기는가 ·
+**성공은 조용한가**(반대 방향을 안 보면 "항상 우는" 구현도 통과한다).
+**로그를 다시 지우면 깨진다**(변이로 확인).
+
+**정정 4 — GameFramework 의 "배포본에서만 죽는 널 역참조" 는 도달할 수 없다.**
+`game::areGameServicesBound()` 가 무엇을 검사하는지 이름만 보고 "필수 서비스 전체" 로 읽었는데,
+실제로는 **`ModuleServiceId::SceneManager` 슬롯 하나**를 본다. 그래서 그 함수가 true 면
+`getService<SceneManager>()` 는 널일 수 없고, **내가 그 뒤에 넣은 가드는 도달하지 않는다.**
+가드 자체는 남겼다 — `CheckNullableServiceUse` 린트가 `getService<T>()->` 모양을 막으므로
+규칙을 예외 없이 같은 모양으로 지키는 편이 낫다 — 대신 **주석을 사실대로 고쳤고**, 진짜 함정인
+`areGameServicesBound()` 의 **이름과 실제 검사 범위가 다르다**는 것을 그 선언 옆에 적었다.
+
+**여전히 테스트가 없는 것과 그 이유(이번에는 근거를 확인했다).**
+
+| 대상 | 왜 없는가 |
+|------|-----------|
+| 모듈 ABI 스탬프(RuntimeAPI) | 대조 대상이 **DLL 심볼**이다. 테스트하려면 버전이 다른 모듈 DLL 을 빌드 산출물로 따로 구워야 한다 — 실기동 재현 절차가 더 싸고 확실하다(3절 RuntimeAPI 항목에 절차가 있다). |
+| 도킹 제목 대조(Editor/Gui) | `EditorContext` + 패널 매니저 + ImGui 가 모두 서 있어야 한다. `EditorUiTest` 는 **컨텍스트만** 필요한 것을 담는 타깃이라 여기 넣으면 그 경계가 무너진다. |
+| 초기화 실패 시 전역 변수 해제(루트) | `ImGuiEditor::initialize()` 를 실패시켜야 하는데 창·RHI·리소스가 모두 필요하다. |
+| 두 그래프 패널의 저장 계약 | 패널 본체는 노드 그래프 에디터까지 끌고 온다. **계약 자체는 기반(`IEditorPanel`)으로 끌어올려 테스트했고**, 커맨드 쪽은 위 정정 3 으로 덮였다 — 남은 것은 그 둘을 잇는 배선뿐이다. |
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 **6/6**(`EditorUiTest` 추가) ·
+`-L hostgpu` 양쪽 1/1 · 린트 16/16 · 새 테스트 8건, 전부 변이로 확인.
+
 ### 2026-09-18 (배포본에서만 죽는 널 역참조 — GameFramework · Games)
+
+> **정정(2026-09-18, 같은 날 늦게).** 아래 1) 의 마지막 문장이 **틀렸다.**
+> `areGameServicesBound()` 는 이름만 보고 "필수 서비스 전체" 로 읽었을 뿐, 실제로는
+> **`ModuleServiceId::SceneManager` 슬롯 하나**를 본다 — 그 하나가 바로 여기서 쓰는 서비스다.
+> 그래서 **이 자리는 널이 될 수 없었고, 내가 넣은 가드는 도달하지 않는다.** 가드는 남겼지만
+> (린트 규칙을 예외 없이 지키는 편이 낫다) **널 역참조를 막았다는 말은 취소한다.**
+> 진짜 함정은 그 함수의 **이름이 실제 검사 범위보다 넓게 읽힌다**는 것이고, 그것은
+> `GameService.h` 선언 옆에 적었다. 아래 2)·3) 과 Games 항목은 그대로 유효하다.
 
 **1) `game::getService<T>()` 를 확인 없이 따라가는 자리 둘.** 이 함수는 못 찾으면
 `SW_ASSERT( false )` 를 거쳐 `nullptr` 을 돌려주는데, **그 단정은 Shipping 에서 사라진다**
 (`SW_ASSERT` 가 빈 매크로다). 즉 Debug 에서는 브레이크가 걸려 눈에 띄고 **배포본에서만 조용히
-널 역참조**가 된다. `GameInstanceBase::serializeSceneObjects` · `deserializeSceneObjects` 둘 다
-바로 위에서 `areGameServicesBound()` 를 확인하지만 — **그것은 필수 엔진 서비스가 붙었는가를
-볼 뿐 이 하나를 보장하지 않는다.**
+널 역참조**가 된다 — `getService<T>()->` 라는 **모양** 자체가 배포본에서만 터지는 함정이라는
+뜻이다. `GameInstanceBase::serializeSceneObjects` · `deserializeSceneObjects` 둘이 그 모양이었다
+(위 정정대로, 이 두 자리에 한해서는 앞선 검사 덕에 실제로 널이 되지는 않는다).
 
 받아 두고 확인하게 고쳤고, **에디터에 붙였던 린트를 여기까지 넓혔다**
 (`CheckNullableServiceUse` 의 검사 범위: `Source/Editor` → `Editor · GameFramework · Games`).
