@@ -32,7 +32,9 @@ from LintGate import GateResult, LintGate  # noqa: E402
 # 포인터를 받아 두고 확인한 뒤 쓰는 형태(`T* p = getService<T>();`)는 걸리지 않는다.
 _kNullableCallRe = re.compile(r"\bgetService\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->")
 
-_kScanRoot = "Source/Editor"
+# 같은 함정이 세 곳에 있다 — 에디터의 `editor::getService`, 게임의 `game::getService`.
+# 게임 쪽은 `SW_ASSERT( false )` 를 거치는데 **그 단정은 Shipping 에서 사라진다.**
+_kListScanRoot = ( "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
 def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
@@ -40,14 +42,14 @@ def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | Non
     if listTargetFile:
         listPath = [repositoryRoot / f for f in listTargetFile]
     else:
-        listPath = collectSourceFiles([repositoryRoot / _kScanRoot], {".cpp", ".h"})
+        listPath = collectSourceFiles([repositoryRoot / r for r in _kListScanRoot], {".cpp", ".h"})
 
     violations: list[str] = []
     for path in listPath:
         if not path.exists() or path.is_dir():
             continue
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if not relative.startswith(_kScanRoot):
+        if not any(relative.startswith(r) for r in _kListScanRoot):
             continue
 
         try:
@@ -67,7 +69,7 @@ class CheckNullableServiceUseGate(LintGate):
     description = "nullptr 가능 서비스 조회를 확인 없이 역참조하는 곳 검사"
     buildComment = "Checking nullable editor service dereferences..."
     timeoutSeconds = 15
-    preCommitPattern = ("Source/Editor/*",)
+    preCommitPattern = ("Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
     preCommitFileArgument = "--files"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
@@ -92,11 +94,11 @@ class CheckNullableServiceUseGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--files", nargs="*", default=None, help="검사할 특정 파일 (생략 시 Source/Editor 전체)")
+        parser.add_argument("--files", nargs="*", default=None, help="검사할 특정 파일 (생략 시 Editor · GameFramework · Games 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findDirectDereferences(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source/Editor 의 서비스 조회 역참조")
+        return GateResult(listViolation=violations, summary="Editor · GameFramework · Games 의 서비스 조회 역참조")
 
 
 main = CheckNullableServiceUseGate.run

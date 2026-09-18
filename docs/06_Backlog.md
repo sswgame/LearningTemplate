@@ -205,12 +205,8 @@ cd build/Ninja-Debug/Bin
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
 | `RuntimeAPI` | 465 | ✅ 2026-09-18 (3절 참고 — 모듈 경계에 ABI 스탬프가 없었다) |
-| `GameFramework/Base` | 1,150 | ← 다음 |
-| `GameFramework/Data` | 495 | |
-| `GameFramework/Kits` | 3,754 | |
-| `GameFramework/Transition` | 493 | |
-| `GameFramework/UI` | 842 | |
-| `Games/Empty` | 1,054 | |
+| `GameFramework` (전체) | 6,777 | ✅ 2026-09-18 (3절 참고 — 배포본에서만 죽는 널 역참조 둘) |
+| `Games/Empty` | 1,054 | ✅ 2026-09-18 (같은 훑기에 포함. 결함 없음) |
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -412,6 +408,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (배포본에서만 죽는 널 역참조 — GameFramework · Games)
+
+**1) `game::getService<T>()` 를 확인 없이 따라가는 자리 둘.** 이 함수는 못 찾으면
+`SW_ASSERT( false )` 를 거쳐 `nullptr` 을 돌려주는데, **그 단정은 Shipping 에서 사라진다**
+(`SW_ASSERT` 가 빈 매크로다). 즉 Debug 에서는 브레이크가 걸려 눈에 띄고 **배포본에서만 조용히
+널 역참조**가 된다. `GameInstanceBase::serializeSceneObjects` · `deserializeSceneObjects` 둘 다
+바로 위에서 `areGameServicesBound()` 를 확인하지만 — **그것은 필수 엔진 서비스가 붙었는가를
+볼 뿐 이 하나를 보장하지 않는다.**
+
+받아 두고 확인하게 고쳤고, **에디터에 붙였던 린트를 여기까지 넓혔다**
+(`CheckNullableServiceUse` 의 검사 범위: `Source/Editor` → `Editor · GameFramework · Games`).
+같은 함정이 세 폴더에 있고 철자가 같으므로 한 게이트가 셋을 다 본다.
+
+**2) `registerGameFrameworkTypes()` 를 지웠다.** GameFramework 의 리플렉션 타입은
+`EngineLoop` 이 서비스를 묶은 직후 `engine::registerModuleTypes( "GameFramework" )` 로 직접
+등록한다 — 그것이 실제로 도는 유일한 경로다. 그런데 같은 일을 하는 함수가 `SW_GF_API` 로
+하나 더 export 돼 있었고 **부르는 곳이 없었다.** 게다가 조건이 달랐다 —
+`areGameServicesBound()` 일 때만 등록하므로, 서비스가 아직 안 묶인 시점에 부르면 **조용히
+아무 일도 하지 않는다.** 등록 자리가 둘이면 어느 쪽이 도는지 알 수 없다.
+
+**3) 적어 두는 것 — `GameEvents.h` 의 열두 이벤트를 아무도 발행하지 않는다.**
+`SaveRequestedEvent` · `SceneTransitionRequestedEvent` 등 **열두 종 전부**, 그리고
+`gameEventChannel()` 까지 저장소 안에 **발행자도 구독자도 없다.** 이름만 보면 "세이브를
+요청하면 프레임워크가 쏴 주겠지" 로 읽히지만 **영원히 오지 않는다.**
+
+지우지 않았다 — 이것은 프레임워크의 **공개 어휘**라, 게임들이 자기들끼리 주고받을 때 이름이
+갈리지 않게 하는 용도라면 소비자가 없는 것이 정상이다. 그 판단은 사용자 몫이므로 헤더에
+`@warning` 으로 **프레임워크가 발행하지 않는다**는 사실만 크게 적었다.
+**결정이 필요하다**: (a) 그대로 어휘로 둔다, (b) 프레임워크가 실제로 발행하게 한다(세이브·씬
+전환 자리를 정해야 한다), (c) 지운다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** 멤버 222개 중 쓰기 전용 후보 7개는 전부 **이벤트
+페이로드 필드**이고(위 3번과 같은 뿌리) 나머지는 정상. 선언 185개 중 "죽은 함수" 후보 52개는
+대부분 **키트가 게임에 내주는 세터/게터**다 — 프레임워크는 저장소 안에 소비자가 없는 것이
+정상이라 지우지 않는다(`EditorThemeUtil` 팔레트와 같은 판단). 그중 실제로 죽은 배선이었던
+것은 위 2번 하나였다. `GameFrameworkTest` 35건이 이 폴더를 두껍게 덮고 있다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 16/16. **새 테스트는 없다** — 널 역참조는 서비스를 푼 상태를 만들어야 하는데 결합이
+프로세스 단위라 다른 테스트가 휩쓸린다. 대신 **린트가 회귀를 막는다**.
 
 ### 2026-09-18 (모듈 경계에 ABI 스탬프가 없었다 — RuntimeAPI)
 

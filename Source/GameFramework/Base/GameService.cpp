@@ -17,12 +17,6 @@ namespace sw
         map<uint64, void*> s_mapLocalService{};
     } // namespace
 
-    SW_GF_API void registerGameFrameworkTypes()
-    {
-        if ( game::areGameServicesBound() )
-            engine::registerModuleTypes( "GameFramework" );
-    }
-
     namespace game
     {
         SW_GAMESERVICE_API void bindGameService( const ModuleService& service )

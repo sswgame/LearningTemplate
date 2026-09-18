@@ -66,7 +66,14 @@ namespace sw
         if ( game::areGameServicesBound() == false )
             return false;
 
-        Scene* pActiveScene = game::getService<SceneManager>()->getActiveScene();
+        // `areGameServicesBound()` 는 **필수 엔진 서비스가 붙었는가**를 볼 뿐 이 하나를 보장하지
+        // 않는다. `game::getService<T>()` 는 못 찾으면 `SW_ASSERT( false )` 뒤 nullptr 을 돌려주는데,
+        // **그 단정은 Shipping 에서 사라진다** — 즉 배포본에서만 조용히 널 역참조가 된다.
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return false;
+
+        Scene* pActiveScene = pSceneManager->getActiveScene();
         if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
             return false;
 
@@ -106,7 +113,14 @@ namespace sw
         if ( game::areGameServicesBound() == false )
             return false;
 
-        Scene* pActiveScene = game::getService<SceneManager>()->getActiveScene();
+        // `areGameServicesBound()` 는 **필수 엔진 서비스가 붙었는가**를 볼 뿐 이 하나를 보장하지
+        // 않는다. `game::getService<T>()` 는 못 찾으면 `SW_ASSERT( false )` 뒤 nullptr 을 돌려주는데,
+        // **그 단정은 Shipping 에서 사라진다** — 즉 배포본에서만 조용히 널 역참조가 된다.
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return false;
+
+        Scene* pActiveScene = pSceneManager->getActiveScene();
         if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
             return false;
 
