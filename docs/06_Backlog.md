@@ -154,8 +154,8 @@ cd build/Ninja-Debug/Bin
 | `Sequencer` | 546 | ✅ 2026-09-18 (3절 참고 — 이벤트 트랙이 배포본에서 아무 일도 하지 않았다) |
 | `Serialization` | 7,120 | ✅ 2026-09-18 (3절 참고 — 손상된 스트림 하나로 프로세스가 멈췄다) |
 | `Spatial` | 1,541 | ✅ 2026-09-18 (3절 참고 — 실패한 update 가 원소를 삼켰다) |
-| `Utility` | 3,077 | ← 다음 |
-| `Window` | 2,124 | |
+| `Utility` | 3,077 | ✅ 2026-09-18 (3절 참고 — 넷 중 하나만 표 크기를 보지 않았다) |
+| `Window` | 2,124 | ← 다음 |
 
 **Core 와 다른 점 하나 — 이제는 해결됐다.** Engine 은 생성 헤더가 전 TU 에 `/FI` 로 들어가는데,
 예전에는 그 우산이 Graphics 헤더 넷까지 끌고 들어와 **헤더 자립성 검사가 거짓 통과**를 냈다.
@@ -362,6 +362,38 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (넷 중 하나만 표 크기를 보지 않았다 — Engine/Utility)
+
+**1) `FrameProfiler::registerScope` 가 고정 배열 밖을 읽었다 — 프로세스가 죽는다.**
+구간 표는 `Scope _arrScope[kMaxScope]`(64개) 고정 배열이고, 등록 수는 `_scopeCount` 다.
+표가 꽉 찬 뒤에도 `fetch_add` 는 **계속 카운터를 올리고** 실패만 돌려줬다. 그래서 65번째
+등록 뒤 `_scopeCount == 65` 가 되고, 그 다음 등록의 "같은 이름 찾기" 선형 탐색이
+`_arrScope[64]` 를 읽는다 — **배열 바로 뒤에 있는 것이 `_scopeCount` 자신**이라, 그 비트가
+`const utf8*` 로 읽혀 `StringUtil::equals` 에 들어가고 주소 65 를 역참조한다.
+
+이 파일의 다른 세 순회(`endFrame` · `report` · `reset`)는 **전부** `index < kMaxScope` 로
+막고 있었다. 넘침을 **만드는** 이 함수 하나만 막지 않았다 — 넷을 나란히 놓고 보면 바로 보인다.
+탐색 상한을 `kMaxScope` 로 자르고, 넘친 뒤에는 카운터를 표 크기에 붙여 둔다(그러지 않으면
+등록 시도마다 계속 자라 `uint32` 를 한 바퀴 돌고 남의 슬롯을 내주게 된다). 둘 중 하나만
+있어도 죽지는 않지만 카운터가 자라는 것 자체가 따로 틀린 일이라 둘 다 뒀다.
+새 스위트 `FrameProfilerTest` 2건 — **이 폴더에 프로파일러 테스트가 하나도 없었다.**
+
+**2) `CommandStack::pushCoalesce` 가 재진입 방지를 보지 않아 지난 명령을 덮어썼다.**
+`_bIsExecuting` 은 undo/redo 콜백이 자기 자신을 새 명령으로 기록하지 못하게 막는 깃발이다.
+`push` 는 그것을 보는데 `pushCoalesce` 는 보지 않았다. 그래서 undo 콜백 안에서 병합 push 를
+하면 `push` 는 거절당하는데 **coalesce 키는 그대로 기록되어**, 그 다음의 정상적인 병합 push 가
+같은 키를 보고 `_index - 1` 의 명령 — **아무 상관 없는 지난 명령** — 의 redo 와 레이블을
+갈아치웠다. 되돌린 뒤 다시 실행하면 다른 일이 일어난다. 에디터에서 슬라이더를 드래그하다
+Ctrl+Z 를 누르고 다시 드래그하면 닿는 자리다.
+테스트 `EditorCommandStackTest.CoalesceDuringUndoDoesNotRewriteHistory`.
+
+**따라갔지만 결함이 아니었던 것.** `KeyValueFile::parse` 가 `line.front()` 를 그냥 부르는데,
+`forEachContentLine` 이 **빈 줄과 주석을 이미 걸러서** 넘기므로 안전하다(그 함수 안의 trim 도
+`empty() == false` 를 매번 확인한다).
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EditorCommandStackTest` 10 → 11건 · 새 `FrameProfilerTest` 2건.
 
 ### 2026-09-18 (실패한 update 가 원소를 삼켰다 — Engine/Spatial)
 

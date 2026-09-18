@@ -103,7 +103,13 @@ namespace sw
 
     void CommandStack::pushCoalesce( string_view coalesceKey, Command cmd )
     {
-        if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false )
+        // **`_bIsExecuting` 을 여기서도 본다.** 이 깃발은 undo/redo 콜백이 자기 자신을 새 명령으로
+        // 기록하지 못하게 막는 재진입 방지인데, 예전에는 `push` 만 보고 이쪽은 보지 않았다.
+        // 그러면 콜백 안에서 병합 push 를 했을 때 `push` 는 거절당하는데 **coalesce 키는 그대로
+        // 남아**, 그 다음의 정상적인 병합 push 가 같은 키를 보고 `_index - 1` 의 명령 — 아무
+        // 상관 없는 지난 명령 — 의 redo 를 갈아치웠다. 되돌린 뒤 다시 실행하면 다른 일이 난다.
+        // 여기서 막고 나면 아래 `push` 가 거절될 이유가 남지 않으므로, 키를 적는 것도 안전해진다.
+        if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
             return;
 
         if ( _transactionDepth != 0 )

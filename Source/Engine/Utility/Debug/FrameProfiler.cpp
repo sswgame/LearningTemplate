@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -49,7 +50,13 @@ namespace sw
             return kInvalidSlot;
 
         // 같은 이름이 이미 있으면 그 슬롯을 쓴다. 등록은 최초 1회뿐이라 선형 탐색으로 충분하다.
-        const uint32 count = _scopeCount.load( std::memory_order_acquire );
+        // **표 크기로 자른다.** 표가 꽉 찬 뒤에도 아래 `fetch_add` 는 카운터를 계속 올리므로
+        // 그 값이 `kMaxScope` 를 넘어간다 — 자르지 않으면 이 순회가 고정 배열 **밖**을 읽고,
+        // 배열 바로 뒤에 있는 것이 `_scopeCount` 자신이라 그 비트가 `const utf8*` 로 읽혀
+        // 문자열 비교에 들어간다(프로세스가 죽는다). 이 파일의 다른 세 순회
+        // (`endFrame` · `report` · `reset`)는 전부 이미 자르고 있었는데, 넘침을 **만드는**
+        // 이 함수만 자르지 않았다.
+        const uint32 count = MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );
         for ( uint32 index = 0; index < count; ++index )
         {
             if ( _arrScope[index]._pName != nullptr && StringUtil::equals( _arrScope[index]._pName, pName ) )
@@ -59,6 +66,10 @@ namespace sw
         const uint32 slot = _scopeCount.fetch_add( 1, std::memory_order_acq_rel );
         if ( slot >= kMaxScope )
         {
+            // 넘친 뒤에는 카운터를 표 크기에 붙여 둔다 — 그러지 않으면 등록 시도마다 계속 자라고,
+            // 오래 돌면 `uint32` 를 한 바퀴 돌아 0 이 되어 남의 슬롯을 내주게 된다.
+            _scopeCount.store( kMaxScope, std::memory_order_release );
+
             // 측정이 실행을 막으면 안 된다 — 한 번만 알리고 조용히 무시한다.
             static bool s_bWarned = false;
             if ( s_bWarned == false )

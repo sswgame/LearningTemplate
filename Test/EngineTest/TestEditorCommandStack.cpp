@@ -584,3 +584,91 @@ SW_TEST_CASE( EditorCommandStackTest, ReentrancyPushGuardDuringUndoRedo )
     stack.redo();
     SW_EXPECT_EQUAL( 1, val );
 }
+
+/**
+ * @brief [EditorCommandStackTest] undo 실행 중의 pushCoalesce 가 지난 명령을 덮어쓰지 않는다
+ * @details `_bIsExecuting` 은 undo/redo 콜백이 자기 자신을 새 명령으로 기록하지 못하게 막는
+ *          재진입 방지다. `push` 는 그것을 보는데 `pushCoalesce` 는 보지 않았다. 그래서
+ *          undo 콜백 안에서 병합 push 를 하면 `push` 는 거절당하는데 **coalesce 키는 그대로
+ *          기록되어**, 그 다음의 정상적인 병합 push 가 같은 키를 보고 `_index - 1` 의 명령 —
+ *          즉 **아무 상관 없는 지난 명령** — 의 redo 를 갈아치웠다. 되돌린 뒤 다시 실행하면
+ *          다른 일이 일어난다.
+ */
+SW_TEST_CASE( EditorCommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
+{
+    CommandStack stack;
+    int32        firstValue{ 0 };
+    int32        secondValue{ 0 };
+
+    // 1) 평범한 명령 하나 — 이것이 나중에 덮어써지는 피해자다.
+    {
+        CommandStack::Command cmd;
+        cmd._label = "SetFirst";
+        cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&firstValue]()
+         {
+            firstValue = 100;
+        } );
+        cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&firstValue]()
+         {
+            firstValue = 0;
+        } );
+        cmd._redo();
+        stack.push( std::move( cmd ) );
+    }
+    SW_ASSERT_EQUAL( 100, firstValue );
+
+    // 2) undo 콜백 안에서 병합 push 를 시도하는 명령. 스택은 그 push 를 받아들이면 안 된다.
+    {
+        CommandStack::Command cmd;
+        cmd._label = "Reentrant";
+        cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&secondValue]()
+         {
+            secondValue = 1;
+        } );
+        cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&stack, &secondValue]()
+         {
+            secondValue = 0;
+
+            CommandStack::Command inner;
+            inner._label = "InnerDuringUndo";
+            inner._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
+            inner._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
+            stack.pushCoalesce( "SharedKey", std::move( inner ) );
+        } );
+        cmd._redo();
+        stack.push( std::move( cmd ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 2 ), stack.getCommandCount() );
+
+    // 3) 되돌린다 — 콜백 안의 병합 push 는 거절되어야 하고, 기록도 남기면 안 된다.
+    stack.undo();
+    SW_EXPECT_EQUAL( 0, secondValue );
+    SW_EXPECT_EQUAL( size_t( 2 ), stack.getCommandCount() );
+
+    // 4) 이제 같은 키로 정상적인 병합 push 를 한다. 이것은 **새 명령**이어야 한다 —
+    //    지난 "SetFirst" 를 덮어쓰면 안 된다.
+    int32 thirdValue{ 0 };
+    {
+        CommandStack::Command cmd;
+        cmd._label = "SetThird";
+        cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&thirdValue]()
+         {
+            thirdValue = 7;
+        } );
+        cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&thirdValue]()
+         {
+            thirdValue = 0;
+        } );
+        cmd._redo();
+        stack.pushCoalesce( "SharedKey", std::move( cmd ) );
+    }
+    SW_ASSERT_EQUAL( 7, thirdValue );
+
+    // "SetFirst" 는 그대로 살아 있어야 한다. 덮어써졌다면 두 번 되돌렸을 때 100 이 남는다.
+    stack.undo(); // SetThird 취소
+    SW_EXPECT_EQUAL( 0, thirdValue );
+    SW_EXPECT_EQUAL( 100, firstValue );
+
+    stack.undo(); // SetFirst 취소
+    SW_EXPECT_EQUAL( 0, firstValue );
+}
