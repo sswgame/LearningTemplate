@@ -141,8 +141,8 @@ cd build/Ninja-Debug/Bin
 | `Common` | 274 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Compression` | 370 | ✅ 2026-09-18 (3절 참고) |
 | `Config` | 480 | ✅ 2026-09-18 (3절 참고) |
-| `Dialogue` | 375 | ← 다음. 헤더 자립 실패 1건이 걸려 있다(3절) |
-| `Graphics` | 42,770 | 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다. 자립 실패 3건(3절) |
+| `Dialogue` | 375 | ✅ 2026-09-18 (3절 참고) |
+| `Graphics` | 42,770 | ← 다음. 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다 |
 | `Input` | 9,056 | |
 | `Localization` | 1,184 | |
 | `Module` | 318 | |
@@ -362,6 +362,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (디스크에 저장되는 핀 번호 계약이 두 파일에 따로 적혀 있었다 — Engine/Dialogue)
+
+**1) 핀 번호를 만드는 쪽과 읽는 쪽이 각자 적고 있었다.** 대화 링크는 `노드 id * 100 + 오프셋` 으로
+핀을 가리키고 그 숫자가 **그대로 디스크에 저장된다.** 그런데 인코딩(`nodeId * 100 + offset`)과 오프셋
+상수(`In=1 · Out=2 · True=3 · False=4 · ChoiceBase=10`)가 `Editor/Panels/DialogueGraphPanel.cpp` 와
+`Engine/Dialogue/DialogueGraphAsset.cpp` **양쪽에 따로** 있었다. 한쪽만 바뀌면 대화가 조용히 엉뚱한
+분기를 탄다 — 증상이 "가끔 다른 대사가 나온다" 라서 재현도 추적도 가장 어려운 종류다.
+
+계약을 애셋으로 모았다(`kPinScale` · `kPinOffset*` · `encodePin` · `encodeChoicePin` ·
+`decodePin*`). 패널은 이제 그것을 부르고, 상수는 그 이름만 짧게 빌린다. 애셋이 on-disk 포맷의
+주인이므로 계약이 있어야 할 자리다.
+
+**2) 선택지가 90개를 넘으면 링크가 다른 노드를 가리켰다.** 선택지 핀은 `오프셋 = 10 + 번호` 인데
+오프셋이 100 을 넘으면 **자릿수를 넘어 노드 id 를 오염시킨다**(`nodeId*100 + 110` = 다음 노드의 10번
+핀). `_listChoice` 에는 상한이 없었고 검사도 없었다. `encodePin` 이 담기지 않는 오프셋에 0(없는 핀)을
+돌려주고, `findChoiceNextNodeId` 는 범위 밖 번호를 기본 출력으로 떨어뜨린다.
+
+**3) 노드 타입 이름을 짓는 쪽과 읽는 쪽이 목록을 따로 들고 있었다.** `nodeTypeName` 은 switch 여섯
+갈래, `parseNodeType` 은 if 다섯 줄이었다. 열거자를 하나 더하고 한쪽만 고치면 그 노드는 **저장은
+되는데 읽을 때 조용히 `Dialogue` 로 떨어진다** — 파일은 멀쩡한데 대화만 달라진다. 표 하나
+(`kArrNodeTypeName`)를 둘이 함께 본다.
+
+**4) 대사 원문이 intern 아레나에 영구히 쌓이고 있었다.** `resolveLocalizedText` 는 "이 텍스트가
+로컬라이즈 키인가" 를 물으려고 그 텍스트로 `hashed_string` 을 만들었다. `hashed_string` 은 **intern**
+이므로 키가 아닌 평범한 대사까지 아레나에 영구 적재된다 — 대화 콘텐츠가 늘수록 함께 늘어나는 누수다.
+그런데 `StringTable` 은 애초에 **해시로만 열리는 표**라 조회에 intern 이 필요 없었다.
+
+- `basic_hashed_string::computeHash( string_view )` — intern 없이 같은 해시를 계산한다.
+- `StringTable::getString( string_view )` · `LocalizationManager::getString( string_view )` 추가.
+  두 오버로드가 `findByHash` / `findInActiveThenFallback` 한 경로를 공유하므로 조회 규칙이 갈라지지 않는다.
+- **조회가 영구 할당을 하지 않는다** 는 것이 요점이다.
+
+**5) 껍데기 하나.** `DialogueGraphAssetInternal` 은 자기 클래스의 public static 을 그대로 다시 부르는
+함수 둘뿐이었다. 지웠고, 그 자리에 3)의 표가 들어갔다.
+`loadFromFile` 의 이중 파싱(`parse → dump → parse`)도 `AnimationGraphAsset` 과 같은 방식으로 없앴다.
+
+**테스트 6건 신규 — `DialogueGraphTest` (`Test/EngineTest/TestDialogueGraph.cpp`).** 이 애셋에는
+테스트가 **하나도** 없었는데 `DialogueRunnerComponent`(실제 게임플레이)와 에디터 패널이 쓰고 있었다.
+핀 왕복 · 자릿수 넘침 거절 · 노드 타입 왕복(전 열거자) · 선택지/기본 출력 따라가기 · JSON 왕복과
+`loadFromFile` 일치 · 키가 아닌 원문 통과. 변이 테스트로 둘을 확인했다 — 넘침 가드를 빼면 2)의
+케이스가, `parseNodeType` 을 표에서 떼어 내면 3)의 케이스가 깨진다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `DialogueGraphTest` 6건 · 헤더 자립 3/3.
 
 ### 2026-09-18 (설정의 정체성이 호출부마다 손으로 적는 문자열이었다 — Engine/Config)
 

@@ -305,8 +305,20 @@ namespace sw
 
     const utf8* StringTable::getString( const hashed_string& key ) const
     {
+        return findByHash( key.getHash() );
+    }
+
+    const utf8* StringTable::getString( string_view key ) const
+    {
+        if ( key.empty() )
+            return nullptr;
+        return findByHash( hashed_string::computeHash( key ) );
+    }
+
+    const utf8* StringTable::findByHash( uint64 keyHash ) const
+    {
         std::shared_lock<std::shared_mutex>                 lock( _mutex );
-        const unordered_map<uint64, string>::const_iterator iter = _mapTable.find( key.getHash() );
+        const unordered_map<uint64, string>::const_iterator iter = _mapTable.find( keyHash );
         if ( iter != _mapTable.end() )
             return iter->second.c_str();
         return nullptr;

@@ -140,6 +140,23 @@ namespace sw
          */
         hash_type getHash() const noexcept;
 
+        /**
+         * @brief 문자열을 **intern 하지 않고** 그 해시만 계산합니다.
+         * @details `getHash()` 와 같은 값이 나온다 — intern 여부와 무관하게 같은 해시 규약을 쓴다.
+         *          해시로만 여는 표(`StringTable` 등)를 **조회**할 때 쓴다. 조회하려고 intern 하면
+         *          그 문자열이 아레나에 영구히 남는다 — 대사 원문처럼 키가 아닌 텍스트로 물어보는
+         *          자리에서는 그것이 곧 증가하는 누수다.
+         */
+        static constexpr hash_type computeHash( std::basic_string_view<value_type> text ) noexcept
+        {
+            if ( text.empty() )
+                return static_cast<hash_type>( 0 );
+            if constexpr ( std::is_same_v<hash_type, uint32> )
+                return StringUtil::computeHash32( text.data(), text.size() );
+            else
+                return StringUtil::computeHash64( text.data(), text.size() );
+        }
+
         /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept { return _stringKeyIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) || size() == 0; }
 

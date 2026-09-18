@@ -487,6 +487,16 @@ namespace sw
 
     const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
     {
+        return findInActiveThenFallback( key.view(), pDefaultText );
+    }
+
+    const utf8* LocalizationManager::getString( string_view key, const utf8* pDefaultText ) const
+    {
+        return findInActiveThenFallback( key, pDefaultText );
+    }
+
+    const utf8* LocalizationManager::findInActiveThenFallback( string_view key, const utf8* pDefaultText ) const
+    {
         std::shared_lock<std::shared_mutex> lock( _mutex );
 
         // 1) 현재 활성 언어 테이블에서 검색

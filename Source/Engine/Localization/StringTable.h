@@ -39,6 +39,13 @@ namespace sw
         bool        loadFromBinaryBuffer( const uint8* pData, size_t size );
         const utf8* getString( const hashed_string& key ) const;
         const utf8* getString( const hashed_string& key, const utf8* pDefaultText ) const;
+        /**
+         * @brief 키를 **intern 하지 않고** 조회합니다. 없으면 nullptr 입니다.
+         * @details 표는 해시로만 열리므로 조회에 intern 이 필요 없다. 키가 아닐 수도 있는 텍스트로
+         *          물어보는 자리(대사 원문 등)는 반드시 이쪽을 쓴다 — `hashed_string` 을 만들면
+         *          그 텍스트가 intern 아레나에 **영구히** 남는다.
+         */
+        const utf8* getString( string_view key ) const;
         bool        contains( const hashed_string& key ) const;
         void        setString( const hashed_string& key, const string& value );
         void        clear();
@@ -46,6 +53,9 @@ namespace sw
         bool        empty() const;
 
     private:
+        /** @brief 해시 하나로 표를 엽니다. 두 getString 오버로드가 공유하는 유일한 조회 경로입니다. */
+        const utf8* findByHash( uint64 keyHash ) const;
+
         mutable std::shared_mutex     _mutex;
         unordered_map<uint64, string> _mapTable;
     };

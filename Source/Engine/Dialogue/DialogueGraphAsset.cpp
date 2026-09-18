@@ -14,17 +14,30 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 노드 타입 ↔ 이름 표. **이름을 짓는 쪽과 읽는 쪽이 같은 표를 본다.**
+         * @details 예전에는 `nodeTypeName` 의 switch 와 `parseNodeType` 의 if 사슬이 따로 있었다.
+         *          열거자를 하나 더하고 한쪽만 고치면, 그 이름은 저장은 되는데 읽을 때 조용히
+         *          `Dialogue` 로 떨어진다 — 파일은 멀쩡한데 대화만 달라진다.
+         */
         struct DialogueGraphAssetInternal
         {
-            static const utf8* dialogueAssetTypeName( DialogueAssetNodeType type )
+            /** @brief 타입 하나와 그 JSON 이름입니다. */
+            struct NodeTypeName
             {
-                return DialogueGraphAsset::nodeTypeName( type );
-            }
+                DialogueAssetNodeType _type;  /**< 노드 타입입니다. */
+                const utf8*           _pName; /**< JSON 에 적히는 이름입니다. */
+            };
 
-            static DialogueAssetNodeType parseDialogueAssetType( string_view typeStr )
-            {
-                return DialogueGraphAsset::parseNodeType( typeStr );
-            }
+            /** @brief 저장·해석에 함께 쓰는 유일한 표입니다. */
+            static constexpr NodeTypeName kArrNodeTypeName[] = {
+                {   DialogueAssetNodeType::Start,    "Start"},
+                {DialogueAssetNodeType::Dialogue, "Dialogue"},
+                {  DialogueAssetNodeType::Choice,   "Choice"},
+                {  DialogueAssetNodeType::Branch,   "Branch"},
+                {  DialogueAssetNodeType::Action,   "Action"},
+                {     DialogueAssetNodeType::End,      "End"},
+            };
         };
     } // namespace
 } // namespace sw
@@ -41,7 +54,10 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        return parseJson( doc.dump( -1 ) );
+        // 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다 — 같은 JSON 을 두 번
+        // 파싱하고 그 사이에 문서 전체 길이의 문자열을 한 번 더 만들던 자리다.
+        parseRoot( doc.root() );
+        return true;
     }
 
     bool DialogueGraphAsset::saveToFile( string_view path ) const
@@ -63,7 +79,12 @@ namespace sw
         if ( doc.parse( jsonView ) == false )
             return false;
 
-        const JsonValue root     = doc.root();
+        parseRoot( doc.root() );
+        return true;
+    }
+
+    void DialogueGraphAsset::parseRoot( const JsonValue& root )
+    {
         const JsonValue nodesVal = root.get( "nodes" );
         if ( nodesVal.isArray() )
         {
@@ -76,7 +97,7 @@ namespace sw
 
                 DialogueAssetNode node{};
                 node._id            = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-                node._type          = DialogueGraphAssetInternal::parseDialogueAssetType( nodeJson.get( "type" ).asString() );
+                node._type          = parseNodeType( nodeJson.get( "type" ).asString() );
                 node._speaker       = nodeJson.get( "speaker" ).asString();
                 node._text          = nodeJson.get( "text" ).asString();
                 node._condition     = nodeJson.get( "condition" ).asString();
@@ -116,7 +137,6 @@ namespace sw
                     _listLink.push_back( link );
             }
         }
-        return true;
     }
 
     string DialogueGraphAsset::toJson() const
@@ -131,7 +151,7 @@ namespace sw
             const JsonValue nodeJson = nodesVal.pushBack();
             nodeJson.setObject();
             nodeJson.set( "id" ).setInt( node._id );
-            nodeJson.set( "type" ).setString( DialogueGraphAssetInternal::dialogueAssetTypeName( node._type ) );
+            nodeJson.set( "type" ).setString( nodeTypeName( node._type ) );
             nodeJson.set( "speaker" ).setString( node._speaker );
             nodeJson.set( "text" ).setString( node._text );
             nodeJson.set( "condition" ).setString( node._condition );
@@ -182,11 +202,27 @@ namespace sw
         return nullptr;
     }
 
+    int32 DialogueGraphAsset::encodePin( int32 nodeId, int32 pinOffset )
+    {
+        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시킨다 — 링크가 **다른 노드**를 가리키게 된다.
+        // 조용히 그런 값을 만들지 않고 0(없는 핀)을 돌려준다.
+        if ( nodeId <= 0 || pinOffset <= 0 || pinOffset >= kPinScale )
+            return 0;
+        return nodeId * kPinScale + pinOffset;
+    }
+
+    int32 DialogueGraphAsset::encodeChoicePin( int32 nodeId, int32 choiceIndex )
+    {
+        if ( choiceIndex < 0 || choiceIndex >= getMaxChoiceCount() )
+            return 0;
+        return encodePin( nodeId, kPinOffsetChoiceBase + choiceIndex );
+    }
+
     int32 DialogueGraphAsset::decodePinNodeId( int32 pin )
     {
         if ( pin <= 0 )
             return 0;
-        const int32 scale = ( pin >= 100 ) ? 100 : 10;
+        const int32 scale = ( pin >= kPinScale ) ? kPinScale : 10;
         return pin / scale;
     }
 
@@ -194,7 +230,7 @@ namespace sw
     {
         if ( pin <= 0 )
             return 0;
-        const int32 scale = ( pin >= 100 ) ? 100 : 10;
+        const int32 scale = ( pin >= kPinScale ) ? kPinScale : 10;
         return pin % scale;
     }
 
@@ -213,59 +249,42 @@ namespace sw
 
     int32 DialogueGraphAsset::findDefaultNextNodeId( int32 fromNodeId ) const
     {
-        constexpr int32 kPinOut = 2;
-        return findLinkedNodeId( fromNodeId, kPinOut );
+        return findLinkedNodeId( fromNodeId, kPinOffsetOut );
     }
 
     int32 DialogueGraphAsset::findChoiceNextNodeId( int32 fromNodeId, int32 choiceIndex ) const
     {
-        constexpr int32 kPinChoiceBase = 10;
-        const int32     nextId         = findLinkedNodeId( fromNodeId, kPinChoiceBase + choiceIndex );
-        if ( nextId > 0 )
-            return nextId;
+        if ( 0 <= choiceIndex && choiceIndex < getMaxChoiceCount() )
+        {
+            const int32 nextId = findLinkedNodeId( fromNodeId, kPinOffsetChoiceBase + choiceIndex );
+            if ( nextId > 0 )
+                return nextId;
+        }
         return findDefaultNextNodeId( fromNodeId );
     }
 
     int32 DialogueGraphAsset::findBranchNextNodeId( int32 fromNodeId, bool bTrue ) const
     {
-        constexpr int32 kPinTrue  = 3;
-        constexpr int32 kPinFalse = 4;
-        return findLinkedNodeId( fromNodeId, bTrue ? kPinTrue : kPinFalse );
+        return findLinkedNodeId( fromNodeId, bTrue ? kPinOffsetTrue : kPinOffsetFalse );
     }
 
     const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )
     {
-        switch ( type )
+        for ( const DialogueGraphAssetInternal::NodeTypeName& entry : DialogueGraphAssetInternal::kArrNodeTypeName )
         {
-            case DialogueAssetNodeType::Start:
-                return "Start";
-            case DialogueAssetNodeType::Dialogue:
-                return "Dialogue";
-            case DialogueAssetNodeType::Choice:
-                return "Choice";
-            case DialogueAssetNodeType::Branch:
-                return "Branch";
-            case DialogueAssetNodeType::Action:
-                return "Action";
-            case DialogueAssetNodeType::End:
-                return "End";
-            default:
-                return "Unknown";
+            if ( entry._type == type )
+                return entry._pName;
         }
+        return "Unknown";
     }
 
     DialogueAssetNodeType DialogueGraphAsset::parseNodeType( string_view typeStr )
     {
-        if ( typeStr == "Start" )
-            return DialogueAssetNodeType::Start;
-        if ( typeStr == "Choice" )
-            return DialogueAssetNodeType::Choice;
-        if ( typeStr == "Branch" )
-            return DialogueAssetNodeType::Branch;
-        if ( typeStr == "Action" )
-            return DialogueAssetNodeType::Action;
-        if ( typeStr == "End" )
-            return DialogueAssetNodeType::End;
+        for ( const DialogueGraphAssetInternal::NodeTypeName& entry : DialogueGraphAssetInternal::kArrNodeTypeName )
+        {
+            if ( typeStr == entry._pName )
+                return entry._type;
+        }
         return DialogueAssetNodeType::Dialogue;
     }
 
@@ -276,8 +295,10 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return string{ textOrKey };
 
-        const string keyStr{ textOrKey };
-        const utf8*  pResolved = engine::getLocalizationManager().getString( hashed_string( keyStr.c_str() ), nullptr );
+        // **키가 아닐 수도 있는 텍스트로 물어본다.** `hashed_string` 을 만들어 물으면 그 대사 원문이
+        // intern 아레나에 영구히 남는다 — 대화가 늘수록 함께 늘어나는 누수였다. 표는 해시로만
+        // 열리므로 intern 없이 물어볼 수 있다.
+        const utf8* pResolved = engine::getLocalizationManager().getString( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };
         return string{ pResolved };

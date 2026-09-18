@@ -117,6 +117,13 @@ namespace sw
          *        현재 언어에 키가 없으면 Fallback 언어에서 조회하며, 모두 없으면 pDefaultText를 반환합니다.
          */
         const utf8* getString( const hashed_string& key, const utf8* pDefaultText = "" ) const;
+        /**
+         * @brief 키를 **intern 하지 않고** 조회합니다.
+         * @details 물어보는 문자열이 키가 아닐 수도 있는 자리(대사 원문 등)에서 쓴다. `hashed_string`
+         *          을 만들어 물으면 그 텍스트가 intern 아레나에 영구히 남아, 콘텐츠가 늘수록 함께
+         *          늘어나는 누수가 된다.
+         */
+        const utf8* getString( string_view key, const utf8* pDefaultText = "" ) const;
 
         /**
          * @brief 지정한 특정 언어에서 문자열을 직접 조회합니다 (Fallback 없음).
@@ -152,9 +159,12 @@ namespace sw
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
     private:
-        mutable std::shared_mutex                      _mutex;
-        string                                         _currentLanguage;
-        string                                         _fallbackLanguage;
+        mutable std::shared_mutex _mutex;
+        string                    _currentLanguage;
+        string                    _fallbackLanguage;
+        /** @brief 활성 언어 → 폴백 언어 순으로 한 번만 훑습니다. 두 getString 오버로드의 공통 경로입니다. */
+        const utf8* findInActiveThenFallback( string_view key, const utf8* pDefaultText ) const;
+
         unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
         unordered_map<uint32, LanguageChangedCallback> _mapCallback;
         uint32                                         _nextCallbackId;

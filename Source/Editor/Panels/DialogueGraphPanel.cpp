@@ -27,37 +27,43 @@ namespace sw::editor
 {
     namespace
     {
+        /**
+         * @brief 핀 번호는 **`DialogueGraphAsset` 이 정본**이다 — 여기서는 이름만 짧게 빌린다.
+         * @details 예전에는 이 구조체가 오프셋 상수와 `nodeId * 100 + offset` 인코딩을 자기 사본으로
+         *          들고 있었고, 읽는 쪽(`DialogueGraphAsset`)에도 같은 상수가 따로 있었다. 링크는
+         *          디스크에 저장되므로 한쪽만 바뀌면 대화가 조용히 엉뚱한 분기를 탄다.
+         */
         struct DialogueGraphPanelInternal
         {
-            static constexpr int32 kPinInputOffset  = 1;
-            static constexpr int32 kPinOutputOffset = 2;
-            static constexpr int32 kPinTrueOffset   = 3;
-            static constexpr int32 kPinFalseOffset  = 4;
-            static constexpr int32 kPinChoiceBase   = 10;
+            static constexpr int32 kPinInputOffset  = DialogueGraphAsset::kPinOffsetIn;
+            static constexpr int32 kPinOutputOffset = DialogueGraphAsset::kPinOffsetOut;
+            static constexpr int32 kPinTrueOffset   = DialogueGraphAsset::kPinOffsetTrue;
+            static constexpr int32 kPinFalseOffset  = DialogueGraphAsset::kPinOffsetFalse;
+            static constexpr int32 kPinChoiceBase   = DialogueGraphAsset::kPinOffsetChoiceBase;
 
             static int32 pinIn( int32 nodeId )
             {
-                return nodeId * 100 + kPinInputOffset;
+                return DialogueGraphAsset::encodePin( nodeId, kPinInputOffset );
             }
 
             static int32 pinOut( int32 nodeId )
             {
-                return nodeId * 100 + kPinOutputOffset;
+                return DialogueGraphAsset::encodePin( nodeId, kPinOutputOffset );
             }
 
             static int32 pinBranchTrue( int32 nodeId )
             {
-                return nodeId * 100 + kPinTrueOffset;
+                return DialogueGraphAsset::encodePin( nodeId, kPinTrueOffset );
             }
 
             static int32 pinBranchFalse( int32 nodeId )
             {
-                return nodeId * 100 + kPinFalseOffset;
+                return DialogueGraphAsset::encodePin( nodeId, kPinFalseOffset );
             }
 
             static int32 pinChoice( int32 nodeId, int32 choiceIndex )
             {
-                return nodeId * 100 + kPinChoiceBase + choiceIndex;
+                return DialogueGraphAsset::encodeChoicePin( nodeId, choiceIndex );
             }
         };
     } // namespace
@@ -341,8 +347,8 @@ namespace sw::editor
                     const int32 pinB = static_cast<int32>( b.Get() );
 
                     // 핀 종류(In vs Out) 분별: In 핀은 끝자리가 1
-                    const bool bIsAInput = ( pinA % 100 ) == DialogueGraphPanelInternal::kPinInputOffset;
-                    const bool bIsBInput = ( pinB % 100 ) == DialogueGraphPanelInternal::kPinInputOffset;
+                    const bool bIsAInput = DialogueGraphAsset::decodePinOffset( pinA ) == DialogueGraphPanelInternal::kPinInputOffset;
+                    const bool bIsBInput = DialogueGraphAsset::decodePinOffset( pinB ) == DialogueGraphPanelInternal::kPinInputOffset;
 
                     if ( bIsAInput != bIsBInput )
                     {
