@@ -142,8 +142,8 @@ cd build/Ninja-Debug/Bin
 | `Compression` | 370 | ✅ 2026-09-18 (3절 참고) |
 | `Config` | 480 | ✅ 2026-09-18 (3절 참고) |
 | `Dialogue` | 375 | ✅ 2026-09-18 (3절 참고) |
-| `Graphics` | 42,770 | ← 다음. 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다 |
-| `Input` | 9,056 | |
+| `Graphics` | 42,770 | ✅ 2026-09-18 (3절 참고 — 훑은 깊이도 적어 두었다) |
+| `Input` | 9,056 | ← 다음 |
 | `Localization` | 1,184 | |
 | `Module` | 318 | |
 | `Object` | 8,428 | |
@@ -362,6 +362,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (에디터 프리뷰가 머티리얼을 잡기만 하고 놓지 않았다 — Engine/Graphics)
+
+**Graphics 는 이미 두 차례 구조 작업을 거쳤다**(2026-09-13 두 커밋). 이번 훑기는 그 위에서
+**기계적 검사 + 소유·계약이 걸린 자리 정독**으로 했고, 깊이를 그대로 적어 둔다 — 42,770줄을 한
+사람이 정독한 것이 아니다.
+
+**기계로 물어본 것(전부 깨끗했다).** TODO/FIXME/HACK 0건 · 헤더 안 매직 버퍼 0건 · 헤더 자립 94/94 ·
+`ENUM(Flags)` 트레이트 0건 · 여러 파일에 흩어진 같은 상수(뷰포트 기본값 넷이 백엔드 셋에 각각
+있지만 API 가 정한 0~1 이라 합칠 값이 없다) · PSO 캐시의 `_bOwned` 소유 표식(정확하고 주석도 맞다).
+
+**정독한 자리.** `Upload/GpuUploadQueue`(스레드 경계) · `Texture/TextureCache` · `Material/MaterialCache` ·
+`Material::acquire/releaseTextureAssets`(획득-해제 짝) · `Renderer/Frame/RenderPsoCache`(소유) ·
+`Shader/Binding`(이미 `ShaderBindingContractTest` 가 지킨다).
+
+**1) `EditorViewportPreview::applyMaterial` 이 `acquire` 만 하고 `release` 를 하지 않았다.**
+머티리얼 패널에서 한 번 편집할 때마다 참조가 하나씩 올라갔고, 그러면 그 머티리얼은 참조가 0 에
+닿지 못해 **캐시에서 영영 지워지지 않는다**. 프리뷰가 드는 참조는 하나뿐이도록 고쳤다 — 같은
+경로면 다시 잡지 않고, 다른 경로로 갈 때는 새 것을 메시에 건 **뒤에** 옛 것을 놓는다(먼저 놓으면
+참조가 0 이 되어 캐시가 지우는데 메시가 아직 그 포인터를 들고 있다).
+**자동 검증이 없다** — `EditorTest` 는 `EditorViewportPreview.cpp` 를 링크하지 않는다(ImGui 를 탄다).
+
+**2) `MaterialCache` 와 `TextureCache` 는 같은 모양인데 어디가 일부러 다른지 아무 데도 없었다.**
+둘 다 경로를 키로 참조를 세고 0 에서 지운다. 그런데 갈라지는 지점이 셋 있다 — 소유가
+`shared_ptr`/`unique_ptr` 이라 `release` 가 GPU 를 내리느냐가 다르고, 디바이스를 캐시가 기억하느냐가
+다르고, `acquire` 가 먼저 세느냐 나중에 세느냐가 다르다. **전부 이유가 있는 차이인데 적혀 있지
+않아서**, 다음 사람이 "한쪽만 고쳐졌나" 로 읽고 맞춰 버릴 수 있다. 헤더에 적었고 서로를 가리키게 했다.
+
+참조 감소 가드(`0 에서 한 번 더 내리면 42억`)는 `TextureCache` 에만 있었다. `MaterialCache` 에도
+넣었지만 **결함을 고친 것이 아니다** — 참조가 0 이면 항목을 그 자리에서 지우므로 지금은 도달할 수
+없다. 변이 테스트가 그것을 알려 줬다(가드를 빼도 테스트가 통과했다). 방어로 남기고 주석에 그렇게
+적었다.
+
+**3) `isCached()` 를 둘 다에 넣었다.** 참조 계수 규율을 **밖에서 확인할 수 있는 손잡이가 없었다** —
+그래서 `MaterialCacheAcquireReleaseNoGpu` 는 acquire/release 를 부르기만 하고 그 결과를 아무것도
+확인하지 못했다. 이제 "두 번 잡고 두 번 놓으면 사라진다" 를 실제로 본다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · 헤더 94개 자립.
 
 ### 2026-09-18 (디스크에 저장되는 핀 번호 계약이 두 파일에 따로 적혀 있었다 — Engine/Dialogue)
 

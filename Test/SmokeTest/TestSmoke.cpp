@@ -688,6 +688,22 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
 
     cache.release( "engine/test/does_not_need_gpu.material" );
     cache.release( "engine/test/does_not_need_gpu.material" );
+
+    // 두 번 잡고 두 번 놓았으니 항목이 사라져 있어야 한다 — **참조 계수 규율은 이것이 전부다.**
+    SW_EXPECT_FALSE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
+
+    // 한 번 더 놓아도 아무 일이 없어야 한다(항목이 이미 없으므로 조용히 돌아간다).
+    {
+        test::ScopedLogSuppressor suppressor;
+        cache.release( "engine/test/does_not_need_gpu.material" );
+    }
+
+    // 다시 잡으면 참조가 1 이므로 한 번 놓는 것으로 사라진다 — 앞의 과다 release 가 셈을 흐리지 않았다.
+    SW_EXPECT_NOT_NULL( cache.acquire( "engine/test/does_not_need_gpu.material", nullptr ) );
+    SW_EXPECT_TRUE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
+    cache.release( "engine/test/does_not_need_gpu.material" );
+    SW_EXPECT_FALSE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
+
     cache.clear();
 }
 

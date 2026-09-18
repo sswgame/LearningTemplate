@@ -16,6 +16,8 @@ namespace sw
      * @class TextureCache
      * @brief 리소스 상대 경로를 키로 Texture2D 를 소유합니다. 머티리얼은 포인터만 빌린다.
      * @note 디바이스 수명은 이 캐시의 일이 아니다 — `Texture2D` 가 `RHIRenderResource` 라서 스스로 통보받는다.
+     * @note `MaterialCache` 와 같은 모양이다. **갈라지는 지점은 그쪽 헤더에 적어 두었다** — 두 벌이
+     *       어긋나 있던 자리라, 다음에 한쪽을 고칠 때 다른 쪽도 같이 볼 것.
      */
     class SW_API TextureCache
     {
@@ -38,6 +40,8 @@ namespace sw
         void reload( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
         void release( string_view relativePath, IRHIDevice* pDevice );
+        /** @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다 (`MaterialCache::isCached` 와 같은 뜻). */
+        bool isCached( string_view relativePath ) const;
         /** @brief 캐시를 비웁니다(GPU 자원은 이미 내려가 있어야 한다). */
         void clear();
 

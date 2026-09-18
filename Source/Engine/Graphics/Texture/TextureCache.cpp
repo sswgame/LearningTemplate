@@ -90,6 +90,16 @@ namespace sw
         }
     }
 
+    bool TextureCache::isCached( string_view relativePath ) const
+    {
+        if ( relativePath.empty() || _impl == nullptr )
+            return false;
+
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
+    }
+
     void TextureCache::clear()
     {
         if ( _impl == nullptr )

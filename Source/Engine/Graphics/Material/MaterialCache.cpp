@@ -88,12 +88,32 @@ namespace sw
 
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         auto                                it = _impl->_mapEntry.find( key );
-        if ( it != _impl->_mapEntry.end() )
+        if ( it == _impl->_mapEntry.end() )
+            return;
+
+        // 참조가 0 이면 항목을 그 자리에서 지우므로 여기 0 이 들어올 길은 **지금은 없다.** 그래도
+        // 막아 둔다 — 부호 없는 수라 한 번 되감기면 42억이 되고, 그 뒤로는 참조가 0 에 닿지 못해
+        // 이 머티리얼이 캐시에 영원히 못박힌다. 되감김은 조용하고 증상은 멀리서 나타난다.
+        // 같은 모양의 `TextureCache::release` 는 처음부터 이 검사를 하고 있었다.
+        if ( it->second._refCount == 0 )
         {
-            --it->second._refCount;
-            if ( it->second._refCount == 0 )
-                _impl->_mapEntry.erase( it );
+            SW_LOG_WARNING( "Material '%#' 를 acquire 보다 많이 release 했습니다 — 무시합니다.", key.c_str() );
+            return;
         }
+
+        --it->second._refCount;
+        if ( it->second._refCount == 0 )
+            _impl->_mapEntry.erase( it );
+    }
+
+    bool MaterialCache::isCached( string_view relativePath ) const
+    {
+        if ( relativePath.empty() || _impl == nullptr )
+            return false;
+
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
     void MaterialCache::reload( string_view relativePath )
