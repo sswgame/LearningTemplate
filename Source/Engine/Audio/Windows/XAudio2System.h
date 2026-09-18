@@ -41,6 +41,8 @@ namespace sw
         bool initialize() override;
         /** @brief 오디오 백엔드를 종료합니다. */
         void shutdown() override;
+        /** @brief 초기화 여부를 반환합니다. */
+        bool isInitialized() const override;
         /** @brief 재생이 끝난 보이스를 정리합니다. */
         void update( float32 deltaSeconds ) override;
 
@@ -54,40 +56,24 @@ namespace sw
         void stopMusic() override;
 
         /** @brief 배경음악을 일시정지합니다. */
-        void pauseMusic();
+        void pauseMusic() override;
         /** @brief 일시정지된 배경음악을 재개합니다. */
-        void resumeMusic();
+        void resumeMusic() override;
 
-        /** @brief 마스터 볼륨(0.0 ~ 1.0)을 설정합니다. */
-        void setMasterVolume( float32 volume ) override;
-        /** @brief 현재 마스터 볼륨을 반환합니다. */
-        float32 getMasterVolume() const;
+        /** @brief 마지막으로 요청된 배경음악 경로입니다. */
+        string getMusicPath() const override;
 
-        /** @brief 배경음악(BGM) 볼륨(0.0 ~ 1.0)을 설정합니다. */
-        void setMusicVolume( float32 volume ) override;
-        /** @brief 현재 배경음악 볼륨을 반환합니다. */
-        float32 getMusicVolume() const;
-
-        /** @brief 효과음(SFX) 볼륨(0.0 ~ 1.0)을 설정합니다. */
-        void setSfxVolume( float32 volume );
-        /** @brief 현재 효과음 볼륨을 반환합니다. */
-        float32 getSfxVolume() const;
-
-        /** @brief 전체 음소거 여부를 설정합니다. */
-        void setMute( bool bMute );
-        /** @brief 현재 음소거 상태인지 반환합니다. */
-        bool isMuted() const;
-
-        /** @brief 초기화 여부를 반환합니다. */
-        bool isInitialized() const;
+    protected:
+        /** @brief 바뀐 볼륨·음소거를 마스터·음악·효과음 보이스에 반영합니다. */
+        void applyVolume() override;
 
     private:
         /** @brief 경로를 해석해 보이스를 재생합니다. */
-        bool playInternal( string_view path, bool loop );
-        /** @brief TaskArgs: abs path, loop bool, requested path. */
+        bool playInternal( string_view path, bool bLoop );
+        /** @brief TaskArgs: 요청 경로, 루프 여부, 음악 세대 번호. */
         void playDecodedClipTask( const TaskArgs& args );
 
     private:
-        unique_ptr<XAudio2SystemImpl> _impl;
+        unique_ptr<XAudio2SystemImpl> _impl; /**< Windows 전용 상태입니다. 헤더에서 XAudio2 를 가립니다. */
     };
 } // namespace sw

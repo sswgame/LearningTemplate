@@ -137,8 +137,8 @@ cd build/Ninja-Debug/Bin
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
 | `Animation` | 1,153 | ✅ 2026-09-18 (3절 참고) |
-| `Audio` | 935 | ← 다음 |
-| `Common` | 274 | |
+| `Audio` | 935 | ✅ 2026-09-18 (3절 참고) |
+| `Common` | 274 | ← 다음 |
 | `Compression` | 370 | |
 | `Config` | 480 | |
 | `Dialogue` | 375 | 헤더 자립 실패 1건이 걸려 있다(3절) |
@@ -360,6 +360,64 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (인터페이스로는 절반만 쓸 수 있었고, 없는 곡을 틀면 틀어져 있던 곡만 꺼졌다 — Engine/Audio)
+
+**1) `IAudioSystem` 이 `XAudio2System` 이 하는 일의 절반만 약속하고 있었다.** 저장소 안에서
+오디오를 드는 자리는 **전부 `IAudioSystem`** 이다(`EngineLoop._audioSystem` · `game::getService` ·
+테스트 셋). 그런데 `setSfxVolume` · `getSfxVolume` · `setMute` · `isMuted` · `pauseMusic` ·
+`resumeMusic` · `getMasterVolume` · `getMusicVolume` · `isInitialized` **아홉 개는 `XAudio2System`
+에만** 있었다 — 즉 **아무도 부를 수 없었다.** 효과음 볼륨도 음소거도 손잡이가 없는 셈이다.
+
+인터페이스로 끌어올리면서 **볼륨·음소거 상태를 `IAudioSystem` 한 자리로 옮겼다.** 0~1 클램프와
+"음소거는 마스터 한 자리" 규칙을 백엔드마다 다시 적을 이유가 없다. 백엔드는 값이 바뀐 뒤
+`applyVolume()` 으로 통보만 받는다 — 세 번째 백엔드가 생겨도 그 규칙을 다시 적지 않는다.
+
+**2) 음소거가 세 자리에 걸려 있어서, 켰다 끄면 소리가 돌아오지 않았다.** `setMute` 는 마스터
+보이스를 0 으로 만드는데, `setMusicVolume` · `setSfxVolume` **도** 음소거 중이면 자기 보이스를
+0 으로 만들었다. 그리고 음소거를 푸는 쪽은 마스터만 되돌린다. 그래서
+
+> 음소거 → (옵션 화면에서) 효과음 볼륨 조절 → 음소거 해제
+
+뒤에는 **효과음 보이스가 0 인 채로 남는다.** 음소거는 이제 마스터 보이스 한 자리에만 건다.
+
+**3) 없는 곡을 요청하면 틀어져 있던 BGM 만 꺼졌다.** `playMusic` 이 **경로를 확인하기 전에**
+`stopMusic()` 을 불렀다. 요청은 `false` 를 돌려주는데 결과는 정적이다. 확인을 먼저 한다.
+(이건 새 테스트를 쓰다가 잡혔다 — 훑으면서는 못 봤다.)
+
+**4) BGM 이 아무 말 없이 시작되지 않을 수 있었다.** `playInternal` 은 디코드를 워커로 넘기고
+`_musicPath` 를 **`.submit()` 뒤에**, 그것도 `_voiceMutex` 없이 적었다. 워커는 그 `_musicPath` 를
+잠금 아래에서 읽어 "요청한 곡이 아니면 버린다". 클립이 캐시에 있으면 워커가 먼저 도착하므로
+**자기 요청을 남의 것으로 보고 조용히 돌아간다.** 게다가 경로로 거르면 A → B → A 처럼 같은 곡으로
+돌아왔을 때 늦게 온 첫 A 도 통과해 **음악 보이스가 둘**이 된다(앞의 것은 멈추지도 않는다).
+요청 번호(`_musicGeneration`)로 바꾸고, 제출보다 먼저 잠금 아래에서 적는다. `stopMusic` 도 번호를
+올려 날아오던 요청을 취소한다.
+
+**5) `NullAudioSystem` 은 Windows 에서 한 번도 컴파일되지 않았다.** `IAudioSystem.cpp` 가
+`#else` 안에서만 include 했다 — `FileWatcher` 의 macOS 구현과 같은 자리다. 헤더 전용이라 비용이
+없으므로 **무조건 include** 하도록 바꿨다. 바꾸자마자 아무도 못 보던 경고가 하나 나왔다
+(`~NullAudioSystem` 이 `override` 없이 소멸자를 재정의). 그리고 새 인터페이스를 구현하면서
+`isInitialized` · `getMusicPath` 같은 상태를 실제로 들게 했다 — 이제 진짜와 같은 판정을 낸다.
+
+**6) 잔가지.** `MFCreateMediaType` 의 결과를 보지 않고 바로 `pPartial->SetGUID` 를 불렀다(실패하면
+널 역참조). `XAudio2SystemImpl` 이 **멤버 → 함수 → 멤버** 순으로 흩어져 있었고, 절반은 헤더
+기본값과 생성자 초기화 목록에 **값을 두 번** 적고 있었다(이 구조체는 `.cpp` 안에 있어
+`Style/HeaderMemberInitializer` 게이트가 보지 못한다). `_bInitialized` 를 `= 1` · `!= 0` 으로
+쓰고 있었다(규칙은 `SW_TRUE`/`SW_FALSE`). 출력 파라미터 `out` → `outClip`, `loadWavPcm( absPath )` 는
+절대 경로가 아니어도 되므로 `path`.
+
+**7) 테스트.** `AudioSystemTest` 5 → 7건. `VolumeControls` 는 이제 **설정한 값을 되읽어** 확인한다
+(예전에는 getter 가 인터페이스에 없어서 호출만 하고 아무것도 확인하지 못했다).
+`MuteKeepsVolumeSettings` · `MusicPathTracksRequests` 가 새로 생겼고, 뒤의 것이 위 3)을 잡는다
+(변이 테스트로 확인: `stopMusic()` 을 앞으로 되돌리면 깨진다). WAV 바이트를 손으로 쌓던 27줄이
+두 케이스에 글자 그대로 복사돼 있던 것을 `writeTestWav` 하나로 모았다.
+
+**테스트가 없는 것 두 가지.** 2)의 보이스 볼륨과 4)의 워커 경합은 **실제 오디오 장치가 있어야**
+관찰된다 — 상태(값·요청 경로)까지는 위 테스트가 잡지만 보이스에 실제로 걸린 볼륨은 못 본다.
+고친 근거는 위에 적어 두었고, 손대는 사람은 이 대목을 먼저 읽을 것.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `AudioSystemTest` 7건 · 헤더 3개 자립.
 
 ### 2026-09-18 (스케일이 있는 포즈는 회전까지 틀렸고, 33번째 표본부터는 아예 없는 셈이었다 — Engine/Animation)
 

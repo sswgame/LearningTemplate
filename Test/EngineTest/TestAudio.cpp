@@ -11,6 +11,52 @@
 // AudioSystemTest — 오디오 시스템 수명주기 및 재생 기능 검증
 // ------------------------------------------------------------------------------
 
+namespace
+{
+    /**
+     * @brief PCM 16비트 모노 44.1kHz WAV 파일을 하나 만듭니다.
+     * @details 예전에는 이 27줄이 두 케이스에 글자 그대로 복사돼 있었다.
+     */
+    bool writeTestWav( const sw::string& path, uint32 dataByteCount )
+    {
+        sw::vector<uint8> bytes;
+        bytes.reserve( 44 + dataByteCount );
+
+        auto appendUint32 = [&bytes]( uint32 value )
+        {
+            bytes.push_back( static_cast<uint8>( value & 0xFFu ) );
+            bytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
+            bytes.push_back( static_cast<uint8>( ( value >> 16 ) & 0xFFu ) );
+            bytes.push_back( static_cast<uint8>( ( value >> 24 ) & 0xFFu ) );
+        };
+        auto appendUint16 = [&bytes]( uint16 value )
+        {
+            bytes.push_back( static_cast<uint8>( value & 0xFFu ) );
+            bytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
+        };
+
+        bytes.insert( bytes.end(), { 'R', 'I', 'F', 'F' } );
+        appendUint32( 36u + dataByteCount );
+        bytes.insert( bytes.end(), { 'W', 'A', 'V', 'E' } );
+
+        bytes.insert( bytes.end(), { 'f', 'm', 't', ' ' } );
+        appendUint32( 16u );
+        appendUint16( 1u );     // WAVE_FORMAT_PCM
+        appendUint16( 1u );     // 모노
+        appendUint32( 44100u ); // 샘플레이트
+        appendUint32( 88200u ); // 바이트레이트
+        appendUint16( 2u );     // 블록 정렬
+        appendUint16( 16u );    // 샘플당 비트
+
+        bytes.insert( bytes.end(), { 'd', 'a', 't', 'a' } );
+        appendUint32( dataByteCount );
+        for ( uint32 byteIndex = 0; byteIndex < dataByteCount; ++byteIndex )
+            bytes.push_back( static_cast<uint8>( byteIndex ) );
+
+        return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
+    }
+} // namespace
+
 SW_TEST_CASE( AudioSystemTest, LifecycleAndState )
 {
     sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
@@ -58,64 +104,7 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
     const sw::string truncatedPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_truncated.wav" );
 
     // 1) 유효한 PCM 16-bit Mono 44.1kHz WAV 생성
-    {
-        sw::vector<uint8> wavBytes;
-        wavBytes.reserve( 44 + 64 );
-
-        // RIFF header
-        wavBytes.insert( wavBytes.end(), { 'R', 'I', 'F', 'F' } );
-        const uint32 totalSizeMinus8 = 36 + 64;
-        wavBytes.push_back( static_cast<uint8>( totalSizeMinus8 & 0xFF ) );
-        wavBytes.push_back( static_cast<uint8>( ( totalSizeMinus8 >> 8 ) & 0xFF ) );
-        wavBytes.push_back( static_cast<uint8>( ( totalSizeMinus8 >> 16 ) & 0xFF ) );
-        wavBytes.push_back( static_cast<uint8>( ( totalSizeMinus8 >> 24 ) & 0xFF ) );
-        wavBytes.insert( wavBytes.end(), { 'W', 'A', 'V', 'E' } );
-
-        // fmt chunk
-        wavBytes.insert( wavBytes.end(), { 'f', 'm', 't', ' ' } );
-        const uint32 fmtChunkSize = 16;
-        wavBytes.push_back( static_cast<uint8>( fmtChunkSize & 0xFF ) );
-        wavBytes.push_back( static_cast<uint8>( ( fmtChunkSize >> 8 ) & 0xFF ) );
-        wavBytes.push_back( 0 );
-        wavBytes.push_back( 0 );
-
-        // format tag = 1 (PCM), channels = 1
-        wavBytes.push_back( 1 );
-        wavBytes.push_back( 0 );
-        wavBytes.push_back( 1 );
-        wavBytes.push_back( 0 );
-
-        // sample rate = 44100 (0xAC44)
-        wavBytes.push_back( 0x44 );
-        wavBytes.push_back( 0xAC );
-        wavBytes.push_back( 0x00 );
-        wavBytes.push_back( 0x00 );
-
-        // byte rate = 88200 (0x015888)
-        wavBytes.push_back( 0x88 );
-        wavBytes.push_back( 0x58 );
-        wavBytes.push_back( 0x01 );
-        wavBytes.push_back( 0x00 );
-
-        // block align = 2, bits per sample = 16
-        wavBytes.push_back( 2 );
-        wavBytes.push_back( 0 );
-        wavBytes.push_back( 16 );
-        wavBytes.push_back( 0 );
-
-        // data chunk
-        wavBytes.insert( wavBytes.end(), { 'd', 'a', 't', 'a' } );
-        const uint32 dataSize = 64;
-        wavBytes.push_back( static_cast<uint8>( dataSize & 0xFF ) );
-        wavBytes.push_back( 0 );
-        wavBytes.push_back( 0 );
-        wavBytes.push_back( 0 );
-
-        for ( uint32 index = 0; index < 64; ++index )
-            wavBytes.push_back( static_cast<uint8>( index ) );
-
-        SW_EXPECT_TRUE( sw::FileUtil::writeFile( validWavPath, wavBytes.data(), wavBytes.size() ) );
-    }
+    SW_EXPECT_TRUE( writeTestWav( validWavPath, 64 ) );
 
     // 2) 손상된(Malformed) WAV 파일 생성 — 유효하지 않은 Magic ID
     {
@@ -147,22 +136,109 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
 }
 
 /**
- * @brief [AudioSystemTest] 마스터 볼륨 및 BGM 볼륨 설정 검증
+ * @brief [AudioSystemTest] 볼륨 설정과 클램프를 IAudioSystem 으로 읽어 검증
+ * @details 예전에는 getter 가 XAudio2System 에만 있어서 **IAudioSystem 을 든 누구도 읽을 수
+ *          없었다** — 그래서 "설정한 값이 실제로 들어갔는지" 를 아무도 확인하지 못했다.
  */
 SW_TEST_CASE( AudioSystemTest, VolumeControls )
 {
     sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
     SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    SW_EXPECT_TRUE( pAudioSystem->isInitialized() );
+
+    // 기본값은 전부 1.0 이다.
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getSfxVolume(), 1e-4f );
 
     pAudioSystem->setMasterVolume( 0.75f );
     pAudioSystem->setMusicVolume( 0.5f );
+    pAudioSystem->setSfxVolume( 0.25f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, pAudioSystem->getMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pAudioSystem->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, pAudioSystem->getSfxVolume(), 1e-4f );
 
-    // 클램핑 및 음수/오버플로 안전성
+    // 0~1 밖의 값은 잘린다.
     pAudioSystem->setMasterVolume( 1.5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMasterVolume(), 1e-4f );
     pAudioSystem->setMasterVolume( -0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getMasterVolume(), 1e-4f );
     pAudioSystem->setMusicVolume( 2.0f );
-    pAudioSystem->setMusicVolume( -1.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMusicVolume(), 1e-4f );
+    pAudioSystem->setSfxVolume( -1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getSfxVolume(), 1e-4f );
 
+    pAudioSystem->shutdown();
+}
+
+/**
+ * @brief [AudioSystemTest] 음소거가 볼륨 값을 먹지 않고, 마스터 한 자리에만 걸리는지 검증
+ * @details 음소거를 여러 자리에 걸면 푸는 쪽이 한 자리만 되돌려 나머지가 0 으로 남는다.
+ *          그래서 음소거는 **마스터 볼륨에만** 걸고, 음악·효과음 볼륨은 그대로 둔다.
+ */
+SW_TEST_CASE( AudioSystemTest, MuteKeepsVolumeSettings )
+{
+    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
+    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+
+    pAudioSystem->setMasterVolume( 0.8f );
+    SW_EXPECT_FALSE( pAudioSystem->isMuted() );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
+
+    pAudioSystem->setMute( true );
+    SW_EXPECT_TRUE( pAudioSystem->isMuted() );
+    // 음소거는 실제로 걸리는 볼륨만 0 으로 만든다 — 설정값은 그대로다.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getMasterVolume(), 1e-4f );
+
+    // 음소거 중에 볼륨을 바꿔도 값이 먹히지 않는다.
+    pAudioSystem->setMusicVolume( 0.4f );
+    pAudioSystem->setSfxVolume( 0.6f );
+
+    pAudioSystem->setMute( false );
+    SW_EXPECT_FALSE( pAudioSystem->isMuted() );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pAudioSystem->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, pAudioSystem->getSfxVolume(), 1e-4f );
+
+    pAudioSystem->shutdown();
+}
+
+/**
+ * @brief [AudioSystemTest] 요청한 BGM 경로를 IAudioSystem 으로 되읽을 수 있는지 검증
+ * @details 백엔드는 디코드를 워커로 넘기므로 재생이 실제로 시작되기 전에 이 값이 정해진다.
+ *          요청 기록이 제출보다 늦으면 워커가 자기 요청을 남의 것으로 보고 버린다 — 그 순서를
+ *          밖에서 확인할 수 있는 유일한 손잡이다.
+ */
+SW_TEST_CASE( AudioSystemTest, MusicPathTracksRequests )
+{
+    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
+    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    SW_EXPECT_TRUE( pAudioSystem->getMusicPath().empty() );
+
+    const sw::string musicPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_music_track.wav" );
+    SW_EXPECT_TRUE( writeTestWav( musicPath, 64 ) );
+
+    SW_EXPECT_TRUE( pAudioSystem->playMusic( musicPath ) );
+    // playMusic 이 돌아온 시점에는 이미 이 곡이 요청되어 있어야 한다.
+    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+
+    // 실패한 요청은 이미 걸린 곡을 건드리지 않는다.
+    SW_EXPECT_FALSE( pAudioSystem->playMusic( "NonExistentMusicFile.mp3" ) );
+    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+
+    // 일시정지·재개는 요청 상태를 바꾸지 않는다.
+    pAudioSystem->pauseMusic();
+    pAudioSystem->resumeMusic();
+    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+
+    pAudioSystem->stopMusic();
+    SW_EXPECT_TRUE( pAudioSystem->getMusicPath().empty() );
+
+    if ( sw::engine::areEngineServicesBound() )
+        sw::engine::getTaskManager().waitAll();
+
+    sw::FileUtil::removeFile( musicPath );
     pAudioSystem->shutdown();
 }
 
@@ -178,49 +254,8 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
     const sw::string wavA    = sw::FileUtil::joinPath( tempDir, "test_mt_audio_a.wav" );
     const sw::string wavB    = sw::FileUtil::joinPath( tempDir, "test_mt_audio_b.wav" );
 
-    auto generateWav = []( const sw::string& path )
-    {
-        sw::vector<uint8> bytes;
-        bytes.insert( bytes.end(), { 'R', 'I', 'F', 'F' } );
-        const uint32 total = 36 + 32;
-        bytes.push_back( static_cast<uint8>( total & 0xFF ) );
-        bytes.push_back( static_cast<uint8>( ( total >> 8 ) & 0xFF ) );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        bytes.insert( bytes.end(), { 'W', 'A', 'V', 'E' } );
-        bytes.insert( bytes.end(), { 'f', 'm', 't', ' ' } );
-        bytes.push_back( 16 );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        bytes.push_back( 1 ); // PCM
-        bytes.push_back( 0 );
-        bytes.push_back( 1 ); // Mono
-        bytes.push_back( 0 );
-        bytes.push_back( 0x44 ); // 44100
-        bytes.push_back( 0xAC );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        bytes.push_back( 0x88 ); // 88200
-        bytes.push_back( 0x58 );
-        bytes.push_back( 0x01 );
-        bytes.push_back( 0 );
-        bytes.push_back( 2 ); // block align
-        bytes.push_back( 0 );
-        bytes.push_back( 16 ); // 16 bits
-        bytes.push_back( 0 );
-        bytes.insert( bytes.end(), { 'd', 'a', 't', 'a' } );
-        bytes.push_back( 32 );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        bytes.push_back( 0 );
-        for ( uint32 byteIndex = 0; byteIndex < 32; ++byteIndex )
-            bytes.push_back( static_cast<uint8>( byteIndex ) );
-        sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
-    };
-
-    generateWav( wavA );
-    generateWav( wavB );
+    SW_EXPECT_TRUE( writeTestWav( wavA, 32 ) );
+    SW_EXPECT_TRUE( writeTestWav( wavB, 32 ) );
 
     constexpr int32         threadCount = 4;
     sw::vector<std::thread> workers;
