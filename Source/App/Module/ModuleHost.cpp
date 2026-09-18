@@ -7,6 +7,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -20,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Window/IWindow.h"
 
+#include "RuntimeAPI/ABI/ModuleAbi.h"
 #include "RuntimeAPI/Service/ModuleService.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -36,6 +38,39 @@ namespace sw
                 Editor,
                 Game
             };
+
+            /**
+             * @brief 모듈이 호스트와 **같은 표 모양**으로 빌드됐는지 대조합니다.
+             * @details `GameAPI`/`EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체다. 모듈이
+             *          자기가 아는 자리에 채우고 호스트가 자기가 아는 자리에서 읽으므로, 서로 다른
+             *          헤더로 빌드되면 **호스트가 엉뚱한 함수를 부른다.** 예전에는 그것을 막는 것이
+             *          아래 `create != nullptr && destroy != nullptr` 뿐이었는데 — 그 둘은 **맨 앞**
+             *          이라 가운데 삽입에서도 채워진다. 가장 위험한 어긋남을 정확히 통과시켰다.
+             *          핫 리로드는 모듈만 다시 굽는 기능이라 이 어긋남이 생기는 바로 그 상황이다.
+             *          RHI 경계가 `RHIModuleAbi.h` 로 하는 대조를 여기 그대로 옮겼다.
+             */
+            static bool matchesModuleAbi( void* pLibraryModule, const utf8* pVersionSymbol, const utf8* pStampSymbol,
+                                          const utf8* pModuleName )
+            {
+                const PFN_GetModuleAbiVersion pfnVersion =
+                    reinterpret_cast<PFN_GetModuleAbiVersion>( FileUtil::getDynamicSymbol( pLibraryModule, pVersionSymbol ) );
+                if ( pfnVersion == nullptr || pfnVersion() != kModuleAbiVersion )
+                {
+                    SW_LOG_ERROR( "%# 모듈 ABI 버전이 다릅니다 (기대 %#) — 엔진과 모듈을 함께 다시 빌드하세요.",
+                                  pModuleName, kModuleAbiVersion );
+                    return false;
+                }
+
+                const PFN_GetModuleAbiStamp pfnStamp =
+                    reinterpret_cast<PFN_GetModuleAbiStamp>( FileUtil::getDynamicSymbol( pLibraryModule, pStampSymbol ) );
+                if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleAbiStamp ) == false )
+                {
+                    SW_LOG_ERROR( "%# 모듈 ABI 스탬프가 다릅니다 (기대 '%#') — 엔진과 모듈을 함께 다시 빌드하세요.",
+                                  pModuleName, kModuleAbiStamp );
+                    return false;
+                }
+                return true;
+            }
 
             /** @brief 호스트가 제공하는 서비스 표를 만듭니다. 게임 모듈에는 gameAllowed=1 만 노출됩니다. */
             template <Target TargetModule>
@@ -439,6 +474,9 @@ namespace sw
         if ( pLibraryModule == nullptr )
             return false;
 
+        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "Editor" ) == false )
+            return false;
+
         PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorApi" ) );
         if ( pfnExport == nullptr || pfnExport( &_editorApi ) == false )
         {
@@ -464,6 +502,9 @@ namespace sw
         }
 #else
         if ( pLibraryModule == nullptr )
+            return false;
+        // Shipping 은 게임이 정적으로 링크되므로(위 분기) 표가 어긋날 수가 없다 — 대조는 동적 경로만.
+        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getGameModuleAbiVersion", "getGameModuleAbiStamp", "Game" ) == false )
             return false;
         PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
         if ( pfnExport == nullptr || pfnExport( &_gameApi ) == false )

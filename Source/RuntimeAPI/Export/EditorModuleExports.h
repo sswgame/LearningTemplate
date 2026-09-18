@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
+#include "RuntimeAPI/ABI/ModuleAbi.h"
 #include "RuntimeAPI/Export/ModuleForwardUtil.h"
 
 namespace sw
@@ -31,7 +32,9 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                                                                                  \
-    extern "C" SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi )                                                                                                                                        \
+    extern "C" SW_MODULE_API uint32      getEditorModuleAbiVersion() { return sw::kModuleAbiVersion; }                                                                                                             \
+    extern "C" SW_MODULE_API const utf8* getEditorModuleAbiStamp() { return sw::kModuleAbiStamp; }                                                                                                                 \
+    extern "C" SW_MODULE_API bool        exportEditorApi( sw::EditorAPI* pOutApi )                                                                                                                                 \
     {                                                                                                                                                                                                              \
         if ( pOutApi == nullptr )                                                                                                                                                                                  \
             return false;                                                                                                                                                                                          \

@@ -198,6 +198,20 @@ cd build/Ninja-Debug/Bin
   "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml" -gv_editorPanelDump=40
 ```
 
+### 1-0c. GameFramework · Games · RuntimeAPI 훑기 (2026-09-18 시작)
+
+`Core` · `Engine` · `Editor` 와 같은 방식. 규모가 작아 폴더 하나 = 커밋 하나로 충분하다.
+
+| 폴더 | 줄 수 | 상태 |
+|------|------:|------|
+| `RuntimeAPI` | 465 | ✅ 2026-09-18 (3절 참고 — 모듈 경계에 ABI 스탬프가 없었다) |
+| `GameFramework/Base` | 1,150 | ← 다음 |
+| `GameFramework/Data` | 495 | |
+| `GameFramework/Kits` | 3,754 | |
+| `GameFramework/Transition` | 493 | |
+| `GameFramework/UI` | 842 | |
+| `Games/Empty` | 1,054 | |
+
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
 - ~~GPU 상주를 CPU 에셋에서 떼어낸다~~ → **다르게 풀었다.** 소유를 옮기는 대신 언리얼의 `FRenderResource` 처럼
@@ -398,6 +412,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (모듈 경계에 ABI 스탬프가 없었다 — RuntimeAPI)
+
+**`GameAPI`·`EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체**다. 모듈이 자기가 아는
+자리에 채우고 호스트가 자기가 아는 자리에서 읽는다. 그래서 둘이 **서로 다른 헤더로 빌드되면
+호스트가 엉뚱한 함수를 부른다** — 끝에 덧붙인 경우는 호스트 쪽이 `nullptr` 로 남아 그나마
+티가 나지만, **가운데에 하나 끼우면** 그 뒤가 전부 한 칸씩 밀려 `update` 자리에서 `shutdown`
+이 불린다.
+
+그것을 막는 것이 로더의 다음 한 줄뿐이었다:
+
+```
+return _editorApi.create != nullptr && _editorApi.destroy != nullptr;
+```
+
+**`create`/`destroy` 는 표의 맨 앞**이라 가운데 삽입에서도 멀쩡히 채워진다 — 즉 **가장 위험한
+어긋남을 정확히 통과시키는 검사**였다. 그리고 핫 리로드는 모듈 DLL 만 다시 굽는 기능이므로,
+이 어긋남이 생기는 바로 그 상황이다.
+
+**RHI 경계는 이미 같은 이유로 스탬프를 갖고 있다** — `RHIModuleAbi.h` 의 버전+지문을
+`RHIBackendRegistry` 가 로드할 때 대조하고, CLAUDE.md 의 "RHI ABI stamps" 항목이 그 실패를
+설명한다. 같은 장치를 모듈 경계에 그대로 옮겼다:
+
+- `RuntimeAPI/ABI/ModuleAbi.h` — `kModuleAbiVersion` · `kModuleAbiStamp`.
+- `SW_IMPLEMENT_GAME_MODULE` / `SW_IMPLEMENT_EDITOR_MODULE` 이 두 심볼을 **같이 내보낸다**
+  (표를 채우는 매크로와 같은 자리라 잊을 수 없다).
+- `ModuleHost::bindEditorApi`/`bindGameApi` 가 `exportXxxApi` 를 **부르기 전에** 대조한다.
+  Shipping 의 게임은 정적 링크라 어긋날 수가 없어 동적 경로만 본다.
+
+**실증.** 모듈 TU 만 버전 2 로 다시 구워 실행하니
+`Editor 모듈 ABI 버전이 다릅니다 (기대 1) — 엔진과 모듈을 함께 다시 빌드하세요` 로 거부됐다.
+그 전에는 같은 DLL 이 그대로 로드됐다.
+
+**표를 고칠 때.** 항목을 더하거나 순서를 바꾸면 `kModuleAbiVersion` 을 올리고 스탬프 문자열을
+고친다. 그러면 옛 DLL 이 이유가 적힌 에러와 함께 거부된다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** `gameAllowed=0` 게이팅은 양쪽에서 실제로 강제된다
+(`engine::fillModuleServices` 와 `ModuleHostInternal::buildModuleService` 가 각각
+`if constexpr` / 런타임 분기로 거른다). 불투명 핸들은 `ABI/RuntimeHandles.h` 한 자리에 모여
+있고 받는 쪽이 역참조하지 않는다. `ModuleService` 는 X-macro 로 만들어져 열거형·표·traits 가
+한 목록에서 나온다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 16/16 · 실기동으로 거부·정상 로드 양쪽 확인. **단위 테스트는 없다** — 이것은 DLL 로드
+경로라 프로세스를 띄워야 재현된다(실기동으로 대신했다).
 
 ### 2026-09-18 (초기화가 실패하면 이 DLL 주소가 매니저에 남았다 — Editor/Popups · Viewport · 루트, **Editor 전체 완료**)
 
