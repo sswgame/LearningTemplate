@@ -281,7 +281,7 @@ namespace sw::editor
         _nodeGraph.requestContentFit();
     }
 
-    void AnimationGraphPanel::saveGraphData()
+    bool AnimationGraphPanel::saveGraphData()
     {
         AnimationGraphAsset data = captureGraphData();
         if ( _nodeGraph.bind() )
@@ -295,15 +295,21 @@ namespace sw::editor
             _nodeGraph.unbind();
             _listNode = data._listNode;
         }
-        EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() );
+        // **저장이 실패하면 아무것도 지우지 않는다.** 예전에는 반환값을 버리고 무조건
+        // `clearDocumentDirty()` 를 불렀다 — 실패해도 "저장됨" 으로 표시되고, 되돌리기 기준점까지
+        // 옮겨지고, `saveDocument()` 는 `true` 를 돌려줬다. 그래서 문서를 바꾸거나 에디터를 닫을 때
+        // 종료 확인이 뜨지 않고 편집이 조용히 사라졌다.
+        if ( EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() ) == false )
+            return false;
+
         clearDocumentDirty();
         syncDocumentUndoBaseline();
+        return true;
     }
 
     bool AnimationGraphPanel::saveDocument()
     {
-        saveGraphData();
-        return true;
+        return saveGraphData();
     }
 
     string AnimationGraphPanel::captureDocumentText() const

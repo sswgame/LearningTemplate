@@ -35,13 +35,16 @@ namespace
     protected:
         void drawContent() override {}
 
+        /**
+         * @brief 파생이 하는 일은 **쓰고, 됐는지 답하는 것**이 전부다.
+         * @details 일부러 `clearDocumentDirty()` 를 부르지 않는다 — dirty 를 지우는 것은 기반의
+         *          `saveDocumentAndClearDirty()` 몫이다. 예전에는 그 순서를 파생 아홉이 각자
+         *          구현해서 서로 달랐다(둘은 실패해도 지웠고, 하나는 성공해도 안 지웠다).
+         */
         bool saveDocument() override
         {
             ++_saveCount;
-            if ( _bSaveSucceeds == false )
-                return false;
-            clearDocumentDirty();
-            return true;
+            return _bSaveSucceeds;
         }
 
         void revertDocument() override { ++_revertCount; }
@@ -138,4 +141,31 @@ SW_TEST_CASE( EditorPanelDocumentTest, PanelWithoutDocumentStaysClean )
     SW_EXPECT_FALSE( panel.trySaveDirtyDocument() );
     panel.discardDirtyDocument();
     SW_EXPECT_FALSE( panel.isDocumentDirty() );
+}
+
+/**
+ * @brief [EditorPanelDocumentTest] 파생이 지우지 않아도 성공한 저장은 dirty 를 지운다
+ * @details "저장했으면 dirty 를 지운다" 는 순서를 파생 아홉이 각자 구현하고 있었고, 그래서
+ *          서로 달랐다 — `AnimationGraphPanel` · `DialogueGraphPanel` 은 **실패해도 무조건**
+ *          지우고 `true` 를 돌려줬고(문서를 바꾸거나 닫을 때 확인 없이 편집이 사라진다),
+ *          `TileMapPanel` 은 **성공해도 지우지 않았다**(저장했는데 계속 미저장으로 남는다).
+ *          순서를 기반(`saveDocumentAndClearDirty`)이 들면 둘 다 존재할 수 없다.
+ */
+SW_TEST_CASE( EditorPanelDocumentTest, BaseClearsDirtyOnSuccessfulSave )
+{
+    FakeDocumentPanel panel;
+    panel.edit();
+    SW_ASSERT_TRUE( panel.isDocumentDirty() );
+
+    // 파생은 저장만 하고 dirty 는 건드리지 않는다 — 그래도 깨끗해져야 한다.
+    SW_EXPECT_TRUE( panel.trySaveDirtyDocument() );
+    SW_EXPECT_EQUAL( 1, panel.getSaveCount() );
+    SW_EXPECT_FALSE( panel.isDocumentDirty() );
+
+    // 실패하면 그대로 남는다 — 그리고 파생이 답한 것이 그대로 나온다.
+    panel.edit();
+    panel.setSaveSucceeds( false );
+    SW_EXPECT_FALSE( panel.trySaveDirtyDocument() );
+    SW_EXPECT_EQUAL( 2, panel.getSaveCount() );
+    SW_EXPECT_TRUE( panel.isDocumentDirty() );
 }

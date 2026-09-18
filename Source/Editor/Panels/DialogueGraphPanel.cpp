@@ -564,18 +564,21 @@ namespace sw::editor
         _nodeGraph.requestContentFit();
     }
 
-    void DialogueGraphPanel::saveGraphData()
+    bool DialogueGraphPanel::saveGraphData()
     {
         DialogueGraphAsset data = captureGraphData();
-        EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() );
+        // 실패하면 아무것도 지우지 않는다 — AnimationGraphPanel 쪽 주석 참고.
+        if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
+            return false;
+
         clearDocumentDirty();
         syncDocumentUndoBaseline();
+        return true;
     }
 
     bool DialogueGraphPanel::saveDocument()
     {
-        saveGraphData();
-        return true;
+        return saveGraphData();
     }
 
     string DialogueGraphPanel::captureDocumentText() const

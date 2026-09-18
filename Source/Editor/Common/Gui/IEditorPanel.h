@@ -59,12 +59,29 @@ namespace sw::editor
          *          비트를 기반이 들면 그런 반쪽 구현이 불가능하다.
          */
         bool isDocumentDirty() const { return _bDocumentDirty; }
-        /** @brief dirty면 saveDocument()를 부릅니다. 저장했으면 true입니다. */
+        /**
+         * @brief `saveDocument()` 를 부르고 **성공했을 때만** dirty 를 지웁니다.
+         * @details 저장 경로는 **전부 이것을 거친다.** 예전에는 "저장했으면 dirty 를 지운다" 는
+         *          순서를 파생 아홉이 각자 구현했고, 그래서 서로 달랐다 — 둘은 실패해도 무조건
+         *          지우고 `true` 를 돌려줬고(편집이 조용히 사라진다), 하나는 성공해도 지우지
+         *          않았다(저장했는데 계속 미저장으로 남는다). 바로 아래 `discardDirtyDocument`
+         *          는 처음부터 기반이 순서를 들고 있었다 — 저장 쪽만 빠져 있었다.
+         *          파생은 **"쓰고, 됐는지 답한다"** 만 하면 된다.
+         * @return 저장에 성공했으면 true. false 면 dirty 는 그대로 남는다.
+         */
+        bool saveDocumentAndClearDirty()
+        {
+            if ( saveDocument() == false )
+                return false;
+            clearDocumentDirty();
+            return true;
+        }
+        /** @brief dirty면 저장합니다. 깨끗하거나 저장에 실패하면 false입니다. */
         bool trySaveDirtyDocument()
         {
             if ( _bDocumentDirty == false )
                 return false;
-            return saveDocument();
+            return saveDocumentAndClearDirty();
         }
         /** @brief dirty면 revertDocument()를 부르고 dirty를 지웁니다. */
         void discardDirtyDocument()

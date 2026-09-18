@@ -171,8 +171,8 @@ cd build/Ninja-Debug/Bin
 |------|------:|------|
 | `Common/Asset` | 819 | ✅ 2026-09-18 (3절 참고 — 같은 결정이 두 자리에 있었다) |
 | `Common/Backend` | 2,236 | ✅ 2026-09-18 (3절 참고 — 실패를 수습하는 경로가 실패했다. **테스트 없음**) |
-| `Common/Commands` | 4,478 | ← 다음 |
-| `Common/Config` | 299 | |
+| `Common/Commands` | 4,478 | ✅ 2026-09-18 (3절 참고 — 저장이 실패해도 "저장됨" 이 됐다) |
+| `Common/Config` | 299 | ← 다음 |
 | `Common/Gui` | 3,740 | |
 | `Common/Widgets` | 1,277 | |
 | `Common/Workspace` | 3,764 | |
@@ -398,6 +398,64 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (저장이 실패해도 "저장됨" 이 됐다 — Editor/Common/Commands)
+
+**찾은 방법.** 커맨드 폴더가 내놓는 `static bool` 함수 50개를 모아, 그 이름이 **문장으로만**
+불리는 곳(반환값을 버리는 곳)을 기계로 훑었다 — 42자리가 나왔다. 대부분은 커맨드가 스스로
+로그를 남기므로 정상이다. 그중 **저장**만 골라 들어갔다.
+
+**1) 저장 실패가 완전히 조용했고, 그 결과 편집이 사라졌다.**
+`EditorToolAssetCommands::saveAnimationGraph`/`saveDialogueGraph` 는 성공에만
+`SW_LOG_INFO("Saved …")` 를 남기고 **실패 두 경로는 로그 없이 `false` 만** 돌려줬다. 그리고
+두 패널이 그 반환값을 버렸다:
+
+```
+EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() );  // 반환값 버림
+clearDocumentDirty();        // 실패해도 "저장됨" 으로 표시
+syncDocumentUndoBaseline();  // 실패해도 되돌리기 기준점을 옮긴다
+...
+bool saveDocument() { saveGraphData(); return true; }   // 언제나 성공이라고 답한다
+```
+
+그래서 `EditorDocumentPanel` 이 문서를 바꾸기 전에 부르는 `saveDocument()` 가 `true` 를
+돌려주고 **전환이 그대로 진행된다.** 종료 확인도 dirty 가 지워져 뜨지 않는다. 즉 저장이
+실패하면 사용자는 **아무 신호 없이 편집을 잃는다.** 2026-09-10 에 `InputMapEditorPanel` 에서
+고쳤던 "편집이 조용히 사라졌다" 와 같은 결과가 다른 경로로 나 있었다.
+
+**2) 그리고 그 순서를 패널 아홉이 각자 구현하고 있었다.** `saveDocument()` 구현 아홉을 나란히
+놓으니 전부 달랐다:
+
+| 패널 | 실패 시 dirty | 반환값 |
+|------|------|------|
+| `MaterialPanel` · `SpriteClipPanel` · `GlobalVariablesPanel` | 유지 ✓ | 정확 ✓ |
+| `AnimationGraphPanel` · `DialogueGraphPanel` | **무조건 지움** ✗ | **언제나 true** ✗ |
+| `TileMapPanel` | **성공해도 안 지움** ✗ | 정확 ✓ |
+| `InputMapEditorPanel` · `DataTablePanel` · `SequencerPanel` | 내부 위임 | 각자 방식 |
+
+`TileMapPanel` 은 반대 방향으로 틀렸다 — 저장에 성공해도 dirty 가 남아 계속 미저장으로 보인다.
+
+**기반이 순서를 들게 했다**(`IEditorPanel::saveDocumentAndClearDirty`): 저장에 **성공했을 때만**
+dirty 를 지우고, 저장 경로는 둘 다(`trySaveDirtyDocument` · `EditorDocumentPanel` 의 문서 전환)
+이것을 거친다. 파생은 **"쓰고, 됐는지 답한다"** 만 한다. 바로 옆 `discardDirtyDocument` 는
+처음부터 기반이 순서를 들고 있었다 — 저장 쪽만 빠져 있었던 것이다. 2026-09-10 에 dirty **비트**를
+기반으로 올린 것의 다음 한 칸이다.
+
+커맨드 쪽도 실패를 크게 말하게 했다(경로 해석 실패 · 파일 쓰기 실패 각각 `SW_LOG_ERROR`).
+
+**테스트** `EditorPanelDocumentTest.BaseClearsDirtyOnSuccessfulSave` — 가짜 패널이 **일부러**
+`clearDocumentDirty()` 를 부르지 않게 바꾸고(새 계약이 그렇다), 그래도 성공한 저장 뒤에는
+깨끗해지고 실패한 저장 뒤에는 dirty 가 남는지 본다. 기반에서 지우기를 빼면 깨진다(변이 확인).
+**패널 두 개의 수정 자체는 테스트가 없다** — 패널은 ImGui 를 링크하고 `EditorTest` 는 그러지
+않는다. 기반 계약으로 끌어올린 덕에 **그 부분은** 테스트가 붙었다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** `EditorSceneCommands::wouldCreateParentCycle` 의
+널 → `true`(거부) 는 의도이고 테스트가 네 경우를 다 박아 두었다. `EditorCommandRegistry::validate`
+의 `findSharedChord` 는 주/보조 단축키 **네 조합을 모두** 비교한다. `validate` 는 실제로
+`EditorCommandGui` 등록 직후에 돌고 어긋나면 에러 로그를 남긴다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EditorPanelDocumentTest` 5 → 6건.
 
 ### 2026-09-18 (실패를 수습하라고 있는 경로가 실패했다 — Editor/Common/Backend)
 

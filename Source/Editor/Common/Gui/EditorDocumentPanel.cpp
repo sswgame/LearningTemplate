@@ -139,7 +139,8 @@ namespace sw::editor
 
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
         {
-            if ( saveDocument() == false )
+            // 저장 순서는 기반이 든다 — 성공했을 때만 dirty 가 지워진다.
+            if ( saveDocumentAndClearDirty() == false )
             {
                 _bConfirmSwitch = SW_FALSE;
                 _pendingFocusPath.clear();

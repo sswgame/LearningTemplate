@@ -156,11 +156,19 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
     {
+        // **실패도 성공만큼 크게 말한다.** 예전에는 성공에만 로그가 있고 실패 둘은 조용히
+        // `false` 만 돌려줬다 — 호출부가 그 값을 버리고 있어서 아무 일도 안 일어난 것처럼 보였다.
         const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
         if ( resolved.empty() )
+        {
+            SW_LOG_ERROR( "애니메이션 그래프 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
             return false;
+        }
         if ( data.saveToFile( resolved ) == false )
+        {
+            SW_LOG_ERROR( "애니메이션 그래프 저장 실패: %#", resolved.c_str() );
             return false;
+        }
         SW_LOG_INFO( "Saved %#", resolved.c_str() );
         return true;
     }
@@ -177,9 +185,15 @@ namespace sw::editor
     {
         const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
         if ( resolved.empty() )
+        {
+            SW_LOG_ERROR( "대화 그래프 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
             return false;
+        }
         if ( data.saveToFile( resolved ) == false )
+        {
+            SW_LOG_ERROR( "대화 그래프 저장 실패: %#", resolved.c_str() );
             return false;
+        }
         SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), resolved.c_str() );
         return true;
     }
