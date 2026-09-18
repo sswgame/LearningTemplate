@@ -176,8 +176,8 @@ cd build/Ninja-Debug/Bin
 | `Common/Gui` | 3,740 | ✅ 2026-09-18 (3절 참고 — 조용히 어긋날 수 있던 자리 둘을 소리 나게) |
 | `Common/Widgets` | 1,277 | ✅ 2026-09-18 (3절 참고 — 죽어 있으면서 함정인 API 하나) |
 | `Common/Workspace` | 3,764 | ✅ 2026-09-18 (3절 참고 — nullptr 을 준다고 적어 둔 값을 15곳이 그냥 따라갔다) |
-| `Panels` | 11,011 | ← 다음 |
-| `Popups` | 1,008 | |
+| `Panels` | 11,011 | ✅ 2026-09-18 (3절 참고 — 설정할 수 있는데 아무 일도 안 하는 손잡이 하나) |
+| `Popups` | 1,008 | ← 다음 |
 | `Viewport` | 1,945 | |
 | 루트(`ImGuiEditor` · `IEditor`) | 780 | |
 
@@ -399,6 +399,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-18 (설정할 수 있는데 아무 일도 안 하는 손잡이 — Editor/Panels)
+
+**1) `EditorPanelEntry::_menuPath` 는 쓰기만 하고 아무도 읽지 않았다.** 멤버 157개를 훑어
+나온 유일한 후보였고, 따라가 보니 손잡이 전체가 죽어 있었다 — `registerPanel` 의 `menuPath`
+인자를 **넘기는 등록이 열아홉 중 하나도 없고**(전부 기본값), 필드를 **읽는 곳도 없다**.
+Window 메뉴는 `entry._title` 로 항목을 만든다. 같이 있던 템플릿 오버로드
+(`registerPanel<TPanel>(…)`)도 호출부가 **하나도 없었다**.
+
+설정은 되는데 아무 일도 하지 않는 손잡이는 다음 사람이 그것으로 메뉴를 옮기려다 시간을
+버리게 한다(2026-09-10 의 "뷰 모드 콤보가 아무 일도 하지 않았다" · "`_clearColor` 가
+무시되고 있었다" 와 같은 모양). 필드 · 인자 · 템플릿을 걷어내고 왜 걷어냈는지 남겼다.
+
+**2) 저장 커맨드 다섯이 실패를 알리는 방식이 제각각이었다.** `Common/Commands` 에서 둘을
+고쳤는데(`saveAnimationGraph` · `saveDialogueGraph`), 나머지 셋을 여기서 마저 맞췄다:
+
+| 커맨드 | 예전 |
+|--------|------|
+| `saveSpriteClip` | 성공만 말함 (실패 둘 조용) |
+| `saveSequence` | **로그 아예 없음**, 경로 해석 실패도 안 봄 |
+| `saveTileMap` | **로그 아예 없음** |
+
+호출부는 반환값을 자주 버리므로 **실패가 조용하면 아무 일도 없었던 것처럼 보인다.** 다섯을
+"경로 실패 · 쓰기 실패 각각 `SW_LOG_ERROR`, 성공은 `SW_LOG_INFO`" 로 통일했다.
+
+**정정 하나 — 앞 항목의 `TileMapPanel` 기술이 틀렸다.** `Common/Commands` 항목의 표에
+`TileMapPanel` 을 "성공해도 dirty 를 안 지움" 으로 적었는데, `saveDocument()` 만 보고 판단한
+것이었다. 실제로는 그것이 부르는 `saveXml()` 이 성공 시 `clearDocumentDirty()` 를 부른다.
+표를 고쳤다. **잘못 고친 코드는 없다**(그 패널은 손대지 않았다) — 기반이 저장 순서를 드는
+변경은 그대로 유효하다.
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** Panels 멤버 157개 중 쓰기 전용은 위 하나뿐이고,
+선언 156개 중 "죽은 함수" 후보 둘(`onLogWritten` · `onImportDialogResult`)은 **델리게이트로
+묶여 있다**(`&Class::method` 형태라 이름+괄호 검색에 안 잡힌다 — 이 훑기의 알려진 오탐).
+`InputMapEditorPanel::saveToFile` 과 `SequencerPanel`·`SpriteClipPanel`·`MaterialPanel`·
+`GlobalVariablesPanel` 의 저장은 실패 시 dirty 를 유지한다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 16/16. **새 테스트는 없다** — 패널은 ImGui 를 링크하고 `EditorTest` 는 그러지 않는다.
+
 ### 2026-09-18 (nullptr 을 준다고 적어 둔 값을 열다섯 곳이 그냥 따라갔다 — Editor/Common/Workspace)
 
 `editor::getService<T>()` 는 **마지막 줄이 `return nullptr;`** 이다 — 지역 등록도 없고 모듈
@@ -562,10 +601,14 @@ bool saveDocument() { saveGraphData(); return true; }   // 언제나 성공이�
 |------|------|------|
 | `MaterialPanel` · `SpriteClipPanel` · `GlobalVariablesPanel` | 유지 ✓ | 정확 ✓ |
 | `AnimationGraphPanel` · `DialogueGraphPanel` | **무조건 지움** ✗ | **언제나 true** ✗ |
-| `TileMapPanel` | **성공해도 안 지움** ✗ | 정확 ✓ |
-| `InputMapEditorPanel` · `DataTablePanel` · `SequencerPanel` | 내부 위임 | 각자 방식 |
+| `TileMapPanel` · `InputMapEditorPanel` · `DataTablePanel` · `SequencerPanel` | 내부 위임 | 각자 방식 |
 
-`TileMapPanel` 은 반대 방향으로 틀렸다 — 저장에 성공해도 dirty 가 남아 계속 미저장으로 보인다.
+**정정(2026-09-18, `Panels` 훑는 중).** 처음 이 표에 `TileMapPanel` 을 "성공해도 안 지움" 으로
+적었는데 **틀렸다** — `saveDocument()` 만 보고 판단했고, 실제로는 그것이 부르는 `saveXml()` 이
+성공했을 때 `clearDocumentDirty()` 와 `syncDocumentUndoBaseline()` 을 부른다. 위임 한 겹을
+따라가지 않은 것이 원인이다. 잘못 고친 것은 없다(그 패널은 손대지 않았다). 기반이 순서를 드는
+변경은 그대로 유효하다 — 두 그래프 패널은 실제로 깨져 있었고, 위임 방식이 넷이나 되는 것 자체가
+"각자 구현" 의 증거다.
 
 **기반이 순서를 들게 했다**(`IEditorPanel::saveDocumentAndClearDirty`): 저장에 **성공했을 때만**
 dirty 를 지우고, 저장 경로는 둘 다(`trySaveDirtyDocument` · `EditorDocumentPanel` 의 문서 전환)

@@ -25,7 +25,7 @@ namespace sw::editor
 {
     void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
                                             string_view              panelId,
-                                            EditorPanelCategory category, string_view menuPath )
+                                            EditorPanelCategory      category )
     {
         if ( pPanel == nullptr )
             return;
@@ -34,7 +34,6 @@ namespace sw::editor
         EditorPanelEntry entry{};
         entry._id        = panelId.empty() == false ? string{ panelId } : ( pTitle != nullptr ? pTitle : "" );
         entry._title     = pTitle != nullptr ? pTitle : "";
-        entry._menuPath  = menuPath.empty() == false ? string{ menuPath } : entry._title;
         entry._category  = category;
         entry._pInstance = std::move( pPanel );
 

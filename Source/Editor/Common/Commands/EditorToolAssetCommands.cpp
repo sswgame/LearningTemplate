@@ -211,7 +211,13 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXmlData& data )
     {
-        return data.save( assetRelativePath );
+        if ( data.save( assetRelativePath ) == false )
+        {
+            SW_LOG_ERROR( "타일맵 저장 실패: %#", string( assetRelativePath ).c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Saved %#", string( assetRelativePath ).c_str() );
+        return true;
     }
 
     bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
@@ -254,10 +260,16 @@ namespace sw::editor
     {
         const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
         if ( resolved.empty() )
+        {
+            SW_LOG_ERROR( "스프라이트 클립 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
             return false;
+        }
         const string text = serializeSpriteClip( data );
         if ( FileUtil::writeTextFile( resolved, text ) == false )
+        {
+            SW_LOG_ERROR( "스프라이트 클립 저장 실패: %#", resolved.c_str() );
             return false;
+        }
         SW_LOG_INFO( "Saved %#", resolved.c_str() );
         return true;
     }
@@ -357,8 +369,22 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
     {
+        // 저장 커맨드 다섯이 실패를 알리는 방식이 제각각이었다 — 이것과 `saveTileMap` 은 로그가
+        // 아예 없었고, `saveSpriteClip` 은 성공만 말했다. 호출부는 반환값을 자주 버리므로
+        // **실패가 조용하면 아무 일도 없었던 것처럼 보인다.** 다섯을 같은 모양으로 맞춘다.
         const string resolved = EditorToolAssetInternal::resolveExistingOrRelativePath( path );
-        return asset.saveToFile( resolved );
+        if ( resolved.empty() )
+        {
+            SW_LOG_ERROR( "시퀀스 저장 경로를 만들 수 없습니다: '%#'", string( path ).c_str() );
+            return false;
+        }
+        if ( asset.saveToFile( resolved ) == false )
+        {
+            SW_LOG_ERROR( "시퀀스 저장 실패: %#", resolved.c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Saved %#", resolved.c_str() );
+        return true;
     }
 
     void EditorToolAssetCommands::collectPrefabOverrides( GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
