@@ -407,3 +407,69 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         sw::FileUtil::removeFile( listBinPath[index] );
     }
 }
+
+/**
+ * @brief [SceneAsyncTest] 대기열에 들어간 요청도 자기 씬을 받는다
+ * @details 이미 로드가 도는 중에 다시 요청하면 그 요청은 대기열로 간다. 그런데 돌려주던
+ *          future 는 **도는 중인 로드의 것**이었고, `tickTransitions` 는 대기열 때문에 그
+ *          로드를 버리면서 같은 약속에 nullptr 을 넣었다 — 그래서 대기열에 넣은 쪽은
+ *          자기 씬이 멀쩡히 활성이 되는데도 "실패" 를 받았다. 그리고 세 번째 요청이 오면
+ *          두 번째는 `_queuedPath` 가 덮이면서 **아무 통지도 없이** 사라졌다.
+ */
+SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
+{
+    const sw::string pathA = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_a.xml" );
+    const sw::string binA  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_a.bin" );
+    const sw::string pathB = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_b.xml" );
+    const sw::string binB  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_b.bin" );
+    const sw::string pathC = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_c.xml" );
+    const sw::string binC  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_c.bin" );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [=]()
+    {
+        for ( const sw::string& p : { pathA, binA, pathB, binB, pathC, binC } )
+            sw::FileUtil::removeFile( p );
+    } ) );
+
+    for ( const auto& nameAndPath : {
+              sw::pair<const utf8*, const sw::string*>{"QueuedA", &binA},
+              sw::pair<const utf8*, const sw::string*>{"QueuedB", &binB},
+              sw::pair<const utf8*, const sw::string*>{"QueuedC", &binC}
+    } )
+    {
+        sw::SceneDocument doc{};
+        doc._name = nameAndPath.first;
+        sw::SceneDocument::EntityNode node{};
+        node._name = "Root";
+        doc._listEntityNode.push_back( std::move( node ) );
+        SW_ASSERT_TRUE( doc.saveBinary( *nameAndPath.second ) );
+    }
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    // A 가 돌고, B 가 대기열로, C 가 B 를 밀어낸다.
+    sw::TaskFuture<sw::Scene*> futA = manager.requestLoadFuture( pathA );
+    sw::TaskFuture<sw::Scene*> futB = manager.requestLoadFuture( pathB );
+    sw::TaskFuture<sw::Scene*> futC = manager.requestLoadFuture( pathC );
+    SW_ASSERT_TRUE( futA.isValid() );
+    SW_ASSERT_TRUE( futB.isValid() );
+    SW_ASSERT_TRUE( futC.isValid() );
+
+    sw::drainSceneTransitions( manager );
+
+    SW_ASSERT_NOT_NULL( manager.getActiveScene() );
+    SW_EXPECT_STREQ( "QueuedC", manager.getActiveScene()->getName() );
+
+    // 셋 다 답을 받아야 한다 — 끝나지 않는 future 를 쥐고 있는 요청자는 없다.
+    SW_ASSERT_TRUE( futA.isReady() );
+    SW_ASSERT_TRUE( futB.isReady() );
+    SW_ASSERT_TRUE( futC.isReady() );
+
+    // A 와 B 는 밀려났으므로 nullptr, C 만 자기 씬을 받는다.
+    SW_EXPECT_NULL( futA.get() );
+    SW_EXPECT_NULL( futB.get() );
+    SW_EXPECT_EQUAL( manager.getActiveScene(), futC.get() );
+
+    manager.shutdown();
+}

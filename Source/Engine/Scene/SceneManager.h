@@ -39,7 +39,16 @@ namespace sw
         Scene* createScene( string_view name );
         /** @brief 빈 씬을 만들어 활성으로 바꾸고 이전 활성 씬을 언로드합니다. */
         Scene* createEmptyActiveScene( string_view name );
-        /** @brief 씬 디스크립터 XML 비동기 로드를 요청하고 완료 시 활성 씬을 제공하는 TaskFuture를 반환합니다. */
+        /**
+         * @brief 씬 디스크립터 XML 비동기 로드를 요청하고 완료 시 활성 씬을 제공하는 TaskFuture를 반환합니다.
+         * @details **대기열에 들어가도 자기 답을 받는다.** 이미 로드가 도는 중이면 이 요청은
+         *          대기열로 가고, 돌려주는 future 는 **이 요청의 것**이다 — 돌던 로드의 것이
+         *          아니다. 예전에는 후자였고, `tickTransitions` 가 대기열 때문에 그 로드를
+         *          버리면서 같은 약속에 nullptr 을 넣었다. 그래서 대기열에 넣은 쪽은 자기 씬이
+         *          멀쩡히 활성이 되는데도 실패를 받았다. 대기열은 **한 자리**이므로 새 요청은
+         *          앞의 것을 밀어내고, 밀려난 쪽의 future 는 nullptr 로 끝난다(예전에는 아무
+         *          통지도 없이 사라져 그 future 가 영원히 끝나지 않았다).
+         */
         TaskFuture<Scene*> requestLoadFuture( string_view path );
         /** @brief 씬 디스크립터 XML 비동기 로드를 요청합니다 (TaskManager 워커). */
         bool requestLoadAsync( string_view path );
@@ -83,6 +92,13 @@ namespace sw
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
+        /**
+         * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
+         * @details 요청 경로와 대기열 경로가 **같은 자리**로 모이게 하려고 뽑았다 — 예전에는
+         *          대기열을 띄우는 쪽이 `requestLoadFuture` 를 다시 불러 약속을 새로 만들었고,
+         *          그래서 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이 갈렸다.
+         */
+        bool dispatchLoad( string_view path, TaskPromise<Scene*> promise );
         /** @brief TaskArgs: AsyncLoadSlot shared_ptr, path string. */
         static void loadSceneAsyncJob( const TaskArgs& args );
 
@@ -104,8 +120,10 @@ namespace sw
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
-        atomic<bool>              _bLoadInFlight;
-        TaskHandle                _loadHandle;
-        bool                      _bInitialized;
+        /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
+        TaskPromise<Scene*> _queuedPromise;
+        atomic<bool>        _bLoadInFlight;
+        TaskHandle          _loadHandle;
+        bool                _bInitialized;
     };
 } // namespace sw

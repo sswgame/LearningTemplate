@@ -26,6 +26,7 @@ namespace sw
         , _pFrameRenderer{ nullptr }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
+        , _queuedPromise{}
         , _bLoadInFlight{ false }
         , _loadHandle{}
         , _bInitialized{ false }
@@ -67,7 +68,11 @@ namespace sw
             return;
 
         _bInitialized = false;
-        _queuedPath.clear();
+        if ( _queuedPath.empty() == false )
+        {
+            _queuedPath.clear();
+            _queuedPromise.setValue( nullptr );
+        }
         if ( _asyncLoad != nullptr )
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
 
@@ -168,14 +173,32 @@ namespace sw
         bool expected{ false };
         if ( _bLoadInFlight.compare_exchange_strong( expected, true ) == false )
         {
-            _queuedPath = path;
+            // 대기열은 **한 자리**다. 앞에 있던 요청은 여기서 밀려나므로 그 요청자에게
+            // 실패를 알린다 — 예전에는 `_queuedPath` 만 덮어써서, 밀려난 쪽이 쥔 future 는
+            // 아무도 채우지 않는 채로 남았다(영원히 끝나지 않는다).
+            if ( _queuedPath.empty() == false )
+                _queuedPromise.setValue( nullptr );
+
+            _queuedPath    = path;
+            _queuedPromise = TaskPromise<Scene*>{};
             SW_LOG_TRACE( "Async load in flight — queued '%#'", path );
-            return _asyncLoad->_promise.getFuture();
+            return _queuedPromise.getFuture();
         }
 
+        // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다 — 여기서
+        // 복사해 넘기고 원본으로 future 를 뽑는다(양쪽 return 이 prvalue 라야 복사가 안 생긴다).
+        TaskPromise<Scene*> promise{};
+        if ( dispatchLoad( path, promise ) == false )
+            return {};
+        return promise.getFuture();
+    }
+
+    bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
+    {
+        _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
-        _asyncLoad->_promise = TaskPromise<Scene*>{};
-        SW_LOG_TRACE( "requestLoadFuture: %#", path );
+        _asyncLoad->_promise = std::move( promise );
+        SW_LOG_TRACE( "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
         _loadHandle                    = engine::getTaskManager().emplaceTask(
@@ -187,9 +210,10 @@ namespace sw
         if ( _loadHandle.isValid() == false )
         {
             _bLoadInFlight.store( false, std::memory_order_release );
-            return {};
+            _asyncLoad->_promise.setValue( nullptr );
+            return false;
         }
-        return _asyncLoad->_promise.getFuture();
+        return true;
     }
 
     bool SceneManager::requestLoadAsync( string_view path )
@@ -246,7 +270,11 @@ namespace sw
             engine::getTaskManager().waitAll();
 
         _bLoadInFlight.store( false, std::memory_order_release );
-        _queuedPath.clear();
+        if ( _queuedPath.empty() == false )
+        {
+            _queuedPath.clear();
+            _queuedPromise.setValue( nullptr );
+        }
 
         if ( _asyncLoad != nullptr )
         {
@@ -305,13 +333,15 @@ namespace sw
         _loadHandle = {};
 
         // 연속된 씬 전환 요청이 큐잉되어 있는 경우 이전 로드 결과를 버리고 다음 요청 즉시 디스패치
+        bool bQueuedSatisfiedByThisLoad{ false };
         if ( _queuedPath.empty() == false )
         {
             const string nextPath = std::move( _queuedPath );
             _queuedPath.clear();
             if ( pendingScene != nullptr && FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), nextPath ) )
             {
-                // 이미 동일한 경로가 로드 완료됨 (대소문자 무관)
+                // 이미 동일한 경로가 로드 완료됨 (대소문자 무관) — 아래 스왑에서 대기열 요청자도 같이 채운다.
+                bQueuedSatisfiedByThisLoad = true;
             }
             else
             {
@@ -323,7 +353,10 @@ namespace sw
                     pendingScene->shutdown();
                     pendingScene.reset();
                 }
-                requestLoadFuture( nextPath );
+                // 대기열 요청자의 약속을 **그대로 들고 간다.** 예전에는 `requestLoadFuture` 를
+                // 다시 불러 약속을 새로 만들었고, 그래서 대기열에 넣은 쪽이 쥔 future 는 바로
+                // 위에서 nullptr 로 닫힌 것이었다 — 자기 씬이 활성이 되는데도 실패를 받았다.
+                dispatchLoad( nextPath, std::move( _queuedPromise ) );
                 return;
             }
         }
@@ -333,6 +366,8 @@ namespace sw
             SW_LOG_ERROR( "Async load failed" );
             if ( _asyncLoad != nullptr )
                 _asyncLoad->_promise.setValue( nullptr );
+            if ( bQueuedSatisfiedByThisLoad )
+                _queuedPromise.setValue( nullptr );
             return;
         }
 
@@ -350,6 +385,9 @@ namespace sw
         SW_LOG_INFO( "Active scene swapped to '%#'", _pActiveScene->getName() );
         if ( _asyncLoad != nullptr )
             _asyncLoad->_promise.setValue( _pActiveScene );
+        // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
+        if ( bQueuedSatisfiedByThisLoad )
+            _queuedPromise.setValue( _pActiveScene );
 
 #if !defined( SW_SHIPPING )
         engine::getCommandStack().clear();

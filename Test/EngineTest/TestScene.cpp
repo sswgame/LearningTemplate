@@ -381,3 +381,48 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
     sw::collectSceneLights( &scene, listLight );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listLight.size() );
 }
+
+/**
+ * @brief [SceneTest] 바이너리 씬이 말하는 엔티티 수를 그대로 믿지 않는다
+ * @details 개수는 **파일에서 온 값**이다. 예전에는 검사 없이 `reserve` 로 들어갔다 —
+ *          엔티티 하나가 문자열 넷이라 4,294,967,295 개면 수백 기가짜리 요청이 된다.
+ *          읽기는 어차피 그 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
+ */
+SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
+{
+    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_badcount.bin" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [binPath]()
+    {
+        sw::FileUtil::removeFile( binPath );
+    } ) );
+
+    // 멀쩡한 씬 하나를 굽고, 헤더의 엔티티 수만 터무니없는 값으로 바꾼다.
+    sw::SceneDocument doc{};
+    doc._name = "BoundedScene";
+    sw::SceneDocument::EntityNode node{};
+    node._name = "Root";
+    doc._listEntityNode.push_back( std::move( node ) );
+    SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
+
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( binPath, bytes ) );
+
+    // magic(4) + version(4) + name(4 + len) 다음이 엔티티 수다.
+    const size_t nameLengthOffset = 8;
+    SW_ASSERT_TRUE( bytes.size() > nameLengthOffset + 4 );
+    uint32 nameLength{ 0 };
+    sw::Memory::copy( &nameLength, bytes.data() + nameLengthOffset, sizeof( uint32 ) );
+    const size_t countOffset = nameLengthOffset + 4 + nameLength;
+    SW_ASSERT_TRUE( bytes.size() >= countOffset + 4 );
+
+    const uint32 absurdCount = 0xFFFFFFFFu;
+    sw::Memory::copy( bytes.data() + countOffset, &absurdCount, sizeof( uint32 ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( binPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+
+    sw::SceneDocument corrupted{};
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( corrupted.loadBinary( binPath ) );
+    }
+    SW_EXPECT_TRUE( corrupted._listEntityNode.empty() );
+}

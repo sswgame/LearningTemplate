@@ -150,8 +150,8 @@ cd build/Ninja-Debug/Bin
 | `Physics` | 1,016 | ✅ 2026-09-18 (3절 참고) |
 | `Reflection` | 3,081 | ✅ 2026-09-18 (3절 참고 — 타입 표가 밀집 배열이라는 함정도 적었다) |
 | `Resource` | 3,604 | ✅ 2026-09-18 (3절 참고 — 파일에서 온 수를 믿던 자리 넷) |
-| `Scene` | 1,438 | ← 다음 |
-| `Sequencer` | 546 | |
+| `Scene` | 1,438 | ✅ 2026-09-18 (3절 참고 — 대기열 요청의 future 가 거짓말을 했다) |
+| `Sequencer` | 546 | ← 다음 |
 | `Serialization` | 7,120 | |
 | `Spatial` | 1,541 | |
 | `Utility` | 3,077 | |
@@ -362,6 +362,51 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (대기열에 넣은 요청이 자기 씬을 받지 못했다 — Engine/Scene)
+
+**1) 대기열에 들어간 씬 로드 요청은 자기 future 를 받지 못했다.** 이미 로드가 도는 중에
+`requestLoadFuture` 를 다시 부르면 그 요청은 대기열로 가는데, **돌려주던 future 는 도는 중인
+로드의 것**이었다. 그리고 `tickTransitions` 는 대기열이 있으면 도는 로드를 버리면서 바로 그
+약속에 `nullptr` 을 넣는다 — 그래서 대기열에 넣은 쪽은 **자기 씬이 멀쩡히 활성이 되는데도
+"실패" 를 받았다.**
+
+더 조용한 것이 하나 더 있었다. 대기열은 `_queuedPath` 한 자리인데, 세 번째 요청이 오면 두 번째는
+경로가 덮이면서 **아무 통지 없이 사라졌다** — 그 요청자가 쥔 future 는 아무도 채우지 않으므로
+영원히 끝나지 않는다. `future.get()` 은 조건 변수 대기라 그대로 멈춘다.
+
+요청 경로와 대기열 경로가 같은 자리로 모이도록 `dispatchLoad( path, promise )` 를 뽑았고,
+대기열 요청의 약속(`_queuedPromise`)을 따로 들고 있다가 그대로 넘긴다. 밀려나는 요청에는
+`nullptr` 을 넣는다(`shutdown` · `cancelPendingAsyncLoads` 포함 — 종료 때도 대기열 요청자가
+끝나지 않은 future 를 쥐고 있으면 안 된다).
+테스트 `SceneAsyncTest.QueuedRequestGetsItsOwnScene` — A 가 돌고 B 가 대기열, C 가 B 를 밀어낸다.
+A·B 는 `nullptr`, C 는 활성 씬. **셋 다 `isReady()` 여야 한다**는 것이 이 테스트의 핵심이다.
+기존 `SceneAsyncStressRapidSwitching` 은 세 번 연속 요청을 이미 하고 있었지만 future 를 받아만
+두고 보지 않아서 못 잡았다.
+
+**2) 바이너리 씬이 말하는 엔티티 수를 그대로 믿었다.** `arch >> entityCount` 다음이
+`_listEntityNode.reserve( entityCount )` 였다. 엔티티 하나가 문자열 넷이라, 손상된 파일의
+`0xFFFFFFFF` 는 수백 기가짜리 요청이 된다(변이 테스트에서 그 한 줄로 프로세스가 죽었다).
+문자열 넷은 길이만 해도 16바이트이므로 **남은 바이트 / 16** 이 상한이다. 그리고 루프가
+`arch.isError()` 를 **끝나고 나서야** 봤다 — 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를
+쌓는 일일 뿐이라 안에서 끊는다. 테스트 `SceneTest.BinaryEntityCountIsBoundedByFileSize`.
+[`Engine/Resource` 항목의 팩 헤더 검증과 같은 뿌리다 — 파일에서 온 수를 믿는다.]
+
+**따라갔지만 결함이 아니었던 것.** `cancelPendingAsyncLoads()` 만 씬을 버릴 때
+`Scene::shutdown()` 을 부르지 않는다(다른 넷은 부른다). 그런데 `~Scene()` 이 `Scene::shutdown()`
+을 부르고 `releaseDefaultMaterial()` 은 경로를 비운 뒤라 두 번 불러도 안전하다 — 그래서 이
+비대칭은 눈에 띄지만 동작 결함은 아니다. `_mapPrefabSource` 에 남는 항목도 마찬가지다:
+오브젝트 ID 가 `_s_nextObjectId` 로 단조 증가라 재사용되지 않으므로 잘못된 프리팹이 붙을 수 없고,
+`instantiate` 는 씬 로드마다 한 번이고 `shutdown()` 이 비운다.
+
+**적어 두는 것 하나.** `SceneDocument::loadXml` 은 `getResourceManager().getAssetFormatRegistry()`
+를 **가드 없이** 부르는데, 같은 함수의 GUID 해석 블록은 `areEngineServicesBound()` 로 감싸고 있고
+`loadBinary` 쪽도 감싼다. 서비스가 안 붙은 채로 XML 씬을 읽으면 그 자리에서 assert 다. 지금
+호출부는 모두 서비스가 붙은 상태라 도달하지 않아 손대지 않았다 — `SceneDocument` 를 단독 도구에서
+쓰려 할 때 여기를 먼저 볼 것.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `SceneAsyncTest` 8 → 9건 · `SceneTest` 12 → 13건.
 
 ### 2026-09-18 (실패를 성공으로 적어 두는 자리가 다섯 — Engine/Resource)
 

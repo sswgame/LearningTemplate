@@ -284,11 +284,27 @@ namespace sw
         uint32 entityCount{ 0 };
         arch >> entityCount;
 
+        // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 엔티티 하나는 문자열 넷이고 각 문자열은
+        // 최소한 길이 4바이트를 쓰므로, 남은 바이트 / 16 보다 많은 엔티티는 있을 수 없다. 손상된
+        // 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다 — 읽기는 어차피 아래에서
+        // 실패하지만, 그 전에 할당이 먼저 터진다.
+        constexpr uint64 kMinBytesPerEntity = 4u * sizeof( uint32 );
+        const uint64     maxPossibleEntity  = arch.getRemainingBytes() / kMinBytesPerEntity;
+        if ( static_cast<uint64>( entityCount ) > maxPossibleEntity )
+        {
+            SW_LOG_ERROR( "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#",
+                          entityCount, maxPossibleEntity, arch.getRemainingBytes(), absPath );
+            return false;
+        }
+
         _listEntityNode.reserve( entityCount );
         for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
         {
             EntityNode node{};
             arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml;
+            // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
+            if ( arch.isError() )
+                break;
 
             if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
             {
