@@ -1,10 +1,12 @@
 #include "pch.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( _MSC_VER )
-    #include "Engine/Module/ModuleHandleProvider.h"
-
-    #include "Core/File/FileUtil.h"
+    // 이 파일은 include 를 **전부 `#if` 안**에 두므로 `CheckIncludeOrder` 가 보지 못한다
+    // (게이트는 첫 `#if` 를 경계로 삼는다). 순서는 손으로 지킨다: Core → Engine.
     #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/File/FileUtil.h"
+
+    #include "Engine/Module/ModuleHandleProvider.h"
 
 namespace sw
 {

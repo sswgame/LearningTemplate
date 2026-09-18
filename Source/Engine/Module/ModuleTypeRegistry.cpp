@@ -35,38 +35,15 @@ namespace sw
     {
         void registerModuleTypes( string_view moduleName )
         {
-            auto&        cache  = getModuleHeadCache();
-            const string modStr = string{ moduleName };
+            // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다 — 그것을 걷어서 넘긴다.
+            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.** 예전에는 같은 18줄이 여기에도
+            // 한 벌 더 있었고(조건만 뒤집힌 같은 로직), 그러고 나서 아래를 불러 또 병합했다.
+            registerModuleTypes( moduleName,
+                                 TypeRegistrar::getHead(),
+                                 EnumRegistrar::getHead(),
+                                 sw::ComponentFactoryRegistrar::getHead() );
 
-            TypeRegistrar*                 pTypeHead    = TypeRegistrar::getHead();
-            EnumRegistrar*                 pEnumHead    = EnumRegistrar::getHead();
-            sw::ComponentFactoryRegistrar* pFactoryHead = sw::ComponentFactoryRegistrar::getHead();
-
-            const auto it = cache.find( modStr );
-            if ( it != cache.end() )
-            {
-                if ( pTypeHead == nullptr )
-                    pTypeHead = it->second._pTypeHead;
-                else
-                    it->second._pTypeHead = pTypeHead;
-
-                if ( pEnumHead == nullptr )
-                    pEnumHead = it->second._pEnumHead;
-                else
-                    it->second._pEnumHead = pEnumHead;
-
-                if ( pFactoryHead == nullptr )
-                    pFactoryHead = it->second._pFactoryHead;
-                else
-                    it->second._pFactoryHead = pFactoryHead;
-            }
-            else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr )
-            {
-                cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
-            }
-
-            registerModuleTypes( moduleName, pTypeHead, pEnumHead, pFactoryHead );
-
+            // 소비했으므로 비운다 — 다음 DLL 이 자기 것만 매달도록.
             TypeRegistrar::getHead()                 = nullptr;
             EnumRegistrar::getHead()                 = nullptr;
             sw::ComponentFactoryRegistrar::getHead() = nullptr;
@@ -77,6 +54,8 @@ namespace sw
                                   EnumRegistrar*                 pEnumHead,
                                   sw::ComponentFactoryRegistrar* pFactoryHead )
         {
+            // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
+            // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
             auto&        cache  = getModuleHeadCache();
             const string modStr = string{ moduleName };
             const auto   it     = cache.find( modStr );
