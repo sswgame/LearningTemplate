@@ -147,8 +147,8 @@ cd build/Ninja-Debug/Bin
 | `Localization` | 1,184 | ✅ 2026-09-18 (3절 참고) |
 | `Module` | 318 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Object` | 8,428 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
-| `Physics` | 1,016 | ← 다음 |
-| `Reflection` | 3,081 | |
+| `Physics` | 1,016 | ✅ 2026-09-18 (3절 참고) |
+| `Reflection` | 3,081 | ← 다음 |
 | `Resource` | 3,604 | |
 | `Scene` | 1,438 | |
 | `Sequencer` | 546 | |
@@ -362,6 +362,29 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (형제 스윕 둘이 빗나갔을 때 다른 것을 남겼다 — Engine/Physics)
+
+**1) `sweepAabb` 는 빗나가도 결과 구조체를 비우지 않았다.** 형제 함수 `sweepSphere` 는 처음부터
+`outHit = SweepHit{}` 로 시작한다. 그래서 **같은 구조체로 여러 대상을 훑으면**(자연스러운 쓰임이다)
+`sweepAabb` 가 `false` 를 돌려준 뒤에도 이전 충돌의 `_bHit` 이 그대로 남는다. 지금 `PhysicsWorld` 는
+반복마다 새 구조체를 만들어 물리지 않지만, 두 형제가 **다른 약속**을 하고 있으면 어느 관례로 쓰는지가
+호출자마다 갈린다. 둘 다 비우게 하고 그 계약을 헤더에 적었다.
+**회귀 테스트** `PhysicsTest.MissedSweepLeavesNoStaleHit` — 맞힌 뒤 같은 구조체로 빗나가 본다.
+비우기를 되돌리면 깨진다(변이 테스트로 확인).
+
+**2) 슬랩 검사 22줄이 여섯 벌이었다** (두 함수 × 세 축). 축마다 부호와 첨자만 다른 같은 코드라,
+한 축을 잘못 적어도 나머지 다섯과 나란히 놓고 보지 않는 한 보이지 않는다 — 증상이 "특정 방향에서만
+안 맞는다" 라서 가장 찾기 어려운 종류다. `clipSlab`(축 하나) / `clipAllSlabs`(세 축) 로 모았고,
+상자를 부풀리는 민코프스키 합도 `expandBox` 하나로 모았다. 기존 물리 테스트 10건이 그대로 통과한다
+(동작을 바꾸지 않았다는 증거다).
+
+**따라가 본 것 — 맞았다.** `AABB::infinite()` 가 `MathUtil::MinFloat` 을 쓰는데, 이것이 C 의
+`FLT_MIN`(가장 작은 **양수**)이었다면 `infinite()` 가 양의 팔분공간만 덮는 조용한 버그가 된다.
+`MinFloat = std::numeric_limits<float32>::lowest()` 라 문제없다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `PhysicsTest` 10 → 11건.
 
 ### 2026-09-18 (한 이름이 두 가지 뜻이라 린트가 일부러 눈을 감는 자리 — Engine/Object)
 

@@ -292,3 +292,43 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
     SW_EXPECT_NEAR_EQUAL( 0.3f, diagHit._time, 0.01f );
 }
+
+/**
+ * @brief [PhysicsTest] 빗나간 스윕이 결과 구조체에 이전 충돌을 남기지 않는지 검증
+ * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. 그런데
+ *          `sweepAabb` 만 시작할 때 결과를 비우지 않아서, 빗나가고도 **이전 호출의 `_bHit` 이
+ *          그대로 남았다** — 형제 함수 `sweepSphere` 는 처음부터 비우고 있었다. 둘이 다른 약속을
+ *          하고 있으면 어느 쪽 관례로 쓰는지가 호출자마다 달라진다.
+ */
+SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
+{
+    const sw::AABB targetBox{
+        sw::float3{10.0f, 10.0f, 10.0f},
+        sw::float3{11.0f, 11.0f, 11.0f}
+    };
+    const sw::AABB hittingBox{
+        sw::float3{0.0f, 10.0f, 10.0f},
+        sw::float3{1.0f, 11.0f, 11.0f}
+    };
+
+    sw::SweepHit hit{};
+
+    // 1) 먼저 맞힌다 — 결과가 채워진다.
+    SW_EXPECT_TRUE( sw::CCD::sweepAabb( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( hit._bHit );
+
+    // 2) **같은 구조체로** 완전히 빗나가는 스윕을 한다.
+    const sw::AABB missingBox{
+        sw::float3{-100.0f, -100.0f, -100.0f},
+        sw::float3{ -99.0f,  -99.0f,  -99.0f}
+    };
+    SW_EXPECT_FALSE( sw::CCD::sweepAabb( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( hit._bHit );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._time, 1e-4f );
+
+    // 3) 구 스윕도 같은 약속이다.
+    SW_EXPECT_TRUE( sw::CCD::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( hit._bHit );
+    SW_EXPECT_FALSE( sw::CCD::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( hit._bHit );
+}

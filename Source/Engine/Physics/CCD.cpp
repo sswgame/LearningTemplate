@@ -8,142 +8,120 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false.
+         * @details 슬랩 검사는 축마다 똑같다. 예전에는 이 22줄이 **여섯 벌**(두 함수 × 세 축)
+         *          있었고, 한 축의 부호나 첨자를 잘못 적어도 나머지 다섯과 비교해 보지 않는 한
+         *          보이지 않았다 — 증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵다.
+         * @param origin 이동 시작점의 이 축 좌표
+         * @param delta 이 축의 변위
+         * @param slabMin 슬랩(확장된 대상 상자)의 이 축 최소값
+         * @param slabMax 슬랩의 이 축 최대값
+         * @param negativeNormal 이 축의 최소면 법선
+         * @param positiveNormal 이 축의 최대면 법선
+         */
+        bool clipSlab( float32 origin, float32 delta, float32 slabMin, float32 slabMax,
+                       const float3& negativeNormal, const float3& positiveNormal,
+                       float32& inoutNear, float32& inoutFar, float3& inoutNearNormal )
+        {
+            // 이 축으로 움직이지 않으면 시작 좌표가 슬랩 안에 있는지만 본다 — 나누면 무한대가 된다.
+            if ( MathUtil::abs( delta ) < MathUtil::Epsilon )
+                return slabMin <= origin && origin <= slabMax;
+
+            const float32 invDelta = 1.0f / delta;
+            float32       tEnter   = ( slabMin - origin ) * invDelta;
+            float32       tExit    = ( slabMax - origin ) * invDelta;
+
+            // 음의 방향으로 가면 두 면의 순서가 뒤집힌다 — 법선도 같이 뒤집는다.
+            const bool bReversed = tEnter > tExit;
+            if ( bReversed )
+                std::swap( tEnter, tExit );
+
+            if ( tEnter > inoutNear )
+            {
+                inoutNear       = tEnter;
+                inoutNearNormal = bReversed ? positiveNormal : negativeNormal;
+            }
+            inoutFar = MathUtil::min( inoutFar, tExit );
+
+            return inoutNear <= inoutFar && inoutFar >= 0.0f;
+        }
+
+        /** @brief 세 축을 모두 잘라 진입 시각과 그 면의 법선을 구합니다. 빗나가면 false. */
+        bool clipAllSlabs( const float3& origin, const float3& displacement, const AABB& slabBox,
+                           float32& outNear, float3& outNearNormal )
+        {
+            outNear         = -MathUtil::MaxFloat;
+            float32 farTime = MathUtil::MaxFloat;
+            outNearNormal   = float3{ 0.0f, 0.0f, 0.0f };
+
+            if ( clipSlab( origin._x, displacement._x, slabBox._min._x, slabBox._max._x,
+                           float3{ -1.0f, 0.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f },
+                           outNear, farTime, outNearNormal ) == false )
+                return false;
+
+            if ( clipSlab( origin._y, displacement._y, slabBox._min._y, slabBox._max._y,
+                           float3{ 0.0f, -1.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f },
+                           outNear, farTime, outNearNormal ) == false )
+                return false;
+
+            if ( clipSlab( origin._z, displacement._z, slabBox._min._z, slabBox._max._z,
+                           float3{ 0.0f, 0.0f, -1.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                           outNear, farTime, outNearNormal ) == false )
+                return false;
+
+            return true;
+        }
+
+        /** @brief 상자를 각 축으로 @p halfExtents 만큼 부풀립니다 (민코프스키 합). */
+        AABB expandBox( const AABB& box, const float3& halfExtents )
+        {
+            return AABB{
+                float3{box._min._x - halfExtents._x, box._min._y - halfExtents._y, box._min._z - halfExtents._z},
+                float3{box._max._x + halfExtents._x, box._max._y + halfExtents._y, box._max._z + halfExtents._z}
+            };
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     bool CCD::sweepAabb( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
-        const float3 movingHalfExtents{
-            ( movingBox._max._x - movingBox._min._x ) * 0.5f,
-            ( movingBox._max._y - movingBox._min._y ) * 0.5f,
-            ( movingBox._max._z - movingBox._min._z ) * 0.5f };
+        // **빗나가면 outHit 은 비어 있다.** 예전에는 이 함수만 비우지 않아서, 결과 구조체를
+        // 재사용하는 호출자가 false 를 받고도 이전 호출의 `_bHit` 을 그대로 읽을 수 있었다
+        // (형제 함수 `sweepSphere` 는 처음부터 비우고 있었다 — 둘이 다른 약속을 하고 있었다).
+        outHit = SweepHit{};
 
-        const float3 movingCenter{
-            ( movingBox._min._x + movingBox._max._x ) * 0.5f,
-            ( movingBox._min._y + movingBox._max._y ) * 0.5f,
-            ( movingBox._min._z + movingBox._max._z ) * 0.5f };
-
-        const AABB expanded{
-            float3{targetBox._min._x - movingHalfExtents._x, targetBox._min._y - movingHalfExtents._y, targetBox._min._z - movingHalfExtents._z},
-            float3{targetBox._max._x + movingHalfExtents._x, targetBox._max._y + movingHalfExtents._y, targetBox._max._z + movingHalfExtents._z}
-        };
+        const float3 movingHalfExtents = movingBox.getExtents();
+        const float3 movingCenter      = movingBox.getCenter();
+        const AABB   expanded          = expandBox( targetBox, movingHalfExtents );
 
         if ( expanded.contains( movingCenter ) )
         {
-            outHit._bHit      = true;
-            outHit._time      = 0.0f;
-            outHit._hitPoint  = movingCenter;
+            outHit._bHit     = true;
+            outHit._time     = 0.0f;
+            outHit._hitPoint = movingCenter;
+            // 이미 겹친 상태에서는 진입면이 없다 — 밀어내는 방향으로 위를 준다.
             outHit._hitNormal = float3{ 0.0f, 1.0f, 0.0f };
             return true;
         }
 
-        float32 tNear = -MathUtil::MaxFloat;
-        float32 tFar  = MathUtil::MaxFloat;
-        float3  nearNormal{ 0.0f, 0.0f, 0.0f };
+        float32 tNear{ 0.0f };
+        float3  nearNormal{};
+        if ( clipAllSlabs( movingCenter, displacement, expanded, tNear, nearNormal ) == false )
+            return false;
 
-        // X-axis slab
-        if ( MathUtil::abs( displacement._x ) < MathUtil::Epsilon )
-        {
-            if ( movingCenter._x < expanded._min._x || movingCenter._x > expanded._max._x )
-                return false;
-        }
-        else
-        {
-            const float32 invDx = 1.0f / displacement._x;
-            float32       t1    = ( expanded._min._x - movingCenter._x ) * invDx;
-            float32       t2    = ( expanded._max._x - movingCenter._x ) * invDx;
-            float3        n1{ -1.0f, 0.0f, 0.0f };
-            float3        n2{ 1.0f, 0.0f, 0.0f };
+        if ( tNear < 0.0f || tNear > 1.0f )
+            return false;
 
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
-
-        // Y-axis slab
-        if ( MathUtil::abs( displacement._y ) < MathUtil::Epsilon )
-        {
-            if ( movingCenter._y < expanded._min._y || movingCenter._y > expanded._max._y )
-                return false;
-        }
-        else
-        {
-            const float32 invDy = 1.0f / displacement._y;
-            float32       t1    = ( expanded._min._y - movingCenter._y ) * invDy;
-            float32       t2    = ( expanded._max._y - movingCenter._y ) * invDy;
-            float3        n1{ 0.0f, -1.0f, 0.0f };
-            float3        n2{ 0.0f, 1.0f, 0.0f };
-
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
-
-        // Z-axis slab
-        if ( MathUtil::abs( displacement._z ) < MathUtil::Epsilon )
-        {
-            if ( movingCenter._z < expanded._min._z || movingCenter._z > expanded._max._z )
-                return false;
-        }
-        else
-        {
-            const float32 invDz = 1.0f / displacement._z;
-            float32       t1    = ( expanded._min._z - movingCenter._z ) * invDz;
-            float32       t2    = ( expanded._max._z - movingCenter._z ) * invDz;
-            float3        n1{ 0.0f, 0.0f, -1.0f };
-            float3        n2{ 0.0f, 0.0f, 1.0f };
-
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
-
-        if ( 0.0f <= tNear && tNear <= 1.0f )
-        {
-            outHit._bHit     = true;
-            outHit._time     = tNear;
-            outHit._hitPoint = float3{
-                movingCenter._x + displacement._x * tNear,
-                movingCenter._y + displacement._y * tNear,
-                movingCenter._z + displacement._z * tNear };
-            outHit._hitNormal = nearNormal;
-            return true;
-        }
-
-        return false;
+        outHit._bHit      = true;
+        outHit._time      = tNear;
+        outHit._hitPoint  = movingCenter + displacement * tNear;
+        outHit._hitNormal = nearNormal;
+        return true;
     }
 
     bool CCD::sweepSphere( const float3& startCenter, float32 radius, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
@@ -170,107 +148,12 @@ namespace sw
             return false;
 
         // 3) 확장 AABB (TargetBox + Radius) 에 대한 슬랩 스윕
-        const AABB expandedBox{
-            float3{targetBox._min._x - radius, targetBox._min._y - radius, targetBox._min._z - radius},
-            float3{targetBox._max._x + radius, targetBox._max._y + radius, targetBox._max._z + radius}
-        };
+        const AABB expandedBox = expandBox( targetBox, float3{ radius, radius, radius } );
 
-        float32 tNear = -MathUtil::MaxFloat;
-        float32 tFar  = MathUtil::MaxFloat;
-        float3  nearNormal{ 0.0f, 0.0f, 0.0f };
-
-        // X slab
-        if ( MathUtil::abs( displacement._x ) < MathUtil::Epsilon )
-        {
-            if ( startCenter._x < expandedBox._min._x || startCenter._x > expandedBox._max._x )
-                return false;
-        }
-        else
-        {
-            const float32 invDx = 1.0f / displacement._x;
-            float32       t1    = ( expandedBox._min._x - startCenter._x ) * invDx;
-            float32       t2    = ( expandedBox._max._x - startCenter._x ) * invDx;
-            float3        n1{ -1.0f, 0.0f, 0.0f };
-            float3        n2{ 1.0f, 0.0f, 0.0f };
-
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
-
-        // Y slab
-        if ( MathUtil::abs( displacement._y ) < MathUtil::Epsilon )
-        {
-            if ( startCenter._y < expandedBox._min._y || startCenter._y > expandedBox._max._y )
-                return false;
-        }
-        else
-        {
-            const float32 invDy = 1.0f / displacement._y;
-            float32       t1    = ( expandedBox._min._y - startCenter._y ) * invDy;
-            float32       t2    = ( expandedBox._max._y - startCenter._y ) * invDy;
-            float3        n1{ 0.0f, -1.0f, 0.0f };
-            float3        n2{ 0.0f, 1.0f, 0.0f };
-
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
-
-        // Z slab
-        if ( MathUtil::abs( displacement._z ) < MathUtil::Epsilon )
-        {
-            if ( startCenter._z < expandedBox._min._z || startCenter._z > expandedBox._max._z )
-                return false;
-        }
-        else
-        {
-            const float32 invDz = 1.0f / displacement._z;
-            float32       t1    = ( expandedBox._min._z - startCenter._z ) * invDz;
-            float32       t2    = ( expandedBox._max._z - startCenter._z ) * invDz;
-            float3        n1{ 0.0f, 0.0f, -1.0f };
-            float3        n2{ 0.0f, 0.0f, 1.0f };
-
-            if ( t1 > t2 )
-            {
-                std::swap( t1, t2 );
-                std::swap( n1, n2 );
-            }
-
-            if ( t1 > tNear )
-            {
-                tNear      = t1;
-                nearNormal = n1;
-            }
-            tFar = MathUtil::min( tFar, t2 );
-
-            if ( tNear > tFar || tFar < 0.0f )
-                return false;
-        }
+        float32 tNear{ 0.0f };
+        float3  nearNormal{};
+        if ( clipAllSlabs( startCenter, displacement, expandedBox, tNear, nearNormal ) == false )
+            return false;
 
         if ( tNear < 0.0f || tNear > 1.0f )
             return false;
