@@ -30,24 +30,41 @@ namespace sw
      */
     namespace path
     {
-        inline static constexpr auto kResourceFolder = "Resource";
-        inline static constexpr auto kEnginePack     = "engine";
-        inline static constexpr auto kCommonPack     = "common";
-        inline static constexpr auto kGamePack       = "game";
-        inline static constexpr auto kEditorPack     = "editor";
+        // `inline static` 이 아니라 `inline` 이다. 네임스페이스 스코프에서 `static` 은 내부 연결을
+        // 주므로 `inline` 이 하는 일이 없어지고, TU 마다 사본이 하나씩 생긴다 — 바로 위 `constant`
+        // 블록은 같은 뜻을 `inline constexpr` 로 적고 있었다. 한 파일에 두 철자를 두지 않는다.
 
-        inline static constexpr auto kShaderFolder       = "shaders";
-        inline static constexpr auto kTextureFolder      = "textures";
-        inline static constexpr auto kMapsFolder         = "maps";
-        inline static constexpr auto kPrefabsFolder      = "prefabs";
-        inline static constexpr auto kDataFolder         = "data";
-        inline static constexpr auto kLocalizationFolder = "localization";
-        inline static constexpr auto kPresetsFolder      = "presets";
-        inline static constexpr auto kGlobalVarsFolder   = "globalvars";
+        /** @brief 리소스 루트 폴더 이름입니다. */
+        inline constexpr const utf8* kResourceFolder = "Resource";
+        /** @brief 엔진 기본 제공 에셋 팩입니다. */
+        inline constexpr const utf8* kEnginePack = "engine";
+        /** @brief 게임 공용 에셋 팩입니다. */
+        inline constexpr const utf8* kCommonPack = "common";
+        /** @brief 활성 게임 에셋 팩입니다. */
+        inline constexpr const utf8* kGamePack = "game";
+        /** @brief 에디터 전용 에셋 팩입니다. */
+        inline constexpr const utf8* kEditorPack = "editor";
+
+        /** @brief 셰이더 폴더 이름입니다. */
+        inline constexpr const utf8* kShaderFolder = "shaders";
+        /** @brief 텍스처 폴더 이름입니다. */
+        inline constexpr const utf8* kTextureFolder = "textures";
+        /** @brief 씬(맵) 폴더 이름입니다. */
+        inline constexpr const utf8* kMapsFolder = "maps";
+        /** @brief 프리팹 폴더 이름입니다. */
+        inline constexpr const utf8* kPrefabsFolder = "prefabs";
+        /** @brief 데이터 테이블 폴더 이름입니다. */
+        inline constexpr const utf8* kDataFolder = "data";
+        /** @brief 현지화 폴더 이름입니다. */
+        inline constexpr const utf8* kLocalizationFolder = "localization";
+        /** @brief 프리셋 폴더 이름입니다. */
+        inline constexpr const utf8* kPresetsFolder = "presets";
+        /** @brief 전역 변수 저장 폴더 이름입니다. */
+        inline constexpr const utf8* kGlobalVarsFolder = "globalvars";
 
         /** @brief 엔진 셸 부트스트랩 XML (Resource 상대). */
-        inline static constexpr auto kEngineData = "engine/data/enginedata.xml";
+        inline constexpr const utf8* kEngineData = "engine/data/enginedata.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
-        inline static constexpr auto kMetaExtension = ".meta";
+        inline constexpr const utf8* kMetaExtension = ".meta";
     } // namespace path
 } // namespace sw

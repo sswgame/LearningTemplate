@@ -53,9 +53,19 @@ namespace sw
         SW_API void bindEngineServices( const EngineServices& services );
         /** @brief 바인딩을 해제합니다 (앱 종료 시). */
         SW_API void unbindEngineServices();
-        /** @brief 필수 매니저가 모두 바인딩되었는지 (MemoryProfiler / GameData 는 선택). */
+        /**
+         * @brief `required=1` 인 매니저가 모두 바인딩되었는지 반환합니다.
+         * @details 선택(`required=0`)인 것은 목록이 정본이다 — 지금은 `CommandStack`(Shipping 에
+         *          없다)과 `SW_ENGINE_SERVICE_OPT` 로 적힌 `MemoryProfiler` · `RenderTargetRegistry`.
+         *          **여기에 이름을 다시 적지 않는다** — 예전에는 존재하지도 않는 `GameData` 를
+         *          선택 항목으로 적어 두고 있었다.
+         */
         SW_API bool areEngineServicesBound();
-        /** @brief ModuleService 테이블에 현재 바인딩된 Engine 서비스를 채웁니다. */
+        /**
+         * @brief ModuleService 테이블에 현재 바인딩된 Engine 서비스를 채웁니다.
+         * @param bGameModuleOnly true 면 `gameAllowed=1` 인 것만 채웁니다. 나머지 자리는 nullptr 입니다.
+         * @note 표를 먼저 통째로 비우므로, 호스트 전용 서비스는 **이 호출 뒤에** 채워야 합니다.
+         */
         SW_API void fillModuleServices( ModuleService& outService, bool bGameModuleOnly = false );
 
         // ------------------------------------------------------------------------------

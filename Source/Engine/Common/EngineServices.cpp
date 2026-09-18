@@ -2,33 +2,21 @@
 
 #include "Engine/Common/EngineServices.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Event/EventDispatcher.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/FrameArenaAllocator.h"
-#include "Core/Task/TaskManager.h"
-
-#include "Engine/Audio/IAudioSystem.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Object/Component/ComponentDefaults.h"
-#include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceManager.h"
-
 #include "RuntimeAPI/Service/ModuleService.h"
 
-SW_LOG_CALLER( "EngineServices" );
+// 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
+// 되돌려 주는 것뿐이라 전방 선언(EngineServices.h 가 목록에서 생성한다)으로 충분하다. 예전에는
+// 매니저 헤더 열다섯 개를 끌어와서, 105줄짜리 접착 파일이 엔진 전체에 의존하는 것처럼 보였다 —
+// ShaderCache 와 GameObjectManager 까지 들어와 있었다.
+
 namespace sw
 {
+    SW_LOG_CALLER( "EngineServices" );
+
     namespace
     {
-
+        /** @brief App 이 바인딩해 둔 서비스 포인터 묶음입니다. */
         EngineServices s_services{};
-
     } // namespace
 
     namespace engine

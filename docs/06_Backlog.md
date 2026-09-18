@@ -138,8 +138,8 @@ cd build/Ninja-Debug/Bin
 |------|------:|------|
 | `Animation` | 1,153 | ✅ 2026-09-18 (3절 참고) |
 | `Audio` | 935 | ✅ 2026-09-18 (3절 참고) |
-| `Common` | 274 | ← 다음 |
-| `Compression` | 370 | |
+| `Common` | 274 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
+| `Compression` | 370 | ← 다음 |
 | `Config` | 480 | |
 | `Dialogue` | 375 | 헤더 자립 실패 1건이 걸려 있다(3절) |
 | `Graphics` | 42,770 | 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다. 자립 실패 3건(3절) |
@@ -360,6 +360,57 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (접착 파일 하나가 엔진 전체에 의존하는 척하고 있었다 — Engine/Common)
+
+**동작 결함을 찾지 못했다.** X-매크로 서비스 등록표(`EngineServiceList.xxx`)는 이미 "목록이 정본"
+으로 잘 서 있다 — 전방 선언 · 구조체 멤버 · getter · `areEngineServicesBound()` 본문 ·
+`ModuleServiceId` · `ModuleServiceTraits` 가 전부 그 한 파일에서 생성된다. 따라간 것과 그 결과:
+
+- `fillModuleServices` 는 표를 **먼저 비우고** 채우며, `ModuleHost::buildModuleService` 가 호스트
+  전용 서비스를 **그 뒤에** 채운다. 순서가 맞다(뒤집혔으면 에디터가 모듈 컴파일러를 잃는다).
+- `_pCommandStack` 이 `required=0` 인 이유와 `_pRenderTargetRegistry` 가 `OPT` 인 이유는 목록에
+  주석으로 남아 있고, 둘 다 맞다.
+- `EngineServices.h` 의 `#error` 가드가 허용하는 `SW_TOOL_INTERNAL` 은 실제로 쓰인다
+  (`Tools/ReflectionParser` 가 `Engine/Common/Common.h` 를 탄다).
+
+**고친 것 셋.**
+
+**1) `EngineServices.cpp` 의 프로젝트 include 15개가 전부 죽어 있었다.** 이 파일이 하는 일은
+포인터를 담아 두고 참조로 돌려주는 것뿐이라 **서비스 타입의 정의가 하나도 필요 없다** — 목록이
+만들어 주는 전방 선언으로 충분하다. 그런데 `ShaderCache.h` · `GameObjectManager.h` ·
+`ReflectionCore.h` 같은 무거운 헤더까지 끌어와서, 105줄짜리 접착 파일이 엔진 전체에 의존하는
+것처럼 보였다. 하나씩 빼며 빌드해 확인했고(15/15 제거 가능), 유니티 빌드(`SW_ENABLE_UNITY_BUILD`)
+로도 확인했다 — 같은 청크의 다른 `.cpp` 가 이 include 에 얹혀 있지 않다.
+**주의: `.xxx` include 세 개는 빼도 컴파일된다**(함수 본문이 비어질 뿐이다). "컴파일된다 = 필요
+없다" 가 성립하지 않는 자리라 기계로 지우면 안 된다.
+
+**2) `areEngineServicesBound()` 문서가 없는 서비스를 가리키고 있었다.** "(MemoryProfiler /
+GameData 는 선택)" 이라고 적혀 있는데 **`GameData` 라는 서비스는 저장소에 없다**, 그리고 실제
+선택 항목인 `CommandStack`·`RenderTargetRegistry` 는 빠져 있었다. 이름을 다시 적는 대신 "목록이
+정본" 이라고 적었다.
+
+**3) `EngineDefines.h` 가 같은 뜻을 두 철자로 적고 있었다.** `constant` 블록은 `inline constexpr`
+인데 `path` 블록은 `inline static constexpr` 다. 네임스페이스 스코프에서 `static` 은 내부 연결을
+주므로 **`inline` 이 하는 일이 없어지고** TU 마다 사본이 생긴다. `inline constexpr const utf8*` 로
+맞추고, 주석 두 개만 있던 `path` 상수 열넷에 전부 `@brief` 를 달았다.
+
+**테스트 3건 신규 — `EngineServiceTest` (`Test/EngineTest/TestEngineService.cpp`).**
+`gameAllowed` 열은 **게임 모듈이 손댈 수 있는 것과 없는 것의 경계**인데 그때까지 아무 테스트도
+그 경계를 보고 있지 않았다. 검사도 같은 X-매크로에서 생성한다(목록이 정본이므로).
+- `GameModuleTableHidesHostOnlyServices` — `gameAllowed=0` 은 게임 표에서 nullptr, `=1` 은 에디터
+  표와 같은 포인터.
+- `FillClearsTheWholeTableFirst` — 호스트 자리에 넣어 둔 값이 지워진다(= 호스트는 뒤에 채워야 한다).
+- `TestHarnessBindsEveryRequiredService` — 많은 테스트가 `areEngineServicesBound()` 로 자기 본문을
+  게이팅한다. 이것이 false 면 **그 테스트들이 통과한 척하며 아무것도 하지 않는다.**
+
+변이 테스트로 확인했다: `outService = {}` 를 빼면 둘째가, 게이팅 조건을 뒤집으면 첫째가 깨진다.
+**다만 `gameAllowed` 열 자체를 뒤집는 변이는 잡지 못한다** — 검사가 같은 목록에서 생성되므로
+기대값도 같이 뒤집힌다. 이 테스트가 보는 것은 "`fillModuleServices` 의 구현이 목록과 같은 말을
+하는가" 이지 "목록의 값이 옳은가" 가 아니다.
+
+**검증.** Debug·Shipping·Unity 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EngineServiceTest` 3건 · 헤더 4개 자립.
 
 ### 2026-09-18 (인터페이스로는 절반만 쓸 수 있었고, 없는 곡을 틀면 틀어져 있던 곡만 꺼졌다 — Engine/Audio)
 
