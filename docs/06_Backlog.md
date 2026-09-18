@@ -175,8 +175,8 @@ cd build/Ninja-Debug/Bin
 | `Common/Config` | 299 | ✅ 2026-09-18 (3절 참고 — 같은 판정을 네 곳이 손으로 적고 있었다) |
 | `Common/Gui` | 3,740 | ✅ 2026-09-18 (3절 참고 — 조용히 어긋날 수 있던 자리 둘을 소리 나게) |
 | `Common/Widgets` | 1,277 | ✅ 2026-09-18 (3절 참고 — 죽어 있으면서 함정인 API 하나) |
-| `Common/Workspace` | 3,764 | ← 다음 |
-| `Panels` | 11,011 | |
+| `Common/Workspace` | 3,764 | ✅ 2026-09-18 (3절 참고 — nullptr 을 준다고 적어 둔 값을 15곳이 그냥 따라갔다) |
+| `Panels` | 11,011 | ← 다음 |
 | `Popups` | 1,008 | |
 | `Viewport` | 1,945 | |
 | 루트(`ImGuiEditor` · `IEditor`) | 780 | |
@@ -398,6 +398,35 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (nullptr 을 준다고 적어 둔 값을 열다섯 곳이 그냥 따라갔다 — Editor/Common/Workspace)
+
+`editor::getService<T>()` 는 **마지막 줄이 `return nullptr;`** 이다 — 지역 등록도 없고 모듈
+서비스 표에도 없으면 그렇다. 그런데 `Source/Editor` 를 세어 보니 **열세 자리가 그 값을 확인
+없이 `->` 로 따라가고** 있었다(그리고 린트를 붙이자 정규식이 놓친 두 자리가 더 나왔다 —
+`getService<const EngineData>()` 처럼 `const` 가 낀 것).
+
+**같은 파일 안에서 갈렸다.** `EditorTransaction::push` 는 포인터를 받아 확인한 뒤 쓰는데,
+바로 위 일곱(`beginTransaction` · `endTransaction` · `cancelTransaction` · `push` 네 자리)은
+그냥 따라갔다. 커맨드 스택은 `EngineLoop` 소유라 EditorModule 보다 오래 살고 종료할 때 서비스
+결합이 먼저 풀린다 — 그 창에서 트랜잭션이 하나라도 돌면 널 역참조다. `ImGuiEditor` 의 두
+자리는 **워커 스레드**에서 도는 스플래시 로드였다.
+
+열다섯 곳을 모두 "받아 두고 확인한 뒤 쓴다" 로 바꿨다.
+
+**고치면서 한 번 잘못 고쳤다.** `recordModify` 계열 네 자리에서 스택이 없으면 곧장 `return`
+하게 했는데, 그러면 뒤따르는 `markActiveSceneDirty()` 까지 건너뛴다 — **씬은 이미 바뀌었고
+되돌리기 기록만 못 남기는 것**이므로 dirty 는 찍어야 한다. 조기 반환 대신 push 만 감쌌다.
+
+**그리고 린트로 옮겼다 — `Scripts/lint/gate/CheckNullableServiceUse.py`.** 이것은 사람이 지킬
+규칙이 아니다(같은 파일 안에서도 갈렸다). `getService<…>()->` 꼴만 잡고, 포인터를 받아 두는
+형태는 잡지 않는다. **붙이자마자 두 건을 더 찾았다** — 손 검색이 놓친 자리였다.
+`CheckLintsAreAlive` 가 자기 self-test 를 돌리고, CMake 는 `gate/` 를 훑으므로 등록할 목록이
+없다(린트 테스트 15 → 16건).
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 16/16. **새 런타임 테스트는 없다** — 서비스 결합은 `TestFramework/main.cpp` 가 프로세스
+단위로 잡고 있어서 한 테스트가 풀면 다른 테스트가 휩쓸린다. 대신 **린트가 회귀를 막는다**.
 
 ### 2026-09-18 (죽어 있으면서 함정이던 API 하나 — Editor/Common/Widgets)
 

@@ -22,6 +22,20 @@ namespace sw::editor
     {
         struct EditorTransactionInternal
         {
+            /**
+             * @brief Undo 스택. 없으면 nullptr — **부르는 쪽은 반드시 확인한다.**
+             * @details `editor::getService<T>()` 는 문서대로 **nullptr 을 돌려줄 수 있다**
+             *          (지역 등록도 없고 모듈 서비스 표에도 없을 때). 그런데 이 파일의 일곱
+             *          자리가 그 값을 그대로 `->` 로 따라가고 있었다. 커맨드 스택은 `EngineLoop`
+             *          소유라 EditorModule 보다 오래 살고, 종료할 때 서비스 결합이 먼저 풀린다 —
+             *          그 창에서 트랜잭션이 하나라도 돌면 널 역참조다. 바로 아래 씬 접근이
+             *          `getActiveScene()` 로 같은 검사를 한 자리에 모아 둔 것과 같은 모양이다.
+             */
+            static CommandStack* getCommandStack()
+            {
+                return editor::getService<CommandStack>();
+            }
+
             static GameObjectManager* getActiveGameObjectManager()
             {
                 Scene* pActiveScene = editor::getActiveScene();
@@ -68,17 +82,26 @@ namespace sw::editor
 {
     void EditorTransaction::beginTransaction( string_view label )
     {
-        editor::getService<CommandStack>()->beginTransaction( label );
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack == nullptr )
+            return;
+        pStack->beginTransaction( label );
     }
 
     void EditorTransaction::endTransaction()
     {
-        editor::getService<CommandStack>()->endTransaction();
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack == nullptr )
+            return;
+        pStack->endTransaction();
     }
 
     void EditorTransaction::cancelTransaction()
     {
-        editor::getService<CommandStack>()->cancelTransaction();
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack == nullptr )
+            return;
+        pStack->cancelTransaction();
     }
 
     string EditorTransaction::captureSnapshot( GameObjectPtr pObj )
@@ -141,7 +164,10 @@ namespace sw::editor
             }
         };
 
-        editor::getService<CommandStack>()->push( std::move( cmd ) );
+        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack != nullptr )
+            pStack->push( std::move( cmd ) );
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
@@ -189,7 +215,10 @@ namespace sw::editor
             }
         };
 
-        editor::getService<CommandStack>()->push( std::move( cmd ) );
+        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack != nullptr )
+            pStack->push( std::move( cmd ) );
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
@@ -246,7 +275,10 @@ namespace sw::editor
             }
         };
 
-        editor::getService<CommandStack>()->push( std::move( cmd ) );
+        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack != nullptr )
+            pStack->push( std::move( cmd ) );
         EditorTransactionInternal::markActiveSceneDirty();
     }
 
@@ -303,7 +335,10 @@ namespace sw::editor
             }
         };
 
-        editor::getService<CommandStack>()->push( std::move( cmd ) );
+        // 스택이 없어도 **씬은 이미 바뀌었다** — 되돌리기 기록만 못 남길 뿐이므로 dirty 는 찍는다.
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack != nullptr )
+            pStack->push( std::move( cmd ) );
         EditorTransactionInternal::markActiveSceneDirty();
     }
 

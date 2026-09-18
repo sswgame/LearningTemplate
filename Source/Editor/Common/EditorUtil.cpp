@@ -86,7 +86,15 @@ namespace sw::editor
             return nullptr;
         }
 
-        GameObject* pSpawned = editor::getService<ResourceManager>()->getPrefabManager().spawn( pManager, pPath );
+        // `getService<T>()` 는 nullptr 을 돌려줄 수 있다(문서에 그렇게 적혀 있다) — 따라가기 전에 본다.
+        ResourceManager* pResources = editor::getService<ResourceManager>();
+        if ( pResources == nullptr )
+        {
+            SW_LOG_WARNING( "ResourceManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
+            return nullptr;
+        }
+
+        GameObject* pSpawned = pResources->getPrefabManager().spawn( pManager, pPath );
         if ( pSpawned == nullptr )
         {
             SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );

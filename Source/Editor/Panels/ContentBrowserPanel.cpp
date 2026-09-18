@@ -368,10 +368,16 @@ namespace sw::editor
     void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
     {
         _listEntry = std::move( listEntry );
-        for ( const AssetEntry& entry : _listEntry )
+
+        // 서비스는 루프 **밖에서** 한 번 확인한다 — 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
+        ResourceManager* pResources = editor::getService<ResourceManager>();
+        if ( pResources != nullptr )
         {
-            if ( entry._bIsDirectory == false && entry._relativePath.empty() == false )
-                editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( entry._relativePath, false );
+            for ( const AssetEntry& entry : _listEntry )
+            {
+                if ( entry._bIsDirectory == false && entry._relativePath.empty() == false )
+                    pResources->getAssetDatabase().ensureMeta( entry._relativePath, false );
+            }
         }
 
         std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )

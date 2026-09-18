@@ -95,12 +95,16 @@ namespace sw::editor
 
             static void commandUndo()
             {
-                getService<CommandStack>()->undo();
+                CommandStack* pStack = getService<CommandStack>();
+                if ( pStack != nullptr )
+                    pStack->undo();
             }
 
             static void commandRedo()
             {
-                getService<CommandStack>()->redo();
+                CommandStack* pStack = getService<CommandStack>();
+                if ( pStack != nullptr )
+                    pStack->redo();
             }
 
             static void commandCompileGame()

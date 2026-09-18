@@ -58,8 +58,13 @@ namespace sw::editor
                 shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
                 if ( pPass == nullptr )
                     return;
+                // `getService<T>()` 는 nullptr 을 돌려줄 수 있다 — 이 둘은 **워커 스레드**에서 도는
+                // 스플래시 로드라, 결합이 아직/이미 없는 창에 걸리면 조용히 죽는다.
+                const EngineData* pEngineData = editor::getService<const EngineData>();
+                if ( pEngineData == nullptr )
+                    return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                pPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
+                pPass->loadFromXmlFile( pEngineData->_defaultRenderPass );
             }
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
@@ -67,8 +72,11 @@ namespace sw::editor
                 shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
                 if ( pPipeline == nullptr )
                     return;
+                const EngineData* pEngineData = editor::getService<const EngineData>();
+                if ( pEngineData == nullptr )
+                    return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                pPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
+                pPipeline->loadFromXmlFile( pEngineData->_defaultForwardPipeline );
             }
         };
     } // namespace
