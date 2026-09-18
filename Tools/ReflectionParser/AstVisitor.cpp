@@ -1203,6 +1203,23 @@ namespace sw
         enumInfo._name               = getCursorSpelling( cursor );
         enumInfo._fullyQualifiedName = buildFullyQualifiedName( cursor );
 
+        BLOCK( "Collect forward-declaration facts" )
+        {
+            // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 **전방 선언** 한 뒤 특수화한다
+            // (`CodeGenerator::generateHeader`). 그래서 기반 정수 타입이 필요하다 — 정본 철자로
+            // 받아야 `uint8` 같은 별칭이 아니라 `unsigned char` 가 나와 재선언이 어긋나지 않는다.
+            enumInfo._underlyingType = AstVisitorInternal::cxStringToStd(
+                clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( cursor ) ) ) );
+
+            // 클래스 안에 든 열거형은 밖에서 전방 선언할 수 없다. 코드젠이 그 사실을 알아야
+            // 조용히 깨진 헤더를 뱉지 않고 그 자리에서 말한다.
+            const CXCursorKind parentKind = clang_getCursorKind( clang_getCursorSemanticParent( cursor ) );
+            enumInfo._bNestedInType       = ( parentKind == CXCursor_ClassDecl || parentKind == CXCursor_StructDecl ||
+                                        parentKind == CXCursor_ClassTemplate || parentKind == CXCursor_UnionDecl )
+                                              ? SW_TRUE
+                                              : SW_FALSE;
+        }
+
         BLOCK( "Collect Enumerators" )
         {
             // 모든 열거자 항목(이름, 정수값) 수집

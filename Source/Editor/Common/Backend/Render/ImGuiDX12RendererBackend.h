@@ -7,6 +7,8 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
+
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
 

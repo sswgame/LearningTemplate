@@ -158,6 +158,28 @@ namespace sw
             emit.pop();
             emit.line( "};" );
         }
+
+        /**
+         * @brief 열거형 하나를 불투명(opaque) 선언으로 앞세웁니다.
+         * @details `namespace sw::editor { enum class EditorPanelFlags : unsigned char; }` 형태입니다.
+         *          네임스페이스가 없으면(전역 열거형) 선언만 씁니다. 기반 타입은 정본 철자를 쓰므로
+         *          원본이 `uint8` 이어도 `unsigned char` 로 나오고, 같은 타입이라 재선언이 어긋나지
+         *          않습니다.
+         */
+        void emitEnumForwardDeclaration( CodeEmit& emit, const ParsedEnumInfo& enumInfo )
+        {
+            const string_view fqn           = enumInfo._fullyQualifiedName;
+            const size_t      lastSeparator = fqn.rfind( "::" );
+            const string_view enumName      = ( lastSeparator == string_view::npos ) ? fqn : fqn.substr( lastSeparator + 2 );
+            const string_view namespacePath = ( lastSeparator == string_view::npos ) ? string_view{} : fqn.substr( 0, lastSeparator );
+
+            if ( namespacePath.empty() )
+            {
+                emit.linef( "enum class %# : %#;", enumName, enumInfo._underlyingType );
+                return;
+            }
+            emit.linef( "namespace %# { enum class %# : %#; }", namespacePath, enumName, enumInfo._underlyingType );
+        }
     } // namespace
 } // namespace sw
 
@@ -757,15 +779,36 @@ namespace sw
             // 코드젠하지 않고 Core/Common/EnumUtil.h의 제네릭 sw::IsBitFlagEnum<E> 트레이트 + 전역
             // 스코프 SFINAE 연산자로 통일합니다 — 로직이 모든 enum에서 동일해 타입별 코드젠이 필요
             // 없습니다. 여기서는 그 트레이트를 opt-in 하는 한 줄짜리 명시적 특수화만 생성합니다.
+            //
+            // **열거형을 전방 선언한 뒤 특수화한다.** 원본 헤더를 include 하지 않는다 — 이 파일을
+            // 모으는 우산(`FlagOps.gen.h`)이 타깃 전 TU 에 `/FI` 로 들어가므로, 여기서 원본 헤더를
+            // 들이면 그 헤더가 끌어오는 것 전부가 **모든 TU 에 이미 있는 이름**이 되어 다른 헤더들의
+            // include 누락을 통째로 가린다(2026-09-18 에 Engine 헤더 230 개 중 5 개가 그렇게 숨어
+            // 있었다). 불투명 열거형 선언은 완전한 타입이라 특수화에 이것으로 충분하다.
             emit.line( "#include \"Core/Common/EnumUtil.h\"" );
             emit.blank();
             for ( const ParsedEnumInfo& enumInfo : _listEnum )
             {
                 if ( enumInfo._bEmitFlagOps == SW_FALSE )
                     continue;
+
+                if ( enumInfo._bNestedInType != SW_FALSE )
+                {
+                    SW_LOG_ERROR( "ENUM(Flags) 는 클래스 안에 둘 수 없습니다 — 밖에서 전방 선언할 수 없어 "
+                                  "비트 연산자 트레이트를 코드젠하지 못합니다: %#",
+                                  enumInfo._fullyQualifiedName );
+                    return false;
+                }
+                if ( enumInfo._underlyingType.empty() )
+                {
+                    SW_LOG_ERROR( "ENUM(Flags) 의 기반 정수 타입을 알아내지 못했습니다: %#", enumInfo._fullyQualifiedName );
+                    return false;
+                }
+
+                emitEnumForwardDeclaration( emit, enumInfo );
                 emit.linef( "template <> struct sw::IsBitFlagEnum<%#> : std::true_type {};", enumInfo._fullyQualifiedName );
+                emit.blank();
             }
-            emit.blank();
         }
 
         const string newContent( buffer.view() );

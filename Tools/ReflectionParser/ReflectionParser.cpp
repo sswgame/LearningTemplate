@@ -315,7 +315,15 @@ namespace sw
                     SW_LOG_TRACE( "Generated  : %#", generator.getOutputFilePath() );
             }
 
-            /** @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다. */
+            /**
+             * @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다.
+             * @details 이 파일은 타깃 전 TU 에 `/FI` 로 강제 include 된다 — 트레이트는 열거형이
+             *          보이는 곳이면 어디서나 함께 보여야 하기 때문이다. 그래서 **원본 헤더는 절대
+             *          들이지 않는다.** 예전에는 `#include "<원본>.h"` 와 `#include "<원본>.gen.h"` 를
+             *          쌍으로 적었고, 그 바람에 Graphics 헤더 넷(다시 `Engine/Common/Common.h` 까지)이
+             *          모든 TU 에 들어가 다른 헤더들의 include 누락을 통째로 가렸다. 지금은 `.gen.h`
+             *          자신이 열거형을 전방 선언하므로 그것 하나만 모으면 된다.
+             */
             static bool emitFlagOpsUmbrella( const CommandLineArgs& commandLineArgs )
             {
                 const ParserClangConfig& cfg     = ParserContext::getSharedConfig();
@@ -338,12 +346,9 @@ namespace sw
                     if ( genText.find( cfg._emitFlagOpsMarker ) == string::npos )
                         continue;
 
-                    bAnyFlags              = true;
-                    const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, commandLineArgs._listIncludePath );
-                    const string genInc    = FileUtil::getFileNamePart( genHeader );
-                    e.linef( "#include \"%#\"", headerInc );
+                    bAnyFlags           = true;
+                    const string genInc = FileUtil::getFileNamePart( genHeader );
                     e.linef( "#include \"%#\"", genInc );
-                    e.blank();
                 }
 
                 if ( bAnyFlags == false )

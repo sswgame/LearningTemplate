@@ -3,6 +3,7 @@
  * @brief 게임 뷰포트 위에 실시간 반응형 가상 컨트롤러 및 커맨드 히스토리 HUD를 렌더링하는 에디터 위젯
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
 namespace sw

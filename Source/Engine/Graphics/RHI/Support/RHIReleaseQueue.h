@@ -10,6 +10,10 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
+
+// 프레임 상수(kGpuReleaseFrameLatency)는 EngineDefines 가 아니라 RHITypes 의 constant 블록에 있다 —
+// 백엔드 간 계약 상수와 같은 자리에 모아 두기 때문이다(EngineDefines.h 의 주석 참고).
 
 namespace sw
 {

@@ -7,6 +7,8 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
+
 namespace sw
 {
     class IRHIDevice;

@@ -2,6 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"

@@ -217,9 +217,13 @@ namespace sw
         vector<ParsedEnumeratorInfo> _listEnumerator;
         string                       _invalidEnumerator;
         string                       _countEnumerator;
-        uint8                        _bIsBitFlag   : 1;
-        uint8                        _bEmitFlagOps : 1;
-        [[maybe_unused]] uint8       _reserved     : 6;
+        /** @brief 기반 정수 타입 철자(`uint8` 등). 전방 선언을 코드젠하는 데 쓴다. */
+        string _underlyingType;
+        uint8  _bIsBitFlag   : 1;
+        uint8  _bEmitFlagOps : 1;
+        /** @brief 클래스/구조체 **안에** 선언된 열거형인가. 그러면 밖에서 전방 선언할 수 없다. */
+        uint8                  _bNestedInType : 1;
+        [[maybe_unused]] uint8 _reserved      : 5;
 
         ParsedEnumInfo() noexcept
             : _name{}
@@ -230,8 +234,10 @@ namespace sw
             , _listEnumerator{}
             , _invalidEnumerator{}
             , _countEnumerator{}
+            , _underlyingType{}
             , _bIsBitFlag{ SW_FALSE }
             , _bEmitFlagOps{ SW_FALSE }
+            , _bNestedInType{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

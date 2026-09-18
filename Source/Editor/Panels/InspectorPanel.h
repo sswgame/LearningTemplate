@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    struct EnumInfo;
     struct PropertyInfo;
     struct TypeInfo;
 

@@ -17,6 +17,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 

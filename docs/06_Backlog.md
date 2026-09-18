@@ -157,8 +157,10 @@ cd build/Ninja-Debug/Bin
 | `Utility` | 3,077 | |
 | `Window` | 2,124 | |
 
-**Core 와 다른 점 하나.** Engine 은 생성 헤더가 전 TU 에 `/FI` 로 들어가므로 **헤더 자립성 검사를
-그냥 돌리면 거짓 통과가 나온다.** 3절의 "Engine 헤더 자립성 검사가 무의미했다" 항목을 먼저 읽을 것.
+**Core 와 다른 점 하나 — 이제는 해결됐다.** Engine 은 생성 헤더가 전 TU 에 `/FI` 로 들어가는데,
+예전에는 그 우산이 Graphics 헤더 넷까지 끌고 들어와 **헤더 자립성 검사가 거짓 통과**를 냈다.
+2026-09-18 에 우산이 전방 선언만 모으도록 바꿔 닫았다(3절 참고). 폴더를 끝낼 때마다
+`py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/<폴더>` 를 돌리면 된다.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -615,35 +617,74 @@ DLB — 다시 곱하도록 고쳤다(`BlendSpaceInternal::splitPose` / `makePos
 **검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
 린트 15/15 · `Animation*` 18건 · 헤더 7개 자립(생성 force-include 를 뺀 상태로).
 
-### 2026-09-18 (Engine 헤더 자립성 검사가 무의미했다 — 생성 force-include 가 Graphics 헤더 넷을 전 TU 에 밀어 넣는다)
+### 2026-09-18 (우산 하나가 헤더 자립성 검사를 통째로 무의미하게 만들고 있었다 — **해결**)
 
-Animation 을 훑다 나온 것이라 여기 적어 둔다. **아직 고치지 않았다.**
+`cmake/Engine/ReflectionCodeGen.cmake` 가 만드는 `FlagOps.gen.h` 는 타깃의 **모든 TU 에 `/FI` 로
+강제 include** 된다 — `ENUM(Flags)` 의 비트 연산자 트레이트(`sw::IsBitFlagEnum<E>` 특수화)는 그
+열거형이 보이는 곳이면 어디서나 함께 보여야 하기 때문이다. 그 자체는 맞다. 문제는 **그 우산이
+트레이트만이 아니라 열거형을 선언한 원본 헤더까지 `#include` 했다**는 것이다:
 
-`cmake/Engine/ReflectionCodeGen.cmake` 가 만드는 `build/<preset>/generated/Engine/FlagOps.gen.h` 는
-Engine 의 **모든 TU 에 `/FI` 로 강제 include** 된다. 그 파일은 플래그 열거형의 `operator|` 를
-공급하려고 `Engine/Graphics/Material/MaterialTypes.h` · `RHITypes.h` · `ShaderCompiler.h` ·
-`ResourcePackTypes.h` 를 끌어온다 — 그래서 **Engine 헤더가 include 를 빠뜨려도 빌드가 통과한다.**
-게다가 그 네 개는 "플래그 연산자를 가진 타입이 어디 있느냐" 에 따라 바뀌므로, **오늘 서는 헤더가
-내 코드를 한 줄도 안 고쳐도 내일 못 설 수 있다.**
+```
+#include "Engine/Graphics/Material/MaterialTypes.h"   ← 이 줄이 문제였다
+#include "MaterialTypes.gen.h"
+```
 
-`/FI ...FlagOps.gen.h` 를 뺀 채 Engine 헤더 229개를 단독 컴파일해 봤다 (`-fsyntax-only`, 컴파일
-DB 의 실제 플래그). **24개가 실패한다.** 그중 19개는 `RHIBufferUsage` 등의 `operator|` 가 없어서
-나는 것이라 **설계대로**다(그것이 force-include 의 목적이다). 나머지 **5개가 진짜 누락**이다:
+`RHITypes.h` 는 다시 `Engine/Common/Common.h`(File · Math · String · Time · ResourceUtil 우산)를
+끌어온다. 그래서 웬만한 이름은 **모든 TU 에 이미 있는 것**이 되어, 어떤 헤더가 include 를
+빠뜨려도 보이지 않았다. 게다가 그 우산의 내용은 "플래그 열거형을 가진 헤더가 무엇이냐" 에 따라
+바뀌므로 **오늘 서는 헤더가 내 코드를 한 줄도 안 고쳐도 내일 못 설 수 있었다.**
+
+**고친 방법 — 우산이 전방 선언만 모은다.** 트레이트 특수화에는 열거형의 **불투명 선언**이면
+충분하다(불투명 열거형 선언은 완전한 타입이다). 그래서 코드젠이 `.gen.h` 에 이렇게 쓴다:
+
+```cpp
+namespace sw { enum class RHIBufferUsage : unsigned char; }
+template <> struct sw::IsBitFlagEnum<sw::RHIBufferUsage> : std::true_type {};
+```
+
+우산은 이제 그 `.gen.h` 들만 모은다 — 원본 헤더는 한 줄도 들이지 않는다. **소스 헤더는 아무것도
+바뀌지 않았다**(열거형 헤더가 자기 `.gen.h` 를 손으로 include 하게 하는 안을 먼저 만들었다가
+물렸다 — 사람이 매번 기억해야 하는 줄을 헤더마다 심는 방식이었다).
+
+파서가 기반 정수 타입을 알아야 하므로 `ParsedEnumInfo._underlyingType` 을 추가했다
+(`clang_getEnumDeclIntegerType` 의 **정본** 철자 — `uint8` 이 아니라 `unsigned char` 여야 재선언이
+어긋나지 않는다). **클래스 안에 든 플래그 열거형은 밖에서 전방 선언할 수 없으므로**
+`_bNestedInType` 을 같이 모아, 그런 열거형을 만나면 코드젠이 그 자리에서 실패한다(지금은 하나도
+없다). 조용히 깨진 헤더를 뱉는 것보다 낫다.
+
+**CMake 쪽 불일치도 같이 닫았다.** `/FI` 를 붙일지 정하는 정규식이 `ENUM( Flags` 만 봤는데, 파서는
+`AnnotationMeta.txt` 의 동의어를 전부 받는다(`Flags` · `BitFlag` · `FLAG` · `Bitwise`). 한 타깃의
+플래그 열거형이 전부 `BitFlag` 철자였다면 우산은 만들어지는데 `/FI` 는 안 붙어
+"invalid operands to binary expression" 으로 깨졌다 — **두 곳이 같은 판정을 따로 내리고 있었다.**
+이제 정규식을 없애고 조건 없이 붙인다(플래그가 없는 타깃의 우산은 사실상 빈 파일이다).
+
+**그 결과 드러난 진짜 누락 13건을 고쳤다.** 우산을 걷어내고 `Source/` 헤더 455개를 단독 컴파일하니:
 
 | 헤더 | 빠진 것 |
 |------|---------|
-| `Engine/Animation/AnimationGraphAsset.h` | `float2` (← `Core/Math/VectorMath.h`) — **이번에 고쳤다** |
+| `Engine/Animation/AnimationGraphAsset.h` | `float2` (앞선 커밋에서 이미 고쳤다) |
 | `Engine/Dialogue/DialogueGraphAsset.h` | `float2` |
 | `Engine/Graphics/Material/MaterialCache.h` | `unique_ptr` |
 | `Engine/Graphics/Texture/TextureCache.h` | `unique_ptr` |
 | `Engine/Graphics/RHI/Support/RHIReleaseQueue.h` | `constant::kGpuReleaseFrameLatency` |
+| `Engine/Utility/Debug/FrameProfiler.h` | `SW_API` — **우산을 뺀 예전 측정에서도 안 보이던 것** |
+| `Editor/Common/Backend/Render/ImGuiDX11RendererBackend.h` | `Microsoft::WRL::ComPtr` |
+| `Editor/Common/Backend/Render/ImGuiDX12RendererBackend.h` | `Microsoft::WRL::ComPtr` |
+| `Editor/Common/Commands/EditorToolAssetCommands.h` | `float2` |
+| `Editor/Common/Widgets/ViewportInputOverlay.h` | `SW_FALSE` |
+| `Editor/Panels/HierarchyPanel.h` | `GameObject` · `GameObjectManager` · `vector` |
+| `Editor/Panels/InspectorPanel.h` | `EnumInfo` |
+| `Editor/Panels/PrefabEditorPanel.h` | `float2` |
+| `GameFramework/Kits/Overworld/ZoneRuntime.h` | `int2` |
 
-**남은 4개는 각 폴더 차례에 같이 고친다** (Dialogue · Graphics). 폴더 훑기가 끝나면 이 검사를
-게이트로 만들지 결정한다 — 게이트로 만들려면 "force-include 가 정당하게 공급하는 것" 과 "그냥
-빠뜨린 것" 을 기계가 갈라야 하고, 그 경계는 `FlagOps.gen.h` 가 어떤 타입을 담느냐에 따라 움직인다.
-검사 스크립트는 한 번 쓰고 버렸다(세션 scratchpad). 다시 필요하면 컴파일 DB 에서 TU 하나의
-플래그를 빌려 `/Yu` `/Fp` `/Fo` `/Fd` 와 `/FI` 두 개를 빼고, 헤더 하나만 include 한 `.cpp` 를
-`-fsyntax-only` 로 물으면 된다.
+**지금은 455개가 전부 혼자 선다.**
+
+**검사는 `Scripts/lint/report/RunHeaderSelfContained.py` 로 남겼다 — 게이트가 아니다.** 헤더 하나에
+컴파일러를 한 번씩 부르므로 6코어에서 약 3분이 걸린다. 린트 스위트 전체가 30초인데 거기에 3분을
+얹으면 아무도 린트를 돌리지 않게 된다(`RunBuildWarnings.py` 와 같은 판단이다 — `Run*` 은 보고하고
+`Check*` 이 막는다). 한 폴더를 훑어 끝냈을 때, include 를 정리한 뒤, 남의 커밋을 받은 뒤에 돌린다.
+**되돌아오는 길은 구조가 막는다** — 우산이 원본 헤더를 들이지 않으므로 이 눈가림이 다시 생기려면
+코드젠을 일부러 되돌려야 한다.
 
 ### 2026-09-17 (Core/Uuid — 결함 없음. 훑은 것과 그 근거만 남긴다)
 

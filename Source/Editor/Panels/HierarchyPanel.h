@@ -4,9 +4,16 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
+
+namespace sw
+{
+    class GameObject;
+    class GameObjectManager;
+} // namespace sw
 
 namespace sw::editor
 {

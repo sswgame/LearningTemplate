@@ -134,12 +134,23 @@ py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per con
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
+py -3 Scripts/lint/report/RunHeaderSelfContained.py            # headers that only compile thanks to someone else
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
 py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its 30 rules still bite? (CI gate)
 ```
 
+- **A header that compiles is not a header that stands alone.** A header that forgets an include still
+  builds as long as something else included that name first — until the day that something else is
+  tidied and the break lands in an unrelated file. `RunHeaderSelfContained.py` compiles each header on
+  its own (`-fsyntax-only`, real flags borrowed from the nearest TU in the compile DB) and names the
+  ones that do not stand. ~3 min for `Source/`, so it is a report, not a gate — run it after a folder
+  sweep or an include cleanup. **Why this went unmeasured for so long:** the generated `FlagOps.gen.h`
+  is force-included (`/FI`) into every TU of a target, and it used to `#include` the four Graphics
+  headers that declare flag enums — so their whole transitive closure was "already there" everywhere
+  and no omission could be seen. That umbrella now carries only opaque enum forward declarations plus
+  the `IsBitFlagEnum` specializations, which is all the trait needs.
 - **Grepping a build for `warning:` does not work.** A warning is printed only when that TU is compiled,
   and ninja never recompiles unchanged files — so an existing warning is invisible on every build after
   the one that introduced it. `RunBuildWarnings.py` re-asks the question over the whole tree

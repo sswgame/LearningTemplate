@@ -140,25 +140,17 @@ function(sw_addReflectionStep TARGET_NAME)
     set_source_files_properties(${generatedCppFiles} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     target_include_directories(${TARGET_NAME} PUBLIC "${ARG_OUTPUT_DIR}")
 
-    set(swHasFlagEnum FALSE)
-
-    foreach(header IN LISTS ARG_HEADERS)
-        if(EXISTS "${header}")
-            file(STRINGS "${header}" swFlagLines LIMIT_COUNT 1 REGEX "^[ \t]*ENUM[ \t]*\\([ \t]*Flags")
-
-            if(swFlagLines)
-                set(swHasFlagEnum TRUE)
-                break()
-            endif()
-        endif()
-    endforeach()
-
-    if(swHasFlagEnum)
-        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-            target_compile_options(${TARGET_NAME} PUBLIC "/FI${swFlagOpsHeader}")
-        else()
-            target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
-        endif()
+    # ENUM(Flags) 트레이트 우산은 **조건 없이** 강제 include 한다.
+    #
+    # 예전에는 여기서 `ENUM( Flags` 를 정규식으로 훑어 플래그 열거형이 있을 때만 붙였다. 그런데
+    # 파서는 `AnnotationMeta.txt` 의 동의어를 전부 받는다(Flags · BitFlag · FLAG · Bitwise) —
+    # 한 타깃의 플래그 열거형이 전부 `BitFlag` 철자였다면 우산은 만들어지는데 `/FI` 는 안 붙어
+    # "invalid operands to binary expression" 으로 깨졌다. **두 곳이 같은 판정을 따로 내리고 있었다.**
+    # 플래그가 없는 타깃의 우산은 사실상 빈 파일이라 붙여도 비용이 없다.
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_compile_options(${TARGET_NAME} PUBLIC "/FI${swFlagOpsHeader}")
+    else()
+        target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
     endif()
 
     add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
