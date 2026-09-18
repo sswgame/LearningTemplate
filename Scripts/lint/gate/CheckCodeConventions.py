@@ -1573,11 +1573,19 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
 
 
 
+# `_b` **다음 글자가 대문자**여야 불리언 이름이다 — 저장소 규칙이 `_bPascalCase` 이기 때문이다.
+# 예전에는 `_b\w+` 라서 `_buttonMask` · `_bytes` 같은 평범한 이름까지 "uint8 불리언" 으로 읽혔고,
+# 그 이름이 어딘가에 `uint8` 로 한 번이라도 선언돼 있으면(예: `MouseDevice::_buttonMask`)
+# **다른 파일의 `uint64 _buttonMask` 까지** 같이 지적당했다.
+_kBoolNamePattern = r"(_b[A-Z]\w*)"
 _kU8BoolDeclRe = re.compile(
-    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*uint8\s+(_b\w+)\s*(?::\s*\d+\s*)?"
+    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*uint8\s+" + _kBoolNamePattern + r"\s*(?::\s*\d+\s*)?"
     r"(?:\{[^{}]*\}|=\s*[^;]+)?\s*;")
 _kBoolDeclRe = re.compile(
-    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*(?:std::)?(?:atomic\s*<\s*bool\s*>|bool)\s+(_b\w+)")
+    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*(?:std::)?(?:atomic\s*<\s*bool\s*>|bool)\s+" + _kBoolNamePattern)
+# 같은 이름이 **다른 폭의 정수**로도 선언돼 있으면 어느 쪽인지 단정할 수 없다 — `bool` 과 같은 이유로 건너뛴다.
+_kWiderIntDeclRe = re.compile(
+    r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*(?:uint(?:16|32|64)|int(?:8|16|32|64))\s+" + _kBoolNamePattern)
 _kAnyStringLiteralRe = re.compile(r'"(?:[^"\\]|\\.)*"')
 
 
@@ -1588,11 +1596,16 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     `uint8 _bFlag : 1;` 에 `true` 를 대입하면 컴파일러 경고가 날 수 있고, 생 `1` 은 "이게 불리언인가 개수인가" 를
     읽는 사람이 판단해야 한다. 값이 아니라 **의미**를 적는다: `_bFlag = SW_TRUE;` · `if ( _bFlag == SW_TRUE )`.
 
-    선언 타입을 알아야 하므로 **전체 스캔에서만** 돕니다. 같은 이름이 다른 곳에서 `bool` 로도 선언돼 있으면
-    어느 쪽인지 단정할 수 없으므로 건너뜁니다(오탐보다 누락이 낫다).
+    선언 타입을 알아야 하므로 **전체 스캔에서만** 돕니다. 같은 이름이 다른 곳에서 `bool` 이나 더 넓은
+    정수로도 선언돼 있으면 어느 쪽인지 단정할 수 없으므로 건너뜁니다(오탐보다 누락이 낫다).
+
+    이름은 `_b` **다음이 대문자**여야 봅니다 — 저장소 규칙이 `_bPascalCase` 이기 때문입니다. 예전에는
+    `_b` 뒤에 아무 글자나 받아서 `_buttonMask` 같은 평범한 이름이 걸렸고, 그것이 어딘가에 `uint8` 로 선언돼 있으면
+    (`MouseDevice::_buttonMask`) **다른 파일의 `uint64 _buttonMask` 까지** 지적당했다.
     """
     mapU8: set[str] = set()
     mapBool: set[str] = set()
+    mapWiderInt: set[str] = set()
     for filePath in filesToScan:
         try:
             lines = filePath.read_text(encoding="utf-8", errors="ignore").splitlines()
@@ -1609,8 +1622,12 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
             match = _kBoolDeclRe.match(line)
             if match is not None:
                 mapBool.add(match.group(1))
+                continue
+            match = _kWiderIntDeclRe.match(line)
+            if match is not None:
+                mapWiderInt.add(match.group(1))
 
-    names = sorted(mapU8 - mapBool, key=len, reverse=True)
+    names = sorted(mapU8 - mapBool - mapWiderInt, key=len, reverse=True)
     if not names:
         return []
 

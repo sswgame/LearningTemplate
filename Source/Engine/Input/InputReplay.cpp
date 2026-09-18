@@ -14,13 +14,26 @@ namespace sw
 
     namespace
     {
+        /**
+         * @brief 리플레이 파일 머리말.
+         * @details **버전은 읽는 쪽이 반드시 본다.** 예전에는 매직만 보고 버전을 그냥 지나쳐서,
+         *          다른 판의 파일도 지금 판의 배치로 읽어 조용히 엉뚱한 프레임이 나왔다 —
+         *          버전 필드를 두고도 쓰지 않은 셈이다.
+         */
         struct ReplayHeader
         {
             uint8  _arrMagic[4]{ 'S', 'W', 'R', 'P' };
-            uint32 _version{ 1 };
+            uint32 _version{ 0 };
             uint32 _nameLength{ 0 };
             uint32 _frameCount{ 0 };
         };
+
+        /**
+         * @brief 지금 쓰는 리플레이 파일 판입니다.
+         * @details 1 → 2: `InputSnapshot` 을 구조체째로 적던 것을 필드 순서대로 적게 바꿨다
+         *          (정렬 패딩이 파일로 나가지 않는다). 프레임 배치가 달라졌으므로 판을 올린다.
+         */
+        constexpr uint32 kReplayVersion = 2;
     } // namespace
 
     InputReplay::InputReplay()
@@ -212,6 +225,7 @@ namespace sw
     {
         vector<uint8> bytes;
         ReplayHeader  header{};
+        header._version    = kReplayVersion;
         header._nameLength = static_cast<uint32>( _replayName.size() );
         header._frameCount = static_cast<uint32>( _listFrame.size() );
 
@@ -233,7 +247,7 @@ namespace sw
             bytes.insert( bytes.end(), pTick, pTick + sizeof( uint32 ) );
             bytes.insert( bytes.end(), pDt, pDt + sizeof( float32 ) );
 
-            uint8        arrSnapshotBuf[64]{};
+            uint8        arrSnapshotBuf[InputSnapshot::kSerializedSize]{};
             uint32       snapSize  = frame._snapshot.serialize( arrSnapshotBuf, sizeof( arrSnapshotBuf ) );
             const uint8* pSnapSize = reinterpret_cast<const uint8*>( &snapSize );
             bytes.insert( bytes.end(), pSnapSize, pSnapSize + sizeof( uint32 ) );
@@ -273,6 +287,14 @@ namespace sw
 
         if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
             return false;
+
+        // 판이 다르면 프레임 배치도 다르다 — 읽어 봐야 엉뚱한 값이 나온다. 여기서 멈춘다.
+        if ( header._version != kReplayVersion )
+        {
+            SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#",
+                            header._version, kReplayVersion, filePath );
+            return false;
+        }
 
         _replayName.clear();
         if ( header._nameLength > 0 && pCursor + header._nameLength <= pEnd )

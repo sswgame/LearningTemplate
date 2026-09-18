@@ -215,6 +215,47 @@ _kCleanCase: tuple[str, str] = (
     "void probe( int32 count )\n{\n    (void)count;\n}\n",
 )
 
+# 트리 전체를 봐야 아는 규칙의 **오탐**을 잡는 조각. 위 `_kCleanCase` 는 파일 하나만 넘기므로
+# 전체 스캔 전용 규칙(`Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
+# `Style/HeaderMemberInitializer`)이 아예 돌지 않는다 — **그 규칙들의 오탐은 아무도 보고 있지 않았다.**
+#
+# `_buttonMask` 가 여기 있는 이유: `Style/BitfieldBoolean` 이 예전에는 이름을 `_b` + 아무 글자로 봐서
+# **`_b` 다음이 소문자인 평범한 이름**(비트마스크·바이트 버퍼)까지 "uint8 불리언" 으로 읽었다.
+# 게다가 이름 집합이 트리 전역이라, 한 파일의 `uint8 _buttonMask` 가 **다른 파일의 `uint64
+# _buttonMask` 까지** 불리언으로 만들었다(실제로 `MouseDevice` 가 `InputSnapshot` 을 그렇게 걸었다).
+_kWholeScanCleanCase: dict[str, str] = {
+    "Source/Probe/MaskDevice.h": (
+        "#pragma once\n\nclass MaskDevice\n{\nprivate:\n"
+        "    uint8 _buttonMask{ 0 };   ///< 8비트 비트마스크 — 불리언이 아니다\n};\n"
+    ),
+    "Source/Probe/MaskSnapshot.h": (
+        "#pragma once\n\nstruct MaskSnapshot\n{\n"
+        "    uint64 _buttonMask{ 0 };  ///< 64비트 비트마스크 — 같은 이름, 다른 폭\n};\n"
+    ),
+    "Source/Probe/MaskUse.cpp": (
+        '#include "pch.h"\n\nvoid probeMask( MaskSnapshot& target )\n{\n'
+        "    target._buttonMask = 0;\n}\n"
+    ),
+    # 같은 이름이 어디에도 더 넓게 선언돼 있지 않은 경우 — **이름 모양만으로** 걸러야 한다.
+    "Source/Probe/ByteCounter.h": (
+        "#pragma once\n\nstruct ByteCounter\n{\n"
+        "    uint8 _bytesWritten{ 0 };  ///< 쓴 바이트 수 — 불리언이 아니다\n};\n"
+    ),
+    "Source/Probe/ByteCounterUse.cpp": (
+        '#include "pch.h"\n\nvoid probeCounter( ByteCounter& target )\n{\n'
+        "    target._bytesWritten = 0;\n}\n"
+    ),
+    # 같은 이름이 두 폭으로 선언돼 있으면 **어느 쪽을 쓴 것인지 단정할 수 없다** — 건너뛴다.
+    "Source/Probe/WidthClash.h": (
+        "#pragma once\n\nstruct NarrowFlags\n{\n    uint8 _bReady : 1;\n};\n\n"
+        "struct WideFlags\n{\n    uint32 _bReady{ 0 };  ///< 같은 이름, 다른 폭\n};\n"
+    ),
+    "Source/Probe/WidthClashUse.cpp": (
+        '#include "pch.h"\n\nvoid probeWide( WideFlags& target )\n{\n'
+        "    target._bReady = 0;\n}\n"
+    ),
+}
+
 
 def resetPathMapCacheInternal() -> None:
     """
@@ -316,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
         # --- 주체 × 어휘 교차표 ---
         errors.extend(checkSubjectMatrixInternal(tempRoot, args.verbose))
 
-        # --- 오탐 확인 ---
+        # --- 오탐 확인 (파일 단위) ---
         cleanRoot = tempRoot / "clean"
         cleanPath = writeFixtureInternal(cleanRoot, _kCleanCase[0], _kCleanCase[1])
         resetPathMapCacheInternal()
@@ -324,6 +365,18 @@ def main(argv: list[str] | None = None) -> int:
 
         if cleanFound:
             errors.append(f"깨끗해야 할 조각에서 위반이 나왔습니다 (오탐): {sorted(cleanFound)}")
+
+        # --- 오탐 확인 (트리 전체) ---
+        # 전체 스캔 전용 규칙은 위쪽 파일 단위 검사에서 **아예 돌지 않는다.** 그래서 그 규칙들의
+        # 오탐은 여기서만 보인다.
+        cleanTreeRoot = tempRoot / "clean_tree"
+        for relPath, content in _kWholeScanCleanCase.items():
+            writeFixtureInternal(cleanTreeRoot, relPath, content)
+        resetPathMapCacheInternal()
+        cleanTreeFound = categoriesForTreeInternal(cleanTreeRoot)
+
+        if cleanTreeFound:
+            errors.append(f"깨끗해야 할 트리에서 위반이 나왔습니다 (오탐): {sorted(cleanTreeFound)}")
     finally:
         shutil.rmtree(tempRoot, ignore_errors=True)
 

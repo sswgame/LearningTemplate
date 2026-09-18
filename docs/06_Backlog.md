@@ -143,8 +143,8 @@ cd build/Ninja-Debug/Bin
 | `Config` | 480 | ✅ 2026-09-18 (3절 참고) |
 | `Dialogue` | 375 | ✅ 2026-09-18 (3절 참고) |
 | `Graphics` | 42,770 | ✅ 2026-09-18 (3절 참고 — 훑은 깊이도 적어 두었다) |
-| `Input` | 9,056 | ← 다음 |
-| `Localization` | 1,184 | |
+| `Input` | 9,056 | ✅ 2026-09-18 (3절 참고) |
+| `Localization` | 1,184 | ← 다음 |
 | `Module` | 318 | |
 | `Object` | 8,428 | |
 | `Physics` | 1,016 | |
@@ -362,6 +362,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (같은 입력을 두 번 저장하면 파일 바이트가 달라졌다 — Engine/Input, 그리고 린트 오탐 하나)
+
+**1) `InputSnapshot::serialize` 가 구조체를 패딩째로 내보냈다.** `_tickNumber`(uint32) 뒤에는
+`_buttonMask`(uint64) 정렬을 맞추려는 **패딩 4바이트**가 있다. 그 자리는 아무도 값을 정하지
+않으므로, 구조체를 통째로 `memcpy` 하면 **그때 그 메모리에 있던 것이 그대로 파일과 네트워크로
+나간다.** 그래서 같은 입력을 두 번 저장해도 바이트가 달라질 수 있었다 — 리플레이 비교·체크섬·중복
+제거가 성립하지 않고, 넷코드로 나가면 그 자리에 있던 메모리가 함께 나간다. 헤더가 스스로
+"롤백 넷코드 및 리플레이 재생을 위한" 이라고 적어 둔 구조체다.
+
+필드를 순서대로 적게 했다(`kSerializedSize` = 36, `sizeof` = 40). 컴파일러·아키텍처가 달라도 같은
+바이트가 나온다. **회귀 테스트**는 서로 다른 쓰레기로 더럽힌 저장 공간에 같은 값을 넣고 바이트가
+같은지 본다(`EnhancedInput_SnapshotSerializationIsDeterministic`) — 되돌리면 깨지는 것을 확인했다.
+
+**2) `InputReplay::loadFromFile` 이 매직만 보고 버전을 보지 않았다.** `ReplayHeader` 에 `_version`
+필드가 있는데 **아무도 읽지 않았다** — 다른 판의 파일도 지금 판의 배치로 읽어 조용히 엉뚱한
+프레임이 나온다. 버전 필드를 두고 쓰지 않은 셈이다. 이제 판이 다르면 거절하고 로그를 남긴다.
+1)로 프레임 배치가 바뀌었으므로 판을 2 로 올렸다.
+
+**3) 링버퍼 용량이 2의 거듭제곱이어야 하는데 아무도 확인하지 않았다.** `& (kDefaultCapacity - 1)`
+로 감는다 — 아니면 조용히 어긋난다. `static_assert` 를 뒀다.
+
+**4) `_buttonMask{ SW_FALSE }`.** 64비트 비트마스크를 불리언 상수로 초기화하고 있었다. 값은 0 으로
+같지만 이름이 거짓말을 한다.
+
+**그리고 — 4)를 고치자 린트가 그것을 지적했다. 린트 쪽이 틀렸다.**
+`Style/BitfieldBoolean` 은 `_b` 로 시작하는 이름을 **뒤에 무엇이 오든** uint8 불리언으로 봤다.
+그래서 `_buttonMask` · `_bytesWritten` 처럼 `_b` 다음이 소문자인 평범한 이름(비트마스크·바이트
+버퍼)이 걸렸다. 게다가 이름 집합이 **트리 전역**이라, `MouseDevice::_buttonMask`(uint8) 하나가
+`InputSnapshot::_buttonMask`(uint64)와 `GamepadDevice::_buttonMask`(uint32)까지 불리언으로 만들었다.
+- 이름은 `_b` **다음이 대문자**여야 본다(저장소 규칙이 `_bPascalCase` 다).
+- 같은 이름이 **다른 폭의 정수**로도 선언돼 있으면 건너뛴다(`bool` 과 같은 이유다).
+
+**자기검사에 전체 스캔 clean 케이스가 없었다 — 그래서 이 오탐을 아무도 보고 있지 않았다.**
+기존 오탐 검사는 **파일 하나**만 넘기는데, `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
+`Style/HeaderMemberInitializer` 는 **전체 스캔일 때만 도는 규칙**이라 그 검사에서는 아예 돌지
+않았다. 트리 단위 clean 케이스를 새로 넣었고, 위 두 수정을 각각 되돌리면 각각 깨지는 것을 변이
+테스트로 확인했다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `GameFrameworkTest.EnhancedInput*` 10건 · 헤더 15개 자립.
 
 ### 2026-09-18 (에디터 프리뷰가 머티리얼을 잡기만 하고 놓지 않았다 — Engine/Graphics)
 
