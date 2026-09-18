@@ -72,14 +72,14 @@ ctest --preset Ninja-Debug-lint
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(2026-09-19 실측, 소스의 케이스는 926개):
+(2026-09-19 실측, 소스의 케이스는 937개):
 
 | 실행 파일 | Debug · Release | Shipping |
 | --- | ---: | ---: |
 | CoreTest | 209 | 209 |
 | EngineTest | 529 | 525 |
-| ReflectionTest | 103 | 103 |
-| **SmokeTest** | **19** | **1** |
+| ReflectionTest | 104 | 104 |
+| **SmokeTest** | **21** | **2** |
 | EditorTest | 63 | 63 |
 | EditorUiTest | 2 | 2 |
 | **AppTest** | **6** | **5** |
@@ -88,6 +88,8 @@ SmokeTest 가 19 → 1 이 되는 것은 **의도된 것이다.** 핫 리로드�
 Shipping 스모크는 정적 `fillGameAPI` 경로 하나만 본다(`Test/SmokeTest/CMakeLists.txt` 참고).
 스킵도 구성을 탄다 — Release·Shipping 의 CoreTest 는 8개가 스킵되고(`SW_LOG_*` 가 컴파일에서 빠진다),
 Shipping 의 EngineTest 는 3개, ReflectionTest 는 5개가 스킵된다(Dev 전용 경로와 배포본에 없는 메타데이터).
+**Debug 의 스킵은 0이다** — 2026-09-19 까지는 `ReflectionParser` 실행 파일을 `Bin/` 에서만 찾던 케이스가
+늘 스스로 빠졌는데(파서는 `BuildTools/` 에 있다), 두 자리를 다 보게 고쳐 그 케이스가 실제로 돈다.
 AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이스는 배포본에 에디터가 없어 아예 컴파일되지 않는다.
 
 **의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**

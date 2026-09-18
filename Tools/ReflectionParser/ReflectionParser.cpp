@@ -156,7 +156,18 @@ namespace sw
                 return existingGen.substr( valueBegin, valueEnd - valueBegin ) == string_view( inputFile );
             }
 
-            /** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿보다 최신이면 true. */
+            /**
+             * @brief 이 파서 실행 파일 자신의 타임스탬프. 한 번만 재고 캐시합니다.
+             * @details **도구도 입력이다.** 산출물의 모양을 정하는 것은 템플릿만이 아니라 그것을
+             *          조립하는 이 코드(`AstVisitor` · `CodeGenerator` · `AnnotationApply`)다.
+             */
+            static uint64 getParserTimestamp()
+            {
+                static const uint64 s_parserTimestamp = sw::FileUtil::getFileTimestamp( sw::FileUtil::getExecutablePath() );
+                return s_parserTimestamp;
+            }
+
+            /** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿·**파서 자신**보다 최신이면 true. */
             static bool isUpToDate( const sw::string& genPath, const sw::string& inputFile, const CommandLineArgs& commandLineArgs )
             {
                 if ( sw::FileUtil::fileExists( genPath ) == false || sw::FileUtil::fileExists( inputFile ) == false )
@@ -175,6 +186,13 @@ namespace sw
                 if ( commandLineArgs._annotationMetaTimestamp > 0 && genTime < commandLineArgs._annotationMetaTimestamp )
                     return false;
                 if ( commandLineArgs._maxTemplateTimestamp > 0 && genTime < commandLineArgs._maxTemplateTimestamp )
+                    return false;
+                // **파서 자신도 본다.** 예전에는 템플릿(.tpl)과 builtins 의 시간만 보고 정작 그것을
+                // 조립하는 실행 파일은 보지 않았다 — 그래서 `CodeGenerator` 나 `AstVisitor` 를 고쳐
+                // 다시 빌드해도 산출물이 **예전 모양 그대로** 남았다(CMake 는 exe 를 DEPENDS 에 걸어
+                // 파서를 다시 부르지만, 파서가 스스로 "최신" 이라며 건너뛰었다. 실측으로 확인했다).
+                // 그 상태에서 일부 파일만 다른 이유로 다시 만들어지면 **두 모양이 섞인다.**
+                if ( genTime < getParserTimestamp() )
                     return false;
 
                 // 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)

@@ -78,16 +78,17 @@ cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 
 # 테스트 (현재 기준선)
-#   Debug    : CoreTest 209 / EngineTest 525 / ReflectionTest 102(+1 skip) / EditorTest 63 /
-#              EditorUiTest 2 / AppTest 4 / SmokeTest 19   ← ctest -L nogpu 는 7/7
-#   Shipping : 201(+8 skip) / 518(+3 skip) / 98(+5 skip) / 63 / 2 / 4 / 1   ← 스킵은 전부 Dev 전용 케이스
+#   Debug    : CoreTest 209 / EngineTest 529 / ReflectionTest 104 / EditorTest 63 /
+#              EditorUiTest 2 / AppTest 6 / SmokeTest 21   ← ctest -L nogpu 는 7/7
+#   Shipping : 201(+8 skip) / 525(+3 skip) / 99(+5 skip) / 63 / 2 / 5 / 1   ← 스킵은 전부 Dev 전용 케이스
 #   (2026-09-19 실측. Debug EngineTest 는 GPU 포함 전체 수다.
-#    ctest 항목이 7개가 된 것은 `EditorUiTest`(2026-09-18)와 `AppTest`(2026-09-19)가 늘어서다.)
+#    ctest 항목이 7개가 된 것은 `EditorUiTest`(2026-09-18)와 `AppTest`(2026-09-19)가 늘어서다.
+#    **Debug ReflectionTest 의 스킵이 0이 됐다** — 파서 실행 파일을 `Bin` 에서만 찾던 검사가
+#    `BuildTools` 도 보게 되어, 늘 건너뛰던 케이스가 실제로 돈다.)
 #   WSL-Debug: ctest 12/12 (린트 6 포함). EngineTest 는 418 통과 + 8 skip = 426 이고,
 #              스킵은 DX11/DX12 처럼 리눅스에 아예 없는 타깃들이다. (2026-09-11 실측)
 #   ASan     : 5개 전부 통과한다(30초). SmokeTest 는 2026-09-10 부터 다시 돈다 — 아래 3절 참고.
-#   ReflectionTest 의 스킵 1건은 Shipping·Debug 공통이다 — Bin/ 에 ReflectionParser.exe 가 없으면
-#   ReflectionParser.MultiBitBitfieldCompilationErrorDiagnosis 가 스스로 빠진다(실패가 아니다).
+#   (예전 메모: "ReflectionTest 스킵 1건" 은 파서를 Bin 에서만 찾아서였다 — 2026-09-19 에 닫혔다.)
 ctest --test-dir build/Ninja-Debug -L nogpu
 ctest --test-dir build/Ninja-Shipping -L nogpu
 
@@ -222,7 +223,7 @@ cd build/Ninja-Debug/Bin
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
 | `App` | 2,512 | ✅ 2026-09-19 (3절 참고 — 디바이스 없는 RHI 에 `getDevice()` 를 묻던 세 자리) |
-| `Tools/ReflectionParser` | — | `ReflectionTest` 가 산출물을 보지만 폴더 훑기는 안 했다. |
+| `Tools/ReflectionParser` | 6,064 | ✅ 2026-09-19 (3절 참고 — 도구가 자기 자신을 입력으로 세지 않았다) |
 
 **손대기 전에 알 것.** `App` 은 실행 파일이라 **링크할 라이브러리가 없다** — 테스트는 소스를 파일
 단위로 가져와야 한다(`SmokeTest` 가 `LiveReloadManager`·`ModuleCompiler` 를, `AppTest` 가
@@ -444,6 +445,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (도구를 고쳐도 산출물이 그대로였다 — Tools/ReflectionParser 훑기)
+
+**파서가 자기 자신을 입력으로 세지 않았다.** `isUpToDate` 는 입력 헤더 · 템플릿(`.tpl`) ·
+`ReflectBuiltins.xxx` · `AnnotationMeta.txt` 의 시간을 보는데, 정작 **그것을 조립하는 실행 파일**은
+보지 않았다. 그래서 `CodeGenerator` 나 `AstVisitor` 나 `AnnotationApply` 를 고치고 다시 빌드하면:
+
+- CMake 는 `DEPENDS ... "$<TARGET_FILE:ReflectionParser>"` 로 파서를 **다시 부르고**,
+- 파서는 파일마다 "최신" 이라며 **전부 건너뛴다.**
+
+결과는 옛 모양 그대로의 `.gen.cpp`/`.gen.h` 다. 게다가 그 사이에 헤더를 건드린 파일만 새 모양으로
+다시 만들어지므로 **한 빌드 안에 두 모양이 섞인다.** 실측으로 확인했다 — 산출물에 표식을 심고
+파서보다 과거로 돌린 뒤 다시 돌리면 표식이 그대로 남았다(2.7ms 만에 끝난다. 실제로 파싱하면 500ms).
+
+`getParserTimestamp()`(자기 실행 파일의 mtime, 한 번만 재고 캐시) 를 비교에 넣어 닫았다. CLI 도
+CMake 도 바뀌지 않는다 — 도구가 자기 시간을 스스로 안다.
+
+**그리고 그 검사를 하던 유일한 테스트는 한 번도 돈 적이 없었다.** `ReflectionParserTest` 의
+파서 호출 케이스는 실행 파일을 `Bin/` 에서만 찾는데, 이 빌드는 파서를 `BuildTools/` 에 둔다 —
+그래서 **늘 스스로 건너뛰었다**(백로그 기준선에 "스킵 1건" 으로 적혀 있던 것이 이것이다).
+두 자리를 다 보는 헬퍼로 바꿨더니 그 케이스가 실제로 돌기 시작했고(544ms) 통과한다.
+**Debug ReflectionTest 의 스킵이 0이 됐다.**
+
+**테스트 1건 신규** — `RegeneratesWhenTheParserItselfIsNewer`: 임시 헤더를 한 번 생성하고, 산출물에
+표식을 심은 뒤 **입력(2시간 전) < 산출물(1시간 전) < 파서(지금)** 로 시간을 벌려 다시 돌린다.
+표식이 사라져야 한다. 변이(파서 시간 비교 제거)로 확인했다.
+**입력도 같이 과거로 보내는 것이 핵심이다** — 안 그러면 "입력이 더 새롭다" 는 이유로 재생성돼
+이 검사가 무엇을 보는지 구분하지 못한다(처음에 그렇게 써서 변이가 통과했다).
+
+**결함이 아니라고 판단한 것.** `CodeGenerator` 의 증분 쓰기(내용이 같으면 파일을 건드리지 않는다)는
+의도된 것이다 — 그래서 **산출물의 mtime 으로는 "건너뛰었는지" 를 알 수 없다.** 이번에 그것을
+모르고 실험하다 한 번 틀린 결론에 도달했다. 판정은 **내용 표식**으로 해야 한다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `-L nogpu` 양쪽 7/7 · `-L hostgpu` 양쪽 2/2 · 린트 17/17 ·
+ReflectionTest Debug 104/104(스킵 0) · Shipping 99/104(스킵 5, 전부 배포본 전용 사유).
 
 ### 2026-09-19 (디바이스가 없는 RHI 에 세 자리가 그대로 물었다 — Source/App 훑기)
 

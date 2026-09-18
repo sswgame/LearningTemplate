@@ -16,7 +16,39 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <chrono>
+#include <filesystem>
+
 // ReflectionParser — 런타임이 아니라 **도구** 를 본다. 애노테이션·주석 파싱과 경로 판별.
+
+namespace
+{
+    /**
+     * @brief 이 빌드의 `ReflectionParser` 실행 파일 경로. 못 찾으면 빈 문자열.
+     * @details **`Bin` 옆이 아니라 `BuildTools` 에 있다.** 그것을 모르고 `Bin` 만 보던 검사는
+     *          늘 스스로 건너뛰었고(백로그에 "스킵 1건" 으로 적혀 있었다), 그래서 파서를 부르는
+     *          유일한 테스트가 한 번도 돈 적이 없었다. 두 자리를 다 본다.
+     */
+    sw::string findReflectionParserExecutable()
+    {
+        const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+        const sw::string buildRoot = sw::FileUtil::getDirectoryPart( binDir );
+
+        const sw::string arrCandidate[] = {
+            sw::FileUtil::joinPath( binDir, "ReflectionParser.exe" ),
+            sw::FileUtil::joinPath( binDir, "ReflectionParser" ),
+            sw::FileUtil::joinPath( sw::FileUtil::joinPath( buildRoot, "BuildTools" ), "ReflectionParser.exe" ),
+            sw::FileUtil::joinPath( sw::FileUtil::joinPath( buildRoot, "BuildTools" ), "ReflectionParser" ),
+        };
+        for ( const sw::string& candidate : arrCandidate )
+        {
+            if ( sw::FileUtil::fileExists( candidate ) )
+                return candidate;
+        }
+        return {};
+    }
+} // namespace
+
 /**
  * @brief [ReflectionParserTest] 주석 내에 있는 매크로 문자열은 파싱되지 않아야 함
  */
@@ -298,11 +330,9 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 {
 #if defined( SW_DEBUG )
     const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
-    const sw::string parserExe = sw::FileUtil::joinPath( binDir, "ReflectionParser" );
-
-    if ( sw::FileUtil::fileExists( parserExe ) == false &&
-         sw::FileUtil::fileExists( parserExe + ".exe" ) == false )
-        SW_TEST_SKIP( "ReflectionParser executable not found in binary directory" );
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string projectRoot    = sw::ResourceUtil::getProjectFolderPath();
@@ -359,4 +389,87 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 #else
     SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 파서 자신이 새로워지면 산출물을 다시 만든다
+ * @details **도구도 입력이다.** 예전에는 입력 헤더·템플릿(.tpl)·builtins 의 시간만 보고, 정작 그것을
+ *          조립하는 실행 파일은 보지 않았다 — `CodeGenerator` 나 `AstVisitor` 를 고쳐 다시 빌드해도
+ *          산출물이 예전 모양 그대로 남았다(CMake 는 exe 를 DEPENDS 에 걸어 파서를 다시 부르지만,
+ *          파서가 스스로 "최신" 이라며 건너뛰었다). 그 상태에서 일부 파일만 다른 이유로 다시
+ *          만들어지면 **두 모양이 섞인다.**
+ *
+ *          검사는 그 상황을 그대로 만든다: 한 번 생성한 뒤 산출물에 표식을 심고 그 파일을 파서보다
+ *          **과거로** 돌린다. 다시 돌렸을 때 표식이 사라져 있으면 다시 만든 것이다.
+ */
+SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
+{
+    const sw::string binDir    = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string headerPath  = sw::FileUtil::joinPath( binDir, "StalenessProbeSample.h" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( binDir, "temp_gen_staleness" );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+
+    const sw::string headerContent = "#pragma once\n"
+                                     "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                     "namespace sw\n"
+                                     "{\n"
+                                     "    REFLECT()\n"
+                                     "    struct StalenessProbeSampleActor\n"
+                                     "    {\n"
+                                     "        REFLECT_BODY();\n"
+                                     "\n"
+                                     "        PROPERTY()\n"
+                                     "        int32 _value;\n"
+                                     "    };\n"
+                                     "}\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, headerContent ) );
+
+    const sw::string command = "\"" + parserExe + "\" " +
+                               "--input \"" + headerPath + "\" " +
+                               "--output \"" + outGenDir + "\" " +
+                               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
+                               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
+                               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
+                               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+
+    sw::ProcessOptions options;
+    options._workingDirectory = projectRoot;
+
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+
+    const sw::string genPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.cpp" );
+    SW_ASSERT_TRUE( sw::FileUtil::fileExists( genPath ) );
+
+    // 표식을 심고, 산출물을 파서보다 한 시간 과거로 돌린다.
+    sw::string generatedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generatedText ) );
+    generatedText += "\n// SW_STALE_PROBE\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( genPath, generatedText ) );
+
+    // 시간을 셋으로 벌린다: 입력(2시간 전) < 산출물(1시간 전) < 파서(지금).
+    // **입력을 같이 과거로 보내는 것이 핵심이다** — 안 그러면 "입력이 더 새롭다" 는 이유로 다시
+    // 만들어져, 이 검사가 파서 시간을 보는지 아닌지를 구분하지 못한다(실제로 그렇게 통과했다).
+    const std::filesystem::file_time_type parserTime = std::filesystem::last_write_time( parserExe.c_str() );
+    std::filesystem::last_write_time( headerPath.c_str(), parserTime - std::chrono::hours( 2 ) );
+    std::filesystem::last_write_time( genPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+    const sw::string genHeaderPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.h" );
+    if ( sw::FileUtil::fileExists( genHeaderPath ) )
+        std::filesystem::last_write_time( genHeaderPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+
+    SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
+
+    sw::string regeneratedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, regeneratedText ) );
+    SW_EXPECT_TRUE_MSG( regeneratedText.find( "SW_STALE_PROBE" ) == sw::string::npos,
+                        "파서가 자기보다 오래된 산출물을 그대로 두었습니다 — 도구를 고쳐도 옛 모양이 남습니다" );
+
+    sw::FileUtil::removeFile( headerPath );
+    sw::FileUtil::removeFile( genPath );
+    sw::FileUtil::removeFile( genHeaderPath );
 }
