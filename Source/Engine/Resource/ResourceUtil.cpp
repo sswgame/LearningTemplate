@@ -407,9 +407,10 @@ namespace sw
             return false;
 
         // 0. OS 절대 경로인 경우 디스크에서 직접 확인
-        const bool bIsAbsolute = ( relativePath.size() >= 2 && relativePath[1] == ':' ) ||
-                                 ( relativePath.size() >= 1 && ( relativePath[0] == '/' || relativePath[0] == '\\' ) );
-        if ( bIsAbsolute )
+        // 판정은 `FileUtil::isAbsolutePath` 가 정본이다 — 여기 손으로 적은 복사본이 있었는데
+        // **드라이브 문자가 글자인지 보지 않아** 정본과 답이 갈렸다. 같은 복사본이 에디터 설정
+        // 경로에도 셋 있었다(지금은 `EditorUtil::resolveProjectRelativePath` 하나로 모았다).
+        if ( FileUtil::isAbsolutePath( relativePath ) )
             return FileUtil::fileExists( relativePath );
 
         const string         normalizedKey = FileUtil::normalizePath( relativePath );

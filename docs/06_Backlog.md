@@ -172,8 +172,8 @@ cd build/Ninja-Debug/Bin
 | `Common/Asset` | 819 | ✅ 2026-09-18 (3절 참고 — 같은 결정이 두 자리에 있었다) |
 | `Common/Backend` | 2,236 | ✅ 2026-09-18 (3절 참고 — 실패를 수습하는 경로가 실패했다. **테스트 없음**) |
 | `Common/Commands` | 4,478 | ✅ 2026-09-18 (3절 참고 — 저장이 실패해도 "저장됨" 이 됐다) |
-| `Common/Config` | 299 | ← 다음 |
-| `Common/Gui` | 3,740 | |
+| `Common/Config` | 299 | ✅ 2026-09-18 (3절 참고 — 같은 판정을 네 곳이 손으로 적고 있었다) |
+| `Common/Gui` | 3,740 | ← 다음 |
 | `Common/Widgets` | 1,277 | |
 | `Common/Workspace` | 3,764 | |
 | `Panels` | 11,011 | |
@@ -398,6 +398,41 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (같은 판정을 네 곳이 손으로 적고 있었다 — Editor/Common/Config)
+
+**동작 결함은 없었다.** 이 폴더는 최근(`ca976db3` · `aec2c6cd` · `eebd368e`)에 손을 많이 본
+자리라 로그 문구까지 사실대로 갈라 적혀 있다(파일 없음 vs 일부 필드 실패). 대신 **구조**에서
+하나 나왔다.
+
+**"프로젝트 상대 경로를 절대 경로로" 가 세 곳에 복사되어 있었다** —
+`EditorConfig::loadFromHost` · `EditorConfig::saveToHost` · `EditorData::loadFromHostPath`.
+셋 다 같은 다섯 줄이고, 그 안에서 **"절대 경로인가" 를 손으로 다시 적고 있었다**:
+
+```
+( path.size() >= 2 && path[1] == ':' ) || ( path.empty() == false && ( path[0] == '/' || path[0] == '\' ) )
+```
+
+**그런데 이 손 판정은 `FileUtil::isAbsolutePath` 와 다르다** — 정본은 `:` 앞이 **글자**인지까지
+보는데 복사본들은 보지 않는다. 그리고 같은 복사본이 엔진에도 하나 더 있었다
+(`ResourceUtil::hasResource`). 넷 다 정본을 쓰게 하고, 경로 해석은
+`EditorUtil::resolveProjectRelativePath` 한 자리로 모았다.
+
+**답이 갈리는 입력을 만들어 보였는가 — 아니다.** `path[1] == ':'` 인데 앞이 글자가 아닌 상대
+경로는 현실의 설정 파일 이름에 나오지 않는다. 그래서 이것은 **결함을 고친 것이 아니라 하나를
+고치려면 네 곳을 고쳐야 하는 구조를 없앤 것**이다. 값은 다음에 이 규칙이 바뀔 때(UNC·`~` 등)
+나온다.
+
+**테스트** `EditorAssetTypeTest.ProjectRelativePathLeavesAbsoluteAlone` — 드라이브 절대·루트
+절대는 구분자만 정규화되고 그대로 나오고, 상대는 루트 아래로 간다. 절대 판정을 뒤집으면
+깨진다(변이 확인).
+**변이 테스트에서 한 번 헛짚었다**: 처음에 `if ( false )` 로 바꿨더니 테스트가 통과했는데,
+그것은 "절대 경로 판정을 없앤다" 가 아니라 "**아무것도 붙이지 않는다**" 라서 절대 경로 케이스가
+우연히 맞았기 때문이다. 조건을 없애는 변이는 `if ( true )` 쪽이었다 — 조건을 지우는 변이는
+**어느 쪽으로 지우는지**가 중요하다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `EditorAssetTypeTest` 6 → 7건.
 
 ### 2026-09-18 (저장이 실패해도 "저장됨" 이 됐다 — Editor/Common/Commands)
 

@@ -32,13 +32,8 @@ namespace sw::editor
     void EditorConfig::loadFromHost()
     {
         EditorConfig    cfg{};
-        const TypeInfo* pTypeInfo   = EditorConfig::StaticType();
-        const string    projectRoot = EditorUtil::getProjectRootPath();
-        string          configPath  = FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
-        const bool      bAbsolute   = ( configPath.size() >= 2 && configPath[1] == ':' ) ||
-                               ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
-        if ( projectRoot.empty() == false && bAbsolute == false )
-            configPath = FileUtil::joinPath( projectRoot, configPath );
+        const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
+        const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
         // loadFile 은 필드 하나만 어긋나도 false 를 돌려주지만, 그 앞까지 읽은 값은 cfg 에 **이미 들어가 있다.**
         // 그래서 "기본값을 쓴다" 는 파일이 없을 때만 참이다 — 두 경우를 갈라서 말한다.
@@ -54,13 +49,8 @@ namespace sw::editor
 
     void EditorConfig::saveToHost()
     {
-        const TypeInfo* pTypeInfo   = EditorConfig::StaticType();
-        const string    projectRoot = EditorUtil::getProjectRootPath();
-        string          configPath  = FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
-        const bool      bAbsolute   = ( configPath.size() >= 2 && configPath[1] == ':' ) ||
-                               ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
-        if ( projectRoot.empty() == false && bAbsolute == false )
-            configPath = FileUtil::joinPath( projectRoot, configPath );
+        const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
+        const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
         if ( pTypeInfo != nullptr && JsonSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
             SW_LOG_TRACE( "EditorConfig saved to file (%#)", configPath.c_str() );

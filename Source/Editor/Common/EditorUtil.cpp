@@ -62,6 +62,19 @@ namespace sw::editor
         return FileUtil::joinPath( configDir, pFileName );
     }
 
+    string EditorUtil::resolveProjectRelativePath( string_view hostRelativePath )
+    {
+        // 반환 지점을 하나로 둔다 — 같은 지역 변수를 여러 곳에서 돌려주면 NRVO 가 적용되지 않는다.
+        string path = FileUtil::normalizeSeparators( hostRelativePath );
+        if ( FileUtil::isAbsolutePath( path ) == false )
+        {
+            const string projectRoot = getProjectRootPath();
+            if ( projectRoot.empty() == false )
+                path = FileUtil::joinPath( projectRoot, path );
+        }
+        return path;
+    }
+
     GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
     {
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )

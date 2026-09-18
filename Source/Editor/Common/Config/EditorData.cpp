@@ -26,12 +26,7 @@ namespace sw::editor
         if ( rel.empty() )
             rel = string( config::kFileRuntimeEditorData );
 
-        const string projectRoot = EditorUtil::getProjectRootPath();
-        string       absPath     = FileUtil::normalizeSeparators( rel );
-        const bool   bAbsolute =
-            ( absPath.size() >= 2 && absPath[1] == ':' ) || ( absPath.empty() == false && ( absPath[0] == '/' || absPath[0] == '\\' ) );
-        if ( projectRoot.empty() == false && bAbsolute == false )
-            absPath = FileUtil::joinPath( projectRoot, absPath );
+        const string absPath = EditorUtil::resolveProjectRelativePath( rel );
 
         // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다 — 레지스트리를 이름으로 뒤질
         // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.

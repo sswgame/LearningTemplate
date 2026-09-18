@@ -41,6 +41,17 @@ namespace sw::editor
          */
         static string resolveEditorConfigFile( const utf8* pFileName );
 
+        /**
+         * @brief 호스트 상대 경로를 프로젝트 루트 기준 절대 경로로 만듭니다. 이미 절대면 그대로 둡니다.
+         * @details 이 다섯 줄이 설정 파일을 다루는 **세 곳에 복사**되어 있었고
+         *          (`EditorConfig::loadFromHost` · `saveToHost` · `EditorData::loadFromHostPath`),
+         *          셋 다 "절대 경로인가" 를 손으로 다시 적고 있었다 — 게다가 그 손 판정은
+         *          `FileUtil::isAbsolutePath` 와 **달랐다**(드라이브 문자가 글자인지 보지 않는다).
+         *          여기 한 번 두고 진짜 판정을 쓴다.
+         * @return 프로젝트 루트를 찾지 못하면 구분자만 정규화한 입력을 그대로 돌려줍니다.
+         */
+        static string resolveProjectRelativePath( string_view hostRelativePath );
+
         // ------------------------------------------------------------------------------
         // 3) 프리팹 스폰 · 편집 허용
         //    애셋 종류 판별은 EditorAssetTypeRegistry::matches 가 정본입니다
