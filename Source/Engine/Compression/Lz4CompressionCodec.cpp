@@ -3,6 +3,7 @@
 #include "Engine/Compression/Lz4CompressionCodec.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include <lz4.h>
 #include <lz4hc.h>
@@ -46,10 +47,11 @@ namespace sw
             return false;
         }
 
+        // 대상 용량은 한계까지만 알려 준다(위 decompress 와 같은 이유다).
         const utf8* pSrcBytes = static_cast<const utf8*>( pSrc );
         utf8*       pDstBytes = static_cast<utf8*>( pDst );
         const int32 srcBytes  = static_cast<int32>( srcSize );
-        const int32 dstBytes  = static_cast<int32>( dstCapacity );
+        const int32 dstBytes  = static_cast<int32>( MathUtil::min( dstCapacity, static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) ) );
 
         // level 0 = 기본 속도 경로, 1 이상 = HC(고압축). 해제 속도는 둘이 같다.
         int32 written{ 0 };
@@ -75,10 +77,23 @@ namespace sw
         if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
             return false;
 
+        // 입력 크기를 **여기서도** 본다. 압축 쪽에만 한계 검사가 있었는데, 외부에서 온 바이트를
+        // 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
+        // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
+        if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
+        {
+            SW_LOG_ERROR( "LZ4 해제 입력이 한계를 넘었습니다 (%# bytes > %#).",
+                          static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
+            return false;
+        }
+
         // **`_safe` 를 쓴다.** 입력 크기를 믿고 읽는 변형(`LZ4_decompress_fast`)은 손상된 데이터에
         // 대해 대상 버퍼 밖으로 쓴다 — 팩·세이브는 외부에서 오는 바이트다.
-        const int32 written = LZ4_decompress_safe( static_cast<const utf8*>( pSrc ), static_cast<utf8*>( pDst ),
-                                                   static_cast<int32>( srcSize ), static_cast<int32>( dstCapacity ) );
+        // 대상 용량은 한계까지만 알려 준다 — 실제 버퍼보다 좁게 보는 것은 안전한 방향이다
+        // (넘치면 LZ4 가 실패로 끝낸다). 그냥 캐스팅하면 음수가 될 수 있다.
+        const int32 dstBytes = static_cast<int32>( MathUtil::min( dstCapacity, static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) ) );
+        const int32 written  = LZ4_decompress_safe( static_cast<const utf8*>( pSrc ), static_cast<utf8*>( pDst ),
+                                                    static_cast<int32>( srcSize ), dstBytes );
         if ( written < 0 )
         {
             SW_LOG_ERROR( "LZ4 해제 실패 (src %# → dst %# bytes).",

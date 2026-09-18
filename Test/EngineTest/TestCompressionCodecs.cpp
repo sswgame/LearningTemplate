@@ -4,7 +4,9 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/RleCompressionCodec.h"
 
+#include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Compression/Lz4CompressionCodec.h"
+#include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Compression/ZstdCompressionCodec.h"
 
 #include "TestFramework/TestFramework.h"
@@ -93,7 +95,9 @@ namespace
 } // namespace
 
 /**
- * @brief [CompressionCodecTest] LZ4 · Zstd 왕복이 원본과 **바이트까지** 같은가.
+ * @brief [CompressionCodecTest] LZ4 · Zstd · Zlib 왕복이 원본과 **바이트까지** 같은가.
+ * @details Zlib 은 여기 없었다 — **리소스 팩이 실제로 쓰는 코덱인데** 직접 왕복을 보는 케이스가
+ *          하나도 없었고, `TestResourcePack` 이 팩을 굽는 김에 간접적으로만 지나가고 있었다.
  */
 SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 {
@@ -101,16 +105,53 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 
     sw::Lz4CompressionCodec  lz4;
     sw::ZstdCompressionCodec zstd;
+    sw::ZlibCompressionCodec zlib;
 
     const CodecMeasure lz4Measure  = measureCodec( lz4, listOriginal, 0 );
     const CodecMeasure zstdMeasure = measureCodec( zstd, listOriginal, 0 );
+    const CodecMeasure zlibMeasure = measureCodec( zlib, listOriginal, 0 );
 
     SW_EXPECT_TRUE_MSG( lz4Measure._bRoundTripOk, "LZ4 왕복이 원본과 달라졌다" );
     SW_EXPECT_TRUE_MSG( zstdMeasure._bRoundTripOk, "Zstd 왕복이 원본과 달라졌다" );
+    SW_EXPECT_TRUE_MSG( zlibMeasure._bRoundTripOk, "Zlib 왕복이 원본과 달라졌다" );
 
     // 압축이 실제로 줄여야 한다 — 이 표본은 반복 구간이 있어 어떤 코덱이든 줄어든다.
     SW_EXPECT_TRUE( lz4Measure._compressedSize < listOriginal.size() );
     SW_EXPECT_TRUE( zstdMeasure._compressedSize < listOriginal.size() );
+    SW_EXPECT_TRUE( zlibMeasure._compressedSize < listOriginal.size() );
+}
+
+/**
+ * @brief [CompressionCodecTest] 라이브러리 길이 타입에 담기지 않는 크기를 코덱이 스스로 거절하는가.
+ * @details `compressBound` 는 버퍼를 받지 않으므로 이 한계를 **메모리 없이** 물어볼 수 있다.
+ *          zlib 의 `uLong` 은 Windows 에서 32비트라, 4GB 를 넘는 크기를 그대로 캐스팅하면 조용히
+ *          잘린 값이 들어가고 `compress2` 는 그만큼만 압축한 뒤 성공을 보고한다 — 데이터를
+ *          버리면서 성공이라고 말하는 셈이다. LZ4 도 int32 한계가 같은 자리에 있다.
+ */
+SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    sw::Lz4CompressionCodec  lz4;
+    sw::ZstdCompressionCodec zstd;
+    sw::ZlibCompressionCodec zlib;
+
+    // 32비트에 담기지 않는 크기. 64비트 빌드에서만 의미가 있다.
+    if constexpr ( sizeof( size_t ) > 4 )
+    {
+        const size_t hugeSize = ( static_cast<size_t>( 1 ) << 33 ); // 8 GiB
+
+        SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), lz4.compressBound( hugeSize ) );
+        SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), zlib.compressBound( hugeSize ) );
+        // zstd 는 64비트 크기를 그대로 다루므로 0 이 아니어야 한다 — 한계가 없는 쪽도 못박는다.
+        SW_EXPECT_TRUE( zstd.compressBound( hugeSize ) >= hugeSize );
+    }
+
+    // 담기는 크기에서는 셋 다 쓸 만한 한계를 준다.
+    const size_t normalSize = 64 * 1024;
+    SW_EXPECT_TRUE( lz4.compressBound( normalSize ) >= normalSize );
+    SW_EXPECT_TRUE( zlib.compressBound( normalSize ) >= normalSize );
+    SW_EXPECT_TRUE( zstd.compressBound( normalSize ) >= normalSize );
 }
 
 /**
@@ -127,8 +168,11 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRejectsCorruptInput )
     sw::Lz4CompressionCodec  lz4;
     sw::ZstdCompressionCodec zstd;
 
+    sw::ZlibCompressionCodec zlib;
+
     for ( sw::ICompressionCodec* pCodec : { static_cast<sw::ICompressionCodec*>( &lz4 ),
-                                            static_cast<sw::ICompressionCodec*>( &zstd ) } )
+                                            static_cast<sw::ICompressionCodec*>( &zstd ),
+                                            static_cast<sw::ICompressionCodec*>( &zlib ) } )
     {
         sw::vector<uint8> listCompressed;
         listCompressed.resize( pCodec->compressBound( listOriginal.size() ) );
@@ -197,35 +241,38 @@ SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
 }
 
 /**
- * @brief [CompressionCodecTest] 엔진이 올린 LZ4 · Zstd 를 `CompressionStream` 이 실제로 집어 쓴다.
- * @details `EngineLoop` 이 기본 레지스트리에 등록하므로, 레지스트리를 넘기지 않아도 타입만 고르면 된다.
+ * @brief [CompressionCodecTest] `EngineCompressionCodecUtil::registerAll` 이 올린 코덱을 스트림이 전부 집어 쓴다.
+ * @details 예전에는 등록 목록이 `EngineLoop::initialize` 안에 손으로 적혀 있었고 **Zlib 이 빠져
+ *          있었다** — 클래스도 열거값도 있는데 아무도 등록하지 않아, 스트림에 Zlib 을 요청하면
+ *          경고 한 줄과 함께 무압축으로 떨어졌다. 목록을 한 자리로 옮겼으므로 여기서 그 자리를 본다.
  */
 SW_TEST_CASE( CompressionCodecTest, RegisteredExternalCodecsAreReachableFromStream )
 {
     // **테스트 호스트는 EngineLoop 을 돌리지 않는다** — 앱에서는 거기서 등록하지만 여기서는 없다.
     // 스킵하면 아무것도 증명하지 못하므로 직접 등록해서 "등록하면 스트림이 집어 쓴다" 를 확인한다.
     sw::CompressionCodecRegistry& registry = *sw::CompressionCodecRegistry::getActive();
-    const bool                    bHadLz4  = registry.isCodecRegistered( sw::CompressionCodecType::LZ4 );
-    const bool                    bHadZstd = registry.isCodecRegistered( sw::CompressionCodecType::Zstd );
 
-    if ( bHadLz4 == false )
-        registry.registerCodec( sw::make_unique<sw::Lz4CompressionCodec>() );
-    if ( bHadZstd == false )
-        registry.registerCodec( sw::make_unique<sw::ZstdCompressionCodec>() );
+    sw::vector<sw::CompressionCodecType> listAddedType;
+    for ( sw::CompressionCodecType type : sw::EngineCompressionCodecUtil::kArrCodecType )
+    {
+        if ( registry.isCodecRegistered( type ) == false )
+            listAddedType.push_back( type );
+    }
+    sw::EngineCompressionCodecUtil::registerAll( registry );
 
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadLz4, bHadZstd]()
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [listAddedType]()
     {
         sw::CompressionCodecRegistry& reg = *sw::CompressionCodecRegistry::getActive();
-        if ( bHadLz4 == false )
-            reg.unregisterCodec( sw::CompressionCodecType::LZ4 );
-        if ( bHadZstd == false )
-            reg.unregisterCodec( sw::CompressionCodecType::Zstd );
+        for ( sw::CompressionCodecType type : listAddedType )
+            reg.unregisterCodec( type );
     } ) );
 
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 64 * 1024 );
 
-    for ( sw::CompressionCodecType type : { sw::CompressionCodecType::LZ4, sw::CompressionCodecType::Zstd } )
+    for ( sw::CompressionCodecType type : sw::EngineCompressionCodecUtil::kArrCodecType )
     {
+        SW_EXPECT_TRUE( registry.isCodecRegistered( type ) );
+
         sw::vector<uint8> listStream;
         SW_EXPECT_TRUE( sw::CompressionStream::compressBuffer( listOriginal.data(), listOriginal.size(), listStream, type ) );
         SW_EXPECT_TRUE( listStream.size() < listOriginal.size() ); // 내장 폴백(Null)로 샜다면 줄지 않는다

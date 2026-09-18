@@ -16,8 +16,7 @@
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Compression/Lz4CompressionCodec.h"
-#include "Engine/Compression/ZstdCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
@@ -206,10 +205,10 @@ namespace sw
             _compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
             _compressionCodecRegistry->initialize();
             CompressionCodecRegistry::setActive( _compressionCodecRegistry.get() );
-            // 외부 라이브러리 코덱은 **여기서** 등록한다. Core 는 압축 라이브러리에 종속되지 않게 두므로
-            // (ReflectionParser 가 Core 를 링크한다) LZ4/Zstd 는 Engine 이 들고 와 붙인다.
-            _compressionCodecRegistry->registerCodec( make_unique<Lz4CompressionCodec>() );
-            _compressionCodecRegistry->registerCodec( make_unique<ZstdCompressionCodec>() );
+            // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
+            // 여기에 손으로 적고 있었을 때 Zlib 이 빠져 있었다 — 클래스도 열거값도 있는데 아무도
+            // 등록하지 않아 스트림에서 쓸 수 없었다.
+            EngineCompressionCodecUtil::registerAll( *_compressionCodecRegistry );
             _shaderCache = make_unique<ShaderCache>();
             _shaderCache->initialize();
             _componentDefaults    = make_unique<ComponentDefaults>();

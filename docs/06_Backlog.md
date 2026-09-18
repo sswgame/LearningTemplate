@@ -139,8 +139,8 @@ cd build/Ninja-Debug/Bin
 | `Animation` | 1,153 | ✅ 2026-09-18 (3절 참고) |
 | `Audio` | 935 | ✅ 2026-09-18 (3절 참고) |
 | `Common` | 274 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
-| `Compression` | 370 | ← 다음 |
-| `Config` | 480 | |
+| `Compression` | 370 | ✅ 2026-09-18 (3절 참고) |
+| `Config` | 480 | ← 다음 |
 | `Dialogue` | 375 | 헤더 자립 실패 1건이 걸려 있다(3절) |
 | `Graphics` | 42,770 | 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다. 자립 실패 3건(3절) |
 | `Input` | 9,056 | |
@@ -360,6 +360,50 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (코덱 하나는 이름만 있고 아무도 등록하지 않았다 — Engine/Compression)
+
+**1) `ZlibCompressionCodec` 이 레지스트리에 한 번도 올라가지 않았다.** `EngineLoop::initialize` 가
+"외부 라이브러리 코덱은 **여기서** 등록한다" 고 적어 두고 LZ4·Zstd 둘만 손으로 부르고 있었다.
+그래서 `CompressionCodecType::Zlib`(공개된 on-disk 값)을 `CompressionStream` 에 요청하면 경고 한
+줄과 함께 **무압축으로 떨어졌고**, 다른 도구가 쓴 Zlib 스트림은 "지원하지 않는 코덱" 으로 읽히지
+않았다. 리소스 팩이 쓰는 코덱이라 라이브러리는 이미 링크돼 있었다 — 등록만 빠진 것이다.
+
+한 줄 더 적는 대신 **목록을 코덱 옆으로 옮겼다**: `EngineCompressionCodecUtil::kArrCodecType` +
+`registerAll()`. 호출부가 목록을 들고 있으면 코덱을 하나 더 만들고 그 자리를 잊는 일이 또 생긴다.
+이제 `EngineLoop` 은 `registerAll` 하나만 부르고, 테스트도 같은 목록을 돈다.
+
+**2) zlib 은 4GB 를 넘는 입력을 조용히 잘라서 압축하고 성공을 보고했다.** zlib 의 길이 타입
+`uLong` 은 **Windows 에서 32비트**다. `static_cast<uLong>( srcSize )` 가 잘린 값을 넘기면
+`compress2` 는 그만큼만 압축하고 `Z_OK` 를 돌려준다 — 데이터를 버리면서 성공이라고 말하는 셈이다.
+`compressBound` 도 같아서, 잘린 크기의 한계를 돌려주면 호출자가 그것을 믿고 작은 버퍼를 잡는다.
+입구에서 막고(`compressBound` 는 0, `compress`/`decompress` 는 false + 로그) 이유를 적었다.
+
+**3) LZ4 는 압축 쪽에만 크기 검사가 있었다 — 외부 바이트를 먹는 쪽은 해제인데.** `decompress` 가
+`srcSize` 를 검사 없이 `int32` 로 캐스팅했다. 2GB 를 넘으면 **음수**가 되어 LZ4 에 그대로 들어가고
+그때 동작은 정의되어 있지 않다. 같은 검사를 해제 쪽에도 뒀다. 대상 용량(`dstCapacity`)은 거절하지
+않고 한계까지 **좁은 쪽으로 자른다** — 실제 버퍼보다 작게 보는 것은 안전한 방향이고(넘치면 LZ4 가
+실패로 끝낸다), 그냥 캐스팅하면 음수가 될 수 있다. 압축 쪽 `dstCapacity` 도 같이 맞췄다.
+
+**4) 리소스 팩이 실제로 쓰는 코덱에 직접 테스트가 없었다.** `CompressionCodecTest` 는 LZ4·Zstd 만
+왕복·손상입력을 보고 있었고 Zlib 은 `TestResourcePack` 이 팩을 굽는 김에 간접적으로만 지나갔다.
+셋 다 보게 했다.
+
+**테스트.** `CompressionCodecTest` 4 → 5건.
+- `ExternalCodecRoundTrip` · `ExternalCodecRejectsCorruptInput` 에 Zlib 추가.
+- `CodecsRejectSizesTheirLibraryCannotHold` 신규 — **`compressBound` 는 버퍼를 받지 않으므로 이
+  한계를 메모리 없이 물어볼 수 있다.** 8GiB 를 물으면 LZ4·Zlib 은 0, Zstd 는 64비트라 0 이 아니다.
+- `RegisteredExternalCodecsAreReachableFromStream` 이 이제 `kArrCodecType` 을 돈다.
+
+변이 테스트로 확인했다(zlib bound 가드 제거 → 셋째가, Zlib 등록 제거 → 넷째가 깨진다).
+
+**테스트가 없는 것.** `EngineLoop::initialize` 가 `registerAll` 을 **부르는지** 는 확인하지
+못한다 — `EngineTest` 도 `SmokeTest` 도 `EngineLoop` 을 돌리지 않는다. 목록을 한 자리로 모은 것이
+이 구멍에 대한 답이다(부르는 곳이 하나뿐이면 잊을 자리도 하나뿐이다). 2GB·4GB 실제 버퍼를 쓰는
+경로도 단위 테스트가 없다 — `compressBound` 로 한계 계약만 못박았다.
+
+**검증.** Debug·Shipping·Unity 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `CompressionCodecTest` 5건 · 헤더 4개 자립.
 
 ### 2026-09-18 (접착 파일 하나가 엔진 전체에 의존하는 척하고 있었다 — Engine/Common)
 
