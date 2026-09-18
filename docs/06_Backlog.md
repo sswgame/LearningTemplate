@@ -198,7 +198,7 @@ cd build/Ninja-Debug/Bin
   "-gv_editorStartupScene=game/empty/maps/editortest.scene.xml" -gv_editorPanelDump=40
 ```
 
-### 1-0c. GameFramework · Games · RuntimeAPI 훑기 (2026-09-18 시작)
+### 1-0c. GameFramework · Games · RuntimeAPI 훑기 — ✅ **전부 끝났다** (2026-09-18, 2커밋)
 
 `Core` · `Engine` · `Editor` 와 같은 방식. 규모가 작아 폴더 하나 = 커밋 하나로 충분하다.
 
