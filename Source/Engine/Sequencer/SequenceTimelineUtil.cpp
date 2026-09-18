@@ -79,8 +79,11 @@ namespace sw
         return false;
     }
 
-    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, int32 previousFrame )
+    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, int32 previousFrame,
+                                           vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
+        if ( pOutListCrossedEvent != nullptr )
+            pOutListCrossedEvent->clear();
         if ( pManager == nullptr )
             return;
 
@@ -112,14 +115,17 @@ namespace sw
             }
         }
 
-        if ( previousFrame < 0 )
+        if ( previousFrame == kNoPreviousFrame )
             return;
         for ( const SequenceTrackItem& item : asset._listItem )
         {
             if ( item._type != 1 )
                 continue;
+            // 지나갔는가 — 이전 프레임에는 아직 안 닿았고 이번 프레임에는 닿았다.
             if ( previousFrame >= item._start || item._start > frame )
                 continue;
+            if ( pOutListCrossedEvent != nullptr )
+                pOutListCrossedEvent->push_back( &item );
             SW_LOG_INFO( "Sequence event %# on %#", item._name.c_str(), item._targetObject.c_str() );
         }
     }

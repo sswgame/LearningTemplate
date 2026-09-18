@@ -151,8 +151,8 @@ cd build/Ninja-Debug/Bin
 | `Reflection` | 3,081 | ✅ 2026-09-18 (3절 참고 — 타입 표가 밀집 배열이라는 함정도 적었다) |
 | `Resource` | 3,604 | ✅ 2026-09-18 (3절 참고 — 파일에서 온 수를 믿던 자리 넷) |
 | `Scene` | 1,438 | ✅ 2026-09-18 (3절 참고 — 대기열 요청의 future 가 거짓말을 했다) |
-| `Sequencer` | 546 | ← 다음 |
-| `Serialization` | 7,120 | |
+| `Sequencer` | 546 | ✅ 2026-09-18 (3절 참고 — 이벤트 트랙이 배포본에서 아무 일도 하지 않았다) |
+| `Serialization` | 7,120 | ← 다음 |
 | `Spatial` | 1,541 | |
 | `Utility` | 3,077 | |
 | `Window` | 2,124 | |
@@ -362,6 +362,44 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (이벤트 트랙이 배포본에서 아무 일도 하지 않았다 — Engine/Sequencer)
+
+이 폴더에는 테스트가 **하나도 없었다**(`EditorTest` 가 에셋 타입 등록만 건드렸다).
+새 스위트 `SequencerTest` 5건을 만들고 시작했고, 그 중 셋이 첫 실행에서 졌다.
+
+**1) 시퀀서 이벤트는 배포본에서 아무 일도 하지 않았다.** 지나간 이벤트에 대한 반응이
+`SW_LOG_INFO` **한 줄뿐**이었는데, 그 매크로는 Shipping 에서 통째로 사라진다
+(`SW_LOG_LEVEL_COMPILED(2)`). 즉 출시된 게임에서 이벤트 트랙은 없는 것과 같았고, **Dev 에서는
+로그가 보이니 그 사실이 드러나지도 않았다.** 이것을 안 방법이 그대로 교훈이다 — 회귀 테스트를
+로그 리스너로 짰더니 Debug 는 통과하고 **Shipping 만 졌다**(CLAUDE.md 가 말하는 바로 그 자리).
+
+`applyFrame` 에 `pOutListCrossedEvent` 출력을 붙였다. 이미 그 안에서 계산하던 집합을 내보내는
+것뿐이라 새 하부 구조가 아니고, 대신 이벤트가 **모든 구성에서 존재하는 값**이 된다. 로그는 Dev
+편의로 남겼다.
+**남은 일:** `SequencePlayerComponent` 가 이 목록을 받아 무언가로 내보내는 것(델리게이트·이벤트
+디스패처)은 아직 없다. 그것은 설계 결정이라 여기서 짓지 않았다 — 이벤트에 반응하는 기능을 붙일
+때 `applyTimeline()` 이 출발점이다.
+
+**2) 시퀀스 첫 프레임에 걸린 이벤트는 영영 발화하지 않았다.** 판정은 "지나갔는가"
+(`previousFrame < start <= frame`)인데 `play()` 가 `_previousFrame` 을 `_frameMin` 으로 두었다.
+그러면 `_start == _frameMin` 인 이벤트는 처음부터 이미 지난 것이다. **루프를 돌 때도 같다** —
+되감긴 뒤 이전 프레임이 `_frameMax` 근처로 남아 있어 매 바퀴 첫 프레임 이벤트가 빠졌다.
+둘 다 `_frameMin - 1` 에서 시작하게 고쳤다.
+
+그런데 그러자 기존 "이전 프레임 없음" 표시와 부딪혔다. 예전 기본값은 `-1` 이고 판정도
+`previousFrame < 0` 이었다 — `_frameMin` 이 0 인 흔한 시퀀스에서 "첫 프레임을 막 지났다" 를
+표현할 값이 **바로 그 -1** 이다. 게다가 음수 프레임을 쓰는 시퀀스에서는 멀쩡한 이전 프레임이
+"없음" 으로 읽혔다. `kNoPreviousFrame`(`INT32_MIN`)을 이름 붙여 갈랐다.
+
+**3) `SequenceAsset::loadFromFile` 이 같은 파일을 두 번 파싱했다.** 문서를 읽은 뒤
+`parseJson( doc.dump( -1 ) )` — **읽은 것을 문자열로 되돌렸다가 다시 읽는** 경로였다.
+`parseRoot( const JsonValue& )` 를 뽑아 파일 경로와 문자열 경로가 한 자리로 모이게 했다.
+같은 손질에서 `parseJson` 이 실패할 때 `_listItem` 만 비우고 프레임 범위·노트는 앞 시퀀스의
+것을 남기던 것도 고쳤다(`*this = SequenceAsset{}`) — 트랙 없는 옛 시퀀스가 새 시퀀스인 척했다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · 새 `SequencerTest` 5건이 **양쪽 구성에서** 통과.
 
 ### 2026-09-18 (대기열에 넣은 요청이 자기 씬을 받지 못했다 — Engine/Scene)
 

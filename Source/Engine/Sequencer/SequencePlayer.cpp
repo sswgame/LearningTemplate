@@ -32,8 +32,11 @@ namespace sw
 
     void SequencePlayer::play()
     {
-        _playbackTime  = 0.0f;
-        _previousFrame = _asset._frameMin;
+        _playbackTime = 0.0f;
+        // **첫 프레임보다 하나 앞**에서 시작한다. 이전 프레임을 `_frameMin` 으로 두면 첫 프레임에
+        // 걸린 이벤트가 처음부터 "이미 지난 것" 이라 영영 발화하지 않는다 — 이벤트 판정은
+        // `previousFrame < start <= frame`(지나갔는가) 이기 때문이다.
+        _previousFrame = _asset._frameMin - 1;
         _bPlaying      = SW_TRUE;
         _bPaused       = SW_FALSE;
     }
@@ -88,6 +91,10 @@ namespace sw
             _playbackTime = MathUtil::fmod( _playbackTime, durationSec );
             if ( _playbackTime < 0.0f )
                 _playbackTime += durationSec;
+            // 한 바퀴를 돌았으면 `play()` 와 같은 자리에서 다시 시작해야 한다. 그러지 않으면
+            // 이전 프레임이 끝쪽(`_frameMax` 근처)인 채로 남아, 되감긴 첫 프레임의 이벤트가
+            // "이미 지난 것" 이 되어 **루프마다 빠진다.**
+            _previousFrame = _asset._frameMin - 1;
         }
         else
         {

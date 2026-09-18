@@ -41,17 +41,16 @@ namespace sw
 {
     bool SequenceAsset::loadFromFile( string_view path )
     {
-        _listItem.clear();
-        _note.clear();
-        _frameMin = 0;
-        _frameMax = 100;
+        *this = SequenceAsset{};
         if ( path.empty() )
             return false;
 
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        return parseJson( doc.dump( -1 ) );
+        // 읽은 문서를 **그대로** 읽는다. 예전에는 `parseJson( doc.dump( -1 ) )` 이었다 —
+        // 파일 전체를 문자열로 되돌렸다가 다시 파싱하는, 같은 일을 두 번 하는 경로였다.
+        return parseRoot( doc.root() );
     }
 
     bool SequenceAsset::saveToFile( string_view path ) const
@@ -66,16 +65,23 @@ namespace sw
 
     bool SequenceAsset::parseJson( string_view jsonView )
     {
-        _listItem.clear();
-
         JsonDocument doc;
         if ( doc.parse( jsonView ) == false )
+        {
+            // 반쯤 찬 애셋을 남기지 않는다 — 실패는 "아무것도 읽지 않았다" 여야 한다.
+            *this = SequenceAsset{};
             return false;
+        }
+        return parseRoot( doc.root() );
+    }
 
-        const JsonValue root = doc.root();
-        _frameMin            = static_cast<int32>( root.get( "frameMin" ).asInt( 0 ) );
-        _frameMax            = static_cast<int32>( root.get( "frameMax" ).asInt( 100 ) );
-        _note                = root.get( "note" ).asString();
+    bool SequenceAsset::parseRoot( const JsonValue& root )
+    {
+        _listItem.clear();
+
+        _frameMin = static_cast<int32>( root.get( "frameMin" ).asInt( 0 ) );
+        _frameMax = static_cast<int32>( root.get( "frameMax" ).asInt( 100 ) );
+        _note     = root.get( "note" ).asString();
         if ( _frameMax <= _frameMin )
             _frameMax = _frameMin + 1;
 
