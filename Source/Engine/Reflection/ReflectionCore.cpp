@@ -450,6 +450,10 @@ namespace sw
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
 
+        // 여기서 캐시를 만들어 두지 않는다 — **다음 등록에서 맵이 커지면 날아간다.**
+        // `sw::unordered_map` 은 밀집 배열이라 커질 때 원소를 옮기고, `TypeInfo` 이동 생성자는
+        // `mutable` 캐시를 비운다. 그래서 캐시는 **배치 등록이 끝난 뒤** 한 번에 만든다
+        // (`buildLookupCaches`).
         _mapFqnToClassType.insert_or_assign( canonicalKey, stored );
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
         if ( stored._name.empty() == false && stored._name != canonicalKey )
@@ -494,6 +498,33 @@ namespace sw
         }
 
         _activeModuleName = hashed_string();
+
+        // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다 — 여기가 아직 단일 스레드다.
+        buildLookupCaches();
+    }
+
+    void TypeRegistry::buildLookupCaches() const
+    {
+        vector<const TypeInfo*> listType;
+        {
+            std::shared_lock<std::shared_mutex> lock{ _mutex };
+            listType.reserve( _mapFqnToClassType.size() );
+            for ( const auto& [fqn, info] : _mapFqnToClassType )
+            {
+                (void)fqn;
+                listType.push_back( &info );
+            }
+        }
+
+        // **잠금 밖에서** 만든다 — getPropertiesWithBase 가 부모를 찾으려고 레지스트리를 다시
+        // 잠그는데, shared_mutex 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
+        for ( const TypeInfo* pType : listType )
+        {
+            if ( pType == nullptr )
+                continue;
+            pType->buildLookupCache();
+            (void)pType->getPropertiesWithBase();
+        }
     }
 
 #if !defined( SW_SHIPPING )

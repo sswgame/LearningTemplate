@@ -690,7 +690,14 @@ namespace sw
          */
         const vector<PropertyInfo>& getPropertiesWithBase() const;
 
-        /** @brief 이름→프로퍼티/메서드 조회 캐시를 만듭니다. */
+        /**
+         * @brief 이름→프로퍼티/메서드 조회 캐시를 만듭니다.
+         * @warning **여러 스레드가 동시에 부르면 안 된다.** `mutable` 맵 둘을 잠금 없이 채운다 —
+         *          두 스레드가 같은 `TypeInfo` 를 처음 조회하면 같은 맵에 동시에 삽입한다.
+         *          그래서 `TypeRegistry::buildLookupCaches()` 가 **등록 배치가 끝난 직후 단일
+         *          스레드에서** 한 번 만든다. 등록된 타입을 병렬로 조회하는 것은 그 뒤이므로 안전하다.
+         *          (등록하지 않은 임시 사본은 만든 스레드가 알아서 쓴다.)
+         */
         void buildLookupCache() const
         {
             if ( _bIsCacheBuilt != SW_FALSE )
@@ -716,6 +723,9 @@ namespace sw
 
             _bIsCacheBuilt = SW_TRUE;
         }
+
+        /** @brief 조회 캐시가 이미 만들어져 있는지 반환합니다 (`buildLookupCaches` 뒤에는 true). */
+        bool isLookupCacheBuilt() const { return _bIsCacheBuilt != SW_FALSE; }
 
         /** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
         const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const

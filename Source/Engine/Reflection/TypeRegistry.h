@@ -149,6 +149,23 @@ namespace sw
             return findEnumOf<E>();
         }
 
+        /**
+         * @brief 등록된 모든 타입의 지연 조회 캐시를 만들어 둡니다. 등록 배치가 끝난 뒤 부릅니다.
+         * @details `TypeInfo` 는 이름→프로퍼티 맵과 상속 병합 목록을 **첫 조회 때 `mutable` 로,
+         *          잠금 없이** 채운다. 그래서 워커 둘이 같은 타입을 처음 조회하면 같은 맵에 동시에
+         *          삽입한다. 등록이 끝난 직후 **단일 스레드에서** 한 번 만들어 그 창을 없앤다.
+         *
+         *          **등록하는 자리에서 하나씩 만들 수는 없다.** `_mapFqnToClassType` 은
+         *          `sw::unordered_map`(밀집 배열)이라 커질 때 원소를 **옮기고**, `TypeInfo` 이동
+         *          생성자는 `mutable` 캐시를 비운다 — 그래서 뒤이은 등록 하나가 앞서 만든 캐시를
+         *          전부 날린다. 배치의 마지막 삽입 뒤에 한 번 도는 것이 유일하게 성립하는 자리다.
+         *          같은 이유로 `findType()` 이 내준 `const TypeInfo*` 도 **다음 등록에서 무효가 된다**
+         *          (`GameObjectManager::rebindAllCachedTypeInfo` 가 그래서 있다).
+         * @note 레지스트리 잠금을 **잡지 않은 채** 만든다 — 상속 병합이 부모를 찾으려고 레지스트리를
+         *       다시 잠그는데 `shared_mutex` 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
+         */
+        void buildLookupCaches() const;
+
         /** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
         template <typename Func>
         void forEachType( Func&& func ) const

@@ -148,8 +148,8 @@ cd build/Ninja-Debug/Bin
 | `Module` | 318 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Object` | 8,428 | ✅ 2026-09-18 (동작 결함 없음. 3절 참고) |
 | `Physics` | 1,016 | ✅ 2026-09-18 (3절 참고) |
-| `Reflection` | 3,081 | ← 다음 |
-| `Resource` | 3,604 | |
+| `Reflection` | 3,081 | ✅ 2026-09-18 (3절 참고 — 타입 표가 밀집 배열이라는 함정도 적었다) |
+| `Resource` | 3,604 | ← 다음 |
 | `Scene` | 1,438 | |
 | `Sequencer` | 546 | |
 | `Serialization` | 7,120 | |
@@ -362,6 +362,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (TypeInfo 의 지연 캐시를 워커 둘이 동시에 만들 수 있었다 — Engine/Reflection)
+
+**1) `TypeInfo` 의 조회 캐시는 `const` 객체에서 잠금 없이 만들어진다.** 이름→프로퍼티/메서드 맵
+(`buildLookupCache`)과 상속 병합 프로퍼티 목록(`getPropertiesWithBase`)은 **첫 조회 때** `mutable`
+멤버에 채워진다. 그 채우기에 잠금이 없고 `_bIsCacheBuilt` 도 평범한 비트필드라, 워커 둘이 같은
+타입을 처음 조회하면 **같은 `unordered_map` 에 동시에 삽입한다.** 병렬 틱 중 컴포넌트가 이름으로
+프로퍼티를 찾는 경로(직렬화 · 인스펙터 · `addComponentByName`)가 그 창이다.
+
+등록 배치가 끝난 직후 **단일 스레드에서** 한 번 만들어 그 창을 없앤다
+(`TypeRegistry::buildLookupCaches()`, `registerPendingTypes` 끝에서 호출).
+
+**2) 그리고 그 과정에서 더 중요한 것이 드러났다 — 타입 표는 밀집 배열이다.**
+`_mapFqnToClassType` 은 `sw::unordered_map` 인데, 이 저장소의 기본(`SW_ENABLE_STL_CONTAINER=OFF`)은
+**std 가 아니라 데이터 지향 밀집 배열**이다. 그래서 표가 커질 때 원소를 **옮긴다**. 그러면:
+
+- `TypeInfo` 이동 생성자가 `mutable` 캐시를 비우므로, **뒤이은 등록 하나가 앞서 만든 캐시를 전부
+  날린다.** 처음에는 `registerClass` 안에서 캐시를 만들게 했는데, 실제로 돌려 보니 등록 직후엔
+  `built=1` 인데 테스트 시점엔 주소가 다르고 `built=0` 이었다 — 그렇게 알았다. 그래서 "등록하는
+  자리에서 하나씩" 이 아니라 **"배치가 끝난 뒤 한 번"** 이 유일하게 성립하는 자리다.
+- 같은 이유로 `findType()` 이 내준 `const TypeInfo*` 는 **다음 등록에서 무효가 된다.** 저장소는
+  이미 이것 때문에 한 번 데었다(`registerClass` 주석: 같은 타입에 복사본이 둘이라 컴포넌트 풀이
+  조회에 실패해 힙을 깨뜨렸다). `GameObjectManager::rebindAllCachedTypeInfo()` 가 그래서 있다.
+  **이 사실이 어디에도 적혀 있지 않았다** — `TypeRegistry::buildLookupCaches` 문서에 적었다.
+
+**테스트** `ReflectionTypeRegistryTest.LookupCachesAreBuiltAfterRegistrationBatch` — 배치 뒤에는
+등록된 타입 전부가 캐시를 갖는다. 배치 패스에서 만들기를 빼면 깨진다(변이 테스트로 확인).
+
+**이름에 대해.** 처음에 `warmLookupCaches()` 라고 지었다가 `buildLookupCaches()` 로 바꿨다.
+`warm/warmup` 은 상용 엔진에도 있지만(Unity `ShaderVariantCollection.WarmUp`, UE 의 PSO 캐시 워밍)
+그것은 **미리 컴파일해 히칭을 없앤다**는 은유다. 여기 목적은 성능이 아니라 병렬 접근 전에 만들어
+두는 것이고, 무엇보다 바로 옆에 `TypeInfo::buildLookupCache()` 가 이미 있다 — 한 개념에 동사 하나다
+(AGENTS 의 함수 이름 어휘).
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `ReflectionTest` 101 → 102건.
 
 ### 2026-09-18 (형제 스윕 둘이 빗나갔을 때 다른 것을 남겼다 — Engine/Physics)
 

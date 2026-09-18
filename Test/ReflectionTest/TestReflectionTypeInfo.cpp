@@ -561,3 +561,34 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
     SW_EXPECT_EQUAL( 77, binTarget._armor );
     SW_EXPECT_EQUAL( 30, binTarget._health );
 }
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 배치 등록 뒤 조회 캐시가 전부 만들어져 있는지 검증
+ * @details `TypeInfo` 의 이름→프로퍼티 맵과 상속 병합 목록은 첫 조회 때 `mutable` 로, **잠금 없이**
+ *          채워진다. 워커 둘이 같은 타입을 처음 조회하면 같은 맵에 동시에 삽입한다.
+ *          `TypeRegistry::buildLookupCaches()` 가 등록 배치 직후 단일 스레드에서 만들어 그 창을 없앤다.
+ *
+ *          **등록하는 자리에서 하나씩 만들 수 없다는 것이 이 테스트의 핵심이다.** 타입 표는 밀집
+ *          배열이라 커질 때 원소를 옮기고, 그때 `TypeInfo` 이동 생성자가 캐시를 비운다 — 뒤이은
+ *          등록 하나가 앞서 만든 것을 전부 날린다. 그래서 "배치 뒤에 한 번" 이 유일하게 성립한다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, LookupCachesAreBuiltAfterRegistrationBatch )
+{
+    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+    // 이 테스트 바이너리의 픽스처처럼 배치 밖에서 등록된 타입도 있으므로, 여기서 한 번 돌린다 —
+    // 엔진에서는 `registerPendingTypes` 가 배치 끝에서 부르는 바로 그 호출이다.
+    registry.buildLookupCaches();
+
+    uint32 checkedCount = 0;
+    uint32 coldCount    = 0;
+    registry.forEachType( [&checkedCount, &coldCount]( const sw::TypeInfo& typeInfo )
+    {
+        ++checkedCount;
+        if ( typeInfo.isLookupCacheBuilt() == false )
+            ++coldCount;
+    } );
+
+    SW_EXPECT_TRUE( checkedCount > 0 );
+    SW_EXPECT_EQUAL( 0u, coldCount );
+}
