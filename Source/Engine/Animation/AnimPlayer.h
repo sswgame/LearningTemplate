@@ -30,8 +30,13 @@ namespace sw
         /** @brief 현재(또는 페이드 중 혼합) 샘플을 평가합니다. */
         AnimSample evaluate() const;
 
-        /** @brief 재생 속도 배율을 설정합니다. (1.0 = 표준 속도, 0.0 = 일시정지, 2.0 = 2배속 등) */
-        void setSpeed( float32 speed ) { _playSpeed = speed; }
+        /**
+         * @brief 재생 속도 배율을 설정합니다. (1.0 = 표준 속도, 0.0 = 일시정지, 2.0 = 2배속 등)
+         * @details 역재생은 지원하지 않습니다 — 음수는 0(일시정지)으로 막습니다. 음수를 그대로
+         *          흘리면 크로스페이드 경과 시간이 뒤로 흘러 페이드가 영원히 끝나지 않습니다.
+         *          `update` 가 음수 델타를 0 으로 막는 것과 같은 이유입니다.
+         */
+        void setSpeed( float32 speed ) { _playSpeed = ( speed > 0.0f ) ? speed : 0.0f; }
         /** @brief 현재 재생 속도 배율을 반환합니다. */
         float32 getSpeed() const { return _playSpeed; }
 
@@ -47,14 +52,14 @@ namespace sw
         float32 getCurrentTime() const { return _currentTime; }
 
     private:
-        const AnimClip* _pCurrent{ nullptr };
-        const AnimClip* _pNext{ nullptr };
-        float32         _currentTime{ 0.0f };
-        float32         _nextTime{ 0.0f };
-        float32         _fadeDuration{ 0.0f };
-        float32         _fadeElapsed{ 0.0f };
-        float32         _playSpeed{ 1.0f };
-        bool            _bCurrentLoop{ true };
-        bool            _bNextLoop{ true };
+        const AnimClip* _pCurrent{ nullptr };  /**< 지금 재생 중인 클립입니다. 소유하지 않습니다. */
+        const AnimClip* _pNext{ nullptr };     /**< 크로스페이드 대상 클립입니다. 소유하지 않습니다. */
+        float32         _currentTime{ 0.0f };  /**< `_pCurrent` 의 재생 시각(초)입니다. */
+        float32         _nextTime{ 0.0f };     /**< `_pNext` 의 재생 시각(초)입니다. */
+        float32         _fadeDuration{ 0.0f }; /**< 크로스페이드 길이(초)입니다. 0 이면 페이드 중이 아닙니다. */
+        float32         _fadeElapsed{ 0.0f };  /**< 크로스페이드 경과 시간(초)입니다. */
+        float32         _playSpeed{ 1.0f };    /**< 재생 속도 배율입니다. 음수가 될 수 없습니다. */
+        bool            _bCurrentLoop{ true }; /**< `_pCurrent` 를 루프 재생하는지 여부입니다. */
+        bool            _bNextLoop{ true };    /**< `_pNext` 를 루프 재생하는지 여부입니다. */
     };
 } // namespace sw

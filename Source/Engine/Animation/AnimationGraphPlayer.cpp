@@ -123,7 +123,13 @@ namespace sw
         _currentNodeName      = pNode->_name;
         const AnimClip* pClip = findClip( pNode->_name );
         if ( pClip == nullptr )
+        {
+            // 클립이 없는 노드로 넘어가면서 플레이어를 그대로 두면, getCurrentNodeName() 은 새
+            // 노드를 말하는데 evaluate() 는 이전 노드의 포즈를 계속 돌려준다. 둘이 다른 말을
+            // 하게 두지 않는다 — 클립이 없는 노드는 길이 0 이므로 재생을 비운다.
+            _player.play( nullptr, false );
             return true;
+        }
 
         if ( bCrossfade )
             _player.crossfade( pClip, _crossfadeSeconds, bLoopClip );

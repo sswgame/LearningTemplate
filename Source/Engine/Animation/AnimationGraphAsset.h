@@ -7,14 +7,17 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {
+    class JsonValue;
+
     /** @brief 애니메이션 그래프 노드 */
     struct AnimationGraphNode
     {
-        string _name;
-        int32  _id{ 0 };
+        string _name;    /**< 노드 이름. 클립을 묶는 열쇠입니다. */
+        int32  _id{ 0 }; /**< 그래프 안에서 유일한 노드 id. 1 이상이어야 합니다. */
         /** @brief 그래프 에디터에서의 노드 위치. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않는다. */
         float2 _position{ 40.0f, 40.0f };
     };
@@ -22,9 +25,9 @@ namespace sw
     /** @brief 애니메이션 그래프 링크 */
     struct AnimationGraphLink
     {
-        int32 _id{ 0 };
-        int32 _fromNode{ 0 };
-        int32 _toNode{ 0 };
+        int32 _id{ 0 };       /**< 그래프 안에서 유일한 링크 id. 1 이상이어야 합니다. */
+        int32 _fromNode{ 0 }; /**< 출발 노드 id 입니다. */
+        int32 _toNode{ 0 };   /**< 도착 노드 id 입니다. */
     };
 
     /**
@@ -56,7 +59,11 @@ namespace sw
         /** @brief 해당 노드에서 나가는 첫 링크의 대상 id입니다. 없으면 0입니다. */
         int32 findFirstOutgoingNodeId( int32 fromNodeId ) const;
 
-        vector<AnimationGraphNode> _listNode;
-        vector<AnimationGraphLink> _listLink;
+        vector<AnimationGraphNode> _listNode; /**< 노드 목록입니다. */
+        vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */
+
+    private:
+        /** @brief 이미 파싱된 JSON 루트에서 노드·링크를 읽습니다. */
+        void parseRoot( const JsonValue& root );
     };
 } // namespace sw

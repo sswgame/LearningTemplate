@@ -56,20 +56,23 @@ namespace sw
         const AnimationGraphAsset& getGraph() const { return _graph; }
 
     private:
+        /** @brief 노드 이름과 거기에 묶인 클립 한 쌍입니다. */
         struct ClipBinding
         {
-            string          _nodeName;
-            const AnimClip* _pClip;
+            string          _nodeName; /**< 그래프 노드 이름입니다. */
+            const AnimClip* _pClip;    /**< 그 노드가 재생할 클립입니다. 소유하지 않습니다. */
         };
 
+        /** @brief 노드 이름에 묶인 클립을 찾습니다. 없으면 nullptr 입니다. */
         const AnimClip* findClip( string_view nodeName ) const;
-        bool            playNode( int32 nodeId, bool bLoopClip, bool bCrossfade );
+        /** @brief 노드로 옮겨 클립을 재생(또는 크로스페이드)합니다. 노드가 없으면 false 입니다. */
+        bool playNode( int32 nodeId, bool bLoopClip, bool bCrossfade );
 
-        AnimationGraphAsset _graph;
-        AnimPlayer          _player;
-        vector<ClipBinding> _listClip;
-        string              _currentNodeName;
-        int32               _currentNodeId;
-        float32             _crossfadeSeconds;
+        AnimationGraphAsset _graph;            /**< 재생 중인 그래프입니다. */
+        AnimPlayer          _player;           /**< 실제 클립 재생을 맡는 플레이어입니다. */
+        vector<ClipBinding> _listClip;         /**< 노드 이름 → 클립 매핑입니다. */
+        string              _currentNodeName;  /**< 현재 노드 이름입니다. */
+        int32               _currentNodeId;    /**< 현재 노드 id 입니다. 재생 중이 아니면 0 입니다. */
+        float32             _crossfadeSeconds; /**< 노드를 넘어갈 때 쓰는 크로스페이드 길이(초)입니다. */
     };
 } // namespace sw

@@ -32,23 +32,23 @@ SW_TEST_CASE( AnimationTest, AnimClipSamplingAndLooping )
 
     // 1) 시작 시점 샘플링
     AnimSample sampleStart = clip.sample( 0.0f, true );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, sampleStart._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sampleStart._normalizedTime, 1e-4f );
 
     // 2) 중간 시점 샘플링 (t = 2.0s on 4.0s duration -> weight = 0.5)
     AnimSample sampleMid = clip.sample( 2.0f, true );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleMid._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleMid._normalizedTime, 1e-4f );
 
     // 3) 루핑 모드 초과 시간 래핑 (t = 5.0s on 4.0s duration -> t = 1.0s, weight = 0.25)
     AnimSample sampleLoopWrap = clip.sample( 5.0f, true );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, sampleLoopWrap._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, sampleLoopWrap._normalizedTime, 1e-4f );
 
     // 4) 비루핑 모드 클램핑 (t = 5.0s on 4.0s duration -> t = 4.0s, weight = 1.0)
     AnimSample sampleClamp = clip.sample( 5.0f, false );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, sampleClamp._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sampleClamp._normalizedTime, 1e-4f );
 
     // 5) 음수 시간 루핑 래핑 (t = -1.0s on 4.0s duration -> t = 3.0s, weight = 0.75)
     AnimSample sampleNeg = clip.sample( -1.0f, true );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, sampleNeg._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, sampleNeg._normalizedTime, 1e-4f );
 }
 
 /**
@@ -65,7 +65,7 @@ SW_TEST_CASE( AnimationTest, AnimPlayerPlayAndUpdate )
 
     // 빈 플레이어 평가 시 항등 변환 반환 검증
     AnimSample emptySample = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, emptySample._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, emptySample._normalizedTime, 1e-4f );
 
     player.play( &idleClip, true );
     SW_EXPECT_EQUAL( &idleClip, player.getCurrentClip() );
@@ -75,12 +75,12 @@ SW_TEST_CASE( AnimationTest, AnimPlayerPlayAndUpdate )
     // 0.5초 경과 후 평가
     player.update( 0.5f );
     AnimSample sampleHalf = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleHalf._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleHalf._normalizedTime, 1e-4f );
 
     // 1.0초 추가 경과 후 루프 래핑 검증 (총 1.5s -> weight = 0.5)
     player.update( 1.0f );
     AnimSample sampleWrap = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleWrap._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleWrap._normalizedTime, 1e-4f );
 }
 
 /**
@@ -99,19 +99,19 @@ SW_TEST_CASE( AnimationTest, AnimPlayerPlaybackSpeed )
     SW_EXPECT_NEAR_EQUAL( 2.0f, player.getSpeed(), 1e-4f );
     player.update( 0.5f );
     AnimSample sampleFast = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleFast._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sampleFast._normalizedTime, 1e-4f );
 
     // 일시정지 (speed = 0.0f) -> 1.0초 경과해도 시간 미변경 (weight = 0.5 유지)
     player.setSpeed( 0.0f );
     player.update( 1.0f );
     AnimSample samplePaused = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.5f, samplePaused._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, samplePaused._normalizedTime, 1e-4f );
 
     // 0.5배속 재생 (speed = 0.5f) -> 1.0초 경과 시 0.5초 진행 (총 1.5초 진행 -> weight = 0.75)
     player.setSpeed( 0.5f );
     player.update( 1.0f );
     AnimSample sampleSlow = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.75f, sampleSlow._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, sampleSlow._normalizedTime, 1e-4f );
 }
 
 /**
@@ -141,7 +141,7 @@ SW_TEST_CASE( AnimationTest, AnimPlayerCrossfade )
     player.update( 0.5f );
     SW_EXPECT_TRUE( player.isCrossfading() );
     AnimSample blendedSample = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.5f, blendedSample._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, blendedSample._normalizedTime, 1e-4f );
 
     // 페이드 완료 지점 (0.5s 추가 갱신 -> fadeElapsed = 1.0s >= fadeDuration)
     player.update( 0.5f );
@@ -151,7 +151,7 @@ SW_TEST_CASE( AnimationTest, AnimPlayerCrossfade )
 
     // 전환 완료 후 clipB 단독 재생 상태 확인 (clipB time = 1.0s -> loop wrap to 0.0s)
     AnimSample finalSample = player.evaluate();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, finalSample._weight, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, finalSample._normalizedTime, 1e-4f );
 }
 
 /**
@@ -246,6 +246,119 @@ SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 
     float4x4 pose2D = bs2D.evaluate( 1.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, pose2D._41, 1e-2f );
+}
+
+/**
+ * @brief [AnimationTest] 스케일이 섞인 행렬에서도 회전을 제대로 뽑는지 검증
+ * @details 축 길이로 나누지 않고 `createFromRotationMatrix` 를 바로 걸면 스케일이 회전에 새어 든다.
+ *          스케일 (2,1,1) + Z 90도는 그렇게 읽으면 112.6도가 된다.
+ */
+SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
+{
+    const float4x4 rotationOnly = float4x4::createRotationZ( MathUtil::HalfPi );
+    const float4x4 scaledPose   = float4x4::createScale( float3{ 2.0f, 1.0f, 1.0f } ) * rotationOnly;
+
+    const quaternion expected = DualQuaternion::fromMatrix( rotationOnly ).getRotation();
+    const quaternion actual   = DualQuaternion::fromMatrix( scaledPose ).getRotation();
+
+    SW_EXPECT_NEAR_EQUAL( expected._x, actual._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( expected._y, actual._y, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( expected._z, actual._z, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( expected._w, actual._w, 1e-3f );
+}
+
+/**
+ * @brief [AnimationTest] BlendSpace1D 가 표본 사이에서도 스케일을 유지하는지 검증
+ * @details 예전에는 표본 지점에서만 원본 포즈를 돌려주고 그 사이에서는 스케일이 1 로 주저앉아,
+ *          파라미터를 조금 옮기는 것만으로 포즈가 튀었다.
+ */
+SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
+{
+    const float4x4 poseA = float4x4::createScale( 2.0f ) * float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } );
+    const float4x4 poseB = float4x4::createScale( 2.0f ) * float4x4::createTranslation( float3{ 0.0f, 0.0f, 10.0f } );
+
+    BlendSpace1D blendSpace;
+    blendSpace.addSample( 0.0f, "A", poseA );
+    blendSpace.addSample( 1.0f, "B", poseB );
+
+    const float4x4 midPose = blendSpace.evaluate( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, midPose.getScale()._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, midPose.getScale()._z, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, midPose._43, 1e-2f );
+
+    // 표본 바로 옆이 표본과 이어져야 한다.
+    const float4x4 nearStartPose = blendSpace.evaluate( 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, nearStartPose.getScale()._x, 1e-3f );
+}
+
+/**
+ * @brief [AnimationTest] BlendSpace2D 가 33번째 이후 표본도 쓰는지 검증
+ * @details 예전에는 가중치를 `float[32]` 에 담고 표본 수를 그 길이로 min 해서, 33번째부터
+ *          아무 말 없이 버렸다. 목표 바로 옆에 둔 표본이 33번째면 결과가 통째로 달라진다.
+ */
+SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
+{
+    BlendSpace2D blendSpace;
+    for ( int32 index = 0; index < 32; ++index )
+        blendSpace.addSample( 100.0f + static_cast<float32>( index ), 100.0f, "Far", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+
+    blendSpace.addSample( 0.1f, 0.0f, "Near", float4x4::createTranslation( float3{ 0.0f, 0.0f, 100.0f } ) );
+    SW_EXPECT_EQUAL( 33u, static_cast<uint32>( blendSpace.getSampleCount() ) );
+
+    // 목표(0,0)에서 가장 가까운 표본이 결과를 지배해야 한다.
+    const float4x4 pose = blendSpace.evaluate( 0.0f, 0.0f );
+    SW_EXPECT_TRUE( pose._43 > 90.0f );
+}
+
+/**
+ * @brief [AnimationTest] Skeleton 이 아직 없는 본을 부모로 받지 않는지 검증
+ * @details `updateCharacterSpaceTransforms` 는 배열을 앞에서 뒤로 한 번만 훑는다. 부모가 뒤에
+ *          있으면 그 본을 루트로 취급해 계층이 통째로 사라지는데, 예전에는 로그조차 없었다.
+ */
+SW_TEST_CASE( AnimationTest, SkeletonRejectsParentThatDoesNotExistYet )
+{
+    Skeleton skeleton;
+
+    // 본이 하나도 없는데 부모 0 은 자기 자신을 가리키는 셈이다.
+    SW_EXPECT_EQUAL( -1, skeleton.addBone( "Hips", 0, float4x4::Identity, float4x4::Identity ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( skeleton.getBoneCount() ) );
+
+    const int32 rootIndex = skeleton.addBone( "Hips", -1, float4x4::Identity, float4x4::Identity );
+    SW_EXPECT_EQUAL( 0, rootIndex );
+
+    // 범위를 벗어난 부모도 같다.
+    SW_EXPECT_EQUAL( -1, skeleton.addBone( "Spine", 7, float4x4::Identity, float4x4::Identity ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( skeleton.getBoneCount() ) );
+}
+
+/**
+ * @brief [AnimationTest] 음수 재생 속도가 크로스페이드를 영원히 멈추지 않는지 검증
+ * @details 음수를 그대로 흘리면 `_fadeElapsed` 가 뒤로 흘러 페이드가 끝나지 않는다.
+ *          `update` 가 음수 델타를 0 으로 막는 것과 같은 자리를 setSpeed 도 막는다.
+ */
+SW_TEST_CASE( AnimationTest, AnimPlayerClampsNegativeSpeed )
+{
+    AnimClip clipA( "Walk", 2.0f );
+    AnimClip clipB( "Run", 2.0f );
+
+    AnimPlayer player;
+    player.play( &clipA, true );
+    player.crossfade( &clipB, 1.0f, true );
+
+    player.setSpeed( -1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, player.getSpeed(), 1e-4f );
+
+    // 속도 0 은 일시정지다 — 페이드도 멈춘다(뒤로 흐르지는 않는다).
+    for ( int32 step = 0; step < 4; ++step )
+        player.update( 0.5f );
+    SW_EXPECT_TRUE( player.isCrossfading() );
+
+    // 다시 정방향으로 돌리면 페이드가 정상적으로 끝난다.
+    player.setSpeed( 1.0f );
+    for ( int32 step = 0; step < 3; ++step )
+        player.update( 0.5f );
+    SW_EXPECT_FALSE( player.isCrossfading() );
+    SW_EXPECT_EQUAL( &clipB, player.getCurrentClip() );
 }
 
 /**

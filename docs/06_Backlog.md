@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-17 · 기준 커밋 `97095c4c`
+> 마지막 갱신: 2026-09-18 · 기준 커밋 `a14ab1df`
 
 ---
 
@@ -126,6 +126,39 @@ cd build/Ninja-Debug/Bin
 ---
 
 ## 1. 남은 일 (우선순위 순)
+
+### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
+
+`Source/Core` 를 폴더 단위로 훑은 것(2026-09-17, `Common` → `Uuid`, 17커밋)과 **같은 방식으로**
+`Source/Engine` 을 훑는다. 폴더 하나 = 커밋 하나, 알파벳 순. 각 커밋은 (1) 찾은 동작 결함,
+(2) 그 결함을 잡는 회귀 테스트 + 변이 테스트, (3) 한글 `@brief` 채우기, (4) 헤더 자립성,
+(5) 이 문서의 3절 기록을 함께 담는다. 결함이 없으면 **훑은 것과 그 근거만 남긴다**(`Core/Uuid` 처럼).
+
+| 폴더 | 줄 수 | 상태 |
+|------|------:|------|
+| `Animation` | 1,153 | ✅ 2026-09-18 (3절 참고) |
+| `Audio` | 935 | ← 다음 |
+| `Common` | 274 | |
+| `Compression` | 370 | |
+| `Config` | 480 | |
+| `Dialogue` | 375 | 헤더 자립 실패 1건이 걸려 있다(3절) |
+| `Graphics` | 42,770 | 가장 크다. 2026-09-13 에 구조 작업을 한 번 했다. 자립 실패 3건(3절) |
+| `Input` | 9,056 | |
+| `Localization` | 1,184 | |
+| `Module` | 318 | |
+| `Object` | 8,428 | |
+| `Physics` | 1,016 | |
+| `Reflection` | 3,081 | |
+| `Resource` | 3,604 | |
+| `Scene` | 1,438 | |
+| `Sequencer` | 546 | |
+| `Serialization` | 7,120 | |
+| `Spatial` | 1,541 | |
+| `Utility` | 3,077 | |
+| `Window` | 2,124 | |
+
+**Core 와 다른 점 하나.** Engine 은 생성 헤더가 전 TU 에 `/FI` 로 들어가므로 **헤더 자립성 검사를
+그냥 돌리면 거짓 통과가 나온다.** 3절의 "Engine 헤더 자립성 검사가 무의미했다" 항목을 먼저 읽을 것.
 
 ### 1-0. 검토는 했고 결정이 남은 것 (2026-09-12, 백엔드 교체 작업 중 나온 질문)
 
@@ -327,6 +360,95 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (스케일이 있는 포즈는 회전까지 틀렸고, 33번째 표본부터는 아예 없는 셈이었다 — Engine/Animation)
+
+**Core 폴더 훑기(2026-09-17, Common → Uuid)가 끝나 Engine 으로 넘어왔다.** 같은 방식·같은
+알파벳 순서다. 첫 폴더가 `Animation` (1,153줄 · 14파일).
+
+**1) `DualQuaternion::fromMatrix` 가 스케일이 섞인 행렬에서 회전을 틀리게 뽑았다.**
+`quaternion::createFromRotationMatrix` 는 **정규직교 회전 행렬**을 전제한다 — 축 길이로 나누지
+않고 그대로 걸면 스케일이 회전에 새어 든다. 스케일 `(2,1,1)` 과 Z축 90° 가 섞인 포즈를 넣으면
+쿼터니언이 `(0,0,1.06066,0.70711)` 로 나오고, DLB 가 정규화한 뒤에는 `(0,0,0.83205,0.5547)`,
+즉 **112.6°** 다 (22.6° 틀렸다). `Core` 에 이미 축 길이로 나눈 뒤 뽑는 `float4x4::decompose` 가
+있었는데 그 절반을 여기서 다시, 틀리게 적고 있었다. `decompose` 를 쓰게 했다.
+
+**2) 그리고 듀얼 쿼터니언은 스케일을 담지 못한다 — 아무 데도 그렇게 적혀 있지 않았다.**
+그래서 `BlendSpace1D::evaluate` 는 **표본 지점에서는 원본 포즈를 그대로 돌려주고**(스케일 포함)
+그 사이에서만 DQ 경로를 타서 스케일이 1 로 주저앉았다. 파라미터를 0 에서 0.001 로 옮기는 것만으로
+포즈가 튀었다는 뜻이다. 포즈를 (스케일, 강체 변환) 으로 가르고 — 스케일은 선형 보간, 나머지는
+DLB — 다시 곱하도록 고쳤다(`BlendSpaceInternal::splitPose` / `makePose`). 1D 는 두 이웃의 선형
+보간, 2D 는 IDW 가중치의 선형 결합이다. 헤더와 폴더 README 에 "DQ 는 스케일을 담지 못한다" 를
+적었다.
+
+**3) `BlendSpace2D` 는 33번째 표본부터 한 마디 없이 버렸다.** 가중치를 `float[constant::kMaxBuffer32]`
+에 담고 표본 수를 `MathUtil::min( size, 32 )` 로 눌렀다. 목표 바로 옆에 둔 표본이 33번째면 결과가
+통째로 달라진다. 거리 제곱을 두 번 구하는 값으로 그 고정 버퍼를 없앴다 — 이제 상한이 없다.
+(README 의 8방향 모션은 32 안에 들어가지만, 상한이 있다는 사실 자체가 어디에도 없었다.)
+
+**4) `Skeleton::addBone` 이 아직 없는 본을 부모로 받아들였다.** `updateCharacterSpaceTransforms` 는
+배열을 앞에서 뒤로 **한 번만** 훑으므로 부모는 자식보다 앞에 있어야 한다. 그렇지 않으면
+`if ( parentIndex < index )` 에 걸려 **그 본을 루트로 취급하고 계층을 통째로 잃는다** — 로그도
+없이. 들어오는 자리에서 막고(`-1` 반환 + `SW_LOG_ERROR`), 훑는 쪽에는 `SW_ASSERT` 를 뒀다.
+지금은 테스트만 `Skeleton` 을 쓰지만, 메시 임포터가 붙는 순간 터질 자리였다.
+
+**5) `AnimationGraphPlayer` 가 서로 다른 말을 하고 있었다.** 클립이 등록되지 않은 노드로 넘어가면
+`_currentNodeName` 만 새 노드로 바꾸고 플레이어는 그대로 뒀다 — `getCurrentNodeName()` 은 "Attack"
+인데 `evaluate()` 는 여전히 "Idle" 의 포즈를 돌려줬다. 클립이 없는 노드는 길이 0 으로 보고 재생을
+비운다.
+
+**6) `AnimationGraphAsset::loadFromFile` 이 같은 JSON 을 두 번 파싱했다.** 파일을 읽어 파싱한
+`JsonDocument` 를 **문자열로 다시 덤프해서** `parseJson` 에 넘기고, 거기서 또 파싱했다. 문서 길이
+만큼의 문자열 하나가 덤이었다. 루트를 받는 `parseRoot` 를 갈라 둘 다 그것을 부른다. 쓰지 않는
+`Engine/Resource/ResourceUtil.h` include 도 지웠다.
+
+**7) 잔가지.** `AnimSample::_weight` 는 **가중치가 아니라 정규화 시간**이었다(헤더가 그렇게 적어
+두고도 이름은 weight 였고, 테스트 주석은 "가중치" 라고 읽고 있었다) → `_normalizedTime`.
+`AnimClip::setName( const string& )` 은 `std::move( name )` 을 const 참조에 걸어 아무 일도 하지
+않는 이동이었다 → `string_view`. `AnimPlayer::setSpeed` 는 음수를 그대로 받아 `_fadeElapsed` 가
+뒤로 흘러 **크로스페이드가 영원히 끝나지 않았다** → `update` 가 음수 델타를 막는 것과 같이 0 으로
+막는다. `AnimClip.cpp` 가 `MathUtil` 을 include 없이 쓰고 있었다.
+
+**8) `AnimationGraphAsset.h` 는 혼자 서지 못했다** — `float2` 를 쓰면서 `VectorMath.h` 를 include
+하지 않았다. **그런데 빌드는 통과한다.** 아래 항목 참고.
+
+**회귀 테스트 10건** (`AnimationTest` 8 → 13, 새 스위트 `AnimationGraphTest` 5건 —
+`Test/EngineTest/TestAnimationGraph.cpp`. 그래프 애셋·플레이어는 그때까지 테스트가 하나도 없었고
+에디터 `AnimationGraphPanel` 이 쓰고 있었다). 변이 테스트로 전부 확인했다 — 고친 것을 되돌리면
+해당 케이스만 정확히 깨진다(A조 4건 · B조 2건).
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `Animation*` 18건 · 헤더 7개 자립(생성 force-include 를 뺀 상태로).
+
+### 2026-09-18 (Engine 헤더 자립성 검사가 무의미했다 — 생성 force-include 가 Graphics 헤더 넷을 전 TU 에 밀어 넣는다)
+
+Animation 을 훑다 나온 것이라 여기 적어 둔다. **아직 고치지 않았다.**
+
+`cmake/Engine/ReflectionCodeGen.cmake` 가 만드는 `build/<preset>/generated/Engine/FlagOps.gen.h` 는
+Engine 의 **모든 TU 에 `/FI` 로 강제 include** 된다. 그 파일은 플래그 열거형의 `operator|` 를
+공급하려고 `Engine/Graphics/Material/MaterialTypes.h` · `RHITypes.h` · `ShaderCompiler.h` ·
+`ResourcePackTypes.h` 를 끌어온다 — 그래서 **Engine 헤더가 include 를 빠뜨려도 빌드가 통과한다.**
+게다가 그 네 개는 "플래그 연산자를 가진 타입이 어디 있느냐" 에 따라 바뀌므로, **오늘 서는 헤더가
+내 코드를 한 줄도 안 고쳐도 내일 못 설 수 있다.**
+
+`/FI ...FlagOps.gen.h` 를 뺀 채 Engine 헤더 229개를 단독 컴파일해 봤다 (`-fsyntax-only`, 컴파일
+DB 의 실제 플래그). **24개가 실패한다.** 그중 19개는 `RHIBufferUsage` 등의 `operator|` 가 없어서
+나는 것이라 **설계대로**다(그것이 force-include 의 목적이다). 나머지 **5개가 진짜 누락**이다:
+
+| 헤더 | 빠진 것 |
+|------|---------|
+| `Engine/Animation/AnimationGraphAsset.h` | `float2` (← `Core/Math/VectorMath.h`) — **이번에 고쳤다** |
+| `Engine/Dialogue/DialogueGraphAsset.h` | `float2` |
+| `Engine/Graphics/Material/MaterialCache.h` | `unique_ptr` |
+| `Engine/Graphics/Texture/TextureCache.h` | `unique_ptr` |
+| `Engine/Graphics/RHI/Support/RHIReleaseQueue.h` | `constant::kGpuReleaseFrameLatency` |
+
+**남은 4개는 각 폴더 차례에 같이 고친다** (Dialogue · Graphics). 폴더 훑기가 끝나면 이 검사를
+게이트로 만들지 결정한다 — 게이트로 만들려면 "force-include 가 정당하게 공급하는 것" 과 "그냥
+빠뜨린 것" 을 기계가 갈라야 하고, 그 경계는 `FlagOps.gen.h` 가 어떤 타입을 담느냐에 따라 움직인다.
+검사 스크립트는 한 번 쓰고 버렸다(세션 scratchpad). 다시 필요하면 컴파일 DB 에서 TU 하나의
+플래그를 빌려 `/Yu` `/Fp` `/Fo` `/Fd` 와 `/FI` 두 개를 빼고, 헤더 하나만 include 한 `.cpp` 를
+`-fsyntax-only` 로 물으면 된다.
 
 ### 2026-09-17 (Core/Uuid — 결함 없음. 훑은 것과 그 근거만 남긴다)
 

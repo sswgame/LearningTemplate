@@ -13,8 +13,8 @@ namespace sw
     /** @brief 지정 시각에 클립을 샘플한 결과입니다. */
     struct AnimSample
     {
-        float32  _weight{ 0.0f };
-        float4x4 _transform{};
+        float32  _normalizedTime{ 0.0f }; /**< 클립 길이로 나눈 재생 위치 [0,1] 입니다. 혼합 가중치가 아닙니다. */
+        float4x4 _transform{};            /**< 샘플한 변환입니다. 스텁 구현에서는 항상 항등입니다. */
     };
 
     /**
@@ -35,18 +35,18 @@ namespace sw
         float32 getDuration() const { return _durationSeconds; }
 
         /** @brief 클립 이름을 설정합니다. */
-        void setName( const string& name ) { _name = std::move( name ); }
+        void setName( string_view name ) { _name = name; }
         /** @brief 클립 길이(초)를 설정합니다. */
         void setDuration( float32 durationSeconds );
 
         /**
          * @brief @p timeSeconds에서 클립을 샘플합니다 (루프면 래핑).
-         * @details 스텁: weight = [0,1] 정규화 시간, transform = 항등.
+         * @details 스텁: `_normalizedTime` = [0,1] 정규화 시간, `_transform` = 항등.
          */
         AnimSample sample( float32 timeSeconds, bool bLooping = true ) const;
 
     private:
-        string  _name;
-        float32 _durationSeconds;
+        string  _name;            /**< 클립 이름입니다. */
+        float32 _durationSeconds; /**< 클립 길이(초)입니다. 항상 0 보다 큽니다. */
     };
 } // namespace sw

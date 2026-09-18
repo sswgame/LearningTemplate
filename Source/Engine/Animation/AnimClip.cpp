@@ -2,6 +2,8 @@
 
 #include "Engine/Animation/AnimClip.h"
 
+#include "Core/Math/MathUtil.h"
+
 namespace sw
 {
     AnimClip::AnimClip()
@@ -37,7 +39,7 @@ namespace sw
             t = MathUtil::clamp( t, 0.0f, duration );
         }
 
-        result._weight = t / duration;
+        result._normalizedTime = t / duration;
         return result;
     }
 } // namespace sw

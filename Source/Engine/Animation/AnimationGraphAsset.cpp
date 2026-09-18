@@ -4,7 +4,6 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
@@ -19,7 +18,10 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        return parseJson( doc.dump( -1 ) );
+        // 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다 — 같은 JSON 을 두 번
+        // 파싱하고 그 사이에 문서 전체 길이의 문자열을 한 번 더 만들던 자리다.
+        parseRoot( doc.root() );
+        return true;
     }
 
     bool AnimationGraphAsset::saveToFile( string_view path ) const
@@ -41,7 +43,12 @@ namespace sw
         if ( doc.parse( jsonView ) == false )
             return false;
 
-        const JsonValue root     = doc.root();
+        parseRoot( doc.root() );
+        return true;
+    }
+
+    void AnimationGraphAsset::parseRoot( const JsonValue& root )
+    {
         const JsonValue nodesVal = root.get( "nodes" );
         if ( nodesVal.isArray() )
         {
@@ -80,7 +87,6 @@ namespace sw
                     _listLink.push_back( link );
             }
         }
-        return true;
     }
 
     string AnimationGraphAsset::toJson() const

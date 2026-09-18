@@ -43,6 +43,19 @@ $$\hat{q} = q_r + \epsilon q_d \quad (\epsilon^2 = 0)$$
 두 개 이상의 모션 포즈를 합성할 때, 듀얼 쿼터니언을 선형 결합한 후 정규화(Normalize)하기만 하면 **부피 손실이나 관절 왜곡 없이 완벽한 최단 경로 스크류 회전(Screw Motion)**으로 부드럽게 보간됩니다:
 $$\hat{q}_{\text{blend}} = \text{Normalize}\left( (1 - t)\hat{q}_A + t\hat{q}_B \right)$$
 
+### 2.4 듀얼 쿼터니언이 담지 못하는 것 — 스케일
+
+$\hat{q}$ 는 **회전과 이동만** 담는다. 그래서 `DualQuaternion::fromMatrix` 는 행렬의 스케일을 떼어 버리고,
+`toMatrix4x4()` 는 스케일이 1 인 행렬을 돌려준다. 여기서 두 가지가 따라온다.
+
+- **회전을 뽑기 전에 축 길이로 나눠야 한다.** 스케일이 섞인 행렬에 `createFromRotationMatrix` 를
+  그대로 걸면 스케일이 회전에 새어 든다 — 스케일 $(2,1,1)$ 과 Z축 90° 가 섞인 포즈는 112.6° 로 읽힌다.
+  `fromMatrix` 는 `float4x4::decompose` 를 거치므로 이 함정을 지난다.
+- **포즈를 섞을 때는 스케일을 따로 보간한다.** `BlendSpace` 는 포즈를 (스케일, 강체 변환) 으로 가른
+  뒤 스케일은 선형 보간, 나머지는 DLB 로 섞고 다시 곱한다. 가르지 않으면 표본 지점에서는 원본
+  포즈가 그대로 나오는데 그 사이에서만 스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로
+  포즈가 튄다.
+
 ---
 
 ## 3. 파라메트릭 모션 블렌딩 (`BlendSpace1D`, `BlendSpace2D`)
@@ -62,6 +75,8 @@ Speed:  0.0 m/s           5.0 m/s           10.0 m/s
 방향(`direction`, -180°~180°)과 속도(`speed`, 0~10) 2개의 파라미터를 입력받아 **역거리 가중치(Inverse Distance Weighting, IDW)** 방식으로 8방향 모션(Walk_Forward, Walk_Backward, Strafe_Left, Strafe_Right 등)을 실시간으로 자연스럽게 합성합니다.
 
 $$\text{Weight}_i = \frac{1}{\text{dist}(\mathbf{p}, \mathbf{p}_i)^2}, \quad \text{NormalizedWeight}_i = \frac{\text{Weight}_i}{\sum \text{Weight}}$$
+
+표본 개수에 상한은 없다. (예전에는 가중치를 `float[32]` 에 담아 33번째 표본부터 조용히 버렸다.)
 
 ---
 
