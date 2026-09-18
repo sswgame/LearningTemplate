@@ -18,7 +18,7 @@
 | **`SmokeTest`** | 런타임 모듈 통합 스모크 테스트 | 게임 DLL 핫 리로드(`LiveReloadManager`)나 RHI 모듈 동적 로드 등 시스템 전체가 런타임에 제대로 맞물려 돌아가는지를 검증합니다. |
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |
 | **`EditorUiTest`** | ImGui 컨텍스트가 필요한 에디터 테스트 | `EditorTest` 는 **일부러 ImGui 를 링크하지 않는다** — 그 경계를 지키면서 컨텍스트만 있으면 도는 것(플랫폼 백엔드의 부분 초기화 수습 등)을 여기 담습니다. GPU·창이 필요한 것은 넣지 않습니다. |
-| **`AppTest`** | App(런처) 로직 유닛 테스트 | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 창·RHI 없이 혼자 도는 정책만 검증합니다(프레임 시간 정책 등). 모듈 로딩·핫리로드는 `SmokeTest` 의 몫입니다. |
+| **`AppTest`** | App(런처) 로직 + **실기동 스모크** | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 혼자 도는 정책을 검증합니다(`FrameTimeline`, `nogpu`). 여기에 더해 `AppSmokeTest` 가 **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄워** 종료 코드와 `[Error]` 를 봅니다(`hostgpu`) — `EngineLoop` 을 돌리는 유일한 자동 그물입니다. |
 | **`TestFramework`** | 테스트 공통 프레임워크 | 테스트 등록/실행을 조정하고, `TestContext`(결과 수집)와 `TestFilter`(CLI/glob 선택)를 재사용 가능한 구성요소로 제공합니다. |
 
 
@@ -77,17 +77,18 @@ ctest --preset Ninja-Debug-lint
 | 실행 파일 | Debug · Release | Shipping |
 | --- | ---: | ---: |
 | CoreTest | 209 | 209 |
-| EngineTest | 525 | 521 |
+| EngineTest | 529 | 525 |
 | ReflectionTest | 103 | 103 |
 | **SmokeTest** | **19** | **1** |
 | EditorTest | 63 | 63 |
 | EditorUiTest | 2 | 2 |
-| AppTest | 4 | 4 |
+| **AppTest** | **6** | **5** |
 
 SmokeTest 가 19 → 1 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
 Shipping 스모크는 정적 `fillGameAPI` 경로 하나만 본다(`Test/SmokeTest/CMakeLists.txt` 참고).
 스킵도 구성을 탄다 — Release·Shipping 의 CoreTest 는 8개가 스킵되고(`SW_LOG_*` 가 컴파일에서 빠진다),
 Shipping 의 EngineTest 는 3개, ReflectionTest 는 5개가 스킵된다(Dev 전용 경로와 배포본에 없는 메타데이터).
+AppTest 가 6 → 5 인 것도 같은 이유다 — 에디터 실기동 케이스는 배포본에 에디터가 없어 아예 컴파일되지 않는다.
 
 **의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**
 필터로 고른 스위트의 케이스가 **전부 스킵되면** 그 실행은 아무것도 검증하지 않은 것이므로 프레임워크가

@@ -50,9 +50,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
-_kNoGpuFilterFile = "Test/EngineTest/CMakeLists.txt"
-_kNoGpuTestName = "EngineTest_NoGPU"
-_kHostOnlyTestName = "EngineTest_HostOnly"
+# NoGPU/HostOnly 짝은 **타깃마다** 있을 수 있다 - 이름을 적지 않고 `Test/*/CMakeLists.txt` 에서 찾는다.
+# 예전에는 EngineTest 하나만 보고 있었고, 그래서 다른 타깃이 같은 갈라짐을 만들면 검사 밖이었다
+# (AppTest 가 실기동 스모크를 hostgpu 로 가르면서 실제로 그렇게 됐다).
+_kNoGpuSuffix = "_NoGPU"
+_kHostOnlySuffix = "_HostOnly"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
 
 # 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 실제로 있었고,
@@ -96,43 +98,51 @@ def collectMarkers(rootDir: Path) -> dict[str, tuple[str, str]]:
     return out
 
 
-def readNoGpuFilter(rootDir: Path) -> tuple[set[str], str | None]:
-    """`EngineTest_NoGPU` 가 제외하는 스위트 집합."""
-    path = rootDir / _kNoGpuFilterFile
-    if path.exists() is False:
-        return set(), f"{_kNoGpuFilterFile}: 파일이 없습니다"
-    text = path.read_text(encoding="utf-8", errors="ignore")
-    if _kNoGpuTestName not in text:
-        return set(), f"{_kNoGpuFilterFile}: `{_kNoGpuTestName}` 등록을 찾지 못했습니다"
-    match = _kFilterRe.search(text)
-    if match is None:
-        return set(), f"{_kNoGpuFilterFile}: `--test_filter=` 를 찾지 못했습니다"
-    excluded: set[str] = set()
-    for token in match.group(1).split(","):
-        token = token.strip()
-        if token.startswith("-") and token.endswith(".*"):
-            excluded.add(token[1:-2])
-    return excluded, None
+def collectSplitFilters(rootDir: Path) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    """
+    (NoGPU 가 빼는 스위트 -> 적힌 파일, HostOnly 가 고르는 스위트 -> 적힌 파일, 오류들).
 
+    타깃 이름을 적지 않는다 - `Test/*/CMakeLists.txt` 에서 `<타깃>_NoGPU` · `<타깃>_HostOnly` 등록을
+    찾는다. 한쪽만 있는 타깃은 그 자체가 오류다(빼기만 하면 그 스위트는 아무 데서도 안 돌고,
+    고르기만 하면 CI 에서도 돈다).
+    """
+    excluded: dict[str, str] = {}
+    hostOnly: dict[str, str] = {}
+    errors: list[str] = []
+    listCMake = sorted((rootDir / _kTestRoot).glob("*/CMakeLists.txt"))
+    if not listCMake:
+        return excluded, hostOnly, [f"{_kTestRoot}: 테스트 CMakeLists 를 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)"]
 
-def readHostOnlyFilter(rootDir: Path) -> tuple[set[str], str | None]:
-    """`EngineTest_HostOnly` 가 **고르는** 스위트 집합 (NoGPU 가 빼는 것과 같아야 한다)."""
-    path = rootDir / _kNoGpuFilterFile
-    if path.exists() is False:
-        return set(), f"{_kNoGpuFilterFile}: 파일이 없습니다"
-    text = path.read_text(encoding="utf-8", errors="ignore")
-    if _kHostOnlyTestName not in text:
-        return set(), (f"{_kNoGpuFilterFile}: `{_kHostOnlyTestName}` 등록을 찾지 못했습니다 — "
-                       f"CI 가 못 도는 집합을 이름으로 돌 수 있어야 합니다")
-    included: set[str] = set()
-    for name, rawFilter in _kNamedTestRe.findall(" ".join(text.split())):
-        if name != _kHostOnlyTestName:
-            continue
-        for token in rawFilter.split(","):
-            token = token.strip()
-            if token.endswith(".*") and token.startswith("-") is False:
-                included.add(token[:-2])
-    return included, None
+    for path in listCMake:
+        relPath = path.relative_to(rootDir).as_posix()
+        text = " ".join(path.read_text(encoding="utf-8", errors="ignore").split())
+
+        setNoGpuTarget: set[str] = set()
+        setHostOnlyTarget: set[str] = set()
+        for name, rawFilter in _kNamedTestRe.findall(text):
+            if name.endswith(_kNoGpuSuffix):
+                setNoGpuTarget.add(name[: -len(_kNoGpuSuffix)])
+                for token in rawFilter.split(","):
+                    token = token.strip()
+                    if token.startswith("-") and token.endswith(".*"):
+                        excluded[token[1:-2]] = relPath
+            elif name.endswith(_kHostOnlySuffix):
+                setHostOnlyTarget.add(name[: -len(_kHostOnlySuffix)])
+                for token in rawFilter.split(","):
+                    token = token.strip()
+                    if token.endswith(".*") and token.startswith("-") is False:
+                        hostOnly[token[:-2]] = relPath
+
+        for target in sorted(setNoGpuTarget - setHostOnlyTarget):
+            errors.append(f"{relPath}: `{target}{_kNoGpuSuffix}` 는 있는데 `{target}{_kHostOnlySuffix}` 가 없습니다 - "
+                          f"빼기만 하면 그 스위트는 **아무 데서도 안 돕니다**")
+        for target in sorted(setHostOnlyTarget - setNoGpuTarget):
+            errors.append(f"{relPath}: `{target}{_kHostOnlySuffix}` 는 있는데 `{target}{_kNoGpuSuffix}` 가 없습니다 - "
+                          f"고르기만 하면 그 스위트가 **CI 에서도 돕니다**")
+
+    if not excluded and not hostOnly:
+        errors.append(f"{_kTestRoot}: `_NoGPU`/`_HostOnly` 등록을 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)")
+    return excluded, hostOnly, errors
 
 
 def checkEditorTestSources(rootDir: Path) -> list[str]:
@@ -196,10 +206,9 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
 
     # 3) 마커 <-> 필터 양방향
     markers = collectMarkers(rootDir)
-    excluded, filterError = readNoGpuFilter(rootDir)
-    if filterError is not None:
-        errors.append(filterError)
-    else:
+    excluded, hostOnly, filterErrors = collectSplitFilters(rootDir)
+    errors += filterErrors
+    if excluded or hostOnly:
         for suite, (relPath, reason) in sorted(markers.items()):
             if suite not in homes:
                 errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그런 스위트가 없습니다")
@@ -210,26 +219,22 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             if not reason:
                 errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` 에 이유가 없습니다")
             if suite not in excluded:
-                errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 적혀 있는데 "
-                              f"`{_kNoGpuTestName}` 필터에 없습니다 — **CI 가 이것을 돌리고 있습니다**")
-        for suite in sorted(excluded - set(markers)):
+                errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 적혀 있는데 어느 "
+                              f"`*{_kNoGpuSuffix}` 필터도 빼지 않습니다 — **CI 가 이것을 돌리고 있습니다**")
+        for suite in sorted(set(excluded) - set(markers)):
             where = f" ({' · '.join(sorted(homes[suite]))})" if suite in homes else " (그런 스위트가 없습니다)"
-            errors.append(f"{_kNoGpuFilterFile}: 필터가 `{suite}` 를 빼는데 그 스위트에 "
+            errors.append(f"{excluded[suite]}: 필터가 `{suite}` 를 빼는데 그 스위트에 "
                           f"`SW_TEST_REQUIRES_HOST` 마커가 없습니다{where} — 마커를 달거나 필터에서 지우세요")
 
         # 3-b) HostOnly 필터 — NoGPU 가 빼는 집합과 **글자 그대로 같아야** 한다.
         # 빼는 목록과 고르는 목록은 형태가 달라 한 문자열로 못 쓴다. 대신 갈라지면 여기서 선다 —
         # 갈라진 채로 두면 "CI 가 안 도는 것을 돌려 보는" 명령이 조용히 일부를 빠뜨린다.
-        hostOnly, hostOnlyError = readHostOnlyFilter(rootDir)
-        if hostOnlyError is not None:
-            errors.append(hostOnlyError)
-        else:
-            for suite in sorted(excluded - hostOnly):
-                errors.append(f"{_kNoGpuFilterFile}: `{suite}` 는 `{_kNoGpuTestName}` 이 빼는데 "
-                              f"`{_kHostOnlyTestName}` 이 고르지 않습니다 — 그 스위트는 **아무 데서도 안 돕니다**")
-            for suite in sorted(hostOnly - excluded):
-                errors.append(f"{_kNoGpuFilterFile}: `{suite}` 는 `{_kHostOnlyTestName}` 이 고르는데 "
-                              f"`{_kNoGpuTestName}` 이 빼지 않습니다 — 두 번 돕니다 (CI 에서도 돕니다)")
+        for suite in sorted(set(excluded) - set(hostOnly)):
+            errors.append(f"{excluded[suite]}: `{suite}` 는 `*{_kNoGpuSuffix}` 가 빼는데 "
+                          f"`*{_kHostOnlySuffix}` 가 고르지 않습니다 — 그 스위트는 **아무 데서도 안 돕니다**")
+        for suite in sorted(set(hostOnly) - set(excluded)):
+            errors.append(f"{hostOnly[suite]}: `{suite}` 는 `*{_kHostOnlySuffix}` 가 고르는데 "
+                          f"`*{_kNoGpuSuffix}` 가 빼지 않습니다 — 두 번 돕니다 (CI 에서도 돕니다)")
 
     # 4) 마커가 붙은 스위트는 자기 파일을 독차지한다
     suitesByFile: dict[str, set[str]] = defaultdict(set)

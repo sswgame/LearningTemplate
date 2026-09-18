@@ -91,7 +91,13 @@ ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
 ctest --test-dir build/Ninja-Debug -L nogpu
 ctest --test-dir build/Ninja-Shipping -L nogpu
 
-# 에디터 실기동 — 패널 변경의 유일한 실질 검증 수단
+# 실기동 게이트 — **2026-09-19 부터 자동이다** (`AppSmokeTest`, 라벨 hostgpu)
+#   네 백엔드 + 에디터(dx12·gl)를 띄워 종료 코드 0 · 로그 [Error] 0건을 본다. 6초.
+#   GPU·창이 필요해 CI 는 못 돈다 — **GPU 있는 PC 에서 일을 끝내기 전에 이것을 돌린다.**
+ctest --test-dir build/Ninja-Debug -L hostgpu --output-on-failure
+ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
+
+# 손으로 볼 때(무엇이 깨졌는지 눈으로 봐야 할 때)는 그대로 쓴다
 cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=40 -dx12 -EnableEditor    # 종료 코드 0, 로그에 [Error] 0건
 ./App.exe -gv_profileFrames=40 -dx11 -EnableEditor
@@ -438,6 +444,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (실기동 게이트를 자동화했다 — 엔진 기동이 처음으로 그물 안에 들어왔다)
+
+이 저장소의 실질적인 최종 검증은 **App 을 띄워 보는 것**이었는데(0절: 네 백엔드 × 에디터 유무,
+종료 코드 0, 로그 `[Error]` 0건), 그 절차가 문서에만 있어서 사람이 기억해야 돌았다. 그리고
+`EngineLoop` 은 어떤 단위 테스트도 돌리지 않는다 — **기동 전체가 자동 그물 밖**이었다. 그 절차를
+그대로 테스트로 옮겼다: `Test/AppTest/TestAppSmoke.cpp` 의 `AppSmokeTest`(라벨 `hostgpu`).
+
+```powershell
+ctest --test-dir build/Ninja-Debug -L hostgpu --output-on-failure   # 6초
+```
+
+**무엇을 보는가.** 종료 코드 0 · 로그에 `[Error]` 0건(그 줄을 실패 메시지에 그대로 싣는다) ·
+Dev 에서는 출력이 한 줄이라도 있는가. 화면의 그림은 안 본다 — 그건 `-gv_screenshot` 픽셀 비교의
+일이고, 섞으면 느려져 아무도 안 돌린다.
+
+**타깃을 가르는 방법은 EngineTest 와 같다.** `AppTest`(전체) · `AppTest_NoGPU`(스모크 제외, CI) ·
+`AppTest_HostOnly`(스모크만). 그러면서 `CheckTestSuites.py` 를 **일반화했다** — 예전에는
+`Test/EngineTest/CMakeLists.txt` 한 파일만 보고 `EngineTest_NoGPU`/`_HostOnly` 를 대조했다. 이제
+`Test/*/CMakeLists.txt` 에서 `<타깃>_NoGPU`·`<타깃>_HostOnly` 짝을 찾아 **마커 ↔ 두 필터**를 같은
+방식으로 대조하고, 한쪽만 있는 타깃도 잡는다(빼기만 하면 아무 데서도 안 돌고, 고르기만 하면
+CI 에서도 돈다).
+
+**변이로 확인했다.** `App::initialize` 에 에러 한 줄을 심으면 그 줄이 실패 메시지로 나온다.
+그 과정에서 두 가지를 알게 돼 테스트와 주석에 적었다:
+1. **로거가 서기 전의 실패는 이 게이트가 못 본다.** `Logger` 는 `EngineLoop::initialize` 안에서
+   만들어지므로 그 앞의 `SW_LOG_ERROR` 는 아무 데도 남지 않는다(첫 변이가 통과해서 알았다).
+   그 구간은 **종료 코드로만** 드러난다.
+2. **배포본은 백엔드를 하나만 링크한다**(`SW_SHIPPING_RHI_BACKEND`, 윈도우 기본 DX12). 그래서
+   배포본 스모크는 스위치 없이 돌린다 — `-dx11` 을 주면 `RHIBackendRegistry` 가 거절한다.
+   배포본은 Info 로그도 컴파일에서 빠져 **깨끗한 실행이 곧 출력 0줄**이라, "출력이 있는가" 단언도
+   Dev 에만 둔다.
+
+**이것이 다음 작업의 전제다.** `EngineLoop` 의 서브시스템 수명을 등록표로 바꾸는 일(1-0e)은
+그물이 없어 미뤄 뒀던 것인데, 이제 그 그물이 생겼다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `-L nogpu` 양쪽 7/7 · `-L hostgpu` 양쪽 2/2 · 린트 17/17.
 
 ### 2026-09-19 (에셋 종류를 늘리는 자리를 만들었다 — 그리고 종료가 잊고 있던 캐시 하나)
 
