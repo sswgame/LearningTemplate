@@ -100,9 +100,17 @@ namespace sw
 
         size_t getOffset() const { return _offset; }
 
+        /**
+         * @brief @p count 바이트를 건너뜁니다. 남은 것보다 많으면 위치를 그대로 두고 false.
+         * @details 뺄셈으로 비교한다 — `_offset + count > _size` 는 스트림에서 읽은 큰 수에서
+         *          **덧셈이 넘쳐 작은 값이 되어 검사를 통과한다.** 이 클래스의 다른 검사들은
+         *          길이가 `uint32` 라 넘칠 수 없지만, 이 함수만 `size_t` 를 받고 호출부가
+         *          파일에서 읽은 `uint64` 페이로드 크기를 그대로 넘긴다. `_offset <= _size` 는
+         *          항상 참이므로(위치는 검사를 통과한 뒤에만 나아간다) 뺄셈은 안전하다.
+         */
         bool skip( size_t count )
         {
-            if ( _offset + count > _size )
+            if ( count > _size - _offset )
                 return false;
             _offset += count;
             return true;

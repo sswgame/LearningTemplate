@@ -1090,6 +1090,99 @@ SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveDenseBitmask )
 }
 
 /**
+ * @brief [ArchiveTest] 경계 검사가 덧셈 넘침으로 뚫리지 않는다
+ * @details 남은 바이트 검사를 `offset + count > size` 로 쓰면, 스트림에서 읽은 큰 `count` 에서
+ *          **덧셈이 넘쳐 작은 값이 되어 검사를 통과한다.** 길이가 `uint32` 인 경로들은 넘칠 수
+ *          없지만, `uint64`/`size_t` 를 받는 셋(`Archive::readBytes` · `Archive::readSubArchive` ·
+ *          `BinaryStreamReader::skip`)은 호출부가 파일에서 읽은 수를 그대로 넘긴다.
+ *          `count > size - offset` 으로 비교하면 넘침 자체가 없다.
+ */
+SW_TEST_CASE( ArchiveTest, BoundsChecksSurviveSizeOverflow )
+{
+    const uint8 arrPayload[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+    // **위치가 0 이 아니어야 넘친다.** `offset + count` 는 `count` 가 `2^64 - offset` 이상일 때
+    // 되감기므로, 위치를 먼저 옮겨 두고 그 자리에서 되감기는 크기를 준다. 위치 0 에서는
+    // 어떤 `uint64` 로도 넘길 수 없어서 예전 검사도 우연히 버틴다 — 그래서 이 설정이 핵심이다.
+    constexpr uint64 kWrapsAtOffsetFour = 0xFFFFFFFFFFFFFFFCull; // 4 를 더하면 0 으로 되감긴다
+
+    {
+        sw::Archive arch( arrPayload, sizeof( arrPayload ) );
+        uint32      consumed{ 0 };
+        arch >> consumed; // 위치를 4 로 옮긴다
+        SW_ASSERT_TRUE( arch.isOk() );
+        SW_ASSERT_EQUAL( uint64( 4 ), arch.getOffset() );
+
+        uint8 scratch[8]{};
+        SW_EXPECT_FALSE( arch.readBytes( scratch, kWrapsAtOffsetFour ) );
+        SW_EXPECT_TRUE( arch.isError() );
+    }
+
+    {
+        sw::Archive arch( arrPayload, sizeof( arrPayload ) );
+        uint32      consumed{ 0 };
+        arch >> consumed;
+        SW_ASSERT_EQUAL( uint64( 4 ), arch.getOffset() );
+
+        SW_EXPECT_FALSE( arch.hasBytesAvailable( kWrapsAtOffsetFour ) );
+        sw::Archive sub = arch.readSubArchive( kWrapsAtOffsetFour );
+        SW_EXPECT_TRUE( sub.isError() );
+        SW_EXPECT_TRUE( arch.isError() );
+    }
+
+    {
+        sw::BinaryStreamReader reader( arrPayload, sizeof( arrPayload ) );
+        SW_ASSERT_TRUE( reader.skip( 4 ) );
+        SW_EXPECT_FALSE( reader.skip( static_cast<size_t>( kWrapsAtOffsetFour ) ) );
+        // 거절당했으면 위치는 그대로다 — 남은 바이트를 여전히 읽을 수 있어야 한다.
+        SW_EXPECT_EQUAL( size_t( 4 ), reader.getOffset() );
+        uint8 fifth{ 0 };
+        SW_EXPECT_TRUE( reader.read( fifth ) );
+        SW_EXPECT_EQUAL( uint8( 5 ), fifth );
+    }
+}
+
+/**
+ * @brief [ArchiveTest] 밀집 비트마스크가 말하는 프로퍼티 수를 그대로 믿지 않는다
+ * @details 모드 바이트 다음의 `totalProps` 는 **스트림에서 온 값**인데 검사 없이 세 군데에 쓰였다.
+ *          ① `(totalProps + 7) / 8` 로 비트마스크를 잡는다 — 큰 값이면 거대한 할당이고,
+ *             uint64 끝자락이면 덧셈이 넘쳐 **0 바이트** 마스크가 나온다.
+ *          ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다 — 버퍼 밖이다.
+ *          ③ 순회 변수가 `uint32` 인데 `totalProps` 는 `uint64` 라, 값이 4,294,967,295 를
+ *             넘으면 인덱스가 되감겨 **끝나지 않는 루프**가 된다.
+ *          남은 바이트로 비트마스크조차 채울 수 없는 수는 어떤 경우에도 거짓이다.
+ */
+SW_TEST_CASE( ArchiveTest, CompactDensePropertyCountIsBounded )
+{
+    // 모드 바이트(Dense) + 터무니없는 totalProps 하나. 뒤에는 아무것도 없다.
+    const uint64 arrAbsurdCount[] = { 0xFFFFFFFFFFFFFFFFull, 0x100000000ull, 1000000ull };
+    for ( const uint64 absurdCount : arrAbsurdCount )
+    {
+        sw::vector<uint8> bytes;
+        bytes.push_back( sw::PresenceMaskUtil::kModeDense );
+        sw::VarIntUtil::encodeVarUint64( absurdCount, bytes );
+
+        TestReflectedPlayer restored;
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
+                                                                   bytes.data(), bytes.size() ) );
+    }
+
+    // 멀쩡한 것은 그대로 읽힌다 — 위 거부가 과잉이 아님을 못 박는다.
+    TestReflectedPlayer player;
+    player._level = 5;
+    player._name  = "Bounded";
+    player._gold  = 42;
+
+    sw::vector<uint8> goodBytes;
+    sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), goodBytes );
+
+    TestReflectedPlayer restored;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
+                                                              goodBytes.data(), goodBytes.size() ) );
+    SW_EXPECT_EQUAL( 5, restored._level );
+}
+
+/**
  * @brief [ArchiveTest] BinarySerializer 적응형 희소 인덱스(Sparse Index) 직렬화 검증
  */
 SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveSparseIndex )

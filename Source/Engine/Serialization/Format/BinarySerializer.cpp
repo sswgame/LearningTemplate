@@ -633,7 +633,18 @@ namespace sw
             if ( reader.readVarUint( totalProps ) == false )
                 return false;
 
-            const size_t  bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
+            // **스트림이 말하는 프로퍼티 수를 그대로 믿지 않는다.** 검사 없이 쓰면 셋이 한꺼번에 깨진다:
+            //  ① `(totalProps + 7) / 8` 이 거대한 할당이 되고, uint64 끝자락에서는 덧셈이 넘쳐
+            //     **0 바이트** 마스크가 나온다.
+            //  ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다 — 첫 바퀴에 버퍼 밖이다.
+            //  ③ 순회 변수가 `uint32` 였다 — 4,294,967,295 를 넘으면 되감겨 **끝나지 않았다.**
+            // 비트마스크는 프로퍼티 여덟 개당 한 바이트이므로, 남은 바이트로 마스크조차 채울 수
+            // 없는 수는 어떤 스키마에서도 거짓이다(더 많은 프로퍼티를 가진 새 스키마는 허용된다).
+            const uint64 remainingBytes = static_cast<uint64>( dataSize - reader.getOffset() );
+            if ( totalProps > remainingBytes * 8 )
+                return false;
+
+            const size_t  bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( static_cast<size_t>( totalProps ) );
             vector<uint8> bitmask( bitmaskBytes, 0 );
             for ( size_t byteIndex = 0; byteIndex < bitmaskBytes; ++byteIndex )
             {
@@ -641,9 +652,9 @@ namespace sw
                     return false;
             }
 
-            for ( uint32 propIndex = 0; propIndex < totalProps; ++propIndex )
+            for ( uint64 propIndex = 0; propIndex < totalProps; ++propIndex )
             {
-                const bool bPresent = PresenceMaskUtil::testBit( bitmask.data(), propIndex );
+                const bool bPresent = PresenceMaskUtil::testBit( bitmask.data(), static_cast<size_t>( propIndex ) );
                 if ( bPresent == false )
                     continue;
 
@@ -652,7 +663,8 @@ namespace sw
                     return false;
 
                 const size_t payloadStart = reader.getOffset();
-                if ( payloadStart + payloadSize > dataSize )
+                // 뺄셈으로 비교한다 — 스트림에서 읽은  가 크면 덧셈이 넘친다.
+                if ( payloadSize > dataSize - payloadStart )
                     return false;
 
                 if ( propIndex < numProps )
@@ -702,7 +714,8 @@ namespace sw
                     return false;
 
                 const size_t payloadStart = reader.getOffset();
-                if ( payloadStart + payloadSize > dataSize )
+                // 뺄셈으로 비교한다 — 스트림에서 읽은  가 크면 덧셈이 넘친다.
+                if ( payloadSize > dataSize - payloadStart )
                     return false;
 
                 if ( propIndex < numProps )

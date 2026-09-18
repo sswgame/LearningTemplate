@@ -117,8 +117,8 @@ namespace sw
 
         /** @brief 남은 읽기 가능 바이트 수를 반환합니다. */
         uint64 getRemainingBytes() const { return ( _pData != nullptr && _offset < _dataSize ) ? ( _dataSize - _offset ) : 0; }
-        /** @brief 지정 바이트만큼 읽을 수 있는지 확인합니다. */
-        bool hasBytesAvailable( uint64 byteSize ) const { return ( _pData != nullptr && _offset + byteSize <= _dataSize ); }
+        /** @brief 남은 바이트가 @p byteSize 이상인지. 뺄셈으로 비교한다 — 덧셈은 큰 값에서 넘친다. */
+        bool hasBytesAvailable( uint64 byteSize ) const { return ( _pData != nullptr && byteSize <= _dataSize - _offset ); }
 
         /** @brief 지정 바이트 크기만큼의 하위 읽기 전용 아카이브를 분할 생성합니다. */
         Archive readSubArchive( uint64 byteSize );

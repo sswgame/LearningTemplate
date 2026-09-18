@@ -124,7 +124,10 @@ namespace sw
             return false;
         }
 
-        if ( _offset + byteSize > _dataSize )
+        // 뺄셈으로 비교한다 — `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서 작아지고**
+        // 그대로 검사를 통과한다. `_offset <= _dataSize` 는 항상 참이다(위치는 검사를 통과한
+        // 뒤에만 나아간다). 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
+        if ( byteSize > _dataSize - _offset )
         {
             _bError = SW_TRUE;
             return false;
@@ -187,7 +190,7 @@ namespace sw
 
     Archive Archive::readSubArchive( uint64 byteSize )
     {
-        if ( _pData == nullptr || _offset + byteSize > _dataSize )
+        if ( _pData == nullptr || byteSize > _dataSize - _offset )
         {
             _bError = SW_TRUE;
             Archive errArch( nullptr, 0 );

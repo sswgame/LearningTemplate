@@ -152,8 +152,8 @@ cd build/Ninja-Debug/Bin
 | `Resource` | 3,604 | ✅ 2026-09-18 (3절 참고 — 파일에서 온 수를 믿던 자리 넷) |
 | `Scene` | 1,438 | ✅ 2026-09-18 (3절 참고 — 대기열 요청의 future 가 거짓말을 했다) |
 | `Sequencer` | 546 | ✅ 2026-09-18 (3절 참고 — 이벤트 트랙이 배포본에서 아무 일도 하지 않았다) |
-| `Serialization` | 7,120 | ← 다음 |
-| `Spatial` | 1,541 | |
+| `Serialization` | 7,120 | ✅ 2026-09-18 (3절 참고 — 손상된 스트림 하나로 프로세스가 멈췄다) |
+| `Spatial` | 1,541 | ← 다음 |
 | `Utility` | 3,077 | |
 | `Window` | 2,124 | |
 
@@ -362,6 +362,47 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (손상된 스트림 하나로 프로세스가 멈췄다 — Engine/Serialization)
+
+**이 폴더는 대체로 잘 굳어 있다.** 길이 접두사가 `uint32` 인 경로들(`Archive::readString` ·
+`readSection` · `operator>>(vector<uint8>&)` · `BinaryStreamReader` 전부)은 **쓰기 전에 경계를
+검사하고** 그 다음에 `resize` 한다. `StringPool` 은 `kMaxDynamicStrings` 로, RPC 언팩은 함수의
+실제 인자 수로 스트림의 수를 대조한다. 그런데 `uint64` 를 다루는 자리 둘이 새고 있었다.
+
+**1) 밀집 비트마스크의 프로퍼티 수가 검사 없이 세 군데에 쓰였다.**
+`BinarySerializer::deserializeCompact` 의 Dense 분기는 모드 바이트 다음에 `totalProps` 를
+varint 로 읽는데, **스트림에서 온 그 값을 그대로** 썼다:
+
+- `(totalProps + 7) / 8` 로 비트마스크를 잡는다 — 큰 값이면 거대한 할당이고, `uint64`
+  끝자락이면 **덧셈이 넘쳐 0 바이트** 마스크가 나온다.
+- 그 0 바이트 마스크를 `PresenceMaskUtil::testBit` 이 그대로 읽는다 — 첫 바퀴에 버퍼 밖이다
+  (`testBit` 은 길이를 받지 않는다; 경계는 부르는 쪽 몫이다).
+- 순회 변수가 `uint32` 인데 `totalProps` 는 `uint64` 라, 4,294,967,295 를 넘으면 인덱스가
+  되감겨 **끝나지 않는 루프**가 된다.
+
+회귀 테스트를 먼저 짜서 확인했더니 **테스트가 돌아오지 않았다**(60초 타임아웃). 비트마스크는
+프로퍼티 여덟 개당 한 바이트이므로 `남은 바이트 × 8` 이 상한이고, 그보다 큰 수는 어떤
+스키마에서도 거짓이다 — 프로퍼티가 더 많은 **새 스키마는 그대로 허용된다**(이미 있던
+`propIndex < numProps` 건너뛰기가 그 경우를 맡는다). 순회 변수도 `uint64` 로 고쳤다.
+테스트 `ArchiveTest.CompactDensePropertyCountIsBounded`.
+
+**2) `offset + count > size` 는 큰 수에서 넘쳐 검사를 통과한다.** 이 형태가 세 군데 있었고
+셋 다 **호출부가 파일에서 읽은 수를 그대로 넘기는** 자리다:
+`Archive::readBytes( uint64 )` · `Archive::readSubArchive( uint64 )` ·
+`Archive::hasBytesAvailable( uint64 )` · `BinaryStreamReader::skip( size_t )`.
+`count > size - offset` 으로 바꿨다 — 위치는 검사를 통과한 뒤에만 나아가므로 `offset <= size`
+가 항상 참이고, 그래서 뺄셈에는 넘침이 없다. `BinarySerializer` 의 페이로드 경계 검사 둘도
+같은 형태였다.
+
+**이 결함의 함정은 테스트를 짜는 쪽에 있다.** 처음 짠 테스트는 위치 0 에서 거대한 크기를
+넘겼는데 **변이 테스트가 통과했다** — 위치가 0 이면 `0 + count` 는 어떤 `uint64` 로도 넘치지
+않아 옛 검사도 우연히 버틴다. 넘치게 하려면 **위치를 먼저 옮기고** 거기서 되감기는 크기를
+줘야 한다(위치 4 · 크기 `0xFFFFFFFFFFFFFFFC`). 그렇게 고치니 네 변이가 모두 잡혔다.
+테스트 `ArchiveTest.BoundsChecksSurviveSizeOverflow`.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15 · `ArchiveTest` 35 → 37건.
 
 ### 2026-09-18 (이벤트 트랙이 배포본에서 아무 일도 하지 않았다 — Engine/Sequencer)
 
