@@ -170,8 +170,8 @@ cd build/Ninja-Debug/Bin
 | 폴더 | 줄 수 | 상태 |
 |------|------:|------|
 | `Common/Asset` | 819 | ✅ 2026-09-18 (3절 참고 — 같은 결정이 두 자리에 있었다) |
-| `Common/Backend` | 2,236 | ← 다음 |
-| `Common/Commands` | 4,478 | |
+| `Common/Backend` | 2,236 | ✅ 2026-09-18 (3절 참고 — 실패를 수습하는 경로가 실패했다. **테스트 없음**) |
+| `Common/Commands` | 4,478 | ← 다음 |
 | `Common/Config` | 299 | |
 | `Common/Gui` | 3,740 | |
 | `Common/Widgets` | 1,277 | |
@@ -398,6 +398,45 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-18 (실패를 수습하라고 있는 경로가 실패했다 — Editor/Common/Backend)
+
+**먼저 — 이 폴더의 두 건에는 테스트가 없다.** `EditorTest` 는 **일부러 ImGui 를 링크하지 않는다**
+(CMakeLists 에 그 이유가 적혀 있고, `CheckTestSuites` 가 그 경계를 지킨다). 두 결함 모두 ImGui
+컨텍스트가 있어야 재현되므로, 테스트를 붙이려면 그 정책을 깨야 한다. **근거는 코드 수준이다** —
+아래에 추적 경로를 그대로 적어 둔다.
+
+**1) 초기화가 실패하면 그 뒤처리가 단정에 걸렸다.** `ImGuiEditor::initialize` 는 각 단계가
+실패할 때마다 `shutdownPartialInitialization()` 을 부르고, 그 함수는 `_platformBackend->shutdown()`
+을 부른다. 그런데 `ImGuiWin32PlatformBackend::shutdown()` 은 `ImGui_ImplWin32_Shutdown()` 을
+**무조건** 불렀다 — 짝이 되는 Init 이 없으면 그 함수의 첫 줄 단정
+("No platform backend to shutdown, or already shutdown?")에 걸린다.
+
+즉 **플랫폼 백엔드 초기화가 실패하면, 그것을 수습하려는 경로가 곧바로 죽는다.**
+추적: `initialize()` → `_platformBackend->initialize(...) == false` →
+`shutdownPartialInitialization()` → `_platformBackend->shutdown()` → 단정.
+
+렌더러 백엔드 **넷은 모두** `if ( ImGui::GetIO().BackendRendererUserData != nullptr )` 로 같은
+것을 막고 있었다 — 그것이 이 패턴이 필요하다는 증거다. 플랫폼 쪽(Win32 · OSX)만 빠져 있었다.
+`BackendPlatformUserData` 로 같은 모양을 맞췄다. (X11 은 ImGui impl 을 쓰지 않고 자기 상태만
+정리하므로 해당 없음.)
+
+**2) `ImGuiViewportSizeGuard` 를 설치한 둘 중 하나만 놓았다.** 이 가드는 DXGI 가 요구하는
+"HWND 클라이언트 크기 = 스왑체인 크기" 를 맞추려고 ImGui 의 창 생성/리사이즈 콜백을 가로채고,
+헤더에 **"백엔드 종료 시 `clear()` 를 부르십시오"** 라고 적혀 있다. 설치하는 곳은 DX11 과 DX12
+둘인데 **`clear()` 를 부르는 곳은 DX12 뿐**이었다. 짝을 맞췄다.
+(이 가드는 원래 DX11·DX12 가 한 벌씩 들고 있던 것을 한 곳으로 모은 것인데, 그 추출이 한쪽
+호출부를 반만 연결한 채 끝나 있었다 — 공통화가 남기는 전형적인 자리다.)
+
+**깨끗하다고 확인한 것 — 다시 파지 말 것.** 렌더러 백엔드 넷의
+`registerTexture`/`unregisterTexture` 는 각자 자기 자원을 짝 맞춰 잡고 놓는다(DX11 ComPtr 목록 ·
+DX12 디스크립터 힙 · Vulkan `AddTexture`/`RemoveTexture` + 맵 · GL 은 RHI 소유라 no-op).
+`createRendererBackend` 는 모르는 백엔드에 **DX11 로 대신 만들어 주지 않고** nullptr 을 돌려준다
+(주석에 그 판단이 적혀 있다). `EditorDrawDataSnapshot` 은 공유 `Textures` 리스트를 끊고
+`CloneOutput` 의 write 커서를 손으로 맞추는 이유까지 주석에 적혀 있다.
+
+**검증.** Debug·Shipping 빌드(경고 0) · `ctest -L nogpu` 양쪽 5/5 · `-L hostgpu` 양쪽 1/1 ·
+린트 15/15. **새 테스트는 없다**(위 사유).
 
 ### 2026-09-18 (같은 결정이 두 자리에 있으면 반드시 어긋난다 — Editor/Common/Asset)
 

@@ -28,7 +28,9 @@ namespace sw::editor
 
         void shutdown() override
         {
-            ImGui_ImplOSX_Shutdown();
+            // 초기화가 실패한 뒤에도 여기로 온다 — Win32 쪽 주석 참고(짝 없는 Shutdown 은 단정에 걸린다).
+            if ( ImGui::GetIO().BackendPlatformUserData != nullptr )
+                ImGui_ImplOSX_Shutdown();
         }
 
         void newFrame() override

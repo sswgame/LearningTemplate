@@ -45,6 +45,9 @@ namespace sw::editor
 
     void ImGuiDX11RendererBackend::shutdown()
     {
+        // `install()` 을 부른 쪽이 `clear()` 도 부른다 — 가드 헤더가 "백엔드 종료 시 부르십시오"
+        // 라고 적어 둔 짝이다. 예전에는 DX12 만 짝을 맞췄고 DX11 은 설치만 하고 놓지 않았다.
+        ImGuiViewportSizeGuard::clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_Shutdown();
         _listRegisteredSrv.clear();
