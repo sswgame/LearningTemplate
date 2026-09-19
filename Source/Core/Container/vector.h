@@ -774,8 +774,19 @@ namespace sw
     inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, T&& value )
     {
         SW_SCOPED_RACE_WRITE();
-        size_t offset = static_cast<size_t>( pos - _pData );
+        const size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset <= _size );
+        // `SW_ASSERT` 는 Release 에서 통째로 사라진다 — `erase` 가 같은 이유로 진짜 가드를 들고 있다.
+        if ( offset > _size )
+            return _pData + _size;
+
+        // **`value` 가 이 벡터 안의 원소일 수 있다.** 형제들(`push_back` 둘 · `emplace_back` ·
+        // `insert( pos, count, value )`)은 전부 손대기 전에 떠 두는데 이 오버로드만 빠져 있었다.
+        // 여기서는 재할당이 없어도 위험하다: 아래 밀기 루프가 `value` 가 가리키는 칸을 **먼저**
+        // 덮으므로(`v.insert( v.begin(), std::move( v[2] ) )`) 엉뚱한 값이 들어간다. 재할당까지
+        // 겹치면 옛 버퍼가 해제된 뒤라 죽은 자리를 읽는다.
+        T movedValue( std::move( value ) );
+
         if ( _size >= _capacity )
             reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
 
@@ -786,11 +797,11 @@ namespace sw
             {
                 _pData[itemIndex] = std::move( _pData[itemIndex - 1] );
             }
-            _pData[offset] = std::move( value );
+            _pData[offset] = std::move( movedValue );
         }
         else
         {
-            sw_placement_new( ( _pData + ( offset ) ) ) T( std::move( value ) );
+            sw_placement_new( ( _pData + ( offset ) ) ) T( std::move( movedValue ) );
         }
         ++_size;
         return _pData + offset;
@@ -802,6 +813,9 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         const size_t offset = static_cast<size_t>( pos - _pData );
         SW_ASSERT( offset <= _size );
+        // `erase` 와 같은 이유 — Release 에서는 위 단언이 없으므로 아래 `_size - offset` 이 뒤집힌다.
+        if ( offset > _size )
+            return _pData + _size;
 
         // 0개 끼워 넣기는 아무 일도 하지 않는다. 예전엔 여기서 빠져나가지 않아 아래 "뒤로 밀기"
         // 루프의 종료 조건이 `itemIndex >= offset + 0` 이 되었고, offset 이 0 이면 그것이 **언제나
@@ -975,6 +989,10 @@ namespace sw
     {
         SW_SCOPED_RACE_WRITE();
         SW_ASSERT( _size > 0 );
+        // 단언은 Release 에서 사라진다. 그 뒤의 `_size - 1` 은 빈 벡터에서 뒤집혀
+        // `_pData[SIZE_MAX]` 의 소멸자를 부른다 — `erase` 가 막아 둔 것과 같은 모양이다.
+        if ( _size == 0 )
+            return;
         _pData[_size - 1].~T();
         --_size;
     }

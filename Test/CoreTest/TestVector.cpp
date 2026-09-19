@@ -321,3 +321,76 @@ SW_TEST_CASE( VectorTest, InsertAcceptsAnElementOfItself )
     SW_EXPECT_STREQ( "alpha", list[3].c_str() );
     SW_EXPECT_STREQ( "beta", list[4].c_str() );
 }
+
+/**
+ * @brief [VectorTest] 이동 삽입의 원본이 이 벡터 안의 원소여도 올바른 값이 들어가는지 검증
+ * @details `insert( pos, count, value )` 는 값을 먼저 떠 두는데(그 주석에 `v.insert( v.begin(),
+ *          3, v[0] )` 이 적법하다고 적혀 있다) **이동 오버로드만 그러지 않았다.**
+ *          `push_back` 둘과 `emplace_back` 도 전부 떠 두므로, 이 한 판만 빠져 있었다.
+ *
+ *          재할당이 없어도 틀린다 — 밀기 루프가 `value` 가 가리키는 칸을 **먼저 덮기** 때문이다.
+ *          재할당까지 겹치면 옛 버퍼가 해제된 뒤라 죽은 자리를 읽는다(ASAN).
+ */
+SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
+{
+    BLOCK( "재할당 없이 — 밀기 루프가 원본 칸을 덮는다" )
+    {
+        sw::vector<sw::string> list;
+        list.reserve( 8 );
+        list.push_back( sw::string( "alpha" ) );
+        list.push_back( sw::string( "bravo" ) );
+        list.push_back( sw::string( "charlie" ) );
+        list.push_back( sw::string( "delta" ) );
+        SW_ASSERT_TRUE( list.capacity() >= 5 );
+
+        list.insert( list.begin(), std::move( list[2] ) );
+
+        SW_ASSERT_EQUAL( size_t( 5 ), list.size() );
+        // 고치기 전에는 여기가 "bravo" 였다 — 밀기 루프가 index 2 를 이미 덮은 뒤였다.
+        SW_EXPECT_STREQ( "charlie", list[0].c_str() );
+        SW_EXPECT_STREQ( "alpha", list[1].c_str() );
+        SW_EXPECT_STREQ( "bravo", list[2].c_str() );
+        SW_EXPECT_STREQ( "delta", list[4].c_str() );
+    }
+
+    BLOCK( "재할당과 함께 — 옛 버퍼가 해제된 뒤 읽는다" )
+    {
+        sw::vector<sw::string> list;
+        list.reserve( 4 );
+        list.push_back( sw::string( 64, 'a' ) );
+        list.push_back( sw::string( 64, 'b' ) );
+        list.push_back( sw::string( 64, 'c' ) );
+        list.push_back( sw::string( 64, 'd' ) );
+        SW_ASSERT_EQUAL( size_t( 4 ), list.capacity() );
+
+        list.insert( list.begin(), std::move( list[3] ) );
+
+        SW_ASSERT_EQUAL( size_t( 5 ), list.size() );
+        SW_EXPECT_STREQ( sw::string( 64, 'd' ).c_str(), list[0].c_str() );
+        SW_EXPECT_STREQ( sw::string( 64, 'a' ).c_str(), list[1].c_str() );
+    }
+}
+
+/**
+ * @brief [VectorTest] 빈 벡터에서 `pop_back` 이 범위 밖을 건드리지 않는지 검증
+ * @details `SW_ASSERT( _size > 0 )` 뿐이었다 — **Release 에서는 통째로 사라진다.** 그러면
+ *          `_pData[_size - 1].~T()` 의 첨자가 뒤집혀 `_pData[SIZE_MAX]` 의 소멸자를 부른다.
+ *          바로 위 `erase` 가 같은 이유로 진짜 가드를 들고 있는데 이쪽은 없었다.
+ */
+SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
+{
+#if defined( SW_DEBUG )
+    // Debug 에서는 `SW_ASSERT( _size > 0 )` 가 먼저 울려 프로세스를 세운다 — **그것이 의도다.**
+    // 이 가드는 단언이 통째로 사라지는 빌드를 위한 것이라 거기서만 잴 수 있다.
+    SW_TEST_SKIP( "SW_ASSERT stops the process in Debug; the guard only matters where the assert is gone." );
+#else
+    sw::vector<sw::string> list;
+    list.pop_back();
+    SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
+
+    list.push_back( sw::string( "only" ) );
+    list.pop_back();
+    list.pop_back();
+    SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
+#endif
+}

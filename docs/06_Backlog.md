@@ -435,6 +435,42 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (vector 의 이동 insert 만 자기 원소 가드가 없었다)
+
+Core 를 다시 훑다가 `vector` 의 삽입 계열에서 **한 판만** 빠져 있는 것을 찾았다:
+
+| 함수 | 값을 먼저 떠 두는가 |
+|------|--------------------|
+| `push_back( const T& )` | O |
+| `push_back( T&& )` | O |
+| `emplace_back( Args&&... )` | O |
+| `insert( pos, count, value )` | O — 주석에 *"`v.insert( v.begin(), 3, v[0] )` 는 적법하다"* 고 적혀 있다 |
+| **`insert( pos, T&& )`** | **X** |
+
+그리고 이 오버로드는 **재할당이 없어도 틀린다.** `push_back` 계열은 끝에 붙이므로 위험한
+순간이 재할당뿐이지만, `insert` 는 **밀기 루프가 `value` 가 가리키는 칸을 먼저 덮는다**:
+
+```cpp
+list = { alpha, bravo, charlie, delta };          // 용량은 넉넉하다
+list.insert( list.begin(), std::move( list[2] ) );
+// 고치기 전: list[0] == "bravo"   ← index 2 가 이미 덮인 뒤에 읽었다
+// 고친 뒤:   list[0] == "charlie"
+```
+
+재할당까지 겹치면 `reserveInternal` 이 옛 버퍼를 **해제한 뒤**라 죽은 자리를 읽는다.
+값을 무조건 한 번 떠 둔다(`count` 판과 같은 모양이다 — 이동이 하나 더 들지만 `insert` 는
+이미 O(n) 이동이다).
+
+**같은 파일에서 하나 더.** `erase` 는 *"`SW_ASSERT` 는 Release 에서 통째로 사라진다"* 는 이유로
+진짜 가드를 들고 있는데, **`pop_back` 과 두 `insert` 오버로드는 단언뿐이었다.** 빈 벡터에서
+`pop_back` 하면 `_size - 1` 이 뒤집혀 `_pData[SIZE_MAX]` 의 소멸자를 부른다 — Release 에서
+**세그폴트**로 확인했다. 셋 다 `erase` 와 같은 모양으로 맞췄다.
+
+**검증.** `VectorTest.InsertMoveAcceptsAnElementOfItself`(되돌리면 `Expected [charlie],
+Actual [bravo]` — ASAN 없이 결정적으로 진다) · `VectorTest.PopBackOnAnEmptyVectorIsSafe`
+(Debug 에서는 `SW_ASSERT` 가 먼저 울려 프로세스를 세우는 것이 **의도**이므로 그쪽은 skip 하고
+Release·Shipping 에서만 잰다. 되돌리면 Release 에서 세그폴트).
+
 ### 2026-09-20 (데이터 요청이 존재 확인에 편승해 "성공" 과 빈 버퍼를 돌려줬다)
 
 `AssetStreamingQueue` 에는 요청이 두 가지 있다 — `requestAsset` 은 **있는지만** 보고
