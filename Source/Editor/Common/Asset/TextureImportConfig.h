@@ -89,6 +89,29 @@ namespace sw::editor
         /** @brief 등록된 규칙 목록을 반환합니다. */
         const vector<TextureImportRule>& getRules() const { return _listRule; }
 
+        /**
+         * @brief 이 규칙이 **무엇에나 매칭되는가** — 네 목록이 모두 비어 있으면 그렇습니다.
+         * @details `findMatchingRule` 은 include 목록이 비면 그 검사를 건너뛰고 exclude 목록이 비면
+         *          거를 것이 없다. 즉 넷 다 비면 **첫 경로에서 바로 매칭된다.**
+         */
+        static bool isCatchAllRule( const TextureImportRule& rule );
+
+        /**
+         * @brief **뒤 규칙을 전부 가리는** 규칙의 인덱스입니다. 없으면 `getRules().size()`.
+         *
+         * @details `findMatchingRule` 은 "첫 매칭이 이긴다". 그래서 무엇에나 매칭되는 규칙이 목록
+         *          **중간**에 있으면 그 뒤 규칙은 **영원히 선택되지 않는다** — 설정을 적은 사람은
+         *          규칙을 적어 뒀는데 아무 일도 일어나지 않는, 조용한 실패다.
+         *
+         *          맨 **끝**의 캐치올은 정상이고 흔한 쓰임이다(`Fallback_Default`). 그래서 "비어 있다"
+         *          가 아니라 **"비어 있는데 뒤에 뭔가 더 있다"** 를 본다.
+         *
+         *          이 함수가 있는 이유는 `rules` 배열이 관대하게 파싱되기 때문이기도 하다 — 객체가
+         *          아닌 원소는 필드를 하나도 못 읽어 **캐치올이 되어** 뒤를 전부 덮는다. 그 동작은
+         *          의도적으로 유지하되(에디터 전용, 손으로 적는 파일), 결과는 소리 나게 한다.
+         */
+        size_t findShadowingRuleIndex() const;
+
     private:
         void parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule );
         /**

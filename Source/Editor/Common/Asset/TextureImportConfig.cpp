@@ -169,6 +169,19 @@ namespace sw::editor
         }
 
         SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
+
+        // 규칙을 적어 뒀는데 아무 일도 일어나지 않는 것이 이 설정의 **유일한 조용한 실패**다.
+        // 위 파싱이 관대해서(객체가 아닌 원소도 규칙이 된다) 더 쉽게 일어난다 — 그 자리를 이름으로 짚는다.
+        const size_t shadowingIndex = findShadowingRuleIndex();
+        if ( shadowingIndex < _listRule.size() )
+        {
+            const TextureImportRule& shadowingRule = _listRule[shadowingIndex];
+            SW_LOG_WARNING( "TextureImportConfig: %#번 규칙('%#')이 조건 없이 모든 경로에 매칭되어 뒤의 %#개 규칙이 절대 선택되지 않습니다. "
+                            "조건 없는 규칙은 목록 맨 끝에 두십시오.",
+                            shadowingIndex, shadowingRule._name.empty() ? "이름 없음" : shadowingRule._name.c_str(),
+                            _listRule.size() - shadowingIndex - 1 );
+        }
+
         return true;
     }
 
@@ -228,6 +241,26 @@ namespace sw::editor
 
         if ( jsonValue.has( "exclude_paths" ) )
             parseStringListInternal( jsonValue.get( "exclude_paths" ), inoutRule._listExcludePath );
+    }
+
+    bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )
+    {
+        return rule._listIncludePattern.empty() && rule._listIncludePath.empty() &&
+               rule._listExcludePattern.empty() && rule._listExcludePath.empty();
+    }
+
+    size_t TextureImportConfig::findShadowingRuleIndex() const
+    {
+        if ( _listRule.size() < 2 )
+            return _listRule.size();
+
+        // 마지막 규칙은 캐치올이어도 가리는 것이 없다 — 그래서 하나 앞까지만 본다.
+        for ( size_t ruleIndex = 0; ruleIndex + 1 < _listRule.size(); ++ruleIndex )
+        {
+            if ( isCatchAllRule( _listRule[ruleIndex] ) )
+                return ruleIndex;
+        }
+        return _listRule.size();
     }
 
     bool TextureImportConfig::findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const

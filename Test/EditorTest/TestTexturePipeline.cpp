@@ -316,4 +316,78 @@ namespace sw::editor
         SW_EXPECT_EQUAL( sw::string( "B8G8R8A8_UNORM" ), itBaseUi->second._format );
     }
 
+    /**
+     * @brief [EditorTexturePipelineTest] 규칙 배열의 **관대한 파싱을 유지**하되, 그 결과를 짚어 준다
+     * @details `rules` 배열은 객체가 아닌 원소도 그대로 규칙으로 만든다 — 에디터에서만 쓰이는 손으로
+     *          적는 파일이라 그 관대함을 **일부러 남겼다**(2026-09-19 결정, `TextureImportConfig.cpp`
+     *          주석 참고). 이 케이스는 그 결정을 못박는 동시에, 그때 무슨 일이 일어나는지도 못박는다:
+     *          필드를 하나도 못 읽은 규칙은 **조건이 없어 모든 경로에 매칭**되고, 매칭은 "첫 승" 이라
+     *          **그 뒤 규칙이 전부 죽는다.** 그 사실을 `findShadowingRuleIndex` 가 짚는다.
+     * @note 그러므로 이 케이스가 깨졌다면 둘 중 하나다 — 파싱을 엄격하게 바꿨거나(그러면 결정을
+     *       뒤집은 것이니 주석·백로그도 같이 고칠 것), 가리는 규칙을 못 찾게 됐거나.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, LenientRuleParsingIsKeptButShadowingIsReported )
+    {
+        // 두 번째 원소가 객체가 아니다 — 손으로 적다 흔히 나는 실수다.
+        const sw::string_view kJson = R"({
+            "rules": [
+                { "name": "Normal_Maps", "include_patterns": ["*_n.*"] },
+                "this is not an object",
+                { "name": "UI_Textures", "include_paths": ["ui/"] }
+            ]
+        })";
+
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
+
+        // 1) 관대함은 그대로다 — 망가진 원소도 규칙 한 줄이 된다(엄격하게 바꿨다면 2가 된다).
+        SW_ASSERT_EQUAL( size_t( 3 ), config.getRules().size() );
+        SW_EXPECT_TRUE_MSG( config.getRules()[1]._name.empty(),
+                            "객체가 아닌 원소에서 이름이 나왔습니다 — 파싱이 예상과 다릅니다" );
+
+        // 2) 그 규칙은 조건이 없어 **무엇에나** 매칭된다.
+        SW_EXPECT_TRUE( TextureImportConfig::isCatchAllRule( config.getRules()[1] ) );
+
+        // 3) 그래서 뒤의 UI_Textures 는 영원히 선택되지 않는다 — 진단이 바로 그 자리를 가리킨다.
+        SW_EXPECT_EQUAL( size_t( 1 ), config.findShadowingRuleIndex() );
+
+        TextureImportRule matched;
+        SW_ASSERT_TRUE( config.findMatchingRule( "ui/button.png", matched ) );
+        SW_EXPECT_TRUE_MSG( matched._name.empty(),
+                            "가려져 있어야 할 UI_Textures 가 선택됐습니다 — 매칭 규칙이 바뀌었습니다" );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 맨 끝의 조건 없는 규칙은 **정상**이다 — 경고하지 않는다
+     * @details `Fallback_Default` 처럼 마지막에 두는 캐치올은 이 설정의 정상적인 쓰임이다. 진단이
+     *          "조건이 없다" 만 보고 짖으면 멀쩡한 설정마다 경고가 떠서 아무도 안 읽게 된다 —
+     *          그래서 **"조건이 없는데 뒤에 뭔가 더 있다"** 일 때만 짚는다. 그 경계를 여기서 지킨다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, TrailingCatchAllRuleIsNotReported )
+    {
+        const sw::string_view kJson = R"({
+            "rules": [
+                { "name": "Normal_Maps", "include_patterns": ["*_n.*"] },
+                { "name": "Fallback_Default" }
+            ]
+        })";
+
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
+        SW_ASSERT_EQUAL( size_t( 2 ), config.getRules().size() );
+
+        // 캐치올이지만 맨 끝이라 가리는 것이 없다.
+        SW_EXPECT_TRUE( TextureImportConfig::isCatchAllRule( config.getRules()[1] ) );
+        SW_EXPECT_EQUAL( config.getRules().size(), config.findShadowingRuleIndex() );
+
+        // 앞 규칙은 살아 있고, 걸리지 않는 것은 폴백으로 간다 — 이것이 의도된 쓰임이다.
+        TextureImportRule normalRule;
+        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_n.png", normalRule ) );
+        SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), normalRule._name );
+
+        TextureImportRule otherRule;
+        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_albedo.png", otherRule ) );
+        SW_EXPECT_EQUAL( sw::string( "Fallback_Default" ), otherRule._name );
+    }
+
 } // namespace sw::editor
