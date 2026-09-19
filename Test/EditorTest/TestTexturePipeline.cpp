@@ -139,7 +139,7 @@ namespace sw::editor
         rule._bGenerateMips = SW_FALSE;
         rule._bSrgb         = SW_TRUE;
 
-        const string      tempOutDds = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_output_splash.dds" );
+        const string      tempOutDds = test::makeTempPath( "test_output_splash.dds" );
         TextureBakeResult bakeResult;
         SW_ASSERT_TRUE( TextureBaker::bakeTexture( srcPath, tempOutDds, rule, &bakeResult ) );
         SW_EXPECT_TRUE( bakeResult._bSuccess );

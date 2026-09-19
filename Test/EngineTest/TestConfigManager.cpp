@@ -69,7 +69,7 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 #else
     test::ScopedLogSuppressor suppressor;
 
-    const string rootDir      = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_config_root_test" );
+    const string rootDir      = test::makeTempPath( "sw_config_root_test" );
     const string relativePath = "TestEngineConfig.json";
     const string absolutePath = FileUtil::joinPath( rootDir, relativePath );
 
@@ -111,7 +111,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToBakedThenCppDefaults )
 {
     test::ScopedLogSuppressor suppressor;
 
-    const string missingPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_config_that_does_not_exist.json" );
+    const string missingPath = test::makeTempPath( "sw_config_that_does_not_exist.json" );
     FileUtil::removeFile( missingPath );
 
     // 1) 베이크된 JSON 이 있으면 그것으로 떨어진다.

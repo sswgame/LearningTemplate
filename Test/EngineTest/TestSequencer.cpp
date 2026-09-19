@@ -137,7 +137,7 @@ SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndAppliesTransform )
  */
 SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
 {
-    const sw::string path = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_sequence.json" );
+    const sw::string path = test::makeTempPath( "sw_test_sequence.json" );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [path]()
     {
         sw::FileUtil::removeFile( path );

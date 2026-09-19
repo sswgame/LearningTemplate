@@ -126,7 +126,7 @@ SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    const sw::string tempFolder = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_unique_save" );
+    const sw::string tempFolder = test::makeTempPath( "sw_unique_save" );
     sw::FileUtil::ensureDirectoryExists( tempFolder );
     SW_ASSERT_TRUE( sw::FileUtil::directoryExists( tempFolder ) );
 
@@ -189,7 +189,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
     SW_EXPECT_TRUE( root.attribute( "formatVersion" ) != nullptr );
     SW_EXPECT_STREQ( "0", root.attribute( "formatVersion" ) );
 
-    const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_current_material.material" );
+    const sw::string tempPath = test::makeTempPath( "test_current_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),
                                              static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
@@ -214,7 +214,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 </Material>
 )";
 
-    const sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_legacy_material.material" );
+    const sw::string tempPath = test::makeTempPath( "test_legacy_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kLegacy ),
                                              static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 

@@ -274,7 +274,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveMathTypesStreaming )
  */
 SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
 {
-    const sw::string tempFilePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_archive_io.bin" );
+    const sw::string tempFilePath = test::makeTempPath( "test_archive_io.bin" );
 
     sw::Archive writeArch;
     writeArch << 0x12345678u;
@@ -400,7 +400,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveObjectTLVSerialization )
  */
 SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
 {
-    const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_save_slot.sav" );
+    const sw::string savePath = test::makeTempPath( "test_save_slot.sav" );
 
     sw::TurnBattleSaveGame writeSlot;
     writeSlot._mapPath = "Resource/game/empty/scenes/overworld.scene.xml";
@@ -432,7 +432,7 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
  */
 SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
 {
-    const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "tampered_save_slot.sav" );
+    const sw::string savePath = test::makeTempPath( "tampered_save_slot.sav" );
 
     sw::TurnBattleSaveGame writeSlot;
     writeSlot._mapPath = "world_level_1";
@@ -461,8 +461,8 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
  */
 SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
 {
-    const sw::string tempSceneBin  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "temp_test_scene.bin" );
-    const sw::string tempPrefabBin = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "temp_test_prefab.bin" );
+    const sw::string tempSceneBin  = test::makeTempPath( "temp_test_scene.bin" );
+    const sw::string tempPrefabBin = test::makeTempPath( "temp_test_prefab.bin" );
 
     // 1) SceneDocument 바이너리 저장 및 로드
     {
@@ -1589,7 +1589,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         validSlot._playerY = 200;
         validSlot.setFlag( "boss_defeated", 1 );
 
-        const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_corrupt_slot.sav" );
+        const sw::string savePath = test::makeTempPath( "test_corrupt_slot.sav" );
         SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( validSlot, savePath ) );
 
         // Read and intentionally flip a byte in payload
@@ -1612,7 +1612,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
     // 2. SceneDocument corrupted binary magic
     {
         const uint8      corruptedSceneBytes[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
-        const sw::string testScenePath          = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_corrupt_scene.bin" );
+        const sw::string testScenePath          = test::makeTempPath( "test_corrupt_scene.bin" );
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( testScenePath, corruptedSceneBytes, 8 ) );
 
         sw::SceneDocument sceneDoc;
@@ -1626,7 +1626,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
     // 3. PrefabAsset corrupted binary magic
     {
         const uint8      corruptedPrefabBytes[8] = { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-        const sw::string testPrefabPath          = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_corrupt_prefab.bin" );
+        const sw::string testPrefabPath          = test::makeTempPath( "test_corrupt_prefab.bin" );
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( testPrefabPath, corruptedPrefabBytes, 8 ) );
 
         sw::PrefabAsset prefabAsset;
@@ -1643,7 +1643,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
  */
 SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
 {
-    const sw::string testSavePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_deterministic_slot.sav" );
+    const sw::string testSavePath = test::makeTempPath( "test_deterministic_slot.sav" );
 
     sw::TurnBattleSaveGame slot1;
     slot1._mapPath = "Overworld_Main";

@@ -45,7 +45,7 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
     queue.initialize();
 
     // 존재하지 않는 경로. 파일을 만들지 않으므로 워커는 반드시 실패한다.
-    const sw::string missingPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_missing_asset.dat" );
+    const sw::string missingPath = test::makeTempPath( "sw_test_missing_asset.dat" );
     sw::FileUtil::removeFile( missingPath );
 
     bool bFirstCompleted{ false };
@@ -166,7 +166,7 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
  */
 SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndLockFreeQueue )
 {
-    const sw::string tempFile = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_streaming_asset.dat" );
+    const sw::string tempFile = test::makeTempPath( "sw_test_streaming_asset.dat" );
     const sw::string testData = "STREAMING_TEST_PAYLOAD";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempFile,
                                              reinterpret_cast<const uint8*>( testData.data() ),
@@ -211,10 +211,10 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
     sw::vector<sw::string> listTempFile;
     listTempFile.reserve( kFileCount );
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
     for ( int32 fileIndex = 0; fileIndex < kFileCount; ++fileIndex )
     {
-        const sw::string path = sw::FileUtil::joinPath( tempDir, sw::string( "sw_stress_asset_" ) + sw::string( std::to_string( fileIndex ).c_str() ) + ".dat" );
+        const sw::string path =
+            test::makeTempPath( ( sw::string( "sw_stress_asset_" ) + sw::string( std::to_string( fileIndex ).c_str() ) + ".dat" ).c_str() );
         const sw::string data = "STRESS_DATA_BLOCK";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( data.data() ), data.size() ) );
         listTempFile.push_back( path );
@@ -292,7 +292,7 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     // 변이가 통과했다). 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
     // **직접 만든 파일을 절대 경로로** 준다. `ResourceUtil` 은 절대 경로를 디스크에서 그대로
     // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
-    const sw::string assetPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_stream_piggyback.bin" );
+    const sw::string assetPath = test::makeTempPath( "sw_stream_piggyback.bin" );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [assetPath]()
     {
         sw::FileUtil::removeFile( assetPath );

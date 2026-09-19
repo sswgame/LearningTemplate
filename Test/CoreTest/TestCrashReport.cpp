@@ -16,7 +16,7 @@ namespace
     /** @brief 이 파일의 테스트가 리포트를 쏟아 놓을 임시 폴더를 준비하고 그 경로를 돌려줍니다. */
     sw::string prepareReportFolderInternal()
     {
-        const sw::string folder = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "SwCrashReportTest" );
+        const sw::string folder = test::makeTempPath( "SwCrashReportTest" );
         sw::FileUtil::ensureDirectoryExists( folder );
         sw::setCrashReportFolder( folder );
         return folder;

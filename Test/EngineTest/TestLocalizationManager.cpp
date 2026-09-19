@@ -78,11 +78,10 @@ SW_TEST_CASE( LocalizationManagerTest, MultiFormatFileLoading )
         "UI_PLAY=Spiel starten\n"
         "UI_EXIT=Beenden\n";
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
-    const sw::string pathKo  = sw::FileUtil::joinPath( tempDir, "test_loc_ko.json" );
-    const sw::string pathEn  = sw::FileUtil::joinPath( tempDir, "test_loc_en.json" );
-    const sw::string pathJa  = sw::FileUtil::joinPath( tempDir, "test_loc_ja.xml" );
-    const sw::string pathDe  = sw::FileUtil::joinPath( tempDir, "test_loc_de.ini" );
+    const sw::string pathKo = test::makeTempPath( "test_loc_ko.json" );
+    const sw::string pathEn = test::makeTempPath( "test_loc_en.json" );
+    const sw::string pathJa = test::makeTempPath( "test_loc_ja.xml" );
+    const sw::string pathDe = test::makeTempPath( "test_loc_de.ini" );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKoJson ), strlen( kKoJson ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEnJson ), strlen( kEnJson ) ) );
@@ -176,7 +175,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageSwitchingAndFallback )
  */
 SW_TEST_CASE( LocalizationManagerTest, DirectoryBatchLoading )
 {
-    const sw::string tempDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_loc_dir" );
+    const sw::string tempDir = test::makeTempPath( "sw_test_loc_dir" );
     sw::FileUtil::ensureDirectoryExists( tempDir );
 
     const utf8* kKo = R"({ "MSG_WELCOME": "환영합니다!" })";
@@ -299,11 +298,10 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
     const utf8* kKv =
         "KEY_KV=KV 텍스트\n";
 
-    const sw::string tempDir  = sw::FileUtil::getTempDirectory();
-    const sw::string pathJson = sw::FileUtil::joinPath( tempDir, "st_test.json" );
-    const sw::string pathXml  = sw::FileUtil::joinPath( tempDir, "st_test.xml" );
-    const sw::string pathIni  = sw::FileUtil::joinPath( tempDir, "st_test.ini" );
-    const sw::string pathKv   = sw::FileUtil::joinPath( tempDir, "st_test.kv" );
+    const sw::string pathJson = test::makeTempPath( "st_test.json" );
+    const sw::string pathXml  = test::makeTempPath( "st_test.xml" );
+    const sw::string pathIni  = test::makeTempPath( "st_test.ini" );
+    const sw::string pathKv   = test::makeTempPath( "st_test.kv" );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathJson, reinterpret_cast<const uint8*>( kJson ), strlen( kJson ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathXml, reinterpret_cast<const uint8*>( kXml ), strlen( kXml ) ) );
@@ -362,10 +360,9 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 		"UI_START": "ゲーム開始"
 	})";
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
-    const sw::string pathKo  = sw::FileUtil::joinPath( tempDir, "gs_test_ko.json" );
-    const sw::string pathEn  = sw::FileUtil::joinPath( tempDir, "gs_test_en.json" );
-    const sw::string pathJa  = sw::FileUtil::joinPath( tempDir, "gs_test_ja.json" );
+    const sw::string pathKo = test::makeTempPath( "gs_test_ko.json" );
+    const sw::string pathEn = test::makeTempPath( "gs_test_en.json" );
+    const sw::string pathJa = test::makeTempPath( "gs_test_ja.json" );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKoJson ), strlen( kKoJson ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEnJson ), strlen( kEnJson ) ) );
@@ -452,8 +449,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::LocalizationManager )] = &sw::engine::getLocalizationManager();
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
-    const sw::string packDir = sw::FileUtil::joinPath( tempDir, "temp_localization_pack" );
+    const sw::string packDir = test::makeTempPath( "temp_localization_pack" );
     sw::FileUtil::ensureDirectoryExists( packDir );
 
     const sw::string pathKo = sw::FileUtil::joinPath( packDir, "ko_KR.json" );
@@ -521,9 +517,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
  */
 SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
 {
-    const sw::string tempDir    = sw::FileUtil::getTempDirectory();
-    const sw::string stBinPath  = sw::FileUtil::joinPath( tempDir, "test_st.bin" );
-    const sw::string locBinPath = sw::FileUtil::joinPath( tempDir, "test_loc.bin" );
+    const sw::string stBinPath  = test::makeTempPath( "test_st.bin" );
+    const sw::string locBinPath = test::makeTempPath( "test_loc.bin" );
 
     // 1) StringTable binary save / load
     sw::StringTable sourceTable;
@@ -584,7 +579,7 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
  */
 SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager )
 {
-    const sw::string tempDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_loc_bin_dir" );
+    const sw::string tempDir = test::makeTempPath( "sw_test_loc_bin_dir" );
     sw::FileUtil::ensureDirectoryExists( tempDir );
 
     const sw::hashed_string kKeyWelcome{ "MSG_WELCOME" };
@@ -821,8 +816,8 @@ SW_TEST_CASE( LocalizationManagerTest, BinaryPackIsDeterministic )
         reverseManager.setString( kArrLanguage[reverseIndex], sw::hashed_string( "menu.start" ), "시작" );
     }
 
-    const sw::string forwardPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_loc_forward.loc.bin" );
-    const sw::string reversePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_loc_reverse.loc.bin" );
+    const sw::string forwardPath = test::makeTempPath( "test_loc_forward.loc.bin" );
+    const sw::string reversePath = test::makeTempPath( "test_loc_reverse.loc.bin" );
     SW_EXPECT_TRUE( forwardManager.saveToBinaryPack( forwardPath ) );
     SW_EXPECT_TRUE( reverseManager.saveToBinaryPack( reversePath ) );
 

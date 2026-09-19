@@ -43,7 +43,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[3], 1e-4f );
     }
 
-    sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_saved_material.material" );
+    sw::string tempPath = test::makeTempPath( "test_saved_material.material" );
     bool       saveOk   = material->saveToFile( tempPath );
     SW_EXPECT_TRUE( saveOk );
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( tempPath ) );
@@ -125,7 +125,7 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
 </MaterialDesc>
 )";
 
-    sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_enum_material.material" );
+    sw::string tempPath = test::makeTempPath( "test_enum_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
@@ -215,7 +215,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     if ( masterColor )
         SW_EXPECT_NEAR_EQUAL( 1.0f, masterColor[0], 1e-3f );
 
-    sw::string tempPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_mic.materialinstance" );
+    sw::string tempPath = test::makeTempPath( "test_mic.materialinstance" );
     instance->setName( "TestMic" );
     SW_EXPECT_TRUE( instance->saveToFile( tempPath ) );
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( material.get() );

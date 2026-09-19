@@ -390,7 +390,7 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
  */
 SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 {
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_badcount.bin" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_badcount.bin" );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [binPath]()
     {
         sw::FileUtil::removeFile( binPath );

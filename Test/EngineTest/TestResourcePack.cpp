@@ -716,7 +716,12 @@ SW_TEST_CASE( ResourcePackTest, PathCacheZeroAllocationAndInvalidation )
  */
 SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 {
-    const sw::string                                   packPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_domain_query_pack.pack" );
+    const sw::string packPath = test::makeTempPath( "sw_domain_query_pack.pack" );
+    // 도메인 이름은 **팩 파일 이름의 줄기**에서 온다. 여기에 이름을 다시 적으면 그것이
+    // 두 번째 사본이 되고, 임시 경로가 프로세스마다 달라지는 순간 어긋난다.
+    const sw::string fileName = sw::FileUtil::getFileNamePart( packPath );
+    const sw::string domain   = fileName.substr( 0, fileName.rfind( '.' ) );
+
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "textures/icon.dat",   "ICON_PAYLOAD_DATA"},
         {"shaders/custom.dat", "SHADER_PAYLOAD_DATA"},
@@ -734,10 +739,10 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
     SW_EXPECT_TRUE( packManager.readTextFile( "textures/icon.dat", textContent ) );
     SW_EXPECT_EQUAL( textContent, "ICON_PAYLOAD_DATA" );
 
-    // 2. 도메인 접두사 포함 쿼리 ("sw_domain_query_pack/textures/icon.dat")
-    SW_EXPECT_TRUE( packManager.hasFile( "sw_domain_query_pack/textures/icon.dat" ) );
+    // 2. 도메인 접두사 포함 쿼리 ("<팩 이름 줄기>/textures/icon.dat")
+    SW_EXPECT_TRUE( packManager.hasFile( ( domain + "/textures/icon.dat" ).c_str() ) );
     sw::string domainText;
-    SW_EXPECT_TRUE( packManager.readTextFile( "sw_domain_query_pack/textures/icon.dat", domainText ) );
+    SW_EXPECT_TRUE( packManager.readTextFile( ( domain + "/textures/icon.dat" ).c_str(), domainText ) );
     SW_EXPECT_EQUAL( domainText, "ICON_PAYLOAD_DATA" );
 
     // 3. 존재하지 않는 도메인 쿼리 ("wrong_domain/textures/icon.dat")
@@ -745,7 +750,7 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 
     // 4. 바이너리 도메인 쿼리 검증
     sw::vector<uint8> bytes;
-    SW_EXPECT_TRUE( packManager.readFile( "sw_domain_query_pack/shaders/custom.dat", bytes ) );
+    SW_EXPECT_TRUE( packManager.readFile( ( domain + "/shaders/custom.dat" ).c_str(), bytes ) );
     SW_EXPECT_EQUAL( bytes.size(), strlen( "SHADER_PAYLOAD_DATA" ) );
 
     packManager.unmountAll();

@@ -698,8 +698,7 @@ SW_TEST_CASE( StringTest, Utf8BomHandling )
     SW_EXPECT_EQUAL( 'H', static_cast<utf8>( pBytes[0] ) );
 
     // 3) 파일 I/O 자동 BOM 제거 검증
-    const sw::string tempDir     = sw::FileUtil::getTempDirectory();
-    const sw::string bomFilePath = sw::FileUtil::joinPath( tempDir, "test_bom.txt" );
+    const sw::string bomFilePath = test::makeTempPath( "test_bom.txt" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( bomFilePath, reinterpret_cast<const uint8*>( pWithBom ), strlen( pWithBom ) ) );
 
     sw::string readText;

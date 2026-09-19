@@ -458,6 +458,30 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (테스트 임시 파일 이름이 전부 고정이었다)
+
+커밋 `TBD`. `Test/` 의 임시 파일 경로 102 자리를 `test::makeTempPath( "이름" )` 하나로 모았다.
+경로는 `<임시 폴더>/sw_<pid>_<케이스 이름>_<이름>` 이고 **확장자는 그대로 남는다**(로더가
+그것으로 형식을 고른다).
+
+고치기 전에는 `%TEMP%/test_malformed.wav` 처럼 이름이 전부 고정이었다. 같은 테스트 실행 파일이
+네 프리셋에서 각각 돌고, 두 프로세스가 겹치면 한쪽의 `removeFile` 이 다른 쪽이 방금 쓴 파일을
+지운다. 한 프로세스 안에서도 `sw_test_scene_desc.bin` 을 두 케이스가 같이 쓰고 있었다.
+
+**이것이 실제 실패를 일으키는 것은 못 봤다.** 4·8 프로세스 동시로 48회를 돌려도 재현되지
+않았다(창이 아주 좁다 — 쓰고 바로 읽는다). 그래도 고정 이름을 공유하는 것 자체가 위험이고,
+고유 이름이 더 싸다. 성능 주장이 아니라 **재현 가능성**을 위한 변경이다.
+
+옮기면서 나온 둘:
+
+- `ResourcePackTest.DomainQualifiedQueryInVfs` 가 팩의 **도메인 이름**(= 파일 이름 줄기)을
+  테스트에 문자열로 다시 적고 있었다. 경로가 바뀌자 어긋났다 — 이제 `packPath` 에서 줄기를
+  뽑아 쓴다. 읽을 수 있는 사실을 다시 적으면 그게 두 번째 사본이다.
+- 하위 폴더를 만들어 그 안에 파일을 놓는 테스트(`loadLanguageDirectory` 둘)는 자식 경로가
+  **폴더 안에 남아야** 한다 — 일괄 치환이 그것들을 임시 루트로 꺼내 깨뜨렸고 되돌렸다.
+
+새 스위트 `TestFrameworkTest`(`Test/CoreTest/TestTestFramework.cpp`) 둘이 헬퍼 자체를 든다.
+
 ### 2026-09-20 (콜백에 자기 멤버를 참조로 넘겼다 — 대화 러너 · 모드 FSM)
 
 커밋 `TBD`. 둘 다 "콜백이 그 안에서 돌아와 나를 바꾼다" 는 한 모양이다.
@@ -483,11 +507,12 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `LocalizationManagerTest.GameModeHandlerCanUnregisterItselfWhileExiting`(예전 모양으로 되돌리면
 **프로세스가 사라진다**).
 
-**확인된 테스트 불안정성 — 아직 안 고침.** 검증 중 `Ninja-Shipping` 의 `EngineTest_NoGPU` 가
-한 번 실패했다가 다시 돌리니 통과했다. 원인은 `AudioSystemTest.WavParsingAndMalformedData` 가
-`%TEMP%/test_malformed.wav` 같은 **고정된 이름**에 쓰는 것이다. `Test/` 전체에 이런 자리가
-83 곳 있고 이름이 전부 고정이라, 두 프리셋의 테스트 프로세스가 겹치면 한쪽의 `removeFile` 이
-다른 쪽이 방금 쓴 파일을 지운다. 다음 커밋에서 프로세스별 고유 경로 헬퍼로 닫는다.
+**재현 안 된 실패 하나 — 원인 미상.** 검증 중 `Ninja-Shipping` 의 `EngineTest_NoGPU` 가 한 번
+실패했다가 다시 돌리니 통과했다. **처음에 "고정된 임시 파일 이름 충돌" 이라고 적었는데 그것은
+근거 없는 추측이었다** — 그 뒤 같은 케이스를 4·8 프로세스 동시로 48회 돌려도 한 번도 재현되지
+않았고, 애초에 그 검증 루프는 프리셋을 **순차로** 돌았으므로 프로세스가 겹칠 수도 없었다.
+Shipping `EngineTest` 단독으로도 8회 연속 통과(530/533, 3 skipped)다. 원인은 아직 모른다 —
+다시 보이면 그때 `--output-on-failure` 의 실제 실패 케이스 이름부터 남길 것.
 
 ### 2026-09-20 (두 킷을 한 게임에서 같이 못 썼다 · 걷는 상태가 시작한 프레임에 취소됐다)
 

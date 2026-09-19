@@ -38,8 +38,8 @@ namespace sw
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
 {
-    const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_async.xml" );
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_async.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_async.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_async.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"0\" name=\"AsyncTown\">\n"
@@ -87,8 +87,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
  */
 SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
 {
-    const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.xml" );
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.bin" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"DescOnly\"><entities><entity name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
@@ -117,7 +117,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
  */
 SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
 {
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.bin" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.bin" );
 
     sw::SceneDocument originalDoc{};
     originalDoc._name = "BinaryTestScene";
@@ -153,10 +153,10 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
 {
-    const sw::string townA = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_a.xml" );
-    const sw::string binA  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_a.bin" );
-    const sw::string townB = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_b.xml" );
-    const sw::string binB  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_b.bin" );
+    const sw::string townA = test::makeTempPath( "sw_test_warp_a.xml" );
+    const sw::string binA  = test::makeTempPath( "sw_test_warp_a.bin" );
+    const sw::string townB = test::makeTempPath( "sw_test_warp_b.xml" );
+    const sw::string binB  = test::makeTempPath( "sw_test_warp_b.bin" );
     const sw::string xmlA =
         "<Scene formatVersion=\"0\" name=\"TownA\"><entities><entity name=\"A\"/></entities></Scene>";
     const sw::string xmlB =
@@ -210,8 +210,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
  */
 SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
 {
-    const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_replace.xml" );
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_replace.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_replace.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_replace.bin" );
     const sw::string xmlStr =
         "<Scene formatVersion=\"0\" name=\"Replaced\"><entities><entity name=\"Only\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
@@ -248,11 +248,10 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
  */
 SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
 {
-    const sw::string tempDir    = sw::FileUtil::getTempDirectory();
-    const sw::string scenePath1 = sw::FileUtil::joinPath( tempDir, "test_rapid_1.scene.xml" );
-    const sw::string binPath1   = sw::FileUtil::joinPath( tempDir, "test_rapid_1.scene.bin" );
-    const sw::string scenePath2 = sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.xml" );
-    const sw::string binPath2   = sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.bin" );
+    const sw::string scenePath1 = test::makeTempPath( "test_rapid_1.scene.xml" );
+    const sw::string binPath1   = test::makeTempPath( "test_rapid_1.scene.bin" );
+    const sw::string scenePath2 = test::makeTempPath( "test_rapid_2.scene.xml" );
+    const sw::string binPath2   = test::makeTempPath( "test_rapid_2.scene.bin" );
 
     const sw::string xmlStr1 =
         "<Scene formatVersion=\"0\" name=\"SceneFirst\"><entities><entity name=\"E1\"/></entities></Scene>";
@@ -301,8 +300,8 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
  */
 SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
 {
-    const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_future_scene.xml" );
-    const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_future_scene.bin" );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_future_scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_future_scene.bin" );
     const sw::string xmlStr =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"0\" name=\"FutureTown\">\n"
@@ -359,15 +358,14 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
  */
 SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 {
-    const sw::string       tempDir = sw::FileUtil::getTempDirectory();
     sw::vector<sw::string> listXmlPath;
     sw::vector<sw::string> listBinPath;
 
     for ( int32 index = 0; index < 3; ++index )
     {
         const sw::string name    = sw::string( "StressScene_" ) + sw::string( std::to_string( index ).c_str() );
-        const sw::string xmlPath = sw::FileUtil::joinPath( tempDir, name + ".xml" );
-        const sw::string binPath = sw::FileUtil::joinPath( tempDir, name + ".bin" );
+        const sw::string xmlPath = test::makeTempPath( ( name + ".xml" ).c_str() );
+        const sw::string binPath = test::makeTempPath( ( name + ".bin" ).c_str() );
 
         const sw::string xmlStr = "<Scene formatVersion=\"0\" name=\"" + name + "\"><entities><entity name=\"E\"/></entities></Scene>";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) );
@@ -418,12 +416,12 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
  */
 SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
 {
-    const sw::string pathA = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_a.xml" );
-    const sw::string binA  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_a.bin" );
-    const sw::string pathB = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_b.xml" );
-    const sw::string binB  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_b.bin" );
-    const sw::string pathC = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_c.xml" );
-    const sw::string binC  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_queued_c.bin" );
+    const sw::string pathA = test::makeTempPath( "sw_test_queued_a.xml" );
+    const sw::string binA  = test::makeTempPath( "sw_test_queued_a.bin" );
+    const sw::string pathB = test::makeTempPath( "sw_test_queued_b.xml" );
+    const sw::string binB  = test::makeTempPath( "sw_test_queued_b.bin" );
+    const sw::string pathC = test::makeTempPath( "sw_test_queued_c.xml" );
+    const sw::string binC  = test::makeTempPath( "sw_test_queued_c.bin" );
 
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [=]()
     {

@@ -100,9 +100,9 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
     sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
     SW_EXPECT_TRUE( pAudioSystem->initialize() );
 
-    const sw::string validWavPath  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_valid.wav" );
-    const sw::string malformedPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_malformed.wav" );
-    const sw::string truncatedPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_truncated.wav" );
+    const sw::string validWavPath  = test::makeTempPath( "test_valid.wav" );
+    const sw::string malformedPath = test::makeTempPath( "test_malformed.wav" );
+    const sw::string truncatedPath = test::makeTempPath( "test_truncated.wav" );
 
     // 1) 유효한 PCM 16-bit Mono 44.1kHz WAV 생성
     SW_EXPECT_TRUE( writeTestWav( validWavPath, 64 ) );
@@ -217,7 +217,7 @@ SW_TEST_CASE( AudioSystemTest, MusicPathTracksRequests )
     SW_EXPECT_TRUE( pAudioSystem->initialize() );
     SW_EXPECT_TRUE( pAudioSystem->getMusicPath().empty() );
 
-    const sw::string musicPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_music_track.wav" );
+    const sw::string musicPath = test::makeTempPath( "test_music_track.wav" );
     SW_EXPECT_TRUE( writeTestWav( musicPath, 64 ) );
 
     SW_EXPECT_TRUE( pAudioSystem->playMusic( musicPath ) );
@@ -251,9 +251,8 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
     sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
     SW_EXPECT_TRUE( pAudioSystem->initialize() );
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
-    const sw::string wavA    = sw::FileUtil::joinPath( tempDir, "test_mt_audio_a.wav" );
-    const sw::string wavB    = sw::FileUtil::joinPath( tempDir, "test_mt_audio_b.wav" );
+    const sw::string wavA = test::makeTempPath( "test_mt_audio_a.wav" );
+    const sw::string wavB = test::makeTempPath( "test_mt_audio_b.wav" );
 
     SW_EXPECT_TRUE( writeTestWav( wavA, 32 ) );
     SW_EXPECT_TRUE( writeTestWav( wavB, 32 ) );
@@ -308,7 +307,6 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
  */
 SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 {
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
 
     // 경쟁 구간은 좁다 — 여러 판을 돌리고(`verify-nondeterministic-repro` 의 규칙), **파일을 매번
     // 다르게** 해서 클립 캐시를 비껴간다. 같은 파일이면 두 번째부터는 캐시에서 즉시 나와
@@ -324,7 +322,7 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
         nameBuilder.append( "test_shutdown_race_" );
         nameBuilder.append( wavIndex );
         nameBuilder.append( ".wav" );
-        sw::string path = sw::FileUtil::joinPath( tempDir, nameBuilder.view() );
+        sw::string path = test::makeTempPath( nameBuilder.view() );
         SW_ASSERT_TRUE( writeTestWav( path, 200000 ) );
         listWavPath.push_back( std::move( path ) );
     }

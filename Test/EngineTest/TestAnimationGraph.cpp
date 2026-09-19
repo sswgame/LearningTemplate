@@ -69,7 +69,7 @@ SW_TEST_CASE( AnimationGraphTest, JsonRoundTripKeepsNodesAndLinks )
 SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJson )
 {
     const AnimationGraphAsset source   = makeTwoNodeGraph();
-    const string              filePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_anim_graph.json" );
+    const string              filePath = test::makeTempPath( "test_anim_graph.json" );
 
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 

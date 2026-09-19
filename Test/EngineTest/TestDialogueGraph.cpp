@@ -167,7 +167,7 @@ SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
     SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeId( 2, 0 ) );
 
-    const string filePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_dialogue_graph.json" );
+    const string filePath = test::makeTempPath( "test_dialogue_graph.json" );
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
     DialogueGraphAsset loaded;

@@ -45,7 +45,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
  */
 SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 {
-    const sw::string dir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "SwPathCaseTestDir" );
+    const sw::string dir = test::makeTempPath( "SwPathCaseTestDir" );
     sw::FileUtil::ensureDirectoryExists( dir );
     const sw::string pathStr = sw::FileUtil::joinPath( dir, "MixedCaseFile.bin" );
     const sw::string content = "case-sensitive-io";
@@ -70,7 +70,7 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
  */
 SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
-    const sw::string rootDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "SwCollectCaseRoot" );
+    const sw::string rootDir = test::makeTempPath( "SwCollectCaseRoot" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "MixedCaseSub" );
     sw::FileUtil::removeDirectory( rootDir ); // 앞 실행이 죽어 남긴 찌꺼기가 개수 단언을 흔들지 않게 한다
     sw::FileUtil::ensureDirectoryExists( subDir );
@@ -106,7 +106,7 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
  */
 SW_TEST_CASE( FileTest, WriteAndReadFile )
 {
-    sw::string testPath    = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_output_temp.bin" );
+    sw::string testPath    = test::makeTempPath( "test_output_temp.bin" );
     sw::string testContent = "Hello C++ Workspace!";
 
     bool writeOk = sw::FileUtil::writeFile( testPath, reinterpret_cast<const uint8*>( testContent.data() ), testContent.size() );
@@ -165,7 +165,7 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
  */
 SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 {
-    const sw::string rootDir = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_walk_root" );
+    const sw::string rootDir = test::makeTempPath( "sw_walk_root" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "nested" );
     sw::FileUtil::ensureDirectoryExists( subDir );
 

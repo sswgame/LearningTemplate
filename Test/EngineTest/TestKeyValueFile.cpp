@@ -237,12 +237,11 @@ SW_TEST_CASE( KeyValueFileTest, StringTableMultiLanguageJsonFileLoading )
 		"MSG_STAGE_CLEAR": "Stufe geschafft!"
 	})";
 
-    const sw::string tempDir = sw::FileUtil::getTempDirectory();
-    const sw::string pathKo  = sw::FileUtil::joinPath( tempDir, "test_strings_ko.json" );
-    const sw::string pathEn  = sw::FileUtil::joinPath( tempDir, "test_strings_en.json" );
-    const sw::string pathJa  = sw::FileUtil::joinPath( tempDir, "test_strings_ja.json" );
-    const sw::string pathZh  = sw::FileUtil::joinPath( tempDir, "test_strings_zh.json" );
-    const sw::string pathDe  = sw::FileUtil::joinPath( tempDir, "test_strings_de.json" );
+    const sw::string pathKo = test::makeTempPath( "test_strings_ko.json" );
+    const sw::string pathEn = test::makeTempPath( "test_strings_en.json" );
+    const sw::string pathJa = test::makeTempPath( "test_strings_ja.json" );
+    const sw::string pathZh = test::makeTempPath( "test_strings_zh.json" );
+    const sw::string pathDe = test::makeTempPath( "test_strings_de.json" );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKoJson ), strlen( kKoJson ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEnJson ), strlen( kEnJson ) ) );

@@ -201,7 +201,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
     SW_EXPECT_EQUAL( 42, srcSlot.getFlag( "player_level" ) );
 
     // 파일 저장 및 로드
-    const string tempSavePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_saveslot_temp.sav" );
+    const string tempSavePath = test::makeTempPath( "test_saveslot_temp.sav" );
     const bool   saveOk       = SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath );
     SW_EXPECT_TRUE( saveOk );
 
@@ -244,7 +244,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
     srcSlot.setFlag( "boss_defeated", 0 );
     srcSlot.setFlag( "difficulty", 2 );
 
-    const string binSavePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_saveslot_sav1.sav" );
+    const string binSavePath = test::makeTempPath( "test_saveslot_sav1.sav" );
     const bool   saveOk      = SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath );
     SW_EXPECT_TRUE( saveOk );
 
@@ -492,7 +492,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     SW_EXPECT_EQUAL( string( "BossRoom_03" ), restoredInstance._customState._stageName );
 
     // 3) 파일 입출력 스냅샷 라운드트립
-    const string tempStateFile = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_game_state.sav" );
+    const string tempStateFile = test::makeTempPath( "test_game_state.sav" );
     SW_EXPECT_TRUE( gameInstance.saveStateToFile( tempStateFile ) );
     SW_EXPECT_TRUE( FileUtil::fileExists( tempStateFile ) );
 
@@ -1886,7 +1886,7 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
 
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
 {
-    const string savePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_turnbattle_huge_pp.sav" );
+    const string savePath = test::makeTempPath( "sw_turnbattle_huge_pp.sav" );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [savePath]()
     {
         FileUtil::removeFile( savePath );

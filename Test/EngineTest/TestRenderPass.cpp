@@ -48,7 +48,7 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
     colorAtt._bClear     = true;
     desc._listAttachment.push_back( colorAtt );
 
-    sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_renderpass_roundtrip.xml" );
+    sw::string testPath = test::makeTempPath( "test_renderpass_roundtrip.xml" );
     SW_EXPECT_TRUE( passRes.saveToXmlFile( testPath ) );
 
     sw::RenderPassResource loadedRes;
@@ -122,7 +122,7 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
     desc._listPass.push_back( pass );
     desc._listRenderPassRef.push_back( "renderpass/defaultrenderpass.xml" );
 
-    sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_renderpipeline_roundtrip.xml" );
+    sw::string testPath = test::makeTempPath( "test_renderpipeline_roundtrip.xml" );
     SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
 
     sw::RenderPipelineResource loadedRes;
@@ -143,7 +143,7 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing legacy root XML rejection" );
-    const sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_legacy_pipeline.xml" );
+    const sw::string testPath = test::makeTempPath( "test_legacy_pipeline.xml" );
     {
         std::ofstream out( testPath.c_str() );
         out << R"(<?xml version="1.0" encoding="utf-8"?>
@@ -603,7 +603,7 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
 
     desc._listPass.push_back( pass );
 
-    const sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_pipeline_all_stages.xml" );
+    const sw::string testPath = test::makeTempPath( "test_pipeline_all_stages.xml" );
     SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
 
     sw::RenderPipelineResource loadedRes;
@@ -647,7 +647,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     // _computeEntryPoint, _geometryEntryPoint 등은 비어 있음
     desc._listPass.push_back( pass );
 
-    const sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_pipeline_compact.xml" );
+    const sw::string testPath = test::makeTempPath( "test_pipeline_compact.xml" );
     SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
 
     sw::string xmlContent;

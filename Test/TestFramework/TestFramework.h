@@ -213,6 +213,21 @@ namespace test
     inline bool isNullText( const sw::string& ) { return false; }
     inline bool isNullText( sw::string_view ) { return false; }
 
+    /**
+     * @brief 이 프로세스·이 케이스만 쓰는 임시 파일 경로를 만듭니다.
+     * @param fileName 쓰려는 파일 이름. 확장자는 그대로 남는다(로더가 그것으로 형식을 고른다).
+     * @return `<임시 폴더>/sw_<pid>_<케이스 이름>_<fileName>`.
+     * @details 테스트들이 `%TEMP%/test_malformed.wav` 처럼 **고정된 이름**에 쓰고 있었다.
+     *          같은 `EngineTest` 가 네 프리셋에서 각각 돌고 CI 는 그것들을 나란히 돌리므로,
+     *          한쪽의 `removeFile` 이 다른 쪽이 방금 쓴 파일을 지운다 — 2026-09-20 에 실제로
+     *          `Ninja-Shipping` 의 `EngineTest_NoGPU` 가 한 번 그렇게 실패했다가 다시 돌리니
+     *          통과했다. 프로세스 id 를 섞으면 그 충돌이 사라지고, 케이스 이름까지 섞으면
+     *          **한 프로세스 안에서 같은 이름을 쓰던 두 케이스**도 서로를 안 밟는다(실제로
+     *          `sw_test_scene_desc.bin` 이 그랬다).
+     * @note 케이스 밖에서 부르면 이름 부분이 빠진다 — 그래도 프로세스별로는 고유하다.
+     */
+    sw::string makeTempPath( sw::string_view fileName );
+
     /** @brief 정적 초기화로 테스트를 레지스트리에 붙입니다. */
     class TestRegistrar
     {

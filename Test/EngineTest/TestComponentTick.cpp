@@ -717,7 +717,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 {
     const sw::string defaultsPath =
-        sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_component_defaults_chain.xml" );
+        test::makeTempPath( "test_component_defaults_chain.xml" );
 
     // SceneComponent(기반)가 Scale 을, MeshComponent(파생)가 BoundsRadius 를 정한다.
     const sw::string xml =

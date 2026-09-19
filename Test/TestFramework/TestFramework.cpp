@@ -2,10 +2,39 @@
 
 #include "TestFramework/TestFramework.h"
 
+#if defined( SW_PLATFORM_WINDOWS )
+    #include <process.h>
+#else
+    #include <unistd.h>
+#endif
+
 namespace test
 {
     namespace
     {
+        /** @brief 이 프로세스의 id 입니다. 임시 파일 이름을 프로세스마다 다르게 하는 데 씁니다. */
+        uint32 currentProcessId()
+        {
+#if defined( SW_PLATFORM_WINDOWS )
+            return static_cast<uint32>( ::_getpid() );
+#else
+            return static_cast<uint32>( ::getpid() );
+#endif
+        }
+
+        /** @brief 파일 이름에 넣어도 되는 글자만 남깁니다. */
+        sw::string toFileNameSafe( sw::string_view text )
+        {
+            sw::string safe;
+            safe.reserve( text.size() );
+            for ( const utf8 ch : text )
+            {
+                const bool bSafe = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || ( '0' <= ch && ch <= '9' );
+                safe.push_back( bSafe ? ch : '_' );
+            }
+            return safe;
+        }
+
         /** @brief CLI 인자 값의 따옴표를 제거합니다. */
         sw::string trimArgValue( std::string_view value )
         {
@@ -17,6 +46,24 @@ namespace test
         }
 
     } // namespace
+
+    sw::string makeTempPath( sw::string_view fileName )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer256> prefix;
+        prefix.append( "sw_" );
+        prefix.append( static_cast<int32>( currentProcessId() ) );
+        prefix.append( "_" );
+
+        const sw::string testName = TestRegistry::getInstance().getCurrentContext()->getTestName();
+        if ( testName.empty() == false )
+        {
+            prefix.append( toFileNameSafe( testName ).c_str() );
+            prefix.append( "_" );
+        }
+
+        const sw::string uniqueName = sw::string( prefix.c_str() ) + sw::string( fileName );
+        return sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), uniqueName );
+    }
 
     TestRegistry& TestRegistry::getInstance()
     {
