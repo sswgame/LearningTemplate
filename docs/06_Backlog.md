@@ -136,6 +136,29 @@ cd build/Ninja-Debug/Bin
 
 ## 1. 남은 일 (우선순위 순)
 
+### 0순위 — 지금 도는 두 패스
+
+**(A) 정확성 훑기 (진행 중).** `Source/` 전체를 함수 하나하나 읽으며 고칠 수 있으면 고친다.
+순서는 Core → Engine → ReflectionParser → Editor → GameFramework → Game. 2026-09-20 기준
+Core · Engine · ReflectionParser 를 마쳤고 Editor 를 보는 중이다. 되풀이해 만난 모양은
+"한 곳에 넣은 고침이 형제에게 안 갔다" 와 "정보를 싣고 와서 읽을 때 버렸다" 둘이다.
+
+**(B) 성능·재사용성 개편 (A 가 끝난 뒤).** 같은 범위(`Source/` 전체 + `Tools/ReflectionParser`)를
+이번에는 **성능과 재사용성**으로 다시 훑는다. **구조가 크게 바뀌어도 된다.** (A) 는 "틀린 답을
+내는 곳" 만 보느라 성능·중복을 일부러 지나쳤다 — 지나친 것들의 예:
+
+- `XmlSerializer::deserializeSoft` 가 같은 XML 을 **두 번 파싱**한다(버전 읽기용 한 번,
+  백엔드용 한 번). 씬·프리팹 로드가 엔티티마다 이 길로 간다.
+- `AnnotationApply` 의 토큰 분해가 토큰마다 임시 `string` 을 만든다
+  (`trim( string( view ).c_str() )`) — `trim( string_view )` 오버로드가 이미 있다.
+- `SpatialHashGrid2D::queryRay` 가 좁은 판정 없이 셀 안 전부를 돌려준다(형제 둘은 좁힌다).
+- `ContainerTypeMap::match` 가 규칙 목록 선형 탐색 + 부분 문자열 검색이다.
+
+성능 주장은 **Release 숫자로만** 한다(`measure-in-release-not-debug`), 숫자 없는 최적화는
+하지 않는다(`measure-before-optimizing`).
+
+
+
 ### 1-0a. Engine 폴더 훑기 — 알파벳 순, 다음은 `Audio` (2026-09-18 시작)
 
 `Source/Core` 를 폴더 단위로 훑은 것(2026-09-17, `Common` → `Uuid`, 17커밋)과 **같은 방식으로**
