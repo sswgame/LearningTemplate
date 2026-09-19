@@ -94,7 +94,7 @@ namespace sw::editor
         string text;
         if ( FileUtil::readTextFile( configPath, text ) == false || text.empty() )
         {
-            SW_LOG_WARNING( "Failed to read TextureImportConfig file: %#", configPath.data() );
+            SW_LOG_WARNING( "Failed to read TextureImportConfig file: %#", configPath );
             return false;
         }
 

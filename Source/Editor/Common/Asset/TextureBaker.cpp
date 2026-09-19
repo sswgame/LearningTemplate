@@ -121,7 +121,7 @@ namespace sw::editor
         RawImageData rawImage;
         if ( ImageUtil::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
-            SW_LOG_ERROR( "Failed to decode source image: %#", sourcePath.data() );
+            SW_LOG_ERROR( "Failed to decode source image: %#", sourcePath );
             return false;
         }
 
@@ -293,7 +293,7 @@ namespace sw::editor
     {
         TextureImportRule rule;
         if ( config.findMatchingRule( sourcePath, rule ) == false )
-            SW_LOG_WARNING( "No matching rule found in config for %#; using default rule.", sourcePath.data() );
+            SW_LOG_WARNING( "No matching rule found in config for %#; using default rule.", sourcePath );
 
         return bakeTexture( sourcePath, outputPath, rule, pOutResult );
     }

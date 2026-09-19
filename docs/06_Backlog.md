@@ -526,6 +526,18 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 `clear()` 를 빼면 `QueriesOverwriteTheOutListInsteadOfAppending` 이, 정규화를 빼면
 `BVHTree3DAABBRaySphereQueries` 가 진다.
 
+### 2026-09-20 (로그에 뷰를 `.data()` 로 풀어 넘겨 끝을 넘어 읽고 있었다)
+
+`formatstring` 은 인자가 `string_view` 면 **길이로** 쓰고(`write()` 가 `str.length()` 를 본다),
+`const utf8*` 면 `strlen` 으로 읽는다. 그래서 뷰를 `.data()` 로 풀어서 넘기면 **뷰가 끝나는 곳을
+지나** 다음 널까지 읽는다 — 부분 뷰(`substr`)일 때 실제로 넘어간다. 열네 자리가 그러고 있었다
+(Editor 4 · Engine 10). 고치는 법은 `.data()` 를 **지우는 것**뿐이다.
+
+`.data()` 가 맞는 것처럼 보여서 다시 자라기 쉬운 모양이라 게이트로 옮겼다
+(`CheckLogViewArgument`). `string` 의 `.c_str()` 은 언제나 널로 끝나므로 잡지 않는다. 여러 줄로
+쪼갠 호출은 놓치는데, 그 대신 오탐이 없다 — 이 저장소의 로그는 거의 한 줄이다.
+`CheckLintsAreAlive` 가 27 케이스 / 17 게이트가 됐다.
+
 ### 2026-09-20 (에디터 워크스페이스 둘 — 순회 중 목록 변경 · GUID 두 표가 어긋났다)
 
 **`ReloadFileManager::dispatchEvents` 가 범위 for 로 돌면서 콜백을 불렀다.** 리로드 콜백이 자기

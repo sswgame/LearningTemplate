@@ -1104,7 +1104,7 @@ namespace sw
 
         const uint32 count = static_cast<uint32>( listDoomed.size() );
         if ( count > 0 )
-            SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName.data() );
+            SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
         return count;
     }
 #endif

@@ -20,7 +20,7 @@ namespace sw::editor
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read image file: %#", filePath.data() );
+            SW_LOG_ERROR( "Failed to read image file: %#", filePath );
             return false;
         }
 

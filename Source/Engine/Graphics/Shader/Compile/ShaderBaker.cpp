@@ -293,7 +293,7 @@ namespace sw
 
         if ( FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write baked bytecode to %#", outputPath.data() );
+            SW_LOG_ERROR( "Failed to write baked bytecode to %#", outputPath );
             return false;
         }
 

@@ -112,7 +112,7 @@ namespace sw
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read DDS file: %#", filePath.data() );
+            SW_LOG_ERROR( "Failed to read DDS file: %#", filePath );
             return false;
         }
 
@@ -124,7 +124,7 @@ namespace sw
         vector<uint8> bytes;
         if ( ResourceUtil::readBinaryResource( relativePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read DDS resource: %#", relativePath.data() );
+            SW_LOG_ERROR( "Failed to read DDS resource: %#", relativePath );
             return false;
         }
 

@@ -79,19 +79,19 @@ namespace sw
         DdsImageData image;
         if ( DdsLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
         {
-            SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath.data() );
+            SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
             return false;
         }
 
         const RHIFormat format = toRhiFormatFromDxgi( image._dxgiFormat );
         if ( format == RHIFormat::Unknown )
         {
-            SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath.data(), image._dxgiFormat );
+            SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, image._dxgiFormat );
             return false;
         }
         if ( image._depth > 1 )
         {
-            SW_LOG_ERROR( "Texture2D: '%#' is a volume/array texture (depth=%#) — only 2D is supported", relativePath.data(), image._depth );
+            SW_LOG_ERROR( "Texture2D: '%#' is a volume/array texture (depth=%#) — only 2D is supported", relativePath, image._depth );
             return false;
         }
 
@@ -105,7 +105,7 @@ namespace sw
         _handle                 = pResource->createTexture2D( desc );
         if ( _handle == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath.data(), desc._width, desc._height, desc._mipLevels );
+            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, desc._width, desc._height, desc._mipLevels );
             return false;
         }
 
@@ -116,7 +116,7 @@ namespace sw
         upload._mipLevels = desc._mipLevels;
         if ( pResource->uploadTexture2D( _handle, upload ) == false )
         {
-            SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for '%#'", relativePath.data() );
+            SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for '%#'", relativePath );
             pResource->destroyTexture( _handle );
             _handle = 0;
             return false;
@@ -125,7 +125,7 @@ namespace sw
         _srv = pResource->registerBindlessTexture( _handle );
         if ( _srv == kInvalidDescriptorIndex )
         {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath.data() );
+            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath );
             pResource->destroyTexture( _handle );
             _handle = 0;
             return false;
