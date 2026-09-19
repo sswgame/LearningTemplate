@@ -153,8 +153,16 @@ namespace sw
 
     void TileMap::resize( int32 width, int32 height )
     {
-        if ( width <= 0 || height <= 0 )
+        // 크기 상한은 `TileMapXmlData` 가 정본이다 — 로더(`TileMapXmlData::loadFromXml`)와 에디터
+        // (`TileMapPanel::resize`)가 같은 것을 본다. 여기만 없으면 같은 맵을 코드로 만들 때
+        // `100000 x 100000` 한 줄이 10^10 칸 요청이 된다.
+        if ( TileMapXmlData::isSizeSupported( width, height ) == false )
+        {
+            SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
+                            width, height, TileMapXmlData::kMaxTileCount );
             return;
+        }
+
         _width             = width;
         _height            = height;
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );

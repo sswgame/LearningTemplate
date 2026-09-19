@@ -34,11 +34,27 @@ namespace sw
                 return fs;
             }
 
+            /**
+             * @brief 세이브에서 읽은 수를 그대로 믿지 않기 위한 하드 상한입니다.
+             * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있다. 파티 수는 이미 잘라
+             *          쓰고 있었는데 **바로 옆의 `ppCount` 는 자르지 않아서**,
+             *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 된다.
+             *          데이터가 정하는 `maxPartySize` 도 데이터가 망가지면 같은 문제이므로 함께 자른다.
+             */
+            static constexpr int32 kHardPartyCap = 64;
+            /** @brief 한 파티원이 가질 수 있는 최대 기술 슬롯 수입니다. 기본 세이브는 둘을 쓴다. */
+            static constexpr int32 kHardPpCap = 16;
+
             static size_t partyCap()
             {
-                const GameData* pData = game::getService<GameData>();
-                const int32     n     = pData != nullptr ? pData->getCustomPropertyInt( "maxPartySize", 6 ) : 6;
-                return n > 0 ? static_cast<size_t>( n ) : 6u;
+                const GameData* pData    = game::getService<GameData>();
+                const int32     rawValue = pData != nullptr ? pData->getCustomPropertyInt( "maxPartySize", 6 ) : 6;
+                return static_cast<size_t>( MathUtil::clamp( rawValue > 0 ? rawValue : 6, 1, kHardPartyCap ) );
+            }
+
+            static size_t ppCap()
+            {
+                return static_cast<size_t>( kHardPpCap );
             }
         };
     } // namespace
@@ -198,11 +214,13 @@ namespace sw
             const int32 ppCount = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "ppCount" ).c_str(), -1 );
             if ( ppCount >= 0 )
             {
-                m._listPp.assign( static_cast<size_t>( ppCount ), 0 );
-                for ( int32 slot = 0; slot < ppCount; ++slot )
+                // **파일이 말한 수를 그대로 잡지 않는다** — 바로 위 파티 수와 같은 규칙이다.
+                const size_t slotCount = MathUtil::min( static_cast<size_t>( ppCount ), SaveGameInternal::ppCap() );
+                m._listPp.assign( slotCount, 0 );
+                for ( size_t slot = 0; slot < slotCount; ++slot )
                 {
-                    const string key = string( "pp" ) + to_string( slot );
-                    m._listPp[static_cast<size_t>( slot )] =
+                    const string key = string( "pp" ) + to_string( static_cast<int32>( slot ) );
+                    m._listPp[slot] =
                         KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, key.c_str() ).c_str(), 0 );
                 }
             }

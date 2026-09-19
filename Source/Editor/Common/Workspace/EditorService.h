@@ -60,6 +60,14 @@ namespace sw::editor
         internal::bindRawLocalService( internal::getServiceTypeHash<T>(), nullptr );
     }
 
+    /**
+     * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 입니다** — 받는 쪽이 확인해야 합니다.
+     * @details 짝인 `game::getService<T>()` 와 같은 계약이다. 그쪽에는 한동안 실패 자리에
+     *          `SW_ASSERT( false )` 가 있어서 **Debug 에서만** 프로세스가 죽었다 — 같은 모양의
+     *          함수가 두 벌 있으면 한쪽만 고쳐지고 끝나기 쉽다는 예다. `CheckNullableServiceUse`
+     *          린트가 두 창구를 모두 본다.
+     * @return 찾은 서비스. 로컬에도 호스트에도 없으면 nullptr.
+     */
     template <typename T>
     T* getService()
     {

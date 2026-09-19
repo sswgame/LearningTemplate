@@ -11,7 +11,9 @@
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/Base/GameInstanceBase.h"
+#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/SaveGame.h"
+#include "GameFramework/Data/GameData.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
@@ -1547,4 +1549,94 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
 
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( manager.getAllGameObjects().empty() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 세이브가 말한 기술 슬롯 수를 그대로 잡지 않는다
+ * @details 텍스트 세이브에서 파티 수는 이미 잘라 쓰고 있었는데 **바로 옆의 `ppCount` 는 자르지
+ *          않았다.** 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있으므로,
+ *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 된다 — 게임이 그 자리에서
+ *          죽는다. 형제 규칙(파티 수 자르기)을 그대로 옮겼다.
+ */
+/**
+ * @brief [GameFrameworkTest] 붙지 않은 게임 서비스는 nullptr 로 돌아온다 — 죽지 않는다
+ * @details `game::getService<T>()` 의 실패 자리에 `SW_ASSERT( false )` 가 있었다. `SW_ASSERT` 는
+ *          Debug 에서 디버거 브레이크이고 Debug 밖에서는 사라지므로, "없으면 nullptr" 이라는
+ *          계약이 **Debug 에서만 프로세스를 죽이는** 계약이었다. 호출하는 자리가 전부
+ *          `== nullptr` 을 확인하는데 그 가드는 Debug 에서 도달할 수 없었다. 짝인
+ *          `editor::getService<T>()` 는 처음부터 조용히 nullptr 을 돌려준다.
+ * @note 이 테스트가 죽으면(단언 실패가 아니라 **프로세스가 사라지면**) 그 단언이 돌아온 것이다.
+ */
+SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
+{
+    // EngineTest 프로세스에는 게임이 붙어 있지 않다.
+    SW_EXPECT_TRUE_MSG( game::getService<GameData>() == nullptr, "테스트 프로세스에 GameData 가 붙어 있습니다" );
+    SW_EXPECT_TRUE_MSG( game::getService<SpeciesCatalog>() == nullptr, "테스트 프로세스에 SpeciesCatalog 가 붙어 있습니다" );
+
+    // 붙이면 그것이 돌아오고, 떼면 다시 nullptr 이다.
+    GameData gameData;
+    game::bindLocalService<GameData>( &gameData );
+    SW_EXPECT_EQUAL( &gameData, game::getService<GameData>() );
+    game::unbindLocalService<GameData>();
+    SW_EXPECT_TRUE( game::getService<GameData>() == nullptr );
+}
+
+SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
+{
+    const string savePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_turnbattle_huge_pp.sav" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [savePath]()
+    {
+        FileUtil::removeFile( savePath );
+    } ) );
+
+    // 손으로 고친 세이브를 흉내낸다 — 텍스트 경로(SAV1 매직이 없다)로 읽힌다.
+    string text;
+    text += "map=Levels/Huge.scene\n";
+    text += "x=3\n";
+    text += "y=4\n";
+    text += "partyCount=1\n";
+    text += "party0.speciesId=huge\n";
+    text += "party0.level=5\n";
+    text += "party0.ppCount=2000000000\n";
+    text += "party0.pp0=11\n";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
+
+    TurnBattleSaveGame loaded;
+    SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
+
+    const size_t slotCount = loaded._listParty[0]._listPp.size();
+    SW_EXPECT_TRUE_MSG( slotCount <= 16, "세이브가 말한 슬롯 수를 그대로 잡았습니다" );
+    SW_EXPECT_TRUE( slotCount > 0 );
+    SW_EXPECT_EQUAL( int32( 11 ), loaded._listParty[0]._listPp[0] );
+}
+
+/**
+ * @brief [GameFrameworkTest] 감당할 수 없는 크기의 resize 는 거절한다
+ * @details 상한은 `TileMapXmlData` 가 정본이고 로더와 에디터가 이미 그것을 본다. `TileMap::resize`
+ *          만 안 보고 있어서, 코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 됐다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )
+{
+    TileMap tileMap;
+    tileMap.resize( 8, 8 );
+    SW_ASSERT_TRUE( tileMap.isWalkable( 7, 7 ) );
+
+    {
+        test::ScopedLogSuppressor suppressor;
+        // 상한 바로 위 — 상한을 안 보면 **할당은 되고** 앞의 크기가 덮여 버린다.
+        tileMap.resize( 2100, 2100 );
+    }
+    SW_EXPECT_TRUE( tileMap.isWalkable( 7, 7 ) );
+    SW_EXPECT_TRUE_MSG( tileMap.isSolid( 8, 8 ), "상한을 넘긴 resize 가 받아들여졌습니다" );
+
+    {
+        test::ScopedLogSuppressor suppressor;
+        // 오타 한 줄이 만드는 10^10 칸 — int32 곱으로는 넘쳐서 작아 보인다.
+        tileMap.resize( 100000, 100000 );
+    }
+
+    // 거절됐으므로 앞의 크기가 그대로 남아 있어야 한다.
+    SW_EXPECT_TRUE( tileMap.isWalkable( 7, 7 ) );
+    SW_EXPECT_TRUE( tileMap.isSolid( 8, 8 ) );
 }

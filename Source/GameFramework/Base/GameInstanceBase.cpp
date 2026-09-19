@@ -142,7 +142,15 @@ namespace sw
             string      _parentName{};
         };
         vector<RestoredObject> listRestoredObject;
-        listRestoredObject.reserve( count );
+
+        // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 오브젝트 하나는 적어도 길이 4바이트를
+        // 쓰므로, 남은 바이트 / 4 보다 많은 오브젝트는 어떤 스냅샷에도 있을 수 없다. 아래 읽기는
+        // 잘린 데이터에서 어차피 멈추지만, **그 전에 이 `reserve` 가 먼저 터진다** — `count` 가
+        // 40억이면 이 한 줄이 수십 기가를 요구한다. `SceneDocument::loadBinary` 가 같은 이유로
+        // 같은 계산을 한다.
+        constexpr size_t kMinBytesPerObject = sizeof( uint32 );
+        const size_t     maxPossibleObject  = ( size - offset ) / kMinBytesPerObject;
+        listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
         // 1차: 모든 게임오브젝트 생성 및 직렬화 복구
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )

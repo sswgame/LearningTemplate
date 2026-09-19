@@ -140,8 +140,8 @@ cd build/Ninja-Debug/Bin
 
 **(A) 정확성 훑기 (진행 중).** `Source/` 전체를 함수 하나하나 읽으며 고칠 수 있으면 고친다.
 순서는 Core → Engine → ReflectionParser → Editor → GameFramework → Game. 2026-09-20 기준
-Core · Engine · ReflectionParser 를 마쳤고 Editor 를 보는 중이다. 되풀이해 만난 모양은
-"한 곳에 넣은 고침이 형제에게 안 갔다" 와 "정보를 싣고 와서 읽을 때 버렸다" 둘이다.
+Core · Engine · ReflectionParser · Editor 를 마쳤고 GameFramework 를 보는 중이다. 되풀이해 만난
+모양은 "한 곳에 넣은 고침이 형제에게 안 갔다" 와 "정보를 싣고 와서 읽을 때 버렸다" 둘이다.
 
 **(B) 성능·재사용성 개편 (A 가 끝난 뒤).** 같은 범위(`Source/` 전체 + `Tools/ReflectionParser`)를
 이번에는 **성능과 재사용성**으로 다시 훑는다. **구조가 크게 바뀌어도 된다.** (A) 는 "틀린 답을
@@ -457,6 +457,37 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-20 (세이브가 말한 슬롯 수를 그대로 잡았다 · 단언이 nullable 계약을 Debug 에서만 죽였다)
+
+커밋 `TBD`. GameFramework 훑기에서 나온 넷.
+
+1. **`game::getService<T>()` 가 실패 자리에서 디버거 브레이크를 걸었다.** 거기 `SW_ASSERT( false )`
+   가 있었는데 `SW_ASSERT` 는 Debug 에서 `SW_DEBUG_BREAK()` 이고 Debug 밖에서는 통째로 사라진다.
+   그래서 "없으면 nullptr" 이라는 계약이 **Debug 에서만 프로세스를 죽이는** 계약이었다. 부르는
+   서른한 자리가 전부 `== nullptr` 을 확인하고 `CheckNullableServiceUse` 린트도 그 모양을
+   강제하는데, **그 가드는 Debug 에서 한 번도 도달할 수 없었다.** 짝인
+   `editor::getService<T>()` 는 처음부터 조용히 nullptr 을 돌려준다 — 같은 함수가 두 벌 있는데
+   한쪽만 죽는 것이었다. 살아 있는 쪽에 맞췄다. 실제로 이것에 부딪힌 곳:
+   `TurnBattleSaveGame::loadFromFile` 의 텍스트 경로는 `GameData` 가 없으면 파티 상한으로 6 을
+   쓰도록 **이미 적혀 있는데**, 게임이 안 붙은 프로세스(도구·테스트)에서 그 폴백에 닿기 전에 죽었다.
+2. **`SaveGame` 이 파티 수는 자르고 바로 옆 `ppCount` 는 안 잘랐다.** 손으로 고친
+   `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 된다. `kHardPpCap = 16` 을 두고
+   `partyCap()` 도 데이터가 망가진 경우를 위해 `kHardPartyCap = 64` 로 함께 잘랐다.
+3. **`TileMap::resize` 만 크기 상한을 안 봤다.** 상한의 정본은 `TileMapXmlData` 이고
+   로더(`loadFromXml`)와 에디터(`TileMapPanel::resize`)는 이미 그것을 본다. `resize` 만 빠져
+   있어서 코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 됐다.
+4. **`GameInstanceBase::deserializeSceneObjects` 가 파일이 말한 개수를 그대로 `reserve` 했다.**
+   오브젝트 하나는 최소 4바이트를 쓰므로 `(남은 바이트 / 4)` 보다 많을 수 없다.
+   `SceneDocument::loadBinary` 가 이미 같은 계산을 한다 — 또 형제 불일치였다. 이 한 줄은
+   **테스트가 없다**: 이 경로는 붙은 SceneManager 와 활성 씬을 요구해서 EngineTest 에서 세울
+   수 없다(메모리 압박을 재는 것이라 관측 가능한 동작 차이도 아니다).
+
+테스트 셋 추가: `UnboundGameServiceReturnsNullInsteadOfBreaking`(단언을 되돌리면 **프로세스가
+사라진다**), `TurnBattleSaveGame_HugeMoveSlotCountIsCapped`(`kHardPpCap` 을 64 로 바꾸면 깨진다),
+`TileMap_ResizeBeyondTheTileLimitIsRejected`(`kMaxTileCount` 를 `1 << 24` 로 넓히면 깨진다 —
+상한 바로 위인 `2100 x 2100` 을 같이 넣어 **가드가 없으면 할당이 성공해** 앞 크기를 덮는 것까지
+깨끗한 단언 실패로 드러나게 했다).
 
 ### 2026-09-20 (시퀀스 플레이어가 자산을 바꾸기 전에 멈췄다)
 
