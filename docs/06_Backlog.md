@@ -4,7 +4,7 @@
 > 무엇이 남았는지, 남은 것을 왜 그 순서로 두었는지, 손대기 전에 알아야 할 함정이 무엇인지를
 > 여기 적는다. 작업을 끝내면 이 문서의 해당 항목을 지우거나 "완료"로 옮기고 같이 커밋한다.
 >
-> 마지막 갱신: 2026-09-19 · 기준 커밋 `1c1f385e`
+> 마지막 갱신: 2026-09-19 · 기준 커밋 `abd5acbe`
 
 ---
 
@@ -432,6 +432,54 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-09-19 (세 포맷이 같은 스무 줄을 갖고 있었고, 그 중 한 줄만 달랐다)
+
+복붙 탐지를 `Source` 전체에 돌렸다(공백·주석을 지운 연속 8줄 창을 해시해 파일을 넘나드는 것만 봤다).
+22건이 나왔고 대부분은 include 묶음이거나 **플랫폼마다 정말로 다른 코드**였다. 하나가 달랐다:
+`JsonSerializer::deserializeVersioned` 와 `XmlSerializer::deserializeVersioned` 가 **주석까지 글자
+그대로 같았다.** 누가 한쪽을 고치고 다른 쪽에 붙여 넣은 흔적이다.
+
+**나란히 놓고 보니 Binary 에 세 번째 사본이 있었고, 거기서 한 줄이 달랐다.**
+
+```
+JSON·XML : runSchemaMigrateStep( …, outVersion != currentVersion, … );
+Binary   : runSchemaMigrateStep( …, outVersion != currentVersion || listOrphan.empty() == false, … );
+```
+
+그 한 줄은 **"버전은 같은데 모르는 필드(orphan)만 있을 때 migrate 없이 통과시킬 것인가"** 를 정한다.
+헤더(`SchemaMigrate.h`)는 조건 없이 *"migrate 가 nullptr 인데 버전 불일치나 orphan 이 있으면 false"*
+라고 적어 두었는데, **실제로는 포맷마다 답이 달랐다.** 실측으로 확정했다 — 같은 데이터를 세 포맷으로
+넣고 `currentVersion` 을 같게 준 결과:
+
+| 포맷 | 결과 |
+|---|---|
+| Binary | `false` (경고: `schema version 1 -> 1 with no migrate callback`) |
+| JSON | **`true`** — orphan 을 버리고 통과 |
+| XML | **`true`** — orphan 을 버리고 통과 |
+
+**절차를 하나로 합쳤다.** `runVersionedDeserialize` 가 레거시 스테이징 · soft 역직렬화 두 벌 ·
+버전 확정 · `runSchemaMigrateStep` 을 맡고, 포맷은 **본문을 읽는 람다 하나와 두 개의 선택**만 넘긴다:
+`SchemaVersionSource`(버전이 스트림 머리에 있나, 본문 안에 있나)와 `SchemaOrphanPolicy`(orphan 만
+있을 때 거절하나, 무시하나). bool 인자 대신 이름 붙은 enum 인 이유는 호출부 한 줄만 읽어도 그 포맷이
+무엇을 고른 것인지 보이게 하려는 것이다.
+
+**동작은 한 톨도 바꾸지 않았다 — 일부러다.** 텍스트를 Binary 처럼 엄격하게 바꾸면 **모르는 필드가
+하나만 있어도 씬·프리팹·머티리얼이 통째로 로드에 실패한다.** 그 결정은 이 리팩터가 혼자 내릴 것이
+아니다. 대신 차이에 이름을 주고 테스트로 못박았다
+(`ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`) — 그 케이스가 깨지면 정책을 바꾼 것이다.
+
+> **결정이 필요한 질문.** 텍스트 포맷의 orphan 관대함은 의도인가?
+> - **의도라면** `SchemaMigrate.h` 의 계약 문구를 포맷별로 나눠 적어야 한다(지금은 Binary 만 설명한다).
+> - **사고라면** 텍스트를 `Reject` 로 바꾸는 순간 **기존 콘텐츠가 로드되지 않을 수 있다** — 프로퍼티를
+>   지운 적이 있는 에셋이 그대로 걸린다. 바꾼다면 마이그레이션 계획과 함께.
+
+변이 둘로 확인했다: orphan 정책을 무시하게 하면 새 케이스가 잡고, 버전 출처 구분을 없애면 기존
+케이스 셋(`BinaryVersionHeaderTest` · `FieldTypeChangeAndTextVersioned` ·
+`VersionedDeserializeFailsWithoutMigrate`)이 잡는다.
+
+**검증.** Debug·Shipping·ASan 빌드(경고 0) · `-L nogpu` 세 구성 7/7 · `-L hostgpu` 2/2 · 린트 17/17 ·
+`ReflectionSerializationTest` 31/31 · 에디터 실기동 `[Error]` 0건.
 
 ### 2026-09-19 (바인딩 종류 하나를 더하려면 여섯 곳이었다 — 그리고 넷은 조용히 틀렸다)
 

@@ -1225,6 +1225,75 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 버전은 같고 orphan 만 있을 때 — **Binary 는 거절하고 텍스트는 받는다**
+ * @details 이것은 "이렇게 되어야 한다" 가 아니라 **지금 실제로 이렇다** 를 못박는 케이스다.
+ *          세 포맷이 `deserializeVersioned` 의 같은 스무 줄을 각자 복사해 갖고 있었고, 그 중 이 판단
+ *          한 줄만 서로 달랐다 — 나란히 놓고 보기 전에는 아무도 몰랐다. 절차를 하나로 합치면서
+ *          그 차이에 `SchemaOrphanPolicy` 라는 이름을 붙여 호출부에 드러냈고, 값은 **그대로 두었다**:
+ *          텍스트를 엄격하게 바꾸면 모르는 필드가 하나만 있어도 씬·프리팹·머티리얼이 통째로 로드에
+ *          실패한다. 그 선택이 옳은지는 `docs/06_Backlog.md` 에 질문으로 남겼다.
+ * @note 그러므로 이 케이스가 깨졌다면 **정책을 바꾼 것**이다. 바꾼 것이 의도라면 여기 기대값과
+ *       백로그의 질문을 같이 고칠 것. 의도가 아니라면 방금 씬 로딩을 깨뜨린 것이다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Pinning the per-format orphan-only policy" );
+    struct WideActor
+    {
+        int32 _fieldA{ 0 };
+        int32 _fieldB{ 0 };
+    };
+    struct NarrowActor
+    {
+        int32 _fieldA{ 0 };
+    };
+
+    sw::TypeInfo wide;
+    wide._name               = sw::hashed_string( "ProbeWideActor" );
+    wide._fullyQualifiedName = sw::hashed_string( "sw::ProbeWideActor" );
+    wide._size               = sizeof( WideActor );
+    wide._listProperty       = {
+        {sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WideActor, _fieldA )},
+        {sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WideActor, _fieldB )}
+    };
+
+    sw::TypeInfo narrow;
+    narrow._name               = sw::hashed_string( "ProbeNarrowActor" );
+    narrow._fullyQualifiedName = sw::hashed_string( "sw::ProbeNarrowActor" );
+    narrow._size               = sizeof( NarrowActor );
+    narrow._listProperty       = {
+        { sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NarrowActor, _fieldA ) }
+    };
+
+    WideActor   source{ 7, 9 };
+    NarrowActor target{ 0 };
+    uint32      ver{ 0 };
+
+    sw::vector<uint8> bin;
+    sw::BinarySerializer::serializeVersioned( 1, &source, wide, bin );
+    const bool bBinary = sw::BinarySerializer::deserializeVersioned( ver, &target, narrow, bin.data(), bin.size(), 1u );
+
+    const sw::string json = sw::JsonSerializer::serializeVersioned( 1, &source, wide );
+    ver                   = 0;
+    const bool bJson      = sw::JsonSerializer::deserializeVersioned( ver, &target, narrow, json, 1u );
+
+    const sw::string xml = sw::XmlSerializer::serializeVersioned( 1, &source, wide );
+    ver                  = 0;
+    const bool bXml      = sw::XmlSerializer::deserializeVersioned( ver, &target, narrow, xml, 1u );
+
+    SW_EXPECT_TRUE_MSG( bBinary == false,
+                        "Binary 가 orphan 을 받아들였습니다 — SchemaOrphanPolicy::Reject 가 무력해졌습니다" );
+    SW_EXPECT_TRUE_MSG( bJson,
+                        "JSON 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 파일 전체가 안 읽힙니다" );
+    SW_EXPECT_TRUE_MSG( bXml,
+                        "XML 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 씬이 통째로 안 읽힙니다" );
+
+    // 텍스트가 받아들였다면 **아는 필드는 제대로 들어왔어야** 한다. 그러지 않으면 "조용히 통과" 가
+    // 아니라 "조용히 망가뜨림" 이다.
+    SW_EXPECT_EQUAL( 7, target._fieldA );
+}
+
+/**
  * @brief [ReflectionSerializationTest] orphan 구조 이동 + PROPERTY Alias 개명
  */
 SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )

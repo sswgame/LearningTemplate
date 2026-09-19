@@ -635,30 +635,16 @@ namespace sw
                                                string_view jsonStr, uint32 currentVersion, SchemaMigrateFn migrate,
                                                const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {
-        vector<SchemaOrphanValue> listOrphan;
-        ScopedScratchInstance     scratchLegacy( pLegacyTypeInfo );
-        void*                     pLegacyPtr = scratchLegacy.get();
-        outVersion                           = 0;
-
-        if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
+        // 절차는 JSON·XML·Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다 —
+        // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
+        return runVersionedDeserialize(
+            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,
+            SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
+            SW_DELEGATE_LAMBDA( SoftDeserializeFn,
+                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            uint32 legacyVer{ 0 };
-            if ( pLegacyPtr == nullptr ||
-                 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, jsonStr, &listOrphan, &legacyVer, ctx ) == false )
-                return false;
-            outVersion = legacyVer;
-        }
-
-        uint32 softVer{ 0 };
-        if ( deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, &softVer, ctx ) == false )
-            return false;
-        // 두 분기가 같은 일을 했다(`pLegacyPtr == nullptr` 이거나 `softVer != 0` 이면 대입).
-        // 조건으로 합치면 무엇을 보고 정하는지가 한 줄에 보인다 — 동작은 그대로다.
-        if ( pLegacyPtr == nullptr || softVer != 0 )
-            outVersion = softVer;
-
-        return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
-                                     listOrphan, migrate, outVersion != currentVersion, ctx );
+            return deserializeSoft( pTarget, targetType, jsonStr, &listOrphan, &outSoftVersion, ctx );
+        } ) );
     }
 
 } // namespace sw

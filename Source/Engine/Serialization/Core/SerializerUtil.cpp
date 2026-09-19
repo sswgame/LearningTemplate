@@ -15,6 +15,49 @@
 
 namespace sw
 {
+    bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+                                  uint32 currentVersion, SchemaMigrateFn migrate,
+                                  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx,
+                                  SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                  const SoftDeserializeFn& softDeserialize )
+    {
+        if ( softDeserialize.isBound() == false )
+            return false;
+
+        vector<SchemaOrphanValue> listOrphan;
+        ScopedScratchInstance     scratchLegacy( pLegacyTypeInfo );
+        void* const               pLegacyPtr = scratchLegacy.get();
+
+        if ( versionSource == SchemaVersionSource::Payload )
+            outVersion = 0;
+
+        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다 — migrate 가 옛 필드를 그대로 보게 된다.
+        if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
+        {
+            uint32 legacyVersion{ 0 };
+            if ( pLegacyPtr == nullptr || softDeserialize( pLegacyPtr, *pLegacyTypeInfo, listOrphan, legacyVersion ) == false )
+                return false;
+            if ( versionSource == SchemaVersionSource::Payload )
+                outVersion = legacyVersion;
+        }
+
+        uint32 softVersion{ 0 };
+        if ( softDeserialize( pInstance, typeInfo, listOrphan, softVersion ) == false )
+            return false;
+
+        // 레거시를 읽지 않았거나(그러면 이쪽이 유일한 출처다) 이번에 실제로 버전이 나왔으면 그것을 쓴다.
+        if ( versionSource == SchemaVersionSource::Payload && ( pLegacyPtr == nullptr || softVersion != 0 ) )
+            outVersion = softVersion;
+
+        // **여기가 포맷마다 갈리던 한 줄이다.** 예전에는 세 벌의 복사본에 각자 다른 식이 적혀 있어서,
+        // 다르다는 사실조차 나란히 놓고 보기 전에는 보이지 않았다.
+        const bool bOrphanBlocks = ( orphanPolicy == SchemaOrphanPolicy::Reject ) && ( listOrphan.empty() == false );
+        const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
+
+        return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+                                     listOrphan, migrate, bNeedsMigrate, ctx );
+    }
+
     namespace
     {
         struct SerializerUtilInternal

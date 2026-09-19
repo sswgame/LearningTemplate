@@ -343,22 +343,18 @@ namespace sw
         const uint8* pBody    = pData + reader.getOffset();
         const size_t bodySize = dataSize - reader.getOffset();
 
-        vector<SchemaOrphanValue> listOrphan;
-        ScopedScratchInstance     scratchLegacy( pLegacyTypeInfo );
-        void*                     pLegacyPtr = scratchLegacy.get();
-
-        if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
+        // 절차는 JSON·XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지 —
+        // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 migrate 없이는
+        // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
+        // 바뀌었다는 뜻이기 때문이다.
+        return runVersionedDeserialize(
+            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,
+            SchemaVersionSource::Stream, SchemaOrphanPolicy::Reject,
+            SW_DELEGATE_LAMBDA( SoftDeserializeFn,
+                                [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {
-            if ( pLegacyPtr == nullptr ||
-                 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
-                return false;
-        }
-
-        if ( deserializeSoft( pInstance, typeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
-            return false;
-
-        return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
-                                     listOrphan, migrate, outVersion != currentVersion || listOrphan.empty() == false, ctx );
+            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, ctx );
+        } ) );
     }
 
     bool BinarySerializer::serializeCompressed( const void*             pInstance,
