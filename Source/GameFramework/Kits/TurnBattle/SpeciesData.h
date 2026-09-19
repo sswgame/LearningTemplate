@@ -77,6 +77,14 @@ namespace sw
     class SW_GF_API SpeciesCatalog
     {
     public:
+        /**
+         * @brief 레벨의 상한입니다 — **곱하기 전에 자르는 데** 씁니다.
+         * @details 레벨은 세이브에서 오고 세이브는 손으로 고칠 수 있다. `40 + level * 10`
+         *          한 줄이 부호 있는 정수 오버플로(= 미정의 동작)가 된다.
+         */
+        static constexpr int32 kMaxLevel = 999;
+
+        /** @brief 최소 폴백 표를 심고 시작합니다 — 빈 카탈로그로는 만들어지지 않습니다. */
         SpeciesCatalog();
         ~SpeciesCatalog();
 
@@ -86,9 +94,9 @@ namespace sw
         /** @brief 리소스 경로에서 기술/종족을 로드합니다. 실패 시 최소 폴백을 심습니다. */
         bool loadFromResource( string_view assetRelativePath );
 
-        /** @brief ID로 종족 정의를 찾습니다. */
+        /** @brief ID로 종족 정의를 찾습니다. 못 찾으면 첫 종족, **표가 비었으면 nullptr** 입니다. */
         const SpeciesDef* findSpecies( const utf8* pId ) const;
-        /** @brief 인덱스로 기술 정의를 찾습니다. */
+        /** @brief 인덱스로 기술 정의를 찾습니다. 범위 밖이면 첫 기술, **표가 비었으면 nullptr** 입니다. */
         const MoveDef* findMove( int32 index ) const;
         /** @brief ID로 기술 인덱스를 찾습니다. */
         int32 findMoveIndex( const utf8* pId ) const;

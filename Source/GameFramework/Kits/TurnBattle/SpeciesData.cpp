@@ -15,6 +15,11 @@ namespace sw
         : _listMove{}
         , _listSpecies{}
     {
+        // **여기서 심는다.** 예전에는 `findSpecies()` · `findMove()` 가 비어 있으면 그 자리에서
+        // `const_cast` 로 자기 자신을 고쳐 폴백을 심었다. 그 둘은 `const` 이고 이 카탈로그는
+        // 서비스라 여러 스레드가 동시에 읽는다 — 읽기인 줄 알고 부른 함수가 벡터를 키우고
+        // 있었다. 게다가 `clear()` 가 아무 뜻도 없었다(다음 조회가 다시 채운다).
+        seedFallback();
     }
 
     SpeciesCatalog::~SpeciesCatalog()
@@ -119,7 +124,13 @@ namespace sw
                     const utf8*  pMoveId  = entryNode.attribute( attrName.c_str() );
                     if ( StringUtil::isNullOrEmpty( pMoveId ) )
                         break;
-                    def._listMoveIndex.push_back( MathUtil::max( findMoveIndex( pMoveId ), 0 ) );
+
+                    // 모르는 기술 id 는 **말하고 나서** 0 번으로 떨어진다. 예전에는 조용히
+                    // 떨어져서, 철자 하나 틀리면 그 종족의 기술이 전부 첫 기술로 바뀌었다.
+                    const int32 moveIndex = findMoveIndex( pMoveId );
+                    if ( moveIndex < 0 )
+                        SW_LOG_WARNING( "Unknown move id '%#' on species '%#' — using the first move.", pMoveId, def._id );
+                    def._listMoveIndex.push_back( MathUtil::max( moveIndex, 0 ) );
                 }
                 if ( def._listMoveIndex.empty() )
                     def._listMoveIndex.push_back( 0 );
@@ -141,10 +152,11 @@ namespace sw
         return true;
     }
 
+    // 아래 둘은 **읽기만 한다.** 비어 있으면 nullptr 이다 — 부르는 쪽은 이미 전부 널을 본다.
     const SpeciesDef* SpeciesCatalog::findSpecies( const utf8* pId ) const
     {
         if ( _listSpecies.empty() )
-            const_cast<SpeciesCatalog*>( this )->seedFallback();
+            return nullptr;
         if ( pId == nullptr )
             return &_listSpecies[0];
         const auto mapIter = _mapSpeciesIndex.find( hashed_string( pId ) );
@@ -156,7 +168,7 @@ namespace sw
     const MoveDef* SpeciesCatalog::findMove( int32 index ) const
     {
         if ( _listMove.empty() )
-            const_cast<SpeciesCatalog*>( this )->seedFallback();
+            return nullptr;
         if ( index < 0 || index >= static_cast<int32>( _listMove.size() ) )
             return &_listMove[0];
         return &_listMove[static_cast<size_t>( index )];
@@ -179,12 +191,20 @@ namespace sw
 
     PartyMember SpeciesCatalog::makeWild( const utf8* pSpeciesId, int32 level ) const
     {
+        PartyMember m{};
+
         const SpeciesDef* pSpecies = findSpecies( pSpeciesId );
-        PartyMember       m{};
+        if ( pSpecies == nullptr )
+            return m;
+
+        // **레벨로 곱하기 전에 자른다.** 레벨은 세이브에서 오고 세이브는 손으로 고칠 수 있다.
+        // `level * 10` 하나면 부호 있는 정수 오버플로(= 미정의 동작)다.
+        const int32 safeLevel = MathUtil::clamp( level, 1, kMaxLevel );
+
         m._speciesId = pSpecies->_id;
         m._nickname  = pSpecies->_name;
-        m._level     = level;
-        m._hpMax     = pSpecies->_baseHp + level * 2;
+        m._level     = safeLevel;
+        m._hpMax     = pSpecies->_baseHp + safeLevel * 2;
         m._hp        = m._hpMax;
         m._listPp.clear();
         m._listPp.reserve( pSpecies->_listMoveIndex.size() );
@@ -194,7 +214,7 @@ namespace sw
             m._listPp.push_back( pMove != nullptr ? pMove->_ppMax : 0 );
         }
         m._exp     = 0;
-        m._expNext = 40 + level * 10;
+        m._expNext = 40 + safeLevel * 10;
         return m;
     }
 

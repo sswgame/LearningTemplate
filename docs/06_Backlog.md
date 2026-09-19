@@ -458,6 +458,27 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-09-20 (const 조회가 자기를 고치고 있었다 — 종족 카탈로그)
+
+커밋 `TBD`. GameFramework 훑기의 마지막.
+
+1. **`findSpecies()` · `findMove()` 가 `const` 인데 `const_cast` 로 자기를 고쳤다.** 표가 비어
+   있으면 그 자리에서 `seedFallback()` 을 불러 벡터를 채웠다. 이 카탈로그는 **서비스**라 여러
+   스레드가 동시에 읽는다 — 읽기인 줄 알고 부른 함수가 벡터를 키우고 있었다. 그리고 그
+   때문에 `clear()` 가 아무 뜻도 없었다(다음 조회가 곧바로 다시 채운다). 폴백은 **생성자에서**
+   심고, 조회는 비어 있으면 nullptr 을 돌려준다(부르는 쪽은 이미 전부 널을 본다).
+2. **모르는 기술 id 가 조용히 0 번이 됐다.** `MathUtil::max( findMoveIndex( id ), 0 )` 한 줄
+   이라, species.xml 에서 철자 하나 틀리면 그 종족의 기술이 **전부 첫 기술**로 바뀌는데 아무
+   말도 없었다. 이제 경고를 남기고 떨어진다.
+3. **레벨을 곱하기 전에 안 잘랐다.** `_expNext = 40 + level * 10` 과 `makeWild` 의
+   `baseHp + level * 2` 가 곱셈인데 레벨은 세이브에서 온다 — 손으로 고친 `level=2000000000`
+   한 줄이 부호 있는 정수 오버플로(= 미정의 동작)다. `SpeciesCatalog::kMaxLevel` 을 두고
+   세이브 읽는 자리와 `makeWild` 양쪽에서 자른다(파티 수 · PP 수와 같은 규칙).
+
+테스트 둘. **`makeWild` 테스트를 쓰면서 한 번 헛짚었다**: 빈 카탈로그에서 나온 파티원을
+`_listPp.empty()` 로 보려 했는데 `PartyMember` 의 기본값이 이미 두 칸이다 — 기본이 비어 있는
+`_nickname` 으로 봐야 한다.
+
 ### 2026-09-20 (코드에서 쓸 수 없던 기능 셋 — 흔들림 · 중력 · 몬스터 카탈로그)
 
 커밋 `TBD`. GameFramework 훑기의 마지막 셋. 공통점은 **상태가 `PROPERTY` 로만 있고 그것을

@@ -2098,6 +2098,72 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
     SW_EXPECT_TRUE( pGravity->isGrounded() == false );
 }
 
+/**
+ * @brief [GameFrameworkTest] 조회는 **읽기만 한다** — `clear()` 가 뜻을 갖는다
+ * @details `findSpecies()` · `findMove()` 가 비어 있으면 그 자리에서 `const_cast` 로 자기
+ *          자신을 고쳐 폴백을 심었다. 둘 다 `const` 이고 이 카탈로그는 서비스라 여러
+ *          스레드가 동시에 읽는다 — 읽기인 줄 알고 부른 함수가 **벡터를 키우고** 있었다.
+ *          그리고 `clear()` 가 아무 뜻도 없었다: 다음 조회가 곧바로 다시 채웠다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SpeciesCatalogLookupDoesNotReseedItself )
+{
+    SpeciesCatalog catalog;
+
+    // 갓 만든 카탈로그는 이미 쓸 수 있다 — 조회가 몰래 채워 주기를 기다리지 않는다.
+    SW_ASSERT_NOT_NULL( catalog.findSpecies( "critter_a" ) );
+    SW_ASSERT_NOT_NULL( catalog.findMove( 0 ) );
+
+    catalog.clear();
+    SW_EXPECT_TRUE_MSG( catalog.findSpecies( "critter_a" ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
+    SW_EXPECT_TRUE_MSG( catalog.findSpecies( nullptr ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
+    SW_EXPECT_TRUE_MSG( catalog.findMove( 0 ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
+
+    // 빈 카탈로그로 만들어도 죽지 않는다 — 아무것도 안 채운 기본 파티원이 나온다.
+    // (`PartyMember` 의 `_listPp` 기본값은 두 칸이라 그것으로는 구별되지 않는다.
+    //  `_nickname` 은 기본이 비어 있고 `makeWild` 가 성공했을 때만 채워진다.)
+    const PartyMember member = catalog.makeWild( "critter_a", 5 );
+    SW_EXPECT_TRUE_MSG( member._nickname.empty(), "빈 카탈로그인데 파티원이 채워졌습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 세이브가 말한 레벨을 그대로 곱하지 않는다
+ * @details `_expNext = 40 + level * 10` 과 `makeWild` 의 `baseHp + level * 2` 가 곱셈인데
+ *          레벨은 세이브에서 온다. 손으로 고친 `level=2000000000` 한 줄이 **부호 있는 정수
+ *          오버플로(= 미정의 동작)** 가 된다. 파티 수 · PP 수와 같은 규칙으로 자른다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
+{
+    const string savePath = test::makeTempPath( "huge_level.sav" );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, [savePath]()
+    {
+        FileUtil::removeFile( savePath );
+    } ) );
+
+    string text;
+    text += "map=Levels/Huge.scene\n";
+    text += "partyCount=1\n";
+    text += "party0.speciesId=huge\n";
+    text += "party0.level=2000000000\n";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
+
+    TurnBattleSaveGame loaded;
+    SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
+
+    const int32 level = loaded._listParty[0]._level;
+    SW_EXPECT_TRUE_MSG( level <= SpeciesCatalog::kMaxLevel, "세이브가 말한 레벨을 그대로 잡았습니다" );
+    SW_EXPECT_TRUE( level >= 1 );
+
+    // 그 레벨로 만든 파생 값도 넘치지 않는다.
+    SW_EXPECT_TRUE( loaded._listParty[0]._expNext > 0 );
+
+    SpeciesCatalog    catalog;
+    const PartyMember wild = catalog.makeWild( "critter_a", 2000000000 );
+    SW_EXPECT_TRUE_MSG( wild._level <= SpeciesCatalog::kMaxLevel, "makeWild 가 레벨을 안 잘랐습니다" );
+    SW_EXPECT_TRUE( wild._hpMax > 0 );
+    SW_EXPECT_TRUE( wild._expNext > 0 );
+}
+
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.

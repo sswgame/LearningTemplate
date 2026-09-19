@@ -205,7 +205,12 @@ namespace sw
             const utf8* pNick = KeyValueFile::get( map, SaveGameInternal::partyKey( itemIndex, "nickname" ).c_str(), nullptr );
             if ( StringUtil::isNullOrEmpty( pNick ) == false )
                 m._nickname = pNick;
-            m._level = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level );
+            // **레벨도 자른다.** 아래 `_expNext = 40 + level * 10` 과 `makeWild` 의
+            // `baseHp + level * 2` 가 곱셈이다 — 손으로 고친 `level=2000000000` 한 줄이
+            // 부호 있는 정수 오버플로(= 미정의 동작)가 된다. 파티 수 · PP 수와 같은 규칙이다.
+            m._level = MathUtil::clamp(
+                KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level ),
+                1, SpeciesCatalog::kMaxLevel );
             m._hp    = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hp" ).c_str(), m._hp );
             m._hpMax = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hpMax" ).c_str(), m._hpMax );
             m._exp   = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "exp" ).c_str(), m._exp );
